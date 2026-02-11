@@ -1,0 +1,81 @@
+'use client';
+
+import { X, Plus, Terminal, Loader2, Radar } from 'lucide-react';
+import { useCLIPanelStore } from '@/components/cli/store/cliPanelStore';
+
+interface CLITabBarProps {
+  /** If provided, only show these tabs (filtered by parent) */
+  filteredTabOrder?: string[];
+  /** Override which tab appears active */
+  activeTabId?: string | null;
+  /** Override tab selection handler */
+  onTabSelect?: (tabId: string) => void;
+}
+
+export function CLITabBar({ filteredTabOrder, activeTabId: activeTabIdProp, onTabSelect }: CLITabBarProps = {}) {
+  const sessions = useCLIPanelStore((s) => s.sessions);
+  const storeTabOrder = useCLIPanelStore((s) => s.tabOrder);
+  const storeActiveTabId = useCLIPanelStore((s) => s.activeTabId);
+  const setActiveTab = useCLIPanelStore((s) => s.setActiveTab);
+  const removeSession = useCLIPanelStore((s) => s.removeSession);
+  const createSession = useCLIPanelStore((s) => s.createSession);
+
+  const tabOrder = filteredTabOrder ?? storeTabOrder;
+  const activeTabId = activeTabIdProp !== undefined ? activeTabIdProp : storeActiveTabId;
+  const handleTabSelect = onTabSelect ?? setActiveTab;
+
+  return (
+    <div className="flex items-center gap-0.5 px-2 py-1 bg-[#0d0d22] border-b border-[#1e1e3a] overflow-x-auto">
+      {tabOrder.map((tabId) => {
+        const session = sessions[tabId];
+        if (!session) return null;
+        const isActive = activeTabId === tabId;
+        const isRunning = session.isRunning;
+        const isEvaluator = session.label === 'Evaluator';
+
+        return (
+          <button
+            key={tabId}
+            onClick={() => handleTabSelect(tabId)}
+            className={`
+              flex items-center gap-1.5 px-2.5 py-1 rounded-t text-xs transition-all duration-150 min-w-0 max-w-[160px] group
+              ${isActive
+                ? 'bg-[#111128] text-[#e0e4f0] border-t-2'
+                : 'text-[#6b7294] hover:text-[#e0e4f0] hover:bg-[#111128]/50'
+              }
+            `}
+            style={isActive ? { borderTopColor: session.accentColor || '#3b82f6' } : undefined}
+          >
+            {isRunning ? (
+              <Loader2 className="w-3 h-3 animate-spin flex-shrink-0" style={{ color: session.accentColor }} />
+            ) : isEvaluator ? (
+              <Radar className="w-3 h-3 flex-shrink-0" style={{ color: session.accentColor }} />
+            ) : (
+              <Terminal className="w-3 h-3 flex-shrink-0" style={{ color: isActive ? session.accentColor : undefined }} />
+            )}
+            <span className="truncate">{session.label || tabId}</span>
+            {!isEvaluator && (
+              <X
+                className="w-3 h-3 flex-shrink-0 opacity-0 group-hover:opacity-100 hover:text-red-400 transition-opacity"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  removeSession(tabId);
+                }}
+              />
+            )}
+          </button>
+        );
+      })}
+
+      {storeTabOrder.length < 8 && (
+        <button
+          onClick={() => createSession({ label: `Terminal ${storeTabOrder.length + 1}` })}
+          className="flex items-center justify-center w-6 h-6 rounded text-[#6b7294] hover:text-[#e0e4f0] hover:bg-[#111128] transition-all"
+          title="New tab"
+        >
+          <Plus className="w-3 h-3" />
+        </button>
+      )}
+    </div>
+  );
+}

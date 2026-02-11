@@ -1,26 +1,90 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #0a0a1a;
+  --surface: #111128;
+  --surface-hover: #1a1a3a;
+  --border: #1e1e3a;
+  --border-bright: #2e2e5a;
+  --text: #e0e4f0;
+  --text-muted: #6b7294;
+
+  /* Category accents */
+  --setup: #00ff88;
+  --core: #3b82f6;
+  --content: #f59e0b;
+  --systems: #8b5cf6;
+  --evaluator: #ef4444;
+
+  --foreground: var(--text);
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
+  --color-surface: var(--surface);
+  --color-surface-hover: var(--surface-hover);
+  --color-border: var(--border);
+  --color-border-bright: var(--border-bright);
+  --color-text: var(--text);
+  --color-text-muted: var(--text-muted);
+  --color-accent-setup: var(--setup);
+  --color-accent-core: var(--core);
+  --color-accent-content: var(--content);
+  --color-accent-systems: var(--systems);
+  --color-accent-evaluator: var(--evaluator);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-sans), system-ui, sans-serif;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--border-bright);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--text-muted);
+}
+
+/* Pulse animation for status indicators */
+@keyframes pulse-glow {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+.animate-pulse-glow {
+  animation: pulse-glow 2s ease-in-out infinite;
+}
+
+/* Grid background pattern */
+.grid-bg {
+  background-image: radial-gradient(circle, var(--border) 1px, transparent 1px);
+  background-size: 24px 24px;
+  opacity: 0.03;
+}
+
+/* Resize handle cursor */
+.resize-handle {
+  cursor: ns-resize;
+}
+
+/* Terminal font */
+.font-terminal {
+  font-family: var(--font-mono), 'Courier New', monospace;
 }
