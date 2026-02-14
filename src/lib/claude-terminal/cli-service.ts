@@ -74,6 +74,8 @@ export interface CLIExecutionEvent {
   timestamp: number;
 }
 
+export type CLIEventListener = (event: CLIExecutionEvent) => void;
+
 export interface CLIExecution {
   id: string;
   projectPath: string;
@@ -85,6 +87,8 @@ export interface CLIExecution {
   endTime?: number;
   events: CLIExecutionEvent[];
   logFilePath?: string;
+  /** Listeners notified immediately when new events arrive */
+  listeners: Set<CLIEventListener>;
 }
 
 const globalForExecutions = globalThis as unknown as {
@@ -157,6 +161,7 @@ export function startExecution(
     startTime: Date.now(),
     events: [],
     logFilePath,
+    listeners: new Set(),
   };
 
   activeExecutions.set(executionId, execution);
@@ -178,6 +183,9 @@ export function startExecution(
   const emitEvent = (event: CLIExecutionEvent) => {
     execution.events.push(event);
     if (onEvent) onEvent(event);
+    for (const listener of execution.listeners) {
+      try { listener(event); } catch { /* ignore listener errors */ }
+    }
   };
 
   logMessage('=== Claude Terminal Execution Started ===');
@@ -299,6 +307,14 @@ export function startExecution(
 
 export function getExecution(executionId: string): CLIExecution | undefined {
   return activeExecutions.get(executionId);
+}
+
+/** Subscribe to live events from an execution. Returns an unsubscribe function. */
+export function subscribeToExecution(executionId: string, listener: CLIEventListener): (() => void) | null {
+  const execution = activeExecutions.get(executionId);
+  if (!execution) return null;
+  execution.listeners.add(listener);
+  return () => { execution.listeners.delete(listener); };
 }
 
 export function abortExecution(executionId: string): boolean {

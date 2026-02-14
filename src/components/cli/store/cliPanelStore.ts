@@ -30,6 +30,8 @@ interface CLIPanelStoreState {
   activeTabId: string | null;
   /** The single terminal currently shown inline (maximized) in its module view */
   maximizedTabId: string | null;
+  /** Persisted inline terminal height in pixels */
+  inlineTerminalHeight: number;
 
   createSession: (opts?: { label?: string; accentColor?: string; moduleId?: string; sessionKey?: string; projectPath?: string }) => string;
   removeSession: (id: string) => void;
@@ -43,6 +45,7 @@ interface CLIPanelStoreState {
   setCurrentExecution: (id: string, executionId: string | null, taskId: string | null) => void;
   updateLastActivity: (id: string) => void;
   setSessionProjectPath: (id: string, path: string) => void;
+  setInlineTerminalHeight: (height: number) => void;
   findSessionByModule: (moduleId: string) => string | null;
   findSessionByKey: (sessionKey: string) => string | null;
 }
@@ -61,6 +64,7 @@ export const useCLIPanelStore = create<CLIPanelStoreState>()(
       tabOrder: [],
       activeTabId: null,
       maximizedTabId: null,
+      inlineTerminalHeight: 300,
 
       createSession: (opts) => {
         const id = generateTabId();
@@ -190,6 +194,8 @@ export const useCLIPanelStore = create<CLIPanelStoreState>()(
         });
       },
 
+      setInlineTerminalHeight: (height) => set({ inlineTerminalHeight: height }),
+
       findSessionByModule: (moduleId) => {
         const { sessions, tabOrder } = get();
         for (const tabId of tabOrder) {
@@ -214,6 +220,7 @@ export const useCLIPanelStore = create<CLIPanelStoreState>()(
         tabOrder: state.tabOrder,
         activeTabId: state.activeTabId,
         maximizedTabId: state.maximizedTabId,
+        inlineTerminalHeight: state.inlineTerminalHeight,
       }),
     }
   )

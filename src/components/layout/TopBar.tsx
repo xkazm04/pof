@@ -2,8 +2,21 @@
 
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { useProjectStore } from '@/stores/projectStore';
+import type { RecentProject } from '@/stores/projectStore';
 import { useCLIPanelStore } from '@/components/cli/store/cliPanelStore';
-import { Gamepad2, ChevronDown, Pencil, Trash2, Check, X } from 'lucide-react';
+import {
+  Gamepad2, ChevronDown, Pencil, Trash2, Check, X,
+  Bell, FolderOpen, Plus, Clock, Loader2,
+} from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { useActivityFeedStore } from '@/stores/activityFeedStore';
+
+const dropdownMotion = {
+  initial: { opacity: 0, y: -4, scale: 0.98 },
+  animate: { opacity: 1, y: 0, scale: 1 },
+  exit: { opacity: 0, y: -4, scale: 0.98 },
+  transition: { duration: 0.15, ease: 'easeOut' as const },
+};
 
 export function TopBar() {
   const projectName = useProjectStore((s) => s.projectName);
@@ -11,14 +24,28 @@ export function TopBar() {
   const isSetupComplete = useProjectStore((s) => s.isSetupComplete);
   const setProject = useProjectStore((s) => s.setProject);
   const resetProject = useProjectStore((s) => s.resetProject);
+  const recentProjects = useProjectStore((s) => s.recentProjects);
+  const loadRecentProjects = useProjectStore((s) => s.loadRecentProjects);
+  const switchProject = useProjectStore((s) => s.switchProject);
+  const removeRecentProject = useProjectStore((s) => s.removeRecentProject);
+  const saveToRecent = useProjectStore((s) => s.saveToRecent);
 
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [renaming, setRenaming] = useState(false);
   const [renameValue, setRenameValue] = useState('');
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [showSwitcher, setShowSwitcher] = useState(false);
+  const [switching, setSwitching] = useState<string | null>(null);
 
   const dropdownRef = useRef<HTMLDivElement>(null);
   const renameInputRef = useRef<HTMLInputElement>(null);
+
+  // Load recent projects when dropdown opens
+  useEffect(() => {
+    if (dropdownOpen) {
+      loadRecentProjects();
+    }
+  }, [dropdownOpen, loadRecentProjects]);
 
   // Close dropdown on outside click
   useEffect(() => {
@@ -28,6 +55,7 @@ export function TopBar() {
         setDropdownOpen(false);
         setRenaming(false);
         setConfirmDelete(false);
+        setShowSwitcher(false);
       }
     };
     document.addEventListener('mousedown', handler);
@@ -46,9 +74,10 @@ export function TopBar() {
     setRenameValue(projectName);
     setRenaming(true);
     setConfirmDelete(false);
+    setShowSwitcher(false);
   };
 
-  const handleRenameConfirm = useCallback(async () => {
+  const handleRenameConfirm = useCallback(() => {
     const trimmed = renameValue.trim();
     if (!trimmed || trimmed === projectName) {
       setRenaming(false);
@@ -66,29 +95,11 @@ export function TopBar() {
 
     setProject({ projectName: trimmed, projectPath: newPath });
 
-    // Persist to SQLite
-    try {
-      await fetch('/api/settings', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ projectName: trimmed, projectPath: newPath }),
-      });
-    } catch {
-      // Non-critical
-    }
-
     setRenaming(false);
     setDropdownOpen(false);
   }, [renameValue, projectName, projectPath, setProject]);
 
-  const handleDelete = useCallback(async () => {
-    // Clear SQLite
-    try {
-      await fetch('/api/settings', { method: 'DELETE' });
-    } catch {
-      // Non-critical
-    }
-
+  const handleDelete = useCallback(() => {
     // Clear all CLI sessions
     const { tabOrder, removeSession } = useCLIPanelStore.getState();
     for (const tabId of [...tabOrder]) {
@@ -102,121 +113,365 @@ export function TopBar() {
     setConfirmDelete(false);
   }, [resetProject]);
 
+  const handleSwitchProject = useCallback(async (project: RecentProject) => {
+    if (project.projectPath === projectPath) {
+      setDropdownOpen(false);
+      setShowSwitcher(false);
+      return;
+    }
+
+    setSwitching(project.id);
+    // Clear CLI sessions before switching
+    const { tabOrder, removeSession } = useCLIPanelStore.getState();
+    for (const tabId of [...tabOrder]) {
+      removeSession(tabId);
+    }
+
+    await switchProject(project.id);
+    setSwitching(null);
+    setDropdownOpen(false);
+    setShowSwitcher(false);
+  }, [projectPath, switchProject]);
+
+  const handleNewProject = useCallback(() => {
+    // Save current before starting fresh
+    if (projectPath && isSetupComplete) {
+      saveToRecent();
+    }
+
+    // Clear CLI sessions
+    const { tabOrder, removeSession } = useCLIPanelStore.getState();
+    for (const tabId of [...tabOrder]) {
+      removeSession(tabId);
+    }
+
+    resetProject();
+    setDropdownOpen(false);
+    setShowSwitcher(false);
+  }, [projectPath, isSetupComplete, saveToRecent, resetProject]);
+
+  // Filter recent projects to exclude current
+  const otherProjects = recentProjects.filter((p) => p.projectPath !== projectPath);
+
   return (
-    <div className="h-11 flex items-center justify-between px-4 border-b border-[#1e1e3a] bg-[#0d0d22]">
+    <div className="h-11 flex items-center justify-between px-4 border-b border-border bg-surface-deep">
       <div className="flex items-center gap-3">
         <Gamepad2 className="w-5 h-5 text-[#00ff88]" />
-        <span className="text-sm font-semibold tracking-wide text-[#e0e4f0]">POF</span>
+        <span className="text-sm font-semibold tracking-wide text-text">POF</span>
         {isSetupComplete && projectName && (
           <>
-            <span className="text-[#2e2e5a]">/</span>
+            <span className="text-border-bright">/</span>
             <div className="relative" ref={dropdownRef}>
               <button
                 onClick={() => {
                   setDropdownOpen(!dropdownOpen);
                   setRenaming(false);
                   setConfirmDelete(false);
+                  setShowSwitcher(false);
                 }}
-                className="flex items-center gap-1 text-sm text-[#6b7294] hover:text-[#e0e4f0] transition-colors rounded px-1.5 py-0.5 hover:bg-[#111128]"
+                className="flex items-center gap-1 text-sm text-text-muted hover:text-text transition-colors rounded px-1.5 py-0.5 hover:bg-surface"
               >
                 {projectName}
                 <ChevronDown className={`w-3 h-3 transition-transform ${dropdownOpen ? 'rotate-180' : ''}`} />
               </button>
 
+              <AnimatePresence>
               {dropdownOpen && (
-                <div className="absolute top-full left-0 mt-1 w-64 bg-[#111128] border border-[#1e1e3a] rounded-lg shadow-xl z-50 overflow-hidden">
-                  {/* Rename */}
-                  {renaming ? (
-                    <div className="p-2 border-b border-[#1e1e3a]">
-                      <label className="text-[10px] text-[#6b7294] mb-1 block">Project Name</label>
-                      <div className="flex items-center gap-1">
-                        <input
-                          ref={renameInputRef}
-                          type="text"
-                          value={renameValue}
-                          onChange={(e) => setRenameValue(e.target.value)}
-                          onKeyDown={(e) => {
-                            if (e.key === 'Enter') handleRenameConfirm();
-                            if (e.key === 'Escape') setRenaming(false);
-                          }}
-                          className="flex-1 px-2 py-1 bg-[#0a0a1a] border border-[#2e2e5a] rounded text-xs text-[#e0e4f0] outline-none focus:border-[#00ff88]/50"
-                        />
+                <motion.div
+                  key="project-dropdown"
+                  {...dropdownMotion}
+                  className="absolute top-full left-0 mt-1 w-72 bg-surface border border-border rounded-lg shadow-xl z-50 overflow-hidden origin-top-left">
+                  {/* Switch Project */}
+                  {showSwitcher ? (
+                    <div className="border-b border-border">
+                      <div className="flex items-center justify-between px-3 py-2">
+                        <span className="text-xs font-medium text-text-muted">Switch Project</span>
                         <button
-                          onClick={handleRenameConfirm}
-                          disabled={!renameValue.trim()}
-                          className="p-1 text-[#00ff88] hover:bg-[#00ff88]/10 rounded disabled:opacity-40"
+                          onClick={() => setShowSwitcher(false)}
+                          className="p-0.5 text-text-muted hover:text-text hover:bg-surface-hover rounded"
                         >
-                          <Check className="w-3.5 h-3.5" />
-                        </button>
-                        <button
-                          onClick={() => setRenaming(false)}
-                          className="p-1 text-[#6b7294] hover:bg-[#1e1e3a] rounded"
-                        >
-                          <X className="w-3.5 h-3.5" />
+                          <X className="w-3 h-3" />
                         </button>
                       </div>
-                    </div>
-                  ) : (
-                    <button
-                      onClick={handleRenameStart}
-                      className="w-full flex items-center gap-2.5 px-3 py-2.5 text-xs text-[#e0e4f0] hover:bg-[#1a1a3a] transition-colors"
-                    >
-                      <Pencil className="w-3.5 h-3.5 text-[#6b7294]" />
-                      Rename Project
-                    </button>
-                  )}
-
-                  {/* Delete */}
-                  {confirmDelete ? (
-                    <div className="p-2 bg-red-500/5">
-                      <p className="text-[10px] text-red-400 mb-2">
-                        This will reset all settings and return to the setup wizard. Project files on disk are not deleted.
-                      </p>
-                      <div className="flex items-center gap-2">
-                        <button
-                          onClick={handleDelete}
-                          className="flex-1 px-2 py-1.5 bg-red-500/10 text-red-400 border border-red-500/20 rounded text-xs hover:bg-red-500/20 transition-colors"
-                        >
-                          Confirm Delete
-                        </button>
-                        <button
-                          onClick={() => setConfirmDelete(false)}
-                          className="px-2 py-1.5 text-[#6b7294] border border-[#1e1e3a] rounded text-xs hover:bg-[#1e1e3a] transition-colors"
-                        >
-                          Cancel
-                        </button>
-                      </div>
+                      {otherProjects.length === 0 ? (
+                        <div className="px-3 py-4 text-center text-xs text-text-muted">
+                          No other projects yet
+                        </div>
+                      ) : (
+                        <div className="max-h-64 overflow-y-auto">
+                          {otherProjects.map((project) => (
+                            <ProjectRow
+                              key={project.id}
+                              project={project}
+                              isSwitching={switching === project.id}
+                              onSwitch={() => handleSwitchProject(project)}
+                              onRemove={() => removeRecentProject(project.id)}
+                            />
+                          ))}
+                        </div>
+                      )}
+                      <button
+                        onClick={handleNewProject}
+                        className="w-full flex items-center gap-2.5 px-3 py-2.5 text-xs text-[#00ff88] hover:bg-[#00ff88]/8 transition-colors border-t border-border"
+                      >
+                        <Plus className="w-3.5 h-3.5" />
+                        New Project
+                      </button>
                     </div>
                   ) : (
                     <button
                       onClick={() => {
-                        setConfirmDelete(true);
+                        setShowSwitcher(true);
                         setRenaming(false);
+                        setConfirmDelete(false);
                       }}
-                      className="w-full flex items-center gap-2.5 px-3 py-2.5 text-xs text-red-400 hover:bg-red-500/10 transition-colors"
+                      className="w-full flex items-center gap-2.5 px-3 py-2.5 text-xs text-text hover:bg-surface-hover transition-colors"
                     >
-                      <Trash2 className="w-3.5 h-3.5" />
-                      Delete Project
+                      <FolderOpen className="w-3.5 h-3.5 text-text-muted" />
+                      Switch Project
+                      {otherProjects.length > 0 && (
+                        <span className="ml-auto text-2xs text-text-muted bg-surface-hover px-1.5 py-px rounded-full">
+                          {otherProjects.length}
+                        </span>
+                      )}
                     </button>
                   )}
 
-                  {/* Path info */}
-                  {projectPath && (
-                    <div className="px-3 py-2 border-t border-[#1e1e3a]">
-                      <span className="text-[10px] text-[#6b7294] block truncate" title={projectPath}>
-                        {projectPath}
-                      </span>
-                    </div>
+                  {/* Rename */}
+                  {!showSwitcher && (
+                    <>
+                      {renaming ? (
+                        <div className="p-2 border-b border-border">
+                          <label className="text-xs text-text-muted mb-1 block">Project Name</label>
+                          <div className="flex items-center gap-1">
+                            <input
+                              ref={renameInputRef}
+                              type="text"
+                              value={renameValue}
+                              onChange={(e) => setRenameValue(e.target.value)}
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter') handleRenameConfirm();
+                                if (e.key === 'Escape') setRenaming(false);
+                              }}
+                              className="flex-1 px-2 py-1 bg-background border border-border-bright rounded text-xs text-text outline-none focus:border-[#00ff88]/50"
+                            />
+                            <button
+                              onClick={handleRenameConfirm}
+                              disabled={!renameValue.trim()}
+                              className="p-1 text-[#00ff88] hover:bg-[#00ff88]/10 rounded disabled:opacity-40"
+                            >
+                              <Check className="w-3.5 h-3.5" />
+                            </button>
+                            <button
+                              onClick={() => setRenaming(false)}
+                              className="p-1 text-text-muted hover:bg-border rounded"
+                            >
+                              <X className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        </div>
+                      ) : (
+                        <button
+                          onClick={handleRenameStart}
+                          className="w-full flex items-center gap-2.5 px-3 py-2.5 text-xs text-text hover:bg-surface-hover transition-colors"
+                        >
+                          <Pencil className="w-3.5 h-3.5 text-text-muted" />
+                          Rename Project
+                        </button>
+                      )}
+
+                      {/* Delete */}
+                      {confirmDelete ? (
+                        <div className="p-2 bg-red-500/5">
+                          <p className="text-xs text-red-400 mb-2">
+                            This will reset all settings and return to the setup wizard. Project files on disk are not deleted.
+                          </p>
+                          <div className="flex items-center gap-2">
+                            <button
+                              onClick={handleDelete}
+                              className="flex-1 px-2 py-1.5 bg-red-500/10 text-red-400 border border-red-500/20 rounded text-xs hover:bg-red-500/20 transition-colors"
+                            >
+                              Confirm Delete
+                            </button>
+                            <button
+                              onClick={() => setConfirmDelete(false)}
+                              className="px-2 py-1.5 text-text-muted border border-border rounded text-xs hover:bg-border transition-colors"
+                            >
+                              Cancel
+                            </button>
+                          </div>
+                        </div>
+                      ) : (
+                        <button
+                          onClick={() => {
+                            setConfirmDelete(true);
+                            setRenaming(false);
+                          }}
+                          className="w-full flex items-center gap-2.5 px-3 py-2.5 text-xs text-red-400 hover:bg-red-500/10 transition-colors"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                          Delete Project
+                        </button>
+                      )}
+
+                      {/* Path info */}
+                      {projectPath && (
+                        <div className="px-3 py-2 border-t border-border">
+                          <span className="text-xs text-text-muted block truncate" title={projectPath}>
+                            {projectPath}
+                          </span>
+                        </div>
+                      )}
+                    </>
                   )}
-                </div>
+                </motion.div>
               )}
+              </AnimatePresence>
             </div>
           </>
         )}
       </div>
-      <div className="flex items-center gap-2 text-xs text-[#6b7294]">
-        <span>UE5 + C++ + Claude</span>
+      <div className="flex items-center gap-3">
+        <span className="text-xs text-[#4a4e6a]">UE5 + C++</span>
+        <NotificationBadge />
       </div>
     </div>
+  );
+}
+
+// --- Project row in the switcher list ---
+
+function ProjectRow({ project, isSwitching, onSwitch, onRemove }: {
+  project: RecentProject;
+  isSwitching: boolean;
+  onSwitch: () => void;
+  onRemove: () => void;
+}) {
+  const [confirmRemove, setConfirmRemove] = useState(false);
+  const pct = project.checklistTotal > 0
+    ? Math.round((project.checklistDone / project.checklistTotal) * 100)
+    : 0;
+
+  const timeAgo = formatTimeAgo(project.lastOpenedAt);
+
+  return (
+    <div className="group relative">
+      <button
+        onClick={onSwitch}
+        disabled={isSwitching}
+        className="w-full flex items-start gap-2.5 px-3 py-2 text-left hover:bg-surface-hover transition-colors disabled:opacity-60"
+      >
+        <div className="flex-shrink-0 mt-0.5 w-7 h-7 rounded bg-surface-hover flex items-center justify-center">
+          {isSwitching ? (
+            <Loader2 className="w-3.5 h-3.5 text-[#00ff88] animate-spin" />
+          ) : (
+            <Gamepad2 className="w-3.5 h-3.5 text-text-muted" />
+          )}
+        </div>
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-medium text-text truncate">{project.projectName}</span>
+            <span className="text-2xs text-text-muted flex-shrink-0">UE{project.ueVersion}</span>
+          </div>
+          <div className="flex items-center gap-2 mt-0.5">
+            {/* Mini progress bar */}
+            <div className="flex items-center gap-1.5">
+              <div className="w-12 h-1 rounded-full bg-border overflow-hidden">
+                <div
+                  className="h-full rounded-full transition-all"
+                  style={{
+                    width: `${pct}%`,
+                    backgroundColor: pct >= 75 ? '#00ff88' : pct >= 40 ? '#f59e0b' : '#6b7294',
+                  }}
+                />
+              </div>
+              <span className="text-2xs text-text-muted">{pct}%</span>
+            </div>
+            <span className="text-2xs text-text-muted flex items-center gap-0.5">
+              <Clock className="w-2.5 h-2.5" />
+              {timeAgo}
+            </span>
+          </div>
+        </div>
+      </button>
+      {/* Remove button on hover */}
+      {confirmRemove ? (
+        <div className="absolute right-1 top-1 flex items-center gap-0.5 bg-surface border border-border rounded px-1 py-0.5">
+          <button
+            onClick={(e) => { e.stopPropagation(); onRemove(); }}
+            className="text-2xs text-red-400 hover:text-red-300 px-1"
+          >
+            Remove
+          </button>
+          <button
+            onClick={(e) => { e.stopPropagation(); setConfirmRemove(false); }}
+            className="text-2xs text-text-muted hover:text-text px-1"
+          >
+            Cancel
+          </button>
+        </div>
+      ) : (
+        <button
+          onClick={(e) => { e.stopPropagation(); setConfirmRemove(true); }}
+          className="absolute right-2 top-2 p-0.5 text-text-muted hover:text-red-400 opacity-0 group-hover:opacity-100 transition-opacity rounded hover:bg-red-500/10"
+          title="Remove from recent"
+        >
+          <X className="w-3 h-3" />
+        </button>
+      )}
+    </div>
+  );
+}
+
+// --- Helper ---
+
+function formatTimeAgo(isoDate: string): string {
+  const now = Date.now();
+  const then = new Date(isoDate).getTime();
+  const diffMs = now - then;
+
+  if (isNaN(then)) return 'Unknown';
+
+  const minutes = Math.floor(diffMs / 60000);
+  if (minutes < 1) return 'Just now';
+  if (minutes < 60) return `${minutes}m ago`;
+
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours}h ago`;
+
+  const days = Math.floor(hours / 24);
+  if (days < 7) return `${days}d ago`;
+
+  const weeks = Math.floor(days / 7);
+  if (weeks < 5) return `${weeks}w ago`;
+
+  const months = Math.floor(days / 30);
+  return `${months}mo ago`;
+}
+
+// --- Notification badge (unchanged) ---
+
+function NotificationBadge() {
+  const unreadCount = useActivityFeedStore((s) => s.events.filter((e) => !e.dismissed).length);
+  const toggleOpen = useActivityFeedStore((s) => s.toggleOpen);
+  const isOpen = useActivityFeedStore((s) => s.isOpen);
+
+  return (
+    <button
+      onClick={toggleOpen}
+      className={`relative p-1.5 rounded-md transition-colors ${
+        isOpen
+          ? 'bg-[#ef444418] text-[#ef4444]'
+          : 'text-text-muted hover:text-text hover:bg-surface'
+      }`}
+      title="Activity feed"
+    >
+      <Bell className="w-4 h-4" />
+      {unreadCount > 0 && (
+        <span className="absolute -top-0.5 -right-0.5 min-w-[14px] h-[14px] flex items-center justify-center px-0.5 text-2xs font-bold text-white bg-[#ef4444] rounded-full leading-none">
+          {unreadCount > 9 ? '9+' : unreadCount}
+        </span>
+      )}
+    </button>
   );
 }

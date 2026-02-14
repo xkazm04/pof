@@ -14,7 +14,7 @@ export function Tooltip({ children, content }: TooltipProps) {
     <div className="relative inline-flex" onMouseEnter={() => setShow(true)} onMouseLeave={() => setShow(false)}>
       {children}
       {show && (
-        <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 px-2 py-1 bg-[#1a1a3a] border border-[#2e2e5a] rounded text-[10px] text-[#e0e4f0] whitespace-nowrap z-50">
+        <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 px-2 py-1 bg-surface-hover border border-border-bright rounded text-2xs text-text whitespace-nowrap z-50">
           {content}
         </div>
       )}

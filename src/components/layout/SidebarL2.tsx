@@ -1,45 +1,40 @@
 'use client';
 
+import { memo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { Check } from 'lucide-react';
 import { useNavigationStore } from '@/stores/navigationStore';
 import { useModuleStore } from '@/stores/moduleStore';
-import { useProjectStore } from '@/stores/projectStore';
-import { getSubModulesForCategory, CATEGORY_MAP } from '@/lib/module-registry';
+import { getSubModulesForCategory, SUB_MODULE_MAP, CATEGORY_MAP } from '@/lib/module-registry';
+import { StaggerContainer, StaggerItem } from '@/components/ui/Stagger';
 import type { SubModuleId } from '@/types/modules';
+
+const RING_SIZE = 16;
+const RING_STROKE = 2;
+const RING_RADIUS = (RING_SIZE - RING_STROKE) / 2;
+const RING_CIRCUMFERENCE = 2 * Math.PI * RING_RADIUS;
 
 export function SidebarL2() {
   const activeCategory = useNavigationStore((s) => s.activeCategory);
   const activeSubModule = useNavigationStore((s) => s.activeSubModule);
   const setActiveSubModule = useNavigationStore((s) => s.setActiveSubModule);
-  const moduleHealth = useModuleStore((s) => s.moduleHealth);
-  const gameGenre = useProjectStore((s) => s.gameGenre);
 
   const category = activeCategory ? CATEGORY_MAP[activeCategory] : null;
-  const subModules = activeCategory ? getSubModulesForCategory(activeCategory, gameGenre) : [];
-
-  const getStatusColor = (moduleId: SubModuleId) => {
-    const health = moduleHealth[moduleId];
-    if (!health || health.status === 'not-started') return '#2e2e5a';
-    if (health.status === 'healthy') return '#00ff88';
-    if (health.status === 'in-progress') return '#f59e0b';
-    return '#ef4444';
-  };
-
-  const showNoGenreHint = activeCategory === 'core-engine' && subModules.length === 0;
+  const subModules = activeCategory ? getSubModulesForCategory(activeCategory) : [];
 
   return (
     <AnimatePresence mode="wait">
-      {category && (subModules.length > 0 || showNoGenreHint) && (
+      {category && subModules.length > 0 && (
         <motion.div
           key={activeCategory}
           initial={{ width: 0, opacity: 0 }}
           animate={{ width: 180, opacity: 1 }}
           exit={{ width: 0, opacity: 0 }}
           transition={{ duration: 0.2, ease: 'easeInOut' }}
-          className="h-full border-r border-[#1e1e3a] bg-[#0d0d22] overflow-hidden"
+          className="h-full border-r border-border bg-surface-deep overflow-hidden"
         >
           <div className="w-[180px] flex flex-col h-full">
-            <div className="px-3 py-3 border-b border-[#1e1e3a]">
+            <div className="px-3 py-3 border-b border-border">
               <h2
                 className="text-xs font-semibold uppercase tracking-wider"
                 style={{ color: category.accentColor }}
@@ -47,48 +42,111 @@ export function SidebarL2() {
                 {category.label}
               </h2>
             </div>
-            {showNoGenreHint ? (
-              <div className="flex-1 flex items-center justify-center px-4">
-                <p className="text-[11px] text-[#6b7294] text-center leading-relaxed">
-                  Select a game genre in Project Setup to see your development roadmap.
-                </p>
-              </div>
-            ) : (
-            <div className="flex-1 overflow-y-auto py-2">
+            <StaggerContainer className="flex-1 overflow-y-auto py-2">
               {subModules.map((mod) => {
                 const isActive = activeSubModule === mod.id;
                 const Icon = mod.icon;
                 return (
+                  <StaggerItem key={mod.id}>
                   <button
-                    key={mod.id}
                     onClick={() => setActiveSubModule(mod.id)}
                     className={`
                       w-full flex items-center gap-2.5 px-3 py-2 text-left transition-all duration-150
                       ${isActive
-                        ? 'bg-[#1a1a3a]'
-                        : 'hover:bg-[#111128]'
+                        ? 'bg-surface-hover'
+                        : 'hover:bg-surface'
                       }
                     `}
                   >
                     <Icon
                       className="w-4 h-4 flex-shrink-0"
-                      style={{ color: isActive ? category.accentColor : '#6b7294' }}
+                      style={{ color: isActive ? category.accentColor : 'var(--text-muted)' }}
                     />
-                    <span className={`text-xs truncate ${isActive ? 'text-[#e0e4f0]' : 'text-[#6b7294]'}`}>
+                    <span className={`text-xs truncate ${isActive ? 'text-text' : 'text-text-muted'}`}>
                       {mod.label}
                     </span>
-                    <div
-                      className="w-1.5 h-1.5 rounded-full ml-auto flex-shrink-0"
-                      style={{ backgroundColor: getStatusColor(mod.id) }}
+                    <ProgressRing
+                      moduleId={mod.id}
+                      accentColor={category.accentColor}
                     />
                   </button>
+                  </StaggerItem>
                 );
               })}
-            </div>
-            )}
+            </StaggerContainer>
           </div>
         </motion.div>
       )}
     </AnimatePresence>
   );
 }
+
+// ─── Progress Ring ───────────────────────────────────────────────────────────
+
+const ProgressRing = memo(function ProgressRing({
+  moduleId,
+  accentColor,
+}: {
+  moduleId: SubModuleId;
+  accentColor: string;
+}) {
+  const progress = useModuleStore((s) => s.checklistProgress[moduleId]);
+  const mod = SUB_MODULE_MAP[moduleId];
+  const total = mod?.checklist?.length ?? 0;
+
+  // No checklist → no ring, show nothing
+  if (total === 0) return null;
+
+  const completed = progress
+    ? Object.values(progress).filter(Boolean).length
+    : 0;
+  const pct = Math.min(completed / total, 1);
+  const dashOffset = RING_CIRCUMFERENCE * (1 - pct);
+
+  // 100% complete → checkmark
+  if (pct >= 1) {
+    return (
+      <div
+        className="ml-auto flex-shrink-0 w-4 h-4 rounded-full flex items-center justify-center"
+        style={{ backgroundColor: `${accentColor}20` }}
+      >
+        <Check className="w-2.5 h-2.5" style={{ color: accentColor }} strokeWidth={3} />
+      </div>
+    );
+  }
+
+  return (
+    <svg
+      className="ml-auto flex-shrink-0"
+      width={RING_SIZE}
+      height={RING_SIZE}
+      viewBox={`0 0 ${RING_SIZE} ${RING_SIZE}`}
+      style={{ transform: 'rotate(-90deg)' }}
+    >
+      {/* Track */}
+      <circle
+        cx={RING_SIZE / 2}
+        cy={RING_SIZE / 2}
+        r={RING_RADIUS}
+        fill="none"
+        stroke="var(--border)"
+        strokeWidth={RING_STROKE}
+      />
+      {/* Fill */}
+      {pct > 0 && (
+        <circle
+          cx={RING_SIZE / 2}
+          cy={RING_SIZE / 2}
+          r={RING_RADIUS}
+          fill="none"
+          stroke={accentColor}
+          strokeWidth={RING_STROKE}
+          strokeDasharray={RING_CIRCUMFERENCE}
+          strokeDashoffset={dashOffset}
+          strokeLinecap="round"
+          style={{ transition: 'stroke-dashoffset 0.4s ease' }}
+        />
+      )}
+    </svg>
+  );
+});

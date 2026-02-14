@@ -1,47 +1,52 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { motion } from 'framer-motion';
+import { Gamepad2 } from 'lucide-react';
 import { useProjectStore } from '@/stores/projectStore';
 import { TopBar } from './TopBar';
 import { Sidebar } from './Sidebar';
 import { ModuleRenderer } from './ModuleRenderer';
 import { CLIBottomPanel } from './CLIBottomPanel';
+import { ActivityFeedPanel } from './ActivityFeedPanel';
 import { SetupWizard } from '@/components/modules/project-setup/SetupWizard';
-import type { GameGenre, ExperienceLevel } from '@/stores/projectStore';
+import { useActivityFeedBridge } from '@/hooks/useActivityFeedBridge';
+import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts';
+import { useFileWatcher } from '@/hooks/useFileWatcher';
 
 export function AppShell() {
   const isSetupComplete = useProjectStore((s) => s.isSetupComplete);
-  const setProject = useProjectStore((s) => s.setProject);
-  const completeSetup = useProjectStore((s) => s.completeSetup);
   const [hydrated, setHydrated] = useState(false);
 
-  // Hydrate from SQLite on mount — server is source of truth
+  // Bridge CLI/evaluator events into activity feed
+  useActivityFeedBridge();
+
+  // Global keyboard shortcuts (Ctrl+B sidebar, Ctrl+J terminal, Ctrl+1-5 categories)
+  useKeyboardShortcuts();
+
+  // Watch UE5 Source/ for file changes → auto-verify checklist items
+  useFileWatcher();
+
+  // Wait for Zustand persist to rehydrate from localStorage
   useEffect(() => {
-    fetch('/api/settings')
-      .then((res) => res.json())
-      .then((settings: Record<string, string>) => {
-        if (settings.isSetupComplete === 'true') {
-          setProject({
-            projectName: settings.projectName || '',
-            projectPath: settings.projectPath || '',
-            ueVersion: settings.ueVersion || '5.5.4',
-            gameGenre: (settings.gameGenre as GameGenre) || null,
-            experienceLevel: (settings.experienceLevel as ExperienceLevel) || 'intermediate',
-            isNewProject: settings.isNewProject === 'true',
-          });
-          completeSetup();
-        }
-      })
-      .catch(() => {
-        // Fall back to localStorage (zustand persist)
-      })
-      .finally(() => setHydrated(true));
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+    setHydrated(true);
+  }, []);
 
   if (!hydrated) {
     return (
-      <div className="h-screen flex items-center justify-center bg-[#0a0a1a]">
-        <div className="w-6 h-6 border-2 border-[#00ff88]/30 border-t-[#00ff88] rounded-full animate-spin" />
+      <div className="h-screen flex items-center justify-center bg-background">
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.2 }}
+          className="flex flex-col items-center gap-3"
+        >
+          <Gamepad2 className="w-12 h-12 text-[#00ff88]" />
+          <span className="text-lg font-semibold text-text tracking-wide">
+            POF
+          </span>
+          <div className="w-5 h-5 border-2 border-[#00ff88]/30 border-t-[#00ff88] rounded-full animate-spin" />
+        </motion.div>
       </div>
     );
   }
@@ -51,11 +56,12 @@ export function AppShell() {
   }
 
   return (
-    <div className="h-screen flex flex-col overflow-hidden bg-[#0a0a1a]">
+    <div className="h-screen flex flex-col overflow-hidden bg-background">
       <TopBar />
       <div className="flex-1 flex overflow-hidden">
         <Sidebar />
         <ModuleRenderer />
+        <ActivityFeedPanel />
       </div>
       <CLIBottomPanel />
     </div>

@@ -17,7 +17,7 @@ export function SidebarL1() {
   };
 
   return (
-    <div className="w-14 flex flex-col items-center py-3 gap-1 border-r border-[#1e1e3a] bg-[#0a0a1a]">
+    <div className="w-14 flex flex-col items-center py-3 gap-1 border-r border-border bg-background">
       {CATEGORIES.map((cat) => {
         const Icon = cat.icon;
         const isActive = activeCategory === cat.id;
@@ -29,8 +29,8 @@ export function SidebarL1() {
             className={`
               relative w-10 h-10 flex items-center justify-center rounded-lg transition-all duration-200
               ${isActive
-                ? 'bg-[#1a1a3a]'
-                : 'hover:bg-[#111128]'
+                ? 'bg-surface-hover'
+                : 'hover:bg-surface'
               }
             `}
             title={cat.label}
@@ -43,7 +43,7 @@ export function SidebarL1() {
             )}
             <Icon
               className="w-5 h-5 transition-colors duration-200"
-              style={{ color: isActive ? cat.accentColor : '#6b7294' }}
+              style={{ color: isActive ? cat.accentColor : 'var(--text-muted)' }}
             />
           </button>
         );

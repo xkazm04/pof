@@ -16,7 +16,7 @@ export function ProgressRing({ value, size = 48, strokeWidth = 4, color = '#00ff
   return (
     <div className={`relative inline-flex items-center justify-center ${className}`}>
       <svg width={size} height={size} className="-rotate-90">
-        <circle cx={size / 2} cy={size / 2} r={radius} stroke="#1e1e3a" strokeWidth={strokeWidth} fill="none" />
+        <circle cx={size / 2} cy={size / 2} r={radius} stroke="var(--border)" strokeWidth={strokeWidth} fill="none" />
         <circle
           cx={size / 2} cy={size / 2} r={radius}
           stroke={color} strokeWidth={strokeWidth} fill="none"

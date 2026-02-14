@@ -1,7 +1,8 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest } from 'next/server';
 import fs from 'fs/promises';
 import path from 'path';
 import os from 'os';
+import { apiSuccess, apiError } from '@/lib/api-utils';
 
 interface ListResponse {
   path: string;
@@ -448,20 +449,17 @@ function resolvePath(input: string): string {
   return input;
 }
 
-async function handleList(requestedPath: string): Promise<NextResponse<ListResponse>> {
+async function handleList(requestedPath: string) {
   const normalized = path.normalize(resolvePath(requestedPath));
 
   if (!(await directoryExists(normalized))) {
-    return NextResponse.json(
-      {
-        path: normalized,
-        parent: path.dirname(normalized),
-        directories: [],
-        uprojectFiles: [],
-        isUEProject: false,
-      },
-      { status: 404 }
-    );
+    return apiSuccess({
+      path: normalized,
+      parent: path.dirname(normalized),
+      directories: [] as { name: string; path: string; hasUProject: boolean }[],
+      uprojectFiles: [] as string[],
+      isUEProject: false,
+    });
   }
 
   const [directories, uprojectFiles] = await Promise.all([
@@ -471,13 +469,139 @@ async function handleList(requestedPath: string): Promise<NextResponse<ListRespo
 
   const parent = path.dirname(normalized);
 
-  return NextResponse.json({
+  return apiSuccess({
     path: normalized,
     parent: parent !== normalized ? parent : null,
     directories,
     uprojectFiles,
     isUEProject: uprojectFiles.length > 0,
   });
+}
+
+// ── Bootstrap command generation ──
+
+interface BootstrapResult {
+  missingTools: string[];
+  commands: string[];
+  prompt: string;
+  allInstalled: boolean;
+}
+
+function generateBootstrapCommands(tools: DetectedTool[], engines: DetectedEngine[]): BootstrapResult {
+  const missing: string[] = [];
+  const commands: string[] = [];
+
+  const vs = tools.find((t) => t.id === 'vs');
+  const msvc = tools.find((t) => t.id === 'msvc');
+  const wsdk = tools.find((t) => t.id === 'wsdk');
+  const dotnet = tools.find((t) => t.id === 'dotnet');
+
+  // VS + MSVC + Windows SDK are bundled via VS workload install
+  if (!vs?.ok || !msvc?.ok || !wsdk?.ok) {
+    if (!vs?.ok) {
+      missing.push('Visual Studio 2022');
+      commands.push(
+        'winget install Microsoft.VisualStudio.2022.Community --silent --override "--add Microsoft.VisualStudio.Workload.NativeDesktopDevelopment --add Microsoft.VisualStudio.Component.VC.Tools.x86.x64 --add Microsoft.VisualStudio.Component.Windows11SDK.22621 --includeRecommended"'
+      );
+    } else if (!msvc?.ok || !wsdk?.ok) {
+      // VS is installed but missing workloads — modify existing installation
+      const addParts: string[] = [];
+      if (!msvc?.ok) {
+        missing.push('C++ Build Tools (MSVC)');
+        addParts.push('--add Microsoft.VisualStudio.Workload.NativeDesktopDevelopment');
+        addParts.push('--add Microsoft.VisualStudio.Component.VC.Tools.x86.x64');
+      }
+      if (!wsdk?.ok) {
+        missing.push('Windows SDK');
+        addParts.push('--add Microsoft.VisualStudio.Component.Windows11SDK.22621');
+      }
+      commands.push(
+        `"C:\\Program Files\\Microsoft Visual Studio\\Installer\\vs_installer.exe" modify --installPath "${vs.path}" ${addParts.join(' ')} --quiet`
+      );
+    }
+  }
+
+  if (!dotnet?.ok) {
+    missing.push('.NET 8.0 Runtime');
+    commands.push('winget install Microsoft.DotNet.Runtime.8 --silent');
+  }
+
+  if (engines.length === 0) {
+    missing.push('Unreal Engine');
+    // Can't install UE via winget — direct to Epic Games Launcher
+    commands.push('winget install EpicGames.EpicGamesLauncher --silent');
+  }
+
+  const allInstalled = missing.length === 0;
+
+  // Build CLI prompt
+  let prompt = '';
+  if (!allInstalled) {
+    const commandBlock = commands.map((cmd, i) => `${i + 1}. \`${cmd}\``).join('\n');
+    prompt = `Install the following missing developer tools for UE5 C++ development on this Windows machine.
+
+MISSING TOOLS: ${missing.join(', ')}
+
+Run these commands in sequence (each requires admin privileges — use PowerShell with elevation if needed):
+
+${commandBlock}
+
+INSTRUCTIONS:
+- Run each command one at a time and wait for it to complete before running the next.
+- If winget is not available, download and install from the direct URLs instead:
+  - Visual Studio 2022 Community: https://visualstudio.microsoft.com/downloads/
+  - .NET 8.0 Runtime: https://dotnet.microsoft.com/en-us/download/dotnet/8.0
+  - Epic Games Launcher: https://www.unrealengine.com/download
+- After all installs complete, report which tools were successfully installed.
+- Do NOT use TodoWrite.`;
+  }
+
+  return { missingTools: missing, commands, prompt, allInstalled };
+}
+
+// ── Environment manifest ──
+
+interface EnvironmentManifest {
+  version: 1;
+  platform: string;
+  generatedAt: string;
+  tools: {
+    id: string;
+    name: string;
+    installed: boolean;
+    detail: string;
+    installCommand?: string;
+  }[];
+  engines: {
+    version: string;
+    path: string;
+  }[];
+}
+
+function buildEnvironmentManifest(tools: DetectedTool[], engines: DetectedEngine[]): EnvironmentManifest {
+  const installCommands: Record<string, string> = {
+    vs: 'winget install Microsoft.VisualStudio.2022.Community --silent --override "--add Microsoft.VisualStudio.Workload.NativeDesktopDevelopment --includeRecommended"',
+    msvc: '(included with VS Desktop Development workload)',
+    wsdk: '(included with VS Desktop Development workload)',
+    dotnet: 'winget install Microsoft.DotNet.Runtime.8 --silent',
+  };
+
+  return {
+    version: 1,
+    platform: process.platform,
+    generatedAt: new Date().toISOString(),
+    tools: tools.map((t) => ({
+      id: t.id,
+      name: t.name,
+      installed: t.ok,
+      detail: t.detail,
+      installCommand: installCommands[t.id],
+    })),
+    engines: engines.map((e) => ({
+      version: e.version,
+      path: e.path,
+    })),
+  };
 }
 
 export async function POST(request: NextRequest) {
@@ -488,47 +612,58 @@ export async function POST(request: NextRequest) {
     switch (action) {
       case 'list': {
         if (!requestedPath) {
-          return NextResponse.json({ error: 'path is required for list action' }, { status: 400 });
+          return apiError('path is required for list action', 400);
         }
         return handleList(requestedPath);
       }
 
       case 'detect-projects': {
         const projects = await scanForProjects();
-        return NextResponse.json({ projects } satisfies DetectProjectsResponse);
+        return apiSuccess({ projects } satisfies DetectProjectsResponse);
       }
 
       case 'detect-engines': {
         const engines = await scanForEngines();
-        return NextResponse.json({ engines } satisfies DetectEnginesResponse);
+        return apiSuccess({ engines } satisfies DetectEnginesResponse);
       }
 
       case 'detect-tooling': {
         const tools = await scanForTooling();
-        return NextResponse.json({ tools } satisfies DetectToolingResponse);
+        return apiSuccess({ tools } satisfies DetectToolingResponse);
       }
 
       case 'validate-path': {
         if (!requestedPath) {
-          return NextResponse.json({ error: 'path is required for validate-path action' }, { status: 400 });
+          return apiError('path is required for validate-path action', 400);
         }
         const normalized = path.normalize(resolvePath(requestedPath));
         const exists = await directoryExists(normalized);
-        return NextResponse.json({ exists, path: normalized } satisfies ValidatePathResponse);
+        return apiSuccess({ exists, path: normalized } satisfies ValidatePathResponse);
       }
 
       case 'drives': {
         const drives = await getWindowsDrives();
-        return NextResponse.json({ drives } satisfies DrivesResponse);
+        return apiSuccess({ drives } satisfies DrivesResponse);
+      }
+
+      case 'generate-bootstrap': {
+        const tools = await scanForTooling();
+        const engines = await scanForEngines();
+        const bootstrap = generateBootstrapCommands(tools, engines);
+        return apiSuccess(bootstrap);
+      }
+
+      case 'export-manifest': {
+        const manifestTools = await scanForTooling();
+        const manifestEngines = await scanForEngines();
+        const manifest = buildEnvironmentManifest(manifestTools, manifestEngines);
+        return apiSuccess({ manifest });
       }
 
       default:
-        return NextResponse.json({ error: `Unknown action: ${action}` }, { status: 400 });
+        return apiError(`Unknown action: ${action}`, 400);
     }
   } catch (error) {
-    return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'Internal server error' },
-      { status: 500 }
-    );
+    return apiError(error instanceof Error ? error.message : 'Internal server error');
   }
 }

@@ -17,10 +17,10 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
     };
 
     const variantClasses = {
-      solid: `bg-[#1a1a3a] text-[#e0e4f0] border border-[#2e2e5a] hover:bg-[#2e2e5a]`,
-      outline: `bg-transparent text-[#e0e4f0] border border-[#2e2e5a] hover:bg-[#1a1a3a]`,
-      ghost: `bg-transparent text-[#6b7294] hover:text-[#e0e4f0] hover:bg-[#1a1a3a]`,
-      glass: `bg-[#111128]/50 backdrop-blur-sm text-[#e0e4f0] border border-[#1e1e3a] hover:bg-[#1a1a3a]/50`,
+      solid: `bg-surface-hover text-text border border-border-bright hover:bg-border-bright`,
+      outline: `bg-transparent text-text border border-border-bright hover:bg-surface-hover`,
+      ghost: `bg-transparent text-text-muted hover:text-text hover:bg-surface-hover`,
+      glass: `bg-surface/50 backdrop-blur-sm text-text border border-border hover:bg-surface-hover/50`,
     };
 
     return (

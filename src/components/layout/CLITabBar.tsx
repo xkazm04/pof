@@ -4,6 +4,8 @@ import { X, Plus, Terminal, Loader2, Radar } from 'lucide-react';
 import { useCLIPanelStore } from '@/components/cli/store/cliPanelStore';
 
 interface CLITabBarProps {
+  /** CSS class for the container — use "contents" to dissolve wrapper into parent flex */
+  className?: string;
   /** If provided, only show these tabs (filtered by parent) */
   filteredTabOrder?: string[];
   /** Override which tab appears active */
@@ -12,7 +14,7 @@ interface CLITabBarProps {
   onTabSelect?: (tabId: string) => void;
 }
 
-export function CLITabBar({ filteredTabOrder, activeTabId: activeTabIdProp, onTabSelect }: CLITabBarProps = {}) {
+export function CLITabBar({ className, filteredTabOrder, activeTabId: activeTabIdProp, onTabSelect }: CLITabBarProps) {
   const sessions = useCLIPanelStore((s) => s.sessions);
   const storeTabOrder = useCLIPanelStore((s) => s.tabOrder);
   const storeActiveTabId = useCLIPanelStore((s) => s.activeTabId);
@@ -25,7 +27,7 @@ export function CLITabBar({ filteredTabOrder, activeTabId: activeTabIdProp, onTa
   const handleTabSelect = onTabSelect ?? setActiveTab;
 
   return (
-    <div className="flex items-center gap-0.5 px-2 py-1 bg-[#0d0d22] border-b border-[#1e1e3a] overflow-x-auto">
+    <div className={className ?? "flex items-center gap-0.5 px-2 py-1 bg-surface-deep border-b border-border overflow-x-auto"}>
       {tabOrder.map((tabId) => {
         const session = sessions[tabId];
         if (!session) return null;
@@ -40,8 +42,8 @@ export function CLITabBar({ filteredTabOrder, activeTabId: activeTabIdProp, onTa
             className={`
               flex items-center gap-1.5 px-2.5 py-1 rounded-t text-xs transition-all duration-150 min-w-0 max-w-[160px] group
               ${isActive
-                ? 'bg-[#111128] text-[#e0e4f0] border-t-2'
-                : 'text-[#6b7294] hover:text-[#e0e4f0] hover:bg-[#111128]/50'
+                ? 'bg-surface text-text border-t-2'
+                : 'text-text-muted hover:text-text hover:bg-surface/50'
               }
             `}
             style={isActive ? { borderTopColor: session.accentColor || '#3b82f6' } : undefined}
@@ -70,7 +72,7 @@ export function CLITabBar({ filteredTabOrder, activeTabId: activeTabIdProp, onTa
       {storeTabOrder.length < 8 && (
         <button
           onClick={() => createSession({ label: `Terminal ${storeTabOrder.length + 1}` })}
-          className="flex items-center justify-center w-6 h-6 rounded text-[#6b7294] hover:text-[#e0e4f0] hover:bg-[#111128] transition-all"
+          className="flex items-center justify-center w-6 h-6 rounded text-text-muted hover:text-text hover:bg-surface transition-all"
           title="New tab"
         >
           <Plus className="w-3 h-3" />

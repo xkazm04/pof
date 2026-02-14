@@ -3,12 +3,13 @@
  * Copied from vibeman as-is.
  */
 
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest } from 'next/server';
 import {
   startExecution,
   abortExecution,
   getExecution,
 } from '@/lib/claude-terminal/cli-service';
+import { apiSuccess, apiError } from '@/lib/api-utils';
 
 interface QueryRequestBody {
   projectPath: string;
@@ -22,27 +23,23 @@ export async function POST(request: NextRequest) {
     const { projectPath, prompt, resumeSessionId } = body;
 
     if (!projectPath) {
-      return NextResponse.json({ error: 'Project path is required' }, { status: 400 });
+      return apiError('Project path is required', 400);
     }
     if (!prompt || !prompt.trim()) {
-      return NextResponse.json({ error: 'Prompt is required' }, { status: 400 });
+      return apiError('Prompt is required', 400);
     }
 
     const executionId = startExecution(projectPath, prompt, resumeSessionId);
     const execution = getExecution(executionId);
 
-    return NextResponse.json({
-      success: true,
+    return apiSuccess({
       executionId,
       streamUrl: `/api/claude-terminal/stream?executionId=${executionId}`,
       logFilePath: execution?.logFilePath ?? null,
     });
   } catch (error) {
     console.error('Claude Terminal query error:', error);
-    return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'Failed to start execution' },
-      { status: 500 }
-    );
+    return apiError(error instanceof Error ? error.message : 'Failed to start execution');
   }
 }
 
@@ -52,25 +49,22 @@ export async function DELETE(request: NextRequest) {
     const executionId = searchParams.get('executionId');
 
     if (!executionId) {
-      return NextResponse.json({ error: 'Execution ID is required' }, { status: 400 });
+      return apiError('Execution ID is required', 400);
     }
 
     const execution = getExecution(executionId);
     if (!execution) {
-      return NextResponse.json({ error: 'Execution not found' }, { status: 404 });
+      return apiError('Execution not found', 404);
     }
 
     const aborted = abortExecution(executionId);
-    return NextResponse.json({
-      success: aborted,
+    return apiSuccess({
+      aborted,
       message: aborted ? 'Execution aborted' : 'Failed to abort execution',
     });
   } catch (error) {
     console.error('Claude Terminal abort error:', error);
-    return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'Failed to abort execution' },
-      { status: 500 }
-    );
+    return apiError(error instanceof Error ? error.message : 'Failed to abort execution');
   }
 }
 
@@ -80,16 +74,15 @@ export async function GET(request: NextRequest) {
     const executionId = searchParams.get('executionId');
 
     if (!executionId) {
-      return NextResponse.json({ error: 'Execution ID is required' }, { status: 400 });
+      return apiError('Execution ID is required', 400);
     }
 
     const execution = getExecution(executionId);
     if (!execution) {
-      return NextResponse.json({ error: 'Execution not found' }, { status: 404 });
+      return apiError('Execution not found', 404);
     }
 
-    return NextResponse.json({
-      success: true,
+    return apiSuccess({
       execution: {
         id: execution.id,
         projectPath: execution.projectPath,
@@ -103,9 +96,6 @@ export async function GET(request: NextRequest) {
     });
   } catch (error) {
     console.error('Claude Terminal status error:', error);
-    return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'Failed to get execution status' },
-      { status: 500 }
-    );
+    return apiError(error instanceof Error ? error.message : 'Failed to get execution status');
   }
 }

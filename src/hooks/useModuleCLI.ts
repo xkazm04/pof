@@ -3,6 +3,8 @@
 import { useCallback, useEffect, useRef } from 'react';
 import { useCLIPanelStore } from '@/components/cli/store/cliPanelStore';
 import { useProjectStore } from '@/stores/projectStore';
+import { recordSessionOutcome } from '@/hooks/useSessionAnalytics';
+import { buildTaskPrompt, type CLITask } from '@/lib/cli-task';
 
 interface UseModuleCLIOptions {
   /** Module this session is displayed within (must match the page's activeModuleId for inline visibility) */
@@ -21,18 +23,7 @@ interface UseModuleCLIOptions {
  * Reusable hook for launching a CLI terminal from any module button.
  *
  * Handles: session creation/lookup, prompt dispatch, running-state subscription,
- * and auto-callback when the stream completes.
- *
- * Usage:
- * ```ts
- * const { sendPrompt, isRunning } = useModuleCLI({
- *   moduleId: 'project-setup',
- *   sessionKey: 'project-build-verify',
- *   label: 'Build & Verify',
- *   accentColor: '#f59e0b',
- *   onComplete: (success) => { if (success) markDone(); },
- * });
- * ```
+ * auto-callback when the stream completes, and session analytics recording.
  */
 export function useModuleCLI(opts: UseModuleCLIOptions) {
   const projectPath = useProjectStore((s) => s.projectPath);
@@ -47,27 +38,65 @@ export function useModuleCLI(opts: UseModuleCLIOptions) {
     return entry?.isRunning ?? false;
   });
 
-  const lastTaskSuccess = useCLIPanelStore((s) => {
-    const entry = Object.values(s.sessions).find(
-      (sess) => sess.sessionKey === opts.sessionKey
-    );
-    return entry?.lastTaskSuccess ?? null;
-  });
+  // Track prompt and start time for analytics recording
+  const lastPromptRef = useRef<string>('');
+  const taskStartRef = useRef<string>('');
 
-  // Detect running → stopped transition and fire onComplete with success info
+  // Detect running → stopped transition and fire onComplete with success info.
+  //
+  // Race condition context: CompactTerminal fires onStreamingChange(false) and
+  // onTaskComplete(id, success) synchronously. The first call sets isRunning=false
+  // in the store WITHOUT lastTaskSuccess. The second call sets lastTaskSuccess.
+  // React batches both, but to be safe we read success imperatively from getState()
+  // after a microtask so both store writes are guaranteed settled.
   const prevRunningRef = useRef(false);
   const onCompleteRef = useRef(opts.onComplete);
+  const sessionKeyRef = useRef(opts.sessionKey);
+  const moduleIdRef = useRef(opts.moduleId);
   onCompleteRef.current = opts.onComplete;
+  sessionKeyRef.current = opts.sessionKey;
+  moduleIdRef.current = opts.moduleId;
 
   useEffect(() => {
     if (prevRunningRef.current && !isRunning) {
-      onCompleteRef.current?.(lastTaskSuccess === true);
+      // Read success imperatively from the settled store state
+      setTimeout(() => {
+        const sessions = useCLIPanelStore.getState().sessions;
+        const entry = Object.values(sessions).find(
+          (sess) => sess.sessionKey === sessionKeyRef.current
+        );
+        const success = entry?.lastTaskSuccess === true;
+
+        // Record session analytics (fire and forget)
+        if (lastPromptRef.current && taskStartRef.current) {
+          const startTime = new Date(taskStartRef.current).getTime();
+          const durationMs = Date.now() - startTime;
+          const hadProjectContext = lastPromptRef.current.includes('## Project Context')
+            || lastPromptRef.current.includes('## Build Command');
+
+          recordSessionOutcome({
+            moduleId: moduleIdRef.current,
+            sessionKey: sessionKeyRef.current,
+            prompt: lastPromptRef.current,
+            hadProjectContext,
+            success,
+            durationMs,
+            startedAt: taskStartRef.current,
+          });
+        }
+
+        onCompleteRef.current?.(success);
+      }, 50);
     }
     prevRunningRef.current = isRunning;
-  }, [isRunning, lastTaskSuccess]);
+  }, [isRunning]);
 
   const sendPrompt = useCallback(
     (prompt: string) => {
+      // Track for analytics
+      lastPromptRef.current = prompt;
+      taskStartRef.current = new Date().toISOString();
+
       let tabId = findSessionByKey(opts.sessionKey);
       if (!tabId) {
         tabId = createSession({
@@ -92,5 +121,26 @@ export function useModuleCLI(opts: UseModuleCLIOptions) {
     [findSessionByKey, createSession, setActiveTab, projectPath, opts.sessionKey, opts.moduleId, opts.label, opts.accentColor]
   );
 
-  return { sendPrompt, isRunning };
+  /**
+   * High-level execution: accepts a CLITask, scans the project for context,
+   * assembles the enriched prompt via buildTaskPrompt, and dispatches it.
+   *
+   * This is the preferred entry point — callers should use TaskFactory to
+   * create the task and then call execute(task) instead of building prompts.
+   */
+  const execute = useCallback(
+    async (task: CLITask) => {
+      // Scan project for dynamic context (uses cache if fresh)
+      const scanProject = useProjectStore.getState().scanProject;
+      await scanProject();
+
+      const { projectName, projectPath: pp, ueVersion, dynamicContext } = useProjectStore.getState();
+      const ctx = { projectName, projectPath: pp, ueVersion, dynamicContext };
+      const enriched = buildTaskPrompt(task, ctx);
+      sendPrompt(enriched);
+    },
+    [sendPrompt],
+  );
+
+  return { sendPrompt, execute, isRunning };
 }

@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useState } from 'react';
+import { useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { Terminal, Minimize2, Loader2, X } from 'lucide-react';
 import { CompactTerminal } from './CompactTerminal';
@@ -9,7 +9,6 @@ import { useProjectStore } from '@/stores/projectStore';
 
 interface InlineTerminalProps {
   sessionId: string;
-  defaultHeight?: number;
   minHeight?: number;
   maxHeight?: number;
   visible?: boolean;
@@ -17,7 +16,6 @@ interface InlineTerminalProps {
 
 export function InlineTerminal({
   sessionId,
-  defaultHeight = 300,
   minHeight = 150,
   maxHeight = 500,
   visible = true,
@@ -26,8 +24,9 @@ export function InlineTerminal({
   const minimizeTab = useCLIPanelStore((s) => s.minimizeTab);
   const removeSession = useCLIPanelStore((s) => s.removeSession);
   const setSessionRunning = useCLIPanelStore((s) => s.setSessionRunning);
+  const height = useCLIPanelStore((s) => s.inlineTerminalHeight);
+  const setInlineTerminalHeight = useCLIPanelStore((s) => s.setInlineTerminalHeight);
   const projectPath = useProjectStore((s) => s.projectPath);
-  const [height, setHeight] = useState(defaultHeight);
 
   const handleResizeMouseDown = useCallback(
     (e: React.MouseEvent) => {
@@ -39,7 +38,7 @@ export function InlineTerminal({
 
       const onMouseMove = (ev: MouseEvent) => {
         const delta = startY - ev.clientY;
-        setHeight(Math.max(minHeight, Math.min(maxHeight, startHeight + delta)));
+        setInlineTerminalHeight(Math.max(minHeight, Math.min(maxHeight, startHeight + delta)));
       };
 
       const onMouseUp = () => {
@@ -52,14 +51,14 @@ export function InlineTerminal({
       document.addEventListener('mousemove', onMouseMove);
       document.addEventListener('mouseup', onMouseUp);
     },
-    [height, minHeight, maxHeight]
+    [height, minHeight, maxHeight, setInlineTerminalHeight]
   );
 
   if (!session) return null;
 
   return (
     <motion.div
-      className="border-t border-[#1e1e3a] bg-[#0d0d22] flex flex-col overflow-hidden"
+      className="border-t border-border bg-surface-deep flex flex-col overflow-hidden"
       style={{ height }}
       initial={{ height: 0, opacity: 0 }}
       animate={{ height, opacity: 1 }}
@@ -69,22 +68,27 @@ export function InlineTerminal({
       {/* Resize handle (top edge — drag up to grow) */}
       <div
         onMouseDown={handleResizeMouseDown}
-        className="h-1 w-full cursor-ns-resize bg-[#1e1e3a] hover:bg-[#2e2e5a] transition-colors flex items-center justify-center group shrink-0"
+        className="h-2 w-full cursor-ns-resize bg-border hover:bg-border-bright transition-colors flex items-center justify-center group shrink-0"
+        style={{ boxShadow: '0 -2px 4px rgba(0,0,0,0.3)' }}
       >
-        <div className="w-8 h-0.5 rounded-full bg-[#2e2e5a] group-hover:bg-[#6b7294] transition-colors" />
+        <div className="flex items-center gap-1">
+          <div className="w-[3px] h-[3px] rounded-full bg-border-bright group-hover:bg-text-muted group-hover:w-1 group-hover:h-1 transition-all" />
+          <div className="w-[3px] h-[3px] rounded-full bg-border-bright group-hover:bg-text-muted group-hover:w-1 group-hover:h-1 transition-all" />
+          <div className="w-[3px] h-[3px] rounded-full bg-border-bright group-hover:bg-text-muted group-hover:w-1 group-hover:h-1 transition-all" />
+        </div>
       </div>
 
       {/* Header bar */}
-      <div className="flex items-center justify-between px-3 py-1 bg-[#0a0a1a] border-b border-[#1e1e3a] shrink-0">
+      <div className="flex items-center justify-between px-3 py-1 bg-background border-b border-border shrink-0">
         <div className="flex items-center gap-2">
           {session.isRunning ? (
             <Loader2 className="w-3 h-3 animate-spin" style={{ color: session.accentColor }} />
           ) : (
             <Terminal className="w-3 h-3" style={{ color: session.accentColor }} />
           )}
-          <span className="text-[11px] font-medium text-[#e0e4f0]">{session.label}</span>
+          <span className="text-xs font-medium text-text">{session.label}</span>
           {session.isRunning && (
-            <span className="text-[9px] px-1.5 py-0.5 rounded bg-[#00ff88]/10 text-[#00ff88]">
+            <span className="text-2xs px-1.5 py-0.5 rounded bg-[#00ff88]/10 text-[#00ff88]">
               running
             </span>
           )}
@@ -92,14 +96,14 @@ export function InlineTerminal({
         <div className="flex items-center gap-0.5">
           <button
             onClick={minimizeTab}
-            className="p-1 text-[#6b7294] hover:text-[#e0e4f0] transition-colors"
+            className="p-1 text-text-muted hover:text-text transition-colors"
             title="Minimize to bottom bar"
           >
             <Minimize2 className="w-3 h-3" />
           </button>
           <button
             onClick={() => removeSession(sessionId)}
-            className="p-1 text-[#6b7294] hover:text-red-400 transition-colors"
+            className="p-1 text-text-muted hover:text-red-400 transition-colors"
             title="Close terminal"
           >
             <X className="w-3 h-3" />

@@ -4,15 +4,21 @@ import { useRef } from 'react';
 import { useNavigationStore } from '@/stores/navigationStore';
 import { CATEGORY_MAP, SUB_MODULE_MAP } from '@/lib/module-registry';
 
+/** Max number of modules kept mounted simultaneously. Oldest are evicted. */
+const LRU_CAP = 5;
+
+/** Max number of inline terminal sessions kept mounted simultaneously. */
+const SESSION_LRU_CAP = 5;
+
 // Genre-based core engine view
 import { GenreModuleView } from '@/components/modules/core-engine/GenreModuleView';
 
-import { ModelsView } from '@/components/modules/content/ModelsView';
-import { AnimationsView } from '@/components/modules/content/AnimationsView';
-import { MaterialsView } from '@/components/modules/content/MaterialsView';
-import { LevelDesignView } from '@/components/modules/content/LevelDesignView';
-import { UIHudView } from '@/components/modules/content/UIHudView';
-import { AudioView } from '@/components/modules/content/AudioView';
+import { ModelsView } from '@/components/modules/content/models/ModelsView';
+import { AnimationsView } from '@/components/modules/content/animations/AnimationsView';
+import { MaterialsView } from '@/components/modules/content/materials/MaterialsView';
+import { LevelDesignView } from '@/components/modules/content/level-design/LevelDesignView';
+import { UIHudView } from '@/components/modules/content/ui-hud/UIHudView';
+import { AudioView } from '@/components/modules/content/audio/AudioView';
 
 import { AIBehaviorView } from '@/components/modules/game-systems/AIBehaviorView';
 import { PhysicsView } from '@/components/modules/game-systems/PhysicsView';
@@ -21,8 +27,11 @@ import { SaveLoadView } from '@/components/modules/game-systems/SaveLoadView';
 import { InputView } from '@/components/modules/game-systems/InputView';
 import { DialogueView } from '@/components/modules/game-systems/DialogueView';
 import { PackagingView } from '@/components/modules/game-systems/PackagingView';
+import { BlueprintTranspilerView } from '@/components/modules/game-systems/blueprint-transpiler/BlueprintTranspilerView';
 
 import { EvaluatorModule } from '@/components/modules/evaluator/EvaluatorModule';
+import { GameDesignDocView } from '@/components/modules/evaluator/GameDesignDocView';
+import { GameDirectorModule } from '@/components/modules/game-director/GameDirectorModule';
 import { ProjectSetupModule } from '@/components/modules/project-setup/ProjectSetupModule';
 import { InlineTerminal } from '@/components/cli/InlineTerminal';
 
@@ -65,19 +74,40 @@ const MODULE_COMPONENTS: Record<SubModuleId, React.ComponentType> = {
   'input-handling': InputView,
   'dialogue-quests': DialogueView,
   'packaging': PackagingView,
+  'blueprint-transpiler': BlueprintTranspilerView,
+  'game-design-doc': GameDesignDocView,
 };
 
 // Special-case categories that render without sub-modules
 const SPECIAL_CATEGORIES: Record<string, React.ComponentType> = {
   'project-setup': ProjectSetupModule,
   'evaluator': EvaluatorModule,
+  'game-director': GameDirectorModule,
 };
+
+/**
+ * Promote `id` to the front of `list` (most-recently-used). If the list
+ * exceeds `cap`, the tail (least-recently-used) entry is evicted.
+ * Mutates `list` in place and returns true if the list changed.
+ */
+function lruTouch(list: string[], id: string, cap: number): boolean {
+  const idx = list.indexOf(id);
+  if (idx === 0) return false; // already MRU — no change
+  if (idx > 0) list.splice(idx, 1); // remove from old position
+  list.unshift(id); // push to front
+  if (list.length > cap) list.pop(); // evict LRU
+  return true;
+}
 
 export function ModuleRenderer() {
   const activeCategory = useNavigationStore((s) => s.activeCategory);
   const activeSubModule = useNavigationStore((s) => s.activeSubModule);
-  const visitedModules = useRef(new Set<string>());
-  const visitedSessions = useRef(new Set<string>());
+
+  // LRU list stored in a ref — mutations happen during render before JSX evaluation,
+  // and navigation store changes already trigger re-renders.
+  const moduleLru = useRef<string[]>([]);
+  const sessionLru = useRef<string[]>([]);
+
   const activeModuleId = useActiveModuleId();
 
   // Show inline terminal only when the maximized tab belongs to the current module
@@ -90,17 +120,17 @@ export function ModuleRenderer() {
       ? maximizedTabId
       : null;
 
-  // Track visited modules for keep-alive
+  // Track visited modules with LRU eviction.
+  // Navigation store changes trigger re-renders, so mutating the ref here is
+  // picked up by the JSX below in the same render pass.
   if (activeSubModule) {
-    visitedModules.current.add(activeSubModule);
+    lruTouch(moduleLru.current, activeSubModule, LRU_CAP);
   }
   if (activeCategory && SPECIAL_CATEGORIES[activeCategory]) {
-    visitedModules.current.add(activeCategory);
+    lruTouch(moduleLru.current, activeCategory, LRU_CAP);
   }
-
-  // Track visited sessions for terminal keep-alive (same pattern — never unmount, just hide)
   if (inlineSessionId) {
-    visitedSessions.current.add(inlineSessionId);
+    lruTouch(sessionLru.current, inlineSessionId, SESSION_LRU_CAP);
   }
 
   // Determine what to render
@@ -113,11 +143,11 @@ export function ModuleRenderer() {
       <div className="flex-1 flex items-center justify-center">
         <div className="text-center">
           {activeCategory ? (
-            <p className="text-[#6b7294] text-sm">Select a module from the sidebar</p>
+            <p className="text-text-muted text-sm">Select a module from the sidebar</p>
           ) : (
             <>
-              <h2 className="text-xl font-semibold text-[#e0e4f0] mb-2">Welcome to POF</h2>
-              <p className="text-[#6b7294] text-sm">Select a category to begin</p>
+              <h2 className="text-xl font-semibold text-text mb-2">Welcome to POF</h2>
+              <p className="text-text-muted text-sm">Select a category to begin</p>
             </>
           )}
         </div>
@@ -129,7 +159,7 @@ export function ModuleRenderer() {
     <div className="flex-1 flex flex-col overflow-hidden">
       {/* Scrollable module content */}
       <div className="flex-1 overflow-y-auto min-h-0">
-        {Array.from(visitedModules.current).map((moduleId) => {
+        {moduleLru.current.map((moduleId) => {
           // Special category modules
           if (SPECIAL_CATEGORIES[moduleId]) {
             const SpecialComponent = SPECIAL_CATEGORIES[moduleId];
@@ -151,6 +181,7 @@ export function ModuleRenderer() {
           return (
             <div
               key={moduleId}
+              className="h-full"
               style={{ display: activeSubModule === moduleId ? 'block' : 'none' }}
             >
               <Component />
@@ -159,8 +190,8 @@ export function ModuleRenderer() {
         })}
       </div>
 
-      {/* Inline terminals — keep-alive: never unmount, toggle visibility via display */}
-      {Array.from(visitedSessions.current).map((sessionId) => {
+      {/* Inline terminals — LRU keep-alive: toggle visibility via display */}
+      {sessionLru.current.map((sessionId) => {
         const isVisible = sessionId === inlineSessionId;
         return (
           <div

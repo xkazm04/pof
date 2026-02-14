@@ -40,9 +40,14 @@ export function ResizeHandle({ onResize, onResizeEnd }: ResizeHandleProps) {
   return (
     <div
       onMouseDown={handleMouseDown}
-      className="h-1.5 w-full cursor-ns-resize bg-[#1e1e3a] hover:bg-[#2e2e5a] transition-colors duration-150 flex items-center justify-center group"
+      className="h-2 w-full cursor-ns-resize bg-border hover:bg-border-bright transition-colors duration-150 flex items-center justify-center group"
+      style={{ boxShadow: '0 -2px 4px rgba(0,0,0,0.3)' }}
     >
-      <div className="w-8 h-0.5 rounded-full bg-[#2e2e5a] group-hover:bg-[#6b7294] transition-colors" />
+      <div className="flex items-center gap-1">
+        <div className="w-[3px] h-[3px] rounded-full bg-border-bright group-hover:bg-text-muted group-hover:w-1 group-hover:h-1 transition-all" />
+        <div className="w-[3px] h-[3px] rounded-full bg-border-bright group-hover:bg-text-muted group-hover:w-1 group-hover:h-1 transition-all" />
+        <div className="w-[3px] h-[3px] rounded-full bg-border-bright group-hover:bg-text-muted group-hover:w-1 group-hover:h-1 transition-all" />
+      </div>
     </div>
   );
 }

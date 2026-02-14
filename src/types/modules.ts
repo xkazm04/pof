@@ -1,42 +1,53 @@
 import type { LucideIcon } from 'lucide-react';
 
-export type CategoryId = 'project-setup' | 'core-engine' | 'content' | 'game-systems' | 'evaluator';
+export type CategoryId = 'project-setup' | 'core-engine' | 'content' | 'game-systems' | 'evaluator' | 'game-director';
 
-export type SubModuleId =
+/** Canonical list of all sub-module IDs — add new modules here and the type updates automatically. */
+export const SUB_MODULE_IDS = [
   // Core Engine — aRPG genre
-  | 'arpg-character'
-  | 'arpg-animation'
-  | 'arpg-gas'
-  | 'arpg-combat'
-  | 'arpg-enemy-ai'
-  | 'arpg-inventory'
-  | 'arpg-loot'
-  | 'arpg-ui'
-  | 'arpg-progression'
-  | 'arpg-world'
-  | 'arpg-save'
-  | 'arpg-polish'
+  'arpg-character',
+  'arpg-animation',
+  'arpg-gas',
+  'arpg-combat',
+  'arpg-enemy-ai',
+  'arpg-inventory',
+  'arpg-loot',
+  'arpg-ui',
+  'arpg-progression',
+  'arpg-world',
+  'arpg-save',
+  'arpg-polish',
   // Content
-  | 'models'
-  | 'animations'
-  | 'materials'
-  | 'level-design'
-  | 'ui-hud'
-  | 'audio'
+  'models',
+  'animations',
+  'materials',
+  'level-design',
+  'ui-hud',
+  'audio',
   // Game Systems
-  | 'ai-behavior'
-  | 'physics'
-  | 'multiplayer'
-  | 'save-load'
-  | 'input-handling'
-  | 'dialogue-quests'
-  | 'packaging';
+  'ai-behavior',
+  'physics',
+  'multiplayer',
+  'save-load',
+  'input-handling',
+  'dialogue-quests',
+  'packaging',
+  'blueprint-transpiler',
+  // Evaluator
+  'game-design-doc',
+] as const;
+
+export type SubModuleId = (typeof SUB_MODULE_IDS)[number];
+
+export type ActionComplexity = 'beginner' | 'intermediate' | 'advanced';
 
 export interface QuickAction {
   id: string;
   label: string;
+  description?: string;
   prompt: string;
   icon?: LucideIcon;
+  complexity?: ActionComplexity;
 }
 
 export interface ChecklistItem {

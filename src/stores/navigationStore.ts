@@ -7,7 +7,7 @@ import type { SidebarMode } from '@/types/navigation';
 import { getCategoryForSubModule } from '@/lib/module-registry';
 
 // Category IDs that render as special-case modules (no sub-modules)
-const SPECIAL_CATEGORY_IDS: Set<string> = new Set(['project-setup', 'evaluator']);
+const SPECIAL_CATEGORY_IDS: Set<string> = new Set(['project-setup', 'evaluator', 'game-director']);
 
 interface NavigationState {
   activeCategory: CategoryId | null;

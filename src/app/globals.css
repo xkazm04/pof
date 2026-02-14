@@ -8,6 +8,8 @@
   --border-bright: #2e2e5a;
   --text: #e0e4f0;
   --text-muted: #6b7294;
+  --text-muted-hover: #8b8fb0;
+  --surface-deep: #0d0d22;
 
   /* Category accents */
   --setup: #00ff88;
@@ -17,6 +19,13 @@
   --evaluator: #ef4444;
 
   --foreground: var(--text);
+
+  /* Type scale */
+  --text-2xs: 0.625rem;  /* 10px — mono labels, badges, timestamps */
+  --text-xs:  0.75rem;   /* 12px — secondary labels, descriptions */
+  --text-sm:  0.875rem;  /* 14px — body text, button labels */
+  --text-base: 1rem;     /* 16px — section headers */
+  --text-lg:  1.25rem;   /* 20px — page titles */
 }
 
 @theme inline {
@@ -28,6 +37,8 @@
   --color-border-bright: var(--border-bright);
   --color-text: var(--text);
   --color-text-muted: var(--text-muted);
+  --color-text-muted-hover: var(--text-muted-hover);
+  --color-surface-deep: var(--surface-deep);
   --color-accent-setup: var(--setup);
   --color-accent-core: var(--core);
   --color-accent-content: var(--content);
@@ -35,6 +46,7 @@
   --color-accent-evaluator: var(--evaluator);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
+  --font-size-2xs: var(--text-2xs);
 }
 
 body {
@@ -87,4 +99,25 @@ body {
 /* Terminal font */
 .font-terminal {
   font-family: var(--font-mono), 'Courier New', monospace;
+}
+
+/* Terminal log entry transitions */
+@keyframes log-slide-in {
+  from { opacity: 0; transform: translateY(4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.log-enter {
+  animation: log-slide-in 0.15s ease-out both;
+}
+
+/* Scroll-to-bottom button transitions */
+.scroll-btn-enter {
+  animation: log-slide-in 0.15s ease-out both;
+}
+
+.scroll-btn-exit {
+  opacity: 0;
+  transform: translateY(4px);
+  transition: opacity 0.12s ease-in, transform 0.12s ease-in;
 }

@@ -1,7 +1,8 @@
 /**
  * Client-side Task Registry API
- * Copied from vibeman as-is.
  */
+
+import { apiFetch } from '@/lib/api-utils';
 
 interface TaskRecord {
   taskId: string;
@@ -49,15 +50,19 @@ export async function registerTaskStart(
   requirementName?: string
 ): Promise<StartTaskResponse> {
   try {
-    const response = await fetch(API_BASE, {
+    const data = await apiFetch<{ record: TaskRecord }>(`${API_BASE}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ action: 'start', taskId, sessionId, requirementName }),
     });
-    return await response.json();
+    return { success: true, record: data.record };
   } catch (error) {
-    console.error('Failed to register task start:', error);
-    return { success: false, error: 'Network error' };
+    const msg = error instanceof Error ? error.message : 'Network error';
+    // 409 conflict: session already has a running task
+    if (msg.includes('already has a running task')) {
+      return { success: false, error: msg, runningTask: undefined };
+    }
+    return { success: false, error: msg };
   }
 }
 
@@ -67,12 +72,12 @@ export async function registerTaskComplete(
   success: boolean
 ): Promise<CompleteTaskResponse> {
   try {
-    const response = await fetch(API_BASE, {
+    const data = await apiFetch<{ record: TaskRecord; wasUntracked?: boolean }>(`${API_BASE}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ action: 'complete', taskId, sessionId, status: success ? 'completed' : 'failed' }),
     });
-    return await response.json();
+    return { success: true, record: data.record, wasUntracked: data.wasUntracked };
   } catch (error) {
     console.error('Failed to register task completion:', error);
     return { success: false };
@@ -81,23 +86,20 @@ export async function registerTaskComplete(
 
 export async function sendTaskHeartbeat(taskId: string): Promise<boolean> {
   try {
-    const response = await fetch(API_BASE, {
+    await apiFetch<{ record: TaskRecord }>(`${API_BASE}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ action: 'heartbeat', taskId }),
     });
-    const data = await response.json();
-    return data.success;
-  } catch (error) {
-    console.error('Failed to send heartbeat:', error);
+    return true;
+  } catch {
     return false;
   }
 }
 
 export async function getTaskStatus(taskId: string): Promise<TaskStatusResponse> {
   try {
-    const response = await fetch(`${API_BASE}?taskId=${encodeURIComponent(taskId)}`);
-    return await response.json();
+    return await apiFetch<TaskStatusResponse>(`${API_BASE}?taskId=${encodeURIComponent(taskId)}`);
   } catch (error) {
     console.error('Failed to get task status:', error);
     return { found: false, taskId };
@@ -106,8 +108,7 @@ export async function getTaskStatus(taskId: string): Promise<TaskStatusResponse>
 
 export async function getSessionTasks(sessionId: string): Promise<SessionTasksResponse> {
   try {
-    const response = await fetch(`${API_BASE}?sessionId=${encodeURIComponent(sessionId)}`);
-    return await response.json();
+    return await apiFetch<SessionTasksResponse>(`${API_BASE}?sessionId=${encodeURIComponent(sessionId)}`);
   } catch (error) {
     console.error('Failed to get session tasks:', error);
     return { sessionId, tasks: [] };
@@ -134,12 +135,11 @@ export async function hasRunningTask(sessionId: string): Promise<{
 
 export async function clearSessionTasks(sessionId: string): Promise<number> {
   try {
-    const response = await fetch(API_BASE, {
+    const data = await apiFetch<{ cleared: number }>(`${API_BASE}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ action: 'clear', sessionId }),
     });
-    const data = await response.json();
     return data.cleared || 0;
   } catch (error) {
     console.error('Failed to clear session tasks:', error);

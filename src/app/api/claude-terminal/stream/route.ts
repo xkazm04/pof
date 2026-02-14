@@ -1,12 +1,13 @@
 /**
  * Claude Terminal Stream API Route (CLI-based)
- * Copied from vibeman as-is.
+ * Event-driven SSE — subscribes to execution events instead of polling.
  */
 
 import { NextRequest } from 'next/server';
 import {
   getExecution,
   startExecution,
+  subscribeToExecution,
   type CLIExecutionEvent,
 } from '@/lib/claude-terminal/cli-service';
 
@@ -39,10 +40,9 @@ export async function GET(request: NextRequest) {
 
   const encoder = new TextEncoder();
   let isStreamClosed = false;
-  let lastEventIndex = 0;
 
   const stream = new ReadableStream({
-    async start(controller) {
+    start(controller) {
       const sendEvent = (event: SSEEvent) => {
         if (isStreamClosed) return;
         try {
@@ -50,6 +50,12 @@ export async function GET(request: NextRequest) {
         } catch {
           isStreamClosed = true;
         }
+      };
+
+      const closeStream = () => {
+        if (isStreamClosed) return;
+        isStreamClosed = true;
+        try { controller.close(); } catch { /* already closed */ }
       };
 
       sendEvent({
@@ -77,59 +83,71 @@ export async function GET(request: NextRequest) {
         }
       };
 
-      let executionNotFoundCount = 0;
-      const maxNotFoundRetries = 30;
+      // Replay any events that arrived between startExecution and this SSE connection
+      const execution = getExecution(activeExecutionId!);
+      if (!execution) {
+        sendEvent({ type: 'error', data: { error: 'Execution not found' }, timestamp: Date.now() });
+        closeStream();
+        return;
+      }
 
-      const pollInterval = setInterval(() => {
-        if (isStreamClosed) { clearInterval(pollInterval); return; }
-
-        const execution = getExecution(activeExecutionId!);
-        if (!execution) {
-          executionNotFoundCount++;
-          if (executionNotFoundCount < maxNotFoundRetries) return;
-          clearInterval(pollInterval);
-          sendEvent({ type: 'error', data: { error: 'Execution not found' }, timestamp: Date.now() });
-          controller.close();
+      for (const event of execution.events) {
+        if (event.type === 'stdout') continue;
+        sendEvent(convertEvent(event));
+        if (event.type === 'result' || event.type === 'error') {
+          closeStream();
           return;
         }
+      }
 
-        executionNotFoundCount = 0;
-        const newEvents = execution.events.slice(lastEventIndex);
-        for (const event of newEvents) {
-          if (event.type === 'stdout') continue;
-          sendEvent(convertEvent(event));
-          if (event.type === 'result' || event.type === 'error') {
-            isStreamClosed = true;
-            clearInterval(pollInterval);
-            controller.close();
-            return;
-          }
+      // If execution already finished during replay
+      if (execution.status !== 'running') {
+        sendEvent({
+          type: execution.status === 'completed' ? 'result' : 'error',
+          data: { status: execution.status, sessionId: execution.sessionId },
+          timestamp: Date.now(),
+        });
+        closeStream();
+        return;
+      }
+
+      // Subscribe to future events (event-driven, no polling)
+      const unsubscribe = subscribeToExecution(activeExecutionId!, (cliEvent) => {
+        if (isStreamClosed) { unsubscribe?.(); return; }
+        if (cliEvent.type === 'stdout') return;
+        sendEvent(convertEvent(cliEvent));
+        if (cliEvent.type === 'result' || cliEvent.type === 'error') {
+          unsubscribe?.();
+          closeStream();
         }
-        lastEventIndex = execution.events.length;
+      });
 
-        if (execution.status !== 'running') {
-          if (!isStreamClosed) {
-            sendEvent({
-              type: execution.status === 'completed' ? 'result' : 'error',
-              data: { status: execution.status, sessionId: execution.sessionId },
-              timestamp: Date.now(),
-            });
-          }
-          isStreamClosed = true;
-          clearInterval(pollInterval);
-          controller.close();
-        }
-      }, 100);
+      if (!unsubscribe) {
+        sendEvent({ type: 'error', data: { error: 'Failed to subscribe to execution' }, timestamp: Date.now() });
+        closeStream();
+        return;
+      }
 
+      // Heartbeat to keep the connection alive
       const heartbeatInterval = setInterval(() => {
-        if (isStreamClosed) { clearInterval(heartbeatInterval); return; }
+        if (isStreamClosed) { clearInterval(heartbeatInterval); unsubscribe(); return; }
         try {
           sendEvent({ type: 'heartbeat', data: { executionId: activeExecutionId, timestamp: Date.now() }, timestamp: Date.now() });
         } catch {
           isStreamClosed = true;
           clearInterval(heartbeatInterval);
+          unsubscribe();
         }
       }, 15000);
+
+      // Safety timeout: if execution takes too long, clean up
+      setTimeout(() => {
+        if (!isStreamClosed) {
+          unsubscribe();
+          clearInterval(heartbeatInterval);
+          closeStream();
+        }
+      }, 6100000); // Slightly longer than the 100-minute execution timeout
     },
     cancel() {
       isStreamClosed = true;
