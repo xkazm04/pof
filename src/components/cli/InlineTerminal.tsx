@@ -4,6 +4,7 @@ import { useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { Terminal, Minimize2, Loader2, X } from 'lucide-react';
 import { CompactTerminal } from './CompactTerminal';
+import { SuggestedActions, type SuggestionAction } from './SuggestedActions';
 import { useCLIPanelStore } from './store/cliPanelStore';
 import { useProjectStore } from '@/stores/projectStore';
 
@@ -54,6 +55,28 @@ export function InlineTerminal({
     [height, minHeight, maxHeight, setInlineTerminalHeight]
   );
 
+  const handleSuggestionAction = useCallback((action: SuggestionAction) => {
+    switch (action.type) {
+      case 'prompt':
+        window.dispatchEvent(
+          new CustomEvent('pof-cli-prompt', {
+            detail: { tabId: sessionId, prompt: action.prompt },
+          })
+        );
+        break;
+      case 'navigate':
+        window.dispatchEvent(
+          new CustomEvent('pof-navigate-tab', {
+            detail: { tab: action.tab },
+          })
+        );
+        break;
+      case 'callback':
+        action.fn();
+        break;
+    }
+  }, [sessionId]);
+
   if (!session) return null;
 
   return (
@@ -88,7 +111,7 @@ export function InlineTerminal({
           )}
           <span className="text-xs font-medium text-text">{session.label}</span>
           {session.isRunning && (
-            <span className="text-2xs px-1.5 py-0.5 rounded bg-[#00ff88]/10 text-[#00ff88]">
+            <span className="text-2xs px-1.5 py-0.5 rounded bg-accent-medium text-[#00ff88]">
               running
             </span>
           )}
@@ -110,6 +133,13 @@ export function InlineTerminal({
           </button>
         </div>
       </div>
+
+      {/* Suggested next actions (shown after task completion) */}
+      <SuggestedActions
+        session={session}
+        onAction={handleSuggestionAction}
+        accentColor={session.accentColor}
+      />
 
       {/* Terminal body */}
       <div className="flex-1 overflow-hidden">

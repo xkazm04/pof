@@ -244,7 +244,7 @@ export function DeepEvalResults() {
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: 'auto' }}
             exit={{ opacity: 0, height: 0 }}
-            transition={{ duration: 0.2 }}
+            transition={{ duration: 0.22 }}
             className="overflow-hidden"
           >
             <SurfaceCard className="p-3">
@@ -277,7 +277,7 @@ export function DeepEvalResults() {
                       className={`flex items-center gap-2 px-2.5 py-1.5 rounded-md text-xs transition-all border ${
                         selected
                           ? 'text-text bg-border border-border-bright'
-                          : 'text-[#4a4e6a] bg-background border-border hover:text-text-muted'
+                          : 'text-text-muted bg-background border-border hover:text-text-muted'
                       }`}
                     >
                       <span
@@ -331,7 +331,7 @@ export function DeepEvalResults() {
                   })}
               </div>
 
-              <span className="text-2xs text-[#4a4e6a] ml-auto">
+              <span className="text-2xs text-text-muted ml-auto">
                 {result.modulesEvaluated.length} modules / {result.passesRun.length} passes / {formatDuration(result.duration)}
               </span>
             </div>
@@ -413,7 +413,7 @@ function ProgressPanel({ progress }: { progress: EvalProgress }) {
             <motion.div
               className="h-full rounded-full bg-[#ef4444]"
               animate={{ width: `${pct}%` }}
-              transition={{ duration: 0.3 }}
+              transition={{ duration: 0.22 }}
             />
           </div>
         </div>
@@ -422,9 +422,9 @@ function ProgressPanel({ progress }: { progress: EvalProgress }) {
       {/* Per-module pass status grid */}
       <div className="grid grid-cols-6 gap-1.5 text-2xs">
         {/* Header row */}
-        <span className="text-[#4a4e6a] font-semibold">Module</span>
+        <span className="text-text-muted font-semibold">Module</span>
         {EVAL_PASSES.map((pass) => (
-          <span key={pass} className="text-[#4a4e6a] font-semibold text-center">
+          <span key={pass} className="text-text-muted font-semibold text-center">
             {PASS_LABELS[pass]}
           </span>
         ))}
@@ -458,7 +458,7 @@ function ModuleProgressRow({
 }) {
   return (
     <>
-      <span className="text-[#9ca0be] truncate">
+      <span className="text-text-muted truncate">
         {MODULE_LABELS[moduleId] ?? moduleId}
       </span>
       {EVAL_PASSES.map((pass) => (
@@ -534,7 +534,7 @@ function ModuleSection({
             })}
         </div>
 
-        <span className="text-xs text-[#4a4e6a]">{totalFindings} findings</span>
+        <span className="text-xs text-text-muted">{totalFindings} findings</span>
       </button>
 
       {/* Expanded content */}
@@ -544,7 +544,7 @@ function ModuleSection({
             initial={{ height: 0, opacity: 0 }}
             animate={{ height: 'auto', opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
-            transition={{ duration: 0.2 }}
+            transition={{ duration: 0.22 }}
             className="overflow-hidden"
           >
             <div className="px-4 pb-3 space-y-2">
@@ -586,12 +586,12 @@ function ModuleSection({
                       className="w-full flex items-center gap-2 px-3 py-2 text-left transition-colors hover:bg-surface"
                     >
                       {isCatExpanded ? (
-                        <ChevronDown className="w-3 h-3 text-[#4a4e6a]" />
+                        <ChevronDown className="w-3 h-3 text-text-muted" />
                       ) : (
-                        <ChevronRight className="w-3 h-3 text-[#4a4e6a]" />
+                        <ChevronRight className="w-3 h-3 text-text-muted" />
                       )}
-                      <span className="text-xs font-medium text-[#9ca0be]">{category}</span>
-                      <span className="text-2xs text-[#4a4e6a]">{findings.length}</span>
+                      <span className="text-xs font-medium text-text-muted">{category}</span>
+                      <span className="text-2xs text-text-muted">{findings.length}</span>
                     </button>
 
                     <AnimatePresence>
@@ -600,7 +600,7 @@ function ModuleSection({
                           initial={{ height: 0 }}
                           animate={{ height: 'auto' }}
                           exit={{ height: 0 }}
-                          transition={{ duration: 0.15 }}
+                          transition={{ duration: 0.12 }}
                           className="overflow-hidden"
                         >
                           <div className="px-3 pb-2 space-y-1.5">
@@ -658,7 +658,7 @@ function FindingRow({
           {/* File location */}
           {finding.file && (
             <div className="flex items-center gap-1.5 mb-1.5">
-              <FileCode2 className="w-3 h-3 text-[#4a4e6a]" />
+              <FileCode2 className="w-3 h-3 text-text-muted" />
               <span className="text-xs text-text-muted font-mono">
                 {finding.file}{finding.line ? `:${finding.line}` : ''}
               </span>
@@ -668,7 +668,7 @@ function FindingRow({
           {/* Suggested fix */}
           {finding.suggestedFix && (
             <div className="bg-background/50 rounded px-2.5 py-1.5 mb-2">
-              <span className="text-2xs text-[#4a4e6a] uppercase tracking-wider font-semibold block mb-0.5">
+              <span className="text-2xs text-text-muted uppercase tracking-wider font-semibold block mb-0.5">
                 Suggested Fix
               </span>
               <p className="text-xs text-text-muted-hover leading-relaxed">
@@ -685,11 +685,11 @@ function FindingRow({
             >
               {cfg.label}
             </span>
-            <span className="text-2xs text-[#4a4e6a] flex items-center gap-1">
+            <span className="text-2xs text-text-muted flex items-center gap-1">
               <Clock className="w-2.5 h-2.5" />
               {EFFORT_LABELS[finding.effort] ?? finding.effort}
             </span>
-            <span className="text-2xs text-[#4a4e6a]">
+            <span className="text-2xs text-text-muted">
               {PASS_LABELS[finding.pass]}
             </span>
 

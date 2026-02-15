@@ -183,7 +183,7 @@ export function MaterialParameterConfigurator({ onGenerate, isGenerating }: Mate
                   border: `1px solid ${isActive ? `${s.color}50` : 'var(--border)'}`,
                 }}
               >
-                <Icon className="w-3.5 h-3.5" style={{ color: isActive ? s.color : '#4a4e6a' }} />
+                <Icon className="w-3.5 h-3.5" style={{ color: isActive ? s.color : 'var(--text-muted)' }} />
                 <span className="text-2xs font-medium" style={{ color: isActive ? s.color : 'var(--text-muted)' }}>
                   {s.label}
                 </span>
@@ -217,12 +217,12 @@ export function MaterialParameterConfigurator({ onGenerate, isGenerating }: Mate
               >
                 {opt.label}
               </span>
-              <span className="text-2xs text-[#4a4e6a]">{opt.desc}</span>
+              <span className="text-2xs text-text-muted">{opt.desc}</span>
             </button>
           ))}
         </div>
         {outputType === 'instance' && (
-          <p className="text-2xs px-1 py-1 rounded bg-[#f59e0b08] border border-[#f59e0b15] text-[#f59e0bcc]">
+          <p className="text-2xs px-1 py-1 rounded bg-status-amber-subtle border border-status-amber-medium text-[#f59e0bcc]">
             Recommended: Use Material Instances for per-object variation without recompiling shaders.
           </p>
         )}
@@ -259,7 +259,7 @@ export function MaterialParameterConfigurator({ onGenerate, isGenerating }: Mate
                   >
                     {f.shortLabel}
                   </span>
-                  <span className="text-2xs text-[#4a4e6a] block truncate">{f.description}</span>
+                  <span className="text-2xs text-text-muted block truncate">{f.description}</span>
                 </div>
               </button>
             );
@@ -271,7 +271,7 @@ export function MaterialParameterConfigurator({ onGenerate, isGenerating }: Mate
       <div className="space-y-2">
         <h4 className="text-2xs font-semibold text-text-muted uppercase tracking-widest">
           Parameters
-          <span className="ml-1.5 font-normal normal-case text-[#4a4e6a]">({applicableParams.length} for {surfaceDef.label})</span>
+          <span className="ml-1.5 font-normal normal-case text-text-muted">({applicableParams.length} for {surfaceDef.label})</span>
         </h4>
         <div className="space-y-2">
           {applicableParams.map((p) => {

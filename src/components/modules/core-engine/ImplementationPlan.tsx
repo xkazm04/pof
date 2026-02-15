@@ -22,7 +22,7 @@ const EFFORT_COLORS: Record<EffortLevel, { bg: string; text: string }> = {
   trivial: { bg: 'bg-green-500/15', text: 'text-green-400' },
   small: { bg: 'bg-blue-500/15', text: 'text-blue-400' },
   medium: { bg: 'bg-yellow-500/15', text: 'text-yellow-400' },
-  large: { bg: 'bg-red-500/15', text: 'text-red-400' },
+  large: { bg: 'bg-status-red-medium', text: 'text-red-400' },
 };
 
 const STATUS_STYLES: Record<string, { icon: typeof CheckCircle; color: string }> = {
@@ -48,7 +48,7 @@ function EffortBadge({ level, minutes }: { level: EffortLevel; minutes: number }
 function ImpactBadge({ score, directUnblocks }: { score: number; directUnblocks: number }) {
   const color = score >= 6 ? 'text-purple-400 bg-purple-500/15'
     : score >= 3 ? 'text-blue-400 bg-blue-500/15'
-    : score >= 1 ? 'text-[#9ca0be] bg-surface-hover'
+    : score >= 1 ? 'text-text-muted bg-surface-hover'
     : 'text-text-muted bg-surface-hover/50';
 
   return (
@@ -136,12 +136,12 @@ function PlanItemRow({
             initial={{ height: 0, opacity: 0 }}
             animate={{ height: 'auto', opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
-            transition={{ duration: 0.15 }}
+            transition={{ duration: 0.12 }}
             className="overflow-hidden"
           >
             <div className="pl-12 pr-3 pb-2.5 space-y-2">
               {/* Description */}
-              <p className="text-xs text-[#9ca0be] leading-relaxed">
+              <p className="text-xs text-text-muted leading-relaxed">
                 {item.description}
               </p>
 
@@ -376,7 +376,7 @@ Implement this feature from scratch. Follow UE5 C++ conventions. Read any existi
                 className="h-full rounded-full bg-gradient-to-r from-[#3b82f6] to-[#8b5cf6]"
                 initial={{ width: 0 }}
                 animate={{ width: `${progress}%` }}
-                transition={{ duration: 0.5 }}
+                transition={{ duration: 0.45 }}
               />
             </div>
             <div className="flex items-center justify-between mt-1">

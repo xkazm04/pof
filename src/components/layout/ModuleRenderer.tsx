@@ -1,8 +1,10 @@
 'use client';
 
 import { useRef } from 'react';
+import { motion } from 'framer-motion';
 import { useNavigationStore } from '@/stores/navigationStore';
 import { CATEGORY_MAP, SUB_MODULE_MAP } from '@/lib/module-registry';
+import { DURATION, EASE_OUT } from '@/lib/motion';
 
 /** Max number of modules kept mounted simultaneously. Oldest are evicted. */
 const LRU_CAP = 5;
@@ -37,7 +39,42 @@ import { InlineTerminal } from '@/components/cli/InlineTerminal';
 
 import { useCLIPanelStore } from '@/components/cli/store/cliPanelStore';
 import { useActiveModuleId } from '@/hooks/useActiveModuleId';
+import { ModuleErrorBoundary } from './ModuleErrorBoundary';
 import type { SubModuleId } from '@/types/modules';
+
+/** Human-readable labels for error boundary fallback */
+const MODULE_LABELS: Record<string, string> = {
+  'project-setup': 'Project Setup',
+  'evaluator': 'Evaluator',
+  'game-director': 'Game Director',
+  'arpg-character': 'Character',
+  'arpg-animation': 'Animation',
+  'arpg-gas': 'GAS',
+  'arpg-combat': 'Combat',
+  'arpg-enemy-ai': 'Enemy AI',
+  'arpg-inventory': 'Inventory',
+  'arpg-loot': 'Loot',
+  'arpg-ui': 'UI',
+  'arpg-progression': 'Progression',
+  'arpg-world': 'World',
+  'arpg-save': 'Save',
+  'arpg-polish': 'Polish',
+  'models': 'Models',
+  'animations': 'Animations',
+  'materials': 'Materials',
+  'level-design': 'Level Design',
+  'ui-hud': 'UI / HUD',
+  'audio': 'Audio',
+  'ai-behavior': 'AI Behavior',
+  'physics': 'Physics',
+  'multiplayer': 'Multiplayer',
+  'save-load': 'Save / Load',
+  'input-handling': 'Input',
+  'dialogue-quests': 'Dialogue & Quests',
+  'packaging': 'Packaging',
+  'blueprint-transpiler': 'Blueprint Transpiler',
+  'game-design-doc': 'Game Design Doc',
+};
 
 // Factory for genre-based core engine sub-modules
 function makeGenreView(id: SubModuleId) {
@@ -137,6 +174,16 @@ export function ModuleRenderer() {
   const isSpecialCategory = activeCategory && SPECIAL_CATEGORIES[activeCategory];
   const hasActiveContent = isSpecialCategory || activeSubModule;
 
+  // Track module switches to trigger entrance animations (must be before early return)
+  const prevActiveRef = useRef<string | null>(null);
+  const switchCountRef = useRef(0);
+  const currentActiveId = isSpecialCategory ? activeCategory : activeSubModule;
+  if (currentActiveId !== prevActiveRef.current) {
+    switchCountRef.current += 1;
+    prevActiveRef.current = currentActiveId ?? null;
+  }
+  const switchKey = switchCountRef.current;
+
   // Welcome / empty state
   if (!hasActiveContent) {
     return (
@@ -170,7 +217,17 @@ export function ModuleRenderer() {
                 style={{ display: isVisible ? 'block' : 'none' }}
                 className="h-full"
               >
-                <SpecialComponent />
+                <motion.div
+                  key={`fade-${moduleId}-${isVisible ? switchKey : 'hidden'}`}
+                  initial={isVisible ? { opacity: 0, y: 6 } : false}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: DURATION.base, ease: EASE_OUT }}
+                  className="h-full"
+                >
+                  <ModuleErrorBoundary moduleName={MODULE_LABELS[moduleId] ?? moduleId}>
+                    <SpecialComponent />
+                  </ModuleErrorBoundary>
+                </motion.div>
               </div>
             );
           }
@@ -178,13 +235,24 @@ export function ModuleRenderer() {
           // Regular sub-module views
           const Component = MODULE_COMPONENTS[moduleId as SubModuleId];
           if (!Component) return null;
+          const isVisible = activeSubModule === moduleId;
           return (
             <div
               key={moduleId}
               className="h-full"
-              style={{ display: activeSubModule === moduleId ? 'block' : 'none' }}
+              style={{ display: isVisible ? 'block' : 'none' }}
             >
-              <Component />
+              <motion.div
+                key={`fade-${moduleId}-${isVisible ? switchKey : 'hidden'}`}
+                initial={isVisible ? { opacity: 0, y: 6 } : false}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: DURATION.base, ease: EASE_OUT }}
+                className="h-full"
+              >
+                <ModuleErrorBoundary moduleName={MODULE_LABELS[moduleId] ?? moduleId}>
+                  <Component />
+                </ModuleErrorBoundary>
+              </motion.div>
             </div>
           );
         })}

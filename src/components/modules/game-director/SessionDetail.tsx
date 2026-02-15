@@ -274,7 +274,7 @@ function FindingsList({ findings, expandedId, onToggle }: {
             key={finding.id}
             initial={{ opacity: 0, y: 4 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.2, delay: idx * 0.02 }}
+            transition={{ duration: 0.22, delay: idx * 0.02 }}
             className="rounded-lg border overflow-hidden"
             style={{ backgroundColor: style.bg, borderColor: style.border }}
           >
@@ -294,7 +294,7 @@ function FindingsList({ findings, expandedId, onToggle }: {
                 <p className="text-xs text-text-muted-hover leading-relaxed line-clamp-2">{finding.description}</p>
               </div>
               <div className="flex items-center gap-2 flex-shrink-0">
-                <span className="text-2xs text-[#4a4e6a]">{finding.confidence}%</span>
+                <span className="text-2xs text-text-muted">{finding.confidence}%</span>
                 {isExpanded ? (
                   <ChevronDown className="w-3 h-3 text-text-muted" />
                 ) : (
@@ -309,7 +309,7 @@ function FindingsList({ findings, expandedId, onToggle }: {
                   initial={{ height: 0, opacity: 0 }}
                   animate={{ height: 'auto', opacity: 1 }}
                   exit={{ height: 0, opacity: 0 }}
-                  transition={{ duration: 0.2 }}
+                  transition={{ duration: 0.22 }}
                   className="overflow-hidden"
                 >
                   <div className="px-3.5 pb-3 pt-1 border-t" style={{ borderColor: style.border }}>
@@ -322,7 +322,7 @@ function FindingsList({ findings, expandedId, onToggle }: {
                         <p className="text-xs text-text-muted-hover leading-relaxed pl-4.5">{finding.suggestedFix}</p>
                       </div>
                     )}
-                    <div className="flex items-center gap-4 text-2xs text-[#4a4e6a]">
+                    <div className="flex items-center gap-4 text-2xs text-text-muted">
                       {finding.gameTimestamp != null && (
                         <span>Game time: {finding.gameTimestamp}s</span>
                       )}
@@ -366,7 +366,7 @@ function TimelineView({ events }: { events: DirectorEvent[] }) {
               key={event.id}
               initial={{ opacity: 0, x: -4 }}
               animate={{ opacity: 1, x: 0 }}
-              transition={{ duration: 0.2, delay: idx * 0.02 }}
+              transition={{ duration: 0.22, delay: idx * 0.02 }}
               className="relative flex items-start gap-3"
             >
               {/* Timeline dot */}
@@ -387,7 +387,7 @@ function TimelineView({ events }: { events: DirectorEvent[] }) {
                     {event.message}
                   </span>
                 </div>
-                <span className="text-2xs text-[#4a4e6a]">
+                <span className="text-2xs text-text-muted">
                   {new Date(event.timestamp).toLocaleTimeString()}
                 </span>
               </div>
@@ -436,7 +436,7 @@ function CoverageView({ session, findings }: { session: PlaytestSession; finding
               key={cat}
               initial={{ opacity: 0, x: -8 }}
               animate={{ opacity: 1, x: 0 }}
-              transition={{ duration: 0.25, delay: idx * 0.05 }}
+              transition={{ duration: 0.22, delay: idx * 0.05 }}
               className="flex items-center gap-3"
             >
               <span className="text-xs text-text-muted-hover w-28 capitalize">{cat.replace(/-/g, ' ')}</span>
@@ -444,7 +444,7 @@ function CoverageView({ session, findings }: { session: PlaytestSession; finding
                 <motion.div
                   initial={{ width: 0 }}
                   animate={{ width: `${pct}%` }}
-                  transition={{ duration: 0.6, ease: 'easeOut', delay: 0.3 + idx * 0.05 }}
+                  transition={{ duration: 0.45, ease: [0.16, 1, 0.3, 1], delay: 0.3 + idx * 0.05 }}
                   className="h-full rounded-full"
                   style={{
                     backgroundColor: pct >= 80 ? '#4ade80' : pct >= 50 ? '#fbbf24' : '#f87171',

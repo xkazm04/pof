@@ -111,7 +111,7 @@ export function PlatformProfileCard({
             initial={{ height: 0, opacity: 0 }}
             animate={{ height: 'auto', opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
-            transition={{ duration: 0.15 }}
+            transition={{ duration: 0.12 }}
             className="overflow-hidden"
           >
             <div className="px-3 pb-3 border-t border-border/50 pt-2 space-y-2.5">
@@ -149,7 +149,7 @@ export function PlatformProfileCard({
                       {cmdCopied ? 'Copied!' : 'Copy'}
                     </button>
                   </div>
-                  <pre className="mt-1 text-2xs font-mono text-[#9ca0be] bg-background rounded p-2 overflow-x-auto whitespace-pre-wrap break-all leading-relaxed">
+                  <pre className="mt-1 text-2xs font-mono text-text-muted bg-background rounded p-2 overflow-x-auto whitespace-pre-wrap break-all leading-relaxed">
                     {uatCommand}
                   </pre>
                 </div>

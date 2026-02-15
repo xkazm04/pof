@@ -37,7 +37,7 @@ export function ProjectFilesPanel({ projectPath, projectFiles, onOpenInExplorer 
             </span>
             <button
               onClick={() => copyToClipboard(filePath)}
-              className="opacity-0 group-hover:opacity-100 p-1 text-text-muted hover:text-[#00ff88] transition-all"
+              className="opacity-30 scale-95 group-hover:opacity-100 group-hover:scale-100 p-1 text-text-muted hover:text-[#00ff88] transition-all"
               title="Copy path"
             >
               {copiedPath === filePath ? (

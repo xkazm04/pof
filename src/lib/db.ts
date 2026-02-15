@@ -166,6 +166,29 @@ export function getDb(): Database.Database {
     db.exec("ALTER TABLE build_history ADD COLUMN project_id TEXT NOT NULL DEFAULT ''");
   }
 
+  // Checklist metadata — stores priority and notes per checklist item
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS checklist_metadata (
+      module_id TEXT NOT NULL,
+      item_id TEXT NOT NULL,
+      priority TEXT NOT NULL DEFAULT 'none'
+        CHECK(priority IN ('none', 'critical', 'important', 'nice-to-have')),
+      notes TEXT NOT NULL DEFAULT '',
+      updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+      PRIMARY KEY (module_id, item_id)
+    )
+  `);
+
+  // Milestone deadlines — user-set target dates for milestone deliverables
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS milestone_deadlines (
+      milestone_id TEXT PRIMARY KEY,
+      target_date TEXT NOT NULL,
+      label TEXT NOT NULL DEFAULT '',
+      updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+    )
+  `);
+
   return db;
 }
 

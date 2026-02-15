@@ -105,11 +105,11 @@ export function ModuleShell({ moduleId }: ModuleShellProps) {
   );
 
   return (
-    <div className="p-6 max-w-4xl">
+    <main className="p-6 max-w-4xl" aria-label={`${module.label} module`}>
       {/* Header */}
       <div className="relative overflow-hidden flex items-center gap-3 mb-6">
         <ModuleHeaderDecoration moduleId={moduleId} variant="full" />
-        <Icon className="w-6 h-6 relative" style={{ color: accentColor }} />
+        <Icon className="w-6 h-6 relative" style={{ color: accentColor }} aria-hidden="true" />
         <div className="relative">
           <div className="flex items-center gap-2">
             <h1 className="text-lg font-semibold text-text">{module.label}</h1>
@@ -128,10 +128,11 @@ export function ModuleShell({ moduleId }: ModuleShellProps) {
             <Lightbulb className="w-4 h-4 text-amber-400 flex-shrink-0 mt-0.5" />
             <div className="flex-1 min-w-0">
               <p className="text-xs font-medium text-amber-300 mb-1">{tip.title}</p>
-              <p className="text-xs text-[#9ca0be] leading-relaxed">{tip.content}</p>
+              <p className="text-xs text-text-muted leading-relaxed">{tip.content}</p>
             </div>
             <button
               onClick={dismissBanner}
+              aria-label="Dismiss tip"
               className="p-0.5 rounded hover:bg-[#ffffff10] transition-colors flex-shrink-0"
             >
               <X className="w-3 h-3 text-text-muted" />
@@ -151,24 +152,25 @@ export function ModuleShell({ moduleId }: ModuleShellProps) {
       )}
 
       {/* Quick Actions */}
-      <div className="mb-6">
+      <section className="mb-6" aria-label="Quick actions">
         <div className="flex items-center gap-2 mb-3">
-          <Zap className="w-4 h-4 text-text-muted" />
+          <Zap className="w-4 h-4 text-text-muted" aria-hidden="true" />
           <h2 className="text-sm font-medium text-text">Quick Actions</h2>
         </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2" role="group" aria-label="Available actions">
           {module.quickActions.map((action, index) => (
             <button
               key={action.id}
               onClick={() => handleQuickAction(action.prompt)}
+              aria-label={action.label}
               className="text-left flex items-start gap-2.5 px-3 py-3.5 bg-surface border border-border rounded-lg hover:border-border-bright hover:bg-surface-hover transition-all group"
             >
               <span
                 className="flex-shrink-0 w-5 h-5 rounded-full flex items-center justify-center text-2xs font-semibold mt-px"
                 style={{
                   color: accentColor,
-                  backgroundColor: `${accentColor}12`,
-                  border: `1px solid ${accentColor}25`,
+                  backgroundColor: `${accentColor}24`,
+                  border: `1px solid ${accentColor}38`,
                 }}
               >
                 {index + 1}
@@ -182,12 +184,12 @@ export function ModuleShell({ moduleId }: ModuleShellProps) {
             </button>
           ))}
         </div>
-      </div>
+      </section>
 
       {/* Ask Claude */}
-      <div className="mb-6">
+      <section className="mb-6" aria-label="Ask Claude">
         <div className="flex items-center gap-2 mb-3">
-          <Send className="w-4 h-4 text-text-muted" />
+          <Send className="w-4 h-4 text-text-muted" aria-hidden="true" />
           <h2 className="text-sm font-medium text-text">Ask Claude</h2>
         </div>
         <div className="flex gap-2">
@@ -197,18 +199,20 @@ export function ModuleShell({ moduleId }: ModuleShellProps) {
             onChange={(e) => setCustomPrompt(e.target.value)}
             onKeyDown={(e) => { if (e.key === 'Enter') handleCustomPrompt(); }}
             placeholder={`Ask about ${module.label.toLowerCase()}...`}
+            aria-label={`Ask about ${module.label.toLowerCase()}`}
             className="flex-1 px-3 py-2 bg-surface border border-border rounded-lg text-xs text-text placeholder-text-muted outline-none focus:border-border-bright transition-colors"
           />
           <button
             onClick={handleCustomPrompt}
             disabled={!customPrompt.trim()}
+            aria-label="Send prompt"
             className="px-3 py-2 rounded-lg text-xs font-medium transition-colors disabled:opacity-50"
-            style={{ backgroundColor: `${accentColor}15`, color: accentColor, border: `1px solid ${accentColor}30` }}
+            style={{ backgroundColor: `${accentColor}24`, color: accentColor, border: `1px solid ${accentColor}38` }}
           >
             Send
           </button>
         </div>
-      </div>
+      </section>
 
       {/* Context Preview */}
       <ContextPreview
@@ -222,22 +226,22 @@ export function ModuleShell({ moduleId }: ModuleShellProps) {
 
       {/* Task History */}
       {moduleHistory.length > 0 && (
-        <div>
+        <section aria-label="Task history">
           <div className="flex items-center gap-2 mb-3">
-            <Clock className="w-4 h-4 text-text-muted" />
+            <Clock className="w-4 h-4 text-text-muted" aria-hidden="true" />
             <h2 className="text-sm font-medium text-text">History</h2>
           </div>
-          <div className="space-y-1">
+          <div className="space-y-1" role="list">
             {moduleHistory.slice(-5).reverse().map((entry) => (
-              <div key={entry.id} className="flex items-center justify-between py-1.5 px-3 bg-surface border border-border rounded text-xs">
+              <div key={entry.id} role="listitem" className="flex items-center justify-between py-1.5 px-3 bg-surface border border-border rounded text-xs">
                 <span className="text-text truncate">{entry.prompt.slice(0, 60)}</span>
                 <span className={entry.status === 'completed' ? 'text-green-400' : 'text-red-400'}>{entry.status}</span>
               </div>
             ))}
           </div>
-        </div>
+        </section>
       )}
-    </div>
+    </main>
   );
 }
 
@@ -275,20 +279,22 @@ function ContextPreview({
     <div className="mb-6">
       <button
         onClick={onToggle}
-        className="flex items-center gap-1.5 text-xs text-[#4a4e6a] hover:text-text-muted transition-colors"
+        aria-expanded={isExpanded}
+        aria-label="Toggle injected context preview"
+        className="flex items-center gap-1.5 text-xs text-text-muted hover:text-text-muted transition-colors"
       >
         {isExpanded
-          ? <ChevronDown className="w-3 h-3" />
-          : <ChevronRight className="w-3 h-3" />
+          ? <ChevronDown className="w-3 h-3" aria-hidden="true" />
+          : <ChevronRight className="w-3 h-3" aria-hidden="true" />
         }
-        <Info className="w-3 h-3" />
+        <Info className="w-3 h-3" aria-hidden="true" />
         Injected context preview
       </button>
       {isExpanded && (
         <SurfaceCard level={2} className="mt-2 px-3 py-2.5 space-y-1.5">
           {fields.map((f) => (
             <div key={f.label} className="flex items-start gap-2 text-xs">
-              <span className="text-[#4a4e6a] flex-shrink-0 w-16 text-right">{f.label}</span>
+              <span className="text-text-muted flex-shrink-0 w-16 text-right">{f.label}</span>
               <span className="text-text-muted-hover font-mono break-all">{f.value}</span>
             </div>
           ))}

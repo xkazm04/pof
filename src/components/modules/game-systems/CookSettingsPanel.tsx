@@ -26,7 +26,7 @@ function Toggle({ label, description, checked, onChange, icon }: {
         </div>
       </div>
       <div className="flex items-start gap-1.5 flex-1 min-w-0">
-        <span className="flex-shrink-0 mt-px text-text-muted group-hover:text-[#9ca0be] transition-colors">
+        <span className="flex-shrink-0 mt-px text-text-muted group-hover:text-text-muted transition-colors">
           {icon}
         </span>
         <div>

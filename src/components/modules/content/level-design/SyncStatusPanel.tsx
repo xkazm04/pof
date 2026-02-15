@@ -65,9 +65,9 @@ export function SyncStatusPanel({
           disabled={isChecking}
           className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-xs font-medium transition-all disabled:opacity-50"
           style={{
-            backgroundColor: `${accentColor}15`,
+            backgroundColor: `${accentColor}24`,
             color: accentColor,
-            border: `1px solid ${accentColor}30`,
+            border: `1px solid ${accentColor}38`,
           }}
         >
           {isChecking ? (
@@ -135,7 +135,7 @@ export function SyncStatusPanel({
                         {div.suggestion && (
                           <div className="flex items-start gap-1.5 mt-1">
                             <ArrowRight className="w-3 h-3 text-text-muted flex-shrink-0 mt-0.5" />
-                            <span className="text-xs text-[#9ca0be] leading-relaxed">
+                            <span className="text-xs text-text-muted leading-relaxed">
                               {div.suggestion}
                             </span>
                           </div>
@@ -146,9 +146,9 @@ export function SyncStatusPanel({
                         onClick={() => onReconcile(div)}
                         className="flex items-center gap-1 px-2 py-1 rounded text-2xs font-medium flex-shrink-0 transition-all"
                         style={{
-                          backgroundColor: `${accentColor}15`,
+                          backgroundColor: `${accentColor}24`,
                           color: accentColor,
-                          border: `1px solid ${accentColor}30`,
+                          border: `1px solid ${accentColor}38`,
                         }}
                       >
                         <RefreshCw className="w-2.5 h-2.5" />
@@ -164,7 +164,7 @@ export function SyncStatusPanel({
       )}
 
       {divergences.length === 0 && syncStatus === 'synced' && (
-        <p className="text-xs text-[#4a4e6a] text-center py-2">
+        <p className="text-xs text-text-muted text-center py-2">
           No divergences detected. Design and code are in sync.
         </p>
       )}

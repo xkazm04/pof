@@ -317,7 +317,7 @@ export function LevelDesignView() {
           className={`absolute bottom-4 right-4 z-50 flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium shadow-lg border animate-in fade-in slide-in-from-bottom-2 ${
             rvToast.type === 'success'
               ? 'bg-surface border-green-500/30 text-green-400'
-              : 'bg-surface border-red-500/30 text-red-400'
+              : 'bg-surface border-status-red-strong text-red-400'
           }`}
         >
           <span
@@ -378,7 +378,7 @@ export function LevelDesignView() {
                     <span className="truncate">{doc.name}</span>
                   </div>
                   <div className="flex items-center gap-2 mt-1 ml-5">
-                    <span className="text-2xs text-[#4a4e6a]">{doc.rooms.length} rooms</span>
+                    <span className="text-2xs text-text-muted">{doc.rooms.length} rooms</span>
                     <SyncDot status={doc.syncStatus} />
                   </div>
                 </button>
@@ -396,7 +396,7 @@ export function LevelDesignView() {
               onChange={(e) => setNewDocName(e.target.value)}
               onKeyDown={(e) => { if (e.key === 'Enter') handleCreateDoc(); }}
               placeholder="New level design..."
-              className="flex-1 px-2.5 py-2 bg-surface border border-border rounded-md text-xs text-text placeholder-[#4a4e6a] outline-none focus:border-border-bright transition-colors min-w-0"
+              className="flex-1 px-2.5 py-2 bg-surface border border-border rounded-md text-xs text-text placeholder-text-muted outline-none focus:border-border-bright transition-colors min-w-0"
             />
             <button
               onClick={handleCreateDoc}
@@ -556,7 +556,7 @@ export function LevelDesignView() {
                       value={activeDoc.description}
                       onChange={(e) => handleDescriptionChange(e.target.value)}
                       placeholder="High-level overview of this level — setting, tone, player objectives..."
-                      className="w-full px-4 py-3 bg-surface-deep border border-border rounded-lg text-xs text-text placeholder-[#4a4e6a] outline-none focus:border-border-bright transition-colors resize-none leading-relaxed"
+                      className="w-full px-4 py-3 bg-surface-deep border border-border rounded-lg text-xs text-text placeholder-text-muted outline-none focus:border-border-bright transition-colors resize-none leading-relaxed"
                       rows={3}
                     />
                   </div>
@@ -566,14 +566,14 @@ export function LevelDesignView() {
                     <label className="text-xs uppercase tracking-wider text-text-muted mb-1.5 block font-semibold">
                       Design Narrative
                     </label>
-                    <p className="text-xs text-[#4a4e6a] mb-2">
+                    <p className="text-xs text-text-muted mb-2">
                       Write your level design in natural language. Describe rooms, encounters, pacing curves, difficulty arcs, and player flow. This narrative drives code generation.
                     </p>
                     <textarea
                       value={activeDoc.designNarrative}
                       onChange={(e) => handleNarrativeChange(e.target.value)}
                       placeholder={`Example:\n\nThe player enters through a narrow stone corridor (low difficulty, building tension). The corridor opens into a grand hall with 3 pillars — first wave: 4 skeleton warriors patrol the perimeter. After clearing them, wave 2 spawns 2 skeleton archers from the balcony above.\n\nThe east door leads to a puzzle room (rest pacing) where the player must rotate statues to unlock the boss chamber. The boss chamber features a Lich King encounter (difficulty 5) with 3 phases...`}
-                      className="w-full px-4 py-3 bg-surface-deep border border-border rounded-lg text-xs text-text placeholder-[#4a4e6a] outline-none focus:border-border-bright transition-colors resize-none leading-relaxed font-mono"
+                      className="w-full px-4 py-3 bg-surface-deep border border-border rounded-lg text-xs text-text placeholder-text-muted outline-none focus:border-border-bright transition-colors resize-none leading-relaxed font-mono"
                       rows={16}
                     />
                   </div>
@@ -587,7 +587,7 @@ export function LevelDesignView() {
                       value={activeDoc.pacingNotes}
                       onChange={(e) => handlePacingNotesChange(e.target.value)}
                       placeholder="Notes on pacing: tension curve, rest areas, difficulty spikes, narrative beats..."
-                      className="w-full px-4 py-3 bg-surface-deep border border-border rounded-lg text-xs text-text placeholder-[#4a4e6a] outline-none focus:border-border-bright transition-colors resize-none leading-relaxed"
+                      className="w-full px-4 py-3 bg-surface-deep border border-border rounded-lg text-xs text-text placeholder-text-muted outline-none focus:border-border-bright transition-colors resize-none leading-relaxed"
                       rows={4}
                     />
                   </div>
@@ -681,7 +681,7 @@ export function LevelDesignView() {
               {/* Divider */}
               <div className="flex items-center gap-3">
                 <div className="flex-1 h-px bg-border" />
-                <span className="text-2xs text-[#4a4e6a] uppercase tracking-widest">or generate procedurally</span>
+                <span className="text-2xs text-text-muted uppercase tracking-widest">or generate procedurally</span>
                 <div className="flex-1 h-px bg-border" />
               </div>
 
@@ -694,7 +694,7 @@ export function LevelDesignView() {
               {/* Divider */}
               <div className="flex items-center gap-3">
                 <div className="flex-1 h-px bg-border" />
-                <span className="text-2xs text-[#4a4e6a] uppercase tracking-widest">or start a design doc</span>
+                <span className="text-2xs text-text-muted uppercase tracking-widest">or start a design doc</span>
                 <div className="flex-1 h-px bg-border" />
               </div>
 
@@ -710,7 +710,7 @@ export function LevelDesignView() {
                     onChange={(e) => setNewDocName(e.target.value)}
                     onKeyDown={(e) => { if (e.key === 'Enter') handleCreateDoc(); }}
                     placeholder="My first level..."
-                    className="px-3 py-2 bg-surface border border-border rounded-md text-xs text-text placeholder-[#4a4e6a] outline-none focus:border-border-bright transition-colors"
+                    className="px-3 py-2 bg-surface border border-border rounded-md text-xs text-text placeholder-text-muted outline-none focus:border-border-bright transition-colors"
                   />
                   <button
                     onClick={handleCreateDoc}

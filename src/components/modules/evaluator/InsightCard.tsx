@@ -13,37 +13,38 @@ import {
   Radar,
 } from 'lucide-react';
 import type { CorrelatedInsight, InsightSeverity } from '@/lib/evaluator/insight-generator';
+import { SEVERITY_COLORS, OPACITY_8, OPACITY_20 } from '@/lib/chart-colors';
 
 // ─── Severity styling ────────────────────────────────────────────────────────
 
 const SEVERITY_STYLES: Record<InsightSeverity, { icon: typeof AlertTriangle; text: string; bg: string; border: string; iconColor: string }> = {
   critical: {
     icon: AlertOctagon,
-    text: '#f87171',
-    bg: '#f8717108',
-    border: '#f8717120',
-    iconColor: '#f87171',
+    text: SEVERITY_COLORS.critical,
+    bg: SEVERITY_COLORS.critical + OPACITY_8,
+    border: SEVERITY_COLORS.critical + OPACITY_20,
+    iconColor: SEVERITY_COLORS.critical,
   },
   warning: {
     icon: AlertTriangle,
-    text: '#fbbf24',
-    bg: '#fbbf2408',
-    border: '#fbbf2420',
-    iconColor: '#fbbf24',
+    text: SEVERITY_COLORS.warning,
+    bg: SEVERITY_COLORS.warning + OPACITY_8,
+    border: SEVERITY_COLORS.warning + OPACITY_20,
+    iconColor: SEVERITY_COLORS.warning,
   },
   info: {
     icon: Info,
-    text: '#60a5fa',
-    bg: '#60a5fa08',
-    border: '#60a5fa20',
-    iconColor: '#60a5fa',
+    text: SEVERITY_COLORS.info,
+    bg: SEVERITY_COLORS.info + OPACITY_8,
+    border: SEVERITY_COLORS.info + OPACITY_20,
+    iconColor: SEVERITY_COLORS.info,
   },
   positive: {
     icon: CheckCircle2,
-    text: '#4ade80',
-    bg: '#4ade8008',
-    border: '#4ade8020',
-    iconColor: '#4ade80',
+    text: SEVERITY_COLORS.positive,
+    bg: SEVERITY_COLORS.positive + OPACITY_8,
+    border: SEVERITY_COLORS.positive + OPACITY_20,
+    iconColor: SEVERITY_COLORS.positive,
   },
 };
 
@@ -77,7 +78,7 @@ export function InsightCard({ insight, index, onDrillDown }: InsightCardProps) {
     <motion.div
       initial={{ opacity: 0, y: 6 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.25, delay: index * 0.04 }}
+      transition={{ duration: 0.22, delay: index * 0.04 }}
       className="rounded-lg border px-3.5 py-3 transition-colors hover:brightness-110"
       style={{ backgroundColor: style.bg, borderColor: style.border }}
     >

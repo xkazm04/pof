@@ -239,7 +239,7 @@ export function AnimationChecklist({ onGenerate, isGenerating, completedSteps, o
         {/* Progress bar */}
         <div className="w-16 h-1.5 rounded-full bg-border overflow-hidden">
           <div
-            className="h-full rounded-full transition-all duration-500"
+            className="h-full rounded-full transition-all duration-slow"
             style={{
               width: `${(completedCount / ANIMATION_STEPS.length) * 100}%`,
               backgroundColor: ACCENT,
@@ -292,7 +292,7 @@ function StepCard({ step, isCompleted, isExpanded, isGenerating, onToggle, onGen
 
   return (
     <div
-      className="rounded-xl border transition-all duration-200"
+      className="rounded-xl border transition-all duration-base"
       style={{
         borderColor: isCompleted ? '#22c55e30' : isExpanded ? `${typeColor}40` : 'var(--border)',
         backgroundColor: isCompleted ? '#22c55e06' : isExpanded ? `${typeColor}06` : 'var(--surface-deep)',
@@ -341,8 +341,8 @@ function StepCard({ step, isCompleted, isExpanded, isGenerating, onToggle, onGen
         {/* Expand indicator */}
         <div className="flex-shrink-0">
           {isExpanded
-            ? <ChevronDown className="w-3.5 h-3.5 text-[#4a4e6a]" />
-            : <ChevronRight className="w-3.5 h-3.5 text-[#4a4e6a]" />
+            ? <ChevronDown className="w-3.5 h-3.5 text-text-muted" />
+            : <ChevronRight className="w-3.5 h-3.5 text-text-muted" />
           }
         </div>
       </button>
@@ -354,7 +354,7 @@ function StepCard({ step, isCompleted, isExpanded, isGenerating, onToggle, onGen
           <ol className="space-y-1.5 ml-10">
             {step.details.map((detail, i) => (
               <li key={i} className="text-2xs text-[#9b9ec0] leading-relaxed flex gap-2">
-                <span className="flex-shrink-0 text-[#4a4e6a] font-mono w-3 text-right">{i + 1}.</span>
+                <span className="flex-shrink-0 text-text-muted font-mono w-3 text-right">{i + 1}.</span>
                 <span>{detail}</span>
               </li>
             ))}
@@ -404,7 +404,7 @@ function StepCard({ step, isCompleted, isExpanded, isGenerating, onToggle, onGen
             {!isCompleted && (
               <button
                 onClick={(e) => { e.stopPropagation(); onMarkComplete(); }}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all text-text-muted bg-surface border border-border hover:border-[#22c55e40] hover:text-[#22c55e]"
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all text-text-muted bg-surface border border-border hover:border-status-green-strong hover:text-[#22c55e]"
               >
                 <Check className="w-3 h-3" />
                 Mark Complete

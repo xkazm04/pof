@@ -2,7 +2,7 @@
 
 import { useCallback, useState } from 'react';
 import {
-  Terminal, CheckCircle, Loader2, Trash2, RotateCcw, FileText,
+  Terminal, CheckCircle, Loader2, Trash2, RotateCcw, FileText, Copy,
 } from 'lucide-react';
 import type { ExecutionInfo, ExecutionResult } from './types';
 
@@ -18,14 +18,16 @@ interface TerminalHeaderProps {
   queuePendingCount: number;
   onClear: () => void;
   onResume: () => void;
+  onCopyOutput?: () => string | null;
 }
 
 export function TerminalHeader({
   title, sessionId, isStreaming, executionInfo, lastResult,
   logFilePath, editCount, writeCount, queuePendingCount,
-  onClear, onResume,
+  onClear, onResume, onCopyOutput,
 }: TerminalHeaderProps) {
   const [logCopied, setLogCopied] = useState(false);
+  const [outputCopied, setOutputCopied] = useState(false);
 
   const copyLogPath = useCallback(() => {
     if (!logFilePath) return;
@@ -80,6 +82,24 @@ export function TerminalHeader({
           {executionInfo?.model && <span className="text-text-muted">{String(executionInfo.model).split('-').slice(-2).join('-')}</span>}
         </div>
         <div className="flex items-center gap-2">
+          {onCopyOutput && !isStreaming && lastResult && (
+            <button
+              onClick={() => {
+                const text = onCopyOutput();
+                if (text) {
+                  navigator.clipboard.writeText(text).then(() => {
+                    setOutputCopied(true);
+                    setTimeout(() => setOutputCopied(false), 2000);
+                  }).catch(() => {});
+                }
+              }}
+              className="flex items-center gap-1 text-text-muted hover:text-text transition-colors"
+              title="Copy last Claude response"
+            >
+              {outputCopied ? <CheckCircle className="w-2.5 h-2.5 text-green-400" /> : <Copy className="w-2.5 h-2.5" />}
+              <span>{outputCopied ? 'Copied' : 'Output'}</span>
+            </button>
+          )}
           {logFilePath && (
             <button
               onClick={copyLogPath}

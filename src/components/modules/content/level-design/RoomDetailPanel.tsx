@@ -119,7 +119,7 @@ export function RoomDetailPanel({
           value={room.description}
           onChange={(e) => updateField('description', e.target.value)}
           placeholder="Describe this room's purpose, aesthetics, and narrative role..."
-          className="w-full px-3 py-2 bg-surface-deep border border-border rounded-md text-xs text-text placeholder-[#4a4e6a] outline-none focus:border-border-bright transition-colors resize-none leading-relaxed"
+          className="w-full px-3 py-2 bg-surface-deep border border-border rounded-md text-xs text-text placeholder-text-muted outline-none focus:border-border-bright transition-colors resize-none leading-relaxed"
           rows={3}
         />
       </div>
@@ -131,7 +131,7 @@ export function RoomDetailPanel({
           value={room.encounterDesign}
           onChange={(e) => updateField('encounterDesign', e.target.value)}
           placeholder="Describe encounters, enemy behavior, wave patterns, triggers, environmental hazards..."
-          className="w-full px-3 py-2 bg-surface-deep border border-border rounded-md text-xs text-text placeholder-[#4a4e6a] outline-none focus:border-border-bright transition-colors resize-none leading-relaxed"
+          className="w-full px-3 py-2 bg-surface-deep border border-border rounded-md text-xs text-text placeholder-text-muted outline-none focus:border-border-bright transition-colors resize-none leading-relaxed"
           rows={4}
         />
       </div>
@@ -182,7 +182,7 @@ export function RoomDetailPanel({
           <span className="text-xs uppercase tracking-wider text-text-muted font-semibold">
             Spawn Entries
           </span>
-          <span className="text-2xs text-[#4a4e6a]">({room.spawnEntries.length})</span>
+          <span className="text-2xs text-text-muted">({room.spawnEntries.length})</span>
         </button>
 
         {showSpawns && (
@@ -244,7 +244,7 @@ export function RoomDetailPanel({
           <span className="text-xs uppercase tracking-wider text-text-muted font-semibold">
             Linked Files
           </span>
-          <span className="text-2xs text-[#4a4e6a]">({room.linkedFiles.length})</span>
+          <span className="text-2xs text-text-muted">({room.linkedFiles.length})</span>
         </button>
 
         {showFiles && (
@@ -256,7 +256,7 @@ export function RoomDetailPanel({
               </div>
             ))}
             {room.linkedFiles.length === 0 && (
-              <p className="text-xs text-[#4a4e6a] px-2">No files linked yet. Generate code to create links.</p>
+              <p className="text-xs text-text-muted px-2">No files linked yet. Generate code to create links.</p>
             )}
           </div>
         )}
@@ -268,9 +268,9 @@ export function RoomDetailPanel({
         disabled={isGenerating}
         className="w-full flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-md text-xs font-medium transition-all disabled:opacity-50"
         style={{
-          backgroundColor: `${accentColor}15`,
+          backgroundColor: `${accentColor}24`,
           color: accentColor,
-          border: `1px solid ${accentColor}30`,
+          border: `1px solid ${accentColor}38`,
         }}
       >
         <Zap className="w-3.5 h-3.5" />

@@ -1,10 +1,11 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   History, CheckCircle, XCircle, Clock, HardDrive, Tag, AlertTriangle,
   TrendingUp, ArrowLeftRight, Plus, Trash2, RefreshCw, ChevronDown, ChevronRight,
+  ChevronUp,
 } from 'lucide-react';
 import type { BuildRecord, BuildStats, SizeTrendPoint } from '@/lib/packaging/build-history-store';
 import { apiFetch } from '@/lib/api-utils';
@@ -13,6 +14,35 @@ import { SurfaceCard } from '@/components/ui/SurfaceCard';
 import { BuildComparison } from './BuildComparison';
 
 type DashboardTab = 'history' | 'trends' | 'compare';
+
+type SortKey = 'date' | 'platform' | 'config' | 'size' | 'duration' | 'errors';
+type SortDir = 'asc' | 'desc';
+
+const ALL_PLATFORMS = ['Windows', 'Linux', 'Mac', 'Android', 'iOS'] as const;
+
+function SortableHeader({
+  label, sortKey, activeKey, dir, onSort,
+}: {
+  label: string; sortKey: SortKey; activeKey: SortKey; dir: SortDir;
+  onSort: (key: SortKey) => void;
+}) {
+  const active = sortKey === activeKey;
+  return (
+    <button
+      onClick={() => onSort(sortKey)}
+      className="flex items-center gap-0.5 text-2xs uppercase tracking-wider font-medium transition-colors group cursor-pointer select-none"
+    >
+      <span className={active ? 'text-[#a78bfa]' : 'text-text-muted group-hover:text-text'}>{label}</span>
+      {active ? (
+        dir === 'asc'
+          ? <ChevronUp className="w-2.5 h-2.5 text-[#a78bfa]" />
+          : <ChevronDown className="w-2.5 h-2.5 text-[#a78bfa]" />
+      ) : (
+        <ChevronDown className="w-2.5 h-2.5 text-text-muted/0 group-hover:text-text-muted/50" />
+      )}
+    </button>
+  );
+}
 
 function formatBytes(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`;
@@ -81,9 +111,9 @@ function BuildRow({ build, onDelete }: { build: BuildRecord; onDelete: (id: numb
           )}
         </div>
 
-        <span className="text-[#9ca0be] font-mono">{build.platform}</span>
+        <span className="text-text-muted font-mono">{build.platform}</span>
         <span className="text-text-muted">{build.config}</span>
-        <span className="text-[#9ca0be] font-mono">{build.sizeBytes != null ? formatBytes(build.sizeBytes) : '-'}</span>
+        <span className="text-text-muted font-mono">{build.sizeBytes != null ? formatBytes(build.sizeBytes) : '-'}</span>
         <span className="text-text-muted font-mono">{build.durationMs != null ? formatDuration(build.durationMs) : '-'}</span>
 
         <span className="text-2xs text-text-muted">
@@ -97,20 +127,20 @@ function BuildRow({ build, onDelete }: { build: BuildRecord; onDelete: (id: numb
             initial={{ height: 0, opacity: 0 }}
             animate={{ height: 'auto', opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
-            transition={{ duration: 0.15 }}
+            transition={{ duration: 0.12 }}
             className="overflow-hidden"
           >
             <div className="px-6 pb-2 grid grid-cols-2 gap-x-6 gap-y-1 text-xs">
               {build.outputPath && (
                 <div>
                   <span className="text-text-muted">Output: </span>
-                  <span className="text-[#9ca0be] font-mono break-all">{build.outputPath}</span>
+                  <span className="text-text-muted font-mono break-all">{build.outputPath}</span>
                 </div>
               )}
               {build.cookTimeMs != null && (
                 <div>
                   <span className="text-text-muted">Cook time: </span>
-                  <span className="text-[#9ca0be] font-mono">{formatDuration(build.cookTimeMs)}</span>
+                  <span className="text-text-muted font-mono">{formatDuration(build.cookTimeMs)}</span>
                 </div>
               )}
               {(build.warningCount > 0 || build.errorCount > 0) && (
@@ -132,7 +162,7 @@ function BuildRow({ build, onDelete }: { build: BuildRecord; onDelete: (id: numb
               {build.notes && (
                 <div className="col-span-2">
                   <span className="text-text-muted">Notes: </span>
-                  <span className="text-[#9ca0be]">{build.notes}</span>
+                  <span className="text-text-muted">{build.notes}</span>
                 </div>
               )}
               <div className="col-span-2 pt-1">
@@ -240,7 +270,7 @@ function VersionPanel({ version, onBump }: { version: string; onBump: (type: 'ma
           <button
             key={type}
             onClick={() => onBump(type)}
-            className="flex-1 py-1 rounded text-2xs font-medium text-[#9ca0be] bg-surface-hover hover:bg-border-bright hover:text-text transition-colors capitalize"
+            className="flex-1 py-1 rounded text-2xs font-medium text-text-muted bg-surface-hover hover:bg-border-bright hover:text-text transition-colors capitalize"
           >
             {type}
           </button>
@@ -260,6 +290,66 @@ export function BuildHistoryDashboard() {
   const [version, setVersion] = useState('0.1.0');
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
+  const [sortKey, setSortKey] = useState<SortKey>('date');
+  const [sortDir, setSortDir] = useState<SortDir>('desc');
+  const [platformFilter, setPlatformFilter] = useState<Set<string>>(new Set());
+
+  const handleSort = useCallback((key: SortKey) => {
+    setSortKey((prev) => {
+      if (prev === key) {
+        setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'));
+      } else {
+        setSortDir(key === 'date' ? 'desc' : 'asc');
+      }
+      return key;
+    });
+  }, []);
+
+  const togglePlatform = useCallback((p: string) => {
+    setPlatformFilter((prev) => {
+      const next = new Set(prev);
+      if (next.has(p)) next.delete(p); else next.add(p);
+      return next;
+    });
+  }, []);
+
+  const filteredSortedBuilds = useMemo(() => {
+    let result = builds;
+
+    // Platform filter
+    if (platformFilter.size > 0) {
+      result = result.filter((b) => platformFilter.has(b.platform));
+    }
+
+    // Sort
+    const dir = sortDir === 'asc' ? 1 : -1;
+    result = [...result].sort((a, b) => {
+      switch (sortKey) {
+        case 'date':
+          return dir * (new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+        case 'platform':
+          return dir * a.platform.localeCompare(b.platform);
+        case 'config':
+          return dir * a.config.localeCompare(b.config);
+        case 'size':
+          return dir * ((a.sizeBytes ?? 0) - (b.sizeBytes ?? 0));
+        case 'duration':
+          return dir * ((a.durationMs ?? 0) - (b.durationMs ?? 0));
+        case 'errors':
+          return dir * (a.errorCount - b.errorCount);
+        default:
+          return 0;
+      }
+    });
+
+    return result;
+  }, [builds, platformFilter, sortKey, sortDir]);
+
+  // Platforms that actually exist in the data
+  const availablePlatforms = useMemo(() => {
+    const set = new Set(builds.map((b) => b.platform));
+    return ALL_PLATFORMS.filter((p) => set.has(p));
+  }, [builds]);
 
   const fetchAll = useCallback(async () => {
     setLoading(true);
@@ -323,7 +413,7 @@ export function BuildHistoryDashboard() {
     `px-2.5 py-1 text-xs font-medium rounded-t transition-colors ${
       tab === t
         ? 'text-text bg-surface-hover border-b-2 border-[#8b5cf6]'
-        : 'text-text-muted hover:text-[#9ca0be]'
+        : 'text-text-muted hover:text-text-muted'
     }`;
 
   return (
@@ -438,26 +528,61 @@ export function BuildHistoryDashboard() {
 
       {/* Tab content */}
       {tab === 'history' && (
-        <div className="rounded border border-border bg-background/60 overflow-hidden">
-          {/* Table header */}
-          <div className="grid grid-cols-[auto_1fr_80px_80px_80px_60px_auto] gap-2 px-2 py-1 bg-surface-deep border-b border-border text-2xs uppercase tracking-wider text-text-muted font-medium">
-            <span className="w-2.5" />
-            <span>Build</span>
-            <span>Platform</span>
-            <span>Config</span>
-            <span>Size</span>
-            <span>Time</span>
-            <span>Date</span>
-          </div>
-          {builds.length === 0 ? (
-            <div className="text-center text-text-muted text-xs py-8">
-              No builds recorded yet. Use "Record" to add your first build.
+        <div className="space-y-2">
+          {/* Platform filter chips */}
+          {availablePlatforms.length > 1 && (
+            <div className="flex items-center gap-1.5">
+              <span className="text-2xs text-text-muted uppercase tracking-wider font-medium mr-1">Platform</span>
+              {availablePlatforms.map((p) => {
+                const active = platformFilter.has(p);
+                return (
+                  <button
+                    key={p}
+                    onClick={() => togglePlatform(p)}
+                    className={`px-2 py-0.5 rounded-full text-2xs font-medium transition-colors ${
+                      active
+                        ? 'bg-[#8b5cf6]/20 text-[#a78bfa] border border-[#8b5cf6]/40'
+                        : 'bg-surface-hover text-text-muted border border-transparent hover:border-border-bright hover:text-text'
+                    }`}
+                  >
+                    {p}
+                  </button>
+                );
+              })}
+              {platformFilter.size > 0 && (
+                <button
+                  onClick={() => setPlatformFilter(new Set())}
+                  className="px-1.5 py-0.5 text-2xs text-text-muted hover:text-text transition-colors"
+                >
+                  Clear
+                </button>
+              )}
             </div>
-          ) : (
-            builds.map((b) => (
-              <BuildRow key={b.id} build={b} onDelete={handleDelete} />
-            ))
           )}
+
+          <div className="rounded border border-border bg-background/60 overflow-hidden">
+            {/* Sortable table header */}
+            <div className="grid grid-cols-[auto_1fr_80px_80px_80px_60px_auto] gap-2 px-2 py-1.5 bg-surface-deep border-b border-border">
+              <span className="w-2.5" />
+              <span className="text-2xs uppercase tracking-wider text-text-muted font-medium">Build</span>
+              <SortableHeader label="Platform" sortKey="platform" activeKey={sortKey} dir={sortDir} onSort={handleSort} />
+              <SortableHeader label="Config" sortKey="config" activeKey={sortKey} dir={sortDir} onSort={handleSort} />
+              <SortableHeader label="Size" sortKey="size" activeKey={sortKey} dir={sortDir} onSort={handleSort} />
+              <SortableHeader label="Time" sortKey="duration" activeKey={sortKey} dir={sortDir} onSort={handleSort} />
+              <SortableHeader label="Date" sortKey="date" activeKey={sortKey} dir={sortDir} onSort={handleSort} />
+            </div>
+            {filteredSortedBuilds.length === 0 ? (
+              <div className="text-center text-text-muted text-xs py-8">
+                {builds.length === 0
+                  ? 'No builds recorded yet. Use "Record" to add your first build.'
+                  : 'No builds match the current filter.'}
+              </div>
+            ) : (
+              filteredSortedBuilds.map((b) => (
+                <BuildRow key={b.id} build={b} onDelete={handleDelete} />
+              ))
+            )}
+          </div>
         </div>
       )}
 

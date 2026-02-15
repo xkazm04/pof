@@ -82,7 +82,7 @@ export function DirectorOverview({
         <motion.div
           initial={{ opacity: 0, y: 8 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.3, delay: 0.2 }}
+          transition={{ duration: 0.22, delay: 0.2 }}
           className="p-4 bg-surface border border-border rounded-xl"
         >
           <div className="flex items-center gap-3 mb-3">
@@ -105,7 +105,7 @@ export function DirectorOverview({
                   strokeWidth="4"
                   strokeDasharray={`${(stats.avgScore / 100) * 175.9} 175.9`}
                   strokeLinecap="round"
-                  className="transition-all duration-700"
+                  className="transition-all duration-slow"
                 />
               </svg>
               <span className="absolute inset-0 flex items-center justify-center text-sm font-bold text-text">
@@ -181,7 +181,7 @@ function StatCard({
     <motion.div
       initial={{ opacity: 0, scale: 0.95 }}
       animate={{ opacity: 1, scale: 1 }}
-      transition={{ duration: 0.25, delay }}
+      transition={{ duration: 0.22, delay }}
       className="p-3.5 bg-surface border border-border rounded-xl"
     >
       <div className="flex items-center gap-2 mb-2">
@@ -207,7 +207,7 @@ function ScoreBar({ label, value, max, color }: { label: string; value: number; 
         <motion.div
           initial={{ width: 0 }}
           animate={{ width: `${pct}%` }}
-          transition={{ duration: 0.6, ease: 'easeOut', delay: 0.3 }}
+          transition={{ duration: 0.45, ease: [0.16, 1, 0.3, 1], delay: 0.3 }}
           className="h-full rounded-full"
           style={{ backgroundColor: color }}
         />
@@ -232,7 +232,7 @@ function SessionCard({
     <motion.button
       initial={{ opacity: 0, y: 6 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.2, delay: index * 0.03 }}
+      transition={{ duration: 0.22, delay: index * 0.03 }}
       onClick={onClick}
       className="w-full text-left flex items-center gap-3 px-3.5 py-3 bg-surface-deep border border-border rounded-lg hover:border-border-bright hover:bg-surface transition-all group"
     >
@@ -289,13 +289,13 @@ function SessionCard({
               {session.systemsTestedCount} system{session.systemsTestedCount !== 1 ? 's' : ''} tested
             </span>
           )}
-          <span className="text-2xs text-[#4a4e6a]">
+          <span className="text-2xs text-text-muted">
             {new Date(session.createdAt).toLocaleDateString()}
           </span>
         </div>
       </div>
 
-      <ChevronRight className="w-3.5 h-3.5 text-[#4a4e6a] group-hover:text-text-muted transition-colors flex-shrink-0" />
+      <ChevronRight className="w-3.5 h-3.5 text-text-muted group-hover:text-text-muted transition-colors flex-shrink-0" />
     </motion.button>
   );
 }

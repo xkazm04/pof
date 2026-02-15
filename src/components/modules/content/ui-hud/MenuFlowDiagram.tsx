@@ -517,7 +517,7 @@ export function MenuFlowDiagram({ onGenerate, isGenerating }: MenuFlowDiagramPro
                   </text>
 
                   {/* Widget count */}
-                  <text x={32} y={58} fontSize={7} fill="#4a4e6a" fontFamily="sans-serif">
+                  <text x={32} y={58} fontSize={7} fill="var(--text-muted)" fontFamily="sans-serif">
                     {scr.widgets.length} widget{scr.widgets.length !== 1 ? 's' : ''}
                   </text>
 
@@ -590,7 +590,7 @@ export function MenuFlowDiagram({ onGenerate, isGenerating }: MenuFlowDiagramPro
                   className="flex items-center gap-2 px-2.5 py-1.5 rounded-md bg-surface border border-border text-xs"
                 >
                   <span className="text-text font-medium">{fromScr.name}</span>
-                  <span className="text-[#4a4e6a]">{tr.bidirectional ? '⟷' : '→'}</span>
+                  <span className="text-text-muted">{tr.bidirectional ? '⟷' : '→'}</span>
                   <span className="text-text font-medium">{toScr.name}</span>
                   <span className="text-text-muted ml-auto truncate max-w-[100px]">{tr.trigger}</span>
                   <button
@@ -707,7 +707,7 @@ function ScreenEditor({
           type="text"
           value={screen.name}
           onChange={(e) => onUpdate({ name: e.target.value })}
-          className="w-full px-2.5 py-1.5 bg-surface border border-border rounded text-xs text-text outline-none focus:border-[#f59e0b40] transition-colors"
+          className="w-full px-2.5 py-1.5 bg-surface border border-border rounded text-xs text-text outline-none focus:border-status-amber-strong transition-colors"
         />
       </div>
 
@@ -718,7 +718,7 @@ function ScreenEditor({
           <select
             value={screen.type}
             onChange={(e) => onUpdate({ type: e.target.value as ScreenType })}
-            className="w-full px-2.5 py-1.5 bg-surface border border-border rounded text-xs text-text outline-none focus:border-[#f59e0b40] appearance-none transition-colors"
+            className="w-full px-2.5 py-1.5 bg-surface border border-border rounded text-xs text-text outline-none focus:border-status-amber-strong appearance-none transition-colors"
           >
             {(Object.entries(SCREEN_TYPES) as [ScreenType, typeof SCREEN_TYPES[ScreenType]][]).map(([key, val]) => (
               <option key={key} value={key}>{val.label}</option>
@@ -763,7 +763,7 @@ function ScreenEditor({
             onChange={(e) => setNewWidget(e.target.value)}
             onKeyDown={(e) => { if (e.key === 'Enter') addWidget(); }}
             placeholder="e.g. Play Button, Health Bar..."
-            className="flex-1 px-2.5 py-1.5 bg-surface border border-border rounded text-xs text-text placeholder-[#4a4e6a] outline-none focus:border-[#f59e0b40] transition-colors"
+            className="flex-1 px-2.5 py-1.5 bg-surface border border-border rounded text-xs text-text placeholder-text-muted outline-none focus:border-status-amber-strong transition-colors"
           />
           <button
             onClick={addWidget}

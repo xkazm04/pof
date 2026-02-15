@@ -5,6 +5,7 @@ import { useCLIPanelStore } from '@/components/cli/store/cliPanelStore';
 import { useProjectStore } from '@/stores/projectStore';
 import { recordSessionOutcome } from '@/hooks/useSessionAnalytics';
 import { buildTaskPrompt, type CLITask } from '@/lib/cli-task';
+import type { SkillId } from '@/components/cli/skills';
 
 interface UseModuleCLIOptions {
   /** Module this session is displayed within (must match the page's activeModuleId for inline visibility) */
@@ -134,13 +135,66 @@ export function useModuleCLI(opts: UseModuleCLIOptions) {
       const scanProject = useProjectStore.getState().scanProject;
       await scanProject();
 
+      // Resolve adaptive skills from telemetry patterns (fire-and-forget on failure)
+      resolveAndApplySkills(opts.sessionKey);
+
       const { projectName, projectPath: pp, ueVersion, dynamicContext } = useProjectStore.getState();
       const ctx = { projectName, projectPath: pp, ueVersion, dynamicContext };
       const enriched = buildTaskPrompt(task, ctx);
       sendPrompt(enriched);
     },
-    [sendPrompt],
+    [sendPrompt, opts.sessionKey],
   );
 
-  return { sendPrompt, execute, isRunning };
+  /**
+   * Optimized prompt sender: runs the prompt through the self-learning optimizer
+   * first, then dispatches the rewritten version. Falls back to the original
+   * prompt if the optimizer fails or has insufficient data.
+   */
+  const sendOptimizedPrompt = useCallback(
+    async (prompt: string) => {
+      try {
+        const res = await fetch('/api/prompt-evolution', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'optimize-prompt', moduleId: opts.moduleId, prompt }),
+        });
+        if (res.ok) {
+          const json = await res.json();
+          if (json.data?.wasModified && json.data?.optimized) {
+            sendPrompt(json.data.optimized);
+            return;
+          }
+        }
+      } catch {
+        // Fall through to unoptimized send
+      }
+      sendPrompt(prompt);
+    },
+    [sendPrompt, opts.moduleId],
+  );
+
+  return { sendPrompt, sendOptimizedPrompt, execute, isRunning };
+}
+
+/**
+ * Resolve adaptive skills from telemetry patterns and apply to the session.
+ * Non-blocking — silently skips on failure so it never blocks prompt dispatch.
+ */
+function resolveAndApplySkills(sessionKey: string): void {
+  fetch('/api/telemetry', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ action: 'resolve-skills' }),
+  })
+    .then((res) => (res.ok ? res.json() : null))
+    .then((json: { skills?: SkillId[] } | null) => {
+      if (!json?.skills?.length) return;
+      const { sessions, tabOrder } = useCLIPanelStore.getState();
+      const tabId = tabOrder.find((id) => sessions[id]?.sessionKey === sessionKey);
+      if (tabId) {
+        useCLIPanelStore.getState().setSessionSkills(tabId, json.skills);
+      }
+    })
+    .catch(() => {});
 }

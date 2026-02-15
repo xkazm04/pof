@@ -1,7 +1,14 @@
 /**
  * Client-side hook that connects to the file watcher SSE endpoint,
  * triggers project re-scans on source file changes, and auto-verifies
- * checklist items based on detected UE5 class declarations.
+ * checklist items using semantic C++ header parsing.
+ *
+ * When a class declaration is detected, the watcher calls the
+ * verify-semantic API to check whether the class has the expected
+ * members. Items are marked as:
+ *   - true (green) when semantic verification returns 'full'
+ *   - true + verification='partial' (yellow) when class exists but incomplete
+ *   - not checked when the class is a hollow stub
  */
 
 'use client';
@@ -9,8 +16,10 @@
 import { useEffect, useRef, useCallback, useState } from 'react';
 import { useProjectStore } from '@/stores/projectStore';
 import { useModuleStore } from '@/stores/moduleStore';
-import { getModuleChecklist, SUB_MODULE_MAP } from '@/lib/module-registry';
+import { SUB_MODULE_MAP } from '@/lib/module-registry';
+import { getExpectationsForItem } from '@/lib/checklist-expectations';
 import type { FileChangeEvent, ScannedDeclaration } from '@/lib/file-watcher';
+import type { VerificationInfo } from '@/stores/moduleStore';
 
 interface WatcherStatus {
   connected: boolean;
@@ -22,10 +31,6 @@ interface WatcherStatus {
 /**
  * Build a map of class name patterns → { subModuleId, checklistItemId }
  * from checklist item labels and descriptions.
- *
- * For example, checklist item "Create AARPGCharacterBase" maps the class name
- * "AARPGCharacterBase" to that item. This enables auto-verification when
- * the file watcher detects that class was actually created.
  */
 function buildVerificationMap(): Map<string, { subModuleId: string; itemId: string }> {
   const map = new Map<string, { subModuleId: string; itemId: string }>();
@@ -33,13 +38,10 @@ function buildVerificationMap(): Map<string, { subModuleId: string; itemId: stri
   for (const [moduleId, mod] of Object.entries(SUB_MODULE_MAP)) {
     const checklist = mod.checklist ?? [];
     for (const item of checklist) {
-      // Extract class names from the label and description
-      // Pattern: words starting with A/U/F/E followed by uppercase (UE naming convention)
       const text = `${item.label} ${item.description}`;
       const classMatches = text.match(/\b[AUFE][A-Z]\w{2,}/g);
       if (classMatches) {
         for (const className of classMatches) {
-          // Avoid false positives on common English words
           if (className.length < 5) continue;
           map.set(className, { subModuleId: moduleId, itemId: item.id });
         }
@@ -62,7 +64,6 @@ export function useFileWatcher(): WatcherStatus {
   const eventSourceRef = useRef<EventSource | null>(null);
   const verificationMapRef = useRef<Map<string, { subModuleId: string; itemId: string }> | null>(null);
 
-  // Lazy-build verification map
   const getVerificationMap = useCallback(() => {
     if (!verificationMapRef.current) {
       verificationMapRef.current = buildVerificationMap();
@@ -70,22 +71,107 @@ export function useFileWatcher(): WatcherStatus {
     return verificationMapRef.current;
   }, []);
 
+  /**
+   * Run semantic verification for detected items via the API,
+   * then update both progress and verification state.
+   */
+  const semanticVerify = useCallback(async (
+    detectedItems: { subModuleId: string; itemId: string }[],
+    currentProjectPath: string,
+  ) => {
+    // Deduplicate
+    const unique = new Map<string, { subModuleId: string; itemId: string }>();
+    for (const item of detectedItems) {
+      unique.set(`${item.subModuleId}::${item.itemId}`, item);
+    }
+
+    // Split by whether they have semantic expectations
+    const withExpectations = [...unique.values()].filter(
+      (item) => getExpectationsForItem(item.itemId) !== null,
+    );
+    const withoutExpectations = [...unique.values()].filter(
+      (item) => getExpectationsForItem(item.itemId) === null,
+    );
+
+    const { setChecklistItem, setVerification } = useModuleStore.getState();
+
+    // Items without expectations: name-match auto-verify (backward-compatible)
+    for (const item of withoutExpectations) {
+      setChecklistItem(item.subModuleId, item.itemId, true);
+    }
+
+    if (withExpectations.length === 0) return;
+
+    // Call semantic verification API
+    try {
+      const res = await fetch('/api/filesystem/verify-semantic', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          projectPath: currentProjectPath,
+          items: withExpectations.map((i) => ({ itemId: i.itemId })),
+        }),
+      });
+
+      if (!res.ok) {
+        // Fallback: name-match only
+        for (const item of withExpectations) {
+          setChecklistItem(item.subModuleId, item.itemId, true);
+        }
+        return;
+      }
+
+      const data = await res.json();
+      if (!data.success) return;
+
+      for (const result of data.data.results) {
+        const item = withExpectations.find((i) => i.itemId === result.itemId);
+        if (!item) continue;
+
+        const verification: VerificationInfo = {
+          status: result.status,
+          completeness: result.completeness,
+          missingMembers: result.missingMembers,
+          verifiedAt: Date.now(),
+        };
+
+        setVerification(item.subModuleId, item.itemId, verification);
+
+        if (result.status === 'full') {
+          setChecklistItem(item.subModuleId, item.itemId, true);
+        } else if (result.status === 'partial') {
+          // Mark as checked but verification shows it's partial
+          setChecklistItem(item.subModuleId, item.itemId, true);
+        }
+        // 'stub' and 'missing' — don't auto-check (avoids false positives)
+      }
+    } catch {
+      // On network failure, fall back to name-match
+      for (const item of withExpectations) {
+        setChecklistItem(item.subModuleId, item.itemId, true);
+      }
+    }
+  }, []);
+
   // Auto-verify checklist items based on detected declarations
   const autoVerify = useCallback((declarations: ScannedDeclaration[]) => {
     const vMap = getVerificationMap();
-    const setChecklistItem = useModuleStore.getState().setChecklistItem;
+    const detected: { subModuleId: string; itemId: string }[] = [];
 
     for (const decl of declarations) {
       const match = vMap.get(decl.name);
       if (match) {
-        setChecklistItem(match.subModuleId, match.itemId, true);
+        detected.push(match);
       }
     }
-  }, [getVerificationMap]);
+
+    if (detected.length > 0 && projectPath) {
+      semanticVerify(detected, projectPath);
+    }
+  }, [getVerificationMap, projectPath, semanticVerify]);
 
   // Handle incoming change events
   const handleChanges = useCallback((events: FileChangeEvent[]) => {
-    // Collect all new declarations for auto-verification
     const allDeclarations: ScannedDeclaration[] = [];
     for (const event of events) {
       if (event.type !== 'deleted' && event.declarations.length > 0) {
@@ -93,20 +179,17 @@ export function useFileWatcher(): WatcherStatus {
       }
     }
 
-    // Auto-verify checklist items
     if (allDeclarations.length > 0) {
       autoVerify(allDeclarations);
     }
 
     // Trigger a project re-scan to update dynamicContext
-    // (invalidate cache by clearing scannedAt so next scanProject() runs fresh)
     const { dynamicContext } = useProjectStore.getState();
     if (dynamicContext) {
       useProjectStore.getState().setProject({
         dynamicContext: { ...dynamicContext, scannedAt: '' },
       });
     }
-    // Fire the actual scan
     useProjectStore.getState().scanProject();
 
     setStatus((prev) => ({
@@ -117,7 +200,6 @@ export function useFileWatcher(): WatcherStatus {
   }, [autoVerify]);
 
   useEffect(() => {
-    // Only watch if project is set up and has a path
     if (!projectPath || !isSetupComplete) return;
 
     const url = `/api/filesystem/watch?projectPath=${encodeURIComponent(projectPath)}`;
@@ -137,7 +219,6 @@ export function useFileWatcher(): WatcherStatus {
 
     es.onerror = () => {
       setStatus((prev) => ({ ...prev, connected: false }));
-      // EventSource auto-reconnects
     };
 
     return () => {

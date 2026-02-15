@@ -223,7 +223,7 @@ export function UnifiedSummaryView({ onNavigateTab }: Props) {
             <SourceBadge label="A" active={sourceStatus.analytics} icon={BarChart3} />
             <SourceBadge label="S" active={sourceStatus.scanner} icon={Radar} />
           </div>
-          <span className="text-2xs text-[#4a4e6a]">{activeSources}/4 sources</span>
+          <span className="text-2xs text-text-muted">{activeSources}/4 sources</span>
         </div>
       </div>
 
@@ -231,7 +231,7 @@ export function UnifiedSummaryView({ onNavigateTab }: Props) {
       <div>
         <div className="flex items-center gap-2 mb-3">
           <Sparkles className="w-3.5 h-3.5 text-[#ef4444]" />
-          <span className="text-xs font-semibold text-[#9ca0be] uppercase tracking-wider">
+          <span className="text-xs font-semibold text-text-muted uppercase tracking-wider">
             Module Health Overview
           </span>
           <span className="text-2xs text-text-muted">
@@ -257,7 +257,7 @@ export function UnifiedSummaryView({ onNavigateTab }: Props) {
         <div>
           <div className="flex items-center gap-2 mb-3">
             <Sparkles className="w-3.5 h-3.5 text-[#fbbf24]" />
-            <span className="text-xs font-semibold text-[#9ca0be] uppercase tracking-wider">
+            <span className="text-xs font-semibold text-text-muted uppercase tracking-wider">
               Cross-Dashboard Insights
             </span>
             <div className="flex items-center gap-1.5 ml-2">
@@ -371,7 +371,7 @@ function CombinedHealthGauge({ score }: { score: number }) {
     <motion.div
       initial={{ opacity: 0, scale: 0.9 }}
       animate={{ opacity: 1, scale: 1 }}
-      transition={{ duration: 0.4 }}
+      transition={{ duration: 0.45 }}
       className="relative"
       style={{ width: size, height: size }}
     >
@@ -386,7 +386,7 @@ function CombinedHealthGauge({ score }: { score: number }) {
             strokeLinecap="round"
             initial={{ pathLength: 0 }}
             animate={{ pathLength: 1 }}
-            transition={{ duration: 1, ease: 'easeOut' }}
+            transition={{ duration: 1, ease: [0.16, 1, 0.3, 1] }}
             style={{ filter: `drop-shadow(0 0 6px ${color}40)` }}
           />
         )}
@@ -421,7 +421,7 @@ function DimensionBar({
           className="h-full rounded-full"
           initial={{ width: 0 }}
           animate={{ width: `${value}%` }}
-          transition={{ duration: 0.6, ease: 'easeOut' }}
+          transition={{ duration: 0.45, ease: [0.16, 1, 0.3, 1] }}
           style={{ backgroundColor: color }}
         />
       </div>
@@ -476,7 +476,7 @@ function ModuleHealthCell({
     <motion.div
       initial={{ opacity: 0, scale: 0.95 }}
       animate={{ opacity: 1, scale: 1 }}
-      transition={{ duration: 0.25, delay: index * 0.03 }}
+      transition={{ duration: 0.22, delay: index * 0.03 }}
       className="rounded-lg border border-border/60 p-3 transition-colors hover:border-border-bright"
       style={{ backgroundColor: bg }}
     >
@@ -507,10 +507,10 @@ function ModuleHealthCell({
 function MiniBar({ value, color, label }: { value: number; color: string; label: string }) {
   return (
     <div className="flex items-center gap-1.5">
-      <span className="text-2xs text-[#4a4e6a] w-2 flex-shrink-0">{label}</span>
+      <span className="text-2xs text-text-muted w-2 flex-shrink-0">{label}</span>
       <div className="flex-1 h-1 bg-background/50 rounded-full overflow-hidden">
         <div
-          className="h-full rounded-full transition-all duration-500"
+          className="h-full rounded-full transition-all duration-slow"
           style={{ width: `${value}%`, backgroundColor: color, opacity: 0.7 }}
         />
       </div>

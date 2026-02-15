@@ -531,7 +531,7 @@ export function AudioScenePainter({
                 <circle
                   cx={drawState.startX} cy={drawState.startY}
                   r={r}
-                  fill={`${accentColor}10`}
+                  fill={`${accentColor}14`}
                   stroke={accentColor}
                   strokeWidth={2}
                   strokeDasharray="6,3"
@@ -543,7 +543,7 @@ export function AudioScenePainter({
               <rect
                 x={x} y={y} width={w} height={h}
                 rx={6}
-                fill={`${accentColor}10`}
+                fill={`${accentColor}14`}
                 stroke={accentColor}
                 strokeWidth={2}
                 strokeDasharray="6,3"

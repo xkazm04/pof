@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 import {
   RefreshCw,
   Loader2,
@@ -9,6 +9,7 @@ import {
   Wrench,
   Download,
   Upload,
+  AlignLeft,
 } from 'lucide-react';
 import type { ChecklistItem } from './useProjectScan';
 
@@ -66,24 +67,47 @@ export function StatusChecklist({
     }
   }, [onManifestExported]);
 
-  const handleImportManifest = useCallback(() => {
-    try {
-      const manifest = JSON.parse(importText);
-      if (!manifest.tools || !Array.isArray(manifest.tools)) return;
-      const missing = manifest.tools
-        .filter((t: { installed: boolean; name: string; installCommand?: string }) => !t.installed && t.installCommand)
-        .map((t: { name: string; installCommand?: string }) => `- ${t.name}: \`${t.installCommand}\``)
-        .join('\n');
-      if (!missing) return;
+  const jsonValidation = useMemo<
+    | { status: 'empty' }
+    | { status: 'error'; message: string }
+    | { status: 'valid'; manifest: { tools: { installed: boolean; name: string; installCommand?: string; category?: string }[] }; toolCount: number; categoryCount: number; missingCount: number }
+  >(() => {
+    const trimmed = importText.trim();
+    if (!trimmed) return { status: 'empty' };
 
-      const prompt = `A teammate shared their environment manifest. Install the following missing tools:\n\n${missing}\n\nRun each command and report the result. Do NOT use TodoWrite.`;
-      onBootstrapFromManifest(prompt);
-      setShowImport(false);
-      setImportText('');
-    } catch {
-      // Invalid JSON
+    try {
+      const parsed = JSON.parse(trimmed);
+      if (!parsed.tools || !Array.isArray(parsed.tools)) {
+        return { status: 'error', message: 'Missing "tools" array in manifest' };
+      }
+      const tools = parsed.tools as { installed: boolean; name: string; installCommand?: string; category?: string }[];
+      const categories = new Set(tools.map((t) => t.category ?? 'uncategorized'));
+      const missingCount = tools.filter((t) => !t.installed && t.installCommand).length;
+      return { status: 'valid', manifest: parsed, toolCount: tools.length, categoryCount: categories.size, missingCount };
+    } catch (e) {
+      const msg = e instanceof SyntaxError ? e.message : 'Invalid JSON';
+      return { status: 'error', message: msg };
     }
-  }, [importText, onBootstrapFromManifest]);
+  }, [importText]);
+
+  const handleFormatJson = useCallback(() => {
+    if (jsonValidation.status !== 'valid') return;
+    setImportText(JSON.stringify(jsonValidation.manifest, null, 2));
+  }, [jsonValidation]);
+
+  const handleImportManifest = useCallback(() => {
+    if (jsonValidation.status !== 'valid') return;
+    const missing = jsonValidation.manifest.tools
+      .filter((t) => !t.installed && t.installCommand)
+      .map((t) => `- ${t.name}: \`${t.installCommand}\``)
+      .join('\n');
+    if (!missing) return;
+
+    const prompt = `A teammate shared their environment manifest. Install the following missing tools:\n\n${missing}\n\nRun each command and report the result. Do NOT use TodoWrite.`;
+    onBootstrapFromManifest(prompt);
+    setShowImport(false);
+    setImportText('');
+  }, [jsonValidation, onBootstrapFromManifest]);
 
   return (
     <div className="w-56 shrink-0 border-r border-border bg-background/50 p-4 flex flex-col">
@@ -204,22 +228,49 @@ export function StatusChecklist({
                 value={importText}
                 onChange={(e) => setImportText(e.target.value)}
                 placeholder="Paste manifest JSON..."
-                className="w-full px-2 py-1.5 bg-surface border border-border rounded-md text-xs text-text placeholder-[#4a4e6a] outline-none focus:border-border-bright transition-colors resize-none font-mono"
+                className={`w-full px-2 py-1.5 bg-surface rounded-md text-xs text-text placeholder-text-muted outline-none transition-colors resize-none font-mono ${
+                  jsonValidation.status === 'error'
+                    ? 'border border-red-400/60 focus:border-red-400'
+                    : jsonValidation.status === 'valid'
+                      ? 'border border-[#00ff88]/40 focus:border-[#00ff88]/70'
+                      : 'border border-border focus:border-border-bright'
+                }`}
                 rows={4}
               />
-              <button
-                onClick={handleImportManifest}
-                disabled={!importText.trim() || isBootstrapping}
-                className="w-full flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all disabled:opacity-50"
-                style={{
-                  backgroundColor: '#3b82f615',
-                  color: '#3b82f6',
-                  border: '1px solid #3b82f630',
-                }}
-              >
-                <Wrench className="w-3 h-3" />
-                Install from Manifest
-              </button>
+              {/* Validation feedback */}
+              {jsonValidation.status === 'error' && (
+                <p className="text-2xs text-red-400 leading-snug">{jsonValidation.message}</p>
+              )}
+              {jsonValidation.status === 'valid' && (
+                <p className="text-2xs text-[#00ff88]/80 leading-snug">
+                  {jsonValidation.toolCount} tool{jsonValidation.toolCount !== 1 ? 's' : ''} detected
+                  {jsonValidation.categoryCount > 1 ? ` across ${jsonValidation.categoryCount} categories` : ''}
+                  {jsonValidation.missingCount > 0 ? ` · ${jsonValidation.missingCount} to install` : ' · all installed'}
+                </p>
+              )}
+              <div className="flex items-center gap-1.5">
+                <button
+                  onClick={handleImportManifest}
+                  disabled={jsonValidation.status !== 'valid' || jsonValidation.missingCount === 0 || isBootstrapping}
+                  className="flex-1 flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all disabled:opacity-50"
+                  style={{
+                    backgroundColor: '#3b82f615',
+                    color: '#3b82f6',
+                    border: '1px solid #3b82f630',
+                  }}
+                >
+                  <Wrench className="w-3 h-3" />
+                  Install from Manifest
+                </button>
+                <button
+                  onClick={handleFormatJson}
+                  disabled={jsonValidation.status !== 'valid'}
+                  className="p-1.5 rounded-md text-text-muted hover:text-text hover:bg-surface transition-colors disabled:opacity-30 disabled:pointer-events-none"
+                  title="Format JSON"
+                >
+                  <AlignLeft className="w-3 h-3" />
+                </button>
+              </div>
             </div>
           )}
         </div>

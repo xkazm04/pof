@@ -4,13 +4,15 @@ import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { AlertTriangle, ChevronDown, ChevronRight, FileCode } from 'lucide-react';
 import type { WarningGroup } from './UE5BuildParser';
+import { TruncateWithTooltip } from '@/components/ui/TruncateWithTooltip';
 
 interface WarningAggregatorProps {
   groups: WarningGroup[];
   onFix?: (prompt: string) => void;
+  isRunning?: boolean;
 }
 
-export function WarningAggregator({ groups, onFix }: WarningAggregatorProps) {
+export function WarningAggregator({ groups, onFix, isRunning = false }: WarningAggregatorProps) {
   const [expanded, setExpanded] = useState(false);
   const [expandedGroup, setExpandedGroup] = useState<string | null>(null);
 
@@ -45,7 +47,7 @@ export function WarningAggregator({ groups, onFix }: WarningAggregatorProps) {
             initial={{ height: 0, opacity: 0 }}
             animate={{ height: 'auto', opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
-            transition={{ duration: 0.15 }}
+            transition={{ duration: 0.12 }}
             className="border-t border-yellow-500/10"
           >
             {groups.map((group) => {
@@ -73,9 +75,9 @@ export function WarningAggregator({ groups, onFix }: WarningAggregatorProps) {
                           x{group.count}
                         </span>
                       </div>
-                      <p className="text-xs text-[#9ca0be] mt-0.5 truncate">
+                      <TruncateWithTooltip as="p" className="text-xs text-text-muted mt-0.5 truncate" side="bottom">
                         {group.messagePattern}
-                      </p>
+                      </TruncateWithTooltip>
                     </div>
                   </button>
 
@@ -105,6 +107,7 @@ export function WarningAggregator({ groups, onFix }: WarningAggregatorProps) {
                           <div className="px-2 py-1">
                             <button
                               onClick={() => {
+                                if (isRunning) return;
                                 const filesSet = new Set(
                                   group.warnings.filter((w) => w.file).map((w) => w.file!)
                                 );
@@ -112,7 +115,8 @@ export function WarningAggregator({ groups, onFix }: WarningAggregatorProps) {
                                 const prompt = `Fix these ${group.count} "${group.code ?? group.messagePattern}" warnings in: ${files.join(', ')}${filesSet.size > 5 ? ` (and ${filesSet.size - 5} more files)` : ''}\n\nAfter fixing, verify the build compiles successfully.`;
                                 onFix(prompt);
                               }}
-                              className="text-2xs font-medium text-blue-400 hover:text-blue-300 transition-colors"
+                              disabled={isRunning}
+                              className="text-2xs font-medium text-blue-400 hover:text-blue-300 transition-colors disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:text-blue-400"
                             >
                               Fix all {group.count}
                             </button>

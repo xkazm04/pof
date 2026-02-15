@@ -2,8 +2,11 @@
  * Shared project-context builder for all CLI prompts.
  *
  * Single source of truth for project metadata, engine paths, build commands,
- * and CLI rules. All prompt builders import from here to avoid divergence.
+ * CLI rules, and past build error memory. All prompt builders import from
+ * here to avoid divergence.
  */
+
+import type { ErrorContextEntry } from '@/types/error-memory';
 
 export interface ProjectContext {
   projectName: string;
@@ -159,6 +162,43 @@ export function getModuleDomainContext(moduleId: string): string | undefined {
   return DOMAIN_CONTEXT[moduleId];
 }
 
+// ── Error memory formatting ─────────────────────────────────────────────────
+
+const CATEGORY_LABELS: Record<string, string> = {
+  'missing-include': 'Missing #include',
+  'unresolved-external': 'Linker / unresolved external',
+  'gc-issue': 'Garbage Collection',
+  'type-mismatch': 'Type mismatch',
+  'missing-module-dep': 'Missing Build.cs dependency',
+  'uclass-macro': 'UCLASS macro',
+  'forward-declaration': 'Incomplete type / forward decl',
+  'linker-duplicate': 'Duplicate symbol',
+  'syntax': 'Syntax error',
+  'access-specifier': 'Access specifier',
+  'generated-header': '.generated.h issue',
+  'other': 'Build error',
+};
+
+/**
+ * Formats past build errors into a compact prompt section.
+ * Only included when there are relevant errors to warn about.
+ */
+function formatErrorMemory(errors: ErrorContextEntry[]): string {
+  if (errors.length === 0) return '';
+
+  const lines: string[] = [];
+  lines.push('\n\n## Past Build Errors (avoid repeating these)');
+  lines.push('The following errors have occurred previously in this project. Proactively avoid them:');
+
+  for (const err of errors) {
+    const label = CATEGORY_LABELS[err.category] || err.category;
+    const codeStr = err.errorCode ? ` [${err.errorCode}]` : '';
+    lines.push(`- **${label}**${codeStr}: ${err.fixDescription} (${err.occurrences} past occurrence${err.occurrences !== 1 ? 's' : ''})`);
+  }
+
+  return lines.join('\n');
+}
+
 /**
  * Options for the shared project context header.
  */
@@ -169,6 +209,8 @@ interface ContextHeaderOptions {
   includeRules?: boolean;
   /** Extra rules to append after the standard ones */
   extraRules?: string[];
+  /** Past build errors relevant to this task — injected as warnings */
+  errorMemory?: ErrorContextEntry[];
 }
 
 /**
@@ -185,6 +227,7 @@ export function buildProjectContextHeader(
     includeBuildCommand = true,
     includeRules = true,
     extraRules = [],
+    errorMemory = [],
   } = opts;
 
   const moduleName = getModuleName(ctx.projectName);
@@ -202,6 +245,11 @@ export function buildProjectContextHeader(
   // Append dynamically scanned project state if available
   if (ctx.dynamicContext) {
     header += formatDynamicContext(ctx.dynamicContext, moduleName);
+  }
+
+  // Append past build error warnings if available
+  if (errorMemory.length > 0) {
+    header += formatErrorMemory(errorMemory);
   }
 
   if (includeBuildCommand) {

@@ -57,7 +57,7 @@ function DependencyGraph({ asset, allAssets, dependencies }: DependencyGraphProp
 
   if (outEdges.length === 0 && inEdges.length === 0) {
     return (
-      <div className="text-xs text-[#4a4e6a] italic py-2 pl-2">
+      <div className="text-xs text-text-muted italic py-2 pl-2">
         No known dependencies
       </div>
     );
@@ -90,7 +90,7 @@ function DependencyGraph({ asset, allAssets, dependencies }: DependencyGraphProp
     <svg width={svgW} height={svgH} className="block">
       <defs>
         <marker id="arrowhead" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
-          <polygon points="0 0, 8 3, 0 6" fill="#4a4e6a" />
+          <polygon points="0 0, 8 3, 0 6" fill="var(--text-muted)" />
         </marker>
       </defs>
 
@@ -104,7 +104,7 @@ function DependencyGraph({ asset, allAssets, dependencies }: DependencyGraphProp
               stroke="#2a2a4a" strokeWidth={1} markerEnd="url(#arrowhead)" />
             <rect x={10} y={y - 12} width={150} height={24} rx={4} fill="var(--surface-deep)" stroke={conf.color + '40'} strokeWidth={1} />
             <circle cx={22} cy={y} r={4} fill={conf.color} />
-            <text x={30} y={y + 3.5} fill="#a0a4c0" fontSize={10} fontFamily="monospace">{s.name.length > 18 ? s.name.slice(0, 17) + '…' : s.name}</text>
+            <text x={30} y={y + 3.5} fill="var(--text-muted)" fontSize={10} fontFamily="monospace">{s.name.length > 18 ? s.name.slice(0, 17) + '…' : s.name}</text>
           </g>
         );
       })}
@@ -127,7 +127,7 @@ function DependencyGraph({ asset, allAssets, dependencies }: DependencyGraphProp
               stroke="#2a2a4a" strokeWidth={1} markerEnd="url(#arrowhead)" />
             <rect x={svgW - 160} y={y - 12} width={150} height={24} rx={4} fill="var(--surface-deep)" stroke={conf.color + '40'} strokeWidth={1} />
             <circle cx={svgW - 148} cy={y} r={4} fill={conf.color} />
-            <text x={svgW - 140} y={y + 3.5} fill="#a0a4c0" fontSize={10} fontFamily="monospace">{t.name.length > 18 ? t.name.slice(0, 17) + '…' : t.name}</text>
+            <text x={svgW - 140} y={y + 3.5} fill="var(--text-muted)" fontSize={10} fontFamily="monospace">{t.name.length > 18 ? t.name.slice(0, 17) + '…' : t.name}</text>
           </g>
         );
       })}
@@ -295,7 +295,7 @@ export function AssetInventory() {
           <span className="text-xs text-text-muted">
             <span className="text-text font-semibold">{depCount}</span> dependencies
           </span>
-          <span className="text-xs text-[#4a4e6a]">
+          <span className="text-xs text-text-muted">
             scanned in {scanResult.scanDurationMs}ms
           </span>
         </div>
@@ -338,20 +338,20 @@ export function AssetInventory() {
 
       {/* Search bar */}
       <div className="relative">
-        <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[#4a4e6a]" />
+        <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-text-muted" />
         <input
           type="text"
           placeholder="Search by name or path..."
           value={search}
           onChange={e => setSearch(e.target.value)}
-          className="w-full pl-8 pr-3 py-1.5 rounded-md bg-surface-deep border border-border text-xs text-text placeholder-[#4a4e6a] focus:outline-none focus:border-[#3b3b6a]"
+          className="w-full pl-8 pr-3 py-1.5 rounded-md bg-surface-deep border border-border text-xs text-text placeholder-text-muted focus:outline-none focus:border-[#3b3b6a]"
         />
       </div>
 
       {/* Asset table */}
       <div className="border border-border rounded-lg overflow-hidden">
         {/* Header row */}
-        <div className="grid grid-cols-[1fr_90px_80px_100px] gap-2 px-3 py-2 bg-background border-b border-border text-xs font-semibold uppercase tracking-wider text-[#4a4e6a]">
+        <div className="grid grid-cols-[1fr_90px_80px_100px] gap-2 px-3 py-2 bg-background border-b border-border text-xs font-semibold uppercase tracking-wider text-text-muted">
           <button className="flex items-center gap-1 text-left hover:text-text-muted-hover transition-colors" onClick={() => toggleSort('name')}>
             Name {sortKey === 'name' && <SortIcon className="w-3 h-3" />}
             {sortKey !== 'name' && <ArrowUpDown className="w-3 h-3 opacity-30" />}
@@ -373,7 +373,7 @@ export function AssetInventory() {
         {/* Rows */}
         <div className="max-h-[400px] overflow-y-auto">
           {displayAssets.length === 0 ? (
-            <div className="px-3 py-6 text-center text-xs text-[#4a4e6a]">
+            <div className="px-3 py-6 text-center text-xs text-text-muted">
               {search || typeFilter !== 'all' ? 'No assets match your filters' : 'No assets found in Content/'}
             </div>
           ) : (
@@ -395,7 +395,7 @@ export function AssetInventory() {
                     <div className="flex items-center gap-2 min-w-0">
                       {hasEdges ? (
                         <ChevronRight
-                          className="w-3 h-3 flex-shrink-0 text-[#4a4e6a] transition-transform"
+                          className="w-3 h-3 flex-shrink-0 text-text-muted transition-transform"
                           style={{ transform: isExpanded ? 'rotate(90deg)' : 'rotate(0deg)' }}
                         />
                       ) : (
@@ -404,7 +404,7 @@ export function AssetInventory() {
                       <Icon className="w-3.5 h-3.5 flex-shrink-0" style={{ color: conf.color }} />
                       <div className="min-w-0">
                         <span className="text-xs text-text truncate block">{asset.name}</span>
-                        <span className="text-2xs text-[#4a4e6a] truncate block">{asset.relativePath}</span>
+                        <span className="text-2xs text-text-muted truncate block">{asset.relativePath}</span>
                       </div>
                     </div>
 
@@ -420,7 +420,7 @@ export function AssetInventory() {
 
                     {/* Size cell */}
                     <div className="flex items-center justify-end">
-                      <span className="text-xs text-[#a0a4c0] tabular-nums">{formatBytes(asset.sizeBytes)}</span>
+                      <span className="text-xs text-text-muted tabular-nums">{formatBytes(asset.sizeBytes)}</span>
                     </div>
 
                     {/* Modified cell */}
@@ -436,7 +436,7 @@ export function AssetInventory() {
                         initial={{ height: 0, opacity: 0 }}
                         animate={{ height: 'auto', opacity: 1 }}
                         exit={{ height: 0, opacity: 0 }}
-                        transition={{ duration: 0.2 }}
+                        transition={{ duration: 0.22 }}
                         className="overflow-hidden border-b border-border/50"
                       >
                         <div className="px-4 py-3 bg-[#080818]">
@@ -463,7 +463,7 @@ export function AssetInventory() {
 
       {/* Showing count */}
       {displayAssets.length > 0 && (
-        <div className="text-xs text-[#4a4e6a] text-right">
+        <div className="text-xs text-text-muted text-right">
           Showing {displayAssets.length} of {scanResult.assets.length} assets
         </div>
       )}

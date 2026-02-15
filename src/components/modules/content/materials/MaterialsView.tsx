@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useCallback } from 'react';
-import { Send, BookOpen, Layers, SlidersHorizontal, CircleDot } from 'lucide-react';
+import { Send, BookOpen, Layers, SlidersHorizontal, CircleDot, ImagePlus } from 'lucide-react';
 import { ReviewableModuleView } from '../../shared/ReviewableModuleView';
 import type { ExtraTab } from '../../shared/ReviewableModuleView';
 import { SUB_MODULE_MAP, getCategoryForSubModule , getModuleChecklist } from '@/lib/module-registry';
@@ -13,13 +13,16 @@ import { TaskFactory } from '@/lib/cli-task';
 import { buildMaterialPatternPrompt } from '@/lib/prompts/material-patterns';
 import { buildPostProcessPrompt } from '@/lib/prompts/post-process';
 import { buildMaterialConfiguratorPrompt } from '@/lib/prompts/material-configurator';
+import { buildStyleTransferPrompt } from '@/lib/prompts/style-transfer';
 import { MaterialLayerGraph } from './MaterialLayerGraph';
 import { MaterialPatternCatalog } from './MaterialPatternCatalog';
 import { PostProcessStackBuilder } from './PostProcessStackBuilder';
 import { MaterialParameterConfigurator } from './MaterialParameterConfigurator';
+import { MaterialStyleTransfer } from './MaterialStyleTransfer';
 import type { MaterialPattern } from './MaterialPatternCatalog';
 import type { PostProcessStackConfig } from './PostProcessStackBuilder';
 import type { MaterialConfiguratorConfig } from './MaterialParameterConfigurator';
+import type { StyleTransferConfig } from './MaterialStyleTransfer';
 
 const CONTENT_ACCENT = '#f59e0b';
 
@@ -84,6 +87,20 @@ export function MaterialsView() {
     postProcessCli.sendPrompt(prompt);
   }, [postProcessCli, projectName, projectPath, ueVersion]);
 
+  // ── Style Transfer CLI session ──
+
+  const styleTransferCli = useModuleCLI({
+    moduleId: 'materials',
+    sessionKey: 'materials-style-transfer',
+    label: 'Style Transfer',
+    accentColor: CONTENT_ACCENT,
+  });
+
+  const handleGenerateStyleTransfer = useCallback((config: StyleTransferConfig) => {
+    const prompt = buildStyleTransferPrompt(config, { projectName, projectPath, ueVersion });
+    styleTransferCli.sendPrompt(prompt);
+  }, [styleTransferCli, projectName, projectPath, ueVersion]);
+
   // ── Custom prompt ──
 
   const customCli = useModuleCLI({
@@ -135,6 +152,17 @@ export function MaterialsView() {
         <PostProcessStackBuilder
           onGenerate={handleGeneratePostProcess}
           isGenerating={postProcessCli.isRunning}
+        />
+      ),
+    },
+    {
+      id: 'style-transfer',
+      label: 'Style',
+      icon: ImagePlus,
+      render: () => (
+        <MaterialStyleTransfer
+          onGenerate={handleGenerateStyleTransfer}
+          isGenerating={styleTransferCli.isRunning}
         />
       ),
     },

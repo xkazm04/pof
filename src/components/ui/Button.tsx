@@ -26,8 +26,8 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
     return (
       <button
         ref={ref}
-        className={`rounded-lg font-medium transition-all duration-200 disabled:opacity-50 ${sizeClasses[size]} ${variantClasses[variant]} ${className}`}
-        style={accentColor ? { borderColor: `${accentColor}30`, color: accentColor } : undefined}
+        className={`rounded-lg font-medium transition-all duration-base ${sizeClasses[size]} ${variantClasses[variant]} ${className}`}
+        style={accentColor ? { borderColor: `${accentColor}38`, color: accentColor } : undefined}
         {...props}
       >
         {children}

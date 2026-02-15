@@ -91,7 +91,7 @@ export function FindingsExplorer({ sessions, getFindings }: FindingsExplorerProp
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Search findings..."
-            className="flex-1 bg-transparent text-xs text-text placeholder-[#4a4e6a] outline-none"
+            className="flex-1 bg-transparent text-xs text-text placeholder-text-muted outline-none"
           />
         </SurfaceCard>
 
@@ -140,7 +140,7 @@ export function FindingsExplorer({ sessions, getFindings }: FindingsExplorerProp
                 key={finding.id}
                 initial={{ opacity: 0, y: 4 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.2, delay: Math.min(idx * 0.02, 0.4) }}
+                transition={{ duration: 0.22, delay: Math.min(idx * 0.02, 0.4) }}
                 className="rounded-lg border px-3.5 py-3"
                 style={{ backgroundColor: style.bg, borderColor: style.border }}
               >
@@ -161,7 +161,7 @@ export function FindingsExplorer({ sessions, getFindings }: FindingsExplorerProp
                       </p>
                     )}
                   </div>
-                  <span className="text-2xs text-[#4a4e6a] flex-shrink-0">{finding.confidence}%</span>
+                  <span className="text-2xs text-text-muted flex-shrink-0">{finding.confidence}%</span>
                 </div>
               </motion.div>
             );

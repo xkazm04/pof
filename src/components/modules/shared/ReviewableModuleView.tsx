@@ -2,6 +2,7 @@
 
 import { useState, useCallback, useEffect, type ReactNode } from 'react';
 import type { LucideIcon } from 'lucide-react';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { TaskFactory } from '@/lib/cli-task';
 import type { FeatureRow } from '@/types/feature-matrix';
 import { MODULE_FEATURE_DEFINITIONS } from '@/lib/feature-definitions';
@@ -13,6 +14,8 @@ import { FeatureMatrix } from './FeatureMatrix';
 import { QuickActionsPanel } from './QuickActionsPanel';
 import { ContextHealthBadge } from './ContextHealthBadge';
 import type { SubModuleId, ChecklistItem, QuickAction } from '@/types/modules';
+
+const COLLAPSE_BREAKPOINT = 1024;
 
 export interface ExtraTab {
   id: string;
@@ -44,6 +47,19 @@ export function ReviewableModuleView({
 }: ReviewableModuleViewProps) {
   const projectPath = useProjectStore((s) => s.projectPath);
   const setChecklistItem = useModuleStore((s) => s.setChecklistItem);
+  const panelCollapsed = useModuleStore((s) => s.quickActionsPanelCollapsed);
+  const setPanelCollapsed = useModuleStore((s) => s.setQuickActionsPanelCollapsed);
+
+  // Auto-collapse on narrow viewports
+  useEffect(() => {
+    const mql = window.matchMedia(`(max-width: ${COLLAPSE_BREAKPOINT - 1}px)`);
+    const handleChange = (e: MediaQueryListEvent | MediaQueryList) => {
+      if (e.matches) setPanelCollapsed(true);
+    };
+    handleChange(mql);
+    mql.addEventListener('change', handleChange);
+    return () => mql.removeEventListener('change', handleChange);
+  }, [setPanelCollapsed]);
 
   const allTabIds = ['overview', 'roadmap', ...extraTabs.map((t) => t.id)];
   const [activeTab, setActiveTab] = useState(allTabIds[0]);
@@ -54,6 +70,18 @@ export function ReviewableModuleView({
     const timer = setTimeout(() => setToast(null), 3000);
     return () => clearTimeout(timer);
   }, [toast]);
+
+  // Listen for suggested-action tab navigation events
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const tab = (e as CustomEvent).detail?.tab;
+      if (tab && allTabIds.includes(tab)) {
+        setActiveTab(tab);
+      }
+    };
+    window.addEventListener('pof-navigate-tab', handler);
+    return () => window.removeEventListener('pof-navigate-tab', handler);
+  }, [allTabIds]);
 
   // --- Checklist CLI session ---
   const [activeItemId, setActiveItemId] = useState<string | null>(null);
@@ -208,19 +236,33 @@ export function ReviewableModuleView({
         ))}
       </div>
 
-      {/* Right panel — Quick Actions */}
-      <div className="w-56 border-l border-border bg-surface-deep flex-shrink-0">
-        <QuickActionsPanel
-          actions={quickActions}
-          onRunPrompt={(prompt) => {
-            const task = TaskFactory.quickAction(moduleId, prompt, moduleLabel);
-            checklistCli.execute(task);
-          }}
-          accentColor={accentColor}
-          isRunning={isAnyRunning}
-          moduleLabel={moduleLabel}
-          moduleId={moduleId}
-        />
+      {/* Right panel — Quick Actions (collapsible) */}
+      <div className="relative flex-shrink-0">
+        {/* Collapse toggle chevron */}
+        <button
+          onClick={() => setPanelCollapsed(!panelCollapsed)}
+          className="absolute -left-3 top-3 z-10 w-6 h-6 rounded-full bg-surface border border-border flex items-center justify-center text-text-muted hover:text-text hover:border-border-bright transition-colors shadow-sm"
+          title={panelCollapsed ? 'Expand panel' : 'Collapse panel'}
+        >
+          {panelCollapsed ? <ChevronLeft className="w-3 h-3" /> : <ChevronRight className="w-3 h-3" />}
+        </button>
+        <div
+          className="border-l border-border bg-surface-deep h-full transition-[width] duration-200 ease-out overflow-hidden"
+          style={{ width: panelCollapsed ? 40 : 224 }}
+        >
+          <QuickActionsPanel
+            actions={quickActions}
+            onRunPrompt={(prompt) => {
+              const task = TaskFactory.quickAction(moduleId, prompt, moduleLabel);
+              checklistCli.execute(task);
+            }}
+            accentColor={accentColor}
+            isRunning={isAnyRunning}
+            moduleLabel={moduleLabel}
+            moduleId={moduleId}
+            collapsed={panelCollapsed}
+          />
+        </div>
       </div>
 
       {/* Toast notification */}
@@ -229,7 +271,7 @@ export function ReviewableModuleView({
           className={`absolute bottom-4 right-4 z-50 flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium shadow-lg border animate-in fade-in slide-in-from-bottom-2 ${
             toast.type === 'success'
               ? 'bg-surface border-green-500/30 text-green-400'
-              : 'bg-surface border-red-500/30 text-red-400'
+              : 'bg-surface border-status-red-strong text-red-400'
           }`}
         >
           <span

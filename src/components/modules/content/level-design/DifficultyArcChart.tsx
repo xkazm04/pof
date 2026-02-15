@@ -39,7 +39,7 @@ export function DifficultyArcChart({
   if (orderedRooms.length === 0) {
     return (
       <div className="flex items-center justify-center py-6">
-        <p className="text-xs text-[#4a4e6a]">Add rooms to see the difficulty arc.</p>
+        <p className="text-xs text-text-muted">Add rooms to see the difficulty arc.</p>
       </div>
     );
   }
@@ -79,7 +79,7 @@ export function DifficultyArcChart({
           return (
             <g key={d}>
               <line x1={padX} y1={y} x2={padX + plotW} y2={y} stroke="var(--border)" strokeWidth={0.5} />
-              <text x={padX - 6} y={y + 3} fontSize={8} fill="#4a4e6a" textAnchor="end">{d}</text>
+              <text x={padX - 6} y={y + 3} fontSize={8} fill="var(--text-muted)" textAnchor="end">{d}</text>
             </g>
           );
         })}

@@ -21,17 +21,13 @@ import { MODULE_LABELS } from '@/lib/module-registry';
 import { apiFetch } from '@/lib/api-utils';
 import { useNavigationStore } from '@/stores/navigationStore';
 import { SurfaceCard } from '@/components/ui/SurfaceCard';
+import { FEATURE_STATUS_COLORS } from '@/lib/chart-colors';
 
 const ALL_MODULE_IDS = Object.keys(MODULE_FEATURE_DEFINITIONS);
 
 // ── Status colors ──
 
-const STATUS_COLORS = {
-  implemented: '#4ade80',
-  partial: '#fbbf24',
-  missing: '#f87171',
-  unknown: 'var(--text-muted)',
-} as const;
+const STATUS_COLORS = FEATURE_STATUS_COLORS;
 
 const STATUS_LABELS = {
   implemented: 'Implemented',
@@ -243,7 +239,7 @@ export function CrossModuleFeatureDashboard() {
       {/* ── Stacked completion bar ──────────────────────── */}
       <SurfaceCard className="p-4">
         <div className="flex items-center justify-between mb-2">
-          <span className="text-xs font-semibold text-[#9ca0be] uppercase tracking-wider">
+          <span className="text-xs font-semibold text-text-muted uppercase tracking-wider">
             Project Feature Status
           </span>
           <button
@@ -264,7 +260,7 @@ export function CrossModuleFeatureDashboard() {
                 className="h-full"
                 initial={{ width: 0 }}
                 animate={{ width: `${pct}%` }}
-                transition={{ duration: 0.8, ease: 'easeOut' }}
+                transition={{ duration: 0.45, ease: [0.16, 1, 0.3, 1] }}
                 style={{ backgroundColor: STATUS_COLORS[key] }}
                 title={`${STATUS_LABELS[key]}: ${totals[key]} (${Math.round(pct)}%)`}
               />
@@ -286,7 +282,7 @@ export function CrossModuleFeatureDashboard() {
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-2">
             <Grid3x3 className="w-3.5 h-3.5 text-[#ef4444]" />
-            <span className="text-xs font-semibold text-[#9ca0be] uppercase tracking-wider">
+            <span className="text-xs font-semibold text-text-muted uppercase tracking-wider">
               Feature Status Heatmap
             </span>
             <span className="text-2xs text-text-muted">
@@ -334,7 +330,7 @@ export function CrossModuleFeatureDashboard() {
             <div key={category}>
               {/* Category header */}
               <div className="px-3 py-1.5 bg-surface border-b border-border">
-                <span className="text-2xs font-bold uppercase tracking-widest text-[#4a4e6a]">
+                <span className="text-2xs font-bold uppercase tracking-widest text-text-muted">
                   {category}
                 </span>
               </div>
@@ -348,7 +344,7 @@ export function CrossModuleFeatureDashboard() {
                     key={cell.moduleId}
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
-                    transition={{ duration: 0.2, delay: i * 0.02 }}
+                    transition={{ duration: 0.22, delay: i * 0.02 }}
                     className="grid items-center border-b border-border/50 hover:bg-surface transition-colors cursor-pointer group"
                     style={{ gridTemplateColumns: '180px repeat(4, 1fr) 80px' }}
                     onClick={() => handleCellClick(cell.moduleId)}
@@ -358,7 +354,7 @@ export function CrossModuleFeatureDashboard() {
                       <span className="text-xs font-medium text-text group-hover:text-text truncate">
                         {cell.label}
                       </span>
-                      <ChevronRight className="w-3 h-3 text-[#4a4e6a] opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0" />
+                      <ChevronRight className="w-3 h-3 text-text-muted opacity-30 scale-95 group-hover:opacity-100 group-hover:scale-100 transition-all flex-shrink-0" />
                     </div>
 
                     {/* Status cells */}
@@ -375,7 +371,7 @@ export function CrossModuleFeatureDashboard() {
                           onMouseLeave={() => setHoveredCell(null)}
                         >
                           <div
-                            className="w-full h-7 rounded-md flex items-center justify-center transition-all duration-200"
+                            className="w-full h-7 rounded-md flex items-center justify-center transition-all duration-base"
                             style={{
                               backgroundColor: count > 0 ? `${STATUS_COLORS[key]}${Math.round(intensity * 20).toString(16).padStart(2, '0')}` : 'transparent',
                               border: isHovered && count > 0 ? `1px solid ${STATUS_COLORS[key]}60` : '1px solid transparent',
@@ -414,7 +410,7 @@ export function CrossModuleFeatureDashboard() {
                       <div className="flex items-center gap-1.5">
                         <div className="w-8 h-1.5 rounded-full bg-border overflow-hidden">
                           <div
-                            className="h-full rounded-full transition-all duration-500"
+                            className="h-full rounded-full transition-all duration-slow"
                             style={{
                               width: `${pctDone}%`,
                               backgroundColor: pctDone >= 80 ? '#4ade80' : pctDone >= 40 ? '#fbbf24' : pctDone > 0 ? '#f87171' : 'var(--text-muted)',
@@ -443,7 +439,7 @@ export function CrossModuleFeatureDashboard() {
             style={{ gridTemplateColumns: '180px repeat(4, 1fr) 80px' }}
           >
             <div className="px-3 py-2.5">
-              <span className="text-xs font-bold text-[#9ca0be] uppercase">
+              <span className="text-xs font-bold text-text-muted uppercase">
                 Total ({cells.length} modules)
               </span>
             </div>
@@ -506,7 +502,7 @@ export function CrossModuleFeatureDashboard() {
                   <span className="text-2xs text-text-muted">
                     {m.missing} missing
                   </span>
-                  <ChevronRight className="w-3 h-3 text-[#4a4e6a] opacity-0 group-hover:opacity-100 transition-opacity" />
+                  <ChevronRight className="w-3 h-3 text-text-muted opacity-30 scale-95 group-hover:opacity-100 group-hover:scale-100 transition-all" />
                 </button>
               );
             })}
@@ -577,7 +573,7 @@ function SummaryCard({
     <motion.div
       initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.3 }}
+      transition={{ duration: 0.22 }}
       className="bg-surface border border-border rounded-lg p-3"
     >
       <div className="flex items-center gap-1.5 mb-1">

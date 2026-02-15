@@ -62,7 +62,7 @@ export function SetupWizard() {
                   onClick={() => setStartFresh(!startFresh)}
                   className={`text-xs px-2 py-0.5 rounded-full border transition-all ${
                     startFresh
-                      ? 'bg-[#00ff88]/10 border-[#00ff88]/30 text-[#00ff88]'
+                      ? 'bg-accent-medium border-accent-strong text-[#00ff88]'
                       : 'bg-surface border-border text-text-muted hover:border-border-bright'
                   }`}
                 >

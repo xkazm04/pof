@@ -71,7 +71,7 @@ export function NewSessionPanel({ onCreated, createSession }: NewSessionPanelPro
       <motion.div
         initial={{ opacity: 0, y: 8 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.25 }}
+        transition={{ duration: 0.22 }}
       >
         <label className="text-xs uppercase tracking-wider text-text-muted mb-1.5 block font-semibold">
           Session Name
@@ -81,7 +81,7 @@ export function NewSessionPanel({ onCreated, createSession }: NewSessionPanelPro
           value={name}
           onChange={(e) => setName(e.target.value)}
           placeholder="e.g. Pre-alpha combat test"
-          className="w-full px-3 py-2.5 bg-surface border border-border rounded-lg text-xs text-text placeholder-[#4a4e6a] outline-none focus:border-border-bright transition-colors"
+          className="w-full px-3 py-2.5 bg-surface border border-border rounded-lg text-xs text-text placeholder-text-muted outline-none focus:border-border-bright transition-colors"
         />
       </motion.div>
 
@@ -89,11 +89,11 @@ export function NewSessionPanel({ onCreated, createSession }: NewSessionPanelPro
       <motion.div
         initial={{ opacity: 0, y: 8 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.25, delay: 0.05 }}
+        transition={{ duration: 0.22, delay: 0.05 }}
       >
         <label className="text-xs uppercase tracking-wider text-text-muted mb-1.5 block font-semibold">
           Build Path
-          <span className="text-[#4a4e6a] ml-1 normal-case tracking-normal">(optional — uses project default)</span>
+          <span className="text-text-muted ml-1 normal-case tracking-normal">(optional — uses project default)</span>
         </label>
         <div className="flex gap-2">
           <input
@@ -101,7 +101,7 @@ export function NewSessionPanel({ onCreated, createSession }: NewSessionPanelPro
             value={buildPath}
             onChange={(e) => setBuildPath(e.target.value)}
             placeholder="C:\MyGame\Saved\StagedBuilds\Windows"
-            className="flex-1 px-3 py-2.5 bg-surface border border-border rounded-lg text-xs text-text placeholder-[#4a4e6a] outline-none focus:border-border-bright transition-colors font-mono"
+            className="flex-1 px-3 py-2.5 bg-surface border border-border rounded-lg text-xs text-text placeholder-text-muted outline-none focus:border-border-bright transition-colors font-mono"
           />
           <button className="px-3 py-2.5 bg-surface border border-border rounded-lg text-text-muted hover:text-text transition-colors">
             <FolderOpen className="w-4 h-4" />
@@ -113,11 +113,11 @@ export function NewSessionPanel({ onCreated, createSession }: NewSessionPanelPro
       <motion.div
         initial={{ opacity: 0, y: 8 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.25, delay: 0.1 }}
+        transition={{ duration: 0.22, delay: 0.1 }}
       >
         <label className="text-xs uppercase tracking-wider text-text-muted mb-2 block font-semibold">
           Test Categories
-          <span className="text-[#4a4e6a] ml-1 normal-case tracking-normal">
+          <span className="text-text-muted ml-1 normal-case tracking-normal">
             ({selectedCategories.size} selected)
           </span>
         </label>
@@ -144,7 +144,7 @@ export function NewSessionPanel({ onCreated, createSession }: NewSessionPanelPro
                 <span className={`text-xs font-medium ${isSelected ? 'text-text' : 'text-text-muted'}`}>
                   {cat.label}
                 </span>
-                <span className="text-2xs text-[#4a4e6a] leading-tight">{cat.description}</span>
+                <span className="text-2xs text-text-muted leading-tight">{cat.description}</span>
               </button>
             );
           })}
@@ -155,7 +155,7 @@ export function NewSessionPanel({ onCreated, createSession }: NewSessionPanelPro
       <motion.div
         initial={{ opacity: 0, y: 8 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.25, delay: 0.15 }}
+        transition={{ duration: 0.22, delay: 0.15 }}
         className="grid grid-cols-3 gap-4"
       >
         {/* Max playtime */}
@@ -222,7 +222,7 @@ export function NewSessionPanel({ onCreated, createSession }: NewSessionPanelPro
       <motion.div
         initial={{ opacity: 0, y: 8 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.25, delay: 0.2 }}
+        transition={{ duration: 0.22, delay: 0.2 }}
         className="pt-2"
       >
         <button

@@ -1,6 +1,6 @@
 'use client';
 
-import { motion } from 'framer-motion';
+import { motion, useReducedMotion } from 'framer-motion';
 import type { HTMLMotionProps, Variants } from 'framer-motion';
 
 const containerVariants: Variants = {
@@ -17,8 +17,18 @@ const itemVariants: Variants = {
   visible: {
     opacity: 1,
     y: 0,
-    transition: { duration: 0.15, ease: 'easeOut' as const },
+    transition: { duration: 0.12, ease: [0.16, 1, 0.3, 1] as const },
   },
+};
+
+const reducedContainerVariants: Variants = {
+  hidden: {},
+  visible: {},
+};
+
+const reducedItemVariants: Variants = {
+  hidden: { opacity: 1 },
+  visible: { opacity: 1 },
 };
 
 /** Wrapper that staggers children entrance at 40ms intervals. */
@@ -27,9 +37,11 @@ export function StaggerContainer({
   className,
   ...rest
 }: HTMLMotionProps<'div'>) {
+  const prefersReduced = useReducedMotion();
+
   return (
     <motion.div
-      variants={containerVariants}
+      variants={prefersReduced ? reducedContainerVariants : containerVariants}
       initial="hidden"
       animate="visible"
       className={className}
@@ -46,8 +58,14 @@ export function StaggerItem({
   className,
   ...rest
 }: HTMLMotionProps<'div'>) {
+  const prefersReduced = useReducedMotion();
+
   return (
-    <motion.div variants={itemVariants} className={className} {...rest}>
+    <motion.div
+      variants={prefersReduced ? reducedItemVariants : itemVariants}
+      className={className}
+      {...rest}
+    >
       {children}
     </motion.div>
   );

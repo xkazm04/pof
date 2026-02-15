@@ -503,7 +503,7 @@ export function StreamingZonePlanner({ onGenerate, isGenerating }: StreamingZone
                   x={cx + 10}
                   y={cy + CELL_SIZE - 7}
                   fontSize={7}
-                  fill="#4a4e6a"
+                  fill="var(--text-muted)"
                   fontFamily="sans-serif"
                 >
                   r{zone.preloadRadius}
@@ -548,7 +548,7 @@ export function StreamingZonePlanner({ onGenerate, isGenerating }: StreamingZone
                   className="flex items-center gap-2 px-2.5 py-1.5 rounded-md bg-surface border border-border text-xs"
                 >
                   <span className="text-text font-medium">{from.name}</span>
-                  <span className="text-[#4a4e6a]">→</span>
+                  <span className="text-text-muted">→</span>
                   <span className="text-text font-medium">{to.name}</span>
 
                   {/* Style badge */}
@@ -682,7 +682,7 @@ function ZoneEditor({
             type="text"
             value={zone.name}
             onChange={(e) => onUpdate({ name: e.target.value })}
-            className="w-full px-2.5 py-1.5 bg-surface border border-border rounded text-xs text-text outline-none focus:border-[#f59e0b40] transition-colors"
+            className="w-full px-2.5 py-1.5 bg-surface border border-border rounded text-xs text-text outline-none focus:border-status-amber-strong transition-colors"
           />
         </div>
 
@@ -693,7 +693,7 @@ function ZoneEditor({
             <select
               value={zone.type}
               onChange={(e) => onUpdate({ type: e.target.value as ZoneType })}
-              className="w-full px-2.5 py-1.5 bg-surface border border-border rounded text-xs text-text outline-none focus:border-[#f59e0b40] appearance-none transition-colors"
+              className="w-full px-2.5 py-1.5 bg-surface border border-border rounded text-xs text-text outline-none focus:border-status-amber-strong appearance-none transition-colors"
             >
               {(Object.entries(ZONE_TYPES) as [ZoneType, typeof ZONE_TYPES[ZoneType]][]).map(([key, val]) => (
                 <option key={key} value={key}>{val.label}</option>
@@ -716,7 +716,7 @@ function ZoneEditor({
                   onClick={() => onUpdate({ loadPriority: p, alwaysLoaded: p === 'always' })}
                   className="flex-1 py-1.5 rounded text-2xs font-medium transition-colors border capitalize"
                   style={{
-                    color: active ? pColor : '#4a4e6a',
+                    color: active ? pColor : 'var(--text-muted)',
                     borderColor: active ? `${pColor}40` : 'var(--border)',
                     backgroundColor: active ? `${pColor}10` : 'var(--surface)',
                   }}
@@ -736,9 +736,9 @@ function ZoneEditor({
             value={zone.preloadRadius}
             onChange={(e) => onUpdate({ preloadRadius: Math.max(0, Math.min(4, Number(e.target.value) || 0)) })}
             min={0} max={4}
-            className="w-full px-2.5 py-1.5 bg-surface border border-border rounded text-xs text-text outline-none focus:border-[#f59e0b40] transition-colors"
+            className="w-full px-2.5 py-1.5 bg-surface border border-border rounded text-xs text-text outline-none focus:border-status-amber-strong transition-colors"
           />
-          <p className="text-2xs text-[#4a4e6a]">Cells ahead to begin async loading</p>
+          <p className="text-2xs text-text-muted">Cells ahead to begin async loading</p>
         </div>
       </div>
 

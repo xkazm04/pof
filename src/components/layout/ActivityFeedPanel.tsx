@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useCallback } from 'react';
+import { useMemo, useCallback, useState, useEffect } from 'react';
 import {
   X,
   CheckCircle2,
@@ -13,12 +13,15 @@ import {
   CheckSquare,
   Inbox,
   Bell,
+  ChevronDown,
+  ChevronRight,
 } from 'lucide-react';
 import { useActivityFeedStore } from '@/stores/activityFeedStore';
 import { useModuleActions } from '@/hooks/useModuleActions';
 import { StaggerContainer, StaggerItem } from '@/components/ui/Stagger';
 import type { ActivityEvent, ActivityEventType } from '@/stores/activityFeedStore';
 import type { SubModuleId } from '@/types/modules';
+import { TruncateWithTooltip } from '@/components/ui/TruncateWithTooltip';
 
 // ── Event type config ──
 
@@ -30,6 +33,65 @@ const EVENT_CONFIG: Record<ActivityEventType, { icon: typeof CheckCircle2; color
   'evaluator-recommendation': { icon: AlertTriangle, color: '#ef4444', label: 'Recommendation' },
   'checklist-progress': { icon: CheckSquare, color: '#22c55e', label: 'Progress' },
 };
+
+// ── Time grouping ──
+
+type TimePeriod = 'Today' | 'Yesterday' | 'Earlier this week' | 'Older';
+
+function getTimePeriod(ts: number): TimePeriod {
+  const now = new Date();
+  const date = new Date(ts);
+  const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+  const yesterdayStart = todayStart - 86_400_000;
+  const weekStart = todayStart - (now.getDay() * 86_400_000);
+
+  if (ts >= todayStart) return 'Today';
+  if (ts >= yesterdayStart) return 'Yesterday';
+  if (ts >= weekStart) return 'Earlier this week';
+  return 'Older';
+}
+
+interface EventGroup {
+  type: ActivityEventType;
+  moduleId: string | undefined;
+  events: ActivityEvent[];
+}
+
+/** Group consecutive events of the same type+module within a time period */
+function groupConsecutive(events: ActivityEvent[]): EventGroup[] {
+  const groups: EventGroup[] = [];
+  for (const event of events) {
+    const last = groups[groups.length - 1];
+    if (last && last.type === event.type && last.moduleId === event.moduleId) {
+      last.events.push(event);
+    } else {
+      groups.push({ type: event.type, moduleId: event.moduleId, events: [event] });
+    }
+  }
+  return groups;
+}
+
+interface TimePeriodSection {
+  period: TimePeriod;
+  groups: EventGroup[];
+}
+
+function buildSections(events: ActivityEvent[]): TimePeriodSection[] {
+  const periodOrder: TimePeriod[] = ['Today', 'Yesterday', 'Earlier this week', 'Older'];
+  const buckets = new Map<TimePeriod, ActivityEvent[]>();
+  for (const p of periodOrder) buckets.set(p, []);
+  for (const e of events) {
+    buckets.get(getTimePeriod(e.timestamp))!.push(e);
+  }
+
+  const sections: TimePeriodSection[] = [];
+  for (const period of periodOrder) {
+    const periodEvents = buckets.get(period)!;
+    if (periodEvents.length === 0) continue;
+    sections.push({ period, groups: groupConsecutive(periodEvents) });
+  }
+  return sections;
+}
 
 // ── Time formatting ──
 
@@ -55,7 +117,15 @@ export function ActivityFeedPanel() {
   const dismissAll = useActivityFeedStore((s) => s.dismissAll);
   const { sendPromptToModule } = useModuleActions();
 
+  // Refresh relative timestamps every 60s
+  const [, setTick] = useState(0);
+  useEffect(() => {
+    const id = setInterval(() => setTick((n) => n + 1), 60_000);
+    return () => clearInterval(id);
+  }, []);
+
   const unreadCount = useMemo(() => events.filter((e) => !e.dismissed).length, [events]);
+  const sections = useMemo(() => buildSections(events), [events]);
 
   const handleDismiss = useCallback(
     (id: string, e: React.MouseEvent) => {
@@ -84,7 +154,7 @@ export function ActivityFeedPanel() {
           <Bell className="w-3.5 h-3.5 text-[#ef4444]" />
           <h2 className="text-xs font-semibold text-text uppercase tracking-wider">Activity</h2>
           {unreadCount > 0 && (
-            <span className="text-2xs font-bold text-[#ef4444] bg-[#ef444418] px-1.5 py-0.5 rounded-full">
+            <span className="text-2xs font-bold text-[#ef4444] bg-status-red-subtle px-1.5 py-0.5 rounded-full">
               {unreadCount}
             </span>
           )}
@@ -111,21 +181,46 @@ export function ActivityFeedPanel() {
       <div className="flex-1 overflow-y-auto">
         {events.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-16 px-6">
-            <Inbox className="w-8 h-8 text-border-bright mb-3" />
-            <p className="text-xs text-text-muted text-center">
-              No activity yet. Events from CLI tasks, builds, and evaluator scans will appear here.
+            <div className="w-12 h-12 rounded-xl border border-border flex items-center justify-center mb-4">
+              <Inbox className="w-6 h-6 text-border-bright" />
+            </div>
+            <h3 className="text-sm font-semibold text-text mb-1">No Activity Yet</h3>
+            <p className="text-xs text-text-muted text-center max-w-[220px] leading-relaxed">
+              CLI task results, build outcomes, quality changes, and evaluator recommendations will appear here as you work.
             </p>
           </div>
         ) : (
           <StaggerContainer className="p-2 space-y-0.5">
-            {events.map((event) => (
-              <StaggerItem key={event.id}>
-                <EventCard
-                  event={event}
-                  onDismiss={handleDismiss}
-                  onAct={handleAct}
-                />
-              </StaggerItem>
+            {sections.map((section) => (
+              <div key={section.period}>
+                {/* Sticky time separator */}
+                <div className="sticky top-0 z-10 bg-surface-deep/95 backdrop-blur-sm px-2 py-1.5 -mx-2">
+                  <span className="text-2xs font-semibold text-text-muted uppercase tracking-wider">
+                    {section.period}
+                  </span>
+                </div>
+
+                {/* Event groups */}
+                {section.groups.map((group, gi) =>
+                  group.events.length > 1 ? (
+                    <StaggerItem key={`${section.period}-g${gi}`}>
+                      <CollapsedGroup
+                        group={group}
+                        onDismiss={handleDismiss}
+                        onAct={handleAct}
+                      />
+                    </StaggerItem>
+                  ) : (
+                    <StaggerItem key={group.events[0].id}>
+                      <EventCard
+                        event={group.events[0]}
+                        onDismiss={handleDismiss}
+                        onAct={handleAct}
+                      />
+                    </StaggerItem>
+                  ),
+                )}
+              </div>
             ))}
           </StaggerContainer>
         )}
@@ -138,6 +233,60 @@ export function ActivityFeedPanel() {
             <CheckCircle2 className="w-3.5 h-3.5 text-[#4ade80]" />
             <span className="text-xs text-[#4ade80] font-medium">All caught up</span>
           </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── Collapsed Group ──
+
+function CollapsedGroup({
+  group,
+  onDismiss,
+  onAct,
+}: {
+  group: EventGroup;
+  onDismiss: (id: string, e: React.MouseEvent) => void;
+  onAct: (event: ActivityEvent) => void;
+}) {
+  const [expanded, setExpanded] = useState(false);
+  const config = EVENT_CONFIG[group.type] ?? EVENT_CONFIG['cli-complete'];
+  const Icon = config.icon;
+  const count = group.events.length;
+  const moduleLabel = group.moduleId ?? '';
+
+  return (
+    <div className="rounded-lg border border-border/60 overflow-hidden">
+      {/* Summary row */}
+      <button
+        onClick={() => setExpanded(!expanded)}
+        className="w-full flex items-center gap-2 px-3 py-2 text-left hover:bg-surface-hover/30 transition-colors"
+      >
+        {expanded
+          ? <ChevronDown className="w-3 h-3 text-text-muted flex-shrink-0" />
+          : <ChevronRight className="w-3 h-3 text-text-muted flex-shrink-0" />
+        }
+        <Icon className="w-3.5 h-3.5 flex-shrink-0" style={{ color: config.color }} />
+        <TruncateWithTooltip className="text-xs font-medium text-text truncate block" side="bottom">
+          {count} {config.label.toLowerCase()} events{moduleLabel ? ` in ${moduleLabel}` : ''}
+        </TruncateWithTooltip>
+        <span className="text-2xs text-text-muted ml-auto flex-shrink-0">
+          {timeAgo(group.events[0].timestamp)}
+        </span>
+      </button>
+
+      {/* Expanded events */}
+      {expanded && (
+        <div className="border-t border-border/40 space-y-0.5 px-1 py-0.5">
+          {group.events.map((event) => (
+            <EventCard
+              key={event.id}
+              event={event}
+              onDismiss={onDismiss}
+              onAct={onAct}
+            />
+          ))}
         </div>
       )}
     </div>
@@ -201,9 +350,9 @@ function EventCard({
         {/* Content */}
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2">
-            <span className="text-xs font-semibold text-text truncate">
+            <TruncateWithTooltip className="text-xs font-semibold text-text truncate block" side="bottom">
               {event.title}
-            </span>
+            </TruncateWithTooltip>
             {event.meta?.success !== undefined && (
               <span
                 className="text-2xs font-bold uppercase tracking-wider px-1 py-0.5 rounded"
@@ -233,9 +382,9 @@ function EventCard({
           </p>
 
           <div className="flex items-center gap-2 mt-1">
-            <span className="text-2xs text-[#4a4e6a]">{timeAgo(event.timestamp)}</span>
+            <span className="text-2xs text-text-muted">{timeAgo(event.timestamp)}</span>
             {event.moduleId && (
-              <span className="text-2xs text-[#4a4e6a]">{event.moduleId}</span>
+              <span className="text-2xs text-text-muted">{event.moduleId}</span>
             )}
             {event.meta?.score != null && (
               <span className="text-2xs font-medium" style={{ color: trendColor ?? 'var(--text-muted)' }}>
@@ -251,7 +400,7 @@ function EventCard({
           {event.moduleId && event.meta?.prompt && (
             <button
               onClick={(e) => { e.stopPropagation(); onAct(event); }}
-              className="flex items-center gap-1 px-1.5 py-0.5 rounded text-2xs font-medium opacity-0 group-hover:opacity-100 text-[#00ff88] hover:bg-[#00ff8815] transition-all"
+              className="flex items-center gap-1 px-1.5 py-0.5 rounded text-2xs font-medium opacity-30 group-hover:opacity-100 text-[#00ff88] hover:bg-accent-subtle transition-all scale-95 group-hover:scale-100"
               title="Fix with Claude"
             >
               <Zap className="w-2.5 h-2.5" />
@@ -261,7 +410,7 @@ function EventCard({
           {isUnread && (
             <button
               onClick={(e) => onDismiss(event.id, e)}
-              className="flex-shrink-0 p-0.5 rounded opacity-0 group-hover:opacity-100 text-text-muted hover:text-text hover:bg-border transition-all"
+              className="flex-shrink-0 p-0.5 rounded opacity-30 group-hover:opacity-100 text-text-muted hover:text-text hover:bg-border transition-all scale-95 group-hover:scale-100"
               title="Dismiss"
             >
               <X className="w-3 h-3" />

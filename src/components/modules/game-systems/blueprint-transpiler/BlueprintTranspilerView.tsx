@@ -230,7 +230,7 @@ function TranspilePane({
       {/* Right: Output */}
       <div className="w-1/2 flex flex-col">
         {error && (
-          <div className="px-3 py-2 bg-red-500/10 border-b border-red-500/30 text-xs text-red-400 flex items-center gap-2">
+          <div className="px-3 py-2 bg-status-red-subtle border-b border-status-red-strong text-xs text-red-400 flex items-center gap-2">
             <XCircle className="w-3.5 h-3.5" /> {error}
           </div>
         )}
@@ -420,7 +420,7 @@ function DiffPane({
 
       {/* Error */}
       {error && (
-        <div className="px-3 py-2 bg-red-500/10 border-t border-red-500/30 text-xs text-red-400 flex items-center gap-2">
+        <div className="px-3 py-2 bg-status-red-subtle border-t border-status-red-strong text-xs text-red-400 flex items-center gap-2">
           <XCircle className="w-3.5 h-3.5" /> {error}
         </div>
       )}

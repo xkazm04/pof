@@ -334,7 +334,7 @@ export function PathBrowser({ value, startFresh, onSelect, onProjectDetected, on
               <button
                 key={dir.path}
                 onClick={() => selectSuggestion(dir)}
-                className="w-full flex items-center gap-2 px-3 py-1.5 text-left hover:bg-[#00ff88]/5 transition-colors"
+                className="w-full flex items-center gap-2 px-3 py-1.5 text-left hover:bg-accent-subtle transition-colors"
               >
                 <ChevronRight className="w-3 h-3 text-[#00ff88] shrink-0" />
                 <span className="text-xs text-[#00ff88] font-medium">{dir.label}</span>
@@ -357,12 +357,12 @@ export function PathBrowser({ value, startFresh, onSelect, onProjectDetected, on
               <button
                 key={project.path}
                 onClick={() => selectProject(project)}
-                className="w-full flex items-center gap-2 px-3 py-1.5 text-left hover:bg-[#00ff88]/5 transition-colors group"
+                className="w-full flex items-center gap-2 px-3 py-1.5 text-left hover:bg-accent-subtle transition-colors group"
               >
                 <ChevronRight className="w-3 h-3 text-[#00ff88] shrink-0" />
                 <span className="text-xs text-[#00ff88] font-medium">{project.name}</span>
                 {project.engineVersion && (
-                  <span className="text-2xs px-1.5 py-0.5 rounded bg-[#00ff88]/10 text-[#00ff88]/80 shrink-0">
+                  <span className="text-2xs px-1.5 py-0.5 rounded bg-accent-medium text-[#00ff88]/80 shrink-0">
                     {project.engineVersion}
                   </span>
                 )}
@@ -403,7 +403,7 @@ export function PathBrowser({ value, startFresh, onSelect, onProjectDetected, on
             onClick={() => clickDirectory(dir)}
             className={`w-full flex items-center gap-2 px-3 py-1.5 text-left transition-colors ${
               dir.hasUProject
-                ? 'hover:bg-[#00ff88]/5 bg-[#00ff88]/[0.02]'
+                ? 'hover:bg-accent-subtle bg-accent-subtle'
                 : 'hover:bg-surface-hover'
             }`}
           >
@@ -424,7 +424,7 @@ export function PathBrowser({ value, startFresh, onSelect, onProjectDetected, on
 
       {/* .uproject indicator */}
       {isUEProject && uprojectFiles.length > 0 && (
-        <div className="px-3 py-2 border-t border-border bg-[#00ff88]/[0.03]">
+        <div className="px-3 py-2 border-t border-border bg-accent-subtle">
           {uprojectFiles.map((f) => (
             <div key={f} className="flex items-center gap-2">
               <FileCode className="w-3.5 h-3.5 text-[#00ff88]" />
@@ -440,7 +440,7 @@ export function PathBrowser({ value, startFresh, onSelect, onProjectDetected, on
         <button
           onClick={selectDirectory}
           disabled={!currentPath}
-          className="w-full py-1.5 text-xs font-medium rounded-md transition-colors disabled:opacity-30 disabled:cursor-not-allowed bg-[#00ff88]/10 text-[#00ff88] border border-[#00ff88]/20 hover:bg-[#00ff88]/20"
+          className="w-full py-1.5 text-xs font-medium rounded-md transition-colors disabled:opacity-30 disabled:cursor-not-allowed bg-accent-medium text-[#00ff88] border border-accent-strong hover:bg-accent-strong"
         >
           {isUEProject
             ? 'Select This Project'

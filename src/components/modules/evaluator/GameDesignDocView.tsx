@@ -93,7 +93,27 @@ export function GameDesignDocView() {
     );
   }
 
-  if (!gdd) return null;
+  if (!gdd) {
+    return (
+      <div className="flex flex-col items-center justify-center py-16 text-center">
+        <div className="w-12 h-12 rounded-xl border border-border flex items-center justify-center mb-4" style={{ backgroundColor: `${ACCENT}10` }}>
+          <FileText className="w-6 h-6" style={{ color: ACCENT }} />
+        </div>
+        <h3 className="text-sm font-semibold text-text mb-1">Design Document</h3>
+        <p className="text-xs text-text-muted max-w-xs leading-relaxed">
+          Generate a comprehensive Game Design Document synthesized from your project configuration, module progress, and checklist state.
+        </p>
+        <button
+          onClick={generate}
+          className="flex items-center gap-1.5 mt-4 px-4 py-2 rounded-lg text-xs font-medium transition-colors"
+          style={{ backgroundColor: `${ACCENT}14`, color: ACCENT, border: `1px solid ${ACCENT}38` }}
+        >
+          <RefreshCw className="w-3.5 h-3.5" />
+          Generate GDD
+        </button>
+      </div>
+    );
+  }
 
   return (
     <div className="flex h-full">

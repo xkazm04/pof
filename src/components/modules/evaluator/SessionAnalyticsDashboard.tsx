@@ -8,6 +8,7 @@ import {
 import { useSessionDashboard } from '@/hooks/useSessionAnalytics';
 import { FetchError } from '../shared/FetchError';
 import { SurfaceCard } from '@/components/ui/SurfaceCard';
+import { EmptyState } from '@/components/ui/EmptyState';
 import type {
   ModuleStats,
   PromptInsight,
@@ -15,9 +16,15 @@ import type {
   SessionRecord,
 } from '@/types/session-analytics';
 
-const EVALUATOR_ACCENT = '#ef4444';
+import { MODULE_COLORS, STATUS_SUCCESS, STATUS_WARNING, STATUS_ERROR, STATUS_INFO, STATUS_STALE } from '@/lib/chart-colors';
 
-export function SessionAnalyticsDashboard() {
+const EVALUATOR_ACCENT = MODULE_COLORS.evaluator;
+
+interface SessionAnalyticsDashboardProps {
+  onNavigateTab?: (tab: string) => void;
+}
+
+export function SessionAnalyticsDashboard({ onNavigateTab }: SessionAnalyticsDashboardProps) {
   const { dashboard, isLoading, error, retry, refetch } = useSessionDashboard();
   const [expandedModule, setExpandedModule] = useState<string | null>(null);
 
@@ -35,15 +42,17 @@ export function SessionAnalyticsDashboard() {
 
   if (dashboard.totalSessions === 0) {
     return (
-      <div className="text-center py-12 space-y-3">
-        <BarChart3 className="w-10 h-10 mx-auto text-border-bright" />
-        <div>
-          <h3 className="text-sm font-semibold text-text">No Sessions Recorded Yet</h3>
-          <p className="text-xs text-text-muted mt-1 max-w-xs mx-auto leading-relaxed">
-            Run CLI tasks from any module to start building your analytics profile. The system learns from every interaction to optimize future prompts.
-          </p>
-        </div>
-      </div>
+      <EmptyState
+        icon={BarChart3}
+        title="No Sessions Recorded Yet"
+        description="Run CLI tasks from any module to start building your analytics profile. The system learns from every interaction to optimize future prompts."
+        iconColor={EVALUATOR_ACCENT}
+        action={onNavigateTab ? {
+          label: 'Go to Features',
+          onClick: () => onNavigateTab('features'),
+          color: EVALUATOR_ACCENT,
+        } : undefined}
+      />
     );
   }
 
@@ -57,25 +66,25 @@ export function SessionAnalyticsDashboard() {
           label="Total Sessions"
           value={dashboard.totalSessions.toString()}
           icon={Activity}
-          color="#60a5fa"
+          color={STATUS_INFO}
         />
         <StatCard
           label="Success Rate"
           value={`${Math.round(dashboard.overallSuccessRate * 100)}%`}
           icon={Target}
-          color={dashboard.overallSuccessRate >= 0.7 ? '#4ade80' : dashboard.overallSuccessRate >= 0.4 ? '#fbbf24' : '#f87171'}
+          color={dashboard.overallSuccessRate >= 0.7 ? STATUS_SUCCESS : dashboard.overallSuccessRate >= 0.4 ? STATUS_WARNING : STATUS_ERROR}
         />
         <StatCard
           label="Avg Duration"
           value={avgDurationSec < 60 ? `${Math.round(avgDurationSec)}s` : `${Math.round(avgDurationSec / 60)}m`}
           icon={Clock}
-          color="#a78bfa"
+          color={STATUS_STALE}
         />
         <StatCard
           label="Modules Active"
           value={dashboard.moduleStats.length.toString()}
           icon={Zap}
-          color="#f59e0b"
+          color={MODULE_COLORS.content}
         />
       </div>
 
@@ -182,7 +191,7 @@ function InsightCard({ insight }: { insight: PromptInsight }) {
           </span>
         </div>
         <p className="text-xs text-text-muted-hover leading-relaxed">{insight.suggestion}</p>
-        <span className="text-2xs text-[#4a4e6a] mt-0.5 inline-block">{insight.moduleId}</span>
+        <span className="text-2xs text-text-muted mt-0.5 inline-block">{insight.moduleId}</span>
       </div>
     </SurfaceCard>
   );
@@ -202,7 +211,7 @@ function QualityScoreRow({ score }: { score: PromptQualityScore }) {
       <div className="flex-1 flex items-center gap-2">
         <div className="flex-1 h-1.5 bg-border rounded-full overflow-hidden">
           <div
-            className="h-full rounded-full transition-all duration-500"
+            className="h-full rounded-full transition-all duration-slow"
             style={{ width: `${score.score}%`, backgroundColor: scoreColor }}
           />
         </div>

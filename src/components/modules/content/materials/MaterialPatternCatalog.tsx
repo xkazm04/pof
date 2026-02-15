@@ -230,13 +230,13 @@ export function MaterialPatternCatalog({ onGenerate, isGenerating }: MaterialPat
       {/* Search + Filter */}
       <div className="flex items-center gap-2">
         <div className="flex-1 relative">
-          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3 h-3 text-[#4a4e6a]" />
+          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3 h-3 text-text-muted" />
           <input
             type="text"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search patterns..."
-            className="w-full pl-7 pr-3 py-1.5 bg-surface border border-border rounded-lg text-xs text-text placeholder-[#4a4e6a] outline-none focus:border-border-bright transition-colors"
+            className="w-full pl-7 pr-3 py-1.5 bg-surface border border-border rounded-lg text-xs text-text placeholder-text-muted outline-none focus:border-border-bright transition-colors"
           />
         </div>
         <div className="flex gap-1">
@@ -275,7 +275,7 @@ export function MaterialPatternCatalog({ onGenerate, isGenerating }: MaterialPat
           />
         ))}
         {filtered.length === 0 && (
-          <p className="text-xs text-[#4a4e6a] text-center py-6">No patterns match your search.</p>
+          <p className="text-xs text-text-muted text-center py-6">No patterns match your search.</p>
         )}
       </div>
     </div>
@@ -298,7 +298,7 @@ function PatternCard({ pattern, isExpanded, onToggle, onGenerate, isGenerating }
 
   return (
     <div
-      className="rounded-xl border transition-all duration-200"
+      className="rounded-xl border transition-all duration-base"
       style={{
         borderColor: isExpanded ? `${catMeta.color}40` : 'var(--border)',
         backgroundColor: isExpanded ? `${catMeta.color}06` : 'var(--surface-deep)',
@@ -333,7 +333,7 @@ function PatternCard({ pattern, isExpanded, onToggle, onGenerate, isGenerating }
         </div>
 
         <span
-          className="text-2xs font-medium opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0"
+          className="text-2xs font-medium opacity-30 scale-95 group-hover:opacity-100 group-hover:scale-100 transition-all flex-shrink-0"
           style={{ color: catMeta.color }}
         >
           {isExpanded ? 'Collapse' : 'Expand'} →

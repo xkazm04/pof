@@ -55,7 +55,7 @@ Enable the EnhancedInput plugin in the .uproject.`;
         <button
           onClick={handleCreate}
           disabled={!projectName.trim() || engines.length === 0 || isRunning}
-          className="flex items-center gap-2 px-4 py-2 bg-[#00ff88]/10 text-[#00ff88] border border-[#00ff88]/20 rounded-lg text-sm hover:bg-[#00ff88]/20 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+          className="flex items-center gap-2 px-4 py-2 bg-accent-medium text-[#00ff88] border border-accent-strong rounded-lg text-sm hover:bg-accent-strong transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
         >
           {isRunning ? (
             <>

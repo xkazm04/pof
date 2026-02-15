@@ -38,7 +38,7 @@ const EQUIP_POSITIONS: Record<string, { x: number; y: number; label: string }> =
 
 // ── Rarity colors ──
 const RARITY_COLORS: Record<string, string> = {
-  Common:    '#9ca0be',
+  Common:    'var(--text-muted)',
   Uncommon:  '#4ade80',
   Rare:      '#60a5fa',
   Epic:      '#a78bfa',
@@ -198,7 +198,7 @@ export function InventoryGridDesigner({ onGenerate, isGenerating }: InventoryGri
                   return (
                     <div
                       key={slot.id}
-                      className="absolute w-[22px] h-[22px] rounded-[3px] border border-[#f59e0b40] bg-[#f59e0b08] flex items-center justify-center"
+                      className="absolute w-[22px] h-[22px] rounded-[3px] border border-status-amber-strong bg-status-amber-subtle flex items-center justify-center"
                       style={{
                         left: `${pos.x}%`,
                         top: `${pos.y}%`,
@@ -234,7 +234,7 @@ export function InventoryGridDesigner({ onGenerate, isGenerating }: InventoryGri
                   type="number"
                   value={config.maxStackSize}
                   onChange={(e) => setConfig((c) => ({ ...c, maxStackSize: Math.max(1, Math.min(9999, Number(e.target.value) || 1)) }))}
-                  className="w-16 px-2 py-1 bg-surface border border-border rounded text-xs text-[#d0d4e8] outline-none focus:border-[#f59e0b40]"
+                  className="w-16 px-2 py-1 bg-surface border border-border rounded text-xs text-[#d0d4e8] outline-none focus:border-status-amber-strong"
                 />
               </div>
             )}
@@ -267,9 +267,9 @@ export function InventoryGridDesigner({ onGenerate, isGenerating }: InventoryGri
                   key={rarity}
                   className="text-xs px-2 py-0.5 rounded-full border font-medium"
                   style={{
-                    color: RARITY_COLORS[rarity] ?? '#9ca0be',
-                    borderColor: `${RARITY_COLORS[rarity] ?? '#9ca0be'}30`,
-                    backgroundColor: `${RARITY_COLORS[rarity] ?? '#9ca0be'}10`,
+                    color: RARITY_COLORS[rarity] ?? 'var(--text-muted)',
+                    borderColor: `${RARITY_COLORS[rarity] ?? 'var(--text-muted)'}30`,
+                    backgroundColor: `${RARITY_COLORS[rarity] ?? 'var(--text-muted)'}10`,
                   }}
                 >
                   {rarity}

@@ -40,7 +40,7 @@ export function ResizeHandle({ onResize, onResizeEnd }: ResizeHandleProps) {
   return (
     <div
       onMouseDown={handleMouseDown}
-      className="h-2 w-full cursor-ns-resize bg-border hover:bg-border-bright transition-colors duration-150 flex items-center justify-center group"
+      className="h-2 w-full cursor-ns-resize bg-border hover:bg-border-bright transition-colors duration-fast flex items-center justify-center group"
       style={{ boxShadow: '0 -2px 4px rgba(0,0,0,0.3)' }}
     >
       <div className="flex items-center gap-1">

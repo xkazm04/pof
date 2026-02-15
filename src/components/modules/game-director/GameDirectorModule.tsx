@@ -2,15 +2,16 @@
 
 import { useState } from 'react';
 import {
-  Clapperboard, BarChart3, FileSearch, Activity, LayoutDashboard,
+  Clapperboard, BarChart3, FileSearch, Activity, LayoutDashboard, GitCompareArrows,
 } from 'lucide-react';
 import { useGameDirector } from '@/hooks/useGameDirector';
 import { DirectorOverview } from './DirectorOverview';
 import { NewSessionPanel } from './NewSessionPanel';
 import { SessionDetail } from './SessionDetail';
 import { FindingsExplorer } from './FindingsExplorer';
+import { RegressionTrackerView } from './RegressionTrackerView';
 
-type TabId = 'overview' | 'new-session' | 'findings';
+type TabId = 'overview' | 'new-session' | 'findings' | 'regressions';
 
 const ACCENT = '#f97316'; // warm orange for the director
 
@@ -95,6 +96,13 @@ export function GameDirectorModule() {
             onClick={() => setActiveTab('findings')}
             accent={ACCENT}
           />
+          <TabButton
+            label="Regressions"
+            icon={GitCompareArrows}
+            active={activeTab === 'regressions'}
+            onClick={() => setActiveTab('regressions')}
+            accent={ACCENT}
+          />
         </div>
       </div>
 
@@ -116,6 +124,10 @@ export function GameDirectorModule() {
 
         {activeTab === 'findings' && (
           <FindingsExplorer sessions={director.sessions} getFindings={director.getFindings} />
+        )}
+
+        {activeTab === 'regressions' && (
+          <RegressionTrackerView />
         )}
       </div>
     </div>

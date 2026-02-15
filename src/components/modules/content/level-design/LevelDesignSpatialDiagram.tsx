@@ -231,14 +231,14 @@ export function LevelDesignSpatialDiagram({ onRunPrompt, isRunning, activeItemId
               onClick={() => handleClick(node, node.locked)}
               disabled={isRunning && !node.isActive}
               className={`
-                absolute rounded-lg border transition-all duration-300 text-left group
+                absolute rounded-lg border transition-all duration-base text-left group
                 ${node.completed
-                  ? 'border-[#22c55e30] bg-[#22c55e08]'
+                  ? 'border-status-green-strong bg-status-green-subtle'
                   : node.locked
                     ? 'border-border bg-[#0a0a1e] opacity-55 cursor-not-allowed'
                     : node.isActive
-                      ? 'border-[#f59e0b50] bg-[#f59e0b0c]'
-                      : 'border-border bg-surface-deep hover:border-[#f59e0b30] hover:bg-[#f59e0b06] cursor-pointer'
+                      ? 'border-status-amber-strong bg-status-amber-subtle'
+                      : 'border-border bg-surface-deep hover:border-status-amber-strong hover:bg-status-amber-subtle cursor-pointer'
                 }
               `}
               style={{
@@ -273,7 +273,7 @@ export function LevelDesignSpatialDiagram({ onRunPrompt, isRunning, activeItemId
                       color: node.completed
                         ? '#22c55e'
                         : node.locked
-                          ? '#4a4e6a'
+                          ? 'var(--text-muted)'
                           : ACCENT,
                     }}
                   />
@@ -287,7 +287,7 @@ export function LevelDesignSpatialDiagram({ onRunPrompt, isRunning, activeItemId
                         node.completed
                           ? 'text-[#22c55e]'
                           : node.locked
-                            ? 'text-[#4a4e6a]'
+                            ? 'text-text-muted'
                             : 'text-text'
                       }`}
                     >
@@ -315,7 +315,7 @@ export function LevelDesignSpatialDiagram({ onRunPrompt, isRunning, activeItemId
                       <span className="text-2xs text-[#3a3e5a] uppercase tracking-wider">Locked</span>
                     ) : (
                       <span
-                        className="text-2xs font-medium uppercase tracking-wider opacity-0 group-hover:opacity-100 transition-opacity"
+                        className="text-2xs font-medium uppercase tracking-wider opacity-30 scale-95 group-hover:opacity-100 group-hover:scale-100 transition-all"
                         style={{ color: ACCENT }}
                       >
                         Build →

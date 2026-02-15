@@ -283,7 +283,7 @@ function EffectRow({
 
   return (
     <div
-      className="rounded-xl border transition-all duration-200"
+      className="rounded-xl border transition-all duration-base"
       style={{
         borderColor: isExpanded ? `${effect.color}40` : entry.enabled ? `${effect.color}20` : 'var(--border)',
         backgroundColor: isExpanded ? `${effect.color}06` : entry.enabled ? `${effect.color}04` : 'var(--surface-deep)',
@@ -297,7 +297,7 @@ function EffectRow({
           <button
             onClick={onMoveUp}
             disabled={isFirst}
-            className="p-0 text-[#4a4e6a] hover:text-text transition-colors disabled:opacity-30 disabled:cursor-default"
+            className="p-0 text-text-muted hover:text-text transition-colors disabled:opacity-30 disabled:cursor-default"
           >
             <ChevronUp className="w-3 h-3" />
           </button>
@@ -305,7 +305,7 @@ function EffectRow({
           <button
             onClick={onMoveDown}
             disabled={isLast}
-            className="p-0 text-[#4a4e6a] hover:text-text transition-colors disabled:opacity-30 disabled:cursor-default"
+            className="p-0 text-text-muted hover:text-text transition-colors disabled:opacity-30 disabled:cursor-default"
           >
             <ChevronDown className="w-3 h-3" />
           </button>
@@ -323,7 +323,7 @@ function EffectRow({
             className="absolute top-0.5 w-3 h-3 rounded-full transition-all"
             style={{
               left: entry.enabled ? '17px' : '2px',
-              backgroundColor: entry.enabled ? effect.color : '#4a4e6a',
+              backgroundColor: entry.enabled ? effect.color : 'var(--text-muted)',
             }}
           />
         </button>
@@ -346,7 +346,7 @@ function EffectRow({
         >
           <div className="flex items-center gap-1.5">
             <span className="text-xs font-semibold text-text">{effect.name}</span>
-            <span className="text-2xs text-[#4a4e6a] font-mono">{entry.priority + 1}</span>
+            <span className="text-2xs text-text-muted font-mono">{entry.priority + 1}</span>
           </div>
           <p className="text-2xs text-text-muted line-clamp-1">{effect.description}</p>
         </button>
@@ -364,7 +364,7 @@ function EffectRow({
       {isExpanded && (
         <div className="px-3 pb-3 pt-0">
           <div className="ml-[72px] space-y-1.5">
-            <div className="text-2xs font-semibold text-[#4a4e6a] uppercase tracking-widest mb-1">
+            <div className="text-2xs font-semibold text-text-muted uppercase tracking-widest mb-1">
               UE: {effect.ueClass}
             </div>
             {effect.params.map((param) => (
@@ -387,7 +387,7 @@ function EffectRow({
                 <div className="flex-shrink-0 text-right">
                   <div className="text-2xs font-mono text-[#9b9ec0]">{param.defaultValue}</div>
                   {param.range && (
-                    <div className="text-2xs text-[#4a4e6a]">{param.range}</div>
+                    <div className="text-2xs text-text-muted">{param.range}</div>
                   )}
                 </div>
               </div>

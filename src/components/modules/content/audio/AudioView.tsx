@@ -4,7 +4,7 @@ import { getModuleChecklist } from '@/lib/module-registry';
 import { useState, useCallback, useEffect } from 'react';
 import {
   Music, Plus, Trash2, FileText, Loader2,
-  Zap, Volume2, Radio, Settings, List, Eye, ListChecks,
+  Zap, Volume2, Radio, Settings, List, Eye, ListChecks, Code2, Wand2,
 } from 'lucide-react';
 import { useAudioScene } from '@/hooks/useAudioScene';
 import { FetchError } from '../../shared/FetchError';
@@ -22,6 +22,8 @@ import { AudioScenePainter } from './AudioScenePainter';
 import { ZonePropertyPanel, EmitterPropertyPanel } from './AudioPropertyPanel';
 import { AudioPipelineDiagram } from './AudioPipelineDiagram';
 import { AudioEventCatalog } from './AudioEventCatalog';
+import { AudioCodeGenPanel } from './AudioCodeGenPanel';
+import { SpatialAudioGeneratorPanel } from './SpatialAudioGeneratorPanel';
 import {
   buildAudioSystemPrompt,
   buildZoneCodegenPrompt,
@@ -33,7 +35,7 @@ import type { AudioEventCatalogConfig } from './AudioEventCatalog';
 
 const CONTENT_ACCENT = '#f59e0b';
 
-type TabId = 'overview' | 'roadmap' | 'painter' | 'soundscapes' | 'settings' | 'events';
+type TabId = 'overview' | 'roadmap' | 'painter' | 'soundscapes' | 'settings' | 'events' | 'codegen' | 'autogen';
 
 export function AudioView() {
   const {
@@ -47,6 +49,7 @@ export function AudioView() {
     createDoc,
     updateDoc,
     deleteDoc,
+    refetch,
   } = useAudioScene();
 
   const projectName = useProjectStore((s) => s.projectName);
@@ -284,7 +287,7 @@ export function AudioView() {
           className={`absolute bottom-4 right-4 z-50 flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium shadow-lg border animate-in fade-in slide-in-from-bottom-2 ${
             rvToast.type === 'success'
               ? 'bg-surface border-green-500/30 text-green-400'
-              : 'bg-surface border-red-500/30 text-red-400'
+              : 'bg-surface border-status-red-strong text-red-400'
           }`}
         >
           <span
@@ -333,7 +336,7 @@ export function AudioView() {
                     <span className="truncate">{doc.name}</span>
                   </div>
                   <div className="flex items-center gap-2 mt-1 ml-5">
-                    <span className="text-2xs text-[#4a4e6a]">
+                    <span className="text-2xs text-text-muted">
                       {doc.zones.length} zones · {doc.emitters.length} emitters
                     </span>
                   </div>
@@ -352,7 +355,7 @@ export function AudioView() {
               onChange={(e) => setNewDocName(e.target.value)}
               onKeyDown={(e) => { if (e.key === 'Enter') handleCreateDoc(); }}
               placeholder="New audio scene..."
-              className="flex-1 px-2.5 py-2 bg-surface border border-border rounded-md text-xs text-text placeholder-[#4a4e6a] outline-none focus:border-border-bright transition-colors min-w-0"
+              className="flex-1 px-2.5 py-2 bg-surface border border-border rounded-md text-xs text-text placeholder-text-muted outline-none focus:border-border-bright transition-colors min-w-0"
             />
             <button
               onClick={handleCreateDoc}
@@ -421,6 +424,8 @@ export function AudioView() {
               <TabButton label="Event Catalog" icon={List} active={activeTab === 'events'} onClick={() => setActiveTab('events')} accent={CONTENT_ACCENT} />
               <TabButton label="Soundscapes" icon={Radio} active={activeTab === 'soundscapes'} onClick={() => setActiveTab('soundscapes')} accent={CONTENT_ACCENT} />
               <TabButton label="Settings" icon={Settings} active={activeTab === 'settings'} onClick={() => setActiveTab('settings')} accent={CONTENT_ACCENT} />
+              <TabButton label="Code Gen" icon={Code2} active={activeTab === 'codegen'} onClick={() => setActiveTab('codegen')} accent={CONTENT_ACCENT} />
+              <TabButton label="Auto Gen" icon={Wand2} active={activeTab === 'autogen'} onClick={() => setActiveTab('autogen')} accent={CONTENT_ACCENT} />
             </div>
 
             {/* Tab content */}
@@ -517,7 +522,7 @@ export function AudioView() {
                       value={activeDoc.description}
                       onChange={(e) => handleDescriptionChange(e.target.value)}
                       placeholder="Describe the overall audio atmosphere for this scene..."
-                      className="w-full px-4 py-3 bg-surface-deep border border-border rounded-lg text-xs text-text placeholder-[#4a4e6a] outline-none focus:border-border-bright transition-colors resize-none leading-relaxed"
+                      className="w-full px-4 py-3 bg-surface-deep border border-border rounded-lg text-xs text-text placeholder-text-muted outline-none focus:border-border-bright transition-colors resize-none leading-relaxed"
                       rows={3}
                     />
                   </div>
@@ -544,7 +549,7 @@ export function AudioView() {
                                 updateDoc({ id: activeDoc.id, zones });
                               }}
                               placeholder={`Describe the soundscape for "${zone.name}"...\ne.g., 'dripping water echoing off stone walls, distant machinery hum'`}
-                              className="w-full px-3 py-2 bg-surface border border-border rounded-md text-xs text-text placeholder-[#4a4e6a] outline-none focus:border-border-bright transition-colors resize-none leading-relaxed font-mono"
+                              className="w-full px-3 py-2 bg-surface border border-border rounded-md text-xs text-text placeholder-text-muted outline-none focus:border-border-bright transition-colors resize-none leading-relaxed font-mono"
                               rows={3}
                             />
                             {zoneEmitters.length > 0 && (
@@ -600,7 +605,7 @@ export function AudioView() {
                         min={1} max={256}
                         className="w-full px-3 py-2 bg-surface-deep border border-border rounded-md text-xs text-text outline-none focus:border-border-bright transition-colors"
                       />
-                      <p className="text-2xs text-[#4a4e6a] mt-1">Pre-allocated audio components for pooling</p>
+                      <p className="text-2xs text-text-muted mt-1">Pre-allocated audio components for pooling</p>
                     </div>
 
                     <div>
@@ -614,7 +619,7 @@ export function AudioView() {
                         min={1} max={128}
                         className="w-full px-3 py-2 bg-surface-deep border border-border rounded-md text-xs text-text outline-none focus:border-border-bright transition-colors"
                       />
-                      <p className="text-2xs text-[#4a4e6a] mt-1">Limit on simultaneous active sounds</p>
+                      <p className="text-2xs text-text-muted mt-1">Limit on simultaneous active sounds</p>
                     </div>
                   </div>
 
@@ -638,7 +643,7 @@ export function AudioView() {
                         </button>
                       ))}
                     </div>
-                    <p className="text-2xs text-[#4a4e6a] mt-1">Default reverb when player is outside all zones</p>
+                    <p className="text-2xs text-text-muted mt-1">Default reverb when player is outside all zones</p>
                   </div>
 
                   {/* Zone overview table */}
@@ -683,6 +688,22 @@ export function AudioView() {
                   )}
                 </div>
               )}
+
+              {activeTab === 'codegen' && (
+                <div className="overflow-y-auto p-5">
+                  <AudioCodeGenPanel doc={activeDoc} accentColor={CONTENT_ACCENT} />
+                </div>
+              )}
+
+              {activeTab === 'autogen' && (
+                <div className="overflow-y-auto p-5">
+                  <SpatialAudioGeneratorPanel
+                    activeDoc={activeDoc}
+                    accentColor={CONTENT_ACCENT}
+                    onSceneCreated={refetch}
+                  />
+                </div>
+              )}
             </div>
           </>
         ) : (
@@ -699,7 +720,7 @@ export function AudioView() {
               {/* Divider */}
               <div className="flex items-center gap-3">
                 <div className="flex-1 h-px bg-border" />
-                <span className="text-2xs text-[#4a4e6a] uppercase tracking-widest">or design a scene</span>
+                <span className="text-2xs text-text-muted uppercase tracking-widest">or design a scene</span>
                 <div className="flex-1 h-px bg-border" />
               </div>
 
@@ -715,7 +736,7 @@ export function AudioView() {
                     onChange={(e) => setNewDocName(e.target.value)}
                     onKeyDown={(e) => { if (e.key === 'Enter') handleCreateDoc(); }}
                     placeholder="My dungeon audio..."
-                    className="px-3 py-2 bg-surface border border-border rounded-md text-xs text-text placeholder-[#4a4e6a] outline-none focus:border-border-bright transition-colors"
+                    className="px-3 py-2 bg-surface border border-border rounded-md text-xs text-text placeholder-text-muted outline-none focus:border-border-bright transition-colors"
                   />
                   <button
                     onClick={handleCreateDoc}

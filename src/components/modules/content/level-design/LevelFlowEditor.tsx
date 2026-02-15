@@ -349,7 +349,7 @@ export function LevelFlowEditor({
                 </text>
 
                 {/* Pacing indicator */}
-                <text x={28} y={54} fontSize={8} fill="#4a4e6a" fontFamily="sans-serif">
+                <text x={28} y={54} fontSize={8} fill="var(--text-muted)" fontFamily="sans-serif">
                   {room.pacing} &middot; diff {room.difficulty}
                 </text>
 

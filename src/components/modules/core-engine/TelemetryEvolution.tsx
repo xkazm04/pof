@@ -53,7 +53,7 @@ export function TelemetryEvolution() {
       <motion.div
         initial={{ opacity: 0, y: 8 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.25 }}
+        transition={{ duration: 0.22 }}
         className="flex items-center justify-between"
       >
         <div className="flex items-center gap-2.5">
@@ -160,7 +160,7 @@ function EmptyState({ onScan, scanning, hasProject }: { onScan: () => void; scan
           {scanning ? 'Scanning...' : 'Run First Scan'}
         </button>
       ) : (
-        <p className="text-xs text-[#4a4e6a]">Set up your project path first in Project Setup.</p>
+        <p className="text-xs text-text-muted">Set up your project path first in Project Setup.</p>
       )}
     </motion.div>
   );
@@ -171,14 +171,14 @@ function PatternsList({ patterns }: { patterns: PatternDetection[] }) {
     <motion.div
       initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.25, delay: 0.05 }}
+      transition={{ duration: 0.22, delay: 0.05 }}
     >
       <div className="flex items-center gap-2 mb-2.5">
         <Activity className="w-3.5 h-3.5 text-text-muted" />
         <span className="text-xs uppercase tracking-wider text-text-muted font-semibold">
           Detected Patterns
         </span>
-        <span className="text-2xs text-[#4a4e6a]">{patterns.length} found</span>
+        <span className="text-2xs text-text-muted">{patterns.length} found</span>
       </div>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
         {patterns.map((p, i) => (
@@ -186,7 +186,7 @@ function PatternsList({ patterns }: { patterns: PatternDetection[] }) {
             key={p.pattern}
             initial={{ opacity: 0, y: 4 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.2, delay: i * 0.03 }}
+            transition={{ duration: 0.22, delay: i * 0.03 }}
             className="flex items-start gap-2.5 px-3 py-2.5 bg-surface-deep border border-border rounded-lg"
           >
             <ConfidenceRing value={p.confidence} size={28} />
@@ -222,7 +222,7 @@ function SuggestionsList({
     <motion.div
       initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.25, delay: 0.1 }}
+      transition={{ duration: 0.22, delay: 0.1 }}
     >
       <div className="flex items-center gap-2 mb-2.5">
         <Sparkles className="w-3.5 h-3.5 text-[#fbbf24]" />
@@ -241,7 +241,7 @@ function SuggestionsList({
               key={sug.id}
               initial={{ opacity: 0, y: 4 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.2, delay: i * 0.04 }}
+              transition={{ duration: 0.22, delay: i * 0.04 }}
               className="bg-surface-deep border rounded-xl overflow-hidden transition-colors"
               style={{ borderColor: isExpanded ? `${style.color}30` : 'var(--border)' }}
             >
@@ -262,9 +262,9 @@ function SuggestionsList({
                 </div>
                 <ConfidenceRing value={sug.confidence} size={32} color={style.color} />
                 {isExpanded ? (
-                  <ChevronDown className="w-3.5 h-3.5 text-[#4a4e6a]" />
+                  <ChevronDown className="w-3.5 h-3.5 text-text-muted" />
                 ) : (
-                  <ChevronRight className="w-3.5 h-3.5 text-[#4a4e6a] group-hover:text-text-muted transition-colors" />
+                  <ChevronRight className="w-3.5 h-3.5 text-text-muted group-hover:text-text-muted transition-colors" />
                 )}
               </button>
 
@@ -275,7 +275,7 @@ function SuggestionsList({
                     initial={{ height: 0, opacity: 0 }}
                     animate={{ height: 'auto', opacity: 1 }}
                     exit={{ height: 0, opacity: 0 }}
-                    transition={{ duration: 0.2 }}
+                    transition={{ duration: 0.22 }}
                     className="overflow-hidden"
                   >
                     <div className="px-3.5 pb-3.5 space-y-3 border-t border-border">
@@ -291,7 +291,7 @@ function SuggestionsList({
                           <div className="mt-1 space-y-1">
                             {sug.patterns.flatMap(p => p.evidence).slice(0, 4).map((ev, j) => (
                               <div key={j} className="flex items-start gap-1.5">
-                                <TrendingUp className="w-2.5 h-2.5 text-[#4a4e6a] mt-0.5 flex-shrink-0" />
+                                <TrendingUp className="w-2.5 h-2.5 text-text-muted mt-0.5 flex-shrink-0" />
                                 <span className="text-2xs text-text-muted-hover">{ev}</span>
                               </div>
                             ))}
@@ -355,7 +355,7 @@ function AcceptedGenres({ genres }: { genres: SubGenreId[] }) {
     <motion.div
       initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.25, delay: 0.15 }}
+      transition={{ duration: 0.22, delay: 0.15 }}
     >
       <div className="flex items-center gap-2 mb-2.5">
         <CheckCircle2 className="w-3.5 h-3.5 text-[#4ade80]" />
@@ -392,7 +392,7 @@ function ScanHistory({ history }: { history: { id: string; scannedAt: string; de
     <motion.div
       initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.25, delay: 0.2 }}
+      transition={{ duration: 0.22, delay: 0.2 }}
     >
       <div className="flex items-center gap-2 mb-2.5">
         <Clock className="w-3.5 h-3.5 text-text-muted" />
@@ -406,10 +406,10 @@ function ScanHistory({ history }: { history: { id: string; scannedAt: string; de
             key={snap.id}
             initial={{ opacity: 0, x: -4 }}
             animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.15, delay: i * 0.03 }}
+            transition={{ duration: 0.12, delay: i * 0.03 }}
             className="flex items-center gap-3 px-3 py-2 bg-surface-deep border border-border rounded-lg"
           >
-            <Scan className="w-3 h-3 text-[#4a4e6a] flex-shrink-0" />
+            <Scan className="w-3 h-3 text-text-muted flex-shrink-0" />
             <span className="text-xs text-text-muted-hover flex-1">
               {new Date(snap.scannedAt).toLocaleString()}
             </span>
@@ -442,7 +442,7 @@ function ConfidenceRing({ value, size, color }: { value: number; size: number; c
           fill="none" stroke={fillColor} strokeWidth="2"
           strokeDasharray={`${(value / 100) * circumference} ${circumference}`}
           strokeLinecap="round"
-          className="transition-all duration-500"
+          className="transition-all duration-slow"
         />
       </svg>
       <span

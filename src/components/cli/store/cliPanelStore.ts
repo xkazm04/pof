@@ -45,6 +45,8 @@ interface CLIPanelStoreState {
   setCurrentExecution: (id: string, executionId: string | null, taskId: string | null) => void;
   updateLastActivity: (id: string) => void;
   setSessionProjectPath: (id: string, path: string) => void;
+  renameSession: (id: string, label: string) => void;
+  setSessionSkills: (id: string, skills: SkillId[]) => void;
   setInlineTerminalHeight: (height: number) => void;
   findSessionByModule: (moduleId: string) => string | null;
   findSessionByKey: (sessionKey: string) => string | null;
@@ -189,6 +191,32 @@ export const useCLIPanelStore = create<CLIPanelStoreState>()(
             sessions: {
               ...state.sessions,
               [id]: { ...session, projectPath: path },
+            },
+          };
+        });
+      },
+
+      renameSession: (id, label) => {
+        set((state) => {
+          const session = state.sessions[id];
+          if (!session) return state;
+          return {
+            sessions: {
+              ...state.sessions,
+              [id]: { ...session, label },
+            },
+          };
+        });
+      },
+
+      setSessionSkills: (id, skills) => {
+        set((state) => {
+          const session = state.sessions[id];
+          if (!session) return state;
+          return {
+            sessions: {
+              ...state.sessions,
+              [id]: { ...session, enabledSkills: skills },
             },
           };
         });

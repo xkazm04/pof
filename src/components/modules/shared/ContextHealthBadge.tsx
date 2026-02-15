@@ -118,7 +118,7 @@ export function ContextHealthBadge() {
       <motion.button
         initial={{ opacity: 0, scale: 0.5 }}
         animate={{ opacity: 1, scale: 1 }}
-        transition={{ duration: 0.3, ease: 'easeOut' }}
+        transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
         onClick={handleClick}
         onMouseEnter={handleMouseEnter}
         onMouseLeave={handleMouseLeave}
@@ -147,7 +147,7 @@ export function ContextHealthBadge() {
             className="absolute inset-0 rounded-full"
             style={{ border: `1px solid ${dotColor}` }}
             animate={{ scale: [1, 1.6], opacity: [0.5, 0] }}
-            transition={{ duration: 1.5, repeat: Infinity, ease: 'easeOut' }}
+            transition={{ duration: 1.5, repeat: Infinity, ease: [0.16, 1, 0.3, 1] }}
           />
         )}
       </motion.button>
@@ -158,7 +158,7 @@ export function ContextHealthBadge() {
             initial={{ opacity: 0, y: -4 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -4 }}
-            transition={{ duration: 0.15 }}
+            transition={{ duration: 0.12 }}
             onMouseEnter={handleMouseEnter}
             onMouseLeave={handleMouseLeave}
             className="absolute left-1/2 top-full mt-2 z-50 -translate-x-1/2"
@@ -185,7 +185,7 @@ export function ContextHealthBadge() {
                     </span>
                     <span
                       className={`text-xs truncate ml-auto ${
-                        f.ok ? 'text-[#a0a4c0]' : 'text-[#f59e0b]'
+                        f.ok ? 'text-text-muted' : 'text-[#f59e0b]'
                       }`}
                       style={{ maxWidth: 120 }}
                     >
@@ -206,7 +206,7 @@ export function ContextHealthBadge() {
                       <button
                         onClick={handleRescan}
                         disabled={isScanning}
-                        className="flex items-center gap-1 text-2xs text-text-muted hover:text-[#a0a4c0] transition-colors disabled:opacity-50"
+                        className="flex items-center gap-1 text-2xs text-text-muted hover:text-text-muted transition-colors disabled:opacity-50"
                         title="Rescan project files"
                       >
                         <RefreshCw className={`w-2.5 h-2.5 ${isScanning ? 'animate-spin' : ''}`} />
@@ -240,7 +240,7 @@ export function ContextHealthBadge() {
                           value={`${dynamicContext.plugins.length} detected`}
                           ok
                         />
-                        <p className="text-2xs text-[#4a4e6a] mt-1.5">
+                        <p className="text-2xs text-text-muted mt-1.5">
                           Scanned {formatTimeAgo(dynamicContext.scannedAt)}
                         </p>
                       </div>
@@ -297,7 +297,7 @@ function ScanRow({ label, value, ok }: { label: string; value: string; ok: boole
         }}
       />
       <span className="text-xs text-text-muted flex-shrink-0">{label}</span>
-      <span className="text-xs text-[#a0a4c0] truncate ml-auto">{value}</span>
+      <span className="text-xs text-text-muted truncate ml-auto">{value}</span>
     </div>
   );
 }

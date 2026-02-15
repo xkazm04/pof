@@ -1,24 +1,26 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import {
-  AlertCircle, AlertTriangle, FileCode, ChevronDown, ChevronRight, Zap,
+  AlertCircle, AlertTriangle, FileCode, ChevronDown, ChevronRight, Zap, Copy, Check,
 } from 'lucide-react';
 import type { BuildDiagnostic } from './UE5BuildParser';
+import { TruncateWithTooltip } from '@/components/ui/TruncateWithTooltip';
 
 interface ErrorCardProps {
   diagnostic: BuildDiagnostic;
   onFix?: (prompt: string) => void;
+  isRunning?: boolean;
 }
 
 const SEVERITY_STYLES = {
   error: {
-    border: 'border-red-500/30',
-    bg: 'bg-red-500/5',
+    border: 'border-status-red-strong',
+    bg: 'bg-status-red-subtle',
     icon: AlertCircle,
     iconColor: 'text-red-400',
-    badge: 'bg-red-500/20 text-red-300',
+    badge: 'bg-status-red-medium text-red-300',
     label: 'ERROR',
   },
   warning: {
@@ -38,8 +40,17 @@ const CATEGORY_LABELS: Record<BuildDiagnostic['category'], string> = {
   general: 'General',
 };
 
-export function ErrorCard({ diagnostic, onFix }: ErrorCardProps) {
+const CATEGORY_BORDER_COLORS: Record<BuildDiagnostic['category'], string> = {
+  compile: '#3b82f6',
+  linker: '#8b5cf6',
+  ubt: '#f59e0b',
+  general: 'var(--border)',
+};
+
+export function ErrorCard({ diagnostic, onFix, isRunning = false }: ErrorCardProps) {
   const [expanded, setExpanded] = useState(false);
+  const [pathExpanded, setPathExpanded] = useState(false);
+  const [copied, setCopied] = useState(false);
   const style = SEVERITY_STYLES[diagnostic.severity];
   const Icon = style.icon;
 
@@ -47,11 +58,28 @@ export function ErrorCard({ diagnostic, onFix }: ErrorCardProps) {
     ? diagnostic.file.split(/[/\\]/).pop() ?? diagnostic.file
     : null;
 
+  const handleCopy = useCallback(async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    const parts: string[] = [diagnostic.message];
+    if (diagnostic.file) {
+      parts.push(`File: ${diagnostic.file}${diagnostic.line != null ? `:${diagnostic.line}` : ''}${diagnostic.column != null ? `:${diagnostic.column}` : ''}`);
+    }
+    if (diagnostic.rawText) {
+      parts.push(diagnostic.rawText);
+    }
+    await navigator.clipboard.writeText(parts.join('\n'));
+    setCopied(true);
+    setTimeout(() => setCopied(false), 1500);
+  }, [diagnostic]);
+
+  const categoryBorderColor = CATEGORY_BORDER_COLORS[diagnostic.category];
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 4 }}
       animate={{ opacity: 1, y: 0 }}
       className={`mx-2 my-1 rounded border ${style.border} ${style.bg} overflow-hidden`}
+      style={{ borderLeftWidth: 3, borderLeftColor: categoryBorderColor }}
     >
       {/* Header row */}
       <button
@@ -76,28 +104,65 @@ export function ErrorCard({ diagnostic, onFix }: ErrorCardProps) {
             <span className="text-2xs text-text-muted">
               {CATEGORY_LABELS[diagnostic.category]}
             </span>
+            {/* Copy button */}
+            <span
+              role="button"
+              tabIndex={0}
+              onClick={handleCopy}
+              onKeyDown={(e) => { if (e.key === 'Enter') handleCopy(e as unknown as React.MouseEvent); }}
+              className="ml-auto p-0.5 rounded text-text-muted hover:text-text hover:bg-surface-hover transition-colors"
+              title={copied ? 'Copied!' : 'Copy error details'}
+            >
+              {copied
+                ? <Check className="w-3 h-3 text-[#4ade80]" />
+                : <Copy className="w-3 h-3" />
+              }
+            </span>
           </div>
-          <p className="text-xs text-[#c8cce0] mt-0.5 leading-tight break-all">
-            {diagnostic.message.length > 150 && !expanded
-              ? diagnostic.message.slice(0, 150) + '...'
-              : diagnostic.message}
-          </p>
+          {expanded ? (
+            <p className="text-xs text-[#c8cce0] mt-0.5 leading-tight break-all">
+              {diagnostic.message}
+            </p>
+          ) : (
+            <TruncateWithTooltip as="p" className="text-xs text-[#c8cce0] mt-0.5 leading-tight break-all line-clamp-2" side="bottom" maxTooltipWidth={400}>
+              {diagnostic.message}
+            </TruncateWithTooltip>
+          )}
         </div>
       </button>
 
       {/* Expanded details */}
       {expanded && (
         <div className="px-2.5 pb-2 border-t border-border/50">
-          {/* File location */}
-          {diagnostic.file && (
-            <div className="flex items-center gap-1.5 mt-1.5">
-              <FileCode className="w-3 h-3 text-text-muted" />
-              <span className="text-xs font-mono text-[#9ca0be]">
-                {diagnostic.file}
-                {diagnostic.line != null && `:${diagnostic.line}`}
-                {diagnostic.column != null && `:${diagnostic.column}`}
+          {/* File location — collapsible path */}
+          {diagnostic.file && shortFile && (
+            <button
+              onClick={() => setPathExpanded(!pathExpanded)}
+              className="flex items-center gap-1.5 mt-1.5 group/path hover:bg-white/[0.02] rounded px-1 -mx-1 transition-colors"
+              title={pathExpanded ? 'Collapse path' : 'Show full path'}
+            >
+              <FileCode className="w-3 h-3 text-text-muted flex-shrink-0" />
+              <span className="text-xs font-mono text-text-muted">
+                {pathExpanded ? (
+                  <>
+                    {diagnostic.file}
+                    {diagnostic.line != null && `:${diagnostic.line}`}
+                    {diagnostic.column != null && `:${diagnostic.column}`}
+                  </>
+                ) : (
+                  <>
+                    {shortFile}
+                    {diagnostic.line != null && `:${diagnostic.line}`}
+                    {diagnostic.column != null && `:${diagnostic.column}`}
+                  </>
+                )}
               </span>
-            </div>
+              {diagnostic.file !== shortFile && (
+                <span className="text-2xs text-text-muted opacity-30 scale-95 group-hover/path:opacity-100 group-hover/path:scale-100 transition-all">
+                  {pathExpanded ? '▸ collapse' : '▸ full path'}
+                </span>
+              )}
+            </button>
           )}
 
           {/* Raw text */}
@@ -110,9 +175,10 @@ export function ErrorCard({ diagnostic, onFix }: ErrorCardProps) {
             <button
               onClick={(e) => {
                 e.stopPropagation();
-                onFix(buildQuickFixPrompt(diagnostic));
+                if (!isRunning) onFix(buildQuickFixPrompt(diagnostic));
               }}
-              className="mt-1.5 flex items-center gap-1 text-xs font-medium text-blue-400 hover:text-blue-300 bg-blue-500/10 hover:bg-blue-500/20 px-2 py-1 rounded transition-colors"
+              disabled={isRunning}
+              className="mt-1.5 flex items-center gap-1 text-xs font-medium text-blue-400 hover:text-blue-300 bg-blue-500/10 hover:bg-blue-500/20 px-2 py-1 rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:text-blue-400 disabled:hover:bg-blue-500/10"
             >
               <Zap className="w-3 h-3" />
               Fix This
@@ -133,9 +199,10 @@ export function ErrorCard({ diagnostic, onFix }: ErrorCardProps) {
             <button
               onClick={(e) => {
                 e.stopPropagation();
-                onFix(buildQuickFixPrompt(diagnostic));
+                if (!isRunning) onFix(buildQuickFixPrompt(diagnostic));
               }}
-              className="ml-auto text-2xs font-medium text-blue-400 hover:text-blue-300 transition-colors"
+              disabled={isRunning}
+              className="ml-auto text-2xs font-medium text-blue-400 hover:text-blue-300 transition-colors disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:text-blue-400"
             >
               Fix
             </button>

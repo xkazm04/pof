@@ -292,9 +292,9 @@ function ActionButton({
       disabled={disabled}
       className="w-full flex items-center justify-center gap-1.5 px-3 py-2 rounded-md text-xs font-medium transition-all disabled:opacity-50"
       style={{
-        backgroundColor: `${accentColor}15`,
+        backgroundColor: `${accentColor}24`,
         color: accentColor,
-        border: `1px solid ${accentColor}30`,
+        border: `1px solid ${accentColor}38`,
       }}
     >
       {icon}

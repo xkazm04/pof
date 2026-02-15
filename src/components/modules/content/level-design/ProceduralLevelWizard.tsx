@@ -206,7 +206,7 @@ export function ProceduralLevelWizard({ onGenerate, isGenerating }: ProceduralLe
               >
                 <Icon
                   className="w-4 h-4 mt-0.5 flex-shrink-0"
-                  style={{ color: isActive ? alg.color : '#4a4e6a' }}
+                  style={{ color: isActive ? alg.color : 'var(--text-muted)' }}
                 />
                 <div className="min-w-0">
                   <span
@@ -215,7 +215,7 @@ export function ProceduralLevelWizard({ onGenerate, isGenerating }: ProceduralLe
                   >
                     {alg.label}
                   </span>
-                  <span className="text-2xs text-[#4a4e6a] block mt-0.5 leading-relaxed">{alg.description}</span>
+                  <span className="text-2xs text-text-muted block mt-0.5 leading-relaxed">{alg.description}</span>
                 </div>
               </button>
             );
@@ -245,7 +245,7 @@ export function ProceduralLevelWizard({ onGenerate, isGenerating }: ProceduralLe
               >
                 <Icon
                   className="w-4 h-4"
-                  style={{ color: isActive ? lt.color : '#4a4e6a' }}
+                  style={{ color: isActive ? lt.color : 'var(--text-muted)' }}
                 />
                 <span
                   className="text-2xs font-semibold"
@@ -253,7 +253,7 @@ export function ProceduralLevelWizard({ onGenerate, isGenerating }: ProceduralLe
                 >
                   {lt.label}
                 </span>
-                <span className="text-2xs text-[#4a4e6a] leading-relaxed">{lt.description}</span>
+                <span className="text-2xs text-text-muted leading-relaxed">{lt.description}</span>
               </button>
             );
           })}
@@ -264,7 +264,7 @@ export function ProceduralLevelWizard({ onGenerate, isGenerating }: ProceduralLe
       <div className="space-y-2">
         <h4 className="text-2xs font-semibold text-text-muted uppercase tracking-widest">
           Size Parameters
-          <span className="ml-1.5 font-normal normal-case text-[#4a4e6a]">(for {ltDef.label})</span>
+          <span className="ml-1.5 font-normal normal-case text-text-muted">(for {ltDef.label})</span>
         </h4>
         <div className="grid grid-cols-2 gap-2">
           <SizeSlider label="Grid Width" value={size.gridWidth} min={16} max={512} step={16} onChange={(v) => updateSize('gridWidth', v)} color={ACCENT} />
@@ -276,7 +276,7 @@ export function ProceduralLevelWizard({ onGenerate, isGenerating }: ProceduralLe
           <div className="px-3 py-2 rounded-lg bg-surface-deep border border-border">
             <div className="flex items-center justify-between mb-1">
               <span className="text-2xs font-medium text-[#c0c4e0]">Seed</span>
-              <span className="text-2xs text-[#4a4e6a]">optional</span>
+              <span className="text-2xs text-text-muted">optional</span>
             </div>
             <input
               type="text"
@@ -315,7 +315,7 @@ export function ProceduralLevelWizard({ onGenerate, isGenerating }: ProceduralLe
                 />
                 <Icon
                   className="w-3 h-3 flex-shrink-0"
-                  style={{ color: isActive ? ACCENT : '#4a4e6a' }}
+                  style={{ color: isActive ? ACCENT : 'var(--text-muted)' }}
                 />
                 <div className="min-w-0">
                   <span
@@ -324,7 +324,7 @@ export function ProceduralLevelWizard({ onGenerate, isGenerating }: ProceduralLe
                   >
                     {c.label}
                   </span>
-                  <span className="text-2xs text-[#4a4e6a] block truncate">{c.description}</span>
+                  <span className="text-2xs text-text-muted block truncate">{c.description}</span>
                 </div>
               </button>
             );

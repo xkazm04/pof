@@ -207,7 +207,7 @@ export function AIBehaviorView() {
                         <span className="truncate">{suite.name}</span>
                       </div>
                       <div className="flex items-center gap-2 mt-1 ml-5">
-                        <span className="text-2xs text-[#4a4e6a]">
+                        <span className="text-2xs text-text-muted">
                           {total > 0 ? `${passed}/${total} passed` : 'no scenarios'}
                         </span>
                       </div>
@@ -224,7 +224,7 @@ export function AIBehaviorView() {
                 onChange={(e) => setNewSuiteName(e.target.value)}
                 onKeyDown={(e) => { if (e.key === 'Enter') handleCreateSuite(); }}
                 placeholder="New test suite..."
-                className="w-full px-2.5 py-2 bg-surface border border-border rounded-md text-xs text-text placeholder-[#4a4e6a] outline-none focus:border-border-bright transition-colors"
+                className="w-full px-2.5 py-2 bg-surface border border-border rounded-md text-xs text-text placeholder-text-muted outline-none focus:border-border-bright transition-colors"
               />
               <input
                 type="text"
@@ -232,7 +232,7 @@ export function AIBehaviorView() {
                 onChange={(e) => setNewTargetClass(e.target.value)}
                 onKeyDown={(e) => { if (e.key === 'Enter') handleCreateSuite(); }}
                 placeholder="Target class (e.g. AMyAIController)"
-                className="w-full px-2.5 py-2 bg-surface border border-border rounded-md text-xs text-text placeholder-[#4a4e6a] outline-none focus:border-border-bright transition-colors font-mono"
+                className="w-full px-2.5 py-2 bg-surface border border-border rounded-md text-xs text-text placeholder-text-muted outline-none focus:border-border-bright transition-colors font-mono"
               />
               <button
                 onClick={handleCreateSuite}
@@ -301,7 +301,7 @@ export function AIBehaviorView() {
                       onChange={(e) => setNewSuiteName(e.target.value)}
                       onKeyDown={(e) => { if (e.key === 'Enter') handleCreateSuite(); }}
                       placeholder="e.g. Enemy AI Combat Tests"
-                      className="w-64 px-3 py-2 bg-surface border border-border rounded-md text-xs text-text placeholder-[#4a4e6a] outline-none focus:border-border-bright transition-colors mx-auto block"
+                      className="w-64 px-3 py-2 bg-surface border border-border rounded-md text-xs text-text placeholder-text-muted outline-none focus:border-border-bright transition-colors mx-auto block"
                     />
                     <input
                       type="text"
@@ -309,7 +309,7 @@ export function AIBehaviorView() {
                       onChange={(e) => setNewTargetClass(e.target.value)}
                       onKeyDown={(e) => { if (e.key === 'Enter') handleCreateSuite(); }}
                       placeholder="Target class (e.g. AEnemyAIController)"
-                      className="w-64 px-3 py-2 bg-surface border border-border rounded-md text-xs text-text placeholder-[#4a4e6a] outline-none focus:border-border-bright transition-colors mx-auto block font-mono"
+                      className="w-64 px-3 py-2 bg-surface border border-border rounded-md text-xs text-text placeholder-text-muted outline-none focus:border-border-bright transition-colors mx-auto block font-mono"
                     />
                     <button
                       onClick={handleCreateSuite}

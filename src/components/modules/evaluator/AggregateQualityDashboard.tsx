@@ -19,6 +19,7 @@ import { MODULE_FEATURE_DEFINITIONS } from '@/lib/feature-definitions';
 import { MODULE_LABELS } from '@/lib/module-registry';
 import { apiFetch } from '@/lib/api-utils';
 import { SurfaceCard } from '@/components/ui/SurfaceCard';
+import { STATUS_SUCCESS, STATUS_WARNING, STATUS_ERROR } from '@/lib/chart-colors';
 
 const ALL_MODULE_IDS = Object.keys(MODULE_FEATURE_DEFINITIONS);
 
@@ -45,10 +46,10 @@ function qualityToAccent(avgQuality: number | null, pctReviewed: number): string
   const t = Math.max(0, Math.min(1, (avgQuality - 1) / 4));
   if (t < 0.5) {
     const s = t / 0.5;
-    return lerpColor('#f87171', '#fbbf24', s);
+    return lerpColor(STATUS_ERROR, STATUS_WARNING, s);
   }
   const s = (t - 0.5) / 0.5;
-  return lerpColor('#fbbf24', '#4ade80', s);
+  return lerpColor(STATUS_WARNING, STATUS_SUCCESS, s);
 }
 
 function lerpColor(a: string, b: string, t: number): string {
@@ -259,7 +260,7 @@ export function AggregateQualityDashboard({ staleDays = 7, onReviewModule, onBat
       {/* ── Project completion bar ──────────────────────────────────────── */}
       <SurfaceCard className="p-4">
         <div className="flex items-center justify-between mb-2">
-          <span className="text-xs font-semibold text-[#9ca0be] uppercase tracking-wider">
+          <span className="text-xs font-semibold text-text-muted uppercase tracking-wider">
             Project Completion
           </span>
           <span className="text-xs text-text-muted">
@@ -272,7 +273,7 @@ export function AggregateQualityDashboard({ staleDays = 7, onReviewModule, onBat
               className="h-full"
               initial={{ width: 0 }}
               animate={{ width: `${(totals.implemented / totals.total) * 100}%` }}
-              transition={{ duration: 0.8, ease: 'easeOut' }}
+              transition={{ duration: 0.45, ease: [0.16, 1, 0.3, 1] }}
               style={{ backgroundColor: '#4ade80' }}
             />
           )}
@@ -281,7 +282,7 @@ export function AggregateQualityDashboard({ staleDays = 7, onReviewModule, onBat
               className="h-full"
               initial={{ width: 0 }}
               animate={{ width: `${(totals.partial / totals.total) * 100}%` }}
-              transition={{ duration: 0.8, ease: 'easeOut', delay: 0.1 }}
+              transition={{ duration: 0.45, ease: [0.16, 1, 0.3, 1], delay: 0.1 }}
               style={{ backgroundColor: '#fbbf24' }}
             />
           )}
@@ -290,7 +291,7 @@ export function AggregateQualityDashboard({ staleDays = 7, onReviewModule, onBat
               className="h-full"
               initial={{ width: 0 }}
               animate={{ width: `${(totals.missing / totals.total) * 100}%` }}
-              transition={{ duration: 0.8, ease: 'easeOut', delay: 0.2 }}
+              transition={{ duration: 0.45, ease: [0.16, 1, 0.3, 1], delay: 0.2 }}
               style={{ backgroundColor: '#f87171' }}
             />
           )}
@@ -302,7 +303,7 @@ export function AggregateQualityDashboard({ staleDays = 7, onReviewModule, onBat
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-2">
             <Activity className="w-3.5 h-3.5 text-[#ef4444]" />
-            <span className="text-xs font-semibold text-[#9ca0be] uppercase tracking-wider">
+            <span className="text-xs font-semibold text-text-muted uppercase tracking-wider">
               Module Quality Heatmap
             </span>
           </div>
@@ -352,13 +353,13 @@ export function AggregateQualityDashboard({ staleDays = 7, onReviewModule, onBat
                 key={cell.moduleId}
                 initial={{ opacity: 0, scale: 0.95 }}
                 animate={{ opacity: 1, scale: 1 }}
-                transition={{ duration: 0.3, delay: i * 0.03 }}
+                transition={{ duration: 0.22, delay: i * 0.03 }}
                 onClick={() =>
                   setSelectedModule(isSelected ? null : cell.moduleId)
                 }
                 onMouseEnter={() => setHoveredModule(cell.moduleId)}
                 onMouseLeave={() => setHoveredModule(null)}
-                className={`relative rounded-lg p-3 text-left transition-all duration-200 border ${
+                className={`relative rounded-lg p-3 text-left transition-all duration-base border ${
                   isSelected
                     ? 'border-[#ef4444]/50 ring-1 ring-[#ef4444]/30'
                     : isHovered
@@ -483,7 +484,7 @@ export function AggregateQualityDashboard({ staleDays = 7, onReviewModule, onBat
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: 'auto' }}
             exit={{ opacity: 0, height: 0 }}
-            transition={{ duration: 0.2 }}
+            transition={{ duration: 0.22 }}
             className="overflow-hidden"
           >
             <SurfaceCard className="p-4">
@@ -609,19 +610,19 @@ export function AggregateQualityDashboard({ staleDays = 7, onReviewModule, onBat
                     Review History
                   </span>
                   <div className="space-y-1.5">
-                    <div className="text-xs text-[#9ca0be]">
+                    <div className="text-xs text-text-muted">
                       <span className="text-text-muted">Last reviewed: </span>
                       {selected.lastReviewedAt
                         ? new Date(selected.lastReviewedAt).toLocaleDateString()
                         : 'Never'}
                     </div>
                     {selected.daysSinceReview !== null && (
-                      <div className="text-xs text-[#9ca0be]">
+                      <div className="text-xs text-text-muted">
                         <span className="text-text-muted">Days ago: </span>
                         {selected.daysSinceReview}
                       </div>
                     )}
-                    <div className="text-xs text-[#9ca0be]">
+                    <div className="text-xs text-text-muted">
                       <span className="text-text-muted">Reviews: </span>
                       {historyMap[selected.moduleId]?.length ?? 0} snapshots
                     </div>
@@ -780,7 +781,7 @@ function MetricCard({
     <motion.div
       initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.3 }}
+      transition={{ duration: 0.22 }}
       className="bg-surface border border-border rounded-lg p-3"
     >
       <div className="flex items-center gap-2 mb-1.5">
@@ -812,7 +813,7 @@ function StatusRow({
   return (
     <div className="flex items-center gap-2">
       <span className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ backgroundColor: color }} />
-      <span className="text-xs text-[#9ca0be] flex-1">{label}</span>
+      <span className="text-xs text-text-muted flex-1">{label}</span>
       <span className="text-xs font-medium" style={{ color }}>
         {count}
       </span>

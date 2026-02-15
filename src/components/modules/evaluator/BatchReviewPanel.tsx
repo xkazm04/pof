@@ -217,7 +217,7 @@ export function BatchReviewPanel() {
               <span className="text-text-muted">
                 {isRunning ? 'Reviewing...' : batch.status === 'completed' ? 'Complete' : batch.status === 'aborted' ? 'Aborted' : 'Finished with errors'}
                 {batch.startedAt && (
-                  <span className="ml-1.5 text-[#4a4e6a]">
+                  <span className="ml-1.5 text-text-muted">
                     {formatDuration(batch.startedAt, batch.completedAt)}
                   </span>
                 )}
@@ -227,13 +227,13 @@ export function BatchReviewPanel() {
             <div className="h-1.5 bg-border rounded-full overflow-hidden flex">
               {completed > 0 && (
                 <div
-                  className="h-full transition-all duration-500"
+                  className="h-full transition-all duration-slow"
                   style={{ width: `${(completed / total) * 100}%`, backgroundColor: '#4ade80', opacity: 0.8 }}
                 />
               )}
               {errored > 0 && (
                 <div
-                  className="h-full transition-all duration-500"
+                  className="h-full transition-all duration-slow"
                   style={{ width: `${(errored / total) * 100}%`, backgroundColor: '#f87171', opacity: 0.8 }}
                 />
               )}
@@ -272,11 +272,11 @@ export function BatchReviewPanel() {
                     <span className="text-xs text-text flex-1 min-w-0 truncate">
                       {mod.label}
                     </span>
-                    <span className="text-2xs text-[#4a4e6a] flex-shrink-0">
+                    <span className="text-2xs text-text-muted flex-shrink-0">
                       {mod.featureCount} features
                     </span>
                     {mod.startedAt && mod.completedAt && (
-                      <span className="text-2xs text-[#4a4e6a] flex-shrink-0 tabular-nums">
+                      <span className="text-2xs text-text-muted flex-shrink-0 tabular-nums">
                         {formatDuration(mod.startedAt, mod.completedAt)}
                       </span>
                     )}
@@ -301,9 +301,24 @@ export function BatchReviewPanel() {
 
       {/* Empty state */}
       {!batch && !error && (
-        <p className="text-xs text-text-muted leading-relaxed">
-          Run a feature review across all modules sequentially. Each module&apos;s features will be scanned by Claude and results imported to the database automatically.
-        </p>
+        <div className="flex flex-col items-center justify-center py-10 text-center">
+          <div className="w-12 h-12 rounded-xl border border-border flex items-center justify-center mb-4" style={{ backgroundColor: `${ACCENT}10` }}>
+            <Zap className="w-6 h-6" style={{ color: ACCENT }} />
+          </div>
+          <h3 className="text-sm font-semibold text-text mb-1">Batch Feature Review</h3>
+          <p className="text-xs text-text-muted max-w-xs leading-relaxed">
+            Scan all modules sequentially with Claude to detect implemented features, quality issues, and generate a comprehensive project status.
+          </p>
+          <button
+            onClick={startBatch}
+            disabled={isStarting}
+            className="flex items-center gap-1.5 mt-4 px-4 py-2 rounded-lg text-xs font-medium transition-colors"
+            style={{ backgroundColor: `${ACCENT}14`, color: ACCENT, border: `1px solid ${ACCENT}38` }}
+          >
+            {isStarting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Play className="w-3.5 h-3.5" />}
+            Run First Review
+          </button>
+        </div>
       )}
     </div>
   );

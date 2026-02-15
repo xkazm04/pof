@@ -168,14 +168,14 @@ function NodeCard({ node, onClick, isRunning }: NodeCardProps) {
       onClick={onClick}
       disabled={isRunning && !node.isActive}
       className={`
-        relative w-full rounded-xl border transition-all duration-300 text-left group
+        relative w-full rounded-xl border transition-all duration-base text-left group
         ${node.completed
-          ? 'border-[#22c55e30] bg-[#22c55e08]'
+          ? 'border-status-green-strong bg-status-green-subtle'
           : node.locked
             ? 'border-border bg-[#0a0a1e] opacity-60 cursor-not-allowed'
             : node.isActive
-              ? 'border-[#f59e0b50] bg-[#f59e0b0c]'
-              : 'border-border bg-surface-deep hover:border-[#f59e0b30] hover:bg-[#f59e0b06] cursor-pointer'
+              ? 'border-status-amber-strong bg-status-amber-subtle'
+              : 'border-border bg-surface-deep hover:border-status-amber-strong hover:bg-status-amber-subtle cursor-pointer'
         }
       `}
       style={{
@@ -215,7 +215,7 @@ function NodeCard({ node, onClick, isRunning }: NodeCardProps) {
           {node.completed ? (
             <Check className="w-3.5 h-3.5 text-[#22c55e]" />
           ) : node.locked ? (
-            <Lock className="w-3 h-3 text-[#4a4e6a]" />
+            <Lock className="w-3 h-3 text-text-muted" />
           ) : (
             <Icon className="w-3.5 h-3.5" style={{ color: ACCENT }} />
           )}
@@ -229,7 +229,7 @@ function NodeCard({ node, onClick, isRunning }: NodeCardProps) {
                 node.completed
                   ? 'text-[#22c55e]'
                   : node.locked
-                    ? 'text-[#4a4e6a]'
+                    ? 'text-text-muted'
                     : 'text-text'
               }`}
             >
@@ -238,7 +238,7 @@ function NodeCard({ node, onClick, isRunning }: NodeCardProps) {
             <span
               className={`text-2xs font-medium uppercase tracking-widest px-1.5 py-0.5 rounded ${
                 node.completed
-                  ? 'bg-[#22c55e12] text-[#22c55e80]'
+                  ? 'bg-status-green-medium text-[#22c55e80]'
                   : node.locked
                     ? 'bg-surface text-[#3a3e5a]'
                     : ''
@@ -296,7 +296,7 @@ function NodeCard({ node, onClick, isRunning }: NodeCardProps) {
             <span className="text-2xs text-[#22c55e80] font-medium">Done</span>
           ) : !node.locked && !node.isActive ? (
             <span
-              className="text-2xs font-medium opacity-0 group-hover:opacity-100 transition-opacity"
+              className="text-2xs font-medium opacity-30 scale-95 group-hover:opacity-100 group-hover:scale-100 transition-all"
               style={{ color: ACCENT }}
             >
               Build →

@@ -134,7 +134,7 @@ export function AssetPipelineDiagram({
                   {isCompleted ? (
                     <Check className="w-3.5 h-3.5" style={{ color: ACCENT }} />
                   ) : (
-                    <Icon className="w-3.5 h-3.5 text-[#4a4e6a] group-hover:text-text-muted-hover transition-colors" />
+                    <Icon className="w-3.5 h-3.5 text-text-muted group-hover:text-text-muted-hover transition-colors" />
                   )}
                 </div>
 
@@ -144,7 +144,7 @@ export function AssetPipelineDiagram({
                     <span
                       className={`text-xs font-medium transition-colors ${
                         isCompleted
-                          ? 'text-[#a0a4c0]'
+                          ? 'text-text-muted'
                           : 'text-text group-hover:text-text'
                       }`}
                     >
@@ -162,7 +162,7 @@ export function AssetPipelineDiagram({
                       </span>
                     )}
                   </div>
-                  <p className="text-xs text-[#4a4e6a] truncate">
+                  <p className="text-xs text-text-muted truncate">
                     {stage.description}
                   </p>
                 </div>
@@ -170,10 +170,10 @@ export function AssetPipelineDiagram({
                 {/* Expand arrow */}
                 <motion.div
                   animate={{ rotate: isExpanded ? 180 : 0 }}
-                  transition={{ duration: 0.2 }}
+                  transition={{ duration: 0.22 }}
                   className="flex-shrink-0"
                 >
-                  <ChevronDown className="w-3.5 h-3.5 text-[#4a4e6a]" />
+                  <ChevronDown className="w-3.5 h-3.5 text-text-muted" />
                 </motion.div>
               </motion.button>
 
@@ -184,7 +184,7 @@ export function AssetPipelineDiagram({
                     initial={{ height: 0, opacity: 0 }}
                     animate={{ height: 'auto', opacity: 1 }}
                     exit={{ height: 0, opacity: 0 }}
-                    transition={{ duration: 0.2, ease: 'easeInOut' }}
+                    transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
                     className="overflow-hidden"
                   >
                     <div className="ml-[39px] mb-2 pl-3 border-l border-border">
@@ -219,7 +219,7 @@ export function AssetPipelineDiagram({
 
       {/* Progress summary */}
       <div className="mt-4 pt-3 border-t border-border flex items-center justify-between">
-        <span className="text-xs text-[#4a4e6a]">
+        <span className="text-xs text-text-muted">
           {completedStages.size} / {PIPELINE_STAGES.length} stages complete
         </span>
         <div className="flex gap-1">

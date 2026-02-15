@@ -9,12 +9,16 @@ import { useInputHistory } from './useInputHistory';
 import { TerminalHeader } from './TerminalHeader';
 import { TerminalOutput } from './TerminalOutput';
 import { TerminalInput } from './TerminalInput';
+import { AntiPatternWarning } from './AntiPatternWarning';
+import { useCLIPanelStore } from './store/cliPanelStore';
 
 export function CompactTerminal({
   instanceId, projectPath, title = 'Terminal', className = '',
   taskQueue = [], onTaskStart, onTaskComplete, onQueueEmpty,
   autoStart = false, enabledSkills = [], onStreamingChange, visible = true,
 }: CompactTerminalProps) {
+  const sessionModuleId = useCLIPanelStore((s) => s.sessions[instanceId]?.moduleId);
+  const accentColor = useCLIPanelStore((s) => s.sessions[instanceId]?.accentColor ?? '#3b82f6');
   const [input, setInput] = useState('');
   const listRef = useListRef(null);
   const history = useInputHistory();
@@ -97,11 +101,27 @@ export function CompactTerminal({
     pendingPromptRef.current = prompt;
   }, [tq.isStreaming]);
 
+  // Empty state prompt chip fill — just fills input without submitting
+  const handlePromptFill = useCallback((prompt: string) => {
+    setInput(prompt);
+    history.inputRef.current?.focus();
+  }, [history.inputRef]);
+
   // --- Derived counts ---
 
   const editCount = tq.fileChanges.filter(c => c.changeType === 'edit').length;
   const writeCount = tq.fileChanges.filter(c => c.changeType === 'write').length;
   const queuePendingCount = taskQueue.filter(t => t.status === 'pending').length;
+
+  const handleCopyOutput = useCallback((): string | null => {
+    // Find the last assistant message in logs
+    for (let i = tq.logs.length - 1; i >= 0; i--) {
+      if (tq.logs[i].type === 'assistant' && tq.logs[i].content.trim()) {
+        return tq.logs[i].content;
+      }
+    }
+    return null;
+  }, [tq.logs]);
 
   return (
     <div className={`flex flex-col bg-background overflow-hidden ${className}`}>
@@ -117,6 +137,7 @@ export function CompactTerminal({
         queuePendingCount={queuePendingCount}
         onClear={tq.handleClear}
         onResume={handleResume}
+        onCopyOutput={handleCopyOutput}
       />
 
       <TerminalOutput
@@ -132,6 +153,13 @@ export function CompactTerminal({
         isAutoScroll={scroll.isAutoScroll}
         unseenCount={scroll.unseenCount}
         onScrollToBottom={scroll.scrollToBottom}
+        accentColor={accentColor}
+        onPromptFill={handlePromptFill}
+      />
+
+      <AntiPatternWarning
+        prompt={input}
+        moduleId={sessionModuleId}
       />
 
       <TerminalInput

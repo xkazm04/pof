@@ -331,7 +331,7 @@ function CategoryGroup({
         >
           {cfg.label}
         </span>
-        <span className="text-2xs text-[#4a4e6a] ml-0.5">{cfg.description}</span>
+        <span className="text-2xs text-text-muted ml-0.5">{cfg.description}</span>
         <button
           onClick={onAdd}
           className="ml-auto flex items-center gap-1 px-2 py-0.5 rounded text-2xs font-medium transition-colors hover:bg-surface-hover"
@@ -343,7 +343,7 @@ function CategoryGroup({
       </div>
 
       {events.length === 0 ? (
-        <div className="text-center py-4 text-xs text-[#4a4e6a]">
+        <div className="text-center py-4 text-xs text-text-muted">
           No events yet. Click Add to create one.
         </div>
       ) : (
@@ -391,7 +391,7 @@ function CategoryGroup({
                 </span>
 
                 {/* Concurrency */}
-                <span className="text-2xs text-[#4a4e6a] tabular-nums w-6 text-right" title="Max concurrent instances">
+                <span className="text-2xs text-text-muted tabular-nums w-6 text-right" title="Max concurrent instances">
                   ×{evt.concurrency}
                 </span>
 
@@ -411,14 +411,14 @@ function CategoryGroup({
                     </span>
                   ))}
                   {evt.tags.length > 2 && (
-                    <span className="text-2xs text-[#4a4e6a]">+{evt.tags.length - 2}</span>
+                    <span className="text-2xs text-text-muted">+{evt.tags.length - 2}</span>
                   )}
                 </div>
 
                 {/* Delete */}
                 <button
                   onClick={(e) => { e.stopPropagation(); onDelete(evt.id); }}
-                  className="opacity-0 group-hover:opacity-100 text-text-muted hover:text-[#f87171] transition-all flex-shrink-0"
+                  className="opacity-30 scale-95 group-hover:opacity-100 group-hover:scale-100 text-text-muted hover:text-[#f87171] transition-all flex-shrink-0"
                 >
                   <X className="w-3 h-3" />
                 </button>
@@ -476,7 +476,7 @@ function EventEditor({
             type="text"
             value={event.name}
             onChange={(e) => onUpdate({ name: e.target.value })}
-            className="w-full px-2.5 py-1.5 bg-surface border border-border rounded text-xs text-text outline-none focus:border-[#f59e0b40] transition-colors"
+            className="w-full px-2.5 py-1.5 bg-surface border border-border rounded text-xs text-text outline-none focus:border-status-amber-strong transition-colors"
           />
         </div>
 
@@ -488,7 +488,7 @@ function EventEditor({
             value={event.trigger}
             onChange={(e) => onUpdate({ trigger: e.target.value })}
             placeholder="OnGameEvent..."
-            className="w-full px-2.5 py-1.5 bg-surface border border-border rounded text-xs text-text font-mono outline-none focus:border-[#f59e0b40] transition-colors"
+            className="w-full px-2.5 py-1.5 bg-surface border border-border rounded text-xs text-text font-mono outline-none focus:border-status-amber-strong transition-colors"
           />
         </div>
 
@@ -499,7 +499,7 @@ function EventEditor({
             <select
               value={event.category}
               onChange={(e) => onUpdate({ category: e.target.value as EventCategory })}
-              className="w-full px-2.5 py-1.5 bg-surface border border-border rounded text-xs text-text outline-none focus:border-[#f59e0b40] appearance-none transition-colors"
+              className="w-full px-2.5 py-1.5 bg-surface border border-border rounded text-xs text-text outline-none focus:border-status-amber-strong appearance-none transition-colors"
             >
               {CATEGORIES.map((c) => (
                 <option key={c} value={c}>{CATEGORY_CONFIG[c].label}</option>
@@ -522,7 +522,7 @@ function EventEditor({
                   onClick={() => onUpdate({ priority: p })}
                   className="flex-1 py-1.5 rounded text-2xs font-medium transition-colors border"
                   style={{
-                    color: active ? pCfg.color : '#4a4e6a',
+                    color: active ? pCfg.color : 'var(--text-muted)',
                     borderColor: active ? `${pCfg.color}40` : 'var(--border)',
                     backgroundColor: active ? `${pCfg.color}10` : 'var(--surface)',
                   }}
@@ -547,7 +547,7 @@ function EventEditor({
                   onClick={() => onUpdate({ spatial: mode })}
                   className="flex-1 py-1.5 rounded text-xs font-bold uppercase transition-colors border"
                   style={{
-                    color: active ? modeColor : '#4a4e6a',
+                    color: active ? modeColor : 'var(--text-muted)',
                     borderColor: active ? `${modeColor}40` : 'var(--border)',
                     backgroundColor: active ? `${modeColor}10` : 'var(--surface)',
                   }}
@@ -567,7 +567,7 @@ function EventEditor({
             value={event.concurrency}
             onChange={(e) => onUpdate({ concurrency: Math.max(1, Math.min(16, Number(e.target.value) || 1)) })}
             min={1} max={16}
-            className="w-full px-2.5 py-1.5 bg-surface border border-border rounded text-xs text-text outline-none focus:border-[#f59e0b40] transition-colors"
+            className="w-full px-2.5 py-1.5 bg-surface border border-border rounded text-xs text-text outline-none focus:border-status-amber-strong transition-colors"
           />
         </div>
 
@@ -579,7 +579,7 @@ function EventEditor({
             value={event.cooldownMs}
             onChange={(e) => onUpdate({ cooldownMs: Math.max(0, Number(e.target.value) || 0) })}
             min={0}
-            className="w-full px-2.5 py-1.5 bg-surface border border-border rounded text-xs text-text outline-none focus:border-[#f59e0b40] transition-colors"
+            className="w-full px-2.5 py-1.5 bg-surface border border-border rounded text-xs text-text outline-none focus:border-status-amber-strong transition-colors"
           />
         </div>
       </div>
@@ -616,7 +616,7 @@ function EventEditor({
             onChange={(e) => setNewTag(e.target.value)}
             onKeyDown={(e) => { if (e.key === 'Enter') addTag(); }}
             placeholder="e.g. impact, voice, loop..."
-            className="flex-1 px-2.5 py-1.5 bg-surface border border-border rounded text-xs text-text placeholder-[#4a4e6a] outline-none focus:border-[#f59e0b40] transition-colors"
+            className="flex-1 px-2.5 py-1.5 bg-surface border border-border rounded text-xs text-text placeholder-text-muted outline-none focus:border-status-amber-strong transition-colors"
           />
           <button
             onClick={addTag}

@@ -20,31 +20,33 @@ import { TaskFactory } from '@/lib/cli-task';
 import { MODULE_LABELS } from '@/lib/module-registry';
 import type { EvaluatorReport, ModuleScore, Recommendation } from '@/types/evaluator';
 import { SurfaceCard } from '@/components/ui/SurfaceCard';
+import { EmptyState } from '@/components/ui/EmptyState';
+import { MODULE_COLORS, STATUS_SUCCESS, STATUS_WARNING, STATUS_ERROR, STATUS_BLOCKER, OPACITY_10 } from '@/lib/chart-colors';
 
-const EVAL_ACCENT = '#ef4444';
+const EVAL_ACCENT = MODULE_COLORS.evaluator;
 
 // ── Score → color ──
 
 function scoreColor(score: number): string {
-  if (score >= 80) return '#4ade80';
-  if (score >= 60) return '#fbbf24';
-  if (score >= 40) return '#fb923c';
-  return '#f87171';
+  if (score >= 80) return STATUS_SUCCESS;
+  if (score >= 60) return STATUS_WARNING;
+  if (score >= 40) return STATUS_BLOCKER;
+  return STATUS_ERROR;
 }
 
 function scoreBg(score: number): string {
-  if (score >= 80) return '#4ade8012';
-  if (score >= 60) return '#fbbf2412';
-  if (score >= 40) return '#fb923c12';
-  return '#f8717112';
+  if (score >= 80) return STATUS_SUCCESS + OPACITY_10;
+  if (score >= 60) return STATUS_WARNING + OPACITY_10;
+  if (score >= 40) return STATUS_BLOCKER + OPACITY_10;
+  return STATUS_ERROR + OPACITY_10;
 }
 
 // ── Priority color ──
 
 const PRIORITY_COLORS: Record<string, { text: string; bg: string; border: string }> = {
-  critical: { text: '#f87171', bg: '#f8717112', border: '#f8717125' },
-  high: { text: '#fb923c', bg: '#fb923c12', border: '#fb923c25' },
-  medium: { text: '#fbbf24', bg: '#fbbf2412', border: '#fbbf2425' },
+  critical: { text: STATUS_ERROR, bg: STATUS_ERROR + OPACITY_10, border: STATUS_ERROR + '25' },
+  high: { text: STATUS_BLOCKER, bg: STATUS_BLOCKER + OPACITY_10, border: STATUS_BLOCKER + '25' },
+  medium: { text: STATUS_WARNING, bg: STATUS_WARNING + OPACITY_10, border: STATUS_WARNING + '25' },
   low: { text: 'var(--text-muted)', bg: 'var(--text-muted)12', border: 'var(--text-muted)25' },
 };
 
@@ -66,7 +68,11 @@ function polarToXY(angle: number, radius: number): { x: number; y: number } {
 
 // ── Component ──
 
-export function ProjectHealthDashboard() {
+interface ProjectHealthDashboardProps {
+  onNavigateTab?: (tab: string) => void;
+}
+
+export function ProjectHealthDashboard({ onNavigateTab }: ProjectHealthDashboardProps) {
   const lastScan = useEvaluatorStore((s) => s.lastScan);
   const scanHistory = useEvaluatorStore((s) => s.scanHistory);
   const isScanning = useEvaluatorStore((s) => s.isScanning);
@@ -256,7 +262,7 @@ export function ProjectHealthDashboard() {
             </p>
           )}
           {lastScan && (
-            <p className="text-2xs text-[#4a4e6a] mt-1">
+            <p className="text-2xs text-text-muted mt-1">
               {new Date(lastScan.timestamp).toLocaleString()} · {lastScan.moduleScores.length} modules · {lastScan.recommendations.length} recommendations
             </p>
           )}
@@ -305,7 +311,7 @@ export function ProjectHealthDashboard() {
         <SurfaceCard level={3} className="p-4">
           <div className="flex items-center gap-2 mb-3">
             <RadarIcon className="w-3.5 h-3.5 text-[#ef4444]" />
-            <span className="text-xs font-semibold text-[#9ca0be] uppercase tracking-wider">
+            <span className="text-xs font-semibold text-text-muted uppercase tracking-wider">
               Module Health Radar
             </span>
             {showHistoryOverlay && prevRadarData && (
@@ -493,7 +499,7 @@ export function ProjectHealthDashboard() {
                 {selectedDetail.issues.map((issue, i) => (
                   <div key={i} className="flex items-start gap-2 px-3 py-1.5 rounded-md bg-surface-deep">
                     <AlertTriangle className="w-3 h-3 text-[#fbbf24] flex-shrink-0 mt-0.5" />
-                    <span className="text-xs text-[#9ca0be]">{issue}</span>
+                    <span className="text-xs text-text-muted">{issue}</span>
                   </div>
                 ))}
               </div>
@@ -559,7 +565,7 @@ export function ProjectHealthDashboard() {
         <SurfaceCard level={3} className="p-4">
           <div className="flex items-center gap-2 mb-3">
             <AlertTriangle className="w-3.5 h-3.5 text-[#fbbf24]" />
-            <span className="text-xs font-semibold text-[#9ca0be] uppercase tracking-wider">
+            <span className="text-xs font-semibold text-text-muted uppercase tracking-wider">
               Top Recommendations
             </span>
             <span className="text-2xs text-text-muted ml-auto">
@@ -615,7 +621,7 @@ export function ProjectHealthDashboard() {
         <SurfaceCard level={3} className="p-4">
           <div className="flex items-center gap-2 mb-3">
             <TrendingUp className="w-3.5 h-3.5 text-[#4ade80]" />
-            <span className="text-xs font-semibold text-[#9ca0be] uppercase tracking-wider">
+            <span className="text-xs font-semibold text-text-muted uppercase tracking-wider">
               Scan History
             </span>
             <span className="text-2xs text-text-muted ml-auto">
@@ -655,7 +661,7 @@ export function ProjectHealthDashboard() {
                   <span className="text-xs text-text-muted flex-1">
                     {new Date(scan.timestamp).toLocaleDateString()} {new Date(scan.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                   </span>
-                  <span className="text-2xs text-[#4a4e6a]">
+                  <span className="text-2xs text-text-muted">
                     {scan.moduleScores.length} modules
                   </span>
                 </div>
@@ -667,13 +673,17 @@ export function ProjectHealthDashboard() {
 
       {/* ── Empty state ── */}
       {!lastScan && !isScanning && (
-        <SurfaceCard level={3} className="p-8 text-center">
-          <RadarIcon className="w-10 h-10 mx-auto text-border-bright mb-3" />
-          <h3 className="text-sm font-semibold text-text mb-2">No Health Data</h3>
-          <p className="text-xs text-text-muted max-w-sm mx-auto mb-4">
-            Scan your project to generate a health radar with per-module scores, issues, and actionable recommendations.
-          </p>
-        </SurfaceCard>
+        <EmptyState
+          icon={RadarIcon}
+          title="No Health Data"
+          description="Scan your project to generate a health radar with per-module scores, issues, and actionable recommendations."
+          iconColor={EVAL_ACCENT}
+          action={onNavigateTab ? {
+            label: 'Review Features First',
+            onClick: () => onNavigateTab('features'),
+            color: EVAL_ACCENT,
+          } : undefined}
+        />
       )}
     </div>
   );

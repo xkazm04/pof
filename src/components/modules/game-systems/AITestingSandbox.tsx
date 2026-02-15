@@ -164,7 +164,7 @@ export function AITestingSandbox({
             onChange={(e) => setNewScenarioName(e.target.value)}
             onKeyDown={(e) => { if (e.key === 'Enter') handleAddScenario(); }}
             placeholder="e.g. Enemy sees player at 50m..."
-            className="flex-1 px-2.5 py-2 bg-surface border border-border rounded-md text-xs text-text placeholder-[#4a4e6a] outline-none focus:border-border-bright transition-colors min-w-0"
+            className="flex-1 px-2.5 py-2 bg-surface border border-border rounded-md text-xs text-text placeholder-text-muted outline-none focus:border-border-bright transition-colors min-w-0"
           />
           <button
             onClick={handleAddScenario}
@@ -295,7 +295,7 @@ function ScenarioCard({
               value={scenario.description}
               onChange={(e) => onUpdate({ description: e.target.value })}
               placeholder="Describe the game situation in natural language..."
-              className="w-full px-3 py-2 bg-surface border border-border rounded text-xs text-text placeholder-[#4a4e6a] outline-none focus:border-border-bright transition-colors resize-none"
+              className="w-full px-3 py-2 bg-surface border border-border rounded text-xs text-text placeholder-text-muted outline-none focus:border-border-bright transition-colors resize-none"
               rows={2}
             />
           </div>
@@ -351,7 +351,7 @@ function ScenarioCard({
                           value={stim.label}
                           onChange={(e) => handleUpdateStimulus(idx, { label: e.target.value })}
                           placeholder="Label"
-                          className="flex-1 bg-transparent text-xs text-text placeholder-[#4a4e6a] outline-none min-w-0"
+                          className="flex-1 bg-transparent text-xs text-text placeholder-text-muted outline-none min-w-0"
                         />
                       </div>
                       <input
@@ -359,7 +359,7 @@ function ScenarioCard({
                         value={stim.description}
                         onChange={(e) => handleUpdateStimulus(idx, { description: e.target.value })}
                         placeholder="What happens in the game world..."
-                        className="w-full bg-transparent text-xs text-text-muted-hover placeholder-[#4a4e6a] outline-none"
+                        className="w-full bg-transparent text-xs text-text-muted-hover placeholder-text-muted outline-none"
                       />
                     </div>
                     <button
@@ -400,7 +400,7 @@ function ScenarioCard({
                       value={ea.action}
                       onChange={(e) => handleUpdateExpected(idx, { action: e.target.value })}
                       placeholder="Expected action (e.g. 'Enter Chase state')"
-                      className="w-full bg-transparent text-xs text-text placeholder-[#4a4e6a] outline-none"
+                      className="w-full bg-transparent text-xs text-text placeholder-text-muted outline-none"
                     />
                     <div className="flex items-center gap-2">
                       <input
@@ -408,7 +408,7 @@ function ScenarioCard({
                         value={ea.btNode}
                         onChange={(e) => handleUpdateExpected(idx, { btNode: e.target.value })}
                         placeholder="BT node (optional)"
-                        className="flex-1 bg-transparent text-xs text-text-muted-hover placeholder-[#4a4e6a] outline-none min-w-0"
+                        className="flex-1 bg-transparent text-xs text-text-muted-hover placeholder-text-muted outline-none min-w-0"
                       />
                       <span className="text-2xs text-text-muted">timeout:</span>
                       <input

@@ -55,11 +55,11 @@ export function TerminalInput({
         style={{ height: '20px', maxHeight: '88px' }}
       />
       {isStreaming ? (
-        <button onClick={onAbort} className="p-1 mt-[3px] text-red-400 hover:bg-red-500/20 rounded transition-colors">
+        <button onClick={onAbort} className="p-1 mt-[3px] text-red-400 hover:bg-status-red-medium rounded transition-colors">
           <Square className="w-3 h-3" />
         </button>
       ) : (
-        <button onClick={() => onSubmit(false)} disabled={!input.trim()} className="p-1 mt-[3px] text-[#3b82f6] hover:bg-[#3b82f6]/20 rounded disabled:opacity-50 transition-colors">
+        <button onClick={() => onSubmit(false)} disabled={!input.trim()} className="p-1 mt-[3px] text-[#3b82f6] hover:bg-[#3b82f6]/20 rounded transition-colors">
           <Send className="w-3 h-3" />
         </button>
       )}

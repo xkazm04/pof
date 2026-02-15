@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
-import { ChevronDown, ChevronRight, FileCode, Loader2, RefreshCw, Star, ArrowRight, Download, TrendingUp, TrendingDown, Minus, AlertTriangle, Link2, Zap, Search, ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react';
+import { Check, ChevronDown, ChevronRight, FileCode, Loader2, RefreshCw, Star, ArrowRight, Download, TrendingUp, TrendingDown, Minus, AlertTriangle, Link2, Zap, Search, ArrowUpDown, ArrowUp, ArrowDown, Play, Copy, Eye } from 'lucide-react';
 import { useFeatureMatrix } from '@/hooks/useFeatureMatrix';
 import { StaggerContainer, StaggerItem } from '@/components/ui/Stagger';
 import { FetchError } from './FetchError';
@@ -11,6 +11,7 @@ import type { ReviewSnapshot } from '@/lib/feature-matrix-db';
 import { buildDependencyMap, computeBlockers } from '@/lib/feature-definitions';
 import type { DependencyInfo, ResolvedDependency } from '@/lib/feature-definitions';
 import { MODULE_LABELS } from '@/lib/module-registry';
+import { MarkdownProse } from '@/components/ui/MarkdownProse';
 
 const STATUS_CONFIG: Record<FeatureStatus, { color: string; bg: string; label: string }> = {
   implemented: { color: '#4ade80', bg: '#4ade8018', label: 'Implemented' },
@@ -123,9 +124,10 @@ interface FeatureMatrixProps {
   isReviewing: boolean;
   onFix?: (feature: FeatureRow) => void;
   isFixing?: boolean;
+  onReviewFeature?: (feature: FeatureRow) => void;
 }
 
-export function FeatureMatrix({ moduleId, accentColor, onReview, onSync, isReviewing, onFix, isFixing }: FeatureMatrixProps) {
+export function FeatureMatrix({ moduleId, accentColor, onReview, onSync, isReviewing, onFix, isFixing, onReviewFeature }: FeatureMatrixProps) {
   const { features, summary, isLoading, error, retry, refetch } = useFeatureMatrix(moduleId);
   const projectPath = useProjectStore((s) => s.projectPath);
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
@@ -354,8 +356,8 @@ export function FeatureMatrix({ moduleId, accentColor, onReview, onSync, isRevie
         <div
           className="flex flex-col items-center gap-3 px-10 py-8 rounded-xl max-w-sm"
           style={{
-            border: `1.5px dashed ${accentColor}35`,
-            backgroundColor: `${accentColor}06`,
+            border: `1.5px dashed ${accentColor}38`,
+            backgroundColor: `${accentColor}14`,
           }}
         >
           <RefreshCw className="w-8 h-8" style={{ color: accentColor, opacity: 0.7 }} />
@@ -366,7 +368,7 @@ export function FeatureMatrix({ moduleId, accentColor, onReview, onSync, isRevie
             Claude will scan your project source files, evaluate each feature&apos;s implementation status, and assign quality scores with actionable next steps.
           </p>
 
-          <span className="text-xs text-[#4a4e6a]">
+          <span className="text-xs text-text-muted">
             {features.length} feature{features.length !== 1 ? 's' : ''} to analyze
           </span>
 
@@ -375,9 +377,9 @@ export function FeatureMatrix({ moduleId, accentColor, onReview, onSync, isRevie
             disabled={isReviewing}
             className="mt-1 flex items-center gap-2 px-5 py-2.5 rounded-lg text-xs font-semibold transition-all disabled:opacity-50 hover:brightness-110"
             style={{
-              backgroundColor: `${accentColor}20`,
+              backgroundColor: `${accentColor}24`,
               color: accentColor,
-              border: `1px solid ${accentColor}40`,
+              border: `1px solid ${accentColor}38`,
             }}
           >
             {isReviewing ? (
@@ -453,9 +455,9 @@ export function FeatureMatrix({ moduleId, accentColor, onReview, onSync, isRevie
             disabled={isReviewing}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all disabled:opacity-50"
             style={{
-              backgroundColor: `${accentColor}15`,
+              backgroundColor: `${accentColor}24`,
               color: accentColor,
-              border: `1px solid ${accentColor}30`,
+              border: `1px solid ${accentColor}38`,
             }}
           >
             {isReviewing ? (
@@ -485,17 +487,17 @@ export function FeatureMatrix({ moduleId, accentColor, onReview, onSync, isRevie
       {/* Status filter chips */}
       <StatusFilterChips summary={summary} activeFilters={activeFilters} onToggle={toggleFilter} />
 
-      {/* Search + Quality filter + Sort controls */}
-      <div className="flex items-center gap-3 flex-wrap">
+      {/* Search + Quality filter + Sort controls — sticky header */}
+      <div className="flex items-center gap-3 flex-wrap sticky top-0 z-10 bg-background py-2 -mt-2">
         {/* Text search */}
         <div className="relative flex-1 min-w-[180px]">
-          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[#4a4e6a]" />
+          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-text-muted" />
           <input
             type="text"
             placeholder="Search features, notes, files..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-8 pr-3 py-1.5 rounded-md bg-surface-deep border border-border text-xs text-text placeholder-[#4a4e6a] focus:outline-none focus:border-[#3b3b6a] transition-colors"
+            className="w-full pl-8 pr-3 py-1.5 rounded-md bg-surface-deep border border-border text-xs text-text placeholder-text-muted focus:outline-none focus:border-[#3b3b6a] transition-colors"
           />
         </div>
 
@@ -513,7 +515,7 @@ export function FeatureMatrix({ moduleId, accentColor, onReview, onSync, isRevie
 
       {/* Result count */}
       {(searchQuery || qualityMin > 1 || qualityMax < 5) && (
-        <div className="text-xs text-[#4a4e6a]">
+        <div className="text-xs text-text-muted">
           Showing {filtered.length} of {features.length} features
         </div>
       )}
@@ -527,17 +529,17 @@ export function FeatureMatrix({ moduleId, accentColor, onReview, onSync, isRevie
 
           return (
             <div key={cat}>
-              {/* Category header */}
+              {/* Category header — sticky within scroll */}
               <button
                 onClick={() => toggleCategory(cat)}
-                className="w-full flex items-center gap-2 px-3 py-2 rounded-md hover:bg-surface-hover transition-colors"
+                className="w-full flex items-center gap-2 px-3 py-2 rounded-md hover:bg-surface-hover transition-colors sticky top-[40px] z-[5] bg-background"
               >
                 {isCollapsed ? (
                   <ChevronRight className="w-3 h-3 text-text-muted-hover" />
                 ) : (
                   <ChevronDown className="w-3 h-3 text-text-muted-hover" />
                 )}
-                <span className="text-xs font-semibold uppercase tracking-wider text-[#9ca0be]">
+                <span className="text-xs font-semibold uppercase tracking-wider text-text-muted">
                   {cat}
                 </span>
                 <span className="text-2xs text-text-muted">
@@ -560,6 +562,8 @@ export function FeatureMatrix({ moduleId, accentColor, onReview, onSync, isRevie
                           depInfo={depInfo}
                           onFix={onFix}
                           isFixing={isFixing}
+                          onReviewFeature={onReviewFeature}
+                          accentColor={accentColor}
                         />
                       </StaggerItem>
                     );
@@ -622,7 +626,7 @@ function QualityRangeFilter({
           <option key={n} value={n}>{n}</option>
         ))}
       </select>
-      <span className="text-[#4a4e6a]">-</span>
+      <span className="text-text-muted">-</span>
       <select
         value={max}
         onChange={(e) => {
@@ -726,7 +730,7 @@ function SummaryBar({ summary }: { summary: { total: number; implemented: number
           s.count > 0 ? (
             <div
               key={s.status}
-              className="h-full transition-all duration-500"
+              className="h-full transition-all duration-slow"
               style={{
                 width: `${(s.count / summary.total) * 100}%`,
                 backgroundColor: STATUS_CONFIG[s.status].color,
@@ -885,6 +889,8 @@ function FeatureRowItem({
   depInfo,
   onFix,
   isFixing,
+  onReviewFeature,
+  accentColor,
 }: {
   feature: FeatureRow;
   isExpanded: boolean;
@@ -892,14 +898,36 @@ function FeatureRowItem({
   depInfo?: DependencyInfo;
   onFix?: (feature: FeatureRow) => void;
   isFixing?: boolean;
+  onReviewFeature?: (feature: FeatureRow) => void;
+  accentColor: string;
 }) {
   const cfg = STATUS_CONFIG[feature.status];
   const hasDeps = depInfo && depInfo.deps.length > 0;
   const isBlocked = depInfo?.isBlocked ?? false;
   const hasDetails = feature.reviewNotes || feature.filePaths.length > 0 || feature.nextSteps || hasDeps;
+  const [copied, setCopied] = useState(false);
+
+  const handleCopy = useCallback(async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    const text = `${feature.featureName} — ${cfg.label}${feature.qualityScore ? ` (${feature.qualityScore}/5)` : ''}`;
+    await navigator.clipboard.writeText(text);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 1500);
+  }, [feature.featureName, cfg.label, feature.qualityScore]);
+
+  const handleReview = useCallback((e: React.MouseEvent) => {
+    e.stopPropagation();
+    onReviewFeature?.(feature);
+  }, [onReviewFeature, feature]);
+
+  const handleViewFiles = useCallback((e: React.MouseEvent) => {
+    e.stopPropagation();
+    // Expand the row to reveal file paths
+    if (!isExpanded) onToggle();
+  }, [isExpanded, onToggle]);
 
   return (
-    <div className="rounded-md overflow-hidden">
+    <div className="group/row rounded-md overflow-hidden">
       <button
         onClick={hasDetails ? onToggle : undefined}
         className={`w-full flex items-center gap-3 px-3 py-2 text-left transition-colors ${
@@ -917,6 +945,45 @@ function FeatureRowItem({
         {/* Description (truncated) */}
         <span className="text-xs text-text-muted-hover flex-1 min-w-0 truncate hidden sm:block">
           {feature.description}
+        </span>
+
+        {/* Hover action buttons */}
+        <span className="flex items-center gap-0.5 flex-shrink-0 opacity-30 scale-95 group-hover/row:opacity-100 group-hover/row:scale-100 transition-all">
+          {onReviewFeature && (
+            <span
+              role="button"
+              tabIndex={0}
+              onClick={handleReview}
+              onKeyDown={(e) => { if (e.key === 'Enter') handleReview(e as unknown as React.MouseEvent); }}
+              className="p-1 rounded hover:bg-surface-hover transition-colors"
+              style={{ color: accentColor }}
+              title="Review this feature with Claude"
+            >
+              <Play className="w-3 h-3" />
+            </span>
+          )}
+          <span
+            role="button"
+            tabIndex={0}
+            onClick={handleCopy}
+            onKeyDown={(e) => { if (e.key === 'Enter') handleCopy(e as unknown as React.MouseEvent); }}
+            className="p-1 rounded hover:bg-surface-hover transition-colors text-text-muted hover:text-text"
+            title={copied ? 'Copied!' : 'Copy feature name & status'}
+          >
+            {copied ? <Check className="w-3 h-3 text-[#4ade80]" /> : <Copy className="w-3 h-3" />}
+          </span>
+          {feature.filePaths.length > 0 && (
+            <span
+              role="button"
+              tabIndex={0}
+              onClick={handleViewFiles}
+              onKeyDown={(e) => { if (e.key === 'Enter') handleViewFiles(e as unknown as React.MouseEvent); }}
+              className="p-1 rounded hover:bg-surface-hover transition-colors text-text-muted hover:text-text"
+              title="View source files"
+            >
+              <Eye className="w-3 h-3" />
+            </span>
+          )}
         </span>
 
         {/* Blocked badge */}
@@ -978,9 +1045,7 @@ function FeatureRowItem({
 
           {/* Review notes */}
           {feature.reviewNotes && (
-            <p className="text-xs text-[#9ca0be] leading-relaxed">
-              {feature.reviewNotes}
-            </p>
+            <MarkdownProse content={feature.reviewNotes} className="leading-relaxed" />
           )}
 
           {/* Next steps */}
@@ -992,9 +1057,7 @@ function FeatureRowItem({
                   Next steps to pro
                 </span>
               </div>
-              <p className="text-xs text-[#b0b4cc] leading-relaxed pl-[18px]">
-                {feature.nextSteps}
-              </p>
+              <MarkdownProse content={feature.nextSteps} className="leading-relaxed pl-[18px] text-[#b0b4cc]" />
               {onFix && feature.status !== 'implemented' && (
                 <button
                   onClick={(e) => {
@@ -1058,7 +1121,7 @@ function ReviewProgressBar({
       </div>
       <div className="h-1 bg-border rounded-full overflow-hidden">
         <div
-          className="h-full rounded-full transition-all duration-700 ease-out"
+          className="h-full rounded-full transition-all duration-slow ease-out"
           style={{
             width: `${pct}%`,
             backgroundColor: accentColor,

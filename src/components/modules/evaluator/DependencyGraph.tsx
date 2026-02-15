@@ -7,22 +7,24 @@ import { MODULE_FEATURE_DEFINITIONS, buildDependencyMap, computeBlockers } from 
 import type { DependencyInfo, ResolvedDependency } from '@/lib/feature-definitions';
 import { MODULE_LABELS } from '@/lib/module-registry';
 import { SurfaceCard } from '@/components/ui/SurfaceCard';
+import { EmptyState } from '@/components/ui/EmptyState';
+import { MODULE_COLORS as CHART_MODULE_COLORS } from '@/lib/chart-colors';
 
 // ─── Module layout config ───────────────────────────────────────────────────
 
 const MODULE_COLORS: Record<string, string> = {
-  'arpg-character': '#3b82f6',
-  'arpg-animation': '#3b82f6',
-  'arpg-gas': '#3b82f6',
-  'arpg-combat': '#3b82f6',
-  'arpg-enemy-ai': '#3b82f6',
-  'arpg-inventory': '#3b82f6',
-  'arpg-loot': '#3b82f6',
-  'arpg-ui': '#3b82f6',
-  'arpg-progression': '#3b82f6',
-  'arpg-world': '#3b82f6',
-  'arpg-save': '#3b82f6',
-  'arpg-polish': '#3b82f6',
+  'arpg-character': CHART_MODULE_COLORS.core,
+  'arpg-animation': CHART_MODULE_COLORS.core,
+  'arpg-gas': CHART_MODULE_COLORS.core,
+  'arpg-combat': CHART_MODULE_COLORS.core,
+  'arpg-enemy-ai': CHART_MODULE_COLORS.core,
+  'arpg-inventory': CHART_MODULE_COLORS.core,
+  'arpg-loot': CHART_MODULE_COLORS.core,
+  'arpg-ui': CHART_MODULE_COLORS.core,
+  'arpg-progression': CHART_MODULE_COLORS.core,
+  'arpg-world': CHART_MODULE_COLORS.core,
+  'arpg-save': CHART_MODULE_COLORS.core,
+  'arpg-polish': CHART_MODULE_COLORS.core,
 };
 
 // Arrange modules in a roughly logical flow (left→right, top→bottom)
@@ -79,7 +81,11 @@ interface Edge {
 
 // ─── Component ──────────────────────────────────────────────────────────────────
 
-export function DependencyGraph() {
+interface DependencyGraphProps {
+  onNavigateTab?: (tab: string) => void;
+}
+
+export function DependencyGraph({ onNavigateTab }: DependencyGraphProps) {
   const [statusMap, setStatusMap] = useState<Map<string, string>>(new Map());
   const [isLoading, setIsLoading] = useState(true);
   const [selectedModule, setSelectedModule] = useState<string | null>(null);
@@ -200,6 +206,22 @@ export function DependencyGraph() {
     );
   }
 
+  if (statusMap.size === 0) {
+    return (
+      <EmptyState
+        icon={Link2}
+        title="No Feature Data Yet"
+        description="Review your module features first so the dependency graph can show implementation status and blockers across modules."
+        iconColor="#ef4444"
+        action={onNavigateTab ? {
+          label: 'Review Features',
+          onClick: () => onNavigateTab('features'),
+          color: '#ef4444',
+        } : undefined}
+      />
+    );
+  }
+
   const highlightModule = hoveredModule ?? selectedModule;
 
   return (
@@ -208,7 +230,7 @@ export function DependencyGraph() {
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <Link2 className="w-3.5 h-3.5 text-[#ef4444]" />
-          <span className="text-xs font-semibold text-[#9ca0be] uppercase tracking-wider">
+          <span className="text-xs font-semibold text-text-muted uppercase tracking-wider">
             Cross-Module Dependencies
           </span>
           <span className="text-2xs text-text-muted">
@@ -286,12 +308,12 @@ export function DependencyGraph() {
                 <path
                   d={`M${x1},${y1} Q${mx + perpX},${my + perpY} ${x2},${y2}`}
                   fill="none"
-                  stroke={edge.hasBlockers ? '#fb923c' : '#4a4e6a'}
+                  stroke={edge.hasBlockers ? '#fb923c' : 'var(--text-muted)'}
                   strokeWidth={Math.min(3, 0.5 + edge.count * 0.5)}
                   strokeDasharray={edge.hasBlockers ? '4 2' : undefined}
                   opacity={opacity}
                   markerEnd={edge.hasBlockers ? 'url(#arrow-blocked)' : 'url(#arrow)'}
-                  className="transition-opacity duration-200"
+                  className="transition-opacity duration-base"
                 />
                 {isHighlighted && (
                   <text
@@ -402,7 +424,7 @@ export function DependencyGraph() {
       {/* Legend */}
       <div className="flex items-center gap-4 text-2xs text-text-muted">
         <span className="flex items-center gap-1.5">
-          <span className="w-6 h-px" style={{ backgroundColor: '#4a4e6a' }} />
+          <span className="w-6 h-px" style={{ backgroundColor: 'var(--text-muted)' }} />
           Dependency
         </span>
         <span className="flex items-center gap-1.5">
@@ -422,7 +444,7 @@ export function DependencyGraph() {
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: 'auto' }}
             exit={{ opacity: 0, height: 0 }}
-            transition={{ duration: 0.2 }}
+            transition={{ duration: 0.22 }}
             className="overflow-hidden"
           >
             <SurfaceCard className="p-4">
@@ -483,7 +505,7 @@ export function DependencyGraph() {
                                 }`}
                               >
                                 {isCross && (
-                                  <span className="text-2xs text-[#4a4e6a]">
+                                  <span className="text-2xs text-text-muted">
                                     {MODULE_LABELS[dep.moduleId] ?? dep.moduleId}/
                                   </span>
                                 )}

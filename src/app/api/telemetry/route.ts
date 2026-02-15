@@ -17,6 +17,7 @@ import {
 } from '@/lib/genre-evolution-engine';
 import type { DynamicProjectContext } from '@/lib/prompt-context';
 import type { ScanTelemetryPayload } from '@/types/telemetry';
+import { resolveSkillsFromPatterns } from '@/components/cli/skills';
 
 // ─── GET: stats, history, suggestions ────────────────────────────────────────
 
@@ -111,6 +112,14 @@ export async function POST(req: Request) {
         }
         resolveSuggestion(suggestionId, resolveAction);
         return NextResponse.json({ ok: true });
+      }
+
+      case 'resolve-skills': {
+        const latest = getLatestSnapshot();
+        const accepted = getAcceptedSubGenres();
+        const patterns = latest?.detectedPatterns ?? [];
+        const skills = resolveSkillsFromPatterns(patterns, accepted);
+        return NextResponse.json({ skills, patternCount: patterns.length, acceptedCount: accepted.length });
       }
 
       default:
