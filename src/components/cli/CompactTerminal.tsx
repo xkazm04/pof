@@ -61,7 +61,12 @@ export function CompactTerminal({
     setInput('');
     history.resetHeight();
     history.pushHistory(prompt);
-    await tq.submitPrompt(prompt, resume && tq.sessionId !== null);
+
+    if (prompt === '/fix') {
+      await tq.executeImprovement();
+    } else {
+      await tq.submitPrompt(prompt, resume && tq.sessionId !== null);
+    }
   }, [input, tq, history]);
 
   const handleInputSubmit = useCallback((resume: boolean) => {

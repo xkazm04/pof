@@ -36,6 +36,9 @@ yarn-error.log*
 # vercel
 .vercel
 
+# CLI self-improvement signals
+.pof/
+
 # typescript
 *.tsbuildinfo
 next-env.d.ts

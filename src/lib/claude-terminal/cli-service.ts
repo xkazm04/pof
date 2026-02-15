@@ -6,6 +6,10 @@
 import { spawn, ChildProcess } from 'child_process';
 import * as fs from 'fs';
 import * as path from 'path';
+import { analyzeEvent } from './signals/signal-analyzer';
+import { appendSignal } from './signals/signal-store';
+import { detectPatterns } from './signals/pattern-detector';
+import { savePatterns, getSignals } from './signals/signal-store';
 
 export interface CLISystemMessage {
   type: 'system';
@@ -218,6 +222,21 @@ export function startExecution(
     let initEventReceived = false;
     let assistantMessageCount = 0;
 
+    // Signal analysis: sliding window of recent events
+    const WINDOW_SIZE = 20;
+    const recentEventsWindow: CLIExecutionEvent[] = [];
+
+    const trackAndAnalyze = (event: CLIExecutionEvent) => {
+      recentEventsWindow.push(event);
+      if (recentEventsWindow.length > WINDOW_SIZE) recentEventsWindow.shift();
+      try {
+        const signal = analyzeEvent(event, recentEventsWindow, execution.id);
+        if (signal) appendSignal(signal);
+      } catch {
+        // Signal analysis is non-critical — never block execution
+      }
+    };
+
     const processLine = (line: string) => {
       const parsed = parseStreamJsonLine(line);
       if (!parsed) return;
@@ -225,24 +244,46 @@ export function startExecution(
       if (parsed.type === 'system' && parsed.subtype === 'init') {
         initEventReceived = true;
         execution.sessionId = parsed.session_id;
-        emitEvent({ type: 'init', data: { sessionId: parsed.session_id, tools: parsed.tools, model: parsed.model, cwd: parsed.cwd, version: parsed.claude_code_version }, timestamp: Date.now() });
+        const initEvent: CLIExecutionEvent = { type: 'init', data: { sessionId: parsed.session_id, tools: parsed.tools, model: parsed.model, cwd: parsed.cwd, version: parsed.claude_code_version }, timestamp: Date.now() };
+        emitEvent(initEvent);
+        trackAndAnalyze(initEvent);
       } else if (parsed.type === 'assistant') {
         assistantMessageCount++;
         const textContent = extractTextContent(parsed);
         if (textContent) {
-          emitEvent({ type: 'text', data: { content: textContent, model: parsed.message.model }, timestamp: Date.now() });
+          const textEvent: CLIExecutionEvent = { type: 'text', data: { content: textContent, model: parsed.message.model }, timestamp: Date.now() };
+          emitEvent(textEvent);
+          trackAndAnalyze(textEvent);
         }
         for (const toolUse of extractToolUses(parsed)) {
-          emitEvent({ type: 'tool_use', data: { id: toolUse.id, name: toolUse.name, input: toolUse.input }, timestamp: Date.now() });
+          const toolEvent: CLIExecutionEvent = { type: 'tool_use', data: { id: toolUse.id, name: toolUse.name, input: toolUse.input }, timestamp: Date.now() };
+          emitEvent(toolEvent);
+          trackAndAnalyze(toolEvent);
         }
       } else if (parsed.type === 'user') {
         for (const result of parsed.message.content.filter(c => c.type === 'tool_result')) {
-          emitEvent({ type: 'tool_result', data: { toolUseId: result.tool_use_id, content: result.content }, timestamp: Date.now() });
+          const resultEvent: CLIExecutionEvent = { type: 'tool_result', data: { toolUseId: result.tool_use_id, content: result.content }, timestamp: Date.now() };
+          emitEvent(resultEvent);
+          trackAndAnalyze(resultEvent);
         }
       } else if (parsed.type === 'result') {
         resultEventEmitted = true;
         execution.sessionId = parsed.result?.session_id || execution.sessionId;
-        emitEvent({ type: 'result', data: { sessionId: parsed.result?.session_id, usage: parsed.result?.usage, durationMs: parsed.duration_ms, costUsd: parsed.cost_usd, isError: parsed.is_error }, timestamp: Date.now() });
+        const resultEvent: CLIExecutionEvent = { type: 'result', data: { sessionId: parsed.result?.session_id, usage: parsed.result?.usage, durationMs: parsed.duration_ms, costUsd: parsed.cost_usd, isError: parsed.is_error }, timestamp: Date.now() };
+        emitEvent(resultEvent);
+        trackAndAnalyze(resultEvent);
+
+        // Run pattern detection at end of execution
+        try {
+          const ONE_DAY = 24 * 60 * 60 * 1000;
+          const recentSignals = getSignals(Date.now() - ONE_DAY);
+          if (recentSignals.length > 0) {
+            const patterns = detectPatterns(recentSignals);
+            savePatterns(patterns);
+          }
+        } catch {
+          // Pattern detection is non-critical
+        }
       }
     };
 

@@ -140,6 +140,30 @@ export function useTaskQueue(opts: UseTaskQueueOpts) {
           currentTaskIdRef.current = null;
           setCurrentTaskId(null);
         }
+
+        // Check for detected patterns after execution
+        fetch('/api/claude-terminal/improve')
+          .then(r => r.json())
+          .then(patternData => {
+            if (patternData.success && patternData.patterns?.length > 0) {
+              const count = patternData.patterns.length;
+              const highCount = patternData.patterns.filter(
+                (p: { severity: string }) => p.severity === 'high'
+              ).length;
+              const summary = patternData.patterns.slice(0, 3)
+                .map((p: { type: string; toolName?: string }) =>
+                  `${p.type}${p.toolName ? ` (${p.toolName})` : ''}`)
+                .join(', ');
+              addLog({
+                id: `signal-${Date.now()}`,
+                type: 'system',
+                content: `[signals] ${count} issue${count > 1 ? 's' : ''} detected${highCount ? ` (${highCount} high)` : ''}: ${summary}. Type /fix to resolve.`,
+                timestamp: Date.now(),
+              });
+            }
+          })
+          .catch(() => {}); // Non-critical
+
         break;
       }
       case 'error': {
@@ -246,6 +270,62 @@ export function useTaskQueue(opts: UseTaskQueueOpts) {
       onStreamingChange?.(false);
     }
   }, [projectPath, sessionId, addLog, connectToStream, onStreamingChange]);
+
+  // --- Improvement execution (/fix command) ---
+
+  const executeImprovement = useCallback(async () => {
+    try {
+      // Fetch current patterns
+      const res = await fetch('/api/claude-terminal/improve');
+      const data = await res.json();
+      if (!data.success || !data.patterns?.length) {
+        addLog({
+          id: `system-${Date.now()}`,
+          type: 'system',
+          content: '[signals] No unresolved patterns to fix.',
+          timestamp: Date.now(),
+        });
+        return;
+      }
+
+      // Build improvement prompt (safe for client — no node deps)
+      const { buildImprovementPrompt } = await import(
+        '@/lib/claude-terminal/signals/improvement-prompt'
+      );
+      const improvementPrompt = buildImprovementPrompt(data.patterns);
+
+      setIsStreaming(true);
+      onStreamingChange?.(true);
+      setError(null);
+
+      // Send via normal query route — uses resumeSessionId for context continuity
+      const queryData = await apiFetch<{ executionId: string; streamUrl: string; logFilePath: string | null }>('/api/claude-terminal/query', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          projectPath,
+          prompt: improvementPrompt,
+          resumeSessionId: sessionId || undefined,
+        }),
+      });
+
+      if (queryData.logFilePath) setLogFilePath(queryData.logFilePath);
+      connectToStream(queryData.streamUrl);
+
+      // Mark patterns as resolved (optimistic)
+      fetch('/api/claude-terminal/improve', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          patternFingerprints: data.patterns.map((p: { fingerprint: string }) => p.fingerprint),
+        }),
+      }).catch(() => {}); // Non-critical
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Improvement failed');
+      setIsStreaming(false);
+      onStreamingChange?.(false);
+    }
+  }, [projectPath, sessionId, addLog, connectToStream, onStreamingChange, setError]);
 
   // --- Abort ---
 
@@ -379,6 +459,7 @@ export function useTaskQueue(opts: UseTaskQueueOpts) {
     logFilePath,
     buildParseCache,
     submitPrompt,
+    executeImprovement,
     handleAbort,
     handleClear,
   };

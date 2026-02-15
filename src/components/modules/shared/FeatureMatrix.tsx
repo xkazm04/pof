@@ -927,7 +927,10 @@ function FeatureRowItem({
   }, [isExpanded, onToggle]);
 
   return (
-    <div className="group/row rounded-md overflow-hidden">
+    <div
+      className="group/row rounded-md overflow-hidden"
+      style={{ borderLeft: `4px solid ${cfg.color}` }}
+    >
       <button
         onClick={hasDetails ? onToggle : undefined}
         className={`w-full flex items-center gap-3 px-3 py-2 text-left transition-colors ${
