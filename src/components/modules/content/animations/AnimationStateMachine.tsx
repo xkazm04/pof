@@ -3,10 +3,11 @@
 import { useState, useCallback, useMemo, useRef, useEffect } from 'react';
 import {
   Film, Check, RefreshCw, Scan, AlertCircle, Sparkles, FileCode2,
-  Play, RotateCcw, AlertTriangle, MousePointerClick,
+  Play, RotateCcw, AlertTriangle, MousePointerClick, Plug,
 } from 'lucide-react';
 import { useModuleStore } from '@/stores/moduleStore';
 import { useProjectStore } from '@/stores/projectStore';
+import { useManifest } from '@/hooks/useManifest';
 import { getModuleName } from '@/lib/prompt-context';
 import type { AnimBPScanResult, AnimTransition } from '@/app/api/filesystem/scan-animbp/route';
 import {
@@ -183,6 +184,47 @@ export function AnimationStateMachine({ onSelectState, isRunning, activeStateId 
   // Hovered transition for showing rule label
   const [hoveredTransition, setHoveredTransition] = useState<string | null>(null);
 
+  // ── Bridge data ──
+  const { manifest, isConnected: bridgeConnected } = useManifest();
+
+  const bridgeStates = useMemo(() => {
+    if (!manifest?.animAssets?.length) return { states: [] as StateNode[], transitions: [] as TransitionEdge[] };
+
+    const animBPs = manifest.animAssets.filter(
+      (a) => a.assetType === 'AnimBlueprint' && a.stateMachines && a.stateMachines.length > 0,
+    );
+    if (animBPs.length === 0) return { states: [] as StateNode[], transitions: [] as TransitionEdge[] };
+
+    // Flatten all states across all state machines
+    const stateNames = new Set<string>();
+    const rawTransitions: { from: string; to: string; condition: string }[] = [];
+
+    for (const bp of animBPs) {
+      for (const sm of bp.stateMachines!) {
+        for (const s of sm.states) {
+          stateNames.add(s);
+        }
+        for (const t of sm.transitions) {
+          rawTransitions.push(t);
+        }
+      }
+    }
+
+    const stateArr = Array.from(stateNames).map((name) => ({
+      name,
+      hasMontage: false, // bridge doesn't convey montage-per-state info
+    }));
+
+    const states = layoutStates(stateArr);
+    const transitions: TransitionEdge[] = rawTransitions.map((t) => ({
+      from: `scanned-${t.from}`,
+      to: `scanned-${t.to}`,
+      rule: t.condition || null,
+    }));
+
+    return { states, transitions };
+  }, [manifest]);
+
   const handleScan = useCallback(async () => {
     if (!projectPath || !projectName || isScanning) return;
     setIsScanning(true);
@@ -245,7 +287,12 @@ export function AnimationStateMachine({ onSelectState, isRunning, activeStateId 
 
   const hasScannedData = scanResult && scanResult.states.length > 0;
 
+  const useBridgeData = bridgeConnected && bridgeStates.states.length > 0;
+
   const { states: displayStates, transitions: displayTransitions } = useMemo(() => {
+    if (useBridgeData) {
+      return { states: bridgeStates.states, transitions: bridgeStates.transitions };
+    }
     if (hasScannedData) {
       const scannedStates = layoutStates(scanResult.states);
       const scannedTransitions: TransitionEdge[] = scanResult.transitions.map((t: AnimTransition) => ({
@@ -256,7 +303,7 @@ export function AnimationStateMachine({ onSelectState, isRunning, activeStateId 
       return { states: scannedStates, transitions: scannedTransitions };
     }
     return { states: FALLBACK_STATES, transitions: FALLBACK_TRANSITIONS };
-  }, [hasScannedData, scanResult]);
+  }, [useBridgeData, bridgeStates, hasScannedData, scanResult]);
 
   const montageSet = useMemo(() => {
     if (!scanResult) return new Set<string>();
@@ -387,13 +434,19 @@ export function AnimationStateMachine({ onSelectState, isRunning, activeStateId 
           <div className="flex flex-col">
             <h3 className="text-sm font-bold text-violet-100 font-mono tracking-widest uppercase flex items-center gap-3" style={{ textShadow: '0 0 8px rgba(167,139,250,0.4)' }}>
               STATE_MACHINE.graph <span className="text-[9px] bg-violet-500/20 text-violet-300 px-2 py-0.5 rounded border border-violet-500/30 shadow-[0_0_10px_rgba(139,92,246,0.2)]">RUNTIME</span>
+              {useBridgeData && (
+                <span className="text-[9px] bg-green-500/20 text-green-300 px-2 py-0.5 rounded border border-green-500/30 shadow-[0_0_10px_rgba(34,197,94,0.2)] flex items-center gap-1">
+                  <Plug className="w-2.5 h-2.5" />
+                  BRIDGE
+                </span>
+              )}
             </h3>
             <p className="text-[10px] text-violet-400/80 font-mono uppercase tracking-widest mt-0.5">
               {simMode
                 ? simPath.length === 0
                   ? 'Click a state to begin tracing'
                   : `${simPath.length} states in path — click valid transitions to continue`
-                : `${completedCount}/${displayStates.length} states${hasScannedData ? ' // SCANNED FROM PROJECT' : ' // CLICK TO IMPLEMENT'}`
+                : `${completedCount}/${displayStates.length} states${useBridgeData ? ' // LIVE FROM BRIDGE' : hasScannedData ? ' // SCANNED FROM PROJECT' : ' // CLICK TO IMPLEMENT'}`
               }
             </p>
           </div>
