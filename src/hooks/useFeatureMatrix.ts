@@ -2,7 +2,10 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import type { FeatureRow, FeatureSummary } from '@/types/feature-matrix';
+import type { VerificationResult } from '@/types/pof-bridge';
 import { MODULE_FEATURE_DEFINITIONS } from '@/lib/feature-definitions';
+import { autoUpdateFeatureMatrix } from '@/lib/pof-bridge/verification-engine';
+import { usePofBridgeStore } from '@/stores/pofBridgeStore';
 import { tryApiFetch } from '@/lib/api-utils';
 import type { SubModuleId } from '@/types/modules';
 
@@ -14,6 +17,9 @@ interface UseFeatureMatrixResult {
   retry: () => void;
   refetch: () => void;
   seed: () => Promise<void>;
+  runAutoVerify: () => Promise<VerificationResult[]>;
+  isVerifying: boolean;
+  verificationResults: VerificationResult[];
 }
 
 const EMPTY_SUMMARY: FeatureSummary = { total: 0, implemented: 0, improved: 0, partial: 0, missing: 0, unknown: 0 };
@@ -23,6 +29,8 @@ export function useFeatureMatrix(moduleId: SubModuleId): UseFeatureMatrixResult 
   const [summary, setSummary] = useState<FeatureSummary>(EMPTY_SUMMARY);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isVerifying, setIsVerifying] = useState(false);
+  const [verificationResults, setVerificationResults] = useState<VerificationResult[]>([]);
   const seededRef = useRef<Set<string>>(new Set());
 
   const fetchData = useCallback(async () => {
@@ -65,6 +73,21 @@ export function useFeatureMatrix(moduleId: SubModuleId): UseFeatureMatrixResult 
     }
   }, [moduleId, fetchData]);
 
+  const runAutoVerify = useCallback(async (): Promise<VerificationResult[]> => {
+    const manifest = usePofBridgeStore.getState().manifest;
+    if (!manifest) return [];
+    setIsVerifying(true);
+    try {
+      const results = await autoUpdateFeatureMatrix(manifest, moduleId);
+      setVerificationResults(results);
+      // Refetch to show updated statuses
+      await fetchData();
+      return results;
+    } finally {
+      setIsVerifying(false);
+    }
+  }, [moduleId, fetchData]);
+
   // Auto-seed on first load if no data exists
   useEffect(() => {
     let cancelled = false;
@@ -88,5 +111,5 @@ export function useFeatureMatrix(moduleId: SubModuleId): UseFeatureMatrixResult 
     }
   }, [isLoading, features.length, moduleId, seed]);
 
-  return { features, summary, isLoading, error, retry: fetchData, refetch: fetchData, seed };
+  return { features, summary, isLoading, error, retry: fetchData, refetch: fetchData, seed, runAutoVerify, isVerifying, verificationResults };
 }
