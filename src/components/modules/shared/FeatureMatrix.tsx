@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useSuspendableEffect } from '@/hooks/useSuspend';
-import { Check, ChevronDown, ChevronRight, FileCode, Loader2, RefreshCw, Star, ArrowRight, Download, TrendingUp, TrendingDown, Minus, AlertTriangle, Link2, Zap, Search, ArrowUpDown, ArrowUp, ArrowDown, Play, Copy, Eye, LayoutList, LayoutGrid } from 'lucide-react';
+import { Check, ChevronDown, ChevronRight, FileCode, Loader2, RefreshCw, Star, ArrowRight, Download, TrendingUp, TrendingDown, Minus, AlertTriangle, Link2, Zap, Search, ArrowUpDown, ArrowUp, ArrowDown, Play, Copy, Eye, LayoutList, LayoutGrid, ShieldCheck } from 'lucide-react';
 import { useFeatureMatrix } from '@/hooks/useFeatureMatrix';
 import { StaggerContainer, StaggerItem } from '@/components/ui/Stagger';
 import { FetchError } from './FetchError';
@@ -16,6 +16,8 @@ import { MarkdownProse } from '@/components/ui/MarkdownProse';
 import { UI_TIMEOUTS } from '@/lib/constants';
 import type { SubModuleId } from '@/types/modules';
 import { FEATURE_STATUS_COLORS, STATUS_ERROR, STATUS_BLOCKER, STATUS_WARNING, STATUS_LIME, STATUS_SUCCESS, OPACITY_10 } from '@/lib/chart-colors';
+import { usePofBridgeStore } from '@/stores/pofBridgeStore';
+import type { VerificationResult } from '@/types/pof-bridge';
 
 const STATUS_CONFIG: Record<FeatureStatus, { color: string; bg: string; label: string }> = {
   implemented: { color: FEATURE_STATUS_COLORS.implemented, bg: FEATURE_STATUS_COLORS.implemented + OPACITY_10, label: 'Implemented' },
@@ -143,8 +145,18 @@ interface FeatureMatrixProps {
 }
 
 export function FeatureMatrix({ moduleId, accentColor, onReview, onSync, isReviewing, onFix, isFixing, onReviewFeature }: FeatureMatrixProps) {
-  const { features, summary, isLoading, error, retry, refetch } = useFeatureMatrix(moduleId);
+  const { features, summary, isLoading, error, retry, refetch, runAutoVerify, isVerifying, verificationResults } = useFeatureMatrix(moduleId);
   const projectPath = useProjectStore((s) => s.projectPath);
+  const bridgeConnected = usePofBridgeStore((s) => s.connectionStatus === 'connected');
+
+  // Build a lookup map for verification results by feature name
+  const verificationMap = useMemo(() => {
+    const map = new Map<string, VerificationResult>();
+    for (const r of verificationResults) {
+      map.set(r.featureName, r);
+    }
+    return map;
+  }, [verificationResults]);
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
   const [isSyncing, setIsSyncing] = useState(false);
   const [collapsedCategories, setCollapsedCategories] = useState<Set<string>>(new Set());
@@ -486,6 +498,31 @@ export function FeatureMatrix({ moduleId, accentColor, onReview, onSync, isRevie
               )}
             </button>
           )}
+          {bridgeConnected && (
+            <button
+              onClick={runAutoVerify}
+              disabled={isVerifying}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all disabled:opacity-50"
+              style={{
+                backgroundColor: '#4ade8018',
+                color: '#4ade80',
+                border: '1px solid #4ade8038',
+              }}
+              title="Auto-verify features against UE5 asset manifest"
+            >
+              {isVerifying ? (
+                <>
+                  <Loader2 className="w-3 h-3 animate-spin" />
+                  Verifying...
+                </>
+              ) : (
+                <>
+                  <ShieldCheck className="w-3 h-3" />
+                  Auto-Verify
+                </>
+              )}
+            </button>
+          )}
           <button
             onClick={onReview}
             disabled={isReviewing}
@@ -518,6 +555,11 @@ export function FeatureMatrix({ moduleId, accentColor, onReview, onSync, isRevie
           total={reviewProgress.total}
           accentColor={accentColor}
         />
+      )}
+
+      {/* Verification results summary — shown after auto-verify */}
+      {verificationResults.length > 0 && (
+        <VerificationSummaryBanner results={verificationResults} />
       )}
 
       {/* Status filter chips */}
@@ -593,6 +635,7 @@ export function FeatureMatrix({ moduleId, accentColor, onReview, onSync, isRevie
                     isFixing={isFixing}
                     onReviewFeature={onReviewFeature}
                     accentColor={accentColor}
+                    verificationResult={verificationMap.get(feature.featureName)}
                     showCategory
                   />
                 </StaggerItem>
@@ -643,6 +686,7 @@ export function FeatureMatrix({ moduleId, accentColor, onReview, onSync, isRevie
                             isFixing={isFixing}
                             onReviewFeature={onReviewFeature}
                             accentColor={accentColor}
+                            verificationResult={verificationMap.get(feature.featureName)}
                           />
                         </StaggerItem>
                       );
@@ -973,6 +1017,7 @@ function FeatureRowItem({
   onReviewFeature,
   accentColor,
   showCategory,
+  verificationResult,
 }: {
   feature: FeatureRow;
   isExpanded: boolean;
@@ -983,6 +1028,7 @@ function FeatureRowItem({
   onReviewFeature?: (feature: FeatureRow) => void;
   accentColor: string;
   showCategory?: boolean;
+  verificationResult?: VerificationResult;
 }) {
   const cfg = STATUS_CONFIG[feature.status];
   const hasDeps = depInfo && depInfo.deps.length > 0;
@@ -1110,6 +1156,11 @@ function FeatureRowItem({
             <FileCode className="w-3 h-3" />
             {feature.filePaths.length}
           </span>
+        )}
+
+        {/* Verification badge — shown after auto-verify runs */}
+        {verificationResult && (
+          <VerificationBadge result={verificationResult} />
         )}
 
         {/* Status badge */}
@@ -1272,6 +1323,81 @@ function DependencyChain({
           );
         })}
       </div>
+    </div>
+  );
+}
+
+const VERIFY_BADGE_CONFIG: Record<string, { icon: typeof ShieldCheck; color: string; label: string }> = {
+  implemented: { icon: ShieldCheck, color: '#4ade80', label: 'verified' },
+  improved: { icon: ShieldCheck, color: '#22d3ee', label: 'verified' },
+  partial: { icon: ShieldCheck, color: '#fbbf24', label: 'partial' },
+  missing: { icon: AlertTriangle, color: '#f87171', label: 'not found' },
+  unknown: { icon: ShieldCheck, color: '#6b7280', label: 'unknown' },
+};
+
+function VerificationBadge({ result }: { result: VerificationResult }) {
+  const cfg = VERIFY_BADGE_CONFIG[result.newStatus] ?? VERIFY_BADGE_CONFIG.unknown;
+  const Icon = cfg.icon;
+  const changed = result.previousStatus !== null && result.previousStatus !== result.newStatus;
+
+  return (
+    <span
+      className="inline-flex items-center gap-1 text-2xs px-1.5 py-0.5 rounded flex-shrink-0 font-medium"
+      style={{
+        backgroundColor: `${cfg.color}18`,
+        color: cfg.color,
+        border: `1px solid ${cfg.color}30`,
+      }}
+      title={
+        changed
+          ? `Auto-verified: ${result.previousStatus} -> ${result.newStatus}`
+          : `Auto-verified: ${result.newStatus}`
+      }
+    >
+      <Icon className="w-2.5 h-2.5" />
+      {cfg.label}
+      {changed && (
+        <span className="text-2xs opacity-70">*</span>
+      )}
+    </span>
+  );
+}
+
+function VerificationSummaryBanner({ results }: { results: VerificationResult[] }) {
+  const changed = results.filter((r) => r.previousStatus !== null && r.previousStatus !== r.newStatus);
+  const implemented = results.filter((r) => r.newStatus === 'implemented' || r.newStatus === 'improved').length;
+  const partial = results.filter((r) => r.newStatus === 'partial').length;
+  const missing = results.filter((r) => r.newStatus === 'missing').length;
+
+  return (
+    <div
+      className="flex items-center gap-3 px-3 py-2 rounded-lg text-xs"
+      style={{
+        backgroundColor: '#4ade8010',
+        border: '1px solid #4ade8025',
+      }}
+    >
+      <ShieldCheck className="w-4 h-4 text-[#4ade80] flex-shrink-0" />
+      <span className="text-[#d0d4e8]">
+        <span className="font-medium">Auto-Verify:</span>{' '}
+        {results.length} rules checked
+      </span>
+      <span className="flex items-center gap-2 text-2xs">
+        {implemented > 0 && (
+          <span className="text-[#4ade80]">{implemented} found</span>
+        )}
+        {partial > 0 && (
+          <span className="text-[#fbbf24]">{partial} partial</span>
+        )}
+        {missing > 0 && (
+          <span className="text-[#f87171]">{missing} missing</span>
+        )}
+      </span>
+      {changed.length > 0 && (
+        <span className="text-2xs text-[#22d3ee]">
+          {changed.length} status{changed.length !== 1 ? 'es' : ''} updated
+        </span>
+      )}
     </div>
   );
 }
