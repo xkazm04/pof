@@ -8,11 +8,12 @@ import { useModuleStore } from '@/stores/moduleStore';
 import { SUB_MODULES } from '@/lib/module-registry';
 import {
   Gamepad2, ChevronDown, Pencil, Trash2, Check, X,
-  Bell, FolderOpen, Plus, Clock, Loader2, CheckCircle2, Search,
+  Bell, FolderOpen, Plus, Clock, Loader2, CheckCircle2, Search, Plug,
 } from 'lucide-react';
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import { useActivityFeedStore } from '@/stores/activityFeedStore';
 import { MODULE_COLORS } from '@/lib/chart-colors';
+import { usePofBridgeStore } from '@/stores/pofBridgeStore';
 
 const dropdownMotion = {
   initial: { opacity: 0, y: -4, scale: 0.98 },
@@ -398,6 +399,7 @@ export function TopBar() {
       <div className="flex items-center gap-3">
         {isSetupComplete && <SearchTrigger />}
         {isSetupComplete && <ProjectStats />}
+        {isSetupComplete && <PofBridgeIndicator />}
         <span className="text-xs text-text-muted">UE5 + C++</span>
         <NotificationBadge />
       </div>
@@ -619,6 +621,44 @@ function NotificationBadge() {
         </span>
       )}
     </button>
+  );
+}
+
+// --- PoF Bridge connection indicator ---
+
+function PofBridgeIndicator() {
+  const connectionStatus = usePofBridgeStore((s) => s.connectionStatus);
+  const pluginInfo = usePofBridgeStore((s) => s.pluginInfo);
+
+  if (connectionStatus === 'disconnected') return null;
+
+  const isConnected = connectionStatus === 'connected';
+  const isConnecting = connectionStatus === 'connecting' || connectionStatus === 'reconnecting';
+  const isError = connectionStatus === 'error';
+
+  const dotColor = isConnected ? '#22c55e' : isError ? '#ef4444' : '#f59e0b';
+  const label = isConnected
+    ? `Bridge v${pluginInfo?.pluginVersion ?? '?'}`
+    : isConnecting
+      ? 'Bridge...'
+      : 'Bridge err';
+
+  return (
+    <div
+      className="flex items-center gap-1.5 px-2 py-1 rounded-md text-xs transition-colors"
+      style={{
+        backgroundColor: isConnected ? 'rgba(34,197,94,0.08)' : isError ? 'rgba(239,68,68,0.08)' : 'rgba(245,158,11,0.08)',
+        border: `1px solid ${isConnected ? 'rgba(34,197,94,0.2)' : isError ? 'rgba(239,68,68,0.2)' : 'rgba(245,158,11,0.2)'}`,
+      }}
+      title={pluginInfo ? `${pluginInfo.projectName} · UE ${pluginInfo.engineVersion} · ${pluginInfo.manifestAssetCount} assets` : 'PoF Bridge'}
+    >
+      {isConnecting ? (
+        <Loader2 className="w-3 h-3 animate-spin" style={{ color: dotColor }} />
+      ) : (
+        <Plug className="w-3 h-3" style={{ color: dotColor }} />
+      )}
+      <span style={{ color: dotColor }}>{label}</span>
+    </div>
   );
 }
 
