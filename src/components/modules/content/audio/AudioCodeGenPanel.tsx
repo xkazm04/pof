@@ -7,18 +7,21 @@ import {
   Loader2, Download, Layers, Volume2, Radio, Zap, Music,
 } from 'lucide-react';
 import { SurfaceCard } from '@/components/ui/SurfaceCard';
+import { apiFetch } from '@/lib/api-utils';
 import type { AudioSceneDocument } from '@/types/audio-scene';
 import type { GeneratedFile, CodeGenResult } from '@/lib/audio-codegen';
-
-const ACCENT = '#f59e0b';
+import { UI_TIMEOUTS, MODULE_COLORS } from '@/lib/constants';
+import {
+  ACCENT_VIOLET, STATUS_INFO, STATUS_SUCCESS, STATUS_WARNING, ACCENT_PINK, STATUS_ERROR,
+} from '@/lib/chart-colors';
 
 const CATEGORY_META: Record<GeneratedFile['category'], { icon: typeof Code2; label: string; color: string }> = {
-  reverb: { icon: Volume2, label: 'Reverb Presets', color: '#a78bfa' },
-  attenuation: { icon: Radio, label: 'Sound Attenuation', color: '#60a5fa' },
-  volume: { icon: Layers, label: 'Audio Volumes', color: '#4ade80' },
-  emitter: { icon: Music, label: 'Emitter Spawner', color: '#fbbf24' },
-  metasound: { icon: Zap, label: 'MetaSounds', color: '#f472b6' },
-  manager: { icon: Code2, label: 'Scene Manager', color: ACCENT },
+  reverb: { icon: Volume2, label: 'Reverb Presets', color: ACCENT_VIOLET },
+  attenuation: { icon: Radio, label: 'Sound Attenuation', color: STATUS_INFO },
+  volume: { icon: Layers, label: 'Audio Volumes', color: STATUS_SUCCESS },
+  emitter: { icon: Music, label: 'Emitter Spawner', color: STATUS_WARNING },
+  metasound: { icon: Zap, label: 'MetaSounds', color: ACCENT_PINK },
+  manager: { icon: Code2, label: 'Scene Manager', color: MODULE_COLORS.content },
 };
 
 interface AudioCodeGenPanelProps {
@@ -39,7 +42,7 @@ export function AudioCodeGenPanel({ doc, accentColor }: AudioCodeGenPanelProps) 
     setGenerating(true);
     setError(null);
     try {
-      const res = await fetch('/api/audio-codegen', {
+      const result = await apiFetch<CodeGenResult>('/api/audio-codegen', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -48,15 +51,10 @@ export function AudioCodeGenPanel({ doc, accentColor }: AudioCodeGenPanelProps) 
           apiMacro: apiMacro || undefined,
         }),
       });
-      const data = await res.json();
-      if (data.ok) {
-        setResult(data.data);
-        setExpandedFile(null);
-      } else {
-        setError(data.error || 'Generation failed');
-      }
-    } catch {
-      setError('Network error');
+      setResult(result);
+      setExpandedFile(null);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Generation failed');
     }
     setGenerating(false);
   }, [doc.id, moduleName, apiMacro]);
@@ -64,7 +62,7 @@ export function AudioCodeGenPanel({ doc, accentColor }: AudioCodeGenPanelProps) 
   const handleCopy = useCallback(async (file: GeneratedFile) => {
     await navigator.clipboard.writeText(file.content);
     setCopiedFile(file.filename);
-    setTimeout(() => setCopiedFile(null), 2000);
+    setTimeout(() => setCopiedFile(null), UI_TIMEOUTS.copyFeedback);
   }, []);
 
   const handleCopyAll = useCallback(async () => {
@@ -74,7 +72,7 @@ export function AudioCodeGenPanel({ doc, accentColor }: AudioCodeGenPanelProps) 
     ).join('\n\n');
     await navigator.clipboard.writeText(allContent);
     setCopiedFile('__all__');
-    setTimeout(() => setCopiedFile(null), 2000);
+    setTimeout(() => setCopiedFile(null), UI_TIMEOUTS.copyFeedback);
   }, [result]);
 
   // Group files by category
@@ -151,9 +149,9 @@ export function AudioCodeGenPanel({ doc, accentColor }: AudioCodeGenPanelProps) 
           {/* Stats */}
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-2">
             <MiniStat label="Files" value={result.stats.totalFiles} color={accentColor} />
-            <MiniStat label="Lines" value={result.stats.totalLines} color="#60a5fa" />
-            <MiniStat label="Zones" value={result.stats.zonesProcessed} color="#4ade80" />
-            <MiniStat label="Emitters" value={result.stats.emittersProcessed} color="#fbbf24" />
+            <MiniStat label="Lines" value={result.stats.totalLines} color={STATUS_INFO} />
+            <MiniStat label="Zones" value={result.stats.zonesProcessed} color={STATUS_SUCCESS} />
+            <MiniStat label="Emitters" value={result.stats.emittersProcessed} color={STATUS_WARNING} />
           </div>
 
           {/* Copy all */}
@@ -196,7 +194,7 @@ export function AudioCodeGenPanel({ doc, accentColor }: AudioCodeGenPanelProps) 
                               ? <ChevronDown className="w-3 h-3 text-text-muted flex-shrink-0" />
                               : <ChevronRight className="w-3 h-3 text-text-muted flex-shrink-0" />
                             }
-                            <FileCode className="w-3 h-3 flex-shrink-0" style={{ color: file.language === 'h' ? '#60a5fa' : '#4ade80' }} />
+                            <FileCode className="w-3 h-3 flex-shrink-0" style={{ color: file.language === 'h' ? STATUS_INFO : STATUS_SUCCESS }} />
                             <span className="text-2xs font-mono text-text flex-1">{file.filename}</span>
                             <span className="text-2xs text-text-muted">{file.lineCount} lines</span>
                             <button

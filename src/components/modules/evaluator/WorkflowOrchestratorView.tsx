@@ -13,6 +13,7 @@ import { Badge } from '@/components/ui/Badge';
 import { useTaskDAGStore } from '@/stores/taskDAGStore';
 import { MODULE_FEATURE_DEFINITIONS } from '@/lib/feature-definitions';
 import type { WorkflowTemplate, WorkflowExecution, DAGNodeState, DAGNodeStatus } from '@/types/task-dag';
+import type { SubModuleId } from '@/types/modules';
 
 // ── Icons for templates ──────────────────────────────────────────────────────
 
@@ -37,7 +38,7 @@ const STATUS_STYLE: Record<DAGNodeStatus, { icon: React.ComponentType<{ classNam
 
 // ── Available modules for selection ──────────────────────────────────────────
 
-const AVAILABLE_MODULES = Object.keys(MODULE_FEATURE_DEFINITIONS);
+const AVAILABLE_MODULES = Object.keys(MODULE_FEATURE_DEFINITIONS) as SubModuleId[];
 
 // ── Main Component ───────────────────────────────────────────────────────────
 
@@ -54,7 +55,7 @@ export function WorkflowOrchestratorView() {
   const [selectedModules, setSelectedModules] = useState<string[]>([]);
   const [showHistory, setShowHistory] = useState(false);
 
-  const handleToggleModule = useCallback((moduleId: string) => {
+  const handleToggleModule = useCallback((moduleId: SubModuleId) => {
     setSelectedModules((prev) =>
       prev.includes(moduleId)
         ? prev.filter((m) => m !== moduleId)
@@ -226,7 +227,7 @@ function ModuleSelector({
   onStart,
 }: {
   selected: string[];
-  onToggle: (id: string) => void;
+  onToggle: (id: SubModuleId) => void;
   onStart: () => void;
 }) {
   const [selectAll, setSelectAll] = useState(false);
@@ -234,7 +235,7 @@ function ModuleSelector({
   const handleSelectAll = useCallback(() => {
     if (selectAll) {
       // Deselect all
-      for (const m of selected) onToggle(m);
+      for (const m of selected) onToggle(m as SubModuleId);
     } else {
       for (const m of AVAILABLE_MODULES) {
         if (!selected.includes(m)) onToggle(m);

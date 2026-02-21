@@ -47,33 +47,58 @@ export function ensureAITestingTables() {
   `);
 }
 
+// ── Row types ──
+
+interface SuiteRow {
+  id: number;
+  name: string;
+  description: string;
+  target_class: string;
+  created_at: string;
+  updated_at: string;
+}
+
+interface ScenarioRow {
+  id: number;
+  suite_id: number;
+  name: string;
+  description: string;
+  stimuli: string;
+  expected_actions: string;
+  status: string;
+  last_run_output: string;
+  last_run_at: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
 // ── Helpers ──
 
-function rowToScenario(row: Record<string, unknown>): TestScenario {
+function rowToScenario(row: ScenarioRow): TestScenario {
   return {
-    id: row.id as number,
-    suiteId: row.suite_id as number,
-    name: row.name as string,
-    description: row.description as string,
-    stimuli: JSON.parse((row.stimuli as string) || '[]') as MockStimulus[],
-    expectedActions: JSON.parse((row.expected_actions as string) || '[]') as ExpectedAction[],
+    id: row.id,
+    suiteId: row.suite_id,
+    name: row.name,
+    description: row.description,
+    stimuli: JSON.parse(row.stimuli || '[]') as MockStimulus[],
+    expectedActions: JSON.parse(row.expected_actions || '[]') as ExpectedAction[],
     status: row.status as ScenarioStatus,
-    lastRunOutput: row.last_run_output as string,
-    lastRunAt: row.last_run_at as string | null,
-    createdAt: row.created_at as string,
-    updatedAt: row.updated_at as string,
+    lastRunOutput: row.last_run_output,
+    lastRunAt: row.last_run_at,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
   };
 }
 
-function rowToSuite(row: Record<string, unknown>, scenarios: TestScenario[]): TestSuite {
+function rowToSuite(row: SuiteRow, scenarios: TestScenario[]): TestSuite {
   return {
-    id: row.id as number,
-    name: row.name as string,
-    description: row.description as string,
-    targetClass: row.target_class as string,
+    id: row.id,
+    name: row.name,
+    description: row.description,
+    targetClass: row.target_class,
     scenarios,
-    createdAt: row.created_at as string,
-    updatedAt: row.updated_at as string,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
   };
 }
 
@@ -84,22 +109,21 @@ export function getAllSuites(): TestSuite[] {
   const db = getDb();
   const suiteRows = db
     .prepare('SELECT * FROM ai_test_suites ORDER BY updated_at DESC')
-    .all() as Record<string, unknown>[];
+    .all() as SuiteRow[];
 
   const scenarioRows = db
     .prepare('SELECT * FROM ai_test_scenarios ORDER BY id ASC')
-    .all() as Record<string, unknown>[];
+    .all() as ScenarioRow[];
 
   const scenariosBySuite = new Map<number, TestScenario[]>();
   for (const row of scenarioRows) {
-    const suiteId = row.suite_id as number;
-    const list = scenariosBySuite.get(suiteId) ?? [];
+    const list = scenariosBySuite.get(row.suite_id) ?? [];
     list.push(rowToScenario(row));
-    scenariosBySuite.set(suiteId, list);
+    scenariosBySuite.set(row.suite_id, list);
   }
 
   return suiteRows.map((row) =>
-    rowToSuite(row, scenariosBySuite.get(row.id as number) ?? [])
+    rowToSuite(row, scenariosBySuite.get(row.id) ?? [])
   );
 }
 
@@ -108,12 +132,12 @@ export function getSuite(id: number): TestSuite | null {
   const db = getDb();
   const row = db
     .prepare('SELECT * FROM ai_test_suites WHERE id = ?')
-    .get(id) as Record<string, unknown> | undefined;
+    .get(id) as SuiteRow | undefined;
   if (!row) return null;
 
   const scenarioRows = db
     .prepare('SELECT * FROM ai_test_scenarios WHERE suite_id = ? ORDER BY id ASC')
-    .all(id) as Record<string, unknown>[];
+    .all(id) as ScenarioRow[];
 
   return rowToSuite(row, scenarioRows.map(rowToScenario));
 }
@@ -124,7 +148,11 @@ export function createSuite(payload: CreateSuitePayload): TestSuite {
   const result = db
     .prepare('INSERT INTO ai_test_suites (name, description, target_class) VALUES (?, ?, ?)')
     .run(payload.name, payload.description, payload.targetClass);
-  return getSuite(result.lastInsertRowid as number)!;
+  const suite = getSuite(result.lastInsertRowid as number);
+  if (!suite) {
+    throw new Error(`Failed to retrieve ai_test_suites record after INSERT (rowid=${result.lastInsertRowid})`);
+  }
+  return suite;
 }
 
 export function updateSuite(payload: UpdateSuitePayload): TestSuite | null {
@@ -171,7 +199,7 @@ export function createScenario(payload: CreateScenarioPayload): TestScenario | n
 
   const row = db
     .prepare('SELECT * FROM ai_test_scenarios WHERE id = ?')
-    .get(result.lastInsertRowid as number) as Record<string, unknown> | undefined;
+    .get(result.lastInsertRowid as number) as ScenarioRow | undefined;
   return row ? rowToScenario(row) : null;
 }
 
@@ -195,7 +223,7 @@ export function updateScenario(payload: UpdateScenarioPayload): TestScenario | n
 
   const row = db
     .prepare('SELECT * FROM ai_test_scenarios WHERE id = ?')
-    .get(payload.id) as Record<string, unknown> | undefined;
+    .get(payload.id) as ScenarioRow | undefined;
   return row ? rowToScenario(row) : null;
 }
 

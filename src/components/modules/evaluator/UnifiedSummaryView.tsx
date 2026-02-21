@@ -28,6 +28,7 @@ import { MODULE_FEATURE_DEFINITIONS, buildDependencyMap, computeBlockers } from 
 import { useEvaluatorStore } from '@/stores/evaluatorStore';
 import { InsightCard } from './InsightCard';
 import { SurfaceCard } from '@/components/ui/SurfaceCard';
+import { STATUS_SUCCESS, STATUS_WARNING, STATUS_ERROR, STATUS_BLOCKER, STATUS_INFO, ACCENT_VIOLET, MODULE_COLORS, OPACITY_10 } from '@/lib/chart-colors';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -40,17 +41,17 @@ interface Props {
 // ─── Score coloring ──────────────────────────────────────────────────────────
 
 function healthColor(score: number): string {
-  if (score >= 70) return '#4ade80';
-  if (score >= 45) return '#fbbf24';
-  if (score >= 25) return '#fb923c';
-  return '#f87171';
+  if (score >= 70) return STATUS_SUCCESS;
+  if (score >= 45) return STATUS_WARNING;
+  if (score >= 25) return STATUS_BLOCKER;
+  return STATUS_ERROR;
 }
 
 function healthBg(score: number): string {
-  if (score >= 70) return '#4ade8010';
-  if (score >= 45) return '#fbbf2410';
-  if (score >= 25) return '#fb923c10';
-  return '#f8717110';
+  if (score >= 70) return `${STATUS_SUCCESS}${OPACITY_10}`;
+  if (score >= 45) return `${STATUS_WARNING}${OPACITY_10}`;
+  if (score >= 25) return `${STATUS_BLOCKER}${OPACITY_10}`;
+  return `${STATUS_ERROR}${OPACITY_10}`;
 }
 
 // ─── Component ───────────────────────────────────────────────────────────────
@@ -201,10 +202,10 @@ export function UnifiedSummaryView({ onNavigateTab }: Props) {
 
           {/* Dimension bars */}
           <div className="grid grid-cols-2 gap-x-4 gap-y-2">
-            <DimensionBar label="Quality" value={health.dimensionAverages.quality} icon={Activity} color="#f87171" />
-            <DimensionBar label="Dep Health" value={health.dimensionAverages.dependencyHealth} icon={Link2} color="#60a5fa" />
-            <DimensionBar label="Coverage" value={health.dimensionAverages.coverage} icon={Zap} color="#4ade80" />
-            <DimensionBar label="Activity" value={health.dimensionAverages.activity} icon={BarChart3} color="#a78bfa" />
+            <DimensionBar label="Quality" value={health.dimensionAverages.quality} icon={Activity} color={STATUS_ERROR} />
+            <DimensionBar label="Dep Health" value={health.dimensionAverages.dependencyHealth} icon={Link2} color={STATUS_INFO} />
+            <DimensionBar label="Coverage" value={health.dimensionAverages.coverage} icon={Zap} color={STATUS_SUCCESS} />
+            <DimensionBar label="Activity" value={health.dimensionAverages.activity} icon={BarChart3} color={ACCENT_VIOLET} />
           </div>
         </div>
 
@@ -297,28 +298,28 @@ export function UnifiedSummaryView({ onNavigateTab }: Props) {
         <QuickNavCard
           label="Quality Dashboard"
           icon={Activity}
-          color="#f87171"
+          color={STATUS_ERROR}
           sub={aggregates.length > 0 ? `${aggregates.length} modules` : 'No data'}
           onClick={() => onNavigateTab('quality')}
         />
         <QuickNavCard
           label="Dependencies"
           icon={Link2}
-          color="#60a5fa"
+          color={STATUS_INFO}
           sub={statusMap.size > 0 ? `${statusMap.size} tracked` : 'No data'}
           onClick={() => onNavigateTab('dependencies')}
         />
         <QuickNavCard
           label="Session Analytics"
           icon={BarChart3}
-          color="#a78bfa"
+          color={ACCENT_VIOLET}
           sub={analytics ? `${analytics.totalSessions} sessions` : 'No data'}
           onClick={() => onNavigateTab('analytics')}
         />
         <QuickNavCard
           label="Project Scanner"
           icon={Radar}
-          color="#ef4444"
+          color={MODULE_COLORS.evaluator}
           sub={lastScan ? `Score: ${lastScan.overallScore}` : 'No scan'}
           onClick={() => onNavigateTab('scanner')}
         />
@@ -495,10 +496,10 @@ function ModuleHealthCell({
 
       {/* Mini dimension bars */}
       <div className="space-y-1">
-        <MiniBar value={breakdown.quality} color="#f87171" label="Q" />
-        <MiniBar value={breakdown.dependencyHealth} color="#60a5fa" label="D" />
-        <MiniBar value={breakdown.coverage} color="#4ade80" label="C" />
-        <MiniBar value={breakdown.activity} color="#a78bfa" label="A" />
+        <MiniBar value={breakdown.quality} color={STATUS_ERROR} label="Q" />
+        <MiniBar value={breakdown.dependencyHealth} color={STATUS_INFO} label="D" />
+        <MiniBar value={breakdown.coverage} color={STATUS_SUCCESS} label="C" />
+        <MiniBar value={breakdown.activity} color={ACCENT_VIOLET} label="A" />
       </div>
     </motion.div>
   );

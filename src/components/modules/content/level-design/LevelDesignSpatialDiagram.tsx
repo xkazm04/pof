@@ -4,8 +4,8 @@ import { useCallback, useMemo } from 'react';
 import { Dice5, ArrowLeftRight, Target, Map } from 'lucide-react';
 import { useModuleStore } from '@/stores/moduleStore';
 import type { LucideIcon } from 'lucide-react';
-
-const ACCENT = '#f59e0b';
+import { MODULE_COLORS } from '@/lib/constants';
+import { STATUS_SUCCESS } from '@/lib/chart-colors';
 
 interface SystemNode {
   id: string;
@@ -107,7 +107,7 @@ export function LevelDesignSpatialDiagram({ onRunPrompt, isRunning, activeItemId
     <div className="w-full max-w-lg mx-auto select-none">
       {/* Header */}
       <div className="flex items-center gap-2 mb-4">
-        <Map className="w-4 h-4" style={{ color: ACCENT }} />
+        <Map className="w-4 h-4" style={{ color: MODULE_COLORS.content }} />
         <div>
           <h3 className="text-xs font-semibold text-text">Level Systems</h3>
           <p className="text-2xs text-text-muted">
@@ -133,7 +133,7 @@ export function LevelDesignSpatialDiagram({ onRunPrompt, isRunning, activeItemId
               markerHeight="6"
               orient="auto-start-reverse"
             >
-              <path d="M 0 0 L 10 3.5 L 0 7 z" fill={`${ACCENT}50`} />
+              <path d="M 0 0 L 10 3.5 L 0 7 z" fill={`${MODULE_COLORS.content}50`} />
             </marker>
             <marker
               id="ld-arrow-done"
@@ -144,7 +144,7 @@ export function LevelDesignSpatialDiagram({ onRunPrompt, isRunning, activeItemId
               markerHeight="6"
               orient="auto-start-reverse"
             >
-              <path d="M 0 0 L 10 3.5 L 0 7 z" fill="#22c55e50" />
+              <path d="M 0 0 L 10 3.5 L 0 7 z" fill={`${STATUS_SUCCESS}50`} />
             </marker>
             <marker
               id="ld-arrow-dim"
@@ -201,10 +201,10 @@ export function LevelDesignSpatialDiagram({ onRunPrompt, isRunning, activeItemId
                 : 'url(#ld-arrow)';
 
             const strokeColor = bothDone
-              ? '#22c55e30'
+              ? `${STATUS_SUCCESS}30`
               : anyLocked
                 ? 'var(--border)'
-                : `${ACCENT}25`;
+                : `${MODULE_COLORS.content}25`;
 
             return (
               <line
@@ -256,25 +256,25 @@ export function LevelDesignSpatialDiagram({ onRunPrompt, isRunning, activeItemId
                   className="flex-shrink-0 w-7 h-7 rounded-md flex items-center justify-center mt-0.5"
                   style={{
                     background: node.completed
-                      ? 'linear-gradient(135deg, #22c55e15, #22c55e08)'
+                      ? `linear-gradient(135deg, ${STATUS_SUCCESS}15, ${STATUS_SUCCESS}08)`
                       : node.locked
                         ? 'var(--surface)'
-                        : `linear-gradient(135deg, ${ACCENT}15, ${ACCENT}08)`,
+                        : `linear-gradient(135deg, ${MODULE_COLORS.content}15, ${MODULE_COLORS.content}08)`,
                     border: node.completed
-                      ? '1px solid #22c55e22'
+                      ? `1px solid ${STATUS_SUCCESS}22`
                       : node.locked
                         ? '1px solid var(--border)'
-                        : `1px solid ${ACCENT}18`,
+                        : `1px solid ${MODULE_COLORS.content}18`,
                   }}
                 >
                   <Icon
                     className="w-3.5 h-3.5"
                     style={{
                       color: node.completed
-                        ? '#22c55e'
+                        ? STATUS_SUCCESS
                         : node.locked
                           ? 'var(--text-muted)'
-                          : ACCENT,
+                          : MODULE_COLORS.content,
                     }}
                   />
                 </div>
@@ -308,15 +308,15 @@ export function LevelDesignSpatialDiagram({ onRunPrompt, isRunning, activeItemId
                       <span className="text-2xs font-medium text-[#22c55e80] uppercase tracking-wider">Done</span>
                     ) : node.isActive ? (
                       <div className="flex items-center gap-1">
-                        <span className="w-1 h-1 rounded-full animate-pulse" style={{ backgroundColor: ACCENT }} />
-                        <span className="text-2xs font-medium uppercase tracking-wider" style={{ color: ACCENT }}>Building...</span>
+                        <span className="w-1 h-1 rounded-full animate-pulse" style={{ backgroundColor: MODULE_COLORS.content }} />
+                        <span className="text-2xs font-medium uppercase tracking-wider" style={{ color: MODULE_COLORS.content }}>Building...</span>
                       </div>
                     ) : node.locked ? (
                       <span className="text-2xs text-[#3a3e5a] uppercase tracking-wider">Locked</span>
                     ) : (
                       <span
                         className="text-2xs font-medium uppercase tracking-wider opacity-30 scale-95 group-hover:opacity-100 group-hover:scale-100 transition-all"
-                        style={{ color: ACCENT }}
+                        style={{ color: MODULE_COLORS.content }}
                       >
                         Build →
                       </span>

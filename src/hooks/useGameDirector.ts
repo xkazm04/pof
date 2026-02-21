@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback } from 'react';
 import type {
   PlaytestSession,
   PlaytestFinding,
@@ -6,59 +6,76 @@ import type {
   CreateSessionPayload,
 } from '@/types/game-director';
 import type { DirectorStats } from '@/lib/game-director-db';
+import { tryApiFetch } from '@/lib/api-utils';
+import { unwrapOr } from '@/types/result';
+import { useCRUD } from './useCRUD';
 
-export function useGameDirector() {
-  const [sessions, setSessions] = useState<PlaytestSession[]>([]);
-  const [stats, setStats] = useState<DirectorStats | null>(null);
-  const [loading, setLoading] = useState(true);
+interface DirectorData {
+  sessions: PlaytestSession[];
+  stats: DirectorStats | null;
+}
+
+const EMPTY: DirectorData = { sessions: [], stats: null };
+
+const fetchDirectorData = async (): Promise<DirectorData> => {
+  const [sessResult, statsResult] = await Promise.all([
+    tryApiFetch<PlaytestSession[]>('/api/game-director?action=list'),
+    tryApiFetch<DirectorStats>('/api/game-director?action=stats'),
+  ]);
+  return {
+    sessions: sessResult.ok ? sessResult.data : [],
+    stats: statsResult.ok ? statsResult.data : null,
+  };
+};
+
+export interface UseGameDirectorResult {
+  sessions: PlaytestSession[];
+  stats: DirectorStats | null;
+  loading: boolean;
+  simulating: boolean;
+  refresh: () => Promise<void>;
+  createSession: (payload: CreateSessionPayload) => Promise<PlaytestSession>;
+  deleteSession: (sessionId: string) => Promise<void>;
+  simulatePlaytest: (sessionId: string) => Promise<void>;
+  getFindings: (sessionId: string) => Promise<PlaytestFinding[]>;
+  getEvents: (sessionId: string) => Promise<DirectorEvent[]>;
+}
+
+export function useGameDirector(): UseGameDirectorResult {
+  const { data, isLoading: loading, refetch: refresh, mutate } = useCRUD<DirectorData>(
+    '/api/game-director',
+    EMPTY,
+    { fetcher: fetchDirectorData },
+  );
+
   const [simulating, setSimulating] = useState(false);
 
-  const fetchSessions = useCallback(async () => {
-    try {
-      const res = await fetch('/api/game-director?action=list');
-      if (res.ok) setSessions(await res.json());
-    } catch { /* ignore */ }
-  }, []);
-
-  const fetchStats = useCallback(async () => {
-    try {
-      const res = await fetch('/api/game-director?action=stats');
-      if (res.ok) setStats(await res.json());
-    } catch { /* ignore */ }
-  }, []);
-
-  const refresh = useCallback(async () => {
-    setLoading(true);
-    await Promise.all([fetchSessions(), fetchStats()]);
-    setLoading(false);
-  }, [fetchSessions, fetchStats]);
-
-  useEffect(() => { refresh(); }, [refresh]);
-
   const createSession = useCallback(async (payload: CreateSessionPayload) => {
-    const res = await fetch('/api/game-director', {
+    const result = await tryApiFetch<PlaytestSession>('/api/game-director', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ action: 'create', ...payload }),
     });
-    const session = await res.json();
+    if (!result.ok) throw new Error(result.error);
     await refresh();
-    return session as PlaytestSession;
+    return result.data;
   }, [refresh]);
 
   const deleteSession = useCallback(async (sessionId: string) => {
-    await fetch(`/api/game-director?sessionId=${sessionId}`, { method: 'DELETE' });
+    const result = await tryApiFetch<{ ok: true }>(`/api/game-director?sessionId=${sessionId}`, { method: 'DELETE' });
+    if (!result.ok) throw new Error(result.error);
     await refresh();
   }, [refresh]);
 
   const simulatePlaytest = useCallback(async (sessionId: string) => {
     setSimulating(true);
     try {
-      await fetch('/api/game-director', {
+      const result = await tryApiFetch('/api/game-director', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action: 'simulate', sessionId }),
       });
+      if (!result.ok) throw new Error(result.error);
       await refresh();
     } finally {
       setSimulating(false);
@@ -66,20 +83,18 @@ export function useGameDirector() {
   }, [refresh]);
 
   const getFindings = useCallback(async (sessionId: string): Promise<PlaytestFinding[]> => {
-    const res = await fetch(`/api/game-director?action=findings&sessionId=${sessionId}`);
-    if (!res.ok) return [];
-    return res.json();
+    const result = await tryApiFetch<PlaytestFinding[]>(`/api/game-director?action=findings&sessionId=${sessionId}`);
+    return unwrapOr(result, []);
   }, []);
 
   const getEvents = useCallback(async (sessionId: string): Promise<DirectorEvent[]> => {
-    const res = await fetch(`/api/game-director?action=events&sessionId=${sessionId}`);
-    if (!res.ok) return [];
-    return res.json();
+    const result = await tryApiFetch<DirectorEvent[]>(`/api/game-director?action=events&sessionId=${sessionId}`);
+    return unwrapOr(result, []);
   }, []);
 
   return {
-    sessions,
-    stats,
+    sessions: data.sessions,
+    stats: data.stats,
     loading,
     simulating,
     refresh,

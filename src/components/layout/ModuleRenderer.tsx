@@ -1,10 +1,11 @@
 'use client';
 
 import { useRef } from 'react';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import { useNavigationStore } from '@/stores/navigationStore';
-import { CATEGORY_MAP, SUB_MODULE_MAP } from '@/lib/module-registry';
+import { CATEGORY_MAP, SUB_MODULE_MAP, MODULE_LABELS } from '@/lib/module-registry';
 import { DURATION, EASE_OUT } from '@/lib/motion';
+import { SuspendContext } from '@/hooks/useSuspend';
 
 /** Max number of modules kept mounted simultaneously. Oldest are evicted. */
 const LRU_CAP = 5;
@@ -14,6 +15,7 @@ const SESSION_LRU_CAP = 5;
 
 // Genre-based core engine view
 import { GenreModuleView } from '@/components/modules/core-engine/GenreModuleView';
+import { PlanView } from '@/components/modules/core-engine/PlanView';
 
 import { ModelsView } from '@/components/modules/content/models/ModelsView';
 import { AnimationsView } from '@/components/modules/content/animations/AnimationsView';
@@ -42,38 +44,11 @@ import { useActiveModuleId } from '@/hooks/useActiveModuleId';
 import { ModuleErrorBoundary } from './ModuleErrorBoundary';
 import type { SubModuleId } from '@/types/modules';
 
-/** Human-readable labels for error boundary fallback */
-const MODULE_LABELS: Record<string, string> = {
+/** Labels for special categories (not sub-modules — not in MODULE_LABELS) */
+const SPECIAL_CATEGORY_LABELS: Record<string, string> = {
   'project-setup': 'Project Setup',
   'evaluator': 'Evaluator',
   'game-director': 'Game Director',
-  'arpg-character': 'Character',
-  'arpg-animation': 'Animation',
-  'arpg-gas': 'GAS',
-  'arpg-combat': 'Combat',
-  'arpg-enemy-ai': 'Enemy AI',
-  'arpg-inventory': 'Inventory',
-  'arpg-loot': 'Loot',
-  'arpg-ui': 'UI',
-  'arpg-progression': 'Progression',
-  'arpg-world': 'World',
-  'arpg-save': 'Save',
-  'arpg-polish': 'Polish',
-  'models': 'Models',
-  'animations': 'Animations',
-  'materials': 'Materials',
-  'level-design': 'Level Design',
-  'ui-hud': 'UI / HUD',
-  'audio': 'Audio',
-  'ai-behavior': 'AI Behavior',
-  'physics': 'Physics',
-  'multiplayer': 'Multiplayer',
-  'save-load': 'Save / Load',
-  'input-handling': 'Input',
-  'dialogue-quests': 'Dialogue & Quests',
-  'packaging': 'Packaging',
-  'blueprint-transpiler': 'Blueprint Transpiler',
-  'game-design-doc': 'Game Design Doc',
 };
 
 // Factory for genre-based core engine sub-modules
@@ -97,6 +72,7 @@ const MODULE_COMPONENTS: Record<SubModuleId, React.ComponentType> = {
   'arpg-world': makeGenreView('arpg-world'),
   'arpg-save': makeGenreView('arpg-save'),
   'arpg-polish': makeGenreView('arpg-polish'),
+  'core-engine-plan': PlanView, // Plan pseudo-module
   // Content
   'models': ModelsView,
   'animations': AnimationsView,
@@ -139,6 +115,7 @@ function lruTouch(list: string[], id: string, cap: number): boolean {
 export function ModuleRenderer() {
   const activeCategory = useNavigationStore((s) => s.activeCategory);
   const activeSubModule = useNavigationStore((s) => s.activeSubModule);
+  const prefersReduced = useReducedMotion();
 
   // LRU list stored in a ref — mutations happen during render before JSX evaluation,
   // and navigation store changes already trigger re-renders.
@@ -202,10 +179,12 @@ export function ModuleRenderer() {
     );
   }
 
+  const crossfadeDuration = prefersReduced ? 0 : DURATION.fast;
+
   return (
     <div className="flex-1 flex flex-col overflow-hidden">
       {/* Scrollable module content */}
-      <div className="flex-1 overflow-y-auto min-h-0">
+      <div className="flex-1 overflow-y-auto min-h-0 relative">
         {moduleLru.current.map((moduleId) => {
           // Special category modules
           if (SPECIAL_CATEGORIES[moduleId]) {
@@ -217,17 +196,19 @@ export function ModuleRenderer() {
                 style={{ display: isVisible ? 'block' : 'none' }}
                 className="h-full"
               >
-                <motion.div
-                  key={`fade-${moduleId}-${isVisible ? switchKey : 'hidden'}`}
-                  initial={isVisible ? { opacity: 0, y: 6 } : false}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: DURATION.base, ease: EASE_OUT }}
-                  className="h-full"
-                >
-                  <ModuleErrorBoundary moduleName={MODULE_LABELS[moduleId] ?? moduleId}>
-                    <SpecialComponent />
-                  </ModuleErrorBoundary>
-                </motion.div>
+                <SuspendContext.Provider value={!isVisible}>
+                  <motion.div
+                    key={`fade-${moduleId}-${isVisible ? switchKey : 'hidden'}`}
+                    initial={isVisible ? { opacity: 0, y: -4 } : false}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: crossfadeDuration, ease: EASE_OUT }}
+                    className="h-full"
+                  >
+                    <ModuleErrorBoundary moduleName={MODULE_LABELS[moduleId] ?? SPECIAL_CATEGORY_LABELS[moduleId] ?? moduleId}>
+                      <SpecialComponent />
+                    </ModuleErrorBoundary>
+                  </motion.div>
+                </SuspendContext.Provider>
               </div>
             );
           }
@@ -242,20 +223,36 @@ export function ModuleRenderer() {
               className="h-full"
               style={{ display: isVisible ? 'block' : 'none' }}
             >
-              <motion.div
-                key={`fade-${moduleId}-${isVisible ? switchKey : 'hidden'}`}
-                initial={isVisible ? { opacity: 0, y: 6 } : false}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: DURATION.base, ease: EASE_OUT }}
-                className="h-full"
-              >
-                <ModuleErrorBoundary moduleName={MODULE_LABELS[moduleId] ?? moduleId}>
-                  <Component />
-                </ModuleErrorBoundary>
-              </motion.div>
+              <SuspendContext.Provider value={!isVisible}>
+                <motion.div
+                  key={`fade-${moduleId}-${isVisible ? switchKey : 'hidden'}`}
+                  initial={isVisible ? { opacity: 0, y: -4 } : false}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: crossfadeDuration, ease: EASE_OUT }}
+                  className="h-full"
+                >
+                  <ModuleErrorBoundary moduleName={MODULE_LABELS[moduleId] ?? SPECIAL_CATEGORY_LABELS[moduleId] ?? moduleId}>
+                    <Component />
+                  </ModuleErrorBoundary>
+                </motion.div>
+              </SuspendContext.Provider>
             </div>
           );
         })}
+
+        {/* Crossfade veil — bg-colored overlay that fades out to reveal incoming module */}
+        <AnimatePresence>
+          {currentActiveId && (
+            <motion.div
+              key={`veil-${switchKey}`}
+              initial={{ opacity: 1 }}
+              animate={{ opacity: 0 }}
+              transition={{ duration: crossfadeDuration, ease: EASE_OUT }}
+              className="absolute inset-0 bg-background pointer-events-none z-10"
+              aria-hidden
+            />
+          )}
+        </AnimatePresence>
       </div>
 
       {/* Inline terminals — LRU keep-alive: toggle visibility via display */}

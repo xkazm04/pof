@@ -1,8 +1,10 @@
+import type { SubModuleId } from './modules';
+
 // ── Session record — one per CLI task execution ──
 
 export interface SessionRecord {
   id: number;
-  moduleId: string;
+  moduleId: SubModuleId;
   sessionKey: string;
   prompt: string;
   /** First 80 chars of prompt, for quick display */
@@ -23,7 +25,7 @@ export interface SessionRecord {
 // ── Module-level stats ──
 
 export interface ModuleStats {
-  moduleId: string;
+  moduleId: SubModuleId;
   totalSessions: number;
   successCount: number;
   failCount: number;
@@ -50,7 +52,7 @@ export type InsightType =
 
 export interface PromptInsight {
   type: InsightType;
-  moduleId: string;
+  moduleId: SubModuleId;
   message: string;
   /** Improvement factor (e.g., 3.0 = "3x more likely to succeed") */
   factor: number;
@@ -63,7 +65,7 @@ export interface PromptInsight {
 // ── Per-module prompt quality score ──
 
 export interface PromptQualityScore {
-  moduleId: string;
+  moduleId: SubModuleId;
   score: number; // 0-100
   trend: 'improving' | 'stable' | 'declining';
   recentSuccessRate: number; // last 10 sessions

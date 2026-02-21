@@ -12,6 +12,8 @@ import {
   AlignLeft,
 } from 'lucide-react';
 import type { ChecklistItem } from './useProjectScan';
+import { UI_TIMEOUTS } from '@/lib/constants';
+import { MODULE_COLORS, OPACITY_15, OPACITY_30 } from '@/lib/chart-colors';
 
 const INSTALL_URLS: Record<string, { url: string; label: string }> = {
   engine: { url: 'https://www.unrealengine.com/download', label: 'Get Epic Launcher' },
@@ -61,7 +63,7 @@ export function StatusChecklist({
       onManifestExported(json);
       await navigator.clipboard.writeText(json);
       setManifestCopied(true);
-      setTimeout(() => setManifestCopied(false), 2000);
+      setTimeout(() => setManifestCopied(false), UI_TIMEOUTS.copyFeedback);
     } catch {
       // Non-critical
     }
@@ -186,9 +188,9 @@ export function StatusChecklist({
             disabled={isBootstrapping || scanning}
             className="w-full flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium transition-all disabled:opacity-50"
             style={{
-              backgroundColor: '#3b82f615',
-              color: '#3b82f6',
-              border: '1px solid #3b82f630',
+              backgroundColor: `${MODULE_COLORS.core}${OPACITY_15}`,
+              color: MODULE_COLORS.core,
+              border: `1px solid ${MODULE_COLORS.core}${OPACITY_30}`,
             }}
           >
             {isBootstrapping ? (
@@ -254,9 +256,9 @@ export function StatusChecklist({
                   disabled={jsonValidation.status !== 'valid' || jsonValidation.missingCount === 0 || isBootstrapping}
                   className="flex-1 flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all disabled:opacity-50"
                   style={{
-                    backgroundColor: '#3b82f615',
-                    color: '#3b82f6',
-                    border: '1px solid #3b82f630',
+                    backgroundColor: `${MODULE_COLORS.core}${OPACITY_15}`,
+                    color: MODULE_COLORS.core,
+                    border: `1px solid ${MODULE_COLORS.core}${OPACITY_30}`,
                   }}
                 >
                   <Wrench className="w-3 h-3" />

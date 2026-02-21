@@ -6,19 +6,20 @@ import {
   ChevronDown, ChevronRight, ArrowRight, Loader2,
 } from 'lucide-react';
 import type { SyncStatus, SyncDivergence } from '@/types/level-design';
+import { STATUS_SUCCESS, STATUS_WARNING, STATUS_INFO, STATUS_ERROR } from '@/lib/chart-colors';
 
 const SYNC_CONFIG: Record<SyncStatus, { icon: typeof CheckCircle; color: string; bg: string; label: string; desc: string }> = {
-  synced:     { icon: CheckCircle,    color: '#4ade80', bg: '#4ade8015', label: 'Synced',     desc: 'Design doc matches generated code' },
-  'doc-ahead': { icon: AlertTriangle, color: '#fbbf24', bg: '#fbbf2415', label: 'Doc Ahead',  desc: 'Design doc has changes not yet in code' },
-  'code-ahead': { icon: AlertTriangle, color: '#60a5fa', bg: '#60a5fa15', label: 'Code Ahead', desc: 'Code has changes not reflected in doc' },
-  diverged:   { icon: AlertOctagon,   color: '#f87171', bg: '#f8717115', label: 'Diverged',   desc: 'Both doc and code have independent changes' },
+  synced:     { icon: CheckCircle,    color: STATUS_SUCCESS, bg: `${STATUS_SUCCESS}15`, label: 'Synced',     desc: 'Design doc matches generated code' },
+  'doc-ahead': { icon: AlertTriangle, color: STATUS_WARNING, bg: `${STATUS_WARNING}15`, label: 'Doc Ahead',  desc: 'Design doc has changes not yet in code' },
+  'code-ahead': { icon: AlertTriangle, color: STATUS_INFO, bg: `${STATUS_INFO}15`, label: 'Code Ahead', desc: 'Code has changes not reflected in doc' },
+  diverged:   { icon: AlertOctagon,   color: STATUS_ERROR, bg: `${STATUS_ERROR}15`, label: 'Diverged',   desc: 'Both doc and code have independent changes' },
   unlinked:   { icon: Info,           color: 'var(--text-muted)', bg: 'var(--text-muted)15', label: 'Unlinked',   desc: 'No code generated yet' },
 };
 
 const SEVERITY_CONFIG: Record<string, { color: string; icon: typeof Info }> = {
-  info:     { color: '#60a5fa', icon: Info },
-  warning:  { color: '#fbbf24', icon: AlertTriangle },
-  critical: { color: '#f87171', icon: AlertOctagon },
+  info:     { color: STATUS_INFO, icon: Info },
+  warning:  { color: STATUS_WARNING, icon: AlertTriangle },
+  critical: { color: STATUS_ERROR, icon: AlertOctagon },
 };
 
 interface SyncStatusPanelProps {
@@ -92,7 +93,7 @@ export function SyncStatusPanel({
             </span>
             <span
               className="text-2xs px-1.5 py-0.5 rounded font-medium"
-              style={{ backgroundColor: '#f8717118', color: '#f87171' }}
+              style={{ backgroundColor: `${STATUS_ERROR}18`, color: STATUS_ERROR }}
             >
               {divergences.length}
             </span>

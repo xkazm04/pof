@@ -14,27 +14,31 @@ import type {
   ScenarioStatus,
 } from '@/types/ai-testing';
 import { SurfaceCard } from '@/components/ui/SurfaceCard';
+import {
+  MODULE_COLORS, STATUS_SUCCESS, STATUS_WARNING, STATUS_ERROR,
+  STATUS_INFO, STATUS_BLOCKER, OPACITY_15, OPACITY_30,
+} from '@/lib/chart-colors';
 
-const SYSTEMS_ACCENT = '#8b5cf6';
+const SYSTEMS_ACCENT = MODULE_COLORS.systems;
 
 // ── Stimulus type metadata ──
 
 const STIMULUS_META: Record<StimulusType, { label: string; icon: typeof Eye; color: string }> = {
-  perception_sight: { label: 'Sight', icon: Eye, color: '#60a5fa' },
-  perception_hearing: { label: 'Hearing', icon: Ear, color: '#fbbf24' },
-  perception_damage: { label: 'Damage Sense', icon: Crosshair, color: '#f87171' },
-  damage_event: { label: 'Damage Event', icon: AlertTriangle, color: '#fb923c' },
-  gameplay_tag: { label: 'Gameplay Tag', icon: Tag, color: '#4ade80' },
+  perception_sight: { label: 'Sight', icon: Eye, color: STATUS_INFO },
+  perception_hearing: { label: 'Hearing', icon: Ear, color: STATUS_WARNING },
+  perception_damage: { label: 'Damage Sense', icon: Crosshair, color: STATUS_ERROR },
+  damage_event: { label: 'Damage Event', icon: AlertTriangle, color: STATUS_BLOCKER },
+  gameplay_tag: { label: 'Gameplay Tag', icon: Tag, color: STATUS_SUCCESS },
   custom: { label: 'Custom', icon: Sparkles, color: '#c084fc' },
 };
 
 const STATUS_COLORS: Record<ScenarioStatus, string> = {
   draft: 'var(--text-muted)',
-  ready: '#60a5fa',
-  running: '#fbbf24',
-  passed: '#4ade80',
-  failed: '#f87171',
-  error: '#fb923c',
+  ready: STATUS_INFO,
+  running: STATUS_WARNING,
+  passed: STATUS_SUCCESS,
+  failed: STATUS_ERROR,
+  error: STATUS_BLOCKER,
 };
 
 // ── Props ──
@@ -103,9 +107,9 @@ export function AITestingSandbox({
           disabled={isGenerating || suite.scenarios.length === 0}
           className="flex items-center gap-1 px-2.5 py-1.5 rounded-md text-xs font-medium transition-all disabled:opacity-50"
           style={{
-            backgroundColor: '#4ade8015',
-            color: '#4ade80',
-            border: '1px solid #4ade8030',
+            backgroundColor: `${STATUS_SUCCESS}${OPACITY_15}`,
+            color: STATUS_SUCCESS,
+            border: `1px solid ${STATUS_SUCCESS}${OPACITY_30}`,
           }}
         >
           {isGenerating ? <Loader2 className="w-3 h-3 animate-spin" /> : <Play className="w-3 h-3" />}

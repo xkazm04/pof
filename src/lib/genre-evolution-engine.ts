@@ -314,6 +314,13 @@ const PATTERN_RULES: Record<GameplayPattern, PatternRule> = {
     if (!s.hasStealthMechanics) return null;
     return { confidence: 65, evidence: ['Stealth/detection system classes detected'] };
   },
+  'procedural-generation': (s) => {
+    if (!s.hasProceduralGeneration) return null;
+    const evidence: string[] = ['Procedural generation system detected'];
+    let conf = 60;
+    if (s.totalSourceFiles >= 20) { conf += 10; evidence.push('Substantial codebase for PCG integration'); }
+    return { confidence: Math.min(conf, 85), evidence };
+  },
 };
 
 export function detectPatterns(signals: TelemetrySignals): PatternDetection[] {

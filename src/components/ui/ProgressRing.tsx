@@ -1,5 +1,7 @@
 'use client';
 
+import { MODULE_COLORS } from '@/lib/chart-colors';
+
 interface ProgressRingProps {
   value: number;
   size?: number;
@@ -10,7 +12,7 @@ interface ProgressRingProps {
   isLoading?: boolean;
 }
 
-export function ProgressRing({ value, size = 48, strokeWidth = 4, color = '#00ff88', className = '', label, isLoading }: ProgressRingProps) {
+export function ProgressRing({ value, size = 48, strokeWidth = 4, color = MODULE_COLORS.setup, className = '', label, isLoading }: ProgressRingProps) {
   const radius = (size - strokeWidth) / 2;
   const circumference = radius * 2 * Math.PI;
   const offset = isLoading ? circumference * 0.75 : circumference - (value / 100) * circumference;

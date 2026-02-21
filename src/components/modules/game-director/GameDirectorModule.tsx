@@ -10,10 +10,11 @@ import { NewSessionPanel } from './NewSessionPanel';
 import { SessionDetail } from './SessionDetail';
 import { FindingsExplorer } from './FindingsExplorer';
 import { RegressionTrackerView } from './RegressionTrackerView';
+import { ACCENT_ORANGE } from '@/lib/chart-colors';
 
 type TabId = 'overview' | 'new-session' | 'findings' | 'regressions';
 
-const ACCENT = '#f97316'; // warm orange for the director
+const ACCENT = ACCENT_ORANGE; // warm orange for the director
 
 export function GameDirectorModule() {
   const director = useGameDirector();

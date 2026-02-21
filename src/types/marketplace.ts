@@ -1,4 +1,5 @@
 import type { FeatureStatus } from './feature-matrix';
+import type { SubModuleId } from './modules';
 
 // ── Asset Categories & Types ────────────────────────────────────────────────
 
@@ -55,7 +56,7 @@ export interface MarketplaceAsset {
 // ── Feature Gap ─────────────────────────────────────────────────────────────
 
 export interface FeatureGap {
-  moduleId: string;
+  moduleId: SubModuleId;
   moduleLabel: string;
   featureName: string;
   status: FeatureStatus;
@@ -92,7 +93,7 @@ export interface ScoredAsset {
 export interface IntegrationSpec {
   assetId: string;
   assetName: string;
-  moduleId: string;
+  moduleId: SubModuleId;
   /** Generated adapter header (.h) */
   adapterHeader: string;
   /** Generated adapter implementation (.cpp) */
@@ -145,7 +146,7 @@ export interface RecommendationResponse {
 
 export interface GenerateIntegrationRequest {
   assetId: string;
-  moduleId: string;
+  moduleId: SubModuleId;
   projectName: string;
   apiMacro: string;
   existingClasses: string[];

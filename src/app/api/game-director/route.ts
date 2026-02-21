@@ -1,4 +1,4 @@
-import { NextResponse } from 'next/server';
+import { apiSuccess, apiError } from '@/lib/api-utils';
 import {
   createSession,
   listSessions,
@@ -30,31 +30,31 @@ export async function GET(req: Request) {
 
     switch (action) {
       case 'list':
-        return NextResponse.json(listSessions());
+        return apiSuccess(listSessions());
 
       case 'get':
-        if (!sessionId) return NextResponse.json({ error: 'sessionId required' }, { status: 400 });
+        if (!sessionId) return apiError('sessionId required', 400);
         const session = getSession(sessionId);
-        if (!session) return NextResponse.json({ error: 'Session not found' }, { status: 404 });
-        return NextResponse.json(session);
+        if (!session) return apiError('Session not found', 404);
+        return apiSuccess(session);
 
       case 'findings':
-        if (!sessionId) return NextResponse.json({ error: 'sessionId required' }, { status: 400 });
-        return NextResponse.json(getFindings(sessionId));
+        if (!sessionId) return apiError('sessionId required', 400);
+        return apiSuccess(getFindings(sessionId));
 
       case 'events':
-        if (!sessionId) return NextResponse.json({ error: 'sessionId required' }, { status: 400 });
-        return NextResponse.json(getEvents(sessionId));
+        if (!sessionId) return apiError('sessionId required', 400);
+        return apiSuccess(getEvents(sessionId));
 
       case 'stats':
-        return NextResponse.json(getDirectorStats());
+        return apiSuccess(getDirectorStats());
 
       default:
-        return NextResponse.json({ error: `Unknown action: ${action}` }, { status: 400 });
+        return apiError(`Unknown action: ${action}`, 400);
     }
   } catch (err) {
     console.error('[game-director] GET error:', err);
-    return NextResponse.json({ error: String(err) }, { status: 500 });
+    return apiError(String(err));
   }
 }
 
@@ -69,13 +69,13 @@ export async function POST(req: Request) {
         const { name, buildPath, config } = body as CreateSessionPayload & { action: string };
         const id = `gd-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
         const session = createSession(id, name, buildPath, config);
-        return NextResponse.json(session);
+        return apiSuccess(session);
       }
 
       case 'update-status': {
         const { sessionId, status } = body as { action: string; sessionId: string; status: PlaytestStatus };
         updateSessionStatus(sessionId, status);
-        return NextResponse.json({ ok: true });
+        return apiSuccess({ ok: true });
       }
 
       case 'complete': {
@@ -88,38 +88,38 @@ export async function POST(req: Request) {
           findingsCount: number;
         };
         updateSessionSummary(sessionId, summary, durationMs, systemsTestedCount, findingsCount);
-        return NextResponse.json({ ok: true });
+        return apiSuccess({ ok: true });
       }
 
       case 'add-finding': {
         const { finding } = body as { action: string; finding: PlaytestFinding };
         addFinding(finding);
-        return NextResponse.json({ ok: true });
+        return apiSuccess({ ok: true });
       }
 
       case 'add-event': {
         const { event } = body as { action: string; event: DirectorEvent };
         addEvent(event);
-        return NextResponse.json({ ok: true });
+        return apiSuccess({ ok: true });
       }
 
       case 'simulate': {
         // Simulate a playtest session for demo/dev purposes
         const { sessionId } = body as { action: string; sessionId: string };
         const session = getSession(sessionId);
-        if (!session) return NextResponse.json({ error: 'Session not found' }, { status: 404 });
+        if (!session) return apiError('Session not found', 404);
 
         await simulatePlaytest(sessionId, session.config);
         const updatedSession = getSession(sessionId);
-        return NextResponse.json(updatedSession);
+        return apiSuccess(updatedSession);
       }
 
       default:
-        return NextResponse.json({ error: `Unknown action: ${action}` }, { status: 400 });
+        return apiError(`Unknown action: ${action}`, 400);
     }
   } catch (err) {
     console.error('[game-director] POST error:', err);
-    return NextResponse.json({ error: String(err) }, { status: 500 });
+    return apiError(String(err));
   }
 }
 
@@ -128,12 +128,12 @@ export async function DELETE(req: Request) {
   try {
     const { searchParams } = new URL(req.url);
     const sessionId = searchParams.get('sessionId');
-    if (!sessionId) return NextResponse.json({ error: 'sessionId required' }, { status: 400 });
+    if (!sessionId) return apiError('sessionId required', 400);
     deleteSession(sessionId);
-    return NextResponse.json({ ok: true });
+    return apiSuccess({ ok: true });
   } catch (err) {
     console.error('[game-director] DELETE error:', err);
-    return NextResponse.json({ error: String(err) }, { status: 500 });
+    return apiError(String(err));
   }
 }
 

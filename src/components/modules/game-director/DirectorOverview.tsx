@@ -8,16 +8,19 @@ import {
 } from 'lucide-react';
 import type { PlaytestSession } from '@/types/game-director';
 import type { DirectorStats } from '@/lib/game-director-db';
+import {
+  ACCENT_ORANGE, STATUS_SUCCESS, STATUS_WARNING, STATUS_ERROR, STATUS_INFO,
+} from '@/lib/chart-colors';
 
-const ACCENT = '#f97316';
+const ACCENT = ACCENT_ORANGE;
 
 const STATUS_CONFIG: Record<string, { color: string; label: string }> = {
   configuring: { color: 'var(--text-muted)', label: 'Configuring' },
-  launching: { color: '#fbbf24', label: 'Launching' },
-  playing: { color: '#60a5fa', label: 'Playing' },
+  launching: { color: STATUS_WARNING, label: 'Launching' },
+  playing: { color: STATUS_INFO, label: 'Playing' },
   analyzing: { color: '#c084fc', label: 'Analyzing' },
-  complete: { color: '#4ade80', label: 'Complete' },
-  failed: { color: '#f87171', label: 'Failed' },
+  complete: { color: STATUS_SUCCESS, label: 'Complete' },
+  failed: { color: STATUS_ERROR, label: 'Failed' },
 };
 
 interface DirectorOverviewProps {
@@ -58,21 +61,21 @@ export function DirectorOverview({
           label="Findings"
           value={stats?.totalFindings ?? 0}
           icon={Target}
-          color="#60a5fa"
+          color={STATUS_INFO}
           delay={0.05}
         />
         <StatCard
           label="Critical Issues"
           value={stats?.criticalFindings ?? 0}
           icon={AlertTriangle}
-          color="#f87171"
+          color={STATUS_ERROR}
           delay={0.1}
         />
         <StatCard
           label="Avg Score"
           value={stats?.avgScore != null ? `${stats.avgScore}/100` : '—'}
           icon={TrendingUp}
-          color="#4ade80"
+          color={STATUS_SUCCESS}
           delay={0.15}
         />
       </div>
@@ -101,7 +104,7 @@ export function DirectorOverview({
                 <circle
                   cx="32" cy="32" r="28"
                   fill="none"
-                  stroke={stats.avgScore >= 70 ? '#4ade80' : stats.avgScore >= 40 ? '#fbbf24' : '#f87171'}
+                  stroke={stats.avgScore >= 70 ? STATUS_SUCCESS : stats.avgScore >= 40 ? STATUS_WARNING : STATUS_ERROR}
                   strokeWidth="4"
                   strokeDasharray={`${(stats.avgScore / 100) * 175.9} 175.9`}
                   strokeLinecap="round"
@@ -113,9 +116,9 @@ export function DirectorOverview({
               </span>
             </div>
             <div className="flex-1 space-y-1.5">
-              <ScoreBar label="Completed" value={stats.completedSessions} max={stats.totalSessions} color="#4ade80" />
-              <ScoreBar label="Findings" value={stats.totalFindings} max={Math.max(stats.totalFindings, 20)} color="#60a5fa" />
-              <ScoreBar label="Critical" value={stats.criticalFindings} max={Math.max(stats.totalFindings, 5)} color="#f87171" />
+              <ScoreBar label="Completed" value={stats.completedSessions} max={stats.totalSessions} color={STATUS_SUCCESS} />
+              <ScoreBar label="Findings" value={stats.totalFindings} max={Math.max(stats.totalFindings, 20)} color={STATUS_INFO} />
+              <ScoreBar label="Critical" value={stats.criticalFindings} max={Math.max(stats.totalFindings, 5)} color={STATUS_ERROR} />
             </div>
           </div>
         </motion.div>
@@ -244,7 +247,7 @@ function SessionCard({
             <circle
               cx="18" cy="18" r="15"
               fill="none"
-              stroke={session.summary.overallScore >= 70 ? '#4ade80' : session.summary.overallScore >= 40 ? '#fbbf24' : '#f87171'}
+              stroke={session.summary.overallScore >= 70 ? STATUS_SUCCESS : session.summary.overallScore >= 40 ? STATUS_WARNING : STATUS_ERROR}
               strokeWidth="2.5"
               strokeDasharray={`${(session.summary.overallScore / 100) * 94.2} 94.2`}
               strokeLinecap="round"

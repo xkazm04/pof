@@ -8,6 +8,8 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import type { SurfaceType, RenderFeature } from './MaterialParameterConfigurator';
+import { MODULE_COLORS } from '@/lib/constants';
+import { ACCENT_VIOLET, STATUS_BLOCKER, STATUS_IMPROVED, ACCENT_ORANGE, STATUS_SUCCESS, STATUS_WARNING } from '@/lib/chart-colors';
 
 // ── Types ──
 
@@ -46,8 +48,6 @@ export interface StyleTransferConfig {
 
 // ── Constants ──
 
-const ACCENT = '#f59e0b';
-
 const SURFACE_LABELS: Record<SurfaceType, string> = {
   metal: 'Metal',
   cloth: 'Cloth',
@@ -61,12 +61,12 @@ const SURFACE_LABELS: Record<SurfaceType, string> = {
 
 const SURFACE_COLORS: Record<SurfaceType, string> = {
   metal: '#94a3b8',
-  cloth: '#a78bfa',
-  skin: '#fb923c',
-  glass: '#38bdf8',
+  cloth: ACCENT_VIOLET,
+  skin: STATUS_BLOCKER,
+  glass: STATUS_IMPROVED,
   water: '#22d3ee',
-  emissive: '#f97316',
-  foliage: '#22c55e',
+  emissive: ACCENT_ORANGE,
+  foliage: STATUS_SUCCESS,
   stone: '#78716c',
 };
 
@@ -210,7 +210,7 @@ export function MaterialStyleTransfer({ onGenerate, isGenerating }: MaterialStyl
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <ImagePlus className="w-4 h-4" style={{ color: ACCENT }} />
+          <ImagePlus className="w-4 h-4" style={{ color: MODULE_COLORS.content }} />
           <div>
             <h3 className="text-xs font-semibold text-text">Style Transfer</h3>
             <p className="text-2xs text-text-muted">
@@ -237,8 +237,8 @@ export function MaterialStyleTransfer({ onGenerate, isGenerating }: MaterialStyl
       <div
         className="relative rounded-xl border-2 border-dashed transition-colors overflow-hidden"
         style={{
-          borderColor: imageDataUrl ? `${ACCENT}40` : 'var(--border)',
-          backgroundColor: imageDataUrl ? `${ACCENT}04` : 'var(--surface-deep)',
+          borderColor: imageDataUrl ? `${MODULE_COLORS.content}40` : 'var(--border)',
+          backgroundColor: imageDataUrl ? `${MODULE_COLORS.content}04` : 'var(--surface-deep)',
         }}
         onDragOver={(e) => e.preventDefault()}
         onDrop={handleDrop}
@@ -332,9 +332,9 @@ export function MaterialStyleTransfer({ onGenerate, isGenerating }: MaterialStyl
           disabled={isAnalyzing || (!imageDataUrl && !referenceDescription.trim())}
           className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-xs font-medium transition-all disabled:opacity-50"
           style={{
-            backgroundColor: `${ACCENT}15`,
-            color: ACCENT,
-            border: `1px solid ${ACCENT}30`,
+            backgroundColor: `${MODULE_COLORS.content}15`,
+            color: MODULE_COLORS.content,
+            border: `1px solid ${MODULE_COLORS.content}30`,
           }}
         >
           {isAnalyzing ? (
@@ -424,9 +424,9 @@ export function MaterialStyleTransfer({ onGenerate, isGenerating }: MaterialStyl
             {/* Property bars */}
             <div className="grid grid-cols-2 gap-2">
               <PropertyBar label="Roughness" value={effectiveAnalysis!.roughness} max={1} color="#94a3b8" icon={Gem} />
-              <PropertyBar label="Metallic" value={effectiveAnalysis!.metallic} max={1} color="#a78bfa" icon={Sparkles} />
-              <PropertyBar label="Emissive" value={effectiveAnalysis!.emissiveIntensity} max={20} color="#fbbf24" icon={Sun} />
-              <PropertyBar label="Subsurface" value={effectiveAnalysis!.subsurfacePresence} max={1} color="#fb923c" icon={Droplets} />
+              <PropertyBar label="Metallic" value={effectiveAnalysis!.metallic} max={1} color={ACCENT_VIOLET} icon={Sparkles} />
+              <PropertyBar label="Emissive" value={effectiveAnalysis!.emissiveIntensity} max={20} color={STATUS_WARNING} icon={Sun} />
+              <PropertyBar label="Subsurface" value={effectiveAnalysis!.subsurfacePresence} max={1} color={STATUS_BLOCKER} icon={Droplets} />
             </div>
 
             {/* Suggestions */}
@@ -532,9 +532,9 @@ export function MaterialStyleTransfer({ onGenerate, isGenerating }: MaterialStyl
                 disabled={isGenerating}
                 className="flex-1 flex items-center justify-center gap-2 px-4 py-2 rounded-lg text-xs font-medium transition-all disabled:opacity-50"
                 style={{
-                  backgroundColor: `${ACCENT}15`,
-                  color: ACCENT,
-                  border: `1px solid ${ACCENT}30`,
+                  backgroundColor: `${MODULE_COLORS.content}15`,
+                  color: MODULE_COLORS.content,
+                  border: `1px solid ${MODULE_COLORS.content}30`,
                 }}
               >
                 {isGenerating ? (

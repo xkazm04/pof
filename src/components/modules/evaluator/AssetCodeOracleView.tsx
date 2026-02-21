@@ -17,13 +17,14 @@ import type {
   ViolationType,
   ViolationSeverity,
 } from '@/lib/asset-code-oracle';
+import { STATUS_ERROR, STATUS_WARNING, STATUS_INFO, STATUS_SUCCESS, MODULE_COLORS } from '@/lib/chart-colors';
 
 // ── Constants ───────────────────────────────────────────────────────────────
 
 const SEVERITY_CONFIG: Record<ViolationSeverity, { icon: typeof AlertCircle; color: string; variant: 'error' | 'warning' | 'default' }> = {
-  error: { icon: AlertCircle, color: '#f87171', variant: 'error' },
-  warning: { icon: AlertTriangle, color: '#fbbf24', variant: 'warning' },
-  info: { icon: Info, color: '#60a5fa', variant: 'default' },
+  error: { icon: AlertCircle, color: STATUS_ERROR, variant: 'error' },
+  warning: { icon: AlertTriangle, color: STATUS_WARNING, variant: 'warning' },
+  info: { icon: Info, color: STATUS_INFO, variant: 'default' },
 };
 
 const TYPE_LABELS: Record<ViolationType, string> = {
@@ -196,9 +197,9 @@ export function AssetCodeOracleView() {
               {/* Filter chips */}
               <div className="flex items-center gap-1.5">
                 <FilterChip label="All" count={result.violations.length} active={filterSeverity === 'all'} onClick={() => setFilterSeverity('all')} />
-                <FilterChip label="Errors" count={severityCounts.error} active={filterSeverity === 'error'} onClick={() => setFilterSeverity('error')} color="#f87171" />
-                <FilterChip label="Warnings" count={severityCounts.warning} active={filterSeverity === 'warning'} onClick={() => setFilterSeverity('warning')} color="#fbbf24" />
-                <FilterChip label="Info" count={severityCounts.info} active={filterSeverity === 'info'} onClick={() => setFilterSeverity('info')} color="#60a5fa" />
+                <FilterChip label="Errors" count={severityCounts.error} active={filterSeverity === 'error'} onClick={() => setFilterSeverity('error')} color={STATUS_ERROR} />
+                <FilterChip label="Warnings" count={severityCounts.warning} active={filterSeverity === 'warning'} onClick={() => setFilterSeverity('warning')} color={STATUS_WARNING} />
+                <FilterChip label="Info" count={severityCounts.info} active={filterSeverity === 'info'} onClick={() => setFilterSeverity('info')} color={STATUS_INFO} />
               </div>
 
               {/* Violations list */}
@@ -261,7 +262,7 @@ function StatCard({ label, value, ring }: { label: string; value: string | numbe
             value={ring}
             size={28}
             strokeWidth={3}
-            color={ring >= 80 ? '#4ade80' : ring >= 50 ? '#fbbf24' : '#f87171'}
+            color={ring >= 80 ? STATUS_SUCCESS : ring >= 50 ? STATUS_WARNING : STATUS_ERROR}
           />
         )}
         <div>

@@ -1,6 +1,7 @@
 'use client';
 
 import type { LucideIcon } from 'lucide-react';
+import { MODULE_COLORS } from '@/lib/chart-colors';
 
 interface EmptyStateProps {
   icon: LucideIcon;
@@ -54,7 +55,7 @@ export function EmptyState({
               className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-medium transition-colors"
               style={{
                 backgroundColor: action.color ? `${action.color}14` : 'var(--accent-medium)',
-                color: action.color ?? '#00ff88',
+                color: action.color ?? MODULE_COLORS.setup,
                 border: `1px solid ${action.color ? `${action.color}38` : 'var(--accent-strong)'}`,
               }}
             >

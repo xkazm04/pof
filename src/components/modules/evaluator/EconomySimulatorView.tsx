@@ -21,6 +21,7 @@ import type {
   PlayerSnapshot,
   ItemCategory,
 } from '@/types/economy-simulator';
+import { MODULE_COLORS, ACCENT_CYAN } from '@/lib/chart-colors';
 
 // ── Constants ───────────────────────────────────────────────────────────────
 
@@ -43,12 +44,12 @@ const ALERT_TYPE_LABELS: Record<string, string> = {
 };
 
 const CATEGORY_COLORS: Record<ItemCategory, string> = {
-  weapon: '#ef4444',
-  armor: '#3b82f6',
+  weapon: MODULE_COLORS.evaluator,
+  armor: MODULE_COLORS.core,
   consumable: '#10b981',
-  material: '#f59e0b',
+  material: MODULE_COLORS.content,
   gem: '#a855f7',
-  recipe: '#06b6d4',
+  recipe: ACCENT_CYAN,
 };
 
 const PHILOSOPHY_LABELS = {

@@ -1,4 +1,5 @@
 import { getDb } from './db';
+import type { SubModuleId } from '@/types/modules';
 import type {
   ImplementationPattern,
   PatternRow,
@@ -64,7 +65,7 @@ function rowToPattern(row: PatternRow): ImplementationPattern {
   return {
     id: row.id,
     title: row.title,
-    moduleId: row.module_id,
+    moduleId: row.module_id as SubModuleId,
     category: row.category as PatternCategory,
     tags: safeParse<string[]>(row.tags, []),
     description: row.description,
@@ -142,7 +143,7 @@ export function getAllPatterns(): ImplementationPattern[] {
   return rows.map(rowToPattern);
 }
 
-export function getPatternsByModule(moduleId: string): ImplementationPattern[] {
+export function getPatternsByModule(moduleId: SubModuleId): ImplementationPattern[] {
   ensurePatternLibraryTable();
   const rows = getDb()
     .prepare('SELECT * FROM pattern_library WHERE module_id = ? ORDER BY success_rate DESC')
@@ -233,7 +234,7 @@ export function getPatternDashboard(): PatternLibraryDashboard {
   }
 
   const topModules = [...moduleCounts.entries()]
-    .map(([moduleId, patternCount]) => ({ moduleId, patternCount }))
+    .map(([moduleId, patternCount]) => ({ moduleId: moduleId as SubModuleId, patternCount }))
     .sort((a, b) => b.patternCount - a.patternCount)
     .slice(0, 10);
 
@@ -254,7 +255,7 @@ export function getPatternDashboard(): PatternLibraryDashboard {
 // ── Suggestion engine ────────────────────────────────────────────────────────
 
 export function suggestPatterns(
-  moduleId: string,
+  moduleId: SubModuleId,
   checklistLabel?: string,
 ): PatternSuggestion[] {
   const patterns = getPatternsByModule(moduleId);
@@ -356,7 +357,7 @@ function rowToAntiPattern(row: AntiPatternRow): AntiPattern {
   return {
     id: row.id,
     title: row.title,
-    moduleId: row.module_id,
+    moduleId: row.module_id as SubModuleId,
     category: row.category as PatternCategory,
     tags: safeParse<string[]>(row.tags, []),
     description: row.description,
@@ -422,7 +423,7 @@ export function getAllAntiPatterns(): AntiPattern[] {
   return rows.map(rowToAntiPattern);
 }
 
-export function getAntiPatternsByModule(moduleId: string): AntiPattern[] {
+export function getAntiPatternsByModule(moduleId: SubModuleId): AntiPattern[] {
   ensureAntiPatternTable();
   const rows = getDb()
     .prepare('SELECT * FROM anti_patterns WHERE module_id = ? ORDER BY failure_rate DESC')
@@ -434,7 +435,7 @@ export function getAntiPatternsByModule(moduleId: string): AntiPattern[] {
 
 export function checkPromptForAntiPatterns(
   prompt: string,
-  moduleId?: string,
+  moduleId?: SubModuleId,
 ): AntiPatternWarning[] {
   const antiPatterns = moduleId
     ? getAntiPatternsByModule(moduleId)

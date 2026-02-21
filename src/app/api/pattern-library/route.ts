@@ -11,6 +11,7 @@ import {
 } from '@/lib/pattern-library-db';
 import { extractPatterns, extractAntiPatterns } from '@/lib/pattern-extractor';
 import type { PatternSearchParams } from '@/types/pattern-library';
+import type { SubModuleId } from '@/types/modules';
 
 /**
  * GET /api/pattern-library
@@ -53,7 +54,7 @@ export async function GET(req: NextRequest) {
       const moduleId = searchParams.get('moduleId');
       if (!moduleId) return apiError('moduleId is required', 400);
       const label = searchParams.get('label') ?? undefined;
-      const suggestions = suggestPatterns(moduleId, label);
+      const suggestions = suggestPatterns(moduleId as SubModuleId, label);
       return apiSuccess({ suggestions });
     }
 
@@ -74,7 +75,7 @@ export async function GET(req: NextRequest) {
       const prompt = searchParams.get('prompt');
       if (!prompt) return apiError('prompt is required', 400);
       const moduleId = searchParams.get('moduleId') ?? undefined;
-      const warnings = checkPromptForAntiPatterns(prompt, moduleId);
+      const warnings = checkPromptForAntiPatterns(prompt, moduleId as SubModuleId | undefined);
       return apiSuccess({ warnings });
     }
 

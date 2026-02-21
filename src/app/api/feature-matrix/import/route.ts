@@ -1,18 +1,20 @@
-import { NextRequest } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import fs from 'fs';
 import path from 'path';
 import { z } from 'zod';
 import { upsertFeatures } from '@/lib/feature-matrix-db';
 import { MODULE_FEATURE_DEFINITIONS } from '@/lib/feature-definitions';
+import { checkIdempotencyKey, saveIdempotencyResult } from '@/lib/request-log';
 import type { CLIFeatureReport } from '@/types/feature-matrix';
 import { apiSuccess, apiError } from '@/lib/api-utils';
+import type { SubModuleId } from '@/types/modules';
 
 // ── Zod schema for a single feature entry ──
 
 const featureEntrySchema = z.object({
   featureName: z.string().min(1, 'featureName must be non-empty'),
   category: z.string().default('general'),
-  status: z.enum(['implemented', 'partial', 'missing', 'unknown']),
+  status: z.enum(['implemented', 'improved', 'partial', 'missing', 'unknown']),
   description: z.string().default(''),
   filePaths: z.array(z.string()).default([]),
   reviewNotes: z.string().default(''),
@@ -40,7 +42,7 @@ interface ValidationResult {
  * Each entry is validated individually so one bad entry doesn't reject the whole batch.
  * Features with hallucinated names (not in definitions) are rejected.
  */
-function validateFeatures(moduleId: string, rawFeatures: unknown[]): ValidationResult {
+function validateFeatures(moduleId: SubModuleId, rawFeatures: unknown[]): ValidationResult {
   const definitions = MODULE_FEATURE_DEFINITIONS[moduleId];
   const knownNames = definitions
     ? new Set(definitions.map(d => d.featureName))
@@ -94,13 +96,27 @@ function validateFeatures(moduleId: string, rawFeatures: unknown[]): ValidationR
  * Valid features are imported; invalid ones are reported in the response.
  */
 export async function POST(request: NextRequest) {
+  // Idempotency check: if the client sent an Idempotency-Key header, check for replay
+  const idempotencyKey = request.headers.get('Idempotency-Key');
+  if (idempotencyKey) {
+    const cached = checkIdempotencyKey(idempotencyKey);
+    if (cached) {
+      return new NextResponse(cached.responseBody, {
+        status: cached.statusCode,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
+  }
+
   try {
     const body = await request.json();
-    const { moduleId } = body;
+    const { moduleId: rawModuleId } = body;
 
-    if (!moduleId || typeof moduleId !== 'string') {
+    if (!rawModuleId || typeof rawModuleId !== 'string') {
       return apiError('moduleId is required', 400);
     }
+
+    const moduleId = rawModuleId as SubModuleId;
 
     let report: CLIFeatureReport;
 
@@ -156,10 +172,16 @@ export async function POST(request: NextRequest) {
 
     upsertFeatures(moduleId, features);
 
-    return apiSuccess({
+    const responseData = {
       imported: accepted.length,
       ...(rejected.length > 0 ? { rejected } : {}),
-    });
+    };
+
+    if (idempotencyKey) {
+      saveIdempotencyResult(idempotencyKey, '/api/feature-matrix/import', 200, responseData);
+    }
+
+    return apiSuccess(responseData);
   } catch (error) {
     console.error('Feature matrix import error:', error);
     return apiError(error instanceof Error ? error.message : 'Failed to import features', 500);

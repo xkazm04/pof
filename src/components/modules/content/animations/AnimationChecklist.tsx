@@ -1,15 +1,16 @@
 'use client';
 
 import { useState, useCallback } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import {
-  Download, FolderInput, Workflow, Clapperboard, Bell,
-  ExternalLink, Check, Zap, ChevronDown, ChevronRight,
+  Download, FolderInput, Workflow, Clapperboard, Bell, Terminal,
+  ExternalLink, Check, Zap, ChevronDown, ChevronRight, ArrowRight
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 
 // ── Types ──
 
-export type StepType = 'manual' | 'code';
+export type StepType = 'manual' | 'code' | 'auto';
 
 export interface ChecklistStep {
   id: string;
@@ -28,8 +29,60 @@ export interface ChecklistStep {
 
 export const ANIMATION_STEPS: ChecklistStep[] = [
   {
-    id: 'step-mixamo-download',
+    id: 'step-commandlet-assets',
     number: 1,
+    title: 'Run Asset Automation Commandlet',
+    type: 'auto',
+    icon: Terminal,
+    description: 'Headless creation of blend spaces + montage shells via UAnimAssetCommandlet (verified UE 5.7.3, ~0.06s for 8 assets).',
+    details: [
+      'Run: UnrealEditor-Cmd.exe PoF.uproject -run=AnimAsset -nopause -unattended -nosplash',
+      'Creates BS1D_Locomotion (1D Blend Space, Speed axis 0-600, GridNum=2) at /Game/Characters/Player/Animations/.',
+      'Creates AM_MeleeCombo (3 sections: Attack1→Attack2→Attack3 linked via NextSectionName) in Montages/ subfolder.',
+      'Creates AM_Dodge_Forward, AM_Dodge_Backward, AM_Dodge_Left, AM_Dodge_Right (each with single Dodge section).',
+      'Creates AM_HitReact and AM_Death montage shells.',
+      'All 8 .uasset files are valid and openable in the editor. Skeleton + AnimSequences must be assigned in-editor afterward.',
+      'Technical: BlendSpace uses FProperty reflection on protected BlendParameters. Montages use NewObject<UAnimMontage> + CompositeSections. SavePackage returns bool in UE 5.7 (not FSavePackageResultStruct).',
+    ],
+    prompt: `Create a UAnimAssetCommandlet in a PoFEditor module for headless animation asset creation.
+
+## VERIFIED APPROACH (UE 5.7.3)
+
+### Module Setup
+- Separate PoFEditor module (Type: Editor in .uproject, added to EditorTarget.cs)
+- Build.cs depends on: Core, CoreUObject, Engine, UnrealEd, PoF (runtime module), AssetTools, ContentBrowser, Niagara
+
+### BlendSpace Creation (KEY FINDING)
+- UBlendSpace1D::GetBlendParameter() returns CONST — cannot set axis via getter
+- BlendParameters[3] is a protected UPROPERTY(EditAnywhere)
+- SOLUTION: Use FProperty reflection:
+  \`\`\`cpp
+  FProperty* Prop = UBlendSpace::StaticClass()->FindPropertyByName("BlendParameters");
+  FBlendParameter* Params = Prop->ContainerPtrToValuePtr<FBlendParameter>(BlendSpace);
+  Params[0].DisplayName = TEXT("Speed");
+  Params[0].Min = 0.f; Params[0].Max = 600.f; Params[0].GridNum = 2;
+  \`\`\`
+
+### Montage Creation
+- NewObject<UAnimMontage>(Package, ..., RF_Public | RF_Standalone)
+- SlotAnimTracks[0].SlotName = FName("DefaultSlot")
+- CompositeSections: first section renamed from default, subsequent added via FCompositeSection with SetTime()
+- Link combo: CompositeSections[i].NextSectionName = Sections[i+1]
+
+### Saving (KEY FINDING)
+- UPackage::SavePackage(Package, Asset, *FilePath, SaveArgs) returns BOOL in UE 5.7
+- Do NOT use FSavePackageResultStruct — that's the Save() method, not SavePackage()
+- Must create directory tree first via IPlatformFile::CreateDirectoryTree
+
+### Assets Created
+1. BS1D_Locomotion — /Game/Characters/Player/Animations/
+2. AM_MeleeCombo (Attack1/2/3) — /Game/Characters/Player/Animations/Montages/
+3. AM_Dodge_Forward, _Backward, _Left, _Right — same folder
+4. AM_HitReact, AM_Death — same folder`,
+  },
+  {
+    id: 'step-mixamo-download',
+    number: 2,
     title: 'Download Character from Mixamo',
     type: 'manual',
     icon: Download,
@@ -38,9 +91,14 @@ export const ANIMATION_STEPS: ChecklistStep[] = [
       'Go to mixamo.com and sign in with your Adobe account.',
       'Choose a character or upload your own FBX mesh.',
       'Select these essential animations: Idle, Walk, Run, Jump Start, Falling, Landing.',
-      'For each animation: set Format to "FBX Binary", Skin to "With Skin" (first only), then "Without Skin" for additional anims.',
-      'Use 30 FPS and check "In Place" for locomotion animations to enable root motion control in UE5.',
-      'Download each animation as a separate FBX file.',
+      'For combat: 3-hit sword combo, dodge roll, hit reaction, death animation.',
+      'First download (character mesh): Format "FBX Binary", Skin "With Skin" — this creates the Skeleton asset in UE5.',
+      'All subsequent animation downloads: Skin "Without Skin" to reuse the same skeleton and reduce file size.',
+      'Check "In Place" for ALL locomotion animations (Idle, Walk, Run) — root motion is controlled in UE5 via CharacterMovementComponent.',
+      'For attack/dodge anims: leave "In Place" unchecked if they have meaningful root translation you want to preserve.',
+      'Use 30 FPS. Download each animation as a separate FBX file.',
+      'Note: Mixamo uses "mixamorig:" bone prefix (e.g., mixamorig:Hips) — this is handled during UE5 import.',
+      'Advanced: For bulk downloads, tools like MixamoHarvester (Python, multithreaded) can batch-download all animations. These are unofficial and may hit rate limits (HTTP 429).',
     ],
     links: [
       { label: 'Open Mixamo', url: 'https://www.mixamo.com/' },
@@ -49,36 +107,42 @@ export const ANIMATION_STEPS: ChecklistStep[] = [
   },
   {
     id: 'step-ue5-import',
-    number: 2,
-    title: 'Import into UE5',
+    number: 3,
+    title: 'Import into UE5 & Assign to Generated Assets',
     type: 'manual',
     icon: FolderInput,
-    description: 'Import the Mixamo FBX files into your UE5 project with correct settings.',
+    description: 'Import Mixamo FBX with bone prefix handling, optionally retarget, then assign to commandlet-generated assets.',
     details: [
-      'In UE5 Content Browser, create folders: Content/Characters/Mixamo/Mesh and Content/Characters/Mixamo/Animations.',
       'Import the character FBX (with skin) first → this creates the Skeleton asset.',
-      'Import settings: Skeletal Mesh = true, Import Animations = true, Skeleton = None (auto-create).',
-      'For each animation FBX: Import → select the same Skeleton asset → Import Animations = true, Import Mesh = false.',
-      'Verify: open each animation asset and check it plays correctly on the skeleton.',
-      'Optional: right-click Skeleton → "Retarget" to use with the UE5 Mannequin if you want IK retargeting.',
+      'IMPORTANT: Strip the "mixamorig:" bone prefix on import. In FBX Import Options, the prefix is auto-stripped by UE5 when importing Mixamo FBX — verify bone names show as "Hips", "Spine", etc. (not "mixamorig:Hips").',
+      'Import each animation FBX using the same Skeleton asset (Import Animations = true, Import Mesh = false).',
+      'If retargeting to a different skeleton: use IK Retargeter with Python API — auto_map_chains(FUZZY) handles Mixamo naming. Batch retarget via IKRetargetBatchOperation.duplicate_and_retarget().',
+      'For in-place Mixamo locomotion: root motion is driven by CharacterMovementComponent. For attacks/dodges with root translation: use RootMotionGeneratorOp to extract root motion from hip bone.',
+      'Open BS1D_Locomotion (generated by commandlet): assign Idle at 0, Walk at 200, Run at 600.',
+      'Open AM_MeleeCombo: set the Skeleton, add attack AnimSequences to each of the 3 sections.',
+      'Open AM_Dodge_* montages: set Skeleton, add dodge AnimSequences. Enable root motion if animations have it.',
+      'Open AM_HitReact and AM_Death: set Skeleton, add corresponding AnimSequences.',
+      'Add Anim Notifies to montage timelines (ComboWindow, HitDetection, SpawnVFX, PlaySound) — this requires the editor.',
     ],
     links: [
       { label: 'FBX Import Docs', url: 'https://dev.epicgames.com/documentation/en-us/unreal-engine/fbx-import-options-reference' },
+      { label: 'IK Retargeter Python API', url: 'https://dev.epicgames.com/documentation/en-us/unreal-engine/using-python-to-create-and-edit-ik-retargeter-assets-in-unreal-engine' },
     ],
   },
   {
     id: 'step-animbp',
-    number: 3,
-    title: 'Create AnimBP with Locomotion',
+    number: 4,
+    title: 'Create AnimBP with Locomotion (Editor Only)',
     type: 'code',
     icon: Workflow,
-    description: 'Generate a C++ AnimInstance with locomotion blend space and state machine.',
+    description: 'C++ AnimInstance is automatable, but the AnimBP state machine graph requires the editor.',
     details: [
-      'Creates UAnimInstance subclass with Speed, Direction, IsInAir, IsFalling variables.',
-      'Locomotion blend space: Idle → Walk → Run driven by movement speed.',
-      'State machine with states: Locomotion, Jump, Fall, Land.',
-      'NativeUpdateAnimation() pulls values from the owning character\'s movement component.',
-      'Fully C++-driven — no Blueprint graph needed.',
+      'C++ UARPGAnimInstance already exists with Speed, Direction, IsInAir, bIsDodging, bIsAttacking, etc.',
+      'Blend space asset (BS1D_Locomotion) already created by commandlet — just needs sample anims assigned.',
+      'AnimBP state machine CANNOT be created programmatically in UE 5.7 — it requires the editor AnimGraph.',
+      'Create AnimBP in editor: right-click Skeleton > Create > Anim Blueprint, parent to UARPGAnimInstance.',
+      'Wire states: Locomotion (BS1D), Attacking, Dodging, HitReact, Death. Transitions use C++ variables.',
+      'This is the ONE step that truly requires manual editor work for animation setup.',
     ],
     prompt: `Create a complete C++ Animation Blueprint system:
 
@@ -108,17 +172,17 @@ export const ANIMATION_STEPS: ChecklistStep[] = [
   },
   {
     id: 'step-montages',
-    number: 4,
+    number: 5,
     title: 'Set Up Action Montages',
     type: 'code',
     icon: Clapperboard,
-    description: 'Generate montage system for attacks, dodge, hit reactions, and death.',
+    description: 'Montage shells created by commandlet. This step adds the C++ montage manager and combo logic.',
     details: [
-      'Montage manager component for playing/stopping montages with priorities.',
-      'Attack combo: 3-section montage with section advancement on input.',
-      'Dodge roll montage with root motion and invulnerability window.',
-      'Hit reaction montage with directional variants (front, back, left, right).',
-      'Death montage with ragdoll blend-out.',
+      'Montage .uasset shells already created by Step 1 commandlet (AM_MeleeCombo, AM_Dodge_*, AM_HitReact, AM_Death).',
+      'This step generates the C++ montage manager component for playing/stopping with priorities.',
+      'Attack combo: section advancement via Montage_JumpToSection during combo window.',
+      'Dodge: directional montage selection already in AARPGCharacterBase::GetDodgeMontage().',
+      'Hit reaction + death: montage references assigned via UPROPERTY in character class.',
     ],
     prompt: `Create a complete UE5 C++ montage system for combat animations:
 
@@ -153,7 +217,7 @@ export const ANIMATION_STEPS: ChecklistStep[] = [
   },
   {
     id: 'step-notifies',
-    number: 5,
+    number: 6,
     title: 'Add Animation Notifies',
     type: 'code',
     icon: Bell,
@@ -205,7 +269,12 @@ export const ANIMATION_STEPS: ChecklistStep[] = [
 
 // ── Component ──
 
-const ACCENT = '#a78bfa';
+import {
+  ACCENT_VIOLET, ACCENT_CYAN, STATUS_SUCCESS, MODULE_COLORS,
+  OPACITY_10, OPACITY_12, OPACITY_15, OPACITY_20, OPACITY_30,
+} from '@/lib/chart-colors';
+
+const ACCENT = ACCENT_VIOLET;
 
 interface AnimationChecklistProps {
   onGenerate: (step: ChecklistStep) => void;
@@ -222,34 +291,53 @@ export function AnimationChecklist({ onGenerate, isGenerating, completedSteps, o
   }, []);
 
   const completedCount = ANIMATION_STEPS.filter((s) => completedSteps.has(s.id)).length;
+  const progressPercent = (completedCount / ANIMATION_STEPS.length) * 100;
 
   return (
-    <div className="w-full space-y-4">
+    <div className="w-full max-w-4xl mx-auto p-6 bg-[#03030a] rounded-2xl border border-violet-900/30 relative overflow-hidden shadow-[inset_0_0_80px_rgba(167,139,250,0.05)]">
+      {/* Background Effects */}
+      <div className="absolute inset-0 pointer-events-none opacity-[0.03]" style={{ backgroundImage: `linear-gradient(${ACCENT} 1px, transparent 1px), linear-gradient(90deg, ${ACCENT} 1px, transparent 1px)`, backgroundSize: '32px 32px' }} />
+      <div className="absolute top-0 right-0 w-64 h-64 bg-violet-600/10 blur-[100px] rounded-full pointer-events-none" />
+
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <Workflow className="w-4 h-4" style={{ color: ACCENT }} />
+      <div className="flex items-center justify-between relative z-10 mb-8 pb-4 border-b border-violet-900/40">
+        <div className="flex items-center gap-3">
+          <div className="p-2.5 rounded-xl grid place-items-center bg-violet-950/50 border border-violet-800/50 shadow-[0_0_15px_rgba(167,139,250,0.15)] overflow-hidden relative">
+            <Workflow className="w-5 h-5 text-violet-400 relative z-10" />
+            <div className="absolute inset-0 bg-gradient-to-t from-violet-500/20 to-transparent" />
+          </div>
           <div>
-            <h3 className="text-xs font-semibold text-text">Animation Setup Checklist</h3>
-            <p className="text-2xs text-text-muted">
-              {completedCount}/{ANIMATION_STEPS.length} steps — Mixamo → AnimBP → Montages → Notifies
+            <h3 className="text-sm font-bold text-violet-100 font-mono tracking-widest uppercase flex items-center gap-2" style={{ textShadow: '0 0 8px rgba(167,139,250,0.4)' }}>
+              INTEGRATION_CHECKLIST.sys
+            </h3>
+            <p className="text-[10px] text-violet-400/80 font-mono uppercase tracking-widest mt-0.5">
+              Commandlet → Mixamo → AnimBP → Montages → Notifies
             </p>
           </div>
         </div>
-        {/* Progress bar */}
-        <div className="w-16 h-1.5 rounded-full bg-border overflow-hidden">
-          <div
-            className="h-full rounded-full transition-all duration-slow"
-            style={{
-              width: `${(completedCount / ANIMATION_STEPS.length) * 100}%`,
-              backgroundColor: ACCENT,
-            }}
-          />
+
+        {/* Progress Display */}
+        <div className="flex flex-col items-end gap-1.5">
+          <div className="text-[10px] font-mono font-bold text-violet-300 tracking-widest uppercase">
+            Progress <span className="text-violet-100">{completedCount}/{ANIMATION_STEPS.length}</span>
+          </div>
+          <div className="w-32 h-2 rounded-full bg-[#0a0a1e] border border-violet-900/40 overflow-hidden relative shadow-inner">
+            <motion.div
+              className="absolute top-0 left-0 bottom-0 rounded-full"
+              style={{
+                backgroundColor: ACCENT,
+                boxShadow: `0 0 10px ${ACCENT}, inset 0 0 5px rgba(255,255,255,0.5)`,
+              }}
+              initial={{ width: 0 }}
+              animate={{ width: `${progressPercent}%` }}
+              transition={{ duration: 0.5, ease: "easeOut" }}
+            />
+          </div>
         </div>
       </div>
 
       {/* Steps */}
-      <div className="space-y-2">
+      <div className="space-y-3 relative z-10">
         {ANIMATION_STEPS.map((step) => {
           const isCompleted = completedSteps.has(step.id);
           const isExpanded = expandedId === step.id;
@@ -287,132 +375,169 @@ interface StepCardProps {
 function StepCard({ step, isCompleted, isExpanded, isGenerating, onToggle, onGenerate, onMarkComplete }: StepCardProps) {
   const Icon = step.icon;
   const isCode = step.type === 'code';
-  const typeColor = isCode ? '#a78bfa' : '#f59e0b';
-  const typeLabel = isCode ? 'Code' : 'Manual';
+  const isAuto = step.type === 'auto';
+  const typeColor = isAuto ? ACCENT_CYAN : isCode ? ACCENT_VIOLET : MODULE_COLORS.content;
+  const typeLabel = isAuto ? 'Auto' : isCode ? 'Code' : 'Manual';
 
   return (
-    <div
-      className="rounded-xl border transition-all duration-base"
-      style={{
-        borderColor: isCompleted ? '#22c55e30' : isExpanded ? `${typeColor}40` : 'var(--border)',
-        backgroundColor: isCompleted ? '#22c55e06' : isExpanded ? `${typeColor}06` : 'var(--surface-deep)',
+    <motion.div
+      layout
+      initial={{ borderRadius: 16 }}
+      animate={{
+        borderColor: isCompleted ? `${STATUS_SUCCESS}50` : isExpanded ? `${typeColor}80` : `${typeColor}20`,
+        backgroundColor: isCompleted ? `${STATUS_SUCCESS}0A` : isExpanded ? `${typeColor}0A` : 'var(--surface-deep)',
+        boxShadow: isExpanded ? `0 0 20px ${typeColor}20, inset 0 0 10px ${typeColor}10` : 'none',
       }}
+      className="border relative overflow-hidden group/card"
     >
-      {/* Header row */}
+      {/* Background glow for expanded */}
+      <AnimatePresence>
+        {isExpanded && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="absolute top-0 right-0 w-64 h-full pointer-events-none"
+            style={{ background: `linear-gradient(to left, ${typeColor}10, transparent)` }}
+          />
+        )}
+      </AnimatePresence>
+
       <button
         onClick={onToggle}
-        className="w-full flex items-center gap-3 px-4 py-3 text-left group"
+        className="w-full flex items-center gap-4 px-5 py-4 text-left relative z-10"
       >
-        {/* Step number / check */}
+        {/* Step Indicator */}
         <div
-          className="flex-shrink-0 w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold transition-all"
+          className="flex-shrink-0 w-10 h-10 rounded-xl flex items-center justify-center text-sm font-bold font-mono transition-all duration-300 relative group-hover/card:scale-105"
           style={{
-            backgroundColor: isCompleted ? '#22c55e20' : `${typeColor}15`,
-            border: `1.5px solid ${isCompleted ? '#22c55e50' : `${typeColor}35`}`,
-            color: isCompleted ? '#22c55e' : typeColor,
+            backgroundColor: isCompleted ? `${STATUS_SUCCESS}20` : `${typeColor}20`,
+            border: `1px solid ${isCompleted ? STATUS_SUCCESS : typeColor}`,
+            boxShadow: `0 0 15px ${isCompleted ? STATUS_SUCCESS : typeColor}40, inset 0 0 10px ${isCompleted ? STATUS_SUCCESS : typeColor}20`,
+            color: isCompleted ? STATUS_SUCCESS : typeColor,
           }}
         >
-          {isCompleted ? <Check className="w-3.5 h-3.5" /> : step.number}
+          {isCompleted ? <Check className="w-5 h-5 drop-shadow-[0_0_8px_currentColor]" /> : step.number}
+
+          {/* Glow Pulse */}
+          {!isCompleted && isExpanded && (
+            <div className="absolute inset-0 rounded-xl animate-ping opacity-30" style={{ border: `2px solid ${typeColor}` }} />
+          )}
         </div>
 
         {/* Content */}
         <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2">
-            <Icon className="w-3 h-3" style={{ color: isCompleted ? '#22c55e' : typeColor }} />
+          <div className="flex items-center gap-3 mb-1">
             <span
-              className="text-xs font-semibold"
-              style={{ color: isCompleted ? '#22c55e' : 'var(--text)' }}
+              className="text-sm font-bold tracking-wide font-mono"
+              style={{
+                color: isCompleted ? STATUS_SUCCESS : isExpanded ? typeColor : '#e2e8f0',
+                textShadow: isCompleted || isExpanded ? `0 0 10px ${isCompleted ? STATUS_SUCCESS : typeColor}80` : 'none'
+              }}
             >
               {step.title}
             </span>
             <span
-              className="text-2xs font-bold uppercase tracking-widest px-1.5 py-0.5 rounded"
+              className="text-[9px] font-bold uppercase tracking-widest px-2 py-0.5 rounded border"
               style={{
-                backgroundColor: isCompleted ? '#22c55e12' : `${typeColor}12`,
-                color: isCompleted ? '#22c55e80' : `${typeColor}cc`,
+                backgroundColor: isCompleted ? `${STATUS_SUCCESS}15` : `${typeColor}15`,
+                color: isCompleted ? STATUS_SUCCESS : typeColor,
+                borderColor: isCompleted ? `${STATUS_SUCCESS}40` : `${typeColor}40`,
               }}
             >
-              {isCompleted ? 'Done' : typeLabel}
+              {isCompleted ? 'OK' : typeLabel}
             </span>
           </div>
-          <p className="text-2xs text-text-muted mt-0.5">{step.description}</p>
+          <p className="text-[11px] text-text-muted font-mono leading-relaxed opacity-80 max-w-2xl truncate">{step.description}</p>
         </div>
 
         {/* Expand indicator */}
-        <div className="flex-shrink-0">
-          {isExpanded
-            ? <ChevronDown className="w-3.5 h-3.5 text-text-muted" />
-            : <ChevronRight className="w-3.5 h-3.5 text-text-muted" />
-          }
-        </div>
+        <motion.div animate={{ rotate: isExpanded ? 180 : 0 }} className="flex-shrink-0 ml-4 p-2 rounded-lg bg-surface/50 border border-border group-hover/card:border-violet-500/50 transition-colors">
+          <ChevronDown className="w-4 h-4 text-text-muted group-hover/card:text-violet-400" />
+        </motion.div>
       </button>
 
-      {/* Expanded content */}
-      {isExpanded && (
-        <div className="px-4 pb-4 space-y-3">
-          {/* Instruction list */}
-          <ol className="space-y-1.5 ml-10">
-            {step.details.map((detail, i) => (
-              <li key={i} className="text-2xs text-[#9b9ec0] leading-relaxed flex gap-2">
-                <span className="flex-shrink-0 text-text-muted font-mono w-3 text-right">{i + 1}.</span>
-                <span>{detail}</span>
-              </li>
-            ))}
-          </ol>
+      {/* Expanded Content */}
+      <AnimatePresence>
+        {isExpanded && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.3, ease: 'easeOut' }}
+            className="overflow-hidden relative z-10"
+          >
+            <div className="px-5 pb-5 pl-[72px] space-y-4">
+              {/* Instructions */}
+              <div className="p-4 bg-black/40 border border-violet-900/40 rounded-xl shadow-inner backdrop-blur-sm">
+                <ol className="space-y-2">
+                  {step.details.map((detail, i) => (
+                    <li key={i} className="text-[11px] text-violet-200/80 leading-relaxed flex gap-3 font-mono">
+                      <span className="flex-shrink-0 text-violet-500/70 font-bold">{String(i + 1).padStart(2, '0')}.</span>
+                      <span>{detail}</span>
+                    </li>
+                  ))}
+                </ol>
+              </div>
 
-          {/* Links (manual steps) */}
-          {step.links && step.links.length > 0 && (
-            <div className="ml-10 flex flex-wrap gap-2">
-              {step.links.map((link) => (
-                <a
-                  key={link.url}
-                  href={link.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1 text-2xs font-medium px-2 py-1 rounded-md transition-colors"
-                  style={{
-                    backgroundColor: '#f59e0b10',
-                    color: '#f59e0b',
-                    border: '1px solid #f59e0b25',
-                  }}
-                >
-                  <ExternalLink className="w-2.5 h-2.5" />
-                  {link.label}
-                </a>
-              ))}
+              {/* Links */}
+              {step.links && step.links.length > 0 && (
+                <div className="flex flex-wrap gap-3 mt-4">
+                  {step.links.map((link) => (
+                    <a
+                      key={link.url}
+                      href={link.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest px-3 py-1.5 rounded-lg transition-all hover:-translate-y-0.5"
+                      style={{
+                        backgroundColor: `${MODULE_COLORS.content}15`,
+                        color: MODULE_COLORS.content,
+                        border: `1px solid ${MODULE_COLORS.content}40`,
+                        boxShadow: `0 4px 10px ${MODULE_COLORS.content}15`,
+                      }}
+                    >
+                      <ExternalLink className="w-3 h-3" />
+                      {link.label}
+                    </a>
+                  ))}
+                </div>
+              )}
+
+              {/* Action Buttons */}
+              <div className="flex gap-3 mt-5 pt-3 border-t border-violet-900/30">
+                {(isCode || isAuto) && step.prompt && (
+                  <button
+                    onClick={(e) => { e.stopPropagation(); onGenerate(); }}
+                    disabled={isGenerating}
+                    className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider transition-all disabled:opacity-50"
+                    style={{
+                      backgroundColor: `${ACCENT}20`,
+                      color: ACCENT_CYAN,
+                      border: `1px solid ${ACCENT}`,
+                      boxShadow: `0 0 20px ${ACCENT}40, inset 0 0 10px ${ACCENT}20`,
+                    }}
+                  >
+                    <Zap className="w-4 h-4 text-cyan-400" />
+                    Execute Process <ArrowRight className="w-3.5 h-3.5 opacity-70" />
+                  </button>
+                )}
+
+                {!isCompleted && (
+                  <button
+                    onClick={(e) => { e.stopPropagation(); onMarkComplete(); }}
+                    className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider transition-all text-text-muted bg-surface/80 border border-border hover:border-green-500/50 hover:text-green-400 hover:shadow-[0_0_15px_rgba(34,197,94,0.2)]"
+                  >
+                    <Check className="w-4 h-4" />
+                    Verify Complete
+                  </button>
+                )}
+              </div>
             </div>
-          )}
-
-          {/* Action buttons */}
-          <div className="ml-10 flex gap-2">
-            {isCode && step.prompt && (
-              <button
-                onClick={(e) => { e.stopPropagation(); onGenerate(); }}
-                disabled={isGenerating}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all disabled:opacity-50"
-                style={{
-                  backgroundColor: `${ACCENT}15`,
-                  color: ACCENT,
-                  border: `1px solid ${ACCENT}30`,
-                }}
-              >
-                <Zap className="w-3 h-3" />
-                Generate Code
-              </button>
-            )}
-
-            {!isCompleted && (
-              <button
-                onClick={(e) => { e.stopPropagation(); onMarkComplete(); }}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all text-text-muted bg-surface border border-border hover:border-status-green-strong hover:text-[#22c55e]"
-              >
-                <Check className="w-3 h-3" />
-                Mark Complete
-              </button>
-            )}
-          </div>
-        </div>
-      )}
-    </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </motion.div>
   );
 }
+

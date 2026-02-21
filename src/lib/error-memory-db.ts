@@ -1,4 +1,5 @@
 import { getDb } from './db';
+import type { SubModuleId } from '@/types/modules';
 import type { ErrorMemoryRecord, ErrorContextEntry } from '@/types/error-memory';
 
 // ── Schema bootstrap ──────────────────────────────────────────────────────
@@ -36,30 +37,48 @@ export function ensureErrorMemoryTable() {
   `);
 }
 
+// ── Row type ─────────────────────────────────────────────────────────────
+
+interface ErrorMemoryRow {
+  id: number;
+  module_id: string;
+  fingerprint: string;
+  category: string;
+  error_code: string | null;
+  pattern: string;
+  message: string;
+  file: string | null;
+  fix_description: string;
+  occurrences: number;
+  first_seen_at: string;
+  last_seen_at: string;
+  was_resolved: number;
+}
+
 // ── Row mapping ──────────────────────────────────────────────────────────
 
-function rowToRecord(row: Record<string, unknown>): ErrorMemoryRecord {
+function rowToRecord(row: ErrorMemoryRow): ErrorMemoryRecord {
   return {
-    id: row.id as number,
-    moduleId: row.module_id as string,
-    fingerprint: row.fingerprint as string,
+    id: row.id,
+    moduleId: row.module_id as SubModuleId,
+    fingerprint: row.fingerprint,
     category: row.category as ErrorMemoryRecord['category'],
-    errorCode: (row.error_code as string) || null,
-    pattern: row.pattern as string,
-    message: row.message as string,
-    file: (row.file as string) || null,
-    fixDescription: row.fix_description as string,
-    occurrences: row.occurrences as number,
-    firstSeenAt: row.first_seen_at as string,
-    lastSeenAt: row.last_seen_at as string,
-    wasResolved: (row.was_resolved as number) === 1,
+    errorCode: row.error_code,
+    pattern: row.pattern,
+    message: row.message,
+    file: row.file,
+    fixDescription: row.fix_description,
+    occurrences: row.occurrences,
+    firstSeenAt: row.first_seen_at,
+    lastSeenAt: row.last_seen_at,
+    wasResolved: row.was_resolved === 1,
   };
 }
 
 // ── Record an error (upsert — increment if fingerprint exists) ──────────
 
 export function recordError(data: {
-  moduleId: string;
+  moduleId: SubModuleId;
   fingerprint: string;
   category: string;
   errorCode: string | null;
@@ -84,7 +103,11 @@ export function recordError(data: {
           was_resolved = 0
       WHERE id = ?
     `).run(existing.id);
-    return getRecord(existing.id)!;
+    const record = getRecord(existing.id);
+    if (!record) {
+      throw new Error(`Failed to retrieve error_memory record after UPDATE (id=${existing.id})`);
+    }
+    return record;
   }
 
   // Insert new
@@ -103,13 +126,17 @@ export function recordError(data: {
     data.fixDescription,
   );
 
-  return getRecord(result.lastInsertRowid as number)!;
+  const inserted = getRecord(result.lastInsertRowid as number);
+  if (!inserted) {
+    throw new Error(`Failed to retrieve error_memory record after INSERT (rowid=${result.lastInsertRowid})`);
+  }
+  return inserted;
 }
 
 // ── Batch record multiple errors ────────────────────────────────────────
 
 export function recordErrors(
-  moduleId: string,
+  moduleId: SubModuleId,
   errors: { fingerprint: string; category: string; errorCode: string | null; pattern: string; message: string; file: string | null; fixDescription: string }[],
 ): ErrorMemoryRecord[] {
   return errors.map((e) => recordError({ moduleId, ...e }));
@@ -121,15 +148,15 @@ function getRecord(id: number): ErrorMemoryRecord | null {
   ensureErrorMemoryTable();
   const row = getDb()
     .prepare('SELECT * FROM error_memory WHERE id = ?')
-    .get(id) as Record<string, unknown> | undefined;
+    .get(id) as ErrorMemoryRow | undefined;
   return row ? rowToRecord(row) : null;
 }
 
-export function getModuleErrors(moduleId: string, limit = 20): ErrorMemoryRecord[] {
+export function getModuleErrors(moduleId: SubModuleId, limit = 20): ErrorMemoryRecord[] {
   ensureErrorMemoryTable();
   const rows = getDb()
     .prepare('SELECT * FROM error_memory WHERE module_id = ? ORDER BY occurrences DESC, last_seen_at DESC LIMIT ?')
-    .all(moduleId, limit) as Record<string, unknown>[];
+    .all(moduleId, limit) as ErrorMemoryRow[];
   return rows.map(rowToRecord);
 }
 
@@ -137,7 +164,7 @@ export function getAllErrors(limit = 50): ErrorMemoryRecord[] {
   ensureErrorMemoryTable();
   const rows = getDb()
     .prepare('SELECT * FROM error_memory ORDER BY occurrences DESC, last_seen_at DESC LIMIT ?')
-    .all(limit) as Record<string, unknown>[];
+    .all(limit) as ErrorMemoryRow[];
   return rows.map(rowToRecord);
 }
 
@@ -153,7 +180,7 @@ export function getAllErrors(limit = 50): ErrorMemoryRecord[] {
  * Returns top N entries formatted for prompt injection.
  */
 export function getRelevantErrors(
-  moduleId: string,
+  moduleId: SubModuleId,
   taskKeywords: string[] = [],
   limit = 5,
 ): ErrorContextEntry[] {
@@ -166,7 +193,7 @@ export function getRelevantErrors(
     WHERE module_id = ? OR occurrences >= 3
     ORDER BY occurrences DESC, last_seen_at DESC
     LIMIT 30
-  `).all(moduleId) as Record<string, unknown>[];
+  `).all(moduleId) as ErrorMemoryRow[];
 
   const records = rows.map(rowToRecord);
   if (records.length === 0) return [];
@@ -239,7 +266,7 @@ export interface ErrorMemoryStats {
   totalErrors: number;
   uniqueFingerprints: number;
   topCategories: { category: string; count: number }[];
-  topPatterns: { pattern: string; occurrences: number; moduleId: string }[];
+  topPatterns: { pattern: string; occurrences: number; moduleId: SubModuleId }[];
   unresolvedCount: number;
 }
 
@@ -270,7 +297,7 @@ export function getErrorMemoryStats(): ErrorMemoryStats {
     totalErrors: total,
     uniqueFingerprints: unique,
     topCategories,
-    topPatterns: topPatterns.map((r) => ({ pattern: r.pattern, occurrences: r.occurrences, moduleId: r.module_id })),
+    topPatterns: topPatterns.map((r) => ({ pattern: r.pattern, occurrences: r.occurrences, moduleId: r.module_id as SubModuleId })),
     unresolvedCount: unresolved,
   };
 }

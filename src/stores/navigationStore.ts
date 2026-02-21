@@ -49,11 +49,12 @@ export const useNavigationStore = create<NavigationState>()(
         }
 
         // Regular sub-module — resolve its parent category
-        const category = getCategoryForSubModule(moduleId);
+        const subModuleId = moduleId as SubModuleId;
+        const category = getCategoryForSubModule(subModuleId);
         if (category) {
           set({
             activeCategory: category.id as CategoryId,
-            activeSubModule: moduleId as SubModuleId,
+            activeSubModule: subModuleId,
           });
         }
       },

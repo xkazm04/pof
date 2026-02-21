@@ -1,3 +1,5 @@
+import type { SubModuleId } from './modules';
+
 // ── Pattern categories ───────────────────────────────────────────────────────
 
 export type PatternCategory =
@@ -22,7 +24,7 @@ export interface ImplementationPattern {
   /** Human-readable title, e.g. "GAS Combo System via Montage Sections" */
   title: string;
   /** Module this pattern applies to */
-  moduleId: string;
+  moduleId: SubModuleId;
   /** Broader category */
   category: PatternCategory;
   /** Keywords for search */
@@ -72,7 +74,7 @@ export interface PatternLibraryDashboard {
   totalPatterns: number;
   totalSessions: number;
   avgSuccessRate: number;
-  topModules: { moduleId: string; patternCount: number }[];
+  topModules: { moduleId: SubModuleId; patternCount: number }[];
   categories: { category: PatternCategory; count: number }[];
 }
 
@@ -92,7 +94,7 @@ export interface AntiPattern {
   id: string;
   /** Human-readable title, e.g. "Inheritance-Based GAS in arpg-gas" */
   title: string;
-  moduleId: string;
+  moduleId: SubModuleId;
   category: PatternCategory;
   tags: string[];
   /** Why this is an anti-pattern */

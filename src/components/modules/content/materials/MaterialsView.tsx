@@ -23,8 +23,7 @@ import type { MaterialPattern } from './MaterialPatternCatalog';
 import type { PostProcessStackConfig } from './PostProcessStackBuilder';
 import type { MaterialConfiguratorConfig } from './MaterialParameterConfigurator';
 import type { StyleTransferConfig } from './MaterialStyleTransfer';
-
-const CONTENT_ACCENT = '#f59e0b';
+import { MODULE_COLORS } from '@/lib/constants';
 
 export function MaterialsView() {
   const mod = SUB_MODULE_MAP['materials'];
@@ -42,7 +41,7 @@ export function MaterialsView() {
     moduleId: 'materials',
     sessionKey: 'materials-graph',
     label: 'Material Graph',
-    accentColor: CONTENT_ACCENT,
+    accentColor: MODULE_COLORS.content,
   });
 
   // ── Configurator CLI session ──
@@ -51,7 +50,7 @@ export function MaterialsView() {
     moduleId: 'materials',
     sessionKey: 'materials-configurator',
     label: 'Material Config',
-    accentColor: CONTENT_ACCENT,
+    accentColor: MODULE_COLORS.content,
   });
 
   const handleGenerateConfigured = useCallback((config: MaterialConfiguratorConfig) => {
@@ -65,7 +64,7 @@ export function MaterialsView() {
     moduleId: 'materials',
     sessionKey: 'materials-catalog',
     label: 'Material Pattern',
-    accentColor: CONTENT_ACCENT,
+    accentColor: MODULE_COLORS.content,
   });
 
   const handleGeneratePattern = useCallback((pattern: MaterialPattern) => {
@@ -79,7 +78,7 @@ export function MaterialsView() {
     moduleId: 'materials',
     sessionKey: 'materials-postprocess',
     label: 'Post-Process Stack',
-    accentColor: CONTENT_ACCENT,
+    accentColor: MODULE_COLORS.content,
   });
 
   const handleGeneratePostProcess = useCallback((config: PostProcessStackConfig) => {
@@ -93,7 +92,7 @@ export function MaterialsView() {
     moduleId: 'materials',
     sessionKey: 'materials-style-transfer',
     label: 'Style Transfer',
-    accentColor: CONTENT_ACCENT,
+    accentColor: MODULE_COLORS.content,
   });
 
   const handleGenerateStyleTransfer = useCallback((config: StyleTransferConfig) => {
@@ -107,7 +106,7 @@ export function MaterialsView() {
     moduleId: 'materials',
     sessionKey: 'materials-custom',
     label: 'Materials',
-    accentColor: CONTENT_ACCENT,
+    accentColor: MODULE_COLORS.content,
   });
 
   const handleCustomPrompt = useCallback(() => {
@@ -201,7 +200,7 @@ export function MaterialsView() {
               onClick={handleCustomPrompt}
               disabled={!customPrompt.trim()}
               className="px-3 py-2 rounded-lg text-xs font-medium transition-colors disabled:opacity-50"
-              style={{ backgroundColor: `${CONTENT_ACCENT}15`, color: CONTENT_ACCENT, border: `1px solid ${CONTENT_ACCENT}30` }}
+              style={{ backgroundColor: `${MODULE_COLORS.content}15`, color: MODULE_COLORS.content, border: `1px solid ${MODULE_COLORS.content}30` }}
             >
               Send
             </button>

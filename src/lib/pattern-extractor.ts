@@ -1,4 +1,5 @@
 import { getDb } from './db';
+import type { SubModuleId } from '@/types/modules';
 import { ensureSessionAnalyticsTable } from './session-analytics-db';
 import { ensurePatternLibraryTable, upsertPattern, ensureAntiPatternTable, upsertAntiPattern, getPatternsByModule } from './pattern-library-db';
 import { MODULE_FEATURE_DEFINITIONS } from './feature-definitions';
@@ -117,7 +118,7 @@ function computeConfidence(sessionCount: number, projectCount: number, successRa
 
 // ── Title generation ─────────────────────────────────────────────────────────
 
-function generateTitle(moduleId: string, approach: string, classes: string[]): string {
+function generateTitle(moduleId: SubModuleId, approach: string, classes: string[]): string {
   const moduleLabel = MODULE_LABELS[moduleId] ?? moduleId;
   const approachLabel = APPROACH_LABELS[approach] ?? approach;
 
@@ -220,7 +221,7 @@ export function extractPatterns(): { extracted: number; updated: number } {
       const category = MODULE_PATTERN_CATEGORIES[moduleId] ?? 'general';
 
       // Generate description from feature definitions
-      const features = MODULE_FEATURE_DEFINITIONS[moduleId] ?? [];
+      const features = MODULE_FEATURE_DEFINITIONS[moduleId as SubModuleId] ?? [];
       const featureNames = features.map((f) => f.featureName).join(', ');
       const description = `Implementation pattern for ${MODULE_LABELS[moduleId] ?? moduleId} using ${APPROACH_LABELS[approach] ?? approach} approach. `
         + `Covers: ${featureNames || 'general module functionality'}. `
@@ -231,13 +232,13 @@ export function extractPatterns(): { extracted: number; updated: number } {
         approach,
         moduleId,
         ...classes.slice(0, 5).map((c) => c.toLowerCase()),
-        ...features.slice(0, 3).map((f) => f.category.toLowerCase()),
+        ...(features ?? []).slice(0, 3).map((f) => f.category.toLowerCase()),
       ];
 
       const pattern: ImplementationPattern = {
         id: patternId,
-        title: generateTitle(moduleId, approach, classes),
-        moduleId,
+        title: generateTitle(moduleId as SubModuleId, approach, classes),
+        moduleId: moduleId as SubModuleId,
         category,
         tags: [...new Set(tags)],
         description,
@@ -299,7 +300,7 @@ function seedPatternsFromDefinitions(): number {
       const pattern: ImplementationPattern = {
         id: patternId,
         title: `${MODULE_LABELS[moduleId] ?? moduleId}: ${category}`,
-        moduleId,
+        moduleId: moduleId as SubModuleId,
         category: moduleCategory,
         tags: [approach, moduleId, category.toLowerCase(), ...classes.slice(0, 3).map((c) => c.toLowerCase())],
         description: feats.map((f) => `**${f.featureName}**: ${f.description}`).join('\n'),
@@ -420,7 +421,7 @@ export function extractAntiPatterns(): { extracted: number; updated: number } {
       const triggerKeywords = extractTriggerKeywords(cluster.map((s) => s.prompt), approach);
 
       // Find the best successful alternative pattern for this module
-      const successPatterns = getPatternsByModule(moduleId);
+      const successPatterns = getPatternsByModule(moduleId as SubModuleId);
       const bestAlternative = successPatterns
         .filter((p) => p.approach !== approach && p.successRate >= 0.5 && p.sessionCount >= 2)
         .sort((a, b) => b.successRate - a.successRate)[0];
@@ -437,7 +438,7 @@ export function extractAntiPatterns(): { extracted: number; updated: number } {
       const ap: AntiPattern = {
         id: antiPatternId,
         title: `${approachLabel} in ${moduleLabel}`,
-        moduleId,
+        moduleId: moduleId as SubModuleId,
         category,
         tags: [approach, moduleId, 'anti-pattern', ...triggerKeywords.slice(0, 3)],
         description,
@@ -664,7 +665,7 @@ function linkEntityToModule(entity: string): string | undefined {
 
 export function extractStructuredEntities(
   text: string,
-  moduleId: string,
+  moduleId: SubModuleId,
   sessionId: string
 ): StructuredInsight {
   const classHierarchy = extractClassHierarchy(text);
@@ -774,7 +775,7 @@ export function getInsightsForSession(sessionId: string): StructuredInsight | nu
   };
 }
 
-export function getInsightsForModule(moduleId: string): StructuredInsight[] {
+export function getInsightsForModule(moduleId: SubModuleId): StructuredInsight[] {
   ensureStructuredInsightsTable();
   const db = getDb();
 

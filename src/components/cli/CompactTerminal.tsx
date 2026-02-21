@@ -11,6 +11,8 @@ import { TerminalOutput } from './TerminalOutput';
 import { TerminalInput } from './TerminalInput';
 import { AntiPatternWarning } from './AntiPatternWarning';
 import { useCLIPanelStore } from './store/cliPanelStore';
+import { MODULE_COLORS } from '@/lib/chart-colors';
+import { UI_TIMEOUTS } from '@/lib/constants';
 
 export function CompactTerminal({
   instanceId, projectPath, title = 'Terminal', className = '',
@@ -18,7 +20,7 @@ export function CompactTerminal({
   autoStart = false, enabledSkills = [], onStreamingChange, visible = true,
 }: CompactTerminalProps) {
   const sessionModuleId = useCLIPanelStore((s) => s.sessions[instanceId]?.moduleId);
-  const accentColor = useCLIPanelStore((s) => s.sessions[instanceId]?.accentColor ?? '#3b82f6');
+  const accentColor = useCLIPanelStore((s) => s.sessions[instanceId]?.accentColor ?? MODULE_COLORS.core);
   const [input, setInput] = useState('');
   const listRef = useListRef(null);
   const history = useInputHistory();
@@ -62,11 +64,7 @@ export function CompactTerminal({
     history.resetHeight();
     history.pushHistory(prompt);
 
-    if (prompt === '/fix') {
-      await tq.executeImprovement();
-    } else {
-      await tq.submitPrompt(prompt, resume && tq.sessionId !== null);
-    }
+    await tq.submitPrompt(prompt, resume && tq.sessionId !== null);
   }, [input, tq, history]);
 
   const handleInputSubmit = useCallback((resume: boolean) => {
@@ -94,7 +92,7 @@ export function CompactTerminal({
   useEffect(() => {
     if (pendingPromptRef.current && input === pendingPromptRef.current && !tq.isStreaming) {
       pendingPromptRef.current = null;
-      const timer = setTimeout(() => handleSubmit(tq.sessionId !== null), 50);
+      const timer = setTimeout(() => handleSubmit(tq.sessionId !== null), UI_TIMEOUTS.autoSubmitDelay);
       return () => clearTimeout(timer);
     }
   }, [input, tq.isStreaming, tq.sessionId, handleSubmit]);

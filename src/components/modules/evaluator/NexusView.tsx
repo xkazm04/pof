@@ -18,6 +18,7 @@ import { SurfaceCard } from '@/components/ui/SurfaceCard';
 import type { ImplementationPattern } from '@/types/pattern-library';
 import type { SubModuleId, ChecklistItem } from '@/types/modules';
 import type { Recommendation } from '@/types/evaluator';
+import { STATUS_SUCCESS, STATUS_WARNING, STATUS_ERROR, STATUS_INFO, STATUS_BLOCKER, STATUS_NEUTRAL, ACCENT_VIOLET, MODULE_COLORS, OPACITY_10, OPACITY_15, OPACITY_20, OPACITY_30 } from '@/lib/chart-colors';
 
 // ─── Layout constants (same as DependencyGraph) ────────────────────────────
 
@@ -43,7 +44,7 @@ const NODE_H = 80;
 const PAD_X = 50;
 const PAD_Y = 50;
 
-function getNodeCenter(moduleId: string) {
+function getNodeCenter(moduleId: SubModuleId) {
   const pos = MODULE_POSITIONS[moduleId] ?? { col: 0, row: 0 };
   return {
     x: PAD_X + pos.col * COL_WIDTH + NODE_W / 2,
@@ -63,16 +64,16 @@ interface LayerConfig {
 }
 
 const LAYERS: LayerConfig[] = [
-  { id: 'patterns', label: 'Pattern Success', color: '#4ade80', icon: BookOpen },
-  { id: 'builds', label: 'Build Health', color: '#ef4444', icon: AlertTriangle },
-  { id: 'sessions', label: 'Session Activity', color: '#60a5fa', icon: BarChart3 },
-  { id: 'genre', label: 'Genre Features', color: '#a78bfa', icon: Swords },
+  { id: 'patterns', label: 'Pattern Success', color: STATUS_SUCCESS, icon: BookOpen },
+  { id: 'builds', label: 'Build Health', color: MODULE_COLORS.evaluator, icon: AlertTriangle },
+  { id: 'sessions', label: 'Session Activity', color: STATUS_INFO, icon: BarChart3 },
+  { id: 'genre', label: 'Genre Features', color: ACCENT_VIOLET, icon: Swords },
 ];
 
 // ─── Types ─────────────────────────────────────────────────────────────────
 
 interface NexusNode {
-  moduleId: string;
+  moduleId: SubModuleId;
   label: string;
   cx: number;
   cy: number;
@@ -231,8 +232,8 @@ export function NexusView() {
   // Build nodes
   const nodes: NexusNode[] = useMemo(() => {
     return Object.keys(MODULE_FEATURE_DEFINITIONS).map((moduleId) => {
-      const features = MODULE_FEATURE_DEFINITIONS[moduleId];
-      const center = getNodeCenter(moduleId);
+      const features = MODULE_FEATURE_DEFINITIONS[moduleId as SubModuleId] ?? [];
+      const center = getNodeCenter(moduleId as SubModuleId);
       let blockedCount = 0;
       let implementedCount = 0;
 
@@ -264,7 +265,7 @@ export function NexusView() {
         : 0;
 
       return {
-        moduleId,
+        moduleId: moduleId as SubModuleId,
         label: MODULE_LABELS[moduleId] ?? moduleId,
         cx: center.x,
         cy: center.y,
@@ -402,7 +403,7 @@ export function NexusView() {
               <path d="M 0 0 L 10 3.5 L 0 7 z" fill="var(--text-muted)" />
             </marker>
             <marker id="nexus-arrow-blocked" viewBox="0 0 10 7" refX="10" refY="3.5" markerWidth="8" markerHeight="6" orient="auto-start-reverse">
-              <path d="M 0 0 L 10 3.5 L 0 7 z" fill="#fb923c" />
+              <path d="M 0 0 L 10 3.5 L 0 7 z" fill={STATUS_BLOCKER} />
             </marker>
             {/* Glow filters */}
             <filter id="glow-red" x="-50%" y="-50%" width="200%" height="200%">
@@ -417,8 +418,8 @@ export function NexusView() {
 
           {/* Edges */}
           {edges.map((edge) => {
-            const fromCenter = getNodeCenter(edge.from);
-            const toCenter = getNodeCenter(edge.to);
+            const fromCenter = getNodeCenter(edge.from as SubModuleId);
+            const toCenter = getNodeCenter(edge.to as SubModuleId);
             const dx = toCenter.x - fromCenter.x;
             const dy = toCenter.y - fromCenter.y;
             const dist = Math.sqrt(dx * dx + dy * dy);
@@ -446,7 +447,7 @@ export function NexusView() {
                 <path
                   d={`M${x1},${y1} Q${mx + perpX},${my + perpY} ${x2},${y2}`}
                   fill="none"
-                  stroke={edge.hasBlockers ? '#fb923c' : 'var(--text-muted)'}
+                  stroke={edge.hasBlockers ? STATUS_BLOCKER : 'var(--text-muted)'}
                   strokeWidth={Math.min(3, 0.5 + edge.count * 0.5)}
                   strokeDasharray={edge.hasBlockers ? '4 2' : undefined}
                   opacity={opacity}
@@ -461,7 +462,7 @@ export function NexusView() {
                 )}
                 {/* Layer 3: session duration annotation */}
                 {showSessionAnnotation && avgMs > 0 && (
-                  <text x={mx + perpX} y={my + perpY + 8} fill="#60a5fa" fontSize="8" textAnchor="middle" opacity="0.8">
+                  <text x={mx + perpX} y={my + perpY + 8} fill={STATUS_INFO} fontSize="8" textAnchor="middle" opacity="0.8">
                     ~{avgMs > 60000 ? `${Math.round(avgMs / 60000)}m` : `${Math.round(avgMs / 1000)}s`}
                   </text>
                 )}
@@ -482,7 +483,7 @@ export function NexusView() {
             // Layer 1: pattern heat
             const showPatternHeat = activeLayers.has('patterns') && node.patternSuccessRate !== null;
             const patternColor = node.patternSuccessRate !== null
-              ? node.patternSuccessRate >= 0.7 ? '#4ade80' : node.patternSuccessRate >= 0.4 ? '#fbbf24' : '#f87171'
+              ? node.patternSuccessRate >= 0.7 ? STATUS_SUCCESS : node.patternSuccessRate >= 0.4 ? STATUS_WARNING : STATUS_ERROR
               : undefined;
 
             // Layer 2: build failure glow
@@ -513,7 +514,7 @@ export function NexusView() {
                     height={NODE_H + 6}
                     rx={11}
                     fill="none"
-                    stroke="#ef4444"
+                    stroke={MODULE_COLORS.evaluator}
                     strokeWidth={2}
                     opacity={0.6}
                     filter="url(#glow-red)"
@@ -531,7 +532,7 @@ export function NexusView() {
                     height={NODE_H + 4}
                     rx={10}
                     fill="none"
-                    stroke="#a78bfa"
+                    stroke={ACCENT_VIOLET}
                     strokeWidth={1.5}
                     opacity={0.5}
                     filter="url(#glow-purple)"
@@ -546,7 +547,7 @@ export function NexusView() {
                   height={NODE_H}
                   rx={8}
                   fill="var(--surface)"
-                  stroke={isSelected ? '#a78bfa' : isHighlighted ? 'var(--border-bright)' : 'var(--border)'}
+                  stroke={isSelected ? ACCENT_VIOLET : isHighlighted ? 'var(--border-bright)' : 'var(--border)'}
                   strokeWidth={isSelected ? 2 : 1}
                 />
 
@@ -576,7 +577,7 @@ export function NexusView() {
                   width={Math.max(0, (NODE_W - 24) * pctComplete)}
                   height={4}
                   rx={2}
-                  fill="#4ade80"
+                  fill={STATUS_SUCCESS}
                 />
 
                 {/* Stats line */}
@@ -598,8 +599,8 @@ export function NexusView() {
                 {/* Layer 3: Session badge (top-right) */}
                 {showSessionBadge && (
                   <g transform={`translate(${node.cx + NODE_W / 2 - 32}, ${node.cy - NODE_H / 2 + 8})`}>
-                    <rect x={0} y={0} width={24} height={14} rx={3} fill="#60a5fa" opacity={0.15} />
-                    <text x={12} y={10} fill="#60a5fa" fontSize="8" fontWeight="600" textAnchor="middle">
+                    <rect x={0} y={0} width={24} height={14} rx={3} fill={STATUS_INFO} opacity={0.15} />
+                    <text x={12} y={10} fill={STATUS_INFO} fontSize="8" fontWeight="600" textAnchor="middle">
                       {node.sessionCount}
                     </text>
                   </g>
@@ -608,8 +609,8 @@ export function NexusView() {
                 {/* Layer 4: Genre badge (bottom-right) */}
                 {showGenreGlow && (
                   <g transform={`translate(${node.cx + NODE_W / 2 - 16}, ${node.cy + NODE_H / 2 - 16})`}>
-                    <circle r={7} fill="#a78bfa" opacity={0.2} />
-                    <text x={0} y={3} fill="#a78bfa" fontSize="8" fontWeight="700" textAnchor="middle">
+                    <circle r={7} fill={ACCENT_VIOLET} opacity={0.2} />
+                    <text x={0} y={3} fill={ACCENT_VIOLET} fontSize="8" fontWeight="700" textAnchor="middle">
                       {node.genreItemCount}
                     </text>
                   </g>
@@ -618,8 +619,8 @@ export function NexusView() {
                 {/* Blocked indicator */}
                 {node.blockedCount > 0 && (
                   <g transform={`translate(${node.cx + NODE_W / 2 - 10}, ${node.cy - NODE_H / 2 + 6})`}>
-                    <circle r={7} fill="#f8717120" />
-                    <text fill="#fb923c" fontSize="9" fontWeight="700" textAnchor="middle" dy="3">!</text>
+                    <circle r={7} fill={`${STATUS_ERROR}${OPACITY_20}`} />
+                    <text fill={STATUS_BLOCKER} fontSize="9" fontWeight="700" textAnchor="middle" dy="3">!</text>
                   </g>
                 )}
               </g>
@@ -634,7 +635,7 @@ export function NexusView() {
           <span className="w-5 h-px bg-text-muted" /> Dependency
         </span>
         <span className="flex items-center gap-1.5">
-          <span className="w-5 border-t border-dashed" style={{ borderColor: '#fb923c' }} /> Blocker
+          <span className="w-5 border-t border-dashed" style={{ borderColor: STATUS_BLOCKER }} /> Blocker
         </span>
         {activeLayers.has('patterns') && (
           <span className="flex items-center gap-1.5">
@@ -686,7 +687,7 @@ function NodeDeepDivePanel({
 }) {
   const [expandedSection, setExpandedSection] = useState<string | null>('checklist');
 
-  const healthColor = node.healthScore >= 70 ? '#4ade80' : node.healthScore >= 40 ? '#fbbf24' : '#f87171';
+  const healthColor = node.healthScore >= 70 ? STATUS_SUCCESS : node.healthScore >= 40 ? STATUS_WARNING : STATUS_ERROR;
   const successCount = history.filter((h) => h.status === 'completed').length;
   const failCount = history.filter((h) => h.status === 'failed').length;
 
@@ -704,7 +705,7 @@ function NodeDeepDivePanel({
           <div className="flex items-center gap-3">
             <div
               className="w-8 h-8 rounded-lg flex items-center justify-center"
-              style={{ backgroundColor: '#a78bfa15', border: '1px solid #a78bfa30' }}
+              style={{ backgroundColor: `${ACCENT_VIOLET}${OPACITY_15}`, border: `1px solid ${ACCENT_VIOLET}${OPACITY_30}` }}
             >
               <Network className="w-4 h-4 text-[#a78bfa]" />
             </div>
@@ -730,14 +731,14 @@ function NodeDeepDivePanel({
 
         {/* Quick stats row */}
         <div className="grid grid-cols-4 gap-2 mb-4">
-          <MiniStat label="Patterns" value={patterns.length.toString()} color="#4ade80" />
+          <MiniStat label="Patterns" value={patterns.length.toString()} color={STATUS_SUCCESS} />
           <MiniStat
             label="Success Rate"
             value={node.patternSuccessRate !== null ? `${Math.round(node.patternSuccessRate * 100)}%` : '—'}
-            color={node.patternSuccessRate !== null && node.patternSuccessRate >= 0.7 ? '#4ade80' : '#fbbf24'}
+            color={node.patternSuccessRate !== null && node.patternSuccessRate >= 0.7 ? STATUS_SUCCESS : STATUS_WARNING}
           />
-          <MiniStat label="Sessions" value={`${successCount}/${successCount + failCount}`} color="#60a5fa" />
-          <MiniStat label="Genre Items" value={node.genreItemCount.toString()} color="#a78bfa" />
+          <MiniStat label="Sessions" value={`${successCount}/${successCount + failCount}`} color={STATUS_INFO} />
+          <MiniStat label="Genre Items" value={node.genreItemCount.toString()} color={ACCENT_VIOLET} />
         </div>
 
         {/* Sections */}
@@ -747,7 +748,7 @@ function NodeDeepDivePanel({
             <CollapsibleSection
               title="Matching Patterns"
               count={patterns.length}
-              color="#4ade80"
+              color={STATUS_SUCCESS}
               isOpen={expandedSection === 'patterns'}
               onToggle={() => setExpandedSection(expandedSection === 'patterns' ? null : 'patterns')}
             >
@@ -756,7 +757,7 @@ function NodeDeepDivePanel({
                   <div key={p.id} className="flex items-center gap-2 px-2 py-1.5 rounded-md bg-background">
                     <BookOpen className="w-3 h-3 text-[#4ade80] flex-shrink-0" />
                     <span className="text-xs text-text flex-1 truncate">{p.title}</span>
-                    <span className="text-2xs font-medium" style={{ color: p.successRate >= 0.7 ? '#4ade80' : '#fbbf24' }}>
+                    <span className="text-2xs font-medium" style={{ color: p.successRate >= 0.7 ? STATUS_SUCCESS : STATUS_WARNING }}>
                       {Math.round(p.successRate * 100)}%
                     </span>
                     <span className="text-2xs text-text-muted">{p.sessionCount} uses</span>
@@ -771,13 +772,13 @@ function NodeDeepDivePanel({
             <CollapsibleSection
               title="Recommendations"
               count={recommendations.length}
-              color="#ef4444"
+              color={MODULE_COLORS.evaluator}
               isOpen={expandedSection === 'recs'}
               onToggle={() => setExpandedSection(expandedSection === 'recs' ? null : 'recs')}
             >
               <div className="space-y-1.5">
                 {recommendations.map((rec) => {
-                  const prioColor = rec.priority === 'critical' ? '#f87171' : rec.priority === 'high' ? '#fb923c' : '#fbbf24';
+                  const prioColor = rec.priority === 'critical' ? STATUS_ERROR : rec.priority === 'high' ? STATUS_BLOCKER : STATUS_WARNING;
                   return (
                     <div key={rec.id} className="flex items-start gap-2 px-2 py-1.5 rounded-md bg-background">
                       <AlertTriangle className="w-3 h-3 flex-shrink-0 mt-0.5" style={{ color: prioColor }} />
@@ -800,7 +801,7 @@ function NodeDeepDivePanel({
             <CollapsibleSection
               title="Recent CLI Sessions"
               count={history.length}
-              color="#60a5fa"
+              color={STATUS_INFO}
               isOpen={expandedSection === 'sessions'}
               onToggle={() => setExpandedSection(expandedSection === 'sessions' ? null : 'sessions')}
             >
@@ -829,7 +830,7 @@ function NodeDeepDivePanel({
             <CollapsibleSection
               title="Genre Evolution Features"
               count={node.genreItemCount}
-              color="#a78bfa"
+              color={ACCENT_VIOLET}
               isOpen={expandedSection === 'genre'}
               onToggle={() => setExpandedSection(expandedSection === 'genre' ? null : 'genre')}
             >

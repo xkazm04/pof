@@ -3,12 +3,20 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { computeNBA, type NBARecommendation } from '@/lib/nba-engine';
 import { useModuleStore } from '@/stores/moduleStore';
+import type { SubModuleId } from '@/types/modules';
+
+export interface UseNBAResult {
+  recommendations: NBARecommendation[];
+  top: NBARecommendation | null;
+  isLoading: boolean;
+  refresh: () => void;
+}
 
 /**
  * Hook that computes Next Best Action recommendations for a module.
  * Fetches feature statuses once, then re-computes when progress changes.
  */
-export function useNBA(moduleId: string) {
+export function useNBA(moduleId: SubModuleId): UseNBAResult {
   const [recommendations, setRecommendations] = useState<NBARecommendation[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const statusMapRef = useRef<Map<string, string>>(new Map());

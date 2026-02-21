@@ -1,6 +1,7 @@
 import { NextRequest } from 'next/server';
 import { getReviewHistory, getAllReviewHistory } from '@/lib/feature-matrix-db';
 import { apiSuccess, apiError } from '@/lib/api-utils';
+import type { SubModuleId } from '@/types/modules';
 
 export async function GET(request: NextRequest) {
   try {
@@ -9,7 +10,7 @@ export async function GET(request: NextRequest) {
     const safeLimit = Math.min(100, Math.max(1, limit));
 
     if (moduleId) {
-      const snapshots = getReviewHistory(moduleId, safeLimit);
+      const snapshots = getReviewHistory(moduleId as SubModuleId, safeLimit);
       return apiSuccess({ snapshots });
     }
 

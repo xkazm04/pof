@@ -13,6 +13,8 @@ import { BuildVerifyPanel } from './BuildVerifyPanel';
 import { ToolingBootstrapPanel } from './ToolingBootstrapPanel';
 import { ManifestPreview } from './ManifestPreview';
 import { SurfaceCard } from '@/components/ui/SurfaceCard';
+import { MODULE_COLORS } from '@/lib/chart-colors';
+import type { SubModuleId } from '@/types/modules';
 
 export function ProjectSetupModule() {
   const projectPath = useProjectStore((s) => s.projectPath);
@@ -21,26 +23,26 @@ export function ProjectSetupModule() {
   const scanRef = useRef<() => void>(() => {});
 
   const setupCLI = useModuleCLI({
-    moduleId: 'project-setup',
+    moduleId: 'project-setup' as unknown as SubModuleId,
     sessionKey: 'project-setup',
     label: 'Project Setup',
-    accentColor: '#00ff88',
+    accentColor: MODULE_COLORS.setup,
     onComplete: () => scanRef.current(),
   });
 
   const buildCLI = useModuleCLI({
-    moduleId: 'project-setup',
+    moduleId: 'project-setup' as unknown as SubModuleId,
     sessionKey: 'project-build-verify',
     label: 'Build & Verify',
-    accentColor: '#f59e0b',
+    accentColor: MODULE_COLORS.content,
     onComplete: () => scanRef.current(),
   });
 
   const bootstrapCLI = useModuleCLI({
-    moduleId: 'project-setup',
+    moduleId: 'project-setup' as unknown as SubModuleId,
     sessionKey: 'project-bootstrap',
     label: 'Install Tools',
-    accentColor: '#3b82f6',
+    accentColor: MODULE_COLORS.core,
     onComplete: () => scanRef.current(),
   });
 

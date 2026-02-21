@@ -19,12 +19,14 @@ import { apiFetch } from '@/lib/api-utils';
 import { MODULE_LABELS } from '@/lib/module-registry';
 import { SurfaceCard } from '@/components/ui/SurfaceCard';
 import type { OverlapReport, OverlapPair, ModuleOverlapSummary } from '@/lib/overlap-detection';
+import { UI_TIMEOUTS } from '@/lib/constants';
+import { STATUS_ERROR, STATUS_WARNING, STATUS_SUCCESS, OPACITY_30 } from '@/lib/chart-colors';
 
 // ── Reason labels + colors ──
 
 const REASON_CONFIG: Record<OverlapPair['reason'], { label: string; color: string }> = {
-  name_match: { label: 'Name Match', color: '#f87171' },
-  description_similarity: { label: 'Description Overlap', color: '#fbbf24' },
+  name_match: { label: 'Name Match', color: STATUS_ERROR },
+  description_similarity: { label: 'Description Overlap', color: STATUS_WARNING },
   shared_category_keywords: { label: 'Shared Category', color: '#818cf8' },
 };
 
@@ -89,7 +91,7 @@ export function CrossModuleOverlapPanel() {
     await navigator.clipboard.writeText(text);
     const id = `${overlap.moduleA}:${overlap.featureA}:${overlap.moduleB}:${overlap.featureB}`;
     setCopiedId(id);
-    setTimeout(() => setCopiedId(null), 1500);
+    setTimeout(() => setCopiedId(null), UI_TIMEOUTS.copyFeedback);
   }, []);
 
   if (isLoading) {
@@ -121,7 +123,7 @@ export function CrossModuleOverlapPanel() {
         <StatCard
           label="Total Overlaps"
           value={report.totalOverlaps}
-          color="#f87171"
+          color={STATUS_ERROR}
           icon={AlertTriangle}
         />
         <StatCard
@@ -229,8 +231,8 @@ function moduleLabel(id: string): string {
 }
 
 function similarityColor(sim: number): string {
-  if (sim >= 0.6) return '#f87171';
-  if (sim >= 0.4) return '#fbbf24';
+  if (sim >= 0.6) return STATUS_ERROR;
+  if (sim >= 0.4) return STATUS_WARNING;
   return '#818cf8';
 }
 
@@ -418,7 +420,7 @@ function OverlapRow({ overlap, isExpanded, isCopied, onToggle, onCopy }: {
           </div>
 
           {/* Ownership suggestion */}
-          <div className="mx-4 mb-4 px-3 py-2.5 rounded-lg border bg-surface" style={{ borderColor: '#4ade8030' }}>
+          <div className="mx-4 mb-4 px-3 py-2.5 rounded-lg border bg-surface" style={{ borderColor: `${STATUS_SUCCESS}${OPACITY_30}` }}>
             <div className="flex items-center gap-2">
               <Crown className="w-3.5 h-3.5 text-[#4ade80] flex-shrink-0" />
               <div className="flex-1 min-w-0">

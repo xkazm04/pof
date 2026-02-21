@@ -4,6 +4,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { AlertTriangle, X, ArrowRight, ShieldAlert } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { apiFetch } from '@/lib/api-utils';
+import { STATUS_SUCCESS, MODULE_COLORS, STATUS_BLOCKER, STATUS_WARNING } from '@/lib/chart-colors';
 import type { AntiPatternWarning as APWarning } from '@/types/pattern-library';
 
 interface AntiPatternWarningProps {
@@ -122,7 +123,7 @@ export function AntiPatternWarning({ prompt, moduleId, onSwitchApproach }: AntiP
                   <button
                     onClick={() => handleSwitch(warning)}
                     className="flex items-center gap-1 mt-1 px-2 py-0.5 rounded text-2xs font-medium transition-colors hover:bg-accent-subtle"
-                    style={{ color: '#4ade80' }}
+                    style={{ color: STATUS_SUCCESS }}
                   >
                     <ArrowRight className="w-2.5 h-2.5" />
                     Switch to {antiPattern.alternative.approach} ({Math.round(antiPattern.alternative.successRate * 100)}% success)
@@ -146,7 +147,7 @@ export function AntiPatternWarning({ prompt, moduleId, onSwitchApproach }: AntiP
 }
 
 const SEVERITY_COLORS: Record<string, string> = {
-  critical: '#ef4444',
-  high: '#fb923c',
-  medium: '#fbbf24',
+  critical: MODULE_COLORS.evaluator,
+  high: STATUS_BLOCKER,
+  medium: STATUS_WARNING,
 };

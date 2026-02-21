@@ -3,6 +3,7 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import { apiFetch } from '@/lib/api-utils';
+import type { SubModuleId } from '@/types/modules';
 import type {
   AcquiredAsset,
   AssetRecommendation,
@@ -26,7 +27,7 @@ interface MarketplaceState {
   error: string | null;
 
   /** Active module filter */
-  moduleFilter: string | null;
+  moduleFilter: SubModuleId | null;
 
   /** Fetch recommendations from the API */
   fetchRecommendations: (statusMap?: Record<string, FeatureStatus>, moduleId?: string) => Promise<void>;
@@ -38,10 +39,10 @@ interface MarketplaceState {
   removeAcquiredAsset: (assetId: string) => void;
 
   /** Generate integration code for an acquired asset */
-  generateIntegration: (assetId: string, moduleId: string, projectName: string, apiMacro: string, existingClasses: string[]) => Promise<IntegrationSpec | null>;
+  generateIntegration: (assetId: string, moduleId: SubModuleId, projectName: string, apiMacro: string, existingClasses: string[]) => Promise<IntegrationSpec | null>;
 
   /** Set module filter */
-  setModuleFilter: (moduleId: string | null) => void;
+  setModuleFilter: (moduleId: SubModuleId | null) => void;
 }
 
 export const useMarketplaceStore = create<MarketplaceState>()(

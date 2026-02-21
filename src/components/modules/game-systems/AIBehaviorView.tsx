@@ -13,6 +13,7 @@ import { FetchError } from '../shared/FetchError';
 import { useModuleCLI } from '@/hooks/useModuleCLI';
 import { useProjectStore } from '@/stores/projectStore';
 import { AITestingSandbox } from './AITestingSandbox';
+import { MODULE_COLORS, STATUS_SUCCESS } from '@/lib/chart-colors';
 import {
   buildGenerateTestsPrompt,
   buildSingleScenarioTestPrompt,
@@ -22,7 +23,7 @@ import {
 import type { TestScenario } from '@/types/ai-testing';
 import type { ExtraTab } from '../shared/ReviewableModuleView';
 
-const SYSTEMS_ACCENT = '#8b5cf6';
+const SYSTEMS_ACCENT = MODULE_COLORS.systems;
 
 export function AIBehaviorView() {
   const mod = SUB_MODULE_MAP['ai-behavior'];
@@ -66,7 +67,7 @@ export function AIBehaviorView() {
     moduleId: 'ai-behavior',
     sessionKey: 'ai-test-run',
     label: 'AI Test Run',
-    accentColor: '#4ade80',
+    accentColor: STATUS_SUCCESS,
   });
 
   // ── Handlers ──

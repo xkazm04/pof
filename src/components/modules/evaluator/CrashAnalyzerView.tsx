@@ -20,6 +20,8 @@ import type {
   CrashSeverity,
   CallstackFrame,
 } from '@/types/crash-analyzer';
+import { UI_TIMEOUTS } from '@/lib/constants';
+import { ACCENT_EMERALD } from '@/lib/chart-colors';
 
 // ── Constants ───────────────────────────────────────────────────────────────
 
@@ -342,7 +344,7 @@ function CrashListItem({
         <div className="flex flex-col items-end gap-1 shrink-0">
           <span className="text-2xs text-text-muted">{timeAgo}</span>
           {diagnosis && (
-            <ProgressRing value={Math.round(diagnosis.confidence * 100)} size={24} strokeWidth={2.5} color="#34d399" />
+            <ProgressRing value={Math.round(diagnosis.confidence * 100)} size={24} strokeWidth={2.5} color={ACCENT_EMERALD} />
           )}
         </div>
       </div>
@@ -366,7 +368,7 @@ function CrashDetailPanel({
     if (!diagnosis) return;
     navigator.clipboard.writeText(diagnosis.fixPrompt);
     setCopied(true);
-    setTimeout(() => setCopied(false), 1500);
+    setTimeout(() => setCopied(false), UI_TIMEOUTS.copyFeedback);
   }, [diagnosis]);
 
   return (
@@ -410,7 +412,7 @@ function CrashDetailPanel({
           <h3 className="text-xs font-semibold text-text mb-2 flex items-center gap-1.5">
             <Eye className="w-3.5 h-3.5 text-emerald-400" />
             AI Root Cause Analysis
-            <ProgressRing value={Math.round(diagnosis.confidence * 100)} size={20} strokeWidth={2} color="#34d399" />
+            <ProgressRing value={Math.round(diagnosis.confidence * 100)} size={20} strokeWidth={2} color={ACCENT_EMERALD} />
           </h3>
 
           <div className="space-y-3">

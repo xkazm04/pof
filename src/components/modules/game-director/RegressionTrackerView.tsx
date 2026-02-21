@@ -8,6 +8,7 @@ import {
   TrendingUp, TrendingDown, Bug, ArrowRight, Eye,
 } from 'lucide-react';
 import { SurfaceCard } from '@/components/ui/SurfaceCard';
+import { apiFetch } from '@/lib/api-utils';
 import type { PlaytestSession, FindingSeverity, FindingCategory } from '@/types/game-director';
 import type {
   FindingFingerprint,
@@ -15,24 +16,28 @@ import type {
   RegressionAlert,
   RegressionReport,
 } from '@/types/regression-tracker';
+import {
+  ACCENT_ORANGE, STATUS_SUCCESS, STATUS_WARNING, STATUS_ERROR, STATUS_INFO, STATUS_BLOCKER,
+  OPACITY_8, OPACITY_10, OPACITY_12, OPACITY_15, OPACITY_20,
+} from '@/lib/chart-colors';
 
-const ACCENT = '#f97316';
+const ACCENT = ACCENT_ORANGE;
 
 // ─── Severity helpers ─────────────────────────────────────────────────────────
 
 const SEVERITY_STYLES: Record<FindingSeverity, { icon: typeof AlertOctagon; color: string; bg: string }> = {
-  critical: { icon: AlertOctagon, color: '#f87171', bg: '#f8717112' },
-  high: { icon: AlertTriangle, color: '#fb923c', bg: '#fb923c12' },
-  medium: { icon: Info, color: '#fbbf24', bg: '#fbbf2412' },
-  low: { icon: Info, color: '#60a5fa', bg: '#60a5fa12' },
-  positive: { icon: CheckCircle2, color: '#4ade80', bg: '#4ade8012' },
+  critical: { icon: AlertOctagon, color: STATUS_ERROR, bg: `${STATUS_ERROR}${OPACITY_12}` },
+  high: { icon: AlertTriangle, color: STATUS_BLOCKER, bg: `${STATUS_BLOCKER}${OPACITY_12}` },
+  medium: { icon: Info, color: STATUS_WARNING, bg: `${STATUS_WARNING}${OPACITY_12}` },
+  low: { icon: Info, color: STATUS_INFO, bg: `${STATUS_INFO}${OPACITY_12}` },
+  positive: { icon: CheckCircle2, color: STATUS_SUCCESS, bg: `${STATUS_SUCCESS}${OPACITY_12}` },
 };
 
 const STATUS_STYLES: Record<string, { color: string; bg: string; label: string }> = {
-  open: { color: '#fb923c', bg: '#fb923c15', label: 'Open' },
-  fixed: { color: '#4ade80', bg: '#4ade8015', label: 'Fixed' },
-  regressed: { color: '#f87171', bg: '#f8717115', label: 'Regressed' },
-  resolved: { color: '#60a5fa', bg: '#60a5fa15', label: 'Resolved' },
+  open: { color: STATUS_BLOCKER, bg: `${STATUS_BLOCKER}${OPACITY_15}`, label: 'Open' },
+  fixed: { color: STATUS_SUCCESS, bg: `${STATUS_SUCCESS}${OPACITY_15}`, label: 'Fixed' },
+  regressed: { color: STATUS_ERROR, bg: `${STATUS_ERROR}${OPACITY_15}`, label: 'Regressed' },
+  resolved: { color: STATUS_INFO, bg: `${STATUS_INFO}${OPACITY_15}`, label: 'Resolved' },
 };
 
 const EMPTY_SESSIONS: PlaytestSession[] = [];
@@ -58,20 +63,16 @@ export function RegressionTrackerView() {
   const refresh = useCallback(async () => {
     setLoading(true);
     try {
-      const [fpRes, alertRes, statRes, sessRes] = await Promise.all([
-        fetch('/api/regression-tracker?action=fingerprints'),
-        fetch('/api/regression-tracker?action=alerts'),
-        fetch('/api/regression-tracker?action=stats'),
-        fetch('/api/regression-tracker?action=sessions'),
+      const [fpData, alertData, statData, sessData] = await Promise.all([
+        apiFetch<FindingFingerprint[]>('/api/regression-tracker?action=fingerprints'),
+        apiFetch<RegressionAlert[]>('/api/regression-tracker?action=alerts'),
+        apiFetch<{ totalTracked: number; openCount: number; fixedCount: number; regressedCount: number; resolvedCount: number; activeAlerts: number; regressionRate: number }>('/api/regression-tracker?action=stats'),
+        apiFetch<PlaytestSession[]>('/api/regression-tracker?action=sessions'),
       ]);
-      const fpData = await fpRes.json();
-      const alertData = await alertRes.json();
-      const statData = await statRes.json();
-      const sessData = await sessRes.json();
-      if (fpData.ok) setFingerprints(fpData.data);
-      if (alertData.ok) setAlerts(alertData.data);
-      if (statData.ok) setStats(statData.data);
-      if (sessData.ok) setSessions(sessData.data);
+      setFingerprints(fpData);
+      setAlerts(alertData);
+      setStats(statData);
+      setSessions(sessData);
     } catch { /* ignore */ }
     setLoading(false);
   }, []);
@@ -82,22 +83,19 @@ export function RegressionTrackerView() {
     if (!selectedSessionId) return;
     setProcessing(true);
     try {
-      const res = await fetch('/api/regression-tracker', {
+      const report = await apiFetch<RegressionReport>('/api/regression-tracker', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action: 'process-session', sessionId: selectedSessionId }),
       });
-      const data = await res.json();
-      if (data.ok) {
-        setLastReport(data.data);
-        await refresh();
-      }
+      setLastReport(report);
+      await refresh();
     } catch { /* ignore */ }
     setProcessing(false);
   }, [selectedSessionId, refresh]);
 
   const handleDismiss = useCallback(async (alertId: string) => {
-    await fetch('/api/regression-tracker', {
+    await apiFetch('/api/regression-tracker', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ action: 'dismiss', alertId }),
@@ -106,7 +104,7 @@ export function RegressionTrackerView() {
   }, [refresh]);
 
   const handleResolve = useCallback(async (fpId: string) => {
-    await fetch('/api/regression-tracker', {
+    await apiFetch('/api/regression-tracker', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ action: 'resolve', fingerprintId: fpId }),
@@ -173,7 +171,7 @@ export function RegressionTrackerView() {
             {label}
             {id === 'alerts' && alerts.filter(a => !a.dismissed).length > 0 && (
               <span className="ml-1.5 inline-flex items-center justify-center w-4 h-4 rounded-full text-[9px] font-bold"
-                style={{ backgroundColor: '#f87171', color: '#fff' }}>
+                style={{ backgroundColor: STATUS_ERROR, color: '#fff' }}>
                 {alerts.filter(a => !a.dismissed).length}
               </span>
             )}
@@ -224,9 +222,9 @@ function DashboardTab({
       {/* Stats grid */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         <StatCard label="Tracked Issues" value={stats.totalTracked} icon={Bug} color={ACCENT} />
-        <StatCard label="Open" value={stats.openCount} icon={AlertTriangle} color="#fb923c" />
-        <StatCard label="Regressed" value={stats.regressedCount} icon={TrendingDown} color="#f87171" />
-        <StatCard label="Fixed" value={stats.fixedCount + stats.resolvedCount} icon={CheckCircle2} color="#4ade80" />
+        <StatCard label="Open" value={stats.openCount} icon={AlertTriangle} color={STATUS_BLOCKER} />
+        <StatCard label="Regressed" value={stats.regressedCount} icon={TrendingDown} color={STATUS_ERROR} />
+        <StatCard label="Fixed" value={stats.fixedCount + stats.resolvedCount} icon={CheckCircle2} color={STATUS_SUCCESS} />
       </div>
 
       {/* Regression rate bar */}
@@ -234,7 +232,7 @@ function DashboardTab({
         <div className="p-3">
           <div className="flex items-center justify-between mb-2">
             <span className="text-2xs font-medium text-text-muted">Regression Rate</span>
-            <span className="text-xs font-bold" style={{ color: ratePercent > 20 ? '#f87171' : ratePercent > 10 ? '#fbbf24' : '#4ade80' }}>
+            <span className="text-xs font-bold" style={{ color: ratePercent > 20 ? STATUS_ERROR : ratePercent > 10 ? STATUS_WARNING : STATUS_SUCCESS }}>
               {ratePercent}%
             </span>
           </div>
@@ -243,7 +241,7 @@ function DashboardTab({
               className="h-full rounded-full transition-all duration-500"
               style={{
                 width: `${Math.min(ratePercent, 100)}%`,
-                backgroundColor: ratePercent > 20 ? '#f87171' : ratePercent > 10 ? '#fbbf24' : '#4ade80',
+                backgroundColor: ratePercent > 20 ? STATUS_ERROR : ratePercent > 10 ? STATUS_WARNING : STATUS_SUCCESS,
               }}
             />
           </div>
@@ -282,7 +280,7 @@ function DashboardTab({
                     <sev.icon className="w-3 h-3 flex-shrink-0" style={{ color: sev.color }} />
                     <span className="text-2xs text-text flex-1 truncate">{fp.titleStem}</span>
                     <span className="text-2xs font-mono px-1.5 py-0.5 rounded"
-                      style={{ color: '#f87171', backgroundColor: '#f8717112' }}>
+                      style={{ color: STATUS_ERROR, backgroundColor: `${STATUS_ERROR}${OPACITY_12}` }}>
                       {fp.regressionCount}x regressed
                     </span>
                     <span className="text-2xs font-medium px-1.5 py-0.5 rounded"
@@ -320,10 +318,10 @@ function ReportSummary({ report }: { report: RegressionReport }) {
         </div>
 
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-2">
-          <MiniStat label="New Issues" value={report.newFindings.length} color="#fbbf24" />
-          <MiniStat label="Regressions" value={report.regressions.length} color="#f87171" />
-          <MiniStat label="Persistent" value={report.persistent.length} color="#fb923c" />
-          <MiniStat label="Newly Fixed" value={report.newlyFixed.length} color="#4ade80" />
+          <MiniStat label="New Issues" value={report.newFindings.length} color={STATUS_WARNING} />
+          <MiniStat label="Regressions" value={report.regressions.length} color={STATUS_ERROR} />
+          <MiniStat label="Persistent" value={report.persistent.length} color={STATUS_BLOCKER} />
+          <MiniStat label="Newly Fixed" value={report.newlyFixed.length} color={STATUS_SUCCESS} />
         </div>
 
         {report.regressions.length > 0 && (
@@ -370,9 +368,8 @@ function FingerprintsTab({
     setExpandedId(fpId);
     setLoadingOcc(true);
     try {
-      const res = await fetch(`/api/regression-tracker?action=occurrences&fpId=${fpId}`);
-      const data = await res.json();
-      if (data.ok) setOccurrences(data.data);
+      const occData = await apiFetch<FingerprintOccurrence[]>(`/api/regression-tracker?action=occurrences&fpId=${fpId}`);
+      setOccurrences(occData);
     } catch { /* ignore */ }
     setLoadingOcc(false);
   }, [expandedId]);
@@ -439,7 +436,7 @@ function FingerprintsTab({
                   <div className="flex items-center gap-2 flex-shrink-0">
                     <span className="text-2xs font-mono text-text-muted">{fp.occurrenceCount}x seen</span>
                     {fp.regressionCount > 0 && (
-                      <span className="text-2xs font-mono px-1.5 py-0.5 rounded" style={{ color: '#f87171', backgroundColor: '#f8717112' }}>
+                      <span className="text-2xs font-mono px-1.5 py-0.5 rounded" style={{ color: STATUS_ERROR, backgroundColor: `${STATUS_ERROR}${OPACITY_12}` }}>
                         {fp.regressionCount}x regressed
                       </span>
                     )}

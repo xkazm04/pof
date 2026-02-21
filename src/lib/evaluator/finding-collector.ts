@@ -2,6 +2,7 @@
  * Finding collector — aggregates findings across evaluation passes with deduplication.
  */
 
+import type { SubModuleId } from '@/types/modules';
 import type { EvalPass } from './module-eval-prompts';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -12,7 +13,7 @@ export type FindingEffort = 'trivial' | 'small' | 'medium' | 'large';
 export interface EvalFinding {
   id: string;
   scanId: string;
-  moduleId: string;
+  moduleId: SubModuleId;
   pass: EvalPass;
   category: string;
   severity: FindingSeverity;
@@ -35,7 +36,7 @@ export interface RawFinding {
 }
 
 export interface ModuleFindings {
-  moduleId: string;
+  moduleId: SubModuleId;
   findings: EvalFinding[];
   bySeverity: Record<FindingSeverity, number>;
   byCategory: Record<string, EvalFinding[]>;
@@ -71,7 +72,7 @@ function validateEffort(e: string): FindingEffort {
 export function parseFindings(
   raw: string,
   scanId: string,
-  moduleId: string,
+  moduleId: SubModuleId,
   pass: EvalPass,
 ): EvalFinding[] {
   // Strip markdown code fences if present
@@ -184,7 +185,7 @@ export function aggregateFindings(findings: EvalFinding[], scanId: string): Scan
     }
 
     modules.push({
-      moduleId,
+      moduleId: moduleId as SubModuleId,
       findings: modFindings,
       bySeverity,
       byCategory,

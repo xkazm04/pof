@@ -6,6 +6,8 @@ import {
   GripVertical, ChevronDown, ChevronUp, Zap,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
+import { MODULE_COLORS } from '@/lib/constants';
+import { STATUS_WARNING, ACCENT_VIOLET, STATUS_IMPROVED, STATUS_NEUTRAL, ACCENT_ORANGE, STATUS_SUCCESS } from '@/lib/chart-colors';
 
 // ── Types ──
 
@@ -45,7 +47,7 @@ export const PP_EFFECTS: PPEffect[] = [
     id: 'pp-bloom',
     name: 'Bloom',
     icon: Sun,
-    color: '#fbbf24',
+    color: STATUS_WARNING,
     description: 'Glow around bright areas. Controls intensity, threshold, and kernel size for the bloom convolution.',
     ueClass: 'FPostProcessSettings::Bloom*',
     params: [
@@ -59,7 +61,7 @@ export const PP_EFFECTS: PPEffect[] = [
     id: 'pp-colorgrading',
     name: 'Color Grading',
     icon: Aperture,
-    color: '#a78bfa',
+    color: ACCENT_VIOLET,
     description: 'LUT-based color correction. Adjusts white balance, saturation, contrast, and tone curve for cinematic looks.',
     ueClass: 'FPostProcessSettings::ColorGrading*',
     params: [
@@ -74,7 +76,7 @@ export const PP_EFFECTS: PPEffect[] = [
     id: 'pp-dof',
     name: 'Depth of Field',
     icon: Eye,
-    color: '#38bdf8',
+    color: STATUS_IMPROVED,
     description: 'Cinematic focus blur. Gaussian or Bokeh DOF with focal distance, aperture (f-stop), and near/far transition regions.',
     ueClass: 'FPostProcessSettings::DepthOfField*',
     params: [
@@ -88,7 +90,7 @@ export const PP_EFFECTS: PPEffect[] = [
     id: 'pp-ao',
     name: 'Ambient Occlusion',
     icon: Circle,
-    color: '#6b7280',
+    color: STATUS_NEUTRAL,
     description: 'Screen-space darkening in crevices and corners. Adds depth and contact shadows without ray tracing.',
     ueClass: 'FPostProcessSettings::AmbientOcclusion*',
     params: [
@@ -102,7 +104,7 @@ export const PP_EFFECTS: PPEffect[] = [
     id: 'pp-motionblur',
     name: 'Motion Blur',
     icon: Move,
-    color: '#f97316',
+    color: ACCENT_ORANGE,
     description: 'Per-object and camera velocity blur. Adds cinematic motion feel; amount and max pixel length are key controls.',
     ueClass: 'FPostProcessSettings::MotionBlur*',
     params: [
@@ -127,7 +129,7 @@ export const PP_EFFECTS: PPEffect[] = [
     id: 'pp-stencil',
     name: 'Custom Stencil',
     icon: LayersIcon,
-    color: '#22c55e',
+    color: STATUS_SUCCESS,
     description: 'Per-object post-process using custom stencil buffer. Apply outline, highlight, or unique effects to tagged actors.',
     ueClass: 'Custom Depth / Stencil + PP Material',
     params: [
@@ -146,8 +148,6 @@ const DEFAULT_STACK: PPStackEntry[] = PP_EFFECTS.map((e, i) => ({
 }));
 
 // ── Component ──
-
-const ACCENT = '#f59e0b';
 
 interface PostProcessStackBuilderProps {
   onGenerate: (config: PostProcessStackConfig) => void;
@@ -203,60 +203,79 @@ export function PostProcessStackBuilder({ onGenerate, isGenerating }: PostProces
   }, [stack, onGenerate]);
 
   return (
-    <div className="w-full space-y-4">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <LayersIcon className="w-4 h-4" style={{ color: ACCENT }} />
-          <div>
-            <h3 className="text-xs font-semibold text-text">Post-Process Stack</h3>
-            <p className="text-2xs text-text-muted">
-              {enabledCount}/{PP_EFFECTS.length} effects enabled — drag to reorder priority
-            </p>
+    <div className="w-full h-full bg-[#03030a] rounded-2xl border border-violet-900/30 shadow-[inset_0_0_80px_rgba(167,139,250,0.05)] p-6 relative overflow-y-auto">
+      {/* Background Ambience */}
+      <div className="absolute inset-0 pointer-events-none z-0">
+        <div className="absolute top-0 right-0 w-64 h-64 bg-violet-600/10 blur-[100px] rounded-full pointer-events-none" />
+      </div>
+
+      <div className="relative z-10 space-y-6">
+        {/* Header */}
+        <div className="flex items-center justify-between border-b border-violet-900/30 pb-4">
+          <div className="flex items-center gap-4">
+            <div className="w-12 h-12 rounded-xl bg-violet-900/40 border border-violet-500/50 flex items-center justify-center shadow-[0_0_15px_rgba(139,92,246,0.3)]">
+              <LayersIcon className="w-6 h-6 text-violet-400" />
+            </div>
+            <div>
+              <h3 className="text-sm font-bold tracking-widest uppercase text-violet-100">Post-Process Stack Pipeline</h3>
+              <p className="text-[10px] text-violet-400/60 uppercase tracking-wider mt-0.5">
+                {enabledCount}/{PP_EFFECTS.length} ACTIVE_NODES — PRIORITY_ROUTING_LOCKED
+              </p>
+            </div>
           </div>
         </div>
-      </div>
 
-      {/* Stack list */}
-      <div className="space-y-1.5">
-        {sortedStack.map((entry, idx) => {
-          const effect = effectMap.get(entry.effectId);
-          if (!effect) return null;
-          const isExpanded = expandedId === entry.effectId;
-          return (
-            <EffectRow
-              key={entry.effectId}
-              effect={effect}
-              entry={entry}
-              isExpanded={isExpanded}
-              isFirst={idx === 0}
-              isLast={idx === sortedStack.length - 1}
-              onToggle={() => toggleEffect(entry.effectId)}
-              onMoveUp={() => moveEffect(entry.effectId, 'up')}
-              onMoveDown={() => moveEffect(entry.effectId, 'down')}
-              onExpand={() => toggleExpand(entry.effectId)}
-            />
-          );
-        })}
-      </div>
+        {/* Stack list */}
+        <div className="space-y-2">
+          {sortedStack.map((entry, idx) => {
+            const effect = effectMap.get(entry.effectId);
+            if (!effect) return null;
+            const isExpanded = expandedId === entry.effectId;
+            return (
+              <EffectRow
+                key={entry.effectId}
+                effect={effect}
+                entry={entry}
+                isExpanded={isExpanded}
+                isFirst={idx === 0}
+                isLast={idx === sortedStack.length - 1}
+                onToggle={() => toggleEffect(entry.effectId)}
+                onMoveUp={() => moveEffect(entry.effectId, 'up')}
+                onMoveDown={() => moveEffect(entry.effectId, 'down')}
+                onExpand={() => toggleExpand(entry.effectId)}
+              />
+            );
+          })}
+        </div>
 
-      {/* Generate button */}
-      <button
-        onClick={handleGenerate}
-        disabled={isGenerating || enabledCount === 0}
-        className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-xs font-medium transition-all disabled:opacity-50"
-        style={{
-          backgroundColor: `${ACCENT}15`,
-          color: ACCENT,
-          border: `1px solid ${ACCENT}30`,
-        }}
-      >
-        <Zap className="w-3.5 h-3.5" />
-        {isGenerating
-          ? 'Generating...'
-          : `Generate Post-Process Volume (${enabledCount} effect${enabledCount !== 1 ? 's' : ''})`
-        }
-      </button>
+        {/* Generate button */}
+        <button
+          onClick={handleGenerate}
+          disabled={isGenerating || enabledCount === 0}
+          className="relative w-full overflow-hidden flex items-center justify-center gap-2 px-6 py-4 rounded-xl text-xs font-bold uppercase tracking-widest transition-all disabled:opacity-50 mt-4 group outline-none"
+          style={{
+            backgroundColor: `${MODULE_COLORS.content}15`,
+            color: MODULE_COLORS.content,
+            border: `1px solid ${MODULE_COLORS.content}50`,
+            boxShadow: `0 0 20px ${MODULE_COLORS.content}20, inset 0 0 10px ${MODULE_COLORS.content}10`,
+          }}
+        >
+          <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/40 to-transparent opacity-50" />
+          <div className="absolute top-0 -left-[100%] w-1/2 h-full bg-gradient-to-r from-transparent via-white/10 to-transparent skew-x-12 group-hover:left-[200%] transition-transform duration-1000 ease-out pointer-events-none" />
+
+          {isGenerating ? (
+            <div className="flex items-center gap-2 animate-pulse">
+              <span className="w-4 h-4 rounded-full border-2 border-current border-t-transparent animate-spin" />
+              COMPILING_STACK...
+            </div>
+          ) : (
+            <>
+              <Zap className="w-4 h-4 group-hover:scale-110 group-hover:drop-shadow-[0_0_8px_rgba(currentColor,0.8)] transition-all" />
+              COMPILE VOLUME_SETTINGS ({enabledCount})
+            </>
+          )}
+        </button>
+      </div>
     </div>
   );
 }
@@ -280,118 +299,138 @@ function EffectRow({
   onToggle, onMoveUp, onMoveDown, onExpand,
 }: EffectRowProps) {
   const Icon = effect.icon;
+  const isActive = entry.enabled;
 
   return (
     <div
-      className="rounded-xl border transition-all duration-base"
+      className="rounded-xl border transition-all duration-500 relative group overflow-hidden"
       style={{
-        borderColor: isExpanded ? `${effect.color}40` : entry.enabled ? `${effect.color}20` : 'var(--border)',
-        backgroundColor: isExpanded ? `${effect.color}06` : entry.enabled ? `${effect.color}04` : 'var(--surface-deep)',
-        opacity: entry.enabled ? 1 : 0.55,
+        borderColor: isExpanded ? `${effect.color}40` : isActive ? `${effect.color}20` : 'rgba(139,92,246,0.2)',
+        backgroundColor: isExpanded ? `${effect.color}08` : isActive ? `${effect.color}04` : 'rgba(10,10,25,0.6)',
+        boxShadow: isExpanded ? `0 0 20px ${effect.color}10, inset 0 0 10px ${effect.color}05` : 'none',
+        opacity: isActive ? 1 : 0.6,
       }}
     >
+      {/* Active Bar indicator */}
+      {isActive && (
+        <div className="absolute left-0 top-0 bottom-0 w-1 shadow-[0_0_10px_currentColor]" style={{ backgroundColor: effect.color }} />
+      )}
+
       {/* Row header */}
-      <div className="flex items-center gap-2 px-3 py-2.5">
+      <div className="flex items-center px-4 py-3 gap-4">
         {/* Grip + reorder */}
-        <div className="flex flex-col items-center gap-0.5 flex-shrink-0">
+        <div className="flex flex-col items-center gap-1 flex-shrink-0">
           <button
             onClick={onMoveUp}
             disabled={isFirst}
-            className="p-0 text-text-muted hover:text-text transition-colors disabled:opacity-30 disabled:cursor-default"
+            className="p-0.5 rounded text-violet-500/40 hover:text-violet-300 hover:bg-violet-900/20 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
           >
-            <ChevronUp className="w-3 h-3" />
+            <ChevronUp className="w-3.5 h-3.5" />
           </button>
-          <GripVertical className="w-3 h-3 text-border-bright" />
+          <GripVertical className="w-3.5 h-3.5 text-violet-900/60 group-hover:text-violet-500/40 transition-colors" />
           <button
             onClick={onMoveDown}
             disabled={isLast}
-            className="p-0 text-text-muted hover:text-text transition-colors disabled:opacity-30 disabled:cursor-default"
+            className="p-0.5 rounded text-violet-500/40 hover:text-violet-300 hover:bg-violet-900/20 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
           >
-            <ChevronDown className="w-3 h-3" />
+            <ChevronDown className="w-3.5 h-3.5" />
           </button>
         </div>
 
-        {/* Toggle */}
+        {/* Toggle Node */}
         <button
           onClick={onToggle}
-          className="flex-shrink-0 w-8 h-4 rounded-full relative transition-colors"
+          className="flex-shrink-0 w-10 h-5 rounded-full relative transition-colors border border-violet-900/30 shadow-inner"
           style={{
-            backgroundColor: entry.enabled ? `${effect.color}40` : 'var(--border)',
+            backgroundColor: isActive ? `${effect.color}20` : 'rgba(0,0,0,0.8)',
           }}
         >
           <span
-            className="absolute top-0.5 w-3 h-3 rounded-full transition-all"
+            className="absolute top-0.5 w-3.5 h-3.5 rounded-full transition-all duration-300 shadow-[0_0_5px_currentColor]"
             style={{
-              left: entry.enabled ? '17px' : '2px',
-              backgroundColor: entry.enabled ? effect.color : 'var(--text-muted)',
+              left: isActive ? '22px' : '4px',
+              backgroundColor: isActive ? effect.color : 'rgba(139,92,246,0.4)',
             }}
           />
         </button>
 
         {/* Icon */}
         <div
-          className="flex-shrink-0 w-6 h-6 rounded-md flex items-center justify-center"
+          className="flex-shrink-0 w-10 h-10 rounded-lg flex items-center justify-center transition-transform group-hover:scale-105"
           style={{
-            background: `linear-gradient(135deg, ${effect.color}18, ${effect.color}08)`,
-            border: `1px solid ${effect.color}20`,
+            background: `linear-gradient(135deg, ${effect.color}15, ${effect.color}05)`,
+            border: `1px solid ${effect.color}30`,
           }}
         >
-          <Icon className="w-3 h-3" style={{ color: effect.color }} />
+          <Icon className="w-5 h-5" style={{ color: effect.color }} />
         </div>
 
         {/* Name + description */}
-        <button
-          onClick={onExpand}
-          className="flex-1 min-w-0 text-left group"
-        >
-          <div className="flex items-center gap-1.5">
-            <span className="text-xs font-semibold text-text">{effect.name}</span>
-            <span className="text-2xs text-text-muted font-mono">{entry.priority + 1}</span>
+        <div className="flex-1 min-w-0 flex flex-col justify-center text-left">
+          <div className="flex items-center gap-3 mb-0.5">
+            <span className="text-[11px] font-bold uppercase tracking-widest text-violet-100 truncate">{effect.name}</span>
+            <span
+              className="text-[9px] font-mono font-bold uppercase tracking-widest px-1.5 py-0.5 rounded border"
+              style={{ backgroundColor: `${effect.color}10`, borderColor: `${effect.color}30`, color: effect.color }}
+            >
+              PRIORITY: {entry.priority + 1}
+            </span>
           </div>
-          <p className="text-2xs text-text-muted line-clamp-1">{effect.description}</p>
-        </button>
+          <p className="text-[10px] text-violet-300/60 line-clamp-1 font-mono">{effect.description}</p>
+        </div>
 
         {/* Expand arrow */}
-        <button onClick={onExpand} className="flex-shrink-0 p-0.5">
-          {isExpanded
-            ? <ChevronUp className="w-3 h-3 text-text-muted" />
-            : <ChevronDown className="w-3 h-3 text-text-muted" />
-          }
+        <button
+          onClick={onExpand}
+          className="flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center bg-black/40 border border-violet-900/30 hover:border-violet-500/50 transition-colors"
+        >
+          <span
+            className="text-[10px] font-mono transition-transform duration-300"
+            style={{ color: effect.color, transform: isExpanded ? 'rotate(180deg)' : 'rotate(0deg)' }}
+          >
+            ▼
+          </span>
         </button>
       </div>
 
       {/* Expanded params */}
       {isExpanded && (
-        <div className="px-3 pb-3 pt-0">
-          <div className="ml-[72px] space-y-1.5">
-            <div className="text-2xs font-semibold text-text-muted uppercase tracking-widest mb-1">
-              UE: {effect.ueClass}
+        <div className="px-5 pb-5 pt-2">
+          <div className="ml-[88px] space-y-3 relative">
+            <div className="absolute -left-6 top-0 bottom-4 w-px bg-violet-900/40" style={{ backgroundColor: `${effect.color}30` }} />
+
+            <div className="text-[9px] font-bold uppercase tracking-widest px-2 py-1 rounded w-fit border shadow-[inset_0_0_10px_rgba(0,0,0,0.5)]" style={{ color: effect.color, backgroundColor: `${effect.color}10`, borderColor: `${effect.color}20` }}>
+              CORE_CLASS: {effect.ueClass}
             </div>
-            {effect.params.map((param) => (
-              <div
-                key={param.name}
-                className="flex items-start gap-2 px-2.5 py-1.5 rounded-lg bg-[#0a0a1e] border border-border"
-              >
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-1.5">
-                    <span className="text-2xs font-mono font-medium text-[#c0c4e0]">{param.name}</span>
-                    <span
-                      className="text-2xs px-1 py-0 rounded font-medium uppercase"
-                      style={{ backgroundColor: `${effect.color}15`, color: `${effect.color}cc` }}
-                    >
-                      {param.type}
-                    </span>
+
+            <div className="space-y-2">
+              {effect.params.map((param) => (
+                <div
+                  key={param.name}
+                  className="flex flex-col xl:flex-row xl:items-center justify-between gap-3 px-4 py-3 rounded-xl bg-black/60 border border-violet-900/40 relative group/param hover:border-violet-500/30 transition-colors shadow-inner"
+                >
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-3 mb-1.5">
+                      <span className="text-[10px] font-bold font-mono text-violet-200">{param.name}</span>
+                      <span
+                        className="text-[8px] px-1.5 py-0.5 rounded font-bold uppercase tracking-widest border"
+                        style={{ backgroundColor: `${effect.color}15`, color: effect.color, borderColor: `${effect.color}30` }}
+                      >
+                        {param.type}
+                      </span>
+                    </div>
+                    <p className="text-[9px] text-violet-400/60 font-mono leading-relaxed">{param.description}</p>
                   </div>
-                  <p className="text-2xs text-text-muted mt-0.5">{param.description}</p>
+
+                  <div className="flex-shrink-0 text-left xl:text-right bg-violet-900/10 px-3 py-2 rounded-lg border border-violet-900/30 min-w-[140px]">
+                    <div className="text-[11px] font-mono text-violet-100 font-bold">{param.defaultValue}</div>
+                    {param.range && (
+                      <div className="text-[8px] text-violet-500/60 font-mono mt-1 uppercase tracking-widest border-t border-violet-900/40 pt-1">RANGE: {param.range}</div>
+                    )}
+                  </div>
                 </div>
-                <div className="flex-shrink-0 text-right">
-                  <div className="text-2xs font-mono text-[#9b9ec0]">{param.defaultValue}</div>
-                  {param.range && (
-                    <div className="text-2xs text-text-muted">{param.range}</div>
-                  )}
-                </div>
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
         </div>
       )}

@@ -5,16 +5,17 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { X, Radio, Trash2, Filter, Zap } from 'lucide-react';
 import { eventBus } from '@/lib/event-bus';
 import type { BusEvent, EventChannel } from '@/types/event-bus';
+import { MODULE_COLORS, STATUS_SUCCESS, STATUS_STALE, ACCENT_CYAN, OPACITY_8, OPACITY_15 } from '@/lib/chart-colors';
 
 const MAX_DISPLAY = 200;
 
 const NAMESPACE_COLORS: Record<string, string> = {
-  cli: '#3b82f6',
-  eval: '#ef4444',
-  build: '#f59e0b',
-  checklist: '#22c55e',
-  file: '#8b5cf6',
-  nav: '#06b6d4',
+  cli: MODULE_COLORS.core,
+  eval: MODULE_COLORS.evaluator,
+  build: MODULE_COLORS.content,
+  checklist: STATUS_SUCCESS,
+  file: STATUS_STALE,
+  nav: ACCENT_CYAN,
 };
 
 function getNamespace(channel: string): string {
@@ -113,9 +114,10 @@ export function EventBusDevTools() {
               onClick={() => setPaused((p) => !p)}
               className={`px-2 py-1 rounded text-2xs font-medium transition-colors ${
                 paused
-                  ? 'text-[#f59e0b] bg-[#f59e0b14] hover:bg-[#f59e0b24]'
+                  ? 'hover:brightness-110'
                   : 'text-text-muted hover:text-text hover:bg-border'
               }`}
+              style={paused ? { color: MODULE_COLORS.content, backgroundColor: MODULE_COLORS.content + OPACITY_8 } : undefined}
             >
               {paused ? 'Paused' : 'Pause'}
             </button>

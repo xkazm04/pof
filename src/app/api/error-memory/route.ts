@@ -9,6 +9,7 @@ import {
 } from '@/lib/error-memory-db';
 import { fingerprintErrors, extractTaskKeywords } from '@/lib/error-fingerprint';
 import type { ErrorMemoryRequest } from '@/types/error-memory';
+import type { SubModuleId } from '@/types/modules';
 
 export async function POST(req: NextRequest) {
   try {
@@ -28,14 +29,14 @@ export async function POST(req: NextRequest) {
         );
 
         // Store in DB (upsert — increments occurrence count for existing fingerprints)
-        const records = recordErrors(body.moduleId, fingerprinted);
+        const records = recordErrors(body.moduleId as SubModuleId, fingerprinted);
         return apiSuccess(records);
       }
 
       // ── Get all errors for a module ───────────────────────────
       case 'get-module-errors': {
         if (!body.moduleId) return apiError('moduleId required', 400);
-        const errors = getModuleErrors(body.moduleId);
+        const errors = getModuleErrors(body.moduleId as SubModuleId);
         return apiSuccess(errors);
       }
 
@@ -43,7 +44,7 @@ export async function POST(req: NextRequest) {
       case 'get-relevant-errors': {
         if (!body.moduleId) return apiError('moduleId required', 400);
         const keywords = body.taskKeywords ?? [];
-        const relevant = getRelevantErrors(body.moduleId, keywords);
+        const relevant = getRelevantErrors(body.moduleId as SubModuleId, keywords);
         return apiSuccess(relevant);
       }
 

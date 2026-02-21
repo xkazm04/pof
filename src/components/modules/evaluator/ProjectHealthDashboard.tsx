@@ -22,6 +22,7 @@ import type { EvaluatorReport, ModuleScore, Recommendation } from '@/types/evalu
 import { SurfaceCard } from '@/components/ui/SurfaceCard';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { MODULE_COLORS, STATUS_SUCCESS, STATUS_WARNING, STATUS_ERROR, STATUS_BLOCKER, OPACITY_10 } from '@/lib/chart-colors';
+import type { SubModuleId } from '@/types/modules';
 
 const EVAL_ACCENT = MODULE_COLORS.evaluator;
 
@@ -215,11 +216,11 @@ export function ProjectHealthDashboard({ onNavigateTab }: ProjectHealthDashboard
               key={alert.id}
               className="flex items-center gap-3 px-4 py-2.5 rounded-lg border"
               style={{
-                backgroundColor: PRIORITY_COLORS[alert.severity]?.bg ?? '#f8717112',
-                borderColor: PRIORITY_COLORS[alert.severity]?.border ?? '#f8717125',
+                backgroundColor: PRIORITY_COLORS[alert.severity]?.bg ?? `${STATUS_ERROR}12`,
+                borderColor: PRIORITY_COLORS[alert.severity]?.border ?? `${STATUS_ERROR}25`,
               }}
             >
-              <TrendingDown className="w-4 h-4 flex-shrink-0" style={{ color: PRIORITY_COLORS[alert.severity]?.text ?? '#f87171' }} />
+              <TrendingDown className="w-4 h-4 flex-shrink-0" style={{ color: PRIORITY_COLORS[alert.severity]?.text ?? STATUS_ERROR }} />
               <span className="text-xs text-text flex-1">{alert.message}</span>
               <span
                 className="text-2xs font-semibold uppercase tracking-wider px-1.5 py-0.5 rounded"
@@ -652,7 +653,7 @@ export function ProjectHealthDashboard({ onNavigateTab }: ProjectHealthDashboard
                   {delta !== 0 && (
                     <span
                       className="text-2xs font-medium flex items-center gap-0.5"
-                      style={{ color: delta > 0 ? '#4ade80' : '#f87171' }}
+                      style={{ color: delta > 0 ? STATUS_SUCCESS : STATUS_ERROR }}
                     >
                       {delta > 0 ? <TrendingUp className="w-2.5 h-2.5" /> : <TrendingDown className="w-2.5 h-2.5" />}
                       {delta > 0 ? '+' : ''}{delta}
@@ -702,7 +703,7 @@ function priorityOrder(p: string): number {
   return order[p] ?? 4;
 }
 
-function ModuleScoreTrend({ moduleId, scanHistory }: { moduleId: string; scanHistory: EvaluatorReport[] }) {
+function ModuleScoreTrend({ moduleId, scanHistory }: { moduleId: SubModuleId; scanHistory: EvaluatorReport[] }) {
   const points = useMemo(() => {
     return scanHistory
       .map((scan) => {
@@ -737,7 +738,7 @@ function ModuleScoreTrend({ moduleId, scanHistory }: { moduleId: string; scanHis
         <span className="text-xs font-semibold uppercase tracking-wider text-text-muted">Score Trend</span>
         <span
           className="text-2xs font-medium"
-          style={{ color: delta > 0 ? '#4ade80' : delta < 0 ? '#f87171' : 'var(--text-muted)' }}
+          style={{ color: delta > 0 ? STATUS_SUCCESS : delta < 0 ? STATUS_ERROR : 'var(--text-muted)' }}
         >
           {delta > 0 ? '+' : ''}{delta} over {points.length} scans
         </span>
@@ -795,7 +796,7 @@ function RadialScoreGauge({ score, isScanning }: { score: number | null; isScann
 
   // Color grading: red (0-30), amber (31-60), green (61-100)
   const gaugeColor = score !== null
-    ? score <= 30 ? '#ef4444' : score <= 60 ? '#fbbf24' : '#4ade80'
+    ? score <= 30 ? MODULE_COLORS.evaluator : score <= 60 ? STATUS_WARNING : STATUS_SUCCESS
     : 'var(--text-muted)';
 
   return (

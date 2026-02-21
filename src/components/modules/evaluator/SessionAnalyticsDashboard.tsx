@@ -199,8 +199,8 @@ function InsightCard({ insight }: { insight: PromptInsight }) {
 
 function QualityScoreRow({ score }: { score: PromptQualityScore }) {
   const TrendIcon = score.trend === 'improving' ? TrendingUp : score.trend === 'declining' ? TrendingDown : Minus;
-  const trendColor = score.trend === 'improving' ? '#4ade80' : score.trend === 'declining' ? '#f87171' : 'var(--text-muted)';
-  const scoreColor = score.score >= 70 ? '#4ade80' : score.score >= 40 ? '#fbbf24' : '#f87171';
+  const trendColor = score.trend === 'improving' ? STATUS_SUCCESS : score.trend === 'declining' ? STATUS_ERROR : 'var(--text-muted)';
+  const scoreColor = score.score >= 70 ? STATUS_SUCCESS : score.score >= 40 ? STATUS_WARNING : STATUS_ERROR;
 
   return (
     <div className="flex items-center gap-3 px-3 py-2 rounded-md hover:bg-[#111130] transition-colors">
@@ -239,7 +239,7 @@ function ModuleStatsRow({
   onToggle: () => void;
 }) {
   const successPercent = Math.round(stats.successRate * 100);
-  const successColor = successPercent >= 70 ? '#4ade80' : successPercent >= 40 ? '#fbbf24' : '#f87171';
+  const successColor = successPercent >= 70 ? STATUS_SUCCESS : successPercent >= 40 ? STATUS_WARNING : STATUS_ERROR;
 
   return (
     <div className="rounded-md overflow-hidden">

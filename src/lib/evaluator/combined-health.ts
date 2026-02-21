@@ -1,3 +1,4 @@
+import type { SubModuleId } from '@/types/modules';
 import type { ModuleCorrelation } from './correlation-engine';
 
 // ─── Combined health score ───────────────────────────────────────────────────
@@ -21,7 +22,7 @@ export interface HealthBreakdown {
 export interface ProjectHealthSummary {
   overallScore: number;
   moduleScores: Array<{
-    moduleId: string;
+    moduleId: SubModuleId;
     label: string;
     breakdown: HealthBreakdown;
   }>;
@@ -82,7 +83,7 @@ export function computeProjectHealth(modules: ModuleCorrelation[]): ProjectHealt
   }
 
   const moduleScores = scorable.map((m) => ({
-    moduleId: m.moduleId,
+    moduleId: m.moduleId as SubModuleId,
     label: m.label,
     breakdown: computeBreakdown(m),
   }));

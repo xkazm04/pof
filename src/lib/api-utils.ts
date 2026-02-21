@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import type { ApiResponse } from '@/types/api';
+import { ok, err, type Result } from '@/types/result';
 
 // ---- Server-side helpers (used in route handlers) ----
 
@@ -23,4 +24,16 @@ export async function apiFetch<T>(url: string, init?: RequestInit): Promise<T> {
   const json: ApiResponse<T> = await res.json();
   if (!json.success) throw new Error(json.error);
   return json.data;
+}
+
+/** Non-throwing variant of apiFetch. Returns Result<T, string> instead of throwing. */
+export async function tryApiFetch<T>(url: string, init?: RequestInit): Promise<Result<T, string>> {
+  try {
+    const res = await fetch(url, init);
+    const json: ApiResponse<T> = await res.json();
+    if (!json.success) return err(json.error);
+    return ok(json.data);
+  } catch (e) {
+    return err(e instanceof Error ? e.message : 'Network error');
+  }
 }

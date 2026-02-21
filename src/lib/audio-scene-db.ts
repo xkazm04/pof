@@ -30,21 +30,37 @@ export function ensureAudioSceneTable() {
   `);
 }
 
+// ── Row type ──
+
+interface AudioSceneRow {
+  id: number;
+  name: string;
+  description: string;
+  zones: string;
+  emitters: string;
+  global_reverb_preset: string;
+  sound_pool_size: number;
+  max_concurrent_sounds: number;
+  last_generated_at: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
 // ── Helpers ──
 
-function rowToDoc(row: Record<string, unknown>): AudioSceneDocument {
+function rowToDoc(row: AudioSceneRow): AudioSceneDocument {
   return {
-    id: row.id as number,
-    name: row.name as string,
-    description: row.description as string,
-    zones: JSON.parse((row.zones as string) || '[]'),
-    emitters: JSON.parse((row.emitters as string) || '[]'),
+    id: row.id,
+    name: row.name,
+    description: row.description,
+    zones: JSON.parse(row.zones || '[]'),
+    emitters: JSON.parse(row.emitters || '[]'),
     globalReverbPreset: (row.global_reverb_preset as AudioSceneDocument['globalReverbPreset']) || 'none',
-    soundPoolSize: (row.sound_pool_size as number) || 32,
-    maxConcurrentSounds: (row.max_concurrent_sounds as number) || 16,
-    lastGeneratedAt: row.last_generated_at as string | null,
-    createdAt: row.created_at as string,
-    updatedAt: row.updated_at as string,
+    soundPoolSize: row.sound_pool_size || 32,
+    maxConcurrentSounds: row.max_concurrent_sounds || 16,
+    lastGeneratedAt: row.last_generated_at,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
   };
 }
 
@@ -54,7 +70,7 @@ export function getAllAudioScenes(): AudioSceneDocument[] {
   ensureAudioSceneTable();
   const rows = getDb()
     .prepare('SELECT * FROM audio_scenes ORDER BY updated_at DESC')
-    .all() as Record<string, unknown>[];
+    .all() as AudioSceneRow[];
   return rows.map(rowToDoc);
 }
 
@@ -62,7 +78,7 @@ export function getAudioScene(id: number): AudioSceneDocument | null {
   ensureAudioSceneTable();
   const row = getDb()
     .prepare('SELECT * FROM audio_scenes WHERE id = ?')
-    .get(id) as Record<string, unknown> | undefined;
+    .get(id) as AudioSceneRow | undefined;
   return row ? rowToDoc(row) : null;
 }
 
@@ -72,7 +88,11 @@ export function createAudioScene(payload: CreateAudioScenePayload): AudioSceneDo
   const result = db
     .prepare('INSERT INTO audio_scenes (name, description) VALUES (?, ?)')
     .run(payload.name, payload.description ?? '');
-  return getAudioScene(result.lastInsertRowid as number)!;
+  const scene = getAudioScene(result.lastInsertRowid as number);
+  if (!scene) {
+    throw new Error(`Failed to retrieve audio_scenes record after INSERT (rowid=${result.lastInsertRowid})`);
+  }
+  return scene;
 }
 
 export function updateAudioScene(payload: UpdateAudioScenePayload): AudioSceneDocument | null {

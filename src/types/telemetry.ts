@@ -13,7 +13,8 @@ export type GameplayPattern =
   | 'permadeath-rogue'       // Save/load with run-based resets → Roguelite ARPG
   | 'performance-intensive'  // High actor counts, VFX → Needs optimization pass
   | 'multiplayer-sync'       // Replication + sessions → Online ARPG
-  | 'stealth-mechanics';     // AI perception tuning, low aggro → Stealth ARPG
+  | 'stealth-mechanics'      // AI perception tuning, low aggro → Stealth ARPG
+  | 'procedural-generation'; // PCG graphs, proc dungeons → PCG-heavy project
 
 /** Confidence of a detected pattern (0–100). */
 export interface PatternDetection {

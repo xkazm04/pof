@@ -1,3 +1,4 @@
+import type { SubModuleId } from '@/types/modules';
 import { MODULE_FEATURE_DEFINITIONS, type FeatureDefinition } from './feature-definitions';
 
 // ── Types ──
@@ -26,7 +27,7 @@ export interface OverlapPair {
 }
 
 export interface ModuleOverlapSummary {
-  moduleId: string;
+  moduleId: SubModuleId;
   overlapCount: number;
   overlappingModules: string[];
   topOverlaps: OverlapPair[];
@@ -84,7 +85,7 @@ function nameOverlapScore(nameA: string, nameB: string): number {
 
 // ── Dependency depth scoring ──
 
-function computeDependencyDepths(moduleId: string): Map<string, number> {
+function computeDependencyDepths(moduleId: SubModuleId): Map<string, number> {
   const features = MODULE_FEATURE_DEFINITIONS[moduleId] ?? [];
   const depths = new Map<string, number>();
   const featureNames = new Set(features.map((f) => f.featureName));
@@ -119,7 +120,7 @@ function computeDependencyDepths(moduleId: string): Map<string, number> {
 
 // ── Count cross-module dependents ──
 
-function countCrossModuleDependents(moduleId: string, featureName: string): number {
+function countCrossModuleDependents(moduleId: SubModuleId, featureName: string): number {
   let count = 0;
   const qualifiedName = `${moduleId}::${featureName}`;
   for (const [mid, features] of Object.entries(MODULE_FEATURE_DEFINITIONS)) {
@@ -142,14 +143,14 @@ function suggestOwner(
   featureB: FeatureDefinition,
 ): { owner: string; reason: string } {
   // Heuristic 1: Module with more cross-module dependents should own
-  const depsA = countCrossModuleDependents(moduleA, featureA.featureName);
-  const depsB = countCrossModuleDependents(moduleB, featureB.featureName);
+  const depsA = countCrossModuleDependents(moduleA as SubModuleId, featureA.featureName);
+  const depsB = countCrossModuleDependents(moduleB as SubModuleId, featureB.featureName);
   if (depsA > depsB) return { owner: moduleA, reason: `${depsA} other modules depend on this feature in ${moduleA}` };
   if (depsB > depsA) return { owner: moduleB, reason: `${depsB} other modules depend on this feature in ${moduleB}` };
 
   // Heuristic 2: Module where the feature has deeper dependency chain owns it
-  const depthsA = computeDependencyDepths(moduleA);
-  const depthsB = computeDependencyDepths(moduleB);
+  const depthsA = computeDependencyDepths(moduleA as SubModuleId);
+  const depthsB = computeDependencyDepths(moduleB as SubModuleId);
   const depthA = depthsA.get(featureA.featureName) ?? 0;
   const depthB = depthsB.get(featureB.featureName) ?? 0;
   if (depthA > depthB) return { owner: moduleA, reason: `Deeper dependency chain (depth ${depthA}) in ${moduleA}` };
@@ -162,8 +163,8 @@ function suggestOwner(
   if (nameMatchB > nameMatchA) return { owner: moduleB, reason: `Feature name aligns more with ${moduleB} module scope` };
 
   // Default: module with more total features is likely more comprehensive
-  const countA = MODULE_FEATURE_DEFINITIONS[moduleA]?.length ?? 0;
-  const countB = MODULE_FEATURE_DEFINITIONS[moduleB]?.length ?? 0;
+  const countA = MODULE_FEATURE_DEFINITIONS[moduleA as SubModuleId]?.length ?? 0;
+  const countB = MODULE_FEATURE_DEFINITIONS[moduleB as SubModuleId]?.length ?? 0;
   if (countA >= countB) return { owner: moduleA, reason: `${moduleA} has broader feature scope (${countA} features)` };
   return { owner: moduleB, reason: `${moduleB} has broader feature scope (${countB} features)` };
 }
@@ -182,8 +183,8 @@ export function analyzeOverlaps(): OverlapReport {
     for (let j = i + 1; j < moduleIds.length; j++) {
       const moduleA = moduleIds[i];
       const moduleB = moduleIds[j];
-      const featuresA = MODULE_FEATURE_DEFINITIONS[moduleA];
-      const featuresB = MODULE_FEATURE_DEFINITIONS[moduleB];
+      const featuresA = MODULE_FEATURE_DEFINITIONS[moduleA as SubModuleId] ?? [];
+      const featuresB = MODULE_FEATURE_DEFINITIONS[moduleB as SubModuleId] ?? [];
 
       for (const fA of featuresA) {
         const kwA = new Set(extractKeywords(fA.description));
@@ -264,7 +265,7 @@ export function analyzeOverlaps(): OverlapReport {
 
   const moduleSummaries: ModuleOverlapSummary[] = Array.from(summaryMap.entries())
     .map(([moduleId, data]) => ({
-      moduleId,
+      moduleId: moduleId as SubModuleId,
       overlapCount: data.overlaps.length,
       overlappingModules: Array.from(data.modules),
       topOverlaps: data.overlaps.slice(0, 5),

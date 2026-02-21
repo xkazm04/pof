@@ -3,6 +3,7 @@
 import { useState, useCallback } from 'react';
 import { FileCode, Copy, Check, FolderOpen } from 'lucide-react';
 import { SurfaceCard } from '@/components/ui/SurfaceCard';
+import { UI_TIMEOUTS } from '@/lib/constants';
 
 interface ProjectFilesPanelProps {
   projectPath: string;
@@ -17,7 +18,7 @@ export function ProjectFilesPanel({ projectPath, projectFiles, onOpenInExplorer 
     try {
       await navigator.clipboard.writeText(text);
       setCopiedPath(text);
-      setTimeout(() => setCopiedPath(null), 2000);
+      setTimeout(() => setCopiedPath(null), UI_TIMEOUTS.copyFeedback);
     } catch {
       // Clipboard API not available
     }

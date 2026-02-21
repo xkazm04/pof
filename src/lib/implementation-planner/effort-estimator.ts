@@ -1,3 +1,4 @@
+import type { SubModuleId } from '@/types/modules';
 import { MODULE_FEATURE_DEFINITIONS, type FeatureDefinition } from '@/lib/feature-definitions';
 
 export type EffortLevel = 'trivial' | 'small' | 'medium' | 'large';
@@ -45,7 +46,7 @@ const SIMPLE_KEYWORDS = [
  * Estimate effort for a single feature based on heuristics.
  */
 export function estimateEffort(
-  moduleId: string,
+  moduleId: SubModuleId,
   featureName: string,
 ): EffortEstimate {
   const features = MODULE_FEATURE_DEFINITIONS[moduleId];
@@ -132,7 +133,7 @@ function estimateFromDefinition(feat: FeatureDefinition): EffortEstimate {
  * Estimate total effort for a set of features.
  */
 export function estimateTotalMinutes(
-  features: Array<{ moduleId: string; featureName: string }>,
+  features: Array<{ moduleId: SubModuleId; featureName: string }>,
 ): number {
   return features.reduce((sum, f) => {
     const est = estimateEffort(f.moduleId, f.featureName);

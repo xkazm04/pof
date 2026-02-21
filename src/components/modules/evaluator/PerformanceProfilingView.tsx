@@ -13,6 +13,7 @@ import { Badge } from '@/components/ui/Badge';
 import { ProgressRing } from '@/components/ui/ProgressRing';
 import { usePerformanceProfilingStore } from '@/stores/performanceProfilingStore';
 import { useProjectStore } from '@/stores/projectStore';
+import { MODULE_COLORS } from '@/lib/chart-colors';
 import type {
   ProfilingSession,
   TriageResult,
@@ -22,6 +23,7 @@ import type {
   MemoryAllocation,
   OptimizationPriority,
 } from '@/types/performance-profiling';
+import { UI_TIMEOUTS } from '@/lib/constants';
 
 // ── Constants ───────────────────────────────────────────────────────────────
 
@@ -258,7 +260,7 @@ export function PerformanceProfilingView() {
               {triage && (
                 <>
                   <span className="text-text-muted/50">|</span>
-                  Score: <ProgressRing value={triage.overallScore} size={20} strokeWidth={2} color={triage.overallScore > 70 ? '#10b981' : triage.overallScore > 40 ? '#f59e0b' : '#ef4444'} />
+                  Score: <ProgressRing value={triage.overallScore} size={20} strokeWidth={2} color={triage.overallScore > 70 ? '#10b981' : triage.overallScore > 40 ? MODULE_COLORS.content : MODULE_COLORS.evaluator} />
                   <span className="text-text-muted/50">|</span>
                   {BOTTLENECK_LABELS[triage.bottleneck]}
                 </>
@@ -540,7 +542,7 @@ function FindingCard({ finding }: { finding: PerformanceFinding }) {
   const handleCopy = useCallback(() => {
     navigator.clipboard.writeText(finding.fixPrompt);
     setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+    setTimeout(() => setCopied(false), UI_TIMEOUTS.copyFeedback);
   }, [finding.fixPrompt]);
 
   return (

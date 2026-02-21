@@ -7,6 +7,17 @@ import {
   type PlanFilter,
 } from '@/lib/implementation-planner/plan-generator';
 import { apiFetch } from '@/lib/api-utils';
+import { useSuspendableEffect } from '@/hooks/useSuspend';
+
+export interface UseImplementationPlanResult {
+  plan: ImplementationPlan | null;
+  loading: boolean;
+  error: string | null;
+  filter: PlanFilter;
+  updateFilter: (newFilter: Partial<PlanFilter>) => void;
+  clearFilter: () => void;
+  refresh: () => Promise<void>;
+}
 
 interface UseImplementationPlanOptions {
   /** Auto-refresh interval in ms (0 = disabled). Default: 0 */
@@ -15,7 +26,7 @@ interface UseImplementationPlanOptions {
   filter?: PlanFilter;
 }
 
-export function useImplementationPlan(options: UseImplementationPlanOptions = {}) {
+export function useImplementationPlan(options: UseImplementationPlanOptions = {}): UseImplementationPlanResult {
   const [plan, setPlan] = useState<ImplementationPlan | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -47,18 +58,13 @@ export function useImplementationPlan(options: UseImplementationPlanOptions = {}
     }
   }, []);
 
-  // Initial fetch
-  useEffect(() => {
-    fetchPlan();
-  }, [fetchPlan]);
-
-  // Refetch when filter changes
+  // Fetch on mount and refetch when filter changes
   useEffect(() => {
     fetchPlan();
   }, [filter, fetchPlan]);
 
-  // Auto-refresh
-  useEffect(() => {
+  // Auto-refresh — pauses when module is suspended (hidden in LRU)
+  useSuspendableEffect(() => {
     if (!options.refreshInterval || options.refreshInterval <= 0) return;
     const interval = setInterval(fetchPlan, options.refreshInterval);
     return () => clearInterval(interval);

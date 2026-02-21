@@ -24,17 +24,18 @@ import type {
   PPStackSnapshot,
   PPEffectCategory,
 } from '@/types/post-process-studio';
+import { ACCENT_VIOLET, STATUS_WARNING, STATUS_IMPROVED, ACCENT_EMERALD, ACCENT_PINK, MODULE_COLORS } from '@/lib/chart-colors';
 
 // ── Constants ───────────────────────────────────────────────────────────────
 
-const ACCENT = '#a78bfa'; // Violet for PP studio
+const ACCENT = ACCENT_VIOLET; // Violet for PP studio
 
 const CATEGORY_COLORS: Record<PPEffectCategory, string> = {
-  lighting: '#fbbf24',
-  color: '#a78bfa',
-  blur: '#38bdf8',
-  atmosphere: '#34d399',
-  special: '#f472b6',
+  lighting: STATUS_WARNING,
+  color: ACCENT_VIOLET,
+  blur: STATUS_IMPROVED,
+  atmosphere: ACCENT_EMERALD,
+  special: ACCENT_PINK,
 };
 
 const EFFECT_ICONS: Record<string, typeof Sun> = {
@@ -117,7 +118,7 @@ export function PostProcessStudioView() {
 
   const budgetPct = budget ? Math.min((budget.totalCostMs / budget.budgetMs) * 100, 100) : 0;
   const budgetColor = budget
-    ? budget.overBudget ? '#ef4444' : budget.totalCostMs > budget.budgetMs * 0.75 ? '#f59e0b' : '#10b981'
+    ? budget.overBudget ? MODULE_COLORS.evaluator : budget.totalCostMs > budget.budgetMs * 0.75 ? MODULE_COLORS.content : '#10b981'
     : '#666';
 
   return (

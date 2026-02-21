@@ -36,8 +36,8 @@ import {
 import type { RoomNode, SyncDivergence, LevelDesignDocument } from '@/types/level-design';
 import type { StreamingZonePlannerConfig } from './StreamingZonePlanner';
 import type { ProceduralLevelConfig } from './ProceduralLevelWizard';
-
-const CONTENT_ACCENT = '#f59e0b';
+import { MODULE_COLORS, getAppOrigin } from '@/lib/constants';
+import { STATUS_SUCCESS, STATUS_ERROR, STATUS_WARNING, STATUS_INFO } from '@/lib/chart-colors';
 
 type TabId = 'overview' | 'roadmap' | 'flow' | 'procgen' | 'narrative' | 'sync' | 'arc' | 'streaming';
 
@@ -72,7 +72,7 @@ export function LevelDesignView() {
     moduleId: 'level-design',
     sessionKey: 'level-design-spatial',
     label: 'Level Systems',
-    accentColor: CONTENT_ACCENT,
+    accentColor: MODULE_COLORS.content,
   });
 
   // ── Document CLI sessions ──
@@ -81,7 +81,7 @@ export function LevelDesignView() {
     moduleId: 'level-design',
     sessionKey: 'level-design-codegen',
     label: 'Level Code Gen',
-    accentColor: CONTENT_ACCENT,
+    accentColor: MODULE_COLORS.content,
     onComplete: (success) => {
       if (success && activeDoc) {
         updateDoc({
@@ -97,7 +97,7 @@ export function LevelDesignView() {
     moduleId: 'level-design',
     sessionKey: 'level-design-sync',
     label: 'Level Sync Check',
-    accentColor: CONTENT_ACCENT,
+    accentColor: MODULE_COLORS.content,
   });
 
   // ── Streaming zone CLI session ──
@@ -106,7 +106,7 @@ export function LevelDesignView() {
     moduleId: 'level-design',
     sessionKey: 'level-design-streaming',
     label: 'Streaming Gen',
-    accentColor: CONTENT_ACCENT,
+    accentColor: MODULE_COLORS.content,
   });
 
   const handleGenerateStreaming = useCallback((config: StreamingZonePlannerConfig) => {
@@ -120,7 +120,7 @@ export function LevelDesignView() {
     moduleId: 'level-design',
     sessionKey: 'level-design-procgen',
     label: 'Procedural Gen',
-    accentColor: CONTENT_ACCENT,
+    accentColor: MODULE_COLORS.content,
   });
 
   const handleGenerateProcgen = useCallback((config: ProceduralLevelConfig) => {
@@ -152,7 +152,7 @@ export function LevelDesignView() {
     moduleId: MODULE_ID,
     sessionKey: `${MODULE_ID}-rv-cli`,
     label: MODULE_LABEL,
-    accentColor: CONTENT_ACCENT,
+    accentColor: MODULE_COLORS.content,
     onItemCompleted: handleRvItemCompleted,
   });
 
@@ -183,7 +183,7 @@ export function LevelDesignView() {
     moduleId: MODULE_ID,
     sessionKey: `${MODULE_ID}-rv-review`,
     label: `${MODULE_LABEL} Review`,
-    accentColor: CONTENT_ACCENT,
+    accentColor: MODULE_COLORS.content,
     onComplete: handleRvReviewComplete,
   });
 
@@ -191,12 +191,13 @@ export function LevelDesignView() {
     moduleId: MODULE_ID,
     sessionKey: `${MODULE_ID}-rv-fix`,
     label: `${MODULE_LABEL} Fix`,
-    accentColor: CONTENT_ACCENT,
+    accentColor: MODULE_COLORS.content,
   });
 
   const handleRvFix = useCallback((feature: FeatureRow) => {
     if (!feature.nextSteps) return;
-    const task = TaskFactory.featureFix(MODULE_ID, feature, `${MODULE_LABEL} Fix`);
+    const appOrigin = getAppOrigin();
+    const task = TaskFactory.featureFix(MODULE_ID, feature, `${MODULE_LABEL} Fix`, appOrigin);
     rvFixCli.execute(task);
   }, [rvFixCli]);
 
@@ -222,7 +223,7 @@ export function LevelDesignView() {
   const startRvReview = useCallback(() => {
     const defs = MODULE_FEATURE_DEFINITIONS[MODULE_ID] ?? [];
     if (defs.length === 0) return;
-    const appOrigin = typeof window !== 'undefined' ? window.location.origin : 'http://localhost:3000';
+    const appOrigin = getAppOrigin();
     const task = TaskFactory.featureReview(MODULE_ID, MODULE_LABEL, defs, appOrigin, `${MODULE_LABEL} Review`);
     rvReviewCli.execute(task);
   }, [rvReviewCli]);
@@ -322,7 +323,7 @@ export function LevelDesignView() {
         >
           <span
             className="w-1.5 h-1.5 rounded-full flex-shrink-0"
-            style={{ backgroundColor: rvToast.type === 'success' ? '#4ade80' : '#f87171' }}
+            style={{ backgroundColor: rvToast.type === 'success' ? STATUS_SUCCESS : STATUS_ERROR }}
           />
           {rvToast.message}
         </div>
@@ -333,7 +334,7 @@ export function LevelDesignView() {
         {/* Header */}
         <div className="relative overflow-hidden flex items-center gap-2 px-3 py-3 border-b border-border">
           <ModuleHeaderDecoration moduleId="level-design" variant="compact" />
-          <Map className="w-3.5 h-3.5 relative" style={{ color: CONTENT_ACCENT }} />
+          <Map className="w-3.5 h-3.5 relative" style={{ color: MODULE_COLORS.content }} />
           <h2 className="text-xs font-semibold text-text relative">Level Designs</h2>
         </div>
 
@@ -403,9 +404,9 @@ export function LevelDesignView() {
               disabled={!newDocName.trim() || isCreating}
               className="px-2 py-2 rounded-md transition-colors disabled:opacity-50 flex-shrink-0"
               style={{
-                backgroundColor: `${CONTENT_ACCENT}15`,
-                color: CONTENT_ACCENT,
-                border: `1px solid ${CONTENT_ACCENT}30`,
+                backgroundColor: `${MODULE_COLORS.content}15`,
+                color: MODULE_COLORS.content,
+                border: `1px solid ${MODULE_COLORS.content}30`,
               }}
             >
               <Plus className="w-3.5 h-3.5" />
@@ -432,9 +433,9 @@ export function LevelDesignView() {
                 disabled={isAnyRunning || activeDoc.rooms.length === 0}
                 className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all disabled:opacity-50"
                 style={{
-                  backgroundColor: `${CONTENT_ACCENT}15`,
-                  color: CONTENT_ACCENT,
-                  border: `1px solid ${CONTENT_ACCENT}30`,
+                  backgroundColor: `${MODULE_COLORS.content}15`,
+                  color: MODULE_COLORS.content,
+                  border: `1px solid ${MODULE_COLORS.content}30`,
                 }}
               >
                 {codegenCli.isRunning ? (
@@ -456,14 +457,14 @@ export function LevelDesignView() {
 
             {/* Tab bar */}
             <div className="flex items-center gap-1 px-5 border-b border-border">
-              <TabButton label="Overview" icon={Eye} active={activeTab === 'overview'} onClick={() => setActiveTab('overview')} accent={CONTENT_ACCENT} />
-              <TabButton label="Roadmap" icon={ListChecks} active={activeTab === 'roadmap'} onClick={() => setActiveTab('roadmap')} accent={CONTENT_ACCENT} />
-              <TabButton label="Flow Editor" icon={Map} active={activeTab === 'flow'} onClick={() => setActiveTab('flow')} accent={CONTENT_ACCENT} />
-              <TabButton label="Procgen" icon={Grid3X3} active={activeTab === 'procgen'} onClick={() => setActiveTab('procgen')} accent={CONTENT_ACCENT} />
-              <TabButton label="Streaming" icon={Layers} active={activeTab === 'streaming'} onClick={() => setActiveTab('streaming')} accent={CONTENT_ACCENT} />
-              <TabButton label="Narrative" icon={BookOpen} active={activeTab === 'narrative'} onClick={() => setActiveTab('narrative')} accent={CONTENT_ACCENT} />
-              <TabButton label="Sync" icon={GitCompare} active={activeTab === 'sync'} onClick={() => setActiveTab('sync')} accent={CONTENT_ACCENT} />
-              <TabButton label="Difficulty" icon={BarChart3} active={activeTab === 'arc'} onClick={() => setActiveTab('arc')} accent={CONTENT_ACCENT} />
+              <TabButton label="Overview" icon={Eye} active={activeTab === 'overview'} onClick={() => setActiveTab('overview')} accent={MODULE_COLORS.content} />
+              <TabButton label="Roadmap" icon={ListChecks} active={activeTab === 'roadmap'} onClick={() => setActiveTab('roadmap')} accent={MODULE_COLORS.content} />
+              <TabButton label="Flow Editor" icon={Map} active={activeTab === 'flow'} onClick={() => setActiveTab('flow')} accent={MODULE_COLORS.content} />
+              <TabButton label="Procgen" icon={Grid3X3} active={activeTab === 'procgen'} onClick={() => setActiveTab('procgen')} accent={MODULE_COLORS.content} />
+              <TabButton label="Streaming" icon={Layers} active={activeTab === 'streaming'} onClick={() => setActiveTab('streaming')} accent={MODULE_COLORS.content} />
+              <TabButton label="Narrative" icon={BookOpen} active={activeTab === 'narrative'} onClick={() => setActiveTab('narrative')} accent={MODULE_COLORS.content} />
+              <TabButton label="Sync" icon={GitCompare} active={activeTab === 'sync'} onClick={() => setActiveTab('sync')} accent={MODULE_COLORS.content} />
+              <TabButton label="Difficulty" icon={BarChart3} active={activeTab === 'arc'} onClick={() => setActiveTab('arc')} accent={MODULE_COLORS.content} />
             </div>
 
             {/* Tab content */}
@@ -473,7 +474,7 @@ export function LevelDesignView() {
                   <FeatureMatrix
                     key={rvRefetch}
                     moduleId={MODULE_ID}
-                    accentColor={CONTENT_ACCENT}
+                    accentColor={MODULE_COLORS.content}
                     onReview={startRvReview}
                     onSync={handleRvSync}
                     isReviewing={rvReviewCli.isRunning}
@@ -490,7 +491,7 @@ export function LevelDesignView() {
                       items={rvChecklist}
                       subModuleId={MODULE_ID}
                       onRunPrompt={rvChecklistCli.sendPrompt}
-                      accentColor={CONTENT_ACCENT}
+                      accentColor={MODULE_COLORS.content}
                       isRunning={rvChecklistCli.isRunning}
                       activeItemId={rvChecklistCli.activeItemId}
                       lastCompletedItemId={rvLastCompletedId}
@@ -512,7 +513,7 @@ export function LevelDesignView() {
                       onUpdateConnections={handleUpdateConnections}
                       onSelectRoom={setSelectedRoomId}
                       selectedRoomId={selectedRoomId}
-                      accentColor={CONTENT_ACCENT}
+                      accentColor={MODULE_COLORS.content}
                     />
                   </div>
 
@@ -523,7 +524,7 @@ export function LevelDesignView() {
                         room={selectedRoom}
                         onUpdate={handleRoomUpdate}
                         onGenerateCode={handleGenerateRoomCode}
-                        accentColor={CONTENT_ACCENT}
+                        accentColor={MODULE_COLORS.content}
                         isGenerating={codegenCli.isRunning}
                       />
                     </div>
@@ -598,9 +599,9 @@ export function LevelDesignView() {
                     disabled={isAnyRunning || !activeDoc.designNarrative.trim()}
                     className="flex items-center gap-2 px-4 py-2.5 rounded-lg text-xs font-medium transition-all disabled:opacity-50"
                     style={{
-                      backgroundColor: `${CONTENT_ACCENT}15`,
-                      color: CONTENT_ACCENT,
-                      border: `1px solid ${CONTENT_ACCENT}30`,
+                      backgroundColor: `${MODULE_COLORS.content}15`,
+                      color: MODULE_COLORS.content,
+                      border: `1px solid ${MODULE_COLORS.content}30`,
                     }}
                   >
                     {codegenCli.isRunning ? (
@@ -621,7 +622,7 @@ export function LevelDesignView() {
                     onCheckSync={handleCheckSync}
                     onReconcile={handleReconcile}
                     isChecking={syncCli.isRunning}
-                    accentColor={CONTENT_ACCENT}
+                    accentColor={MODULE_COLORS.content}
                   />
                 </div>
               )}
@@ -637,7 +638,7 @@ export function LevelDesignView() {
                       <DifficultyArcChart
                         rooms={activeDoc.rooms}
                         difficultyArc={activeDoc.difficultyArc}
-                        accentColor={CONTENT_ACCENT}
+                        accentColor={MODULE_COLORS.content}
                         onSelectRoom={(id) => { setSelectedRoomId(id); setActiveTab('flow'); }}
                       />
                     </div>
@@ -717,9 +718,9 @@ export function LevelDesignView() {
                     disabled={!newDocName.trim() || isCreating}
                     className="flex items-center gap-1.5 px-3 py-2 rounded-md text-xs font-medium transition-all disabled:opacity-50"
                     style={{
-                      backgroundColor: `${CONTENT_ACCENT}15`,
-                      color: CONTENT_ACCENT,
-                      border: `1px solid ${CONTENT_ACCENT}30`,
+                      backgroundColor: `${MODULE_COLORS.content}15`,
+                      color: MODULE_COLORS.content,
+                      border: `1px solid ${MODULE_COLORS.content}30`,
                     }}
                   >
                     <Plus className="w-3.5 h-3.5" />
@@ -771,10 +772,10 @@ function TabButton({
 
 function SyncDot({ status }: { status: string }) {
   const colors: Record<string, string> = {
-    synced: '#4ade80',
-    'doc-ahead': '#fbbf24',
-    'code-ahead': '#60a5fa',
-    diverged: '#f87171',
+    synced: STATUS_SUCCESS,
+    'doc-ahead': STATUS_WARNING,
+    'code-ahead': STATUS_INFO,
+    diverged: STATUS_ERROR,
     unlinked: 'var(--text-muted)',
   };
   return (

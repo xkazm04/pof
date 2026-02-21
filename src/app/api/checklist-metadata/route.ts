@@ -1,11 +1,12 @@
 import { NextRequest } from 'next/server';
 import { apiSuccess, apiError } from '@/lib/api-utils';
 import { getDb } from '@/lib/db';
+import type { SubModuleId } from '@/types/modules';
 
 export type Priority = 'none' | 'critical' | 'important' | 'nice-to-have';
 
 export interface ChecklistMetadataRow {
-  moduleId: string;
+  moduleId: SubModuleId;
   itemId: string;
   priority: Priority;
   notes: string;
@@ -33,7 +34,7 @@ export async function GET(req: NextRequest) {
     const result: Record<string, ChecklistMetadataRow> = {};
     for (const row of rows) {
       result[row.item_id] = {
-        moduleId: row.module_id,
+        moduleId: row.module_id as SubModuleId,
         itemId: row.item_id,
         priority: row.priority as Priority,
         notes: row.notes,
@@ -51,7 +52,7 @@ export async function PUT(req: NextRequest) {
   try {
     const body = await req.json();
     const { moduleId, itemId, priority, notes } = body as {
-      moduleId: string;
+      moduleId: SubModuleId;
       itemId: string;
       priority?: Priority;
       notes?: string;

@@ -1,3 +1,4 @@
+import type { SubModuleId } from '@/types/modules';
 import type {
   AssetCategory,
   AssetRecommendation,
@@ -59,7 +60,7 @@ const MODULE_DIY_HOURS: Record<string, number> = {
 
 // ── Feature → tag keywords for matching ──────────────────────────────────────
 
-function featureToTags(featureName: string, moduleId: string): string[] {
+function featureToTags(featureName: string, moduleId: SubModuleId): string[] {
   const tags: string[] = [];
   const lower = featureName.toLowerCase();
 
@@ -190,7 +191,7 @@ export function buildFeatureGaps(
       if (!statusFilter.includes(status)) continue;
 
       gaps.push({
-        moduleId,
+        moduleId: moduleId as SubModuleId,
         moduleLabel: MODULE_LABELS[moduleId] ?? moduleId,
         featureName: feat.featureName,
         status,

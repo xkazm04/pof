@@ -9,6 +9,8 @@
 
 // ─── Pass types ──────────────────────────────────────────────────────────────
 
+import type { SubModuleId } from '@/types/modules';
+
 export type EvalPass = 'structure' | 'quality' | 'performance';
 
 export const EVAL_PASSES: EvalPass[] = ['structure', 'quality', 'performance'];
@@ -68,21 +70,31 @@ const MODULE_CONTEXTS: Record<string, ModuleEvalContext> = {
 - Character initialization should not load assets synchronously`,
   },
   'arpg-animation': {
-    focus: 'AnimInstance, blend spaces, state machines, montages, notifies, motion warping',
+    focus: 'AnimInstance, blend spaces, state machines, montages, notifies, motion warping, Motion Matching (5.7+), IK Retargeter, Mixamo import pipeline',
     structureChecks: `- Should have a C++ AnimInstance base (not pure Blueprint AnimBP)
 - State machine should have clear states: Locomotion, Attacking, Dodging, HitReact, Death
 - Blend spaces should be separate assets, not inline
 - Anim notifies should be C++ classes, not blueprint notifies for gameplay events
-- Montages should use sections for combo advancement`,
+- Montages should use sections for combo advancement
+- If using Motion Matching (5.7+ experimental): check Motion Matching Chooser Integration for per-asset filtering
+- IK Retargeter (5.7+): check for crotch height, floor constraints, stretch chain operators
+- If using Mixamo source: skeleton should have "mixamorig:" prefix stripped — bone names should be "Hips" not "mixamorig:Hips"
+- Retarget setup should use IK Rigs with proper chain definitions (Spine, LeftArm, RightArm, LeftLeg, RightLeg, Head)`,
     qualityChecks: `- NativeUpdateAnimation should cache movement component values, not call GetOwner() every frame
 - Root motion should be toggled per-state (on for attacks, off for locomotion)
 - Motion warping targets should be set before montage play, not after
 - Anim notify windows should have proper begin/end (UAnimNotifyState)
-- Blend space axes should have proper min/max and smoothing`,
+- Blend space axes should have proper min/max and smoothing
+- IK Retargeter should use spatially aware retargeting to prevent limb collision (5.7+)
+- Batch retarget should use IKRetargetBatchOperation.duplicate_and_retarget() not manual per-asset retarget
+- Mixamo in-place locomotion should NOT have root motion enabled — movement driven by CharacterMovementComponent
+- Attack/dodge anims from Mixamo may need RootMotionGeneratorOp post-process if root motion extraction is needed`,
     performanceChecks: `- NativeUpdateAnimation runs every frame — avoid expensive calculations
 - Thread-safe proxy should be used for heavy computations
 - Avoid GetActorLocation/GetActorRotation in anim tick — cache values
-- Montage callbacks should not capture heavy references`,
+- Montage callbacks should not capture heavy references
+- Motion Matching database queries should be profiled — large databases impact perf
+- Batch retarget operations should be run as editor utility, not at runtime`,
   },
   'arpg-gas': {
     focus: 'Gameplay Ability System: ASC, AttributeSets, abilities, effects, tags',
@@ -119,22 +131,25 @@ const MODULE_CONTEXTS: Record<string, ModuleEvalContext> = {
 - Combat events should not broadcast to all actors`,
   },
   'arpg-enemy-ai': {
-    focus: 'AI controllers, behavior trees, perception, EQS, spawn system',
-    structureChecks: `- AIController should own BehaviorTree and Blackboard
+    focus: 'AI controllers, behavior trees, State Trees (5.7+), perception, EQS, spawn system',
+    structureChecks: `- AIController should own BehaviorTree and Blackboard (or State Tree as alternative)
 - Perception should have sight and damage senses configured
 - BT should have clear states: Idle, Patrol, Chase, Attack, Flee
 - Custom BT tasks/services/decorators should be C++ classes
-- Enemy character should inherit from AARPGCharacterBase`,
+- Enemy character should inherit from AARPGCharacterBase
+- If using State Tree (5.7+): states map to BT subtrees, transitions replace decorators, ExecutionRuntimeData for persistent node data`,
     qualityChecks: `- Blackboard keys should be typed (object, vector, bool), not all strings
 - BT services should update blackboard, tasks should execute actions
 - AI should lose interest after a timeout (not chase forever)
 - Perception should have proper sight radius, angle, and age
-- Spawn system should respect player proximity limits`,
+- Spawn system should respect player proximity limits
+- State Tree: use Re-Enter State behavior for looping states, Output Properties for live binding`,
     performanceChecks: `- BT tick interval should be > 0.1s for non-combat AI
 - EQS queries should have reasonable item count limits
 - Perception should use event-driven, not polling where possible
 - Distant enemies should reduce update frequency
-- Spawn system should use pooling for frequently spawned enemies`,
+- Spawn system should use pooling for frequently spawned enemies
+- State Tree Rewind Debugger integration for AI debugging without perf overhead`,
   },
   'arpg-inventory': {
     focus: 'Item definitions, instances, inventory component, equipment, consumables',
@@ -237,6 +252,42 @@ const MODULE_CONTEXTS: Record<string, ModuleEvalContext> = {
 - Auto-save frequency should be throttled (not on every small change)
 - Save file size should be monitored and compressed if needed`,
   },
+  'materials': {
+    focus: 'Master materials, material instances, Substrate shading (5.7+), material functions, post-process',
+    structureChecks: `- Master material should use static switches for feature toggling
+- Material instances should inherit from master, not duplicate
+- Material functions should be reusable across materials
+- Material Parameter Collections for global shared state
+- Substrate (5.7+): check if Substrate Slab is used instead of legacy shading models`,
+    qualityChecks: `- Dynamic material instances should use UMaterialInstanceDynamic, not direct material edits
+- TSoftObjectPtr for base material references (async loading)
+- Substrate: unified material graph replaces separate Default Lit/Subsurface/Cloth shading models
+- Texture parameters should have sensible defaults
+- Material complexity should be monitored (instruction count)`,
+    performanceChecks: `- Material instances share compiled shaders — prefer over unique materials
+- Static switches compile out unused features at cook time
+- Avoid excessive texture samples (combine channels where possible)
+- Post-process materials should use early-out for pixels outside effect area
+- Substrate materials may have higher baseline cost — profile vs legacy`,
+  },
+  'ai-behavior': {
+    focus: 'AI controllers, behavior trees, State Trees (5.7+), perception, EQS, group coordination',
+    structureChecks: `- AIController should own BehaviorTree/Blackboard or State Tree
+- Custom BT nodes should be C++ classes
+- Perception senses should be configured per AI archetype
+- EQS queries should be data assets, not hardcoded
+- State Tree (5.7+): hierarchical states with ExecutionRuntimeData for persistent node data`,
+    qualityChecks: `- Blackboard keys should be typed, not all strings
+- AI should have proper state transitions (idle, alert, combat, flee)
+- Perception should have proper sight radius, angle, and age settings
+- State Tree: Re-Enter State behavior for looping, Output Properties for live binding
+- Group AI should coordinate without tight coupling between agents`,
+    performanceChecks: `- BT tick interval should be > 0.1s for non-combat AI
+- EQS should have reasonable item count limits
+- Perception should be event-driven where possible
+- Distant AI should reduce update frequency
+- State Tree Rewind Debugger for perf-safe debugging`,
+  },
   'arpg-polish': {
     focus: 'Logging, debug tools, object pooling, tick optimization, async loading',
     structureChecks: `- Each system should have its own log category
@@ -257,7 +308,7 @@ const MODULE_CONTEXTS: Record<string, ModuleEvalContext> = {
 // ─── Prompt builder ──────────────────────────────────────────────────────────
 
 export interface EvalPromptParams {
-  moduleId: string;
+  moduleId: SubModuleId;
   pass: EvalPass;
   projectName: string;
   moduleName: string;
@@ -331,13 +382,13 @@ function getPassChecks(ctx: ModuleEvalContext | undefined, pass: EvalPass): stri
 /**
  * Returns the list of module IDs that have specialized evaluation contexts.
  */
-export function getEvaluableModuleIds(): string[] {
-  return Object.keys(MODULE_CONTEXTS);
+export function getEvaluableModuleIds(): SubModuleId[] {
+  return Object.keys(MODULE_CONTEXTS) as SubModuleId[];
 }
 
 /**
  * Check if a module has specialized evaluation prompts.
  */
-export function hasModuleContext(moduleId: string): boolean {
+export function hasModuleContext(moduleId: SubModuleId): boolean {
   return moduleId in MODULE_CONTEXTS;
 }

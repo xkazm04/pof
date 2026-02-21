@@ -50,6 +50,8 @@ interface CLIPanelStoreState {
   setInlineTerminalHeight: (height: number) => void;
   findSessionByModule: (moduleId: string) => string | null;
   findSessionByKey: (sessionKey: string) => string | null;
+  /** Remove all sessions (used during project switch to prevent cross-project leakage) */
+  clearAllSessions: () => void;
 }
 
 let tabCounter = 0;
@@ -239,6 +241,15 @@ export const useCLIPanelStore = create<CLIPanelStoreState>()(
         }
         return null;
       },
+
+      clearAllSessions: () => {
+        set({
+          sessions: {},
+          tabOrder: [],
+          activeTabId: null,
+          maximizedTabId: null,
+        });
+      },
     }),
     {
       name: 'pof-cli-panel',
@@ -250,6 +261,18 @@ export const useCLIPanelStore = create<CLIPanelStoreState>()(
         maximizedTabId: state.maximizedTabId,
         inlineTerminalHeight: state.inlineTerminalHeight,
       }),
+      merge: (persisted, current) => {
+        const merged = { ...current, ...(persisted as Partial<CLIPanelStoreState>) };
+        // Reset transient runtime fields — sessions can't be running after a page refresh
+        if (merged.sessions) {
+          const cleaned: Record<string, CLISessionState> = {};
+          for (const [id, sess] of Object.entries(merged.sessions)) {
+            cleaned[id] = { ...sess, isRunning: false, lastTaskSuccess: null, currentExecutionId: null, currentTaskId: null };
+          }
+          merged.sessions = cleaned;
+        }
+        return merged;
+      },
     }
   )
 );

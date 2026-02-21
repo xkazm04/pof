@@ -1,3 +1,4 @@
+import type { SubModuleId } from '@/types/modules';
 import type { IntegrationSpec, IntegrationStep, MarketplaceAsset } from '@/types/marketplace';
 import { ASSET_CATALOG } from './asset-catalog';
 
@@ -7,7 +8,7 @@ import { ASSET_CATALOG } from './asset-catalog';
  */
 export function generateIntegration(
   assetId: string,
-  moduleId: string,
+  moduleId: SubModuleId,
   projectName: string,
   apiMacro: string,
   existingClasses: string[],
@@ -50,7 +51,7 @@ function toPascal(s: string): string {
 
 function generateAdapterCode(
   asset: MarketplaceAsset,
-  moduleId: string,
+  moduleId: SubModuleId,
   projectName: string,
   apiMacro: string,
   adapterName: string,

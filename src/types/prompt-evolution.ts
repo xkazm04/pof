@@ -1,3 +1,5 @@
+import type { SubModuleId } from './modules';
+
 // ── Prompt variant — one phrasing of a task prompt ──
 
 export type VariantStyle = 'imperative' | 'descriptive' | 'step-by-step' | 'holistic' | 'example-rich' | 'minimal';
@@ -5,7 +7,7 @@ export type VariantStyle = 'imperative' | 'descriptive' | 'step-by-step' | 'holi
 export interface PromptVariant {
   id: string;
   /** Module (checklist) this variant belongs to */
-  moduleId: string;
+  moduleId: SubModuleId;
   /** Checklist item id (e.g. "ac-1") */
   checklistItemId: string;
   /** Human-readable label */
@@ -41,7 +43,7 @@ export type ABTestStatus = 'running' | 'concluded' | 'cancelled';
 
 export interface ABTest {
   id: string;
-  moduleId: string;
+  moduleId: SubModuleId;
   checklistItemId: string;
   variantAId: string;
   variantBId: string;
@@ -68,7 +70,7 @@ export interface ABTest {
 
 export interface TemplateFamily {
   id: string;
-  moduleId: string;
+  moduleId: SubModuleId;
   /** Representative label */
   label: string;
   /** Centroid prompt (most representative) */
@@ -114,7 +116,7 @@ export interface EvolutionStats {
 }
 
 export interface ModuleEvolutionStats {
-  moduleId: string;
+  moduleId: SubModuleId;
   variants: number;
   activeTests: number;
   bestSuccessRate: number;
@@ -126,7 +128,7 @@ export interface ModuleEvolutionStats {
 
 export interface EvolutionSuggestion {
   type: 'try-variant' | 'start-ab-test' | 'adopt-winner' | 'cluster-insight';
-  moduleId: string;
+  moduleId: SubModuleId;
   checklistItemId?: string;
   message: string;
   variantId?: string;

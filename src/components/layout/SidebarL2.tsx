@@ -2,7 +2,7 @@
 
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
-import { Check } from 'lucide-react';
+import { Check, ListOrdered } from 'lucide-react';
 import { useNavigationStore } from '@/stores/navigationStore';
 import { useModuleStore } from '@/stores/moduleStore';
 import { useCLIPanelStore } from '@/components/cli/store/cliPanelStore';
@@ -10,6 +10,7 @@ import { getSubModulesForCategory, SUB_MODULE_MAP, CATEGORY_MAP } from '@/lib/mo
 import { StaggerContainer, StaggerItem } from '@/components/ui/Stagger';
 import { TruncateWithTooltip } from '@/components/ui/TruncateWithTooltip';
 import type { SubModuleId } from '@/types/modules';
+import { STATUS_ERROR, STATUS_INFO } from '@/lib/chart-colors';
 
 const RING_SIZE = 16;
 const RING_STROKE = 2;
@@ -133,17 +134,34 @@ export function SidebarL2() {
         >
           <div style={{ width }} className="flex flex-col h-full">
             <div className="px-3 py-3 border-b border-border">
-              <h2
-                className="text-xs font-semibold uppercase tracking-wider"
-                style={{ color: category.accentColor }}
-              >
-                {category.label}
-              </h2>
+              <div className="flex items-center justify-between gap-2">
+                <h2
+                  className="text-xs font-semibold uppercase tracking-wider"
+                  style={{ color: category.accentColor }}
+                >
+                  {category.label}
+                </h2>
+                {activeCategory === 'core-engine' && (
+                  <button
+                    onClick={() => setActiveSubModule('core-engine-plan' as SubModuleId)}
+                    className={`inline-flex items-center justify-center w-6 h-6 rounded text-2xs border transition-colors ${
+                      activeSubModule === 'core-engine-plan'
+                        ? 'bg-blue-500/15 text-blue-400 border-blue-500/30'
+                        : 'text-text-muted hover:text-text hover:bg-surface border-border'
+                    }`}
+                    title="Open Core Engine aggregate Plan"
+                    aria-label="Open Core Engine aggregate Plan"
+                  >
+                    <ListOrdered className="w-3 h-3" />
+                  </button>
+                )}
+              </div>
             </div>
             <StaggerContainer ref={listRef} className="flex-1 overflow-y-auto py-2" role="listbox" aria-label={`${category.label} modules`}>
               {subModules.map((mod) => {
                 const isActive = activeSubModule === mod.id;
                 const Icon = mod.icon;
+                const isPlanItem = mod.id === 'core-engine-plan';
                 return (
                   <StaggerItem key={mod.id}>
                   <button
@@ -159,6 +177,7 @@ export function SidebarL2() {
                         ? 'bg-surface-hover'
                         : 'hover:bg-surface'
                       }
+                      ${isPlanItem ? 'border-y border-border/40 bg-surface/40' : ''}
                     `}
                   >
                     <div className="relative flex-shrink-0">
@@ -210,8 +229,8 @@ export function SidebarL2() {
 // ─── Status Badge ────────────────────────────────────────────────────────────
 
 const STATUS_COLORS = {
-  failed: '#f87171',   // red — CLI task failed
-  running: '#60a5fa',  // blue — CLI task running
+  failed: STATUS_ERROR,   // red — CLI task failed
+  running: STATUS_INFO,  // blue — CLI task running
 } as const;
 
 const StatusBadge = memo(function StatusBadge({ moduleId }: { moduleId: SubModuleId }) {

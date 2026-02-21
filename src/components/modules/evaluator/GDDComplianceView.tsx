@@ -9,12 +9,13 @@ import {
 import { useGDDComplianceStore } from '@/stores/gddComplianceStore';
 import { useModuleStore } from '@/stores/moduleStore';
 import type { ComplianceGap, ModuleCompliance, GapSeverity, ReconciliationSuggestion } from '@/types/gdd-compliance';
+import { MODULE_COLORS } from '@/lib/chart-colors';
 import { useState } from 'react';
 
 const SEVERITY_CONFIG: Record<GapSeverity, { icon: typeof AlertTriangle; color: string; label: string }> = {
-  critical: { icon: AlertCircle, color: '#ef4444', label: 'Critical' },
-  major: { icon: AlertTriangle, color: '#f59e0b', label: 'Major' },
-  minor: { icon: Info, color: '#3b82f6', label: 'Minor' },
+  critical: { icon: AlertCircle, color: MODULE_COLORS.evaluator, label: 'Critical' },
+  major: { icon: AlertTriangle, color: MODULE_COLORS.content, label: 'Major' },
+  minor: { icon: Info, color: MODULE_COLORS.core, label: 'Minor' },
   info: { icon: Info, color: 'var(--text-muted)', label: 'Info' },
 };
 
@@ -26,9 +27,9 @@ const EFFORT_LABELS: Record<string, string> = {
 };
 
 function scoreColor(score: number): string {
-  if (score >= 80) return '#00ff88';
-  if (score >= 60) return '#f59e0b';
-  return '#ef4444';
+  if (score >= 80) return MODULE_COLORS.setup;
+  if (score >= 60) return MODULE_COLORS.content;
+  return MODULE_COLORS.evaluator;
 }
 
 export function GDDComplianceView() {
@@ -346,9 +347,9 @@ function SuggestionsPanel({ suggestions }: { suggestions: ReconciliationSuggesti
   const [collapsed, setCollapsed] = useState(false);
 
   const typeConfig: Record<string, { color: string; label: string }> = {
-    'update-gdd': { color: '#3b82f6', label: 'Update GDD' },
-    'implement-feature': { color: '#f59e0b', label: 'Implement' },
-    'remove-stale': { color: '#ef4444', label: 'Remove' },
+    'update-gdd': { color: MODULE_COLORS.core, label: 'Update GDD' },
+    'implement-feature': { color: MODULE_COLORS.content, label: 'Implement' },
+    'remove-stale': { color: MODULE_COLORS.evaluator, label: 'Remove' },
   };
 
   return (

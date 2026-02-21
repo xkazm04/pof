@@ -1,13 +1,18 @@
 'use client';
 
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useCallback } from 'react';
 import type {
   AudioSceneDocument,
   AudioSceneSummary,
   CreateAudioScenePayload,
   UpdateAudioScenePayload,
 } from '@/types/audio-scene';
-import { apiFetch } from '@/lib/api-utils';
+import { useCRUD } from './useCRUD';
+
+interface AudioSceneData {
+  docs: AudioSceneDocument[];
+  summary: AudioSceneSummary;
+}
 
 interface UseAudioSceneResult {
   docs: AudioSceneDocument[];
@@ -23,101 +28,68 @@ interface UseAudioSceneResult {
   refetch: () => Promise<void>;
 }
 
-const EMPTY_SUMMARY: AudioSceneSummary = {
-  totalScenes: 0,
-  totalZones: 0,
-  totalEmitters: 0,
-  zonesByReverb: {},
-  emittersByType: { ambient: 0, point: 0, loop: 0, oneshot: 0, music: 0 },
+const EMPTY: AudioSceneData = {
+  docs: [],
+  summary: {
+    totalScenes: 0,
+    totalZones: 0,
+    totalEmitters: 0,
+    zonesByReverb: {},
+    emittersByType: { ambient: 0, point: 0, loop: 0, oneshot: 0, music: 0 },
+  },
+};
+
+const transform = (raw: unknown): AudioSceneData => {
+  const d = raw as Partial<AudioSceneData>;
+  return { docs: d.docs ?? [], summary: d.summary ?? EMPTY.summary };
 };
 
 export function useAudioScene(): UseAudioSceneResult {
-  const [docs, setDocs] = useState<AudioSceneDocument[]>([]);
-  const [summary, setSummary] = useState<AudioSceneSummary>(EMPTY_SUMMARY);
+  const { data, isLoading, error, refetch, mutate } = useCRUD<AudioSceneData>(
+    '/api/audio-scene',
+    EMPTY,
+    { transform, errorMessage: 'Failed to load audio scenes' },
+  );
+
   const [activeDocId, setActiveDocId] = useState<number | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const mountedRef = useRef(true);
+  const activeDoc = data.docs.find((d) => d.id === activeDocId) ?? null;
 
-  useEffect(() => {
-    mountedRef.current = true;
-    return () => { mountedRef.current = false; };
-  }, []);
+  const createDoc = useCallback(async (payload: CreateAudioScenePayload) => {
+    const result = await mutate<{ doc: AudioSceneDocument }>('/api/audio-scene', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    if (result?.doc) setActiveDocId(result.doc.id);
+    return result?.doc ?? null;
+  }, [mutate]);
 
-  const fetchAll = useCallback(async () => {
-    setIsLoading(true);
-    setError(null);
-    try {
-      const data = await apiFetch<{ docs: AudioSceneDocument[]; summary: AudioSceneSummary }>('/api/audio-scene');
-      if (!mountedRef.current) return;
-      setDocs(data.docs ?? []);
-      setSummary(data.summary ?? EMPTY_SUMMARY);
-    } catch (err) {
-      console.error('useAudioScene fetch error:', err);
-      if (mountedRef.current) setError(err instanceof Error ? err.message : 'Failed to load audio scenes');
-    } finally {
-      if (mountedRef.current) setIsLoading(false);
-    }
-  }, []);
+  const updateDoc = useCallback(async (payload: UpdateAudioScenePayload) => {
+    const result = await mutate<{ doc: AudioSceneDocument }>('/api/audio-scene', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    return result?.doc ?? null;
+  }, [mutate]);
 
-  useEffect(() => { fetchAll(); }, [fetchAll]);
-
-  const activeDoc = docs.find((d) => d.id === activeDocId) ?? null;
-
-  const create = useCallback(async (payload: CreateAudioScenePayload) => {
-    try {
-      const data = await apiFetch<{ doc: AudioSceneDocument }>('/api/audio-scene', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      });
-      await fetchAll();
-      if (data.doc) setActiveDocId(data.doc.id);
-      return data.doc;
-    } catch (err) {
-      console.error('useAudioScene create error:', err);
-      return null;
-    }
-  }, [fetchAll]);
-
-  const update = useCallback(async (payload: UpdateAudioScenePayload) => {
-    try {
-      const data = await apiFetch<{ doc: AudioSceneDocument }>('/api/audio-scene', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      });
-      await fetchAll();
-      return data.doc;
-    } catch (err) {
-      console.error('useAudioScene update error:', err);
-      return null;
-    }
-  }, [fetchAll]);
-
-  const remove = useCallback(async (id: number) => {
-    try {
-      await apiFetch<unknown>(`/api/audio-scene?id=${id}`, { method: 'DELETE' });
-      if (activeDocId === id) setActiveDocId(null);
-      await fetchAll();
-      return true;
-    } catch (err) {
-      console.error('useAudioScene delete error:', err);
-      return false;
-    }
-  }, [activeDocId, fetchAll]);
+  const deleteDoc = useCallback(async (id: number) => {
+    const result = await mutate<unknown>(`/api/audio-scene?id=${id}`, { method: 'DELETE' });
+    if (result !== null && activeDocId === id) setActiveDocId(null);
+    return result !== null;
+  }, [activeDocId, mutate]);
 
   return {
-    docs,
-    summary,
+    docs: data.docs,
+    summary: data.summary,
     activeDoc,
     isLoading,
     error,
-    retry: fetchAll,
+    retry: refetch,
     setActiveDocId,
-    createDoc: create,
-    updateDoc: update,
-    deleteDoc: remove,
-    refetch: fetchAll,
+    createDoc,
+    updateDoc,
+    deleteDoc,
+    refetch,
   };
 }

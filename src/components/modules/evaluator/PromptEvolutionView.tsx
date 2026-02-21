@@ -24,24 +24,27 @@ import type {
   PromptOptimizationResult,
 } from '@/types/prompt-evolution';
 import { MUTATION_OPTIONS } from '@/lib/prompt-evolution/mutations';
+import { UI_TIMEOUTS } from '@/lib/constants';
+import { MODULE_COLORS, STATUS_NEUTRAL } from '@/lib/chart-colors';
+import type { SubModuleId } from '@/types/modules';
 
 // ── Constants ───────────────────────────────────────────────────────────────
 
 const ACCENT = '#10b981'; // Emerald for evolution/growth
 
 const STYLE_COLORS: Record<VariantStyle, string> = {
-  imperative: '#ef4444',
-  descriptive: '#3b82f6',
-  'step-by-step': '#f59e0b',
-  holistic: '#8b5cf6',
+  imperative: MODULE_COLORS.evaluator,
+  descriptive: MODULE_COLORS.core,
+  'step-by-step': MODULE_COLORS.content,
+  holistic: MODULE_COLORS.systems,
   'example-rich': '#10b981',
-  minimal: '#6b7280',
+  minimal: STATUS_NEUTRAL,
 };
 
 const STATUS_COLORS = {
-  running: '#f59e0b',
+  running: MODULE_COLORS.content,
   concluded: '#10b981',
-  cancelled: '#6b7280',
+  cancelled: STATUS_NEUTRAL,
 };
 
 // ── Sample modules for the module picker ────────────────────────────────────
@@ -165,7 +168,7 @@ export function PromptEvolutionView() {
         {/* Module picker */}
         <select
           value={selectedModuleId ?? ''}
-          onChange={(e) => setSelectedModule(e.target.value || null)}
+          onChange={(e) => setSelectedModule((e.target.value || null) as SubModuleId | null)}
           className="px-3 py-1.5 text-xs rounded-md bg-surface border border-border text-text"
         >
           <option value="">Select module...</option>
@@ -889,12 +892,12 @@ function ClustersPanel({
 // ── Optimizer Panel ──────────────────────────────────────────────────────────
 
 const DIFF_TYPE_CONFIG: Record<string, { icon: typeof Wand2; color: string; label: string }> = {
-  'add-context': { icon: ShieldCheck, color: '#3b82f6', label: 'Context' },
-  'restructure': { icon: Shuffle, color: '#8b5cf6', label: 'Restructure' },
+  'add-context': { icon: ShieldCheck, color: MODULE_COLORS.core, label: 'Context' },
+  'restructure': { icon: Shuffle, color: MODULE_COLORS.systems, label: 'Restructure' },
   'add-verification': { icon: CheckCircle2, color: '#10b981', label: 'Verification' },
-  'shorten': { icon: ArrowUp, color: '#f59e0b', label: 'Shorten' },
-  'lengthen': { icon: ArrowDown, color: '#f59e0b', label: 'Lengthen' },
-  'imperative-rewrite': { icon: Zap, color: '#ef4444', label: 'Imperative' },
+  'shorten': { icon: ArrowUp, color: MODULE_COLORS.content, label: 'Shorten' },
+  'lengthen': { icon: ArrowDown, color: MODULE_COLORS.content, label: 'Lengthen' },
+  'imperative-rewrite': { icon: Zap, color: MODULE_COLORS.evaluator, label: 'Imperative' },
 };
 
 function OptimizerPanel({
@@ -906,21 +909,21 @@ function OptimizerPanel({
   selectedModuleId: string | null;
   lastOptimization: PromptOptimizationResult | null;
   isOptimizing: boolean;
-  onOptimize: (moduleId: string, prompt: string) => Promise<PromptOptimizationResult | null>;
+  onOptimize: (moduleId: SubModuleId, prompt: string) => Promise<PromptOptimizationResult | null>;
 }) {
   const [inputPrompt, setInputPrompt] = useState('');
   const [copiedOptimized, setCopiedOptimized] = useState(false);
 
   const handleOptimize = useCallback(async () => {
     if (!selectedModuleId || !inputPrompt.trim()) return;
-    await onOptimize(selectedModuleId, inputPrompt.trim());
+    await onOptimize(selectedModuleId as SubModuleId, inputPrompt.trim());
   }, [selectedModuleId, inputPrompt, onOptimize]);
 
   const handleCopyOptimized = useCallback(() => {
     if (!lastOptimization?.optimized) return;
     navigator.clipboard.writeText(lastOptimization.optimized);
     setCopiedOptimized(true);
-    setTimeout(() => setCopiedOptimized(false), 2000);
+    setTimeout(() => setCopiedOptimized(false), UI_TIMEOUTS.copyFeedback);
   }, [lastOptimization]);
 
   return (
@@ -1121,7 +1124,7 @@ function StatsPanel({ stats }: { stats: EvolutionStats }) {
           label="Avg Improvement"
           value={`${stats.avgImprovementRate > 0 ? '+' : ''}${Math.round(stats.avgImprovementRate * 100)}%`}
           icon={TrendingUp}
-          color={stats.avgImprovementRate > 0 ? ACCENT : '#6b7280'}
+          color={stats.avgImprovementRate > 0 ? ACCENT : STATUS_NEUTRAL}
         />
       </div>
 

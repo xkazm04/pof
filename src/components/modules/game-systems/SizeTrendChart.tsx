@@ -2,6 +2,7 @@
 
 import { useMemo } from 'react';
 import type { SizeTrendPoint } from '@/lib/packaging/build-history-store';
+import { MODULE_COLORS } from '@/lib/chart-colors';
 
 interface SizeTrendChartProps {
   data: SizeTrendPoint[];
@@ -18,7 +19,7 @@ function formatBytes(bytes: number): string {
 
 const PADDING = { top: 20, right: 16, bottom: 28, left: 56 };
 
-export function SizeTrendChart({ data, height = 180, accentColor = '#8b5cf6' }: SizeTrendChartProps) {
+export function SizeTrendChart({ data, height = 180, accentColor = MODULE_COLORS.systems }: SizeTrendChartProps) {
   const width = 400; // SVG viewBox width, scales responsively
 
   const { points, yTicks, xLabels, minVal, maxVal } = useMemo(() => {

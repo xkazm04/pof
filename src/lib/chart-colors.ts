@@ -25,6 +25,32 @@ export const STATUS_BLOCKER = '#fb923c';
 /** Purple — stale, duration/time metric, historical */
 export const STATUS_STALE = '#8b5cf6';
 
+/** Neutral gray — disabled, unknown, inactive */
+export const STATUS_NEUTRAL = '#6b7280';
+
+/** Lime — quality 4, "good but not great" */
+export const STATUS_LIME = '#a3e635';
+
+/** Sky blue — improved features */
+export const STATUS_IMPROVED = '#38bdf8';
+
+// ── Extended accent palette ─────────────────────────────────────────────────
+
+/** Violet — animations, audio, content decorative accent */
+export const ACCENT_VIOLET = '#a78bfa';
+
+/** Orange — game director, secondary alert, warm accent */
+export const ACCENT_ORANGE = '#f97316';
+
+/** Emerald — healthy, ecosystem, nature contexts */
+export const ACCENT_EMERALD = '#34d399';
+
+/** Cyan — interactive, event bus, economy systems */
+export const ACCENT_CYAN = '#06b6d4';
+
+/** Pink — UI flow, menu navigation, creative accent */
+export const ACCENT_PINK = '#f472b6';
+
 // ── Opacity helpers — append to any hex color ───────────────────────────────
 
 /** 5% opacity suffix */
@@ -59,7 +85,7 @@ const QUALITY_COLORS = [
   STATUS_ERROR,   // 1 — red
   STATUS_BLOCKER, // 2 — orange
   STATUS_WARNING, // 3 — amber
-  '#a3e635',      // 4 — lime
+  STATUS_LIME,    // 4 — lime
   STATUS_SUCCESS, // 5 — green
 ] as const;
 
@@ -73,6 +99,7 @@ export function qualityColor(score: number | null): string {
 
 export const FEATURE_STATUS_COLORS = {
   implemented: STATUS_SUCCESS,
+  improved: STATUS_IMPROVED,
   partial: STATUS_WARNING,
   missing: STATUS_ERROR,
   unknown: 'var(--text-muted)',

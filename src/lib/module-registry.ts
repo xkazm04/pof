@@ -15,7 +15,7 @@ import {
   Timer, TreeDeciduous, TreePine, TrendingDown, TrendingUp, User,
   UserPlus, Users, Volume2, Workflow, Wrench, Zap,
 } from 'lucide-react';
-import type { CategoryDefinition, SubModuleDefinition, ChecklistItem, QuickAction } from '@/types/modules';
+import type { CategoryDefinition, SubModuleDefinition, SubModuleId, ChecklistItem, QuickAction } from '@/types/modules';
 
 // ─── Checklist data per aRPG sub-module ───────────────────────────────────────
 
@@ -142,13 +142,46 @@ List any issues found and fix them. Verify build compiles.`,
   ],
   'arpg-animation': [
     { id: 'aa-1', label: 'Create AnimInstance C++ class', description: 'Create UAnimInstance subclass with movement variables (Speed, Direction, IsInAir) exposed to Animation Blueprint.', prompt: 'Create a UARPGAnimInstance C++ class that derives from UAnimInstance. Override NativeUpdateAnimation to calculate Speed (from velocity), Direction, IsInAir (from movement component), and IsDead variables. Expose these with UPROPERTY(BlueprintReadOnly) for the Animation Blueprint.' },
-    { id: 'aa-2', label: 'Set up locomotion Blend Space', description: 'Create a 1D or 2D Blend Space for Idle/Walk/Run transitions based on speed.', prompt: 'Guide me through creating a 1D Blend Space for my aRPG character locomotion. It should blend between Idle (speed 0), Walk (speed 200), and Run (speed 600) animations. Explain the Blend Space setup in UE5 and how to reference it from the Animation Blueprint.' },
-    { id: 'aa-3', label: 'Build animation state machine', description: 'Create Animation Blueprint with states: Locomotion, Attacking, Dodging, Hit React, Death. Wire transitions.', prompt: 'Create an Animation Blueprint state machine for my aRPG character with these states: Locomotion (uses blend space), Attacking (plays montage), Dodging (plays roll montage), HitReact (plays hit reaction), and Death (plays death animation then holds final pose). Define transition rules between each state.' },
-    { id: 'aa-4', label: 'Create attack animation montages', description: 'Set up Animation Montages for a 3-hit melee combo with montage sections for chaining.', prompt: 'Create Animation Montage setup for a 3-hit melee attack combo. Each hit should be a separate montage section so they can chain. Add Anim Notifies for: AN_ComboWindow (when next input is accepted), AN_EnableHitbox (start of damage window), AN_DisableHitbox (end of damage window). Explain the C++ notify classes.' },
+    { id: 'aa-2', label: 'Set up locomotion Blend Space', description: 'Create via commandlet or editor. Commandlet: UAnimAssetCommandlet creates BS1D_Locomotion with Speed axis [0,600] using FProperty reflection on protected BlendParameters. Then assign sample anims in-editor.', prompt: 'Create a 1D Blend Space for aRPG locomotion. AUTOMATION NOTE: The PoFEditor module includes UAnimAssetCommandlet that creates BS1D_Locomotion headlessly via `UnrealEditor-Cmd -run=AnimAsset`. It uses FProperty reflection to set BlendParameters[0] (protected UPROPERTY). After running, open in-editor to assign Idle(0)/Walk(200)/Run(600) sample animations. If creating manually: Content Browser > Animation > Blend Space 1D, axis Speed [0,600], GridNum=2.' },
+    { id: 'aa-3', label: 'Build animation state machine', description: 'Create Animation Blueprint with states: Locomotion, Attacking, Dodging, Hit React, Death. NOT automatable — requires editor AnimGraph.', prompt: 'Create an Animation Blueprint state machine for my aRPG character. IMPORTANT: AnimBP state machines CANNOT be created programmatically in UE 5.7 — they require the editor AnimGraph. States: Locomotion (uses blend space), Attacking (plays montage), Dodging (plays roll montage), HitReact (plays hit reaction), Death (plays death then holds final pose). Transition rules reference C++ AnimInstance variables (bIsAttacking, bIsDodging, bIsHitReacting, bIsDead) from UARPGAnimInstance.' },
+    { id: 'aa-4', label: 'Create attack animation montages', description: 'Automatable: commandlet creates AM_MeleeCombo with 3 sections (Attack1/2/3) linked via NextSectionName. Then add anim notifies in-editor.', prompt: 'Create montage setup for 3-hit melee combo. AUTOMATION: UAnimAssetCommandlet creates AM_MeleeCombo with CompositeSections[Attack1,Attack2,Attack3] linked via NextSectionName. Also creates AM_Dodge_{Forward,Backward,Left,Right}, AM_HitReact, AM_Death — 7 montages total in ~0.06s headless. After creation: assign Skeleton + AnimSequences in-editor, then add Anim Notifies (AN_ComboWindow, AN_EnableHitbox, AN_DisableHitbox) to the timeline. Montage shells are valid .uasset files ready for editor use.' },
     { id: 'aa-5', label: 'Implement anim notifies', description: 'Create C++ Anim Notify classes: ComboWindow, EnableHitbox, DisableHitbox, SpawnVFX, PlaySound.', prompt: 'Create C++ Anim Notify classes for my aRPG: UAnimNotify_ComboWindow (signals combo input window open/close), UAnimNotifyState_HitDetection (enables/disables weapon hit detection for the duration), UAnimNotify_SpawnVFX (spawns a Niagara effect), and UAnimNotify_PlaySound (plays a sound cue). Show how to use them in montages.' },
     { id: 'aa-6', label: 'Set up Motion Warping', description: 'Enable Motion Warping plugin and add notify states for attack magnetism toward targets.', prompt: 'Set up Motion Warping for my aRPG attacks. Add UMotionWarpingComponent to the character. Create Motion Warping notify states in attack montages so that melee attacks slightly magnetize the character toward the target (like Dark Souls/Elden Ring lock-on attacks). Show how to set the warp target from the combat system.' },
     { id: 'aa-7', label: 'Configure root motion toggle', description: 'Enable root motion for attacks and dodges, disable for normal locomotion. Handle transitions.', prompt: 'Set up root motion handling for my aRPG character. Root motion should be ON during attack montages and dodge rolls (for precise movement) but OFF during normal locomotion (WASD movement). Show how to configure this in the AnimInstance and CharacterMovementComponent.' },
-    { id: 'aa-8', label: 'Import and test animations', description: 'Import placeholder animations (Mixamo or marketplace), assign to blend spaces and montages, test full flow.', prompt: 'Guide me through importing animations for my aRPG character. I need placeholder animations from Mixamo for: idle, walk, run, 3-hit sword combo, dodge roll, hit reaction, and death. Show the import settings, retargeting if needed, and how to assign them to the blend spaces and montages we created.' },
+    { id: 'aa-8', label: 'Import and retarget animations', description: 'Import Mixamo FBX with bone prefix handling, batch retarget via IK Retargeter Python API, assign to commandlet-generated assets, test full flow.', prompt: `Guide me through importing and retargeting Mixamo animations for my aRPG character.
+
+## Phase 1: Mixamo FBX Import
+1. Download from Mixamo: idle, walk, run, 3-hit sword combo, dodge roll, hit reaction, death.
+   - First download: Format "FBX Binary", Skin "With Skin" (creates Skeleton asset).
+   - Subsequent downloads: "Without Skin" to reuse the same skeleton.
+   - Check "In Place" for ALL locomotion anims (idle/walk/run) — root motion is extracted in UE5 instead.
+2. Import via Content Browser or ImportAssets commandlet with JSON config.
+   - CRITICAL: Strip the "mixamorig:" bone prefix on import. In FBX Import Options > Skeleton, uncheck "Use T0 as Ref Pose" and set Skeleton to the first-imported skeleton asset.
+   - Or via Python: use unreal.AssetTools batch import with FbxImportUI settings to auto-strip prefixes.
+
+## Phase 2: IK Retargeter Setup (UE5 Python API — fully automatable)
+3. Create IK Rigs for source (Mixamo) and target (your game skeleton) via Python:
+   - unreal.IKRetargeterController.get_controller(retargeter_asset)
+   - set_ik_rig(SOURCE, mixamo_ik_rig) / set_ik_rig(TARGET, game_ik_rig)
+4. Auto-map bone chains: rtg_controller.auto_map_chains(AutoMapChainType.FUZZY, True)
+   - Fuzzy matching handles Mixamo naming (Hips, Spine, LeftArm) to UE5 Mannequin equivalents.
+5. Adjust retarget pose if Mixamo is T-pose and target is A-pose — use rtg_controller pose alignment.
+
+## Phase 3: Batch Retarget
+6. Batch retarget ALL animations in one call:
+   - IKRetargetBatchOperation.duplicate_and_retarget(anim_assets, None, None, retargeter, remap_referenced_assets=True)
+   - This processes hundreds of animations at once — no manual per-asset retarget needed.
+
+## Phase 4: Root Motion Extraction
+7. Mixamo anims are in-place by default. For attacks/dodges that need root motion:
+   - Use RootMotionGeneratorOp post-process to extract root motion from hip translation.
+   - Keep locomotion as in-place (blend space handles movement via CharacterMovementComponent).
+
+## Phase 5: Asset Assignment & Test
+8. Run UAnimAssetCommandlet to generate BS1D + montage shells.
+9. Assign retargeted anims to blend space sample points and montage sections.
+10. Create AnimBP manually (state machine not automatable), reference UARPGAnimInstance.
+11. Test full loop in PIE: locomotion blending, combo chains, dodge, hit react, death.` },
   ],
   'arpg-gas': [
     { id: 'ag-1', label: 'Add AbilitySystemComponent to character', description: 'Add ASC to character base class. Implement IAbilitySystemInterface. Initialize in BeginPlay.', prompt: 'Add UAbilitySystemComponent to my AARPGCharacterBase class. Implement the IAbilitySystemInterface to return the ASC. Initialize the ASC properly in BeginPlay and PossessedBy. Handle the owner actor and avatar actor setup for both player and AI characters.' },
@@ -264,7 +297,7 @@ const ARPG_QUICK_ACTIONS: Record<string, QuickAction[]> = {
   'arpg-animation': [
     { id: 'qaa-1', label: 'Debug Anim Transitions', prompt: 'Debug animation transition issues: blend artifacts, incorrect state transitions, or montage interruption problems.', icon: ArrowLeftRight, complexity: 'intermediate' },
     { id: 'qaa-2', label: 'Add Anim Notify', prompt: 'Create a new custom Anim Notify class in C++ for gameplay events during animations.', icon: Bell, complexity: 'intermediate' },
-    { id: 'qaa-3', label: 'Setup Retargeting', prompt: 'Set up animation retargeting to use Mixamo or marketplace animations with my character skeleton.', icon: PersonStanding, complexity: 'beginner' },
+    { id: 'qaa-3', label: 'Setup Retargeting', prompt: 'Set up IK Retargeter for Mixamo or marketplace animations with my character skeleton. Use the UE5 Python API: create IK Rigs for source and target, IKRetargeterController to set rigs and auto_map_chains(FUZZY) for bone chain mapping, then IKRetargetBatchOperation.duplicate_and_retarget() for bulk retargeting. Handle mixamorig: bone prefix if using Mixamo source. Align retarget pose for T-pose/A-pose differences. Verify no foot sliding on locomotion and correct hit heights on attacks.', icon: PersonStanding, complexity: 'beginner' },
   ],
   'arpg-gas': [
     { id: 'qag-1', label: 'Debug GAS Issue', prompt: 'Help me debug a GAS issue. Show me how to use showdebug abilitysystem and diagnose ability activation or effect application problems.', icon: SearchCode, complexity: 'intermediate' },
@@ -375,6 +408,7 @@ const CORE_ENGINE_IDS = [
   'arpg-character', 'arpg-animation', 'arpg-gas', 'arpg-combat',
   'arpg-enemy-ai', 'arpg-inventory', 'arpg-loot', 'arpg-ui',
   'arpg-progression', 'arpg-world', 'arpg-save', 'arpg-polish',
+  'core-engine-plan', // Plan pseudo-module at end
 ] as const;
 
 export const SUB_MODULES: SubModuleDefinition[] = [
@@ -500,6 +534,18 @@ export const SUB_MODULES: SubModuleDefinition[] = [
     knowledgeTips: [],
     checklist: ARPG_CHECKLISTS['arpg-polish'],
   },
+  // ── Core Engine Plan (pseudo-module, not a real submodule) ─────────────────────
+  {
+    id: 'core-engine-plan',
+    label: 'Plan',
+    description: 'Cross-module implementation plan, dependency tracking, prioritization',
+    categoryId: 'core-engine',
+    icon: Map,
+    isSpecialItem: true, // Marks this as a special pseudo-module
+    quickActions: [],
+    knowledgeTips: [],
+    checklist: [],
+  },
   // ── Content & Game Systems ───────────────────────────────────────────────────────
 
     // Content
@@ -544,11 +590,50 @@ export const SUB_MODULES: SubModuleDefinition[] = [
     ],
     checklist: [
     { id: 'anim-1', label: 'Create C++ AnimInstance', description: 'Set up UAnimInstance subclass with movement variables and native update.', prompt: 'Create a C++ UAnimInstance subclass for my UE5 project. Override NativeInitializeAnimation to cache character/movement component references. Override NativeUpdateAnimation to update: float Speed (from velocity magnitude), float Direction (CalculateDirection), bool bIsInAir (IsFalling), bool bIsAccelerating (acceleration > 0), float AimPitch/AimYaw (from control rotation delta). Use UPROPERTY(BlueprintReadOnly) for all variables so AnimBP Blueprint can read them. Avoid using EventGraph in AnimBP - do all logic in C++ NativeUpdate for performance.' },
-    { id: 'anim-2', label: 'Build locomotion blend space', description: 'Create 1D or 2D blend space for idle/walk/run transitions.', prompt: 'Create a locomotion Blend Space for my UE5 project. If isometric/third-person: create BS1D_Locomotion (1D Blend Space) with Speed axis 0-600. Sample points: Idle at 0, Walk at 200, Run at 600. Set interpolation to cubic. If strafing needed: create BS2D_Locomotion (2D) with Direction (-180 to 180) on X, Speed (0-600) on Y. Place animations at cardinal directions. In AnimBP: feed Speed and Direction from AnimInstance C++ variables. Verify smooth blending between states with no foot sliding (adjust playrate if needed).' },
+    { id: 'anim-2', label: 'Build locomotion blend space', description: 'AUTOMATABLE: Create via commandlet or manually. BlendParameters is protected — use FProperty reflection.', prompt: 'Create a locomotion Blend Space for my UE5 project. AUTOMATION (verified UE 5.7.3): Create a UCommandlet that uses NewObject<UBlendSpace1D>, then set axis via FProperty reflection: `FProperty* Prop = UBlendSpace::StaticClass()->FindPropertyByName("BlendParameters"); FBlendParameter* Params = Prop->ContainerPtrToValuePtr<FBlendParameter>(BlendSpace); Params[0].DisplayName = "Speed"; Params[0].Min = 0.f; Params[0].Max = 600.f;`. Save via UPackage::SavePackage (returns bool in 5.7, NOT FSavePackageResultStruct). Then assign sample anims in-editor. MANUAL: Content Browser > Animation > Blend Space 1D, Speed axis 0-600, sample points Idle(0)/Walk(200)/Run(600).' },
     { id: 'anim-3', label: 'Set up animation state machine', description: 'Create states for locomotion, attacking, dodging, hit-react, and death.', prompt: 'Create the main animation state machine in my UE5 project AnimBP. States: Locomotion (plays BS1D_Locomotion), Attacking (montage-driven, auto-transitions back), Dodging (plays dodge montage), HitReact (plays hit react montage), Death (plays death montage, remains in final pose). Transitions: Locomotion->Attacking (on IsMontageActive check), Locomotion->Dodging (on bIsDodging), Any->HitReact (on HitReact montage play), Any->Death (on bIsDead). Set transition blend times: 0.1s for combat transitions, 0.2s for locomotion. Use Transition Rules with C++ AnimInstance booleans.' },
-    { id: 'anim-4', label: 'Implement attack montages', description: 'Create attack montage with sections for combo system.', prompt: 'Set up attack montages for my UE5 project. Create AM_MeleeCombo montage with 3 sections: Attack1, Attack2, Attack3. Each section has: anticipation frames (3-5), active frames (weapon trace window), recovery frames (8-12). Add Anim Notifies: AN_ComboWindowOpen/Close (marks window where next input queues), AN_EnableHitDetection/DisableHitDetection, AN_PlaySwingSound, AN_SpawnSwingVFX. In combo system code: on attack input during combo window, call Montage_JumpToSection(NextSection). If no input during window, montage plays recovery and ends. Test timing feels responsive.' },
+    { id: 'anim-4', label: 'Implement attack montages', description: 'AUTOMATABLE: Commandlet creates montage shells with sections and NextSectionName linking. Add notifies in-editor.', prompt: 'Set up attack montages for my UE5 project. AUTOMATION (verified UE 5.7.3): Commandlet creates montage via NewObject<UAnimMontage>. Set SlotAnimTracks[0].SlotName. Add CompositeSections: section 0 renamed from default, subsequent added via FCompositeSection with SetTime(). Link sequentially: CompositeSections[i].NextSectionName = Sections[i+1]. Save via UPackage::SavePackage. Creates valid .uasset shells (~0.06s for 8 assets). THEN IN-EDITOR: assign Skeleton, add AnimSequences to SlotAnimTracks, add Anim Notifies to timeline (AN_ComboWindowOpen/Close, AN_EnableHitDetection/Disable, AN_PlaySwingSound, AN_SpawnSwingVFX). Section timing: anticipation 3-5 frames, active window, recovery 8-12 frames.' },
     { id: 'anim-5', label: 'Create custom Anim Notifies', description: 'Build C++ notify classes for combat events, VFX, and sound.', prompt: 'Create custom C++ Anim Notify classes for my UE5 project. UAnimNotify_PlayNiagaraEffect: spawns Niagara system at socket location. UAnimNotifyState_WeaponTrace: on NotifyBegin starts weapon collision trace, NotifyTick performs per-frame line traces along weapon, NotifyEnd stops traces. Dedup hits with TSet<AActor*>. UAnimNotify_CameraShake: triggers camera shake with configurable intensity. UAnimNotify_PlaySound: plays USoundBase at socket. UAnimNotify_FootstepSound: plays surface-type-dependent footstep (line trace down, check physical material). Register all notifies so they appear in Montage Editor dropdown.' },
-    { id: 'anim-6', label: 'Set up animation retargeting', description: 'Configure IK Retargeter for sharing animations between different skeletons.', prompt: 'Set up animation retargeting in my UE5 project. Create UIKRetargeter asset: set Source skeleton (e.g., Mixamo or Mannequin) and Target skeleton (your character). Map bone chains: Spine, LeftArm, RightArm, LeftLeg, RightLeg, Head. Adjust retarget settings: Translation Mode = Globally Scaled for limbs, Skeleton for root. Create RetargetPose matching source T-pose. Batch retarget animations: right-click animation > Retarget > select retargeter and target skeleton. Verify: retargeted locomotion has no foot sliding, attack montages hit at correct height. Fix any bone mapping issues.' },
+    { id: 'anim-6', label: 'Set up animation retargeting', description: 'Configure IK Retargeter with Python API for automated cross-skeleton retargeting. Supports Mixamo→game skeleton batch pipeline.', prompt: `Set up animation retargeting in my UE5 project using the IK Retargeter Python API for batch automation.
+
+## Step 1: Create IK Rigs (Python or Editor)
+- Source IK Rig (Mixamo skeleton): define chains for Spine, LeftArm, RightArm, LeftLeg, RightLeg, Head.
+- Target IK Rig (game skeleton): same chain definitions mapped to your bone names.
+- Note: Mixamo uses "mixamorig:" bone prefix — strip it on import or handle in chain definitions.
+
+## Step 2: Create IK Retargeter via Python
+\`\`\`python
+asset_tools = unreal.AssetToolsHelpers.get_asset_tools()
+rtg = asset_tools.create_asset('RTG_MixamoToGame', '/Game/Retarget/',
+                                unreal.IKRetargeter, unreal.IKRetargetFactory())
+rtg_controller = unreal.IKRetargeterController.get_controller(rtg)
+rtg_controller.set_ik_rig(unreal.RetargetSourceOrTarget.SOURCE, source_ik_rig)
+rtg_controller.set_ik_rig(unreal.RetargetSourceOrTarget.TARGET, target_ik_rig)
+\`\`\`
+
+## Step 3: Auto-Map Bone Chains
+- rtg_controller.auto_map_chains(unreal.AutoMapChainType.FUZZY, True)
+- Fuzzy matching works well for Mixamo→UE5 (Hips→pelvis, Spine→spine_01, etc.)
+- Manually fix any chains that fuzzy match misses.
+
+## Step 4: Pose Alignment
+- If source is T-pose and target is A-pose, adjust the retarget pose.
+- UE5.7+: use crotch height, floor constraints, and stretch chain operators for better alignment.
+- Enable spatially aware retargeting to prevent limb collision.
+
+## Step 5: Batch Retarget All Animations
+\`\`\`python
+anim_paths = ['/Game/Mixamo/Anims/Idle', '/Game/Mixamo/Anims/Walk', ...]  # all animation assets
+assets = [unreal.EditorAssetSubsystem().find_asset_data(p) for p in anim_paths]
+unreal.IKRetargetBatchOperation.duplicate_and_retarget(
+    assets, None, None, rtg, remap_referenced_assets=True)
+\`\`\`
+- Processes hundreds of animations in a single call — no manual per-asset retarget.
+
+## Step 6: Verify
+- Retargeted locomotion: no foot sliding, correct ground contact.
+- Attack montages: hit detection at correct height for new skeleton proportions.
+- Root motion: verify extracted root motion matches original movement distances.` },
     { id: 'anim-7', label: 'Test animation integration', description: 'Verify all animation states, transitions, and notifies work with gameplay.', prompt: 'Test the full animation integration in my UE5 project. Verify: (1) Locomotion blends smoothly between idle/walk/run with no pops. (2) Attack combo: press attack 3 times in combo window, verify montage sections chain. (3) Attack outside combo window: verify recovery plays fully. (4) Hit react: take damage during locomotion and during attack, verify hit react interrupts correctly. (5) Death: verify death montage plays and character stays in final pose. (6) Anim notifies: verify swing VFX spawns at weapon socket, sounds play, weapon traces detect hits. (7) No foot sliding during movement.' },
   ],
   },
@@ -864,7 +949,7 @@ export const ARPG_SUB_MODULES = SUB_MODULES.filter(m => m.categoryId === 'core-e
 export const CATEGORY_MAP = Object.fromEntries(CATEGORIES.map(c => [c.id, c])) as Record<string, CategoryDefinition>;
 
 /** All sub-modules in one map. */
-export const SUB_MODULE_MAP: Record<string, SubModuleDefinition> = {};
+export const SUB_MODULE_MAP: Partial<Record<SubModuleId, SubModuleDefinition>> = {};
 for (const mod of SUB_MODULES) {
   SUB_MODULE_MAP[mod.id] = mod;
 }
@@ -875,21 +960,26 @@ export function getSubModulesForCategory(categoryId: string): SubModuleDefinitio
   }
   const category = CATEGORY_MAP[categoryId];
   if (!category) return [];
-  return category.subModules.map(id => SUB_MODULE_MAP[id]).filter(Boolean);
+  return category.subModules.map(id => SUB_MODULE_MAP[id]).filter((m): m is SubModuleDefinition => !!m);
 }
 
-export function getCategoryForSubModule(subModuleId: string): CategoryDefinition | undefined {
+export function getCategoryForSubModule(subModuleId: SubModuleId): CategoryDefinition | undefined {
   const subModule = SUB_MODULE_MAP[subModuleId];
   if (!subModule) return undefined;
   return CATEGORY_MAP[subModule.categoryId];
 }
 
 /** Get checklist for any module. */
-export function getModuleChecklist(moduleId: string): ChecklistItem[] {
+export function getModuleChecklist(moduleId: SubModuleId): ChecklistItem[] {
   return SUB_MODULE_MAP[moduleId]?.checklist ?? [];
 }
 
-/** Short labels derived from module definitions. */
+/** Short labels derived from module definitions — canonical single source of truth for all module label lookups. */
 export const MODULE_LABELS: Record<string, string> = Object.fromEntries(
   Object.values(SUB_MODULE_MAP).map(m => [m.id, m.label])
 );
+
+/** Type-safe label lookup. Prefer this over raw MODULE_LABELS indexing. */
+export function getModuleLabel(moduleId: SubModuleId): string {
+  return MODULE_LABELS[moduleId] ?? moduleId;
+}

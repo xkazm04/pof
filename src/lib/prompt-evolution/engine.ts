@@ -1,3 +1,4 @@
+import type { SubModuleId } from '@/types/modules';
 import type {
   PromptVariant,
   ABTest,
@@ -30,7 +31,7 @@ function genId(prefix: string): string {
 }
 
 export function createVariant(
-  moduleId: string,
+  moduleId: SubModuleId,
   checklistItemId: string,
   prompt: string,
   origin: PromptVariant['origin'] = 'default',
@@ -58,13 +59,13 @@ export function getVariant(id: string): PromptVariant | null {
   return variants.get(id) ?? null;
 }
 
-export function getVariantsForItem(moduleId: string, checklistItemId: string): PromptVariant[] {
+export function getVariantsForItem(moduleId: SubModuleId, checklistItemId: string): PromptVariant[] {
   return Array.from(variants.values()).filter(
     (v) => v.moduleId === moduleId && v.checklistItemId === checklistItemId,
   );
 }
 
-export function getVariantsForModule(moduleId: string): PromptVariant[] {
+export function getVariantsForModule(moduleId: SubModuleId): PromptVariant[] {
   return Array.from(variants.values()).filter((v) => v.moduleId === moduleId);
 }
 
@@ -92,7 +93,7 @@ export function mutateVariant(variantId: string, mutation: MutationType): Prompt
 // ── A/B Testing ─────────────────────────────────────────────────────────────
 
 export function startABTest(
-  moduleId: string,
+  moduleId: SubModuleId,
   checklistItemId: string,
   variantAId: string,
   variantBId: string,
@@ -106,7 +107,7 @@ export function getABTest(id: string): ABTest | null {
   return abTests.get(id) ?? null;
 }
 
-export function getActiveTests(moduleId?: string): ABTest[] {
+export function getActiveTests(moduleId?: SubModuleId): ABTest[] {
   return Array.from(abTests.values()).filter(
     (t) => t.status === 'running' && (!moduleId || t.moduleId === moduleId),
   );
@@ -175,7 +176,7 @@ export function clusterModulePrompts(sessions: SessionRecord[]) {
 
 // ── Template families ───────────────────────────────────────────────────────
 
-export function buildTemplateFamilies(moduleId: string): TemplateFamily[] {
+export function buildTemplateFamilies(moduleId: SubModuleId): TemplateFamily[] {
   const moduleVariants = getVariantsForModule(moduleId);
   if (moduleVariants.length < 2) return [];
 
@@ -224,7 +225,7 @@ export function buildTemplateFamilies(moduleId: string): TemplateFamily[] {
 
 /** Get the best-performing variant for a checklist item, based on A/B test results. */
 export function getBestVariant(
-  moduleId: string,
+  moduleId: SubModuleId,
   checklistItemId: string,
 ): PromptVariant | null {
   // Check concluded tests for winners
@@ -248,7 +249,7 @@ export function getBestVariant(
 // ── Suggestions ─────────────────────────────────────────────────────────────
 
 export function generateSuggestions(
-  moduleId: string,
+  moduleId: SubModuleId,
   sessions: SessionRecord[],
 ): EvolutionSuggestion[] {
   const suggestions: EvolutionSuggestion[] = [];
@@ -382,7 +383,7 @@ export function getEvolutionStats(): EvolutionStats {
  */
 export function optimizePrompt(
   prompt: string,
-  moduleId: string,
+  moduleId: SubModuleId,
   sessions: SessionRecord[],
   moduleStats: ModuleStats,
 ): PromptOptimizationResult {

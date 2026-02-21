@@ -8,13 +8,17 @@ import {
 } from 'lucide-react';
 import type { PlaytestSession, PlaytestFinding, FindingSeverity, FindingCategory } from '@/types/game-director';
 import { SurfaceCard } from '@/components/ui/SurfaceCard';
+import {
+  STATUS_SUCCESS, STATUS_WARNING, STATUS_ERROR, STATUS_INFO, STATUS_BLOCKER,
+  OPACITY_8, OPACITY_20,
+} from '@/lib/chart-colors';
 
 const SEVERITY_STYLES: Record<FindingSeverity, { icon: typeof AlertOctagon; color: string; bg: string; border: string }> = {
-  critical: { icon: AlertOctagon, color: '#f87171', bg: '#f8717108', border: '#f8717120' },
-  high: { icon: AlertTriangle, color: '#fb923c', bg: '#fb923c08', border: '#fb923c20' },
-  medium: { icon: Info, color: '#fbbf24', bg: '#fbbf2408', border: '#fbbf2420' },
-  low: { icon: Info, color: '#60a5fa', bg: '#60a5fa08', border: '#60a5fa20' },
-  positive: { icon: CheckCircle2, color: '#4ade80', bg: '#4ade8008', border: '#4ade8020' },
+  critical: { icon: AlertOctagon, color: STATUS_ERROR, bg: `${STATUS_ERROR}${OPACITY_8}`, border: `${STATUS_ERROR}${OPACITY_20}` },
+  high: { icon: AlertTriangle, color: STATUS_BLOCKER, bg: `${STATUS_BLOCKER}${OPACITY_8}`, border: `${STATUS_BLOCKER}${OPACITY_20}` },
+  medium: { icon: Info, color: STATUS_WARNING, bg: `${STATUS_WARNING}${OPACITY_8}`, border: `${STATUS_WARNING}${OPACITY_20}` },
+  low: { icon: Info, color: STATUS_INFO, bg: `${STATUS_INFO}${OPACITY_8}`, border: `${STATUS_INFO}${OPACITY_20}` },
+  positive: { icon: CheckCircle2, color: STATUS_SUCCESS, bg: `${STATUS_SUCCESS}${OPACITY_8}`, border: `${STATUS_SUCCESS}${OPACITY_20}` },
 };
 
 const CATEGORY_LABELS: Record<FindingCategory, string> = {

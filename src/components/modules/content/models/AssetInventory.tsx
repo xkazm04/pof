@@ -9,21 +9,22 @@ import {
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { useProjectStore } from '@/stores/projectStore';
+import { ACCENT_VIOLET, ACCENT_CYAN, ACCENT_ORANGE, MODULE_COLORS } from '@/lib/chart-colors';
 import type { AssetScanResult, ScannedAsset, AssetType, AssetDependencyEdge } from '@/app/api/filesystem/scan-assets/route';
 
 // ── Constants ──
 
-const ACCENT = '#a78bfa';
+const ACCENT = ACCENT_VIOLET;
 
 const TYPE_CONFIG: Record<AssetType, { label: string; icon: LucideIcon; color: string }> = {
-  mesh:      { label: 'Mesh',      icon: Box,        color: '#3b82f6' },
-  texture:   { label: 'Texture',   icon: Image,      color: '#f59e0b' },
-  material:  { label: 'Material',  icon: Paintbrush,  color: '#8b5cf6' },
-  animation: { label: 'Animation', icon: Film,        color: '#ef4444' },
-  blueprint: { label: 'Blueprint', icon: Cpu,         color: '#00ff88' },
-  sound:     { label: 'Sound',     icon: Volume2,     color: '#06b6d4' },
-  map:       { label: 'Map',       icon: Map,         color: '#f97316' },
-  other:     { label: 'Other',     icon: HelpCircle,  color: 'var(--text-muted)' },
+  mesh: { label: 'Mesh', icon: Box, color: MODULE_COLORS.core },
+  texture: { label: 'Texture', icon: Image, color: MODULE_COLORS.content },
+  material: { label: 'Material', icon: Paintbrush, color: MODULE_COLORS.systems },
+  animation: { label: 'Animation', icon: Film, color: MODULE_COLORS.evaluator },
+  blueprint: { label: 'Blueprint', icon: Cpu, color: MODULE_COLORS.setup },
+  sound: { label: 'Sound', icon: Volume2, color: ACCENT_CYAN },
+  map: { label: 'Map', icon: Map, color: ACCENT_ORANGE },
+  other: { label: 'Other', icon: HelpCircle, color: 'var(--text-muted)' },
 };
 
 type SortKey = 'name' | 'type' | 'size' | 'modified';
@@ -348,32 +349,11 @@ export function AssetInventory() {
         />
       </div>
 
-      {/* Asset table */}
-      <div className="border border-border rounded-lg overflow-hidden">
-        {/* Header row */}
-        <div className="grid grid-cols-[1fr_90px_80px_100px] gap-2 px-3 py-2 bg-background border-b border-border text-xs font-semibold uppercase tracking-wider text-text-muted">
-          <button className="flex items-center gap-1 text-left hover:text-text-muted-hover transition-colors" onClick={() => toggleSort('name')}>
-            Name {sortKey === 'name' && <SortIcon className="w-3 h-3" />}
-            {sortKey !== 'name' && <ArrowUpDown className="w-3 h-3 opacity-30" />}
-          </button>
-          <button className="flex items-center gap-1 hover:text-text-muted-hover transition-colors" onClick={() => toggleSort('type')}>
-            Type {sortKey === 'type' && <SortIcon className="w-3 h-3" />}
-            {sortKey !== 'type' && <ArrowUpDown className="w-3 h-3 opacity-30" />}
-          </button>
-          <button className="flex items-center gap-1 text-right justify-end hover:text-text-muted-hover transition-colors" onClick={() => toggleSort('size')}>
-            Size {sortKey === 'size' && <SortIcon className="w-3 h-3" />}
-            {sortKey !== 'size' && <ArrowUpDown className="w-3 h-3 opacity-30" />}
-          </button>
-          <button className="flex items-center gap-1 text-right justify-end hover:text-text-muted-hover transition-colors" onClick={() => toggleSort('modified')}>
-            Modified {sortKey === 'modified' && <SortIcon className="w-3 h-3" />}
-            {sortKey !== 'modified' && <ArrowUpDown className="w-3 h-3 opacity-30" />}
-          </button>
-        </div>
-
-        {/* Rows */}
-        <div className="max-h-[400px] overflow-y-auto">
+      {/* Asset Grid */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 mt-4">
+        <AnimatePresence mode="popLayout">
           {displayAssets.length === 0 ? (
-            <div className="px-3 py-6 text-center text-xs text-text-muted">
+            <div className="col-span-full py-16 text-center text-xs text-text-muted bg-surface/30 rounded-xl border border-dashed border-border">
               {search || typeFilter !== 'all' ? 'No assets match your filters' : 'No assets found in Content/'}
             </div>
           ) : (
@@ -381,89 +361,119 @@ export function AssetInventory() {
               const conf = TYPE_CONFIG[asset.type];
               const Icon = conf.icon;
               const isExpanded = expandedAsset === asset.relativePath;
-              const hasEdges = scanResult.dependencies.some(
-                e => e.from === asset.name || e.to === asset.name
-              );
 
               return (
-                <div key={asset.relativePath}>
-                  <button
-                    onClick={() => setExpandedAsset(isExpanded ? null : asset.relativePath)}
-                    className="w-full grid grid-cols-[1fr_90px_80px_100px] gap-2 px-3 py-2 text-left hover:bg-surface transition-colors border-b border-border/50 group"
+                <motion.div
+                  key={asset.relativePath}
+                  layout
+                  initial={{ opacity: 0, scale: 0.9, y: 10 }}
+                  animate={{ opacity: 1, scale: 1, y: 0 }}
+                  exit={{ opacity: 0, scale: 0.9, y: -10 }}
+                  transition={{ type: "spring", stiffness: 350, damping: 25 }}
+                  whileHover={{ y: isExpanded ? 0 : -5, scale: isExpanded ? 1 : 1.02 }}
+                  className={`relative group ${isExpanded ? 'col-span-full row-span-2' : ''}`}
+                  style={{ perspective: 1000 }}
+                >
+                  <div
+                    className={`h-full flex flex-col relative transition-all duration-300 ${isExpanded ? 'border-2 shadow-2xl' : 'border shadow-lg cursor-pointer'}`}
+                    style={{
+                      backgroundColor: 'var(--surface-card)',
+                      borderRadius: '16px',
+                      overflow: 'hidden',
+                      borderColor: isExpanded ? `${conf.color}80` : `${conf.color}30`,
+                      boxShadow: isExpanded ? `0 0 30px -5px ${conf.color}40, inset 0 0 20px -10px ${conf.color}20` : `0 10px 20px -10px rgba(0,0,0,0.5), inset 0 0 10px -5px ${conf.color}20`,
+                    }}
+                    onClick={() => !isExpanded && setExpandedAsset(asset.relativePath)}
                   >
-                    {/* Name cell */}
-                    <div className="flex items-center gap-2 min-w-0">
-                      {hasEdges ? (
-                        <ChevronRight
-                          className="w-3 h-3 flex-shrink-0 text-text-muted transition-transform"
-                          style={{ transform: isExpanded ? 'rotate(90deg)' : 'rotate(0deg)' }}
-                        />
-                      ) : (
-                        <span className="w-3 flex-shrink-0" />
-                      )}
-                      <Icon className="w-3.5 h-3.5 flex-shrink-0" style={{ color: conf.color }} />
-                      <div className="min-w-0">
-                        <span className="text-xs text-text truncate block">{asset.name}</span>
-                        <span className="text-2xs text-text-muted truncate block">{asset.relativePath}</span>
+                    {/* Glow Effects */}
+                    <div className="absolute inset-0 bg-gradient-to-br from-[rgba(255,255,255,0.05)] to-transparent pointer-events-none" />
+                    <div className="absolute -inset-[100%] bg-gradient-to-r from-transparent via-[rgba(255,255,255,0.08)] to-transparent -rotate-45 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000 pointer-events-none z-20" />
+                    <div className="absolute top-0 right-0 w-32 h-32 blur-3xl rounded-full pointer-events-none transition-opacity duration-300"
+                      style={{ backgroundColor: `${conf.color}20`, opacity: isExpanded ? 1 : 0.4 }} />
+
+                    {/* Particle Background */}
+                    <div className="absolute inset-0 pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity duration-500 z-0"
+                      style={{ backgroundImage: `radial-gradient(circle at center, ${conf.color}20 1px, transparent 1px)`, backgroundSize: '16px 16px' }} />
+
+                    {/* Header */}
+                    <div className="p-4 flex flex-col relative z-10 flex-1 border-b" style={{ borderColor: `${conf.color}20`, backgroundColor: `${conf.color}05` }}>
+                      <div className="flex justify-between items-start mb-3">
+                        <div className="p-2.5 rounded-xl border shadow-inner overflow-hidden relative" style={{ backgroundColor: `${conf.color}15`, borderColor: `${conf.color}40` }}>
+                          <div className="absolute inset-0 bg-gradient-to-b from-[rgba(255,255,255,0.2)] to-transparent pointer-events-none" />
+                          <Icon className="w-5 h-5 relative z-10" style={{ color: conf.color, filter: `drop-shadow(0 0 4px ${conf.color}80)` }} />
+                        </div>
+                        <div className="flex flex-col items-end">
+                          <span
+                            className="text-[10px] px-2 py-0.5 rounded font-mono font-bold uppercase tracking-widest border shadow-sm"
+                            style={{ color: conf.color, backgroundColor: conf.color + '15', borderColor: `${conf.color}30` }}
+                          >
+                            {conf.label}
+                          </span>
+                          <span className="text-xs text-text-muted mt-1.5 tabular-nums font-mono">{formatBytes(asset.sizeBytes)}</span>
+                        </div>
+                      </div>
+
+                      <div className="mt-auto">
+                        <h3 className="text-sm font-bold text-text mb-1 truncate tracking-wide" title={asset.name}>{asset.name}</h3>
+                        <p className="text-[10px] text-text-muted font-mono truncate opacity-60 flex items-center gap-1" title={asset.relativePath}>
+                          <FolderOpen className="w-3 h-3" /> {asset.relativePath}
+                        </p>
                       </div>
                     </div>
 
-                    {/* Type cell */}
-                    <div className="flex items-center">
-                      <span
-                        className="text-2xs px-1.5 py-0.5 rounded font-medium"
-                        style={{ color: conf.color, backgroundColor: conf.color + '15', border: `1px solid ${conf.color}25` }}
-                      >
-                        {conf.label}
-                      </span>
-                    </div>
-
-                    {/* Size cell */}
-                    <div className="flex items-center justify-end">
-                      <span className="text-xs text-text-muted tabular-nums">{formatBytes(asset.sizeBytes)}</span>
-                    </div>
-
-                    {/* Modified cell */}
-                    <div className="flex items-center justify-end">
-                      <span className="text-xs text-text-muted">{formatDate(asset.modifiedAt)}</span>
-                    </div>
-                  </button>
-
-                  {/* Expanded dependency graph */}
-                  <AnimatePresence>
-                    {isExpanded && (
-                      <motion.div
-                        initial={{ height: 0, opacity: 0 }}
-                        animate={{ height: 'auto', opacity: 1 }}
-                        exit={{ height: 0, opacity: 0 }}
-                        transition={{ duration: 0.22 }}
-                        className="overflow-hidden border-b border-border/50"
-                      >
-                        <div className="px-4 py-3 bg-[#080818]">
-                          <div className="text-xs text-text-muted font-semibold uppercase tracking-wider mb-2">
-                            Dependency Graph
-                          </div>
-                          <div className="overflow-x-auto">
-                            <DependencyGraph
-                              asset={asset}
-                              allAssets={scanResult.assets}
-                              dependencies={scanResult.dependencies}
-                            />
-                          </div>
+                    {/* Footer Info */}
+                    {!isExpanded && (
+                      <div className="px-4 py-2.5 bg-surface/40 flex justify-between items-center relative z-10">
+                        <span className="text-[10px] text-text-muted opacity-80">{formatDate(asset.modifiedAt)}</span>
+                        <div className="text-[10px] text-text-muted font-mono bg-surface-deep px-1.5 py-0.5 rounded border border-border/40">
+                          {scanResult.dependencies.filter(e => e.from === asset.name || e.to === asset.name).length} edges
                         </div>
-                      </motion.div>
+                      </div>
                     )}
-                  </AnimatePresence>
-                </div>
+
+                    {/* Expanded Content (Dependency Graph) */}
+                    <AnimatePresence>
+                      {isExpanded && (
+                        <motion.div
+                          initial={{ height: 0, opacity: 0 }}
+                          animate={{ height: 'auto', opacity: 1 }}
+                          exit={{ height: 0, opacity: 0 }}
+                          className="relative z-10 flex-1 bg-[#080818]/60 backdrop-blur-md"
+                        >
+                          <div className="p-4 border-t" style={{ borderColor: `${conf.color}20` }}>
+                            <div className="flex justify-between items-center mb-4">
+                              <div className="text-xs text-cyan-500 font-mono uppercase tracking-widest flex items-center gap-2">
+                                <ScanLine className="w-4 h-4" /> Dependency Graph
+                              </div>
+                              <button
+                                onClick={(e) => { e.stopPropagation(); setExpandedAsset(null); }}
+                                className="text-[10px] text-text-muted hover:text-text px-2 py-1 rounded bg-surface border border-border shadow-sm cursor-pointer hover:bg-surface-hover transition-colors font-mono"
+                              >
+                                CLOSE
+                              </button>
+                            </div>
+                            <div className="overflow-x-auto rounded-xl border border-border/30 bg-black/40 shadow-inner p-4 custom-scrollbar flex justify-center">
+                              <DependencyGraph
+                                asset={asset}
+                                allAssets={scanResult.assets}
+                                dependencies={scanResult.dependencies}
+                              />
+                            </div>
+                          </div>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+                  </div>
+                </motion.div>
               );
             })
           )}
-        </div>
+        </AnimatePresence>
       </div>
 
       {/* Showing count */}
       {displayAssets.length > 0 && (
-        <div className="text-xs text-text-muted text-right">
+        <div className="text-xs text-text-muted text-right font-mono mt-2 opacity-60">
           Showing {displayAssets.length} of {scanResult.assets.length} assets
         </div>
       )}

@@ -14,7 +14,9 @@ import { aggregateWarnings, type BuildParseResult } from './UE5BuildParser';
 import { ErrorCard } from './ErrorCard';
 import { WarningAggregator } from './WarningAggregator';
 import { BuildSummaryCard } from './BuildSummaryCard';
+import { AssistantMessageContent, parseCodeBlocks } from './CodeBlockHighlighter';
 import type { ListImperativeAPI } from 'react-window';
+import { STATUS_INFO, ACCENT_VIOLET, MODULE_COLORS } from '@/lib/chart-colors';
 
 // --- Constants ---
 
@@ -283,7 +285,8 @@ function SelectionToolbar({ state, onCopy, onSearch, onFix, containerRef }: {
       <div className="w-px h-4 bg-border" />
       <button
         onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); onFix(); }}
-        className="flex items-center gap-1.5 px-2 py-1 rounded-md text-2xs font-medium text-[#00ff88] hover:bg-accent-subtle transition-colors"
+        className={`flex items-center gap-1.5 px-2 py-1 rounded-md text-2xs font-medium hover:bg-accent-subtle transition-colors`}
+        style={{ color: MODULE_COLORS.setup }}
         title="Fix with Claude"
       >
         <Zap className="w-3 h-3" />
@@ -374,11 +377,11 @@ function extractInlineEntities(text: string): InlineEntity[] {
 }
 
 const ENTITY_STYLES: Record<InlineEntity['type'], { color: string; icon: typeof Box }> = {
-  class:   { color: '#60a5fa', icon: Box },
+  class:   { color: STATUS_INFO, icon: Box },
   file:    { color: '#94a3b8', icon: FileCode },
-  concept: { color: '#a78bfa', icon: Lightbulb },
-  warning: { color: '#f59e0b', icon: AlertTriangle },
-  step:    { color: '#00ff88', icon: Footprints },
+  concept: { color: ACCENT_VIOLET, icon: Lightbulb },
+  warning: { color: MODULE_COLORS.content, icon: AlertTriangle },
+  step:    { color: MODULE_COLORS.setup, icon: Footprints },
 };
 
 function EntityTags({ entities, onNavigate }: {
@@ -427,7 +430,7 @@ export function TerminalOutput({
   scrollRef, listRef, onScroll,
   buildParseCache, onBuildFix,
   scrollBtnVisible, isAutoScroll, unseenCount, onScrollToBottom,
-  accentColor = '#3b82f6', onPromptFill,
+  accentColor = MODULE_COLORS.core, onPromptFill,
 }: TerminalOutputProps) {
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
   const [expandedPairs, setExpandedPairs] = useState<Set<string>>(new Set());
@@ -570,7 +573,21 @@ export function TerminalOutput({
 
     // Extract entities for assistant messages
     if (log.type === 'assistant' && log.content.length >= 40) {
+      const hasCodeBlocks = parseCodeBlocks(log.content);
       const entities = extractInlineEntities(log.content);
+
+      if (hasCodeBlocks) {
+        return (
+          <div>
+            <div className="flex items-start gap-2 px-3 py-1 hover:bg-surface-hover/40 transition-colors duration-fast">
+              <span className="flex-shrink-0 mt-0.5">{getLogIcon(log.type, log.toolName)}</span>
+              <AssistantMessageContent content={log.content} />
+            </div>
+            {entities.length > 0 && <EntityTags entities={entities} />}
+          </div>
+        );
+      }
+
       if (entities.length > 0) {
         return (
           <div>
@@ -722,7 +739,7 @@ export function TerminalOutput({
       )}
 
       {isStreaming && (
-        <div className="flex items-center gap-2 px-3 py-1 text-[#3b82f6] text-xs">
+        <div className="flex items-center gap-2 px-3 py-1 text-xs" style={{ color: MODULE_COLORS.core }}>
           <Loader2 className="w-3 h-3 animate-spin" />
           <span>Working...</span>
         </div>
@@ -739,7 +756,7 @@ export function TerminalOutput({
           >
             <ChevronDown className="w-3 h-3" />
             {unseenCount > 0 && (
-              <span className="text-xs font-medium text-[#3b82f6]">{unseenCount} new</span>
+              <span className="text-xs font-medium" style={{ color: MODULE_COLORS.core }}>{unseenCount} new</span>
             )}
           </button>
         </div>

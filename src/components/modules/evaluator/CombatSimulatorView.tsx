@@ -12,6 +12,7 @@ import { SurfaceCard } from '@/components/ui/SurfaceCard';
 import { Badge } from '@/components/ui/Badge';
 import { ProgressRing } from '@/components/ui/ProgressRing';
 import { useCombatSimulatorStore } from '@/stores/combatSimulatorStore';
+import { MODULE_COLORS } from '@/lib/chart-colors';
 import type {
   CombatScenario,
   TuningOverrides,
@@ -107,7 +108,7 @@ export function CombatSimulatorView() {
   }, [tuning, setTuning]);
 
   const survivalColor = summary
-    ? summary.survivalRate > 0.7 ? '#10b981' : summary.survivalRate > 0.4 ? '#f59e0b' : '#ef4444'
+    ? summary.survivalRate > 0.7 ? '#10b981' : summary.survivalRate > 0.4 ? MODULE_COLORS.content : MODULE_COLORS.evaluator
     : '#666';
 
   return (

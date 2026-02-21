@@ -21,7 +21,9 @@ export type SkillId =
   | 'roguelite-procedural'
   | 'survival-crafting'
   | 'networking-replication'
-  | 'performance-optimization';
+  | 'performance-optimization'
+  | 'pcg-procedural'
+  | 'state-tree-ai';
 
 interface SkillPack {
   id: SkillId;
@@ -92,11 +94,12 @@ const SKILL_PACKS: Record<SkillId, SkillPack> = {
     id: 'open-world-streaming',
     label: 'Open World & Streaming',
     context: `## Skill: Open World Systems
-- **World partition**: Use UE5 World Partition with OFPA. Define streaming distances per actor type. Data layers for conditional content (quest-gated areas). Level instancing for dungeons.
+- **World partition**: Use UE5 World Partition with OFPA. Define streaming distances per actor type. Data layers for conditional content (quest-gated areas). Level instancing for dungeons. Custom HLODs for injecting optimized representations (UE 5.7+).
 - **POI system**: Discoverable map markers (Camp/Dungeon/Shrine/Vista/Chest). States: undiscovered/discovered/completed. Compass indicator at screen edge. Fog-of-war map reveal on Vista discovery.
 - **Mount system**: AARPGMount with mounted movement (speed 1200, sprint 1800). Mount/dismount animation with socket attachment. Basic combat while mounted (light attacks only). Whistle summon from anywhere.
 - **Dynamic events**: World event manager spawns timed encounters (caravan attacks, wandering bosses, resource nodes). Events visible on map with countdown timer. Shared rewards for participation.
-- **Fast travel**: Discovered POIs become fast travel points. Fade-to-black transition with loading screen. Save player state before teleport. Cooldown between uses.`,
+- **Fast travel**: Discovered POIs become fast travel points. Fade-to-black transition with loading screen. Save player state before teleport. Cooldown between uses.
+- **Nanite Foliage (5.7+)**: Use Nanite Assemblies for dense foliage within 60fps budget. Nanite Skinning for skeletal mesh-driven dynamic wind via Dynamic Wind plugin. USD importer support with DCC markup schemas. TSR thin geometry detection for distant vegetation.`,
   },
 
   'roguelite-procedural': {
@@ -125,11 +128,37 @@ const SKILL_PACKS: Record<SkillId, SkillPack> = {
     id: 'networking-replication',
     label: 'Multiplayer Networking',
     context: `## Skill: UE5 Multiplayer & Replication
-- **Replication patterns**: Mark properties with UPROPERTY(Replicated). Use GetLifetimeReplicatedProps with DOREPLIFETIME. For conditional replication use DOREPLIFETIME_CONDITION (COND_OwnerOnly for inventory, COND_SkipOwner for cosmetics).
+- **Legacy replication**: Mark properties with UPROPERTY(Replicated). Use GetLifetimeReplicatedProps with DOREPLIFETIME. For conditional replication use DOREPLIFETIME_CONDITION (COND_OwnerOnly for inventory, COND_SkipOwner for cosmetics).
+- **Iris replication (5.7+ Beta)**: Cleaner API replacing UReplicationBridge. Use StartActorReplication as entry point, OnBeginReplication for lifecycle hooks. Actor Factory Overrides via StartReplicationParams. Supports seamless travel for persistent player data across world transitions. Consistent behavior with legacy networking.
 - **RPC validation**: Server RPCs (UFUNCTION(Server, Reliable)): validate all inputs server-side, never trust client. Client RPCs: for cosmetic feedback only. Multicast: for effects visible to all (explosions, deaths).
 - **NetCullDistance**: Set per actor class. NPCs: 10000. Projectiles: 5000. Cosmetic effects: 3000. Players: 0 (always relevant). Use NetUpdateFrequency to control bandwidth.
 - **Ability prediction**: GAS supports client-side prediction via FPredictionKey. Predicted abilities play immediately on owning client, server confirms/corrects. Use AbilityTask_WaitConfirmCancel for charge-up abilities.
 - **Session management**: Use UE Online Subsystem. Create/Find/Join sessions. Host migration for listen servers. Dedicated server: stateless, clients connect via lobby matchmaking.`,
+  },
+
+  'pcg-procedural': {
+    id: 'pcg-procedural',
+    label: 'PCG Procedural Generation',
+    context: `## Skill: Procedural Content Generation (PCG) Framework (5.7+ Production-Ready)
+- **PCG graphs**: Build content-generation graphs in the PCG editor. Nodes operate on point/mesh/spline data. Graphs can execute standalone without world context. Backward compatibility maintained across engine updates.
+- **Vegetation (PVE)**: Procedural Vegetation Editor — graph-based tool for high-quality foliage assets. 2x performance vs 5.5. Combine with Nanite Foliage for dense rendering.
+- **Custom data types**: Register custom data types for PCG graphs. Built-in Polygon2D type with intersection, union, difference, and offset operators for zone-based generation.
+- **GPU acceleration**: GPU Fast Geo Interop leverages FastGeometry for improved game thread performance. Scene Capture node for sampling scene color/depth. Save Texture to Asset node for baking to UTexture2D.
+- **Parameter system**: GPU nodes support parameter overrides. Min/max values and units for designer tuning. Type-based pin coloring matching Blueprint visual language.
+- **Room/dungeon generation**: Use PCG graph to define room templates (Combat, Elite, Shop, Treasure, Boss). Generate run layouts as point graphs. Connect via spline paths. Spawn as streaming sub-levels.`,
+  },
+
+  'state-tree-ai': {
+    id: 'state-tree-ai',
+    label: 'State Tree AI',
+    context: `## Skill: State Tree AI Systems (5.7+)
+- **State Tree basics**: Alternative to Behavior Trees for AI logic. Hierarchical state machine with tasks, conditions, and transitions. Preferred for new 5.7+ projects due to better debugging tools.
+- **ExecutionRuntimeData**: Persistent, long-lived node data across state transitions. Avoids re-initialization overhead when re-entering states.
+- **Re-Enter State Behavior**: Opt-in support for states that need to reset on re-entry. Configure per-state whether to restart or continue.
+- **Live Property Binding**: Output Properties enable real-time property binding between states and external systems. Eliminates polling patterns.
+- **Rewind Debugger**: Full integration with Rewind Debugger for owner- and instance-oriented debugging. Step backward through state transitions. Preferred over legacy State Tree debugger.
+- **Copy/paste workflow**: Cross-asset copy/paste for tasks, conditions, and transitions with intelligent binding handling. Property-level copy/paste preserves references.
+- **Migration from BT**: State Tree states map to BT subtrees. Tasks map to BTTasks. Conditions map to Decorators. Services become state-level tasks with tick. EQS queries work identically in both systems.`,
   },
 
   'performance-optimization': {
@@ -137,10 +166,11 @@ const SKILL_PACKS: Record<SkillId, SkillPack> = {
     label: 'Performance Optimization',
     context: `## Skill: UE5 Performance Optimization
 - **Actor tick budgeting**: Disable tick on actors that don't need it (SetActorTickEnabled(false)). Use tick intervals for distant actors (SetActorTickInterval(0.5f) for actors >5000 units away). SignificanceManager for LOD-based tick frequency.
-- **Niagara optimization**: GPU particle simulation for high counts. Distance-based quality scaling. Shared material instances. Pool emitter components. Budget: max 50k GPU particles, 5k CPU particles.
-- **Draw call reduction**: Instanced Static Meshes for repeated objects (foliage, debris). Merge actors for static geometry. Nanite for high-poly meshes. Virtual Textures for terrain.
+- **Niagara optimization**: GPU particle simulation for high counts. Distance-based quality scaling. Shared material instances. Pool emitter components. Budget: max 50k GPU particles, 5k CPU particles. Niagara Particle Lights supported by MegaLights (5.7+).
+- **Draw call reduction**: Instanced Static Meshes for repeated objects (debris). Nanite for high-poly meshes. Nanite Foliage (5.7+) for dense vegetation within 60fps budget. Virtual Textures for terrain. Merge actors for non-Nanite static geometry.
+- **MegaLights (5.7+ Beta)**: Many dynamic lights with improved performance — ideal for dungeon/interior scenes. Supports directional lights, Niagara particle lights, translucency, and hair strands. Replaces manual light budget limits for supported hardware.
 - **Memory budgets**: Texture streaming pool size per platform. LOD groups for skeletal meshes. Audio attenuation to cull distant sounds. Garbage collection interval tuning.
-- **Profiling workflow**: Use Unreal Insights for frame timing. stat unit, stat gpu for real-time. CSV profiling for automated regression tests. Target: 16.6ms frame time (60fps), 11.1ms (90fps VR).`,
+- **Profiling workflow**: Use Unreal Insights for frame timing. stat unit, stat gpu for real-time. CSV profiling for automated regression tests. Target: 16.6ms frame time (60fps), 11.1ms (90fps VR). Build Health Tracking dashboard (5.7+) for monitoring BuildGraph errors.`,
   },
 };
 
@@ -161,6 +191,7 @@ const SUB_GENRE_SKILLS: Record<SubGenreId, SkillId[]> = {
 const PATTERN_SKILLS: Partial<Record<GameplayPattern, SkillId>> = {
   'multiplayer-sync': 'networking-replication',
   'performance-intensive': 'performance-optimization',
+  'procedural-generation': 'pcg-procedural',
 };
 
 // ── Public API ─────────────────────────────────────────────────────────────

@@ -1,16 +1,18 @@
 import { NextRequest } from 'next/server';
-import { startExecution, getExecution } from '@/lib/claude-terminal/cli-service';
+import { startExecution, getExecution, subscribeToExecution } from '@/lib/claude-terminal/cli-service';
 import { MODULE_FEATURE_DEFINITIONS } from '@/lib/feature-definitions';
-import { TaskFactory, buildTaskPrompt } from '@/lib/cli-task';
+import { TaskFactory, buildTaskPrompt, extractCallbackPayload, resolveCallback } from '@/lib/cli-task';
 import { MODULE_LABELS } from '@/lib/module-registry';
 import { apiSuccess, apiError } from '@/lib/api-utils';
+import { getOriginFromRequest } from '@/lib/constants';
+import type { SubModuleId } from '@/types/modules';
 
 // ── Types ──
 
 type ModuleReviewStatus = 'pending' | 'running' | 'completed' | 'error' | 'skipped';
 
 interface ModuleProgress {
-  moduleId: string;
+  moduleId: SubModuleId;
   label: string;
   featureCount: number;
   status: ModuleReviewStatus;
@@ -34,27 +36,40 @@ interface BatchReviewState {
 let activeBatch: BatchReviewState | null = null;
 let batchAborted = false;
 
-function getModulesWithDefinitions(): { moduleId: string; label: string; featureCount: number }[] {
+function getModulesWithDefinitions(): { moduleId: SubModuleId; label: string; featureCount: number }[] {
   return Object.entries(MODULE_FEATURE_DEFINITIONS)
     .filter(([, defs]) => defs.length > 0)
     .map(([moduleId, defs]) => ({
-      moduleId,
+      moduleId: moduleId as SubModuleId,
       label: MODULE_LABELS[moduleId] ?? moduleId,
       featureCount: defs.length,
     }));
 }
 
-async function waitForExecution(executionId: string, timeoutMs = 600000): Promise<'completed' | 'error' | 'aborted'> {
+async function waitForExecution(executionId: string, timeoutMs = 600000): Promise<{ result: 'completed' | 'error' | 'aborted'; assistantOutput: string }> {
+  let assistantOutput = '';
+
+  // Subscribe to events to collect assistant output for callback processing
+  const unsub = subscribeToExecution(executionId, (event) => {
+    if (event.type === 'text') {
+      const content = event.data.content as string | undefined;
+      if (content) {
+        assistantOutput += content;
+      }
+    }
+  });
+
   const start = Date.now();
   while (Date.now() - start < timeoutMs) {
-    if (batchAborted) return 'aborted';
+    if (batchAborted) { unsub?.(); return { result: 'aborted', assistantOutput }; }
     const exec = getExecution(executionId);
-    if (!exec) return 'error';
-    if (exec.status === 'completed') return 'completed';
-    if (exec.status === 'error' || exec.status === 'aborted') return exec.status;
+    if (!exec) { unsub?.(); return { result: 'error', assistantOutput }; }
+    if (exec.status === 'completed') { unsub?.(); return { result: 'completed', assistantOutput }; }
+    if (exec.status === 'error' || exec.status === 'aborted') { unsub?.(); return { result: exec.status, assistantOutput }; }
     await new Promise((r) => setTimeout(r, 2000));
   }
-  return 'error'; // timeout
+  unsub?.();
+  return { result: 'error', assistantOutput }; // timeout
 }
 
 async function runBatchReview(projectPath: string, projectName: string, ueVersion: string, appOrigin: string) {
@@ -87,7 +102,7 @@ async function runBatchReview(projectPath: string, projectName: string, ueVersio
       const executionId = startExecution(projectPath, prompt);
       mod.executionId = executionId;
 
-      const result = await waitForExecution(executionId);
+      const { result, assistantOutput } = await waitForExecution(executionId);
 
       if (result === 'aborted') {
         mod.status = 'error';
@@ -96,6 +111,14 @@ async function runBatchReview(projectPath: string, projectName: string, ueVersio
         activeBatch.status = 'aborted';
         activeBatch.completedAt = new Date().toISOString();
         return;
+      }
+
+      // Process structured callback from assistant output
+      if (result === 'completed' && assistantOutput) {
+        const cbMatch = extractCallbackPayload(assistantOutput);
+        if (cbMatch) {
+          await resolveCallback(cbMatch.callbackId, cbMatch.payload);
+        }
       }
 
       mod.status = result === 'completed' ? 'completed' : 'error';
@@ -157,7 +180,7 @@ export async function POST(request: NextRequest) {
       return apiError('Project path not configured', 400);
     }
 
-    const appOrigin = body.appOrigin || 'http://localhost:3000';
+    const appOrigin = body.appOrigin || getOriginFromRequest(request);
     const modules = getModulesWithDefinitions();
 
     if (modules.length === 0) {

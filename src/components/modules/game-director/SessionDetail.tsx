@@ -9,15 +9,19 @@ import {
 } from 'lucide-react';
 import type { PlaytestSession, PlaytestFinding, DirectorEvent, FindingSeverity, FindingCategory } from '@/types/game-director';
 import { SurfaceCard } from '@/components/ui/SurfaceCard';
+import {
+  ACCENT_ORANGE, STATUS_SUCCESS, STATUS_WARNING, STATUS_ERROR, STATUS_INFO, STATUS_BLOCKER,
+  OPACITY_8, OPACITY_20,
+} from '@/lib/chart-colors';
 
-const ACCENT = '#f97316';
+const ACCENT = ACCENT_ORANGE;
 
 const SEVERITY_STYLES: Record<FindingSeverity, { icon: typeof AlertOctagon; color: string; bg: string; border: string }> = {
-  critical: { icon: AlertOctagon, color: '#f87171', bg: '#f8717108', border: '#f8717120' },
-  high: { icon: AlertTriangle, color: '#fb923c', bg: '#fb923c08', border: '#fb923c20' },
-  medium: { icon: Info, color: '#fbbf24', bg: '#fbbf2408', border: '#fbbf2420' },
-  low: { icon: Info, color: '#60a5fa', bg: '#60a5fa08', border: '#60a5fa20' },
-  positive: { icon: CheckCircle2, color: '#4ade80', bg: '#4ade8008', border: '#4ade8020' },
+  critical: { icon: AlertOctagon, color: STATUS_ERROR, bg: `${STATUS_ERROR}${OPACITY_8}`, border: `${STATUS_ERROR}${OPACITY_20}` },
+  high: { icon: AlertTriangle, color: STATUS_BLOCKER, bg: `${STATUS_BLOCKER}${OPACITY_8}`, border: `${STATUS_BLOCKER}${OPACITY_20}` },
+  medium: { icon: Info, color: STATUS_WARNING, bg: `${STATUS_WARNING}${OPACITY_8}`, border: `${STATUS_WARNING}${OPACITY_20}` },
+  low: { icon: Info, color: STATUS_INFO, bg: `${STATUS_INFO}${OPACITY_8}`, border: `${STATUS_INFO}${OPACITY_20}` },
+  positive: { icon: CheckCircle2, color: STATUS_SUCCESS, bg: `${STATUS_SUCCESS}${OPACITY_8}`, border: `${STATUS_SUCCESS}${OPACITY_20}` },
 };
 
 const CATEGORY_LABELS: Record<FindingCategory, string> = {
@@ -122,7 +126,7 @@ export function SessionDetail({
                   <circle
                     cx="20" cy="20" r="17"
                     fill="none"
-                    stroke={session.summary.overallScore >= 70 ? '#4ade80' : session.summary.overallScore >= 40 ? '#fbbf24' : '#f87171'}
+                    stroke={session.summary.overallScore >= 70 ? STATUS_SUCCESS : session.summary.overallScore >= 40 ? STATUS_WARNING : STATUS_ERROR}
                     strokeWidth="3"
                     strokeDasharray={`${(session.summary.overallScore / 100) * 106.8} 106.8`}
                     strokeLinecap="round"
@@ -168,10 +172,10 @@ export function SessionDetail({
             animate={{ opacity: 1, y: 0 }}
             className="flex items-center gap-4 px-3.5 py-2.5 bg-surface border border-border rounded-lg mb-4"
           >
-            <SummaryStat icon={Target} label="Findings" value={session.findingsCount} color="#60a5fa" />
+            <SummaryStat icon={Target} label="Findings" value={session.findingsCount} color={STATUS_INFO} />
             <SummaryStat icon={Gamepad2} label="Systems" value={session.systemsTestedCount} color={ACCENT} />
             <SummaryStat icon={Camera} label="Screenshots" value={session.summary.totalScreenshotsAnalyzed} color="#c084fc" />
-            <SummaryStat icon={Clock} label="Playtime" value={`${Math.floor(session.summary.playtimeSeconds / 60)}m`} color="#fbbf24" />
+            <SummaryStat icon={Clock} label="Playtime" value={`${Math.floor(session.summary.playtimeSeconds / 60)}m`} color={STATUS_WARNING} />
             <div className="ml-auto flex items-center gap-3 text-2xs">
               {criticals.length > 0 && (
                 <span className="text-[#f87171]">{criticals.length} critical</span>
@@ -373,7 +377,7 @@ function TimelineView({ events }: { events: DirectorEvent[] }) {
               <div
                 className="absolute left-[-18px] w-3 h-3 rounded-full border-2 border-surface-deep flex-shrink-0"
                 style={{
-                  backgroundColor: isError ? '#f87171' : isFinding ? '#fbbf24' : 'var(--border-bright)',
+                  backgroundColor: isError ? STATUS_ERROR : isFinding ? STATUS_WARNING : 'var(--border-bright)',
                 }}
               />
 
@@ -381,7 +385,7 @@ function TimelineView({ events }: { events: DirectorEvent[] }) {
                 <div className="flex items-center gap-2 mb-0.5">
                   <Icon
                     className="w-3 h-3 flex-shrink-0"
-                    style={{ color: isError ? '#f87171' : isFinding ? '#fbbf24' : 'var(--text-muted)' }}
+                    style={{ color: isError ? STATUS_ERROR : isFinding ? STATUS_WARNING : 'var(--text-muted)' }}
                   />
                   <span className={`text-xs ${isError ? 'text-[#f87171]' : 'text-text'}`}>
                     {event.message}
@@ -447,7 +451,7 @@ function CoverageView({ session, findings }: { session: PlaytestSession; finding
                   transition={{ duration: 0.45, ease: [0.16, 1, 0.3, 1], delay: 0.3 + idx * 0.05 }}
                   className="h-full rounded-full"
                   style={{
-                    backgroundColor: pct >= 80 ? '#4ade80' : pct >= 50 ? '#fbbf24' : '#f87171',
+                    backgroundColor: pct >= 80 ? STATUS_SUCCESS : pct >= 50 ? STATUS_WARNING : STATUS_ERROR,
                   }}
                 />
               </div>

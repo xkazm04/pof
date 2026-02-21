@@ -2,6 +2,7 @@
 
 import { useCallback } from 'react';
 import { Volume2, Radio, Waves, Settings2 } from 'lucide-react';
+import { ACCENT_VIOLET } from '@/lib/chart-colors';
 import type {
   AudioZone,
   SoundEmitter,
@@ -142,7 +143,7 @@ export function ZonePropertyPanel({
           label={isGenerating ? 'Generating...' : 'Generate from Description'}
           onClick={() => onGenerateSoundscape(zone)}
           disabled={isGenerating || !zone.soundscapeDescription.trim()}
-          accentColor="#a78bfa"
+          accentColor={ACCENT_VIOLET}
           icon={<Waves className="w-3 h-3" />}
         />
       </div>

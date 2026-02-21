@@ -10,8 +10,13 @@ import { useBlueprintTranspiler } from '@/hooks/useBlueprintTranspiler';
 import { useProjectStore } from '@/stores/projectStore';
 import { StaggerContainer, StaggerItem } from '@/components/ui/Stagger';
 import type { TranspilerTab, SemanticChange, DiffConflictLevel } from '@/types/blueprint';
+import { UI_TIMEOUTS } from '@/lib/constants';
+import {
+  MODULE_COLORS, STATUS_SUCCESS, STATUS_WARNING, STATUS_ERROR, STATUS_INFO,
+  OPACITY_15, OPACITY_20, OPACITY_30,
+} from '@/lib/chart-colors';
 
-const ACCENT = '#8b5cf6';
+const ACCENT = MODULE_COLORS.systems;
 
 const TAB_CONFIG: { id: TranspilerTab; label: string; icon: typeof Code }[] = [
   { id: 'transpile', label: 'Transpile', icon: ArrowRight },
@@ -19,9 +24,9 @@ const TAB_CONFIG: { id: TranspilerTab; label: string; icon: typeof Code }[] = [
 ];
 
 const CONFLICT_STYLES: Record<DiffConflictLevel, { color: string; bg: string; label: string; icon: typeof CheckCircle2 }> = {
-  none: { color: '#4ade80', bg: '#4ade8015', label: 'No Conflicts', icon: CheckCircle2 },
-  compatible: { color: '#fbbf24', bg: '#fbbf2415', label: 'Compatible Changes', icon: AlertTriangle },
-  conflict: { color: '#f87171', bg: '#f8717115', label: 'Conflicts Detected', icon: XCircle },
+  none: { color: STATUS_SUCCESS, bg: `${STATUS_SUCCESS}${OPACITY_15}`, label: 'No Conflicts', icon: CheckCircle2 },
+  compatible: { color: STATUS_WARNING, bg: `${STATUS_WARNING}${OPACITY_15}`, label: 'Compatible Changes', icon: AlertTriangle },
+  conflict: { color: STATUS_ERROR, bg: `${STATUS_ERROR}${OPACITY_15}`, label: 'Conflicts Detected', icon: XCircle },
 };
 
 const SAMPLE_BLUEPRINT = JSON.stringify({
@@ -88,8 +93,8 @@ export function BlueprintTranspilerView() {
 
   const copyToClipboard = useCallback(async (text: string, which: 'header' | 'source') => {
     await navigator.clipboard.writeText(text);
-    if (which === 'header') { setCopiedHeader(true); setTimeout(() => setCopiedHeader(false), 2000); }
-    else { setCopiedSource(true); setTimeout(() => setCopiedSource(false), 2000); }
+    if (which === 'header') { setCopiedHeader(true); setTimeout(() => setCopiedHeader(false), UI_TIMEOUTS.copyFeedback); }
+    else { setCopiedSource(true); setTimeout(() => setCopiedSource(false), UI_TIMEOUTS.copyFeedback); }
   }, []);
 
   return (
@@ -219,7 +224,7 @@ function TranspilePane({
             onClick={onTranspile}
             disabled={!blueprintJson.trim() || isLoading}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all disabled:opacity-40"
-            style={{ backgroundColor: `${ACCENT}20`, color: ACCENT, border: `1px solid ${ACCENT}30` }}
+            style={{ backgroundColor: `${ACCENT}${OPACITY_20}`, color: ACCENT, border: `1px solid ${ACCENT}${OPACITY_30}` }}
           >
             {isLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <ArrowRight className="w-3.5 h-3.5" />}
             Transpile to C++
@@ -411,7 +416,7 @@ function DiffPane({
           onClick={onDiff}
           disabled={!blueprintJson.trim() || !existingCpp.trim() || isLoading}
           className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all disabled:opacity-40"
-          style={{ backgroundColor: `${ACCENT}20`, color: ACCENT, border: `1px solid ${ACCENT}30` }}
+          style={{ backgroundColor: `${ACCENT}${OPACITY_20}`, color: ACCENT, border: `1px solid ${ACCENT}${OPACITY_30}` }}
         >
           {isLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <GitCompare className="w-3.5 h-3.5" />}
           Run Semantic Diff
@@ -472,10 +477,10 @@ function ChangeCard({ change }: { change: SemanticChange }) {
   const conflictStyle = CONFLICT_STYLES[change.conflictLevel];
 
   const typeLabel: Record<string, { color: string; label: string }> = {
-    add: { color: '#4ade80', label: 'ADD' },
-    remove: { color: '#f87171', label: 'DEL' },
-    modify: { color: '#fbbf24', label: 'MOD' },
-    move: { color: '#60a5fa', label: 'MOV' },
+    add: { color: STATUS_SUCCESS, label: 'ADD' },
+    remove: { color: STATUS_ERROR, label: 'DEL' },
+    modify: { color: STATUS_WARNING, label: 'MOD' },
+    move: { color: STATUS_INFO, label: 'MOV' },
     rename: { color: '#c084fc', label: 'REN' },
   };
 

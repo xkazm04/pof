@@ -1,0 +1,15 @@
+# Core Engine Unique Tabs Upgrade
+
+## Phase 0: Planning & Setup
+
+- [x] Analyze current structure and baseline design of `unique-tabs`
+- [x] Draft [implementation_plan.md](file:///C:/Users/kazda/.gemini/antigravity/brain/6b0a71f9-af03-42ae-a8dc-804231ffd00d/implementation_plan.md) with phase-by-phase breakdown
+- [x] Get user approval for the plan
+
+## Execution Phases
+
+- [x] Phase 1: Foundation & Shared UI ([_shared.tsx](file:///C:/Users/kazda/kiro/pof/src/components/modules/core-engine/unique-tabs/_shared.tsx), [index.tsx](file:///C:/Users/kazda/kiro/pof/src/components/modules/core-engine/unique-tabs/index.tsx))
+- [x] Phase 2: Combat & Abilities ([CombatActionMap.tsx](file:///C:/Users/kazda/kiro/pof/src/components/modules/core-engine/unique-tabs/CombatActionMap.tsx), [AbilitySpellbook.tsx](file:///C:/Users/kazda/kiro/pof/src/components/modules/core-engine/unique-tabs/AbilitySpellbook.tsx), [AnimationStateGraph.tsx](file:///C:/Users/kazda/kiro/pof/src/components/modules/core-engine/unique-tabs/AnimationStateGraph.tsx))
+- [x] Phase 3: World & Progression ([ZoneMap.tsx](file:///C:/Users/kazda/kiro/pof/src/components/modules/core-engine/unique-tabs/ZoneMap.tsx), [ProgressionCurve.tsx](file:///C:/Users/kazda/kiro/pof/src/components/modules/core-engine/unique-tabs/ProgressionCurve.tsx), [ScreenFlowMap.tsx](file:///C:/Users/kazda/kiro/pof/src/components/modules/core-engine/unique-tabs/ScreenFlowMap.tsx))
+- [/] Phase 4: Data & Content ([CharacterBlueprint.tsx](file:///C:/Users/kazda/kiro/pof/src/components/modules/core-engine/unique-tabs/CharacterBlueprint.tsx), [EnemyBestiary.tsx](file:///C:/Users/kazda/kiro/pof/src/components/modules/core-engine/unique-tabs/EnemyBestiary.tsx), [ItemCatalog.tsx](file:///C:/Users/kazda/kiro/pof/src/components/modules/core-engine/unique-tabs/ItemCatalog.tsx), [LootTableVisualizer.tsx](file:///C:/Users/kazda/kiro/pof/src/components/modules/core-engine/unique-tabs/LootTableVisualizer.tsx))
+- [ ] Phase 5: Technical Dashboards ([SaveDataSchema.tsx](file:///C:/Users/kazda/kiro/pof/src/components/modules/core-engine/unique-tabs/SaveDataSchema.tsx), [DebugDashboard.tsx](file:///C:/Users/kazda/kiro/pof/src/components/modules/core-engine/unique-tabs/DebugDashboard.tsx))

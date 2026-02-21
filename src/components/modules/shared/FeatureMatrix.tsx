@@ -1,7 +1,8 @@
 'use client';
 
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
-import { Check, ChevronDown, ChevronRight, FileCode, Loader2, RefreshCw, Star, ArrowRight, Download, TrendingUp, TrendingDown, Minus, AlertTriangle, Link2, Zap, Search, ArrowUpDown, ArrowUp, ArrowDown, Play, Copy, Eye } from 'lucide-react';
+import { useSuspendableEffect } from '@/hooks/useSuspend';
+import { Check, ChevronDown, ChevronRight, FileCode, Loader2, RefreshCw, Star, ArrowRight, Download, TrendingUp, TrendingDown, Minus, AlertTriangle, Link2, Zap, Search, ArrowUpDown, ArrowUp, ArrowDown, Play, Copy, Eye, LayoutList, LayoutGrid } from 'lucide-react';
 import { useFeatureMatrix } from '@/hooks/useFeatureMatrix';
 import { StaggerContainer, StaggerItem } from '@/components/ui/Stagger';
 import { FetchError } from './FetchError';
@@ -12,31 +13,37 @@ import { buildDependencyMap, computeBlockers } from '@/lib/feature-definitions';
 import type { DependencyInfo, ResolvedDependency } from '@/lib/feature-definitions';
 import { MODULE_LABELS } from '@/lib/module-registry';
 import { MarkdownProse } from '@/components/ui/MarkdownProse';
+import { UI_TIMEOUTS } from '@/lib/constants';
+import type { SubModuleId } from '@/types/modules';
+import { FEATURE_STATUS_COLORS, STATUS_ERROR, STATUS_BLOCKER, STATUS_WARNING, STATUS_LIME, STATUS_SUCCESS, OPACITY_10 } from '@/lib/chart-colors';
 
 const STATUS_CONFIG: Record<FeatureStatus, { color: string; bg: string; label: string }> = {
-  implemented: { color: '#4ade80', bg: '#4ade8018', label: 'Implemented' },
-  partial: { color: '#fbbf24', bg: '#fbbf2418', label: 'Partial' },
-  missing: { color: '#f87171', bg: '#f8717118', label: 'Missing' },
-  unknown: { color: 'var(--text-muted)', bg: 'var(--text-muted)18', label: 'Unknown' },
+  implemented: { color: FEATURE_STATUS_COLORS.implemented, bg: FEATURE_STATUS_COLORS.implemented + OPACITY_10, label: 'Implemented' },
+  improved: { color: FEATURE_STATUS_COLORS.improved, bg: FEATURE_STATUS_COLORS.improved + OPACITY_10, label: 'Improved' },
+  partial: { color: FEATURE_STATUS_COLORS.partial, bg: FEATURE_STATUS_COLORS.partial + OPACITY_10, label: 'Partial' },
+  missing: { color: FEATURE_STATUS_COLORS.missing, bg: FEATURE_STATUS_COLORS.missing + OPACITY_10, label: 'Missing' },
+  unknown: { color: FEATURE_STATUS_COLORS.unknown, bg: 'var(--border)', label: 'Unknown' },
 };
 
 const STAR_COLORS = [
-  '', // 0 — unused
-  '#f87171', // 1 — red
-  '#fb923c', // 2 — orange
-  '#fbbf24', // 3 — amber
-  '#a3e635', // 4 — lime
-  '#4ade80', // 5 — green
+  '',             // 0 — unused
+  STATUS_ERROR,   // 1 — red
+  STATUS_BLOCKER, // 2 — orange
+  STATUS_WARNING, // 3 — amber
+  STATUS_LIME,    // 4 — lime
+  STATUS_SUCCESS, // 5 — green
 ];
 
 type SortKey = 'name' | 'status' | 'quality' | 'reviewed';
 type SortDir = 'asc' | 'desc';
+type ViewMode = 'grouped' | 'flat';
 
 const STATUS_ORDER: Record<FeatureStatus, number> = {
   missing: 0,
   unknown: 1,
   partial: 2,
   implemented: 3,
+  improved: 4,
 };
 
 /** Read filter/sort state from URL search params */
@@ -47,6 +54,7 @@ function readUrlParams(): {
   qualityMax?: number;
   sortKey?: SortKey;
   sortDir?: SortDir;
+  viewMode?: ViewMode;
 } {
   if (typeof window === 'undefined') return {};
   const params = new URLSearchParams(window.location.search);
@@ -58,7 +66,7 @@ function readUrlParams(): {
   const st = params.get('status');
   if (st) {
     const valid = st.split(',').filter((s): s is FeatureStatus =>
-      ['implemented', 'partial', 'missing', 'unknown'].includes(s)
+      ['implemented', 'improved', 'partial', 'missing', 'unknown'].includes(s)
     );
     if (valid.length > 0) result.statuses = valid;
   }
@@ -74,6 +82,9 @@ function readUrlParams(): {
   const sd = params.get('dir');
   if (sd && ['asc', 'desc'].includes(sd)) result.sortDir = sd as SortDir;
 
+  const vm = params.get('view');
+  if (vm && ['grouped', 'flat'].includes(vm)) result.viewMode = vm as ViewMode;
+
   return result;
 }
 
@@ -85,6 +96,7 @@ function writeUrlParams(state: {
   qualityMax: number;
   sortKey: SortKey;
   sortDir: SortDir;
+  viewMode: ViewMode;
 }) {
   if (typeof window === 'undefined') return;
   const params = new URLSearchParams(window.location.search);
@@ -93,7 +105,7 @@ function writeUrlParams(state: {
   if (state.search) params.set('q', state.search);
   else params.delete('q');
 
-  const allStatuses = state.statuses.length === 4;
+  const allStatuses = state.statuses.length === 5;
   if (!allStatuses) params.set('status', state.statuses.join(','));
   else params.delete('status');
 
@@ -111,13 +123,16 @@ function writeUrlParams(state: {
     params.delete('dir');
   }
 
+  if (state.viewMode !== 'grouped') params.set('view', state.viewMode);
+  else params.delete('view');
+
   const qs = params.toString();
   const newUrl = qs ? `${window.location.pathname}?${qs}` : window.location.pathname;
   window.history.replaceState({}, '', newUrl);
 }
 
 interface FeatureMatrixProps {
-  moduleId: string;
+  moduleId: SubModuleId;
   accentColor: string;
   onReview: () => void;
   onSync?: () => void;
@@ -145,8 +160,17 @@ export function FeatureMatrix({ moduleId, accentColor, onReview, onSync, isRevie
   const [sortKey, setSortKey] = useState<SortKey>(urlInit.sortKey ?? 'name');
   const [sortDir, setSortDir] = useState<SortDir>(urlInit.sortDir ?? 'asc');
   const [activeFilters, setActiveFilters] = useState<Set<FeatureStatus>>(
-    new Set<FeatureStatus>(urlInit.statuses ?? ['implemented', 'partial', 'missing', 'unknown'])
+    new Set<FeatureStatus>(urlInit.statuses ?? ['implemented', 'improved', 'partial', 'missing', 'unknown'])
   );
+  const [viewMode, setViewMode] = useState<ViewMode>(urlInit.viewMode ?? 'grouped');
+
+  // Auto-switch to flat view when non-default sort is active
+  useEffect(() => {
+    const isNonDefaultSort = sortKey !== 'name' || sortDir !== 'asc';
+    if (isNonDefaultSort && viewMode === 'grouped') {
+      setViewMode('flat');
+    }
+  }, [sortKey, sortDir, viewMode]);
 
   // Sync filter/sort state to URL params
   useEffect(() => {
@@ -157,11 +181,12 @@ export function FeatureMatrix({ moduleId, accentColor, onReview, onSync, isRevie
       qualityMax,
       sortKey,
       sortDir,
+      viewMode,
     });
-  }, [searchQuery, activeFilters, qualityMin, qualityMax, sortKey, sortDir]);
+  }, [searchQuery, activeFilters, qualityMin, qualityMax, sortKey, sortDir, viewMode]);
 
-  // Poll review progress while reviewing
-  useEffect(() => {
+  // Poll review progress while reviewing — pauses when module is suspended
+  useSuspendableEffect(() => {
     if (!isReviewing || !projectPath) {
       setReviewProgress(null);
       if (progressTimer.current) {
@@ -196,6 +221,17 @@ export function FeatureMatrix({ moduleId, accentColor, onReview, onSync, isRevie
       }
     };
   }, [isReviewing, moduleId, projectPath]);
+
+  // Auto-refetch while a fix CLI is running — the CLI will PATCH the status to
+  // 'improved' via curl. Polling picks up the change so the UI updates in real-time.
+  // Pauses when module is suspended (hidden in LRU).
+  useSuspendableEffect(() => {
+    if (!isFixing) return;
+    const interval = setInterval(() => {
+      refetch();
+    }, 5000);
+    return () => clearInterval(interval);
+  }, [isFixing, refetch]);
 
   const fetchHistory = useCallback(async () => {
     try {
@@ -511,6 +547,24 @@ export function FeatureMatrix({ moduleId, accentColor, onReview, onSync, isRevie
           <SortButton label="Quality" sortKey="quality" currentKey={sortKey} currentDir={sortDir} onToggle={toggleSort} />
           <SortButton label="Reviewed" sortKey="reviewed" currentKey={sortKey} currentDir={sortDir} onToggle={toggleSort} />
         </div>
+
+        {/* View mode toggle */}
+        <div className="flex items-center gap-0.5 border border-border rounded-md p-0.5">
+          <button
+            onClick={() => setViewMode('grouped')}
+            className={`p-1 rounded transition-colors ${viewMode === 'grouped' ? 'bg-border text-text' : 'text-text-muted hover:text-text'}`}
+            title="Grouped by category"
+          >
+            <LayoutGrid className="w-3 h-3" />
+          </button>
+          <button
+            onClick={() => setViewMode('flat')}
+            className={`p-1 rounded transition-colors ${viewMode === 'flat' ? 'bg-border text-text' : 'text-text-muted hover:text-text'}`}
+            title="Flat sorted list"
+          >
+            <LayoutList className="w-3 h-3" />
+          </button>
+        </div>
       </div>
 
       {/* Result count */}
@@ -520,59 +574,85 @@ export function FeatureMatrix({ moduleId, accentColor, onReview, onSync, isRevie
         </div>
       )}
 
-      {/* Feature table grouped by category */}
+      {/* Feature table — grouped or flat based on viewMode */}
       <div className="space-y-1">
-        {categories.map((cat) => {
-          const catFeatures = grouped[cat];
-          const isCollapsed = collapsedCategories.has(cat);
-          const catImplemented = catFeatures.filter((f) => f.status === 'implemented').length;
+        {viewMode === 'flat' ? (
+          /* Flat sorted list — no category grouping */
+          <StaggerContainer className="space-y-px">
+            {filtered.map((feature) => {
+              const featureKey = `${feature.moduleId}::${feature.featureName}`;
+              const depInfo = depMap.get(featureKey);
+              return (
+                <StaggerItem key={feature.featureName}>
+                  <FeatureRowItem
+                    feature={feature}
+                    isExpanded={expandedRows.has(feature.featureName)}
+                    onToggle={() => toggleRow(feature.featureName)}
+                    depInfo={depInfo}
+                    onFix={onFix}
+                    isFixing={isFixing}
+                    onReviewFeature={onReviewFeature}
+                    accentColor={accentColor}
+                    showCategory
+                  />
+                </StaggerItem>
+              );
+            })}
+          </StaggerContainer>
+        ) : (
+          /* Grouped by category */
+          categories.map((cat) => {
+            const catFeatures = grouped[cat];
+            const isCollapsed = collapsedCategories.has(cat);
+            const catImplemented = catFeatures.filter((f) => f.status === 'implemented' || f.status === 'improved').length;
 
-          return (
-            <div key={cat}>
-              {/* Category header — sticky within scroll */}
-              <button
-                onClick={() => toggleCategory(cat)}
-                className="w-full flex items-center gap-2 px-3 py-2 rounded-md hover:bg-surface-hover transition-colors sticky top-[40px] z-[5] bg-background"
-              >
-                {isCollapsed ? (
-                  <ChevronRight className="w-3 h-3 text-text-muted-hover" />
-                ) : (
-                  <ChevronDown className="w-3 h-3 text-text-muted-hover" />
+            return (
+              <div key={cat}>
+                {/* Category header — sticky within scroll */}
+                <button
+                  onClick={() => toggleCategory(cat)}
+                  className="w-full flex items-center gap-2 px-3 py-2 rounded-md hover:bg-surface-hover transition-colors sticky top-[40px] z-[5] bg-background"
+                >
+                  {isCollapsed ? (
+                    <ChevronRight className="w-3 h-3 text-text-muted-hover" />
+                  ) : (
+                    <ChevronDown className="w-3 h-3 text-text-muted-hover" />
+                  )}
+                  <span className="text-xs font-semibold uppercase tracking-wider text-text-muted">
+                    {cat}
+                  </span>
+                  <span className="text-2xs text-text-muted">
+                    {catImplemented}/{catFeatures.length}
+                  </span>
+                </button>
+
+                {/* Feature rows */}
+                {!isCollapsed && (
+                  <StaggerContainer className="ml-2 space-y-px">
+                    {catFeatures.map((feature) => {
+                      const featureKey = `${feature.moduleId}::${feature.featureName}`;
+                      const depInfo = depMap.get(featureKey);
+                      return (
+                        <StaggerItem key={feature.featureName}>
+                          <FeatureRowItem
+                            feature={feature}
+                            isExpanded={expandedRows.has(feature.featureName)}
+                            onToggle={() => toggleRow(feature.featureName)}
+                            depInfo={depInfo}
+                            onFix={onFix}
+                            isFixing={isFixing}
+                            onReviewFeature={onReviewFeature}
+                            accentColor={accentColor}
+                          />
+                        </StaggerItem>
+                      );
+                    })}
+                  </StaggerContainer>
                 )}
-                <span className="text-xs font-semibold uppercase tracking-wider text-text-muted">
-                  {cat}
-                </span>
-                <span className="text-2xs text-text-muted">
-                  {catImplemented}/{catFeatures.length}
-                </span>
-              </button>
-
-              {/* Feature rows */}
-              {!isCollapsed && (
-                <StaggerContainer className="ml-2 space-y-px">
-                  {catFeatures.map((feature) => {
-                    const featureKey = `${feature.moduleId}::${feature.featureName}`;
-                    const depInfo = depMap.get(featureKey);
-                    return (
-                      <StaggerItem key={feature.featureName}>
-                        <FeatureRowItem
-                          feature={feature}
-                          isExpanded={expandedRows.has(feature.featureName)}
-                          onToggle={() => toggleRow(feature.featureName)}
-                          depInfo={depInfo}
-                          onFix={onFix}
-                          isFixing={isFixing}
-                          onReviewFeature={onReviewFeature}
-                          accentColor={accentColor}
-                        />
-                      </StaggerItem>
-                    );
-                  })}
-                </StaggerContainer>
-              )}
-            </div>
-          );
-        })}
+              </div>
+            );
+          })
+        )}
       </div>
 
       {filtered.length === 0 && features.length > 0 && (
@@ -698,10 +778,11 @@ function formatRelativeTime(dateStr: string): { label: string; dotColor: string;
   return { label, dotColor, isOutdated };
 }
 
-function SummaryBar({ summary }: { summary: { total: number; implemented: number; partial: number; missing: number; unknown: number } }) {
+function SummaryBar({ summary }: { summary: { total: number; implemented: number; improved: number; partial: number; missing: number; unknown: number } }) {
   if (summary.total === 0) return null;
 
   const segments: { status: FeatureStatus; count: number }[] = [
+    { status: 'improved', count: summary.improved },
     { status: 'implemented', count: summary.implemented },
     { status: 'partial', count: summary.partial },
     { status: 'missing', count: summary.missing },
@@ -722,7 +803,7 @@ function SummaryBar({ summary }: { summary: { total: number; implemented: number
           )}
         </div>
         <span className="text-xs text-text-muted-hover">
-          {summary.implemented}/{summary.total}
+          {summary.implemented + summary.improved}/{summary.total}
         </span>
       </div>
       <div className="h-1.5 bg-border rounded-full overflow-hidden flex">
@@ -749,13 +830,13 @@ function StatusFilterChips({
   activeFilters,
   onToggle,
 }: {
-  summary: { total: number; implemented: number; partial: number; missing: number; unknown: number };
+  summary: { total: number; implemented: number; improved: number; partial: number; missing: number; unknown: number };
   activeFilters: Set<FeatureStatus>;
   onToggle: (status: FeatureStatus) => void;
 }) {
   if (summary.total === 0) return null;
 
-  const statuses: FeatureStatus[] = ['implemented', 'partial', 'missing', 'unknown'];
+  const statuses: FeatureStatus[] = ['improved', 'implemented', 'partial', 'missing', 'unknown'];
 
   return (
     <div className="flex items-center gap-1.5 flex-wrap">
@@ -891,6 +972,7 @@ function FeatureRowItem({
   isFixing,
   onReviewFeature,
   accentColor,
+  showCategory,
 }: {
   feature: FeatureRow;
   isExpanded: boolean;
@@ -900,6 +982,7 @@ function FeatureRowItem({
   isFixing?: boolean;
   onReviewFeature?: (feature: FeatureRow) => void;
   accentColor: string;
+  showCategory?: boolean;
 }) {
   const cfg = STATUS_CONFIG[feature.status];
   const hasDeps = depInfo && depInfo.deps.length > 0;
@@ -912,7 +995,7 @@ function FeatureRowItem({
     const text = `${feature.featureName} — ${cfg.label}${feature.qualityScore ? ` (${feature.qualityScore}/5)` : ''}`;
     await navigator.clipboard.writeText(text);
     setCopied(true);
-    setTimeout(() => setCopied(false), 1500);
+    setTimeout(() => setCopied(false), UI_TIMEOUTS.copyFeedback);
   }, [feature.featureName, cfg.label, feature.qualityScore]);
 
   const handleReview = useCallback((e: React.MouseEvent) => {
@@ -944,6 +1027,13 @@ function FeatureRowItem({
         <span className="text-sm text-[#d0d4e8] flex-1 min-w-0 truncate">
           {feature.featureName}
         </span>
+
+        {/* Inline category badge (flat view only) */}
+        {showCategory && (
+          <span className="text-2xs font-mono px-1.5 py-0.5 rounded bg-surface-hover text-text-muted flex-shrink-0">
+            {feature.category}
+          </span>
+        )}
 
         {/* Description (truncated) */}
         <span className="text-xs text-text-muted-hover flex-1 min-w-0 truncate hidden sm:block">
@@ -1061,7 +1151,7 @@ function FeatureRowItem({
                 </span>
               </div>
               <MarkdownProse content={feature.nextSteps} className="leading-relaxed pl-[18px] text-[#b0b4cc]" />
-              {onFix && feature.status !== 'implemented' && (
+              {onFix && feature.status !== 'improved' && !(feature.status === 'implemented' && feature.qualityScore === 5 && !feature.nextSteps?.trim()) && (
                 <button
                   onClick={(e) => {
                     e.stopPropagation();

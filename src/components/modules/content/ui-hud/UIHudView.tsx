@@ -5,6 +5,7 @@ import { Grid3x3, Workflow } from 'lucide-react';
 import { ReviewableModuleView } from '../../shared/ReviewableModuleView';
 import type { ExtraTab } from '../../shared/ReviewableModuleView';
 import { SUB_MODULE_MAP, getCategoryForSubModule , getModuleChecklist } from '@/lib/module-registry';
+import { MODULE_COLORS } from '@/lib/constants';
 
 import { useModuleCLI } from '@/hooks/useModuleCLI';
 import { useProjectStore } from '@/stores/projectStore';
@@ -14,8 +15,6 @@ import { InventoryGridDesigner } from './InventoryGridDesigner';
 import { MenuFlowDiagram } from './MenuFlowDiagram';
 import type { InventoryConfig } from '@/lib/prompts/inventory';
 import type { MenuFlowConfig } from './MenuFlowDiagram';
-
-const CONTENT_ACCENT = '#f59e0b';
 
 export function UIHudView() {
   const mod = SUB_MODULE_MAP['ui-hud'];
@@ -31,14 +30,14 @@ export function UIHudView() {
     moduleId: 'ui-hud',
     sessionKey: 'ui-hud-inventory',
     label: 'Inventory Gen',
-    accentColor: CONTENT_ACCENT,
+    accentColor: MODULE_COLORS.content,
   });
 
   const menuFlowCli = useModuleCLI({
     moduleId: 'ui-hud',
     sessionKey: 'ui-hud-menuflow',
     label: 'Menu Flow Gen',
-    accentColor: CONTENT_ACCENT,
+    accentColor: MODULE_COLORS.content,
   });
 
   // ── Handlers ──

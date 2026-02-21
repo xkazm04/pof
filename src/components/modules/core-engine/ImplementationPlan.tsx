@@ -5,8 +5,9 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   ListOrdered, Zap, Clock, ArrowRight, Filter, RefreshCw,
   ChevronDown, ChevronRight, Link2, CheckCircle, Circle,
-  Target, TrendingUp, AlertCircle,
+  Target, TrendingUp, AlertCircle, Map, List,
 } from 'lucide-react';
+import { PlanMatrixMap } from './PlanMatrixMap';
 import { useImplementationPlan } from '@/hooks/useImplementationPlan';
 import { useModuleCLI } from '@/hooks/useModuleCLI';
 import { useProjectStore } from '@/stores/projectStore';
@@ -15,6 +16,8 @@ import { formatEffortTime, type EffortLevel } from '@/lib/implementation-planner
 import { getModuleLabel, type PlanItem } from '@/lib/implementation-planner/plan-generator';
 import { MODULE_FEATURE_DEFINITIONS } from '@/lib/feature-definitions';
 import { SurfaceCard } from '@/components/ui/SurfaceCard';
+import { MODULE_COLORS } from '@/lib/chart-colors';
+import type { SubModuleId } from '@/types/modules';
 
 // ---------- Constants ----------
 
@@ -62,7 +65,7 @@ function ImpactBadge({ score, directUnblocks }: { score: number; directUnblocks:
   );
 }
 
-function ModuleBadge({ moduleId }: { moduleId: string }) {
+function ModuleBadge({ moduleId }: { moduleId: SubModuleId }) {
   return (
     <span className="text-2xs font-mono px-1.5 py-px rounded bg-surface-hover text-text-muted-hover flex-shrink-0">
       {getModuleLabel(moduleId)}
@@ -164,7 +167,7 @@ function PlanItemRow({
                               : 'bg-surface-hover text-text-muted-hover'
                           }`}
                         >
-                          {mod !== item.moduleId ? `${getModuleLabel(mod)} / ` : ''}{feat}
+                          {mod !== item.moduleId ? `${getModuleLabel(mod as SubModuleId)} / ` : ''}{feat}
                         </span>
                       );
                     })}
@@ -184,7 +187,7 @@ function PlanItemRow({
                       const feat = rest.join('::');
                       return (
                         <span key={dep} className="text-2xs px-1.5 py-px rounded bg-purple-500/10 text-purple-400/80 font-mono">
-                          {getModuleLabel(mod)} / {feat}
+                          {getModuleLabel(mod as SubModuleId)} / {feat}
                         </span>
                       );
                     })}
@@ -248,7 +251,7 @@ function FilterBar({
       >
         <option value="">All modules</option>
         {moduleIds.map((id) => (
-          <option key={id} value={id}>{getModuleLabel(id)}</option>
+          <option key={id} value={id}>{getModuleLabel(id as SubModuleId)}</option>
         ))}
       </select>
 
@@ -289,19 +292,30 @@ function FilterBar({
 
 // ---------- Main component ----------
 
-export function ImplementationPlan() {
-  const { plan, loading, error, filter, updateFilter, clearFilter, refresh } = useImplementationPlan();
+type PlanViewMode = 'table' | 'map';
+
+interface ImplementationPlanProps {
+  /** When provided, auto-filters to this submodule */
+  moduleId?: string;
+}
+
+export function ImplementationPlan({ moduleId }: ImplementationPlanProps = {}) {
+  const [viewMode, setViewMode] = useState<PlanViewMode>('table');
+  const { plan, loading, error, filter, updateFilter, clearFilter, refresh } = useImplementationPlan({
+    filter: moduleId ? { moduleId } : undefined,
+  });
   const [page, setPage] = useState(0);
+  const [showAllModules, setShowAllModules] = useState(!moduleId);
   const projectName = useProjectStore((s) => s.projectName);
   const projectPath = useProjectStore((s) => s.projectPath);
   const ueVersion = useProjectStore((s) => s.ueVersion);
 
   // CLI for executing fix operations
   const { sendPrompt } = useModuleCLI({
-    moduleId: 'core-engine',
+    moduleId: 'core-engine' as SubModuleId,
     sessionKey: 'implementation-plan',
     label: 'Implementation Plan',
-    accentColor: '#3b82f6',
+    accentColor: MODULE_COLORS.core,
   });
 
   const moduleIds = useMemo(() => Object.keys(MODULE_FEATURE_DEFINITIONS), []);
@@ -314,7 +328,7 @@ export function ImplementationPlan() {
 
     const prompt = `${header}${depsSection}
 
-## Task: Implement "${item.featureName}" (${getModuleLabel(item.moduleId)})
+## Task: Implement "${item.featureName}" (${getModuleLabel(item.moduleId as SubModuleId)})
 
 ${item.description}
 
@@ -353,17 +367,67 @@ Implement this feature from scratch. Follow UE5 C++ conventions. Read any existi
             </span>
           )}
         </div>
-        <button
-          onClick={refresh}
-          disabled={loading}
-          className="p-1 rounded text-text-muted hover:text-text hover:bg-surface-hover transition-colors disabled:opacity-50"
-        >
-          <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
-        </button>
+        <div className="flex items-center gap-1">
+          {/* View mode toggle */}
+          <div className="flex items-center border border-border rounded-md overflow-hidden mr-1">
+            <button
+              onClick={() => setViewMode('table')}
+              title="Table view"
+              className={`p-1 transition-colors ${viewMode === 'table' ? 'bg-surface-hover text-text' : 'text-text-muted hover:text-text'}`}
+            >
+              <List className="w-3.5 h-3.5" />
+            </button>
+            <button
+              onClick={() => setViewMode('map')}
+              title="Matrix map"
+              className={`p-1 transition-colors ${viewMode === 'map' ? 'bg-surface-hover text-text' : 'text-text-muted hover:text-text'}`}
+            >
+              <Map className="w-3.5 h-3.5" />
+            </button>
+          </div>
+          <button
+            onClick={refresh}
+            disabled={loading}
+            className="p-1 rounded text-text-muted hover:text-text hover:bg-surface-hover transition-colors disabled:opacity-50"
+          >
+            <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
+          </button>
+        </div>
       </div>
 
-      {/* Progress & summary */}
-      {plan && (
+      {/* Module scope toggle */}
+      {moduleId && (
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => {
+              const next = !showAllModules;
+              setShowAllModules(next);
+              if (next) {
+                updateFilter({ moduleId: undefined });
+              } else {
+                updateFilter({ moduleId });
+              }
+            }}
+            className={`flex items-center gap-1 px-2 py-1 rounded text-xs font-medium transition-colors ${
+              showAllModules
+                ? 'text-text-muted hover:text-text hover:bg-surface-hover border border-transparent'
+                : 'bg-blue-500/15 text-blue-400 border border-blue-500/30'
+            }`}
+          >
+            <Target className="w-3 h-3" />
+            {showAllModules ? 'Filtered to module' : getModuleLabel(moduleId as SubModuleId) + ' only'}
+          </button>
+          {!showAllModules && (
+            <span className="text-2xs text-text-muted">Cross-module deps shown as context</span>
+          )}
+        </div>
+      )}
+
+      {/* Matrix map view */}
+      {viewMode === 'map' && <PlanMatrixMap moduleId={showAllModules ? undefined : moduleId} />}
+
+      {/* Table view content below */}
+      {viewMode === 'table' && plan && (
         <div className="grid grid-cols-4 gap-2">
           {/* Progress bar */}
           <SurfaceCard level={2} className="col-span-2 px-3 py-2.5">
@@ -425,79 +489,83 @@ Implement this feature from scratch. Follow UE5 C++ conventions. Read any existi
         </div>
       )}
 
-      {/* Filters */}
-      <FilterBar
-        filter={filter}
-        onUpdate={updateFilter}
-        onClear={clearFilter}
-        moduleIds={moduleIds}
-      />
+      {viewMode === 'table' && (
+        <>
+          {/* Filters */}
+          <FilterBar
+            filter={filter}
+            onUpdate={updateFilter}
+            onClear={clearFilter}
+            moduleIds={moduleIds}
+          />
 
-      {/* Error state */}
-      {error && (
-        <div className="text-center text-red-400 text-xs py-4">{error}</div>
-      )}
-
-      {/* Plan list */}
-      {plan && (
-        <div className="rounded border border-border bg-background/60 overflow-hidden">
-          {/* Table header */}
-          <div className="flex items-center gap-2 px-3 py-1.5 bg-surface-deep border-b border-border text-2xs uppercase tracking-wider text-text-muted font-medium">
-            <span className="w-5 text-right">#</span>
-            <span className="w-3.5" />
-            <span className="w-3" />
-            <span className="flex-1">Feature</span>
-          </div>
-
-          {pagedItems.length === 0 ? (
-            <div className="text-center text-text-muted text-xs py-8">
-              {plan.items.length === 0
-                ? 'All features are implemented!'
-                : 'No features match the current filters.'
-              }
-            </div>
-          ) : (
-            pagedItems.map((item, i) => (
-              <PlanItemRow
-                key={item.key}
-                item={item}
-                rank={page * PAGE_SIZE + i + 1}
-                onExecute={handleExecute}
-              />
-            ))
+          {/* Error state */}
+          {error && (
+            <div className="text-center text-red-400 text-xs py-4">{error}</div>
           )}
 
-          {/* Pagination */}
-          {totalPages > 1 && (
-            <div className="flex items-center justify-center gap-2 px-3 py-2 border-t border-border bg-surface-deep">
-              <button
-                onClick={() => setPage(Math.max(0, page - 1))}
-                disabled={page === 0}
-                className="text-xs text-text-muted hover:text-text disabled:opacity-30 transition-colors"
-              >
-                Prev
-              </button>
-              <span className="text-xs text-text-muted font-mono">
-                {page + 1} / {totalPages}
-              </span>
-              <button
-                onClick={() => setPage(Math.min(totalPages - 1, page + 1))}
-                disabled={page >= totalPages - 1}
-                className="text-xs text-text-muted hover:text-text disabled:opacity-30 transition-colors"
-              >
-                Next
-              </button>
+          {/* Plan list */}
+          {plan && (
+            <div className="rounded border border-border bg-background/60 overflow-hidden">
+              {/* Table header */}
+              <div className="flex items-center gap-2 px-3 py-1.5 bg-surface-deep border-b border-border text-2xs uppercase tracking-wider text-text-muted font-medium">
+                <span className="w-5 text-right">#</span>
+                <span className="w-3.5" />
+                <span className="w-3" />
+                <span className="flex-1">Feature</span>
+              </div>
+
+              {pagedItems.length === 0 ? (
+                <div className="text-center text-text-muted text-xs py-8">
+                  {plan.items.length === 0
+                    ? 'All features are implemented!'
+                    : 'No features match the current filters.'
+                  }
+                </div>
+              ) : (
+                pagedItems.map((item, i) => (
+                  <PlanItemRow
+                    key={item.key}
+                    item={item}
+                    rank={page * PAGE_SIZE + i + 1}
+                    onExecute={handleExecute}
+                  />
+                ))
+              )}
+
+              {/* Pagination */}
+              {totalPages > 1 && (
+                <div className="flex items-center justify-center gap-2 px-3 py-2 border-t border-border bg-surface-deep">
+                  <button
+                    onClick={() => setPage(Math.max(0, page - 1))}
+                    disabled={page === 0}
+                    className="text-xs text-text-muted hover:text-text disabled:opacity-30 transition-colors"
+                  >
+                    Prev
+                  </button>
+                  <span className="text-xs text-text-muted font-mono">
+                    {page + 1} / {totalPages}
+                  </span>
+                  <button
+                    onClick={() => setPage(Math.min(totalPages - 1, page + 1))}
+                    disabled={page >= totalPages - 1}
+                    className="text-xs text-text-muted hover:text-text disabled:opacity-30 transition-colors"
+                  >
+                    Next
+                  </button>
+                </div>
+              )}
             </div>
           )}
-        </div>
-      )}
 
-      {/* Loading state */}
-      {loading && !plan && (
-        <div className="flex items-center justify-center gap-2 text-text-muted text-xs py-8">
-          <RefreshCw className="w-3.5 h-3.5 animate-spin" />
-          Generating plan...
-        </div>
+          {/* Loading state */}
+          {loading && !plan && (
+            <div className="flex items-center justify-center gap-2 text-text-muted text-xs py-8">
+              <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+              Generating plan...
+            </div>
+          )}
+        </>
       )}
     </div>
   );

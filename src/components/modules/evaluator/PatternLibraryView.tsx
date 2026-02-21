@@ -12,11 +12,13 @@ import { Badge } from '@/components/ui/Badge';
 import { ProgressRing } from '@/components/ui/ProgressRing';
 import { usePatternLibraryStore } from '@/stores/patternLibraryStore';
 import type { ImplementationPattern, PatternCategory, PatternConfidence } from '@/types/pattern-library';
+import type { SubModuleId } from '@/types/modules';
+import { MODULE_COLORS, OPACITY_10 } from '@/lib/chart-colors';
 
 // ── Constants for stable Zustand selectors ──────────────────────────────────
 
 const EMPTY_PATTERNS: ImplementationPattern[] = [];
-const EMPTY_MODULES: { moduleId: string; patternCount: number }[] = [];
+const EMPTY_MODULES: { moduleId: SubModuleId; patternCount: number }[] = [];
 const EMPTY_CATEGORIES: { category: PatternCategory; count: number }[] = [];
 
 // ── Styling maps ────────────────────────────────────────────────────────────
@@ -185,7 +187,7 @@ export function PatternLibraryView() {
           <div className="relative">
             <select
               value={moduleFilter ?? ''}
-              onChange={(e) => setModuleFilter(e.target.value || null)}
+              onChange={(e) => setModuleFilter((e.target.value || null) as SubModuleId | null)}
               className="appearance-none pl-7 pr-6 py-1.5 bg-surface border border-border rounded-lg text-xs text-text focus:outline-none focus:border-violet-500/40 cursor-pointer"
             >
               <option value="">All modules</option>
@@ -249,7 +251,7 @@ export function PatternLibraryView() {
 
         {!isLoading && patterns.length === 0 && (
           <div className="flex flex-col items-center justify-center py-16 text-center">
-            <div className="w-12 h-12 rounded-xl border border-border flex items-center justify-center mb-4" style={{ backgroundColor: '#8b5cf610' }}>
+            <div className="w-12 h-12 rounded-xl border border-border flex items-center justify-center mb-4" style={{ backgroundColor: `${MODULE_COLORS.systems}${OPACITY_10}` }}>
               <BookOpen className="w-6 h-6 text-violet-400" />
             </div>
             <h3 className="text-sm font-semibold text-text mb-1">No Patterns Yet</h3>
@@ -304,7 +306,7 @@ function PatternCard({ pattern }: { pattern: ImplementationPattern }) {
   const [expanded, setExpanded] = useState(false);
   const conf = CONFIDENCE_STYLE[pattern.confidence];
   const successPercent = Math.round(pattern.successRate * 100);
-  const successColor = successPercent >= 70 ? '#10b981' : successPercent >= 50 ? '#f59e0b' : '#ef4444';
+  const successColor = successPercent >= 70 ? '#10b981' : successPercent >= 50 ? MODULE_COLORS.content : MODULE_COLORS.evaluator;
 
   return (
     <SurfaceCard className="overflow-hidden">

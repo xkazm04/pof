@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { X, Plus, Terminal, Loader2, Radar } from 'lucide-react';
 import { useCLIPanelStore } from '@/components/cli/store/cliPanelStore';
+import { MODULE_COLORS } from '@/lib/chart-colors';
 
 interface CLITabBarProps {
   /** CSS class for the container — use "contents" to dissolve wrapper into parent flex */
@@ -66,7 +67,7 @@ export function CLITabBar({ className, filteredTabOrder, activeTabId: activeTabI
                 : 'text-text-muted hover:text-text hover:bg-surface/50'
               }
             `}
-            style={isActive ? { borderTopColor: session.accentColor || '#3b82f6' } : undefined}
+            style={isActive ? { borderTopColor: session.accentColor || MODULE_COLORS.core } : undefined}
           >
             {isRunning ? (
               <Loader2 className="w-3 h-3 animate-spin flex-shrink-0" style={{ color: session.accentColor }} />

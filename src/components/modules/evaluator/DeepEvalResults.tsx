@@ -23,23 +23,25 @@ import {
 import { runDeepEval, runSingleModuleEval, cancelDeepEval } from '@/lib/evaluator/deep-eval-engine';
 import { generateFixPlan, generateBatchFixPlan } from '@/lib/evaluator/fix-plan-generator';
 import { getEvaluableModuleIds, EVAL_PASSES, PASS_LABELS } from '@/lib/evaluator/module-eval-prompts';
-import { MODULE_LABELS } from '@/lib/evaluator/correlation-engine';
+import { MODULE_LABELS } from '@/lib/module-registry';
 import type { EvalProgress, DeepEvalResult } from '@/lib/evaluator/deep-eval-engine';
 import type { EvalPass } from '@/lib/evaluator/module-eval-prompts';
 import type { EvalFinding, FindingSeverity, ScanFindings, ModuleFindings } from '@/lib/evaluator/finding-collector';
 import type { FixPlan } from '@/lib/evaluator/fix-plan-generator';
+import type { SubModuleId } from '@/types/modules';
 import { useProjectStore } from '@/stores/projectStore';
 import { useModuleCLI } from '@/hooks/useModuleCLI';
 import { SurfaceCard } from '@/components/ui/SurfaceCard';
+import { MODULE_COLORS, STATUS_ERROR, STATUS_BLOCKER, STATUS_WARNING, OPACITY_8 } from '@/lib/chart-colors';
 
 // ─── Constants ───────────────────────────────────────────────────────────────
 
-const EVAL_ACCENT = '#ef4444';
+const EVAL_ACCENT = MODULE_COLORS.evaluator;
 
 const SEVERITY_CONFIG: Record<FindingSeverity, { label: string; color: string; bg: string; icon: typeof AlertOctagon }> = {
-  critical: { label: 'Critical', color: '#f87171', bg: '#f8717112', icon: AlertOctagon },
-  high: { label: 'High', color: '#fb923c', bg: '#fb923c12', icon: AlertTriangle },
-  medium: { label: 'Medium', color: '#fbbf24', bg: '#fbbf2412', icon: Info },
+  critical: { label: 'Critical', color: STATUS_ERROR, bg: `${STATUS_ERROR}${OPACITY_8}`, icon: AlertOctagon },
+  high: { label: 'High', color: STATUS_BLOCKER, bg: `${STATUS_BLOCKER}${OPACITY_8}`, icon: AlertTriangle },
+  medium: { label: 'Medium', color: STATUS_WARNING, bg: `${STATUS_WARNING}${OPACITY_8}`, icon: Info },
   low: { label: 'Low', color: 'var(--text-muted)', bg: 'var(--text-muted)12', icon: Info },
 };
 
@@ -113,7 +115,7 @@ export function DeepEvalResults() {
     }
   }, [isRunning, selectedModuleIds, projectName, projectPath, ueVersion]);
 
-  const handleRunSingle = useCallback(async (moduleId: string) => {
+  const handleRunSingle = useCallback(async (moduleId: SubModuleId) => {
     if (isRunning) return;
 
     setResult(null);
@@ -153,7 +155,7 @@ export function DeepEvalResults() {
 
   // ── Toggle helpers ─────────────────────────────────────────────────────────
 
-  const toggleModule = (moduleId: string) => {
+  const toggleModule = (moduleId: SubModuleId) => {
     setExpandedModules((prev) => {
       const next = new Set(prev);
       next.has(moduleId) ? next.delete(moduleId) : next.add(moduleId);
@@ -169,7 +171,7 @@ export function DeepEvalResults() {
     });
   };
 
-  const toggleSelectedModule = (moduleId: string) => {
+  const toggleSelectedModule = (moduleId: SubModuleId) => {
     setSelectedModuleIds((prev) => {
       const next = new Set(prev);
       next.has(moduleId) ? next.delete(moduleId) : next.add(moduleId);
@@ -273,7 +275,7 @@ export function DeepEvalResults() {
                   return (
                     <button
                       key={id}
-                      onClick={() => toggleSelectedModule(id)}
+                      onClick={() => toggleSelectedModule(id as SubModuleId)}
                       className={`flex items-center gap-2 px-2.5 py-1.5 rounded-md text-xs transition-all border ${
                         selected
                           ? 'text-text bg-border border-border-bright'
@@ -433,7 +435,7 @@ function ProgressPanel({ progress }: { progress: EvalProgress }) {
 
         {/* Module rows */}
         {Object.entries(progress.passStatuses).map(([moduleId, passes]) => (
-          <ModuleProgressRow key={moduleId} moduleId={moduleId} passes={passes} />
+          <ModuleProgressRow key={moduleId} moduleId={moduleId as SubModuleId} passes={passes} />
         ))}
       </div>
 
@@ -453,7 +455,7 @@ function ModuleProgressRow({
   moduleId,
   passes,
 }: {
-  moduleId: string;
+  moduleId: SubModuleId;
   passes: Record<EvalPass, 'pending' | 'running' | 'done' | 'error' | 'skipped'>;
 }) {
   return (

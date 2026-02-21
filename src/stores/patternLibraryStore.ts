@@ -2,6 +2,7 @@
 
 import { create } from 'zustand';
 import { apiFetch } from '@/lib/api-utils';
+import type { SubModuleId } from '@/types/modules';
 import type {
   ImplementationPattern,
   PatternCategory,
@@ -11,7 +12,7 @@ import type {
 
 const EMPTY_PATTERNS: ImplementationPattern[] = [];
 const EMPTY_SUGGESTIONS: PatternSuggestion[] = [];
-const EMPTY_MODULES: { moduleId: string; patternCount: number }[] = [];
+const EMPTY_MODULES: { moduleId: SubModuleId; patternCount: number }[] = [];
 const EMPTY_CATEGORIES: { category: PatternCategory; count: number }[] = [];
 
 interface PatternLibraryState {
@@ -19,7 +20,7 @@ interface PatternLibraryState {
   totalPatterns: number;
   totalSessions: number;
   avgSuccessRate: number;
-  topModules: { moduleId: string; patternCount: number }[];
+  topModules: { moduleId: SubModuleId; patternCount: number }[];
   categories: { category: PatternCategory; count: number }[];
 
   suggestions: PatternSuggestion[];
@@ -29,17 +30,17 @@ interface PatternLibraryState {
   error: string | null;
 
   searchQuery: string;
-  moduleFilter: string | null;
+  moduleFilter: SubModuleId | null;
   categoryFilter: PatternCategory | null;
   sortBy: 'success-rate' | 'usage' | 'recent' | 'duration';
 
   fetchDashboard: () => Promise<void>;
   searchPatterns: () => Promise<void>;
   extractPatterns: () => Promise<{ extracted: number; updated: number }>;
-  fetchSuggestions: (moduleId: string, label?: string) => Promise<void>;
+  fetchSuggestions: (moduleId: SubModuleId, label?: string) => Promise<void>;
 
   setSearchQuery: (q: string) => void;
-  setModuleFilter: (m: string | null) => void;
+  setModuleFilter: (m: SubModuleId | null) => void;
   setCategoryFilter: (c: PatternCategory | null) => void;
   setSortBy: (s: 'success-rate' | 'usage' | 'recent' | 'duration') => void;
 }

@@ -2,6 +2,7 @@
 
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { apiFetch } from '@/lib/api-utils';
+import { useModuleStore } from '@/stores/moduleStore';
 import type { GDDDocument } from '@/lib/gdd-synthesizer';
 
 interface UseGameDesignDocResult {
@@ -25,11 +26,8 @@ export function useGameDesignDoc(projectName: string): UseGameDesignDocResult {
 
   const getChecklistJson = useCallback((): string => {
     try {
-      const raw = localStorage.getItem('pof-modules');
-      if (raw) {
-        const parsed = JSON.parse(raw);
-        return JSON.stringify(parsed?.state?.checklistProgress ?? {});
-      }
+      const progress = useModuleStore.getState().checklistProgress;
+      return JSON.stringify(progress);
     } catch { /* ignore */ }
     return '{}';
   }, []);

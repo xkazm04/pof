@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Scroll, Swords, Package, MousePointerClick, MapPin, MessageSquare,
@@ -9,6 +9,7 @@ import {
 } from 'lucide-react';
 import { SurfaceCard } from '@/components/ui/SurfaceCard';
 import { apiFetch } from '@/lib/api-utils';
+import { useProjectStore } from '@/stores/projectStore';
 import { ReviewableModuleView } from '../shared/ReviewableModuleView';
 import { SUB_MODULE_MAP, getCategoryForSubModule, getModuleChecklist } from '@/lib/module-registry';
 import type {
@@ -19,6 +20,7 @@ import type {
   WorldScanResult,
   QuestCategory,
 } from '@/types/quest-generation';
+import { MODULE_COLORS, STATUS_SUCCESS } from '@/lib/chart-colors';
 
 // ── Stable empty refs ──
 
@@ -30,11 +32,11 @@ const EMPTY_NOTES: string[] = [];
 type ViewTab = 'generator' | 'checklist';
 
 const CATEGORY_LABELS: Record<QuestCategory, { label: string; color: string }> = {
-  main: { label: 'Main', color: '#f59e0b' },
-  side: { label: 'Side', color: '#3b82f6' },
-  bounty: { label: 'Bounty', color: '#ef4444' },
-  exploration: { label: 'Exploration', color: '#22c55e' },
-  fetch: { label: 'Fetch', color: '#8b5cf6' },
+  main: { label: 'Main', color: MODULE_COLORS.content },
+  side: { label: 'Side', color: MODULE_COLORS.core },
+  bounty: { label: 'Bounty', color: MODULE_COLORS.evaluator },
+  exploration: { label: 'Exploration', color: STATUS_SUCCESS },
+  fetch: { label: 'Fetch', color: MODULE_COLORS.systems },
 };
 
 const OBJ_ICONS: Record<string, typeof Swords> = {
@@ -100,16 +102,7 @@ function QuestGeneratorPanel() {
   const [levelDocs, setLevelDocs] = useState<Array<{ id: number; name: string; roomCount: number }>>([]);
   const [selectedDocId, setSelectedDocId] = useState<number | null>(null);
 
-  // Get project path from localStorage
-  const projectPath = useMemo(() => {
-    if (typeof window === 'undefined') return '';
-    try {
-      const raw = localStorage.getItem('pof-project-store');
-      if (!raw) return '';
-      const parsed = JSON.parse(raw);
-      return parsed?.state?.projectPath || '';
-    } catch { return ''; }
-  }, []);
+  const projectPath = useProjectStore((s) => s.projectPath);
 
   // Load available level docs
   useEffect(() => {

@@ -9,6 +9,7 @@ import {
 import { SurfaceCard } from '@/components/ui/SurfaceCard';
 import { ProgressRing } from '@/components/ui/ProgressRing';
 import { apiFetch } from '@/lib/api-utils';
+import { useProjectStore } from '@/stores/projectStore';
 import type {
   ArcheologistAnalysis,
   AntiPatternHit,
@@ -18,6 +19,7 @@ import type {
   ShotgunSurgery,
   RefactoringItem,
 } from '@/types/codebase-archeologist';
+import { MODULE_COLORS } from '@/lib/chart-colors';
 
 // ── Stable empty references (Zustand selector safety) ──
 
@@ -66,16 +68,7 @@ export function CodebaseArcheologistView() {
   const [categoryFilter, setCategoryFilter] = useState<AntiPatternCategory | 'all'>('all');
   const [severityFilter, setSeverityFilter] = useState<Severity | 'all'>('all');
 
-  // Get project path from project store (localStorage)
-  const projectPath = useMemo(() => {
-    if (typeof window === 'undefined') return '';
-    try {
-      const raw = localStorage.getItem('pof-project-store');
-      if (!raw) return '';
-      const parsed = JSON.parse(raw);
-      return parsed?.state?.projectPath || '';
-    } catch { return ''; }
-  }, []);
+  const projectPath = useProjectStore((s) => s.projectPath);
 
   const runAnalysis = useCallback(async () => {
     if (!projectPath) {
@@ -268,7 +261,7 @@ export function CodebaseArcheologistView() {
 
 function OverviewTab({ analysis }: { analysis: ArcheologistAnalysis }) {
   const healthScore = Math.max(0, 100 - analysis.bySeverity.critical * 15 - analysis.bySeverity.warning * 3 - analysis.bySeverity.info);
-  const ringColor = healthScore >= 70 ? '#00ff88' : healthScore >= 40 ? '#f59e0b' : '#ef4444';
+  const ringColor = healthScore >= 70 ? MODULE_COLORS.setup : healthScore >= 40 ? MODULE_COLORS.content : MODULE_COLORS.evaluator;
 
   return (
     <div className="space-y-3">

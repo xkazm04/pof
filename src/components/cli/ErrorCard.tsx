@@ -7,6 +7,8 @@ import {
 } from 'lucide-react';
 import type { BuildDiagnostic } from './UE5BuildParser';
 import { TruncateWithTooltip } from '@/components/ui/TruncateWithTooltip';
+import { UI_TIMEOUTS } from '@/lib/constants';
+import { MODULE_COLORS } from '@/lib/chart-colors';
 
 interface ErrorCardProps {
   diagnostic: BuildDiagnostic;
@@ -41,9 +43,9 @@ const CATEGORY_LABELS: Record<BuildDiagnostic['category'], string> = {
 };
 
 const CATEGORY_BORDER_COLORS: Record<BuildDiagnostic['category'], string> = {
-  compile: '#3b82f6',
-  linker: '#8b5cf6',
-  ubt: '#f59e0b',
+  compile: MODULE_COLORS.core,
+  linker: MODULE_COLORS.systems,
+  ubt: MODULE_COLORS.content,
   general: 'var(--border)',
 };
 
@@ -69,7 +71,7 @@ export function ErrorCard({ diagnostic, onFix, isRunning = false }: ErrorCardPro
     }
     await navigator.clipboard.writeText(parts.join('\n'));
     setCopied(true);
-    setTimeout(() => setCopied(false), 1500);
+    setTimeout(() => setCopied(false), UI_TIMEOUTS.copyFeedback);
   }, [diagnostic]);
 
   const categoryBorderColor = CATEGORY_BORDER_COLORS[diagnostic.category];

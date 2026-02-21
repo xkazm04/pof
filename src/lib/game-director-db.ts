@@ -94,13 +94,17 @@ export function createSession(
     VALUES (?, ?, ?, ?)
   `).run(id, name, buildPath, JSON.stringify(config));
 
-  return getSession(id)!;
+  const session = getSession(id);
+  if (!session) {
+    throw new Error(`Failed to retrieve session after INSERT (id=${id})`);
+  }
+  return session;
 }
 
 export function getSession(id: string): PlaytestSession | null {
   ensureTables();
   const db = getDb();
-  const row = db.prepare('SELECT * FROM game_director_sessions WHERE id = ?').get(id) as Record<string, unknown> | undefined;
+  const row = db.prepare('SELECT * FROM game_director_sessions WHERE id = ?').get(id) as SessionRow | undefined;
   if (!row) return null;
   return rowToSession(row);
 }
@@ -108,7 +112,7 @@ export function getSession(id: string): PlaytestSession | null {
 export function listSessions(): PlaytestSession[] {
   ensureTables();
   const db = getDb();
-  const rows = db.prepare('SELECT * FROM game_director_sessions ORDER BY created_at DESC').all() as Record<string, unknown>[];
+  const rows = db.prepare('SELECT * FROM game_director_sessions ORDER BY created_at DESC').all() as SessionRow[];
   return rows.map(rowToSession);
 }
 
@@ -149,9 +153,12 @@ export function updateSessionSummary(
 export function deleteSession(id: string) {
   ensureTables();
   const db = getDb();
-  db.prepare('DELETE FROM game_director_events WHERE session_id = ?').run(id);
-  db.prepare('DELETE FROM game_director_findings WHERE session_id = ?').run(id);
-  db.prepare('DELETE FROM game_director_sessions WHERE id = ?').run(id);
+  const deleteAll = db.transaction(() => {
+    db.prepare('DELETE FROM game_director_events WHERE session_id = ?').run(id);
+    db.prepare('DELETE FROM game_director_findings WHERE session_id = ?').run(id);
+    db.prepare('DELETE FROM game_director_sessions WHERE id = ?').run(id);
+  });
+  deleteAll();
 }
 
 // ─── Findings CRUD ───────────────────────────────────────────────────────────
@@ -159,24 +166,27 @@ export function deleteSession(id: string) {
 export function addFinding(finding: PlaytestFinding) {
   ensureTables();
   const db = getDb();
-  db.prepare(`
-    INSERT INTO game_director_findings
-      (id, session_id, category, severity, title, description,
-       related_module, screenshot_ref, game_timestamp, suggested_fix, confidence)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-  `).run(
-    finding.id, finding.sessionId, finding.category, finding.severity,
-    finding.title, finding.description, finding.relatedModule,
-    finding.screenshotRef, finding.gameTimestamp, finding.suggestedFix,
-    finding.confidence,
-  );
+  const insertAndUpdate = db.transaction(() => {
+    db.prepare(`
+      INSERT INTO game_director_findings
+        (id, session_id, category, severity, title, description,
+         related_module, screenshot_ref, game_timestamp, suggested_fix, confidence)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `).run(
+      finding.id, finding.sessionId, finding.category, finding.severity,
+      finding.title, finding.description, finding.relatedModule,
+      finding.screenshotRef, finding.gameTimestamp, finding.suggestedFix,
+      finding.confidence,
+    );
 
-  // Update count on session
-  db.prepare(`
-    UPDATE game_director_sessions
-    SET findings_count = (SELECT COUNT(*) FROM game_director_findings WHERE session_id = ?)
-    WHERE id = ?
-  `).run(finding.sessionId, finding.sessionId);
+    // Update count on session
+    db.prepare(`
+      UPDATE game_director_sessions
+      SET findings_count = (SELECT COUNT(*) FROM game_director_findings WHERE session_id = ?)
+      WHERE id = ?
+    `).run(finding.sessionId, finding.sessionId);
+  });
+  insertAndUpdate();
 }
 
 export function getFindings(sessionId: string): PlaytestFinding[] {
@@ -184,7 +194,7 @@ export function getFindings(sessionId: string): PlaytestFinding[] {
   const db = getDb();
   const rows = db.prepare(
     'SELECT * FROM game_director_findings WHERE session_id = ? ORDER BY severity, created_at'
-  ).all(sessionId) as Record<string, unknown>[];
+  ).all(sessionId) as FindingRow[];
   return rows.map(rowToFinding);
 }
 
@@ -193,7 +203,7 @@ export function getAllFindings(): PlaytestFinding[] {
   const db = getDb();
   const rows = db.prepare(
     'SELECT * FROM game_director_findings ORDER BY created_at DESC LIMIT 200'
-  ).all() as Record<string, unknown>[];
+  ).all() as FindingRow[];
   return rows.map(rowToFinding);
 }
 
@@ -216,7 +226,7 @@ export function getEvents(sessionId: string, limit = 100): DirectorEvent[] {
   const db = getDb();
   const rows = db.prepare(
     'SELECT * FROM game_director_events WHERE session_id = ? ORDER BY timestamp DESC LIMIT ?'
-  ).all(sessionId, limit) as Record<string, unknown>[];
+  ).all(sessionId, limit) as EventRow[];
   return rows.map(rowToEvent);
 }
 
@@ -247,7 +257,7 @@ export function getDirectorStats(): DirectorStats {
 
   const recentRows = db.prepare(
     'SELECT * FROM game_director_sessions ORDER BY created_at DESC LIMIT 5'
-  ).all() as Record<string, unknown>[];
+  ).all() as SessionRow[];
 
   return {
     totalSessions: sessCount.c,
@@ -259,49 +269,90 @@ export function getDirectorStats(): DirectorStats {
   };
 }
 
+// ─── Row types ───────────────────────────────────────────────────────────────
+
+interface SessionRow {
+  id: string;
+  name: string;
+  status: string;
+  build_path: string;
+  config: string;
+  summary: string | null;
+  systems_tested_count: number;
+  findings_count: number;
+  duration_ms: number | null;
+  created_at: string;
+  started_at: string | null;
+  completed_at: string | null;
+}
+
+interface FindingRow {
+  id: string;
+  session_id: string;
+  category: string;
+  severity: string;
+  title: string;
+  description: string;
+  related_module: string | null;
+  screenshot_ref: string | null;
+  game_timestamp: number | null;
+  suggested_fix: string;
+  confidence: number;
+  created_at: string;
+}
+
+interface EventRow {
+  id: string;
+  session_id: string;
+  timestamp: string;
+  type: string;
+  message: string;
+  data: string | null;
+}
+
 // ─── Row mappers ─────────────────────────────────────────────────────────────
 
-function rowToSession(row: Record<string, unknown>): PlaytestSession {
+function rowToSession(row: SessionRow): PlaytestSession {
   return {
-    id: row.id as string,
-    name: row.name as string,
+    id: row.id,
+    name: row.name,
     status: row.status as PlaytestSession['status'],
-    buildPath: row.build_path as string,
-    createdAt: row.created_at as string,
-    startedAt: (row.started_at as string) || null,
-    completedAt: (row.completed_at as string) || null,
-    durationMs: (row.duration_ms as number) || null,
-    config: JSON.parse((row.config as string) || '{}'),
-    summary: row.summary ? JSON.parse(row.summary as string) : null,
-    systemsTestedCount: (row.systems_tested_count as number) || 0,
-    findingsCount: (row.findings_count as number) || 0,
+    buildPath: row.build_path,
+    createdAt: row.created_at,
+    startedAt: row.started_at,
+    completedAt: row.completed_at,
+    durationMs: row.duration_ms,
+    config: JSON.parse(row.config || '{}'),
+    summary: row.summary ? JSON.parse(row.summary) : null,
+    systemsTestedCount: row.systems_tested_count || 0,
+    findingsCount: row.findings_count || 0,
   };
 }
 
-function rowToFinding(row: Record<string, unknown>): PlaytestFinding {
+function rowToFinding(row: FindingRow): PlaytestFinding {
   return {
-    id: row.id as string,
-    sessionId: row.session_id as string,
+    id: row.id,
+    sessionId: row.session_id,
     category: row.category as PlaytestFinding['category'],
     severity: row.severity as PlaytestFinding['severity'],
-    title: row.title as string,
-    description: (row.description as string) || '',
-    relatedModule: (row.related_module as string) || null,
-    screenshotRef: (row.screenshot_ref as string) || null,
-    gameTimestamp: (row.game_timestamp as number) || null,
-    suggestedFix: (row.suggested_fix as string) || '',
-    confidence: (row.confidence as number) || 80,
-    createdAt: row.created_at as string,
+    title: row.title,
+    description: row.description || '',
+    relatedModule: row.related_module,
+    screenshotRef: row.screenshot_ref,
+    gameTimestamp: row.game_timestamp,
+    suggestedFix: row.suggested_fix || '',
+    confidence: row.confidence || 80,
+    createdAt: row.created_at,
   };
 }
 
-function rowToEvent(row: Record<string, unknown>): DirectorEvent {
+function rowToEvent(row: EventRow): DirectorEvent {
   return {
-    id: row.id as string,
-    sessionId: row.session_id as string,
-    timestamp: row.timestamp as string,
+    id: row.id,
+    sessionId: row.session_id,
+    timestamp: row.timestamp,
     type: row.type as DirectorEvent['type'],
-    message: row.message as string,
-    data: row.data ? JSON.parse(row.data as string) : undefined,
+    message: row.message,
+    data: row.data ? JSON.parse(row.data) : undefined,
   };
 }

@@ -32,7 +32,7 @@ export function getDb(): Database.Database {
       feature_name TEXT NOT NULL,
       category TEXT NOT NULL DEFAULT 'general',
       status TEXT NOT NULL DEFAULT 'unknown'
-        CHECK(status IN ('implemented', 'partial', 'missing', 'unknown')),
+        CHECK(status IN ('implemented', 'improved', 'partial', 'missing', 'unknown')),
       description TEXT NOT NULL DEFAULT '',
       file_paths TEXT NOT NULL DEFAULT '[]',
       review_notes TEXT NOT NULL DEFAULT '',
@@ -53,6 +53,35 @@ export function getDb(): Database.Database {
   }
   if (!colNames.has('next_steps')) {
     db.exec("ALTER TABLE feature_matrix ADD COLUMN next_steps TEXT NOT NULL DEFAULT ''");
+  }
+
+  // Migrate: update CHECK constraint to allow 'improved' status
+  // SQLite cannot ALTER constraints, so we recreate the table if the old constraint is present
+  const sqlRow = db.prepare("SELECT sql FROM sqlite_master WHERE type='table' AND name='feature_matrix'").get() as { sql: string } | undefined;
+  if (sqlRow?.sql && !sqlRow.sql.includes("'improved'")) {
+    db.exec(`
+      CREATE TABLE feature_matrix_new (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        module_id TEXT NOT NULL,
+        feature_name TEXT NOT NULL,
+        category TEXT NOT NULL DEFAULT 'general',
+        status TEXT NOT NULL DEFAULT 'unknown'
+          CHECK(status IN ('implemented', 'improved', 'partial', 'missing', 'unknown')),
+        description TEXT NOT NULL DEFAULT '',
+        file_paths TEXT NOT NULL DEFAULT '[]',
+        review_notes TEXT NOT NULL DEFAULT '',
+        quality_score INTEGER,
+        next_steps TEXT NOT NULL DEFAULT '',
+        last_reviewed_at TEXT,
+        created_at TEXT NOT NULL DEFAULT (datetime('now')),
+        updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+        project_id TEXT NOT NULL DEFAULT '',
+        UNIQUE(module_id, feature_name)
+      );
+      INSERT INTO feature_matrix_new SELECT * FROM feature_matrix;
+      DROP TABLE feature_matrix;
+      ALTER TABLE feature_matrix_new RENAME TO feature_matrix;
+    `);
   }
 
   // Review snapshots — captures module state at each review for trend tracking
@@ -157,8 +186,12 @@ export function getDb(): Database.Database {
   }
 
   const rsCols = db.prepare("PRAGMA table_info(review_snapshots)").all() as { name: string }[];
-  if (!new Set(rsCols.map((c) => c.name)).has('project_id')) {
+  const rsColNames = new Set(rsCols.map((c) => c.name));
+  if (!rsColNames.has('project_id')) {
     db.exec("ALTER TABLE review_snapshots ADD COLUMN project_id TEXT NOT NULL DEFAULT ''");
+  }
+  if (!rsColNames.has('improved')) {
+    db.exec("ALTER TABLE review_snapshots ADD COLUMN improved INTEGER NOT NULL DEFAULT 0");
   }
 
   const bhCols = db.prepare("PRAGMA table_info(build_history)").all() as { name: string }[];
@@ -187,6 +220,60 @@ export function getDb(): Database.Database {
       label TEXT NOT NULL DEFAULT '',
       updated_at TEXT NOT NULL DEFAULT (datetime('now'))
     )
+  `);
+
+  // Project progress — stores full module state (checklist, health, verification, history) per project
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS project_progress (
+      project_id TEXT PRIMARY KEY,
+      checklist_json TEXT NOT NULL DEFAULT '{}',
+      health_json TEXT NOT NULL DEFAULT '{}',
+      verification_json TEXT NOT NULL DEFAULT '{}',
+      history_json TEXT NOT NULL DEFAULT '{}',
+      updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+    )
+  `);
+
+  // Session log — unified audit trail linking CLI sessions to modules and projects
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS session_log (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      tab_id TEXT NOT NULL,
+      session_key TEXT NOT NULL,
+      module_id TEXT NOT NULL,
+      project_path TEXT NOT NULL DEFAULT '',
+      event TEXT NOT NULL CHECK(event IN ('started', 'completed', 'cancelled')),
+      success INTEGER,
+      prompt_preview TEXT NOT NULL DEFAULT '',
+      duration_ms INTEGER,
+      created_at TEXT NOT NULL DEFAULT (datetime('now'))
+    )
+  `);
+
+  db.exec(`
+    CREATE INDEX IF NOT EXISTS idx_session_log_project
+    ON session_log(project_path, created_at)
+  `);
+
+  db.exec(`
+    CREATE INDEX IF NOT EXISTS idx_session_log_module
+    ON session_log(module_id, created_at)
+  `);
+
+  // Request log — idempotency key replay detection for import/mutation routes
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS request_log (
+      idempotency_key TEXT PRIMARY KEY,
+      route TEXT NOT NULL,
+      status_code INTEGER NOT NULL,
+      response_body TEXT NOT NULL,
+      created_at TEXT NOT NULL DEFAULT (datetime('now'))
+    )
+  `);
+
+  db.exec(`
+    CREATE INDEX IF NOT EXISTS idx_request_log_created
+    ON request_log(created_at)
   `);
 
   return db;

@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { RefreshCw } from 'lucide-react';
 import { useProjectStore } from '@/stores/projectStore';
 import { useNavigationStore } from '@/stores/navigationStore';
+import { STATUS_SUCCESS, MODULE_COLORS } from '@/lib/chart-colors';
 
 interface FieldStatus {
   label: string;
@@ -106,7 +107,7 @@ export function ContextHealthBadge() {
     scanProject();
   }, [scanProject]);
 
-  const dotColor = allHealthy ? '#22c55e' : staticHealthy ? '#3b82f6' : '#f59e0b';
+  const dotColor = allHealthy ? STATUS_SUCCESS : staticHealthy ? MODULE_COLORS.core : MODULE_COLORS.content;
   const glowColor = allHealthy
     ? 'rgba(34,197,94,0.4)'
     : staticHealthy
@@ -177,7 +178,7 @@ export function ContextHealthBadge() {
                       style={{
                         width: 5,
                         height: 5,
-                        backgroundColor: f.ok ? '#22c55e' : '#f59e0b',
+                        backgroundColor: f.ok ? STATUS_SUCCESS : MODULE_COLORS.content,
                       }}
                     />
                     <span className="text-xs text-text-muted flex-shrink-0">
@@ -293,7 +294,7 @@ function ScanRow({ label, value, ok }: { label: string; value: string; ok: boole
         style={{
           width: 5,
           height: 5,
-          backgroundColor: ok ? '#22c55e' : 'var(--text-muted)',
+          backgroundColor: ok ? STATUS_SUCCESS : 'var(--text-muted)',
         }}
       />
       <span className="text-xs text-text-muted flex-shrink-0">{label}</span>

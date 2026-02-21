@@ -1,4 +1,5 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest } from 'next/server';
+import { apiSuccess } from '@/lib/api-utils';
 import { searchIndex, rebuildSearchIndex, getLastRebuildTime } from '@/lib/search-index';
 
 export async function GET(request: NextRequest) {
@@ -9,18 +10,17 @@ export async function GET(request: NextRequest) {
   // Rebuild index on demand
   if (rebuild === '1') {
     const result = rebuildSearchIndex();
-    return NextResponse.json({ ok: true, indexed: result.indexed });
+    return apiSuccess({ indexed: result.indexed });
   }
 
   if (!q) {
-    return NextResponse.json({ ok: true, results: [], lastRebuilt: getLastRebuildTime() });
+    return apiSuccess({ results: [], lastRebuilt: getLastRebuildTime() });
   }
 
   const typeFilter = types ? types.split(',').filter(Boolean) : undefined;
   const results = searchIndex(q, { types: typeFilter, limit: 30 });
 
-  return NextResponse.json({
-    ok: true,
+  return apiSuccess({
     results,
     count: results.length,
     lastRebuilt: getLastRebuildTime(),

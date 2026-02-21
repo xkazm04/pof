@@ -3,6 +3,7 @@
  * against implementation reality (feature matrix/reviews) to detect gaps.
  */
 
+import type { SubModuleId } from '@/types/modules';
 import { getDb } from './db';
 import { SUB_MODULES, SUB_MODULE_MAP } from './module-registry';
 import { getFeaturesByModule, getFeatureSummary, getAllModuleAggregates } from './feature-matrix-db';
@@ -15,7 +16,7 @@ import type {
 // ─── Gap Detection ──────────────────────────────────────────────────────────
 
 function detectFeatureGaps(
-  moduleId: string,
+  moduleId: SubModuleId,
   moduleName: string,
   features: FeatureRow[],
   checklistItems: { id: string; label: string }[],
@@ -140,7 +141,7 @@ function calculateModuleScore(
   // Feature implementation weight (60%)
   if (summary.total > 0) {
     const featureScore =
-      ((summary.implemented + summary.partial * 0.5) / summary.total) * 100;
+      ((summary.implemented + summary.improved + summary.partial * 0.5) / summary.total) * 100;
     score = featureScore * 0.6;
   } else {
     score = 60; // No scan data, assume neutral
@@ -234,7 +235,7 @@ export function runComplianceAudit(
     const features = getFeaturesByModule(mod.id);
     const summary = features.length > 0
       ? getFeatureSummary(mod.id)
-      : { total: 0, implemented: 0, partial: 0, missing: 0, unknown: 0 };
+      : { total: 0, implemented: 0, improved: 0, partial: 0, missing: 0, unknown: 0 };
 
     const moduleProgress = checklistProgress[mod.id] ?? {};
     const checklistDone = checklist.filter((c) => moduleProgress[c.id]).length;

@@ -3,6 +3,8 @@
 import { useState, useMemo, useCallback } from 'react';
 import { Sparkles, Search, Zap, Droplets, Flame, Eye, Shield, Snowflake, Waves, Gem } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
+import { MODULE_COLORS } from '@/lib/constants';
+import { ACCENT_ORANGE, ACCENT_VIOLET, STATUS_IMPROVED } from '@/lib/chart-colors';
 
 // ── Types ──
 
@@ -28,9 +30,9 @@ export interface MaterialPatternCatalogConfig {
 // ── Static Pattern Data ──
 
 const CATEGORY_META: Record<MaterialCategory, { label: string; color: string }> = {
-  elemental: { label: 'Elemental', color: '#f97316' },
-  stylized:  { label: 'Stylized',  color: '#a78bfa' },
-  utility:   { label: 'Utility',   color: '#38bdf8' },
+  elemental: { label: 'Elemental', color: ACCENT_ORANGE },
+  stylized: { label: 'Stylized', color: ACCENT_VIOLET },
+  utility: { label: 'Utility', color: STATUS_IMPROVED },
 };
 
 export const MATERIAL_PATTERNS: MaterialPattern[] = [
@@ -183,8 +185,6 @@ Roughness = lerp(0.2, 0.9, CrustMask);`,
 
 // ── Component ──
 
-const ACCENT = '#f59e0b';
-
 interface MaterialPatternCatalogProps {
   onGenerate: (pattern: MaterialPattern) => void;
   isGenerating: boolean;
@@ -215,68 +215,82 @@ export function MaterialPatternCatalog({ onGenerate, isGenerating }: MaterialPat
   }, []);
 
   return (
-    <div className="w-full space-y-4">
-      {/* Header */}
-      <div className="flex items-center gap-2">
-        <Sparkles className="w-4 h-4" style={{ color: ACCENT }} />
-        <div>
-          <h3 className="text-xs font-semibold text-text">Material Pattern Library</h3>
-          <p className="text-2xs text-text-muted">
-            {MATERIAL_PATTERNS.length} patterns — click to expand, generate with Claude
-          </p>
-        </div>
+    <div className="w-full h-full bg-[#03030a] rounded-2xl border border-violet-900/30 shadow-[inset_0_0_80px_rgba(167,139,250,0.05)] p-6 relative overflow-y-auto">
+      {/* Background Ambience */}
+      <div className="absolute inset-0 pointer-events-none z-0">
+        <div className="absolute top-0 right-0 w-64 h-64 bg-violet-600/10 blur-[100px] rounded-full pointer-events-none" />
       </div>
 
-      {/* Search + Filter */}
-      <div className="flex items-center gap-2">
-        <div className="flex-1 relative">
-          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3 h-3 text-text-muted" />
-          <input
-            type="text"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search patterns..."
-            className="w-full pl-7 pr-3 py-1.5 bg-surface border border-border rounded-lg text-xs text-text placeholder-text-muted outline-none focus:border-border-bright transition-colors"
-          />
+      <div className="relative z-10 space-y-6">
+        {/* Header */}
+        <div className="flex items-center gap-4 border-b border-violet-900/30 pb-4">
+          <div className="w-12 h-12 rounded-xl bg-violet-900/40 border border-violet-500/50 flex items-center justify-center shadow-[0_0_15px_rgba(139,92,246,0.3)]">
+            <Sparkles className="w-6 h-6 text-violet-400" />
+          </div>
+          <div>
+            <h3 className="text-sm font-bold tracking-widest uppercase text-violet-100">Material Pattern Library</h3>
+            <p className="text-[10px] text-violet-400/60 uppercase tracking-wider mt-0.5">
+              DATABASE_ENTRIES: {MATERIAL_PATTERNS.length} — PROCEDURAL_SHADER_ARCHIVES
+            </p>
+          </div>
         </div>
-        <div className="flex gap-1">
-          {(['all', 'elemental', 'stylized', 'utility'] as const).map((cat) => {
-            const isActive = selectedCategory === cat;
-            const color = cat === 'all' ? ACCENT : CATEGORY_META[cat].color;
-            const label = cat === 'all' ? 'All' : CATEGORY_META[cat].label;
-            return (
-              <button
-                key={cat}
-                onClick={() => setSelectedCategory(cat)}
-                className="px-2 py-1 rounded text-2xs font-medium transition-colors"
-                style={{
-                  backgroundColor: isActive ? `${color}20` : 'transparent',
-                  color: isActive ? color : 'var(--text-muted)',
-                  border: `1px solid ${isActive ? `${color}40` : 'transparent'}`,
-                }}
-              >
-                {label}
-              </button>
-            );
-          })}
-        </div>
-      </div>
 
-      {/* Pattern List */}
-      <div className="space-y-2">
-        {filtered.map((pattern) => (
-          <PatternCard
-            key={pattern.id}
-            pattern={pattern}
-            isExpanded={expandedId === pattern.id}
-            onToggle={() => handleToggle(pattern.id)}
-            onGenerate={() => onGenerate(pattern)}
-            isGenerating={isGenerating}
-          />
-        ))}
-        {filtered.length === 0 && (
-          <p className="text-xs text-text-muted text-center py-6">No patterns match your search.</p>
-        )}
+        {/* Search + Filter */}
+        <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-4 bg-black/40 border border-violet-900/30 p-3 rounded-xl">
+          <div className="flex-1 relative w-full xl:max-w-sm">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-violet-500/50" />
+            <input
+              type="text"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="QUERY PATTERNS..."
+              className="w-full pl-9 pr-4 py-2 bg-black/60 border border-violet-900/40 rounded-lg text-xs font-mono text-violet-100 placeholder-violet-500/40 outline-none focus:border-violet-500 transition-colors shadow-inner uppercase tracking-wider"
+              spellCheck={false}
+            />
+          </div>
+          <div className="flex gap-2 overflow-x-auto pb-1 xl:pb-0">
+            {(['all', 'elemental', 'stylized', 'utility'] as const).map((cat) => {
+              const isActive = selectedCategory === cat;
+              const color = cat === 'all' ? MODULE_COLORS.content : CATEGORY_META[cat].color;
+              const label = cat === 'all' ? 'All' : CATEGORY_META[cat].label;
+              return (
+                <button
+                  key={cat}
+                  onClick={() => setSelectedCategory(cat)}
+                  className="px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-widest transition-all relative overflow-hidden flex-shrink-0"
+                  style={{
+                    backgroundColor: isActive ? `${color}20` : 'rgba(0,0,0,0.4)',
+                    color: isActive ? color : 'var(--text-muted)',
+                    border: `1px solid ${isActive ? `${color}50` : 'rgba(139,92,246,0.2)'}`,
+                    boxShadow: isActive ? `0 0 15px ${color}20` : 'none',
+                  }}
+                >
+                  {isActive && <div className="absolute bottom-0 inset-x-0 h-0.5" style={{ backgroundColor: color }} />}
+                  {label}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Pattern List */}
+        <div className="space-y-3">
+          {filtered.map((pattern) => (
+            <PatternCard
+              key={pattern.id}
+              pattern={pattern}
+              isExpanded={expandedId === pattern.id}
+              onToggle={() => handleToggle(pattern.id)}
+              onGenerate={() => onGenerate(pattern)}
+              isGenerating={isGenerating}
+            />
+          ))}
+          {filtered.length === 0 && (
+            <div className="text-center py-12 bg-black/40 border border-violet-900/30 rounded-xl">
+              <p className="text-xs font-mono text-violet-500/60 uppercase tracking-widest">NO_PATTERNS_FOUND</p>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
@@ -298,94 +312,125 @@ function PatternCard({ pattern, isExpanded, onToggle, onGenerate, isGenerating }
 
   return (
     <div
-      className="rounded-xl border transition-all duration-base"
+      className="rounded-xl border transition-all duration-500 overflow-hidden relative group"
       style={{
-        borderColor: isExpanded ? `${catMeta.color}40` : 'var(--border)',
-        backgroundColor: isExpanded ? `${catMeta.color}06` : 'var(--surface-deep)',
+        borderColor: isExpanded ? `${catMeta.color}50` : 'rgba(139,92,246,0.2)',
+        backgroundColor: isExpanded ? 'rgba(3,3,10,0.9)' : 'rgba(10,10,25,0.6)',
+        boxShadow: isExpanded ? `0 0 30px ${catMeta.color}15, inset 0 0 20px ${catMeta.color}10` : 'none',
       }}
     >
+      {isExpanded && <div className="absolute inset-0 bg-gradient-to-b from-transparent via-white/5 to-transparent pointer-events-none mix-blend-overlay" />}
+
       {/* Collapsed header — always visible */}
       <button
         onClick={onToggle}
-        className="w-full flex items-center gap-3 px-4 py-3 text-left group"
+        className="w-full flex items-center gap-4 px-4 py-3 text-left relative z-10"
       >
         <div
-          className="flex-shrink-0 w-7 h-7 rounded-lg flex items-center justify-center"
+          className="flex-shrink-0 w-10 h-10 rounded-lg flex items-center justify-center transition-transform group-hover:scale-105"
           style={{
-            background: `linear-gradient(135deg, ${catMeta.color}18, ${catMeta.color}08)`,
-            border: `1px solid ${catMeta.color}25`,
+            background: `linear-gradient(135deg, ${catMeta.color}20, ${catMeta.color}05)`,
+            border: `1px solid ${catMeta.color}40`,
+            boxShadow: `0 0 15px ${catMeta.color}20`,
           }}
         >
-          <Icon className="w-3.5 h-3.5" style={{ color: catMeta.color }} />
+          <Icon className="w-5 h-5" style={{ color: catMeta.color }} />
         </div>
 
         <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2">
-            <span className="text-xs font-semibold text-text">{pattern.name}</span>
+          <div className="flex items-center gap-3 mb-1">
+            <span className="text-xs font-bold uppercase tracking-widest text-violet-100 truncate">{pattern.name}</span>
             <span
-              className="text-2xs font-medium uppercase tracking-widest px-1.5 py-0.5 rounded"
-              style={{ backgroundColor: `${catMeta.color}12`, color: catMeta.color }}
+              className="text-[9px] font-mono font-bold uppercase tracking-widest px-1.5 py-0.5 rounded border"
+              style={{ backgroundColor: `${catMeta.color}15`, borderColor: `${catMeta.color}40`, color: catMeta.color }}
             >
               {catMeta.label}
             </span>
           </div>
-          <p className="text-xs text-text-muted mt-0.5 line-clamp-1">{pattern.description}</p>
+          <p className="text-[10px] text-violet-300/60 line-clamp-1 font-mono">{pattern.description}</p>
         </div>
 
-        <span
-          className="text-2xs font-medium opacity-30 scale-95 group-hover:opacity-100 group-hover:scale-100 transition-all flex-shrink-0"
-          style={{ color: catMeta.color }}
-        >
-          {isExpanded ? 'Collapse' : 'Expand'} →
-        </span>
+        <div className="flex-shrink-0 flex items-center justify-center w-8 h-8 rounded-full border border-violet-900/40 bg-black/60 group-hover:border-violet-500/50 transition-colors">
+          <span
+            className="text-[10px] font-mono transition-transform duration-300"
+            style={{ color: catMeta.color, transform: isExpanded ? 'rotate(180deg)' : 'rotate(0deg)' }}
+          >
+            ▼
+          </span>
+        </div>
       </button>
 
       {/* Expanded content */}
       {isExpanded && (
-        <div className="px-4 pb-4 space-y-3">
-          {/* Description */}
-          <p className="text-xs text-[#9b9ec0] leading-relaxed">{pattern.description}</p>
+        <div className="px-4 pb-4 pt-2 space-y-5 relative z-10 border-t border-violet-900/30 w-full overflow-hidden">
+          <div className="absolute left-4 top-4 bottom-4 w-px bg-violet-900/40" />
 
-          {/* Approach */}
-          <div>
-            <h4 className="text-2xs font-semibold text-text uppercase tracking-widest mb-1">Approach</h4>
-            <p className="text-xs text-text-muted-hover leading-relaxed">{pattern.approach}</p>
+          <div className="pl-6 space-y-4">
+            {/* Description */}
+            <p className="text-[11px] text-violet-200/80 leading-relaxed font-mono">
+              <span className="text-[10px] text-violet-500 uppercase tracking-widest block mb-1 font-bold">SYNOPSIS</span>
+              {pattern.description}
+            </p>
+
+            {/* Approach */}
+            <div>
+              <span className="text-[10px] text-amber-500 uppercase tracking-widest block mb-1 font-bold">METHODOLOGY</span>
+              <p className="text-[11px] text-amber-100/70 leading-relaxed font-mono bg-amber-500/5 border border-amber-500/20 p-3 rounded-lg">
+                {pattern.approach}
+              </p>
+            </div>
+
+            {/* HLSL Snippet */}
+            <div className="w-full">
+              <span className="text-[10px] text-emerald-500 uppercase tracking-widest block mb-1 font-bold">HLSL_SOURCE</span>
+              <div className="relative w-full rounded-xl bg-black/80 border border-emerald-500/30 overflow-hidden shadow-inner">
+                <div className="px-2 py-1 bg-emerald-500/20 text-emerald-400 text-[8px] border-b border-emerald-500/30 uppercase tracking-widest font-bold">CORE_LOGIC</div>
+                <pre className="text-[10px] leading-relaxed p-3 overflow-x-auto text-emerald-200/90 font-mono whitespace-pre">
+                  {pattern.hlslSnippet}
+                </pre>
+              </div>
+            </div>
+
+            {/* Tags */}
+            <div className="flex flex-wrap gap-2 pt-2">
+              {pattern.tags.map((tag) => (
+                <span
+                  key={tag}
+                  className="text-[9px] px-2 py-1 rounded bg-black/60 text-violet-300 border border-violet-900/50 uppercase tracking-widest font-mono"
+                >
+                  #{tag}
+                </span>
+              ))}
+            </div>
+
+            {/* Generate button */}
+            <button
+              onClick={(e) => { e.stopPropagation(); onGenerate(); }}
+              disabled={isGenerating}
+              className="relative w-full overflow-hidden flex items-center justify-center gap-2 px-6 py-4 rounded-xl text-xs font-bold uppercase tracking-widest transition-all disabled:opacity-50 mt-2 group outline-none"
+              style={{
+                backgroundColor: `${catMeta.color}15`,
+                color: catMeta.color,
+                border: `1px solid ${catMeta.color}50`,
+                boxShadow: `0 0 20px ${catMeta.color}20, inset 0 0 10px ${catMeta.color}10`,
+              }}
+            >
+              <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/40 to-transparent opacity-50" />
+              <div className="absolute top-0 -left-[100%] w-1/2 h-full bg-gradient-to-r from-transparent via-white/10 to-transparent skew-x-12 group-hover:left-[200%] transition-transform duration-1000 ease-out pointer-events-none" />
+
+              {isGenerating ? (
+                <div className="flex items-center gap-2 animate-pulse">
+                  <span className="w-4 h-4 rounded-full border-2 border-current border-t-transparent animate-spin" />
+                  COMPILING_SHADER...
+                </div>
+              ) : (
+                <>
+                  <Zap className="w-4 h-4 group-hover:scale-110 group-hover:drop-shadow-[0_0_8px_rgba(currentColor,0.8)] transition-all" />
+                  EXECUTE {pattern.name} SYNTHESIS
+                </>
+              )}
+            </button>
           </div>
-
-          {/* HLSL Snippet */}
-          <div>
-            <h4 className="text-2xs font-semibold text-text uppercase tracking-widest mb-1">HLSL Reference</h4>
-            <pre className="text-2xs leading-relaxed px-3 py-2 rounded-lg bg-[#0a0a1e] border border-border overflow-x-auto text-[#a0a4c4] font-mono whitespace-pre">
-              {pattern.hlslSnippet}
-            </pre>
-          </div>
-
-          {/* Tags */}
-          <div className="flex flex-wrap gap-1">
-            {pattern.tags.map((tag) => (
-              <span
-                key={tag}
-                className="text-2xs px-1.5 py-0.5 rounded bg-surface text-text-muted border border-border"
-              >
-                {tag}
-              </span>
-            ))}
-          </div>
-
-          {/* Generate button */}
-          <button
-            onClick={(e) => { e.stopPropagation(); onGenerate(); }}
-            disabled={isGenerating}
-            className="w-full flex items-center justify-center gap-2 px-4 py-2 rounded-lg text-xs font-medium transition-all disabled:opacity-50"
-            style={{
-              backgroundColor: `${ACCENT}15`,
-              color: ACCENT,
-              border: `1px solid ${ACCENT}30`,
-            }}
-          >
-            <Zap className="w-3.5 h-3.5" />
-            Generate {pattern.name} Material
-          </button>
         </div>
       )}
     </div>

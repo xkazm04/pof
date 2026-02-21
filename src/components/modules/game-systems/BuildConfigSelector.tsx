@@ -17,6 +17,7 @@ import { apiFetch } from '@/lib/api-utils';
 import { useModuleCLI } from '@/hooks/useModuleCLI';
 import { PlatformProfileCard } from './PlatformProfileCard';
 import { CookSettingsPanel } from './CookSettingsPanel';
+import { MODULE_COLORS } from '@/lib/chart-colors';
 
 const PLATFORM_ICONS: Record<PlatformId, typeof Monitor> = {
   Win64: Monitor,
@@ -50,7 +51,7 @@ export function BuildConfigSelector() {
     moduleId: 'packaging',
     sessionKey: 'package-build',
     label: 'Package Build',
-    accentColor: '#8b5cf6',
+    accentColor: MODULE_COLORS.systems,
   });
 
   // Fetch profiles

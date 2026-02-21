@@ -3,6 +3,10 @@
 import { useState, useCallback, useRef } from 'react';
 import { Plus, Unlink } from 'lucide-react';
 import type { RoomNode, RoomConnection, RoomType, DifficultyLevel } from '@/types/level-design';
+import {
+  STATUS_ERROR, STATUS_SUCCESS, STATUS_LIME, STATUS_WARNING, STATUS_BLOCKER, STATUS_INFO,
+  ACCENT_VIOLET, ACCENT_EMERALD, ACCENT_PINK,
+} from '@/lib/chart-colors';
 
 // ── Constants ──
 
@@ -10,22 +14,22 @@ const ROOM_W = 160;
 const ROOM_H = 80;
 
 const ROOM_TYPE_CONFIG: Record<RoomType, { color: string; label: string }> = {
-  combat:      { color: '#f87171', label: 'Combat' },
-  puzzle:      { color: '#a78bfa', label: 'Puzzle' },
-  exploration: { color: '#34d399', label: 'Exploration' },
-  boss:        { color: '#fbbf24', label: 'Boss' },
-  safe:        { color: '#60a5fa', label: 'Safe Zone' },
-  transition:  { color: '#8b8fb0', label: 'Transition' },
-  cutscene:    { color: '#f472b6', label: 'Cutscene' },
-  hub:         { color: '#2dd4bf', label: 'Hub' },
+  combat: { color: STATUS_ERROR, label: 'Combat' },
+  puzzle: { color: ACCENT_VIOLET, label: 'Puzzle' },
+  exploration: { color: ACCENT_EMERALD, label: 'Exploration' },
+  boss: { color: STATUS_WARNING, label: 'Boss' },
+  safe: { color: STATUS_INFO, label: 'Safe Zone' },
+  transition: { color: '#8b8fb0', label: 'Transition' },
+  cutscene: { color: ACCENT_PINK, label: 'Cutscene' },
+  hub: { color: '#2dd4bf', label: 'Hub' },
 };
 
 const DIFFICULTY_COLORS: Record<DifficultyLevel, string> = {
-  1: '#4ade80',
-  2: '#a3e635',
-  3: '#fbbf24',
-  4: '#fb923c',
-  5: '#f87171',
+  1: STATUS_SUCCESS,
+  2: STATUS_LIME,
+  3: STATUS_WARNING,
+  4: STATUS_BLOCKER,
+  5: STATUS_ERROR,
 };
 
 interface LevelFlowEditorProps {
@@ -194,51 +198,79 @@ export function LevelFlowEditor({
   }, [rooms]);
 
   return (
-    <div className="relative w-full h-full bg-[#080818] rounded-lg border border-border overflow-hidden">
+    <div className="relative w-full h-full bg-[#03030a] rounded-2xl border border-violet-900/30 overflow-hidden shadow-[inset_0_0_80px_rgba(167,139,250,0.05)]">
+      {/* Background Gradients */}
+      <div className="absolute inset-0 pointer-events-none z-0">
+        <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-violet-600/10 blur-[120px] rounded-full pointer-events-none" />
+        <div className="absolute bottom-0 left-0 w-[400px] h-[400px] bg-emerald-600/5 blur-[100px] rounded-full pointer-events-none" />
+      </div>
+
       {/* Toolbar */}
       {!readOnly && (
-        <div className="absolute top-2 left-2 z-10 flex items-center gap-1">
+        <div className="absolute top-4 left-4 z-10 flex items-center gap-2">
           <button
             onClick={addRoom}
-            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-xs font-medium bg-surface border border-border-bright text-text hover:bg-surface-hover transition-colors"
+            className="flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-bold uppercase tracking-wider transition-all shadow-lg"
+            style={{
+              backgroundColor: `${accentColor}20`,
+              color: accentColor,
+              border: `1px solid ${accentColor}50`,
+              boxShadow: `0 0 15px ${accentColor}30, inset 0 0 10px ${accentColor}15`,
+            }}
           >
-            <Plus className="w-3 h-3" />
+            <Plus className="w-4 h-4" />
             Add Room
           </button>
-          {connectingFrom ? (
+          {connectingFrom && (
             <button
               onClick={() => setConnectingFrom(null)}
-              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-xs font-medium bg-[#f8717118] border border-[#f8717130] text-[#f87171] transition-colors"
+              className="flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-bold uppercase tracking-wider transition-all animate-pulse"
+              style={{
+                backgroundColor: `${STATUS_ERROR}20`,
+                color: STATUS_ERROR,
+                border: `1px solid ${STATUS_ERROR}50`,
+                boxShadow: `0 0 15px ${STATUS_ERROR}40, inset 0 0 10px ${STATUS_ERROR}20`,
+              }}
             >
-              <Unlink className="w-3 h-3" />
+              <Unlink className="w-4 h-4" />
               Cancel Link
             </button>
-          ) : null}
+          )}
         </div>
       )}
 
       {/* Room count badge */}
-      <div className="absolute top-2 right-2 z-10 px-2 py-1 rounded text-xs bg-surface border border-border text-text-muted">
-        {rooms.length} rooms &middot; {connections.length} links
+      <div className="absolute top-4 right-4 z-10 px-3 py-1.5 rounded-lg border bg-surface-deep/80 backdrop-blur-sm border-violet-900/40 text-[10px] uppercase font-mono font-bold tracking-widest text-violet-300/80 shadow-[0_0_15px_rgba(0,0,0,0.5)]">
+        {rooms.length} NODES <span className="mx-1 text-violet-500/50">|</span> {connections.length} LINKS
       </div>
 
       {/* SVG Canvas */}
       <svg
         ref={svgRef}
-        className="w-full h-full"
+        className="w-full h-full relative z-0"
         style={{ cursor: isPanning ? 'grabbing' : connectingFrom ? 'crosshair' : 'grab' }}
         onMouseDown={handleSvgMouseDown}
         onMouseMove={handleMouseMove}
         onMouseUp={handleMouseUp}
         onMouseLeave={handleMouseUp}
       >
-        {/* Grid pattern */}
         <defs>
-          <pattern id="grid" width="24" height="24" patternUnits="userSpaceOnUse"
-            patternTransform={`translate(${pan.x % 24},${pan.y % 24})`}
+          {/* Blueprint Dot Grid */}
+          <pattern id="grid" width="32" height="32" patternUnits="userSpaceOnUse"
+            patternTransform={`translate(${pan.x % 32},${pan.y % 32})`}
           >
-            <circle cx="12" cy="12" r="0.5" fill="var(--border)" />
+            <circle cx="16" cy="16" r="1" fill={accentColor} opacity="0.15" />
+            <path d="M 16 12 L 16 20 M 12 16 L 20 16" stroke={accentColor} strokeWidth="0.5" opacity="0.05" />
           </pattern>
+          {/* Glow Filters */}
+          <filter id="glow-node" x="-20%" y="-20%" width="140%" height="140%">
+            <feGaussianBlur stdDeviation="6" result="blur" />
+            <feComposite in="SourceGraphic" in2="blur" operator="over" />
+          </filter>
+          <filter id="glow-link" x="-50%" y="-50%" width="200%" height="200%">
+            <feGaussianBlur stdDeviation="3" result="blur" />
+            <feComposite in="SourceGraphic" in2="blur" operator="over" />
+          </filter>
         </defs>
         <rect width="100%" height="100%" fill="url(#grid)" />
 
@@ -247,29 +279,57 @@ export function LevelFlowEditor({
           {connections.map((conn) => {
             const from = getRoomCenter(conn.fromId);
             const to = getRoomCenter(conn.toId);
+            const isTarget = connectingFrom && (conn.fromId === connectingFrom || conn.toId === connectingFrom);
+
             return (
-              <g key={conn.id}>
+              <g key={conn.id} className="group/conn">
+                {/* Glow layer (visible on hover or when connected node selected) */}
                 <line
                   x1={from.x} y1={from.y}
                   x2={to.x} y2={to.y}
-                  stroke="var(--border-bright)"
-                  strokeWidth={2}
-                  strokeDasharray={conn.condition ? '6,3' : undefined}
+                  stroke={accentColor}
+                  strokeWidth={6}
+                  opacity={isTarget ? 0.3 : 0}
+                  className="transition-opacity duration-300 group-hover/conn:opacity-40"
+                  filter="url(#glow-link)"
                 />
+
+                {/* Base dashed link */}
+                <line
+                  x1={from.x} y1={from.y}
+                  x2={to.x} y2={to.y}
+                  stroke={isTarget ? accentColor : "rgba(139,92,246,0.2)"}
+                  strokeWidth={2}
+                  strokeDasharray={conn.condition ? '8,4' : undefined}
+                  className="transition-colors duration-300"
+                />
+
+                {/* Animated data flow dots */}
+                <line
+                  x1={from.x} y1={from.y}
+                  x2={to.x} y2={to.y}
+                  stroke={isTarget ? '#d8b4fe' : "rgba(139,92,246,0.6)"}
+                  strokeWidth={1.5}
+                  strokeDasharray="4 16"
+                  className="pointer-events-none"
+                >
+                  <animate attributeName="stroke-dashoffset" from="20" to="0" dur="1s" repeatCount="indefinite" />
+                </line>
+
                 {conn.bidirectional && (
-                  <circle
-                    cx={(from.x + to.x) / 2}
-                    cy={(from.y + to.y) / 2}
-                    r={4}
-                    fill="var(--border-bright)"
-                  />
+                  <>
+                    <circle cx={(from.x + to.x) / 2} cy={(from.y + to.y) / 2} r={5} fill="#050510" stroke={accentColor} strokeWidth={1} />
+                    <circle cx={(from.x + to.x) / 2} cy={(from.y + to.y) / 2} r={2} fill={accentColor} />
+                  </>
                 )}
+
+                {/* Invisible hover area for deletion */}
                 {!readOnly && (
                   <line
                     x1={from.x} y1={from.y}
                     x2={to.x} y2={to.y}
                     stroke="transparent"
-                    strokeWidth={12}
+                    strokeWidth={20}
                     style={{ cursor: 'pointer' }}
                     onClick={() => deleteConnection(conn.id)}
                   />
@@ -292,97 +352,114 @@ export function LevelFlowEditor({
                 onMouseDown={(e) => handleMouseDown(e, room.id)}
                 onClick={() => isConnectTarget && completeConnection(room.id)}
                 style={{ cursor: dragState?.roomId === room.id ? 'grabbing' : isConnectTarget ? 'crosshair' : 'pointer' }}
+                className="transition-transform duration-200"
               >
-                {/* Selection glow */}
-                {isSelected && (
-                  <rect
-                    x={-3} y={-3}
-                    width={ROOM_W + 6} height={ROOM_H + 6}
-                    rx={10} ry={10}
-                    fill="none"
-                    stroke={accentColor}
-                    strokeWidth={2}
-                    opacity={0.5}
-                  />
-                )}
+                {/* Selection / Hover Glow Frame */}
+                <rect
+                  x={-6} y={-6}
+                  width={ROOM_W + 12} height={ROOM_H + 12}
+                  rx={14} ry={14}
+                  fill="none"
+                  stroke={isSelected ? accentColor : isConnectTarget ? STATUS_WARNING : "transparent"}
+                  strokeWidth={isSelected ? 1.5 : 2}
+                  opacity={isSelected || isConnectTarget ? 0.6 : 0}
+                  className="transition-all duration-300"
+                  filter="url(#glow-node)"
+                />
 
-                {/* Room body */}
+                {/* Primary node body */}
                 <rect
                   x={0} y={0}
                   width={ROOM_W} height={ROOM_H}
-                  rx={8} ry={8}
-                  fill="var(--surface)"
-                  stroke={isSelected ? accentColor : isConnectTarget ? '#fbbf24' : cfg.color + '40'}
-                  strokeWidth={isSelected ? 2 : 1}
+                  rx={12} ry={12}
+                  fill={isSelected ? `${cfg.color}15` : "#0a0a1e"}
+                  stroke={isSelected ? accentColor : isConnectTarget ? STATUS_WARNING : `${cfg.color}40`}
+                  strokeWidth={isSelected ? 1.5 : 1}
+                  className="transition-colors duration-300 shadow-2xl"
+                  style={{ filter: isSelected ? 'drop-shadow(0 0 20px rgba(0,0,0,0.8))' : 'drop-shadow(0 10px 15px rgba(0,0,0,0.5))' }}
                 />
 
-                {/* Difficulty bar */}
+                {/* Left accent strip mapping to room type */}
                 <rect
-                  x={0} y={ROOM_H - 4}
-                  width={ROOM_W * (room.difficulty / 5)}
-                  height={4}
-                  rx={0}
+                  x={2} y={16}
+                  width={3} height={ROOM_H - 32}
+                  rx={1.5} ry={1.5}
+                  fill={cfg.color}
+                  opacity={0.8}
+                />
+
+                {/* Title Background Area */}
+                <rect x={1} y={1} width={ROOM_W - 2} height={26} rx={11} fill="rgba(255,255,255,0.02)" />
+                <line x1={1} y1={27} x2={ROOM_W - 1} y2={27} stroke={`${cfg.color}20`} strokeWidth={1} />
+
+                {/* Difficulty Gradient Bar (Top Edge) */}
+                <rect
+                  x={12} y={0}
+                  width={(ROOM_W - 24) * (room.difficulty / 5)} height={2}
                   fill={diffColor}
-                  opacity={0.6}
-                />
-                <rect
-                  x={0} y={ROOM_H - 4}
-                  width={ROOM_W}
-                  height={4}
-                  rx={0}
-                  ry={0}
-                  fill="none"
-                  stroke="none"
+                  opacity={0.8}
+                  style={{ filter: 'blur(0.5px)' }}
                 />
 
-                {/* Type indicator dot */}
-                <circle cx={16} cy={20} r={5} fill={cfg.color} opacity={0.8} />
+                {/* Type icon simulation */}
+                <circle cx={18} cy={14} r={3.5} fill={cfg.color} opacity={isSelected ? 1 : 0.7} />
+                <circle cx={18} cy={14} r={6} fill="none" stroke={cfg.color} strokeWidth={1} opacity={0.3} />
 
                 {/* Room name */}
-                <text x={28} y={24} fontSize={12} fill="var(--text)" fontFamily="sans-serif" fontWeight={600}>
-                  {room.name.length > 14 ? room.name.slice(0, 14) + '...' : room.name}
+                <text x={30} y={18} fontSize={11} fill={isSelected ? '#fff' : 'var(--text)'} fontFamily="monospace" fontWeight={700} letterSpacing={0.5}>
+                  {room.name.length > 14 ? room.name.slice(0, 14) + '...' : room.name.toUpperCase()}
                 </text>
 
                 {/* Room type label */}
-                <text x={28} y={40} fontSize={9} fill="var(--text-muted)" fontFamily="sans-serif">
+                <text x={18} y={42} fontSize={9} fill={cfg.color} opacity={0.8} fontFamily="monospace" fontWeight={600} letterSpacing={1} className="uppercase">
                   {cfg.label}
                 </text>
 
-                {/* Pacing indicator */}
-                <text x={28} y={54} fontSize={8} fill="var(--text-muted)" fontFamily="sans-serif">
-                  {room.pacing} &middot; diff {room.difficulty}
+                {/* Pacing indicator & Diff text */}
+                <text x={18} y={56} fontSize={8} fill="var(--text-muted)" opacity={0.7} fontFamily="monospace" letterSpacing={1} className="uppercase">
+                  PACING: <tspan fill="#d8b4fe">{room.pacing}</tspan> | DIFF: <tspan fill={diffColor}>{room.difficulty}</tspan>
                 </text>
+
+                {/* Grid texture inside node for tech look */}
+                <rect
+                  x={ROOM_W - 40} y={32}
+                  width={30} height={20}
+                  fill="url(#grid)"
+                  opacity={0.3}
+                />
 
                 {/* Action buttons (visible on hover or selection) */}
                 {!readOnly && isSelected && (
-                  <>
+                  <g className="opacity-0 hover:opacity-100 transition-opacity duration-300" style={{ opacity: 1 }}>
                     {/* Link button */}
                     <g
-                      transform={`translate(${ROOM_W - 36}, 6)`}
+                      transform={`translate(${ROOM_W - 38}, 4)`}
                       onClick={(e) => { e.stopPropagation(); startConnection(room.id); }}
                       style={{ cursor: 'pointer' }}
+                      className="group/btn"
                     >
-                      <rect x={0} y={0} width={14} height={14} rx={3} fill="var(--border)" />
-                      <text x={3} y={11} fontSize={10} fill="var(--text-muted-hover)">&#128279;</text>
+                      <rect x={0} y={0} width={16} height={16} rx={4} fill="rgba(139,92,246,0.2)" stroke="rgba(139,92,246,0.4)" />
+                      <text x={4} y={12} fontSize={10} fill="#a78bfa" className="opacity-80 group-hover/btn:opacity-100">&#128279;</text>
                     </g>
                     {/* Delete button */}
                     <g
-                      transform={`translate(${ROOM_W - 18}, 6)`}
+                      transform={`translate(${ROOM_W - 20}, 4)`}
                       onClick={(e) => { e.stopPropagation(); deleteRoom(room.id); }}
                       style={{ cursor: 'pointer' }}
+                      className="group/btn"
                     >
-                      <rect x={0} y={0} width={14} height={14} rx={3} fill="#f8717118" />
-                      <text x={3} y={11} fontSize={10} fill="#f87171">&times;</text>
+                      <rect x={0} y={0} width={16} height={16} rx={4} fill={`${STATUS_ERROR}20`} stroke={`${STATUS_ERROR}40`} />
+                      <text x={5.5} y={12} fontSize={10} fill={STATUS_ERROR} className="opacity-80 group-hover/btn:opacity-100">&times;</text>
                     </g>
-                  </>
+                  </g>
                 )}
 
-                {/* Spawn count badge */}
+                {/* Spawn count HUD badge */}
                 {room.spawnEntries.length > 0 && (
-                  <g transform={`translate(${ROOM_W - 20}, ${ROOM_H - 20})`}>
-                    <rect x={0} y={0} width={16} height={14} rx={3} fill={cfg.color + '20'} />
-                    <text x={8} y={11} fontSize={8} fill={cfg.color} textAnchor="middle" fontFamily="sans-serif">
-                      {room.spawnEntries.reduce((s, e) => s + e.count, 0)}
+                  <g transform={`translate(${ROOM_W - 24}, ${ROOM_H - 18})`}>
+                    <rect x={0} y={0} width={18} height={12} rx={2} fill={`${cfg.color}15`} stroke={`${cfg.color}40`} />
+                    <text x={9} y={9} fontSize={8} fill={cfg.color} textAnchor="middle" fontFamily="monospace" fontWeight="bold">
+                      {String(room.spawnEntries.reduce((s, e) => s + e.count, 0)).padStart(2, '0')}
                     </text>
                   </g>
                 )}

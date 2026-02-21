@@ -32,8 +32,8 @@ import {
 import { buildAudioEventPrompt } from '@/lib/prompts/audio-events';
 import type { AudioZone, SoundEmitter } from '@/types/audio-scene';
 import type { AudioEventCatalogConfig } from './AudioEventCatalog';
-
-const CONTENT_ACCENT = '#f59e0b';
+import { MODULE_COLORS, getAppOrigin } from '@/lib/constants';
+import { STATUS_SUCCESS, STATUS_ERROR, ACCENT_VIOLET, OPACITY_15, OPACITY_30 } from '@/lib/chart-colors';
 
 type TabId = 'overview' | 'roadmap' | 'painter' | 'soundscapes' | 'settings' | 'events' | 'codegen' | 'autogen';
 
@@ -70,7 +70,7 @@ export function AudioView() {
     moduleId: 'audio',
     sessionKey: 'audio-pipeline',
     label: 'Audio Pipeline',
-    accentColor: CONTENT_ACCENT,
+    accentColor: MODULE_COLORS.content,
   });
 
   // ── Scene CLI session ──
@@ -79,7 +79,7 @@ export function AudioView() {
     moduleId: 'audio',
     sessionKey: 'audio-codegen',
     label: 'Audio Code Gen',
-    accentColor: CONTENT_ACCENT,
+    accentColor: MODULE_COLORS.content,
     onComplete: (success) => {
       if (success && activeDoc) {
         updateDoc({
@@ -96,7 +96,7 @@ export function AudioView() {
     moduleId: 'audio',
     sessionKey: 'audio-events',
     label: 'Audio Events Gen',
-    accentColor: CONTENT_ACCENT,
+    accentColor: MODULE_COLORS.content,
   });
 
   const handleGenerateEvents = useCallback((config: AudioEventCatalogConfig) => {
@@ -128,7 +128,7 @@ export function AudioView() {
     moduleId: AUD_MODULE_ID,
     sessionKey: `${AUD_MODULE_ID}-rv-cli`,
     label: AUD_MODULE_LABEL,
-    accentColor: CONTENT_ACCENT,
+    accentColor: MODULE_COLORS.content,
     onItemCompleted: handleRvItemCompleted,
   });
 
@@ -159,7 +159,7 @@ export function AudioView() {
     moduleId: AUD_MODULE_ID,
     sessionKey: `${AUD_MODULE_ID}-rv-review`,
     label: `${AUD_MODULE_LABEL} Review`,
-    accentColor: CONTENT_ACCENT,
+    accentColor: MODULE_COLORS.content,
     onComplete: handleRvReviewComplete,
   });
 
@@ -167,12 +167,13 @@ export function AudioView() {
     moduleId: AUD_MODULE_ID,
     sessionKey: `${AUD_MODULE_ID}-rv-fix`,
     label: `${AUD_MODULE_LABEL} Fix`,
-    accentColor: CONTENT_ACCENT,
+    accentColor: MODULE_COLORS.content,
   });
 
   const handleRvFix = useCallback((feature: FeatureRow) => {
     if (!feature.nextSteps) return;
-    const task = TaskFactory.featureFix(AUD_MODULE_ID, feature, `${AUD_MODULE_LABEL} Fix`);
+    const appOrigin = getAppOrigin();
+    const task = TaskFactory.featureFix(AUD_MODULE_ID, feature, `${AUD_MODULE_LABEL} Fix`, appOrigin);
     rvFixCli.execute(task);
   }, [rvFixCli]);
 
@@ -198,7 +199,7 @@ export function AudioView() {
   const startRvReview = useCallback(() => {
     const defs = MODULE_FEATURE_DEFINITIONS[AUD_MODULE_ID] ?? [];
     if (defs.length === 0) return;
-    const appOrigin = typeof window !== 'undefined' ? window.location.origin : 'http://localhost:3000';
+    const appOrigin = getAppOrigin();
     const task = TaskFactory.featureReview(AUD_MODULE_ID, AUD_MODULE_LABEL, defs, appOrigin, `${AUD_MODULE_LABEL} Review`);
     rvReviewCli.execute(task);
   }, [rvReviewCli]);
@@ -292,7 +293,7 @@ export function AudioView() {
         >
           <span
             className="w-1.5 h-1.5 rounded-full flex-shrink-0"
-            style={{ backgroundColor: rvToast.type === 'success' ? '#4ade80' : '#f87171' }}
+            style={{ backgroundColor: rvToast.type === 'success' ? STATUS_SUCCESS : STATUS_ERROR }}
           />
           {rvToast.message}
         </div>
@@ -303,7 +304,7 @@ export function AudioView() {
         {/* Header */}
         <div className="relative overflow-hidden flex items-center gap-2 px-3 py-3 border-b border-border">
           <ModuleHeaderDecoration moduleId="audio" variant="compact" />
-          <Music className="w-3.5 h-3.5 relative" style={{ color: CONTENT_ACCENT }} />
+          <Music className="w-3.5 h-3.5 relative" style={{ color: MODULE_COLORS.content }} />
           <h2 className="text-xs font-semibold text-text relative">Audio Scenes</h2>
         </div>
 
@@ -362,9 +363,9 @@ export function AudioView() {
               disabled={!newDocName.trim() || isCreating}
               className="px-2 py-2 rounded-md transition-colors disabled:opacity-50 flex-shrink-0"
               style={{
-                backgroundColor: `${CONTENT_ACCENT}15`,
-                color: CONTENT_ACCENT,
-                border: `1px solid ${CONTENT_ACCENT}30`,
+                backgroundColor: `${MODULE_COLORS.content}15`,
+                color: MODULE_COLORS.content,
+                border: `1px solid ${MODULE_COLORS.content}30`,
               }}
             >
               <Plus className="w-3.5 h-3.5" />
@@ -394,9 +395,9 @@ export function AudioView() {
                 disabled={audioCli.isRunning || (activeDoc.zones.length === 0 && activeDoc.emitters.length === 0)}
                 className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all disabled:opacity-50"
                 style={{
-                  backgroundColor: `${CONTENT_ACCENT}15`,
-                  color: CONTENT_ACCENT,
-                  border: `1px solid ${CONTENT_ACCENT}30`,
+                  backgroundColor: `${MODULE_COLORS.content}15`,
+                  color: MODULE_COLORS.content,
+                  border: `1px solid ${MODULE_COLORS.content}30`,
                 }}
               >
                 {audioCli.isRunning ? (
@@ -418,14 +419,14 @@ export function AudioView() {
 
             {/* Tab bar */}
             <div className="flex items-center gap-1 px-5 border-b border-border">
-              <TabButton label="Overview" icon={Eye} active={activeTab === 'overview'} onClick={() => setActiveTab('overview')} accent={CONTENT_ACCENT} />
-              <TabButton label="Roadmap" icon={ListChecks} active={activeTab === 'roadmap'} onClick={() => setActiveTab('roadmap')} accent={CONTENT_ACCENT} />
-              <TabButton label="Scene Painter" icon={Volume2} active={activeTab === 'painter'} onClick={() => setActiveTab('painter')} accent={CONTENT_ACCENT} />
-              <TabButton label="Event Catalog" icon={List} active={activeTab === 'events'} onClick={() => setActiveTab('events')} accent={CONTENT_ACCENT} />
-              <TabButton label="Soundscapes" icon={Radio} active={activeTab === 'soundscapes'} onClick={() => setActiveTab('soundscapes')} accent={CONTENT_ACCENT} />
-              <TabButton label="Settings" icon={Settings} active={activeTab === 'settings'} onClick={() => setActiveTab('settings')} accent={CONTENT_ACCENT} />
-              <TabButton label="Code Gen" icon={Code2} active={activeTab === 'codegen'} onClick={() => setActiveTab('codegen')} accent={CONTENT_ACCENT} />
-              <TabButton label="Auto Gen" icon={Wand2} active={activeTab === 'autogen'} onClick={() => setActiveTab('autogen')} accent={CONTENT_ACCENT} />
+              <TabButton label="Overview" icon={Eye} active={activeTab === 'overview'} onClick={() => setActiveTab('overview')} accent={MODULE_COLORS.content} />
+              <TabButton label="Roadmap" icon={ListChecks} active={activeTab === 'roadmap'} onClick={() => setActiveTab('roadmap')} accent={MODULE_COLORS.content} />
+              <TabButton label="Scene Painter" icon={Volume2} active={activeTab === 'painter'} onClick={() => setActiveTab('painter')} accent={MODULE_COLORS.content} />
+              <TabButton label="Event Catalog" icon={List} active={activeTab === 'events'} onClick={() => setActiveTab('events')} accent={MODULE_COLORS.content} />
+              <TabButton label="Soundscapes" icon={Radio} active={activeTab === 'soundscapes'} onClick={() => setActiveTab('soundscapes')} accent={MODULE_COLORS.content} />
+              <TabButton label="Settings" icon={Settings} active={activeTab === 'settings'} onClick={() => setActiveTab('settings')} accent={MODULE_COLORS.content} />
+              <TabButton label="Code Gen" icon={Code2} active={activeTab === 'codegen'} onClick={() => setActiveTab('codegen')} accent={MODULE_COLORS.content} />
+              <TabButton label="Auto Gen" icon={Wand2} active={activeTab === 'autogen'} onClick={() => setActiveTab('autogen')} accent={MODULE_COLORS.content} />
             </div>
 
             {/* Tab content */}
@@ -435,7 +436,7 @@ export function AudioView() {
                   <FeatureMatrix
                     key={rvRefetch}
                     moduleId={AUD_MODULE_ID}
-                    accentColor={CONTENT_ACCENT}
+                    accentColor={MODULE_COLORS.content}
                     onReview={startRvReview}
                     onSync={handleRvSync}
                     isReviewing={rvReviewCli.isRunning}
@@ -452,7 +453,7 @@ export function AudioView() {
                       items={rvChecklist}
                       subModuleId={AUD_MODULE_ID}
                       onRunPrompt={rvChecklistCli.sendPrompt}
-                      accentColor={CONTENT_ACCENT}
+                      accentColor={MODULE_COLORS.content}
                       isRunning={rvChecklistCli.isRunning}
                       activeItemId={rvChecklistCli.activeItemId}
                       lastCompletedItemId={rvLastCompletedId}
@@ -475,7 +476,7 @@ export function AudioView() {
                       onSelectEmitter={(id) => { setSelectedEmitterId(id); if (id) setSelectedZoneId(null); }}
                       selectedZoneId={selectedZoneId}
                       selectedEmitterId={selectedEmitterId}
-                      accentColor={CONTENT_ACCENT}
+                      accentColor={MODULE_COLORS.content}
                     />
                   </div>
 
@@ -488,7 +489,7 @@ export function AudioView() {
                           onUpdate={handleZoneUpdate}
                           onGenerateCode={handleGenerateZoneCode}
                           onGenerateSoundscape={handleGenerateSoundscape}
-                          accentColor={CONTENT_ACCENT}
+                          accentColor={MODULE_COLORS.content}
                           isGenerating={audioCli.isRunning}
                         />
                       )}
@@ -496,7 +497,7 @@ export function AudioView() {
                         <EmitterPropertyPanel
                           emitter={selectedEmitter}
                           onUpdate={handleEmitterUpdate}
-                          accentColor={CONTENT_ACCENT}
+                          accentColor={MODULE_COLORS.content}
                         />
                       )}
                     </div>
@@ -566,9 +567,9 @@ export function AudioView() {
                               disabled={audioCli.isRunning || !zone.soundscapeDescription.trim()}
                               className="mt-2 flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all disabled:opacity-50"
                               style={{
-                                backgroundColor: '#a78bfa15',
-                                color: '#a78bfa',
-                                border: '1px solid #a78bfa30',
+                                backgroundColor: `${ACCENT_VIOLET}${OPACITY_15}`,
+                                color: ACCENT_VIOLET,
+                                border: `1px solid ${ACCENT_VIOLET}${OPACITY_30}`,
                               }}
                             >
                               <Zap className="w-3 h-3" />
@@ -691,7 +692,7 @@ export function AudioView() {
 
               {activeTab === 'codegen' && (
                 <div className="overflow-y-auto p-5">
-                  <AudioCodeGenPanel doc={activeDoc} accentColor={CONTENT_ACCENT} />
+                  <AudioCodeGenPanel doc={activeDoc} accentColor={MODULE_COLORS.content} />
                 </div>
               )}
 
@@ -699,7 +700,7 @@ export function AudioView() {
                 <div className="overflow-y-auto p-5">
                   <SpatialAudioGeneratorPanel
                     activeDoc={activeDoc}
-                    accentColor={CONTENT_ACCENT}
+                    accentColor={MODULE_COLORS.content}
                     onSceneCreated={refetch}
                   />
                 </div>
@@ -743,9 +744,9 @@ export function AudioView() {
                     disabled={!newDocName.trim() || isCreating}
                     className="flex items-center gap-1.5 px-3 py-2 rounded-md text-xs font-medium transition-all disabled:opacity-50"
                     style={{
-                      backgroundColor: `${CONTENT_ACCENT}15`,
-                      color: CONTENT_ACCENT,
-                      border: `1px solid ${CONTENT_ACCENT}30`,
+                      backgroundColor: `${MODULE_COLORS.content}15`,
+                      color: MODULE_COLORS.content,
+                      border: `1px solid ${MODULE_COLORS.content}30`,
                     }}
                   >
                     <Plus className="w-3.5 h-3.5" />

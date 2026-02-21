@@ -10,11 +10,13 @@ import { useModuleCLI } from '@/hooks/useModuleCLI';
 import { useChecklistCLI } from '@/hooks/useChecklistCLI';
 import { useModuleStore } from '@/stores/moduleStore';
 import { TaskFactory } from '@/lib/cli-task';
+import { getAppOrigin } from '@/lib/constants';
 import { AnimationStateMachine } from './AnimationStateMachine';
 import { AnimationChecklist } from './AnimationChecklist';
 import type { ChecklistStep } from './AnimationChecklist';
+import { ACCENT_VIOLET, OPACITY_15, OPACITY_30 } from '@/lib/chart-colors';
 
-const ANIM_ACCENT = '#a78bfa';
+const ANIM_ACCENT = ACCENT_VIOLET;
 
 export function AnimationsView() {
   const mod = SUB_MODULE_MAP['animations'];
@@ -34,11 +36,13 @@ export function AnimationsView() {
     accentColor: ANIM_ACCENT,
   });
 
+  const appOrigin = getAppOrigin();
+
   const handleGenerateStep = useCallback((step: ChecklistStep) => {
     if (!step.prompt) return;
-    const task = TaskFactory.checklist('animations', step.id, step.prompt, 'Anim Setup');
+    const task = TaskFactory.checklist('animations', step.id, step.prompt, 'Anim Setup', appOrigin);
     checklistCli.execute(task);
-  }, [checklistCli]);
+  }, [checklistCli, appOrigin]);
 
   const handleMarkComplete = useCallback((stepId: string) => {
     setCompletedSteps((prev) => {
@@ -131,7 +135,7 @@ export function AnimationsView() {
               onClick={handleCustomPrompt}
               disabled={!customPrompt.trim()}
               className="px-3 py-2 rounded-lg text-xs font-medium transition-colors disabled:opacity-50"
-              style={{ backgroundColor: `${ANIM_ACCENT}15`, color: ANIM_ACCENT, border: `1px solid ${ANIM_ACCENT}30` }}
+              style={{ backgroundColor: `${ANIM_ACCENT}${OPACITY_15}`, color: ANIM_ACCENT, border: `1px solid ${ANIM_ACCENT}${OPACITY_30}` }}
             >
               Send
             </button>

@@ -1,3 +1,5 @@
+import type { SubModuleId } from './modules';
+
 // ── Error fingerprint categories ──
 
 export type ErrorCategory =
@@ -19,7 +21,7 @@ export type ErrorCategory =
 export interface ErrorMemoryRecord {
   id: number;
   /** The module this error occurred in (e.g., "arpg-combat") */
-  moduleId: string;
+  moduleId: SubModuleId;
   /** Fingerprint hash — groups identical errors across sessions */
   fingerprint: string;
   /** Human-readable category */

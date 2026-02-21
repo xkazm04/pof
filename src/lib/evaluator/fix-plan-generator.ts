@@ -5,7 +5,7 @@
 import type { EvalFinding, FindingSeverity } from './finding-collector';
 import type { ProjectContext } from '@/lib/prompt-context';
 import { buildProjectContextHeader } from '@/lib/prompt-context';
-import { MODULE_LABELS } from './correlation-engine';
+import { MODULE_LABELS } from '@/lib/module-registry';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 

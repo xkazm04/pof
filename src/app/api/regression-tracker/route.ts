@@ -1,4 +1,5 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest } from 'next/server';
+import { apiSuccess, apiError } from '@/lib/api-utils';
 import {
   processSession,
   getAllFingerprints,
@@ -11,43 +12,36 @@ import {
 } from '@/lib/regression-tracker';
 import { getSession, listSessions } from '@/lib/game-director-db';
 
-function ok(data: unknown) {
-  return NextResponse.json({ ok: true, data });
-}
-function err(msg: string, status = 400) {
-  return NextResponse.json({ ok: false, error: msg }, { status });
-}
-
 // GET ?action=fingerprints | alerts | active-alerts | occurrences&fpId=X | stats
 export async function GET(req: NextRequest) {
   const action = req.nextUrl.searchParams.get('action');
 
   try {
     if (action === 'fingerprints') {
-      return ok(getAllFingerprints());
+      return apiSuccess(getAllFingerprints());
     }
     if (action === 'alerts') {
-      return ok(getAllAlerts());
+      return apiSuccess(getAllAlerts());
     }
     if (action === 'active-alerts') {
-      return ok(getActiveAlerts());
+      return apiSuccess(getActiveAlerts());
     }
     if (action === 'occurrences') {
       const fpId = req.nextUrl.searchParams.get('fpId');
-      if (!fpId) return err('fpId required');
-      return ok(getOccurrences(fpId));
+      if (!fpId) return apiError('fpId required', 400);
+      return apiSuccess(getOccurrences(fpId));
     }
     if (action === 'stats') {
-      return ok(getRegressionStats());
+      return apiSuccess(getRegressionStats());
     }
     if (action === 'sessions') {
       // Return completed sessions for the dropdown
       const sessions = listSessions().filter(s => s.status === 'complete');
-      return ok(sessions);
+      return apiSuccess(sessions);
     }
-    return err('Unknown action');
+    return apiError('Unknown action', 400);
   } catch (e) {
-    return err(String(e), 500);
+    return apiError(String(e));
   }
 }
 
@@ -59,30 +53,30 @@ export async function POST(req: NextRequest) {
 
     if (action === 'process-session') {
       const { sessionId } = body;
-      if (!sessionId) return err('sessionId required');
+      if (!sessionId) return apiError('sessionId required', 400);
       const session = getSession(sessionId);
-      if (!session) return err('Session not found', 404);
-      if (session.status !== 'complete') return err('Session must be complete to process');
+      if (!session) return apiError('Session not found', 404);
+      if (session.status !== 'complete') return apiError('Session must be complete to process', 400);
       const report = processSession(session);
-      return ok(report);
+      return apiSuccess(report);
     }
 
     if (action === 'dismiss') {
       const { alertId } = body;
-      if (!alertId) return err('alertId required');
+      if (!alertId) return apiError('alertId required', 400);
       dismissAlert(alertId);
-      return ok({ dismissed: true });
+      return apiSuccess({ dismissed: true });
     }
 
     if (action === 'resolve') {
       const { fingerprintId } = body;
-      if (!fingerprintId) return err('fingerprintId required');
+      if (!fingerprintId) return apiError('fingerprintId required', 400);
       markResolved(fingerprintId);
-      return ok({ resolved: true });
+      return apiSuccess({ resolved: true });
     }
 
-    return err('Unknown action');
+    return apiError('Unknown action', 400);
   } catch (e) {
-    return err(String(e), 500);
+    return apiError(String(e));
   }
 }

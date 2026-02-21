@@ -1,15 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { useModuleStore } from '@/stores/moduleStore';
-
-// Zustand persist uses localStorage — provide a minimal stub
-const storage: Record<string, string> = {};
-Object.defineProperty(globalThis, 'localStorage', {
-  value: {
-    getItem: (k: string) => storage[k] ?? null,
-    setItem: (k: string, v: string) => { storage[k] = v; },
-    removeItem: (k: string) => { delete storage[k]; },
-  },
-});
+// localStorage mock is installed by vitest setupFiles (src/__tests__/setup.ts)
 
 function resetStore() {
   useModuleStore.setState({
@@ -46,10 +37,10 @@ describe('useModuleStore', () => {
 
     it('does not affect other modules', () => {
       useModuleStore.getState().setChecklistItem('arpg-combat', 'hit-detection', true);
-      useModuleStore.getState().setChecklistItem('inventory', 'grid-layout', true);
+      useModuleStore.getState().setChecklistItem('arpg-inventory', 'grid-layout', true);
       const progress = useModuleStore.getState().checklistProgress;
       expect(progress['arpg-combat']?.['hit-detection']).toBe(true);
-      expect(progress['inventory']?.['grid-layout']).toBe(true);
+      expect(progress['arpg-inventory']?.['grid-layout']).toBe(true);
     });
   });
 

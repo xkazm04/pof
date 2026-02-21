@@ -1,4 +1,5 @@
 import type { ABTest, ABTestStatus } from '@/types/prompt-evolution';
+import type { SubModuleId } from '@/types/modules';
 
 // ── A/B test logic ──────────────────────────────────────────────────────────
 
@@ -12,7 +13,7 @@ export function createABTest(
 ): ABTest {
   return {
     id: `ab-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
-    moduleId,
+    moduleId: moduleId as SubModuleId,
     checklistItemId,
     variantAId,
     variantBId,

@@ -1,9 +1,10 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
+import { useEffect } from 'react';
 import { useActivityFeedStore } from '@/stores/activityFeedStore';
 import { eventBus } from '@/lib/event-bus';
-import { initEventBusBridge } from '@/lib/event-bus-bridge';
+import { eventBusBridgeLifecycle } from '@/lib/event-bus-bridge';
+import { useGuardedLifecycle } from '@/hooks/useLifecycle';
 import type { BusEvent } from '@/types/event-bus';
 
 /**
@@ -16,18 +17,8 @@ import type { BusEvent } from '@/types/event-bus';
 export function useActivityFeedBridge() {
   const addEvent = useActivityFeedStore((s) => s.addEvent);
 
-  // Initialize the store → bus bridge once
-  const bridgeInitialized = useRef(false);
-
-  useEffect(() => {
-    if (bridgeInitialized.current) return;
-    bridgeInitialized.current = true;
-    const cleanup = initEventBusBridge();
-    return () => {
-      cleanup();
-      bridgeInitialized.current = false;
-    };
-  }, []);
+  // Initialize the store → bus bridge once via Lifecycle protocol
+  useGuardedLifecycle(() => eventBusBridgeLifecycle);
 
   // ── CLI task completion → activity feed ──
   useEffect(() => {

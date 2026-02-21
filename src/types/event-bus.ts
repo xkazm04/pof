@@ -1,3 +1,5 @@
+import type { SubModuleId } from './modules';
+
 // ── Typed Event Bus — Channel Definitions ──
 //
 // Namespaced event channels for cross-module communication.
@@ -58,13 +60,13 @@ export interface BuildEvents {
 /** Checklist / progress events */
 export interface ChecklistEvents {
   'checklist.item.changed': {
-    moduleId: string;
+    moduleId: SubModuleId;
     itemId: string;
     checked: boolean;
     source: 'user' | 'auto-verify' | 'cli';
   };
   'checklist.module.completed': {
-    moduleId: string;
+    moduleId: SubModuleId;
     totalItems: number;
   };
 }
@@ -76,7 +78,7 @@ export interface FileEvents {
     kind: 'create' | 'modify' | 'delete';
   };
   'file.verified': {
-    moduleId: string;
+    moduleId: SubModuleId;
     itemId: string;
     status: 'full' | 'partial' | 'stub' | 'missing';
     completeness: number;
@@ -86,7 +88,7 @@ export interface FileEvents {
 /** Navigation events */
 export interface NavigationEvents {
   'nav.module.changed': {
-    moduleId: string;
+    moduleId: SubModuleId;
     previousModuleId?: string;
   };
   'nav.tab.changed': {

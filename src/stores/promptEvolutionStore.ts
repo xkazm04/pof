@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { apiFetch } from '@/lib/api-utils';
+import type { SubModuleId } from '@/types/modules';
 import type {
   PromptVariant,
   ABTest,
@@ -38,7 +39,7 @@ interface PromptEvolutionState {
   suggestions: EvolutionSuggestion[];
   families: TemplateFamily[];
   stats: EvolutionStats;
-  selectedModuleId: string | null;
+  selectedModuleId: SubModuleId | null;
   selectedChecklistItemId: string | null;
   selectedVariantId: string | null;
   selectedTestId: string | null;
@@ -56,22 +57,22 @@ interface PromptEvolutionState {
 
   // Actions
   init: () => Promise<void>;
-  setSelectedModule: (moduleId: string | null) => void;
+  setSelectedModule: (moduleId: SubModuleId | null) => void;
   setSelectedChecklistItem: (itemId: string | null) => void;
   setSelectedVariant: (variantId: string | null) => void;
   setSelectedTest: (testId: string | null) => void;
   setActiveSubTab: (tab: PromptEvolutionState['activeSubTab']) => void;
-  loadVariants: (moduleId: string, checklistItemId?: string) => Promise<void>;
-  createVariant: (moduleId: string, checklistItemId: string, prompt: string) => Promise<PromptVariant | null>;
+  loadVariants: (moduleId: SubModuleId, checklistItemId?: string) => Promise<void>;
+  createVariant: (moduleId: SubModuleId, checklistItemId: string, prompt: string) => Promise<PromptVariant | null>;
   mutateVariant: (variantId: string, mutation: MutationType) => Promise<PromptVariant | null>;
-  startABTest: (moduleId: string, checklistItemId: string, variantAId: string, variantBId: string) => Promise<ABTest | null>;
+  startABTest: (moduleId: SubModuleId, checklistItemId: string, variantAId: string, variantBId: string) => Promise<ABTest | null>;
   recordTrial: (testId: string, variantSlot: 'A' | 'B', success: boolean, durationMs: number) => Promise<ABTest | null>;
   concludeTest: (testId: string) => Promise<ABTest | null>;
-  clusterPrompts: (moduleId: string) => Promise<void>;
+  clusterPrompts: (moduleId: SubModuleId) => Promise<void>;
   loadStats: () => Promise<void>;
-  loadSuggestions: (moduleId: string) => Promise<void>;
-  getBestVariant: (moduleId: string, checklistItemId: string) => Promise<PromptVariant | null>;
-  optimizePrompt: (moduleId: string, prompt: string) => Promise<PromptOptimizationResult | null>;
+  loadSuggestions: (moduleId: SubModuleId) => Promise<void>;
+  getBestVariant: (moduleId: SubModuleId, checklistItemId: string) => Promise<PromptVariant | null>;
+  optimizePrompt: (moduleId: SubModuleId, prompt: string) => Promise<PromptOptimizationResult | null>;
 }
 
 export const usePromptEvolutionStore = create<PromptEvolutionState>((set, get) => ({

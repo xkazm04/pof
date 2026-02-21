@@ -8,8 +8,9 @@ import {
 } from 'lucide-react';
 import type { CreateSessionPayload, TestCategory, PlaytestConfig } from '@/types/game-director';
 import type { PlaytestSession } from '@/types/game-director';
+import { ACCENT_ORANGE } from '@/lib/chart-colors';
 
-const ACCENT = '#f97316';
+const ACCENT = ACCENT_ORANGE;
 
 const TEST_CATEGORIES: { id: TestCategory; label: string; icon: typeof Swords; description: string }[] = [
   { id: 'combat', label: 'Combat', icon: Swords, description: 'Test combos, hit detection, damage' },

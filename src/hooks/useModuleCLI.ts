@@ -6,10 +6,12 @@ import { useProjectStore } from '@/stores/projectStore';
 import { recordSessionOutcome } from '@/hooks/useSessionAnalytics';
 import { buildTaskPrompt, type CLITask } from '@/lib/cli-task';
 import type { SkillId } from '@/components/cli/skills';
+import { UI_TIMEOUTS } from '@/lib/constants';
+import type { SubModuleId } from '@/types/modules';
 
 interface UseModuleCLIOptions {
   /** Module this session is displayed within (must match the page's activeModuleId for inline visibility) */
-  moduleId: string;
+  moduleId: SubModuleId;
   /** Unique key to distinguish this session from others in the same module */
   sessionKey: string;
   /** Tab label shown in bottom panel and terminal header */
@@ -20,13 +22,19 @@ interface UseModuleCLIOptions {
   onComplete?: (success: boolean) => void;
 }
 
+export interface UseModuleCLIResult {
+  sendPrompt: (prompt: string) => void;
+  execute: (task: CLITask) => Promise<void>;
+  isRunning: boolean;
+}
+
 /**
  * Reusable hook for launching a CLI terminal from any module button.
  *
  * Handles: session creation/lookup, prompt dispatch, running-state subscription,
  * auto-callback when the stream completes, and session analytics recording.
  */
-export function useModuleCLI(opts: UseModuleCLIOptions) {
+export function useModuleCLI(opts: UseModuleCLIOptions): UseModuleCLIResult {
   const projectPath = useProjectStore((s) => s.projectPath);
   const createSession = useCLIPanelStore((s) => s.createSession);
   const findSessionByKey = useCLIPanelStore((s) => s.findSessionByKey);
@@ -87,7 +95,7 @@ export function useModuleCLI(opts: UseModuleCLIOptions) {
         }
 
         onCompleteRef.current?.(success);
-      }, 50);
+      }, UI_TIMEOUTS.raceConditionBuffer);
     }
     prevRunningRef.current = isRunning;
   }, [isRunning]);
@@ -117,7 +125,7 @@ export function useModuleCLI(opts: UseModuleCLIOptions) {
             detail: { tabId, prompt },
           })
         );
-      }, 100);
+      }, UI_TIMEOUTS.mountDelay);
     },
     [findSessionByKey, createSession, setActiveTab, projectPath, opts.sessionKey, opts.moduleId, opts.label, opts.accentColor]
   );
@@ -146,35 +154,7 @@ export function useModuleCLI(opts: UseModuleCLIOptions) {
     [sendPrompt, opts.sessionKey],
   );
 
-  /**
-   * Optimized prompt sender: runs the prompt through the self-learning optimizer
-   * first, then dispatches the rewritten version. Falls back to the original
-   * prompt if the optimizer fails or has insufficient data.
-   */
-  const sendOptimizedPrompt = useCallback(
-    async (prompt: string) => {
-      try {
-        const res = await fetch('/api/prompt-evolution', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ action: 'optimize-prompt', moduleId: opts.moduleId, prompt }),
-        });
-        if (res.ok) {
-          const json = await res.json();
-          if (json.data?.wasModified && json.data?.optimized) {
-            sendPrompt(json.data.optimized);
-            return;
-          }
-        }
-      } catch {
-        // Fall through to unoptimized send
-      }
-      sendPrompt(prompt);
-    },
-    [sendPrompt, opts.moduleId],
-  );
-
-  return { sendPrompt, sendOptimizedPrompt, execute, isRunning };
+  return { sendPrompt, execute, isRunning };
 }
 
 /**
@@ -188,7 +168,8 @@ function resolveAndApplySkills(sessionKey: string): void {
     body: JSON.stringify({ action: 'resolve-skills' }),
   })
     .then((res) => (res.ok ? res.json() : null))
-    .then((json: { skills?: SkillId[] } | null) => {
+    .then((envelope: { success: boolean; data: { skills?: SkillId[] } } | null) => {
+      const json = envelope?.success ? envelope.data : null;
       if (!json?.skills?.length) return;
       const { sessions, tabOrder } = useCLIPanelStore.getState();
       const tabId = tabOrder.find((id) => sessions[id]?.sessionKey === sessionKey);

@@ -23,6 +23,7 @@ import type {
   BurnChartPoint,
   SubsystemSignal,
 } from '@/types/project-health';
+import { ACCENT_EMERALD, STATUS_WARNING, STATUS_ERROR, STATUS_INFO, STATUS_NEUTRAL, OPACITY_10, OPACITY_20 } from '@/lib/chart-colors';
 
 // ── Constants ───────────────────────────────────────────────────────────────
 
@@ -34,9 +35,9 @@ const EMPTY_BURN: BurnChartPoint[] = [];
 const EMPTY_SIGNALS: SubsystemSignal[] = [];
 
 const STATUS_COLORS: Record<ModuleHealthStatus, string> = {
-  healthy: '#34d399',
-  warning: '#fbbf24',
-  critical: '#f87171',
+  healthy: ACCENT_EMERALD,
+  warning: STATUS_WARNING,
+  critical: STATUS_ERROR,
   'not-started': '#4b5563',
 };
 
@@ -48,10 +49,10 @@ const STATUS_BADGE: Record<ModuleHealthStatus, 'success' | 'warning' | 'error' |
 };
 
 const SIGNAL_COLORS: Record<string, string> = {
-  healthy: '#34d399',
-  warning: '#fbbf24',
-  critical: '#f87171',
-  inactive: '#6b7280',
+  healthy: ACCENT_EMERALD,
+  warning: STATUS_WARNING,
+  critical: STATUS_ERROR,
+  inactive: STATUS_NEUTRAL,
 };
 
 type ViewTab = 'overview' | 'velocity' | 'quality' | 'milestones';
@@ -144,7 +145,7 @@ export function HolisticHealthView() {
       {/* ── Empty state ─────────────────────────────────────────── */}
       {!summary && !isLoading && !error && (
         <div className="flex flex-col items-center justify-center py-16 text-center">
-          <div className="w-12 h-12 rounded-xl border border-border flex items-center justify-center mb-4" style={{ backgroundColor: '#34d39910' }}>
+          <div className="w-12 h-12 rounded-xl border border-border flex items-center justify-center mb-4" style={{ backgroundColor: `${ACCENT_EMERALD}${OPACITY_10}` }}>
             <HeartPulse className="w-6 h-6 text-emerald-400" />
           </div>
           <h3 className="text-sm font-semibold text-text mb-1">No Health Data Yet</h3>
@@ -172,7 +173,7 @@ export function HolisticHealthView() {
                   value={summary.overallCompletion}
                   size={48}
                   strokeWidth={5}
-                  color={summary.overallCompletion >= 70 ? '#34d399' : summary.overallCompletion >= 40 ? '#fbbf24' : '#f87171'}
+                  color={summary.overallCompletion >= 70 ? ACCENT_EMERALD : summary.overallCompletion >= 40 ? STATUS_WARNING : STATUS_ERROR}
                 />
                 <div>
                   <p className="text-2xs text-text-muted">Overall Completion</p>
@@ -191,12 +192,12 @@ export function HolisticHealthView() {
                   strokeWidth={5}
                   color={
                     summary.currentQualityScore === null
-                      ? '#6b7280'
+                      ? STATUS_NEUTRAL
                       : summary.currentQualityScore >= 70
-                        ? '#34d399'
+                        ? ACCENT_EMERALD
                         : summary.currentQualityScore >= 40
-                          ? '#fbbf24'
-                          : '#f87171'
+                          ? STATUS_WARNING
+                          : STATUS_ERROR
                   }
                 />
                 <div>
@@ -304,7 +305,7 @@ export function HolisticHealthView() {
                   <BarChart3 className="w-3.5 h-3.5 text-blue-400" />
                   Weekly Velocity (Items Completed)
                 </h3>
-                <BarChartSimple data={velocityHistory.map((v) => ({ label: v.weekLabel, value: v.itemsCompleted }))} color="#60a5fa" />
+                <BarChartSimple data={velocityHistory.map((v) => ({ label: v.weekLabel, value: v.itemsCompleted }))} color={STATUS_INFO} />
               </SurfaceCard>
 
               <SurfaceCard>
@@ -332,7 +333,7 @@ export function HolisticHealthView() {
                   <Gauge className="w-3.5 h-3.5 text-emerald-400" />
                   Quality Score Trend
                 </h3>
-                <LineChartSimple data={qualityHistory.map((q) => ({ label: q.label, value: q.overallScore }))} color="#34d399" />
+                <LineChartSimple data={qualityHistory.map((q) => ({ label: q.label, value: q.overallScore }))} color={ACCENT_EMERALD} />
               </SurfaceCard>
 
               <SurfaceCard>
@@ -355,7 +356,7 @@ export function HolisticHealthView() {
                           <span className="text-2xs text-emerald-400">No issues</span>
                         )}
                       </div>
-                      <ProgressRing value={q.overallScore} size={24} strokeWidth={2.5} color={q.overallScore >= 70 ? '#34d399' : '#fbbf24'} />
+                      <ProgressRing value={q.overallScore} size={24} strokeWidth={2.5} color={q.overallScore >= 70 ? ACCENT_EMERALD : STATUS_WARNING} />
                     </div>
                   ))}
                 </div>
@@ -607,15 +608,15 @@ function AreaChartSimple({ data, total }: { data: { label: string; completed: nu
         {/* Ideal line (dashed) */}
         <polyline
           fill="none"
-          stroke="#6b7280"
+          stroke={STATUS_NEUTRAL}
           strokeWidth="1.5"
           strokeDasharray="4,3"
           points={data.map((d, i) => `${i * 60 + 30},${h - (d.ideal / total) * (h - 16) - 8}`).join(' ')}
         />
         {/* Completed area */}
         <polygon
-          fill="#34d39920"
-          stroke="#34d399"
+          fill={`${ACCENT_EMERALD}${OPACITY_20}`}
+          stroke={ACCENT_EMERALD}
           strokeWidth="2"
           points={[
             `${30},${h - 8}`,
@@ -644,7 +645,7 @@ function BurndownChart({ data, total }: { data: BurnChartPoint[]; total: number 
         {/* Ideal burndown (dashed) */}
         <polyline
           fill="none"
-          stroke="#6b7280"
+          stroke={STATUS_NEUTRAL}
           strokeWidth="1.5"
           strokeDasharray="4,3"
           points={data.map((d, i) => `${i * 60 + 30},${(d.idealRemaining / total) * (h - 16) + 8}`).join(' ')}
@@ -652,7 +653,7 @@ function BurndownChart({ data, total }: { data: BurnChartPoint[]; total: number 
         {/* Actual remaining */}
         <polyline
           fill="none"
-          stroke="#60a5fa"
+          stroke={STATUS_INFO}
           strokeWidth="2"
           points={data.map((d, i) => `${i * 60 + 30},${(d.remaining / total) * (h - 16) + 8}`).join(' ')}
         />
@@ -663,7 +664,7 @@ function BurndownChart({ data, total }: { data: BurnChartPoint[]; total: number 
             cx={i * 60 + 30}
             cy={(d.remaining / total) * (h - 16) + 8}
             r="3"
-            fill="#60a5fa"
+            fill={STATUS_INFO}
           />
         ))}
       </svg>
@@ -678,7 +679,7 @@ function BurndownChart({ data, total }: { data: BurnChartPoint[]; total: number 
           <span className="w-3 h-0.5 bg-blue-400 inline-block rounded" /> Actual
         </span>
         <span className="text-[10px] text-text-muted flex items-center gap-1">
-          <span className="w-3 h-0.5 bg-gray-500 inline-block rounded border-dashed" style={{ borderTop: '1.5px dashed #6b7280' }} /> Ideal
+          <span className="w-3 h-0.5 bg-gray-500 inline-block rounded border-dashed" style={{ borderTop: `1.5px dashed ${STATUS_NEUTRAL}` }} /> Ideal
         </span>
       </div>
     </div>

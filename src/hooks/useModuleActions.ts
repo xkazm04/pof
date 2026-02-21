@@ -4,9 +4,14 @@ import { useCallback } from 'react';
 import { useCLIPanelStore } from '@/components/cli/store/cliPanelStore';
 import { useProjectStore } from '@/stores/projectStore';
 import { getCategoryForSubModule, SUB_MODULE_MAP } from '@/lib/module-registry';
+import { UI_TIMEOUTS } from '@/lib/constants';
 import type { SubModuleId } from '@/types/modules';
 
-export function useModuleActions() {
+export interface UseModuleActionsResult {
+  sendPromptToModule: (moduleId: SubModuleId, prompt: string) => void;
+}
+
+export function useModuleActions(): UseModuleActionsResult {
   const projectPath = useProjectStore((s) => s.projectPath);
   const createSession = useCLIPanelStore((s) => s.createSession);
   const findSessionByModule = useCLIPanelStore((s) => s.findSessionByModule);
@@ -28,10 +33,12 @@ export function useModuleActions() {
     }
     setActiveTab(tabId);
 
-    // Dispatch custom event for the terminal to pick up
-    window.dispatchEvent(new CustomEvent('pof-cli-prompt', {
-      detail: { tabId, prompt },
-    }));
+    // Small delay to allow the terminal component to mount and attach its event listener
+    setTimeout(() => {
+      window.dispatchEvent(new CustomEvent('pof-cli-prompt', {
+        detail: { tabId, prompt },
+      }));
+    }, UI_TIMEOUTS.mountDelay);
   }, [projectPath, createSession, findSessionByModule, setActiveTab]);
 
   return { sendPromptToModule };

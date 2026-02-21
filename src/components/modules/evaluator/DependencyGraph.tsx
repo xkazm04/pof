@@ -8,7 +8,8 @@ import type { DependencyInfo, ResolvedDependency } from '@/lib/feature-definitio
 import { MODULE_LABELS } from '@/lib/module-registry';
 import { SurfaceCard } from '@/components/ui/SurfaceCard';
 import { EmptyState } from '@/components/ui/EmptyState';
-import { MODULE_COLORS as CHART_MODULE_COLORS } from '@/lib/chart-colors';
+import { MODULE_COLORS as CHART_MODULE_COLORS, STATUS_SUCCESS, STATUS_WARNING, STATUS_ERROR, STATUS_BLOCKER, OPACITY_20 } from '@/lib/chart-colors';
+import type { SubModuleId } from '@/types/modules';
 
 // ─── Module layout config ───────────────────────────────────────────────────
 
@@ -51,7 +52,7 @@ const NODE_H = 72;
 const PAD_X = 40;
 const PAD_Y = 40;
 
-function getNodeCenter(moduleId: string) {
+function getNodeCenter(moduleId: SubModuleId) {
   const pos = MODULE_POSITIONS[moduleId] ?? { col: 0, row: 0 };
   return {
     x: PAD_X + pos.col * COL_WIDTH + NODE_W / 2,
@@ -62,7 +63,7 @@ function getNodeCenter(moduleId: string) {
 // ─── Types ──────────────────────────────────────────────────────────────────────
 
 interface ModuleNode {
-  moduleId: string;
+  moduleId: SubModuleId;
   label: string;
   color: string;
   featureCount: number;
@@ -120,8 +121,8 @@ export function DependencyGraph({ onNavigateTab }: DependencyGraphProps) {
   // Build nodes
   const nodes: ModuleNode[] = useMemo(() => {
     return Object.keys(MODULE_FEATURE_DEFINITIONS).map((moduleId) => {
-      const features = MODULE_FEATURE_DEFINITIONS[moduleId];
-      const center = getNodeCenter(moduleId);
+      const features = MODULE_FEATURE_DEFINITIONS[moduleId as SubModuleId] ?? [];
+      const center = getNodeCenter(moduleId as SubModuleId);
       let blockedCount = 0;
       let implementedCount = 0;
 
@@ -134,7 +135,7 @@ export function DependencyGraph({ onNavigateTab }: DependencyGraphProps) {
       }
 
       return {
-        moduleId,
+        moduleId: moduleId as SubModuleId,
         label: MODULE_LABELS[moduleId] ?? moduleId,
         color: MODULE_COLORS[moduleId] ?? 'var(--text-muted)',
         featureCount: features.length,
@@ -180,7 +181,7 @@ export function DependencyGraph({ onNavigateTab }: DependencyGraphProps) {
   // Feature-level details for selected module
   const selectedDetails = useMemo(() => {
     if (!selectedModule) return null;
-    const features = MODULE_FEATURE_DEFINITIONS[selectedModule] ?? [];
+    const features = MODULE_FEATURE_DEFINITIONS[selectedModule as SubModuleId] ?? [];
     return features.map((feat) => {
       const key = `${selectedModule}::${feat.featureName}`;
       const status = statusMap.get(key) ?? 'unknown';
@@ -212,11 +213,11 @@ export function DependencyGraph({ onNavigateTab }: DependencyGraphProps) {
         icon={Link2}
         title="No Feature Data Yet"
         description="Review your module features first so the dependency graph can show implementation status and blockers across modules."
-        iconColor="#ef4444"
+        iconColor={CHART_MODULE_COLORS.evaluator}
         action={onNavigateTab ? {
           label: 'Review Features',
           onClick: () => onNavigateTab('features'),
-          color: '#ef4444',
+          color: CHART_MODULE_COLORS.evaluator,
         } : undefined}
       />
     );
@@ -273,14 +274,14 @@ export function DependencyGraph({ onNavigateTab }: DependencyGraphProps) {
               <path d="M 0 0 L 10 3.5 L 0 7 z" fill="var(--text-muted)" />
             </marker>
             <marker id="arrow-blocked" viewBox="0 0 10 7" refX="10" refY="3.5" markerWidth="8" markerHeight="6" orient="auto-start-reverse">
-              <path d="M 0 0 L 10 3.5 L 0 7 z" fill="#fb923c" />
+              <path d="M 0 0 L 10 3.5 L 0 7 z" fill={STATUS_BLOCKER} />
             </marker>
           </defs>
 
           {/* Edges */}
           {edges.map((edge) => {
-            const fromCenter = getNodeCenter(edge.from);
-            const toCenter = getNodeCenter(edge.to);
+            const fromCenter = getNodeCenter(edge.from as SubModuleId);
+            const toCenter = getNodeCenter(edge.to as SubModuleId);
 
             // Shorten line to stop at node border
             const dx = toCenter.x - fromCenter.x;
@@ -308,7 +309,7 @@ export function DependencyGraph({ onNavigateTab }: DependencyGraphProps) {
                 <path
                   d={`M${x1},${y1} Q${mx + perpX},${my + perpY} ${x2},${y2}`}
                   fill="none"
-                  stroke={edge.hasBlockers ? '#fb923c' : 'var(--text-muted)'}
+                  stroke={edge.hasBlockers ? STATUS_BLOCKER : 'var(--text-muted)'}
                   strokeWidth={Math.min(3, 0.5 + edge.count * 0.5)}
                   strokeDasharray={edge.hasBlockers ? '4 2' : undefined}
                   opacity={opacity}
@@ -362,7 +363,7 @@ export function DependencyGraph({ onNavigateTab }: DependencyGraphProps) {
                   height={NODE_H}
                   rx={8}
                   fill="var(--surface)"
-                  stroke={isSelected ? '#ef4444' : isHighlighted ? 'var(--border-bright)' : 'var(--border)'}
+                  stroke={isSelected ? CHART_MODULE_COLORS.evaluator : isHighlighted ? 'var(--border-bright)' : 'var(--border)'}
                   strokeWidth={isSelected ? 2 : 1}
                 />
 
@@ -393,7 +394,7 @@ export function DependencyGraph({ onNavigateTab }: DependencyGraphProps) {
                   width={Math.max(0, (NODE_W - 24) * pctComplete)}
                   height={4}
                   rx={2}
-                  fill="#4ade80"
+                  fill={STATUS_SUCCESS}
                 />
 
                 {/* Stats line */}
@@ -411,8 +412,8 @@ export function DependencyGraph({ onNavigateTab }: DependencyGraphProps) {
                 {/* Blocked indicator */}
                 {node.blockedCount > 0 && (
                   <g transform={`translate(${node.cx + NODE_W / 2 - 10}, ${node.cy - NODE_H / 2 + 6})`}>
-                    <circle r="7" fill="#f8717120" />
-                    <text fill="#fb923c" fontSize="9" fontWeight="700" textAnchor="middle" dy="3">!</text>
+                    <circle r="7" fill={`${STATUS_ERROR}${OPACITY_20}`} />
+                    <text fill={STATUS_BLOCKER} fontSize="9" fontWeight="700" textAnchor="middle" dy="3">!</text>
                   </g>
                 )}
               </g>
@@ -428,7 +429,7 @@ export function DependencyGraph({ onNavigateTab }: DependencyGraphProps) {
           Dependency
         </span>
         <span className="flex items-center gap-1.5">
-          <span className="w-6 border-t border-dashed" style={{ borderColor: '#fb923c' }} />
+          <span className="w-6 border-t border-dashed" style={{ borderColor: STATUS_BLOCKER }} />
           Has blockers
         </span>
         <span className="flex items-center gap-1.5">
@@ -471,11 +472,11 @@ export function DependencyGraph({ onNavigateTab }: DependencyGraphProps) {
                         style={{
                           backgroundColor:
                             feat.status === 'implemented'
-                              ? '#4ade80'
+                              ? STATUS_SUCCESS
                               : feat.status === 'partial'
-                                ? '#fbbf24'
+                                ? STATUS_WARNING
                                 : feat.status === 'missing'
-                                  ? '#f87171'
+                                  ? STATUS_ERROR
                                   : 'var(--text-muted)',
                         }}
                       />

@@ -18,6 +18,7 @@ import {
 } from '@/lib/prompt-evolution/engine';
 import { getModuleSessions, getModuleStats } from '@/lib/session-analytics-db';
 import type { PromptEvolutionRequest } from '@/types/prompt-evolution';
+import type { SubModuleId } from '@/types/modules';
 
 export async function POST(req: NextRequest) {
   try {
@@ -29,8 +30,8 @@ export async function POST(req: NextRequest) {
       case 'get-variants': {
         if (!body.moduleId) return apiError('moduleId required', 400);
         const variants = body.checklistItemId
-          ? getVariantsForItem(body.moduleId, body.checklistItemId)
-          : getVariantsForModule(body.moduleId);
+          ? getVariantsForItem(body.moduleId as SubModuleId, body.checklistItemId)
+          : getVariantsForModule(body.moduleId as SubModuleId);
         return apiSuccess(variants);
       }
 
@@ -39,7 +40,7 @@ export async function POST(req: NextRequest) {
           return apiError('moduleId, checklistItemId, and prompt required', 400);
         }
         const variant = createVariant(
-          body.moduleId,
+          body.moduleId as SubModuleId,
           body.checklistItemId,
           body.prompt,
           'user-edit',
@@ -61,7 +62,7 @@ export async function POST(req: NextRequest) {
         if (!body.moduleId || !body.checklistItemId || !body.variantId || !body.testId) {
           return apiError('moduleId, checklistItemId, variantId (A), and testId (B) required', 400);
         }
-        const test = startABTest(body.moduleId, body.checklistItemId, body.variantId, body.testId);
+        const test = startABTest(body.moduleId as SubModuleId, body.checklistItemId, body.variantId, body.testId);
         return apiSuccess(test);
       }
 
@@ -85,7 +86,7 @@ export async function POST(req: NextRequest) {
       // ── Clustering ────────────────────────────────────────────
       case 'cluster-prompts': {
         if (!body.moduleId) return apiError('moduleId required', 400);
-        const sessions = getModuleSessions(body.moduleId);
+        const sessions = getModuleSessions(body.moduleId as SubModuleId);
         const clusters = clusterModulePrompts(sessions);
         return apiSuccess(clusters);
       }
@@ -98,8 +99,8 @@ export async function POST(req: NextRequest) {
 
       case 'get-suggestions': {
         if (!body.moduleId) return apiError('moduleId required', 400);
-        const sessions = getModuleSessions(body.moduleId);
-        const suggestions = generateSuggestions(body.moduleId, sessions);
+        const sessions = getModuleSessions(body.moduleId as SubModuleId);
+        const suggestions = generateSuggestions(body.moduleId as SubModuleId, sessions);
         return apiSuccess(suggestions);
       }
 
@@ -107,7 +108,7 @@ export async function POST(req: NextRequest) {
         if (!body.moduleId || !body.checklistItemId) {
           return apiError('moduleId and checklistItemId required', 400);
         }
-        const best = getBestVariant(body.moduleId, body.checklistItemId);
+        const best = getBestVariant(body.moduleId as SubModuleId, body.checklistItemId);
         return apiSuccess(best);
       }
 
@@ -116,9 +117,9 @@ export async function POST(req: NextRequest) {
         if (!body.moduleId || !body.prompt) {
           return apiError('moduleId and prompt required', 400);
         }
-        const optSessions = getModuleSessions(body.moduleId);
-        const optStats = getModuleStats(body.moduleId);
-        const optResult = optimizePrompt(body.prompt, body.moduleId, optSessions, optStats);
+        const optSessions = getModuleSessions(body.moduleId as SubModuleId);
+        const optStats = getModuleStats(body.moduleId as SubModuleId);
+        const optResult = optimizePrompt(body.prompt, body.moduleId as SubModuleId, optSessions, optStats);
         return apiSuccess(optResult);
       }
 

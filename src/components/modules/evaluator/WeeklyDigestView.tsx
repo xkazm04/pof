@@ -6,8 +6,11 @@ import {
   Minus, Flame, Clock, BarChart3, Zap, Loader2, RefreshCw,
 } from 'lucide-react';
 import { useModuleStore } from '@/stores/moduleStore';
+import { apiFetch } from '@/lib/api-utils';
 import { SUB_MODULES, MODULE_LABELS } from '@/lib/module-registry';
 import type { WeeklyDigest } from '@/types/weekly-digest';
+import { UI_TIMEOUTS } from '@/lib/constants';
+import { STATUS_INFO, MODULE_COLORS, ACCENT_VIOLET } from '@/lib/chart-colors';
 
 // ── Precompute checklist item IDs (static) ──
 const MODULE_ITEM_IDS: Record<string, string[]> = Object.fromEntries(
@@ -46,13 +49,10 @@ export function WeeklyDigestView() {
   const fetchDigest = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await fetch('/api/weekly-digest');
-      const data = await res.json();
-      if (data.ok) {
-        const d = data.digest as WeeklyDigest;
-        d.checklistCompleted = checklistCompleted;
-        setDigest(d);
-      }
+      const data = await apiFetch<{ digest: WeeklyDigest }>('/api/weekly-digest');
+      const d = data.digest;
+      d.checklistCompleted = checklistCompleted;
+      setDigest(d);
     } catch { /* ignore */ }
     setLoading(false);
   }, [checklistCompleted]);
@@ -65,7 +65,7 @@ export function WeeklyDigestView() {
     const md = formatDigestMarkdown(digest);
     await navigator.clipboard.writeText(md);
     setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+    setTimeout(() => setCopied(false), UI_TIMEOUTS.copyFeedback);
   }, [digest]);
 
   // ── Export as PNG ──
@@ -154,7 +154,7 @@ export function WeeklyDigestView() {
           value={digest.totalSessions.toString()}
           delta={sessionDelta}
           icon={BarChart3}
-          color="#60a5fa"
+          color={STATUS_INFO}
         />
         <StatCard
           label="Success Rate"
@@ -162,19 +162,19 @@ export function WeeklyDigestView() {
           delta={Math.round(rateDelta * 100)}
           suffix="%"
           icon={Zap}
-          color="#00ff88"
+          color={MODULE_COLORS.setup}
         />
         <StatCard
           label="Checklist"
           value={`${digest.checklistCompleted}/${digest.checklistTotal}`}
           icon={Check}
-          color="#a78bfa"
+          color={ACCENT_VIOLET}
         />
         <StatCard
           label="Time Invested"
           value={formatDuration(digest.totalTimeMs)}
           icon={Clock}
-          color="#f59e0b"
+          color={MODULE_COLORS.content}
         />
       </div>
 
@@ -208,7 +208,7 @@ export function WeeklyDigestView() {
                     height: `${height}px`,
                     backgroundColor: d.total === 0
                       ? 'var(--border)'
-                      : rate >= 0.75 ? '#00ff88' : rate >= 0.5 ? '#f59e0b' : '#ef4444',
+                      : rate >= 0.75 ? MODULE_COLORS.setup : rate >= 0.5 ? MODULE_COLORS.content : MODULE_COLORS.evaluator,
                     opacity: d.total === 0 ? 0.3 : 0.8,
                   }}
                   title={`${d.date}: ${d.total} sessions, ${d.success} successful`}
@@ -250,13 +250,13 @@ export function WeeklyDigestView() {
                       className="h-full rounded-full transition-all"
                       style={{
                         width: `${barWidth}%`,
-                        backgroundColor: m.successRate >= 0.75 ? '#00ff88' : m.successRate >= 0.5 ? '#f59e0b' : '#ef4444',
+                        backgroundColor: m.successRate >= 0.75 ? MODULE_COLORS.setup : m.successRate >= 0.5 ? MODULE_COLORS.content : MODULE_COLORS.evaluator,
                       }}
                     />
                   </div>
                   <span className="text-2xs text-text-muted tabular-nums w-8 text-right">{m.sessions}</span>
                   <span className="text-2xs tabular-nums w-8 text-right" style={{
-                    color: m.successRate >= 0.75 ? '#00ff88' : m.successRate >= 0.5 ? '#f59e0b' : '#ef4444',
+                    color: m.successRate >= 0.75 ? MODULE_COLORS.setup : m.successRate >= 0.5 ? MODULE_COLORS.content : MODULE_COLORS.evaluator,
                   }}>
                     {Math.round(m.successRate * 100)}%
                   </span>

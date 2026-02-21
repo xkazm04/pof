@@ -1,3 +1,148 @@
+import type { SubModuleId, PartialModuleMap } from '@/types/modules';
+
+// ─── Module-level prerequisite graph ──────────────────────────────────────────
+// Defines which modules should be completed before starting another.
+// Derived from the implicit aRPG curriculum order and cross-module feature deps.
+
+export const MODULE_PREREQUISITES: Partial<Record<SubModuleId, SubModuleId[]>> = {
+  // Core Engine — aRPG curriculum sequence
+  'arpg-animation': ['arpg-character'],
+  'arpg-gas': ['arpg-character'],
+  'arpg-combat': ['arpg-gas', 'arpg-animation'],
+  'arpg-enemy-ai': ['arpg-character', 'arpg-gas'],
+  'arpg-inventory': ['arpg-gas'],
+  'arpg-loot': ['arpg-inventory', 'arpg-combat'],
+  'arpg-ui': ['arpg-gas', 'arpg-inventory'],
+  'arpg-progression': ['arpg-gas', 'arpg-combat'],
+  'arpg-world': ['arpg-enemy-ai', 'arpg-ui'],
+  'arpg-save': ['arpg-inventory', 'arpg-gas'],
+  'arpg-polish': ['arpg-combat', 'arpg-world'],
+
+  // Content modules — lighter dependencies
+  'animations': ['models'],
+  'materials': ['models'],
+  'level-design': ['models', 'materials'],
+  'ui-hud': [],
+  'audio': [],
+
+  // Game Systems
+  'ai-behavior': [],
+  'physics': [],
+  'multiplayer': [],
+  'save-load': [],
+  'input-handling': [],
+  'dialogue-quests': [],
+  'packaging': [],
+};
+
+/** Modules that depend on `moduleId` (i.e. moduleId is a prerequisite for them). */
+function getDependents(moduleId: SubModuleId): SubModuleId[] {
+  const result: SubModuleId[] = [];
+  for (const [mod, prereqs] of Object.entries(MODULE_PREREQUISITES)) {
+    if (prereqs && prereqs.includes(moduleId)) {
+      result.push(mod as SubModuleId);
+    }
+  }
+  return result;
+}
+
+export interface ModulePrereqStatus {
+  moduleId: SubModuleId;
+  label: string;
+  progress: number; // 0-100
+}
+
+export interface RecommendedNextModule {
+  moduleId: SubModuleId;
+  label: string;
+  reason: string;
+}
+
+/**
+ * Compute recommended next modules for a user based on their checklist progress.
+ *
+ * Strategy:
+ * 1. Find modules that are substantially complete (>= 70% checklist)
+ * 2. For those, find dependent modules that haven't been started much (< 30%)
+ * 3. Only recommend modules whose prerequisites are all >= 50% complete
+ * 4. Sort by: all-prereqs-done first, then by number of prereqs satisfied
+ */
+export function getRecommendedNextModules(
+  currentModuleId: SubModuleId,
+  checklistProgress: Record<string, Record<string, boolean>>,
+  checklistSizes: Record<string, number>,
+): RecommendedNextModule[] {
+  function moduleProgress(modId: string): number {
+    const progress = checklistProgress[modId];
+    const total = checklistSizes[modId] ?? 0;
+    if (!progress || total === 0) return 0;
+    const done = Object.values(progress).filter(Boolean).length;
+    return Math.round((done / total) * 100);
+  }
+
+  const currentProgress = moduleProgress(currentModuleId);
+
+  // Only show recommendations if the current module has meaningful progress
+  if (currentProgress < 50) return [];
+
+  const dependents = getDependents(currentModuleId);
+  const results: RecommendedNextModule[] = [];
+
+  for (const depId of dependents) {
+    const depProgress = moduleProgress(depId);
+    // Skip modules that are already well underway
+    if (depProgress >= 50) continue;
+
+    const prereqs = MODULE_PREREQUISITES[depId] ?? [];
+    const prereqsMet = prereqs.filter((p) => moduleProgress(p) >= 50).length;
+    const allPrereqsMet = prereqsMet === prereqs.length;
+
+    // Only recommend if all prerequisites are at least 50% done
+    if (!allPrereqsMet) continue;
+
+    const reason = prereqs.length === 1
+      ? `Ready — builds on this module`
+      : `Ready — all ${prereqs.length} prerequisites met`;
+
+    results.push({ moduleId: depId, label: depId, reason });
+  }
+
+  // Sort: most prerequisites satisfied first
+  results.sort((a, b) => {
+    const aPrereqs = MODULE_PREREQUISITES[a.moduleId]?.length ?? 0;
+    const bPrereqs = MODULE_PREREQUISITES[b.moduleId]?.length ?? 0;
+    return bPrereqs - aPrereqs;
+  });
+
+  return results.slice(0, 3);
+}
+
+/**
+ * Get unmet prerequisites for a module (progress < 50%).
+ */
+export function getUnmetPrerequisites(
+  moduleId: SubModuleId,
+  checklistProgress: Record<string, Record<string, boolean>>,
+  checklistSizes: Record<string, number>,
+): ModulePrereqStatus[] {
+  const prereqs = MODULE_PREREQUISITES[moduleId];
+  if (!prereqs || prereqs.length === 0) return [];
+
+  const unmet: ModulePrereqStatus[] = [];
+  for (const prereqId of prereqs) {
+    const progress = checklistProgress[prereqId];
+    const total = checklistSizes[prereqId] ?? 0;
+    let pct = 0;
+    if (progress && total > 0) {
+      pct = Math.round((Object.values(progress).filter(Boolean).length / total) * 100);
+    }
+    if (pct < 50) {
+      unmet.push({ moduleId: prereqId, label: prereqId, progress: pct });
+    }
+  }
+  return unmet;
+}
+
 export interface FeatureDefinition {
   featureName: string;
   category: string;
@@ -6,7 +151,7 @@ export interface FeatureDefinition {
   dependsOn?: string[];
 }
 
-export const MODULE_FEATURE_DEFINITIONS: Record<string, FeatureDefinition[]> = {
+export const MODULE_FEATURE_DEFINITIONS: PartialModuleMap<FeatureDefinition[]> = {
   'arpg-character': [
     { featureName: 'AARPGCharacterBase', category: 'Character', description: 'Abstract ACharacter subclass shared by player and enemies' },
     { featureName: 'AARPGPlayerCharacter', category: 'Character', description: 'Concrete player character with camera and input', dependsOn: ['AARPGCharacterBase'] },
@@ -21,12 +166,14 @@ export const MODULE_FEATURE_DEFINITIONS: Record<string, FeatureDefinition[]> = {
   ],
   'arpg-animation': [
     { featureName: 'UARPGAnimInstance', category: 'AnimBP', description: 'C++ AnimInstance with Speed, Direction, IsInAir variables', dependsOn: ['arpg-character::AARPGCharacterBase'] },
-    { featureName: 'Locomotion Blend Space', category: 'AnimBP', description: '1D Blend Space for Idle/Walk/Run', dependsOn: ['UARPGAnimInstance'] },
-    { featureName: 'Animation state machine', category: 'AnimBP', description: 'States: Locomotion, Attacking, Dodging, HitReact, Death', dependsOn: ['Locomotion Blend Space'] },
-    { featureName: 'Attack montages', category: 'Montages', description: '3-hit melee combo montage with sections', dependsOn: ['Animation state machine'] },
+    { featureName: 'Locomotion Blend Space', category: 'AnimBP', description: '1D Blend Space for Idle/Walk/Run — can be created headlessly via UCommandlet (BlendParameters set via FProperty reflection)', dependsOn: ['UARPGAnimInstance'] },
+    { featureName: 'Animation state machine', category: 'AnimBP', description: 'States: Locomotion, Attacking, Dodging, HitReact, Death. Note: AnimBP graph cannot be created programmatically — requires editor', dependsOn: ['Locomotion Blend Space'] },
+    { featureName: 'Attack montages', category: 'Montages', description: '3-hit melee combo montage with sections — fully automatable via commandlet (CompositeSections + NextSectionName linking)', dependsOn: ['Animation state machine'] },
     { featureName: 'Anim Notify classes', category: 'Notifies', description: 'ComboWindow, HitDetection, SpawnVFX, PlaySound notifies', dependsOn: ['Attack montages'] },
     { featureName: 'Motion Warping', category: 'Montages', description: 'MotionWarpingComponent for attack magnetism', dependsOn: ['Attack montages'] },
     { featureName: 'Root motion toggle', category: 'AnimBP', description: 'Root motion on for attacks/dodge, off for locomotion', dependsOn: ['Animation state machine'] },
+    { featureName: 'Mixamo import & retarget pipeline', category: 'Retarget', description: 'Mixamo FBX import with bone prefix stripping, IK Retargeter Python API for batch retargeting (auto_map_chains FUZZY + duplicate_and_retarget), root motion extraction via RootMotionGeneratorOp for in-place anims', dependsOn: ['UARPGAnimInstance'] },
+    { featureName: 'Asset automation commandlet', category: 'Automation', description: 'PoFEditor module with UAnimAssetCommandlet: headless creation of BS1D, montage shells (combo/dodge/hitreact/death). Run: UnrealEditor-Cmd -run=AnimAsset. Verified on UE 5.7.3 — 8 assets in 0.06s', dependsOn: ['UARPGAnimInstance'] },
   ],
   'arpg-gas': [
     { featureName: 'AbilitySystemComponent', category: 'Core', description: 'ASC on character base with IAbilitySystemInterface', dependsOn: ['arpg-character::AARPGCharacterBase'] },
@@ -130,6 +277,7 @@ export const MODULE_FEATURE_DEFINITIONS: Record<string, FeatureDefinition[]> = {
     { featureName: 'LOD generation', category: 'Optimization', description: 'Auto LOD groups with screen-size thresholds and reduction settings' },
     { featureName: 'Collision setup', category: 'Physics', description: 'Simple/complex collision, UCX convex hulls, per-poly collision toggle', dependsOn: ['Static mesh import pipeline'] },
     { featureName: 'Nanite mesh enabling', category: 'Optimization', description: 'Nanite enable per mesh, fallback LOD settings, displacement', dependsOn: ['Static mesh import pipeline'] },
+    { featureName: 'Nanite Foliage setup', category: 'Optimization', description: 'Nanite Assemblies for dense foliage, Nanite Skinning for dynamic wind via Dynamic Wind plugin, USD importer with DCC markup schemas (5.7+)', dependsOn: ['Nanite mesh enabling'] },
     { featureName: 'Data Table mesh registry', category: 'Data', description: 'FDataTableRowHandle entries for mesh catalogs with metadata', dependsOn: ['Static mesh import pipeline'] },
     { featureName: 'Procedural mesh generation', category: 'Runtime', description: 'UProceduralMeshComponent with vertex/triangle/UV construction' },
     { featureName: 'Skeletal mesh import', category: 'Import', description: 'Skeletal mesh with skeleton asset, physics asset, retargeting setup' },
@@ -142,7 +290,10 @@ export const MODULE_FEATURE_DEFINITIONS: Record<string, FeatureDefinition[]> = {
     { featureName: 'Anim Notify framework', category: 'Notifies', description: 'UAnimNotify and UAnimNotifyState subclasses for gameplay events', dependsOn: ['Montage system'] },
     { featureName: 'Motion Warping setup', category: 'Warping', description: 'UMotionWarpingComponent with warp targets and update methods', dependsOn: ['Montage system'] },
     { featureName: 'Root motion configuration', category: 'AnimBP', description: 'Root motion enable/disable per state, extract/ignore settings', dependsOn: ['Animation state machine'] },
-    { featureName: 'Animation retargeting', category: 'Retarget', description: 'IK Retargeter setup with IK Rig for cross-skeleton sharing', dependsOn: ['Custom AnimInstance base'] },
+    { featureName: 'Animation retargeting', category: 'Retarget', description: 'IK Retargeter setup with IK Rig for cross-skeleton sharing. Python API: IKRetargeterController for scriptable setup, auto_map_chains(FUZZY) for Mixamo→UE5 bone mapping, IKRetargetBatchOperation.duplicate_and_retarget() for bulk retargeting. 5.7+: crotch height, floor constraints, stretch chain operators, spatially aware retargeting with collision prevention', dependsOn: ['Custom AnimInstance base'] },
+    { featureName: 'Motion Matching', category: 'AnimBP', description: 'Motion Matching Chooser Integration for per-asset filtering (5.7+ experimental). Data-driven animation selection from motion database', dependsOn: ['Custom AnimInstance base', 'Blend Space setup'] },
+    { featureName: 'Blendshape sculpting', category: 'Morph', description: 'Skeletal Editor blendshape and sculpting tools for morph targets with topology-adaptive shapes (5.7+)', dependsOn: ['Custom AnimInstance base'] },
+    { featureName: 'Editor Commandlet automation', category: 'Automation', description: 'UCommandlet-based headless asset creation: blend spaces (via FProperty reflection on protected BlendParameters), montages (NewObject + CompositeSections + SavePackage), tested on UE 5.7.3. PoFEditor module pattern with separate Build.cs depending on UnrealEd + AssetTools. ~0.06s for 8 assets.', dependsOn: ['Custom AnimInstance base', 'Montage system'] },
   ],
   'materials': [
     { featureName: 'Master material', category: 'Core', description: 'Layered master material with static switch parameters for variants' },
@@ -152,6 +303,7 @@ export const MODULE_FEATURE_DEFINITIONS: Record<string, FeatureDefinition[]> = {
     { featureName: 'Post-process materials', category: 'PostProcess', description: 'Post-process material chain with scene texture sampling and blendables', dependsOn: ['Material functions library'] },
     { featureName: 'HLSL custom nodes', category: 'Custom', description: 'Custom HLSL expressions for specialized shading, SDF, ray marching' },
     { featureName: 'Material layer system', category: 'Layers', description: 'Material Layer and Material Layer Blend for modular surface composition', dependsOn: ['Master material'] },
+    { featureName: 'Substrate shading models', category: 'Core', description: 'Substrate (production-ready 5.7+): unified shading model replacing legacy Default Lit/Subsurface/Cloth. Use Substrate Slab for PBR, eye, cloth, thin-film, and clearcoat via a single flexible material graph', dependsOn: ['Master material'] },
   ],
   'level-design': [
     { featureName: 'Blockout geometry', category: 'Layout', description: 'BSP/geometry brush blockout with proper scale reference and metric grids' },
@@ -161,6 +313,8 @@ export const MODULE_FEATURE_DEFINITIONS: Record<string, FeatureDefinition[]> = {
     { featureName: 'Environmental hazards', category: 'Gameplay', description: 'Damage volumes, moving platforms, trap triggers, area effects', dependsOn: ['Blockout geometry'] },
     { featureName: 'NavMesh configuration', category: 'Navigation', description: 'RecastNavMesh bounds, Nav Modifiers, Nav Links for AI pathfinding', dependsOn: ['Blockout geometry'] },
     { featureName: 'Procedural level generation', category: 'Procedural', description: 'Room/tile-based procedural layout with PCG framework integration', dependsOn: ['Blockout geometry'] },
+    { featureName: 'PCG graph setup', category: 'Procedural', description: 'PCG graphs for content generation: scatter, spline-based placement, attribute-driven filtering. GPU Fast Geo Interop for large-scale generation (5.7+ production-ready)', dependsOn: ['Blockout geometry'] },
+    { featureName: 'Procedural Vegetation (PVE)', category: 'Procedural', description: 'Procedural Vegetation Editor for biome painting with density, slope, altitude rules. Integrates with Nanite Foliage assemblies (5.7+)', dependsOn: ['PCG graph setup'] },
   ],
   'ui-hud': [
     { featureName: 'Main menu widget', category: 'Menus', description: 'UMG main menu with New Game, Continue, Settings, Quit buttons' },
@@ -197,6 +351,7 @@ export const MODULE_FEATURE_DEFINITIONS: Record<string, FeatureDefinition[]> = {
     { featureName: 'Session management', category: 'Sessions', description: 'UOnlineSessionInterface with create/find/join/destroy session flow' },
     { featureName: 'Network prediction', category: 'Movement', description: 'Client-side prediction, server reconciliation, CharacterMovement replication', dependsOn: ['Replicated properties', 'RPC framework'] },
     { featureName: 'Net relevancy settings', category: 'Optimization', description: 'AActor::IsNetRelevantFor, NetCullDistanceSquared, dormancy configuration', dependsOn: ['Replicated properties'] },
+    { featureName: 'Iris replication system', category: 'Replication', description: 'Iris replication (5.7+ beta): StartActorReplication API replacing UReplicationBridge, OnBeginReplication override for per-actor config, StartReplicationParams for initial state', dependsOn: ['Replicated properties', 'RPC framework'] },
   ],
   'save-load': [
     { featureName: 'USaveGame subclass', category: 'Core', description: 'USaveGame with UPROPERTY fields for all persistent game state' },
@@ -229,6 +384,7 @@ export const MODULE_FEATURE_DEFINITIONS: Record<string, FeatureDefinition[]> = {
     { featureName: 'EQS queries', category: 'EQS', description: 'UEnvQueryManager with custom generators, tests, contexts', dependsOn: ['Behavior Tree system'] },
     { featureName: 'Group AI coordination', category: 'Coordination', description: 'Squad manager for flanking, surround, focus-fire, retreat behaviors', dependsOn: ['Behavior Tree system', 'AI Perception setup'] },
     { featureName: 'AI debugging tools', category: 'Debug', description: 'Gameplay Debugger categories, visual logger, BT debugger integration', dependsOn: ['Behavior Tree system'] },
+    { featureName: 'State Tree AI system', category: 'StateTree', description: 'State Tree as modern alternative to Behavior Trees (5.7+): hierarchical states with ExecutionRuntimeData for persistent node data, Re-Enter State behavior, Output Properties for Live Property Binding, Rewind Debugger integration', dependsOn: ['AI Controller base'] },
   ],
   'packaging': [
     { featureName: 'Build configuration', category: 'Config', description: 'Development/Shipping build targets with UBT settings and defines' },
@@ -243,7 +399,7 @@ export const MODULE_FEATURE_DEFINITIONS: Record<string, FeatureDefinition[]> = {
 // ─── Dependency resolution engine ─────────────────────────────────────────────
 
 export interface ResolvedDependency {
-  moduleId: string;
+  moduleId: SubModuleId;
   featureName: string;
   /** Fully qualified key: "moduleId::featureName" */
   key: string;
@@ -264,13 +420,23 @@ export interface DependencyInfo {
 function resolveDep(ref: string, contextModuleId: string): ResolvedDependency {
   if (ref.includes('::')) {
     const [mod, feat] = ref.split('::', 2);
-    return { moduleId: mod, featureName: feat, key: `${mod}::${feat}` };
+    return { moduleId: mod as SubModuleId, featureName: feat, key: `${mod}::${feat}` };
   }
-  return { moduleId: contextModuleId, featureName: ref, key: `${contextModuleId}::${ref}` };
+  return { moduleId: contextModuleId as SubModuleId, featureName: ref, key: `${contextModuleId}::${ref}` };
 }
 
-/** Build a full dependency map for all features across all modules */
+/**
+ * Build a full dependency map for all features across all modules.
+ *
+ * Memoized: MODULE_FEATURE_DEFINITIONS is a static const, so deps and
+ * transitive chains are computed once and reused. The cached map should
+ * be treated as read-only — use computeBlockers() to get a status-aware copy.
+ */
+let _cachedDepMap: Map<string, DependencyInfo> | null = null;
+
 export function buildDependencyMap(): Map<string, DependencyInfo> {
+  if (_cachedDepMap) return _cachedDepMap;
+
   const map = new Map<string, DependencyInfo>();
 
   // First pass: resolve direct deps
@@ -304,20 +470,31 @@ export function buildDependencyMap(): Map<string, DependencyInfo> {
     info.chain = chain;
   }
 
+  _cachedDepMap = map;
   return map;
 }
 
-/** Given a status map (featureKey → status), compute blockers for each feature */
+/**
+ * Given a status map (featureKey → status), compute blockers for each feature.
+ *
+ * Returns a NEW map with shallow-copied entries so the memoized base map is
+ * not mutated. Multiple callers with different statusMaps won't conflict.
+ */
 export function computeBlockers(
   depMap: Map<string, DependencyInfo>,
   statusMap: Map<string, string>,
 ): Map<string, DependencyInfo> {
-  for (const [, info] of depMap) {
-    info.blockers = info.deps.filter((d) => {
+  const result = new Map<string, DependencyInfo>();
+  for (const [key, info] of depMap) {
+    const blockers = info.deps.filter((d) => {
       const status = statusMap.get(d.key);
       return !status || status !== 'implemented';
     });
-    info.isBlocked = info.blockers.length > 0;
+    result.set(key, {
+      ...info,
+      blockers,
+      isBlocked: blockers.length > 0,
+    });
   }
-  return depMap;
+  return result;
 }

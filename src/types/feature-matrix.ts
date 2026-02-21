@@ -1,8 +1,10 @@
-export type FeatureStatus = 'implemented' | 'partial' | 'missing' | 'unknown';
+import type { SubModuleId } from './modules';
+
+export type FeatureStatus = 'implemented' | 'improved' | 'partial' | 'missing' | 'unknown';
 
 export interface FeatureRow {
   id: number;
-  moduleId: string;
+  moduleId: SubModuleId;
   featureName: string;
   category: string;
   status: FeatureStatus;
@@ -17,6 +19,7 @@ export interface FeatureRow {
 export interface FeatureSummary {
   total: number;
   implemented: number;
+  improved: number;
   partial: number;
   missing: number;
   unknown: number;
@@ -24,7 +27,7 @@ export interface FeatureSummary {
 
 /** Shape Claude writes to the JSON file */
 export interface CLIFeatureReport {
-  moduleId: string;
+  moduleId: SubModuleId;
   reviewedAt: string;
   features: CLIFeatureEntry[];
 }

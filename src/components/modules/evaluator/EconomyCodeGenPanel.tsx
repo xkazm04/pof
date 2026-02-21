@@ -10,12 +10,14 @@ import { SurfaceCard } from '@/components/ui/SurfaceCard';
 import { Badge } from '@/components/ui/Badge';
 import { useEconomySimulatorStore } from '@/stores/economySimulatorStore';
 import type { GeneratedFile } from '@/lib/economy/codegen';
+import { UI_TIMEOUTS } from '@/lib/constants';
+import { MODULE_COLORS } from '@/lib/chart-colors';
 
 // ── Constants ────────────────────────────────────────────────────────────────
 
 const LANG_COLORS: Record<string, string> = {
   h: '#a855f7',
-  cpp: '#3b82f6',
+  cpp: MODULE_COLORS.core,
 };
 
 const LANG_LABELS: Record<string, string> = {
@@ -43,7 +45,7 @@ export function EconomyCodeGenPanel() {
   const handleCopy = useCallback(async (file: GeneratedFile) => {
     await navigator.clipboard.writeText(file.content);
     setCopiedFile(file.filename);
-    setTimeout(() => setCopiedFile(null), 2000);
+    setTimeout(() => setCopiedFile(null), UI_TIMEOUTS.copyFeedback);
   }, []);
 
   const handleDownloadAll = useCallback(() => {

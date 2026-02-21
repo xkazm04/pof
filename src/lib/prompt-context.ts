@@ -6,6 +6,7 @@
  * here to avoid divergence.
  */
 
+import type { SubModuleId } from '@/types/modules';
 import type { ErrorContextEntry } from '@/types/error-memory';
 
 export interface ProjectContext {
@@ -43,11 +44,23 @@ export function getAPIMacro(moduleName: string): string {
 
 /**
  * Derive the UE engine install path from the UE version string (e.g., "5.5.4" → "UE_5.5").
+ * Supports both installed builds (Epic Games Launcher) and source builds.
  */
 export function getEnginePath(ueVersion: string): string {
   const parts = ueVersion.split('.');
   const majorMinor = parts.length >= 2 ? `${parts[0]}.${parts[1]}` : ueVersion;
   return `C:\\Program Files\\Epic Games\\UE_${majorMinor}`;
+}
+
+/**
+ * Returns the minimum required MSVC toolchain version for a given UE version.
+ * UE 5.7+ requires MSVC 14.44 (VS 2022 17.14+).
+ */
+export function getRequiredMSVCVersion(ueVersion: string): string {
+  const parts = ueVersion.split('.').map(Number);
+  if (parts[0] >= 5 && parts[1] >= 7) return '14.44';
+  if (parts[0] >= 5 && parts[1] >= 4) return '14.38';
+  return '14.34';
 }
 
 /**
@@ -125,15 +138,15 @@ const DOMAIN_CONTEXT: Record<string, string> = {
   // Content modules (6) — from CONTENT_PROMPTS
   'models': 'You are helping with 3D model import pipelines, procedural mesh generation, and data table setup in UE5.',
   'animations': 'You are helping create animation systems including AnimBP, locomotion states, montages, and notifies in UE5.',
-  'materials': 'You are helping create material systems including dynamic materials, post-process effects, and shaders in UE5.',
-  'level-design': 'You are helping with level design systems including living design documents, room/encounter flow, spawn systems, difficulty arcs, and bidirectional design-to-code synchronization in UE5.',
+  'materials': 'You are helping create material systems including dynamic materials, post-process effects, and shaders in UE5. For 5.7+: Substrate is production-ready — prefer Substrate Slab over legacy shading models (Default Lit, Subsurface, Cloth) for new materials.',
+  'level-design': 'You are helping with level design systems including living design documents, room/encounter flow, spawn systems, difficulty arcs, and bidirectional design-to-code synchronization in UE5. For 5.7+: PCG framework is production-ready for procedural content generation, MegaLights (beta) for dynamic lighting without lightmaps.',
   'ui-hud': 'You are helping create UI/HUD systems using UMG in UE5 C++ including menus, HUD elements, and inventory UI.',
   'audio': 'You are helping create spatial audio systems including audio volumes with reverb/attenuation/occlusion, sound emitter placement, Sound Cue randomization, sound pooling managers, and natural-language soundscape-to-code generation in UE5.',
 
   // Game Systems modules (7) — from GAME_SYSTEMS_PROMPTS
-  'ai-behavior': 'You are helping create AI/NPC behavior systems including behavior trees, EQS, perception, combat AI, and scenario-based unit testing using UE5 Automation Framework with mock stimuli in UE5.',
+  'ai-behavior': 'You are helping create AI/NPC behavior systems including behavior trees, State Trees (5.7+ enhanced alternative to BTs), EQS, perception, combat AI, and scenario-based unit testing using UE5 Automation Framework with mock stimuli in UE5.',
   'physics': 'You are helping set up physics and collision systems including profiles, materials, projectiles, and destruction in UE5.',
-  'multiplayer': 'You are helping implement multiplayer systems including replication, RPCs, and session management in UE5. Note: this is one of the most challenging areas.',
+  'multiplayer': 'You are helping implement multiplayer systems including replication, RPCs, and session management in UE5. For 5.7+: Iris replication system (beta) replaces UReplicationBridge with StartActorReplication API. Note: this is one of the most challenging areas.',
   'save-load': 'You are helping create save/load systems using USaveGame with auto-save and slot management in UE5.',
   'input-handling': 'You are helping set up input handling with Enhanced Input System including rebinding and gamepad support in UE5.',
   'dialogue-quests': 'You are helping create dialogue and quest systems with data-driven content and quest tracking in UE5.',
@@ -158,7 +171,7 @@ const DOMAIN_CONTEXT: Record<string, string> = {
 /**
  * Get the domain-specific context string for a module, or undefined if none exists.
  */
-export function getModuleDomainContext(moduleId: string): string | undefined {
+export function getModuleDomainContext(moduleId: SubModuleId): string | undefined {
   return DOMAIN_CONTEXT[moduleId];
 }
 
@@ -176,6 +189,7 @@ const CATEGORY_LABELS: Record<string, string> = {
   'syntax': 'Syntax error',
   'access-specifier': 'Access specifier',
   'generated-header': '.generated.h issue',
+  'msvc-version': 'MSVC compiler version',
   'other': 'Build error',
 };
 
@@ -235,12 +249,15 @@ export function buildProjectContextHeader(
   const enginePath = getEnginePath(ctx.ueVersion);
   const buildCmd = getBuildCommand(enginePath, moduleName, ctx.projectPath);
 
+  const msvcVersion = getRequiredMSVCVersion(ctx.ueVersion);
+
   let header = `## Project Context
 - Project: "${moduleName}" at ${ctx.projectPath}
 - UE Version: ${ctx.ueVersion}
 - Module: ${moduleName} | API export macro: ${apiMacro}
 - Source root: Source/${moduleName}/
-- Engine: ${enginePath}`;
+- Engine: ${enginePath}
+- Required MSVC toolchain: ${msvcVersion}+`;
 
   // Append dynamically scanned project state if available
   if (ctx.dynamicContext) {

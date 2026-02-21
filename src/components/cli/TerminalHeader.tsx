@@ -5,6 +5,7 @@ import {
   Terminal, CheckCircle, Loader2, Trash2, RotateCcw, FileText, Copy,
 } from 'lucide-react';
 import type { ExecutionInfo, ExecutionResult } from './types';
+import { UI_TIMEOUTS } from '@/lib/constants';
 
 interface TerminalHeaderProps {
   title: string;
@@ -33,7 +34,7 @@ export function TerminalHeader({
     if (!logFilePath) return;
     navigator.clipboard.writeText(logFilePath).then(() => {
       setLogCopied(true);
-      setTimeout(() => setLogCopied(false), 2000);
+      setTimeout(() => setLogCopied(false), UI_TIMEOUTS.copyFeedback);
     }).catch(() => {});
   }, [logFilePath]);
 
@@ -89,7 +90,7 @@ export function TerminalHeader({
                 if (text) {
                   navigator.clipboard.writeText(text).then(() => {
                     setOutputCopied(true);
-                    setTimeout(() => setOutputCopied(false), 2000);
+                    setTimeout(() => setOutputCopied(false), UI_TIMEOUTS.copyFeedback);
                   }).catch(() => {});
                 }
               }}

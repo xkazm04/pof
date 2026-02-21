@@ -3,6 +3,13 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import { apiFetch } from '@/lib/api-utils';
+import {
+  registerProjectStore,
+  saveModuleProgress,
+  loadModuleProgress,
+  getChecklistProgress,
+} from '@/services/ProjectModuleBridge';
+import { useCLIPanelStore } from '@/components/cli/store/cliPanelStore';
 import type { DynamicProjectContext } from '@/lib/prompt-context';
 
 export interface RecentProject {
@@ -34,7 +41,7 @@ interface ProjectState {
   recentProjects: RecentProject[];
 
   setProject: (data: Partial<ProjectState>) => void;
-  completeSetup: () => void;
+  completeSetup: () => Promise<void>;
   resetProject: () => void;
   /** Scan the project directory for existing classes, plugins, and dependencies */
   scanProject: () => Promise<void>;
@@ -56,7 +63,7 @@ export const useProjectStore = create<ProjectState>()(
     (set, get) => ({
       projectName: '',
       projectPath: '',
-      ueVersion: '5.5.4',
+      ueVersion: '5.7.3',
       isSetupComplete: false,
       isNewProject: true,
       setupStep: 0,
@@ -69,23 +76,38 @@ export const useProjectStore = create<ProjectState>()(
 
       setProject: (data) => set((state) => ({ ...state, ...data })),
 
-      completeSetup: () => {
+      completeSetup: async () => {
         set({ isSetupComplete: true });
+        const { projectPath, isNewProject } = get();
         // Auto-save to recent when setup completes
-        setTimeout(() => get().saveToRecent(), 100);
+        await get().saveToRecent();
+        // For existing projects, restore saved module progress from SQLite
+        // For new projects, save the (empty) initial state
+        if (isNewProject) {
+          await saveModuleProgress(projectPath);
+        } else {
+          await loadModuleProgress(projectPath);
+        }
       },
 
-      resetProject: () => set({
-        projectName: '',
-        projectPath: '',
-        ueVersion: '5.5.4',
-        isSetupComplete: false,
-        isNewProject: true,
-        setupStep: 0,
-        dynamicContext: null,
-        isScanning: false,
-        scanError: null,
-      }),
+      resetProject: () => {
+        // Save current module progress before resetting
+        const { projectPath, isSetupComplete } = get();
+        if (projectPath && isSetupComplete) {
+          saveModuleProgress(projectPath);
+        }
+        set({
+          projectName: '',
+          projectPath: '',
+          ueVersion: '5.7.3',
+          isSetupComplete: false,
+          isNewProject: true,
+          setupStep: 0,
+          dynamicContext: null,
+          isScanning: false,
+          scanError: null,
+        });
+      },
 
       scanProject: async () => {
         const { projectPath, projectName, isScanning, dynamicContext } = get();
@@ -134,15 +156,7 @@ export const useProjectStore = create<ProjectState>()(
         const { projectName, projectPath, ueVersion, isSetupComplete } = get();
         if (!projectName || !projectPath || !isSetupComplete) return;
 
-        // Grab checklist progress from moduleStore (cross-store read)
-        let checklistProgress = {};
-        try {
-          const moduleStoreRaw = localStorage.getItem('pof-modules');
-          if (moduleStoreRaw) {
-            const parsed = JSON.parse(moduleStoreRaw);
-            checklistProgress = parsed?.state?.checklistProgress ?? {};
-          }
-        } catch { /* ignore */ }
+        const checklistProgress = getChecklistProgress();
 
         try {
           await apiFetch('/api/recent-projects', {
@@ -177,9 +191,24 @@ export const useProjectStore = create<ProjectState>()(
         const target = recentProjects.find((p) => p.id === projectId);
         if (!target) return;
 
-        // Save current project state before switching
+        // Save current project's module progress before switching
         if (projectPath && isSetupComplete) {
-          await get().saveToRecent();
+          await Promise.all([
+            get().saveToRecent(),
+            saveModuleProgress(projectPath),
+          ]);
+        }
+
+        // Clear terminal sessions to prevent cross-project leakage
+        useCLIPanelStore.getState().clearAllSessions();
+
+        // Cancel open session log entries for the old project (fire-and-forget)
+        if (projectPath) {
+          apiFetch('/api/session-log', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action: 'cancel-open', projectPath }),
+          }).catch(() => {});
         }
 
         // Touch the target project's last_opened_at
@@ -208,6 +237,9 @@ export const useProjectStore = create<ProjectState>()(
           isScanning: false,
           scanError: null,
         });
+
+        // Restore module progress from SQLite for the target project
+        await loadModuleProgress(target.projectPath);
 
         // Trigger a scan for the new project
         setTimeout(() => get().scanProject(), 200);
@@ -245,3 +277,6 @@ export const useProjectStore = create<ProjectState>()(
     }
   )
 );
+
+// Register with bridge so moduleStore can read projectPath without importing us
+registerProjectStore(useProjectStore);

@@ -7,6 +7,7 @@ import {
   getPromptSuggestions,
   getSessionCount,
 } from '@/lib/session-analytics-db';
+import type { SubModuleId } from '@/types/modules';
 
 // GET /api/session-analytics
 // ?action=dashboard          → full dashboard
@@ -25,7 +26,7 @@ export async function GET(req: NextRequest) {
     if (action === 'module') {
       const moduleId = searchParams.get('moduleId');
       if (!moduleId) return apiError('moduleId required', 400);
-      const sessions = getModuleSessions(moduleId);
+      const sessions = getModuleSessions(moduleId as SubModuleId);
       return apiSuccess({ sessions });
     }
 
@@ -35,14 +36,14 @@ export async function GET(req: NextRequest) {
       if (!moduleId || !prompt) {
         return apiError('moduleId and prompt required', 400);
       }
-      const suggestions = getPromptSuggestions(moduleId, prompt);
+      const suggestions = getPromptSuggestions(moduleId as SubModuleId, prompt);
       return apiSuccess({ suggestions });
     }
 
     if (action === 'count') {
       const moduleId = searchParams.get('moduleId');
       if (!moduleId) return apiError('moduleId required', 400);
-      return apiSuccess({ count: getSessionCount(moduleId) });
+      return apiSuccess({ count: getSessionCount(moduleId as SubModuleId) });
     }
 
     return apiError('Unknown action', 400);

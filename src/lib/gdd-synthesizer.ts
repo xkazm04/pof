@@ -277,7 +277,7 @@ function buildCoreSystemsSection(
     const catFeatures: string[] = [];
 
     for (const modId of moduleIds) {
-      const mod = SUB_MODULE_MAP[modId as SubModuleId];
+      const mod = SUB_MODULE_MAP[modId];
       if (!mod) continue;
 
       const modFeatures = byModule.get(modId) ?? [];

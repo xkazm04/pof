@@ -10,8 +10,10 @@ import { useProjectStore } from '@/stores/projectStore';
 import { useGameDesignDoc } from '@/hooks/useGameDesignDoc';
 import { SurfaceCard } from '@/components/ui/SurfaceCard';
 import type { GDDSection } from '@/lib/gdd-synthesizer';
+import { UI_TIMEOUTS } from '@/lib/constants';
+import { MODULE_COLORS } from '@/lib/chart-colors';
 
-const ACCENT = '#ef4444';
+const ACCENT = MODULE_COLORS.evaluator;
 
 const SECTION_ICONS: Record<string, typeof FileText> = {
   'overview': BarChart3,
@@ -66,7 +68,7 @@ export function GameDesignDocView() {
     if (!markdown) return;
     await navigator.clipboard.writeText(markdown);
     setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+    setTimeout(() => setCopied(false), UI_TIMEOUTS.copyFeedback);
   }, [exportMarkdown]);
 
   if (isLoading && !gdd) {

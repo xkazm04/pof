@@ -9,6 +9,7 @@
  * endpoint for each evaluation pass.
  */
 
+import type { SubModuleId } from '@/types/modules';
 import { buildEvalPrompt, EVAL_PASSES, PASS_LABELS, getEvaluableModuleIds } from './module-eval-prompts';
 import type { EvalPass } from './module-eval-prompts';
 import { parseFindings, deduplicateFindings, aggregateFindings } from './finding-collector';
@@ -134,7 +135,7 @@ export async function runDeepEval(options: DeepEvalOptions): Promise<DeepEvalRes
 
         try {
           const prompt = buildEvalPrompt({
-            moduleId,
+            moduleId: moduleId as SubModuleId,
             pass,
             projectName: projectContext.projectName,
             moduleName,
@@ -175,7 +176,7 @@ ${prompt}`;
           const rawOutput = await collectStreamResponse(response, signal);
 
           // Parse findings from output
-          const findings = parseFindings(rawOutput, scanId, moduleId, pass);
+          const findings = parseFindings(rawOutput, scanId, moduleId as SubModuleId, pass);
           allFindings.push(...findings);
 
           passStatuses[moduleId][pass] = 'done';
@@ -289,7 +290,7 @@ async function collectStreamResponse(response: Response, signal: AbortSignal): P
  * Run deep eval for a single module (convenience wrapper).
  */
 export async function runSingleModuleEval(
-  moduleId: string,
+  moduleId: SubModuleId,
   options: Omit<DeepEvalOptions, 'moduleIds'>,
 ): Promise<DeepEvalResult> {
   return runDeepEval({ ...options, moduleIds: [moduleId] });

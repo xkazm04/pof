@@ -9,6 +9,7 @@ import { useProjectHealthStore } from '@/stores/projectHealthStore';
 import { useModuleStore } from '@/stores/moduleStore';
 import { useEvaluatorStore } from '@/stores/evaluatorStore';
 import type { Milestone } from '@/types/project-health';
+import { MODULE_COLORS, STATUS_SUCCESS, STATUS_INFO } from '@/lib/chart-colors';
 
 /* ------------------------------------------------------------------ */
 /*  Constants                                                          */
@@ -20,7 +21,7 @@ const HEADER_HEIGHT = 48;    // Month/week header
 const LEFT_GUTTER = 200;     // Label column width
 const BAR_HEIGHT = 28;       // Gantt bar height
 const BAR_Y_OFFSET = (ROW_HEIGHT - BAR_HEIGHT) / 2;
-const TODAY_COLOR = '#00ff88';
+const TODAY_COLOR = MODULE_COLORS.setup;
 
 /* ------------------------------------------------------------------ */
 /*  Helpers                                                            */
@@ -551,7 +552,7 @@ export function CalendarRoadmapView() {
                 <line
                   x1={x} y1={HEADER_HEIGHT + i * ROW_HEIGHT + 2}
                   x2={x} y2={HEADER_HEIGHT + (i + 1) * ROW_HEIGHT - 2}
-                  stroke={isOverdue ? '#f59e0b' : '#60a5fa'}
+                  stroke={isOverdue ? MODULE_COLORS.content : STATUS_INFO}
                   strokeWidth={1.5}
                   strokeDasharray="3 2"
                   opacity={0.7}
@@ -559,8 +560,8 @@ export function CalendarRoadmapView() {
                 {/* Diamond marker */}
                 <polygon
                   points={`${x},${y - 7} ${x + 7},${y} ${x},${y + 7} ${x - 7},${y}`}
-                  fill={isOverdue ? '#f59e0b' : '#60a5fa'}
-                  stroke={isOverdue ? '#f59e0b' : '#60a5fa'}
+                  fill={isOverdue ? MODULE_COLORS.content : STATUS_INFO}
+                  stroke={isOverdue ? MODULE_COLORS.content : STATUS_INFO}
                   strokeWidth={1}
                   opacity={0.9}
                 />
@@ -576,7 +577,7 @@ export function CalendarRoadmapView() {
                   <text
                     x={x} y={HEADER_HEIGHT + i * ROW_HEIGHT + ROW_HEIGHT - 4}
                     textAnchor="middle"
-                    fill={isOverdue ? '#f59e0b' : '#4ade80'}
+                    fill={isOverdue ? MODULE_COLORS.content : STATUS_SUCCESS}
                     fontSize={9}
                     fontWeight={500}
                   >

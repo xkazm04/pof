@@ -7,6 +7,7 @@ import type { ExtraTab } from '../../shared/ReviewableModuleView';
 import { SUB_MODULE_MAP, getCategoryForSubModule , getModuleChecklist } from '@/lib/module-registry';
 
 import { useCLIPanelStore } from '@/components/cli/store/cliPanelStore';
+import { ACCENT_VIOLET } from '@/lib/chart-colors';
 import { useProjectStore } from '@/stores/projectStore';
 import { useModuleStore } from '@/stores/moduleStore';
 import { AssetPipelineDiagram } from './AssetPipelineDiagram';
@@ -42,7 +43,7 @@ export function ModelsView() {
     if (!tabId) {
       tabId = createSession({
         label: '3D Models & Characters',
-        accentColor: '#a78bfa',
+        accentColor: ACCENT_VIOLET,
         moduleId: 'models',
         projectPath,
       });

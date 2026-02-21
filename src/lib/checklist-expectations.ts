@@ -87,6 +87,40 @@ export const CHECKLIST_EXPECTATIONS: Record<string, ChecklistExpectation> = {
       minBodyLines: 5,
     },
   },
+  'aa-5': {
+    primary: {
+      className: 'UAnimNotify_ComboWindow',
+      baseClass: 'UAnimNotify',
+      minBodyLines: 3,
+    },
+    secondary: [
+      {
+        className: 'UAnimNotifyState_HitDetection',
+        baseClass: 'UAnimNotifyState',
+        minBodyLines: 5,
+      },
+      {
+        className: 'UAnimNotify_SpawnVFX',
+        baseClass: 'UAnimNotify',
+        minBodyLines: 5,
+      },
+      {
+        className: 'UAnimNotify_ARPGPlaySound',
+        baseClass: 'UAnimNotify',
+        minBodyLines: 3,
+      },
+    ],
+  },
+
+  // ── arpg-animation automation (PoFEditor module) ───────────────────────
+  'aa-commandlet': {
+    primary: {
+      className: 'UAnimAssetCommandlet',
+      baseClass: 'UCommandlet',
+      expectedFunctions: ['Main'],
+      minBodyLines: 20,
+    },
+  },
 
   // ── arpg-gas ──────────────────────────────────────────────────────────────
   'ag-1': {

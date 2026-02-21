@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useCallback } from 'react';
 import type {
   TestSuite,
   TestSuiteSummary,
@@ -9,7 +9,12 @@ import type {
   CreateScenarioPayload,
   UpdateScenarioPayload,
 } from '@/types/ai-testing';
-import { apiFetch } from '@/lib/api-utils';
+import { useCRUD } from './useCRUD';
+
+interface AITestingData {
+  suites: TestSuite[];
+  summary: TestSuiteSummary;
+}
 
 interface UseAITestingResult {
   suites: TestSuite[];
@@ -28,138 +33,81 @@ interface UseAITestingResult {
   refetch: () => Promise<void>;
 }
 
-const EMPTY_SUMMARY: TestSuiteSummary = {
-  totalSuites: 0,
-  totalScenarios: 0,
-  passedCount: 0,
-  failedCount: 0,
-  draftCount: 0,
+const EMPTY: AITestingData = {
+  suites: [],
+  summary: { totalSuites: 0, totalScenarios: 0, passedCount: 0, failedCount: 0, draftCount: 0 },
+};
+
+const transform = (raw: unknown): AITestingData => {
+  const d = raw as Partial<AITestingData>;
+  return { suites: d.suites ?? [], summary: d.summary ?? EMPTY.summary };
 };
 
 export function useAITesting(): UseAITestingResult {
-  const [suites, setSuites] = useState<TestSuite[]>([]);
-  const [summary, setSummary] = useState<TestSuiteSummary>(EMPTY_SUMMARY);
+  const { data, isLoading, error, refetch, mutate } = useCRUD<AITestingData>(
+    '/api/ai-testing',
+    EMPTY,
+    { transform, errorMessage: 'Failed to load AI testing data' },
+  );
+
   const [activeSuiteId, setActiveSuiteId] = useState<number | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const mountedRef = useRef(true);
-
-  useEffect(() => {
-    mountedRef.current = true;
-    return () => { mountedRef.current = false; };
-  }, []);
-
-  const fetchAll = useCallback(async () => {
-    setIsLoading(true);
-    setError(null);
-    try {
-      const data = await apiFetch<{ suites: TestSuite[]; summary: TestSuiteSummary }>('/api/ai-testing');
-      if (!mountedRef.current) return;
-      setSuites(data.suites ?? []);
-      setSummary(data.summary ?? EMPTY_SUMMARY);
-    } catch (err) {
-      console.error('useAITesting fetch error:', err);
-      if (mountedRef.current) setError(err instanceof Error ? err.message : 'Failed to load AI testing data');
-    } finally {
-      if (mountedRef.current) setIsLoading(false);
-    }
-  }, []);
-
-  useEffect(() => { fetchAll(); }, [fetchAll]);
-
-  const activeSuite = suites.find((s) => s.id === activeSuiteId) ?? null;
+  const activeSuite = data.suites.find((s) => s.id === activeSuiteId) ?? null;
 
   const createSuiteOp = useCallback(async (payload: CreateSuitePayload) => {
-    try {
-      const data = await apiFetch<{ suite: TestSuite }>('/api/ai-testing', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'create-suite', ...payload }),
-      });
-      await fetchAll();
-      if (data.suite) setActiveSuiteId(data.suite.id);
-      return data.suite;
-    } catch (err) {
-      console.error('useAITesting createSuite error:', err);
-      return null;
-    }
-  }, [fetchAll]);
+    const result = await mutate<{ suite: TestSuite }>('/api/ai-testing', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'create-suite', ...payload }),
+    });
+    if (result?.suite) setActiveSuiteId(result.suite.id);
+    return result?.suite ?? null;
+  }, [mutate]);
 
   const updateSuiteOp = useCallback(async (payload: UpdateSuitePayload) => {
-    try {
-      const data = await apiFetch<{ suite: TestSuite }>('/api/ai-testing', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'update-suite', ...payload }),
-      });
-      await fetchAll();
-      return data.suite;
-    } catch (err) {
-      console.error('useAITesting updateSuite error:', err);
-      return null;
-    }
-  }, [fetchAll]);
+    const result = await mutate<{ suite: TestSuite }>('/api/ai-testing', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'update-suite', ...payload }),
+    });
+    return result?.suite ?? null;
+  }, [mutate]);
 
   const deleteSuiteOp = useCallback(async (id: number) => {
-    try {
-      await apiFetch<unknown>(`/api/ai-testing?type=suite&id=${id}`, { method: 'DELETE' });
-      if (activeSuiteId === id) setActiveSuiteId(null);
-      await fetchAll();
-      return true;
-    } catch (err) {
-      console.error('useAITesting deleteSuite error:', err);
-      return false;
-    }
-  }, [activeSuiteId, fetchAll]);
+    const result = await mutate<unknown>(`/api/ai-testing?type=suite&id=${id}`, { method: 'DELETE' });
+    if (result !== null && activeSuiteId === id) setActiveSuiteId(null);
+    return result !== null;
+  }, [activeSuiteId, mutate]);
 
   const createScenarioOp = useCallback(async (payload: CreateScenarioPayload) => {
-    try {
-      await apiFetch<unknown>('/api/ai-testing', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'create-scenario', ...payload }),
-      });
-      await fetchAll();
-      return true;
-    } catch (err) {
-      console.error('useAITesting createScenario error:', err);
-      return false;
-    }
-  }, [fetchAll]);
+    const result = await mutate<unknown>('/api/ai-testing', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'create-scenario', ...payload }),
+    });
+    return result !== null;
+  }, [mutate]);
 
   const updateScenarioOp = useCallback(async (payload: UpdateScenarioPayload) => {
-    try {
-      await apiFetch<unknown>('/api/ai-testing', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'update-scenario', ...payload }),
-      });
-      await fetchAll();
-      return true;
-    } catch (err) {
-      console.error('useAITesting updateScenario error:', err);
-      return false;
-    }
-  }, [fetchAll]);
+    const result = await mutate<unknown>('/api/ai-testing', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'update-scenario', ...payload }),
+    });
+    return result !== null;
+  }, [mutate]);
 
   const deleteScenarioOp = useCallback(async (id: number) => {
-    try {
-      await apiFetch<unknown>(`/api/ai-testing?type=scenario&id=${id}`, { method: 'DELETE' });
-      await fetchAll();
-      return true;
-    } catch (err) {
-      console.error('useAITesting deleteScenario error:', err);
-      return false;
-    }
-  }, [fetchAll]);
+    const result = await mutate<unknown>(`/api/ai-testing?type=scenario&id=${id}`, { method: 'DELETE' });
+    return result !== null;
+  }, [mutate]);
 
   return {
-    suites,
-    summary,
+    suites: data.suites,
+    summary: data.summary,
     activeSuite,
     isLoading,
     error,
-    retry: fetchAll,
+    retry: refetch,
     setActiveSuiteId,
     createSuite: createSuiteOp,
     updateSuite: updateSuiteOp,
@@ -167,6 +115,6 @@ export function useAITesting(): UseAITestingResult {
     createScenario: createScenarioOp,
     updateScenario: updateScenarioOp,
     deleteScenario: deleteScenarioOp,
-    refetch: fetchAll,
+    refetch,
   };
 }

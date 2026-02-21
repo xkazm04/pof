@@ -13,13 +13,16 @@
 
 'use client';
 
-import { useEffect, useRef, useCallback, useState } from 'react';
+import { useRef, useCallback, useState } from 'react';
 import { useProjectStore } from '@/stores/projectStore';
 import { useModuleStore } from '@/stores/moduleStore';
 import { SUB_MODULE_MAP } from '@/lib/module-registry';
 import { getExpectationsForItem } from '@/lib/checklist-expectations';
+import { createLifecycle } from '@/lib/lifecycle';
+import { useLifecycle } from '@/hooks/useLifecycle';
 import type { FileChangeEvent, ScannedDeclaration } from '@/lib/file-watcher';
 import type { VerificationInfo } from '@/stores/moduleStore';
+import type { SubModuleId } from '@/types/modules';
 
 interface WatcherStatus {
   connected: boolean;
@@ -97,7 +100,7 @@ export function useFileWatcher(): WatcherStatus {
 
     // Items without expectations: name-match auto-verify (backward-compatible)
     for (const item of withoutExpectations) {
-      setChecklistItem(item.subModuleId, item.itemId, true);
+      setChecklistItem(item.subModuleId as SubModuleId, item.itemId, true);
     }
 
     if (withExpectations.length === 0) return;
@@ -116,7 +119,7 @@ export function useFileWatcher(): WatcherStatus {
       if (!res.ok) {
         // Fallback: name-match only
         for (const item of withExpectations) {
-          setChecklistItem(item.subModuleId, item.itemId, true);
+          setChecklistItem(item.subModuleId as SubModuleId, item.itemId, true);
         }
         return;
       }
@@ -135,20 +138,20 @@ export function useFileWatcher(): WatcherStatus {
           verifiedAt: Date.now(),
         };
 
-        setVerification(item.subModuleId, item.itemId, verification);
+        setVerification(item.subModuleId as SubModuleId, item.itemId, verification);
 
         if (result.status === 'full') {
-          setChecklistItem(item.subModuleId, item.itemId, true);
+          setChecklistItem(item.subModuleId as SubModuleId, item.itemId, true);
         } else if (result.status === 'partial') {
           // Mark as checked but verification shows it's partial
-          setChecklistItem(item.subModuleId, item.itemId, true);
+          setChecklistItem(item.subModuleId as SubModuleId, item.itemId, true);
         }
         // 'stub' and 'missing' — don't auto-check (avoids false positives)
       }
     } catch {
       // On network failure, fall back to name-match
       for (const item of withExpectations) {
-        setChecklistItem(item.subModuleId, item.itemId, true);
+        setChecklistItem(item.subModuleId as SubModuleId, item.itemId, true);
       }
     }
   }, []);
@@ -199,33 +202,43 @@ export function useFileWatcher(): WatcherStatus {
     }));
   }, [autoVerify]);
 
-  useEffect(() => {
-    if (!projectPath || !isSetupComplete) return;
+  // Lifecycle-managed EventSource: controlled-monopoly (teardown-before-switch)
+  useLifecycle<EventSource | void>(() => {
+    if (!projectPath || !isSetupComplete) {
+      // Return a no-op lifecycle when not ready
+      return { init() {}, isActive() { return false; }, dispose() {} };
+    }
 
     const url = `/api/filesystem/watch?projectPath=${encodeURIComponent(projectPath)}`;
-    const es = new EventSource(url);
-    eventSourceRef.current = es;
 
-    es.onmessage = (event) => {
-      try {
-        const data = JSON.parse(event.data);
-        if (data.type === 'connected') {
-          setStatus((prev) => ({ ...prev, connected: true }));
-        } else if (data.type === 'changes') {
-          handleChanges(data.events as FileChangeEvent[]);
-        }
-      } catch { /* ignore parse errors */ }
-    };
+    return createLifecycle<EventSource>(
+      () => {
+        const es = new EventSource(url);
+        eventSourceRef.current = es;
 
-    es.onerror = () => {
-      setStatus((prev) => ({ ...prev, connected: false }));
-    };
+        es.onmessage = (event) => {
+          try {
+            const data = JSON.parse(event.data);
+            if (data.type === 'connected') {
+              setStatus((prev) => ({ ...prev, connected: true }));
+            } else if (data.type === 'changes') {
+              handleChanges(data.events as FileChangeEvent[]);
+            }
+          } catch { /* ignore parse errors */ }
+        };
 
-    return () => {
-      es.close();
-      eventSourceRef.current = null;
-      setStatus((prev) => ({ ...prev, connected: false }));
-    };
+        es.onerror = () => {
+          setStatus((prev) => ({ ...prev, connected: false }));
+        };
+
+        return es;
+      },
+      (es) => {
+        es.close();
+        eventSourceRef.current = null;
+        setStatus((prev) => ({ ...prev, connected: false }));
+      },
+    );
   }, [projectPath, isSetupComplete, handleChanges]);
 
   return status;

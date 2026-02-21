@@ -9,19 +9,23 @@ import { useModuleStore } from '@/stores/moduleStore';
 import { useProjectStore } from '@/stores/projectStore';
 import { getModuleName } from '@/lib/prompt-context';
 import type { AnimBPScanResult, AnimTransition } from '@/app/api/filesystem/scan-animbp/route';
+import {
+  ACCENT_VIOLET, ACCENT_ORANGE, STATUS_SUCCESS, MODULE_COLORS,
+  OPACITY_8, OPACITY_10, OPACITY_15, OPACITY_20, OPACITY_30,
+} from '@/lib/chart-colors';
 
-const ANIM_ACCENT = '#a78bfa';
+const ANIM_ACCENT = ACCENT_VIOLET;
 
 // ── State type classification ──
 
 type StateType = 'locomotion' | 'combat' | 'reaction' | 'montage' | 'other';
 
 const STATE_TYPE_COLORS: Record<StateType, string> = {
-  locomotion: '#3b82f6', // blue
-  combat: '#ef4444',     // red
-  reaction: '#f97316',   // orange
-  montage: '#f59e0b',    // amber
-  other: ANIM_ACCENT,    // violet
+  locomotion: MODULE_COLORS.core,
+  combat: MODULE_COLORS.evaluator,
+  reaction: ACCENT_ORANGE,
+  montage: MODULE_COLORS.content,
+  other: ANIM_ACCENT,
 };
 
 const LOCOMOTION_KEYWORDS = ['idle', 'walk', 'run', 'sprint', 'jump', 'jumpstart', 'jumploop', 'fall', 'falling', 'land', 'landing', 'locomotion', 'swimming', 'climbing'];
@@ -152,8 +156,8 @@ interface AnimationStateMachineProps {
 }
 
 const EMPTY_PROGRESS: Record<string, boolean> = {};
-const NODE_W = 90;
-const NODE_H = 44;
+const NODE_W = 110;
+const NODE_H = 46;
 
 export function AnimationStateMachine({ onSelectState, isRunning, activeStateId }: AnimationStateMachineProps) {
   const progress = useModuleStore((s) => s.checklistProgress['animations'] ?? EMPTY_PROGRESS);
@@ -359,44 +363,55 @@ export function AnimationStateMachine({ onSelectState, isRunning, activeStateId 
 
   // Node color based on state type
   const getNodeColor = (state: typeof stateNodes[0]) => {
-    if (state.completed) return '#22c55e';
+    if (state.completed) return STATUS_SUCCESS;
     if (state.isActive) return ANIM_ACCENT;
     return STATE_TYPE_COLORS[state.stateType];
   };
 
   return (
-    <div className="w-full max-w-xl mx-auto select-none space-y-3">
+    <div className="w-full max-w-4xl mx-auto select-none p-6 bg-[#03030a] rounded-2xl border border-violet-900/30 relative overflow-hidden shadow-[inset_0_0_80px_rgba(167,139,250,0.05)] flex flex-col gap-6">
+      {/* Schematic Background */}
+      <div className="absolute inset-0 pointer-events-none z-0">
+        <div className="absolute inset-0 opacity-[0.03]" style={{ backgroundImage: `linear-gradient(${ANIM_ACCENT} 1px, transparent 1px), linear-gradient(90deg, ${ANIM_ACCENT} 1px, transparent 1px)`, backgroundSize: '32px 32px' }} />
+        <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-violet-600/10 blur-[120px] rounded-full pointer-events-none" />
+        <div className="absolute bottom-0 left-0 w-[400px] h-[400px] bg-cyan-600/10 blur-[100px] rounded-full pointer-events-none" />
+      </div>
+
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <Film className="w-4 h-4" style={{ color: ANIM_ACCENT }} />
-          <div>
-            <h3 className="text-xs font-semibold text-text">
-              {simMode ? 'Simulation Mode' : hasScannedData ? 'Project State Machine' : 'Locomotion State Machine'}
+      <div className="flex items-center justify-between relative z-10 border-b border-violet-900/40 pb-4">
+        <div className="flex items-center gap-3">
+          <div className="p-2.5 rounded-xl grid place-items-center bg-violet-950/50 border border-violet-800/50 shadow-[0_0_15px_rgba(167,139,250,0.15)] relative overflow-hidden">
+            <Film className="w-5 h-5 text-violet-400 relative z-10" />
+            <div className="absolute inset-0 bg-gradient-to-t from-violet-500/20 to-transparent" />
+          </div>
+          <div className="flex flex-col">
+            <h3 className="text-sm font-bold text-violet-100 font-mono tracking-widest uppercase flex items-center gap-3" style={{ textShadow: '0 0 8px rgba(167,139,250,0.4)' }}>
+              STATE_MACHINE.graph <span className="text-[9px] bg-violet-500/20 text-violet-300 px-2 py-0.5 rounded border border-violet-500/30 shadow-[0_0_10px_rgba(139,92,246,0.2)]">RUNTIME</span>
             </h3>
-            <p className="text-2xs text-text-muted">
+            <p className="text-[10px] text-violet-400/80 font-mono uppercase tracking-widest mt-0.5">
               {simMode
                 ? simPath.length === 0
                   ? 'Click a state to begin tracing'
                   : `${simPath.length} states in path — click valid transitions to continue`
-                : `${completedCount}/${displayStates.length} states${hasScannedData ? ' (scanned from project)' : ' — click a state to implement it'}`
+                : `${completedCount}/${displayStates.length} states${hasScannedData ? ' // SCANNED FROM PROJECT' : ' // CLICK TO IMPLEMENT'}`
               }
             </p>
           </div>
         </div>
 
-        <div className="flex items-center gap-1.5">
+        <div className="flex items-center gap-2">
           {/* Simulate button */}
           <button
             onClick={toggleSimMode}
-            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-2xs font-medium transition-all"
+            className="flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all shadow-lg"
             style={{
-              backgroundColor: simMode ? '#f9731610' : `${ANIM_ACCENT}08`,
-              color: simMode ? '#f97316' : ANIM_ACCENT,
-              border: `1px solid ${simMode ? '#f9731630' : `${ANIM_ACCENT}20`}`,
+              backgroundColor: simMode ? `${ACCENT_ORANGE}20` : `${ANIM_ACCENT}20`,
+              color: simMode ? ACCENT_ORANGE : ANIM_ACCENT,
+              border: `1px solid ${simMode ? ACCENT_ORANGE : ANIM_ACCENT}`,
+              boxShadow: simMode ? `0 0 15px ${ACCENT_ORANGE}40, inset 0 0 10px ${ACCENT_ORANGE}20` : `0 0 10px ${ANIM_ACCENT}30, inset 0 0 10px ${ANIM_ACCENT}15`,
             }}
           >
-            {simMode ? <RotateCcw className="w-3 h-3" /> : <Play className="w-3 h-3" />}
+            {simMode ? <RotateCcw className="w-3.5 h-3.5" /> : <Play className="w-3.5 h-3.5" />}
             {simMode ? 'Exit Sim' : 'Simulate'}
           </button>
 
@@ -405,17 +420,18 @@ export function AnimationStateMachine({ onSelectState, isRunning, activeStateId 
             <button
               onClick={handleScan}
               disabled={isScanning}
-              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-2xs font-medium transition-all disabled:opacity-50"
+              className="flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all disabled:opacity-50 shadow-lg"
               style={{
-                backgroundColor: hasScannedData ? '#22c55e10' : `${ANIM_ACCENT}10`,
-                color: hasScannedData ? '#22c55e' : ANIM_ACCENT,
-                border: `1px solid ${hasScannedData ? '#22c55e25' : `${ANIM_ACCENT}25`}`,
+                backgroundColor: hasScannedData ? `${STATUS_SUCCESS}20` : `${ANIM_ACCENT}20`,
+                color: hasScannedData ? STATUS_SUCCESS : ANIM_ACCENT,
+                border: `1px solid ${hasScannedData ? STATUS_SUCCESS : ANIM_ACCENT}`,
+                boxShadow: hasScannedData ? `0 0 15px ${STATUS_SUCCESS}40, inset 0 0 10px ${STATUS_SUCCESS}20` : `0 0 10px ${ANIM_ACCENT}30, inset 0 0 10px ${ANIM_ACCENT}15`,
               }}
             >
               {isScanning ? (
-                <RefreshCw className="w-3 h-3 animate-spin" />
+                <RefreshCw className="w-3.5 h-3.5 animate-spin" />
               ) : (
-                <Scan className="w-3 h-3" />
+                <Scan className="w-3.5 h-3.5" />
               )}
               {isScanning ? 'Scanning...' : hasScannedData ? 'Rescan' : 'Scan Project'}
             </button>
@@ -425,9 +441,9 @@ export function AnimationStateMachine({ onSelectState, isRunning, activeStateId 
 
       {/* Simulation reset bar */}
       {simMode && simPath.length > 0 && (
-        <div className="flex items-center justify-between px-3 py-2 rounded-lg border" style={{ borderColor: '#f9731630', backgroundColor: '#f9731606' }}>
+        <div className="flex items-center justify-between px-3 py-2 rounded-lg border" style={{ borderColor: `${ACCENT_ORANGE}${OPACITY_30}`, backgroundColor: `${ACCENT_ORANGE}06` }}>
           <div className="flex items-center gap-2 min-w-0">
-            <MousePointerClick className="w-3 h-3 flex-shrink-0" style={{ color: '#f97316' }} />
+            <MousePointerClick className="w-3 h-3 flex-shrink-0" style={{ color: ACCENT_ORANGE }} />
             <span className="text-2xs text-text-muted truncate">
               Path: {simPath.map((id) => stateMap[id]?.label ?? id).join(' → ')}
             </span>
@@ -435,7 +451,7 @@ export function AnimationStateMachine({ onSelectState, isRunning, activeStateId 
           <button
             onClick={resetSimPath}
             className="flex items-center gap-1 px-2 py-1 rounded text-2xs font-medium transition-colors"
-            style={{ color: '#f97316' }}
+            style={{ color: ACCENT_ORANGE }}
           >
             <RotateCcw className="w-2.5 h-2.5" />
             Reset
@@ -486,9 +502,10 @@ export function AnimationStateMachine({ onSelectState, isRunning, activeStateId 
 
       {/* State machine diagram */}
       <div
-        className="relative rounded-xl border border-border bg-[#0a0a1e]"
-        style={{ height: displayStates.length > 8 ? 300 : 220 }}
+        className="relative rounded-xl border-2 border-surface-deep bg-[#050510]/80 shadow-[inset_0_0_40px_rgba(0,0,0,0.8)] overflow-hidden z-10"
+        style={{ height: displayStates.length > 8 ? 450 : 350 }}
       >
+        <div className="absolute inset-0 pointer-events-none opacity-20 z-0" style={{ backgroundImage: 'radial-gradient(circle at center, rgba(167,139,250,0.15) 0%, transparent 70%)' }} />
         {/* SVG transitions layer */}
         <svg className="absolute inset-0 w-full h-full" style={{ zIndex: 0 }}>
           <defs>
@@ -512,7 +529,7 @@ export function AnimationStateMachine({ onSelectState, isRunning, activeStateId 
               markerHeight="5"
               orient="auto-start-reverse"
             >
-              <path d="M 0 0 L 8 3 L 0 6 z" fill="#22c55e40" />
+              <path d="M 0 0 L 8 3 L 0 6 z" fill={`${STATUS_SUCCESS}40`} />
             </marker>
             <marker
               id="sm-arrow-sim"
@@ -580,27 +597,27 @@ export function AnimationStateMachine({ onSelectState, isRunning, activeStateId 
             const midY = (y1 + y2) / 2;
             const ruleText = rule ?? transitionRuleMap.get(edgeKey) ?? null;
 
-            let strokeColor = bothDone ? '#22c55e20' : `${ANIM_ACCENT}18`;
-            let strokeWidth = 1;
+            let strokeColor = bothDone ? `${STATUS_SUCCESS}50` : `${ANIM_ACCENT}30`;
+            let strokeWidth = bothDone ? 2 : 1.5;
             let markerEnd = bothDone ? 'url(#sm-arrow-done)' : 'url(#sm-arrow)';
 
             if (isSimEdge) {
-              strokeColor = '#f97316';
-              strokeWidth = 2;
+              strokeColor = ACCENT_ORANGE;
+              strokeWidth = 2.5;
               markerEnd = 'url(#sm-arrow-sim)';
             } else if (isModified) {
               strokeColor = '#eab308';
-              strokeWidth = 1.5;
+              strokeWidth = 2;
               markerEnd = 'url(#sm-arrow-modified)';
             }
 
             if (isHovered && !isSimEdge) {
               strokeColor = ANIM_ACCENT;
-              strokeWidth = 1.5;
+              strokeWidth = 2.5;
             }
 
             return (
-              <g key={edgeKey}>
+              <g key={edgeKey} className="group/edge">
                 {/* Invisible wider line for hover target */}
                 <line
                   x1={`${x1}%`}
@@ -608,11 +625,27 @@ export function AnimationStateMachine({ onSelectState, isRunning, activeStateId 
                   x2={`${x2}%`}
                   y2={`${y2}%`}
                   stroke="transparent"
-                  strokeWidth={10}
+                  strokeWidth={15}
                   style={{ cursor: 'pointer' }}
                   onMouseEnter={() => setHoveredTransition(edgeKey)}
                   onMouseLeave={() => setHoveredTransition(null)}
                 />
+
+                {/* Glow underlay */}
+                {(bothDone || isSimEdge || isHovered) && (
+                  <line
+                    x1={`${x1}%`}
+                    y1={`${y1}%`}
+                    x2={`${x2}%`}
+                    y2={`${y2}%`}
+                    stroke={strokeColor}
+                    strokeWidth={strokeWidth * 3}
+                    opacity="0.3"
+                    className="pointer-events-none"
+                    style={{ filter: 'blur(3px)' }}
+                  />
+                )}
+
                 <line
                   x1={`${x1}%`}
                   y1={`${y1}%`}
@@ -621,10 +654,14 @@ export function AnimationStateMachine({ onSelectState, isRunning, activeStateId 
                   stroke={strokeColor}
                   strokeWidth={strokeWidth}
                   markerEnd={markerEnd}
-                  className="pointer-events-none"
+                  className="pointer-events-none transition-all duration-300"
+                  strokeDasharray={(bothDone || isSimEdge) ? "6, 6" : "none"}
                 >
                   {isModified && (
                     <animate attributeName="opacity" values="1;0.3;1" dur="1s" repeatCount="5" />
+                  )}
+                  {(bothDone || isSimEdge) && (
+                    <animate attributeName="stroke-dashoffset" from="12" to="0" dur="0.8s" repeatCount="indefinite" />
                   )}
                 </line>
                 {/* Transition rule label on hover */}
@@ -667,32 +704,38 @@ export function AnimationStateMachine({ onSelectState, isRunning, activeStateId 
           const isUnreachable = simUnreachable.has(state.id) && simPath.length > 0;
           const isDeadEnd = simDeadEnds.has(state.id) && simPath.length > 0;
 
-          let borderColor = `${color}30`;
-          let bgColor = `${color}06`;
-          let extraClass = 'cursor-pointer';
+          let borderColor = `${color}40`;
+          let bgColor = `${color}0A`;
+          let shadow = 'none';
+          let extraClass = 'cursor-pointer hover:scale-105';
 
           if (state.completed) {
-            borderColor = '#22c55e40';
-            bgColor = '#22c55e08';
+            borderColor = `${STATUS_SUCCESS}60`;
+            bgColor = `${STATUS_SUCCESS}15`;
+            shadow = `0 0 15px ${STATUS_SUCCESS}30, inset 0 0 10px ${STATUS_SUCCESS}10`;
           } else if (state.isActive) {
-            borderColor = `${ANIM_ACCENT}50`;
-            bgColor = `${ANIM_ACCENT}10`;
+            borderColor = `${ANIM_ACCENT}80`;
+            bgColor = `${ANIM_ACCENT}20`;
+            shadow = `0 0 20px ${ANIM_ACCENT}40, inset 0 0 15px ${ANIM_ACCENT}20`;
+            extraClass += ' ring-2 ring-violet-500/50 ring-offset-2 ring-offset-[#03030a]';
           } else if (simMode) {
             if (isInSimPath) {
-              borderColor = '#f9731660';
-              bgColor = '#f9731610';
+              borderColor = `${ACCENT_ORANGE}80`;
+              bgColor = `${ACCENT_ORANGE}20`;
+              shadow = `0 0 20px ${ACCENT_ORANGE}40, inset 0 0 15px ${ACCENT_ORANGE}20`;
             } else if (isValidNext) {
-              borderColor = `${color}50`;
-              bgColor = `${color}12`;
-              extraClass = 'cursor-pointer ring-1 ring-offset-0';
+              borderColor = `${color}60`;
+              bgColor = `${color}1A`;
+              extraClass += ' ring-1 ring-offset-0 ring-orange-400/50';
+              shadow = `0 0 10px ${color}30, inset 0 0 10px ${color}10`;
             } else if (isUnreachable) {
-              borderColor = '#ef444440';
-              bgColor = '#ef444408';
-              extraClass = 'opacity-50';
+              borderColor = `${MODULE_COLORS.evaluator}30`;
+              bgColor = `${MODULE_COLORS.evaluator}08`;
+              extraClass += ' opacity-40';
             } else {
-              borderColor = `${color}15`;
-              bgColor = `${color}04`;
-              extraClass = 'opacity-60';
+              borderColor = `${color}20`;
+              bgColor = `${color}08`;
+              extraClass += ' opacity-50';
             }
           }
 
@@ -706,7 +749,7 @@ export function AnimationStateMachine({ onSelectState, isRunning, activeStateId 
                   ? isDeadEnd ? `${state.label} (dead end — no outgoing transitions)` : state.label
                   : state.hasMontage ? `${state.label} (montage assigned)` : state.label
               }
-              className={`absolute rounded-lg border transition-all duration-base group ${extraClass}`}
+              className={`absolute rounded-xl border transition-all duration-300 group ${extraClass}`}
               style={{
                 left: `${state.x}%`,
                 top: `${state.y}%`,
@@ -716,56 +759,55 @@ export function AnimationStateMachine({ onSelectState, isRunning, activeStateId 
                 zIndex: 1,
                 borderColor,
                 backgroundColor: bgColor,
+                boxShadow: shadow,
                 ...(state.isNew ? { filter: 'url(#glow-new)' } : {}),
               }}
             >
               {/* Type color strip on the left edge */}
               <div
-                className="absolute left-0 top-1 bottom-1 w-[3px] rounded-full"
+                className="absolute left-0 top-1 bottom-1 w-[4px] rounded-full"
                 style={{ backgroundColor: color }}
               />
 
-              <div className="flex items-center justify-center gap-1.5 h-full px-2 pl-3">
+              <div className="absolute inset-0 bg-gradient-to-br from-white/5 to-transparent rounded-lg pointer-events-none" />
+              <div className="flex items-center justify-start gap-2 h-full px-3 pl-4 relative z-10 w-full overflow-hidden">
                 {state.completed ? (
-                  <Check className="w-3 h-3 text-[#22c55e] flex-shrink-0" />
+                  <div className="p-1 rounded bg-green-500/20 border border-green-500/30 shadow-[0_0_8px_rgba(34,197,94,0.4)] flex-shrink-0">
+                    <Check className="w-3 h-3 text-green-400" />
+                  </div>
                 ) : state.isActive ? (
-                  <span
-                    className="w-1.5 h-1.5 rounded-full animate-pulse flex-shrink-0"
-                    style={{ backgroundColor: ANIM_ACCENT }}
-                  />
+                  <span className="w-2.5 h-2.5 rounded-full animate-pulse shadow-[0_0_8px_rgba(167,139,250,0.8)] flex-shrink-0" style={{ backgroundColor: ANIM_ACCENT }} />
                 ) : simMode && isInSimPath ? (
-                  <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: '#f97316' }} />
+                  <span className="w-2.5 h-2.5 rounded-full shadow-[0_0_8px_rgba(249,115,22,0.8)] flex-shrink-0" style={{ backgroundColor: ACCENT_ORANGE }} />
                 ) : simMode && isDeadEnd ? (
-                  <AlertTriangle className="w-3 h-3 flex-shrink-0" style={{ color: '#ef4444' }} />
+                  <AlertTriangle className="w-3.5 h-3.5 shadow-sm flex-shrink-0" style={{ color: MODULE_COLORS.evaluator }} />
                 ) : state.hasMontage ? (
-                  <Sparkles className="w-2.5 h-2.5 flex-shrink-0" style={{ color: '#f59e0b' }} />
+                  <Sparkles className="w-3.5 h-3.5 drop-shadow-[0_0_4px_rgba(56,182,255,0.6)] flex-shrink-0" style={{ color: MODULE_COLORS.content }} />
                 ) : (
-                  <span
-                    className="w-1.5 h-1.5 rounded-full flex-shrink-0"
-                    style={{ backgroundColor: `${color}40`, border: `1px solid ${color}30` }}
-                  />
+                  <span className="w-2 h-2 rounded-full flex-shrink-0 shadow-sm" style={{ backgroundColor: `${color}60`, border: `1px solid ${color}40` }} />
                 )}
-                <span
-                  className="text-xs font-semibold leading-none truncate"
-                  style={{
-                    color: state.completed
-                      ? '#22c55e'
-                      : state.isActive
-                        ? ANIM_ACCENT
-                        : isInSimPath
-                          ? '#f97316'
-                          : color,
-                  }}
-                >
-                  {state.label}
-                </span>
+
+                <div className="flex flex-col items-start truncate leading-none pt-[2px] w-full min-w-0">
+                  <span
+                    className="text-[11px] font-bold tracking-wide font-mono truncate w-full"
+                    style={{
+                      color: state.completed ? STATUS_SUCCESS : state.isActive ? ANIM_ACCENT : isInSimPath ? ACCENT_ORANGE : '#e2e8f0',
+                      textShadow: state.isActive || state.completed || isInSimPath ? `0 0 10px ${color}80` : 'none'
+                    }}
+                  >
+                    {state.label}
+                  </span>
+                  {state.hasMontage && (
+                    <span className="text-[8px] text-[#38b6ff] uppercase tracking-widest font-mono opacity-80 mt-1 block">Montage</span>
+                  )}
+                </div>
               </div>
 
               {/* New state pulse animation */}
               {state.isNew && (
                 <div
-                  className="absolute inset-0 rounded-lg border-2 animate-pulse pointer-events-none"
-                  style={{ borderColor: '#22c55e60' }}
+                  className="absolute inset-0 rounded-xl border-2 animate-pulse pointer-events-none"
+                  style={{ borderColor: `${STATUS_SUCCESS}60` }}
                 />
               )}
             </button>
@@ -796,34 +838,34 @@ export function AnimationStateMachine({ onSelectState, isRunning, activeStateId 
           {simMode ? (
             <>
               <span className="flex items-center gap-1">
-                <span className="w-2 h-2 rounded-full" style={{ backgroundColor: '#f97316' }} />
+                <span className="w-2 h-2 rounded-full" style={{ backgroundColor: ACCENT_ORANGE }} />
                 path
               </span>
               <span className="flex items-center gap-1">
-                <AlertTriangle className="w-2 h-2" style={{ color: '#ef4444' }} />
+                <AlertTriangle className="w-2 h-2" style={{ color: MODULE_COLORS.evaluator }} />
                 dead end
               </span>
               <span className="flex items-center gap-1">
-                <span className="w-2 h-2 rounded-full opacity-50" style={{ backgroundColor: '#ef4444' }} />
+                <span className="w-2 h-2 rounded-full opacity-50" style={{ backgroundColor: MODULE_COLORS.evaluator }} />
                 unreachable
               </span>
             </>
           ) : (
             <>
               <span className="flex items-center gap-1">
-                <span className="w-1.5 h-1.5 rounded-sm" style={{ backgroundColor: '#3b82f6' }} />
+                <span className="w-1.5 h-1.5 rounded-sm" style={{ backgroundColor: MODULE_COLORS.core }} />
                 locomotion
               </span>
               <span className="flex items-center gap-1">
-                <span className="w-1.5 h-1.5 rounded-sm" style={{ backgroundColor: '#ef4444' }} />
+                <span className="w-1.5 h-1.5 rounded-sm" style={{ backgroundColor: MODULE_COLORS.evaluator }} />
                 combat
               </span>
               <span className="flex items-center gap-1">
-                <span className="w-1.5 h-1.5 rounded-sm" style={{ backgroundColor: '#f97316' }} />
+                <span className="w-1.5 h-1.5 rounded-sm" style={{ backgroundColor: ACCENT_ORANGE }} />
                 reaction
               </span>
               <span className="flex items-center gap-1">
-                <Sparkles className="w-2 h-2" style={{ color: '#f59e0b' }} />
+                <Sparkles className="w-2 h-2" style={{ color: MODULE_COLORS.content }} />
                 montage
               </span>
               <span className="flex items-center gap-1">
@@ -843,13 +885,13 @@ export function AnimationStateMachine({ onSelectState, isRunning, activeStateId 
             <div className="text-2xs text-text-muted">states visited</div>
           </div>
           <div className="rounded-lg border border-border bg-surface-deep px-3 py-2 text-center">
-            <div className="text-xs font-bold" style={{ color: simUnreachable.size > 0 ? '#ef4444' : '#22c55e' }}>
+            <div className="text-xs font-bold" style={{ color: simUnreachable.size > 0 ? MODULE_COLORS.evaluator : STATUS_SUCCESS }}>
               {simUnreachable.size}
             </div>
             <div className="text-2xs text-text-muted">unreachable</div>
           </div>
           <div className="rounded-lg border border-border bg-surface-deep px-3 py-2 text-center">
-            <div className="text-xs font-bold" style={{ color: simDeadEnds.size > 0 ? '#f97316' : '#22c55e' }}>
+            <div className="text-xs font-bold" style={{ color: simDeadEnds.size > 0 ? ACCENT_ORANGE : STATUS_SUCCESS }}>
               {simDeadEnds.size}
             </div>
             <div className="text-2xs text-text-muted">dead ends</div>
@@ -867,9 +909,9 @@ export function AnimationStateMachine({ onSelectState, isRunning, activeStateId 
                 key={ref}
                 className="text-2xs px-2 py-0.5 rounded-full font-mono"
                 style={{
-                  backgroundColor: '#f59e0b0a',
-                  color: '#f59e0b',
-                  border: '1px solid #f59e0b20',
+                  backgroundColor: `${MODULE_COLORS.content}0a`,
+                  color: MODULE_COLORS.content,
+                  border: `1px solid ${MODULE_COLORS.content}${OPACITY_20}`,
                 }}
               >
                 {ref}

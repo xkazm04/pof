@@ -3,28 +3,32 @@
 import { useState, useCallback, useRef } from 'react';
 import { Plus, Volume2, Radio } from 'lucide-react';
 import type { AudioZone, SoundEmitter, AudioZoneShape, EmitterType } from '@/types/audio-scene';
+import {
+  STATUS_INFO, ACCENT_VIOLET, STATUS_SUCCESS, STATUS_BLOCKER,
+  STATUS_WARNING, ACCENT_EMERALD, ACCENT_PINK, STATUS_ERROR,
+} from '@/lib/chart-colors';
 
 // ── Constants ──
 
 const ZONE_COLORS: Record<string, string> = {
-  'none':           'var(--text-muted)',
-  'small-room':     '#60a5fa',
-  'large-hall':     '#a78bfa',
-  'cave':           '#8b8fb0',
-  'outdoor':        '#4ade80',
-  'underwater':     '#22d3ee',
-  'metal-corridor': '#fb923c',
-  'stone-chamber':  '#fbbf24',
-  'forest':         '#34d399',
-  'custom':         '#f472b6',
+  'none': 'var(--text-muted)',
+  'small-room': STATUS_INFO,
+  'large-hall': ACCENT_VIOLET,
+  'cave': '#8b8fb0',
+  'outdoor': STATUS_SUCCESS,
+  'underwater': '#22d3ee',
+  'metal-corridor': STATUS_BLOCKER,
+  'stone-chamber': STATUS_WARNING,
+  'forest': ACCENT_EMERALD,
+  'custom': ACCENT_PINK,
 };
 
 const EMITTER_COLORS: Record<EmitterType, string> = {
-  ambient: '#4ade80',
-  point:   '#60a5fa',
-  loop:    '#a78bfa',
-  oneshot: '#fbbf24',
-  music:   '#f472b6',
+  ambient: STATUS_SUCCESS,
+  point: STATUS_INFO,
+  loop: ACCENT_VIOLET,
+  oneshot: STATUS_WARNING,
+  music: ACCENT_PINK,
 };
 
 interface AudioScenePainterProps {
@@ -268,58 +272,76 @@ export function AudioScenePainter({
   };
 
   return (
-    <div className="relative w-full h-full bg-[#080818] overflow-hidden">
+    <div className="relative w-full h-full bg-[#03030a] overflow-hidden rounded-2xl border border-blue-900/30 shadow-[inset_0_0_80px_rgba(59,130,246,0.05)]">
+      {/* Background Ambient Glow */}
+      <div className="absolute inset-0 pointer-events-none z-0">
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-blue-600/5 blur-[120px] rounded-full" />
+      </div>
+
       {/* Toolbar */}
-      <div className="absolute top-2 left-2 z-10 flex items-center gap-1">
-        <ToolBtn
-          active={paintMode === 'select'}
-          onClick={() => setPaintMode('select')}
-          label="Select"
-        />
-        <ToolBtn
-          active={paintMode === 'zone-rect'}
-          onClick={() => setPaintMode('zone-rect')}
-          label="Zone"
-          icon={<Volume2 className="w-3 h-3" />}
-        />
-        <ToolBtn
-          active={paintMode === 'zone-circle'}
-          onClick={() => setPaintMode('zone-circle')}
-          label="Radial"
-          icon={<Radio className="w-3 h-3" />}
-        />
-        <ToolBtn
-          active={paintMode === 'emitter'}
-          onClick={() => setPaintMode('emitter')}
-          label="Emitter"
-          icon={<Plus className="w-3 h-3" />}
-        />
+      <div className="absolute top-4 left-4 z-10 flex flex-col gap-2">
+        <div className="bg-black/40 border border-blue-900/40 p-1.5 rounded-xl backdrop-blur-md shadow-[0_0_15px_rgba(0,0,0,0.5)] flex items-center gap-1">
+          <ToolBtn
+            active={paintMode === 'select'}
+            onClick={() => setPaintMode('select')}
+            label="SELECT"
+          />
+          <div className="w-px h-6 bg-blue-900/60 mx-1" />
+          <ToolBtn
+            active={paintMode === 'zone-rect'}
+            onClick={() => setPaintMode('zone-rect')}
+            label="VOL_RECT"
+            icon={<Volume2 className="w-3.5 h-3.5" />}
+          />
+          <ToolBtn
+            active={paintMode === 'zone-circle'}
+            onClick={() => setPaintMode('zone-circle')}
+            label="VOL_RADIAL"
+            icon={<Radio className="w-3.5 h-3.5" />}
+          />
+          <div className="w-px h-6 bg-blue-900/60 mx-1" />
+          <ToolBtn
+            active={paintMode === 'emitter'}
+            onClick={() => setPaintMode('emitter')}
+            label="EMITTER"
+            icon={<Plus className="w-3.5 h-3.5" />}
+          />
+        </div>
       </div>
 
       {/* Stats badge */}
-      <div className="absolute top-2 right-2 z-10 px-2 py-1 rounded text-xs bg-surface border border-border text-text-muted">
-        {zones.length} zones &middot; {emitters.length} emitters
+      <div className="absolute top-4 right-4 z-10 px-3 py-1.5 rounded-lg border border-blue-500/30 bg-blue-500/10 text-[10px] font-mono font-bold text-blue-300 backdrop-blur-md uppercase tracking-widest shadow-[0_0_15px_rgba(59,130,246,0.15)] flex items-center gap-3">
+        <span className="flex items-center gap-1.5"><Volume2 className="w-3.5 h-3.5 text-blue-500" /> {zones.length}</span>
+        <span className="text-blue-500/50">/</span>
+        <span className="flex items-center gap-1.5"><Radio className="w-3.5 h-3.5 text-cyan-500" /> {emitters.length}</span>
       </div>
 
       {/* SVG Canvas */}
       <svg
         ref={svgRef}
-        className="w-full h-full"
+        className="w-full h-full relative z-0"
         style={{ cursor: getCursor() }}
         onMouseDown={handleCanvasMouseDown}
         onMouseMove={handleMouseMove}
         onMouseUp={handleMouseUp}
         onMouseLeave={handleMouseUp}
       >
-        {/* Grid */}
+        {/* Grid and defs */}
         <defs>
-          <pattern id="audio-grid" width="24" height="24" patternUnits="userSpaceOnUse"
-            patternTransform={`translate(${pan.x % 24},${pan.y % 24})`}
-          >
-            <circle cx="12" cy="12" r="0.5" fill="var(--border)" />
+          <pattern id="audio-grid-major" width="96" height="96" patternUnits="userSpaceOnUse" patternTransform={`translate(${pan.x % 96},${pan.y % 96})`}>
+            <path d="M 96 0 L 0 0 0 96" fill="none" stroke="rgba(59,130,246,0.15)" strokeWidth="1" />
           </pattern>
+          <pattern id="audio-grid-minor" width="24" height="24" patternUnits="userSpaceOnUse" patternTransform={`translate(${pan.x % 24},${pan.y % 24})`}>
+            <path d="M 24 0 L 0 0 0 24" fill="none" stroke="rgba(59,130,246,0.05)" strokeWidth="0.5" />
+          </pattern>
+          <radialGradient id="radar-glow" cx="50%" cy="50%" r="50%">
+            <stop offset="0%" stopColor="rgba(59,130,246,0.05)" />
+            <stop offset="100%" stopColor="transparent" />
+          </radialGradient>
         </defs>
-        <rect width="100%" height="100%" fill="url(#audio-grid)" />
+
+        <rect width="100%" height="100%" fill="url(#audio-grid-minor)" />
+        <rect width="100%" height="100%" fill="url(#audio-grid-major)" />
 
         <g transform={`translate(${pan.x},${pan.y})`}>
           {/* Audio zones */}
@@ -334,20 +356,20 @@ export function AudioScenePainter({
                   <circle
                     cx={zone.x} cy={zone.y}
                     r={zone.attenuationRadius}
-                    fill={`${zoneColor}05`}
-                    stroke={`${zoneColor}15`}
+                    fill={`url(#radar-glow)`}
+                    stroke={`${zoneColor}20`}
                     strokeWidth={1}
-                    strokeDasharray="4,4"
+                    strokeDasharray="4,8"
                   />
                 ) : (
                   <rect
                     x={zone.x - 30} y={zone.y - 30}
                     width={zone.width + 60} height={zone.height + 60}
                     rx={12}
-                    fill={`${zoneColor}05`}
-                    stroke={`${zoneColor}15`}
+                    fill={`url(#radar-glow)`}
+                    stroke={`${zoneColor}20`}
                     strokeWidth={1}
-                    strokeDasharray="4,4"
+                    strokeDasharray="4,8"
                   />
                 )}
 
@@ -356,80 +378,74 @@ export function AudioScenePainter({
                   <circle
                     cx={zone.x} cy={zone.y}
                     r={zone.width / 2}
-                    fill={`${zoneColor}12`}
+                    fill={`${zoneColor}10`}
                     stroke={isSelected ? accentColor : `${zoneColor}60`}
-                    strokeWidth={isSelected ? 2 : 1}
+                    strokeWidth={isSelected ? 2 : 1.5}
                     onMouseDown={(e) => handleZoneMouseDown(e, zone.id)}
-                    style={{ cursor: paintMode === 'select' ? 'pointer' : undefined }}
+                    style={{ cursor: paintMode === 'select' ? 'pointer' : undefined, filter: isSelected ? `drop-shadow(0 0 10px ${accentColor}40)` : 'none' }}
                   />
                 ) : (
                   <rect
                     x={zone.x} y={zone.y}
                     width={zone.width} height={zone.height}
-                    rx={6}
-                    fill={`${zoneColor}12`}
+                    rx={2}
+                    fill={`${zoneColor}10`}
                     stroke={isSelected ? accentColor : `${zoneColor}60`}
-                    strokeWidth={isSelected ? 2 : 1}
+                    strokeWidth={isSelected ? 2 : 1.5}
                     onMouseDown={(e) => handleZoneMouseDown(e, zone.id)}
-                    style={{ cursor: paintMode === 'select' ? 'pointer' : undefined }}
+                    style={{ cursor: paintMode === 'select' ? 'pointer' : undefined, filter: isSelected ? `drop-shadow(0 0 10px ${accentColor}40)` : 'none' }}
                   />
                 )}
 
                 {/* Zone label */}
-                {zone.shape === 'circle' ? (
-                  <text
-                    x={zone.x} y={zone.y - zone.width / 2 - 8}
-                    textAnchor="middle"
-                    fontSize={10} fill={zoneColor} fontFamily="sans-serif" fontWeight={600}
-                    style={{ pointerEvents: 'none' }}
-                  >
-                    {zone.name}
-                  </text>
-                ) : (
-                  <text
-                    x={zone.x + 8} y={zone.y + 16}
-                    fontSize={10} fill={zoneColor} fontFamily="sans-serif" fontWeight={600}
-                    style={{ pointerEvents: 'none' }}
-                  >
-                    {zone.name}
-                  </text>
-                )}
+                <g style={{ pointerEvents: 'none' }}>
+                  {zone.shape === 'circle' ? (
+                    <>
+                      <rect x={zone.x - 40} y={zone.y - zone.width / 2 - 16} width={80} height={14} rx={2} fill="rgba(0,0,0,0.6)" stroke={`${zoneColor}40`} strokeWidth={1} />
+                      <text x={zone.x} y={zone.y - zone.width / 2 - 6} textAnchor="middle" fontSize={8} fill={zoneColor} fontFamily="monospace" fontWeight={700} style={{ textTransform: 'uppercase' }}>{zone.name}</text>
+                    </>
+                  ) : (
+                    <>
+                      <rect x={zone.x + 8} y={zone.y + 8} width={Math.max(80, zone.name.length * 6 + 10)} height={14} rx={2} fill="rgba(0,0,0,0.6)" stroke={`${zoneColor}40`} strokeWidth={1} />
+                      <text x={zone.x + 12} y={zone.y + 18} fontSize={8} fill={zoneColor} fontFamily="monospace" fontWeight={700} style={{ textTransform: 'uppercase' }}>{zone.name}</text>
 
-                {/* Reverb badge */}
-                {zone.shape === 'rect' && (
-                  <text
-                    x={zone.x + 8} y={zone.y + 30}
-                    fontSize={8} fill={`${zoneColor}80`} fontFamily="sans-serif"
-                    style={{ pointerEvents: 'none' }}
-                  >
-                    {zone.reverbPreset} · {zone.occlusionMode}
-                  </text>
-                )}
+                      <text x={zone.x + 12} y={zone.y + 32} fontSize={7} fill={`${zoneColor}80`} fontFamily="monospace" style={{ textTransform: 'uppercase' }}>[{zone.reverbPreset}]</text>
+                    </>
+                  )}
+                </g>
 
                 {/* Selection controls */}
                 {isSelected && paintMode === 'select' && (
                   <>
+                    {/* Corner brackets for rect */}
+                    {zone.shape === 'rect' && (
+                      <>
+                        <path d={`M ${zone.x - 4} ${zone.y + 10} L ${zone.x - 4} ${zone.y - 4} L ${zone.x + 10} ${zone.y - 4}`} fill="none" stroke={accentColor} strokeWidth={2} />
+                        <path d={`M ${zone.x + zone.width - 10} ${zone.y - 4} L ${zone.x + zone.width + 4} ${zone.y - 4} L ${zone.x + zone.width + 4} ${zone.y + 10}`} fill="none" stroke={accentColor} strokeWidth={2} />
+                        <path d={`M ${zone.x - 4} ${zone.y + zone.height - 10} L ${zone.x - 4} ${zone.y + zone.height + 4} L ${zone.x + 10} ${zone.y + zone.height + 4}`} fill="none" stroke={accentColor} strokeWidth={2} />
+                        <path d={`M ${zone.x + zone.width - 10} ${zone.y + zone.height + 4} L ${zone.x + zone.width + 4} ${zone.y + zone.height + 4} L ${zone.x + zone.width + 4} ${zone.y + zone.height - 10}`} fill="none" stroke={accentColor} strokeWidth={2} />
+                      </>
+                    )}
+
                     {/* Delete button */}
                     <g
                       transform={zone.shape === 'circle'
                         ? `translate(${zone.x + zone.width / 2 - 8},${zone.y - zone.width / 2 - 24})`
-                        : `translate(${zone.x + zone.width - 16},${zone.y - 20})`}
+                        : `translate(${zone.x + zone.width - 24},${zone.y + 8})`}
                       onClick={(e) => { e.stopPropagation(); deleteZone(zone.id); }}
                       style={{ cursor: 'pointer' }}
                     >
-                      <rect x={0} y={0} width={16} height={16} rx={4} fill="#f8717125" />
-                      <text x={4} y={12} fontSize={10} fill="#f87171">&times;</text>
+                      <rect x={0} y={0} width={16} height={16} rx={4} fill={`${STATUS_ERROR}20`} stroke={`${STATUS_ERROR}50`} />
+                      <text x={5} y={12} fontSize={10} fill={STATUS_ERROR} fontFamily="sans-serif" fontWeight={700}>×</text>
                     </g>
 
                     {/* Resize handle (rect only) */}
                     {zone.shape === 'rect' && (
                       <rect
-                        x={zone.x + zone.width - 6}
-                        y={zone.y + zone.height - 6}
-                        width={12} height={12}
-                        rx={2}
-                        fill={accentColor}
-                        opacity={0.6}
+                        x={zone.x + zone.width - 8}
+                        y={zone.y + zone.height - 8}
+                        width={16} height={16}
+                        fill="transparent"
                         style={{ cursor: 'se-resize' }}
                         onMouseDown={(e) => handleResizeStart(e, zone.id, 'se')}
                       />
@@ -443,7 +459,7 @@ export function AudioScenePainter({
           {/* Sound emitters */}
           {emitters.map((em) => {
             const isSelected = selectedEmitterId === em.id;
-            const emColor = EMITTER_COLORS[em.type] || '#60a5fa';
+            const emColor = EMITTER_COLORS[em.type] || STATUS_INFO;
 
             return (
               <g key={em.id}>
@@ -451,67 +467,55 @@ export function AudioScenePainter({
                 <circle
                   cx={em.x} cy={em.y}
                   r={em.attenuationRadius}
-                  fill={`${emColor}08`}
-                  stroke={`${emColor}20`}
+                  fill={`url(#radar-glow)`}
+                  stroke={`${emColor}30`}
                   strokeWidth={1}
-                  strokeDasharray="3,3"
+                  strokeDasharray="2,6"
                   style={{ pointerEvents: 'none' }}
                 />
 
                 {/* Emitter body */}
                 <circle
                   cx={em.x} cy={em.y}
-                  r={8}
-                  fill={`${emColor}30`}
+                  r={10}
+                  fill="rgba(0,0,0,0.6)"
                   stroke={isSelected ? accentColor : emColor}
                   strokeWidth={isSelected ? 2 : 1.5}
                   onMouseDown={(e) => handleEmitterMouseDown(e, em.id)}
-                  style={{ cursor: paintMode === 'select' ? 'pointer' : undefined }}
+                  style={{ cursor: paintMode === 'select' ? 'pointer' : undefined, filter: isSelected ? `drop-shadow(0 0 10px ${accentColor}50)` : `drop-shadow(0 0 5px ${emColor}40)` }}
                 />
 
                 {/* Inner dot */}
                 <circle
                   cx={em.x} cy={em.y}
-                  r={3}
-                  fill={emColor}
-                  style={{ pointerEvents: 'none' }}
+                  r={isSelected ? 4 : 3}
+                  fill={isSelected ? accentColor : emColor}
+                  style={{ pointerEvents: 'none', transition: 'all 0.3s' }}
                 />
 
-                {/* Sound wave arcs */}
-                {em.type === 'ambient' || em.type === 'loop' ? (
-                  <>
-                    <path
-                      d={`M ${em.x + 11} ${em.y - 4} A 6 6 0 0 1 ${em.x + 11} ${em.y + 4}`}
-                      fill="none" stroke={`${emColor}50`} strokeWidth={1}
-                      style={{ pointerEvents: 'none' }}
-                    />
-                    <path
-                      d={`M ${em.x + 14} ${em.y - 7} A 10 10 0 0 1 ${em.x + 14} ${em.y + 7}`}
-                      fill="none" stroke={`${emColor}30`} strokeWidth={1}
-                      style={{ pointerEvents: 'none' }}
-                    />
-                  </>
+                {/* Sound wave arcs (radar ripples) */}
+                {em.type === 'ambient' || em.type === 'loop' || em.type === 'music' ? (
+                  <g style={{ pointerEvents: 'none' }}>
+                    <circle cx={em.x} cy={em.y} r={16} fill="none" stroke={emColor} strokeWidth={1} opacity={0.4} strokeDasharray="4,8" />
+                    <circle cx={em.x} cy={em.y} r={24} fill="none" stroke={emColor} strokeWidth={0.5} opacity={0.2} strokeDasharray="2,6" />
+                  </g>
                 ) : null}
 
                 {/* Label */}
-                <text
-                  x={em.x} y={em.y - 14}
-                  textAnchor="middle"
-                  fontSize={8} fill={emColor} fontFamily="sans-serif" fontWeight={600}
-                  style={{ pointerEvents: 'none' }}
-                >
-                  {em.name}
-                </text>
+                <g style={{ pointerEvents: 'none' }}>
+                  <rect x={em.x - 30} y={em.y - 28} width={60} height={14} rx={2} fill="rgba(0,0,0,0.7)" stroke={`${emColor}40`} strokeWidth={1} />
+                  <text x={em.x} y={em.y - 18} textAnchor="middle" fontSize={7} fill={emColor} fontFamily="monospace" fontWeight={700} style={{ textTransform: 'uppercase' }}>{em.name}</text>
+                </g>
 
                 {/* Delete on selection */}
                 {isSelected && paintMode === 'select' && (
                   <g
-                    transform={`translate(${em.x + 10},${em.y - 20})`}
+                    transform={`translate(${em.x + 12},${em.y - 12})`}
                     onClick={(e) => { e.stopPropagation(); deleteEmitter(em.id); }}
                     style={{ cursor: 'pointer' }}
                   >
-                    <rect x={0} y={0} width={14} height={14} rx={3} fill="#f8717125" />
-                    <text x={3} y={11} fontSize={9} fill="#f87171">&times;</text>
+                    <rect x={0} y={0} width={14} height={14} rx={3} fill={`${STATUS_ERROR}20`} stroke={`${STATUS_ERROR}50`} />
+                    <text x={4} y={10} fontSize={9} fill={STATUS_ERROR} fontFamily="sans-serif" fontWeight={700}>×</text>
                   </g>
                 )}
               </g>
@@ -519,22 +523,22 @@ export function AudioScenePainter({
           })}
 
           {/* Drawing preview */}
-          {drawState && (() => {
-            const x = Math.min(drawState.startX, drawState.currentX);
-            const y = Math.min(drawState.startY, drawState.currentY);
-            const w = Math.abs(drawState.currentX - drawState.startX);
-            const h = Math.abs(drawState.currentY - drawState.startY);
+          {drawState && ((ds) => {
+            const x = Math.min(ds.startX, ds.currentX);
+            const y = Math.min(ds.startY, ds.currentY);
+            const w = Math.abs(ds.currentX - ds.startX);
+            const h = Math.abs(ds.currentY - ds.startY);
 
-            if (drawState.shape === 'circle') {
+            if (ds.shape === 'circle') {
               const r = Math.max(w, h) / 2;
               return (
                 <circle
-                  cx={drawState.startX} cy={drawState.startY}
+                  cx={ds.startX} cy={ds.startY}
                   r={r}
-                  fill={`${accentColor}14`}
+                  fill={`url(#radar-glow)`}
                   stroke={accentColor}
-                  strokeWidth={2}
-                  strokeDasharray="6,3"
+                  strokeWidth={1}
+                  strokeDasharray="4,4"
                 />
               );
             }
@@ -542,14 +546,14 @@ export function AudioScenePainter({
             return (
               <rect
                 x={x} y={y} width={w} height={h}
-                rx={6}
-                fill={`${accentColor}14`}
+                rx={2}
+                fill={`url(#radar-glow)`}
                 stroke={accentColor}
-                strokeWidth={2}
-                strokeDasharray="6,3"
+                strokeWidth={1}
+                strokeDasharray="4,4"
               />
             );
-          })()}
+          })(drawState)}
         </g>
       </svg>
     </div>
@@ -577,12 +581,11 @@ function ToolBtn({ active, onClick, label, icon }: {
   return (
     <button
       onClick={onClick}
-      className={`flex items-center gap-1 px-2.5 py-1.5 rounded-md text-xs font-medium transition-colors ${
-        active
-          ? 'bg-surface-hover border-[#3e3e6a] text-text'
-          : 'bg-surface border-border-bright text-text-muted-hover hover:bg-surface-hover hover:text-text'
-      }`}
-      style={{ border: `1px solid ${active ? '#3e3e6a' : 'var(--border-bright)'}` }}
+      className={`flex items-center gap-2 px-3 py-2 rounded-lg text-[9px] font-bold uppercase tracking-widest transition-all ${active
+        ? 'bg-blue-500/20 text-blue-300 border-blue-500/50 shadow-[0_0_15px_rgba(59,130,246,0.3)]'
+        : 'bg-transparent text-blue-400/60 border-transparent hover:bg-blue-500/10 hover:text-blue-300'
+        }`}
+      style={{ borderStyle: 'solid', borderWidth: '1px' }}
     >
       {icon}
       {label}

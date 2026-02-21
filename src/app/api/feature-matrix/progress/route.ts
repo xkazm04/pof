@@ -3,6 +3,7 @@ import fs from 'fs';
 import path from 'path';
 import { MODULE_FEATURE_DEFINITIONS } from '@/lib/feature-definitions';
 import { apiSuccess, apiError } from '@/lib/api-utils';
+import type { SubModuleId } from '@/types/modules';
 
 /**
  * GET /api/feature-matrix/progress?moduleId=X&projectPath=Y
@@ -19,7 +20,7 @@ export async function GET(request: NextRequest) {
       return apiError('moduleId and projectPath required', 400);
     }
 
-    const defs = MODULE_FEATURE_DEFINITIONS[moduleId] ?? [];
+    const defs = MODULE_FEATURE_DEFINITIONS[moduleId as SubModuleId] ?? [];
     const total = defs.length;
 
     if (total === 0) {

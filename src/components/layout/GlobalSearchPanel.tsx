@@ -7,16 +7,18 @@ import {
   ArrowRight, RefreshCw, Loader2,
 } from 'lucide-react';
 import { useNavigationStore } from '@/stores/navigationStore';
+import { apiFetch } from '@/lib/api-utils';
+import { MODULE_COLORS, STATUS_INFO, ACCENT_VIOLET } from '@/lib/chart-colors';
 import type { SearchResult } from '@/lib/search-index';
 
 // ── Type icons ───────────────────────────────────────────────────────────────
 
 const TYPE_META: Record<string, { icon: typeof Box; label: string; color: string }> = {
-  checklist: { icon: ListChecks, label: 'Checklist', color: '#00ff88' },
-  feature:   { icon: Box, label: 'Feature', color: '#60a5fa' },
-  module:    { icon: Layers, label: 'Module', color: '#a78bfa' },
-  category:  { icon: Layers, label: 'Category', color: '#f59e0b' },
-  finding:   { icon: AlertTriangle, label: 'Finding', color: '#ef4444' },
+  checklist: { icon: ListChecks, label: 'Checklist', color: MODULE_COLORS.setup },
+  feature:   { icon: Box, label: 'Feature', color: STATUS_INFO },
+  module:    { icon: Layers, label: 'Module', color: ACCENT_VIOLET },
+  category:  { icon: Layers, label: 'Category', color: MODULE_COLORS.content },
+  finding:   { icon: AlertTriangle, label: 'Finding', color: MODULE_COLORS.evaluator },
   build:     { icon: Package, label: 'Build', color: '#94a3b8' },
 };
 
@@ -86,8 +88,7 @@ export function GlobalSearchPanel() {
       try {
         const params = new URLSearchParams({ q: query });
         if (activeFilter) params.set('types', activeFilter);
-        const res = await fetch(`/api/search?${params.toString()}`);
-        const data = await res.json();
+        const data = await apiFetch<{ results: SearchResult[]; count: number; lastRebuilt: string | null }>(`/api/search?${params.toString()}`);
         setResults(data.results ?? []);
         setLastRebuilt(data.lastRebuilt ?? null);
         setActiveIndex(0);
@@ -107,9 +108,8 @@ export function GlobalSearchPanel() {
   const handleRebuild = useCallback(async (silent = false) => {
     if (!silent) setRebuilding(true);
     try {
-      const res = await fetch('/api/search?rebuild=1');
-      const data = await res.json();
-      if (data.ok) setLastRebuilt(new Date().toISOString());
+      await apiFetch('/api/search?rebuild=1');
+      setLastRebuilt(new Date().toISOString());
     } catch { /* ignore */ }
     if (!silent) setRebuilding(false);
   }, []);
@@ -205,9 +205,10 @@ export function GlobalSearchPanel() {
                 onClick={() => setActiveFilter(null)}
                 className={`px-2 py-0.5 rounded-full text-2xs font-medium transition-colors whitespace-nowrap ${
                   activeFilter === null
-                    ? 'bg-accent-medium text-[#00ff88]'
+                    ? 'bg-accent-medium'
                     : 'text-text-muted hover:text-text hover:bg-surface-hover'
                 }`}
+                style={activeFilter === null ? { color: MODULE_COLORS.setup } : undefined}
               >
                 All
               </button>

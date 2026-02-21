@@ -22,6 +22,8 @@ import type {
   StringTable,
 } from '@/types/localization-pipeline';
 import { CONTEXT_LABELS, SUPPORTED_LOCALES } from '@/lib/localization/definitions';
+import { UI_TIMEOUTS } from '@/lib/constants';
+import { ACCENT_EMERALD, STATUS_WARNING, STATUS_ERROR } from '@/lib/chart-colors';
 
 // ── Constants ───────────────────────────────────────────────────────────────
 
@@ -245,7 +247,7 @@ export function LocalizationPipelineView() {
                       <div className="flex-1 h-2 bg-surface-2 rounded-full overflow-hidden">
                         <div
                           className="h-full rounded-full transition-all"
-                          style={{ width: `${pct}%`, backgroundColor: pct >= 80 ? '#34d399' : pct >= 50 ? '#fbbf24' : '#f87171' }}
+                          style={{ width: `${pct}%`, backgroundColor: pct >= 80 ? ACCENT_EMERALD : pct >= 50 ? STATUS_WARNING : STATUS_ERROR }}
                         />
                       </div>
                       <span className="text-2xs text-text-muted w-10 text-right">{pct}%</span>
@@ -542,7 +544,7 @@ function TranslationCard({ entry, sourceText }: { entry: TranslationEntry; sourc
           )}
         </div>
         <div className="flex items-center gap-1.5 shrink-0">
-          <ProgressRing value={Math.round(entry.confidence * 100)} size={28} strokeWidth={3} color={entry.confidence >= 0.85 ? '#34d399' : '#fbbf24'} />
+          <ProgressRing value={Math.round(entry.confidence * 100)} size={28} strokeWidth={3} color={entry.confidence >= 0.85 ? ACCENT_EMERALD : STATUS_WARNING} />
         </div>
       </div>
       {entry.charDelta !== 0 && (
@@ -562,7 +564,7 @@ function HazardCard({ hazard }: { hazard: LocalizationHazard }) {
   const handleCopy = useCallback(() => {
     navigator.clipboard.writeText(hazard.fixPrompt);
     setCopied(true);
-    setTimeout(() => setCopied(false), 1500);
+    setTimeout(() => setCopied(false), UI_TIMEOUTS.copyFeedback);
   }, [hazard.fixPrompt]);
 
   return (
@@ -626,7 +628,7 @@ function ReplacementCard({ replacement }: { replacement: { stringId: string; ori
   const handleCopy = useCallback(() => {
     navigator.clipboard.writeText(replacement.suggestedCode);
     setCopied(true);
-    setTimeout(() => setCopied(false), 1500);
+    setTimeout(() => setCopied(false), UI_TIMEOUTS.copyFeedback);
   }, [replacement.suggestedCode]);
 
   return (
@@ -665,7 +667,7 @@ function StringTableCard({ table }: { table: StringTable }) {
   const handleCopy = useCallback(() => {
     navigator.clipboard.writeText(csvContent);
     setCopied(true);
-    setTimeout(() => setCopied(false), 1500);
+    setTimeout(() => setCopied(false), UI_TIMEOUTS.copyFeedback);
   }, [csvContent]);
 
   return (

@@ -1,6 +1,8 @@
+import type { SubModuleId } from '@/types/modules';
 import type { ModuleAggregate, ReviewSnapshot } from '@/lib/feature-matrix-db';
 import type { AnalyticsDashboard, ModuleStats } from '@/types/session-analytics';
 import type { EvaluatorReport, ModuleScore } from '@/types/evaluator';
+import { MODULE_LABELS } from '@/lib/module-registry';
 
 // ─── Correlation types ───────────────────────────────────────────────────────
 
@@ -33,23 +35,6 @@ export interface CorrelationResult {
   timestamp: number;
 }
 
-// ─── Module labels (shared constant) ─────────────────────────────────────────
-
-export const MODULE_LABELS: Record<string, string> = {
-  'arpg-character': 'Character',
-  'arpg-animation': 'Animation',
-  'arpg-gas': 'GAS',
-  'arpg-combat': 'Combat',
-  'arpg-enemy-ai': 'Enemy AI',
-  'arpg-inventory': 'Inventory',
-  'arpg-loot': 'Loot',
-  'arpg-ui': 'UI / HUD',
-  'arpg-progression': 'Progression',
-  'arpg-world': 'World',
-  'arpg-save': 'Save',
-  'arpg-polish': 'Polish',
-};
-
 // ─── Correlation engine ──────────────────────────────────────────────────────
 
 export function correlateModuleData(
@@ -77,7 +62,7 @@ export function correlateModuleData(
   const modules: ModuleCorrelation[] = [];
 
   for (const moduleId of allModuleIds) {
-    const agg = aggMap.get(moduleId);
+    const agg = aggMap.get(moduleId as SubModuleId);
     const session = analyticsMap.get(moduleId);
     const scan = scanMap.get(moduleId);
 
@@ -90,7 +75,7 @@ export function correlateModuleData(
     const hasScan = scan != null;
 
     modules.push({
-      moduleId,
+      moduleId: moduleId as SubModuleId,
       label: MODULE_LABELS[moduleId] ?? moduleId,
       avgQuality: agg?.avgQuality ?? null,
       pctComplete,

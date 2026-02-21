@@ -1,22 +1,27 @@
 'use client';
 
-import { useEffect, useState, useCallback, useRef } from 'react';
+import { useEffect, useState, useCallback, useRef, useReducer } from 'react';
 import {
   Check, Play, Loader2, Sparkles, Info, Copy,
   ChevronDown, ChevronRight, StickyNote, Flag,
   CheckSquare, Square, X, ClipboardCopy, CheckCheck, Undo2,
   Zap, AlertTriangle, TrendingUp, ChevronUp, ShieldAlert, ScanSearch,
-  RotateCcw, FileCode, ArrowUpToLine,
+  RotateCcw, FileCode, ArrowUpToLine, LayoutList, Rows3,
 } from 'lucide-react';
 import { useModuleStore } from '@/stores/moduleStore';
 import { usePatternLibraryStore } from '@/stores/patternLibraryStore';
 import { useNBA } from '@/hooks/useNBA';
 import { StaggerContainer, StaggerItem } from '@/components/ui/Stagger';
-import type { ChecklistItem } from '@/types/modules';
+import type { ChecklistItem, SubModuleId } from '@/types/modules';
 import type { PatternSuggestion } from '@/types/pattern-library';
 import type { NBARecommendation } from '@/lib/nba-engine';
 import type { VerificationInfo } from '@/stores/moduleStore';
 import { TruncateWithTooltip } from '@/components/ui/TruncateWithTooltip';
+import { UI_TIMEOUTS } from '@/lib/constants';
+import {
+  MODULE_COLORS, STATUS_SUCCESS, STATUS_WARNING, STATUS_ERROR, STATUS_INFO,
+  OPACITY_8, OPACITY_30,
+} from '@/lib/chart-colors';
 
 // ── Constants ────────────────────────────────────────────────────────────────
 
@@ -34,14 +39,107 @@ interface ItemMetadata {
 
 const PRIORITY_CONFIG: Record<Priority, { label: string; color: string; bg: string; border: string }> = {
   none:          { label: 'No priority', color: 'transparent', bg: 'transparent', border: 'transparent' },
-  critical:     { label: 'Critical',     color: '#ef4444', bg: '#ef444418', border: '#ef444430' },
-  important:    { label: 'Important',    color: '#f59e0b', bg: '#f59e0b18', border: '#f59e0b30' },
-  'nice-to-have': { label: 'Nice to Have', color: '#60a5fa', bg: '#60a5fa18', border: '#60a5fa30' },
+  critical:     { label: 'Critical',     color: MODULE_COLORS.evaluator, bg: `${MODULE_COLORS.evaluator}${OPACITY_8}`, border: `${MODULE_COLORS.evaluator}${OPACITY_30}` },
+  important:    { label: 'Important',    color: MODULE_COLORS.content, bg: `${MODULE_COLORS.content}${OPACITY_8}`, border: `${MODULE_COLORS.content}${OPACITY_30}` },
+  'nice-to-have': { label: 'Nice to Have', color: STATUS_INFO, bg: `${STATUS_INFO}${OPACITY_8}`, border: `${STATUS_INFO}${OPACITY_30}` },
 };
 
 const PRIORITY_OPTIONS: Priority[] = ['none', 'critical', 'important', 'nice-to-have'];
 
+// ── Metadata state machine ──────────────────────────────────────────────────
+
+type MetadataPhase =
+  | { phase: 'idle' }
+  | { phase: 'loading' }
+  | { phase: 'loaded'; data: Record<string, ItemMetadata> }
+  | { phase: 'saving'; data: Record<string, ItemMetadata>; savingItemId: string }
+  | { phase: 'error'; data: Record<string, ItemMetadata>; error: string };
+
+type MetadataAction =
+  | { type: 'FETCH_START' }
+  | { type: 'FETCH_SUCCESS'; data: Record<string, ItemMetadata> }
+  | { type: 'FETCH_ERROR'; error: string }
+  | { type: 'SAVE_START'; itemId: string; patch: Partial<ItemMetadata> }
+  | { type: 'SAVE_DONE' }
+  | { type: 'SAVE_ERROR'; error: string };
+
+function getMetadataData(state: MetadataPhase): Record<string, ItemMetadata> {
+  if ('data' in state) return state.data;
+  return {};
+}
+
+function metadataReducer(state: MetadataPhase, action: MetadataAction): MetadataPhase {
+  switch (action.type) {
+    case 'FETCH_START':
+      return { phase: 'loading' };
+
+    case 'FETCH_SUCCESS':
+      return { phase: 'loaded', data: action.data };
+
+    case 'FETCH_ERROR':
+      return { phase: 'error', data: getMetadataData(state), error: action.error };
+
+    case 'SAVE_START': {
+      const data = getMetadataData(state);
+      const current = data[action.itemId] ?? { priority: 'none' as Priority, notes: '', updatedAt: '' };
+      const updated = { ...current, ...action.patch, updatedAt: new Date().toISOString() };
+      return { phase: 'saving', data: { ...data, [action.itemId]: updated }, savingItemId: action.itemId };
+    }
+
+    case 'SAVE_DONE':
+      return { phase: 'loaded', data: getMetadataData(state) };
+
+    case 'SAVE_ERROR':
+      return { phase: 'error', data: getMetadataData(state), error: action.error };
+
+    default:
+      return state;
+  }
+}
+
+// ── Select mode state machine ───────────────────────────────────────────────
+
+type SelectPhase =
+  | { phase: 'inactive' }
+  | { phase: 'active'; selected: Set<string> };
+
+type SelectAction =
+  | { type: 'ENTER' }
+  | { type: 'EXIT' }
+  | { type: 'TOGGLE'; itemId: string }
+  | { type: 'SELECT_ALL'; itemIds: string[] }
+  | { type: 'SELECT_NONE' };
+
+function selectReducer(state: SelectPhase, action: SelectAction): SelectPhase {
+  switch (action.type) {
+    case 'ENTER':
+      return { phase: 'active', selected: new Set() };
+
+    case 'EXIT':
+      return { phase: 'inactive' };
+
+    case 'TOGGLE': {
+      if (state.phase !== 'active') return state;
+      const next = new Set(state.selected);
+      if (next.has(action.itemId)) next.delete(action.itemId);
+      else next.add(action.itemId);
+      return { phase: 'active', selected: next };
+    }
+
+    case 'SELECT_ALL':
+      return { phase: 'active', selected: new Set(action.itemIds) };
+
+    case 'SELECT_NONE':
+      return { phase: 'active', selected: new Set() };
+
+    default:
+      return state;
+  }
+}
+
 // ── Main component ──────────────────────────────────────────────────────────
+
+type LayoutMode = 'cards' | 'compact';
 
 export interface RoadmapChecklistProps {
   items: ChecklistItem[];
@@ -51,11 +149,13 @@ export interface RoadmapChecklistProps {
   isRunning: boolean;
   activeItemId?: string | null;
   lastCompletedItemId?: string | null;
+  onBatchRun?: (itemIds: string[]) => void;
+  batchQueue?: string[];
 }
 
 export function RoadmapChecklist({
   items, subModuleId, onRunPrompt, accentColor, isRunning,
-  activeItemId, lastCompletedItemId,
+  activeItemId, lastCompletedItemId, onBatchRun, batchQueue = [],
 }: RoadmapChecklistProps) {
   const progress = useModuleStore((s) => s.checklistProgress[subModuleId] ?? EMPTY_PROGRESS);
   const verification = useModuleStore((s) => s.checklistVerification[subModuleId] ?? EMPTY_VERIFICATION);
@@ -64,9 +164,11 @@ export function RoadmapChecklist({
   const suggestions = usePatternLibraryStore((s) => s.suggestions) ?? EMPTY_SUGGESTIONS;
   const fetchSuggestions = usePatternLibraryStore((s) => s.fetchSuggestions);
   const [hoveredItemId, setHoveredItemId] = useState<string | null>(null);
+  const [layout, setLayout] = useState<LayoutMode>('compact');
 
-  // Metadata state
-  const [metadata, setMetadata] = useState<Record<string, ItemMetadata>>({});
+  // Metadata state machine
+  const [metaState, metaDispatch] = useReducer(metadataReducer, { phase: 'idle' } as MetadataPhase);
+  const metadata = getMetadataData(metaState);
   const [expandedNotes, setExpandedNotes] = useState<Set<string>>(new Set());
   const [editingNotes, setEditingNotes] = useState<string | null>(null);
   const [priorityDropdown, setPriorityDropdown] = useState<string | null>(null);
@@ -85,7 +187,7 @@ export function RoadmapChecklist({
     const idx = items.findIndex((i) => i.id === itemId);
     for (let i = 0; i < idx; i++) {
       if (!progress[items[i].id]) {
-        setItem(subModuleId, items[i].id, true);
+        setItem(subModuleId as SubModuleId, items[i].id, true);
       }
     }
     closeContextMenu();
@@ -93,71 +195,77 @@ export function RoadmapChecklist({
 
   const handleResetItem = useCallback((itemId: string) => {
     if (progress[itemId]) {
-      setItem(subModuleId, itemId, false);
+      setItem(subModuleId as SubModuleId, itemId, false);
     }
     closeContextMenu();
   }, [progress, subModuleId, setItem, closeContextMenu]);
 
-  // Select mode state
-  const [selectMode, setSelectMode] = useState(false);
-  const [selected, setSelected] = useState<Set<string>>(new Set());
+  // Select mode state machine
+  const [selectState, selectDispatch] = useReducer(selectReducer, { phase: 'inactive' } as SelectPhase);
+  const selectMode = selectState.phase === 'active';
+  const selected = selectState.phase === 'active' ? selectState.selected : new Set<string>();
 
   const toggleSelected = useCallback((itemId: string) => {
-    setSelected((prev) => {
-      const next = new Set(prev);
-      if (next.has(itemId)) next.delete(itemId);
-      else next.add(itemId);
-      return next;
-    });
+    selectDispatch({ type: 'TOGGLE', itemId });
   }, []);
 
   const selectAll = useCallback(() => {
-    setSelected(new Set(items.map((i) => i.id)));
+    selectDispatch({ type: 'SELECT_ALL', itemIds: items.map((i) => i.id) });
   }, [items]);
 
   const selectNone = useCallback(() => {
-    setSelected(new Set());
+    selectDispatch({ type: 'SELECT_NONE' });
   }, []);
 
   const exitSelectMode = useCallback(() => {
-    setSelectMode(false);
-    setSelected(new Set());
+    selectDispatch({ type: 'EXIT' });
   }, []);
 
   // Fetch suggestions + metadata on mount
   useEffect(() => {
-    fetchSuggestions(subModuleId);
+    fetchSuggestions(subModuleId as SubModuleId);
   }, [fetchSuggestions, subModuleId]);
 
   useEffect(() => {
     let cancelled = false;
+    metaDispatch({ type: 'FETCH_START' });
     fetch(`/api/checklist-metadata?moduleId=${encodeURIComponent(subModuleId)}`)
       .then((r) => r.json())
       .then((data) => {
         if (!cancelled && data.success) {
-          setMetadata(data.data);
+          metaDispatch({ type: 'FETCH_SUCCESS', data: data.data });
+        } else if (!cancelled) {
+          metaDispatch({ type: 'FETCH_ERROR', error: 'Failed to load metadata' });
         }
       })
-      .catch(() => {});
+      .catch(() => {
+        if (!cancelled) metaDispatch({ type: 'FETCH_ERROR', error: 'Network error' });
+      });
     return () => { cancelled = true; };
   }, [subModuleId]);
 
   // Save metadata to API
   const saveMetadata = useCallback(async (itemId: string, patch: Partial<ItemMetadata>) => {
+    metaDispatch({ type: 'SAVE_START', itemId, patch });
+
     const current = metadata[itemId] ?? { priority: 'none' as Priority, notes: '', updatedAt: '' };
     const updated = { ...current, ...patch, updatedAt: new Date().toISOString() };
-    setMetadata((prev) => ({ ...prev, [itemId]: updated }));
 
-    await fetch('/api/checklist-metadata', {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        moduleId: subModuleId,
-        itemId,
-        priority: updated.priority,
-        notes: updated.notes,
-      }),
-    }).catch(() => {});
+    try {
+      await fetch('/api/checklist-metadata', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          moduleId: subModuleId,
+          itemId,
+          priority: updated.priority,
+          notes: updated.notes,
+        }),
+      });
+      metaDispatch({ type: 'SAVE_DONE' });
+    } catch {
+      metaDispatch({ type: 'SAVE_ERROR', error: 'Failed to save' });
+    }
   }, [metadata, subModuleId]);
 
   const handleSetPriority = useCallback((itemId: string, priority: Priority) => {
@@ -179,7 +287,7 @@ export function RoadmapChecklist({
   }, []);
 
   // NBA recommendations
-  const { top: nbaTop, recommendations: nbaRecs, isLoading: nbaLoading } = useNBA(subModuleId);
+  const { top: nbaTop, recommendations: nbaRecs, isLoading: nbaLoading } = useNBA(subModuleId as SubModuleId);
   const [nbaExpanded, setNbaExpanded] = useState(false);
 
   const completedCount = items.filter((item) => progress[item.id]).length;
@@ -209,18 +317,37 @@ export function RoadmapChecklist({
         <div className="flex items-center justify-between text-xs">
           <div className="flex items-center gap-2">
             <span className="text-text-muted">Progress</span>
-            <button
-              onClick={() => selectMode ? exitSelectMode() : setSelectMode(true)}
-              className={`flex items-center gap-1 px-1.5 py-0.5 rounded text-2xs transition-colors ${
-                selectMode
-                  ? 'bg-accent-medium text-[#00ff88]'
-                  : 'text-text-muted hover:text-text hover:bg-surface-hover'
-              }`}
-              title={selectMode ? 'Exit select mode' : 'Select multiple items'}
-            >
-              <CheckSquare className="w-3 h-3" />
-              {selectMode ? 'Cancel' : 'Select'}
-            </button>
+            {/* Layout toggle */}
+            <div className="flex items-center gap-0.5 border border-border rounded-md p-0.5">
+              <button
+                onClick={() => setLayout('compact')}
+                className={`p-0.5 rounded transition-colors ${layout === 'compact' ? 'bg-border text-text' : 'text-text-muted hover:text-text'}`}
+                title="Compact view"
+              >
+                <Rows3 className="w-3 h-3" />
+              </button>
+              <button
+                onClick={() => setLayout('cards')}
+                className={`p-0.5 rounded transition-colors ${layout === 'cards' ? 'bg-border text-text' : 'text-text-muted hover:text-text'}`}
+                title="Card view"
+              >
+                <LayoutList className="w-3 h-3" />
+              </button>
+            </div>
+            {layout === 'cards' && (
+              <button
+                onClick={() => selectMode ? exitSelectMode() : selectDispatch({ type: 'ENTER' })}
+                className={`flex items-center gap-1 px-1.5 py-0.5 rounded text-2xs transition-colors ${
+                  selectMode
+                    ? 'bg-accent-medium text-[#00ff88]'
+                    : 'text-text-muted hover:text-text hover:bg-surface-hover'
+                }`}
+                title={selectMode ? 'Exit select mode' : 'Select multiple items'}
+              >
+                <CheckSquare className="w-3 h-3" />
+                {selectMode ? 'Cancel' : 'Select'}
+              </button>
+            )}
             {selectMode && (
               <div className="flex items-center gap-1">
                 <button
@@ -277,8 +404,8 @@ export function RoadmapChecklist({
         </div>
       )}
 
-      {/* Floating action bar for select mode */}
-      {selectMode && selected.size > 0 && (
+      {/* Floating action bar for select mode (cards layout only) */}
+      {layout === 'cards' && selectMode && selected.size > 0 && (
         <BulkActionBar
           selected={selected}
           items={items}
@@ -291,7 +418,28 @@ export function RoadmapChecklist({
         />
       )}
 
-      {/* Checklist items */}
+      {/* Compact layout — consolidated card with checkbox rows */}
+      {layout === 'compact' && (
+        <CompactChecklist
+          items={items}
+          subModuleId={subModuleId}
+          progress={progress}
+          verification={verification}
+          metadata={metadata}
+          accentColor={accentColor}
+          isRunning={isRunning}
+          activeItemId={activeItemId ?? null}
+          lastCompletedItemId={lastCompletedItemId ?? null}
+          batchQueue={batchQueue}
+          onRunPrompt={onRunPrompt}
+          onBatchRun={onBatchRun}
+          onToggleItem={(itemId) => toggleItem(subModuleId as SubModuleId, itemId)}
+          onContextMenu={handleContextMenu}
+        />
+      )}
+
+      {/* Cards layout — existing per-item cards */}
+      {layout === 'cards' && (
       <StaggerContainer className="space-y-2">
         {items.map((item, index) => {
           const checked = !!progress[item.id];
@@ -333,7 +481,7 @@ export function RoadmapChecklist({
               onKeyDown={(e) => {
                 if (e.key === 'Enter') {
                   e.preventDefault();
-                  toggleItem(subModuleId, item.id);
+                  toggleItem(subModuleId as SubModuleId, item.id);
                 } else if (e.key === ' ' && !checked && !isActive) {
                   e.preventDefault();
                   onRunPrompt(item.id, item.prompt);
@@ -365,7 +513,7 @@ export function RoadmapChecklist({
                 )}
                 {/* Checkbox */}
                 <button
-                  onClick={() => toggleItem(subModuleId, item.id)}
+                  onClick={() => toggleItem(subModuleId as SubModuleId, item.id)}
                   className={`mt-0.5 flex-shrink-0 w-5 h-5 rounded border-2 flex items-center justify-center transition-all ${
                     isPartial
                       ? 'border-yellow-500 bg-yellow-500/20'
@@ -516,6 +664,7 @@ export function RoadmapChecklist({
           );
         })}
       </StaggerContainer>
+      )}
 
       {/* Context menu */}
       {contextMenu && (
@@ -545,6 +694,168 @@ export function RoadmapChecklist({
             closeContextMenu();
           }}
         />
+      )}
+    </div>
+  );
+}
+
+// ── Compact checklist ─────────────────────────────────────────────────────────
+
+function CompactChecklist({
+  items, subModuleId, progress, verification, metadata, accentColor,
+  isRunning, activeItemId, lastCompletedItemId, batchQueue,
+  onRunPrompt, onBatchRun, onToggleItem, onContextMenu,
+}: {
+  items: ChecklistItem[];
+  subModuleId: string;
+  progress: Record<string, boolean>;
+  verification: Record<string, VerificationInfo>;
+  metadata: Record<string, ItemMetadata>;
+  accentColor: string;
+  isRunning: boolean;
+  activeItemId: string | null;
+  lastCompletedItemId: string | null;
+  batchQueue: string[];
+  onRunPrompt: (itemId: string, prompt: string) => void;
+  onBatchRun?: (itemIds: string[]) => void;
+  onToggleItem: (itemId: string) => void;
+  onContextMenu: (e: React.MouseEvent, itemId: string) => void;
+}) {
+  const [expandedRow, setExpandedRow] = useState<string | null>(null);
+  const [hoveredRow, setHoveredRow] = useState<string | null>(null);
+
+  const uncheckedIds = items.filter((i) => !progress[i.id]).map((i) => i.id);
+  const inQueue = new Set(batchQueue);
+
+  return (
+    <div className="space-y-3">
+      {/* Consolidated card */}
+      <div className="rounded-lg border border-border bg-surface overflow-hidden">
+        {items.map((item, index) => {
+          const checked = !!progress[item.id];
+          const isActive = activeItemId === item.id;
+          const justCompleted = lastCompletedItemId === item.id;
+          const isQueued = inQueue.has(item.id);
+          const isPartial = checked && verification[item.id]?.status === 'partial';
+          const meta = metadata[item.id];
+          const priority = meta?.priority ?? 'none';
+          const isExpanded = expandedRow === item.id;
+          const isHovered = hoveredRow === item.id;
+
+          return (
+            <div
+              key={item.id}
+              className={`border-b border-border/40 last:border-b-0 transition-colors ${
+                justCompleted ? 'bg-green-900/15' : isActive ? 'bg-[#111130]' : isHovered ? 'bg-surface-hover/30' : ''
+              }`}
+              onMouseEnter={() => setHoveredRow(item.id)}
+              onMouseLeave={() => setHoveredRow(null)}
+              onContextMenu={(e) => onContextMenu(e, item.id)}
+            >
+              <div className="flex items-center gap-2.5 px-3 py-2">
+                {/* Checkbox */}
+                <button
+                  onClick={() => onToggleItem(item.id)}
+                  className={`flex-shrink-0 w-4 h-4 rounded border flex items-center justify-center transition-all ${
+                    isPartial
+                      ? 'border-yellow-500 bg-yellow-500/20'
+                      : checked
+                        ? 'border-green-500 bg-green-500/20'
+                        : 'border-[#3e3e6a] hover:border-[#5e5e8a]'
+                  }`}
+                >
+                  {isPartial
+                    ? <ShieldAlert className="w-2.5 h-2.5 text-yellow-400" />
+                    : checked
+                      ? <Check className="w-2.5 h-2.5 text-green-400" />
+                      : null}
+                </button>
+
+                {/* Number */}
+                <span className="text-2xs text-text-muted font-mono w-4 text-right flex-shrink-0">{index + 1}</span>
+
+                {/* Label - clickable to expand */}
+                <button
+                  onClick={() => setExpandedRow(isExpanded ? null : item.id)}
+                  className={`flex-1 min-w-0 text-left text-xs truncate ${checked ? 'text-text-muted line-through' : 'text-text'}`}
+                >
+                  {item.label}
+                </button>
+
+                {/* Status indicators */}
+                {priority !== 'none' && <PriorityBadge priority={priority} />}
+                {isQueued && (
+                  <span className="text-2xs px-1 py-0.5 rounded bg-blue-500/10 text-blue-400 font-mono">queued</span>
+                )}
+                {isActive && (
+                  <span className="flex items-center gap-1 text-2xs px-1.5 py-0.5 rounded bg-accent-medium text-[#00ff88]">
+                    <Loader2 className="w-2.5 h-2.5 animate-spin" />
+                  </span>
+                )}
+                {justCompleted && (
+                  <span className="text-2xs px-1.5 py-0.5 rounded bg-green-500/15 text-green-400 animate-pulse">done</span>
+                )}
+
+                {/* Hover actions */}
+                {isHovered && !checked && !isActive && (
+                  <button
+                    onClick={(e) => { e.stopPropagation(); onRunPrompt(item.id, item.prompt); }}
+                    disabled={isRunning}
+                    className="flex items-center gap-1 px-2 py-1 rounded text-2xs font-medium transition-all disabled:opacity-50"
+                    style={{ backgroundColor: `${accentColor}20`, color: accentColor }}
+                  >
+                    <Play className="w-2.5 h-2.5" />
+                  </button>
+                )}
+
+                {/* Expand chevron */}
+                {isExpanded
+                  ? <ChevronDown className="w-3 h-3 text-text-muted flex-shrink-0" />
+                  : <ChevronRight className="w-3 h-3 text-text-muted flex-shrink-0 opacity-30" />}
+              </div>
+
+              {/* Expanded description */}
+              {isExpanded && (
+                <div className="px-12 pb-2.5 text-xs text-text-muted leading-relaxed">
+                  {item.description}
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Run All Unchecked button */}
+      {uncheckedIds.length > 0 && onBatchRun && (
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => onBatchRun(uncheckedIds)}
+            disabled={isRunning}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all disabled:opacity-50"
+            style={{
+              backgroundColor: `${accentColor}24`,
+              color: accentColor,
+              border: `1px solid ${accentColor}38`,
+            }}
+          >
+            {isRunning ? (
+              <>
+                <Loader2 className="w-3 h-3 animate-spin" />
+                Running ({batchQueue.length} queued)
+              </>
+            ) : (
+              <>
+                <Play className="w-3 h-3" />
+                Run All Unchecked ({uncheckedIds.length})
+              </>
+            )}
+          </button>
+          {batchQueue.length > 0 && (
+            <span className="text-2xs text-text-muted">
+              {batchQueue.length} remaining in queue
+            </span>
+          )}
+        </div>
       )}
     </div>
   );
@@ -740,13 +1051,13 @@ function BulkActionBar({
 
   const handleMarkDone = useCallback(() => {
     for (const item of selectedItems) {
-      if (!progress[item.id]) setItem(subModuleId, item.id, true);
+      if (!progress[item.id]) setItem(subModuleId as SubModuleId, item.id, true);
     }
   }, [selectedItems, progress, subModuleId, setItem]);
 
   const handleMarkUndone = useCallback(() => {
     for (const item of selectedItems) {
-      if (progress[item.id]) setItem(subModuleId, item.id, false);
+      if (progress[item.id]) setItem(subModuleId as SubModuleId, item.id, false);
     }
   }, [selectedItems, progress, subModuleId, setItem]);
 
@@ -754,7 +1065,7 @@ function BulkActionBar({
     const text = selectedItems.map((i) => i.prompt).join('\n\n---\n\n');
     await navigator.clipboard.writeText(text);
     setCopied(true);
-    setTimeout(() => setCopied(false), 1500);
+    setTimeout(() => setCopied(false), UI_TIMEOUTS.copyFeedback);
   }, [selectedItems]);
 
   const handleBatchRun = useCallback(() => {
@@ -868,8 +1179,8 @@ function NBABanner({
             <div className="flex items-center gap-3 mt-2">
               {top.pattern && (
                 <span className="flex items-center gap-1 text-2xs text-text-muted">
-                  <TrendingUp className="w-3 h-3" style={{ color: successPct >= 70 ? '#4ade80' : successPct >= 40 ? '#fbbf24' : '#f87171' }} />
-                  <strong style={{ color: successPct >= 70 ? '#4ade80' : successPct >= 40 ? '#fbbf24' : '#f87171' }}>{successPct}%</strong> success
+                  <TrendingUp className="w-3 h-3" style={{ color: successPct >= 70 ? STATUS_SUCCESS : successPct >= 40 ? STATUS_WARNING : STATUS_ERROR }} />
+                  <strong style={{ color: successPct >= 70 ? STATUS_SUCCESS : successPct >= 40 ? STATUS_WARNING : STATUS_ERROR }}>{successPct}%</strong> success
                 </span>
               )}
               {top.pattern?.approach && (
@@ -957,7 +1268,7 @@ function NBARunnerRow({
         <div className="flex items-center gap-2 mt-0.5">
           <span className="text-2xs text-text-muted truncate">{rec.reason}</span>
           {rec.pattern && (
-            <span className="flex-shrink-0 text-2xs" style={{ color: successPct >= 70 ? '#4ade80' : successPct >= 40 ? '#fbbf24' : '#f87171' }}>
+            <span className="flex-shrink-0 text-2xs" style={{ color: successPct >= 70 ? STATUS_SUCCESS : successPct >= 40 ? STATUS_WARNING : STATUS_ERROR }}>
               {successPct}%
             </span>
           )}
@@ -1153,7 +1464,7 @@ function CopyItemButton({ text, tooltip = 'Copy' }: { text: string; tooltip?: st
     e.stopPropagation();
     await navigator.clipboard.writeText(text);
     setCopied(true);
-    setTimeout(() => setCopied(false), 1500);
+    setTimeout(() => setCopied(false), UI_TIMEOUTS.copyFeedback);
   }, [text]);
 
   return (

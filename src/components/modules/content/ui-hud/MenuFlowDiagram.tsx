@@ -6,6 +6,8 @@ import {
   X, ChevronDown,
 } from 'lucide-react';
 import { SurfaceCard } from '@/components/ui/SurfaceCard';
+import { MODULE_COLORS } from '@/lib/constants';
+import { STATUS_INFO, ACCENT_VIOLET, STATUS_WARNING, ACCENT_EMERALD, ACCENT_PINK, STATUS_BLOCKER, STATUS_ERROR } from '@/lib/chart-colors';
 
 // ── Types ──
 
@@ -45,27 +47,26 @@ export interface MenuFlowConfig {
 
 const NODE_W = 170;
 const NODE_H = 72;
-const CONTENT_ACCENT = '#f59e0b';
 
 const SCREEN_TYPES: Record<ScreenType, { color: string; label: string; icon: string }> = {
-  'main-menu':  { color: '#60a5fa', label: 'Main Menu',  icon: 'M' },
-  'settings':   { color: '#a78bfa', label: 'Settings',   icon: 'S' },
-  'pause-menu': { color: '#fbbf24', label: 'Pause Menu', icon: 'P' },
-  'hud':        { color: '#34d399', label: 'HUD',        icon: 'H' },
-  'loading':    { color: '#8b8fb0', label: 'Loading',    icon: 'L' },
-  'splash':     { color: '#f472b6', label: 'Splash',     icon: '◆' },
-  'popup':      { color: '#fb923c', label: 'Popup',      icon: '□' },
-  'custom':     { color: 'var(--text-muted)', label: 'Custom',     icon: '?' },
+  'main-menu': { color: STATUS_INFO, label: 'Main Menu', icon: 'M' },
+  'settings': { color: ACCENT_VIOLET, label: 'Settings', icon: 'S' },
+  'pause-menu': { color: STATUS_WARNING, label: 'Pause Menu', icon: 'P' },
+  'hud': { color: ACCENT_EMERALD, label: 'HUD', icon: 'H' },
+  'loading': { color: '#8b8fb0', label: 'Loading', icon: 'L' },
+  'splash': { color: ACCENT_PINK, label: 'Splash', icon: '◆' },
+  'popup': { color: STATUS_BLOCKER, label: 'Popup', icon: '□' },
+  'custom': { color: 'var(--text-muted)', label: 'Custom', icon: '?' },
 };
 
 const DEFAULT_SCREENS: ScreenNode[] = [
-  { id: 'scr-main',     name: 'Main Menu',     type: 'main-menu',  x: 60,  y: 120, widgets: ['Play Button', 'Settings Button', 'Quit Button'] },
-  { id: 'scr-settings', name: 'Settings',      type: 'settings',   x: 320, y: 40,  widgets: ['Graphics Tab', 'Audio Tab', 'Controls Tab', 'Back Button'] },
-  { id: 'scr-pause',    name: 'Pause Menu',    type: 'pause-menu', x: 320, y: 220, widgets: ['Resume Button', 'Settings Button', 'Quit Button'] },
+  { id: 'scr-main', name: 'Main Menu', type: 'main-menu', x: 60, y: 120, widgets: ['Play Button', 'Settings Button', 'Quit Button'] },
+  { id: 'scr-settings', name: 'Settings', type: 'settings', x: 320, y: 40, widgets: ['Graphics Tab', 'Audio Tab', 'Controls Tab', 'Back Button'] },
+  { id: 'scr-pause', name: 'Pause Menu', type: 'pause-menu', x: 320, y: 220, widgets: ['Resume Button', 'Settings Button', 'Quit Button'] },
 ];
 
 const DEFAULT_TRANSITIONS: ScreenTransition[] = [
-  { id: 'tr-1', fromId: 'scr-main',  toId: 'scr-settings', trigger: 'Settings Button', bidirectional: true },
+  { id: 'tr-1', fromId: 'scr-main', toId: 'scr-settings', trigger: 'Settings Button', bidirectional: true },
   { id: 'tr-2', fromId: 'scr-pause', toId: 'scr-settings', trigger: 'Settings Button', bidirectional: true },
 ];
 
@@ -142,7 +143,7 @@ export function MenuFlowDiagram({ onGenerate, isGenerating }: MenuFlowDiagramPro
     }
     const exists = transitions.some(
       (t) => (t.fromId === connectingFrom && t.toId === toId) ||
-             (t.fromId === toId && t.toId === connectingFrom)
+        (t.fromId === toId && t.toId === connectingFrom)
     );
     if (!exists) {
       setTransitions((prev) => [
@@ -292,40 +293,64 @@ export function MenuFlowDiagram({ onGenerate, isGenerating }: MenuFlowDiagramPro
   );
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6 bg-[#03030a] p-6 rounded-2xl border border-indigo-900/30 shadow-[inset_0_0_80px_rgba(99,102,241,0.05)] relative w-full overflow-hidden">
+      {/* Ambient tech background */}
+      <div className="absolute inset-0 pointer-events-none z-0">
+        <div className="absolute -top-1/4 -right-1/4 w-[500px] h-[500px] bg-indigo-600/10 blur-[120px] rounded-full pointer-events-none" />
+        <div className="absolute bottom-1/4 -left-1/4 w-[500px] h-[500px] bg-violet-600/10 blur-[120px] rounded-full pointer-events-none" />
+        <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.02)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.02)_1px,transparent_1px)] bg-[size:32px_32px] [mask-image:radial-gradient(ellipse_at_center,black_20%,transparent_70%)] opacity-30 pointer-events-none" />
+      </div>
+
+      <div className="relative z-10 w-full mb-6 border-b border-indigo-900/40 pb-4">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center shadow-[inset_0_0_15px_rgba(99,102,241,0.1)]">
+            <Link className="w-5 h-5 text-indigo-400" />
+          </div>
+          <div>
+            <h3 className="text-sm font-bold tracking-widest uppercase text-indigo-100 shadow-[0_0_10px_rgba(99,102,241,0.5)]">UI Node Flow Matrix</h3>
+            <p className="text-[10px] text-indigo-400/60 uppercase tracking-widest mt-1">
+              INTERFACE_TOPOLOGY_AND_SCREEN_ROUTING
+            </p>
+          </div>
+        </div>
+      </div>
+
       {/* Canvas area */}
-      <div className="relative w-full bg-[#080818] rounded-lg border border-border overflow-hidden" style={{ height: 380 }}>
+      <div className="relative w-full bg-black/60 rounded-2xl border border-indigo-900/40 overflow-hidden shadow-[inset_0_0_40px_rgba(49,46,129,0.5)] ring-1 ring-white/5 z-10" style={{ height: 420 }}>
+        {/* Glow effect */}
+        <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-500/5 blur-[80px] pointer-events-none" />
+
         {/* Toolbar */}
-        <div className="absolute top-2 left-2 z-10 flex items-center gap-1">
+        <div className="absolute top-4 left-4 z-10 flex items-center gap-2">
           <button
             onClick={addScreen}
-            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-xs font-medium bg-surface border border-border-bright text-text hover:bg-surface-hover transition-colors"
+            className="flex items-center gap-2 px-3 py-2 rounded-lg text-[10px] uppercase font-bold tracking-widest bg-indigo-950/40 border border-indigo-900/50 text-indigo-300 hover:text-white hover:bg-indigo-600/30 hover:border-indigo-500/50 transition-all shadow-[0_0_15px_rgba(0,0,0,0.5)] group backdrop-blur-sm"
           >
-            <Plus className="w-3 h-3" />
+            <Plus className="w-3.5 h-3.5 group-hover:scale-110 transition-transform" />
             Add Screen
           </button>
           {connectingFrom ? (
             <button
               onClick={() => setConnectingFrom(null)}
-              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-xs font-medium bg-[#f8717118] border border-[#f8717130] text-[#f87171] transition-colors"
+              className="flex items-center gap-2 px-3 py-2 rounded-lg text-[10px] uppercase font-bold tracking-widest bg-rose-950/40 border border-rose-900/50 text-rose-400 hover:text-white hover:bg-rose-600/30 hover:border-rose-500/50 transition-all shadow-[0_0_15px_rgba(0,0,0,0.5)] backdrop-blur-sm"
             >
-              <Unlink className="w-3 h-3" />
-              Cancel
+              <Unlink className="w-3.5 h-3.5" />
+              Cancel Route
             </button>
           ) : connectingFrom === null && selectedId && (
             <button
               onClick={() => startConnection(selectedId)}
-              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-xs font-medium bg-surface border border-border-bright text-text hover:bg-surface-hover transition-colors"
+              className="flex items-center gap-2 px-3 py-2 rounded-lg text-[10px] uppercase font-bold tracking-widest bg-emerald-950/40 border border-emerald-900/50 text-emerald-400 hover:text-white hover:bg-emerald-600/30 hover:border-emerald-500/50 transition-all shadow-[0_0_15px_rgba(0,0,0,0.5)] backdrop-blur-sm group"
             >
-              <Link className="w-3 h-3" />
-              Connect
+              <Link className="w-3.5 h-3.5 group-hover:scale-110 transition-transform" />
+              Connect Route
             </button>
           )}
         </div>
 
         {/* Badge */}
-        <div className="absolute top-2 right-2 z-10 px-2 py-1 rounded text-xs bg-surface border border-border text-text-muted">
-          {screens.length} screens &middot; {transitions.length} transitions
+        <div className="absolute top-4 right-4 z-10 px-3 py-1.5 rounded-lg text-[9px] uppercase font-bold tracking-widest bg-indigo-950/40 border border-indigo-900/50 text-indigo-400/80 shadow-[0_0_15px_rgba(0,0,0,0.5)] backdrop-blur-sm">
+          {screens.length} SCREENS <span className="text-indigo-900 font-black mx-1">/</span> {transitions.length} ROUTES
         </div>
 
         {/* SVG */}
@@ -342,13 +367,17 @@ export function MenuFlowDiagram({ onGenerate, isGenerating }: MenuFlowDiagramPro
           <defs>
             <pattern
               id="menuflow-grid"
-              width="24"
-              height="24"
+              width="32"
+              height="32"
               patternUnits="userSpaceOnUse"
-              patternTransform={`translate(${pan.x % 24},${pan.y % 24})`}
+              patternTransform={`translate(${pan.x % 32},${pan.y % 32})`}
             >
-              <circle cx="12" cy="12" r="0.5" fill="var(--border)" />
+              <circle cx="16" cy="16" r="1.5" fill="rgba(79,70,229,0.15)" />
             </pattern>
+            <filter id="neon-glow" x="-20%" y="-20%" width="140%" height="140%">
+              <feGaussianBlur stdDeviation="3" result="blur" />
+              <feComposite in="SourceGraphic" in2="blur" operator="over" />
+            </filter>
           </defs>
           <rect width="100%" height="100%" fill="url(#menuflow-grid)" />
 
@@ -362,31 +391,33 @@ export function MenuFlowDiagram({ onGenerate, isGenerating }: MenuFlowDiagramPro
               return (
                 <g key={tr.id}>
                   {/* Visible line */}
-                  <path d={line} stroke="#3a3a6a" strokeWidth={2} fill="none" />
-                  <path d={arrows} stroke="#3a3a6a" strokeWidth={2} fill="none" strokeLinecap="round" />
+                  <path d={line} stroke="rgba(99,102,241,0.5)" strokeWidth={2} fill="none" style={{ filter: 'url(#neon-glow)' }} />
+                  <path d={arrows} stroke="rgba(99,102,241,0.8)" strokeWidth={2} fill="none" strokeLinecap="round" />
 
                   {/* Trigger label */}
                   {midX !== undefined && midY !== undefined && (
                     <g transform={`translate(${midX}, ${midY})`}>
                       <rect
-                        x={-tr.trigger.length * 3 - 6}
-                        y={-8}
-                        width={tr.trigger.length * 6 + 12}
-                        height={16}
-                        rx={4}
-                        fill="var(--surface)"
-                        stroke="var(--border)"
+                        x={-tr.trigger.length * 3.5 - 8}
+                        y={-10}
+                        width={tr.trigger.length * 7 + 16}
+                        height={20}
+                        rx={6}
+                        fill="rgba(3,3,10,0.8)"
+                        stroke="rgba(99,102,241,0.4)"
                         strokeWidth={1}
                       />
                       <text
                         x={0}
-                        y={4}
+                        y={3.5}
                         fontSize={8}
-                        fill="var(--text-muted)"
+                        fill="rgba(165,180,252,0.8)"
                         textAnchor="middle"
-                        fontFamily="sans-serif"
+                        fontFamily="monospace"
+                        fontWeight="bold"
+                        letterSpacing="1"
                       >
-                        {tr.trigger}
+                        {tr.trigger.toUpperCase()}
                       </text>
                     </g>
                   )}
@@ -395,12 +426,11 @@ export function MenuFlowDiagram({ onGenerate, isGenerating }: MenuFlowDiagramPro
                   <path
                     d={line}
                     stroke="transparent"
-                    strokeWidth={14}
+                    strokeWidth={20}
                     fill="none"
                     style={{ cursor: 'pointer' }}
                     onClick={(e) => {
                       e.stopPropagation();
-                      // Show a mini action row: toggle bidirectional or delete
                       toggleBidirectional(tr.id);
                     }}
                     onContextMenu={(e) => {
@@ -412,7 +442,7 @@ export function MenuFlowDiagram({ onGenerate, isGenerating }: MenuFlowDiagramPro
 
                   {/* Bidirectional indicator */}
                   {tr.bidirectional && midX !== undefined && midY !== undefined && (
-                    <circle cx={midX} cy={midY - 14} r={3} fill="#3a3a6a" />
+                    <circle cx={midX} cy={midY - 16} r={4} fill="rgba(99,102,241,0.8)" />
                   )}
                 </g>
               );
@@ -423,6 +453,7 @@ export function MenuFlowDiagram({ onGenerate, isGenerating }: MenuFlowDiagramPro
               const cfg = SCREEN_TYPES[scr.type];
               const isSelected = selectedId === scr.id;
               const isConnectTarget = connectingFrom !== null && connectingFrom !== scr.id;
+              const isBeingDragged = dragState?.screenId === scr.id;
 
               return (
                 <g
@@ -437,116 +468,140 @@ export function MenuFlowDiagram({ onGenerate, isGenerating }: MenuFlowDiagramPro
                     if (isConnectTarget) completeConnection(scr.id);
                   }}
                   style={{
-                    cursor: dragState?.screenId === scr.id
+                    cursor: isBeingDragged
                       ? 'grabbing'
                       : isConnectTarget
                         ? 'crosshair'
                         : 'pointer',
+                    opacity: isBeingDragged ? 0.8 : 1,
                   }}
                 >
                   {/* Selection glow */}
                   {isSelected && (
                     <rect
-                      x={-3} y={-3}
-                      width={NODE_W + 6} height={NODE_H + 6}
-                      rx={11} ry={11}
-                      fill="none"
-                      stroke={CONTENT_ACCENT}
+                      x={-4} y={-4}
+                      width={NODE_W + 8} height={NODE_H + 8}
+                      rx={12} ry={12}
+                      fill="rgba(99,102,241,0.05)"
+                      stroke="rgba(99,102,241,0.6)"
                       strokeWidth={2}
-                      opacity={0.5}
+                      style={{ filter: 'url(#neon-glow)' }}
                     />
                   )}
 
                   {/* Connect-target highlight */}
                   {isConnectTarget && (
                     <rect
-                      x={-2} y={-2}
-                      width={NODE_W + 4} height={NODE_H + 4}
-                      rx={10} ry={10}
-                      fill="none"
-                      stroke="#fbbf24"
+                      x={-3} y={-3}
+                      width={NODE_W + 6} height={NODE_H + 6}
+                      rx={11} ry={11}
+                      fill="rgba(52,211,153,0.05)"
+                      stroke="rgba(52,211,153,0.6)"
                       strokeWidth={1.5}
-                      strokeDasharray="4,3"
-                      opacity={0.7}
+                      strokeDasharray="4,4"
+                      className="animate-[spin_4s_linear_infinite]"
+                      style={{ transformOrigin: 'center' }}
                     />
                   )}
 
-                  {/* Node body */}
+                  {/* Node body (glassmorphism) */}
                   <rect
                     x={0} y={0}
                     width={NODE_W} height={NODE_H}
                     rx={8} ry={8}
-                    fill="var(--surface)"
-                    stroke={isSelected ? CONTENT_ACCENT : `${cfg.color}40`}
+                    fill="rgba(0,0,0,0.6)"
+                    stroke={isSelected ? 'rgba(99,102,241,1)' : `${cfg.color}50`}
                     strokeWidth={isSelected ? 2 : 1}
                   />
 
-                  {/* Colored top bar */}
+                  {/* Inner subtle glow */}
+                  <rect
+                    x={1} y={1}
+                    width={NODE_W - 2} height={NODE_H - 2}
+                    rx={7} ry={7}
+                    fill="none"
+                    stroke="rgba(255,255,255,0.05)"
+                    strokeWidth={1}
+                  />
+
+                  {/* Colored top bar gradient line */}
                   <rect
                     x={0} y={0}
                     width={NODE_W} height={4}
-                    rx={8} ry={8}
+                    rx={4} ry={4}
                     fill={cfg.color}
-                    opacity={0.6}
+                    opacity={0.8}
                   />
                   {/* Cover bottom corners of top bar */}
-                  <rect x={0} y={2} width={NODE_W} height={2} fill={cfg.color} opacity={0.6} />
-                  <rect x={0} y={4} width={NODE_W} height={1} fill="var(--surface)" />
+                  <rect x={0} y={2} width={NODE_W} height={2} fill={cfg.color} opacity={0.8} />
 
-                  {/* Type icon circle */}
-                  <circle cx={18} cy={26} r={8} fill={`${cfg.color}20`} stroke={`${cfg.color}40`} strokeWidth={1} />
+                  {/* Type icon background */}
+                  <rect x={10} y={14} width={22} height={22} rx={6} fill={`${cfg.color}15`} stroke={`${cfg.color}30`} strokeWidth={1} />
                   <text
-                    x={18} y={30}
-                    fontSize={9}
+                    x={21} y={29}
+                    fontSize={12}
                     fill={cfg.color}
                     textAnchor="middle"
                     fontFamily="sans-serif"
-                    fontWeight={700}
+                    fontWeight={800}
+                    style={{ filter: `drop-shadow(0 0 5px ${cfg.color})` }}
                   >
                     {cfg.icon}
                   </text>
 
                   {/* Screen name */}
-                  <text x={32} y={30} fontSize={11} fill="var(--text)" fontFamily="sans-serif" fontWeight={600}>
+                  <text x={42} y={24} fontSize={11} fill="white" fontFamily="sans-serif" fontWeight={700} letterSpacing="0.5">
                     {scr.name.length > 15 ? scr.name.slice(0, 15) + '…' : scr.name}
                   </text>
 
                   {/* Type label */}
-                  <text x={32} y={44} fontSize={8} fill="var(--text-muted)" fontFamily="sans-serif">
-                    {cfg.label}
+                  <text x={42} y={35} fontSize={8} fill={`${cfg.color}90`} fontFamily="monospace" fontWeight={600} letterSpacing="1">
+                    {cfg.label.toUpperCase()}
                   </text>
 
-                  {/* Widget count */}
-                  <text x={32} y={58} fontSize={7} fill="var(--text-muted)" fontFamily="sans-serif">
-                    {scr.widgets.length} widget{scr.widgets.length !== 1 ? 's' : ''}
-                  </text>
+                  {/* Widget count indicator string */}
+                  <g transform={`translate(10, 48)`}>
+                    {/* Tiny nodes representing widgets */}
+                    <rect x={0} y={0} width={NODE_W - 20} height={10} rx={3} fill="rgba(255,255,255,0.03)" stroke="rgba(255,255,255,0.05)" />
+                    {Array.from({ length: Math.min(scr.widgets.length, 12) }).map((_, i) => (
+                      <rect key={i} x={4 + i * 8} y={3} width={4} height={4} rx={1} fill={`${cfg.color}80`} />
+                    ))}
+                    {scr.widgets.length > 12 && (
+                      <text x={4 + 12 * 8} y={8} fontSize={8} fill={`${cfg.color}80`}>+</text>
+                    )}
+                    {scr.widgets.length === 0 && (
+                      <text x={5} y={8} fontSize={7} fill="rgba(255,255,255,0.2)" fontFamily="monospace">NO_ELEMENTS</text>
+                    )}
+                  </g>
 
                   {/* Action buttons when selected */}
                   {isSelected && (
                     <>
                       {/* Link button */}
                       <g
-                        transform={`translate(${NODE_W - 38}, 10)`}
+                        transform={`translate(${NODE_W - 44}, -16)`}
                         onClick={(e) => {
                           e.stopPropagation();
                           startConnection(scr.id);
                         }}
                         style={{ cursor: 'pointer' }}
+                        className="group"
                       >
-                        <rect x={0} y={0} width={14} height={14} rx={3} fill="var(--border)" />
-                        <text x={3.5} y={11} fontSize={9} fill="var(--text-muted-hover)">⟶</text>
+                        <rect x={0} y={0} width={20} height={20} rx={6} fill="rgba(52,211,153,0.15)" stroke="rgba(52,211,153,0.4)" strokeWidth={1} />
+                        <text x={10} y={13} fontSize={10} fill="rgba(52,211,153,1)" textAnchor="middle">→</text>
                       </g>
                       {/* Delete button */}
                       <g
-                        transform={`translate(${NODE_W - 20}, 10)`}
+                        transform={`translate(${NODE_W - 20}, -16)`}
                         onClick={(e) => {
                           e.stopPropagation();
                           deleteScreen(scr.id);
                         }}
                         style={{ cursor: 'pointer' }}
+                        className="group"
                       >
-                        <rect x={0} y={0} width={14} height={14} rx={3} fill="#f8717118" />
-                        <text x={3} y={11} fontSize={10} fill="#f87171">&times;</text>
+                        <rect x={0} y={0} width={20} height={20} rx={6} fill="rgba(244,63,94,0.15)" stroke="rgba(244,63,94,0.4)" strokeWidth={1} />
+                        <text x={10} y={14} fontSize={12} fill="rgba(244,63,94,1)" textAnchor="middle" fontWeight="bold">×</text>
                       </g>
                     </>
                   )}
@@ -558,8 +613,8 @@ export function MenuFlowDiagram({ onGenerate, isGenerating }: MenuFlowDiagramPro
 
         {/* Help text */}
         {connectingFrom && (
-          <div className="absolute bottom-2 left-1/2 -translate-x-1/2 z-10 px-3 py-1.5 rounded-full text-xs bg-[#fbbf2418] border border-[#fbbf2430] text-[#fbbf24]">
-            Click a target screen to connect, or click canvas to cancel
+          <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-10 px-4 py-2 rounded-xl text-[10px] uppercase font-bold tracking-widest bg-amber-950/80 border border-amber-900/50 text-amber-400 shadow-[0_0_20px_rgba(245,158,11,0.2)] backdrop-blur-md animate-pulse">
+            Select target matrix node to establish route, or click background to abort
           </div>
         )}
       </div>
@@ -575,11 +630,12 @@ export function MenuFlowDiagram({ onGenerate, isGenerating }: MenuFlowDiagramPro
 
       {/* ── Transition List ── */}
       {transitions.length > 0 && (
-        <SurfaceCard level={2} className="p-3">
-          <div className="text-2xs uppercase tracking-wider text-text-muted font-semibold mb-2">
-            Transitions
+        <div className="p-5 bg-black/40 border border-indigo-900/40 rounded-2xl shadow-inner relative z-10">
+          <div className="flex items-center gap-2 text-[10px] uppercase tracking-widest text-indigo-400 font-bold mb-4">
+            <Unlink className="w-3.5 h-3.5" />
+            Active Routing Pathways
           </div>
-          <div className="space-y-1">
+          <div className="space-y-2">
             {transitions.map((tr) => {
               const fromScr = screens.find((s) => s.id === tr.fromId);
               const toScr = screens.find((s) => s.id === tr.toId);
@@ -587,68 +643,69 @@ export function MenuFlowDiagram({ onGenerate, isGenerating }: MenuFlowDiagramPro
               return (
                 <div
                   key={tr.id}
-                  className="flex items-center gap-2 px-2.5 py-1.5 rounded-md bg-surface border border-border text-xs"
+                  className="flex items-center gap-3 px-4 py-3 rounded-xl bg-black/60 border border-indigo-900/50 shadow-sm"
                 >
-                  <span className="text-text font-medium">{fromScr.name}</span>
-                  <span className="text-text-muted">{tr.bidirectional ? '⟷' : '→'}</span>
-                  <span className="text-text font-medium">{toScr.name}</span>
-                  <span className="text-text-muted ml-auto truncate max-w-[100px]">{tr.trigger}</span>
+                  <div className="flex-1 flex items-center justify-between text-[11px] font-bold tracking-wider uppercase bg-indigo-950/20 rounded-md px-3 py-1.5 border border-indigo-900/30">
+                    <span className="text-white drop-shadow-md" style={{ color: SCREEN_TYPES[fromScr.type].color }}>{fromScr.name}</span>
+                    <div className="flex flex-col items-center flex-1 px-4">
+                      <span className="text-[9px] text-indigo-400/60 font-mono tracking-widest mb-0.5 truncate max-w-[120px]">{tr.trigger}</span>
+                      <div className="w-full h-px bg-indigo-900/40 relative">
+                        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-black px-1 text-indigo-500">{tr.bidirectional ? '⟷' : '→'}</div>
+                      </div>
+                    </div>
+                    <span className="text-white drop-shadow-md" style={{ color: SCREEN_TYPES[toScr.type].color }}>{toScr.name}</span>
+                  </div>
                   <button
                     onClick={() => toggleBidirectional(tr.id)}
-                    className="text-2xs px-1.5 py-0.5 rounded border transition-colors"
+                    className="p-2 rounded-lg border transition-all hover:bg-white/5 active:scale-95"
                     style={{
-                      color: tr.bidirectional ? '#60a5fa' : 'var(--text-muted)',
-                      borderColor: tr.bidirectional ? '#60a5fa30' : 'var(--border)',
-                      backgroundColor: tr.bidirectional ? '#60a5fa08' : 'transparent',
+                      color: tr.bidirectional ? '#6ee7b7' : 'rgba(156,163,175,0.7)',
+                      borderColor: tr.bidirectional ? 'rgba(52,211,153,0.4)' : 'rgba(49,46,129,0.5)',
+                      backgroundColor: tr.bidirectional ? 'rgba(52,211,153,0.1)' : 'rgba(0,0,0,0.4)',
                     }}
-                    title="Toggle bidirectional"
+                    title="Toggle Route Bind"
                   >
-                    {tr.bidirectional ? '⟷' : '→'}
+                    <Link className="w-3.5 h-3.5" />
                   </button>
                   <button
                     onClick={() => deleteTransition(tr.id)}
-                    className="text-[#f87171] hover:text-[#fca5a5] transition-colors"
-                    title="Delete transition"
+                    className="p-2 rounded-lg border border-rose-900/50 bg-rose-950/20 text-rose-500 hover:bg-rose-900/40 hover:text-rose-400 transition-all active:scale-95"
+                    title="Sever Route"
                   >
-                    <X className="w-3 h-3" />
+                    <X className="w-3.5 h-3.5" />
                   </button>
                 </div>
               );
             })}
           </div>
-        </SurfaceCard>
+        </div>
       )}
 
       {/* ── Summary & Generate ── */}
-      <div className="border-t border-border pt-4">
-        <div className="flex items-center justify-between mb-3">
-          <div className="flex items-center gap-4 text-xs text-text-muted-hover">
-            <span>{screens.length} screen{screens.length !== 1 ? 's' : ''}</span>
-            <span className="text-[#2a2a4a]">|</span>
-            <span>{transitions.length} transition{transitions.length !== 1 ? 's' : ''}</span>
-            <span className="text-[#2a2a4a]">|</span>
-            <span>{screens.reduce((n, s) => n + s.widgets.length, 0)} total widgets</span>
-          </div>
-        </div>
+      <div className="relative z-10 pt-6 mt-2 border-t border-indigo-900/40">
         <button
           onClick={() => onGenerate(config)}
           disabled={isGenerating || screens.length === 0}
-          className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-xs font-semibold transition-all disabled:opacity-50"
+          className="relative w-full overflow-hidden flex items-center justify-center gap-3 px-6 py-4 rounded-xl text-[11px] font-bold uppercase tracking-widest transition-all disabled:opacity-50 group outline-none focus:ring-2 focus:ring-indigo-500/50 focus:ring-offset-2 focus:ring-offset-[#03030a]"
           style={{
-            backgroundColor: `${CONTENT_ACCENT}18`,
-            color: CONTENT_ACCENT,
-            border: `1px solid ${CONTENT_ACCENT}35`,
+            backgroundColor: 'rgba(99,102,241,0.15)',
+            color: '#818cf8',
+            border: '1px solid rgba(99,102,241,0.5)',
+            boxShadow: '0 0 20px rgba(99,102,241,0.2), inset 0 0 10px rgba(99,102,241,0.1)',
           }}
         >
+          <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/40 to-transparent opacity-50" />
+          <div className="absolute top-0 -left-[100%] w-1/2 h-full bg-gradient-to-r from-transparent via-white/10 to-transparent skew-x-12 group-hover:left-[200%] transition-transform duration-1000 ease-out pointer-events-none" />
+
           {isGenerating ? (
             <>
-              <Loader2 className="w-4 h-4 animate-spin" />
-              Generating Navigation System...
+              <Loader2 className="w-4 h-4 animate-spin drop-shadow-[0_0_8px_currentColor]" />
+              COMPILING_TOPOLOGY...
             </>
           ) : (
             <>
-              <Send className="w-4 h-4" />
-              Generate Menu System with Claude
+              <Send className="w-4 h-4 group-hover:translate-x-1 transition-transform drop-shadow-[0_0_8px_currentColor]" />
+              EXPORT_MENU_ARCHITECTURE
             </>
           )}
         </button>
@@ -684,101 +741,117 @@ function ScreenEditor({
   const cfg = SCREEN_TYPES[screen.type];
 
   return (
-    <SurfaceCard level={2} className="p-4 space-y-3">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
+    <div className="p-6 bg-black/60 border border-indigo-900/50 rounded-2xl shadow-[0_0_30px_rgba(99,102,241,0.1)_inset] relative z-10 animate-in slide-in-from-bottom-2 fade-in duration-300">
+      <div className="flex items-center justify-between mb-6 pb-4 border-b border-indigo-900/40">
+        <div className="flex items-center gap-3">
           <div
-            className="w-5 h-5 rounded flex items-center justify-center text-xs font-bold"
-            style={{ backgroundColor: `${cfg.color}20`, color: cfg.color }}
+            className="w-8 h-8 rounded-lg flex items-center justify-center text-sm font-bold shadow-inner"
+            style={{ backgroundColor: `${cfg.color}15`, color: cfg.color, border: `1px solid ${cfg.color}40`, textShadow: `0 0 10px ${cfg.color}` }}
           >
             {cfg.icon}
           </div>
-          <span className="text-xs font-semibold text-text">Edit Screen</span>
+          <span className="text-[11px] font-bold uppercase tracking-widest text-white drop-shadow-md">Node Configuration</span>
         </div>
-        <button onClick={onClose} className="text-text-muted hover:text-text transition-colors">
-          <X className="w-3.5 h-3.5" />
+        <button onClick={onClose} className="p-2 rounded-lg bg-indigo-950/40 border border-indigo-900/40 text-indigo-400 hover:text-white hover:bg-indigo-600/30 hover:border-indigo-500/50 transition-colors">
+          <X className="w-4 h-4" />
         </button>
       </div>
 
-      {/* Name */}
-      <div className="space-y-1">
-        <label className="text-2xs uppercase tracking-wider text-text-muted font-semibold">Name</label>
-        <input
-          type="text"
-          value={screen.name}
-          onChange={(e) => onUpdate({ name: e.target.value })}
-          className="w-full px-2.5 py-1.5 bg-surface border border-border rounded text-xs text-text outline-none focus:border-status-amber-strong transition-colors"
-        />
-      </div>
-
-      {/* Type */}
-      <div className="space-y-1">
-        <label className="text-2xs uppercase tracking-wider text-text-muted font-semibold">Type</label>
-        <div className="relative">
-          <select
-            value={screen.type}
-            onChange={(e) => onUpdate({ type: e.target.value as ScreenType })}
-            className="w-full px-2.5 py-1.5 bg-surface border border-border rounded text-xs text-text outline-none focus:border-status-amber-strong appearance-none transition-colors"
-          >
-            {(Object.entries(SCREEN_TYPES) as [ScreenType, typeof SCREEN_TYPES[ScreenType]][]).map(([key, val]) => (
-              <option key={key} value={key}>{val.label}</option>
-            ))}
-          </select>
-          <ChevronDown className="w-3 h-3 text-text-muted absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
-        </div>
-      </div>
-
-      {/* Widgets */}
-      <div className="space-y-1.5">
-        <label className="text-2xs uppercase tracking-wider text-text-muted font-semibold">
-          Widgets / Elements ({screen.widgets.length})
-        </label>
-        {screen.widgets.length > 0 && (
-          <div className="flex flex-wrap gap-1.5">
-            {screen.widgets.map((w, i) => (
-              <span
-                key={i}
-                className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs border transition-colors"
-                style={{
-                  color: cfg.color,
-                  borderColor: `${cfg.color}30`,
-                  backgroundColor: `${cfg.color}08`,
-                }}
-              >
-                {w}
-                <button
-                  onClick={() => removeWidget(i)}
-                  className="hover:text-[#f87171] transition-colors"
-                >
-                  <X className="w-2.5 h-2.5" />
-                </button>
-              </span>
-            ))}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="space-y-4">
+          {/* Name */}
+          <div className="space-y-1.5 flex flex-col">
+            <label className="text-[9px] uppercase tracking-widest text-indigo-400 font-bold ml-1 flex items-center gap-2">
+              <div className="w-1.5 h-1.5 rounded-full bg-indigo-500" /> Identifier String
+            </label>
+            <input
+              type="text"
+              value={screen.name}
+              onChange={(e) => onUpdate({ name: e.target.value })}
+              className="w-full px-4 py-2.5 bg-black/50 border border-indigo-900/60 rounded-xl text-xs font-bold text-white outline-none focus:border-indigo-400 focus:ring-1 focus:ring-indigo-400/50 shadow-inner transition-all"
+            />
           </div>
-        )}
-        <div className="flex gap-1.5">
-          <input
-            type="text"
-            value={newWidget}
-            onChange={(e) => setNewWidget(e.target.value)}
-            onKeyDown={(e) => { if (e.key === 'Enter') addWidget(); }}
-            placeholder="e.g. Play Button, Health Bar..."
-            className="flex-1 px-2.5 py-1.5 bg-surface border border-border rounded text-xs text-text placeholder-text-muted outline-none focus:border-status-amber-strong transition-colors"
-          />
-          <button
-            onClick={addWidget}
-            disabled={!newWidget.trim()}
-            className="px-2 py-1.5 rounded text-xs font-medium transition-colors disabled:opacity-30"
-            style={{
-              backgroundColor: `${CONTENT_ACCENT}15`,
-              color: CONTENT_ACCENT,
-              border: `1px solid ${CONTENT_ACCENT}30`,
-            }}
-          >
-            <Plus className="w-3 h-3" />
-          </button>
+
+          {/* Type */}
+          <div className="space-y-1.5 flex flex-col">
+            <label className="text-[9px] uppercase tracking-widest text-indigo-400 font-bold ml-1 flex items-center gap-2">
+              <div className="w-1.5 h-1.5 rounded-full bg-indigo-500" /> Class Designation
+            </label>
+            <div className="relative">
+              <select
+                value={screen.type}
+                onChange={(e) => onUpdate({ type: e.target.value as ScreenType })}
+                className="w-full px-4 py-2.5 bg-black/50 border border-indigo-900/60 rounded-xl text-xs font-bold text-white outline-none focus:border-indigo-400 focus:ring-1 focus:ring-indigo-400/50 shadow-inner appearance-none transition-all cursor-pointer"
+                style={{ color: cfg.color }}
+              >
+                {(Object.entries(SCREEN_TYPES) as [ScreenType, typeof SCREEN_TYPES[ScreenType]][]).map(([key, val]) => (
+                  <option key={key} value={key} style={{ backgroundColor: '#0f172a', color: val.color }}>{val.label.toUpperCase()}</option>
+                ))}
+              </select>
+              <ChevronDown className="w-4 h-4 text-indigo-500 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+            </div>
+          </div>
+        </div>
+
+        {/* Widgets */}
+        <div className="space-y-2.5 flex flex-col">
+          <label className="text-[9px] uppercase tracking-widest text-indigo-400 font-bold ml-1 flex items-center gap-2">
+            <div className="w-1.5 h-1.5 rounded-full bg-indigo-500" /> Embedded UI Elements <span className="bg-indigo-900/50 text-indigo-200 px-1.5 py-0.5 rounded text-[8px]">{screen.widgets.length}</span>
+          </label>
+          <div className="flex-1 bg-black/40 border border-indigo-900/50 rounded-xl p-3 flex flex-col gap-3 shadow-inner max-h-[140px] overflow-y-auto global-scrollbar">
+            {screen.widgets.length > 0 ? (
+              <div className="flex flex-wrap gap-2">
+                {screen.widgets.map((w, i) => (
+                  <span
+                    key={i}
+                    className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[10px] uppercase font-bold tracking-widest border transition-colors shadow-sm"
+                    style={{
+                      color: 'white',
+                      borderColor: `${cfg.color}40`,
+                      backgroundColor: `${cfg.color}15`,
+                      textShadow: `0 0 10px ${cfg.color}80`
+                    }}
+                  >
+                    {w}
+                    <button
+                      onClick={() => removeWidget(i)}
+                      className="hover:text-rose-400 hover:bg-rose-950/50 p-0.5 rounded -mr-1 transition-colors"
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
+                  </span>
+                ))}
+              </div>
+            ) : (
+              <div className="text-[10px] text-indigo-900/50 font-mono uppercase tracking-widest text-center my-auto">
+                No embedded elements assigned
+              </div>
+            )}
+          </div>
+
+          <div className="flex gap-2">
+            <input
+              type="text"
+              value={newWidget}
+              onChange={(e) => setNewWidget(e.target.value)}
+              onKeyDown={(e) => { if (e.key === 'Enter') addWidget(); }}
+              placeholder="E.G. PROGRESS_BAR_01"
+              className="flex-1 px-3 py-2 bg-black/50 border border-indigo-900/60 rounded-lg text-[10px] font-mono text-white placeholder-indigo-900/40 outline-none focus:border-indigo-400 focus:ring-1 focus:ring-indigo-400/50 shadow-inner transition-all uppercase tracking-widest"
+            />
+            <button
+              onClick={addWidget}
+              disabled={!newWidget.trim()}
+              className="px-4 py-2 rounded-lg text-white font-bold transition-all disabled:opacity-30 disabled:grayscale flex items-center justify-center hover:brightness-110 shadow-lg active:scale-95"
+              style={{
+                backgroundColor: cfg.color,
+                boxShadow: `0 0 15px ${cfg.color}40`,
+              }}
+            >
+              <Plus className="w-4 h-4 drop-shadow-md" />
+            </button>
+          </div>
         </div>
       </div>
-    </SurfaceCard>
+    </div>
   );
 }

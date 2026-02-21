@@ -4,8 +4,8 @@ import { useCallback, useMemo } from 'react';
 import { Brush, Crown, Paintbrush, SunDim, Lock, Check, ChevronDown } from 'lucide-react';
 import { useModuleStore } from '@/stores/moduleStore';
 import type { LucideIcon } from 'lucide-react';
-
-const ACCENT = '#f59e0b';
+import { MODULE_COLORS } from '@/lib/constants';
+import { STATUS_SUCCESS } from '@/lib/chart-colors';
 
 interface MaterialNode {
   id: string;
@@ -96,49 +96,73 @@ export function MaterialLayerGraph({ onRunPrompt, isRunning, activeItemId }: Mat
   const completedCount = nodeStates.filter((n) => n.completed).length;
 
   return (
-    <div className="w-full max-w-lg mx-auto select-none">
-      {/* Header */}
-      <div className="flex items-center gap-2 mb-5">
-        <Brush className="w-4 h-4" style={{ color: ACCENT }} />
-        <div>
-          <h3 className="text-xs font-semibold text-text">Material Hierarchy</h3>
-          <p className="text-2xs text-text-muted">
-            {completedCount}/3 layers — build from the master material down
-          </p>
-        </div>
+    <div className="w-full h-full bg-[#03030a] rounded-2xl border border-violet-900/30 shadow-[inset_0_0_80px_rgba(167,139,250,0.05)] p-6 relative overflow-y-auto select-none">
+      {/* Background Ambience */}
+      <div className="absolute inset-0 pointer-events-none z-0">
+        <div className="absolute top-10 left-10 w-64 h-64 bg-violet-600/10 blur-[100px] rounded-full pointer-events-none" />
+        <div className="absolute bottom-10 right-10 w-64 h-64 bg-emerald-600/5 blur-[80px] rounded-full pointer-events-none" />
+        {/* Subtle grid pattern */}
+        <div className="absolute inset-0 opacity-50 pointer-events-none" style={{ backgroundImage: "url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAiIGhlaWdodD0iMjAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGNpcmNsZSBjeD0iMSIgY3k9IjEiIHI9IjEiIGZpbGw9InJnYmEoMTY3LCAxMzksIDI1MCwgMC4wNSkiLz48L3N2Zz4=')" }} />
       </div>
 
-      {/* Root node — Master Material */}
-      <div className="flex flex-col items-center">
-        <NodeCard
-          node={root}
-          onClick={() => handleClick(root, root.locked)}
-          isRunning={isRunning}
-        />
-
-        {/* Branch connector — single line down then fork */}
-        <div className="flex flex-col items-center py-1.5">
-          <ChevronDown
-            className="w-4 h-4"
-            style={{
-              color: root.completed
-                ? '#22c55e40'
-                : `${ACCENT}40`,
-            }}
-          />
+      <div className="max-w-xl mx-auto relative z-10 space-y-8">
+        {/* Header */}
+        <div className="flex items-center gap-4 border-b border-violet-900/30 pb-4">
+          <div className="w-12 h-12 rounded-xl bg-violet-900/40 border border-violet-500/50 flex items-center justify-center shadow-[0_0_15px_rgba(139,92,246,0.3)]">
+            <Brush className="w-6 h-6 text-violet-400" />
+          </div>
+          <div>
+            <h3 className="text-sm font-bold tracking-widest uppercase text-violet-100">Shader Tree Compiler</h3>
+            <p className="text-[10px] text-violet-400/60 uppercase tracking-wider mt-0.5">
+              GRAPH_STATUS: {completedCount}/3 NODES_COMPILED
+            </p>
+          </div>
         </div>
 
-        {/* Child nodes — side by side */}
-        <div className="flex items-start gap-4 w-full">
-          {children.map((child) => (
-            <div key={child.id} className="flex-1">
-              <NodeCard
-                node={child}
-                onClick={() => handleClick(child, child.locked)}
-                isRunning={isRunning}
-              />
+        {/* Graph Area */}
+        <div className="flex flex-col items-center">
+          {/* Root node — Master Material */}
+          <div className="w-full max-w-sm">
+            <NodeCard
+              node={root}
+              onClick={() => handleClick(root, root.locked)}
+              isRunning={isRunning}
+            />
+          </div>
+
+          {/* Branch connector — single line down then fork */}
+          <div className="flex flex-col items-center w-full my-1">
+            {/* Vertical line from root */}
+            <div className="w-px h-8 bg-violet-900/50 relative">
+              <div className="absolute top-0 left-[-1px] w-[3px] h-2 bg-violet-500 animate-[bounce_2s_infinite]" />
             </div>
-          ))}
+
+            {/* Horizontal fork line */}
+            <div className="w-[calc(50%+1rem)] h-px bg-violet-900/50 relative" />
+
+            {/* Vertical drops to children */}
+            <div className="flex w-[calc(50%+1rem)] justify-between">
+              <div className="w-px h-8 bg-violet-900/50 relative">
+                <div className="absolute bottom-0 left-[-3px] w-[7px] h-[7px] border-2 border-[#03030a] rounded-full bg-violet-500" />
+              </div>
+              <div className="w-px h-8 bg-violet-900/50 relative">
+                <div className="absolute bottom-0 left-[-3px] w-[7px] h-[7px] border-2 border-[#03030a] rounded-full bg-violet-500" />
+              </div>
+            </div>
+          </div>
+
+          {/* Child nodes — side by side */}
+          <div className="flex items-start gap-4 w-full">
+            {children.map((child) => (
+              <div key={child.id} className="flex-1">
+                <NodeCard
+                  node={child}
+                  onClick={() => handleClick(child, child.locked)}
+                  isRunning={isRunning}
+                />
+              </div>
+            ))}
+          </div>
         </div>
       </div>
     </div>
@@ -162,146 +186,89 @@ interface NodeCardProps {
 
 function NodeCard({ node, onClick, isRunning }: NodeCardProps) {
   const Icon = node.icon;
+  const isCompleted = node.completed;
+  const isLocked = node.locked;
+  const isActive = node.isActive;
 
   return (
     <button
       onClick={onClick}
-      disabled={isRunning && !node.isActive}
+      disabled={isRunning && !isActive}
       className={`
-        relative w-full rounded-xl border transition-all duration-base text-left group
-        ${node.completed
-          ? 'border-status-green-strong bg-status-green-subtle'
-          : node.locked
-            ? 'border-border bg-[#0a0a1e] opacity-60 cursor-not-allowed'
-            : node.isActive
-              ? 'border-status-amber-strong bg-status-amber-subtle'
-              : 'border-border bg-surface-deep hover:border-status-amber-strong hover:bg-status-amber-subtle cursor-pointer'
+        relative w-full rounded-xl text-left transition-all duration-300 group overflow-hidden
+        ${isCompleted
+          ? 'bg-[#03030a] border border-emerald-500/40 shadow-[0_0_15px_rgba(16,185,129,0.1),inset_0_0_10px_rgba(16,185,129,0.05)]'
+          : isLocked
+            ? 'bg-black/40 border border-violet-900/20 opacity-50 cursor-not-allowed grayscale'
+            : isActive
+              ? 'bg-[#03030a] border border-amber-500/50 shadow-[0_0_20px_rgba(245,158,11,0.2),inset_0_0_15px_rgba(245,158,11,0.1)]'
+              : 'bg-black/60 border border-violet-900/40 hover:border-violet-500/50 hover:bg-violet-900/10 cursor-pointer shadow-lg hover:shadow-[0_0_20px_rgba(139,92,246,0.15)]'
         }
       `}
-      style={{
-        ...(node.isRoot && !node.completed && !node.locked
-          ? { boxShadow: `0 0 20px ${ACCENT}10, 0 0 40px ${ACCENT}06` }
-          : {}),
-      }}
     >
-      {/* Subtle glow on root */}
-      {node.isRoot && !node.completed && !node.locked && !node.isActive && (
-        <span
-          className="absolute inset-0 rounded-xl animate-pulse pointer-events-none"
-          style={{
-            border: `1px solid ${ACCENT}18`,
-            boxShadow: `0 0 12px ${ACCENT}08`,
-          }}
-        />
-      )}
+      {/* Glossy Header Bar */}
+      <div className={`
+        h-1.5 w-full
+        ${isCompleted ? 'bg-gradient-to-r from-emerald-600 to-emerald-400'
+          : isLocked ? 'bg-violet-900/30'
+            : isActive ? 'bg-gradient-to-r from-amber-600 to-amber-400 animate-pulse'
+              : 'bg-gradient-to-r from-violet-600/50 to-violet-400/50 group-hover:from-violet-500 group-hover:to-violet-400 transition-colors'}
+      `} />
 
-      <div className="flex items-start gap-3 px-4 py-3">
-        {/* Icon */}
-        <div
-          className="flex-shrink-0 w-8 h-8 rounded-lg flex items-center justify-center mt-0.5"
-          style={{
-            background: node.completed
-              ? 'linear-gradient(135deg, #22c55e18, #22c55e08)'
-              : node.locked
-                ? 'var(--surface)'
-                : `linear-gradient(135deg, ${ACCENT}18, ${ACCENT}08)`,
-            border: node.completed
-              ? '1px solid #22c55e25'
-              : node.locked
-                ? '1px solid var(--border)'
-                : `1px solid ${ACCENT}20`,
-          }}
-        >
-          {node.completed ? (
-            <Check className="w-3.5 h-3.5 text-[#22c55e]" />
-          ) : node.locked ? (
-            <Lock className="w-3 h-3 text-text-muted" />
-          ) : (
-            <Icon className="w-3.5 h-3.5" style={{ color: ACCENT }} />
-          )}
+      <div className="flex items-start gap-4 p-4 relative z-10">
+        {/* Icon Container */}
+        <div className={`
+          flex-shrink-0 w-10 h-10 rounded-lg flex items-center justify-center
+          ${isCompleted ? 'bg-emerald-500/10 border border-emerald-500/30 text-emerald-400'
+            : isLocked ? 'bg-surface border border-border text-text-muted'
+              : isActive ? 'bg-amber-500/10 border border-amber-500/30 text-amber-400'
+                : 'bg-violet-500/10 border border-violet-500/30 text-violet-400 group-hover:scale-110 transition-transform'}
+        `}>
+          {isCompleted ? <Check className="w-5 h-5" /> : isLocked ? <Lock className="w-4 h-4" /> : <Icon className="w-5 h-5" />}
         </div>
 
-        {/* Text */}
+        {/* Content */}
         <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2">
-            <span
-              className={`text-xs font-semibold ${
-                node.completed
-                  ? 'text-[#22c55e]'
-                  : node.locked
-                    ? 'text-text-muted'
-                    : 'text-text'
-              }`}
-            >
+          <div className="flex items-center gap-2 mb-1">
+            <span className={`text-[11px] font-bold uppercase tracking-widest truncate ${isCompleted ? 'text-emerald-400' : isLocked ? 'text-text-muted' : isActive ? 'text-amber-400' : 'text-violet-100'}`}>
               {node.label}
             </span>
-            <span
-              className={`text-2xs font-medium uppercase tracking-widest px-1.5 py-0.5 rounded ${
-                node.completed
-                  ? 'bg-status-green-medium text-[#22c55e80]'
-                  : node.locked
-                    ? 'bg-surface text-[#3a3e5a]'
-                    : ''
-              }`}
-              style={
-                !node.completed && !node.locked
-                  ? { backgroundColor: `${ACCENT}12`, color: ACCENT }
-                  : {}
-              }
-            >
+            <span className={`text-[8px] font-mono tracking-widest px-1.5 py-0.5 rounded border uppercase ${isCompleted ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400/80' :
+                isLocked ? 'bg-transparent border-transparent text-transparent' :
+                  'bg-violet-900/30 border-violet-900/50 text-violet-300'}
+            `}>
               {node.subtitle}
             </span>
           </div>
 
-          <p
-            className={`text-xs mt-0.5 leading-relaxed ${
-              node.locked ? 'text-[#3a3e5a]' : 'text-text-muted'
-            }`}
-          >
+          <p className="text-[10px] text-violet-200/60 leading-relaxed font-mono tracking-tight line-clamp-2">
             {node.description}
           </p>
 
-          {/* Locked hint */}
-          {node.locked && (
-            <p className="text-2xs mt-1.5 text-[#f59e0b80] flex items-center gap-1">
-              <Lock className="w-2.5 h-2.5" />
-              Complete Master Material first
-            </p>
-          )}
-
-          {/* Active indicator */}
-          {node.isActive && (
-            <div className="flex items-center gap-1.5 mt-1.5">
-              <span
-                className="w-1.5 h-1.5 rounded-full animate-pulse"
-                style={{ backgroundColor: ACCENT }}
-              />
-              <span className="text-2xs font-medium" style={{ color: ACCENT }}>
-                Building...
-              </span>
-            </div>
-          )}
-
-          {/* Root start nudge */}
-          {node.isRoot && !node.completed && !node.locked && !node.isActive && (
-            <p className="text-2xs mt-1.5 font-medium" style={{ color: `${ACCENT}cc` }}>
-              Start here
-            </p>
-          )}
-        </div>
-
-        {/* Right status */}
-        <div className="flex-shrink-0 self-center">
-          {node.completed ? (
-            <span className="text-2xs text-[#22c55e80] font-medium">Done</span>
-          ) : !node.locked && !node.isActive ? (
-            <span
-              className="text-2xs font-medium opacity-30 scale-95 group-hover:opacity-100 group-hover:scale-100 transition-all"
-              style={{ color: ACCENT }}
-            >
-              Build →
-            </span>
-          ) : null}
+          {/* Status Sub-text */}
+          <div className="mt-3">
+            {isLocked && (
+              <div className="flex items-center gap-1 text-[9px] text-amber-500/60 uppercase tracking-widest font-bold">
+                <Lock className="w-3 h-3" /> DEP_MISSING: mt-3
+              </div>
+            )}
+            {isActive && (
+              <div className="flex items-center gap-2 text-[9px] text-amber-400 uppercase tracking-widest font-bold animate-pulse">
+                <div className="w-1.5 h-1.5 rounded-full bg-amber-400" />
+                COMPILING_SHADER...
+              </div>
+            )}
+            {!isLocked && !isActive && !isCompleted && (
+              <div className="flex items-center gap-1 text-[9px] text-violet-400/50 uppercase tracking-widest font-bold group-hover:text-violet-400 transition-colors">
+                <span>AWAITING_EXECUTION</span>
+              </div>
+            )}
+            {isCompleted && (
+              <div className="flex items-center gap-1 text-[9px] text-emerald-500/60 uppercase tracking-widest font-bold">
+                <span>COMPILED_SUCCESSFULLY</span>
+              </div>
+            )}
+          </div>
         </div>
       </div>
     </button>

@@ -19,6 +19,7 @@ import type {
   AcquiredAsset,
   IntegrationDifficulty,
 } from '@/types/marketplace';
+import type { SubModuleId } from '@/types/modules';
 
 // ── Constants for stable Zustand selectors ──────────────────────────────────
 
@@ -146,7 +147,7 @@ export function AssetScoutView() {
           <div className="relative">
             <select
               value={moduleFilter ?? ''}
-              onChange={(e) => setModuleFilter(e.target.value || null)}
+              onChange={(e) => setModuleFilter((e.target.value || null) as SubModuleId | null)}
               className="appearance-none pl-7 pr-6 py-1.5 bg-surface border border-border rounded-lg text-xs text-text focus:outline-none focus:border-emerald-500/40 cursor-pointer"
             >
               <option value="">All modules</option>
@@ -368,7 +369,7 @@ function RecommendationCard({ recommendation, acquiredAssets, projectName }: {
 function AssetRow({ scored, isAcquired, moduleId, projectName }: {
   scored: ScoredAsset;
   isAcquired: boolean;
-  moduleId: string;
+  moduleId: SubModuleId;
   projectName: string;
 }) {
   const { asset, matchScore, matchReasons, timeSavedMinutes } = scored;

@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useCallback, useRef, useEffect } from 'react';
+import { MODULE_COLORS } from '@/lib/chart-colors';
 import { useScrollRestoration } from '@/hooks/useScrollRestoration';
 import { Radar, BarChart3, Activity, Link2, LayoutDashboard, ScanSearch, Grid3x3, FileText, ShoppingBag, BookOpen, Coins, Gauge, Swords, Globe, Bug, HeartPulse, Palette, Dna, ShieldCheck, Network, Layers, Calendar, CalendarDays, ChevronLeft, ChevronRight, GitBranch, Pickaxe, SearchCode } from 'lucide-react';
 import { SessionAnalyticsDashboard } from './SessionAnalyticsDashboard';
@@ -340,7 +341,7 @@ function TabButton({
       {active && (
         <span
           className="absolute bottom-0 left-0 right-0 h-0.5 rounded-t"
-          style={{ backgroundColor: '#ef4444' }}
+          style={{ backgroundColor: MODULE_COLORS.evaluator }}
         />
       )}
     </button>

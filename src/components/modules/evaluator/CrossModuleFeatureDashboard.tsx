@@ -9,6 +9,7 @@ import {
   TrendingUp,
   AlertTriangle,
   CheckCircle2,
+  ArrowUpCircle,
   XCircle,
   HelpCircle,
   ChevronRight,
@@ -21,9 +22,10 @@ import { MODULE_LABELS } from '@/lib/module-registry';
 import { apiFetch } from '@/lib/api-utils';
 import { useNavigationStore } from '@/stores/navigationStore';
 import { SurfaceCard } from '@/components/ui/SurfaceCard';
-import { FEATURE_STATUS_COLORS } from '@/lib/chart-colors';
+import { FEATURE_STATUS_COLORS, STATUS_SUCCESS, STATUS_WARNING, STATUS_ERROR } from '@/lib/chart-colors';
+import type { SubModuleId } from '@/types/modules';
 
-const ALL_MODULE_IDS = Object.keys(MODULE_FEATURE_DEFINITIONS);
+const ALL_MODULE_IDS = Object.keys(MODULE_FEATURE_DEFINITIONS) as SubModuleId[];
 
 // ── Status colors ──
 
@@ -31,13 +33,14 @@ const STATUS_COLORS = FEATURE_STATUS_COLORS;
 
 const STATUS_LABELS = {
   implemented: 'Implemented',
+  improved: 'Improved',
   partial: 'Partial',
   missing: 'Missing',
   unknown: 'Unknown',
 } as const;
 
 type StatusKey = keyof typeof STATUS_COLORS;
-const STATUS_KEYS: StatusKey[] = ['implemented', 'partial', 'missing', 'unknown'];
+const STATUS_KEYS: StatusKey[] = ['improved', 'implemented', 'partial', 'missing', 'unknown'];
 
 // ── Category grouping ──
 
@@ -53,11 +56,12 @@ type SortKey = 'name' | 'completion' | 'missing';
 // ── Types ──
 
 interface CellData {
-  moduleId: string;
+  moduleId: SubModuleId;
   label: string;
   category: string;
   total: number;
   implemented: number;
+  improved: number;
   partial: number;
   missing: number;
   unknown: number;
@@ -108,17 +112,19 @@ export function CrossModuleFeatureDashboard() {
       const defCount = MODULE_FEATURE_DEFINITIONS[moduleId]?.length ?? 0;
       const total = agg?.total ?? defCount;
       const implemented = agg?.implemented ?? 0;
+      const improved = agg?.improved ?? 0;
       const partial = agg?.partial ?? 0;
       const missing = agg?.missing ?? 0;
       const unknown = agg?.unknown ?? total;
-      const pctComplete = total > 0 ? implemented / total : 0;
+      const pctComplete = total > 0 ? (implemented + improved) / total : 0;
 
       return {
-        moduleId,
+        moduleId: moduleId as SubModuleId,
         label: MODULE_LABELS[moduleId] ?? moduleId,
         category: MODULE_CATEGORIES[moduleId] ?? 'Other',
         total,
         implemented,
+        improved,
         partial,
         missing,
         unknown,
@@ -156,10 +162,11 @@ export function CrossModuleFeatureDashboard() {
 
   // Project totals
   const totals = useMemo(() => {
-    const t = { total: 0, implemented: 0, partial: 0, missing: 0, unknown: 0 };
+    const t = { total: 0, implemented: 0, improved: 0, partial: 0, missing: 0, unknown: 0 };
     for (const c of cells) {
       t.total += c.total;
       t.implemented += c.implemented;
+      t.improved += c.improved;
       t.partial += c.partial;
       t.missing += c.missing;
       t.unknown += c.unknown;
@@ -167,7 +174,7 @@ export function CrossModuleFeatureDashboard() {
     return t;
   }, [cells]);
 
-  const overallPct = totals.total > 0 ? Math.round((totals.implemented / totals.total) * 100) : 0;
+  const overallPct = totals.total > 0 ? Math.round(((totals.implemented + totals.improved) / totals.total) * 100) : 0;
 
   // Lowest-scoring modules (least % implemented)
   const lowestModules = useMemo(() => {
@@ -201,7 +208,7 @@ export function CrossModuleFeatureDashboard() {
     return 0.15 + (count / total) * 0.85;
   }
 
-  const handleCellClick = useCallback((moduleId: string) => {
+  const handleCellClick = useCallback((moduleId: SubModuleId) => {
     navigateToModule(moduleId);
   }, [navigateToModule]);
 
@@ -221,13 +228,13 @@ export function CrossModuleFeatureDashboard() {
           icon={TrendingUp}
           label="Overall"
           value={`${overallPct}%`}
-          sub={`${totals.implemented}/${totals.total}`}
-          color="#4ade80"
+          sub={`${totals.implemented + totals.improved}/${totals.total}`}
+          color={STATUS_SUCCESS}
         />
         {STATUS_KEYS.map((key) => (
           <SummaryCard
             key={key}
-            icon={key === 'implemented' ? CheckCircle2 : key === 'partial' ? AlertTriangle : key === 'missing' ? XCircle : HelpCircle}
+            icon={key === 'improved' ? ArrowUpCircle : key === 'implemented' ? CheckCircle2 : key === 'partial' ? AlertTriangle : key === 'missing' ? XCircle : HelpCircle}
             label={STATUS_LABELS[key]}
             value={`${totals[key]}`}
             sub={totals.total > 0 ? `${Math.round((totals[key] / totals.total) * 100)}%` : '0%'}
@@ -413,14 +420,14 @@ export function CrossModuleFeatureDashboard() {
                             className="h-full rounded-full transition-all duration-slow"
                             style={{
                               width: `${pctDone}%`,
-                              backgroundColor: pctDone >= 80 ? '#4ade80' : pctDone >= 40 ? '#fbbf24' : pctDone > 0 ? '#f87171' : 'var(--text-muted)',
+                              backgroundColor: pctDone >= 80 ? STATUS_SUCCESS : pctDone >= 40 ? STATUS_WARNING : pctDone > 0 ? STATUS_ERROR : 'var(--text-muted)',
                             }}
                           />
                         </div>
                         <span
                           className="text-xs font-medium w-7 text-right"
                           style={{
-                            color: pctDone >= 80 ? '#4ade80' : pctDone >= 40 ? '#fbbf24' : pctDone > 0 ? '#f87171' : 'var(--text-muted)',
+                            color: pctDone >= 80 ? STATUS_SUCCESS : pctDone >= 40 ? STATUS_WARNING : pctDone > 0 ? STATUS_ERROR : 'var(--text-muted)',
                           }}
                         >
                           {pctDone}%
@@ -453,7 +460,7 @@ export function CrossModuleFeatureDashboard() {
             <div className="px-2 py-2.5 flex items-center justify-center">
               <span
                 className="text-xs font-bold"
-                style={{ color: overallPct >= 80 ? '#4ade80' : overallPct >= 40 ? '#fbbf24' : '#f87171' }}
+                style={{ color: overallPct >= 80 ? STATUS_SUCCESS : overallPct >= 40 ? STATUS_WARNING : STATUS_ERROR }}
               >
                 {overallPct}%
               </span>
@@ -489,13 +496,13 @@ export function CrossModuleFeatureDashboard() {
                       className="h-full rounded-full"
                       style={{
                         width: `${pct}%`,
-                        backgroundColor: pct >= 40 ? '#fbbf24' : pct > 0 ? '#f87171' : 'var(--text-muted)',
+                        backgroundColor: pct >= 40 ? STATUS_WARNING : pct > 0 ? STATUS_ERROR : 'var(--text-muted)',
                       }}
                     />
                   </div>
                   <span
                     className="text-xs font-medium w-7 text-right"
-                    style={{ color: pct >= 40 ? '#fbbf24' : pct > 0 ? '#f87171' : 'var(--text-muted)' }}
+                    style={{ color: pct >= 40 ? STATUS_WARNING : pct > 0 ? STATUS_ERROR : 'var(--text-muted)' }}
                   >
                     {pct}%
                   </span>

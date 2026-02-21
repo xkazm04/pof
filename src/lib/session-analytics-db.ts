@@ -1,4 +1,5 @@
 import { getDb } from './db';
+import type { SubModuleId } from '@/types/modules';
 import type {
   SessionRecord,
   ModuleStats,
@@ -41,7 +42,7 @@ export function ensureSessionAnalyticsTable() {
 function rowToRecord(row: Record<string, unknown>): SessionRecord {
   return {
     id: row.id as number,
-    moduleId: row.module_id as string,
+    moduleId: row.module_id as SubModuleId,
     sessionKey: row.session_key as string,
     prompt: row.prompt as string,
     promptPreview: row.prompt_preview as string,
@@ -57,7 +58,7 @@ function rowToRecord(row: Record<string, unknown>): SessionRecord {
 // ── CRUD ──
 
 export function recordSession(data: {
-  moduleId: string;
+  moduleId: SubModuleId;
   sessionKey: string;
   prompt: string;
   hadProjectContext: boolean;
@@ -88,7 +89,11 @@ export function recordSession(data: {
     data.completedAt,
   );
 
-  return getRecord(result.lastInsertRowid as number)!;
+  const record = getRecord(result.lastInsertRowid as number);
+  if (!record) {
+    throw new Error(`Failed to retrieve session_analytics record after INSERT (rowid=${result.lastInsertRowid})`);
+  }
+  return record;
 }
 
 export function getRecord(id: number): SessionRecord | null {
@@ -107,7 +112,7 @@ export function getRecentSessions(limit: number = 20): SessionRecord[] {
   return rows.map(rowToRecord);
 }
 
-export function getModuleSessions(moduleId: string): SessionRecord[] {
+export function getModuleSessions(moduleId: SubModuleId): SessionRecord[] {
   ensureSessionAnalyticsTable();
   const rows = getDb()
     .prepare('SELECT * FROM session_analytics WHERE module_id = ? ORDER BY completed_at DESC')
@@ -159,7 +164,7 @@ function rowToModuleStats(r: RawModuleStatsRow): ModuleStats {
   const noCtxSuccessCount = r.no_ctx_success_count;
 
   return {
-    moduleId: r.module_id,
+    moduleId: r.module_id as SubModuleId,
     totalSessions: total,
     successCount,
     failCount,
@@ -174,7 +179,7 @@ function rowToModuleStats(r: RawModuleStatsRow): ModuleStats {
   };
 }
 
-export function getModuleStats(moduleId: string): ModuleStats {
+export function getModuleStats(moduleId: SubModuleId): ModuleStats {
   ensureSessionAnalyticsTable();
   const row = getDb()
     .prepare(MODULE_STATS_SQL + ' WHERE module_id = ?')
@@ -204,7 +209,7 @@ export function getAllModuleStats(): ModuleStats[] {
 }
 
 /** Raw row also carries prompt-length averages for insights/suggestions. */
-function getModuleStatsRaw(moduleId: string): RawModuleStatsRow | null {
+function getModuleStatsRaw(moduleId: SubModuleId): RawModuleStatsRow | null {
   ensureSessionAnalyticsTable();
   const row = getDb()
     .prepare(MODULE_STATS_SQL + ' WHERE module_id = ?')
@@ -214,7 +219,7 @@ function getModuleStatsRaw(moduleId: string): RawModuleStatsRow | null {
 
 // ── Analytics: Prompt Quality Score ──
 
-export function getPromptQualityScore(moduleId: string): PromptQualityScore {
+export function getPromptQualityScore(moduleId: SubModuleId): PromptQualityScore {
   ensureSessionAnalyticsTable();
   const db = getDb();
 
@@ -256,7 +261,7 @@ export function getPromptQualityScore(moduleId: string): PromptQualityScore {
 
 // ── Analytics: Pattern Insights ──
 
-export function generateInsights(moduleId: string): PromptInsight[] {
+export function generateInsights(moduleId: SubModuleId): PromptInsight[] {
   const raw = getModuleStatsRaw(moduleId);
   if (!raw || raw.total < 5) return [];
 
@@ -350,7 +355,7 @@ export function generateInsights(moduleId: string): PromptInsight[] {
 
 // ── Prompt Suggestions (before sending) ──
 
-export function getPromptSuggestions(moduleId: string, prompt: string): PromptSuggestion[] {
+export function getPromptSuggestions(moduleId: SubModuleId, prompt: string): PromptSuggestion[] {
   const raw = getModuleStatsRaw(moduleId);
   if (!raw || raw.total < 5) return [];
 
@@ -444,7 +449,7 @@ export function getDashboard(): AnalyticsDashboard {
 
 // ── Session count per module (for threshold checks) ──
 
-export function getSessionCount(moduleId: string): number {
+export function getSessionCount(moduleId: SubModuleId): number {
   ensureSessionAnalyticsTable();
   const row = getDb()
     .prepare('SELECT COUNT(*) as cnt FROM session_analytics WHERE module_id = ?')

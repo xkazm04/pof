@@ -4,6 +4,7 @@ import { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Sparkles, Play, RefreshCw, Package, ChevronRight, X, Undo2 } from 'lucide-react';
 import type { CLISessionState } from './store/cliPanelStore';
+import { MODULE_COLORS } from '@/lib/chart-colors';
 
 // ── Suggestion types ──
 
@@ -182,7 +183,7 @@ interface SuggestedActionsProps {
   accentColor?: string;
 }
 
-export function SuggestedActions({ session, onAction, accentColor = '#00ff88' }: SuggestedActionsProps) {
+export function SuggestedActions({ session, onAction, accentColor = MODULE_COLORS.setup }: SuggestedActionsProps) {
   const [dismissState, setDismissState] = useState<'visible' | 'pending-undo' | 'dismissed'>('visible');
   const [dismissedForSession, setDismissedForSession] = useState<string | null>(null);
 

@@ -9,6 +9,7 @@
  * feature-matrix statuses which require an API call.
  */
 
+import type { SubModuleId } from '@/types/modules';
 import {
   MODULE_FEATURE_DEFINITIONS,
   buildDependencyMap,
@@ -29,7 +30,7 @@ export interface NBARecommendation {
   /** Checklist item this recommendation targets */
   item: ChecklistItem;
   /** Module this item belongs to */
-  moduleId: string;
+  moduleId: SubModuleId;
   /** 0–100 composite score (higher = do first) */
   score: number;
   /** Human-readable reason why this item is recommended */
@@ -70,10 +71,10 @@ const W = {
  * The featureStatusMap must be fetched externally (API call).
  */
 export function computeNBA(
-  moduleId: string,
+  moduleId: SubModuleId,
   featureStatusMap?: Map<string, string>,
 ): NBARecommendation[] {
-  const mod = SUB_MODULE_MAP[moduleId];
+  const mod = SUB_MODULE_MAP[moduleId as keyof typeof SUB_MODULE_MAP];
   if (!mod?.checklist?.length) return [];
 
   // ── Gather data from stores ────────────────────────────────────────────────
@@ -250,7 +251,7 @@ export function computeNBA(
  * Convenience wrapper around computeNBA.
  */
 export function getTopRecommendation(
-  moduleId: string,
+  moduleId: SubModuleId,
   featureStatusMap?: Map<string, string>,
 ): NBARecommendation | null {
   const recs = computeNBA(moduleId, featureStatusMap);

@@ -17,6 +17,7 @@ export const SUB_MODULE_IDS = [
   'arpg-world',
   'arpg-save',
   'arpg-polish',
+  'core-engine-plan',
   // Content
   'models',
   'animations',
@@ -69,6 +70,7 @@ export interface SubModuleDefinition {
   description: string;
   categoryId: CategoryId;
   icon: LucideIcon;
+  isSpecialItem?: boolean;
   quickActions: QuickAction[];
   knowledgeTips: KnowledgeTip[];
   feasibilityRating?: 'strong' | 'moderate' | 'challenging';
@@ -99,3 +101,40 @@ export interface TaskHistoryEntry {
   timestamp: number;
   duration?: number;
 }
+
+// ─── Canonical Module Schema ─────────────────────────────────────────────────
+//
+// "Module" means 5 things in this codebase:
+//   1. Type identity      — SubModuleId union (this file)
+//   2. Registry entry     — SubModuleDefinition with checklist + quick actions (module-registry.ts)
+//   3. Feature graph      — FeatureDefinition[] per module (feature-definitions.ts)
+//   4. Storage key        — moduleStore keys for progress/health/scan data (moduleStore.ts)
+//   5. Component factory  — React component per module (ModuleRenderer.tsx)
+//
+// ModuleSchema ties these together with compile-time constraints so that
+// adding a new SubModuleId forces updates across all domains.
+
+/**
+ * Canonical schema connecting all 5 module domains.
+ * Used as a compile-time anchor — not instantiated at runtime.
+ */
+export interface ModuleSchema {
+  /** The SubModuleId — type identity (domain 1) */
+  id: SubModuleId;
+  /** Human-readable label — single source of truth */
+  label: string;
+  /** Category this module belongs to */
+  categoryId: CategoryId;
+}
+
+/**
+ * Requires a value for EVERY SubModuleId — compile error on omission.
+ * Use for maps that must be exhaustive (component factory, labels).
+ */
+export type ExhaustiveModuleMap<T> = Record<SubModuleId, T>;
+
+/**
+ * Allows a value for any SubModuleId — no compile error on omission.
+ * Use for maps where not every module has data (features, prerequisites).
+ */
+export type PartialModuleMap<T> = Partial<Record<SubModuleId, T>>;

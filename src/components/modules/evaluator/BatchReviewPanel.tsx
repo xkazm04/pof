@@ -1,19 +1,22 @@
 'use client';
 
 import { useState, useEffect, useCallback, useRef } from 'react';
+import { useSuspendableEffect } from '@/hooks/useSuspend';
 import {
   Play, Square, Loader2, CheckCircle, XCircle, Clock,
   RotateCcw, Zap, ChevronDown, ChevronRight,
 } from 'lucide-react';
 import { useProjectStore } from '@/stores/projectStore';
 import { apiFetch } from '@/lib/api-utils';
+import type { SubModuleId } from '@/types/modules';
+import { STATUS_SUCCESS, STATUS_ERROR, MODULE_COLORS, STATUS_INFO } from '@/lib/chart-colors';
 
 // ── Types (mirroring API response) ──
 
 type ModuleReviewStatus = 'pending' | 'running' | 'completed' | 'error' | 'skipped';
 
 interface ModuleProgress {
-  moduleId: string;
+  moduleId: SubModuleId;
   label: string;
   featureCount: number;
   status: ModuleReviewStatus;
@@ -32,7 +35,7 @@ interface BatchState {
   currentIndex: number;
 }
 
-const ACCENT = '#ef4444';
+const ACCENT = MODULE_COLORS.evaluator;
 
 const STATUS_ICON: Record<ModuleReviewStatus, typeof CheckCircle> = {
   pending: Clock,
@@ -44,9 +47,9 @@ const STATUS_ICON: Record<ModuleReviewStatus, typeof CheckCircle> = {
 
 const STATUS_COLOR: Record<ModuleReviewStatus, string> = {
   pending: 'var(--text-muted)',
-  running: '#3b82f6',
-  completed: '#4ade80',
-  error: '#f87171',
+  running: MODULE_COLORS.core,
+  completed: STATUS_SUCCESS,
+  error: STATUS_ERROR,
   skipped: 'var(--text-muted)',
 };
 
@@ -85,8 +88,8 @@ export function BatchReviewPanel() {
     } catch { /* silent */ }
   }, []);
 
-  // Initial fetch + start polling if running
-  useEffect(() => {
+  // Initial fetch + start polling if running — pauses when module is suspended
+  useSuspendableEffect(() => {
     pollStatus();
     return () => {
       if (pollRef.current) {
@@ -228,13 +231,13 @@ export function BatchReviewPanel() {
               {completed > 0 && (
                 <div
                   className="h-full transition-all duration-slow"
-                  style={{ width: `${(completed / total) * 100}%`, backgroundColor: '#4ade80', opacity: 0.8 }}
+                  style={{ width: `${(completed / total) * 100}%`, backgroundColor: STATUS_SUCCESS, opacity: 0.8 }}
                 />
               )}
               {errored > 0 && (
                 <div
                   className="h-full transition-all duration-slow"
-                  style={{ width: `${(errored / total) * 100}%`, backgroundColor: '#f87171', opacity: 0.8 }}
+                  style={{ width: `${(errored / total) * 100}%`, backgroundColor: STATUS_ERROR, opacity: 0.8 }}
                 />
               )}
             </div>
@@ -261,8 +264,8 @@ export function BatchReviewPanel() {
                     key={mod.moduleId}
                     className="flex items-center gap-2.5 px-3 py-1.5 rounded-md transition-colors"
                     style={{
-                      backgroundColor: isModRunning ? '#3b82f608' : 'transparent',
-                      border: isModRunning ? '1px solid #3b82f620' : '1px solid transparent',
+                      backgroundColor: isModRunning ? `${MODULE_COLORS.core}08` : 'transparent',
+                      border: isModRunning ? `1px solid ${MODULE_COLORS.core}20` : '1px solid transparent',
                     }}
                   >
                     <Icon

@@ -8,21 +8,25 @@ import {
   Layers, Clock, Shield, Swords, Compass, Package,
   Skull, Crosshair, Zap,
 } from 'lucide-react';
+import {
+  MODULE_COLORS, STATUS_SUCCESS, STATUS_WARNING, STATUS_ERROR, STATUS_INFO,
+  ACCENT_ORANGE, ACCENT_EMERALD,
+} from '@/lib/chart-colors';
 import { useGenreEvolution } from '@/hooks/useGenreEvolution';
 import { useProjectStore } from '@/stores/projectStore';
 import type { GenreEvolutionSuggestion, PatternDetection, SubGenreId } from '@/types/telemetry';
 
-const ACCENT = '#3b82f6';
+const ACCENT = MODULE_COLORS.core;
 
 const SUB_GENRE_STYLES: Record<SubGenreId, { color: string; icon: typeof Swords }> = {
-  'souls-like':       { color: '#f87171', icon: Skull },
-  'character-action': { color: '#fbbf24', icon: Zap },
+  'souls-like':       { color: STATUS_ERROR, icon: Skull },
+  'character-action': { color: STATUS_WARNING, icon: Zap },
   'diablo-like':      { color: '#c084fc', icon: Package },
-  'arpg-shooter':     { color: '#60a5fa', icon: Crosshair },
-  'tactical-arpg':    { color: '#4ade80', icon: Shield },
-  'open-world-arpg':  { color: '#f97316', icon: Compass },
+  'arpg-shooter':     { color: STATUS_INFO, icon: Crosshair },
+  'tactical-arpg':    { color: STATUS_SUCCESS, icon: Shield },
+  'open-world-arpg':  { color: ACCENT_ORANGE, icon: Compass },
   'roguelite-arpg':   { color: '#e879f9', icon: Layers },
-  'survival-arpg':    { color: '#34d399', icon: Activity },
+  'survival-arpg':    { color: ACCENT_EMERALD, icon: Activity },
 };
 
 export function TelemetryEvolution() {
@@ -428,7 +432,7 @@ function ScanHistory({ history }: { history: { id: string; scannedAt: string; de
 function ConfidenceRing({ value, size, color }: { value: number; size: number; color?: string }) {
   const r = (size / 2) - 3;
   const circumference = 2 * Math.PI * r;
-  const fillColor = color ?? (value >= 70 ? '#4ade80' : value >= 50 ? '#fbbf24' : '#f87171');
+  const fillColor = color ?? (value >= 70 ? STATUS_SUCCESS : value >= 50 ? STATUS_WARNING : STATUS_ERROR);
 
   return (
     <div className="relative flex-shrink-0" style={{ width: size, height: size }}>

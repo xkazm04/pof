@@ -6,7 +6,7 @@ Analyze the **pof** codebase at **C:\Users\mkdol\dolla\pof** and create/update i
 
 ## Project Information
 
-- **Project ID**: a4c1ad20-7806-4ef5-9df4-d9a60cf71c24
+- **Project ID**: 994c4d7f-5b3e-42be-b345-ef6421f4ee3e
 - **Project Name**: pof
 - **Project Path**: C:\Users\mkdol\dolla\pof
 - **Project Type**: nextjs
@@ -31,7 +31,7 @@ This skill provides comprehensive guidance on:
 ## Quick Reference
 
 **Always replace these placeholders:**
-- `PROJECT_ID` → a4c1ad20-7806-4ef5-9df4-d9a60cf71c24
+- `PROJECT_ID` → 994c4d7f-5b3e-42be-b345-ef6421f4ee3e
 - `PROJECT_PATH` → C:\Users\mkdol\dolla\pof
 
 ## Essential Steps
@@ -39,7 +39,7 @@ This skill provides comprehensive guidance on:
 ### 1. Check Existing Contexts
 
 ```bash
-curl -X GET "http://localhost:3000/api/contexts?projectId=a4c1ad20-7806-4ef5-9df4-d9a60cf71c24"
+curl -X GET "http://localhost:3000/api/contexts?projectId=994c4d7f-5b3e-42be-b345-ef6421f4ee3e"
 ```
 
 ### 2. Map Project Structure
@@ -74,7 +74,7 @@ cat > "C:\Users\mkdol\dolla\pof/docs/contexts/scan-report-2026-02-11T22-28-08.md
 
 **Date**: 2026-02-11T22-28-08
 **Project**: pof
-**Project ID**: a4c1ad20-7806-4ef5-9df4-d9a60cf71c24
+**Project ID**: 994c4d7f-5b3e-42be-b345-ef6421f4ee3e
 
 ## Execution Summary
 
@@ -135,7 +135,7 @@ cat > "C:\Users\mkdol\dolla\pof/docs/contexts/scan-report-2026-02-11T22-28-08.md
 
 To verify contexts were saved:
 ```bash
-curl -X GET "http://localhost:3000/api/contexts?projectId=a4c1ad20-7806-4ef5-9df4-d9a60cf71c24"
+curl -X GET "http://localhost:3000/api/contexts?projectId=994c4d7f-5b3e-42be-b345-ef6421f4ee3e"
 ```
 
 ## Issues and Warnings

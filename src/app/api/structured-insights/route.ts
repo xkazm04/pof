@@ -6,6 +6,7 @@ import {
   getInsightsForSession,
   getInsightsForModule,
 } from '@/lib/pattern-extractor';
+import type { SubModuleId } from '@/types/modules';
 
 /**
  * GET /api/structured-insights
@@ -27,7 +28,7 @@ export async function GET(req: NextRequest) {
     }
 
     if (moduleId) {
-      const insights = getInsightsForModule(moduleId);
+      const insights = getInsightsForModule(moduleId as SubModuleId);
       return apiSuccess(insights);
     }
 
@@ -50,7 +51,7 @@ export async function POST(req: NextRequest) {
       return apiError('text, moduleId, and sessionId are required', 400);
     }
 
-    const insight = extractStructuredEntities(text, moduleId, sessionId);
+    const insight = extractStructuredEntities(text, moduleId as SubModuleId, sessionId);
     saveStructuredInsight(insight);
 
     return apiSuccess(insight);

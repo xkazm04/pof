@@ -22,16 +22,17 @@ import { StaggerContainer, StaggerItem } from '@/components/ui/Stagger';
 import type { ActivityEvent, ActivityEventType } from '@/stores/activityFeedStore';
 import type { SubModuleId } from '@/types/modules';
 import { TruncateWithTooltip } from '@/components/ui/TruncateWithTooltip';
+import { STATUS_SUCCESS, STATUS_ERROR, STATUS_WARNING, STATUS_BLOCKER, MODULE_COLORS, OPACITY_12 } from '@/lib/chart-colors';
 
 // ── Event type config ──
 
 const EVENT_CONFIG: Record<ActivityEventType, { icon: typeof CheckCircle2; color: string; label: string }> = {
-  'cli-complete': { icon: CheckCircle2, color: '#4ade80', label: 'Task Complete' },
-  'cli-error': { icon: XCircle, color: '#f87171', label: 'Task Failed' },
-  'quality-change': { icon: TrendingUp, color: '#fbbf24', label: 'Quality' },
-  'build-result': { icon: Hammer, color: '#3b82f6', label: 'Build' },
-  'evaluator-recommendation': { icon: AlertTriangle, color: '#ef4444', label: 'Recommendation' },
-  'checklist-progress': { icon: CheckSquare, color: '#22c55e', label: 'Progress' },
+  'cli-complete': { icon: CheckCircle2, color: STATUS_SUCCESS, label: 'Task Complete' },
+  'cli-error': { icon: XCircle, color: STATUS_ERROR, label: 'Task Failed' },
+  'quality-change': { icon: TrendingUp, color: STATUS_WARNING, label: 'Quality' },
+  'build-result': { icon: Hammer, color: MODULE_COLORS.core, label: 'Build' },
+  'evaluator-recommendation': { icon: AlertTriangle, color: MODULE_COLORS.evaluator, label: 'Recommendation' },
+  'checklist-progress': { icon: CheckSquare, color: STATUS_SUCCESS, label: 'Progress' },
 };
 
 // ── Time grouping ──
@@ -53,7 +54,7 @@ function getTimePeriod(ts: number): TimePeriod {
 
 interface EventGroup {
   type: ActivityEventType;
-  moduleId: string | undefined;
+  moduleId: SubModuleId | undefined;
   events: ActivityEvent[];
 }
 
@@ -65,7 +66,7 @@ function groupConsecutive(events: ActivityEvent[]): EventGroup[] {
     if (last && last.type === event.type && last.moduleId === event.moduleId) {
       last.events.push(event);
     } else {
-      groups.push({ type: event.type, moduleId: event.moduleId, events: [event] });
+      groups.push({ type: event.type, moduleId: event.moduleId as SubModuleId | undefined, events: [event] });
     }
   }
   return groups;
@@ -151,10 +152,10 @@ export function ActivityFeedPanel() {
       {/* Header */}
       <div className="flex items-center justify-between px-4 py-3 border-b border-border">
         <div className="flex items-center gap-2">
-          <Bell className="w-3.5 h-3.5 text-[#ef4444]" />
+          <Bell className="w-3.5 h-3.5" style={{ color: MODULE_COLORS.evaluator }} />
           <h2 className="text-xs font-semibold text-text uppercase tracking-wider">Activity</h2>
           {unreadCount > 0 && (
-            <span className="text-2xs font-bold text-[#ef4444] bg-status-red-subtle px-1.5 py-0.5 rounded-full">
+            <span className="text-2xs font-bold bg-status-red-subtle px-1.5 py-0.5 rounded-full" style={{ color: MODULE_COLORS.evaluator }}>
               {unreadCount}
             </span>
           )}
@@ -230,8 +231,8 @@ export function ActivityFeedPanel() {
       {events.length > 0 && unreadCount === 0 && (
         <div className="px-4 py-3 border-t border-border">
           <div className="flex items-center gap-2">
-            <CheckCircle2 className="w-3.5 h-3.5 text-[#4ade80]" />
-            <span className="text-xs text-[#4ade80] font-medium">All caught up</span>
+            <CheckCircle2 className="w-3.5 h-3.5" style={{ color: STATUS_SUCCESS }} />
+            <span className="text-xs font-medium" style={{ color: STATUS_SUCCESS }}>All caught up</span>
           </div>
         </div>
       )}
@@ -317,8 +318,8 @@ function EventCard({
 
   const trendColor = event.meta?.prevScore != null && event.meta?.score != null
     ? event.meta.score > event.meta.prevScore
-      ? '#4ade80'
-      : '#f87171'
+      ? STATUS_SUCCESS
+      : STATUS_ERROR
     : undefined;
 
   return (
@@ -357,8 +358,8 @@ function EventCard({
               <span
                 className="text-2xs font-bold uppercase tracking-wider px-1 py-0.5 rounded"
                 style={{
-                  color: event.meta.success ? '#4ade80' : '#f87171',
-                  backgroundColor: event.meta.success ? '#4ade8012' : '#f8717112',
+                  color: event.meta.success ? STATUS_SUCCESS : STATUS_ERROR,
+                  backgroundColor: event.meta.success ? STATUS_SUCCESS + OPACITY_12 : STATUS_ERROR + OPACITY_12,
                 }}
               >
                 {event.meta.success ? 'Success' : 'Failed'}
@@ -424,9 +425,9 @@ function EventCard({
 
 function priorityColor(priority: string): string {
   switch (priority) {
-    case 'critical': return '#f87171';
-    case 'high': return '#fb923c';
-    case 'medium': return '#fbbf24';
+    case 'critical': return STATUS_ERROR;
+    case 'high': return STATUS_BLOCKER;
+    case 'medium': return STATUS_WARNING;
     default: return 'var(--text-muted)';
   }
 }

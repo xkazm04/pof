@@ -9,6 +9,8 @@ import {
 } from 'lucide-react';
 import type { BuildProfile, PlatformId } from '@/lib/packaging/build-profiles';
 import { PLATFORM_NOTES } from '@/lib/packaging/uat-command-generator';
+import { UI_TIMEOUTS } from '@/lib/constants';
+import { MODULE_COLORS, STATUS_SUCCESS, ACCENT_ORANGE, ACCENT_VIOLET } from '@/lib/chart-colors';
 
 const PLATFORM_ICONS: Record<PlatformId, typeof Monitor> = {
   Win64: Monitor,
@@ -19,10 +21,10 @@ const PLATFORM_ICONS: Record<PlatformId, typeof Monitor> = {
 };
 
 const PLATFORM_COLORS: Record<PlatformId, string> = {
-  Win64: '#3b82f6',
-  Linux: '#f97316',
-  Mac: '#a78bfa',
-  Android: '#22c55e',
+  Win64: MODULE_COLORS.core,
+  Linux: ACCENT_ORANGE,
+  Mac: ACCENT_VIOLET,
+  Android: STATUS_SUCCESS,
   IOS: 'var(--text-muted)',
 };
 
@@ -140,7 +142,7 @@ export function PlatformProfileCard({
                       onClick={() => {
                         navigator.clipboard.writeText(uatCommand).then(() => {
                           setCmdCopied(true);
-                          setTimeout(() => setCmdCopied(false), 2000);
+                          setTimeout(() => setCmdCopied(false), UI_TIMEOUTS.copyFeedback);
                         });
                       }}
                       className="flex items-center gap-0.5 text-2xs text-text-muted hover:text-text transition-colors"

@@ -5,6 +5,8 @@ import {
   Zap, Gem, Shirt, User, Droplets, Flame, Leaf, Blocks, CircleDot,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
+import { MODULE_COLORS } from '@/lib/constants';
+import { ACCENT_VIOLET, STATUS_BLOCKER, STATUS_IMPROVED, ACCENT_ORANGE, STATUS_SUCCESS, STATUS_WARNING } from '@/lib/chart-colors';
 
 // ── Types ──
 
@@ -40,12 +42,12 @@ interface SurfaceDef {
 
 const SURFACES: SurfaceDef[] = [
   { id: 'metal',    label: 'Metal',    icon: Gem,       color: '#94a3b8', description: 'PBR metallic: high metallic, low roughness, sharp reflections', defaultFeatures: [] },
-  { id: 'cloth',    label: 'Cloth',    icon: Shirt,     color: '#a78bfa', description: 'Fabric shading with fuzz, thread detail, anisotropy', defaultFeatures: ['subsurface'] },
-  { id: 'skin',     label: 'Skin',     icon: User,      color: '#fb923c', description: 'Subsurface skin: SSS profile, pore detail, translucency', defaultFeatures: ['subsurface'] },
-  { id: 'glass',    label: 'Glass',    icon: Droplets,  color: '#38bdf8', description: 'Translucent glass with refraction, IOR, tint color', defaultFeatures: ['refraction'] },
+  { id: 'cloth',    label: 'Cloth',    icon: Shirt,     color: ACCENT_VIOLET, description: 'Fabric shading with fuzz, thread detail, anisotropy', defaultFeatures: ['subsurface'] },
+  { id: 'skin',     label: 'Skin',     icon: User,      color: STATUS_BLOCKER, description: 'Subsurface skin: SSS profile, pore detail, translucency', defaultFeatures: ['subsurface'] },
+  { id: 'glass',    label: 'Glass',    icon: Droplets,  color: STATUS_IMPROVED, description: 'Translucent glass with refraction, IOR, tint color', defaultFeatures: ['refraction'] },
   { id: 'water',    label: 'Water',    icon: Droplets,  color: '#22d3ee', description: 'Animated water surface with depth fade, caustics', defaultFeatures: ['refraction', 'worldPositionOffset'] },
-  { id: 'emissive', label: 'Emissive', icon: Flame,     color: '#f97316', description: 'Self-illuminating surfaces: neon, lava, magic effects', defaultFeatures: ['emissive'] },
-  { id: 'foliage',  label: 'Foliage',  icon: Leaf,      color: '#22c55e', description: 'Two-sided foliage with subsurface, wind animation', defaultFeatures: ['subsurface', 'worldPositionOffset'] },
+  { id: 'emissive', label: 'Emissive', icon: Flame,     color: ACCENT_ORANGE, description: 'Self-illuminating surfaces: neon, lava, magic effects', defaultFeatures: ['emissive'] },
+  { id: 'foliage',  label: 'Foliage',  icon: Leaf,      color: STATUS_SUCCESS, description: 'Two-sided foliage with subsurface, wind animation', defaultFeatures: ['subsurface', 'worldPositionOffset'] },
   { id: 'stone',    label: 'Stone',    icon: Blocks,    color: '#78716c', description: 'Rock/brick with parallax occlusion depth detail', defaultFeatures: ['parallax'] },
 ];
 
@@ -58,12 +60,12 @@ interface FeatureDef {
 }
 
 const FEATURES: FeatureDef[] = [
-  { id: 'subsurface',          label: 'Subsurface Scattering', shortLabel: 'SSS',       description: 'Light passes through material (skin, wax, leaves)', color: '#fb923c' },
+  { id: 'subsurface',          label: 'Subsurface Scattering', shortLabel: 'SSS',       description: 'Light passes through material (skin, wax, leaves)', color: STATUS_BLOCKER },
   { id: 'parallax',            label: 'Parallax Occlusion',    shortLabel: 'Parallax',   description: 'Depth illusion from heightmap without extra geometry', color: '#78716c' },
-  { id: 'emissive',            label: 'Emissive',              shortLabel: 'Emissive',   description: 'Self-illumination channel for glowing regions', color: '#fbbf24' },
-  { id: 'refraction',          label: 'Refraction',            shortLabel: 'Refract',    description: 'Light bending through translucent surfaces', color: '#38bdf8' },
-  { id: 'tessellation',        label: 'Tessellation / Nanite', shortLabel: 'Tess',       description: 'Subdivide mesh for displacement detail (UE5.4+ Nanite)', color: '#a78bfa' },
-  { id: 'worldPositionOffset', label: 'World Position Offset', shortLabel: 'WPO',        description: 'Vertex animation: wind, waves, breathing', color: '#22c55e' },
+  { id: 'emissive',            label: 'Emissive',              shortLabel: 'Emissive',   description: 'Self-illumination channel for glowing regions', color: STATUS_WARNING },
+  { id: 'refraction',          label: 'Refraction',            shortLabel: 'Refract',    description: 'Light bending through translucent surfaces', color: STATUS_IMPROVED },
+  { id: 'tessellation',        label: 'Tessellation / Nanite', shortLabel: 'Tess',       description: 'Subdivide mesh for displacement detail (UE5.4+ Nanite)', color: ACCENT_VIOLET },
+  { id: 'worldPositionOffset', label: 'World Position Offset', shortLabel: 'WPO',        description: 'Vertex animation: wind, waves, breathing', color: STATUS_SUCCESS },
 ];
 
 interface ParamDef {
@@ -111,8 +113,6 @@ function getApplicableParams(surface: SurfaceType): ParamDef[] {
 
 // ── Component ──
 
-const ACCENT = '#f59e0b';
-
 interface MaterialParameterConfiguratorProps {
   onGenerate: (config: MaterialConfiguratorConfig) => void;
   isGenerating: boolean;
@@ -159,7 +159,7 @@ export function MaterialParameterConfigurator({ onGenerate, isGenerating }: Mate
     <div className="w-full space-y-5">
       {/* Header */}
       <div className="flex items-center gap-2">
-        <CircleDot className="w-4 h-4" style={{ color: ACCENT }} />
+        <CircleDot className="w-4 h-4" style={{ color: MODULE_COLORS.content }} />
         <div>
           <h3 className="text-xs font-semibold text-text">Material Configurator</h3>
           <p className="text-2xs text-text-muted">Configure surface, features, and parameters</p>
@@ -207,13 +207,13 @@ export function MaterialParameterConfigurator({ onGenerate, isGenerating }: Mate
               onClick={() => setOutputType(opt.id)}
               className="flex-1 px-3 py-2 rounded-lg text-left transition-all"
               style={{
-                backgroundColor: outputType === opt.id ? `${ACCENT}12` : 'var(--surface-deep)',
-                border: `1px solid ${outputType === opt.id ? `${ACCENT}40` : 'var(--border)'}`,
+                backgroundColor: outputType === opt.id ? `${MODULE_COLORS.content}12` : 'var(--surface-deep)',
+                border: `1px solid ${outputType === opt.id ? `${MODULE_COLORS.content}40` : 'var(--border)'}`,
               }}
             >
               <span
                 className="text-xs font-semibold block"
-                style={{ color: outputType === opt.id ? ACCENT : 'var(--text-muted)' }}
+                style={{ color: outputType === opt.id ? MODULE_COLORS.content : 'var(--text-muted)' }}
               >
                 {opt.label}
               </span>
@@ -313,9 +313,9 @@ export function MaterialParameterConfigurator({ onGenerate, isGenerating }: Mate
         disabled={isGenerating}
         className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-xs font-medium transition-all disabled:opacity-50"
         style={{
-          backgroundColor: `${ACCENT}15`,
-          color: ACCENT,
-          border: `1px solid ${ACCENT}30`,
+          backgroundColor: `${MODULE_COLORS.content}15`,
+          color: MODULE_COLORS.content,
+          border: `1px solid ${MODULE_COLORS.content}30`,
         }}
       >
         <Zap className="w-3.5 h-3.5" />

@@ -3,7 +3,8 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import type { FeatureRow, FeatureSummary } from '@/types/feature-matrix';
 import { MODULE_FEATURE_DEFINITIONS } from '@/lib/feature-definitions';
-import { apiFetch } from '@/lib/api-utils';
+import { tryApiFetch } from '@/lib/api-utils';
+import type { SubModuleId } from '@/types/modules';
 
 interface UseFeatureMatrixResult {
   features: FeatureRow[];
@@ -15,9 +16,9 @@ interface UseFeatureMatrixResult {
   seed: () => Promise<void>;
 }
 
-const EMPTY_SUMMARY: FeatureSummary = { total: 0, implemented: 0, partial: 0, missing: 0, unknown: 0 };
+const EMPTY_SUMMARY: FeatureSummary = { total: 0, implemented: 0, improved: 0, partial: 0, missing: 0, unknown: 0 };
 
-export function useFeatureMatrix(moduleId: string): UseFeatureMatrixResult {
+export function useFeatureMatrix(moduleId: SubModuleId): UseFeatureMatrixResult {
   const [features, setFeatures] = useState<FeatureRow[]>([]);
   const [summary, setSummary] = useState<FeatureSummary>(EMPTY_SUMMARY);
   const [isLoading, setIsLoading] = useState(true);
@@ -28,16 +29,15 @@ export function useFeatureMatrix(moduleId: string): UseFeatureMatrixResult {
     if (!moduleId) return;
     setIsLoading(true);
     setError(null);
-    try {
-      const data = await apiFetch<{ features: FeatureRow[]; summary: FeatureSummary }>(`/api/feature-matrix?moduleId=${encodeURIComponent(moduleId)}`);
-      setFeatures(data.features ?? []);
-      setSummary(data.summary ?? EMPTY_SUMMARY);
-    } catch (err) {
-      console.error('useFeatureMatrix fetch error:', err);
-      setError(err instanceof Error ? err.message : 'Failed to load feature matrix');
-    } finally {
-      setIsLoading(false);
+    const result = await tryApiFetch<{ features: FeatureRow[]; summary: FeatureSummary }>(`/api/feature-matrix?moduleId=${encodeURIComponent(moduleId)}`);
+    if (result.ok) {
+      setFeatures(result.data.features ?? []);
+      setSummary(result.data.summary ?? EMPTY_SUMMARY);
+    } else {
+      console.error('useFeatureMatrix fetch error:', result.error);
+      setError(result.error);
     }
+    setIsLoading(false);
   }, [moduleId]);
 
   const seed = useCallback(async () => {
@@ -53,15 +53,15 @@ export function useFeatureMatrix(moduleId: string): UseFeatureMatrixResult {
       reviewNotes: '',
     }));
 
-    try {
-      await apiFetch<unknown>('/api/feature-matrix', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ moduleId, features: seedFeatures }),
-      });
+    const result = await tryApiFetch<unknown>('/api/feature-matrix', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ moduleId, features: seedFeatures }),
+    });
+    if (result.ok) {
       await fetchData();
-    } catch (err) {
-      console.error('useFeatureMatrix seed error:', err);
+    } else {
+      console.error('useFeatureMatrix seed error:', result.error);
     }
   }, [moduleId, fetchData]);
 

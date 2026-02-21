@@ -1,13 +1,16 @@
 'use client';
 
 import type { RoomNode } from '@/types/level-design';
+import {
+  STATUS_SUCCESS, STATUS_LIME, STATUS_WARNING, STATUS_BLOCKER, STATUS_ERROR,
+} from '@/lib/chart-colors';
 
 const DIFFICULTY_COLORS: Record<number, string> = {
-  1: '#4ade80',
-  2: '#a3e635',
-  3: '#fbbf24',
-  4: '#fb923c',
-  5: '#f87171',
+  1: STATUS_SUCCESS,
+  2: STATUS_LIME,
+  3: STATUS_WARNING,
+  4: STATUS_BLOCKER,
+  5: STATUS_ERROR,
 };
 
 const PACING_ICONS: Record<string, string> = {

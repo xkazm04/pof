@@ -1,4 +1,4 @@
-import { NextResponse } from 'next/server';
+import { apiSuccess, apiError } from '@/lib/api-utils';
 import {
   saveSnapshot,
   getLatestSnapshot,
@@ -28,28 +28,25 @@ export async function GET(req: Request) {
 
     switch (action) {
       case 'stats':
-        return NextResponse.json(getTelemetryStats());
+        return apiSuccess(getTelemetryStats());
 
       case 'history':
-        return NextResponse.json(getSnapshotHistory(Number(searchParams.get('limit') || 20)));
+        return apiSuccess(getSnapshotHistory(Number(searchParams.get('limit') || 20)));
 
       case 'latest':
-        return NextResponse.json(getLatestSnapshot());
+        return apiSuccess(getLatestSnapshot());
 
       case 'suggestions':
-        return NextResponse.json(getAllSuggestions());
+        return apiSuccess(getAllSuggestions());
 
       case 'pending':
-        return NextResponse.json(getPendingSuggestions());
+        return apiSuccess(getPendingSuggestions());
 
       default:
-        return NextResponse.json({ error: `Unknown action: ${action}` }, { status: 400 });
+        return apiError(`Unknown action: ${action}`, 400);
     }
   } catch (err) {
-    return NextResponse.json(
-      { error: err instanceof Error ? err.message : 'Internal error' },
-      { status: 500 },
-    );
+    return apiError(err instanceof Error ? err.message : 'Internal error');
   }
 }
 
@@ -66,7 +63,7 @@ export async function POST(req: Request) {
           dynamicContext: DynamicProjectContext | null;
         };
         if (!projectPath) {
-          return NextResponse.json({ error: 'projectPath required' }, { status: 400 });
+          return apiError('projectPath required', 400);
         }
 
         // Extract signals from the project scan data
@@ -98,7 +95,7 @@ export async function POST(req: Request) {
           }
         }
 
-        return NextResponse.json({
+        return apiSuccess({
           snapshot,
           newSuggestions: newSuggestions.filter(s => !pendingGenres.has(s.subGenre)),
         });
@@ -108,10 +105,10 @@ export async function POST(req: Request) {
         const suggestionId = body.suggestionId as string;
         const resolveAction = body.resolveAction as 'accept' | 'dismiss';
         if (!suggestionId || !resolveAction || (resolveAction !== 'accept' && resolveAction !== 'dismiss')) {
-          return NextResponse.json({ error: 'suggestionId and resolveAction required' }, { status: 400 });
+          return apiError('suggestionId and resolveAction required', 400);
         }
         resolveSuggestion(suggestionId, resolveAction);
-        return NextResponse.json({ ok: true });
+        return apiSuccess({ ok: true });
       }
 
       case 'resolve-skills': {
@@ -119,16 +116,13 @@ export async function POST(req: Request) {
         const accepted = getAcceptedSubGenres();
         const patterns = latest?.detectedPatterns ?? [];
         const skills = resolveSkillsFromPatterns(patterns, accepted);
-        return NextResponse.json({ skills, patternCount: patterns.length, acceptedCount: accepted.length });
+        return apiSuccess({ skills, patternCount: patterns.length, acceptedCount: accepted.length });
       }
 
       default:
-        return NextResponse.json({ error: `Unknown action: ${action}` }, { status: 400 });
+        return apiError(`Unknown action: ${action}`, 400);
     }
   } catch (err) {
-    return NextResponse.json(
-      { error: err instanceof Error ? err.message : 'Internal error' },
-      { status: 500 },
-    );
+    return apiError(err instanceof Error ? err.message : 'Internal error');
   }
 }

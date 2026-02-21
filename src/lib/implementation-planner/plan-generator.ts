@@ -1,3 +1,4 @@
+import type { SubModuleId } from '@/types/modules';
 import {
   MODULE_FEATURE_DEFINITIONS,
   buildDependencyMap,
@@ -12,7 +13,7 @@ import { estimateEffort, type EffortEstimate } from './effort-estimator';
 export interface PlanItem {
   /** Fully qualified key: "moduleId::featureName" */
   key: string;
-  moduleId: string;
+  moduleId: SubModuleId;
   featureName: string;
   category: string;
   description: string;
@@ -165,7 +166,7 @@ export function generatePlan(
   let items: PlanItem[] = sorted.map(({ key, depth }) => {
     const [moduleId, ...rest] = key.split('::');
     const featureName = rest.join('::');
-    const features = MODULE_FEATURE_DEFINITIONS[moduleId] ?? [];
+    const features = MODULE_FEATURE_DEFINITIONS[moduleId as SubModuleId] ?? [];
     const feat = features.find((f) => f.featureName === featureName);
 
     const info = depMap.get(key);
@@ -176,13 +177,13 @@ export function generatePlan(
 
     return {
       key,
-      moduleId,
+      moduleId: moduleId as SubModuleId,
       featureName,
       category: feat?.category ?? 'Unknown',
       description: feat?.description ?? '',
       depth,
       impact: impactScores.get(key) ?? { directUnblocks: 0, transitiveUnblocks: 0, score: 0, directDependents: [] },
-      effort: estimateEffort(moduleId, featureName),
+      effort: estimateEffort(moduleId as SubModuleId, featureName),
       dependsOn: deps,
       isReady,
       status: statusMap.get(key) ?? 'unknown',
@@ -218,7 +219,7 @@ export function generatePlan(
 /**
  * Get module labels for display.
  */
-export function getModuleLabel(moduleId: string): string {
+export function getModuleLabel(moduleId: SubModuleId): string {
   const labels: Record<string, string> = {
     'arpg-character': 'Character',
     'arpg-animation': 'Animation',

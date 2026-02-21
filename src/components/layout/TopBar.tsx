@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import { useActivityFeedStore } from '@/stores/activityFeedStore';
+import { MODULE_COLORS } from '@/lib/chart-colors';
 
 const dropdownMotion = {
   initial: { opacity: 0, y: -4, scale: 0.98 },
@@ -212,7 +213,7 @@ export function TopBar() {
   return (
     <header role="banner" className="h-11 flex items-center justify-between px-4 border-b border-border bg-surface-deep">
       <div className="flex items-center gap-3">
-        <Gamepad2 className="w-5 h-5 text-[#00ff88]" aria-hidden="true" />
+        <Gamepad2 className="w-5 h-5" style={{ color: MODULE_COLORS.setup }} aria-hidden="true" />
         <span className="text-sm font-semibold tracking-wide text-text">POF</span>
         {isSetupComplete && projectName && (
           <>
@@ -273,7 +274,8 @@ export function TopBar() {
                       )}
                       <button
                         onClick={handleNewProject}
-                        className="w-full flex items-center gap-2.5 px-3 py-2.5 text-xs text-[#00ff88] hover:bg-accent-subtle transition-colors border-t border-border"
+                        className="w-full flex items-center gap-2.5 px-3 py-2.5 text-xs hover:bg-accent-subtle transition-colors border-t border-border"
+                        style={{ color: MODULE_COLORS.setup }}
                       >
                         <Plus className="w-3.5 h-3.5" />
                         New Project
@@ -314,12 +316,13 @@ export function TopBar() {
                                 if (e.key === 'Enter') handleRenameConfirm();
                                 if (e.key === 'Escape') setRenaming(false);
                               }}
-                              className="flex-1 px-2 py-1 bg-background border border-border-bright rounded text-xs text-text outline-none focus:border-[#00ff88]/50"
+                              className="flex-1 px-2 py-1 bg-background border border-border-bright rounded text-xs text-text outline-none focus:border-accent-strong"
                             />
                             <button
                               onClick={handleRenameConfirm}
                               disabled={!renameValue.trim()}
-                              className="p-1 text-[#00ff88] hover:bg-accent-medium rounded"
+                              className="p-1 hover:bg-accent-medium rounded"
+                              style={{ color: MODULE_COLORS.setup }}
                             >
                               <Check className="w-3.5 h-3.5" />
                             </button>
@@ -426,7 +429,7 @@ function ProjectRow({ project, isSwitching, onSwitch, onRemove }: {
       >
         <div className="flex-shrink-0 mt-0.5 w-7 h-7 rounded bg-surface-hover flex items-center justify-center">
           {isSwitching ? (
-            <Loader2 className="w-3.5 h-3.5 text-[#00ff88] animate-spin" />
+            <Loader2 className="w-3.5 h-3.5 animate-spin" style={{ color: MODULE_COLORS.setup }} />
           ) : (
             <Gamepad2 className="w-3.5 h-3.5 text-text-muted" />
           )}
@@ -444,7 +447,7 @@ function ProjectRow({ project, isSwitching, onSwitch, onRemove }: {
                   className="h-full rounded-full transition-all"
                   style={{
                     width: `${pct}%`,
-                    backgroundColor: pct >= 75 ? '#00ff88' : pct >= 40 ? '#f59e0b' : 'var(--text-muted)',
+                    backgroundColor: pct >= 75 ? MODULE_COLORS.setup : pct >= 40 ? MODULE_COLORS.content : 'var(--text-muted)',
                   }}
                 />
               </div>
@@ -559,7 +562,7 @@ function ProjectStats() {
 
   if (TOTAL_CHECKLIST_ITEMS === 0) return null;
 
-  const barColor = stats.pct >= 75 ? '#00ff88' : stats.pct >= 40 ? '#f59e0b' : 'var(--text-muted)';
+  const barColor = stats.pct >= 75 ? MODULE_COLORS.setup : stats.pct >= 40 ? MODULE_COLORS.content : 'var(--text-muted)';
 
   return (
     <div className="flex items-center gap-2.5" title={`${stats.completed}/${stats.total} checklist items · ${stats.modulesComplete} modules complete`}>
@@ -581,7 +584,7 @@ function ProjectStats() {
       </span>
       {/* Modules at 100% */}
       {stats.modulesComplete > 0 && (
-        <span className="flex items-center gap-0.5 text-2xs text-[#00ff88]">
+        <span className="flex items-center gap-0.5 text-2xs" style={{ color: MODULE_COLORS.setup }}>
           <CheckCircle2 className="w-3 h-3" />
           {stats.modulesComplete}
         </span>

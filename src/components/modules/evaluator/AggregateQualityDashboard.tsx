@@ -19,9 +19,10 @@ import { MODULE_FEATURE_DEFINITIONS } from '@/lib/feature-definitions';
 import { MODULE_LABELS } from '@/lib/module-registry';
 import { apiFetch } from '@/lib/api-utils';
 import { SurfaceCard } from '@/components/ui/SurfaceCard';
-import { STATUS_SUCCESS, STATUS_WARNING, STATUS_ERROR } from '@/lib/chart-colors';
+import { STATUS_SUCCESS, STATUS_WARNING, STATUS_ERROR, STATUS_STALE, MODULE_COLORS } from '@/lib/chart-colors';
+import type { SubModuleId } from '@/types/modules';
 
-const ALL_MODULE_IDS = Object.keys(MODULE_FEATURE_DEFINITIONS);
+const ALL_MODULE_IDS = Object.keys(MODULE_FEATURE_DEFINITIONS) as SubModuleId[];
 
 // ─── Color helpers ──────────────────────────────────────────────────────────────
 
@@ -76,10 +77,11 @@ function daysSince(dateStr: string | null): number | null {
 // ─── Types ──────────────────────────────────────────────────────────────────────
 
 interface CellData {
-  moduleId: string;
+  moduleId: SubModuleId;
   label: string;
   total: number;
   implemented: number;
+  improved: number;
   partial: number;
   missing: number;
   unknown: number;
@@ -92,7 +94,7 @@ interface CellData {
 
 interface Props {
   staleDays?: number;
-  onReviewModule?: (moduleId: string) => void;
+  onReviewModule?: (moduleId: SubModuleId) => void;
   onBatchReview?: (moduleIds: string[]) => void;
 }
 
@@ -136,19 +138,21 @@ export function AggregateQualityDashboard({ staleDays = 7, onReviewModule, onBat
       const defCount = MODULE_FEATURE_DEFINITIONS[moduleId]?.length ?? 0;
       const total = agg?.total ?? defCount;
       const implemented = agg?.implemented ?? 0;
+      const improved = agg?.improved ?? 0;
       const partial = agg?.partial ?? 0;
       const missing = agg?.missing ?? 0;
       const unknown = agg?.unknown ?? total;
-      const reviewed = implemented + partial + missing;
+      const reviewed = implemented + improved + partial + missing;
       const pctReviewed = total > 0 ? reviewed / total : 0;
-      const pctComplete = total > 0 ? implemented / total : 0;
+      const pctComplete = total > 0 ? (implemented + improved) / total : 0;
       const lastReviewedAt = agg?.lastReviewedAt ?? null;
 
       return {
-        moduleId,
+        moduleId: moduleId as SubModuleId,
         label: MODULE_LABELS[moduleId] ?? moduleId,
         total,
         implemented,
+        improved,
         partial,
         missing,
         unknown,
@@ -163,10 +167,11 @@ export function AggregateQualityDashboard({ staleDays = 7, onReviewModule, onBat
 
   // Project-wide totals
   const totals = useMemo(() => {
-    const t = { total: 0, implemented: 0, partial: 0, missing: 0, unknown: 0, reviewed: 0 };
+    const t = { total: 0, implemented: 0, improved: 0, partial: 0, missing: 0, unknown: 0, reviewed: 0 };
     for (const c of cells) {
       t.total += c.total;
       t.implemented += c.implemented;
+      t.improved += c.improved;
       t.partial += c.partial;
       t.missing += c.missing;
       t.unknown += c.unknown;
@@ -232,28 +237,28 @@ export function AggregateQualityDashboard({ staleDays = 7, onReviewModule, onBat
           label="Overall Progress"
           value={`${overallPct}%`}
           sub={`${totals.implemented} / ${totals.total} features`}
-          accent="#4ade80"
+          accent={STATUS_SUCCESS}
         />
         <MetricCard
           icon={Star}
           label="Avg Quality"
           value={overallQuality !== null ? `${overallQuality} / 5` : '--'}
           sub={`${totals.reviewed} / ${cells.length} modules reviewed`}
-          accent="#fbbf24"
+          accent={STATUS_WARNING}
         />
         <MetricCard
           icon={AlertTriangle}
           label="Needs Attention"
           value={`${worstModules.length}`}
           sub="modules below quality 3"
-          accent="#f87171"
+          accent={STATUS_ERROR}
         />
         <MetricCard
           icon={Clock}
           label="Stale Reviews"
           value={`${staleModules.length}`}
           sub={`not reviewed in ${customStaleDays}d`}
-          accent="#8b5cf6"
+          accent={STATUS_STALE}
         />
       </div>
 
@@ -274,7 +279,7 @@ export function AggregateQualityDashboard({ staleDays = 7, onReviewModule, onBat
               initial={{ width: 0 }}
               animate={{ width: `${(totals.implemented / totals.total) * 100}%` }}
               transition={{ duration: 0.45, ease: [0.16, 1, 0.3, 1] }}
-              style={{ backgroundColor: '#4ade80' }}
+              style={{ backgroundColor: STATUS_SUCCESS }}
             />
           )}
           {totals.partial > 0 && (
@@ -283,7 +288,7 @@ export function AggregateQualityDashboard({ staleDays = 7, onReviewModule, onBat
               initial={{ width: 0 }}
               animate={{ width: `${(totals.partial / totals.total) * 100}%` }}
               transition={{ duration: 0.45, ease: [0.16, 1, 0.3, 1], delay: 0.1 }}
-              style={{ backgroundColor: '#fbbf24' }}
+              style={{ backgroundColor: STATUS_WARNING }}
             />
           )}
           {totals.missing > 0 && (
@@ -292,7 +297,7 @@ export function AggregateQualityDashboard({ staleDays = 7, onReviewModule, onBat
               initial={{ width: 0 }}
               animate={{ width: `${(totals.missing / totals.total) * 100}%` }}
               transition={{ duration: 0.45, ease: [0.16, 1, 0.3, 1], delay: 0.2 }}
-              style={{ backgroundColor: '#f87171' }}
+              style={{ backgroundColor: STATUS_ERROR }}
             />
           )}
         </div>
@@ -438,7 +443,7 @@ export function AggregateQualityDashboard({ staleDays = 7, onReviewModule, onBat
                       className="h-full"
                       style={{
                         width: `${(cell.implemented / cell.total) * 100}%`,
-                        backgroundColor: '#4ade80',
+                        backgroundColor: STATUS_SUCCESS,
                       }}
                     />
                   )}
@@ -447,7 +452,7 @@ export function AggregateQualityDashboard({ staleDays = 7, onReviewModule, onBat
                       className="h-full"
                       style={{
                         width: `${(cell.partial / cell.total) * 100}%`,
-                        backgroundColor: '#fbbf24',
+                        backgroundColor: STATUS_WARNING,
                       }}
                     />
                   )}
@@ -456,7 +461,7 @@ export function AggregateQualityDashboard({ staleDays = 7, onReviewModule, onBat
                       className="h-full"
                       style={{
                         width: `${(cell.missing / cell.total) * 100}%`,
-                        backgroundColor: '#f87171',
+                        backgroundColor: STATUS_ERROR,
                       }}
                     />
                   )}
@@ -528,19 +533,19 @@ export function AggregateQualityDashboard({ staleDays = 7, onReviewModule, onBat
                       label="Implemented"
                       count={selected.implemented}
                       total={selected.total}
-                      color="#4ade80"
+                      color={STATUS_SUCCESS}
                     />
                     <StatusRow
                       label="Partial"
                       count={selected.partial}
                       total={selected.total}
-                      color="#fbbf24"
+                      color={STATUS_WARNING}
                     />
                     <StatusRow
                       label="Missing"
                       count={selected.missing}
                       total={selected.total}
-                      color="#f87171"
+                      color={STATUS_ERROR}
                     />
                     <StatusRow
                       label="Unknown"
@@ -669,8 +674,8 @@ export function AggregateQualityDashboard({ staleDays = 7, onReviewModule, onBat
                       key={i}
                       className="w-2.5 h-2.5"
                       style={{
-                        color: i < Math.round(m.avgQuality!) ? '#f87171' : '#2a2a4a',
-                        fill: i < Math.round(m.avgQuality!) ? '#f87171' : 'none',
+                        color: i < Math.round(m.avgQuality!) ? STATUS_ERROR : '#2a2a4a',
+                        fill: i < Math.round(m.avgQuality!) ? STATUS_ERROR : 'none',
                       }}
                     />
                   ))}
@@ -897,7 +902,7 @@ function TrendChart({
   const last = qualityPoints[qualityPoints.length - 1].q;
   const delta = last - first;
   const deltaStr = delta > 0 ? `+${delta.toFixed(1)}` : delta.toFixed(1);
-  const deltaColor = delta > 0.1 ? '#4ade80' : delta < -0.1 ? '#f87171' : 'var(--text-muted)';
+  const deltaColor = delta > 0.1 ? STATUS_SUCCESS : delta < -0.1 ? STATUS_ERROR : 'var(--text-muted)';
 
   return (
     <div className="mt-1">

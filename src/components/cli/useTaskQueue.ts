@@ -1,7 +1,9 @@
 'use client';
 
-import { useEffect, useCallback, useRef, useState } from 'react';
+import { useEffect, useCallback, useRef, useState, useReducer } from 'react';
 import { apiFetch } from '@/lib/api-utils';
+import { UI_TIMEOUTS } from '@/lib/constants';
+import { extractCallbackPayload, resolveCallback } from '@/lib/cli-task';
 import type {
   QueuedTask, FileChange, LogEntry,
   ExecutionInfo, ExecutionResult, CLISSEEvent,
@@ -28,6 +30,147 @@ interface UseTaskQueueOpts {
   onBatchFlushed?: (count: number) => void;
 }
 
+// ── State machine ───────────────────────────────────────────────────────────
+
+/**
+ * Discriminated union for the task execution lifecycle.
+ *
+ * Valid transitions:
+ *   idle       → connecting   (TASK_START / SUBMIT_START)
+ *   connecting → streaming    (SSE_CONNECTED)
+ *   connecting → error        (START_FAILED)
+ *   streaming  → complete     (SSE_RESULT)
+ *   streaming  → error        (SSE_ERROR)
+ *   streaming  → idle         (ABORT)
+ *   complete   → connecting   (TASK_START / SUBMIT_START)
+ *   error      → connecting   (TASK_START / SUBMIT_START)
+ *   *          → idle         (CLEAR)
+ */
+type TaskPhase =
+  | { phase: 'idle' }
+  | { phase: 'connecting'; taskId: string | null }
+  | { phase: 'streaming'; taskId: string | null; executionInfo: ExecutionInfo }
+  | { phase: 'complete'; lastResult: ExecutionResult }
+  | { phase: 'error'; error: string; taskId: string | null };
+
+interface TaskQueueState {
+  current: TaskPhase;
+  /** Persists across task lifecycle — set once connected, cleared on CLEAR */
+  sessionId: string | null;
+  /** Persists across task lifecycle — set on each task start */
+  logFilePath: string | null;
+}
+
+type TaskQueueAction =
+  | { type: 'TASK_START'; taskId: string }
+  | { type: 'SUBMIT_START' }
+  | { type: 'SSE_CONNECTED'; info: ExecutionInfo; sessionId?: string }
+  | { type: 'SSE_RESULT'; result: ExecutionResult; sessionId?: string }
+  | { type: 'SSE_ERROR'; error: string }
+  | { type: 'START_FAILED'; error: string }
+  | { type: 'SET_LOG_FILE'; path: string }
+  | { type: 'ABORT' }
+  | { type: 'TASK_DONE' }
+  | { type: 'STUCK_RESOLVED'; success: boolean }
+  | { type: 'CLEAR' };
+
+const INITIAL_STATE: TaskQueueState = {
+  current: { phase: 'idle' },
+  sessionId: null,
+  logFilePath: null,
+};
+
+function taskQueueReducer(state: TaskQueueState, action: TaskQueueAction): TaskQueueState {
+  switch (action.type) {
+    case 'TASK_START':
+      return {
+        ...state,
+        current: { phase: 'connecting', taskId: action.taskId },
+      };
+
+    case 'SUBMIT_START':
+      return {
+        ...state,
+        current: { phase: 'connecting', taskId: null },
+      };
+
+    case 'SSE_CONNECTED': {
+      const taskId = state.current.phase === 'connecting' ? state.current.taskId : null;
+      return {
+        ...state,
+        current: { phase: 'streaming', taskId, executionInfo: action.info },
+        sessionId: action.sessionId ?? state.sessionId,
+      };
+    }
+
+    case 'SSE_RESULT':
+      return {
+        ...state,
+        current: { phase: 'complete', lastResult: action.result },
+        sessionId: action.sessionId ?? state.sessionId,
+      };
+
+    case 'SSE_ERROR':
+      return {
+        ...state,
+        current: { phase: 'error', error: action.error, taskId: getTaskId(state.current) },
+      };
+
+    case 'START_FAILED':
+      return {
+        ...state,
+        current: { phase: 'error', error: action.error, taskId: getTaskId(state.current) },
+      };
+
+    case 'SET_LOG_FILE':
+      return { ...state, logFilePath: action.path };
+
+    case 'ABORT':
+    case 'TASK_DONE':
+    case 'STUCK_RESOLVED':
+      return {
+        ...state,
+        current: { phase: 'idle' },
+      };
+
+    case 'CLEAR':
+      return { ...INITIAL_STATE };
+
+    default:
+      return state;
+  }
+}
+
+/** Extract taskId from any phase that carries one */
+function getTaskId(phase: TaskPhase): string | null {
+  if ('taskId' in phase) return phase.taskId;
+  return null;
+}
+
+// ── Derived selectors ───────────────────────────────────────────────────────
+
+function isStreaming(state: TaskQueueState): boolean {
+  return state.current.phase === 'connecting' || state.current.phase === 'streaming';
+}
+
+function currentTaskId(state: TaskQueueState): string | null {
+  return getTaskId(state.current);
+}
+
+function currentError(state: TaskQueueState): string | null {
+  return state.current.phase === 'error' ? state.current.error : null;
+}
+
+function currentExecutionInfo(state: TaskQueueState): ExecutionInfo | null {
+  return state.current.phase === 'streaming' ? state.current.executionInfo : null;
+}
+
+function lastResult(state: TaskQueueState): ExecutionResult | null {
+  return state.current.phase === 'complete' ? state.current.lastResult : null;
+}
+
+// ── Hook ────────────────────────────────────────────────────────────────────
+
 /**
  * Manages task execution, SSE event handling, stuck task detection,
  * heartbeat, abort, queue processing, and RAF-batched log updates.
@@ -39,23 +182,41 @@ export function useTaskQueue(opts: UseTaskQueueOpts) {
     onTaskStart, onTaskComplete, onQueueEmpty, onStreamingChange, onBatchFlushed,
   } = opts;
 
+  const [state, dispatch] = useReducer(taskQueueReducer, INITIAL_STATE);
   const [logs, setLogs] = useState<LogEntry[]>([]);
   const [fileChanges, setFileChanges] = useState<FileChange[]>([]);
-  const [isStreaming, setIsStreaming] = useState(false);
-  const [sessionId, setSessionId] = useState<string | null>(null);
-  const [executionInfo, setExecutionInfo] = useState<ExecutionInfo | null>(null);
-  const [lastResult, setLastResult] = useState<ExecutionResult | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [currentTaskId, setCurrentTaskId] = useState<string | null>(null);
-  const [logFilePath, setLogFilePath] = useState<string | null>(null);
 
+  // Derived values from state machine
+  const streaming = isStreaming(state);
+  const taskId = currentTaskId(state);
+  const error = currentError(state);
+  const executionInfo = currentExecutionInfo(state);
+  const result = lastResult(state);
+
+  // Keep a ref for the current taskId so callbacks can read it without re-rendering
   const currentTaskIdRef = useRef<string | null>(null);
+  currentTaskIdRef.current = taskId;
+
+  /** Tracks task IDs already dispatched to prevent duplicate execution */
+  const dispatchedTaskIds = useRef<Set<string>>(new Set());
+  /** Capped at 200 entries — oldest evicted first when full */
   const buildParseCache = useRef<Map<string, BuildParseResult>>(new Map());
   const eventSourceRef = useRef<EventSource | null>(null);
+  /** Accumulated assistant output for current task — used for callback extraction */
+  const assistantOutputRef = useRef<string>('');
   const heartbeatIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const stuckCheckIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const pendingNextTaskRef = useRef<NodeJS.Timeout | null>(null);
   const savedStreamUrlRef = useRef<string | null>(null);
+
+  // Notify parent when streaming state changes
+  const prevStreamingRef = useRef(false);
+  useEffect(() => {
+    if (prevStreamingRef.current !== streaming) {
+      prevStreamingRef.current = streaming;
+      onStreamingChange?.(streaming);
+    }
+  }, [streaming, onStreamingChange]);
 
   // RAF-batched log updates
   const logBufferRef = useRef<LogEntry[]>([]);
@@ -86,20 +247,32 @@ export function useTaskQueue(opts: UseTaskQueueOpts) {
     });
   }, []);
 
+  // --- Heartbeat cleanup helper ---
+
+  const clearHeartbeat = useCallback(() => {
+    if (heartbeatIntervalRef.current) {
+      clearInterval(heartbeatIntervalRef.current);
+      heartbeatIntervalRef.current = null;
+    }
+  }, []);
+
   // --- SSE event handling ---
 
   const handleSSEEvent = useCallback((event: CLISSEEvent) => {
     switch (event.type) {
       case 'connected': {
         const data = event.data as ExecutionInfo & { executionId?: string };
-        if (data.sessionId) setSessionId(data.sessionId as string);
-        setExecutionInfo(data as unknown as ExecutionInfo);
-        setError(null);
+        dispatch({
+          type: 'SSE_CONNECTED',
+          info: data as unknown as ExecutionInfo,
+          sessionId: data.sessionId as string | undefined,
+        });
         break;
       }
       case 'message': {
         const data = event.data as { type: string; content: string; model?: string };
         if (data.type === 'assistant' && data.content) {
+          assistantOutputRef.current += data.content;
           addLog({ id: `msg-${Date.now()}-${Math.random().toString(36).slice(2)}`, type: 'assistant', content: data.content, timestamp: event.timestamp, model: data.model });
         }
         break;
@@ -122,68 +295,55 @@ export function useTaskQueue(opts: UseTaskQueueOpts) {
         const parsed = parseBuildOutput(fullContent);
         if (parsed.isBuildOutput) {
           buildParseCache.current.set(logId, parsed);
+          if (buildParseCache.current.size > 200) {
+            const firstKey = buildParseCache.current.keys().next().value;
+            if (firstKey !== undefined) buildParseCache.current.delete(firstKey);
+          }
         }
         addLog({ id: logId, type: 'tool_result', content: fullContent.slice(0, 200), timestamp: event.timestamp });
         break;
       }
       case 'result': {
         const data = event.data as ExecutionResult;
-        if (data.sessionId) setSessionId(data.sessionId);
-        setLastResult(data);
-        setIsStreaming(false);
-        onStreamingChange?.(false);
-        if (heartbeatIntervalRef.current) { clearInterval(heartbeatIntervalRef.current); heartbeatIntervalRef.current = null; }
-        const taskId = currentTaskIdRef.current;
-        if (taskId) {
-          registerTaskComplete(taskId, instanceId, !data.isError);
-          onTaskComplete?.(taskId, !data.isError);
-          currentTaskIdRef.current = null;
-          setCurrentTaskId(null);
-        }
+        dispatch({ type: 'SSE_RESULT', result: data, sessionId: data.sessionId });
+        clearHeartbeat();
 
-        // Check for detected patterns after execution
-        fetch('/api/claude-terminal/improve')
-          .then(r => r.json())
-          .then(patternData => {
-            if (patternData.success && patternData.patterns?.length > 0) {
-              const count = patternData.patterns.length;
-              const highCount = patternData.patterns.filter(
-                (p: { severity: string }) => p.severity === 'high'
-              ).length;
-              const summary = patternData.patterns.slice(0, 3)
-                .map((p: { type: string; toolName?: string }) =>
-                  `${p.type}${p.toolName ? ` (${p.toolName})` : ''}`)
-                .join(', ');
-              addLog({
-                id: `signal-${Date.now()}`,
-                type: 'system',
-                content: `[signals] ${count} issue${count > 1 ? 's' : ''} detected${highCount ? ` (${highCount} high)` : ''}: ${summary}. Type /fix to resolve.`,
-                timestamp: Date.now(),
-              });
+        // Process structured callback if present in assistant output
+        const cbMatch = extractCallbackPayload(assistantOutputRef.current);
+        if (cbMatch) {
+          resolveCallback(cbMatch.callbackId, cbMatch.payload).then((cbResult) => {
+            if (cbResult.success) {
+              addLog({ id: `cb-ok-${Date.now()}`, type: 'system', content: `Callback submitted successfully`, timestamp: Date.now() });
+            } else {
+              addLog({ id: `cb-err-${Date.now()}`, type: 'error', content: `Callback failed: ${cbResult.error}`, timestamp: Date.now() });
             }
-          })
-          .catch(() => {}); // Non-critical
+          });
+        }
+        assistantOutputRef.current = '';
+
+        const tid = currentTaskIdRef.current;
+        if (tid) {
+          registerTaskComplete(tid, instanceId, !data.isError);
+          onTaskComplete?.(tid, !data.isError);
+        }
 
         break;
       }
       case 'error': {
         const data = event.data as { error: string };
-        setError(data.error);
-        setIsStreaming(false);
-        onStreamingChange?.(false);
-        if (heartbeatIntervalRef.current) { clearInterval(heartbeatIntervalRef.current); heartbeatIntervalRef.current = null; }
+        dispatch({ type: 'SSE_ERROR', error: data.error });
+        clearHeartbeat();
         addLog({ id: `error-${Date.now()}`, type: 'error', content: data.error, timestamp: event.timestamp });
-        const taskId = currentTaskIdRef.current;
-        if (taskId) {
-          registerTaskComplete(taskId, instanceId, false);
-          onTaskComplete?.(taskId, false);
-          currentTaskIdRef.current = null;
-          setCurrentTaskId(null);
+        assistantOutputRef.current = '';
+        const tid = currentTaskIdRef.current;
+        if (tid) {
+          registerTaskComplete(tid, instanceId, false);
+          onTaskComplete?.(tid, false);
         }
         break;
       }
     }
-  }, [addLog, addFileChange, instanceId, onTaskComplete, onStreamingChange]);
+  }, [addLog, addFileChange, instanceId, onTaskComplete, clearHeartbeat]);
 
   const connectToStream = useCallback((streamUrl: string) => {
     if (eventSourceRef.current) eventSourceRef.current.close();
@@ -207,21 +367,22 @@ export function useTaskQueue(opts: UseTaskQueueOpts) {
   // --- Task execution ---
 
   const executeTask = useCallback(async (task: QueuedTask, resumeSession: boolean) => {
+    // Idempotency guard: skip if this task was already dispatched
+    if (dispatchedTaskIds.current.has(task.id)) return;
+    dispatchedTaskIds.current.add(task.id);
+
     let startResult = await registerTaskStart(task.id, instanceId, task.label);
     if (!startResult.success && startResult.runningTask) {
       await registerTaskComplete(startResult.runningTask.taskId, instanceId, false);
       startResult = await registerTaskStart(task.id, instanceId, task.label);
     }
 
-    currentTaskIdRef.current = task.id;
-    setIsStreaming(true);
-    onStreamingChange?.(true);
-    setError(null);
-    setCurrentTaskId(task.id);
+    assistantOutputRef.current = '';
+    dispatch({ type: 'TASK_START', taskId: task.id });
     onTaskStart?.(task.id);
 
-    if (heartbeatIntervalRef.current) clearInterval(heartbeatIntervalRef.current);
-    heartbeatIntervalRef.current = setInterval(() => sendTaskHeartbeat(task.id), 2 * 60 * 1000);
+    clearHeartbeat();
+    heartbeatIntervalRef.current = setInterval(() => sendTaskHeartbeat(task.id), UI_TIMEOUTS.heartbeatInterval);
 
     const skillsPrefix = !resumeSession && enabledSkills.length > 0 ? buildSkillsPrompt(enabledSkills) : '';
     const taskPrompt = `${skillsPrefix}${task.prompt}`;
@@ -232,116 +393,50 @@ export function useTaskQueue(opts: UseTaskQueueOpts) {
       const data = await apiFetch<{ executionId: string; streamUrl: string; logFilePath: string | null }>('/api/claude-terminal/query', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ projectPath, prompt: taskPrompt, resumeSessionId: resumeSession ? sessionId : undefined }),
+        body: JSON.stringify({ projectPath, prompt: taskPrompt, resumeSessionId: resumeSession ? state.sessionId : undefined }),
       });
-      if (data.logFilePath) setLogFilePath(data.logFilePath);
+      if (data.logFilePath) dispatch({ type: 'SET_LOG_FILE', path: data.logFilePath });
       connectToStream(data.streamUrl);
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Failed to start task');
-      setIsStreaming(false);
-      onStreamingChange?.(false);
+      dispatch({ type: 'START_FAILED', error: e instanceof Error ? e.message : 'Failed to start task' });
       registerTaskComplete(task.id, instanceId, false);
       onTaskComplete?.(task.id, false);
-      currentTaskIdRef.current = null;
-      setCurrentTaskId(null);
-      if (heartbeatIntervalRef.current) { clearInterval(heartbeatIntervalRef.current); heartbeatIntervalRef.current = null; }
+      clearHeartbeat();
     }
-  }, [sessionId, instanceId, projectPath, addLog, connectToStream, onTaskStart, onTaskComplete, enabledSkills, onStreamingChange]);
+  }, [state.sessionId, instanceId, projectPath, addLog, connectToStream, onTaskStart, onTaskComplete, enabledSkills, clearHeartbeat]);
 
   // --- Manual submit (user input) ---
 
   const submitPrompt = useCallback(async (prompt: string, resumeSession: boolean) => {
-    setIsStreaming(true);
-    onStreamingChange?.(true);
-    setError(null);
+    assistantOutputRef.current = '';
+    dispatch({ type: 'SUBMIT_START' });
     addLog({ id: `user-${Date.now()}`, type: 'user', content: prompt, timestamp: Date.now() });
 
     try {
       const data = await apiFetch<{ executionId: string; streamUrl: string; logFilePath: string | null }>('/api/claude-terminal/query', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ projectPath, prompt, resumeSessionId: resumeSession ? sessionId : undefined }),
+        body: JSON.stringify({ projectPath, prompt, resumeSessionId: resumeSession ? state.sessionId : undefined }),
       });
-      if (data.logFilePath) setLogFilePath(data.logFilePath);
+      if (data.logFilePath) dispatch({ type: 'SET_LOG_FILE', path: data.logFilePath });
       connectToStream(data.streamUrl);
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Failed to start');
-      setIsStreaming(false);
-      onStreamingChange?.(false);
+      dispatch({ type: 'START_FAILED', error: e instanceof Error ? e.message : 'Failed to start' });
     }
-  }, [projectPath, sessionId, addLog, connectToStream, onStreamingChange]);
-
-  // --- Improvement execution (/fix command) ---
-
-  const executeImprovement = useCallback(async () => {
-    try {
-      // Fetch current patterns
-      const res = await fetch('/api/claude-terminal/improve');
-      const data = await res.json();
-      if (!data.success || !data.patterns?.length) {
-        addLog({
-          id: `system-${Date.now()}`,
-          type: 'system',
-          content: '[signals] No unresolved patterns to fix.',
-          timestamp: Date.now(),
-        });
-        return;
-      }
-
-      // Build improvement prompt (safe for client — no node deps)
-      const { buildImprovementPrompt } = await import(
-        '@/lib/claude-terminal/signals/improvement-prompt'
-      );
-      const improvementPrompt = buildImprovementPrompt(data.patterns);
-
-      setIsStreaming(true);
-      onStreamingChange?.(true);
-      setError(null);
-
-      // Send via normal query route — uses resumeSessionId for context continuity
-      const queryData = await apiFetch<{ executionId: string; streamUrl: string; logFilePath: string | null }>('/api/claude-terminal/query', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          projectPath,
-          prompt: improvementPrompt,
-          resumeSessionId: sessionId || undefined,
-        }),
-      });
-
-      if (queryData.logFilePath) setLogFilePath(queryData.logFilePath);
-      connectToStream(queryData.streamUrl);
-
-      // Mark patterns as resolved (optimistic)
-      fetch('/api/claude-terminal/improve', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          patternFingerprints: data.patterns.map((p: { fingerprint: string }) => p.fingerprint),
-        }),
-      }).catch(() => {}); // Non-critical
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Improvement failed');
-      setIsStreaming(false);
-      onStreamingChange?.(false);
-    }
-  }, [projectPath, sessionId, addLog, connectToStream, onStreamingChange, setError]);
+  }, [projectPath, state.sessionId, addLog, connectToStream]);
 
   // --- Abort ---
 
   const handleAbort = useCallback(async () => {
     if (eventSourceRef.current) { eventSourceRef.current.close(); eventSourceRef.current = null; }
-    setIsStreaming(false);
-    onStreamingChange?.(false);
-    if (heartbeatIntervalRef.current) { clearInterval(heartbeatIntervalRef.current); heartbeatIntervalRef.current = null; }
-    const taskId = currentTaskIdRef.current;
-    if (taskId) {
-      registerTaskComplete(taskId, instanceId, false);
-      onTaskComplete?.(taskId, false);
-      currentTaskIdRef.current = null;
-      setCurrentTaskId(null);
+    clearHeartbeat();
+    const tid = currentTaskIdRef.current;
+    if (tid) {
+      registerTaskComplete(tid, instanceId, false);
+      onTaskComplete?.(tid, false);
     }
-  }, [instanceId, onTaskComplete, onStreamingChange]);
+    dispatch({ type: 'ABORT' });
+  }, [instanceId, onTaskComplete, clearHeartbeat]);
 
   // --- Clear ---
 
@@ -351,76 +446,65 @@ export function useTaskQueue(opts: UseTaskQueueOpts) {
     logBufferRef.current = [];
     setLogs([]);
     setFileChanges([]);
-    setError(null);
-    setSessionId(null);
-    setLogFilePath(null);
-    currentTaskIdRef.current = null;
-    setCurrentTaskId(null);
+    dispatchedTaskIds.current.clear();
     buildParseCache.current.clear();
-    if (heartbeatIntervalRef.current) { clearInterval(heartbeatIntervalRef.current); heartbeatIntervalRef.current = null; }
+    clearHeartbeat();
     if (stuckCheckIntervalRef.current) { clearInterval(stuckCheckIntervalRef.current); stuckCheckIntervalRef.current = null; }
-  }, [instanceId]);
+    dispatch({ type: 'CLEAR' });
+  }, [instanceId, clearHeartbeat]);
 
   // --- Stuck task detection ---
 
   useEffect(() => {
-    if (!visible || !autoStart || !isStreaming || !currentTaskId) {
+    if (!visible || !autoStart || !streaming || !taskId) {
       if (stuckCheckIntervalRef.current) { clearInterval(stuckCheckIntervalRef.current); stuckCheckIntervalRef.current = null; }
       return;
     }
     stuckCheckIntervalRef.current = setInterval(async () => {
-      const taskId = currentTaskIdRef.current;
-      if (!taskId) return;
-      const status = await getTaskStatus(taskId);
+      const tid = currentTaskIdRef.current;
+      if (!tid) return;
+      const status = await getTaskStatus(tid);
       if (status.found && status.status !== 'running') {
         if (eventSourceRef.current) { eventSourceRef.current.close(); eventSourceRef.current = null; }
-        setIsStreaming(false);
-        onStreamingChange?.(false);
-        onTaskComplete?.(taskId, status.status === 'completed');
-        currentTaskIdRef.current = null;
-        setCurrentTaskId(null);
-        if (heartbeatIntervalRef.current) { clearInterval(heartbeatIntervalRef.current); heartbeatIntervalRef.current = null; }
+        clearHeartbeat();
+        onTaskComplete?.(tid, status.status === 'completed');
+        dispatch({ type: 'STUCK_RESOLVED', success: status.status === 'completed' });
       }
       if (status.isStale) {
         if (eventSourceRef.current) { eventSourceRef.current.close(); eventSourceRef.current = null; }
-        setIsStreaming(false);
-        onStreamingChange?.(false);
-        registerTaskComplete(taskId, instanceId, false);
-        onTaskComplete?.(taskId, false);
-        currentTaskIdRef.current = null;
-        setCurrentTaskId(null);
-        if (heartbeatIntervalRef.current) { clearInterval(heartbeatIntervalRef.current); heartbeatIntervalRef.current = null; }
+        clearHeartbeat();
+        registerTaskComplete(tid, instanceId, false);
+        onTaskComplete?.(tid, false);
+        dispatch({ type: 'STUCK_RESOLVED', success: false });
       }
-    }, 30 * 1000);
+    }, UI_TIMEOUTS.stuckCheckInterval);
     return () => { if (stuckCheckIntervalRef.current) { clearInterval(stuckCheckIntervalRef.current); stuckCheckIntervalRef.current = null; } };
-  }, [visible, autoStart, isStreaming, currentTaskId, instanceId, onTaskComplete, onStreamingChange]);
+  }, [visible, autoStart, streaming, taskId, instanceId, onTaskComplete, clearHeartbeat]);
 
   // --- Process task queue ---
 
   useEffect(() => {
     if (pendingNextTaskRef.current) { clearTimeout(pendingNextTaskRef.current); pendingNextTaskRef.current = null; }
-    if (!visible || isStreaming || taskQueue.length === 0) return;
+    if (!visible || streaming || taskQueue.length === 0) return;
     const nextTask = taskQueue.find((t) => t.status === 'pending');
     if (nextTask && autoStart) {
       pendingNextTaskRef.current = setTimeout(() => {
-        executeTask(nextTask, sessionId !== null);
-      }, 3000);
+        executeTask(nextTask, state.sessionId !== null);
+      }, UI_TIMEOUTS.nextTaskDelay);
     } else if (!nextTask && taskQueue.length > 0 && autoStart) {
       onQueueEmpty?.();
     }
     return () => { if (pendingNextTaskRef.current) clearTimeout(pendingNextTaskRef.current); };
-  }, [visible, taskQueue, isStreaming, autoStart, sessionId, executeTask, onQueueEmpty]);
+  }, [visible, taskQueue, streaming, autoStart, state.sessionId, executeTask, onQueueEmpty]);
 
   // --- Visibility guard: pause resources when hidden, resume when visible ---
 
   useEffect(() => {
     if (visible) {
       // Re-show: reconnect SSE if we were streaming when hidden
-      if (isStreaming && savedStreamUrlRef.current && !eventSourceRef.current) {
+      if (streaming && savedStreamUrlRef.current && !eventSourceRef.current) {
         connectToStream(savedStreamUrlRef.current);
       }
-      // Heartbeat and stuck-check intervals are re-created by their own effects
-      // (stuck-check depends on isStreaming+currentTaskId, heartbeat is set inside executeTask/connectToStream)
       return;
     }
 
@@ -428,13 +512,12 @@ export function useTaskQueue(opts: UseTaskQueueOpts) {
     if (eventSourceRef.current) {
       eventSourceRef.current.close();
       eventSourceRef.current = null;
-      // savedStreamUrlRef stays set so we can reconnect
     }
-    if (heartbeatIntervalRef.current) { clearInterval(heartbeatIntervalRef.current); heartbeatIntervalRef.current = null; }
+    clearHeartbeat();
     if (stuckCheckIntervalRef.current) { clearInterval(stuckCheckIntervalRef.current); stuckCheckIntervalRef.current = null; }
     if (pendingNextTaskRef.current) { clearTimeout(pendingNextTaskRef.current); pendingNextTaskRef.current = null; }
     if (rafIdRef.current !== null) { cancelAnimationFrame(rafIdRef.current); rafIdRef.current = null; }
-  }, [visible, isStreaming, connectToStream]);
+  }, [visible, streaming, connectToStream, clearHeartbeat]);
 
   // --- Cleanup on unmount ---
 
@@ -450,16 +533,15 @@ export function useTaskQueue(opts: UseTaskQueueOpts) {
   return {
     logs,
     fileChanges,
-    isStreaming,
-    sessionId,
+    isStreaming: streaming,
+    sessionId: state.sessionId,
     executionInfo,
-    lastResult,
+    lastResult: result,
     error,
-    currentTaskId,
-    logFilePath,
+    currentTaskId: taskId,
+    logFilePath: state.logFilePath,
     buildParseCache,
     submitPrompt,
-    executeImprovement,
     handleAbort,
     handleClear,
   };

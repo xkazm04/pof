@@ -8,12 +8,29 @@ import type {
   SemanticDiffResult,
 } from '@/types/blueprint';
 
+export interface UseBlueprintTranspilerResult {
+  blueprintJson: string;
+  setBlueprintJson: (value: string) => void;
+  existingCpp: string;
+  setExistingCpp: (value: string) => void;
+  asset: BlueprintAsset | null;
+  summary: string | null;
+  transpileResult: TranspileResult | null;
+  diffResult: SemanticDiffResult | null;
+  isLoading: boolean;
+  error: string | null;
+  parse: (json: string) => Promise<ParseResponse>;
+  transpile: (json: string, projectName?: string, moduleName?: string) => Promise<TranspileResult>;
+  diff: (json: string, cpp: string, projectName?: string) => Promise<SemanticDiffResult>;
+  reset: () => void;
+}
+
 interface ParseResponse {
   asset: BlueprintAsset;
   summary: string;
 }
 
-export function useBlueprintTranspiler() {
+export function useBlueprintTranspiler(): UseBlueprintTranspilerResult {
   const [blueprintJson, setBlueprintJson] = useState('');
   const [existingCpp, setExistingCpp] = useState('');
   const [asset, setAsset] = useState<BlueprintAsset | null>(null);
