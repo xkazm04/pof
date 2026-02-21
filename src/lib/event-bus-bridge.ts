@@ -4,6 +4,7 @@ import { useCLIPanelStore } from '@/components/cli/store/cliPanelStore';
 import { useEvaluatorStore } from '@/stores/evaluatorStore';
 import { useModuleStore } from '@/stores/moduleStore';
 import { useProjectStore } from '@/stores/projectStore';
+import { useUE5BridgeStore } from '@/stores/ue5BridgeStore';
 import type { SubModuleId } from '@/types/modules';
 
 // ── Event Bus Bridge ──
@@ -136,6 +137,43 @@ function createBridgeSubscriptions(): () => void {
       }
 
       prevScanCount = count;
+    }),
+  );
+
+  // ── UE5 bus events → ue5BridgeStore ──
+
+  unsubs.push(
+    eventBus.on('ue5.connected', (event) => {
+      useUE5BridgeStore.getState().setConnectionState({
+        status: 'connected',
+        info: { version: event.payload.version, serverName: '' },
+        error: null,
+        lastConnected: new Date().toISOString(),
+        reconnectAttempts: 0,
+      });
+    }),
+  );
+
+  unsubs.push(
+    eventBus.on('ue5.disconnected', () => {
+      useUE5BridgeStore.getState().setConnectionState({
+        status: 'disconnected',
+        info: null,
+        error: null,
+        lastConnected: useUE5BridgeStore.getState().connectionState.lastConnected,
+        reconnectAttempts: 0,
+      });
+    }),
+  );
+
+  unsubs.push(
+    eventBus.on('ue5.error', (event) => {
+      const prev = useUE5BridgeStore.getState().connectionState;
+      useUE5BridgeStore.getState().setConnectionState({
+        ...prev,
+        status: 'error',
+        error: event.payload.message,
+      });
     }),
   );
 

@@ -55,4 +55,16 @@ export const UI_TIMEOUTS = {
   nextTaskDelay: 3000,
   /** Auto-submit delay after programmatic input fill. */
   autoSubmitDelay: 50,
+  /** UE5 Remote Control health check interval. */
+  ue5HealthCheck: 30_000,
+  /** Base delay for UE5 reconnection attempts. */
+  ue5ReconnectBase: 2_000,
+  /** Maximum delay between reconnection attempts. */
+  ue5ReconnectMax: 30_000,
+  /** Timeout for individual UE5 HTTP requests. */
+  ue5HttpTimeout: 10_000,
+  /** Poll interval while a build is active. */
+  buildPollInterval: 3_000,
+  /** Maximum time for a headless build process (10 min). */
+  buildProcessTimeout: 600_000,
 } as const;

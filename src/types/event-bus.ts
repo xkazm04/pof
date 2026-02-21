@@ -85,6 +85,22 @@ export interface FileEvents {
   };
 }
 
+/** UE5 Remote Control events */
+export interface UE5Events {
+  'ue5.connected': { version: string };
+  'ue5.disconnected': { reason?: string };
+  'ue5.error': { message: string };
+}
+
+/** Headless build pipeline events */
+export interface BuildPipelineEvents {
+  'build.queued': { buildId: string; targetName: string };
+  'build.progress': { buildId: string; message: string; percent?: number };
+  'build.succeeded': { buildId: string; errorCount: number; warningCount: number; durationMs: number };
+  'build.failed': { buildId: string; errorCount: number; exitCode: number | null };
+  'build.aborted': { buildId: string };
+}
+
 /** Navigation events */
 export interface NavigationEvents {
   'nav.module.changed': {
@@ -103,7 +119,9 @@ export interface EventMap
     BuildEvents,
     ChecklistEvents,
     FileEvents,
-    NavigationEvents {}
+    NavigationEvents,
+    UE5Events,
+    BuildPipelineEvents {}
 
 /** Any valid channel name */
 export type EventChannel = keyof EventMap;
