@@ -2,10 +2,11 @@
 
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { AlertTriangle, Link2, Loader2, ZoomIn, ZoomOut, Maximize2 } from 'lucide-react';
+import { AlertTriangle, Link2, Loader2, ZoomIn, ZoomOut, Maximize2, Plug } from 'lucide-react';
 import { MODULE_FEATURE_DEFINITIONS, buildDependencyMap, computeBlockers } from '@/lib/feature-definitions';
 import type { DependencyInfo, ResolvedDependency } from '@/lib/feature-definitions';
 import { MODULE_LABELS } from '@/lib/module-registry';
+import { useManifest } from '@/hooks/useManifest';
 import { SurfaceCard } from '@/components/ui/SurfaceCard';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { MODULE_COLORS as CHART_MODULE_COLORS, STATUS_SUCCESS, STATUS_WARNING, STATUS_ERROR, STATUS_BLOCKER, OPACITY_20 } from '@/lib/chart-colors';
@@ -93,6 +94,25 @@ export function DependencyGraph({ onNavigateTab }: DependencyGraphProps) {
   const [hoveredModule, setHoveredModule] = useState<string | null>(null);
   const [zoom, setZoom] = useState(1);
   const svgRef = useRef<SVGSVGElement>(null);
+  const { manifest, isConnected: bridgeConnected } = useManifest();
+
+  const manifestCrossRefs = useMemo(() => {
+    if (!manifest) return new Map<string, Set<string>>();
+    const refs = new Map<string, Set<string>>();
+    const addRefs = (path: string, crossRefs: string[]) => {
+      for (const ref of crossRefs) {
+        const existing = refs.get(path) ?? new Set<string>();
+        existing.add(ref);
+        refs.set(path, existing);
+      }
+    };
+    for (const bp of manifest.blueprints) addRefs(bp.path, bp.crossReferences);
+    for (const mat of manifest.materials) addRefs(mat.path, mat.crossReferences);
+    for (const anim of manifest.animAssets) addRefs(anim.path, anim.crossReferences);
+    for (const dt of manifest.dataTables) addRefs(dt.path, dt.crossReferences);
+    for (const oa of manifest.otherAssets) addRefs(oa.path, oa.crossReferences);
+    return refs;
+  }, [manifest]);
 
   const fetchStatuses = useCallback(async () => {
     setIsLoading(true);
@@ -195,6 +215,31 @@ export function DependencyGraph({ onNavigateTab }: DependencyGraphProps) {
       };
     });
   }, [selectedModule, depMap, statusMap]);
+
+  // Per-module cross-ref counts from manifest (best-effort path matching)
+  const moduleCrossRefCounts = useMemo(() => {
+    const counts = new Map<string, number>();
+    if (!manifest) return counts;
+    const allPaths = [
+      ...manifest.blueprints.map((a) => a.path),
+      ...manifest.materials.map((a) => a.path),
+      ...manifest.animAssets.map((a) => a.path),
+      ...manifest.dataTables.map((a) => a.path),
+      ...manifest.otherAssets.map((a) => a.path),
+    ];
+    for (const moduleId of Object.keys(MODULE_FEATURE_DEFINITIONS)) {
+      // Match paths containing a segment similar to the module name (strip "arpg-" prefix)
+      const shortName = moduleId.replace('arpg-', '').toLowerCase();
+      const matching = allPaths.filter((p) => p.toLowerCase().includes(shortName));
+      let refCount = 0;
+      for (const path of matching) {
+        const refs = manifestCrossRefs.get(path);
+        if (refs) refCount += refs.size;
+      }
+      if (refCount > 0) counts.set(moduleId, refCount);
+    }
+    return counts;
+  }, [manifest, manifestCrossRefs]);
 
   const svgWidth = PAD_X * 2 + 3 * COL_WIDTH + NODE_W;
   const svgHeight = PAD_Y * 2 + 2 * ROW_HEIGHT + NODE_H;
@@ -407,6 +452,9 @@ export function DependencyGraph({ onNavigateTab }: DependencyGraphProps) {
                 >
                   {node.implementedCount}/{node.featureCount} done
                   {node.blockedCount > 0 ? ` · ${node.blockedCount} blocked` : ''}
+                  {bridgeConnected && moduleCrossRefCounts.get(node.moduleId)
+                    ? ` · ${moduleCrossRefCounts.get(node.moduleId)} refs`
+                    : ''}
                 </text>
 
                 {/* Blocked indicator */}
@@ -436,6 +484,12 @@ export function DependencyGraph({ onNavigateTab }: DependencyGraphProps) {
           <span className="w-2.5 h-2.5 rounded-full bg-[#f8717120] flex items-center justify-center text-[#fb923c] text-2xs font-bold">!</span>
           Module has blocked features
         </span>
+        {bridgeConnected && manifestCrossRefs.size > 0 && (
+          <span className="flex items-center gap-1.5">
+            <Plug className="w-3 h-3 text-green-400" />
+            <span className="text-green-400">{manifestCrossRefs.size} bridge assets with cross-refs</span>
+          </span>
+        )}
       </div>
 
       {/* Selected module detail */}
