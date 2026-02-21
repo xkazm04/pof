@@ -5,6 +5,7 @@ import { useEvaluatorStore } from '@/stores/evaluatorStore';
 import { useModuleStore } from '@/stores/moduleStore';
 import { useProjectStore } from '@/stores/projectStore';
 import { useUE5BridgeStore } from '@/stores/ue5BridgeStore';
+import { usePofBridgeStore } from '@/stores/pofBridgeStore';
 import type { SubModuleId } from '@/types/modules';
 
 // ── Event Bus Bridge ──
@@ -174,6 +175,50 @@ function createBridgeSubscriptions(): () => void {
         status: 'error',
         error: event.payload.message,
       });
+    }),
+  );
+
+  // ── PoF Bridge bus events → pofBridgeStore ──
+
+  unsubs.push(
+    eventBus.on('pof.connected', () => {
+      const store = usePofBridgeStore.getState();
+      store.setConnectionStatus('connected');
+      store.setError(null);
+    }),
+  );
+
+  unsubs.push(
+    eventBus.on('pof.disconnected', () => {
+      const store = usePofBridgeStore.getState();
+      store.setConnectionStatus('disconnected');
+      store.setPluginInfo(null);
+    }),
+  );
+
+  unsubs.push(
+    eventBus.on('pof.error', (event) => {
+      const store = usePofBridgeStore.getState();
+      store.setError(event.payload.message);
+    }),
+  );
+
+  unsubs.push(
+    eventBus.on('pof.manifest.updated', () => {
+      // Manifest updated notification — actual manifest data is fetched by useManifest hook
+      // This is just for awareness/logging
+    }),
+  );
+
+  unsubs.push(
+    eventBus.on('pof.test.completed', () => {
+      // Test completion — surfaced via activity feed by connection manager
+    }),
+  );
+
+  unsubs.push(
+    eventBus.on('pof.compile.completed', () => {
+      // Compile completion — surfaced via activity feed by connection manager
     }),
   );
 
