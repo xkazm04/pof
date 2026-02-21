@@ -1,10 +1,11 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 import {
-  Zap, Gem, Shirt, User, Droplets, Flame, Leaf, Blocks, CircleDot,
+  Zap, Gem, Shirt, User, Droplets, Flame, Leaf, Blocks, CircleDot, Plug,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
+import { useManifest } from '@/hooks/useManifest';
 import { MODULE_COLORS } from '@/lib/constants';
 import { ACCENT_VIOLET, STATUS_BLOCKER, STATUS_IMPROVED, ACCENT_ORANGE, STATUS_SUCCESS, STATUS_WARNING } from '@/lib/chart-colors';
 
@@ -123,6 +124,23 @@ export function MaterialParameterConfigurator({ onGenerate, isGenerating }: Mate
   const [features, setFeatures] = useState<RenderFeature[]>([]);
   const [outputType, setOutputType] = useState<MaterialOutputType>('master');
   const [paramValues, setParamValues] = useState<Record<string, number>>({});
+
+  // ── Bridge data ──
+  const { manifest, isConnected: bridgeConnected } = useManifest();
+
+  const bridgeMaterials = useMemo(() => {
+    if (!manifest?.materials?.length) return [];
+    return manifest.materials.map((m) => ({
+      path: m.path,
+      domain: m.domain,
+      blendMode: m.blendMode,
+      shadingModel: m.shadingModel,
+      paramCount: m.parameters.length,
+      instanceCount: m.materialInstances.length,
+      textureCount: m.textureReferences.length,
+      parameters: m.parameters,
+    }));
+  }, [manifest]);
 
   const selectSurface = useCallback((s: SurfaceType) => {
     setSurfaceType(s);
@@ -306,6 +324,34 @@ export function MaterialParameterConfigurator({ onGenerate, isGenerating }: Mate
           })}
         </div>
       </div>
+
+      {/* ─── Live Material Data from Bridge ─── */}
+      {bridgeConnected && bridgeMaterials.length > 0 && (
+        <div className="space-y-2">
+          <h4 className="text-2xs font-semibold text-text-muted uppercase tracking-widest flex items-center gap-1.5">
+            <Plug className="w-3 h-3 text-green-400" />
+            Live from Bridge
+            <span className="text-green-400 font-normal">({bridgeMaterials.length} materials)</span>
+          </h4>
+          <div className="max-h-48 overflow-y-auto space-y-1 custom-scrollbar">
+            {bridgeMaterials.map((mat) => (
+              <div
+                key={mat.path}
+                className="flex items-center justify-between px-2.5 py-1.5 rounded-md bg-surface-deep border border-border hover:border-green-500/30 transition-colors"
+              >
+                <div className="min-w-0">
+                  <span className="text-2xs text-text block truncate font-mono">{mat.path.split('/').pop()}</span>
+                  <span className="text-2xs text-text-muted">{mat.domain} &middot; {mat.shadingModel}</span>
+                </div>
+                <div className="flex items-center gap-2 flex-shrink-0 text-2xs text-text-muted">
+                  <span>{mat.paramCount} params</span>
+                  <span>{mat.instanceCount} inst</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* ─── Generate Button ─── */}
       <button
