@@ -5,10 +5,11 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   Search, ScanLine, ArrowUpDown, ArrowDown, ArrowUp,
   Box, Image, Paintbrush, Film, Cpu, Volume2, Map, HelpCircle,
-  ChevronRight, Loader2, AlertCircle, FolderOpen,
+  ChevronRight, Loader2, AlertCircle, FolderOpen, Plug,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { useProjectStore } from '@/stores/projectStore';
+import { useManifest } from '@/hooks/useManifest';
 import { ACCENT_VIOLET, ACCENT_CYAN, ACCENT_ORANGE, MODULE_COLORS } from '@/lib/chart-colors';
 import type { AssetScanResult, ScannedAsset, AssetType, AssetDependencyEdge } from '@/app/api/filesystem/scan-assets/route';
 
@@ -140,6 +141,22 @@ function DependencyGraph({ asset, allAssets, dependencies }: DependencyGraphProp
 
 export function AssetInventory() {
   const projectPath = useProjectStore((s) => s.projectPath);
+  const { manifest, isConnected: bridgeConnected } = useManifest();
+
+  const bridgeSummary = useMemo(() => {
+    if (!manifest) return null;
+    return {
+      blueprints: manifest.blueprints.length,
+      materials: manifest.materials.length,
+      animations: manifest.animAssets.length,
+      dataTables: manifest.dataTables.length,
+      other: manifest.otherAssets.length,
+      total: manifest.assetCount,
+      checksum: manifest.checksumSha256.slice(0, 8),
+      generatedAt: manifest.generatedAt,
+    };
+  }, [manifest]);
+
   const [scanResult, setScanResult] = useState<AssetScanResult | null>(null);
   const [isScanning, setIsScanning] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -244,6 +261,34 @@ export function AssetInventory() {
           <ScanLine className="w-3.5 h-3.5" />
           Scan Content/
         </button>
+        {bridgeConnected && bridgeSummary && (
+          <div className="rounded-lg border border-green-500/20 bg-green-500/5 p-3 space-y-2 w-full max-w-sm">
+            <div className="flex items-center justify-between">
+              <h4 className="text-xs font-semibold text-green-400 flex items-center gap-1.5">
+                <Plug className="w-3 h-3" />
+                Bridge Manifest
+              </h4>
+              <span className="text-2xs text-text-muted font-mono">{bridgeSummary.checksum}</span>
+            </div>
+            <div className="grid grid-cols-5 gap-2">
+              {([
+                ['Blueprints', bridgeSummary.blueprints],
+                ['Materials', bridgeSummary.materials],
+                ['Animations', bridgeSummary.animations],
+                ['DataTables', bridgeSummary.dataTables],
+                ['Other', bridgeSummary.other],
+              ] as const).map(([label, count]) => (
+                <div key={label} className="text-center">
+                  <div className="text-sm font-bold text-text">{count}</div>
+                  <div className="text-2xs text-text-muted">{label}</div>
+                </div>
+              ))}
+            </div>
+            <div className="text-2xs text-text-muted">
+              {bridgeSummary.total} total assets · Last updated {new Date(bridgeSummary.generatedAt).toLocaleTimeString()}
+            </div>
+          </div>
+        )}
         {!projectPath && (
           <p className="text-xs text-red-400/70">Set your project path in Project Setup first</p>
         )}
@@ -310,6 +355,36 @@ export function AssetInventory() {
           Rescan
         </button>
       </div>
+
+      {/* Bridge Assets summary */}
+      {bridgeConnected && bridgeSummary && (
+        <div className="rounded-lg border border-green-500/20 bg-green-500/5 p-3 space-y-2">
+          <div className="flex items-center justify-between">
+            <h4 className="text-xs font-semibold text-green-400 flex items-center gap-1.5">
+              <Plug className="w-3 h-3" />
+              Bridge Manifest
+            </h4>
+            <span className="text-2xs text-text-muted font-mono">{bridgeSummary.checksum}</span>
+          </div>
+          <div className="grid grid-cols-5 gap-2">
+            {([
+              ['Blueprints', bridgeSummary.blueprints],
+              ['Materials', bridgeSummary.materials],
+              ['Animations', bridgeSummary.animations],
+              ['DataTables', bridgeSummary.dataTables],
+              ['Other', bridgeSummary.other],
+            ] as const).map(([label, count]) => (
+              <div key={label} className="text-center">
+                <div className="text-sm font-bold text-text">{count}</div>
+                <div className="text-2xs text-text-muted">{label}</div>
+              </div>
+            ))}
+          </div>
+          <div className="text-2xs text-text-muted">
+            {bridgeSummary.total} total assets · Last updated {new Date(bridgeSummary.generatedAt).toLocaleTimeString()}
+          </div>
+        </div>
+      )}
 
       {/* Type filter chips */}
       <div className="flex items-center gap-1.5 flex-wrap">
