@@ -1,18 +1,22 @@
 'use client';
 
 import { useMemo, useState, useCallback } from 'react';
-import { Swords, Shield, Zap, ChevronDown, ChevronRight, ExternalLink, Play } from 'lucide-react';
+import { Swords, Shield, Zap, ChevronDown, ChevronRight, ExternalLink, Play, Target, Gauge, Crosshair, Flame, BarChart3, Activity, GitBranch, Timer, TrendingUp, Layers } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  MODULE_COLORS, STATUS_WARNING,
-  OPACITY_10, OPACITY_20,
+  MODULE_COLORS, STATUS_WARNING, STATUS_SUCCESS, STATUS_ERROR,
+  ACCENT_ORANGE, ACCENT_EMERALD, ACCENT_CYAN, ACCENT_VIOLET, ACCENT_PINK,
 } from '@/lib/chart-colors';
 import { MODULE_FEATURE_DEFINITIONS } from '@/lib/feature-definitions';
 import { useFeatureMatrix } from '@/hooks/useFeatureMatrix';
 import { SurfaceCard } from '@/components/ui/SurfaceCard';
 import type { SubModuleId } from '@/types/modules';
 import type { FeatureRow, FeatureStatus } from '@/types/feature-matrix';
-import { STATUS_COLORS, TabHeader, PipelineFlow, SectionLabel, LoadingSpinner } from './_shared';
+import {
+  STATUS_COLORS, TabHeader, PipelineFlow, SectionLabel, LoadingSpinner,
+  HeatmapGrid, LiveMetricGauge, TimelineStrip,
+} from './_shared';
+import type { HeatmapCell, GaugeMetric, TimelineEvent } from '@/types/unique-tab-improvements';
 
 const ACCENT = MODULE_COLORS.core;
 
@@ -68,6 +72,328 @@ const FLOW_ARROWS: FlowArrow[] = [
   { from: 'GAS damage application', to: 'Death flow', label: 'HP <= 0' },
 ];
 
+/* ── 4.1 Combat Event Sequence Diagram data ────────────────────────────── */
+
+interface SequenceLane {
+  id: string;
+  label: string;
+  color: string;
+}
+
+interface SequenceEvent {
+  label: string;
+  fromLane: string;
+  toLane: string;
+  color: string;
+}
+
+const SEQ_LANES: SequenceLane[] = [
+  { id: 'player', label: 'Player', color: ACCENT_EMERALD },
+  { id: 'anim', label: 'AnimSystem', color: ACCENT_CYAN },
+  { id: 'gas', label: 'GAS', color: ACCENT_ORANGE },
+  { id: 'feedback', label: 'FeedbackSystem', color: ACCENT_VIOLET },
+];
+
+const SEQ_EVENTS: SequenceEvent[] = [
+  { label: 'InputPressed', fromLane: 'player', toLane: 'player', color: ACCENT_EMERALD },
+  { label: 'AbilityActivated', fromLane: 'player', toLane: 'gas', color: ACCENT_ORANGE },
+  { label: 'MontageStarted', fromLane: 'gas', toLane: 'anim', color: ACCENT_CYAN },
+  { label: 'HitDetectionBegin', fromLane: 'anim', toLane: 'anim', color: ACCENT_CYAN },
+  { label: 'DamageApplied', fromLane: 'anim', toLane: 'gas', color: ACCENT_ORANGE },
+  { label: 'FeedbackTriggered', fromLane: 'gas', toLane: 'feedback', color: ACCENT_VIOLET },
+];
+
+/* ── 4.2 Hit Detection Debug data ──────────────────────────────────────── */
+
+interface TraceFrame {
+  cx: number;
+  cy: number;
+  r: number;
+  hit: boolean;
+}
+
+const TRACE_FRAMES: TraceFrame[] = [
+  { cx: 30, cy: 80, r: 12, hit: false },
+  { cx: 55, cy: 60, r: 14, hit: false },
+  { cx: 85, cy: 42, r: 15, hit: true },
+  { cx: 115, cy: 35, r: 14, hit: true },
+  { cx: 145, cy: 40, r: 12, hit: false },
+];
+
+const HIT_STATS = [
+  { label: 'Hit Rate', value: '67%', color: ACCENT_EMERALD },
+  { label: 'Avg Hits/Swing', value: '2.3', color: ACCENT_CYAN },
+  { label: 'Trace Coverage', value: '85%', color: ACCENT_ORANGE },
+];
+
+/* ── 4.3 Feedback Intensity Tuner data ─────────────────────────────────── */
+
+interface FeedbackParam {
+  id: string;
+  label: string;
+  min: number;
+  max: number;
+  step: number;
+  defaultValue: number;
+  unit: string;
+}
+
+const FEEDBACK_PARAMS: FeedbackParam[] = [
+  { id: 'shakeScale', label: 'ShakeScale', min: 0, max: 2, step: 0.05, defaultValue: 0.8, unit: 'x' },
+  { id: 'hitstopDuration', label: 'HitstopDuration', min: 0, max: 0.2, step: 0.005, defaultValue: 0.05, unit: 's' },
+  { id: 'vfxScale', label: 'VFXScale', min: 0, max: 3, step: 0.1, defaultValue: 1.5, unit: 'x' },
+  { id: 'sfxVolume', label: 'SFXVolume', min: 0, max: 1, step: 0.05, defaultValue: 0.7, unit: '' },
+  { id: 'screenFlashAlpha', label: 'ScreenFlashAlpha', min: 0, max: 0.5, step: 0.01, defaultValue: 0.15, unit: '' },
+];
+
+interface FeedbackPreset {
+  name: string;
+  values: Record<string, number>;
+  color: string;
+}
+
+const FEEDBACK_PRESETS: FeedbackPreset[] = [
+  { name: 'Subtle', values: { shakeScale: 0.3, hitstopDuration: 0.02, vfxScale: 0.8, sfxVolume: 0.4, screenFlashAlpha: 0.05 }, color: ACCENT_CYAN },
+  { name: 'Normal', values: { shakeScale: 0.8, hitstopDuration: 0.05, vfxScale: 1.5, sfxVolume: 0.7, screenFlashAlpha: 0.15 }, color: ACCENT_EMERALD },
+  { name: 'Juicy', values: { shakeScale: 1.6, hitstopDuration: 0.12, vfxScale: 2.5, sfxVolume: 0.95, screenFlashAlpha: 0.35 }, color: ACCENT_ORANGE },
+];
+
+/* ── 4.4 Projectile Trajectory data ────────────────────────────────────── */
+
+interface ProjectilePath {
+  label: string;
+  color: string;
+  speed: number;
+  flightTime: string;
+  maxRange: string;
+  points: { x: number; y: number }[];
+}
+
+const PROJECTILE_PATHS: ProjectilePath[] = [
+  {
+    label: 'Straight',
+    color: '#3b82f6',
+    speed: 2000,
+    flightTime: '0.5s',
+    maxRange: '1000u',
+    points: [
+      { x: 10, y: 50 }, { x: 50, y: 50 }, { x: 90, y: 50 }, { x: 130, y: 50 }, { x: 180, y: 50 },
+    ],
+  },
+  {
+    label: 'Arced',
+    color: ACCENT_ORANGE,
+    speed: 1200,
+    flightTime: '1.2s',
+    maxRange: '800u',
+    points: [
+      { x: 10, y: 80 }, { x: 50, y: 45 }, { x: 90, y: 25 }, { x: 130, y: 30 }, { x: 180, y: 80 },
+    ],
+  },
+  {
+    label: 'Homing',
+    color: ACCENT_VIOLET,
+    speed: 800,
+    flightTime: '1.8s',
+    maxRange: '1200u',
+    points: [
+      { x: 10, y: 80 }, { x: 40, y: 70 }, { x: 80, y: 55 }, { x: 130, y: 30 }, { x: 180, y: 25 },
+    ],
+  },
+];
+
+/* ── 4.5 DPS Calculator data ───────────────────────────────────────────── */
+
+interface DPSStrategy {
+  name: string;
+  dps: number;
+  time: string;
+  color: string;
+}
+
+const DPS_STRATEGIES: DPSStrategy[] = [
+  { name: 'SingleAttackSpam', dps: 180, time: 'Infinite', color: '#64748b' },
+  { name: 'Full3HitCombo', dps: 245, time: '1.55s', color: ACCENT_CYAN },
+  { name: 'CancelIntoAbility', dps: 310, time: '1.2s', color: ACCENT_EMERALD },
+];
+
+const DPS_MAX = 310;
+
+// Cumulative damage over 5 seconds at each DPS rate
+const CUMULATIVE_POINTS = [0, 1, 2, 3, 4, 5];
+
+/* ── 4.6 Damage Type Effectiveness data ────────────────────────────────── */
+
+const DMG_TYPES = ['Physical', 'Fire', 'Ice', 'Lightning'];
+const ARMOR_TYPES = ['Light', 'Medium', 'Heavy', 'Magical'];
+
+const EFFECTIVENESS_DATA: HeatmapCell[] = [
+  // Physical row (0)
+  { row: 0, col: 0, value: 0.8, label: '1.2', tooltip: 'Physical vs Light: 1.2x (effective)' },
+  { row: 0, col: 1, value: 0.6, label: '1.0', tooltip: 'Physical vs Medium: 1.0x (neutral)' },
+  { row: 0, col: 2, value: 0.2, label: '0.5', tooltip: 'Physical vs Heavy: 0.5x (resisted)' },
+  { row: 0, col: 3, value: 0.4, label: '0.8', tooltip: 'Physical vs Magical: 0.8x (slightly resisted)' },
+  // Fire row (1)
+  { row: 1, col: 0, value: 1.0, label: '1.5', tooltip: 'Fire vs Light: 1.5x (very effective)' },
+  { row: 1, col: 1, value: 0.7, label: '1.1', tooltip: 'Fire vs Medium: 1.1x (slightly effective)' },
+  { row: 1, col: 2, value: 0.5, label: '0.9', tooltip: 'Fire vs Heavy: 0.9x (slightly resisted)' },
+  { row: 1, col: 3, value: 0.25, label: '0.7', tooltip: 'Fire vs Magical: 0.7x (resisted)' },
+  // Ice row (2)
+  { row: 2, col: 0, value: 0.5, label: '0.9', tooltip: 'Ice vs Light: 0.9x (slightly resisted)' },
+  { row: 2, col: 1, value: 0.85, label: '1.3', tooltip: 'Ice vs Medium: 1.3x (effective)' },
+  { row: 2, col: 2, value: 0.7, label: '1.1', tooltip: 'Ice vs Heavy: 1.1x (slightly effective)' },
+  { row: 2, col: 3, value: 0.6, label: '1.0', tooltip: 'Ice vs Magical: 1.0x (neutral)' },
+  // Lightning row (3)
+  { row: 3, col: 0, value: 0.6, label: '1.0', tooltip: 'Lightning vs Light: 1.0x (neutral)' },
+  { row: 3, col: 1, value: 0.5, label: '0.9', tooltip: 'Lightning vs Medium: 0.9x (slightly resisted)' },
+  { row: 3, col: 2, value: 0.3, label: '0.6', tooltip: 'Lightning vs Heavy: 0.6x (resisted)' },
+  { row: 3, col: 3, value: 1.0, label: '1.5', tooltip: 'Lightning vs Magical: 1.5x (very effective)' },
+];
+
+/* ── 4.7 Combat Flow Sankey data ───────────────────────────────────────── */
+
+interface SankeyColumn {
+  label: string;
+  items: { id: string; label: string; pct: number; color: string }[];
+}
+
+const SANKEY_COLUMNS: SankeyColumn[] = [
+  {
+    label: 'Input',
+    items: [
+      { id: 'light', label: 'LightAttack', pct: 60, color: ACCENT_CYAN },
+      { id: 'heavy', label: 'HeavyAttack', pct: 25, color: ACCENT_ORANGE },
+      { id: 'dodge', label: 'Dodge', pct: 15, color: ACCENT_EMERALD },
+    ],
+  },
+  {
+    label: 'Result',
+    items: [
+      { id: 'hit', label: 'Hit', pct: 70, color: ACCENT_EMERALD },
+      { id: 'miss', label: 'Miss', pct: 20, color: '#64748b' },
+      { id: 'blocked', label: 'Blocked', pct: 10, color: ACCENT_ORANGE },
+    ],
+  },
+  {
+    label: 'Outcome',
+    items: [
+      { id: 'damage', label: 'Damage', pct: 55, color: ACCENT_EMERALD },
+      { id: 'stagger', label: 'Stagger', pct: 15, color: ACCENT_VIOLET },
+      { id: 'kill', label: 'Kill', pct: 5, color: STATUS_ERROR },
+      { id: 'noDmg', label: 'NoDamage', pct: 25, color: '#64748b' },
+    ],
+  },
+];
+
+// Flow connections between sankey columns
+interface SankeyFlow {
+  from: string;
+  to: string;
+  value: number; // percent of total
+  color: string;
+}
+
+const SANKEY_FLOWS: SankeyFlow[] = [
+  // Input -> Result
+  { from: 'light', to: 'hit', value: 45, color: ACCENT_CYAN },
+  { from: 'light', to: 'miss', value: 10, color: '#64748b' },
+  { from: 'light', to: 'blocked', value: 5, color: ACCENT_ORANGE },
+  { from: 'heavy', to: 'hit', value: 18, color: ACCENT_ORANGE },
+  { from: 'heavy', to: 'miss', value: 5, color: '#64748b' },
+  { from: 'heavy', to: 'blocked', value: 2, color: ACCENT_ORANGE },
+  { from: 'dodge', to: 'hit', value: 7, color: ACCENT_EMERALD },
+  { from: 'dodge', to: 'miss', value: 5, color: '#64748b' },
+  { from: 'dodge', to: 'blocked', value: 3, color: ACCENT_ORANGE },
+  // Result -> Outcome
+  { from: 'hit', to: 'damage', value: 45, color: ACCENT_EMERALD },
+  { from: 'hit', to: 'stagger', value: 15, color: ACCENT_VIOLET },
+  { from: 'hit', to: 'kill', value: 5, color: STATUS_ERROR },
+  { from: 'hit', to: 'noDmg', value: 5, color: '#64748b' },
+  { from: 'miss', to: 'noDmg', value: 15, color: '#64748b' },
+  { from: 'miss', to: 'damage', value: 5, color: ACCENT_EMERALD },
+  { from: 'blocked', to: 'damage', value: 5, color: ACCENT_EMERALD },
+  { from: 'blocked', to: 'noDmg', value: 5, color: '#64748b' },
+];
+
+/* ── 4.8 Hitstop Timing data ──────────────────────────────────────────── */
+
+interface HitstopAbility {
+  name: string;
+  hitstop: number;
+  animDuration: number;
+  color: string;
+}
+
+const HITSTOP_ABILITIES: HitstopAbility[] = [
+  { name: 'LightAttack1', hitstop: 0.03, animDuration: 0.4, color: ACCENT_CYAN },
+  { name: 'LightAttack2', hitstop: 0.04, animDuration: 0.5, color: ACCENT_CYAN },
+  { name: 'LightAttack3', hitstop: 0.06, animDuration: 0.6, color: ACCENT_ORANGE },
+  { name: 'HeavyAttack', hitstop: 0.10, animDuration: 0.9, color: ACCENT_VIOLET },
+  { name: 'Slam', hitstop: 0.15, animDuration: 1.2, color: STATUS_ERROR },
+];
+
+const MAX_HITSTOP = 0.15;
+
+/* ── 4.9 Combat Metrics data ──────────────────────────────────────────── */
+
+interface KPICard {
+  label: string;
+  value: string;
+  trend?: string;
+  trendColor?: string;
+  barPct?: number;
+  barColor?: string;
+}
+
+const KPI_CARDS: KPICard[] = [
+  { label: 'Total Damage Dealt', value: '12,450', trend: '+15%', trendColor: ACCENT_EMERALD },
+  { label: 'Crit Rate', value: '18%', barPct: 18, barColor: ACCENT_ORANGE },
+  { label: 'Dodge Success', value: '85%', barPct: 85, barColor: ACCENT_CYAN },
+  { label: 'Avg Combo Length', value: '2.3', barPct: 46, barColor: ACCENT_VIOLET },
+];
+
+const HIT_ACCURACY_GAUGE: GaugeMetric = {
+  label: 'Hit Accuracy',
+  current: 73,
+  target: 100,
+  unit: '%',
+  trend: 'up',
+};
+
+interface PieSlice {
+  label: string;
+  pct: number;
+  color: string;
+}
+
+const ABILITY_USAGE: PieSlice[] = [
+  { label: 'MeleeAttack', pct: 45, color: ACCENT_ORANGE },
+  { label: 'Dodge', pct: 25, color: ACCENT_CYAN },
+  { label: 'Fireball', pct: 20, color: STATUS_ERROR },
+  { label: 'Other', pct: 10, color: '#64748b' },
+];
+
+/* ── 4.10 Stagger & Status Effect data ─────────────────────────────────── */
+
+const STAGGER_CONFIG = {
+  currentStagger: 67,
+  threshold: 100,
+  decayRate: 5,
+};
+
+const STAGGER_PIPELINE_STEPS = ['Hits Accumulate', 'Threshold Reached', 'Stun Triggered', 'Recovery'];
+
+const STAGGER_TIMELINE: TimelineEvent[] = [
+  { id: 'st1', timestamp: 0, label: '+15', category: 'hit', color: ACCENT_ORANGE, duration: 0.3 },
+  { id: 'st2', timestamp: 1.2, label: '+20', category: 'hit', color: ACCENT_ORANGE, duration: 0.3 },
+  { id: 'st3', timestamp: 2.5, label: '-5 decay', category: 'decay', color: '#64748b', duration: 1.0 },
+  { id: 'st4', timestamp: 3.8, label: '+25', category: 'hit', color: ACCENT_ORANGE, duration: 0.3 },
+  { id: 'st5', timestamp: 5.0, label: '+15', category: 'hit', color: ACCENT_ORANGE, duration: 0.3 },
+  { id: 'st6', timestamp: 6.2, label: '-5 decay', category: 'decay', color: '#64748b', duration: 1.0 },
+  { id: 'st7', timestamp: 7.5, label: 'STUN', category: 'stun', color: STATUS_ERROR, duration: 1.5 },
+  { id: 'st8', timestamp: 9.0, label: 'Recovery', category: 'recovery', color: ACCENT_EMERALD, duration: 1.0 },
+];
+
 /* ── Component ─────────────────────────────────────────────────────────── */
 
 interface CombatActionMapProps {
@@ -79,7 +405,14 @@ export function CombatActionMap({ moduleId }: CombatActionMapProps) {
   const defs = useMemo(() => MODULE_FEATURE_DEFINITIONS[moduleId] ?? [], [moduleId]);
   const [expanded, setExpanded] = useState<string | null>(null);
 
-  // Build a lookup: featureName → FeatureRow (review data)
+  // Feedback Intensity Tuner state (4.3)
+  const [feedbackValues, setFeedbackValues] = useState<Record<string, number>>(() => {
+    const defaults: Record<string, number> = {};
+    for (const p of FEEDBACK_PARAMS) defaults[p.id] = p.defaultValue;
+    return defaults;
+  });
+
+  // Build a lookup: featureName -> FeatureRow (review data)
   const featureMap = useMemo(() => {
     const map = new Map<string, FeatureRow>();
     for (const f of features) map.set(f.featureName, f);
@@ -101,6 +434,24 @@ export function CombatActionMap({ moduleId }: CombatActionMapProps) {
 
   const toggleExpand = useCallback((name: string) => {
     setExpanded((prev) => (prev === name ? null : name));
+  }, []);
+
+  // Juice level calculation (4.3)
+  const juiceLevel = useMemo(() => {
+    let total = 0;
+    for (const p of FEEDBACK_PARAMS) {
+      const norm = (feedbackValues[p.id] - p.min) / (p.max - p.min);
+      total += norm;
+    }
+    return total / FEEDBACK_PARAMS.length;
+  }, [feedbackValues]);
+
+  const applyPreset = useCallback((preset: FeedbackPreset) => {
+    setFeedbackValues({ ...preset.values });
+  }, []);
+
+  const updateFeedbackParam = useCallback((id: string, value: number) => {
+    setFeedbackValues(prev => ({ ...prev, [id]: value }));
   }, []);
 
   if (isLoading) {
@@ -153,6 +504,458 @@ export function CombatActionMap({ moduleId }: CombatActionMapProps) {
       >
         <ComboChainDiagram status={featureMap.get('Combo system')?.status ?? 'unknown'} />
       </motion.div>
+
+      {/* ── 4.1 Combat Event Sequence Diagram ─────────────────────────────── */}
+      <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.35 }}>
+        <SurfaceCard level={2} className="p-4 relative overflow-hidden">
+          <SectionLabel icon={GitBranch} label="Combat Event Sequence" />
+          <div className="mt-3 overflow-x-auto custom-scrollbar">
+            <svg width="440" height="260" viewBox="0 0 440 260" className="overflow-visible">
+              {/* Lane vertical lines */}
+              {SEQ_LANES.map((lane, i) => {
+                const x = 60 + i * 100;
+                return (
+                  <g key={lane.id}>
+                    <line x1={x} y1={30} x2={x} y2={240} stroke={lane.color} strokeWidth="2" strokeDasharray="4 4" opacity="0.4" />
+                    <rect x={x - 38} y={4} width="76" height="22" rx="4" fill={`${lane.color}20`} stroke={lane.color} strokeWidth="1" />
+                    <text x={x} y={18} textAnchor="middle" className="text-[9px] font-mono font-bold" fill={lane.color}>{lane.label}</text>
+                  </g>
+                );
+              })}
+              {/* Events as horizontal arrows */}
+              {SEQ_EVENTS.map((evt, i) => {
+                const y = 50 + i * 34;
+                const fromIdx = SEQ_LANES.findIndex(l => l.id === evt.fromLane);
+                const toIdx = SEQ_LANES.findIndex(l => l.id === evt.toLane);
+                const fromX = 60 + fromIdx * 100;
+                const toX = 60 + toIdx * 100;
+                const isSelf = fromIdx === toIdx;
+
+                return (
+                  <g key={evt.label}>
+                    {isSelf ? (
+                      <>
+                        <circle cx={fromX} cy={y} r="4" fill={evt.color} opacity="0.8" />
+                        <text x={fromX + 10} y={y + 3} className="text-[8px] font-mono" fill={evt.color}>{evt.label}</text>
+                      </>
+                    ) : (
+                      <>
+                        <line x1={fromX} y1={y} x2={toX} y2={y} stroke={evt.color} strokeWidth="1.5" markerEnd="url(#arrowhead)" />
+                        <circle cx={fromX} cy={y} r="3" fill={evt.color} />
+                        <polygon points={`${toX - 6},${y - 3} ${toX},${y} ${toX - 6},${y + 3}`} fill={evt.color} />
+                        <text x={(fromX + toX) / 2} y={y - 6} textAnchor="middle" className="text-[8px] font-mono" fill={evt.color}>{evt.label}</text>
+                      </>
+                    )}
+                  </g>
+                );
+              })}
+            </svg>
+          </div>
+        </SurfaceCard>
+      </motion.div>
+
+      {/* ── 4.2 Hit Detection Debug Visualizer ────────────────────────────── */}
+      <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }}>
+        <SurfaceCard level={2} className="p-4 relative overflow-hidden">
+          <SectionLabel icon={Crosshair} label="Hit Detection Debug" />
+          <div className="mt-3 flex gap-4 flex-wrap items-start">
+            <svg width="180" height="120" viewBox="0 0 180 120" className="overflow-visible flex-shrink-0">
+              {/* Background sweep arc */}
+              <path d="M 20,100 Q 50,20 90,15 Q 130,10 160,30" fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth="28" strokeLinecap="round" />
+              {/* Trace frames */}
+              {TRACE_FRAMES.map((frame, i) => (
+                <g key={i}>
+                  <circle cx={frame.cx} cy={frame.cy} r={frame.r} fill={frame.hit ? `${STATUS_ERROR}30` : 'rgba(255,255,255,0.05)'} stroke={frame.hit ? STATUS_ERROR : '#64748b'} strokeWidth="1.5" strokeDasharray={frame.hit ? 'none' : '3 2'} />
+                  {frame.hit && (
+                    <circle cx={frame.cx} cy={frame.cy} r={frame.r + 3} fill="none" stroke={STATUS_ERROR} strokeWidth="0.5" opacity="0.4" />
+                  )}
+                  <text x={frame.cx} y={frame.cy + 3} textAnchor="middle" className="text-[7px] font-mono" fill={frame.hit ? STATUS_ERROR : '#64748b'}>
+                    {frame.hit ? 'HIT' : 'MISS'}
+                  </text>
+                </g>
+              ))}
+              {/* Arc path connecting frames */}
+              <path d={`M ${TRACE_FRAMES[0].cx},${TRACE_FRAMES[0].cy} ${TRACE_FRAMES.slice(1).map(f => `L ${f.cx},${f.cy}`).join(' ')}`} fill="none" stroke="rgba(255,255,255,0.15)" strokeWidth="1" strokeDasharray="2 3" />
+            </svg>
+            <div className="flex flex-col gap-2 flex-1 min-w-[140px]">
+              {HIT_STATS.map((stat) => (
+                <div key={stat.label} className="flex items-center gap-2 px-2 py-1.5 rounded bg-surface/50">
+                  <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: stat.color }} />
+                  <span className="text-2xs font-mono text-text-muted flex-shrink-0">{stat.label}</span>
+                  <span className="text-xs font-mono font-bold ml-auto" style={{ color: stat.color }}>{stat.value}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </SurfaceCard>
+      </motion.div>
+
+      {/* ── 4.3 Feedback Intensity Tuner ──────────────────────────────────── */}
+      <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.45 }}>
+        <SurfaceCard level={2} className="p-4 relative overflow-hidden">
+          <div className="flex items-center justify-between mb-3">
+            <SectionLabel icon={Gauge} label="Feedback Intensity Tuner" />
+            <div className="flex gap-1.5">
+              {FEEDBACK_PRESETS.map((preset) => (
+                <button
+                  key={preset.name}
+                  onClick={() => applyPreset(preset)}
+                  className="text-2xs font-mono font-bold px-2 py-0.5 rounded border transition-colors hover:brightness-125"
+                  style={{ color: preset.color, borderColor: `${preset.color}40`, backgroundColor: `${preset.color}10` }}
+                >
+                  {preset.name}
+                </button>
+              ))}
+            </div>
+          </div>
+          <div className="space-y-2.5">
+            {FEEDBACK_PARAMS.map((param) => {
+              const val = feedbackValues[param.id];
+              const pct = ((val - param.min) / (param.max - param.min)) * 100;
+              return (
+                <div key={param.id} className="flex items-center gap-3">
+                  <span className="text-2xs font-mono text-text-muted w-[120px] flex-shrink-0 truncate">{param.label}</span>
+                  <div className="flex-1 relative">
+                    <div className="h-1.5 rounded-full bg-surface-deep overflow-hidden">
+                      <motion.div
+                        className="h-full rounded-full"
+                        style={{ width: `${pct}%`, backgroundColor: ACCENT }}
+                        layout
+                        transition={{ type: 'spring', stiffness: 300, damping: 30 }}
+                      />
+                    </div>
+                    <input
+                      type="range"
+                      min={param.min}
+                      max={param.max}
+                      step={param.step}
+                      value={val}
+                      onChange={(e) => updateFeedbackParam(param.id, parseFloat(e.target.value))}
+                      className="absolute inset-0 w-full opacity-0 cursor-pointer"
+                    />
+                  </div>
+                  <span className="text-2xs font-mono font-bold w-[50px] text-right" style={{ color: ACCENT }}>
+                    {val.toFixed(param.step < 0.01 ? 3 : 2)}{param.unit}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+          {/* Juice Level Meter */}
+          <div className="mt-3 pt-3 border-t border-border/30">
+            <div className="flex items-center gap-3">
+              <span className="text-2xs font-mono font-bold text-text-muted uppercase tracking-wider">Juice Level</span>
+              <div className="flex-1 h-3 rounded-full bg-surface-deep overflow-hidden shadow-inner">
+                <motion.div
+                  className="h-full rounded-full"
+                  style={{
+                    width: `${juiceLevel * 100}%`,
+                    backgroundColor: juiceLevel < 0.33 ? ACCENT_CYAN : juiceLevel < 0.66 ? ACCENT_EMERALD : ACCENT_ORANGE,
+                  }}
+                  layout
+                  transition={{ type: 'spring', stiffness: 300, damping: 30 }}
+                />
+              </div>
+              <span className="text-xs font-mono font-bold" style={{ color: juiceLevel < 0.33 ? ACCENT_CYAN : juiceLevel < 0.66 ? ACCENT_EMERALD : ACCENT_ORANGE }}>
+                {(juiceLevel * 100).toFixed(0)}%
+              </span>
+            </div>
+          </div>
+        </SurfaceCard>
+      </motion.div>
+
+      {/* ── 4.4 Projectile Trajectory Planner ─────────────────────────────── */}
+      <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.5 }}>
+        <SurfaceCard level={2} className="p-4 relative overflow-hidden">
+          <SectionLabel icon={Target} label="Projectile Trajectory Planner" />
+          <div className="mt-3">
+            <svg width="200" height="100" viewBox="0 0 200 100" className="w-full overflow-visible" preserveAspectRatio="xMidYMid meet">
+              {/* Ground line */}
+              <line x1="5" y1="90" x2="195" y2="90" stroke="rgba(255,255,255,0.1)" strokeWidth="1" />
+              {/* Target */}
+              <circle cx="180" cy="25" r="6" fill="none" stroke={STATUS_ERROR} strokeWidth="1" opacity="0.5" />
+              <circle cx="180" cy="25" r="3" fill={`${STATUS_ERROR}50`} />
+              <text x="180" y="18" textAnchor="middle" className="text-[7px] font-mono" fill={STATUS_ERROR}>TARGET</text>
+              {/* Paths */}
+              {PROJECTILE_PATHS.map((path) => {
+                const d = `M ${path.points.map(p => `${p.x},${p.y}`).join(' L ')}`;
+                return (
+                  <g key={path.label}>
+                    <path d={d} fill="none" stroke={path.color} strokeWidth="1.5" opacity="0.7" />
+                    {path.points.map((p, i) => (
+                      <circle key={i} cx={p.x} cy={p.y} r="2" fill={path.color} opacity={i === 0 || i === path.points.length - 1 ? 1 : 0.4} />
+                    ))}
+                  </g>
+                );
+              })}
+            </svg>
+            {/* Legend / Config */}
+            <div className="mt-3 grid grid-cols-3 gap-2">
+              {PROJECTILE_PATHS.map((path) => (
+                <div key={path.label} className="px-2 py-1.5 rounded bg-surface/50 border border-border/30">
+                  <div className="flex items-center gap-1.5 mb-1">
+                    <span className="w-3 h-0.5 rounded-full" style={{ backgroundColor: path.color }} />
+                    <span className="text-2xs font-mono font-bold" style={{ color: path.color }}>{path.label}</span>
+                  </div>
+                  <div className="text-[9px] font-mono text-text-muted space-y-0.5">
+                    <div>Speed: {path.speed} u/s</div>
+                    <div>Flight: {path.flightTime}</div>
+                    <div>Range: {path.maxRange}</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </SurfaceCard>
+      </motion.div>
+
+      {/* ── 4.5 DPS Calculator with Combo Chains ─────────────────────────── */}
+      <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.55 }}>
+        <SurfaceCard level={2} className="p-4 relative overflow-hidden">
+          <SectionLabel icon={BarChart3} label="DPS Calculator" />
+          {/* Strategy comparison table */}
+          <div className="mt-3 space-y-1.5">
+            {DPS_STRATEGIES.map((strat, idx) => (
+              <motion.div
+                key={strat.name}
+                initial={{ opacity: 0, x: -8 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: idx * 0.08 }}
+                className="flex items-center gap-3 px-2 py-1.5 rounded hover:bg-surface-hover/30 transition-colors"
+              >
+                <span className="text-2xs font-mono text-text w-[130px] flex-shrink-0 truncate">{strat.name}</span>
+                <span className="text-2xs font-mono text-text-muted w-[50px] flex-shrink-0">{strat.time}</span>
+                <div className="flex-1 h-2 rounded-full bg-surface-deep overflow-hidden shadow-inner">
+                  <motion.div
+                    initial={{ width: 0 }}
+                    animate={{ width: `${(strat.dps / DPS_MAX) * 100}%` }}
+                    transition={{ delay: idx * 0.1 + 0.2, duration: 0.5 }}
+                    className="h-full rounded-full"
+                    style={{ backgroundColor: strat.color }}
+                  />
+                </div>
+                <span className="text-xs font-mono font-bold w-[55px] text-right" style={{ color: strat.color }}>{strat.dps} DPS</span>
+              </motion.div>
+            ))}
+          </div>
+          {/* Cumulative damage chart */}
+          <div className="mt-3 pt-3 border-t border-border/30">
+            <span className="text-2xs font-mono text-text-muted uppercase tracking-wider">Cumulative Damage (5s)</span>
+            <svg width="100%" height="80" viewBox="0 0 260 80" className="mt-2 overflow-visible" preserveAspectRatio="xMidYMid meet">
+              {/* Grid lines */}
+              {[0, 20, 40, 60].map(y => (
+                <line key={y} x1="30" y1={y + 5} x2="255" y2={y + 5} stroke="rgba(255,255,255,0.04)" strokeWidth="1" />
+              ))}
+              {/* X-axis labels */}
+              {CUMULATIVE_POINTS.map((t) => (
+                <text key={t} x={30 + t * 45} y="78" textAnchor="middle" className="text-[7px] font-mono" fill="rgba(255,255,255,0.3)">{t}s</text>
+              ))}
+              {/* Lines for each strategy */}
+              {DPS_STRATEGIES.map((strat) => {
+                const maxDmg = DPS_MAX * 5;
+                const pts = CUMULATIVE_POINTS.map(t => ({
+                  x: 30 + t * 45,
+                  y: 65 - ((strat.dps * t) / maxDmg) * 60,
+                }));
+                const d = `M ${pts.map(p => `${p.x},${p.y}`).join(' L ')}`;
+                return (
+                  <g key={strat.name}>
+                    <path d={d} fill="none" stroke={strat.color} strokeWidth="1.5" opacity="0.8" />
+                    {pts.map((p, i) => (
+                      <circle key={i} cx={p.x} cy={p.y} r="2" fill={strat.color} />
+                    ))}
+                  </g>
+                );
+              })}
+            </svg>
+          </div>
+        </SurfaceCard>
+      </motion.div>
+
+      {/* ── 4.6 Damage Type Effectiveness Matrix ─────────────────────────── */}
+      <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.6 }}>
+        <SurfaceCard level={2} className="p-4 relative overflow-hidden">
+          <SectionLabel icon={Flame} label="Damage Type Effectiveness" />
+          <div className="mt-3">
+            <HeatmapGrid
+              rows={DMG_TYPES}
+              cols={ARMOR_TYPES}
+              cells={EFFECTIVENESS_DATA}
+              lowColor="#7f1d1d"
+              highColor="#065f46"
+              accent={ACCENT}
+            />
+            <div className="flex items-center gap-4 mt-2 text-[9px] font-mono text-text-muted">
+              <span className="flex items-center gap-1"><span className="w-3 h-3 rounded-sm" style={{ backgroundColor: '#065f46' }} /> Effective</span>
+              <span className="flex items-center gap-1"><span className="w-3 h-3 rounded-sm" style={{ backgroundColor: '#374151' }} /> Neutral</span>
+              <span className="flex items-center gap-1"><span className="w-3 h-3 rounded-sm" style={{ backgroundColor: '#7f1d1d' }} /> Resisted</span>
+            </div>
+          </div>
+        </SurfaceCard>
+      </motion.div>
+
+      {/* ── 4.7 Combat Flow Sankey Diagram ────────────────────────────────── */}
+      <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.65 }}>
+        <SurfaceCard level={2} className="p-4 relative overflow-hidden">
+          <SectionLabel icon={Activity} label="Combat Flow" />
+          <div className="mt-3 overflow-x-auto custom-scrollbar">
+            <CombatFlowSankey />
+          </div>
+        </SurfaceCard>
+      </motion.div>
+
+      {/* ── 4.8 Hitstop Timing Chart ─────────────────────────────────────── */}
+      <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.7 }}>
+        <SurfaceCard level={2} className="p-4 relative overflow-hidden">
+          <SectionLabel icon={Timer} label="Hitstop Timing" />
+          <div className="mt-3 flex items-end gap-3 justify-around">
+            {HITSTOP_ABILITIES.map((ability, idx) => {
+              const barHeight = (ability.hitstop / MAX_HITSTOP) * 80;
+              const intensity = ability.hitstop / MAX_HITSTOP;
+              return (
+                <motion.div
+                  key={ability.name}
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: idx * 0.08 }}
+                  className="flex flex-col items-center gap-1"
+                >
+                  <span className="text-[9px] font-mono font-bold" style={{ color: ability.color }}>{ability.hitstop}s</span>
+                  <div className="w-8 rounded-t relative overflow-hidden" style={{ height: barHeight, backgroundColor: `${ability.color}30` }}>
+                    <motion.div
+                      className="absolute bottom-0 left-0 right-0 rounded-t"
+                      style={{ backgroundColor: ability.color, opacity: 0.4 + intensity * 0.6 }}
+                      initial={{ height: 0 }}
+                      animate={{ height: '100%' }}
+                      transition={{ delay: idx * 0.1 + 0.3, duration: 0.4 }}
+                    />
+                  </div>
+                  {/* Mini timeline under bar */}
+                  <div className="w-12 h-1.5 rounded-full bg-surface-deep relative overflow-hidden mt-0.5">
+                    <div
+                      className="absolute h-full rounded-full"
+                      style={{
+                        backgroundColor: ability.color,
+                        left: `${((ability.animDuration - ability.hitstop) / ability.animDuration) * 30}%`,
+                        width: `${(ability.hitstop / ability.animDuration) * 100}%`,
+                        opacity: 0.7,
+                      }}
+                    />
+                  </div>
+                  <span className="text-[8px] font-mono text-text-muted truncate max-w-[60px] text-center">{ability.name}</span>
+                </motion.div>
+              );
+            })}
+          </div>
+          <div className="mt-2 text-[9px] font-mono text-text-muted text-center opacity-60">
+            Bar height = hitstop duration | Mini bar = hitstop window within animation
+          </div>
+        </SurfaceCard>
+      </motion.div>
+
+      {/* ── 4.9 Combat Metrics Dashboard ──────────────────────────────────── */}
+      <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.75 }}>
+        <SurfaceCard level={2} className="p-4 relative overflow-hidden">
+          <SectionLabel icon={TrendingUp} label="Combat Metrics" />
+          <div className="mt-3 flex gap-4 flex-wrap">
+            {/* KPI Cards */}
+            <div className="flex-1 min-w-[180px] space-y-2">
+              {KPI_CARDS.map((card) => (
+                <div key={card.label} className="flex items-center gap-2 px-2 py-1.5 rounded bg-surface/50">
+                  <div className="flex-1 min-w-0">
+                    <div className="text-[9px] font-mono text-text-muted uppercase tracking-wider truncate">{card.label}</div>
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-sm font-mono font-bold text-text">{card.value}</span>
+                      {card.trend && (
+                        <span className="text-2xs font-mono" style={{ color: card.trendColor }}>{card.trend}</span>
+                      )}
+                    </div>
+                  </div>
+                  {card.barPct != null && (
+                    <div className="w-16 h-1.5 rounded-full bg-surface-deep overflow-hidden flex-shrink-0">
+                      <div className="h-full rounded-full" style={{ width: `${card.barPct}%`, backgroundColor: card.barColor }} />
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+            {/* Hit Accuracy Gauge */}
+            <div className="flex flex-col items-center gap-2">
+              <LiveMetricGauge metric={HIT_ACCURACY_GAUGE} size={80} accent={ACCENT} />
+            </div>
+            {/* Ability Usage Pie */}
+            <div className="flex flex-col items-center gap-2">
+              <AbilityPieChart slices={ABILITY_USAGE} size={80} />
+              <div className="flex flex-wrap gap-x-2 gap-y-0.5 justify-center max-w-[120px]">
+                {ABILITY_USAGE.map((slice) => (
+                  <span key={slice.label} className="flex items-center gap-1 text-[8px] font-mono whitespace-nowrap" style={{ color: slice.color }}>
+                    <span className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ backgroundColor: slice.color }} />
+                    {slice.label} {slice.pct}%
+                  </span>
+                ))}
+              </div>
+            </div>
+          </div>
+        </SurfaceCard>
+      </motion.div>
+
+      {/* ── 4.10 Stagger & Status Effect Flow ────────────────────────────── */}
+      <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.8 }}>
+        <SurfaceCard level={2} className="p-4 relative overflow-hidden">
+          <SectionLabel icon={Layers} label="Stagger & Status Effects" />
+          {/* Stagger meter */}
+          <div className="mt-3">
+            <div className="flex items-center gap-2 mb-1">
+              <span className="text-2xs font-mono text-text-muted">Stagger</span>
+              <span className="text-xs font-mono font-bold" style={{ color: STAGGER_CONFIG.currentStagger >= STAGGER_CONFIG.threshold * 0.8 ? STATUS_ERROR : ACCENT_ORANGE }}>
+                {STAGGER_CONFIG.currentStagger}/{STAGGER_CONFIG.threshold}
+              </span>
+            </div>
+            <div className="relative h-4 rounded-full bg-surface-deep overflow-hidden shadow-inner">
+              <motion.div
+                className="h-full rounded-full"
+                style={{ backgroundColor: STAGGER_CONFIG.currentStagger >= STAGGER_CONFIG.threshold * 0.8 ? STATUS_ERROR : ACCENT_ORANGE }}
+                initial={{ width: 0 }}
+                animate={{ width: `${(STAGGER_CONFIG.currentStagger / STAGGER_CONFIG.threshold) * 100}%` }}
+                transition={{ duration: 0.6, ease: 'easeOut' }}
+              />
+              {/* Threshold marker */}
+              <div
+                className="absolute top-0 bottom-0 w-0.5 bg-white/60"
+                style={{ left: '100%' }}
+                title={`Threshold: ${STAGGER_CONFIG.threshold}`}
+              />
+              {/* 80% warning marker */}
+              <div
+                className="absolute top-0 bottom-0 w-px bg-white/20"
+                style={{ left: '80%' }}
+              />
+            </div>
+          </div>
+
+          {/* Pipeline diagram */}
+          <div className="mt-3">
+            <PipelineFlow
+              steps={STAGGER_PIPELINE_STEPS}
+              accent={ACCENT_ORANGE}
+            />
+          </div>
+
+          {/* Stagger timeline */}
+          <div className="mt-3 pt-3 border-t border-border/30">
+            <span className="text-2xs font-mono text-text-muted uppercase tracking-wider">Stagger Buildup Timeline (10s)</span>
+            <div className="mt-2">
+              <TimelineStrip events={STAGGER_TIMELINE} accent={ACCENT_ORANGE} height={80} />
+            </div>
+          </div>
+
+          {/* Config */}
+          <div className="mt-3 flex gap-3 text-[9px] font-mono text-text-muted">
+            <span>Threshold: <span className="text-text font-bold">{STAGGER_CONFIG.threshold}</span></span>
+            <span>Decay Rate: <span className="text-text font-bold">{STAGGER_CONFIG.decayRate}/s</span></span>
+          </div>
+        </SurfaceCard>
+      </motion.div>
     </div>
   );
 }
@@ -165,7 +968,6 @@ function LaneSection({
   defs,
   expanded,
   onToggle,
-  arrows,
 }: {
   lane: LaneConfig;
   featureMap: Map<string, FeatureRow>;
@@ -178,117 +980,78 @@ function LaneSection({
 
   return (
     <div className="relative">
-      {/* Lane background styling */}
-      <div className="absolute inset-0 rounded-xl opacity-5 pointer-events-none" style={{ backgroundColor: lane.color }} />
       <div className="absolute -left-1 top-0 bottom-0 w-1 rounded-l opacity-50" style={{ backgroundColor: lane.color }} />
 
       <div className="pl-3 py-1">
-        <div className="flex items-center gap-2 mb-3">
-          <div className="p-1 rounded bg-surface/50 border border-border/50">
-            <LaneIcon className="w-3.5 h-3.5" style={{ color: lane.color, filter: `drop-shadow(0 0 3px ${lane.color}80)` }} />
-          </div>
-          <span className="text-xs font-bold uppercase tracking-widest text-text">
-            {lane.label}
-          </span>
+        <div className="flex items-center gap-2 mb-2">
+          <LaneIcon className="w-3.5 h-3.5" style={{ color: lane.color }} />
+          <span className="text-xs font-bold uppercase tracking-widest text-text">{lane.label}</span>
         </div>
 
-        <div className="flex gap-3 flex-wrap items-center">
-          {lane.featureNames.map((name, i) => {
+        <div className="space-y-0.5">
+          {lane.featureNames.map((name) => {
             const row = featureMap.get(name);
             const def = defs.find((d) => d.featureName === name);
             const status: FeatureStatus = row?.status ?? 'unknown';
             const sc = STATUS_COLORS[status];
             const isExpanded = expanded === name;
-            const outgoing = arrows.filter((a) => a.from === name);
 
             return (
-              <div key={name} className="flex items-center gap-3">
-                <SurfaceCard level={3} className="min-w-[200px] max-w-[260px] group relative overflow-hidden shadow-lg border-border/60">
-                  <div className="absolute top-0 left-0 w-full h-[1px] opacity-30" style={{ background: `linear-gradient(90deg, transparent, ${lane.color}, transparent)` }} />
+              <div key={name}>
+                <button
+                  onClick={() => onToggle(name)}
+                  className="w-full flex items-center gap-3 px-2 py-1.5 rounded hover:bg-surface-hover/50 transition-colors text-left"
+                >
+                  <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: lane.color }} />
+                  <span className="text-xs font-medium text-text w-[180px] flex-shrink-0 truncate">{name}</span>
+                  <span className="text-2xs px-1.5 py-0.5 rounded font-medium flex-shrink-0" style={{ backgroundColor: sc.bg, color: sc.dot }}>{sc.label}</span>
+                  {row?.qualityScore != null && (
+                    <span className="text-2xs font-mono text-emerald-400 bg-emerald-400/10 px-1 rounded-sm border border-emerald-400/20 flex-shrink-0">
+                      Q{row.qualityScore}
+                    </span>
+                  )}
+                  {row?.filePaths && row.filePaths.length > 0 && (
+                    <span className="text-2xs text-text-muted flex-shrink-0">{row.filePaths.length} files</span>
+                  )}
+                  <span className="ml-auto flex-shrink-0">
+                    {isExpanded
+                      ? <ChevronDown className="w-3 h-3 text-text-muted" />
+                      : <ChevronRight className="w-3 h-3 text-text-muted" />}
+                  </span>
+                </button>
 
-                  <button
-                    onClick={() => onToggle(name)}
-                    className="w-full text-left px-3.5 py-2.5 transition-colors hover:bg-surface-hover/50 focus:outline-none"
-                  >
-                    <div className="flex items-center gap-2">
-                      <motion.div
-                        animate={{ rotate: isExpanded ? 90 : 0 }}
-                        transition={{ type: "spring", stiffness: 300, damping: 20 }}
-                        className="flex-shrink-0"
-                      >
-                        <ChevronRight className="w-3.5 h-3.5 text-text-muted transition-colors group-hover:text-text" />
-                      </motion.div>
-                      <span className="text-xs font-semibold text-text truncate">{name}</span>
-                    </div>
-                    <div className="flex items-center gap-1.5 mt-2 ml-5">
-                      <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: sc.dot, boxShadow: `0 0 6px ${sc.dot}80` }} />
-                      <span className="text-2xs font-medium" style={{ color: sc.dot }}>{sc.label}</span>
-                      {row?.qualityScore != null && (
-                        <span className="text-2xs font-mono text-emerald-400 ml-auto bg-emerald-400/10 px-1 rounded-sm border border-emerald-400/20">
-                          Q{row.qualityScore}
-                        </span>
-                      )}
-                    </div>
-                  </button>
-
-                  <AnimatePresence>
-                    {isExpanded && (
-                      <motion.div
-                        initial={{ height: 0, opacity: 0 }}
-                        animate={{ height: 'auto', opacity: 1 }}
-                        exit={{ height: 0, opacity: 0 }}
-                        transition={{ opacity: { duration: 0.2 }, height: { duration: 0.3, type: "spring", bounce: 0 } }}
-                        className="overflow-hidden"
-                      >
-                        <div className="px-3 pb-3 space-y-2.5 border-t border-border/40 bg-surface/30">
-                          <p className="text-2xs text-text-muted leading-relaxed mt-2.5">
-                            {def?.description ?? row?.description ?? 'No description'}
+                <AnimatePresence>
+                  {isExpanded && (
+                    <motion.div
+                      initial={{ height: 0, opacity: 0 }}
+                      animate={{ height: 'auto', opacity: 1 }}
+                      exit={{ height: 0, opacity: 0 }}
+                      transition={{ duration: 0.2 }}
+                      className="overflow-hidden"
+                    >
+                      <div className="px-8 pb-2 space-y-2">
+                        <p className="text-2xs text-text-muted leading-relaxed">
+                          {def?.description ?? row?.description ?? 'No description'}
+                        </p>
+                        {row?.filePaths && row.filePaths.length > 0 && (
+                          <div className="flex flex-wrap gap-1.5">
+                            {row.filePaths.slice(0, 3).map((fp) => (
+                              <span key={fp} className="flex items-center gap-1 text-2xs font-mono px-1.5 py-0.5 rounded" style={{ backgroundColor: `${ACCENT}10`, color: ACCENT, border: `1px solid ${ACCENT}30` }}>
+                                <ExternalLink className="w-2.5 h-2.5" />
+                                {fp.split('/').pop()}
+                              </span>
+                            ))}
+                          </div>
+                        )}
+                        {row?.nextSteps && (
+                          <p className="text-2xs border-l-2 pl-2" style={{ borderColor: STATUS_WARNING, color: STATUS_WARNING }}>
+                            <span className="font-semibold opacity-70 mr-1">Next:</span>{row.nextSteps}
                           </p>
-                          {row?.filePaths && row.filePaths.length > 0 && (
-                            <div className="flex flex-wrap gap-1.5 pt-1">
-                              {row.filePaths.slice(0, 3).map((fp) => (
-                                <span key={fp} className="flex items-center gap-1 text-2xs font-mono px-1.5 py-0.5 rounded" style={{ backgroundColor: `${ACCENT}10`, color: ACCENT, border: `1px solid ${ACCENT}30` }}>
-                                  <ExternalLink className="w-2.5 h-2.5" />
-                                  {fp.split('/').pop()}
-                                </span>
-                              ))}
-                            </div>
-                          )}
-                          {row?.nextSteps && (
-                            <p className="text-2xs border-l-2 pl-2 mt-2" style={{ borderColor: STATUS_WARNING, color: STATUS_WARNING }}>
-                              <span className="font-semibold opacity-70 mr-1">Next:</span>{row.nextSteps}
-                            </p>
-                          )}
-                          {def?.dependsOn && def.dependsOn.length > 0 && (
-                            <div className="text-2xs text-text-muted mt-1.5 bg-surface-deep px-2 py-1 rounded inline-block">
-                              <span className="font-semibold">Deps:</span> {def.dependsOn.map((d) => d.replace(/.*::/, '')).join(', ')}
-                            </div>
-                          )}
-                        </div>
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
-                </SurfaceCard>
-
-                {/* Animated Arrow to next in lane */}
-                {i < lane.featureNames.length - 1 && (
-                  <div className="flex flex-col items-center gap-1 relative w-8">
-                    <div className="h-[2px] w-full bg-border relative overflow-hidden rounded-full">
-                      <motion.div
-                        className="absolute inset-y-0 left-0 bg-current"
-                        style={{ color: lane.color }}
-                        initial={{ x: '-100%' }}
-                        animate={{ x: '100%' }}
-                        transition={{ duration: 1.5, repeat: Infinity, ease: 'linear' }}
-                      />
-                    </div>
-                    {outgoing.length > 0 && (
-                      <span className="text-[10px] text-text-muted font-mono leading-none whitespace-nowrap absolute -bottom-4">
-                        {outgoing[0]?.label}
-                      </span>
-                    )}
-                  </div>
-                )}
+                        )}
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
               </div>
             );
           })}
@@ -304,98 +1067,193 @@ function ComboChainDiagram({ status }: { status: FeatureStatus }) {
   const sc = STATUS_COLORS[status];
 
   const sections = [
-    { name: 'Attack 1', timing: '0.0s - 0.4s', window: 'Combo Window', delay: 0 },
-    { name: 'Attack 2', timing: '0.0s - 0.5s', window: 'Combo Window', delay: 0.2 },
-    { name: 'Attack 3', timing: '0.0s - 0.6s', window: 'Finisher', delay: 0.4 },
+    { name: 'Attack 1', timing: '0.0s - 0.4s', window: 'Combo Window', pct: 60 },
+    { name: 'Attack 2', timing: '0.0s - 0.5s', window: 'Combo Window', pct: 70 },
+    { name: 'Attack 3', timing: '0.0s - 0.6s', window: 'Finisher', pct: 85 },
   ];
 
   return (
-    <SurfaceCard level={2} className="p-4 relative overflow-hidden group">
-      <div className="absolute top-0 right-0 w-32 h-32 bg-red-500/5 rounded-full blur-3xl -z-10 group-hover:bg-red-500/10 transition-colors duration-700" />
-
-      <div className="flex items-center gap-2.5 mb-4 border-b border-border/40 pb-2">
-        <div className="bg-red-500/10 p-1.5 rounded-md border border-red-500/20">
-          <Play className="w-4 h-4 text-red-400" />
-        </div>
-        <span className="text-sm font-bold text-text tracking-wide">Combo Chain Analysis</span>
-        <span className="text-2xs px-2 py-0.5 rounded-md ml-auto border border-border/50 shadow-sm" style={{ backgroundColor: sc.bg, color: sc.dot }}>
+    <SurfaceCard level={2} className="p-4 relative overflow-hidden">
+      <div className="flex items-center gap-2.5 mb-3">
+        <Play className="w-4 h-4 text-red-400" />
+        <span className="text-sm font-bold text-text">Combo Chain Analysis</span>
+        <span className="text-2xs px-2 py-0.5 rounded-md ml-auto" style={{ backgroundColor: sc.bg, color: sc.dot }}>
           {sc.label}
         </span>
       </div>
 
-      <div className="flex items-stretch gap-0 overflow-x-auto pb-2 custom-scrollbar">
+      {/* Table header */}
+      <div className="flex items-center gap-3 px-2 py-1 text-2xs font-bold uppercase tracking-wider text-text-muted border-b border-border/40">
+        <span className="w-[100px] flex-shrink-0">Attack</span>
+        <span className="w-[100px] flex-shrink-0">Timing</span>
+        <span className="w-[100px] flex-shrink-0">Window</span>
+        <span className="flex-1">Progress</span>
+      </div>
+
+      {/* Table rows */}
+      <div className="space-y-0.5">
         {sections.map((s, i) => (
-          <div key={s.name} className="flex items-center">
-            <motion.div
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: s.delay, duration: 0.4 }}
-              className="flex flex-col items-center px-4 py-3 rounded-xl border relative overflow-hidden min-w-[140px]"
-              style={{
-                borderColor: i === 2 ? '#ef444450' : `${ACCENT}40`,
-                backgroundColor: i === 2 ? '#ef444410' : `${ACCENT}08`,
-                boxShadow: i === 2 ? '0 0 15px rgba(239, 68, 68, 0.1)' : 'none',
-              }}
+          <motion.div
+            key={s.name}
+            initial={{ opacity: 0, x: -5 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ delay: i * 0.1 }}
+            className="flex items-center gap-3 px-2 py-1.5 rounded hover:bg-surface-hover/30 transition-colors"
+          >
+            <span className="text-xs font-medium text-text w-[100px] flex-shrink-0">{s.name}</span>
+            <span className="text-2xs font-mono text-text-muted w-[100px] flex-shrink-0">{s.timing}</span>
+            <span
+              className="text-2xs font-medium w-[100px] flex-shrink-0"
+              style={{ color: i === 2 ? '#ef4444' : ACCENT }}
             >
-              {i === 2 && (
-                <motion.div
-                  className="absolute inset-0 bg-gradient-to-tr from-transparent via-red-500/5 to-transparent pointer-events-none"
-                  animate={{ backgroundPosition: ['0% 0%', '100% 100%'] }}
-                  transition={{ duration: 3, repeat: Infinity, repeatType: "reverse" }}
-                />
-              )}
-
-              <span className="text-xs font-bold text-text z-10">{s.name}</span>
-              <span className="text-2xs text-text-muted font-mono mt-0.5 z-10">{s.timing}</span>
-
-              <div className="mt-2 text-2xs px-2 py-0.5 rounded-md font-medium z-10"
-                style={{
-                  backgroundColor: i === 2 ? '#ef444420' : `${MODULE_COLORS.core}20`,
-                  color: i === 2 ? '#ef4444' : MODULE_COLORS.core,
-                  border: `1px solid ${i === 2 ? '#ef444440' : `${MODULE_COLORS.core}40`}`
-                }}
-              >
-                {s.window}
-              </div>
-
-              {/* Notify windows */}
-              <div className="mt-2.5 w-full h-2 rounded-full bg-surface-deep overflow-hidden flex relative shadow-inner z-10">
-                <motion.div
-                  initial={{ width: 0 }} animate={{ width: '60%' }} transition={{ delay: s.delay + 0.3, duration: 0.5 }}
-                  className="h-full bg-blue-500/60 shadow-[0_0_5px_rgba(59,130,246,0.6)]" title="Combo Input Window"
-                />
-                <motion.div
-                  initial={{ width: 0 }} animate={{ width: '30%' }} transition={{ delay: s.delay + 0.6, duration: 0.3 }}
-                  className="h-full bg-red-500/60 shadow-[0_0_5px_rgba(239,68,68,0.6)]" title="Hit Detection"
-                />
-              </div>
-            </motion.div>
-
-            {i < sections.length - 1 && (
-              <div className="flex flex-col items-center px-3 relative">
-                <div className="w-6 h-[2px] bg-border relative overflow-hidden rounded-full">
-                  <motion.div
-                    className="absolute inset-y-0 left-0 w-full bg-text-muted/50"
-                    initial={{ x: '-100%' }}
-                    animate={{ x: '100%' }}
-                    transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
-                  />
-                </div>
-                <span className="text-[10px] text-text-muted font-mono mt-1 uppercase tracking-wider">input</span>
-              </div>
-            )}
-          </div>
+              {s.window}
+            </span>
+            <div className="flex-1 h-2 rounded-full bg-surface-deep overflow-hidden shadow-inner">
+              <motion.div
+                initial={{ width: 0 }}
+                animate={{ width: `${s.pct}%` }}
+                transition={{ delay: i * 0.15 + 0.2, duration: 0.5 }}
+                className="h-full rounded-full"
+                style={{ backgroundColor: i === 2 ? '#ef444480' : `${ACCENT}80` }}
+              />
+            </div>
+          </motion.div>
         ))}
       </div>
-
-      <div className="flex items-center gap-5 mt-4 pt-3 border-t border-border/40 text-xs font-medium text-text-muted">
-        <span className="flex items-center gap-2">
-          <span className="w-4 h-2 rounded bg-blue-500/60 shadow-[0_0_5px_rgba(59,130,246,0.4)]" /> Combo Window
-        </span>
-        <span className="flex items-center gap-2">
-          <span className="w-4 h-2 rounded bg-red-500/60 shadow-[0_0_5px_rgba(239,68,68,0.4)]" /> Hit Detection
-        </span>
-      </div>
     </SurfaceCard>
+  );
+}
+
+/* ── 4.7 Combat Flow Sankey (sub-component) ────────────────────────────── */
+
+function CombatFlowSankey() {
+  const totalHeight = 180;
+  const colWidth = 100;
+  const colGap = 60;
+  const svgWidth = SANKEY_COLUMNS.length * colWidth + (SANKEY_COLUMNS.length - 1) * colGap;
+  const barWidth = 16;
+  const padding = 8;
+
+  // Calculate Y positions for each item in each column
+  const colPositions = useMemo(() => {
+    return SANKEY_COLUMNS.map((col) => {
+      const items: { id: string; y: number; height: number; color: string; label: string; pct: number }[] = [];
+      let currentY = 10;
+      const usableHeight = totalHeight - 20;
+      for (const item of col.items) {
+        const h = Math.max((item.pct / 100) * usableHeight, 12);
+        items.push({ id: item.id, y: currentY, height: h, color: item.color, label: item.label, pct: item.pct });
+        currentY += h + padding;
+      }
+      return items;
+    });
+  }, []);
+
+  // Build flow path lookup
+  const getItemPos = (id: string) => {
+    for (let ci = 0; ci < colPositions.length; ci++) {
+      const item = colPositions[ci].find(it => it.id === id);
+      if (item) return { colIdx: ci, ...item };
+    }
+    return null;
+  };
+
+  return (
+    <svg width={svgWidth} height={totalHeight + 20} viewBox={`0 0 ${svgWidth} ${totalHeight + 20}`} className="overflow-visible">
+      {/* Column labels */}
+      {SANKEY_COLUMNS.map((col, ci) => (
+        <text key={col.label} x={ci * (colWidth + colGap) + barWidth / 2} y={totalHeight + 16} textAnchor="middle" className="text-[9px] font-mono font-bold" fill="rgba(255,255,255,0.4)">
+          {col.label}
+        </text>
+      ))}
+
+      {/* Flow paths (draw first so bars are on top) */}
+      {SANKEY_FLOWS.map((flow, i) => {
+        const from = getItemPos(flow.from);
+        const to = getItemPos(flow.to);
+        if (!from || !to) return null;
+
+        const fromX = from.colIdx * (colWidth + colGap) + barWidth;
+        const toX = to.colIdx * (colWidth + colGap);
+        const fromY = from.y + from.height / 2;
+        const toY = to.y + to.height / 2;
+        const thickness = Math.max((flow.value / 100) * 30, 1.5);
+        const midX = (fromX + toX) / 2;
+
+        return (
+          <path
+            key={i}
+            d={`M ${fromX},${fromY} C ${midX},${fromY} ${midX},${toY} ${toX},${toY}`}
+            fill="none"
+            stroke={flow.color}
+            strokeWidth={thickness}
+            opacity="0.25"
+          />
+        );
+      })}
+
+      {/* Column bars */}
+      {colPositions.map((items, ci) => (
+        <g key={ci}>
+          {items.map((item) => (
+            <g key={item.id}>
+              <rect
+                x={ci * (colWidth + colGap)}
+                y={item.y}
+                width={barWidth}
+                height={item.height}
+                rx="3"
+                fill={item.color}
+                opacity="0.7"
+              />
+              <text
+                x={ci * (colWidth + colGap) + barWidth + 4}
+                y={item.y + item.height / 2 + 3}
+                className="text-[8px] font-mono"
+                fill={item.color}
+              >
+                {item.label} ({item.pct}%)
+              </text>
+            </g>
+          ))}
+        </g>
+      ))}
+    </svg>
+  );
+}
+
+/* ── 4.9 Ability Pie Chart (sub-component) ─────────────────────────────── */
+
+function AbilityPieChart({ slices, size = 80 }: { slices: PieSlice[]; size?: number }) {
+  const cx = size / 2;
+  const cy = size / 2;
+  const r = size / 2 - 4;
+
+  let cumulativePct = 0;
+  const arcs = slices.map((slice) => {
+    const startAngle = (cumulativePct / 100) * 2 * Math.PI - Math.PI / 2;
+    cumulativePct += slice.pct;
+    const endAngle = (cumulativePct / 100) * 2 * Math.PI - Math.PI / 2;
+    const largeArc = slice.pct > 50 ? 1 : 0;
+
+    const x1 = cx + r * Math.cos(startAngle);
+    const y1 = cy + r * Math.sin(startAngle);
+    const x2 = cx + r * Math.cos(endAngle);
+    const y2 = cy + r * Math.sin(endAngle);
+
+    return {
+      ...slice,
+      d: `M ${cx},${cy} L ${x1},${y1} A ${r},${r} 0 ${largeArc},1 ${x2},${y2} Z`,
+    };
+  });
+
+  return (
+    <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
+      {arcs.map((arc) => (
+        <path key={arc.label} d={arc.d} fill={arc.color} opacity="0.7" stroke="rgba(0,0,0,0.3)" strokeWidth="1" />
+      ))}
+      <circle cx={cx} cy={cy} r={r * 0.45} fill="var(--surface-card, #1a1a2e)" />
+      <text x={cx} y={cy + 3} textAnchor="middle" className="text-[8px] font-mono font-bold" fill="rgba(255,255,255,0.5)">Usage</text>
+    </svg>
   );
 }
