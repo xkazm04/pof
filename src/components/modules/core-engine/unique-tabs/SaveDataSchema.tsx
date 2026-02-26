@@ -406,7 +406,7 @@ export function SaveDataSchema({ moduleId }: SaveDataSchemaProps) {
   const recoveryOverall = RECOVERY_RESULTS.reduce((sum, r) => sum + r.confidence, 0) / RECOVERY_RESULTS.length;
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-2.5">
       {/* Terminal Interface Header */}
       <div className="flex items-center justify-between pb-3 border-b border-cyan-900/40 relative">
         <div className="absolute top-0 right-0 w-full h-[1px] bg-gradient-to-r from-transparent via-cyan-500/50 to-transparent" />
@@ -427,9 +427,9 @@ export function SaveDataSchema({ moduleId }: SaveDataSchemaProps) {
       </div>
 
       {/* Cyber Flow diagram */}
-      <SurfaceCard level={2} className="p-4 border-cyan-900/30 bg-black/40 shadow-inner relative overflow-hidden">
+      <SurfaceCard level={2} className="p-3 border-cyan-900/30 bg-black/40 shadow-inner relative overflow-hidden">
         <div className="absolute inset-0 pointer-events-none opacity-[0.03]" style={{ backgroundImage: 'linear-gradient(0deg, transparent 24%, rgba(6, 182, 212, .3) 25%, rgba(6, 182, 212, .3) 26%, transparent 27%, transparent 74%, rgba(6, 182, 212, .3) 75%, rgba(6, 182, 212, .3) 76%, transparent 77%, transparent), linear-gradient(90deg, transparent 24%, rgba(6, 182, 212, .3) 25%, rgba(6, 182, 212, .3) 26%, transparent 27%, transparent 74%, rgba(6, 182, 212, .3) 75%, rgba(6, 182, 212, .3) 76%, transparent 77%, transparent)', backgroundSize: '20px 20px' }} />
-        <div className="flex items-center gap-2 mb-4 text-cyan-500/70 font-mono text-xs uppercase tracking-widest border-b border-cyan-900/40 pb-2">
+        <div className="flex items-center gap-2 mb-2.5 text-cyan-500/70 font-mono text-xs uppercase tracking-widest border-b border-cyan-900/40 pb-2">
           <Cpu className="w-4 h-4" /> Runtime Serialization Pipeline
         </div>
         <div className="relative z-10">
@@ -437,7 +437,7 @@ export function SaveDataSchema({ moduleId }: SaveDataSchemaProps) {
         </div>
       </SurfaceCard>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-2.5">
         {/* Schema tree terminal view */}
         <SurfaceCard level={2} className="p-0 border-cyan-900/30 bg-[#060b11] shadow-[inset_0_0_30px_rgba(0,0,0,0.8)] flex flex-col h-full overflow-hidden relative">
           <div className="absolute top-0 w-full h-1 bg-gradient-to-r from-transparent via-cyan-500/20 to-transparent" />
@@ -489,7 +489,7 @@ export function SaveDataSchema({ moduleId }: SaveDataSchemaProps) {
                             className="overflow-hidden pl-6"
                           >
                             {group.fields.map((field, i) => (
-                              <div key={field.name} className="flex gap-4 py-0.5 hover:bg-white/5 pr-2 group transition-colors">
+                              <div key={field.name} className="flex gap-2.5 py-0.5 hover:bg-white/5 pr-2 group transition-colors">
                                 <span className="w-[80px] shrink-0 font-medium" style={{ color: TYPE_COLORS[field.type] }}>{field.type}</span>
                                 <span className="text-cyan-100">{field.name};</span>
                                 <span className="text-cyan-700/60 ml-auto hidden sm:block opacity-0 group-hover:opacity-100 transition-opacity">// {field.details}</span>
@@ -505,14 +505,14 @@ export function SaveDataSchema({ moduleId }: SaveDataSchemaProps) {
               <div className="mt-1 text-cyan-500/80">{'};'}</div>
             </div>
 
-            <div className="pl-6 mt-4 text-cyan-500/40">
+            <div className="pl-6 mt-2.5 text-cyan-500/40">
               &gt; EOF
             </div>
           </div>
         </SurfaceCard>
 
         {/* Save Slots matrix style */}
-        <div className="space-y-4 h-full flex flex-col">
+        <div className="space-y-2.5 h-full flex flex-col">
           <SurfaceCard level={2} className="p-0 border-cyan-900/30 bg-[#060b11] shadow-[inset_0_0_30px_rgba(0,0,0,0.8)] flex-1 flex flex-col overflow-hidden relative">
             <div className="px-4 py-3 border-b border-cyan-900/40 flex items-center gap-2 bg-cyan-950/10">
               <Database className="w-4 h-4 text-cyan-500" />
@@ -598,7 +598,7 @@ export function SaveDataSchema({ moduleId }: SaveDataSchemaProps) {
           <span className="ml-auto text-[10px] font-mono text-cyan-700">{formatBytes(TOTAL_BYTES)} total</span>
         </div>
 
-        <div className="p-4 space-y-4 relative z-10">
+        <div className="p-4 space-y-2.5 relative z-10">
           {/* Treemap-style rectangles */}
           <div className="flex gap-1 h-16 rounded overflow-hidden">
             {FILE_SIZE_SECTIONS.map((sec) => {
@@ -682,9 +682,9 @@ export function SaveDataSchema({ moduleId }: SaveDataSchemaProps) {
           </span>
         </div>
 
-        <div className="p-4 relative z-10">
+        <div className="p-3 relative z-10">
           {/* Summary stats */}
-          <div className="flex gap-4 mb-3 font-mono text-[10px]">
+          <div className="flex gap-2.5 mb-3 font-mono text-[10px]">
             {(['changed', 'added', 'removed', 'unchanged'] as const).map(type => {
               const count = SAVE_DIFF_ENTRIES.filter(e => e.changeType === type).length;
               const colors = { changed: STATUS_WARNING, added: STATUS_SUCCESS, removed: STATUS_ERROR, unchanged: '#64748b' };
@@ -762,7 +762,7 @@ export function SaveDataSchema({ moduleId }: SaveDataSchemaProps) {
           <span className="text-[10px] font-mono text-cyan-600 uppercase tracking-widest">MIGRATION_PATH_GRAPH</span>
         </div>
 
-        <div className="p-4 space-y-4 relative z-10">
+        <div className="p-4 space-y-2.5 relative z-10">
           {/* Version node graph */}
           <div className="flex items-center gap-2 flex-wrap">
             {MIGRATION_PATH.map((node, i, arr) => (
@@ -889,7 +889,7 @@ export function SaveDataSchema({ moduleId }: SaveDataSchemaProps) {
           </div>
         </div>
 
-        <div className="p-4 relative z-10">
+        <div className="p-3 relative z-10">
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 font-mono text-xs">
             <div className="border border-cyan-900/30 bg-cyan-950/20 p-3 rounded-sm">
               <div className="text-[9px] text-cyan-700 uppercase tracking-widest mb-1">Last Sync</div>
@@ -1025,7 +1025,7 @@ export function SaveDataSchema({ moduleId }: SaveDataSchemaProps) {
           </span>
         </div>
 
-        <div className="p-4 space-y-4 relative z-10">
+        <div className="p-4 space-y-2.5 relative z-10">
           {/* Stacked bar chart */}
           <div className="space-y-2">
             <div className="flex items-center gap-1 h-10 bg-cyan-950/30 rounded overflow-hidden border border-cyan-900/30">
@@ -1083,7 +1083,7 @@ export function SaveDataSchema({ moduleId }: SaveDataSchemaProps) {
           </div>
 
           {/* Gauges */}
-          <div className="flex justify-center gap-6 pt-2 border-t border-cyan-900/30">
+          <div className="flex justify-center gap-2.5 pt-2 border-t border-cyan-900/30">
             {PERF_METRICS.map(m => (
               <LiveMetricGauge key={m.label} metric={m} size={72} accent={ACCENT} />
             ))}
@@ -1100,7 +1100,7 @@ export function SaveDataSchema({ moduleId }: SaveDataSchemaProps) {
           <span className="text-[10px] font-mono text-cyan-600 uppercase tracking-widest">AUTO_SAVE_CONFIG</span>
         </div>
 
-        <div className="p-4 space-y-4 relative z-10">
+        <div className="p-4 space-y-2.5 relative z-10">
           {/* Interval slider (visual only) */}
           <div className="space-y-2">
             <div className="flex items-center justify-between font-mono text-xs">
@@ -1266,7 +1266,7 @@ export function SaveDataSchema({ moduleId }: SaveDataSchemaProps) {
           <span className="text-[10px] font-mono text-cyan-600 uppercase tracking-widest">DATA_RECOVERY_TOOL</span>
         </div>
 
-        <div className="p-4 space-y-4 relative z-10">
+        <div className="p-4 space-y-2.5 relative z-10">
           {/* Step indicators */}
           <div className="flex items-center gap-1 justify-center">
             {RECOVERY_STEPS.map((step, i, arr) => {
@@ -1300,17 +1300,17 @@ export function SaveDataSchema({ moduleId }: SaveDataSchemaProps) {
           {/* Recovery confidence gauge */}
           <div className="flex justify-center">
             <div className="flex flex-col items-center gap-2">
-              <div className="relative w-24 h-24">
-                <svg width="96" height="96" viewBox="0 0 96 96">
-                  <circle cx="48" cy="48" r="38" fill="none" stroke="rgba(255,255,255,0.05)" strokeWidth="6" />
+              <div className="relative w-[72px] h-[72px]">
+                <svg width="72" height="72" viewBox="0 0 72 72">
+                  <circle cx="36" cy="36" r="28" fill="none" stroke="rgba(255,255,255,0.05)" strokeWidth="5" />
                   <circle
-                    cx="48" cy="48" r="38" fill="none"
+                    cx="36" cy="36" r="28" fill="none"
                     stroke={recoveryOverall >= 80 ? STATUS_SUCCESS : recoveryOverall >= 50 ? STATUS_WARNING : STATUS_ERROR}
-                    strokeWidth="6"
-                    strokeDasharray={`${2 * Math.PI * 38}`}
-                    strokeDashoffset={`${2 * Math.PI * 38 * (1 - recoveryOverall / 100)}`}
+                    strokeWidth="5"
+                    strokeDasharray={`${2 * Math.PI * 28}`}
+                    strokeDashoffset={`${2 * Math.PI * 28 * (1 - recoveryOverall / 100)}`}
                     strokeLinecap="round"
-                    transform="rotate(-90 48 48)"
+                    transform="rotate(-90 36 36)"
                     style={{ transition: 'stroke-dashoffset 0.8s ease-out', filter: `drop-shadow(0 0 6px ${recoveryOverall >= 80 ? STATUS_SUCCESS : STATUS_WARNING})` }}
                   />
                 </svg>

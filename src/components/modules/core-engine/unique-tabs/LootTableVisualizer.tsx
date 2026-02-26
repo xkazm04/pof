@@ -294,7 +294,7 @@ export function LootTableVisualizer({ moduleId }: LootTableVisualizerProps) {
   }, []);
 
   /* 7.1 Treemap layout */
-  const treemapLayout = useMemo(() => computeTreemapLayout(TREEMAP_DATA, 300, 160), []);
+  const treemapLayout = useMemo(() => computeTreemapLayout(TREEMAP_DATA, 260, 120), []);
 
   /* 7.2 Monte Carlo roller */
   const runMonteCarlo = useCallback((n: number) => {
@@ -542,7 +542,7 @@ export function LootTableVisualizer({ moduleId }: LootTableVisualizerProps) {
           <BarChart3 className="w-3.5 h-3.5" style={{ color: ACCENT }} />
           <span className="text-xs font-semibold text-text">Drop Probability Treemap</span>
         </div>
-        <svg width={300} height={160} viewBox="0 0 300 160" className="w-full max-w-[300px]">
+        <svg width={260} height={120} viewBox="0 0 260 120" className="w-full max-w-[260px]">
           {treemapLayout.map((rect) => (
             <g
               key={rect.item.name}
@@ -1041,7 +1041,7 @@ export function LootTableVisualizer({ moduleId }: LootTableVisualizerProps) {
         {/* 3D-ish beam height preview */}
         <div className="mt-3">
           <div className="text-2xs text-text-muted font-medium mb-2">Relative Beam Heights</div>
-          <div className="flex items-end justify-center gap-4 h-28">
+          <div className="flex items-end justify-center gap-2.5 h-28">
             {BEACON_CONFIGS.map((cfg) => {
               const displayColor = colorblindMode
                 ? { Common: '#888888', Uncommon: '#4488ff', Rare: '#ff8844', Epic: '#ff44ff', Legendary: '#ffff44' }[cfg.rarity] ?? cfg.color
@@ -1215,7 +1215,7 @@ export function LootTableVisualizer({ moduleId }: LootTableVisualizerProps) {
           })}
         </div>
         {/* Legend */}
-        <div className="flex gap-4 mt-2">
+        <div className="flex gap-2.5 mt-2">
           <span className="flex items-center gap-1 text-2xs text-text-muted">
             <span className="w-2 h-2 rounded-sm" style={{ backgroundColor: '#64748b' }} />
             Raw

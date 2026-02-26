@@ -380,20 +380,20 @@ export function ZoneMap({ moduleId }: ZoneMapProps) {
   if (isLoading) return <LoadingSpinner accent={ACCENT} />;
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-2.5">
       <TabHeader icon={MapIcon} title="Zone & Level Architecture" implemented={stats.implemented} total={stats.total} accent={ACCENT} />
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-2.5">
         {/* Map Canvas - takes up more space */}
-        <div className="lg:col-span-2 space-y-4">
-          <SurfaceCard level={2} className="p-4 relative overflow-hidden group">
+        <div className="lg:col-span-2 space-y-2.5">
+          <SurfaceCard level={2} className="p-3 relative overflow-hidden group">
             <div className="absolute top-0 right-0 w-64 h-64 bg-cyan-500/5 blur-3xl rounded-full pointer-events-none group-hover:bg-cyan-500/10 transition-colors duration-1000" />
 
-            <div className="flex justify-between items-center mb-4 relative z-10">
+            <div className="flex justify-between items-center mb-2.5 relative z-10">
               <div className="text-xs font-bold uppercase tracking-widest text-text-muted flex items-center gap-2">
                 <Compass className="w-4 h-4 text-cyan-400" /> World Map Preview
               </div>
-              <div className="flex gap-4 text-[10px] font-mono text-text-muted bg-surface-deep px-3 py-1.5 rounded-full border border-border/40">
+              <div className="flex gap-2.5 text-[10px] font-mono text-text-muted bg-surface-deep px-3 py-1.5 rounded-full border border-border/40">
                 <span className="flex items-center gap-1.5 hover:text-cyan-400 transition-colors cursor-help">
                   <span className="w-2 h-2 rounded-full shadow-[0_0_5px_currentColor]" style={{ backgroundColor: STATUS_SUCCESS, color: STATUS_SUCCESS }} /> Completed
                 </span>
@@ -429,7 +429,7 @@ export function ZoneMap({ moduleId }: ZoneMapProps) {
           </SurfaceCard>
 
           {/* Level Streaming Pipeline */}
-          <SurfaceCard level={2} className="p-4 relative overflow-hidden">
+          <SurfaceCard level={2} className="p-3 relative overflow-hidden">
             <div className="absolute inset-0 bg-gradient-to-r from-transparent via-[rgba(255,255,255,0.02)] to-transparent" />
             <div className="text-xs font-bold uppercase tracking-widest text-text-muted mb-3 flex items-center gap-2">
               <Navigation className="w-4 h-4 text-cyan-400" /> World Partition Flow
@@ -439,20 +439,20 @@ export function ZoneMap({ moduleId }: ZoneMapProps) {
         </div>
 
         {/* Details Panel */}
-        <div className="space-y-4">
+        <div className="space-y-2.5">
           <SurfaceCard level={2} className="p-4 h-full relative overflow-hidden">
-            <div className="text-xs font-bold uppercase tracking-widest text-text-muted mb-4 flex items-center gap-2">
+            <div className="text-xs font-bold uppercase tracking-widest text-text-muted mb-2.5 flex items-center gap-2">
               <Info className="w-4 h-4 text-cyan-400" /> Region Details
             </div>
 
-            <AnimatePresence mode="wait">
+            <AnimatePresence mode="sync">
               <motion.div
                 key={selectedZone.id}
                 initial={{ opacity: 0, x: 10 }}
                 animate={{ opacity: 1, x: 0 }}
                 exit={{ opacity: 0, x: -10 }}
                 transition={{ duration: 0.2 }}
-                className="space-y-4"
+                className="space-y-2.5"
               >
                 <div className="bg-surface-deep p-4 rounded-xl border border-border/50 relative overflow-hidden">
                   <div className="absolute top-0 right-0 p-3 opacity-20">
@@ -465,7 +465,7 @@ export function ZoneMap({ moduleId }: ZoneMapProps) {
                     <span className="text-lg font-bold text-text">{selectedZone.name}</span>
                   </div>
 
-                  <div className="flex items-center gap-3 text-xs text-text-muted font-mono mb-4 relative z-10">
+                  <div className="flex items-center gap-3 text-xs text-text-muted font-mono mb-2.5 relative z-10">
                     <span className="bg-surface px-2 py-0.5 rounded border border-border/40 text-cyan-400">
                       LVL {selectedZone.levelRange}
                     </span>
@@ -522,8 +522,8 @@ export function ZoneMap({ moduleId }: ZoneMapProps) {
       </div>
 
       {/* Environment Assets */}
-      <SurfaceCard level={2} className="p-4 relative">
-        <div className="text-xs font-bold uppercase tracking-widest text-text-muted mb-4 flex items-center gap-2">
+      <SurfaceCard level={2} className="p-3 relative">
+        <div className="text-xs font-bold uppercase tracking-widest text-text-muted mb-2.5 flex items-center gap-2">
           <MapIcon className="w-4 h-4 text-cyan-400" /> Environment Tech
         </div>
         <FeatureGrid
@@ -537,11 +537,11 @@ export function ZoneMap({ moduleId }: ZoneMapProps) {
       </SurfaceCard>
 
       {/* ── 10.1 Zone Topology Graph ──────────────────────────────────────────── */}
-      <SurfaceCard level={2} className="p-4 relative overflow-hidden">
+      <SurfaceCard level={2} className="p-3 relative overflow-hidden">
         <div className="absolute top-0 right-0 w-48 h-48 bg-cyan-500/5 blur-3xl rounded-full pointer-events-none" />
-        <div className="mb-4"><SectionLabel icon={Network} label="Zone Topology Graph" color={ACCENT} /></div>
+        <div className="mb-2.5"><SectionLabel icon={Network} label="Zone Topology Graph" color={ACCENT} /></div>
         <div className="flex justify-center">
-          <svg width={540} height={360} viewBox="0 0 540 360" className="overflow-visible">
+          <svg width={460} height={300} viewBox="0 0 460 300" className="overflow-visible">
             {/* Edges */}
             {TOPOLOGY_EDGES.map((edge) => {
               const src = TOPOLOGY_NODES.find(n => n.id === edge.from);
@@ -592,7 +592,7 @@ export function ZoneMap({ moduleId }: ZoneMapProps) {
           </svg>
         </div>
         {/* Legend */}
-        <div className="flex flex-wrap items-center gap-4 mt-3 pt-2 border-t border-border/40">
+        <div className="flex flex-wrap items-center gap-2.5 mt-3 pt-2 border-t border-border/40">
           {Object.entries(EDGE_STYLE_MAP).map(([type, s]) => (
             <span key={type} className="flex items-center gap-1.5 text-[10px] font-mono text-text-muted">
               <svg width="24" height="4"><line x1="0" y1="2" x2="24" y2="2" stroke={s.color} strokeWidth="2" strokeDasharray={s.dash === '0' ? 'none' : s.dash} /></svg>
@@ -607,9 +607,9 @@ export function ZoneMap({ moduleId }: ZoneMapProps) {
       </SurfaceCard>
 
       {/* ── 10.2 Enemy Density Heatmap ────────────────────────────────────────── */}
-      <SurfaceCard level={2} className="p-4 relative overflow-hidden">
+      <SurfaceCard level={2} className="p-3 relative overflow-hidden">
         <div className="absolute bottom-0 left-0 w-40 h-40 bg-red-500/5 blur-3xl rounded-full pointer-events-none" />
-        <div className="mb-4"><SectionLabel icon={Target} label="Enemy Density Heatmap" color={STATUS_ERROR} /></div>
+        <div className="mb-2.5"><SectionLabel icon={Target} label="Enemy Density Heatmap" color={STATUS_ERROR} /></div>
         <HeatmapGrid
           rows={ENEMY_DENSITY_CONFIG.rows}
           cols={ENEMY_DENSITY_CONFIG.cols}
@@ -618,7 +618,7 @@ export function ZoneMap({ moduleId }: ZoneMapProps) {
           highColor={STATUS_ERROR}
           accent={STATUS_ERROR}
         />
-        <div className="flex items-center gap-4 mt-3 pt-2 border-t border-border/40 text-[10px] font-mono text-text-muted">
+        <div className="flex items-center gap-2.5 mt-3 pt-2 border-t border-border/40 text-[10px] font-mono text-text-muted">
           <span className="flex items-center gap-1.5">
             <span className="w-4 h-3 rounded-sm" style={{ backgroundColor: '#1e3a5f' }} /> Low
           </span>
@@ -630,9 +630,9 @@ export function ZoneMap({ moduleId }: ZoneMapProps) {
       </SurfaceCard>
 
       {/* ── 10.3 Level Range Flow ─────────────────────────────────────────────── */}
-      <SurfaceCard level={2} className="p-4 relative overflow-hidden">
+      <SurfaceCard level={2} className="p-3 relative overflow-hidden">
         <div className="absolute top-0 left-0 w-48 h-48 bg-cyan-500/5 blur-3xl rounded-full pointer-events-none" />
-        <div className="mb-4"><SectionLabel icon={TrendingUp} label="Level Range Flow" color={ACCENT} /></div>
+        <div className="mb-2.5"><SectionLabel icon={TrendingUp} label="Level Range Flow" color={ACCENT} /></div>
         <div className="relative">
           {/* Player level indicator */}
           <div
@@ -691,9 +691,9 @@ export function ZoneMap({ moduleId }: ZoneMapProps) {
       </SurfaceCard>
 
       {/* ── 10.4 World Streaming Budget ───────────────────────────────────────── */}
-      <SurfaceCard level={2} className="p-4 relative overflow-hidden">
+      <SurfaceCard level={2} className="p-3 relative overflow-hidden">
         <div className="absolute top-0 right-0 w-40 h-40 bg-violet-500/5 blur-3xl rounded-full pointer-events-none" />
-        <div className="mb-4"><SectionLabel icon={Gauge} label="World Streaming Budget" color={ACCENT_VIOLET} /></div>
+        <div className="mb-2.5"><SectionLabel icon={Gauge} label="World Streaming Budget" color={ACCENT_VIOLET} /></div>
         <div className="space-y-3">
           {STREAMING_BUDGETS.map((budget) => {
             const pct = (budget.current / budget.max) * 100;
@@ -734,12 +734,12 @@ export function ZoneMap({ moduleId }: ZoneMapProps) {
       </SurfaceCard>
 
       {/* ── 10.5 Points of Interest Layer ─────────────────────────────────────── */}
-      <SurfaceCard level={2} className="p-4 relative overflow-hidden">
+      <SurfaceCard level={2} className="p-3 relative overflow-hidden">
         <div className="absolute bottom-0 right-0 w-48 h-48 bg-emerald-500/5 blur-3xl rounded-full pointer-events-none" />
-        <div className="mb-4"><SectionLabel icon={MapPin} label="Points of Interest Layer" color={ACCENT_EMERALD} /></div>
+        <div className="mb-2.5"><SectionLabel icon={MapPin} label="Points of Interest Layer" color={ACCENT_EMERALD} /></div>
 
         {/* POI type legend */}
-        <div className="flex flex-wrap gap-3 mb-4 pb-3 border-b border-border/40">
+        <div className="flex flex-wrap gap-3 mb-2.5 pb-3 border-b border-border/40">
           {Object.entries(POI_ICONS).map(([type, cfg]) => {
             const IconComp = cfg.icon;
             return (
@@ -788,9 +788,9 @@ export function ZoneMap({ moduleId }: ZoneMapProps) {
       </SurfaceCard>
 
       {/* ── 10.6 Zone Connection Visualizer ───────────────────────────────────── */}
-      <SurfaceCard level={2} className="p-4 relative overflow-hidden">
+      <SurfaceCard level={2} className="p-3 relative overflow-hidden">
         <div className="absolute top-0 left-0 w-40 h-40 bg-violet-500/5 blur-3xl rounded-full pointer-events-none" />
-        <div className="mb-4"><SectionLabel icon={ArrowRightLeft} label="Zone Connection Visualizer" color={ACCENT_VIOLET} /></div>
+        <div className="mb-2.5"><SectionLabel icon={ArrowRightLeft} label="Zone Connection Visualizer" color={ACCENT_VIOLET} /></div>
         <div className="overflow-x-auto custom-scrollbar">
           <table className="w-full text-xs font-mono">
             <thead>
@@ -836,9 +836,9 @@ export function ZoneMap({ moduleId }: ZoneMapProps) {
       </SurfaceCard>
 
       {/* ── 10.7 Boss Arena Details ───────────────────────────────────────────── */}
-      <SurfaceCard level={2} className="p-4 relative overflow-hidden">
+      <SurfaceCard level={2} className="p-3 relative overflow-hidden">
         <div className="absolute top-0 right-0 w-48 h-48 bg-red-500/5 blur-3xl rounded-full pointer-events-none" />
-        <div className="mb-4"><SectionLabel icon={Skull} label="Boss Arena Details" color={STATUS_ERROR} /></div>
+        <div className="mb-2.5"><SectionLabel icon={Skull} label="Boss Arena Details" color={STATUS_ERROR} /></div>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
           {BOSS_ARENAS.map((boss) => (
             <motion.div
@@ -898,12 +898,12 @@ export function ZoneMap({ moduleId }: ZoneMapProps) {
       </SurfaceCard>
 
       {/* ── 10.8 Environmental Hazard Map ─────────────────────────────────────── */}
-      <SurfaceCard level={2} className="p-4 relative overflow-hidden">
+      <SurfaceCard level={2} className="p-3 relative overflow-hidden">
         <div className="absolute bottom-0 left-0 w-48 h-48 bg-orange-500/5 blur-3xl rounded-full pointer-events-none" />
-        <div className="mb-4"><SectionLabel icon={AlertTriangle} label="Environmental Hazard Map" color={ACCENT_ORANGE} /></div>
+        <div className="mb-2.5"><SectionLabel icon={AlertTriangle} label="Environmental Hazard Map" color={ACCENT_ORANGE} /></div>
 
         {/* Danger Score Summary */}
-        <div className="flex flex-wrap gap-2 mb-4 pb-3 border-b border-border/40">
+        <div className="flex flex-wrap gap-2 mb-2.5 pb-3 border-b border-border/40">
           {ZONE_DANGER_SCORES.map((zds) => {
             const dangerColor = zds.score >= 80 ? STATUS_ERROR : zds.score >= 50 ? ACCENT_ORANGE : zds.score >= 20 ? STATUS_WARNING : STATUS_SUCCESS;
             return (
@@ -961,12 +961,12 @@ export function ZoneMap({ moduleId }: ZoneMapProps) {
       </SurfaceCard>
 
       {/* ── 10.9 Fast Travel Network ──────────────────────────────────────────── */}
-      <SurfaceCard level={2} className="p-4 relative overflow-hidden">
+      <SurfaceCard level={2} className="p-3 relative overflow-hidden">
         <div className="absolute top-0 right-0 w-40 h-40 bg-cyan-500/5 blur-3xl rounded-full pointer-events-none" />
-        <div className="mb-4"><SectionLabel icon={Zap} label="Fast Travel Network" color={ACCENT} /></div>
+        <div className="mb-2.5"><SectionLabel icon={Zap} label="Fast Travel Network" color={ACCENT} /></div>
 
         {/* Coverage Summary */}
-        <div className="flex flex-wrap gap-2 mb-4 pb-3 border-b border-border/40">
+        <div className="flex flex-wrap gap-2 mb-2.5 pb-3 border-b border-border/40">
           {FAST_TRAVEL_COVERAGE.map((ftc) => (
             <div key={ftc.zone} className="flex items-center gap-1.5 text-[10px] font-mono">
               <span className="text-text-muted">{ftc.zone}:</span>
@@ -1012,9 +1012,9 @@ export function ZoneMap({ moduleId }: ZoneMapProps) {
       </SurfaceCard>
 
       {/* ── 10.10 Zone Progression Timeline ───────────────────────────────────── */}
-      <SurfaceCard level={2} className="p-4 relative overflow-hidden">
+      <SurfaceCard level={2} className="p-3 relative overflow-hidden">
         <div className="absolute bottom-0 right-0 w-48 h-48 bg-emerald-500/5 blur-3xl rounded-full pointer-events-none" />
-        <div className="mb-4"><SectionLabel icon={Clock} label="Zone Progression Timeline" color={ACCENT_EMERALD} /></div>
+        <div className="mb-2.5"><SectionLabel icon={Clock} label="Zone Progression Timeline" color={ACCENT_EMERALD} /></div>
 
         {/* Current day indicator label */}
         <div className="text-[10px] font-mono text-text-muted mb-2">

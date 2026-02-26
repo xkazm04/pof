@@ -18,7 +18,7 @@ import type { RadarDataPoint, TimelineEvent } from '@/types/unique-tab-improveme
 import {
   TabHeader, PipelineFlow, SectionLabel,
   FeatureCard as SharedFeatureCard, LoadingSpinner,
-  RadarChart, TimelineStrip,
+  RadarChart, TimelineStrip, SubTabNavigation, SubTab
 } from './_shared';
 
 const ACCENT = MODULE_COLORS.systems;
@@ -359,8 +359,15 @@ interface AbilitySpellbookProps {
 export function AbilitySpellbook({ moduleId }: AbilitySpellbookProps) {
   const { features, isLoading } = useFeatureMatrix(moduleId);
   const defs = useMemo(() => MODULE_FEATURE_DEFINITIONS[moduleId] ?? [], [moduleId]);
-  const [activeSection, setActiveSection] = useState<SectionId>('core');
+  const [activeTab, setActiveTab] = useState('core');
   const [expandedFeature, setExpandedFeature] = useState<string | null>(null);
+
+  const tabs: SubTab[] = useMemo(() => [
+    { id: 'core', label: 'Core & Architecture', icon: Cpu },
+    { id: 'abilities', label: 'Abilities', icon: Sparkles },
+    { id: 'effects', label: 'Effects', icon: Flame },
+    { id: 'tags', label: 'Tags & Attributes', icon: Tags },
+  ], []);
 
   const featureMap = useMemo(() => {
     const map = new Map<string, FeatureRow>();
@@ -389,96 +396,52 @@ export function AbilitySpellbook({ moduleId }: AbilitySpellbookProps) {
   }
 
   return (
-    <div className="space-y-4">
-      {/* Header */}
-      <TabHeader icon={BookOpen} title="Ability Spellbook" implemented={stats.implemented} total={stats.total} accent={ACCENT} />
-
-      {/* Section tabs */}
-      <div className="flex items-center gap-2 overflow-x-auto pb-1 custom-scrollbar">
-        {SECTIONS.map((s) => {
-          const isActive = s.id === activeSection;
-          const SIcon = s.icon;
-          const sectionDone = s.featureNames.filter((n) => {
-            const st = featureMap.get(n)?.status;
-            return st === 'implemented' || st === 'improved';
-          }).length;
-
-          return (
-            <motion.button
-              key={s.id}
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
-              onClick={() => setActiveSection(s.id)}
-              className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-semibold transition-all relative overflow-hidden group flex-shrink-0"
-              style={isActive
-                ? { backgroundColor: `${s.color}15`, color: s.color, border: `1px solid ${s.color}50`, boxShadow: `0 0 10px ${s.color}20` }
-                : { backgroundColor: 'var(--surface)', color: 'var(--text-muted)', border: '1px solid var(--border)' }
-              }
-            >
-              {isActive && (
-                <motion.div
-                  layoutId="activeTabGlow"
-                  className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent pointer-events-none"
-                  transition={{ duration: 0.3 }}
-                />
-              )}
-              <SIcon className="w-4 h-4" />
-              {s.label}
-              {sectionDone > 0 && (
-                <span className="text-2xs px-1.5 py-0.5 rounded-md ml-1" style={{ backgroundColor: `${s.color}20` }}>
-                  {sectionDone}/{s.featureNames.length}
-                </span>
-              )}
-            </motion.button>
-          );
-        })}
+    <div className="space-y-2.5">
+      <div className="flex flex-col gap-1.5">
+        <TabHeader icon={BookOpen} title="Ability Spellbook" implemented={stats.implemented} total={stats.total} accent={ACCENT} />
+        <SubTabNavigation tabs={tabs} activeTabId={activeTab} onChange={setActiveTab} accent={ACCENT} />
       </div>
 
-      {/* Section content */}
-      <div className="min-h-[200px] relative">
-        <AnimatePresence mode="wait">
-          <motion.div
-            key={activeSection}
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -10 }}
-            transition={{ duration: 0.3 }}
-            className="absolute inset-0 w-full"
-          >
-            {activeSection === 'core' && (
-              <CoreSection featureMap={featureMap} defs={defs} expanded={expandedFeature} onToggle={toggleFeature} />
-            )}
-            {activeSection === 'attributes' && (
+      <div className="mt-2.5 relative min-h-[300px]">
+        <AnimatePresence mode="sync">
+          {activeTab === 'core' && (
+            <motion.div key="core" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} transition={{ duration: 0.2 }} className="space-y-2.5">
+              <div className="grid grid-cols-1 xl:grid-cols-2 gap-2.5">
+                <CoreSection featureMap={featureMap} defs={defs} expanded={expandedFeature} onToggle={toggleFeature} />
+                <LoadoutSection />
+              </div>
+            </motion.div>
+          )}
+          {activeTab === 'abilities' && (
+            <motion.div key="abilities" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} transition={{ duration: 0.2 }} className="space-y-2.5">
+              <div className="grid grid-cols-1 xl:grid-cols-2 gap-2.5">
+                <AbilitiesSection featureMap={featureMap} defs={defs} expanded={expandedFeature} onToggle={toggleFeature} />
+                <DamageCalcSection />
+              </div>
+            </motion.div>
+          )}
+          {activeTab === 'effects' && (
+            <motion.div key="effects" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} transition={{ duration: 0.2 }} className="space-y-2.5">
+              <div className="grid grid-cols-1 xl:grid-cols-2 gap-2.5">
+                <EffectsSection featureMap={featureMap} defs={defs} expanded={expandedFeature} onToggle={toggleFeature} />
+                <EffectsTimelineSection />
+              </div>
+            </motion.div>
+          )}
+          {activeTab === 'tags' && (
+            <motion.div key="tags" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} transition={{ duration: 0.2 }} className="space-y-2.5">
               <AttributesSection featureMap={featureMap} defs={defs} expanded={expandedFeature} onToggle={toggleFeature} />
-            )}
-            {activeSection === 'tags' && (
-              <TagsSection featureMap={featureMap} defs={defs} expanded={expandedFeature} onToggle={toggleFeature} />
-            )}
-            {activeSection === 'abilities' && (
-              <AbilitiesSection featureMap={featureMap} defs={defs} expanded={expandedFeature} onToggle={toggleFeature} />
-            )}
-            {activeSection === 'effects' && (
-              <EffectsSection featureMap={featureMap} defs={defs} expanded={expandedFeature} onToggle={toggleFeature} />
-            )}
-            {activeSection === 'tag-deps' && (
-              <TagDepsSection />
-            )}
-            {activeSection === 'effects-timeline' && (
-              <EffectsTimelineSection />
-            )}
-            {activeSection === 'damage-calc' && (
-              <DamageCalcSection />
-            )}
-            {activeSection === 'tag-audit' && (
-              <TagAuditSection />
-            )}
-            {activeSection === 'loadout' && (
-              <LoadoutSection />
-            )}
-          </motion.div>
+              <div className="grid grid-cols-1 xl:grid-cols-2 gap-2.5">
+                <TagsSection featureMap={featureMap} defs={defs} expanded={expandedFeature} onToggle={toggleFeature} />
+                <div className="space-y-2.5">
+                  <TagDepsSection />
+                  <TagAuditSection />
+                </div>
+              </div>
+            </motion.div>
+          )}
         </AnimatePresence>
       </div>
-
     </div>
   );
 }
@@ -487,7 +450,7 @@ export function AbilitySpellbook({ moduleId }: AbilitySpellbookProps) {
 
 function CoreSection({ featureMap, defs, expanded, onToggle }: SectionProps) {
   return (
-    <div className="space-y-4">
+    <div className="space-y-2.5">
       <SurfaceCard level={3} className="p-3 bg-surface-deep/50 border-border/40 text-sm text-text-muted leading-relaxed">
         The Ability System Component (ASC) is the central hub that manages abilities, attributes, tags, and effects.
         It must be attached to the character base class and implement <span className="font-mono text-xs text-text">IAbilitySystemInterface</span>.
@@ -496,7 +459,7 @@ function CoreSection({ featureMap, defs, expanded, onToggle }: SectionProps) {
       <SharedFeatureCard name="AbilitySystemComponent" featureMap={featureMap} defs={defs} expanded={expanded} onToggle={onToggle} accent={MODULE_COLORS.core} />
 
       {/* Connection diagram */}
-      <SurfaceCard level={2} className="p-4 relative overflow-hidden">
+      <SurfaceCard level={2} className="p-3 relative overflow-hidden">
         <div className="absolute right-0 top-0 w-32 h-32 bg-blue-500/5 blur-3xl rounded-full" />
         <div className="text-xs font-bold uppercase tracking-widest text-text-muted mb-3 flex items-center gap-2">
           <Cpu className="w-4 h-4 text-blue-400" /> ASC Connections
@@ -518,7 +481,7 @@ function CoreSection({ featureMap, defs, expanded, onToggle }: SectionProps) {
       </SurfaceCard>
 
       {/* GAS Architecture Pipeline */}
-      <SurfaceCard level={2} className="p-4 relative overflow-hidden group">
+      <SurfaceCard level={2} className="p-3 relative overflow-hidden group">
         <div className="absolute inset-0 bg-gradient-to-r from-transparent via-[rgba(255,255,255,0.02)] to-transparent" />
         <SectionLabel label="GAS Architecture Pipeline" />
         <div className="mt-3 relative z-10">
@@ -527,10 +490,10 @@ function CoreSection({ featureMap, defs, expanded, onToggle }: SectionProps) {
       </SurfaceCard>
 
       {/* 3.8 GAS Architecture Explorer - Animated sequence diagram */}
-      <SurfaceCard level={2} className="p-4 relative overflow-hidden">
+      <SurfaceCard level={2} className="p-3 relative overflow-hidden">
         <div className="absolute left-0 top-0 w-40 h-40 bg-blue-500/5 blur-3xl rounded-full pointer-events-none" />
         <SectionLabel icon={Cpu} label="GAS Execution Sequence" color={MODULE_COLORS.core} />
-        <div className="mt-4 relative z-10">
+        <div className="mt-2.5 relative z-10">
           <GASArchitectureExplorer />
         </div>
       </SurfaceCard>
@@ -541,9 +504,9 @@ function CoreSection({ featureMap, defs, expanded, onToggle }: SectionProps) {
 /* ── 3.8 GAS Architecture Explorer component ──────────────────────────── */
 
 function GASArchitectureExplorer() {
-  const stepH = 48;
-  const stepW = 220;
-  const arrowGap = 24;
+  const stepH = 36;
+  const stepW = 180;
+  const arrowGap = 16;
   const totalH = GAS_STEPS.length * stepH + (GAS_STEPS.length - 1) * arrowGap + 20;
   const cx = stepW / 2 + 40;
 
@@ -618,22 +581,22 @@ function AttributesSection({ featureMap, defs, expanded, onToggle }: SectionProp
   const attrStatus = featureMap.get('Core AttributeSet')?.status ?? 'unknown';
 
   return (
-    <div className="space-y-4">
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+    <div className="space-y-2.5">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
         <SharedFeatureCard name="Core AttributeSet" featureMap={featureMap} defs={defs} expanded={expanded} onToggle={onToggle} accent="#10b981" />
         <SharedFeatureCard name="Default attribute initialization" featureMap={featureMap} defs={defs} expanded={expanded} onToggle={onToggle} accent="#10b981" />
       </div>
 
       {/* Attribute catalog */}
-      <SurfaceCard level={2} className="p-4 relative">
+      <SurfaceCard level={2} className="p-3 relative">
         <div className="absolute right-0 top-0 w-32 h-32 bg-emerald-500/5 blur-3xl rounded-full" />
-        <div className="text-xs font-bold uppercase tracking-widest text-text-muted mb-4 flex items-center gap-2">
+        <div className="text-xs font-bold uppercase tracking-widest text-text-muted mb-2.5 flex items-center gap-2">
           <BarChart3 className="w-4 h-4 text-emerald-400" /> Attribute Set Catalog
         </div>
 
         {/* Core Attributes */}
         <div className="text-2xs font-bold uppercase tracking-wider text-text-muted mb-2">Core Attributes</div>
-        <div className="grid grid-cols-3 gap-2 mb-4">
+        <div className="grid grid-cols-3 gap-2 mb-2.5">
           {CORE_ATTRIBUTES.map((attr, i) => {
             const isInit = attrStatus === 'implemented' || attrStatus === 'improved';
             return (
@@ -683,19 +646,19 @@ function AttributesSection({ featureMap, defs, expanded, onToggle }: SectionProp
       </SurfaceCard>
 
       {/* 3.1 Attribute Relationship Web */}
-      <SurfaceCard level={2} className="p-4 relative overflow-hidden">
+      <SurfaceCard level={2} className="p-3 relative overflow-hidden">
         <div className="absolute right-0 bottom-0 w-40 h-40 bg-emerald-500/5 blur-3xl rounded-full pointer-events-none" />
         <SectionLabel icon={Network} label="Attribute Relationship Web" color="#10b981" />
-        <div className="mt-4 flex justify-center">
+        <div className="mt-2.5 flex justify-center">
           <AttributeRelationshipWeb />
         </div>
       </SurfaceCard>
 
       {/* 3.6 Attribute Growth Projections */}
-      <SurfaceCard level={2} className="p-4 relative overflow-hidden">
+      <SurfaceCard level={2} className="p-3 relative overflow-hidden">
         <div className="absolute left-0 top-0 w-40 h-40 bg-emerald-500/5 blur-3xl rounded-full pointer-events-none" />
         <SectionLabel icon={BarChart3} label="Attribute Growth Projections (Lv 1-50)" color="#10b981" />
-        <div className="mt-4">
+        <div className="mt-2.5">
           <AttributeGrowthChart />
         </div>
       </SurfaceCard>
@@ -706,7 +669,7 @@ function AttributesSection({ featureMap, defs, expanded, onToggle }: SectionProp
 /* ── 3.1 Attribute Relationship Web component ─────────────────────────── */
 
 function AttributeRelationshipWeb() {
-  const size = 320;
+  const size = 240;
   const cx = size / 2;
   const cy = size / 2;
   const r = size / 2 - 50;
@@ -795,7 +758,7 @@ function AttributeRelationshipWeb() {
 
 function AttributeGrowthChart() {
   const w = 500;
-  const h = 200;
+  const h = 150;
   const pad = { top: 10, right: 20, bottom: 30, left: 45 };
   const chartW = w - pad.left - pad.right;
   const chartH = h - pad.top - pad.bottom;
@@ -850,14 +813,14 @@ function AttributeGrowthChart() {
 
 function TagsSection({ featureMap, defs, expanded, onToggle }: SectionProps) {
   return (
-    <div className="space-y-4 flex">
+    <div className="space-y-2.5 flex">
       <div className="w-1/2 pr-2">
         <SharedFeatureCard name="Gameplay Tags hierarchy" featureMap={featureMap} defs={defs} expanded={expanded} onToggle={onToggle} accent="#f59e0b" />
       </div>
 
       <div className="w-1/2 pl-2">
         <SurfaceCard level={2} className="p-4 h-full">
-          <div className="text-xs font-bold uppercase tracking-widest text-text-muted mb-4 flex items-center gap-2">
+          <div className="text-xs font-bold uppercase tracking-widest text-text-muted mb-2.5 flex items-center gap-2">
             <Tags className="w-4 h-4 text-amber-500" /> Tag Hierarchy Data
           </div>
           <div className="space-y-2 bg-surface-deep/30 p-3 rounded-lg border border-border/40">
@@ -925,13 +888,13 @@ function AbilitiesSection({ featureMap, defs, expanded, onToggle }: SectionProps
   ];
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-2.5">
       <SharedFeatureCard name="Base GameplayAbility" featureMap={featureMap} defs={defs} expanded={expanded} onToggle={onToggle} accent="#a855f7" />
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <SurfaceCard level={2} className="p-4 relative">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
+        <SurfaceCard level={2} className="p-3 relative">
           <div className="absolute right-0 top-0 w-32 h-32 bg-purple-500/5 blur-3xl rounded-full pointer-events-none" />
-          <div className="text-xs font-bold uppercase tracking-widest text-text-muted mb-4 flex items-center gap-2">
+          <div className="text-xs font-bold uppercase tracking-widest text-text-muted mb-2.5 flex items-center gap-2">
             <Sparkles className="w-4 h-4 text-purple-400" /> Derived Cross-Module
           </div>
           <div className="space-y-2.5">
@@ -956,23 +919,23 @@ function AbilitiesSection({ featureMap, defs, expanded, onToggle }: SectionProps
         {/* Ability lifecycle */}
         <SurfaceCard level={2} className="p-4 flex flex-col justify-center">
           <SectionLabel label="Ability Lifecycle" />
-          <div className="mt-4">
+          <div className="mt-2.5">
             <PipelineFlow steps={['CanActivate', 'CommitAbility', 'ActivateAbility', 'ApplyCost', 'EndAbility']} accent="#a855f7" />
           </div>
         </SurfaceCard>
       </div>
 
       {/* 3.2 Ability Cost/Benefit Radar */}
-      <SurfaceCard level={2} className="p-4 relative overflow-hidden">
+      <SurfaceCard level={2} className="p-3 relative overflow-hidden">
         <div className="absolute left-0 top-0 w-40 h-40 bg-purple-500/5 blur-3xl rounded-full pointer-events-none" />
         <SectionLabel icon={Sparkles} label="Ability Cost/Benefit Radar" color="#a855f7" />
-        <div className="mt-4 flex items-center gap-6 justify-center flex-wrap">
+        <div className="mt-2.5 flex items-center gap-2.5 justify-center flex-wrap">
           <RadarChart
             data={ABILITY_RADAR_AXES.map((axis, i) => ({
               axis,
               value: ABILITY_RADAR_DATA[0].values[i],
             }))}
-            size={180}
+            size={150}
             accent={ABILITY_RADAR_DATA[0].color}
             overlays={ABILITY_RADAR_DATA.slice(1).map(ab => ({
               data: ABILITY_RADAR_AXES.map((axis, i) => ({ axis, value: ab.values[i] })),
@@ -993,10 +956,10 @@ function AbilitiesSection({ featureMap, defs, expanded, onToggle }: SectionProps
       </SurfaceCard>
 
       {/* 3.7 Cooldown Flow Visualization */}
-      <SurfaceCard level={2} className="p-4 relative overflow-hidden">
+      <SurfaceCard level={2} className="p-3 relative overflow-hidden">
         <div className="absolute right-0 bottom-0 w-40 h-40 bg-purple-500/5 blur-3xl rounded-full pointer-events-none" />
         <SectionLabel icon={Clock} label="Cooldown Flow" color="#a855f7" />
-        <div className="mt-4 flex items-center gap-6 justify-center flex-wrap">
+        <div className="mt-2.5 flex items-center gap-2.5 justify-center flex-wrap">
           {COOLDOWN_ABILITIES.map((ab, i) => (
             <CooldownWheel key={ab.name} ability={ab} index={i} />
           ))}
@@ -1009,7 +972,7 @@ function AbilitiesSection({ featureMap, defs, expanded, onToggle }: SectionProps
 /* ── 3.7 Cooldown Wheel component ─────────────────────────────────────── */
 
 function CooldownWheel({ ability, index }: { ability: typeof COOLDOWN_ABILITIES[number]; index: number }) {
-  const size = 72;
+  const size = 56;
   const strokeW = 5;
   const r = (size - strokeW * 2) / 2;
   const circ = 2 * Math.PI * r;
@@ -1057,13 +1020,13 @@ function CooldownWheel({ ability, index }: { ability: typeof COOLDOWN_ABILITIES[
 
 function EffectsSection({ featureMap, defs, expanded, onToggle }: SectionProps) {
   return (
-    <div className="space-y-4">
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+    <div className="space-y-2.5">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
         <SharedFeatureCard name="Core Gameplay Effects" featureMap={featureMap} defs={defs} expanded={expanded} onToggle={onToggle} accent="#ef4444" />
         <SharedFeatureCard name="Damage execution calculation" featureMap={featureMap} defs={defs} expanded={expanded} onToggle={onToggle} accent="#ef4444" />
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
         {/* Effect type cards */}
         <div className="grid grid-cols-2 gap-3">
           {EFFECT_TYPES.map((effect, i) => (
@@ -1084,7 +1047,7 @@ function EffectsSection({ featureMap, defs, expanded, onToggle }: SectionProps) 
         {/* Damage execution pipeline */}
         <SurfaceCard level={2} className="p-4 flex flex-col justify-center">
           <SectionLabel label="Damage Execution Pipeline" />
-          <div className="mt-4">
+          <div className="mt-2.5">
             <PipelineFlow steps={['GameplayEffect', 'ExecutionCalc', 'Armor Reduction', 'Crit Multiplier', 'Final Damage']} accent="#ef4444" />
           </div>
         </SurfaceCard>
@@ -1096,7 +1059,7 @@ function EffectsSection({ featureMap, defs, expanded, onToggle }: SectionProps) 
 /* ── Section: Tag Dependencies (3.3) ──────────────────────────────────── */
 
 function TagDepsSection() {
-  const size = 400;
+  const size = 300;
   const cx = size / 2;
   const cy = size / 2;
   const r = size / 2 - 60;
@@ -1115,11 +1078,11 @@ function TagDepsSection() {
   }, []);
 
   return (
-    <div className="space-y-4">
-      <SurfaceCard level={2} className="p-4 relative overflow-hidden">
+    <div className="space-y-2.5">
+      <SurfaceCard level={2} className="p-3 relative overflow-hidden">
         <div className="absolute right-0 top-0 w-40 h-40 bg-amber-500/5 blur-3xl rounded-full pointer-events-none" />
         <SectionLabel icon={Network} label="Gameplay Tag Dependency Graph" color="#f59e0b" />
-        <p className="text-xs text-text-muted mt-1 mb-4">
+        <p className="text-xs text-text-muted mt-1 mb-2.5">
           Tags interact through blocking and requirement relationships. Red dashed edges indicate blocking dependencies.
         </p>
 
@@ -1189,7 +1152,7 @@ function TagDepsSection() {
         </div>
 
         {/* Category legend */}
-        <div className="flex items-center gap-4 justify-center mt-4 flex-wrap">
+        <div className="flex items-center gap-2.5 justify-center mt-2.5 flex-wrap">
           {Object.entries(TAG_DEP_CATEGORIES).map(([cat, color]) => (
             <div key={cat} className="flex items-center gap-1.5 text-xs font-mono">
               <span className="w-3 h-3 rounded-full" style={{ backgroundColor: `${color}30`, border: `1.5px solid ${color}` }} />
@@ -1219,17 +1182,17 @@ function EffectsTimelineSection() {
   }, []);
 
   return (
-    <div className="space-y-4">
-      <SurfaceCard level={2} className="p-4 relative overflow-hidden">
+    <div className="space-y-2.5">
+      <SurfaceCard level={2} className="p-3 relative overflow-hidden">
         <div className="absolute left-0 top-0 w-40 h-40 bg-red-500/5 blur-3xl rounded-full pointer-events-none" />
         <SectionLabel icon={Clock} label="Effect Stack Timeline" color="#ef4444" />
-        <p className="text-xs text-text-muted mt-1 mb-4">
+        <p className="text-xs text-text-muted mt-1 mb-2.5">
           Swim-lane view of 8 effect events over a 10-second combat sequence. Duration bars show persistent effects.
         </p>
 
         {/* Full timeline strip */}
-        <div className="mb-4">
-          <TimelineStrip events={EFFECT_TIMELINE_EVENTS} accent="#ef4444" height={100} />
+        <div className="mb-2.5">
+          <TimelineStrip events={EFFECT_TIMELINE_EVENTS} accent="#ef4444" height={70} />
         </div>
 
         {/* Swim-lane breakdown */}
@@ -1302,17 +1265,17 @@ function DamageCalcSection() {
   }, [baseDamage, attackerPower, targetArmor, critChance, critMultiplier]);
 
   return (
-    <div className="space-y-4">
-      <SurfaceCard level={2} className="p-4 relative overflow-hidden">
+    <div className="space-y-2.5">
+      <SurfaceCard level={2} className="p-3 relative overflow-hidden">
         <div className="absolute right-0 top-0 w-40 h-40 bg-orange-500/5 blur-3xl rounded-full pointer-events-none" />
         <SectionLabel icon={Calculator} label="Damage Formula Sandbox" color="#f97316" />
-        <p className="text-xs text-text-muted mt-1 mb-4">
+        <p className="text-xs text-text-muted mt-1 mb-2.5">
           Adjust parameters to explore how the GAS damage formula works. All calculations follow the standard execution pipeline.
         </p>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
           {/* Sliders */}
-          <div className="space-y-4">
+          <div className="space-y-2.5">
             <SliderParam label="Base Damage" value={baseDamage} min={10} max={100} onChange={setBaseDamage} color="#ef4444" />
             <SliderParam label="Attacker Power" value={attackerPower} min={1} max={200} onChange={setAttackerPower} color="#f97316" />
             <SliderParam label="Target Armor" value={targetArmor} min={0} max={200} onChange={setTargetArmor} color="#3b82f6" />
@@ -1457,27 +1420,27 @@ function TagAuditSection() {
   const maxUsage = Math.max(...TAG_USAGE_FREQUENCY.map(t => t.count));
 
   return (
-    <div className="space-y-4">
-      <SurfaceCard level={2} className="p-4 relative overflow-hidden">
+    <div className="space-y-2.5">
+      <SurfaceCard level={2} className="p-3 relative overflow-hidden">
         <div className="absolute right-0 top-0 w-40 h-40 bg-amber-500/5 blur-3xl rounded-full pointer-events-none" />
         <SectionLabel icon={ClipboardCheck} label="Tag Audit Dashboard" color="#fbbf24" />
-        <p className="text-xs text-text-muted mt-1 mb-4">
+        <p className="text-xs text-text-muted mt-1 mb-2.5">
           Automated analysis of tag health across the Gameplay Tag hierarchy.
         </p>
 
         {/* Audit score */}
-        <div className="flex items-center gap-4 mb-5">
-          <div className="relative w-16 h-16">
-            <svg width={64} height={64} viewBox="0 0 64 64">
-              <circle cx={32} cy={32} r={26} fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth={5} />
+        <div className="flex items-center gap-2.5 mb-3">
+          <div className="relative w-12 h-12">
+            <svg width={48} height={48} viewBox="0 0 48 48">
+              <circle cx={24} cy={24} r={20} fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth={4} />
               <circle
-                cx={32} cy={32} r={26} fill="none"
+                cx={24} cy={24} r={20} fill="none"
                 stroke={TAG_AUDIT_SCORE >= 80 ? STATUS_SUCCESS : TAG_AUDIT_SCORE >= 60 ? STATUS_WARNING : STATUS_ERROR}
-                strokeWidth={5}
-                strokeDasharray={2 * Math.PI * 26}
-                strokeDashoffset={2 * Math.PI * 26 * (1 - TAG_AUDIT_SCORE / 100)}
+                strokeWidth={4}
+                strokeDasharray={2 * Math.PI * 20}
+                strokeDashoffset={2 * Math.PI * 20 * (1 - TAG_AUDIT_SCORE / 100)}
                 strokeLinecap="round"
-                transform="rotate(-90 32 32)"
+                transform="rotate(-90 24 24)"
                 style={{ filter: `drop-shadow(0 0 6px ${STATUS_SUCCESS})` }}
               />
             </svg>
@@ -1492,7 +1455,7 @@ function TagAuditSection() {
         </div>
 
         {/* Audit categories */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-5">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-3">
           {TAG_AUDIT_CATEGORIES.map((cat, i) => (
             <motion.div
               key={cat.name}
@@ -1546,17 +1509,17 @@ function TagAuditSection() {
 
 function LoadoutSection() {
   return (
-    <div className="space-y-4">
-      <SurfaceCard level={2} className="p-4 relative overflow-hidden">
+    <div className="space-y-2.5">
+      <SurfaceCard level={2} className="p-3 relative overflow-hidden">
         <div className="absolute left-0 top-0 w-40 h-40 bg-purple-500/5 blur-3xl rounded-full pointer-events-none" />
         <SectionLabel icon={Layers} label="Ability Loadout Optimizer" color="#a855f7" />
-        <p className="text-xs text-text-muted mt-1 mb-4">
+        <p className="text-xs text-text-muted mt-1 mb-2.5">
           Optimal ability loadout for 4 slots, scored on coverage, synergy, DPS, burst, and utility.
         </p>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
           {/* Loadout slots */}
-          <div className="space-y-4">
+          <div className="space-y-2.5">
             <div className="text-xs font-bold uppercase tracking-widest text-text-muted mb-2">Optimal Loadout</div>
             <div className="grid grid-cols-2 gap-3">
               {OPTIMAL_LOADOUT.map((slot, i) => (
@@ -1592,9 +1555,9 @@ function LoadoutSection() {
           </div>
 
           {/* Radar + alternatives */}
-          <div className="space-y-4">
+          <div className="space-y-2.5">
             <div className="flex justify-center">
-              <RadarChart data={LOADOUT_RADAR} size={180} accent="#a855f7" />
+              <RadarChart data={LOADOUT_RADAR} size={140} accent="#a855f7" />
             </div>
 
             {/* Alternative loadouts */}

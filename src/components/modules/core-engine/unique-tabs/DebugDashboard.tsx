@@ -316,7 +316,7 @@ function CircularGauge({ label, current, target, unit }: { label: string; curren
       <div className="absolute top-0 right-0 w-full h-[1px] bg-gradient-to-r from-transparent via-orange-500/30 to-transparent" />
 
       <div className="relative">
-        <svg width="60" height="60" viewBox="0 0 60 60">
+        <svg width="48" height="48" viewBox="0 0 60 60">
           <circle cx="30" cy="30" r={r} fill="none" stroke="rgba(255,255,255,0.05)" strokeWidth="4" />
           <circle cx="30" cy="30" r={r} fill="none" stroke={color} strokeWidth="4"
             strokeDasharray={circ} strokeDashoffset={circ * (1 - pct)}
@@ -460,7 +460,7 @@ export function DebugDashboard({ moduleId }: DebugDashboardProps) {
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-2.5">
       {/* Terminal Interface Header */}
       <div className="flex items-center justify-between pb-3 border-b border-orange-900/40 relative">
         <div className="flex items-center gap-3">
@@ -490,7 +490,7 @@ export function DebugDashboard({ moduleId }: DebugDashboardProps) {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-2.5">
         {/* Features list */}
         <div className="space-y-2">
           <div className="flex items-center gap-2 mb-2 border-b border-orange-900/30 pb-2">
@@ -581,7 +581,7 @@ export function DebugDashboard({ moduleId }: DebugDashboardProps) {
           <Cpu className="w-3.5 h-3.5 text-orange-500" />
           <span className="text-[10px] font-mono text-orange-500 uppercase tracking-widest">SYSTEM_HEALTH_MATRIX</span>
         </div>
-        <SurfaceCard level={2} className="p-4 border-orange-900/30 bg-orange-950/5">
+        <SurfaceCard level={2} className="p-3 border-orange-900/30 bg-orange-950/5">
           <HeatmapGrid
             rows={HEALTH_MATRIX_ROWS}
             cols={HEALTH_MATRIX_COLS}
@@ -590,7 +590,7 @@ export function DebugDashboard({ moduleId }: DebugDashboardProps) {
             highColor={STATUS_ERROR}
             accent={ACCENT}
           />
-          <div className="flex items-center gap-4 mt-3 text-[9px] font-mono text-orange-500/60 uppercase tracking-widest">
+          <div className="flex items-center gap-2.5 mt-3 text-[9px] font-mono text-orange-500/60 uppercase tracking-widest">
             <span className="flex items-center gap-1.5">
               <span className="w-3 h-2 rounded-sm" style={{ backgroundColor: '#0c2d1a' }} /> HEALTHY
             </span>
@@ -615,7 +615,7 @@ export function DebugDashboard({ moduleId }: DebugDashboardProps) {
             TOTAL: {FRAME_TOTAL_MS.toFixed(1)}ms / {FRAME_TARGET_MS.toFixed(2)}ms TARGET
           </span>
         </div>
-        <SurfaceCard level={2} className="p-4 border-orange-900/30 bg-orange-950/5">
+        <SurfaceCard level={2} className="p-3 border-orange-900/30 bg-orange-950/5">
           <div className="space-y-2">
             {FRAME_TIME_BARS.map((bar) => {
               const pct = (bar.ms / FRAME_TARGET_MS) * 100;
@@ -641,7 +641,7 @@ export function DebugDashboard({ moduleId }: DebugDashboardProps) {
             })}
           </div>
           {/* Stacked summary bar */}
-          <div className="mt-4 relative">
+          <div className="mt-2.5 relative">
             <div className="text-[9px] font-mono text-orange-500/50 uppercase tracking-widest mb-1">STACKED FRAME BUDGET</div>
             <div className="h-6 bg-black/40 rounded-sm flex overflow-hidden relative">
               {FRAME_TIME_BARS.map((bar) => (
@@ -675,12 +675,12 @@ export function DebugDashboard({ moduleId }: DebugDashboardProps) {
           <PieChart className="w-3.5 h-3.5 text-orange-500" />
           <span className="text-[10px] font-mono text-orange-500 uppercase tracking-widest">MEMORY_ALLOCATION_TRACKER</span>
         </div>
-        <SurfaceCard level={2} className="p-4 border-orange-900/30 bg-orange-950/5">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <SurfaceCard level={2} className="p-3 border-orange-900/30 bg-orange-950/5">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
             {/* Donut chart */}
             <div className="flex flex-col items-center gap-3">
               <div className="relative">
-                <svg width="140" height="140" viewBox="0 0 140 140">
+                <svg width="110" height="110" viewBox="0 0 140 140">
                   {(() => {
                     let cumulative = 0;
                     const r = 52;
@@ -761,7 +761,7 @@ export function DebugDashboard({ moduleId }: DebugDashboardProps) {
           <Search className="w-3.5 h-3.5 text-orange-500" />
           <span className="text-[10px] font-mono text-orange-500 uppercase tracking-widest">CONSOLE_COMMAND_BUILDER</span>
         </div>
-        <SurfaceCard level={2} className="p-4 border-orange-900/30 bg-orange-950/5">
+        <SurfaceCard level={2} className="p-3 border-orange-900/30 bg-orange-950/5">
           {/* Search + Category filter */}
           <div className="flex flex-col sm:flex-row gap-2 mb-3">
             <div className="relative flex-1">
@@ -854,8 +854,8 @@ export function DebugDashboard({ moduleId }: DebugDashboardProps) {
           <Wifi className="w-3.5 h-3.5 text-orange-500" />
           <span className="text-[10px] font-mono text-orange-500 uppercase tracking-widest">NETWORK_REPLICATION_MONITOR</span>
         </div>
-        <SurfaceCard level={2} className="p-4 border-orange-900/30 bg-orange-950/5">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <SurfaceCard level={2} className="p-3 border-orange-900/30 bg-orange-950/5">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-2.5">
             {/* Left: Bandwidth + Actor table */}
             <div className="space-y-3">
               {/* Bandwidth gauge */}
@@ -945,7 +945,7 @@ export function DebugDashboard({ moduleId }: DebugDashboardProps) {
             AVG INTERVAL: {GC_AVG_INTERVAL}s // WARN THRESHOLD: {GC_WARNING_THRESHOLD_MS}ms
           </span>
         </div>
-        <SurfaceCard level={2} className="p-4 border-orange-900/30 bg-orange-950/5">
+        <SurfaceCard level={2} className="p-3 border-orange-900/30 bg-orange-950/5">
           {/* Timeline visualization */}
           <div className="relative h-32 bg-black/30 rounded-sm overflow-hidden mb-3">
             {/* Y-axis labels */}
@@ -1029,8 +1029,8 @@ export function DebugDashboard({ moduleId }: DebugDashboardProps) {
             TOTAL: {DRAW_CALL_TOTAL} / {DRAW_CALL_BUDGET} BUDGET
           </span>
         </div>
-        <SurfaceCard level={2} className="p-4 border-orange-900/30 bg-orange-950/5">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <SurfaceCard level={2} className="p-3 border-orange-900/30 bg-orange-950/5">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-2.5">
             {/* Bar chart */}
             <div className="space-y-2">
               <div className="text-[9px] font-mono text-orange-500/50 uppercase tracking-widest mb-1.5">BY CATEGORY</div>
@@ -1143,9 +1143,9 @@ export function DebugDashboard({ moduleId }: DebugDashboardProps) {
           <ShieldAlert className="w-3.5 h-3.5 text-orange-500" />
           <span className="text-[10px] font-mono text-orange-500 uppercase tracking-widest">CRASH_PREDICTION_ENGINE</span>
         </div>
-        <SurfaceCard level={2} className="p-4 border-orange-900/30 bg-orange-950/5">
+        <SurfaceCard level={2} className="p-3 border-orange-900/30 bg-orange-950/5">
           {/* Overall risk */}
-          <div className="flex items-center gap-3 mb-4 p-3 rounded bg-black/30 border border-orange-900/30">
+          <div className="flex items-center gap-3 mb-2.5 p-3 rounded bg-black/30 border border-orange-900/30">
             <div className="flex items-center gap-2">
               <CheckCircle2 className="w-5 h-5" style={{ color: STATUS_SUCCESS }} />
               <span className="text-[10px] font-mono text-orange-500/60 uppercase tracking-widest">OVERALL RISK</span>
@@ -1157,7 +1157,7 @@ export function DebugDashboard({ moduleId }: DebugDashboardProps) {
           </div>
           {/* Risk factors */}
           <div className="text-[9px] font-mono text-orange-500/50 uppercase tracking-widest mb-2">RISK FACTORS</div>
-          <div className="space-y-1.5 mb-4">
+          <div className="space-y-1.5 mb-2.5">
             {CRASH_RISK_FACTORS.map((rf) => (
               <div key={rf.factor} className="flex items-center gap-3 px-2 py-1.5 rounded hover:bg-orange-950/20 transition-colors border border-transparent hover:border-orange-900/20">
                 <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: RISK_COLORS[rf.risk], boxShadow: `0 0 4px ${RISK_COLORS[rf.risk]}60` }} />
@@ -1196,10 +1196,10 @@ export function DebugDashboard({ moduleId }: DebugDashboardProps) {
           <TrendingDown className="w-3.5 h-3.5 text-orange-500" />
           <span className="text-[10px] font-mono text-orange-500 uppercase tracking-widest">PERF_REGRESSION_DETECTOR</span>
         </div>
-        <SurfaceCard level={2} className="p-4 border-orange-900/30 bg-orange-950/5">
+        <SurfaceCard level={2} className="p-3 border-orange-900/30 bg-orange-950/5">
           {/* Regression report */}
           <div className="text-[9px] font-mono text-orange-500/50 uppercase tracking-widest mb-2">REGRESSION REPORT — LATEST BUILD</div>
-          <div className="space-y-1 mb-4">
+          <div className="space-y-1 mb-2.5">
             {REGRESSION_METRICS.map((rm) => (
               <div key={rm.metric} className="flex items-center gap-3 px-2 py-1.5 rounded hover:bg-orange-950/20 transition-colors">
                 {rm.status === 'PASS' ? (
@@ -1275,7 +1275,7 @@ export function DebugDashboard({ moduleId }: DebugDashboardProps) {
             ))}
           </div>
           {/* Legend */}
-          <div className="flex items-center gap-4 text-[9px] font-mono">
+          <div className="flex items-center gap-2.5 text-[9px] font-mono">
             <span className="flex items-center gap-1.5">
               <span className="w-4 h-[2px] rounded" style={{ backgroundColor: STATUS_SUCCESS }} /> <span className="text-orange-500/50 uppercase tracking-widest">FPS</span>
             </span>

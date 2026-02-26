@@ -394,16 +394,16 @@ export function CharacterBlueprint({ moduleId }: CharacterBlueprintProps) {
   if (isLoading) return <LoadingSpinner accent={ACCENT} />;
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-2.5">
       {/* Header */}
       <TabHeader icon={User} title="Character Blueprint" implemented={stats.implemented} total={stats.total} accent={ACCENT} />
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-2.5">
         {/* Class tree & Movement */}
-        <div className="space-y-4">
-          <SurfaceCard level={2} className="p-4 relative overflow-hidden">
+        <div className="space-y-2.5">
+          <SurfaceCard level={2} className="p-3 relative overflow-hidden">
             <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500/5 blur-3xl rounded-full pointer-events-none" />
-            <div className="text-xs font-bold uppercase tracking-widest text-text-muted mb-4 flex items-center gap-2 relative z-10">
+            <div className="text-xs font-bold uppercase tracking-widest text-text-muted mb-2.5 flex items-center gap-2 relative z-10">
               <User className="w-4 h-4 text-blue-400" /> Class Hierarchy
             </div>
             <div className="bg-surface-deep/50 p-4 rounded-xl border border-border/40 relative z-10">
@@ -411,8 +411,8 @@ export function CharacterBlueprint({ moduleId }: CharacterBlueprintProps) {
             </div>
           </SurfaceCard>
 
-          <SurfaceCard level={2} className="p-4 relative">
-            <div className="mb-4"><SectionLabel icon={Zap} label="Movement States Flow" /></div>
+          <SurfaceCard level={2} className="p-3 relative">
+            <div className="mb-2.5"><SectionLabel icon={Zap} label="Movement States Flow" /></div>
             <div className="flex flex-wrap gap-2 items-center">
               {MOVEMENT_STATES.map((state, i, arr) => (
                 <span key={state.label} className="flex items-center gap-2">
@@ -433,7 +433,7 @@ export function CharacterBlueprint({ moduleId }: CharacterBlueprintProps) {
                 </span>
               ))}
             </div>
-            <div className="flex gap-4 mt-4 text-xs font-mono text-text-muted bg-surface/50 p-2 rounded-lg border border-border/30">
+            <div className="flex gap-2.5 mt-2.5 text-xs font-mono text-text-muted bg-surface/50 p-2 rounded-lg border border-border/30">
               <span className="flex items-center gap-1.5"><span className="w-1.5 h-1.5 rounded-full bg-orange-400" /> Sprint: Shift held</span>
               <span className="flex items-center gap-1.5"><span className="w-1.5 h-1.5 rounded-full bg-red-400" /> Dodge: Space (cooldown)</span>
             </div>
@@ -441,10 +441,10 @@ export function CharacterBlueprint({ moduleId }: CharacterBlueprintProps) {
         </div>
 
         {/* Components & Bindings */}
-        <div className="space-y-4">
-          <SurfaceCard level={2} className="p-4 relative group overflow-hidden">
+        <div className="space-y-2.5">
+          <SurfaceCard level={2} className="p-3 relative group overflow-hidden">
             <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-[rgba(255,255,255,0.02)] to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-700 pointer-events-none" />
-            <div className="text-xs font-bold uppercase tracking-widest text-text-muted mb-4 flex items-center gap-2 relative z-10">
+            <div className="text-xs font-bold uppercase tracking-widest text-text-muted mb-2.5 flex items-center gap-2 relative z-10">
               <Cpu className="w-4 h-4 text-cyan-400" /> Component Slots
             </div>
             <div className="grid grid-cols-2 gap-3 relative z-10">
@@ -477,8 +477,8 @@ export function CharacterBlueprint({ moduleId }: CharacterBlueprintProps) {
             </div>
           </SurfaceCard>
 
-          <SurfaceCard level={2} className="p-4 relative">
-            <div className="text-xs font-bold uppercase tracking-widest text-text-muted mb-4 flex items-center gap-2">
+          <SurfaceCard level={2} className="p-3 relative">
+            <div className="text-xs font-bold uppercase tracking-widest text-text-muted mb-2.5 flex items-center gap-2">
               <Keyboard className="w-4 h-4 text-emerald-400" /> Input Bindings
             </div>
             <div className="overflow-x-auto custom-scrollbar pb-2">
@@ -532,11 +532,11 @@ export function CharacterBlueprint({ moduleId }: CharacterBlueprintProps) {
       </div>
 
       {/* Keyboard Visualization */}
-      <SurfaceCard level={2} className="p-4 relative overflow-hidden">
-        <div className="text-xs font-bold uppercase tracking-widest text-text-muted mb-4 flex items-center gap-2">
+      <SurfaceCard level={2} className="p-3 relative overflow-hidden">
+        <div className="text-xs font-bold uppercase tracking-widest text-text-muted mb-2.5 flex items-center gap-2">
           <Keyboard className="w-4 h-4 text-cyan-400" /> Input Binding Map
         </div>
-        <div className="flex gap-6 items-start">
+        <div className="flex gap-2.5 items-start">
           {/* Keyboard */}
           <div className="space-y-1">
             {KEYBOARD_ROWS.map((row, ri) => (
@@ -602,7 +602,7 @@ export function CharacterBlueprint({ moduleId }: CharacterBlueprintProps) {
         </div>
 
         {/* Legend */}
-        <div className="flex items-center gap-4 mt-3 text-[10px] font-medium text-text-muted border-t border-border/40 pt-2">
+        <div className="flex items-center gap-2.5 mt-3 text-[10px] font-medium text-text-muted border-t border-border/40 pt-2">
           <span className="flex items-center gap-1.5">
             <span className="w-3 h-3 rounded border shadow-sm" style={{ backgroundColor: `${ACCENT_CYAN}20`, borderColor: `${ACCENT_CYAN}50` }} />
             Bound
@@ -616,16 +616,16 @@ export function CharacterBlueprint({ moduleId }: CharacterBlueprintProps) {
 
       {/* Feature status list */}
       <SurfaceCard level={2} className="p-4">
-        <div className="mb-4"><SectionLabel label="Architectural Components" /></div>
+        <div className="mb-2.5"><SectionLabel label="Architectural Components" /></div>
         <FeatureGrid featureNames={CHARACTER_FEATURES} featureMap={featureMap} defs={defs} expanded={expanded} onToggle={toggleExpand} accent={ACCENT} />
       </SurfaceCard>
 
       {/* ── 1.1 Component Dependency Graph ─────────────────────────────────── */}
-      <SurfaceCard level={2} className="p-4 relative overflow-hidden">
+      <SurfaceCard level={2} className="p-3 relative overflow-hidden">
         <div className="absolute top-0 left-0 w-40 h-40 bg-blue-500/5 blur-3xl rounded-full pointer-events-none" />
-        <div className="mb-4"><SectionLabel icon={Network} label="Component Dependency Graph" color={ACCENT} /></div>
+        <div className="mb-2.5"><SectionLabel icon={Network} label="Component Dependency Graph" color={ACCENT} /></div>
         <div className="flex justify-center">
-          <svg width={360} height={360} viewBox="0 0 360 360" className="overflow-visible">
+          <svg width={280} height={280} viewBox="0 0 360 360" className="overflow-visible">
             {/* Edges */}
             {DEPENDENCY_EDGES.map((edge) => {
               const si = DEPENDENCY_NODES.findIndex((n) => n.id === edge.source);
@@ -674,10 +674,10 @@ export function CharacterBlueprint({ moduleId }: CharacterBlueprintProps) {
       </SurfaceCard>
 
       {/* ── 1.2 Movement State Heatmap (Donut) ────────────────────────────── */}
-      <SurfaceCard level={2} className="p-4 relative overflow-hidden">
-        <div className="mb-4"><SectionLabel icon={Activity} label="Movement State Distribution" color={ACCENT_EMERALD} /></div>
-        <div className="flex items-center gap-6">
-          <svg width={180} height={180} viewBox="0 0 180 180">
+      <SurfaceCard level={2} className="p-3 relative overflow-hidden">
+        <div className="mb-2.5"><SectionLabel icon={Activity} label="Movement State Distribution" color={ACCENT_EMERALD} /></div>
+        <div className="flex items-center gap-2.5">
+          <svg width={140} height={140} viewBox="0 0 180 180">
             {(() => {
               const cx = 90, cy = 90, r = 70, innerR = 42;
               let cumAngle = -90;
@@ -724,9 +724,9 @@ export function CharacterBlueprint({ moduleId }: CharacterBlueprintProps) {
       </SurfaceCard>
 
       {/* ── 1.3 Input Action Conflict Detector ────────────────────────────── */}
-      <SurfaceCard level={2} className="p-4 relative overflow-hidden">
-        <div className="mb-4"><SectionLabel icon={AlertTriangle} label="Input Action Conflict Detector" color={ACCENT_CYAN} /></div>
-        <div className="flex items-start gap-6">
+      <SurfaceCard level={2} className="p-3 relative overflow-hidden">
+        <div className="mb-2.5"><SectionLabel icon={AlertTriangle} label="Input Action Conflict Detector" color={ACCENT_CYAN} /></div>
+        <div className="flex items-start gap-2.5">
           {/* Mini keyboard */}
           <div className="space-y-1">
             {KEYBOARD_ROWS.slice(0, 3).map((row, ri) => (
@@ -768,10 +768,10 @@ export function CharacterBlueprint({ moduleId }: CharacterBlueprintProps) {
       </SurfaceCard>
 
       {/* ── 1.4 Acceleration Curve Editor ─────────────────────────────────── */}
-      <SurfaceCard level={2} className="p-4 relative overflow-hidden">
-        <div className="mb-4"><SectionLabel icon={TrendingUp} label="Sprint Acceleration Curve" color={ACCENT_ORANGE} /></div>
+      <SurfaceCard level={2} className="p-3 relative overflow-hidden">
+        <div className="mb-2.5"><SectionLabel icon={TrendingUp} label="Sprint Acceleration Curve" color={ACCENT_ORANGE} /></div>
         <div className="flex justify-center">
-          <svg width={320} height={200} viewBox="0 0 320 200" className="overflow-visible">
+          <svg width={280} height={160} viewBox="0 0 320 200" className="overflow-visible">
             {/* Grid */}
             {[0, 150, 300, 450, 600].map((v) => {
               const y = 180 - (v / 600) * 160;
@@ -822,9 +822,9 @@ export function CharacterBlueprint({ moduleId }: CharacterBlueprintProps) {
       </SurfaceCard>
 
       {/* ── 1.5 Camera Profile Comparison ─────────────────────────────────── */}
-      <SurfaceCard level={2} className="p-4 relative overflow-hidden">
-        <div className="mb-4"><SectionLabel icon={Camera} label="Camera Profile Comparison" color={ACCENT_ORANGE} /></div>
-        <div className="flex items-center gap-6 justify-center">
+      <SurfaceCard level={2} className="p-3 relative overflow-hidden">
+        <div className="mb-2.5"><SectionLabel icon={Camera} label="Camera Profile Comparison" color={ACCENT_ORANGE} /></div>
+        <div className="flex items-center gap-2.5 justify-center">
           <RadarChart
             data={CAMERA_PROFILES[0].data}
             size={200}
@@ -840,15 +840,15 @@ export function CharacterBlueprint({ moduleId }: CharacterBlueprintProps) {
               </div>
             ))}
             <div className="mt-2 text-[10px] text-text-muted space-y-0.5">
-              <div className="flex justify-between gap-4">
+              <div className="flex justify-between gap-2.5">
                 <span>Best Distance:</span>
                 <span className="font-mono font-bold" style={{ color: STATUS_ERROR }}>Combat (0.9)</span>
               </div>
-              <div className="flex justify-between gap-4">
+              <div className="flex justify-between gap-2.5">
                 <span>Best FOV:</span>
                 <span className="font-mono font-bold" style={{ color: ACCENT_VIOLET }}>Cinematic (0.95)</span>
               </div>
-              <div className="flex justify-between gap-4">
+              <div className="flex justify-between gap-2.5">
                 <span>Best Freedom:</span>
                 <span className="font-mono font-bold" style={{ color: ACCENT_EMERALD }}>Exploration (0.9)</span>
               </div>
@@ -858,11 +858,11 @@ export function CharacterBlueprint({ moduleId }: CharacterBlueprintProps) {
       </SurfaceCard>
 
       {/* ── 1.6 Dodge Trajectory Visualizer ───────────────────────────────── */}
-      <SurfaceCard level={2} className="p-4 relative overflow-hidden">
-        <div className="mb-4"><SectionLabel icon={Crosshair} label="Dodge Trajectory Visualizer" color={ACCENT_CYAN} /></div>
-        <div className="flex items-center gap-6">
+      <SurfaceCard level={2} className="p-3 relative overflow-hidden">
+        <div className="mb-2.5"><SectionLabel icon={Crosshair} label="Dodge Trajectory Visualizer" color={ACCENT_CYAN} /></div>
+        <div className="flex items-center gap-2.5">
           <div className="relative">
-            <svg width={120} height={120} viewBox="0 0 100 100" className="overflow-visible">
+            <svg width={100} height={100} viewBox="0 0 100 100" className="overflow-visible">
               {/* Grid */}
               <rect x={0} y={0} width={100} height={100} fill="rgba(255,255,255,0.02)" stroke="rgba(255,255,255,0.1)" strokeWidth="0.5" rx={4} />
               {[25, 50, 75].map((v) => (
@@ -914,9 +914,9 @@ export function CharacterBlueprint({ moduleId }: CharacterBlueprintProps) {
       </SurfaceCard>
 
       {/* ── 1.7 Character Scaling Preview ─────────────────────────────────── */}
-      <SurfaceCard level={2} className="p-4 relative overflow-hidden">
-        <div className="mb-4"><SectionLabel icon={Scaling} label="Character Scaling Preview" color={ACCENT_VIOLET} /></div>
-        <div className="flex items-center gap-3 mb-4">
+      <SurfaceCard level={2} className="p-3 relative overflow-hidden">
+        <div className="mb-2.5"><SectionLabel icon={Scaling} label="Character Scaling Preview" color={ACCENT_VIOLET} /></div>
+        <div className="flex items-center gap-3 mb-2.5">
           <span className="text-xs font-mono font-bold text-text-muted">Level</span>
           <input
             type="range" min={1} max={50} value={scalingLevel}
@@ -955,10 +955,10 @@ export function CharacterBlueprint({ moduleId }: CharacterBlueprintProps) {
       </SurfaceCard>
 
       {/* ── 1.8 Hitbox Wireframe Viewer ───────────────────────────────────── */}
-      <SurfaceCard level={2} className="p-4 relative overflow-hidden">
-        <div className="mb-4"><SectionLabel icon={Box} label="Hitbox Wireframe Viewer" color={STATUS_ERROR} /></div>
-        <div className="flex items-start gap-6">
-          <svg width={140} height={160} viewBox="0 0 100 120" className="overflow-visible">
+      <SurfaceCard level={2} className="p-3 relative overflow-hidden">
+        <div className="mb-2.5"><SectionLabel icon={Box} label="Hitbox Wireframe Viewer" color={STATUS_ERROR} /></div>
+        <div className="flex items-start gap-2.5">
+          <svg width={100} height={100} viewBox="0 0 100 100" className="overflow-visible">
             {/* Silhouette outline */}
             <ellipse cx={50} cy={15} rx={10} ry={12} fill="none" stroke="rgba(255,255,255,0.15)" strokeWidth="1" />
             <rect x={38} y={27} width={24} height={35} rx={3} fill="none" stroke="rgba(255,255,255,0.15)" strokeWidth="1" />
@@ -1009,8 +1009,8 @@ export function CharacterBlueprint({ moduleId }: CharacterBlueprintProps) {
       </SurfaceCard>
 
       {/* ── 1.9 Character Comparison Matrix ───────────────────────────────── */}
-      <SurfaceCard level={2} className="p-4 relative overflow-hidden">
-        <div className="mb-4"><SectionLabel icon={BarChart3} label="Character Comparison Matrix" color={ACCENT_VIOLET} /></div>
+      <SurfaceCard level={2} className="p-3 relative overflow-hidden">
+        <div className="mb-2.5"><SectionLabel icon={BarChart3} label="Character Comparison Matrix" color={ACCENT_VIOLET} /></div>
         <div className="overflow-x-auto custom-scrollbar">
           <table className="w-full text-xs border-collapse">
             <thead>
@@ -1073,8 +1073,8 @@ export function CharacterBlueprint({ moduleId }: CharacterBlueprintProps) {
       </SurfaceCard>
 
       {/* ── 1.10 Blueprint Property Inspector ─────────────────────────────── */}
-      <SurfaceCard level={2} className="p-4 relative overflow-hidden">
-        <div className="mb-4 flex items-center justify-between">
+      <SurfaceCard level={2} className="p-3 relative overflow-hidden">
+        <div className="mb-2.5 flex items-center justify-between">
           <SectionLabel icon={Search} label="Blueprint Property Inspector" color={ACCENT} />
           <div className="relative">
             <Search className="w-3 h-3 absolute left-2 top-1/2 -translate-y-1/2 text-text-muted" />
@@ -1127,7 +1127,7 @@ export function CharacterBlueprint({ moduleId }: CharacterBlueprintProps) {
             );
           })}
         </div>
-        <div className="flex items-center gap-4 mt-3 pt-2 border-t border-border/30 text-[10px] text-text-muted font-mono">
+        <div className="flex items-center gap-2.5 mt-3 pt-2 border-t border-border/30 text-[10px] text-text-muted font-mono">
           <span>Total: {BLUEPRINT_PROPERTIES.length} properties</span>
           <span>Modified: <span className="font-bold" style={{ color: STATUS_WARNING }}>{BLUEPRINT_PROPERTIES.filter((p) => p.isModified).length}</span></span>
           <span>Default: <span className="font-bold text-text-muted">{BLUEPRINT_PROPERTIES.filter((p) => !p.isModified).length}</span></span>

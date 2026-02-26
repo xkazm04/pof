@@ -12,7 +12,7 @@ import { SurfaceCard } from '@/components/ui/SurfaceCard';
 import type { SubModuleId } from '@/types/modules';
 import type { FeatureRow, FeatureStatus } from '@/types/feature-matrix';
 import type { RadarDataPoint } from '@/types/unique-tab-improvements';
-import { STATUS_COLORS, TabHeader, PipelineFlow, SectionLabel, LoadingSpinner, RadarChart } from './_shared';
+import { STATUS_COLORS, TabHeader, PipelineFlow, SectionLabel, LoadingSpinner, RadarChart, SubTabNavigation, SubTab } from './_shared';
 
 const ACCENT = MODULE_COLORS.core;
 
@@ -161,14 +161,14 @@ interface BtEdge {
 }
 
 const BT_NODES: BtNode[] = [
-  { id: 'root', label: 'Root Selector', shape: 'diamond', x: 140, y: 20, active: true, details: 'Evaluates children left-to-right. Succeeds on first child success.' },
-  { id: 'seq-combat', label: 'Seq:Combat', shape: 'rect', x: 60, y: 80, active: true, details: 'Sequence node: all children must succeed for combat engagement.' },
-  { id: 'seq-patrol', label: 'Seq:Patrol', shape: 'rect', x: 220, y: 80, active: false, details: 'Sequence node: patrol waypoint loop with idle pauses.' },
-  { id: 'dec-target', label: 'HasTarget?', shape: 'hexagon', x: 20, y: 140, active: true, details: 'Decorator: checks blackboard for valid target reference (not null, alive, in range).' },
-  { id: 'dec-range', label: 'InRange?', shape: 'hexagon', x: 100, y: 140, active: true, details: 'Decorator: evaluates distance < AttackRange (500cm default). Returns success/fail.' },
-  { id: 'task-attack', label: 'Attack', shape: 'rounded', x: 20, y: 200, active: true, details: 'Task: execute melee/ranged attack ability. Cooldown: 1.2s. Damage: based on archetype.' },
-  { id: 'task-chase', label: 'Chase', shape: 'rounded', x: 100, y: 200, active: false, details: 'Task: move toward target using NavMesh pathfinding. Speed multiplier: 1.5x base.' },
-  { id: 'task-wander', label: 'Wander', shape: 'rounded', x: 220, y: 140, active: false, details: 'Task: random point in 600cm radius via EQS. Idle 2-4s between moves.' },
+  { id: 'root', label: 'Root Selector', shape: 'diamond', x: 120, y: 15, active: true, details: 'Evaluates children left-to-right. Succeeds on first child success.' },
+  { id: 'seq-combat', label: 'Seq:Combat', shape: 'rect', x: 51.4, y: 60, active: true, details: 'Sequence node: all children must succeed for combat engagement.' },
+  { id: 'seq-patrol', label: 'Seq:Patrol', shape: 'rect', x: 188.6, y: 60, active: false, details: 'Sequence node: patrol waypoint loop with idle pauses.' },
+  { id: 'dec-target', label: 'HasTarget?', shape: 'hexagon', x: 17.1, y: 105, active: true, details: 'Decorator: checks blackboard for valid target reference (not null, alive, in range).' },
+  { id: 'dec-range', label: 'InRange?', shape: 'hexagon', x: 85.7, y: 105, active: true, details: 'Decorator: evaluates distance < AttackRange (500cm default). Returns success/fail.' },
+  { id: 'task-attack', label: 'Attack', shape: 'rounded', x: 17.1, y: 150, active: true, details: 'Task: execute melee/ranged attack ability. Cooldown: 1.2s. Damage: based on archetype.' },
+  { id: 'task-chase', label: 'Chase', shape: 'rounded', x: 85.7, y: 150, active: false, details: 'Task: move toward target using NavMesh pathfinding. Speed multiplier: 1.5x base.' },
+  { id: 'task-wander', label: 'Wander', shape: 'rounded', x: 188.6, y: 105, active: false, details: 'Task: random point in 600cm radius via EQS. Idle 2-4s between moves.' },
 ];
 
 const BT_EDGES: BtEdge[] = [
@@ -193,9 +193,9 @@ interface DetectedEntity {
 }
 
 const DETECTED_ENTITIES: DetectedEntity[] = [
-  { label: 'Player', x: 55, y: 30, color: '#ef4444', inCone: true, inHearing: true },
-  { label: 'NPC', x: 115, y: 100, color: '#4ade80', inCone: false, inHearing: true },
-  { label: 'Distant', x: 25, y: 135, color: '#6b7280', inCone: false, inHearing: false },
+  { label: 'Player', x: 44.7, y: 24.4, color: '#ef4444', inCone: true, inHearing: true },
+  { label: 'NPC', x: 93.4, y: 81.3, color: '#4ade80', inCone: false, inHearing: true },
+  { label: 'Distant', x: 20.3, y: 109.7, color: '#6b7280', inCone: false, inHearing: false },
 ];
 
 /* ── 5.4 Difficulty Curve data ───────────────────────────────────────── */
@@ -228,12 +228,12 @@ const DIFFICULTY_BRUTE: DifficultyPoint[] = [
 interface SpawnPoint { id: number; x: number; y: number; order: number; }
 
 const SPAWN_POINTS: SpawnPoint[] = [
-  { id: 1, x: 90, y: 20, order: 1 },
-  { id: 2, x: 150, y: 50, order: 2 },
-  { id: 3, x: 150, y: 120, order: 3 },
-  { id: 4, x: 90, y: 155, order: 4 },
-  { id: 5, x: 30, y: 120, order: 5 },
-  { id: 6, x: 30, y: 50, order: 6 },
+  { id: 1, x: 70, y: 15.6, order: 1 },
+  { id: 2, x: 116.7, y: 38.9, order: 2 },
+  { id: 3, x: 116.7, y: 93.3, order: 3 },
+  { id: 4, x: 70, y: 120.6, order: 4 },
+  { id: 5, x: 23.3, y: 93.3, order: 5 },
+  { id: 6, x: 23.3, y: 38.9, order: 6 },
 ];
 
 interface WaveConfig { id: number; delay: string; count: number; archetype: string; }
@@ -327,11 +327,11 @@ interface TacticsEnemy {
 }
 
 const TACTICS_ENEMIES: TacticsEnemy[] = [
-  { id: 1, x: 60, y: 40, role: 'attacking', label: 'ATK-1' },
-  { id: 2, x: 140, y: 55, role: 'attacking', label: 'ATK-2' },
-  { id: 3, x: 160, y: 120, role: 'flanking', label: 'FLK-1' },
-  { id: 4, x: 30, y: 130, role: 'waiting', label: 'WAIT-1' },
-  { id: 5, x: 170, y: 30, role: 'waiting', label: 'WAIT-2' },
+  { id: 1, x: 48, y: 32, role: 'attacking', label: 'ATK-1' },
+  { id: 2, x: 112, y: 44, role: 'attacking', label: 'ATK-2' },
+  { id: 3, x: 128, y: 96, role: 'flanking', label: 'FLK-1' },
+  { id: 4, x: 24, y: 104, role: 'waiting', label: 'WAIT-1' },
+  { id: 5, x: 136, y: 24, role: 'waiting', label: 'WAIT-2' },
 ];
 
 const TACTICS_ROLE_COLORS: Record<TacticsEnemy['role'], string> = {
@@ -354,6 +354,14 @@ export function EnemyBestiary({ moduleId }: EnemyBestiaryProps) {
   const [groupBy, setGroupBy] = useState<GroupBy>('none');
 
   /* 5.1 Radar overlay toggles */
+  const [activeTab, setActiveTab] = useState('archetypes');
+
+  const tabs: SubTab[] = useMemo(() => [
+    { id: 'archetypes', label: 'Archetypes & Stats', icon: Skull },
+    { id: 'ai-logic', label: 'AI Logic & Senses', icon: Brain },
+    { id: 'encounters', label: 'Encounters', icon: Swords },
+  ], []);
+
   const [radarOverlays, setRadarOverlays] = useState<Record<string, boolean>>({ grunt: true, caster: true, brute: true, player: true });
 
   /* 5.2 BT expanded node */
@@ -435,929 +443,977 @@ export function EnemyBestiary({ moduleId }: EnemyBestiaryProps) {
   const polyline = (pts: DifficultyPoint[]) => pts.map(p => `${toChartX(p.level)},${toChartY(p.value)}`).join(' ');
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-2.5">
       {/* Header with stats */}
-      <TabHeader icon={Skull} title="Enemy Bestiary" implemented={stats.implemented} total={stats.total} accent={ACCENT} />
-
-      {/* Group filter bar */}
-      <div className="flex items-center gap-2 text-xs">
-        <span className="text-text-muted font-medium">Group by:</span>
-        {(['none', 'class', 'role'] as const).map((g) => (
-          <button
-            key={g}
-            onClick={() => setGroupBy(g)}
-            className={`px-2.5 py-1 rounded text-xs font-medium transition-colors ${
-              groupBy === g ? 'bg-surface-hover text-text' : 'text-text-muted hover:text-text hover:bg-surface-hover/50'
-            }`}
-          >
-            {g === 'none' ? 'None' : g.charAt(0).toUpperCase() + g.slice(1)}
-          </button>
-        ))}
+      <div className="flex flex-col gap-1.5">
+        <TabHeader icon={Skull} title="Enemy Bestiary" implemented={stats.implemented} total={stats.total} accent={ACCENT} />
+        <SubTabNavigation tabs={tabs} activeTabId={activeTab} onChange={setActiveTab} accent={ACCENT} />
       </div>
 
-      {/* Archetype cards */}
-      {groupedArchetypes.map((group) => (
-        <div key={group.header ?? 'all'}>
-          {group.header && (
-            <div className="text-2xs font-bold uppercase tracking-wider text-text-muted mb-2 mt-2">{group.header}</div>
-          )}
-          <div className="grid grid-cols-1 gap-3 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
-            {group.items.map((archetype, i) => (
-              <motion.div key={archetype.id} initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.1 }}>
-                <ArchetypeCard
-                  archetype={archetype}
-                  featureMap={featureMap}
-                  expanded={expandedArchetype === archetype.id}
-                  onToggle={toggleArchetype}
-                />
-              </motion.div>
-            ))}
-          </div>
-        </div>
-      ))}
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        {/* AI Infrastructure pipeline */}
-        <SurfaceCard level={2} className="p-4 relative overflow-hidden group">
-          <div className="absolute inset-0 bg-gradient-to-r from-transparent via-[rgba(255,255,255,0.02)] to-transparent pointer-events-none" />
-          <SectionLabel icon={Zap} label="AI Infrastructure Pipeline" />
-          <div className="mt-4 relative z-10">
-            <PipelineFlow
-              steps={AI_PIPELINE.map(n => ({ label: n.label, status: (featureMap.get(n.featureName)?.status ?? 'unknown') as FeatureStatus }))}
-              accent={MODULE_COLORS.core}
-              showStatus
-            />
-          </div>
-        </SurfaceCard>
+      <div className="mt-2.5 relative min-h-[300px]">
+        <AnimatePresence mode="sync">
+          {activeTab === 'archetypes' && (
+            <motion.div
+              key="archetypes"
+              initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}
+              transition={{ duration: 0.2 }}
+              className="space-y-2.5"
+            >
+              {/* Group filter bar */}
+              <div className="flex items-center gap-2 text-xs">
+                <span className="text-text-muted font-medium">Group by:</span>
+                {(['none', 'class', 'role'] as const).map((g) => (
+                  <button
+                    key={g}
+                    onClick={() => setGroupBy(g)}
+                    className={`px-2.5 py-1 rounded text-xs font-medium transition-colors ${groupBy === g ? 'bg-surface-hover text-text' : 'text-text-muted hover:text-text hover:bg-surface-hover/50'
+                      }`}
+                  >
+                    {g === 'none' ? 'None' : g.charAt(0).toUpperCase() + g.slice(1)}
+                  </button>
+                ))}
+              </div>
 
-        {/* Spawn config collapsible */}
-        <SurfaceCard level={2} className="p-0 overflow-hidden relative group border-border/60 hover:border-text-muted/40 transition-colors h-fit">
-          <div className="absolute top-0 right-0 w-32 h-32 bg-amber-500/5 blur-3xl rounded-full pointer-events-none" />
-          <button
-            onClick={() => setSpawnOpen((v) => !v)}
-            className="w-full flex items-center gap-3 px-4 py-3 hover:bg-surface-hover/30 transition-colors text-left relative z-10 focus:outline-none"
-          >
-            <motion.div animate={{ rotate: spawnOpen ? 90 : 0 }}>
-              <ChevronRight className="w-4 h-4 text-text-muted group-hover:text-text transition-colors" />
-            </motion.div>
-            <span className="text-sm font-bold text-text">Wave Spawner Configurator</span>
-            <span className="text-[10px] font-bold uppercase px-2 py-0.5 rounded-md ml-auto border shadow-sm"
-              style={{
-                backgroundColor: STATUS_COLORS[featureMap.get('Spawn system')?.status ?? 'unknown'].bg,
-                color: STATUS_COLORS[featureMap.get('Spawn system')?.status ?? 'unknown'].dot,
-                borderColor: `${STATUS_COLORS[featureMap.get('Spawn system')?.status ?? 'unknown'].dot}40`
-              }}>
-              {STATUS_COLORS[featureMap.get('Spawn system')?.status ?? 'unknown'].label}
-            </span>
-          </button>
-          <AnimatePresence>
-            {spawnOpen && (
-              <motion.div
-                initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }}
-                className="overflow-hidden relative z-10"
-              >
-                <div className="px-4 pb-4 pt-1 border-t border-border/40 space-y-3 bg-surface/30">
-                  <p className="text-xs text-text-muted leading-relaxed mt-2 bg-surface-deep p-3 rounded-lg border border-border/40">
-                    Wave-based spawner drives enemy density. Each wave config specifies archetype pool, count range, spawn radius, and inter-spawn delay.
-                  </p>
-                  <div className="flex gap-3 mt-1">
-                    {[{ label: 'Wave Inter', value: '60s' }, { label: 'Max Active', value: '12' }, { label: 'Spawn Radius', value: '800cm' }].map((item) => (
-                      <div key={item.label} className="flex-1 flex flex-col items-center py-2 px-3 rounded-xl text-center border shadow-sm"
-                        style={{ backgroundColor: `${ACCENT}10`, borderColor: `${ACCENT}30` }}>
-                        <span className="text-sm font-mono font-bold text-text">{item.value}</span>
-                        <span className="text-[10px] uppercase font-bold text-text-muted mt-1 tracking-wider">{item.label}</span>
-                      </div>
+              {/* Archetype cards */}
+              {groupedArchetypes.map((group) => (
+                <div key={group.header ?? 'all'}>
+                  {group.header && (
+                    <div className="text-2xs font-bold uppercase tracking-wider text-text-muted mb-2 mt-2">{group.header}</div>
+                  )}
+                  <div className="grid grid-cols-1 gap-3 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
+                    {group.items.map((archetype, i) => (
+                      <motion.div key={archetype.id} initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.1 }}>
+                        <ArchetypeCard
+                          archetype={archetype}
+                          featureMap={featureMap}
+                          expanded={expandedArchetype === archetype.id}
+                          onToggle={toggleArchetype}
+                        />
+                      </motion.div>
                     ))}
                   </div>
                 </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </SurfaceCard>
-      </div>
+              ))}
 
-      {/* ══════════════════════════════════════════════════════════════════════
+
+              <div className="grid grid-cols-1 xl:grid-cols-2 gap-2.5">
+                {/* ══════════════════════════════════════════════════════════════════════
           5.1 Archetype Comparison Radar
          ══════════════════════════════════════════════════════════════════════ */}
-      <SurfaceCard level={2} className="p-4 relative overflow-hidden">
-        <div className="absolute top-0 right-0 w-40 h-40 bg-blue-500/5 blur-3xl rounded-full pointer-events-none" />
-        <SectionLabel icon={Target} label="Archetype Comparison Radar" color={ACCENT} />
-        <div className="mt-3 flex flex-col md:flex-row items-start gap-4">
-          <div className="flex-shrink-0">
-            <RadarChart
-              data={radarOverlays.player ? RADAR_PLAYER : RADAR_AXES.map(a => ({ axis: a, value: 0 }))}
-              size={200}
-              accent={radarOverlays.player ? '#3b82f6' : 'transparent'}
-              overlays={activeOverlays}
-              showLabels
-            />
-          </div>
-          <div className="space-y-2 flex-1">
-            <div className="text-[10px] font-bold uppercase tracking-widest text-text-muted mb-2">Toggle Overlays</div>
-            {[
-              { key: 'grunt', label: 'Grunt', color: '#ef4444' },
-              { key: 'caster', label: 'Caster', color: '#a855f7' },
-              { key: 'brute', label: 'Brute', color: '#f59e0b' },
-              { key: 'player', label: 'Player (base)', color: '#3b82f6' },
-            ].map(item => (
-              <label key={item.key} className="flex items-center gap-2 cursor-pointer text-xs group">
-                <input
-                  type="checkbox"
-                  checked={radarOverlays[item.key]}
-                  onChange={() => setRadarOverlays(prev => ({ ...prev, [item.key]: !prev[item.key] }))}
-                  className="rounded border-border accent-blue-500"
-                />
-                <span className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: item.color }} />
-                <span className="text-text-muted group-hover:text-text transition-colors font-medium">{item.label}</span>
-                {item.key === 'player' && <span className="text-[10px] text-text-muted opacity-60 ml-1">(dashed)</span>}
-              </label>
-            ))}
-            <p className="text-[10px] text-text-muted mt-2 leading-relaxed">
-              7-axis comparison: HP, Damage, Speed, Range, Aggression, Resilience, Intelligence. Values normalized 0-1.
-            </p>
-          </div>
-        </div>
-      </SurfaceCard>
-
-      {/* ══════════════════════════════════════════════════════════════════════
-          5.2 Behavior Tree Flowchart
-         ══════════════════════════════════════════════════════════════════════ */}
-      <SurfaceCard level={2} className="p-4 relative overflow-hidden">
-        <div className="absolute bottom-0 left-0 w-40 h-40 bg-emerald-500/5 blur-3xl rounded-full pointer-events-none" />
-        <SectionLabel icon={Brain} label="Behavior Tree Flowchart" color="#4ade80" />
-        <div className="mt-3 flex flex-col md:flex-row gap-4">
-          <svg width={280} height={240} viewBox="0 0 280 240" className="flex-shrink-0">
-            {/* Edges */}
-            {BT_EDGES.map(edge => {
-              const from = BT_NODES.find(n => n.id === edge.from)!;
-              const to = BT_NODES.find(n => n.id === edge.to)!;
-              return (
-                <line
-                  key={`${edge.from}-${edge.to}`}
-                  x1={from.x + 30} y1={from.y + 20}
-                  x2={to.x + 30} y2={to.y}
-                  stroke={edge.active ? '#4ade80' : 'rgba(255,255,255,0.15)'}
-                  strokeWidth={edge.active ? 2 : 1}
-                  strokeDasharray={edge.active ? undefined : '4 4'}
-                />
-              );
-            })}
-            {/* Nodes */}
-            {BT_NODES.map(node => {
-              const isSelected = btExpandedNode === node.id;
-              const fillColor = node.active ? 'rgba(74,222,128,0.15)' : 'rgba(255,255,255,0.05)';
-              const strokeColor = isSelected ? '#60a5fa' : node.active ? '#4ade80' : 'rgba(255,255,255,0.2)';
-              const w = 60, h = 28;
-              return (
-                <g key={node.id} onClick={() => setBtExpandedNode(prev => prev === node.id ? null : node.id)} className="cursor-pointer">
-                  {node.shape === 'diamond' && (
-                    <polygon
-                      points={`${node.x + w / 2},${node.y} ${node.x + w},${node.y + h / 2} ${node.x + w / 2},${node.y + h} ${node.x},${node.y + h / 2}`}
-                      fill={fillColor} stroke={strokeColor} strokeWidth={isSelected ? 2 : 1.5}
-                    />
-                  )}
-                  {node.shape === 'rect' && (
-                    <rect x={node.x} y={node.y} width={w} height={h} rx={3}
-                      fill={fillColor} stroke={strokeColor} strokeWidth={isSelected ? 2 : 1.5}
-                    />
-                  )}
-                  {node.shape === 'rounded' && (
-                    <rect x={node.x} y={node.y} width={w} height={h} rx={14}
-                      fill={fillColor} stroke={strokeColor} strokeWidth={isSelected ? 2 : 1.5}
-                    />
-                  )}
-                  {node.shape === 'hexagon' && (
-                    <polygon
-                      points={`${node.x + 10},${node.y} ${node.x + w - 10},${node.y} ${node.x + w},${node.y + h / 2} ${node.x + w - 10},${node.y + h} ${node.x + 10},${node.y + h} ${node.x},${node.y + h / 2}`}
-                      fill={fillColor} stroke={strokeColor} strokeWidth={isSelected ? 2 : 1.5}
-                    />
-                  )}
-                  <text
-                    x={node.x + w / 2} y={node.y + h / 2 + 1}
-                    textAnchor="middle" dominantBaseline="central"
-                    className="text-[8px] font-mono font-bold pointer-events-none"
-                    fill={node.active ? '#4ade80' : 'rgba(255,255,255,0.5)'}
-                  >
-                    {node.label}
-                  </text>
-                </g>
-              );
-            })}
-          </svg>
-          {/* Expanded node details panel */}
-          <div className="flex-1 min-w-0">
-            <AnimatePresence mode="wait">
-              {btExpandedNode ? (
-                <motion.div
-                  key={btExpandedNode}
-                  initial={{ opacity: 0, x: 10 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0, x: -10 }}
-                  className="bg-surface-deep p-3 rounded-lg border border-border/40 space-y-2"
-                >
-                  <div className="text-xs font-bold text-text">{BT_NODES.find(n => n.id === btExpandedNode)?.label}</div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-[10px] font-mono uppercase tracking-widest text-text-muted">Shape:</span>
-                    <span className="text-[10px] font-mono text-text">{BT_NODES.find(n => n.id === btExpandedNode)?.shape}</span>
-                    <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${BT_NODES.find(n => n.id === btExpandedNode)?.active ? 'bg-emerald-500/20 text-emerald-400' : 'bg-gray-500/20 text-gray-400'}`}>
-                      {BT_NODES.find(n => n.id === btExpandedNode)?.active ? 'ACTIVE' : 'INACTIVE'}
-                    </span>
-                  </div>
-                  <p className="text-xs text-text-muted leading-relaxed">{BT_NODES.find(n => n.id === btExpandedNode)?.details}</p>
-                </motion.div>
-              ) : (
-                <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-xs text-text-muted italic mt-2">
-                  Click a node to view details. Green path shows current execution flow.
-                </motion.p>
-              )}
-            </AnimatePresence>
-            <div className="flex flex-wrap gap-2 mt-3">
-              {[
-                { shape: 'diamond', label: 'Selector' },
-                { shape: 'rect', label: 'Sequence' },
-                { shape: 'rounded', label: 'Task' },
-                { shape: 'hexagon', label: 'Decorator' },
-              ].map(l => (
-                <span key={l.shape} className="text-[9px] font-mono text-text-muted flex items-center gap-1">
-                  <span className="w-2 h-2 border border-text-muted/40 flex-shrink-0" style={{
-                    borderRadius: l.shape === 'rounded' ? '50%' : l.shape === 'diamond' ? '0' : '2px',
-                    transform: l.shape === 'diamond' ? 'rotate(45deg) scale(0.8)' : undefined,
-                  }} />
-                  {l.label}
-                </span>
-              ))}
-            </div>
-          </div>
-        </div>
-      </SurfaceCard>
-
-      {/* ══════════════════════════════════════════════════════════════════════
-          5.3 Perception Cone Visualizer
-         ══════════════════════════════════════════════════════════════════════ */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <SurfaceCard level={2} className="p-4 relative overflow-hidden">
-          <div className="absolute top-0 left-0 w-32 h-32 bg-cyan-500/5 blur-3xl rounded-full pointer-events-none" />
-          <SectionLabel icon={Eye} label="Perception Cone Visualizer" color="#06b6d4" />
-          <div className="mt-3 flex items-center gap-4">
-            <svg width={160} height={160} viewBox="0 0 160 160" className="flex-shrink-0">
-              {/* Background grid */}
-              {[40, 80, 120].map(r => (
-                <circle key={r} cx={80} cy={80} r={r} fill="none" stroke="rgba(255,255,255,0.04)" strokeWidth="1" />
-              ))}
-              {/* Hearing circle (800cm radius - scaled) */}
-              <circle cx={80} cy={80} r={55} fill="none" stroke="rgba(6,182,212,0.25)" strokeWidth="1.5" strokeDasharray="4 3" />
-              {/* Sight cone: 60 degrees, pointing up-left */}
-              <path
-                d={`M 80 80 L ${80 + 70 * Math.cos(-Math.PI / 2 - Math.PI / 6)} ${80 + 70 * Math.sin(-Math.PI / 2 - Math.PI / 6)} A 70 70 0 0 1 ${80 + 70 * Math.cos(-Math.PI / 2 + Math.PI / 6)} ${80 + 70 * Math.sin(-Math.PI / 2 + Math.PI / 6)} Z`}
-                fill="rgba(6,182,212,0.12)" stroke="rgba(6,182,212,0.5)" strokeWidth="1.5"
-              />
-              {/* AI center */}
-              <circle cx={80} cy={80} r={5} fill="#06b6d4" style={{ filter: 'drop-shadow(0 0 6px #06b6d4)' }} />
-              <text x={80} y={95} textAnchor="middle" className="text-[8px] font-mono font-bold fill-[#06b6d4]">AI</text>
-              {/* Detected entities */}
-              {DETECTED_ENTITIES.map(e => (
-                <g key={e.label}>
-                  <circle cx={e.x} cy={e.y} r={4} fill={e.color} style={{ filter: `drop-shadow(0 0 4px ${e.color})` }} />
-                  <text x={e.x} y={e.y - 8} textAnchor="middle" className="text-[7px] font-mono font-bold" fill={e.color}>{e.label}</text>
-                </g>
-              ))}
-              {/* Range labels */}
-              <text x={80} y={22} textAnchor="middle" className="text-[7px] font-mono fill-[rgba(255,255,255,0.3)]">1500cm</text>
-              <text x={137} y={80} textAnchor="middle" className="text-[7px] font-mono fill-[rgba(255,255,255,0.3)]">800cm</text>
-            </svg>
-            <div className="space-y-3 flex-1 min-w-0">
-              <div className="text-[10px] font-bold uppercase tracking-widest text-text-muted">Sense Legend</div>
-              {[
-                { label: 'Sight Cone', desc: '60 deg, 1500cm', color: 'rgba(6,182,212,0.5)', style: 'solid' },
-                { label: 'Hearing Range', desc: '800cm radius', color: 'rgba(6,182,212,0.25)', style: 'dashed' },
-              ].map(s => (
-                <div key={s.label} className="flex items-center gap-2 text-xs">
-                  <div className="w-5 h-[2px] flex-shrink-0" style={{ backgroundColor: s.color, borderTop: s.style === 'dashed' ? `2px dashed ${s.color}` : undefined }} />
-                  <span className="font-medium text-text">{s.label}</span>
-                  <span className="text-text-muted text-[10px]">{s.desc}</span>
-                </div>
-              ))}
-              <div className="border-t border-border/30 pt-2 space-y-1.5 mt-2">
-                <div className="text-[10px] font-bold uppercase tracking-widest text-text-muted">Detected</div>
-                {DETECTED_ENTITIES.map(e => (
-                  <div key={e.label} className="flex items-center gap-2 text-xs">
-                    <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: e.color }} />
-                    <span className="font-medium text-text">{e.label}</span>
-                    <span className="text-[10px] text-text-muted">
-                      {e.inCone ? 'In sight' : e.inHearing ? 'Heard' : 'Undetected'}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-        </SurfaceCard>
-
-        {/* ══════════════════════════════════════════════════════════════════════
-            5.4 Enemy Difficulty Curve
-           ══════════════════════════════════════════════════════════════════════ */}
-        <SurfaceCard level={2} className="p-4 relative overflow-hidden">
-          <div className="absolute bottom-0 right-0 w-32 h-32 bg-red-500/5 blur-3xl rounded-full pointer-events-none" />
-          <SectionLabel icon={TrendingUp} label="Enemy Difficulty Curve" color="#f87171" />
-          <div className="mt-3">
-            <svg width={chartW} height={chartH} viewBox={`0 0 ${chartW} ${chartH}`} className="w-full max-w-[280px]"
-              onMouseLeave={() => setDiffHoverLevel(null)}
-            >
-              {/* Zones */}
-              <rect x={chartPadL} y={toChartY(100)} width={plotW} height={toChartY(70) - toChartY(100)} fill="rgba(239,68,68,0.08)" />
-              <rect x={chartPadL} y={toChartY(70)} width={plotW} height={toChartY(40) - toChartY(70)} fill="rgba(74,222,128,0.08)" />
-              <rect x={chartPadL} y={toChartY(40)} width={plotW} height={toChartY(0) - toChartY(40)} fill="rgba(107,114,128,0.06)" />
-              {/* Zone labels */}
-              <text x={chartPadL + 3} y={toChartY(88)} className="text-[7px] font-mono fill-[rgba(239,68,68,0.5)]">DANGER</text>
-              <text x={chartPadL + 3} y={toChartY(55)} className="text-[7px] font-mono fill-[rgba(74,222,128,0.5)]">SWEET SPOT</text>
-              <text x={chartPadL + 3} y={toChartY(20)} className="text-[7px] font-mono fill-[rgba(107,114,128,0.4)]">TRIVIAL</text>
-              {/* Grid lines */}
-              {[0, 25, 50, 75, 100].map(v => (
-                <line key={v} x1={chartPadL} y1={toChartY(v)} x2={chartPadL + plotW} y2={toChartY(v)} stroke="rgba(255,255,255,0.06)" strokeWidth="1" />
-              ))}
-              {/* X axis labels */}
-              {[1, 10, 20, 30, 40, 50].map(l => (
-                <text key={l} x={toChartX(l)} y={chartH - 3} textAnchor="middle" className="text-[7px] font-mono fill-[var(--text-muted)]">Lv{l}</text>
-              ))}
-              {/* Lines */}
-              <polyline points={polyline(DIFFICULTY_GRUNT)} fill="none" stroke="#ef4444" strokeWidth="1.5" />
-              <polyline points={polyline(DIFFICULTY_CASTER)} fill="none" stroke="#a855f7" strokeWidth="1.5" />
-              <polyline points={polyline(DIFFICULTY_BRUTE)} fill="none" stroke="#f59e0b" strokeWidth="1.5" />
-              {/* Hover line */}
-              {diffHoverLevel !== null && (
-                <line x1={toChartX(diffHoverLevel)} y1={10} x2={toChartX(diffHoverLevel)} y2={chartH - chartPadB} stroke="rgba(255,255,255,0.3)" strokeWidth="1" strokeDasharray="3 3" />
-              )}
-              {/* Invisible hover rects for interaction */}
-              {Array.from({ length: 50 }, (_, i) => i + 1).map(level => (
-                <rect
-                  key={level}
-                  x={toChartX(level) - (plotW / 49) / 2}
-                  y={10}
-                  width={plotW / 49}
-                  height={plotH}
-                  fill="transparent"
-                  onMouseEnter={() => setDiffHoverLevel(level)}
-                />
-              ))}
-            </svg>
-            <div className="flex gap-3 mt-2">
-              {[{ label: 'Grunt', color: '#ef4444' }, { label: 'Caster', color: '#a855f7' }, { label: 'Brute', color: '#f59e0b' }].map(l => (
-                <span key={l.label} className="flex items-center gap-1 text-[10px] font-mono text-text-muted">
-                  <span className="w-3 h-[2px] flex-shrink-0" style={{ backgroundColor: l.color }} />
-                  {l.label}
-                </span>
-              ))}
-            </div>
-            {diffHoverLevel !== null && (
-              <div className="text-[10px] text-text-muted mt-1 font-mono">
-                Level {diffHoverLevel}: Grunt={DIFFICULTY_GRUNT.reduce((a, b) => Math.abs(b.level - diffHoverLevel) < Math.abs(a.level - diffHoverLevel) ? b : a).value},
-                Caster={DIFFICULTY_CASTER.reduce((a, b) => Math.abs(b.level - diffHoverLevel) < Math.abs(a.level - diffHoverLevel) ? b : a).value},
-                Brute={DIFFICULTY_BRUTE.reduce((a, b) => Math.abs(b.level - diffHoverLevel) < Math.abs(a.level - diffHoverLevel) ? b : a).value}
-              </div>
-            )}
-          </div>
-        </SurfaceCard>
-      </div>
-
-      {/* ══════════════════════════════════════════════════════════════════════
-          5.5 Spawn Wave Choreographer
-         ══════════════════════════════════════════════════════════════════════ */}
-      <SurfaceCard level={2} className="p-4 relative overflow-hidden">
-        <div className="absolute top-0 right-0 w-32 h-32 bg-amber-500/5 blur-3xl rounded-full pointer-events-none" />
-        <SectionLabel icon={Users} label="Spawn Wave Choreographer" color="#f59e0b" />
-        <div className="mt-3 flex flex-col md:flex-row gap-4">
-          {/* Top-down spawn positions */}
-          <svg width={180} height={180} viewBox="0 0 180 180" className="flex-shrink-0">
-            {/* Arena circle */}
-            <circle cx={90} cy={90} r={75} fill="none" stroke="rgba(255,255,255,0.1)" strokeWidth="1" strokeDasharray="4 4" />
-            <circle cx={90} cy={90} r={4} fill="rgba(255,255,255,0.3)" />
-            <text x={90} y={100} textAnchor="middle" className="text-[7px] font-mono fill-[rgba(255,255,255,0.4)]">CENTER</text>
-            {/* Spawn points */}
-            {SPAWN_POINTS.map(sp => (
-              <g key={sp.id}>
-                <motion.circle
-                  cx={sp.x} cy={sp.y} r={10}
-                  fill="rgba(245,158,11,0.15)" stroke="#f59e0b" strokeWidth="1.5"
-                  initial={{ scale: 0 }} animate={{ scale: 1 }}
-                  transition={{ delay: sp.order * 0.15, type: 'spring' }}
-                />
-                <text x={sp.x} y={sp.y + 1} textAnchor="middle" dominantBaseline="central"
-                  className="text-[9px] font-mono font-bold fill-[#f59e0b] pointer-events-none">
-                  {sp.order}
-                </text>
-                {/* Connection line to center */}
-                <line x1={90} y1={90} x2={sp.x} y2={sp.y} stroke="rgba(245,158,11,0.15)" strokeWidth="1" strokeDasharray="2 3" />
-              </g>
-            ))}
-          </svg>
-
-          <div className="flex-1 space-y-3 min-w-0">
-            {/* Formation selector */}
-            <div>
-              <div className="text-[10px] font-bold uppercase tracking-widest text-text-muted mb-1.5">Formation</div>
-              <div className="flex gap-1.5">
-                {(['Circle', 'Line', 'Ambush'] as const).map(f => (
-                  <button
-                    key={f}
-                    onClick={() => setSpawnFormation(f)}
-                    className={`px-2.5 py-1 rounded text-[10px] font-bold transition-colors ${
-                      spawnFormation === f ? 'bg-amber-500/20 text-amber-400 border border-amber-500/40' : 'text-text-muted hover:text-text bg-surface border border-border/40'
-                    }`}
-                  >
-                    {f}
-                  </button>
-                ))}
-              </div>
-            </div>
-            {/* Config values */}
-            <div className="flex gap-2">
-              {[{ label: 'WaveDelay', value: '60s' }, { label: 'MaxActive', value: '12' }].map(c => (
-                <div key={c.label} className="flex-1 py-1.5 px-2 rounded-lg bg-surface-deep border border-border/40 text-center">
-                  <div className="text-xs font-mono font-bold text-text">{c.value}</div>
-                  <div className="text-[9px] uppercase font-bold text-text-muted tracking-wider">{c.label}</div>
-                </div>
-              ))}
-            </div>
-            {/* Wave timeline */}
-            <div>
-              <div className="text-[10px] font-bold uppercase tracking-widest text-text-muted mb-1.5">Wave Timeline</div>
-              <div className="space-y-1.5">
-                {WAVE_TIMELINE.map(wave => (
-                  <motion.div
-                    key={wave.id}
-                    initial={{ opacity: 0, x: -10 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: wave.id * 0.1 }}
-                    className="flex items-center gap-2 text-xs bg-surface-deep px-2 py-1.5 rounded border border-border/30"
-                  >
-                    <span className="w-5 h-5 rounded-full bg-amber-500/20 border border-amber-500/40 flex items-center justify-center text-[9px] font-mono font-bold text-amber-400 flex-shrink-0">
-                      {wave.id}
-                    </span>
-                    <span className="font-mono text-text-muted text-[10px] w-8">{wave.delay}</span>
-                    <span className="text-text font-medium">{wave.archetype}</span>
-                    <span className="ml-auto text-text-muted font-mono text-[10px]">x{wave.count}</span>
-                  </motion.div>
-                ))}
-              </div>
-            </div>
-          </div>
-        </div>
-      </SurfaceCard>
-
-      {/* ══════════════════════════════════════════════════════════════════════
-          5.6 Archetype Builder (Custom Enemy Form)
-         ══════════════════════════════════════════════════════════════════════ */}
-      <SurfaceCard level={2} className="p-4 relative overflow-hidden">
-        <div className="absolute bottom-0 left-0 w-40 h-40 bg-purple-500/5 blur-3xl rounded-full pointer-events-none" />
-        <SectionLabel icon={Wrench} label="Archetype Builder" color="#a855f7" />
-        <div className="mt-3 grid grid-cols-1 md:grid-cols-2 gap-4">
-          {/* Form */}
-          <div className="space-y-3">
-            {/* Name input */}
-            <div>
-              <label className="text-[10px] font-bold uppercase tracking-widest text-text-muted block mb-1">Name</label>
-              <input
-                type="text"
-                value={builderName}
-                onChange={e => setBuilderName(e.target.value)}
-                className="w-full bg-surface-deep border border-border/40 rounded px-2.5 py-1.5 text-xs text-text font-mono focus:outline-none focus:border-purple-500/50 transition-colors"
-              />
-            </div>
-            {/* Stat sliders */}
-            <div>
-              <label className="text-[10px] font-bold uppercase tracking-widest text-text-muted block mb-1.5">Stats</label>
-              <div className="space-y-2">
-                {(Object.keys(builderStats) as (keyof typeof builderStats)[]).map(stat => (
-                  <div key={stat} className="flex items-center gap-2">
-                    <span className="text-[10px] font-bold uppercase tracking-wider text-text-muted w-12 text-right flex-shrink-0">{stat}</span>
-                    <input
-                      type="range"
-                      min={0} max={100}
-                      value={builderStats[stat]}
-                      onChange={e => setBuilderStats(prev => ({ ...prev, [stat]: parseInt(e.target.value) }))}
-                      className="flex-1 h-1.5 accent-purple-500"
-                    />
-                    <span className="text-[10px] font-mono font-bold text-text w-6 text-right">{builderStats[stat]}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-            {/* Abilities checkboxes */}
-            <div>
-              <label className="text-[10px] font-bold uppercase tracking-widest text-text-muted block mb-1.5">Abilities</label>
-              <div className="flex flex-wrap gap-1.5">
-                {ABILITY_POOL.map(ab => (
-                  <label key={ab} className="flex items-center gap-1 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={builderAbilities.includes(ab)}
-                      onChange={() => setBuilderAbilities(prev =>
-                        prev.includes(ab) ? prev.filter(a => a !== ab) : [...prev, ab]
-                      )}
-                      className="rounded border-border accent-purple-500 w-3 h-3"
-                    />
-                    <span className="text-[10px] text-text-muted font-medium">{ab}</span>
-                  </label>
-                ))}
-              </div>
-            </div>
-            {/* BT Dropdown */}
-            <div>
-              <label className="text-[10px] font-bold uppercase tracking-widest text-text-muted block mb-1">Behavior Tree</label>
-              <select
-                value={builderBT}
-                onChange={e => setBuilderBT(e.target.value as typeof BT_PRESETS[number])}
-                className="w-full bg-surface-deep border border-border/40 rounded px-2.5 py-1.5 text-xs text-text font-mono focus:outline-none focus:border-purple-500/50 transition-colors"
-              >
-                {BT_PRESETS.map(bt => <option key={bt} value={bt}>{bt}</option>)}
-              </select>
-            </div>
-          </div>
-
-          {/* Preview card */}
-          <div className="bg-surface-deep rounded-xl border-2 border-purple-500/30 p-4 space-y-3 relative overflow-hidden"
-            style={{ boxShadow: '0 0 20px -5px rgba(168,85,247,0.3), inset 0 0 20px -10px rgba(168,85,247,0.15)' }}>
-            <div className="absolute top-0 right-0 w-24 h-24 bg-purple-500/10 blur-2xl rounded-full pointer-events-none" />
-            <div className="text-[10px] font-bold uppercase tracking-widest text-text-muted">Preview</div>
-            <div className="text-sm font-bold text-text">{builderName || 'Unnamed'}</div>
-            <div className="text-[10px] font-mono text-purple-400 uppercase tracking-wider">BT: {builderBT}</div>
-            {/* Stat bars */}
-            <div className="space-y-1.5">
-              {(Object.entries(builderStats) as [string, number][]).map(([stat, value]) => (
-                <div key={stat} className="flex items-center gap-2">
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-text-muted w-10 flex-shrink-0 text-right">{stat}</span>
-                  <div className="flex-1 h-1.5 rounded-full bg-surface overflow-hidden">
-                    <motion.div
-                      className="h-full rounded-full bg-purple-500"
-                      animate={{ width: `${value}%` }}
-                      transition={{ type: 'spring', stiffness: 300, damping: 25 }}
-                    />
-                  </div>
-                  <span className="text-2xs font-mono font-bold text-text w-6 text-right">{value}</span>
-                </div>
-              ))}
-            </div>
-            {/* Selected abilities */}
-            {builderAbilities.length > 0 && (
-              <div className="flex flex-wrap gap-1">
-                {builderAbilities.map(ab => (
-                  <span key={ab} className="text-[9px] font-bold px-1.5 py-0.5 rounded border bg-surface text-text"
-                    style={{ borderColor: 'rgba(168,85,247,0.4)' }}>
-                    {ab}
-                  </span>
-                ))}
-              </div>
-            )}
-            {builderAbilities.length === 0 && (
-              <p className="text-[10px] text-text-muted italic">No abilities selected</p>
-            )}
-          </div>
-        </div>
-      </SurfaceCard>
-
-      {/* ══════════════════════════════════════════════════════════════════════
-          5.7 Kill/Death Statistics per Archetype
-         ══════════════════════════════════════════════════════════════════════ */}
-      <SurfaceCard level={2} className="p-4 relative overflow-hidden">
-        <div className="absolute top-0 left-0 w-40 h-40 bg-red-500/5 blur-3xl rounded-full pointer-events-none" />
-        <SectionLabel icon={BarChart3} label="Kill/Death Statistics" color="#f87171" />
-        <div className="mt-3 space-y-4">
-          {/* Stats cards */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-            {KILL_DEATH_STATS.map(arch => (
-              <motion.div
-                key={arch.id}
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="bg-surface-deep rounded-lg border p-3 space-y-2 relative overflow-hidden"
-                style={{ borderColor: `${arch.color}30` }}
-              >
-                <div className="absolute top-0 right-0 w-16 h-16 blur-2xl rounded-full pointer-events-none" style={{ backgroundColor: `${arch.color}10` }} />
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold text-text">{arch.label}</span>
-                  <span className="text-[10px] font-bold px-1.5 py-0.5 rounded border"
-                    style={{ backgroundColor: `${arch.color}15`, borderColor: `${arch.color}40`, color: arch.color }}>
-                    #{arch.dangerRank}
-                  </span>
-                </div>
-                <div className="grid grid-cols-2 gap-x-3 gap-y-1 text-[10px]">
-                  <div className="flex justify-between"><span className="text-text-muted">Spawned</span><span className="font-mono font-bold text-text">{arch.timesSpawned.toLocaleString()}</span></div>
-                  <div className="flex justify-between"><span className="text-text-muted">Killed</span><span className="font-mono font-bold text-text">{arch.timesKilled.toLocaleString()}</span></div>
-                  <div className="flex justify-between"><span className="text-text-muted">Avg Life</span><span className="font-mono font-bold text-text">{arch.avgLifespan}</span></div>
-                  <div className="flex justify-between"><span className="text-text-muted">Player Kills</span><span className="font-mono font-bold" style={{ color: arch.color }}>{arch.killsOnPlayer}</span></div>
-                  <div className="col-span-2 flex justify-between"><span className="text-text-muted">Total Dmg</span><span className="font-mono font-bold text-text">{arch.totalDmgDealt.toLocaleString()}</span></div>
-                </div>
-                {/* Mini bar */}
-                <div className="h-1 rounded-full bg-surface overflow-hidden">
-                  <div className="h-full rounded-full" style={{ width: `${(arch.killsOnPlayer / 67) * 100}%`, backgroundColor: arch.color }} />
-                </div>
-              </motion.div>
-            ))}
-          </div>
-
-          {/* Death causes pie chart + bar comparison */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {/* Pie chart of death causes */}
-            <div className="bg-surface-deep rounded-lg border border-border/30 p-3">
-              <div className="text-[10px] font-bold uppercase tracking-widest text-text-muted mb-2">Death Causes</div>
-              <div className="flex items-center gap-3">
-                <svg width={80} height={80} viewBox="0 0 80 80" className="flex-shrink-0">
-                  {(() => {
-                    let cumAngle = 0;
-                    return DEATH_CAUSES.map(dc => {
-                      const startAngle = cumAngle;
-                      const sliceAngle = (dc.pct / 100) * 360;
-                      cumAngle += sliceAngle;
-                      const startRad = (startAngle - 90) * (Math.PI / 180);
-                      const endRad = (startAngle + sliceAngle - 90) * (Math.PI / 180);
-                      const largeArc = sliceAngle > 180 ? 1 : 0;
-                      const x1 = 40 + 35 * Math.cos(startRad);
-                      const y1 = 40 + 35 * Math.sin(startRad);
-                      const x2 = 40 + 35 * Math.cos(endRad);
-                      const y2 = 40 + 35 * Math.sin(endRad);
-                      return (
-                        <path
-                          key={dc.cause}
-                          d={`M 40 40 L ${x1} ${y1} A 35 35 0 ${largeArc} 1 ${x2} ${y2} Z`}
-                          fill={dc.color} opacity={0.8}
-                        />
-                      );
-                    });
-                  })()}
-                </svg>
-                <div className="space-y-1">
-                  {DEATH_CAUSES.map(dc => (
-                    <div key={dc.cause} className="flex items-center gap-1.5 text-[10px]">
-                      <span className="w-2 h-2 rounded-sm flex-shrink-0" style={{ backgroundColor: dc.color }} />
-                      <span className="text-text-muted font-medium">{dc.cause}</span>
-                      <span className="font-mono font-bold text-text ml-auto">{dc.pct}%</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-
-            {/* Danger ranking bar comparison */}
-            <div className="bg-surface-deep rounded-lg border border-border/30 p-3">
-              <div className="text-[10px] font-bold uppercase tracking-widest text-text-muted mb-2">Danger Ranking (Player Kills)</div>
-              <div className="space-y-2">
-                {[...KILL_DEATH_STATS].sort((a, b) => a.dangerRank - b.dangerRank).map(arch => (
-                  <div key={arch.id} className="space-y-0.5">
-                    <div className="flex items-center justify-between text-[10px]">
-                      <span className="font-medium text-text">{arch.label}</span>
-                      <span className="font-mono font-bold" style={{ color: arch.color }}>{arch.killsOnPlayer} kills</span>
-                    </div>
-                    <div className="h-2 rounded-full bg-surface overflow-hidden">
-                      <motion.div
-                        className="h-full rounded-full"
-                        style={{ backgroundColor: arch.color }}
-                        initial={{ width: 0 }}
-                        animate={{ width: `${(arch.killsOnPlayer / 67) * 100}%` }}
-                        transition={{ duration: 1, ease: 'easeOut' }}
+                <SurfaceCard level={2} className="p-3 relative overflow-hidden">
+                  <div className="absolute top-0 right-0 w-40 h-40 bg-blue-500/5 blur-3xl rounded-full pointer-events-none" />
+                  <SectionLabel icon={Target} label="Archetype Comparison Radar" color={ACCENT} />
+                  <div className="mt-3 flex flex-col md:flex-row items-start gap-2.5">
+                    <div className="flex-shrink-0">
+                      <RadarChart
+                        data={radarOverlays.player ? RADAR_PLAYER : RADAR_AXES.map(a => ({ axis: a, value: 0 }))}
+                        size={200}
+                        accent={radarOverlays.player ? '#3b82f6' : 'transparent'}
+                        overlays={activeOverlays}
+                        showLabels
                       />
                     </div>
+                    <div className="space-y-2 flex-1">
+                      <div className="text-[10px] font-bold uppercase tracking-widest text-text-muted mb-2">Toggle Overlays</div>
+                      {[
+                        { key: 'grunt', label: 'Grunt', color: '#ef4444' },
+                        { key: 'caster', label: 'Caster', color: '#a855f7' },
+                        { key: 'brute', label: 'Brute', color: '#f59e0b' },
+                        { key: 'player', label: 'Player (base)', color: '#3b82f6' },
+                      ].map(item => (
+                        <label key={item.key} className="flex items-center gap-2 cursor-pointer text-xs group">
+                          <input
+                            type="checkbox"
+                            checked={radarOverlays[item.key]}
+                            onChange={() => setRadarOverlays(prev => ({ ...prev, [item.key]: !prev[item.key] }))}
+                            className="rounded border-border accent-blue-500"
+                          />
+                          <span className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: item.color }} />
+                          <span className="text-text-muted group-hover:text-text transition-colors font-medium">{item.label}</span>
+                          {item.key === 'player' && <span className="text-[10px] text-text-muted opacity-60 ml-1">(dashed)</span>}
+                        </label>
+                      ))}
+                      <p className="text-[10px] text-text-muted mt-2 leading-relaxed">
+                        7-axis comparison: HP, Damage, Speed, Range, Aggression, Resilience, Intelligence. Values normalized 0-1.
+                      </p>
+                    </div>
                   </div>
-                ))}
-              </div>
-            </div>
-          </div>
-        </div>
-      </SurfaceCard>
+                </SurfaceCard>
 
-      {/* ══════════════════════════════════════════════════════════════════════
-          5.8 AI Decision Debugger
+
+                {/* ══════════════════════════════════════════════════════════════════════
+          5.7 Kill/Death Statistics per Archetype
          ══════════════════════════════════════════════════════════════════════ */}
-      <SurfaceCard level={2} className="p-4 relative overflow-hidden">
-        <div className="absolute top-0 right-0 w-32 h-32 bg-amber-500/5 blur-3xl rounded-full pointer-events-none" />
-        <SectionLabel icon={Bug} label="AI Decision Debugger" color="#fbbf24" />
-        <div className="mt-3 space-y-2">
-          {/* Filter buttons */}
-          <div className="flex gap-1.5 mb-2">
-            {(['all', 'evaluation', 'selection', 'unexpected'] as const).map(f => (
-              <button
-                key={f}
-                onClick={() => setDebugFilter(f)}
-                className={`px-2 py-1 rounded text-[10px] font-bold transition-colors ${
-                  debugFilter === f
-                    ? f === 'unexpected' ? 'bg-amber-500/20 text-amber-400 border border-amber-500/40' : 'bg-surface-hover text-text border border-border/50'
-                    : 'text-text-muted hover:text-text bg-surface border border-border/30'
-                }`}
-              >
-                {f === 'all' ? 'All' : f.charAt(0).toUpperCase() + f.slice(1)}
-              </button>
-            ))}
-          </div>
-          {/* Decision log */}
-          <div className="max-h-[240px] overflow-y-auto custom-scrollbar space-y-1.5">
-            {filteredDecisions.map(entry => {
-              const isExpanded = debugExpanded === entry.tick;
-              const isUnexpected = entry.type === 'unexpected';
-              return (
-                <motion.div
-                  key={entry.tick}
-                  initial={{ opacity: 0, x: -5 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  className={`rounded border transition-colors ${
-                    isUnexpected ? 'border-amber-500/40 bg-amber-500/5' : 'border-border/30 bg-surface-deep'
-                  }`}
-                >
+                <SurfaceCard level={2} className="p-3 relative overflow-hidden">
+                  <div className="absolute top-0 left-0 w-40 h-40 bg-red-500/5 blur-3xl rounded-full pointer-events-none" />
+                  <SectionLabel icon={BarChart3} label="Kill/Death Statistics" color="#f87171" />
+                  <div className="mt-3 space-y-2.5">
+                    {/* Stats cards */}
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                      {KILL_DEATH_STATS.map(arch => (
+                        <motion.div
+                          key={arch.id}
+                          initial={{ opacity: 0, y: 10 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          className="bg-surface-deep rounded-lg border p-3 space-y-2 relative overflow-hidden"
+                          style={{ borderColor: `${arch.color}30` }}
+                        >
+                          <div className="absolute top-0 right-0 w-16 h-16 blur-2xl rounded-full pointer-events-none" style={{ backgroundColor: `${arch.color}10` }} />
+                          <div className="flex items-center justify-between">
+                            <span className="text-xs font-bold text-text">{arch.label}</span>
+                            <span className="text-[10px] font-bold px-1.5 py-0.5 rounded border"
+                              style={{ backgroundColor: `${arch.color}15`, borderColor: `${arch.color}40`, color: arch.color }}>
+                              #{arch.dangerRank}
+                            </span>
+                          </div>
+                          <div className="grid grid-cols-2 gap-x-3 gap-y-1 text-[10px]">
+                            <div className="flex justify-between"><span className="text-text-muted">Spawned</span><span className="font-mono font-bold text-text">{arch.timesSpawned.toLocaleString()}</span></div>
+                            <div className="flex justify-between"><span className="text-text-muted">Killed</span><span className="font-mono font-bold text-text">{arch.timesKilled.toLocaleString()}</span></div>
+                            <div className="flex justify-between"><span className="text-text-muted">Avg Life</span><span className="font-mono font-bold text-text">{arch.avgLifespan}</span></div>
+                            <div className="flex justify-between"><span className="text-text-muted">Player Kills</span><span className="font-mono font-bold" style={{ color: arch.color }}>{arch.killsOnPlayer}</span></div>
+                            <div className="col-span-2 flex justify-between"><span className="text-text-muted">Total Dmg</span><span className="font-mono font-bold text-text">{arch.totalDmgDealt.toLocaleString()}</span></div>
+                          </div>
+                          {/* Mini bar */}
+                          <div className="h-1 rounded-full bg-surface overflow-hidden">
+                            <div className="h-full rounded-full" style={{ width: `${(arch.killsOnPlayer / 67) * 100}%`, backgroundColor: arch.color }} />
+                          </div>
+                        </motion.div>
+                      ))}
+                    </div>
+
+                    {/* Death causes pie chart + bar comparison */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
+                      {/* Pie chart of death causes */}
+                      <div className="bg-surface-deep rounded-lg border border-border/30 p-3">
+                        <div className="text-[10px] font-bold uppercase tracking-widest text-text-muted mb-2">Death Causes</div>
+                        <div className="flex items-center gap-3">
+                          <svg width={64} height={64} viewBox="0 0 64 64" className="flex-shrink-0">
+                            {(() => {
+                              let cumAngle = 0;
+                              return DEATH_CAUSES.map(dc => {
+                                const startAngle = cumAngle;
+                                const sliceAngle = (dc.pct / 100) * 360;
+                                cumAngle += sliceAngle;
+                                const startRad = (startAngle - 90) * (Math.PI / 180);
+                                const endRad = (startAngle + sliceAngle - 90) * (Math.PI / 180);
+                                const largeArc = sliceAngle > 180 ? 1 : 0;
+                                const x1 = 32 + 28 * Math.cos(startRad);
+                                const y1 = 32 + 28 * Math.sin(startRad);
+                                const x2 = 32 + 28 * Math.cos(endRad);
+                                const y2 = 32 + 28 * Math.sin(endRad);
+                                return (
+                                  <path
+                                    key={dc.cause}
+                                    d={`M 32 32 L ${x1} ${y1} A 28 28 0 ${largeArc} 1 ${x2} ${y2} Z`}
+                                    fill={dc.color} opacity={0.8}
+                                  />
+                                );
+                              });
+                            })()}
+                          </svg>
+                          <div className="space-y-1">
+                            {DEATH_CAUSES.map(dc => (
+                              <div key={dc.cause} className="flex items-center gap-1.5 text-[10px]">
+                                <span className="w-2 h-2 rounded-sm flex-shrink-0" style={{ backgroundColor: dc.color }} />
+                                <span className="text-text-muted font-medium">{dc.cause}</span>
+                                <span className="font-mono font-bold text-text ml-auto">{dc.pct}%</span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Danger ranking bar comparison */}
+                      <div className="bg-surface-deep rounded-lg border border-border/30 p-3">
+                        <div className="text-[10px] font-bold uppercase tracking-widest text-text-muted mb-2">Danger Ranking (Player Kills)</div>
+                        <div className="space-y-2">
+                          {[...KILL_DEATH_STATS].sort((a, b) => a.dangerRank - b.dangerRank).map(arch => (
+                            <div key={arch.id} className="space-y-0.5">
+                              <div className="flex items-center justify-between text-[10px]">
+                                <span className="font-medium text-text">{arch.label}</span>
+                                <span className="font-mono font-bold" style={{ color: arch.color }}>{arch.killsOnPlayer} kills</span>
+                              </div>
+                              <div className="h-2 rounded-full bg-surface overflow-hidden">
+                                <motion.div
+                                  className="h-full rounded-full"
+                                  style={{ backgroundColor: arch.color }}
+                                  initial={{ width: 0 }}
+                                  animate={{ width: `${(arch.killsOnPlayer / 67) * 100}%` }}
+                                  transition={{ duration: 1, ease: 'easeOut' }}
+                                />
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </SurfaceCard>
+
+
+              </div>
+            </motion.div>
+          )}
+          {activeTab === 'ai-logic' && (
+            <motion.div
+              key="ai-logic"
+              initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}
+              transition={{ duration: 0.2 }}
+              className="space-y-2.5"
+            >
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-2.5">
+                {/* AI Infrastructure pipeline */}
+                <SurfaceCard level={2} className="p-3 relative overflow-hidden group">
+                  <div className="absolute inset-0 bg-gradient-to-r from-transparent via-[rgba(255,255,255,0.02)] to-transparent pointer-events-none" />
+                  <SectionLabel icon={Zap} label="AI Infrastructure Pipeline" />
+                  <div className="mt-2.5 relative z-10">
+                    <PipelineFlow
+                      steps={AI_PIPELINE.map(n => ({ label: n.label, status: (featureMap.get(n.featureName)?.status ?? 'unknown') as FeatureStatus }))}
+                      accent={MODULE_COLORS.core}
+                      showStatus
+                    />
+                  </div>
+                </SurfaceCard>
+
+                {/* Spawn config collapsible */}
+                <SurfaceCard level={2} className="p-0 overflow-hidden relative group border-border/60 hover:border-text-muted/40 transition-colors h-fit">
+                  <div className="absolute top-0 right-0 w-32 h-32 bg-amber-500/5 blur-3xl rounded-full pointer-events-none" />
                   <button
-                    onClick={() => setDebugExpanded(prev => prev === entry.tick ? null : entry.tick)}
-                    className="w-full text-left px-3 py-2 flex items-center gap-2 hover:bg-surface-hover/30 transition-colors focus:outline-none"
+                    onClick={() => setSpawnOpen((v) => !v)}
+                    className="w-full flex items-center gap-3 px-4 py-3 hover:bg-surface-hover/30 transition-colors text-left relative z-10 focus:outline-none"
                   >
-                    <span className={`text-[10px] font-mono font-bold flex-shrink-0 ${isUnexpected ? 'text-amber-400' : 'text-text-muted'}`}>
-                      #{entry.tick}
-                    </span>
-                    <span className={`text-[9px] font-bold uppercase px-1.5 py-0.5 rounded flex-shrink-0 ${
-                      entry.type === 'evaluation' ? 'bg-blue-500/15 text-blue-400' :
-                      entry.type === 'selection' ? 'bg-emerald-500/15 text-emerald-400' :
-                      'bg-amber-500/15 text-amber-400'
-                    }`}>
-                      {entry.type}
-                    </span>
-                    <span className="text-xs text-text truncate">{entry.summary}</span>
-                    <motion.div animate={{ rotate: isExpanded ? 180 : 0 }} className="ml-auto flex-shrink-0">
-                      <ChevronDown className="w-3 h-3 text-text-muted" />
+                    <motion.div animate={{ rotate: spawnOpen ? 90 : 0 }}>
+                      <ChevronRight className="w-4 h-4 text-text-muted group-hover:text-text transition-colors" />
                     </motion.div>
+                    <span className="text-sm font-bold text-text">Wave Spawner Configurator</span>
+                    <span className="text-[10px] font-bold uppercase px-2 py-0.5 rounded-md ml-auto border shadow-sm"
+                      style={{
+                        backgroundColor: STATUS_COLORS[featureMap.get('Spawn system')?.status ?? 'unknown'].bg,
+                        color: STATUS_COLORS[featureMap.get('Spawn system')?.status ?? 'unknown'].dot,
+                        borderColor: `${STATUS_COLORS[featureMap.get('Spawn system')?.status ?? 'unknown'].dot}40`
+                      }}>
+                      {STATUS_COLORS[featureMap.get('Spawn system')?.status ?? 'unknown'].label}
+                    </span>
                   </button>
                   <AnimatePresence>
-                    {isExpanded && (
+                    {spawnOpen && (
                       <motion.div
-                        initial={{ height: 0, opacity: 0 }}
-                        animate={{ height: 'auto', opacity: 1 }}
-                        exit={{ height: 0, opacity: 0 }}
-                        className="overflow-hidden"
+                        initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }}
+                        className="overflow-hidden relative z-10"
                       >
-                        <div className="px-3 pb-2 border-t border-border/20">
-                          <p className="text-[10px] text-text-muted leading-relaxed mt-1.5 font-mono">{entry.details}</p>
+                        <div className="px-4 pb-4 pt-1 border-t border-border/40 space-y-3 bg-surface/30">
+                          <p className="text-xs text-text-muted leading-relaxed mt-2 bg-surface-deep p-3 rounded-lg border border-border/40">
+                            Wave-based spawner drives enemy density. Each wave config specifies archetype pool, count range, spawn radius, and inter-spawn delay.
+                          </p>
+                          <div className="flex gap-3 mt-1">
+                            {[{ label: 'Wave Inter', value: '60s' }, { label: 'Max Active', value: '12' }, { label: 'Spawn Radius', value: '800cm' }].map((item) => (
+                              <div key={item.label} className="flex-1 flex flex-col items-center py-2 px-3 rounded-xl text-center border shadow-sm"
+                                style={{ backgroundColor: `${ACCENT}10`, borderColor: `${ACCENT}30` }}>
+                                <span className="text-sm font-mono font-bold text-text">{item.value}</span>
+                                <span className="text-[10px] uppercase font-bold text-text-muted mt-1 tracking-wider">{item.label}</span>
+                              </div>
+                            ))}
+                          </div>
                         </div>
                       </motion.div>
                     )}
                   </AnimatePresence>
-                </motion.div>
-              );
-            })}
-          </div>
-        </div>
-      </SurfaceCard>
-
-      {/* ══════════════════════════════════════════════════════════════════════
-          5.9 Aggro Table Visualization
-         ══════════════════════════════════════════════════════════════════════ */}
-      <SurfaceCard level={2} className="p-4 relative overflow-hidden">
-        <div className="absolute bottom-0 right-0 w-32 h-32 bg-red-500/5 blur-3xl rounded-full pointer-events-none" />
-        <SectionLabel icon={Swords} label="Aggro Table" color="#ef4444" />
-        <div className="mt-3 grid grid-cols-1 md:grid-cols-2 gap-4">
-          {/* Threat bars */}
-          <div className="space-y-3">
-            <div className="text-[10px] font-bold uppercase tracking-widest text-text-muted">Threat Values</div>
-            {AGGRO_TABLE.map(entry => (
-              <div key={entry.target} className="space-y-1.5">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold text-text">{entry.target}</span>
-                  <span className="text-xs font-mono font-bold" style={{ color: entry.color }}>{entry.threat}</span>
-                </div>
-                {/* Threat bar */}
-                <div className="h-3 rounded-full bg-surface-deep overflow-hidden border border-border/20">
-                  <motion.div
-                    className="h-full rounded-full"
-                    style={{ backgroundColor: entry.color }}
-                    initial={{ width: 0 }}
-                    animate={{ width: `${entry.threat}%` }}
-                    transition={{ duration: 0.8, ease: 'easeOut' }}
-                  />
-                </div>
-                {/* Source breakdown */}
-                <div className="flex gap-2">
-                  {entry.breakdown.map(b => (
-                    <span key={b.source} className="text-[9px] font-mono text-text-muted">
-                      {b.source}={b.pct}%
-                    </span>
-                  ))}
-                </div>
+                </SurfaceCard>
               </div>
-            ))}
-          </div>
 
-          {/* Aggro switch events */}
-          <div className="space-y-2">
-            <div className="text-[10px] font-bold uppercase tracking-widest text-text-muted">Aggro Switch Log</div>
-            <div className="space-y-1.5">
-              {AGGRO_EVENTS.map((evt, i) => (
-                <motion.div
-                  key={i}
-                  initial={{ opacity: 0, x: 10 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: i * 0.1 }}
-                  className="bg-surface-deep rounded border border-border/30 px-3 py-2 space-y-1"
-                >
-                  <div className="flex items-center gap-2 text-xs">
-                    <span className="font-mono text-text-muted text-[10px]">{evt.time}</span>
-                    <span className="font-bold text-red-400">{evt.from}</span>
-                    <span className="text-text-muted">&rarr;</span>
-                    <span className="font-bold text-emerald-400">{evt.to}</span>
+
+              {/* ══════════════════════════════════════════════════════════════════════
+          5.3 Perception Cone Visualizer
+         ══════════════════════════════════════════════════════════════════════ */}
+              <SurfaceCard level={2} className="p-3 relative overflow-hidden">
+                <div className="absolute top-0 left-0 w-32 h-32 bg-cyan-500/5 blur-3xl rounded-full pointer-events-none" />
+                <SectionLabel icon={Eye} label="Perception Cone Visualizer" color="#06b6d4" />
+                <div className="mt-3 flex items-center gap-2.5">
+                  <svg width={130} height={130} viewBox="0 0 130 130" className="flex-shrink-0">
+                    {/* Background grid */}
+                    {[32.5, 65, 97.5].map(r => (
+                      <circle key={r} cx={65} cy={65} r={r} fill="none" stroke="rgba(255,255,255,0.04)" strokeWidth="1" />
+                    ))}
+                    {/* Hearing circle (800cm radius - scaled) */}
+                    <circle cx={65} cy={65} r={44.7} fill="none" stroke="rgba(6,182,212,0.25)" strokeWidth="1.5" strokeDasharray="4 3" />
+                    {/* Sight cone: 60 degrees, pointing up-left */}
+                    <path
+                      d={`M 65 65 L ${65 + 56.9 * Math.cos(-Math.PI / 2 - Math.PI / 6)} ${65 + 56.9 * Math.sin(-Math.PI / 2 - Math.PI / 6)} A 56.9 56.9 0 0 1 ${65 + 56.9 * Math.cos(-Math.PI / 2 + Math.PI / 6)} ${65 + 56.9 * Math.sin(-Math.PI / 2 + Math.PI / 6)} Z`}
+                      fill="rgba(6,182,212,0.12)" stroke="rgba(6,182,212,0.5)" strokeWidth="1.5"
+                    />
+                    {/* AI center */}
+                    <circle cx={65} cy={65} r={5} fill="#06b6d4" style={{ filter: 'drop-shadow(0 0 6px #06b6d4)' }} />
+                    <text x={65} y={77.2} textAnchor="middle" className="text-[8px] font-mono font-bold fill-[#06b6d4]">AI</text>
+                    {/* Detected entities */}
+                    {DETECTED_ENTITIES.map(e => (
+                      <g key={e.label}>
+                        <circle cx={e.x} cy={e.y} r={4} fill={e.color} style={{ filter: `drop-shadow(0 0 4px ${e.color})` }} />
+                        <text x={e.x} y={e.y - 8} textAnchor="middle" className="text-[7px] font-mono font-bold" fill={e.color}>{e.label}</text>
+                      </g>
+                    ))}
+                    {/* Range labels */}
+                    <text x={65} y={17.9} textAnchor="middle" className="text-[7px] font-mono fill-[rgba(255,255,255,0.3)]">1500cm</text>
+                    <text x={111.3} y={65} textAnchor="middle" className="text-[7px] font-mono fill-[rgba(255,255,255,0.3)]">800cm</text>
+                  </svg>
+                  <div className="space-y-3 flex-1 min-w-0">
+                    <div className="text-[10px] font-bold uppercase tracking-widest text-text-muted">Sense Legend</div>
+                    {[
+                      { label: 'Sight Cone', desc: '60 deg, 1500cm', color: 'rgba(6,182,212,0.5)', style: 'solid' },
+                      { label: 'Hearing Range', desc: '800cm radius', color: 'rgba(6,182,212,0.25)', style: 'dashed' },
+                    ].map(s => (
+                      <div key={s.label} className="flex items-center gap-2 text-xs">
+                        <div className="w-5 h-[2px] flex-shrink-0" style={{ backgroundColor: s.color, borderTop: s.style === 'dashed' ? `2px dashed ${s.color}` : undefined }} />
+                        <span className="font-medium text-text">{s.label}</span>
+                        <span className="text-text-muted text-[10px]">{s.desc}</span>
+                      </div>
+                    ))}
+                    <div className="border-t border-border/30 pt-2 space-y-1.5 mt-2">
+                      <div className="text-[10px] font-bold uppercase tracking-widest text-text-muted">Detected</div>
+                      {DETECTED_ENTITIES.map(e => (
+                        <div key={e.label} className="flex items-center gap-2 text-xs">
+                          <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: e.color }} />
+                          <span className="font-medium text-text">{e.label}</span>
+                          <span className="text-[10px] text-text-muted">
+                            {e.inCone ? 'In sight' : e.inHearing ? 'Heard' : 'Undetected'}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
                   </div>
-                  <p className="text-[10px] text-text-muted leading-relaxed">{evt.reason}</p>
-                </motion.div>
-              ))}
-            </div>
-          </div>
-        </div>
-      </SurfaceCard>
+                </div>
+              </SurfaceCard>
 
-      {/* ══════════════════════════════════════════════════════════════════════
+
+              <div className="grid grid-cols-1 xl:grid-cols-2 gap-2.5">
+                {/* ══════════════════════════════════════════════════════════════════════
+          5.2 Behavior Tree Flowchart
+         ══════════════════════════════════════════════════════════════════════ */}
+                <SurfaceCard level={2} className="p-3 relative overflow-hidden">
+                  <div className="absolute bottom-0 left-0 w-40 h-40 bg-emerald-500/5 blur-3xl rounded-full pointer-events-none" />
+                  <SectionLabel icon={Brain} label="Behavior Tree Flowchart" color="#4ade80" />
+                  <div className="mt-3 flex flex-col md:flex-row gap-2.5">
+                    <svg width={240} height={180} viewBox="0 0 240 180" className="flex-shrink-0">
+                      {/* Edges */}
+                      {BT_EDGES.map(edge => {
+                        const from = BT_NODES.find(n => n.id === edge.from)!;
+                        const to = BT_NODES.find(n => n.id === edge.to)!;
+                        return (
+                          <line
+                            key={`${edge.from}-${edge.to}`}
+                            x1={from.x + 30} y1={from.y + 20}
+                            x2={to.x + 30} y2={to.y}
+                            stroke={edge.active ? '#4ade80' : 'rgba(255,255,255,0.15)'}
+                            strokeWidth={edge.active ? 2 : 1}
+                            strokeDasharray={edge.active ? undefined : '4 4'}
+                          />
+                        );
+                      })}
+                      {/* Nodes */}
+                      {BT_NODES.map(node => {
+                        const isSelected = btExpandedNode === node.id;
+                        const fillColor = node.active ? 'rgba(74,222,128,0.15)' : 'rgba(255,255,255,0.05)';
+                        const strokeColor = isSelected ? '#60a5fa' : node.active ? '#4ade80' : 'rgba(255,255,255,0.2)';
+                        const w = 60, h = 28;
+                        return (
+                          <g key={node.id} onClick={() => setBtExpandedNode(prev => prev === node.id ? null : node.id)} className="cursor-pointer">
+                            {node.shape === 'diamond' && (
+                              <polygon
+                                points={`${node.x + w / 2},${node.y} ${node.x + w},${node.y + h / 2} ${node.x + w / 2},${node.y + h} ${node.x},${node.y + h / 2}`}
+                                fill={fillColor} stroke={strokeColor} strokeWidth={isSelected ? 2 : 1.5}
+                              />
+                            )}
+                            {node.shape === 'rect' && (
+                              <rect x={node.x} y={node.y} width={w} height={h} rx={3}
+                                fill={fillColor} stroke={strokeColor} strokeWidth={isSelected ? 2 : 1.5}
+                              />
+                            )}
+                            {node.shape === 'rounded' && (
+                              <rect x={node.x} y={node.y} width={w} height={h} rx={14}
+                                fill={fillColor} stroke={strokeColor} strokeWidth={isSelected ? 2 : 1.5}
+                              />
+                            )}
+                            {node.shape === 'hexagon' && (
+                              <polygon
+                                points={`${node.x + 10},${node.y} ${node.x + w - 10},${node.y} ${node.x + w},${node.y + h / 2} ${node.x + w - 10},${node.y + h} ${node.x + 10},${node.y + h} ${node.x},${node.y + h / 2}`}
+                                fill={fillColor} stroke={strokeColor} strokeWidth={isSelected ? 2 : 1.5}
+                              />
+                            )}
+                            <text
+                              x={node.x + w / 2} y={node.y + h / 2 + 1}
+                              textAnchor="middle" dominantBaseline="central"
+                              className="text-[8px] font-mono font-bold pointer-events-none"
+                              fill={node.active ? '#4ade80' : 'rgba(255,255,255,0.5)'}
+                            >
+                              {node.label}
+                            </text>
+                          </g>
+                        );
+                      })}
+                    </svg>
+                    {/* Expanded node details panel */}
+                    <div className="flex-1 min-w-0">
+                      <AnimatePresence mode="sync">
+                        {btExpandedNode ? (
+                          <motion.div
+                            key={btExpandedNode}
+                            initial={{ opacity: 0, x: 10 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            exit={{ opacity: 0, x: -10 }}
+                            className="bg-surface-deep p-3 rounded-lg border border-border/40 space-y-2"
+                          >
+                            <div className="text-xs font-bold text-text">{BT_NODES.find(n => n.id === btExpandedNode)?.label}</div>
+                            <div className="flex items-center gap-2">
+                              <span className="text-[10px] font-mono uppercase tracking-widest text-text-muted">Shape:</span>
+                              <span className="text-[10px] font-mono text-text">{BT_NODES.find(n => n.id === btExpandedNode)?.shape}</span>
+                              <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${BT_NODES.find(n => n.id === btExpandedNode)?.active ? 'bg-emerald-500/20 text-emerald-400' : 'bg-gray-500/20 text-gray-400'}`}>
+                                {BT_NODES.find(n => n.id === btExpandedNode)?.active ? 'ACTIVE' : 'INACTIVE'}
+                              </span>
+                            </div>
+                            <p className="text-xs text-text-muted leading-relaxed">{BT_NODES.find(n => n.id === btExpandedNode)?.details}</p>
+                          </motion.div>
+                        ) : (
+                          <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-xs text-text-muted italic mt-2">
+                            Click a node to view details. Green path shows current execution flow.
+                          </motion.p>
+                        )}
+                      </AnimatePresence>
+                      <div className="flex flex-wrap gap-2 mt-3">
+                        {[
+                          { shape: 'diamond', label: 'Selector' },
+                          { shape: 'rect', label: 'Sequence' },
+                          { shape: 'rounded', label: 'Task' },
+                          { shape: 'hexagon', label: 'Decorator' },
+                        ].map(l => (
+                          <span key={l.shape} className="text-[9px] font-mono text-text-muted flex items-center gap-1">
+                            <span className="w-2 h-2 border border-text-muted/40 flex-shrink-0" style={{
+                              borderRadius: l.shape === 'rounded' ? '50%' : l.shape === 'diamond' ? '0' : '2px',
+                              transform: l.shape === 'diamond' ? 'rotate(45deg) scale(0.8)' : undefined,
+                            }} />
+                            {l.label}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                </SurfaceCard>
+
+
+                {/* ══════════════════════════════════════════════════════════════════════
+          5.8 AI Decision Debugger
+         ══════════════════════════════════════════════════════════════════════ */}
+                <SurfaceCard level={2} className="p-3 relative overflow-hidden">
+                  <div className="absolute top-0 right-0 w-32 h-32 bg-amber-500/5 blur-3xl rounded-full pointer-events-none" />
+                  <SectionLabel icon={Bug} label="AI Decision Debugger" color="#fbbf24" />
+                  <div className="mt-3 space-y-2">
+                    {/* Filter buttons */}
+                    <div className="flex gap-1.5 mb-2">
+                      {(['all', 'evaluation', 'selection', 'unexpected'] as const).map(f => (
+                        <button
+                          key={f}
+                          onClick={() => setDebugFilter(f)}
+                          className={`px-2 py-1 rounded text-[10px] font-bold transition-colors ${debugFilter === f
+                              ? f === 'unexpected' ? 'bg-amber-500/20 text-amber-400 border border-amber-500/40' : 'bg-surface-hover text-text border border-border/50'
+                              : 'text-text-muted hover:text-text bg-surface border border-border/30'
+                            }`}
+                        >
+                          {f === 'all' ? 'All' : f.charAt(0).toUpperCase() + f.slice(1)}
+                        </button>
+                      ))}
+                    </div>
+                    {/* Decision log */}
+                    <div className="max-h-[240px] overflow-y-auto custom-scrollbar space-y-1.5">
+                      {filteredDecisions.map(entry => {
+                        const isExpanded = debugExpanded === entry.tick;
+                        const isUnexpected = entry.type === 'unexpected';
+                        return (
+                          <motion.div
+                            key={entry.tick}
+                            initial={{ opacity: 0, x: -5 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            className={`rounded border transition-colors ${isUnexpected ? 'border-amber-500/40 bg-amber-500/5' : 'border-border/30 bg-surface-deep'
+                              }`}
+                          >
+                            <button
+                              onClick={() => setDebugExpanded(prev => prev === entry.tick ? null : entry.tick)}
+                              className="w-full text-left px-3 py-2 flex items-center gap-2 hover:bg-surface-hover/30 transition-colors focus:outline-none"
+                            >
+                              <span className={`text-[10px] font-mono font-bold flex-shrink-0 ${isUnexpected ? 'text-amber-400' : 'text-text-muted'}`}>
+                                #{entry.tick}
+                              </span>
+                              <span className={`text-[9px] font-bold uppercase px-1.5 py-0.5 rounded flex-shrink-0 ${entry.type === 'evaluation' ? 'bg-blue-500/15 text-blue-400' :
+                                  entry.type === 'selection' ? 'bg-emerald-500/15 text-emerald-400' :
+                                    'bg-amber-500/15 text-amber-400'
+                                }`}>
+                                {entry.type}
+                              </span>
+                              <span className="text-xs text-text truncate">{entry.summary}</span>
+                              <motion.div animate={{ rotate: isExpanded ? 180 : 0 }} className="ml-auto flex-shrink-0">
+                                <ChevronDown className="w-3 h-3 text-text-muted" />
+                              </motion.div>
+                            </button>
+                            <AnimatePresence>
+                              {isExpanded && (
+                                <motion.div
+                                  initial={{ height: 0, opacity: 0 }}
+                                  animate={{ height: 'auto', opacity: 1 }}
+                                  exit={{ height: 0, opacity: 0 }}
+                                  className="overflow-hidden"
+                                >
+                                  <div className="px-3 pb-2 border-t border-border/20">
+                                    <p className="text-[10px] text-text-muted leading-relaxed mt-1.5 font-mono">{entry.details}</p>
+                                  </div>
+                                </motion.div>
+                              )}
+                            </AnimatePresence>
+                          </motion.div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </SurfaceCard>
+
+
+              </div>
+            </motion.div>
+          )}
+          {activeTab === 'encounters' && (
+            <motion.div
+              key="encounters"
+              initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}
+              transition={{ duration: 0.2 }}
+              className="space-y-2.5"
+            >
+              <div className="grid grid-cols-1 xl:grid-cols-2 gap-2.5">
+                {/* ══════════════════════════════════════════════════════════════════════
+            5.4 Enemy Difficulty Curve
+           ══════════════════════════════════════════════════════════════════════ */}
+                <SurfaceCard level={2} className="p-3 relative overflow-hidden">
+                  <div className="absolute bottom-0 right-0 w-32 h-32 bg-red-500/5 blur-3xl rounded-full pointer-events-none" />
+                  <SectionLabel icon={TrendingUp} label="Enemy Difficulty Curve" color="#f87171" />
+                  <div className="mt-3">
+                    <svg width={chartW} height={chartH} viewBox={`0 0 ${chartW} ${chartH}`} className="w-full max-w-[280px]"
+                      onMouseLeave={() => setDiffHoverLevel(null)}
+                    >
+                      {/* Zones */}
+                      <rect x={chartPadL} y={toChartY(100)} width={plotW} height={toChartY(70) - toChartY(100)} fill="rgba(239,68,68,0.08)" />
+                      <rect x={chartPadL} y={toChartY(70)} width={plotW} height={toChartY(40) - toChartY(70)} fill="rgba(74,222,128,0.08)" />
+                      <rect x={chartPadL} y={toChartY(40)} width={plotW} height={toChartY(0) - toChartY(40)} fill="rgba(107,114,128,0.06)" />
+                      {/* Zone labels */}
+                      <text x={chartPadL + 3} y={toChartY(88)} className="text-[7px] font-mono fill-[rgba(239,68,68,0.5)]">DANGER</text>
+                      <text x={chartPadL + 3} y={toChartY(55)} className="text-[7px] font-mono fill-[rgba(74,222,128,0.5)]">SWEET SPOT</text>
+                      <text x={chartPadL + 3} y={toChartY(20)} className="text-[7px] font-mono fill-[rgba(107,114,128,0.4)]">TRIVIAL</text>
+                      {/* Grid lines */}
+                      {[0, 25, 50, 75, 100].map(v => (
+                        <line key={v} x1={chartPadL} y1={toChartY(v)} x2={chartPadL + plotW} y2={toChartY(v)} stroke="rgba(255,255,255,0.06)" strokeWidth="1" />
+                      ))}
+                      {/* X axis labels */}
+                      {[1, 10, 20, 30, 40, 50].map(l => (
+                        <text key={l} x={toChartX(l)} y={chartH - 3} textAnchor="middle" className="text-[7px] font-mono fill-[var(--text-muted)]">Lv{l}</text>
+                      ))}
+                      {/* Lines */}
+                      <polyline points={polyline(DIFFICULTY_GRUNT)} fill="none" stroke="#ef4444" strokeWidth="1.5" />
+                      <polyline points={polyline(DIFFICULTY_CASTER)} fill="none" stroke="#a855f7" strokeWidth="1.5" />
+                      <polyline points={polyline(DIFFICULTY_BRUTE)} fill="none" stroke="#f59e0b" strokeWidth="1.5" />
+                      {/* Hover line */}
+                      {diffHoverLevel !== null && (
+                        <line x1={toChartX(diffHoverLevel)} y1={10} x2={toChartX(diffHoverLevel)} y2={chartH - chartPadB} stroke="rgba(255,255,255,0.3)" strokeWidth="1" strokeDasharray="3 3" />
+                      )}
+                      {/* Invisible hover rects for interaction */}
+                      {Array.from({ length: 50 }, (_, i) => i + 1).map(level => (
+                        <rect
+                          key={level}
+                          x={toChartX(level) - (plotW / 49) / 2}
+                          y={10}
+                          width={plotW / 49}
+                          height={plotH}
+                          fill="transparent"
+                          onMouseEnter={() => setDiffHoverLevel(level)}
+                        />
+                      ))}
+                    </svg>
+                    <div className="flex gap-3 mt-2">
+                      {[{ label: 'Grunt', color: '#ef4444' }, { label: 'Caster', color: '#a855f7' }, { label: 'Brute', color: '#f59e0b' }].map(l => (
+                        <span key={l.label} className="flex items-center gap-1 text-[10px] font-mono text-text-muted">
+                          <span className="w-3 h-[2px] flex-shrink-0" style={{ backgroundColor: l.color }} />
+                          {l.label}
+                        </span>
+                      ))}
+                    </div>
+                    {diffHoverLevel !== null && (
+                      <div className="text-[10px] text-text-muted mt-1 font-mono">
+                        Level {diffHoverLevel}: Grunt={DIFFICULTY_GRUNT.reduce((a, b) => Math.abs(b.level - diffHoverLevel) < Math.abs(a.level - diffHoverLevel) ? b : a).value},
+                        Caster={DIFFICULTY_CASTER.reduce((a, b) => Math.abs(b.level - diffHoverLevel) < Math.abs(a.level - diffHoverLevel) ? b : a).value},
+                        Brute={DIFFICULTY_BRUTE.reduce((a, b) => Math.abs(b.level - diffHoverLevel) < Math.abs(a.level - diffHoverLevel) ? b : a).value}
+                      </div>
+                    )}
+                  </div>
+                </SurfaceCard>
+              </div>
+
+
+              {/* ══════════════════════════════════════════════════════════════════════
           5.10 Enemy Group Tactics Planner
          ══════════════════════════════════════════════════════════════════════ */}
-      <SurfaceCard level={2} className="p-4 relative overflow-hidden">
-        <div className="absolute top-0 left-0 w-40 h-40 bg-blue-500/5 blur-3xl rounded-full pointer-events-none" />
-        <SectionLabel icon={MapIcon} label="Enemy Group Tactics Planner" color={ACCENT} />
-        <div className="mt-3 flex flex-col md:flex-row gap-4">
-          {/* Tactical overview SVG */}
-          <svg width={200} height={150} viewBox="0 0 200 150" className="flex-shrink-0">
-            {/* Arena bounds */}
-            <rect x={5} y={5} width={190} height={140} rx={4} fill="none" stroke="rgba(255,255,255,0.08)" strokeWidth="1" strokeDasharray="4 4" />
-            {/* Grid */}
-            {[50, 100, 150].map(x => <line key={`vg${x}`} x1={x} y1={5} x2={x} y2={145} stroke="rgba(255,255,255,0.03)" strokeWidth="1" />)}
-            {[37, 75, 112].map(y => <line key={`hg${y}`} x1={5} y1={y} x2={195} y2={y} stroke="rgba(255,255,255,0.03)" strokeWidth="1" />)}
-            {/* Player at center */}
-            <circle cx={100} cy={75} r={8} fill="rgba(59,130,246,0.2)" stroke="#3b82f6" strokeWidth="1.5" />
-            <text x={100} y={75} textAnchor="middle" dominantBaseline="central" className="text-[7px] font-mono font-bold fill-[#3b82f6]">P</text>
-            {/* Enemies */}
-            {TACTICS_ENEMIES.map(enemy => {
-              const roleColor = TACTICS_ROLE_COLORS[enemy.role];
-              return (
-                <g key={enemy.id}>
-                  <circle cx={enemy.x} cy={enemy.y} r={7}
-                    fill={`${roleColor}20`} stroke={roleColor} strokeWidth="1.5"
-                  />
-                  <text x={enemy.x} y={enemy.y} textAnchor="middle" dominantBaseline="central"
-                    className="text-[6px] font-mono font-bold pointer-events-none" fill={roleColor}>
-                    {enemy.id}
-                  </text>
-                  {/* Label */}
-                  <text x={enemy.x} y={enemy.y + 14} textAnchor="middle"
-                    className="text-[6px] font-mono fill-[rgba(255,255,255,0.4)]">
-                    {enemy.label}
-                  </text>
-                  {/* Attack line to player for attackers */}
-                  {enemy.role === 'attacking' && (
-                    <line x1={enemy.x} y1={enemy.y} x2={100} y2={75}
-                      stroke={`${roleColor}40`} strokeWidth="1" strokeDasharray="3 3" />
-                  )}
-                  {/* Flanking arc */}
-                  {enemy.role === 'flanking' && (
-                    <path
-                      d={`M ${enemy.x} ${enemy.y} Q ${enemy.x + 20} ${enemy.y - 30} ${100} ${75}`}
-                      fill="none" stroke={`${roleColor}50`} strokeWidth="1" strokeDasharray="3 2"
-                    />
-                  )}
-                </g>
-              );
-            })}
-            {/* Attack slot rotation arrow */}
-            <path d="M 45 30 C 35 15, 70 10, 75 25" fill="none" stroke="rgba(239,68,68,0.3)" strokeWidth="1" markerEnd="url(#arrowhead)" />
-            <defs>
-              <marker id="arrowhead" markerWidth="6" markerHeight="4" refX="6" refY="2" orient="auto">
-                <polygon points="0 0, 6 2, 0 4" fill="rgba(239,68,68,0.4)" />
-              </marker>
-            </defs>
-          </svg>
+              <SurfaceCard level={2} className="p-3 relative overflow-hidden">
+                <div className="absolute top-0 left-0 w-40 h-40 bg-blue-500/5 blur-3xl rounded-full pointer-events-none" />
+                <SectionLabel icon={MapIcon} label="Enemy Group Tactics Planner" color={ACCENT} />
+                <div className="mt-3 flex flex-col md:flex-row gap-2.5">
+                  {/* Tactical overview SVG */}
+                  <svg width={160} height={120} viewBox="0 0 160 120" className="flex-shrink-0">
+                    {/* Arena bounds */}
+                    <rect x={4} y={4} width={152} height={112} rx={4} fill="none" stroke="rgba(255,255,255,0.08)" strokeWidth="1" strokeDasharray="4 4" />
+                    {/* Grid */}
+                    {[40, 80, 120].map(x => <line key={`vg${x}`} x1={x} y1={4} x2={x} y2={116} stroke="rgba(255,255,255,0.03)" strokeWidth="1" />)}
+                    {[30, 60, 90].map(y => <line key={`hg${y}`} x1={4} y1={y} x2={156} y2={y} stroke="rgba(255,255,255,0.03)" strokeWidth="1" />)}
+                    {/* Player at center */}
+                    <circle cx={80} cy={60} r={8} fill="rgba(59,130,246,0.2)" stroke="#3b82f6" strokeWidth="1.5" />
+                    <text x={80} y={60} textAnchor="middle" dominantBaseline="central" className="text-[7px] font-mono font-bold fill-[#3b82f6]">P</text>
+                    {/* Enemies */}
+                    {TACTICS_ENEMIES.map(enemy => {
+                      const roleColor = TACTICS_ROLE_COLORS[enemy.role];
+                      return (
+                        <g key={enemy.id}>
+                          <circle cx={enemy.x} cy={enemy.y} r={7}
+                            fill={`${roleColor}20`} stroke={roleColor} strokeWidth="1.5"
+                          />
+                          <text x={enemy.x} y={enemy.y} textAnchor="middle" dominantBaseline="central"
+                            className="text-[6px] font-mono font-bold pointer-events-none" fill={roleColor}>
+                            {enemy.id}
+                          </text>
+                          {/* Label */}
+                          <text x={enemy.x} y={enemy.y + 14} textAnchor="middle"
+                            className="text-[6px] font-mono fill-[rgba(255,255,255,0.4)]">
+                            {enemy.label}
+                          </text>
+                          {/* Attack line to player for attackers */}
+                          {enemy.role === 'attacking' && (
+                            <line x1={enemy.x} y1={enemy.y} x2={80} y2={60}
+                              stroke={`${roleColor}40`} strokeWidth="1" strokeDasharray="3 3" />
+                          )}
+                          {/* Flanking arc */}
+                          {enemy.role === 'flanking' && (
+                            <path
+                              d={`M ${enemy.x} ${enemy.y} Q ${enemy.x + 16} ${enemy.y - 24} ${80} ${60}`}
+                              fill="none" stroke={`${roleColor}50`} strokeWidth="1" strokeDasharray="3 2"
+                            />
+                          )}
+                        </g>
+                      );
+                    })}
+                    {/* Attack slot rotation arrow */}
+                    <path d="M 36 24 C 28 12, 56 8, 60 20" fill="none" stroke="rgba(239,68,68,0.3)" strokeWidth="1" markerEnd="url(#arrowhead)" />
+                    <defs>
+                      <marker id="arrowhead" markerWidth="6" markerHeight="4" refX="6" refY="2" orient="auto">
+                        <polygon points="0 0, 6 2, 0 4" fill="rgba(239,68,68,0.4)" />
+                      </marker>
+                    </defs>
+                  </svg>
 
-          <div className="flex-1 space-y-3 min-w-0">
-            {/* Config */}
-            <div>
-              <div className="text-[10px] font-bold uppercase tracking-widest text-text-muted mb-1.5">Tactics Config</div>
-              <div className="grid grid-cols-2 gap-2">
-                {[
-                  { label: 'MaxSimultaneous', value: '2' },
-                  { label: 'FlankingEnabled', value: 'true' },
-                ].map(c => (
-                  <div key={c.label} className="bg-surface-deep rounded border border-border/30 px-2 py-1.5 text-center">
-                    <div className="text-xs font-mono font-bold text-text">{c.value}</div>
-                    <div className="text-[8px] uppercase font-bold text-text-muted tracking-wider">{c.label}</div>
+                  <div className="flex-1 space-y-3 min-w-0">
+                    {/* Config */}
+                    <div>
+                      <div className="text-[10px] font-bold uppercase tracking-widest text-text-muted mb-1.5">Tactics Config</div>
+                      <div className="grid grid-cols-2 gap-2">
+                        {[
+                          { label: 'MaxSimultaneous', value: '2' },
+                          { label: 'FlankingEnabled', value: 'true' },
+                        ].map(c => (
+                          <div key={c.label} className="bg-surface-deep rounded border border-border/30 px-2 py-1.5 text-center">
+                            <div className="text-xs font-mono font-bold text-text">{c.value}</div>
+                            <div className="text-[8px] uppercase font-bold text-text-muted tracking-wider">{c.label}</div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                    {/* Role legend */}
+                    <div>
+                      <div className="text-[10px] font-bold uppercase tracking-widest text-text-muted mb-1.5">Role Status</div>
+                      <div className="space-y-1">
+                        {TACTICS_ENEMIES.map(e => (
+                          <div key={e.id} className="flex items-center gap-2 text-[10px]">
+                            <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: TACTICS_ROLE_COLORS[e.role] }} />
+                            <span className="font-mono font-bold text-text w-12">{e.label}</span>
+                            <span className="font-medium capitalize" style={{ color: TACTICS_ROLE_COLORS[e.role] }}>{e.role}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                    <p className="text-[10px] text-text-muted leading-relaxed">
+                      Attack slot rotation ensures only MaxSimultaneous enemies engage at once. Flankers circle around to rear. Waiting enemies hold positions until a slot opens.
+                    </p>
                   </div>
-                ))}
-              </div>
-            </div>
-            {/* Role legend */}
-            <div>
-              <div className="text-[10px] font-bold uppercase tracking-widest text-text-muted mb-1.5">Role Status</div>
-              <div className="space-y-1">
-                {TACTICS_ENEMIES.map(e => (
-                  <div key={e.id} className="flex items-center gap-2 text-[10px]">
-                    <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: TACTICS_ROLE_COLORS[e.role] }} />
-                    <span className="font-mono font-bold text-text w-12">{e.label}</span>
-                    <span className="font-medium capitalize" style={{ color: TACTICS_ROLE_COLORS[e.role] }}>{e.role}</span>
+                </div>
+              </SurfaceCard>
+
+              {/* ══════════════════════════════════════════════════════════════════════
+          5.5 Spawn Wave Choreographer
+         ══════════════════════════════════════════════════════════════════════ */}
+              <SurfaceCard level={2} className="p-3 relative overflow-hidden">
+                <div className="absolute top-0 right-0 w-32 h-32 bg-amber-500/5 blur-3xl rounded-full pointer-events-none" />
+                <SectionLabel icon={Users} label="Spawn Wave Choreographer" color="#f59e0b" />
+                <div className="mt-3 flex flex-col md:flex-row gap-2.5">
+                  {/* Top-down spawn positions */}
+                  <svg width={140} height={140} viewBox="0 0 140 140" className="flex-shrink-0">
+                    {/* Arena circle */}
+                    <circle cx={70} cy={70} r={58.3} fill="none" stroke="rgba(255,255,255,0.1)" strokeWidth="1" strokeDasharray="4 4" />
+                    <circle cx={70} cy={70} r={4} fill="rgba(255,255,255,0.3)" />
+                    <text x={70} y={77.8} textAnchor="middle" className="text-[7px] font-mono fill-[rgba(255,255,255,0.4)]">CENTER</text>
+                    {/* Spawn points */}
+                    {SPAWN_POINTS.map(sp => (
+                      <g key={sp.id}>
+                        <motion.circle
+                          cx={sp.x} cy={sp.y} r={10}
+                          fill="rgba(245,158,11,0.15)" stroke="#f59e0b" strokeWidth="1.5"
+                          initial={{ scale: 0 }} animate={{ scale: 1 }}
+                          transition={{ delay: sp.order * 0.15, type: 'spring' }}
+                        />
+                        <text x={sp.x} y={sp.y + 1} textAnchor="middle" dominantBaseline="central"
+                          className="text-[9px] font-mono font-bold fill-[#f59e0b] pointer-events-none">
+                          {sp.order}
+                        </text>
+                        {/* Connection line to center */}
+                        <line x1={70} y1={70} x2={sp.x} y2={sp.y} stroke="rgba(245,158,11,0.15)" strokeWidth="1" strokeDasharray="2 3" />
+                      </g>
+                    ))}
+                  </svg>
+
+                  <div className="flex-1 space-y-3 min-w-0">
+                    {/* Formation selector */}
+                    <div>
+                      <div className="text-[10px] font-bold uppercase tracking-widest text-text-muted mb-1.5">Formation</div>
+                      <div className="flex gap-1.5">
+                        {(['Circle', 'Line', 'Ambush'] as const).map(f => (
+                          <button
+                            key={f}
+                            onClick={() => setSpawnFormation(f)}
+                            className={`px-2.5 py-1 rounded text-[10px] font-bold transition-colors ${spawnFormation === f ? 'bg-amber-500/20 text-amber-400 border border-amber-500/40' : 'text-text-muted hover:text-text bg-surface border border-border/40'
+                              }`}
+                          >
+                            {f}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                    {/* Config values */}
+                    <div className="flex gap-2">
+                      {[{ label: 'WaveDelay', value: '60s' }, { label: 'MaxActive', value: '12' }].map(c => (
+                        <div key={c.label} className="flex-1 py-1.5 px-2 rounded-lg bg-surface-deep border border-border/40 text-center">
+                          <div className="text-xs font-mono font-bold text-text">{c.value}</div>
+                          <div className="text-[9px] uppercase font-bold text-text-muted tracking-wider">{c.label}</div>
+                        </div>
+                      ))}
+                    </div>
+                    {/* Wave timeline */}
+                    <div>
+                      <div className="text-[10px] font-bold uppercase tracking-widest text-text-muted mb-1.5">Wave Timeline</div>
+                      <div className="space-y-1.5">
+                        {WAVE_TIMELINE.map(wave => (
+                          <motion.div
+                            key={wave.id}
+                            initial={{ opacity: 0, x: -10 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            transition={{ delay: wave.id * 0.1 }}
+                            className="flex items-center gap-2 text-xs bg-surface-deep px-2 py-1.5 rounded border border-border/30"
+                          >
+                            <span className="w-5 h-5 rounded-full bg-amber-500/20 border border-amber-500/40 flex items-center justify-center text-[9px] font-mono font-bold text-amber-400 flex-shrink-0">
+                              {wave.id}
+                            </span>
+                            <span className="font-mono text-text-muted text-[10px] w-8">{wave.delay}</span>
+                            <span className="text-text font-medium">{wave.archetype}</span>
+                            <span className="ml-auto text-text-muted font-mono text-[10px]">x{wave.count}</span>
+                          </motion.div>
+                        ))}
+                      </div>
+                    </div>
                   </div>
-                ))}
+                </div>
+              </SurfaceCard>
+
+
+              <div className="grid grid-cols-1 xl:grid-cols-2 gap-2.5">
+                {/* ══════════════════════════════════════════════════════════════════════
+          5.6 Archetype Builder (Custom Enemy Form)
+         ══════════════════════════════════════════════════════════════════════ */}
+                <SurfaceCard level={2} className="p-3 relative overflow-hidden">
+                  <div className="absolute bottom-0 left-0 w-40 h-40 bg-purple-500/5 blur-3xl rounded-full pointer-events-none" />
+                  <SectionLabel icon={Wrench} label="Archetype Builder" color="#a855f7" />
+                  <div className="mt-3 grid grid-cols-1 md:grid-cols-2 gap-2.5">
+                    {/* Form */}
+                    <div className="space-y-3">
+                      {/* Name input */}
+                      <div>
+                        <label className="text-[10px] font-bold uppercase tracking-widest text-text-muted block mb-1">Name</label>
+                        <input
+                          type="text"
+                          value={builderName}
+                          onChange={e => setBuilderName(e.target.value)}
+                          className="w-full bg-surface-deep border border-border/40 rounded px-2.5 py-1.5 text-xs text-text font-mono focus:outline-none focus:border-purple-500/50 transition-colors"
+                        />
+                      </div>
+                      {/* Stat sliders */}
+                      <div>
+                        <label className="text-[10px] font-bold uppercase tracking-widest text-text-muted block mb-1.5">Stats</label>
+                        <div className="space-y-2">
+                          {(Object.keys(builderStats) as (keyof typeof builderStats)[]).map(stat => (
+                            <div key={stat} className="flex items-center gap-2">
+                              <span className="text-[10px] font-bold uppercase tracking-wider text-text-muted w-12 text-right flex-shrink-0">{stat}</span>
+                              <input
+                                type="range"
+                                min={0} max={100}
+                                value={builderStats[stat]}
+                                onChange={e => setBuilderStats(prev => ({ ...prev, [stat]: parseInt(e.target.value) }))}
+                                className="flex-1 h-1.5 accent-purple-500"
+                              />
+                              <span className="text-[10px] font-mono font-bold text-text w-6 text-right">{builderStats[stat]}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                      {/* Abilities checkboxes */}
+                      <div>
+                        <label className="text-[10px] font-bold uppercase tracking-widest text-text-muted block mb-1.5">Abilities</label>
+                        <div className="flex flex-wrap gap-1.5">
+                          {ABILITY_POOL.map(ab => (
+                            <label key={ab} className="flex items-center gap-1 cursor-pointer">
+                              <input
+                                type="checkbox"
+                                checked={builderAbilities.includes(ab)}
+                                onChange={() => setBuilderAbilities(prev =>
+                                  prev.includes(ab) ? prev.filter(a => a !== ab) : [...prev, ab]
+                                )}
+                                className="rounded border-border accent-purple-500 w-3 h-3"
+                              />
+                              <span className="text-[10px] text-text-muted font-medium">{ab}</span>
+                            </label>
+                          ))}
+                        </div>
+                      </div>
+                      {/* BT Dropdown */}
+                      <div>
+                        <label className="text-[10px] font-bold uppercase tracking-widest text-text-muted block mb-1">Behavior Tree</label>
+                        <select
+                          value={builderBT}
+                          onChange={e => setBuilderBT(e.target.value as typeof BT_PRESETS[number])}
+                          className="w-full bg-surface-deep border border-border/40 rounded px-2.5 py-1.5 text-xs text-text font-mono focus:outline-none focus:border-purple-500/50 transition-colors"
+                        >
+                          {BT_PRESETS.map(bt => <option key={bt} value={bt}>{bt}</option>)}
+                        </select>
+                      </div>
+                    </div>
+
+                    {/* Preview card */}
+                    <div className="bg-surface-deep rounded-xl border-2 border-purple-500/30 p-4 space-y-3 relative overflow-hidden"
+                      style={{ boxShadow: '0 0 20px -5px rgba(168,85,247,0.3), inset 0 0 20px -10px rgba(168,85,247,0.15)' }}>
+                      <div className="absolute top-0 right-0 w-24 h-24 bg-purple-500/10 blur-2xl rounded-full pointer-events-none" />
+                      <div className="text-[10px] font-bold uppercase tracking-widest text-text-muted">Preview</div>
+                      <div className="text-sm font-bold text-text">{builderName || 'Unnamed'}</div>
+                      <div className="text-[10px] font-mono text-purple-400 uppercase tracking-wider">BT: {builderBT}</div>
+                      {/* Stat bars */}
+                      <div className="space-y-1.5">
+                        {(Object.entries(builderStats) as [string, number][]).map(([stat, value]) => (
+                          <div key={stat} className="flex items-center gap-2">
+                            <span className="text-[10px] font-bold uppercase tracking-wider text-text-muted w-10 flex-shrink-0 text-right">{stat}</span>
+                            <div className="flex-1 h-1.5 rounded-full bg-surface overflow-hidden">
+                              <motion.div
+                                className="h-full rounded-full bg-purple-500"
+                                animate={{ width: `${value}%` }}
+                                transition={{ type: 'spring', stiffness: 300, damping: 25 }}
+                              />
+                            </div>
+                            <span className="text-2xs font-mono font-bold text-text w-6 text-right">{value}</span>
+                          </div>
+                        ))}
+                      </div>
+                      {/* Selected abilities */}
+                      {builderAbilities.length > 0 && (
+                        <div className="flex flex-wrap gap-1">
+                          {builderAbilities.map(ab => (
+                            <span key={ab} className="text-[9px] font-bold px-1.5 py-0.5 rounded border bg-surface text-text"
+                              style={{ borderColor: 'rgba(168,85,247,0.4)' }}>
+                              {ab}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                      {builderAbilities.length === 0 && (
+                        <p className="text-[10px] text-text-muted italic">No abilities selected</p>
+                      )}
+                    </div>
+                  </div>
+                </SurfaceCard>
+
+
+                {/* ══════════════════════════════════════════════════════════════════════
+          5.9 Aggro Table Visualization
+         ══════════════════════════════════════════════════════════════════════ */}
+                <SurfaceCard level={2} className="p-3 relative overflow-hidden">
+                  <div className="absolute bottom-0 right-0 w-32 h-32 bg-red-500/5 blur-3xl rounded-full pointer-events-none" />
+                  <SectionLabel icon={Swords} label="Aggro Table" color="#ef4444" />
+                  <div className="mt-3 grid grid-cols-1 md:grid-cols-2 gap-2.5">
+                    {/* Threat bars */}
+                    <div className="space-y-3">
+                      <div className="text-[10px] font-bold uppercase tracking-widest text-text-muted">Threat Values</div>
+                      {AGGRO_TABLE.map(entry => (
+                        <div key={entry.target} className="space-y-1.5">
+                          <div className="flex items-center justify-between">
+                            <span className="text-xs font-bold text-text">{entry.target}</span>
+                            <span className="text-xs font-mono font-bold" style={{ color: entry.color }}>{entry.threat}</span>
+                          </div>
+                          {/* Threat bar */}
+                          <div className="h-3 rounded-full bg-surface-deep overflow-hidden border border-border/20">
+                            <motion.div
+                              className="h-full rounded-full"
+                              style={{ backgroundColor: entry.color }}
+                              initial={{ width: 0 }}
+                              animate={{ width: `${entry.threat}%` }}
+                              transition={{ duration: 0.8, ease: 'easeOut' }}
+                            />
+                          </div>
+                          {/* Source breakdown */}
+                          <div className="flex gap-2">
+                            {entry.breakdown.map(b => (
+                              <span key={b.source} className="text-[9px] font-mono text-text-muted">
+                                {b.source}={b.pct}%
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+
+                    {/* Aggro switch events */}
+                    <div className="space-y-2">
+                      <div className="text-[10px] font-bold uppercase tracking-widest text-text-muted">Aggro Switch Log</div>
+                      <div className="space-y-1.5">
+                        {AGGRO_EVENTS.map((evt, i) => (
+                          <motion.div
+                            key={i}
+                            initial={{ opacity: 0, x: 10 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            transition={{ delay: i * 0.1 }}
+                            className="bg-surface-deep rounded border border-border/30 px-3 py-2 space-y-1"
+                          >
+                            <div className="flex items-center gap-2 text-xs">
+                              <span className="font-mono text-text-muted text-[10px]">{evt.time}</span>
+                              <span className="font-bold text-red-400">{evt.from}</span>
+                              <span className="text-text-muted">&rarr;</span>
+                              <span className="font-bold text-emerald-400">{evt.to}</span>
+                            </div>
+                            <p className="text-[10px] text-text-muted leading-relaxed">{evt.reason}</p>
+                          </motion.div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                </SurfaceCard>
+
+
               </div>
-            </div>
-            <p className="text-[10px] text-text-muted leading-relaxed">
-              Attack slot rotation ensures only MaxSimultaneous enemies engage at once. Flankers circle around to rear. Waiting enemies hold positions until a slot opens.
-            </p>
-          </div>
-        </div>
-      </SurfaceCard>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
     </div>
   );
 }
@@ -1455,7 +1511,7 @@ function ArchetypeCard({
               initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }}
               className="relative z-10"
             >
-              <div className="px-4 pb-4 border-t border-[rgba(255,255,255,0.05)] pt-3 bg-surface/30 space-y-4 backdrop-blur-sm">
+              <div className="px-4 pb-4 border-t border-[rgba(255,255,255,0.05)] pt-3 bg-surface/30 space-y-2.5 backdrop-blur-sm">
                 {/* Abilities */}
                 <div>
                   <div className="text-[10px] font-bold uppercase tracking-widest text-text-muted mb-2">Signature Abilities</div>

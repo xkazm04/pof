@@ -56,19 +56,19 @@ interface TabHeaderProps {
 export function TabHeader({ icon: Icon, title, implemented, total, accent, children }: TabHeaderProps) {
   return (
     <motion.div
-      initial={{ opacity: 0, y: -10 }}
+      initial={{ opacity: 0, y: -6 }}
       animate={{ opacity: 1, y: 0 }}
-      className="flex items-center justify-between pb-3 border-b border-border/40"
+      className="flex items-center justify-between pb-2 border-b border-border/40"
     >
-      <div className="flex items-center gap-3">
-        <div className="p-2 rounded-lg relative overflow-hidden group">
+      <div className="flex items-center gap-2">
+        <div className="p-1.5 rounded-lg relative overflow-hidden group">
           <div className="absolute inset-0 opacity-20" style={{ backgroundColor: accent }} />
           <div className="absolute inset-0 opacity-0 group-hover:opacity-30 transition-opacity blur-md" style={{ backgroundColor: accent }} />
-          <Icon className="w-5 h-5 relative z-10" style={{ color: accent, filter: `drop-shadow(0 0 4px ${accent}80)` }} />
+          <Icon className="w-4 h-4 relative z-10" style={{ color: accent, filter: `drop-shadow(0 0 4px ${accent}80)` }} />
         </div>
         <div className="flex flex-col">
-          <span className="text-base font-bold text-text tracking-wide">{title}</span>
-          <span className="text-xs text-text-muted mt-0.5">
+          <span className="text-sm font-bold text-text tracking-wide">{title}</span>
+          <span className="text-xs text-text-muted">
             <span className="font-mono font-medium" style={{ color: implemented === total ? STATUS_SUCCESS : accent }}>{implemented}</span>
             <span className="opacity-60">/{total} deployed</span>
           </span>
@@ -94,7 +94,7 @@ interface PipelineFlowProps {
 
 export function PipelineFlow({ steps, accent, showStatus }: PipelineFlowProps) {
   return (
-    <div className="flex items-center gap-1.5 flex-wrap">
+    <div className="flex items-center gap-1 flex-wrap">
       {steps.map((step, i, arr) => {
         const label = typeof step === 'string' ? step : step.label;
         const status = typeof step === 'string' ? undefined : step.status;
@@ -104,13 +104,13 @@ export function PipelineFlow({ steps, accent, showStatus }: PipelineFlowProps) {
         return (
           <motion.div
             key={label}
-            initial={{ opacity: 0, x: -10 }}
+            initial={{ opacity: 0, x: -6 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ delay: i * 0.1 }}
-            className="flex items-center gap-1.5"
+            className="flex items-center gap-1"
           >
             <div
-              className="flex items-center gap-1.5 text-xs font-mono px-2.5 py-1 rounded-md"
+              className="flex items-center gap-1.5 text-xs font-mono px-2 py-0.5 rounded-md"
               style={{
                 backgroundColor: `${accent}15`,
                 color: accent,
@@ -124,7 +124,7 @@ export function PipelineFlow({ steps, accent, showStatus }: PipelineFlowProps) {
               {label}
             </div>
             {!isLast && (
-              <div className="relative w-5 h-[2px] bg-border overflow-hidden rounded-full">
+              <div className="relative w-4 h-[2px] bg-border overflow-hidden rounded-full">
                 <motion.div
                   className="absolute inset-y-0 left-0 bg-current"
                   style={{ color: accent }}
@@ -151,8 +151,8 @@ interface SectionLabelProps {
 
 export function SectionLabel({ icon: Icon, label, color }: SectionLabelProps) {
   return (
-    <div className="flex items-center gap-1.5 text-xs text-text-muted font-bold uppercase tracking-widest">
-      {Icon && <Icon className="w-3.5 h-3.5" style={color ? { color, filter: `drop-shadow(0 0 3px ${color}80)` } : undefined} />}
+    <div className="flex items-center gap-1 text-xs text-text-muted font-bold uppercase tracking-widest">
+      {Icon && <Icon className="w-3 h-3" style={color ? { color, filter: `drop-shadow(0 0 3px ${color}80)` } : undefined} />}
       {label}
     </div>
   );
@@ -186,7 +186,7 @@ export function FeatureCard({ name, featureMap, defs, expanded, onToggle, accent
 
       <button
         onClick={() => onToggle(name)}
-        className="relative z-10 w-full text-left px-3 py-2.5 transition-colors focus:outline-none"
+        className="relative z-10 w-full text-left px-2.5 py-1.5 transition-colors focus:outline-none"
       >
         <div className="flex items-center gap-2">
           <motion.div
@@ -194,7 +194,7 @@ export function FeatureCard({ name, featureMap, defs, expanded, onToggle, accent
             transition={{ type: "spring", stiffness: 300, damping: 20 }}
             className="flex-shrink-0"
           >
-            <ChevronRight className="w-3.5 h-3.5 text-text-muted transition-colors group-hover:text-text" />
+            <ChevronRight className="w-3 h-3 text-text-muted transition-colors group-hover:text-text" />
           </motion.div>
           <span className="text-xs font-semibold text-text truncate group-hover:text-text-bright transition-colors">{name}</span>
           <span className="ml-auto flex items-center gap-1.5 flex-shrink-0 bg-surface px-2 py-0.5 rounded-md border border-border/50 shadow-sm">
@@ -213,8 +213,8 @@ export function FeatureCard({ name, featureMap, defs, expanded, onToggle, accent
             transition={{ opacity: { duration: 0.2 }, height: { duration: 0.3, type: "spring", bounce: 0 } }}
             className="relative z-10 overflow-hidden"
           >
-            <div className="px-3 pb-3 space-y-2.5 border-t border-border/40 bg-surface/30">
-              <p className="text-xs text-text-muted leading-relaxed mt-2.5">
+            <div className="px-2.5 pb-2 space-y-1.5 border-t border-border/40 bg-surface/30">
+              <p className="text-xs text-text-muted leading-relaxed mt-1.5">
                 {def?.description ?? row?.description ?? 'No description available for this feature.'}
               </p>
 
@@ -293,7 +293,7 @@ export function FeatureGrid({ featureNames, featureMap, defs, expanded, onToggle
       variants={gridVariants}
       initial="hidden"
       animate="visible"
-      className="grid grid-cols-2 gap-2"
+      className="grid grid-cols-2 gap-1.5"
     >
       {featureNames.map((name) => (
         <motion.div key={name} variants={itemVariants}>
@@ -315,9 +315,9 @@ export function FeatureGrid({ featureNames, featureMap, defs, expanded, onToggle
 
 export function LoadingSpinner({ accent }: { accent: string }) {
   return (
-    <div className="flex items-center justify-center py-16">
+    <div className="flex items-center justify-center py-8">
       <motion.div
-        className="w-10 h-10 rounded-full"
+        className="w-8 h-8 rounded-full"
         style={{
           border: `2px solid ${accent}30`,
           borderTopColor: accent,
@@ -340,10 +340,10 @@ interface RadarChartProps {
   showLabels?: boolean;
 }
 
-export function RadarChart({ data, size = 160, accent, overlays, showLabels = true }: RadarChartProps) {
+export function RadarChart({ data, size = 130, accent, overlays, showLabels = true }: RadarChartProps) {
   const cx = size / 2;
   const cy = size / 2;
-  const r = size / 2 - 24;
+  const r = size / 2 - 18;
   const n = data.length;
   const angleStep = (2 * Math.PI) / n;
 
@@ -389,7 +389,7 @@ export function RadarChart({ data, size = 160, accent, overlays, showLabels = tr
       })}
       {/* Labels */}
       {showLabels && data.map((d, i) => {
-        const p = toXY(1.18, i);
+        const p = toXY(1.15, i);
         return (
           <text key={i} x={p.x} y={p.y} textAnchor="middle" dominantBaseline="central"
             className="text-[9px] font-mono font-bold fill-[var(--text-muted)]"
@@ -411,7 +411,7 @@ interface TimelineStripProps {
   height?: number;
 }
 
-export function TimelineStrip({ events, accent, maxVisible = 50, height = 120 }: TimelineStripProps) {
+export function TimelineStrip({ events, accent, maxVisible = 50, height = 80 }: TimelineStripProps) {
   const visible = events.slice(0, maxVisible);
   const minT = visible.length > 0 ? Math.min(...visible.map((e) => e.timestamp)) : 0;
   const maxT = visible.length > 0 ? Math.max(...visible.map((e) => e.timestamp + (e.duration ?? 0))) : 1;
@@ -433,9 +433,9 @@ export function TimelineStrip({ events, accent, maxVisible = 50, height = 120 }:
             title={`${evt.label}: ${evt.details ?? evt.category}`}
           >
             {width ? (
-              <div className="h-5 rounded-sm opacity-70" style={{ backgroundColor: evt.color, minWidth: 4 }} />
+              <div className="h-4 rounded-sm opacity-70" style={{ backgroundColor: evt.color, minWidth: 4 }} />
             ) : (
-              <div className="w-2 h-2 rounded-full -ml-1" style={{ backgroundColor: evt.color, boxShadow: `0 0 4px ${evt.color}` }} />
+              <div className="w-1.5 h-1.5 rounded-full -ml-1" style={{ backgroundColor: evt.color, boxShadow: `0 0 4px ${evt.color}` }} />
             )}
             <div className="text-[8px] font-mono text-text-muted mt-0.5 whitespace-nowrap truncate max-w-[60px]">
               {evt.label}
@@ -499,12 +499,12 @@ export function HeatmapGrid({ rows, cols, cells, lowColor = '#1e293b', highColor
                 return (
                   <td
                     key={ci}
-                    className="p-0.5"
+                    className="p-px"
                     title={cell?.tooltip ?? `${rowLabel} × ${cols[ci]}: ${(v * 100).toFixed(0)}%`}
                     onClick={() => onCellClick?.(ri, ci)}
                   >
                     <div
-                      className="w-7 h-7 rounded-sm cursor-pointer hover:ring-1 hover:ring-white/30 transition-all flex items-center justify-center"
+                      className="w-6 h-6 rounded-sm cursor-pointer hover:ring-1 hover:ring-white/30 transition-all flex items-center justify-center"
                       style={{ backgroundColor: interpolateColor(lowColor, high, v) }}
                     >
                       {cell?.label && <span className="text-[8px] font-mono text-white/80">{cell.label}</span>}
@@ -528,7 +528,7 @@ interface LiveMetricGaugeProps {
   accent?: string;
 }
 
-export function LiveMetricGauge({ metric, size = 80, accent }: LiveMetricGaugeProps) {
+export function LiveMetricGauge({ metric, size = 64, accent }: LiveMetricGaugeProps) {
   const pct = Math.min(metric.current / metric.target, 1.5);
   const clamped = Math.min(pct, 1);
   const r = (size / 2) - 8;
@@ -540,10 +540,10 @@ export function LiveMetricGauge({ metric, size = 80, accent }: LiveMetricGaugePr
     <div className="flex flex-col items-center gap-1.5">
       <div className="relative" style={{ width: size, height: size }}>
         <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
-          <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="rgba(255,255,255,0.05)" strokeWidth="5" />
+          <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="rgba(255,255,255,0.05)" strokeWidth="4" />
           <circle
             cx={size / 2} cy={size / 2} r={r} fill="none"
-            stroke={finalColor} strokeWidth="5"
+            stroke={finalColor} strokeWidth="4"
             strokeDasharray={circ} strokeDashoffset={circ * (1 - clamped)}
             strokeLinecap="round" transform={`rotate(-90 ${size / 2} ${size / 2})`}
             style={{ transition: 'stroke-dashoffset 0.6s ease-out', filter: `drop-shadow(0 0 4px ${finalColor})` }}
@@ -584,7 +584,7 @@ export function DiffViewer({ entries, accent }: DiffViewerProps) {
       {entries.map((e) => {
         const c = typeColors[e.changeType];
         return (
-          <div key={e.field} className="flex items-center gap-2 px-2 py-1 rounded hover:bg-surface-hover/30 transition-colors">
+          <div key={e.field} className="flex items-center gap-2 px-1.5 py-0.5 rounded hover:bg-surface-hover/30 transition-colors">
             <span className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ backgroundColor: c }} />
             <span className="text-text-muted font-medium w-32 truncate flex-shrink-0">{e.field}</span>
             {e.changeType === 'changed' ? (
@@ -622,7 +622,7 @@ export function TagCloud({ tags, accent, maxFontSize = 16, minFontSize = 9 }: Ta
   const range = maxCount - minCount || 1;
 
   return (
-    <div className="flex flex-wrap gap-1.5 items-center justify-center p-2">
+    <div className="flex flex-wrap gap-1 items-center justify-center p-1.5">
       {tags.map((t) => {
         const norm = (t.count - minCount) / range;
         const fontSize = minFontSize + norm * (maxFontSize - minFontSize);
@@ -645,3 +645,97 @@ export function TagCloud({ tags, accent, maxFontSize = 16, minFontSize = 9 }: Ta
     </div>
   );
 }
+
+/* ── SubTabNavigation ────────────────────────────────────────────────────── */
+
+export interface SubTab {
+  id: string;
+  label: string;
+  icon?: React.ComponentType<{ className?: string; style?: React.CSSProperties }>;
+}
+
+export interface SubTabNavigationProps {
+  tabs: SubTab[];
+  activeTabId: string;
+  onChange: (id: string) => void;
+  accent: string;
+}
+
+export function SubTabNavigation({ tabs, activeTabId, onChange, accent }: SubTabNavigationProps) {
+  return (
+    <div className="flex gap-1 mb-2 border-b border-border/40 pb-1.5 overflow-x-auto custom-scrollbar">
+      {tabs.map(tab => {
+        const isActive = activeTabId === tab.id;
+        const Icon = tab.icon;
+        return (
+          <button
+            key={tab.id}
+            onClick={() => onChange(tab.id)}
+            className={`
+              relative flex items-center gap-2 px-2.5 py-1 rounded-lg text-xs font-semibold
+              transition-all duration-300 focus:outline-none whitespace-nowrap
+              ${isActive ? 'text-white' : 'text-text-muted hover:text-text hover:bg-surface/50'}
+            `}
+          >
+            {isActive && (
+              <motion.div
+                layoutId="activeSubTabBg"
+                className="absolute inset-0 rounded-lg opacity-20"
+                style={{ backgroundColor: accent }}
+                transition={{ type: "spring", stiffness: 300, damping: 25 }}
+              />
+            )}
+            {Icon && (
+              <Icon
+                className="w-3.5 h-3.5 relative z-10 transition-colors duration-300"
+                style={{ color: isActive ? accent : 'currentColor' }}
+              />
+            )}
+            <span className="relative z-10">{tab.label}</span>
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+/* ── SegmentedControl ────────────────────────────────────────────────────── */
+
+export interface SegmentedControlProps {
+  options: { id: string; label: string; icon?: React.ComponentType<{ className?: string; style?: React.CSSProperties }> }[];
+  activeId: string;
+  onChange: (id: string) => void;
+  accent: string;
+}
+
+export function SegmentedControl({ options, activeId, onChange, accent }: SegmentedControlProps) {
+  return (
+    <div className="flex bg-surface-deep p-1 rounded-lg border border-border/40 overflow-x-auto custom-scrollbar w-fit">
+      {options.map((opt) => {
+        const isActive = activeId === opt.id;
+        const Icon = opt.icon;
+        return (
+          <button
+            key={opt.id}
+            onClick={() => onChange(opt.id)}
+            className={`relative flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-medium transition-colors focus:outline-none whitespace-nowrap
+              ${isActive ? 'text-white' : 'text-text-muted hover:text-text'}
+            `}
+          >
+            {isActive && (
+              <motion.div
+                layoutId="segmentedControlBg"
+                className="absolute inset-0 rounded-md"
+                style={{ backgroundColor: accent, opacity: 0.2 }}
+                transition={{ type: "spring", stiffness: 300, damping: 25 }}
+              />
+            )}
+            {Icon && <Icon className="w-3.5 h-3.5 relative z-10" style={{ color: isActive ? accent : 'currentColor' }} />}
+            <span className="relative z-10">{opt.label}</span>
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+

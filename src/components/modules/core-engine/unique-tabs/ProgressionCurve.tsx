@@ -341,17 +341,17 @@ export function ProgressionCurve({ moduleId }: ProgressionCurveProps) {
   const powerMax = Math.max(...PLAYER_POWER, ...ENEMY_DIFFICULTY);
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-2.5">
       {/* Header */}
       <TabHeader icon={TrendingUp} title="Progression Curve" implemented={stats.implemented} total={stats.total} accent={ACCENT} />
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-2.5">
         {/* Main Chart Area */}
         <SurfaceCard level={2} className="lg:col-span-2 p-5 relative overflow-hidden group">
           <div className="absolute inset-0 bg-gradient-to-t from-transparent via-[rgba(255,255,255,0.01)] to-transparent pointer-events-none" />
           <div className="absolute top-0 right-0 w-64 h-64 bg-amber-500/5 blur-3xl rounded-full pointer-events-none group-hover:bg-amber-500/10 transition-colors duration-1000" />
 
-          <div className="flex justify-between items-center mb-6 relative z-10">
+          <div className="flex justify-between items-center mb-2.5 relative z-10">
             <div className="text-sm font-bold uppercase tracking-widest text-text-muted flex items-center gap-2">
               <TrendingUp className="w-4 h-4 text-amber-500" /> Required XP per Level Curve
             </div>
@@ -368,7 +368,7 @@ export function ProgressionCurve({ moduleId }: ProgressionCurveProps) {
         {/* Simulator Controls */}
         <SurfaceCard level={2} className="p-5 flex flex-col relative overflow-hidden">
           <div className="absolute inset-0 bg-gradient-to-r from-[rgba(255,255,255,0.01)] to-transparent pointer-events-none" />
-          <div className="text-sm font-bold uppercase tracking-widest text-text-muted mb-6 flex items-center gap-2 relative z-10">
+          <div className="text-sm font-bold uppercase tracking-widest text-text-muted mb-2.5 flex items-center gap-2 relative z-10">
             <SlidersHorizontal className="w-4 h-4 text-amber-500" /> Curve Parameters
           </div>
 
@@ -433,11 +433,11 @@ export function ProgressionCurve({ moduleId }: ProgressionCurveProps) {
         </SurfaceCard>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-2.5">
         {/* Ability Timeline */}
-        <SurfaceCard level={2} className="p-4 overflow-hidden relative group">
+        <SurfaceCard level={2} className="p-3 overflow-hidden relative group">
           <div className="absolute top-0 right-0 w-32 h-32 bg-cyan-500/5 blur-3xl rounded-full pointer-events-none group-hover:bg-cyan-500/10 transition-colors duration-1000" />
-          <div className="text-xs font-bold uppercase tracking-widest text-text-muted mb-5 flex items-center gap-2 relative z-10">
+          <div className="text-xs font-bold uppercase tracking-widest text-text-muted mb-3 flex items-center gap-2 relative z-10">
             <Target className="w-4 h-4 text-cyan-400" /> Key Milestone Timeline
           </div>
 
@@ -448,7 +448,7 @@ export function ProgressionCurve({ moduleId }: ProgressionCurveProps) {
                 <motion.div
                   key={item.name}
                   initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.1 }}
-                  className="flex items-center gap-4 relative"
+                  className="flex items-center gap-2.5 relative"
                 >
                   <div className="w-3 h-3 rounded-full border-2 border-[var(--surface-deep)] z-10 shadow-[0_0_5px_currentColor]"
                     style={{ backgroundColor: ACCENT_CYAN, color: ACCENT_CYAN }} />
@@ -468,8 +468,8 @@ export function ProgressionCurve({ moduleId }: ProgressionCurveProps) {
         </SurfaceCard>
 
         {/* Feature List */}
-        <SurfaceCard level={2} className="p-4 relative">
-          <div className="text-xs font-bold uppercase tracking-widest text-text-muted mb-4 flex items-center gap-2">
+        <SurfaceCard level={2} className="p-3 relative">
+          <div className="text-xs font-bold uppercase tracking-widest text-text-muted mb-2.5 flex items-center gap-2">
             <Settings2 className="w-4 h-4 text-amber-500" /> System Integration Status
           </div>
           <FeatureGrid
@@ -488,7 +488,7 @@ export function ProgressionCurve({ moduleId }: ProgressionCurveProps) {
       {/* ═══════════════════════════════════════════════════════════════════════ */}
       <SurfaceCard level={2} className="p-5 relative overflow-hidden group">
         <div className="absolute top-0 left-0 w-48 h-48 bg-amber-500/5 blur-3xl rounded-full pointer-events-none group-hover:bg-amber-500/8 transition-colors duration-1000" />
-        <div className="flex items-center justify-between mb-4 relative z-10">
+        <div className="flex items-center justify-between mb-2.5 relative z-10">
           <SectionLabel icon={Layers} label="Multi-Curve Overlay" color={ACCENT} />
           <div className="flex items-center gap-2 flex-wrap">
             {MULTI_CURVE_SERIES.map(s => (
@@ -569,7 +569,7 @@ export function ProgressionCurve({ moduleId }: ProgressionCurveProps) {
         <div className="absolute top-0 right-0 w-40 h-40 bg-red-500/5 blur-3xl rounded-full pointer-events-none" />
         <SectionLabel icon={Crosshair} label="Build Path Comparison" color={ACCENT} />
 
-        <div className="flex items-center gap-3 mt-3 mb-4">
+        <div className="flex items-center gap-3 mt-2.5 mb-2.5">
           {BUILD_PRESETS.map(b => {
             const Icon = b.icon;
             const active = buildVisibility[b.name];
@@ -591,7 +591,7 @@ export function ProgressionCurve({ moduleId }: ProgressionCurveProps) {
           })}
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-2.5">
           {/* Radar overlay */}
           <div className="flex items-center justify-center">
             {primaryBuild ? (
@@ -640,7 +640,7 @@ export function ProgressionCurve({ moduleId }: ProgressionCurveProps) {
       <SurfaceCard level={2} className="p-5 relative overflow-hidden">
         <SectionLabel icon={BarChart3} label="XP Source Breakdown" color={ACCENT} />
 
-        <div className="mt-4 space-y-3">
+        <div className="mt-2.5 space-y-3">
           {XP_SOURCES.map((src, i) => (
             <motion.div
               key={src.label}
@@ -669,7 +669,7 @@ export function ProgressionCurve({ moduleId }: ProgressionCurveProps) {
           ))}
 
           {/* Combined stacked bar */}
-          <div className="mt-4 pt-3 border-t border-border/40">
+          <div className="mt-2.5 pt-3 border-t border-border/40">
             <div className="text-2xs font-mono text-text-muted mb-2 uppercase tracking-wider">Combined Distribution</div>
             <div className="flex h-6 rounded-lg overflow-hidden border border-border/30">
               {XP_SOURCES.map((src, i) => (
@@ -688,7 +688,7 @@ export function ProgressionCurve({ moduleId }: ProgressionCurveProps) {
         </div>
       </SurfaceCard>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-2.5">
 
         {/* ═════════════════════════════════════════════════════════════════════ */}
         {/*  8.4  LEVEL-UP REWARD PREVIEW                                       */}
@@ -697,7 +697,7 @@ export function ProgressionCurve({ moduleId }: ProgressionCurveProps) {
           <div className="absolute bottom-0 left-0 w-40 h-40 bg-amber-500/5 blur-3xl rounded-full pointer-events-none group-hover:bg-amber-500/8 transition-colors duration-1000" />
           <SectionLabel icon={Award} label="Level-Up Reward Preview" color={ACCENT} />
 
-          <div className="relative mt-4 z-10 pl-4">
+          <div className="relative mt-2.5 z-10 pl-4">
             <div className="absolute left-6 top-0 bottom-0 w-px bg-gradient-to-b from-amber-500/50 via-amber-500/20 to-transparent" />
 
             <div className="space-y-3">
@@ -748,13 +748,13 @@ export function ProgressionCurve({ moduleId }: ProgressionCurveProps) {
         <SurfaceCard level={2} className="p-5 relative overflow-hidden">
           <SectionLabel icon={Clock} label="Time-to-Level Estimator" color={ACCENT} />
 
-          <div className="mt-4 flex items-center justify-center gap-6">
+          <div className="mt-2.5 flex items-center justify-center gap-2.5">
             {TTL_GAUGES.map(g => (
               <LiveMetricGauge key={g.label} metric={g} accent={ACCENT} size={90} />
             ))}
           </div>
 
-          <div className="mt-5 pt-4 border-t border-border/40 space-y-3">
+          <div className="mt-3 pt-4 border-t border-border/40 space-y-3">
             <div className="text-2xs font-mono text-text-muted uppercase tracking-wider">Playstyle Comparison</div>
             {TTL_TIMELINES.map(t => (
               <div key={t.label} className="space-y-1">
@@ -857,7 +857,7 @@ export function ProgressionCurve({ moduleId }: ProgressionCurveProps) {
           </svg>
 
           {/* Legend */}
-          <div className="absolute top-2 right-4 flex items-center gap-4 text-2xs font-mono z-10">
+          <div className="absolute top-2 right-4 flex items-center gap-2.5 text-2xs font-mono z-10">
             <span className="flex items-center gap-1"><span className="w-4 h-[2px] rounded" style={{ backgroundColor: STATUS_SUCCESS }} /> Player</span>
             <span className="flex items-center gap-1"><span className="w-4 h-[2px] rounded border-t border-dashed" style={{ borderColor: STATUS_ERROR, backgroundColor: STATUS_ERROR }} /> Enemy</span>
           </div>
@@ -878,7 +878,7 @@ export function ProgressionCurve({ moduleId }: ProgressionCurveProps) {
         <SectionLabel icon={TrendingUp} label="Diminishing Returns Visualizer" color={ACCENT} />
 
         {/* Attribute selector */}
-        <div className="flex items-center gap-2 mt-3 mb-4">
+        <div className="flex items-center gap-2 mt-2.5 mb-2.5">
           {DR_ATTRIBUTES.map((attr, idx) => (
             <button
               key={attr.name}
@@ -978,7 +978,7 @@ export function ProgressionCurve({ moduleId }: ProgressionCurveProps) {
       <SurfaceCard level={2} className="p-5 relative overflow-hidden">
         <SectionLabel icon={Trophy} label="Achievement Board" color={ACCENT} />
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mt-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-2.5 mt-2.5">
           {ACHIEVEMENT_CATEGORIES.map((cat, ci) => {
             const Icon = cat.icon;
             const completed = cat.achievements.filter(a => a.progress === 100).length;
@@ -1055,7 +1055,7 @@ export function ProgressionCurve({ moduleId }: ProgressionCurveProps) {
         </div>
       </SurfaceCard>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-2.5">
 
         {/* ═════════════════════════════════════════════════════════════════════ */}
         {/*  8.9  REST XP SYSTEM                                                */}
@@ -1064,7 +1064,7 @@ export function ProgressionCurve({ moduleId }: ProgressionCurveProps) {
           <div className="absolute top-0 left-0 w-36 h-36 bg-blue-500/5 blur-3xl rounded-full pointer-events-none group-hover:bg-blue-500/10 transition-colors duration-1000" />
           <SectionLabel icon={Zap} label="Rest XP System" color={ACCENT_CYAN} />
 
-          <div className="mt-4 space-y-4 relative z-10">
+          <div className="mt-2.5 space-y-2.5 relative z-10">
             {/* Current XP bar with rest XP overlay */}
             <div>
               <div className="flex justify-between text-xs font-mono mb-1.5">
@@ -1100,7 +1100,7 @@ export function ProgressionCurve({ moduleId }: ProgressionCurveProps) {
                 </div>
               </div>
               {/* Legend */}
-              <div className="flex items-center gap-4 mt-1.5 text-2xs font-mono text-text-muted">
+              <div className="flex items-center gap-2.5 mt-1.5 text-2xs font-mono text-text-muted">
                 <span className="flex items-center gap-1"><span className="w-3 h-2 rounded-sm" style={{ backgroundColor: ACCENT, opacity: 0.6 }} /> Earned XP</span>
                 <span className="flex items-center gap-1"><span className="w-3 h-2 rounded-sm" style={{ backgroundColor: ACCENT_CYAN, opacity: 0.4 }} /> Rest XP</span>
               </div>
@@ -1148,7 +1148,7 @@ export function ProgressionCurve({ moduleId }: ProgressionCurveProps) {
           <div className="absolute bottom-0 right-0 w-40 h-40 bg-violet-500/5 blur-3xl rounded-full pointer-events-none group-hover:bg-violet-500/10 transition-colors duration-1000" />
           <SectionLabel icon={RotateCcw} label="Prestige / NG+ Preview" color={ACCENT_VIOLET} />
 
-          <div className="mt-4 space-y-4 relative z-10">
+          <div className="mt-2.5 space-y-2.5 relative z-10">
             {/* Current prestige status */}
             <div className="flex items-center gap-3 bg-surface/50 rounded-lg p-3 border border-border/30">
               <div className="flex items-center gap-2">

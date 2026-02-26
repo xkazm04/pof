@@ -14,7 +14,7 @@ import type { SubModuleId } from '@/types/modules';
 import type { FeatureRow, FeatureStatus } from '@/types/feature-matrix';
 import {
   STATUS_COLORS, TabHeader, PipelineFlow, SectionLabel, LoadingSpinner,
-  HeatmapGrid, LiveMetricGauge, TimelineStrip,
+  HeatmapGrid, LiveMetricGauge, TimelineStrip, SubTabNavigation, SubTab
 } from './_shared';
 import type { HeatmapCell, GaugeMetric, TimelineEvent } from '@/types/unique-tab-improvements';
 
@@ -403,23 +403,28 @@ interface CombatActionMapProps {
 export function CombatActionMap({ moduleId }: CombatActionMapProps) {
   const { features, isLoading } = useFeatureMatrix(moduleId);
   const defs = useMemo(() => MODULE_FEATURE_DEFINITIONS[moduleId] ?? [], [moduleId]);
+  const [activeTab, setActiveTab] = useState('flow');
   const [expanded, setExpanded] = useState<string | null>(null);
 
-  // Feedback Intensity Tuner state (4.3)
+  const tabs: SubTab[] = useMemo(() => [
+    { id: 'flow', label: 'Flow & Sequences', icon: GitBranch },
+    { id: 'hits', label: 'Analysis & Hits', icon: Crosshair },
+    { id: 'feedback', label: 'Polish & Tuner', icon: Gauge },
+    { id: 'metrics', label: 'Combat Metrics', icon: Activity },
+  ], []);
+
   const [feedbackValues, setFeedbackValues] = useState<Record<string, number>>(() => {
     const defaults: Record<string, number> = {};
     for (const p of FEEDBACK_PARAMS) defaults[p.id] = p.defaultValue;
     return defaults;
   });
 
-  // Build a lookup: featureName -> FeatureRow (review data)
   const featureMap = useMemo(() => {
     const map = new Map<string, FeatureRow>();
     for (const f of features) map.set(f.featureName, f);
     return map;
   }, [features]);
 
-  // Summary stats
   const stats = useMemo(() => {
     const total = defs.length;
     let implemented = 0, partial = 0, missing = 0;
@@ -436,7 +441,6 @@ export function CombatActionMap({ moduleId }: CombatActionMapProps) {
     setExpanded((prev) => (prev === name ? null : name));
   }, []);
 
-  // Juice level calculation (4.3)
   const juiceLevel = useMemo(() => {
     let total = 0;
     for (const p of FEEDBACK_PARAMS) {
@@ -454,508 +458,349 @@ export function CombatActionMap({ moduleId }: CombatActionMapProps) {
     setFeedbackValues(prev => ({ ...prev, [id]: value }));
   }, []);
 
-  if (isLoading) {
-    return <LoadingSpinner accent={ACCENT} />;
-  }
+  if (isLoading) return <LoadingSpinner accent={ACCENT} />;
 
   return (
-    <div className="space-y-4">
-      {/* Header with stats */}
-      <TabHeader icon={Swords} title="Combat Action Map" implemented={stats.implemented} total={stats.total} accent={ACCENT} />
-
-      {/* Pipeline overview - compact flow */}
-      <SurfaceCard level={2} className="p-3.5 relative overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-[rgba(255,255,255,0.02)] to-transparent" />
-        <SectionLabel icon={Zap} label="Execution Flow" />
-        <div className="mt-3 relative z-10">
-          <PipelineFlow steps={['Attack', 'Combo', 'Hit Detect', 'Damage', 'Reaction', 'Feedback']} accent={ACCENT} />
-        </div>
-      </SurfaceCard>
-
-      {/* Lanes */}
-      <div className="space-y-4">
-        <SectionLabel icon={Swords} label="Combat Lanes" />
-        <div className="space-y-4">
-          {LANES.map((lane, idx) => (
-            <motion.div
-              key={lane.id}
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: idx * 0.1, duration: 0.4 }}
-            >
-              <LaneSection
-                lane={lane}
-                featureMap={featureMap}
-                defs={defs}
-                expanded={expanded}
-                onToggle={toggleExpand}
-                arrows={FLOW_ARROWS}
-              />
-            </motion.div>
-          ))}
-        </div>
+    <div className="space-y-2.5">
+      <div className="flex flex-col gap-1.5">
+        <TabHeader icon={Swords} title="Combat Action Map" implemented={stats.implemented} total={stats.total} accent={ACCENT} />
+        <SubTabNavigation tabs={tabs} activeTabId={activeTab} onChange={setActiveTab} accent={ACCENT} />
       </div>
 
-      {/* Combo detail - special treatment */}
-      <motion.div
-        initial={{ opacity: 0, scale: 0.98 }}
-        animate={{ opacity: 1, scale: 1 }}
-        transition={{ delay: 0.3 }}
-      >
-        <ComboChainDiagram status={featureMap.get('Combo system')?.status ?? 'unknown'} />
-      </motion.div>
-
-      {/* ── 4.1 Combat Event Sequence Diagram ─────────────────────────────── */}
-      <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.35 }}>
-        <SurfaceCard level={2} className="p-4 relative overflow-hidden">
-          <SectionLabel icon={GitBranch} label="Combat Event Sequence" />
-          <div className="mt-3 overflow-x-auto custom-scrollbar">
-            <svg width="440" height="260" viewBox="0 0 440 260" className="overflow-visible">
-              {/* Lane vertical lines */}
-              {SEQ_LANES.map((lane, i) => {
-                const x = 60 + i * 100;
-                return (
-                  <g key={lane.id}>
-                    <line x1={x} y1={30} x2={x} y2={240} stroke={lane.color} strokeWidth="2" strokeDasharray="4 4" opacity="0.4" />
-                    <rect x={x - 38} y={4} width="76" height="22" rx="4" fill={`${lane.color}20`} stroke={lane.color} strokeWidth="1" />
-                    <text x={x} y={18} textAnchor="middle" className="text-[9px] font-mono font-bold" fill={lane.color}>{lane.label}</text>
-                  </g>
-                );
-              })}
-              {/* Events as horizontal arrows */}
-              {SEQ_EVENTS.map((evt, i) => {
-                const y = 50 + i * 34;
-                const fromIdx = SEQ_LANES.findIndex(l => l.id === evt.fromLane);
-                const toIdx = SEQ_LANES.findIndex(l => l.id === evt.toLane);
-                const fromX = 60 + fromIdx * 100;
-                const toX = 60 + toIdx * 100;
-                const isSelf = fromIdx === toIdx;
-
-                return (
-                  <g key={evt.label}>
-                    {isSelf ? (
-                      <>
-                        <circle cx={fromX} cy={y} r="4" fill={evt.color} opacity="0.8" />
-                        <text x={fromX + 10} y={y + 3} className="text-[8px] font-mono" fill={evt.color}>{evt.label}</text>
-                      </>
-                    ) : (
-                      <>
-                        <line x1={fromX} y1={y} x2={toX} y2={y} stroke={evt.color} strokeWidth="1.5" markerEnd="url(#arrowhead)" />
-                        <circle cx={fromX} cy={y} r="3" fill={evt.color} />
-                        <polygon points={`${toX - 6},${y - 3} ${toX},${y} ${toX - 6},${y + 3}`} fill={evt.color} />
-                        <text x={(fromX + toX) / 2} y={y - 6} textAnchor="middle" className="text-[8px] font-mono" fill={evt.color}>{evt.label}</text>
-                      </>
-                    )}
-                  </g>
-                );
-              })}
-            </svg>
-          </div>
-        </SurfaceCard>
-      </motion.div>
-
-      {/* ── 4.2 Hit Detection Debug Visualizer ────────────────────────────── */}
-      <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }}>
-        <SurfaceCard level={2} className="p-4 relative overflow-hidden">
-          <SectionLabel icon={Crosshair} label="Hit Detection Debug" />
-          <div className="mt-3 flex gap-4 flex-wrap items-start">
-            <svg width="180" height="120" viewBox="0 0 180 120" className="overflow-visible flex-shrink-0">
-              {/* Background sweep arc */}
-              <path d="M 20,100 Q 50,20 90,15 Q 130,10 160,30" fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth="28" strokeLinecap="round" />
-              {/* Trace frames */}
-              {TRACE_FRAMES.map((frame, i) => (
-                <g key={i}>
-                  <circle cx={frame.cx} cy={frame.cy} r={frame.r} fill={frame.hit ? `${STATUS_ERROR}30` : 'rgba(255,255,255,0.05)'} stroke={frame.hit ? STATUS_ERROR : '#64748b'} strokeWidth="1.5" strokeDasharray={frame.hit ? 'none' : '3 2'} />
-                  {frame.hit && (
-                    <circle cx={frame.cx} cy={frame.cy} r={frame.r + 3} fill="none" stroke={STATUS_ERROR} strokeWidth="0.5" opacity="0.4" />
-                  )}
-                  <text x={frame.cx} y={frame.cy + 3} textAnchor="middle" className="text-[7px] font-mono" fill={frame.hit ? STATUS_ERROR : '#64748b'}>
-                    {frame.hit ? 'HIT' : 'MISS'}
-                  </text>
-                </g>
-              ))}
-              {/* Arc path connecting frames */}
-              <path d={`M ${TRACE_FRAMES[0].cx},${TRACE_FRAMES[0].cy} ${TRACE_FRAMES.slice(1).map(f => `L ${f.cx},${f.cy}`).join(' ')}`} fill="none" stroke="rgba(255,255,255,0.15)" strokeWidth="1" strokeDasharray="2 3" />
-            </svg>
-            <div className="flex flex-col gap-2 flex-1 min-w-[140px]">
-              {HIT_STATS.map((stat) => (
-                <div key={stat.label} className="flex items-center gap-2 px-2 py-1.5 rounded bg-surface/50">
-                  <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: stat.color }} />
-                  <span className="text-2xs font-mono text-text-muted flex-shrink-0">{stat.label}</span>
-                  <span className="text-xs font-mono font-bold ml-auto" style={{ color: stat.color }}>{stat.value}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-        </SurfaceCard>
-      </motion.div>
-
-      {/* ── 4.3 Feedback Intensity Tuner ──────────────────────────────────── */}
-      <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.45 }}>
-        <SurfaceCard level={2} className="p-4 relative overflow-hidden">
-          <div className="flex items-center justify-between mb-3">
-            <SectionLabel icon={Gauge} label="Feedback Intensity Tuner" />
-            <div className="flex gap-1.5">
-              {FEEDBACK_PRESETS.map((preset) => (
-                <button
-                  key={preset.name}
-                  onClick={() => applyPreset(preset)}
-                  className="text-2xs font-mono font-bold px-2 py-0.5 rounded border transition-colors hover:brightness-125"
-                  style={{ color: preset.color, borderColor: `${preset.color}40`, backgroundColor: `${preset.color}10` }}
-                >
-                  {preset.name}
-                </button>
-              ))}
-            </div>
-          </div>
-          <div className="space-y-2.5">
-            {FEEDBACK_PARAMS.map((param) => {
-              const val = feedbackValues[param.id];
-              const pct = ((val - param.min) / (param.max - param.min)) * 100;
-              return (
-                <div key={param.id} className="flex items-center gap-3">
-                  <span className="text-2xs font-mono text-text-muted w-[120px] flex-shrink-0 truncate">{param.label}</span>
-                  <div className="flex-1 relative">
-                    <div className="h-1.5 rounded-full bg-surface-deep overflow-hidden">
-                      <motion.div
-                        className="h-full rounded-full"
-                        style={{ width: `${pct}%`, backgroundColor: ACCENT }}
-                        layout
-                        transition={{ type: 'spring', stiffness: 300, damping: 30 }}
-                      />
-                    </div>
-                    <input
-                      type="range"
-                      min={param.min}
-                      max={param.max}
-                      step={param.step}
-                      value={val}
-                      onChange={(e) => updateFeedbackParam(param.id, parseFloat(e.target.value))}
-                      className="absolute inset-0 w-full opacity-0 cursor-pointer"
-                    />
-                  </div>
-                  <span className="text-2xs font-mono font-bold w-[50px] text-right" style={{ color: ACCENT }}>
-                    {val.toFixed(param.step < 0.01 ? 3 : 2)}{param.unit}
-                  </span>
-                </div>
-              );
-            })}
-          </div>
-          {/* Juice Level Meter */}
-          <div className="mt-3 pt-3 border-t border-border/30">
-            <div className="flex items-center gap-3">
-              <span className="text-2xs font-mono font-bold text-text-muted uppercase tracking-wider">Juice Level</span>
-              <div className="flex-1 h-3 rounded-full bg-surface-deep overflow-hidden shadow-inner">
-                <motion.div
-                  className="h-full rounded-full"
-                  style={{
-                    width: `${juiceLevel * 100}%`,
-                    backgroundColor: juiceLevel < 0.33 ? ACCENT_CYAN : juiceLevel < 0.66 ? ACCENT_EMERALD : ACCENT_ORANGE,
-                  }}
-                  layout
-                  transition={{ type: 'spring', stiffness: 300, damping: 30 }}
-                />
-              </div>
-              <span className="text-xs font-mono font-bold" style={{ color: juiceLevel < 0.33 ? ACCENT_CYAN : juiceLevel < 0.66 ? ACCENT_EMERALD : ACCENT_ORANGE }}>
-                {(juiceLevel * 100).toFixed(0)}%
-              </span>
-            </div>
-          </div>
-        </SurfaceCard>
-      </motion.div>
-
-      {/* ── 4.4 Projectile Trajectory Planner ─────────────────────────────── */}
-      <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.5 }}>
-        <SurfaceCard level={2} className="p-4 relative overflow-hidden">
-          <SectionLabel icon={Target} label="Projectile Trajectory Planner" />
-          <div className="mt-3">
-            <svg width="200" height="100" viewBox="0 0 200 100" className="w-full overflow-visible" preserveAspectRatio="xMidYMid meet">
-              {/* Ground line */}
-              <line x1="5" y1="90" x2="195" y2="90" stroke="rgba(255,255,255,0.1)" strokeWidth="1" />
-              {/* Target */}
-              <circle cx="180" cy="25" r="6" fill="none" stroke={STATUS_ERROR} strokeWidth="1" opacity="0.5" />
-              <circle cx="180" cy="25" r="3" fill={`${STATUS_ERROR}50`} />
-              <text x="180" y="18" textAnchor="middle" className="text-[7px] font-mono" fill={STATUS_ERROR}>TARGET</text>
-              {/* Paths */}
-              {PROJECTILE_PATHS.map((path) => {
-                const d = `M ${path.points.map(p => `${p.x},${p.y}`).join(' L ')}`;
-                return (
-                  <g key={path.label}>
-                    <path d={d} fill="none" stroke={path.color} strokeWidth="1.5" opacity="0.7" />
-                    {path.points.map((p, i) => (
-                      <circle key={i} cx={p.x} cy={p.y} r="2" fill={path.color} opacity={i === 0 || i === path.points.length - 1 ? 1 : 0.4} />
+      <div className="mt-2.5 relative min-h-[300px]">
+        <AnimatePresence mode="sync">
+          {activeTab === 'flow' && (
+            <motion.div key="flow" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} transition={{ duration: 0.2 }} className="space-y-2.5">
+              <SurfaceCard level={2} className="p-3.5 relative overflow-hidden">
+                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-[rgba(255,255,255,0.02)] to-transparent" />
+                <SectionLabel icon={Zap} label="Execution Flow" />
+                <div className="mt-3 relative z-10"><PipelineFlow steps={['Attack', 'Combo', 'Hit Detect', 'Damage', 'Reaction', 'Feedback']} accent={ACCENT} /></div>
+              </SurfaceCard>
+              
+              <div className="grid grid-cols-1 xl:grid-cols-2 gap-2.5">
+                <div className="space-y-2.5">
+                  <SectionLabel icon={Swords} label="Combat Lanes" />
+                  <div className="space-y-2.5">
+                    {LANES.map(lane => (
+                      <LaneSection key={lane.id} lane={lane} featureMap={featureMap} defs={defs} expanded={expanded} onToggle={toggleExpand} arrows={FLOW_ARROWS} />
                     ))}
-                  </g>
-                );
-              })}
-            </svg>
-            {/* Legend / Config */}
-            <div className="mt-3 grid grid-cols-3 gap-2">
-              {PROJECTILE_PATHS.map((path) => (
-                <div key={path.label} className="px-2 py-1.5 rounded bg-surface/50 border border-border/30">
-                  <div className="flex items-center gap-1.5 mb-1">
-                    <span className="w-3 h-0.5 rounded-full" style={{ backgroundColor: path.color }} />
-                    <span className="text-2xs font-mono font-bold" style={{ color: path.color }}>{path.label}</span>
-                  </div>
-                  <div className="text-[9px] font-mono text-text-muted space-y-0.5">
-                    <div>Speed: {path.speed} u/s</div>
-                    <div>Flight: {path.flightTime}</div>
-                    <div>Range: {path.maxRange}</div>
                   </div>
                 </div>
-              ))}
-            </div>
-          </div>
-        </SurfaceCard>
-      </motion.div>
+                <div className="space-y-2.5">
+                  <ComboChainDiagram status={featureMap.get('Combo system')?.status ?? 'unknown'} />
+                  <SurfaceCard level={2} className="p-3 relative overflow-hidden">
+                    <SectionLabel icon={GitBranch} label="Combat Event Sequence" />
+                    <div className="mt-3 overflow-x-auto custom-scrollbar">
+                      <svg width="400" height="200" viewBox="0 0 400 200" className="overflow-visible">
+                        {SEQ_LANES.map((lane, i) => {
+                          const x = 60 + i * 100;
+                          return (
+                            <g key={lane.id}>
+                              <line x1={x} y1={30} x2={x} y2={240} stroke={lane.color} strokeWidth="2" strokeDasharray="4 4" opacity="0.4" />
+                              <rect x={x - 38} y={4} width="76" height="22" rx="4" fill={`${lane.color}20`} stroke={lane.color} strokeWidth="1" />
+                              <text x={x} y={18} textAnchor="middle" className="text-[9px] font-mono font-bold" fill={lane.color}>{lane.label}</text>
+                            </g>
+                          );
+                        })}
+                        {SEQ_EVENTS.map((evt, i) => {
+                          const y = 50 + i * 34;
+                          const fromIdx = SEQ_LANES.findIndex(l => l.id === evt.fromLane);
+                          const toIdx = SEQ_LANES.findIndex(l => l.id === evt.toLane);
+                          const fromX = 60 + fromIdx * 100;
+                          const toX = 60 + toIdx * 100;
+                          const isSelf = fromIdx === toIdx;
 
-      {/* ── 4.5 DPS Calculator with Combo Chains ─────────────────────────── */}
-      <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.55 }}>
-        <SurfaceCard level={2} className="p-4 relative overflow-hidden">
-          <SectionLabel icon={BarChart3} label="DPS Calculator" />
-          {/* Strategy comparison table */}
-          <div className="mt-3 space-y-1.5">
-            {DPS_STRATEGIES.map((strat, idx) => (
-              <motion.div
-                key={strat.name}
-                initial={{ opacity: 0, x: -8 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: idx * 0.08 }}
-                className="flex items-center gap-3 px-2 py-1.5 rounded hover:bg-surface-hover/30 transition-colors"
-              >
-                <span className="text-2xs font-mono text-text w-[130px] flex-shrink-0 truncate">{strat.name}</span>
-                <span className="text-2xs font-mono text-text-muted w-[50px] flex-shrink-0">{strat.time}</span>
-                <div className="flex-1 h-2 rounded-full bg-surface-deep overflow-hidden shadow-inner">
-                  <motion.div
-                    initial={{ width: 0 }}
-                    animate={{ width: `${(strat.dps / DPS_MAX) * 100}%` }}
-                    transition={{ delay: idx * 0.1 + 0.2, duration: 0.5 }}
-                    className="h-full rounded-full"
-                    style={{ backgroundColor: strat.color }}
-                  />
-                </div>
-                <span className="text-xs font-mono font-bold w-[55px] text-right" style={{ color: strat.color }}>{strat.dps} DPS</span>
-              </motion.div>
-            ))}
-          </div>
-          {/* Cumulative damage chart */}
-          <div className="mt-3 pt-3 border-t border-border/30">
-            <span className="text-2xs font-mono text-text-muted uppercase tracking-wider">Cumulative Damage (5s)</span>
-            <svg width="100%" height="80" viewBox="0 0 260 80" className="mt-2 overflow-visible" preserveAspectRatio="xMidYMid meet">
-              {/* Grid lines */}
-              {[0, 20, 40, 60].map(y => (
-                <line key={y} x1="30" y1={y + 5} x2="255" y2={y + 5} stroke="rgba(255,255,255,0.04)" strokeWidth="1" />
-              ))}
-              {/* X-axis labels */}
-              {CUMULATIVE_POINTS.map((t) => (
-                <text key={t} x={30 + t * 45} y="78" textAnchor="middle" className="text-[7px] font-mono" fill="rgba(255,255,255,0.3)">{t}s</text>
-              ))}
-              {/* Lines for each strategy */}
-              {DPS_STRATEGIES.map((strat) => {
-                const maxDmg = DPS_MAX * 5;
-                const pts = CUMULATIVE_POINTS.map(t => ({
-                  x: 30 + t * 45,
-                  y: 65 - ((strat.dps * t) / maxDmg) * 60,
-                }));
-                const d = `M ${pts.map(p => `${p.x},${p.y}`).join(' L ')}`;
-                return (
-                  <g key={strat.name}>
-                    <path d={d} fill="none" stroke={strat.color} strokeWidth="1.5" opacity="0.8" />
-                    {pts.map((p, i) => (
-                      <circle key={i} cx={p.x} cy={p.y} r="2" fill={strat.color} />
-                    ))}
-                  </g>
-                );
-              })}
-            </svg>
-          </div>
-        </SurfaceCard>
-      </motion.div>
-
-      {/* ── 4.6 Damage Type Effectiveness Matrix ─────────────────────────── */}
-      <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.6 }}>
-        <SurfaceCard level={2} className="p-4 relative overflow-hidden">
-          <SectionLabel icon={Flame} label="Damage Type Effectiveness" />
-          <div className="mt-3">
-            <HeatmapGrid
-              rows={DMG_TYPES}
-              cols={ARMOR_TYPES}
-              cells={EFFECTIVENESS_DATA}
-              lowColor="#7f1d1d"
-              highColor="#065f46"
-              accent={ACCENT}
-            />
-            <div className="flex items-center gap-4 mt-2 text-[9px] font-mono text-text-muted">
-              <span className="flex items-center gap-1"><span className="w-3 h-3 rounded-sm" style={{ backgroundColor: '#065f46' }} /> Effective</span>
-              <span className="flex items-center gap-1"><span className="w-3 h-3 rounded-sm" style={{ backgroundColor: '#374151' }} /> Neutral</span>
-              <span className="flex items-center gap-1"><span className="w-3 h-3 rounded-sm" style={{ backgroundColor: '#7f1d1d' }} /> Resisted</span>
-            </div>
-          </div>
-        </SurfaceCard>
-      </motion.div>
-
-      {/* ── 4.7 Combat Flow Sankey Diagram ────────────────────────────────── */}
-      <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.65 }}>
-        <SurfaceCard level={2} className="p-4 relative overflow-hidden">
-          <SectionLabel icon={Activity} label="Combat Flow" />
-          <div className="mt-3 overflow-x-auto custom-scrollbar">
-            <CombatFlowSankey />
-          </div>
-        </SurfaceCard>
-      </motion.div>
-
-      {/* ── 4.8 Hitstop Timing Chart ─────────────────────────────────────── */}
-      <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.7 }}>
-        <SurfaceCard level={2} className="p-4 relative overflow-hidden">
-          <SectionLabel icon={Timer} label="Hitstop Timing" />
-          <div className="mt-3 flex items-end gap-3 justify-around">
-            {HITSTOP_ABILITIES.map((ability, idx) => {
-              const barHeight = (ability.hitstop / MAX_HITSTOP) * 80;
-              const intensity = ability.hitstop / MAX_HITSTOP;
-              return (
-                <motion.div
-                  key={ability.name}
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: idx * 0.08 }}
-                  className="flex flex-col items-center gap-1"
-                >
-                  <span className="text-[9px] font-mono font-bold" style={{ color: ability.color }}>{ability.hitstop}s</span>
-                  <div className="w-8 rounded-t relative overflow-hidden" style={{ height: barHeight, backgroundColor: `${ability.color}30` }}>
-                    <motion.div
-                      className="absolute bottom-0 left-0 right-0 rounded-t"
-                      style={{ backgroundColor: ability.color, opacity: 0.4 + intensity * 0.6 }}
-                      initial={{ height: 0 }}
-                      animate={{ height: '100%' }}
-                      transition={{ delay: idx * 0.1 + 0.3, duration: 0.4 }}
-                    />
-                  </div>
-                  {/* Mini timeline under bar */}
-                  <div className="w-12 h-1.5 rounded-full bg-surface-deep relative overflow-hidden mt-0.5">
-                    <div
-                      className="absolute h-full rounded-full"
-                      style={{
-                        backgroundColor: ability.color,
-                        left: `${((ability.animDuration - ability.hitstop) / ability.animDuration) * 30}%`,
-                        width: `${(ability.hitstop / ability.animDuration) * 100}%`,
-                        opacity: 0.7,
-                      }}
-                    />
-                  </div>
-                  <span className="text-[8px] font-mono text-text-muted truncate max-w-[60px] text-center">{ability.name}</span>
-                </motion.div>
-              );
-            })}
-          </div>
-          <div className="mt-2 text-[9px] font-mono text-text-muted text-center opacity-60">
-            Bar height = hitstop duration | Mini bar = hitstop window within animation
-          </div>
-        </SurfaceCard>
-      </motion.div>
-
-      {/* ── 4.9 Combat Metrics Dashboard ──────────────────────────────────── */}
-      <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.75 }}>
-        <SurfaceCard level={2} className="p-4 relative overflow-hidden">
-          <SectionLabel icon={TrendingUp} label="Combat Metrics" />
-          <div className="mt-3 flex gap-4 flex-wrap">
-            {/* KPI Cards */}
-            <div className="flex-1 min-w-[180px] space-y-2">
-              {KPI_CARDS.map((card) => (
-                <div key={card.label} className="flex items-center gap-2 px-2 py-1.5 rounded bg-surface/50">
-                  <div className="flex-1 min-w-0">
-                    <div className="text-[9px] font-mono text-text-muted uppercase tracking-wider truncate">{card.label}</div>
-                    <div className="flex items-center gap-1.5">
-                      <span className="text-sm font-mono font-bold text-text">{card.value}</span>
-                      {card.trend && (
-                        <span className="text-2xs font-mono" style={{ color: card.trendColor }}>{card.trend}</span>
-                      )}
+                          return (
+                            <g key={evt.label + i}>
+                              {isSelf ? (
+                                <>
+                                  <circle cx={fromX} cy={y} r="4" fill={evt.color} opacity="0.8" />
+                                  <text x={fromX + 10} y={y + 3} className="text-[8px] font-mono" fill={evt.color}>{evt.label}</text>
+                                </>
+                              ) : (
+                                <>
+                                  <line x1={fromX} y1={y} x2={toX} y2={y} stroke={evt.color} strokeWidth="1.5" markerEnd="url(#arrowhead)" />
+                                  <circle cx={fromX} cy={y} r="3" fill={evt.color} />
+                                  <polygon points={`${toX - 6},${y - 3} ${toX},${y} ${toX - 6},${y + 3}`} fill={evt.color} />
+                                  <text x={(fromX + toX) / 2} y={y - 6} textAnchor="middle" className="text-[8px] font-mono" fill={evt.color}>{evt.label}</text>
+                                </>
+                              )}
+                            </g>
+                          );
+                        })}
+                      </svg>
                     </div>
-                  </div>
-                  {card.barPct != null && (
-                    <div className="w-16 h-1.5 rounded-full bg-surface-deep overflow-hidden flex-shrink-0">
-                      <div className="h-full rounded-full" style={{ width: `${card.barPct}%`, backgroundColor: card.barColor }} />
-                    </div>
-                  )}
+                  </SurfaceCard>
                 </div>
-              ))}
-            </div>
-            {/* Hit Accuracy Gauge */}
-            <div className="flex flex-col items-center gap-2">
-              <LiveMetricGauge metric={HIT_ACCURACY_GAUGE} size={80} accent={ACCENT} />
-            </div>
-            {/* Ability Usage Pie */}
-            <div className="flex flex-col items-center gap-2">
-              <AbilityPieChart slices={ABILITY_USAGE} size={80} />
-              <div className="flex flex-wrap gap-x-2 gap-y-0.5 justify-center max-w-[120px]">
-                {ABILITY_USAGE.map((slice) => (
-                  <span key={slice.label} className="flex items-center gap-1 text-[8px] font-mono whitespace-nowrap" style={{ color: slice.color }}>
-                    <span className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ backgroundColor: slice.color }} />
-                    {slice.label} {slice.pct}%
-                  </span>
-                ))}
               </div>
-            </div>
-          </div>
-        </SurfaceCard>
-      </motion.div>
+            </motion.div>
+          )}
 
-      {/* ── 4.10 Stagger & Status Effect Flow ────────────────────────────── */}
-      <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.8 }}>
-        <SurfaceCard level={2} className="p-4 relative overflow-hidden">
-          <SectionLabel icon={Layers} label="Stagger & Status Effects" />
-          {/* Stagger meter */}
-          <div className="mt-3">
-            <div className="flex items-center gap-2 mb-1">
-              <span className="text-2xs font-mono text-text-muted">Stagger</span>
-              <span className="text-xs font-mono font-bold" style={{ color: STAGGER_CONFIG.currentStagger >= STAGGER_CONFIG.threshold * 0.8 ? STATUS_ERROR : ACCENT_ORANGE }}>
-                {STAGGER_CONFIG.currentStagger}/{STAGGER_CONFIG.threshold}
-              </span>
-            </div>
-            <div className="relative h-4 rounded-full bg-surface-deep overflow-hidden shadow-inner">
-              <motion.div
-                className="h-full rounded-full"
-                style={{ backgroundColor: STAGGER_CONFIG.currentStagger >= STAGGER_CONFIG.threshold * 0.8 ? STATUS_ERROR : ACCENT_ORANGE }}
-                initial={{ width: 0 }}
-                animate={{ width: `${(STAGGER_CONFIG.currentStagger / STAGGER_CONFIG.threshold) * 100}%` }}
-                transition={{ duration: 0.6, ease: 'easeOut' }}
-              />
-              {/* Threshold marker */}
-              <div
-                className="absolute top-0 bottom-0 w-0.5 bg-white/60"
-                style={{ left: '100%' }}
-                title={`Threshold: ${STAGGER_CONFIG.threshold}`}
-              />
-              {/* 80% warning marker */}
-              <div
-                className="absolute top-0 bottom-0 w-px bg-white/20"
-                style={{ left: '80%' }}
-              />
-            </div>
-          </div>
+          {activeTab === 'hits' && (
+            <motion.div key="hits" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} transition={{ duration: 0.2 }} className="space-y-2.5">
+              <div className="grid grid-cols-1 xl:grid-cols-2 gap-2.5">
+                <SurfaceCard level={2} className="p-3 relative overflow-hidden">
+                  <SectionLabel icon={Crosshair} label="Hit Detection Debug" />
+                  <div className="mt-3 flex gap-2.5 flex-wrap items-start">
+                    <svg width="160" height="100" viewBox="0 0 160 100" className="overflow-visible flex-shrink-0">
+                      <path d="M 20,100 Q 50,20 90,15 Q 130,10 160,30" fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth="28" strokeLinecap="round" />
+                      {TRACE_FRAMES.map((frame, i) => (
+                        <g key={i}>
+                          <circle cx={frame.cx} cy={frame.cy} r={frame.r} fill={frame.hit ? `${STATUS_ERROR}30` : 'rgba(255,255,255,0.05)'} stroke={frame.hit ? STATUS_ERROR : '#64748b'} strokeWidth="1.5" strokeDasharray={frame.hit ? 'none' : '3 2'} />
+                          {frame.hit && <circle cx={frame.cx} cy={frame.cy} r={frame.r + 3} fill="none" stroke={STATUS_ERROR} strokeWidth="0.5" opacity="0.4" />}
+                          <text x={frame.cx} y={frame.cy + 3} textAnchor="middle" className="text-[7px] font-mono" fill={frame.hit ? STATUS_ERROR : '#64748b'}>
+                            {frame.hit ? 'HIT' : 'MISS'}
+                          </text>
+                        </g>
+                      ))}
+                      <path d={`M ${TRACE_FRAMES[0].cx},${TRACE_FRAMES[0].cy} ${TRACE_FRAMES.slice(1).map(f => `L ${f.cx},${f.cy}`).join(' ')}`} fill="none" stroke="rgba(255,255,255,0.15)" strokeWidth="1" strokeDasharray="2 3" />
+                    </svg>
+                    <div className="flex flex-col gap-2 flex-1 min-w-[140px]">
+                      {HIT_STATS.map((stat) => (
+                        <div key={stat.label} className="flex items-center gap-2 px-2 py-1.5 rounded bg-surface/50">
+                          <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: stat.color }} />
+                          <span className="text-2xs font-mono text-text-muted flex-shrink-0">{stat.label}</span>
+                          <span className="text-xs font-mono font-bold ml-auto" style={{ color: stat.color }}>{stat.value}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </SurfaceCard>
 
-          {/* Pipeline diagram */}
-          <div className="mt-3">
-            <PipelineFlow
-              steps={STAGGER_PIPELINE_STEPS}
-              accent={ACCENT_ORANGE}
-            />
-          </div>
+                <SurfaceCard level={2} className="p-3 relative overflow-hidden">
+                  <SectionLabel icon={Flame} label="Damage Type Effectiveness" />
+                  <div className="mt-3">
+                    <HeatmapGrid rows={DMG_TYPES} cols={ARMOR_TYPES} cells={EFFECTIVENESS_DATA} lowColor="#7f1d1d" highColor="#065f46" accent={ACCENT} />
+                    <div className="flex items-center gap-2.5 mt-2 text-[9px] font-mono text-text-muted">
+                      <span className="flex items-center gap-1"><span className="w-3 h-3 rounded-sm" style={{ backgroundColor: '#065f46' }} /> Effective</span>
+                      <span className="flex items-center gap-1"><span className="w-3 h-3 rounded-sm" style={{ backgroundColor: '#374151' }} /> Neutral</span>
+                      <span className="flex items-center gap-1"><span className="w-3 h-3 rounded-sm" style={{ backgroundColor: '#7f1d1d' }} /> Resisted</span>
+                    </div>
+                  </div>
+                </SurfaceCard>
 
-          {/* Stagger timeline */}
-          <div className="mt-3 pt-3 border-t border-border/30">
-            <span className="text-2xs font-mono text-text-muted uppercase tracking-wider">Stagger Buildup Timeline (10s)</span>
-            <div className="mt-2">
-              <TimelineStrip events={STAGGER_TIMELINE} accent={ACCENT_ORANGE} height={80} />
-            </div>
-          </div>
+                <SurfaceCard level={2} className="p-3 relative overflow-hidden">
+                  <SectionLabel icon={Target} label="Projectile Trajectory Planner" />
+                  <div className="mt-3">
+                    <svg width="180" height="80" viewBox="0 0 180 80" className="w-full overflow-visible" preserveAspectRatio="xMidYMid meet">
+                      <line x1="5" y1="90" x2="195" y2="90" stroke="rgba(255,255,255,0.1)" strokeWidth="1" />
+                      <circle cx="180" cy="25" r="6" fill="none" stroke={STATUS_ERROR} strokeWidth="1" opacity="0.5" />
+                      <circle cx="180" cy="25" r="3" fill={`${STATUS_ERROR}50`} />
+                      <text x="180" y="18" textAnchor="middle" className="text-[7px] font-mono" fill={STATUS_ERROR}>TARGET</text>
+                      {PROJECTILE_PATHS.map((path) => {
+                        const d = `M ${path.points.map(p => `${p.x},${p.y}`).join(' L ')}`;
+                        return (
+                          <g key={path.label}>
+                            <path d={d} fill="none" stroke={path.color} strokeWidth="1.5" opacity="0.7" />
+                            {path.points.map((p, i) => (
+                              <circle key={i} cx={p.x} cy={p.y} r="2" fill={path.color} opacity={i === 0 || i === path.points.length - 1 ? 1 : 0.4} />
+                            ))}
+                          </g>
+                        );
+                      })}
+                    </svg>
+                    <div className="mt-3 grid grid-cols-3 gap-2">
+                      {PROJECTILE_PATHS.map((path) => (
+                        <div key={path.label} className="px-2 py-1.5 rounded bg-surface/50 border border-border/30">
+                          <div className="flex items-center gap-1.5 mb-1">
+                            <span className="w-3 h-0.5 rounded-full" style={{ backgroundColor: path.color }} />
+                            <span className="text-2xs font-mono font-bold" style={{ color: path.color }}>{path.label}</span>
+                          </div>
+                          <div className="text-[9px] font-mono text-text-muted space-y-0.5">
+                            <div>Speed: {path.speed} u/s</div>
+                            <div>Flight: {path.flightTime}</div>
+                            <div>Range: {path.maxRange}</div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </SurfaceCard>
+              </div>
+            </motion.div>
+          )}
 
-          {/* Config */}
-          <div className="mt-3 flex gap-3 text-[9px] font-mono text-text-muted">
-            <span>Threshold: <span className="text-text font-bold">{STAGGER_CONFIG.threshold}</span></span>
-            <span>Decay Rate: <span className="text-text font-bold">{STAGGER_CONFIG.decayRate}/s</span></span>
-          </div>
-        </SurfaceCard>
-      </motion.div>
+          {activeTab === 'feedback' && (
+            <motion.div key="feedback" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} transition={{ duration: 0.2 }} className="space-y-2.5">
+              <div className="grid grid-cols-1 xl:grid-cols-2 gap-2.5">
+                <SurfaceCard level={2} className="p-3 relative overflow-hidden">
+                  <div className="flex items-center justify-between mb-3">
+                    <SectionLabel icon={Gauge} label="Feedback Intensity Tuner" />
+                    <div className="flex gap-1.5">
+                      {FEEDBACK_PRESETS.map((preset) => (
+                        <button
+                          key={preset.name}
+                          onClick={() => applyPreset(preset)}
+                          className="text-2xs font-mono font-bold px-2 py-0.5 rounded border transition-colors hover:brightness-125"
+                          style={{ color: preset.color, borderColor: `${preset.color}40`, backgroundColor: `${preset.color}10` }}
+                        >
+                          {preset.name}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                  <div className="space-y-2.5">
+                    {FEEDBACK_PARAMS.map((param) => {
+                      const val = feedbackValues[param.id];
+                      const pct = ((val - param.min) / (param.max - param.min)) * 100;
+                      return (
+                        <div key={param.id} className="flex items-center gap-3">
+                          <span className="text-2xs font-mono text-text-muted w-[120px] flex-shrink-0 truncate">{param.label}</span>
+                          <div className="flex-1 relative">
+                            <div className="h-1.5 rounded-full bg-surface-deep overflow-hidden">
+                              <motion.div className="h-full rounded-full" style={{ width: `${pct}%`, backgroundColor: ACCENT }} layout transition={{ type: 'spring', stiffness: 300, damping: 30 }} />
+                            </div>
+                            <input type="range" min={param.min} max={param.max} step={param.step} value={val} onChange={(e) => updateFeedbackParam(param.id, parseFloat(e.target.value))} className="absolute inset-0 w-full opacity-0 cursor-pointer" />
+                          </div>
+                          <span className="text-2xs font-mono font-bold w-[50px] text-right" style={{ color: ACCENT }}>
+                            {val.toFixed(param.step < 0.01 ? 3 : 2)}{param.unit}
+                          </span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                  <div className="mt-3 pt-3 border-t border-border/30">
+                    <div className="flex items-center gap-3">
+                      <span className="text-2xs font-mono font-bold text-text-muted uppercase tracking-wider">Juice Level</span>
+                      <div className="flex-1 h-3 rounded-full bg-surface-deep overflow-hidden shadow-inner">
+                        <motion.div className="h-full rounded-full" style={{ width: `${juiceLevel * 100}%`, backgroundColor: juiceLevel < 0.33 ? ACCENT_CYAN : juiceLevel < 0.66 ? ACCENT_EMERALD : ACCENT_ORANGE }} layout transition={{ type: 'spring', stiffness: 300, damping: 30 }} />
+                      </div>
+                      <span className="text-xs font-mono font-bold" style={{ color: juiceLevel < 0.33 ? ACCENT_CYAN : juiceLevel < 0.66 ? ACCENT_EMERALD : ACCENT_ORANGE }}>
+                        {(juiceLevel * 100).toFixed(0)}%
+                      </span>
+                    </div>
+                  </div>
+                </SurfaceCard>
+                
+                <div className="space-y-2.5">
+                  <SurfaceCard level={2} className="p-3 relative overflow-hidden">
+                    <SectionLabel icon={Timer} label="Hitstop Timing Configurations" />
+                    <div className="mt-3 space-y-2">
+                      {HITSTOP_ABILITIES.map((ability, idx) => (
+                        <motion.div key={ability.name} initial={{ opacity: 0, x: -8 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: idx * 0.08 }} className="flex items-center gap-3">
+                          <span className="text-2xs font-mono text-text-muted w-[100px] flex-shrink-0">{ability.name}</span>
+                          <div className="flex-1 h-2 rounded-full border border-border/20 bg-surface-deep relative">
+                            <div className="absolute top-0 bottom-0 left-0 bg-surface-hover border-r border-border/50" style={{ width: `${(ability.animDuration / 1.5) * 100}%` }} />
+                            <div className="absolute top-0 bottom-0 left-0 animate-pulse" style={{ width: `${(ability.hitstop / MAX_HITSTOP) * 30}%`, left: '10%', backgroundColor: ability.color, boxShadow: `0 0 8px ${ability.color}80` }} />
+                          </div>
+                          <span className="text-xs font-mono font-bold w-[45px] text-right" style={{ color: ability.color }}>{ability.hitstop}s</span>
+                        </motion.div>
+                      ))}
+                    </div>
+                  </SurfaceCard>
+
+                  <SurfaceCard level={2} className="p-3 relative overflow-hidden">
+                    <SectionLabel icon={TrendingUp} label="Stagger Pipeline" />
+                    <div className="mt-3">
+                      <TimelineStrip events={STAGGER_TIMELINE} accent={STATUS_ERROR} />
+                      <div className="flex justify-between mt-3 text-2xs font-mono text-text-muted">
+                        <span>Threshold: {STAGGER_CONFIG.threshold}</span>
+                        <span>Decay: {STAGGER_CONFIG.decayRate}/s</span>
+                      </div>
+                    </div>
+                  </SurfaceCard>
+                </div>
+              </div>
+            </motion.div>
+          )}
+
+          {activeTab === 'metrics' && (
+            <motion.div key="metrics" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} transition={{ duration: 0.2 }} className="space-y-2.5">
+              <div className="grid grid-cols-1 xl:grid-cols-2 gap-2.5">
+                <SurfaceCard level={2} className="p-3 relative overflow-hidden">
+                  <SectionLabel icon={BarChart3} label="DPS Calculator" />
+                  <div className="mt-3 space-y-1.5">
+                    {DPS_STRATEGIES.map((strat, idx) => (
+                      <motion.div key={strat.name} initial={{ opacity: 0, x: -8 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: idx * 0.08 }} className="flex items-center gap-3 px-2 py-1.5 rounded hover:bg-surface-hover/30 transition-colors">
+                        <span className="text-2xs font-mono text-text w-[130px] flex-shrink-0 truncate">{strat.name}</span>
+                        <span className="text-2xs font-mono text-text-muted w-[50px] flex-shrink-0">{strat.time}</span>
+                        <div className="flex-1 h-2 rounded-full bg-surface-deep overflow-hidden shadow-inner">
+                          <motion.div initial={{ width: 0 }} animate={{ width: `${(strat.dps / DPS_MAX) * 100}%` }} transition={{ delay: idx * 0.1 + 0.2, duration: 0.5 }} className="h-full rounded-full" style={{ backgroundColor: strat.color }} />
+                        </div>
+                        <span className="text-xs font-mono font-bold w-[55px] text-right" style={{ color: strat.color }}>{strat.dps} DPS</span>
+                      </motion.div>
+                    ))}
+                  </div>
+                  <div className="mt-3 pt-3 border-t border-border/30">
+                    <span className="text-2xs font-mono text-text-muted uppercase tracking-wider">Cumulative Damage (5s)</span>
+                    <svg width="100%" height="60" viewBox="0 0 260 60" className="mt-2 overflow-visible" preserveAspectRatio="xMidYMid meet">
+                      {[0, 20, 40, 60].map(y => <line key={y} x1="30" y1={y + 5} x2="255" y2={y + 5} stroke="rgba(255,255,255,0.04)" strokeWidth="1" />)}
+                      {CUMULATIVE_POINTS.map((t) => <text key={t} x={30 + t * 45} y="78" textAnchor="middle" className="text-[7px] font-mono" fill="rgba(255,255,255,0.3)">{t}s</text>)}
+                      {DPS_STRATEGIES.map((strat) => {
+                        const maxDmg = DPS_MAX * 5;
+                        const pts = CUMULATIVE_POINTS.map(t => ({ x: 30 + t * 45, y: 65 - ((strat.dps * t) / maxDmg) * 60 }));
+                        const d = `M ${pts.map(p => `${p.x},${p.y}`).join(' L ')}`;
+                        return (
+                          <g key={strat.name}>
+                            <path d={d} fill="none" stroke={strat.color} strokeWidth="1.5" opacity="0.8" />
+                            {pts.map((p, i) => <circle key={i} cx={p.x} cy={p.y} r="2" fill={strat.color} />)}
+                          </g>
+                        );
+                      })}
+                    </svg>
+                  </div>
+                </SurfaceCard>
+
+                <div className="space-y-2.5">
+                  <SurfaceCard level={2} className="p-3 relative overflow-hidden">
+                    <SectionLabel icon={Activity} label="Combat Flow Sankey" />
+                    <div className="mt-3 flex justify-between relative h-[150px]">
+                      <svg className="absolute inset-0 w-full h-full pointer-events-none" style={{ zIndex: 0 }}>
+                        {SANKEY_FLOWS.map((flow, i) => {
+                          const colWidth = 100 / (SANKEY_COLUMNS.length - 1);
+                          const fromColIdx = SANKEY_COLUMNS.findIndex(c => c.items.some(it => it.id === flow.from));
+                          const toColIdx = SANKEY_COLUMNS.findIndex(c => c.items.some(it => it.id === flow.to));
+                          if (fromColIdx === -1 || toColIdx === -1) return null;
+                          const fromItemIdx = SANKEY_COLUMNS[fromColIdx].items.findIndex(it => it.id === flow.from);
+                          const toItemIdx = SANKEY_COLUMNS[toColIdx].items.findIndex(it => it.id === flow.to);
+                          const x1 = `${fromColIdx * colWidth + 5}%`;
+                          const x2 = `${toColIdx * colWidth - 5}%`;
+                          const y1 = `${(fromItemIdx + 0.5) * (100 / SANKEY_COLUMNS[fromColIdx].items.length)}%`;
+                          const y2 = `${(toItemIdx + 0.5) * (100 / SANKEY_COLUMNS[toColIdx].items.length)}%`;
+                          return (
+                            <path key={i} d={`M ${x1} ${y1} C ${fromColIdx * colWidth + 25}% ${y1}, ${toColIdx * colWidth - 25}% ${y2}, ${x2} ${y2}`} fill="none" stroke={flow.color} strokeWidth={Math.max(1, (flow.value / 100) * 20)} strokeOpacity="0.15" />
+                          );
+                        })}
+                      </svg>
+                      {SANKEY_COLUMNS.map((col, cIdx) => (
+                        <div key={col.label} className="flex flex-col h-full justify-between" style={{ zIndex: 1, width: '25%' }}>
+                          <span className="text-2xs font-mono font-bold text-text-muted text-center mb-2">{col.label}</span>
+                          {col.items.map((item) => (
+                            <div key={item.id} className="flex-1 flex flex-col justify-center items-center py-1 relative">
+                              <div className="w-full rounded border py-1.5 px-1 relative overflow-hidden backdrop-blur-sm" style={{ borderColor: `${item.color}40`, backgroundColor: 'rgba(0,0,0,0.5)' }}>
+                                <div className="absolute inset-0 opacity-20" style={{ backgroundColor: item.color }} />
+                                <div className="text-[10px] font-mono leading-tight text-center text-text shadow-sm truncate relative z-10">{item.label}</div>
+                                <div className="text-[8px] font-mono font-bold text-center mt-0.5 relative z-10" style={{ color: item.color }}>{item.pct}%</div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      ))}
+                    </div>
+                  </SurfaceCard>
+
+                  <div className="grid grid-cols-2 gap-2.5">
+                    {KPI_CARDS.map((kpi, idx) => (
+                      <SurfaceCard key={idx} level={3} className="p-3">
+                        <span className="text-2xs font-mono text-text-muted">{kpi.label}</span>
+                        <div className="mt-1 flex items-end justify-between">
+                          <span className="text-lg font-mono font-bold text-text-strong">{kpi.value}</span>
+                          {kpi.trend && <span className="text-xs font-mono font-bold" style={{ color: kpi.trendColor }}>{kpi.trend}</span>}
+                        </div>
+                        {kpi.barPct !== undefined && kpi.barColor && (
+                          <div className="mt-2 h-1 bg-surface-deep rounded-full overflow-hidden">
+                            <div className="h-full rounded-full" style={{ width: `${kpi.barPct}%`, backgroundColor: kpi.barColor }} />
+                          </div>
+                        )}
+                      </SurfaceCard>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
     </div>
   );
 }
@@ -1073,7 +918,7 @@ function ComboChainDiagram({ status }: { status: FeatureStatus }) {
   ];
 
   return (
-    <SurfaceCard level={2} className="p-4 relative overflow-hidden">
+    <SurfaceCard level={2} className="p-3 relative overflow-hidden">
       <div className="flex items-center gap-2.5 mb-3">
         <Play className="w-4 h-4 text-red-400" />
         <span className="text-sm font-bold text-text">Combo Chain Analysis</span>
