@@ -308,24 +308,28 @@ export function useTaskQueue(opts: UseTaskQueueOpts) {
         dispatch({ type: 'SSE_RESULT', result: data, sessionId: data.sessionId });
         clearHeartbeat();
 
-        // Process structured callback if present in assistant output
+        // Process structured callback if present in assistant output.
+        // Await the callback POST so data is in the DB before onTaskComplete fires.
         const cbMatch = extractCallbackPayload(assistantOutputRef.current);
-        if (cbMatch) {
-          resolveCallback(cbMatch.callbackId, cbMatch.payload).then((cbResult) => {
-            if (cbResult.success) {
-              addLog({ id: `cb-ok-${Date.now()}`, type: 'system', content: `Callback submitted successfully`, timestamp: Date.now() });
-            } else {
-              addLog({ id: `cb-err-${Date.now()}`, type: 'error', content: `Callback failed: ${cbResult.error}`, timestamp: Date.now() });
-            }
-          });
-        }
+        const cbPromise = cbMatch
+          ? resolveCallback(cbMatch.callbackId, cbMatch.payload).then((cbResult) => {
+              if (cbResult.success) {
+                addLog({ id: `cb-ok-${Date.now()}`, type: 'system', content: `Callback submitted successfully`, timestamp: Date.now() });
+              } else {
+                addLog({ id: `cb-err-${Date.now()}`, type: 'error', content: `Callback failed: ${cbResult.error}`, timestamp: Date.now() });
+              }
+            })
+          : Promise.resolve();
+
         assistantOutputRef.current = '';
 
-        const tid = currentTaskIdRef.current;
-        if (tid) {
-          registerTaskComplete(tid, instanceId, !data.isError);
-          onTaskComplete?.(tid, !data.isError);
-        }
+        cbPromise.finally(() => {
+          const tid = currentTaskIdRef.current;
+          if (tid) {
+            registerTaskComplete(tid, instanceId, !data.isError);
+            onTaskComplete?.(tid, !data.isError);
+          }
+        });
 
         break;
       }

@@ -76,6 +76,7 @@ export const MODULE_COLORS = {
   content: '#f59e0b',
   systems: '#8b5cf6',
   evaluator: '#ef4444',
+  'visual-gen': '#06b6d4',
 } as const;
 
 // ── Quality score color mapping ─────────────────────────────────────────────

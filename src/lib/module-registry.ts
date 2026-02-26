@@ -400,6 +400,14 @@ export const CATEGORIES: CategoryDefinition[] = [
     accentColorVar: 'var(--director)',
     subModules: [],
   },
+  {
+    id: 'visual-gen',
+    label: 'Asset Studio',
+    icon: Shapes,
+    accentColor: '#06b6d4',
+    accentColorVar: 'var(--visual-gen)',
+    subModules: ['asset-viewer', 'asset-forge', 'material-lab', 'blender-pipeline', 'asset-browser', 'import-automation', 'auto-rig', 'procedural-engine'],
+  },
 ];
 
 // ─── Core Engine module IDs ────────────────────────────────────────────────────────
@@ -937,6 +945,194 @@ unreal.IKRetargetBatchOperation.duplicate_and_retarget(
       { title: 'Living document', content: 'The GDD updates automatically from feature matrix, checklist progress, evaluator findings, and build history.', source: 'best-practice' },
     ],
     checklist: [],
+  },
+
+  // ── Visual Generation (Asset Studio) ────────────────────────────────────────
+
+  {
+    id: 'asset-viewer',
+    label: '3D Asset Viewer',
+    description: 'In-browser 3D model viewer with orbit controls, lighting, and wireframe',
+    categoryId: 'visual-gen',
+    icon: Eye,
+    feasibilityRating: 'strong',
+    quickActions: [
+      { id: 'av-1', label: 'Load Model', description: 'Load a glTF/GLB/FBX model into the 3D viewer', icon: Import, complexity: 'beginner', prompt: 'Guide me through loading a 3D model file (glTF, GLB, or FBX format) into the in-browser viewer. Explain supported formats, file size considerations, and how to troubleshoot common loading issues.' },
+      { id: 'av-2', label: 'Scene Setup', description: 'Configure lighting, environment, and camera for best preview', icon: SunDim, complexity: 'beginner', prompt: 'Help me set up an optimal 3D scene for previewing game assets. Cover three-point lighting, environment maps (HDR), camera distance/FOV settings, and ground plane/grid configuration for accurate scale reference.' },
+      { id: 'av-3', label: 'Export Screenshot', description: 'Capture high-quality screenshots of the 3D viewport', icon: Monitor, complexity: 'beginner', prompt: 'Show me how to capture screenshots from the 3D viewer with transparent backgrounds, custom resolutions, and multiple camera angles for documentation or texture reference.' },
+    ],
+    knowledgeTips: [
+      { title: 'GLB is preferred', content: 'GLB (binary glTF) is the most efficient format for web viewing — it bundles geometry, textures, and animations in a single file with smaller size than FBX.', source: 'best-practice' },
+      { title: 'Check polygon count', content: 'For smooth in-browser viewing, keep models under 500K triangles. Use LODs for high-poly models.', source: 'best-practice' },
+    ],
+    checklist: [
+      { id: 'viewer-load', label: 'Load 3D model', description: 'Import a glTF/GLB/FBX file into the viewer', prompt: 'Set up a file loader for 3D models in the browser viewer. Support glTF 2.0 (.gltf + .bin), GLB (binary glTF), and FBX formats. Use Three.js GLTFLoader for glTF/GLB and FBXLoader for FBX. Handle embedded textures, external texture references, and Draco-compressed meshes. Show loading progress bar and error messages for unsupported features.' },
+      { id: 'viewer-orbit', label: 'Configure orbit controls', description: 'Set up zoom, pan, and rotate controls', prompt: 'Configure Three.js OrbitControls for the 3D viewer. Set reasonable defaults: enable damping (factor 0.1), min/max zoom distance (0.5 to 100 units), auto-rotate option (speed 2.0), pan speed 1.0. Add mouse button mapping: left=rotate, middle=zoom, right=pan. Support touch gestures for mobile. Add keyboard shortcuts: R=reset camera, F=frame selection, G=toggle grid.' },
+      { id: 'viewer-lighting', label: 'Set up scene lighting', description: 'Configure ambient and directional lights', prompt: 'Set up a 3-point lighting system for the 3D asset viewer. Key light: DirectionalLight intensity 1.5, position top-right-front, cast shadows with PCFSoftShadowMap. Fill light: DirectionalLight intensity 0.5, position left-front, no shadows. Rim light: DirectionalLight intensity 0.3, position behind. Add AmbientLight intensity 0.4 as base. Add option for HDR environment map using drei Environment component with presets (studio, sunset, forest).' },
+      { id: 'viewer-wireframe', label: 'Toggle render modes', description: 'Switch between solid, wireframe, and textured views', prompt: 'Implement render mode toggles for the 3D viewer: (1) Textured — default PBR materials with all texture maps, (2) Solid — flat shading with single color to inspect geometry, (3) Wireframe — wireframe overlay to see topology and edge flow, (4) Normals — visualize normal directions with color mapping. Apply mode by traversing scene.traverse() and modifying material properties. Preserve original materials for restoration.' },
+      { id: 'viewer-grid', label: 'Add grid & axis helper', description: 'Show ground grid and XYZ axis indicators', prompt: 'Add a configurable grid and axis visualization to the 3D viewer. Grid: use drei Grid component with 10m extent, 1m cell size, fade-out at edges, semi-transparent. Axis helper: use drei GizmoHelper with GizmoViewport in corner showing XYZ orientation. Add scale reference bar showing 1 meter. Make grid and axes toggleable via toolbar buttons. Color-code axes: X=red, Y=green, Z=blue (matching UE5 convention).' },
+      { id: 'viewer-export', label: 'Screenshot & export', description: 'Capture viewport as image', prompt: 'Implement screenshot capture from the 3D viewer canvas. Use canvas.toDataURL("image/png") to capture the current frame. Add options: resolution multiplier (1x, 2x, 4x for high-DPI), transparent background (set scene background to null before capture), include/exclude grid and axes. Trigger download as PNG with filename pattern: modelname_angle_timestamp.png.' },
+    ],
+  },
+  {
+    id: 'asset-forge',
+    label: 'Asset Forge',
+    description: 'AI-powered 3D model generation from text prompts and images',
+    categoryId: 'visual-gen',
+    icon: Sparkle,
+    feasibilityRating: 'moderate',
+    quickActions: [
+      { id: 'af-1', label: 'Text to 3D', description: 'Generate a 3D model from a text description', icon: MessageSquare, complexity: 'beginner', prompt: 'Guide me through generating a 3D game asset from a text prompt. Cover prompt best practices for game-ready models (low-poly hints, style descriptors, topology keywords), selecting the right provider (free: TripoSR local, paid: Meshy), and post-processing the output for UE5 import.' },
+      { id: 'af-2', label: 'Image to 3D', description: 'Convert a reference image into a 3D model', icon: Import, complexity: 'intermediate', prompt: 'Help me convert a 2D reference image (concept art, photo, sketch) into a 3D model. Cover image preparation (clean background, good lighting, multiple views), provider selection, and quality tips for game-ready output.' },
+      { id: 'af-3', label: 'Batch Generate', description: 'Queue multiple generation jobs', icon: Layers, complexity: 'advanced', prompt: 'Set up a batch generation pipeline for creating multiple 3D assets. Cover prompt templates for consistent style, queue management, output organization, and quality review workflow.' },
+    ],
+    knowledgeTips: [
+      { title: 'Free local generation', content: 'TripoSR runs locally (MIT license, ~6GB VRAM). Quality is decent for prototyping. For production, consider paid services like Meshy.', source: 'best-practice' },
+      { title: 'Post-processing matters', content: 'AI-generated models often need cleanup: fix normals, reduce poly count, UV unwrap, and re-texture for game use.', source: 'best-practice' },
+    ],
+    checklist: [
+      { id: 'forge-prompt', label: 'Text-to-3D generation', description: 'Generate a 3D model from a text prompt', prompt: 'Set up a text-to-3D generation pipeline. Create a prompt input with style presets (realistic, stylized, low-poly). Wire to a provider backend (start with TripoSR for free local generation). Show generation progress, preview result in the 3D viewer, and save output as GLB.' },
+      { id: 'forge-image', label: 'Image-to-3D generation', description: 'Convert reference images to 3D models', prompt: 'Implement image-to-3D conversion. Accept PNG/JPG uploads, optionally auto-remove background. Send to generation provider. Support single-view and multi-view input modes. Preview result and allow re-generation with adjusted parameters.' },
+      { id: 'forge-queue', label: 'Generation queue', description: 'Manage multiple generation jobs', prompt: 'Build a generation job queue system. Track jobs with status (pending, generating, completed, failed), progress percentage, elapsed time. Allow cancellation. Store completed results with metadata (prompt, provider, settings) for reproducibility.' },
+      { id: 'forge-preview', label: 'Inline model preview', description: 'Preview generated models in the 3D viewer', prompt: 'Integrate the Asset Viewer SceneViewer component for inline preview of generated models. Auto-load completed generation results. Allow quick comparison between generation attempts. Add "Send to Viewer" button for full-screen inspection.' },
+      { id: 'forge-export', label: 'Export generated assets', description: 'Save and organize generated 3D models', prompt: 'Implement asset export and organization. Save generated models as GLB files to ~/.pof/assets/generated/. Store metadata (prompt, provider, generation params, timestamps) in SQLite. Add tagging and search. Support bulk export for UE5 import.' },
+    ],
+  },
+  {
+    id: 'material-lab',
+    label: 'Material Lab',
+    description: 'PBR material editor with live preview and UE5 export',
+    categoryId: 'visual-gen',
+    icon: Paintbrush,
+    feasibilityRating: 'strong',
+    quickActions: [
+      { id: 'ml-1', label: 'Create Material', description: 'Build a new PBR material from scratch', icon: Plus, complexity: 'beginner', prompt: 'Guide me through creating a PBR material for UE5. Cover the PBR workflow: base color (albedo), metallic, roughness, normal map, ambient occlusion. Explain value ranges, common presets (metal, wood, stone, fabric), and how to preview the result on a sphere.' },
+      { id: 'ml-2', label: 'Import Textures', description: 'Load texture maps into the material editor', icon: Import, complexity: 'beginner', prompt: 'Help me import texture maps into the Material Lab. Cover supported formats (PNG, JPG, EXR for HDR), channel packing conventions (ORM = Occlusion+Roughness+Metallic), resolution best practices for games (1K-4K), and proper sRGB vs Linear color space settings.' },
+      { id: 'ml-3', label: 'Export to UE5', description: 'Generate UE5 material instance code', icon: FileUp, complexity: 'intermediate', prompt: 'Generate UE5 C++ code for a Material Instance Dynamic from the current PBR parameters. Cover creating the parent material with parameter nodes, spawning a dynamic instance at runtime, and setting scalar/vector parameters from our saved presets.' },
+    ],
+    knowledgeTips: [
+      { title: 'PBR is universal', content: 'The metallic-roughness PBR workflow used here maps directly to UE5 material parameters — what you see in the preview closely matches in-engine results.', source: 'best-practice' },
+      { title: 'Texture resolution', content: 'For game assets, 2K (2048x2048) textures are the sweet spot. Use 4K only for hero assets and 1K for distant/small objects.', source: 'best-practice' },
+    ],
+    checklist: [
+      { id: 'mat-params', label: 'PBR parameter editor', description: 'Create sliders for metallic, roughness, normal strength, and color picker for albedo', prompt: 'Build a PBR material parameter editor UI. Include: color picker for base color (albedo), slider for metallic (0-1, default 0), slider for roughness (0-1, default 0.5), slider for normal map strength (0-2, default 1), slider for ambient occlusion strength (0-1, default 1). Add presets dropdown with common materials: Polished Metal (metallic 1.0, roughness 0.1), Rough Stone (metallic 0, roughness 0.8), Wood (metallic 0, roughness 0.5), Plastic (metallic 0, roughness 0.4).' },
+      { id: 'mat-textures', label: 'Texture map upload', description: 'Upload albedo, normal, roughness, metallic, and AO texture maps', prompt: 'Add texture map upload slots for each PBR channel: Base Color (sRGB), Normal Map (Linear, tangent space), Metallic (Linear, grayscale), Roughness (Linear, grayscale), AO (Linear, grayscale). Support drag-and-drop upload. Show thumbnails of loaded textures. Allow clearing individual texture slots to fall back to scalar parameter values.' },
+      { id: 'mat-preview', label: 'Live material preview', description: 'Three.js sphere with real-time PBR material updates', prompt: 'Create a live 3D preview using Three.js MeshStandardMaterial on a sphere. Map PBR parameters to material properties in real-time: color→material.color, metallic→material.metalness, roughness→material.roughness, normalMap→material.normalMap. Add environment lighting for realistic reflections. Allow switching preview mesh (sphere, cube, plane, custom model from viewer).' },
+      { id: 'mat-presets', label: 'Save material presets', description: 'Save and load material configurations', prompt: 'Implement material preset save/load. Store presets in SQLite with name, all PBR parameters, texture file paths, creation date. Add preset browser with thumbnail preview. Support duplicate, rename, delete. Export preset as JSON for sharing.' },
+      { id: 'mat-ue5', label: 'UE5 material export', description: 'Generate UE5 material instance code from current settings', prompt: 'Generate UE5 C++ code to recreate the current material as a Material Instance Dynamic. Output: parent material setup with parameter nodes matching our PBR channels, C++ function to create and configure MID at runtime, texture import settings matching our channel configuration. Support both Material Instance Constant (editor) and Dynamic (runtime) variants.' },
+    ],
+  },
+  {
+    id: 'blender-pipeline',
+    label: 'Blender Pipeline',
+    description: 'Headless Blender automation for batch conversion, LOD generation, and optimization',
+    categoryId: 'visual-gen',
+    icon: Settings,
+    feasibilityRating: 'moderate',
+    quickActions: [
+      { id: 'bp-1', label: 'Detect Blender', description: 'Find and verify Blender installation', icon: ScanSearch, complexity: 'beginner', prompt: 'Help me detect and configure the Blender installation path on this system. Check common install locations (Program Files, Steam, custom). Verify the version is 3.0+ for Python API compatibility. Test headless mode with a simple script.' },
+      { id: 'bp-2', label: 'Convert FBX→glTF', description: 'Batch convert FBX files to optimized glTF', icon: RefreshCw, complexity: 'intermediate', prompt: 'Create a Blender Python script for batch FBX to glTF conversion. Import each FBX, apply transforms, optimize mesh, and export as GLB with Draco compression. Handle materials, textures, and armatures.' },
+      { id: 'bp-3', label: 'Generate LODs', description: 'Auto-generate Level of Detail meshes', icon: Layers, complexity: 'advanced', prompt: 'Create a Blender Python script for automatic LOD generation. Take a high-poly mesh, generate 3-4 LOD levels using decimate modifier (LOD0=100%, LOD1=50%, LOD2=25%, LOD3=10%). Export each LOD as separate GLB. Preserve UV maps and materials.' },
+    ],
+    knowledgeTips: [
+      { title: 'Blender is free', content: 'Blender is GPL-licensed and completely free. Its Python API enables powerful headless automation for game asset pipelines.', source: 'best-practice' },
+      { title: 'Headless mode', content: 'Run Blender without UI using "blender -b -P script.py". This enables server-side batch processing of 3D assets.', source: 'best-practice' },
+    ],
+    checklist: [
+      { id: 'blender-detect', label: 'Detect Blender install', description: 'Auto-detect Blender path and version', prompt: 'Create an API endpoint that detects Blender installation. Search common paths: "C:/Program Files/Blender Foundation/Blender X.Y/blender.exe" on Windows, "/usr/bin/blender" on Linux, "/Applications/Blender.app/Contents/MacOS/Blender" on macOS. Run "blender --version" to verify. Store the path in project settings.' },
+      { id: 'blender-convert', label: 'FBX to glTF converter', description: 'Batch convert FBX files to GLB format', prompt: 'Build an FBX-to-GLB conversion pipeline using Blender headless. Create a Python script that: imports FBX, applies all transforms, triangulates mesh, exports as GLB with Draco compression enabled. Create an API endpoint that accepts file paths, spawns blender subprocess, and returns conversion status.' },
+      { id: 'blender-lods', label: 'LOD generation', description: 'Auto-generate LOD meshes with configurable ratios', prompt: 'Create a LOD generation pipeline. Python script that: loads a mesh, creates N LOD copies, applies decimate modifier with configurable ratios, preserves UVs and vertex groups, exports each LOD level. API endpoint to queue LOD jobs with custom ratios.' },
+      { id: 'blender-optimize', label: 'Mesh optimization', description: 'Clean up and optimize meshes for game use', prompt: 'Build a mesh optimization script for Blender. Operations: remove doubles (merge by distance), recalculate normals, remove loose geometry, limit polygon count, clean up UV maps, apply smooth shading. Make each operation configurable. Report before/after vertex and face counts.' },
+    ],
+  },
+  {
+    id: 'asset-browser',
+    label: 'Asset Browser',
+    description: 'Browse and download free CC0 3D assets, textures, and HDRIs',
+    categoryId: 'visual-gen',
+    icon: FolderOpen,
+    feasibilityRating: 'strong',
+    quickActions: [
+      { id: 'ab-1', label: 'Search Assets', description: 'Find free 3D models and textures', icon: ScanSearch, complexity: 'beginner', prompt: 'Help me search for free CC0 game assets. Cover available sources (Poly Haven for HDRIs and textures, ambientCG for PBR materials), search strategies for game-specific assets, and quality evaluation criteria.' },
+      { id: 'ab-2', label: 'Download Textures', description: 'Batch download PBR texture sets', icon: Import, complexity: 'beginner', prompt: 'Guide me through downloading PBR texture sets from free sources. Cover resolution selection (1K-4K), format options (PNG, EXR), channel packing for UE5, and organizing downloaded textures in the project.' },
+    ],
+    knowledgeTips: [
+      { title: 'All CC0 licensed', content: 'Poly Haven and ambientCG assets are CC0 (public domain) — use them freely in commercial projects without attribution.', source: 'best-practice' },
+      { title: 'Proxy API', content: 'The app proxies requests to external APIs to avoid CORS issues and cache results for faster browsing.', source: 'best-practice' },
+    ],
+    checklist: [
+      { id: 'browse-polyhaven', label: 'Poly Haven integration', description: 'Search and download HDRIs, textures, and models from Poly Haven', prompt: 'Integrate the Poly Haven API (api.polyhaven.com). Implement: search with category filters (hdris, textures, models), thumbnail grid display, resolution selector, format picker, download with progress. Cache API responses for 1 hour.' },
+      { id: 'browse-ambientcg', label: 'ambientCG integration', description: 'Search and download PBR materials from ambientCG', prompt: 'Integrate the ambientCG API (ambientcg.com/api/v2/full_json). Implement: search PBR materials by keyword, filter by resolution and format, display thumbnails with material previews, download ZIP bundles with all texture maps. Parse the API response format.' },
+      { id: 'browse-download', label: 'Download manager', description: 'Track and manage asset downloads', prompt: 'Build a download manager for browsed assets. Track download progress, store completed downloads in ~/.pof/assets/downloaded/. Index downloaded assets in SQLite with source, license, resolution, file paths. Show download history with re-download option.' },
+      { id: 'browse-preview', label: 'Asset preview', description: 'Preview downloaded assets in the 3D viewer', prompt: 'Integrate downloaded assets with the Asset Viewer. Auto-open 3D models in the viewer after download. Apply downloaded textures to the Material Lab for preview. Support drag-and-drop from browser to viewer.' },
+    ],
+  },
+  {
+    id: 'import-automation',
+    label: 'UE5 Import Automation',
+    description: 'Generate UE5 C++ asset import scripts and DataAsset configurations',
+    categoryId: 'visual-gen',
+    icon: FileUp,
+    feasibilityRating: 'strong',
+    quickActions: [
+      { id: 'ia-1', label: 'Import Script', description: 'Generate a C++ FBX/glTF import script', icon: Code, complexity: 'intermediate', prompt: 'Generate a UE5 C++ editor utility script for batch importing FBX/glTF assets. Cover: UAutomatedAssetImportData configuration, material auto-assignment, skeletal vs static mesh detection, LOD setup, and collision generation. Output ready-to-compile code.' },
+      { id: 'ia-2', label: 'DataAsset Config', description: 'Create DataAsset definitions for imported assets', icon: Database, complexity: 'intermediate', prompt: 'Create UE5 C++ UDataAsset subclasses for cataloging imported 3D assets. Include: mesh reference, material slots, LOD distances, collision preset, tags, and source metadata. Generate both the header and implementation files.' },
+    ],
+    knowledgeTips: [
+      { title: 'Editor Utility Widgets', content: 'UE5 Editor Utility Widgets can automate import workflows with UI — great for artists who want one-click import.', source: 'best-practice' },
+      { title: 'FBX Import API', content: 'UFbxImportUI and UFbxFactory provide full programmatic control over FBX import settings in C++.', source: 'best-practice' },
+    ],
+    checklist: [
+      { id: 'import-fbx', label: 'FBX import script', description: 'Generate C++ code for automated FBX import', prompt: 'Generate a UE5 C++ editor script for FBX import automation. Create a UEditorUtilityWidget subclass that: configures UFbxImportUI (auto-detect mesh type, auto-generate collision, import materials, set scale), loops over FBX files in a directory, imports each with UAssetToolsModule, and logs results. Include proper error handling and progress reporting.' },
+      { id: 'import-gltf', label: 'glTF import script', description: 'Generate C++ code for glTF/GLB import', prompt: 'Generate UE5 C++ code for glTF/GLB import. Use the glTF importer plugin API or UInterchangeManager for UE5.1+. Configure: material import, texture compression settings, skeletal mesh detection, and LOD assignment. Handle both separate .gltf+.bin and packed .glb formats.' },
+      { id: 'import-preset', label: 'Import presets', description: 'Save and load import configuration presets', prompt: 'Build an import preset system. Store presets with: source format, scale factor, axis conversion, material assignment rules, LOD generation settings, collision mode. Save to SQLite. Generate matching UE5 C++ import code from the preset values.' },
+      { id: 'import-batch', label: 'Batch import pipeline', description: 'Queue and process multiple asset imports', prompt: 'Create a batch import pipeline. Accept a directory of 3D files, auto-detect format for each, apply appropriate import preset, generate a combined UE5 C++ import script that processes all files in sequence. Output a manifest of imported assets with their UE5 content paths.' },
+    ],
+  },
+  {
+    id: 'auto-rig',
+    label: 'Auto-Rig',
+    description: 'Automated skeleton rigging for 3D character models',
+    categoryId: 'visual-gen',
+    icon: PersonStanding,
+    feasibilityRating: 'moderate',
+    quickActions: [
+      { id: 'ar-1', label: 'Rig Character', description: 'Apply an auto-rig to a character mesh', icon: PersonStanding, complexity: 'intermediate', prompt: 'Guide me through auto-rigging a character mesh for UE5. Cover: preparing the mesh (T-pose, clean topology, proper scale), choosing a rig type (UE5 Mannequin, MetaHuman, custom), using Mixamo web upload for quick rigging, and importing the rigged FBX back into UE5 with proper bone mapping.' },
+      { id: 'ar-2', label: 'Retarget Skeleton', description: 'Map bones between different skeleton hierarchies', icon: RefreshCw, complexity: 'advanced', prompt: 'Help me set up skeleton retargeting in UE5. Cover: IK Rig setup for source and target skeletons, IK Retargeter configuration, bone chain mapping, pose adjustment, and testing with animation sequences.' },
+    ],
+    knowledgeTips: [
+      { title: 'Mixamo is free', content: 'Adobe Mixamo auto-rigs characters for free via web upload. No API available — but the web workflow is fast and reliable for humanoid meshes.', source: 'best-practice' },
+      { title: 'UE5 Mannequin compat', content: 'Rigging to the UE5 Mannequin skeleton enables access to the entire Unreal animation library and Marketplace animations.', source: 'best-practice' },
+    ],
+    checklist: [
+      { id: 'rig-prep', label: 'Prepare mesh for rigging', description: 'Clean and prepare a character mesh for auto-rigging', prompt: 'Create a mesh preparation checklist for auto-rigging. Verify: mesh is in T-pose or A-pose, scale matches UE5 units (1 unit = 1 cm), mesh is manifold (no holes), face normals are consistent, mesh has proper UV unwrap, polycount is reasonable for rigging (under 100K for best results). Provide Blender Python commands to fix common issues.' },
+      { id: 'rig-mixamo', label: 'Mixamo rigging workflow', description: 'Step-by-step Mixamo web rigging guide', prompt: 'Create a detailed Mixamo rigging workflow guide: 1) Export mesh as FBX from Blender (only mesh, no armature), 2) Upload to mixamo.com, 3) Place bone markers on the model, 4) Select skeleton type and finger count, 5) Preview rig with test animations, 6) Download as FBX with skeleton, 7) Import into UE5 with skeleton retargeting to UE5_Mannequin. Include common troubleshooting tips.' },
+      { id: 'rig-presets', label: 'Skeleton presets', description: 'Define target skeleton presets for UE5', prompt: 'Define skeleton preset configurations for common UE5 targets: UE5 Mannequin (bone hierarchy, expected bone names), MetaHuman (full body + face rig), custom humanoid (minimal bone set for indie games). Store bone name mappings, expected transforms, and IK chain definitions. Output as JSON for use in retargeting tools.' },
+      { id: 'rig-retarget', label: 'UE5 retarget setup', description: 'Generate IK Rig and Retargeter code', prompt: 'Generate UE5 C++ code for setting up IK Retargeting. Create IK Rig definition for source skeleton (from auto-rig output), create IK Rig for target (UE5 Mannequin), generate IK Retargeter asset connecting both. Map bone chains: spine, left/right arm, left/right leg, head. Handle differences in bone orientation and bind pose.' },
+    ],
+  },
+  {
+    id: 'procedural-engine',
+    label: 'Procedural Engine',
+    description: 'Procedural generation of terrains, dungeons, vegetation, and rock formations',
+    categoryId: 'visual-gen',
+    icon: Grid3x3,
+    feasibilityRating: 'strong',
+    quickActions: [
+      { id: 'pe-1', label: 'Generate Terrain', description: 'Create a procedural heightmap terrain', icon: TreeDeciduous, complexity: 'intermediate', prompt: 'Generate a procedural terrain heightmap using noise algorithms (Perlin, Simplex, Diamond-Square). Configure: map size (256-4096), height range, octaves for detail, lacunarity, persistence. Export as 16-bit grayscale PNG compatible with UE5 Landscape import.' },
+      { id: 'pe-2', label: 'Generate Dungeon', description: 'Create a procedural dungeon layout', icon: Map, complexity: 'intermediate', prompt: 'Generate a procedural dungeon layout using BSP tree or random walk algorithm. Configure: grid size, room count, min/max room size, corridor width, door placement. Output as 2D grid map with room/corridor/wall cells. Export as JSON for UE5 level generation.' },
+      { id: 'pe-3', label: 'Scatter Vegetation', description: 'Place vegetation with Poisson disk sampling', icon: TreePine, complexity: 'advanced', prompt: 'Generate vegetation scatter points using Poisson disk sampling. Configure: area size, density per species, min distance between plants, slope/height constraints from terrain data. Output as point cloud with species ID, position, rotation, scale. Export as CSV for UE5 PCG (Procedural Content Generation) framework import.' },
+    ],
+    knowledgeTips: [
+      { title: 'UE5 PCG framework', content: 'UE5.2+ has a built-in PCG framework. Generated scatter data can be imported as PCG input for native Unreal procedural placement.', source: 'best-practice' },
+      { title: 'Heightmap format', content: 'UE5 Landscape imports 16-bit grayscale PNG heightmaps. Resolution should match landscape component size (e.g., 1009x1009 for 4 components).', source: 'best-practice' },
+    ],
+    checklist: [
+      { id: 'proc-terrain', label: 'Terrain heightmap generator', description: 'Generate terrain heightmaps with configurable noise', prompt: 'Build a terrain heightmap generator. Implement Diamond-Square algorithm with configurable: size (power of 2 + 1, e.g., 257, 513, 1025), roughness factor (0-1), height range, seed for reproducibility. Also implement Perlin noise with octaves, lacunarity, persistence. Output as 2D float array. Render preview as grayscale canvas. Export as 16-bit PNG for UE5 Landscape.' },
+      { id: 'proc-dungeon', label: 'Dungeon layout generator', description: 'Generate dungeon maps with rooms and corridors', prompt: 'Build a dungeon layout generator using BSP (Binary Space Partitioning). Algorithm: recursively split grid into cells, place rooms within cells, connect rooms with corridors through shared edges. Configure: grid dimensions, min/max room size, split ratio, corridor width. Output cell types: empty, floor, wall, door. Render preview as 2D colored grid. Export as JSON with room list and tile map.' },
+      { id: 'proc-vegetation', label: 'Vegetation scatter generator', description: 'Distribute vegetation points using Poisson disk sampling', prompt: 'Implement Poisson disk sampling for vegetation scatter. Algorithm: use Bridson\'s algorithm for fast 2D Poisson disk sampling. Configure per-species: density radius, height range constraint, slope constraint, cluster probability. Support multiple species with different radii. Output point list with position, species ID, random rotation/scale. Render 2D preview with colored dots per species.' },
+      { id: 'proc-preview', label: 'Preview and export', description: 'Preview generated content and export for UE5', prompt: 'Build preview and export system. Terrain: render heightmap as 3D mesh in the Asset Viewer using PlaneGeometry with vertex displacement. Dungeon: render as 2D canvas with color-coded cells. Vegetation: render as dots on terrain preview. Export formats: heightmap as 16-bit PNG, dungeon as JSON + UE5 DataTable CSV, vegetation as CSV point cloud compatible with UE5 PCG framework.' },
+    ],
   },
 
 ];

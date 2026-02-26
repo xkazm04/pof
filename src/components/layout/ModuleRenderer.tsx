@@ -33,6 +33,14 @@ import { DialogueView } from '@/components/modules/game-systems/DialogueView';
 import { PackagingView } from '@/components/modules/game-systems/PackagingView';
 import { BlueprintTranspilerView } from '@/components/modules/game-systems/blueprint-transpiler/BlueprintTranspilerView';
 
+import { AssetViewerView } from '@/components/modules/visual-gen/asset-viewer/AssetViewerView';
+import { AssetForgeView } from '@/components/modules/visual-gen/asset-forge/AssetForgeView';
+import { MaterialLabView } from '@/components/modules/visual-gen/material-lab/MaterialLabView';
+import { BlenderPipelineView } from '@/components/modules/visual-gen/blender-pipeline/BlenderPipelineView';
+import { AssetBrowserView } from '@/components/modules/visual-gen/asset-browser/AssetBrowserView';
+import { ImportAutomationView } from '@/components/modules/visual-gen/import-automation/ImportAutomationView';
+import { AutoRigView } from '@/components/modules/visual-gen/auto-rig/AutoRigView';
+import { ProceduralEngineView } from '@/components/modules/visual-gen/procedural-engine/ProceduralEngineView';
 import { EvaluatorModule } from '@/components/modules/evaluator/EvaluatorModule';
 import { GameDesignDocView } from '@/components/modules/evaluator/GameDesignDocView';
 import { GameDirectorModule } from '@/components/modules/game-director/GameDirectorModule';
@@ -89,6 +97,15 @@ const MODULE_COMPONENTS: Record<SubModuleId, React.ComponentType> = {
   'packaging': PackagingView,
   'blueprint-transpiler': BlueprintTranspilerView,
   'game-design-doc': GameDesignDocView,
+  // Visual Generation (Asset Studio)
+  'asset-viewer': AssetViewerView,
+  'asset-forge': AssetForgeView,
+  'material-lab': MaterialLabView,
+  'blender-pipeline': BlenderPipelineView,
+  'asset-browser': AssetBrowserView,
+  'import-automation': ImportAutomationView,
+  'auto-rig': AutoRigView,
+  'procedural-engine': ProceduralEngineView,
 };
 
 // Special-case categories that render without sub-modules

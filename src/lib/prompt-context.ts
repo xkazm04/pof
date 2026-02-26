@@ -17,13 +17,25 @@ export interface ProjectContext {
   dynamicContext?: DynamicProjectContext | null;
 }
 
-/** Result of scanning the actual UE5 project files on disk. */
+export type ProjectType = 'ue5' | 'nextjs' | 'generic';
+
+/** Result of scanning the actual project files on disk. */
 export interface DynamicProjectContext {
   scannedAt: string;
+  projectType: ProjectType;
+  // UE5 fields (populated when projectType === 'ue5')
   classes: { name: string; prefix: string; headerPath: string }[];
   plugins: { name: string; enabled: boolean }[];
   buildDependencies: { module: string; type: 'public' | 'private' }[];
   sourceFileCount: number;
+  // Web-app fields (populated when projectType !== 'ue5')
+  framework?: string;
+  apiRoutes?: string[];
+  databaseType?: string;
+  // MCP fields (populated when .mcp.json detected in project root)
+  hasMcp?: boolean;
+  mcpServerNames?: string[];
+  mcpInstructions?: string;
 }
 
 /**
@@ -228,15 +240,82 @@ interface ContextHeaderOptions {
 }
 
 /**
+ * Builds a context header for web-app projects (Next.js, generic).
+ * Replaces UE5 metadata with framework, database, and API route information.
+ */
+function buildWebAppContextHeader(
+  ctx: ProjectContext,
+  opts: ContextHeaderOptions = {},
+): string {
+  const dc = ctx.dynamicContext!;
+  const { includeRules = true, extraRules = [] } = opts;
+
+  const typeLine = dc.framework
+    ? `${dc.framework} Web Application`
+    : dc.projectType === 'nextjs' ? 'Next.js Web Application' : 'Web Application';
+
+  let header = `## Project Context
+- Project: "${ctx.projectName}" at ${ctx.projectPath}
+- Type: ${typeLine}`;
+
+  if (dc.databaseType) {
+    header += `\n- Database: ${dc.databaseType}`;
+  }
+
+  // MCP tools take priority over raw API endpoints
+  if (dc.hasMcp && dc.mcpInstructions) {
+    header += `\n\n${dc.mcpInstructions}`;
+  } else if (dc.apiRoutes && dc.apiRoutes.length > 0) {
+    header += '\n\n## Available API Endpoints\nThe project exposes these REST API routes for data access:';
+    const routes = dc.apiRoutes;
+    for (let i = 0; i < routes.length; i += 4) {
+      const chunk = routes.slice(i, i + 4);
+      header += `\n- ${chunk.join(', ')}`;
+    }
+  }
+
+  if (includeRules) {
+    const rules: string[] = [];
+    if (dc.hasMcp) {
+      rules.push('CRITICAL: Do NOT use Read, Edit, Write, Bash, or Glob tools.');
+      rules.push('NEVER read source code, mock data, API routes, or config files.');
+      rules.push('NEVER investigate "how things work" — everything you need is in the MCP tools.');
+      rules.push('ONLY use MCP tools for reading and writing project data.');
+      rules.push('If a tool call fails, report the error to the user — do NOT debug the system.');
+      rules.push('The project_id is pre-configured in the MCP server — you do NOT need to pass it to most tools (it auto-fills).');
+    } else if (dc.apiRoutes && dc.apiRoutes.length > 0) {
+      rules.push('Access project data through the API endpoints listed above, NOT by searching the codebase for data files.');
+      rules.push('The database contains the actual content data. Mock data files (if any) are for development seeding — do not treat them as the source of truth.');
+      rules.push('Your CWD is the project root. You may explore the project structure if needed.');
+    } else {
+      rules.push('Your CWD is the project root. You may explore the project structure if needed.');
+    }
+    rules.push(...extraRules);
+    header += '\n\n## Rules\n' + rules.map((r) => `- ${r}`).join('\n');
+  }
+
+  return header;
+}
+
+/**
  * Builds the shared project context header used by all prompt types.
  *
  * This is the single source of truth for project metadata formatting.
  * All prompt builder functions should call this instead of formatting their own.
+ *
+ * Branches based on `ctx.dynamicContext.projectType`:
+ * - 'ue5' or missing → UE5 C++ context (default, backward-compatible)
+ * - 'nextjs' / 'generic' → web-app context with API routes
  */
 export function buildProjectContextHeader(
   ctx: ProjectContext,
   opts: ContextHeaderOptions = {},
 ): string {
+  // Branch: non-UE5 projects get a web-app-specific header
+  if (ctx.dynamicContext?.projectType && ctx.dynamicContext.projectType !== 'ue5') {
+    return buildWebAppContextHeader(ctx, opts);
+  }
+
   const {
     includeBuildCommand = true,
     includeRules = true,

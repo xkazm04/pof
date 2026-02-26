@@ -5,7 +5,7 @@ import { useSuspendableEffect } from '@/hooks/useSuspend';
 import {
   ScanSearch, Play, Loader2, AlertTriangle, AlertCircle, Info,
   ChevronDown, ChevronRight, Zap, Trash2, RotateCcw, Clock,
-  Shield, Bug, Gauge, CheckCircle,
+  Shield, Bug, Gauge, CheckCircle, Square, CheckSquare,
 } from 'lucide-react';
 import { useModuleCLI } from '@/hooks/useModuleCLI';
 import { useModuleStore } from '@/stores/moduleStore';
@@ -15,7 +15,7 @@ import { EVAL_PASSES, PASS_LABELS, type EvalPass } from '@/lib/evaluator/module-
 import { SurfaceCard } from '@/components/ui/SurfaceCard';
 import type { SubModuleId } from '@/types/modules';
 import type { ScanFinding, ScanSeverity } from '@/types/scan';
-import { getAppOrigin } from '@/lib/constants';
+import { getAppOrigin, UI_TIMEOUTS } from '@/lib/constants';
 import {
   MODULE_COLORS, STATUS_SUCCESS, STATUS_WARNING, STATUS_ERROR, STATUS_IMPROVED,
   ACCENT_ORANGE, OPACITY_8,
@@ -59,6 +59,14 @@ export function ScanTab({ moduleId }: ScanTabProps) {
   const [expandedFindings, setExpandedFindings] = useState<Set<string>>(new Set());
   const [scanCount, setScanCount] = useState(0);
 
+  // --- Batch fix state ---
+  const [selectedFindings, setSelectedFindings] = useState<Set<string>>(new Set());
+  const [fixQueue, setFixQueue] = useState<string[]>([]);
+  const fixQueueRef = useRef<string[]>([]);
+  fixQueueRef.current = fixQueue;
+  const [activeFixId, setActiveFixId] = useState<string | null>(null);
+  const fixTotalRef = useRef(0);
+
   // Fetch findings from the DB and merge into the Zustand store
   const fetchAndMergeFindings = useCallback(async () => {
     try {
@@ -85,6 +93,70 @@ export function ScanTab({ moduleId }: ScanTabProps) {
     accentColor: ACCENT,
     onComplete: handleScanComplete,
   });
+
+  // --- Batch fix CLI ---
+  const advanceFix = useCallback(() => {
+    const queue = fixQueueRef.current;
+    if (queue.length === 0) {
+      setActiveFixId(null);
+      fixTotalRef.current = 0;
+      return;
+    }
+
+    const [nextId, ...rest] = queue;
+    setFixQueue(rest);
+    setActiveFixId(nextId);
+
+    const finding = useModuleStore.getState().scanResults[moduleId]?.find((f) => f.id === nextId);
+    if (finding) {
+      const prompt = `Fix the following issue in the ${moduleLabel} module:\n\n**${finding.category}** (${finding.severity})\n${finding.description}\n\nFile: ${finding.file ?? 'N/A'}\n\nSuggested fix: ${finding.suggestedFix}`;
+      fixCliRef.current?.sendPrompt(prompt);
+    }
+  }, [moduleId, moduleLabel]);
+
+  const handleFixComplete = useCallback((success: boolean) => {
+    const completedId = activeFixId;
+    if (success && completedId) {
+      resolveScanFinding(moduleId, completedId);
+    }
+    // Advance to next in queue
+    setTimeout(advanceFix, UI_TIMEOUTS.batchItemDelay);
+  }, [activeFixId, moduleId, resolveScanFinding, advanceFix]);
+
+  const fixCli = useModuleCLI({
+    moduleId,
+    sessionKey: `${moduleId}-fix`,
+    label: `${moduleLabel} Fix`,
+    accentColor: ACCENT,
+    onComplete: handleFixComplete,
+  });
+
+  const fixCliRef = useRef(fixCli);
+  fixCliRef.current = fixCli;
+
+  const startBatchFix = useCallback(() => {
+    const ids = Array.from(selectedFindings);
+    if (ids.length === 0) return;
+
+    fixTotalRef.current = ids.length;
+    const [firstId, ...rest] = ids;
+    setFixQueue(rest);
+    setActiveFixId(firstId);
+    setSelectedFindings(new Set());
+
+    const finding = findings.find((f) => f.id === firstId);
+    if (finding) {
+      const prompt = `Fix the following issue in the ${moduleLabel} module:\n\n**${finding.category}** (${finding.severity})\n${finding.description}\n\nFile: ${finding.file ?? 'N/A'}\n\nSuggested fix: ${finding.suggestedFix}`;
+      fixCli.sendPrompt(prompt);
+    }
+  }, [selectedFindings, findings, moduleLabel, fixCli]);
+
+  const markSelectedResolved = useCallback(() => {
+    for (const id of selectedFindings) {
+      resolveScanFinding(moduleId, id);
+    }
+    setSelectedFindings(new Set());
+  }, [selectedFindings, moduleId, resolveScanFinding]);
 
   // Poll for new findings while the scan is running (every 3s)
   // Pauses when module is suspended (hidden in LRU).
@@ -147,6 +219,15 @@ export function ScanTab({ moduleId }: ScanTabProps) {
     });
   }, []);
 
+  const toggleSelectFinding = useCallback((id: string) => {
+    setSelectedFindings((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }, []);
+
   // Group findings by severity
   const activeFindings = useMemo(() => findings.filter((f) => !f.resolvedAt), [findings]);
   const resolvedFindings = useMemo(() => findings.filter((f) => f.resolvedAt), [findings]);
@@ -177,12 +258,27 @@ export function ScanTab({ moduleId }: ScanTabProps) {
     return counts;
   }, [activeFindings]);
 
+  // Batch fix progress
+  const isBatchFixing = activeFixId !== null;
+  const fixProgress = fixTotalRef.current > 0
+    ? fixTotalRef.current - fixQueue.length - (activeFixId ? 1 : 0)
+    : 0;
+
+  const allSelected = activeFindings.length > 0 && selectedFindings.size === activeFindings.length;
+  const toggleSelectAll = useCallback(() => {
+    if (allSelected) {
+      setSelectedFindings(new Set());
+    } else {
+      setSelectedFindings(new Set(activeFindings.map((f) => f.id)));
+    }
+  }, [allSelected, activeFindings]);
+
   return (
     <div className="space-y-4">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <ScanSearch className="w-4 h-4 text-[#3b82f6]" />
+          <ScanSearch className="w-4 h-4" style={{ color: ACCENT }} />
           <span className="text-sm font-semibold text-text">Module Scan</span>
           <span className="text-xs text-text-muted">— {moduleLabel}</span>
           {scanCount > 0 && (
@@ -281,6 +377,55 @@ export function ScanTab({ moduleId }: ScanTabProps) {
         </div>
       )}
 
+      {/* Batch controls */}
+      {activeFindings.length > 0 && (
+        <div className="flex items-center gap-2 flex-wrap">
+          <button
+            onClick={toggleSelectAll}
+            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-xs font-medium text-text-muted hover:text-text hover:bg-surface-hover transition-colors border border-border"
+          >
+            {allSelected
+              ? <CheckSquare className="w-3 h-3" style={{ color: ACCENT }} />
+              : <Square className="w-3 h-3" />}
+            {allSelected ? 'Deselect All' : 'Select All'}
+          </button>
+
+          {selectedFindings.size > 0 && (
+            <>
+              <button
+                onClick={startBatchFix}
+                disabled={isBatchFixing || fixCli.isRunning || scanCli.isRunning}
+                className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-xs font-medium transition-all disabled:opacity-50"
+                style={{
+                  backgroundColor: `${ACCENT}20`,
+                  color: ACCENT,
+                  border: `1px solid ${ACCENT}40`,
+                }}
+              >
+                <Zap className="w-3 h-3" />
+                Fix Selected ({selectedFindings.size})
+              </button>
+
+              <button
+                onClick={markSelectedResolved}
+                disabled={isBatchFixing}
+                className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-xs font-medium text-green-400 hover:text-green-300 bg-green-500/10 hover:bg-green-500/20 border border-green-500/30 transition-colors disabled:opacity-50"
+              >
+                <CheckCircle className="w-3 h-3" />
+                Mark Selected Resolved
+              </button>
+            </>
+          )}
+
+          {isBatchFixing && (
+            <span className="flex items-center gap-1.5 text-xs text-text-muted">
+              <Loader2 className="w-3 h-3 animate-spin" style={{ color: ACCENT }} />
+              Fixing {fixProgress + 1}/{fixTotalRef.current}...
+            </span>
+          )}
+        </div>
+      )}
+
       {/* Findings list grouped by severity */}
       {activeFindings.length > 0 ? (
         <div className="space-y-3">
@@ -311,7 +456,10 @@ export function ScanTab({ moduleId }: ScanTabProps) {
                         const prompt = `Fix the following issue in the ${moduleLabel} module:\n\n**${finding.category}** (${finding.severity})\n${finding.description}\n\nFile: ${finding.file ?? 'N/A'}\n\nSuggested fix: ${finding.suggestedFix}`;
                         scanCli.sendPrompt(prompt);
                       }}
-                      isRunning={scanCli.isRunning}
+                      isRunning={scanCli.isRunning || fixCli.isRunning}
+                      selected={selectedFindings.has(finding.id)}
+                      onSelect={() => toggleSelectFinding(finding.id)}
+                      isActivelyFixing={activeFixId === finding.id}
                     />
                   ))}
                 </div>
@@ -348,6 +496,9 @@ function FindingRow({
   onResolve,
   onFix,
   isRunning,
+  selected,
+  onSelect,
+  isActivelyFixing,
 }: {
   finding: ScanFinding;
   isExpanded: boolean;
@@ -355,50 +506,72 @@ function FindingRow({
   onResolve: () => void;
   onFix: () => void;
   isRunning: boolean;
+  selected?: boolean;
+  onSelect?: () => void;
+  isActivelyFixing?: boolean;
 }) {
   const cfg = SEVERITY_CONFIG[finding.severity];
   const effortCfg = EFFORT_CONFIG[finding.effort];
   const PassIcon = PASS_ICONS[finding.pass];
 
   return (
-    <div className="border-b border-border/40 last:border-b-0">
-      <button
-        onClick={onToggle}
-        className="w-full flex items-start gap-2 px-3 py-2 text-left hover:bg-surface-hover/30 transition-colors"
-      >
-        {isExpanded
-          ? <ChevronDown className="w-3 h-3 text-text-muted flex-shrink-0 mt-0.5" />
-          : <ChevronRight className="w-3 h-3 text-text-muted flex-shrink-0 mt-0.5" />}
+    <div className={`border-b border-border/40 last:border-b-0 ${isActivelyFixing ? 'bg-blue-500/5' : ''}`}>
+      <div className="flex items-start">
+        {/* Selection checkbox */}
+        {onSelect && (
+          <button
+            onClick={(e) => { e.stopPropagation(); onSelect(); }}
+            className="flex-shrink-0 p-2 pt-2.5 text-text-muted hover:text-text transition-colors"
+          >
+            {selected
+              ? <CheckSquare className="w-3.5 h-3.5" style={{ color: ACCENT }} />
+              : <Square className="w-3.5 h-3.5" />}
+          </button>
+        )}
 
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-1.5 flex-wrap">
-            <span className="text-xs font-medium text-text">{finding.category}</span>
-            <span className="text-2xs font-mono px-1.5 py-px rounded" style={{ backgroundColor: cfg.bg, color: cfg.color }}>
-              {finding.severity}
-            </span>
-            <span className="text-2xs text-text-muted flex items-center gap-0.5">
-              <PassIcon className="w-2.5 h-2.5" />
-              {PASS_LABELS[finding.pass]}
-            </span>
-            {finding.file && (
-              <span className="text-2xs font-mono text-text-muted truncate max-w-[200px]">
-                {finding.file}{finding.line ? `:${finding.line}` : ''}
+        <button
+          onClick={onToggle}
+          className="flex-1 flex items-start gap-2 px-3 py-2 text-left hover:bg-surface-hover/30 transition-colors min-w-0"
+          style={onSelect ? { paddingLeft: 0 } : undefined}
+        >
+          {isActivelyFixing ? (
+            <Loader2 className="w-3 h-3 animate-spin flex-shrink-0 mt-0.5" style={{ color: ACCENT }} />
+          ) : isExpanded ? (
+            <ChevronDown className="w-3 h-3 text-text-muted flex-shrink-0 mt-0.5" />
+          ) : (
+            <ChevronRight className="w-3 h-3 text-text-muted flex-shrink-0 mt-0.5" />
+          )}
+
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-1.5 flex-wrap">
+              <span className="text-xs font-medium text-text">{finding.category}</span>
+              <span className="text-2xs font-mono px-1.5 py-px rounded" style={{ backgroundColor: cfg.bg, color: cfg.color }}>
+                {finding.severity}
               </span>
-            )}
+              <span className="text-2xs text-text-muted flex items-center gap-0.5">
+                <PassIcon className="w-2.5 h-2.5" />
+                {PASS_LABELS[finding.pass]}
+              </span>
+              {finding.file && (
+                <span className="text-2xs font-mono text-text-muted truncate max-w-[200px]">
+                  {finding.file}{finding.line ? `:${finding.line}` : ''}
+                </span>
+              )}
+            </div>
+            <p className="text-xs text-text-muted mt-0.5 leading-relaxed">
+              {finding.description}
+            </p>
           </div>
-          <p className="text-xs text-text-muted mt-0.5 leading-relaxed">
-            {finding.description}
-          </p>
-        </div>
 
-        <span className="flex items-center gap-0.5 text-2xs px-1.5 py-px rounded flex-shrink-0" style={{ color: effortCfg.color, backgroundColor: `${effortCfg.color}18` }}>
-          <Clock className="w-2.5 h-2.5" />
-          {effortCfg.label}
-        </span>
-      </button>
+          <span className="flex items-center gap-0.5 text-2xs px-1.5 py-px rounded flex-shrink-0" style={{ color: effortCfg.color, backgroundColor: `${effortCfg.color}18` }}>
+            <Clock className="w-2.5 h-2.5" />
+            {effortCfg.label}
+          </span>
+        </button>
+      </div>
 
       {isExpanded && (
-        <div className="px-8 pb-2.5 space-y-2">
+        <div className="px-8 pb-2.5 space-y-2" style={onSelect ? { paddingLeft: '3.25rem' } : undefined}>
           {finding.suggestedFix && (
             <div className="text-xs text-text-muted leading-relaxed">
               <span className="font-semibold text-text-muted-hover">Suggested fix: </span>

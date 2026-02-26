@@ -19,6 +19,7 @@
 8. [Communication Protocol](#8-communication-protocol)
 9. [Implementation Phases](#9-implementation-phases)
 10. [Technical Considerations](#10-technical-considerations)
+11. [PoF Web App Integration Spec](#11-pof-web-app-integration-spec)
 
 ---
 
@@ -2006,3 +2007,343 @@ Log levels:
 - `Verbose`: Per-request HTTP logging, per-asset manifest updates (disabled by default)
 
 Logs are also captured to `.pof/bridge-log.txt` (last 1000 lines, rotating) for PoF to read when troubleshooting connection issues.
+
+---
+
+## 11. PoF Web App Integration Spec
+
+This section describes how the PoF Next.js web application integrates with the PillarsOfFortuneBridge plugin. It covers the proxy layer, connection management, manifest verification, React hooks, and module-level data flow.
+
+### 11.1 Architecture Overview
+
+The PoF web app communicates with UE5 through a dual-bridge architecture:
+
+- **UE5 Remote Control API (port 30010):** Standard UE5 plugin for runtime actor property read/write and function invocation during PIE sessions. Used for live gameplay inspection.
+- **PoF Bridge (port 30040):** Custom PillarsOfFortuneBridge plugin for Editor-time asset inspection, Blueprint introspection, test execution, snapshot capture, and Live Coding. Provides capabilities beyond the Remote Control API (see Section 1).
+
+Both bridges are accessed through a Next.js API proxy layer to avoid CORS complications. The web app's API routes at `/api/pof-bridge/*` proxy requests to `http://localhost:{port}/pof/*`, keeping the browser origin consistent with the Next.js dev server.
+
+**Graceful degradation** is a core principle: every module in PoF functions without the plugin installed. Plugin-dependent features (manifest-backed asset counts, auto-verification, snapshot capture) appear conditionally in the UI only when the bridge reports a connected status. No module renders an error state or blank screen when the plugin is absent.
+
+### 11.2 API Proxy Route Mapping
+
+Each Next.js route handler proxies to the corresponding plugin HTTP endpoint. The proxy adds the `X-Pof-Auth-Token` header when authentication is configured.
+
+| PoF Route | Plugin Endpoint | Method | Description |
+|---|---|---|---|
+| `/api/pof-bridge/status` | `GET /pof/status` | GET | Plugin health check and Editor state |
+| `/api/pof-bridge/manifest` | `GET /pof/manifest` | GET | Full asset manifest, or `?checksum-only=true` for fast change detection |
+| `/api/pof-bridge/test` | `POST /pof/test/run`, `GET /pof/test/results` | POST/GET | Submit test spec for PIE execution, retrieve results |
+| `/api/pof-bridge/snapshot` | `POST /pof/snapshot/capture`, `GET /pof/snapshot/diff` | POST/GET | Trigger viewport capture, retrieve diff report |
+| `/api/pof-bridge/compile` | `POST /pof/compile/live`, `GET /pof/compile/status` | POST/GET | Trigger Live Coding hot reload, poll compilation status |
+
+All proxy routes follow the same pattern:
+
+```typescript
+// src/app/api/pof-bridge/status/route.ts
+import { NextResponse } from 'next/server';
+import { getPofBridgeUrl, getPofAuthHeaders } from '@/lib/pof-bridge/client';
+
+export async function GET() {
+  try {
+    const res = await fetch(`${getPofBridgeUrl()}/pof/status`, {
+      headers: getPofAuthHeaders(),
+    });
+    const data = await res.json();
+    return NextResponse.json(data, { status: res.status });
+  } catch {
+    return NextResponse.json(
+      { error: true, code: 'BRIDGE_UNREACHABLE', message: 'Plugin not running' },
+      { status: 503 }
+    );
+  }
+}
+```
+
+### 11.3 Connection Lifecycle
+
+Connection management is handled by a singleton `PofBridgeConnectionManager` that tracks the bridge's availability and emits events for UI updates.
+
+**Health check polling:**
+
+- When connected: poll `GET /api/pof-bridge/status` every 10 seconds.
+- Three consecutive failures trigger a transition to the `disconnected` state.
+- On disconnect: switch to exponential backoff reconnection (2-second base, 30-second max, 1.5x multiplier).
+- On successful reconnect: reset failure count, resume normal 10-second polling.
+
+**Events emitted:**
+
+| Event | Payload | Trigger |
+|---|---|---|
+| `pof.connected` | `{ port, pluginVersion, engineVersion }` | First successful status check or reconnect |
+| `pof.disconnected` | `{ reason, failureCount }` | Three consecutive health check failures |
+| `pof.error` | `{ code, message }` | Non-connection errors (auth failure, server error) |
+
+**Zustand store (`pofBridgeStore`):**
+
+The store persists user-configurable connection settings and caches runtime state:
+
+```typescript
+interface PofBridgeState {
+  // Persisted (localStorage)
+  port: number;             // Default: 30040
+  authToken: string;        // Default: '' (no auth)
+  autoDetect: boolean;      // Default: true
+
+  // Runtime (not persisted)
+  connected: boolean;
+  pluginVersion: string | null;
+  engineVersion: string | null;
+  editorState: string | null;
+  manifest: AssetManifest | null;
+  manifestChecksum: string | null;
+  lastHealthCheck: string | null;
+}
+```
+
+### 11.4 Manifest Verification System
+
+The verification system bridges the gap between the plugin's asset manifest and PoF's Feature Matrix. It enables automatic status assessment of Feature Matrix entries based on actual Editor state.
+
+**`VerificationRule` objects** define how to check a single feature:
+
+```typescript
+interface VerificationRule {
+  featureName: string;      // Matches FeatureRow.featureName
+  moduleId: SubModuleId;    // Target module
+  check: (manifest: AssetManifest) => FeatureStatus;
+}
+```
+
+Each rule's `check` function receives the full manifest and returns a `FeatureStatus` value (`'implemented' | 'improved' | 'partial' | 'missing' | 'unknown'`).
+
+**Verification engine workflow:**
+
+1. `runVerification(manifest, rules)` executes all rules and returns `VerificationResult[]`, each containing the rule's `featureName`, `moduleId`, computed `status`, and an optional `reason` string.
+2. `autoUpdateFeatureMatrix(results, currentMatrix)` compares computed statuses against the current Feature Matrix. For each entry where the status differs, it issues a batch update via the Feature Matrix API.
+3. Updated entries emit `checklist.item.changed` events with `source: 'auto-verify'` so the activity feed and other listeners can distinguish automatic verification from manual edits.
+
+**Rule inspection strategies:**
+
+Rules determine status by inspecting manifest data using patterns such as:
+
+- **Blueprint path patterns and parent classes:** Check that a Blueprint exists at the expected path and inherits from the correct C++ base class.
+- **Component presence:** Verify that a Blueprint has specific `UActorComponent` subclasses (e.g., `UAbilitySystemComponent`, `USphereComponent`).
+- **Animation asset types and state machine counts:** Confirm AnimBlueprint entries contain the expected number of state machines with the correct state names.
+- **Material parameter presence:** Verify that a material exposes specific scalar, vector, or texture parameters.
+- **Data table row structures:** Check that a DataTable has the expected `rowStruct` and column names.
+- **Other asset classes:** Look for `InputAction`, `BehaviorTree`, `World`, or other asset types by class name.
+
+### 11.5 React Hook Layer
+
+All bridge interactions are exposed to React components through dedicated hooks. Each hook manages its own loading/error state and integrates with the `pofBridgeStore`.
+
+| Hook | Purpose | Data Flow |
+|---|---|---|
+| `useManifest` | Manifest fetching with checksum-based polling | `GET /api/pof-bridge/manifest` -> `pofBridgeStore.manifest` |
+| `usePofBridge` | Connection state, connect/disconnect actions | `PofBridgeConnectionManager` -> `pofBridgeStore` |
+| `useTestRunner` | Test spec submission, result polling, test history | `POST /api/pof-bridge/test` -> `GET /api/pof-bridge/test` |
+| `useSnapshots` | Snapshot capture trigger, diff report retrieval | `POST /api/pof-bridge/snapshot` -> `GET /api/pof-bridge/snapshot` |
+| `useLiveCoding` | Compile trigger, status polling, diagnostic display | `POST /api/pof-bridge/compile` -> `GET /api/pof-bridge/compile` |
+
+**`useManifest` polling strategy:**
+
+1. On mount (if connected): fetch checksum via `?checksum-only=true`.
+2. Compare returned checksum against `pofBridgeStore.manifestChecksum`.
+3. If different: fetch full manifest and update store.
+4. Re-poll checksum every 30 seconds while mounted.
+5. On `pof.connected` event: immediately fetch full manifest.
+
+### 11.6 Module-to-Plugin Data Flow
+
+When the bridge is connected and a manifest is available, individual PoF modules display real UE5 project data instead of placeholder or manually-entered content.
+
+| Module / Component | Manifest Data Used | Behavior |
+|---|---|---|
+| **AnimationStateMachine** | `manifest.animAssets` (ABP entries with `stateMachines`) | Renders real state machine graphs with states and transitions extracted from AnimBlueprint assets. Falls back to manual entry when disconnected. |
+| **MaterialParameterConfigurator** | `manifest.materials[].parameters` | Displays actual scalar, vector, and texture parameters for each material. Enables live parameter preview when combined with Remote Control API. |
+| **AssetInventory** | All manifest arrays | Shows real asset counts grouped by class (`Blueprint`, `Material`, `AnimMontage`, `DataTable`, `World`, etc.). Replaces the manually-maintained count when connected. |
+| **DependencyGraph** | `manifest.*.crossReferences` | Overlays manifest cross-reference edges onto the existing feature dependency graph, highlighting which features have real asset backing. |
+| **FeatureMatrix** | Full manifest via verification rules | Adds an "Auto-Verify" button that runs all `VerificationRule` entries against the current manifest and batch-updates changed feature statuses. |
+| **TopBar** | `pofBridgeStore.connected` | Displays a PoF Bridge connection indicator: green dot when connected, gray when disconnected, amber during reconnection attempts. |
+
+### 11.7 Event Bus Integration
+
+The PoF event bus (defined in `src/types/event-bus.ts`) gains new channels for bridge events. These channels allow any component or service to react to bridge state changes without direct coupling to the store or connection manager.
+
+**New `PofBridgeEvents` channels:**
+
+| Channel | Payload | Emitted When |
+|---|---|---|
+| `pof.connected` | `{ port, pluginVersion, engineVersion }` | Bridge connection established |
+| `pof.disconnected` | `{ reason, failureCount }` | Bridge connection lost |
+| `pof.error` | `{ code, message }` | Bridge returns an error response |
+| `pof.manifest.updated` | `{ assetCount, checksum }` | New manifest fetched and stored |
+| `pof.test.completed` | `{ testId, status, assertionsPassed, assertionsFailed }` | Test execution finishes |
+| `pof.snapshot.captured` | `{ presetIds, diffStatus }` | Snapshot capture and diff complete |
+| `pof.compile.completed` | `{ status, errorCount, warningCount, durationMs }` | Live Coding compilation finishes |
+
+**Event bus bridge wiring:**
+
+The `event-bus-bridge.ts` module subscribes to `PofBridgeConnectionManager` callbacks and translates them into event bus emissions. This feeds the activity feed panel, toast notifications, and any module-level listeners.
+
+**Verification events:**
+
+When the verification engine updates Feature Matrix entries, it emits `checklist.item.changed` events with `source: 'auto-verify'` to distinguish these updates from manual user edits. The activity feed renders auto-verify updates with a distinct icon and label.
+
+### 11.8 Verification Rule Format
+
+Verification rules are the primary mechanism for translating raw manifest data into Feature Matrix status assessments. Each rule targets a specific feature within a specific module.
+
+```typescript
+interface VerificationRule {
+  featureName: string;      // Matches FeatureRow.featureName
+  moduleId: SubModuleId;    // Target module
+  check: (manifest: AssetManifest) => FeatureStatus;
+}
+```
+
+**Rule examples by inspection strategy:**
+
+```typescript
+// Blueprint path + parent class check
+{
+  featureName: 'Character Foundation',
+  moduleId: 'arpg-character',
+  check: (manifest) => {
+    const bp = manifest.blueprints.find(b => b.path.includes('BP_PlayerCharacter'));
+    if (!bp) return 'missing';
+    if (!bp.parentCppClass.includes('Character')) return 'partial';
+    return 'implemented';
+  }
+}
+
+// Component presence check
+{
+  featureName: 'GAS Integration',
+  moduleId: 'arpg-gas',
+  check: (manifest) => {
+    const hasASC = manifest.blueprints.some(bp =>
+      bp.addedComponents.some(c => c.class === 'UAbilitySystemComponent')
+    );
+    return hasASC ? 'implemented' : 'missing';
+  }
+}
+
+// Animation state machine count check
+{
+  featureName: 'Locomotion System',
+  moduleId: 'arpg-animation',
+  check: (manifest) => {
+    const abp = manifest.animAssets.find(
+      a => a.assetType === 'AnimBlueprint' && a.path.includes('ABP_Player')
+    );
+    if (!abp) return 'missing';
+    const locoSM = abp.stateMachines?.find(sm => sm.name === 'Locomotion');
+    if (!locoSM) return 'partial';
+    return locoSM.states.length >= 3 ? 'implemented' : 'partial';
+  }
+}
+
+// Material parameter presence check
+{
+  featureName: 'Character Material Setup',
+  moduleId: 'arpg-materials',
+  check: (manifest) => {
+    const mat = manifest.materials.find(m => m.path.includes('M_Character'));
+    if (!mat) return 'missing';
+    const hasBaseColor = mat.parameters.some(p => p.name === 'BaseColor');
+    const hasNormal = mat.parameters.some(p => p.name === 'NormalMap' || p.name === 'Normal');
+    return (hasBaseColor && hasNormal) ? 'implemented' : 'partial';
+  }
+}
+
+// Data table row structure check
+{
+  featureName: 'Weapon Stats Table',
+  moduleId: 'arpg-combat',
+  check: (manifest) => {
+    const dt = manifest.dataTables.find(d => d.path.includes('DT_WeaponStats'));
+    if (!dt) return 'missing';
+    const requiredCols = ['BaseDamage', 'AttackSpeed', 'Range'];
+    const hasCols = requiredCols.every(c => dt.columnNames.includes(c));
+    return hasCols ? 'implemented' : 'partial';
+  }
+}
+```
+
+### 11.9 Extensibility Guide
+
+The integration layer is designed for straightforward extension as new plugin capabilities are added.
+
+**Adding new verification rules:**
+
+1. Open `src/lib/pof-bridge/verification-rules.ts`.
+2. Add a new `VerificationRule` object to the `verificationRules` array.
+3. The rule's `check` function receives the full `AssetManifest` and returns a `FeatureStatus`.
+4. The rule is automatically picked up by `runVerification()` on the next auto-verify cycle.
+
+**Adding new event channels:**
+
+1. Open `src/types/event-bus.ts`.
+2. Add the new channel name and payload type to the `PofBridgeEvents` interface.
+3. Emit the event from the appropriate location (connection manager, hook, or verification engine).
+4. Subscribe in any component or service that needs to react.
+
+**Adding new proxy routes:**
+
+1. Create a new directory under `src/app/api/pof-bridge/{endpoint-name}/`.
+2. Add a `route.ts` file with the appropriate HTTP method handlers.
+3. Use `getPofBridgeUrl()` and `getPofAuthHeaders()` from `src/lib/pof-bridge/client.ts` for consistent proxy behavior.
+4. Handle the `BRIDGE_UNREACHABLE` error case with a 503 response.
+
+**Adding new hooks:**
+
+1. Create a new hook file under `src/hooks/` (e.g., `useNewFeature.ts`).
+2. Use `usePofBridge()` to check connection state before making requests.
+3. Integrate with `pofBridgeStore` for caching if the data is shared across components.
+4. Emit appropriate event bus events for cross-component reactivity.
+
+### 11.10 File Manifest
+
+All files involved in the PoF web app integration layer:
+
+**Types:**
+
+- `src/types/pof-bridge.ts` -- `AssetManifest`, `VerificationRule`, `VerificationResult`, `PofBridgeStatus`, `CompileResult`, `TestResult`, `SnapshotDiffReport` type definitions.
+- `src/types/event-bus.ts` -- Modified to include `PofBridgeEvents` channel definitions.
+
+**Client and connection management:**
+
+- `src/lib/pof-bridge/client.ts` -- `getPofBridgeUrl()`, `getPofAuthHeaders()`, low-level fetch wrappers for the proxy layer.
+- `src/lib/pof-bridge/connection-manager.ts` -- `PofBridgeConnectionManager` singleton with health check polling, exponential backoff reconnection, and event emission.
+
+**Verification:**
+
+- `src/lib/pof-bridge/verification-rules.ts` -- Array of `VerificationRule` objects covering all Feature Matrix-verifiable features.
+- `src/lib/pof-bridge/verification-engine.ts` -- `runVerification()` and `autoUpdateFeatureMatrix()` functions.
+
+**Store:**
+
+- `src/stores/pofBridgeStore.ts` -- Zustand store for connection settings (persisted) and runtime state (manifest cache, connection status).
+
+**API proxy routes:**
+
+- `src/app/api/pof-bridge/status/route.ts` -- Proxies to `GET /pof/status`.
+- `src/app/api/pof-bridge/manifest/route.ts` -- Proxies to `GET /pof/manifest`.
+- `src/app/api/pof-bridge/test/route.ts` -- Proxies to `POST /pof/test/run` and `GET /pof/test/results`.
+- `src/app/api/pof-bridge/snapshot/route.ts` -- Proxies to `POST /pof/snapshot/capture` and `GET /pof/snapshot/diff`.
+- `src/app/api/pof-bridge/compile/route.ts` -- Proxies to `POST /pof/compile/live` and `GET /pof/compile/status`.
+
+**React hooks:**
+
+- `src/hooks/useManifest.ts` -- Manifest fetching with checksum-based polling.
+- `src/hooks/usePofBridge.ts` -- Connection state and connect/disconnect actions.
+- `src/hooks/useTestRunner.ts` -- Test spec submission and result polling.
+- `src/hooks/useSnapshots.ts` -- Snapshot capture trigger and diff report retrieval.
+- `src/hooks/useLiveCoding.ts` -- Compile trigger and status polling.
+
+**Modified existing files:**
+
+- `src/lib/constants.ts` -- Added `POF_BRIDGE_DEFAULT_PORT`, `POF_BRIDGE_HEALTH_INTERVAL_MS`, `POF_BRIDGE_RECONNECT_BASE_MS`, `POF_BRIDGE_RECONNECT_MAX_MS` constants.
+- `src/lib/event-bus-bridge.ts` -- Added wiring for `PofBridgeConnectionManager` events to the event bus.

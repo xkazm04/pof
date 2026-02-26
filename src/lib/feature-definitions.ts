@@ -33,6 +33,16 @@ export const MODULE_PREREQUISITES: Partial<Record<SubModuleId, SubModuleId[]>> =
   'input-handling': [],
   'dialogue-quests': [],
   'packaging': [],
+
+  // Visual Generation (Asset Studio)
+  'asset-viewer': [],
+  'asset-forge': ['asset-viewer'],
+  'material-lab': ['asset-viewer'],
+  'blender-pipeline': [],
+  'asset-browser': [],
+  'import-automation': ['asset-viewer', 'blender-pipeline'],
+  'auto-rig': ['asset-viewer'],
+  'procedural-engine': ['asset-viewer'],
 };
 
 /** Modules that depend on `moduleId` (i.e. moduleId is a prerequisite for them). */

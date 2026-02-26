@@ -101,6 +101,17 @@ export interface BuildPipelineEvents {
   'build.aborted': { buildId: string };
 }
 
+/** PoF Companion Plugin bridge events */
+export interface PofBridgeEvents {
+  'pof.connected': { pluginVersion: string; engineVersion: string; projectName: string };
+  'pof.disconnected': { reason?: string };
+  'pof.error': { message: string };
+  'pof.manifest.updated': { assetCount: number; checksum: string };
+  'pof.test.completed': { testId: string; status: 'passed' | 'failed' | 'error'; assertionsPassed: number; assertionsFailed: number };
+  'pof.snapshot.captured': { presetIds: string[]; overallStatus: string };
+  'pof.compile.completed': { status: string; errorCount: number; warningCount: number; durationMs: number };
+}
+
 /** Navigation events */
 export interface NavigationEvents {
   'nav.module.changed': {
@@ -121,7 +132,8 @@ export interface EventMap
     FileEvents,
     NavigationEvents,
     UE5Events,
-    BuildPipelineEvents {}
+    BuildPipelineEvents,
+    PofBridgeEvents {}
 
 /** Any valid channel name */
 export type EventChannel = keyof EventMap;

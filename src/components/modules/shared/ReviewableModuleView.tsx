@@ -95,23 +95,28 @@ export function ReviewableModuleView({
   const activeItemIdRef = useRef<string | null>(null);
   const checklistRef = useRef(checklist);
   checklistRef.current = checklist;
+  const batchQueueRef = useRef(batchQueue);
+  batchQueueRef.current = batchQueue;
 
-  // Helper: advance to next batch item (shared by onComplete and watchdog)
+  // Helper: advance to next batch item (shared by onComplete and watchdog).
+  // Reads from batchQueueRef to avoid stale closures, then performs a pure
+  // state update followed by a separate side-effect (setTimeout).
   const advanceBatch = useCallback(() => {
-    setBatchQueue((prev) => {
-      if (prev.length === 0) return prev;
-      const [nextId, ...rest] = prev;
-      const nextItem = checklistRef.current.find((c) => c.id === nextId);
-      if (nextItem) {
-        setTimeout(() => {
-          activeItemIdRef.current = nextId;
-          setActiveItemId(nextId);
-          const task = TaskFactory.checklist(moduleId, nextId, nextItem.prompt, moduleLabel, appOrigin);
-          checklistCliRef.current?.execute(task);
-        }, UI_TIMEOUTS.batchItemDelay);
-      }
-      return rest;
-    });
+    const queue = batchQueueRef.current;
+    if (queue.length === 0) return;
+
+    const [nextId, ...rest] = queue;
+    setBatchQueue(rest);
+
+    const nextItem = checklistRef.current.find((c) => c.id === nextId);
+    if (nextItem) {
+      setTimeout(() => {
+        activeItemIdRef.current = nextId;
+        setActiveItemId(nextId);
+        const task = TaskFactory.checklist(moduleId, nextId, nextItem.prompt, moduleLabel, appOrigin);
+        checklistCliRef.current?.execute(task);
+      }, UI_TIMEOUTS.batchItemDelay);
+    }
   }, [moduleId, moduleLabel, appOrigin]);
 
   const handleChecklistComplete = useCallback((success: boolean) => {
@@ -344,7 +349,7 @@ export function ReviewableModuleView({
         )}
 
         {extraTabs.map((tab) => (
-          activeTab === tab.id ? <div key={tab.id}>{tab.render(moduleId)}</div> : null
+          activeTab === tab.id ? <div key={tab.id} className="flex flex-col" style={{ minHeight: 'calc(100vh - 180px)' }}>{tab.render(moduleId)}</div> : null
         ))}
       </div>
 

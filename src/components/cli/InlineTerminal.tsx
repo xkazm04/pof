@@ -149,7 +149,7 @@ export function InlineTerminal({
           title={session.label}
           className="h-full"
           enabledSkills={session.enabledSkills}
-          onStreamingChange={(streaming) => setSessionRunning(sessionId, streaming)}
+          onStreamingChange={(streaming) => { if (streaming) setSessionRunning(sessionId, true); }}
           onTaskComplete={(_taskId, success) => setSessionRunning(sessionId, false, success)}
           visible={visible}
         />

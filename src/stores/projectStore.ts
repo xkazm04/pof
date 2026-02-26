@@ -124,10 +124,17 @@ export const useProjectStore = create<ProjectState>()(
         try {
           const data = await apiFetch<{
             scannedAt: string;
+            projectType?: DynamicProjectContext['projectType'];
             classes: DynamicProjectContext['classes'];
             plugins: DynamicProjectContext['plugins'];
             buildDependencies: DynamicProjectContext['buildDependencies'];
             sourceFileCount: number;
+            framework?: string;
+            apiRoutes?: string[];
+            databaseType?: string;
+            hasMcp?: boolean;
+            mcpServerNames?: string[];
+            mcpInstructions?: string;
           }>('/api/filesystem/scan-project', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -138,10 +145,17 @@ export const useProjectStore = create<ProjectState>()(
             scanError: null,
             dynamicContext: {
               scannedAt: data.scannedAt,
+              projectType: data.projectType ?? 'ue5',
               classes: data.classes,
               plugins: data.plugins,
               buildDependencies: data.buildDependencies,
               sourceFileCount: data.sourceFileCount,
+              framework: data.framework,
+              apiRoutes: data.apiRoutes,
+              databaseType: data.databaseType,
+              hasMcp: data.hasMcp,
+              mcpServerNames: data.mcpServerNames,
+              mcpInstructions: data.mcpInstructions,
             },
           });
         } catch (err) {

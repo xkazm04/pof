@@ -1070,7 +1070,7 @@ function FeatureRowItem({
         <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: cfg.color }} />
 
         {/* Feature name */}
-        <span className="text-sm text-[#d0d4e8] flex-1 min-w-0 truncate">
+        <span className="text-sm text-[#d0d4e8] w-[150px] flex-shrink-0 truncate">
           {feature.featureName}
         </span>
 

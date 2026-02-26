@@ -1,0 +1,85 @@
+'use client';
+
+import { CheckCircle, AlertCircle, Loader2, X, Trash2 } from 'lucide-react';
+import { useBlenderStore, type ScriptJob, type ScriptStatus } from './useBlenderStore';
+
+const STATUS_CONFIG: Record<ScriptStatus, { icon: typeof Loader2; color: string; label: string }> = {
+  idle: { icon: Loader2, color: 'text-text-muted', label: 'Idle' },
+  running: { icon: Loader2, color: 'text-[var(--visual-gen)]', label: 'Running' },
+  completed: { icon: CheckCircle, color: 'text-emerald-400', label: 'Done' },
+  failed: { icon: AlertCircle, color: 'text-red-400', label: 'Failed' },
+};
+
+function ScriptCard({ job }: { job: ScriptJob }) {
+  const removeScript = useBlenderStore((s) => s.removeScript);
+  const config = STATUS_CONFIG[job.status];
+  const StatusIcon = config.icon;
+
+  const elapsed = job.completedAt
+    ? ((job.completedAt - job.startedAt) / 1000).toFixed(1)
+    : ((Date.now() - job.startedAt) / 1000).toFixed(0);
+
+  return (
+    <div className="rounded-lg border border-border bg-surface/50 overflow-hidden">
+      <div className="flex items-center gap-2 px-3 py-2 border-b border-border">
+        <StatusIcon
+          size={14}
+          className={`${config.color} ${job.status === 'running' ? 'animate-spin' : ''}`}
+        />
+        <span className="text-xs font-medium text-text flex-1">{job.scriptName}</span>
+        <span className="text-[10px] text-text-muted">{elapsed}s</span>
+        <button onClick={() => removeScript(job.id)} className="text-text-muted hover:text-text">
+          <X size={12} />
+        </button>
+      </div>
+      {job.output && (
+        <pre className="px-3 py-2 text-[10px] font-mono text-text-muted max-h-32 overflow-y-auto whitespace-pre-wrap">
+          {job.output}
+        </pre>
+      )}
+      {job.error && (
+        <div className="px-3 py-2 text-[10px] text-red-400">{job.error}</div>
+      )}
+    </div>
+  );
+}
+
+export function ScriptRunner() {
+  const scripts = useBlenderStore((s) => s.scripts);
+  const clearCompleted = useBlenderStore((s) => s.clearCompleted);
+
+  if (scripts.length === 0) {
+    return (
+      <div className="text-center py-6">
+        <p className="text-xs text-text-muted">No scripts have been run yet.</p>
+        <p className="text-xs text-text-muted mt-1">
+          Configure Blender above, then use the Roadmap checklist to run pipeline scripts.
+        </p>
+      </div>
+    );
+  }
+
+  const hasCompleted = scripts.some((s) => s.status === 'completed' || s.status === 'failed');
+
+  return (
+    <div className="space-y-2">
+      <div className="flex items-center justify-between">
+        <h3 className="text-xs font-medium text-text">Script History ({scripts.length})</h3>
+        {hasCompleted && (
+          <button
+            onClick={clearCompleted}
+            className="flex items-center gap-1 text-[10px] text-text-muted hover:text-text"
+          >
+            <Trash2 size={10} />
+            Clear finished
+          </button>
+        )}
+      </div>
+      <div className="space-y-2">
+        {scripts.map((job) => (
+          <ScriptCard key={job.id} job={job} />
+        ))}
+      </div>
+    </div>
+  );
+}

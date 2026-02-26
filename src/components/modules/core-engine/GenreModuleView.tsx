@@ -6,8 +6,7 @@ import { SUB_MODULE_MAP } from '@/lib/module-registry';
 import { ReviewableModuleView } from '../shared/ReviewableModuleView';
 import type { ExtraTab } from '../shared/ReviewableModuleView';
 import type { SubModuleId } from '@/types/modules';
-import { Dna, ScanSearch } from 'lucide-react';
-import { TelemetryEvolution } from './TelemetryEvolution';
+import { ScanSearch } from 'lucide-react';
 import { ScanTab } from './ScanTab';
 import { getUniqueTab } from './unique-tabs';
 
@@ -23,18 +22,11 @@ function buildExtraTabs(moduleId: SubModuleId): ExtraTab[] {
     },
   ];
 
-  // Insert the unique domain-specific tab (between Scan and Evolution)
+  // Insert the unique domain-specific tab after Scan
   const uniqueTab = getUniqueTab(moduleId);
   if (uniqueTab) {
     tabs.push(uniqueTab);
   }
-
-  tabs.push({
-    id: 'evolution',
-    label: 'Evolution',
-    icon: Dna,
-    render: () => <TelemetryEvolution />,
-  });
 
   return tabs;
 }

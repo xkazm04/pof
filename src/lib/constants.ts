@@ -67,4 +67,14 @@ export const UI_TIMEOUTS = {
   buildPollInterval: 3_000,
   /** Maximum time for a headless build process (10 min). */
   buildProcessTimeout: 600_000,
+  /** Poll interval for PoF Bridge health check. */
+  pofHealthCheck: 10_000,
+  /** Base delay for PoF Bridge reconnection attempts. */
+  pofReconnectBase: 2_000,
+  /** Maximum delay between PoF Bridge reconnection attempts. */
+  pofReconnectMax: 30_000,
+  /** Poll interval for manifest checksum change detection. */
+  pofManifestPoll: 30_000,
+  /** Timeout for individual PoF Bridge HTTP requests. */
+  pofHttpTimeout: 15_000,
 } as const;

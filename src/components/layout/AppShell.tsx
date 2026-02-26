@@ -15,6 +15,7 @@ import { useActivityFeedBridge } from '@/hooks/useActivityFeedBridge';
 import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts';
 import { useFileWatcher } from '@/hooks/useFileWatcher';
 import { useDynamicTitle } from '@/hooks/useDynamicTitle';
+import { usePofBridge } from '@/hooks/usePofBridge';
 import { GlobalSearchPanel } from './GlobalSearchPanel';
 import { EventBusDevTools } from './EventBusDevTools';
 
@@ -33,6 +34,9 @@ export function AppShell() {
 
   // Dynamic browser tab title + favicon based on CLI task status
   useDynamicTitle();
+
+  // PoF Bridge plugin auto-connection (connects to UE5 plugin HTTP server)
+  usePofBridge();
 
   // Warn before closing/refreshing when CLI tasks are actively running
   useEffect(() => {

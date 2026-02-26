@@ -213,11 +213,13 @@ export interface ModuleScanTask extends CLITask {
  * add their own sections.
  */
 export function buildTaskPrompt(task: CLITask, ctx: ProjectContext): string {
+  const isUE5 = !ctx.dynamicContext?.projectType || ctx.dynamicContext.projectType === 'ue5';
+
   switch (task.type) {
     case 'checklist': {
       const ct = task as ChecklistTask;
       const header = buildProjectContextHeader(ctx);
-      const domainContext = getModuleDomainContext(task.moduleId);
+      const domainContext = isUE5 ? getModuleDomainContext(task.moduleId) : undefined;
       const domainSection = domainContext
         ? `\n\n## Domain Context\n${domainContext}`
         : '';
@@ -239,7 +241,7 @@ export function buildTaskPrompt(task: CLITask, ctx: ProjectContext): string {
     case 'quick-action':
     case 'ask-claude': {
       const header = buildProjectContextHeader(ctx);
-      const domainContext = getModuleDomainContext(task.moduleId);
+      const domainContext = isUE5 ? getModuleDomainContext(task.moduleId) : undefined;
       const domainSection = domainContext
         ? `\n\n## Domain Context\n${domainContext}`
         : '';
@@ -249,7 +251,7 @@ export function buildTaskPrompt(task: CLITask, ctx: ProjectContext): string {
     case 'feature-fix': {
       const ft = task as FeatureFixTask;
       const header = buildProjectContextHeader(ctx);
-      const domainContext = getModuleDomainContext(task.moduleId);
+      const domainContext = isUE5 ? getModuleDomainContext(task.moduleId) : undefined;
       const domainSection = domainContext
         ? `\n\n## Domain Context\n${domainContext}`
         : '';
@@ -281,7 +283,7 @@ export function buildTaskPrompt(task: CLITask, ctx: ProjectContext): string {
         includeBuildCommand: false,
         includeRules: false,
       });
-      const domainContext = getModuleDomainContext(task.moduleId);
+      const domainContext = isUE5 ? getModuleDomainContext(task.moduleId) : undefined;
       const domainSection = domainContext
         ? `\n\n## Domain Context\n${domainContext}`
         : '';
@@ -302,13 +304,30 @@ export function buildTaskPrompt(task: CLITask, ctx: ProjectContext): string {
       "category": "<category>",
       "status": "implemented|partial|missing|unknown",
       "description": "<your description of what exists>",
-      "filePaths": ["Source/path/to/File.h"],
+      "filePaths": ["${isUE5 ? 'Source/path/to/File.h' : 'src/path/to/file.ts'}"],
       "reviewNotes": "<brief explanation>",
       "qualityScore": <1-5 or null if missing>,
       "nextSteps": "<concrete actions to reach pro quality>"
     }
   ]`,
       });
+
+      const searchInstr = isUE5
+        ? `1. For each feature, search Source/${moduleName}/ for relevant C++ classes, headers, and config.`
+        : `1. For each feature, search the project source code for relevant implementations.`;
+
+      const qualityRef = isUE5
+        ? '   - **5**: Pro / production-grade — robust, optimized, follows UE best practices'
+        : '   - **5**: Pro / production-grade — robust, optimized, follows best practices';
+
+      const reviewRules = isUE5
+        ? `### Rules
+- Do NOT modify any project files — this is a read-only review.
+- Do NOT use TodoWrite or Task/Explore tools.
+- Do NOT write any files to disk — submit results using the callback format below.`
+        : `### Rules
+- Do NOT modify any project files — this is a read-only review.
+- Do NOT write any files to disk — submit results using the callback format below.`;
 
       return `${header}${domainSection}
 
@@ -320,7 +339,7 @@ Scan the project source code and determine the implementation status of each fea
 ${featureList}
 
 ### Instructions
-1. For each feature, search Source/${moduleName}/ for relevant C++ classes, headers, and config.
+${searchInstr}
 2. Determine the status:
    - **implemented**: Feature is fully present and functional code exists
    - **partial**: Some parts exist but incomplete (e.g., class exists but methods are empty)
@@ -333,14 +352,11 @@ ${featureList}
    - **2**: Basic skeleton — compiles but lacks core behavior
    - **3**: Functional — works for basic cases, needs polish
    - **4**: Solid — handles edge cases, good structure, minor gaps
-   - **5**: Pro / production-grade — robust, optimized, follows UE best practices
+${qualityRef}
    For missing features, use \`null\`.
-6. Write **nextSteps**: a concise list of what is needed to reach quality 5 (pro-grade mechanics). Focus on concrete actions: missing methods, unhandled edge cases, performance gaps, UE best practices not yet followed. For features already at 5, write "None — production ready." For missing features, describe what needs to be built from scratch.
+6. Write **nextSteps**: a concise list of what is needed to reach quality 5 (pro-grade). Focus on concrete actions: missing methods, unhandled edge cases, performance gaps, best practices not yet followed. For features already at 5, write "None — production ready." For missing features, describe what needs to be built from scratch.
 
-### Rules
-- Do NOT modify any project files — this is a read-only review.
-- Do NOT use TodoWrite or Task/Explore tools.
-- Do NOT write any files to disk — submit results using the callback format below.
+${reviewRules}
 
 Include ALL features from the list, even if missing. Use the EXACT featureName strings.
 

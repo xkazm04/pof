@@ -1,6 +1,6 @@
 import type { LucideIcon } from 'lucide-react';
 
-export type CategoryId = 'project-setup' | 'core-engine' | 'content' | 'game-systems' | 'evaluator' | 'game-director';
+export type CategoryId = 'project-setup' | 'core-engine' | 'content' | 'game-systems' | 'evaluator' | 'game-director' | 'visual-gen';
 
 /** Canonical list of all sub-module IDs — add new modules here and the type updates automatically. */
 export const SUB_MODULE_IDS = [
@@ -36,6 +36,15 @@ export const SUB_MODULE_IDS = [
   'blueprint-transpiler',
   // Evaluator
   'game-design-doc',
+  // Visual Generation (Asset Studio)
+  'asset-viewer',
+  'asset-forge',
+  'material-lab',
+  'blender-pipeline',
+  'asset-browser',
+  'import-automation',
+  'auto-rig',
+  'procedural-engine',
 ] as const;
 
 export type SubModuleId = (typeof SUB_MODULE_IDS)[number];

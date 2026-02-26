@@ -2,6 +2,7 @@ import { NextRequest } from 'next/server';
 import fs from 'fs/promises';
 import path from 'path';
 import { apiSuccess, apiError } from '@/lib/api-utils';
+import type { ProjectType } from '@/lib/prompt-context';
 
 // ── Types ──
 
@@ -24,10 +25,20 @@ export interface ScannedDependency {
 
 export interface ProjectScanResult {
   scannedAt: string;
+  projectType: ProjectType;
+  // UE5 fields
   classes: ScannedClass[];
   plugins: ScannedPlugin[];
   buildDependencies: ScannedDependency[];
   sourceFileCount: number;
+  // Web-app fields
+  framework?: string;
+  apiRoutes?: string[];
+  databaseType?: string;
+  // MCP fields
+  hasMcp?: boolean;
+  mcpServerNames?: string[];
+  mcpInstructions?: string;
   /** Milliseconds taken to perform the scan */
   scanDurationMs: number;
 }
@@ -230,9 +241,151 @@ async function scanLocalPlugins(projectPath: string): Promise<ScannedPlugin[]> {
   return plugins;
 }
 
-// ── Main scan function ──
+// ── Project type detection ──
 
-async function scanProject(projectPath: string, moduleName: string): Promise<ProjectScanResult> {
+interface DetectedProjectInfo {
+  projectType: ProjectType;
+  framework?: string;
+  databaseType?: string;
+}
+
+const DB_DETECTORS: { pkg: string; label: string }[] = [
+  { pkg: '@supabase/supabase-js', label: 'Supabase (PostgreSQL)' },
+  { pkg: 'prisma', label: 'Prisma' },
+  { pkg: '@prisma/client', label: 'Prisma' },
+  { pkg: 'better-sqlite3', label: 'SQLite' },
+  { pkg: 'pg', label: 'PostgreSQL' },
+  { pkg: 'mysql2', label: 'MySQL' },
+  { pkg: 'mongodb', label: 'MongoDB' },
+  { pkg: 'mongoose', label: 'MongoDB' },
+  { pkg: 'drizzle-orm', label: 'Drizzle ORM' },
+  { pkg: 'typeorm', label: 'TypeORM' },
+];
+
+async function detectProjectType(projectPath: string): Promise<DetectedProjectInfo> {
+  // Check for .uproject file (UE5)
+  try {
+    const entries = await fs.readdir(projectPath);
+    if (entries.some((e) => e.endsWith('.uproject'))) {
+      return { projectType: 'ue5' };
+    }
+  } catch { /* skip */ }
+
+  // Check for package.json (web app)
+  const pkgPath = path.join(projectPath, 'package.json');
+  if (await fileExists(pkgPath)) {
+    try {
+      const content = await fs.readFile(pkgPath, 'utf-8');
+      const pkg = JSON.parse(content);
+      const allDeps = { ...pkg.dependencies, ...pkg.devDependencies };
+
+      // Detect framework
+      let framework: string | undefined;
+      if (allDeps['next']) {
+        framework = `Next.js ${allDeps['next'].replace(/[\^~]/, '')}`;
+      } else if (allDeps['nuxt']) {
+        framework = 'Nuxt';
+      } else if (allDeps['@angular/core']) {
+        framework = 'Angular';
+      } else if (allDeps['react']) {
+        framework = 'React';
+      } else if (allDeps['vue']) {
+        framework = 'Vue';
+      } else if (allDeps['express']) {
+        framework = 'Express';
+      }
+
+      const projectType: ProjectType = allDeps['next'] ? 'nextjs' : 'generic';
+
+      // Detect database
+      let databaseType: string | undefined;
+      for (const det of DB_DETECTORS) {
+        if (allDeps[det.pkg]) {
+          databaseType = det.label;
+          break;
+        }
+      }
+
+      return { projectType, framework, databaseType };
+    } catch { /* skip */ }
+  }
+
+  return { projectType: 'generic' };
+}
+
+/**
+ * Scan for API route directories in a Next.js project.
+ * Checks src/app/api/, app/api/, and pages/api/ for route handler directories.
+ */
+async function scanApiRoutes(projectPath: string): Promise<string[]> {
+  const candidates = [
+    path.join(projectPath, 'src', 'app', 'api'),
+    path.join(projectPath, 'app', 'api'),
+  ];
+
+  const routes: string[] = [];
+
+  for (const apiDir of candidates) {
+    if (!(await directoryExists(apiDir))) continue;
+
+    try {
+      const entries = await fs.readdir(apiDir, { withFileTypes: true });
+      for (const entry of entries) {
+        if (!entry.isDirectory()) continue;
+        // Check if it has a route.ts/route.js handler
+        const routeDir = path.join(apiDir, entry.name);
+        const hasRoute = await hasRouteFile(routeDir);
+        if (hasRoute) {
+          routes.push(`/api/${entry.name}`);
+        }
+        // Also check one level deeper for nested routes
+        try {
+          const subEntries = await fs.readdir(routeDir, { withFileTypes: true });
+          for (const sub of subEntries) {
+            if (!sub.isDirectory()) continue;
+            const subDir = path.join(routeDir, sub.name);
+            if (await hasRouteFile(subDir)) {
+              routes.push(`/api/${entry.name}/${sub.name}`);
+            }
+          }
+        } catch { /* skip */ }
+      }
+    } catch { /* skip */ }
+    // Stop after first valid api directory found
+    if (routes.length > 0) break;
+  }
+
+  // Also check pages/api/ (Pages Router)
+  if (routes.length === 0) {
+    const pagesApiDir = path.join(projectPath, 'pages', 'api');
+    if (await directoryExists(pagesApiDir)) {
+      try {
+        const entries = await fs.readdir(pagesApiDir, { withFileTypes: true });
+        for (const entry of entries) {
+          if (entry.isFile() && /\.(ts|js|tsx|jsx)$/.test(entry.name)) {
+            const name = entry.name.replace(/\.(ts|js|tsx|jsx)$/, '');
+            if (name !== 'index') routes.push(`/api/${name}`);
+          } else if (entry.isDirectory()) {
+            routes.push(`/api/${entry.name}`);
+          }
+        }
+      } catch { /* skip */ }
+    }
+  }
+
+  return routes.sort();
+}
+
+async function hasRouteFile(dir: string): Promise<boolean> {
+  for (const name of ['route.ts', 'route.js', 'route.tsx', 'route.jsx']) {
+    if (await fileExists(path.join(dir, name))) return true;
+  }
+  return false;
+}
+
+// ── Main scan function (UE5) ──
+
+async function scanUE5Project(projectPath: string, moduleName: string): Promise<ProjectScanResult> {
   const startTime = Date.now();
 
   const sourceRoot = path.join(projectPath, 'Source', moduleName);
@@ -288,10 +441,87 @@ async function scanProject(projectPath: string, moduleName: string): Promise<Pro
 
   return {
     scannedAt: new Date().toISOString(),
+    projectType: 'ue5',
     classes: allClasses,
     plugins: mergedPlugins,
     buildDependencies: buildDeps,
     sourceFileCount,
+    scanDurationMs: Date.now() - startTime,
+  };
+}
+
+/** Scan a web-app project (Next.js, generic). */
+/**
+ * Detect MCP server configuration from .mcp.json in the project root.
+ * Returns server names and instructions from the MCP server metadata.
+ */
+async function detectMcpConfig(projectPath: string): Promise<{
+  hasMcp: boolean;
+  mcpServerNames: string[];
+  mcpInstructions: string;
+}> {
+  const mcpPath = path.join(projectPath, '.mcp.json');
+  if (!(await fileExists(mcpPath))) {
+    return { hasMcp: false, mcpServerNames: [], mcpInstructions: '' };
+  }
+
+  try {
+    const content = await fs.readFile(mcpPath, 'utf-8');
+    const config = JSON.parse(content);
+    const servers = config.mcpServers ?? {};
+    const serverNames = Object.keys(servers);
+
+    if (serverNames.length === 0) {
+      return { hasMcp: false, mcpServerNames: [], mcpInstructions: '' };
+    }
+
+    // Build MCP instruction text summarizing available tools
+    const lines: string[] = [];
+    lines.push('## MCP Tools Available');
+    lines.push(`This project has ${serverNames.length} MCP server(s) configured: ${serverNames.join(', ')}.`);
+    lines.push('Claude Code auto-discovers these tools from the project\'s .mcp.json configuration.');
+    lines.push('Use these MCP tools for ALL data access — they provide typed read/write access to the project\'s database.');
+    lines.push('');
+    lines.push('Common tool patterns:');
+    lines.push('- `list_*` — list all items of a type (characters, factions, scenes, etc.)');
+    lines.push('- `get_*` — get detailed info about a specific item by ID');
+    lines.push('- `create_*` / `update_*` — create or modify items');
+    lines.push('- `generate_image_*` — generate images for visual content');
+
+    return {
+      hasMcp: true,
+      mcpServerNames: serverNames,
+      mcpInstructions: lines.join('\n'),
+    };
+  } catch {
+    return { hasMcp: false, mcpServerNames: [], mcpInstructions: '' };
+  }
+}
+
+async function scanWebAppProject(
+  projectPath: string,
+  info: DetectedProjectInfo,
+): Promise<ProjectScanResult> {
+  const startTime = Date.now();
+
+  const [apiRoutes, mcpInfo] = await Promise.all([
+    info.projectType === 'nextjs' ? scanApiRoutes(projectPath) : Promise.resolve([]),
+    detectMcpConfig(projectPath),
+  ]);
+
+  return {
+    scannedAt: new Date().toISOString(),
+    projectType: info.projectType,
+    classes: [],
+    plugins: [],
+    buildDependencies: [],
+    sourceFileCount: 0,
+    framework: info.framework,
+    apiRoutes,
+    databaseType: info.databaseType,
+    hasMcp: mcpInfo.hasMcp,
+    mcpServerNames: mcpInfo.mcpServerNames,
+    mcpInstructions: mcpInfo.mcpInstructions,
     scanDurationMs: Date.now() - startTime,
   };
 }
@@ -306,15 +536,25 @@ export async function POST(request: NextRequest) {
     if (!projectPath || typeof projectPath !== 'string') {
       return apiError('projectPath is required', 400);
     }
-    if (!moduleName || typeof moduleName !== 'string') {
-      return apiError('moduleName is required', 400);
-    }
 
     if (!(await directoryExists(projectPath))) {
       return apiError('Project path does not exist', 404);
     }
 
-    const result = await scanProject(projectPath, moduleName);
+    // Detect project type first
+    const info = await detectProjectType(projectPath);
+
+    if (info.projectType === 'ue5') {
+      // UE5 projects require moduleName
+      if (!moduleName || typeof moduleName !== 'string') {
+        return apiError('moduleName is required for UE5 projects', 400);
+      }
+      const result = await scanUE5Project(projectPath, moduleName);
+      return apiSuccess(result);
+    }
+
+    // Web-app / generic project
+    const result = await scanWebAppProject(projectPath, info);
     return apiSuccess(result);
   } catch (error) {
     return apiError(error instanceof Error ? error.message : 'Internal server error');
