@@ -1,0 +1,82 @@
+/* ==========================================================================
+   @dzin/core State Animations
+   Panel enter/exit, LLM highlight, density transition, typewriter cursor
+   ========================================================================== */
+
+/* ---------------------------------------------------------------------------
+   Panel Entry Animation (fade + scale, 200ms)
+   Applied via data-dzin-entering attribute on panel frame
+   --------------------------------------------------------------------------- */
+
+[data-dzin-panel][data-dzin-entering] {
+  animation: dzin-panel-enter 200ms ease-out;
+}
+
+@keyframes dzin-panel-enter {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* ---------------------------------------------------------------------------
+   Panel Exit Animation (fade out, 200ms)
+   Applied via data-dzin-exiting attribute on panel frame
+   --------------------------------------------------------------------------- */
+
+[data-dzin-panel][data-dzin-exiting] {
+  animation: dzin-panel-exit 200ms ease-in forwards;
+}
+
+@keyframes dzin-panel-exit {
+  to {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+}
+
+/* ---------------------------------------------------------------------------
+   LLM Highlight (cyan glow, fades over 1s)
+   Applied via data-dzin-highlight="llm" on panel frame
+   Brief cyan glow/border highlight lasting ~1 second
+   --------------------------------------------------------------------------- */
+
+[data-dzin-panel][data-dzin-highlight="llm"] {
+  box-shadow: 0 0 0 2px var(--dzin-color-accent, #06b6d4);
+  transition: box-shadow 1s ease-out;
+}
+
+/* ---------------------------------------------------------------------------
+   Density Transition (smooth resize, 200ms)
+   Smooth resize when density changes between full/compact/micro
+   --------------------------------------------------------------------------- */
+
+[data-dzin-panel] {
+  transition: width 200ms ease, height 200ms ease;
+}
+
+/* ---------------------------------------------------------------------------
+   Typewriter Cursor
+   Visible at the streaming text insertion point
+   --------------------------------------------------------------------------- */
+
+[data-dzin-streaming-cursor]::after {
+  content: '';
+  display: inline-block;
+  width: 2px;
+  height: 1em;
+  background: var(--dzin-color-accent, #06b6d4);
+  animation: dzin-cursor-blink 1s step-end infinite;
+  margin-left: 1px;
+  vertical-align: text-bottom;
+}
+
+@keyframes dzin-cursor-blink {
+  50% {
+    opacity: 0;
+  }
+}

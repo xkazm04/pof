@@ -1,0 +1,216 @@
+/* ==========================================================================
+   Dzin Default Theme
+   Pure CSS targeting data-dzin-* attributes with --dzin-* custom properties.
+   No Tailwind, no @apply, no utility classes.
+   ========================================================================== */
+
+/* --------------------------------------------------------------------------
+   1. Root Variables (dark mode default)
+   -------------------------------------------------------------------------- */
+
+:root {
+  /* Surface colors */
+  --dzin-surface-1: #0f172a;
+  --dzin-surface-2: #1e293b;
+  --dzin-surface-3: #334155;
+
+  /* Border */
+  --dzin-border: #334155;
+  --dzin-border-focus: #06b6d4;
+
+  /* Text */
+  --dzin-text-primary: #f1f5f9;
+  --dzin-text-secondary: #cbd5e1;
+  --dzin-text-muted: #94a3b8;
+
+  /* Accent */
+  --dzin-accent: #06b6d4;
+  --dzin-accent-muted: #0e7490;
+
+  /* Spacing scale */
+  --dzin-space-xs: 4px;
+  --dzin-space-sm: 8px;
+  --dzin-space-md: 12px;
+  --dzin-space-lg: 16px;
+  --dzin-space-xl: 24px;
+
+  /* Typography */
+  --dzin-font-sm: 0.75rem;
+  --dzin-font-base: 0.875rem;
+  --dzin-font-lg: 1rem;
+
+  /* Radius */
+  --dzin-radius-sm: 4px;
+  --dzin-radius-md: 6px;
+  --dzin-radius-lg: 8px;
+
+  /* Panel-specific */
+  --dzin-panel-bg: var(--dzin-surface-2);
+  --dzin-panel-border: var(--dzin-border);
+  --dzin-panel-radius: var(--dzin-radius-md);
+  --dzin-panel-header-bg: var(--dzin-surface-1);
+  --dzin-panel-header-height: 36px;
+}
+
+/* --------------------------------------------------------------------------
+   2. Light Mode Override (prefers-color-scheme)
+   -------------------------------------------------------------------------- */
+
+@media (prefers-color-scheme: light) {
+  :root {
+    --dzin-surface-1: #ffffff;
+    --dzin-surface-2: #f8fafc;
+    --dzin-surface-3: #f1f5f9;
+
+    --dzin-border: #e2e8f0;
+    --dzin-border-focus: #0891b2;
+
+    --dzin-text-primary: #0f172a;
+    --dzin-text-secondary: #334155;
+    --dzin-text-muted: #64748b;
+
+    --dzin-accent: #0891b2;
+    --dzin-accent-muted: #06b6d4;
+
+    --dzin-panel-header-bg: #f8fafc;
+  }
+}
+
+/* --------------------------------------------------------------------------
+   3. Explicit Class Toggles
+   -------------------------------------------------------------------------- */
+
+.light,
+[data-theme="light"] {
+  --dzin-surface-1: #ffffff;
+  --dzin-surface-2: #f8fafc;
+  --dzin-surface-3: #f1f5f9;
+
+  --dzin-border: #e2e8f0;
+  --dzin-border-focus: #0891b2;
+
+  --dzin-text-primary: #0f172a;
+  --dzin-text-secondary: #334155;
+  --dzin-text-muted: #64748b;
+
+  --dzin-accent: #0891b2;
+  --dzin-accent-muted: #06b6d4;
+
+  --dzin-panel-header-bg: #f8fafc;
+}
+
+.dark,
+[data-theme="dark"] {
+  --dzin-surface-1: #0f172a;
+  --dzin-surface-2: #1e293b;
+  --dzin-surface-3: #334155;
+
+  --dzin-border: #334155;
+  --dzin-border-focus: #06b6d4;
+
+  --dzin-text-primary: #f1f5f9;
+  --dzin-text-secondary: #cbd5e1;
+  --dzin-text-muted: #94a3b8;
+
+  --dzin-accent: #06b6d4;
+  --dzin-accent-muted: #0e7490;
+
+  --dzin-panel-header-bg: var(--dzin-surface-1);
+}
+
+/* --------------------------------------------------------------------------
+   4. Panel Frame
+   -------------------------------------------------------------------------- */
+
+[data-dzin-panel] {
+  background: var(--dzin-panel-bg);
+  border: 1px solid var(--dzin-panel-border);
+  border-radius: var(--dzin-panel-radius);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  color: var(--dzin-text-primary);
+  font-size: var(--dzin-font-base);
+}
+
+/* --------------------------------------------------------------------------
+   5. Panel Header
+   -------------------------------------------------------------------------- */
+
+[data-dzin-panel-header] {
+  display: flex;
+  align-items: center;
+  gap: var(--dzin-space-sm);
+  padding: 0 var(--dzin-space-md);
+  background: var(--dzin-panel-header-bg);
+  border-bottom: 1px solid var(--dzin-panel-border);
+  flex-shrink: 0;
+}
+
+[data-dzin-panel-icon] {
+  display: flex;
+  align-items: center;
+  color: var(--dzin-accent);
+  flex-shrink: 0;
+}
+
+[data-dzin-panel-title] {
+  font-weight: 600;
+  color: var(--dzin-text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  flex: 1;
+  min-width: 0;
+}
+
+[data-dzin-panel-actions] {
+  display: flex;
+  align-items: center;
+  gap: var(--dzin-space-xs);
+  flex-shrink: 0;
+  margin-left: auto;
+}
+
+/* --------------------------------------------------------------------------
+   6. Panel Body
+   -------------------------------------------------------------------------- */
+
+[data-dzin-panel-body] {
+  flex: 1;
+  overflow: auto;
+}
+
+/* --------------------------------------------------------------------------
+   7. Density-Specific Styles
+   -------------------------------------------------------------------------- */
+
+/* -- Micro -- */
+[data-dzin-panel-body][data-dzin-density="micro"] {
+  padding: var(--dzin-space-xs);
+  font-size: var(--dzin-font-sm);
+}
+
+/* -- Compact -- */
+[data-dzin-panel-header][data-dzin-density="compact"] {
+  height: 28px;
+  --dzin-panel-header-height: 28px;
+  font-size: var(--dzin-font-sm);
+}
+
+[data-dzin-panel-body][data-dzin-density="compact"] {
+  padding: var(--dzin-space-sm);
+  font-size: var(--dzin-font-sm);
+}
+
+/* -- Full -- */
+[data-dzin-panel-header][data-dzin-density="full"] {
+  height: 36px;
+  --dzin-panel-header-height: 36px;
+  font-size: var(--dzin-font-base);
+}
+
+[data-dzin-panel-body][data-dzin-density="full"] {
+  padding: var(--dzin-space-md);
+  font-size: var(--dzin-font-base);
+}
