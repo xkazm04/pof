@@ -9,8 +9,8 @@
 
 - [x] **FOUND-01**: Dzin source copied into `src/lib/dzin/` with only needed modules (density, layout, panel, registry, theme, types)
 - [x] **FOUND-02**: `fast-json-patch` dependency installed and Dzin compiles cleanly in PoF's TypeScript/Next.js build
-- [ ] **FOUND-03**: Theme bridge CSS maps `--dzin-*` tokens to PoF's existing CSS variables and chart-colors system
-- [ ] **FOUND-04**: Tailwind CSS 4 custom variants for `density-micro`, `density-compact`, `density-full` targeting `data-dzin-density` attributes
+- [x] **FOUND-03**: Theme bridge CSS maps `--dzin-*` tokens to PoF's existing CSS variables and chart-colors system
+- [x] **FOUND-04**: Tailwind CSS 4 custom variants for `density-micro`, `density-compact`, `density-full` targeting `data-dzin-density` attributes
 
 ### Density Rendering
 
@@ -82,8 +82,8 @@
 |-------------|-------|--------|
 | FOUND-01 | Phase 1 | Complete |
 | FOUND-02 | Phase 1 | Complete |
-| FOUND-03 | Phase 1 | Pending |
-| FOUND-04 | Phase 1 | Pending |
+| FOUND-03 | Phase 1 | Complete |
+| FOUND-04 | Phase 1 | Complete |
 | DENS-01 | Phase 2 | Pending |
 | DENS-02 | Phase 2 | Pending |
 | DENS-03 | Phase 3 | Pending |
