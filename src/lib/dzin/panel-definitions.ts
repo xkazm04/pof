@@ -94,6 +94,228 @@ pofRegistry.register({
   component: CorePanel as unknown as ComponentType<Record<string, unknown>>,
 });
 
+/* ── AttributesPanel registration ──────────────────────────────────────── */
+
+pofRegistry.register({
+  type: 'arpg-combat-attributes',
+  label: 'Attributes -- AttributeSet',
+  icon: 'BarChart3',
+
+  defaultRole: 'secondary',
+  sizeClass: 'standard',
+  complexity: 'medium',
+  domains: ['arpg-combat'],
+
+  description:
+    'Attribute catalog, relationship web, and growth projections for the ARPG combat AttributeSet',
+  capabilities: ['viewing', 'status-tracking', 'chart-visualization'],
+  useCases: [
+    'View core and derived attributes',
+    'Inspect attribute relationships',
+    'Project attribute growth curves',
+  ],
+  suggestedCompanions: [
+    'arpg-combat-core',
+    'arpg-combat-abilities',
+    'arpg-combat-damage-calc',
+  ],
+
+  inputs: [
+    {
+      name: 'featureMap',
+      type: 'object',
+      description:
+        'Map<string, FeatureRow> mapping feature names to their status data',
+      required: true,
+    },
+    {
+      name: 'defs',
+      type: 'object',
+      description:
+        'Array of feature definitions with featureName, description, and optional dependsOn',
+      required: true,
+    },
+  ],
+  outputs: [
+    {
+      name: 'onAttributeSelect',
+      type: 'string',
+      description:
+        'Emits selected attribute name for cross-panel filtering',
+    },
+  ],
+
+  densityModes: {
+    micro: {
+      minWidth: 80,
+      minHeight: 60,
+      description: 'BarChart3 icon with attribute count badge',
+    },
+    compact: {
+      minWidth: 200,
+      minHeight: 160,
+      description:
+        'Core vs derived attribute summary with status',
+    },
+    full: {
+      minWidth: 400,
+      minHeight: 300,
+      description:
+        'Full attribute catalog, relationship web, growth projections',
+    },
+  },
+
+  component: AttributesPanel as unknown as ComponentType<Record<string, unknown>>,
+});
+
+/* ── TagsPanel registration ───────────────────────────────────────────── */
+
+pofRegistry.register({
+  type: 'arpg-combat-tags',
+  label: 'Tags -- Gameplay Tags',
+  icon: 'Tags',
+
+  defaultRole: 'secondary',
+  sizeClass: 'standard',
+  complexity: 'low',
+  domains: ['arpg-combat'],
+
+  description:
+    'Gameplay tag hierarchy viewer showing tag categories, naming conventions, and tag tree structure',
+  capabilities: ['viewing', 'hierarchy-visualization'],
+  useCases: [
+    'Browse tag hierarchy',
+    'Check tag category counts',
+    'Inspect tag naming structure',
+  ],
+  suggestedCompanions: [
+    'arpg-combat-tag-deps',
+    'arpg-combat-tag-audit',
+    'arpg-combat-effects',
+  ],
+
+  inputs: [
+    {
+      name: 'featureMap',
+      type: 'object',
+      description:
+        'Map<string, FeatureRow> mapping feature names to their status data',
+      required: true,
+    },
+    {
+      name: 'defs',
+      type: 'object',
+      description:
+        'Array of feature definitions with featureName, description, and optional dependsOn',
+      required: true,
+    },
+  ],
+  outputs: [
+    {
+      name: 'onTagSelect',
+      type: 'string',
+      description:
+        'Emits selected tag name for cross-panel filtering',
+    },
+  ],
+
+  densityModes: {
+    micro: {
+      minWidth: 80,
+      minHeight: 60,
+      description: 'Tags icon with total tag count',
+    },
+    compact: {
+      minWidth: 200,
+      minHeight: 120,
+      description:
+        'Tag categories with child counts',
+    },
+    full: {
+      minWidth: 400,
+      minHeight: 280,
+      description:
+        'Full tag hierarchy tree with category colors',
+    },
+  },
+
+  component: TagsPanel as unknown as ComponentType<Record<string, unknown>>,
+});
+
+/* ── AbilitiesPanel registration ──────────────────────────────────────── */
+
+pofRegistry.register({
+  type: 'arpg-combat-abilities',
+  label: 'Abilities -- GameplayAbility',
+  icon: 'Sparkles',
+
+  defaultRole: 'secondary',
+  sizeClass: 'standard',
+  complexity: 'medium',
+  domains: ['arpg-combat'],
+
+  description:
+    'Ability radar comparison, cooldown flow visualization, and GameplayAbility feature tracking',
+  capabilities: ['viewing', 'status-tracking', 'chart-visualization'],
+  useCases: [
+    'Compare ability stats via radar chart',
+    'Monitor cooldown flows',
+    'Track GameplayAbility implementation',
+  ],
+  suggestedCompanions: [
+    'arpg-combat-core',
+    'arpg-combat-effects',
+    'arpg-combat-loadout',
+  ],
+
+  inputs: [
+    {
+      name: 'featureMap',
+      type: 'object',
+      description:
+        'Map<string, FeatureRow> mapping feature names to their status data',
+      required: true,
+    },
+    {
+      name: 'defs',
+      type: 'object',
+      description:
+        'Array of feature definitions with featureName, description, and optional dependsOn',
+      required: true,
+    },
+  ],
+  outputs: [
+    {
+      name: 'onAbilitySelect',
+      type: 'string',
+      description:
+        'Emits selected ability name for cross-panel filtering',
+    },
+  ],
+
+  densityModes: {
+    micro: {
+      minWidth: 80,
+      minHeight: 60,
+      description: 'Sparkles icon with ability count',
+    },
+    compact: {
+      minWidth: 200,
+      minHeight: 160,
+      description:
+        'Ability list with cooldown bars',
+    },
+    full: {
+      minWidth: 400,
+      minHeight: 300,
+      description:
+        'Full ability radar, cooldown flow, feature cards',
+    },
+  },
+
+  component: AbilitiesPanel as unknown as ComponentType<Record<string, unknown>>,
+});
+
 /* ── EffectsPanel registration ─────────────────────────────────────────── */
 
 pofRegistry.register({
