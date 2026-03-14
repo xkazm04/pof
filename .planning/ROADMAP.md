@@ -28,11 +28,11 @@ Decimal phases appear between their surrounding integers in numeric order.
   2. `npm run build` completes successfully with Dzin modules included
   3. A test element with `data-dzin-density="compact"` renders using PoF's dark theme colors (surfaces, borders, text) -- no Dzin default palette visible
   4. Tailwind utility classes `density-micro:`, `density-compact:`, `density-full:` apply styles conditionally based on `data-dzin-density` attribute
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 01-01: TBD
-- [ ] 01-02: TBD
+- [ ] 01-01-PLAN.md — Vendor Dzin source and install fast-json-patch
+- [ ] 01-02-PLAN.md — Theme bridge CSS and Tailwind density variants
 
 ### Phase 2: First Panel Vertical Slice
 **Goal**: One AbilitySpellbook section (Core) renders at all 3 density levels inside a Dzin layout on the `/prototype` route, proving the full integration pattern
@@ -43,7 +43,7 @@ Plans:
   2. The Core panel displays three distinct views: micro (icon + count badge), compact (key stats list), and full (existing rich view) -- not just CSS scaling, fundamentally different content
   3. Resizing the panel slot causes Dzin to automatically reassign density level, and the panel content switches accordingly
   4. The panel consumes live data from PoF's existing stores/hooks via props (not hardcoded mock data)
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
 - [ ] 02-01: TBD
@@ -58,7 +58,7 @@ Plans:
   2. Each panel is registered in the panel registry with correct metadata (type, label, role, sizeClass, densityModes)
   3. Panel chrome (borders, backgrounds, headers) visually matches PoF's existing dark theme across all 10 panels
   4. Swapping any panel between density levels shows the correct summary metric at micro, intermediate detail at compact, and full interactive view at full
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
 - [ ] 03-01: TBD
@@ -75,7 +75,7 @@ Plans:
   3. Switching layout templates and switching density levels both animate smoothly (no layout jank, no content flash)
   4. Selecting an entity in one panel (e.g., an ability) highlights or filters related data in companion panels
   5. At least 3 composition presets (e.g., "Ability Overview", "Combat Debug", "Full Spellbook") are available and apply named panel+layout combos
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
 - [ ] 04-01: TBD
