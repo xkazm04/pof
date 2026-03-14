@@ -70,7 +70,7 @@
 |---------|--------|
 | Drag-and-drop panel rearrangement | Conflicts with auto-density assignment; massive implementation cost for zero density-validation value |
 | User-resizable panel dividers | Conflicts with density-aware auto-sizing; manual resize makes density engine incoherent |
-| Floating/detachable panels | Requires portal rendering, z-index management, cross-window state sync — orthogonal to density validation |
+| Floating/detachable panels | Requires portal rendering, z-index management, cross-window state sync -- orthogonal to density validation |
 | LLM/AI intent routing | Separate validation track; mixing it in clouds density evaluation |
 | Chat-driven panel composition | Significant surface area unrelated to proving density adaptation works |
 | Multi-module panel support | Scoped to arpg-combat only; expanding to other modules is a separate effort |
@@ -80,39 +80,39 @@
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| FOUND-01 | — | Pending |
-| FOUND-02 | — | Pending |
-| FOUND-03 | — | Pending |
-| FOUND-04 | — | Pending |
-| DENS-01 | — | Pending |
-| DENS-02 | — | Pending |
-| DENS-03 | — | Pending |
-| DENS-04 | — | Pending |
-| DENS-05 | — | Pending |
-| DENS-06 | — | Pending |
-| DENS-07 | — | Pending |
-| DENS-08 | — | Pending |
-| DENS-09 | — | Pending |
-| DENS-10 | — | Pending |
-| DENS-11 | — | Pending |
-| DENS-12 | — | Pending |
-| DENS-13 | — | Pending |
-| LAYT-01 | — | Pending |
-| LAYT-02 | — | Pending |
-| LAYT-03 | — | Pending |
-| LAYT-04 | — | Pending |
-| LAYT-05 | — | Pending |
-| LAYT-06 | — | Pending |
-| INTG-01 | — | Pending |
-| INTG-02 | — | Pending |
-| INTG-03 | — | Pending |
-| INTG-04 | — | Pending |
+| FOUND-01 | Phase 1 | Pending |
+| FOUND-02 | Phase 1 | Pending |
+| FOUND-03 | Phase 1 | Pending |
+| FOUND-04 | Phase 1 | Pending |
+| DENS-01 | Phase 2 | Pending |
+| DENS-02 | Phase 2 | Pending |
+| DENS-03 | Phase 3 | Pending |
+| DENS-04 | Phase 3 | Pending |
+| DENS-05 | Phase 3 | Pending |
+| DENS-06 | Phase 3 | Pending |
+| DENS-07 | Phase 3 | Pending |
+| DENS-08 | Phase 3 | Pending |
+| DENS-09 | Phase 3 | Pending |
+| DENS-10 | Phase 3 | Pending |
+| DENS-11 | Phase 3 | Pending |
+| DENS-12 | Phase 2 | Pending |
+| DENS-13 | Phase 4 | Pending |
+| LAYT-01 | Phase 4 | Pending |
+| LAYT-02 | Phase 4 | Pending |
+| LAYT-03 | Phase 4 | Pending |
+| LAYT-04 | Phase 4 | Pending |
+| LAYT-05 | Phase 4 | Pending |
+| LAYT-06 | Phase 4 | Pending |
+| INTG-01 | Phase 2 | Pending |
+| INTG-02 | Phase 2 | Pending |
+| INTG-03 | Phase 4 | Pending |
+| INTG-04 | Phase 3 | Pending |
 
 **Coverage:**
 - v1 requirements: 27 total
-- Mapped to phases: 0
-- Unmapped: 27 ⚠️
+- Mapped to phases: 27
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-03-14*
-*Last updated: 2026-03-14 after initial definition*
+*Last updated: 2026-03-14 after roadmap creation*
