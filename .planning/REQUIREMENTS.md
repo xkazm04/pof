@@ -22,9 +22,9 @@
 - [x] **DENS-06**: Effects section panel renders at micro (effect count), compact (effect list with durations), and full (effect cards with stacking/calculation details)
 - [x] **DENS-07**: Tag Dependencies section panel renders at micro (dep count), compact (simplified dep list), and full (network graph)
 - [x] **DENS-08**: Effect Timeline section panel renders at micro (timeline span badge), compact (condensed timeline bar), and full (interactive timeline strip)
-- [ ] **DENS-09**: Damage Calc section panel renders at micro (DPS badge), compact (pipeline summary), and full (step-by-step calculation flow)
-- [ ] **DENS-10**: Tag Audit section panel renders at micro (pass/fail badge), compact (audit summary counts), and full (detailed audit checklist)
-- [ ] **DENS-11**: Loadout section panel renders at micro (loadout count), compact (loadout names with slots), and full (interactive loadout builder)
+- [x] **DENS-09**: Damage Calc section panel renders at micro (DPS badge), compact (pipeline summary), and full (step-by-step calculation flow)
+- [x] **DENS-10**: Tag Audit section panel renders at micro (pass/fail badge), compact (audit summary counts), and full (detailed audit checklist)
+- [x] **DENS-11**: Loadout section panel renders at micro (loadout count), compact (loadout names with slots), and full (interactive loadout builder)
 - [x] **DENS-12**: Density is automatically assigned per-slot based on pixel dimensions via Dzin's `assignSlotDensity()`
 - [ ] **DENS-13**: Density transitions between levels are animated (smooth content morphing, no layout jank)
 
@@ -92,9 +92,9 @@
 | DENS-06 | Phase 3 | Complete |
 | DENS-07 | Phase 3 | Complete |
 | DENS-08 | Phase 3 | Complete |
-| DENS-09 | Phase 3 | Pending |
-| DENS-10 | Phase 3 | Pending |
-| DENS-11 | Phase 3 | Pending |
+| DENS-09 | Phase 3 | Complete |
+| DENS-10 | Phase 3 | Complete |
+| DENS-11 | Phase 3 | Complete |
 | DENS-12 | Phase 2 | Complete |
 | DENS-13 | Phase 4 | Pending |
 | LAYT-01 | Phase 4 | Pending |
