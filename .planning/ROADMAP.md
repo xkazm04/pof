@@ -46,8 +46,8 @@ Plans:
 **Plans**: 2 plans
 
 Plans:
-- [ ] 02-01: TBD
-- [ ] 02-02: TBD
+- [ ] 02-01-PLAN.md — CorePanel component with tri-density rendering and panel registry registration
+- [ ] 02-02-PLAN.md — Prototype page with DzinLayout and dual-mode density controls
 
 ### Phase 3: All Panels
 **Goal**: All 10 AbilitySpellbook sections render as Dzin panels at micro/compact/full densities with a complete panel registry
