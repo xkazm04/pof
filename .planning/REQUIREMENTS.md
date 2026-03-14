@@ -14,8 +14,8 @@
 
 ### Density Rendering
 
-- [ ] **DENS-01**: Each AbilitySpellbook section registered as a Dzin panel with `PanelDefinition` (type, label, role, sizeClass, densityModes, inputs, outputs)
-- [ ] **DENS-02**: Core section panel renders at micro (icon + count badge), compact (key stats list), and full (existing rich view)
+- [x] **DENS-01**: Each AbilitySpellbook section registered as a Dzin panel with `PanelDefinition` (type, label, role, sizeClass, densityModes, inputs, outputs)
+- [x] **DENS-02**: Core section panel renders at micro (icon + count badge), compact (key stats list), and full (existing rich view)
 - [ ] **DENS-03**: Attributes section panel renders at micro (attribute count), compact (bar chart summary), and full (detailed attribute grid)
 - [ ] **DENS-04**: Tags section panel renders at micro (tag count badge), compact (tag list), and full (tag hierarchy tree)
 - [ ] **DENS-05**: Abilities section panel renders at micro (ability count), compact (ability name list with cooldowns), and full (ability cards with full details)
@@ -40,7 +40,7 @@
 ### Integration
 
 - [ ] **INTG-01**: `/prototype` route hosts the Dzin demo page, isolated from existing PoF module views
-- [ ] **INTG-02**: Panels consume data from PoF's existing hooks (`useFeatureMatrix`, module stores) via props
+- [x] **INTG-02**: Panels consume data from PoF's existing hooks (`useFeatureMatrix`, module stores) via props
 - [ ] **INTG-03**: Selecting an entity in one panel (e.g., an ability) filters/highlights related data in companion panels
 - [ ] **INTG-04**: Dzin panel chrome (borders, backgrounds, headers) visually matches PoF's existing dark theme
 
@@ -84,8 +84,8 @@
 | FOUND-02 | Phase 1 | Complete |
 | FOUND-03 | Phase 1 | Complete |
 | FOUND-04 | Phase 1 | Complete |
-| DENS-01 | Phase 2 | Pending |
-| DENS-02 | Phase 2 | Pending |
+| DENS-01 | Phase 2 | Complete |
+| DENS-02 | Phase 2 | Complete |
 | DENS-03 | Phase 3 | Pending |
 | DENS-04 | Phase 3 | Pending |
 | DENS-05 | Phase 3 | Pending |
@@ -104,7 +104,7 @@
 | LAYT-05 | Phase 4 | Pending |
 | LAYT-06 | Phase 4 | Pending |
 | INTG-01 | Phase 2 | Pending |
-| INTG-02 | Phase 2 | Pending |
+| INTG-02 | Phase 2 | Complete |
 | INTG-03 | Phase 4 | Pending |
 | INTG-04 | Phase 3 | Pending |
 
