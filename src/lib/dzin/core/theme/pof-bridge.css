@@ -1,0 +1,72 @@
+/* Override Dzin's :root color tokens with PoF values.
+   Structural selectors from default.css are preserved.
+   Light mode blocks are neutralized by re-declaring dark values. */
+
+:root {
+  /* Surface colors */
+  --dzin-surface-1: var(--background);
+  --dzin-surface-2: var(--surface);
+  --dzin-surface-3: var(--surface-hover);
+
+  /* Border */
+  --dzin-border: var(--border);
+  --dzin-border-focus: var(--core);
+
+  /* Text */
+  --dzin-text-primary: var(--text);
+  --dzin-text-secondary: var(--text);
+  --dzin-text-muted: var(--text-muted);
+
+  /* Accent */
+  --dzin-accent: var(--core);
+  --dzin-accent-muted: var(--border-bright);
+
+  /* Panel-specific */
+  --dzin-panel-bg: var(--surface);
+  --dzin-panel-border: var(--border);
+  --dzin-panel-header-bg: var(--surface-deep);
+
+  /* Spacing: tighten to match PoF's compact aesthetic */
+  --dzin-space-xs: 4px;
+  --dzin-space-sm: 6px;
+  --dzin-space-md: 10px;
+  --dzin-space-lg: 14px;
+  --dzin-space-xl: 20px;
+
+  /* Typography: map to PoF type scale */
+  --dzin-font-sm: var(--text-xs);
+  --dzin-font-base: var(--text-sm);
+  --dzin-font-lg: var(--text-base);
+}
+
+/* Neutralize Dzin's light mode -- PoF is dark-only */
+@media (prefers-color-scheme: light) {
+  :root {
+    --dzin-surface-1: var(--background);
+    --dzin-surface-2: var(--surface);
+    --dzin-surface-3: var(--surface-hover);
+    --dzin-border: var(--border);
+    --dzin-border-focus: var(--core);
+    --dzin-text-primary: var(--text);
+    --dzin-text-secondary: var(--text);
+    --dzin-text-muted: var(--text-muted);
+    --dzin-accent: var(--core);
+    --dzin-accent-muted: var(--border-bright);
+    --dzin-panel-header-bg: var(--surface-deep);
+  }
+}
+
+/* Neutralize explicit class toggles */
+.light, [data-theme="light"] {
+  --dzin-surface-1: var(--background);
+  --dzin-surface-2: var(--surface);
+  --dzin-surface-3: var(--surface-hover);
+  --dzin-border: var(--border);
+  --dzin-border-focus: var(--core);
+  --dzin-text-primary: var(--text);
+  --dzin-text-secondary: var(--text);
+  --dzin-text-muted: var(--text-muted);
+  --dzin-accent: var(--core);
+  --dzin-accent-muted: var(--border-bright);
+  --dzin-panel-header-bg: var(--surface-deep);
+}

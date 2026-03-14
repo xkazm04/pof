@@ -1,5 +1,17 @@
 @import "tailwindcss";
 
+/* Dzin theme: structural selectors + default dark tokens */
+@import "../lib/dzin/core/theme/default.css";
+/* Dzin state: panel enter/exit animations, LLM glow, density transitions */
+@import "../lib/dzin/core/theme/state.css";
+/* PoF bridge: override Dzin tokens with PoF design system values */
+@import "../lib/dzin/core/theme/pof-bridge.css";
+
+/* Density variants for Tailwind utilities inside Dzin panels */
+@custom-variant density-micro (&:is([data-dzin-density="micro"], [data-dzin-density="micro"] *));
+@custom-variant density-compact (&:is([data-dzin-density="compact"], [data-dzin-density="compact"] *));
+@custom-variant density-full (&:is([data-dzin-density="full"], [data-dzin-density="full"] *));
+
 :root {
   --background: #0a0a1a;
   --surface: #111128;
