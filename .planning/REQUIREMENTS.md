@@ -19,9 +19,9 @@
 - [ ] **DENS-03**: Attributes section panel renders at micro (attribute count), compact (bar chart summary), and full (detailed attribute grid)
 - [ ] **DENS-04**: Tags section panel renders at micro (tag count badge), compact (tag list), and full (tag hierarchy tree)
 - [ ] **DENS-05**: Abilities section panel renders at micro (ability count), compact (ability name list with cooldowns), and full (ability cards with full details)
-- [ ] **DENS-06**: Effects section panel renders at micro (effect count), compact (effect list with durations), and full (effect cards with stacking/calculation details)
-- [ ] **DENS-07**: Tag Dependencies section panel renders at micro (dep count), compact (simplified dep list), and full (network graph)
-- [ ] **DENS-08**: Effect Timeline section panel renders at micro (timeline span badge), compact (condensed timeline bar), and full (interactive timeline strip)
+- [x] **DENS-06**: Effects section panel renders at micro (effect count), compact (effect list with durations), and full (effect cards with stacking/calculation details)
+- [x] **DENS-07**: Tag Dependencies section panel renders at micro (dep count), compact (simplified dep list), and full (network graph)
+- [x] **DENS-08**: Effect Timeline section panel renders at micro (timeline span badge), compact (condensed timeline bar), and full (interactive timeline strip)
 - [ ] **DENS-09**: Damage Calc section panel renders at micro (DPS badge), compact (pipeline summary), and full (step-by-step calculation flow)
 - [ ] **DENS-10**: Tag Audit section panel renders at micro (pass/fail badge), compact (audit summary counts), and full (detailed audit checklist)
 - [ ] **DENS-11**: Loadout section panel renders at micro (loadout count), compact (loadout names with slots), and full (interactive loadout builder)
@@ -42,7 +42,7 @@
 - [x] **INTG-01**: `/prototype` route hosts the Dzin demo page, isolated from existing PoF module views
 - [x] **INTG-02**: Panels consume data from PoF's existing hooks (`useFeatureMatrix`, module stores) via props
 - [ ] **INTG-03**: Selecting an entity in one panel (e.g., an ability) filters/highlights related data in companion panels
-- [ ] **INTG-04**: Dzin panel chrome (borders, backgrounds, headers) visually matches PoF's existing dark theme
+- [x] **INTG-04**: Dzin panel chrome (borders, backgrounds, headers) visually matches PoF's existing dark theme
 
 ## v2 Requirements
 
@@ -89,9 +89,9 @@
 | DENS-03 | Phase 3 | Pending |
 | DENS-04 | Phase 3 | Pending |
 | DENS-05 | Phase 3 | Pending |
-| DENS-06 | Phase 3 | Pending |
-| DENS-07 | Phase 3 | Pending |
-| DENS-08 | Phase 3 | Pending |
+| DENS-06 | Phase 3 | Complete |
+| DENS-07 | Phase 3 | Complete |
+| DENS-08 | Phase 3 | Complete |
 | DENS-09 | Phase 3 | Pending |
 | DENS-10 | Phase 3 | Pending |
 | DENS-11 | Phase 3 | Pending |
@@ -106,7 +106,7 @@
 | INTG-01 | Phase 2 | Complete |
 | INTG-02 | Phase 2 | Complete |
 | INTG-03 | Phase 4 | Pending |
-| INTG-04 | Phase 3 | Pending |
+| INTG-04 | Phase 3 | Complete |
 
 **Coverage:**
 - v1 requirements: 27 total
