@@ -25,7 +25,7 @@
 - [ ] **DENS-09**: Damage Calc section panel renders at micro (DPS badge), compact (pipeline summary), and full (step-by-step calculation flow)
 - [ ] **DENS-10**: Tag Audit section panel renders at micro (pass/fail badge), compact (audit summary counts), and full (detailed audit checklist)
 - [ ] **DENS-11**: Loadout section panel renders at micro (loadout count), compact (loadout names with slots), and full (interactive loadout builder)
-- [ ] **DENS-12**: Density is automatically assigned per-slot based on pixel dimensions via Dzin's `assignSlotDensity()`
+- [x] **DENS-12**: Density is automatically assigned per-slot based on pixel dimensions via Dzin's `assignSlotDensity()`
 - [ ] **DENS-13**: Density transitions between levels are animated (smooth content morphing, no layout jank)
 
 ### Layout System
@@ -39,7 +39,7 @@
 
 ### Integration
 
-- [ ] **INTG-01**: `/prototype` route hosts the Dzin demo page, isolated from existing PoF module views
+- [x] **INTG-01**: `/prototype` route hosts the Dzin demo page, isolated from existing PoF module views
 - [x] **INTG-02**: Panels consume data from PoF's existing hooks (`useFeatureMatrix`, module stores) via props
 - [ ] **INTG-03**: Selecting an entity in one panel (e.g., an ability) filters/highlights related data in companion panels
 - [ ] **INTG-04**: Dzin panel chrome (borders, backgrounds, headers) visually matches PoF's existing dark theme
@@ -95,7 +95,7 @@
 | DENS-09 | Phase 3 | Pending |
 | DENS-10 | Phase 3 | Pending |
 | DENS-11 | Phase 3 | Pending |
-| DENS-12 | Phase 2 | Pending |
+| DENS-12 | Phase 2 | Complete |
 | DENS-13 | Phase 4 | Pending |
 | LAYT-01 | Phase 4 | Pending |
 | LAYT-02 | Phase 4 | Pending |
@@ -103,7 +103,7 @@
 | LAYT-04 | Phase 4 | Pending |
 | LAYT-05 | Phase 4 | Pending |
 | LAYT-06 | Phase 4 | Pending |
-| INTG-01 | Phase 2 | Pending |
+| INTG-01 | Phase 2 | Complete |
 | INTG-02 | Phase 2 | Complete |
 | INTG-03 | Phase 4 | Pending |
 | INTG-04 | Phase 3 | Pending |

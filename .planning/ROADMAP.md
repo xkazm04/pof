@@ -13,7 +13,7 @@ This prototype validates Dzin's density-aware panel framework inside PoF by rebu
 Decimal phases appear between their surrounding integers in numeric order.
 
 - [x] **Phase 1: Foundation** - Vendor Dzin source, install deps, bridge theme tokens to PoF's design system (completed 2026-03-14)
-- [ ] **Phase 2: First Panel Vertical Slice** - Prove the density pattern end-to-end with one panel on `/prototype` route
+- [x] **Phase 2: First Panel Vertical Slice** - Prove the density pattern end-to-end with one panel on `/prototype` route (completed 2026-03-14)
 - [ ] **Phase 3: All Panels** - Build remaining 9 panels at all 3 densities with panel registry and data wiring
 - [ ] **Phase 4: Layout Engine & Polish** - Layout templates, composition presets, animated transitions, cross-panel interaction
 
@@ -46,8 +46,8 @@ Plans:
 **Plans**: 2 plans
 
 Plans:
-- [ ] 02-01-PLAN.md — CorePanel component with tri-density rendering and panel registry registration
-- [ ] 02-02-PLAN.md — Prototype page with DzinLayout and dual-mode density controls
+- [x] 02-01-PLAN.md — CorePanel component with tri-density rendering and panel registry registration
+- [x] 02-02-PLAN.md — Prototype page with DzinLayout and dual-mode density controls
 
 ### Phase 3: All Panels
 **Goal**: All 10 AbilitySpellbook sections render as Dzin panels at micro/compact/full densities with a complete panel registry
@@ -89,6 +89,6 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Foundation | 2/2 | Complete   | 2026-03-14 |
-| 2. First Panel Vertical Slice | 1/2 | In Progress|  |
+| 2. First Panel Vertical Slice | 2/2 | Complete   | 2026-03-14 |
 | 3. All Panels | 0/3 | Not started | - |
 | 4. Layout Engine & Polish | 0/2 | Not started | - |
