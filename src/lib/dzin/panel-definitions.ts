@@ -85,5 +85,5 @@ pofRegistry.register({
   },
 
   // Component
-  component: CorePanel as ComponentType<Record<string, unknown>>,
+  component: CorePanel as unknown as ComponentType<Record<string, unknown>>,
 });

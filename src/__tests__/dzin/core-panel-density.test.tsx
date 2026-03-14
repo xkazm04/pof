@@ -29,6 +29,7 @@ function makeFeatureRow(name: string, status: FeatureRow['status']): [string, Fe
     reviewNotes: '',
     qualityScore: null,
     nextSteps: '',
+    lastReviewedAt: null,
   }];
 }
 
