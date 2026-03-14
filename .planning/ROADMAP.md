@@ -58,12 +58,12 @@ Plans:
   2. Each panel is registered in the panel registry with correct metadata (type, label, role, sizeClass, densityModes)
   3. Panel chrome (borders, backgrounds, headers) visually matches PoF's existing dark theme across all 10 panels
   4. Swapping any panel between density levels shows the correct summary metric at micro, intermediate detail at compact, and full interactive view at full
-**Plans**: 2 plans
+**Plans**: 3 plans
 
 Plans:
-- [ ] 03-01: TBD
-- [ ] 03-02: TBD
-- [ ] 03-03: TBD
+- [ ] 03-01-PLAN.md — Attributes, Tags, and Abilities panels (data-driven sections)
+- [ ] 03-02-PLAN.md — Effects, Tag Deps, and Effect Timeline panels (visualization-heavy sections)
+- [ ] 03-03-PLAN.md — Damage Calc, Tag Audit, and Loadout panels (mixed-content sections)
 
 ### Phase 4: Layout Engine & Polish
 **Goal**: Users can switch between layout templates and composition presets with animated transitions, and panels interact with each other
