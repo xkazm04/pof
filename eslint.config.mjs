@@ -29,6 +29,8 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Vendored Dzin panel framework — do not lint vendored source.
+    "src/lib/dzin/**",
   ]),
 ]);
 
