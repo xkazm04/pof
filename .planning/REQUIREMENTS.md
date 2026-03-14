@@ -16,9 +16,9 @@
 
 - [x] **DENS-01**: Each AbilitySpellbook section registered as a Dzin panel with `PanelDefinition` (type, label, role, sizeClass, densityModes, inputs, outputs)
 - [x] **DENS-02**: Core section panel renders at micro (icon + count badge), compact (key stats list), and full (existing rich view)
-- [ ] **DENS-03**: Attributes section panel renders at micro (attribute count), compact (bar chart summary), and full (detailed attribute grid)
-- [ ] **DENS-04**: Tags section panel renders at micro (tag count badge), compact (tag list), and full (tag hierarchy tree)
-- [ ] **DENS-05**: Abilities section panel renders at micro (ability count), compact (ability name list with cooldowns), and full (ability cards with full details)
+- [x] **DENS-03**: Attributes section panel renders at micro (attribute count), compact (bar chart summary), and full (detailed attribute grid)
+- [x] **DENS-04**: Tags section panel renders at micro (tag count badge), compact (tag list), and full (tag hierarchy tree)
+- [x] **DENS-05**: Abilities section panel renders at micro (ability count), compact (ability name list with cooldowns), and full (ability cards with full details)
 - [x] **DENS-06**: Effects section panel renders at micro (effect count), compact (effect list with durations), and full (effect cards with stacking/calculation details)
 - [x] **DENS-07**: Tag Dependencies section panel renders at micro (dep count), compact (simplified dep list), and full (network graph)
 - [x] **DENS-08**: Effect Timeline section panel renders at micro (timeline span badge), compact (condensed timeline bar), and full (interactive timeline strip)
@@ -86,9 +86,9 @@
 | FOUND-04 | Phase 1 | Complete |
 | DENS-01 | Phase 2 | Complete |
 | DENS-02 | Phase 2 | Complete |
-| DENS-03 | Phase 3 | Pending |
-| DENS-04 | Phase 3 | Pending |
-| DENS-05 | Phase 3 | Pending |
+| DENS-03 | Phase 3 | Complete |
+| DENS-04 | Phase 3 | Complete |
+| DENS-05 | Phase 3 | Complete |
 | DENS-06 | Phase 3 | Complete |
 | DENS-07 | Phase 3 | Complete |
 | DENS-08 | Phase 3 | Complete |

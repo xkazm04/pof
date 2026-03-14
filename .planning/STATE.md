@@ -40,16 +40,16 @@ See: .planning/PROJECT.md (updated 2026-03-14)
 ## Current Position
 
 Phase: 3 of 4 (All Panels)
-Plan: 2 of 3 in current phase
+Plan: 2 of 3 in current phase (03-01 and 03-02 complete)
 Status: Executing Phase 3
-Last activity: 2026-03-14 -- Completed 03-02 (Batch 2 Panels: Effects, TagDeps, EffectTimeline)
+Last activity: 2026-03-14 -- Completed 03-01 (Batch 1 Panels: Attributes, Tags, Abilities)
 
-Progress: [████████░░] 80% (Phase 3 plan 2 of 3 complete)
+Progress: [████████░░] 80% (Phase 3 plans 1-2 of 3 complete)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 4
+- Total plans completed: 6
 - Average duration: 6min
 - Total execution time: 0.39 hours
 
@@ -61,6 +61,7 @@ Progress: [████████░░] 80% (Phase 3 plan 2 of 3 complete)
 | Phase 01 P02 | 5min | 2 tasks | 2 files |
 | Phase 02 P01 | 5min | 2 tasks | 4 files |
 | Phase 02 P02 | 4min | 2 tasks | 1 files |
+| Phase 03 P01 | 6min | 2 tasks | 6 files |
 | Phase 03 P02 | 5min | 2 tasks | 6 files |
 
 **Recent Trend:**
@@ -86,6 +87,8 @@ Recent decisions affecting current work:
 - [Phase 02]: CoreFull manages local expanded state via useState to keep CorePanelProps minimal
 - [Phase 02]: Resize presets Small=160/Medium=320/Large=800 chosen to align with density breakpoint thresholds
 - [Phase 02]: containerRef passed to DzinLayout for ResizeObserver to measure container, not viewport
+- [Phase 03-01]: Static data constants duplicated per panel file rather than shared module for self-containment
+- [Phase 03-01]: SVG filter IDs prefixed with panel name to avoid DOM ID collisions
 - [Phase 03]: Circular layout for tag dependency SVG graph (nodes evenly spaced around ellipse)
 - [Phase 03]: Condensed horizontal color-coded bar for compact timeline density
 
@@ -101,6 +104,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-14T23:11:00.000Z
-Stopped at: Completed 03-02-PLAN.md
-Resume file: .planning/phases/03-all-panels/03-02-SUMMARY.md
+Last session: 2026-03-14T23:12:14.000Z
+Stopped at: Completed 03-01-PLAN.md
+Resume file: .planning/phases/03-all-panels/03-01-SUMMARY.md
