@@ -61,9 +61,9 @@ Plans:
 **Plans**: 3 plans
 
 Plans:
-- [ ] 03-01-PLAN.md — Attributes, Tags, and Abilities panels (data-driven sections)
-- [ ] 03-02-PLAN.md — Effects, Tag Deps, and Effect Timeline panels (visualization-heavy sections)
-- [ ] 03-03-PLAN.md — Damage Calc, Tag Audit, and Loadout panels (mixed-content sections)
+- [x] 03-01-PLAN.md — Attributes, Tags, and Abilities panels (data-driven sections)
+- [x] 03-02-PLAN.md — Effects, Tag Deps, and Effect Timeline panels (visualization-heavy sections)
+- [x] 03-03-PLAN.md — Damage Calc, Tag Audit, and Loadout panels (mixed-content sections)
 
 ### Phase 4: Layout Engine & Polish
 **Goal**: Users can switch between layout templates and composition presets with animated transitions, and panels interact with each other
@@ -78,8 +78,8 @@ Plans:
 **Plans**: 2 plans
 
 Plans:
-- [ ] 04-01: TBD
-- [ ] 04-02: TBD
+- [ ] 04-01-PLAN.md — Foundation modules (animation constants, presets, selection context, entity relations) and panel density/selection updates
+- [ ] 04-02-PLAN.md — Prototype page rewrite with template picker, preset switcher, FLIP animations
 
 ## Progress
 
