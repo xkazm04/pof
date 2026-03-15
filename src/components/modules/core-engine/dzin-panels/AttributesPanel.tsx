@@ -2,8 +2,9 @@
 
 import { useState, useMemo, useCallback } from 'react';
 import { BarChart3, Network } from 'lucide-react';
-import { motion } from 'framer-motion';
+import { AnimatePresence, motion } from 'framer-motion';
 import { useDensity, PanelFrame } from '@/lib/dzin/core';
+import { DZIN_TIMING } from '@/lib/dzin/animation-constants';
 import {
   FeatureCard,
   SectionLabel,
@@ -436,9 +437,19 @@ export function AttributesPanel({ featureMap, defs }: AttributesPanelProps) {
 
   return (
     <PanelFrame title="Attributes" icon={<BarChart3 className="w-4 h-4" />}>
-      {density === 'micro' && <AttributesMicro />}
-      {density === 'compact' && <AttributesCompact featureMap={featureMap} defs={defs} />}
-      {density === 'full' && <AttributesFull featureMap={featureMap} defs={defs} />}
+      <AnimatePresence mode="wait">
+        <motion.div
+          key={density}
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: DZIN_TIMING.DENSITY / 2 }}
+        >
+          {density === 'micro' && <AttributesMicro />}
+          {density === 'compact' && <AttributesCompact featureMap={featureMap} defs={defs} />}
+          {density === 'full' && <AttributesFull featureMap={featureMap} defs={defs} />}
+        </motion.div>
+      </AnimatePresence>
     </PanelFrame>
   );
 }

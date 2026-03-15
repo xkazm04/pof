@@ -4,6 +4,8 @@ import { useState, useCallback } from 'react';
 import { ClipboardCheck } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useDensity, PanelFrame } from '@/lib/dzin/core';
+import { DZIN_TIMING } from '@/lib/dzin/animation-constants';
+import { useDzinSelection } from '@/lib/dzin/selection-context';
 import {
   SectionLabel,
   PipelineFlow,
@@ -149,20 +151,31 @@ function TagAuditMicro() {
 /* ── Compact density ────────────────────────────────────────────────────── */
 
 function TagAuditCompact() {
+  const { selection } = useDzinSelection();
+
   return (
     <div className="space-y-1.5 p-2 text-xs">
-      {TAG_AUDIT_CATEGORIES.map((cat) => (
-        <div key={cat.name} className="flex items-center gap-2">
-          <span
-            className="text-[10px] font-mono font-bold px-1 py-0.5 rounded flex-shrink-0"
-            style={{ backgroundColor: `${statusColor(cat.status)}20`, color: statusColor(cat.status) }}
+      {TAG_AUDIT_CATEGORIES.map((cat) => {
+        // Audit categories map to tag prefixes; check if any related tag starts with this category name
+        const isRelated = !selection || selection.type !== 'tag' || selection.id.startsWith(cat.name);
+        return (
+          <motion.div
+            key={cat.name}
+            className="flex items-center gap-2"
+            animate={{ opacity: selection && !isRelated ? 0.4 : 1 }}
+            transition={{ duration: DZIN_TIMING.HIGHLIGHT }}
           >
-            {statusIcon(cat.status)}
-          </span>
-          <span className="font-medium text-text">{cat.name}</span>
-          <span className="ml-auto font-mono text-text-muted">{cat.count}</span>
-        </div>
-      ))}
+            <span
+              className="text-[10px] font-mono font-bold px-1 py-0.5 rounded flex-shrink-0"
+              style={{ backgroundColor: `${statusColor(cat.status)}20`, color: statusColor(cat.status) }}
+            >
+              {statusIcon(cat.status)}
+            </span>
+            <span className="font-medium text-text">{cat.name}</span>
+            <span className="ml-auto font-mono text-text-muted">{cat.count}</span>
+          </motion.div>
+        );
+      })}
       <div className="border-t border-border/40 pt-1.5 text-text-muted font-mono">
         Score: {TAG_AUDIT_SCORE}%
       </div>
@@ -330,9 +343,19 @@ export function TagAuditPanel({ featureMap: _featureMap, defs: _defs }: TagAudit
 
   return (
     <PanelFrame title="Tag Audit" icon={<ClipboardCheck className="w-4 h-4" />}>
-      {density === 'micro' && <TagAuditMicro />}
-      {density === 'compact' && <TagAuditCompact />}
-      {density === 'full' && <TagAuditFull />}
+      <AnimatePresence mode="wait">
+        <motion.div
+          key={density}
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: DZIN_TIMING.DENSITY / 2 }}
+        >
+          {density === 'micro' && <TagAuditMicro />}
+          {density === 'compact' && <TagAuditCompact />}
+          {density === 'full' && <TagAuditFull />}
+        </motion.div>
+      </AnimatePresence>
     </PanelFrame>
   );
 }

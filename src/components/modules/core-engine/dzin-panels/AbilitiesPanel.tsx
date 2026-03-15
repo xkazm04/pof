@@ -2,8 +2,11 @@
 
 import { useState } from 'react';
 import { Sparkles } from 'lucide-react';
-import { motion } from 'framer-motion';
+import { AnimatePresence, motion } from 'framer-motion';
 import { useDensity, PanelFrame } from '@/lib/dzin/core';
+import { DZIN_TIMING } from '@/lib/dzin/animation-constants';
+import { useDzinSelection } from '@/lib/dzin/selection-context';
+import { ENTITY_RELATIONS, isRelatedToSelection } from '@/lib/dzin/entity-relations';
 import {
   FeatureCard,
   RadarChart,
@@ -50,12 +53,22 @@ function AbilitiesMicro() {
 /* -- Compact density ------------------------------------------------------- */
 
 function AbilitiesCompact() {
+  const { selection, setSelection } = useDzinSelection();
+
   return (
     <div className="space-y-1.5 p-2 text-xs">
       {COOLDOWN_ABILITIES.map((ability) => {
         const pct = ability.cd > 0 ? ((ability.cd - ability.remaining) / ability.cd) * 100 : 100;
+        const isRelated = isRelatedToSelection('ability', ability.name, selection, ENTITY_RELATIONS);
+        const isSelected = selection?.type === 'ability' && selection.id === ability.name;
         return (
-          <div key={ability.name} className="space-y-0.5">
+          <motion.div
+            key={ability.name}
+            className={`space-y-0.5 cursor-pointer ${isSelected ? 'ring-1 ring-blue-500/50 rounded' : ''}`}
+            animate={{ opacity: selection && !isRelated ? 0.4 : 1 }}
+            transition={{ duration: DZIN_TIMING.HIGHLIGHT }}
+            onClick={() => setSelection({ type: 'ability', id: ability.name })}
+          >
             <div className="flex items-center justify-between">
               <span className="font-medium text-text">{ability.name}</span>
               <span className="font-mono text-text-muted">{ability.cd}s</span>
@@ -66,7 +79,7 @@ function AbilitiesCompact() {
                 style={{ width: `${pct}%`, backgroundColor: ability.color }}
               />
             </div>
-          </div>
+          </motion.div>
         );
       })}
     </div>
@@ -181,9 +194,19 @@ export function AbilitiesPanel({ featureMap, defs }: AbilitiesPanelProps) {
 
   return (
     <PanelFrame title="Abilities" icon={<Sparkles className="w-4 h-4" />}>
-      {density === 'micro' && <AbilitiesMicro />}
-      {density === 'compact' && <AbilitiesCompact />}
-      {density === 'full' && <AbilitiesFull featureMap={featureMap} defs={defs} />}
+      <AnimatePresence mode="wait">
+        <motion.div
+          key={density}
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: DZIN_TIMING.DENSITY / 2 }}
+        >
+          {density === 'micro' && <AbilitiesMicro />}
+          {density === 'compact' && <AbilitiesCompact />}
+          {density === 'full' && <AbilitiesFull featureMap={featureMap} defs={defs} />}
+        </motion.div>
+      </AnimatePresence>
     </PanelFrame>
   );
 }

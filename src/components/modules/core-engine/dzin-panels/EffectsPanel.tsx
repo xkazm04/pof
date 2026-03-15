@@ -2,7 +2,11 @@
 
 import { useState } from 'react';
 import { Flame } from 'lucide-react';
+import { AnimatePresence, motion } from 'framer-motion';
 import { useDensity, PanelFrame } from '@/lib/dzin/core';
+import { DZIN_TIMING } from '@/lib/dzin/animation-constants';
+import { useDzinSelection } from '@/lib/dzin/selection-context';
+import { isRelatedToSelection, ENTITY_RELATIONS } from '@/lib/dzin/entity-relations';
 import {
   FeatureCard,
   PipelineFlow,
@@ -55,20 +59,40 @@ function EffectsMicro() {
 /* ── Compact density ────────────────────────────────────────────────────── */
 
 function EffectsCompact({ featureMap }: EffectsPanelProps) {
+  const { selection } = useDzinSelection();
+
+  // Map effect types to related ability entities for cross-panel selection
+  const effectAbilityMap: Record<string, string> = {
+    'GE_Damage': 'MeleeAttack',
+    'GE_Heal': 'HealOverTime',
+    'GE_Buff': 'Shield',
+  };
+
   return (
     <div className="space-y-2 p-2 text-xs">
       {/* Effect type list */}
       <div className="space-y-1">
-        {EFFECT_TYPES.map((effect) => (
-          <div key={effect.name} className="flex items-center gap-2">
-            <span
-              className="w-2 h-2 rounded-full flex-shrink-0"
-              style={{ backgroundColor: effect.color }}
-            />
-            <span className="font-medium text-text">{effect.name}</span>
-            <span className="text-text-muted truncate ml-auto text-2xs">{effect.desc}</span>
-          </div>
-        ))}
+        {EFFECT_TYPES.map((effect) => {
+          const mappedAbility = effectAbilityMap[effect.name];
+          const isRelated = mappedAbility
+            ? isRelatedToSelection('ability', mappedAbility, selection, ENTITY_RELATIONS)
+            : true;
+          return (
+            <motion.div
+              key={effect.name}
+              className="flex items-center gap-2"
+              animate={{ opacity: selection && !isRelated ? 0.4 : 1 }}
+              transition={{ duration: DZIN_TIMING.HIGHLIGHT }}
+            >
+              <span
+                className="w-2 h-2 rounded-full flex-shrink-0"
+                style={{ backgroundColor: effect.color }}
+              />
+              <span className="font-medium text-text">{effect.name}</span>
+              <span className="text-text-muted truncate ml-auto text-2xs">{effect.desc}</span>
+            </motion.div>
+          );
+        })}
       </div>
 
       {/* Feature status indicators */}
@@ -149,9 +173,19 @@ export function EffectsPanel({ featureMap, defs }: EffectsPanelProps) {
 
   return (
     <PanelFrame title="Effects" icon={<Flame className="w-4 h-4" />}>
-      {density === 'micro' && <EffectsMicro />}
-      {density === 'compact' && <EffectsCompact featureMap={featureMap} defs={defs} />}
-      {density === 'full' && <EffectsFull featureMap={featureMap} defs={defs} />}
+      <AnimatePresence mode="wait">
+        <motion.div
+          key={density}
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: DZIN_TIMING.DENSITY / 2 }}
+        >
+          {density === 'micro' && <EffectsMicro />}
+          {density === 'compact' && <EffectsCompact featureMap={featureMap} defs={defs} />}
+          {density === 'full' && <EffectsFull featureMap={featureMap} defs={defs} />}
+        </motion.div>
+      </AnimatePresence>
     </PanelFrame>
   );
 }

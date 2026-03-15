@@ -1,8 +1,9 @@
 'use client';
 
 import { Layers, Sparkles } from 'lucide-react';
-import { motion } from 'framer-motion';
+import { AnimatePresence, motion } from 'framer-motion';
 import { useDensity, PanelFrame } from '@/lib/dzin/core';
+import { DZIN_TIMING } from '@/lib/dzin/animation-constants';
 import {
   SectionLabel,
   RadarChart,
@@ -167,9 +168,19 @@ export function LoadoutPanel({ featureMap: _featureMap, defs: _defs }: LoadoutPa
 
   return (
     <PanelFrame title="Loadout" icon={<Layers className="w-4 h-4" />}>
-      {density === 'micro' && <LoadoutMicro />}
-      {density === 'compact' && <LoadoutCompact />}
-      {density === 'full' && <LoadoutFull />}
+      <AnimatePresence mode="wait">
+        <motion.div
+          key={density}
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: DZIN_TIMING.DENSITY / 2 }}
+        >
+          {density === 'micro' && <LoadoutMicro />}
+          {density === 'compact' && <LoadoutCompact />}
+          {density === 'full' && <LoadoutFull />}
+        </motion.div>
+      </AnimatePresence>
     </PanelFrame>
   );
 }

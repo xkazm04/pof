@@ -2,8 +2,11 @@
 
 import { useState } from 'react';
 import { Tags } from 'lucide-react';
-import { motion } from 'framer-motion';
+import { AnimatePresence, motion } from 'framer-motion';
 import { useDensity, PanelFrame } from '@/lib/dzin/core';
+import { DZIN_TIMING } from '@/lib/dzin/animation-constants';
+import { useDzinSelection } from '@/lib/dzin/selection-context';
+import { ENTITY_RELATIONS, isRelatedToSelection } from '@/lib/dzin/entity-relations';
 import {
   FeatureCard,
   STATUS_COLORS,
@@ -97,6 +100,7 @@ function TagsMicro() {
 function TagsCompact({ featureMap }: TagsPanelProps) {
   const tagStatus = featureMap.get('Gameplay Tags hierarchy')?.status;
   const dotColor = statusDotColor(tagStatus);
+  const { selection, setSelection } = useDzinSelection();
 
   return (
     <div className="space-y-1.5 p-2 text-xs">
@@ -107,16 +111,27 @@ function TagsCompact({ featureMap }: TagsPanelProps) {
         />
         <span className="font-medium text-text">Tag Hierarchy</span>
       </div>
-      {TAG_TREE.map((cat) => (
-        <div key={cat.name} className="flex items-center gap-2">
-          <span
-            className="w-1.5 h-1.5 rounded-full flex-shrink-0"
-            style={{ backgroundColor: TAG_CATEGORY_COLORS[cat.name] ?? '#64748b' }}
-          />
-          <span className="text-text-muted">{cat.name}</span>
-          <span className="ml-auto font-mono text-text-muted">({cat.children?.length ?? 0})</span>
-        </div>
-      ))}
+      {TAG_TREE.map((cat) =>
+        cat.children?.map((child) => {
+          const isRelated = isRelatedToSelection('tag', child.name, selection, ENTITY_RELATIONS);
+          const isSelected = selection?.type === 'tag' && selection.id === child.name;
+          return (
+            <motion.div
+              key={child.name}
+              className={`flex items-center gap-2 cursor-pointer ${isSelected ? 'ring-1 ring-blue-500/50 rounded' : ''}`}
+              animate={{ opacity: selection && !isRelated ? 0.4 : 1 }}
+              transition={{ duration: DZIN_TIMING.HIGHLIGHT }}
+              onClick={() => setSelection({ type: 'tag', id: child.name })}
+            >
+              <span
+                className="w-1.5 h-1.5 rounded-full flex-shrink-0"
+                style={{ backgroundColor: TAG_CATEGORY_COLORS[cat.name] ?? '#64748b' }}
+              />
+              <span className="text-text-muted">{child.name}</span>
+            </motion.div>
+          );
+        })
+      )}
     </div>
   );
 }
@@ -200,9 +215,19 @@ export function TagsPanel({ featureMap, defs }: TagsPanelProps) {
 
   return (
     <PanelFrame title="Tags" icon={<Tags className="w-4 h-4" />}>
-      {density === 'micro' && <TagsMicro />}
-      {density === 'compact' && <TagsCompact featureMap={featureMap} defs={defs} />}
-      {density === 'full' && <TagsFull featureMap={featureMap} defs={defs} />}
+      <AnimatePresence mode="wait">
+        <motion.div
+          key={density}
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: DZIN_TIMING.DENSITY / 2 }}
+        >
+          {density === 'micro' && <TagsMicro />}
+          {density === 'compact' && <TagsCompact featureMap={featureMap} defs={defs} />}
+          {density === 'full' && <TagsFull featureMap={featureMap} defs={defs} />}
+        </motion.div>
+      </AnimatePresence>
     </PanelFrame>
   );
 }

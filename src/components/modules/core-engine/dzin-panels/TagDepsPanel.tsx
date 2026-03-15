@@ -2,7 +2,11 @@
 
 import { useMemo } from 'react';
 import { Network } from 'lucide-react';
+import { AnimatePresence, motion } from 'framer-motion';
 import { useDensity, PanelFrame } from '@/lib/dzin/core';
+import { DZIN_TIMING } from '@/lib/dzin/animation-constants';
+import { useDzinSelection } from '@/lib/dzin/selection-context';
+import { isRelatedToSelection, ENTITY_RELATIONS } from '@/lib/dzin/entity-relations';
 import { SurfaceCard } from '@/components/ui/SurfaceCard';
 import { SectionLabel } from '@/components/modules/core-engine/unique-tabs/_shared';
 import type { FeatureRow } from '@/types/feature-matrix';
@@ -67,18 +71,28 @@ function TagDepsMicro() {
 /* ── Compact density ────────────────────────────────────────────────────── */
 
 function TagDepsCompact() {
+  const { selection } = useDzinSelection();
+
   return (
     <div className="space-y-1.5 p-2 text-xs">
       {TAG_DEP_EDGES.map((edge, i) => {
         const fromNode = nodeById(edge.from);
         const toNode = nodeById(edge.to);
         if (!fromNode || !toNode) return null;
+        const fromRelated = isRelatedToSelection('tag', fromNode.label, selection, ENTITY_RELATIONS);
+        const toRelated = isRelatedToSelection('tag', toNode.label, selection, ENTITY_RELATIONS);
+        const isRelated = fromRelated || toRelated;
         return (
-          <div key={i} className="flex items-center gap-1.5 text-text-muted">
+          <motion.div
+            key={i}
+            className="flex items-center gap-1.5 text-text-muted"
+            animate={{ opacity: selection && !isRelated ? 0.4 : 1 }}
+            transition={{ duration: DZIN_TIMING.HIGHLIGHT }}
+          >
             <span className="font-medium" style={{ color: fromNode.color }}>{fromNode.label.split('.')[1]}</span>
             <span className="text-2xs opacity-60">{edge.type}</span>
             <span className="font-medium" style={{ color: toNode.color }}>{toNode.label.split('.')[1]}</span>
-          </div>
+          </motion.div>
         );
       })}
     </div>
@@ -199,9 +213,19 @@ export function TagDepsPanel({ featureMap: _featureMap, defs: _defs }: TagDepsPa
 
   return (
     <PanelFrame title="Tag Deps" icon={<Network className="w-4 h-4" />}>
-      {density === 'micro' && <TagDepsMicro />}
-      {density === 'compact' && <TagDepsCompact />}
-      {density === 'full' && <TagDepsFull />}
+      <AnimatePresence mode="wait">
+        <motion.div
+          key={density}
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: DZIN_TIMING.DENSITY / 2 }}
+        >
+          {density === 'micro' && <TagDepsMicro />}
+          {density === 'compact' && <TagDepsCompact />}
+          {density === 'full' && <TagDepsFull />}
+        </motion.div>
+      </AnimatePresence>
     </PanelFrame>
   );
 }

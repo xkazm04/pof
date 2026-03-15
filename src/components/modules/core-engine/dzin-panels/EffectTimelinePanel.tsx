@@ -1,7 +1,9 @@
 'use client';
 
 import { Clock } from 'lucide-react';
+import { AnimatePresence, motion } from 'framer-motion';
 import { useDensity, PanelFrame } from '@/lib/dzin/core';
+import { DZIN_TIMING } from '@/lib/dzin/animation-constants';
 import { TimelineStrip, SectionLabel } from '@/components/modules/core-engine/unique-tabs/_shared';
 import { SurfaceCard } from '@/components/ui/SurfaceCard';
 import type { FeatureRow } from '@/types/feature-matrix';
@@ -106,9 +108,19 @@ export function EffectTimelinePanel({ featureMap: _featureMap, defs: _defs }: Ef
 
   return (
     <PanelFrame title="Effect Timeline" icon={<Clock className="w-4 h-4" />}>
-      {density === 'micro' && <TimelineMicro />}
-      {density === 'compact' && <TimelineCompact />}
-      {density === 'full' && <TimelineFull />}
+      <AnimatePresence mode="wait">
+        <motion.div
+          key={density}
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: DZIN_TIMING.DENSITY / 2 }}
+        >
+          {density === 'micro' && <TimelineMicro />}
+          {density === 'compact' && <TimelineCompact />}
+          {density === 'full' && <TimelineFull />}
+        </motion.div>
+      </AnimatePresence>
     </PanelFrame>
   );
 }

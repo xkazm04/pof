@@ -2,7 +2,11 @@
 
 import { useState } from 'react';
 import { Cpu } from 'lucide-react';
+import { AnimatePresence, motion } from 'framer-motion';
 import { useDensity, PanelFrame } from '@/lib/dzin/core';
+import { DZIN_TIMING } from '@/lib/dzin/animation-constants';
+import { useDzinSelection } from '@/lib/dzin/selection-context';
+import { isRelatedToSelection, ENTITY_RELATIONS } from '@/lib/dzin/entity-relations';
 import {
   FeatureCard,
   PipelineFlow,
@@ -65,6 +69,13 @@ function CoreMicro({ featureMap, defs }: CorePanelProps) {
 function CoreCompact({ featureMap }: CorePanelProps) {
   const ascStatus = featureMap.get('AbilitySystemComponent')?.status;
   const dotColor = statusDotColor(ascStatus);
+  const { selection } = useDzinSelection();
+
+  // Map ASC connections to entity types for selection awareness
+  const connEntityMap: Record<string, { type: 'ability' | 'tag'; id: string }> = {
+    'Abilities': { type: 'ability', id: 'MeleeAttack' },
+    'Tag Container': { type: 'tag', id: 'Ability.MeleeAttack' },
+  };
 
   return (
     <div className="space-y-2 p-2 text-xs">
@@ -79,12 +90,23 @@ function CoreCompact({ featureMap }: CorePanelProps) {
 
       {/* Connection items */}
       <div className="space-y-1 pl-1">
-        {ASC_CONNECTIONS.map((conn) => (
-          <div key={conn} className="flex items-center gap-2">
-            <span className="w-1.5 h-1.5 rounded-full bg-blue-400 flex-shrink-0" />
-            <span className="text-text-muted">{conn}</span>
-          </div>
-        ))}
+        {ASC_CONNECTIONS.map((conn) => {
+          const entity = connEntityMap[conn];
+          const isRelated = entity
+            ? isRelatedToSelection(entity.type, entity.id, selection, ENTITY_RELATIONS)
+            : true;
+          return (
+            <motion.div
+              key={conn}
+              className="flex items-center gap-2"
+              animate={{ opacity: selection && !isRelated ? 0.4 : 1 }}
+              transition={{ duration: DZIN_TIMING.HIGHLIGHT }}
+            >
+              <span className="w-1.5 h-1.5 rounded-full bg-blue-400 flex-shrink-0" />
+              <span className="text-text-muted">{conn}</span>
+            </motion.div>
+          );
+        })}
       </div>
 
       {/* Pipeline count */}
@@ -155,9 +177,19 @@ export function CorePanel({ featureMap, defs }: CorePanelProps) {
 
   return (
     <PanelFrame title="Core" icon={<Cpu className="w-4 h-4" />}>
-      {density === 'micro' && <CoreMicro featureMap={featureMap} defs={defs} />}
-      {density === 'compact' && <CoreCompact featureMap={featureMap} defs={defs} />}
-      {density === 'full' && <CoreFull featureMap={featureMap} defs={defs} />}
+      <AnimatePresence mode="wait">
+        <motion.div
+          key={density}
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: DZIN_TIMING.DENSITY / 2 }}
+        >
+          {density === 'micro' && <CoreMicro featureMap={featureMap} defs={defs} />}
+          {density === 'compact' && <CoreCompact featureMap={featureMap} defs={defs} />}
+          {density === 'full' && <CoreFull featureMap={featureMap} defs={defs} />}
+        </motion.div>
+      </AnimatePresence>
     </PanelFrame>
   );
 }

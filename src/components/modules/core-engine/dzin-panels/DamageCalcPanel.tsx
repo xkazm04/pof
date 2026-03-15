@@ -1,8 +1,9 @@
 'use client';
 
 import { Calculator } from 'lucide-react';
-import { motion } from 'framer-motion';
+import { AnimatePresence, motion } from 'framer-motion';
 import { useDensity, PanelFrame } from '@/lib/dzin/core';
+import { DZIN_TIMING } from '@/lib/dzin/animation-constants';
 import { SectionLabel } from '@/components/modules/core-engine/unique-tabs/_shared';
 import { SurfaceCard } from '@/components/ui/SurfaceCard';
 import type { FeatureRow } from '@/types/feature-matrix';
@@ -148,9 +149,19 @@ export function DamageCalcPanel({ featureMap: _featureMap, defs: _defs }: Damage
 
   return (
     <PanelFrame title="Damage Calc" icon={<Calculator className="w-4 h-4" />}>
-      {density === 'micro' && <DamageCalcMicro />}
-      {density === 'compact' && <DamageCalcCompact />}
-      {density === 'full' && <DamageCalcFull />}
+      <AnimatePresence mode="wait">
+        <motion.div
+          key={density}
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: DZIN_TIMING.DENSITY / 2 }}
+        >
+          {density === 'micro' && <DamageCalcMicro />}
+          {density === 'compact' && <DamageCalcCompact />}
+          {density === 'full' && <DamageCalcFull />}
+        </motion.div>
+      </AnimatePresence>
     </PanelFrame>
   );
 }
