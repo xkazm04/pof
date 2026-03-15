@@ -30,12 +30,12 @@
 
 ### Layout System
 
-- [ ] **LAYT-01**: `DzinLayout` component wired with panel registry and renders combat panels in CSS Grid
-- [ ] **LAYT-02**: User can switch between at least 4 layout templates (split-2, grid-4, primary-sidebar, studio)
-- [ ] **LAYT-03**: Layout template picker UI shows visual minimap-style thumbnails of each template
-- [ ] **LAYT-04**: Switching layout templates animates panel positions smoothly (framer-motion layout/FLIP)
+- [x] **LAYT-01**: `DzinLayout` component wired with panel registry and renders combat panels in CSS Grid
+- [x] **LAYT-02**: User can switch between at least 4 layout templates (split-2, grid-4, primary-sidebar, studio)
+- [x] **LAYT-03**: Layout template picker UI shows visual minimap-style thumbnails of each template
+- [x] **LAYT-04**: Switching layout templates animates panel positions smoothly (framer-motion layout/FLIP)
 - [x] **LAYT-05**: At least 3 composition presets defined (e.g., "Ability Overview", "Combat Debug", "Full Spellbook")
-- [ ] **LAYT-06**: Composition preset switcher UI allows one-click workspace changes
+- [x] **LAYT-06**: Composition preset switcher UI allows one-click workspace changes
 
 ### Integration
 
@@ -97,12 +97,12 @@
 | DENS-11 | Phase 3 | Complete |
 | DENS-12 | Phase 2 | Complete |
 | DENS-13 | Phase 4 | Complete |
-| LAYT-01 | Phase 4 | Pending |
-| LAYT-02 | Phase 4 | Pending |
-| LAYT-03 | Phase 4 | Pending |
-| LAYT-04 | Phase 4 | Pending |
+| LAYT-01 | Phase 4 | Complete |
+| LAYT-02 | Phase 4 | Complete |
+| LAYT-03 | Phase 4 | Complete |
+| LAYT-04 | Phase 4 | Complete |
 | LAYT-05 | Phase 4 | Complete |
-| LAYT-06 | Phase 4 | Pending |
+| LAYT-06 | Phase 4 | Complete |
 | INTG-01 | Phase 2 | Complete |
 | INTG-02 | Phase 2 | Complete |
 | INTG-03 | Phase 4 | Complete |
