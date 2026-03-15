@@ -26,7 +26,7 @@
 - [x] **DENS-10**: Tag Audit section panel renders at micro (pass/fail badge), compact (audit summary counts), and full (detailed audit checklist)
 - [x] **DENS-11**: Loadout section panel renders at micro (loadout count), compact (loadout names with slots), and full (interactive loadout builder)
 - [x] **DENS-12**: Density is automatically assigned per-slot based on pixel dimensions via Dzin's `assignSlotDensity()`
-- [ ] **DENS-13**: Density transitions between levels are animated (smooth content morphing, no layout jank)
+- [x] **DENS-13**: Density transitions between levels are animated (smooth content morphing, no layout jank)
 
 ### Layout System
 
@@ -34,14 +34,14 @@
 - [ ] **LAYT-02**: User can switch between at least 4 layout templates (split-2, grid-4, primary-sidebar, studio)
 - [ ] **LAYT-03**: Layout template picker UI shows visual minimap-style thumbnails of each template
 - [ ] **LAYT-04**: Switching layout templates animates panel positions smoothly (framer-motion layout/FLIP)
-- [ ] **LAYT-05**: At least 3 composition presets defined (e.g., "Ability Overview", "Combat Debug", "Full Spellbook")
+- [x] **LAYT-05**: At least 3 composition presets defined (e.g., "Ability Overview", "Combat Debug", "Full Spellbook")
 - [ ] **LAYT-06**: Composition preset switcher UI allows one-click workspace changes
 
 ### Integration
 
 - [x] **INTG-01**: `/prototype` route hosts the Dzin demo page, isolated from existing PoF module views
 - [x] **INTG-02**: Panels consume data from PoF's existing hooks (`useFeatureMatrix`, module stores) via props
-- [ ] **INTG-03**: Selecting an entity in one panel (e.g., an ability) filters/highlights related data in companion panels
+- [x] **INTG-03**: Selecting an entity in one panel (e.g., an ability) filters/highlights related data in companion panels
 - [x] **INTG-04**: Dzin panel chrome (borders, backgrounds, headers) visually matches PoF's existing dark theme
 
 ## v2 Requirements
@@ -96,16 +96,16 @@
 | DENS-10 | Phase 3 | Complete |
 | DENS-11 | Phase 3 | Complete |
 | DENS-12 | Phase 2 | Complete |
-| DENS-13 | Phase 4 | Pending |
+| DENS-13 | Phase 4 | Complete |
 | LAYT-01 | Phase 4 | Pending |
 | LAYT-02 | Phase 4 | Pending |
 | LAYT-03 | Phase 4 | Pending |
 | LAYT-04 | Phase 4 | Pending |
-| LAYT-05 | Phase 4 | Pending |
+| LAYT-05 | Phase 4 | Complete |
 | LAYT-06 | Phase 4 | Pending |
 | INTG-01 | Phase 2 | Complete |
 | INTG-02 | Phase 2 | Complete |
-| INTG-03 | Phase 4 | Pending |
+| INTG-03 | Phase 4 | Complete |
 | INTG-04 | Phase 3 | Complete |
 
 **Coverage:**
