@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState, useCallback } from 'react';
+import { useMemo, useState, useCallback, useRef, useEffect } from 'react';
 import { User, Cpu, Camera, Zap, Keyboard, ExternalLink, Network, Activity, AlertTriangle, TrendingUp, Crosshair, Scaling, Box, BarChart3, Search, CheckCircle } from 'lucide-react';
 import { motion } from 'framer-motion';
 import {
@@ -11,6 +11,8 @@ import { MODULE_FEATURE_DEFINITIONS } from '@/lib/feature-definitions';
 import { useFeatureMatrix } from '@/hooks/useFeatureMatrix';
 import { SurfaceCard } from '@/components/ui/SurfaceCard';
 import { STATUS_COLORS, TabHeader, SectionLabel, FeatureGrid, LoadingSpinner, RadarChart } from './_shared';
+import { CharacterFeelOptimizer } from './CharacterFeelOptimizer';
+import { PredictiveBalanceSimulator } from './PredictiveBalanceSimulator';
 import type { SubModuleId } from '@/types/modules';
 import type { FeatureRow, FeatureStatus } from '@/types/feature-matrix';
 import type { GraphNode, GraphEdge, RadarDataPoint } from '@/types/unique-tab-improvements';
@@ -383,13 +385,36 @@ export function CharacterBlueprint({ moduleId }: CharacterBlueprintProps) {
 
   // 1.10 Blueprint Property Inspector
   const [propSearch, setPropSearch] = useState('');
+  const [properties, setProperties] = useState<BlueprintProperty[]>(() => BLUEPRINT_PROPERTIES.map(p => ({ ...p })));
+  const [highlightedProps, setHighlightedProps] = useState<Set<string>>(new Set());
+  const highlightTimers = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
+
+  const handlePropertyChange = useCallback((name: string, value: number) => {
+    setProperties(prev => prev.map(p => {
+      if (p.name !== name) return p;
+      const isModified = value !== p.defaultVal;
+      return { ...p, current: value, isModified };
+    }));
+    setHighlightedProps(prev => { const next = new Set(prev); next.add(name); return next; });
+    const existing = highlightTimers.current.get(name);
+    if (existing) clearTimeout(existing);
+    highlightTimers.current.set(name, setTimeout(() => {
+      setHighlightedProps(prev => { const next = new Set(prev); next.delete(name); return next; });
+      highlightTimers.current.delete(name);
+    }, 2000));
+  }, []);
+
+  useEffect(() => () => {
+    for (const t of highlightTimers.current.values()) clearTimeout(t);
+  }, []);
+
   const filteredProperties = useMemo(() => {
-    if (!propSearch) return BLUEPRINT_PROPERTIES;
+    if (!propSearch) return properties;
     const q = propSearch.toLowerCase();
-    return BLUEPRINT_PROPERTIES.filter(
+    return properties.filter(
       (p) => p.name.toLowerCase().includes(q) || p.category.toLowerCase().includes(q),
     );
-  }, [propSearch]);
+  }, [propSearch, properties]);
 
   if (isLoading) return <LoadingSpinner accent={ACCENT} />;
 
@@ -1098,41 +1123,70 @@ export function CharacterBlueprint({ moduleId }: CharacterBlueprintProps) {
                   {cat}
                 </div>
                 <div className="space-y-0.5">
-                  {catProps.map((prop) => (
-                    <div key={prop.name}
-                      className="flex items-center gap-3 px-2 py-1 rounded hover:bg-surface/30 transition-colors text-xs font-mono">
-                      <span className="text-text-muted w-36 truncate">{prop.name}</span>
-                      <span className="font-bold" style={{
-                        color: prop.isModified ? STATUS_WARNING : 'var(--text-muted)',
-                      }}>
-                        {String(prop.current)}
-                      </span>
-                      {prop.isModified && (
-                        <>
-                          <span className="text-text-muted opacity-40 text-[10px]">default:</span>
-                          <span className="text-text-muted opacity-60 text-[10px] line-through">{String(prop.defaultVal)}</span>
-                          <span className="ml-auto px-1.5 py-0.5 rounded text-[8px] font-bold uppercase"
-                            style={{ backgroundColor: `${STATUS_WARNING}15`, color: STATUS_WARNING, border: `1px solid ${STATUS_WARNING}30` }}>
-                            Modified
-                          </span>
-                        </>
-                      )}
-                      {!prop.isModified && (
-                        <span className="ml-auto text-[8px] font-bold text-text-muted opacity-40 uppercase">Default</span>
-                      )}
-                    </div>
-                  ))}
+                  {catProps.map((prop) => {
+                    const isHighlighted = highlightedProps.has(prop.name);
+                    const isNumeric = typeof prop.current === 'number' && typeof prop.defaultVal === 'number';
+                    return (
+                      <div key={prop.name}
+                        className="flex items-center gap-3 px-2 py-1 rounded hover:bg-surface/30 text-xs font-mono border"
+                        style={{
+                          borderColor: isHighlighted ? `${STATUS_WARNING}60` : 'transparent',
+                          boxShadow: isHighlighted ? `0 0 8px ${STATUS_WARNING}40, inset 0 0 8px ${STATUS_WARNING}10` : 'none',
+                          transition: 'border-color 0.15s ease-in, box-shadow 0.15s ease-in, background-color 0.15s ease-in',
+                          ...(!isHighlighted ? { transitionDuration: '2s', transitionTimingFunction: 'ease-out' } : {}),
+                          backgroundColor: isHighlighted ? `${STATUS_WARNING}08` : undefined,
+                        }}>
+                        <span className="text-text-muted w-28 truncate flex-shrink-0">{prop.name}</span>
+                        {isNumeric ? (
+                          <input
+                            type="range"
+                            min={0}
+                            max={Math.max(Number(prop.defaultVal) * 3, Number(prop.current) * 1.5)}
+                            step={Number(prop.defaultVal) < 10 ? 0.05 : 1}
+                            value={Number(prop.current)}
+                            onChange={(e) => handlePropertyChange(prop.name, Number(e.target.value))}
+                            className="w-20 h-1 rounded-full appearance-none cursor-pointer flex-shrink-0"
+                            style={{ accentColor: isHighlighted ? STATUS_WARNING : catColor }}
+                          />
+                        ) : null}
+                        <span className="font-bold min-w-[48px]" style={{
+                          color: prop.isModified ? STATUS_WARNING : 'var(--text-muted)',
+                        }}>
+                          {typeof prop.current === 'number' ? prop.current.toFixed(prop.current % 1 ? 2 : 0) : String(prop.current)}
+                        </span>
+                        {prop.isModified && (
+                          <>
+                            <span className="text-text-muted opacity-40 text-[10px]">default:</span>
+                            <span className="text-text-muted opacity-60 text-[10px] line-through">{String(prop.defaultVal)}</span>
+                            <span className="ml-auto px-1.5 py-0.5 rounded text-[8px] font-bold uppercase"
+                              style={{ backgroundColor: `${STATUS_WARNING}15`, color: STATUS_WARNING, border: `1px solid ${STATUS_WARNING}30` }}>
+                              Modified
+                            </span>
+                          </>
+                        )}
+                        {!prop.isModified && (
+                          <span className="ml-auto text-[8px] font-bold text-text-muted opacity-40 uppercase">Default</span>
+                        )}
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
             );
           })}
         </div>
         <div className="flex items-center gap-2.5 mt-3 pt-2 border-t border-border/30 text-[10px] text-text-muted font-mono">
-          <span>Total: {BLUEPRINT_PROPERTIES.length} properties</span>
-          <span>Modified: <span className="font-bold" style={{ color: STATUS_WARNING }}>{BLUEPRINT_PROPERTIES.filter((p) => p.isModified).length}</span></span>
-          <span>Default: <span className="font-bold text-text-muted">{BLUEPRINT_PROPERTIES.filter((p) => !p.isModified).length}</span></span>
+          <span>Total: {properties.length} properties</span>
+          <span>Modified: <span className="font-bold" style={{ color: STATUS_WARNING }}>{properties.filter((p) => p.isModified).length}</span></span>
+          <span>Default: <span className="font-bold text-text-muted">{properties.filter((p) => !p.isModified).length}</span></span>
         </div>
       </SurfaceCard>
+
+      {/* ── 1.11 AI Feel Optimizer ───────────────────────────────────────── */}
+      <CharacterFeelOptimizer moduleId={moduleId} />
+
+      {/* ── 1.12 Predictive Balance Simulator ──────────────────────────────── */}
+      <PredictiveBalanceSimulator />
     </div>
   );
 }

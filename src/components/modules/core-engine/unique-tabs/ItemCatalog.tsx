@@ -1,7 +1,7 @@
 'use client';
 
 import { useMemo, useState, useCallback } from 'react';
-import { Package, ChevronRight, Layers, Search, Filter, Plus, Sparkles, X, Target, TreePine, Shield, Swords, FlaskConical, MapPin, BarChart3, Crown, TrendingUp, PieChart } from 'lucide-react';
+import { Package, ChevronRight, Layers, Search, Filter, Plus, Sparkles, X, Target, TreePine, Shield, Swords, FlaskConical, MapPin, BarChart3, Crown, TrendingUp, PieChart, GitCompareArrows } from 'lucide-react';
 import Image from 'next/image';
 import { useModuleCLI } from '@/hooks/useModuleCLI';
 import {
@@ -335,6 +335,281 @@ const RARITY_DIST: RarityDistEntry[] = [
 ];
 
 const LUCK_SCORE = 72;
+
+/* ── Item Comparison Data ──────────────────────────────────────────────── */
+
+interface ComparisonStat {
+  label: string;
+  key: string;
+  value: number;
+  unit: string;
+  higherIsBetter: boolean;
+}
+
+interface ComparableItem {
+  id: string;
+  name: string;
+  rarity: string;
+  slot: string;
+  stats: ComparisonStat[];
+  affixes: { name: string; stat: string; value: number }[];
+}
+
+const COMPARABLE_ITEMS: ComparableItem[] = [
+  {
+    id: 'c1', name: 'Iron Longsword', rarity: 'Common', slot: 'MainHand',
+    stats: [
+      { label: 'Base Damage', key: 'baseDmg', value: 15, unit: '', higherIsBetter: true },
+      { label: 'Attack Speed', key: 'atkSpd', value: 1.2, unit: '/s', higherIsBetter: true },
+      { label: 'Crit Chance', key: 'critChance', value: 5, unit: '%', higherIsBetter: true },
+      { label: 'Armor', key: 'armor', value: 0, unit: '', higherIsBetter: true },
+      { label: 'Atk Power', key: 'atkPow', value: 10, unit: '', higherIsBetter: true },
+    ],
+    affixes: [],
+  },
+  {
+    id: 'c2', name: 'Void Daggers', rarity: 'Legendary', slot: 'MainHand',
+    stats: [
+      { label: 'Base Damage', key: 'baseDmg', value: 40, unit: '', higherIsBetter: true },
+      { label: 'Attack Speed', key: 'atkSpd', value: 1.8, unit: '/s', higherIsBetter: true },
+      { label: 'Crit Chance', key: 'critChance', value: 15, unit: '%', higherIsBetter: true },
+      { label: 'Armor', key: 'armor', value: 0, unit: '', higherIsBetter: true },
+      { label: 'Atk Power', key: 'atkPow', value: 25, unit: '', higherIsBetter: true },
+    ],
+    affixes: [
+      { name: 'Armor Penetration', stat: 'Ignores 20% armor', value: 20 },
+      { name: 'Vampiric', stat: '+8% Life Steal', value: 8 },
+    ],
+  },
+  {
+    id: 'c3', name: 'Crystal Staff', rarity: 'Rare', slot: 'MainHand',
+    stats: [
+      { label: 'Base Damage', key: 'baseDmg', value: 30, unit: '', higherIsBetter: true },
+      { label: 'Attack Speed', key: 'atkSpd', value: 0.8, unit: '/s', higherIsBetter: true },
+      { label: 'Crit Chance', key: 'critChance', value: 8, unit: '%', higherIsBetter: true },
+      { label: 'Armor', key: 'armor', value: 0, unit: '', higherIsBetter: true },
+      { label: 'Atk Power', key: 'atkPow', value: 35, unit: '', higherIsBetter: true },
+    ],
+    affixes: [
+      { name: 'Mana Efficiency', stat: '-10% mana cost', value: 10 },
+    ],
+  },
+  {
+    id: 'c4', name: 'Steel Chestplate', rarity: 'Uncommon', slot: 'Chest',
+    stats: [
+      { label: 'Base Damage', key: 'baseDmg', value: 0, unit: '', higherIsBetter: true },
+      { label: 'Attack Speed', key: 'atkSpd', value: 0, unit: '/s', higherIsBetter: true },
+      { label: 'Crit Chance', key: 'critChance', value: 0, unit: '%', higherIsBetter: true },
+      { label: 'Armor', key: 'armor', value: 45, unit: '', higherIsBetter: true },
+      { label: 'Atk Power', key: 'atkPow', value: 0, unit: '', higherIsBetter: true },
+    ],
+    affixes: [{ name: 'of Fortitude', stat: '+200 Max HP', value: 200 }],
+  },
+  {
+    id: 'c5', name: "Assassin's Cowl", rarity: 'Epic', slot: 'Head',
+    stats: [
+      { label: 'Base Damage', key: 'baseDmg', value: 0, unit: '', higherIsBetter: true },
+      { label: 'Attack Speed', key: 'atkSpd', value: 0, unit: '/s', higherIsBetter: true },
+      { label: 'Crit Chance', key: 'critChance', value: 5, unit: '%', higherIsBetter: true },
+      { label: 'Armor', key: 'armor', value: 15, unit: '', higherIsBetter: true },
+      { label: 'Atk Power', key: 'atkPow', value: 8, unit: '', higherIsBetter: true },
+    ],
+    affixes: [{ name: 'Shadow Cloak', stat: '-20% detection', value: 20 }],
+  },
+];
+
+/** Compute effective DPS from item stats, mirroring GAS damage pipeline */
+function computeEffectiveDPS(item: ComparableItem): { dps: number; ttk: number } {
+  const baseDmg = item.stats.find(s => s.key === 'baseDmg')?.value ?? 0;
+  const atkSpd = item.stats.find(s => s.key === 'atkSpd')?.value ?? 1;
+  const critChance = (item.stats.find(s => s.key === 'critChance')?.value ?? 0) / 100;
+  const atkPow = item.stats.find(s => s.key === 'atkPow')?.value ?? 0;
+  const totalDmg = baseDmg + atkPow;
+  const critMulti = 2.0; // standard crit multiplier from AttributeSet
+  const dps = totalDmg * atkSpd * (1 + critChance * (critMulti - 1));
+  const enemyHP = 1000; // standard enemy
+  const ttk = dps > 0 ? enemyHP / dps : Infinity;
+  return { dps, ttk };
+}
+
+function ItemComparisonPanel({ items }: { items: ComparableItem[] }) {
+  const [leftId, setLeftId] = useState(items[0]?.id ?? '');
+  const [rightId, setRightId] = useState(items[1]?.id ?? items[0]?.id ?? '');
+
+  const leftItem = items.find(i => i.id === leftId) ?? items[0];
+  const rightItem = items.find(i => i.id === rightId) ?? (items[1] ?? items[0]);
+
+  if (items.length < 2) return null;
+
+  const leftDps = computeEffectiveDPS(leftItem);
+  const rightDps = computeEffectiveDPS(rightItem);
+  const dpsDiff = rightDps.dps - leftDps.dps;
+  const ttkDiff = rightDps.ttk - leftDps.ttk;
+
+  // Collect all stat keys
+  const allStatKeys = leftItem.stats.map(s => s.key);
+
+  return (
+    <SurfaceCard level={2} className="p-3 space-y-2.5">
+      <SectionLabel icon={GitCompareArrows} label="Item Comparison" color={ACCENT} />
+
+      {/* Selectors */}
+      <div className="flex items-center gap-2">
+        <select
+          value={leftId}
+          onChange={(e) => setLeftId(e.target.value)}
+          className="flex-1 text-xs font-mono font-bold bg-surface-deep border border-border/40 rounded-lg px-2 py-1.5 text-text focus:outline-none focus:border-blue-500/50"
+        >
+          {items.map(i => (
+            <option key={i.id} value={i.id}>{i.name} ({i.rarity})</option>
+          ))}
+        </select>
+        <span className="text-xs font-bold text-text-muted uppercase tracking-wider">vs</span>
+        <select
+          value={rightId}
+          onChange={(e) => setRightId(e.target.value)}
+          className="flex-1 text-xs font-mono font-bold bg-surface-deep border border-border/40 rounded-lg px-2 py-1.5 text-text focus:outline-none focus:border-blue-500/50"
+        >
+          {items.map(i => (
+            <option key={i.id} value={i.id}>{i.name} ({i.rarity})</option>
+          ))}
+        </select>
+      </div>
+
+      {/* Side-by-side header */}
+      <div className="grid grid-cols-[1fr_auto_1fr] gap-2 items-center">
+        <div className="text-center">
+          <span className="text-xs font-mono font-bold" style={{ color: RARITY_COLORS[leftItem.rarity] ?? '#94a3b8' }}>
+            {leftItem.name}
+          </span>
+          <div className="text-[10px] text-text-muted">{leftItem.rarity} · {leftItem.slot}</div>
+        </div>
+        <div className="text-[10px] text-text-muted font-bold uppercase">Delta</div>
+        <div className="text-center">
+          <span className="text-xs font-mono font-bold" style={{ color: RARITY_COLORS[rightItem.rarity] ?? '#94a3b8' }}>
+            {rightItem.name}
+          </span>
+          <div className="text-[10px] text-text-muted">{rightItem.rarity} · {rightItem.slot}</div>
+        </div>
+      </div>
+
+      {/* Stat rows */}
+      <div className="space-y-0.5">
+        {allStatKeys.map(key => {
+          const ls = leftItem.stats.find(s => s.key === key);
+          const rs = rightItem.stats.find(s => s.key === key);
+          if (!ls || !rs) return null;
+          const diff = rs.value - ls.value;
+          const isBetter = ls.higherIsBetter ? diff > 0 : diff < 0;
+          const isWorse = ls.higherIsBetter ? diff < 0 : diff > 0;
+          const diffColor = diff === 0 ? 'var(--text-muted)' : isBetter ? STATUS_SUCCESS : STATUS_ERROR;
+          return (
+            <div key={key} className="grid grid-cols-[1fr_auto_1fr] gap-2 items-center py-1 border-b border-border/10">
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] font-mono text-text-muted">{ls.label}</span>
+                <span className={`text-xs font-mono font-bold ${isWorse ? 'text-red-400' : 'text-text'}`}>
+                  {ls.value % 1 !== 0 ? ls.value.toFixed(1) : ls.value}{ls.unit}
+                </span>
+              </div>
+              <div className="w-16 text-center">
+                {diff !== 0 ? (
+                  <span
+                    className="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded-md inline-block"
+                    style={{ backgroundColor: `${diffColor}15`, color: diffColor, border: `1px solid ${diffColor}30` }}
+                  >
+                    {diff > 0 ? '+' : ''}{diff % 1 !== 0 ? diff.toFixed(1) : diff}
+                  </span>
+                ) : (
+                  <span className="text-[10px] font-mono text-text-muted/40">—</span>
+                )}
+              </div>
+              <div className="flex items-center justify-between">
+                <span className={`text-xs font-mono font-bold ${isBetter ? 'text-emerald-400' : 'text-text'}`}>
+                  {rs.value % 1 !== 0 ? rs.value.toFixed(1) : rs.value}{rs.unit}
+                </span>
+                <span className="text-[10px] font-mono text-text-muted">{rs.label}</span>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Affixes comparison */}
+      <div className="grid grid-cols-2 gap-2">
+        <div>
+          <div className="text-[10px] font-mono font-bold text-text-muted uppercase tracking-wider mb-1">Affixes</div>
+          {leftItem.affixes.length > 0 ? leftItem.affixes.map(a => (
+            <div key={a.name} className="text-[10px] font-mono py-0.5" style={{ color: RARITY_COLORS[leftItem.rarity] ?? '#94a3b8' }}>
+              {a.name}: {a.stat}
+            </div>
+          )) : <div className="text-[10px] font-mono text-text-muted/40 italic">None</div>}
+        </div>
+        <div>
+          <div className="text-[10px] font-mono font-bold text-text-muted uppercase tracking-wider mb-1">Affixes</div>
+          {rightItem.affixes.length > 0 ? rightItem.affixes.map(a => (
+            <div key={a.name} className="text-[10px] font-mono py-0.5" style={{ color: RARITY_COLORS[rightItem.rarity] ?? '#94a3b8' }}>
+              {a.name}: {a.stat}
+            </div>
+          )) : <div className="text-[10px] font-mono text-text-muted/40 italic">None</div>}
+        </div>
+      </div>
+
+      {/* Effective DPS / TTK comparison */}
+      <div className="p-2 rounded-lg border border-border/30 bg-surface-deep/50">
+        <div className="text-[10px] font-mono font-bold text-text-muted uppercase tracking-wider mb-1.5">
+          Combat Impact (GAS Pipeline)
+        </div>
+        <div className="grid grid-cols-[1fr_auto_1fr] gap-2 items-center">
+          <div className="text-center">
+            <div className="text-sm font-mono font-bold" style={{ color: ACCENT }}>{leftDps.dps.toFixed(1)}</div>
+            <div className="text-[9px] text-text-muted">Effective DPS</div>
+          </div>
+          <div className="text-center">
+            <span
+              className="text-xs font-mono font-bold px-2 py-0.5 rounded-md inline-block"
+              style={{
+                backgroundColor: `${dpsDiff >= 0 ? STATUS_SUCCESS : STATUS_ERROR}15`,
+                color: dpsDiff >= 0 ? STATUS_SUCCESS : STATUS_ERROR,
+                border: `1px solid ${dpsDiff >= 0 ? STATUS_SUCCESS : STATUS_ERROR}30`,
+              }}
+            >
+              {dpsDiff >= 0 ? '+' : ''}{dpsDiff.toFixed(1)} DPS
+            </span>
+          </div>
+          <div className="text-center">
+            <div className="text-sm font-mono font-bold" style={{ color: ACCENT }}>{rightDps.dps.toFixed(1)}</div>
+            <div className="text-[9px] text-text-muted">Effective DPS</div>
+          </div>
+        </div>
+        <div className="grid grid-cols-[1fr_auto_1fr] gap-2 items-center mt-1.5">
+          <div className="text-center">
+            <div className="text-xs font-mono font-bold text-text">{leftDps.ttk.toFixed(2)}s</div>
+            <div className="text-[9px] text-text-muted">TTK (1000 HP)</div>
+          </div>
+          <div className="text-center">
+            <span
+              className="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded-md inline-block"
+              style={{
+                backgroundColor: `${ttkDiff <= 0 ? STATUS_SUCCESS : STATUS_ERROR}15`,
+                color: ttkDiff <= 0 ? STATUS_SUCCESS : STATUS_ERROR,
+                border: `1px solid ${ttkDiff <= 0 ? STATUS_SUCCESS : STATUS_ERROR}30`,
+              }}
+            >
+              {ttkDiff > 0 ? '+' : ''}{ttkDiff.toFixed(2)}s
+            </span>
+          </div>
+          <div className="text-center">
+            <div className="text-xs font-mono font-bold text-text">{rightDps.ttk.toFixed(2)}s</div>
+            <div className="text-[9px] text-text-muted">TTK (1000 HP)</div>
+          </div>
+        </div>
+        <div className="text-[9px] text-text-muted mt-1.5 text-center">
+          Formula: (baseDmg + atkPow) × atkSpd × (1 + critChance × (critMult − 1)) · CritMult = 2.0×
+        </div>
+      </div>
+    </SurfaceCard>
+  );
+}
 
 /* ── Component ─────────────────────────────────────────────────────────── */
 
@@ -853,6 +1128,8 @@ Item slug: ${slug}`;
                 </div>
               </SurfaceCard>
 
+              {/* ── Item Comparison Panel ──────────────────────────────────────────── */}
+              <ItemComparisonPanel items={COMPARABLE_ITEMS} />
 
             </motion.div>
           )}

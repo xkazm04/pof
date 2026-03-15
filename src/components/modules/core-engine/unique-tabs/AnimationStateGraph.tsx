@@ -352,6 +352,192 @@ const ANIMATION_TIMELINE_EVENTS: TimelineEvent[] = [
   { id: 'evt10', timestamp: 5.3, label: 'Recover', category: 'state', color: STATUS_INFO },
 ];
 
+/* ── 2.11 Predictive Responsiveness Analyzer data ─────────────────────────── */
+
+type AnimStateName = 'Locomotion' | 'Attacking' | 'Dodging' | 'HitReact' | 'Death';
+
+interface MontageTiming {
+  name: string;
+  state: AnimStateName;
+  totalFrames: number;
+  fps: number;
+  /** Cancel window: frames where bCanInterruptDodge / bIsAttackRecovery is true */
+  cancelWindowStart?: number;
+  cancelWindowEnd?: number;
+  blendInTime: number; // seconds — blend-in adds to response latency
+}
+
+const MONTAGE_TIMINGS: MontageTiming[] = [
+  { name: 'AM_Combo1', state: 'Attacking', totalFrames: 30, fps: 30, cancelWindowStart: 20, cancelWindowEnd: 30, blendInTime: 0.05 },
+  { name: 'AM_Combo2', state: 'Attacking', totalFrames: 36, fps: 30, cancelWindowStart: 24, cancelWindowEnd: 36, blendInTime: 0.05 },
+  { name: 'AM_Combo3', state: 'Attacking', totalFrames: 45, fps: 30, cancelWindowStart: 30, cancelWindowEnd: 45, blendInTime: 0.08 },
+  { name: 'AM_HeavyAttack', state: 'Attacking', totalFrames: 50, fps: 30, cancelWindowStart: 35, cancelWindowEnd: 50, blendInTime: 0.08 },
+  { name: 'AM_Dodge', state: 'Dodging', totalFrames: 15, fps: 30, cancelWindowStart: 10, cancelWindowEnd: 15, blendInTime: 0.03 },
+  { name: 'AM_HitReact', state: 'HitReact', totalFrames: 12, fps: 30, blendInTime: 0.0 },
+];
+
+interface TransitionRule {
+  from: AnimStateName;
+  to: AnimStateName;
+  condition: string;
+  /** Whether this can interrupt mid-montage via cancel window */
+  useCancelWindow: boolean;
+  /** Key UE5 bool that gates this transition */
+  gateBool: string;
+}
+
+const TRANSITION_RULES: TransitionRule[] = [
+  { from: 'Locomotion', to: 'Attacking', condition: 'bIsAttacking', useCancelWindow: false, gateBool: 'bIsAttacking' },
+  { from: 'Locomotion', to: 'Dodging', condition: 'bIsDodging', useCancelWindow: false, gateBool: 'bIsDodging' },
+  { from: 'Locomotion', to: 'HitReact', condition: 'bIsHitReacting', useCancelWindow: false, gateBool: 'bIsHitReacting' },
+  { from: 'Attacking', to: 'Locomotion', condition: '!bIsAttacking && !bIsFullBodyMontage', useCancelWindow: false, gateBool: 'bIsAttackRecovery' },
+  { from: 'Attacking', to: 'Dodging', condition: 'bDodgeCancelsAttack', useCancelWindow: true, gateBool: 'bDodgeCancelsAttack' },
+  { from: 'Attacking', to: 'HitReact', condition: 'bHitReactInterrupt', useCancelWindow: false, gateBool: 'bHitReactInterrupt' },
+  { from: 'Dodging', to: 'Locomotion', condition: '!bIsDodging', useCancelWindow: false, gateBool: 'bIsDodging' },
+  { from: 'Dodging', to: 'Attacking', condition: 'bCanInterruptDodge && bIsAttacking', useCancelWindow: true, gateBool: 'bCanInterruptDodge' },
+  { from: 'HitReact', to: 'Locomotion', condition: '!bIsHitReacting', useCancelWindow: false, gateBool: 'bIsHitReacting' },
+];
+
+/** Genre norms for responsiveness (seconds). Exceeding these flags a warning. */
+const GENRE_NORMS: Record<string, number> = {
+  'Locomotion': 0.05,  // From idle, response should be near-instant
+  'Attacking': 0.20,   // Attack recovery cancel should feel snappy
+  'Dodging': 0.15,     // Dodge cancel window should be responsive
+  'HitReact': 0.10,    // Hit react interrupt should be immediate
+};
+
+interface ResponsivenessResult {
+  from: AnimStateName;
+  to: AnimStateName;
+  action: string;
+  bestCase: number;   // seconds
+  worstCase: number;  // seconds
+  avgCase: number;    // seconds
+  /** Frame range description */
+  frameRange: string;
+  /** Percentage through source montage when cancel is possible */
+  cancelPct: string;
+  exceedsNorm: boolean;
+  normThreshold: number;
+  gateBool: string;
+}
+
+function computeResponsiveness(): ResponsivenessResult[] {
+  const results: ResponsivenessResult[] = [];
+
+  for (const rule of TRANSITION_RULES) {
+    const sourceMontages = MONTAGE_TIMINGS.filter(m => m.state === rule.from);
+
+    if (rule.from === 'Locomotion') {
+      // From locomotion, response is just blend-in time + 1 frame of input lag
+      const blendIn = 0.05; // default blend
+      const inputLag = 1 / 60; // 1 frame at 60fps
+      const total = blendIn + inputLag;
+      results.push({
+        from: rule.from,
+        to: rule.to,
+        action: `${rule.to} from idle`,
+        bestCase: inputLag,
+        worstCase: total,
+        avgCase: (inputLag + total) / 2,
+        frameRange: `frame 0-1`,
+        cancelPct: 'immediate',
+        exceedsNorm: total > (GENRE_NORMS[rule.from] ?? 0.2),
+        normThreshold: GENRE_NORMS[rule.from] ?? 0.2,
+        gateBool: rule.gateBool,
+      });
+      continue;
+    }
+
+    if (sourceMontages.length === 0) {
+      // State with no montage data (e.g. HitReact -> Locomotion)
+      const montage = MONTAGE_TIMINGS.find(m => m.state === rule.from);
+      const dur = montage ? montage.totalFrames / montage.fps : 0.3;
+      results.push({
+        from: rule.from,
+        to: rule.to,
+        action: `${rule.to} from ${rule.from}`,
+        bestCase: 0,
+        worstCase: dur,
+        avgCase: dur / 2,
+        frameRange: `0-${montage?.totalFrames ?? '?'}`,
+        cancelPct: 'on completion',
+        exceedsNorm: dur > (GENRE_NORMS[rule.from] ?? 0.2),
+        normThreshold: GENRE_NORMS[rule.from] ?? 0.2,
+        gateBool: rule.gateBool,
+      });
+      continue;
+    }
+
+    // Compute for each source montage
+    for (const montage of sourceMontages) {
+      const frameDur = 1 / montage.fps;
+      const totalDur = montage.totalFrames * frameDur;
+
+      if (rule.useCancelWindow && montage.cancelWindowStart !== undefined && montage.cancelWindowEnd !== undefined) {
+        // Can cancel within the window
+        const cancelStart = montage.cancelWindowStart * frameDur;
+        const cancelEnd = montage.cancelWindowEnd * frameDur;
+        const waitBest = cancelStart; // time until cancel window opens
+        const waitWorst = cancelEnd;  // latest point in cancel window
+        const blendIn = montage.blendInTime;
+        const best = cancelStart + blendIn;
+        const worst = cancelEnd + blendIn;
+        const avg = (best + worst) / 2;
+        const pctStart = Math.round((montage.cancelWindowStart / montage.totalFrames) * 100);
+        const pctEnd = Math.round((montage.cancelWindowEnd / montage.totalFrames) * 100);
+
+        results.push({
+          from: rule.from,
+          to: rule.to,
+          action: `${rule.to} from ${montage.name}`,
+          bestCase: best,
+          worstCase: worst,
+          avgCase: avg,
+          frameRange: `frames ${montage.cancelWindowStart}-${montage.cancelWindowEnd} of ${montage.totalFrames}`,
+          cancelPct: `${pctStart}-${pctEnd}%`,
+          exceedsNorm: best > (GENRE_NORMS[rule.from] ?? 0.2),
+          normThreshold: GENRE_NORMS[rule.from] ?? 0.2,
+          gateBool: rule.gateBool,
+        });
+      } else {
+        // Must wait for montage to finish
+        const blendIn = montage.blendInTime;
+        results.push({
+          from: rule.from,
+          to: rule.to,
+          action: `${rule.to} from ${montage.name}`,
+          bestCase: totalDur + blendIn,
+          worstCase: totalDur + blendIn,
+          avgCase: totalDur + blendIn,
+          frameRange: `after frame ${montage.totalFrames}`,
+          cancelPct: 'on completion',
+          exceedsNorm: (totalDur + blendIn) > (GENRE_NORMS[rule.from] ?? 0.2),
+          normThreshold: GENRE_NORMS[rule.from] ?? 0.2,
+          gateBool: rule.gateBool,
+        });
+      }
+    }
+  }
+
+  return results;
+}
+
+const RESPONSIVENESS_RESULTS = computeResponsiveness();
+
+const RESPONSIVENESS_GRADE_THRESHOLDS = [
+  { max: 0.05, label: 'Instant', color: STATUS_SUCCESS },
+  { max: 0.10, label: 'Excellent', color: STATUS_SUCCESS },
+  { max: 0.15, label: 'Good', color: ACCENT_EMERALD },
+  { max: 0.25, label: 'Acceptable', color: STATUS_WARNING },
+  { max: 0.50, label: 'Sluggish', color: ACCENT_VIOLET },
+  { max: Infinity, label: 'Unresponsive', color: STATUS_ERROR },
+];
+
+function getGrade(seconds: number) {
+  return RESPONSIVENESS_GRADE_THRESHOLDS.find(t => seconds <= t.max) ?? RESPONSIVENESS_GRADE_THRESHOLDS[RESPONSIVENESS_GRADE_THRESHOLDS.length - 1];
+}
+
 /* ── Component ─────────────────────────────────────────────────────────────── */
 
 interface AnimationStateGraphProps {
@@ -672,7 +858,153 @@ export function AnimationStateGraph({ moduleId }: AnimationStateGraphProps) {
         </div>
       </SurfaceCard>
 
-      
+      {/* ── 2.11 Predictive Responsiveness Analyzer ──────────────────────────── */}
+      <SurfaceCard level={2} className="p-3 relative overflow-hidden group col-span-full">
+        <div className="absolute top-0 left-0 w-40 h-40 bg-emerald-500/5 blur-3xl rounded-full pointer-events-none" />
+        <SectionLabel label="Predictive Responsiveness Analyzer" />
+        <p className="text-xs text-text-muted mt-1 mb-3">
+          Input-to-visual response latency computed from transition rules, montage durations, cancel windows, and blend weights.
+          Based on <span className="font-mono text-text">UARPGAnimInstance</span> transition booleans.
+        </p>
+        <div className="relative z-10 space-y-3">
+          {/* Summary gauges */}
+          <div className="grid grid-cols-4 gap-2">
+            {(['Locomotion', 'Attacking', 'Dodging', 'HitReact'] as AnimStateName[]).map((state) => {
+              const stateResults = RESPONSIVENESS_RESULTS.filter(r => r.from === state);
+              if (stateResults.length === 0) return null;
+              const avgAll = stateResults.reduce((s, r) => s + r.avgCase, 0) / stateResults.length;
+              const grade = getGrade(avgAll);
+              const warnings = stateResults.filter(r => r.exceedsNorm).length;
+              return (
+                <div key={state} className="p-2 rounded-lg border border-border/30 bg-surface-deep/50">
+                  <div className="text-[10px] font-mono font-bold text-text-muted uppercase tracking-wider">{state}</div>
+                  <div className="text-sm font-mono font-bold mt-0.5" style={{ color: grade.color }}>
+                    {(avgAll * 1000).toFixed(0)}ms
+                  </div>
+                  <div className="text-[9px] font-mono mt-0.5" style={{ color: grade.color }}>{grade.label}</div>
+                  {warnings > 0 && (
+                    <div className="flex items-center gap-1 mt-1">
+                      <AlertTriangle className="w-2.5 h-2.5" style={{ color: STATUS_WARNING }} />
+                      <span className="text-[9px] font-mono" style={{ color: STATUS_WARNING }}>{warnings} above norm</span>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Detailed report table */}
+          <div className="overflow-x-auto custom-scrollbar">
+            <table className="w-full text-xs border-collapse">
+              <thead>
+                <tr className="border-b border-border/40">
+                  <th className="text-left py-1.5 pr-3 text-[10px] font-bold uppercase tracking-wider text-text-muted">Action</th>
+                  <th className="py-1.5 px-2 text-[10px] font-bold uppercase tracking-wider text-text-muted text-center">Best</th>
+                  <th className="py-1.5 px-2 text-[10px] font-bold uppercase tracking-wider text-text-muted text-center">Avg</th>
+                  <th className="py-1.5 px-2 text-[10px] font-bold uppercase tracking-wider text-text-muted text-center">Worst</th>
+                  <th className="py-1.5 px-2 text-[10px] font-bold uppercase tracking-wider text-text-muted text-center">Grade</th>
+                  <th className="py-1.5 px-2 text-[10px] font-bold uppercase tracking-wider text-text-muted">Frames</th>
+                  <th className="py-1.5 px-2 text-[10px] font-bold uppercase tracking-wider text-text-muted">Gate</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border/20">
+                {RESPONSIVENESS_RESULTS.map((r, i) => {
+                  const grade = getGrade(r.avgCase);
+                  return (
+                    <tr key={i} className="hover:bg-surface/30 transition-colors">
+                      <td className="py-1.5 pr-3">
+                        <div className="flex items-center gap-1.5">
+                          {r.exceedsNorm && <AlertTriangle className="w-3 h-3 flex-shrink-0" style={{ color: STATUS_WARNING }} />}
+                          <span className="font-mono text-text">{r.action}</span>
+                        </div>
+                      </td>
+                      <td className="py-1.5 px-2 text-center font-mono" style={{ color: getGrade(r.bestCase).color }}>
+                        {(r.bestCase * 1000).toFixed(0)}ms
+                      </td>
+                      <td className="py-1.5 px-2 text-center font-mono font-bold" style={{ color: grade.color }}>
+                        {(r.avgCase * 1000).toFixed(0)}ms
+                      </td>
+                      <td className="py-1.5 px-2 text-center font-mono" style={{ color: getGrade(r.worstCase).color }}>
+                        {(r.worstCase * 1000).toFixed(0)}ms
+                      </td>
+                      <td className="py-1.5 px-2 text-center">
+                        <span
+                          className="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded-md"
+                          style={{ backgroundColor: `${grade.color}15`, color: grade.color, border: `1px solid ${grade.color}30` }}
+                        >
+                          {grade.label}
+                        </span>
+                      </td>
+                      <td className="py-1.5 px-2 text-[10px] font-mono text-text-muted">{r.frameRange}</td>
+                      <td className="py-1.5 px-2">
+                        <span className="text-[10px] font-mono px-1 py-0.5 rounded bg-surface-deep border border-border/30 text-text-muted">
+                          {r.gateBool}
+                        </span>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Responsiveness bar chart */}
+          <div className="space-y-1">
+            <div className="text-[10px] font-mono font-bold text-text-muted uppercase tracking-wider">Response Latency Comparison</div>
+            {RESPONSIVENESS_RESULTS.map((r, i) => {
+              const maxMs = 600;
+              const barPct = Math.min((r.avgCase * 1000 / maxMs) * 100, 100);
+              const bestPct = Math.min((r.bestCase * 1000 / maxMs) * 100, 100);
+              const worstPct = Math.min((r.worstCase * 1000 / maxMs) * 100, 100);
+              const normPct = Math.min((r.normThreshold * 1000 / maxMs) * 100, 100);
+              const grade = getGrade(r.avgCase);
+              return (
+                <div key={i} className="flex items-center gap-2">
+                  <span className="text-[9px] font-mono text-text-muted w-36 truncate" title={r.action}>{r.action}</span>
+                  <div className="flex-1 relative h-4 rounded bg-surface-deep">
+                    {/* Worst-case range */}
+                    <div
+                      className="absolute top-0 h-full rounded opacity-20"
+                      style={{ left: `${bestPct}%`, width: `${worstPct - bestPct}%`, backgroundColor: grade.color }}
+                    />
+                    {/* Average bar */}
+                    <div
+                      className="absolute top-0.5 h-3 rounded-sm"
+                      style={{ width: `${barPct}%`, backgroundColor: grade.color, boxShadow: `0 0 4px ${grade.color}40` }}
+                    />
+                    {/* Genre norm line */}
+                    <div
+                      className="absolute top-0 w-[2px] h-full"
+                      style={{ left: `${normPct}%`, backgroundColor: STATUS_WARNING }}
+                      title={`Genre norm: ${r.normThreshold * 1000}ms`}
+                    />
+                  </div>
+                  <span className="text-[9px] font-mono w-12 text-right" style={{ color: grade.color }}>
+                    {(r.avgCase * 1000).toFixed(0)}ms
+                  </span>
+                </div>
+              );
+            })}
+            {/* Legend */}
+            <div className="flex items-center gap-3 mt-1.5 text-[9px] font-mono text-text-muted">
+              <span className="flex items-center gap-1">
+                <span className="w-3 h-2 rounded-sm" style={{ backgroundColor: STATUS_SUCCESS }} /> &lt;100ms
+              </span>
+              <span className="flex items-center gap-1">
+                <span className="w-3 h-2 rounded-sm" style={{ backgroundColor: STATUS_WARNING }} /> 100-250ms
+              </span>
+              <span className="flex items-center gap-1">
+                <span className="w-3 h-2 rounded-sm" style={{ backgroundColor: STATUS_ERROR }} /> &gt;500ms
+              </span>
+              <span className="flex items-center gap-1">
+                <span className="w-[2px] h-3" style={{ backgroundColor: STATUS_WARNING }} /> Genre norm
+              </span>
+            </div>
+          </div>
+        </div>
+      </SurfaceCard>
+
+
               </div>
             </motion.div>
 )}

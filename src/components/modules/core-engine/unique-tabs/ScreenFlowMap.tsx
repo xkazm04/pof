@@ -516,7 +516,26 @@ export function ScreenFlowMap({ moduleId }: ScreenFlowMapProps) {
                       const isHighlighted = highlightedFlowNode === edge.source || highlightedFlowNode === edge.target;
                       return (
                         <g key={`edge-${i}`}>
+                          {/* Base static line */}
                           <line x1={sx} y1={sy} x2={tx} y2={ty} stroke={isHighlighted ? ACCENT : 'rgba(255,255,255,0.12)'} strokeWidth={isHighlighted ? 2 : 1.5} strokeDasharray={edge.style === 'dashed' ? '6 4' : undefined} style={{ transition: 'stroke 0.2s, stroke-width 0.2s' }} />
+                          {/* Animated flow overlay */}
+                          <motion.line
+                            x1={sx} y1={sy} x2={tx} y2={ty}
+                            stroke={isHighlighted ? ACCENT : 'rgba(255,255,255,0.2)'}
+                            strokeWidth={isHighlighted ? 1.5 : 1}
+                            strokeDasharray="6 10"
+                            strokeLinecap="round"
+                            initial={{ strokeDashoffset: 0, opacity: 0 }}
+                            animate={{
+                              strokeDashoffset: edge.style === 'dashed' ? 32 : -32,
+                              opacity: isHighlighted ? [0.4, 0.8, 0.4] : [0.15, 0.35, 0.15],
+                            }}
+                            transition={{
+                              strokeDashoffset: { duration: 1.8, ease: 'linear', repeat: Infinity },
+                              opacity: { duration: 1.8, ease: 'easeInOut', repeat: Infinity },
+                            }}
+                            style={isHighlighted ? { filter: `drop-shadow(0 0 3px ${ACCENT}80)` } : undefined}
+                          />
                           {edge.label && <text x={mx} y={my - 6} textAnchor="middle" className="text-[7px] font-mono" fill={isHighlighted ? ACCENT : 'var(--text-muted)'} style={{ transition: 'fill 0.2s' }}>{edge.label}</text>}
                         </g>
                       );

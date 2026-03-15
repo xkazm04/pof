@@ -1,7 +1,7 @@
 'use client';
 
 import { useMemo, useState, useCallback } from 'react';
-import { Coins, Dices, Package, BarChart3, Diff, Clock, Sparkles, SlidersHorizontal, Timer, Radio, Calculator, Brain } from 'lucide-react';
+import { Coins, Dices, Package, BarChart3, Diff, Clock, Sparkles, SlidersHorizontal, Timer, Radio, Calculator, Brain, Skull, Play, Code, Copy, CheckCircle2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   ACCENT_ORANGE, ACCENT_EMERALD, ACCENT_CYAN,
@@ -132,6 +132,47 @@ const DEFAULT_EDITOR_ENTRIES: LootEditorEntry[] = [
   { id: 'e5', name: 'Sunfire Amulet', weight: 5, rarity: 'Legendary', color: '#fbbf24' },
 ];
 
+/* ── 7.7b Drought Streak Probability Calculator ───────────────────────────── */
+
+const DROUGHT_RARITY_OPTIONS = RARITY_TIERS.map(t => ({
+  name: t.name,
+  color: t.color,
+  dropRate: t.weight / TOTAL_WEIGHT,
+}));
+
+/** Cumulative probability of getting ≥1 drop in N attempts.
+ *  Without pity: P(N) = 1 - (1 - rate)^N
+ *  With pity threshold T: P(N) = 1 for N >= T, else adjusted via inclusion. */
+function cumulativeProbCurve(
+  dropRate: number,
+  maxKills: number,
+  pityThreshold: number | null,
+): { kill: number; probNoPity: number; probWithPity: number }[] {
+  const points: { kill: number; probNoPity: number; probWithPity: number }[] = [];
+  for (let n = 1; n <= maxKills; n++) {
+    const probNoPity = 1 - Math.pow(1 - dropRate, n);
+    // With pity: guaranteed at threshold, so cap the no-drop tail
+    const probWithPity = pityThreshold && n >= pityThreshold
+      ? 1.0
+      : pityThreshold
+        ? 1 - Math.pow(1 - dropRate, n) * ((pityThreshold - Math.min(n, pityThreshold)) / pityThreshold)
+        : probNoPity;
+    points.push({ kill: n, probNoPity, probWithPity: Math.min(probWithPity, 1) });
+  }
+  return points;
+}
+
+/** Find the kill count where cumulative probability first crosses a threshold */
+function findPercentileKill(dropRate: number, percentile: number, pityThreshold: number | null): number {
+  const target = percentile / 100;
+  for (let n = 1; n <= 2000; n++) {
+    if (pityThreshold && n >= pityThreshold) return n;
+    const prob = 1 - Math.pow(1 - dropRate, n);
+    if (prob >= target) return n;
+  }
+  return 2000;
+}
+
 /* ── 7.8 Beacon config data ───────────────────────────────────────────────── */
 
 interface BeaconConfig {
@@ -179,6 +220,113 @@ const SMART_LOOT_DATA: SmartLootSlot[] = [
   { slot: 'Ring', rawPct: 12, smartPct: 10, gearScoreGap: 5 },
   { slot: 'Amulet', rawPct: 12, smartPct: 6, gearScoreGap: 1 },
 ];
+
+/* ── 7.11 Enemy-to-LootTable Binding Data ──────────────────────────────────── */
+
+interface EnemyLootBinding {
+  archetypeId: string;
+  archetypeName: string;
+  color: string;
+  icon: string;
+  lootTableName: string;
+  dropChance: number; // 0-1, chance of dropping any item
+  rarityWeights: number[]; // weights for each RARITY_TIERS entry
+  bonusGold: number;
+}
+
+const DEFAULT_ENEMY_LOOT_BINDINGS: EnemyLootBinding[] = [
+  {
+    archetypeId: 'MeleeGrunt', archetypeName: 'Melee Grunt', color: ACCENT_EMERALD, icon: 'FG',
+    lootTableName: 'LT_Grunt', dropChance: 0.3,
+    rarityWeights: [60, 25, 10, 4, 1], bonusGold: 15,
+  },
+  {
+    archetypeId: 'RangedCaster', archetypeName: 'Ranged Caster', color: '#60a5fa', icon: 'DM',
+    lootTableName: 'LT_Caster', dropChance: 0.35,
+    rarityWeights: [40, 30, 18, 9, 3], bonusGold: 20,
+  },
+  {
+    archetypeId: 'Brute', archetypeName: 'Brute', color: ACCENT_ORANGE, icon: 'SB',
+    lootTableName: 'LT_Brute', dropChance: 0.5,
+    rarityWeights: [30, 25, 25, 15, 5], bonusGold: 40,
+  },
+];
+
+interface SimulatedDrop {
+  rarityIndex: number;
+  count: number;
+}
+
+function simulateKills(binding: EnemyLootBinding, killCount: number): SimulatedDrop[] {
+  const totalWeight = binding.rarityWeights.reduce((s, w) => s + w, 0);
+  const counts = binding.rarityWeights.map(() => 0);
+
+  // Deterministic simulation using distribution
+  const expectedDrops = killCount * binding.dropChance;
+  for (let i = 0; i < binding.rarityWeights.length; i++) {
+    counts[i] = Math.round(expectedDrops * (binding.rarityWeights[i] / totalWeight));
+  }
+
+  return counts.map((count, rarityIndex) => ({ rarityIndex, count }));
+}
+
+function generateEnemyLootCpp(bindings: EnemyLootBinding[]): string {
+  return `// Add to ARPGEnemyCharacter.h — protected section:
+//
+// /** Loot table to roll on death. Assign per-archetype in the enemy BP. */
+// UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Loot")
+// TObjectPtr<UARPGLootTable> LootTable;
+//
+// /** Chance to drop any item on death [0.0 - 1.0]. */
+// UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Loot", meta = (ClampMin = "0.0", ClampMax = "1.0"))
+// float DropChance = 0.3f;
+//
+// /** Bonus gold dropped on death. */
+// UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Loot", meta = (ClampMin = "0"))
+// int32 BonusGold = 15;
+
+// ─── Add to OnDeathFromAbility() in ARPGEnemyCharacter.cpp ───
+
+void AARPGEnemyCharacter::OnDeathFromAbility(AActor* KillingActor)
+{
+\t// ... existing XP award code ...
+
+\t// Loot drop
+\tif (LootTable && FMath::FRand() <= DropChance)
+\t{
+\t\tFARPGLootResult LootResult;
+\t\tif (LootTable->RollLoot(CharacterLevel, LootResult))
+\t\t{
+\t\t\t// Spawn world item at death location
+\t\t\tconst FVector SpawnLoc = GetActorLocation() + FVector(0, 0, 50.f);
+\t\t\tFActorSpawnParameters SpawnParams;
+\t\t\tSpawnParams.SpawnCollisionHandlingOverride =
+\t\t\t\tESpawnActorCollisionHandlingMethod::AdjustIfPossibleButAlwaysSpawn;
+
+\t\t\tif (AARPGWorldItem* WorldItem = GetWorld()->SpawnActor<AARPGWorldItem>(
+\t\t\t\tAARPGWorldItem::StaticClass(), SpawnLoc, FRotator::ZeroRotator, SpawnParams))
+\t\t\t{
+\t\t\t\tWorldItem->InitFromLootResult(LootResult);
+\t\t\t}
+\t\t}
+\t}
+
+\t// Gold drop
+\tif (BonusGold > 0 && KillingActor)
+\t{
+\t\tif (AARPGPlayerCharacter* Player = Cast<AARPGPlayerCharacter>(KillingActor))
+\t\t{
+\t\t\t// Player->AddGold(BonusGold);
+\t\t}
+\t}
+
+\t// ... existing death broadcast ...
+}
+
+// ─── Default values per archetype (set in constructor or BP) ───
+${bindings.map(b => `// ${b.archetypeName}: LootTable=${b.lootTableName}, DropChance=${b.dropChance.toFixed(2)}, Gold=${b.bonusGold}`).join('\n')}
+`;
+}
 
 /* ── Helper: squarified treemap layout ────────────────────────────────────── */
 
@@ -251,6 +399,25 @@ export function LootTableVisualizer({ moduleId }: LootTableVisualizerProps) {
   const [pityHistory, setPityHistory] = useState<number[]>([]);
   const [lastRareAt, setLastRareAt] = useState(0);
 
+  /* 7.7b Drought calculator state */
+  const [droughtRarity, setDroughtRarity] = useState<number>(4); // index into DROUGHT_RARITY_OPTIONS, default Legendary
+  const [droughtPityEnabled, setDroughtPityEnabled] = useState(true);
+
+  const droughtData = useMemo(() => {
+    const opt = DROUGHT_RARITY_OPTIONS[droughtRarity];
+    const rate = opt.dropRate;
+    const pity = droughtPityEnabled ? pityThreshold : null;
+    const maxKills = Math.min(Math.max(Math.ceil(5 / rate), 50), 500);
+    const curve = cumulativeProbCurve(rate, maxKills, pity);
+    const expectedDry = Math.round(1 / rate);
+    const p50 = findPercentileKill(rate, 50, null);
+    const p95 = findPercentileKill(rate, 95, null);
+    const p99 = findPercentileKill(rate, 99, null);
+    const p95Pity = findPercentileKill(rate, 95, pity);
+    const p99Pity = findPercentileKill(rate, 99, pity);
+    return { opt, rate, pity, maxKills, curve, expectedDry, p50, p95, p99, p95Pity, p99Pity };
+  }, [droughtRarity, droughtPityEnabled, pityThreshold]);
+
   /* 7.8 Beacon state */
   const [colorblindMode, setColorblindMode] = useState(false);
 
@@ -259,6 +426,23 @@ export function LootTableVisualizer({ moduleId }: LootTableVisualizerProps) {
 
   /* 7.10 Smart loot state */
   const [smartMode, setSmartMode] = useState(false);
+
+  /* 7.11 Enemy-to-LootTable binding state */
+  const [enemyLootBindings, setEnemyLootBindings] = useState<EnemyLootBinding[]>(DEFAULT_ENEMY_LOOT_BINDINGS);
+  const [simKillCount, setSimKillCount] = useState(100);
+  const [copiedLootCpp, setCopiedLootCpp] = useState(false);
+  const [showLootCpp, setShowLootCpp] = useState(false);
+
+  const simResults = useMemo(
+    () => enemyLootBindings.map(b => ({ binding: b, drops: simulateKills(b, simKillCount) })),
+    [enemyLootBindings, simKillCount],
+  );
+
+  const handleCopyLootCpp = useCallback(() => {
+    navigator.clipboard.writeText(generateEnemyLootCpp(enemyLootBindings));
+    setCopiedLootCpp(true);
+    setTimeout(() => setCopiedLootCpp(false), 2000);
+  }, [enemyLootBindings]);
 
   const featureMap = useMemo(() => {
     const map = new Map<string, FeatureRow>();
@@ -993,6 +1177,178 @@ export function LootTableVisualizer({ moduleId }: LootTableVisualizerProps) {
         )}
       </SurfaceCard>
 
+      {/* ═══ 7.7b Drought Streak & Luck Probability Calculator ═══ */}
+      <SurfaceCard level={2} className="p-3">
+        <div className="flex items-center gap-2 mb-3">
+          <Calculator className="w-3.5 h-3.5" style={{ color: droughtData.opt.color }} />
+          <span className="text-xs font-semibold text-text">Drought Streak Calculator</span>
+          <span className="ml-auto text-2xs font-mono text-text-muted">
+            P(drop) = {(droughtData.rate * 100).toFixed(1)}%
+          </span>
+        </div>
+
+        {/* Controls */}
+        <div className="flex flex-wrap items-center gap-2 mb-3">
+          <div className="flex gap-1">
+            {DROUGHT_RARITY_OPTIONS.map((opt, i) => (
+              <button
+                key={opt.name}
+                onClick={() => setDroughtRarity(i)}
+                className="text-2xs font-mono px-2 py-0.5 rounded border transition-all hover:opacity-80"
+                style={{
+                  borderColor: droughtRarity === i ? `${opt.color}60` : 'var(--border)',
+                  backgroundColor: droughtRarity === i ? `${opt.color}20` : 'transparent',
+                  color: droughtRarity === i ? opt.color : 'var(--text-muted)',
+                }}
+              >
+                {opt.name}
+              </button>
+            ))}
+          </div>
+          <button
+            onClick={() => setDroughtPityEnabled(v => !v)}
+            className="text-2xs font-mono px-2 py-0.5 rounded border transition-all hover:opacity-80 ml-auto"
+            style={{
+              borderColor: droughtPityEnabled ? `${STATUS_SUCCESS}${OPACITY_30}` : 'var(--border)',
+              backgroundColor: droughtPityEnabled ? `${STATUS_SUCCESS}${OPACITY_8}` : 'transparent',
+              color: droughtPityEnabled ? STATUS_SUCCESS : 'var(--text-muted)',
+            }}
+          >
+            {droughtPityEnabled ? `Pity @ ${pityThreshold}` : 'No Pity'}
+          </button>
+        </div>
+
+        {/* Key stats row */}
+        <div className="grid grid-cols-4 gap-2 mb-3">
+          {[
+            { label: 'Expected Dry', value: `${droughtData.expectedDry} kills`, color: droughtData.opt.color },
+            { label: 'Median (P50)', value: `${droughtData.p50} kills`, color: ACCENT_CYAN },
+            { label: 'P95 Worst', value: `${droughtPityEnabled ? droughtData.p95Pity : droughtData.p95} kills`, color: STATUS_WARNING },
+            { label: 'P99 Worst', value: `${droughtPityEnabled ? droughtData.p99Pity : droughtData.p99} kills`, color: STATUS_ERROR },
+          ].map(stat => (
+            <div key={stat.label} className="text-center p-1.5 rounded border" style={{ borderColor: `${stat.color}${OPACITY_30}`, backgroundColor: `${stat.color}${OPACITY_8}` }}>
+              <div className="text-2xs text-text-muted">{stat.label}</div>
+              <div className="text-xs font-mono font-bold" style={{ color: stat.color }}>{stat.value}</div>
+            </div>
+          ))}
+        </div>
+
+        {/* Cumulative probability curve SVG */}
+        <div className="relative">
+          <div className="text-2xs text-text-muted font-medium mb-1">Cumulative P(≥1 drop) vs Kill Count</div>
+          <svg viewBox="0 0 400 180" className="w-full" role="img" aria-label={`Cumulative probability curve for ${droughtData.opt.name} rarity drops over ${droughtData.maxKills} kills`}>
+            <title>Drought Streak Probability Curve</title>
+            <desc>Shows the probability of receiving at least one drop as kill count increases, with and without pity timer.</desc>
+            {/* Grid lines */}
+            {[0.25, 0.5, 0.75, 1.0].map(pct => (
+              <g key={pct}>
+                <line x1={40} y1={160 - pct * 140} x2={390} y2={160 - pct * 140} stroke="rgba(255,255,255,0.06)" strokeWidth="0.5" />
+                <text x={36} y={160 - pct * 140 + 3} textAnchor="end" className="text-[8px] font-mono" fill="var(--text-muted)">{Math.round(pct * 100)}%</text>
+              </g>
+            ))}
+            {/* X-axis labels */}
+            {Array.from({ length: 5 }, (_, i) => {
+              const kill = Math.round((droughtData.maxKills / 4) * i);
+              const x = 40 + (kill / droughtData.maxKills) * 350;
+              return (
+                <text key={i} x={x} y={175} textAnchor="middle" className="text-[8px] font-mono" fill="var(--text-muted)">{kill}</text>
+              );
+            })}
+
+            {/* No-pity curve */}
+            <polyline
+              fill="none"
+              stroke={droughtData.opt.color}
+              strokeWidth="1.5"
+              strokeDasharray="4 3"
+              opacity={droughtPityEnabled ? 0.35 : 0.8}
+              points={droughtData.curve.map(p => `${40 + (p.kill / droughtData.maxKills) * 350},${160 - p.probNoPity * 140}`).join(' ')}
+            />
+
+            {/* With-pity curve */}
+            {droughtPityEnabled && (
+              <polyline
+                fill="none"
+                stroke={droughtData.opt.color}
+                strokeWidth="2"
+                points={droughtData.curve.map(p => `${40 + (p.kill / droughtData.maxKills) * 350},${160 - p.probWithPity * 140}`).join(' ')}
+                style={{ filter: `drop-shadow(0 0 3px ${droughtData.opt.color}60)` }}
+              />
+            )}
+
+            {/* Pity threshold vertical line */}
+            {droughtPityEnabled && droughtData.pity && droughtData.pity <= droughtData.maxKills && (
+              <g>
+                <line
+                  x1={40 + (droughtData.pity / droughtData.maxKills) * 350}
+                  y1={18}
+                  x2={40 + (droughtData.pity / droughtData.maxKills) * 350}
+                  y2={160}
+                  stroke={STATUS_SUCCESS}
+                  strokeWidth="1"
+                  strokeDasharray="3 2"
+                  opacity={0.6}
+                />
+                <text
+                  x={40 + (droughtData.pity / droughtData.maxKills) * 350}
+                  y={14}
+                  textAnchor="middle"
+                  className="text-[7px] font-mono font-bold"
+                  fill={STATUS_SUCCESS}
+                >
+                  Pity@{droughtData.pity}
+                </text>
+              </g>
+            )}
+
+            {/* Percentile annotations */}
+            {[
+              { label: 'P50', kill: droughtData.p50, pct: 0.5, color: ACCENT_CYAN },
+              { label: 'P95', kill: droughtPityEnabled ? droughtData.p95Pity : droughtData.p95, pct: 0.95, color: STATUS_WARNING },
+              { label: 'P99', kill: droughtPityEnabled ? droughtData.p99Pity : droughtData.p99, pct: 0.99, color: STATUS_ERROR },
+            ].filter(a => a.kill <= droughtData.maxKills).map(ann => {
+              const x = 40 + (ann.kill / droughtData.maxKills) * 350;
+              const y = 160 - ann.pct * 140;
+              return (
+                <g key={ann.label}>
+                  <circle cx={x} cy={y} r={3} fill={ann.color} opacity={0.8} />
+                  <text x={x} y={y - 6} textAnchor="middle" className="text-[7px] font-mono font-bold" fill={ann.color}>
+                    {ann.label} ({ann.kill})
+                  </text>
+                </g>
+              );
+            })}
+
+            {/* Axis labels */}
+            <text x={215} y={175} textAnchor="middle" className="text-[8px] font-mono" fill="var(--text-muted)">Kills</text>
+          </svg>
+        </div>
+
+        {/* Legend */}
+        <div className="flex flex-wrap gap-3 mt-1 text-2xs font-mono text-text-muted">
+          {droughtPityEnabled && (
+            <>
+              <span className="flex items-center gap-1"><span className="inline-block w-4 h-0.5 rounded" style={{ backgroundColor: droughtData.opt.color }} /> With Pity</span>
+              <span className="flex items-center gap-1"><span className="inline-block w-4 h-0.5 rounded opacity-40" style={{ backgroundColor: droughtData.opt.color, borderTop: '1px dashed' }} /> No Pity</span>
+            </>
+          )}
+          <span className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: ACCENT_CYAN }} /> P50</span>
+          <span className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: STATUS_WARNING }} /> P95</span>
+          <span className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: STATUS_ERROR }} /> P99</span>
+        </div>
+
+        {/* Interpretation */}
+        <div className="mt-2 p-2 rounded border text-2xs font-mono" style={{ borderColor: `${droughtData.opt.color}${OPACITY_30}`, backgroundColor: `${droughtData.opt.color}${OPACITY_8}` }}>
+          <span style={{ color: droughtData.opt.color }} className="font-bold">{droughtData.opt.name}</span>
+          <span className="text-text-muted"> — {(droughtData.rate * 100).toFixed(1)}% per kill. </span>
+          <span className="text-text-muted">50% of players get a drop within </span>
+          <span className="text-text font-bold">{droughtData.p50}</span>
+          <span className="text-text-muted"> kills. 99% within </span>
+          <span className="text-text font-bold">{droughtPityEnabled ? droughtData.p99Pity : droughtData.p99}</span>
+          <span className="text-text-muted"> kills{droughtPityEnabled ? ` (pity caps at ${pityThreshold})` : ''}.</span>
+        </div>
+      </SurfaceCard>
+
       {/* ═══ 7.8 World Drop Beacon Visualizer ═══ */}
       <SurfaceCard level={2} className="p-3">
         <div className="flex items-center gap-2 mb-3">
@@ -1225,6 +1581,161 @@ export function LootTableVisualizer({ moduleId }: LootTableVisualizerProps) {
             Smart
           </span>
         </div>
+      </SurfaceCard>
+
+      {/* ═══ 7.11 Enemy-to-LootTable Binding with Drop Simulation ═══ */}
+      <SurfaceCard level={2} className="p-4 relative overflow-hidden">
+        <div className="flex items-center justify-between mb-1">
+          <SectionLabel label="Enemy → LootTable Binding" />
+          <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1.5 text-2xs font-mono text-text-muted">
+              <span>Kills:</span>
+              <input
+                type="number" min={10} max={10000} step={10} value={simKillCount}
+                onChange={e => setSimKillCount(Math.max(10, Number(e.target.value)))}
+                className="w-16 bg-surface-deep/50 border border-border/40 rounded px-1.5 py-0.5 text-2xs font-mono text-text text-right focus:outline-none focus:ring-1 focus:ring-orange-500/50"
+              />
+            </div>
+            <button
+              onClick={() => setShowLootCpp(!showLootCpp)}
+              className="flex items-center gap-1 px-2 py-1 rounded-lg text-2xs font-mono font-bold transition-all border"
+              style={{ borderColor: `${ACCENT}${OPACITY_20}`, color: ACCENT, backgroundColor: `${ACCENT}08` }}
+            >
+              <Code className="w-3 h-3" /> C++
+            </button>
+          </div>
+        </div>
+
+        {/* Binding cards grid */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-2.5 mt-2.5">
+          {simResults.map(({ binding, drops }) => {
+            const totalDrops = drops.reduce((s, d) => s + d.count, 0);
+            const maxCount = Math.max(...drops.map(d => d.count), 1);
+            const totalWeight = binding.rarityWeights.reduce((s, w) => s + w, 0);
+
+            return (
+              <div key={binding.archetypeId} className="rounded-lg border p-3" style={{ borderColor: `${binding.color}${OPACITY_20}`, backgroundColor: `${binding.color}05` }}>
+                {/* Header */}
+                <div className="flex items-center gap-2 mb-2">
+                  <div className="w-7 h-7 rounded-md flex items-center justify-center text-[10px] font-bold" style={{ backgroundColor: `${binding.color}20`, color: binding.color }}>
+                    {binding.icon}
+                  </div>
+                  <div className="flex-1">
+                    <div className="text-xs font-bold" style={{ color: binding.color }}>{binding.archetypeName}</div>
+                    <div className="text-[9px] font-mono text-text-muted">{binding.lootTableName}</div>
+                  </div>
+                  <Skull className="w-3.5 h-3.5 text-text-muted" />
+                </div>
+
+                {/* Config row */}
+                <div className="flex items-center gap-3 mb-2.5 text-[9px] font-mono text-text-muted">
+                  <span>Drop: <span className="font-bold text-text">{(binding.dropChance * 100).toFixed(0)}%</span></span>
+                  <span>Gold: <span className="font-bold text-text">{binding.bonusGold}</span></span>
+                  <span>Items: <span className="font-bold" style={{ color: binding.color }}>{totalDrops}</span></span>
+                </div>
+
+                {/* Stacked bar chart */}
+                <div className="space-y-1">
+                  {RARITY_TIERS.map((tier, ri) => {
+                    const drop = drops[ri];
+                    const pct = totalWeight > 0 ? (binding.rarityWeights[ri] / totalWeight * 100) : 0;
+                    const barW = maxCount > 0 ? (drop.count / maxCount * 100) : 0;
+                    return (
+                      <div key={tier.name} className="flex items-center gap-1.5">
+                        <span className="text-[8px] font-mono w-12 text-right text-text-muted truncate">{tier.name}</span>
+                        <div className="flex-1 h-2.5 bg-surface-deep/50 rounded-full overflow-hidden relative">
+                          <motion.div
+                            className="h-full rounded-full"
+                            style={{ backgroundColor: tier.color }}
+                            initial={{ width: 0 }}
+                            animate={{ width: `${barW}%` }}
+                            transition={{ duration: 0.4, delay: ri * 0.05 }}
+                          />
+                        </div>
+                        <span className="text-[8px] font-mono w-6 text-right font-bold" style={{ color: tier.color }}>
+                          {drop.count}
+                        </span>
+                        <span className="text-[7px] font-mono w-8 text-right text-text-muted">
+                          {pct.toFixed(0)}%
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {/* Stacked horizontal summary bar */}
+                <div className="mt-2 h-3 rounded-full overflow-hidden flex">
+                  {RARITY_TIERS.map((tier, ri) => {
+                    const drop = drops[ri];
+                    const pct = totalDrops > 0 ? (drop.count / totalDrops * 100) : 0;
+                    return (
+                      <motion.div
+                        key={tier.name}
+                        className="h-full"
+                        style={{ backgroundColor: tier.color }}
+                        initial={{ width: 0 }}
+                        animate={{ width: `${pct}%` }}
+                        transition={{ duration: 0.5, delay: ri * 0.05 }}
+                        title={`${tier.name}: ${drop.count} (${pct.toFixed(1)}%)`}
+                      />
+                    );
+                  })}
+                </div>
+
+                {/* Gold summary */}
+                <div className="mt-1.5 flex items-center justify-between text-[9px] font-mono">
+                  <span className="text-text-muted">Total gold ({simKillCount} kills)</span>
+                  <span className="font-bold" style={{ color: '#fbbf24' }}>{(simKillCount * binding.bonusGold).toLocaleString()}g</span>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Rarity legend */}
+        <div className="flex items-center gap-3 mt-2.5 flex-wrap">
+          {RARITY_TIERS.map(tier => (
+            <div key={tier.name} className="flex items-center gap-1 text-[9px] font-mono">
+              <span className="w-2 h-2 rounded-sm" style={{ backgroundColor: tier.color }} />
+              <span style={{ color: tier.color }}>{tier.name}</span>
+            </div>
+          ))}
+        </div>
+
+        {/* C++ code output */}
+        <AnimatePresence>
+          {showLootCpp && (
+            <motion.div
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: 'auto', opacity: 1 }}
+              exit={{ height: 0, opacity: 0 }}
+              className="overflow-hidden mt-3"
+            >
+              <div className="bg-[#0d1117] rounded-xl border border-border/40 overflow-hidden">
+                <div className="px-3 py-1.5 bg-surface-deep/50 border-b border-border/30 flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Code className="w-3 h-3 text-text-muted" />
+                    <span className="text-2xs font-mono text-text-muted">ARPGEnemyCharacter — LootTable Integration</span>
+                  </div>
+                  <button
+                    onClick={handleCopyLootCpp}
+                    className="flex items-center gap-1 px-2 py-1 rounded text-[9px] font-mono font-bold"
+                    style={{
+                      color: copiedLootCpp ? STATUS_SUCCESS : ACCENT,
+                      backgroundColor: copiedLootCpp ? `${STATUS_SUCCESS}15` : `${ACCENT}10`,
+                    }}
+                  >
+                    {copiedLootCpp ? <CheckCircle2 className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
+                    {copiedLootCpp ? 'Copied' : 'Copy'}
+                  </button>
+                </div>
+                <pre className="p-4 text-2xs font-mono leading-relaxed text-cyan-100/90 overflow-x-auto custom-scrollbar max-h-[350px] overflow-y-auto">
+                  {generateEnemyLootCpp(enemyLootBindings)}
+                </pre>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </SurfaceCard>
 
       {/* Feature status list */}

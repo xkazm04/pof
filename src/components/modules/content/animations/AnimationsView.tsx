@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useCallback } from 'react';
-import { Send, ListChecks, Workflow } from 'lucide-react';
+import { Send, ListChecks, Workflow, Sparkles } from 'lucide-react';
 import { ReviewableModuleView } from '../../shared/ReviewableModuleView';
 import type { ExtraTab } from '../../shared/ReviewableModuleView';
 import { SUB_MODULE_MAP, getCategoryForSubModule, getModuleChecklist } from '@/lib/module-registry';
@@ -13,6 +13,7 @@ import { TaskFactory } from '@/lib/cli-task';
 import { getAppOrigin } from '@/lib/constants';
 import { AnimationStateMachine } from './AnimationStateMachine';
 import { AnimationChecklist } from './AnimationChecklist';
+import { AIComboChoreographer } from './AIComboChoreographer';
 import type { ChecklistStep } from './AnimationChecklist';
 import { ACCENT_VIOLET, OPACITY_15, OPACITY_30 } from '@/lib/chart-colors';
 
@@ -111,6 +112,12 @@ export function AnimationsView() {
           activeStateId={smCli.activeItemId}
         />
       ),
+    },
+    {
+      id: 'combo-ai',
+      label: 'Combo Designer',
+      icon: Sparkles,
+      render: () => <AIComboChoreographer />,
     },
     {
       id: 'ask',

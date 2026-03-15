@@ -1,13 +1,13 @@
 'use client';
 
-import { useMemo, useState, useCallback, useEffect } from 'react';
+import { useMemo, useState, useCallback, useEffect, useRef } from 'react';
 import { useSuspendableEffect } from '@/hooks/useSuspend';
 import {
   Save, ChevronDown, ChevronRight, Database, Terminal, Cpu,
   HardDrive, FileText, ShieldCheck, GitBranch, Cloud, Layers,
   Timer, Settings, History, Wrench, AlertTriangle, CheckCircle2,
   XCircle, RefreshCw, Download, Upload, Copy, Trash2, Play,
-  Zap, Lock, Wifi, WifiOff, Archive, RotateCcw,
+  Zap, Lock, Wifi, WifiOff, Archive, RotateCcw, Plus,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -62,11 +62,24 @@ const TYPE_COLORS: Record<FieldType, string> = {
   bool: '#a78bfa', array: '#f472b6', object: '#fb923c',
 };
 
-const SAVE_SLOTS = [
+type SaveSlot = {
+  id: string;
+  label: string;
+  isAuto: boolean;
+  empty?: boolean;
+  level?: number;
+  zone?: string;
+  playtime?: string;
+  ts?: string;
+  integrity?: string;
+};
+
+const SAVE_SLOTS: SaveSlot[] = [
   { id: 'auto', label: 'AUTO_SAVE', isAuto: true, level: 14, zone: 'The Ashlands', playtime: '4h 28m', ts: '8m ago', integrity: '100%' },
   { id: 'slot-1', label: 'SLOT-01', isAuto: false, level: 14, zone: 'The Ashlands', playtime: '4h 32m', ts: '2h ago', integrity: '100%' },
   { id: 'slot-2', label: 'SLOT-02', isAuto: false, level: 7, zone: 'Verdant Plains', playtime: '1h 58m', ts: '1d ago', integrity: '98%' },
   { id: 'slot-3', label: 'SLOT-03', isAuto: false, level: 1, zone: 'Tutorial Zone', playtime: '0h 12m', ts: '3d ago', integrity: '100%' },
+  { id: 'slot-4', label: 'SLOT-04', isAuto: false, empty: true },
 ];
 
 const VERSIONS = [
@@ -383,6 +396,63 @@ export function SaveDataSchema({ moduleId }: SaveDataSchemaProps) {
     setExpandedFeature((prev) => (prev === name ? null : name));
   }, []);
 
+  const treeRef = useRef<HTMLDivElement>(null);
+
+  const handleTreeKeyDown = useCallback((e: React.KeyboardEvent<HTMLDivElement>) => {
+    const tree = treeRef.current;
+    if (!tree) return;
+    const focusable = Array.from(tree.querySelectorAll<HTMLElement>('[role="treeitem"]'));
+    const current = document.activeElement as HTMLElement;
+    const idx = focusable.indexOf(current);
+    if (idx === -1) return;
+
+    let next: HTMLElement | undefined;
+    switch (e.key) {
+      case 'ArrowDown':
+        e.preventDefault();
+        next = focusable[idx + 1];
+        break;
+      case 'ArrowUp':
+        e.preventDefault();
+        next = focusable[idx - 1];
+        break;
+      case 'ArrowRight': {
+        e.preventDefault();
+        const groupId = current.dataset.groupId;
+        if (groupId && !expandedGroups.has(groupId)) {
+          toggleGroup(groupId);
+        } else {
+          next = focusable[idx + 1];
+        }
+        break;
+      }
+      case 'ArrowLeft': {
+        e.preventDefault();
+        const groupId = current.dataset.groupId;
+        if (groupId && expandedGroups.has(groupId)) {
+          toggleGroup(groupId);
+        } else if (!groupId) {
+          // Focus parent group button
+          for (let i = idx - 1; i >= 0; i--) {
+            if (focusable[i].dataset.groupId) { next = focusable[i]; break; }
+          }
+        }
+        break;
+      }
+      case 'Home':
+        e.preventDefault();
+        next = focusable[0];
+        break;
+      case 'End':
+        e.preventDefault();
+        next = focusable[focusable.length - 1];
+        break;
+      default:
+        return;
+    }
+    next?.focus();
+  }, [expandedGroups, toggleGroup]);
+
   const stats = useMemo(() => {
     const implemented = FEATURE_NAMES.filter((n) => {
       const st = featureMap.get(n)?.status ?? 'unknown';
@@ -451,12 +521,21 @@ export function SaveDataSchema({ moduleId }: SaveDataSchemaProps) {
             </span>
           </div>
 
+          <div className="flex flex-wrap items-center gap-3 px-4 py-1.5 bg-cyan-950/20 border-b border-cyan-900/20 text-[10px] font-mono">
+            {(Object.entries(TYPE_COLORS) as [FieldType, string][]).map(([type, color]) => (
+              <span key={type} className="flex items-center gap-1">
+                <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: color }} />
+                <span style={{ color }} className="uppercase">{type}</span>
+              </span>
+            ))}
+          </div>
+
           <div className="p-4 space-y-1 font-mono text-xs leading-relaxed overflow-y-auto custom-scrollbar relative">
             <div className="absolute left-0 top-0 bottom-0 w-8 bg-cyan-950/20 border-r border-cyan-900/20 z-0 select-none flex flex-col pt-4 items-center text-[10px] text-cyan-800/40 font-mono">
               {[...Array(20)].map((_, i) => <div key={i} className="h-6 flex items-center">{i + 1}</div>)}
             </div>
 
-            <div className="relative z-10 pl-6 text-cyan-500/80">
+            <div className="relative z-10 pl-6 text-cyan-500/80" ref={treeRef} role="tree" aria-label="Save data schema tree" onKeyDown={handleTreeKeyDown}>
               <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 1 }}>
                 <span className="text-purple-400">struct</span> <span className="text-emerald-400">USaveDataSchema</span> {'{'}
               </motion.div>
@@ -473,8 +552,13 @@ export function SaveDataSchema({ moduleId }: SaveDataSchemaProps) {
                       className="mb-1"
                     >
                       <button
+                        role="treeitem"
+                        aria-expanded={isOpen}
+                        aria-label={`${group.label} group, ${group.fields.length} fields`}
+                        data-group-id={group.id}
+                        tabIndex={groupIndex === 0 ? 0 : -1}
                         onClick={() => toggleGroup(group.id)}
-                        className="flex items-center gap-2 hover:bg-cyan-900/20 px-2 py-0.5 rounded transition-colors w-full text-left focus:outline-none"
+                        className="flex items-center gap-2 hover:bg-cyan-900/20 px-2 py-0.5 rounded transition-colors w-full text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500/50"
                       >
                         <span className="text-cyan-700">{isOpen ? '▼' : '▶'}</span>
                         <span style={{ color: group.color, textShadow: `0 0 5px ${group.color}40` }}>{group.label}</span>
@@ -483,13 +567,20 @@ export function SaveDataSchema({ moduleId }: SaveDataSchemaProps) {
                       <AnimatePresence>
                         {isOpen && (
                           <motion.div
+                            role="group"
                             initial={{ height: 0, opacity: 0 }}
                             animate={{ height: 'auto', opacity: 1 }}
                             exit={{ height: 0, opacity: 0 }}
                             className="overflow-hidden pl-6"
                           >
-                            {group.fields.map((field, i) => (
-                              <div key={field.name} className="flex gap-2.5 py-0.5 hover:bg-white/5 pr-2 group transition-colors">
+                            {group.fields.map((field) => (
+                              <div
+                                key={field.name}
+                                role="treeitem"
+                                tabIndex={-1}
+                                aria-label={`${field.name}, type ${field.type}`}
+                                className="flex gap-2.5 py-0.5 hover:bg-white/5 pr-2 group transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500/50 rounded"
+                              >
                                 <span className="w-[80px] shrink-0 font-medium" style={{ color: TYPE_COLORS[field.type] }}>{field.type}</span>
                                 <span className="text-cyan-100">{field.name};</span>
                                 <span className="text-cyan-700/60 ml-auto hidden sm:block opacity-0 group-hover:opacity-100 transition-opacity">// {field.details}</span>
@@ -526,33 +617,49 @@ export function SaveDataSchema({ moduleId }: SaveDataSchemaProps) {
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: 0.2 + i * 0.1 }}
-                  className={`border font-mono p-3 relative overflow-hidden group hover:border-cyan-500 transition-colors ${slot.isAuto ? 'border-amber-500/30 bg-amber-950/10' : 'border-cyan-900/40 bg-cyan-950/10'}`}
+                  className={`font-mono p-3 relative overflow-hidden group transition-colors ${
+                    slot.empty
+                      ? 'border border-dashed border-cyan-800/30 bg-cyan-950/5'
+                      : `border ${slot.isAuto ? 'border-amber-500/30 bg-amber-950/10' : 'border-cyan-900/40 bg-cyan-950/20'} hover:border-cyan-500`
+                  }`}
                 >
-                  <div className={`absolute left-0 top-0 bottom-0 w-1 ${slot.isAuto ? 'bg-amber-500' : 'bg-cyan-500 opacity-50 group-hover:opacity-100 transition-opacity'}`} />
+                  {slot.empty ? (
+                    <div className="flex flex-col items-center justify-center py-3 gap-2">
+                      <div className="w-8 h-8 rounded-full border border-dashed border-cyan-800/40 flex items-center justify-center">
+                        <Plus className="w-4 h-4 text-cyan-700" />
+                      </div>
+                      <span className="text-[10px] font-mono text-cyan-700 uppercase tracking-widest">{slot.label}</span>
+                      <span className="text-[10px] text-cyan-600/60">New Save</span>
+                    </div>
+                  ) : (
+                    <>
+                      <div className={`absolute left-0 top-0 bottom-0 w-1 ${slot.isAuto ? 'bg-amber-500' : 'bg-cyan-500 opacity-50 group-hover:opacity-100 transition-opacity'}`} />
 
-                  <div className="flex justify-between items-start mb-2 pl-2">
-                    <span className={`text-xs font-bold tracking-widest ${slot.isAuto ? 'text-amber-400' : 'text-cyan-300'}`}>{slot.label}</span>
-                    <span className="text-[10px] text-cyan-700">{slot.ts}</span>
-                  </div>
+                      <div className="flex justify-between items-start mb-2 pl-2">
+                        <span className={`text-xs font-bold tracking-widest ${slot.isAuto ? 'text-amber-400' : 'text-cyan-300'}`}>{slot.label}</span>
+                        <span className="text-[10px] text-cyan-700">{slot.ts}</span>
+                      </div>
 
-                  <div className="grid grid-cols-2 gap-y-1.5 text-xs pl-2">
-                    <div className="flex flex-col">
-                      <span className="text-[9px] text-cyan-700 uppercase">Location</span>
-                      <span className="text-cyan-100 truncate pr-2">{slot.zone}</span>
-                    </div>
-                    <div className="flex flex-col">
-                      <span className="text-[9px] text-cyan-700 uppercase">Integrity</span>
-                      <span className="text-emerald-400">{slot.integrity}</span>
-                    </div>
-                    <div className="flex flex-col">
-                      <span className="text-[9px] text-cyan-700 uppercase">Level</span>
-                      <span className="text-cyan-100">Lv.{slot.level.toString().padStart(2, '0')}</span>
-                    </div>
-                    <div className="flex flex-col">
-                      <span className="text-[9px] text-cyan-700 uppercase">Uptime</span>
-                      <span className="text-cyan-100">{slot.playtime}</span>
-                    </div>
-                  </div>
+                      <div className="grid grid-cols-2 gap-y-1.5 text-xs pl-2">
+                        <div className="flex flex-col">
+                          <span className="text-[9px] text-cyan-700 uppercase">Location</span>
+                          <span className="text-cyan-100 truncate pr-2">{slot.zone}</span>
+                        </div>
+                        <div className="flex flex-col">
+                          <span className="text-[9px] text-cyan-700 uppercase">Integrity</span>
+                          <span className="text-emerald-400">{slot.integrity}</span>
+                        </div>
+                        <div className="flex flex-col">
+                          <span className="text-[9px] text-cyan-700 uppercase">Level</span>
+                          <span className="text-cyan-100">Lv.{slot.level!.toString().padStart(2, '0')}</span>
+                        </div>
+                        <div className="flex flex-col">
+                          <span className="text-[9px] text-cyan-700 uppercase">Uptime</span>
+                          <span className="text-cyan-100">{slot.playtime}</span>
+                        </div>
+                      </div>
+                    </>
+                  )}
                 </motion.div>
               ))}
             </div>

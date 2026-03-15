@@ -1015,10 +1015,44 @@ export function EnemyBestiary({ moduleId }: EnemyBestiaryProps) {
                       <polyline points={polyline(DIFFICULTY_GRUNT)} fill="none" stroke="#ef4444" strokeWidth="1.5" />
                       <polyline points={polyline(DIFFICULTY_CASTER)} fill="none" stroke="#a855f7" strokeWidth="1.5" />
                       <polyline points={polyline(DIFFICULTY_BRUTE)} fill="none" stroke="#f59e0b" strokeWidth="1.5" />
-                      {/* Hover line */}
-                      {diffHoverLevel !== null && (
-                        <line x1={toChartX(diffHoverLevel)} y1={10} x2={toChartX(diffHoverLevel)} y2={chartH - chartPadB} stroke="rgba(255,255,255,0.3)" strokeWidth="1" strokeDasharray="3 3" />
-                      )}
+                      {/* Hover line + floating tooltip */}
+                      {diffHoverLevel !== null && (() => {
+                        const hx = toChartX(diffHoverLevel);
+                        const nearest = (pts: DifficultyPoint[]) => pts.reduce((a, b) => Math.abs(b.level - diffHoverLevel) < Math.abs(a.level - diffHoverLevel) ? b : a).value;
+                        const archetypes = [
+                          { label: 'Grunt', value: nearest(DIFFICULTY_GRUNT), color: '#ef4444' },
+                          { label: 'Caster', value: nearest(DIFFICULTY_CASTER), color: '#a855f7' },
+                          { label: 'Brute', value: nearest(DIFFICULTY_BRUTE), color: '#f59e0b' },
+                        ];
+                        const getZone = (v: number) => v >= 70 ? { label: 'DANGER', color: '#ef4444' } : v >= 40 ? { label: 'SWEET SPOT', color: '#4ade80' } : { label: 'TRIVIAL', color: '#6b7280' };
+                        const tooltipW = 90;
+                        const flipLeft = hx + tooltipW + 6 > chartW - 10;
+                        const tx = flipLeft ? hx - tooltipW - 6 : hx + 6;
+                        return (
+                          <g>
+                            <line x1={hx} y1={10} x2={hx} y2={chartH - chartPadB} stroke="rgba(255,255,255,0.3)" strokeWidth="1" strokeDasharray="3 3" />
+                            {archetypes.map(a => (
+                              <circle key={a.label} cx={hx} cy={toChartY(a.value)} r={2.5} fill={a.color} />
+                            ))}
+                            <foreignObject x={tx} y={12} width={tooltipW} height={plotH - 4} style={{ pointerEvents: 'none', overflow: 'visible' }}>
+                              <div style={{ background: 'var(--color-surface-raised)', border: '1px solid var(--color-border)', borderRadius: 6, padding: '4px 6px', fontSize: 9, lineHeight: 1.5 }}>
+                                <div style={{ fontFamily: 'monospace', fontWeight: 700, color: 'var(--color-text)', marginBottom: 3 }}>Lv {diffHoverLevel}</div>
+                                {archetypes.map(a => {
+                                  const zone = getZone(a.value);
+                                  return (
+                                    <div key={a.label} style={{ display: 'flex', alignItems: 'center', gap: 4, marginBottom: 2 }}>
+                                      <span style={{ background: `${a.color}25`, color: a.color, borderRadius: 3, padding: '0 4px', fontFamily: 'monospace', fontWeight: 600, fontSize: 9, whiteSpace: 'nowrap' }}>
+                                        {a.label}: {a.value}
+                                      </span>
+                                      <span style={{ color: zone.color, fontSize: 7, fontFamily: 'monospace', opacity: 0.8 }}>{zone.label}</span>
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            </foreignObject>
+                          </g>
+                        );
+                      })()}
                       {/* Invisible hover rects for interaction */}
                       {Array.from({ length: 50 }, (_, i) => i + 1).map(level => (
                         <rect
@@ -1040,13 +1074,6 @@ export function EnemyBestiary({ moduleId }: EnemyBestiaryProps) {
                         </span>
                       ))}
                     </div>
-                    {diffHoverLevel !== null && (
-                      <div className="text-[10px] text-text-muted mt-1 font-mono">
-                        Level {diffHoverLevel}: Grunt={DIFFICULTY_GRUNT.reduce((a, b) => Math.abs(b.level - diffHoverLevel) < Math.abs(a.level - diffHoverLevel) ? b : a).value},
-                        Caster={DIFFICULTY_CASTER.reduce((a, b) => Math.abs(b.level - diffHoverLevel) < Math.abs(a.level - diffHoverLevel) ? b : a).value},
-                        Brute={DIFFICULTY_BRUTE.reduce((a, b) => Math.abs(b.level - diffHoverLevel) < Math.abs(a.level - diffHoverLevel) ? b : a).value}
-                      </div>
-                    )}
                   </div>
                 </SurfaceCard>
               </div>
@@ -1487,16 +1514,28 @@ function ArchetypeCard({
           {/* Stat bars */}
           <div className="space-y-1.5 mt-auto">
             {archetype.stats.map((stat) => (
-              <div key={stat.label} className="flex items-center gap-2">
+              <div key={stat.label} className="flex items-center gap-2 group/stat relative">
                 <span className="text-[10px] font-bold uppercase tracking-wider text-text-muted w-10 flex-shrink-0 text-right">{stat.label}</span>
-                <div className="flex-1 h-1.5 rounded-full bg-surface-deep overflow-hidden shadow-inner">
+                <div className="flex-1 h-1.5 rounded-full bg-surface-deep overflow-visible shadow-inner relative">
                   <motion.div
                     initial={{ width: 0 }}
                     animate={{ width: `${stat.value}%` }}
                     transition={{ duration: 1, ease: 'easeOut' }}
-                    className="h-full rounded-full"
+                    className="h-full rounded-full relative"
                     style={{ backgroundColor: archetype.color }}
-                  />
+                  >
+                    {/* Hover tooltip badge at bar endpoint */}
+                    <div
+                      className="absolute right-0 -top-7 translate-x-1/2 opacity-0 group-hover/stat:opacity-100 transition-opacity duration-150 ease-in-out pointer-events-none z-30"
+                    >
+                      <div className="px-1.5 py-0.5 rounded text-[9px] font-mono font-bold whitespace-nowrap shadow-lg"
+                        style={{ backgroundColor: archetype.color, color: '#000' }}>
+                        {stat.value}/100
+                      </div>
+                      <div className="w-0 h-0 mx-auto border-l-[4px] border-l-transparent border-r-[4px] border-r-transparent border-t-[4px]"
+                        style={{ borderTopColor: archetype.color }} />
+                    </div>
+                  </motion.div>
                 </div>
                 <span className="text-2xs font-mono font-bold text-text w-6 text-right">{stat.value}</span>
               </div>

@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState, useCallback } from 'react';
+import { useMemo, useState, useCallback, useRef, useEffect } from 'react';
 import {
   BookOpen, Cpu, BarChart3, Tags, Sparkles, Flame,
   ChevronRight, Network, Clock, Calculator, ClipboardCheck, Layers,
@@ -322,6 +322,74 @@ const TAG_USAGE_FREQUENCY = [
 ];
 
 const TAG_AUDIT_SCORE = 85;
+
+/* ── Tag quick-view popover data ───────────────────────────────────────── */
+
+interface TagDetail {
+  name: string;
+  prefix: string;
+  cooldown?: string;
+  manaCost?: number;
+  blockingTags: string[];
+  lifecycle: string[];
+  color: string;
+}
+
+const TAG_DETAIL_MAP: Record<string, TagDetail> = {
+  'State.Dead': {
+    name: 'Dead State', prefix: 'State', blockingTags: [],
+    lifecycle: ['OnHealthDepleted', 'SetTag', 'BlockAll', 'Ragdoll', 'Cleanup'],
+    color: '#ef4444',
+  },
+  'Ability.MeleeAttack': {
+    name: 'Melee Attack', prefix: 'Ability', cooldown: 'Cooldown.MeleeAttack (0.5s)',
+    manaCost: 0, blockingTags: ['State.Dead', 'State.Stunned'],
+    lifecycle: ['CanActivate', 'CommitAbility', 'PlayMontage', 'ApplyDamage', 'EndAbility'],
+    color: '#a855f7',
+  },
+  'Damage.Physical': {
+    name: 'Physical Damage', prefix: 'Damage', blockingTags: ['State.Invulnerable'],
+    lifecycle: ['CalcMagnitude', 'ArmorReduction', 'ApplyToTarget', 'PostExecute'],
+    color: '#f97316',
+  },
+  'State.Stunned': {
+    name: 'Stunned State', prefix: 'State', blockingTags: [],
+    lifecycle: ['OnStunApplied', 'SetTag', 'BlockAbilities', 'Duration', 'RemoveTag'],
+    color: '#ef4444',
+  },
+  'Ability.Dodge': {
+    name: 'Dodge', prefix: 'Ability', cooldown: 'Cooldown.Dodge (1.5s)',
+    manaCost: 10, blockingTags: ['State.Dead', 'State.Stunned'],
+    lifecycle: ['CanActivate', 'CommitAbility', 'GrantInvuln', 'PlayMontage', 'EndAbility'],
+    color: '#3b82f6',
+  },
+  'Input.Attack': {
+    name: 'Attack Input', prefix: 'Input', blockingTags: ['State.Dead'],
+    lifecycle: ['InputPressed', 'FindAbility', 'TryActivate', 'InputReleased'],
+    color: '#06b6d4',
+  },
+  'Damage.Magical': {
+    name: 'Magical Damage', prefix: 'Damage', blockingTags: ['State.Invulnerable'],
+    lifecycle: ['CalcMagnitude', 'ResistCheck', 'ApplyToTarget', 'PostExecute'],
+    color: '#f97316',
+  },
+  'Ability.Spell': {
+    name: 'Spell Cast', prefix: 'Ability', cooldown: 'Cooldown.Spell (3.0s)',
+    manaCost: 25, blockingTags: ['State.Dead', 'State.Stunned'],
+    lifecycle: ['CanActivate', 'CheckMana', 'CommitAbility', 'SpawnProjectile', 'EndAbility'],
+    color: '#a855f7',
+  },
+  'Input.Dodge': {
+    name: 'Dodge Input', prefix: 'Input', blockingTags: ['State.Dead'],
+    lifecycle: ['InputPressed', 'FindAbility', 'TryActivate', 'InputReleased'],
+    color: '#06b6d4',
+  },
+  'State.Invulnerable': {
+    name: 'Invulnerable State', prefix: 'State', blockingTags: [],
+    lifecycle: ['OnDodge', 'SetTag', 'BlockDamage', 'Duration', 'RemoveTag'],
+    color: '#22c55e',
+  },
+};
 
 /* ── 3.10 Ability Loadout Optimizer data ───────────────────────────────── */
 
@@ -675,6 +743,8 @@ function AttributeRelationshipWeb() {
   const r = size / 2 - 50;
   const n = ATTR_WEB_NODES.length;
 
+  const [hoveredNode, setHoveredNode] = useState<string | null>(null);
+
   const nodePositions = useMemo(() => {
     const positions: Record<string, { x: number; y: number }> = {};
     ATTR_WEB_NODES.forEach((node, i) => {
@@ -687,23 +757,67 @@ function AttributeRelationshipWeb() {
     return positions;
   }, []);
 
+  // Compute connected subgraph via BFS from hovered node
+  const connectedNodes = useMemo(() => {
+    if (!hoveredNode) return null;
+    const visited = new Set<string>();
+    const queue = [hoveredNode];
+    visited.add(hoveredNode);
+    while (queue.length > 0) {
+      const current = queue.shift()!;
+      for (const edge of ATTR_WEB_EDGES) {
+        if (edge.from === current && !visited.has(edge.to)) {
+          visited.add(edge.to);
+          queue.push(edge.to);
+        }
+        if (edge.to === current && !visited.has(edge.from)) {
+          visited.add(edge.from);
+          queue.push(edge.from);
+        }
+      }
+    }
+    return visited;
+  }, [hoveredNode]);
+
+  const isEdgeConnected = useCallback((edge: AttrEdge) => {
+    if (!connectedNodes) return true;
+    return connectedNodes.has(edge.from) && connectedNodes.has(edge.to);
+  }, [connectedNodes]);
+
+  const isNodeConnected = useCallback((nodeId: string) => {
+    if (!connectedNodes) return true;
+    return connectedNodes.has(nodeId);
+  }, [connectedNodes]);
+
   return (
-    <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} className="overflow-visible">
+    <svg
+      width={size} height={size} viewBox={`0 0 ${size} ${size}`} className="overflow-visible"
+      onMouseLeave={() => setHoveredNode(null)}
+    >
+      {/* Glow filter for highlighted elements */}
+      <defs>
+        <filter id="attr-web-glow" x="-50%" y="-50%" width="200%" height="200%">
+          <feDropShadow dx="0" dy="0" stdDeviation="4" floodOpacity="0.6" />
+        </filter>
+      </defs>
       {/* Edges */}
       {ATTR_WEB_EDGES.map((edge, i) => {
         const from = nodePositions[edge.from];
         const to = nodePositions[edge.to];
         if (!from || !to) return null;
         const edgeColor = edge.type === 'scales' ? '#10b981' : '#f59e0b';
+        const connected = isEdgeConnected(edge);
+        const dimmed = hoveredNode !== null && !connected;
         return (
           <motion.g key={`${edge.from}-${edge.to}`}
-            initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: i * 0.1 }}
+            initial={{ opacity: 0 }} animate={{ opacity: dimmed ? 0.15 : 1 }} transition={{ duration: 0.2 }}
           >
             <line
               x1={from.x} y1={from.y} x2={to.x} y2={to.y}
               stroke={edgeColor} strokeWidth={edge.type === 'scales' ? 2 : 1.5}
               strokeDasharray={edge.type === 'partial' ? '4 3' : undefined}
               opacity={0.7}
+              filter={hoveredNode && connected ? 'url(#attr-web-glow)' : undefined}
             />
             <text
               x={(from.x + to.x) / 2} y={(from.y + to.y) / 2 - 5}
@@ -720,11 +834,23 @@ function AttributeRelationshipWeb() {
         if (!pos) return null;
         const isCore = CORE_ATTRIBUTES.map(a => a.toLowerCase()).includes(node.label.toLowerCase());
         const nodeColor = isCore ? '#10b981' : STATUS_IMPROVED;
+        const connected = isNodeConnected(node.id);
+        const dimmed = hoveredNode !== null && !connected;
+        const isHovered = hoveredNode === node.id;
         return (
           <motion.g key={node.id}
-            initial={{ opacity: 0, scale: 0.5 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: i * 0.06 }}
+            initial={{ opacity: 0, scale: 0.5 }}
+            animate={{ opacity: dimmed ? 0.15 : 1, scale: 1 }}
+            transition={{ duration: 0.2, delay: dimmed ? 0 : i * 0.06 }}
+            onMouseEnter={() => setHoveredNode(node.id)}
+            style={{ cursor: 'pointer' }}
           >
-            <circle cx={pos.x} cy={pos.y} r={14} fill={`${nodeColor}20`} stroke={nodeColor} strokeWidth={1.5} />
+            <circle
+              cx={pos.x} cy={pos.y} r={isHovered ? 16 : 14}
+              fill={`${nodeColor}20`} stroke={nodeColor}
+              strokeWidth={isHovered ? 2.5 : 1.5}
+              filter={hoveredNode && connected ? 'url(#attr-web-glow)' : undefined}
+            />
             <text
               x={pos.x} y={pos.y + 1}
               textAnchor="middle" dominantBaseline="central"
@@ -1398,9 +1524,99 @@ function FormulaStep({ step, label, formula, result, unit, isPercent, color }: {
   );
 }
 
+/* ── Tag Quick-View Popover ────────────────────────────────────────────── */
+
+function TagQuickViewPopover({ tag, detail, onClose }: { tag: string; detail: TagDetail; onClose: () => void }) {
+  const popoverRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (popoverRef.current && !popoverRef.current.contains(e.target as Node)) onClose();
+    }
+    function handleEscape(e: KeyboardEvent) {
+      if (e.key === 'Escape') onClose();
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+    document.addEventListener('keydown', handleEscape);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('keydown', handleEscape);
+    };
+  }, [onClose]);
+
+  return (
+    <motion.div
+      ref={popoverRef}
+      initial={{ opacity: 0, y: -8, scale: 0.96 }}
+      animate={{ opacity: 1, y: 0, scale: 1 }}
+      exit={{ opacity: 0, y: -8, scale: 0.96 }}
+      transition={{ duration: 0.15 }}
+      className="absolute z-50 bg-surface border border-border/40 rounded-lg shadow-2xl p-3 w-72"
+      style={{ top: '100%', left: 0, marginTop: 4 }}
+    >
+      {/* Header */}
+      <div className="flex items-center gap-2 mb-2">
+        <span className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: detail.color, boxShadow: `0 0 6px ${detail.color}60` }} />
+        <span className="text-sm font-bold text-text">{detail.name}</span>
+        <span className="text-2xs font-mono text-text-muted ml-auto bg-surface-deep px-1.5 py-0.5 rounded border border-border/40">{detail.prefix}</span>
+      </div>
+
+      {/* Properties */}
+      <div className="space-y-1.5 mb-2.5">
+        <div className="flex items-center justify-between text-[10px]">
+          <span className="font-mono text-text-muted">Tag</span>
+          <span className="font-mono font-bold text-text">{tag}</span>
+        </div>
+        {detail.cooldown && (
+          <div className="flex items-center justify-between text-[10px]">
+            <span className="font-mono text-text-muted">Cooldown</span>
+            <span className="font-mono font-bold" style={{ color: '#f59e0b' }}>{detail.cooldown}</span>
+          </div>
+        )}
+        {detail.manaCost !== undefined && (
+          <div className="flex items-center justify-between text-[10px]">
+            <span className="font-mono text-text-muted">Mana Cost</span>
+            <span className="font-mono font-bold" style={{ color: '#3b82f6' }}>{detail.manaCost === 0 ? 'None' : detail.manaCost}</span>
+          </div>
+        )}
+      </div>
+
+      {/* Blocking tags */}
+      {detail.blockingTags.length > 0 && (
+        <div className="mb-2.5">
+          <div className="text-[10px] font-bold uppercase tracking-widest text-text-muted mb-1">Blocked By</div>
+          <div className="flex flex-wrap gap-1">
+            {detail.blockingTags.map(bt => (
+              <span key={bt} className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-red-500/10 text-red-400 border border-red-500/20">
+                {bt}
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Mini PipelineFlow */}
+      <div>
+        <div className="text-[10px] font-bold uppercase tracking-widest text-text-muted mb-1.5">Lifecycle</div>
+        <PipelineFlow steps={detail.lifecycle} accent={detail.color} />
+      </div>
+    </motion.div>
+  );
+}
+
 /* ── Section: Tag Audit Dashboard (3.9) ───────────────────────────────── */
 
 function TagAuditSection() {
+  const [selectedTag, setSelectedTag] = useState<string | null>(null);
+
+  const handleTagClick = useCallback((tag: string) => {
+    setSelectedTag(prev => prev === tag ? null : tag);
+  }, []);
+
+  const handlePopoverClose = useCallback(() => {
+    setSelectedTag(null);
+  }, []);
+
   const statusColor = (status: AuditCategory['status']) => {
     switch (status) {
       case 'pass': return STATUS_SUCCESS;
@@ -1480,25 +1696,38 @@ function TagAuditSection() {
         {/* Tag usage frequency */}
         <div className="text-xs font-bold uppercase tracking-widest text-text-muted mb-3">Tag Usage Frequency (Top 10)</div>
         <div className="space-y-1.5">
-          {TAG_USAGE_FREQUENCY.map((item, i) => (
-            <motion.div
-              key={item.tag}
-              initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.04 }}
-              className="flex items-center gap-2"
-            >
-              <span className="text-[10px] font-mono text-text-muted w-36 truncate flex-shrink-0 text-right">{item.tag}</span>
-              <div className="flex-1 h-4 bg-surface-deep/50 rounded-sm overflow-hidden border border-border/30">
-                <motion.div
-                  className="h-full rounded-sm"
-                  style={{ backgroundColor: '#f59e0b', width: `${(item.count / maxUsage) * 100}%`, opacity: 0.7 }}
-                  initial={{ width: 0 }}
-                  animate={{ width: `${(item.count / maxUsage) * 100}%` }}
-                  transition={{ delay: i * 0.04 + 0.2, duration: 0.4 }}
-                />
+          {TAG_USAGE_FREQUENCY.map((item, i) => {
+            const detail = TAG_DETAIL_MAP[item.tag];
+            const barColor = detail?.color ?? '#f59e0b';
+            return (
+              <div key={item.tag} className="relative">
+                <motion.button
+                  type="button"
+                  initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.04 }}
+                  className="flex items-center gap-2 w-full text-left rounded-sm transition-colors hover:bg-surface-hover/40 cursor-pointer"
+                  style={selectedTag === item.tag ? { backgroundColor: `${barColor}10` } : undefined}
+                  onClick={() => handleTagClick(item.tag)}
+                >
+                  <span className="text-[10px] font-mono text-text-muted w-36 truncate flex-shrink-0 text-right">{item.tag}</span>
+                  <div className="flex-1 h-4 bg-surface-deep/50 rounded-sm overflow-hidden border border-border/30">
+                    <motion.div
+                      className="h-full rounded-sm"
+                      style={{ backgroundColor: barColor, width: `${(item.count / maxUsage) * 100}%`, opacity: 0.7 }}
+                      initial={{ width: 0 }}
+                      animate={{ width: `${(item.count / maxUsage) * 100}%` }}
+                      transition={{ delay: i * 0.04 + 0.2, duration: 0.4 }}
+                    />
+                  </div>
+                  <span className="text-[10px] font-mono font-bold text-text w-6 text-right">{item.count}</span>
+                </motion.button>
+                <AnimatePresence>
+                  {selectedTag === item.tag && detail && (
+                    <TagQuickViewPopover tag={item.tag} detail={detail} onClose={handlePopoverClose} />
+                  )}
+                </AnimatePresence>
               </div>
-              <span className="text-[10px] font-mono font-bold text-text w-6 text-right">{item.count}</span>
-            </motion.div>
-          ))}
+            );
+          })}
         </div>
       </SurfaceCard>
     </div>

@@ -1,6 +1,6 @@
 'use client';
 
-import { ReactNode, useMemo } from 'react';
+import { ReactNode, useMemo, useState } from 'react';
 import { ChevronDown, ChevronRight, ExternalLink } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -480,7 +480,7 @@ export function HeatmapGrid({ rows, cols, cells, lowColor = '#1e293b', highColor
 
   return (
     <div className="overflow-x-auto custom-scrollbar">
-      <table className="border-collapse text-[10px]">
+      <table className="border-collapse text-[10px]" role="grid" aria-label="Heatmap grid">
         <thead>
           <tr>
             <th className="p-1" />
@@ -499,12 +499,21 @@ export function HeatmapGrid({ rows, cols, cells, lowColor = '#1e293b', highColor
                 return (
                   <td
                     key={ci}
-                    className="p-px"
+                    className="p-px outline-none focus-visible:ring-2 focus-visible:ring-white/60 focus-visible:rounded-sm"
+                    tabIndex={0}
+                    role="gridcell"
+                    aria-label={cell?.tooltip ?? `${rowLabel} × ${cols[ci]}: ${(v * 100).toFixed(0)}%`}
                     title={cell?.tooltip ?? `${rowLabel} × ${cols[ci]}: ${(v * 100).toFixed(0)}%`}
                     onClick={() => onCellClick?.(ri, ci)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        onCellClick?.(ri, ci);
+                      }
+                    }}
                   >
                     <div
-                      className="w-6 h-6 rounded-sm cursor-pointer hover:ring-1 hover:ring-white/30 transition-all flex items-center justify-center"
+                      className="w-6 h-6 rounded-sm cursor-pointer hover:ring-1 hover:ring-white/30 focus-visible:ring-2 focus-visible:ring-white/60 transition-all flex items-center justify-center"
                       style={{ backgroundColor: interpolateColor(lowColor, high, v) }}
                     >
                       {cell?.label && <span className="text-[8px] font-mono text-white/80">{cell.label}</span>}
@@ -572,6 +581,8 @@ interface DiffViewerProps {
 }
 
 export function DiffViewer({ entries, accent }: DiffViewerProps) {
+  const [showUnchanged, setShowUnchanged] = useState(false);
+
   const typeColors: Record<DiffEntry['changeType'], string> = {
     added: STATUS_SUCCESS,
     removed: STATUS_ERROR,
@@ -579,9 +590,12 @@ export function DiffViewer({ entries, accent }: DiffViewerProps) {
     unchanged: '#64748b',
   };
 
+  const unchangedCount = entries.filter(e => e.changeType === 'unchanged').length;
+  const visibleEntries = entries.filter(e => showUnchanged || e.changeType !== 'unchanged');
+
   return (
     <div className="space-y-1 text-xs font-mono">
-      {entries.map((e) => {
+      {visibleEntries.map((e) => {
         const c = typeColors[e.changeType];
         return (
           <div key={e.field} className="flex items-center gap-2 px-1.5 py-0.5 rounded hover:bg-surface-hover/30 transition-colors">
@@ -603,6 +617,24 @@ export function DiffViewer({ entries, accent }: DiffViewerProps) {
           </div>
         );
       })}
+      {unchangedCount > 0 && !showUnchanged && (
+        <button
+          onClick={() => setShowUnchanged(true)}
+          className="w-full flex items-center justify-center gap-2 px-2 py-1 rounded border border-dashed border-slate-700/50 text-slate-500 hover:text-slate-400 hover:border-slate-600/60 transition-colors cursor-pointer"
+        >
+          <ChevronRight className="w-3 h-3" />
+          <span>Show {unchangedCount} unchanged</span>
+        </button>
+      )}
+      {unchangedCount > 0 && showUnchanged && (
+        <button
+          onClick={() => setShowUnchanged(false)}
+          className="w-full flex items-center justify-center gap-2 px-2 py-1 rounded border border-dashed border-slate-700/50 text-slate-500 hover:text-slate-400 hover:border-slate-600/60 transition-colors cursor-pointer"
+        >
+          <ChevronDown className="w-3 h-3" />
+          <span>Hide {unchangedCount} unchanged</span>
+        </button>
+      )}
     </div>
   );
 }
