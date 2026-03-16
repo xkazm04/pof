@@ -1,0 +1,100 @@
+/* Conversation Shell CSS — PoF theme using CSS custom properties */
+
+:root {
+  --dzin-chat-bg: var(--surface-deep, #0a0a0f);
+  --dzin-chat-border: var(--border, #1e293b);
+  --dzin-chat-text: var(--text, #f1f5f9);
+  --dzin-chat-muted: var(--text-muted, #94a3b8);
+  --dzin-chat-accent: var(--accent, #3b82f6);
+  --dzin-chat-success: #22c55e;
+  --dzin-chat-error: #ef4444;
+}
+
+[data-dzin-chat-messages] > div + div {
+  border-top: 1px solid var(--dzin-chat-border);
+}
+
+[data-dzin-chat-command-menu] {
+  position: absolute;
+  bottom: 100%;
+  left: 0;
+  right: 0;
+  margin-bottom: 4px;
+  background: var(--dzin-chat-bg);
+  border: 1px solid var(--dzin-chat-border);
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 -4px 16px rgba(0, 0, 0, 0.3);
+  z-index: 10;
+}
+
+[data-dzin-chat-command-menu] [data-active='true'] {
+  background: rgba(59, 130, 246, 0.15);
+}
+
+[data-dzin-chat-command-menu] [data-command-item] {
+  padding: 8px 12px;
+  cursor: pointer;
+  transition: background 0.1s ease;
+}
+
+[data-dzin-chat-command-menu] [data-command-item]:hover {
+  background: rgba(59, 130, 246, 0.1);
+}
+
+[data-dzin-chat-input] textarea {
+  resize: none;
+  background: transparent;
+  border: none;
+  outline: none;
+  color: var(--dzin-chat-text);
+  font-family: inherit;
+  font-size: 0.875rem;
+  line-height: 1.5;
+  width: 100%;
+  max-height: 96px;
+  overflow-y: auto;
+}
+
+[data-dzin-chat-input] textarea::placeholder {
+  color: var(--dzin-chat-muted);
+}
+
+[data-dzin-chat-messages] [data-dzin-chat-code-block] {
+  background: var(--dzin-chat-bg);
+  border: 1px solid var(--dzin-chat-border);
+  border-radius: 6px;
+  padding: 12px;
+  margin: 8px 0;
+  overflow-x: auto;
+  font-family: ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, monospace;
+  font-size: 0.8125rem;
+  line-height: 1.6;
+  color: var(--dzin-chat-text);
+}
+
+[data-dzin-chat-messages] [data-dzin-chat-inline-code] {
+  background: rgba(30, 41, 59, 0.8);
+  border-radius: 3px;
+  padding: 1px 5px;
+  font-family: ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, monospace;
+  font-size: 0.85em;
+  color: var(--dzin-chat-accent);
+}
+
+[data-dzin-chat-messages] ul,
+[data-dzin-chat-messages] ol {
+  padding-left: 1.25em;
+  margin: 4px 0;
+}
+
+[data-dzin-chat-messages] li { margin: 2px 0; }
+
+[data-dzin-chat-messages] a {
+  color: var(--dzin-chat-accent);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+[data-dzin-chat-messages] p + p { margin-top: 8px; }
+[data-dzin-chat-messages] strong { font-weight: 600; color: var(--dzin-chat-text); }

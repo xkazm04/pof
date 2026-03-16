@@ -8,6 +8,9 @@ import { pofRegistry } from '@/lib/dzin/panel-definitions';
 import { COMPOSITION_PRESETS } from '@/lib/dzin/composition-presets';
 import { DzinSelectionProvider, useDzinSelection } from '@/lib/dzin/selection-context';
 import { DZIN_TIMING, LAYOUT_EASE } from '@/lib/dzin/animation-constants';
+import { useIntentDispatch } from '@/hooks/useIntentDispatch';
+import { useMultimodalInput } from '@/hooks/useMultimodalInput';
+import { ConversationShell } from '@/components/prototype/chat/ConversationShell';
 import { CorePanel } from '@/components/modules/core-engine/dzin-panels/CorePanel';
 import { AbilitiesPanel } from '@/components/modules/core-engine/dzin-panels/AbilitiesPanel';
 import { AttributesPanel } from '@/components/modules/core-engine/dzin-panels/AttributesPanel';
@@ -127,6 +130,29 @@ export default function PrototypePage() {
   const [templateId, setTemplateId] = useState<LayoutTemplateId>(firstPreset.templateId);
   const [activePresetId, setActivePresetId] = useState<string | null>(firstPreset.id);
   const [directives, setDirectives] = useState<PanelDirective[]>(firstPreset.directives);
+
+  /* ── Intent system wiring ──────────────────────────────────────────── */
+
+  const handleWorkspaceChange = useCallback((newDirectives: PanelDirective[], newTemplate: LayoutTemplateId) => {
+    setDirectives(newDirectives);
+    setTemplateId(newTemplate);
+    setActivePresetId(null);
+  }, []);
+
+  const { bus, chatStore, advisorClient } = useIntentDispatch(
+    firstPreset.directives,
+    firstPreset.templateId,
+    handleWorkspaceChange,
+  );
+
+  const { handleTextInput } = useMultimodalInput({
+    bus,
+    onLLMFallback: useCallback((text: string) => {
+      // Send to advisor via HTTP
+      const state = { panels: directives.map(d => ({ type: d.type, role: d.role ?? 'secondary' })), layout: templateId };
+      advisorClient.sendContext(state, text);
+    }, [directives, templateId, advisorClient]),
+  });
 
   /* ── Data wiring (real hooks, no mocks) ─────────────────────────────── */
 
@@ -272,6 +298,9 @@ export default function PrototypePage() {
           onSelect={handlePresetSelect}
         />
       </div>
+
+      {/* Chat overlay */}
+      <ConversationShell chatStore={chatStore} bus={bus} onSend={handleTextInput} />
 
       {/* Layout container with selection context */}
       <DzinSelectionProvider>
