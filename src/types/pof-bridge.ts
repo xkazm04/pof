@@ -331,6 +331,43 @@ export interface PofDiagnostic {
   category: 'compile' | 'link' | 'asset';
 }
 
+// ── Hot-Patch ────────────────────────────────────────────────────────────────
+
+export type PofPatchPhase =
+  | 'idle'
+  | 'writing_file'
+  | 'compiling'
+  | 'verifying'
+  | 'complete'
+  | 'reverting'
+  | 'reverted'
+  | 'failed';
+
+export interface PofHotPatchDiagnostic {
+  severity: 'error' | 'warning' | 'info';
+  message: string;
+  file?: string;
+  line?: number;
+}
+
+export interface PofHotPatchRequest {
+  filePath: string;
+  fileContent: string;
+  verifyObjectPath?: string;
+  verifyFunctionName?: string;
+}
+
+export interface PofHotPatchResult {
+  filePath: string;
+  patchPhase: PofPatchPhase;
+  durationMs: number;
+  diagnostics: PofHotPatchDiagnostic[];
+  errorMessage?: string;
+  verificationOutput?: string;
+  verificationPassed?: boolean;
+  fileReverted?: boolean;
+}
+
 // ── Verification ─────────────────────────────────────────────────────────────
 
 export interface VerificationRule {

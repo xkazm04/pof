@@ -217,7 +217,7 @@ export function useIntentDispatch(
 
 function handleComposeToolCall(
   args: Record<string, unknown>,
-  system: { stateEngine: ReturnType<typeof createStateEngine>; bus: IntentBus },
+  system: { stateEngine: import('@/lib/dzin/core/state/types').StateEngine<WorkspaceState>; bus: IntentBus },
 ) {
   const action = args.action as string;
   const layout = args.layout as LayoutTemplateId | undefined;

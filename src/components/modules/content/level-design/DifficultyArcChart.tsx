@@ -74,7 +74,7 @@ export function DifficultyArcChart({
     + ` L ${points[0].x} ${padY + plotH} Z`;
 
   return (
-    <div className="overflow-x-auto">
+    <div className="overflow-x-auto min-h-[200px] bg-surface-deep/30 rounded-lg">
       <svg width={chartW} height={chartH} className="min-w-full">
         {/* Grid lines */}
         {[1, 2, 3, 4, 5].map((d) => {
@@ -82,7 +82,7 @@ export function DifficultyArcChart({
           return (
             <g key={d}>
               <line x1={padX} y1={y} x2={padX + plotW} y2={y} stroke="var(--border)" strokeWidth={0.5} />
-              <text x={padX - 6} y={y + 3} fontSize={8} fill="var(--text-muted)" textAnchor="end">{d}</text>
+              <text x={padX - 6} y={y + 3} fontSize={11} fill="var(--text-muted)" textAnchor="end">{d}</text>
             </g>
           );
         })}
@@ -106,14 +106,14 @@ export function DifficultyArcChart({
             <text
               x={p.x}
               y={padY + plotH + 12}
-              fontSize={7}
+              fontSize={11}
               fill="var(--text-muted)"
               textAnchor="middle"
               fontFamily="sans-serif"
             >
               {p.room.name.slice(0, 8)}
             </text>
-            <text x={p.x} y={p.y + 3} fontSize={7} fill="var(--text)" textAnchor="middle">
+            <text x={p.x} y={p.y + 3} fontSize={11} fill="var(--text)" textAnchor="middle">
               {PACING_ICONS[p.room.pacing] ?? ''}
             </text>
           </g>

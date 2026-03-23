@@ -7,7 +7,7 @@ import {
 } from 'lucide-react';
 import type { RoomNode, RoomType, DifficultyLevel, PacingCurve, SpawnEntry } from '@/types/level-design';
 import type { LucideIcon } from 'lucide-react';
-import { STATUS_ERROR, ACCENT_VIOLET, ACCENT_EMERALD, STATUS_WARNING, STATUS_INFO, ACCENT_PINK, STATUS_SUCCESS, STATUS_LIME, STATUS_BLOCKER } from '@/lib/chart-colors';
+import { STATUS_ERROR, ACCENT_VIOLET, ACCENT_EMERALD, STATUS_WARNING, STATUS_INFO, ACCENT_PINK, STATUS_SUCCESS, STATUS_LIME, STATUS_BLOCKER, STATUS_SUBDUED, ACCENT_CYAN_LIGHT } from '@/lib/chart-colors';
 
 const ROOM_TYPE_CONFIG: Record<RoomType, { icon: LucideIcon; color: string; label: string }> = {
   combat: { icon: Swords, color: STATUS_ERROR, label: 'Combat' },
@@ -15,9 +15,9 @@ const ROOM_TYPE_CONFIG: Record<RoomType, { icon: LucideIcon; color: string; labe
   exploration: { icon: Compass, color: ACCENT_EMERALD, label: 'Exploration' },
   boss: { icon: Crown, color: STATUS_WARNING, label: 'Boss' },
   safe: { icon: Shield, color: STATUS_INFO, label: 'Safe Zone' },
-  transition: { icon: ArrowRightLeft, color: '#8b8fb0', label: 'Transition' },
+  transition: { icon: ArrowRightLeft, color: STATUS_SUBDUED, label: 'Transition' },
   cutscene: { icon: Film, color: ACCENT_PINK, label: 'Cutscene' },
-  hub: { icon: Home, color: '#2dd4bf', label: 'Hub' },
+  hub: { icon: Home, color: ACCENT_CYAN_LIGHT, label: 'Hub' },
 };
 
 const ALL_ROOM_TYPES: RoomType[] = ['combat', 'puzzle', 'exploration', 'boss', 'safe', 'transition', 'cutscene', 'hub'];
@@ -90,7 +90,7 @@ export function RoomDetailPanel({
             <Icon className="w-6 h-6" style={{ color: cfg.color }} />
           </div>
           <div className="flex-1 min-w-0">
-            <label className="text-[9px] font-bold text-violet-400 uppercase tracking-widest block mb-0.5">NODE_NAME</label>
+            <label className="text-[11px] font-bold text-violet-400 uppercase tracking-widest block mb-0.5">NODE_NAME</label>
             <input
               type="text"
               value={room.name}
@@ -103,7 +103,7 @@ export function RoomDetailPanel({
 
         {/* Type selector */}
         <div>
-          <label className="text-[10px] font-bold text-violet-400 uppercase tracking-widest mb-2 flex items-center gap-2">
+          <label className="text-xs font-bold text-violet-400 uppercase tracking-widest mb-2 flex items-center gap-2">
             <Zap className="w-3 h-3" /> Topology Classification
           </label>
           <div className="grid grid-cols-4 gap-2">
@@ -125,7 +125,7 @@ export function RoomDetailPanel({
                 >
                   {active && <div className="absolute inset-0 bg-gradient-to-t from-transparent via-white/5 to-transparent animate-pulse pointer-events-none" />}
                   <TIcon className="w-4 h-4 mb-1.5 transition-transform group-hover:scale-110" style={{ color: active ? tc.color : 'rgba(139,92,246,0.5)' }} />
-                  <span className="text-[9px] font-bold uppercase tracking-wider truncate w-full text-center" style={{ color: active ? tc.color : 'rgba(200,200,240,0.6)' }}>
+                  <span className="text-[11px] font-bold uppercase tracking-wider truncate w-full text-center" style={{ color: active ? tc.color : 'rgba(200,200,240,0.6)' }}>
                     {tc.label}
                   </span>
                 </button>
@@ -139,7 +139,7 @@ export function RoomDetailPanel({
           <div className="bg-black/40 rounded-xl border border-violet-900/30 p-1 relative group">
             <div className="absolute -left-px top-4 bottom-4 w-[2px] bg-violet-500/30 group-focus-within:bg-violet-400 transition-colors" />
             <div className="px-3 pt-2 pb-1">
-              <label className="text-[9px] font-bold text-violet-400 uppercase tracking-widest block mb-1">NARRATIVE_ROLE</label>
+              <label className="text-[11px] font-bold text-violet-400 uppercase tracking-widest block mb-1">NARRATIVE_ROLE</label>
               <textarea
                 value={room.description}
                 onChange={(e) => updateField('description', e.target.value)}
@@ -153,7 +153,7 @@ export function RoomDetailPanel({
           <div className="bg-black/40 rounded-xl border border-violet-900/30 p-1 relative group">
             <div className="absolute -left-px top-4 bottom-4 w-[2px] bg-amber-500/30 group-focus-within:bg-amber-400 transition-colors" />
             <div className="px-3 pt-2 pb-1">
-              <label className="text-[9px] font-bold text-amber-500/80 uppercase tracking-widest block mb-1">ENCOUNTER_DESIGN</label>
+              <label className="text-[11px] font-bold text-amber-500/80 uppercase tracking-widest block mb-1">ENCOUNTER_DESIGN</label>
               <textarea
                 value={room.encounterDesign}
                 onChange={(e) => updateField('encounterDesign', e.target.value)}
@@ -168,7 +168,7 @@ export function RoomDetailPanel({
         {/* Difficulty + Pacing row */}
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <label className="text-[9px] font-bold text-violet-400 uppercase tracking-widest block mb-2">THREAT_LEVEL</label>
+            <label className="text-[11px] font-bold text-violet-400 uppercase tracking-widest block mb-2">THREAT_LEVEL</label>
             <div className="flex h-8 rounded-lg overflow-hidden border border-violet-900/40 bg-black/60">
               {ALL_DIFFICULTIES.map((d) => {
                 const active = room.difficulty === d;
@@ -177,7 +177,7 @@ export function RoomDetailPanel({
                   <button
                     key={d}
                     onClick={() => updateField('difficulty', d)}
-                    className="flex-1 text-[10px] font-bold transition-all relative"
+                    className="flex-1 text-xs font-bold transition-all relative"
                     style={{
                       backgroundColor: active ? `${dColor}25` : 'transparent',
                       color: active ? dColor : 'rgba(200,200,240,0.5)',
@@ -193,7 +193,7 @@ export function RoomDetailPanel({
           </div>
 
           <div>
-            <label className="text-[9px] font-bold text-violet-400 uppercase tracking-widest block mb-2">PACING_CURVE</label>
+            <label className="text-[11px] font-bold text-violet-400 uppercase tracking-widest block mb-2">PACING_CURVE</label>
             <div className="relative h-8">
               <select
                 value={room.pacing}
@@ -217,10 +217,10 @@ export function RoomDetailPanel({
           >
             <div className="flex items-center gap-2">
               {showSpawns ? <ChevronDown className="w-3.5 h-3.5 text-violet-400" /> : <ChevronRight className="w-3.5 h-3.5 text-violet-400" />}
-              <span className="text-[10px] font-bold text-violet-300 uppercase tracking-widest">
+              <span className="text-xs font-bold text-violet-300 uppercase tracking-widest">
                 SPAWN_VECTORS
               </span>
-              <span className="text-[9px] font-mono text-violet-500 bg-violet-900/30 px-1.5 rounded">
+              <span className="text-[11px] font-mono text-violet-500 bg-violet-900/30 px-1.5 rounded">
                 {room.spawnEntries.length}
               </span>
             </div>
@@ -243,26 +243,26 @@ export function RoomDetailPanel({
                       type="text"
                       value={entry.enemyClass}
                       onChange={(e) => updateSpawn(entry.id, { enemyClass: e.target.value })}
-                      className="bg-transparent text-[10px] text-violet-100 outline-none font-mono placeholder-violet-500/40 px-2 uppercase"
+                      className="bg-transparent text-xs text-violet-100 outline-none font-mono placeholder-violet-500/40 px-2 uppercase"
                       placeholder="ENTITY_CLASS"
                     />
                     <div className="flex items-center bg-violet-900/20 rounded px-1 border border-violet-900/30">
-                      <span className="text-[8px] text-violet-500 pr-1">Q</span>
+                      <span className="text-[11px] text-violet-500 pr-1">Q</span>
                       <input
                         type="number"
                         value={entry.count}
                         onChange={(e) => updateSpawn(entry.id, { count: Number(e.target.value) })}
-                        className="w-full bg-transparent text-[10px] text-violet-100 outline-none text-center font-mono"
+                        className="w-full bg-transparent text-xs text-violet-100 outline-none text-center font-mono"
                         min={1}
                       />
                     </div>
                     <div className="flex items-center bg-violet-900/20 rounded px-1 border border-violet-900/30">
-                      <span className="text-[8px] text-violet-500 pr-1">W</span>
+                      <span className="text-[11px] text-violet-500 pr-1">W</span>
                       <input
                         type="number"
                         value={entry.wave}
                         onChange={(e) => updateSpawn(entry.id, { wave: Number(e.target.value) })}
-                        className="w-full bg-transparent text-[10px] text-violet-100 outline-none text-center font-mono"
+                        className="w-full bg-transparent text-xs text-violet-100 outline-none text-center font-mono"
                         min={1}
                       />
                     </div>
@@ -278,7 +278,7 @@ export function RoomDetailPanel({
 
               <button
                 onClick={addSpawnEntry}
-                className="ml-6 flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg text-[9px] font-bold text-violet-400 uppercase tracking-widest border border-dashed border-violet-900/50 hover:bg-violet-900/20 hover:border-violet-500/50 transition-all"
+                className="ml-6 flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-bold text-violet-400 uppercase tracking-widest border border-dashed border-violet-900/50 hover:bg-violet-900/20 hover:border-violet-500/50 transition-all"
               >
                 <Plus className="w-3 h-3" />
                 ADD_VECTOR
@@ -295,10 +295,10 @@ export function RoomDetailPanel({
           >
             <div className="flex items-center gap-2">
               {showFiles ? <ChevronDown className="w-3.5 h-3.5 text-violet-400" /> : <ChevronRight className="w-3.5 h-3.5 text-violet-400" />}
-              <span className="text-[10px] font-bold text-violet-300 uppercase tracking-widest">
+              <span className="text-xs font-bold text-violet-300 uppercase tracking-widest">
                 LINKED_ASSETS
               </span>
-              <span className="text-[9px] font-mono text-violet-500 bg-violet-900/30 px-1.5 rounded">
+              <span className="text-[11px] font-mono text-violet-500 bg-violet-900/30 px-1.5 rounded">
                 {room.linkedFiles.length}
               </span>
             </div>
@@ -309,11 +309,11 @@ export function RoomDetailPanel({
               {room.linkedFiles.map((fp, i) => (
                 <div key={i} className="flex items-center gap-2 p-1.5 bg-black/40 border border-violet-900/30 rounded group hover:border-violet-500/30 transition-colors">
                   <FileCode className="w-3.5 h-3.5 text-violet-500/50 group-hover:text-violet-400 transition-colors flex-shrink-0" />
-                  <span className="text-[10px] text-violet-200 font-mono truncate tracking-tight">{fp}</span>
+                  <span className="text-xs text-violet-200 font-mono truncate tracking-tight">{fp}</span>
                 </div>
               ))}
               {room.linkedFiles.length === 0 && (
-                <p className="text-[9px] text-violet-500/60 font-mono italic px-2">No assets linked. Execute sequence to formulate bindings.</p>
+                <p className="text-[11px] text-violet-500/60 font-mono italic px-2">No assets linked. Execute sequence to formulate bindings.</p>
               )}
             </div>
           )}

@@ -20,14 +20,14 @@ import { MODULE_LABELS } from '@/lib/module-registry';
 import { SurfaceCard } from '@/components/ui/SurfaceCard';
 import type { OverlapReport, OverlapPair, ModuleOverlapSummary } from '@/lib/overlap-detection';
 import { UI_TIMEOUTS } from '@/lib/constants';
-import { STATUS_ERROR, STATUS_WARNING, STATUS_SUCCESS, OPACITY_30 } from '@/lib/chart-colors';
+import { STATUS_ERROR, STATUS_WARNING, STATUS_SUCCESS, OPACITY_30, STATUS_STALE } from '@/lib/chart-colors';
 
 // ── Reason labels + colors ──
 
 const REASON_CONFIG: Record<OverlapPair['reason'], { label: string; color: string }> = {
   name_match: { label: 'Name Match', color: STATUS_ERROR },
   description_similarity: { label: 'Description Overlap', color: STATUS_WARNING },
-  shared_category_keywords: { label: 'Shared Category', color: '#818cf8' },
+  shared_category_keywords: { label: 'Shared Category', color: STATUS_STALE },
 };
 
 type FilterReason = OverlapPair['reason'] | 'all';
@@ -106,7 +106,7 @@ export function CrossModuleOverlapPanel() {
     return (
       <div className="flex flex-col items-center justify-center py-16 px-6">
         <div className="w-12 h-12 rounded-xl border border-border flex items-center justify-center mb-4">
-          <Layers className="w-6 h-6 text-[#4ade80]" />
+          <Layers className="w-6 h-6" style={{ color: STATUS_SUCCESS }} />
         </div>
         <h3 className="text-sm font-semibold text-text mb-1">No Overlaps Detected</h3>
         <p className="text-xs text-text-muted text-center max-w-xs leading-relaxed">
@@ -150,7 +150,7 @@ export function CrossModuleOverlapPanel() {
       <SurfaceCard className="p-4">
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-2">
-            <Layers className="w-3.5 h-3.5 text-[#f87171]" />
+            <Layers className="w-3.5 h-3.5" style={{ color: STATUS_ERROR }} />
             <span className="text-xs font-semibold text-text-muted uppercase tracking-wider">
               Modules by Overlap Count
             </span>
@@ -233,7 +233,7 @@ function moduleLabel(id: string): string {
 function similarityColor(sim: number): string {
   if (sim >= 0.6) return STATUS_ERROR;
   if (sim >= 0.4) return STATUS_WARNING;
-  return '#818cf8';
+  return STATUS_STALE;
 }
 
 // ── Sub-components ──
@@ -360,7 +360,7 @@ function OverlapRow({ overlap, isExpanded, isCopied, onToggle, onCopy }: {
           className="p-1 rounded hover:bg-border transition-all text-text-muted hover:text-text opacity-30 scale-95 group-hover:opacity-100 group-hover:scale-100 flex-shrink-0"
           title={isCopied ? 'Copied!' : 'Copy overlap details'}
         >
-          {isCopied ? <Check className="w-3 h-3 text-[#4ade80]" /> : <Copy className="w-3 h-3" />}
+          {isCopied ? <Check className="w-3 h-3" style={{ color: STATUS_SUCCESS }} /> : <Copy className="w-3 h-3" />}
         </span>
 
         {/* Similarity badge */}
@@ -422,9 +422,9 @@ function OverlapRow({ overlap, isExpanded, isCopied, onToggle, onCopy }: {
           {/* Ownership suggestion */}
           <div className="mx-4 mb-4 px-3 py-2.5 rounded-lg border bg-surface" style={{ borderColor: `${STATUS_SUCCESS}${OPACITY_30}` }}>
             <div className="flex items-center gap-2">
-              <Crown className="w-3.5 h-3.5 text-[#4ade80] flex-shrink-0" />
+              <Crown className="w-3.5 h-3.5 flex-shrink-0" style={{ color: STATUS_SUCCESS }} />
               <div className="flex-1 min-w-0">
-                <span className="text-xs font-medium text-[#4ade80]">
+                <span className="text-xs font-medium" style={{ color: STATUS_SUCCESS }}>
                   Suggested owner: {moduleLabel(overlap.suggestedOwner)}
                 </span>
                 <p className="text-2xs text-text-muted mt-0.5">

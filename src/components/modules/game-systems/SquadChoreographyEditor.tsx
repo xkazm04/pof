@@ -404,7 +404,7 @@ function FormationView({
                 y={SVG_CENTER + Math.sin(angle) * r}
                 textAnchor="middle"
                 dominantBaseline="central"
-                className="text-[8px] font-mono fill-[var(--text-muted)]"
+                className="text-[11px] font-mono fill-[var(--text-muted)]"
                 opacity={0.5}
               >
                 {dir}
@@ -448,7 +448,7 @@ function FormationView({
             x={SVG_CENTER + Math.cos(config.targetForwardAngle) * (DRAW_RADIUS * 0.45)}
             y={SVG_CENTER + Math.sin(config.targetForwardAngle) * (DRAW_RADIUS * 0.45) - 8}
             textAnchor="middle"
-            className="text-[9px] font-mono font-bold"
+            className="text-[11px] font-mono font-bold"
             fill={ACCENT_CYAN}
             opacity={0.8}
           >
@@ -469,7 +469,7 @@ function FormationView({
           <text
             x={SVG_CENTER} y={SVG_CENTER + 18}
             textAnchor="middle"
-            className="text-[8px] font-mono" fill={ACCENT_CYAN} opacity={0.7}
+            className="text-[11px] font-mono" fill={ACCENT_CYAN} opacity={0.7}
           >
             Player
           </text>
@@ -524,7 +524,7 @@ function FormationView({
                   x={sx} y={sy + 1}
                   textAnchor="middle"
                   dominantBaseline="central"
-                  className="text-[8px] font-mono font-bold fill-[var(--surface-deep)]"
+                  className="text-[11px] font-mono font-bold fill-[var(--surface-deep)]"
                   style={{ pointerEvents: 'none' }}
                 >
                   {member.role[0].toUpperCase()}
@@ -543,17 +543,17 @@ function FormationView({
                       opacity={0.95}
                     />
                     <text x={sx + 16} y={sy - 8}
-                      className="text-[8px] font-mono font-bold" fill={color}
+                      className="text-[11px] font-mono font-bold" fill={color}
                     >
                       {member.label}
                     </text>
                     <text x={sx + 16} y={sy + 2}
-                      className="text-[7px] font-mono fill-[var(--text-muted)]"
+                      className="text-[11px] font-mono fill-[var(--text-muted)]"
                     >
                       Flank: {member.flankAngle.toFixed(0)}° | {member.distance.toFixed(0)} UU
                     </text>
                     <text x={sx + 16} y={sy + 12}
-                      className="text-[7px] font-mono fill-[var(--text-muted)]"
+                      className="text-[11px] font-mono fill-[var(--text-muted)]"
                     >
                       Score: {(member.score * 100).toFixed(0)}%
                     </text>
@@ -577,7 +577,7 @@ function FormationView({
                 <text
                   x={20} y={SVG_SIZE - 12 - i * 14}
                   dominantBaseline="central"
-                  className="text-[8px] font-mono fill-[var(--text-muted)]"
+                  className="text-[11px] font-mono fill-[var(--text-muted)]"
                 >
                   {ROLE_DEFINITIONS[role].label}
                 </text>

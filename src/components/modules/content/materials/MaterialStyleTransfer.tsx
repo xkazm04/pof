@@ -9,7 +9,7 @@ import {
 import { motion, AnimatePresence } from 'framer-motion';
 import type { SurfaceType, RenderFeature } from './MaterialParameterConfigurator';
 import { MODULE_COLORS } from '@/lib/constants';
-import { ACCENT_VIOLET, STATUS_BLOCKER, STATUS_IMPROVED, ACCENT_ORANGE, STATUS_SUCCESS, STATUS_WARNING } from '@/lib/chart-colors';
+import { ACCENT_VIOLET, STATUS_BLOCKER, STATUS_IMPROVED, ACCENT_ORANGE, STATUS_SUCCESS, STATUS_WARNING, STATUS_MUTED, ACCENT_CYAN_LIGHT } from '@/lib/chart-colors';
 
 // ── Types ──
 
@@ -60,11 +60,11 @@ const SURFACE_LABELS: Record<SurfaceType, string> = {
 };
 
 const SURFACE_COLORS: Record<SurfaceType, string> = {
-  metal: '#94a3b8',
+  metal: STATUS_MUTED,
   cloth: ACCENT_VIOLET,
   skin: STATUS_BLOCKER,
   glass: STATUS_IMPROVED,
-  water: '#22d3ee',
+  water: ACCENT_CYAN_LIGHT,
   emissive: ACCENT_ORANGE,
   foliage: STATUS_SUCCESS,
   stone: '#78716c',
@@ -422,7 +422,7 @@ export function MaterialStyleTransfer({ onGenerate, isGenerating }: MaterialStyl
             </div>
 
             {/* Property bars */}
-            <div className="grid grid-cols-2 gap-2">
+            <div className="grid grid-cols-2 gap-4">
               <PropertyBar label="Roughness" value={effectiveAnalysis!.roughness} max={1} color="#94a3b8" icon={Gem} />
               <PropertyBar label="Metallic" value={effectiveAnalysis!.metallic} max={1} color={ACCENT_VIOLET} icon={Sparkles} />
               <PropertyBar label="Emissive" value={effectiveAnalysis!.emissiveIntensity} max={20} color={STATUS_WARNING} icon={Sun} />
@@ -461,7 +461,7 @@ export function MaterialStyleTransfer({ onGenerate, isGenerating }: MaterialStyl
                     transition={{ duration: 0.22 }}
                     className="overflow-hidden"
                   >
-                    <div className="px-3 pb-3 space-y-2.5 border-t border-border pt-2">
+                    <div className="px-3 pb-3 space-y-4 border-t border-border pt-2">
                       {/* Surface override */}
                       <div>
                         <label className="text-2xs font-medium text-text-muted block mb-1">Surface Type</label>

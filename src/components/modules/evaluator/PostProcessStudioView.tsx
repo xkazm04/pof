@@ -24,7 +24,7 @@ import type {
   PPStackSnapshot,
   PPEffectCategory,
 } from '@/types/post-process-studio';
-import { ACCENT_VIOLET, STATUS_WARNING, STATUS_IMPROVED, ACCENT_EMERALD, ACCENT_PINK, MODULE_COLORS } from '@/lib/chart-colors';
+import { ACCENT_VIOLET, STATUS_WARNING, STATUS_IMPROVED, ACCENT_EMERALD, ACCENT_PINK, MODULE_COLORS, ACCENT_EMERALD_DARK, STATUS_NEUTRAL } from '@/lib/chart-colors';
 
 // ── Constants ───────────────────────────────────────────────────────────────
 
@@ -118,8 +118,8 @@ export function PostProcessStudioView() {
 
   const budgetPct = budget ? Math.min((budget.totalCostMs / budget.budgetMs) * 100, 100) : 0;
   const budgetColor = budget
-    ? budget.overBudget ? MODULE_COLORS.evaluator : budget.totalCostMs > budget.budgetMs * 0.75 ? MODULE_COLORS.content : '#10b981'
-    : '#666';
+    ? budget.overBudget ? MODULE_COLORS.evaluator : budget.totalCostMs > budget.budgetMs * 0.75 ? MODULE_COLORS.content : ACCENT_EMERALD_DARK
+    : STATUS_NEUTRAL;
 
   return (
     <div className="flex flex-col h-full">

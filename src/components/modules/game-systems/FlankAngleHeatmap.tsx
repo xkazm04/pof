@@ -287,7 +287,7 @@ export function FlankAngleHeatmap() {
                   y={ly}
                   textAnchor="middle"
                   dominantBaseline="central"
-                  className="text-[8px] font-mono fill-[var(--text-muted)]"
+                  className="text-[11px] font-mono fill-[var(--text-muted)]"
                   opacity={0.5}
                 >
                   {deg}°
@@ -338,7 +338,7 @@ export function FlankAngleHeatmap() {
               x={SVG_CENTER + Math.cos(forwardAngle) * (arrowLen * 0.55)}
               y={SVG_CENTER + Math.sin(forwardAngle) * (arrowLen * 0.55) - 8}
               textAnchor="middle"
-              className="text-[9px] font-mono font-bold"
+              className="text-[11px] font-mono font-bold"
               fill={ACCENT_CYAN}
               opacity={0.8}
             >
@@ -360,7 +360,7 @@ export function FlankAngleHeatmap() {
               x={SVG_CENTER}
               y={SVG_CENTER + 22}
               textAnchor="middle"
-              className="text-[8px] font-mono"
+              className="text-[11px] font-mono"
               fill={ACCENT_CYAN}
               opacity={0.7}
             >
@@ -404,7 +404,7 @@ export function FlankAngleHeatmap() {
                     x={sx}
                     y={sy - (isHovered ? r + 6 : r + 4)}
                     textAnchor="middle"
-                    className="text-[9px] font-mono font-bold"
+                    className="text-[11px] font-mono font-bold"
                     fill={pt.color}
                     opacity={isHovered || isBest ? 1 : 0.7}
                   >
@@ -434,12 +434,12 @@ export function FlankAngleHeatmap() {
                     opacity={0.95}
                   />
                   <text x={tooltipX + 4} y={tooltipY + 12}
-                    className="text-[8px] font-mono fill-[var(--text-muted)]"
+                    className="text-[11px] font-mono fill-[var(--text-muted)]"
                   >
                     Score: {pt.flankDeg.toFixed(1)}°
                   </text>
                   <text x={tooltipX + 4} y={tooltipY + 22}
-                    className="text-[8px] font-mono font-bold" fill={pt.color}
+                    className="text-[11px] font-mono font-bold" fill={pt.color}
                   >
                     {pt.flankDeg >= 135 ? 'Behind' : pt.flankDeg >= 45 ? 'Side' : 'Front'}
                   </text>
@@ -461,8 +461,8 @@ export function FlankAngleHeatmap() {
               fill="url(#flank-gradient)"
               opacity={0.8}
             />
-            <text x={SVG_CENTER - 62} y={SVG_SIZE - 14} textAnchor="end" className="text-[7px] font-mono fill-[var(--text-muted)]">0° Front</text>
-            <text x={SVG_CENTER + 62} y={SVG_SIZE - 14} textAnchor="start" className="text-[7px] font-mono fill-[var(--text-muted)]">180° Behind</text>
+            <text x={SVG_CENTER - 62} y={SVG_SIZE - 14} textAnchor="end" className="text-[11px] font-mono fill-[var(--text-muted)]">0° Front</text>
+            <text x={SVG_CENTER + 62} y={SVG_SIZE - 14} textAnchor="start" className="text-[11px] font-mono fill-[var(--text-muted)]">180° Behind</text>
           </svg>
         </div>
 

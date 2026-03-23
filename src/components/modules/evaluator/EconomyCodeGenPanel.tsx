@@ -11,12 +11,12 @@ import { Badge } from '@/components/ui/Badge';
 import { useEconomySimulatorStore } from '@/stores/economySimulatorStore';
 import type { GeneratedFile } from '@/lib/economy/codegen';
 import { UI_TIMEOUTS } from '@/lib/constants';
-import { MODULE_COLORS } from '@/lib/chart-colors';
+import { MODULE_COLORS, ACCENT_PURPLE_BOLD } from '@/lib/chart-colors';
 
 // ── Constants ────────────────────────────────────────────────────────────────
 
 const LANG_COLORS: Record<string, string> = {
-  h: '#a855f7',
+  h: ACCENT_PURPLE_BOLD,
   cpp: MODULE_COLORS.core,
 };
 

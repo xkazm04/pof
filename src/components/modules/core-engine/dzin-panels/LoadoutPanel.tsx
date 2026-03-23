@@ -2,6 +2,9 @@
 
 import { Layers, Sparkles } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
+import {
+  ACCENT_RED, ACCENT_ORANGE, MODULE_COLORS, ACCENT_GREEN, ACCENT_PURPLE_BOLD,
+} from '@/lib/chart-colors';
 import { useDensity, PanelFrame } from '@/lib/dzin/core';
 import { DZIN_TIMING } from '@/lib/dzin/animation-constants';
 import {
@@ -24,10 +27,10 @@ export interface LoadoutPanelProps {
 interface LoadoutEntry { slot: number; ability: string; color: string }
 
 const OPTIMAL_LOADOUT: LoadoutEntry[] = [
-  { slot: 1, ability: 'MeleeAttack', color: '#ef4444' },
-  { slot: 2, ability: 'Fireball', color: '#f97316' },
-  { slot: 3, ability: 'FrostNova', color: '#3b82f6' },
-  { slot: 4, ability: 'Dodge', color: '#22c55e' },
+  { slot: 1, ability: 'MeleeAttack', color: ACCENT_RED },
+  { slot: 2, ability: 'Fireball', color: ACCENT_ORANGE },
+  { slot: 3, ability: 'FrostNova', color: MODULE_COLORS.core },
+  { slot: 4, ability: 'Dodge', color: ACCENT_GREEN },
 ];
 
 const LOADOUT_RADAR: RadarDataPoint[] = [
@@ -51,7 +54,7 @@ const ALTERNATIVE_LOADOUTS = [
 function LoadoutMicro() {
   return (
     <div className="flex flex-col items-center justify-center gap-1 p-2">
-      <Layers className="w-5 h-5" style={{ color: '#a855f7' }} />
+      <Layers className="w-5 h-5" style={{ color: ACCENT_PURPLE_BOLD }} />
       <span className="font-mono text-xs">{OPTIMAL_LOADOUT.length} slots</span>
     </div>
   );
@@ -68,7 +71,7 @@ function LoadoutCompact() {
             className="w-2 h-2 rounded-full flex-shrink-0"
             style={{ backgroundColor: slot.color }}
           />
-          <span className="text-text-muted text-[10px]">Slot {slot.slot}</span>
+          <span className="text-text-muted text-xs">Slot {slot.slot}</span>
           <span className="font-mono font-medium text-text">{slot.ability}</span>
         </div>
       ))}
@@ -105,7 +108,7 @@ function LoadoutFull() {
                   <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity"
                     style={{ background: `radial-gradient(ellipse at 50% 50%, ${slot.color}10, transparent 70%)` }}
                   />
-                  <div className="text-[10px] font-mono text-text-muted mb-1">Slot {slot.slot}</div>
+                  <div className="text-xs font-mono text-text-muted mb-1">Slot {slot.slot}</div>
                   <div className="w-10 h-10 mx-auto rounded-lg flex items-center justify-center mb-1.5"
                     style={{ backgroundColor: `${slot.color}20`, border: `1.5px solid ${slot.color}50` }}
                   >
@@ -145,7 +148,7 @@ function LoadoutFull() {
                   <span className="font-mono font-bold text-text w-20 flex-shrink-0">{alt.name}</span>
                   <div className="flex gap-1 flex-1">
                     {alt.abilities.map((ab, ai) => (
-                      <span key={ai} className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-surface border border-border/40 text-text-muted truncate">
+                      <span key={ai} className="text-xs font-mono px-1.5 py-0.5 rounded bg-surface border border-border/40 text-text-muted truncate">
                         {ab}
                       </span>
                     ))}

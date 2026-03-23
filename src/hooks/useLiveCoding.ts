@@ -9,7 +9,14 @@
 
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { tryApiFetch } from '@/lib/api-utils';
-import type { PofCompileRequest, PofCompileResult, PofCompileStatus } from '@/types/pof-bridge';
+import type {
+  PofCompileRequest,
+  PofCompileResult,
+  PofCompileStatus,
+  PofHotPatchRequest,
+  PofHotPatchResult,
+  PofPatchPhase,
+} from '@/types/pof-bridge';
 
 /** Polling interval while compile is in progress (ms). */
 const COMPILE_POLL_INTERVAL = 2_000;
@@ -19,18 +26,42 @@ const COMPILE_POLL_TIMEOUT = 180_000;
 
 interface UseLiveCodingResult {
   compile: (req?: PofCompileRequest) => Promise<PofCompileResult | null>;
+  hotPatch: (req: PofHotPatchRequest) => Promise<PofHotPatchResult | null>;
   result: PofCompileResult | null;
+  hotPatchResult: PofHotPatchResult | null;
+  patchPhase: PofPatchPhase;
   isCompiling: boolean;
+  isPatching: boolean;
   error: string | null;
+  isAvailable: boolean;
+  isProbing: boolean;
 }
 
 export function useLiveCoding(): UseLiveCodingResult {
   const [result, setResult] = useState<PofCompileResult | null>(null);
+  const [hotPatchResult, setHotPatchResult] = useState<PofHotPatchResult | null>(null);
+  const [patchPhase, setPatchPhase] = useState<PofPatchPhase>('idle');
   const [isCompiling, setIsCompiling] = useState(false);
+  const [isPatching, setIsPatching] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isAvailable, setIsAvailable] = useState(false);
+  const [isProbing, setIsProbing] = useState(true);
 
   const mountedRef = useRef(true);
   const abortRef = useRef(false);
+
+  useEffect(() => {
+    // Probe for live coding availability
+    let cancelled = false;
+    (async () => {
+      const probeResult = await tryApiFetch<{ liveCodingEnabled: boolean }>('/api/pof-bridge/status');
+      if (!cancelled && mountedRef.current) {
+        setIsAvailable(probeResult.ok ? probeResult.data.liveCodingEnabled : false);
+        setIsProbing(false);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, []);
 
   useEffect(() => {
     return () => {
@@ -114,10 +145,49 @@ export function useLiveCoding(): UseLiveCodingResult {
     return finalResult;
   }, [pollCompileStatus]);
 
+  // ── Hot-patch ──────────────────────────────────────────────────────────────
+
+  const hotPatch = useCallback(async (
+    req: PofHotPatchRequest,
+  ): Promise<PofHotPatchResult | null> => {
+    setIsPatching(true);
+    setPatchPhase('writing_file');
+    setError(null);
+
+    const patchResult = await tryApiFetch<PofHotPatchResult>(
+      '/api/pof-bridge/compile/hot-patch',
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(req),
+      },
+    );
+
+    if (!mountedRef.current) return patchResult.ok ? patchResult.data : null;
+
+    if (!patchResult.ok) {
+      setError(patchResult.error);
+      setPatchPhase('failed');
+      setIsPatching(false);
+      return null;
+    }
+
+    setHotPatchResult(patchResult.data);
+    setPatchPhase(patchResult.data.patchPhase);
+    setIsPatching(false);
+    return patchResult.data;
+  }, []);
+
   return {
     compile,
+    hotPatch,
     result,
+    hotPatchResult,
+    patchPhase,
     isCompiling,
+    isPatching,
     error,
+    isAvailable,
+    isProbing,
   };
 }

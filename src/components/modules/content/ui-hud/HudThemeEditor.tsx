@@ -312,7 +312,7 @@ function LivePreviewScene({ theme, time }: { theme: HudTheme; time: number }) {
                 boxShadow: isLow ? `0 0 10px ${healthCSS}, inset 0 0 6px ${healthCSS}` : 'none',
               }}
             />
-            <span className="absolute inset-0 flex items-center justify-center text-[10px] font-bold text-white drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)]">
+            <span className="absolute inset-0 flex items-center justify-center text-xs font-bold text-white drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)]">
               {Math.round(playerHealth * 100)}%
             </span>
           </div>
@@ -349,7 +349,7 @@ function LivePreviewScene({ theme, time }: { theme: HudTheme; time: number }) {
           className="absolute top-4 left-1/2 -translate-x-1/2 w-40 space-y-0.5"
           style={{ opacity: enemyBarAlpha }}
         >
-          <div className="text-center text-[9px] font-bold text-text-muted uppercase tracking-wider">
+          <div className="text-center text-[11px] font-bold text-text-muted uppercase tracking-wider">
             Enemy Target
           </div>
           <div className="relative h-3 rounded bg-black/70 border border-border/50 overflow-hidden">
@@ -402,7 +402,7 @@ function LivePreviewScene({ theme, time }: { theme: HudTheme; time: number }) {
       })}
 
       {/* ── Time indicator ── */}
-      <div className="absolute top-2 right-2 text-[9px] font-mono text-text-muted/50">
+      <div className="absolute top-2 right-2 text-[11px] font-mono text-text-muted/50">
         {(time % CYCLE_DURATION).toFixed(1)}s / {CYCLE_DURATION}s
       </div>
     </div>
@@ -569,7 +569,7 @@ export function HudThemeEditor() {
 
       {/* Live Preview */}
       <SurfaceCard level={2} className="p-3">
-        <div className="text-[10px] font-bold text-text-muted uppercase tracking-widest mb-2">
+        <div className="text-xs font-bold text-text-muted uppercase tracking-widest mb-2">
           Live Combat Preview
         </div>
         <LivePreviewScene theme={theme} time={time} />
@@ -600,7 +600,7 @@ export function HudThemeEditor() {
           {/* Health & Mana section */}
           {activeSection === 'health' && (
             <div className="space-y-3">
-              <div className="text-[10px] font-bold text-text-muted uppercase tracking-widest">
+              <div className="text-xs font-bold text-text-muted uppercase tracking-widest">
                 ARPGHUDWidget Colors
               </div>
               <ColorPickerField
@@ -619,7 +619,7 @@ export function HudThemeEditor() {
                 onChange={(c) => update('manaColor', c)}
               />
               <div className="h-px bg-border/40" />
-              <div className="text-[10px] font-bold text-text-muted uppercase tracking-widest">
+              <div className="text-xs font-bold text-text-muted uppercase tracking-widest">
                 Low-Health Pulse
               </div>
               <SliderField
@@ -649,7 +649,7 @@ export function HudThemeEditor() {
           {/* Damage Numbers section */}
           {activeSection === 'damage' && (
             <div className="space-y-3">
-              <div className="text-[10px] font-bold text-text-muted uppercase tracking-widest">
+              <div className="text-xs font-bold text-text-muted uppercase tracking-widest">
                 Element Colors
               </div>
               {Object.entries(theme.elementColors).map(([name, color]) => (
@@ -661,7 +661,7 @@ export function HudThemeEditor() {
                 />
               ))}
               <div className="h-px bg-border/40" />
-              <div className="text-[10px] font-bold text-text-muted uppercase tracking-widest">
+              <div className="text-xs font-bold text-text-muted uppercase tracking-widest">
                 Font & Animation
               </div>
               <SliderField
@@ -703,7 +703,7 @@ export function HudThemeEditor() {
           {/* Enemy HP Bar section */}
           {activeSection === 'enemy' && (
             <div className="space-y-3">
-              <div className="text-[10px] font-bold text-text-muted uppercase tracking-widest">
+              <div className="text-xs font-bold text-text-muted uppercase tracking-widest">
                 EnemyHealthBarWidget
               </div>
               <ColorPickerField
@@ -712,7 +712,7 @@ export function HudThemeEditor() {
                 onChange={(c) => update('enemyBarColor', c)}
               />
               <div className="h-px bg-border/40" />
-              <div className="text-[10px] font-bold text-text-muted uppercase tracking-widest">
+              <div className="text-xs font-bold text-text-muted uppercase tracking-widest">
                 Fade Timing
               </div>
               <SliderField
@@ -745,7 +745,7 @@ export function HudThemeEditor() {
               />
 
               {/* Fade timeline visualization */}
-              <div className="text-[10px] font-bold text-text-muted uppercase tracking-widest mt-2">
+              <div className="text-xs font-bold text-text-muted uppercase tracking-widest mt-2">
                 Fade Timeline
               </div>
               <div className="relative h-10 rounded bg-black/40 border border-border/40 overflow-hidden">
@@ -758,7 +758,7 @@ export function HudThemeEditor() {
         {/* ── Right: UE5 Export ── */}
         <SurfaceCard level={2} className="p-3 space-y-2">
           <div className="flex items-center justify-between">
-            <div className="text-[10px] font-bold text-text-muted uppercase tracking-widest">
+            <div className="text-xs font-bold text-text-muted uppercase tracking-widest">
               UE5 UMG Configuration
             </div>
             <div className="flex items-center gap-1">
@@ -786,7 +786,7 @@ export function HudThemeEditor() {
           </div>
 
           <div className="relative rounded-md bg-black/50 border border-border/40 overflow-hidden">
-            <pre className="p-3 text-[10px] font-mono text-text-muted leading-relaxed overflow-auto max-h-[400px] whitespace-pre">
+            <pre className="p-3 text-xs font-mono text-text-muted leading-relaxed overflow-auto max-h-[400px] whitespace-pre">
               {exportConfig}
             </pre>
           </div>

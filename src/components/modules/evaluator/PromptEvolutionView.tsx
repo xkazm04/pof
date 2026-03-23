@@ -25,25 +25,25 @@ import type {
 } from '@/types/prompt-evolution';
 import { MUTATION_OPTIONS } from '@/lib/prompt-evolution/mutations';
 import { UI_TIMEOUTS } from '@/lib/constants';
-import { MODULE_COLORS, STATUS_NEUTRAL } from '@/lib/chart-colors';
+import { MODULE_COLORS, STATUS_NEUTRAL, ACCENT_EMERALD_DARK, STATUS_WARNING } from '@/lib/chart-colors';
 import type { SubModuleId } from '@/types/modules';
 
 // ── Constants ───────────────────────────────────────────────────────────────
 
-const ACCENT = '#10b981'; // Emerald for evolution/growth
+const ACCENT = ACCENT_EMERALD_DARK; // Emerald for evolution/growth
 
 const STYLE_COLORS: Record<VariantStyle, string> = {
   imperative: MODULE_COLORS.evaluator,
   descriptive: MODULE_COLORS.core,
   'step-by-step': MODULE_COLORS.content,
   holistic: MODULE_COLORS.systems,
-  'example-rich': '#10b981',
+  'example-rich': ACCENT_EMERALD_DARK,
   minimal: STATUS_NEUTRAL,
 };
 
 const STATUS_COLORS = {
   running: MODULE_COLORS.content,
-  concluded: '#10b981',
+  concluded: ACCENT_EMERALD_DARK,
   cancelled: STATUS_NEUTRAL,
 };
 
@@ -160,7 +160,7 @@ export function PromptEvolutionView() {
         <div className="flex items-center gap-3">
           <Dna className="w-5 h-5" style={{ color: ACCENT }} />
           <h2 className="text-base font-semibold text-text">Prompt Evolution Engine</h2>
-          <Badge variant="default" className="text-[10px]">
+          <Badge variant="default" className="text-xs">
             {stats.totalVariants} variants
           </Badge>
         </div>
@@ -396,7 +396,7 @@ function VariantsPanel({
               <div className="flex items-center gap-2 mb-3">
                 <Target className="w-3.5 h-3.5 text-text-muted" />
                 <span className="text-xs font-medium text-text">{itemId}</span>
-                <Badge variant="default" className="text-[10px]">
+                <Badge variant="default" className="text-xs">
                   {itemVariants.length} variant{itemVariants.length !== 1 ? 's' : ''}
                 </Badge>
               </div>
@@ -473,10 +473,10 @@ function VariantCard({
         )}
         <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: styleColor }} />
         <span className="text-xs font-medium text-text truncate flex-1">{variant.label}</span>
-        <span className="inline-flex items-center px-1.5 py-0.5 text-[9px] font-medium rounded border" style={{ borderColor: styleColor, color: styleColor }}>
+        <span className="inline-flex items-center px-1.5 py-0.5 text-[11px] font-medium rounded border" style={{ borderColor: styleColor, color: styleColor }}>
           {variant.style}
         </span>
-        <Badge variant="default" className="text-[9px]">
+        <Badge variant="default" className="text-[11px]">
           {variant.origin}
         </Badge>
       </button>
@@ -493,13 +493,13 @@ function VariantCard({
             <div className="px-3 pb-3 space-y-3 border-t border-border/30">
               {/* Prompt preview */}
               <div className="mt-2 p-2 rounded bg-surface/50 max-h-32 overflow-y-auto">
-                <pre className="text-[10px] text-text-muted whitespace-pre-wrap font-mono leading-relaxed">
+                <pre className="text-xs text-text-muted whitespace-pre-wrap font-mono leading-relaxed">
                   {variant.prompt.slice(0, 500)}{variant.prompt.length > 500 ? '...' : ''}
                 </pre>
               </div>
 
               {/* Metadata */}
-              <div className="flex items-center gap-3 text-[10px] text-text-muted">
+              <div className="flex items-center gap-3 text-xs text-text-muted">
                 <span>{variant.prompt.length} chars</span>
                 {variant.parentId && <span>Parent: {variant.parentId.slice(0, 12)}...</span>}
                 {variant.mutationType && <span>Mutation: {variant.mutationType}</span>}
@@ -512,7 +512,7 @@ function VariantCard({
                 <select
                   value={selectedMutation}
                   onChange={(e) => setSelectedMutation(e.target.value as MutationType)}
-                  className="px-2 py-1 text-[10px] rounded bg-surface border border-border text-text"
+                  className="px-2 py-1 text-xs rounded bg-surface border border-border text-text"
                 >
                   {MUTATION_OPTIONS.map((m) => (
                     <option key={m.type} value={m.type}>{m.label}</option>
@@ -521,7 +521,7 @@ function VariantCard({
                 <button
                   onClick={onMutate}
                   disabled={isMutating}
-                  className="flex items-center gap-1 px-2 py-1 text-[10px] font-medium rounded border border-border hover:bg-surface transition-colors disabled:opacity-40"
+                  className="flex items-center gap-1 px-2 py-1 text-xs font-medium rounded border border-border hover:bg-surface transition-colors disabled:opacity-40"
                 >
                   <Shuffle className="w-3 h-3" />
                   Mutate
@@ -530,7 +530,7 @@ function VariantCard({
                 {/* Start A/B test */}
                 {siblings.length >= 2 && (
                   <div className="flex items-center gap-1">
-                    <span className="text-[10px] text-text-muted">A/B vs:</span>
+                    <span className="text-xs text-text-muted">A/B vs:</span>
                     {siblings
                       .filter((s) => s.id !== variant.id)
                       .slice(0, 3)
@@ -538,7 +538,7 @@ function VariantCard({
                         <button
                           key={s.id}
                           onClick={() => onStartTest(variant.id, s.id)}
-                          className="px-1.5 py-0.5 text-[9px] rounded border border-border hover:bg-surface transition-colors"
+                          className="px-1.5 py-0.5 text-[11px] rounded border border-border hover:bg-surface transition-colors"
                           title={s.label}
                         >
                           <FlaskConical className="w-3 h-3 inline" />
@@ -550,7 +550,7 @@ function VariantCard({
                 {/* Copy */}
                 <button
                   onClick={() => navigator.clipboard.writeText(variant.prompt)}
-                  className="flex items-center gap-1 px-2 py-1 text-[10px] font-medium rounded border border-border hover:bg-surface transition-colors"
+                  className="flex items-center gap-1 px-2 py-1 text-xs font-medium rounded border border-border hover:bg-surface transition-colors"
                 >
                   <Copy className="w-3 h-3" />
                   Copy
@@ -677,10 +677,10 @@ function ABTestCard({
         )}
         <FlaskConical className="w-3.5 h-3.5" style={{ color: statusColor }} />
         <span className="text-xs font-medium text-text flex-1">{test.checklistItemId}</span>
-        <span className="inline-flex items-center px-1.5 py-0.5 text-[9px] font-medium rounded border" style={{ borderColor: statusColor, color: statusColor }}>
+        <span className="inline-flex items-center px-1.5 py-0.5 text-[11px] font-medium rounded border" style={{ borderColor: statusColor, color: statusColor }}>
           {test.status}
         </span>
-        <span className="text-[10px] text-text-muted">{totalTrials} trials</span>
+        <span className="text-xs text-text-muted">{totalTrials} trials</span>
         {test.winnerId && (
           <Trophy className="w-3 h-3 text-yellow-500" />
         )}
@@ -719,7 +719,7 @@ function ABTestCard({
 
               {/* Confidence */}
               {test.confidence > 0 && (
-                <div className="flex items-center gap-2 text-[10px] text-text-muted">
+                <div className="flex items-center gap-2 text-xs text-text-muted">
                   <Target className="w-3 h-3" />
                   <span>Confidence: {Math.round(test.confidence * 100)}%</span>
                 </div>
@@ -729,7 +729,7 @@ function ABTestCard({
               {test.status === 'running' && onConclude && totalTrials >= 2 && (
                 <button
                   onClick={onConclude}
-                  className="flex items-center gap-1.5 px-3 py-1.5 text-[10px] font-medium rounded-md text-white transition-colors"
+                  className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md text-white transition-colors"
                   style={{ backgroundColor: ACCENT }}
                 >
                   <CheckCircle2 className="w-3 h-3" />
@@ -766,13 +766,13 @@ function VariantSlotCard({
   return (
     <div className={`rounded-md p-2.5 border ${isWinner ? 'border-yellow-500/50 bg-yellow-500/5' : 'border-border/50 bg-surface/30'}`}>
       <div className="flex items-center gap-1.5 mb-2">
-        <span className="text-[10px] font-medium text-text">{label}</span>
+        <span className="text-xs font-medium text-text">{label}</span>
         {isWinner && <Trophy className="w-3 h-3 text-yellow-500" />}
       </div>
       {variant && (
-        <p className="text-[9px] text-text-muted mb-1.5 truncate">{variant.label}</p>
+        <p className="text-[11px] text-text-muted mb-1.5 truncate">{variant.label}</p>
       )}
-      <div className="flex items-center gap-2 text-[10px]">
+      <div className="flex items-center gap-2 text-xs">
         <span className="text-text">
           {Math.round(rate * 100)}%
         </span>
@@ -789,7 +789,7 @@ function VariantSlotCard({
       <div className="mt-1.5 h-1 rounded-full bg-border/30 overflow-hidden">
         <div
           className="h-full rounded-full transition-all"
-          style={{ width: `${rate * 100}%`, backgroundColor: isWinner ? '#eab308' : ACCENT }}
+          style={{ width: `${rate * 100}%`, backgroundColor: isWinner ? STATUS_WARNING : ACCENT }}
         />
       </div>
     </div>
@@ -854,30 +854,30 @@ function ClustersPanel({
                   <div className="flex items-center gap-2">
                     <Badge
                       variant={cluster.successRate >= 0.7 ? 'success' : cluster.successRate >= 0.4 ? 'warning' : 'error'}
-                      className="text-[9px]"
+                      className="text-[11px]"
                     >
                       {Math.round(cluster.successRate * 100)}% success
                     </Badge>
-                    <span className="text-[10px] text-text-muted">{cluster.sessionIds.length} sessions</span>
+                    <span className="text-xs text-text-muted">{cluster.sessionIds.length} sessions</span>
                   </div>
                 </div>
 
                 {/* Keywords */}
                 <div className="flex items-center gap-1 mb-2 flex-wrap">
                   {cluster.keywords.map((kw) => (
-                    <span key={kw} className="px-1.5 py-0.5 text-[9px] rounded bg-surface border border-border text-text-muted">
+                    <span key={kw} className="px-1.5 py-0.5 text-[11px] rounded bg-surface border border-border text-text-muted">
                       {kw}
                     </span>
                   ))}
                 </div>
 
                 {/* Representative prompt */}
-                <p className="text-[10px] text-text-muted font-mono leading-relaxed">
+                <p className="text-xs text-text-muted font-mono leading-relaxed">
                   {cluster.representative}
                 </p>
 
                 {/* Stats */}
-                <div className="flex items-center gap-3 mt-2 text-[10px] text-text-muted">
+                <div className="flex items-center gap-3 mt-2 text-xs text-text-muted">
                   <span>Avg length: {cluster.avgLength} chars</span>
                 </div>
               </SurfaceCard>
@@ -894,7 +894,7 @@ function ClustersPanel({
 const DIFF_TYPE_CONFIG: Record<string, { icon: typeof Wand2; color: string; label: string }> = {
   'add-context': { icon: ShieldCheck, color: MODULE_COLORS.core, label: 'Context' },
   'restructure': { icon: Shuffle, color: MODULE_COLORS.systems, label: 'Restructure' },
-  'add-verification': { icon: CheckCircle2, color: '#10b981', label: 'Verification' },
+  'add-verification': { icon: CheckCircle2, color: ACCENT_EMERALD_DARK, label: 'Verification' },
   'shorten': { icon: ArrowUp, color: MODULE_COLORS.content, label: 'Shorten' },
   'lengthen': { icon: ArrowDown, color: MODULE_COLORS.content, label: 'Lengthen' },
   'imperative-rewrite': { icon: Zap, color: MODULE_COLORS.evaluator, label: 'Imperative' },
@@ -933,7 +933,7 @@ function OptimizerPanel({
         <div className="flex items-center gap-2 mb-1">
           <Wand2 className="w-4 h-4" style={{ color: ACCENT }} />
           <h3 className="text-xs font-semibold text-text">Prompt Optimizer</h3>
-          <span className="text-[10px] text-text-muted">Paste a prompt to auto-optimize based on session history</span>
+          <span className="text-xs text-text-muted">Paste a prompt to auto-optimize based on session history</span>
         </div>
 
         <textarea
@@ -959,7 +959,7 @@ function OptimizerPanel({
             {isOptimizing ? 'Optimizing...' : 'Optimize Prompt'}
           </button>
           {!selectedModuleId && (
-            <span className="text-[10px] text-text-muted">Select a module first</span>
+            <span className="text-xs text-text-muted">Select a module first</span>
           )}
         </div>
       </SurfaceCard>
@@ -982,7 +982,7 @@ function OptimizerPanel({
                     <p className="text-xs font-medium text-text">
                       {lastOptimization.diffs.length} optimization{lastOptimization.diffs.length !== 1 ? 's' : ''} applied
                     </p>
-                    <p className="text-[10px] text-text-muted">
+                    <p className="text-xs text-text-muted">
                       Based on {lastOptimization.sampleSize} historical sessions
                       {lastOptimization.predictedImprovement > 0 && (
                         <> — predicted +{Math.round(lastOptimization.predictedImprovement * 100)}% success rate</>
@@ -1037,13 +1037,13 @@ function OptimizerPanel({
                             <div className="flex items-center gap-2 mb-1">
                               <span className="text-xs font-medium text-text">{diff.description}</span>
                               <span
-                                className="px-1.5 py-0.5 text-[9px] font-medium rounded"
+                                className="px-1.5 py-0.5 text-[11px] font-medium rounded"
                                 style={{ backgroundColor: `${config.color}15`, color: config.color }}
                               >
                                 {config.label}
                               </span>
                             </div>
-                            <p className="text-[10px] text-text-muted leading-relaxed">{diff.reason}</p>
+                            <p className="text-xs text-text-muted leading-relaxed">{diff.reason}</p>
                           </div>
                         </div>
                       </SurfaceCard>
@@ -1060,11 +1060,11 @@ function OptimizerPanel({
                 <SurfaceCard level={2} className="p-3">
                   <div className="flex items-center gap-1.5 mb-2">
                     <span className="w-2 h-2 rounded-full bg-red-400/70" />
-                    <span className="text-[10px] font-semibold text-text-muted uppercase tracking-wider">Original</span>
-                    <span className="text-[10px] text-text-muted ml-auto">{lastOptimization.original.length} chars</span>
+                    <span className="text-xs font-semibold text-text-muted uppercase tracking-wider">Original</span>
+                    <span className="text-xs text-text-muted ml-auto">{lastOptimization.original.length} chars</span>
                   </div>
                   <div className="max-h-64 overflow-y-auto rounded bg-surface/50 p-2">
-                    <pre className="text-[10px] text-text-muted/80 whitespace-pre-wrap font-mono leading-relaxed">
+                    <pre className="text-xs text-text-muted/80 whitespace-pre-wrap font-mono leading-relaxed">
                       {lastOptimization.original.slice(0, 1200)}
                       {lastOptimization.original.length > 1200 ? '\n...' : ''}
                     </pre>
@@ -1075,18 +1075,18 @@ function OptimizerPanel({
                 <SurfaceCard level={2} className="p-3">
                   <div className="flex items-center gap-1.5 mb-2">
                     <span className="w-2 h-2 rounded-full" style={{ backgroundColor: ACCENT }} />
-                    <span className="text-[10px] font-semibold text-text-muted uppercase tracking-wider">Optimized</span>
-                    <span className="text-[10px] text-text-muted ml-auto">{lastOptimization.optimized.length} chars</span>
+                    <span className="text-xs font-semibold text-text-muted uppercase tracking-wider">Optimized</span>
+                    <span className="text-xs text-text-muted ml-auto">{lastOptimization.optimized.length} chars</span>
                     <button
                       onClick={handleCopyOptimized}
-                      className="flex items-center gap-1 px-1.5 py-0.5 text-[9px] rounded border border-border hover:bg-surface transition-colors"
+                      className="flex items-center gap-1 px-1.5 py-0.5 text-[11px] rounded border border-border hover:bg-surface transition-colors"
                     >
                       <Copy className="w-2.5 h-2.5" />
                       {copiedOptimized ? 'Copied' : 'Copy'}
                     </button>
                   </div>
                   <div className="max-h-64 overflow-y-auto rounded p-2" style={{ backgroundColor: `${ACCENT}08` }}>
-                    <pre className="text-[10px] text-text whitespace-pre-wrap font-mono leading-relaxed">
+                    <pre className="text-xs text-text whitespace-pre-wrap font-mono leading-relaxed">
                       {lastOptimization.optimized.slice(0, 1200)}
                       {lastOptimization.optimized.length > 1200 ? '\n...' : ''}
                     </pre>
@@ -1139,8 +1139,8 @@ function StatsPanel({ stats }: { stats: EvolutionStats }) {
             {stats.moduleBreakdown.map((m) => (
               <div key={m.moduleId} className="flex items-center gap-3 py-1.5 border-b border-border/30 last:border-0">
                 <span className="text-xs text-text w-28 truncate">{m.moduleId}</span>
-                <Badge variant="default" className="text-[9px]">{m.variants} var</Badge>
-                <Badge variant="default" className="text-[9px]">{m.activeTests} tests</Badge>
+                <Badge variant="default" className="text-[11px]">{m.variants} var</Badge>
+                <Badge variant="default" className="text-[11px]">{m.activeTests} tests</Badge>
                 <div className="flex-1 h-1.5 rounded-full bg-border/30 overflow-hidden">
                   <div
                     className="h-full rounded-full"
@@ -1150,11 +1150,11 @@ function StatsPanel({ stats }: { stats: EvolutionStats }) {
                     }}
                   />
                 </div>
-                <span className="text-[10px] text-text-muted w-12 text-right">
+                <span className="text-xs text-text-muted w-12 text-right">
                   {Math.round(m.bestSuccessRate * 100)}%
                 </span>
                 {m.improvement > 0 && (
-                  <span className="text-[10px] font-medium" style={{ color: ACCENT }}>
+                  <span className="text-xs font-medium" style={{ color: ACCENT }}>
                     +{Math.round(m.improvement * 100)}%
                   </span>
                 )}
@@ -1199,7 +1199,7 @@ function StatCard({
     <SurfaceCard level={2} className="p-3">
       <div className="flex items-center gap-2 mb-1.5">
         <Icon className="w-3.5 h-3.5" style={{ color }} />
-        <span className="text-[10px] text-text-muted">{label}</span>
+        <span className="text-xs text-text-muted">{label}</span>
       </div>
       <span className="text-lg font-semibold text-text">{value}</span>
     </SurfaceCard>

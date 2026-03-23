@@ -10,7 +10,7 @@ import { apiFetch } from '@/lib/api-utils';
 import { SUB_MODULES, MODULE_LABELS } from '@/lib/module-registry';
 import type { WeeklyDigest } from '@/types/weekly-digest';
 import { UI_TIMEOUTS } from '@/lib/constants';
-import { STATUS_INFO, MODULE_COLORS, ACCENT_VIOLET } from '@/lib/chart-colors';
+import { STATUS_INFO, MODULE_COLORS, ACCENT_VIOLET, STATUS_SUCCESS, ACCENT_RED, ACCENT_ORANGE, OVERLAY_WHITE } from '@/lib/chart-colors';
 
 // ── Precompute checklist item IDs (static) ──
 const MODULE_ITEM_IDS: Record<string, string[]> = Object.fromEntries(
@@ -113,7 +113,7 @@ export function WeeklyDigestView() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <Calendar className="w-5 h-5 text-[#a78bfa]" />
+          <Calendar className="w-5 h-5" style={{ color: ACCENT_VIOLET }} />
           <div>
             <h2 className="text-base font-semibold text-text">Weekly Progress Digest</h2>
             <p className="text-2xs text-text-muted">
@@ -133,7 +133,7 @@ export function WeeklyDigestView() {
             onClick={handleCopy}
             className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-xs text-text-muted hover:text-text bg-surface border border-border hover:border-border-bright transition-colors"
           >
-            {copied ? <Check className="w-3 h-3 text-[#4ade80]" /> : <Copy className="w-3 h-3" />}
+            {copied ? <Check className="w-3 h-3" style={{ color: STATUS_SUCCESS }} /> : <Copy className="w-3 h-3" />}
             {copied ? 'Copied' : 'Copy'}
           </button>
           <button
@@ -181,9 +181,9 @@ export function WeeklyDigestView() {
       {/* Streaks */}
       <div className="flex items-center gap-4 px-4 py-3 rounded-lg bg-surface border border-border">
         <div className="flex items-center gap-2">
-          <Flame className="w-4 h-4 text-[#f97316]" />
+          <Flame className="w-4 h-4" style={{ color: ACCENT_ORANGE }} />
           <span className="text-xs text-text">Current streak</span>
-          <span className="text-sm font-bold text-[#f97316] tabular-nums">{digest.currentStreak}</span>
+          <span className="text-sm font-bold tabular-nums" style={{ color: ACCENT_ORANGE }}>{digest.currentStreak}</span>
         </div>
         <div className="w-px h-4 bg-border" />
         <div className="flex items-center gap-2">
@@ -311,7 +311,7 @@ function StatCard({ label, value, delta, suffix, icon: Icon, color }: {
       <div className="flex items-baseline gap-1.5">
         <span className="text-lg font-bold text-text tabular-nums">{value}</span>
         {delta !== undefined && delta !== 0 && (
-          <span className={`flex items-center gap-0.5 text-2xs ${delta > 0 ? 'text-[#4ade80]' : 'text-[#ef4444]'}`}>
+          <span className="flex items-center gap-0.5 text-2xs" style={{ color: delta > 0 ? STATUS_SUCCESS : ACCENT_RED }}>
             {delta > 0 ? <TrendingUp className="w-2.5 h-2.5" /> : delta < 0 ? <TrendingDown className="w-2.5 h-2.5" /> : <Minus className="w-2.5 h-2.5" />}
             {delta > 0 ? '+' : ''}{delta}{suffix ?? ''}
           </span>
@@ -411,7 +411,7 @@ function renderDigestToCanvas(canvas: HTMLCanvasElement, d: WeeklyDigest): void 
 
   // Title
   ctx.font = 'bold 22px system-ui, -apple-system, sans-serif';
-  ctx.fillStyle = '#ffffff';
+  ctx.fillStyle = OVERLAY_WHITE;
   ctx.fillText('POF Weekly Digest', 40, y);
   y += 28;
 
@@ -422,10 +422,10 @@ function renderDigestToCanvas(canvas: HTMLCanvasElement, d: WeeklyDigest): void 
 
   // Stat boxes
   const stats = [
-    { label: 'Sessions', value: d.totalSessions.toString(), color: '#60a5fa' },
-    { label: 'Success Rate', value: `${Math.round(d.successRate * 100)}%`, color: '#00ff88' },
-    { label: 'Checklist', value: `${d.checklistCompleted}/${d.checklistTotal}`, color: '#a78bfa' },
-    { label: 'Time', value: formatDuration(d.totalTimeMs), color: '#f59e0b' },
+    { label: 'Sessions', value: d.totalSessions.toString(), color: STATUS_INFO },
+    { label: 'Success Rate', value: `${Math.round(d.successRate * 100)}%`, color: MODULE_COLORS.setup },
+    { label: 'Checklist', value: `${d.checklistCompleted}/${d.checklistTotal}`, color: ACCENT_VIOLET },
+    { label: 'Time', value: formatDuration(d.totalTimeMs), color: MODULE_COLORS.content },
   ];
 
   const boxW = (W - 80 - 30) / 4;
@@ -450,7 +450,7 @@ function renderDigestToCanvas(canvas: HTMLCanvasElement, d: WeeklyDigest): void 
 
   // Streak
   ctx.font = '13px system-ui, -apple-system, sans-serif';
-  ctx.fillStyle = '#f97316';
+  ctx.fillStyle = ACCENT_ORANGE;
   ctx.fillText(`\u{1F525} Streak: ${d.currentStreak}`, 40, y);
   ctx.fillStyle = '#888888';
   ctx.fillText(`  |  Best: ${d.longestStreak}`, 40 + ctx.measureText(`\u{1F525} Streak: ${d.currentStreak}`).width, y);
@@ -472,7 +472,7 @@ function renderDigestToCanvas(canvas: HTMLCanvasElement, d: WeeklyDigest): void 
     const x = 40 + i * (barW + 6);
     const h = dd.total > 0 ? Math.max(4, (dd.total / maxD) * barMaxH) : 2;
     const rate = dd.total > 0 ? dd.success / dd.total : 0;
-    const color = dd.total === 0 ? 'rgba(255,255,255,0.1)' : rate >= 0.75 ? '#00ff88' : rate >= 0.5 ? '#f59e0b' : '#ef4444';
+    const color = dd.total === 0 ? 'rgba(255,255,255,0.1)' : rate >= 0.75 ? MODULE_COLORS.setup : rate >= 0.5 ? MODULE_COLORS.content : ACCENT_RED;
 
     ctx.fillStyle = color;
     roundRect(ctx, x, y + barMaxH - h, barW, h, 2);
@@ -497,7 +497,7 @@ function renderDigestToCanvas(canvas: HTMLCanvasElement, d: WeeklyDigest): void 
     const maxSessions = d.moduleActivity[0].sessions;
     for (const m of d.moduleActivity.slice(0, 5)) {
       const barW2 = maxSessions > 0 ? (m.sessions / maxSessions) * (W - 280) : 0;
-      const color = m.successRate >= 0.75 ? '#00ff88' : m.successRate >= 0.5 ? '#f59e0b' : '#ef4444';
+      const color = m.successRate >= 0.75 ? MODULE_COLORS.setup : m.successRate >= 0.5 ? MODULE_COLORS.content : ACCENT_RED;
 
       ctx.font = '12px system-ui, -apple-system, sans-serif';
       ctx.fillStyle = '#cccccc';

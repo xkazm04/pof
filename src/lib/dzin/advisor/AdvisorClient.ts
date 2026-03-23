@@ -202,7 +202,7 @@ export class AdvisorClient {
     }
 
     this.emitProcessing(false);
-    logger.error('[advisor] Failed after retries:', lastError?.message);
+    logger.warn('[advisor] Failed after retries:', lastError?.message);
     this.onErrorHandlers.forEach(h => h(lastError?.message ?? 'unknown error'));
   }
 

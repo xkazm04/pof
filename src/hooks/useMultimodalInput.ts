@@ -43,7 +43,7 @@ let counter = 0;
 
 function makeIntent<T extends Intent['type']>(
   type: T,
-  payload: Extract<Intent, { type: T }>['payload'],
+  payload: Intent<T>['payload'],
   source: Intent['source'],
 ): Intent {
   return {

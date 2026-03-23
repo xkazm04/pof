@@ -4,8 +4,8 @@ import { useState, useCallback, useRef } from 'react';
 import { Plus, Unlink } from 'lucide-react';
 import type { RoomNode, RoomConnection, RoomType, DifficultyLevel } from '@/types/level-design';
 import {
-  STATUS_ERROR, STATUS_SUCCESS, STATUS_LIME, STATUS_WARNING, STATUS_BLOCKER, STATUS_INFO,
-  ACCENT_VIOLET, ACCENT_EMERALD, ACCENT_PINK,
+  STATUS_ERROR, STATUS_SUCCESS, STATUS_LIME, STATUS_WARNING, STATUS_BLOCKER, STATUS_INFO, STATUS_SUBDUED,
+  ACCENT_VIOLET, ACCENT_EMERALD, ACCENT_PINK, ACCENT_CYAN_LIGHT, OVERLAY_WHITE,
 } from '@/lib/chart-colors';
 
 // ── Constants ──
@@ -19,9 +19,9 @@ const ROOM_TYPE_CONFIG: Record<RoomType, { color: string; label: string }> = {
   exploration: { color: ACCENT_EMERALD, label: 'Exploration' },
   boss: { color: STATUS_WARNING, label: 'Boss' },
   safe: { color: STATUS_INFO, label: 'Safe Zone' },
-  transition: { color: '#8b8fb0', label: 'Transition' },
+  transition: { color: STATUS_SUBDUED, label: 'Transition' },
   cutscene: { color: ACCENT_PINK, label: 'Cutscene' },
-  hub: { color: '#2dd4bf', label: 'Hub' },
+  hub: { color: ACCENT_CYAN_LIGHT, label: 'Hub' },
 };
 
 const DIFFICULTY_COLORS: Record<DifficultyLevel, string> = {
@@ -240,7 +240,7 @@ export function LevelFlowEditor({
       )}
 
       {/* Room count badge */}
-      <div className="absolute top-4 right-4 z-10 px-3 py-1.5 rounded-lg border bg-surface-deep/80 backdrop-blur-sm border-violet-900/40 text-[10px] uppercase font-mono font-bold tracking-widest text-violet-300/80 shadow-[0_0_15px_rgba(0,0,0,0.5)]">
+      <div className="absolute top-4 right-4 z-10 px-3 py-1.5 rounded-lg border bg-surface-deep/80 backdrop-blur-sm border-violet-900/40 text-xs uppercase font-mono font-bold tracking-widest text-violet-300/80 shadow-[0_0_15px_rgba(0,0,0,0.5)]">
         {rooms.length} NODES <span className="mx-1 text-violet-500/50">|</span> {connections.length} LINKS
       </div>
 
@@ -308,7 +308,7 @@ export function LevelFlowEditor({
                 <line
                   x1={from.x} y1={from.y}
                   x2={to.x} y2={to.y}
-                  stroke={isTarget ? '#d8b4fe' : "rgba(139,92,246,0.6)"}
+                  stroke={isTarget ? ACCENT_VIOLET : "rgba(139,92,246,0.6)"}
                   strokeWidth={1.5}
                   strokeDasharray="4 16"
                   className="pointer-events-none"
@@ -406,17 +406,17 @@ export function LevelFlowEditor({
                 <circle cx={18} cy={14} r={6} fill="none" stroke={cfg.color} strokeWidth={1} opacity={0.3} />
 
                 {/* Room name */}
-                <text x={30} y={18} fontSize={11} fill={isSelected ? '#fff' : 'var(--text)'} fontFamily="monospace" fontWeight={700} letterSpacing={0.5}>
+                <text x={30} y={18} style={{ fontSize: 11 }} fill={isSelected ? OVERLAY_WHITE : 'var(--text)'} fontFamily="monospace" fontWeight={700} letterSpacing={0.5}>
                   {room.name.length > 14 ? room.name.slice(0, 14) + '...' : room.name.toUpperCase()}
                 </text>
 
                 {/* Room type label */}
-                <text x={18} y={42} fontSize={9} fill={cfg.color} opacity={0.8} fontFamily="monospace" fontWeight={600} letterSpacing={1} className="uppercase">
+                <text x={18} y={42} style={{ fontSize: 11 }} fill={cfg.color} opacity={0.8} fontFamily="monospace" fontWeight={600} letterSpacing={1} className="uppercase">
                   {cfg.label}
                 </text>
 
                 {/* Pacing indicator & Diff text */}
-                <text x={18} y={56} fontSize={8} fill="var(--text-muted)" opacity={0.7} fontFamily="monospace" letterSpacing={1} className="uppercase">
+                <text x={18} y={56} style={{ fontSize: 11 }} fill="var(--text-muted)" opacity={0.7} fontFamily="monospace" letterSpacing={1} className="uppercase">
                   PACING: <tspan fill="#d8b4fe">{room.pacing}</tspan> | DIFF: <tspan fill={diffColor}>{room.difficulty}</tspan>
                 </text>
 
@@ -439,7 +439,7 @@ export function LevelFlowEditor({
                       className="group/btn"
                     >
                       <rect x={0} y={0} width={16} height={16} rx={4} fill="rgba(139,92,246,0.2)" stroke="rgba(139,92,246,0.4)" />
-                      <text x={4} y={12} fontSize={10} fill="#a78bfa" className="opacity-80 group-hover/btn:opacity-100">&#128279;</text>
+                      <text x={4} y={12} style={{ fontSize: 11 }} fill={ACCENT_VIOLET} className="opacity-80 group-hover/btn:opacity-100">&#128279;</text>
                     </g>
                     {/* Delete button */}
                     <g
@@ -449,7 +449,7 @@ export function LevelFlowEditor({
                       className="group/btn"
                     >
                       <rect x={0} y={0} width={16} height={16} rx={4} fill={`${STATUS_ERROR}20`} stroke={`${STATUS_ERROR}40`} />
-                      <text x={5.5} y={12} fontSize={10} fill={STATUS_ERROR} className="opacity-80 group-hover/btn:opacity-100">&times;</text>
+                      <text x={5.5} y={12} style={{ fontSize: 11 }} fill={STATUS_ERROR} className="opacity-80 group-hover/btn:opacity-100">&times;</text>
                     </g>
                   </g>
                 )}
@@ -458,7 +458,7 @@ export function LevelFlowEditor({
                 {room.spawnEntries.length > 0 && (
                   <g transform={`translate(${ROOM_W - 24}, ${ROOM_H - 18})`}>
                     <rect x={0} y={0} width={18} height={12} rx={2} fill={`${cfg.color}15`} stroke={`${cfg.color}40`} />
-                    <text x={9} y={9} fontSize={8} fill={cfg.color} textAnchor="middle" fontFamily="monospace" fontWeight="bold">
+                    <text x={9} y={9} style={{ fontSize: 11 }} fill={cfg.color} textAnchor="middle" fontFamily="monospace" fontWeight="bold">
                       {String(room.spawnEntries.reduce((s, e) => s + e.count, 0)).padStart(2, '0')}
                     </text>
                   </g>

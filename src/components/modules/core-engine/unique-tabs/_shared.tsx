@@ -1,11 +1,11 @@
 'use client';
 
-import { ReactNode, useMemo, useState } from 'react';
+import { type CSSProperties, ReactNode, useMemo, useState, useRef, useCallback } from 'react';
 import { ChevronDown, ChevronRight, ExternalLink } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   STATUS_SUCCESS, STATUS_WARNING, STATUS_ERROR, STATUS_IMPROVED,
-  OPACITY_8, OPACITY_10,
+  OPACITY_8, OPACITY_10, OPACITY_20, OPACITY_30,
 } from '@/lib/chart-colors';
 import { SurfaceCard } from '@/components/ui/SurfaceCard';
 import type { FeatureRow, FeatureStatus } from '@/types/feature-matrix';
@@ -13,6 +13,14 @@ import type {
   RadarDataPoint, TimelineEvent, HeatmapCell,
   GaugeMetric, DiffEntry, TagCloudItem,
 } from '@/types/unique-tab-improvements';
+
+/* ── Stagger Animation Variants ───────────────────────────────────────────── */
+
+/** Stagger delay (seconds) for default grid/list item entrance */
+export const STAGGER_DEFAULT = 0.05;
+
+/** Stagger delay (seconds) for slower, more dramatic item entrance */
+export const STAGGER_SLOW = 0.1;
 
 /* ── Shared STATUS_COLORS ─────────────────────────────────────────────────── */
 
@@ -37,7 +45,7 @@ export function StatusDot({ status }: { status: FeatureStatus }) {
         animate={isActive ? { scale: [1, 1.3, 1], opacity: [0.6, 1, 0.6] } : {}}
         transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
       />
-      <span className="text-2xs font-medium" style={{ color: sc.dot }}>{sc.label}</span>
+      <span className="text-xs font-medium" style={{ color: sc.dot }}>{sc.label}</span>
     </span>
   );
 }
@@ -68,7 +76,7 @@ export function TabHeader({ icon: Icon, title, implemented, total, accent, child
         </div>
         <div className="flex flex-col">
           <span className="text-sm font-bold text-text tracking-wide">{title}</span>
-          <span className="text-xs text-text-muted">
+          <span className="text-sm text-text-muted">
             <span className="font-mono font-medium" style={{ color: implemented === total ? STATUS_SUCCESS : accent }}>{implemented}</span>
             <span className="opacity-60">/{total} deployed</span>
           </span>
@@ -110,7 +118,7 @@ export function PipelineFlow({ steps, accent, showStatus }: PipelineFlowProps) {
             className="flex items-center gap-1"
           >
             <div
-              className="flex items-center gap-1.5 text-xs font-mono px-2 py-0.5 rounded-md"
+              className="flex items-center gap-1.5 text-sm font-mono px-2 py-0.5 rounded-md"
               style={{
                 backgroundColor: `${accent}15`,
                 color: accent,
@@ -151,7 +159,7 @@ interface SectionLabelProps {
 
 export function SectionLabel({ icon: Icon, label, color }: SectionLabelProps) {
   return (
-    <div className="flex items-center gap-1 text-xs text-text-muted font-bold uppercase tracking-widest">
+    <div className="flex items-center gap-1 text-sm text-text-muted font-bold uppercase tracking-widest">
       {Icon && <Icon className="w-3 h-3" style={color ? { color, filter: `drop-shadow(0 0 3px ${color}80)` } : undefined} />}
       {label}
     </div>
@@ -196,10 +204,10 @@ export function FeatureCard({ name, featureMap, defs, expanded, onToggle, accent
           >
             <ChevronRight className="w-3 h-3 text-text-muted transition-colors group-hover:text-text" />
           </motion.div>
-          <span className="text-xs font-semibold text-text truncate group-hover:text-text-bright transition-colors">{name}</span>
+          <span className="text-sm font-semibold text-text truncate group-hover:text-text-bright transition-colors">{name}</span>
           <span className="ml-auto flex items-center gap-1.5 flex-shrink-0 bg-surface px-2 py-0.5 rounded-md border border-border/50 shadow-sm">
             <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: sc.dot, boxShadow: `0 0 6px ${sc.dot}80` }} />
-            <span className="text-2xs font-medium" style={{ color: sc.dot }}>{sc.label}</span>
+            <span className="text-xs font-medium" style={{ color: sc.dot }}>{sc.label}</span>
           </span>
         </div>
       </button>
@@ -214,7 +222,7 @@ export function FeatureCard({ name, featureMap, defs, expanded, onToggle, accent
             className="relative z-10 overflow-hidden"
           >
             <div className="px-2.5 pb-2 space-y-1.5 border-t border-border/40 bg-surface/30">
-              <p className="text-xs text-text-muted leading-relaxed mt-1.5">
+              <p className="text-sm text-text-muted leading-relaxed mt-1.5">
                 {def?.description ?? row?.description ?? 'No description available for this feature.'}
               </p>
 
@@ -223,7 +231,7 @@ export function FeatureCard({ name, featureMap, defs, expanded, onToggle, accent
                   {row.filePaths.slice(0, 3).map((fp) => (
                     <span
                       key={fp}
-                      className="flex items-center gap-1 text-2xs font-mono px-1.5 py-0.5 rounded"
+                      className="flex items-center gap-1 text-xs font-mono px-1.5 py-0.5 rounded"
                       style={{ backgroundColor: `${accent}10`, color: accent, border: `1px solid ${accent}30` }}
                     >
                       <ExternalLink className="w-2.5 h-2.5" />
@@ -235,7 +243,7 @@ export function FeatureCard({ name, featureMap, defs, expanded, onToggle, accent
 
               <div className="flex items-center justify-between pt-1">
                 {row?.qualityScore != null && (
-                  <div className="flex items-center gap-1.5 bg-surface px-2 py-1 rounded-md text-2xs font-mono border border-border/50">
+                  <div className="flex items-center gap-1.5 bg-surface px-2 py-1 rounded-md text-xs font-mono border border-border/50">
                     <span className="text-text-muted">Quality:</span>
                     <span className={row.qualityScore >= 8 ? "text-emerald-400" : row.qualityScore >= 5 ? "text-amber-400" : "text-red-400"}>
                       {row.qualityScore}/10
@@ -244,14 +252,14 @@ export function FeatureCard({ name, featureMap, defs, expanded, onToggle, accent
                 )}
 
                 {row?.nextSteps && (
-                  <div className="text-2xs truncate ml-auto border-l-2 pl-2 max-w-[60%]" style={{ borderColor: STATUS_WARNING, color: STATUS_WARNING }}>
+                  <div className="text-xs truncate ml-auto border-l-2 pl-2 max-w-[60%]" style={{ borderColor: STATUS_WARNING, color: STATUS_WARNING }}>
                     <span className="opacity-70 font-semibold mr-1">Next:</span>{row.nextSteps}
                   </div>
                 )}
               </div>
 
               {def?.dependsOn && def.dependsOn.length > 0 && (
-                <div className="text-2xs text-text-muted font-mono pt-1">
+                <div className="text-xs text-text-muted font-mono pt-1">
                   <span className="opacity-50 font-semibold mr-1">Deps:</span> {def.dependsOn.map((d) => d.replace(/.*::/, '')).join(', ')}
                 </div>
               )}
@@ -340,7 +348,7 @@ interface RadarChartProps {
   showLabels?: boolean;
 }
 
-export function RadarChart({ data, size = 130, accent, overlays, showLabels = true }: RadarChartProps) {
+export function RadarChart({ data, size = 220, accent, overlays, showLabels = true }: RadarChartProps) {
   const cx = size / 2;
   const cy = size / 2;
   const r = size / 2 - 18;
@@ -392,7 +400,7 @@ export function RadarChart({ data, size = 130, accent, overlays, showLabels = tr
         const p = toXY(1.15, i);
         return (
           <text key={i} x={p.x} y={p.y} textAnchor="middle" dominantBaseline="central"
-            className="text-[9px] font-mono font-bold fill-[var(--text-muted)]"
+            className="text-[11px] font-mono font-bold fill-[var(--text-muted)]"
           >
             {d.axis}
           </text>
@@ -411,7 +419,7 @@ interface TimelineStripProps {
   height?: number;
 }
 
-export function TimelineStrip({ events, accent, maxVisible = 50, height = 80 }: TimelineStripProps) {
+export function TimelineStrip({ events, accent, maxVisible = 50, height = 100 }: TimelineStripProps) {
   const visible = events.slice(0, maxVisible);
   const minT = visible.length > 0 ? Math.min(...visible.map((e) => e.timestamp)) : 0;
   const maxT = visible.length > 0 ? Math.max(...visible.map((e) => e.timestamp + (e.duration ?? 0))) : 1;
@@ -437,7 +445,7 @@ export function TimelineStrip({ events, accent, maxVisible = 50, height = 80 }: 
             ) : (
               <div className="w-1.5 h-1.5 rounded-full -ml-1" style={{ backgroundColor: evt.color, boxShadow: `0 0 4px ${evt.color}` }} />
             )}
-            <div className="text-[8px] font-mono text-text-muted mt-0.5 whitespace-nowrap truncate max-w-[60px]">
+            <div className="text-sm font-mono text-text-muted mt-0.5 whitespace-nowrap truncate max-w-[60px]">
               {evt.label}
             </div>
           </div>
@@ -480,7 +488,7 @@ export function HeatmapGrid({ rows, cols, cells, lowColor = '#1e293b', highColor
 
   return (
     <div className="overflow-x-auto custom-scrollbar">
-      <table className="border-collapse text-[10px]" role="grid" aria-label="Heatmap grid">
+      <table className="border-collapse text-sm" role="grid" aria-label="Heatmap grid">
         <thead>
           <tr>
             <th className="p-1" />
@@ -513,10 +521,10 @@ export function HeatmapGrid({ rows, cols, cells, lowColor = '#1e293b', highColor
                     }}
                   >
                     <div
-                      className="w-6 h-6 rounded-sm cursor-pointer hover:ring-1 hover:ring-white/30 focus-visible:ring-2 focus-visible:ring-white/60 transition-all flex items-center justify-center"
+                      className="w-8 h-8 rounded-sm cursor-pointer hover:ring-1 hover:ring-white/30 focus-visible:ring-2 focus-visible:ring-white/60 transition-all flex items-center justify-center"
                       style={{ backgroundColor: interpolateColor(lowColor, high, v) }}
                     >
-                      {cell?.label && <span className="text-[8px] font-mono text-white/80">{cell.label}</span>}
+                      {cell?.label && <span className="text-xs font-mono text-white/80">{cell.label}</span>}
                     </div>
                   </td>
                 );
@@ -537,7 +545,7 @@ interface LiveMetricGaugeProps {
   accent?: string;
 }
 
-export function LiveMetricGauge({ metric, size = 64, accent }: LiveMetricGaugeProps) {
+export function LiveMetricGauge({ metric, size = 88, accent }: LiveMetricGaugeProps) {
   const pct = Math.min(metric.current / metric.target, 1.5);
   const clamped = Math.min(pct, 1);
   const r = (size / 2) - 8;
@@ -559,14 +567,14 @@ export function LiveMetricGauge({ metric, size = 64, accent }: LiveMetricGaugePr
           />
         </svg>
         <div className="absolute inset-0 flex items-center justify-center flex-col leading-none">
-          <span className="text-xs font-mono font-bold" style={{ color: finalColor }}>{Math.round(pct * 100)}%</span>
+          <span className="text-sm font-mono font-bold" style={{ color: finalColor }}>{Math.round(pct * 100)}%</span>
         </div>
       </div>
       <div className="text-center">
-        <div className="text-[10px] font-mono font-bold text-text-muted uppercase tracking-widest truncate max-w-[80px]">{metric.label}</div>
-        <div className="text-xs font-mono text-text">
+        <div className="text-sm font-mono font-bold text-text-muted uppercase tracking-widest truncate max-w-[80px]">{metric.label}</div>
+        <div className="text-sm font-mono text-text">
           {metric.current.toFixed(metric.unit === 'ms' || metric.unit === '%' ? 1 : 0)}
-          <span className="text-text-muted text-[10px]">{metric.unit}</span>
+          <span className="text-text-muted text-xs">{metric.unit}</span>
         </div>
       </div>
     </div>
@@ -594,7 +602,7 @@ export function DiffViewer({ entries, accent }: DiffViewerProps) {
   const visibleEntries = entries.filter(e => showUnchanged || e.changeType !== 'unchanged');
 
   return (
-    <div className="space-y-1 text-xs font-mono">
+    <div className="space-y-1 text-sm font-mono">
       {visibleEntries.map((e) => {
         const c = typeColors[e.changeType];
         return (
@@ -678,6 +686,72 @@ export function TagCloud({ tags, accent, maxFontSize = 16, minFontSize = 9 }: Ta
   );
 }
 
+/* ── TabButtonGroup ──────────────────────────────────────────────────────── */
+
+export interface TabButtonGroupItem {
+  value: string;
+  label: string;
+  /** Per-item accent color; when set, unselected items show muted text */
+  color?: string;
+}
+
+export interface TabButtonGroupProps {
+  items: TabButtonGroupItem[];
+  selected: string | null;
+  onSelect: (value: string) => void;
+  accent: string;
+  ariaLabel: string;
+  className?: string;
+}
+
+export function TabButtonGroup({ items, selected, onSelect, accent, ariaLabel, className }: TabButtonGroupProps) {
+  const buttonsRef = useRef<(HTMLButtonElement | null)[]>([]);
+
+  const handleKeyDown = useCallback((e: React.KeyboardEvent, index: number) => {
+    let nextIndex: number | null = null;
+    if (e.key === 'ArrowRight') nextIndex = (index + 1) % items.length;
+    else if (e.key === 'ArrowLeft') nextIndex = (index - 1 + items.length) % items.length;
+    else if (e.key === 'Home') nextIndex = 0;
+    else if (e.key === 'End') nextIndex = items.length - 1;
+    if (nextIndex !== null) {
+      e.preventDefault();
+      buttonsRef.current[nextIndex]?.focus();
+      onSelect(items[nextIndex].value);
+    }
+  }, [items, onSelect]);
+
+  return (
+    <div role="tablist" aria-label={ariaLabel} className={`flex gap-1${className ? ` ${className}` : ''}`}>
+      {items.map((item, i) => {
+        const isSelected = selected === item.value;
+        const itemColor = item.color ?? accent;
+
+        return (
+          <button
+            key={item.value}
+            ref={el => { buttonsRef.current[i] = el; }}
+            role="tab"
+            aria-selected={isSelected}
+            tabIndex={isSelected || (selected === null && i === 0) ? 0 : -1}
+            onClick={() => onSelect(item.value)}
+            onKeyDown={(e) => handleKeyDown(e, i)}
+            className="text-2xs font-mono px-2 py-0.5 rounded border transition-all hover:opacity-80"
+            style={{
+              borderColor: isSelected
+                ? (item.color ? `${itemColor}60` : `${accent}${OPACITY_30}`)
+                : (item.color ? 'var(--border)' : `${accent}${OPACITY_30}`),
+              backgroundColor: isSelected ? `${itemColor}${OPACITY_20}` : 'transparent',
+              color: item.color ? (isSelected ? itemColor : 'var(--text-muted)') : accent,
+            }}
+          >
+            {item.label}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
 /* ── SubTabNavigation ────────────────────────────────────────────────────── */
 
 export interface SubTab {
@@ -704,7 +778,7 @@ export function SubTabNavigation({ tabs, activeTabId, onChange, accent }: SubTab
             key={tab.id}
             onClick={() => onChange(tab.id)}
             className={`
-              relative flex items-center gap-2 px-2.5 py-1 rounded-lg text-xs font-semibold
+              relative flex items-center gap-2 px-2.5 py-1 rounded-lg text-sm font-semibold
               transition-all duration-300 focus:outline-none whitespace-nowrap
               ${isActive ? 'text-white' : 'text-text-muted hover:text-text hover:bg-surface/50'}
             `}
@@ -740,6 +814,66 @@ export interface SegmentedControlProps {
   accent: string;
 }
 
+/* ── CollapsibleSection ──────────────────────────────────────────────────── */
+
+export interface CollapsibleSectionProps {
+  title: string;
+  color: string;
+  children: ReactNode;
+  defaultOpen?: boolean;
+  /** Optional icon — when omitted, a colored dot is shown instead. */
+  icon?: React.ComponentType<{ className?: string; style?: React.CSSProperties }>;
+  /** Optional data-testid for the wrapper. */
+  testId?: string;
+  /** 'card' wraps in SurfaceCard, 'bordered' uses a plain bordered div. Default: 'card'. */
+  variant?: 'card' | 'bordered';
+}
+
+export function CollapsibleSection({
+  title, color, children, defaultOpen = false, icon: Icon, testId, variant = 'card',
+}: CollapsibleSectionProps) {
+  const [open, setOpen] = useState(defaultOpen);
+
+  const Wrapper = variant === 'card' ? SurfaceCard : 'div';
+  const wrapperProps = variant === 'card'
+    ? { level: 2 as const, className: 'relative overflow-hidden', ...(testId ? { 'data-testid': testId } : {}) }
+    : { className: 'border border-border/30 rounded-lg overflow-hidden', ...(testId ? { 'data-testid': testId } : {}) };
+
+  return (
+    <Wrapper {...wrapperProps}>
+      <button
+        onClick={() => setOpen(o => !o)}
+        className="w-full flex items-center gap-2 px-3 py-2 text-left hover:bg-surface-hover/30 transition-colors"
+        {...(testId ? { 'data-testid': `${testId}-toggle` } : {})}
+      >
+        <motion.div animate={{ rotate: open ? 90 : 0 }} transition={{ type: 'spring', stiffness: 300, damping: 20 }}>
+          <ChevronRight className="w-3.5 h-3.5 text-text-muted" />
+        </motion.div>
+        {Icon
+          ? <Icon className="w-3.5 h-3.5" style={{ color }} />
+          : <span className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: color, boxShadow: `0 0 6px ${color}60` }} />
+        }
+        <span className="text-xs font-semibold text-text">{title}</span>
+      </button>
+      <AnimatePresence>
+        {open && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            className="overflow-hidden"
+          >
+            <div className="px-3 pb-3">{children}</div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </Wrapper>
+  );
+}
+
+/* ── SegmentedControl ────────────────────────────────────────────────────── */
+
 export function SegmentedControl({ options, activeId, onChange, accent }: SegmentedControlProps) {
   return (
     <div className="flex bg-surface-deep p-1 rounded-lg border border-border/40 overflow-x-auto custom-scrollbar w-fit">
@@ -750,7 +884,7 @@ export function SegmentedControl({ options, activeId, onChange, accent }: Segmen
           <button
             key={opt.id}
             onClick={() => onChange(opt.id)}
-            className={`relative flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-medium transition-colors focus:outline-none whitespace-nowrap
+            className={`relative flex items-center gap-1 px-2.5 py-1 rounded-md text-sm font-medium transition-colors focus:outline-none whitespace-nowrap
               ${isActive ? 'text-white' : 'text-text-muted hover:text-text'}
             `}
           >
@@ -771,3 +905,63 @@ export function SegmentedControl({ options, activeId, onChange, accent }: Segmen
   );
 }
 
+/* ── NormalizedLineChart ──────────────────────────────────────────────────── */
+
+interface NormalizedLineChartProps {
+  /** Tailwind height class, e.g. "h-[260px]" — defaults to "h-[220px]" */
+  height?: string;
+  /** Show horizontal grid lines at 25 / 50 / 75 % */
+  showGrid?: boolean;
+  /** Grid stroke color — default "rgba(255,255,255,0.06)" */
+  gridColor?: string;
+  /** Y-axis labels rendered top→bottom on the left edge */
+  yLabels?: string[];
+  /** X-axis labels rendered left→right along the bottom edge */
+  xLabels?: string[];
+  /** Extra SVG <defs> (gradients, clip paths, etc.) */
+  defs?: ReactNode;
+  /** SVG child elements (polylines, paths, circles, etc.) */
+  children: ReactNode;
+  /** Extra content rendered *outside* the SVG but inside the container (legends, badges) */
+  overlay?: ReactNode;
+  /** Optional style override for the outer container */
+  style?: CSSProperties;
+}
+
+export function NormalizedLineChart({
+  height = 'h-[220px]',
+  showGrid = true,
+  gridColor = 'rgba(255,255,255,0.06)',
+  yLabels,
+  xLabels,
+  defs,
+  children,
+  overlay,
+  style,
+}: NormalizedLineChartProps) {
+  return (
+    <div className={`w-full ${height} bg-surface-deep/30 rounded-xl relative p-4 border border-border/40 min-h-[200px]`} style={style}>
+      <svg className="w-full h-full overflow-visible" viewBox="0 0 100 100" preserveAspectRatio="none">
+        {defs}
+        {showGrid && [25, 50, 75].map(pct => (
+          <line key={pct} x1="0" y1={pct} x2="100" y2={pct} stroke={gridColor} strokeWidth="0.5" vectorEffect="non-scaling-stroke" />
+        ))}
+        {children}
+      </svg>
+
+      {yLabels && yLabels.length > 0 && (
+        <div className="absolute left-1 top-4 bottom-4 flex flex-col justify-between text-[11px] text-text-muted font-mono">
+          {yLabels.map((label, i) => <span key={i}>{label}</span>)}
+        </div>
+      )}
+
+      {xLabels && xLabels.length > 0 && (
+        <div className="absolute left-4 right-4 bottom-0 flex justify-between text-[11px] text-text-muted font-mono">
+          {xLabels.map((label, i) => <span key={i}>{label}</span>)}
+        </div>
+      )}
+
+      {overlay}
+    </div>
+  );
+}

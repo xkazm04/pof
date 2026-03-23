@@ -5,6 +5,7 @@ import type {
   GearLoadout,
   TuningOverrides,
   CombatSimConfig,
+  FeedbackPreset,
 } from '@/types/combat-simulator';
 
 // ── Base Player Attributes (Level 1) ────────────────────────────────────────
@@ -342,3 +343,73 @@ export const DEFAULT_CONFIG: CombatSimConfig = {
   seed: 42,
   maxFightDurationSec: 120,
 };
+
+// ── Feedback Presets ─────────────────────────────────────────────────────────
+
+export const FEEDBACK_PRESETS: FeedbackPreset[] = [
+  {
+    id: 'default',
+    name: 'Default',
+    description: 'Standard feedback — moderate hitstop, light shake, short recovery',
+    config: {
+      hitstopDurationSec: 0.05,
+      cameraShakeScale: 1.0,
+      baseReactionTimeSec: 0.2,
+      shakeAccuracyPenalty: 0.05,
+      hitRecoveryWindowSec: 0.1,
+      hitRecoveryIFrames: false,
+    },
+  },
+  {
+    id: 'soulslike',
+    name: 'Souls-like',
+    description: 'Heavy hitstop, strong shake, generous recovery with i-frames',
+    config: {
+      hitstopDurationSec: 0.12,
+      cameraShakeScale: 2.5,
+      baseReactionTimeSec: 0.25,
+      shakeAccuracyPenalty: 0.15,
+      hitRecoveryWindowSec: 0.3,
+      hitRecoveryIFrames: true,
+    },
+  },
+  {
+    id: 'hack-n-slash',
+    name: 'Hack & Slash',
+    description: 'Minimal hitstop, low shake, fast recovery — snappy feel',
+    config: {
+      hitstopDurationSec: 0.02,
+      cameraShakeScale: 0.5,
+      baseReactionTimeSec: 0.15,
+      shakeAccuracyPenalty: 0.02,
+      hitRecoveryWindowSec: 0.05,
+      hitRecoveryIFrames: false,
+    },
+  },
+  {
+    id: 'heavy',
+    name: 'Heavy Impact',
+    description: 'Extreme hitstop and shake — weighty, deliberate combat',
+    config: {
+      hitstopDurationSec: 0.2,
+      cameraShakeScale: 4.0,
+      baseReactionTimeSec: 0.3,
+      shakeAccuracyPenalty: 0.25,
+      hitRecoveryWindowSec: 0.2,
+      hitRecoveryIFrames: true,
+    },
+  },
+  {
+    id: 'none',
+    name: 'No Feedback',
+    description: 'All feedback disabled — pure math baseline',
+    config: {
+      hitstopDurationSec: 0,
+      cameraShakeScale: 0,
+      baseReactionTimeSec: 0.2,
+      shakeAccuracyPenalty: 0,
+      hitRecoveryWindowSec: 0,
+      hitRecoveryIFrames: false,
+    },
+  },
+];

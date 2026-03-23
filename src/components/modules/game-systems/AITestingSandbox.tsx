@@ -16,7 +16,7 @@ import type {
 import { SurfaceCard } from '@/components/ui/SurfaceCard';
 import {
   MODULE_COLORS, STATUS_SUCCESS, STATUS_WARNING, STATUS_ERROR,
-  STATUS_INFO, STATUS_BLOCKER, OPACITY_15, OPACITY_30,
+  STATUS_INFO, STATUS_BLOCKER, OPACITY_15, OPACITY_30, ACCENT_PURPLE,
 } from '@/lib/chart-colors';
 
 const SYSTEMS_ACCENT = MODULE_COLORS.systems;
@@ -29,7 +29,7 @@ const STIMULUS_META: Record<StimulusType, { label: string; icon: typeof Eye; col
   perception_damage: { label: 'Damage Sense', icon: Crosshair, color: STATUS_ERROR },
   damage_event: { label: 'Damage Event', icon: AlertTriangle, color: STATUS_BLOCKER },
   gameplay_tag: { label: 'Gameplay Tag', icon: Tag, color: STATUS_SUCCESS },
-  custom: { label: 'Custom', icon: Sparkles, color: '#c084fc' },
+  custom: { label: 'Custom', icon: Sparkles, color: ACCENT_PURPLE },
 };
 
 const STATUS_COLORS: Record<ScenarioStatus, string> = {
@@ -90,12 +90,18 @@ export function AITestingSandbox({
 
         {/* Pass/fail badges */}
         {passedCount > 0 && (
-          <span className="text-2xs px-1.5 py-0.5 rounded bg-[#4ade8015] text-[#4ade80] border border-[#4ade8030]">
+          <span
+            className="text-2xs px-1.5 py-0.5 rounded"
+            style={{ backgroundColor: `${STATUS_SUCCESS}15`, color: STATUS_SUCCESS, border: `1px solid ${STATUS_SUCCESS}30` }}
+          >
             {passedCount} passed
           </span>
         )}
         {failedCount > 0 && (
-          <span className="text-2xs px-1.5 py-0.5 rounded bg-[#f8717115] text-[#f87171] border border-[#f8717130]">
+          <span
+            className="text-2xs px-1.5 py-0.5 rounded"
+            style={{ backgroundColor: `${STATUS_ERROR}15`, color: STATUS_ERROR, border: `1px solid ${STATUS_ERROR}30` }}
+          >
             {failedCount} failed
           </span>
         )}
@@ -368,7 +374,7 @@ function ScenarioCard({
                     </div>
                     <button
                       onClick={() => handleRemoveStimulus(idx)}
-                      className="text-text-muted hover:text-[#f87171] transition-colors mt-0.5"
+                      className="text-text-muted hover:text-red-400 transition-colors mt-0.5"
                     >
                       <Trash2 className="w-3 h-3" />
                     </button>
@@ -397,7 +403,7 @@ function ScenarioCard({
                   key={ea.id}
                   className="flex items-start gap-2 px-2.5 py-2 bg-surface border border-border rounded"
                 >
-                  <Play className="w-3 h-3 mt-0.5 flex-shrink-0 text-[#4ade80]" />
+                  <Play className="w-3 h-3 mt-0.5 flex-shrink-0" style={{ color: STATUS_SUCCESS }} />
                   <div className="flex-1 min-w-0 space-y-1">
                     <input
                       type="text"
@@ -428,7 +434,7 @@ function ScenarioCard({
                   </div>
                   <button
                     onClick={() => handleRemoveExpected(idx)}
-                    className="text-text-muted hover:text-[#f87171] transition-colors mt-0.5"
+                    className="text-text-muted hover:text-red-400 transition-colors mt-0.5"
                   >
                     <Trash2 className="w-3 h-3" />
                   </button>
@@ -466,7 +472,7 @@ function ScenarioCard({
             </button>
             <button
               onClick={onDelete}
-              className="flex items-center gap-1 px-2 py-1.5 rounded text-xs text-text-muted hover:text-[#f87171] hover:bg-[#f8717110] transition-colors"
+              className="flex items-center gap-1 px-2 py-1.5 rounded text-xs text-text-muted hover:text-red-400 hover:bg-red-400/10 transition-colors"
             >
               <Trash2 className="w-3 h-3" />
               Delete

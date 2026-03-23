@@ -190,13 +190,13 @@ export function UnifiedSummaryView({ onNavigateTab }: Props) {
 
         <div className="flex-1 min-w-0 py-1">
           <div className="flex items-center gap-2 mb-1.5">
-            <Shield className="w-4 h-4 text-[#ef4444]" />
+            <Shield className="w-4 h-4" style={{ color: STATUS_ERROR }} />
             <h3 className="text-sm font-semibold text-text">Combined Project Health</h3>
           </div>
           <p className="text-xs text-text-muted leading-relaxed mb-3">
             Weighted composite across quality ({Math.round(0.4 * 100)}%), dependencies ({Math.round(0.3 * 100)}%), coverage ({Math.round(0.2 * 100)}%), and activity ({Math.round(0.1 * 100)}%).
             {health.topWeakness && (
-              <> Weakest area: <span className="text-[#fbbf24] font-medium">{health.topWeakness}</span>.</>
+              <> Weakest area: <span className="font-medium" style={{ color: STATUS_WARNING }}>{health.topWeakness}</span>.</>
             )}
           </p>
 
@@ -231,7 +231,7 @@ export function UnifiedSummaryView({ onNavigateTab }: Props) {
       {/* ── Module Health Grid ────────────────────────────────────────────── */}
       <div>
         <div className="flex items-center gap-2 mb-3">
-          <Sparkles className="w-3.5 h-3.5 text-[#ef4444]" />
+          <Sparkles className="w-3.5 h-3.5" style={{ color: STATUS_ERROR }} />
           <span className="text-xs font-semibold text-text-muted uppercase tracking-wider">
             Module Health Overview
           </span>
@@ -257,23 +257,23 @@ export function UnifiedSummaryView({ onNavigateTab }: Props) {
       {insights.length > 0 && (
         <div>
           <div className="flex items-center gap-2 mb-3">
-            <Sparkles className="w-3.5 h-3.5 text-[#fbbf24]" />
+            <Sparkles className="w-3.5 h-3.5" style={{ color: STATUS_WARNING }} />
             <span className="text-xs font-semibold text-text-muted uppercase tracking-wider">
               Cross-Dashboard Insights
             </span>
             <div className="flex items-center gap-1.5 ml-2">
               {criticalInsights.length > 0 && (
-                <span className="text-2xs font-medium px-1.5 py-0.5 rounded bg-[#f8717115] text-[#f87171]">
+                <span className="text-2xs font-medium px-1.5 py-0.5 rounded" style={{ backgroundColor: `${STATUS_ERROR}15`, color: STATUS_ERROR }}>
                   {criticalInsights.length} critical
                 </span>
               )}
               {warningInsights.length > 0 && (
-                <span className="text-2xs font-medium px-1.5 py-0.5 rounded bg-[#fbbf2415] text-[#fbbf24]">
+                <span className="text-2xs font-medium px-1.5 py-0.5 rounded" style={{ backgroundColor: `${STATUS_WARNING}15`, color: STATUS_WARNING }}>
                   {warningInsights.length} warning
                 </span>
               )}
               {positiveInsights.length > 0 && (
-                <span className="text-2xs font-medium px-1.5 py-0.5 rounded bg-[#4ade8015] text-[#4ade80]">
+                <span className="text-2xs font-medium px-1.5 py-0.5 rounded" style={{ backgroundColor: `${STATUS_SUCCESS}15`, color: STATUS_SUCCESS }}>
                   {positiveInsights.length} strong
                 </span>
               )}

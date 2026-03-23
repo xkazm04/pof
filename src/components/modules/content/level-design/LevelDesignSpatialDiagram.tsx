@@ -117,7 +117,7 @@ export function LevelDesignSpatialDiagram({ onRunPrompt, isRunning, activeItemId
       </div>
 
       {/* Spatial diagram */}
-      <div className="relative" style={{ height: 240 }}>
+      <div className="relative min-h-[200px]" style={{ height: 240 }}>
         {/* SVG arrows layer */}
         <svg
           className="absolute inset-0 w-full h-full pointer-events-none"

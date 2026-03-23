@@ -6,7 +6,7 @@ import {
   Castle, Sword, Trophy, MapPin, Package, Gem, Loader2
 } from 'lucide-react';
 import { MODULE_COLORS } from '@/lib/constants';
-import { STATUS_IMPROVED, ACCENT_VIOLET, STATUS_SUCCESS, ACCENT_ORANGE } from '@/lib/chart-colors';
+import { STATUS_IMPROVED, ACCENT_VIOLET, STATUS_SUCCESS, ACCENT_ORANGE, OVERLAY_WHITE } from '@/lib/chart-colors';
 import { motion } from 'framer-motion';
 
 // ── Types ──
@@ -191,13 +191,13 @@ export function ProceduralLevelWizard({ onGenerate, isGenerating }: ProceduralLe
         </div>
         <div>
           <h3 className="text-sm font-bold tracking-widest uppercase text-violet-100">Procedural Matrix Configurator</h3>
-          <p className="text-[10px] text-violet-400/60 uppercase tracking-wider mt-0.5">Initialize algorithmic spatial generation parameters</p>
+          <p className="text-xs text-violet-400/60 uppercase tracking-wider mt-0.5">Initialize algorithmic spatial generation parameters</p>
         </div>
       </div>
 
       {/* ─── Algorithm ─── */}
       <div className="space-y-3 relative z-10">
-        <h4 className="flex items-center gap-2 text-[10px] font-bold text-violet-400 uppercase tracking-widest">
+        <h4 className="flex items-center gap-2 text-xs font-bold text-violet-400 uppercase tracking-widest">
           <Zap className="w-3 h-3" /> Core Subroutine
         </h4>
         <div className="grid grid-cols-2 gap-3">
@@ -217,7 +217,7 @@ export function ProceduralLevelWizard({ onGenerate, isGenerating }: ProceduralLe
               >
                 {/* Tech background element */}
                 <div className="absolute right-0 top-0 w-32 h-32 opacity-[0.03] transition-transform duration-700 group-hover:scale-150 group-hover:rotate-12 pointer-events-none">
-                  <Icon className="w-full h-full" style={{ color: isActive ? alg.color : '#fff' }} />
+                  <Icon className="w-full h-full" style={{ color: isActive ? alg.color : OVERLAY_WHITE }} />
                 </div>
 
                 <div className="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 relative z-10 transition-colors"
@@ -231,7 +231,7 @@ export function ProceduralLevelWizard({ onGenerate, isGenerating }: ProceduralLe
                   >
                     {alg.label}
                   </span>
-                  <span className="text-[9px] text-violet-300/60 block leading-relaxed">{alg.description}</span>
+                  <span className="text-[11px] text-violet-300/60 block leading-relaxed">{alg.description}</span>
                 </div>
               </button>
             );
@@ -240,7 +240,7 @@ export function ProceduralLevelWizard({ onGenerate, isGenerating }: ProceduralLe
         <motion.p
           key={algorithm}
           initial={{ opacity: 0, y: -5 }} animate={{ opacity: 1, y: 0 }}
-          className="text-[10px] px-3 py-2 rounded-lg bg-black/40 border border-violet-900/30 text-violet-300/80 font-mono"
+          className="text-xs px-3 py-2 rounded-lg bg-black/40 border border-violet-900/30 text-violet-300/80 font-mono"
         >
           <span className="text-violet-500 font-bold mr-2">RECOMMENDED_FOR:</span>
           {algDef.bestFor.toUpperCase()}
@@ -249,7 +249,7 @@ export function ProceduralLevelWizard({ onGenerate, isGenerating }: ProceduralLe
 
       {/* ─── Level Type ─── */}
       <div className="space-y-3 relative z-10 bg-black/40 p-4 rounded-xl border border-violet-900/30 shadow-inner">
-        <h4 className="flex items-center gap-2 text-[10px] font-bold text-violet-400 uppercase tracking-widest">
+        <h4 className="flex items-center gap-2 text-xs font-bold text-violet-400 uppercase tracking-widest">
           <Hexagon className="w-3 h-3" /> Output Topology
         </h4>
         <div className="grid grid-cols-3 gap-3">
@@ -284,7 +284,7 @@ export function ProceduralLevelWizard({ onGenerate, isGenerating }: ProceduralLe
                   >
                     {lt.label}
                   </span>
-                  <span className="text-[8px] text-violet-400/50 uppercase tracking-widest leading-tight block px-2">
+                  <span className="text-[11px] text-violet-400/50 uppercase tracking-widest leading-tight block px-2">
                     {lt.description.split(' ').slice(0, 3).join(' ')}...
                   </span>
                 </div>
@@ -296,7 +296,7 @@ export function ProceduralLevelWizard({ onGenerate, isGenerating }: ProceduralLe
 
       {/* ─── Size Parameters ─── */}
       <div className="space-y-3 relative z-10">
-        <h4 className="flex items-center gap-2 text-[10px] font-bold text-violet-400 uppercase tracking-widest border-b border-violet-900/30 pb-2">
+        <h4 className="flex items-center gap-2 text-xs font-bold text-violet-400 uppercase tracking-widest border-b border-violet-900/30 pb-2">
           <Grid3X3 className="w-3 h-3" /> Size Parameters
           <span className="ml-1 text-violet-500/50">[{ltDef.label}]</span>
         </h4>
@@ -310,15 +310,15 @@ export function ProceduralLevelWizard({ onGenerate, isGenerating }: ProceduralLe
           <div className="px-4 py-3 rounded-xl bg-black/60 border border-violet-900/40 relative group overflow-hidden">
             <div className="absolute inset-0 bg-gradient-to-r from-violet-500/0 via-violet-500/5 to-violet-500/0 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none" />
             <div className="flex items-center justify-between mb-2">
-              <span className="text-[9px] font-bold text-violet-300 uppercase tracking-widest">WORLD SEED</span>
-              <span className="text-[8px] text-violet-500 font-mono">OPTIONAL</span>
+              <span className="text-[11px] font-bold text-violet-300 uppercase tracking-widest">WORLD SEED</span>
+              <span className="text-[11px] text-violet-500 font-mono">OPTIONAL</span>
             </div>
             <input
               type="text"
               value={seed}
               onChange={(e) => setSeed(e.target.value)}
               placeholder="0xRND..."
-              className="w-full px-3 py-1.5 bg-black/40 border border-violet-900/50 rounded-md text-[10px] text-violet-200 placeholder-violet-500/40 outline-none focus:border-violet-500 transition-colors font-mono tracking-wider shadow-inner"
+              className="w-full px-3 py-1.5 bg-black/40 border border-violet-900/50 rounded-md text-xs text-violet-200 placeholder-violet-500/40 outline-none focus:border-violet-500 transition-colors font-mono tracking-wider shadow-inner"
             />
           </div>
         </div>
@@ -326,7 +326,7 @@ export function ProceduralLevelWizard({ onGenerate, isGenerating }: ProceduralLe
 
       {/* ─── Gameplay Constraints ─── */}
       <div className="space-y-3 relative z-10">
-        <h4 className="flex items-center gap-2 text-[10px] font-bold text-violet-400 uppercase tracking-widest border-b border-violet-900/30 pb-2">
+        <h4 className="flex items-center gap-2 text-xs font-bold text-violet-400 uppercase tracking-widest border-b border-violet-900/30 pb-2">
           <Castle className="w-3 h-3" /> Environmental Logic
         </h4>
         <div className="grid grid-cols-2 lg:grid-cols-3 gap-2">
@@ -364,7 +364,7 @@ export function ProceduralLevelWizard({ onGenerate, isGenerating }: ProceduralLe
                 />
                 <div className="min-w-0 relative z-10 flex-1">
                   <span
-                    className="text-[10px] font-bold uppercase tracking-wider block truncate"
+                    className="text-xs font-bold uppercase tracking-wider block truncate"
                     style={{ color: isActive ? MODULE_COLORS.content : 'rgba(200,200,240,0.7)' }}
                   >
                     {c.label}
@@ -428,8 +428,8 @@ function SizeSlider({
       <div className="absolute inset-x-0 inset-y-0 bg-gradient-to-b from-transparent via-violet-500/5 to-transparent -translate-y-full group-hover:translate-y-full transition-transform duration-1000 pointer-events-none" />
 
       <div className="flex items-center justify-between mb-2 relative z-10">
-        <span className="text-[9px] font-bold text-violet-300 uppercase tracking-widest">{label}</span>
-        <span className="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded bg-violet-900/30" style={{ color }}>{value}</span>
+        <span className="text-[11px] font-bold text-violet-300 uppercase tracking-widest">{label}</span>
+        <span className="text-xs font-mono font-bold px-1.5 py-0.5 rounded bg-violet-900/30" style={{ color }}>{value}</span>
       </div>
 
       <div className="relative h-1.5 rounded-full bg-violet-900/30 overflow-hidden mt-1 backdrop-blur-sm shadow-inner z-10">
@@ -449,8 +449,8 @@ function SizeSlider({
       </div>
 
       <div className="flex justify-between mt-1.5 opacity-50 relative z-10">
-        <span className="text-[8px] font-mono text-violet-200">{min}</span>
-        <span className="text-[8px] font-mono text-violet-200">{max}</span>
+        <span className="text-[11px] font-mono text-violet-200">{min}</span>
+        <span className="text-[11px] font-mono text-violet-200">{max}</span>
       </div>
     </div>
   );

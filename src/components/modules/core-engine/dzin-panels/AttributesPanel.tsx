@@ -12,7 +12,8 @@ import {
 } from '@/components/modules/core-engine/unique-tabs/_shared';
 import { SurfaceCard } from '@/components/ui/SurfaceCard';
 import {
-  STATUS_SUCCESS, STATUS_IMPROVED,
+  STATUS_SUCCESS, STATUS_IMPROVED, ACCENT_RED, MODULE_COLORS, ACCENT_GREEN,
+  ACCENT_EMERALD_DARK, STATUS_WARNING,
 } from '@/lib/chart-colors';
 import type { FeatureRow, FeatureStatus } from '@/types/feature-matrix';
 
@@ -55,7 +56,7 @@ interface GrowthPoint { level: number; power: number }
 
 const GROWTH_BUILDS: { name: string; color: string; points: GrowthPoint[] }[] = [
   {
-    name: 'Warrior', color: '#ef4444',
+    name: 'Warrior', color: ACCENT_RED,
     points: [
       { level: 1, power: 10 }, { level: 5, power: 35 }, { level: 10, power: 80 },
       { level: 15, power: 140 }, { level: 20, power: 210 }, { level: 25, power: 290 },
@@ -64,7 +65,7 @@ const GROWTH_BUILDS: { name: string; color: string; points: GrowthPoint[] }[] = 
     ],
   },
   {
-    name: 'Mage', color: '#3b82f6',
+    name: 'Mage', color: MODULE_COLORS.core,
     points: [
       { level: 1, power: 8 }, { level: 5, power: 25 }, { level: 10, power: 60 },
       { level: 15, power: 110 }, { level: 20, power: 190 }, { level: 25, power: 300 },
@@ -73,7 +74,7 @@ const GROWTH_BUILDS: { name: string; color: string; points: GrowthPoint[] }[] = 
     ],
   },
   {
-    name: 'Rogue', color: '#22c55e',
+    name: 'Rogue', color: ACCENT_GREEN,
     points: [
       { level: 1, power: 12 }, { level: 5, power: 40 }, { level: 10, power: 90 },
       { level: 15, power: 150 }, { level: 20, power: 220 }, { level: 25, power: 280 },
@@ -302,7 +303,7 @@ function AttributeRelationshipWeb() {
         const from = nodePositions[edge.from];
         const to = nodePositions[edge.to];
         if (!from || !to) return null;
-        const edgeColor = edge.type === 'scales' ? '#10b981' : '#f59e0b';
+        const edgeColor = edge.type === 'scales' ? ACCENT_EMERALD_DARK : STATUS_WARNING;
         const connected = isEdgeConnected(edge);
         const dimmed = hoveredNode !== null && !connected;
         return (
@@ -318,7 +319,7 @@ function AttributeRelationshipWeb() {
             />
             <text
               x={(from.x + to.x) / 2} y={(from.y + to.y) / 2 - 5}
-              textAnchor="middle" className="text-[7px] font-mono font-bold" fill={edgeColor}
+              textAnchor="middle" className="text-[11px] font-mono font-bold" fill={edgeColor}
             >
               {edge.label}
             </text>
@@ -329,7 +330,7 @@ function AttributeRelationshipWeb() {
         const pos = nodePositions[node.id];
         if (!pos) return null;
         const isCore = CORE_ATTRIBUTES.map(a => a.toLowerCase()).includes(node.label.toLowerCase());
-        const nodeColor = isCore ? '#10b981' : STATUS_IMPROVED;
+        const nodeColor = isCore ? ACCENT_EMERALD_DARK : STATUS_IMPROVED;
         const connected = isNodeConnected(node.id);
         const dimmed = hoveredNode !== null && !connected;
         const isHovered = hoveredNode === node.id;
@@ -350,14 +351,14 @@ function AttributeRelationshipWeb() {
             <text
               x={pos.x} y={pos.y + 1}
               textAnchor="middle" dominantBaseline="central"
-              className="text-[8px] font-mono font-bold" fill={nodeColor}
+              className="text-[11px] font-mono font-bold" fill={nodeColor}
             >
               {node.label.slice(0, 3)}
             </text>
             <text
               x={pos.x} y={pos.y + (pos.y > cy ? 26 : -20)}
               textAnchor="middle"
-              className="text-[8px] font-mono fill-[var(--text-muted)]"
+              className="text-[11px] font-mono fill-[var(--text-muted)]"
             >
               {node.label}
             </text>
@@ -366,9 +367,9 @@ function AttributeRelationshipWeb() {
       })}
       <g transform={`translate(10, ${size - 30})`}>
         <line x1={0} y1={0} x2={16} y2={0} stroke="#10b981" strokeWidth={2} />
-        <text x={20} y={4} className="text-[8px] font-mono fill-[var(--text-muted)]">Scales</text>
+        <text x={20} y={4} className="text-[11px] font-mono fill-[var(--text-muted)]">Scales</text>
         <line x1={65} y1={0} x2={81} y2={0} stroke="#f59e0b" strokeWidth={1.5} strokeDasharray="4 3" />
-        <text x={85} y={4} className="text-[8px] font-mono fill-[var(--text-muted)]">Partial</text>
+        <text x={85} y={4} className="text-[11px] font-mono fill-[var(--text-muted)]">Partial</text>
       </g>
     </svg>
   );
@@ -397,13 +398,13 @@ function AttributeGrowthChart() {
       ))}
       {/* X axis labels */}
       {[1, 10, 20, 30, 40, 50].map((lv) => (
-        <text key={lv} x={toX(lv)} y={h - 5} textAnchor="middle" className="text-[9px] font-mono fill-[var(--text-muted)]">
+        <text key={lv} x={toX(lv)} y={h - 5} textAnchor="middle" className="text-[11px] font-mono fill-[var(--text-muted)]">
           Lv{lv}
         </text>
       ))}
       {/* Y axis labels */}
       {[0, 250, 500, 750].map((pw) => (
-        <text key={pw} x={pad.left - 5} y={toY(pw) + 3} textAnchor="end" className="text-[9px] font-mono fill-[var(--text-muted)]">
+        <text key={pw} x={pad.left - 5} y={toY(pw) + 3} textAnchor="end" className="text-[11px] font-mono fill-[var(--text-muted)]">
           {pw}
         </text>
       ))}
@@ -419,7 +420,7 @@ function AttributeGrowthChart() {
             />
             <text
               x={toX(50) + 5} y={toY(build.points[build.points.length - 1].power)}
-              className="text-[9px] font-mono font-bold" fill={build.color}
+              className="text-[11px] font-mono font-bold" fill={build.color}
             >
               {build.name}
             </text>

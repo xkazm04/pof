@@ -20,6 +20,7 @@ import { useProjectStore } from '@/stores/projectStore';
 import { buildProjectContextHeader } from '@/lib/prompt-context';
 import {
   MODULE_COLORS, STATUS_SUCCESS, STATUS_WARNING, STATUS_ERROR, STATUS_NEUTRAL, STATUS_INFO,
+  ACCENT_RED,
 } from '@/lib/chart-colors';
 import type { SubModuleId } from '@/types/modules';
 
@@ -277,7 +278,7 @@ export function PlanMatrixMap({ moduleId: initialModuleId }: PlanMatrixMapProps 
             className={`w-full text-left px-3 py-2 rounded-md text-xs font-medium transition-colors flex items-center justify-between ${!filterModuleId ? 'bg-blue-500/10 text-blue-400' : 'text-text-muted hover:bg-surface-hover hover:text-text'}`}
           >
             <span>All Modules</span>
-            <span className="text-[10px] bg-background/50 px-1.5 py-0.5 rounded">{plan.items.length}</span>
+            <span className="text-xs bg-background/50 px-1.5 py-0.5 rounded">{plan.items.length}</span>
           </button>
 
           <div className="my-2 border-t border-border/30" />
@@ -336,7 +337,7 @@ export function PlanMatrixMap({ moduleId: initialModuleId }: PlanMatrixMapProps 
                         className={`text-left px-2 py-1.5 rounded-md text-[11px] transition-colors flex items-center justify-between ${selectedSectorId === sector.id ? 'bg-blue-500/10 text-blue-400' : 'text-text-muted hover:bg-surface-hover hover:text-text'}`}
                       >
                         <span className="truncate pr-2">{sector.label}</span>
-                        <span className="text-[9px] opacity-60">{sector.ready}/{sector.count}</span>
+                        <span className="text-[11px] opacity-60">{sector.ready}/{sector.count}</span>
                       </button>
                     ))}
                   </div>
@@ -579,7 +580,7 @@ export function PlanMatrixMap({ moduleId: initialModuleId }: PlanMatrixMapProps 
                   {sector.label}
                 </button>
                 <div
-                  className="absolute right-3 top-3 text-[10px] font-mono text-gray-300 bg-surface-deep/80 backdrop-blur-md border border-border/40 px-2 py-1 rounded-md shadow-lg"
+                  className="absolute right-3 top-3 text-xs font-mono text-gray-300 bg-surface-deep/80 backdrop-blur-md border border-border/40 px-2 py-1 rounded-md shadow-lg"
                   style={{ transform: `scale(${labelScale})`, transformOrigin: 'top right' }}
                 >
                   <span className="text-white font-bold">{sector.count}</span> nodes <span className="opacity-40 mx-1">|</span> <span className="text-green-400 font-bold">{sector.ready}</span> ready
@@ -611,17 +612,17 @@ export function PlanMatrixMap({ moduleId: initialModuleId }: PlanMatrixMapProps 
                 let dashArray = undefined;
 
                 if (isOnCp) {
-                  strokeColor = '#f59e0b'; // Amber glow
+                  strokeColor = MODULE_COLORS.content; // Amber glow
                   strokeWidth = 2.5;
                   opacity = 0.8;
                   dashArray = '8 4';
                 } else if (isHoveredIncoming) {
-                  strokeColor = '#ef4444'; // Red for dependencies (blockers)
+                  strokeColor = ACCENT_RED; // Red for dependencies (blockers)
                   strokeWidth = 2;
                   opacity = 0.9;
                   dashArray = '6 4';
                 } else if (isHoveredOutgoing) {
-                  strokeColor = '#3b82f6'; // Blue for dependents (unblocks)
+                  strokeColor = MODULE_COLORS.core; // Blue for dependents (unblocks)
                   strokeWidth = 2;
                   opacity = 0.9;
                   dashArray = '6 4';
@@ -700,8 +701,8 @@ export function PlanMatrixMap({ moduleId: initialModuleId }: PlanMatrixMapProps 
                     </div>
 
                     {/* Feature Name */}
-                    <div 
-                      className={`text-[10px] truncate flex-1 ${isReady ? 'text-white font-semibold' : 'text-gray-300 font-medium'}`} 
+                    <div
+                      className={`text-xs truncate flex-1 ${isReady ? 'text-white font-semibold' : 'text-gray-300 font-medium'}`}
                       title={node.item.featureName}
                     >
                       {node.item.featureName}
@@ -709,7 +710,7 @@ export function PlanMatrixMap({ moduleId: initialModuleId }: PlanMatrixMapProps 
 
                     {/* Impact Indicator (Subtle) */}
                     {node.item.impact.score > 5 && (
-                      <div className="flex-shrink-0 flex items-center text-[8px] text-amber-400/70 font-mono">
+                      <div className="flex-shrink-0 flex items-center text-[11px] text-amber-400/70 font-mono">
                         <Zap className="w-2.5 h-2.5 mr-0.5" />
                         {node.item.impact.score}
                       </div>
@@ -835,7 +836,7 @@ export function PlanMatrixMap({ moduleId: initialModuleId }: PlanMatrixMapProps 
       )}
 
       {/* ── Legend ── */}
-      <div className="absolute bottom-6 left-6 flex flex-col gap-1.5 text-[10px] text-gray-300 bg-surface-deep/80 backdrop-blur-md rounded-lg px-3 py-2 border border-border/50 select-none z-20 shadow-lg">
+      <div className="absolute bottom-6 left-6 flex flex-col gap-1.5 text-xs text-gray-300 bg-surface-deep/80 backdrop-blur-md rounded-lg px-3 py-2 border border-border/50 select-none z-20 shadow-lg">
         <div className="flex items-center gap-3 mb-1 border-b border-border/50 pb-1">
           <span className="font-semibold text-white">Status</span>
           <span className="opacity-40">|</span>
@@ -1030,11 +1031,11 @@ function DetailPanel({
                     className="text-left text-sm px-3 py-2.5 rounded-lg font-mono transition-all hover:brightness-125 border flex items-center gap-3"
                     style={{ 
                       backgroundColor: dn ? `${dn.color}10` : 'rgba(50,50,70,0.3)', 
-                      color: dn?.color ?? '#6b7280',
+                      color: dn?.color ?? STATUS_NEUTRAL,
                       borderColor: dn ? `${dn.color}20` : 'rgba(100,100,130,0.2)'
                     }}
                   >
-                    <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: dn?.color ?? '#6b7280' }} />
+                    <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: dn?.color ?? STATUS_NEUTRAL }} />
                     <span className="truncate">{rest.join('::')}</span>
                   </button>
                 );

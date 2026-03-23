@@ -61,6 +61,7 @@ function phaseLabel(phase: PofPatchPhase): string {
     case 'reverting': return 'Reverting...';
     case 'reverted': return 'Reverted';
     case 'failed': return 'Failed';
+    default: return 'Unknown';
   }
 }
 
@@ -131,8 +132,8 @@ export function LiveCodingPanel() {
   const isBusy = isCompiling || isPatching;
   const currentPhaseColor = phaseColor(patchPhase);
   const diagnostics = hotPatchResult?.diagnostics ?? [];
-  const errorCount = diagnostics.filter((d) => d.severity === 'error').length;
-  const warningCount = diagnostics.filter((d) => d.severity === 'warning').length;
+  const errorCount = diagnostics.filter((d: PofHotPatchDiagnostic) => d.severity === 'error').length;
+  const warningCount = diagnostics.filter((d: PofHotPatchDiagnostic) => d.severity === 'warning').length;
 
   return (
     <SurfaceCard className="p-0 overflow-hidden" data-testid="live-coding-panel">

@@ -94,6 +94,24 @@ export interface SankeyLink {
   color?: string;
 }
 
+/** Sankey column item (node with percentage weight) */
+export interface SankeyColumnItem extends SankeyNode {
+  pct: number;
+}
+
+/** Sankey column (grouped nodes at one stage of the diagram) */
+export interface SankeyColumn {
+  label: string;
+  items: SankeyColumnItem[];
+}
+
+/** Pie/donut chart slice */
+export interface PieSlice {
+  label: string;
+  pct: number;
+  color: string;
+}
+
 /** Budget bar data */
 export interface BudgetBar {
   label: string;

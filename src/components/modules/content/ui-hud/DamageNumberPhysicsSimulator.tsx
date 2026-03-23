@@ -591,7 +591,7 @@ export function DamageNumberPhysicsSimulator() {
                 >
                   <Swords className="w-3.5 h-3.5" style={{ color: ACCENT_VIOLET }} />
                 </div>
-                <span className="text-[8px] font-mono text-text-muted mt-0.5">Mob {m.index + 1}</span>
+                <span className="text-[11px] font-mono text-text-muted mt-0.5">Mob {m.index + 1}</span>
               </div>
             ))}
 
@@ -662,7 +662,7 @@ export function DamageNumberPhysicsSimulator() {
             ].map((m) => (
               <div key={m.label} className="rounded-md border border-border/30 bg-surface-deep/50 px-2 py-1.5 text-center">
                 <div className="text-xs font-bold font-mono" style={{ color: m.color }}>{m.value}</div>
-                <div className="text-[9px] text-text-muted uppercase tracking-wider">{m.label}</div>
+                <div className="text-[11px] text-text-muted uppercase tracking-wider">{m.label}</div>
               </div>
             ))}
           </div>
@@ -699,7 +699,7 @@ export function DamageNumberPhysicsSimulator() {
                       <button
                         key={mode}
                         onClick={() => updatePhysics({ physicsMode: mode })}
-                        className="px-2 py-1 rounded text-[10px] font-mono font-bold uppercase transition-all"
+                        className="px-2 py-1 rounded text-xs font-mono font-bold uppercase transition-all"
                         style={{
                           backgroundColor: physics.physicsMode === mode ? `${ACCENT_CYAN}20` : 'transparent',
                           color: physics.physicsMode === mode ? ACCENT_CYAN : 'var(--text-muted)',
@@ -742,7 +742,7 @@ export function DamageNumberPhysicsSimulator() {
                       <button
                         key={mode}
                         onClick={() => updatePhysics({ stackMode: mode })}
-                        className="px-1.5 py-1 rounded text-[10px] font-mono font-bold transition-all"
+                        className="px-1.5 py-1 rounded text-xs font-mono font-bold transition-all"
                         style={{
                           backgroundColor: physics.stackMode === mode ? `${ACCENT_ORANGE}20` : 'transparent',
                           color: physics.stackMode === mode ? ACCENT_ORANGE : 'var(--text-muted)',
@@ -791,7 +791,7 @@ export function DamageNumberPhysicsSimulator() {
                     return (
                       <div key={el} className="flex items-center gap-1.5">
                         <Icon className="w-2.5 h-2.5 shrink-0" style={{ color: ELEMENT_COLORS[el] }} />
-                        <span className="text-[10px] text-text-muted w-14 shrink-0">{el}</span>
+                        <span className="text-xs text-text-muted w-14 shrink-0">{el}</span>
                         <input
                           type="range" min={0} max={1} step={0.1} value={combat.elementWeights[el]}
                           onChange={(e) => updateCombat({
@@ -802,7 +802,7 @@ export function DamageNumberPhysicsSimulator() {
                             background: `linear-gradient(to right, ${ELEMENT_COLORS[el]} ${combat.elementWeights[el] * 100}%, rgba(255,255,255,0.1) ${combat.elementWeights[el] * 100}%)`,
                           }}
                         />
-                        <span className="text-[10px] font-mono text-text-muted w-6 text-right">{(combat.elementWeights[el] * 100).toFixed(0)}%</span>
+                        <span className="text-xs font-mono text-text-muted w-6 text-right">{(combat.elementWeights[el] * 100).toFixed(0)}%</span>
                       </div>
                     );
                   })}
@@ -812,7 +812,7 @@ export function DamageNumberPhysicsSimulator() {
           </SurfaceCard>
 
           {/* C++ reference */}
-          <div className="text-[9px] text-text-muted font-mono leading-relaxed px-1">
+          <div className="text-[11px] text-text-muted font-mono leading-relaxed px-1">
             Matching: DamageNumberWidget.h<br />
             Lifetime={physics.lifetime}s Float={physics.floatDistance}px<br />
             Fade: 100% → {(physics.fadeStart * 100).toFixed(0)}% → 0%

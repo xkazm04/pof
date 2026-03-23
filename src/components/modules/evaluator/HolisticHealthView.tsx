@@ -429,8 +429,8 @@ function ModuleHeatCell({ module: m }: { module: ModuleHealthSummary }) {
         />
       </div>
       <div className="flex items-center justify-between mt-1">
-        <span className="text-[10px] text-text-muted">{m.checklistCompletion}% done</span>
-        {m.issueCount > 0 && <span className="text-[10px] text-amber-400">{m.issueCount} issues</span>}
+        <span className="text-xs text-text-muted">{m.checklistCompletion}% done</span>
+        {m.issueCount > 0 && <span className="text-xs text-amber-400">{m.issueCount} issues</span>}
       </div>
     </div>
   );
@@ -461,7 +461,7 @@ function MilestoneRow({ milestone: ms }: { milestone: Milestone }) {
           ) : (
             <div>
               <span className="text-xs font-medium text-text">{ms.predictedWeeks}w</span>
-              <p className="text-[10px] text-text-muted">
+              <p className="text-xs text-text-muted">
                 {ms.predictedDate ? new Date(ms.predictedDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : ''}
               </p>
             </div>
@@ -520,8 +520,8 @@ function SignalCard({ signal: s }: { signal: SubsystemSignal }) {
         <div className="w-2 h-2 rounded-full" style={{ backgroundColor: SIGNAL_COLORS[s.status] }} />
         <span className="text-2xs font-medium text-text">{s.label}</span>
       </div>
-      <p className="text-[10px] text-text-muted">{s.metric}</p>
-      <p className="text-[10px] text-text-muted mt-0.5">{s.detail}</p>
+      <p className="text-xs text-text-muted">{s.metric}</p>
+      <p className="text-xs text-text-muted mt-0.5">{s.detail}</p>
     </div>
   );
 }
@@ -534,14 +534,14 @@ function BarChartSimple({ data, color }: { data: { label: string; value: number 
     <div className="flex items-end gap-1.5 h-32">
       {data.map((d) => (
         <div key={d.label} className="flex-1 flex flex-col items-center gap-1">
-          <span className="text-[10px] text-text-muted">{d.value}</span>
+          <span className="text-xs text-text-muted">{d.value}</span>
           <div className="w-full bg-surface rounded-t relative" style={{ height: '100%' }}>
             <div
               className="absolute bottom-0 left-0 right-0 rounded-t transition-all"
               style={{ height: `${(d.value / max) * 100}%`, backgroundColor: color, minHeight: d.value > 0 ? 4 : 0 }}
             />
           </div>
-          <span className="text-[10px] text-text-muted">{d.label}</span>
+          <span className="text-xs text-text-muted">{d.label}</span>
         </div>
       ))}
     </div>
@@ -590,7 +590,7 @@ function LineChartSimple({ data, color }: { data: { label: string; value: number
       {/* Labels */}
       <div className="absolute left-0 right-0 flex justify-around" style={{ top: h + 4 }}>
         {data.map((d) => (
-          <span key={d.label} className="text-[10px] text-text-muted">{d.label}</span>
+          <span key={d.label} className="text-xs text-text-muted">{d.label}</span>
         ))}
       </div>
     </div>
@@ -627,7 +627,7 @@ function AreaChartSimple({ data, total }: { data: { label: string; completed: nu
       </svg>
       <div className="absolute left-0 right-0 flex justify-around" style={{ top: h + 4 }}>
         {data.map((d) => (
-          <span key={d.label} className="text-[10px] text-text-muted">{d.label}</span>
+          <span key={d.label} className="text-xs text-text-muted">{d.label}</span>
         ))}
       </div>
     </div>
@@ -670,15 +670,15 @@ function BurndownChart({ data, total }: { data: BurnChartPoint[]; total: number 
       </svg>
       <div className="absolute left-0 right-0 flex justify-around" style={{ top: h + 4 }}>
         {data.map((d) => (
-          <span key={d.weekLabel} className="text-[10px] text-text-muted">{d.weekLabel}</span>
+          <span key={d.weekLabel} className="text-xs text-text-muted">{d.weekLabel}</span>
         ))}
       </div>
       {/* Legend */}
       <div className="absolute top-1 right-1 flex items-center gap-3">
-        <span className="text-[10px] text-text-muted flex items-center gap-1">
+        <span className="text-xs text-text-muted flex items-center gap-1">
           <span className="w-3 h-0.5 bg-blue-400 inline-block rounded" /> Actual
         </span>
-        <span className="text-[10px] text-text-muted flex items-center gap-1">
+        <span className="text-xs text-text-muted flex items-center gap-1">
           <span className="w-3 h-0.5 bg-gray-500 inline-block rounded border-dashed" style={{ borderTop: `1.5px dashed ${STATUS_NEUTRAL}` }} /> Ideal
         </span>
       </div>

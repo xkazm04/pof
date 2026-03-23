@@ -10,6 +10,10 @@ import type {
   SimulationResult,
   CombatSummary,
   BalanceAlert,
+  FeedbackConfig,
+  FeedbackComparisonResult,
+  FeedbackSimSummary,
+  FeedbackInsight,
 } from '@/types/combat-simulator';
 import {
   BASE_PLAYER_ATTRIBUTES,
@@ -19,7 +23,7 @@ import {
 
 // ── Seeded RNG ──────────────────────────────────────────────────────────────
 
-function createRNG(seed: number) {
+export function createRNG(seed: number) {
   let s = seed | 0;
   return () => {
     s = (s + 0x6d2b79f5) | 0;
@@ -33,7 +37,7 @@ function createRNG(seed: number) {
 // FinalDamage = (BaseDamage + AttackPower * Scaling) * CritMul * (1 - ArmorReduction)
 // ArmorReduction = Armor / (Armor + 100) — diminishing returns formula
 
-function calculateDamage(
+export function calculateDamage(
   ability: CombatAbility,
   sourceAttrs: AttributeSet,
   targetAttrs: AttributeSet,
@@ -560,6 +564,173 @@ function detectAlerts(
     const rank = { critical: 2, warning: 1, info: 0 };
     return rank[b.severity] - rank[a.severity];
   });
+}
+
+// ── Feedback-Aware Comparison ────────────────────────────────────────────────
+
+export const DEFAULT_FEEDBACK_CONFIG: FeedbackConfig = {
+  hitstopDurationSec: 0.05,
+  cameraShakeScale: 1.0,
+  baseReactionTimeSec: 0.2,
+  shakeAccuracyPenalty: 0.05,
+  hitRecoveryWindowSec: 0.1,
+  hitRecoveryIFrames: false,
+};
+
+/**
+ * Runs two simulation batches — one with feedback mechanics applied, one without —
+ * and compares the results to quantify how UCombatFeedbackComponent parameters
+ * affect player survival, DPS, and reaction windows.
+ */
+export function runFeedbackComparison(
+  scenario: CombatScenario,
+  tuning: TuningOverrides,
+  config: CombatSimConfig,
+  feedbackConfig: FeedbackConfig,
+): FeedbackComparisonResult {
+  // Run baseline (no feedback)
+  const baseResult = runCombatSimulation(scenario, tuning, config);
+
+  // Run with feedback — apply feedback-derived tuning adjustments
+  const feedbackTuning = applyFeedbackToTuning(tuning, feedbackConfig);
+  const feedbackResult = runCombatSimulation(scenario, feedbackTuning, config);
+
+  const withFeedback = buildFeedbackSummary(feedbackResult, feedbackConfig);
+  const withoutFeedback = buildFeedbackSummary(baseResult, {
+    ...feedbackConfig,
+    hitstopDurationSec: 0,
+    cameraShakeScale: 0,
+    shakeAccuracyPenalty: 0,
+    hitRecoveryWindowSec: 0,
+    hitRecoveryIFrames: false,
+  });
+
+  const deltas = {
+    survivalRateDelta: round2(withFeedback.survivalRate - withoutFeedback.survivalRate),
+    durationDelta: round2(withFeedback.avgDurationSec - withoutFeedback.avgDurationSec),
+    dpsDelta: round2(withFeedback.avgDPS - withoutFeedback.avgDPS),
+    damageTakenDelta: round2(withFeedback.avgDamageTaken - withoutFeedback.avgDamageTaken),
+  };
+
+  const insights = generateFeedbackInsights(withFeedback, withoutFeedback, deltas, feedbackConfig);
+
+  return { withFeedback, withoutFeedback, deltas, insights };
+}
+
+function applyFeedbackToTuning(tuning: TuningOverrides, fc: FeedbackConfig): TuningOverrides {
+  // Hitstop extends effective reaction time, reducing enemy damage slightly
+  // Camera shake introduces accuracy penalty, reducing enemy effective DPS
+  // Recovery windows with i-frames reduce damage taken
+  const shakePenalty = 1 - (fc.shakeAccuracyPenalty * Math.min(fc.cameraShakeScale, 5) / 5);
+  const recoveryReduction = fc.hitRecoveryIFrames ? (1 - fc.hitRecoveryWindowSec * 0.5) : 1;
+
+  return {
+    ...tuning,
+    enemyDamageMul: round2(tuning.enemyDamageMul * shakePenalty * recoveryReduction),
+  };
+}
+
+function buildFeedbackSummary(result: SimulationResult, fc: FeedbackConfig): FeedbackSimSummary {
+  const s = result.summary;
+  const avgHits = s.avgDamageDealt > 0
+    ? result.fights.reduce((sum, f) => sum + f.totalHits, 0) / result.fights.length
+    : 0;
+
+  return {
+    survivalRate: s.survivalRate,
+    avgDurationSec: s.avgFightDurationSec,
+    avgDPS: s.avgDPS,
+    avgDamageTaken: s.avgDamageTaken,
+    avgDodgesFromHitstop: round2(avgHits * fc.hitstopDurationSec * 2),
+    avgMissesFromShake: round2(avgHits * fc.shakeAccuracyPenalty * Math.min(fc.cameraShakeScale, 5) / 5),
+    avgTotalHitstopSec: round2(avgHits * fc.hitstopDurationSec),
+    avgEffectiveReactionSec: round2(fc.hitstopDurationSec + fc.baseReactionTimeSec),
+  };
+}
+
+function generateFeedbackInsights(
+  on: FeedbackSimSummary,
+  off: FeedbackSimSummary,
+  deltas: { survivalRateDelta: number; durationDelta: number; dpsDelta: number; damageTakenDelta: number },
+  fc: FeedbackConfig,
+): FeedbackInsight[] {
+  const insights: FeedbackInsight[] = [];
+
+  // Survival change
+  if (deltas.survivalRateDelta > 0.05) {
+    insights.push({
+      severity: 'positive',
+      category: 'survival',
+      message: `Feedback mechanics improve survival by ${(deltas.survivalRateDelta * 100).toFixed(1)}% — hitstop and recovery windows give players time to react.`,
+    });
+  } else if (deltas.survivalRateDelta < -0.05) {
+    insights.push({
+      severity: 'warning',
+      category: 'survival',
+      message: `Feedback mechanics reduce survival by ${(Math.abs(deltas.survivalRateDelta) * 100).toFixed(1)}% — extended fight duration may expose players to more cumulative damage.`,
+    });
+  }
+
+  // Hitstop analysis
+  if (on.avgTotalHitstopSec > on.avgDurationSec * 0.2) {
+    insights.push({
+      severity: 'critical',
+      category: 'hitstop',
+      message: `${((on.avgTotalHitstopSec / on.avgDurationSec) * 100).toFixed(1)}% of fight time is hitstop freeze frames — combat may feel sluggish. Reduce hitstopDurationSec below ${(fc.hitstopDurationSec * 0.5 * 1000).toFixed(0)}ms.`,
+    });
+  } else if (on.avgTotalHitstopSec > on.avgDurationSec * 0.1) {
+    insights.push({
+      severity: 'warning',
+      category: 'hitstop',
+      message: `Hitstop accounts for ${((on.avgTotalHitstopSec / on.avgDurationSec) * 100).toFixed(1)}% of fight time — approaching the threshold where combat feels interrupted.`,
+    });
+  }
+
+  // Camera shake
+  if (on.avgMissesFromShake > 3) {
+    insights.push({
+      severity: 'warning',
+      category: 'camera-shake',
+      message: `Camera shake causes ~${on.avgMissesFromShake.toFixed(1)} misses per fight — high shake scales may frustrate players. Consider reducing cameraShakeScale.`,
+    });
+  }
+
+  // Recovery i-frames
+  if (fc.hitRecoveryIFrames && fc.hitRecoveryWindowSec > 0.2) {
+    insights.push({
+      severity: 'warning',
+      category: 'recovery',
+      message: `Recovery i-frames with ${(fc.hitRecoveryWindowSec * 1000).toFixed(0)}ms window make the player effectively invulnerable for extended periods. This may trivialize multi-hit combos.`,
+    });
+  }
+
+  // DPS impact
+  if (Math.abs(deltas.dpsDelta) > 5) {
+    const direction = deltas.dpsDelta > 0 ? 'increases' : 'decreases';
+    insights.push({
+      severity: deltas.dpsDelta > 0 ? 'positive' : 'warning',
+      category: 'dps',
+      message: `Feedback ${direction} average DPS by ${Math.abs(deltas.dpsDelta).toFixed(1)} — ${deltas.dpsDelta > 0 ? 'extended windows allow better ability usage' : 'hitstop reduces effective attack speed'}.`,
+    });
+  }
+
+  // Effective reaction window
+  const effectiveReaction = on.avgEffectiveReactionSec * 1000;
+  if (effectiveReaction > 400) {
+    insights.push({
+      severity: 'positive',
+      category: 'reaction',
+      message: `Effective reaction window is ${effectiveReaction.toFixed(0)}ms (hitstop + base reaction) — comfortable for most players to dodge telegraphed attacks.`,
+    });
+  } else if (effectiveReaction < 200) {
+    insights.push({
+      severity: 'warning',
+      category: 'reaction',
+      message: `Effective reaction window is only ${effectiveReaction.toFixed(0)}ms — too fast for average human reaction. Increase hitstopDurationSec or baseReactionTimeSec.`,
+    });
+  }
+
+  return insights;
 }
 
 // ── Helpers ─────────────────────────────────────────────────────────────────

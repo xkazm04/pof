@@ -171,7 +171,7 @@ export function EnemyHealthBarFSM() {
                       x={mx + (t.label === 'death' ? -4 : 4)}
                       y={my + (offset > 0 ? -6 : offset < 0 ? 10 : -6)}
                       textAnchor="middle"
-                      className="text-[8px] font-mono font-bold"
+                      className="text-[11px] font-mono font-bold"
                       fill={t.color}
                     >
                       {t.label}
@@ -215,7 +215,7 @@ export function EnemyHealthBarFSM() {
                     x={s.x + NODE_W / 2}
                     y={s.y + 33}
                     textAnchor="middle"
-                    className="text-[7px] font-mono"
+                    className="text-[11px] font-mono"
                     fill="var(--text-muted)"
                   >
                     {s.id === 'Hidden' ? 'α = 0' : s.id === 'FadingIn' ? '0.2s → α = 1' : s.id === 'Visible' ? 'α = 1, idle timer' : '0.5s → α = 0'}
@@ -229,19 +229,19 @@ export function EnemyHealthBarFSM() {
         {/* Transition legend for selected state */}
         {activeState && (
           <div className="mt-3 space-y-1" data-testid="fsm-transition-list">
-            <p className="text-[10px] font-bold text-text-muted uppercase tracking-wider">
+            <p className="text-xs font-bold text-text-muted uppercase tracking-wider">
               Transitions for <span style={{ color: stateMap.get(activeState)!.color }}>{activeState}</span>
             </p>
             {activeTransitions.map((t, i) => (
               <div
                 key={i}
-                className="flex items-center gap-2 text-[10px] font-mono px-2 py-1 rounded border"
+                className="flex items-center gap-2 text-xs font-mono px-2 py-1 rounded border"
                 style={{ borderColor: `${t.color}30`, backgroundColor: `${t.color}${OPACITY_10}` }}
                 data-testid={`fsm-transition-${i}`}
               >
                 <span style={{ color: t.color }} className="font-bold shrink-0">{t.from} → {t.to}</span>
                 <span className="text-text-muted truncate">{t.trigger}</span>
-                {t.label && <span className="ml-auto shrink-0 px-1.5 py-0.5 rounded text-[9px]" style={{ color: t.color, backgroundColor: `${t.color}${OPACITY_10}` }}>{t.label}</span>}
+                {t.label && <span className="ml-auto shrink-0 px-1.5 py-0.5 rounded text-[11px]" style={{ color: t.color, backgroundColor: `${t.color}${OPACITY_10}` }}>{t.label}</span>}
               </div>
             ))}
           </div>
@@ -260,7 +260,7 @@ export function EnemyHealthBarFSM() {
           {CONFIG_PARAMS.map(p => (
             <div
               key={p.name}
-              className="flex items-center gap-2 text-[10px] font-mono px-2 py-1.5 rounded border border-border/30"
+              className="flex items-center gap-2 text-xs font-mono px-2 py-1.5 rounded border border-border/30"
               data-testid={`fsm-param-${p.name.toLowerCase()}`}
             >
               <span className="text-text font-bold w-[130px] shrink-0">{p.name}</span>

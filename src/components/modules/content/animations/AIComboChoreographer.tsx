@@ -358,7 +358,7 @@ function MontageTimeline({ sections }: { sections: ComboSection[] }) {
                     }}
                     title={`${win.name}: ${(win.start * sec.duration).toFixed(3)}s – ${((win.start + win.width) * sec.duration).toFixed(3)}s`}
                   >
-                    <span className="text-[8px] font-mono font-bold text-white px-0.5 truncate block leading-6">
+                    <span className="text-[11px] font-mono font-bold text-white px-0.5 truncate block leading-6">
                       {win.name.replace('Detection', '').replace('Spawn', '')}
                     </span>
                   </div>
@@ -403,7 +403,7 @@ function ComboChainGraph({ combo }: { combo: GeneratedCombo }) {
         return (
           <g key={i}>
             <line x1={x1} y1={y} x2={x2} y2={y} stroke={ACCENT_CYAN} strokeWidth={2} markerEnd="url(#arrow)" />
-            <text x={(x1 + x2) / 2} y={y - 6} textAnchor="middle" className="text-[8px] font-mono" fill={ACCENT_CYAN}>
+            <text x={(x1 + x2) / 2} y={y - 6} textAnchor="middle" className="text-[11px] font-mono" fill={ACCENT_CYAN}>
               {edge.windowStart.toFixed(2)}–{edge.windowEnd.toFixed(2)}s
             </text>
           </g>
@@ -425,13 +425,13 @@ function ComboChainGraph({ combo }: { combo: GeneratedCombo }) {
               x={x} y={y} width={nodeWidth} height={nodeHeight}
               rx={6} fill={`${ACCENT}15`} stroke={ACCENT} strokeWidth={1.5}
             />
-            <text x={x + nodeWidth / 2} y={y + 16} textAnchor="middle" className="text-[10px] font-bold" fill="var(--text)">
+            <text x={x + nodeWidth / 2} y={y + 16} textAnchor="middle" className="text-xs font-bold" fill="var(--text)">
               {sec.label}
             </text>
-            <text x={x + nodeWidth / 2} y={y + 28} textAnchor="middle" className="text-[9px] font-mono" fill={STATUS_ERROR}>
+            <text x={x + nodeWidth / 2} y={y + 28} textAnchor="middle" className="text-[11px] font-mono" fill={STATUS_ERROR}>
               {sec.damage} dmg
             </text>
-            <text x={x + nodeWidth / 2} y={y + 40} textAnchor="middle" className="text-[8px] font-mono" fill="var(--text-muted)">
+            <text x={x + nodeWidth / 2} y={y + 40} textAnchor="middle" className="text-[11px] font-mono" fill="var(--text-muted)">
               {sec.duration}s | {sec.rootMotionDistance}cm
             </text>
           </g>
@@ -462,10 +462,10 @@ function RootMotionPreview({ sections }: { sections: ComboSection[] }) {
           <g key={i}>
             <line x1={startX} y1={y} x2={endX} y2={y} stroke={color} strokeWidth={3} strokeLinecap="round" />
             <circle cx={endX} cy={y} r={3} fill={color} />
-            <text x={(startX + endX) / 2} y={y - 8} textAnchor="middle" className="text-[8px] font-mono" fill={color}>
+            <text x={(startX + endX) / 2} y={y - 8} textAnchor="middle" className="text-[11px] font-mono" fill={color}>
               {sec.rootMotionDistance}cm
             </text>
-            <text x={(startX + endX) / 2} y={svgH - 2} textAnchor="middle" className="text-[7px] font-mono" fill="var(--text-muted)">
+            <text x={(startX + endX) / 2} y={svgH - 2} textAnchor="middle" className="text-[11px] font-mono" fill="var(--text-muted)">
               {sec.label.split(' ')[0]}
             </text>
           </g>
@@ -473,9 +473,9 @@ function RootMotionPreview({ sections }: { sections: ComboSection[] }) {
       })}
       {/* Start marker */}
       <circle cx={15} cy={svgH - 16} r={4} fill={ACCENT} />
-      <text x={15} y={svgH - 24} textAnchor="middle" className="text-[8px] font-mono" fill={ACCENT}>Start</text>
+      <text x={15} y={svgH - 24} textAnchor="middle" className="text-[11px] font-mono" fill={ACCENT}>Start</text>
       {/* Total distance */}
-      <text x={svgW - 10} y={12} textAnchor="end" className="text-[9px] font-mono font-bold" fill="var(--text-muted)">
+      <text x={svgW - 10} y={12} textAnchor="end" className="text-[11px] font-mono font-bold" fill="var(--text-muted)">
         Total: {totalDist}cm
       </text>
     </svg>

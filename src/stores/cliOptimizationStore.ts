@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import type { DodgeParams } from '@/components/modules/core-engine/unique-tabs/DodgeTimelineEditor';
+import type { DodgeParams } from '@/components/modules/core-engine/unique-tabs/dodge-types';
 
 /* ── Generic CLI Optimization Store Factory ──────────────────────────────── */
 

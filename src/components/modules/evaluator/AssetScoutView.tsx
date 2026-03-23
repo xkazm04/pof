@@ -20,6 +20,7 @@ import type {
   IntegrationDifficulty,
 } from '@/types/marketplace';
 import type { SubModuleId } from '@/types/modules';
+import { ACCENT_EMERALD_DARK, MODULE_COLORS, ACCENT_RED } from '@/lib/chart-colors';
 
 // ── Constants for stable Zustand selectors ──────────────────────────────────
 
@@ -399,7 +400,7 @@ function AssetRow({ scored, isAcquired, moduleId, projectName }: {
   return (
     <SurfaceCard level={2} className="flex items-center gap-3 px-3 py-2.5">
       {/* Match score ring */}
-      <ProgressRing value={matchScore} size={36} strokeWidth={3} color={matchScore > 70 ? '#10b981' : matchScore > 40 ? '#f59e0b' : '#ef4444'} />
+      <ProgressRing value={matchScore} size={36} strokeWidth={3} color={matchScore > 70 ? ACCENT_EMERALD_DARK : matchScore > 40 ? MODULE_COLORS.content : ACCENT_RED} />
 
       {/* Asset info */}
       <div className="flex-1 min-w-0">

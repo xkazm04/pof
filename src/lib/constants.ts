@@ -77,4 +77,12 @@ export const UI_TIMEOUTS = {
   pofManifestPoll: 30_000,
   /** Timeout for individual PoF Bridge HTTP requests. */
   pofHttpTimeout: 15_000,
+  /** Idle timeout before voice connection auto-disconnects (2 minutes). */
+  voiceIdleDisconnect: 2 * 60 * 1000,
+  /** Ping/keepalive interval for UE5 WebSocket connection. */
+  ue5WsPingInterval: 15_000,
+  /** Base delay for UE5 WebSocket reconnection attempts. */
+  ue5WsReconnectBase: 2_000,
+  /** Maximum delay between UE5 WebSocket reconnection attempts. */
+  ue5WsReconnectMax: 30_000,
 } as const;

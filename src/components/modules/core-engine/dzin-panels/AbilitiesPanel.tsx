@@ -3,6 +3,9 @@
 import { useState } from 'react';
 import { Sparkles } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
+import {
+  ACCENT_RED, ACCENT_ORANGE, MODULE_COLORS, ACCENT_GREEN,
+} from '@/lib/chart-colors';
 import { useDensity, PanelFrame } from '@/lib/dzin/core';
 import { DZIN_TIMING } from '@/lib/dzin/animation-constants';
 import { useDzinSelection } from '@/lib/dzin/selection-context';
@@ -27,16 +30,16 @@ export interface AbilitiesPanelProps {
 const ABILITY_RADAR_AXES = ['Damage', 'Range', 'AOE', 'Speed', 'Efficiency'];
 
 const ABILITY_RADAR_DATA: { name: string; color: string; values: number[] }[] = [
-  { name: 'MeleeAttack', color: '#ef4444', values: [0.85, 0.2, 0, 0.9, 0.6] },
-  { name: 'Fireball', color: '#f97316', values: [0.9, 0.85, 0.6, 0.3, 0.25] },
-  { name: 'Dodge', color: '#3b82f6', values: [0, 0, 0, 0.95, 0.8] },
+  { name: 'MeleeAttack', color: ACCENT_RED, values: [0.85, 0.2, 0, 0.9, 0.6] },
+  { name: 'Fireball', color: ACCENT_ORANGE, values: [0.9, 0.85, 0.6, 0.3, 0.25] },
+  { name: 'Dodge', color: MODULE_COLORS.core, values: [0, 0, 0, 0.95, 0.8] },
 ];
 
 const COOLDOWN_ABILITIES = [
-  { name: 'MeleeAttack', cd: 0.5, remaining: 0.2, color: '#ef4444' },
-  { name: 'Fireball', cd: 3.0, remaining: 1.8, color: '#f97316' },
-  { name: 'FrostNova', cd: 8.0, remaining: 5.5, color: '#3b82f6' },
-  { name: 'Dodge', cd: 1.5, remaining: 0.0, color: '#22c55e' },
+  { name: 'MeleeAttack', cd: 0.5, remaining: 0.2, color: ACCENT_RED },
+  { name: 'Fireball', cd: 3.0, remaining: 1.8, color: ACCENT_ORANGE },
+  { name: 'FrostNova', cd: 8.0, remaining: 5.5, color: MODULE_COLORS.core },
+  { name: 'Dodge', cd: 1.5, remaining: 0.0, color: ACCENT_GREEN },
 ];
 
 /* -- Micro density --------------------------------------------------------- */

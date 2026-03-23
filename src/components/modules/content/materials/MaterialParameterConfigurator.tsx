@@ -7,7 +7,7 @@ import {
 import type { LucideIcon } from 'lucide-react';
 import { useManifest } from '@/hooks/useManifest';
 import { MODULE_COLORS } from '@/lib/constants';
-import { ACCENT_VIOLET, STATUS_BLOCKER, STATUS_IMPROVED, ACCENT_ORANGE, STATUS_SUCCESS, STATUS_WARNING } from '@/lib/chart-colors';
+import { ACCENT_VIOLET, STATUS_BLOCKER, STATUS_IMPROVED, ACCENT_ORANGE, STATUS_SUCCESS, STATUS_WARNING, STATUS_MUTED, ACCENT_CYAN_LIGHT } from '@/lib/chart-colors';
 
 // ── Types ──
 
@@ -42,11 +42,11 @@ interface SurfaceDef {
 }
 
 const SURFACES: SurfaceDef[] = [
-  { id: 'metal',    label: 'Metal',    icon: Gem,       color: '#94a3b8', description: 'PBR metallic: high metallic, low roughness, sharp reflections', defaultFeatures: [] },
+  { id: 'metal',    label: 'Metal',    icon: Gem,       color: STATUS_MUTED, description: 'PBR metallic: high metallic, low roughness, sharp reflections', defaultFeatures: [] },
   { id: 'cloth',    label: 'Cloth',    icon: Shirt,     color: ACCENT_VIOLET, description: 'Fabric shading with fuzz, thread detail, anisotropy', defaultFeatures: ['subsurface'] },
   { id: 'skin',     label: 'Skin',     icon: User,      color: STATUS_BLOCKER, description: 'Subsurface skin: SSS profile, pore detail, translucency', defaultFeatures: ['subsurface'] },
   { id: 'glass',    label: 'Glass',    icon: Droplets,  color: STATUS_IMPROVED, description: 'Translucent glass with refraction, IOR, tint color', defaultFeatures: ['refraction'] },
-  { id: 'water',    label: 'Water',    icon: Droplets,  color: '#22d3ee', description: 'Animated water surface with depth fade, caustics', defaultFeatures: ['refraction', 'worldPositionOffset'] },
+  { id: 'water',    label: 'Water',    icon: Droplets,  color: ACCENT_CYAN_LIGHT, description: 'Animated water surface with depth fade, caustics', defaultFeatures: ['refraction', 'worldPositionOffset'] },
   { id: 'emissive', label: 'Emissive', icon: Flame,     color: ACCENT_ORANGE, description: 'Self-illuminating surfaces: neon, lava, magic effects', defaultFeatures: ['emissive'] },
   { id: 'foliage',  label: 'Foliage',  icon: Leaf,      color: STATUS_SUCCESS, description: 'Two-sided foliage with subsurface, wind animation', defaultFeatures: ['subsurface', 'worldPositionOffset'] },
   { id: 'stone',    label: 'Stone',    icon: Blocks,    color: '#78716c', description: 'Rock/brick with parallax occlusion depth detail', defaultFeatures: ['parallax'] },
@@ -185,9 +185,9 @@ export function MaterialParameterConfigurator({ onGenerate, isGenerating }: Mate
       </div>
 
       {/* ─── Surface Type ─── */}
-      <div className="space-y-2">
-        <h4 className="text-2xs font-semibold text-text-muted uppercase tracking-widest">Surface Type</h4>
-        <div className="grid grid-cols-4 gap-1.5">
+      <div className="space-y-3">
+        <h4 className="text-sm font-bold text-text-muted uppercase tracking-widest">Surface Type</h4>
+        <div className="grid grid-cols-4 gap-4">
           {SURFACES.map((s) => {
             const isActive = surfaceType === s.id;
             const Icon = s.icon;
@@ -213,8 +213,8 @@ export function MaterialParameterConfigurator({ onGenerate, isGenerating }: Mate
       </div>
 
       {/* ─── Output Type ─── */}
-      <div className="space-y-2">
-        <h4 className="text-2xs font-semibold text-text-muted uppercase tracking-widest">Output Type</h4>
+      <div className="space-y-3">
+        <h4 className="text-sm font-bold text-text-muted uppercase tracking-widest">Output Type</h4>
         <div className="flex gap-2">
           {([
             { id: 'master' as const, label: 'Master Material', desc: 'Full shader with parameters and switches' },
@@ -247,9 +247,9 @@ export function MaterialParameterConfigurator({ onGenerate, isGenerating }: Mate
       </div>
 
       {/* ─── Rendering Features ─── */}
-      <div className="space-y-2">
-        <h4 className="text-2xs font-semibold text-text-muted uppercase tracking-widest">Rendering Features</h4>
-        <div className="grid grid-cols-2 gap-1.5">
+      <div className="space-y-3">
+        <h4 className="text-sm font-bold text-text-muted uppercase tracking-widest">Rendering Features</h4>
+        <div className="grid grid-cols-2 gap-4">
           {FEATURES.map((f) => {
             const isActive = features.includes(f.id);
             return (
@@ -286,12 +286,12 @@ export function MaterialParameterConfigurator({ onGenerate, isGenerating }: Mate
       </div>
 
       {/* ─── Parameter Ranges ─── */}
-      <div className="space-y-2">
-        <h4 className="text-2xs font-semibold text-text-muted uppercase tracking-widest">
+      <div className="space-y-3">
+        <h4 className="text-sm font-bold text-text-muted uppercase tracking-widest">
           Parameters
           <span className="ml-1.5 font-normal normal-case text-text-muted">({applicableParams.length} for {surfaceDef.label})</span>
         </h4>
-        <div className="space-y-2">
+        <div className="space-y-3">
           {applicableParams.map((p) => {
             const val = paramValues[p.name] ?? p.defaultValue;
             return (
@@ -327,8 +327,8 @@ export function MaterialParameterConfigurator({ onGenerate, isGenerating }: Mate
 
       {/* ─── Live Material Data from Bridge ─── */}
       {bridgeConnected && bridgeMaterials.length > 0 && (
-        <div className="space-y-2">
-          <h4 className="text-2xs font-semibold text-text-muted uppercase tracking-widest flex items-center gap-1.5">
+        <div className="space-y-3">
+          <h4 className="text-sm font-bold text-text-muted uppercase tracking-widest flex items-center gap-1.5">
             <Plug className="w-3 h-3 text-green-400" />
             Live from Bridge
             <span className="text-green-400 font-normal">({bridgeMaterials.length} materials)</span>

@@ -153,4 +153,22 @@ export class RemoteControlClient {
   async batch(batchRequest: UE5BatchRequest): Promise<Result<UE5BatchResponse, string>> {
     return this.request<UE5BatchResponse>('PUT', '/remote/batch', batchRequest);
   }
+
+  /**
+   * Execute a UE5 console command via Remote Control.
+   * Uses KismetSystemLibrary::ExecuteConsoleCommand on the GameWorld.
+   */
+  async executeConsoleCommand(command: string): Promise<Result<{ command: string; executed: boolean }, string>> {
+    const result = await this.request<unknown>('PUT', '/remote/object/call', {
+      objectPath: '/Script/Engine.Default__KismetSystemLibrary',
+      functionName: 'ExecuteConsoleCommand',
+      parameters: {
+        WorldContextObject: '/Game/Maps',
+        Command: command,
+      },
+    });
+
+    if (!result.ok) return err(result.error);
+    return ok({ command, executed: true });
+  }
 }

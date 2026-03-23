@@ -10,7 +10,7 @@ import {
 } from 'lucide-react';
 import {
   MODULE_COLORS, STATUS_SUCCESS, STATUS_WARNING, STATUS_ERROR, STATUS_INFO,
-  ACCENT_ORANGE, ACCENT_EMERALD,
+  ACCENT_ORANGE, ACCENT_EMERALD, ACCENT_PURPLE, ACCENT_PINK,
 } from '@/lib/chart-colors';
 import { useGenreEvolution } from '@/hooks/useGenreEvolution';
 import { useProjectStore } from '@/stores/projectStore';
@@ -21,11 +21,11 @@ const ACCENT = MODULE_COLORS.core;
 const SUB_GENRE_STYLES: Record<SubGenreId, { color: string; icon: typeof Swords }> = {
   'souls-like':       { color: STATUS_ERROR, icon: Skull },
   'character-action': { color: STATUS_WARNING, icon: Zap },
-  'diablo-like':      { color: '#c084fc', icon: Package },
+  'diablo-like':      { color: ACCENT_PURPLE, icon: Package },
   'arpg-shooter':     { color: STATUS_INFO, icon: Crosshair },
   'tactical-arpg':    { color: STATUS_SUCCESS, icon: Shield },
   'open-world-arpg':  { color: ACCENT_ORANGE, icon: Compass },
-  'roguelite-arpg':   { color: '#e879f9', icon: Layers },
+  'roguelite-arpg':   { color: ACCENT_PINK, icon: Layers },
   'survival-arpg':    { color: ACCENT_EMERALD, icon: Activity },
 };
 
@@ -184,7 +184,7 @@ function PatternsList({ patterns }: { patterns: PatternDetection[] }) {
         </span>
         <span className="text-2xs text-text-muted">{patterns.length} found</span>
       </div>
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         {patterns.map((p, i) => (
           <motion.div
             key={p.pattern}
@@ -234,7 +234,7 @@ function SuggestionsList({
           Evolution Suggestions
         </span>
       </div>
-      <div className="space-y-2">
+      <div className="space-y-3">
         {suggestions.map((sug, i) => {
           const style = SUB_GENRE_STYLES[sug.subGenre] ?? { color: 'var(--text-muted)', icon: Layers };
           const Icon = style.icon;
@@ -451,7 +451,7 @@ function ConfidenceRing({ value, size, color }: { value: number; size: number; c
       </svg>
       <span
         className="absolute inset-0 flex items-center justify-center font-bold text-text"
-        style={{ fontSize: size < 30 ? '7px' : '9px' }}
+        style={{ fontSize: size < 30 ? 11 : 11 }}
       >
         {value}
       </span>

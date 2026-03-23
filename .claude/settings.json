@@ -1,4 +1,10 @@
 {
+  "enabledPlugins": {
+    "frontend-design@claude-plugins-official": true,
+    "context7@claude-plugins-official": true,
+    "code-review@claude-plugins-official": true,
+    "superpowers@claude-plugins-official": true
+  },
   "projectName": "pof",
   "createdAt": "2026-02-11T22:28:08.796Z",
   "updatedAt": "2026-02-11T22:28:08.796Z",

@@ -450,7 +450,7 @@ function CrashDetailPanel({
                   {copied ? 'Copied!' : 'Copy'}
                 </button>
               </div>
-              <pre className="text-[10px] leading-relaxed text-emerald-300/80 whitespace-pre-wrap overflow-x-auto max-h-32 overflow-y-auto">
+              <pre className="text-xs leading-relaxed text-emerald-300/80 whitespace-pre-wrap overflow-x-auto max-h-32 overflow-y-auto">
                 {diagnosis.fixPrompt}
               </pre>
             </div>
@@ -458,7 +458,7 @@ function CrashDetailPanel({
             {/* Tags */}
             <div className="flex flex-wrap gap-1">
               {diagnosis.tags.map((tag) => (
-                <span key={tag} className="px-1.5 py-0.5 rounded text-[10px] bg-surface-2 text-text-muted">
+                <span key={tag} className="px-1.5 py-0.5 rounded text-xs bg-surface-2 text-text-muted">
                   {tag}
                 </span>
               ))}
@@ -484,7 +484,7 @@ function CrashDetailPanel({
             exit={{ height: 0, opacity: 0 }}
             className="overflow-hidden"
           >
-            <pre className="text-[10px] leading-relaxed p-3 rounded-md border border-border bg-surface text-text-muted overflow-x-auto max-h-48 overflow-y-auto">
+            <pre className="text-xs leading-relaxed p-3 rounded-md border border-border bg-surface text-text-muted overflow-x-auto max-h-48 overflow-y-auto">
               {report.rawLog}
             </pre>
           </motion.div>
@@ -496,7 +496,7 @@ function CrashDetailPanel({
 
 function FrameRow({ frame }: { frame: CallstackFrame }) {
   return (
-    <div className={`flex items-center gap-2 px-2 py-1 rounded text-[10px] leading-relaxed ${
+    <div className={`flex items-center gap-2 px-2 py-1 rounded text-xs leading-relaxed ${
       frame.isCrashOrigin
         ? 'bg-status-red-subtle border border-status-red-medium'
         : frame.isGameCode
@@ -557,7 +557,7 @@ function PatternCard({ pattern }: { pattern: CrashPattern }) {
                 <p className="text-2xs font-medium text-text">Signature Functions</p>
                 <div className="flex flex-wrap gap-1 mt-0.5">
                   {pattern.signatureFunctions.map((fn) => (
-                    <span key={fn} className="px-1.5 py-0.5 rounded text-[10px] bg-surface-2 text-text-muted font-mono">
+                    <span key={fn} className="px-1.5 py-0.5 rounded text-xs bg-surface-2 text-text-muted font-mono">
                       {fn}
                     </span>
                   ))}

@@ -13,7 +13,7 @@ import { Badge } from '@/components/ui/Badge';
 import { ProgressRing } from '@/components/ui/ProgressRing';
 import { usePerformanceProfilingStore } from '@/stores/performanceProfilingStore';
 import { useProjectStore } from '@/stores/projectStore';
-import { MODULE_COLORS } from '@/lib/chart-colors';
+import { MODULE_COLORS, ACCENT_EMERALD_DARK } from '@/lib/chart-colors';
 import type {
   ProfilingSession,
   TriageResult,
@@ -260,7 +260,7 @@ export function PerformanceProfilingView() {
               {triage && (
                 <>
                   <span className="text-text-muted/50">|</span>
-                  Score: <ProgressRing value={triage.overallScore} size={20} strokeWidth={2} color={triage.overallScore > 70 ? '#10b981' : triage.overallScore > 40 ? MODULE_COLORS.content : MODULE_COLORS.evaluator} />
+                  Score: <ProgressRing value={triage.overallScore} size={20} strokeWidth={2} color={triage.overallScore > 70 ? ACCENT_EMERALD_DARK : triage.overallScore > 40 ? MODULE_COLORS.content : MODULE_COLORS.evaluator} />
                   <span className="text-text-muted/50">|</span>
                   {BOTTLENECK_LABELS[triage.bottleneck]}
                 </>

@@ -509,7 +509,7 @@ function StringCard({ str }: { str: LocalizableString }) {
               {str.locations.map((loc, i) => (
                 <div key={i} className="text-2xs">
                   <span className="text-text-muted">{loc.filePath}:{loc.lineNumber}</span>
-                  <pre className="mt-1 p-2 rounded bg-surface text-text-muted overflow-x-auto text-[10px] leading-relaxed">
+                  <pre className="mt-1 p-2 rounded bg-surface text-text-muted overflow-x-auto text-xs leading-relaxed">
                     {loc.codeSnippet}
                   </pre>
                 </div>
@@ -637,10 +637,10 @@ function ReplacementCard({ replacement }: { replacement: { stringId: string; ori
         <ArrowRight className="w-3 h-3 text-indigo-400" />
         <span className="text-2xs font-medium text-text">LOCTEXT Replacement</span>
       </div>
-      <pre className="text-[10px] leading-relaxed p-1.5 rounded bg-status-red-subtle text-red-300 overflow-x-auto mb-1">
+      <pre className="text-xs leading-relaxed p-1.5 rounded bg-status-red-subtle text-red-300 overflow-x-auto mb-1">
         - {replacement.originalCode}
       </pre>
-      <pre className="text-[10px] leading-relaxed p-1.5 rounded bg-emerald-500/5 text-emerald-300 overflow-x-auto mb-1">
+      <pre className="text-xs leading-relaxed p-1.5 rounded bg-emerald-500/5 text-emerald-300 overflow-x-auto mb-1">
         + {replacement.suggestedCode}
       </pre>
       <button

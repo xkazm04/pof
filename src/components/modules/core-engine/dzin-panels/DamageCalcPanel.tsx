@@ -2,6 +2,9 @@
 
 import { Calculator } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
+import {
+  MODULE_COLORS, STATUS_STALE, ACCENT_PURPLE_BOLD, ACCENT_ORANGE, ACCENT_RED, ACCENT_EMERALD_DARK,
+} from '@/lib/chart-colors';
 import { useDensity, PanelFrame } from '@/lib/dzin/core';
 import { DZIN_TIMING } from '@/lib/dzin/animation-constants';
 import { SectionLabel } from '@/components/modules/core-engine/unique-tabs/_shared';
@@ -18,13 +21,13 @@ export interface DamageCalcPanelProps {
 /* ── Constants ──────────────────────────────────────────────────────────── */
 
 const GAS_STEPS = [
-  { label: 'CommitAbility', desc: 'Lock resources, check tags', color: '#3b82f6' },
-  { label: 'CheckCost', desc: 'Verify mana/stamina available', color: '#8b5cf6' },
-  { label: 'ApplyCost', desc: 'Deduct resource from AttributeSet', color: '#a855f7' },
-  { label: 'SpawnProjectile', desc: 'Create projectile actor (if ranged)', color: '#f59e0b' },
-  { label: 'OnHit', desc: 'Collision triggers effect application', color: '#f97316' },
-  { label: 'ApplyDamage', desc: 'GameplayEffect modifies target HP', color: '#ef4444' },
-  { label: 'PostGEExecute', desc: 'Run post-effect callbacks', color: '#10b981' },
+  { label: 'CommitAbility', desc: 'Lock resources, check tags', color: MODULE_COLORS.core },
+  { label: 'CheckCost', desc: 'Verify mana/stamina available', color: STATUS_STALE },
+  { label: 'ApplyCost', desc: 'Deduct resource from AttributeSet', color: ACCENT_PURPLE_BOLD },
+  { label: 'SpawnProjectile', desc: 'Create projectile actor (if ranged)', color: MODULE_COLORS.content },
+  { label: 'OnHit', desc: 'Collision triggers effect application', color: ACCENT_ORANGE },
+  { label: 'ApplyDamage', desc: 'GameplayEffect modifies target HP', color: ACCENT_RED },
+  { label: 'PostGEExecute', desc: 'Run post-effect callbacks', color: ACCENT_EMERALD_DARK },
 ];
 
 /* ── GAS Architecture Explorer (copied from AbilitySpellbook -- private) ── */
@@ -66,7 +69,7 @@ function GASArchitectureExplorer() {
             <motion.text
               x={cx} y={y + 34}
               textAnchor="middle"
-              className="text-[9px] font-mono fill-[var(--text-muted)]"
+              className="text-[11px] font-mono fill-[var(--text-muted)]"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ delay: i * 0.12 + 0.1 }}
@@ -102,7 +105,7 @@ function GASArchitectureExplorer() {
 function DamageCalcMicro() {
   return (
     <div className="flex flex-col items-center justify-center gap-1 p-2">
-      <Calculator className="w-5 h-5" style={{ color: '#f97316' }} />
+      <Calculator className="w-5 h-5" style={{ color: ACCENT_ORANGE }} />
       <span className="font-mono text-xs">{GAS_STEPS.length} steps</span>
     </div>
   );
@@ -120,7 +123,7 @@ function DamageCalcCompact() {
             style={{ backgroundColor: step.color }}
           />
           <span className="font-mono font-medium text-text truncate">{step.label}</span>
-          <span className="text-text-muted text-[10px] truncate ml-auto">{step.desc}</span>
+          <span className="text-text-muted text-xs truncate ml-auto">{step.desc}</span>
         </div>
       ))}
     </div>

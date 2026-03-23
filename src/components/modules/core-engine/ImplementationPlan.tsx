@@ -16,7 +16,7 @@ import { formatEffortTime, type EffortLevel } from '@/lib/implementation-planner
 import { getModuleLabel, type PlanItem } from '@/lib/implementation-planner/plan-generator';
 import { MODULE_FEATURE_DEFINITIONS } from '@/lib/feature-definitions';
 import { SurfaceCard } from '@/components/ui/SurfaceCard';
-import { MODULE_COLORS } from '@/lib/chart-colors';
+import { MODULE_COLORS, STATUS_STALE } from '@/lib/chart-colors';
 import type { SubModuleId } from '@/types/modules';
 
 // ---------- Constants ----------
@@ -237,7 +237,7 @@ function FilterBar({
   onClear: () => void;
   moduleIds: string[];
 }) {
-  const selectClass = 'bg-background border border-border-bright rounded px-2 py-1 text-xs text-[#c8cce0] outline-none focus:border-[#3b82f6]/50';
+  const selectClass = 'bg-background border border-border-bright rounded px-2 py-1 text-xs text-text-muted outline-none focus:border-blue-500/50';
   const hasFilter = filter.moduleId || filter.maxEffort || (filter.minImpact != null && filter.minImpact > 0);
 
   return (
@@ -359,7 +359,7 @@ Implement this feature from scratch. Follow UE5 C++ conventions. Read any existi
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <ListOrdered className="w-4 h-4 text-[#3b82f6]" />
+          <ListOrdered className="w-4 h-4" style={{ color: MODULE_COLORS.core }} />
           <span className="text-sm font-semibold text-text">Implementation Plan</span>
           {plan && (
             <span className="text-xs text-text-muted font-mono">
@@ -428,16 +428,17 @@ Implement this feature from scratch. Follow UE5 C++ conventions. Read any existi
 
       {/* Table view content below */}
       {viewMode === 'table' && plan && (
-        <div className="grid grid-cols-4 gap-2">
+        <div className="grid grid-cols-4 gap-4">
           {/* Progress bar */}
-          <SurfaceCard level={2} className="col-span-2 px-3 py-2.5">
+          <SurfaceCard level={2} className="col-span-2 px-3 py-2.5 border-l-2" style={{ borderLeftColor: MODULE_COLORS.core }}>
             <div className="flex items-center justify-between mb-1.5">
               <span className="text-2xs uppercase tracking-wider text-text-muted font-medium">Progress</span>
               <span className="text-xs font-bold text-text">{progress.toFixed(0)}%</span>
             </div>
             <div className="w-full h-2 rounded-full bg-surface-hover overflow-hidden">
               <motion.div
-                className="h-full rounded-full bg-gradient-to-r from-[#3b82f6] to-[#8b5cf6]"
+                className="h-full rounded-full"
+                style={{ backgroundImage: `linear-gradient(to right, ${MODULE_COLORS.core}, ${STATUS_STALE})` }}
                 initial={{ width: 0 }}
                 animate={{ width: `${progress}%` }}
                 transition={{ duration: 0.45 }}

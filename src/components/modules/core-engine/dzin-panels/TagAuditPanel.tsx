@@ -13,6 +13,7 @@ import {
 import { SurfaceCard } from '@/components/ui/SurfaceCard';
 import {
   STATUS_SUCCESS, STATUS_WARNING, STATUS_ERROR,
+  ACCENT_RED, ACCENT_PURPLE_BOLD, ACCENT_ORANGE, MODULE_COLORS, ACCENT_CYAN, ACCENT_GREEN,
 } from '@/lib/chart-colors';
 import type { FeatureRow } from '@/types/feature-matrix';
 
@@ -63,55 +64,55 @@ const TAG_DETAIL_MAP: Record<string, TagDetail> = {
   'State.Dead': {
     name: 'Dead State', prefix: 'State', blockingTags: [],
     lifecycle: ['OnHealthDepleted', 'SetTag', 'BlockAll', 'Ragdoll', 'Cleanup'],
-    color: '#ef4444',
+    color: ACCENT_RED,
   },
   'Ability.MeleeAttack': {
     name: 'Melee Attack', prefix: 'Ability', cooldown: 'Cooldown.MeleeAttack (0.5s)',
     manaCost: 0, blockingTags: ['State.Dead', 'State.Stunned'],
     lifecycle: ['CanActivate', 'CommitAbility', 'PlayMontage', 'ApplyDamage', 'EndAbility'],
-    color: '#a855f7',
+    color: ACCENT_PURPLE_BOLD,
   },
   'Damage.Physical': {
     name: 'Physical Damage', prefix: 'Damage', blockingTags: ['State.Invulnerable'],
     lifecycle: ['CalcMagnitude', 'ArmorReduction', 'ApplyToTarget', 'PostExecute'],
-    color: '#f97316',
+    color: ACCENT_ORANGE,
   },
   'State.Stunned': {
     name: 'Stunned State', prefix: 'State', blockingTags: [],
     lifecycle: ['OnStunApplied', 'SetTag', 'BlockAbilities', 'Duration', 'RemoveTag'],
-    color: '#ef4444',
+    color: ACCENT_RED,
   },
   'Ability.Dodge': {
     name: 'Dodge', prefix: 'Ability', cooldown: 'Cooldown.Dodge (1.5s)',
     manaCost: 10, blockingTags: ['State.Dead', 'State.Stunned'],
     lifecycle: ['CanActivate', 'CommitAbility', 'GrantInvuln', 'PlayMontage', 'EndAbility'],
-    color: '#3b82f6',
+    color: MODULE_COLORS.core,
   },
   'Input.Attack': {
     name: 'Attack Input', prefix: 'Input', blockingTags: ['State.Dead'],
     lifecycle: ['InputPressed', 'FindAbility', 'TryActivate', 'InputReleased'],
-    color: '#06b6d4',
+    color: ACCENT_CYAN,
   },
   'Damage.Magical': {
     name: 'Magical Damage', prefix: 'Damage', blockingTags: ['State.Invulnerable'],
     lifecycle: ['CalcMagnitude', 'ResistCheck', 'ApplyToTarget', 'PostExecute'],
-    color: '#f97316',
+    color: ACCENT_ORANGE,
   },
   'Ability.Spell': {
     name: 'Spell Cast', prefix: 'Ability', cooldown: 'Cooldown.Spell (3.0s)',
     manaCost: 25, blockingTags: ['State.Dead', 'State.Stunned'],
     lifecycle: ['CanActivate', 'CheckMana', 'CommitAbility', 'SpawnProjectile', 'EndAbility'],
-    color: '#a855f7',
+    color: ACCENT_PURPLE_BOLD,
   },
   'Input.Dodge': {
     name: 'Dodge Input', prefix: 'Input', blockingTags: ['State.Dead'],
     lifecycle: ['InputPressed', 'FindAbility', 'TryActivate', 'InputReleased'],
-    color: '#06b6d4',
+    color: ACCENT_CYAN,
   },
   'State.Invulnerable': {
     name: 'Invulnerable State', prefix: 'State', blockingTags: [],
     lifecycle: ['OnDodge', 'SetTag', 'BlockDamage', 'Duration', 'RemoveTag'],
-    color: '#22c55e',
+    color: ACCENT_GREEN,
   },
 };
 
@@ -140,7 +141,7 @@ function TagAuditMicro() {
 
   return (
     <div className="flex flex-col items-center justify-center gap-1 p-2">
-      <ClipboardCheck className="w-5 h-5" style={{ color: '#fbbf24' }} />
+      <ClipboardCheck className="w-5 h-5" style={{ color: STATUS_WARNING }} />
       <span className="font-mono text-xs font-bold" style={{ color: scoreColor }}>
         {TAG_AUDIT_SCORE}%
       </span>
@@ -166,7 +167,7 @@ function TagAuditCompact() {
             transition={{ duration: DZIN_TIMING.HIGHLIGHT }}
           >
             <span
-              className="text-[10px] font-mono font-bold px-1 py-0.5 rounded flex-shrink-0"
+              className="text-xs font-mono font-bold px-1 py-0.5 rounded flex-shrink-0"
               style={{ backgroundColor: `${statusColor(cat.status)}20`, color: statusColor(cat.status) }}
             >
               {statusIcon(cat.status)}
@@ -197,9 +198,9 @@ function TagQuickViewCard({ tag, detail }: { tag: string; detail: TagDetail }) {
         <div className="flex items-center gap-2">
           <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: detail.color }} />
           <span className="text-xs font-bold text-text">{detail.name}</span>
-          <span className="text-[10px] font-mono text-text-muted ml-auto bg-surface-deep px-1.5 py-0.5 rounded border border-border/40">{detail.prefix}</span>
+          <span className="text-xs font-mono text-text-muted ml-auto bg-surface-deep px-1.5 py-0.5 rounded border border-border/40">{detail.prefix}</span>
         </div>
-        <div className="space-y-1 text-[10px]">
+        <div className="space-y-1 text-xs">
           <div className="flex justify-between">
             <span className="font-mono text-text-muted">Tag</span>
             <span className="font-mono font-bold text-text">{tag}</span>
@@ -207,16 +208,16 @@ function TagQuickViewCard({ tag, detail }: { tag: string; detail: TagDetail }) {
           {detail.cooldown && (
             <div className="flex justify-between">
               <span className="font-mono text-text-muted">Cooldown</span>
-              <span className="font-mono font-bold" style={{ color: '#f59e0b' }}>{detail.cooldown}</span>
+              <span className="font-mono font-bold" style={{ color: MODULE_COLORS.content }}>{detail.cooldown}</span>
             </div>
           )}
         </div>
         {detail.blockingTags.length > 0 && (
           <div>
-            <div className="text-[10px] font-bold uppercase tracking-widest text-text-muted mb-1">Blocked By</div>
+            <div className="text-xs font-bold uppercase tracking-widest text-text-muted mb-1">Blocked By</div>
             <div className="flex flex-wrap gap-1">
               {detail.blockingTags.map(bt => (
-                <span key={bt} className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-red-500/10 text-red-400 border border-red-500/20">
+                <span key={bt} className="text-xs font-mono px-1.5 py-0.5 rounded bg-red-500/10 text-red-400 border border-red-500/20">
                   {bt}
                 </span>
               ))}
@@ -224,7 +225,7 @@ function TagQuickViewCard({ tag, detail }: { tag: string; detail: TagDetail }) {
           </div>
         )}
         <div>
-          <div className="text-[10px] font-bold uppercase tracking-widest text-text-muted mb-1.5">Lifecycle</div>
+          <div className="text-xs font-bold uppercase tracking-widest text-text-muted mb-1.5">Lifecycle</div>
           <PipelineFlow steps={detail.lifecycle} accent={detail.color} />
         </div>
       </div>
@@ -283,14 +284,14 @@ function TagAuditFull() {
             >
               <div className="flex items-center justify-between mb-1.5">
                 <span className="text-xs font-mono font-bold text-text">{cat.name}</span>
-                <span className="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded"
+                <span className="text-xs font-mono font-bold px-1.5 py-0.5 rounded"
                   style={{ backgroundColor: `${statusColor(cat.status)}20`, color: statusColor(cat.status) }}
                 >
                   {statusIcon(cat.status)}
                 </span>
               </div>
               <div className="text-lg font-mono font-bold mb-1" style={{ color: statusColor(cat.status) }}>{cat.count}</div>
-              <div className="text-[10px] text-text-muted leading-tight">{cat.detail}</div>
+              <div className="text-xs text-text-muted leading-tight">{cat.detail}</div>
             </motion.div>
           ))}
         </div>
@@ -300,7 +301,7 @@ function TagAuditFull() {
         <div className="space-y-1.5">
           {TAG_USAGE_FREQUENCY.map((item, i) => {
             const detail = TAG_DETAIL_MAP[item.tag];
-            const barColor = detail?.color ?? '#f59e0b';
+            const barColor = detail?.color ?? MODULE_COLORS.content;
             return (
               <div key={item.tag}>
                 <motion.button
@@ -310,7 +311,7 @@ function TagAuditFull() {
                   style={selectedTag === item.tag ? { backgroundColor: `${barColor}10` } : undefined}
                   onClick={() => handleTagClick(item.tag)}
                 >
-                  <span className="text-[10px] font-mono text-text-muted w-36 truncate flex-shrink-0 text-right">{item.tag}</span>
+                  <span className="text-xs font-mono text-text-muted w-36 truncate flex-shrink-0 text-right">{item.tag}</span>
                   <div className="flex-1 h-4 bg-surface-deep/50 rounded-sm overflow-hidden border border-border/30">
                     <motion.div
                       className="h-full rounded-sm"
@@ -320,7 +321,7 @@ function TagAuditFull() {
                       transition={{ delay: i * 0.04 + 0.2, duration: 0.4 }}
                     />
                   </div>
-                  <span className="text-[10px] font-mono font-bold text-text w-6 text-right">{item.count}</span>
+                  <span className="text-xs font-mono font-bold text-text w-6 text-right">{item.count}</span>
                 </motion.button>
                 <AnimatePresence>
                   {selectedTag === item.tag && detail && (

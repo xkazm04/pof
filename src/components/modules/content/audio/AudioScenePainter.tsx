@@ -6,6 +6,7 @@ import type { AudioZone, SoundEmitter, AudioZoneShape, EmitterType } from '@/typ
 import {
   STATUS_INFO, ACCENT_VIOLET, STATUS_SUCCESS, STATUS_BLOCKER,
   STATUS_WARNING, ACCENT_EMERALD, ACCENT_PINK, STATUS_ERROR,
+  STATUS_SUBDUED, ACCENT_CYAN_LIGHT,
 } from '@/lib/chart-colors';
 
 // ── Constants ──
@@ -14,9 +15,9 @@ const ZONE_COLORS: Record<string, string> = {
   'none': 'var(--text-muted)',
   'small-room': STATUS_INFO,
   'large-hall': ACCENT_VIOLET,
-  'cave': '#8b8fb0',
+  'cave': STATUS_SUBDUED,
   'outdoor': STATUS_SUCCESS,
-  'underwater': '#22d3ee',
+  'underwater': ACCENT_CYAN_LIGHT,
   'metal-corridor': STATUS_BLOCKER,
   'stone-chamber': STATUS_WARNING,
   'forest': ACCENT_EMERALD,
@@ -310,7 +311,7 @@ export function AudioScenePainter({
       </div>
 
       {/* Stats badge */}
-      <div className="absolute top-4 right-4 z-10 px-3 py-1.5 rounded-lg border border-blue-500/30 bg-blue-500/10 text-[10px] font-mono font-bold text-blue-300 backdrop-blur-md uppercase tracking-widest shadow-[0_0_15px_rgba(59,130,246,0.15)] flex items-center gap-3">
+      <div className="absolute top-4 right-4 z-10 px-3 py-1.5 rounded-lg border border-blue-500/30 bg-blue-500/10 text-xs font-mono font-bold text-blue-300 backdrop-blur-md uppercase tracking-widest shadow-[0_0_15px_rgba(59,130,246,0.15)] flex items-center gap-3">
         <span className="flex items-center gap-1.5"><Volume2 className="w-3.5 h-3.5 text-blue-500" /> {zones.length}</span>
         <span className="text-blue-500/50">/</span>
         <span className="flex items-center gap-1.5"><Radio className="w-3.5 h-3.5 text-cyan-500" /> {emitters.length}</span>
@@ -581,7 +582,7 @@ function ToolBtn({ active, onClick, label, icon }: {
   return (
     <button
       onClick={onClick}
-      className={`flex items-center gap-2 px-3 py-2 rounded-lg text-[9px] font-bold uppercase tracking-widest transition-all ${active
+      className={`flex items-center gap-2 px-3 py-2 rounded-lg text-[11px] font-bold uppercase tracking-widest transition-all ${active
         ? 'bg-blue-500/20 text-blue-300 border-blue-500/50 shadow-[0_0_15px_rgba(59,130,246,0.3)]'
         : 'bg-transparent text-blue-400/60 border-transparent hover:bg-blue-500/10 hover:text-blue-300'
         }`}

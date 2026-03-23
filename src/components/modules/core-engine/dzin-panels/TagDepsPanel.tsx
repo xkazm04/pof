@@ -3,6 +3,9 @@
 import { useMemo } from 'react';
 import { Network } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
+import {
+  ACCENT_PURPLE_BOLD, ACCENT_RED, ACCENT_ORANGE, ACCENT_CYAN,
+} from '@/lib/chart-colors';
 import { useDensity, PanelFrame } from '@/lib/dzin/core';
 import { DZIN_TIMING } from '@/lib/dzin/animation-constants';
 import { useDzinSelection } from '@/lib/dzin/selection-context';
@@ -24,10 +27,10 @@ interface TagDepNode { id: string; label: string; category: string; color: strin
 interface TagDepEdge { from: string; to: string; type: 'blocks' | 'requires' }
 
 const TAG_DEP_CATEGORIES: Record<string, string> = {
-  Ability: '#a855f7',
-  State: '#ef4444',
-  Damage: '#f97316',
-  Input: '#06b6d4',
+  Ability: ACCENT_PURPLE_BOLD,
+  State: ACCENT_RED,
+  Damage: ACCENT_ORANGE,
+  Input: ACCENT_CYAN,
 };
 
 const TAG_DEP_NODES: TagDepNode[] = [
@@ -151,7 +154,7 @@ function TagDepsFull() {
                   <text
                     x={midX} y={midY - 4}
                     textAnchor="middle"
-                    className="text-[8px] font-mono fill-[var(--text-muted)]"
+                    className="text-[11px] font-mono fill-[var(--text-muted)]"
                   >
                     {edge.type}
                   </text>
@@ -175,7 +178,7 @@ function TagDepsFull() {
                   <text
                     x={pos.x} y={pos.y + 18}
                     textAnchor="middle"
-                    className="text-[9px] font-mono font-bold"
+                    className="text-[11px] font-mono font-bold"
                     fill={node.color}
                   >
                     {node.label.split('.')[1]}

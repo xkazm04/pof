@@ -2,6 +2,9 @@
 
 import { Clock } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
+import {
+  ACCENT_RED, MODULE_COLORS, ACCENT_EMERALD_DARK, ACCENT_GREEN, STATUS_STALE,
+} from '@/lib/chart-colors';
 import { useDensity, PanelFrame } from '@/lib/dzin/core';
 import { DZIN_TIMING } from '@/lib/dzin/animation-constants';
 import { TimelineStrip, SectionLabel } from '@/components/modules/core-engine/unique-tabs/_shared';
@@ -19,14 +22,14 @@ export interface EffectTimelinePanelProps {
 /* ── Constants ──────────────────────────────────────────────────────────── */
 
 const EFFECT_TIMELINE_EVENTS: TimelineEvent[] = [
-  { id: 'e1', timestamp: 0.5, label: 'GE_Damage', category: 'damage', color: '#ef4444', details: 'Instant damage' },
-  { id: 'e2', timestamp: 1.0, label: 'GE_Buff(AtkUp)', category: 'buff', color: '#3b82f6', duration: 3.0, details: 'Attack buff 3s' },
-  { id: 'e3', timestamp: 2.0, label: 'GE_Regen', category: 'regen', color: '#10b981', duration: 5.0, details: 'HP regen 5s' },
-  { id: 'e4', timestamp: 3.5, label: 'GE_Damage', category: 'damage', color: '#ef4444', details: 'Instant damage' },
-  { id: 'e5', timestamp: 4.0, label: 'GE_Buff(DefUp)', category: 'buff', color: '#3b82f6', duration: 4.0, details: 'Defense buff 4s' },
-  { id: 'e6', timestamp: 5.5, label: 'GE_Heal', category: 'heal', color: '#22c55e', details: 'Instant heal' },
-  { id: 'e7', timestamp: 7.0, label: 'GE_Damage', category: 'damage', color: '#ef4444', details: 'Instant damage' },
-  { id: 'e8', timestamp: 8.5, label: 'GE_Regen', category: 'regen', color: '#8b5cf6', duration: 2.0, details: 'Mana regen 2s' },
+  { id: 'e1', timestamp: 0.5, label: 'GE_Damage', category: 'damage', color: ACCENT_RED, details: 'Instant damage' },
+  { id: 'e2', timestamp: 1.0, label: 'GE_Buff(AtkUp)', category: 'buff', color: MODULE_COLORS.core, duration: 3.0, details: 'Attack buff 3s' },
+  { id: 'e3', timestamp: 2.0, label: 'GE_Regen', category: 'regen', color: ACCENT_EMERALD_DARK, duration: 5.0, details: 'HP regen 5s' },
+  { id: 'e4', timestamp: 3.5, label: 'GE_Damage', category: 'damage', color: ACCENT_RED, details: 'Instant damage' },
+  { id: 'e5', timestamp: 4.0, label: 'GE_Buff(DefUp)', category: 'buff', color: MODULE_COLORS.core, duration: 4.0, details: 'Defense buff 4s' },
+  { id: 'e6', timestamp: 5.5, label: 'GE_Heal', category: 'heal', color: ACCENT_GREEN, details: 'Instant heal' },
+  { id: 'e7', timestamp: 7.0, label: 'GE_Damage', category: 'damage', color: ACCENT_RED, details: 'Instant damage' },
+  { id: 'e8', timestamp: 8.5, label: 'GE_Regen', category: 'regen', color: STATUS_STALE, duration: 2.0, details: 'Mana regen 2s' },
 ];
 
 /* ── Computed constants ─────────────────────────────────────────────────── */

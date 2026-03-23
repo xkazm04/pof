@@ -479,7 +479,7 @@ export function AssetInventory() {
                         </div>
                         <div className="flex flex-col items-end">
                           <span
-                            className="text-[10px] px-2 py-0.5 rounded font-mono font-bold uppercase tracking-widest border shadow-sm"
+                            className="text-xs px-2 py-0.5 rounded font-mono font-bold uppercase tracking-widest border shadow-sm"
                             style={{ color: conf.color, backgroundColor: conf.color + '15', borderColor: `${conf.color}30` }}
                           >
                             {conf.label}
@@ -490,7 +490,7 @@ export function AssetInventory() {
 
                       <div className="mt-auto">
                         <h3 className="text-sm font-bold text-text mb-1 truncate tracking-wide" title={asset.name}>{asset.name}</h3>
-                        <p className="text-[10px] text-text-muted font-mono truncate opacity-60 flex items-center gap-1" title={asset.relativePath}>
+                        <p className="text-xs text-text-muted font-mono truncate opacity-60 flex items-center gap-1" title={asset.relativePath}>
                           <FolderOpen className="w-3 h-3" /> {asset.relativePath}
                         </p>
                       </div>
@@ -499,8 +499,8 @@ export function AssetInventory() {
                     {/* Footer Info */}
                     {!isExpanded && (
                       <div className="px-4 py-2.5 bg-surface/40 flex justify-between items-center relative z-10">
-                        <span className="text-[10px] text-text-muted opacity-80">{formatDate(asset.modifiedAt)}</span>
-                        <div className="text-[10px] text-text-muted font-mono bg-surface-deep px-1.5 py-0.5 rounded border border-border/40">
+                        <span className="text-xs text-text-muted opacity-80">{formatDate(asset.modifiedAt)}</span>
+                        <div className="text-xs text-text-muted font-mono bg-surface-deep px-1.5 py-0.5 rounded border border-border/40">
                           {scanResult.dependencies.filter(e => e.from === asset.name || e.to === asset.name).length} edges
                         </div>
                       </div>
@@ -522,7 +522,7 @@ export function AssetInventory() {
                               </div>
                               <button
                                 onClick={(e) => { e.stopPropagation(); setExpandedAsset(null); }}
-                                className="text-[10px] text-text-muted hover:text-text px-2 py-1 rounded bg-surface border border-border shadow-sm cursor-pointer hover:bg-surface-hover transition-colors font-mono"
+                                className="text-xs text-text-muted hover:text-text px-2 py-1 rounded bg-surface border border-border shadow-sm cursor-pointer hover:bg-surface-hover transition-colors font-mono"
                               >
                                 CLOSE
                               </button>

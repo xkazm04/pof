@@ -90,6 +90,12 @@ export interface UE5Events {
   'ue5.connected': { version: string };
   'ue5.disconnected': { reason?: string };
   'ue5.error': { message: string };
+  'ue5.ws.connected': Record<string, never>;
+  'ue5.ws.disconnected': { reason?: string };
+  'ue5.ws.snapshot': { timestamp: number; editorState: string };
+  'ue5.ws.pie': { action: string; sessionId?: string };
+  'ue5.ws.selection': { actorCount: number };
+  'ue5.ws.property': { watchId: string; propertyName: string };
 }
 
 /** Headless build pipeline events */

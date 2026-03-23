@@ -13,7 +13,7 @@ import type { TranspilerTab, SemanticChange, DiffConflictLevel } from '@/types/b
 import { UI_TIMEOUTS } from '@/lib/constants';
 import {
   MODULE_COLORS, STATUS_SUCCESS, STATUS_WARNING, STATUS_ERROR, STATUS_INFO,
-  OPACITY_15, OPACITY_20, OPACITY_30,
+  OPACITY_15, OPACITY_20, OPACITY_30, ACCENT_PURPLE,
 } from '@/lib/chart-colors';
 
 const ACCENT = MODULE_COLORS.systems;
@@ -481,7 +481,7 @@ function ChangeCard({ change }: { change: SemanticChange }) {
     remove: { color: STATUS_ERROR, label: 'DEL' },
     modify: { color: STATUS_WARNING, label: 'MOD' },
     move: { color: STATUS_INFO, label: 'MOV' },
-    rename: { color: '#c084fc', label: 'REN' },
+    rename: { color: ACCENT_PURPLE, label: 'REN' },
   };
 
   const t = typeLabel[change.type] ?? typeLabel.modify;

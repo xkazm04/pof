@@ -13,7 +13,7 @@ import { ProgressRing } from '@/components/ui/ProgressRing';
 import { usePatternLibraryStore } from '@/stores/patternLibraryStore';
 import type { ImplementationPattern, PatternCategory, PatternConfidence } from '@/types/pattern-library';
 import type { SubModuleId } from '@/types/modules';
-import { MODULE_COLORS, OPACITY_10 } from '@/lib/chart-colors';
+import { MODULE_COLORS, OPACITY_10, ACCENT_EMERALD_DARK } from '@/lib/chart-colors';
 
 // ── Constants for stable Zustand selectors ──────────────────────────────────
 
@@ -306,7 +306,7 @@ function PatternCard({ pattern }: { pattern: ImplementationPattern }) {
   const [expanded, setExpanded] = useState(false);
   const conf = CONFIDENCE_STYLE[pattern.confidence];
   const successPercent = Math.round(pattern.successRate * 100);
-  const successColor = successPercent >= 70 ? '#10b981' : successPercent >= 50 ? MODULE_COLORS.content : MODULE_COLORS.evaluator;
+  const successColor = successPercent >= 70 ? ACCENT_EMERALD_DARK : successPercent >= 50 ? MODULE_COLORS.content : MODULE_COLORS.evaluator;
 
   return (
     <SurfaceCard className="overflow-hidden">

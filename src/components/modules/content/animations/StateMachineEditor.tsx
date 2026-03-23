@@ -543,7 +543,7 @@ export function StateMachineEditor() {
           <div>
             <h3 className="text-sm font-bold text-text flex items-center gap-2">
               Visual State Machine Editor
-              <span className="text-[9px] bg-amber-500/20 text-amber-300 px-2 py-0.5 rounded border border-amber-500/30">
+              <span className="text-[11px] bg-amber-500/20 text-amber-300 px-2 py-0.5 rounded border border-amber-500/30">
                 EDITOR
               </span>
             </h3>
@@ -557,7 +557,7 @@ export function StateMachineEditor() {
           {/* Snapshot */}
           <button
             onClick={takeSnapshot}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-medium transition-all"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all"
             style={{
               backgroundColor: hasChanges ? `${STATUS_INFO}${OPACITY_15}` : `${EDITOR_ACCENT}${OPACITY_10}`,
               color: hasChanges ? STATUS_INFO : EDITOR_ACCENT,
@@ -573,7 +573,7 @@ export function StateMachineEditor() {
           {hasChanges && (
             <button
               onClick={showDiffResult}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-medium transition-all"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all"
               style={{
                 backgroundColor: `${STATUS_WARNING}${OPACITY_15}`,
                 color: STATUS_WARNING,
@@ -588,7 +588,7 @@ export function StateMachineEditor() {
           {/* Add state */}
           <button
             onClick={addState}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-medium transition-all"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all"
             style={{
               backgroundColor: `${STATUS_SUCCESS}${OPACITY_15}`,
               color: STATUS_SUCCESS,
@@ -603,7 +603,7 @@ export function StateMachineEditor() {
           <button
             onClick={() => setDrawingTransition(drawingTransition ? null : (selectedStateId ?? null))}
             disabled={!selectedStateId}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-medium transition-all disabled:opacity-40"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all disabled:opacity-40"
             style={{
               backgroundColor: drawingTransition ? `${ACCENT_ORANGE}${OPACITY_15}` : `${ACCENT_CYAN}${OPACITY_15}`,
               color: drawingTransition ? ACCENT_ORANGE : ACCENT_CYAN,
@@ -618,7 +618,7 @@ export function StateMachineEditor() {
           {/* Code */}
           <button
             onClick={() => setShowCode(!showCode)}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-medium transition-all"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all"
             style={{
               backgroundColor: showCode ? `${EDITOR_ACCENT}${OPACITY_20}` : `${EDITOR_ACCENT}${OPACITY_10}`,
               color: EDITOR_ACCENT,
@@ -632,7 +632,7 @@ export function StateMachineEditor() {
           {/* Export */}
           <button
             onClick={handleExport}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-medium transition-all"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all"
             style={{
               backgroundColor: `${STATUS_SUCCESS}${OPACITY_10}`,
               color: STATUS_SUCCESS,
@@ -647,7 +647,7 @@ export function StateMachineEditor() {
           {/* Reset */}
           <button
             onClick={handleReset}
-            className="flex items-center gap-1 px-2 py-1.5 rounded-lg text-[10px] text-text-muted hover:text-text transition-colors border border-border/40"
+            className="flex items-center gap-1 px-2 py-1.5 rounded-lg text-xs text-text-muted hover:text-text transition-colors border border-border/40"
             title="Reset to default 5-state machine"
           >
             <RotateCcw className="w-3 h-3" />
@@ -856,7 +856,7 @@ export function StateMachineEditor() {
 
                 {/* Priority badge */}
                 <div
-                  className="absolute -top-2 -right-2 w-5 h-5 rounded-full flex items-center justify-center text-[9px] font-bold border"
+                  className="absolute -top-2 -right-2 w-5 h-5 rounded-full flex items-center justify-center text-[11px] font-bold border"
                   style={{
                     backgroundColor: `${color}20`,
                     borderColor: `${color}50`,
@@ -869,9 +869,9 @@ export function StateMachineEditor() {
 
                 <div className="flex flex-col items-start justify-center h-full px-3 pl-4 overflow-hidden">
                   <span className="text-[11px] font-bold font-mono text-text truncate w-full">{state.name}</span>
-                  <span className="text-[8px] font-mono text-text-muted truncate w-full">{state.flag}</span>
+                  <span className="text-[11px] font-mono text-text-muted truncate w-full">{state.flag}</span>
                   {state.montageRef && (
-                    <span className="text-[7px] font-mono truncate w-full" style={{ color: MODULE_COLORS.content }}>{state.montageRef}</span>
+                    <span className="text-[11px] font-mono truncate w-full" style={{ color: MODULE_COLORS.content }}>{state.montageRef}</span>
                   )}
                 </div>
               </div>
@@ -904,7 +904,7 @@ export function StateMachineEditor() {
           </div>
 
           {/* Instruction hint */}
-          <div className="absolute top-2 left-2 text-[9px] text-text-muted/50 font-mono" style={{ zIndex: 2 }}>
+          <div className="absolute top-2 left-2 text-[11px] text-text-muted/50 font-mono" style={{ zIndex: 2 }}>
             Drag to move · Click to select · Use toolbar for transitions
           </div>
         </div>
@@ -931,10 +931,10 @@ export function StateMachineEditor() {
                     className="w-full flex items-center gap-2 px-2 py-1.5 rounded text-left transition-colors hover:bg-surface-hover/30"
                     style={isSelected ? { backgroundColor: `${ACCENT_CYAN}15`, border: `1px solid ${ACCENT_CYAN}30` } : { border: '1px solid transparent' }}
                   >
-                    <span className="text-[10px] font-mono font-bold w-4 text-center" style={{ color }}>{s.priority}</span>
+                    <span className="text-xs font-mono font-bold w-4 text-center" style={{ color }}>{s.priority}</span>
                     <span className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ backgroundColor: color }} />
                     <span className="text-[11px] font-mono font-medium text-text flex-1 truncate">{s.name}</span>
-                    <span className="text-[9px] font-mono text-text-muted truncate max-w-[80px]">{s.flag}</span>
+                    <span className="text-[11px] font-mono text-text-muted truncate max-w-[80px]">{s.flag}</span>
                   </button>
                 );
               })}
@@ -1039,7 +1039,7 @@ function StatePropertyEditor({
             <button
               key={opt.value}
               onClick={() => onUpdate({ stateType: opt.value })}
-              className="flex-1 px-2 py-1 rounded text-[10px] font-medium transition-all"
+              className="flex-1 px-2 py-1 rounded text-xs font-medium transition-all"
               style={{
                 backgroundColor: state.stateType === opt.value ? `${STATE_TYPE_COLORS[opt.value]}20` : 'transparent',
                 color: state.stateType === opt.value ? STATE_TYPE_COLORS[opt.value] : 'var(--text-muted)',
@@ -1191,7 +1191,7 @@ function TransitionPropertyEditor({
             <button
               key={tmpl}
               onClick={() => onUpdate({ rule: tmpl })}
-              className="text-[9px] font-mono px-1.5 py-0.5 rounded border border-border/40 text-text-muted hover:text-text hover:bg-surface-hover transition-colors truncate max-w-[140px]"
+              className="text-[11px] font-mono px-1.5 py-0.5 rounded border border-border/40 text-text-muted hover:text-text hover:bg-surface-hover transition-colors truncate max-w-[140px]"
               title={tmpl}
             >
               {tmpl.length > 20 ? tmpl.slice(0, 18) + '...' : tmpl}
@@ -1303,7 +1303,7 @@ function CodeOutputPanel({
             <button
               key={t.id}
               onClick={() => onTabChange(t.id)}
-              className="px-3 py-1 rounded text-[10px] font-medium transition-colors"
+              className="px-3 py-1 rounded text-xs font-medium transition-colors"
               style={{
                 backgroundColor: codeTab === t.id ? `${EDITOR_ACCENT}20` : 'transparent',
                 color: codeTab === t.id ? EDITOR_ACCENT : 'var(--text-muted)',
@@ -1317,7 +1317,7 @@ function CodeOutputPanel({
         <div className="flex items-center gap-2">
           <button
             onClick={() => onCopy(codeTab, code)}
-            className="flex items-center gap-1 px-2 py-1 rounded text-[10px] font-medium transition-colors"
+            className="flex items-center gap-1 px-2 py-1 rounded text-xs font-medium transition-colors"
             style={{
               backgroundColor: copiedSection === codeTab ? `${STATUS_SUCCESS}20` : `${EDITOR_ACCENT}10`,
               color: copiedSection === codeTab ? STATUS_SUCCESS : EDITOR_ACCENT,
@@ -1328,7 +1328,7 @@ function CodeOutputPanel({
           </button>
           <button
             onClick={onExport}
-            className="flex items-center gap-1 px-2 py-1 rounded text-[10px] font-medium transition-colors"
+            className="flex items-center gap-1 px-2 py-1 rounded text-xs font-medium transition-colors"
             style={{ backgroundColor: `${STATUS_SUCCESS}10`, color: STATUS_SUCCESS }}
           >
             <Download className="w-3 h-3" />

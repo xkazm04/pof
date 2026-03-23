@@ -13,6 +13,7 @@ import { MODULE_COLORS } from '@/lib/constants';
 import {
   STATUS_SUCCESS, STATUS_ERROR, ACCENT_VIOLET,
   STATUS_INFO, STATUS_NEUTRAL, OPACITY_10, OPACITY_30,
+  STATUS_WARNING, ACCENT_PURPLE_BOLD, ACCENT_PINK, ACCENT_EMERALD_DARK,
 } from '@/lib/chart-colors';
 
 interface LevelDocItem {
@@ -117,7 +118,7 @@ export function SpatialAudioGeneratorPanel({
             </div>
             <div>
               <h3 className="text-sm font-bold tracking-widest uppercase text-blue-100">Auto-Generate Spatial Nodes</h3>
-              <p className="text-[10px] text-blue-400/60 uppercase tracking-wider mt-0.5">
+              <p className="text-xs text-blue-400/60 uppercase tracking-wider mt-0.5">
                 LEVEL_GEOMETRY_TO_ACOUSTIC_PROJECTION
               </p>
             </div>
@@ -133,17 +134,17 @@ export function SpatialAudioGeneratorPanel({
         <div className="bg-black/60 border border-blue-900/40 rounded-xl overflow-hidden shadow-lg">
           <div className="px-4 py-3 bg-blue-900/20 border-b border-blue-900/40 flex items-center gap-2">
             <Radio className="w-4 h-4 text-blue-400" />
-            <span className="text-[10px] uppercase tracking-widest text-blue-300 font-bold">SOURCE_LEVEL_DATA</span>
+            <span className="text-xs uppercase tracking-widest text-blue-300 font-bold">SOURCE_LEVEL_DATA</span>
           </div>
 
           <div className="p-4 space-y-4">
             {loadingLevels ? (
-              <div className="flex items-center justify-center gap-3 py-6 text-[10px] font-bold uppercase tracking-widest text-blue-400 animate-pulse">
+              <div className="flex items-center justify-center gap-3 py-6 text-xs font-bold uppercase tracking-widest text-blue-400 animate-pulse">
                 <Loader2 className="w-4 h-4 animate-spin" />
                 EXTRACTING_DOCUMENTS...
               </div>
             ) : levelDocs.length === 0 ? (
-              <div className="flex items-center justify-center gap-2 text-[10px] font-bold uppercase tracking-widest text-amber-500 py-6 bg-amber-500/10 border border-amber-500/20 rounded-lg">
+              <div className="flex items-center justify-center gap-2 text-xs font-bold uppercase tracking-widest text-amber-500 py-6 bg-amber-500/10 border border-amber-500/20 rounded-lg">
                 <AlertCircle className="w-4 h-4" />
                 NO_LEVEL_DESIGN_RECORDS_FOUND
               </div>
@@ -168,7 +169,7 @@ export function SpatialAudioGeneratorPanel({
                             {doc.name}
                           </span>
                         </div>
-                        <span className="text-[9px] font-mono text-blue-400/60 uppercase tracking-widest">
+                        <span className="text-[11px] font-mono text-blue-400/60 uppercase tracking-widest">
                           {doc.roomCount} ZONES // {doc.connectionCount} LINKS
                         </span>
                       </div>
@@ -187,7 +188,7 @@ export function SpatialAudioGeneratorPanel({
                   onChange={(e) => setMergeIntoActive(e.target.checked)}
                   className="w-4 h-4 rounded border-blue-900/50 bg-black/60 text-blue-500 focus:ring-blue-500/50 focus:ring-offset-0 transition-colors outline-none accent-blue-500"
                 />
-                <span className="text-[10px] font-bold uppercase tracking-widest text-blue-300/80 flex-1">
+                <span className="text-xs font-bold uppercase tracking-widest text-blue-300/80 flex-1">
                   APPEND_TO_ACTIVE: <span className="text-blue-200">"{activeDoc.name}"</span>
                 </span>
               </label>
@@ -202,7 +203,7 @@ export function SpatialAudioGeneratorPanel({
           className="relative w-full overflow-hidden flex items-center justify-center gap-2 px-6 py-4 rounded-xl text-xs font-bold uppercase tracking-widest transition-all disabled:opacity-50 group outline-none"
           style={{
             backgroundColor: 'rgba(59,130,246,0.15)',
-            color: '#60a5fa',
+            color: STATUS_INFO,
             border: '1px solid rgba(59,130,246,0.5)',
             boxShadow: '0 0 20px rgba(59,130,246,0.2), inset 0 0 10px rgba(59,130,246,0.1)',
           }}
@@ -225,7 +226,7 @@ export function SpatialAudioGeneratorPanel({
 
         {/* Error */}
         {error && (
-          <div className="flex items-center gap-3 text-[10px] font-bold uppercase tracking-widest rounded-xl px-4 py-3 bg-red-500/10 border border-red-500/30 text-red-400 shadow-[inset_0_0_15px_rgba(239,68,68,0.1)]">
+          <div className="flex items-center gap-3 text-xs font-bold uppercase tracking-widest rounded-xl px-4 py-3 bg-red-500/10 border border-red-500/30 text-red-400 shadow-[inset_0_0_15px_rgba(239,68,68,0.1)]">
             <AlertCircle className="w-4 h-4 flex-shrink-0" />
             ERR_CODE: {error}
           </div>
@@ -250,7 +251,7 @@ export function SpatialAudioGeneratorPanel({
                   <p className="text-[11px] font-bold uppercase tracking-widest text-emerald-200">
                     {result.merged ? 'MERGE_COMPLETE' : 'SYNTHESIS_COMPLETE'}: {result.audioScene?.name}
                   </p>
-                  <p className="text-[9px] font-mono text-emerald-400/70 mt-1 uppercase tracking-widest">
+                  <p className="text-[11px] font-mono text-emerald-400/70 mt-1 uppercase tracking-widest">
                     {result.report.length} ZONES // {result.report.reduce((n, r) => n + r.emitterCount, 0)} EMITTERS // REVERB: {result.audioScene?.globalReverbPreset}
                   </p>
                 </div>
@@ -260,7 +261,7 @@ export function SpatialAudioGeneratorPanel({
               <div>
                 <div className="flex items-center gap-2 mb-3">
                   <Volume2 className="w-3.5 h-3.5 text-blue-500/60" />
-                  <h4 className="text-[10px] font-bold uppercase tracking-widest text-blue-400">TELEMETRY_LOG</h4>
+                  <h4 className="text-xs font-bold uppercase tracking-widest text-blue-400">TELEMETRY_LOG</h4>
                 </div>
                 <div className="space-y-2">
                   {result.report.map((room) => {
@@ -281,7 +282,7 @@ export function SpatialAudioGeneratorPanel({
                             style={{ backgroundColor: ROOM_TYPE_COLORS[room.roomType] ?? STATUS_NEUTRAL }}
                           />
                           <span className="text-blue-100 font-bold uppercase tracking-widest flex-1 truncate">{room.roomName}</span>
-                          <span className="text-[9px] font-mono text-blue-400/60 uppercase tracking-widest flex-shrink-0 text-right">
+                          <span className="text-[11px] font-mono text-blue-400/60 uppercase tracking-widest flex-shrink-0 text-right">
                             {room.reverbPreset} <br /> {room.emitterCount} SOURCE(S)
                           </span>
                         </button>
@@ -298,7 +299,7 @@ export function SpatialAudioGeneratorPanel({
                               <div className="px-4 pb-4 pt-1 space-y-4 border-t border-blue-900/40 bg-black/60">
                                 {/* Reasoning */}
                                 <div className="p-3 rounded-lg bg-blue-900/10 border border-blue-900/30">
-                                  <p className="text-[10px] font-mono text-blue-200/80 leading-relaxed"><span className="text-blue-400 font-bold uppercase tracking-widest">LOGIC_TRACE: </span>{room.reasoning}</p>
+                                  <p className="text-xs font-mono text-blue-200/80 leading-relaxed"><span className="text-blue-400 font-bold uppercase tracking-widest">LOGIC_TRACE: </span>{room.reasoning}</p>
                                 </div>
 
                                 {/* Acoustic props */}
@@ -310,12 +311,12 @@ export function SpatialAudioGeneratorPanel({
                                 {/* Emitters */}
                                 {room.emitterNames.length > 0 && (
                                   <div className="space-y-1.5">
-                                    <span className="text-[9px] font-bold uppercase tracking-widest text-blue-500/80">GENERATED_EMITTERS</span>
+                                    <span className="text-[11px] font-bold uppercase tracking-widest text-blue-500/80">GENERATED_EMITTERS</span>
                                     <div className="flex flex-wrap gap-2">
                                       {room.emitterNames.map((name, i) => (
                                         <span
                                           key={i}
-                                          className="px-2.5 py-1.5 rounded-lg text-[9px] font-mono border border-blue-500/20 bg-blue-500/10 text-blue-200 flex items-center gap-1.5 shadow-[inset_0_0_10px_rgba(59,130,246,0.1)]"
+                                          className="px-2.5 py-1.5 rounded-lg text-[11px] font-mono border border-blue-500/20 bg-blue-500/10 text-blue-200 flex items-center gap-1.5 shadow-[inset_0_0_10px_rgba(59,130,246,0.1)]"
                                         >
                                           <Music className="w-3 h-3 text-blue-400" />
                                           {name}
@@ -345,13 +346,13 @@ export function SpatialAudioGeneratorPanel({
 
 const ROOM_TYPE_COLORS: Record<string, string> = {
   combat: MODULE_COLORS.evaluator,
-  boss: '#eab308',
-  puzzle: '#a855f7',
+  boss: STATUS_WARNING,
+  puzzle: ACCENT_PURPLE_BOLD,
   exploration: STATUS_SUCCESS,
   safe: MODULE_COLORS.core,
   transition: STATUS_NEUTRAL,
-  cutscene: '#ec4899',
-  hub: '#14b8a6',
+  cutscene: ACCENT_PINK,
+  hub: ACCENT_EMERALD_DARK,
 };
 
 function PropPill({
@@ -367,7 +368,7 @@ function PropPill({
 }) {
   return (
     <div
-      className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-[9px] font-bold uppercase tracking-widest border border-blue-900/30 shadow-inner"
+      className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-[11px] font-bold uppercase tracking-widest border border-blue-900/30 shadow-inner"
       style={{
         backgroundColor: `${color}15`,
         borderColor: `${color}40`,

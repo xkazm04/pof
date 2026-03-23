@@ -87,11 +87,11 @@ export function AttackRingVisualizer() {
           </span>
           <div>
             <div className="text-sm font-bold text-text">Attack Ring Positions</div>
-            <div className="text-[10px] font-mono text-text-muted">UEnvQueryGenerator_AttackPositions — real C++ defaults</div>
+            <div className="text-xs font-mono text-text-muted">UEnvQueryGenerator_AttackPositions — real C++ defaults</div>
           </div>
           <button
             onClick={reset}
-            className="ml-auto text-[10px] font-mono flex items-center gap-1 px-2 py-1 rounded border border-border/40 text-text-muted hover:text-text transition-colors"
+            className="ml-auto text-xs font-mono flex items-center gap-1 px-2 py-1 rounded border border-border/40 text-text-muted hover:text-text transition-colors"
             data-testid="attack-ring-reset"
           >
             <RotateCcw className="w-3 h-3" /> Reset
@@ -217,7 +217,7 @@ export function AttackRingVisualizer() {
                 x={SVG_CENTER}
                 y={SVG_CENTER - 14}
                 textAnchor="middle"
-                className="text-[9px] font-mono font-bold"
+                className="text-[11px] font-mono font-bold"
                 fill={ACCENT_ORANGE}
               >
                 TargetActor
@@ -227,7 +227,7 @@ export function AttackRingVisualizer() {
               <text
                 x={SVG_CENTER + outerR + 4}
                 y={SVG_CENTER - 4}
-                className="text-[8px] font-mono"
+                className="text-[11px] font-mono"
                 fill={ACCENT_CYAN}
                 opacity={0.7}
               >
@@ -237,7 +237,7 @@ export function AttackRingVisualizer() {
                 <text
                   x={SVG_CENTER + innerR + 4}
                   y={SVG_CENTER + 10}
-                  className="text-[8px] font-mono"
+                  className="text-[11px] font-mono"
                   fill={ACCENT_VIOLET}
                   opacity={0.7}
                 >
@@ -247,7 +247,7 @@ export function AttackRingVisualizer() {
 
               {/* Total points badge */}
               <rect x={4} y={4} width={70} height={20} rx={4} fill="rgba(0,0,0,0.5)" />
-              <text x={8} y={17} className="text-[9px] font-mono font-bold" fill={ACCENT_CYAN}>
+              <text x={8} y={17} className="text-[11px] font-mono font-bold" fill={ACCENT_CYAN}>
                 {totalPoints} pts
               </text>
             </svg>
@@ -258,8 +258,8 @@ export function AttackRingVisualizer() {
             {/* NumberOfPoints slider */}
             <div>
               <div className="flex items-center justify-between mb-1">
-                <span className="text-[10px] font-mono text-text-muted">NumberOfPoints</span>
-                <span className="text-[10px] font-mono font-bold" style={{ color: ACCENT_CYAN }}>{numPoints}</span>
+                <span className="text-xs font-mono text-text-muted">NumberOfPoints</span>
+                <span className="text-xs font-mono font-bold" style={{ color: ACCENT_CYAN }}>{numPoints}</span>
               </div>
               <input
                 type="range"
@@ -274,7 +274,7 @@ export function AttackRingVisualizer() {
                   background: `linear-gradient(to right, ${ACCENT_CYAN} 0%, ${ACCENT_CYAN} ${((numPoints - MIN_POINTS) / (MAX_POINTS - MIN_POINTS)) * 100}%, rgba(255,255,255,0.1) ${((numPoints - MIN_POINTS) / (MAX_POINTS - MIN_POINTS)) * 100}%, rgba(255,255,255,0.1) 100%)`,
                 }}
               />
-              <div className="flex justify-between text-[8px] font-mono text-text-muted mt-0.5">
+              <div className="flex justify-between text-[11px] font-mono text-text-muted mt-0.5">
                 <span>{MIN_POINTS}</span>
                 <span>ClampMin={MIN_POINTS}, ClampMax={MAX_POINTS}</span>
                 <span>{MAX_POINTS}</span>
@@ -284,8 +284,8 @@ export function AttackRingVisualizer() {
             {/* AttackDistance slider */}
             <div>
               <div className="flex items-center justify-between mb-1">
-                <span className="text-[10px] font-mono text-text-muted">AttackDistance</span>
-                <span className="text-[10px] font-mono font-bold" style={{ color: ACCENT_CYAN }}>{attackDist}u</span>
+                <span className="text-xs font-mono text-text-muted">AttackDistance</span>
+                <span className="text-xs font-mono font-bold" style={{ color: ACCENT_CYAN }}>{attackDist}u</span>
               </div>
               <input
                 type="range"
@@ -300,7 +300,7 @@ export function AttackRingVisualizer() {
                   background: `linear-gradient(to right, ${ACCENT_CYAN} 0%, ${ACCENT_CYAN} ${((attackDist - MIN_DISTANCE) / (500 - MIN_DISTANCE)) * 100}%, rgba(255,255,255,0.1) ${((attackDist - MIN_DISTANCE) / (500 - MIN_DISTANCE)) * 100}%, rgba(255,255,255,0.1) 100%)`,
                 }}
               />
-              <div className="flex justify-between text-[8px] font-mono text-text-muted mt-0.5">
+              <div className="flex justify-between text-[11px] font-mono text-text-muted mt-0.5">
                 <span>{MIN_DISTANCE}</span>
                 <span>ClampMin={MIN_DISTANCE}</span>
                 <span>500</span>
@@ -310,13 +310,13 @@ export function AttackRingVisualizer() {
             {/* Inner ring toggle */}
             <div className="flex items-center justify-between">
               <div>
-                <div className="text-[10px] font-mono text-text-muted">bGenerateInnerRing</div>
-                <div className="text-[8px] text-text-muted">Inner ring at {Math.round(attackDist * 0.5)}u (50%)</div>
+                <div className="text-xs font-mono text-text-muted">bGenerateInnerRing</div>
+                <div className="text-[11px] text-text-muted">Inner ring at {Math.round(attackDist * 0.5)}u (50%)</div>
               </div>
               <button
                 onClick={() => setInnerRing(v => !v)}
                 data-testid="attack-ring-inner-toggle"
-                className="text-[10px] font-mono font-bold px-2.5 py-1 rounded border transition-all"
+                className="text-xs font-mono font-bold px-2.5 py-1 rounded border transition-all"
                 style={{
                   backgroundColor: innerRing ? `${ACCENT_VIOLET}${OPACITY_20}` : 'transparent',
                   color: innerRing ? ACCENT_VIOLET : 'var(--text-muted)',
@@ -329,45 +329,45 @@ export function AttackRingVisualizer() {
 
             {/* Nav Projection info */}
             <div className="rounded-lg border border-border/30 p-2 bg-surface-deep/50">
-              <div className="text-[10px] font-mono font-bold text-text mb-1.5">Nav Projection</div>
+              <div className="text-xs font-mono font-bold text-text mb-1.5">Nav Projection</div>
               <div className="space-y-1">
                 <div className="flex items-center justify-between">
-                  <span className="text-[9px] font-mono text-text-muted">TraceMode</span>
-                  <span className="text-[9px] font-mono font-bold" style={{ color: STATUS_SUCCESS }}>Navigation</span>
+                  <span className="text-[11px] font-mono text-text-muted">TraceMode</span>
+                  <span className="text-[11px] font-mono font-bold" style={{ color: STATUS_SUCCESS }}>Navigation</span>
                 </div>
                 <div className="flex items-center justify-between">
-                  <span className="text-[9px] font-mono text-text-muted">ProjectDown</span>
-                  <span className="text-[9px] font-mono font-bold" style={{ color: STATUS_WARNING }}>{PROJECT_DOWN}u</span>
+                  <span className="text-[11px] font-mono text-text-muted">ProjectDown</span>
+                  <span className="text-[11px] font-mono font-bold" style={{ color: STATUS_WARNING }}>{PROJECT_DOWN}u</span>
                 </div>
                 <div className="flex items-center justify-between">
-                  <span className="text-[9px] font-mono text-text-muted">ProjectUp</span>
-                  <span className="text-[9px] font-mono font-bold" style={{ color: STATUS_WARNING }}>{PROJECT_UP}u</span>
+                  <span className="text-[11px] font-mono text-text-muted">ProjectUp</span>
+                  <span className="text-[11px] font-mono font-bold" style={{ color: STATUS_WARNING }}>{PROJECT_UP}u</span>
                 </div>
                 <div className="flex items-center justify-between">
-                  <span className="text-[9px] font-mono text-text-muted">bCanProjectDown</span>
-                  <span className="text-[9px] font-mono font-bold" style={{ color: STATUS_SUCCESS }}>true</span>
+                  <span className="text-[11px] font-mono text-text-muted">bCanProjectDown</span>
+                  <span className="text-[11px] font-mono font-bold" style={{ color: STATUS_SUCCESS }}>true</span>
                 </div>
               </div>
               {/* Height band indicator */}
               <div className="mt-2 relative h-10 rounded border border-border/20 bg-surface overflow-hidden">
                 <div className="absolute inset-x-0 text-center" style={{ top: '15%' }}>
                   <div className="h-px w-full" style={{ backgroundColor: `${STATUS_WARNING}40` }} />
-                  <span className="text-[7px] font-mono" style={{ color: STATUS_WARNING }}>+{PROJECT_UP}u</span>
+                  <span className="text-[11px] font-mono" style={{ color: STATUS_WARNING }}>+{PROJECT_UP}u</span>
                 </div>
                 <div className="absolute inset-x-0 text-center" style={{ top: '40%' }}>
                   <div className="h-px w-full" style={{ backgroundColor: `${STATUS_SUCCESS}60` }} />
-                  <span className="text-[7px] font-mono" style={{ color: STATUS_SUCCESS }}>Ground (0)</span>
+                  <span className="text-[11px] font-mono" style={{ color: STATUS_SUCCESS }}>Ground (0)</span>
                 </div>
                 <div className="absolute inset-x-0 text-center" style={{ top: '80%' }}>
                   <div className="h-px w-full" style={{ backgroundColor: `${STATUS_WARNING}40` }} />
-                  <span className="text-[7px] font-mono" style={{ color: STATUS_WARNING }}>-{PROJECT_DOWN}u</span>
+                  <span className="text-[11px] font-mono" style={{ color: STATUS_WARNING }}>-{PROJECT_DOWN}u</span>
                 </div>
               </div>
             </div>
 
             {/* UPROPERTY summary */}
             <div className="rounded-lg border border-border/30 p-2 bg-surface-deep/50">
-              <div className="text-[10px] font-mono font-bold text-text mb-1.5">C++ Properties</div>
+              <div className="text-xs font-mono font-bold text-text mb-1.5">C++ Properties</div>
               {[
                 { name: 'CenterContext', value: 'TargetActor', type: 'TSubclassOf<UEnvQueryContext>' },
                 { name: 'AttackDistance', value: `${attackDist}.f`, type: 'float' },
@@ -375,8 +375,8 @@ export function AttackRingVisualizer() {
                 { name: 'bGenerateInnerRing', value: innerRing ? 'true' : 'false', type: 'bool' },
               ].map(prop => (
                 <div key={prop.name} className="flex items-center gap-1.5 py-0.5">
-                  <span className="text-[9px] font-mono text-text-muted flex-1 truncate">{prop.name}</span>
-                  <span className="text-[9px] font-mono font-bold" style={{ color: ACCENT_CYAN }}>{prop.value}</span>
+                  <span className="text-[11px] font-mono text-text-muted flex-1 truncate">{prop.name}</span>
+                  <span className="text-[11px] font-mono font-bold" style={{ color: ACCENT_CYAN }}>{prop.value}</span>
                 </div>
               ))}
             </div>

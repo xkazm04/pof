@@ -90,7 +90,7 @@ export function AudioPipelineDiagram({ onRunPrompt, isRunning, activeItemId }: A
         </div>
         <div>
           <h3 className="text-sm font-bold tracking-widest uppercase text-blue-100 dark:text-blue-100 shadow-[0_0_10px_rgba(59,130,246,0.5)]">Audio Subsystem Architecture</h3>
-          <p className="text-[10px] text-blue-400/60 uppercase tracking-widest mt-1">
+          <p className="text-xs text-blue-400/60 uppercase tracking-widest mt-1">
             {completedCount}/3 MODULES COMPILED — ESTABLISH CORE INFRASTRUCTURE
           </p>
         </div>
@@ -185,7 +185,7 @@ export function AudioPipelineDiagram({ onRunPrompt, isRunning, activeItemId }: A
                         </span>
 
                         <span
-                          className={`text-[9px] font-bold uppercase tracking-widest px-2 py-0.5 rounded border ${layer.completed
+                          className={`text-[11px] font-bold uppercase tracking-widest px-2 py-0.5 rounded border ${layer.completed
                             ? 'bg-emerald-500/10 text-emerald-400/80 border-emerald-500/20'
                             : layer.locked
                               ? 'bg-black/50 text-blue-900/50 border-blue-900/20'
@@ -198,7 +198,7 @@ export function AudioPipelineDiagram({ onRunPrompt, isRunning, activeItemId }: A
                     </div>
 
                     <p
-                      className={`text-[10px] font-mono leading-relaxed mt-1 uppercase tracking-wider ${layer.locked ? 'text-blue-900/40' : 'text-blue-300/60'
+                      className={`text-xs font-mono leading-relaxed mt-1 uppercase tracking-wider ${layer.locked ? 'text-blue-900/40' : 'text-blue-300/60'
                         }`}
                     >
                       {layer.description}
@@ -208,7 +208,7 @@ export function AudioPipelineDiagram({ onRunPrompt, isRunning, activeItemId }: A
                     {layer.locked && (
                       <div className="mt-3 flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-orange-950/30 border border-orange-900/30 w-fit">
                         <Lock className="w-3 h-3 text-orange-500/70" />
-                        <span className="text-[9px] font-bold uppercase tracking-widest text-orange-500/70">
+                        <span className="text-[11px] font-bold uppercase tracking-widest text-orange-500/70">
                           REQ: {layer.prerequisites.length === 1 ? 'SOUND_MANAGER' : 'SOUND_MANAGER + AMBIENT_SYS'}
                         </span>
                       </div>
@@ -218,7 +218,7 @@ export function AudioPipelineDiagram({ onRunPrompt, isRunning, activeItemId }: A
                     {layer.isActive && (
                       <div className="flex items-center gap-2 mt-3 bg-amber-500/10 border border-amber-500/20 px-3 py-1.5 rounded-lg w-fit">
                         <Loader2 className="w-3 h-3 text-amber-400 animate-spin" />
-                        <span className="text-[9px] font-bold uppercase tracking-widest text-amber-400">
+                        <span className="text-[11px] font-bold uppercase tracking-widest text-amber-400">
                           COMPILING_MODULE...
                         </span>
                       </div>
@@ -231,7 +231,7 @@ export function AudioPipelineDiagram({ onRunPrompt, isRunning, activeItemId }: A
                           <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
                           <span className="relative inline-flex rounded-full h-2 w-2 bg-blue-500"></span>
                         </span>
-                        <span className="text-[9px] font-bold uppercase tracking-widest text-blue-400">
+                        <span className="text-[11px] font-bold uppercase tracking-widest text-blue-400">
                           INITIALIZE_HERE
                         </span>
                       </div>
@@ -243,12 +243,12 @@ export function AudioPipelineDiagram({ onRunPrompt, isRunning, activeItemId }: A
                     {layer.completed ? (
                       <div className="flex flex-col items-center gap-1">
                         <Check className="w-4 h-4 text-emerald-500/50" />
-                        <span className="text-[9px] text-emerald-500/50 font-bold uppercase tracking-widest">OK</span>
+                        <span className="text-[11px] text-emerald-500/50 font-bold uppercase tracking-widest">OK</span>
                       </div>
                     ) : !layer.locked && !layer.isActive ? (
                       <div className="flex flex-col items-center gap-1 opacity-50 group-hover:opacity-100 transition-opacity">
                         <Send className="w-4 h-4 text-blue-400 group-hover:translate-x-1 transition-transform" />
-                        <span className="text-[9px] font-bold uppercase tracking-widest text-blue-400">RUN</span>
+                        <span className="text-[11px] font-bold uppercase tracking-widest text-blue-400">RUN</span>
                       </div>
                     ) : null}
                   </div>

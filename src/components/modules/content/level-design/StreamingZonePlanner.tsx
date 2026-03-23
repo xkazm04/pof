@@ -7,7 +7,7 @@ import {
 } from 'lucide-react';
 import { SurfaceCard } from '@/components/ui/SurfaceCard';
 import { MODULE_COLORS } from '@/lib/constants';
-import { STATUS_INFO, STATUS_SUCCESS, ACCENT_VIOLET, STATUS_ERROR, STATUS_BLOCKER, STATUS_WARNING } from '@/lib/chart-colors';
+import { STATUS_INFO, STATUS_SUCCESS, ACCENT_VIOLET, STATUS_ERROR, STATUS_BLOCKER, STATUS_WARNING, STATUS_SUBDUED, ACCENT_CYAN_LIGHT, OVERLAY_WHITE } from '@/lib/chart-colors';
 import { motion, AnimatePresence } from 'framer-motion';
 
 // ── Types ──
@@ -52,9 +52,9 @@ const ZONE_TYPES: Record<ZoneType, { color: string; label: string; letter: strin
   'town': { color: STATUS_INFO, label: 'Town', letter: 'T' },
   'forest': { color: STATUS_SUCCESS, label: 'Forest', letter: 'F' },
   'ruins': { color: ACCENT_VIOLET, label: 'Ruins', letter: 'R' },
-  'catacombs': { color: '#8b8fb0', label: 'Catacombs', letter: 'C' },
+  'catacombs': { color: STATUS_SUBDUED, label: 'Catacombs', letter: 'C' },
   'boss-arena': { color: STATUS_ERROR, label: 'Boss Arena', letter: 'B' },
-  'hub': { color: '#2dd4bf', label: 'Hub', letter: 'H' },
+  'hub': { color: ACCENT_CYAN_LIGHT, label: 'Hub', letter: 'H' },
   'dungeon': { color: STATUS_BLOCKER, label: 'Dungeon', letter: 'D' },
   'custom': { color: 'var(--text-muted)', label: 'Custom', letter: '?' },
 };
@@ -235,7 +235,7 @@ export function StreamingZonePlanner({ onGenerate, isGenerating }: StreamingZone
     <div className="p-6 space-y-6 overflow-y-auto w-full max-w-6xl mx-auto" style={{ maxHeight: 'calc(100vh - 120px)' }}>
       {/* Paint palette */}
       <div className="flex items-center gap-2 flex-wrap bg-[#03030a] p-3 rounded-2xl border border-violet-900/40 shadow-[inset_0_0_40px_rgba(167,139,250,0.05)]">
-        <span className="text-[10px] uppercase tracking-widest font-mono text-violet-400/80 font-bold mx-2">PAINT_MODE</span>
+        <span className="text-xs uppercase tracking-widest font-mono text-violet-400/80 font-bold mx-2">PAINT_MODE</span>
         {(Object.entries(ZONE_TYPES) as [ZoneType, typeof ZONE_TYPES[ZoneType]][]).map(([type, cfg]) => {
           const active = paintType === type;
           return (
@@ -380,7 +380,7 @@ export function StreamingZonePlanner({ onGenerate, isGenerating }: StreamingZone
                       />
                       <text
                         x={0} y={3}
-                        fontSize={8}
+                        style={{ fontSize: 11 }}
                         fill={STATUS_WARNING}
                         textAnchor="middle"
                         fontFamily="monospace"
@@ -529,7 +529,7 @@ export function StreamingZonePlanner({ onGenerate, isGenerating }: StreamingZone
                     x={cx + CELL_SIZE / 2}
                     y={cy + CELL_SIZE / 2 - 2}
                     fontSize={18}
-                    fill={isSelected ? '#fff' : cfg.color}
+                    fill={isSelected ? OVERLAY_WHITE : cfg.color}
                     textAnchor="middle"
                     fontFamily="monospace"
                     fontWeight={800}
@@ -544,7 +544,7 @@ export function StreamingZonePlanner({ onGenerate, isGenerating }: StreamingZone
                   <text
                     x={cx + CELL_SIZE / 2}
                     y={cy + CELL_SIZE / 2 + 14}
-                    fontSize={8}
+                    style={{ fontSize: 11 }}
                     fill="var(--text)"
                     textAnchor="middle"
                     fontFamily="monospace"
@@ -578,7 +578,7 @@ export function StreamingZonePlanner({ onGenerate, isGenerating }: StreamingZone
                   <text
                     x={cx + 8}
                     y={cy + CELL_SIZE - 10}
-                    fontSize={8}
+                    style={{ fontSize: 11 }}
                     fill="var(--text-muted)"
                     fontFamily="monospace"
                     fontWeight={600}
@@ -594,7 +594,7 @@ export function StreamingZonePlanner({ onGenerate, isGenerating }: StreamingZone
           {/* Floating Hint Overlay */}
           {linkingFrom && (
             <div className="absolute inset-x-0 bottom-4 flex justify-center pointer-events-none">
-              <div className="bg-black/80 backdrop-blur border border-amber-500/50 rounded-full px-4 py-1.5 text-[10px] uppercase tracking-widest text-amber-400/90 shadow-[0_0_20px_rgba(245,158,11,0.2)] animate-bounce font-mono">
+              <div className="bg-black/80 backdrop-blur border border-amber-500/50 rounded-full px-4 py-1.5 text-xs uppercase tracking-widest text-amber-400/90 shadow-[0_0_20px_rgba(245,158,11,0.2)] animate-bounce font-mono">
                 Select target node to establish flow pipeline
               </div>
             </div>
@@ -614,10 +614,10 @@ export function StreamingZonePlanner({ onGenerate, isGenerating }: StreamingZone
           {/* Transition list */}
           {transitions.length > 0 && (
             <div className="bg-[#03030a] rounded-xl border border-violet-900/30 shadow-[inset_0_0_20px_rgba(167,139,250,0.05)] p-4 flex-1 overflow-y-auto">
-              <div className="text-[10px] uppercase font-mono tracking-widest text-violet-400 mb-3 font-bold border-b border-violet-900/30 pb-2">
+              <div className="text-xs uppercase font-mono tracking-widest text-violet-400 mb-3 font-bold border-b border-violet-900/30 pb-2">
                 Zone Pipelines ({transitions.length})
               </div>
-              <div className="space-y-2">
+              <div className="space-y-3">
                 {transitions.map((tr) => {
                   const from = zones.find((z) => z.id === tr.fromId);
                   const to = zones.find((z) => z.id === tr.toId);
@@ -629,7 +629,7 @@ export function StreamingZonePlanner({ onGenerate, isGenerating }: StreamingZone
                       className="flex flex-col gap-2 p-2.5 rounded-lg bg-surface-deep/50 border border-violet-900/20 text-xs shadow-inner"
                     >
                       <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-1.5 font-mono text-[10px] truncate max-w-[140px]">
+                        <div className="flex items-center gap-1.5 font-mono text-xs truncate max-w-[140px]">
                           <span className="text-violet-200 capitalize font-bold">{from.name}</span>
                           <span className="text-violet-500">→</span>
                           <span className="text-violet-200 capitalize font-bold">{to.name}</span>
@@ -646,7 +646,7 @@ export function StreamingZonePlanner({ onGenerate, isGenerating }: StreamingZone
                         <select
                           value={tr.style}
                           onChange={(e) => updateTransition(tr.id, { style: e.target.value as TransitionStyle })}
-                          className="flex-1 text-[10px] bg-black/40 border border-violet-900/40 rounded px-1.5 py-1 text-violet-200 outline-none uppercase font-mono tracking-wide"
+                          className="flex-1 text-xs bg-black/40 border border-violet-900/40 rounded px-1.5 py-1 text-violet-200 outline-none uppercase font-mono tracking-wide"
                           style={{
                             color: styleCfg.color,
                           }}
@@ -656,12 +656,12 @@ export function StreamingZonePlanner({ onGenerate, isGenerating }: StreamingZone
                           ))}
                         </select>
 
-                        <span className="text-[9px] text-violet-400 font-mono tracking-wider uppercase px-2 py-1 rounded bg-violet-900/20">{tr.triggerType}</span>
+                        <span className="text-[11px] text-violet-400 font-mono tracking-wider uppercase px-2 py-1 rounded bg-violet-900/20">{tr.triggerType}</span>
                       </div>
 
                       {/* Condition */}
                       {tr.condition && (
-                        <div className="text-[9px] text-amber-400/90 truncate bg-amber-500/10 border border-amber-500/20 px-2 py-1 rounded font-mono mt-1">
+                        <div className="text-[11px] text-amber-400/90 truncate bg-amber-500/10 border border-amber-500/20 px-2 py-1 rounded font-mono mt-1">
                           REQ: {tr.condition}
                         </div>
                       )}
@@ -674,7 +674,7 @@ export function StreamingZonePlanner({ onGenerate, isGenerating }: StreamingZone
 
           {/* Summary & Generate */}
           <div className="bg-[#03030a] rounded-xl border border-violet-900/30 shadow-[inset_0_0_20px_rgba(167,139,250,0.05)] p-4">
-            <div className="flex items-center justify-between mb-3 text-[9px] font-mono tracking-widest uppercase text-violet-300">
+            <div className="flex items-center justify-between mb-3 text-[11px] font-mono tracking-widest uppercase text-violet-300">
               <span>{stats.total} ZONES</span>
               <span className="text-violet-800">|</span>
               <span>{stats.alwaysLoaded} PERSISTENT</span>
@@ -764,7 +764,7 @@ function ZoneEditor({
 
         {/* Type */}
         <div className="space-y-1">
-          <label className="text-[9px] uppercase tracking-widest font-mono text-violet-400 font-bold mb-1 block">ZONE TYPE</label>
+          <label className="text-[11px] uppercase tracking-widest font-mono text-violet-400 font-bold mb-1 block">ZONE TYPE</label>
           <div className="relative">
             <select
               value={zone.type}
@@ -781,7 +781,7 @@ function ZoneEditor({
 
         {/* Load priority */}
         <div className="space-y-1 col-span-2 mt-2">
-          <label className="text-[9px] uppercase tracking-widest font-mono text-violet-400 font-bold block mb-1">LOAD PRIORITY</label>
+          <label className="text-[11px] uppercase tracking-widest font-mono text-violet-400 font-bold block mb-1">LOAD PRIORITY</label>
           <div className="flex gap-2">
             {(['low', 'normal', 'high', 'always'] as LoadPriority[]).map((p) => {
               const active = zone.loadPriority === p;
@@ -790,7 +790,7 @@ function ZoneEditor({
                 <button
                   key={p}
                   onClick={() => onUpdate({ loadPriority: p, alwaysLoaded: p === 'always' })}
-                  className="flex-1 py-1.5 rounded-lg text-[10px] uppercase font-mono font-bold transition-all border shadow-sm"
+                  className="flex-1 py-1.5 rounded-lg text-xs uppercase font-mono font-bold transition-all border shadow-sm"
                   style={{
                     color: active ? pColor : 'var(--text-muted)',
                     borderColor: active ? `${pColor}50` : 'var(--border)',
@@ -807,7 +807,7 @@ function ZoneEditor({
 
         {/* Preload radius */}
         <div className="space-y-1 col-span-2 pt-2 border-t border-violet-900/30">
-          <label className="text-[9px] uppercase tracking-widest font-mono text-violet-400 font-bold block mb-1">PRELOAD SECS / RADIUS</label>
+          <label className="text-[11px] uppercase tracking-widest font-mono text-violet-400 font-bold block mb-1">PRELOAD SECS / RADIUS</label>
           <div className="flex items-center gap-3">
             <input
               type="range"
@@ -820,7 +820,7 @@ function ZoneEditor({
               {zone.preloadRadius}
             </div>
           </div>
-          <p className="text-[10px] text-violet-500/60 font-mono mt-1">Adjacent cell load threshold</p>
+          <p className="text-xs text-violet-500/60 font-mono mt-1">Adjacent cell load threshold</p>
         </div>
       </div>
 

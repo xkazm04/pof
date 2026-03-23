@@ -11,7 +11,7 @@ import { useEffect, useCallback, useRef } from 'react';
 import { ue5LiveState } from '@/lib/ue5-bridge/ws-live-state';
 import { useUE5BridgeStore } from '@/stores/ue5BridgeStore';
 import type {
-  WSConnectionStatus,
+  UE5ConnectionStatus,
   UE5EditorSnapshot,
   PropertyWatchRequest,
   PropertyWatchUpdate,
@@ -19,7 +19,7 @@ import type {
 
 interface UseLiveStateSyncResult {
   /** WebSocket connection status. */
-  wsStatus: WSConnectionStatus;
+  wsStatus: UE5ConnectionStatus;
   /** Latest editor snapshot from live sync. */
   snapshot: UE5EditorSnapshot | null;
   /** Active property watch values keyed by watchId. */

@@ -11,8 +11,9 @@ import { useManifest } from '@/hooks/useManifest';
 import { getModuleName } from '@/lib/prompt-context';
 import type { AnimBPScanResult, AnimTransition } from '@/app/api/filesystem/scan-animbp/route';
 import {
-  ACCENT_VIOLET, ACCENT_ORANGE, STATUS_SUCCESS, MODULE_COLORS,
+  ACCENT_VIOLET, ACCENT_ORANGE, STATUS_SUCCESS, STATUS_WARNING, MODULE_COLORS,
   OPACITY_8, OPACITY_10, OPACITY_15, OPACITY_20, OPACITY_30,
+  STATUS_IMPROVED,
 } from '@/lib/chart-colors';
 
 const ANIM_ACCENT = ACCENT_VIOLET;
@@ -433,15 +434,15 @@ export function AnimationStateMachine({ onSelectState, isRunning, activeStateId 
           </div>
           <div className="flex flex-col">
             <h3 className="text-sm font-bold text-violet-100 font-mono tracking-widest uppercase flex items-center gap-3" style={{ textShadow: '0 0 8px rgba(167,139,250,0.4)' }}>
-              STATE_MACHINE.graph <span className="text-[9px] bg-violet-500/20 text-violet-300 px-2 py-0.5 rounded border border-violet-500/30 shadow-[0_0_10px_rgba(139,92,246,0.2)]">RUNTIME</span>
+              STATE_MACHINE.graph <span className="text-[11px] bg-violet-500/20 text-violet-300 px-2 py-0.5 rounded border border-violet-500/30 shadow-[0_0_10px_rgba(139,92,246,0.2)]">RUNTIME</span>
               {useBridgeData && (
-                <span className="text-[9px] bg-green-500/20 text-green-300 px-2 py-0.5 rounded border border-green-500/30 shadow-[0_0_10px_rgba(34,197,94,0.2)] flex items-center gap-1">
+                <span className="text-[11px] bg-green-500/20 text-green-300 px-2 py-0.5 rounded border border-green-500/30 shadow-[0_0_10px_rgba(34,197,94,0.2)] flex items-center gap-1">
                   <Plug className="w-2.5 h-2.5" />
                   BRIDGE
                 </span>
               )}
             </h3>
-            <p className="text-[10px] text-violet-400/80 font-mono uppercase tracking-widest mt-0.5">
+            <p className="text-xs text-violet-400/80 font-mono uppercase tracking-widest mt-0.5">
               {simMode
                 ? simPath.length === 0
                   ? 'Click a state to begin tracing'
@@ -659,7 +660,7 @@ export function AnimationStateMachine({ onSelectState, isRunning, activeStateId 
               strokeWidth = 2.5;
               markerEnd = 'url(#sm-arrow-sim)';
             } else if (isModified) {
-              strokeColor = '#eab308';
+              strokeColor = STATUS_WARNING;
               strokeWidth = 2;
               markerEnd = 'url(#sm-arrow-modified)';
             }
@@ -851,7 +852,7 @@ export function AnimationStateMachine({ onSelectState, isRunning, activeStateId 
                     {state.label}
                   </span>
                   {state.hasMontage && (
-                    <span className="text-[8px] text-[#38b6ff] uppercase tracking-widest font-mono opacity-80 mt-1 block">Montage</span>
+                    <span className="text-[11px] uppercase tracking-widest font-mono opacity-80 mt-1 block" style={{ color: STATUS_IMPROVED }}>Montage</span>
                   )}
                 </div>
               </div>

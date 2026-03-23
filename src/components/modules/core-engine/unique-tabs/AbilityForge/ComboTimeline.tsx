@@ -1,0 +1,83 @@
+'use client';
+
+import { Timer } from 'lucide-react';
+import { SectionHeader } from '../_design';
+import { ACCENT, DAMAGE_TYPE_COLORS } from './constants';
+import type { ForgedAbility } from '@/lib/prompts/ability-forge';
+
+/* ── Timeline visualization ──────────────────────────────────────────── */
+
+export function ComboTimeline({ ability }: { ability: ForgedAbility }) {
+  const { comboEntry } = ability;
+  const totalDuration = comboEntry.animDuration;
+  const [startPct, endPct] = [
+    (comboEntry.damageWindow[0] / totalDuration) * 100,
+    (comboEntry.damageWindow[1] / totalDuration) * 100,
+  ];
+  const recoveryStart = endPct;
+  const recoveryEnd =
+    ((comboEntry.damageWindow[1] + comboEntry.recovery) / totalDuration) * 100;
+
+  const dmgColor = DAMAGE_TYPE_COLORS[ability.stats.damageType] ?? DAMAGE_TYPE_COLORS.Physical;
+
+  return (
+    <div className="space-y-2">
+      <SectionHeader icon={Timer} label="Combo Timeline" color={ACCENT} />
+
+      <div
+        className="relative h-10 rounded-lg overflow-hidden"
+        style={{ background: 'rgba(255,255,255,0.03)' }}
+      >
+        {/* Startup phase */}
+        <div
+          className="absolute inset-y-0 rounded-l-lg"
+          style={{ left: 0, width: `${startPct}%`, background: 'rgba(255,255,255,0.06)' }}
+        />
+        {/* Damage window */}
+        <div
+          className="absolute inset-y-0"
+          style={{
+            left: `${startPct}%`,
+            width: `${endPct - startPct}%`,
+            background: `${dmgColor}33`,
+            borderLeft: `2px solid ${dmgColor}`,
+            borderRight: `2px solid ${dmgColor}`,
+          }}
+        />
+        {/* Recovery */}
+        <div
+          className="absolute inset-y-0"
+          style={{
+            left: `${recoveryStart}%`,
+            width: `${Math.min(recoveryEnd, 100) - recoveryStart}%`,
+            background: 'rgba(255,255,255,0.04)',
+          }}
+        />
+
+        {/* Labels */}
+        <span className="absolute left-1 top-1/2 -translate-y-1/2 text-[10px] font-mono uppercase tracking-[0.15em] text-zinc-500">
+          Startup
+        </span>
+        <span
+          className="absolute top-1/2 -translate-y-1/2 text-[10px] font-mono font-semibold uppercase tracking-[0.15em]"
+          style={{ left: `${startPct + 1}%`, color: dmgColor }}
+        >
+          Damage
+        </span>
+        <span
+          className="absolute top-1/2 -translate-y-1/2 text-[10px] font-mono uppercase tracking-[0.15em] text-zinc-500"
+          style={{ left: `${recoveryStart + 1}%` }}
+        >
+          Recovery
+        </span>
+      </div>
+
+      <div className="flex justify-between text-[10px] font-mono text-zinc-600 tabular-nums">
+        <span>0s</span>
+        <span>{comboEntry.damageWindow[0].toFixed(2)}s</span>
+        <span>{comboEntry.damageWindow[1].toFixed(2)}s</span>
+        <span>{totalDuration.toFixed(2)}s</span>
+      </div>
+    </div>
+  );
+}

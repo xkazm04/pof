@@ -426,7 +426,7 @@ export function TacticalCoverAnalysis() {
                     <text
                       x={sx} y={sy - sw / 2 - 4}
                       textAnchor="middle"
-                      className="text-[7px] font-mono"
+                      className="text-[11px] font-mono"
                       fill={ACCENT_VIOLET} opacity={0.7}
                     >
                       {obs.label}
@@ -456,7 +456,7 @@ export function TacticalCoverAnalysis() {
                     <text
                       x={sx} y={sy + sh / 2 + 8}
                       textAnchor="middle"
-                      className="text-[7px] font-mono"
+                      className="text-[11px] font-mono"
                       fill={ACCENT_ORANGE} opacity={0.7}
                     >
                       {obs.label} (+{obs.elevation}UU)
@@ -480,7 +480,7 @@ export function TacticalCoverAnalysis() {
                   <text
                     x={sx} y={sy - sh / 2 - 4}
                     textAnchor="middle"
-                    className="text-[7px] font-mono"
+                    className="text-[11px] font-mono"
                     fill={ACCENT_VIOLET} opacity={0.7}
                   >
                     {obs.label}
@@ -544,7 +544,7 @@ export function TacticalCoverAnalysis() {
                       x={sx}
                       y={sy - r - 4}
                       textAnchor="middle"
-                      className="text-[8px] font-mono font-bold"
+                      className="text-[11px] font-mono font-bold"
                       fill={color}
                     >
                       {(score * 100).toFixed(0)}%
@@ -574,17 +574,17 @@ export function TacticalCoverAnalysis() {
                     opacity={0.95}
                   />
                   <text x={tooltipX + 4} y={tooltipY + 11}
-                    className="text-[7px] font-mono fill-[var(--text-muted)]"
+                    className="text-[11px] font-mono fill-[var(--text-muted)]"
                   >
                     Cover: {(pt.coverScore * 100).toFixed(0)}%
                   </text>
                   <text x={tooltipX + 4} y={tooltipY + 22}
-                    className="text-[7px] font-mono fill-[var(--text-muted)]"
+                    className="text-[11px] font-mono fill-[var(--text-muted)]"
                   >
                     Elev: {(pt.elevationScore * 100).toFixed(0)}%
                   </text>
                   <text x={tooltipX + 4} y={tooltipY + 33}
-                    className="text-[7px] font-mono font-bold"
+                    className="text-[11px] font-mono font-bold"
                     fill={coverColor(pt.combinedScore)}
                   >
                     Combined: {(pt.combinedScore * 100).toFixed(0)}%
@@ -608,7 +608,7 @@ export function TacticalCoverAnalysis() {
               x={SVG_CENTER}
               y={SVG_CENTER + 20}
               textAnchor="middle"
-              className="text-[8px] font-mono"
+              className="text-[11px] font-mono"
               fill={ACCENT_ORANGE} opacity={0.8}
             >
               Threat (Player)
@@ -628,8 +628,8 @@ export function TacticalCoverAnalysis() {
               fill="url(#cover-gradient)"
               opacity={0.8}
             />
-            <text x={SVG_CENTER - 62} y={SVG_SIZE - 14} textAnchor="end" className="text-[7px] font-mono fill-[var(--text-muted)]">Exposed</text>
-            <text x={SVG_CENTER + 62} y={SVG_SIZE - 14} textAnchor="start" className="text-[7px] font-mono fill-[var(--text-muted)]">Covered</text>
+            <text x={SVG_CENTER - 62} y={SVG_SIZE - 14} textAnchor="end" className="text-[11px] font-mono fill-[var(--text-muted)]">Exposed</text>
+            <text x={SVG_CENTER + 62} y={SVG_SIZE - 14} textAnchor="start" className="text-[11px] font-mono fill-[var(--text-muted)]">Covered</text>
 
             {/* Degree markings */}
             {[0, 90, 180, 270].map((deg) => {
@@ -642,7 +642,7 @@ export function TacticalCoverAnalysis() {
                   x={lx} y={ly}
                   textAnchor="middle"
                   dominantBaseline="central"
-                  className="text-[7px] font-mono fill-[var(--text-muted)]"
+                  className="text-[11px] font-mono fill-[var(--text-muted)]"
                   opacity={0.4}
                 >
                   {deg}°

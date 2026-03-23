@@ -648,7 +648,7 @@ export function LevelDesignView() {
                   {activeDoc.rooms.length > 0 && (
                     <div>
                       <h3 className="text-xs font-semibold text-text mb-3">Room Composition</h3>
-                      <div className="grid grid-cols-4 gap-2">
+                      <div className="grid grid-cols-4 gap-4">
                         {Object.entries(countRoomTypes(activeDoc.rooms)).map(([type, count]) => {
                           if (count === 0) return null;
                           return (

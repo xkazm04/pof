@@ -3,6 +3,9 @@
 import { useState } from 'react';
 import { Flame } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
+import {
+  ACCENT_RED, ACCENT_EMERALD_DARK, MODULE_COLORS, STATUS_STALE,
+} from '@/lib/chart-colors';
 import { useDensity, PanelFrame } from '@/lib/dzin/core';
 import { DZIN_TIMING } from '@/lib/dzin/animation-constants';
 import { useDzinSelection } from '@/lib/dzin/selection-context';
@@ -25,13 +28,13 @@ export interface EffectsPanelProps {
 
 /* ── Constants ──────────────────────────────────────────────────────────── */
 
-const ACCENT = '#ef4444';
+const ACCENT = ACCENT_RED;
 
 const EFFECT_TYPES = [
-  { name: 'GE_Damage', desc: 'Instant damage application', color: '#ef4444' },
-  { name: 'GE_Heal', desc: 'Health restoration over time', color: '#10b981' },
-  { name: 'GE_Buff', desc: 'Temporary stat modifier', color: '#3b82f6' },
-  { name: 'GE_Regen', desc: 'Periodic health/mana regen', color: '#8b5cf6' },
+  { name: 'GE_Damage', desc: 'Instant damage application', color: ACCENT_RED },
+  { name: 'GE_Heal', desc: 'Health restoration over time', color: ACCENT_EMERALD_DARK },
+  { name: 'GE_Buff', desc: 'Temporary stat modifier', color: MODULE_COLORS.core },
+  { name: 'GE_Regen', desc: 'Periodic health/mana regen', color: STATUS_STALE },
 ];
 
 const EFFECT_FEATURE_NAMES = ['Core Gameplay Effects', 'Damage execution calculation'];

@@ -22,7 +22,7 @@ import {
   ACCENT_CYAN, ACCENT_EMERALD, ACCENT_VIOLET, ACCENT_ORANGE, ACCENT_PINK,
   OPACITY_8, OPACITY_10, OPACITY_15, OPACITY_20,
 } from '@/lib/chart-colors';
-import type { SelectedActor, PropertyWatchRequest } from '@/types/ue5-bridge';
+import type { SelectedActor, PropertyWatchRequest, PropertyWatchUpdate } from '@/types/ue5-bridge';
 
 const ACCENT = MODULE_COLORS.setup;
 

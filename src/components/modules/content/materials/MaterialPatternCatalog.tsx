@@ -229,7 +229,7 @@ export function MaterialPatternCatalog({ onGenerate, isGenerating }: MaterialPat
           </div>
           <div>
             <h3 className="text-sm font-bold tracking-widest uppercase text-violet-100">Material Pattern Library</h3>
-            <p className="text-[10px] text-violet-400/60 uppercase tracking-wider mt-0.5">
+            <p className="text-xs text-violet-400/60 uppercase tracking-wider mt-0.5">
               DATABASE_ENTRIES: {MATERIAL_PATTERNS.length} — PROCEDURAL_SHADER_ARCHIVES
             </p>
           </div>
@@ -257,7 +257,7 @@ export function MaterialPatternCatalog({ onGenerate, isGenerating }: MaterialPat
                 <button
                   key={cat}
                   onClick={() => setSelectedCategory(cat)}
-                  className="px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-widest transition-all relative overflow-hidden flex-shrink-0"
+                  className="px-3 py-1.5 rounded-lg text-xs font-bold uppercase tracking-widest transition-all relative overflow-hidden flex-shrink-0"
                   style={{
                     backgroundColor: isActive ? `${color}20` : 'rgba(0,0,0,0.4)',
                     color: isActive ? color : 'var(--text-muted)',
@@ -341,18 +341,18 @@ function PatternCard({ pattern, isExpanded, onToggle, onGenerate, isGenerating }
           <div className="flex items-center gap-3 mb-1">
             <span className="text-xs font-bold uppercase tracking-widest text-violet-100 truncate">{pattern.name}</span>
             <span
-              className="text-[9px] font-mono font-bold uppercase tracking-widest px-1.5 py-0.5 rounded border"
+              className="text-[11px] font-mono font-bold uppercase tracking-widest px-1.5 py-0.5 rounded border"
               style={{ backgroundColor: `${catMeta.color}15`, borderColor: `${catMeta.color}40`, color: catMeta.color }}
             >
               {catMeta.label}
             </span>
           </div>
-          <p className="text-[10px] text-violet-300/60 line-clamp-1 font-mono">{pattern.description}</p>
+          <p className="text-xs text-violet-300/60 line-clamp-1 font-mono">{pattern.description}</p>
         </div>
 
         <div className="flex-shrink-0 flex items-center justify-center w-8 h-8 rounded-full border border-violet-900/40 bg-black/60 group-hover:border-violet-500/50 transition-colors">
           <span
-            className="text-[10px] font-mono transition-transform duration-300"
+            className="text-xs font-mono transition-transform duration-300"
             style={{ color: catMeta.color, transform: isExpanded ? 'rotate(180deg)' : 'rotate(0deg)' }}
           >
             ▼
@@ -368,13 +368,13 @@ function PatternCard({ pattern, isExpanded, onToggle, onGenerate, isGenerating }
           <div className="pl-6 space-y-4">
             {/* Description */}
             <p className="text-[11px] text-violet-200/80 leading-relaxed font-mono">
-              <span className="text-[10px] text-violet-500 uppercase tracking-widest block mb-1 font-bold">SYNOPSIS</span>
+              <span className="text-xs text-violet-500 uppercase tracking-widest block mb-1 font-bold">SYNOPSIS</span>
               {pattern.description}
             </p>
 
             {/* Approach */}
             <div>
-              <span className="text-[10px] text-amber-500 uppercase tracking-widest block mb-1 font-bold">METHODOLOGY</span>
+              <span className="text-xs text-amber-500 uppercase tracking-widest block mb-1 font-bold">METHODOLOGY</span>
               <p className="text-[11px] text-amber-100/70 leading-relaxed font-mono bg-amber-500/5 border border-amber-500/20 p-3 rounded-lg">
                 {pattern.approach}
               </p>
@@ -382,10 +382,10 @@ function PatternCard({ pattern, isExpanded, onToggle, onGenerate, isGenerating }
 
             {/* HLSL Snippet */}
             <div className="w-full">
-              <span className="text-[10px] text-emerald-500 uppercase tracking-widest block mb-1 font-bold">HLSL_SOURCE</span>
+              <span className="text-xs text-emerald-500 uppercase tracking-widest block mb-1 font-bold">HLSL_SOURCE</span>
               <div className="relative w-full rounded-xl bg-black/80 border border-emerald-500/30 overflow-hidden shadow-inner">
-                <div className="px-2 py-1 bg-emerald-500/20 text-emerald-400 text-[8px] border-b border-emerald-500/30 uppercase tracking-widest font-bold">CORE_LOGIC</div>
-                <pre className="text-[10px] leading-relaxed p-3 overflow-x-auto text-emerald-200/90 font-mono whitespace-pre">
+                <div className="px-2 py-1 bg-emerald-500/20 text-emerald-400 text-[11px] border-b border-emerald-500/30 uppercase tracking-widest font-bold">CORE_LOGIC</div>
+                <pre className="text-xs leading-relaxed p-3 overflow-x-auto text-emerald-200/90 font-mono whitespace-pre">
                   {pattern.hlslSnippet}
                 </pre>
               </div>
@@ -396,7 +396,7 @@ function PatternCard({ pattern, isExpanded, onToggle, onGenerate, isGenerating }
               {pattern.tags.map((tag) => (
                 <span
                   key={tag}
-                  className="text-[9px] px-2 py-1 rounded bg-black/60 text-violet-300 border border-violet-900/50 uppercase tracking-widest font-mono"
+                  className="text-[11px] px-2 py-1 rounded bg-black/60 text-violet-300 border border-violet-900/50 uppercase tracking-widest font-mono"
                 >
                   #{tag}
                 </span>

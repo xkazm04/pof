@@ -45,7 +45,7 @@ export function SyncStatusPanel({
   const StatusIcon = cfg.icon;
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-4">
       {/* Sync status badge */}
       <div
         className="flex items-center gap-3 px-4 py-3 rounded-lg border"

@@ -310,7 +310,7 @@ export function AnimationChecklist({ onGenerate, isGenerating, completedSteps, o
             <h3 className="text-sm font-bold text-violet-100 font-mono tracking-widest uppercase flex items-center gap-2" style={{ textShadow: '0 0 8px rgba(167,139,250,0.4)' }}>
               INTEGRATION_CHECKLIST.sys
             </h3>
-            <p className="text-[10px] text-violet-400/80 font-mono uppercase tracking-widest mt-0.5">
+            <p className="text-xs text-violet-400/80 font-mono uppercase tracking-widest mt-0.5">
               Commandlet → Mixamo → AnimBP → Montages → Notifies
             </p>
           </div>
@@ -318,7 +318,7 @@ export function AnimationChecklist({ onGenerate, isGenerating, completedSteps, o
 
         {/* Progress Display */}
         <div className="flex flex-col items-end gap-1.5">
-          <div className="text-[10px] font-mono font-bold text-violet-300 tracking-widest uppercase">
+          <div className="text-xs font-mono font-bold text-violet-300 tracking-widest uppercase">
             Progress <span className="text-violet-100">{completedCount}/{ANIMATION_STEPS.length}</span>
           </div>
           <div className="w-32 h-2 rounded-full bg-[#0a0a1e] border border-violet-900/40 overflow-hidden relative shadow-inner">
@@ -438,7 +438,7 @@ function StepCard({ step, isCompleted, isExpanded, isGenerating, onToggle, onGen
               {step.title}
             </span>
             <span
-              className="text-[9px] font-bold uppercase tracking-widest px-2 py-0.5 rounded border"
+              className="text-[11px] font-bold uppercase tracking-widest px-2 py-0.5 rounded border"
               style={{
                 backgroundColor: isCompleted ? `${STATUS_SUCCESS}15` : `${typeColor}15`,
                 color: isCompleted ? STATUS_SUCCESS : typeColor,
@@ -489,7 +489,7 @@ function StepCard({ step, isCompleted, isExpanded, isGenerating, onToggle, onGen
                       href={link.url}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="inline-flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest px-3 py-1.5 rounded-lg transition-all hover:-translate-y-0.5"
+                      className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-widest px-3 py-1.5 rounded-lg transition-all hover:-translate-y-0.5"
                       style={{
                         backgroundColor: `${MODULE_COLORS.content}15`,
                         color: MODULE_COLORS.content,

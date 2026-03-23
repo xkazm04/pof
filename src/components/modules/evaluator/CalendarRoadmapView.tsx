@@ -268,7 +268,7 @@ export function CalendarRoadmapView() {
       </div>
 
       {/* Legend */}
-      <div className="flex items-center gap-4 text-[10px] text-text-muted">
+      <div className="flex items-center gap-4 text-xs text-text-muted">
         <span className="flex items-center gap-1.5">
           <span className="w-8 h-2 rounded-full bg-gradient-to-r from-[#34d399]/60 to-[#34d399]" />
           Predicted
@@ -315,7 +315,7 @@ export function CalendarRoadmapView() {
                 />
               </div>
 
-              <div className="flex items-center justify-between text-[10px]">
+              <div className="flex items-center justify-between text-xs">
                 <span className="text-text-muted">
                   {ms.predictedDate
                     ? `Predicted: ${new Date(ms.predictedDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: '2-digit' })}`
@@ -356,7 +356,7 @@ export function CalendarRoadmapView() {
                       setEditingId(ms.id);
                       setEditDate(dl ? formatDateInput(new Date(dl.targetDate)) : ms.predictedDate ? formatDateInput(new Date(ms.predictedDate)) : formatDateInput(new Date()));
                     }}
-                    className="flex items-center gap-1 text-[10px] text-text-muted hover:text-text transition-colors"
+                    className="flex items-center gap-1 text-xs text-text-muted hover:text-text transition-colors"
                   >
                     <Target className="w-3 h-3" />
                     {dl
@@ -376,7 +376,7 @@ export function CalendarRoadmapView() {
 
               {/* Variance chip */}
               {variance !== null && (
-                <div className={`flex items-center gap-1 text-[10px] ${
+                <div className={`flex items-center gap-1 text-xs ${
                   variance >= 0 ? 'text-green-400' : 'text-amber-400'
                 }`}>
                   {variance < 0 && <AlertTriangle className="w-3 h-3" />}

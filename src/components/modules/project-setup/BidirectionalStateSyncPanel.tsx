@@ -539,7 +539,7 @@ export function BidirectionalStateSyncPanel() {
                     {/* Current PIE info */}
                     {snapshot?.pieState && (
                       <div className="mt-2 flex items-center gap-4 text-2xs font-mono text-text-muted">
-                        <span>Session: <span className="text-text">{snapshot.pieState.sessionId.slice(0, 8)}</span></span>
+                        <span>Session: <span className="text-text">{snapshot.pieState.sessionId?.slice(0, 8) ?? 'N/A'}</span></span>
                         <span>Players: <span className="text-text">{snapshot.pieState.playerCount}</span></span>
                         <span>Editor: <span className="text-text">{snapshot.editorState}</span></span>
                       </div>

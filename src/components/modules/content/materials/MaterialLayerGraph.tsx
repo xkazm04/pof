@@ -113,7 +113,7 @@ export function MaterialLayerGraph({ onRunPrompt, isRunning, activeItemId }: Mat
           </div>
           <div>
             <h3 className="text-sm font-bold tracking-widest uppercase text-violet-100">Shader Tree Compiler</h3>
-            <p className="text-[10px] text-violet-400/60 uppercase tracking-wider mt-0.5">
+            <p className="text-xs text-violet-400/60 uppercase tracking-wider mt-0.5">
               GRAPH_STATUS: {completedCount}/3 NODES_COMPILED
             </p>
           </div>
@@ -233,7 +233,7 @@ function NodeCard({ node, onClick, isRunning }: NodeCardProps) {
             <span className={`text-[11px] font-bold uppercase tracking-widest truncate ${isCompleted ? 'text-emerald-400' : isLocked ? 'text-text-muted' : isActive ? 'text-amber-400' : 'text-violet-100'}`}>
               {node.label}
             </span>
-            <span className={`text-[8px] font-mono tracking-widest px-1.5 py-0.5 rounded border uppercase ${isCompleted ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400/80' :
+            <span className={`text-[11px] font-mono tracking-widest px-1.5 py-0.5 rounded border uppercase ${isCompleted ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400/80' :
                 isLocked ? 'bg-transparent border-transparent text-transparent' :
                   'bg-violet-900/30 border-violet-900/50 text-violet-300'}
             `}>
@@ -241,30 +241,30 @@ function NodeCard({ node, onClick, isRunning }: NodeCardProps) {
             </span>
           </div>
 
-          <p className="text-[10px] text-violet-200/60 leading-relaxed font-mono tracking-tight line-clamp-2">
+          <p className="text-xs text-violet-200/60 leading-relaxed font-mono tracking-tight line-clamp-2">
             {node.description}
           </p>
 
           {/* Status Sub-text */}
           <div className="mt-3">
             {isLocked && (
-              <div className="flex items-center gap-1 text-[9px] text-amber-500/60 uppercase tracking-widest font-bold">
+              <div className="flex items-center gap-1 text-[11px] text-amber-500/60 uppercase tracking-widest font-bold">
                 <Lock className="w-3 h-3" /> DEP_MISSING: mt-3
               </div>
             )}
             {isActive && (
-              <div className="flex items-center gap-2 text-[9px] text-amber-400 uppercase tracking-widest font-bold animate-pulse">
+              <div className="flex items-center gap-2 text-[11px] text-amber-400 uppercase tracking-widest font-bold animate-pulse">
                 <div className="w-1.5 h-1.5 rounded-full bg-amber-400" />
                 COMPILING_SHADER...
               </div>
             )}
             {!isLocked && !isActive && !isCompleted && (
-              <div className="flex items-center gap-1 text-[9px] text-violet-400/50 uppercase tracking-widest font-bold group-hover:text-violet-400 transition-colors">
+              <div className="flex items-center gap-1 text-[11px] text-violet-400/50 uppercase tracking-widest font-bold group-hover:text-violet-400 transition-colors">
                 <span>AWAITING_EXECUTION</span>
               </div>
             )}
             {isCompleted && (
-              <div className="flex items-center gap-1 text-[9px] text-emerald-500/60 uppercase tracking-widest font-bold">
+              <div className="flex items-center gap-1 text-[11px] text-emerald-500/60 uppercase tracking-widest font-bold">
                 <span>COMPILED_SUCCESSFULLY</span>
               </div>
             )}

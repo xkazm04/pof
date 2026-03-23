@@ -7,7 +7,7 @@ import {
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { MODULE_COLORS } from '@/lib/constants';
-import { STATUS_WARNING, ACCENT_VIOLET, STATUS_IMPROVED, STATUS_NEUTRAL, ACCENT_ORANGE, STATUS_SUCCESS } from '@/lib/chart-colors';
+import { STATUS_WARNING, ACCENT_VIOLET, STATUS_IMPROVED, STATUS_NEUTRAL, ACCENT_ORANGE, STATUS_SUCCESS, ACCENT_PINK } from '@/lib/chart-colors';
 
 // ── Types ──
 
@@ -118,7 +118,7 @@ export const PP_EFFECTS: PPEffect[] = [
     id: 'pp-vignette',
     name: 'Vignette',
     icon: Wind,
-    color: '#ec4899',
+    color: ACCENT_PINK,
     description: 'Darkened screen edges for a cinematic or focused viewport feel. Simple intensity control.',
     ueClass: 'FPostProcessSettings::VignetteIntensity',
     params: [
@@ -218,7 +218,7 @@ export function PostProcessStackBuilder({ onGenerate, isGenerating }: PostProces
             </div>
             <div>
               <h3 className="text-sm font-bold tracking-widest uppercase text-violet-100">Post-Process Stack Pipeline</h3>
-              <p className="text-[10px] text-violet-400/60 uppercase tracking-wider mt-0.5">
+              <p className="text-xs text-violet-400/60 uppercase tracking-wider mt-0.5">
                 {enabledCount}/{PP_EFFECTS.length} ACTIVE_NODES — PRIORITY_ROUTING_LOCKED
               </p>
             </div>
@@ -226,7 +226,7 @@ export function PostProcessStackBuilder({ onGenerate, isGenerating }: PostProces
         </div>
 
         {/* Stack list */}
-        <div className="space-y-2">
+        <div className="space-y-3">
           {sortedStack.map((entry, idx) => {
             const effect = effectMap.get(entry.effectId);
             if (!effect) return null;
@@ -370,13 +370,13 @@ function EffectRow({
           <div className="flex items-center gap-3 mb-0.5">
             <span className="text-[11px] font-bold uppercase tracking-widest text-violet-100 truncate">{effect.name}</span>
             <span
-              className="text-[9px] font-mono font-bold uppercase tracking-widest px-1.5 py-0.5 rounded border"
+              className="text-[11px] font-mono font-bold uppercase tracking-widest px-1.5 py-0.5 rounded border"
               style={{ backgroundColor: `${effect.color}10`, borderColor: `${effect.color}30`, color: effect.color }}
             >
               PRIORITY: {entry.priority + 1}
             </span>
           </div>
-          <p className="text-[10px] text-violet-300/60 line-clamp-1 font-mono">{effect.description}</p>
+          <p className="text-xs text-violet-300/60 line-clamp-1 font-mono">{effect.description}</p>
         </div>
 
         {/* Expand arrow */}
@@ -385,7 +385,7 @@ function EffectRow({
           className="flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center bg-black/40 border border-violet-900/30 hover:border-violet-500/50 transition-colors"
         >
           <span
-            className="text-[10px] font-mono transition-transform duration-300"
+            className="text-xs font-mono transition-transform duration-300"
             style={{ color: effect.color, transform: isExpanded ? 'rotate(180deg)' : 'rotate(0deg)' }}
           >
             ▼
@@ -399,11 +399,11 @@ function EffectRow({
           <div className="ml-[88px] space-y-3 relative">
             <div className="absolute -left-6 top-0 bottom-4 w-px bg-violet-900/40" style={{ backgroundColor: `${effect.color}30` }} />
 
-            <div className="text-[9px] font-bold uppercase tracking-widest px-2 py-1 rounded w-fit border shadow-[inset_0_0_10px_rgba(0,0,0,0.5)]" style={{ color: effect.color, backgroundColor: `${effect.color}10`, borderColor: `${effect.color}20` }}>
+            <div className="text-[11px] font-bold uppercase tracking-widest px-2 py-1 rounded w-fit border shadow-[inset_0_0_10px_rgba(0,0,0,0.5)]" style={{ color: effect.color, backgroundColor: `${effect.color}10`, borderColor: `${effect.color}20` }}>
               CORE_CLASS: {effect.ueClass}
             </div>
 
-            <div className="space-y-2">
+            <div className="space-y-3">
               {effect.params.map((param) => (
                 <div
                   key={param.name}
@@ -411,21 +411,21 @@ function EffectRow({
                 >
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-3 mb-1.5">
-                      <span className="text-[10px] font-bold font-mono text-violet-200">{param.name}</span>
+                      <span className="text-xs font-bold font-mono text-violet-200">{param.name}</span>
                       <span
-                        className="text-[8px] px-1.5 py-0.5 rounded font-bold uppercase tracking-widest border"
+                        className="text-[11px] px-1.5 py-0.5 rounded font-bold uppercase tracking-widest border"
                         style={{ backgroundColor: `${effect.color}15`, color: effect.color, borderColor: `${effect.color}30` }}
                       >
                         {param.type}
                       </span>
                     </div>
-                    <p className="text-[9px] text-violet-400/60 font-mono leading-relaxed">{param.description}</p>
+                    <p className="text-[11px] text-violet-400/60 font-mono leading-relaxed">{param.description}</p>
                   </div>
 
                   <div className="flex-shrink-0 text-left xl:text-right bg-violet-900/10 px-3 py-2 rounded-lg border border-violet-900/30 min-w-[140px]">
                     <div className="text-[11px] font-mono text-violet-100 font-bold">{param.defaultValue}</div>
                     {param.range && (
-                      <div className="text-[8px] text-violet-500/60 font-mono mt-1 uppercase tracking-widest border-t border-violet-900/40 pt-1">RANGE: {param.range}</div>
+                      <div className="text-[11px] text-violet-500/60 font-mono mt-1 uppercase tracking-widest border-t border-violet-900/40 pt-1">RANGE: {param.range}</div>
                     )}
                   </div>
                 </div>

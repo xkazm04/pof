@@ -1,0 +1,76 @@
+'use client';
+
+import { useCallback, useState, useMemo } from 'react';
+import { Plus, Trash2, Zap } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { useCollectionEditor } from '@/hooks/useCollectionEditor';
+import type { GASLoadoutSlot } from '@/lib/gas-codegen';
+import { ACCENT_RED, ACCENT_EMERALD_DARK, MODULE_COLORS, STATUS_STALE } from '@/lib/chart-colors';
+
+const SLOT_COLORS = [ACCENT_RED, ACCENT_EMERALD_DARK, MODULE_COLORS.core, STATUS_STALE, MODULE_COLORS.content];
+
+export function LoadoutEditor({
+  loadout, onChange,
+}: {
+  loadout: GASLoadoutSlot[];
+  onChange: (slots: GASLoadoutSlot[]) => void;
+}) {
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+
+  const slotFactory = useCallback((): GASLoadoutSlot => ({
+    id: `ls-${Date.now()}`, slot: loadout.length + 1, abilityName: 'NewAbility',
+    iconColor: SLOT_COLORS[loadout.length % SLOT_COLORS.length], cooldownTag: '',
+  }), [loadout.length]);
+
+  const { add: addSlot, remove: removeSlot, update: updateSlot } = useCollectionEditor(loadout, onChange, slotFactory);
+  const nextSlotColor = useMemo(() => SLOT_COLORS[loadout.length % SLOT_COLORS.length], [loadout.length]);
+
+  const handleRemove = useCallback((id: string) => {
+    if (selectedId === id) setSelectedId(null);
+    removeSlot(id);
+  }, [selectedId, removeSlot]);
+
+  return (
+    <div className="space-y-2">
+      <div className="flex items-center gap-2 justify-center py-3">
+        <AnimatePresence mode="popLayout">
+          {loadout.map((slot) => {
+            const isSelected = selectedId === slot.id;
+            return (
+              <motion.button key={slot.id} layout initial={{ scale: 0, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1, borderColor: isSelected ? slot.iconColor : `${slot.iconColor}60` }}
+                exit={{ scale: 0, opacity: 0 }} transition={{ type: 'spring', stiffness: 500, damping: 30 }}
+                whileHover={{ scale: 1.08, boxShadow: `0 0 12px 2px ${slot.iconColor}40` }} whileTap={{ scale: 0.95 }}
+                className="relative w-14 h-14 rounded-lg border-2 flex flex-col items-center justify-center gap-0.5 group cursor-pointer"
+                style={{ backgroundColor: `${slot.iconColor}08`, ...(isSelected ? { animation: 'loadout-pulse 1.5s ease-in-out infinite', boxShadow: `0 0 8px 1px ${slot.iconColor}50` } : {}) }}
+                onClick={() => setSelectedId(isSelected ? null : slot.id)}>
+                <Zap className="w-5 h-5" style={{ color: slot.iconColor, filter: `drop-shadow(0 0 6px ${slot.iconColor})` }} />
+                <span className="text-[10px] font-mono font-bold truncate w-full text-center px-0.5" style={{ color: slot.iconColor, textShadow: `0 0 12px ${slot.iconColor}40` }}>{slot.abilityName}</span>
+                <span className="absolute -top-1.5 -left-1.5 w-4 h-4 rounded-full text-[10px] font-bold flex items-center justify-center bg-surface border border-border/60 text-text-muted">{slot.slot}</span>
+              </motion.button>
+            );
+          })}
+        </AnimatePresence>
+        <motion.button onClick={addSlot} className="w-14 h-14 rounded-lg border-2 border-dashed flex items-center justify-center transition-colors"
+          style={{ borderColor: 'var(--border-40, rgba(255,255,255,0.1))' }}
+          whileHover={{ borderColor: nextSlotColor, boxShadow: `0 0 10px 1px ${nextSlotColor}30`, scale: 1.05 }}
+          whileTap={{ scale: 0.95 }} transition={{ duration: 0.2 }}>
+          <Plus className="w-5 h-5 text-text-muted" />
+        </motion.button>
+      </div>
+      <div className="space-y-1">
+        <AnimatePresence mode="popLayout">
+          {loadout.map((slot) => (
+            <motion.div key={slot.id} layout initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 10, height: 0 }} transition={{ duration: 0.15 }} className="flex items-center gap-1.5 text-2xs font-mono">
+              <span className="w-5 h-5 rounded text-center leading-5 font-bold" style={{ backgroundColor: `${slot.iconColor}20`, color: slot.iconColor }}>{slot.slot}</span>
+              <input value={slot.abilityName} onChange={(e) => updateSlot(slot.id, { abilityName: e.target.value })} className="bg-surface-deep border border-border/30 rounded px-1.5 py-0.5 text-text w-28 focus:outline-none" />
+              <input value={slot.cooldownTag} onChange={(e) => updateSlot(slot.id, { cooldownTag: e.target.value })} placeholder="Cooldown.Tag" className="bg-surface-deep border border-border/30 rounded px-1.5 py-0.5 text-text-muted w-36 focus:outline-none" />
+              <motion.button onClick={() => handleRemove(slot.id)} className="text-text-muted hover:text-red-400 flex-shrink-0" whileHover={{ scale: 1.2 }} whileTap={{ scale: 0.9 }}><Trash2 className="w-3 h-3" /></motion.button>
+            </motion.div>
+          ))}
+        </AnimatePresence>
+      </div>
+      <style>{`@keyframes loadout-pulse { 0%, 100% { border-opacity: 1; } 50% { opacity: 0.85; } }`}</style>
+    </div>
+  );
+}

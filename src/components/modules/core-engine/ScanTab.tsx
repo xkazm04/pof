@@ -18,14 +18,14 @@ import type { ScanFinding, ScanSeverity } from '@/types/scan';
 import { getAppOrigin, UI_TIMEOUTS } from '@/lib/constants';
 import {
   MODULE_COLORS, STATUS_SUCCESS, STATUS_WARNING, STATUS_ERROR, STATUS_IMPROVED,
-  ACCENT_ORANGE, OPACITY_8,
+  ACCENT_ORANGE, OPACITY_8, STATUS_MUTED,
 } from '@/lib/chart-colors';
 
 const SEVERITY_CONFIG: Record<ScanSeverity, { color: string; bg: string; icon: typeof AlertTriangle }> = {
   critical: { color: MODULE_COLORS.evaluator, bg: `${MODULE_COLORS.evaluator}${OPACITY_8}`, icon: AlertTriangle },
   high: { color: ACCENT_ORANGE, bg: `${ACCENT_ORANGE}${OPACITY_8}`, icon: AlertCircle },
   medium: { color: STATUS_WARNING, bg: `${STATUS_WARNING}${OPACITY_8}`, icon: Info },
-  low: { color: '#94a3b8', bg: '#94a3b818', icon: Info },
+  low: { color: STATUS_MUTED, bg: `${STATUS_MUTED}${OPACITY_8}`, icon: Info },
 };
 
 const EFFORT_CONFIG: Record<string, { color: string; label: string }> = {
@@ -357,13 +357,13 @@ export function ScanTab({ moduleId }: ScanTabProps) {
 
       {/* Summary stats */}
       {activeFindings.length > 0 && (
-        <div className="grid grid-cols-4 gap-2">
+        <div className="grid grid-cols-4 gap-4">
           {(['critical', 'high', 'medium', 'low'] as ScanSeverity[]).map((sev) => {
             const cfg = SEVERITY_CONFIG[sev];
             const count = severityCounts[sev];
             const SevIcon = cfg.icon;
             return (
-              <SurfaceCard key={sev} level={2} className="px-3 py-2">
+              <SurfaceCard key={sev} level={2} className="px-3 py-2" style={{ borderLeft: `2px solid ${cfg.color}` }}>
                 <div className="flex items-center gap-1.5">
                   <SevIcon className="w-3 h-3" style={{ color: cfg.color }} />
                   <span className="text-2xs uppercase tracking-wider text-text-muted font-medium">{sev}</span>

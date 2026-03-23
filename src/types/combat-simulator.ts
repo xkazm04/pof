@@ -165,6 +165,70 @@ export interface CombatSimConfig {
   maxFightDurationSec: number;
 }
 
+// ── Feedback Balance Types ───────────────────────────────────────────────────
+
+/** Severity levels for feedback-specific balance insights */
+export type FeedbackInsightSeverity = 'positive' | 'warning' | 'critical';
+
+/** Configuration for feedback-aware combat simulation */
+export interface FeedbackConfig {
+  /** Hitstop freeze duration in seconds (0 = disabled) */
+  hitstopDurationSec: number;
+  /** Camera shake intensity multiplier (0 = disabled) */
+  cameraShakeScale: number;
+  /** Base player reaction time in seconds */
+  baseReactionTimeSec: number;
+  /** Accuracy penalty from camera shake (0-1) */
+  shakeAccuracyPenalty: number;
+  /** Hit recovery window in seconds */
+  hitRecoveryWindowSec: number;
+  /** Whether recovery window grants invulnerability frames */
+  hitRecoveryIFrames: boolean;
+}
+
+/** Summary stats from a feedback-aware simulation run */
+export interface FeedbackSimSummary {
+  survivalRate: number;
+  avgDurationSec: number;
+  avgDPS: number;
+  avgDamageTaken: number;
+  avgDodgesFromHitstop: number;
+  avgMissesFromShake: number;
+  avgTotalHitstopSec: number;
+  avgEffectiveReactionSec: number;
+}
+
+/** Deltas between feedback-on and feedback-off runs */
+export interface FeedbackDeltas {
+  survivalRateDelta: number;
+  durationDelta: number;
+  dpsDelta: number;
+  damageTakenDelta: number;
+}
+
+/** A single feedback balance insight */
+export interface FeedbackInsight {
+  severity: FeedbackInsightSeverity;
+  category: string;
+  message: string;
+}
+
+/** Full comparison result from runFeedbackComparison */
+export interface FeedbackComparisonResult {
+  withFeedback: FeedbackSimSummary;
+  withoutFeedback: FeedbackSimSummary;
+  deltas: FeedbackDeltas;
+  insights: FeedbackInsight[];
+}
+
+/** Preset for feedback configuration */
+export interface FeedbackPreset {
+  id: string;
+  name: string;
+  description: string;
+  config: FeedbackConfig;
+}
+
 // ── API Types ───────────────────────────────────────────────────────────────
 
 export interface RunCombatSimRequest {

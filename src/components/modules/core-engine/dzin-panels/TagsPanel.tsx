@@ -3,6 +3,9 @@
 import { useState } from 'react';
 import { Tags } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
+import {
+  ACCENT_PURPLE_BOLD, ACCENT_RED, ACCENT_ORANGE, ACCENT_CYAN, STATUS_SUBDUED,
+} from '@/lib/chart-colors';
 import { useDensity, PanelFrame } from '@/lib/dzin/core';
 import { DZIN_TIMING } from '@/lib/dzin/animation-constants';
 import { useDzinSelection } from '@/lib/dzin/selection-context';
@@ -60,10 +63,10 @@ const TAG_TREE: TagNode[] = [
 ];
 
 const TAG_CATEGORY_COLORS: Record<string, string> = {
-  Ability: '#a855f7',
-  State: '#ef4444',
-  Damage: '#f97316',
-  Input: '#06b6d4',
+  Ability: ACCENT_PURPLE_BOLD,
+  State: ACCENT_RED,
+  Damage: ACCENT_ORANGE,
+  Input: ACCENT_CYAN,
 };
 
 /* -- Helpers --------------------------------------------------------------- */
@@ -125,7 +128,7 @@ function TagsCompact({ featureMap }: TagsPanelProps) {
             >
               <span
                 className="w-1.5 h-1.5 rounded-full flex-shrink-0"
-                style={{ backgroundColor: TAG_CATEGORY_COLORS[cat.name] ?? '#64748b' }}
+                style={{ backgroundColor: TAG_CATEGORY_COLORS[cat.name] ?? STATUS_SUBDUED }}
               />
               <span className="text-text-muted">{child.name}</span>
             </motion.div>
@@ -160,7 +163,7 @@ function TagsFull({ featureMap, defs }: TagsPanelProps) {
 
         <div className="space-y-2">
           {TAG_TREE.map((category, ci) => {
-            const catColor = TAG_CATEGORY_COLORS[category.name] ?? '#64748b';
+            const catColor = TAG_CATEGORY_COLORS[category.name] ?? STATUS_SUBDUED;
             return (
               <motion.div
                 key={category.name}
