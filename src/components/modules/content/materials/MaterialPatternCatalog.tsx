@@ -1,10 +1,18 @@
 'use client';
 
 import { useState, useMemo, useCallback } from 'react';
-import { Sparkles, Search, Zap, Droplets, Flame, Eye, Shield, Snowflake, Waves, Gem } from 'lucide-react';
+import { Sparkles, Search, Zap, Droplets, Flame, Eye, Shield, Snowflake, Waves, Gem, Monitor } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { MODULE_COLORS } from '@/lib/constants';
 import { ACCENT_ORANGE, ACCENT_VIOLET, STATUS_IMPROVED } from '@/lib/chart-colors';
+import { useBlenderMCPStore } from '@/stores/blenderMCPStore';
+import { BlenderConnectionBar } from '@/components/blender-mcp/BlenderConnectionBar';
+import { tryApiFetch } from '@/lib/api-utils';
+import { waterShaderScript } from '@/lib/blender-mcp/scripts/shader-patterns/water';
+import { fireShaderScript } from '@/lib/blender-mcp/scripts/shader-patterns/fire';
+import { dissolveShaderScript } from '@/lib/blender-mcp/scripts/shader-patterns/dissolve';
+import type { ExecuteOutput } from '@/lib/blender-mcp/types';
+import { logger } from '@/lib/logger';
 
 // ── Types ──
 
@@ -33,6 +41,12 @@ const CATEGORY_META: Record<MaterialCategory, { label: string; color: string }> 
   elemental: { label: 'Elemental', color: ACCENT_ORANGE },
   stylized: { label: 'Stylized', color: ACCENT_VIOLET },
   utility: { label: 'Utility', color: STATUS_IMPROVED },
+};
+
+const SHADER_SCRIPT_MAP: Record<string, () => string> = {
+  'mat-water': () => waterShaderScript({ materialName: 'Water_Surface', waveScale: 8.0 }),
+  'mat-fire': () => fireShaderScript({ materialName: 'Fire_Embers', intensity: 5.0 }),
+  'mat-dissolve': () => dissolveShaderScript({ materialName: 'Dissolve_Effect' }),
 };
 
 export const MATERIAL_PATTERNS: MaterialPattern[] = [
@@ -194,6 +208,34 @@ export function MaterialPatternCatalog({ onGenerate, isGenerating }: MaterialPat
   const [search, setSearch] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<MaterialCategory | 'all'>('all');
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [blenderPreviewing, setBlenderPreviewing] = useState<string | null>(null);
+  const [blenderResult, setBlenderResult] = useState<{ patternId: string; message: string; isError: boolean } | null>(null);
+  const blenderConnected = useBlenderMCPStore((s) => s.connection.connected);
+
+  const handleBlenderPreview = useCallback(async (pattern: MaterialPattern) => {
+    const scriptFn = SHADER_SCRIPT_MAP[pattern.id];
+    if (!scriptFn) return;
+    setBlenderPreviewing(pattern.id);
+    setBlenderResult(null);
+    try {
+      const code = scriptFn();
+      const result = await tryApiFetch<ExecuteOutput>('/api/blender-mcp/execute', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code }),
+      });
+      if (result.ok) {
+        setBlenderResult({ patternId: pattern.id, message: result.data.output || 'Shader created in Blender', isError: false });
+      } else {
+        setBlenderResult({ patternId: pattern.id, message: result.error, isError: true });
+      }
+    } catch (e) {
+      logger.warn('Blender preview failed', e);
+      setBlenderResult({ patternId: pattern.id, message: e instanceof Error ? e.message : 'Preview failed', isError: true });
+    } finally {
+      setBlenderPreviewing(null);
+    }
+  }, []);
 
   const filtered = useMemo(() => {
     return MATERIAL_PATTERNS.filter((p) => {
@@ -222,6 +264,9 @@ export function MaterialPatternCatalog({ onGenerate, isGenerating }: MaterialPat
       </div>
 
       <div className="relative z-10 space-y-6">
+        {/* Blender Connection */}
+        <BlenderConnectionBar />
+
         {/* Header */}
         <div className="flex items-center gap-4 border-b border-violet-900/30 pb-4">
           <div className="w-12 h-12 rounded-xl bg-violet-900/40 border border-violet-500/50 flex items-center justify-center shadow-[0_0_15px_rgba(139,92,246,0.3)]">
@@ -283,6 +328,11 @@ export function MaterialPatternCatalog({ onGenerate, isGenerating }: MaterialPat
               onToggle={() => handleToggle(pattern.id)}
               onGenerate={() => onGenerate(pattern)}
               isGenerating={isGenerating}
+              blenderConnected={blenderConnected}
+              hasBlenderScript={!!SHADER_SCRIPT_MAP[pattern.id]}
+              isBlenderPreviewing={blenderPreviewing === pattern.id}
+              onBlenderPreview={() => handleBlenderPreview(pattern)}
+              blenderResult={blenderResult?.patternId === pattern.id ? blenderResult : null}
             />
           ))}
           {filtered.length === 0 && (
@@ -304,9 +354,14 @@ interface PatternCardProps {
   onToggle: () => void;
   onGenerate: () => void;
   isGenerating: boolean;
+  blenderConnected: boolean;
+  hasBlenderScript: boolean;
+  isBlenderPreviewing: boolean;
+  onBlenderPreview: () => void;
+  blenderResult: { patternId: string; message: string; isError: boolean } | null;
 }
 
-function PatternCard({ pattern, isExpanded, onToggle, onGenerate, isGenerating }: PatternCardProps) {
+function PatternCard({ pattern, isExpanded, onToggle, onGenerate, isGenerating, blenderConnected, hasBlenderScript, isBlenderPreviewing, onBlenderPreview, blenderResult }: PatternCardProps) {
   const Icon = pattern.icon;
   const catMeta = CATEGORY_META[pattern.category];
 
@@ -430,6 +485,35 @@ function PatternCard({ pattern, isExpanded, onToggle, onGenerate, isGenerating }
                 </>
               )}
             </button>
+
+            {/* Preview in Blender button */}
+            {hasBlenderScript && (
+              <button
+                onClick={(e) => { e.stopPropagation(); onBlenderPreview(); }}
+                disabled={!blenderConnected || isBlenderPreviewing}
+                className="relative w-full overflow-hidden flex items-center justify-center gap-2 px-6 py-3 rounded-xl text-xs font-bold uppercase tracking-widest transition-all disabled:opacity-40 group outline-none border border-emerald-500/40 bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20"
+                title={!blenderConnected ? 'Connect to Blender first' : `Preview ${pattern.name} shader in Blender`}
+              >
+                {isBlenderPreviewing ? (
+                  <div className="flex items-center gap-2 animate-pulse">
+                    <span className="w-4 h-4 rounded-full border-2 border-current border-t-transparent animate-spin" />
+                    SENDING_TO_BLENDER...
+                  </div>
+                ) : (
+                  <>
+                    <Monitor className="w-4 h-4" />
+                    PREVIEW IN BLENDER
+                  </>
+                )}
+              </button>
+            )}
+
+            {/* Blender result inline */}
+            {blenderResult && (
+              <div className={`text-xs font-mono px-3 py-2 rounded-lg border ${blenderResult.isError ? 'border-red-500/30 bg-red-500/10 text-red-400' : 'border-emerald-500/30 bg-emerald-500/10 text-emerald-400'}`}>
+                {blenderResult.message}
+              </div>
+            )}
           </div>
         </div>
       )}
