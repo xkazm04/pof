@@ -4,7 +4,7 @@ import { useState, useMemo, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Sparkles, Play, Copy, Check, ChevronRight, Download,
-  Swords, Zap, Shield, Clock, Wind, RotateCcw,
+  Swords, Zap, Shield, Clock, Wind, RotateCcw, Monitor,
 } from 'lucide-react';
 import { SurfaceCard } from '@/components/ui/SurfaceCard';
 import { SectionLabel } from '@/components/modules/core-engine/unique-tabs/_shared';
@@ -13,6 +13,13 @@ import {
   ACCENT_CYAN, ACCENT_VIOLET, ACCENT_ORANGE, ACCENT_EMERALD,
   OPACITY_15, OPACITY_20,
 } from '@/lib/chart-colors';
+import { useBlenderMCPStore } from '@/stores/blenderMCPStore';
+import { BlenderConnectionBar } from '@/components/blender-mcp/BlenderConnectionBar';
+import { tryApiFetch } from '@/lib/api-utils';
+import { comboAnimationScript } from '@/lib/blender-mcp/scripts/combo-animation';
+import type { ComboHit } from '@/lib/blender-mcp/scripts/combo-animation';
+import type { ExecuteOutput } from '@/lib/blender-mcp/types';
+import { logger } from '@/lib/logger';
 
 /* ══════════════════════════════════════════════════════════════════════════
    DATA MODEL — matches AnimationStateGraph.tsx schemas
@@ -504,6 +511,9 @@ export function AIComboChoreographer() {
   const [generatedCombo, setGeneratedCombo] = useState<GeneratedCombo | null>(null);
   const [codePreview, setCodePreview] = useState<{ code: string; title: string } | null>(null);
   const [copied, setCopied] = useState(false);
+  const [blenderPreviewing, setBlenderPreviewing] = useState(false);
+  const [blenderResult, setBlenderResult] = useState<{ message: string; isError: boolean } | null>(null);
+  const blenderConnected = useBlenderMCPStore((s) => s.connection.connected);
 
   const handleGenerate = useCallback(() => {
     if (!prompt.trim()) return;
@@ -544,8 +554,50 @@ export function AIComboChoreographer() {
     };
   }, [generatedCombo]);
 
+  const handleBlenderPreview = useCallback(async () => {
+    if (!generatedCombo) return;
+    setBlenderPreviewing(true);
+    setBlenderResult(null);
+    try {
+      let cumTime = 0;
+      const hits: ComboHit[] = generatedCombo.sections.map((sec) => {
+        const hit: ComboHit = {
+          time: cumTime,
+          type: sec.label,
+          damage: sec.damage,
+          rootMotion: sec.rootMotionDistance,
+        };
+        cumTime += sec.duration;
+        return hit;
+      });
+      const code = comboAnimationScript({
+        comboName: generatedCombo.name.replace(/[^a-zA-Z0-9_]/g, '_'),
+        hits,
+        totalDuration: generatedCombo.totalDuration,
+      });
+      const result = await tryApiFetch<ExecuteOutput>('/api/blender-mcp/execute', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code }),
+      });
+      if (result.ok) {
+        setBlenderResult({ message: result.data.output || 'Combo preview created in Blender', isError: false });
+      } else {
+        setBlenderResult({ message: result.error, isError: true });
+      }
+    } catch (e) {
+      logger.warn('Blender combo preview failed', e);
+      setBlenderResult({ message: e instanceof Error ? e.message : 'Preview failed', isError: true });
+    } finally {
+      setBlenderPreviewing(false);
+    }
+  }, [generatedCombo]);
+
   return (
     <div className="space-y-2.5">
+      {/* Blender Connection */}
+      <BlenderConnectionBar />
+
       {/* Header */}
       <SurfaceCard level={2} className="p-3 relative overflow-hidden">
         <div className="absolute right-0 top-0 w-40 h-40 blur-3xl rounded-full pointer-events-none" style={{ backgroundColor: `${ACCENT}10` }} />
@@ -703,7 +755,26 @@ export function AIComboChoreographer() {
                 >
                   <Download className="w-3 h-3" /> Export JSON
                 </button>
+                <button
+                  onClick={handleBlenderPreview}
+                  disabled={!blenderConnected || blenderPreviewing}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold border transition-colors hover:brightness-110 disabled:opacity-40"
+                  style={{ borderColor: 'rgba(16,185,129,0.3)', backgroundColor: 'rgba(16,185,129,0.08)', color: 'rgb(52,211,153)' }}
+                  title={!blenderConnected ? 'Connect to Blender first' : 'Preview combo animation in Blender'}
+                >
+                  {blenderPreviewing ? (
+                    <span className="w-3 h-3 rounded-full border-2 border-current border-t-transparent animate-spin" />
+                  ) : (
+                    <Monitor className="w-3 h-3" />
+                  )}
+                  {blenderPreviewing ? 'Sending...' : 'Preview in Blender'}
+                </button>
               </div>
+              {blenderResult && (
+                <div className={`text-xs font-mono px-3 py-2 rounded-lg border mt-2 ${blenderResult.isError ? 'border-red-500/30 bg-red-500/10 text-red-400' : 'border-emerald-500/30 bg-emerald-500/10 text-emerald-400'}`}>
+                  {blenderResult.message}
+                </div>
+              )}
             </SurfaceCard>
           </motion.div>
         )}
