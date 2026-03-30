@@ -16,6 +16,8 @@ export interface GenerationProvider {
   vramGb?: number;
   /** Whether the provider runs locally (vs cloud API) */
   isLocal: boolean;
+  /** Whether this provider is backed by Blender MCP integration */
+  mcpBacked?: boolean;
 }
 
 export const GENERATION_PROVIDERS: GenerationProvider[] = [
@@ -45,6 +47,7 @@ export const GENERATION_PROVIDERS: GenerationProvider[] = [
     description: 'Open-source 3D generation from Tencent (Apache 2.0). Good quality, ~12GB VRAM.',
     vramGb: 12,
     isLocal: true,
+    mcpBacked: true,
   },
   {
     id: 'meshy',
@@ -64,11 +67,12 @@ export const GENERATION_PROVIDERS: GenerationProvider[] = [
   },
   {
     id: 'rodin',
-    name: 'Rodin (Hyperhuman)',
-    status: 'coming-soon',
+    name: 'Rodin (Hyper3D)',
+    status: 'free',
     modes: ['text-to-3d', 'image-to-3d'],
-    description: 'High-fidelity 3D generation with PBR textures. Paid API.',
+    description: 'High-fidelity 3D generation with PBR textures via Blender MCP.',
     isLocal: false,
+    mcpBacked: true,
   },
 ];
 

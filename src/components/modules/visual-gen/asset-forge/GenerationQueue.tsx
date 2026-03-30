@@ -1,11 +1,12 @@
 'use client';
 
-import { Clock, CheckCircle, AlertCircle, Loader2, Trash2, X } from 'lucide-react';
+import { Clock, CheckCircle, AlertCircle, Loader2, Trash2, X, Download } from 'lucide-react';
 import { useForgeStore, type GenerationJob, type JobStatus } from './useForgeStore';
 
 const STATUS_CONFIG: Record<JobStatus, { icon: typeof Clock; color: string; label: string }> = {
   pending: { icon: Clock, color: 'text-amber-400', label: 'Pending' },
   generating: { icon: Loader2, color: 'text-[var(--visual-gen)]', label: 'Generating' },
+  importing: { icon: Download, color: 'text-blue-400', label: 'Importing to Blender...' },
   completed: { icon: CheckCircle, color: 'text-emerald-400', label: 'Complete' },
   failed: { icon: AlertCircle, color: 'text-red-400', label: 'Failed' },
 };
@@ -19,10 +20,12 @@ function JobCard({ job }: { job: GenerationJob }) {
     ? Math.round((job.completedAt - job.createdAt) / 1000)
     : Math.round((Date.now() - job.createdAt) / 1000);
 
+  const isAnimated = job.status === 'generating' || job.status === 'importing';
+
   return (
     <div className="flex items-start gap-3 p-3 rounded-lg border border-border bg-surface/50">
       <div className={`mt-0.5 ${config.color}`}>
-        <StatusIcon size={16} className={job.status === 'generating' ? 'animate-spin' : ''} />
+        <StatusIcon size={16} className={isAnimated ? 'animate-spin' : ''} />
       </div>
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2">
@@ -39,11 +42,29 @@ function JobCard({ job }: { job: GenerationJob }) {
           <span>{elapsed}s</span>
         </div>
         {job.status === 'generating' && (
-          <div className="mt-2 h-1 bg-border rounded-full overflow-hidden">
-            <div
-              className="h-full bg-[var(--visual-gen)] rounded-full transition-all duration-300"
-              style={{ width: `${job.progress}%` }}
-            />
+          <div className="mt-2">
+            <div className="flex items-center justify-between mb-1">
+              <span className="text-[10px] text-text-muted">Progress</span>
+              <span className="text-[10px] text-[var(--visual-gen)] font-medium">
+                {Math.round(job.progress)}%
+              </span>
+            </div>
+            <div className="h-1 bg-border rounded-full overflow-hidden">
+              <div
+                className="h-full bg-[var(--visual-gen)] rounded-full transition-all duration-300"
+                style={{ width: `${job.progress}%` }}
+              />
+            </div>
+          </div>
+        )}
+        {job.status === 'importing' && (
+          <div className="mt-2">
+            <div className="h-1 bg-border rounded-full overflow-hidden">
+              <div className="h-full bg-blue-400 rounded-full animate-pulse w-full" />
+            </div>
+            <p className="text-[10px] text-blue-400 mt-1">
+              Importing generated model into Blender scene...
+            </p>
           </div>
         )}
         {job.error && (
