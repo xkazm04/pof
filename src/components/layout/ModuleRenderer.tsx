@@ -41,6 +41,7 @@ import { AssetBrowserView } from '@/components/modules/visual-gen/asset-browser/
 import { ImportAutomationView } from '@/components/modules/visual-gen/import-automation/ImportAutomationView';
 import { AutoRigView } from '@/components/modules/visual-gen/auto-rig/AutoRigView';
 import { ProceduralEngineView } from '@/components/modules/visual-gen/procedural-engine/ProceduralEngineView';
+import { SceneComposerView } from '@/components/modules/visual-gen/scene-composer/SceneComposerView';
 import { EvaluatorModule } from '@/components/modules/evaluator/EvaluatorModule';
 import { GameDesignDocView } from '@/components/modules/evaluator/GameDesignDocView';
 import { GameDirectorModule } from '@/components/modules/game-director/GameDirectorModule';
@@ -106,6 +107,7 @@ const MODULE_COMPONENTS: Record<SubModuleId, React.ComponentType> = {
   'import-automation': ImportAutomationView,
   'auto-rig': AutoRigView,
   'procedural-engine': ProceduralEngineView,
+  'scene-composer': SceneComposerView,
 };
 
 // Special-case categories that render without sub-modules

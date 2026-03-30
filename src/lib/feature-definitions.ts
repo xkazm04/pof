@@ -43,6 +43,7 @@ export const MODULE_PREREQUISITES: Partial<Record<SubModuleId, SubModuleId[]>> =
   'import-automation': ['asset-viewer', 'blender-pipeline'],
   'auto-rig': ['asset-viewer'],
   'procedural-engine': ['asset-viewer'],
+  'scene-composer': ['asset-viewer', 'blender-pipeline'],
 };
 
 /** Modules that depend on `moduleId` (i.e. moduleId is a prerequisite for them). */

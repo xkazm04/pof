@@ -406,7 +406,7 @@ export const CATEGORIES: CategoryDefinition[] = [
     icon: Shapes,
     accentColor: '#06b6d4',
     accentColorVar: 'var(--visual-gen)',
-    subModules: ['asset-viewer', 'asset-forge', 'material-lab', 'blender-pipeline', 'asset-browser', 'import-automation', 'auto-rig', 'procedural-engine'],
+    subModules: ['asset-viewer', 'asset-forge', 'material-lab', 'blender-pipeline', 'asset-browser', 'import-automation', 'auto-rig', 'procedural-engine', 'scene-composer'],
   },
 ];
 
@@ -1132,6 +1132,28 @@ unreal.IKRetargetBatchOperation.duplicate_and_retarget(
       { id: 'proc-dungeon', label: 'Dungeon layout generator', description: 'Generate dungeon maps with rooms and corridors', prompt: 'Build a dungeon layout generator using BSP (Binary Space Partitioning). Algorithm: recursively split grid into cells, place rooms within cells, connect rooms with corridors through shared edges. Configure: grid dimensions, min/max room size, split ratio, corridor width. Output cell types: empty, floor, wall, door. Render preview as 2D colored grid. Export as JSON with room list and tile map.' },
       { id: 'proc-vegetation', label: 'Vegetation scatter generator', description: 'Distribute vegetation points using Poisson disk sampling', prompt: 'Implement Poisson disk sampling for vegetation scatter. Algorithm: use Bridson\'s algorithm for fast 2D Poisson disk sampling. Configure per-species: density radius, height range constraint, slope constraint, cluster probability. Support multiple species with different radii. Output point list with position, species ID, random rotation/scale. Render 2D preview with colored dots per species.' },
       { id: 'proc-preview', label: 'Preview and export', description: 'Preview generated content and export for UE5', prompt: 'Build preview and export system. Terrain: render heightmap as 3D mesh in the Asset Viewer using PlaneGeometry with vertex displacement. Dungeon: render as 2D canvas with color-coded cells. Vegetation: render as dots on terrain preview. Export formats: heightmap as 16-bit PNG, dungeon as JSON + UE5 DataTable CSV, vegetation as CSV point cloud compatible with UE5 PCG framework.' },
+    ],
+  },
+  {
+    id: 'scene-composer',
+    label: 'Scene Composer',
+    description: 'Compose complete Blender scenes from assets, materials, and procedural content for UE5 export',
+    categoryId: 'visual-gen',
+    icon: Layers,
+    feasibilityRating: 'moderate',
+    quickActions: [
+      { id: 'sc-qa-1', label: 'Refresh Scene', description: 'Fetch current Blender scene tree', icon: RefreshCw, complexity: 'beginner', prompt: 'Fetch the current Blender scene hierarchy showing all objects, their types, visibility, and collection membership. Display as an interactive tree view.' },
+      { id: 'sc-qa-2', label: 'Export for UE5', description: 'Export scene as FBX/glTF for Unreal Engine import', icon: FileUp, complexity: 'intermediate', prompt: 'Export the current Blender scene as FBX or glTF for UE5 import. Configure: format (FBX/glTF), scale, forward axis, include animations. Validate naming conventions (SM_, SK_, M_ prefixes) before export.' },
+      { id: 'sc-qa-3', label: 'Clean Scene', description: 'Remove unused data blocks and optimize scene', icon: BugOff, complexity: 'beginner', prompt: 'Clean the Blender scene by removing orphaned data blocks, unused materials, and empty objects. Report what was removed and the resulting scene statistics.' },
+    ],
+    knowledgeTips: [
+      { title: 'Collection hierarchy', content: 'Blender collections map to UE5 folder structure on import. Name collections with UE5 conventions for smooth import.', source: 'best-practice' },
+      { title: 'Naming conventions', content: 'Name objects with UE5 prefixes (SM_ for static mesh, SK_ for skeletal, M_ for material) to automate import categorization.', source: 'best-practice' },
+    ],
+    checklist: [
+      { id: 'sc-1', label: 'Scene tree management', description: 'View, select, delete, and duplicate Blender scene objects', prompt: 'Implement scene tree management: connect to Blender via MCP, fetch scene hierarchy with get_scene_info, display objects in a tree view with type icons, enable select/delete/duplicate operations via execute_code. Show object properties (location, rotation, scale, materials) when selected.' },
+      { id: 'sc-2', label: 'Asset placement', description: 'Place assets from browser/forge into Blender scene', prompt: 'Implement asset placement workflow: browse assets from Poly Haven/Sketchfab via MCP, import selected asset into Blender scene, position with transform controls, capture viewport screenshot to verify placement. Support placing multiple instances with offset.' },
+      { id: 'sc-3', label: 'Scene export', description: 'Export complete scene as FBX or glTF for UE5', prompt: 'Implement scene export: support FBX and glTF/GLB formats, configure export settings (scale, axis, selection-only), validate scene before export (check for ngons, missing materials, non-manifold geometry), execute export via Blender MCP, report file size and object count.' },
     ],
   },
 
