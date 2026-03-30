@@ -1,6 +1,8 @@
 'use client';
 
 import { CheckCircle, AlertCircle, Loader2, X, Trash2 } from 'lucide-react';
+import { tryApiFetch } from '@/lib/api-utils';
+import type { ExecuteOutput } from '@/lib/blender-mcp/types';
 import { useBlenderStore, type ScriptJob, type ScriptStatus } from './useBlenderStore';
 
 const STATUS_CONFIG: Record<ScriptStatus, { icon: typeof Loader2; color: string; label: string }> = {
@@ -44,6 +46,34 @@ function ScriptCard({ job }: { job: ScriptJob }) {
   );
 }
 
+/** Execute a Python script via the Blender MCP bridge and track it in the store. */
+export async function executeViaMCP(scriptName: string, scriptCode: string) {
+  const { addScript, updateScript } = useBlenderStore.getState();
+  const jobId = addScript(scriptName, []);
+
+  const result = await tryApiFetch<ExecuteOutput>('/api/blender-mcp/execute', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ code: scriptCode }),
+  });
+
+  if (result.ok) {
+    updateScript(jobId, {
+      status: 'completed',
+      output: result.data.output,
+      completedAt: Date.now(),
+    });
+  } else {
+    updateScript(jobId, {
+      status: 'failed',
+      error: result.error,
+      completedAt: Date.now(),
+    });
+  }
+
+  return result;
+}
+
 export function ScriptRunner() {
   const scripts = useBlenderStore((s) => s.scripts);
   const clearCompleted = useBlenderStore((s) => s.clearCompleted);
@@ -53,7 +83,7 @@ export function ScriptRunner() {
       <div className="text-center py-6">
         <p className="text-xs text-text-muted">No scripts have been run yet.</p>
         <p className="text-xs text-text-muted mt-1">
-          Configure Blender above, then use the Roadmap checklist to run pipeline scripts.
+          Use the pipeline tabs above to run LOD, optimization, or conversion scripts via Blender MCP.
         </p>
       </div>
     );
