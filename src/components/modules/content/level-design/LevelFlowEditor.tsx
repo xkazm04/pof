@@ -1,12 +1,18 @@
 'use client';
 
 import { useState, useCallback, useRef } from 'react';
-import { Plus, Unlink } from 'lucide-react';
+import { Plus, Unlink, Monitor } from 'lucide-react';
 import type { RoomNode, RoomConnection, RoomType, DifficultyLevel } from '@/types/level-design';
 import {
   STATUS_ERROR, STATUS_SUCCESS, STATUS_LIME, STATUS_WARNING, STATUS_BLOCKER, STATUS_INFO, STATUS_SUBDUED,
   ACCENT_VIOLET, ACCENT_EMERALD, ACCENT_PINK, ACCENT_CYAN_LIGHT, OVERLAY_WHITE,
 } from '@/lib/chart-colors';
+import { useBlenderMCPStore } from '@/stores/blenderMCPStore';
+import { tryApiFetch } from '@/lib/api-utils';
+import { levelBlockoutScript } from '@/lib/blender-mcp/scripts/level-blockout';
+import type { BlockoutRoom } from '@/lib/blender-mcp/scripts/level-blockout';
+import type { ExecuteOutput } from '@/lib/blender-mcp/types';
+import { logger } from '@/lib/logger';
 
 // ── Constants ──
 
@@ -63,6 +69,11 @@ export function LevelFlowEditor({
   const [pan, setPan] = useState({ x: 0, y: 0 });
   const [isPanning, setIsPanning] = useState(false);
   const panStart = useRef({ x: 0, y: 0, panX: 0, panY: 0 });
+
+  // Blender blockout
+  const [blenderExporting, setBlenderExporting] = useState(false);
+  const [blenderResult, setBlenderResult] = useState<{ message: string; isError: boolean } | null>(null);
+  const blenderConnected = useBlenderMCPStore((s) => s.connection.connected);
 
   // ── Room CRUD ──
 
@@ -197,6 +208,50 @@ export function LevelFlowEditor({
     return { x: room.x + ROOM_W / 2, y: room.y + ROOM_H / 2 };
   }, [rooms]);
 
+  const handleBlockoutInBlender = useCallback(async () => {
+    setBlenderExporting(true);
+    setBlenderResult(null);
+    try {
+      const hexToRgb = (hex: string): [number, number, number] => {
+        const h = hex.replace('#', '');
+        return [
+          parseInt(h.substring(0, 2), 16) / 255,
+          parseInt(h.substring(2, 4), 16) / 255,
+          parseInt(h.substring(4, 6), 16) / 255,
+        ];
+      };
+      const blockoutRooms: BlockoutRoom[] = rooms.map((room) => {
+        const cfg = ROOM_TYPE_CONFIG[room.type];
+        return {
+          id: room.id,
+          name: room.name,
+          type: room.type,
+          x: room.x / 100,
+          y: room.y / 100,
+          width: ROOM_W / 50,
+          height: ROOM_H / 50,
+          color: hexToRgb(cfg.color),
+        };
+      });
+      const code = levelBlockoutScript({ rooms: blockoutRooms, wallHeight: 3 });
+      const result = await tryApiFetch<ExecuteOutput>('/api/blender-mcp/execute', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code }),
+      });
+      if (result.ok) {
+        setBlenderResult({ message: result.data.output || `Blockout created: ${rooms.length} rooms`, isError: false });
+      } else {
+        setBlenderResult({ message: result.error, isError: true });
+      }
+    } catch (e) {
+      logger.warn('Blender blockout failed', e);
+      setBlenderResult({ message: e instanceof Error ? e.message : 'Blockout failed', isError: true });
+    } finally {
+      setBlenderExporting(false);
+    }
+  }, [rooms]);
+
   return (
     <div className="relative w-full h-full bg-[#03030a] rounded-2xl border border-violet-900/30 overflow-hidden shadow-[inset_0_0_80px_rgba(167,139,250,0.05)]">
       {/* Background Gradients */}
@@ -221,6 +276,25 @@ export function LevelFlowEditor({
             <Plus className="w-4 h-4" />
             Add Room
           </button>
+          <button
+            onClick={handleBlockoutInBlender}
+            disabled={!blenderConnected || blenderExporting || rooms.length === 0}
+            className="flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-bold uppercase tracking-wider transition-all shadow-lg disabled:opacity-40"
+            style={{
+              backgroundColor: 'rgba(16,185,129,0.12)',
+              color: 'rgb(52,211,153)',
+              border: '1px solid rgba(16,185,129,0.4)',
+              boxShadow: '0 0 15px rgba(16,185,129,0.2), inset 0 0 10px rgba(16,185,129,0.1)',
+            }}
+            title={!blenderConnected ? 'Connect to Blender first' : 'Create 3D blockout in Blender'}
+          >
+            {blenderExporting ? (
+              <span className="w-4 h-4 rounded-full border-2 border-current border-t-transparent animate-spin" />
+            ) : (
+              <Monitor className="w-4 h-4" />
+            )}
+            {blenderExporting ? 'Exporting...' : 'Blockout in Blender'}
+          </button>
           {connectingFrom && (
             <button
               onClick={() => setConnectingFrom(null)}
@@ -243,6 +317,13 @@ export function LevelFlowEditor({
       <div className="absolute top-4 right-4 z-10 px-3 py-1.5 rounded-lg border bg-surface-deep/80 backdrop-blur-sm border-violet-900/40 text-xs uppercase font-mono font-bold tracking-widest text-violet-300/80 shadow-[0_0_15px_rgba(0,0,0,0.5)]">
         {rooms.length} NODES <span className="mx-1 text-violet-500/50">|</span> {connections.length} LINKS
       </div>
+
+      {/* Blender blockout result */}
+      {blenderResult && (
+        <div className={`absolute bottom-4 left-4 right-4 z-10 text-xs font-mono px-3 py-2 rounded-lg border backdrop-blur-sm ${blenderResult.isError ? 'border-red-500/30 bg-red-500/10 text-red-400' : 'border-emerald-500/30 bg-emerald-500/10 text-emerald-400'}`}>
+          {blenderResult.message}
+        </div>
+      )}
 
       {/* SVG Canvas */}
       <svg

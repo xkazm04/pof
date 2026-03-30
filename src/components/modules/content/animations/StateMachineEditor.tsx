@@ -12,6 +12,10 @@ import {
   MODULE_COLORS, OPACITY_10, OPACITY_15, OPACITY_20, OPACITY_30,
 } from '@/lib/chart-colors';
 import { logger } from '@/lib/logger';
+import { tryApiFetch } from '@/lib/api-utils';
+import { nlaStateMachineScript } from '@/lib/blender-mcp/scripts/nla-state-machine';
+import type { ExecuteOutput } from '@/lib/blender-mcp/types';
+import { useBlenderMCPStore } from '@/stores/blenderMCPStore';
 
 const EDITOR_ACCENT = ACCENT_VIOLET;
 
@@ -339,6 +343,46 @@ function genId(prefix: string): string {
 const NODE_W = 120;
 const NODE_H = 52;
 
+// ── Blender NLA Export ──
+
+function BlenderNLAExport({ states }: { states: EditorState[] }) {
+  const { connection } = useBlenderMCPStore();
+  const [isExporting, setIsExporting] = useState(false);
+
+  const handleExport = async () => {
+    setIsExporting(true);
+    const code = nlaStateMachineScript({
+      armatureName: 'Armature',
+      states: states.map((s, i) => ({
+        name: s.name,
+        type: s.stateType,
+        frameStart: i * 30 + 1,
+        frameEnd: (i + 1) * 30,
+      })),
+    });
+    await tryApiFetch<ExecuteOutput>('/api/blender-mcp/execute', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ code }),
+    });
+    setIsExporting(false);
+  };
+
+  if (!connection.connected) return null;
+
+  return (
+    <button
+      onClick={handleExport}
+      disabled={isExporting}
+      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all border border-border/40 text-text-muted hover:text-text disabled:opacity-50"
+      title="Export state machine as Blender NLA tracks"
+    >
+      <Layers className="w-3 h-3" />
+      {isExporting ? 'Exporting...' : 'NLA Export'}
+    </button>
+  );
+}
+
 // ── Component ──
 
 export function StateMachineEditor() {
@@ -643,6 +687,9 @@ export function StateMachineEditor() {
             <Download className="w-3 h-3" />
             Export
           </button>
+
+          {/* Export to Blender NLA */}
+          <BlenderNLAExport states={states} />
 
           {/* Reset */}
           <button
