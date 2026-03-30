@@ -1,54 +1,168 @@
 'use client';
 
-import { useState } from 'react';
-import { PersonStanding, CheckCircle } from 'lucide-react';
-import { ReviewableModuleView } from '../../shared/ReviewableModuleView';
-import type { ExtraTab } from '../../shared/ReviewableModuleView';
+import { useState, useCallback } from 'react';
+import { PersonStanding, CheckCircle, Bone, Loader2, XCircle, CheckCircle2 } from 'lucide-react';
+import { ReviewableModuleView } from '@/components/modules/shared/ReviewableModuleView';
+import type { ExtraTab } from '@/components/modules/shared/ReviewableModuleView';
 import { SUB_MODULE_MAP, getCategoryForSubModule, getModuleChecklist } from '@/lib/module-registry';
 import { RIG_PRESETS, type RigPreset } from '@/lib/visual-gen/rig-presets';
+import { createArmatureScript, type BoneDefinition } from '@/lib/blender-mcp/scripts/create-armature';
+import { tryApiFetch } from '@/lib/api-utils';
+import { BlenderConnectionBar } from '@/components/blender-mcp/BlenderConnectionBar';
+import { useBlenderMCPStore } from '@/stores/blenderMCPStore';
 
-function RigPresetCard({ preset, selected, onSelect }: {
+/** Convert an IK chain from a rig preset into BoneDefinition[] for Blender. */
+function presetToBones(preset: RigPreset): BoneDefinition[] {
+  const bones: BoneDefinition[] = [];
+  const spacing = 0.15;
+
+  // Root bone
+  bones.push({
+    name: preset.rootBone,
+    head: [0, 0, 0],
+    tail: [0, 0, spacing],
+  });
+
+  // Build a simplified humanoid skeleton from the IK chains
+  const spineChain = preset.ikChains.find((c) => c.name === 'Spine');
+  if (spineChain) {
+    bones.push(
+      { name: spineChain.startBone, head: [0, 0, spacing], tail: [0, 0, spacing * 4], parent: preset.rootBone },
+      { name: spineChain.endBone, head: [0, 0, spacing * 4], tail: [0, 0, spacing * 5], parent: spineChain.startBone },
+    );
+  }
+
+  const armChains = preset.ikChains.filter((c) => c.name.includes('Arm'));
+  armChains.forEach((chain) => {
+    const side = chain.name.includes('Left') ? -1 : 1;
+    const parentBone = spineChain?.endBone ?? preset.rootBone;
+    bones.push(
+      { name: chain.startBone, head: [side * spacing * 2, 0, spacing * 4], tail: [side * spacing * 4, 0, spacing * 4], parent: parentBone },
+      { name: chain.endBone, head: [side * spacing * 4, 0, spacing * 4], tail: [side * spacing * 6, 0, spacing * 4], parent: chain.startBone },
+    );
+  });
+
+  const legChains = preset.ikChains.filter((c) => c.name.includes('Leg'));
+  legChains.forEach((chain) => {
+    const side = chain.name.includes('Left') ? -1 : 1;
+    const parentBone = spineChain?.startBone ?? preset.rootBone;
+    bones.push(
+      { name: chain.startBone, head: [side * spacing, 0, spacing], tail: [side * spacing, 0, -spacing * 2], parent: parentBone },
+      { name: chain.endBone, head: [side * spacing, 0, -spacing * 2], tail: [side * spacing, 0, -spacing * 3], parent: chain.startBone },
+    );
+  });
+
+  return bones;
+}
+
+function RigPresetCard({ preset, selected, onSelect, onCreateInBlender, isCreating, createResult }: {
   preset: RigPreset;
   selected: boolean;
   onSelect: () => void;
+  onCreateInBlender: () => void;
+  isCreating: boolean;
+  createResult: { status: 'success' | 'error'; message: string } | null;
 }) {
+  const connected = useBlenderMCPStore((s) => s.connection.connected);
+
   return (
-    <button
-      onClick={onSelect}
+    <div
       className={`relative text-left p-4 rounded-lg border transition-colors ${
         selected
           ? 'border-[var(--visual-gen)] bg-[var(--visual-gen)]/10'
           : 'border-border hover:border-text-muted'
       }`}
     >
-      {selected && (
-        <CheckCircle size={16} className="absolute top-2 right-2 text-[var(--visual-gen)]" />
+      <button onClick={onSelect} className="w-full text-left">
+        {selected && (
+          <CheckCircle size={16} className="absolute top-2 right-2 text-[var(--visual-gen)]" />
+        )}
+        <h4 className="text-sm font-medium text-text">{preset.name}</h4>
+        <p className="text-xs text-text-muted mt-1">{preset.description}</p>
+        <div className="flex gap-3 mt-2 text-[10px] text-text-muted">
+          <span>{preset.boneCount} bones</span>
+          {preset.hasFingers && <span>Fingers</span>}
+          {preset.hasFaceRig && <span>Face rig</span>}
+        </div>
+        <div className="mt-2">
+          <span className="text-[10px] text-text-muted">IK Chains: </span>
+          {preset.ikChains.map((chain, i) => (
+            <span key={chain.name} className="text-[10px] text-[var(--visual-gen)]">
+              {chain.name}{i < preset.ikChains.length - 1 ? ', ' : ''}
+            </span>
+          ))}
+        </div>
+      </button>
+
+      {/* Create in Blender button */}
+      <button
+        onClick={(e) => { e.stopPropagation(); onCreateInBlender(); }}
+        disabled={!connected || isCreating}
+        className="flex items-center gap-1.5 mt-3 px-2 py-1 rounded text-[11px] font-medium transition-colors bg-[var(--visual-gen)]/10 text-[var(--visual-gen)] hover:bg-[var(--visual-gen)]/20 disabled:opacity-40 disabled:cursor-not-allowed"
+      >
+        {isCreating ? (
+          <Loader2 className="w-3 h-3 animate-spin" />
+        ) : (
+          <Bone className="w-3 h-3" />
+        )}
+        {isCreating ? 'Creating...' : 'Create in Blender'}
+      </button>
+
+      {createResult?.status === 'success' && (
+        <div className="flex items-center gap-1 mt-2 text-[10px] text-emerald-400">
+          <CheckCircle2 className="w-3 h-3 shrink-0" />
+          Armature created
+        </div>
       )}
-      <h4 className="text-sm font-medium text-text">{preset.name}</h4>
-      <p className="text-xs text-text-muted mt-1">{preset.description}</p>
-      <div className="flex gap-3 mt-2 text-[10px] text-text-muted">
-        <span>{preset.boneCount} bones</span>
-        {preset.hasFingers && <span>Fingers</span>}
-        {preset.hasFaceRig && <span>Face rig</span>}
-      </div>
-      <div className="mt-2">
-        <span className="text-[10px] text-text-muted">IK Chains: </span>
-        {preset.ikChains.map((chain, i) => (
-          <span key={chain.name} className="text-[10px] text-[var(--visual-gen)]">
-            {chain.name}{i < preset.ikChains.length - 1 ? ', ' : ''}
-          </span>
-        ))}
-      </div>
-    </button>
+      {createResult?.status === 'error' && (
+        <div className="flex items-start gap-1 mt-2 text-[10px] text-red-400">
+          <XCircle className="w-3 h-3 shrink-0 mt-0.5" />
+          <span>{createResult.message}</span>
+        </div>
+      )}
+    </div>
   );
 }
 
 function RigTab() {
   const [selectedPreset, setSelectedPreset] = useState<string>('ue5-mannequin');
+  const [creatingPresetId, setCreatingPresetId] = useState<string | null>(null);
+  const [createResults, setCreateResults] = useState<Record<string, { status: 'success' | 'error'; message: string }>>({});
   const activePreset = RIG_PRESETS.find((p) => p.id === selectedPreset);
+
+  const handleCreateInBlender = useCallback(async (preset: RigPreset) => {
+    setCreatingPresetId(preset.id);
+    setCreateResults((prev) => {
+      const next = { ...prev };
+      delete next[preset.id];
+      return next;
+    });
+
+    const bones = presetToBones(preset);
+    const code = createArmatureScript({
+      armatureName: preset.name.replace(/\s+/g, '_'),
+      bones,
+    });
+
+    const result = await tryApiFetch<unknown>('/api/blender-mcp/execute', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ code }),
+    });
+
+    if (result.ok) {
+      setCreateResults((prev) => ({ ...prev, [preset.id]: { status: 'success', message: 'Armature created' } }));
+    } else {
+      setCreateResults((prev) => ({ ...prev, [preset.id]: { status: 'error', message: result.error } }));
+    }
+    setCreatingPresetId(null);
+  }, []);
 
   return (
     <div className="max-w-3xl mx-auto space-y-6">
+      {/* Blender Connection */}
+      <BlenderConnectionBar />
+
       <div className="text-center">
         <h2 className="text-base font-semibold text-text">Auto-Rig Setup</h2>
         <p className="text-xs text-text-muted mt-1">
@@ -66,6 +180,9 @@ function RigTab() {
               preset={preset}
               selected={selectedPreset === preset.id}
               onSelect={() => setSelectedPreset(preset.id)}
+              onCreateInBlender={() => handleCreateInBlender(preset)}
+              isCreating={creatingPresetId === preset.id}
+              createResult={createResults[preset.id] ?? null}
             />
           ))}
         </div>

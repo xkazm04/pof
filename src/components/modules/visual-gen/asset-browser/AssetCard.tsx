@@ -1,7 +1,9 @@
 'use client';
 
-import { Download, ExternalLink } from 'lucide-react';
+import { Download, ExternalLink, Loader2 } from 'lucide-react';
 import type { AssetSearchResult } from '@/lib/visual-gen/asset-sources';
+import { useBlenderMCPStore } from '@/stores/blenderMCPStore';
+import { useAssetBrowserStore } from '@/components/modules/visual-gen/asset-browser/useAssetBrowserStore';
 
 interface AssetCardProps {
   asset: AssetSearchResult;
@@ -9,6 +11,11 @@ interface AssetCardProps {
 }
 
 export function AssetCard({ asset, onDownload }: AssetCardProps) {
+  const blenderConnected = useBlenderMCPStore((s) => s.connection.connected);
+  const importToBlender = useAssetBrowserStore((s) => s.importToBlender);
+  const isImporting = useAssetBrowserStore((s) => s.isImporting);
+  const importing = isImporting === asset.id;
+
   return (
     <div className="rounded-lg border border-border bg-surface/50 overflow-hidden group hover:border-[var(--visual-gen)] transition-colors">
       {/* Thumbnail */}
@@ -36,6 +43,20 @@ export function AssetCard({ asset, onDownload }: AssetCardProps) {
           >
             <Download size={16} />
           </button>
+          {blenderConnected && (
+            <button
+              onClick={() => importToBlender(asset.source, asset.id)}
+              disabled={importing}
+              className="p-2 rounded-full bg-surface-secondary text-text hover:brightness-110 disabled:opacity-50"
+              title="Import to Blender"
+            >
+              {importing ? (
+                <Loader2 size={16} className="animate-spin" />
+              ) : (
+                <ExternalLink size={16} />
+              )}
+            </button>
+          )}
         </div>
       </div>
 

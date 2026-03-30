@@ -3,11 +3,17 @@
 import { useState, useCallback, useMemo } from 'react';
 import {
   Sun, Eye, Wind, Circle, Move, Aperture, Layers as LayersIcon,
-  GripVertical, ChevronDown, ChevronUp, Zap,
+  GripVertical, ChevronDown, ChevronUp, Zap, Monitor,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { MODULE_COLORS } from '@/lib/constants';
 import { STATUS_WARNING, ACCENT_VIOLET, STATUS_IMPROVED, STATUS_NEUTRAL, ACCENT_ORANGE, STATUS_SUCCESS, ACCENT_PINK } from '@/lib/chart-colors';
+import { useBlenderMCPStore } from '@/stores/blenderMCPStore';
+import { BlenderConnectionBar } from '@/components/blender-mcp/BlenderConnectionBar';
+import { tryApiFetch } from '@/lib/api-utils';
+import { compositorStackScript } from '@/lib/blender-mcp/scripts/compositor-stack';
+import type { ExecuteOutput } from '@/lib/blender-mcp/types';
+import { logger } from '@/lib/logger';
 
 // ── Types ──
 
@@ -157,6 +163,9 @@ interface PostProcessStackBuilderProps {
 export function PostProcessStackBuilder({ onGenerate, isGenerating }: PostProcessStackBuilderProps) {
   const [stack, setStack] = useState<PPStackEntry[]>(DEFAULT_STACK);
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [blenderPreviewing, setBlenderPreviewing] = useState(false);
+  const [blenderResult, setBlenderResult] = useState<{ message: string; isError: boolean } | null>(null);
+  const blenderConnected = useBlenderMCPStore((s) => s.connection.connected);
 
   const effectMap = useMemo(() => {
     const m = new Map<string, PPEffect>();
@@ -202,6 +211,41 @@ export function PostProcessStackBuilder({ onGenerate, isGenerating }: PostProces
     onGenerate({ stack, effects: PP_EFFECTS });
   }, [stack, onGenerate]);
 
+  const handleBlenderPreview = useCallback(async () => {
+    setBlenderPreviewing(true);
+    setBlenderResult(null);
+    try {
+      // Collect enabled effects into compositor settings
+      const enabledIds = new Set(stack.filter((s) => s.enabled).map((s) => s.effectId));
+      const settings: Parameters<typeof compositorStackScript>[0] = {};
+      if (enabledIds.has('pp-bloom')) {
+        settings.bloom = { intensity: 0.675, threshold: -1.0, radius: 4.0 };
+      }
+      if (enabledIds.has('pp-colorgrading')) {
+        settings.colorGrading = { saturation: 1.0, whiteBalance: 6500 };
+      }
+      if (enabledIds.has('pp-vignette')) {
+        settings.vignette = { intensity: 0.4 };
+      }
+      const code = compositorStackScript(settings);
+      const result = await tryApiFetch<ExecuteOutput>('/api/blender-mcp/execute', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code }),
+      });
+      if (result.ok) {
+        setBlenderResult({ message: result.data.output || 'Compositor stack applied in Blender', isError: false });
+      } else {
+        setBlenderResult({ message: result.error, isError: true });
+      }
+    } catch (e) {
+      logger.warn('Blender PP preview failed', e);
+      setBlenderResult({ message: e instanceof Error ? e.message : 'Preview failed', isError: true });
+    } finally {
+      setBlenderPreviewing(false);
+    }
+  }, [stack]);
+
   return (
     <div className="w-full h-full bg-[#03030a] rounded-2xl border border-violet-900/30 shadow-[inset_0_0_80px_rgba(167,139,250,0.05)] p-6 relative overflow-y-auto">
       {/* Background Ambience */}
@@ -210,6 +254,9 @@ export function PostProcessStackBuilder({ onGenerate, isGenerating }: PostProces
       </div>
 
       <div className="relative z-10 space-y-6">
+        {/* Blender Connection */}
+        <BlenderConnectionBar />
+
         {/* Header */}
         <div className="flex items-center justify-between border-b border-violet-900/30 pb-4">
           <div className="flex items-center gap-4">
@@ -275,6 +322,33 @@ export function PostProcessStackBuilder({ onGenerate, isGenerating }: PostProces
             </>
           )}
         </button>
+
+        {/* Preview in Blender */}
+        <button
+          onClick={handleBlenderPreview}
+          disabled={!blenderConnected || blenderPreviewing || enabledCount === 0}
+          className="relative w-full overflow-hidden flex items-center justify-center gap-2 px-6 py-4 rounded-xl text-xs font-bold uppercase tracking-widest transition-all disabled:opacity-40 group outline-none border border-emerald-500/40 bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20"
+          title={!blenderConnected ? 'Connect to Blender first' : 'Preview compositor stack in Blender'}
+        >
+          {blenderPreviewing ? (
+            <div className="flex items-center gap-2 animate-pulse">
+              <span className="w-4 h-4 rounded-full border-2 border-current border-t-transparent animate-spin" />
+              SENDING_TO_BLENDER...
+            </div>
+          ) : (
+            <>
+              <Monitor className="w-4 h-4 group-hover:scale-110 transition-all" />
+              PREVIEW IN BLENDER ({enabledCount})
+            </>
+          )}
+        </button>
+
+        {/* Blender result */}
+        {blenderResult && (
+          <div className={`text-xs font-mono px-3 py-2 rounded-lg border ${blenderResult.isError ? 'border-red-500/30 bg-red-500/10 text-red-400' : 'border-emerald-500/30 bg-emerald-500/10 text-emerald-400'}`}>
+            {blenderResult.message}
+          </div>
+        )}
       </div>
     </div>
   );

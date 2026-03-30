@@ -3,7 +3,7 @@
 import { useState, useCallback, useMemo, useRef, useEffect } from 'react';
 import {
   Film, Check, RefreshCw, Scan, AlertCircle, Sparkles, FileCode2,
-  Play, RotateCcw, AlertTriangle, MousePointerClick, Plug,
+  Play, RotateCcw, AlertTriangle, MousePointerClick, Plug, Monitor,
 } from 'lucide-react';
 import { useModuleStore } from '@/stores/moduleStore';
 import { useProjectStore } from '@/stores/projectStore';
@@ -15,6 +15,11 @@ import {
   OPACITY_8, OPACITY_10, OPACITY_15, OPACITY_20, OPACITY_30,
   STATUS_IMPROVED,
 } from '@/lib/chart-colors';
+import { useBlenderMCPStore } from '@/stores/blenderMCPStore';
+import { tryApiFetch } from '@/lib/api-utils';
+import { nlaStateMachineScript } from '@/lib/blender-mcp/scripts/nla-state-machine';
+import type { ExecuteOutput } from '@/lib/blender-mcp/types';
+import { logger } from '@/lib/logger';
 
 const ANIM_ACCENT = ACCENT_VIOLET;
 
@@ -169,6 +174,11 @@ export function AnimationStateMachine({ onSelectState, isRunning, activeStateId 
   const [scanResult, setScanResult] = useState<AnimBPScanResult | null>(null);
   const [isScanning, setIsScanning] = useState(false);
   const [scanError, setScanError] = useState<string | null>(null);
+
+  // Blender NLA export
+  const [blenderExporting, setBlenderExporting] = useState(false);
+  const [blenderResult, setBlenderResult] = useState<{ message: string; isError: boolean } | null>(null);
+  const blenderConnected = useBlenderMCPStore((s) => s.connection.connected);
 
   // Simulation mode
   const [simMode, setSimMode] = useState(false);
@@ -407,6 +417,40 @@ export function AnimationStateMachine({ onSelectState, isRunning, activeStateId 
     setSimDeadEnds(new Set());
   }, []);
 
+  const handleExportToBlenderNLA = useCallback(async () => {
+    setBlenderExporting(true);
+    setBlenderResult(null);
+    try {
+      const fps = 30;
+      const frameDuration = 60; // frames per state
+      const states = displayStates.map((state, i) => ({
+        name: state.label,
+        type: state.stateType,
+        frameStart: i * frameDuration + 1,
+        frameEnd: (i + 1) * frameDuration,
+      }));
+      const code = nlaStateMachineScript({
+        armatureName: 'Armature',
+        states,
+      });
+      const result = await tryApiFetch<ExecuteOutput>('/api/blender-mcp/execute', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code }),
+      });
+      if (result.ok) {
+        setBlenderResult({ message: result.data.output || `Exported ${states.length} states to Blender NLA`, isError: false });
+      } else {
+        setBlenderResult({ message: result.error, isError: true });
+      }
+    } catch (e) {
+      logger.warn('Blender NLA export failed', e);
+      setBlenderResult({ message: e instanceof Error ? e.message : 'Export failed', isError: true });
+    } finally {
+      setBlenderExporting(false);
+    }
+  }, [displayStates]);
+
   const completedCount = stateNodes.filter((n) => n.completed).length;
 
   // Node color based on state type
@@ -490,8 +534,38 @@ export function AnimationStateMachine({ onSelectState, isRunning, activeStateId 
               {isScanning ? 'Scanning...' : hasScannedData ? 'Rescan' : 'Scan Project'}
             </button>
           )}
+
+          {/* Export to Blender NLA */}
+          {!simMode && (
+            <button
+              onClick={handleExportToBlenderNLA}
+              disabled={!blenderConnected || blenderExporting || displayStates.length === 0}
+              className="flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all disabled:opacity-40 shadow-lg"
+              style={{
+                backgroundColor: 'rgba(16,185,129,0.12)',
+                color: 'rgb(52,211,153)',
+                border: '1px solid rgba(16,185,129,0.4)',
+                boxShadow: '0 0 10px rgba(16,185,129,0.2), inset 0 0 10px rgba(16,185,129,0.1)',
+              }}
+              title={!blenderConnected ? 'Connect to Blender first' : 'Export state machine as NLA tracks in Blender'}
+            >
+              {blenderExporting ? (
+                <span className="w-3.5 h-3.5 rounded-full border-2 border-current border-t-transparent animate-spin" />
+              ) : (
+                <Monitor className="w-3.5 h-3.5" />
+              )}
+              {blenderExporting ? 'Exporting...' : 'Export to Blender NLA'}
+            </button>
+          )}
         </div>
       </div>
+
+      {/* Blender NLA result */}
+      {blenderResult && (
+        <div className={`relative z-10 text-xs font-mono px-3 py-2 rounded-lg border ${blenderResult.isError ? 'border-red-500/30 bg-red-500/10 text-red-400' : 'border-emerald-500/30 bg-emerald-500/10 text-emerald-400'}`}>
+          {blenderResult.message}
+        </div>
+      )}
 
       {/* Simulation reset bar */}
       {simMode && simPath.length > 0 && (

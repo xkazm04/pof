@@ -1,4 +1,7 @@
 import { create } from 'zustand';
+import { tryApiFetch } from '@/lib/api-utils';
+import { createMaterialScript } from '@/lib/blender-mcp/scripts/create-material';
+import type { Result } from '@/types/result';
 
 export interface PBRParams {
   baseColor: string;     // hex color
@@ -16,6 +19,15 @@ export interface MaterialPreset {
 }
 
 export type PreviewMesh = 'sphere' | 'cube' | 'plane' | 'cylinder';
+
+/** Convert a hex color string like "#c0c0c0" to [r, g, b] in 0-1 range. */
+function hexToRgb(hex: string): [number, number, number] {
+  const h = hex.replace('#', '');
+  const r = parseInt(h.substring(0, 2), 16) / 255;
+  const g = parseInt(h.substring(2, 4), 16) / 255;
+  const b = parseInt(h.substring(4, 6), 16) / 255;
+  return [r, g, b];
+}
 
 interface MaterialState {
   params: PBRParams;
@@ -38,6 +50,7 @@ interface MaterialState {
   loadPreset: (id: string) => void;
   removePreset: (id: string) => void;
   reset: () => void;
+  sendToBlender: (materialName?: string) => Promise<Result<unknown, string>>;
 }
 
 const DEFAULT_PARAMS: PBRParams = {
@@ -118,4 +131,21 @@ export const useMaterialStore = create<MaterialState>((set, get) => ({
       roughnessTexture: null,
       aoTexture: null,
     }),
+
+  sendToBlender: async (materialName?: string) => {
+    const { params } = get();
+    const name = materialName ?? `PoF_Material_${Date.now()}`;
+    const code = createMaterialScript({
+      name,
+      baseColor: hexToRgb(params.baseColor),
+      metallic: params.metallic,
+      roughness: params.roughness,
+    });
+
+    return tryApiFetch<unknown>('/api/blender-mcp/execute', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ code }),
+    });
+  },
 }));

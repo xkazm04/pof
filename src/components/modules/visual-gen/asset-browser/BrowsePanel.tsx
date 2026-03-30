@@ -9,12 +9,13 @@ import type { AssetSearchResult, AssetSource, AssetCategory } from '@/lib/visual
 const SOURCES: { value: AssetSource; label: string }[] = [
   { value: 'polyhaven', label: 'Poly Haven' },
   { value: 'ambientcg', label: 'ambientCG' },
+  { value: 'sketchfab', label: 'Sketchfab' },
 ];
 
 const CATEGORIES: { value: AssetCategory; label: string; sources: AssetSource[] }[] = [
   { value: 'textures', label: 'Textures', sources: ['polyhaven'] },
   { value: 'hdris', label: 'HDRIs', sources: ['polyhaven'] },
-  { value: 'models', label: '3D Models', sources: ['polyhaven'] },
+  { value: 'models', label: '3D Models', sources: ['polyhaven', 'sketchfab'] },
   { value: 'materials', label: 'PBR Materials', sources: ['ambientcg'] },
 ];
 
@@ -29,8 +30,14 @@ export function BrowsePanel() {
   const setActiveCategory = useAssetBrowserStore((s) => s.setActiveCategory);
   const setResults = useAssetBrowserStore((s) => s.setResults);
   const setSearching = useAssetBrowserStore((s) => s.setSearching);
+  const searchSketchfab = useAssetBrowserStore((s) => s.searchSketchfab);
 
   const handleSearch = useCallback(async () => {
+    if (activeSource === 'sketchfab') {
+      await searchSketchfab(query.trim());
+      return;
+    }
+
     setSearching(true);
     try {
       const params = new URLSearchParams({
@@ -49,7 +56,7 @@ export function BrowsePanel() {
     } finally {
       setSearching(false);
     }
-  }, [activeSource, activeCategory, query, setResults, setSearching]);
+  }, [activeSource, activeCategory, query, setResults, setSearching, searchSketchfab]);
 
   const handleDownload = useCallback((asset: AssetSearchResult) => {
     // For now, open download URL in new tab

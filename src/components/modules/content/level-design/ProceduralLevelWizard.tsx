@@ -3,11 +3,18 @@
 import { useState, useCallback } from 'react';
 import {
   Zap, Grid3X3, Waves, Hexagon, Mountain,
-  Castle, Sword, Trophy, MapPin, Package, Gem, Loader2
+  Castle, Sword, Trophy, MapPin, Package, Gem, Loader2, Monitor,
 } from 'lucide-react';
 import { MODULE_COLORS } from '@/lib/constants';
 import { STATUS_IMPROVED, ACCENT_VIOLET, STATUS_SUCCESS, ACCENT_ORANGE, OVERLAY_WHITE } from '@/lib/chart-colors';
 import { motion } from 'framer-motion';
+import { useBlenderMCPStore } from '@/stores/blenderMCPStore';
+import { tryApiFetch } from '@/lib/api-utils';
+import { dungeonToGeometryScript } from '@/lib/blender-mcp/scripts/dungeon-to-geometry';
+import type { CellType } from '@/lib/blender-mcp/scripts/dungeon-to-geometry';
+import { levelMetadataScript } from '@/lib/blender-mcp/scripts/level-metadata';
+import type { ExecuteOutput } from '@/lib/blender-mcp/types';
+import { logger } from '@/lib/logger';
 
 // ── Types ──
 
@@ -156,6 +163,9 @@ export function ProceduralLevelWizard({ onGenerate, isGenerating }: ProceduralLe
     safeZones: false,
   });
   const [seed, setSeed] = useState('');
+  const [blenderExporting, setBlenderExporting] = useState(false);
+  const [blenderResult, setBlenderResult] = useState<{ message: string; isError: boolean } | null>(null);
+  const blenderConnected = useBlenderMCPStore((s) => s.connection.connected);
 
   const selectLevelType = useCallback((lt: LevelType) => {
     setLevelType(lt);
@@ -173,6 +183,62 @@ export function ProceduralLevelWizard({ onGenerate, isGenerating }: ProceduralLe
   const handleGenerate = useCallback(() => {
     onGenerate({ algorithm, levelType, size, constraints, seed });
   }, [algorithm, levelType, size, constraints, seed, onGenerate]);
+
+  const handleExportToBlender = useCallback(async () => {
+    setBlenderExporting(true);
+    setBlenderResult(null);
+    try {
+      // Generate a simple procedural grid based on current settings
+      const rows = Math.min(size.gridHeight, 32);
+      const cols = Math.min(size.gridWidth, 32);
+      const grid: CellType[][] = [];
+      for (let r = 0; r < rows; r++) {
+        const row: CellType[] = [];
+        for (let c = 0; c < cols; c++) {
+          const isBorder = r === 0 || r === rows - 1 || c === 0 || c === cols - 1;
+          row.push(isBorder ? 'wall' : 'floor');
+        }
+        grid.push(row);
+      }
+
+      const geometryCode = dungeonToGeometryScript({
+        grid,
+        cellSize: 2,
+        wallHeight: 3,
+      });
+
+      // Build spawn points from constraints
+      const spawnPoints: { x: number; y: number; type: string }[] = [];
+      if (constraints.spawnPoints) {
+        spawnPoints.push({ x: 2, y: 2, type: 'player' });
+      }
+      if (constraints.bossRoom) {
+        spawnPoints.push({ x: (cols - 2) * 2, y: (rows - 2) * 2, type: 'boss' });
+      }
+      if (constraints.lootPlacement) {
+        spawnPoints.push({ x: Math.floor(cols / 2) * 2, y: Math.floor(rows / 2) * 2, type: 'loot' });
+      }
+
+      const metadataCode = levelMetadataScript({ spawnPoints });
+      const combinedCode = geometryCode + '\n\n' + metadataCode;
+
+      const result = await tryApiFetch<ExecuteOutput>('/api/blender-mcp/execute', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code: combinedCode }),
+      });
+      if (result.ok) {
+        setBlenderResult({ message: result.data.output || `Exported ${rows}x${cols} dungeon to Blender`, isError: false });
+      } else {
+        setBlenderResult({ message: result.error, isError: true });
+      }
+    } catch (e) {
+      logger.warn('Blender export failed', e);
+      setBlenderResult({ message: e instanceof Error ? e.message : 'Export failed', isError: true });
+    } finally {
+      setBlenderExporting(false);
+    }
+  }, [size, constraints]);
 
   const algDef = ALGORITHMS.find((a) => a.id === algorithm)!;
   const ltDef = LEVEL_TYPES.find((lt) => lt.id === levelType)!;
@@ -408,6 +474,40 @@ export function ProceduralLevelWizard({ onGenerate, isGenerating }: ProceduralLe
             </>
           )}
         </button>
+
+        {/* Export to Blender */}
+        <button
+          onClick={handleExportToBlender}
+          disabled={!blenderConnected || blenderExporting}
+          className="relative w-full overflow-hidden flex items-center justify-center gap-2 px-6 py-4 rounded-xl text-xs font-bold uppercase tracking-widest transition-all disabled:opacity-40 group outline-none"
+          style={{
+            backgroundColor: 'rgba(16,185,129,0.12)',
+            color: 'rgb(52,211,153)',
+            border: '1px solid rgba(16,185,129,0.4)',
+            boxShadow: '0 0 20px rgba(16,185,129,0.2), inset 0 0 10px rgba(16,185,129,0.1)',
+          }}
+          title={!blenderConnected ? 'Connect to Blender first' : 'Export level geometry + metadata to Blender'}
+        >
+          <div className="absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-emerald-300 to-transparent opacity-50" />
+          {blenderExporting ? (
+            <>
+              <Loader2 className="w-5 h-5 animate-spin" />
+              Exporting to Blender...
+            </>
+          ) : (
+            <>
+              <Monitor className="w-5 h-5 group-hover:scale-110 transition-all" />
+              Export to Blender
+            </>
+          )}
+        </button>
+
+        {/* Blender result */}
+        {blenderResult && (
+          <div className={`text-xs font-mono px-3 py-2 rounded-lg border ${blenderResult.isError ? 'border-red-500/30 bg-red-500/10 text-red-400' : 'border-emerald-500/30 bg-emerald-500/10 text-emerald-400'}`}>
+            {blenderResult.message}
+          </div>
+        )}
       </div>
     </div>
   );

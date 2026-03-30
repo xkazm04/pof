@@ -1,14 +1,16 @@
 'use client';
 
 import { FolderOpen } from 'lucide-react';
-import { ReviewableModuleView } from '../../shared/ReviewableModuleView';
-import type { ExtraTab } from '../../shared/ReviewableModuleView';
+import { ReviewableModuleView } from '@/components/modules/shared/ReviewableModuleView';
+import type { ExtraTab } from '@/components/modules/shared/ReviewableModuleView';
 import { SUB_MODULE_MAP, getCategoryForSubModule, getModuleChecklist } from '@/lib/module-registry';
-import { BrowsePanel } from './BrowsePanel';
+import { BrowsePanel } from '@/components/modules/visual-gen/asset-browser/BrowsePanel';
+import { BlenderConnectionBar } from '@/components/blender-mcp/BlenderConnectionBar';
 
 function BrowseTab() {
   return (
     <div className="space-y-4">
+      <BlenderConnectionBar />
       <div className="text-center">
         <h2 className="text-base font-semibold text-text">Free Asset Browser</h2>
         <p className="text-xs text-text-muted mt-1">

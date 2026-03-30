@@ -45,6 +45,7 @@ export const SUB_MODULE_IDS = [
   'import-automation',
   'auto-rig',
   'procedural-engine',
+  'scene-composer',
 ] as const;
 
 export type SubModuleId = (typeof SUB_MODULE_IDS)[number];

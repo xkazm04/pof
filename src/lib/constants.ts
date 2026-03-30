@@ -85,4 +85,16 @@ export const UI_TIMEOUTS = {
   ue5WsReconnectBase: 2_000,
   /** Maximum delay between UE5 WebSocket reconnection attempts. */
   ue5WsReconnectMax: 30_000,
+  /** Blender MCP TCP operation timeout. */
+  blenderTcpTimeout: 30_000,
+  /** Blender connection health check interval. */
+  blenderHealthCheck: 15_000,
+  /** Base delay for Blender reconnection attempts. */
+  blenderReconnectBase: 2_000,
+  /** Maximum delay between Blender reconnection attempts. */
+  blenderReconnectMax: 30_000,
+  /** Polling interval for Blender generation jobs. */
+  blenderGenPollInterval: 5_000,
+  /** Debounce delay for viewport screenshot requests. */
+  blenderScreenshotDebounce: 500,
 } as const;
