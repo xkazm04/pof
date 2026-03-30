@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useRef, useEffect } from 'react';
-import { Cpu } from 'lucide-react';
+import { Cpu, Upload } from 'lucide-react';
 import { ReviewableModuleView } from '../../shared/ReviewableModuleView';
 import type { ExtraTab } from '../../shared/ReviewableModuleView';
 import { SUB_MODULE_MAP, getCategoryForSubModule, getModuleChecklist } from '@/lib/module-registry';
@@ -10,6 +10,8 @@ import { generateDiamondSquare } from '@/lib/visual-gen/generators/terrain';
 import { generateDungeon } from '@/lib/visual-gen/generators/dungeon';
 import { generateVegetation } from '@/lib/visual-gen/generators/vegetation';
 import type { CellType } from '@/lib/visual-gen/generators/dungeon';
+import { BlenderConnectionBar } from '@/components/blender-mcp/BlenderConnectionBar';
+import { useBlenderMCPStore } from '@/stores/blenderMCPStore';
 
 const GENERATOR_OPTIONS: { id: GeneratorType; label: string; description: string }[] = [
   { id: 'terrain', label: 'Terrain Heightmap', description: 'Diamond-Square algorithm for realistic terrain elevation' },
@@ -132,6 +134,35 @@ function VegetationPreview({ points, width, height, species }: {
   );
 }
 
+function ExportFeedback({ isExporting, result, error }: {
+  isExporting: boolean;
+  result: string | null;
+  error: string | null;
+}) {
+  if (isExporting) {
+    return (
+      <div className="text-xs text-amber-400 bg-amber-500/5 rounded px-2 py-1.5 animate-pulse">
+        Exporting to Blender...
+      </div>
+    );
+  }
+  if (error) {
+    return (
+      <div className="text-xs text-red-400 bg-red-500/5 rounded px-2 py-1.5">
+        Export failed: {error}
+      </div>
+    );
+  }
+  if (result) {
+    return (
+      <div className="text-xs text-emerald-400 bg-emerald-500/5 rounded px-2 py-1.5">
+        {result}
+      </div>
+    );
+  }
+  return null;
+}
+
 function GeneratorTab() {
   const {
     activeGenerator,
@@ -142,6 +173,7 @@ function GeneratorTab() {
     dungeonResult,
     vegetationPoints,
     isGenerating,
+    exportState,
     setActiveGenerator,
     setTerrainConfig,
     setDungeonConfig,
@@ -150,7 +182,12 @@ function GeneratorTab() {
     setDungeonResult,
     setVegetationPoints,
     setGenerating,
+    exportTerrainToBlender,
+    exportDungeonToBlender,
+    exportVegetationToBlender,
   } = useProceduralStore();
+
+  const connected = useBlenderMCPStore((s) => s.connection.connected);
 
   const handleGenerate = useCallback(() => {
     setGenerating(true);
@@ -173,6 +210,21 @@ function GeneratorTab() {
     });
   }, [activeGenerator, terrainConfig, dungeonConfig, vegetationConfig, setTerrainHeightmap, setDungeonResult, setVegetationPoints, setGenerating]);
 
+  const handleExport = useCallback(() => {
+    if (activeGenerator === 'terrain') {
+      exportTerrainToBlender();
+    } else if (activeGenerator === 'dungeon') {
+      exportDungeonToBlender();
+    } else if (activeGenerator === 'vegetation') {
+      exportVegetationToBlender();
+    }
+  }, [activeGenerator, exportTerrainToBlender, exportDungeonToBlender, exportVegetationToBlender]);
+
+  const hasData =
+    (activeGenerator === 'terrain' && terrainHeightmap !== null) ||
+    (activeGenerator === 'dungeon' && dungeonResult !== null) ||
+    (activeGenerator === 'vegetation' && vegetationPoints !== null);
+
   return (
     <div className="max-w-4xl mx-auto space-y-6">
       <div className="text-center">
@@ -181,6 +233,9 @@ function GeneratorTab() {
           Generate terrains, dungeons, and vegetation scatter using configurable algorithms
         </p>
       </div>
+
+      {/* Blender connection */}
+      <BlenderConnectionBar />
 
       {/* Generator selector */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
@@ -383,14 +438,33 @@ function GeneratorTab() {
           </div>
         )}
 
-        <button
-          onClick={handleGenerate}
-          disabled={isGenerating}
-          className="px-4 py-2 rounded-lg text-sm font-medium transition-colors bg-[var(--visual-gen)] text-white hover:brightness-110 disabled:opacity-50"
-        >
-          {isGenerating ? 'Generating...' : 'Generate'}
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={handleGenerate}
+            disabled={isGenerating}
+            className="px-4 py-2 rounded-lg text-sm font-medium transition-colors bg-[var(--visual-gen)] text-white hover:brightness-110 disabled:opacity-50"
+          >
+            {isGenerating ? 'Generating...' : 'Generate'}
+          </button>
+
+          <button
+            onClick={handleExport}
+            disabled={!connected || !hasData || exportState.isExporting}
+            title={!connected ? 'Connect to Blender first' : !hasData ? 'Generate content first' : 'Export to Blender'}
+            className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium transition-colors bg-emerald-600 text-white hover:bg-emerald-500 disabled:opacity-40 disabled:cursor-not-allowed"
+          >
+            <Upload className="w-3.5 h-3.5" />
+            {exportState.isExporting ? 'Exporting...' : 'Export to Blender'}
+          </button>
+        </div>
       </div>
+
+      {/* Export feedback */}
+      <ExportFeedback
+        isExporting={exportState.isExporting}
+        result={exportState.exportResult}
+        error={exportState.exportError}
+      />
 
       {/* Preview */}
       <div className="rounded-lg border border-border p-4 flex flex-col items-center gap-3">
