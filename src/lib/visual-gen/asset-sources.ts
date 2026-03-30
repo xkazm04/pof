@@ -3,7 +3,7 @@
  * All sources are Creative Commons Zero — free for commercial use.
  */
 
-export type AssetSource = 'polyhaven' | 'ambientcg';
+export type AssetSource = 'polyhaven' | 'ambientcg' | 'sketchfab';
 export type AssetCategory = 'hdris' | 'textures' | 'models' | 'materials';
 
 export interface AssetSearchResult {

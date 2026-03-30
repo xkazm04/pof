@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { tryApiFetch } from '@/lib/api-utils';
 import type { AssetSearchResult, AssetSource, AssetCategory } from '@/lib/visual-gen/asset-sources';
 
 export type DownloadStatus = 'idle' | 'downloading' | 'completed' | 'failed';
@@ -16,6 +17,7 @@ interface AssetBrowserState {
   activeCategory: AssetCategory;
   results: AssetSearchResult[];
   isSearching: boolean;
+  isImporting: string | null;
   downloads: DownloadItem[];
 
   setQuery: (query: string) => void;
@@ -26,14 +28,17 @@ interface AssetBrowserState {
   addDownload: (assetId: string, name: string) => void;
   updateDownload: (assetId: string, updates: Partial<DownloadItem>) => void;
   removeDownload: (assetId: string) => void;
+  searchSketchfab: (query: string) => Promise<void>;
+  importToBlender: (source: AssetSource, id: string) => Promise<void>;
 }
 
-export const useAssetBrowserStore = create<AssetBrowserState>((set) => ({
+export const useAssetBrowserStore = create<AssetBrowserState>((set, get) => ({
   query: '',
   activeSource: 'polyhaven',
   activeCategory: 'textures',
   results: [],
   isSearching: false,
+  isImporting: null,
   downloads: [],
 
   setQuery: (query) => set({ query }),
@@ -58,4 +63,32 @@ export const useAssetBrowserStore = create<AssetBrowserState>((set) => ({
     set((s) => ({
       downloads: s.downloads.filter((d) => d.assetId !== assetId),
     })),
+
+  searchSketchfab: async (query: string) => {
+    set({ isSearching: true });
+    try {
+      const params = new URLSearchParams({ source: 'sketchfab', query });
+      const result = await tryApiFetch<AssetSearchResult[]>(
+        `/api/blender-mcp/assets?${params}`,
+      );
+      if (result.ok) {
+        set({ results: result.data });
+      }
+    } finally {
+      set({ isSearching: false });
+    }
+  },
+
+  importToBlender: async (source: AssetSource, id: string) => {
+    set({ isImporting: id });
+    try {
+      await tryApiFetch<{ success: boolean }>('/api/blender-mcp/assets/download', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ source, id }),
+      });
+    } finally {
+      set({ isImporting: null });
+    }
+  },
 }));
