@@ -23,7 +23,7 @@ export function EffectsTimelineSection() {
     <div className="space-y-4">
       <BlueprintPanel color={ACCENT_RED} className="p-3">
         <SectionHeader icon={Clock} label="Effect Stack Timeline" color={ACCENT_RED} />
-        <p className="text-[10px] font-mono uppercase tracking-[0.15em] text-text-muted mt-1 mb-4">
+        <p className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted mt-1 mb-4">
           Swim-lane view of 8 effect events over a 10-second combat sequence.
         </p>
 
@@ -36,7 +36,7 @@ export function EffectsTimelineSection() {
         <div className="space-y-3">
           {lanes.map(([category, events]) => (
             <div key={category} className="flex items-center gap-3">
-              <div className="w-16 text-[10px] font-mono uppercase tracking-[0.15em] font-bold text-text-muted flex-shrink-0 text-right">
+              <div className="w-16 text-xs font-mono uppercase tracking-[0.15em] font-bold text-text-muted flex-shrink-0 text-right">
                 {category}
               </div>
               <div className="flex-1 h-8 rounded relative border" style={{ borderColor: `${ACCENT_RED}25`, backgroundColor: `${ACCENT_RED}08` }}>
@@ -72,7 +72,7 @@ export function EffectsTimelineSection() {
         {/* Time axis */}
         <div className="flex items-center gap-3 mt-1">
           <div className="w-16 flex-shrink-0" />
-          <div className="flex-1 flex justify-between text-[10px] font-mono uppercase tracking-[0.15em] text-text-muted">
+          <div className="flex-1 flex justify-between text-xs font-mono uppercase tracking-[0.15em] text-text-muted">
             {[0, 2, 4, 6, 8, 10].map(t => <span key={t}>{t}s</span>)}
           </div>
         </div>

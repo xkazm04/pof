@@ -28,7 +28,7 @@ function ConfigInput({ label, value, onChange, min, max, step, wide }: {
 }) {
   return (
     <div>
-      <span className="text-[10px] font-mono uppercase tracking-[0.15em] text-text-muted block mb-0.5">
+      <span className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted block mb-0.5">
         {label}
       </span>
       <input
@@ -97,13 +97,13 @@ export function ItemEconomySimulator({ moduleId }: Props) {
             <span className="text-sm font-bold text-text tracking-wide">
               Item Economy Simulator
             </span>
-            <span className="text-[10px] font-mono uppercase tracking-[0.15em] text-text-muted">
+            <span className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted">
               Monte Carlo loot distribution &amp; balance analysis
             </span>
           </div>
         </div>
         {summary && (
-          <span className="text-[10px] font-mono uppercase tracking-[0.15em] text-text-muted">
+          <span className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted">
             {summary.simTime.toFixed(0)}ms
           </span>
         )}
@@ -176,7 +176,7 @@ export function ItemEconomySimulator({ moduleId }: Props) {
         <BlueprintPanel color={ACCENT} className="flex flex-col items-center justify-center py-16">
           <Activity className="w-10 h-10 text-text-muted/20 mb-3" />
           <p className="text-sm font-bold text-text-muted">No simulation results yet</p>
-          <p className="text-[10px] font-mono uppercase tracking-[0.15em] text-text-muted mt-1">
+          <p className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted mt-1">
             Configure parameters above and click &ldquo;Simulate&rdquo; to run a
             Monte Carlo economy analysis
           </p>

@@ -39,7 +39,7 @@ export function MemorySection() {
               </svg>
               <div className="absolute inset-0 flex items-center justify-center flex-col">
                 <span className="text-lg font-mono font-bold" style={{ color: `${ACCENT}ee`, textShadow: `0 0 12px ${ACCENT}40` }}>{MEMORY_TOTAL_MB}</span>
-                <span className="text-[10px] font-mono uppercase tracking-[0.15em] text-text-muted">MB TOTAL</span>
+                <span className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted">MB TOTAL</span>
               </div>
             </div>
             {/* Legend */}
@@ -47,7 +47,7 @@ export function MemorySection() {
               {MEMORY_SLICES.map((slice) => (
                 <div key={slice.label} className="flex items-center gap-1.5">
                   <span className="w-2 h-2 rounded-sm flex-shrink-0" style={{ backgroundColor: slice.color }} />
-                  <span className="text-[10px] font-mono uppercase tracking-[0.15em] text-text-muted">{slice.label}</span>
+                  <span className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted">{slice.label}</span>
                 </div>
               ))}
             </div>
@@ -56,8 +56,8 @@ export function MemorySection() {
           {/* Stats panel */}
           <div className="space-y-3">
             {MEMORY_SLICES.map((slice) => (
-              <div key={slice.label} className="flex items-center gap-2">
-                <span className="text-[10px] font-mono uppercase tracking-[0.15em] w-16 text-right text-text-muted">{slice.label}</span>
+              <div key={slice.label} className="flex items-center gap-1.5">
+                <span className="text-xs font-mono uppercase tracking-[0.15em] w-16 text-right text-text-muted">{slice.label}</span>
                 <div className="flex-1">
                   <NeonBar pct={slice.pct} color={slice.color} height={4} />
                 </div>
@@ -67,16 +67,16 @@ export function MemorySection() {
               </div>
             ))}
             <div className="border-t border-border pt-2 mt-2 space-y-1.5">
-              <div className="flex justify-between text-[10px] font-mono uppercase tracking-[0.15em]">
+              <div className="flex justify-between text-xs font-mono uppercase tracking-[0.15em]">
                 <span className="text-text-muted">Peak</span>
                 <span className="font-bold" style={{ color: `${ACCENT}ee` }}>{MEMORY_PEAK_MB}MB</span>
               </div>
-              <div className="flex justify-between text-[10px] font-mono uppercase tracking-[0.15em]">
+              <div className="flex justify-between text-xs font-mono uppercase tracking-[0.15em]">
                 <span className="text-text-muted">Budget Remaining</span>
                 <span className="font-bold" style={{ color: STATUS_SUCCESS }}>{MEMORY_BUDGET_MB - MEMORY_TOTAL_MB}MB</span>
               </div>
               <NeonBar pct={(MEMORY_TOTAL_MB / MEMORY_BUDGET_MB) * 100} color={ACCENT} height={4} glow />
-              <div className="flex justify-between text-[10px] font-mono uppercase tracking-[0.15em] text-text-muted">
+              <div className="flex justify-between text-xs font-mono uppercase tracking-[0.15em] text-text-muted">
                 <span>0MB</span>
                 <span>{MEMORY_BUDGET_MB}MB BUDGET</span>
               </div>

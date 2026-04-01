@@ -33,7 +33,7 @@ export function HitsTab() {
           <SectionHeader label="Damage Type Effectiveness" color={ACCENT} icon={Flame} />
           <div className="mt-3">
             <HeatmapGrid rows={DMG_TYPES} cols={ARMOR_TYPES} cells={EFFECTIVENESS_DATA} lowColor="#7f1d1d" highColor="#065f46" accent={ACCENT} />
-            <div className="flex items-center gap-4 mt-2 text-[10px] font-mono uppercase tracking-[0.15em] text-text-muted">
+            <div className="flex items-center gap-4 mt-2 text-xs font-mono uppercase tracking-[0.15em] text-text-muted">
               <span className="flex items-center gap-1"><span className="w-3 h-3 rounded-sm" style={{ backgroundColor: HEATMAP_HIGH }} /> Effective</span>
               <span className="flex items-center gap-1"><span className="w-3 h-3 rounded-sm" style={{ backgroundColor: HEATMAP_MID }} /> Neutral</span>
               <span className="flex items-center gap-1"><span className="w-3 h-3 rounded-sm" style={{ backgroundColor: HEATMAP_LOW }} /> Resisted</span>
@@ -51,9 +51,9 @@ export function HitsTab() {
                 <div key={path.label} className="px-2 py-1.5 rounded bg-surface/50 border border-border/30">
                   <div className="flex items-center gap-1.5 mb-1">
                     <span className="w-3 h-0.5 rounded-full" style={{ backgroundColor: path.color }} />
-                    <span className="text-[10px] font-mono uppercase tracking-[0.15em] font-bold" style={{ color: path.color }}>{path.label}</span>
+                    <span className="text-xs font-mono uppercase tracking-[0.15em] font-bold" style={{ color: path.color }}>{path.label}</span>
                   </div>
-                  <div className="text-[10px] font-mono uppercase tracking-[0.15em] text-text-muted space-y-0.5">
+                  <div className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted space-y-0.5">
                     <div>Speed: {path.speed} u/s</div>
                     <div>Flight: {path.flightTime}</div>
                     <div>Range: {path.maxRange}</div>
@@ -78,7 +78,7 @@ function HitDetectionSvg() {
         <g key={i}>
           <circle cx={frame.cx} cy={frame.cy} r={frame.r} fill={frame.hit ? `${STATUS_ERROR}30` : 'rgba(255,255,255,0.05)'} stroke={frame.hit ? STATUS_ERROR : STATUS_NEUTRAL} strokeWidth="1.5" strokeDasharray={frame.hit ? 'none' : '3 2'} />
           {frame.hit && <circle cx={frame.cx} cy={frame.cy} r={frame.r + 3} fill="none" stroke={STATUS_ERROR} strokeWidth="0.5" opacity="0.4" />}
-          <text x={frame.cx} y={frame.cy + 3} textAnchor="middle" className="text-[11px] font-mono" fill={frame.hit ? STATUS_ERROR : STATUS_NEUTRAL} style={{ fontSize: 11 }}>
+          <text x={frame.cx} y={frame.cy + 3} textAnchor="middle" className="text-xs font-mono" fill={frame.hit ? STATUS_ERROR : STATUS_NEUTRAL}>
             {frame.hit ? 'HIT' : 'MISS'}
           </text>
         </g>
@@ -96,7 +96,7 @@ function ProjectileSvg() {
       <line x1="5" y1="90" x2="195" y2="90" stroke="rgba(255,255,255,0.1)" strokeWidth="1" />
       <circle cx="180" cy="25" r="6" fill="none" stroke={STATUS_ERROR} strokeWidth="1" opacity="0.5" />
       <circle cx="180" cy="25" r="3" fill={`${STATUS_ERROR}50`} />
-      <text x="180" y="18" textAnchor="middle" className="text-[11px] font-mono" fill={STATUS_ERROR} style={{ fontSize: 11 }}>TARGET</text>
+      <text x="180" y="18" textAnchor="middle" className="text-xs font-mono" fill={STATUS_ERROR}>TARGET</text>
       {PROJECTILE_PATHS.map((path) => {
         const d = `M ${path.points.map(p => `${p.x},${p.y}`).join(' L ')}`;
         return (

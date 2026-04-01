@@ -120,15 +120,28 @@ describe('createChatStore', () => {
   // Snapshot
   // -------------------------------------------------------------------------
 
-  it('getSnapshot returns JSON string of messages array', () => {
+  it('getSnapshot returns the messages array directly', () => {
     const store = makeStore();
     store.addMessage('user', 'Hello');
 
     const snapshot = store.getSnapshot();
-    const parsed = JSON.parse(snapshot);
-    expect(Array.isArray(parsed)).toBe(true);
-    expect(parsed).toHaveLength(1);
-    expect(parsed[0].content).toBe('Hello');
+    expect(Array.isArray(snapshot)).toBe(true);
+    expect(snapshot).toHaveLength(1);
+    expect(snapshot[0].content).toBe('Hello');
+  });
+
+  it('getVersion increments on each mutation', () => {
+    const store = makeStore();
+    const v0 = store.getVersion();
+
+    store.addMessage('user', 'A');
+    const v1 = store.getVersion();
+    expect(v1).toBeGreaterThan(v0);
+
+    const id = store.messages[0].id;
+    store.appendContent(id, '!');
+    const v2 = store.getVersion();
+    expect(v2).toBeGreaterThan(v1);
   });
 
   // -------------------------------------------------------------------------

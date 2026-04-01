@@ -14,9 +14,9 @@ export function GenomeComparisonTable({ genomes, activeId }: {
     <table className="w-full text-xs border-collapse">
       <thead>
         <tr className="border-b border-border/40">
-          <th className="text-left py-2 pr-4 text-[10px] font-mono uppercase tracking-[0.15em] text-text-muted w-32">Stat</th>
+          <th className="text-left py-2 pr-4 text-xs font-mono uppercase tracking-[0.15em] text-text-muted w-32">Stat</th>
           {genomes.map((g) => (
-            <th key={g.id} className="py-2 px-2 text-[10px] font-mono uppercase tracking-[0.15em] text-center" style={{ color: g.color }}>
+            <th key={g.id} className="py-2 px-2 text-xs font-mono uppercase tracking-[0.15em] text-center" style={{ color: g.color }}>
               <div className="flex items-center justify-center gap-1.5">
                 <span className="w-2 h-2 rounded-full" style={{ backgroundColor: g.color }} />
                 {g.name}

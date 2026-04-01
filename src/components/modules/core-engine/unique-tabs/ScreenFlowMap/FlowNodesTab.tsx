@@ -51,7 +51,7 @@ export function FlowNodesTab({
                 <InputModeBadge mode="GameAndUI" />
                 <span className="ml-auto flex items-center gap-1.5 bg-surface-deep px-2 py-0.5 rounded shadow-inner border border-border/40">
                   <span className="w-2 h-2 rounded-full shadow-[0_0_5px_currentColor]" style={{ backgroundColor: hudSc.dot, color: hudSc.dot }} />
-                  <span className="text-[10px] font-mono uppercase tracking-[0.15em] font-bold" style={{ color: hudSc.dot }}>{hudSc.label}</span>
+                  <span className="text-xs font-mono uppercase tracking-[0.15em] font-bold" style={{ color: hudSc.dot }}>{hudSc.label}</span>
                 </span>
               </div>
             </button>
@@ -88,7 +88,7 @@ export function FlowNodesTab({
             <div className="flex flex-col gap-2">
               {(Object.entries(INPUT_MODE_COLORS) as [InputMode, string][]).map(([mode, color]) => (
                 <div key={mode} className="flex items-center gap-3 bg-surface p-2 rounded-lg border border-border/50">
-                  <span className="px-2 py-0.5 rounded text-[10px] font-mono uppercase tracking-[0.15em] font-bold w-24 text-center shadow-sm" style={{ backgroundColor: `${color}20`, color, border: `1px solid ${color}40` }}>{mode}</span>
+                  <span className="px-2 py-0.5 rounded text-xs font-mono uppercase tracking-[0.15em] font-bold w-24 text-center shadow-sm" style={{ backgroundColor: `${color}20`, color, border: `1px solid ${color}40` }}>{mode}</span>
                   <span className="text-text-muted text-xs">{mode === 'Game' ? 'Cursor hidden, gameplay active' : mode === 'UI' ? 'Cursor shown, game paused' : 'Cursor shown, gameplay active'}</span>
                 </div>
               ))}

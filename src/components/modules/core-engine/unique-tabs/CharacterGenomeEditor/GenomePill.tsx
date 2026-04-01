@@ -59,12 +59,12 @@ function GenomeColorPicker({ currentColor, onSelect, onClose }: {
           onChange={(e) => setHex(e.target.value)}
           onKeyDown={(e) => e.key === 'Enter' && applyHex()}
           placeholder="#ff0000"
-          className="flex-1 w-0 min-w-0 text-[10px] font-mono bg-surface-deep border border-border/40 rounded px-1.5 py-0.5 text-text focus:outline-none focus:border-blue-500/50"
+          className="flex-1 w-0 min-w-0 text-xs font-mono bg-surface-deep border border-border/40 rounded px-1.5 py-0.5 text-text focus:outline-none focus:border-blue-500/50"
           maxLength={7}
         />
         <button
           onClick={applyHex}
-          className="px-1.5 py-0.5 text-[10px] font-bold rounded border border-border/40 bg-surface-deep text-text-muted hover:text-text transition-colors"
+          className="px-1.5 py-0.5 text-xs font-bold rounded border border-border/40 bg-surface-deep text-text-muted hover:text-text transition-colors"
         >
           OK
         </button>

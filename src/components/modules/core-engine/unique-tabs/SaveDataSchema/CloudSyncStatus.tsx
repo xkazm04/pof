@@ -4,7 +4,8 @@ import { Cloud, Wifi, CheckCircle2 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { STATUS_SUCCESS, STATUS_INFO, STATUS_ERROR, STATUS_WARNING } from '@/lib/chart-colors';
 import { BlueprintPanel, SectionHeader, GlowStat } from './design';
-import { ACCENT, CLOUD_SYNC } from './data';
+import { ACCENT } from './data';
+import { CLOUD_SYNC } from './data-panels';
 
 export function CloudSyncSection() {
   const statusColor = CLOUD_SYNC.status === 'synced' ? STATUS_SUCCESS
@@ -22,7 +23,7 @@ export function CloudSyncSection() {
             animate={{ opacity: [0.5, 1, 0.5] }}
             transition={{ duration: 2, repeat: Infinity }}
           />
-          <span className="text-[10px] font-mono font-bold uppercase tracking-[0.15em]" style={{ color: statusColor }}>
+          <span className="text-xs font-mono font-bold uppercase tracking-[0.15em]" style={{ color: statusColor }}>
             {CLOUD_SYNC.status}
           </span>
         </div>
@@ -61,7 +62,7 @@ export function CloudSyncSection() {
         {/* Provider info bar */}
         <div className="mt-3 flex items-center gap-3 px-3 py-2 border border-border/10 rounded-lg font-mono text-xs" style={{ backgroundColor: `${ACCENT}06` }}>
           <Wifi className="w-3.5 h-3.5" style={{ color: ACCENT }} />
-          <span className="text-[10px] font-mono uppercase tracking-[0.15em] text-text-muted">Provider:</span>
+          <span className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted">Provider:</span>
           <span className="text-cyan-300">{CLOUD_SYNC.provider}</span>
           <span className="ml-auto text-text-muted">Protocol: WebSocket TLS</span>
         </div>

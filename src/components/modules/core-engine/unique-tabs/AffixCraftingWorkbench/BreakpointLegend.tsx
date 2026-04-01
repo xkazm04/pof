@@ -10,7 +10,7 @@ import { ACCENT } from './constants';
 
 export function BreakpointLegend() {
   return (
-    <div className="flex flex-wrap items-center gap-4 px-1 text-[10px] font-mono uppercase tracking-[0.15em] text-text-muted">
+    <div className="flex flex-wrap items-center gap-4 px-1 text-xs font-mono uppercase tracking-[0.15em] text-text-muted">
       <span className="font-bold">Legend:</span>
       <span className="flex items-center gap-1.5">
         <span className="w-2 h-2 rounded-full" style={{ backgroundColor: STATUS_ERROR }} /> Offensive

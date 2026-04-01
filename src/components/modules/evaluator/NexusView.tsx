@@ -19,6 +19,7 @@ import type { ImplementationPattern } from '@/types/pattern-library';
 import type { SubModuleId, ChecklistItem } from '@/types/modules';
 import type { Recommendation } from '@/types/evaluator';
 import { STATUS_SUCCESS, STATUS_WARNING, STATUS_ERROR, STATUS_INFO, STATUS_BLOCKER, STATUS_NEUTRAL, ACCENT_VIOLET, MODULE_COLORS, OPACITY_10, OPACITY_15, OPACITY_20, OPACITY_30 } from '@/lib/chart-colors';
+import { MOTION } from '@/lib/constants';
 
 // ─── Layout constants (same as DependencyGraph) ────────────────────────────
 
@@ -696,7 +697,7 @@ function NodeDeepDivePanel({
       initial={{ opacity: 0, height: 0 }}
       animate={{ opacity: 1, height: 'auto' }}
       exit={{ opacity: 0, height: 0 }}
-      transition={{ duration: 0.22 }}
+      transition={{ duration: MOTION.base }}
       className="overflow-hidden"
     >
       <SurfaceCard className="p-4">
@@ -904,7 +905,7 @@ function CollapsibleSection({
             initial={{ height: 0 }}
             animate={{ height: 'auto' }}
             exit={{ height: 0 }}
-            transition={{ duration: 0.12 }}
+            transition={{ duration: MOTION.fast }}
             className="overflow-hidden"
           >
             <div className="px-3 pb-2">

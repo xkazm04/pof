@@ -91,7 +91,7 @@ export function CharacterFeelPlayground() {
                   <span className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: p.color }} />
                   <div className="flex-1 min-w-0">
                     <div className="truncate">{p.name}</div>
-                    <div className="text-[10px] font-mono uppercase tracking-[0.15em] text-text-muted">{p.genre}</div>
+                    <div className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted">{p.genre}</div>
                   </div>
                 </button>
               ))}
@@ -183,7 +183,7 @@ export function CharacterFeelPlayground() {
       </div>
 
       {/* Hint */}
-      <div className="text-[10px] font-mono uppercase tracking-[0.15em] text-text-muted text-center opacity-60">
+      <div className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted text-center opacity-60">
         Drag the control points on the curves above to tune character feel. Values update live. Use presets as starting points.
       </div>
     </motion.div>

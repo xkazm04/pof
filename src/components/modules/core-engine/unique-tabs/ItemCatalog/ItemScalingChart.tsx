@@ -35,7 +35,7 @@ export function ItemScalingChart({ lines, width, height }: { lines: ScalingLine[
           <g key={frac}>
             <line x1={padL} y1={y} x2={padL + plotW} y2={y} stroke="rgba(255,255,255,0.06)" strokeWidth="1" />
             <text x={padL - 4} y={y} textAnchor="end" dominantBaseline="central"
-              className="text-[11px] font-mono fill-[var(--text-muted)]" style={{ fontSize: 11 }}>
+              className="text-xs font-mono fill-[var(--text-muted)]">
               {val.toFixed(0)}
             </text>
           </g>
@@ -44,12 +44,12 @@ export function ItemScalingChart({ lines, width, height }: { lines: ScalingLine[
       {/* X axis labels */}
       {allLevels.filter((_, i) => i % 2 === 0).map(lvl => (
         <text key={lvl} x={xScale(lvl)} y={height - 4} textAnchor="middle"
-          className="text-[11px] font-mono fill-[var(--text-muted)]" style={{ fontSize: 11 }}>
+          className="text-xs font-mono fill-[var(--text-muted)]">
           {lvl}
         </text>
       ))}
       <text x={width / 2} y={height} textAnchor="middle"
-        className="text-[11px] font-mono fill-[var(--text-muted)]" style={{ fontSize: 11 }}>
+        className="text-xs font-mono fill-[var(--text-muted)]">
         Item Level
       </text>
       {/* Lines with min/max bands */}

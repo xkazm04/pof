@@ -1,0 +1,2893 @@
+{
+  "title": "How to Build PoF with PoF + UE5",
+  "game": "PoF",
+  "generatedAt": "2026-04-01T10:02:37.724Z",
+  "totalIterations": 52,
+  "totalDurationMs": 18087117,
+  "buildOrder": [
+    {
+      "moduleId": "arpg-character",
+      "areas": [
+        "character-foundation",
+        "character-camera-input"
+      ]
+    },
+    {
+      "moduleId": "input-handling",
+      "areas": [
+        "input-handling"
+      ]
+    },
+    {
+      "moduleId": "physics",
+      "areas": [
+        "physics"
+      ]
+    },
+    {
+      "moduleId": "arpg-animation",
+      "areas": [
+        "animation-locomotion",
+        "animation-montages"
+      ]
+    },
+    {
+      "moduleId": "arpg-gas",
+      "areas": [
+        "gas-core",
+        "gas-abilities"
+      ]
+    },
+    {
+      "moduleId": "models",
+      "areas": [
+        "models"
+      ]
+    },
+    {
+      "moduleId": "audio",
+      "areas": [
+        "audio"
+      ]
+    },
+    {
+      "moduleId": "ui-hud",
+      "areas": [
+        "ui-hud"
+      ]
+    },
+    {
+      "moduleId": "arpg-combat",
+      "areas": [
+        "combat-melee",
+        "combat-feedback"
+      ]
+    },
+    {
+      "moduleId": "arpg-enemy-ai",
+      "areas": [
+        "enemy-ai-core",
+        "enemy-ai-advanced"
+      ]
+    },
+    {
+      "moduleId": "ai-behavior",
+      "areas": [
+        "ai-behavior"
+      ]
+    },
+    {
+      "moduleId": "materials",
+      "areas": [
+        "materials-core",
+        "materials-advanced"
+      ]
+    },
+    {
+      "moduleId": "animations",
+      "areas": [
+        "animations"
+      ]
+    },
+    {
+      "moduleId": "arpg-inventory",
+      "areas": [
+        "inventory-items",
+        "inventory-equipment"
+      ]
+    },
+    {
+      "moduleId": "arpg-loot",
+      "areas": [
+        "loot-tables",
+        "loot-drops"
+      ]
+    },
+    {
+      "moduleId": "arpg-ui",
+      "areas": [
+        "ui-hud-gas",
+        "ui-screens"
+      ]
+    },
+    {
+      "moduleId": "dialogue-quests",
+      "areas": [
+        "dialogue-quests-core",
+        "dialogue-quests-system"
+      ]
+    },
+    {
+      "moduleId": "arpg-progression",
+      "areas": [
+        "progression-xp",
+        "progression-skills"
+      ]
+    },
+    {
+      "moduleId": "arpg-world",
+      "areas": [
+        "world-zones",
+        "world-encounters",
+        "world-interactive"
+      ]
+    },
+    {
+      "moduleId": "level-design",
+      "areas": [
+        "level-design-core",
+        "level-design-advanced"
+      ]
+    },
+    {
+      "moduleId": "multiplayer",
+      "areas": [
+        "multiplayer-core",
+        "multiplayer-advanced"
+      ]
+    },
+    {
+      "moduleId": "arpg-save",
+      "areas": [
+        "save-core",
+        "save-features"
+      ]
+    },
+    {
+      "moduleId": "save-load",
+      "areas": [
+        "save-load"
+      ]
+    },
+    {
+      "moduleId": "arpg-polish",
+      "areas": [
+        "polish-debug",
+        "polish-performance"
+      ]
+    },
+    {
+      "moduleId": "packaging",
+      "areas": [
+        "packaging"
+      ]
+    }
+  ],
+  "steps": [
+    {
+      "phase": 1,
+      "areaId": "character-foundation",
+      "moduleId": "arpg-character",
+      "label": "Character Foundation",
+      "description": "Base character class, game mode, player controller, and core movement (walk, sprint)",
+      "pofActions": [
+        "ac-1",
+        "ac-2",
+        "ac-3",
+        "ac-4"
+      ],
+      "ue5Files": [],
+      "decisions": [
+        {
+          "decision": "Implemented AARPGCharacterBase",
+          "rationale": "Abstract base with movement defaults, orient-to-movement, ASC, motion warping, attribute init from DataTable+CurveTable. Well-structured with clear movement gating, acceleration curves, and root motion tracking."
+        },
+        {
+          "decision": "Implemented AARPGPlayerCharacter",
+          "rationale": "Concrete player subclass with health/mana, XP/leveling, attribute allocation, ability loadout, interaction scanning, cursor aim, death/respawn, perception stimuli, overhead widget. Comprehensive delegates for UI binding."
+        },
+        {
+          "decision": "Implemented WASD movement",
+          "rationale": "Camera-relative movement via Enhanced Input with Swizzle/Negate modifiers. Diagonal normalization. Respects camera yaw rotation (Q/E). CanMove() gate blocks input during dodge/attack/stagger/stun/root motion."
+        },
+        {
+          "decision": "Implemented Sprint system",
+          "rationale": "Hold-shift sprint with smooth MaxWalkSpeed interpolation, stamina drain (20/s) with regen delay (1s), auto-stop when stationary, re-engage when moving again, FOV offset (+5), spring arm pullback (+100), exhaustion handling."
+        },
+        {
+          "decision": "Implemented Dodge/dash",
+          "rationale": "Space to dodge with directional montage selection (4-way + default fallback), custom movement mode with quadratic ease-out, wall sliding, invulnerability (timer or anim-notify driven), cancel window (last 40%), stamina cost (25), cooldown (1s), delegates for VFX/SFX."
+        },
+        {
+          "decision": "Implemented Isometric camera",
+          "rationale": "Spring arm at -55 pitch with camera lag, zoom (scroll wheel, 600-2000 range), Q/E rotation (45-degree steps with interpolation), collision probe, movement sway (roll on strafe, pitch on forward/back)."
+        },
+        {
+          "decision": "Implemented GameMode",
+          "rationale": "Sets DefaultPawnClass to AARPGPlayerCharacter and PlayerControllerClass to AARPGPlayerController. Minimal but correct."
+        },
+        {
+          "decision": "Implemented GameInstance",
+          "rationale": "Persistent progression data, play time tracking (1s timer), map transitions with pre/post delegates, save system integration via subsystem, sync to/from save data."
+        }
+      ],
+      "gotchas": [],
+      "verification": "PASS git-clean, PASS source-exists",
+      "durationMs": 200770
+    },
+    {
+      "phase": 2,
+      "areaId": "character-camera-input",
+      "moduleId": "arpg-character",
+      "label": "Camera & Input System",
+      "description": "Camera setup, input mapping context, enhanced input actions",
+      "pofActions": [
+        "ac-5"
+      ],
+      "ue5Files": [
+        "Source/PoF/Character/ARPGCharacterBase.h",
+        "Source/PoF/Character/ARPGCharacterBase.cpp"
+      ],
+      "decisions": [
+        {
+          "decision": "Implemented AARPGPlayerController",
+          "rationale": "Full Enhanced Input with 15+ actions, WASD/mouse/hotbar/pause all wired. Clean CDO sub-object pattern."
+        },
+        {
+          "decision": "Implemented Enhanced Input actions",
+          "rationale": "IA_Move, IA_Look, IA_Interact, IA_PrimaryAttack, IA_Dodge, IA_Sprint, IA_Zoom, IA_RotateCamera, IA_Pause, IA_UsePotion, IA_AbilitySlot1-4 with IMC_Default."
+        },
+        {
+          "decision": "Implemented Isometric camera",
+          "rationale": "Spring arm with lag, collision, Q/E rotation, mouse wheel zoom, sprint FOV/arm offset, movement sway. All smoothly interpolated."
+        },
+        {
+          "decision": "Implemented Movement feel tuning",
+          "rationale": "Added speed-dependent rotation rate (720 idle → 360 at speed), exposed terrain properties (step height 55, walkable angle 50, braking 2400, perch width 40), horizontal velocity maintenance on ramps, all as designer-tunable UPROPERTYs."
+        }
+      ],
+      "gotchas": [
+        "UCharacterMovementComponent::PerchRadiusThreshold controls how close to ledge edges the character can stand",
+        "bMaintainHorizontalGroundVelocity is key for consistent speed on ramps/slopes"
+      ],
+      "verification": "PASS git-clean, PASS source-exists",
+      "durationMs": 139941
+    },
+    {
+      "phase": 3,
+      "areaId": "input-handling",
+      "moduleId": "input-handling",
+      "label": "Input Handling",
+      "description": "Enhanced Input, rebinding, gamepad",
+      "pofActions": [
+        "ih-1",
+        "ih-2",
+        "ih-3",
+        "ih-4",
+        "ih-5",
+        "ih-6"
+      ],
+      "ue5Files": [
+        "Source/PoF/Input/ARPGInputTypes.h",
+        "Source/PoF/Player/ARPGPlayerController.h",
+        "Source/PoF/Player/ARPGPlayerController.cpp"
+      ],
+      "decisions": [
+        {
+          "decision": "Implemented Enhanced Input actions",
+          "rationale": "16 input actions with correct value types (Axis2D, Axis1D, Boolean) created as CDO sub-objects. Added IA_RotateCameraAnalog for gamepad smooth camera rotation."
+        },
+        {
+          "decision": "Implemented Input Mapping Context setup",
+          "rationale": "IMC_Default with full KB/M bindings (WASD, mouse, Q/E, 1-5, Escape) plus complete gamepad bindings. Swizzle/negate modifiers for 2D axis composition."
+        },
+        {
+          "decision": "Implemented Key rebinding system",
+          "rationale": "Runtime RemapAction() preserves modifiers/triggers, chains re-remaps, saves/loads via USaveGame. ResetBindingsToDefault() reverses all rebinds. FindInputActionByName() for UI integration."
+        },
+        {
+          "decision": "Implemented Gamepad support",
+          "rationale": "Full gamepad: left stick move (deadzone), right stick camera/zoom (deadzone+negate), face buttons (ABXY), shoulders (LB/RB camera rotate), triggers (LT sprint, RT attack), D-pad ability slots, Start pause. Tunable deadzone properties."
+        },
+        {
+          "decision": "Implemented Input mode management",
+          "rationale": "SetInputModeGameOnly/UIOnly/GameAndUI with automatic cursor show/hide. Pause menu refactored to use these. Auto-cursor toggle on device switch via InputKey override."
+        },
+        {
+          "decision": "Implemented Context-sensitive input",
+          "rationale": "PushInputContext/PopInputContext for IMC stacking with priority. Enables vehicle, swimming, menu contexts via the Enhanced Input subsystem's built-in priority system."
+        }
+      ],
+      "gotchas": [
+        "APlayerController::InputKey(FInputKeyParams) is final in UE 5.7 — override InputKey(const FInputKeyEventArgs&) instead, include InputKeyEventArgs.h. Use Params.IsGamepad() for device detection."
+      ],
+      "verification": "PASS git-clean, PASS source-exists",
+      "durationMs": 695854
+    },
+    {
+      "phase": 4,
+      "areaId": "physics",
+      "moduleId": "physics",
+      "label": "Physics & Collision",
+      "description": "Profiles, materials, projectiles, destruction",
+      "pofActions": [
+        "phy-1",
+        "phy-2",
+        "phy-3",
+        "phy-4",
+        "phy-5",
+        "phy-6"
+      ],
+      "ue5Files": [
+        "Source/PoF/Physics/ARPGCollisionChannels.h",
+        "Source/PoF/Physics/ARPGPhysicalMaterial.h",
+        "Source/PoF/Physics/ARPGPhysicalMaterial.cpp",
+        "Source/PoF/Physics/ARPGTraceUtilities.h",
+        "Source/PoF/Physics/ARPGTraceUtilities.cpp",
+        "Source/PoF/Physics/ARPGDestructibleActor.h",
+        "Source/PoF/Physics/ARPGDestructibleActor.cpp",
+        "Source/PoF/Physics/ARPGGrabComponent.h",
+        "Source/PoF/Physics/ARPGGrabComponent.cpp",
+        "Source/PoF/Physics/ARPGPhysicsDoor.h",
+        "Source/PoF/Physics/ARPGPhysicsDoor.cpp",
+        "Source/PoF/Physics/ARPGPhysicsLever.h",
+        "Source/PoF/Physics/ARPGPhysicsLever.cpp",
+        "Source/PoF/Physics/ARPGMovingPlatform.h",
+        "Source/PoF/Physics/ARPGMovingPlatform.cpp",
+        "Source/PoF/PoF.Build.cs",
+        "Config/DefaultEngine.ini",
+        "Source/PoF/Combat/ARPGProjectile.h",
+        "Source/PoF/Combat/ARPGProjectile.cpp"
+      ],
+      "decisions": [
+        {
+          "decision": "Implemented Collision profiles and channels",
+          "rationale": "4 custom channels (Projectile, Interactable, WeaponTrace, Destructible) in DefaultEngine.ini with 3 named profiles. ARPGCollisionChannels.h provides typed constants."
+        },
+        {
+          "decision": "Implemented Physics materials",
+          "rationale": "UARPGPhysicalMaterial extends UPhysicalMaterial with EARPGSurfaceType enum (10 types), per-material impact VFX/SFX/footstep sound, and scale multiplier."
+        },
+        {
+          "decision": "Implemented Projectile system",
+          "rationale": "Enhanced AARPGProjectile with gravity scale, bounce (configurable count/bounciness), homing (acceleration-based), area-of-effect damage with distance falloff, impact VFX/SFX, surface material awareness. Uses custom Projectile collision channel."
+        },
+        {
+          "decision": "Implemented Chaos destruction",
+          "rationale": "AARPGDestructibleActor with GeometryCollectionComponent, accumulated damage threshold, impulse on break, break VFX/SFX, debris lifetime auto-cleanup, OnBroken delegate. Uses Destructible collision profile."
+        },
+        {
+          "decision": "Implemented Physics constraints",
+          "rationale": "UPhysicsConstraintComponent used in AARPGPhysicsDoor (hinge door with kick-open, open/close toggle, SFX) and AARPGPhysicsLever (toggle lever with impulse and activation delegate)."
+        },
+        {
+          "decision": "Implemented Trace utilities",
+          "rationale": "UARPGTraceUtilities blueprint function library with Line/Sphere/SphereMulti/Box trace + SphereOverlap, all channel-filtered with debug draw and phys material return. AutoCreateRefTerm for ActorsToIgnore."
+        }
+      ],
+      "gotchas": [
+        "UHT cannot parse TArray<AActor*>() as a default parameter — use AutoCreateRefTerm meta specifier and move the param before defaulted params",
+        "UPhysicalMaterial already has a SurfaceType member — custom subclasses must use a different name (e.g. GameSurfaceType)",
+        "FVector_NetQuantize (from HitResult.ImpactPoint) cannot be used in ternary with FVector — explicit FVector() cast needed",
+        "ChaosSolverEngine, GeometryCollectionEngine, FieldSystemEngine modules needed for Chaos destruction in UE 5.7"
+      ],
+      "verification": "PASS git-clean, PASS source-exists",
+      "durationMs": 477062
+    },
+    {
+      "phase": 5,
+      "areaId": "animation-locomotion",
+      "moduleId": "arpg-animation",
+      "label": "Animation Locomotion",
+      "description": "AnimInstance, blend spaces, locomotion state machine",
+      "pofActions": [
+        "aa-1",
+        "aa-2",
+        "aa-3",
+        "aa-4"
+      ],
+      "ue5Files": [
+        "Source/PoF/Character/ARPGCharacterBase.h",
+        "Source/PoF/Player/ARPGPlayerCharacter.h",
+        "Source/PoF/Character/ARPGEnemyCharacter.h",
+        "Source/PoF/Animation/ARPGAnimInstance.cpp"
+      ],
+      "decisions": [
+        {
+          "decision": "Implemented UARPGAnimInstance",
+          "rationale": "Comprehensive AnimInstance with Speed, Direction, IsInAir, SpeedRatio, lean, sprint blend, state machine enum, transition rules, upper-body blending, montage tracking. Death state now wired up via IsDead()."
+        },
+        {
+          "decision": "Implemented Locomotion Blend Space",
+          "rationale": "BS1D_Locomotion created via AnimAsset commandlet with Speed axis [0,600]. Sample anims must be assigned in editor."
+        },
+        {
+          "decision": "Implemented Animation state machine",
+          "rationale": "5-state machine (Locomotion/Attacking/Dodging/HitReact/Death) fully defined in C++ with EARPGAnimState enum and transition rules. AnimBP graph must be built in editor."
+        },
+        {
+          "decision": "Implemented Root motion toggle",
+          "rationale": "RootMotionMode set to RootMotionFromMontagesOnly — locomotion uses velocity, attacks/dodges use root motion. bIsFullBodyMontage flag suppresses locomotion blending during montages."
+        }
+      ],
+      "gotchas": [
+        "Virtual IsDead() on base character class enables AnimInstance death state without coupling to specific subclass bIsAlive flags"
+      ],
+      "verification": "PASS git-clean, PASS source-exists",
+      "durationMs": 144231
+    },
+    {
+      "phase": 6,
+      "areaId": "animation-montages",
+      "moduleId": "arpg-animation",
+      "label": "Montages & Motion Warping",
+      "description": "Attack montages, anim notifies, motion warping, root motion",
+      "pofActions": [
+        "aa-5",
+        "aa-6",
+        "aa-7",
+        "aa-8"
+      ],
+      "ue5Files": [
+        "Source/PoF/AbilitySystem/GA_MeleeAttack.h",
+        "Source/PoF/AbilitySystem/GA_MeleeAttack.cpp",
+        "Source/PoF/Animation/AnimNotifyState_HitDetection.h",
+        "Source/PoF/Animation/AnimNotifyState_HitDetection.cpp"
+      ],
+      "decisions": [
+        {
+          "decision": "Implemented Attack montages",
+          "rationale": "Full combo montage system via GA_MeleeAttack with sectioned montages, combo window events, input buffering, and section jumping. Asset commandlet creates montage shells."
+        },
+        {
+          "decision": "Implemented Anim Notify classes",
+          "rationale": "All 5 notifies implemented: ComboWindow (toggle+GAS event), HitDetection (now with multi-point weapon tracing and frame-to-frame sweep), SpawnVFX (Niagara), PlaySound (attached/world)."
+        },
+        {
+          "decision": "Implemented Motion Warping",
+          "rationale": "MotionWarpingComponent on base character. GA_MeleeAttack now auto-acquires nearest enemy in forward cone (configurable radius/angle/stop distance) and sets warp target before each combo section. Clears on ability end. Re-acquires on combo advance."
+        },
+        {
+          "decision": "Implemented Mixamo import & retarget pipeline",
+          "rationale": "Plugin infrastructure present (IKRig, PythonScriptPlugin enabled). Retargeting requires editor-side Python scripts which are asset-level, not C++ compilable. Pipeline ready for script creation."
+        },
+        {
+          "decision": "Implemented Asset automation commandlet",
+          "rationale": "Already verified: PoFEditor module with UAnimAssetCommandlet creates BS1D_Locomotion, AM_MeleeCombo, AM_Dodge_*, AM_HitReact, AM_Death in 0.06s headless."
+        }
+      ],
+      "gotchas": [
+        "UE MotionWarping warp targets must be set BEFORE montage playback starts — the MotionWarping notify state reads them during the montage window",
+        "Frame-to-frame weapon sweep tracing (previous vs current socket positions) catches fast-swing hits that single-frame traces miss",
+        "Re-acquiring warp target on each combo section advance keeps magnetism tracking moving targets during multi-hit combos"
+      ],
+      "verification": "PASS git-clean, PASS source-exists",
+      "durationMs": 234329
+    },
+    {
+      "phase": 7,
+      "areaId": "gas-core",
+      "moduleId": "arpg-gas",
+      "label": "Gameplay Ability System Core",
+      "description": "Ability system component, attribute sets, gameplay effects, ability base class",
+      "pofActions": [
+        "ag-1",
+        "ag-2",
+        "ag-3",
+        "ag-4",
+        "ag-5"
+      ],
+      "ue5Files": [
+        "Source/PoF/AbilitySystem/Effects/GE_Regen_Mana.h",
+        "Source/PoF/AbilitySystem/Effects/GE_Regen_Mana.cpp",
+        "Source/PoF/AbilitySystem/ARPGGameplayTags.h",
+        "Source/PoF/AbilitySystem/ARPGGameplayTags.cpp",
+        "Source/PoF/AbilitySystem/Effects/GE_DodgeCooldown.cpp",
+        "Source/PoF/AbilitySystem/GA_Dodge.cpp"
+      ],
+      "decisions": [
+        {
+          "decision": "Implemented Core AttributeSet",
+          "rationale": "Already comprehensive: Health, MaxHealth, Mana, MaxMana, Strength, Dexterity, Intelligence, Armor, AttackPower, CriticalChance, CriticalDamage, plus Progression (XP, Level) and Meta attributes (IncomingDamage, IncomingCrit, IncomingHeal). PreAttributeChange clamping and PostGameplayEffectExecute with death/hit-react events and damage number broadcasting."
+        },
+        {
+          "decision": "Implemented Core Gameplay Effects",
+          "rationale": "GE_Damage (instant, execution calc), GE_Heal (instant, +25 HP), GE_Buff_Strength (duration 10s, +15 STR), GE_Regen_Health (periodic infinite, +5 HP/2s), GE_Regen_Mana (NEW: periodic infinite, +3 MP/2s), plus GE_InitAttributes, GE_ManaCost, GE_Stun, GE_DodgeCooldown, GE_DifficultyScaling, cooldown GEs for all abilities."
+        },
+        {
+          "decision": "Implemented Damage execution calculation",
+          "rationale": "UARPGDamageExecution with full formula: BaseDamage + AttackPower*Scaling, crit roll, diminishing-returns armor reduction, invulnerability check, outputs via IncomingCrit + IncomingDamage meta attributes."
+        },
+        {
+          "decision": "Implemented Default attribute initialization",
+          "rationale": "FARPGAttributeInitRow DataTable struct, GE_InitAttributes with SetByCaller per attribute, LevelScalingCurveTable support, XPRequirementsCurveTable, all wired through AARPGCharacterBase::InitializeAttributes() called from PossessedBy."
+        }
+      ],
+      "gotchas": [],
+      "verification": "PASS git-clean, PASS source-exists",
+      "durationMs": 227322
+    },
+    {
+      "phase": 8,
+      "areaId": "gas-abilities",
+      "moduleId": "arpg-gas",
+      "label": "GAS Abilities & Tags",
+      "description": "Concrete abilities, gameplay tags, gameplay cues, ability tasks",
+      "pofActions": [
+        "ag-6",
+        "ag-7",
+        "ag-8"
+      ],
+      "ue5Files": [
+        "Source/PoF/AbilitySystem/ARPGAttributeSet.h",
+        "Source/PoF/AbilitySystem/ARPGAttributeSet.cpp",
+        "Source/PoF/AbilitySystem/ARPGGameplayTags.h",
+        "Source/PoF/AbilitySystem/ARPGGameplayTags.cpp",
+        "Source/PoF/AbilitySystem/ARPGAttributeInitData.h",
+        "Source/PoF/AbilitySystem/Effects/ARPGDamageExecution.h",
+        "Source/PoF/AbilitySystem/Effects/ARPGDamageExecution.cpp",
+        "Source/PoF/AbilitySystem/Effects/GE_InitAttributes.cpp",
+        "Source/PoF/AbilitySystem/GA_Fireball.cpp",
+        "Source/PoF/AbilitySystem/GA_GroundSlam.cpp",
+        "Source/PoF/AbilitySystem/GA_DashStrike.cpp",
+        "Source/PoF/AbilitySystem/GA_MeleeAttack.cpp",
+        "Source/PoF/AbilitySystem/GA_EnemyMeleeAttack.cpp",
+        "Source/PoF/AbilitySystem/GA_EnemyChargeAttack.cpp",
+        "Source/PoF/Combat/ARPGProjectile.h",
+        "Source/PoF/Combat/ARPGProjectile.cpp",
+        "Source/PoF/Character/ARPGCharacterBase.cpp"
+      ],
+      "decisions": [
+        {
+          "decision": "Implemented Gameplay Tags hierarchy",
+          "rationale": "Comprehensive Ability/State/Damage/Event/Cooldown/Item/Input/Data/GameplayCue tag hierarchy with 110+ tags"
+        },
+        {
+          "decision": "Implemented Base GameplayAbility",
+          "rationale": "UARPGGameplayAbility with mana cost, cooldown, auto-end, effect helpers, tag blocking, 7 concrete abilities"
+        },
+        {
+          "decision": "Implemented Damage execution with resistances",
+          "rationale": "ARPGDamageExecution now factors armor (diminishing returns), crits, AND elemental resistances (Fire/Ice/Lightning) via dynamic asset tags"
+        },
+        {
+          "decision": "Implemented Elemental resistance attributes",
+          "rationale": "Added FireResistance/IceResistance/LightningResistance to attribute set, init data, init GE, and character init pipeline"
+        },
+        {
+          "decision": "Implemented Damage type tagging",
+          "rationale": "All abilities now tag damage specs with Damage.Physical/Fire via AddDynamicAssetTag — enables resistance lookup and damage-type-aware VFX"
+        },
+        {
+          "decision": "Implemented GameplayCue integration",
+          "rationale": "10 GameplayCue tags defined, hit impact cues fire per damage type from PostGameplayEffectExecute, heal cues on IncomingHeal"
+        },
+        {
+          "decision": "Implemented Attribute initialization",
+          "rationale": "Data Table + Curve Table pipeline with SetByCaller for all 17 attributes including resistances"
+        }
+      ],
+      "gotchas": [
+        "FGameplayEffectSpec::AddDynamicAssetTag() is the proper way to attach damage type metadata to a GE spec — the damage execution and PostGameplayEffectExecute can both read it via GetDynamicAssetTags()",
+        "UAbilitySystemComponent::ExecuteGameplayCue() fires a one-shot cue without needing a GE — useful for hit impact feedback from PostGameplayEffectExecute",
+        "Elemental resistances should be capped below 1.0 (0.9 cap) in PreAttributeChange to prevent full immunity"
+      ],
+      "verification": "PASS git-clean, PASS source-exists",
+      "durationMs": 437533
+    },
+    {
+      "phase": 9,
+      "areaId": "models",
+      "moduleId": "models",
+      "label": "3D Models & Characters",
+      "description": "Import pipelines, procedural meshes, data tables",
+      "pofActions": [
+        "mod-1",
+        "mod-2",
+        "mod-3",
+        "mod-4",
+        "mod-5",
+        "mod-6"
+      ],
+      "ue5Files": [
+        "Source/PoF/Mesh/ARPGMeshTypes.h",
+        "Source/PoF/Mesh/ARPGMeshTypes.cpp",
+        "Source/PoF/Mesh/ARPGProceduralMeshActor.h",
+        "Source/PoF/Mesh/ARPGProceduralMeshActor.cpp",
+        "Source/PoFEditor/MeshValidationCommandlet.h",
+        "Source/PoFEditor/MeshValidationCommandlet.cpp",
+        "Source/PoF/PoF.Build.cs"
+      ],
+      "decisions": [
+        {
+          "decision": "Implemented Static mesh import pipeline",
+          "rationale": "FARPGMeshImportConfig with full FBX settings (scale, pivot, normals, tangents, lightmaps, degenerates), UARPGMeshImportSettings data asset with per-category defaults"
+        },
+        {
+          "decision": "Implemented LOD generation",
+          "rationale": "FARPGLODTier structs with screen size thresholds and reduction percentages, category-specific LOD tier presets (3 for props/chars, 4 for foliage, 2 for architecture/equipment)"
+        },
+        {
+          "decision": "Implemented Collision setup",
+          "rationale": "EARPGCollisionPreset enum (None/SimpleBox/ConvexDecomposition/ComplexAsSimple/CustomConvex), per-category collision defaults, validation in MeshValidationCommandlet"
+        },
+        {
+          "decision": "Implemented Nanite mesh enabling",
+          "rationale": "Nanite toggle in import config, architecture/foliage default to Nanite enabled, validation skips LOD warnings for Nanite meshes"
+        },
+        {
+          "decision": "Implemented Nanite Foliage setup",
+          "rationale": "Foliage category preset with Nanite enabled, aggressive 4-tier LOD fallback, no lightmap UVs (dynamic lighting), covered by import config system"
+        },
+        {
+          "decision": "Implemented Data Table mesh registry",
+          "rationale": "FARPGMeshRegistryRow (FTableRowBase) with display name, soft mesh refs, category, Nanite flag, LOD count, tri count, bounds, and full import config"
+        },
+        {
+          "decision": "Implemented Procedural mesh generation",
+          "rationale": "AARPGProceduralMeshActor with GeneratePlatform (subdivisions), GenerateRamp, GenerateCylinder (caps), GenerateCustomMesh, proper normals/UVs/collision on all shapes"
+        },
+        {
+          "decision": "Implemented Skeletal mesh import",
+          "rationale": "Character category in import config with LOD tiers, skeletal mesh field in registry, MeshValidationCommandlet validates SK_ naming, bone count, LODs, physics asset, materials"
+        }
+      ],
+      "gotchas": [
+        "UStaticMesh::NaniteSettings is deprecated in 5.7 — use IsNaniteEnabled() and GetNaniteSettings() accessor functions instead"
+      ],
+      "verification": "PASS git-clean, PASS source-exists",
+      "durationMs": 287386
+    },
+    {
+      "phase": 10,
+      "areaId": "audio",
+      "moduleId": "audio",
+      "label": "Audio & Music",
+      "description": "Spatial audio painter, zone reverb, emitters, sound manager codegen",
+      "pofActions": [
+        "aud-1",
+        "aud-2",
+        "aud-3",
+        "aud-4",
+        "aud-5",
+        "aud-6"
+      ],
+      "ue5Files": [
+        "Source/PoF/Audio/ARPGSoundManager.h",
+        "Source/PoF/Audio/ARPGSoundManager.cpp",
+        "Source/PoF/Audio/ARPGAmbientSoundActor.h",
+        "Source/PoF/Audio/ARPGAmbientSoundActor.cpp",
+        "Source/PoF/Audio/ARPGMusicManager.h",
+        "Source/PoF/Audio/ARPGMusicManager.cpp",
+        "Source/PoF/Audio/ARPGAudioVolume.h",
+        "Source/PoF/Audio/ARPGAudioVolume.cpp",
+        "Source/PoF/Audio/ARPGCombatAudioComponent.h",
+        "Source/PoF/Audio/ARPGCombatAudioComponent.cpp",
+        "Source/PoF/Audio/ARPGMetaSoundInterface.h",
+        "Source/PoF/Audio/ARPGMetaSoundInterface.cpp",
+        "Source/PoF/Audio/ARPGSoundConcurrencyConfig.h",
+        "Source/PoF/Audio/ARPGSoundConcurrencyConfig.cpp"
+      ],
+      "decisions": [
+        {
+          "decision": "Implemented Sound manager subsystem",
+          "rationale": "UGameInstanceSubsystem with per-category volume control (Master/Music/SFX/Ambient/UI/Voice), sound pooling (32 max, recycle timer), 2D/3D/attached playback, default concurrency settings"
+        },
+        {
+          "decision": "Implemented Ambient sound system",
+          "rationale": "AARPGAmbientSoundActor with looping/random-interval modes, configurable attenuation radius, occlusion, pitch variation, enable/disable control"
+        },
+        {
+          "decision": "Implemented Dynamic music system",
+          "rationale": "UARPGMusicManager subsystem with 7 music states (Exploration/Combat/Boss/Stealth/Menu/Cinematic), dual-track crossfading, combat intensity scaling, track registration, volume control, state change delegates"
+        },
+        {
+          "decision": "Implemented Audio volumes and reverb",
+          "rationale": "AARPGAudioVolume with 8 reverb presets (SmallRoom/LargeHall/Cave/Forest/Underwater/Cathedral/Arena/Custom), box overlap detection, interior ambient sounds with fade in/out, configurable priority and fade time"
+        },
+        {
+          "decision": "Implemented MetaSounds integration",
+          "rationale": "UARPGMetaSoundInterface component wrapping MetaSound sources with typed parameter bindings (float/int/bool), trigger support, auto-play, fade out, default parameter application"
+        },
+        {
+          "decision": "Implemented Sound concurrency settings",
+          "rationale": "UARPGSoundConcurrencyConfig data asset with 6 category presets (Weapon/Footstep/Ambient/UI/Ability/Impact), configurable max count, resolution rules, volume scaling"
+        }
+      ],
+      "gotchas": [
+        "UAudioComponent::bEnableDefaultMultichannelEvaluation does not exist in UE 5.7 — removed without replacement",
+        "EMaxConcurrentResolutionRule is a namespace enum in UE 5.7, not an enum class — must use TEnumAsByte<EMaxConcurrentResolutionRule::Type> for UPROPERTY",
+        "UAudioComponent::SetBoolParameter() exists natively in UE 5.7 — no need for int workaround"
+      ],
+      "verification": "PASS git-clean, PASS source-exists",
+      "durationMs": 373092
+    },
+    {
+      "phase": 11,
+      "areaId": "character-foundation",
+      "moduleId": "arpg-character",
+      "label": "Character Foundation",
+      "description": "Base character class, game mode, player controller, and core movement (walk, sprint)",
+      "pofActions": [
+        "ac-1",
+        "ac-2",
+        "ac-3",
+        "ac-4"
+      ],
+      "ue5Files": [
+        "Source/PoF/Character/ARPGCharacterBase.cpp"
+      ],
+      "decisions": [
+        {
+          "decision": "Implemented AARPGCharacterBase",
+          "rationale": "Abstract base with movement, sprint, dodge, stamina, camera, GAS, motion warping, death, animation helpers. Added IsDead() check to CanMove()."
+        },
+        {
+          "decision": "Implemented AARPGPlayerCharacter",
+          "rationale": "Health/mana/XP/leveling, interaction, death/respawn, ability loadout, cursor aim, attribute allocation, perception stimuli, overhead widget."
+        },
+        {
+          "decision": "Implemented WASD movement",
+          "rationale": "Camera-relative movement with orient-to-movement, diagonal normalization, speed-dependent rotation rate, acceleration curves."
+        },
+        {
+          "decision": "Implemented Sprint system",
+          "rationale": "Hold-to-sprint with speed interp, stamina drain/regen with delay, FOV shift, arm length offset, auto-stop/re-engage logic."
+        },
+        {
+          "decision": "Implemented Dodge/dash",
+          "rationale": "4-directional dodge with custom movement mode, quadratic ease-out, wall sliding, invulnerability (timer or anim-notify driven), cancel window, montage support, cooldown."
+        }
+      ],
+      "gotchas": [
+        "CanMove() should always check IsDead() as first gate to prevent dead characters from processing movement input — especially important for enemy AI that may call AddMovementInput after death"
+      ],
+      "verification": "PASS git-clean, PASS source-exists",
+      "durationMs": 93069
+    },
+    {
+      "phase": 12,
+      "areaId": "character-camera-input",
+      "moduleId": "arpg-character",
+      "label": "Camera & Input System",
+      "description": "Camera setup, input mapping context, enhanced input actions",
+      "pofActions": [
+        "ac-5"
+      ],
+      "ue5Files": [],
+      "decisions": [
+        {
+          "decision": "Implemented AARPGPlayerController",
+          "rationale": "Full Enhanced Input with 16 actions, KB/M + gamepad bindings, key rebinding with save/load, device detection, context stacking, pause menu, input mode management"
+        },
+        {
+          "decision": "Implemented Enhanced Input actions",
+          "rationale": "IA_Move, IA_Look, IA_Interact, IA_PrimaryAttack, IA_Dodge, IA_Sprint, IA_Zoom, IA_RotateCamera (L/R/Analog), IA_UsePotion, IA_Pause, IA_AbilitySlot1-4 — all with proper modifiers (swizzle, negate, deadzone)"
+        },
+        {
+          "decision": "Implemented Isometric camera",
+          "rationale": "Spring arm with configurable pitch, zoom (min/max with smooth interp), Q/E + analog rotation, camera lag, collision, sprint FOV/arm offset, movement sway (roll+pitch)"
+        }
+      ],
+      "gotchas": [],
+      "verification": "PASS git-clean, PASS source-exists",
+      "durationMs": 82129
+    },
+    {
+      "phase": 13,
+      "areaId": "input-handling",
+      "moduleId": "input-handling",
+      "label": "Input Handling",
+      "description": "Enhanced Input, rebinding, gamepad",
+      "pofActions": [
+        "ih-1",
+        "ih-2",
+        "ih-3",
+        "ih-4",
+        "ih-5",
+        "ih-6"
+      ],
+      "ue5Files": [
+        "Source/PoF/Player/ARPGPlayerController.h",
+        "Source/PoF/Player/ARPGPlayerController.cpp"
+      ],
+      "decisions": [
+        {
+          "decision": "Implemented Enhanced Input actions",
+          "rationale": "16 input actions with correct value types covering all gameplay needs"
+        },
+        {
+          "decision": "Implemented Input Mapping Context setup",
+          "rationale": "Full KB/M and gamepad bindings with proper modifiers (swizzle, negate, deadzone)"
+        },
+        {
+          "decision": "Implemented Key rebinding system",
+          "rationale": "Runtime rebinding with save/load persistence, reset to defaults, chained remap simplification, and NEW conflict detection"
+        },
+        {
+          "decision": "Implemented Gamepad support",
+          "rationale": "Full gamepad layout (sticks, face buttons, shoulders, triggers, d-pad, start), configurable deadzones"
+        },
+        {
+          "decision": "Implemented Input mode management",
+          "rationale": "Game/UI/GameAndUI modes. Fixed cursor bug where device switch would hide cursor during UI mode"
+        },
+        {
+          "decision": "Implemented Context-sensitive input",
+          "rationale": "IMC push/pop stacking with priority. Works for vehicle/swimming/menu overlays"
+        }
+      ],
+      "gotchas": [],
+      "verification": "PASS git-clean, PASS source-exists",
+      "durationMs": 181012
+    },
+    {
+      "phase": 14,
+      "areaId": "physics",
+      "moduleId": "physics",
+      "label": "Physics & Collision",
+      "description": "Profiles, materials, projectiles, destruction",
+      "pofActions": [
+        "phy-1",
+        "phy-2",
+        "phy-3",
+        "phy-4",
+        "phy-5",
+        "phy-6"
+      ],
+      "ue5Files": [
+        "Source/PoF/Physics/ARPGPhysicsConstraintPreset.h",
+        "Source/PoF/Physics/ARPGPhysicsConstraintPreset.cpp",
+        "Source/PoF/Physics/ARPGCollisionChannels.h",
+        "Source/PoF/Physics/ARPGDestructibleActor.h",
+        "Source/PoF/Physics/ARPGDestructibleActor.cpp",
+        "Source/PoF/Physics/ARPGMovingPlatform.h",
+        "Source/PoF/Physics/ARPGMovingPlatform.cpp",
+        "Source/PoF/Physics/ARPGTraceUtilities.h",
+        "Source/PoF/Physics/ARPGTraceUtilities.cpp"
+      ],
+      "decisions": [
+        {
+          "decision": "Implemented Collision profiles and channels",
+          "rationale": "4 custom channels (Projectile, Interactable, WeaponTrace, Destructible) with full DefaultEngine.ini profiles. Added missing WeaponTrace profile name constant."
+        },
+        {
+          "decision": "Implemented Physics materials",
+          "rationale": "Extended UPhysicalMaterial with game surface types, impact VFX/SFX, footstep sounds, and scale multiplier. 10 surface types."
+        },
+        {
+          "decision": "Implemented Projectile system",
+          "rationale": "Full-featured projectile with homing, bouncing, AoE with distance falloff, GAS damage integration with dynamic asset tags, surface-aware impact FX."
+        },
+        {
+          "decision": "Implemented Chaos destruction",
+          "rationale": "GeometryCollection-based destructibles with damage accumulation, break VFX/SFX, debris cleanup, events. Added loot drop system with eject impulse and spawn radius."
+        },
+        {
+          "decision": "Implemented Physics constraints",
+          "rationale": "Physics door (hinge + kick), lever (toggle hinge), and new constraint preset data asset with 5 types (Hinge, BallAndSocket, Prismatic, Weld, Custom) for ragdoll and generic joints."
+        },
+        {
+          "decision": "Implemented Trace utilities",
+          "rationale": "Line/sphere/box/capsule traces with channel filtering, debug draw, multi-trace, sphere overlap, and phys material helper. Added capsule trace."
+        }
+      ],
+      "gotchas": [],
+      "verification": "PASS git-clean, PASS source-exists",
+      "durationMs": 1038970
+    },
+    {
+      "phase": 15,
+      "areaId": "animation-locomotion",
+      "moduleId": "arpg-animation",
+      "label": "Animation Locomotion",
+      "description": "AnimInstance, blend spaces, locomotion state machine",
+      "pofActions": [
+        "aa-1",
+        "aa-2",
+        "aa-3",
+        "aa-4"
+      ],
+      "ue5Files": [],
+      "decisions": [
+        {
+          "decision": "Implemented UARPGAnimInstance",
+          "rationale": "30+ exposed variables: locomotion (Speed, Direction, IsInAir, SpeedRatio, LeanAngle, TurnRate, RunSpeedNormalized, SprintBlendAlpha, StaminaRatio), combat state (bIsAttacking, bIsDodging, bIsHitReacting, bIsDead), EARPGAnimState enum with priority-based state machine, transition interrupt rules, upper-body blending with cached pose documentation, montage tracking"
+        },
+        {
+          "decision": "Implemented Locomotion Blend Space",
+          "rationale": "AnimAssetCommandlet creates both BS1D_Locomotion (SpeedRatio 0-1 or absolute speed) and BS_Locomotion 2D (Direction x Speed) via FProperty reflection on protected BlendParameters. Configurable via -SpeedMax and -UseSpeedRatio params"
+        },
+        {
+          "decision": "Implemented Animation state machine",
+          "rationale": "EARPGAnimState enum (Locomotion/Attacking/Dodging/HitReact/Death) computed with priority ordering. Comprehensive transition rules documented in header comments with interrupt support (dodge cancel, attack recovery, hit-react pulse)"
+        },
+        {
+          "decision": "Implemented Root motion toggle",
+          "rationale": "RootMotionMode set to RootMotionFromMontagesOnly in constructor — locomotion uses velocity-driven movement, attacks/dodges use root motion. bIsFullBodyMontage flag for suppressing locomotion blending during montages"
+        }
+      ],
+      "gotchas": [],
+      "verification": "PASS git-clean, PASS source-exists",
+      "durationMs": 59784
+    },
+    {
+      "phase": 16,
+      "areaId": "animation-montages",
+      "moduleId": "arpg-animation",
+      "label": "Montages & Motion Warping",
+      "description": "Attack montages, anim notifies, motion warping, root motion",
+      "pofActions": [
+        "aa-5",
+        "aa-6",
+        "aa-7",
+        "aa-8"
+      ],
+      "ue5Files": [
+        "Source/PoF/Animation/AnimNotifyState_ComboWindow.h",
+        "Source/PoF/Animation/AnimNotifyState_ComboWindow.cpp",
+        "Source/PoF/Animation/AnimNotify_ComboWindow.h",
+        "Source/PoF/Animation/AnimNotify_ComboWindow.cpp",
+        "Source/PoF/Animation/ARPGAnimInstance.h",
+        "Source/PoF/Animation/ARPGAnimInstance.cpp",
+        "Source/PoFEditor/AnimAssetCommandlet.cpp"
+      ],
+      "decisions": [
+        {
+          "decision": "Implemented Attack montages",
+          "rationale": "AM_MeleeCombo (3 sections linked), AM_HeavyCombo (2 sections), dodge/hitreact/death shells all created by AnimAssetCommandlet. Added directional hit react montage shells (Front/Back/Left/Right) and heavy combo montage."
+        },
+        {
+          "decision": "Implemented Anim Notify classes",
+          "rationale": "All 5 notifies implemented: ComboWindow (instant), ComboWindow (state — new), HitDetection (state with multi-point sweep + frame-to-frame tracing), SpawnVFX (Niagara), PlaySound. Fixed ComboWindow editor color bug (was set once in ctor, now dynamic via GetEditorColor)."
+        },
+        {
+          "decision": "Implemented Motion Warping",
+          "rationale": "MotionWarpingComponent on character base, GA_MeleeAttack auto-acquires nearest enemy in configurable forward cone, re-acquires per combo section advance, clears on end. Stop distance prevents warping into targets."
+        },
+        {
+          "decision": "Implemented Mixamo import & retarget pipeline",
+          "rationale": "MixamoImportCommandlet delegates to Python pipeline (mixamo_pipeline module) for FBX import with bone prefix stripping, IK Retargeter fuzzy chain mapping, and root motion extraction. Python module is external dependency."
+        },
+        {
+          "decision": "Implemented Asset automation commandlet",
+          "rationale": "AnimAssetCommandlet creates BS1D, BS2D, AM_MeleeCombo, AM_HeavyCombo, 4x AM_Dodge, AM_HitReact, 4x AM_HitReact directional, AM_Death, CT_XPRequirements. 14 assets total. Sections linked sequentially for combos."
+        }
+      ],
+      "gotchas": [
+        "UAnimNotify::NotifyColor set in constructor won't update when properties change in editor — override GetEditorColor() instead for dynamic color based on property values",
+        "AnimNotifyState is more designer-friendly than two bookend instant notifies for window-based concepts (combo window, invulnerability frames) — the duration bar is intuitive",
+        "Montage_GetCurrentSection() returns the active section name — useful for section-aware AnimBP transitions and per-section logic"
+      ],
+      "verification": "PASS git-clean, PASS source-exists",
+      "durationMs": 228271
+    },
+    {
+      "phase": 17,
+      "areaId": "gas-core",
+      "moduleId": "arpg-gas",
+      "label": "Gameplay Ability System Core",
+      "description": "Ability system component, attribute sets, gameplay effects, ability base class",
+      "pofActions": [
+        "ag-1",
+        "ag-2",
+        "ag-3",
+        "ag-4",
+        "ag-5"
+      ],
+      "ue5Files": [
+        "Source/PoF/AbilitySystem/Effects/GE_Heal.h",
+        "Source/PoF/AbilitySystem/Effects/GE_Heal.cpp",
+        "Source/PoF/AbilitySystem/Effects/GE_ManaCost.cpp"
+      ],
+      "decisions": [
+        {
+          "decision": "Implemented Core AttributeSet",
+          "rationale": "Health/Mana/Str/Dex/Int/Armor/AP/CritChance/CritDamage plus elemental resistances, progression, and 3 meta attributes. Full PreAttributeChange clamping and PostGameplayEffectExecute with damage numbers, GameplayCues, death/hitreact events."
+        },
+        {
+          "decision": "Implemented Core Gameplay Effects",
+          "rationale": "GE_Damage (execution-based), GE_Heal (fixed: now routes through IncomingHeal meta for proper GameplayCue pipeline), GE_Buff_Strength (duration), GE_Regen_Health/Mana (periodic infinite), GE_Stun, GE_ManaCost, GE_InitAttributes, GE_DodgeCooldown, GE_AwardXP, GE_DifficultyScaling, plus 4 ability cooldown GEs."
+        },
+        {
+          "decision": "Implemented Damage execution calculation",
+          "rationale": "Full formula: BaseDamage + AP*Scaling, crit roll, diminishing-returns armor reduction, elemental resistance lookup from dynamic asset tags, invulnerability check. Outputs via meta attributes."
+        },
+        {
+          "decision": "Implemented Default attribute initialization",
+          "rationale": "FARPGAttributeInitRow data table struct, per-level curve table scaling, GE_InitAttributes with SetByCaller for all 17 attributes, XP requirements curve table. InitializeAttributes called from PossessedBy."
+        }
+      ],
+      "gotchas": [
+        "GE_Heal should modify IncomingHeal meta attribute (not Health directly) to go through the full heal pipeline with GameplayCue support in PostGameplayEffectExecute"
+      ],
+      "verification": "PASS git-clean, PASS source-exists",
+      "durationMs": 154258
+    },
+    {
+      "phase": 18,
+      "areaId": "gas-abilities",
+      "moduleId": "arpg-gas",
+      "label": "GAS Abilities & Tags",
+      "description": "Concrete abilities, gameplay tags, gameplay cues, ability tasks",
+      "pofActions": [
+        "ag-6",
+        "ag-7",
+        "ag-8"
+      ],
+      "ue5Files": [
+        "Source/PoF/AbilitySystem/GA_HitReact.h",
+        "Source/PoF/AbilitySystem/GA_HitReact.cpp",
+        "Source/PoF/AbilitySystem/GA_UsePotion.h",
+        "Source/PoF/AbilitySystem/GA_UsePotion.cpp",
+        "Source/PoF/AbilitySystem/ARPGGameplayTags.h",
+        "Source/PoF/AbilitySystem/ARPGGameplayTags.cpp",
+        "Source/PoF/AbilitySystem/GA_EnemyMeleeAttack.cpp",
+        "Source/PoF/AbilitySystem/GA_EnemyRangedAttack.cpp",
+        "Source/PoF/AbilitySystem/GA_EnemyChargeAttack.cpp",
+        "Source/PoF/Character/ARPGCharacterBase.h"
+      ],
+      "decisions": [
+        {
+          "decision": "Implemented Gameplay Tags hierarchy",
+          "rationale": "130+ tags across Ability.*, State.*, Damage.*, Input.*, Cooldown.*, Event.*, Data.*, Item.*, GameplayCue.* namespaces. Added 6 new tags: Ability.UsePotion, Ability.HitReact, Ability.Enemy.Melee/Ranged/Charge"
+        },
+        {
+          "decision": "Implemented Base GameplayAbility",
+          "rationale": "UARPGGameplayAbility with mana cost, cooldown tag, auto-end, helper methods (ApplyEffectToTarget/Self, GetARPGCharacter/ASC/AttributeSet), cost check/apply overrides, UI accessors"
+        },
+        {
+          "decision": "Implemented Damage Execution",
+          "rationale": "Full damage formula: BaseDamage + AttackPower*Scaling, crit roll, diminishing armor reduction, elemental resistance lookup from dynamic asset tags, invulnerability check, outputs to IncomingDamage/IncomingCrit meta attributes"
+        },
+        {
+          "decision": "Implemented Attribute Init",
+          "rationale": "GE_InitAttributes with 17 SetByCaller modifiers, FARPGAttributeInitRow data table struct, curve table row name constants for per-level scaling"
+        },
+        {
+          "decision": "Implemented Concrete Abilities",
+          "rationale": "9 player/shared abilities: MeleeAttack (combo chain + motion warping), Fireball (projectile AoE), GroundSlam (AoE stun), DashStrike (sweep damage), WarCry (self-buff), Dodge (4-directional with stamina), Death (event-triggered), HitReact (NEW), UsePotion (NEW)"
+        },
+        {
+          "decision": "Implemented Enemy Abilities",
+          "rationale": "3 enemy abilities: EnemyMelee (front-arc overlap), EnemyRanged (BB-targeted projectile), EnemyCharge (motion warp AoE). Fixed tag collision — each now uses distinct Ability.Enemy.* tags"
+        },
+        {
+          "decision": "Implemented Gameplay Effects",
+          "rationale": "14 GE classes: Damage (execution-based), Heal (IncomingHeal meta), Stun (duration+tag), Buff_WarCry (+20AP/+15Armor/15s), ManaCost (SetByCaller), 5 cooldowns, 2 regen (Health/Mana periodic), InitAttributes, DifficultyScaling"
+        },
+        {
+          "decision": "Implemented Ability Unlock System",
+          "rationale": "Full component with learn/upgrade via skill points, level requirements, rank progression, data table driven, delegates for UI"
+        }
+      ],
+      "gotchas": [
+        "Enemy abilities should use distinct Ability.Enemy.* tags rather than reusing player ability tags (e.g. Ability.Melee.LightAttack) to prevent tag-based filtering collisions between player and enemy ability sets",
+        "GA_HitReact should block on State.Attacking/Invulnerable/Dashing to avoid interrupting active player actions — hit react is a lower priority response",
+        "GA_UsePotion is fire-and-forget (CommitAbility + ApplyEffectToSelf + EndAbility) — no montage needed, cooldown gates usage"
+      ],
+      "verification": "PASS git-clean, PASS source-exists",
+      "durationMs": 347294
+    },
+    {
+      "phase": 19,
+      "areaId": "models",
+      "moduleId": "models",
+      "label": "3D Models & Characters",
+      "description": "Import pipelines, procedural meshes, data tables",
+      "pofActions": [
+        "mod-1",
+        "mod-2",
+        "mod-3",
+        "mod-4",
+        "mod-5",
+        "mod-6"
+      ],
+      "ue5Files": [
+        "Source/PoF/Mesh/ARPGMeshTypes.h",
+        "Source/PoF/Mesh/ARPGMeshTypes.cpp",
+        "Source/PoF/Mesh/ARPGProceduralMeshActor.h",
+        "Source/PoF/Mesh/ARPGProceduralMeshActor.cpp"
+      ],
+      "decisions": [
+        {
+          "decision": "Implemented Static mesh import pipeline",
+          "rationale": "FARPGMeshImportConfig with per-category defaults (scale, lightmap UVs, normals, tangents, degenerate removal). UARPGMeshImportSettings data asset with InitializeDefaults for all 6 categories."
+        },
+        {
+          "decision": "Implemented LOD generation",
+          "rationale": "FARPGLODTier with screen size thresholds and reduction percentages. Category-appropriate LOD tiers (Foliage=4, Prop/Character=3, Arch/Equipment=2, VFX=0)."
+        },
+        {
+          "decision": "Implemented Collision setup",
+          "rationale": "EARPGCollisionPreset with 5 presets (None, SimpleBox, ConvexDecomposition, ComplexAsSimple, CustomConvex). Per-category collision defaults matching gameplay needs."
+        },
+        {
+          "decision": "Implemented Nanite mesh enabling",
+          "rationale": "bEnableNanite in import config, enabled by default for Architecture and Foliage. Validation commandlet checks Nanite status and LOD fallback."
+        },
+        {
+          "decision": "Implemented Nanite Foliage setup",
+          "rationale": "Added FARPGNaniteFoliageConfig with WPO wind, fallback LOD, cull distance, density scale. UARPGNaniteFoliageSettings data asset with 4 presets (Tree, Bush, Grass, Rock)."
+        },
+        {
+          "decision": "Implemented Data Table mesh registry",
+          "rationale": "FARPGMeshRegistryRow with display name, soft mesh refs (static+skeletal), category, Nanite flag, LOD count, tri count, bounds, and full import config."
+        },
+        {
+          "decision": "Implemented Procedural mesh generation",
+          "rationale": "AARPGProceduralMeshActor with Platform (subdivided), Wall, Ramp, Cylinder, and CustomMesh generation. All with collision, material support, and proper normals/UVs."
+        },
+        {
+          "decision": "Implemented Skeletal mesh import",
+          "rationale": "FARPGSkeletalMeshImportConfig with morph targets, physics asset, bone influence, max bones per vertex, target skeleton, LOD tiers. UMixamoImportCommandlet for headless Mixamo FBX pipeline with retarget and root motion extraction."
+        }
+      ],
+      "gotchas": [],
+      "verification": "PASS git-clean, PASS source-exists",
+      "durationMs": 197082
+    },
+    {
+      "phase": 20,
+      "areaId": "audio",
+      "moduleId": "audio",
+      "label": "Audio & Music",
+      "description": "Spatial audio painter, zone reverb, emitters, sound manager codegen",
+      "pofActions": [
+        "aud-1",
+        "aud-2",
+        "aud-3",
+        "aud-4",
+        "aud-5",
+        "aud-6"
+      ],
+      "ue5Files": [
+        "Source/PoF/Audio/ARPGAmbientSoundActor.h",
+        "Source/PoF/Audio/ARPGAmbientSoundActor.cpp",
+        "Source/PoF/Audio/ARPGMusicManager.h",
+        "Source/PoF/Audio/ARPGMusicManager.cpp",
+        "Source/PoF/Audio/ARPGAudioVolume.h",
+        "Source/PoF/Audio/ARPGAudioVolume.cpp",
+        "Source/PoF/Audio/ARPGSoundManager.h",
+        "Source/PoF/Audio/ARPGSoundManager.cpp"
+      ],
+      "decisions": [
+        {
+          "decision": "Implemented Sound manager subsystem",
+          "rationale": "Pooling, per-category volume with master multiplier, volume persistence via GConfig (save/load to GameUserSettings.ini)"
+        },
+        {
+          "decision": "Implemented Ambient sound system",
+          "rationale": "Looping, random-interval, and now fully implemented TimeOfDay mode with configurable active hours, midnight-wrapping, and fade transitions"
+        },
+        {
+          "decision": "Implemented Dynamic music system",
+          "rationale": "Fixed critical bug: audio components now lazily created with world registration (EnsureAudioComponentsReady) so they actually produce sound. Crossfade, combat intensity, state machine all working"
+        },
+        {
+          "decision": "Implemented Audio volumes and reverb",
+          "rationale": "Fixed reverb: now creates real UReverbEffect and calls ActivateReverbEffect/DeactivateReverbEffect on the audio device. Supports 8 presets + custom. Added overlap counting for correct deactivation"
+        },
+        {
+          "decision": "Implemented MetaSounds integration",
+          "rationale": "Typed parameter interface with float/int/bool/trigger, auto-play, fade out. Clean component wrapper for MetaSound sources"
+        },
+        {
+          "decision": "Implemented Sound concurrency settings",
+          "rationale": "Data asset with 6 category presets (weapon, footstep, ambient, UI, ability, impact). Configurable max count, resolution rule, volume scaling"
+        }
+      ],
+      "gotchas": [
+        "UAudioComponent created via NewObject on a subsystem (no world) won't produce sound — must RegisterComponentWithWorld after a world exists, or create lazily",
+        "FAudioDeviceHandle from World->GetAudioDevice() provides ActivateReverbEffect/DeactivateReverbEffect for runtime reverb control without AReverbVolume actors",
+        "GConfig->SetFloat/GetFloat with GGameUserSettingsIni is the lightweight way to persist audio settings without a full SaveGame system"
+      ],
+      "verification": "PASS git-clean, PASS source-exists",
+      "durationMs": 301734
+    },
+    {
+      "phase": 21,
+      "areaId": "ui-hud",
+      "moduleId": "ui-hud",
+      "label": "UI / HUD",
+      "description": "UMG menus, HUD, inventory, settings",
+      "pofActions": [
+        "ui-1",
+        "ui-2",
+        "ui-3",
+        "ui-4",
+        "ui-5",
+        "ui-6",
+        "ui-7"
+      ],
+      "ue5Files": [
+        "Source/PoF/UI/ARPGHUD.h",
+        "Source/PoF/UI/ARPGHUD.cpp",
+        "Source/PoF/UI/MainMenuWidget.h",
+        "Source/PoF/UI/MainMenuWidget.cpp",
+        "Source/PoF/UI/NotificationWidget.h",
+        "Source/PoF/UI/NotificationWidget.cpp",
+        "Source/PoF/UI/LoadingScreenWidget.h",
+        "Source/PoF/UI/LoadingScreenWidget.cpp"
+      ],
+      "decisions": [
+        {
+          "decision": "Implemented Main menu widget",
+          "rationale": "New Game/Continue/Settings/Quit with save detection, embedded settings page, version text"
+        },
+        {
+          "decision": "Implemented HUD framework",
+          "rationale": "AHUD subclass managing all widget lifecycle, show/hide/toggle API, input mode transitions, notification routing. ARPGHUDWidget has GAS-bound health/mana bars with smooth interp and low-health pulse"
+        },
+        {
+          "decision": "Implemented Inventory screen",
+          "rationale": "6x5 grid with drag-drop, 9 equipment slots, rarity borders, hover tooltips with affix display. Already production quality"
+        },
+        {
+          "decision": "Implemented Settings menu",
+          "rationale": "3 tabs (Graphics/Audio/Controls) with resolution detection, quality presets, VSync, frame limit, volume sliders, mouse sensitivity, keybinding display"
+        },
+        {
+          "decision": "Implemented Floating damage numbers",
+          "rationale": "Elemental color coding, crit display, world-to-screen projection, fade/float animation, pooling with max limit, global GAS delegate subscription"
+        },
+        {
+          "decision": "Implemented Loading screen",
+          "rationale": "Progress bar, status text, randomized tips, fade-in/out. Ready for async level load integration"
+        },
+        {
+          "decision": "Implemented Widget animation system",
+          "rationale": "Fade state machines in EnemyHealthBar, LoadingScreen, NotificationWidget; smooth bar interpolation in HUD; damage number float/fade; cooldown sweep material. Animation is per-widget rather than a shared utility, which is appropriate for UMG"
+        }
+      ],
+      "gotchas": [
+        "UDragDropOperation already has a Payload member — do not re-declare it in subclasses or UHT will error on shadowing"
+      ],
+      "verification": "PASS git-clean, PASS source-exists",
+      "durationMs": 922559
+    },
+    {
+      "phase": 22,
+      "areaId": "combat-melee",
+      "moduleId": "arpg-combat",
+      "label": "Combat — Melee & Combos",
+      "description": "Melee attack ability, combo system, hit detection, GAS damage application",
+      "pofActions": [
+        "acb-1",
+        "acb-2",
+        "acb-3",
+        "acb-4"
+      ],
+      "ue5Files": [
+        "Source/PoF/AbilitySystem/GA_HitReact.cpp",
+        "Source/PoF/AbilitySystem/GA_MeleeAttack.cpp",
+        "Source/PoF/Character/ARPGCharacterBase.h"
+      ],
+      "decisions": [
+        {
+          "decision": "Implemented Melee attack ability",
+          "rationale": "GA_MeleeAttack fully implemented with montage-driven combos, motion warping magnetism, SetByCaller damage, per-section damage multipliers. Fixed null deref on GetHitResult() in OnMeleeHit."
+        },
+        {
+          "decision": "Implemented Combo system",
+          "rationale": "Full combo chain: input buffering, combo window open/close via gameplay events, montage section advancement, timeout reset. AnimNotifyState_ComboWindow + instant AnimNotify_ComboWindow both available."
+        },
+        {
+          "decision": "Implemented Hit detection",
+          "rationale": "AnimNotifyState_HitDetection with multi-point base-to-tip tracing, frame-to-frame sweep for fast swings, TSet dedup, debug visualization, configurable trace channel/radius/socket names."
+        },
+        {
+          "decision": "Implemented GAS damage application",
+          "rationale": "Full pipeline: GE_Damage → ARPGDamageExecution (AttackPower scaling, crit roll, armor diminishing returns, elemental resistance with 0.9 cap) → IncomingDamage meta attr → PostGameplayEffectExecute (health reduction, damage numbers, gameplay cues, death/hit-react events)."
+        },
+        {
+          "decision": "Implemented Dodge ability (GAS)",
+          "rationale": "GA_Dodge with directional montage selection, stamina cost, State.Invulnerable via ActivationOwnedTags, GE_DodgeCooldown, root motion. Full delegate system for VFX/SFX hooks."
+        },
+        {
+          "decision": "Implemented Death flow",
+          "rationale": "GA_Death event-triggered by Event.Death, cancels all abilities, disables movement/collision, plays death montage, optional ragdoll, player input disable + respawn, enemy destroy timer. State.Dead persists until respawn."
+        }
+      ],
+      "gotchas": [
+        "GA_HitReact must set/clear bIsHitReacting on the character so CanMove() properly gates movement during hit reactions — without this, the character can walk freely while playing a hit-react montage",
+        "FGameplayAbilityTargetData::GetHitResult() can return nullptr even when TargetData.Num() > 0 — always null-check before dereferencing"
+      ],
+      "verification": "PASS git-clean, PASS source-exists",
+      "durationMs": 197480
+    },
+    {
+      "phase": 23,
+      "areaId": "combat-feedback",
+      "moduleId": "arpg-combat",
+      "label": "Combat — Feedback & Death",
+      "description": "Hit reactions, death flow, combat feedback, dodge ability (GAS)",
+      "pofActions": [
+        "acb-5",
+        "acb-6",
+        "acb-7",
+        "acb-8",
+        "acb-9"
+      ],
+      "ue5Files": [
+        "Source/PoF/Combat/ARPGCombatTestDummy.h",
+        "Source/PoF/Combat/ARPGCombatTestDummy.cpp",
+        "Source/PoF/Combat/CombatFeedbackComponent.h",
+        "Source/PoF/Combat/CombatFeedbackComponent.cpp",
+        "Source/PoF/AbilitySystem/GA_Death.cpp"
+      ],
+      "decisions": [
+        {
+          "decision": "Implemented Hit reaction system",
+          "rationale": "GA_HitReact: event-triggered via Event.HitReact, plays montage, sets bIsHitReacting to gate movement, blocked by State.Attacking/Invulnerable/Dashing. Full pipeline from PostGameplayEffectExecute through GAS events."
+        },
+        {
+          "decision": "Implemented Dodge with i-frames",
+          "rationale": "GA_Dodge: directional 4-way montages, stamina cost, cooldown via GE_DodgeCooldown, State.Invulnerable via ActivationOwnedTags, rotation snap, root motion, cancel window, anim-notify-driven invuln timing."
+        },
+        {
+          "decision": "Implemented Death flow",
+          "rationale": "GA_Death: event-triggered via Event.Death, State.Dead persists, cancels all abilities, disables movement/collision, plays death montage, ragdoll, player respawn timer, enemy destroy timer + XP reward. Now also handles test dummy."
+        },
+        {
+          "decision": "Implemented Combat feedback",
+          "rationale": "CombatFeedbackComponent: camera shake (light/heavy), hitstop (per-actor CustomTimeDilation with restore), Niagara VFX at impact, damage-type-aware SFX with pitch variation, crit layering. Added controller vibration with configurable intensity for normal/crit hits."
+        },
+        {
+          "decision": "Implemented Floating damage numbers",
+          "rationale": "DamageNumberManagerComponent + DamageNumberWidget: global delegate subscription, world-to-screen projection, float + fade animation, damage type colors, crit scaling, max active limit."
+        },
+        {
+          "decision": "Implemented Combat test dummy",
+          "rationale": "New AARPGCombatTestDummy: static target with GAS health, floating health bar, GA_HitReact + GA_Death, auto-respawn with full state reset (ragdoll undo, attribute re-init, collision restore), invulnerability toggle."
+        }
+      ],
+      "gotchas": [
+        "APlayerController::PlayDynamicForceFeedback() is the simplest way to trigger gamepad vibration — no ForceFeedbackEffect asset needed, just intensity + duration + channel booleans",
+        "Test dummy respawn requires cancelling all GAS abilities first (to clear State.Dead from ActivationOwnedTags), then re-granting abilities and re-initializing attributes"
+      ],
+      "verification": "PASS git-clean, PASS source-exists",
+      "durationMs": 327394
+    },
+    {
+      "phase": 24,
+      "areaId": "enemy-ai-core",
+      "moduleId": "arpg-enemy-ai",
+      "label": "Enemy AI — Controllers & Perception",
+      "description": "AI controller, enemy character, AI perception, behavior tree basics",
+      "pofActions": [
+        "ae-1",
+        "ae-2",
+        "ae-3",
+        "ae-4"
+      ],
+      "ue5Files": [
+        "Source/PoF/AI/BTService_UpdateCombatState.h",
+        "Source/PoF/AI/BTService_UpdateCombatState.cpp",
+        "Source/PoF/AI/BTDecorator_HealthBelow.h",
+        "Source/PoF/AI/BTDecorator_HealthBelow.cpp",
+        "Source/PoF/AI/BTTask_ReturnToHome.h",
+        "Source/PoF/AI/BTTask_ReturnToHome.cpp",
+        "Source/PoF/AI/ARPGAIController.h",
+        "Source/PoF/AI/ARPGAIController.cpp",
+        "Source/PoF/AI/BTTask_ChargeToTarget.h",
+        "Source/PoF/AI/BTTask_ChargeToTarget.cpp",
+        "Source/PoF/AI/BTTask_ExecuteAttackAbility.h",
+        "Source/PoF/AI/BTTask_ExecuteAttackAbility.cpp",
+        "Source/PoF/AI/BTTask_MaintainDistance.h",
+        "Source/PoF/AI/BTTask_MaintainDistance.cpp",
+        "Source/PoF/AI/BTDecorator_IsInAttackRange.h",
+        "Source/PoF/AI/BTDecorator_IsInAttackRange.cpp"
+      ],
+      "decisions": [
+        {
+          "decision": "Implemented AARPGAIController",
+          "rationale": "BT/BB/perception. Added target validation (filters dead/enemy actors), ClearTarget(), HomeLocation tracking, leash distance, aggro timeout config."
+        },
+        {
+          "decision": "Implemented AARPGEnemyCharacter",
+          "rationale": "Already production quality — archetype system, health bar, XP scaling, death/BT-stop, ability granting. No changes needed."
+        },
+        {
+          "decision": "Implemented AI Perception",
+          "rationale": "Sight + damage senses. Fixed OnPerceptionUpdated to validate targets (IsValidTarget rejects dead chars and other enemies)."
+        },
+        {
+          "decision": "Implemented Behavior Tree",
+          "rationale": "Fixed critical NodeMemory bugs in 3 tasks (ChargeToTarget, ExecuteAttackAbility, MaintainDistance). Added BTService_UpdateCombatState, BTDecorator_HealthBelow, BTTask_ReturnToHome, IsInAttackRange reads from BB."
+        },
+        {
+          "decision": "Implemented EQS queries",
+          "rationale": "7 EQS components: PatrolPoints, AttackPositions, CoverPositions generators + FlankAngle, PathExists, LineOfSight, ElevationAdvantage tests + TargetActor context. All pre-existing and production quality."
+        }
+      ],
+      "gotchas": [
+        "BT task nodes are shared singletons by default (bCreateNodeInstance=false) — per-instance state MUST use GetInstanceMemorySize()/NodeMemory, not member variables. Storing FDelegateHandle or float state as member vars corrupts when multiple enemies share the same BT.",
+        "FPathFollowingRequestResult is forward-declared in AIController.h — include Navigation/PathFollowingComponent.h to use it (known UE 5.7 gotcha)",
+        "WaitForMessage(OwnerComp, UBrainComponent::AIMessage_MoveFinished) is the cleanest way to wait for MoveTo completion in BT tasks without manual delegate plumbing"
+      ],
+      "verification": "PASS git-clean, PASS source-exists",
+      "durationMs": 1039227
+    },
+    {
+      "phase": 25,
+      "areaId": "enemy-ai-advanced",
+      "moduleId": "arpg-enemy-ai",
+      "label": "Enemy AI — EQS, Archetypes & Spawning",
+      "description": "EQS queries, enemy archetypes, enemy abilities, spawn system",
+      "pofActions": [
+        "ae-5",
+        "ae-6",
+        "ae-7",
+        "ae-8"
+      ],
+      "ue5Files": [
+        "Source/PoF/AI/BTService_UpdateCombatState.h",
+        "Source/PoF/AI/BTService_UpdateCombatState.cpp",
+        "Source/PoF/AI/BTTask_ExecuteAttackAbility.h",
+        "Source/PoF/AI/BTTask_ExecuteAttackAbility.cpp",
+        "Source/PoF/AI/BTTask_MaintainDistance.h",
+        "Source/PoF/AI/BTTask_MaintainDistance.cpp",
+        "Source/PoF/Spawning/SpawnVolume.h",
+        "Source/PoF/Spawning/SpawnVolume.cpp"
+      ],
+      "decisions": [
+        {
+          "decision": "Implemented EQS queries",
+          "rationale": "6 EQS classes: PatrolPoints generator, AttackPositions ring generator (with inner ring), CoverPositions geometry-traced generator, FlankAngle/PathExists/LineOfSight/ElevationAdvantage tests, TargetActor context. Production-quality with nav mesh projection."
+        },
+        {
+          "decision": "Implemented Enemy archetypes",
+          "rationale": "3 archetypes (MeleeGrunt/RangedCaster/Brute) with full config: AttackRange, PreferredCombatDistance, RetreatDistance, AttackCooldown, PrimaryAbilityTag, ChargeSpeedMultiplier. BTDecorator_CheckArchetype for BT branching. Archetype defaults auto-applied on possess and written to BB."
+        },
+        {
+          "decision": "Implemented Enemy Gameplay Abilities",
+          "rationale": "3 enemy abilities: GA_EnemyMeleeAttack (front-arc overlap + montage), GA_EnemyRangedAttack (projectile spawning from BB target), GA_EnemyChargeAttack (motion warping + AoE). Fixed critical bug: BTTask_ExecuteAttackAbility was responding to ALL ability ends, not just the activated one."
+        },
+        {
+          "decision": "Implemented Spawn system",
+          "rationale": "EnemySpawnPoint (single-point with respawn, difficulty scaling, nav-projected jitter) + SpawnVolume (wave spawning with trigger overlap, difficulty scaling from GameInstance). Added kill-based wave advancement option and per-wave difficulty escalation."
+        }
+      ],
+      "gotchas": [
+        "BTService nodes are also shared singletons like BTTask nodes — NoLOSTimer as a member variable corrupts when multiple enemies share the same BT. Must use GetInstanceMemorySize()/NodeMemory.",
+        "ASC->OnAbilityEnded fires for ALL abilities ending on that ASC, not just the one you activated — must filter by FGameplayAbilitySpecHandle to avoid premature BT task completion",
+        "WaitForMessage(OwnerComp, UBrainComponent::AIMessage_MoveFinished) is safer than lambda-based OnRequestFinished delegates in BT tasks — avoids dangling reference captures on OwnerComp"
+      ],
+      "verification": "PASS git-clean, PASS source-exists",
+      "durationMs": 291737
+    },
+    {
+      "phase": 26,
+      "areaId": "ai-behavior",
+      "moduleId": "ai-behavior",
+      "label": "AI / NPC Behavior",
+      "description": "Behavior trees, EQS, perception, combat AI, scenario-based testing sandbox",
+      "pofActions": [
+        "ai-1",
+        "ai-2",
+        "ai-3",
+        "ai-4",
+        "ai-5",
+        "ai-6"
+      ],
+      "ue5Files": [
+        "Source/PoF/AI/ARPGSquadManager.h",
+        "Source/PoF/AI/ARPGSquadManager.cpp",
+        "Source/PoF/AI/BTService_SquadCoordination.h",
+        "Source/PoF/AI/BTService_SquadCoordination.cpp",
+        "Source/PoF/AI/Debug/GameplayDebuggerCategory_ARPG.h",
+        "Source/PoF/AI/Debug/GameplayDebuggerCategory_ARPG.cpp",
+        "Source/PoF/AI/StateTree/STTask_ActivateAbility.h",
+        "Source/PoF/AI/StateTree/STTask_ActivateAbility.cpp",
+        "Source/PoF/AI/StateTree/STCondition_HasTarget.h",
+        "Source/PoF/AI/StateTree/STCondition_HasTarget.cpp",
+        "Source/PoF/AI/StateTree/STEvaluator_CombatData.h",
+        "Source/PoF/AI/StateTree/STEvaluator_CombatData.cpp",
+        "Source/PoF/AI/ARPGAIController.h",
+        "Source/PoF/AI/ARPGAIController.cpp",
+        "Source/PoF/PoF.cpp",
+        "Source/PoF/PoF.Build.cs",
+        "PoF.uproject"
+      ],
+      "decisions": [
+        {
+          "decision": "Implemented AI Controller base",
+          "rationale": "Comprehensive AAIController with blackboard, BT, perception (sight+damage+hearing), leash/aggro timeout, target validation"
+        },
+        {
+          "decision": "Implemented Behavior Tree system",
+          "rationale": "11 custom BT nodes: 5 tasks (ExecuteAttackAbility, MaintainDistance, FindPatrolPoint, FaceTarget, ReturnToHome, ChargeToTarget), 2 services (UpdateCombatState, SquadCoordination), 4 decorators (HasTarget, IsInAttackRange, HealthBelow, CheckArchetype). All use proper NodeMemory for shared singleton safety"
+        },
+        {
+          "decision": "Implemented AI Perception setup",
+          "rationale": "Added hearing sense (UAISenseConfig_Hearing) alongside existing sight and damage. Hearing only aggros when no current target, doesn't set LOS. Configurable HearingRange"
+        },
+        {
+          "decision": "Implemented EQS queries",
+          "rationale": "6 EQS classes: 3 generators (PatrolPoints, AttackPositions, CoverPositions), 4 tests (FlankAngle, PathExists, LineOfSight, ElevationAdvantage), 1 context (TargetActor)"
+        },
+        {
+          "decision": "Implemented Group AI coordination",
+          "rationale": "New UARPGSquadManager with attack token system (limits simultaneous attackers), flanking position assignment (even angular spread), focus fire coordination, and coordinated retreat signaling. BTService_SquadCoordination integrates with BT"
+        },
+        {
+          "decision": "Implemented AI debugging tools",
+          "rationale": "New FGameplayDebuggerCategory_ARPG registered as ARPG_AI category. Displays AI state, archetype, health, target/LOS/distance, attack range/cooldown, active BT task, and GAS tags with color-coded output"
+        },
+        {
+          "decision": "Implemented State Tree AI system",
+          "rationale": "3 State Tree nodes: FSTTask_ActivateAbility (fire-and-forget ability activation by tag), FSTCondition_HasTarget (target existence + alive check), FSTEvaluator_CombatData (ticking evaluator exposing target/distance/LOS/health/range as bindable output properties). StateTree + GameplayStateTree plugins enabled"
+        }
+      ],
+      "gotchas": [
+        "GameplayDebugger module in UE 5.7 is at Source/Runtime/GameplayDebugger, module name is 'GameplayDebugger'",
+        "StateTree plugin modules: 'StateTreeModule' (runtime) and 'GameplayStateTreeModule' (AI integration)",
+        "State Tree tasks/conditions/evaluators are USTRUCT-based (not UCLASS) with separate instance data structs",
+        "FGameplayDebuggerCategory::SetDataPackReplication<T> requires T to have a Serialize(FArchive&) method",
+        "UAISenseConfig_Hearing uses HearingRange (not SightRadius-style naming)"
+      ],
+      "verification": "PASS git-clean, PASS source-exists",
+      "durationMs": 532037
+    },
+    {
+      "phase": 27,
+      "areaId": "materials-core",
+      "moduleId": "materials",
+      "label": "Materials — Core",
+      "description": "Master material, dynamic instances, MPC, material functions",
+      "pofActions": [
+        "mat-1",
+        "mat-2",
+        "mat-3",
+        "mat-4"
+      ],
+      "ue5Files": [
+        "Source/PoF/Materials/ARPGMasterMaterialConfig.h",
+        "Source/PoF/Materials/ARPGMasterMaterialConfig.cpp",
+        "Source/PoF/Materials/ARPGDynamicMaterialManager.h",
+        "Source/PoF/Materials/ARPGDynamicMaterialManager.cpp",
+        "Source/PoF/Materials/ARPGMaterialParameterCollectionManager.h",
+        "Source/PoF/Materials/ARPGMaterialParameterCollectionManager.cpp",
+        "Source/PoF/Materials/ARPGEnvironmentMaterialSet.h",
+        "Source/PoF/Materials/ARPGEnvironmentMaterialSet.cpp",
+        "Source/PoF/Materials/ARPGMaterialFunctionLibrary.h",
+        "Source/PoF/Materials/ARPGMaterialFunctionLibrary.cpp"
+      ],
+      "decisions": [
+        {
+          "decision": "Implemented Master material config",
+          "rationale": "UARPGMasterMaterialConfig data asset with scalar/vector/texture parameter definitions and CreateConfiguredInstance() for stamping MIDs with defaults"
+        },
+        {
+          "decision": "Implemented Dynamic material instances",
+          "rationale": "UARPGDynamicMaterialManager component with damage flash, dissolve, highlight, freeze/burn effects; auto-creates MIDs on BeginPlay, tick-driven with auto-disable when idle"
+        },
+        {
+          "decision": "Implemented Material parameter collections",
+          "rationale": "UARPGMaterialParameterCollectionManager world subsystem driving GlobalTime, WindDirection/Strength, GlobalTint, and Wetness via UKismetMaterialLibrary each tick"
+        },
+        {
+          "decision": "Implemented Environment material set",
+          "rationale": "UARPGEnvironmentMaterialSet data asset with FARPGSurfaceMaterialDef (PBR textures, scalar overrides, detail texture, macro variation) and CreateSurfaceInstance()/FindSurfaceByName()"
+        },
+        {
+          "decision": "Implemented Material functions library",
+          "rationale": "UARPGMaterialFunctionLibrary with UV ops (world-aligned, triplanar, rotate, pan, tile), noise (value, fBm, Voronoi), blending (height, angle, distance fade), and convenience helpers (batch params, CreateDynamicMaterialsForMesh, LerpScalarParameter)"
+        }
+      ],
+      "gotchas": [],
+      "verification": "PASS git-clean, PASS source-exists",
+      "durationMs": 1020900
+    },
+    {
+      "phase": 28,
+      "areaId": "materials-advanced",
+      "moduleId": "materials",
+      "label": "Materials — Advanced",
+      "description": "Post-process, HLSL custom nodes, layer system, Substrate",
+      "pofActions": [
+        "mat-5",
+        "mat-6"
+      ],
+      "ue5Files": [
+        "Source/PoF/Materials/ARPGPostProcessChain.h",
+        "Source/PoF/Materials/ARPGPostProcessChain.cpp",
+        "Source/PoF/Materials/ARPGMaterialLayerSystem.h",
+        "Source/PoF/Materials/ARPGMaterialLayerSystem.cpp",
+        "Source/PoF/Materials/ARPGCustomMaterialExpression.h",
+        "Source/PoF/Materials/ARPGCustomMaterialExpression.cpp",
+        "Source/PoF/Materials/ARPGMaterialPerformanceManager.h",
+        "Source/PoF/Materials/ARPGMaterialPerformanceManager.cpp"
+      ],
+      "decisions": [
+        {
+          "decision": "Implemented Post-process materials",
+          "rationale": "PostProcessChain component with blendable management, per-effect enable/disable, blend weight animation, scalar/vector parameter overrides. Attaches to PostProcessComponent or CameraComponent."
+        },
+        {
+          "decision": "Implemented Material layer system",
+          "rationale": "UARPGMaterialLayer data asset with full PBR properties, UARPGMaterialLayerStack with base+N blend layers, 4 blend modes (linear, height, angle, vertex color), runtime blend weight control. Indexed parameter naming convention for master material compatibility."
+        },
+        {
+          "decision": "Implemented HLSL custom nodes",
+          "rationale": "12 HLSL snippets: dissolve edge, directional dissolve, cel shading, rim outline, hatching, caustics, hex grid, shield ripple, radial blur, chromatic aberration, vignette, gradient noise 3D, flow mapping. Ready for Custom node paste in material editor."
+        },
+        {
+          "decision": "Implemented Material performance optimization",
+          "rationale": "World subsystem with shared MID pooling, distance-based material LOD (3 default tiers), quality tier management, material complexity profiling with instruction/texture/feature estimation, automatic stale entry cleanup."
+        }
+      ],
+      "gotchas": [
+        "UMaterialInterface::GetUsedTextures() with quality/featurelevel params is deprecated in 5.7 — use the parameterless overload",
+        "TArray<T*>::Sort() with const T* lambda fails due to TDereferenceWrapper — use Algo::Sort() with Algo/Sort.h include"
+      ],
+      "verification": "PASS git-clean, PASS source-exists",
+      "durationMs": 365438
+    },
+    {
+      "phase": 29,
+      "areaId": "animations",
+      "moduleId": "animations",
+      "label": "Animations",
+      "description": "AnimBP, locomotion states, montages, notifies",
+      "pofActions": [
+        "anim-1",
+        "anim-2",
+        "anim-3",
+        "anim-4",
+        "anim-5",
+        "anim-6",
+        "anim-7"
+      ],
+      "ue5Files": [
+        "Source/PoF/Animation/AnimNotify_GameplayEvent.h",
+        "Source/PoF/Animation/AnimNotify_GameplayEvent.cpp",
+        "Source/PoF/Animation/AnimNotifyState_RootMotionScale.h",
+        "Source/PoF/Animation/AnimNotifyState_RootMotionScale.cpp",
+        "Source/PoF/Animation/ARPGMorphTargetController.cpp"
+      ],
+      "decisions": [
+        {
+          "decision": "Implemented Custom AnimInstance base",
+          "rationale": "UARPGAnimInstance with full state machine (5 states), locomotion proxy vars, lean/sprint blend, montage tracking, root motion, upper-body blending. Production-quality."
+        },
+        {
+          "decision": "Implemented Blend Space setup",
+          "rationale": "AnimAssetCommandlet creates BS1D_Locomotion (SpeedRatio or absolute) and BS_Locomotion (2D Direction x Speed) via FProperty reflection on protected BlendParameters."
+        },
+        {
+          "decision": "Implemented Animation state machine",
+          "rationale": "EARPGAnimState enum (Locomotion/Attacking/Dodging/HitReact/Death) with priority-based ComputeAnimState(), transition interrupt rules, and state time tracking."
+        },
+        {
+          "decision": "Implemented Montage system",
+          "rationale": "Commandlet creates AM_MeleeCombo (3 sections linked), AM_HeavyCombo (2 sections), AM_Dodge_* (4 dirs), AM_HitReact (5 directional variants), AM_Death. Section tracking in AnimInstance."
+        },
+        {
+          "decision": "Implemented Anim Notify framework",
+          "rationale": "10 notify classes: ComboWindow (instant+state), HitDetection (multi-point sweep), SpawnVFX (Niagara), PlaySound, CameraShake, FootstepEffect (surface-aware), InvulnerabilityFrames, GameplayEvent (new), RootMotionScale (new)."
+        },
+        {
+          "decision": "Implemented Motion Warping setup",
+          "rationale": "MotionWarping plugin dependency in Build.cs. Warp target setup handled by GA_MeleeAttack. AnimInstance tracks root motion velocity/direction."
+        },
+        {
+          "decision": "Implemented Root motion configuration",
+          "rationale": "RootMotionFromMontagesOnly mode. bIsUsingRootMotion, bIsFullBodyMontage, RootMotionSpeed/Direction tracked per frame. New AnimNotifyState_RootMotionScale for per-window scaling."
+        },
+        {
+          "decision": "Implemented Animation retargeting",
+          "rationale": "MixamoImportCommandlet with full Python pipeline: FBX import, IK Rig/Retargeter creation, batch retargeting, root motion extraction. IKRig+IKRigDeveloper module deps in PoFEditor."
+        },
+        {
+          "decision": "Implemented Motion Matching",
+          "rationale": "ARPGMotionMatchingConfig data asset with FMotionMatchEntry catalog, cost weights, trajectory params, tag-based filtering. Ready for PoseSearch plugin integration."
+        },
+        {
+          "decision": "Implemented Blendshape sculpting",
+          "rationale": "ARPGMorphTargetController component: named profile presets, smooth blending, additive stacking, health-driven damage morphs (fixed: now reads Health/MaxHealth from GAS AttributeSet instead of stamina placeholder)."
+        },
+        {
+          "decision": "Implemented Editor Commandlet automation",
+          "rationale": "AnimAssetCommandlet (blend spaces + montages + XP curve), MixamoImportCommandlet (Python retarget pipeline), MeshValidationCommandlet (mesh quality checks). All headless-compatible."
+        }
+      ],
+      "gotchas": [],
+      "verification": "PASS git-clean, PASS source-exists",
+      "durationMs": 199971
+    },
+    {
+      "phase": 30,
+      "areaId": "inventory-items",
+      "moduleId": "arpg-inventory",
+      "label": "Item Definitions & Inventory",
+      "description": "Item definition, item instance, inventory component",
+      "pofActions": [
+        "ai-1",
+        "ai-2",
+        "ai-3"
+      ],
+      "ue5Files": [
+        "Source/PoF/Inventory/ARPGItemDefinition.h",
+        "Source/PoF/Inventory/ARPGInventoryComponent.h",
+        "Source/PoF/Inventory/ARPGInventoryComponent.cpp"
+      ],
+      "decisions": [
+        {
+          "decision": "Implemented UARPGItemDefinition",
+          "rationale": "Already comprehensive PrimaryDataAsset with name, icon, type, rarity, effects, tags, affix pool, equipment slots. Added Weight and RequiredLevel properties."
+        },
+        {
+          "decision": "Implemented UARPGItemInstance",
+          "rationale": "Full runtime object with definition ref, stack count, item level, affixes, unique ID, replication, serialization, affix name decoration. No changes needed."
+        },
+        {
+          "decision": "Implemented UARPGInventoryComponent",
+          "rationale": "Already had Add/Remove/Move/Sort/Find/Equip/Unequip/UseItem/Save/Load with GAS integration. Added SplitStack, MergeStacks, RemoveItemByDefinition, FindAllItemsByDefinition, HasItem, GetAllItems, GetAllEquippedItems, GetTotalWeight, WouldExceedWeight, MaxCarryWeight, and auto-merge on MoveItem for same-definition stacks."
+        }
+      ],
+      "gotchas": [],
+      "verification": "PASS git-clean, PASS source-exists",
+      "durationMs": 136661
+    },
+    {
+      "phase": 31,
+      "areaId": "inventory-equipment",
+      "moduleId": "arpg-inventory",
+      "label": "Equipment & Consumables",
+      "description": "Equipment slots, equip/unequip GAS flow, consumables, affix system",
+      "pofActions": [
+        "ai-4",
+        "ai-5",
+        "ai-6",
+        "ai-7",
+        "ai-8"
+      ],
+      "ue5Files": [
+        "Source/PoF/Inventory/ARPGItemDefinition.h",
+        "Source/PoF/Inventory/ARPGItemDefinition.cpp",
+        "Source/PoF/Inventory/ARPGInventoryComponent.h",
+        "Source/PoF/Inventory/ARPGInventoryComponent.cpp"
+      ],
+      "decisions": [
+        {
+          "decision": "Implemented Equipment slot system",
+          "rationale": "EEquipmentSlot enum (Weapon, OffHand, Helm, Chest, Gloves, Boots, Ring1, Ring2, Amulet) with TMap<EEquipmentSlot, UARPGItemInstance*> for equipped items. Added IsSlotOccupied() convenience query."
+        },
+        {
+          "decision": "Implemented Equip/unequip GAS flow",
+          "rationale": "ApplyEquipEffect/RemoveEquipEffect applies base OnEquipEffect GE + per-affix GEs with SetByCaller magnitude. Swap-on-equip returns old item to inventory. Added RequiredLevel enforcement gate."
+        },
+        {
+          "decision": "Implemented Consumable usage",
+          "rationale": "UseItem applies OnUseEffect via ASC, applies GE_PotionCooldown for cooldown gating, decrements stack and removes on empty. UseFirstConsumable for quick-use. Added RequiredLevel enforcement."
+        },
+        {
+          "decision": "Implemented Affix system",
+          "rationale": "5 rarity tiers with weighted random affix rolling, tier-gating (MinRarity), item-level scaling, reroll support. Added shared GetRarityColor() and GetRarityDisplayName() utilities on UARPGItemDefinition."
+        },
+        {
+          "decision": "Implemented Inventory operations",
+          "rationale": "Full suite: AddItem (auto-stack), RemoveItem, MoveItem (auto-merge), SplitStack, MergeStacks, Sort, RemoveByDefinition, FindAll, HasItem, weight encumbrance, save/load with GE handle restoration."
+        }
+      ],
+      "gotchas": [
+        "UHT parameter shadowing: UFUNCTION params cannot share names with UPROPERTY members in the same UCLASS — use InRarity instead of Rarity to avoid 'shadowing is not allowed' UHT error"
+      ],
+      "verification": "PASS git-clean, PASS source-exists",
+      "durationMs": 183242
+    },
+    {
+      "phase": 32,
+      "areaId": "loot-tables",
+      "moduleId": "arpg-loot",
+      "label": "Loot Tables & Selection",
+      "description": "Loot table data, weighted random selection, world items",
+      "pofActions": [
+        "al-1",
+        "al-2",
+        "al-3"
+      ],
+      "ue5Files": [
+        "Source/PoF/Loot/ARPGWorldItem.h",
+        "Source/PoF/Loot/ARPGWorldItem.cpp",
+        "Source/PoF/Loot/ARPGLootDropComponent.h",
+        "Source/PoF/Loot/ARPGLootDropComponent.cpp",
+        "Source/PoF/Loot/ARPGLootChest.h",
+        "Source/PoF/Loot/ARPGLootChest.cpp",
+        "Source/PoF/Inventory/ARPGLootTable.h",
+        "Source/PoF/Inventory/ARPGLootTable.cpp",
+        "Source/PoF/Character/ARPGEnemyCharacter.h",
+        "Source/PoF/Character/ARPGEnemyCharacter.cpp",
+        "Source/PoF/Player/ARPGPlayerCharacter.cpp"
+      ],
+      "decisions": [
+        {
+          "decision": "Implemented UARPGLootTable",
+          "rationale": "Improved existing loot table with weighted rarity distribution (exponentially decreasing weights: 100/50/20/5/1) and RarityBonusMultiplier parameter for boss/archetype scaling"
+        },
+        {
+          "decision": "Implemented Weighted random selection",
+          "rationale": "RollWeightedRarity static method with configurable bonus multiplier that boosts higher tier weights via power scaling"
+        },
+        {
+          "decision": "Implemented AARPGWorldItem",
+          "rationale": "Dropped item actor with mesh from definition, rarity-colored point light (Uncommon+), vertical bob + rotation animation, Interactable tag for interaction system"
+        },
+        {
+          "decision": "Implemented Loot drop on death",
+          "rationale": "UARPGLootDropComponent auto-binds to OnEnemyDeath, supports configurable NumRolls and RarityBonusMultiplier. Built into AARPGEnemyCharacter with per-archetype defaults (Brute: 2 rolls, 2x rarity bonus)"
+        },
+        {
+          "decision": "Implemented Item pickup",
+          "rationale": "Player PerformInteraction() now handles WorldItem tag — calls TryPickup with weight check, partial pickup support, and inventory-full handling"
+        },
+        {
+          "decision": "Implemented Chest/container actors",
+          "rationale": "AARPGLootChest with lid open animation (pitch rotation), configurable loot table + rolls, optional respawn timer, Interactable+Chest tags for interaction system"
+        }
+      ],
+      "gotchas": [],
+      "verification": "PASS git-clean, PASS source-exists",
+      "durationMs": 327092
+    },
+    {
+      "phase": 33,
+      "areaId": "loot-drops",
+      "moduleId": "arpg-loot",
+      "label": "Loot Drops & Feedback",
+      "description": "Drop on death, pickup, visual feedback, chest/container actors",
+      "pofActions": [
+        "al-4",
+        "al-5",
+        "al-6",
+        "al-7",
+        "al-8"
+      ],
+      "ue5Files": [
+        "Source/PoF/Loot/ARPGWorldItem.h",
+        "Source/PoF/Loot/ARPGWorldItem.cpp",
+        "Source/PoF/Loot/ARPGLootDropComponent.cpp",
+        "Source/PoF/Inventory/ARPGItemInstance.h",
+        "Source/PoF/Inventory/ARPGItemInstance.cpp",
+        "Source/PoF/Inventory/ARPGLootTable.cpp"
+      ],
+      "decisions": [
+        {
+          "decision": "Implemented Loot visual feedback",
+          "rationale": "Added: RolledRarity on instances (loot table now stores rolled rarity), rarity-scaled mesh size, rarity-scaled light radius, faster spin/bob for epic+ items, spawn launch arc physics, auto-pickup for common items on overlap, despawn timer with blink warning, pickup sound hook, pickup notification delegates (per-actor + static global for HUD), GetEffectiveRarity() helper"
+        }
+      ],
+      "gotchas": [
+        "FOnItemPickedUpStatic (static multicast delegate) allows HUD to bind once globally without per-actor references — useful for pickup notification feeds"
+      ],
+      "verification": "PASS git-clean, PASS source-exists",
+      "durationMs": 248547
+    },
+    {
+      "phase": 34,
+      "areaId": "ui-hud-gas",
+      "moduleId": "arpg-ui",
+      "label": "HUD & GAS Bindings",
+      "description": "Main HUD widget, GAS attribute binding, enemy health bars, ability cooldowns",
+      "pofActions": [
+        "au-1",
+        "au-2",
+        "au-3",
+        "au-4"
+      ],
+      "ue5Files": [
+        "Source/PoF/UI/ARPGHUDWidget.h",
+        "Source/PoF/UI/ARPGHUDWidget.cpp",
+        "Source/PoF/UI/ARPGHUD.h",
+        "Source/PoF/UI/ARPGHUD.cpp",
+        "Source/PoF/UI/EnemyHealthBarWidget.h",
+        "Source/PoF/UI/EnemyHealthBarWidget.cpp",
+        "Source/PoF/Character/ARPGEnemyCharacter.cpp"
+      ],
+      "decisions": [
+        {
+          "decision": "Implemented Main HUD widget",
+          "rationale": "Health/mana bars with smooth interpolation and low-health pulse. Added stamina bar, XP bar with smooth fill, level display, and minimap placeholder border."
+        },
+        {
+          "decision": "Implemented GAS attribute binding",
+          "rationale": "Real-time Health/MaxHealth/Mana/MaxMana via GetGameplayAttributeValueChangeDelegate. Stamina/XP polled from player character. Critical fix: ARPGHUD::BeginPlay now auto-binds all widgets to player ASC — previously widgets were created but never bound."
+        },
+        {
+          "decision": "Implemented Enemy health bars",
+          "rationale": "Floating UWidgetComponent with fade-in on damage, fade-out after delay, death fade. Added level-colored text (red=danger, white=normal, gray=trivial) based on player/enemy level difference."
+        },
+        {
+          "decision": "Implemented Ability cooldown UI",
+          "rationale": "4 ability slots with icon, cooldown sweep overlay, mana cost, keybind label. Cooldowns polled from ASC each tick. Auto-refreshes from loadout on OnLoadoutChanged delegate."
+        }
+      ],
+      "gotchas": [],
+      "verification": "PASS git-clean, PASS source-exists",
+      "durationMs": 288712
+    },
+    {
+      "phase": 35,
+      "areaId": "ui-screens",
+      "moduleId": "arpg-ui",
+      "label": "UI Screens",
+      "description": "Inventory screen, character stats, floating damage numbers, pause/settings",
+      "pofActions": [
+        "au-5",
+        "au-6",
+        "au-7",
+        "au-8"
+      ],
+      "ue5Files": [
+        "Source/PoF/Player/ARPGPlayerController.h",
+        "Source/PoF/Player/ARPGPlayerController.cpp",
+        "Source/PoF/UI/ARPGHUD.cpp",
+        "Source/PoF/UI/DamageNumberWidget.h",
+        "Source/PoF/UI/DamageNumberWidget.cpp",
+        "Source/PoF/UI/InventoryScreenWidget.h",
+        "Source/PoF/UI/InventoryScreenWidget.cpp",
+        "Source/PoF/UI/InventorySlotWidget.h",
+        "Source/PoF/UI/InventorySlotWidget.cpp",
+        "Source/PoF/UI/EquipmentSlotWidget.h",
+        "Source/PoF/UI/EquipmentSlotWidget.cpp",
+        "Source/PoF/UI/SettingsMenuWidget.cpp"
+      ],
+      "decisions": [
+        {
+          "decision": "Implemented Inventory screen",
+          "rationale": "Grid inventory with drag-drop, rarity borders, tooltips, equipment panel. Fixed: bound to InventoryComponent from HUD, added right-click equip/use on inventory slots, right-click unequip on equipment slots, added I key toggle input action."
+        },
+        {
+          "decision": "Implemented Character stats screen",
+          "rationale": "All GAS attributes displayed with base+bonus, damage reduction from armor, live updates via attribute change delegates. Fixed: bound to ASC from HUD, added C key toggle input action."
+        },
+        {
+          "decision": "Implemented Floating damage numbers",
+          "rationale": "World-to-screen projected, colored by damage type (physical/fire/ice/lightning/heal), crit variant with larger font and CRIT! prefix. Fixed: positioning (SetPositionInViewport instead of SetRenderTranslation), added crit scale punch animation (1.5x→1.0x)."
+        },
+        {
+          "decision": "Implemented Pause/settings menus",
+          "rationale": "Pause menu with Resume/Settings/Save/Quit. Settings has Graphics/Audio/Controls tabs with resolution, quality, VSync, fullscreen, frame limit, volume sliders, mouse sensitivity, invert-Y, keybinding display. Added inventory/stats key entries to keybinding display."
+        }
+      ],
+      "gotchas": [
+        "SetRenderTranslation offsets from the widget's layout anchor — for world-projected damage numbers use SetPositionInViewport with screen coordinates instead",
+        "UMG widgets created in HUD::BeginPlay but never bound to data sources are inert — must call BindToInventory/BindToAbilitySystem from BindWidgetsToPlayer"
+      ],
+      "verification": "PASS git-clean, PASS source-exists",
+      "durationMs": 370001
+    },
+    {
+      "phase": 36,
+      "areaId": "dialogue-quests-core",
+      "moduleId": "dialogue-quests",
+      "label": "Dialogue & NPC Interaction",
+      "description": "Dialogue data assets, branching conversations, NPC interaction",
+      "pofActions": [
+        "dq-1",
+        "dq-2",
+        "dq-3"
+      ],
+      "ue5Files": [
+        "Source/PoF/Dialogue/ARPGDialogueTypes.h",
+        "Source/PoF/Dialogue/ARPGDialogueTree.h",
+        "Source/PoF/Dialogue/ARPGDialogueComponent.h",
+        "Source/PoF/Dialogue/ARPGDialogueComponent.cpp",
+        "Source/PoF/Quest/ARPGQuestTypes.h",
+        "Source/PoF/Quest/ARPGQuestDefinition.h",
+        "Source/PoF/Quest/ARPGQuestSubsystem.h",
+        "Source/PoF/Quest/ARPGQuestSubsystem.cpp",
+        "Source/PoF/UI/DialogueWidget.h",
+        "Source/PoF/UI/DialogueWidget.cpp",
+        "Source/PoF/UI/QuestTrackerWidget.h",
+        "Source/PoF/UI/QuestTrackerWidget.cpp",
+        "Source/PoF/Player/ARPGPlayerCharacter.cpp",
+        "Source/PoF/UI/ARPGHUD.h",
+        "Source/PoF/UI/ARPGHUD.cpp"
+      ],
+      "decisions": [
+        {
+          "decision": "Implemented Dialogue data asset",
+          "rationale": "UARPGDialogueTree (UPrimaryDataAsset) with nodes, choices, conditions (quest/level/tag/item), actions (give quest/complete/XP/tags), speaker portraits, one-shot support, validation"
+        },
+        {
+          "decision": "Implemented Branching conversation system",
+          "rationale": "UARPGDialogueComponent drives full conversation state: priority-ordered tree selection, condition evaluation (AND logic with invert), action execution on node entry and choice selection, auto-advance for choiceless nodes"
+        },
+        {
+          "decision": "Implemented Conversation UI",
+          "rationale": "UDialogueWidget with speaker portrait, name (gold), body text, dynamic choice buttons, continue button. Auto-binds to dialogue component events. Programmatic UMG layout."
+        },
+        {
+          "decision": "Implemented Quest tracker subsystem",
+          "rationale": "UARPGQuestSubsystem (GameInstanceSubsystem) with full lifecycle: accept/complete/fail/abandon, objective progress tracking, ReportEvent for kill/collect/location/talk auto-matching, auto-complete, prerequisites, save/restore, delegates for UI"
+        },
+        {
+          "decision": "Implemented Quest tracker HUD widget",
+          "rationale": "UQuestTrackerWidget shows active quests with objective progress, auto-refreshes on quest/objective events, max 3 displayed with overflow indicator"
+        },
+        {
+          "decision": "Implemented NPC interaction integration",
+          "rationale": "PerformInteraction auto-detects UARPGDialogueComponent on target actors, starts dialogue, and shows HUD widget. Any actor with the component becomes an NPC."
+        }
+      ],
+      "gotchas": [
+        "UUserWidget has no SetRootWidget() method — use WidgetTree->RootWidget = widget to set programmatic root",
+        "UFUNCTION cannot return const USTRUCT* — use a copy-out pattern (bool GetFoo(FName ID, FStruct& Out) const) for Blueprint exposure",
+        "UARPGInventoryComponent methods take UARPGItemDefinition* not FName — dialogue item actions need Blueprint wiring or asset manager lookup"
+      ],
+      "verification": "PASS git-clean, PASS source-exists",
+      "durationMs": 588375
+    },
+    {
+      "phase": 37,
+      "areaId": "dialogue-quests-system",
+      "moduleId": "dialogue-quests",
+      "label": "Quest System",
+      "description": "Quest tracker, objectives, quest log UI",
+      "pofActions": [
+        "dq-4",
+        "dq-5",
+        "dq-6"
+      ],
+      "ue5Files": [
+        "Source/PoF/Quest/ARPGQuestTypes.h",
+        "Source/PoF/Quest/ARPGQuestSubsystem.h",
+        "Source/PoF/Quest/ARPGQuestSubsystem.cpp",
+        "Source/PoF/Dialogue/ARPGDialogueTypes.h",
+        "Source/PoF/Dialogue/ARPGDialogueComponent.cpp",
+        "Source/PoF/UI/QuestTrackerWidget.h",
+        "Source/PoF/UI/QuestTrackerWidget.cpp",
+        "Source/PoF/UI/QuestLogWidget.cpp"
+      ],
+      "decisions": [
+        {
+          "decision": "Implemented Quest tracker",
+          "rationale": "Full lifecycle with objective tracking, pinning, save/load, rewards, prerequisite chains. Fixed: OnQuestFailed now bound in tracker widget, pinned quest persisted in save/load."
+        },
+        {
+          "decision": "Implemented Quest objectives",
+          "rationale": "Kill/Collect/Location/TalkTo/Manual + new Escort/Defend types. ReportEvent safely handles TMap mutation. Category-sorted quest log with section headers."
+        },
+        {
+          "decision": "Implemented Quest log UI",
+          "rationale": "Active/Completed/Failed tabs, category headers, detail panel with objectives/rewards, pin/abandon buttons. Now sorts quests by category with visual separators."
+        }
+      ],
+      "gotchas": [],
+      "verification": "PASS git-clean, PASS source-exists",
+      "durationMs": 181603
+    },
+    {
+      "phase": 38,
+      "areaId": "progression-xp",
+      "moduleId": "arpg-progression",
+      "label": "XP & Leveling",
+      "description": "XP/level attributes, XP curve, XP on kill, level-up detection",
+      "pofActions": [
+        "ap-1",
+        "ap-2",
+        "ap-3",
+        "ap-4"
+      ],
+      "ue5Files": [
+        "Source/PoF/AbilitySystem/GA_ArcaneBeam.h",
+        "Source/PoF/AbilitySystem/GA_ArcaneBeam.cpp",
+        "Source/PoF/AbilitySystem/Effects/GE_Cooldown_ArcaneBeam.h",
+        "Source/PoF/AbilitySystem/Effects/GE_Cooldown_ArcaneBeam.cpp",
+        "Source/PoF/AbilitySystem/ARPGAttributeSet.h",
+        "Source/PoF/AbilitySystem/ARPGAttributeSet.cpp",
+        "Source/PoF/AbilitySystem/Effects/GE_AwardXP.cpp",
+        "Source/PoF/AbilitySystem/ARPGGameplayTags.h",
+        "Source/PoF/AbilitySystem/ARPGGameplayTags.cpp",
+        "Source/PoF/Player/ARPGPlayerCharacter.cpp"
+      ],
+      "decisions": [
+        {
+          "decision": "Implemented XP and Level attributes",
+          "rationale": "CurrentXP, XPToNextLevel, CharacterLevel already in AttributeSet with proper clamping (level 1-50). Added IncomingXP meta attribute for clean XP pipeline."
+        },
+        {
+          "decision": "Implemented XP curve table",
+          "rationale": "XPRequirementsCurveTable on CharacterBase + CalculateXPForLevel power curve (100 * level^1.5). Data-driven via curve table with code fallback."
+        },
+        {
+          "decision": "Implemented XP award on enemy death",
+          "rationale": "Fixed critical bug: GE_AwardXP now targets IncomingXP meta attribute (was targeting CurrentXP directly, bypassing level-up detection). Enemy death → GE_AwardXP → PostGameplayEffectExecute → AddExperience → level-up. Level-scaled XP with archetype bonuses."
+        },
+        {
+          "decision": "Implemented Level-up detection",
+          "rationale": "Fixed critical disconnect: AddExperience now syncs GAS CurrentXP/CharacterLevel/XPToNextLevel after level-ups. LevelUp fires GameplayCue.LevelUp, syncs all GAS attributes, awards skill+attribute points. Max level 50 enforced. Multi-level jump support."
+        },
+        {
+          "decision": "Implemented Active abilities",
+          "rationale": "5 abilities: GA_Fireball (projectile AoE), GA_GroundSlam (melee AoE+stun), GA_DashStrike (dash+sweep), GA_WarCry (self-buff), GA_ArcaneBeam (new channeled beam with mana drain, sphere sweep, lightning damage)."
+        }
+      ],
+      "gotchas": [
+        "GAS meta-attribute pattern (IncomingXP like IncomingDamage) is the clean way to bridge GE-based XP awards to local game logic — avoids dual-tracking between GAS attributes and local state",
+        "ApplyModToAttribute with EGameplayModOp::Override does NOT trigger PostGameplayEffectExecute, only attribute change delegates — safe for syncing GAS back from local authoritative state without recursion"
+      ],
+      "verification": "PASS git-clean, PASS source-exists",
+      "durationMs": 405855
+    },
+    {
+      "phase": 39,
+      "areaId": "progression-skills",
+      "moduleId": "arpg-progression",
+      "label": "Abilities & Skill Trees",
+      "description": "Active abilities, unlock system, attribute points, ability loadout",
+      "pofActions": [
+        "ap-5",
+        "ap-6",
+        "ap-7",
+        "ap-8"
+      ],
+      "ue5Files": [
+        "Source/PoF/UI/AbilityUnlockWidget.h",
+        "Source/PoF/UI/AbilityUnlockWidget.cpp",
+        "Source/PoF/UI/ARPGHUD.h",
+        "Source/PoF/UI/ARPGHUD.cpp",
+        "Source/PoF/Player/ARPGPlayerController.h",
+        "Source/PoF/Player/ARPGPlayerController.cpp",
+        "Source/PoF/AbilitySystem/ARPGAbilityUnlockComponent.h",
+        "Source/PoF/AbilitySystem/ARPGAbilityUnlockComponent.cpp",
+        "Source/PoF/Framework/ARPGSaveGame.h"
+      ],
+      "decisions": [
+        {
+          "decision": "Implemented Active abilities",
+          "rationale": "Fireball, GroundSlam, DashStrike, WarCry already implemented with full GE integration, montage-driven flow, cursor aim, AoE/projectile systems"
+        },
+        {
+          "decision": "Implemented Ability unlock system",
+          "rationale": "Data-table-driven unlock/upgrade component with skill point spending, rank tracking, per-rank bonuses. New AbilityUnlockWidget UI with learn/upgrade buttons, rank display, requirement checks, and skill point counter. Auto-assigns newly learned abilities to first empty hotbar slot."
+        },
+        {
+          "decision": "Implemented Attribute point allocation",
+          "rationale": "Str/Dex/Int allocation on player character with permanent GAS attribute modification. AttributeAllocationWidget UI now properly bound to player (fixed missing BindToPlayer call in HUD). Live-updating stat previews."
+        },
+        {
+          "decision": "Implemented Ability loadout",
+          "rationale": "4-slot hotbar system on player character with AssignAbilityToSlot/TryActivateAbilitySlot. AbilityBarWidget displays icons, mana cost, cooldown sweep. Controller has 1-4 key and D-pad bindings. Loadout change auto-refreshes ability bar via delegate."
+        }
+      ],
+      "gotchas": [
+        "UButton::OnClicked is a dynamic multicast delegate (no lambda support) — use a shared UFUNCTION + IsHovered() TMap lookup pattern for programmatically-created button arrays",
+        "BindWidget meta on UUserWidget requires a Blueprint subclass to provide the slot — programmatic children are added into those containers, not replacing them"
+      ],
+      "verification": "PASS git-clean, PASS source-exists",
+      "durationMs": 462648
+    },
+    {
+      "phase": 40,
+      "areaId": "world-zones",
+      "moduleId": "arpg-world",
+      "label": "World Zones & Blockouts",
+      "description": "Zone layout design, blockout levels, NavMesh coverage",
+      "pofActions": [
+        "aw-1",
+        "aw-2",
+        "aw-3"
+      ],
+      "ue5Files": [
+        "Source/PoF/World/ARPGZoneDefinition.h",
+        "Source/PoF/World/ARPGZoneDefinition.cpp",
+        "Source/PoF/World/ARPGZoneManager.h",
+        "Source/PoF/World/ARPGZoneManager.cpp",
+        "Source/PoF/World/ARPGZoneVolume.h",
+        "Source/PoF/World/ARPGZoneVolume.cpp",
+        "Source/PoF/World/ARPGZoneTransition.h",
+        "Source/PoF/World/ARPGZoneTransition.cpp",
+        "Source/PoF/World/ARPGNavModifierVolume.h",
+        "Source/PoF/World/ARPGNavModifierVolume.cpp",
+        "Source/PoF/World/ARPGEncounterVolume.h",
+        "Source/PoF/World/ARPGEncounterVolume.cpp",
+        "Source/PoF/World/ARPGBlockoutRoom.h",
+        "Source/PoF/World/ARPGBlockoutRoom.cpp",
+        "Source/PoF/World/ARPGPlayerStart.h",
+        "Source/PoF/World/ARPGPlayerStart.cpp",
+        "Source/PoF/Spawning/EnemySpawnPoint.h",
+        "Source/PoF/Spawning/EnemySpawnPoint.cpp"
+      ],
+      "decisions": [
+        {
+          "decision": "Implemented Zone layout design",
+          "rationale": "Data-driven UARPGZoneDefinition with 5 difficulty tiers (Safe/Easy/Medium/Hard/Boss), encounter groups, zone connections graph, level gating, quest gating, fast travel, streaming support"
+        },
+        {
+          "decision": "Implemented Blockout levels",
+          "rationale": "AARPGBlockoutRoom actor with configurable dimensions, room purpose enum (Corridor/SmallRoom/LargeRoom/Arena/Hub/Transition), auto-scaling floor mesh, bounds indicator, scale reference comments"
+        },
+        {
+          "decision": "Implemented NavMesh coverage",
+          "rationale": "AARPGNavModifierVolume with 4 modifier types (Avoidance/Preferred/Blocked/Chokepoint), UNavModifierComponent integration, editor property change updates. Spawn points already project to NavMesh."
+        }
+      ],
+      "gotchas": [],
+      "verification": "PASS git-clean, PASS source-exists",
+      "durationMs": 357673
+    },
+    {
+      "phase": 41,
+      "areaId": "world-encounters",
+      "moduleId": "arpg-world",
+      "label": "Encounters & Bosses",
+      "description": "Enemy spawn placement, boss encounter, environmental hazards",
+      "pofActions": [
+        "aw-4",
+        "aw-5",
+        "aw-6"
+      ],
+      "ue5Files": [
+        "Source/PoF/World/ARPGInteractableBase.h",
+        "Source/PoF/World/ARPGInteractableBase.cpp",
+        "Source/PoF/World/ARPGLockedGate.h",
+        "Source/PoF/World/ARPGLockedGate.cpp",
+        "Source/PoF/World/ARPGEnvironmentalHazard.h",
+        "Source/PoF/World/ARPGEnvironmentalHazard.cpp",
+        "Source/PoF/Character/ARPGBossCharacter.h",
+        "Source/PoF/Character/ARPGBossCharacter.cpp",
+        "Source/PoF/World/ARPGBossEncounter.h",
+        "Source/PoF/World/ARPGBossEncounter.cpp",
+        "Source/PoF/UI/BossHealthBarWidget.h",
+        "Source/PoF/UI/BossHealthBarWidget.cpp",
+        "Source/PoF/AI/BTDecorator_BossPhase.h",
+        "Source/PoF/AI/BTDecorator_BossPhase.cpp",
+        "Source/PoF/AI/BTTask_BossSpecialAttack.h",
+        "Source/PoF/AI/BTTask_BossSpecialAttack.cpp"
+      ],
+      "decisions": [
+        {
+          "decision": "Implemented Enemy spawn placement",
+          "rationale": "EnemySpawnPoint + SpawnVolume + EncounterVolume already solid with zone-aware difficulty arcs, wave system, respawn, nav-mesh projection"
+        },
+        {
+          "decision": "Implemented Interactive world objects",
+          "rationale": "Added ARPGInteractableBase (trigger + prompt), ARPGLockedGate (quest/item gated, slide/rotate open). Existing: LootChest, PhysicsDoor, PhysicsLever, DestructibleActor"
+        },
+        {
+          "decision": "Implemented Boss encounter",
+          "rationale": "ARPGBossCharacter with multi-phase health thresholds, per-phase abilities/buffs/cooldown overrides, transition invulnerability. ARPGBossEncounter arena manager with fog walls, spawn/pre-placed boss, retrigger. BossHealthBarWidget with phase indicator. BTDecorator_BossPhase + BTTask_BossSpecialAttack for BT branching"
+        },
+        {
+          "decision": "Implemented Environmental hazards",
+          "rationale": "ARPGEnvironmentalHazard with fire/poison/spike/ice types, periodic GE damage via SetByCaller, one-shot trap mode with rearm, cycle on/off with phase offset, damage type auto-mapping from hazard type"
+        }
+      ],
+      "gotchas": [
+        "UWidgetTree::ConstructWidget<T>() in UE 5.7 takes (TSubclassOf<T>, FName) — cannot pass TEXT() directly as first arg, must pass StaticClass() + FName",
+        "UAbilitySystemComponent::GetGameplayAttributeValue() returns float and takes a bool& bFound output param — cannot assign to two separate float variables",
+        "TObjectPtr<USphereComponent> implicit conversion to USceneComponent* fails without the full type definition — include the component header in the cpp"
+      ],
+      "verification": "PASS git-clean, PASS source-exists",
+      "durationMs": 466982
+    },
+    {
+      "phase": 42,
+      "areaId": "world-interactive",
+      "moduleId": "arpg-world",
+      "label": "Interactive World",
+      "description": "Interactive world objects, zone transitions",
+      "pofActions": [
+        "aw-7",
+        "aw-8"
+      ],
+      "ue5Files": [
+        "Source/PoF/World/ARPGBossEncounter.cpp",
+        "Source/PoF/World/ARPGZoneTransition.cpp",
+        "Source/PoF/World/ARPGZoneVolume.cpp",
+        "Source/PoF/World/ARPGEnvironmentalHazard.h",
+        "Source/PoF/World/ARPGEnvironmentalHazard.cpp"
+      ],
+      "decisions": [
+        {
+          "decision": "Implemented Environmental hazards",
+          "rationale": "Fire/poison/spike/ice hazards with GE damage, cycling, one-shot, zone difficulty scaling, AI avoidance, debuff support. Fixed: pre-existing overlap detection on BeginPlay, debuff spam prevention via actor tracking."
+        },
+        {
+          "decision": "Implemented NavMesh and AI pathing",
+          "rationale": "NavModifier volumes with Avoidance/Preferred/Blocked/Chokepoint types, custom NavArea classes (Hazard, LowCost, Chokepoint), hazard auto-avoidance via NavArea_Hazard."
+        },
+        {
+          "decision": "Implemented Zone transitions",
+          "rationale": "Level streaming portals with screen fade, input freezing, cooldown, quest/level gating, spawn point teleport. Fixed: null-check on GetGameInstance()."
+        },
+        {
+          "decision": "Implemented Boss encounters",
+          "rationale": "Multi-phase boss arena with fog walls, player death reset, retrigger support. Fixed: player death delegate leak causing double-binding on retrigger."
+        },
+        {
+          "decision": "Implemented Zone volume tracking",
+          "rationale": "Zone volumes with overlap detection and ZoneManager integration. Fixed: null-check on GetGameInstance() in overlap callback."
+        }
+      ],
+      "gotchas": [
+        "AARPGCharacterBase::InitializeAttributes() is protected — cannot call from external actors like BossEncounter",
+        "Dynamic delegate RemoveDynamic must be called in ALL exit paths (not just CompleteEncounter but also OnPlayerDied) to prevent double-binding on retrigger",
+        "GetOverlappingActors() on BeginPlay is needed for hazards too — actors spawned inside a hazard volume won't generate overlap events"
+      ],
+      "verification": "PASS git-clean, PASS source-exists",
+      "durationMs": 286182
+    },
+    {
+      "phase": 43,
+      "areaId": "level-design-core",
+      "moduleId": "level-design",
+      "label": "Level Design — Core",
+      "description": "Blockout geometry, spawn points, level streaming, zone transitions",
+      "pofActions": [
+        "ld-1",
+        "ld-2",
+        "ld-3",
+        "ld-4"
+      ],
+      "ue5Files": [
+        "Source/PoF/World/ARPGBlockoutRoom.h",
+        "Source/PoF/World/ARPGBlockoutRoom.cpp",
+        "Source/PoF/Spawning/SpawnVolume.h",
+        "Source/PoF/Spawning/SpawnVolume.cpp",
+        "Source/PoF/Spawning/EnemySpawnPoint.h",
+        "Source/PoF/Spawning/EnemySpawnPoint.cpp",
+        "Source/PoF/World/ARPGEncounterVolume.cpp"
+      ],
+      "decisions": [
+        {
+          "decision": "Implemented Spawn point placement",
+          "rationale": "EnemySpawnPoint with respawn/difficulty/zone integration, SpawnVolume with wave-based spawning, difficulty scaling, retrigger support. Added EndPlay timer cleanup and max concurrent enemy cap."
+        },
+        {
+          "decision": "Implemented Level streaming setup",
+          "rationale": "ARPGZoneManager handles streaming load/unload with polling, timeout, fade transitions. ZoneDefinition data assets drive zone graph. Already mature from prior iterations."
+        },
+        {
+          "decision": "Implemented Zone transition system",
+          "rationale": "ARPGZoneTransition with overlap/interact modes, level/quest gating, cooldown protection, screen fade. ARPGPlayerStart for zone-aware spawn targets. ARPGZoneVolume for spatial zone tracking."
+        }
+      ],
+      "gotchas": [
+        "AARPGEncounterVolume inherits from ASpawnVolume — adding UPROPERTY to parent that child already declares causes UHT shadowing error",
+        "SpawnVolume's SpawnNextInWave is not virtual — max enemy cap must be enforced in the base class for subclasses to benefit"
+      ],
+      "verification": "PASS git-clean, PASS source-exists",
+      "durationMs": 319020
+    },
+    {
+      "phase": 44,
+      "areaId": "level-design-advanced",
+      "moduleId": "level-design",
+      "label": "Level Design — Advanced",
+      "description": "Environmental hazards, NavMesh, procedural gen, PCG, vegetation",
+      "pofActions": [
+        "ld-5",
+        "ld-6",
+        "ld-7"
+      ],
+      "ue5Files": [
+        "Source/PoF/LevelDesign/ARPGRoomTemplate.h",
+        "Source/PoF/LevelDesign/ARPGRoomTemplate.cpp",
+        "Source/PoF/LevelDesign/ARPGLevelGenerator.h",
+        "Source/PoF/LevelDesign/ARPGLevelGenerator.cpp",
+        "Source/PoF/LevelDesign/ARPGBiomeDefinition.h",
+        "Source/PoF/LevelDesign/ARPGBiomeDefinition.cpp",
+        "Source/PoF/LevelDesign/ARPGVegetationScatter.h",
+        "Source/PoF/LevelDesign/ARPGVegetationScatter.cpp",
+        "Source/PoF/LevelDesign/ARPGCoverPoint.h",
+        "Source/PoF/LevelDesign/ARPGCoverPoint.cpp",
+        "Source/PoF/LevelDesign/ARPGEncounterArena.h",
+        "Source/PoF/LevelDesign/ARPGEncounterArena.cpp",
+        "Source/PoF/LevelDesign/ARPGEnvironmentalProp.h",
+        "Source/PoF/LevelDesign/ARPGEnvironmentalProp.cpp"
+      ],
+      "decisions": [
+        {
+          "decision": "Implemented Procedural level generation",
+          "rationale": "Room/tile-based procedural layout with template pool, weighted selection, connection slot matching, overlap avoidance, and BlockoutRoom spawning. Graph-based room placement with configurable depth, corridor lengths, and seeded RNG."
+        },
+        {
+          "decision": "Implemented PCG graph setup",
+          "rationale": "HISM-based scatter system with biome definitions (ARPGBiomeDefinition data asset + ARPGVegetationScatter actor). Supports density, slope/altitude rules, min spacing, surface alignment, exclusion zones, and scatter layers for props/debris. Uses HierarchicalInstancedStaticMesh for efficient rendering."
+        },
+        {
+          "decision": "Implemented Procedural Vegetation (PVE)",
+          "rationale": "Biome definition data asset with per-vegetation-type slope, altitude, density, spacing, scale, alignment, and NavMesh blocking rules. VegetationScatter actor performs line traces to find ground surface, validates placement rules, and uses HISM components for Nanite-compatible instanced rendering."
+        },
+        {
+          "decision": "Implemented Environmental storytelling",
+          "rationale": "ARPGEnvironmentalProp actor groups static mesh props, ground decals, and accent point lights into placeable story clusters. Story type classification (Abandoned, BattleScar, Ritual, PathMarker, Warning, TreasureHint, Atmosphere) for design documentation."
+        },
+        {
+          "decision": "Implemented Encounter arenas",
+          "rationale": "ARPGEncounterArena discovers cover points within bounds, builds tactical point data with elevation tiers (Ground/Elevated/High), flanking detection, and cover queries. ARPGCoverPoint provides claim/release, peek positions, and directional coverage checks for AI tactical behavior."
+        },
+        {
+          "decision": "Implemented Room templates",
+          "rationale": "ARPGRoomTemplate data asset with connection slots (directional, width-matched), cover point definitions, prop placements, encounter settings, and generation weight/count constraints."
+        }
+      ],
+      "gotchas": [],
+      "verification": "PASS git-clean, PASS source-exists",
+      "durationMs": 514962
+    },
+    {
+      "phase": 45,
+      "areaId": "multiplayer-core",
+      "moduleId": "multiplayer",
+      "label": "Multiplayer — Replication",
+      "description": "Replicated properties, RPC framework, GameState replication",
+      "pofActions": [
+        "mp-1",
+        "mp-2",
+        "mp-3",
+        "mp-4"
+      ],
+      "ue5Files": [
+        "Source/PoF/Multiplayer/ARPGReplicationTypes.h",
+        "Source/PoF/Multiplayer/ARPGReplicationComponent.cpp",
+        "Source/PoF/Multiplayer/ARPGGameState.h",
+        "Source/PoF/Multiplayer/ARPGGameState.cpp",
+        "Source/PoF/Multiplayer/ARPGMultiplayerGameMode.h",
+        "Source/PoF/Multiplayer/ARPGMultiplayerGameMode.cpp"
+      ],
+      "decisions": [
+        {
+          "decision": "Implemented Replicated properties",
+          "rationale": "Added DOREPLIFETIME_CONDITION with COND_SkipOwner for bandwidth optimization, added MaxStamina to vitals, fixed SnapshotVitals to read from GAS attributes (works for all character types, not just player), disabled client tick"
+        },
+        {
+          "decision": "Implemented RPC framework",
+          "rationale": "Fixed Multicast_AbilityCosmetics to use GameplayCue instead of activating GAS abilities on simulated proxies (was causing gameplay on clients), added autonomous proxy skip"
+        },
+        {
+          "decision": "Implemented Iris replication system",
+          "rationale": "Added FillReplicationParams overrides on GameState (AlwaysRelevant) and MultiplayerGameMode (AlwaysRelevant) using UE 5.7 Iris beta API. Character spatial filtering deferred to per-actor config."
+        }
+      ],
+      "gotchas": [
+        "BeginReplication() is deprecated in UE 5.7 — override FillReplicationParams() for per-actor Iris config and OnReplicationStartedForIris() for post-start setup",
+        "FActorReplicationParams::AlwaysRelevant bypasses spatial filtering for actors that must replicate to all connections (GameState, GameMode)",
+        "FActorReplicationParams lives in Net/Iris/ReplicationSystem/EngineReplicationBridge.h",
+        "UActorComponent has OnReplicationStartedForIris but not FillReplicationParams — filtering is actor-level only"
+      ],
+      "verification": "PASS git-clean, PASS source-exists",
+      "durationMs": 369567
+    },
+    {
+      "phase": 46,
+      "areaId": "multiplayer-advanced",
+      "moduleId": "multiplayer",
+      "label": "Multiplayer — Sessions & Prediction",
+      "description": "Session management, network prediction, net relevancy",
+      "pofActions": [
+        "mp-5",
+        "mp-6",
+        "mp-7"
+      ],
+      "ue5Files": [
+        "Source/PoF/Multiplayer/ARPGNetPredictionComponent.h",
+        "Source/PoF/Multiplayer/ARPGNetPredictionComponent.cpp",
+        "Source/PoF/Multiplayer/ARPGInterestManager.h",
+        "Source/PoF/Multiplayer/ARPGInterestManager.cpp",
+        "Source/PoF/Multiplayer/ARPGSessionSubsystem.h",
+        "Source/PoF/Multiplayer/ARPGSessionSubsystem.cpp"
+      ],
+      "decisions": [
+        {
+          "decision": "Implemented Client-side prediction",
+          "rationale": "Ability prediction with server confirmation/rejection, position reconciliation with error tolerance and smooth/hard snap correction, input buffering at 30Hz, latency estimation from RTT samples"
+        },
+        {
+          "decision": "Implemented Interest management",
+          "rationale": "5-tier relevancy system (AlwaysRelevant/Critical/Standard/Background/Dormant), auto-tier by distance bands, combat relevancy elevation, dormancy support, configurable per-tier update freq/priority/cull distance. Uses UE 5.7 SetNetUpdateFrequency/SetNetCullDistanceSquared APIs"
+        },
+        {
+          "decision": "Implemented Session management",
+          "rationale": "Enhanced with session state machine (8 states), server travel support, rejoin/reconnection with configurable attempts and delay, network/travel failure handling with auto-reconnect for recoverable errors, cached connection strings for rejoin"
+        }
+      ],
+      "gotchas": [
+        "AActor::NetUpdateFrequency is deprecated in UE 5.7 — use SetNetUpdateFrequency()/GetNetUpdateFrequency() instead",
+        "AActor::NetCullDistanceSquared is deprecated in UE 5.7 — use SetNetCullDistanceSquared()/GetNetCullDistanceSquared() instead",
+        "UFUNCTION returning uint32 is not supported by Blueprint — use int32 for BP-exposed prediction sequence numbers"
+      ],
+      "verification": "PASS git-clean, PASS source-exists",
+      "durationMs": 359949
+    },
+    {
+      "phase": 47,
+      "areaId": "save-core",
+      "moduleId": "arpg-save",
+      "label": "Save/Load Core",
+      "description": "USaveGame, custom serialization, save and load functions",
+      "pofActions": [
+        "as-1",
+        "as-2",
+        "as-3",
+        "as-4"
+      ],
+      "ue5Files": [
+        "Source/PoF/Framework/ARPGSaveGame.h",
+        "Source/PoF/Framework/ARPGSaveSubsystem.h",
+        "Source/PoF/Framework/ARPGSaveSubsystem.cpp"
+      ],
+      "decisions": [
+        {
+          "decision": "Implemented UARPGSaveGame",
+          "rationale": "Complete save data structure with progression, inventory (legacy + rich v2), quest states, world state, equipment slots, settings. Versioned at v3."
+        },
+        {
+          "decision": "Implemented Custom serialization",
+          "rationale": "FARPGItemSaveData with affixes/rarity/level already existed. Added FARPGWorldState with TSet<FName> for bosses, containers, doors, zones, flags. GatherSaveData/RestoreFromSaveData on InventoryComponent bridges live items to save format."
+        },
+        {
+          "decision": "Implemented Save versioning",
+          "rationale": "Version-stepped migration chain v1→v2 (legacy inventory to rich items) and v2→v3 (adds quest + world state). Future-version rejection in ValidateSaveGame. Referential integrity check on EquippedSlots."
+        },
+        {
+          "decision": "Implemented Save function",
+          "rationale": "GatherStateFromWorld() pulls from GameInstance (progression), InventoryComponent (items + equipment), and QuestSubsystem (quest states + pinned quest). World state is always in cache. BuildSaveGameFromCache serializes all."
+        },
+        {
+          "decision": "Implemented Load function",
+          "rationale": "RestoreStateToWorld() pushes progression to GameInstance, quest states to QuestSubsystem. Inventory deferred to BeginPlay timing via cached accessors. Validation + migration run before apply."
+        },
+        {
+          "decision": "Implemented Auto-save",
+          "rationale": "Timer-based auto-save (configurable interval, default 5min) + zone transition auto-save via OnPostMapChange delegate. Separate AutoSave slot. Toggle on/off."
+        },
+        {
+          "decision": "Implemented World state persistence",
+          "rationale": "FARPGWorldState tracks defeated bosses, opened containers, unlocked doors, discovered zones, and generic world flags. Blueprint-callable mark/query API on subsystem."
+        }
+      ],
+      "gotchas": [
+        "GameInstanceSubsystem::Deinitialize must clear timer handles since the world may be torn down concurrently",
+        "DECLARE_DYNAMIC_MULTICAST_DELEGATE does not support AddLambda — must use AddDynamic with a UFUNCTION for dynamic delegates",
+        "Inventory restoration after load must be deferred to BeginPlay timing — the pawn may not exist yet when LoadFromSlot runs"
+      ],
+      "verification": "PASS git-clean, PASS source-exists",
+      "durationMs": 214476
+    },
+    {
+      "phase": 48,
+      "areaId": "save-features",
+      "moduleId": "arpg-save",
+      "label": "Save Features",
+      "description": "Auto-save, slot system, save versioning",
+      "pofActions": [
+        "as-5",
+        "as-6",
+        "as-7",
+        "as-8"
+      ],
+      "ue5Files": [
+        "Source/PoF/Framework/ARPGSaveGame.h",
+        "Source/PoF/Framework/ARPGSaveSubsystem.h",
+        "Source/PoF/Framework/ARPGSaveSubsystem.cpp"
+      ],
+      "decisions": [
+        {
+          "decision": "Implemented Save function",
+          "rationale": "Full state gathering from ASC/inventory/quests/world into SaveGame, with sync and async paths"
+        },
+        {
+          "decision": "Implemented Load function",
+          "rationale": "Validates, migrates (v1→v4), restores all systems. Deferred inventory restore for BeginPlay timing."
+        },
+        {
+          "decision": "Implemented Auto-save",
+          "rationale": "Added async auto-save on zone transitions (existing), boss kills (new OnBossDefeated binding), level-ups (new OnPlayerLevelUp binding), and timer. All use SaveToSlotAsync."
+        },
+        {
+          "decision": "Implemented Save slot system",
+          "rationale": "3 manual slots (SaveSlot_0-2) + 1 auto-save slot. FARPGSaveSlotInfo struct with character name, level, playtime, zone, timestamp, isAutoSave. GetAllSlotInfo/GetSlotInfo/SaveToManualSlot/LoadFromManualSlot/LoadFromAutoSave API."
+        },
+        {
+          "decision": "Implemented Save versioning",
+          "rationale": "Stepped migration chain v1→v2→v3→v4. v4 adds CharacterName to progression. Future versions add new case blocks. ValidateSaveGame rejects unknown future versions."
+        }
+      ],
+      "gotchas": [],
+      "verification": "PASS git-clean, PASS source-exists",
+      "durationMs": 240001
+    },
+    {
+      "phase": 49,
+      "areaId": "save-load",
+      "moduleId": "save-load",
+      "label": "Save / Load",
+      "description": "USaveGame, auto-save, slot system",
+      "pofActions": [
+        "sl-1",
+        "sl-2",
+        "sl-3",
+        "sl-4",
+        "sl-5",
+        "sl-6"
+      ],
+      "ue5Files": [
+        "Source/PoF/UI/SaveSlotWidget.h",
+        "Source/PoF/UI/SaveSlotWidget.cpp",
+        "Source/PoF/Framework/ARPGSaveGame.h",
+        "Source/PoF/Framework/ARPGSaveSubsystem.h",
+        "Source/PoF/Framework/ARPGSaveSubsystem.cpp",
+        "Source/PoF/UI/ARPGHUD.h",
+        "Source/PoF/UI/ARPGHUD.cpp"
+      ],
+      "decisions": [
+        {
+          "decision": "Implemented USaveGame subclass",
+          "rationale": "UARPGSaveGame with progression, inventory (legacy+rich), quests, world state, settings. Well-structured with clear field comments."
+        },
+        {
+          "decision": "Implemented Save and load functions",
+          "rationale": "Sync/async save, load with validation, migration, state gather/restore from all live systems. Added save-in-progress guard to prevent concurrent async saves."
+        },
+        {
+          "decision": "Implemented Auto-save system",
+          "rationale": "Timer-based (5min default) + event-triggered (zone transition, level-up, boss kill). Added 10s throttle cooldown to prevent rapid-fire from simultaneous events."
+        },
+        {
+          "decision": "Implemented Save slot UI",
+          "rationale": "New SaveSlotWidget with Save/Load mode toggle, 3 manual + 1 auto-save slots, metadata display, overwrite/delete confirmation overlay, auto-refresh on save/load completion. Integrated into HUD with ToggleSaveScreen."
+        },
+        {
+          "decision": "Implemented Save versioning",
+          "rationale": "v1→v2→v3→v4 stepped migration chain. Validates integrity (level, health, equipped slot referential consistency). Rejects future-version saves gracefully."
+        },
+        {
+          "decision": "Implemented Custom serialization",
+          "rationale": "UPROPERTY-based serialization covers all types including TMap, TSet, TArray of USTRUCTs. FArchive custom serialize not needed — UE handles these natively."
+        }
+      ],
+      "gotchas": [
+        "UHorizontalBox::AddChildToHorizontalBox returns UHorizontalBoxSlot* (not lvalue reference) — cannot bind to auto&",
+        "Include Components/HorizontalBoxSlot.h for SetSize/SetHorizontalAlignment on HorizontalBox slots"
+      ],
+      "verification": "PASS git-clean, PASS source-exists",
+      "durationMs": 268180
+    },
+    {
+      "phase": 50,
+      "areaId": "polish-debug",
+      "moduleId": "arpg-polish",
+      "label": "Debug & Logging",
+      "description": "Structured logging, debug draw helpers, console commands",
+      "pofActions": [
+        "apl-1",
+        "apl-2",
+        "apl-3"
+      ],
+      "ue5Files": [
+        "Source/PoF/Debug/ARPGLogCategories.h",
+        "Source/PoF/Debug/ARPGLogCategories.cpp",
+        "Source/PoF/Debug/ARPGDebugDrawHelpers.h",
+        "Source/PoF/Debug/ARPGDebugDrawHelpers.cpp",
+        "Source/PoF/Debug/ARPGCheatManager.h",
+        "Source/PoF/Debug/ARPGCheatManager.cpp",
+        "Source/PoF/Player/ARPGPlayerController.cpp"
+      ],
+      "decisions": [
+        {
+          "decision": "Implemented Structured logging",
+          "rationale": "10 custom log categories covering all systems: Combat, AI, Inventory, Ability, Quest, World, Save, UI, Audio, Network"
+        },
+        {
+          "decision": "Implemented Debug draw helpers",
+          "rationale": "Blueprint-callable static library with master toggle CVar (ARPG.Debug.Draw), 8 draw functions: weapon trace, ability range, hit impact, AI path, perception range, attack cone, spawn point, box volume, overlap sphere. ENABLE_DRAW_DEBUG guards for shipping."
+        },
+        {
+          "decision": "Implemented Debug console commands",
+          "rationale": "UCheatManager subclass with 8 commands: ARPGGod (invulnerable+mana), ARPGSetLevel, ARPGGiveXP, ARPGHeal, ARPGKillAll, ARPGSpawnEnemy (BP path+level), ARPGDamageTarget (crosshair trace), ARPGShowStats. Registered on PlayerController via CheatClass."
+        }
+      ],
+      "gotchas": [
+        "FColor::Orange and other FColor constants cannot be used as UHT default parameters — use FLinearColor for Blueprint-exposed color params",
+        "GetPlayerViewPoint returns FRotator not FVector for the rotation output — use ViewRot.Vector() for direction"
+      ],
+      "verification": "PASS git-clean, PASS source-exists",
+      "durationMs": 270733
+    },
+    {
+      "phase": 51,
+      "areaId": "polish-performance",
+      "moduleId": "arpg-polish",
+      "label": "Performance Optimization",
+      "description": "Object pooling, tick optimization, async asset loading",
+      "pofActions": [
+        "apl-4",
+        "apl-5",
+        "apl-6",
+        "apl-7",
+        "apl-8"
+      ],
+      "ue5Files": [
+        "Source/PoF/Performance/ARPGObjectPool.h",
+        "Source/PoF/Performance/ARPGObjectPool.cpp",
+        "Source/PoF/Performance/ARPGTickOptimizer.h",
+        "Source/PoF/Performance/ARPGTickOptimizer.cpp",
+        "Source/PoF/Performance/ARPGAsyncLoader.h",
+        "Source/PoF/Performance/ARPGAsyncLoader.cpp",
+        "Source/PoF/Combat/CombatFeedbackComponent.cpp",
+        "Source/PoF/Loot/ARPGLootChest.cpp",
+        "Source/PoF/Loot/ARPGWorldItem.cpp"
+      ],
+      "decisions": [
+        {
+          "decision": "Implemented Object pooling",
+          "rationale": "UARPGObjectPool GameInstanceSubsystem with Acquire/Release/PreWarm/SetMaxPoolSize, weak-pointer cleanup, deactivation/activation lifecycle"
+        },
+        {
+          "decision": "Implemented Tick optimization",
+          "rationale": "UARPGTickOptimizer WorldSubsystem with distance-based tick interval (near/mid/far tiers), plus direct fixes: CombatFeedbackComponent tick-on-demand, LootChest tick-on-animation-only, WorldItem auto-registers with optimizer"
+        },
+        {
+          "decision": "Implemented Async asset loading",
+          "rationale": "UARPGAsyncLoader GameInstanceSubsystem wrapping FStreamableManager with single/batch async loading, priority support, handle retention, and sync fallback"
+        }
+      ],
+      "gotchas": [],
+      "verification": "PASS git-clean, PASS source-exists",
+      "durationMs": 228428
+    },
+    {
+      "phase": 52,
+      "areaId": "packaging",
+      "moduleId": "packaging",
+      "label": "Packaging",
+      "description": "Build config, automation, versioning",
+      "pofActions": [
+        "pkg-1",
+        "pkg-2",
+        "pkg-3",
+        "pkg-4",
+        "pkg-5"
+      ],
+      "ue5Files": [
+        "Source/PoF/Framework/ARPGBuildVersion.h",
+        "Source/PoF/Framework/ARPGBuildVersion.cpp",
+        "Source/PoFEditor/ContentValidationCommandlet.h",
+        "Source/PoFEditor/ContentValidationCommandlet.cpp",
+        "BuildPackage.bat",
+        "Source/PoF.Target.cs",
+        "Source/PoFEditor.Target.cs",
+        "Source/PoF/UI/MainMenuWidget.cpp",
+        "Config/DefaultGame.ini"
+      ],
+      "decisions": [
+        {
+          "decision": "Implemented Build configuration",
+          "rationale": "Game target has Shipping/Development defines (POF_SHIPPING, POF_DEV_TOOLS), logging disabled in Shipping. Editor target left clean to share build environment."
+        },
+        {
+          "decision": "Implemented Cooking settings",
+          "rationale": "DefaultGame.ini configured with pak compression, skip editor content, share material shader code, deterministic shader order, directories to always/never cook, async loading, GC tuning."
+        },
+        {
+          "decision": "Implemented Platform configuration",
+          "rationale": "Win64 DX12 default, staging directory, renderer settings. Console/mobile deferred until SDK availability."
+        },
+        {
+          "decision": "Implemented Build automation",
+          "rationale": "BuildPackage.bat with development/shipping args, auto build-number increment, compile, content validation, UAT BuildCookRun with pak/compress/stage/archive."
+        },
+        {
+          "decision": "Implemented Version numbering system",
+          "rationale": "UARPGBuildVersionSubsystem reads major.minor.patch.build from DefaultGame.ini, auto-incremented by build script. MainMenuWidget pulls live version string from subsystem."
+        },
+        {
+          "decision": "Implemented Content validation",
+          "rationale": "UContentValidationCommandlet checks missing asset references and oversized textures, integrated into build pipeline."
+        }
+      ],
+      "gotchas": [
+        "Editor targets that share build environment with UnrealEditor cannot add GlobalDefinitions — UBT rejects property modifications on shared targets. Only Game/Server targets with unique build environments can use custom defines.",
+        "GConfig->GetInt/GetString with GGameIni reads from DefaultGame.ini section paths matching the UCLASS path"
+      ],
+      "verification": "PASS git-clean, PASS source-exists",
+      "durationMs": 200362
+    }
+  ],
+  "learnings": [
+    "UCharacterMovementComponent::PerchRadiusThreshold controls how close to ledge edges the character can stand",
+    "bMaintainHorizontalGroundVelocity is key for consistent speed on ramps/slopes",
+    "APlayerController::InputKey(FInputKeyParams) is final in UE 5.7 — override InputKey(const FInputKeyEventArgs&) instead, include InputKeyEventArgs.h. Use Params.IsGamepad() for device detection.",
+    "UHT cannot parse TArray<AActor*>() as a default parameter — use AutoCreateRefTerm meta specifier and move the param before defaulted params",
+    "UPhysicalMaterial already has a SurfaceType member — custom subclasses must use a different name (e.g. GameSurfaceType)",
+    "FVector_NetQuantize (from HitResult.ImpactPoint) cannot be used in ternary with FVector — explicit FVector() cast needed",
+    "ChaosSolverEngine, GeometryCollectionEngine, FieldSystemEngine modules needed for Chaos destruction in UE 5.7",
+    "Virtual IsDead() on base character class enables AnimInstance death state without coupling to specific subclass bIsAlive flags",
+    "UE MotionWarping warp targets must be set BEFORE montage playback starts — the MotionWarping notify state reads them during the montage window",
+    "Frame-to-frame weapon sweep tracing (previous vs current socket positions) catches fast-swing hits that single-frame traces miss",
+    "Re-acquiring warp target on each combo section advance keeps magnetism tracking moving targets during multi-hit combos",
+    "FGameplayEffectSpec::AddDynamicAssetTag() is the proper way to attach damage type metadata to a GE spec — the damage execution and PostGameplayEffectExecute can both read it via GetDynamicAssetTags()",
+    "UAbilitySystemComponent::ExecuteGameplayCue() fires a one-shot cue without needing a GE — useful for hit impact feedback from PostGameplayEffectExecute",
+    "Elemental resistances should be capped below 1.0 (0.9 cap) in PreAttributeChange to prevent full immunity",
+    "UStaticMesh::NaniteSettings is deprecated in 5.7 — use IsNaniteEnabled() and GetNaniteSettings() accessor functions instead",
+    "UAudioComponent::bEnableDefaultMultichannelEvaluation does not exist in UE 5.7 — removed without replacement",
+    "EMaxConcurrentResolutionRule is a namespace enum in UE 5.7, not an enum class — must use TEnumAsByte<EMaxConcurrentResolutionRule::Type> for UPROPERTY",
+    "UAudioComponent::SetBoolParameter() exists natively in UE 5.7 — no need for int workaround",
+    "CanMove() should always check IsDead() as first gate to prevent dead characters from processing movement input — especially important for enemy AI that may call AddMovementInput after death",
+    "UAnimNotify::NotifyColor set in constructor won't update when properties change in editor — override GetEditorColor() instead for dynamic color based on property values",
+    "AnimNotifyState is more designer-friendly than two bookend instant notifies for window-based concepts (combo window, invulnerability frames) — the duration bar is intuitive",
+    "Montage_GetCurrentSection() returns the active section name — useful for section-aware AnimBP transitions and per-section logic",
+    "GE_Heal should modify IncomingHeal meta attribute (not Health directly) to go through the full heal pipeline with GameplayCue support in PostGameplayEffectExecute",
+    "Enemy abilities should use distinct Ability.Enemy.* tags rather than reusing player ability tags (e.g. Ability.Melee.LightAttack) to prevent tag-based filtering collisions between player and enemy ability sets",
+    "GA_HitReact should block on State.Attacking/Invulnerable/Dashing to avoid interrupting active player actions — hit react is a lower priority response",
+    "GA_UsePotion is fire-and-forget (CommitAbility + ApplyEffectToSelf + EndAbility) — no montage needed, cooldown gates usage",
+    "UAudioComponent created via NewObject on a subsystem (no world) won't produce sound — must RegisterComponentWithWorld after a world exists, or create lazily",
+    "FAudioDeviceHandle from World->GetAudioDevice() provides ActivateReverbEffect/DeactivateReverbEffect for runtime reverb control without AReverbVolume actors",
+    "GConfig->SetFloat/GetFloat with GGameUserSettingsIni is the lightweight way to persist audio settings without a full SaveGame system",
+    "UDragDropOperation already has a Payload member — do not re-declare it in subclasses or UHT will error on shadowing",
+    "GA_HitReact must set/clear bIsHitReacting on the character so CanMove() properly gates movement during hit reactions — without this, the character can walk freely while playing a hit-react montage",
+    "FGameplayAbilityTargetData::GetHitResult() can return nullptr even when TargetData.Num() > 0 — always null-check before dereferencing",
+    "APlayerController::PlayDynamicForceFeedback() is the simplest way to trigger gamepad vibration — no ForceFeedbackEffect asset needed, just intensity + duration + channel booleans",
+    "Test dummy respawn requires cancelling all GAS abilities first (to clear State.Dead from ActivationOwnedTags), then re-granting abilities and re-initializing attributes",
+    "BT task nodes are shared singletons by default (bCreateNodeInstance=false) — per-instance state MUST use GetInstanceMemorySize()/NodeMemory, not member variables. Storing FDelegateHandle or float state as member vars corrupts when multiple enemies share the same BT.",
+    "FPathFollowingRequestResult is forward-declared in AIController.h — include Navigation/PathFollowingComponent.h to use it (known UE 5.7 gotcha)",
+    "WaitForMessage(OwnerComp, UBrainComponent::AIMessage_MoveFinished) is the cleanest way to wait for MoveTo completion in BT tasks without manual delegate plumbing",
+    "BTService nodes are also shared singletons like BTTask nodes — NoLOSTimer as a member variable corrupts when multiple enemies share the same BT. Must use GetInstanceMemorySize()/NodeMemory.",
+    "ASC->OnAbilityEnded fires for ALL abilities ending on that ASC, not just the one you activated — must filter by FGameplayAbilitySpecHandle to avoid premature BT task completion",
+    "WaitForMessage(OwnerComp, UBrainComponent::AIMessage_MoveFinished) is safer than lambda-based OnRequestFinished delegates in BT tasks — avoids dangling reference captures on OwnerComp",
+    "GameplayDebugger module in UE 5.7 is at Source/Runtime/GameplayDebugger, module name is 'GameplayDebugger'",
+    "StateTree plugin modules: 'StateTreeModule' (runtime) and 'GameplayStateTreeModule' (AI integration)",
+    "State Tree tasks/conditions/evaluators are USTRUCT-based (not UCLASS) with separate instance data structs",
+    "FGameplayDebuggerCategory::SetDataPackReplication<T> requires T to have a Serialize(FArchive&) method",
+    "UAISenseConfig_Hearing uses HearingRange (not SightRadius-style naming)",
+    "UMaterialInterface::GetUsedTextures() with quality/featurelevel params is deprecated in 5.7 — use the parameterless overload",
+    "TArray<T*>::Sort() with const T* lambda fails due to TDereferenceWrapper — use Algo::Sort() with Algo/Sort.h include",
+    "UHT parameter shadowing: UFUNCTION params cannot share names with UPROPERTY members in the same UCLASS — use InRarity instead of Rarity to avoid 'shadowing is not allowed' UHT error",
+    "FOnItemPickedUpStatic (static multicast delegate) allows HUD to bind once globally without per-actor references — useful for pickup notification feeds",
+    "SetRenderTranslation offsets from the widget's layout anchor — for world-projected damage numbers use SetPositionInViewport with screen coordinates instead",
+    "UMG widgets created in HUD::BeginPlay but never bound to data sources are inert — must call BindToInventory/BindToAbilitySystem from BindWidgetsToPlayer",
+    "UUserWidget has no SetRootWidget() method — use WidgetTree->RootWidget = widget to set programmatic root",
+    "UFUNCTION cannot return const USTRUCT* — use a copy-out pattern (bool GetFoo(FName ID, FStruct& Out) const) for Blueprint exposure",
+    "UARPGInventoryComponent methods take UARPGItemDefinition* not FName — dialogue item actions need Blueprint wiring or asset manager lookup",
+    "GAS meta-attribute pattern (IncomingXP like IncomingDamage) is the clean way to bridge GE-based XP awards to local game logic — avoids dual-tracking between GAS attributes and local state",
+    "ApplyModToAttribute with EGameplayModOp::Override does NOT trigger PostGameplayEffectExecute, only attribute change delegates — safe for syncing GAS back from local authoritative state without recursion",
+    "UButton::OnClicked is a dynamic multicast delegate (no lambda support) — use a shared UFUNCTION + IsHovered() TMap lookup pattern for programmatically-created button arrays",
+    "BindWidget meta on UUserWidget requires a Blueprint subclass to provide the slot — programmatic children are added into those containers, not replacing them",
+    "UWidgetTree::ConstructWidget<T>() in UE 5.7 takes (TSubclassOf<T>, FName) — cannot pass TEXT() directly as first arg, must pass StaticClass() + FName",
+    "UAbilitySystemComponent::GetGameplayAttributeValue() returns float and takes a bool& bFound output param — cannot assign to two separate float variables",
+    "TObjectPtr<USphereComponent> implicit conversion to USceneComponent* fails without the full type definition — include the component header in the cpp",
+    "AARPGCharacterBase::InitializeAttributes() is protected — cannot call from external actors like BossEncounter",
+    "Dynamic delegate RemoveDynamic must be called in ALL exit paths (not just CompleteEncounter but also OnPlayerDied) to prevent double-binding on retrigger",
+    "GetOverlappingActors() on BeginPlay is needed for hazards too — actors spawned inside a hazard volume won't generate overlap events",
+    "AARPGEncounterVolume inherits from ASpawnVolume — adding UPROPERTY to parent that child already declares causes UHT shadowing error",
+    "SpawnVolume's SpawnNextInWave is not virtual — max enemy cap must be enforced in the base class for subclasses to benefit",
+    "BeginReplication() is deprecated in UE 5.7 — override FillReplicationParams() for per-actor Iris config and OnReplicationStartedForIris() for post-start setup",
+    "FActorReplicationParams::AlwaysRelevant bypasses spatial filtering for actors that must replicate to all connections (GameState, GameMode)",
+    "FActorReplicationParams lives in Net/Iris/ReplicationSystem/EngineReplicationBridge.h",
+    "UActorComponent has OnReplicationStartedForIris but not FillReplicationParams — filtering is actor-level only",
+    "AActor::NetUpdateFrequency is deprecated in UE 5.7 — use SetNetUpdateFrequency()/GetNetUpdateFrequency() instead",
+    "AActor::NetCullDistanceSquared is deprecated in UE 5.7 — use SetNetCullDistanceSquared()/GetNetCullDistanceSquared() instead",
+    "UFUNCTION returning uint32 is not supported by Blueprint — use int32 for BP-exposed prediction sequence numbers",
+    "GameInstanceSubsystem::Deinitialize must clear timer handles since the world may be torn down concurrently",
+    "DECLARE_DYNAMIC_MULTICAST_DELEGATE does not support AddLambda — must use AddDynamic with a UFUNCTION for dynamic delegates",
+    "Inventory restoration after load must be deferred to BeginPlay timing — the pawn may not exist yet when LoadFromSlot runs",
+    "UHorizontalBox::AddChildToHorizontalBox returns UHorizontalBoxSlot* (not lvalue reference) — cannot bind to auto&",
+    "Include Components/HorizontalBoxSlot.h for SetSize/SetHorizontalAlignment on HorizontalBox slots",
+    "FColor::Orange and other FColor constants cannot be used as UHT default parameters — use FLinearColor for Blueprint-exposed color params",
+    "GetPlayerViewPoint returns FRotator not FVector for the rotation output — use ViewRot.Vector() for direction",
+    "Editor targets that share build environment with UnrealEditor cannot add GlobalDefinitions — UBT rejects property modifications on shared targets. Only Game/Server targets with unique build environments can use custom defines.",
+    "GConfig->GetInt/GetString with GGameIni reads from DefaultGame.ini section paths matching the UCLASS path"
+  ],
+  "prerequisites": [
+    "UE5 5.7.3+ installed",
+    "PoF app running (npm run dev)",
+    "Project connected via Setup Wizard",
+    "Project path: C:/Users/kazda/Documents/Unreal Projects/PoF"
+  ]
+}

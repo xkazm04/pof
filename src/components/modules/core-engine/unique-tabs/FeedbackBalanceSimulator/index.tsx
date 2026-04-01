@@ -104,17 +104,17 @@ export function FeedbackBalanceSimulator() {
       {/* Header */}
       <BlueprintPanel color={ACCENT_VIOLET} className="p-3">
         <SectionHeader icon={Eye} label="Feedback-Aware Balance Simulator" color={ACCENT_VIOLET} />
-        <p className="text-[10px] font-mono text-text-muted mt-1">
+        <p className="text-xs font-mono text-text-muted mt-1">
           Compares combat outcomes WITH and WITHOUT feedback mechanics (hitstop, camera shake, recovery windows).
           Quantifies how UCombatFeedbackComponent parameters affect player survival, DPS, and reaction windows.
         </p>
 
         {/* Feedback Presets */}
         <div className="flex items-center gap-2 mt-2 flex-wrap">
-          <span className="text-[10px] font-mono uppercase tracking-[0.15em] text-text-muted">Feedback:</span>
+          <span className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted">Feedback:</span>
           {FEEDBACK_PRESETS.map(p => (
             <button key={p.id} onClick={() => loadPreset(p.id)} title={p.description}
-              className="text-[10px] font-mono uppercase tracking-[0.15em] px-2 py-0.5 rounded-md border transition-colors"
+              className="text-xs font-mono uppercase tracking-[0.15em] px-2 py-0.5 rounded-md border transition-colors"
               style={{
                 borderColor: activePreset === p.id ? ACCENT_VIOLET : 'var(--color-border)',
                 backgroundColor: activePreset === p.id ? `${ACCENT_VIOLET}${OPACITY_15}` : 'transparent',
@@ -127,10 +127,10 @@ export function FeedbackBalanceSimulator() {
 
         {/* Scenario Presets */}
         <div className="flex items-center gap-2 mt-1.5 flex-wrap">
-          <span className="text-[10px] font-mono uppercase tracking-[0.15em] text-text-muted">Encounter:</span>
+          <span className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted">Encounter:</span>
           {SCENARIO_PRESETS.map(p => (
             <button key={p.id} onClick={() => loadScenario(p.id)}
-              className="text-[10px] font-mono uppercase tracking-[0.15em] px-2 py-0.5 rounded-md border transition-colors"
+              className="text-xs font-mono uppercase tracking-[0.15em] px-2 py-0.5 rounded-md border transition-colors"
               style={{
                 borderColor: activeScenario === p.id ? ACCENT : 'var(--color-border)',
                 backgroundColor: activeScenario === p.id ? `${ACCENT}${OPACITY_15}` : 'transparent',
@@ -160,7 +160,7 @@ export function FeedbackBalanceSimulator() {
               <div className="flex flex-col items-center gap-2 text-text-muted">
                 <Eye className="w-8 h-8 opacity-30" />
                 <p className="text-sm font-mono">Configure feedback parameters and run the comparison</p>
-                <p className="text-[10px] font-mono">
+                <p className="text-xs font-mono">
                   Results will compare feedback-on vs feedback-off across survival, DPS, and reaction metrics
                 </p>
               </div>

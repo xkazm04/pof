@@ -1,4 +1,5 @@
 import { getDb } from './db';
+import { logger } from '@/lib/logger';
 import type { SubModuleId } from '@/types/modules';
 import type { FeatureRow, FeatureStatus, FeatureSummary } from '@/types/feature-matrix';
 
@@ -34,6 +35,16 @@ interface RawRow {
   updated_at: string;
 }
 
+function safeParseJsonArray(value: string | null | undefined, rowId: number): string[] {
+  try {
+    const parsed = JSON.parse(value || '[]');
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    logger.warn(`[feature-matrix-db] Corrupt file_paths JSON in row ${rowId}, falling back to []`);
+    return [];
+  }
+}
+
 function toFeatureRow(raw: RawRow): FeatureRow {
   return {
     id: raw.id,
@@ -42,7 +53,7 @@ function toFeatureRow(raw: RawRow): FeatureRow {
     category: raw.category,
     status: raw.status as FeatureStatus,
     description: raw.description,
-    filePaths: JSON.parse(raw.file_paths || '[]'),
+    filePaths: safeParseJsonArray(raw.file_paths, raw.id),
     reviewNotes: raw.review_notes,
     qualityScore: raw.quality_score,
     nextSteps: raw.next_steps || '',

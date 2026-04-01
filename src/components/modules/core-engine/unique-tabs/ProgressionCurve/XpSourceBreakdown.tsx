@@ -40,14 +40,14 @@ export function XpSourceBreakdown() {
                 style={{ width: `${src.pct}%`, background: `linear-gradient(90deg, ${src.color}40, ${src.color}10)` }}
               />
               <div className="absolute inset-0 flex items-center px-2">
-                <span className="text-[10px] font-mono font-bold text-white/80 drop-shadow-sm">{src.label} - {src.pct}%</span>
+                <span className="text-xs font-mono font-bold text-white/80 drop-shadow-sm">{src.label} - {src.pct}%</span>
               </div>
             </div>
           </motion.div>
         ))}
 
         <div className="mt-2.5 pt-3 border-t border-border/40">
-          <div className="text-[10px] font-mono uppercase tracking-[0.15em] text-text-muted mb-2">Combined Distribution</div>
+          <div className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted mb-2">Combined Distribution</div>
           <div className="flex h-6 rounded-lg overflow-hidden border border-border/30">
             {XP_SOURCES.map((src, i) => (
               <motion.div

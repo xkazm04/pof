@@ -48,7 +48,7 @@ export function ComparisonPanel({
             className="overflow-hidden"
           >
             {/* Header */}
-            <div className="flex items-center gap-2 px-2 py-1.5 mb-1 text-[10px] font-mono uppercase tracking-[0.15em] font-bold">
+            <div className="flex items-center gap-2 px-2 py-1.5 mb-1 text-xs font-mono uppercase tracking-[0.15em] font-bold">
               <span className="w-28 flex-shrink-0 text-text-muted">Parameter</span>
               <div className="flex-1 flex items-center gap-1">
                 <span className="w-12 text-right" style={{ color: selectedPreset.color }}>
@@ -67,7 +67,7 @@ export function ComparisonPanel({
               const catColor = CATEGORY_COLORS[cat];
               return (
                 <div key={cat} className="mb-2">
-                  <div className="text-[10px] font-mono font-bold uppercase tracking-[0.15em] px-2 py-1" style={{ color: catColor }}>
+                  <div className="text-xs font-mono font-bold uppercase tracking-[0.15em] px-2 py-1" style={{ color: catColor }}>
                     <span className="w-1.5 h-1.5 rounded-full inline-block mr-1.5" style={{ backgroundColor: catColor }} />
                     {cat}
                   </div>

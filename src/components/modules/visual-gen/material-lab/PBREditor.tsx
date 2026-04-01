@@ -3,6 +3,7 @@
 import { useCallback } from 'react';
 import { Upload, X } from 'lucide-react';
 import { useMaterialStore, BUILT_IN_PRESETS, type PreviewMesh } from './useMaterialStore';
+import { StyledSlider } from '@/components/ui/StyledSlider';
 
 function Slider({
   label,
@@ -20,24 +21,16 @@ function Slider({
   onChange: (v: number) => void;
 }) {
   return (
-    <div className="space-y-1">
-      <div className="flex items-center justify-between">
-        <label className="text-xs text-text-muted">{label}</label>
-        <span className="text-xs text-text tabular-nums">{value.toFixed(2)}</span>
-      </div>
-      <input
-        type="range"
-        min={min}
-        max={max}
-        step={step}
-        value={value}
-        onChange={(e) => onChange(parseFloat(e.target.value))}
-        className="w-full h-1.5 bg-border rounded-full appearance-none cursor-pointer
-                   [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:h-3
-                   [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-[var(--visual-gen)]
-                   [&::-webkit-slider-thumb]:cursor-pointer"
-      />
-    </div>
+    <StyledSlider
+      min={min}
+      max={max}
+      step={step}
+      value={value}
+      onChange={onChange}
+      accentColor="var(--visual-gen)"
+      label={label}
+      displayValue={value.toFixed(2)}
+    />
   );
 }
 
@@ -116,7 +109,7 @@ export function PBREditor() {
             <button
               key={preset.name}
               onClick={() => setParams(preset.params)}
-              className="px-2 py-1 text-[10px] rounded border border-border text-text-muted hover:text-text hover:border-[var(--visual-gen)] transition-colors"
+              className="px-2 py-1 text-xs rounded border border-border text-text-muted hover:text-text hover:border-[var(--visual-gen)] transition-colors"
             >
               <span
                 className="inline-block w-2 h-2 rounded-full mr-1"

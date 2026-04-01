@@ -4,18 +4,18 @@ import { useState, useMemo, useCallback } from 'react';
 import { BarChart3, Network } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { useDensity, PanelFrame } from '@/lib/dzin/core';
-import { DZIN_TIMING } from '@/lib/dzin/animation-constants';
+import { DZIN_SPACING, TRANSITION_ENTER, TRANSITION_EXIT } from '@/lib/dzin/animation-constants';
 import {
   FeatureCard,
   SectionLabel,
-  STATUS_COLORS,
+  statusInfo,
 } from '@/components/modules/core-engine/unique-tabs/_shared';
 import { SurfaceCard } from '@/components/ui/SurfaceCard';
 import {
   STATUS_SUCCESS, STATUS_IMPROVED, ACCENT_RED, MODULE_COLORS, ACCENT_GREEN,
   ACCENT_EMERALD_DARK, STATUS_WARNING,
 } from '@/lib/chart-colors';
-import type { FeatureRow, FeatureStatus } from '@/types/feature-matrix';
+import type { FeatureRow } from '@/types/feature-matrix';
 
 /* -- Props ----------------------------------------------------------------- */
 
@@ -84,20 +84,13 @@ const GROWTH_BUILDS: { name: string; color: string; points: GrowthPoint[] }[] = 
   },
 ];
 
-/* -- Helpers --------------------------------------------------------------- */
-
-function statusDotColor(status: FeatureStatus | undefined): string {
-  if (!status) return STATUS_COLORS.unknown.dot;
-  return STATUS_COLORS[status].dot;
-}
-
 /* -- Micro density --------------------------------------------------------- */
 
 function AttributesMicro() {
   const total = CORE_ATTRIBUTES.length + DERIVED_ATTRIBUTES.length;
 
   return (
-    <div className="flex flex-col items-center justify-center gap-1 p-2">
+    <div className={DZIN_SPACING.micro.wrapper}>
       <BarChart3 className="w-5 h-5 text-emerald-400" />
       <span className="font-mono text-xs text-text">{total}</span>
     </div>
@@ -108,10 +101,10 @@ function AttributesMicro() {
 
 function AttributesCompact({ featureMap }: AttributesPanelProps) {
   const attrStatus = featureMap.get('Core AttributeSet')?.status;
-  const dotColor = statusDotColor(attrStatus);
+  const { color: dotColor } = statusInfo(attrStatus);
 
   return (
-    <div className="space-y-2 p-2 text-xs">
+    <div className={`${DZIN_SPACING.compact.wrapper} text-xs`}>
       <div className="flex items-center gap-2">
         <span
           className="w-2 h-2 rounded-full flex-shrink-0"
@@ -155,20 +148,20 @@ function AttributesFull({ featureMap, defs }: AttributesPanelProps) {
   const attrStatus = featureMap.get('Core AttributeSet')?.status ?? 'unknown';
 
   return (
-    <div className="space-y-2.5">
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
+    <div className={DZIN_SPACING.full.wrapper}>
+      <div className={`grid grid-cols-1 md:grid-cols-2 ${DZIN_SPACING.full.gap}`}>
         <FeatureCard name="Core AttributeSet" featureMap={featureMap} defs={defs} expanded={expanded} onToggle={onToggle} accent="#10b981" />
         <FeatureCard name="Default attribute initialization" featureMap={featureMap} defs={defs} expanded={expanded} onToggle={onToggle} accent="#10b981" />
       </div>
 
       {/* Attribute catalog */}
-      <SurfaceCard level={2} className="p-3 relative">
-        <div className="text-xs font-bold uppercase tracking-widest text-text-muted mb-2.5 flex items-center gap-2">
+      <SurfaceCard level={2} className={`${DZIN_SPACING.full.card} relative`}>
+        <div className={`text-xs font-bold uppercase text-text-muted ${DZIN_SPACING.full.sectionMb} flex items-center gap-2`}>
           <BarChart3 className="w-4 h-4 text-emerald-400" /> Attribute Set Catalog
         </div>
 
         <div className="text-2xs font-bold uppercase tracking-wider text-text-muted mb-2">Core Attributes</div>
-        <div className="grid grid-cols-3 gap-2 mb-2.5">
+        <div className={`grid grid-cols-3 gap-2 ${DZIN_SPACING.full.sectionMb}`}>
           {CORE_ATTRIBUTES.map((attr, i) => {
             const isInit = attrStatus === 'implemented' || attrStatus === 'improved';
             return (
@@ -217,17 +210,17 @@ function AttributesFull({ featureMap, defs }: AttributesPanelProps) {
       </SurfaceCard>
 
       {/* Attribute Relationship Web */}
-      <SurfaceCard level={2} className="p-3 relative overflow-hidden">
+      <SurfaceCard level={2} className={`${DZIN_SPACING.full.card} relative overflow-hidden`}>
         <SectionLabel icon={Network} label="Attribute Relationship Web" color="#10b981" />
-        <div className="mt-2.5 flex justify-center">
+        <div className={`${DZIN_SPACING.full.contentMt} flex justify-center`}>
           <AttributeRelationshipWeb />
         </div>
       </SurfaceCard>
 
       {/* Attribute Growth Projections */}
-      <SurfaceCard level={2} className="p-3 relative overflow-hidden">
+      <SurfaceCard level={2} className={`${DZIN_SPACING.full.card} relative overflow-hidden`}>
         <SectionLabel icon={BarChart3} label="Attribute Growth Projections (Lv 1-50)" color="#10b981" />
-        <div className="mt-2.5">
+        <div className={DZIN_SPACING.full.contentMt}>
           <AttributeGrowthChart />
         </div>
       </SurfaceCard>
@@ -443,8 +436,8 @@ export function AttributesPanel({ featureMap, defs }: AttributesPanelProps) {
           key={density}
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          transition={{ duration: DZIN_TIMING.DENSITY / 2 }}
+          exit={{ opacity: 0, transition: TRANSITION_EXIT }}
+          transition={TRANSITION_ENTER}
         >
           {density === 'micro' && <AttributesMicro />}
           {density === 'compact' && <AttributesCompact featureMap={featureMap} defs={defs} />}

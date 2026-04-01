@@ -137,7 +137,7 @@ export function LevelScaledPowerCurve({ genomes, activeId }: {
         </div>
 
         <div className="flex items-center gap-3 px-3 py-2 rounded-lg bg-surface-deep/50 border" style={{ borderColor: `${ACCENT_VIOLET}25` }}>
-          <span className="text-[10px] font-mono uppercase tracking-[0.15em] text-text-muted w-10">Lv.</span>
+          <span className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted w-10">Lv.</span>
           <div className="flex-1 relative h-5 flex items-center">
             <div className="absolute inset-x-0 h-1.5 bg-surface rounded-full" />
             <NeonBar pct={((previewLevel - 1) / 99) * 100} color={ACCENT_VIOLET} height={6} glow />
@@ -147,7 +147,7 @@ export function LevelScaledPowerCurve({ genomes, activeId }: {
           <input type="number" min={1} max={100} value={previewLevel}
             onChange={(e) => { const v = parseInt(e.target.value); if (!isNaN(v) && v >= 1 && v <= 100) setPreviewLevel(v); }}
             className="w-12 text-xs font-mono font-bold text-center bg-surface border border-border/40 rounded px-1 py-0.5 text-text focus:outline-none focus:border-blue-500/50" />
-          <span className="text-[10px] font-mono text-text-muted/50">/ 100</span>
+          <span className="text-xs font-mono text-text-muted/50">/ 100</span>
         </div>
 
         <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-1.5">
@@ -158,7 +158,7 @@ export function LevelScaledPowerCurve({ genomes, activeId }: {
               <span className="text-xs font-mono font-bold truncate" style={{ color, textShadow: `0 0 12px ${color}40` }}>{name}</span>
               <span className="ml-auto text-xs font-mono font-bold text-text whitespace-nowrap">{fmtVal(value)}</span>
               {idx === 0 && levelStats.length > 1 && (
-                <span className="text-[10px] font-bold px-1 py-0.5 rounded" style={{ backgroundColor: `${STATUS_SUCCESS}15`, color: STATUS_SUCCESS }}>#1</span>
+                <span className="text-xs font-bold px-1 py-0.5 rounded" style={{ backgroundColor: `${STATUS_SUCCESS}15`, color: STATUS_SUCCESS }}>#1</span>
               )}
             </div>
           ))}
@@ -166,7 +166,7 @@ export function LevelScaledPowerCurve({ genomes, activeId }: {
 
         {crossovers.length > 0 && (
           <div className="pt-2 border-t" style={{ borderColor: `${ACCENT_VIOLET}20` }}>
-            <span className="text-[10px] font-mono uppercase tracking-[0.15em] text-text-muted">Crossover Points</span>
+            <span className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted">Crossover Points</span>
             <div className="flex flex-wrap gap-1.5 mt-1.5">
               {crossovers.map((cp, i) => (
                 <button key={i} onClick={() => setPreviewLevel(Math.round(cp.level))}

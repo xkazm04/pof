@@ -1,7 +1,8 @@
 'use client';
 
-import { Wrench, Loader2 } from 'lucide-react';
+import { Wrench } from 'lucide-react';
 import { SurfaceCard } from '@/components/ui/SurfaceCard';
+import { WizardButton } from './WizardButton';
 
 interface ToolingBootstrapPanelProps {
   missingToolCount: number;
@@ -27,23 +28,16 @@ export function ToolingBootstrapPanel({
           Let Claude install everything automatically using winget (Windows Package Manager),
           or manually install from the links in the sidebar.
         </p>
-        <button
+        <WizardButton
+          variant="info"
           onClick={onFixAllMissing}
-          disabled={isRunning || scanning}
-          className="flex items-center gap-2 px-4 py-2 bg-[#3b82f6]/10 text-[#3b82f6] border border-[#3b82f6]/20 rounded-lg text-sm hover:bg-[#3b82f6]/20 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+          disabled={scanning}
+          loading={isRunning}
+          loadingLabel="Installing Tools..."
+          icon={<Wrench className="w-4 h-4" />}
         >
-          {isRunning ? (
-            <>
-              <Loader2 className="w-4 h-4 animate-spin" />
-              Installing Tools...
-            </>
-          ) : (
-            <>
-              <Wrench className="w-4 h-4" />
-              Fix All Missing Tools
-            </>
-          )}
-        </button>
+          Fix All Missing Tools
+        </WizardButton>
       </SurfaceCard>
     </div>
   );

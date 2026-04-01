@@ -14,7 +14,7 @@ export function DPSBreakdownChart({ breakdowns }: {
 
   return (
     <div className="space-y-1.5">
-      <div className="text-[10px] font-mono uppercase tracking-[0.15em] text-text-muted mb-1">
+      <div className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted mb-1">
         {label} — Effective DPS/ability
       </div>
       {items.map(item => {
@@ -27,7 +27,7 @@ export function DPSBreakdownChart({ breakdowns }: {
             <div className="flex-1">
               <NeonBar pct={pct} color={item.color} height={8} glow />
             </div>
-            <span className="text-xs font-mono font-bold text-text w-10 text-right">
+            <span className="text-xs font-mono font-bold tabular-nums text-text w-10 text-right">
               {item.avgDamage.toFixed(1)}
             </span>
           </div>

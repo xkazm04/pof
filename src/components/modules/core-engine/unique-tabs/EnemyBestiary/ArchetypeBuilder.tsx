@@ -30,16 +30,16 @@ export function ArchetypeBuilder() {
         {/* Form */}
         <div className="space-y-3">
           <div>
-            <label className="text-[10px] font-mono uppercase tracking-[0.15em] text-text-muted block mb-1">Name</label>
+            <label className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted block mb-1">Name</label>
             <input type="text" value={builderName} onChange={e => setBuilderName(e.target.value)}
               className="w-full bg-surface-deep border border-border/40 rounded px-2.5 py-1.5 text-xs text-text font-mono focus:outline-none focus:border-purple-500/50 transition-colors" />
           </div>
           <div>
-            <label className="text-[10px] font-mono uppercase tracking-[0.15em] text-text-muted block mb-1.5">Stats</label>
+            <label className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted block mb-1.5">Stats</label>
             <div className="space-y-3">
               {(Object.keys(builderStats) as (keyof typeof builderStats)[]).map(stat => (
                 <div key={stat} className="flex items-center gap-2">
-                  <span className="text-[10px] font-mono uppercase tracking-[0.15em] text-text-muted w-12 text-right flex-shrink-0">{stat}</span>
+                  <span className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted w-12 text-right flex-shrink-0">{stat}</span>
                   <input type="range" min={0} max={100} value={builderStats[stat]}
                     onChange={e => setBuilderStats(prev => ({ ...prev, [stat]: parseInt(e.target.value) }))}
                     className="flex-1 h-1.5 accent-purple-500" />
@@ -49,7 +49,7 @@ export function ArchetypeBuilder() {
             </div>
           </div>
           <div>
-            <label className="text-[10px] font-mono uppercase tracking-[0.15em] text-text-muted block mb-1.5">Abilities</label>
+            <label className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted block mb-1.5">Abilities</label>
             <div className="flex flex-wrap gap-1.5">
               {ABILITY_POOL.map(ab => (
                 <label key={ab} className="flex items-center gap-1 cursor-pointer">
@@ -62,14 +62,14 @@ export function ArchetypeBuilder() {
             </div>
           </div>
           <div>
-            <label className="text-[10px] font-mono uppercase tracking-[0.15em] text-text-muted block mb-1">Behavior Tree</label>
+            <label className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted block mb-1">Behavior Tree</label>
             <select value={builderBT} onChange={e => setBuilderBT(e.target.value as typeof BT_PRESETS[number])}
               className="w-full bg-surface-deep border border-border/40 rounded px-2.5 py-1.5 text-xs text-text font-mono focus:outline-none focus:border-purple-500/50 transition-colors">
               {BT_PRESETS.map(bt => <option key={bt} value={bt}>{bt}</option>)}
             </select>
           </div>
           <div>
-            <label className="text-[10px] font-mono uppercase tracking-[0.15em] text-text-muted block mb-1.5">Elite Modifiers</label>
+            <label className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted block mb-1.5">Elite Modifiers</label>
             <div className="flex flex-wrap gap-1.5">
               {ELITE_MODIFIERS.map(mod => {
                 const isActive = builderModifiers.includes(mod.id);
@@ -77,7 +77,7 @@ export function ArchetypeBuilder() {
                 return (
                   <button key={mod.id} onClick={() => !isExcluded && toggleBuilderModifier(mod.id)}
                     disabled={isExcluded}
-                    className={`text-[11px] font-bold px-1.5 py-0.5 rounded border transition-all inline-flex items-center gap-1 ${
+                    className={`text-xs font-bold px-1.5 py-0.5 rounded border transition-all inline-flex items-center gap-1 ${
                       isActive ? '' : isExcluded ? 'opacity-30 cursor-not-allowed' : 'hover:brightness-125 cursor-pointer'
                     }`}
                     style={{
@@ -121,12 +121,12 @@ function BuilderPreview({ name, stats, abilities, bt, modifiers }: {
     <div className="bg-surface-deep rounded-xl border-2 border-purple-500/30 p-4 space-y-3 relative overflow-hidden"
       style={{ boxShadow: '0 0 20px -5px rgba(168,85,247,0.3), inset 0 0 20px -10px rgba(168,85,247,0.15)' }}>
       <div className="absolute top-0 right-0 w-24 h-24 bg-purple-500/10 blur-2xl rounded-full pointer-events-none" />
-      <div className="text-[10px] font-mono uppercase tracking-[0.15em] text-text-muted">Preview</div>
+      <div className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted">Preview</div>
       <div className="text-sm font-bold text-text">{name || 'Unnamed'}</div>
       <div className="flex items-center gap-2 flex-wrap">
         <span className="text-xs font-mono text-purple-400 uppercase tracking-wider">BT: {bt}</span>
         {activeMods.map(mod => (
-          <span key={mod.id} className="text-[11px] font-bold px-1.5 py-0.5 rounded-full border inline-flex items-center gap-0.5"
+          <span key={mod.id} className="text-xs font-bold px-1.5 py-0.5 rounded-full border inline-flex items-center gap-0.5"
             style={{ backgroundColor: `${mod.color}15`, borderColor: `${mod.color}40`, color: mod.color }}>
             {mod.icon} {mod.name}
           </span>
@@ -138,7 +138,7 @@ function BuilderPreview({ name, stats, abilities, bt, modifiers }: {
           const diff = effective - value;
           return (
             <div key={stat} className="flex items-center gap-2">
-              <span className="text-[10px] font-mono uppercase tracking-[0.15em] text-text-muted w-10 flex-shrink-0 text-right">{stat}</span>
+              <span className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted w-10 flex-shrink-0 text-right">{stat}</span>
               <div className="flex-1">
                 <NeonBar
                   pct={effective}
@@ -148,7 +148,7 @@ function BuilderPreview({ name, stats, abilities, bt, modifiers }: {
               </div>
               <span className={`text-2xs font-mono font-bold w-6 text-right ${diff > 0 ? 'text-emerald-400' : diff < 0 ? 'text-red-400' : 'text-text'}`}>{effective}</span>
               {diff !== 0 && (
-                <span className={`text-[10px] font-mono font-bold w-8 ${diff > 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                <span className={`text-xs font-mono font-bold w-8 ${diff > 0 ? 'text-emerald-400' : 'text-red-400'}`}>
                   {diff > 0 ? '+' : ''}{diff}
                 </span>
               )}
@@ -159,7 +159,7 @@ function BuilderPreview({ name, stats, abilities, bt, modifiers }: {
       {abilities.length > 0 ? (
         <div className="flex flex-wrap gap-1">
           {abilities.map(ab => (
-            <span key={ab} className="text-[11px] font-bold px-1.5 py-0.5 rounded border bg-surface text-text"
+            <span key={ab} className="text-xs font-bold px-1.5 py-0.5 rounded border bg-surface text-text"
               style={{ borderColor: 'rgba(168,85,247,0.4)' }}>{ab}</span>
           ))}
         </div>

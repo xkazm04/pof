@@ -43,13 +43,13 @@ export function ArchetypeBalanceRadar({ balanceResults, scoreMean }: ArchetypeBa
                   <span className="w-2.5 h-2.5 rounded-full flex-shrink-0 relative z-[1]"
                     style={{ backgroundColor: br.color, boxShadow: `0 0 6px ${br.color}60` }} />
                   <div className="relative z-[1]">
-                    <div className="text-[10px] font-mono font-bold uppercase tracking-[0.15em]" style={{ color: br.color }}>{br.name}</div>
+                    <div className="text-xs font-mono font-bold uppercase tracking-[0.15em]" style={{ color: br.color }}>{br.name}</div>
                     <div className="flex items-center gap-1.5 mt-0.5">
                       <span className="text-sm font-mono font-bold tabular-nums text-text"
                         style={{ textShadow: `0 0 8px ${br.color}30` }}>
                         {(br.compositeScore * 100).toFixed(0)}
                       </span>
-                      <span className="text-[10px] font-mono font-bold tabular-nums" style={{ color: deltaColor }}>
+                      <span className="text-xs font-mono font-bold tabular-nums" style={{ color: deltaColor }}>
                         ({deltaSign}{(delta * 100).toFixed(1)})
                       </span>
                     </div>
@@ -62,7 +62,7 @@ export function ArchetypeBalanceRadar({ balanceResults, scoreMean }: ArchetypeBa
           {/* Deviation heatmap */}
           <div className="relative rounded-lg border border-border/15 p-3 overflow-hidden">
             <CornerBrackets size={8} color={ACCENT_CYAN} />
-            <div className="text-[10px] font-mono font-bold uppercase tracking-[0.15em] text-text-muted mb-2">
+            <div className="text-xs font-mono font-bold uppercase tracking-[0.15em] text-text-muted mb-2">
               Stat Deviation Heatmap
             </div>
 
@@ -88,7 +88,7 @@ export function ArchetypeBalanceRadar({ balanceResults, scoreMean }: ArchetypeBa
                       transition={{ delay: si * 0.04 }}
                       className="border-b" style={{ borderColor: `${OVERLAY_WHITE}04` }}
                     >
-                      <td className="py-1.5 pr-3 text-[10px] font-bold text-text-muted">{stat.stat}</td>
+                      <td className="py-1.5 pr-3 text-xs font-bold text-text-muted">{stat.stat}</td>
                       {balanceResults.map(br => {
                         const dev = br.deviations[si];
                         const color = deviationColor(dev);
@@ -97,7 +97,7 @@ export function ArchetypeBalanceRadar({ balanceResults, scoreMean }: ArchetypeBa
                           <td key={br.name} className="py-1.5 px-2 text-center">
                             <motion.span
                               whileHover={{ scale: 1.1 }}
-                              className="inline-flex items-center justify-center px-2 py-0.5 rounded text-[10px] font-bold tabular-nums min-w-[44px]"
+                              className="inline-flex items-center justify-center px-2 py-0.5 rounded text-xs font-bold tabular-nums min-w-[44px]"
                               style={{ backgroundColor: `${color}12`, color, border: `1px solid ${color}20` }}
                             >
                               {sign}{(dev * 100).toFixed(0)}%
@@ -152,7 +152,7 @@ export function ArchetypeBalanceRadar({ balanceResults, scoreMean }: ArchetypeBa
           </div>
           <div className="flex flex-wrap justify-center gap-x-3 gap-y-1">
             {balanceResults.map(br => (
-              <span key={br.name} className="flex items-center gap-1.5 text-[10px] font-mono font-bold" style={{ color: br.color }}>
+              <span key={br.name} className="flex items-center gap-1.5 text-xs font-mono font-bold" style={{ color: br.color }}>
                 <span className="w-2 h-2 rounded-full" style={{ backgroundColor: br.color, boxShadow: `0 0 4px ${br.color}60` }} />
                 {br.name}
               </span>

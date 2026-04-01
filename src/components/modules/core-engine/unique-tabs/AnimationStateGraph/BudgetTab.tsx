@@ -28,7 +28,7 @@ export function BudgetTab({ featureMap, defs }: BudgetTabProps) {
       {/* Asset list */}
       <div className="space-y-3 pt-2">
         <div className="px-1">
-          <div className="text-[10px] font-mono font-bold uppercase tracking-[0.15em] text-text-muted">
+          <div className="text-xs font-mono font-bold uppercase tracking-[0.15em] text-text-muted">
             Anim Architecture Modules
           </div>
         </div>
@@ -55,7 +55,7 @@ function BudgetTracker() {
   return (
     <BlueprintPanel color={ACCENT} className="p-4">
       <SectionHeader label="Animation Budget Tracker" color={ACCENT} />
-      <p className="text-[10px] font-mono uppercase tracking-[0.15em] text-text-muted mt-1 mb-3">
+      <p className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted mt-1 mb-3">
         Current animation system resource usage vs budget limits.
       </p>
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -80,7 +80,7 @@ function NotifyCoverage() {
   return (
     <BlueprintPanel color={ACCENT} className="p-4">
       <SectionHeader label="Notify Coverage Analyzer" color={ACCENT} />
-      <p className="text-[10px] font-mono uppercase tracking-[0.15em] text-text-muted mt-1 mb-3">
+      <p className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted mt-1 mb-3">
         Gaps in animation notify coverage. Errors must be resolved; warnings are advisory.
       </p>
       <div className="space-y-4">
@@ -119,7 +119,7 @@ function NotifyCoverage() {
 
         {/* Coverage bars */}
         <div className="space-y-1.5 pt-2 border-t border-border/40">
-          <div className="text-[10px] font-mono font-bold uppercase tracking-[0.15em] text-text-muted mb-2">
+          <div className="text-xs font-mono font-bold uppercase tracking-[0.15em] text-text-muted mb-2">
             Coverage per Montage
           </div>
           {MONTAGE_COVERAGES.map((mc) => {

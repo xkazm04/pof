@@ -63,7 +63,7 @@ export function DroughtCalculator({ pityThreshold }: DroughtCalculatorProps) {
           { label: 'P99 Worst', value: `${droughtPityEnabled ? droughtData.p99Pity : droughtData.p99} kills`, color: STATUS_ERROR },
         ].map(stat => (
           <div key={stat.label} className="text-center p-1.5 rounded border" style={{ borderColor: `${stat.color}${OPACITY_30}`, backgroundColor: `${stat.color}${OPACITY_8}` }}>
-            <div className="text-[10px] font-mono uppercase tracking-[0.15em] text-text-muted">{stat.label}</div>
+            <div className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted">{stat.label}</div>
             <div className="text-xs font-mono font-bold" style={{ color: stat.color }}>{stat.value}</div>
           </div>
         ))}
@@ -71,20 +71,20 @@ export function DroughtCalculator({ pityThreshold }: DroughtCalculatorProps) {
 
       {/* Cumulative probability curve SVG */}
       <div className="relative min-h-[200px] bg-surface-deep/30 rounded-lg p-2">
-        <div className="text-[10px] font-mono uppercase tracking-[0.15em] text-text-muted mb-1">{'Cumulative P(\u22651 drop) vs Kill Count'}</div>
+        <div className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted mb-1">{'Cumulative P(\u22651 drop) vs Kill Count'}</div>
         <svg viewBox="0 0 400 180" className="w-full" role="img" aria-label={`Cumulative probability curve for ${droughtData.opt.name} rarity drops over ${droughtData.maxKills} kills`}>
           <title>Drought Streak Probability Curve</title>
           <desc>Shows the probability of receiving at least one drop as kill count increases, with and without pity timer.</desc>
           {[0.25, 0.5, 0.75, 1.0].map(pct => (
             <g key={pct}>
               <line x1={40} y1={160 - pct * 140} x2={390} y2={160 - pct * 140} stroke="rgba(255,255,255,0.06)" strokeWidth="0.5" />
-              <text x={36} y={160 - pct * 140 + 3} textAnchor="end" className="text-[11px] font-mono" fill="var(--text-muted)">{Math.round(pct * 100)}%</text>
+              <text x={36} y={160 - pct * 140 + 3} textAnchor="end" className="text-xs font-mono" fill="var(--text-muted)">{Math.round(pct * 100)}%</text>
             </g>
           ))}
           {Array.from({ length: 5 }, (_, i) => {
             const kill = Math.round((droughtData.maxKills / 4) * i);
             const x = 40 + (kill / droughtData.maxKills) * 350;
-            return <text key={i} x={x} y={175} textAnchor="middle" className="text-[11px] font-mono" fill="var(--text-muted)">{kill}</text>;
+            return <text key={i} x={x} y={175} textAnchor="middle" className="text-xs font-mono" fill="var(--text-muted)">{kill}</text>;
           })}
           <polyline fill="none" stroke={droughtData.opt.color} strokeWidth="1.5" strokeDasharray="4 3" opacity={droughtPityEnabled ? 0.35 : 0.8}
             points={droughtData.curve.map(p => `${40 + (p.kill / droughtData.maxKills) * 350},${160 - p.probNoPity * 140}`).join(' ')} />
@@ -96,7 +96,7 @@ export function DroughtCalculator({ pityThreshold }: DroughtCalculatorProps) {
           {droughtPityEnabled && droughtData.pity && droughtData.pity <= droughtData.maxKills && (
             <g>
               <line x1={40 + (droughtData.pity / droughtData.maxKills) * 350} y1={18} x2={40 + (droughtData.pity / droughtData.maxKills) * 350} y2={160} stroke={STATUS_SUCCESS} strokeWidth="1" strokeDasharray="3 2" opacity={0.6} />
-              <text x={40 + (droughtData.pity / droughtData.maxKills) * 350} y={14} textAnchor="middle" className="text-[11px] font-mono font-bold" fill={STATUS_SUCCESS}>Pity@{droughtData.pity}</text>
+              <text x={40 + (droughtData.pity / droughtData.maxKills) * 350} y={14} textAnchor="middle" className="text-xs font-mono font-bold" fill={STATUS_SUCCESS}>Pity@{droughtData.pity}</text>
             </g>
           )}
           {[
@@ -109,11 +109,11 @@ export function DroughtCalculator({ pityThreshold }: DroughtCalculatorProps) {
             return (
               <g key={ann.label}>
                 <circle cx={x} cy={y} r={3} fill={ann.color} opacity={0.8} />
-                <text x={x} y={y - 6} textAnchor="middle" className="text-[11px] font-mono font-bold" fill={ann.color}>{ann.label} ({ann.kill})</text>
+                <text x={x} y={y - 6} textAnchor="middle" className="text-xs font-mono font-bold" fill={ann.color}>{ann.label} ({ann.kill})</text>
               </g>
             );
           })}
-          <text x={215} y={175} textAnchor="middle" className="text-[11px] font-mono" fill="var(--text-muted)">Kills</text>
+          <text x={215} y={175} textAnchor="middle" className="text-xs font-mono" fill="var(--text-muted)">Kills</text>
         </svg>
       </div>
 

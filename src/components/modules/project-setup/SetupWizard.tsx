@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Rocket, Plus, FolderOpen, Loader2, Info, AlertTriangle } from 'lucide-react';
 import { useProjectStore } from '@/stores/projectStore';
 import { apiFetch } from '@/lib/api-utils';
@@ -92,7 +92,17 @@ export function SetupWizard() {
     completeSetup();
   };
 
-  const nameValid = newName.trim().length > 0 && !/[<>:"|?*\\\/]/.test(newName);
+  const INVALID_CHARS_RE = /[<>:"|?*\\/]/;
+  const nameValid = newName.trim().length > 0 && !INVALID_CHARS_RE.test(newName);
+  const nameError = useMemo(() => {
+    if (newName.length === 0) return null;
+    if (newName.trim().length === 0) return 'Name cannot be only whitespace';
+    if (INVALID_CHARS_RE.test(newName)) {
+      const found = [...new Set(newName.split('').filter((c) => INVALID_CHARS_RE.test(c)))];
+      return `Name cannot contain ${found.map((c) => `"${c}"`).join(' ')}  — invalid characters: < > : " | ? * \\ /`;
+    }
+    return null;
+  }, [newName]);
 
   return (
     <div className="h-screen flex flex-col items-center justify-center bg-background px-4">
@@ -199,9 +209,24 @@ export function SetupWizard() {
                 <p className="text-sm text-text-muted">
                   No UE {selectedMajorMinor} projects found
                 </p>
-                <p className="text-xs text-text-muted/60 mt-1">
-                  Try switching version or start a fresh project
-                </p>
+                <div className="flex items-center justify-center gap-3 mt-3">
+                  {UE_VERSIONS.filter((v) => v.value !== ueVersion).map((v) => (
+                    <button
+                      key={v.value}
+                      onClick={() => setProject({ ueVersion: v.value })}
+                      className="text-xs text-[#00ff88]/80 hover:text-[#00ff88] underline underline-offset-2 transition-colors"
+                    >
+                      Switch to {v.label}
+                    </button>
+                  ))}
+                  <span className="text-text-muted/30">|</span>
+                  <button
+                    onClick={() => setMode('fresh')}
+                    className="text-xs text-[#00ff88]/80 hover:text-[#00ff88] underline underline-offset-2 transition-colors"
+                  >
+                    Start fresh project
+                  </button>
+                </div>
               </div>
             )}
 
@@ -225,13 +250,25 @@ export function SetupWizard() {
                 onKeyDown={(e) => e.key === 'Enter' && nameValid && handleStartFresh()}
                 placeholder="Project name"
                 autoFocus
-                className="w-full px-3 py-2.5 bg-surface border border-border rounded-lg text-sm text-text placeholder-text-muted outline-none focus:border-[#00ff88]/40 transition-colors"
+                className={`w-full px-3 py-2.5 bg-surface border rounded-lg text-sm text-text placeholder-text-muted outline-none transition-colors ${
+                  nameError
+                    ? 'border-red-400/60 focus:border-red-400'
+                    : 'border-border focus:border-[#00ff88]/40'
+                }`}
               />
-              <p className="text-xs text-text-muted/60 mt-1.5">
-                {newName.trim()
-                  ? `${DEFAULT_PROJECTS_DIR}\\${newName.trim()}`
-                  : DEFAULT_PROJECTS_DIR}
-              </p>
+              {nameError ? (
+                <p
+                  className="text-2xs text-red-400 mt-1.5 animate-in slide-in-from-top-1 duration-200"
+                >
+                  {nameError}
+                </p>
+              ) : (
+                <p className="text-xs text-text-muted/60 mt-1.5">
+                  {newName.trim()
+                    ? `${DEFAULT_PROJECTS_DIR}\\${newName.trim()}`
+                    : DEFAULT_PROJECTS_DIR}
+                </p>
+              )}
             </div>
             <button
               onClick={handleStartFresh}

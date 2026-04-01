@@ -28,7 +28,7 @@ export function RadarComparison({ radarOverlays, onToggleOverlay, activeOverlays
           />
         </div>
         <div className="space-y-3 flex-1">
-          <div className="text-[10px] font-mono uppercase tracking-[0.15em] text-text-muted mb-2">
+          <div className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted mb-2">
             Toggle Overlays
           </div>
           {[

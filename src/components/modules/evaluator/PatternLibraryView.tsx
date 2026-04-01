@@ -14,6 +14,7 @@ import { usePatternLibraryStore } from '@/stores/patternLibraryStore';
 import type { ImplementationPattern, PatternCategory, PatternConfidence } from '@/types/pattern-library';
 import type { SubModuleId } from '@/types/modules';
 import { MODULE_COLORS, OPACITY_10, ACCENT_EMERALD_DARK } from '@/lib/chart-colors';
+import { MOTION } from '@/lib/constants';
 
 // ── Constants for stable Zustand selectors ──────────────────────────────────
 
@@ -362,7 +363,7 @@ function PatternCard({ pattern }: { pattern: ImplementationPattern }) {
             initial={{ height: 0, opacity: 0 }}
             animate={{ height: 'auto', opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
-            transition={{ duration: 0.22 }}
+            transition={{ duration: MOTION.base }}
             className="overflow-hidden"
           >
             <div className="border-t border-border px-4 py-3 space-y-3">

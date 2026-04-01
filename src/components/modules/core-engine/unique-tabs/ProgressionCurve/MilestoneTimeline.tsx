@@ -32,7 +32,7 @@ export function MilestoneTimeline() {
                 <div className="flex-1 bg-surface/50 p-2.5 rounded-lg border border-border/40 flex justify-between items-center hover:bg-surface-hover/50 transition-colors group/milestone">
                   <div className="flex items-center gap-3">
                     <span className="text-xs font-bold text-text group-hover/milestone:text-cyan-400 transition-colors">{item.name}</span>
-                    <span className="text-[10px] font-mono uppercase tracking-[0.15em] text-text-muted">{item.class}</span>
+                    <span className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted">{item.class}</span>
                   </div>
                   <span className="text-xs font-mono font-bold bg-surface-deep px-2 py-1 rounded border border-border/60" style={{ color: ACCENT_CYAN }}>
                     LV {item.level}

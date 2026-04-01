@@ -66,10 +66,13 @@ export const useModuleStore = create<ModuleState>()(
       addHistoryEntry: (entry) => {
         set((state) => {
           const existing = state.moduleHistory[entry.moduleId] || [];
+          const updated = [...existing, entry];
+          // Cap at 200 entries per module — keep most recent, matching scanResults pattern
+          const capped = updated.length > 200 ? updated.slice(-200) : updated;
           return {
             moduleHistory: {
               ...state.moduleHistory,
-              [entry.moduleId]: [...existing, entry],
+              [entry.moduleId]: capped,
             },
           };
         });

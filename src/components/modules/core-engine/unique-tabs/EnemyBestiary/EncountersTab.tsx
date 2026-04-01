@@ -79,7 +79,7 @@ function TacticsLegend() {
   return (
     <div className="flex-1 space-y-3 min-w-0">
       <div>
-        <div className="text-[10px] font-mono uppercase tracking-[0.15em] text-text-muted mb-1.5">Tactics Config</div>
+        <div className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted mb-1.5">Tactics Config</div>
         <div className="grid grid-cols-2 gap-2">
           {[
             { label: 'MaxSimultaneous', value: '2' },
@@ -87,13 +87,13 @@ function TacticsLegend() {
           ].map(c => (
             <div key={c.label} className="bg-surface-deep rounded border border-border/30 px-2 py-1.5 text-center">
               <div className="text-xs font-mono font-bold text-text">{c.value}</div>
-              <div className="text-[10px] font-mono uppercase tracking-[0.15em] text-text-muted">{c.label}</div>
+              <div className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted">{c.label}</div>
             </div>
           ))}
         </div>
       </div>
       <div>
-        <div className="text-[10px] font-mono uppercase tracking-[0.15em] text-text-muted mb-1.5">Role Status</div>
+        <div className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted mb-1.5">Role Status</div>
         <div className="space-y-1">
           {TACTICS_ENEMIES.map(e => (
             <div key={e.id} className="flex items-center gap-2 text-xs">
@@ -120,7 +120,7 @@ function SpawnControls({ formation, setFormation }: {
   return (
     <div className="flex-1 space-y-3 min-w-0">
       <div>
-        <div className="text-[10px] font-mono uppercase tracking-[0.15em] text-text-muted mb-1.5">Formation</div>
+        <div className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted mb-1.5">Formation</div>
         <div className="flex gap-1.5">
           {(['Circle', 'Line', 'Ambush'] as const).map(f => (
             <button key={f} onClick={() => setFormation(f)}
@@ -138,19 +138,19 @@ function SpawnControls({ formation, setFormation }: {
         {[{ label: 'WaveDelay', value: '60s' }, { label: 'MaxActive', value: '12' }].map(c => (
           <div key={c.label} className="flex-1 py-1.5 px-2 rounded-lg bg-surface-deep border border-border/40 text-center">
             <div className="text-xs font-mono font-bold text-text">{c.value}</div>
-            <div className="text-[10px] font-mono uppercase tracking-[0.15em] text-text-muted">{c.label}</div>
+            <div className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted">{c.label}</div>
           </div>
         ))}
       </div>
       <div>
-        <div className="text-[10px] font-mono uppercase tracking-[0.15em] text-text-muted mb-1.5">Wave Timeline</div>
+        <div className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted mb-1.5">Wave Timeline</div>
         <div className="space-y-1.5">
           {WAVE_TIMELINE.map(wave => (
             <motion.div key={wave.id}
               initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }}
               transition={{ delay: wave.id * 0.1 }}
               className="flex items-center gap-2 text-xs bg-surface-deep px-2 py-1.5 rounded border border-border/30">
-              <span className="w-5 h-5 rounded-full bg-amber-500/20 border border-amber-500/40 flex items-center justify-center text-[11px] font-mono font-bold text-amber-400 flex-shrink-0">
+              <span className="w-5 h-5 rounded-full bg-amber-500/20 border border-amber-500/40 flex items-center justify-center text-xs font-mono font-bold text-amber-400 flex-shrink-0">
                 {wave.id}
               </span>
               <span className="font-mono text-text-muted text-xs w-8">{wave.delay}</span>

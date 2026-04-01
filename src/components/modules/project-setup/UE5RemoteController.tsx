@@ -3,7 +3,7 @@
 import { useState, useCallback, useMemo, useRef } from 'react';
 import {
   Radio, Plug, PlugZap, Search, Send, Eye, Edit3, Play, Trash2,
-  ChevronRight, ChevronDown, Copy, Check, AlertTriangle, Clock,
+  ChevronRight, ChevronDown, Copy, Check, Clock,
   Package, Layers, Terminal, RotateCcw, X,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -12,6 +12,8 @@ import {
   ACCENT_VIOLET, STATUS_SUCCESS, STATUS_ERROR, STATUS_NEUTRAL,
 } from '@/lib/chart-colors';
 import { SurfaceCard } from '@/components/ui/SurfaceCard';
+import { ConnectionStatusBadge } from '@/components/ui/ConnectionStatusBadge';
+import { ErrorBanner } from './ErrorBanner';
 import { tryApiFetch } from '@/lib/api-utils';
 import type { UE5ConnectionState, UE5AssetSearchResult } from '@/types/ue5-bridge';
 
@@ -55,34 +57,18 @@ async function queryUE5<T = unknown>(body: Record<string, unknown>): Promise<{ o
 
 /* ── Sub-components ──────────────────────────────────────────────────────── */
 
-function StatusBadge({ status }: { status: UE5ConnectionState['status'] }) {
-  const config: Record<string, { color: string; label: string; pulse: boolean }> = {
-    connected: { color: STATUS_SUCCESS, label: 'Connected', pulse: true },
-    connecting: { color: ACCENT_ORANGE, label: 'Connecting...', pulse: true },
-    reconnecting: { color: ACCENT_ORANGE, label: 'Reconnecting...', pulse: true },
-    disconnected: { color: STATUS_NEUTRAL, label: 'Disconnected', pulse: false },
-    error: { color: STATUS_ERROR, label: 'Error', pulse: false },
-  };
-  const c = config[status] ?? config.disconnected;
-  return (
-    <span className="flex items-center gap-1.5 text-xs font-mono font-bold" style={{ color: c.color }}>
-      <motion.span
-        className="w-2 h-2 rounded-full"
-        style={{ backgroundColor: c.color, boxShadow: `0 0 6px ${c.color}60` }}
-        animate={c.pulse ? { scale: [1, 1.3, 1], opacity: [0.6, 1, 0.6] } : {}}
-        transition={{ duration: 2, repeat: Infinity }}
-      />
-      {c.label}
-    </span>
-  );
-}
+// StatusBadge replaced by shared ConnectionStatusBadge
 
-function TabButton({ label, icon: Icon, active, onClick }: {
-  label: string; icon: React.ComponentType<{ className?: string }>; active: boolean; onClick: () => void;
+function TabButton({ label, icon: Icon, active, onClick, id, controls }: {
+  label: string; icon: React.ComponentType<{ className?: string }>; active: boolean; onClick: () => void; id?: string; controls?: string;
 }) {
   return (
     <button
       onClick={onClick}
+      role="tab"
+      aria-selected={active}
+      aria-controls={controls}
+      id={id}
       className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all duration-200"
       style={{
         backgroundColor: active ? `${ACCENT}15` : 'transparent',
@@ -129,13 +115,15 @@ function JsonViewer({ data, maxHeight }: { data: unknown; maxHeight?: string }) 
   );
 }
 
-function InputField({ label, value, onChange, placeholder, mono, className }: {
-  label: string; value: string; onChange: (v: string) => void; placeholder?: string; mono?: boolean; className?: string;
+function InputField({ label, value, onChange, placeholder, mono, className, id: externalId }: {
+  label: string; value: string; onChange: (v: string) => void; placeholder?: string; mono?: boolean; className?: string; id?: string;
 }) {
+  const inputId = externalId ?? `rc-field-${label.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`;
   return (
     <div className={className}>
-      <label className="block text-xs font-bold text-text-muted uppercase tracking-wider mb-1">{label}</label>
+      <label htmlFor={inputId} className="block text-xs font-bold text-text-muted uppercase tracking-wider mb-1">{label}</label>
       <input
+        id={inputId}
         type="text"
         value={value}
         onChange={(e) => onChange(e.target.value)}
@@ -273,12 +261,7 @@ function ObjectInspectorPanel({ onAddHistory }: { onAddHistory: (e: HistoryEntry
         {mode === 'describe' ? 'Describe Object' : mode === 'read' ? 'Read Property' : 'Write Property'}
       </button>
 
-      {error && (
-        <div className="flex items-center gap-2 p-2 rounded-lg border text-xs font-mono" style={{ borderColor: `${STATUS_ERROR}30`, backgroundColor: `${STATUS_ERROR}08`, color: STATUS_ERROR }}>
-          <AlertTriangle className="w-3.5 h-3.5 flex-shrink-0" />
-          {error}
-        </div>
-      )}
+      {error && <ErrorBanner message={error} />}
 
       {/* Properties list from describe */}
       {properties.length > 0 && mode === 'describe' && (
@@ -380,8 +363,9 @@ function FunctionCallerPanel({ onAddHistory }: { onAddHistory: (e: HistoryEntry)
       </div>
 
       <div>
-        <label className="block text-xs font-bold text-text-muted uppercase tracking-wider mb-1">Parameters (JSON)</label>
+        <label htmlFor="rc-fn-params" className="block text-xs font-bold text-text-muted uppercase tracking-wider mb-1">Parameters (JSON)</label>
         <textarea
+          id="rc-fn-params"
           value={parametersJson}
           onChange={(e) => setParametersJson(e.target.value)}
           className="w-full h-20 text-xs font-mono bg-surface-deep border border-border/40 rounded-lg p-2.5 text-text placeholder:text-text-muted/40 focus:outline-none focus:border-blue-500/50 resize-none custom-scrollbar"
@@ -413,12 +397,7 @@ function FunctionCallerPanel({ onAddHistory }: { onAddHistory: (e: HistoryEntry)
         Call Function
       </button>
 
-      {error && (
-        <div className="flex items-center gap-2 p-2 rounded-lg border text-xs font-mono" style={{ borderColor: `${STATUS_ERROR}30`, backgroundColor: `${STATUS_ERROR}08`, color: STATUS_ERROR }}>
-          <AlertTriangle className="w-3.5 h-3.5 flex-shrink-0" />
-          {error}
-        </div>
-      )}
+      {error && <ErrorBanner message={error} />}
 
       {result !== null && (
         <div>
@@ -511,12 +490,7 @@ function AssetSearchPanel({ onAddHistory }: { onAddHistory: (e: HistoryEntry) =>
         Search Assets
       </button>
 
-      {error && (
-        <div className="flex items-center gap-2 p-2 rounded-lg border text-xs font-mono" style={{ borderColor: `${STATUS_ERROR}30`, backgroundColor: `${STATUS_ERROR}08`, color: STATUS_ERROR }}>
-          <AlertTriangle className="w-3.5 h-3.5 flex-shrink-0" />
-          {error}
-        </div>
-      )}
+      {error && <ErrorBanner message={error} />}
 
       {results.length > 0 && (
         <div>
@@ -580,6 +554,7 @@ function HistoryPanel({ history, onClear, onReplay }: {
             <div key={entry.id} className="rounded-lg border border-border/20 overflow-hidden">
               <button
                 onClick={() => setExpandedId(isExpanded ? null : entry.id)}
+                aria-expanded={isExpanded}
                 className="w-full flex items-center gap-2 px-2.5 py-2 text-xs hover:bg-surface/30 transition-colors text-left"
               >
                 <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: entry.success ? STATUS_SUCCESS : STATUS_ERROR }} />
@@ -702,7 +677,7 @@ export function UE5RemoteController() {
   ];
 
   return (
-    <SurfaceCard className="overflow-hidden">
+    <SurfaceCard className="overflow-hidden" role="region" aria-label="UE5 Remote Controller">
       {/* ── Header ────────────────────────────────────────────────────── */}
       <div className="px-4 py-3 border-b border-border/40">
         <div className="flex items-center gap-3">
@@ -713,7 +688,7 @@ export function UE5RemoteController() {
           <div className="flex-1">
             <div className="flex items-center gap-2">
               <h3 className="text-sm font-bold text-text">UE5 Remote Controller</h3>
-              <StatusBadge status={connState.status} />
+              <ConnectionStatusBadge status={connState.status} />
             </div>
             <p className="text-xs text-text-muted">
               Read/write UObject properties, invoke UFUNCTIONs, and search project assets remotely
@@ -760,12 +735,7 @@ export function UE5RemoteController() {
                   </button>
                 )}
               </div>
-              {connState.error && (
-                <div className="flex items-center gap-2 mt-2 p-2 rounded-lg border text-xs font-mono" style={{ borderColor: `${STATUS_ERROR}30`, backgroundColor: `${STATUS_ERROR}08`, color: STATUS_ERROR }}>
-                  <AlertTriangle className="w-3.5 h-3.5 flex-shrink-0" />
-                  {connState.error}
-                </div>
-              )}
+              {connState.error && <ErrorBanner message={connState.error} className="mt-2" />}
               {connState.info && (
                 <div className="flex items-center gap-3 mt-2 text-xs font-mono text-text-muted">
                   <span>Server: <span className="font-bold text-text">{connState.info.serverName}</span></span>
@@ -778,14 +748,14 @@ export function UE5RemoteController() {
       </div>
 
       {/* ── Tab bar ───────────────────────────────────────────────────── */}
-      <div className="flex gap-1.5 px-4 py-2 border-b border-border/30 overflow-x-auto custom-scrollbar">
+      <div className="flex gap-1.5 px-4 py-2 border-b border-border/30 overflow-x-auto custom-scrollbar" role="tablist" aria-label="Remote controller tabs">
         {TABS.map((t) => (
-          <TabButton key={t.id} label={t.label} icon={t.icon} active={activeTab === t.id} onClick={() => setActiveTab(t.id)} />
+          <TabButton key={t.id} label={t.label} icon={t.icon} active={activeTab === t.id} onClick={() => setActiveTab(t.id)} id={`rc-tab-${t.id}`} controls={`rc-tabpanel-${t.id}`} />
         ))}
       </div>
 
       {/* ── Tab content ───────────────────────────────────────────────── */}
-      <div className="p-4">
+      <div className="p-4" role="tabpanel" id={`rc-tabpanel-${activeTab}`} aria-labelledby={`rc-tab-${activeTab}`}>
         {!isConnected && activeTab !== 'history' ? (
           <div className="flex flex-col items-center justify-center py-12 text-text-muted">
             <Plug className="w-8 h-8 opacity-30 mb-3" />

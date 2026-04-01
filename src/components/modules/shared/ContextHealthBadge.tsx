@@ -5,7 +5,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { RefreshCw } from 'lucide-react';
 import { useProjectStore } from '@/stores/projectStore';
 import { useNavigationStore } from '@/stores/navigationStore';
-import { STATUS_SUCCESS, MODULE_COLORS } from '@/lib/chart-colors';
+import { STATUS_SUCCESS, STATUS_ERROR, MODULE_COLORS, statusGlow } from '@/lib/chart-colors';
+import { Z_INDEX } from '@/lib/constants';
 
 interface FieldStatus {
   label: string;
@@ -109,10 +110,10 @@ export function ContextHealthBadge() {
 
   const dotColor = allHealthy ? STATUS_SUCCESS : staticHealthy ? MODULE_COLORS.core : MODULE_COLORS.content;
   const glowColor = allHealthy
-    ? 'rgba(34,197,94,0.4)'
+    ? statusGlow('success')
     : staticHealthy
-      ? 'rgba(59,130,246,0.4)'
-      : 'rgba(245,158,11,0.4)';
+      ? statusGlow('info')
+      : statusGlow('warning');
 
   return (
     <div ref={containerRef} className="relative flex items-center">
@@ -123,7 +124,7 @@ export function ContextHealthBadge() {
         onClick={handleClick}
         onMouseEnter={handleMouseEnter}
         onMouseLeave={handleMouseLeave}
-        className="relative flex items-center justify-center w-4 h-4 rounded-full cursor-pointer focus:outline-none focus-visible:ring-1 focus-visible:ring-blue-400"
+        className="relative flex items-center justify-center w-4 h-4 rounded-full cursor-pointer focus:outline-none focus-visible:ring-1 focus-visible:ring-accent-core"
         aria-label={
           allHealthy
             ? 'Context healthy — all fields configured, project scanned'
@@ -162,9 +163,10 @@ export function ContextHealthBadge() {
             transition={{ duration: 0.12 }}
             onMouseEnter={handleMouseEnter}
             onMouseLeave={handleMouseLeave}
-            className="absolute left-1/2 top-full mt-2 z-50 -translate-x-1/2"
+            className="absolute left-1/2 top-full mt-2 -translate-x-1/2"
+            style={{ zIndex: Z_INDEX.toast }}
           >
-            <div className="bg-[#161633] border border-[#2a2a4a] rounded-lg shadow-xl p-3 min-w-[240px] max-w-[320px]">
+            <div className="bg-surface-deep border border-border-bright rounded-lg shadow-xl p-3 min-w-[240px] max-w-[320px]">
               <p className="text-xs font-semibold text-text-muted-hover uppercase tracking-wider mb-2">
                 Context Health
               </p>
@@ -185,10 +187,8 @@ export function ContextHealthBadge() {
                       {f.label}
                     </span>
                     <span
-                      className={`text-xs truncate ml-auto ${
-                        f.ok ? 'text-text-muted' : 'text-[#f59e0b]'
-                      }`}
-                      style={{ maxWidth: 120 }}
+                      className="text-xs truncate ml-auto"
+                      style={{ maxWidth: 120, color: f.ok ? undefined : MODULE_COLORS.content }}
                     >
                       {f.value}
                     </span>
@@ -216,7 +216,7 @@ export function ContextHealthBadge() {
                     </div>
 
                     {scanError && (
-                      <p className="text-xs text-red-400/80 mb-1.5">{scanError}</p>
+                      <p className="text-xs mb-1.5" style={{ color: STATUS_ERROR, opacity: 0.8 }}>{scanError}</p>
                     )}
 
                     {dynamicContext ? (
@@ -251,7 +251,7 @@ export function ContextHealthBadge() {
                       </p>
                     ) : (
                       <div className="flex items-center gap-2 py-1">
-                        <div className="w-3 h-3 border border-[#3b82f6] border-t-transparent rounded-full animate-spin" />
+                        <div className="w-3 h-3 border border-accent-core border-t-transparent rounded-full animate-spin" />
                         <span className="text-xs text-text-muted">Scanning project files...</span>
                       </div>
                     )}
@@ -262,14 +262,14 @@ export function ContextHealthBadge() {
               {!staticHealthy && (
                 <button
                   onClick={handleClick}
-                  className="mt-2.5 w-full text-xs font-medium text-[#3b82f6] hover:text-[#60a5fa] transition-colors text-center py-1 rounded bg-surface-hover hover:bg-[#1e1e40]"
+                  className="mt-2.5 w-full text-xs font-medium text-accent-core hover:brightness-125 transition-colors text-center py-1 rounded bg-surface-hover hover:bg-surface-hover"
                 >
                   Open Project Setup
                 </button>
               )}
 
               {allHealthy && (
-                <p className="mt-2 text-xs text-[#22c55e]/70 text-center">
+                <p className="mt-2 text-xs text-center" style={{ color: STATUS_SUCCESS, opacity: 0.7 }}>
                   All context fields configured
                 </p>
               )}
@@ -277,7 +277,7 @@ export function ContextHealthBadge() {
 
             {/* Tooltip arrow */}
             <div
-              className="absolute -top-1 left-1/2 -translate-x-1/2 w-2 h-2 rotate-45 bg-[#161633] border-l border-t border-[#2a2a4a]"
+              className="absolute -top-1 left-1/2 -translate-x-1/2 w-2 h-2 rotate-45 bg-surface-deep border-l border-t border-border-bright"
             />
           </motion.div>
         )}

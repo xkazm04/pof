@@ -55,7 +55,7 @@ export function ZonePropertyPanel({
           type="text"
           value={zone.name}
           onChange={(e) => update('name', e.target.value)}
-          className="field-input"
+          className="field-input focus-ring-inset"
         />
       </Field>
 
@@ -65,7 +65,7 @@ export function ZonePropertyPanel({
           value={zone.soundscapeDescription}
           onChange={(e) => update('soundscapeDescription', e.target.value)}
           placeholder="Describe the soundscape in natural language... e.g., 'dripping water echoing off stone walls, distant machinery hum, occasional metal groans'"
-          className="field-input resize-none font-mono"
+          className="field-input resize-none font-mono focus-ring-inset"
           rows={4}
         />
       </Field>
@@ -184,7 +184,7 @@ export function EmitterPropertyPanel({
           type="text"
           value={emitter.name}
           onChange={(e) => update('name', e.target.value)}
-          className="field-input"
+          className="field-input focus-ring-inset"
         />
       </Field>
 
@@ -215,7 +215,7 @@ export function EmitterPropertyPanel({
           value={emitter.soundCueRef}
           onChange={(e) => update('soundCueRef', e.target.value)}
           placeholder="/Game/Audio/SC_Ambient..."
-          className="field-input font-mono"
+          className="field-input font-mono focus-ring-inset"
         />
       </Field>
 
@@ -276,7 +276,7 @@ function SliderField({
         min={min} max={max} step={step}
         value={value}
         onChange={(e) => onChange(Number(e.target.value))}
-        className="w-full h-1 rounded-full appearance-none bg-border accent-[#60a5fa]"
+        className="w-full h-1 rounded-full appearance-none bg-border accent-blue-400 focus-ring"
       />
     </div>
   );

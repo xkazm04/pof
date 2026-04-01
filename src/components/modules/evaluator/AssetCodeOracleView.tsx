@@ -17,7 +17,7 @@ import type {
   ViolationType,
   ViolationSeverity,
 } from '@/lib/asset-code-oracle';
-import { STATUS_ERROR, STATUS_WARNING, STATUS_INFO, STATUS_SUCCESS, MODULE_COLORS } from '@/lib/chart-colors';
+import { STATUS_ERROR, STATUS_WARNING, STATUS_INFO, STATUS_SUCCESS, MODULE_COLORS, statusBg, statusBorder } from '@/lib/chart-colors';
 
 // ── Constants ───────────────────────────────────────────────────────────────
 
@@ -126,7 +126,7 @@ export function AssetCodeOracleView() {
         <button
           onClick={runAnalysis}
           disabled={loading || !projectPath}
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all disabled:opacity-50 bg-[#ef444415] text-[#ef4444] border border-[#ef444430]"
+          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all disabled:opacity-50 bg-[${statusBg(STATUS_ERROR)}] text-[${STATUS_ERROR}] border border-[${statusBorder(STATUS_ERROR)}]`}
         >
           {loading ? (
             <Loader2 className="w-3 h-3 animate-spin" />
@@ -144,7 +144,7 @@ export function AssetCodeOracleView() {
 
       {/* Error */}
       {error && (
-        <div className="flex items-center gap-2 text-xs text-[#f87171] bg-[#f8717110] border border-[#f8717130] rounded-lg px-3 py-2">
+        <div className={`flex items-center gap-2 text-xs text-[${STATUS_ERROR}] bg-[${statusBg(STATUS_ERROR)}] border border-[${statusBorder(STATUS_ERROR)}] rounded-lg px-3 py-2`}>
           <AlertCircle className="w-3.5 h-3.5 flex-shrink-0" />
           {error}
         </div>
@@ -422,7 +422,7 @@ function DependencyExplorer({
                 onClick={() => setSelectedNode(isSelected ? null : node.name)}
                 className={`w-full flex items-center gap-2 px-2.5 py-1.5 rounded text-xs text-left transition-colors ${
                   isSelected
-                    ? 'bg-[#ef444415] text-text'
+                    ? `bg-[${statusBg(STATUS_ERROR)}] text-text`
                     : 'hover:bg-surface-hover text-text-muted-hover'
                 }`}
               >

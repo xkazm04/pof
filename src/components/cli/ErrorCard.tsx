@@ -1,14 +1,14 @@
 'use client';
 
 import { useState, useCallback } from 'react';
-import { motion } from 'framer-motion';
+import { motion, useReducedMotion } from 'framer-motion';
 import {
   AlertCircle, AlertTriangle, FileCode, ChevronDown, ChevronRight, Zap, Copy, Check,
 } from 'lucide-react';
 import type { BuildDiagnostic } from './UE5BuildParser';
 import { TruncateWithTooltip } from '@/components/ui/TruncateWithTooltip';
 import { UI_TIMEOUTS } from '@/lib/constants';
-import { MODULE_COLORS } from '@/lib/chart-colors';
+import { MODULE_COLORS, CLI_COLORS, STATUS_SUCCESS } from '@/lib/chart-colors';
 
 interface ErrorCardProps {
   diagnostic: BuildDiagnostic;
@@ -21,7 +21,7 @@ const SEVERITY_STYLES = {
     border: 'border-status-red-strong',
     bg: 'bg-status-red-subtle',
     icon: AlertCircle,
-    iconColor: 'text-red-400',
+    iconColor: CLI_COLORS.error,
     badge: 'bg-status-red-medium text-red-300',
     label: 'ERROR',
   },
@@ -29,7 +29,7 @@ const SEVERITY_STYLES = {
     border: 'border-yellow-500/30',
     bg: 'bg-yellow-500/5',
     icon: AlertTriangle,
-    iconColor: 'text-yellow-400',
+    iconColor: CLI_COLORS.warning,
     badge: 'bg-yellow-500/20 text-yellow-300',
     label: 'WARN',
   },
@@ -50,6 +50,7 @@ const CATEGORY_BORDER_COLORS: Record<BuildDiagnostic['category'], string> = {
 };
 
 export function ErrorCard({ diagnostic, onFix, isRunning = false }: ErrorCardProps) {
+  const shouldReduceMotion = useReducedMotion() ?? false;
   const [expanded, setExpanded] = useState(false);
   const [pathExpanded, setPathExpanded] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -78,7 +79,7 @@ export function ErrorCard({ diagnostic, onFix, isRunning = false }: ErrorCardPro
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 4 }}
+      initial={shouldReduceMotion ? false : { opacity: 0, y: 4 }}
       animate={{ opacity: 1, y: 0 }}
       className={`mx-2 my-1 rounded border ${style.border} ${style.bg} overflow-hidden`}
       style={{ borderLeftWidth: 3, borderLeftColor: categoryBorderColor }}
@@ -116,17 +117,17 @@ export function ErrorCard({ diagnostic, onFix, isRunning = false }: ErrorCardPro
               title={copied ? 'Copied!' : 'Copy error details'}
             >
               {copied
-                ? <Check className="w-3 h-3 text-[#4ade80]" />
+                ? <Check className="w-3 h-3" style={{ color: STATUS_SUCCESS }} />
                 : <Copy className="w-3 h-3" />
               }
             </span>
           </div>
           {expanded ? (
-            <p className="text-xs text-[#c8cce0] mt-0.5 leading-tight break-all">
+            <p className="text-xs text-text-muted-hover mt-0.5 leading-tight break-all">
               {diagnostic.message}
             </p>
           ) : (
-            <TruncateWithTooltip as="p" className="text-xs text-[#c8cce0] mt-0.5 leading-tight break-all line-clamp-2" side="bottom" maxTooltipWidth={400}>
+            <TruncateWithTooltip as="p" className="text-xs text-text-muted-hover mt-0.5 leading-tight break-all line-clamp-2" side="bottom" maxTooltipWidth={400}>
               {diagnostic.message}
             </TruncateWithTooltip>
           )}
@@ -180,7 +181,7 @@ export function ErrorCard({ diagnostic, onFix, isRunning = false }: ErrorCardPro
                 if (!isRunning) onFix(buildQuickFixPrompt(diagnostic));
               }}
               disabled={isRunning}
-              className="mt-1.5 flex items-center gap-1 text-xs font-medium text-blue-400 hover:text-blue-300 bg-blue-500/10 hover:bg-blue-500/20 px-2 py-1 rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:text-blue-400 disabled:hover:bg-blue-500/10"
+              className={`mt-1.5 flex items-center gap-1 text-xs font-medium ${CLI_COLORS.prompt} hover:text-blue-300 bg-blue-500/10 hover:bg-blue-500/20 px-2 py-1 rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:${CLI_COLORS.prompt} disabled:hover:bg-blue-500/10`}
             >
               <Zap className="w-3 h-3" />
               Fix This
@@ -204,7 +205,7 @@ export function ErrorCard({ diagnostic, onFix, isRunning = false }: ErrorCardPro
                 if (!isRunning) onFix(buildQuickFixPrompt(diagnostic));
               }}
               disabled={isRunning}
-              className="ml-auto text-2xs font-medium text-blue-400 hover:text-blue-300 transition-colors disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:text-blue-400"
+              className={`ml-auto text-2xs font-medium ${CLI_COLORS.prompt} hover:text-blue-300 transition-colors disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:${CLI_COLORS.prompt}`}
             >
               Fix
             </button>

@@ -11,7 +11,7 @@ export function SlotManagement() {
     <BlueprintPanel color={ACCENT} className="p-0 overflow-hidden">
       <div className="px-4 py-3 border-b border-border/10 flex items-center justify-between">
         <SectionHeader label="SLOT_MANAGEMENT_DASHBOARD" icon={Layers} color={ACCENT} />
-        <span className="text-[10px] font-mono uppercase tracking-[0.15em] text-text-muted">{ENHANCED_SLOTS.length} slots</span>
+        <span className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted">{ENHANCED_SLOTS.length} slots</span>
       </div>
 
       <div className="p-4 grid grid-cols-1 md:grid-cols-2 gap-3 relative z-10">
@@ -26,12 +26,12 @@ export function SlotManagement() {
             }`}
           >
             {/* Thumbnail placeholder */}
-            <div className={`h-16 flex items-center justify-center text-[10px] font-mono uppercase tracking-[0.15em] relative overflow-hidden ${
+            <div className={`h-16 flex items-center justify-center text-xs font-mono uppercase tracking-[0.15em] relative overflow-hidden ${
               slot.isAuto ? 'bg-amber-950/20' : ''
             }`} style={!slot.isAuto ? { backgroundColor: `${ACCENT}08` } : undefined}>
               <span className="text-text-muted relative z-10">[{slot.screenshotPlaceholder}]</span>
               {slot.isAuto && (
-                <span className="absolute top-1.5 right-1.5 px-1.5 py-0.5 bg-amber-500/20 text-amber-400 text-[10px] font-bold border border-amber-500/30 rounded-sm">AUTO</span>
+                <span className="absolute top-1.5 right-1.5 px-1.5 py-0.5 bg-amber-500/20 text-amber-400 text-xs font-bold border border-amber-500/30 rounded-sm">AUTO</span>
               )}
             </div>
 
@@ -50,15 +50,15 @@ export function SlotManagement() {
 
               <div className="grid grid-cols-3 gap-2 text-xs">
                 <div>
-                  <span className="text-[10px] font-mono uppercase tracking-[0.15em] text-text-muted block">Zone</span>
+                  <span className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted block">Zone</span>
                   <span className="text-cyan-100 truncate block">{slot.zone}</span>
                 </div>
                 <div>
-                  <span className="text-[10px] font-mono uppercase tracking-[0.15em] text-text-muted block">Playtime</span>
+                  <span className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted block">Playtime</span>
                   <span className="text-cyan-100">{slot.playtime}</span>
                 </div>
                 <div>
-                  <span className="text-[10px] font-mono uppercase tracking-[0.15em] text-text-muted block">Last</span>
+                  <span className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted block">Last</span>
                   <span className="text-cyan-100">{slot.lastPlayed}</span>
                 </div>
               </div>
@@ -73,7 +73,7 @@ export function SlotManagement() {
                 ].map(action => (
                   <button
                     key={action.label}
-                    className="flex items-center gap-1 px-2 py-1 rounded-sm border text-[10px] font-mono uppercase tracking-[0.15em] font-bold transition-colors hover:bg-white/5"
+                    className="flex items-center gap-1 px-2 py-1 rounded-sm border text-xs font-mono uppercase tracking-[0.15em] font-bold transition-colors hover:bg-white/5"
                     style={{ borderColor: `${action.color}30`, color: action.color }}
                   >
                     <action.icon className="w-3 h-3" />

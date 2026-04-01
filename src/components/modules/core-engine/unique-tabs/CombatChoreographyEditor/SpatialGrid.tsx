@@ -113,7 +113,7 @@ export function SpatialGrid({ enemies, selectedWave, totalWaves, onPlace, onRemo
                 title={`${ENEMY_ARCHETYPES.find((a) => a.id === enemy.archetypeId)?.name} Lv${enemy.level} — drag to move, click to remove`}
               >
                 <span className="text-xs font-mono font-bold" style={{ color }}>{icon}</span>
-                <span className="absolute -top-1 -right-1 text-[11px] font-mono font-bold px-0.5 rounded"
+                <span className="absolute -top-1 -right-1 text-xs font-mono font-bold px-0.5 rounded"
                   style={{ backgroundColor: color, color: 'black' }}>{enemy.level}</span>
                 {!isDragging && <Trash2 className="absolute inset-0 m-auto w-3.5 h-3.5 opacity-0 group-hover:opacity-80 transition-opacity" style={{ color: STATUS_ERROR }} />}
               </div>
@@ -131,7 +131,7 @@ export function SpatialGrid({ enemies, selectedWave, totalWaves, onPlace, onRemo
                 title={`Previous wave: ${ENEMY_ARCHETYPES.find((a) => a.id === prevGhost.archetypeId)?.name ?? prevGhost.archetypeId} Lv${prevGhost.level}`}
               >
                 <span className="text-xs font-mono font-bold" style={{ color }}>{icon}</span>
-                <span className="absolute bottom-0.5 right-0.5 text-[11px] font-mono text-text-muted/50">prev</span>
+                <span className="absolute bottom-0.5 right-0.5 text-xs font-mono text-text-muted/50">prev</span>
               </div>
             );
           }
@@ -149,7 +149,7 @@ export function SpatialGrid({ enemies, selectedWave, totalWaves, onPlace, onRemo
                 title={`Next wave: ${ENEMY_ARCHETYPES.find((a) => a.id === nextGhost.archetypeId)?.name ?? nextGhost.archetypeId} Lv${nextGhost.level}`}
               >
                 <span className="text-xs font-mono font-bold" style={{ color, opacity: 0.35 }}>{icon}</span>
-                <span className="absolute bottom-0.5 right-0.5 text-[11px] font-mono text-text-muted/40">next</span>
+                <span className="absolute bottom-0.5 right-0.5 text-xs font-mono text-text-muted/40">next</span>
               </motion.div>
             );
           }
@@ -170,9 +170,9 @@ export function SpatialGrid({ enemies, selectedWave, totalWaves, onPlace, onRemo
         })}
       </div>
       {isDragging && (
-        <div className="text-[11px] font-mono text-text-muted/60 mt-1 flex items-center gap-1">
+        <div className="text-xs font-mono text-text-muted/60 mt-1 flex items-center gap-1">
           <span>Drop to reposition</span>
-          <span className="px-1 py-0.5 rounded bg-surface-deep border border-border/30 text-[10px]">Shift</span>
+          <span className="px-1 py-0.5 rounded bg-surface-deep border border-border/30 text-xs">Shift</span>
           <span>= move to current wave</span>
         </div>
       )}

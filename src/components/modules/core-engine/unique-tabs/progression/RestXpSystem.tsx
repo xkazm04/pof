@@ -89,7 +89,7 @@ export function RestXpSystem() {
               style={{ backgroundColor: ACCENT_CYAN }}
             />
           </div>
-          <div className="text-[11px] text-text-muted mt-1 font-mono">Regen: +{REST_XP_DATA.regenRate} XP/hour offline</div>
+          <div className="text-xs text-text-muted mt-1 font-mono">Regen: +{REST_XP_DATA.regenRate} XP/hour offline</div>
         </div>
       </div>
     </SurfaceCard>

@@ -27,7 +27,7 @@ export function FeelInputPanel({ customPrompt, isRunning, onPromptChange, onGene
               <Sparkles className="w-4 h-4 relative z-10" style={{ color: ACCENT, filter: `drop-shadow(0 0 4px ${ACCENT}80)` }} />
             </div>
             <div>
-              <span className="text-[10px] font-mono uppercase tracking-[0.15em] font-bold text-text">
+              <span className="text-xs font-mono uppercase tracking-[0.15em] font-bold text-text">
                 AI Feel Optimizer
               </span>
               <div className="text-xs text-text-muted">
@@ -73,7 +73,7 @@ export function FeelInputPanel({ customPrompt, isRunning, onPromptChange, onGene
             <button
               key={hint}
               onClick={() => onPromptChange(hint)}
-              className="text-[10px] font-mono uppercase tracking-[0.15em] px-2 py-1 rounded-full transition-colors hover:bg-surface/50"
+              className="text-xs font-mono uppercase tracking-[0.15em] px-2 py-1 rounded-full transition-colors hover:bg-surface/50"
               style={{
                 backgroundColor: 'var(--surface-deep)',
                 color: 'var(--text-muted)',

@@ -1,7 +1,7 @@
 'use client';
 import { getModuleChecklist } from '@/lib/module-registry';
 
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import {
   Map, Plus, Trash2, FileText, Loader2,
   Zap, BookOpen, GitCompare, BarChart3, Layers, Grid3X3, Eye, ListChecks,
@@ -361,6 +361,30 @@ export function LevelDesignView() {
 
         {/* Document list */}
         <div className="flex-1 overflow-y-auto">
+          {docs.length === 0 ? (
+            <div className="flex flex-col items-center justify-center gap-2 py-8 px-3">
+              <svg
+                width="24"
+                height="24"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                className="text-violet-500/20"
+              >
+                <rect x="3" y="3" width="7" height="7" />
+                <rect x="14" y="3" width="7" height="7" />
+                <rect x="3" y="14" width="7" height="7" />
+                <rect x="14" y="14" width="7" height="7" />
+                <line x1="10" y1="6.5" x2="14" y2="6.5" />
+                <line x1="6.5" y1="10" x2="6.5" y2="14" />
+              </svg>
+              <span className="text-xs text-text-muted text-center">No levels yet</span>
+              <span className="text-2xs text-text-muted text-center leading-relaxed">Create your first level design below</span>
+            </div>
+          ) : (
           <div className="p-2 space-y-0.5">
             {docs.map((doc) => {
               const isActive = activeDoc?.id === doc.id;
@@ -386,6 +410,7 @@ export function LevelDesignView() {
               );
             })}
           </div>
+          )}
         </div>
 
         {/* New doc input */}
@@ -456,7 +481,7 @@ export function LevelDesignView() {
             </div>
 
             {/* Tab bar */}
-            <div className="flex items-center gap-1 px-5 border-b border-border">
+            <ScrollableTabBar>
               <TabButton label="Overview" icon={Eye} active={activeTab === 'overview'} onClick={() => setActiveTab('overview')} accent={MODULE_COLORS.content} />
               <TabButton label="Roadmap" icon={ListChecks} active={activeTab === 'roadmap'} onClick={() => setActiveTab('roadmap')} accent={MODULE_COLORS.content} />
               <TabButton label="Flow Editor" icon={Map} active={activeTab === 'flow'} onClick={() => setActiveTab('flow')} accent={MODULE_COLORS.content} />
@@ -465,7 +490,7 @@ export function LevelDesignView() {
               <TabButton label="Narrative" icon={BookOpen} active={activeTab === 'narrative'} onClick={() => setActiveTab('narrative')} accent={MODULE_COLORS.content} />
               <TabButton label="Sync" icon={GitCompare} active={activeTab === 'sync'} onClick={() => setActiveTab('sync')} accent={MODULE_COLORS.content} />
               <TabButton label="Difficulty" icon={BarChart3} active={activeTab === 'arc'} onClick={() => setActiveTab('arc')} accent={MODULE_COLORS.content} />
-            </div>
+            </ScrollableTabBar>
 
             {/* Tab content */}
             <div className="flex-1 overflow-hidden">
@@ -738,6 +763,50 @@ export function LevelDesignView() {
 
 // ── Helper components ──
 
+function ScrollableTabBar({ children }: { children: React.ReactNode }) {
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const [canScrollLeft, setCanScrollLeft] = useState(false);
+  const [canScrollRight, setCanScrollRight] = useState(false);
+
+  const updateOverflow = useCallback(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    setCanScrollLeft(el.scrollLeft > 0);
+    setCanScrollRight(el.scrollLeft + el.clientWidth < el.scrollWidth - 1);
+  }, []);
+
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    updateOverflow();
+    const ro = new ResizeObserver(updateOverflow);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [updateOverflow]);
+
+  return (
+    <div className="relative border-b border-border">
+      {/* Left fade */}
+      {canScrollLeft && (
+        <div className="absolute left-0 top-0 bottom-0 w-6 z-10 pointer-events-none bg-gradient-to-r from-surface-deep to-transparent" />
+      )}
+      {/* Scrollable container */}
+      <div
+        ref={scrollRef}
+        onScroll={updateOverflow}
+        className="flex items-center gap-1 px-5 overflow-x-auto scrollbar-hide"
+        style={{ scrollSnapType: 'x mandatory' }}
+      >
+        {children}
+      </div>
+      {/* Right fade */}
+      {canScrollRight && (
+        <div className="absolute right-0 top-0 bottom-0 w-6 z-10 pointer-events-none bg-gradient-to-l from-surface-deep to-transparent" />
+      )}
+    </div>
+  );
+}
+
 function TabButton({
   label,
   icon: Icon,
@@ -754,9 +823,10 @@ function TabButton({
   return (
     <button
       onClick={onClick}
-      className={`flex items-center gap-1.5 px-3 py-2 text-xs font-medium transition-colors relative ${
+      className={`flex items-center gap-1.5 px-3 py-2 text-xs font-medium transition-colors relative whitespace-nowrap flex-shrink-0 ${
         active ? 'text-text' : 'text-text-muted hover:text-text'
       }`}
+      style={{ scrollSnapAlign: 'start' }}
     >
       <Icon className="w-3 h-3" />
       {label}

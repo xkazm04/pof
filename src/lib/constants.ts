@@ -6,6 +6,20 @@
 
 export { MODULE_COLORS } from './chart-colors';
 
+/** Standardized z-index scale — prevents stacking-context collisions across components. */
+export const Z_INDEX = {
+  /** Inline overlays: tooltips on hover, sticky headers, playhead cursors */
+  overlay: 20,
+  /** Backdrop layers: modal backdrops, side-panel scrims */
+  backdrop: 30,
+  /** Panels: slide-over panels, drawers, sidebars */
+  panel: 40,
+  /** Toast / snackbar: always above panels */
+  toast: 50,
+  /** Modal: highest standard layer */
+  modal: 60,
+} as const;
+
 /** Safe window.location.origin accessor for SSR / client contexts. */
 export function getAppOrigin(): string {
   if (typeof window !== 'undefined') return window.location.origin;
@@ -26,6 +40,23 @@ export function getOriginFromRequest(request: { headers: { get(name: string): st
   }
   return getAppOrigin();
 }
+
+/**
+ * Unified motion timing scale — re-exported from motion.ts (single source of truth).
+ * Consumers can import MOTION from either '@/lib/constants' or '@/lib/motion'.
+ */
+import { DURATION } from './motion';
+export { DURATION as MOTION } from './motion';
+
+/** CLI-specific animation presets — consistent timing for terminal UI. */
+export const CLI_ANIM = {
+  /** Fast expand/collapse transitions (120ms). */
+  fast: { duration: 0.12, ease: DURATION.ease } as const,
+  /** Medium state transitions (200ms). */
+  medium: { duration: 0.2, ease: DURATION.ease } as const,
+  /** Spring preset for drawer/panel animations. */
+  spring: { type: 'spring' as const, stiffness: 300, damping: 30, mass: 0.8 },
+} as const;
 
 /** Standardized UI timing constants (ms). */
 export const UI_TIMEOUTS = {

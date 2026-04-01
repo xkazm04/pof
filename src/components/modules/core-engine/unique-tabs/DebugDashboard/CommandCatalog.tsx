@@ -46,7 +46,7 @@ export function CommandCatalog({ onExecute, onPopulate, isExecuting }: Props) {
           </div>
           <div className="flex gap-1 flex-wrap">
             <button onClick={() => setCmdCategoryFilter('All')}
-              className="text-[10px] font-mono uppercase tracking-[0.15em] px-2 py-1 rounded border transition-colors"
+              className="text-xs font-mono uppercase tracking-[0.15em] px-2 py-1 rounded border transition-colors"
               style={{
                 backgroundColor: cmdCategoryFilter === 'All' ? `${ACCENT}${OPACITY_20}` : 'transparent',
                 color: cmdCategoryFilter === 'All' ? ACCENT : `${ACCENT}60`,
@@ -54,7 +54,7 @@ export function CommandCatalog({ onExecute, onPopulate, isExecuting }: Props) {
               }}>ALL</button>
             {COMMAND_CATEGORIES.map((cat) => (
               <button key={cat} onClick={() => setCmdCategoryFilter(cat)}
-                className="text-[10px] font-mono uppercase tracking-[0.15em] px-2 py-1 rounded border transition-colors"
+                className="text-xs font-mono uppercase tracking-[0.15em] px-2 py-1 rounded border transition-colors"
                 style={{
                   backgroundColor: cmdCategoryFilter === cat ? `${CATEGORY_COLORS[cat]}${OPACITY_20}` : 'transparent',
                   color: cmdCategoryFilter === cat ? CATEGORY_COLORS[cat] : `${CATEGORY_COLORS[cat]}60`,
@@ -69,19 +69,19 @@ export function CommandCatalog({ onExecute, onPopulate, isExecuting }: Props) {
             <div key={cmd.syntax} onClick={() => onPopulate(cmd.syntax)}
               className="flex items-start gap-3 p-2 border rounded cursor-pointer transition-colors group"
               style={{ borderColor: `${ACCENT}18`, backgroundColor: `${ACCENT}04` }}>
-              <span className="text-[10px] font-mono uppercase tracking-[0.15em] px-1.5 py-[1px] rounded border flex-shrink-0 mt-0.5"
+              <span className="text-xs font-mono uppercase tracking-[0.15em] px-1.5 py-[1px] rounded border flex-shrink-0 mt-0.5"
                 style={{ backgroundColor: `${CATEGORY_COLORS[cmd.category]}${OPACITY_10}`, color: CATEGORY_COLORS[cmd.category], borderColor: `${CATEGORY_COLORS[cmd.category]}${OPACITY_30}` }}>
                 {cmd.category}
               </span>
               <div className="flex-1 min-w-0">
-                <div className="text-[10px] font-mono font-bold" style={{ color: `${ACCENT}cc` }}>
+                <div className="text-xs font-mono font-bold" style={{ color: `${ACCENT}cc` }}>
                   &gt; {cmd.syntax}{cmd.params ? <span className="text-text-muted"> {cmd.params}</span> : null}
                 </div>
-                <div className="text-[10px] font-mono text-text-muted uppercase mt-0.5">{cmd.description}</div>
+                <div className="text-xs font-mono text-text-muted uppercase mt-0.5">{cmd.description}</div>
               </div>
               <div className="flex items-center gap-1 shrink-0">
                 <button onClick={(e) => { e.stopPropagation(); onExecute(cmd.syntax); }} disabled={isExecuting}
-                  className="flex items-center gap-1 text-[10px] font-mono uppercase tracking-[0.15em] px-2 py-1 rounded border transition-all opacity-0 group-hover:opacity-100 disabled:opacity-30"
+                  className="flex items-center gap-1 text-xs font-mono uppercase tracking-[0.15em] px-2 py-1 rounded border transition-all opacity-0 group-hover:opacity-100 disabled:opacity-30"
                   style={{ backgroundColor: `${ACCENT_EMERALD}${OPACITY_10}`, color: ACCENT_EMERALD, borderColor: `${ACCENT_EMERALD}${OPACITY_30}` }}>
                   <Play className="w-3 h-3" /> RUN
                 </button>
@@ -90,7 +90,7 @@ export function CommandCatalog({ onExecute, onPopulate, isExecuting }: Props) {
             </div>
           ))}
           {filteredCommands.length === 0 && (
-            <div className="text-[10px] font-mono text-text-muted text-center py-4 uppercase tracking-[0.15em]">NO COMMANDS MATCH FILTER</div>
+            <div className="text-xs font-mono text-text-muted text-center py-4 uppercase tracking-[0.15em]">NO COMMANDS MATCH FILTER</div>
           )}
         </div>
       </BlueprintPanel>

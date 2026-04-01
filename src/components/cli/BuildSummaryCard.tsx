@@ -1,6 +1,6 @@
 'use client';
 
-import { motion } from 'framer-motion';
+import { motion, useReducedMotion } from 'framer-motion';
 import {
   CheckCircle, XCircle, AlertTriangle, Clock, AlertCircle,
 } from 'lucide-react';
@@ -12,11 +12,12 @@ interface BuildSummaryCardProps {
 }
 
 export function BuildSummaryCard({ summary }: BuildSummaryCardProps) {
+  const shouldReduceMotion = useReducedMotion() ?? false;
   const isSuccess = summary.success;
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 4 }}
+      initial={shouldReduceMotion ? false : { opacity: 0, y: 4 }}
       animate={{ opacity: 1, y: 0 }}
       className={`mx-2 my-1 rounded border overflow-hidden ${
         isSuccess

@@ -48,12 +48,12 @@ export function RestXpSystem() {
               }}
             />
             <div className="absolute inset-0 flex items-center justify-center">
-              <span className="text-[10px] font-mono font-bold text-white/80 drop-shadow-sm">
+              <span className="text-xs font-mono font-bold text-white/80 drop-shadow-sm">
                 {Math.round((REST_XP_DATA.currentXP / REST_XP_DATA.nextLevelXP) * 100)}%
               </span>
             </div>
           </div>
-          <div className="flex items-center gap-4 mt-1.5 text-[10px] font-mono uppercase tracking-[0.15em] text-text-muted">
+          <div className="flex items-center gap-4 mt-1.5 text-xs font-mono uppercase tracking-[0.15em] text-text-muted">
             <span className="flex items-center gap-1"><span className="w-3 h-2 rounded-sm" style={{ backgroundColor: ACCENT, opacity: 0.6 }} /> Earned XP</span>
             <span className="flex items-center gap-1"><span className="w-3 h-2 rounded-sm" style={{ backgroundColor: ACCENT_CYAN, opacity: 0.4 }} /> Rest XP</span>
           </div>
@@ -66,7 +66,7 @@ export function RestXpSystem() {
         </div>
 
         <div>
-          <div className="flex justify-between text-[10px] font-mono uppercase tracking-[0.15em] text-text-muted mb-1">
+          <div className="flex justify-between text-xs font-mono uppercase tracking-[0.15em] text-text-muted mb-1">
             <span>Rest XP Bank</span>
             <span>{REST_XP_DATA.bankedXP.toLocaleString()} / {REST_XP_DATA.maxBankedXP.toLocaleString()}</span>
           </div>
@@ -78,7 +78,7 @@ export function RestXpSystem() {
               style={{ backgroundColor: ACCENT_CYAN }}
             />
           </div>
-          <div className="text-[10px] font-mono text-text-muted mt-1">Regen: +{REST_XP_DATA.regenRate} XP/hour offline</div>
+          <div className="text-xs font-mono text-text-muted mt-1">Regen: +{REST_XP_DATA.regenRate} XP/hour offline</div>
         </div>
       </div>
     </BlueprintPanel>

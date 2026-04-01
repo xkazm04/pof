@@ -27,7 +27,7 @@ export function StateMachinePanel({ featureMap }: StateMachinePanelProps) {
       <div className="flex gap-4 mb-3">
         {STATE_GROUPS.map((group) => (
           <div key={group.group} className="flex-1 min-w-0">
-            <div className="text-[10px] font-mono uppercase tracking-[0.15em] text-text-muted mb-2">
+            <div className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted mb-2">
               {group.group}
             </div>
             <div className="space-y-1">
@@ -40,7 +40,7 @@ export function StateMachinePanel({ featureMap }: StateMachinePanelProps) {
                   <div key={node.name} className="flex items-center gap-2 py-1 px-2 rounded hover:bg-surface-hover transition-colors">
                     <span className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ backgroundColor: sc.dot }} />
                     <span className="text-xs font-medium text-text flex-1 min-w-0 truncate">{node.name}</span>
-                    <span className="text-[10px] font-mono text-text-muted">{node.ref}</span>
+                    <span className="text-xs font-mono text-text-muted">{node.ref}</span>
                   </div>
                 );
               })}
@@ -51,7 +51,7 @@ export function StateMachinePanel({ featureMap }: StateMachinePanelProps) {
 
       {/* Transition labels */}
       <div className="space-y-1.5 bg-surface-deep/30 p-3 rounded-xl border border-border/40">
-        <div className="text-[10px] font-mono uppercase tracking-[0.15em] text-text-muted mb-2">
+        <div className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted mb-2">
           Transitions Matrix
         </div>
         <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-5 gap-2">

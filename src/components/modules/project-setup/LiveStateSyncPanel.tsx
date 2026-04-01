@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { SurfaceCard } from '@/components/ui/SurfaceCard';
+import { ConnectionStatusBadge } from '@/components/ui/ConnectionStatusBadge';
 import { useLiveStateSync } from '@/hooks/useLiveStateSync';
 import { useUE5BridgeStore } from '@/stores/ue5BridgeStore';
 import {
@@ -38,28 +39,7 @@ function formatRot(r: { pitch: number; yaw: number; roll: number } | undefined):
   return `P:${r.pitch.toFixed(1)} Y:${r.yaw.toFixed(1)} R:${r.roll.toFixed(1)}`;
 }
 
-// ── Status badge ──────────────────────────────────────────────────────────
-
-function WsStatusBadge({ status }: { status: string }) {
-  const config: Record<string, { color: string; label: string; pulse: boolean }> = {
-    connected: { color: STATUS_SUCCESS, label: 'Live', pulse: true },
-    connecting: { color: ACCENT_ORANGE, label: 'Connecting...', pulse: true },
-    reconnecting: { color: ACCENT_ORANGE, label: 'Reconnecting...', pulse: true },
-    disconnected: { color: STATUS_NEUTRAL, label: 'Offline', pulse: false },
-  };
-  const c = config[status] ?? config.disconnected;
-  return (
-    <span className="flex items-center gap-1.5 text-xs font-mono font-bold" style={{ color: c.color }}>
-      <motion.span
-        className="w-2 h-2 rounded-full"
-        style={{ backgroundColor: c.color, boxShadow: `0 0 6px ${c.color}60` }}
-        animate={c.pulse ? { scale: [1, 1.3, 1], opacity: [0.6, 1, 0.6] } : {}}
-        transition={{ duration: 2, repeat: Infinity }}
-      />
-      {c.label}
-    </span>
-  );
-}
+// ── Status badge (uses shared ConnectionStatusBadge) ─────────────────────
 
 // ── Editor state badge ────────────────────────────────────────────────────
 
@@ -75,6 +55,8 @@ function EditorStateBadge({ state }: { state: string }) {
   return (
     <span
       className="flex items-center gap-1 px-2 py-0.5 rounded-md text-xs font-bold"
+      role="status"
+      aria-label={`Editor state: ${state}`}
       style={{ color: c.color, backgroundColor: `${c.color}${OPACITY_15}` }}
     >
       <Icon className="w-3 h-3" />
@@ -121,8 +103,9 @@ function PropertyWatchForm({ onAdd }: { onAdd: (req: PropertyWatchRequest) => vo
   return (
     <div className="flex items-end gap-1.5">
       <div className="flex-1">
-        <label className="text-2xs font-bold text-text-muted uppercase tracking-wider">Object Path</label>
+        <label htmlFor="lss-watch-object-path" className="text-2xs font-bold text-text-muted uppercase tracking-wider">Object Path</label>
         <input
+          id="lss-watch-object-path"
           type="text"
           value={objectPath}
           onChange={(e) => setObjectPath(e.target.value)}
@@ -131,8 +114,9 @@ function PropertyWatchForm({ onAdd }: { onAdd: (req: PropertyWatchRequest) => vo
         />
       </div>
       <div className="w-32">
-        <label className="text-2xs font-bold text-text-muted uppercase tracking-wider">Property</label>
+        <label htmlFor="lss-watch-property" className="text-2xs font-bold text-text-muted uppercase tracking-wider">Property</label>
         <input
+          id="lss-watch-property"
           type="text"
           value={propertyName}
           onChange={(e) => setPropertyName(e.target.value)}
@@ -145,6 +129,7 @@ function PropertyWatchForm({ onAdd }: { onAdd: (req: PropertyWatchRequest) => vo
         disabled={!objectPath.trim() || !propertyName.trim()}
         className="px-2 py-1 rounded text-xs font-bold border transition-colors disabled:opacity-40"
         style={{ borderColor: `${ACCENT_EMERALD}40`, color: ACCENT_EMERALD }}
+        aria-label="Add property watch"
       >
         <Plus className="w-3 h-3" />
       </button>
@@ -184,7 +169,7 @@ export function LiveStateSyncPanel() {
   }, [watchProperty]);
 
   return (
-    <SurfaceCard className="p-0 overflow-hidden" data-testid="live-state-sync-panel">
+    <SurfaceCard className="p-0 overflow-hidden" data-testid="live-state-sync-panel" role="region" aria-label="Live State Sync">
       {/* ── Header ───────────────────────────────────────────────── */}
       <div className="px-4 py-3 border-b border-border/40">
         <div className="flex items-center gap-3">
@@ -195,7 +180,7 @@ export function LiveStateSyncPanel() {
           <div className="flex-1">
             <div className="flex items-center gap-2">
               <h3 className="text-sm font-bold text-text">Live State Sync</h3>
-              <WsStatusBadge status={wsStatus} />
+              <ConnectionStatusBadge status={wsStatus} label={wsStatus === 'connected' ? 'Live' : undefined} />
               {isLive && snapshot && <EditorStateBadge state={snapshot.editorState} />}
             </div>
             <p className="text-xs text-text-muted">
@@ -269,8 +254,9 @@ export function LiveStateSyncPanel() {
               className="overflow-hidden"
             >
               <div className="flex items-center gap-3 mt-3 pt-3 border-t border-border/30">
-                <label className="text-2xs font-bold text-text-muted uppercase tracking-wider">WS Port</label>
+                <label htmlFor="lss-ws-port" className="text-2xs font-bold text-text-muted uppercase tracking-wider">WS Port</label>
                 <input
+                  id="lss-ws-port"
                   type="number"
                   min={1024}
                   max={65535}
@@ -306,6 +292,8 @@ export function LiveStateSyncPanel() {
           <div>
             <button
               onClick={() => setShowViewport(!showViewport)}
+              aria-expanded={showViewport}
+              aria-controls="lss-viewport-panel"
               className="w-full flex items-center gap-2 px-4 py-2 text-left hover:bg-white/3 transition-colors"
             >
               {showViewport ? <ChevronDown className="w-3 h-3 text-text-muted" /> : <ChevronRight className="w-3 h-3 text-text-muted" />}
@@ -318,7 +306,7 @@ export function LiveStateSyncPanel() {
               </span>
             </button>
             {showViewport && (
-              <div className="px-4 pb-3 space-y-1.5">
+              <div id="lss-viewport-panel" role="region" aria-label="Viewport" className="px-4 pb-3 space-y-1.5">
                 <div className="grid grid-cols-2 gap-2">
                   <div className="space-y-0.5">
                     <div className="text-2xs font-bold text-text-muted uppercase tracking-wider">Camera Location</div>
@@ -384,6 +372,8 @@ export function LiveStateSyncPanel() {
           <div>
             <button
               onClick={() => setShowSelection(!showSelection)}
+              aria-expanded={showSelection}
+              aria-controls="lss-selection-panel"
               className="w-full flex items-center gap-2 px-4 py-2 text-left hover:bg-white/3 transition-colors"
             >
               {showSelection ? <ChevronDown className="w-3 h-3 text-text-muted" /> : <ChevronRight className="w-3 h-3 text-text-muted" />}
@@ -402,7 +392,7 @@ export function LiveStateSyncPanel() {
               </span>
             </button>
             {showSelection && (
-              <div className="px-4 pb-3">
+              <div id="lss-selection-panel" role="region" aria-label="Selected Actors" className="px-4 pb-3">
                 {snapshot.selectedActors.length === 0 ? (
                   <p className="text-2xs text-text-muted py-1">No actors selected in the editor</p>
                 ) : (
@@ -445,6 +435,8 @@ export function LiveStateSyncPanel() {
           <div>
             <button
               onClick={() => setShowWatches(!showWatches)}
+              aria-expanded={showWatches}
+              aria-controls="lss-watches-panel"
               className="w-full flex items-center gap-2 px-4 py-2 text-left hover:bg-white/3 transition-colors"
             >
               {showWatches ? <ChevronDown className="w-3 h-3 text-text-muted" /> : <ChevronRight className="w-3 h-3 text-text-muted" />}
@@ -455,7 +447,7 @@ export function LiveStateSyncPanel() {
               <span className="text-2xs text-text-muted">{watchEntries.length}</span>
             </button>
             {showWatches && (
-              <div className="px-4 pb-3 space-y-2">
+              <div id="lss-watches-panel" role="region" aria-label="Property Watches" className="px-4 pb-3 space-y-2">
                 {/* Active watches */}
                 {watchEntries.length > 0 && (
                   <div className="space-y-1 max-h-48 overflow-y-auto custom-scrollbar">
@@ -475,6 +467,7 @@ export function LiveStateSyncPanel() {
                           onClick={() => unwatchProperty(watchId)}
                           className="p-0.5 rounded opacity-0 group-hover:opacity-100 transition-opacity"
                           style={{ color: STATUS_ERROR }}
+                          aria-label={`Remove watch for ${update.propertyName}`}
                         >
                           <X className="w-3 h-3" />
                         </button>

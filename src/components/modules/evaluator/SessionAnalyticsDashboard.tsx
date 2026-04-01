@@ -1,8 +1,8 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
-  BarChart3, TrendingUp, TrendingDown, Minus, Clock, CheckCircle, XCircle,
+  BarChart3, TrendingUp, TrendingDown, Minus, Clock, CheckCircle, XCircle, AlertTriangle,
   Lightbulb, ChevronDown, ChevronRight, Zap, Target, Activity,
 } from 'lucide-react';
 import { useSessionDashboard } from '@/hooks/useSessionAnalytics';
@@ -16,7 +16,7 @@ import type {
   SessionRecord,
 } from '@/types/session-analytics';
 
-import { MODULE_COLORS, STATUS_SUCCESS, STATUS_WARNING, STATUS_ERROR, STATUS_INFO, STATUS_STALE } from '@/lib/chart-colors';
+import { MODULE_COLORS, STATUS_SUCCESS, STATUS_WARNING, STATUS_ERROR, STATUS_INFO, STATUS_STALE, OPACITY_10 } from '@/lib/chart-colors';
 
 const EVALUATOR_ACCENT = MODULE_COLORS.evaluator;
 
@@ -27,6 +27,15 @@ interface SessionAnalyticsDashboardProps {
 export function SessionAnalyticsDashboard({ onNavigateTab }: SessionAnalyticsDashboardProps) {
   const { dashboard, isLoading, error, retry, refetch } = useSessionDashboard();
   const [expandedModule, setExpandedModule] = useState<string | null>(null);
+  const [barsReady, setBarsReady] = useState(false);
+
+  useEffect(() => {
+    if (!isLoading && dashboard.totalSessions > 0) {
+      const frame = requestAnimationFrame(() => setBarsReady(true));
+      return () => cancelAnimationFrame(frame);
+    }
+    setBarsReady(false);
+  }, [isLoading, dashboard.totalSessions]);
 
   if (isLoading) {
     return (
@@ -92,9 +101,9 @@ export function SessionAnalyticsDashboard({ onNavigateTab }: SessionAnalyticsDas
       {dashboard.insights.length > 0 && (
         <div>
           <div className="flex items-center gap-2 mb-3">
-            <Lightbulb className="w-3.5 h-3.5 text-[#fbbf24]" />
+            <Lightbulb className="w-3.5 h-3.5" style={{ color: STATUS_WARNING }} />
             <h3 className="text-xs font-semibold text-text">Learned Insights</h3>
-            <span className="text-2xs px-1.5 py-0.5 rounded bg-[#fbbf2418] text-[#fbbf24] font-medium">
+            <span className={`text-2xs px-1.5 py-0.5 rounded bg-[${STATUS_WARNING}${OPACITY_10}] text-[${STATUS_WARNING}] font-medium`}>
               {dashboard.insights.length}
             </span>
           </div>
@@ -111,8 +120,8 @@ export function SessionAnalyticsDashboard({ onNavigateTab }: SessionAnalyticsDas
         <div>
           <h3 className="text-xs font-semibold text-text mb-3">Prompt Quality by Module</h3>
           <div className="space-y-1.5">
-            {dashboard.qualityScores.map((qs) => (
-              <QualityScoreRow key={qs.moduleId} score={qs} />
+            {dashboard.qualityScores.map((qs, i) => (
+              <QualityScoreRow key={qs.moduleId} score={qs} index={i} animate={barsReady} />
             ))}
           </div>
         </div>
@@ -125,10 +134,12 @@ export function SessionAnalyticsDashboard({ onNavigateTab }: SessionAnalyticsDas
           <div className="space-y-1">
             {dashboard.moduleStats
               .sort((a, b) => b.totalSessions - a.totalSessions)
-              .map((ms) => (
+              .map((ms, i) => (
                 <ModuleStatsRow
                   key={ms.moduleId}
                   stats={ms}
+                  index={i}
+                  animate={barsReady}
                   isExpanded={expandedModule === ms.moduleId}
                   onToggle={() => setExpandedModule(expandedModule === ms.moduleId ? null : ms.moduleId)}
                 />
@@ -182,7 +193,7 @@ function InsightCard({ insight }: { insight: PromptInsight }) {
 
   return (
     <SurfaceCard level={2} className="flex items-start gap-3 px-3 py-2.5">
-      <Lightbulb className="w-3.5 h-3.5 flex-shrink-0 mt-0.5 text-[#fbbf24]" />
+      <Lightbulb className="w-3.5 h-3.5 flex-shrink-0 mt-0.5" style={{ color: STATUS_WARNING }} />
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2 mb-0.5">
           <span className="text-xs font-medium text-text">{insight.message}</span>
@@ -197,13 +208,13 @@ function InsightCard({ insight }: { insight: PromptInsight }) {
   );
 }
 
-function QualityScoreRow({ score }: { score: PromptQualityScore }) {
+function QualityScoreRow({ score, index, animate }: { score: PromptQualityScore; index: number; animate: boolean }) {
   const TrendIcon = score.trend === 'improving' ? TrendingUp : score.trend === 'declining' ? TrendingDown : Minus;
   const trendColor = score.trend === 'improving' ? STATUS_SUCCESS : score.trend === 'declining' ? STATUS_ERROR : 'var(--text-muted)';
   const scoreColor = score.score >= 70 ? STATUS_SUCCESS : score.score >= 40 ? STATUS_WARNING : STATUS_ERROR;
 
   return (
-    <div className="flex items-center gap-3 px-3 py-2 rounded-md hover:bg-[#111130] transition-colors">
+    <div className="flex items-center gap-3 px-3 py-2 rounded-md hover:bg-surface-hover transition-colors">
       {/* Module name */}
       <span className="text-xs text-text w-36 truncate">{score.moduleId}</span>
 
@@ -211,12 +222,21 @@ function QualityScoreRow({ score }: { score: PromptQualityScore }) {
       <div className="flex-1 flex items-center gap-2">
         <div className="flex-1 h-1.5 bg-border rounded-full overflow-hidden">
           <div
-            className="h-full rounded-full transition-all duration-slow"
-            style={{ width: `${score.score}%`, backgroundColor: scoreColor }}
+            className="h-full rounded-full ease-out"
+            style={{
+              width: animate ? `${score.score}%` : '0%',
+              backgroundColor: scoreColor,
+              transitionProperty: 'width',
+              transitionDuration: '500ms',
+              transitionDelay: `${index * 50}ms`,
+            }}
           />
         </div>
         <span className="text-xs font-bold w-8 text-right" style={{ color: scoreColor }}>
           {score.score}
+        </span>
+        <span className="text-2xs w-8 text-left" style={{ color: scoreColor }}>
+          {score.score >= 70 ? '✓ Good' : score.score >= 40 ? '~ Fair' : '✗ Low'}
         </span>
       </div>
 
@@ -231,55 +251,75 @@ function QualityScoreRow({ score }: { score: PromptQualityScore }) {
 
 function ModuleStatsRow({
   stats,
+  index,
+  animate,
   isExpanded,
   onToggle,
 }: {
   stats: ModuleStats;
+  index: number;
+  animate: boolean;
   isExpanded: boolean;
   onToggle: () => void;
 }) {
   const successPercent = Math.round(stats.successRate * 100);
   const successColor = successPercent >= 70 ? STATUS_SUCCESS : successPercent >= 40 ? STATUS_WARNING : STATUS_ERROR;
 
+  const panelId = `module-details-${stats.moduleId}`;
+
   return (
     <div className="rounded-md overflow-hidden">
       <button
         onClick={onToggle}
+        aria-expanded={isExpanded}
+        aria-controls={panelId}
         className="w-full flex items-center gap-3 px-3 py-2 text-left hover:bg-surface-hover transition-colors"
       >
         {isExpanded ? (
-          <ChevronDown className="w-3 h-3 text-text-muted-hover" />
+          <ChevronDown className="w-3 h-3 text-text-muted-hover" aria-hidden="true" />
         ) : (
-          <ChevronRight className="w-3 h-3 text-text-muted-hover" />
+          <ChevronRight className="w-3 h-3 text-text-muted-hover" aria-hidden="true" />
         )}
 
         <span className="text-xs text-text w-36 truncate">{stats.moduleId}</span>
 
         {/* Mini success bar */}
-        <div className="flex-1 h-1 bg-border rounded-full overflow-hidden">
+        <div className="flex-1 h-1 bg-border rounded-full overflow-hidden" role="progressbar" aria-valuenow={successPercent} aria-valuemin={0} aria-valuemax={100} aria-label={`${stats.moduleId} success rate`}>
           <div
-            className="h-full rounded-full"
-            style={{ width: `${successPercent}%`, backgroundColor: successColor }}
+            className="h-full rounded-full ease-out"
+            style={{
+              width: animate ? `${successPercent}%` : '0%',
+              backgroundColor: successColor,
+              transitionProperty: 'width',
+              transitionDuration: '500ms',
+              transitionDelay: `${index * 50}ms`,
+            }}
           />
         </div>
 
-        <span className="text-xs font-medium w-10 text-right" style={{ color: successColor }}>
-          {successPercent}%
+        <span className="flex items-center gap-0.5 w-16 justify-end" style={{ color: successColor }}>
+          {successPercent >= 70
+            ? <CheckCircle className="w-2.5 h-2.5 flex-shrink-0" aria-hidden="true" />
+            : successPercent >= 40
+              ? <AlertTriangle className="w-2.5 h-2.5 flex-shrink-0" aria-hidden="true" />
+              : <XCircle className="w-2.5 h-2.5 flex-shrink-0" aria-hidden="true" />
+          }
+          <span className="text-xs font-medium">{successPercent}%</span>
         </span>
 
         <span className="text-2xs text-text-muted w-8 text-right">{stats.totalSessions}</span>
       </button>
 
       {isExpanded && (
-        <div className="px-8 py-3 bg-[#111130] space-y-2">
+        <div id={panelId} role="region" aria-label={`${stats.moduleId} details`} className="px-8 py-3 bg-surface-hover space-y-2">
           <div className="grid grid-cols-3 gap-3">
             <div>
               <span className="text-2xs text-text-muted block">Success</span>
-              <span className="text-xs text-[#4ade80] font-medium">{stats.successCount}</span>
+              <span className="text-xs font-medium" style={{ color: STATUS_SUCCESS }}>{stats.successCount}</span>
             </div>
             <div>
               <span className="text-2xs text-text-muted block">Failed</span>
-              <span className="text-xs text-[#f87171] font-medium">{stats.failCount}</span>
+              <span className="text-xs font-medium" style={{ color: STATUS_ERROR }}>{stats.failCount}</span>
             </div>
             <div>
               <span className="text-2xs text-text-muted block">Avg Time</span>
@@ -298,7 +338,7 @@ function ModuleStatsRow({
               <span className="text-2xs text-text-muted block mb-1">Context Injection Impact</span>
               <div className="flex items-center gap-3">
                 <div className="flex items-center gap-1.5">
-                  <div className="w-2 h-2 rounded-full bg-[#4ade80]" />
+                  <div className="w-2 h-2 rounded-full" style={{ backgroundColor: STATUS_SUCCESS }} />
                   <span className="text-xs text-text">
                     With: {Math.round(stats.contextInjectedSuccessRate * 100)}%
                   </span>
@@ -326,17 +366,17 @@ function RecentSessionRow({ session }: { session: SessionRecord }) {
     : `${Math.round(session.durationMs / 1000)}s`;
 
   return (
-    <div className="flex items-center gap-3 px-3 py-1.5 rounded hover:bg-[#111130] transition-colors">
+    <div className="flex items-center gap-3 px-3 py-1.5 rounded hover:bg-surface-hover transition-colors">
       {session.success ? (
-        <CheckCircle className="w-3 h-3 text-[#4ade80] flex-shrink-0" />
+        <CheckCircle className="w-3 h-3 flex-shrink-0" style={{ color: STATUS_SUCCESS }} aria-label="Session succeeded" />
       ) : (
-        <XCircle className="w-3 h-3 text-[#f87171] flex-shrink-0" />
+        <XCircle className="w-3 h-3 flex-shrink-0" style={{ color: STATUS_ERROR }} aria-label="Session failed" />
       )}
       <span className="text-xs text-text-muted-hover w-28 truncate flex-shrink-0">{session.moduleId}</span>
-      <span className="text-xs text-[#d0d4e8] flex-1 min-w-0 truncate">{session.promptPreview}</span>
+      <span className="text-xs text-text-muted-hover flex-1 min-w-0 truncate">{session.promptPreview}</span>
       <span className="text-2xs text-text-muted flex-shrink-0">{durationStr}</span>
       {session.hadProjectContext && (
-        <span className="text-2xs px-1 py-0.5 rounded bg-[#4ade8018] text-[#4ade80] flex-shrink-0">ctx</span>
+        <span className={`text-2xs px-1 py-0.5 rounded bg-[${STATUS_SUCCESS}${OPACITY_10}] text-[${STATUS_SUCCESS}] flex-shrink-0`}>ctx</span>
       )}
     </div>
   );

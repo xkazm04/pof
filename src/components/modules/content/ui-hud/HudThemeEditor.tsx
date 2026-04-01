@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { Palette, Play, Pause, RotateCcw, Download, Copy, Check } from 'lucide-react';
 import { SurfaceCard } from '@/components/ui/SurfaceCard';
+import { StyledSlider } from '@/components/ui/StyledSlider';
 import {
   STATUS_SUCCESS, STATUS_WARNING, STATUS_ERROR, STATUS_INFO,
   ACCENT_CYAN, ACCENT_VIOLET, ACCENT_EMERALD,
@@ -237,26 +238,18 @@ function SliderField({ label, value, min, max, step, unit, onChange, color }: {
   onChange: (v: number) => void;
   color?: string;
 }) {
+  const displayValue = `${Number.isInteger(step) || step >= 1 ? value : value.toFixed(1)}${unit}`;
   return (
-    <div className="space-y-0.5">
-      <div className="flex items-center justify-between">
-        <span className="text-2xs text-text-muted">{label}</span>
-        <span className="text-2xs font-mono font-bold" style={{ color: color || 'var(--text)' }}>
-          {Number.isInteger(step) || step >= 1 ? value : value.toFixed(1)}{unit}
-        </span>
-      </div>
-      <input
-        type="range"
-        min={min}
-        max={max}
-        step={step}
-        value={value}
-        onChange={(e) => onChange(Number(e.target.value))}
-        className="w-full h-1 rounded-full appearance-none bg-border cursor-pointer
-                   [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:h-3 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:border-2 [&::-webkit-slider-thumb]:border-white [&::-webkit-slider-thumb]:cursor-pointer"
-        style={{ accentColor: color || ACCENT_CYAN }}
-      />
-    </div>
+    <StyledSlider
+      min={min}
+      max={max}
+      step={step}
+      value={value}
+      onChange={onChange}
+      accentColor={color || ACCENT_CYAN}
+      label={label}
+      displayValue={displayValue}
+    />
   );
 }
 
@@ -569,7 +562,7 @@ export function HudThemeEditor() {
 
       {/* Live Preview */}
       <SurfaceCard level={2} className="p-3">
-        <div className="text-xs font-bold text-text-muted uppercase tracking-widest mb-2">
+        <div className="text-xs font-bold text-text-muted uppercase mb-2">
           Live Combat Preview
         </div>
         <LivePreviewScene theme={theme} time={time} />
@@ -600,7 +593,7 @@ export function HudThemeEditor() {
           {/* Health & Mana section */}
           {activeSection === 'health' && (
             <div className="space-y-3">
-              <div className="text-xs font-bold text-text-muted uppercase tracking-widest">
+              <div className="text-xs font-bold text-text-muted uppercase">
                 ARPGHUDWidget Colors
               </div>
               <ColorPickerField
@@ -619,7 +612,7 @@ export function HudThemeEditor() {
                 onChange={(c) => update('manaColor', c)}
               />
               <div className="h-px bg-border/40" />
-              <div className="text-xs font-bold text-text-muted uppercase tracking-widest">
+              <div className="text-xs font-bold text-text-muted uppercase">
                 Low-Health Pulse
               </div>
               <SliderField
@@ -649,7 +642,7 @@ export function HudThemeEditor() {
           {/* Damage Numbers section */}
           {activeSection === 'damage' && (
             <div className="space-y-3">
-              <div className="text-xs font-bold text-text-muted uppercase tracking-widest">
+              <div className="text-xs font-bold text-text-muted uppercase">
                 Element Colors
               </div>
               {Object.entries(theme.elementColors).map(([name, color]) => (
@@ -661,7 +654,7 @@ export function HudThemeEditor() {
                 />
               ))}
               <div className="h-px bg-border/40" />
-              <div className="text-xs font-bold text-text-muted uppercase tracking-widest">
+              <div className="text-xs font-bold text-text-muted uppercase">
                 Font & Animation
               </div>
               <SliderField
@@ -703,7 +696,7 @@ export function HudThemeEditor() {
           {/* Enemy HP Bar section */}
           {activeSection === 'enemy' && (
             <div className="space-y-3">
-              <div className="text-xs font-bold text-text-muted uppercase tracking-widest">
+              <div className="text-xs font-bold text-text-muted uppercase">
                 EnemyHealthBarWidget
               </div>
               <ColorPickerField
@@ -712,7 +705,7 @@ export function HudThemeEditor() {
                 onChange={(c) => update('enemyBarColor', c)}
               />
               <div className="h-px bg-border/40" />
-              <div className="text-xs font-bold text-text-muted uppercase tracking-widest">
+              <div className="text-xs font-bold text-text-muted uppercase">
                 Fade Timing
               </div>
               <SliderField
@@ -745,7 +738,7 @@ export function HudThemeEditor() {
               />
 
               {/* Fade timeline visualization */}
-              <div className="text-xs font-bold text-text-muted uppercase tracking-widest mt-2">
+              <div className="text-xs font-bold text-text-muted uppercase mt-2">
                 Fade Timeline
               </div>
               <div className="relative h-10 rounded bg-black/40 border border-border/40 overflow-hidden">
@@ -758,7 +751,7 @@ export function HudThemeEditor() {
         {/* ── Right: UE5 Export ── */}
         <SurfaceCard level={2} className="p-3 space-y-2">
           <div className="flex items-center justify-between">
-            <div className="text-xs font-bold text-text-muted uppercase tracking-widest">
+            <div className="text-xs font-bold text-text-muted uppercase">
               UE5 UMG Configuration
             </div>
             <div className="flex items-center gap-1">

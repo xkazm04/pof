@@ -21,7 +21,7 @@ function MetricCell({ label, value, unit, icon: Icon, color, muted }: {
     >
       <Icon className="w-3.5 h-3.5 flex-shrink-0" style={{ color: iconColor }} />
       <div className="flex-1 min-w-0">
-        <div className="text-[10px] font-mono uppercase tracking-[0.15em] text-text-muted">{label}</div>
+        <div className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted">{label}</div>
         <span className="text-xs font-bold font-mono" style={{ color: valueColor }}>
           {formatMetricValue(value, unit)}
         </span>
@@ -48,7 +48,7 @@ export function MetricRow({ label, feedbackOn, feedbackOff, unit, higherIsBetter
       <div className="flex items-center w-20 px-1">
         <div className="flex-1 h-px" style={{ backgroundColor: `${deltaColor}40` }} />
         <span
-          className="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded-full whitespace-nowrap"
+          className="text-xs font-mono font-bold px-1.5 py-0.5 rounded-full whitespace-nowrap"
           style={{ color: deltaColor, backgroundColor: `${deltaColor}15` }}
         >
           {neutral ? '=' : `${delta > 0 ? '+' : ''}${formatDelta(delta, unit)}`}

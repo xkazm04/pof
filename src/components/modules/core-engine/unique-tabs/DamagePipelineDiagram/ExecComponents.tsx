@@ -22,7 +22,7 @@ export function ExecPhaseHeader({ label, color }: { label: string; color: string
   return (
     <div className="flex items-center gap-2 px-2.5 py-1.5 mt-0.5"
       style={{ borderLeft: `2px solid ${color}` }}>
-      <span className="text-[10px] font-mono uppercase tracking-[0.15em] font-bold" style={{ color }}>
+      <span className="text-xs font-mono uppercase tracking-[0.15em] font-bold" style={{ color }}>
         {label}
       </span>
     </div>

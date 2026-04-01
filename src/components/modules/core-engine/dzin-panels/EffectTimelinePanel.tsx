@@ -6,7 +6,7 @@ import {
   ACCENT_RED, MODULE_COLORS, ACCENT_EMERALD_DARK, ACCENT_GREEN, STATUS_STALE,
 } from '@/lib/chart-colors';
 import { useDensity, PanelFrame } from '@/lib/dzin/core';
-import { DZIN_TIMING } from '@/lib/dzin/animation-constants';
+import { DZIN_SPACING, TRANSITION_ENTER, TRANSITION_EXIT } from '@/lib/dzin/animation-constants';
 import { TimelineStrip, SectionLabel } from '@/components/modules/core-engine/unique-tabs/_shared';
 import { SurfaceCard } from '@/components/ui/SurfaceCard';
 import type { FeatureRow } from '@/types/feature-matrix';
@@ -43,7 +43,7 @@ const MAX_TIMESTAMP = Math.max(
 
 function TimelineMicro() {
   return (
-    <div className="flex flex-col items-center justify-center gap-1 p-2">
+    <div className={DZIN_SPACING.micro.wrapper}>
       <Clock className="w-5 h-5 text-red-400" />
       <span className="font-mono text-2xs text-text-muted">
         {MIN_TIMESTAMP.toFixed(1)}s - {MAX_TIMESTAMP.toFixed(1)}s
@@ -89,10 +89,10 @@ function TimelineCompact() {
 
 function TimelineFull() {
   return (
-    <div className="space-y-2.5">
-      <SurfaceCard level={2} className="p-3 relative overflow-hidden">
+    <div className={DZIN_SPACING.full.wrapper}>
+      <SurfaceCard level={2} className={`${DZIN_SPACING.full.card} relative overflow-hidden`}>
         <SectionLabel label="Effect Stack Timeline" />
-        <div className="mt-3">
+        <div className={DZIN_SPACING.full.pipelineMt}>
           <TimelineStrip
             events={EFFECT_TIMELINE_EVENTS}
             accent="#ef4444"
@@ -116,8 +116,8 @@ export function EffectTimelinePanel({ featureMap: _featureMap, defs: _defs }: Ef
           key={density}
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          transition={{ duration: DZIN_TIMING.DENSITY / 2 }}
+          exit={{ opacity: 0, transition: TRANSITION_EXIT }}
+          transition={TRANSITION_ENTER}
         >
           {density === 'micro' && <TimelineMicro />}
           {density === 'compact' && <TimelineCompact />}

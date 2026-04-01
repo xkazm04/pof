@@ -18,7 +18,7 @@ export function InputModeBadge({ mode }: { mode: InputMode }) {
   const color = INPUT_MODE_COLORS[mode];
   return (
     <span
-      className="text-[10px] font-mono uppercase tracking-[0.15em] px-1.5 py-0.5 rounded font-bold border"
+      className="text-xs font-mono uppercase tracking-[0.15em] px-1.5 py-0.5 rounded font-bold border"
       style={{ backgroundColor: `${color}15`, color, borderColor: `${color}40` }}
     >
       {mode}
@@ -83,7 +83,7 @@ export function ScreenNodeRow({
               <ChevronRight className="w-3.5 h-3.5 text-text-muted group-hover:text-text transition-colors" />
             </motion.div>
             {fromLabel && (
-              <span className="text-[10px] font-mono uppercase tracking-[0.15em] text-text-muted bg-surface px-1.5 py-0.5 rounded border border-border/30">
+              <span className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted bg-surface px-1.5 py-0.5 rounded border border-border/30">
                 {fromLabel} &rarr;
               </span>
             )}
@@ -91,13 +91,13 @@ export function ScreenNodeRow({
             <div className="hidden sm:flex ml-2"><InputModeBadge mode={node.inputMode} /></div>
             <span className="ml-auto flex items-center gap-1.5 bg-surface px-2 py-0.5 rounded border border-border/40 shadow-sm flex-shrink-0">
               <span className="w-2 h-2 rounded-full shadow-[0_0_5px_currentColor]" style={{ backgroundColor: sc.dot, color: sc.dot }} />
-              <span className="text-[10px] font-mono uppercase tracking-[0.15em] font-bold" style={{ color: sc.dot }}>{sc.label}</span>
+              <span className="text-xs font-mono uppercase tracking-[0.15em] font-bold" style={{ color: sc.dot }}>{sc.label}</span>
             </span>
           </div>
           <div className="flex sm:hidden mt-2 ml-6 items-center gap-2">
             <InputModeBadge mode={node.inputMode} />
             {arrowLabel && (
-              <span className="text-[10px] font-mono uppercase tracking-[0.15em] px-1.5 py-0.5 rounded font-medium border"
+              <span className="text-xs font-mono uppercase tracking-[0.15em] px-1.5 py-0.5 rounded font-medium border"
                 style={{ backgroundColor: `${ACCENT}10`, color: ACCENT, borderColor: `${ACCENT}30` }}>
                 Trigger: {arrowLabel}
               </span>
@@ -114,14 +114,14 @@ export function ScreenNodeRow({
                     {def?.description ?? row?.description ?? 'No description'}
                   </p>
                   {arrowLabel && (
-                    <span className="hidden sm:inline-block text-[10px] font-mono uppercase tracking-[0.15em] px-2 py-1 rounded font-medium border whitespace-nowrap"
+                    <span className="hidden sm:inline-block text-xs font-mono uppercase tracking-[0.15em] px-2 py-1 rounded font-medium border whitespace-nowrap"
                       style={{ backgroundColor: `${ACCENT}10`, color: ACCENT, borderColor: `${ACCENT}30` }}>
                       Trigger: {arrowLabel}
                     </span>
                   )}
                 </div>
                 <div className="bg-surface-deep p-2 rounded-lg border border-border/40">
-                  <div className="text-[10px] font-mono uppercase tracking-[0.15em] font-bold text-text-muted mb-1.5 ml-1">Sub-Widgets</div>
+                  <div className="text-xs font-mono uppercase tracking-[0.15em] font-bold text-text-muted mb-1.5 ml-1">Sub-Widgets</div>
                   <div className="flex flex-wrap gap-1.5">
                     {node.subWidgets.map((w) => (
                       <span key={w} className="text-xs font-mono font-medium px-2 py-0.5 rounded-md border shadow-sm"

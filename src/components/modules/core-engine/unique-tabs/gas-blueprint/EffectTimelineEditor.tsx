@@ -204,21 +204,21 @@ export function EffectTimelineEditor({
         {/* Active effects badge */}
         {playheadTime !== null && activeEffectDetails.length > 0 && (
           <div className="absolute top-0 right-0 mt-1 mr-1 p-1.5 rounded-lg border border-border/40 bg-surface-deep/90 backdrop-blur-sm max-w-[160px]">
-            <div className="text-[11px] font-mono font-bold text-text-muted uppercase tracking-wider mb-1">
+            <div className="text-xs font-mono font-bold text-text-muted uppercase tracking-wider mb-1">
               Active @ {playheadTime.toFixed(1)}s
             </div>
             {activeEffectDetails.map((eff) => (
               <div key={eff.id} className="flex items-center gap-1.5 mb-0.5">
                 <span className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ backgroundColor: eff.color, boxShadow: `0 0 4px ${eff.color}` }} />
-                <span className="text-[11px] font-mono font-bold truncate" style={{ color: eff.color }}>{eff.name}</span>
+                <span className="text-xs font-mono font-bold truncate" style={{ color: eff.color }}>{eff.name}</span>
               </div>
             ))}
             {activeEffectDetails.some(e => e.grantedTags.length > 0) && (
               <div className="mt-1 pt-1 border-t border-border/30">
-                <div className="text-[11px] font-mono text-text-muted uppercase tracking-wider mb-0.5">Tags</div>
+                <div className="text-xs font-mono text-text-muted uppercase tracking-wider mb-0.5">Tags</div>
                 <div className="flex flex-wrap gap-0.5">
                   {activeEffectDetails.flatMap(e => e.grantedTags.map(t => ({ tag: t, color: e.color }))).map(({ tag, color }) => (
-                    <span key={tag} className="text-[11px] font-mono px-1 py-0 rounded" style={{ backgroundColor: `${color}15`, color, border: `1px solid ${color}25` }}>
+                    <span key={tag} className="text-xs font-mono px-1 py-0 rounded" style={{ backgroundColor: `${color}15`, color, border: `1px solid ${color}25` }}>
                       {tag}
                     </span>
                   ))}

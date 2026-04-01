@@ -35,11 +35,11 @@ export function ItemBaseSelector({
                   border: `1px solid ${isSelected ? `${rc}60` : `${rc}25`}`,
                   color: isSelected ? rc : 'var(--text-muted)',
                 }}>
-                <div className="font-bold font-mono text-[10px] uppercase tracking-[0.15em] truncate"
+                <div className="font-bold font-mono text-xs uppercase tracking-[0.15em] truncate"
                   style={isSelected ? { textShadow: `0 0 12px ${rc}40` } : undefined}>
                   {base.name}
                 </div>
-                <div className="text-[10px] font-mono opacity-70">{base.type} | Lv{base.itemLevel}</div>
+                <div className="text-xs font-mono opacity-70">{base.type} | Lv{base.itemLevel}</div>
               </motion.button>
             );
           })}
@@ -49,7 +49,7 @@ export function ItemBaseSelector({
       {/* Item level slider */}
       <BlueprintPanel color={ACCENT} className="p-3">
         <div className="flex items-center justify-between mb-1">
-          <span className="text-[10px] font-mono uppercase tracking-[0.15em] text-text-muted">
+          <span className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted">
             Item Level
           </span>
           <span className="text-xs font-mono font-bold"
@@ -61,7 +61,7 @@ export function ItemBaseSelector({
           onChange={(e) => onSetItemLevel(Number(e.target.value))}
           className="w-full h-1.5 rounded-full appearance-none cursor-pointer"
           style={{ accentColor: ACCENT }} />
-        <div className="flex justify-between text-[10px] text-text-muted font-mono mt-0.5">
+        <div className="flex justify-between text-xs text-text-muted font-mono mt-0.5">
           <span>1</span>
           <span style={{ textShadow: `0 0 12px ${ACCENT}40` }}>
             Scaling: {getItemLevelScaling(itemLevel).toFixed(1)}x

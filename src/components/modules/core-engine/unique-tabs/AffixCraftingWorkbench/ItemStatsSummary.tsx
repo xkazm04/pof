@@ -52,7 +52,7 @@ export function ItemStatsSummary({
       <SectionHeader label="Item Stats Summary" color={ACCENT} />
       <div className="mt-2 space-y-1.5">
         {rows.map(({ label, value, color }) => (
-          <div key={label} className="flex items-center justify-between text-[10px] font-mono uppercase tracking-[0.15em]">
+          <div key={label} className="flex items-center justify-between text-xs font-mono uppercase tracking-[0.15em]">
             <span className="text-text-muted">{label}</span>
             <span className="font-bold" style={{ color, textShadow: `0 0 12px ${color}40` }}>{value}</span>
           </div>
@@ -60,7 +60,7 @@ export function ItemStatsSummary({
 
         <div className="border-t my-1 pt-1" style={{ borderColor: `${ACCENT}18` }} />
 
-        <div className="flex items-center justify-between text-[10px] font-mono uppercase tracking-[0.15em]">
+        <div className="flex items-center justify-between text-xs font-mono uppercase tracking-[0.15em]">
           <span className="text-text-muted flex items-center gap-1">
             <Coins className="w-3 h-3" /> Forging Pot.
           </span>
@@ -73,7 +73,7 @@ export function ItemStatsSummary({
           </span>
         </div>
 
-        <div className="flex items-center justify-between text-[10px] font-mono uppercase tracking-[0.15em]">
+        <div className="flex items-center justify-between text-xs font-mono uppercase tracking-[0.15em]">
           <span className="text-text-muted flex items-center gap-1">
             {hasLocks ? <Lock className="w-3 h-3" /> : <Unlock className="w-3 h-3" />} Locks
           </span>
@@ -83,7 +83,7 @@ export function ItemStatsSummary({
           </span>
         </div>
 
-        <div className="flex items-center justify-between text-[10px] font-mono uppercase tracking-[0.15em]">
+        <div className="flex items-center justify-between text-xs font-mono uppercase tracking-[0.15em]">
           <span className="text-text-muted flex items-center gap-1">
             <CircleDollarSign className="w-3 h-3" /> Total Spent
           </span>

@@ -62,6 +62,7 @@ export function CLITabBar({ className, filteredTabOrder, activeTabId: activeTabI
             onClick={() => handleTabSelect(tabId)}
             className={`
               flex items-center gap-1.5 px-2.5 py-1 rounded-t text-xs transition-all duration-fast min-w-0 max-w-[160px] group
+              focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-strong focus-visible:ring-offset-1 focus-visible:ring-offset-surface-deep
               ${isActive
                 ? 'bg-surface text-text border-t-2'
                 : 'text-text-muted hover:text-text hover:bg-surface/50'
@@ -115,7 +116,7 @@ export function CLITabBar({ className, filteredTabOrder, activeTabId: activeTabI
         <button
           onClick={() => createSession({ label: `Terminal ${storeTabOrder.length + 1}` })}
           aria-label="New terminal tab"
-          className="flex items-center justify-center w-6 h-6 rounded text-text-muted hover:text-text hover:bg-surface transition-all"
+          className="flex items-center justify-center w-6 h-6 rounded text-text-muted hover:text-text hover:bg-surface transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-strong focus-visible:ring-offset-1 focus-visible:ring-offset-surface-deep"
           title="New tab"
         >
           <Plus className="w-3 h-3" />

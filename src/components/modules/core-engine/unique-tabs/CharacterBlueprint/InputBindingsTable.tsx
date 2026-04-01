@@ -35,7 +35,7 @@ export function InputBindingsTable({ featureMap }: InputBindingsTableProps) {
             <div className="text-xs font-mono font-bold uppercase tracking-wider" style={{ color: STATUS_ERROR }}>
               {KEY_CONFLICTS.size} Conflict{KEY_CONFLICTS.size > 1 ? 's' : ''} Detected
             </div>
-            <div className="text-[10px] text-text-muted mt-1 space-y-0.5 font-mono">
+            <div className="text-xs text-text-muted mt-1 space-y-0.5 font-mono">
               {Array.from(KEY_CONFLICTS.entries()).map(([key, actions]) => (
                 <div key={key}>
                   <span className="font-bold" style={{ color: STATUS_ERROR }}>{key}</span>
@@ -56,7 +56,7 @@ export function InputBindingsTable({ featureMap }: InputBindingsTableProps) {
           <ShieldCheck className="w-4 h-4 flex-shrink-0" style={{ color: STATUS_SUCCESS }} />
           <div>
             <span className="text-xs font-mono font-bold" style={{ color: STATUS_SUCCESS }}>No Conflicts</span>
-            <span className="text-[10px] font-mono text-text-muted ml-2">
+            <span className="text-xs font-mono text-text-muted ml-2">
               {INPUT_BINDINGS.length} actions with unique bindings
             </span>
           </div>
@@ -69,7 +69,7 @@ export function InputBindingsTable({ featureMap }: InputBindingsTableProps) {
           <thead>
             <tr className="border-b" style={{ borderColor: `${OVERLAY_WHITE}10` }}>
               {['Action', 'Key', 'Handler', 'Frequency', 'Status'].map(h => (
-                <th key={h} className="text-left py-2 pr-4 text-[10px] font-bold uppercase tracking-[0.15em] text-text-muted">{h}</th>
+                <th key={h} className="text-left py-2 pr-4 text-xs font-bold uppercase tracking-[0.15em] text-text-muted">{h}</th>
               ))}
             </tr>
           </thead>
@@ -96,7 +96,7 @@ export function InputBindingsTable({ featureMap }: InputBindingsTableProps) {
                 >
                   <td className="py-2.5 pr-4 text-text font-bold">{binding.action}</td>
                   <td className="py-2.5 pr-4">
-                    <span className="px-2 py-0.5 rounded text-[10px] font-bold border"
+                    <span className="px-2 py-0.5 rounded text-xs font-bold border"
                       style={{
                         backgroundColor: `${freqColor}10`,
                         color: freqColor,
@@ -111,7 +111,7 @@ export function InputBindingsTable({ featureMap }: InputBindingsTableProps) {
                       <div className="w-16">
                         <NeonBar pct={freq} color={freqColor} height={4} />
                       </div>
-                      <span className="text-[10px] text-text-muted tabular-nums w-6 text-right">{freq}%</span>
+                      <span className="text-xs text-text-muted tabular-nums w-6 text-right">{freq}%</span>
                     </div>
                   </td>
                   <td className="py-2.5">
@@ -122,7 +122,7 @@ export function InputBindingsTable({ featureMap }: InputBindingsTableProps) {
                         animate={status === 'implemented' ? { opacity: [0.5, 1, 0.5] } : {}}
                         transition={{ duration: 2, repeat: Infinity }}
                       />
-                      <span className="text-[10px] uppercase font-bold tracking-wider" style={{ color: sc.dot }}>{sc.label}</span>
+                      <span className="text-xs uppercase font-bold tracking-wider" style={{ color: sc.dot }}>{sc.label}</span>
                     </span>
                   </td>
                 </motion.tr>

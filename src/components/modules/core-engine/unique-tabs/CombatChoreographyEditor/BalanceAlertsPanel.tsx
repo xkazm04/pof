@@ -50,7 +50,7 @@ export function BalanceAlertsPanel({ alerts }: { alerts: BalanceAlert[] }) {
           {SEVERITY_PILLS.map(s => (
             <span
               key={s.key}
-              className="text-[10px] font-mono uppercase tracking-[0.15em] font-bold px-1.5 py-0.5 rounded-full"
+              className="text-xs font-mono uppercase tracking-[0.15em] font-bold px-1.5 py-0.5 rounded-full"
               style={{ backgroundColor: `${s.color}20`, color: s.color, opacity: counts[s.key] > 0 ? 1 : 0.35 }}
             >
               {counts[s.key]} {s.label}
@@ -84,7 +84,7 @@ export function BalanceAlertsPanel({ alerts }: { alerts: BalanceAlert[] }) {
                 }}
               >
                 <AlertTriangle className="w-3 h-3 shrink-0 mt-0.5" style={{ color }} />
-                <span className="text-[11px] font-mono" style={{ color }}>{alert.message}</span>
+                <span className="text-xs font-mono" style={{ color }}>{alert.message}</span>
               </div>
             );
           })

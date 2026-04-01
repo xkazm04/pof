@@ -27,7 +27,7 @@ export function AccessibilityTab() {
           </div>
           <div className="bg-surface-deep/50 rounded-lg p-3 border border-border/30">
             <div className="flex justify-between items-end mb-2">
-              <span className="text-[10px] font-mono uppercase tracking-[0.15em] text-text-muted">Estimated Expansion</span>
+              <span className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted">Estimated Expansion</span>
               <span className="text-lg font-mono font-bold" style={{ color: lang.expansion > 110 ? STATUS_WARNING : STATUS_SUCCESS }}>
                 {lang.expansion}%
               </span>
@@ -45,7 +45,7 @@ export function AccessibilityTab() {
             </div>
             {lang.overflowWidgets.length > 0 && (
               <div className="mt-2.5 pt-3 border-t border-border/20">
-                <span className="text-[10px] font-mono uppercase tracking-[0.15em] text-amber-500 font-bold mb-2 flex items-center gap-1">
+                <span className="text-xs font-mono uppercase tracking-[0.15em] text-amber-500 font-bold mb-2 flex items-center gap-1">
                   <AlertCircle className="w-3 h-3" /> Potential Overflow Areas
                 </span>
                 <div className="flex flex-wrap gap-1.5 mt-2">
@@ -67,7 +67,7 @@ export function AccessibilityTab() {
                 backgroundColor: `${A11Y_OVERALL_SCORE > 80 ? STATUS_SUCCESS : STATUS_WARNING}10`,
               }}>
               <div className="flex flex-col items-center text-center">
-                <span className="text-[10px] font-mono uppercase tracking-[0.15em] text-text-muted">Grade</span>
+                <span className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted">Grade</span>
                 <span className="text-4xl font-black">{A11Y_OVERALL_GRADE}</span>
                 <span className="text-xs font-mono" style={{ color: A11Y_OVERALL_SCORE > 80 ? STATUS_SUCCESS : STATUS_WARNING }}>
                   {A11Y_OVERALL_SCORE}/100

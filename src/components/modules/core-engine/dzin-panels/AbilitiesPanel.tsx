@@ -7,7 +7,7 @@ import {
   ACCENT_RED, ACCENT_ORANGE, MODULE_COLORS, ACCENT_GREEN,
 } from '@/lib/chart-colors';
 import { useDensity, PanelFrame } from '@/lib/dzin/core';
-import { DZIN_TIMING } from '@/lib/dzin/animation-constants';
+import { DZIN_TIMING, DZIN_SPACING, TRANSITION_ENTER, TRANSITION_EXIT } from '@/lib/dzin/animation-constants';
 import { useDzinSelection } from '@/lib/dzin/selection-context';
 import { ENTITY_RELATIONS, isRelatedToSelection } from '@/lib/dzin/entity-relations';
 import {
@@ -46,7 +46,7 @@ const COOLDOWN_ABILITIES = [
 
 function AbilitiesMicro() {
   return (
-    <div className="flex flex-col items-center justify-center gap-1 p-2">
+    <div className={DZIN_SPACING.micro.wrapper}>
       <Sparkles className="w-5 h-5 text-purple-400" />
       <span className="font-mono text-xs text-text">{ABILITY_RADAR_DATA.length}</span>
     </div>
@@ -59,7 +59,7 @@ function AbilitiesCompact() {
   const { selection, setSelection } = useDzinSelection();
 
   return (
-    <div className="space-y-1.5 p-2 text-xs">
+    <div className={`${DZIN_SPACING.compact.wrapper} text-xs`}>
       {COOLDOWN_ABILITIES.map((ability) => {
         const pct = ability.cd > 0 ? ((ability.cd - ability.remaining) / ability.cd) * 100 : 100;
         const isRelated = isRelatedToSelection('ability', ability.name, selection, ENTITY_RELATIONS);
@@ -112,7 +112,7 @@ function AbilitiesFull({ featureMap, defs }: AbilitiesPanelProps) {
   }));
 
   return (
-    <div className="space-y-2.5">
+    <div className={DZIN_SPACING.full.wrapper}>
       <FeatureCard
         name="Base GameplayAbility"
         featureMap={featureMap}
@@ -123,8 +123,8 @@ function AbilitiesFull({ featureMap, defs }: AbilitiesPanelProps) {
       />
 
       {/* Radar comparison */}
-      <SurfaceCard level={2} className="p-3 relative overflow-hidden">
-        <div className="text-xs font-bold uppercase tracking-widest text-text-muted mb-2.5 flex items-center gap-2">
+      <SurfaceCard level={2} className={`${DZIN_SPACING.full.card} relative overflow-hidden`}>
+        <div className={`text-xs font-bold uppercase text-text-muted ${DZIN_SPACING.full.sectionMb} flex items-center gap-2`}>
           <Sparkles className="w-4 h-4 text-purple-400" /> Ability Radar Comparison
         </div>
         <div className="flex justify-center">
@@ -150,8 +150,8 @@ function AbilitiesFull({ featureMap, defs }: AbilitiesPanelProps) {
       </SurfaceCard>
 
       {/* Cooldown flow */}
-      <SurfaceCard level={2} className="p-3 relative overflow-hidden">
-        <div className="text-xs font-bold uppercase tracking-widest text-text-muted mb-2.5 flex items-center gap-2">
+      <SurfaceCard level={2} className={`${DZIN_SPACING.full.card} relative overflow-hidden`}>
+        <div className={`text-xs font-bold uppercase text-text-muted ${DZIN_SPACING.full.sectionMb} flex items-center gap-2`}>
           <Sparkles className="w-4 h-4 text-purple-400" /> Cooldown Flow
         </div>
         <div className="space-y-2">
@@ -202,8 +202,8 @@ export function AbilitiesPanel({ featureMap, defs }: AbilitiesPanelProps) {
           key={density}
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          transition={{ duration: DZIN_TIMING.DENSITY / 2 }}
+          exit={{ opacity: 0, transition: TRANSITION_EXIT }}
+          transition={TRANSITION_ENTER}
         >
           {density === 'micro' && <AbilitiesMicro />}
           {density === 'compact' && <AbilitiesCompact />}

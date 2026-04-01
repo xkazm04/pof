@@ -6,7 +6,7 @@ import {
   ACCENT_RED, ACCENT_ORANGE, MODULE_COLORS, ACCENT_GREEN, ACCENT_PURPLE_BOLD,
 } from '@/lib/chart-colors';
 import { useDensity, PanelFrame } from '@/lib/dzin/core';
-import { DZIN_TIMING } from '@/lib/dzin/animation-constants';
+import { DZIN_SPACING, TRANSITION_ENTER, TRANSITION_EXIT } from '@/lib/dzin/animation-constants';
 import {
   SectionLabel,
   RadarChart,
@@ -53,7 +53,7 @@ const ALTERNATIVE_LOADOUTS = [
 
 function LoadoutMicro() {
   return (
-    <div className="flex flex-col items-center justify-center gap-1 p-2">
+    <div className={DZIN_SPACING.micro.wrapper}>
       <Layers className="w-5 h-5" style={{ color: ACCENT_PURPLE_BOLD }} />
       <span className="font-mono text-xs">{OPTIMAL_LOADOUT.length} slots</span>
     </div>
@@ -64,7 +64,7 @@ function LoadoutMicro() {
 
 function LoadoutCompact() {
   return (
-    <div className="space-y-1.5 p-2 text-xs">
+    <div className={`${DZIN_SPACING.compact.wrapper} text-xs`}>
       {OPTIMAL_LOADOUT.map((slot) => (
         <div key={slot.slot} className="flex items-center gap-2">
           <span
@@ -75,7 +75,7 @@ function LoadoutCompact() {
           <span className="font-mono font-medium text-text">{slot.ability}</span>
         </div>
       ))}
-      <div className="border-t border-border/40 pt-1.5 text-text-muted font-mono">
+      <div className={`border-t border-border/40 ${DZIN_SPACING.compact.divider} text-text-muted font-mono`}>
         Score: {LOADOUT_SCORE}
       </div>
     </div>
@@ -86,18 +86,18 @@ function LoadoutCompact() {
 
 function LoadoutFull() {
   return (
-    <div className="space-y-2.5">
-      <SurfaceCard level={2} className="p-3 relative overflow-hidden">
+    <div className={DZIN_SPACING.full.wrapper}>
+      <SurfaceCard level={2} className={`${DZIN_SPACING.full.card} relative overflow-hidden`}>
         <SectionLabel icon={Layers} label="Ability Loadout Optimizer" color="#a855f7" />
-        <p className="text-xs text-text-muted mt-1 mb-2.5">
+        <p className={`text-xs text-text-muted mt-1 ${DZIN_SPACING.full.sectionMb}`}>
           Optimal ability loadout for 4 slots, scored on coverage, synergy, DPS, burst, and utility.
         </p>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
+        <div className={`grid grid-cols-1 md:grid-cols-2 ${DZIN_SPACING.full.gap}`}>
           {/* Loadout slots */}
-          <div className="space-y-2.5">
-            <div className="text-xs font-bold uppercase tracking-widest text-text-muted mb-2">Optimal Loadout</div>
-            <div className="grid grid-cols-2 gap-3">
+          <div className={DZIN_SPACING.full.wrapper}>
+            <div className="text-xs font-bold uppercase text-text-muted mb-2">Optimal Loadout</div>
+            <div className={`grid grid-cols-2 ${DZIN_SPACING.full.gridGap}`}>
               {OPTIMAL_LOADOUT.map((slot, i) => (
                 <motion.div
                   key={slot.slot}
@@ -120,7 +120,7 @@ function LoadoutFull() {
             </div>
 
             {/* Loadout score */}
-            <SurfaceCard level={3} className="p-3">
+            <SurfaceCard level={3} className={DZIN_SPACING.full.card}>
               <div className="flex items-center justify-between">
                 <div className="text-xs font-mono font-bold text-text-muted">Loadout Score</div>
                 <div className="text-xl font-mono font-bold text-purple-400" style={{ textShadow: '0 0 10px rgba(168,85,247,0.3)' }}>
@@ -131,13 +131,13 @@ function LoadoutFull() {
           </div>
 
           {/* Radar + alternatives */}
-          <div className="space-y-2.5">
+          <div className={DZIN_SPACING.full.wrapper}>
             <div className="flex justify-center">
               <RadarChart data={LOADOUT_RADAR} size={140} accent="#a855f7" />
             </div>
 
             {/* Alternative loadouts */}
-            <div className="text-xs font-bold uppercase tracking-widest text-text-muted mb-2">Alternative Loadouts</div>
+            <div className="text-xs font-bold uppercase text-text-muted mb-2">Alternative Loadouts</div>
             <div className="space-y-2">
               {ALTERNATIVE_LOADOUTS.map((alt, i) => (
                 <motion.div
@@ -176,8 +176,8 @@ export function LoadoutPanel({ featureMap: _featureMap, defs: _defs }: LoadoutPa
           key={density}
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          transition={{ duration: DZIN_TIMING.DENSITY / 2 }}
+          exit={{ opacity: 0, transition: TRANSITION_EXIT }}
+          transition={TRANSITION_ENTER}
         >
           {density === 'micro' && <LoadoutMicro />}
           {density === 'compact' && <LoadoutCompact />}

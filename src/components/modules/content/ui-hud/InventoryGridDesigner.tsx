@@ -118,7 +118,7 @@ export function InventoryGridDesigner({ onGenerate, isGenerating }: InventoryGri
           </div>
           <div>
             <h3 className="text-sm font-bold tracking-widest uppercase text-indigo-100 shadow-[0_0_10px_rgba(99,102,241,0.5)]">Tactical Grid Configurator</h3>
-            <p className="text-xs text-indigo-400/60 uppercase tracking-widest mt-1">
+            <p className="text-xs text-indigo-400/60 uppercase mt-1">
               INVENTORY_LAYOUT_AND_INTERACTION_MATRIX
             </p>
           </div>
@@ -163,7 +163,7 @@ export function InventoryGridDesigner({ onGenerate, isGenerating }: InventoryGri
               <span className="text-indigo-500/50 text-xl font-light">×</span>
               <DimensionControl label="Rows" value={config.gridRows} onChange={setRows} min={2} max={8} />
               <div className="ml-4 flex flex-col items-center">
-                <span className="text-[11px] uppercase tracking-widest text-indigo-400/60 font-bold mb-1">Total Capacity</span>
+                <span className="text-[11px] uppercase text-indigo-400/60 font-bold mb-1">Total Capacity</span>
                 <div className="flex items-center justify-center bg-indigo-500/10 border border-indigo-500/20 px-4 py-1.5 rounded-lg text-indigo-200 font-bold tracking-wider shadow-[inset_0_0_10px_rgba(99,102,241,0.1)]">
                   {totalSlots} SLOTS
                 </div>
@@ -175,7 +175,7 @@ export function InventoryGridDesigner({ onGenerate, isGenerating }: InventoryGri
               {/* Glow effect */}
               <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-500/10 blur-[80px] pointer-events-none" />
 
-              <div className="text-xs uppercase tracking-widest text-indigo-400 mb-6 font-bold flex items-center gap-2">
+              <div className="text-xs uppercase text-indigo-400 mb-6 font-bold flex items-center gap-2">
                 <span className="w-1.5 h-1.5 rounded-full bg-indigo-500 animate-pulse shadow-[0_0_8px_rgba(99,102,241,0.8)]" />
                 Live Matrix Preview
               </div>
@@ -247,7 +247,7 @@ export function InventoryGridDesigner({ onGenerate, isGenerating }: InventoryGri
                         }}
                         title={slot.label}
                       >
-                        <span className="text-[11px] text-amber-300 font-bold leading-none select-none uppercase tracking-widest">
+                        <span className="text-[11px] text-amber-300 font-bold leading-none select-none uppercase">
                           {pos.label.slice(0, 3)}
                         </span>
                         <div className="absolute inset-0 border border-amber-400/50 rounded-md animate-ping opacity-20 pointer-events-none" />
@@ -270,12 +270,12 @@ export function InventoryGridDesigner({ onGenerate, isGenerating }: InventoryGri
                   />
                   <Check className="w-3 h-3 text-indigo-400 absolute opacity-0 peer-checked:opacity-100 pointer-events-none transition-opacity drop-shadow-[0_0_2px_rgba(99,102,241,0.8)]" />
                 </div>
-                <span className="text-[11px] font-bold uppercase tracking-widest text-indigo-200 group-hover:text-white transition-colors">Stackable Assets</span>
+                <span className="text-[11px] font-bold uppercase text-indigo-200 group-hover:text-white transition-colors">Stackable Assets</span>
               </label>
 
               {config.stackable && (
                 <div className="flex items-center gap-3 pl-6 border-l border-indigo-900/40">
-                  <span className="text-xs font-bold uppercase tracking-widest text-indigo-400/80">Stack Limit:</span>
+                  <span className="text-xs font-bold uppercase text-indigo-400/80">Stack Limit:</span>
                   <input
                     type="number"
                     value={config.maxStackSize}
@@ -296,7 +296,7 @@ export function InventoryGridDesigner({ onGenerate, isGenerating }: InventoryGri
                 <Package className="w-4 h-4 text-indigo-400" />
               </div>
               <div>
-                <h4 className="text-[11px] font-bold uppercase tracking-widest text-indigo-200 mb-1">Supported Asset Classifications</h4>
+                <h4 className="text-[11px] font-bold uppercase text-indigo-200 mb-1">Supported Asset Classifications</h4>
                 <p className="text-xs font-mono text-indigo-400/60 leading-relaxed uppercase tracking-wider">
                   Define the permissible item typologies managed by this grid. Mapped directly to EItemType enumerations.
                 </p>
@@ -315,7 +315,7 @@ export function InventoryGridDesigner({ onGenerate, isGenerating }: InventoryGri
 
             {/* Rarity configuration */}
             <div className="mt-8 p-6 bg-black/40 border border-indigo-900/40 rounded-2xl shadow-inner">
-              <div className="text-xs uppercase tracking-widest text-indigo-400 font-bold mb-4 flex items-center gap-2">
+              <div className="text-xs uppercase text-indigo-400 font-bold mb-4 flex items-center gap-2">
                 <Zap className="w-3.5 h-3.5" />
                 Rarity Tiers Mapping
               </div>
@@ -323,7 +323,7 @@ export function InventoryGridDesigner({ onGenerate, isGenerating }: InventoryGri
                 {config.itemRarities.map((rarity) => (
                   <span
                     key={rarity}
-                    className="px-4 py-1.5 rounded-lg text-xs font-bold uppercase tracking-widest border shadow-[inset_0_0_15px_rgba(255,255,255,0.05)]"
+                    className="px-4 py-1.5 rounded-lg text-xs font-bold uppercase border shadow-[inset_0_0_15px_rgba(255,255,255,0.05)]"
                     style={{
                       color: RARITY_COLORS[rarity] ?? 'rgba(156,163,175,0.8)',
                       borderColor: `${RARITY_COLORS[rarity] ?? 'rgba(156,163,175,0.8)'}40`,
@@ -347,7 +347,7 @@ export function InventoryGridDesigner({ onGenerate, isGenerating }: InventoryGri
                 <Shield className="w-4 h-4 text-indigo-400" />
               </div>
               <div>
-                <h4 className="text-[11px] font-bold uppercase tracking-widest text-indigo-200 mb-1">Equipment Slot Configuration</h4>
+                <h4 className="text-[11px] font-bold uppercase text-indigo-200 mb-1">Equipment Slot Configuration</h4>
                 <p className="text-xs font-mono text-indigo-400/60 leading-relaxed uppercase tracking-wider">
                   Enable or disable specific anatomical hardpoints for equipable assets. Mapped to EEquipmentSlot definitions.
                 </p>
@@ -413,7 +413,7 @@ export function InventoryGridDesigner({ onGenerate, isGenerating }: InventoryGri
 
               <div className="mt-8 inline-flex items-center gap-2 px-4 py-2 bg-indigo-950/30 border border-indigo-900/40 rounded-xl">
                 <span className="w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.8)]" />
-                <span className="text-xs uppercase font-bold tracking-widest text-indigo-200">
+                <span className="text-xs uppercase font-bold text-indigo-200">
                   ACTIVE_SLOTS: {enabledEquip.length}
                 </span>
               </div>
@@ -429,7 +429,7 @@ export function InventoryGridDesigner({ onGenerate, isGenerating }: InventoryGri
                 <MousePointer2 className="w-4 h-4 text-indigo-400" />
               </div>
               <div>
-                <h4 className="text-[11px] font-bold uppercase tracking-widest text-indigo-200 mb-1">UMG Interaction Protocol</h4>
+                <h4 className="text-[11px] font-bold uppercase text-indigo-200 mb-1">UMG Interaction Protocol</h4>
                 <p className="text-xs font-mono text-indigo-400/60 leading-relaxed uppercase tracking-wider">
                   Select input handling routines mapped to the inventory grid widget.
                 </p>
@@ -462,7 +462,7 @@ export function InventoryGridDesigner({ onGenerate, isGenerating }: InventoryGri
                       )}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <div className="text-[11px] text-white font-bold uppercase tracking-widest mb-1 group-hover:text-indigo-200 transition-colors">{interaction.label}</div>
+                      <div className="text-[11px] text-white font-bold uppercase mb-1 group-hover:text-indigo-200 transition-colors">{interaction.label}</div>
                       <div className="text-xs font-mono text-indigo-300/50 uppercase tracking-wider">{interaction.description}</div>
                     </div>
                     <div className={`p-2 rounded-lg border transition-colors ${enabled ? 'bg-indigo-500/20 border-indigo-500/40' : 'bg-indigo-950/20 border-indigo-900/30'}`}>
@@ -478,7 +478,7 @@ export function InventoryGridDesigner({ onGenerate, isGenerating }: InventoryGri
         {/* ─── Summary & Generate ─── */}
         <div className="relative z-10 pt-6 mt-6 border-t border-indigo-900/40">
           <div className="flex flex-wrap items-center justify-between mb-4 gap-4">
-            <div className="flex flex-wrap items-center gap-3 text-[11px] font-mono uppercase tracking-widest text-indigo-400/80">
+            <div className="flex flex-wrap items-center gap-3 text-[11px] font-mono uppercase text-indigo-400/80">
               <span className="bg-indigo-950/40 px-2 py-1 rounded border border-indigo-900/30">GRID: <span className="text-indigo-200 font-bold">{config.gridCols}×{config.gridRows} ({totalSlots})</span></span>
               <span className="bg-indigo-950/40 px-2 py-1 rounded border border-indigo-900/30">TYPES: <span className="text-indigo-200 font-bold">{enabledSlots.length}</span></span>
               <span className="bg-indigo-950/40 px-2 py-1 rounded border border-indigo-900/30">EQUIP: <span className="text-indigo-200 font-bold">{enabledEquip.length}</span></span>
@@ -488,7 +488,7 @@ export function InventoryGridDesigner({ onGenerate, isGenerating }: InventoryGri
           <button
             onClick={() => onGenerate(config)}
             disabled={isGenerating}
-            className="relative w-full overflow-hidden flex items-center justify-center gap-2 px-6 py-4 rounded-xl text-xs font-bold uppercase tracking-widest transition-all disabled:opacity-50 group outline-none focus:ring-2 focus:ring-indigo-500/50 focus:ring-offset-2 focus:ring-offset-[#03030a]"
+            className="relative w-full overflow-hidden flex items-center justify-center gap-2 px-6 py-4 rounded-xl text-xs font-bold uppercase transition-all disabled:opacity-50 group outline-none focus:ring-2 focus:ring-indigo-500/50 focus:ring-offset-2 focus:ring-offset-[#03030a]"
             style={{
               backgroundColor: 'rgba(99,102,241,0.15)',
               color: STATUS_STALE,
@@ -533,7 +533,7 @@ function SectionTab({
   return (
     <button
       onClick={onClick}
-      className={`flex flex-col items-center justify-center gap-1.5 px-6 py-3 text-xs font-bold uppercase tracking-widest transition-all relative overflow-hidden group border-r border-indigo-900/40 last:border-r-0 flex-1 hover:bg-white/5 ${active ? 'text-indigo-200' : 'text-indigo-500/50 hover:text-indigo-300'
+      className={`flex flex-col items-center justify-center gap-1.5 px-6 py-3 text-xs font-bold uppercase transition-all relative overflow-hidden group border-r border-indigo-900/40 last:border-r-0 flex-1 hover:bg-white/5 ${active ? 'text-indigo-200' : 'text-indigo-500/50 hover:text-indigo-300'
         }`}
     >
       <div className={`transition-transform duration-300 ${active ? 'scale-110 drop-shadow-[0_0_8px_currentColor]' : 'group-hover:scale-110'}`}>
@@ -565,7 +565,7 @@ function DimensionControl({
 }) {
   return (
     <div className="space-y-2 flex flex-col items-center">
-      <div className="text-xs uppercase tracking-widest text-indigo-400 font-bold shadow-[0_0_10px_rgba(0,0,0,0.5)]">{label}</div>
+      <div className="text-xs uppercase text-indigo-400 font-bold shadow-[0_0_10px_rgba(0,0,0,0.5)]">{label}</div>
       <div className="flex items-center gap-2 bg-black/50 p-1.5 rounded-lg border border-indigo-900/60 shadow-inner">
         <button
           onClick={() => onChange(value - 1)}
@@ -574,7 +574,7 @@ function DimensionControl({
         >
           <Minus className="w-4 h-4" />
         </button>
-        <span className="w-8 text-center text-[13px] font-bold text-white tracking-widest">{value}</span>
+        <span className="w-8 text-center text-[13px] font-bold text-white">{value}</span>
         <button
           onClick={() => onChange(value + 1)}
           disabled={value >= max}
@@ -606,7 +606,7 @@ function SlotTypeToggle({ slot, onToggle }: { slot: SlotTypeConfig; onToggle: ()
         }}
       />
       <span
-        className="text-[11px] font-bold uppercase tracking-widest transition-colors drop-shadow-md"
+        className="text-[11px] font-bold uppercase transition-colors drop-shadow-md"
         style={{ color: slot.enabled ? 'white' : 'rgba(156,163,175,0.6)', textShadow: slot.enabled ? `0 0 8px ${slot.color}80` : 'none' }}
       >
         {slot.label}

@@ -302,7 +302,7 @@ export function MaterialPatternCatalog({ onGenerate, isGenerating }: MaterialPat
                 <button
                   key={cat}
                   onClick={() => setSelectedCategory(cat)}
-                  className="px-3 py-1.5 rounded-lg text-xs font-bold uppercase tracking-widest transition-all relative overflow-hidden flex-shrink-0"
+                  className="px-3 py-1.5 rounded-lg text-xs font-bold uppercase transition-all relative overflow-hidden flex-shrink-0"
                   style={{
                     backgroundColor: isActive ? `${color}20` : 'rgba(0,0,0,0.4)',
                     color: isActive ? color : 'var(--text-muted)',
@@ -337,7 +337,7 @@ export function MaterialPatternCatalog({ onGenerate, isGenerating }: MaterialPat
           ))}
           {filtered.length === 0 && (
             <div className="text-center py-12 bg-black/40 border border-violet-900/30 rounded-xl">
-              <p className="text-xs font-mono text-violet-500/60 uppercase tracking-widest">NO_PATTERNS_FOUND</p>
+              <p className="text-xs font-mono text-violet-500/60">No Patterns Found</p>
             </div>
           )}
         </div>
@@ -394,9 +394,9 @@ function PatternCard({ pattern, isExpanded, onToggle, onGenerate, isGenerating, 
 
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-3 mb-1">
-            <span className="text-xs font-bold uppercase tracking-widest text-violet-100 truncate">{pattern.name}</span>
+            <span className="text-xs font-bold uppercase text-violet-100 truncate">{pattern.name}</span>
             <span
-              className="text-[11px] font-mono font-bold uppercase tracking-widest px-1.5 py-0.5 rounded border"
+              className="text-[11px] font-mono font-bold uppercase px-1.5 py-0.5 rounded border"
               style={{ backgroundColor: `${catMeta.color}15`, borderColor: `${catMeta.color}40`, color: catMeta.color }}
             >
               {catMeta.label}
@@ -423,13 +423,13 @@ function PatternCard({ pattern, isExpanded, onToggle, onGenerate, isGenerating, 
           <div className="pl-6 space-y-4">
             {/* Description */}
             <p className="text-[11px] text-violet-200/80 leading-relaxed font-mono">
-              <span className="text-xs text-violet-500 uppercase tracking-widest block mb-1 font-bold">SYNOPSIS</span>
+              <span className="text-xs text-violet-500 uppercase block mb-1 font-bold">Synopsis</span>
               {pattern.description}
             </p>
 
             {/* Approach */}
             <div>
-              <span className="text-xs text-amber-500 uppercase tracking-widest block mb-1 font-bold">METHODOLOGY</span>
+              <span className="text-xs text-amber-500 uppercase block mb-1 font-bold">Methodology</span>
               <p className="text-[11px] text-amber-100/70 leading-relaxed font-mono bg-amber-500/5 border border-amber-500/20 p-3 rounded-lg">
                 {pattern.approach}
               </p>
@@ -437,9 +437,9 @@ function PatternCard({ pattern, isExpanded, onToggle, onGenerate, isGenerating, 
 
             {/* HLSL Snippet */}
             <div className="w-full">
-              <span className="text-xs text-emerald-500 uppercase tracking-widest block mb-1 font-bold">HLSL_SOURCE</span>
+              <span className="text-xs text-emerald-500 uppercase block mb-1 font-bold">HLSL Source</span>
               <div className="relative w-full rounded-xl bg-black/80 border border-emerald-500/30 overflow-hidden shadow-inner">
-                <div className="px-2 py-1 bg-emerald-500/20 text-emerald-400 text-[11px] border-b border-emerald-500/30 uppercase tracking-widest font-bold">CORE_LOGIC</div>
+                <div className="px-2 py-1 bg-emerald-500/20 text-emerald-400 text-[11px] border-b border-emerald-500/30 font-bold">Core Logic</div>
                 <pre className="text-xs leading-relaxed p-3 overflow-x-auto text-emerald-200/90 font-mono whitespace-pre">
                   {pattern.hlslSnippet}
                 </pre>
@@ -451,7 +451,7 @@ function PatternCard({ pattern, isExpanded, onToggle, onGenerate, isGenerating, 
               {pattern.tags.map((tag) => (
                 <span
                   key={tag}
-                  className="text-[11px] px-2 py-1 rounded bg-black/60 text-violet-300 border border-violet-900/50 uppercase tracking-widest font-mono"
+                  className="text-[11px] px-2 py-1 rounded bg-black/60 text-violet-300 border border-violet-900/50 uppercase font-mono"
                 >
                   #{tag}
                 </span>
@@ -462,7 +462,7 @@ function PatternCard({ pattern, isExpanded, onToggle, onGenerate, isGenerating, 
             <button
               onClick={(e) => { e.stopPropagation(); onGenerate(); }}
               disabled={isGenerating}
-              className="relative w-full overflow-hidden flex items-center justify-center gap-2 px-6 py-4 rounded-xl text-xs font-bold uppercase tracking-widest transition-all disabled:opacity-50 mt-2 group outline-none"
+              className="relative w-full overflow-hidden flex items-center justify-center gap-2 px-6 py-4 rounded-xl text-xs font-bold uppercase transition-all disabled:opacity-50 mt-2 group outline-none"
               style={{
                 backgroundColor: `${catMeta.color}15`,
                 color: catMeta.color,
@@ -491,7 +491,7 @@ function PatternCard({ pattern, isExpanded, onToggle, onGenerate, isGenerating, 
               <button
                 onClick={(e) => { e.stopPropagation(); onBlenderPreview(); }}
                 disabled={!blenderConnected || isBlenderPreviewing}
-                className="relative w-full overflow-hidden flex items-center justify-center gap-2 px-6 py-3 rounded-xl text-xs font-bold uppercase tracking-widest transition-all disabled:opacity-40 group outline-none border border-emerald-500/40 bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20"
+                className="relative w-full overflow-hidden flex items-center justify-center gap-2 px-6 py-3 rounded-xl text-xs font-bold uppercase transition-all disabled:opacity-40 group outline-none border border-emerald-500/40 bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20"
                 title={!blenderConnected ? 'Connect to Blender first' : `Preview ${pattern.name} shader in Blender`}
               >
                 {isBlenderPreviewing ? (

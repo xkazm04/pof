@@ -72,13 +72,13 @@ export function ForgeResult({ ability, existingRadar }: {
         <div className="flex items-center gap-2">
           <div className="w-2 h-2 rounded-full" style={{ background: ACCENT }} />
           <span className="text-sm font-semibold text-zinc-200">{ability.displayName}</span>
-          <span className="text-[10px] font-mono uppercase tracking-[0.15em] text-zinc-500">
+          <span className="text-xs font-mono uppercase tracking-[0.15em] text-zinc-500">
             {ability.className}
           </span>
         </div>
         <button
           onClick={handleDownload}
-          className="flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] text-zinc-400 hover:text-zinc-200 transition-colors"
+          className="flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs text-zinc-400 hover:text-zinc-200 transition-colors"
           style={{ background: 'rgba(255,255,255,0.04)' }}
         >
           <Download size={12} /> Download .h/.cpp
@@ -99,7 +99,7 @@ export function ForgeResult({ ability, existingRadar }: {
           <div className="flex items-center gap-1.5 mt-1">
             <div className="w-2 h-2 rounded-full"
               style={{ background: DAMAGE_TYPE_COLORS[ability.stats.damageType] ?? DAMAGE_TYPE_COLORS.None }} />
-            <span className="text-[10px] font-mono uppercase tracking-[0.15em] text-zinc-400">
+            <span className="text-xs font-mono uppercase tracking-[0.15em] text-zinc-400">
               {ability.stats.damageType} damage
             </span>
           </div>
@@ -144,7 +144,7 @@ export function ForgeResult({ ability, existingRadar }: {
       <div className="space-y-2">
         <button
           onClick={() => setShowHeader(v => !v)}
-          className="flex items-center gap-1.5 text-[11px] font-mono text-zinc-400 hover:text-zinc-200 transition-colors"
+          className="flex items-center gap-1.5 text-xs font-mono text-zinc-400 hover:text-zinc-200 transition-colors"
         >
           {showHeader ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
           {ability.className}.h
@@ -160,7 +160,7 @@ export function ForgeResult({ ability, existingRadar }: {
 
         <button
           onClick={() => setShowCpp(v => !v)}
-          className="flex items-center gap-1.5 text-[11px] font-mono text-zinc-400 hover:text-zinc-200 transition-colors"
+          className="flex items-center gap-1.5 text-xs font-mono text-zinc-400 hover:text-zinc-200 transition-colors"
         >
           {showCpp ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
           {ability.className}.cpp

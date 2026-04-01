@@ -42,12 +42,12 @@ export function EvolutionTab({ selected, doEvolve }: EvolutionTabProps) {
         </div>
         {/* XP progress bar */}
         {tier >= 3 ? (
-          <div className="text-[10px] font-mono uppercase tracking-[0.15em] text-center" style={{ color: STATUS_SUCCESS }}>
+          <div className="text-xs font-mono uppercase tracking-[0.15em] text-center" style={{ color: STATUS_SUCCESS }}>
             Maximum evolution reached
           </div>
         ) : (
           <div className="space-y-1">
-            <div className="flex justify-between text-[10px] font-mono uppercase tracking-[0.15em] text-text-muted">
+            <div className="flex justify-between text-xs font-mono uppercase tracking-[0.15em] text-text-muted">
               <span>Tier {tier}</span>
               <span>{xp} / {thresholds[tier]} XP</span>
               <span>Tier {tier + 1}</span>
@@ -74,7 +74,7 @@ export function EvolutionTab({ selected, doEvolve }: EvolutionTabProps) {
             return (
               <div key={gene.axis} className="flex items-center gap-2 text-xs font-mono">
                 <Icon className="w-3 h-3" style={{ color: cfg.color }} />
-                <span className="text-[10px] font-mono uppercase tracking-[0.15em] w-16 font-bold" style={{ color: cfg.color }}>{cfg.label}</span>
+                <span className="text-xs font-mono uppercase tracking-[0.15em] w-16 font-bold" style={{ color: cfg.color }}>{cfg.label}</span>
                 <div className="flex-1">
                   <NeonBar pct={gene.weight * 100} color={cfg.color} />
                 </div>

@@ -72,10 +72,10 @@ export function LoadoutEditor({
                 onClick={() => setSelectedId(isSelected ? null : slot.id)}
               >
                 <Zap className="w-5 h-5" style={{ color: slot.iconColor }} />
-                <span className="text-[11px] font-mono font-bold truncate w-full text-center px-0.5" style={{ color: slot.iconColor }}>
+                <span className="text-xs font-mono font-bold truncate w-full text-center px-0.5" style={{ color: slot.iconColor }}>
                   {slot.abilityName}
                 </span>
-                <span className="absolute -top-1.5 -left-1.5 w-4 h-4 rounded-full text-[11px] font-bold flex items-center justify-center bg-surface border border-border/60 text-text-muted">
+                <span className="absolute -top-1.5 -left-1.5 w-4 h-4 rounded-full text-xs font-bold flex items-center justify-center bg-surface border border-border/60 text-text-muted">
                   {slot.slot}
                 </span>
               </motion.button>

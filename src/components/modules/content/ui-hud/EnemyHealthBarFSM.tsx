@@ -97,12 +97,10 @@ export function EnemyHealthBarFSM() {
           Click a state to highlight its transitions.
         </p>
 
-        <div className="flex justify-center">
+        <div className="max-w-md mx-auto">
           <svg
-            width={400}
-            height={230}
             viewBox="0 0 400 230"
-            className="overflow-visible"
+            className="w-full overflow-visible"
             data-testid="fsm-diagram-svg"
           >
             <defs>

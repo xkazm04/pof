@@ -50,7 +50,7 @@ export function ArchetypeComparisonPanel({ genomes, activeGenome: _activeGenome 
             style={{ color: leftGenome.color, borderColor: `${leftGenome.color}25` }}>
             {genomes.map((g) => <option key={g.id} value={g.id} style={{ color: 'var(--text)' }}>{g.name}</option>)}
           </select>
-          <span className="text-[10px] font-mono uppercase tracking-[0.15em] text-text-muted">vs</span>
+          <span className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted">vs</span>
           <select value={rightId} onChange={(e) => setRightId(e.target.value)}
             className="flex-1 text-xs font-mono font-bold bg-surface-deep border rounded-lg px-2 py-1.5 text-text focus:outline-none focus:border-blue-500/50"
             style={{ color: rightGenome.color, borderColor: `${rightGenome.color}25` }}>
@@ -87,7 +87,7 @@ export function ArchetypeComparisonPanel({ genomes, activeGenome: _activeGenome 
                   <div key={d.label} className="flex items-center justify-between p-1.5 rounded-lg border bg-surface-deep/30"
                     style={{ borderColor: `${badgeColor}20` }}>
                     <div className="flex flex-col">
-                      <span className="text-[10px] font-mono uppercase tracking-[0.15em] text-text-muted">{d.label}</span>
+                      <span className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted">{d.label}</span>
                       <div className="flex items-center gap-2 mt-0.5">
                         <span className="text-xs font-mono font-bold" style={{ color: leftGenome.color, textShadow: `0 0 12px ${leftGenome.color}40` }}>
                           {d.left % 1 !== 0 ? d.left.toFixed(1) : d.left}

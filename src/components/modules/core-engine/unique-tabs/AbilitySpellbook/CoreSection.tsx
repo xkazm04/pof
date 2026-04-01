@@ -16,7 +16,7 @@ export function CoreSection({ featureMap, defs, expanded, onToggle }: SectionPro
   return (
     <div className="space-y-4">
       <BlueprintPanel color={ACCENT} className="p-3">
-        <p className="text-[10px] font-mono uppercase tracking-[0.15em] text-text-muted leading-relaxed">
+        <p className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted leading-relaxed">
           The Ability System Component (ASC) is the central hub that manages abilities, attributes, tags, and effects.
           It must be attached to the character base class and implement <span className="font-mono text-xs text-text">IAbilitySystemInterface</span>.
         </p>
@@ -34,7 +34,7 @@ export function CoreSection({ featureMap, defs, expanded, onToggle }: SectionPro
               initial={{ opacity: 0, scale: 0.9 }}
               animate={{ opacity: 1, scale: 1 }}
               transition={{ delay: i * 0.1 }}
-              className="flex items-center gap-2 text-[10px] font-mono uppercase tracking-[0.15em] p-2.5 rounded-lg border"
+              className="flex items-center gap-2 text-xs font-mono uppercase tracking-[0.15em] p-2.5 rounded-lg border"
               style={{ borderColor: `${ACCENT}25`, backgroundColor: `${ACCENT}08` }}
             >
               <span className="w-2 h-2 rounded-full" style={{ backgroundColor: ACCENT, boxShadow: `0 0 6px ${ACCENT}` }} />
@@ -91,7 +91,7 @@ function GASArchitectureExplorer() {
             <motion.text
               x={cx} y={y + 18}
               textAnchor="middle"
-              className="text-[11px] font-mono font-bold"
+              className="text-xs font-mono font-bold"
               fill={step.color}
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
@@ -102,7 +102,7 @@ function GASArchitectureExplorer() {
             <motion.text
               x={cx} y={y + 34}
               textAnchor="middle"
-              className="text-[11px] font-mono fill-[var(--text-muted)]"
+              className="text-xs font-mono fill-[var(--text-muted)]"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ delay: i * 0.12 + 0.1 }}

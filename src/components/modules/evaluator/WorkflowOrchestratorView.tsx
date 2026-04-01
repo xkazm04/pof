@@ -13,6 +13,7 @@ import { Badge } from '@/components/ui/Badge';
 import { useTaskDAGStore } from '@/stores/taskDAGStore';
 import { MODULE_FEATURE_DEFINITIONS } from '@/lib/feature-definitions';
 import type { WorkflowTemplate, WorkflowExecution, DAGNodeState, DAGNodeStatus } from '@/types/task-dag';
+import { MOTION } from '@/lib/constants';
 import type { SubModuleId } from '@/types/modules';
 
 // ── Icons for templates ──────────────────────────────────────────────────────
@@ -121,7 +122,7 @@ export function WorkflowOrchestratorView() {
                 initial={{ height: 0, opacity: 0 }}
                 animate={{ height: 'auto', opacity: 1 }}
                 exit={{ height: 0, opacity: 0 }}
-                transition={{ duration: 0.2 }}
+                transition={{ duration: MOTION.base }}
                 className="overflow-hidden"
               >
                 <ModuleSelector
@@ -156,7 +157,7 @@ export function WorkflowOrchestratorView() {
                 initial={{ height: 0, opacity: 0 }}
                 animate={{ height: 'auto', opacity: 1 }}
                 exit={{ height: 0, opacity: 0 }}
-                transition={{ duration: 0.2 }}
+                transition={{ duration: MOTION.base }}
                 className="overflow-hidden"
               >
                 <div className="border-t border-border px-4 py-3 space-y-2">
@@ -353,7 +354,7 @@ function ActiveWorkflowPanel({
           className="h-full bg-cyan-500 rounded-full"
           initial={{ width: 0 }}
           animate={{ width: `${progress}%` }}
-          transition={{ duration: 0.3 }}
+          transition={{ duration: MOTION.slow }}
         />
       </div>
 

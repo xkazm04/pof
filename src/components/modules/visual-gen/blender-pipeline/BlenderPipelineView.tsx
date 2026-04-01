@@ -51,7 +51,7 @@ function ResultBlock({ result, error }: { result: string | null; error: string |
       {result && (
         <div className="flex items-start gap-2 p-3 rounded bg-emerald-400/5 border border-emerald-400/20">
           <CheckCircle size={14} className="text-emerald-400 mt-0.5 shrink-0" />
-          <pre className="text-[10px] font-mono text-text-muted whitespace-pre-wrap">{result}</pre>
+          <pre className="text-xs font-mono text-text-muted whitespace-pre-wrap">{result}</pre>
         </div>
       )}
       {error && (
@@ -101,7 +101,7 @@ function LODGenerationTab() {
   }, [objectName, lodRatiosText, execute]);
 
   return (
-    <div className="max-w-2xl mx-auto space-y-4">
+    <div className="max-w-2xl mx-auto space-y-6">
       <div className="text-center">
         <h2 className="text-base font-semibold text-text">LOD Generation</h2>
         <p className="text-xs text-text-muted mt-1">
@@ -117,7 +117,7 @@ function LODGenerationTab() {
             value={objectName}
             onChange={(e) => setObjectName(e.target.value)}
             placeholder="e.g. SM_Sword"
-            className="w-full bg-surface-tertiary border border-border rounded px-3 py-1.5 text-xs text-text placeholder:text-text-muted"
+            className="w-full bg-surface-tertiary border border-border rounded-lg px-3 py-1.5 text-xs text-text placeholder:text-text-muted"
           />
         </div>
 
@@ -130,9 +130,9 @@ function LODGenerationTab() {
             value={lodRatiosText}
             onChange={(e) => setLodRatiosText(e.target.value)}
             placeholder="0.75, 0.5, 0.25"
-            className="w-full bg-surface-tertiary border border-border rounded px-3 py-1.5 text-xs text-text placeholder:text-text-muted"
+            className="w-full bg-surface-tertiary border border-border rounded-lg px-3 py-1.5 text-xs text-text placeholder:text-text-muted"
           />
-          <p className="text-[10px] text-text-muted mt-1">
+          <p className="text-xs text-text-muted mt-1">
             Each ratio creates an LOD level. 0.75 = 75% of original polygon count.
           </p>
         </div>
@@ -149,7 +149,7 @@ function LODGenerationTab() {
         </button>
 
         {!connected && (
-          <p className="text-[10px] text-amber-400">Connect to Blender MCP first.</p>
+          <p className="text-xs text-amber-400">Connect to Blender MCP first.</p>
         )}
       </div>
 
@@ -180,7 +180,7 @@ function MeshOptimizationTab() {
   }, [objectName, removeDoubles, recalcNormals, mergeDistance, execute]);
 
   return (
-    <div className="max-w-2xl mx-auto space-y-4">
+    <div className="max-w-2xl mx-auto space-y-6">
       <div className="text-center">
         <h2 className="text-base font-semibold text-text">Mesh Optimization</h2>
         <p className="text-xs text-text-muted mt-1">
@@ -196,7 +196,7 @@ function MeshOptimizationTab() {
             value={objectName}
             onChange={(e) => setObjectName(e.target.value)}
             placeholder="e.g. SM_Character"
-            className="w-full bg-surface-tertiary border border-border rounded px-3 py-1.5 text-xs text-text placeholder:text-text-muted"
+            className="w-full bg-surface-tertiary border border-border rounded-lg px-3 py-1.5 text-xs text-text placeholder:text-text-muted"
           />
         </div>
 
@@ -228,7 +228,7 @@ function MeshOptimizationTab() {
             value={mergeDistance}
             onChange={(e) => setMergeDistance(e.target.value)}
             placeholder="0.0001"
-            className="w-32 bg-surface-tertiary border border-border rounded px-3 py-1.5 text-xs text-text placeholder:text-text-muted"
+            className="w-32 bg-surface-tertiary border border-border rounded-lg px-3 py-1.5 text-xs text-text placeholder:text-text-muted"
           />
         </div>
 
@@ -244,7 +244,7 @@ function MeshOptimizationTab() {
         </button>
 
         {!connected && (
-          <p className="text-[10px] text-amber-400">Connect to Blender MCP first.</p>
+          <p className="text-xs text-amber-400">Connect to Blender MCP first.</p>
         )}
       </div>
 
@@ -273,7 +273,7 @@ function FBXConversionTab() {
   }, [inputPath, outputPath, dracoCompression, execute]);
 
   return (
-    <div className="max-w-2xl mx-auto space-y-4">
+    <div className="max-w-2xl mx-auto space-y-6">
       <div className="text-center">
         <h2 className="text-base font-semibold text-text">FBX to glTF Conversion</h2>
         <p className="text-xs text-text-muted mt-1">
@@ -289,7 +289,7 @@ function FBXConversionTab() {
             value={inputPath}
             onChange={(e) => setInputPath(e.target.value)}
             placeholder="C:/Assets/model.fbx"
-            className="w-full bg-surface-tertiary border border-border rounded px-3 py-1.5 text-xs text-text font-mono placeholder:text-text-muted"
+            className="w-full bg-surface-tertiary border border-border rounded-lg px-3 py-1.5 text-xs text-text font-mono placeholder:text-text-muted"
           />
         </div>
 
@@ -300,7 +300,7 @@ function FBXConversionTab() {
             value={outputPath}
             onChange={(e) => setOutputPath(e.target.value)}
             placeholder="C:/Assets/model.glb"
-            className="w-full bg-surface-tertiary border border-border rounded px-3 py-1.5 text-xs text-text font-mono placeholder:text-text-muted"
+            className="w-full bg-surface-tertiary border border-border rounded-lg px-3 py-1.5 text-xs text-text font-mono placeholder:text-text-muted"
           />
         </div>
 
@@ -326,7 +326,7 @@ function FBXConversionTab() {
         </button>
 
         {!connected && (
-          <p className="text-[10px] text-amber-400">Connect to Blender MCP first.</p>
+          <p className="text-xs text-amber-400">Connect to Blender MCP first.</p>
         )}
       </div>
 

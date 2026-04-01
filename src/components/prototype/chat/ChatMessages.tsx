@@ -44,8 +44,8 @@ const MessageItem = React.memo(
           <span className={`text-xs font-semibold ${isUser ? 'text-text' : isSystem ? 'text-yellow-400' : 'text-blue-400'}`}>
             {label}
           </span>
-          <span className="text-[10px] text-text-muted">{relativeTime(message.timestamp)}</span>
-          {message.isStreaming && <span className="text-[10px] text-blue-400 animate-pulse">typing...</span>}
+          <span className="text-xs text-text-muted">{relativeTime(message.timestamp)}</span>
+          {message.isStreaming && <span className="text-xs text-blue-400 animate-pulse">typing...</span>}
         </div>
         <div className="text-sm text-text leading-relaxed">
           {isUser || isSystem ? (

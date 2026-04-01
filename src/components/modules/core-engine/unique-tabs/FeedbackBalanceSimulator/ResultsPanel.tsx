@@ -39,7 +39,7 @@ export function ResultsPanel({ result, feedbackConfig, onCopyReport }: {
           <SectionHeader icon={Swords} label="Feedback vs Pure Math" />
           <button
             onClick={onCopyReport}
-            className="flex items-center gap-1 px-2 py-1 rounded text-[10px] font-mono uppercase tracking-[0.15em] transition-colors"
+            className="flex items-center gap-1 px-2 py-1 rounded text-xs font-mono uppercase tracking-[0.15em] transition-colors"
             style={{ color: ACCENT_VIOLET, backgroundColor: `${ACCENT_VIOLET}${OPACITY_15}` }}
           >
             <Copy className="w-3 h-3" />
@@ -51,16 +51,16 @@ export function ResultsPanel({ result, feedbackConfig, onCopyReport }: {
         <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-0 mb-2">
           <div className="flex items-center gap-1.5">
             <Eye className="w-3 h-3" style={{ color: ACCENT_VIOLET }} />
-            <span className="text-[10px] font-mono font-bold uppercase tracking-[0.15em]" style={{ color: ACCENT_VIOLET }}>
+            <span className="text-xs font-mono font-bold uppercase tracking-[0.15em]" style={{ color: ACCENT_VIOLET }}>
               With Feedback
             </span>
           </div>
           <div className="w-20 text-center">
-            <span className="text-[10px] font-mono uppercase tracking-[0.15em] text-text-muted">Delta</span>
+            <span className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted">Delta</span>
           </div>
           <div className="flex items-center gap-1.5">
             <EyeOff className="w-3 h-3 text-text-muted" />
-            <span className="text-[10px] font-mono font-bold uppercase tracking-[0.15em] text-text-muted">
+            <span className="text-xs font-mono font-bold uppercase tracking-[0.15em] text-text-muted">
               Pure Math
             </span>
           </div>

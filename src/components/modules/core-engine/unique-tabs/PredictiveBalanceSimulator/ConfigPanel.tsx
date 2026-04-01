@@ -14,7 +14,7 @@ export function ConfigPanel({ config, setConfig }: {
       {/* Parameter grid */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-xs font-mono">
         <div className="flex flex-col gap-1">
-          <span className="text-[10px] font-mono uppercase tracking-[0.15em] text-text-muted">
+          <span className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted">
             Level Range
           </span>
           <div className="flex items-center gap-1">
@@ -35,7 +35,7 @@ export function ConfigPanel({ config, setConfig }: {
         </div>
 
         <div className="flex flex-col gap-1">
-          <span className="text-[10px] font-mono uppercase tracking-[0.15em] text-text-muted">
+          <span className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted">
             Iterations
           </span>
           <select
@@ -48,7 +48,7 @@ export function ConfigPanel({ config, setConfig }: {
         </div>
 
         <div className="flex flex-col gap-1">
-          <span className="text-[10px] font-mono uppercase tracking-[0.15em] text-text-muted">
+          <span className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted">
             Gear
           </span>
           <select
@@ -61,7 +61,7 @@ export function ConfigPanel({ config, setConfig }: {
         </div>
 
         <div className="flex flex-col gap-1">
-          <span className="text-[10px] font-mono uppercase tracking-[0.15em] text-text-muted">
+          <span className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted">
             Level Step
           </span>
           <select
@@ -76,7 +76,7 @@ export function ConfigPanel({ config, setConfig }: {
 
       {/* Encounter setup */}
       <div className="space-y-1.5">
-        <span className="text-[10px] font-mono uppercase tracking-[0.15em] text-text-muted">
+        <span className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted">
           Encounter Setup
         </span>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">

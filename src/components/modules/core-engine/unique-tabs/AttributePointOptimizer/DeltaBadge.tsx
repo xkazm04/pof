@@ -33,7 +33,7 @@ export function DeltaBadge({ current, optimal, label, unit, higherIsBetter = tru
       className="flex items-center justify-between px-3 py-2 rounded-md border"
       style={{ borderColor: `${isZero ? STATUS_SUBDUED : isPositive ? STATUS_SUCCESS : STATUS_ERROR}20`, backgroundColor: `${isZero ? STATUS_SUBDUED : isPositive ? STATUS_SUCCESS : STATUS_ERROR}08` }}
     >
-      <span className="text-[10px] font-mono uppercase tracking-[0.15em] text-text-muted">{label}</span>
+      <span className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted">{label}</span>
       <div className="flex items-center gap-2">
         <span className="text-xs font-mono text-text tabular-nums">{displayCurrent}{unit}</span>
         <ArrowRight className="w-3 h-3 text-text-muted" />

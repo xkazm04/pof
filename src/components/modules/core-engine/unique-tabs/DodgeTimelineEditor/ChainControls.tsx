@@ -68,7 +68,7 @@ export function ChainControls({
         <DodgeChainTimeline chain={chain} playhead={chainPlayhead} onScrub={onScrub} />
       ) : (
         <div className="flex items-center justify-center py-6 text-text-muted">
-          <p className="text-[10px] font-mono uppercase tracking-[0.15em]">
+          <p className="text-xs font-mono uppercase tracking-[0.15em]">
             Select a chain count (2\u00d7, 3\u00d7, 4\u00d7) or add dodges to simulate a sequence
           </p>
         </div>

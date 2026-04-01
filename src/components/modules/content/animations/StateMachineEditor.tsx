@@ -1074,7 +1074,7 @@ function StatePropertyEditor({
           type="text"
           value={state.name}
           onChange={(e) => onUpdate({ name: e.target.value })}
-          className="w-full px-2 py-1.5 bg-surface border border-border rounded text-xs font-mono text-text outline-none focus:border-border-bright transition-colors"
+          className="w-full px-2 py-1.5 bg-surface border border-border rounded text-xs font-mono text-text focus-ring-inset transition-colors"
         />
       </div>
 
@@ -1107,7 +1107,7 @@ function StatePropertyEditor({
           min={0}
           value={state.priority}
           onChange={(e) => onUpdate({ priority: parseInt(e.target.value, 10) || 0 })}
-          className="w-full px-2 py-1.5 bg-surface border border-border rounded text-xs font-mono text-text outline-none focus:border-border-bright transition-colors"
+          className="w-full px-2 py-1.5 bg-surface border border-border rounded text-xs font-mono text-text focus-ring-inset transition-colors"
         />
       </div>
 
@@ -1118,7 +1118,7 @@ function StatePropertyEditor({
           type="text"
           value={state.flag}
           onChange={(e) => onUpdate({ flag: e.target.value })}
-          className="w-full px-2 py-1.5 bg-surface border border-border rounded text-xs font-mono text-text outline-none focus:border-border-bright transition-colors"
+          className="w-full px-2 py-1.5 bg-surface border border-border rounded text-xs font-mono text-text focus-ring-inset transition-colors"
           list="known-flags"
         />
         <datalist id="known-flags">
@@ -1145,7 +1145,7 @@ function StatePropertyEditor({
           value={state.montageRef ?? ''}
           onChange={(e) => onUpdate({ montageRef: e.target.value || undefined })}
           placeholder="e.g., AM_Dodge"
-          className="w-full px-2 py-1.5 bg-surface border border-border rounded text-xs font-mono text-text placeholder-text-muted outline-none focus:border-border-bright transition-colors"
+          className="w-full px-2 py-1.5 bg-surface border border-border rounded text-xs font-mono text-text placeholder-text-muted focus-ring-inset transition-colors"
         />
       </div>
 
@@ -1230,7 +1230,7 @@ function TransitionPropertyEditor({
           value={transition.rule}
           onChange={(e) => onUpdate({ rule: e.target.value })}
           placeholder="e.g., bIsAttacking == true"
-          className="w-full px-2 py-1.5 bg-surface border border-border rounded text-xs font-mono text-text placeholder-text-muted outline-none focus:border-border-bright transition-colors"
+          className="w-full px-2 py-1.5 bg-surface border border-border rounded text-xs font-mono text-text placeholder-text-muted focus-ring-inset transition-colors"
         />
         {/* Quick templates */}
         <div className="flex flex-wrap gap-1 mt-1.5">
@@ -1255,7 +1255,7 @@ function TransitionPropertyEditor({
           value={transition.description ?? ''}
           onChange={(e) => onUpdate({ description: e.target.value || undefined })}
           placeholder="e.g., Dodge cancels attack recovery"
-          className="w-full px-2 py-1.5 bg-surface border border-border rounded text-xs font-mono text-text placeholder-text-muted outline-none focus:border-border-bright transition-colors"
+          className="w-full px-2 py-1.5 bg-surface border border-border rounded text-xs font-mono text-text placeholder-text-muted focus-ring-inset transition-colors"
         />
       </div>
     </div>

@@ -30,7 +30,7 @@ export function EffectsSection({ featureMap, defs, expanded, onToggle }: Section
             >
               <div className="flex items-center gap-2 mb-1.5">
                 <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: effect.color, boxShadow: `0 0 6px ${effect.color}60` }} />
-                <span className="text-[10px] font-mono uppercase tracking-[0.15em] font-bold text-text"
+                <span className="text-xs font-mono uppercase tracking-[0.15em] font-bold text-text"
                   style={{ textShadow: `0 0 12px ${effect.color}40` }}>{effect.name}</span>
               </div>
               <p className="text-2xs text-text-muted leading-relaxed">{effect.desc}</p>

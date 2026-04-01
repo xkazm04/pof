@@ -18,7 +18,7 @@ export function NetworkSection() {
           {/* Left: Bandwidth + Actor table */}
           <div className="space-y-3">
             <div>
-              <div className="flex justify-between text-[10px] font-mono uppercase tracking-[0.15em] mb-1">
+              <div className="flex justify-between text-xs font-mono uppercase tracking-[0.15em] mb-1">
                 <span className="text-text-muted">BANDWIDTH</span>
                 <span className="font-bold" style={{ color: `${ACCENT}ee` }}>{NET_BANDWIDTH.current}/{NET_BANDWIDTH.max} {NET_BANDWIDTH.unit}</span>
               </div>
@@ -26,9 +26,9 @@ export function NetworkSection() {
             </div>
 
             <div>
-              <div className="text-[10px] font-mono uppercase tracking-[0.15em] text-text-muted mb-1.5">TOP REPLICATED ACTORS</div>
+              <div className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted mb-1.5">TOP REPLICATED ACTORS</div>
               <div className="space-y-1">
-                <div className="grid grid-cols-4 gap-2 text-[10px] font-mono uppercase tracking-[0.15em] text-text-muted pb-1 border-b border-border">
+                <div className="grid grid-cols-4 gap-2 text-xs font-mono uppercase tracking-[0.15em] text-text-muted pb-1 border-b border-border">
                   <span>Actor</span><span className="text-center">Count</span><span className="text-center">B/s</span><span className="text-right">Priority</span>
                 </div>
                 {NET_REPLICATED_ACTORS.map((a) => (
@@ -37,7 +37,7 @@ export function NetworkSection() {
                     <span className="text-center text-text-muted">{a.count}</span>
                     <span className="text-center text-text-muted">{(a.bytesPerSec / 1000).toFixed(1)}K</span>
                     <span className="text-right">
-                      <span className="px-1 py-[1px] rounded text-[10px] uppercase" style={{ color: PRIORITY_COLORS[a.priority], backgroundColor: `${PRIORITY_COLORS[a.priority]}${OPACITY_10}` }}>
+                      <span className="px-1 py-[1px] rounded text-xs uppercase" style={{ color: PRIORITY_COLORS[a.priority], backgroundColor: `${PRIORITY_COLORS[a.priority]}${OPACITY_10}` }}>
                         {a.priority}
                       </span>
                     </span>
@@ -50,13 +50,13 @@ export function NetworkSection() {
           {/* Right: RPC frequency + Suggestions */}
           <div className="space-y-3">
             <div>
-              <div className="text-[10px] font-mono uppercase tracking-[0.15em] text-text-muted mb-1.5">RPC FREQUENCY (calls/sec)</div>
+              <div className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted mb-1.5">RPC FREQUENCY (calls/sec)</div>
               <div className="space-y-1.5">
                 {NET_RPC_FREQ.map((rpc) => {
                   const maxFreq = Math.max(...NET_RPC_FREQ.map(r => r.freq));
                   return (
-                    <div key={rpc.name} className="flex items-center gap-2">
-                      <span className="text-[10px] font-mono uppercase tracking-[0.15em] w-28 text-right text-text-muted truncate">{rpc.name}</span>
+                    <div key={rpc.name} className="flex items-center gap-1.5">
+                      <span className="text-xs font-mono uppercase tracking-[0.15em] w-28 text-right text-text-muted truncate">{rpc.name}</span>
                       <div className="flex-1">
                         <NeonBar pct={(rpc.freq / maxFreq) * 100} color={rpc.color} height={4} />
                       </div>
@@ -68,10 +68,10 @@ export function NetworkSection() {
             </div>
 
             <div>
-              <div className="text-[10px] font-mono uppercase tracking-[0.15em] text-text-muted mb-1.5">OPTIMIZATION SUGGESTIONS</div>
+              <div className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted mb-1.5">OPTIMIZATION SUGGESTIONS</div>
               <div className="space-y-1.5">
                 {NET_SUGGESTIONS.map((sug, i) => (
-                  <div key={i} className="flex items-start gap-2 text-xs font-mono text-text-muted leading-relaxed">
+                  <div key={i} className="flex items-start gap-1.5 text-xs font-mono text-text-muted leading-relaxed">
                     <Zap className="w-3 h-3 flex-shrink-0 mt-0.5" style={{ color: `${ACCENT}50` }} />
                     <span>{sug}</span>
                   </div>

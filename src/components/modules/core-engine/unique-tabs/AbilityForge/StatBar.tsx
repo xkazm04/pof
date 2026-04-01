@@ -14,13 +14,13 @@ export function StatBar({ label, value, max, color, unit }: {
   const pct = Math.min((value / max) * 100, 100);
   return (
     <div className="flex items-center gap-2">
-      <span className="text-[10px] font-mono uppercase tracking-[0.15em] text-zinc-400 w-16 shrink-0">
+      <span className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted w-16 shrink-0">
         {label}
       </span>
       <div className="flex-1">
         <NeonBar pct={pct} color={color} height={6} glow />
       </div>
-      <span className="text-[11px] font-mono text-zinc-300 tabular-nums w-14 text-right">
+      <span className="text-xs font-mono text-zinc-300 tabular-nums w-14 text-right">
         {value}{unit ?? ''}
       </span>
     </div>

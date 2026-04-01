@@ -55,6 +55,14 @@ function presetToBones(preset: RigPreset): BoneDefinition[] {
   return bones;
 }
 
+const MAX_BONE_COUNT = Math.max(...RIG_PRESETS.map((p) => p.boneCount));
+
+function boneComplexityColor(count: number): string {
+  if (count < 50) return 'bg-emerald-500';
+  if (count <= 200) return 'bg-amber-500';
+  return 'bg-rose-500';
+}
+
 function RigPresetCard({ preset, selected, onSelect, onCreateInBlender, isCreating, createResult }: {
   preset: RigPreset;
   selected: boolean;
@@ -64,6 +72,7 @@ function RigPresetCard({ preset, selected, onSelect, onCreateInBlender, isCreati
   createResult: { status: 'success' | 'error'; message: string } | null;
 }) {
   const connected = useBlenderMCPStore((s) => s.connection.connected);
+  const barWidth = Math.max(4, (preset.boneCount / MAX_BONE_COUNT) * 100);
 
   return (
     <div
@@ -79,15 +88,27 @@ function RigPresetCard({ preset, selected, onSelect, onCreateInBlender, isCreati
         )}
         <h4 className="text-sm font-medium text-text">{preset.name}</h4>
         <p className="text-xs text-text-muted mt-1">{preset.description}</p>
-        <div className="flex gap-3 mt-2 text-[10px] text-text-muted">
+        <div className="flex gap-3 mt-2 text-xs text-text-muted">
           <span>{preset.boneCount} bones</span>
           {preset.hasFingers && <span>Fingers</span>}
           {preset.hasFaceRig && <span>Face rig</span>}
         </div>
+        {/* Bone count complexity bar */}
+        <div className="flex items-center gap-1.5 mt-2">
+          <div className="flex-1 h-1 rounded-full bg-border overflow-hidden">
+            <div
+              className={`h-full rounded-full ${boneComplexityColor(preset.boneCount)}`}
+              style={{ width: `${barWidth}%` }}
+            />
+          </div>
+          <span className="text-[10px] leading-none text-text-muted font-medium tabular-nums">
+            {preset.boneCount}
+          </span>
+        </div>
         <div className="mt-2">
-          <span className="text-[10px] text-text-muted">IK Chains: </span>
+          <span className="text-xs text-text-muted">IK Chains: </span>
           {preset.ikChains.map((chain, i) => (
-            <span key={chain.name} className="text-[10px] text-[var(--visual-gen)]">
+            <span key={chain.name} className="text-xs text-[var(--visual-gen)]">
               {chain.name}{i < preset.ikChains.length - 1 ? ', ' : ''}
             </span>
           ))}
@@ -109,13 +130,13 @@ function RigPresetCard({ preset, selected, onSelect, onCreateInBlender, isCreati
       </button>
 
       {createResult?.status === 'success' && (
-        <div className="flex items-center gap-1 mt-2 text-[10px] text-emerald-400">
+        <div className="flex items-center gap-1 mt-2 text-xs text-emerald-400">
           <CheckCircle2 className="w-3 h-3 shrink-0" />
           Armature created
         </div>
       )}
       {createResult?.status === 'error' && (
-        <div className="flex items-start gap-1 mt-2 text-[10px] text-red-400">
+        <div className="flex items-start gap-1 mt-2 text-xs text-red-400">
           <XCircle className="w-3 h-3 shrink-0 mt-0.5" />
           <span>{createResult.message}</span>
         </div>

@@ -1,23 +1,6 @@
 import type { PanelDensity } from '../types/panel';
 import type { PanelDefinition } from '../registry/types';
-
-// ---------------------------------------------------------------------------
-// Fallback Density Thresholds
-// ---------------------------------------------------------------------------
-
-/**
- * Default thresholds used when a panel has no densityModes config for a
- * given density level. These ensure every panel gets a reasonable density
- * assignment even without explicit configuration.
- */
-const FALLBACK_THRESHOLDS: Record<PanelDensity, { minWidth: number; minHeight: number }> = {
-  full: { minWidth: 400, minHeight: 300 },
-  compact: { minWidth: 180, minHeight: 120 },
-  micro: { minWidth: 60, minHeight: 40 },
-};
-
-/** Density levels ordered from highest to lowest. */
-const DENSITY_ORDER: PanelDensity[] = ['full', 'compact', 'micro'];
+import { DENSITY_CONFIG, DENSITY_ORDER } from '@/lib/dzin/animation-constants';
 
 // ---------------------------------------------------------------------------
 // Density Assignment
@@ -56,7 +39,7 @@ export function assignSlotDensity(
 
   for (const density of DENSITY_ORDER) {
     const config = modes?.[density];
-    const thresholds = config ?? FALLBACK_THRESHOLDS[density];
+    const thresholds = config ?? DENSITY_CONFIG.fallback[density];
 
     if (slotWidthPx >= thresholds.minWidth && slotHeightPx >= thresholds.minHeight) {
       return density;

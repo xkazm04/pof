@@ -1,8 +1,9 @@
 'use client';
 
 import { BarChart3 } from 'lucide-react';
-import { motion } from 'framer-motion';
+import { motion, useReducedMotion } from 'framer-motion';
 import { STATUS_ERROR, ACCENT_CYAN, ACCENT_VIOLET, ACCENT_EMERALD } from '@/lib/chart-colors';
+import { motionSafe } from '@/lib/motion';
 import { SurfaceCard } from '@/components/ui/SurfaceCard';
 import { SectionLabel } from '../_shared';
 import { ACCENT } from './progression-data';
@@ -15,6 +16,7 @@ const XP_SOURCES = [
 ];
 
 export function XpSourceBreakdown() {
+  const prefersReduced = useReducedMotion();
   return (
     <SurfaceCard level={2} className="p-5 relative overflow-hidden">
       <SectionLabel icon={BarChart3} label="XP Source Breakdown" color={ACCENT} />
@@ -23,7 +25,9 @@ export function XpSourceBreakdown() {
         {XP_SOURCES.map((src, i) => (
           <motion.div
             key={src.label}
-            initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.1 }}
+            initial={prefersReduced ? { opacity: 1, x: 0 } : { opacity: 0, x: -20 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={motionSafe({ delay: i * 0.1 }, prefersReduced)}
             className="space-y-1"
           >
             <div className="flex justify-between text-xs font-mono">
@@ -32,7 +36,9 @@ export function XpSourceBreakdown() {
             </div>
             <div className="relative h-5 bg-surface-deep rounded-md overflow-hidden border border-border/30">
               <motion.div
-                initial={{ width: 0 }} animate={{ width: `${src.pct}%` }} transition={{ duration: 0.8, delay: i * 0.1 }}
+                initial={prefersReduced ? { width: `${src.pct}%` } : { width: 0 }}
+                animate={{ width: `${src.pct}%` }}
+                transition={motionSafe({ duration: 0.8, delay: i * 0.1 }, prefersReduced)}
                 className="absolute inset-y-0 left-0 rounded-md"
                 style={{ backgroundColor: src.color, opacity: 0.7 }}
               />
@@ -53,7 +59,9 @@ export function XpSourceBreakdown() {
             {XP_SOURCES.map((src, i) => (
               <motion.div
                 key={src.label}
-                initial={{ width: 0 }} animate={{ width: `${src.pct}%` }} transition={{ duration: 0.6, delay: 0.5 + i * 0.1 }}
+                initial={prefersReduced ? { width: `${src.pct}%` } : { width: 0 }}
+                animate={{ width: `${src.pct}%` }}
+                transition={motionSafe({ duration: 0.6, delay: 0.5 + i * 0.1 }, prefersReduced)}
                 className="relative group/seg"
                 style={{ backgroundColor: src.color, opacity: 0.75 }}
                 title={`${src.label}: ${src.pct}%`}

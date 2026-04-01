@@ -26,7 +26,7 @@ export function Section({ title, icon: Icon, color, defaultOpen, children }: {
           <ChevronRight className="w-3.5 h-3.5 text-text-muted" />
         </motion.div>
         <Icon className="w-3.5 h-3.5" style={{ color }} />
-        <span className="text-[10px] font-mono uppercase tracking-[0.15em] font-bold text-text">
+        <span className="text-xs font-mono uppercase tracking-[0.15em] font-bold text-text">
           {title}
         </span>
       </button>

@@ -17,7 +17,7 @@ export function CharacterScalingPreview() {
 
       {/* Level selector */}
       <div className="flex items-center gap-3 mb-4">
-        <span className="text-[10px] font-mono font-bold uppercase tracking-[0.15em] text-text-muted">Level</span>
+        <span className="text-xs font-mono font-bold uppercase tracking-[0.15em] text-text-muted">Level</span>
         <input
           type="range" min={1} max={50} value={scalingLevel}
           onChange={(e) => setScalingLevel(Number(e.target.value))}
@@ -54,7 +54,7 @@ export function CharacterScalingPreview() {
                 style={{ backgroundColor: `${prop.color}20` }} />
 
               <div className="flex justify-between items-center mb-2 relative z-[1]">
-                <span className="text-[10px] font-mono font-bold uppercase tracking-[0.15em] text-text-muted">{prop.label}</span>
+                <span className="text-xs font-mono font-bold uppercase tracking-[0.15em] text-text-muted">{prop.label}</span>
                 <motion.span
                   key={val.toFixed(prop.unit === 'x' ? 2 : 0)}
                   initial={{ scale: 1.15 }}

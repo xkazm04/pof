@@ -265,7 +265,7 @@ export function PostProcessStackBuilder({ onGenerate, isGenerating }: PostProces
             </div>
             <div>
               <h3 className="text-sm font-bold tracking-widest uppercase text-violet-100">Post-Process Stack Pipeline</h3>
-              <p className="text-xs text-violet-400/60 uppercase tracking-wider mt-0.5">
+              <p className="text-xs text-violet-400/80 uppercase tracking-wider mt-0.5">
                 {enabledCount}/{PP_EFFECTS.length} ACTIVE_NODES — PRIORITY_ROUTING_LOCKED
               </p>
             </div>
@@ -299,7 +299,7 @@ export function PostProcessStackBuilder({ onGenerate, isGenerating }: PostProces
         <button
           onClick={handleGenerate}
           disabled={isGenerating || enabledCount === 0}
-          className="relative w-full overflow-hidden flex items-center justify-center gap-2 px-6 py-4 rounded-xl text-xs font-bold uppercase tracking-widest transition-all disabled:opacity-50 mt-4 group outline-none"
+          className="relative w-full overflow-hidden flex items-center justify-center gap-2 px-6 py-4 rounded-xl text-xs font-bold uppercase transition-all disabled:opacity-50 mt-4 group outline-none"
           style={{
             backgroundColor: `${MODULE_COLORS.content}15`,
             color: MODULE_COLORS.content,
@@ -327,7 +327,7 @@ export function PostProcessStackBuilder({ onGenerate, isGenerating }: PostProces
         <button
           onClick={handleBlenderPreview}
           disabled={!blenderConnected || blenderPreviewing || enabledCount === 0}
-          className="relative w-full overflow-hidden flex items-center justify-center gap-2 px-6 py-4 rounded-xl text-xs font-bold uppercase tracking-widest transition-all disabled:opacity-40 group outline-none border border-emerald-500/40 bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20"
+          className="relative w-full overflow-hidden flex items-center justify-center gap-2 px-6 py-4 rounded-xl text-xs font-bold uppercase transition-all disabled:opacity-40 group outline-none border border-emerald-500/40 bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20"
           title={!blenderConnected ? 'Connect to Blender first' : 'Preview compositor stack in Blender'}
         >
           {blenderPreviewing ? (
@@ -442,15 +442,15 @@ function EffectRow({
         {/* Name + description */}
         <div className="flex-1 min-w-0 flex flex-col justify-center text-left">
           <div className="flex items-center gap-3 mb-0.5">
-            <span className="text-[11px] font-bold uppercase tracking-widest text-violet-100 truncate">{effect.name}</span>
+            <span className="text-[11px] font-bold uppercase text-violet-100 truncate">{effect.name}</span>
             <span
-              className="text-[11px] font-mono font-bold uppercase tracking-widest px-1.5 py-0.5 rounded border"
+              className="text-[11px] font-mono font-bold uppercase px-1.5 py-0.5 rounded border"
               style={{ backgroundColor: `${effect.color}10`, borderColor: `${effect.color}30`, color: effect.color }}
             >
               PRIORITY: {entry.priority + 1}
             </span>
           </div>
-          <p className="text-xs text-violet-300/60 line-clamp-1 font-mono">{effect.description}</p>
+          <p className="text-xs text-violet-300/80 line-clamp-1 font-mono">{effect.description}</p>
         </div>
 
         {/* Expand arrow */}
@@ -473,7 +473,7 @@ function EffectRow({
           <div className="ml-[88px] space-y-3 relative">
             <div className="absolute -left-6 top-0 bottom-4 w-px bg-violet-900/40" style={{ backgroundColor: `${effect.color}30` }} />
 
-            <div className="text-[11px] font-bold uppercase tracking-widest px-2 py-1 rounded w-fit border shadow-[inset_0_0_10px_rgba(0,0,0,0.5)]" style={{ color: effect.color, backgroundColor: `${effect.color}10`, borderColor: `${effect.color}20` }}>
+            <div className="text-[11px] font-bold uppercase px-2 py-1 rounded w-fit border shadow-[inset_0_0_10px_rgba(0,0,0,0.5)]" style={{ color: effect.color, backgroundColor: `${effect.color}10`, borderColor: `${effect.color}20` }}>
               CORE_CLASS: {effect.ueClass}
             </div>
 
@@ -487,19 +487,19 @@ function EffectRow({
                     <div className="flex items-center gap-3 mb-1.5">
                       <span className="text-xs font-bold font-mono text-violet-200">{param.name}</span>
                       <span
-                        className="text-[11px] px-1.5 py-0.5 rounded font-bold uppercase tracking-widest border"
+                        className="text-[11px] px-1.5 py-0.5 rounded font-bold uppercase border"
                         style={{ backgroundColor: `${effect.color}15`, color: effect.color, borderColor: `${effect.color}30` }}
                       >
                         {param.type}
                       </span>
                     </div>
-                    <p className="text-[11px] text-violet-400/60 font-mono leading-relaxed">{param.description}</p>
+                    <p className="text-[11px] text-violet-400/80 font-mono leading-relaxed">{param.description}</p>
                   </div>
 
                   <div className="flex-shrink-0 text-left xl:text-right bg-violet-900/10 px-3 py-2 rounded-lg border border-violet-900/30 min-w-[140px]">
                     <div className="text-[11px] font-mono text-violet-100 font-bold">{param.defaultValue}</div>
                     {param.range && (
-                      <div className="text-[11px] text-violet-500/60 font-mono mt-1 uppercase tracking-widest border-t border-violet-900/40 pt-1">RANGE: {param.range}</div>
+                      <div className="text-[11px] text-violet-500/80 font-mono mt-1 uppercase border-t border-violet-900/40 pt-1">RANGE: {param.range}</div>
                     )}
                   </div>
                 </div>

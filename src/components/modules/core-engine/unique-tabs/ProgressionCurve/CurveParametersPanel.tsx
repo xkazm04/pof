@@ -30,7 +30,7 @@ export function CurveParametersPanel({
         <SectionHeader label="Curve Parameters" icon={SlidersHorizontal} color={ACCENT} />
         <button
           onClick={onToggleCompare}
-          className="flex items-center gap-1.5 text-[10px] font-mono uppercase tracking-[0.15em] font-bold px-2.5 py-1 rounded-full border transition-all duration-200"
+          className="flex items-center gap-1.5 text-xs font-mono uppercase tracking-[0.15em] font-bold px-2.5 py-1 rounded-full border transition-all duration-200"
           style={{
             color: compareMode ? STATUS_INFO : 'var(--text-muted)',
             borderColor: compareMode ? `${STATUS_INFO}40` : 'var(--border)',
@@ -45,7 +45,7 @@ export function CurveParametersPanel({
       <div className="space-y-6 flex-1 bg-surface/30 p-4 rounded-xl border border-border/40">
         <div>
           <div className="flex justify-between mb-2">
-            <label className="text-[10px] font-mono uppercase tracking-[0.15em] text-text flex items-center gap-2">
+            <label className="text-xs font-mono uppercase tracking-[0.15em] text-text flex items-center gap-2">
               <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: ACCENT }} /> Base XP Scale
             </label>
             <span className="text-xs font-mono font-bold px-2 rounded-sm border" style={{ color: ACCENT, backgroundColor: `${ACCENT}10`, borderColor: `${ACCENT}20` }}>{baseXp}</span>
@@ -57,14 +57,14 @@ export function CurveParametersPanel({
             onChange={(e) => onBaseXpChange(Number(e.target.value))}
             className="w-full accent-amber-500 h-1.5 bg-surface-deep rounded-lg appearance-none cursor-pointer"
           />
-          <div className="flex justify-between text-[10px] font-mono uppercase tracking-[0.15em] text-text-muted mt-1.5">
+          <div className="flex justify-between text-xs font-mono uppercase tracking-[0.15em] text-text-muted mt-1.5">
             <span>50</span><span>Fast</span><span>500</span>
           </div>
         </div>
 
         <div>
           <div className="flex justify-between mb-2">
-            <label className="text-[10px] font-mono uppercase tracking-[0.15em] text-text flex items-center gap-2">
+            <label className="text-xs font-mono uppercase tracking-[0.15em] text-text flex items-center gap-2">
               <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: ACCENT }} /> Exponential Factor
             </label>
             <span className="text-xs font-mono font-bold px-2 rounded-sm border" style={{ color: ACCENT, backgroundColor: `${ACCENT}10`, borderColor: `${ACCENT}20` }}>{curveExp.toFixed(2)}</span>
@@ -76,13 +76,13 @@ export function CurveParametersPanel({
             onChange={(e) => onCurveExpChange(Number(e.target.value))}
             className="w-full accent-amber-500 h-1.5 bg-surface-deep rounded-lg appearance-none cursor-pointer"
           />
-          <div className="flex justify-between text-[10px] font-mono uppercase tracking-[0.15em] text-text-muted mt-1.5">
+          <div className="flex justify-between text-xs font-mono uppercase tracking-[0.15em] text-text-muted mt-1.5">
             <span>Linear (1.1)</span><span>Steep (2.5)</span>
           </div>
         </div>
 
         <div className="mt-6 pt-4 border-t border-border/40">
-          <div className="text-[10px] font-mono uppercase tracking-[0.15em] text-text-muted mb-2">Simulation Impact</div>
+          <div className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted mb-2">Simulation Impact</div>
           <div className="flex justify-between items-center text-xs">
             <span className="text-text">Lv 10 {'->'}  Lv 11</span>
             <span className="font-mono" style={{ color: ACCENT }}>
@@ -101,7 +101,7 @@ export function CurveParametersPanel({
             >
               <div className="flex items-center gap-2 mb-2">
                 <Camera className="w-3 h-3" style={{ color: STATUS_INFO }} />
-                <span className="text-[10px] font-mono uppercase tracking-[0.15em] font-bold" style={{ color: STATUS_INFO }}>Snapshot</span>
+                <span className="text-xs font-mono uppercase tracking-[0.15em] font-bold" style={{ color: STATUS_INFO }}>Snapshot</span>
               </div>
               <div className="flex justify-between items-center text-xs mb-1">
                 <span className="text-text-muted">Base XP</span>

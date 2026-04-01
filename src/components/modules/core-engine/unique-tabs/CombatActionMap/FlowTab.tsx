@@ -63,7 +63,7 @@ function SequenceDiagram() {
           <g key={lane.id}>
             <line x1={x} y1={30} x2={x} y2={240} stroke={lane.color} strokeWidth="2" strokeDasharray="4 4" opacity="0.4" />
             <rect x={x - 38} y={4} width="76" height="22" rx="4" fill={`${lane.color}20`} stroke={lane.color} strokeWidth="1" />
-            <text x={x} y={18} textAnchor="middle" className="text-[11px] font-mono font-bold" fill={lane.color} style={{ fontSize: 11 }}>{lane.label}</text>
+            <text x={x} y={18} textAnchor="middle" className="text-xs font-mono font-bold" fill={lane.color}>{lane.label}</text>
           </g>
         );
       })}
@@ -80,14 +80,14 @@ function SequenceDiagram() {
             {isSelf ? (
               <>
                 <circle cx={fromX} cy={y} r="4" fill={evt.color} opacity="0.8" />
-                <text x={fromX + 10} y={y + 3} className="text-[11px] font-mono" fill={evt.color} style={{ fontSize: 11 }}>{evt.label}</text>
+                <text x={fromX + 10} y={y + 3} className="text-xs font-mono" fill={evt.color}>{evt.label}</text>
               </>
             ) : (
               <>
                 <line x1={fromX} y1={y} x2={toX} y2={y} stroke={evt.color} strokeWidth="1.5" markerEnd="url(#arrowhead)" />
                 <circle cx={fromX} cy={y} r="3" fill={evt.color} />
                 <polygon points={`${toX - 6},${y - 3} ${toX},${y} ${toX - 6},${y + 3}`} fill={evt.color} />
-                <text x={(fromX + toX) / 2} y={y - 6} textAnchor="middle" className="text-[11px] font-mono" fill={evt.color} style={{ fontSize: 11 }}>{evt.label}</text>
+                <text x={(fromX + toX) / 2} y={y - 6} textAnchor="middle" className="text-xs font-mono" fill={evt.color}>{evt.label}</text>
               </>
             )}
           </g>

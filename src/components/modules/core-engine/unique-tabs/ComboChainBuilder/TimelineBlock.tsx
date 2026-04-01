@@ -69,7 +69,7 @@ export function TimelineBlock({
         />
         {/* Labels */}
         <div className="absolute inset-0 flex flex-col items-center justify-center z-10 px-1">
-          <span className="text-[10px] font-mono font-bold uppercase tracking-[0.15em] truncate max-w-full" style={{ color: ability.color }}>
+          <span className="text-xs font-mono font-bold uppercase tracking-[0.15em] truncate max-w-full" style={{ color: ability.color }}>
             {ability.name}
           </span>
           {ability.damage > 0 && (

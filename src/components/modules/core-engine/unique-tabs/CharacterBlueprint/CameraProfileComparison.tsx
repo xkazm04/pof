@@ -43,7 +43,7 @@ export function CameraProfileComparison() {
               <div>
                 <div className="text-xs font-mono font-bold uppercase tracking-wider"
                   style={{ color: profile.color }}>{profile.label}</div>
-                <div className="text-[10px] font-mono text-text-muted mt-0.5">
+                <div className="text-xs font-mono text-text-muted mt-0.5">
                   Peak: {profile.data.reduce((best, d) => d.value > best.value ? d : best, profile.data[0]).axis}
                   {' '}({(profile.data.reduce((best, d) => d.value > best.value ? d : best, profile.data[0]).value * 100).toFixed(0)}%)
                 </div>

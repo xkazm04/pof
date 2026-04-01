@@ -54,7 +54,7 @@ export function DamageNumberPalette() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
         {/* ── Left: Element color swatches ── */}
         <SurfaceCard level={2} className="p-4 space-y-3">
-          <div className="text-xs font-bold text-text-muted uppercase tracking-widest">Element Colors</div>
+          <div className="text-xs font-bold text-text-muted uppercase">Element Colors</div>
 
           <div className="space-y-1.5">
             {ELEMENT_COLORS.map((el) => {
@@ -105,7 +105,7 @@ export function DamageNumberPalette() {
         <SurfaceCard level={2} className="p-4 space-y-4">
           {/* Font size comparison */}
           <div className="space-y-3">
-            <div className="text-xs font-bold text-text-muted uppercase tracking-widest">Font Size Comparison</div>
+            <div className="text-xs font-bold text-text-muted uppercase">Font Size Comparison</div>
 
             <div className="flex items-end gap-6 p-3 rounded-md bg-black/40 border border-border/40">
               {/* Normal */}
@@ -144,7 +144,7 @@ export function DamageNumberPalette() {
 
           {/* Display format strings */}
           <div className="space-y-2">
-            <div className="text-xs font-bold text-text-muted uppercase tracking-widest">Display Formats</div>
+            <div className="text-xs font-bold text-text-muted uppercase">Display Formats</div>
 
             <div className="space-y-1.5">
               <div className="flex items-center gap-2 p-2 rounded-md bg-black/30 border border-border/40">
@@ -167,7 +167,7 @@ export function DamageNumberPalette() {
 
           {/* Animation properties */}
           <div className="space-y-2">
-            <div className="text-xs font-bold text-text-muted uppercase tracking-widest">Animation</div>
+            <div className="text-xs font-bold text-text-muted uppercase">Animation</div>
 
             <div className="grid grid-cols-3 gap-2">
               <div className="p-2 rounded-md bg-black/30 border border-border/40 text-center">

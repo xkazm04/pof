@@ -4,18 +4,18 @@ import { useState } from 'react';
 import { Cpu } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { useDensity, PanelFrame } from '@/lib/dzin/core';
-import { DZIN_TIMING } from '@/lib/dzin/animation-constants';
+import { DZIN_TIMING, DZIN_SPACING, TRANSITION_ENTER, TRANSITION_EXIT } from '@/lib/dzin/animation-constants';
 import { useDzinSelection } from '@/lib/dzin/selection-context';
 import { isRelatedToSelection, ENTITY_RELATIONS } from '@/lib/dzin/entity-relations';
 import {
   FeatureCard,
   PipelineFlow,
   SectionLabel,
-  STATUS_COLORS,
+  statusInfo,
 } from '@/components/modules/core-engine/unique-tabs/_shared';
 import { SurfaceCard } from '@/components/ui/SurfaceCard';
 import { MODULE_COLORS } from '@/lib/chart-colors';
-import type { FeatureRow, FeatureStatus } from '@/types/feature-matrix';
+import type { FeatureRow } from '@/types/feature-matrix';
 
 /* ── Props ──────────────────────────────────────────────────────────────── */
 
@@ -33,13 +33,6 @@ const ASC_CONNECTIONS_FULL = ['AttributeSet', 'Tag Container', 'Ability Instance
 
 const GAS_PIPELINE_STEPS = ['ASC', 'AttributeSet', 'Tags', 'GameplayAbility', 'GameplayEffect', 'Execution'] as const;
 
-/* ── Helpers ────────────────────────────────────────────────────────────── */
-
-function statusDotColor(status: FeatureStatus | undefined): string {
-  if (!status) return STATUS_COLORS.unknown.dot;
-  return STATUS_COLORS[status].dot;
-}
-
 /* ── Micro density ──────────────────────────────────────────────────────── */
 
 function CoreMicro({ featureMap, defs }: CorePanelProps) {
@@ -51,7 +44,7 @@ function CoreMicro({ featureMap, defs }: CorePanelProps) {
   const pct = total > 0 ? (completed / total) * 100 : 0;
 
   return (
-    <div className="flex flex-col items-center justify-center gap-1 p-2">
+    <div className={DZIN_SPACING.micro.wrapper}>
       <Cpu className="w-5 h-5 text-blue-400" />
       <span className="font-mono text-xs">{completed}/{total}</span>
       <div className="w-8 h-1.5 bg-surface-deep rounded-full overflow-hidden">
@@ -68,22 +61,25 @@ function CoreMicro({ featureMap, defs }: CorePanelProps) {
 
 function CoreCompact({ featureMap }: CorePanelProps) {
   const ascStatus = featureMap.get('AbilitySystemComponent')?.status;
-  const dotColor = statusDotColor(ascStatus);
+  const { color: dotColor, label: dotLabel } = statusInfo(ascStatus);
   const { selection } = useDzinSelection();
 
   // Map ASC connections to entity types for selection awareness
   const connEntityMap: Record<string, { type: 'ability' | 'tag'; id: string }> = {
     'Abilities': { type: 'ability', id: 'MeleeAttack' },
     'Tag Container': { type: 'tag', id: 'Ability.MeleeAttack' },
+    'AttributeSet': { type: 'tag', id: 'Damage.Physical' },
+    'Active Effects': { type: 'ability', id: 'HealOverTime' },
   };
 
   return (
-    <div className="space-y-2 p-2 text-xs">
+    <div className={`${DZIN_SPACING.compact.wrapper} text-xs`}>
       {/* ASC status */}
       <div className="flex items-center gap-2">
         <span
-          className="w-2 h-2 rounded-full flex-shrink-0"
-          style={{ backgroundColor: dotColor }}
+          className="w-3 h-3 rounded-full flex-shrink-0"
+          style={{ backgroundColor: dotColor, boxShadow: `0 0 0 3px ${dotColor}33` }}
+          title={dotLabel}
         />
         <span className="font-medium text-text">AbilitySystemComponent</span>
       </div>
@@ -102,7 +98,7 @@ function CoreCompact({ featureMap }: CorePanelProps) {
               animate={{ opacity: selection && !isRelated ? 0.4 : 1 }}
               transition={{ duration: DZIN_TIMING.HIGHLIGHT }}
             >
-              <span className="w-1.5 h-1.5 rounded-full bg-blue-400 flex-shrink-0" />
+              <span className="w-2 h-2 rounded-full bg-blue-400 flex-shrink-0" />
               <span className="text-text-muted">{conn}</span>
             </motion.div>
           );
@@ -110,7 +106,7 @@ function CoreCompact({ featureMap }: CorePanelProps) {
       </div>
 
       {/* Pipeline count */}
-      <div className="border-t border-border/40 pt-1.5 text-text-muted">
+      <div className={`border-t border-border/40 ${DZIN_SPACING.compact.divider} text-text-muted`}>
         Pipeline: {GAS_PIPELINE_STEPS.length} steps
       </div>
     </div>
@@ -124,9 +120,9 @@ function CoreFull({ featureMap, defs }: CorePanelProps) {
   const onToggle = (name: string) => setExpanded((prev) => (prev === name ? null : name));
 
   return (
-    <div className="space-y-2.5">
+    <div className={DZIN_SPACING.full.wrapper}>
       {/* Description card */}
-      <SurfaceCard level={3} className="p-3 bg-surface-deep/50 border-border/40 text-sm text-text-muted leading-relaxed">
+      <SurfaceCard level={3} className={`${DZIN_SPACING.full.card} bg-surface-deep/50 border-border/40 text-sm text-text-muted leading-relaxed`}>
         The Ability System Component (ASC) is the central hub that manages abilities, attributes, tags, and effects.
         It must be attached to the character base class and implement <span className="font-mono text-xs text-text">IAbilitySystemInterface</span>.
       </SurfaceCard>
@@ -142,17 +138,17 @@ function CoreFull({ featureMap, defs }: CorePanelProps) {
       />
 
       {/* ASC Connections grid */}
-      <SurfaceCard level={2} className="p-3 relative overflow-hidden">
-        <div className="text-xs font-bold uppercase tracking-widest text-text-muted mb-3 flex items-center gap-2">
+      <SurfaceCard level={2} className={`${DZIN_SPACING.full.card} relative overflow-hidden`}>
+        <div className={`text-xs font-bold uppercase text-text-muted ${DZIN_SPACING.full.sectionMb} flex items-center gap-2`}>
           <Cpu className="w-4 h-4 text-blue-400" /> ASC Connections
         </div>
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        <div className={`grid grid-cols-2 lg:grid-cols-4 ${DZIN_SPACING.full.gridGap}`}>
           {ASC_CONNECTIONS_FULL.map((conn) => (
             <div
               key={conn}
               className="flex items-center gap-2 text-sm bg-surface p-2.5 rounded-lg border border-border/50 shadow-sm"
             >
-              <span className="w-2 h-2 rounded-full bg-blue-400" />
+              <span className="w-3 h-3 rounded-full bg-blue-400" style={{ boxShadow: '0 0 0 3px rgba(96,165,250,0.2)' }} />
               <span className="text-text font-medium">{conn}</span>
             </div>
           ))}
@@ -160,9 +156,9 @@ function CoreFull({ featureMap, defs }: CorePanelProps) {
       </SurfaceCard>
 
       {/* GAS Architecture Pipeline */}
-      <SurfaceCard level={2} className="p-3 relative overflow-hidden">
+      <SurfaceCard level={2} className={`${DZIN_SPACING.full.card} relative overflow-hidden`}>
         <SectionLabel label="GAS Architecture Pipeline" />
-        <div className="mt-3">
+        <div className={DZIN_SPACING.full.pipelineMt}>
           <PipelineFlow steps={[...GAS_PIPELINE_STEPS]} accent={ACCENT} />
         </div>
       </SurfaceCard>
@@ -182,8 +178,8 @@ export function CorePanel({ featureMap, defs }: CorePanelProps) {
           key={density}
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          transition={{ duration: DZIN_TIMING.DENSITY / 2 }}
+          exit={{ opacity: 0, transition: TRANSITION_EXIT }}
+          transition={TRANSITION_ENTER}
         >
           {density === 'micro' && <CoreMicro featureMap={featureMap} defs={defs} />}
           {density === 'compact' && <CoreCompact featureMap={featureMap} defs={defs} />}

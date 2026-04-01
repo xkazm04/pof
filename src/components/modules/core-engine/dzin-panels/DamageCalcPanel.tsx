@@ -6,7 +6,7 @@ import {
   MODULE_COLORS, STATUS_STALE, ACCENT_PURPLE_BOLD, ACCENT_ORANGE, ACCENT_RED, ACCENT_EMERALD_DARK,
 } from '@/lib/chart-colors';
 import { useDensity, PanelFrame } from '@/lib/dzin/core';
-import { DZIN_TIMING } from '@/lib/dzin/animation-constants';
+import { DZIN_SPACING, TRANSITION_ENTER, TRANSITION_EXIT } from '@/lib/dzin/animation-constants';
 import { SectionLabel } from '@/components/modules/core-engine/unique-tabs/_shared';
 import { SurfaceCard } from '@/components/ui/SurfaceCard';
 import type { FeatureRow } from '@/types/feature-matrix';
@@ -104,7 +104,7 @@ function GASArchitectureExplorer() {
 
 function DamageCalcMicro() {
   return (
-    <div className="flex flex-col items-center justify-center gap-1 p-2">
+    <div className={DZIN_SPACING.micro.wrapper}>
       <Calculator className="w-5 h-5" style={{ color: ACCENT_ORANGE }} />
       <span className="font-mono text-xs">{GAS_STEPS.length} steps</span>
     </div>
@@ -115,7 +115,7 @@ function DamageCalcMicro() {
 
 function DamageCalcCompact() {
   return (
-    <div className="space-y-1.5 p-2 text-xs">
+    <div className={`${DZIN_SPACING.compact.wrapper} text-xs`}>
       {GAS_STEPS.map((step) => (
         <div key={step.label} className="flex items-center gap-2">
           <span
@@ -134,10 +134,10 @@ function DamageCalcCompact() {
 
 function DamageCalcFull() {
   return (
-    <div className="space-y-2.5">
-      <SurfaceCard level={2} className="p-3 relative overflow-hidden">
+    <div className={DZIN_SPACING.full.wrapper}>
+      <SurfaceCard level={2} className={`${DZIN_SPACING.full.card} relative overflow-hidden`}>
         <SectionLabel icon={Calculator} label="Damage Execution Pipeline" color="#f97316" />
-        <div className="mt-2.5 relative z-10">
+        <div className={`${DZIN_SPACING.full.contentMt} relative z-10`}>
           <GASArchitectureExplorer />
         </div>
       </SurfaceCard>
@@ -157,8 +157,8 @@ export function DamageCalcPanel({ featureMap: _featureMap, defs: _defs }: Damage
           key={density}
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          transition={{ duration: DZIN_TIMING.DENSITY / 2 }}
+          exit={{ opacity: 0, transition: TRANSITION_EXIT }}
+          transition={TRANSITION_ENTER}
         >
           {density === 'micro' && <DamageCalcMicro />}
           {density === 'compact' && <DamageCalcCompact />}

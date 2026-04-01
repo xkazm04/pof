@@ -46,7 +46,7 @@ export function ProfileSection({
               {warningCount}
             </span>
           )}
-          <span className="text-[10px] font-mono uppercase tracking-[0.15em] text-text-muted">{fields.length} fields</span>
+          <span className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted">{fields.length} fields</span>
         </span>
       </button>
       <AnimatePresence>
@@ -73,7 +73,7 @@ export function ProfileSection({
                     className="group"
                   >
                     <div className="flex items-center gap-2">
-                      <span className="text-[10px] font-mono uppercase tracking-[0.15em] text-text-muted w-24 truncate flex-shrink-0">{f.label}</span>
+                      <span className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted w-24 truncate flex-shrink-0">{f.label}</span>
                       <div className="flex-1 relative h-4 flex items-center">
                         <div className="absolute inset-x-0 h-1.5 bg-surface-deep rounded-full" />
                         {cmpPct != null && (
@@ -95,7 +95,7 @@ export function ProfileSection({
                         className="w-16 text-xs font-mono font-bold text-right px-1.5 py-0.5 rounded bg-surface-deep border border-border/40 text-text focus:outline-none focus:border-blue-500/50"
                         style={{ textShadow: `0 0 12px ${color}40` }}
                       />
-                      <span className="text-[10px] font-mono uppercase tracking-[0.15em] text-text-muted/60 w-8 flex-shrink-0">{f.unit}</span>
+                      <span className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted/60 w-8 flex-shrink-0">{f.unit}</span>
                     </div>
                     {fieldWarnings?.get(f.key) && (() => {
                       const w = fieldWarnings.get(f.key)!;

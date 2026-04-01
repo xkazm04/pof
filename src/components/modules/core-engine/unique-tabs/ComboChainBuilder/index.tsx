@@ -68,7 +68,7 @@ export function ComboChainBuilder() {
               transition={{ delay: i * 0.08 }}
               className="text-xs bg-surface-deep/50 p-2 rounded-lg border border-border/40"
             >
-              <span className="text-[10px] font-mono font-bold uppercase tracking-[0.15em]" style={{ color: ACCENT_CYAN }}>{evt.tag}</span>
+              <span className="text-xs font-mono font-bold uppercase tracking-[0.15em]" style={{ color: ACCENT_CYAN }}>{evt.tag}</span>
               <p className="text-text-muted mt-0.5 leading-relaxed">{evt.desc}</p>
             </motion.div>
           ))}
@@ -83,7 +83,7 @@ export function ComboChainBuilder() {
             <button
               key={preset.id}
               onClick={() => loadPreset(preset)}
-              className={`px-2.5 py-1 rounded-lg text-[10px] font-mono font-bold uppercase tracking-[0.15em] border transition-all cursor-pointer ${
+              className={`px-2.5 py-1 rounded-lg text-xs font-mono font-bold uppercase tracking-[0.15em] border transition-all cursor-pointer ${
                 activePreset === preset.id ? 'shadow-sm' : 'opacity-60 hover:opacity-90'
               }`}
               style={activePreset === preset.id ? {
@@ -108,7 +108,7 @@ export function ComboChainBuilder() {
           <SectionHeader icon={Plus} label="Ability Palette" color={MODULE_COLORS.core} />
           <button
             onClick={clearChain}
-            className="flex items-center gap-1 text-[10px] font-mono uppercase tracking-[0.15em] text-text-muted hover:text-text transition-colors cursor-pointer px-2 py-0.5 rounded border border-border/40 hover:border-border"
+            className="flex items-center gap-1 text-xs font-mono uppercase tracking-[0.15em] text-text-muted hover:text-text transition-colors cursor-pointer px-2 py-0.5 rounded border border-border/40 hover:border-border"
           >
             <RotateCcw className="w-3 h-3" /> Clear
           </button>
@@ -156,7 +156,7 @@ export function ComboChainBuilder() {
               ))}
             </AnimatePresence>
             {chain.length === 0 && (
-              <div className="flex-1 flex items-center justify-center text-[10px] font-mono uppercase tracking-[0.15em] text-text-muted py-6">
+              <div className="flex-1 flex items-center justify-center text-xs font-mono uppercase tracking-[0.15em] text-text-muted py-6">
                 Click abilities above to build a combo chain
               </div>
             )}

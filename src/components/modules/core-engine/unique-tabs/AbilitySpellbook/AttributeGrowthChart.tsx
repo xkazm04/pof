@@ -22,12 +22,12 @@ export function AttributeGrowthChart() {
       {[0, 200, 400, 600].map(v => (
         <g key={v}>
           <line x1={pad.left} y1={toY(v)} x2={w - pad.right} y2={toY(v)} stroke="rgba(255,255,255,0.06)" strokeWidth={1} />
-          <text x={pad.left - 8} y={toY(v) + 3} textAnchor="end" className="text-[11px] font-mono fill-[var(--text-muted)]" style={{ fontSize: 11 }}>{v}</text>
+          <text x={pad.left - 8} y={toY(v) + 3} textAnchor="end" className="text-xs font-mono fill-[var(--text-muted)]">{v}</text>
         </g>
       ))}
       {/* X-axis labels */}
       {[1, 10, 20, 30, 40, 50].map(lvl => (
-        <text key={lvl} x={toX(lvl)} y={h - 5} textAnchor="middle" className="text-[11px] font-mono fill-[var(--text-muted)]" style={{ fontSize: 11 }}>Lv{lvl}</text>
+        <text key={lvl} x={toX(lvl)} y={h - 5} textAnchor="middle" className="text-xs font-mono fill-[var(--text-muted)]">Lv{lvl}</text>
       ))}
       {/* Build lines */}
       {GROWTH_BUILDS.map((build) => {
@@ -47,11 +47,11 @@ export function AttributeGrowthChart() {
       {GROWTH_BUILDS.map((build, i) => (
         <g key={build.name} transform={`translate(${pad.left + i * 90}, ${h - 18})`}>
           <rect width={10} height={3} rx={1} fill={build.color} />
-          <text x={14} y={4} className="text-[11px] font-mono font-bold" fill={build.color} style={{ fontSize: 11 }}>{build.name}</text>
+          <text x={14} y={4} className="text-xs font-mono font-bold" fill={build.color}>{build.name}</text>
         </g>
       ))}
       {/* Axis labels */}
-      <text x={w / 2} y={h} textAnchor="middle" className="text-[11px] font-mono fill-[var(--text-muted)]" style={{ fontSize: 11 }}>Level</text>
+      <text x={w / 2} y={h} textAnchor="middle" className="text-xs font-mono fill-[var(--text-muted)]">Level</text>
     </svg>
   );
 }

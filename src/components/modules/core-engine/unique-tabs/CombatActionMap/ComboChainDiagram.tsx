@@ -20,7 +20,7 @@ export function ComboChainDiagram({ status }: { status: FeatureStatus }) {
         </span>
       </div>
 
-      <div className="flex items-center gap-3 px-2 py-1 text-[10px] font-mono uppercase tracking-[0.15em] text-text-muted border-b border-border/40">
+      <div className="flex items-center gap-3 px-2 py-1 text-xs font-mono uppercase tracking-[0.15em] text-text-muted border-b border-border/40">
         <span className="w-[100px] flex-shrink-0">Attack</span>
         <span className="w-[100px] flex-shrink-0">Timing</span>
         <span className="w-[100px] flex-shrink-0">Window</span>
@@ -36,7 +36,7 @@ export function ComboChainDiagram({ status }: { status: FeatureStatus }) {
             transition={{ delay: i * 0.1 }}
             className="flex items-center gap-3 px-2 py-1.5 rounded hover:bg-surface-hover/30 transition-colors"
           >
-            <span className="text-[10px] font-mono uppercase tracking-[0.15em] text-text w-[100px] flex-shrink-0">{s.name}</span>
+            <span className="text-xs font-mono uppercase tracking-[0.15em] text-text w-[100px] flex-shrink-0">{s.name}</span>
             <span className="text-2xs font-mono text-text-muted w-[100px] flex-shrink-0">{s.timing}</span>
             <span
               className="text-2xs font-medium w-[100px] flex-shrink-0"

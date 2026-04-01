@@ -81,7 +81,7 @@ export function KillDeathStats({ accent }: KillDeathStatsProps) {
 function DeathCausesPie() {
   return (
     <div className="bg-surface-deep rounded-lg border border-border/30 p-3">
-      <div className="text-[10px] font-mono uppercase tracking-[0.15em] text-text-muted mb-2">
+      <div className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted mb-2">
         Death Causes
       </div>
       <div className="flex items-center gap-3">
@@ -128,7 +128,7 @@ function DeathCausesPie() {
 function DangerRanking() {
   return (
     <div className="bg-surface-deep rounded-lg border border-border/30 p-3">
-      <div className="text-[10px] font-mono uppercase tracking-[0.15em] text-text-muted mb-2">
+      <div className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted mb-2">
         Danger Ranking (Player Kills)
       </div>
       <div className="space-y-3">

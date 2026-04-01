@@ -162,7 +162,7 @@ export function EncounterTTKSimulator() {
             onChange={(e) => setEncLevel(Number(e.target.value))}
             className="w-full accent-orange-500 h-1.5 bg-surface-deep rounded-lg appearance-none cursor-pointer"
           />
-          <div className="flex justify-between text-[10px] text-text-muted mt-1"><span>1</span><span>25</span><span>50</span></div>
+          <div className="flex justify-between text-xs text-text-muted mt-1"><span>1</span><span>25</span><span>50</span></div>
         </div>
 
         {/* Build Preset */}
@@ -198,7 +198,7 @@ export function EncounterTTKSimulator() {
               <button
                 key={et.name}
                 onClick={() => setEncEnemyIdx(idx)}
-                className="flex items-center gap-1 px-2 py-1 rounded text-[11px] font-bold transition-all border"
+                className="flex items-center gap-1 px-2 py-1 rounded text-xs font-bold transition-all border"
                 style={{
                   backgroundColor: encEnemyIdx === idx ? `${et.color}${OPACITY_15}` : 'transparent',
                   borderColor: encEnemyIdx === idx ? `${et.color}${OPACITY_30}` : 'var(--border)',
@@ -217,7 +217,7 @@ export function EncounterTTKSimulator() {
           <span className="text-2xs font-bold uppercase tracking-widest text-text-muted block mb-1.5">Healthy TTK Ratio</span>
           <div className="flex items-center gap-2">
             <div className="flex-1">
-              <label className="text-[10px] text-text-muted">Min</label>
+              <label className="text-xs text-text-muted">Min</label>
               <input
                 title="Min healthy ratio"
                 type="number" min={1} max={10} step={0.5}
@@ -228,7 +228,7 @@ export function EncounterTTKSimulator() {
             </div>
             <span className="text-text-muted text-xs mt-3">:</span>
             <div className="flex-1">
-              <label className="text-[10px] text-text-muted">Max</label>
+              <label className="text-xs text-text-muted">Max</label>
               <input
                 title="Max healthy ratio"
                 type="number" min={1} max={20} step={0.5}
@@ -238,7 +238,7 @@ export function EncounterTTKSimulator() {
               />
             </div>
           </div>
-          <div className="text-[10px] text-text-muted mt-1">e.g. 2:1 to 5:1 (enemy dies faster)</div>
+          <div className="text-xs text-text-muted mt-1">e.g. 2:1 to 5:1 (enemy dies faster)</div>
         </div>
       </div>
 
@@ -248,40 +248,40 @@ export function EncounterTTKSimulator() {
         <div className="bg-surface-deep/30 rounded-xl p-4 border border-border/40">
           <div className="grid grid-cols-2 gap-3">
             <div className="text-center">
-              <div className="text-[10px] font-bold uppercase tracking-widest text-text-muted mb-1">Player DPS</div>
+              <div className="text-xs font-bold uppercase tracking-widest text-text-muted mb-1">Player DPS</div>
               <div className="text-xl font-mono font-bold" style={{ color: STATUS_SUCCESS }}>{encounterResult.playerDPS.toFixed(1)}</div>
             </div>
             <div className="text-center">
-              <div className="text-[10px] font-bold uppercase tracking-widest text-text-muted mb-1">Enemy DPS</div>
+              <div className="text-xs font-bold uppercase tracking-widest text-text-muted mb-1">Enemy DPS</div>
               <div className="text-xl font-mono font-bold" style={{ color: STATUS_ERROR }}>{encounterResult.enemyDPS.toFixed(1)}</div>
             </div>
             <div className="text-center">
-              <div className="text-[10px] font-bold uppercase tracking-widest text-text-muted mb-1">Player Eff. HP</div>
+              <div className="text-xs font-bold uppercase tracking-widest text-text-muted mb-1">Player Eff. HP</div>
               <div className="text-xl font-mono font-bold" style={{ color: ACCENT_EMERALD }}>{Math.round(encounterResult.playerEffectiveHP).toLocaleString()}</div>
             </div>
             <div className="text-center">
-              <div className="text-[10px] font-bold uppercase tracking-widest text-text-muted mb-1">Enemy HP</div>
+              <div className="text-xs font-bold uppercase tracking-widest text-text-muted mb-1">Enemy HP</div>
               <div className="text-xl font-mono font-bold" style={{ color: ACCENT_VIOLET }}>{Math.round(encounterResult.enemyHP).toLocaleString()}</div>
             </div>
           </div>
 
           <div className="mt-3 pt-3 border-t border-border/40 grid grid-cols-3 gap-2">
             <div className="text-center">
-              <div className="text-[10px] font-bold uppercase tracking-widest text-text-muted mb-0.5">Player TTK</div>
+              <div className="text-xs font-bold uppercase tracking-widest text-text-muted mb-0.5">Player TTK</div>
               <div className="text-sm font-mono font-bold" style={{ color: STATUS_SUCCESS }}>
                 {encounterResult.playerTTK < 999 ? `${encounterResult.playerTTK.toFixed(1)}s` : '\u221E'}
               </div>
-              <div className="text-[10px] text-text-muted">{encounterResult.hitsToKillEnemy} hits</div>
+              <div className="text-xs text-text-muted">{encounterResult.hitsToKillEnemy} hits</div>
             </div>
             <div className="text-center">
-              <div className="text-[10px] font-bold uppercase tracking-widest text-text-muted mb-0.5">Enemy TTK</div>
+              <div className="text-xs font-bold uppercase tracking-widest text-text-muted mb-0.5">Enemy TTK</div>
               <div className="text-sm font-mono font-bold" style={{ color: STATUS_ERROR }}>
                 {encounterResult.enemyTTK < 999 ? `${encounterResult.enemyTTK.toFixed(1)}s` : '\u221E'}
               </div>
-              <div className="text-[10px] text-text-muted">{encounterResult.hitsToKillPlayer} hits</div>
+              <div className="text-xs text-text-muted">{encounterResult.hitsToKillPlayer} hits</div>
             </div>
             <div className="text-center">
-              <div className="text-[10px] font-bold uppercase tracking-widest text-text-muted mb-0.5">TTK Ratio</div>
+              <div className="text-xs font-bold uppercase tracking-widest text-text-muted mb-0.5">TTK Ratio</div>
               <div className="text-sm font-mono font-bold" style={{ color: verdict.color }}>
                 {encounterResult.ttkRatio < 99 ? `${encounterResult.ttkRatio.toFixed(2)}:1` : '\u221E:1'}
               </div>
@@ -291,7 +291,7 @@ export function EncounterTTKSimulator() {
 
         {/* Balance Gauge + Warnings */}
         <div className="bg-surface-deep/30 rounded-xl p-4 border border-border/40 flex flex-col">
-          <div className="text-[10px] font-bold uppercase tracking-widest text-text-muted mb-2">Balance Gauge</div>
+          <div className="text-xs font-bold uppercase tracking-widest text-text-muted mb-2">Balance Gauge</div>
           <div className="relative h-6 bg-surface-deep rounded-full border border-border/40 overflow-hidden mb-2">
             <div className="absolute inset-0 flex">
               <div className="h-full" style={{ width: '15%', backgroundColor: `${STATUS_ERROR}20` }} />
@@ -339,7 +339,7 @@ export function EncounterTTKSimulator() {
             {encounterResult.balanceVerdict !== 'balanced' && (
               <div className="mt-2 space-y-1">
                 {encounterResult.ttkRatio < encHealthyMin && (
-                  <div className="text-[11px] font-mono px-2 py-1 rounded border" style={{
+                  <div className="text-xs font-mono px-2 py-1 rounded border" style={{
                     color: STATUS_ERROR,
                     borderColor: `${STATUS_ERROR}${OPACITY_20}`,
                     backgroundColor: `${STATUS_ERROR}${OPACITY_10}`,
@@ -348,7 +348,7 @@ export function EncounterTTKSimulator() {
                   </div>
                 )}
                 {encounterResult.ttkRatio > encHealthyMax && (
-                  <div className="text-[11px] font-mono px-2 py-1 rounded border" style={{
+                  <div className="text-xs font-mono px-2 py-1 rounded border" style={{
                     color: ACCENT_CYAN,
                     borderColor: `${ACCENT_CYAN}${OPACITY_20}`,
                     backgroundColor: `${ACCENT_CYAN}${OPACITY_10}`,
@@ -357,7 +357,7 @@ export function EncounterTTKSimulator() {
                   </div>
                 )}
                 {encounterResult.hitsToKillEnemy <= 2 && (
-                  <div className="text-[11px] font-mono px-2 py-1 rounded border" style={{
+                  <div className="text-xs font-mono px-2 py-1 rounded border" style={{
                     color: STATUS_WARNING,
                     borderColor: `${STATUS_WARNING}${OPACITY_20}`,
                     backgroundColor: `${STATUS_WARNING}${OPACITY_10}`,
@@ -366,7 +366,7 @@ export function EncounterTTKSimulator() {
                   </div>
                 )}
                 {encounterResult.hitsToKillPlayer <= 3 && (
-                  <div className="text-[11px] font-mono px-2 py-1 rounded border" style={{
+                  <div className="text-xs font-mono px-2 py-1 rounded border" style={{
                     color: STATUS_ERROR,
                     borderColor: `${STATUS_ERROR}${OPACITY_20}`,
                     backgroundColor: `${STATUS_ERROR}${OPACITY_10}`,
@@ -378,7 +378,7 @@ export function EncounterTTKSimulator() {
             )}
           </div>
 
-          <div className="mt-2 pt-2 border-t border-border/40 text-[10px] text-text-muted font-mono">
+          <div className="mt-2 pt-2 border-t border-border/40 text-xs text-text-muted font-mono">
             Healthy range: {encHealthyMin}:1 – {encHealthyMax}:1 | {BUILD_PRESETS[encBuildIdx].name} Lv{encLevel} vs {ENEMY_TYPES[encEnemyIdx].name}
           </div>
         </div>

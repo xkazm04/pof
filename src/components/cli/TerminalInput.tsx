@@ -2,6 +2,7 @@
 
 import { useCallback } from 'react';
 import { Send, Square } from 'lucide-react';
+import { MODULE_COLORS, CLI_COLORS } from '@/lib/chart-colors';
 
 interface TerminalInputProps {
   input: string;
@@ -38,7 +39,7 @@ export function TerminalInput({
 
   return (
     <div className="flex items-start gap-2 px-3 py-2 border-t border-border bg-surface-deep">
-      <span className="text-[#3b82f6] text-xs font-mono mt-[5px]">{'>'}</span>
+      <span className="text-xs font-mono mt-[5px]" style={{ color: MODULE_COLORS.core }}>{'>'}</span>
       <textarea
         ref={inputRef}
         value={input}
@@ -55,11 +56,11 @@ export function TerminalInput({
         style={{ height: '20px', maxHeight: '88px' }}
       />
       {isStreaming ? (
-        <button onClick={onAbort} className="p-1 mt-[3px] text-red-400 hover:bg-status-red-medium rounded transition-colors">
+        <button onClick={onAbort} className={`p-1 mt-[3px] ${CLI_COLORS.error} hover:bg-status-red-medium rounded transition-colors`}>
           <Square className="w-3 h-3" />
         </button>
       ) : (
-        <button onClick={() => onSubmit(false)} disabled={!input.trim()} className="p-1 mt-[3px] text-[#3b82f6] hover:bg-[#3b82f6]/20 rounded transition-colors">
+        <button onClick={() => onSubmit(false)} disabled={!input.trim()} className="p-1 mt-[3px] hover:bg-blue-500/20 rounded transition-colors" style={{ color: MODULE_COLORS.core }}>
           <Send className="w-3 h-3" />
         </button>
       )}

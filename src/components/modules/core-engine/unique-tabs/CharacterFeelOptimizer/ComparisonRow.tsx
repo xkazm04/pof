@@ -25,7 +25,7 @@ export function ComparisonRow({ item, colorA, colorB }: {
 
   return (
     <div className="flex items-center gap-2 px-2 py-1 rounded hover:bg-surface/20 transition-colors text-xs font-mono">
-      <span className="text-[10px] font-mono uppercase tracking-[0.15em] text-text-muted w-28 truncate flex-shrink-0">
+      <span className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted w-28 truncate flex-shrink-0">
         {item.label}
       </span>
       <div className="flex-1 flex items-center gap-1">

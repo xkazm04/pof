@@ -31,7 +31,7 @@ export function BreedingTab({
         </p>
         <div className="grid grid-cols-2 gap-3">
           <div>
-            <span className="text-[10px] font-mono uppercase tracking-[0.15em] text-text-muted block mb-1">Parent A</span>
+            <span className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted block mb-1">Parent A</span>
             <select
               value={breedParentA ?? ''}
               onChange={(e) => setBreedParentA(e.target.value || null)}
@@ -44,7 +44,7 @@ export function BreedingTab({
             </select>
           </div>
           <div>
-            <span className="text-[10px] font-mono uppercase tracking-[0.15em] text-text-muted block mb-1">Parent B</span>
+            <span className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted block mb-1">Parent B</span>
             <select
               value={breedParentB ?? ''}
               onChange={(e) => setBreedParentB(e.target.value || null)}
@@ -77,7 +77,7 @@ export function BreedingTab({
               <BlueprintPanel key={pid} color={parent.color} className="p-3 space-y-3">
                 <div className="flex items-center gap-2">
                   <span className="w-2 h-2 rounded-full" style={{ backgroundColor: parent.color }} />
-                  <span className="text-[10px] font-mono uppercase tracking-[0.15em] font-bold text-text">
+                  <span className="text-xs font-mono uppercase tracking-[0.15em] font-bold text-text">
                     Parent {idx === 0 ? 'A' : 'B'}: {parent.name}
                   </span>
                 </div>

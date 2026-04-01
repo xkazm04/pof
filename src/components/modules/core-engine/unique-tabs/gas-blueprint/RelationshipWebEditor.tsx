@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useCallback, useMemo, useRef, useEffect } from 'react';
+import { useReducedMotion } from 'framer-motion';
 import { Trash2, ArrowRight } from 'lucide-react';
 import {
   STATUS_SUCCESS, STATUS_WARNING,
@@ -17,6 +18,7 @@ export function RelationshipWebEditor({
   relationships: AttrRelationship[];
   onChange: (rels: AttrRelationship[]) => void;
 }) {
+  const prefersReduced = useReducedMotion();
   const [dragSource, setDragSource] = useState<string | null>(null);
   const [dragMouse, setDragMouse] = useState<{ x: number; y: number } | null>(null);
   const svgRef = useRef<SVGSVGElement>(null);
@@ -120,7 +122,7 @@ export function RelationshipWebEditor({
                   opacity={0.6}
                   markerEnd="url(#gas-arrow)"
                 />
-                {(rel.type === 'scale' || rel.type === 'regen') && (
+                {(rel.type === 'scale' || rel.type === 'regen') && !prefersReduced && (
                   <circle r={2} fill={relColors[rel.type]} opacity={0.6} className="pointer-events-none">
                     <animateMotion
                       dur={rel.type === 'regen' ? '1.5s' : '2.5s'}

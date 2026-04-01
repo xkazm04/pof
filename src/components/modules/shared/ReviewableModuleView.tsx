@@ -1,11 +1,12 @@
 'use client';
 
 import { useState, useCallback, useEffect, useRef, type ReactNode } from 'react';
+import { motion } from 'framer-motion';
 import { useSuspendableEffect } from '@/hooks/useSuspend';
 import type { LucideIcon } from 'lucide-react';
 import { ChevronLeft, ChevronRight, Zap } from 'lucide-react';
 import { TaskFactory } from '@/lib/cli-task';
-import { getAppOrigin, UI_TIMEOUTS } from '@/lib/constants';
+import { getAppOrigin, UI_TIMEOUTS, Z_INDEX } from '@/lib/constants';
 import type { FeatureRow } from '@/types/feature-matrix';
 import { MODULE_FEATURE_DEFINITIONS } from '@/lib/feature-definitions';
 import { useModuleCLI } from '@/hooks/useModuleCLI';
@@ -304,11 +305,11 @@ export function ReviewableModuleView({
         </div>
 
         {/* Tab bar */}
-        <div className="flex items-center gap-1 mb-5 border-b border-border">
-          <TabButton label="Overview" active={activeTab === 'overview'} onClick={() => setActiveTab('overview')} accentColor={accentColor} />
-          <TabButton label="Roadmap" active={activeTab === 'roadmap'} onClick={() => setActiveTab('roadmap')} accentColor={accentColor} />
+        <div className="flex items-center gap-1 mb-5 border-b border-border" role="tablist" aria-label={`${moduleLabel} sections`}>
+          <TabButton id="overview" label="Overview" active={activeTab === 'overview'} onClick={() => setActiveTab('overview')} accentColor={accentColor} />
+          <TabButton id="roadmap" label="Roadmap" active={activeTab === 'roadmap'} onClick={() => setActiveTab('roadmap')} accentColor={accentColor} />
           {extraTabs.map((tab) => (
-            <TabButton key={tab.id} label={tab.label} active={activeTab === tab.id} onClick={() => setActiveTab(tab.id)} accentColor={accentColor} />
+            <TabButton key={tab.id} id={tab.id} label={tab.label} active={activeTab === tab.id} onClick={() => setActiveTab(tab.id)} accentColor={accentColor} />
           ))}
         </div>
 
@@ -317,6 +318,7 @@ export function ReviewableModuleView({
 
         {/* Tab content */}
         {activeTab === 'overview' && (
+          <div role="tabpanel" id="tabpanel-overview" aria-labelledby="tab-overview">
           <FeatureMatrix
             key={reviewRefetchTrigger}
             moduleId={moduleId}
@@ -328,10 +330,12 @@ export function ReviewableModuleView({
             isFixing={fixCli.isRunning}
             onReviewFeature={handleReviewFeature}
           />
+          </div>
         )}
 
         {activeTab === 'roadmap' && (
-          checklist.length > 0 ? (
+          <div role="tabpanel" id="tabpanel-roadmap" aria-labelledby="tab-roadmap">
+          {checklist.length > 0 ? (
             <RoadmapChecklist
               items={checklist}
               subModuleId={moduleId}
@@ -345,19 +349,20 @@ export function ReviewableModuleView({
             />
           ) : (
             <p className="text-sm text-text-muted">No checklist items defined for this module yet.</p>
-          )
+          )}
+          </div>
         )}
 
         {extraTabs.map((tab) => (
-          activeTab === tab.id ? <div key={tab.id} className="flex flex-col" style={{ minHeight: 'calc(100vh - 180px)' }}>{tab.render(moduleId)}</div> : null
+          activeTab === tab.id ? <div key={tab.id} role="tabpanel" id={`tabpanel-${tab.id}`} aria-labelledby={`tab-${tab.id}`} className="flex flex-col" style={{ minHeight: 'calc(100vh - 180px)' }}>{tab.render(moduleId)}</div> : null
         ))}
       </div>
 
       {/* Quick Actions toggle — fixed on right edge */}
       <button
         onClick={() => setPanelCollapsed(false)}
-        className="absolute right-0 top-3 z-20 w-7 h-14 rounded-l-lg bg-surface border border-r-0 border-border flex items-center justify-center text-text-muted hover:text-text hover:bg-surface-hover transition-colors shadow-md"
-        style={{ display: panelCollapsed ? undefined : 'none' }}
+        className="absolute right-0 top-3 w-7 h-14 rounded-l-lg bg-surface border border-r-0 border-border flex items-center justify-center text-text-muted hover:text-text hover:bg-surface-hover transition-colors shadow-md"
+        style={{ zIndex: Z_INDEX.overlay, display: panelCollapsed ? undefined : 'none' }}
         title="Open Quick Actions"
       >
         <ChevronLeft className="w-3.5 h-3.5" />
@@ -366,16 +371,18 @@ export function ReviewableModuleView({
       {/* Backdrop overlay */}
       {!panelCollapsed && (
         <div
-          className="fixed inset-0 z-30 bg-black/40 animate-in fade-in duration-200"
+          className="fixed inset-0 bg-black/40 animate-in fade-in duration-200"
+          style={{ zIndex: Z_INDEX.backdrop }}
           onClick={() => setPanelCollapsed(true)}
         />
       )}
 
       {/* Quick Actions slide-over panel */}
       <div
-        className={`fixed top-0 right-0 z-40 h-full w-1/2 max-w-[600px] min-w-[320px] bg-surface-deep border-l border-border shadow-2xl transition-transform duration-300 ease-out ${
+        className={`fixed top-0 right-0 h-full w-1/2 max-w-[600px] min-w-[320px] bg-surface-deep border-l border-border shadow-2xl transition-transform duration-300 ease-out ${
           panelCollapsed ? 'translate-x-full' : 'translate-x-0'
         }`}
+        style={{ zIndex: Z_INDEX.panel }}
       >
         {/* Panel header */}
         <div className="flex items-center justify-between px-4 py-3 border-b border-border">
@@ -411,11 +418,12 @@ export function ReviewableModuleView({
       {/* Toast notification */}
       {toast && (
         <div
-          className={`absolute bottom-4 right-4 z-50 flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium shadow-lg border animate-in fade-in slide-in-from-bottom-2 ${
+          className={`absolute bottom-4 right-4 flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium shadow-lg border animate-in fade-in slide-in-from-bottom-2 ${
             toast.type === 'success'
               ? 'bg-surface border-green-500/30 text-green-400'
               : 'bg-surface border-status-red-strong text-red-400'
           }`}
+          style={{ zIndex: Z_INDEX.toast }}
         >
           <span
             className="w-1.5 h-1.5 rounded-full flex-shrink-0"
@@ -428,7 +436,8 @@ export function ReviewableModuleView({
   );
 }
 
-function TabButton({ label, active, onClick, accentColor }: {
+function TabButton({ id, label, active, onClick, accentColor }: {
+  id: string;
   label: string;
   active: boolean;
   onClick: () => void;
@@ -436,6 +445,10 @@ function TabButton({ label, active, onClick, accentColor }: {
 }) {
   return (
     <button
+      role="tab"
+      id={`tab-${id}`}
+      aria-selected={active}
+      aria-controls={`tabpanel-${id}`}
       onClick={onClick}
       className={`px-4 py-2 text-xs font-medium transition-colors relative ${
         active ? 'text-text' : 'text-text-muted hover:text-text'
@@ -443,9 +456,11 @@ function TabButton({ label, active, onClick, accentColor }: {
     >
       {label}
       {active && (
-        <span
+        <motion.span
+          layoutId="tab-indicator"
           className="absolute bottom-0 left-0 right-0 h-0.5 rounded-t"
           style={{ backgroundColor: accentColor }}
+          transition={{ type: 'spring', stiffness: 500, damping: 35 }}
         />
       )}
     </button>

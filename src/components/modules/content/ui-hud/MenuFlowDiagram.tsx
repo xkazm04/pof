@@ -308,7 +308,7 @@ export function MenuFlowDiagram({ onGenerate, isGenerating }: MenuFlowDiagramPro
           </div>
           <div>
             <h3 className="text-sm font-bold tracking-widest uppercase text-indigo-100 shadow-[0_0_10px_rgba(99,102,241,0.5)]">UI Node Flow Matrix</h3>
-            <p className="text-xs text-indigo-400/60 uppercase tracking-widest mt-1">
+            <p className="text-xs text-indigo-400/60 uppercase mt-1">
               INTERFACE_TOPOLOGY_AND_SCREEN_ROUTING
             </p>
           </div>
@@ -324,7 +324,7 @@ export function MenuFlowDiagram({ onGenerate, isGenerating }: MenuFlowDiagramPro
         <div className="absolute top-4 left-4 z-10 flex items-center gap-2">
           <button
             onClick={addScreen}
-            className="flex items-center gap-2 px-3 py-2 rounded-lg text-xs uppercase font-bold tracking-widest bg-indigo-950/40 border border-indigo-900/50 text-indigo-300 hover:text-white hover:bg-indigo-600/30 hover:border-indigo-500/50 transition-all shadow-[0_0_15px_rgba(0,0,0,0.5)] group backdrop-blur-sm"
+            className="flex items-center gap-2 px-3 py-2 rounded-lg text-xs uppercase font-bold bg-indigo-950/40 border border-indigo-900/50 text-indigo-300 hover:text-white hover:bg-indigo-600/30 hover:border-indigo-500/50 transition-all shadow-[0_0_15px_rgba(0,0,0,0.5)] group backdrop-blur-sm"
           >
             <Plus className="w-3.5 h-3.5 group-hover:scale-110 transition-transform" />
             Add Screen
@@ -332,7 +332,7 @@ export function MenuFlowDiagram({ onGenerate, isGenerating }: MenuFlowDiagramPro
           {connectingFrom ? (
             <button
               onClick={() => setConnectingFrom(null)}
-              className="flex items-center gap-2 px-3 py-2 rounded-lg text-xs uppercase font-bold tracking-widest bg-rose-950/40 border border-rose-900/50 text-rose-400 hover:text-white hover:bg-rose-600/30 hover:border-rose-500/50 transition-all shadow-[0_0_15px_rgba(0,0,0,0.5)] backdrop-blur-sm"
+              className="flex items-center gap-2 px-3 py-2 rounded-lg text-xs uppercase font-bold bg-rose-950/40 border border-rose-900/50 text-rose-400 hover:text-white hover:bg-rose-600/30 hover:border-rose-500/50 transition-all shadow-[0_0_15px_rgba(0,0,0,0.5)] backdrop-blur-sm"
             >
               <Unlink className="w-3.5 h-3.5" />
               Cancel Route
@@ -340,7 +340,7 @@ export function MenuFlowDiagram({ onGenerate, isGenerating }: MenuFlowDiagramPro
           ) : connectingFrom === null && selectedId && (
             <button
               onClick={() => startConnection(selectedId)}
-              className="flex items-center gap-2 px-3 py-2 rounded-lg text-xs uppercase font-bold tracking-widest bg-emerald-950/40 border border-emerald-900/50 text-emerald-400 hover:text-white hover:bg-emerald-600/30 hover:border-emerald-500/50 transition-all shadow-[0_0_15px_rgba(0,0,0,0.5)] backdrop-blur-sm group"
+              className="flex items-center gap-2 px-3 py-2 rounded-lg text-xs uppercase font-bold bg-emerald-950/40 border border-emerald-900/50 text-emerald-400 hover:text-white hover:bg-emerald-600/30 hover:border-emerald-500/50 transition-all shadow-[0_0_15px_rgba(0,0,0,0.5)] backdrop-blur-sm group"
             >
               <Link className="w-3.5 h-3.5 group-hover:scale-110 transition-transform" />
               Connect Route
@@ -349,7 +349,7 @@ export function MenuFlowDiagram({ onGenerate, isGenerating }: MenuFlowDiagramPro
         </div>
 
         {/* Badge */}
-        <div className="absolute top-4 right-4 z-10 px-3 py-1.5 rounded-lg text-[11px] uppercase font-bold tracking-widest bg-indigo-950/40 border border-indigo-900/50 text-indigo-400/80 shadow-[0_0_15px_rgba(0,0,0,0.5)] backdrop-blur-sm">
+        <div className="absolute top-4 right-4 z-10 px-3 py-1.5 rounded-lg text-[11px] uppercase font-bold bg-indigo-950/40 border border-indigo-900/50 text-indigo-400/80 shadow-[0_0_15px_rgba(0,0,0,0.5)] backdrop-blur-sm">
           {screens.length} SCREENS <span className="text-indigo-900 font-black mx-1">/</span> {transitions.length} ROUTES
         </div>
 
@@ -613,7 +613,7 @@ export function MenuFlowDiagram({ onGenerate, isGenerating }: MenuFlowDiagramPro
 
         {/* Help text */}
         {connectingFrom && (
-          <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-10 px-4 py-2 rounded-xl text-xs uppercase font-bold tracking-widest bg-amber-950/80 border border-amber-900/50 text-amber-400 shadow-[0_0_20px_rgba(245,158,11,0.2)] backdrop-blur-md animate-pulse">
+          <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-10 px-4 py-2 rounded-xl text-xs uppercase font-bold bg-amber-950/80 border border-amber-900/50 text-amber-400 shadow-[0_0_20px_rgba(245,158,11,0.2)] backdrop-blur-md animate-pulse">
             Select target matrix node to establish route, or click background to abort
           </div>
         )}
@@ -631,7 +631,7 @@ export function MenuFlowDiagram({ onGenerate, isGenerating }: MenuFlowDiagramPro
       {/* ── Transition List ── */}
       {transitions.length > 0 && (
         <div className="p-5 bg-black/40 border border-indigo-900/40 rounded-2xl shadow-inner relative z-10">
-          <div className="flex items-center gap-2 text-xs uppercase tracking-widest text-indigo-400 font-bold mb-4">
+          <div className="flex items-center gap-2 text-xs uppercase text-indigo-400 font-bold mb-4">
             <Unlink className="w-3.5 h-3.5" />
             Active Routing Pathways
           </div>
@@ -648,7 +648,7 @@ export function MenuFlowDiagram({ onGenerate, isGenerating }: MenuFlowDiagramPro
                   <div className="flex-1 flex items-center justify-between text-[11px] font-bold tracking-wider uppercase bg-indigo-950/20 rounded-md px-3 py-1.5 border border-indigo-900/30">
                     <span className="text-white drop-shadow-md" style={{ color: SCREEN_TYPES[fromScr.type].color }}>{fromScr.name}</span>
                     <div className="flex flex-col items-center flex-1 px-4">
-                      <span className="text-[11px] text-indigo-400/60 font-mono tracking-widest mb-0.5 truncate max-w-[120px]">{tr.trigger}</span>
+                      <span className="text-[11px] text-indigo-400/60 font-mono mb-0.5 truncate max-w-[120px]">{tr.trigger}</span>
                       <div className="w-full h-px bg-indigo-900/40 relative">
                         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-black px-1 text-indigo-500">{tr.bidirectional ? '⟷' : '→'}</div>
                       </div>
@@ -686,7 +686,7 @@ export function MenuFlowDiagram({ onGenerate, isGenerating }: MenuFlowDiagramPro
         <button
           onClick={() => onGenerate(config)}
           disabled={isGenerating || screens.length === 0}
-          className="relative w-full overflow-hidden flex items-center justify-center gap-3 px-6 py-4 rounded-xl text-[11px] font-bold uppercase tracking-widest transition-all disabled:opacity-50 group outline-none focus:ring-2 focus:ring-indigo-500/50 focus:ring-offset-2 focus:ring-offset-[#03030a]"
+          className="relative w-full overflow-hidden flex items-center justify-center gap-3 px-6 py-4 rounded-xl text-[11px] font-bold uppercase transition-all disabled:opacity-50 group outline-none focus:ring-2 focus:ring-indigo-500/50 focus:ring-offset-2 focus:ring-offset-[#03030a]"
           style={{
             backgroundColor: 'rgba(99,102,241,0.15)',
             color: STATUS_STALE,
@@ -750,7 +750,7 @@ function ScreenEditor({
           >
             {cfg.icon}
           </div>
-          <span className="text-[11px] font-bold uppercase tracking-widest text-white drop-shadow-md">Node Configuration</span>
+          <span className="text-[11px] font-bold uppercase text-white drop-shadow-md">Node Configuration</span>
         </div>
         <button onClick={onClose} className="p-2 rounded-lg bg-indigo-950/40 border border-indigo-900/40 text-indigo-400 hover:text-white hover:bg-indigo-600/30 hover:border-indigo-500/50 transition-colors">
           <X className="w-4 h-4" />
@@ -761,7 +761,7 @@ function ScreenEditor({
         <div className="space-y-4">
           {/* Name */}
           <div className="space-y-1.5 flex flex-col">
-            <label className="text-[11px] uppercase tracking-widest text-indigo-400 font-bold ml-1 flex items-center gap-2">
+            <label className="text-[11px] uppercase text-indigo-400 font-bold ml-1 flex items-center gap-2">
               <div className="w-1.5 h-1.5 rounded-full bg-indigo-500" /> Identifier String
             </label>
             <input
@@ -774,7 +774,7 @@ function ScreenEditor({
 
           {/* Type */}
           <div className="space-y-1.5 flex flex-col">
-            <label className="text-[11px] uppercase tracking-widest text-indigo-400 font-bold ml-1 flex items-center gap-2">
+            <label className="text-[11px] uppercase text-indigo-400 font-bold ml-1 flex items-center gap-2">
               <div className="w-1.5 h-1.5 rounded-full bg-indigo-500" /> Class Designation
             </label>
             <div className="relative">
@@ -795,7 +795,7 @@ function ScreenEditor({
 
         {/* Widgets */}
         <div className="space-y-2.5 flex flex-col">
-          <label className="text-[11px] uppercase tracking-widest text-indigo-400 font-bold ml-1 flex items-center gap-2">
+          <label className="text-[11px] uppercase text-indigo-400 font-bold ml-1 flex items-center gap-2">
             <div className="w-1.5 h-1.5 rounded-full bg-indigo-500" /> Embedded UI Elements <span className="bg-indigo-900/50 text-indigo-200 px-1.5 py-0.5 rounded text-[11px]">{screen.widgets.length}</span>
           </label>
           <div className="flex-1 bg-black/40 border border-indigo-900/50 rounded-xl p-3 flex flex-col gap-3 shadow-inner max-h-[140px] overflow-y-auto global-scrollbar">
@@ -804,7 +804,7 @@ function ScreenEditor({
                 {screen.widgets.map((w, i) => (
                   <span
                     key={i}
-                    className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs uppercase font-bold tracking-widest border transition-colors shadow-sm"
+                    className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs uppercase font-bold border transition-colors shadow-sm"
                     style={{
                       color: 'white',
                       borderColor: `${cfg.color}40`,
@@ -823,7 +823,7 @@ function ScreenEditor({
                 ))}
               </div>
             ) : (
-              <div className="text-xs text-indigo-900/50 font-mono uppercase tracking-widest text-center my-auto">
+              <div className="text-xs text-indigo-900/50 font-mono uppercase text-center my-auto">
                 No embedded elements assigned
               </div>
             )}
@@ -836,7 +836,7 @@ function ScreenEditor({
               onChange={(e) => setNewWidget(e.target.value)}
               onKeyDown={(e) => { if (e.key === 'Enter') addWidget(); }}
               placeholder="E.G. PROGRESS_BAR_01"
-              className="flex-1 px-3 py-2 bg-black/50 border border-indigo-900/60 rounded-lg text-xs font-mono text-white placeholder-indigo-900/40 outline-none focus:border-indigo-400 focus:ring-1 focus:ring-indigo-400/50 shadow-inner transition-all uppercase tracking-widest"
+              className="flex-1 px-3 py-2 bg-black/50 border border-indigo-900/60 rounded-lg text-xs font-mono text-white placeholder-indigo-900/40 outline-none focus:border-indigo-400 focus:ring-1 focus:ring-indigo-400/50 shadow-inner transition-all uppercase"
             />
             <button
               onClick={addWidget}

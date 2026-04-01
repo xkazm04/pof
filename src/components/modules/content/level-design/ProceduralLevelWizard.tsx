@@ -308,7 +308,7 @@ export function ProceduralLevelWizard({ onGenerate, isGenerating }: ProceduralLe
           initial={{ opacity: 0, y: -5 }} animate={{ opacity: 1, y: 0 }}
           className="text-xs px-3 py-2 rounded-lg bg-black/40 border border-violet-900/30 text-violet-300/80 font-mono"
         >
-          <span className="text-violet-500 font-bold mr-2">RECOMMENDED_FOR:</span>
+          <span className="text-violet-500 font-bold mr-2">Recommended For:</span>
           {algDef.bestFor.toUpperCase()}
         </motion.p>
       </div>

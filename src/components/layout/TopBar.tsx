@@ -230,7 +230,7 @@ export function TopBar() {
                 aria-label={`Project: ${projectName}`}
                 aria-expanded={dropdownOpen}
                 aria-haspopup="menu"
-                className="flex items-center gap-1 text-sm text-text-muted hover:text-text transition-colors rounded px-1.5 py-0.5 hover:bg-surface"
+                className="flex items-center gap-1 text-sm text-text-muted hover:text-text transition-colors rounded px-1.5 py-0.5 hover:bg-surface focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-strong focus-visible:ring-offset-1 focus-visible:ring-offset-surface-deep"
               >
                 {projectName}
                 <ChevronDown className={`w-3 h-3 transition-transform ${dropdownOpen ? 'rotate-180' : ''}`} />
@@ -289,7 +289,7 @@ export function TopBar() {
                         setRenaming(false);
                         setConfirmDelete(false);
                       }}
-                      className="w-full flex items-center gap-2.5 px-3 py-2.5 text-xs text-text hover:bg-surface-hover transition-colors"
+                      className="w-full flex items-center gap-2.5 px-3 py-2.5 text-xs text-text hover:bg-surface-hover transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent-strong"
                     >
                       <FolderOpen className="w-3.5 h-3.5 text-text-muted" />
                       Switch Project
@@ -338,7 +338,7 @@ export function TopBar() {
                       ) : (
                         <button
                           onClick={handleRenameStart}
-                          className="w-full flex items-center gap-2.5 px-3 py-2.5 text-xs text-text hover:bg-surface-hover transition-colors"
+                          className="w-full flex items-center gap-2.5 px-3 py-2.5 text-xs text-text hover:bg-surface-hover transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent-strong"
                         >
                           <Pencil className="w-3.5 h-3.5 text-text-muted" />
                           Rename Project
@@ -372,7 +372,7 @@ export function TopBar() {
                             setConfirmDelete(true);
                             setRenaming(false);
                           }}
-                          className="w-full flex items-center gap-2.5 px-3 py-2.5 text-xs text-red-400 hover:bg-status-red-subtle transition-colors"
+                          className="w-full flex items-center gap-2.5 px-3 py-2.5 text-xs text-red-400 hover:bg-status-red-subtle transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent-strong"
                         >
                           <Trash2 className="w-3.5 h-3.5" />
                           Delete Project
@@ -607,7 +607,7 @@ function NotificationBadge() {
       onClick={toggleOpen}
       aria-label={`Activity feed${unreadCount > 0 ? `, ${unreadCount} unread` : ''}`}
       aria-expanded={isOpen}
-      className={`relative p-1.5 rounded-md transition-colors ${
+      className={`relative p-1.5 rounded-md transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-strong focus-visible:ring-offset-1 focus-visible:ring-offset-surface-deep ${
         isOpen
           ? 'bg-status-red-subtle text-[#ef4444]'
           : 'text-text-muted hover:text-text hover:bg-surface'
@@ -672,7 +672,7 @@ function SearchTrigger() {
   return (
     <button
       onClick={handleClick}
-      className="flex items-center gap-2 px-2.5 py-1 rounded-md text-xs text-text-muted hover:text-text bg-background border border-border hover:border-border-bright transition-colors"
+      className="flex items-center gap-2 px-2.5 py-1 rounded-md text-xs text-text-muted hover:text-text bg-background border border-border hover:border-border-bright transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-strong focus-visible:ring-offset-1 focus-visible:ring-offset-surface-deep"
       title="Search (Ctrl+K)"
     >
       <Search className="w-3 h-3" />

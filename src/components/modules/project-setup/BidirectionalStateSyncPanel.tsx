@@ -380,7 +380,7 @@ export function BidirectionalStateSyncPanel() {
   }, []);
 
   return (
-    <SurfaceCard className="p-0 overflow-hidden" data-testid="bidirectional-state-sync-panel">
+    <SurfaceCard className="p-0 overflow-hidden" data-testid="bidirectional-state-sync-panel" role="region" aria-label="Bidirectional State Sync">
       {/* ── Header ───────────────────────────────────────────────── */}
       <div className="px-4 py-3 border-b border-border/40">
         <div className="flex items-center gap-3">
@@ -394,6 +394,8 @@ export function BidirectionalStateSyncPanel() {
               {isLive && (
                 <motion.span
                   className="flex items-center gap-1 px-1.5 py-0.5 rounded text-2xs font-bold"
+                  role="status"
+                  aria-live="polite"
                   style={{ color: STATUS_SUCCESS, backgroundColor: `${STATUS_SUCCESS}${OPACITY_15}` }}
                   animate={{ opacity: [0.7, 1, 0.7] }}
                   transition={{ duration: 2, repeat: Infinity }}
@@ -404,6 +406,7 @@ export function BidirectionalStateSyncPanel() {
               {conflicts.length > 0 && (
                 <span
                   className="flex items-center gap-1 px-1.5 py-0.5 rounded text-2xs font-bold"
+                  role="alert"
                   style={{ color: STATUS_ERROR, backgroundColor: `${STATUS_ERROR}${OPACITY_15}` }}
                 >
                   <AlertTriangle className="w-2.5 h-2.5" /> {conflicts.length} conflict{conflicts.length !== 1 ? 's' : ''}
@@ -478,6 +481,8 @@ export function BidirectionalStateSyncPanel() {
           <div>
             <button
               onClick={() => setShowPieControl(!showPieControl)}
+              aria-expanded={showPieControl}
+              aria-controls="bss-pie-panel"
               className="w-full flex items-center gap-2 px-4 py-2 text-left hover:bg-white/3 transition-colors"
             >
               {showPieControl ? <ChevronDown className="w-3 h-3 text-text-muted" /> : <ChevronRight className="w-3 h-3 text-text-muted" />}
@@ -554,6 +559,8 @@ export function BidirectionalStateSyncPanel() {
           <div>
             <button
               onClick={() => setShowPropertyWrite(!showPropertyWrite)}
+              aria-expanded={showPropertyWrite}
+              aria-controls="bss-property-write-panel"
               className="w-full flex items-center gap-2 px-4 py-2 text-left hover:bg-white/3 transition-colors"
             >
               {showPropertyWrite ? <ChevronDown className="w-3 h-3 text-text-muted" /> : <ChevronRight className="w-3 h-3 text-text-muted" />}
@@ -592,8 +599,9 @@ export function BidirectionalStateSyncPanel() {
                       <div className="text-2xs font-bold text-text-muted uppercase tracking-wider mb-1.5">Direct Property Write</div>
                       <div className="flex items-end gap-1.5">
                         <div className="flex-1">
-                          <label className="text-2xs text-text-muted">Object Path</label>
+                          <label htmlFor="bss-prop-object" className="text-2xs text-text-muted">Object Path</label>
                           <input
+                            id="bss-prop-object"
                             type="text"
                             value={propEdit.objectPath}
                             onChange={(e) => setPropEdit((p) => ({ ...p, objectPath: e.target.value }))}
@@ -602,8 +610,9 @@ export function BidirectionalStateSyncPanel() {
                           />
                         </div>
                         <div className="w-28">
-                          <label className="text-2xs text-text-muted">Property</label>
+                          <label htmlFor="bss-prop-name" className="text-2xs text-text-muted">Property</label>
                           <input
+                            id="bss-prop-name"
                             type="text"
                             value={propEdit.propertyName}
                             onChange={(e) => setPropEdit((p) => ({ ...p, propertyName: e.target.value }))}
@@ -612,8 +621,9 @@ export function BidirectionalStateSyncPanel() {
                           />
                         </div>
                         <div className="w-28">
-                          <label className="text-2xs text-text-muted">Value</label>
+                          <label htmlFor="bss-prop-value" className="text-2xs text-text-muted">Value</label>
                           <input
+                            id="bss-prop-value"
                             type="text"
                             value={propEdit.value}
                             onChange={(e) => setPropEdit((p) => ({ ...p, value: e.target.value }))}
@@ -642,6 +652,8 @@ export function BidirectionalStateSyncPanel() {
           <div>
             <button
               onClick={() => setShowViewportTeleport(!showViewportTeleport)}
+              aria-expanded={showViewportTeleport}
+              aria-controls="bss-viewport-panel"
               className="w-full flex items-center gap-2 px-4 py-2 text-left hover:bg-white/3 transition-colors"
             >
               {showViewportTeleport ? <ChevronDown className="w-3 h-3 text-text-muted" /> : <ChevronRight className="w-3 h-3 text-text-muted" />}
@@ -721,6 +733,8 @@ export function BidirectionalStateSyncPanel() {
             <div>
               <button
                 onClick={() => setShowConflicts(!showConflicts)}
+                aria-expanded={showConflicts}
+                aria-controls="bss-conflicts-panel"
                 className="w-full flex items-center gap-2 px-4 py-2 text-left hover:bg-white/3 transition-colors"
               >
                 {showConflicts ? <ChevronDown className="w-3 h-3 text-text-muted" /> : <ChevronRight className="w-3 h-3 text-text-muted" />}
@@ -773,6 +787,8 @@ export function BidirectionalStateSyncPanel() {
           <div>
             <button
               onClick={() => setShowLog(!showLog)}
+              aria-expanded={showLog}
+              aria-controls="bss-log-panel"
               className="w-full flex items-center gap-2 px-4 py-2 text-left hover:bg-white/3 transition-colors"
             >
               {showLog ? <ChevronDown className="w-3 h-3 text-text-muted" /> : <ChevronRight className="w-3 h-3 text-text-muted" />}
@@ -789,6 +805,7 @@ export function BidirectionalStateSyncPanel() {
                   }}
                   className="ml-auto p-0.5 rounded text-text-muted hover:text-text transition-colors"
                   title="Clear log"
+                  aria-label="Clear sync log"
                 >
                   <Trash2 className="w-3 h-3" />
                 </button>

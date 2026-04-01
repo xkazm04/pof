@@ -9,7 +9,7 @@ export function EventTimelinePanel() {
   return (
     <BlueprintPanel color={ACCENT} className="p-4">
       <SectionHeader label="Animation Event Timeline" color={ACCENT} />
-      <p className="text-[10px] font-mono uppercase tracking-[0.15em] text-text-muted mt-1 mb-3">
+      <p className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted mt-1 mb-3">
         10-second event log showing state changes, montage plays, and notify fires.
       </p>
       <div>

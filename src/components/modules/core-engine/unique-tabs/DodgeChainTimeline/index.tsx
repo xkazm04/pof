@@ -97,7 +97,7 @@ export function DodgeChainTimeline({
               />
               {/* Dodge number label */}
               <div
-                className="absolute top-0.5 text-[10px] font-mono uppercase tracking-[0.15em] font-bold"
+                className="absolute top-0.5 text-xs font-mono uppercase tracking-[0.15em] font-bold"
                 style={{ left: `${leftPct + 1}%`, color: ACCENT_CYAN }}
               >
                 #{i + 1}
@@ -131,7 +131,7 @@ export function DodgeChainTimeline({
       </div>
 
       {/* Time labels + stamina readout */}
-      <div className="flex justify-between text-[10px] font-mono uppercase tracking-[0.15em] text-text-muted px-0.5 mt-1.5">
+      <div className="flex justify-between text-xs font-mono uppercase tracking-[0.15em] text-text-muted px-0.5 mt-1.5">
         <span>0s</span>
         <span style={{ color: ACCENT_EMERALD }}>
           Stamina: {staminaRemaining}/{maxStamina}

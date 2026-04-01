@@ -5,7 +5,8 @@ import { GitBranch } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { STATUS_SUCCESS, STATUS_WARNING, STATUS_ERROR, OPACITY_8 } from '@/lib/chart-colors';
 import { BlueprintPanel, SectionHeader } from './design';
-import { ACCENT, MIGRATION_PATH, COMPAT_VERSIONS, COMPAT_LOOKUP } from './data';
+import { ACCENT } from './data';
+import { MIGRATION_PATH, COMPAT_VERSIONS, COMPAT_LOOKUP } from './data-panels';
 
 export function MigrationPathGraph() {
   const [expandedMigration, setExpandedMigration] = useState<string | null>('V2.0');
@@ -32,9 +33,9 @@ export function MigrationPathGraph() {
                 style={{ backgroundColor: expandedMigration === node.version ? `${ACCENT}15` : `${ACCENT}06` }}
               >
                 <span className={`font-bold ${node.breaking ? 'text-amber-400' : 'text-cyan-300'}`}>{node.version}</span>
-                <span className="text-[10px] text-text-muted mt-0.5">{node.date}</span>
+                <span className="text-xs text-text-muted mt-0.5">{node.date}</span>
                 {node.breaking && (
-                  <span className="text-[10px] text-amber-500 mt-1 px-1 py-0.5 bg-amber-950/30 border border-amber-800/30 rounded">BREAKING</span>
+                  <span className="text-xs text-amber-500 mt-1 px-1 py-0.5 bg-amber-950/30 border border-amber-800/30 rounded">BREAKING</span>
                 )}
               </motion.button>
               {i < arr.length - 1 && (
@@ -56,7 +57,7 @@ export function MigrationPathGraph() {
             return (
               <motion.div key={node.version} initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
                 <div className="border border-border/10 rounded-lg p-3 font-mono text-xs space-y-3" style={{ backgroundColor: `${ACCENT}06` }}>
-                  <div className="text-[10px] font-mono uppercase tracking-[0.15em] border-b border-border/10 pb-1" style={{ color: ACCENT }}>
+                  <div className="text-xs font-mono uppercase tracking-[0.15em] border-b border-border/10 pb-1" style={{ color: ACCENT }}>
                     {node.version} Migration Details
                   </div>
                   {node.fieldsAdded.length > 0 && (
@@ -88,12 +89,12 @@ export function MigrationPathGraph() {
 
         {/* Compatibility matrix */}
         <div className="space-y-1.5">
-          <span className="text-[10px] font-mono uppercase tracking-[0.15em]" style={{ color: ACCENT }}>Compatibility Matrix</span>
+          <span className="text-xs font-mono uppercase tracking-[0.15em]" style={{ color: ACCENT }}>Compatibility Matrix</span>
           <div className="overflow-auto">
-            <table className="w-full border-collapse font-mono text-[11px]">
+            <table className="w-full border-collapse font-mono text-xs">
               <thead>
                 <tr>
-                  <th className="sticky left-0 z-20 bg-surface-deep px-3 py-2 text-[10px] text-text-muted text-left border border-border/10 whitespace-nowrap">
+                  <th className="sticky left-0 z-20 bg-surface-deep px-3 py-2 text-xs text-text-muted text-left border border-border/10 whitespace-nowrap">
                     FROM / TO
                   </th>
                   {COMPAT_VERSIONS.map(v => (

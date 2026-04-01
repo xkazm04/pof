@@ -31,7 +31,7 @@ export function TimeToLevelEstimator() {
       </div>
 
       <div className="mt-3 pt-4 border-t border-border/40 space-y-3">
-        <div className="text-[10px] font-mono uppercase tracking-[0.15em] text-text-muted">Playstyle Comparison</div>
+        <div className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted">Playstyle Comparison</div>
         {TTL_TIMELINES.map(t => (
           <div key={t.label} className="space-y-1">
             <div className="flex justify-between text-xs font-mono">

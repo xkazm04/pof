@@ -90,7 +90,7 @@ export function RoomDetailPanel({
             <Icon className="w-6 h-6" style={{ color: cfg.color }} />
           </div>
           <div className="flex-1 min-w-0">
-            <label className="text-[11px] font-bold text-violet-400 uppercase tracking-widest block mb-0.5">NODE_NAME</label>
+            <label className="text-[11px] font-bold text-violet-400 block mb-0.5">Node Name</label>
             <input
               type="text"
               value={room.name}
@@ -139,7 +139,7 @@ export function RoomDetailPanel({
           <div className="bg-black/40 rounded-xl border border-violet-900/30 p-1 relative group">
             <div className="absolute -left-px top-4 bottom-4 w-[2px] bg-violet-500/30 group-focus-within:bg-violet-400 transition-colors" />
             <div className="px-3 pt-2 pb-1">
-              <label className="text-[11px] font-bold text-violet-400 uppercase tracking-widest block mb-1">NARRATIVE_ROLE</label>
+              <label className="text-[11px] font-bold text-violet-400 block mb-1">Narrative Role</label>
               <textarea
                 value={room.description}
                 onChange={(e) => updateField('description', e.target.value)}
@@ -153,7 +153,7 @@ export function RoomDetailPanel({
           <div className="bg-black/40 rounded-xl border border-violet-900/30 p-1 relative group">
             <div className="absolute -left-px top-4 bottom-4 w-[2px] bg-amber-500/30 group-focus-within:bg-amber-400 transition-colors" />
             <div className="px-3 pt-2 pb-1">
-              <label className="text-[11px] font-bold text-amber-500/80 uppercase tracking-widest block mb-1">ENCOUNTER_DESIGN</label>
+              <label className="text-[11px] font-bold text-amber-500/80 block mb-1">Encounter Design</label>
               <textarea
                 value={room.encounterDesign}
                 onChange={(e) => updateField('encounterDesign', e.target.value)}
@@ -168,7 +168,7 @@ export function RoomDetailPanel({
         {/* Difficulty + Pacing row */}
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <label className="text-[11px] font-bold text-violet-400 uppercase tracking-widest block mb-2">THREAT_LEVEL</label>
+            <label className="text-[11px] font-bold text-violet-400 block mb-2">Threat Level</label>
             <div className="flex h-8 rounded-lg overflow-hidden border border-violet-900/40 bg-black/60">
               {ALL_DIFFICULTIES.map((d) => {
                 const active = room.difficulty === d;
@@ -193,7 +193,7 @@ export function RoomDetailPanel({
           </div>
 
           <div>
-            <label className="text-[11px] font-bold text-violet-400 uppercase tracking-widest block mb-2">PACING_CURVE</label>
+            <label className="text-[11px] font-bold text-violet-400 block mb-2">Pacing Curve</label>
             <div className="relative h-8">
               <select
                 value={room.pacing}

@@ -23,7 +23,7 @@ export function ExpandedDetails({
     <div className="px-4 pb-4 border-t border-[rgba(255,255,255,0.05)] pt-3 bg-surface/30 space-y-4 backdrop-blur-sm">
       {/* Abilities */}
       <div>
-        <div className="text-[10px] font-mono uppercase tracking-[0.15em] text-text-muted mb-2">Signature Abilities</div>
+        <div className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted mb-2">Signature Abilities</div>
         <div className="flex flex-wrap gap-1.5">
           {archetype.abilities.map(ab => (
             <span key={ab} className="text-xs font-bold px-2 py-1 rounded-md border shadow-sm bg-surface text-text"
@@ -36,7 +36,7 @@ export function ExpandedDetails({
 
       {/* BT States */}
       <div className="bg-surface-deep p-3 rounded-xl border" style={{ borderColor: `${archetype.color}30` }}>
-        <div className="text-[10px] font-mono uppercase tracking-[0.15em] text-text-muted mb-2">Behavior Tree Matrix</div>
+        <div className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted mb-2">Behavior Tree Matrix</div>
         <div className="space-y-1.5">
           {Object.entries(archetype.btSummary).map(([state, desc]) => (
             <div key={state} className="flex items-center gap-3 text-xs">
@@ -50,7 +50,7 @@ export function ExpandedDetails({
 
       {/* Elite Modifiers */}
       <div>
-        <div className="text-[10px] font-mono uppercase tracking-[0.15em] text-text-muted mb-2">Elite Modifiers</div>
+        <div className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted mb-2">Elite Modifiers</div>
         <div className="flex flex-wrap gap-1.5">
           {ELITE_MODIFIERS.map(mod => {
             const isActive = activeModifiers.includes(mod.id);
@@ -59,7 +59,7 @@ export function ExpandedDetails({
               <button key={mod.id}
                 onClick={(e) => { e.stopPropagation(); if (!isExcluded) onToggleModifier(mod.id); }}
                 disabled={isExcluded}
-                className={`text-[11px] font-bold px-2 py-1 rounded-md border transition-all inline-flex items-center gap-1 ${
+                className={`text-xs font-bold px-2 py-1 rounded-md border transition-all inline-flex items-center gap-1 ${
                   isActive ? 'shadow-sm' : isExcluded ? 'opacity-30 cursor-not-allowed' : 'hover:brightness-125 cursor-pointer'
                 }`}
                 style={{
@@ -79,7 +79,7 @@ export function ExpandedDetails({
         </div>
         {appliedMods.length > 0 && (
           <div className="mt-2 bg-surface-deep rounded-lg border border-border/30 p-2 space-y-1">
-            <div className="text-[10px] font-mono uppercase tracking-[0.15em] text-text-muted">Modifier Effects</div>
+            <div className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted">Modifier Effects</div>
             {appliedMods.map(mod => (
               <div key={mod.id} className="flex items-center gap-2 text-xs">
                 <span style={{ color: mod.color }}>{mod.icon} {mod.name}</span>
@@ -100,7 +100,7 @@ export function ExpandedDetails({
 
       {/* Status Footer */}
       <div className="flex items-center justify-between mt-2 pt-2 border-t border-[rgba(255,255,255,0.05)]">
-        <span className="text-[10px] font-mono uppercase tracking-[0.15em] text-text-muted">Dev Status</span>
+        <span className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted">Dev Status</span>
         <span className="text-xs px-2 py-0.5 rounded uppercase font-bold border shadow-sm flex items-center gap-1.5 bg-surface"
           style={{ color: sc.dot, borderColor: `${sc.dot}40` }}>
           <span className="w-1.5 h-1.5 rounded-full shadow-[0_0_5px_currentColor]" style={{ backgroundColor: sc.dot, color: sc.dot }} />

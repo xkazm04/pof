@@ -2,7 +2,7 @@
 
 import { useState, useCallback } from 'react';
 import { Dices } from 'lucide-react';
-import { ACCENT_CYAN, OPACITY_8, OPACITY_30 } from '@/lib/chart-colors';
+import { ACCENT_CYAN, OPACITY_8, OPACITY_30, STATUS_SUCCESS, STATUS_WARNING, STATUS_ERROR } from '@/lib/chart-colors';
 import { TabButtonGroup } from '../_shared';
 import { RARITY_TIERS, TOTAL_WEIGHT } from './data';
 import { BlueprintPanel, SectionHeader } from './design';
@@ -25,6 +25,25 @@ export function DropSimulator() {
     setRollResults(tally);
   }, []);
 
+  const getDeviation = (tierName: string, weight: number) => {
+    if (rollCount === null) return null;
+    const actual = rollResults[tierName] ?? 0;
+    const expected = rollCount * (weight / TOTAL_WEIGHT);
+    const delta = actual - expected;
+    const rounded = Math.round(delta);
+    if (rounded === 0) return { label: 'as expected', color: STATUS_SUCCESS };
+    const absDelta = Math.abs(rounded);
+    // > 2 standard deviations from expected is "error"-level surprise
+    const stdDev = Math.sqrt(rollCount * (weight / TOTAL_WEIGHT) * (1 - weight / TOTAL_WEIGHT));
+    const color = Math.abs(delta) > 2 * stdDev ? STATUS_ERROR
+      : Math.abs(delta) > stdDev ? STATUS_WARNING
+      : STATUS_SUCCESS;
+    return {
+      label: rounded > 0 ? `+${absDelta} above` : `−${absDelta} below`,
+      color,
+    };
+  };
+
   return (
     <BlueprintPanel className="p-3">
       <SectionHeader icon={Dices} label="Drop Simulator" color={ACCENT_CYAN} />
@@ -43,19 +62,27 @@ export function DropSimulator() {
       </div>
       {rollCount !== null ? (
         <div className="flex flex-wrap gap-2" aria-live="polite">
-          {RARITY_TIERS.map((tier) => (
-            <div
-              key={tier.name}
-              className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg border"
-              style={{ borderColor: `${tier.color}${OPACITY_30}`, backgroundColor: `${tier.color}${OPACITY_8}` }}
-            >
-              <span className="w-2 h-2 rounded-full" style={{ backgroundColor: tier.color }} />
-              <span className="text-xs text-text">{tier.name}</span>
-              <span className="text-xs font-mono font-semibold" style={{ color: tier.color }}>
-                {rollResults[tier.name] ?? 0}
-              </span>
-            </div>
-          ))}
+          {RARITY_TIERS.map((tier) => {
+            const dev = getDeviation(tier.name, tier.weight);
+            return (
+              <div
+                key={tier.name}
+                className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg border"
+                style={{ borderColor: `${tier.color}${OPACITY_30}`, backgroundColor: `${tier.color}${OPACITY_8}` }}
+              >
+                <span className="w-2 h-2 rounded-full" style={{ backgroundColor: tier.color }} />
+                <span className="text-xs text-text">{tier.name}</span>
+                <span className="text-xs font-mono font-semibold" style={{ color: tier.color }}>
+                  {rollResults[tier.name] ?? 0}
+                </span>
+                {dev && (
+                  <span className="text-2xs font-mono" style={{ color: dev.color }}>
+                    {dev.label}
+                  </span>
+                )}
+              </div>
+            );
+          })}
           <span className="text-2xs text-text-muted self-center">/ {rollCount} drops</span>
         </div>
       ) : (

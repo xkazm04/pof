@@ -1,6 +1,7 @@
 'use client';
 
 import { motion } from 'framer-motion';
+import { MOTION } from '@/lib/constants';
 import {
   AlertTriangle,
   AlertOctagon,
@@ -78,7 +79,7 @@ export function InsightCard({ insight, index, onDrillDown }: InsightCardProps) {
     <motion.div
       initial={{ opacity: 0, y: 6 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.22, delay: index * 0.04 }}
+      transition={{ duration: MOTION.base, delay: index * MOTION.staggerChildren }}
       className="rounded-lg border px-3.5 py-3 transition-colors hover:brightness-110"
       style={{ backgroundColor: style.bg, borderColor: style.border }}
     >

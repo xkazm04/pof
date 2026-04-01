@@ -116,15 +116,15 @@ function SimulationParams({
       <div className="flex items-center justify-between">
         <SectionHeader icon={Settings2} label="Simulation" color={ACCENT} />
         <div className="flex items-center gap-1.5">
-          <button onClick={onReseed} className="flex items-center gap-1 text-[10px] font-mono uppercase tracking-[0.15em] text-text-muted hover:text-text transition-colors px-1.5 py-0.5 rounded hover:bg-surface/50">
+          <button onClick={onReseed} className="flex items-center gap-1 text-xs font-mono uppercase tracking-[0.15em] text-text-muted hover:text-text transition-colors px-1.5 py-0.5 rounded hover:bg-surface/50">
             <RotateCcw className="w-3 h-3" /> Reseed
           </button>
-          <span className="text-[10px] font-mono uppercase tracking-[0.15em] text-text-muted opacity-60">#{seed}</span>
+          <span className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted opacity-60">#{seed}</span>
         </div>
       </div>
       <div className="grid grid-cols-3 gap-2">
         <div className="space-y-0.5">
-          <span className="text-[10px] font-mono uppercase tracking-[0.15em] text-text-muted">Rarity</span>
+          <span className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted">Rarity</span>
           <select
             value={rarity}
             onChange={(e) => onRarityChange(e.target.value as Rarity)}
@@ -135,14 +135,14 @@ function SimulationParams({
           </select>
         </div>
         <div className="space-y-0.5">
-          <span className="text-[10px] font-mono uppercase tracking-[0.15em] text-text-muted">Level</span>
+          <span className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted">Level</span>
           <div className="flex items-center gap-1">
             <input type="range" min={1} max={50} value={itemLevel} onChange={(e) => onItemLevelChange(Number(e.target.value))} className="flex-1 h-1 accent-blue-500" />
             <span className="text-xs font-mono w-6 text-right" style={{ color: ACCENT }}>{itemLevel}</span>
           </div>
         </div>
         <div className="space-y-0.5">
-          <span className="text-[10px] font-mono uppercase tracking-[0.15em] text-text-muted">Rolls</span>
+          <span className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted">Rolls</span>
           <select
             value={rollCount}
             onChange={(e) => onRollCountChange(Number(e.target.value))}

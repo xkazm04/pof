@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { GitBranch, ExternalLink, ChevronRight, Layers } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { STATUS_ERROR } from '@/lib/chart-colors';
+import { MOTION_CONFIG } from '@/lib/motion';
 import { BlueprintPanel, SectionHeader, CornerBrackets } from './design';
 import { CLASS_TREE, type ClassNode } from './data';
 
@@ -28,7 +29,7 @@ function ClassTreeNode({ node, depth, index }: { node: ClassNode; depth: number;
     <motion.div
       initial={{ opacity: 0, x: -12 }}
       animate={{ opacity: 1, x: 0 }}
-      transition={{ delay: index * 0.08, duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
+      transition={{ delay: index * MOTION_CONFIG.stagger, ...MOTION_CONFIG.standard }}
       style={{ paddingLeft: depth === 0 ? 0 : 32 }}
       className="relative"
     >
@@ -65,7 +66,7 @@ function ClassTreeNode({ node, depth, index }: { node: ClassNode; depth: number;
           <button onClick={() => setExpanded(!expanded)}
             className="p-0.5 rounded transition-colors hover:bg-surface/50 cursor-pointer"
             style={{ color: node.color }}>
-            <motion.div animate={{ rotate: expanded ? 90 : 0 }} transition={{ duration: 0.2 }}>
+            <motion.div animate={{ rotate: expanded ? 90 : 0 }} transition={MOTION_CONFIG.micro}>
               <ChevronRight className="w-3.5 h-3.5" />
             </motion.div>
           </button>
@@ -98,14 +99,14 @@ function ClassTreeNode({ node, depth, index }: { node: ClassNode; depth: number;
 
           {/* Subtitle tag */}
           {node.subtitle && (
-            <span className="text-[10px] font-mono font-bold uppercase tracking-[0.15em] px-2 py-1 rounded border border-border/30 bg-surface/50 text-text-muted">
+            <span className="text-xs font-mono font-bold uppercase tracking-[0.15em] px-2 py-1 rounded border border-border/30 bg-surface/50 text-text-muted">
               {node.subtitle}
             </span>
           )}
 
           {/* Component count badge */}
           {node.componentCount !== undefined && (
-            <span className="flex items-center gap-1 text-[10px] font-mono text-text-muted">
+            <span className="flex items-center gap-1 text-xs font-mono text-text-muted">
               <Layers className="w-2.5 h-2.5" />
               {node.componentCount}
             </span>
@@ -128,11 +129,11 @@ function ClassTreeNode({ node, depth, index }: { node: ClassNode; depth: number;
                 initial={{ opacity: 0, y: 6, scale: 0.95 }}
                 animate={{ opacity: 1, y: 0, scale: 1 }}
                 exit={{ opacity: 0, y: 6, scale: 0.95 }}
-                transition={{ duration: 0.15 }}
+                transition={MOTION_CONFIG.micro}
                 className="absolute left-0 top-full mt-2 z-50 px-3 py-2 rounded-md border bg-surface-deep shadow-2xl"
                 style={{ borderColor: `${node.color}25`, boxShadow: `0 8px 32px ${node.color}10` }}
               >
-                <div className="text-[10px] font-mono text-text-muted uppercase tracking-wider mb-0.5">Header</div>
+                <div className="text-xs font-mono text-text-muted uppercase tracking-wider mb-0.5">Header</div>
                 <div className="text-xs font-mono" style={{ color: node.color }}>{node.headerFile}</div>
               </motion.div>
             )}
@@ -147,7 +148,7 @@ function ClassTreeNode({ node, depth, index }: { node: ClassNode; depth: number;
             initial={{ height: 0, opacity: 0 }}
             animate={{ height: 'auto', opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
-            transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
+            transition={MOTION_CONFIG.standard}
             className="overflow-hidden"
           >
             <div className="border-l ml-[11px] relative" style={{ borderColor: `${node.color}20` }}>

@@ -21,6 +21,7 @@ import { apiFetch } from '@/lib/api-utils';
 import { SurfaceCard } from '@/components/ui/SurfaceCard';
 import { STATUS_SUCCESS, STATUS_WARNING, STATUS_ERROR, STATUS_STALE, MODULE_COLORS } from '@/lib/chart-colors';
 import type { SubModuleId } from '@/types/modules';
+import { MOTION } from '@/lib/constants';
 
 const ALL_MODULE_IDS = Object.keys(MODULE_FEATURE_DEFINITIONS) as SubModuleId[];
 
@@ -278,7 +279,7 @@ export function AggregateQualityDashboard({ staleDays = 7, onReviewModule, onBat
               className="h-full"
               initial={{ width: 0 }}
               animate={{ width: `${(totals.implemented / totals.total) * 100}%` }}
-              transition={{ duration: 0.45, ease: [0.16, 1, 0.3, 1] }}
+              transition={{ duration: MOTION.slow, ease: MOTION.ease }}
               style={{ backgroundColor: STATUS_SUCCESS }}
             />
           )}
@@ -287,7 +288,7 @@ export function AggregateQualityDashboard({ staleDays = 7, onReviewModule, onBat
               className="h-full"
               initial={{ width: 0 }}
               animate={{ width: `${(totals.partial / totals.total) * 100}%` }}
-              transition={{ duration: 0.45, ease: [0.16, 1, 0.3, 1], delay: 0.1 }}
+              transition={{ duration: MOTION.slow, ease: MOTION.ease, delay: 0.1 }}
               style={{ backgroundColor: STATUS_WARNING }}
             />
           )}
@@ -296,7 +297,7 @@ export function AggregateQualityDashboard({ staleDays = 7, onReviewModule, onBat
               className="h-full"
               initial={{ width: 0 }}
               animate={{ width: `${(totals.missing / totals.total) * 100}%` }}
-              transition={{ duration: 0.45, ease: [0.16, 1, 0.3, 1], delay: 0.2 }}
+              transition={{ duration: MOTION.slow, ease: MOTION.ease, delay: 0.2 }}
               style={{ backgroundColor: STATUS_ERROR }}
             />
           )}
@@ -358,7 +359,7 @@ export function AggregateQualityDashboard({ staleDays = 7, onReviewModule, onBat
                 key={cell.moduleId}
                 initial={{ opacity: 0, scale: 0.95 }}
                 animate={{ opacity: 1, scale: 1 }}
-                transition={{ duration: 0.22, delay: i * 0.03 }}
+                transition={{ duration: MOTION.base, delay: i * 0.03 }}
                 onClick={() =>
                   setSelectedModule(isSelected ? null : cell.moduleId)
                 }
@@ -489,7 +490,7 @@ export function AggregateQualityDashboard({ staleDays = 7, onReviewModule, onBat
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: 'auto' }}
             exit={{ opacity: 0, height: 0 }}
-            transition={{ duration: 0.22 }}
+            transition={{ duration: MOTION.base }}
             className="overflow-hidden"
           >
             <SurfaceCard className="p-4">
@@ -786,7 +787,7 @@ function MetricCard({
     <motion.div
       initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.22 }}
+      transition={{ duration: MOTION.base }}
       className="bg-surface border border-border rounded-lg p-3"
     >
       <div className="flex items-center gap-2 mb-1.5">

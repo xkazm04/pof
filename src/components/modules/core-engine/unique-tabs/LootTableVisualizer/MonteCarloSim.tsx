@@ -35,7 +35,7 @@ export function MonteCarloSim() {
   return (
     <BlueprintPanel className="p-3">
       <div className="flex items-center gap-2 mb-3">
-        <SectionHeader icon={Dices} label="Monte Carlo Simulation" color=ACCENT_VIOLET />
+        <SectionHeader icon={Dices} label="Monte Carlo Simulation" color={ACCENT_VIOLET} />
       </div>
       <div className="mb-3">
         <TabButtonGroup
@@ -47,7 +47,7 @@ export function MonteCarloSim() {
           ]}
           selected={mcRollCount !== null ? String(mcRollCount) : null}
           onSelect={(v) => runMonteCarlo(Number(v))}
-          accent=ACCENT_VIOLET
+          accent={ACCENT_VIOLET}
           ariaLabel="Monte Carlo sample size"
         />
       </div>
@@ -95,7 +95,7 @@ export function MonteCarloSim() {
           </div>
           {/* Histogram bars */}
           <div className="space-y-1">
-            <div className="text-[10px] font-mono uppercase tracking-[0.15em] text-text-muted">Distribution (avg of 10 runs)</div>
+            <div className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted">Distribution (avg of 10 runs)</div>
             {RARITY_TIERS.map((tier) => {
               const avg = mcResults.tally[tier.name].reduce((s, v) => s + v, 0) / mcResults.tally[tier.name].length;
               const pct = (avg / mcResults.total) * 100;

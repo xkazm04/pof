@@ -24,17 +24,17 @@ export function PerceptionConeViz({ entities, accent = ACCENT_CYAN }: Perception
       />
       {/* AI center */}
       <circle cx={65} cy={65} r={5} fill={accent} style={{ filter: `drop-shadow(0 0 6px ${accent})` }} />
-      <text x={65} y={77.2} textAnchor="middle" className="text-[11px] font-mono font-bold" fill={accent} style={{ fontSize: 11 }}>AI</text>
+      <text x={65} y={77.2} textAnchor="middle" className="text-xs font-mono font-bold" fill={accent}>AI</text>
       {/* Detected entities */}
       {entities.map(e => (
         <g key={e.label}>
           <circle cx={e.x} cy={e.y} r={4} fill={e.color} style={{ filter: `drop-shadow(0 0 4px ${e.color})` }} />
-          <text x={e.x} y={e.y - 8} textAnchor="middle" className="text-[11px] font-mono font-bold" fill={e.color} style={{ fontSize: 11 }}>{e.label}</text>
+          <text x={e.x} y={e.y - 8} textAnchor="middle" className="text-xs font-mono font-bold" fill={e.color}>{e.label}</text>
         </g>
       ))}
       {/* Range labels */}
-      <text x={65} y={17.9} textAnchor="middle" className="text-[11px] font-mono fill-[rgba(255,255,255,0.3)]" style={{ fontSize: 11 }}>1500cm</text>
-      <text x={111.3} y={65} textAnchor="middle" className="text-[11px] font-mono fill-[rgba(255,255,255,0.3)]" style={{ fontSize: 11 }}>800cm</text>
+      <text x={65} y={17.9} textAnchor="middle" className="text-xs font-mono fill-[rgba(255,255,255,0.3)]">1500cm</text>
+      <text x={111.3} y={65} textAnchor="middle" className="text-xs font-mono fill-[rgba(255,255,255,0.3)]">800cm</text>
     </svg>
   );
 }

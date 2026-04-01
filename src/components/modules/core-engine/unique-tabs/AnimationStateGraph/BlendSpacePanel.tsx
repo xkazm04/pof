@@ -8,7 +8,7 @@ export function BlendSpacePanel() {
   return (
     <BlueprintPanel color={ACCENT} className="p-4">
       <SectionHeader label="Blend Space Visualizer" color={ACCENT} />
-      <p className="text-[10px] font-mono uppercase tracking-[0.15em] text-text-muted mt-1 mb-3">
+      <p className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted mt-1 mb-3">
         2D blend space mapping Direction vs Speed. Each dot is an animation clip; the pulsing dot shows the current sampled position.
       </p>
       <div className="flex justify-center min-h-[200px]">
@@ -24,17 +24,17 @@ export function BlendSpacePanel() {
             return <line key={deg} x1={xx} y1={8} x2={xx} y2={166} stroke="rgba(255,255,255,0.05)" strokeWidth="1" />;
           })}
           {/* Axis labels */}
-          <text x={140} y={184} textAnchor="middle" className="text-[11px] font-mono fill-[var(--text-muted)]" style={{ fontSize: 11 }}>Direction (deg)</text>
-          <text x={10} y={87} textAnchor="middle" className="text-[11px] font-mono fill-[var(--text-muted)]" style={{ fontSize: 11 }} transform="rotate(-90 10 87)">Speed</text>
+          <text x={140} y={184} textAnchor="middle" className="text-xs font-mono fill-[var(--text-muted)]">Direction (deg)</text>
+          <text x={10} y={87} textAnchor="middle" className="text-xs font-mono fill-[var(--text-muted)]" transform="rotate(-90 10 87)">Speed</text>
           {/* Tick labels - X axis */}
           {[-180, -90, 0, 90, 180].map((deg) => {
             const xx = 35 + ((deg + 180) / 360) * 228;
-            return <text key={deg} x={xx} y={177} textAnchor="middle" className="text-[11px] font-mono fill-[var(--text-muted)]" style={{ fontSize: 11 }}>{deg}</text>;
+            return <text key={deg} x={xx} y={177} textAnchor="middle" className="text-xs font-mono fill-[var(--text-muted)]">{deg}</text>;
           })}
           {/* Tick labels - Y axis */}
           {[0, 0.5, 1].map((v) => {
             const yy = 166 - v * 158;
-            return <text key={v} x={31} y={yy + 3} textAnchor="end" className="text-[11px] font-mono fill-[var(--text-muted)]" style={{ fontSize: 11 }}>{v}</text>;
+            return <text key={v} x={31} y={yy + 3} textAnchor="end" className="text-xs font-mono fill-[var(--text-muted)]">{v}</text>;
           })}
           {/* Animation clip dots */}
           {BLEND_CLIPS.map((clip) => {
@@ -43,7 +43,7 @@ export function BlendSpacePanel() {
             return (
               <g key={clip.name}>
                 <circle cx={cx} cy={cy} r={6} fill={`${ACCENT}40`} stroke={ACCENT} strokeWidth="1.5" />
-                <text x={cx} y={cy - 10} textAnchor="middle" className="text-[11px] font-mono font-bold fill-[var(--text-muted)]" style={{ fontSize: 11 }}>{clip.name}</text>
+                <text x={cx} y={cy - 10} textAnchor="middle" className="text-xs font-mono font-bold fill-[var(--text-muted)]">{clip.name}</text>
               </g>
             );
           })}
@@ -73,7 +73,7 @@ export function BlendSpacePanel() {
                   <animate attributeName="opacity" values="1;0.6;1" dur="2s" repeatCount="indefinite" />
                 </circle>
                 <circle cx={curX} cy={curY} r={3} fill={ACCENT_CYAN} />
-                <text x={curX + 14} y={curY + 3} className="text-[11px] font-mono font-bold" fill={ACCENT_CYAN} style={{ fontSize: 11 }}>Current</text>
+                <text x={curX + 14} y={curY + 3} className="text-xs font-mono font-bold" fill={ACCENT_CYAN}>Current</text>
               </>
             );
           })()}

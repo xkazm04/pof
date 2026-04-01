@@ -137,7 +137,7 @@ export function CombatSimulatorView() {
 
         {/* Summary stats */}
         {summary && (
-          <div className="flex gap-3 mb-4">
+          <div className="flex flex-wrap gap-3 mb-4">
             <SurfaceCard className="flex items-center gap-2.5 px-3 py-2 flex-1" level={2}>
               <ProgressRing value={Math.round(summary.survivalRate * 100)} size={36} strokeWidth={3} color={survivalColor} />
               <div>
@@ -170,7 +170,7 @@ export function CombatSimulatorView() {
         {!isLoading && (
           <div className="space-y-5">
             {/* Scenario + Tuning side by side */}
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {/* Scenario Builder */}
               <ScenarioBuilder
                 playerLevel={playerLevel}
@@ -233,7 +233,7 @@ export function CombatSimulatorView() {
                 <AbilityHeatmap heatmap={summary.abilityHeatmap} />
 
                 {/* Distributions */}
-                <div className="grid grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                   <DistributionChart title="Damage Dealt" buckets={summary.damageDealtBuckets} color="emerald" />
                   <DistributionChart title="Damage Taken" buckets={summary.damageTakenBuckets} color="red" />
                   <DistributionChart title="Fight Duration" buckets={summary.durationBuckets} color="blue" unit="s" />
@@ -241,7 +241,7 @@ export function CombatSimulatorView() {
 
                 {/* Extra stats */}
                 <SurfaceCard className="p-4">
-                  <div className="grid grid-cols-4 gap-4 text-center">
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-center">
                     <MiniStat label="Avg Crit Rate" value={`${(summary.avgCritRate * 100).toFixed(1)}%`} />
                     <MiniStat label="One-Shot Rate" value={`${(summary.oneShotRate * 100).toFixed(1)}%`} alert={summary.oneShotRate > 0.05} />
                     <MiniStat label="Avg HP Left" value={`${summary.avgPlayerHealthRemaining.toFixed(0)}`} />
@@ -306,7 +306,7 @@ function ScenarioBuilder({
 
       <div className="space-y-3">
         {/* Player config */}
-        <div className="grid grid-cols-3 gap-2">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
           <div>
             <label className="text-2xs text-text-muted font-medium block mb-1">Player Level</label>
             <input

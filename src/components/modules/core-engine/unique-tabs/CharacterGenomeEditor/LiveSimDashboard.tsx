@@ -47,7 +47,7 @@ export function LiveSimDashboard({ genome, compareGenome }: {
 
         {/* Level Slider */}
         <div className="flex items-center gap-3 px-3 py-2 rounded-lg bg-surface-deep/50 border" style={{ borderColor: `${ACCENT_ORANGE}25` }}>
-          <span className="text-[10px] font-mono uppercase tracking-[0.15em] text-text-muted w-10">Lv.</span>
+          <span className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted w-10">Lv.</span>
           <div className="flex-1 relative h-5 flex items-center">
             <div className="absolute inset-x-0 h-1.5 bg-surface rounded-full" />
             <NeonBar pct={((level - 1) / 49) * 100} color={ACCENT_ORANGE} height={6} glow />
@@ -60,7 +60,7 @@ export function LiveSimDashboard({ genome, compareGenome }: {
           <input type="number" min={1} max={50} value={level}
             onChange={(e) => { const v = parseInt(e.target.value); if (!isNaN(v) && v >= 1 && v <= 50) setLevel(v); }}
             className="w-12 text-xs font-mono font-bold text-center bg-surface border border-border/40 rounded px-1 py-0.5 text-text focus:outline-none focus:border-blue-500/50" />
-          <span className="text-[10px] font-mono text-text-muted/50">/ 50</span>
+          <span className="text-xs font-mono text-text-muted/50">/ 50</span>
         </div>
 
         {/* Hero Metrics */}
@@ -77,7 +77,7 @@ export function LiveSimDashboard({ genome, compareGenome }: {
           <div className="space-y-1">
             <div className="flex items-center gap-1.5 pb-1 border-b" style={{ borderColor: `${STATUS_ERROR}25` }}>
               <Swords className="w-3 h-3" style={{ color: STATUS_ERROR, filter: `drop-shadow(0 0 3px ${STATUS_ERROR}80)` }} />
-              <span className="text-[10px] font-mono uppercase tracking-[0.15em]" style={{ color: STATUS_ERROR }}>Offense</span>
+              <span className="text-xs font-mono uppercase tracking-[0.15em]" style={{ color: STATUS_ERROR }}>Offense</span>
             </div>
             <SimStatLine label="Raw DPS" value={`${fmtN(sim.rawDps)} dmg/s`} formula="baseDmg \u00D7 atkSpd" color={STATUS_ERROR}
               barPct={(sim.rawDps / 200) * 100} delta={delta(sim.rawDps, cmp?.rawDps, (v) => fmtN(v))} />
@@ -101,7 +101,7 @@ export function LiveSimDashboard({ genome, compareGenome }: {
           <div className="space-y-1">
             <div className="flex items-center gap-1.5 pb-1 border-b" style={{ borderColor: `${ACCENT_EMERALD}25` }}>
               <Shield className="w-3 h-3" style={{ color: ACCENT_EMERALD, filter: `drop-shadow(0 0 3px ${ACCENT_EMERALD}80)` }} />
-              <span className="text-[10px] font-mono uppercase tracking-[0.15em]" style={{ color: ACCENT_EMERALD }}>Defense</span>
+              <span className="text-xs font-mono uppercase tracking-[0.15em]" style={{ color: ACCENT_EMERALD }}>Defense</span>
             </div>
             <SimStatLine label={`HP (Lv.${level})`} value={fmtN(sim.hp, 0)} formula={`baseHP + hpPerLvl \u00D7 ${level - 1}`} color={ACCENT_GREEN}
               barPct={(sim.hp / 5000) * 100} delta={delta(sim.hp, cmp?.hp, (v) => fmtN(v, 0))} />
@@ -123,7 +123,7 @@ export function LiveSimDashboard({ genome, compareGenome }: {
           <div className="space-y-1">
             <div className="flex items-center gap-1.5 pb-1 border-b" style={{ borderColor: `${ACCENT_CYAN}25` }}>
               <Zap className="w-3 h-3" style={{ color: ACCENT_CYAN, filter: `drop-shadow(0 0 3px ${ACCENT_CYAN}80)` }} />
-              <span className="text-[10px] font-mono uppercase tracking-[0.15em]" style={{ color: ACCENT_CYAN }}>Stamina Economy</span>
+              <span className="text-xs font-mono uppercase tracking-[0.15em]" style={{ color: ACCENT_CYAN }}>Stamina Economy</span>
             </div>
             <SimStatLine label={`Stamina (Lv.${level})`} value={fmtN(sim.stamina, 0)} formula={`baseStam + stamPerLvl \u00D7 ${level - 1}`} color={ACCENT_CYAN}
               barPct={(sim.stamina / 300) * 100} delta={delta(sim.stamina, cmp?.stamina, (v) => fmtN(v, 0))} />
@@ -151,7 +151,7 @@ export function LiveSimDashboard({ genome, compareGenome }: {
           <div className="space-y-1">
             <div className="flex items-center gap-1.5 pb-1 border-b" style={{ borderColor: `${ACCENT_VIOLET}25` }}>
               <Activity className="w-3 h-3" style={{ color: ACCENT_VIOLET, filter: `drop-shadow(0 0 3px ${ACCENT_VIOLET}80)` }} />
-              <span className="text-[10px] font-mono uppercase tracking-[0.15em]" style={{ color: ACCENT_VIOLET }}>Mobility</span>
+              <span className="text-xs font-mono uppercase tracking-[0.15em]" style={{ color: ACCENT_VIOLET }}>Mobility</span>
             </div>
             <SimStatLine label="Sprint Ratio" value={`${sim.sprintRatio.toFixed(2)}\u00D7`} formula="sprintSpeed \u00F7 walkSpeed" color={ACCENT_VIOLET}
               barPct={(sim.sprintRatio / 3) * 100} delta={delta(sim.sprintRatio, cmp?.sprintRatio, (v) => `${v.toFixed(2)}\u00D7`)} />

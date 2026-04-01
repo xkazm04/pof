@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Heart, Play, Pause, RotateCcw } from 'lucide-react';
 import { SurfaceCard } from '@/components/ui/SurfaceCard';
+import { StyledSlider } from '@/components/ui/StyledSlider';
 import { STATUS_SUCCESS, STATUS_ERROR, STATUS_WARNING, OPACITY_10 } from '@/lib/chart-colors';
 
 // ── C++ defaults from ARPGHUDWidget.h ──────────────────────────────────────
@@ -155,7 +156,7 @@ export function LowHealthPulse() {
         <SurfaceCard level={2} className="p-4 space-y-4">
           {/* Live health bar preview */}
           <div className="space-y-2">
-            <div className="text-xs font-bold text-text-muted uppercase tracking-widest">Live Preview</div>
+            <div className="text-xs font-bold text-text-muted uppercase">Live Preview</div>
 
             {/* Simulated health bar */}
             <div className="relative h-7 rounded-md overflow-hidden bg-black/60 border border-border/60">
@@ -198,28 +199,17 @@ export function LowHealthPulse() {
           </div>
 
           {/* Health slider */}
-          <div className="space-y-1.5">
-            <div className="flex items-center justify-between">
-              <span className="text-xs text-text-muted">Health %</span>
-              <span className="text-xs font-mono font-bold" style={{ color: isLow ? dangerCSS : healthyCSS }}>
-                {Math.round(healthPct * 100)}%
-              </span>
-            </div>
-            <input
-              type="range"
-              min={0}
-              max={100}
-              step={1}
-              value={Math.round(healthPct * 100)}
-              onChange={(e) => setHealthPct(Number(e.target.value) / 100)}
-              className="w-full accent-current h-1.5 rounded-full appearance-none bg-border cursor-pointer
-                         [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3.5 [&::-webkit-slider-thumb]:h-3.5 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:border-2 [&::-webkit-slider-thumb]:border-white [&::-webkit-slider-thumb]:cursor-pointer"
-              style={{
-                accentColor: isLow ? dangerCSS : healthyCSS,
-              }}
-              data-testid="health-pct-slider"
-            />
-          </div>
+          <StyledSlider
+            min={0}
+            max={100}
+            step={1}
+            value={Math.round(healthPct * 100)}
+            onChange={(v) => setHealthPct(v / 100)}
+            accentColor={isLow ? dangerCSS : healthyCSS}
+            label="Health %"
+            displayValue={`${Math.round(healthPct * 100)}%`}
+            testId="health-pct-slider"
+          />
 
           {/* Color endpoints */}
           <div className="grid grid-cols-2 gap-2">
@@ -260,7 +250,7 @@ export function LowHealthPulse() {
         <SurfaceCard level={2} className="p-4 space-y-4">
           {/* Timing diagram */}
           <div className="space-y-2">
-            <div className="text-xs font-bold text-text-muted uppercase tracking-widest">Pulse Timing Diagram</div>
+            <div className="text-xs font-bold text-text-muted uppercase">Pulse Timing Diagram</div>
             <div className="text-2xs text-text-muted">
               1 cycle = {(1 / pulseSpeed).toFixed(2)}s &middot; sin(t &times; {pulseSpeed.toFixed(1)} &times; 2&pi;)
             </div>
@@ -330,50 +320,36 @@ export function LowHealthPulse() {
 
           {/* Parameters */}
           <div className="space-y-3">
-            <div className="text-xs font-bold text-text-muted uppercase tracking-widest">Parameters</div>
+            <div className="text-xs font-bold text-text-muted uppercase">Parameters</div>
 
             {/* Threshold */}
             <div className="space-y-1">
-              <div className="flex items-center justify-between">
-                <span className="text-xs text-text-muted">LowHealthThreshold</span>
-                <span className="text-xs font-mono font-bold" style={{ color: STATUS_WARNING }}>
-                  {(threshold * 100).toFixed(0)}%
-                </span>
-              </div>
-              <input
-                type="range"
+              <StyledSlider
                 min={5}
                 max={75}
                 step={1}
                 value={Math.round(threshold * 100)}
-                onChange={(e) => setThreshold(Number(e.target.value) / 100)}
-                className="w-full h-1.5 rounded-full appearance-none bg-border cursor-pointer
-                           [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:h-3 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:border-2 [&::-webkit-slider-thumb]:border-white [&::-webkit-slider-thumb]:cursor-pointer"
-                style={{ accentColor: STATUS_WARNING }}
-                data-testid="threshold-slider"
+                onChange={(v) => setThreshold(v / 100)}
+                accentColor={STATUS_WARNING}
+                label="LowHealthThreshold"
+                displayValue={`${(threshold * 100).toFixed(0)}%`}
+                testId="threshold-slider"
               />
               <div className="text-2xs text-text-muted font-mono">UPROPERTY float LowHealthThreshold = {threshold.toFixed(2)}f;</div>
             </div>
 
             {/* Pulse speed */}
             <div className="space-y-1">
-              <div className="flex items-center justify-between">
-                <span className="text-xs text-text-muted">LowHealthPulseSpeed</span>
-                <span className="text-xs font-mono font-bold" style={{ color: STATUS_SUCCESS }}>
-                  {pulseSpeed.toFixed(1)} Hz
-                </span>
-              </div>
-              <input
-                type="range"
+              <StyledSlider
                 min={0.5}
                 max={6}
                 step={0.1}
                 value={pulseSpeed}
-                onChange={(e) => setPulseSpeed(Number(e.target.value))}
-                className="w-full h-1.5 rounded-full appearance-none bg-border cursor-pointer
-                           [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:h-3 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:border-2 [&::-webkit-slider-thumb]:border-white [&::-webkit-slider-thumb]:cursor-pointer"
-                style={{ accentColor: STATUS_SUCCESS }}
-                data-testid="pulse-speed-slider"
+                onChange={setPulseSpeed}
+                accentColor={STATUS_SUCCESS}
+                label="LowHealthPulseSpeed"
+                displayValue={`${pulseSpeed.toFixed(1)} Hz`}
+                testId="pulse-speed-slider"
               />
               <div className="text-2xs text-text-muted font-mono">UPROPERTY float LowHealthPulseSpeed = {pulseSpeed.toFixed(1)}f;</div>
             </div>
@@ -381,7 +357,7 @@ export function LowHealthPulse() {
 
           {/* Formula reference */}
           <SurfaceCard level={2} className="p-2.5 space-y-1">
-            <div className="text-2xs font-bold text-text-muted uppercase tracking-widest">C++ Formula</div>
+            <div className="text-2xs font-bold text-text-muted uppercase">C++ Formula</div>
             <code className="block text-2xs font-mono text-text-muted leading-relaxed whitespace-pre-wrap">
 {`Alpha = (sin(PulseTime * ${pulseSpeed.toFixed(1)} * 2*PI) + 1) * 0.5
 Color = Lerp(LowHealthColor, HealthBarColor, Alpha)

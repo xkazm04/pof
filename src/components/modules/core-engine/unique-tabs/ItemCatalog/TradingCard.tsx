@@ -30,7 +30,7 @@ function TradingCardTooltip({ item, color }: { item: ItemData; color: string }) 
         </div>
         <p className="text-xs text-text-muted italic leading-relaxed">{item.description}</p>
         <div className="space-y-2">
-          <p className="text-[10px] font-mono uppercase tracking-[0.15em] text-text-muted">Stats</p>
+          <p className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted">Stats</p>
           {item.stats.map(s => {
             const pct = s.numericValue != null && s.maxValue ? Math.min(100, (s.numericValue / s.maxValue) * 100) : null;
             return (
@@ -57,7 +57,7 @@ function TradingCardTooltip({ item, color }: { item: ItemData; color: string }) 
         )}
         {item.affixes && item.affixes.length > 0 && (
           <div className="space-y-1.5">
-            <p className="text-[10px] font-mono uppercase tracking-[0.15em] text-text-muted">Affixes</p>
+            <p className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted">Affixes</p>
             {item.affixes.map(a => (
               <div key={a.name} className="flex items-center gap-2 px-2 py-1 rounded-md" style={{ backgroundColor: `${AFFIX_CATEGORY_COLORS[a.category]}10` }}>
                 <span className="w-1 h-1 rounded-full flex-shrink-0" style={{ backgroundColor: AFFIX_CATEGORY_COLORS[a.category] }} />
@@ -127,7 +127,7 @@ function TradingCard({ item, tabIndex, onFocus: onFocusProp }, ref) {
           <div className="relative z-10 flex justify-between items-start">
             <div>
               <h3 className="text-sm font-bold text-text leading-tight" style={{ textShadow: `0 0 12px ${color}40` }}>{item.name}</h3>
-              <p className="text-[10px] font-mono uppercase tracking-[0.15em] mt-1 opacity-80" style={{ color }}>{item.rarity} {item.subtype}</p>
+              <p className="text-xs font-mono uppercase tracking-[0.15em] mt-1 opacity-80" style={{ color }}>{item.rarity} {item.subtype}</p>
             </div>
           </div>
         </div>
@@ -147,7 +147,7 @@ function TradingCard({ item, tabIndex, onFocus: onFocusProp }, ref) {
           <div className="flex justify-around items-center py-2 border-y border-border/40">
             {item.stats.map(s => (
               <div key={s.label} className="flex flex-col items-center">
-                <span className="text-[10px] uppercase font-mono tracking-[0.15em] text-text-muted">{s.label}</span>
+                <span className="text-xs uppercase font-mono tracking-[0.15em] text-text-muted">{s.label}</span>
                 <span className="text-sm font-mono font-bold text-text mt-0.5" style={{ textShadow: `0 0 12px ${color}40` }}>{s.value}</span>
               </div>
             ))}

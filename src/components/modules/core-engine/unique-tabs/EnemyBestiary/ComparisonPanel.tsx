@@ -31,7 +31,7 @@ export function ComparisonPanel({ selected, compare, accent }: ComparisonPanelPr
               <span className="text-sm font-bold" style={{ color: arch.color }}>
                 {arch.label}
               </span>
-              <span className="text-[10px] font-mono uppercase tracking-[0.15em] text-text-muted">
+              <span className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted">
                 {arch.class} / {arch.role}
               </span>
             </div>
@@ -44,7 +44,7 @@ export function ComparisonPanel({ selected, compare, accent }: ComparisonPanelPr
                 const diff = otherStat ? stat.value - otherStat.value : 0;
                 return (
                   <div key={stat.label} className="flex items-center gap-2">
-                    <span className="text-[10px] font-mono uppercase tracking-[0.15em] text-text-muted w-14 text-right flex-shrink-0">
+                    <span className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted w-14 text-right flex-shrink-0">
                       {stat.label}
                     </span>
                     <div className="flex-1">
@@ -65,7 +65,7 @@ export function ComparisonPanel({ selected, compare, accent }: ComparisonPanelPr
 
             {/* Abilities */}
             <div>
-              <div className="text-[10px] font-mono uppercase tracking-[0.15em] text-text-muted mb-1.5">
+              <div className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted mb-1.5">
                 Abilities
               </div>
               <div className="flex flex-wrap gap-1">

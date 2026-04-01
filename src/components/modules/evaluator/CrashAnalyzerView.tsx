@@ -11,6 +11,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { SurfaceCard } from '@/components/ui/SurfaceCard';
 import { Badge } from '@/components/ui/Badge';
 import { ProgressRing } from '@/components/ui/ProgressRing';
+import { MultiInteractivePill } from '@/components/ui/InteractivePill';
+import type { MultiPillItem } from '@/components/ui/InteractivePill';
 import { useCrashAnalyzerStore } from '@/stores/crashAnalyzerStore';
 import type {
   CrashReport,
@@ -21,7 +23,7 @@ import type {
   CallstackFrame,
 } from '@/types/crash-analyzer';
 import { UI_TIMEOUTS } from '@/lib/constants';
-import { ACCENT_EMERALD } from '@/lib/chart-colors';
+import { ACCENT_EMERALD, STATUS_ERROR, STATUS_BLOCKER, STATUS_WARNING, STATUS_INFO } from '@/lib/chart-colors';
 
 // ── Constants ───────────────────────────────────────────────────────────────
 
@@ -67,7 +69,7 @@ export function CrashAnalyzerView() {
 
   const [viewTab, setViewTab] = useState<ViewTab>('crashes');
   const [searchQuery, setSearchQuery] = useState('');
-  const [severityFilter, setSeverityFilter] = useState<CrashSeverity | 'all'>('all');
+  const [severityFilter, setSeverityFilter] = useState<Set<CrashSeverity>>(new Set());
 
   useEffect(() => {
     fetchAnalysis();
@@ -85,11 +87,34 @@ export function CrashAnalyzerView() {
           (r.mappedModule ?? '').toLowerCase().includes(q),
       );
     }
-    if (severityFilter !== 'all') {
-      result = result.filter((r) => r.severity === severityFilter);
+    if (severityFilter.size > 0) {
+      result = result.filter((r) => severityFilter.has(r.severity));
     }
     return result;
   }, [reports, searchQuery, severityFilter]);
+
+  // Severity counts for pill badges
+  const severityCounts = useMemo(() => {
+    const counts: Record<CrashSeverity, number> = { critical: 0, high: 0, medium: 0, low: 0 };
+    for (const r of reports) counts[r.severity]++;
+    return counts;
+  }, [reports]);
+
+  const SEVERITY_PILLS: MultiPillItem[] = useMemo(() => [
+    { id: 'critical', label: 'Critical', color: STATUS_ERROR, count: severityCounts.critical },
+    { id: 'high', label: 'High', color: STATUS_BLOCKER, count: severityCounts.high },
+    { id: 'medium', label: 'Medium', color: STATUS_WARNING, count: severityCounts.medium },
+    { id: 'low', label: 'Low', color: STATUS_INFO, count: severityCounts.low },
+  ], [severityCounts]);
+
+  const toggleSeverity = useCallback((id: string) => {
+    setSeverityFilter((prev) => {
+      const next = new Set(prev);
+      if (next.has(id as CrashSeverity)) next.delete(id as CrashSeverity);
+      else next.add(id as CrashSeverity);
+      return next;
+    });
+  }, []);
 
   // Selected crash detail
   const selectedReport = useMemo(
@@ -199,17 +224,11 @@ export function CrashAnalyzerView() {
                   className="w-full pl-8 pr-3 py-1.5 rounded-md border border-border bg-surface text-xs text-text placeholder:text-text-muted focus:outline-none focus:ring-1 focus:ring-status-red-strong"
                 />
               </div>
-              <select
-                value={severityFilter}
-                onChange={(e) => setSeverityFilter(e.target.value as CrashSeverity | 'all')}
-                className="px-2 py-1.5 rounded-md border border-border bg-surface text-xs text-text focus:outline-none"
-              >
-                <option value="all">All Severities</option>
-                <option value="critical">Critical</option>
-                <option value="high">High</option>
-                <option value="medium">Medium</option>
-                <option value="low">Low</option>
-              </select>
+              <MultiInteractivePill
+                items={SEVERITY_PILLS}
+                activeIds={severityFilter}
+                onToggle={toggleSeverity}
+              />
             </div>
 
             <div className="space-y-2 max-h-[65vh] overflow-y-auto">

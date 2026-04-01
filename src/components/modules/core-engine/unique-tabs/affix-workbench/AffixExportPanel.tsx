@@ -41,7 +41,7 @@ export function AffixExportPanel({
                 </button>
               </div>
             </div>
-            <pre className="p-4 text-[11px] font-mono text-text-muted leading-relaxed overflow-x-auto max-h-[400px] overflow-y-auto whitespace-pre">
+            <pre className="p-4 text-xs font-mono text-text-muted leading-relaxed overflow-x-auto max-h-[400px] overflow-y-auto whitespace-pre">
               {exportCode}
             </pre>
           </div>

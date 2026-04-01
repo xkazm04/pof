@@ -5,7 +5,7 @@ import {
   Globe, Play, AlertTriangle, CheckCircle2, FileText,
   ChevronDown, ChevronRight, Search, Copy, Check,
   Languages, ShieldAlert, BookOpen, Table2, RefreshCw,
-  ArrowRight, XCircle, Info, Eye,
+  ArrowRight, XCircle, Info, Eye, X,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { SurfaceCard } from '@/components/ui/SurfaceCard';
@@ -23,7 +23,7 @@ import type {
 } from '@/types/localization-pipeline';
 import { CONTEXT_LABELS, SUPPORTED_LOCALES } from '@/lib/localization/definitions';
 import { UI_TIMEOUTS } from '@/lib/constants';
-import { ACCENT_EMERALD, STATUS_WARNING, STATUS_ERROR } from '@/lib/chart-colors';
+import { ACCENT_EMERALD, STATUS_WARNING, STATUS_ERROR, STATUS_INFO } from '@/lib/chart-colors';
 
 // ── Constants ───────────────────────────────────────────────────────────────
 
@@ -50,6 +50,24 @@ const STATUS_STYLE: Record<TranslationStatus, { color: string; label: string }> 
 
 type ViewTab = 'overview' | 'strings' | 'translations' | 'hazards' | 'tables';
 
+type StringPreset = 'hardcoded' | 'low-confidence' | 'missing-translations' | 'critical-hazards';
+
+const STRING_PRESET_LABELS: Record<StringPreset, string> = {
+  'hardcoded': 'Hardcoded Only',
+  'low-confidence': 'Low Confidence',
+  'missing-translations': 'Missing Translations',
+  'critical-hazards': 'Critical Hazards',
+};
+
+type TranslationPreset = 'low-confidence' | 'needs-review' | 'missing-translations' | 'expansion-warnings';
+
+const TRANSLATION_PRESET_LABELS: Record<TranslationPreset, string> = {
+  'low-confidence': 'Low Confidence',
+  'needs-review': 'Needs Review',
+  'missing-translations': 'Missing Translations',
+  'expansion-warnings': 'Expansion Warnings',
+};
+
 // ── Main Component ──────────────────────────────────────────────────────────
 
 export function LocalizationPipelineView() {
@@ -73,6 +91,8 @@ export function LocalizationPipelineView() {
   const [searchQuery, setSearchQuery] = useState('');
   const [contextFilter, setContextFilter] = useState<StringContext | 'all'>('all');
   const [localeFilter, setLocaleFilter] = useState<string>('all');
+  const [stringPresets, setStringPresets] = useState<Set<StringPreset>>(new Set());
+  const [translationPresets, setTranslationPresets] = useState<Set<TranslationPreset>>(new Set());
 
   useEffect(() => {
     fetchDefaults();
@@ -81,6 +101,24 @@ export function LocalizationPipelineView() {
   const handleRunPipeline = useCallback(async () => {
     await runFullPipeline();
   }, [runFullPipeline]);
+
+  // Hazard string IDs for preset filtering
+  const criticalHazardStringIds = useMemo(() => {
+    const ids = new Set<string>();
+    for (const h of hazards) {
+      if (h.severity === 'critical') ids.add(h.location.filePath + ':' + h.location.lineNumber);
+    }
+    return ids;
+  }, [hazards]);
+
+  // Set of string IDs that have translations
+  const translatedStringIds = useMemo(() => {
+    const ids = new Set<string>();
+    for (const e of entries) {
+      if (e.status !== 'pending') ids.add(e.stringId);
+    }
+    return ids;
+  }, [entries]);
 
   // Filtered strings
   const filteredStrings = useMemo(() => {
@@ -94,8 +132,22 @@ export function LocalizationPipelineView() {
     if (contextFilter !== 'all') {
       result = result.filter((s) => s.context === contextFilter);
     }
+    if (stringPresets.has('hardcoded')) {
+      result = result.filter((s) => s.currentUsage === 'hardcoded');
+    }
+    if (stringPresets.has('low-confidence')) {
+      result = result.filter((s) => s.detectionConfidence < 0.7);
+    }
+    if (stringPresets.has('missing-translations')) {
+      result = result.filter((s) => !translatedStringIds.has(s.id));
+    }
+    if (stringPresets.has('critical-hazards')) {
+      result = result.filter((s) =>
+        s.locations.some((loc) => criticalHazardStringIds.has(loc.filePath + ':' + loc.lineNumber)),
+      );
+    }
     return result;
-  }, [strings, searchQuery, contextFilter]);
+  }, [strings, searchQuery, contextFilter, stringPresets, translatedStringIds, criticalHazardStringIds]);
 
   // Filtered translations
   const filteredEntries = useMemo(() => {
@@ -108,8 +160,20 @@ export function LocalizationPipelineView() {
       const matchIds = new Set(strings.filter((s) => s.sourceText.toLowerCase().includes(q)).map((s) => s.id));
       result = result.filter((e) => matchIds.has(e.stringId));
     }
+    if (translationPresets.has('low-confidence')) {
+      result = result.filter((e) => e.confidence < 0.7);
+    }
+    if (translationPresets.has('needs-review')) {
+      result = result.filter((e) => e.status === 'needs_review');
+    }
+    if (translationPresets.has('missing-translations')) {
+      result = result.filter((e) => e.status === 'pending');
+    }
+    if (translationPresets.has('expansion-warnings')) {
+      result = result.filter((e) => e.expansionWarning);
+    }
     return result;
-  }, [entries, localeFilter, searchQuery, strings]);
+  }, [entries, localeFilter, searchQuery, strings, translationPresets]);
 
   // Summary stats
   const totalStrings = scanResult?.totalStringsFound ?? 0;
@@ -186,7 +250,7 @@ export function LocalizationPipelineView() {
       {/* Empty state */}
       {!scanResult && !isLoading && (
         <SurfaceCard>
-          <div className="text-center py-12">
+          <div className="text-center py-10">
             <Globe className="w-10 h-10 text-text-muted mx-auto mb-3 opacity-40" />
             <p className="text-sm text-text-muted mb-1">No scan results yet</p>
             <p className="text-2xs text-text-muted">
@@ -200,7 +264,7 @@ export function LocalizationPipelineView() {
       {/* Loading */}
       {isLoading && !scanResult && (
         <SurfaceCard>
-          <div className="text-center py-12">
+          <div className="text-center py-10">
             <RefreshCw className="w-8 h-8 text-indigo-400 mx-auto mb-3 animate-spin" />
             <p className="text-sm text-text-muted">Running localization pipeline...</p>
           </div>
@@ -246,7 +310,12 @@ export function LocalizationPipelineView() {
                       </span>
                       <div className="flex-1 h-2 bg-surface-2 rounded-full overflow-hidden">
                         <div
-                          className="h-full rounded-full transition-all"
+                          role="progressbar"
+                          aria-valuenow={pct}
+                          aria-valuemin={0}
+                          aria-valuemax={100}
+                          aria-label={`${locInfo?.nativeName ?? locale} translation progress`}
+                          className="h-full rounded-full transition-[width] duration-300"
                           style={{ width: `${pct}%`, backgroundColor: pct >= 80 ? ACCENT_EMERALD : pct >= 50 ? STATUS_WARNING : STATUS_ERROR }}
                         />
                       </div>
@@ -260,6 +329,18 @@ export function LocalizationPipelineView() {
               </div>
             </SurfaceCard>
           )}
+
+          {/* Expansion factor comparison */}
+          <SurfaceCard>
+            <h3 className="text-xs font-semibold text-text mb-3 flex items-center gap-1.5">
+              <Globe className="w-3.5 h-3.5 text-indigo-400" />
+              Text Expansion by Locale
+            </h3>
+            <p className="text-2xs text-text-muted mb-3">
+              How much longer (or shorter) translated text is compared to English. Higher values risk UI overflow.
+            </p>
+            <ExpansionFactorBars />
+          </SurfaceCard>
 
           {/* Module breakdown */}
           <SurfaceCard>
@@ -309,7 +390,7 @@ export function LocalizationPipelineView() {
 
       {/* ── Strings Tab ──────────────────────────────────────────────── */}
       {scanResult && viewTab === 'strings' && (
-        <div className="space-y-3">
+        <div className="space-y-4">
           {/* Filters */}
           <div className="flex items-center gap-2">
             <div className="relative flex-1">
@@ -321,6 +402,11 @@ export function LocalizationPipelineView() {
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="w-full pl-8 pr-3 py-1.5 rounded-md border border-border bg-surface text-xs text-text placeholder:text-text-muted focus:outline-none focus:ring-1 focus:ring-indigo-500/40"
               />
+              {(searchQuery || stringPresets.size > 0 || contextFilter !== 'all') && (
+                <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-2xs text-indigo-400 font-medium tabular-nums pointer-events-none">
+                  {filteredStrings.length} of {strings.length}
+                </span>
+              )}
             </div>
             <select
               value={contextFilter}
@@ -328,10 +414,48 @@ export function LocalizationPipelineView() {
               className="px-2 py-1.5 rounded-md border border-border bg-surface text-xs text-text focus:outline-none"
             >
               <option value="all">All Contexts</option>
-              {Object.entries(CONTEXT_LABELS).map(([key, label]) => (
-                <option key={key} value={key}>{label}</option>
-              ))}
+              <optgroup label="Gameplay">
+                <option value="ability_name">{CONTEXT_LABELS.ability_name}</option>
+                <option value="ability_description">{CONTEXT_LABELS.ability_description}</option>
+                <option value="item_name">{CONTEXT_LABELS.item_name}</option>
+                <option value="item_tooltip">{CONTEXT_LABELS.item_tooltip}</option>
+                <option value="stat_label">{CONTEXT_LABELS.stat_label}</option>
+              </optgroup>
+              <optgroup label="UI">
+                <option value="ui_label">{CONTEXT_LABELS.ui_label}</option>
+                <option value="ui_button">{CONTEXT_LABELS.ui_button}</option>
+                <option value="menu_title">{CONTEXT_LABELS.menu_title}</option>
+                <option value="notification">{CONTEXT_LABELS.notification}</option>
+              </optgroup>
+              <optgroup label="Narrative">
+                <option value="quest_title">{CONTEXT_LABELS.quest_title}</option>
+                <option value="quest_description">{CONTEXT_LABELS.quest_description}</option>
+                <option value="dialogue_line">{CONTEXT_LABELS.dialogue_line}</option>
+                <option value="tutorial">{CONTEXT_LABELS.tutorial}</option>
+              </optgroup>
+              <optgroup label="Other">
+                <option value="unknown">{CONTEXT_LABELS.unknown}</option>
+              </optgroup>
             </select>
+          </div>
+
+          {/* Preset filter chips */}
+          <div className="flex items-center gap-1.5 flex-wrap">
+            {(Object.keys(STRING_PRESET_LABELS) as StringPreset[]).map((preset) => (
+              <PresetChip
+                key={preset}
+                label={STRING_PRESET_LABELS[preset]}
+                active={stringPresets.has(preset)}
+                onClick={() => {
+                  setStringPresets((prev) => {
+                    const next = new Set(prev);
+                    if (next.has(preset)) next.delete(preset);
+                    else next.add(preset);
+                    return next;
+                  });
+                }}
+              />
+            ))}
           </div>
 
           <p className="text-2xs text-text-muted">{filteredStrings.length} strings</p>
@@ -346,7 +470,7 @@ export function LocalizationPipelineView() {
 
       {/* ── Translations Tab ─────────────────────────────────────────── */}
       {scanResult && viewTab === 'translations' && (
-        <div className="space-y-3">
+        <div className="space-y-4">
           {/* Filters */}
           <div className="flex items-center gap-2">
             <div className="relative flex-1">
@@ -358,6 +482,11 @@ export function LocalizationPipelineView() {
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="w-full pl-8 pr-3 py-1.5 rounded-md border border-border bg-surface text-xs text-text placeholder:text-text-muted focus:outline-none focus:ring-1 focus:ring-indigo-500/40"
               />
+              {(searchQuery || translationPresets.size > 0 || localeFilter !== 'all') && (
+                <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-2xs text-indigo-400 font-medium tabular-nums pointer-events-none">
+                  {filteredEntries.length} of {entries.length}
+                </span>
+              )}
             </div>
             <select
               value={localeFilter}
@@ -370,6 +499,25 @@ export function LocalizationPipelineView() {
                 return <option key={code} value={code}>{loc?.name ?? code}</option>;
               })}
             </select>
+          </div>
+
+          {/* Preset filter chips */}
+          <div className="flex items-center gap-1.5 flex-wrap">
+            {(Object.keys(TRANSLATION_PRESET_LABELS) as TranslationPreset[]).map((preset) => (
+              <PresetChip
+                key={preset}
+                label={TRANSLATION_PRESET_LABELS[preset]}
+                active={translationPresets.has(preset)}
+                onClick={() => {
+                  setTranslationPresets((prev) => {
+                    const next = new Set(prev);
+                    if (next.has(preset)) next.delete(preset);
+                    else next.add(preset);
+                    return next;
+                  });
+                }}
+              />
+            ))}
           </div>
 
           {/* Quality score */}
@@ -395,10 +543,10 @@ export function LocalizationPipelineView() {
 
       {/* ── Hazards Tab ──────────────────────────────────────────────── */}
       {scanResult && viewTab === 'hazards' && (
-        <div className="space-y-3">
+        <div className="space-y-4">
           {hazards.length === 0 ? (
             <SurfaceCard>
-              <div className="text-center py-8">
+              <div className="text-center py-10">
                 <CheckCircle2 className="w-8 h-8 text-emerald-400 mx-auto mb-2" />
                 <p className="text-sm text-text">No localization hazards detected</p>
               </div>
@@ -422,10 +570,10 @@ export function LocalizationPipelineView() {
 
       {/* ── String Tables Tab ────────────────────────────────────────── */}
       {scanResult && viewTab === 'tables' && (
-        <div className="space-y-3">
+        <div className="space-y-4">
           {stringTables.length === 0 ? (
             <SurfaceCard>
-              <div className="text-center py-8">
+              <div className="text-center py-10">
                 <Table2 className="w-8 h-8 text-text-muted mx-auto mb-2 opacity-40" />
                 <p className="text-sm text-text-muted">No string tables generated</p>
               </div>
@@ -458,11 +606,27 @@ function SubTab({ label, active, onClick, count }: { label: string; active: bool
   );
 }
 
+function PresetChip({ label, active, onClick }: { label: string; active: boolean; onClick: () => void }) {
+  return (
+    <button
+      onClick={onClick}
+      className={`flex items-center gap-1 px-2 py-1 rounded-full text-2xs font-medium transition-colors ${
+        active
+          ? 'bg-indigo-500/15 text-indigo-400 border border-indigo-500/30'
+          : 'bg-surface-2 text-text-muted border border-transparent hover:bg-surface hover:text-text'
+      }`}
+    >
+      {label}
+      {active && <X className="w-3 h-3" />}
+    </button>
+  );
+}
+
 function MiniStat({ label, value, accent }: { label: string; value: number | string; accent?: string }) {
   return (
-    <SurfaceCard level={2}>
-      <p className="text-2xs text-text-muted">{label}</p>
-      <p className={`text-lg font-bold ${accent ?? 'text-text'}`}>{value}</p>
+    <SurfaceCard level={2} className="min-w-0">
+      <p className="text-2xs text-text-muted truncate">{label}</p>
+      <p className={`text-lg font-bold truncate ${accent ?? 'text-text'}`}>{value}</p>
     </SurfaceCard>
   );
 }
@@ -539,6 +703,20 @@ function TranslationCard({ entry, sourceText }: { entry: TranslationEntry; sourc
           </div>
           <p className="text-xs text-text-muted mt-0.5">&quot;{sourceText}&quot;</p>
           <p className="text-xs text-text font-medium mt-0.5">→ &quot;{entry.translatedText}&quot;</p>
+          {locInfo && locInfo.expansionFactor !== 1.0 && (
+            <div className="flex items-center gap-2 mt-1.5">
+              <div className="flex-1 h-1.5 bg-surface-2 rounded-full overflow-hidden max-w-[120px]">
+                <div
+                  className="h-full rounded-full transition-[width] duration-300"
+                  style={{
+                    width: `${Math.min((locInfo.expansionFactor / 1.5) * 100, 100)}%`,
+                    backgroundColor: expansionColor(locInfo.expansionFactor),
+                  }}
+                />
+              </div>
+              <span className="text-2xs text-text-muted">{formatExpansion(locInfo.expansionFactor)}</span>
+            </div>
+          )}
           {entry.translatorNotes && (
             <p className="text-2xs text-text-muted mt-1 italic">{entry.translatorNotes}</p>
           )}
@@ -650,6 +828,62 @@ function ReplacementCard({ replacement }: { replacement: { stringId: string; ori
         {copied ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
         {copied ? 'Copied!' : 'Copy suggested'}
       </button>
+    </div>
+  );
+}
+
+/* ── Expansion helpers ──────────────────────────────────────────────────── */
+
+const MAX_EXPANSION = Math.max(...SUPPORTED_LOCALES.map((l) => l.expansionFactor));
+
+/** Returns a color from green (compact) → amber (neutral) → red (high expansion). */
+function expansionColor(factor: number): string {
+  if (factor <= 0.7) return ACCENT_EMERALD;
+  if (factor <= 1.0) return STATUS_INFO;
+  if (factor <= 1.2) return STATUS_WARNING;
+  return STATUS_ERROR;
+}
+
+function formatExpansion(factor: number): string {
+  if (factor === 1.0) return 'baseline';
+  const pct = Math.round((factor - 1) * 100);
+  return pct > 0 ? `+${pct}%` : `${pct}%`;
+}
+
+function ExpansionFactorBars() {
+  const sorted = useMemo(
+    () => [...SUPPORTED_LOCALES].sort((a, b) => b.expansionFactor - a.expansionFactor),
+    [],
+  );
+
+  return (
+    <div className="space-y-1.5">
+      {sorted.map((loc) => {
+        const widthPct = (loc.expansionFactor / MAX_EXPANSION) * 100;
+        const color = expansionColor(loc.expansionFactor);
+        return (
+          <div key={loc.code} className="flex items-center gap-3">
+            <span className="text-2xs text-text-muted w-20 shrink-0 truncate" title={loc.name}>
+              {loc.nativeName}
+            </span>
+            <div className="flex-1 h-2.5 bg-surface-2 rounded-full overflow-hidden">
+              <div
+                className="h-full rounded-full transition-[width] duration-300"
+                style={{ width: `${widthPct}%`, backgroundColor: color }}
+              />
+            </div>
+            <span
+              className="text-2xs font-medium w-12 text-right shrink-0"
+              style={{ color }}
+            >
+              {formatExpansion(loc.expansionFactor)}
+            </span>
+            <span className="text-2xs text-text-muted w-8 text-right shrink-0">
+              ×{loc.expansionFactor.toFixed(1)}
+            </span>
+          </div>
+        );
+      })}
     </div>
   );
 }

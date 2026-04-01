@@ -53,7 +53,7 @@ export function MechanicsScalingTab({ moduleId, featureMap }: MechanicsScalingTa
         {/* Power Budget Radar */}
         <BlueprintPanel color={ACCENT} className="p-4">
           <SectionHeader icon={Target} label="Item Power Budget Radar" color={ACCENT} />
-          <p className="text-[10px] font-mono uppercase tracking-[0.15em] text-text-muted mb-3">Compare item power distribution across 5 budget axes.</p>
+          <p className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted mb-3">Compare item power distribution across 5 budget axes.</p>
           <div className="flex items-center justify-center gap-8 flex-wrap">
             <div className="flex flex-col items-center gap-2">
               <RadarChart data={IRON_LONGSWORD_RADAR} size={180} accent={RARITY_COLORS.Common}
@@ -95,7 +95,7 @@ export function MechanicsScalingTab({ moduleId, featureMap }: MechanicsScalingTa
         {/* Affix Probability Tree */}
         <BlueprintPanel color={ACCENT} className="p-4">
           <SectionHeader icon={TreePine} label="Affix Probability Tree" color={ACCENT} />
-          <p className="text-[10px] font-mono uppercase tracking-[0.15em] text-text-muted mb-3">Sunburst view: center = Rare rarity, first ring = prefix count, second ring = specific affixes.</p>
+          <p className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted mb-3">Sunburst view: center = Rare rarity, first ring = prefix count, second ring = specific affixes.</p>
           <div className="flex items-center justify-center">
             <AffixSunburst tree={AFFIX_PROB_TREE} size={260} />
           </div>
@@ -112,7 +112,7 @@ export function MechanicsScalingTab({ moduleId, featureMap }: MechanicsScalingTa
       {/* Item Level Scaling */}
       <BlueprintPanel color={ACCENT} className="p-4">
         <SectionHeader icon={TrendingUp} label="Item Level Scaling Preview" color={ACCENT} />
-        <p className="text-[10px] font-mono uppercase tracking-[0.15em] text-text-muted mb-3">Stat values across item levels 1-50 with min-max bands.</p>
+        <p className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted mb-3">Stat values across item levels 1-50 with min-max bands.</p>
         <div className="flex justify-center">
           <ItemScalingChart lines={SCALING_LINES} width={280} height={110} />
         </div>
@@ -132,7 +132,7 @@ export function MechanicsScalingTab({ moduleId, featureMap }: MechanicsScalingTa
         <div className="flex items-center justify-between">
           <div>
             <SectionHeader icon={Scale} label="AI Balance Advisor" color={ACCENT} />
-            <p className="text-[10px] font-mono text-text-muted">
+            <p className="text-xs font-mono text-text-muted">
               Analyze power budgets, affix scaling, DPS outliers, set bonus balance, and rarity distribution health.
             </p>
           </div>

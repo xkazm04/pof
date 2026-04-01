@@ -533,7 +533,7 @@ export function PlanMatrixMap({ moduleId: initialModuleId }: PlanMatrixMapProps 
                     return (
                       <div 
                         key={cat.label} 
-                        className="absolute text-xs font-bold tracking-widest uppercase text-white border-l-2 border-border/60 pl-3 flex items-center"
+                        className="absolute text-xs font-bold uppercase text-white border-l-2 border-border/60 pl-3 flex items-center"
                         style={{ left: cat.x, top: cat.y - 14, height: 28, width: 140 }}
                       >
                         {cat.label}

@@ -25,7 +25,7 @@ export function LiveMetrics({ simResult, rollCount, itemLevel }: { simResult: Dr
 
       {/* Axis coverage */}
       <div className="space-y-1">
-        <span className="text-[10px] font-mono uppercase tracking-[0.15em] text-text-muted font-bold">Axis Coverage</span>
+        <span className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted font-bold">Axis Coverage</span>
         <div className="grid grid-cols-4 gap-1.5">
           {(Object.keys(simResult.axisCoverage) as TraitAxis[]).map((ax) => {
             const pct = simResult.axisCoverage[ax];
@@ -46,7 +46,7 @@ export function LiveMetrics({ simResult, rollCount, itemLevel }: { simResult: Dr
 
       {/* Power histogram */}
       <div className="space-y-1">
-        <span className="text-[10px] font-mono uppercase tracking-[0.15em] text-text-muted font-bold">Power Distribution</span>
+        <span className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted font-bold">Power Distribution</span>
         <div className="flex items-end gap-px h-12">
           {simResult.powerHistogram.map((count, i) => {
             const maxH = Math.max(...simResult.powerHistogram) || 1;
@@ -82,10 +82,10 @@ export function WeightTuning({
       <div className="flex items-center justify-between">
         <SectionHeader icon={Settings2} label="Affix Weights" color={ACCENT_ORANGE} />
         <div className="flex items-center gap-1.5">
-          <button onClick={onResetWeights} className="text-[10px] font-mono uppercase tracking-[0.15em] text-text-muted hover:text-text transition-colors px-1.5 py-0.5 rounded hover:bg-surface/50">
+          <button onClick={onResetWeights} className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted hover:text-text transition-colors px-1.5 py-0.5 rounded hover:bg-surface/50">
             Reset
           </button>
-          <button onClick={onToggleAdvanced} className="flex items-center gap-0.5 text-[10px] font-mono uppercase tracking-[0.15em] text-text-muted hover:text-text transition-colors px-1.5 py-0.5 rounded hover:bg-surface/50">
+          <button onClick={onToggleAdvanced} className="flex items-center gap-0.5 text-xs font-mono uppercase tracking-[0.15em] text-text-muted hover:text-text transition-colors px-1.5 py-0.5 rounded hover:bg-surface/50">
             {showAdvanced ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
             {showAdvanced ? 'Less' : 'More'}
           </button>
@@ -101,7 +101,7 @@ export function WeightTuning({
             return (
               <div key={affix.id} className={`flex items-center gap-1.5 ${eligible ? '' : 'opacity-30'}`}>
                 <span className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ backgroundColor: AXIS_COLORS[affix.axis] }} />
-                <span className="text-[10px] font-mono uppercase tracking-[0.15em] text-text-muted truncate w-20">{affix.name}</span>
+                <span className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted truncate w-20">{affix.name}</span>
                 <input type="range" min={0} max={50} step={1} value={Math.round(w * 10)} onChange={(e) => onUpdateWeight(affix.id, Number(e.target.value) / 10)} className="flex-1 h-1 accent-blue-500" disabled={!eligible} />
                 <span className="text-xs font-mono w-8 text-right" style={{ color: isCustom ? STATUS_WARNING : 'var(--text-muted)' }}>
                   {w.toFixed(1)}

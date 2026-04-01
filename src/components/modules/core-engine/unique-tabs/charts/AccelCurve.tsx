@@ -55,7 +55,7 @@ export function AccelCurve({
         return (
           <g key={v}>
             <line x1={left} y1={y} x2={right} y2={y} stroke="rgba(255,255,255,0.06)" strokeWidth="1" />
-            <text x={left - 4} y={y + 3} textAnchor="end" className="text-[11px] font-mono fill-[var(--text-muted)]" style={{ fontSize: 11 }}>
+            <text x={left - 4} y={y + 3} textAnchor="end" className="text-xs font-mono fill-[var(--text-muted)]">
               {v}
             </text>
           </g>
@@ -67,7 +67,7 @@ export function AccelCurve({
         return (
           <g key={t}>
             <line x1={x} y1={top} x2={x} y2={bottom} stroke="rgba(255,255,255,0.06)" strokeWidth="1" />
-            <text x={x} y={bottom + 14} textAnchor="middle" className="text-[11px] font-mono fill-[var(--text-muted)]" style={{ fontSize: 11 }}>
+            <text x={x} y={bottom + 14} textAnchor="middle" className="text-xs font-mono fill-[var(--text-muted)]">
               {t}s
             </text>
           </g>

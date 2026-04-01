@@ -17,7 +17,7 @@ function InventoryCapacitySection() {
   return (
     <BlueprintPanel color={ACCENT} className="p-4">
       <SectionHeader icon={PieChart} label="Inventory Capacity Planner" color={ACCENT} />
-      <p className="text-[10px] font-mono uppercase tracking-[0.15em] text-text-muted mb-3">Slots by type, rarity breakdown, total value, and cleanup suggestions.</p>
+      <p className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted mb-3">Slots by type, rarity breakdown, total value, and cleanup suggestions.</p>
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         {/* Donut chart */}
         <div className="flex flex-col items-center gap-2">
@@ -53,11 +53,11 @@ function InventoryCapacitySection() {
               return <path d={d} fill="rgba(255,255,255,0.05)" stroke="var(--surface)" strokeWidth="1.5" />;
             })()}
             <text x="70" y="66" textAnchor="middle" className="text-sm font-bold fill-text font-mono" style={{ fontSize: 14 }}>{INVENTORY_USED}/{INVENTORY_TOTAL}</text>
-            <text x="70" y="80" textAnchor="middle" className="text-[11px] fill-[var(--text-muted)] font-mono" style={{ fontSize: 11 }}>slots</text>
+            <text x="70" y="80" textAnchor="middle" className="text-xs fill-[var(--text-muted)] font-mono">slots</text>
           </svg>
           <div className="flex flex-wrap gap-1.5 justify-center">
             {INVENTORY_GROUPS.map(g => (
-              <span key={g.type} className="text-[11px] font-mono flex items-center gap-1">
+              <span key={g.type} className="text-xs font-mono flex items-center gap-1">
                 <span className="w-2 h-2 rounded-sm" style={{ backgroundColor: g.color }} />{g.type} ({g.count})
               </span>
             ))}
@@ -65,7 +65,7 @@ function InventoryCapacitySection() {
         </div>
         {/* Rarity bars */}
         <div className="space-y-3">
-          <p className="text-[10px] font-mono uppercase tracking-[0.15em] text-text-muted">By Rarity</p>
+          <p className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted">By Rarity</p>
           {INVENTORY_BY_RARITY.map(r => (
             <div key={r.rarity} className="space-y-0.5">
               <div className="flex justify-between text-sm font-mono">
@@ -81,7 +81,7 @@ function InventoryCapacitySection() {
         </div>
         {/* Cleanup suggestions */}
         <div className="space-y-3">
-          <p className="text-[10px] font-mono uppercase tracking-[0.15em] text-text-muted">Auto-Cleanup Suggestions</p>
+          <p className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted">Auto-Cleanup Suggestions</p>
           {CLEANUP_SUGGESTIONS.map((sug, i) => (
             <motion.div key={i} className="flex items-start gap-2 text-sm font-mono p-2 rounded-lg bg-surface-deep border" style={{ borderColor: `${ACCENT}15` }}
               initial={{ opacity: 0, x: 10 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.1 }}>

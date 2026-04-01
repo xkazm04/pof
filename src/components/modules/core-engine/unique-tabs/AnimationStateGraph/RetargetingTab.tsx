@@ -42,7 +42,7 @@ function RetargetPipelineStatus() {
   return (
     <BlueprintPanel color={ACCENT} className="p-4">
       <SectionHeader label="Retarget Pipeline Status" color={ACCENT} />
-      <p className="text-[10px] font-mono uppercase tracking-[0.15em] text-text-muted mt-1 mb-3">
+      <p className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted mt-1 mb-3">
         Detailed status of each retarget pipeline stage. Click a step to see details.
       </p>
       <div className="space-y-1.5">
@@ -99,7 +99,7 @@ function RootMotionTrajectory() {
   return (
     <BlueprintPanel color={ACCENT} className="p-4">
       <SectionHeader label="Root Motion Trajectory Preview" color={ACCENT} />
-      <p className="text-[10px] font-mono uppercase tracking-[0.15em] text-text-muted mt-1 mb-3">
+      <p className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted mt-1 mb-3">
         Top-down view of root motion paths per montage. Line thickness indicates velocity.
       </p>
       <div className="flex items-center gap-4">
@@ -109,7 +109,7 @@ function RootMotionTrajectory() {
           <line x1={60} y1={8} x2={60} y2={112} stroke="rgba(255,255,255,0.04)" strokeWidth="1" />
           <line x1={8} y1={60} x2={112} y2={60} stroke="rgba(255,255,255,0.04)" strokeWidth="1" />
           <circle cx={60} cy={104} r={3} fill="rgba(255,255,255,0.3)" stroke="rgba(255,255,255,0.5)" strokeWidth="1" />
-          <text x={60} y={117} textAnchor="middle" className="text-[11px] font-mono fill-[var(--text-muted)]" style={{ fontSize: 11 }}>Origin</text>
+          <text x={60} y={117} textAnchor="middle" className="text-xs font-mono fill-[var(--text-muted)]">Origin</text>
           {ROOT_MOTION_PATHS.map((path) => {
             const pts = path.points.map((p) => `${p.x},${p.y}`).join(' ');
             return (

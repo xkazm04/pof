@@ -59,7 +59,7 @@ export function AnimationStateGraph({ moduleId }: AnimationStateGraphProps) {
               <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
                 <BlueprintPanel color={ACCENT} className="p-4">
                   <SectionHeader label="State Transition Heatmap" color={ACCENT} />
-                  <p className="text-[10px] font-mono uppercase tracking-[0.15em] text-text-muted mt-1 mb-3">
+                  <p className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted mt-1 mb-3">
                     Normalized transition frequency between animation states. Brighter cells indicate more frequent transitions.
                   </p>
                   <HeatmapGrid rows={HEATMAP_STATE_NAMES} cols={HEATMAP_STATE_NAMES} cells={HEATMAP_CELLS} accent={ACCENT} />

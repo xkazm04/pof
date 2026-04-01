@@ -4,7 +4,8 @@ import { ShieldCheck, CheckCircle2, AlertTriangle, XCircle } from 'lucide-react'
 import { motion } from 'framer-motion';
 import { STATUS_SUCCESS, STATUS_WARNING, STATUS_ERROR } from '@/lib/chart-colors';
 import { BlueprintPanel, SectionHeader } from './design';
-import { ACCENT, VALIDATION_CHECKS } from './data';
+import { ACCENT } from './data';
+import { VALIDATION_CHECKS } from './data-panels';
 
 export function IntegrityValidator() {
   const overallValidation = VALIDATION_CHECKS.every(c => c.status === 'pass') ? 'PASS' :
@@ -15,7 +16,7 @@ export function IntegrityValidator() {
       <div className="px-4 py-3 border-b border-border/10 flex items-center justify-between">
         <SectionHeader label="INTEGRITY_VALIDATOR" icon={ShieldCheck} color={ACCENT} />
         <span
-          className="px-2 py-0.5 rounded text-[10px] font-mono font-bold tracking-[0.15em] uppercase"
+          className="px-2 py-0.5 rounded text-xs font-mono font-bold tracking-[0.15em] uppercase"
           style={{
             backgroundColor: overallValidation === 'PASS' ? `${STATUS_SUCCESS}20` : overallValidation === 'WARN' ? `${STATUS_WARNING}20` : `${STATUS_ERROR}20`,
             color: overallValidation === 'PASS' ? STATUS_SUCCESS : overallValidation === 'WARN' ? STATUS_WARNING : STATUS_ERROR,

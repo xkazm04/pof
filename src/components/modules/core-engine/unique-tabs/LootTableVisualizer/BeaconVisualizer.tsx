@@ -56,7 +56,7 @@ export function BeaconVisualizer() {
       </div>
       {/* Beam height preview */}
       <div className="mt-3">
-        <div className="text-[10px] font-mono uppercase tracking-[0.15em] text-text-muted mb-2">Relative Beam Heights</div>
+        <div className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted mb-2">Relative Beam Heights</div>
         <div className="flex items-end justify-center gap-4 h-28">
           {BEACON_CONFIGS.map((cfg) => {
             const displayColor = colorblindMode ? (COLORBLIND_MAP[cfg.rarity] ?? cfg.color) : cfg.color;
@@ -74,7 +74,7 @@ export function BeaconVisualizer() {
                     transition={{ duration: cfg.pulseSpeed > 0 ? 2 / cfg.pulseSpeed : 10, repeat: Infinity, ease: 'linear' }}
                   />
                 </motion.div>
-                <span className="text-[11px] font-mono text-text-muted">{cfg.rarity.slice(0, 3)}</span>
+                <span className="text-xs font-mono text-text-muted">{cfg.rarity.slice(0, 3)}</span>
               </div>
             );
           })}

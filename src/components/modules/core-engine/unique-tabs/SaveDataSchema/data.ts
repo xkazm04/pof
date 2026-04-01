@@ -165,4 +165,4 @@ export function formatBytes(bytes: number): string {
 
 /* ── Re-export split data modules for backward compat ────────────────────── */
 export * from './data-budget';
-export * from './data-panels';
+// data-panels re-export removed to break circular dep (data-panels imports from ./data)

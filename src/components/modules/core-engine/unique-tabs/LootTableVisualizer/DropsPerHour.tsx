@@ -18,7 +18,7 @@ export function DropsPerHour() {
       <SectionHeader icon={Clock} label="Expected Drops per Hour" color={ACCENT_CYAN} />
       {/* Player level slider */}
       <div className="flex items-center gap-3 mb-3">
-        <span className="text-[10px] font-mono uppercase tracking-[0.15em] text-text-muted">Player Level:</span>
+        <span className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted">Player Level:</span>
         <input
           type="range" min={1} max={50} value={playerLevel}
           onChange={(e) => setPlayerLevel(Number(e.target.value))}
@@ -34,7 +34,7 @@ export function DropsPerHour() {
           <LiveMetricGauge metric={{ ...GOLD_PER_HOUR_GAUGE, current: adjGoldPerHour }} accent={STATUS_WARNING} />
         </div>
         <div className="flex flex-col items-center justify-center gap-1">
-          <span className="text-[10px] font-mono uppercase tracking-[0.15em] text-text-muted">Time to Legendary</span>
+          <span className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted">Time to Legendary</span>
           <span className="text-lg font-mono font-bold" style={{ color: STATUS_WARNING }}>
             {(8.5 / levelMultiplier).toFixed(1)}h
           </span>
@@ -43,7 +43,7 @@ export function DropsPerHour() {
       </div>
       {/* Source breakdown bar */}
       <div className="space-y-1">
-        <div className="text-[10px] font-mono uppercase tracking-[0.15em] text-text-muted">Drop Source Breakdown</div>
+        <div className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted">Drop Source Breakdown</div>
         <div className="flex h-4 rounded overflow-hidden w-full">
           {DROP_SOURCE_BREAKDOWN.map((src) => (
             <div

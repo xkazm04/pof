@@ -33,7 +33,7 @@ export function DistributionsPanel({ simResult }: { simResult: DropSimResult; af
             return (
               <div key={dist.affixId} className="flex items-center gap-1.5">
                 <span className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ backgroundColor: AXIS_COLORS[dist.axis] }} />
-                <span className="text-[10px] font-mono uppercase tracking-[0.15em] text-text-muted truncate w-24">{dist.name}</span>
+                <span className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted truncate w-24">{dist.name}</span>
                 <div className="flex-1">
                   <NeonBar pct={barW} color={AXIS_COLORS[dist.axis]} height={12} glow />
                 </div>
@@ -91,7 +91,7 @@ export function DistributionsPanel({ simResult }: { simResult: DropSimResult; af
             );
           })}
         </div>
-        <div className="text-[10px] font-mono uppercase tracking-[0.15em] text-text-muted text-center opacity-60">
+        <div className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted text-center opacity-60">
           number of affixes per item
         </div>
       </BlueprintPanel>

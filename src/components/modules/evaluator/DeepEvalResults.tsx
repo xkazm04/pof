@@ -31,8 +31,9 @@ import type { FixPlan } from '@/lib/evaluator/fix-plan-generator';
 import type { SubModuleId } from '@/types/modules';
 import { useProjectStore } from '@/stores/projectStore';
 import { useModuleCLI } from '@/hooks/useModuleCLI';
+import { MOTION } from '@/lib/constants';
 import { SurfaceCard } from '@/components/ui/SurfaceCard';
-import { MODULE_COLORS, STATUS_ERROR, STATUS_BLOCKER, STATUS_WARNING, OPACITY_8 } from '@/lib/chart-colors';
+import { MODULE_COLORS, STATUS_SUCCESS, STATUS_ERROR, STATUS_BLOCKER, STATUS_WARNING, OPACITY_8, statusBg, statusBorder } from '@/lib/chart-colors';
 
 // ─── Constants ───────────────────────────────────────────────────────────────
 
@@ -216,7 +217,7 @@ export function DeepEvalResults() {
           {isRunning ? (
             <button
               onClick={handleCancel}
-              className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-medium transition-all bg-[#f8717112] text-[#f87171] border border-[#f8717125] hover:bg-[#f8717120]"
+              className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-medium transition-all bg-[${statusBg(STATUS_ERROR)}] text-[${STATUS_ERROR}] border border-[${statusBorder(STATUS_ERROR, 0.12)}] hover:bg-[${statusBg(STATUS_ERROR, 0.12)}]`}
             >
               <Square className="w-3.5 h-3.5" />
               Cancel
@@ -246,7 +247,7 @@ export function DeepEvalResults() {
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: 'auto' }}
             exit={{ opacity: 0, height: 0 }}
-            transition={{ duration: 0.22 }}
+            transition={{ duration: MOTION.base }}
             className="overflow-hidden"
           >
             <SurfaceCard className="p-3">
@@ -359,7 +360,7 @@ export function DeepEvalResults() {
 
           {/* Empty results */}
           {result.findings.totalFindings === 0 && (
-            <div className="bg-surface border border-[#4ade8020] rounded-lg p-8 text-center">
+            <div className={`bg-surface border border-[${statusBorder(STATUS_SUCCESS, 0.12)}] rounded-lg p-8 text-center`}>
               <Check className="w-8 h-8 mx-auto text-[#4ade80] mb-3" />
               <h3 className="text-sm font-semibold text-text mb-1">No Issues Found</h3>
               <p className="text-xs text-text-muted">
@@ -415,7 +416,7 @@ function ProgressPanel({ progress }: { progress: EvalProgress }) {
             <motion.div
               className="h-full rounded-full bg-[#ef4444]"
               animate={{ width: `${pct}%` }}
-              transition={{ duration: 0.22 }}
+              transition={{ duration: MOTION.base }}
             />
           </div>
         </div>
@@ -546,7 +547,7 @@ function ModuleSection({
             initial={{ height: 0, opacity: 0 }}
             animate={{ height: 'auto', opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
-            transition={{ duration: 0.22 }}
+            transition={{ duration: MOTION.base }}
             className="overflow-hidden"
           >
             <div className="px-4 pb-3 space-y-2">
@@ -602,7 +603,7 @@ function ModuleSection({
                           initial={{ height: 0 }}
                           animate={{ height: 'auto' }}
                           exit={{ height: 0 }}
-                          transition={{ duration: 0.12 }}
+                          transition={{ duration: MOTION.fast }}
                           className="overflow-hidden"
                         >
                           <div className="px-3 pb-2 space-y-1.5">

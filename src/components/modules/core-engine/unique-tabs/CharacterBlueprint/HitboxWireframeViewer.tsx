@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { Scan, Eye, EyeOff } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { STATUS_ERROR, ACCENT_CYAN, OVERLAY_WHITE } from '@/lib/chart-colors';
+import { MOTION_CONFIG } from '@/lib/motion';
 import { BlueprintPanel, SectionHeader, CornerBrackets } from './design';
 import { HITBOX_ZONES } from './data';
 
@@ -72,7 +73,7 @@ export function HitboxWireframeViewer() {
                     initial={{ opacity: 0, scale: 0.8 }}
                     animate={{ opacity: 1, scale: 1 }}
                     exit={{ opacity: 0, scale: 0.8 }}
-                    transition={{ delay, duration: 0.3 }}
+                    transition={{ delay, ...MOTION_CONFIG.standard }}
                   />
                 ) : (
                   <motion.rect
@@ -85,7 +86,7 @@ export function HitboxWireframeViewer() {
                     initial={{ opacity: 0, scale: 0.8 }}
                     animate={{ opacity: 1, scale: 1 }}
                     exit={{ opacity: 0, scale: 0.8 }}
-                    transition={{ delay, duration: 0.3 }}
+                    transition={{ delay, ...MOTION_CONFIG.standard }}
                   />
                 );
               }),
@@ -107,7 +108,7 @@ export function HitboxWireframeViewer() {
 
         {/* ── Controls & Info ────────────────────────────────────────────── */}
         <div className="flex-1 space-y-3">
-          <div className="text-[10px] font-mono font-bold uppercase tracking-[0.15em] text-text-muted">
+          <div className="text-xs font-mono font-bold uppercase tracking-[0.15em] text-text-muted">
             Layer Toggles
           </div>
 
@@ -120,7 +121,7 @@ export function HitboxWireframeViewer() {
                     key={zone.type}
                     initial={{ opacity: 0, x: 10 }}
                     animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: i * 0.08 }}
+                    transition={{ delay: i * MOTION_CONFIG.stagger }}
                     onClick={() => setToggles(prev => ({ ...prev, [zone.type]: !prev[zone.type] }))}
                     className="flex items-center gap-2.5 w-full px-3 py-2 rounded-md border text-left transition-all cursor-pointer group"
                     style={{
@@ -134,7 +135,7 @@ export function HitboxWireframeViewer() {
                       <motion.div
                         className="absolute top-0.5 w-3 h-3 rounded-full"
                         animate={{ left: active ? 14 : 2 }}
-                        transition={{ type: 'spring', stiffness: 500, damping: 30 }}
+                        transition={MOTION_CONFIG.spring}
                         style={{ backgroundColor: active ? zone.color : 'var(--text-muted)' }}
                       />
                     </div>
@@ -146,7 +147,7 @@ export function HitboxWireframeViewer() {
                         {active ? <Eye className="w-3 h-3" /> : <EyeOff className="w-3 h-3" />}
                         {zone.type}
                       </div>
-                      <div className="text-[10px] text-text-muted truncate mt-0.5">
+                      <div className="text-xs text-text-muted truncate mt-0.5">
                         {ZONE_DESCRIPTIONS[zone.type]}
                       </div>
                     </div>
@@ -166,11 +167,11 @@ export function HitboxWireframeViewer() {
 
           {/* Legend */}
           <div className="pt-2 border-t border-border/20 space-y-1">
-            <div className="flex items-center gap-2 text-[10px] font-mono text-text-muted">
+            <div className="flex items-center gap-2 text-xs font-mono text-text-muted">
               <span className="w-4 h-px" style={{ borderTop: `1.5px dashed ${ACCENT_CYAN}` }} />
               Dashed = collision boundary
             </div>
-            <div className="flex items-center gap-2 text-[10px] font-mono text-text-muted">
+            <div className="flex items-center gap-2 text-xs font-mono text-text-muted">
               <span className="w-4 h-px" style={{ background: `${STATUS_ERROR}40` }} />
               Scan sweep (active detection)
             </div>

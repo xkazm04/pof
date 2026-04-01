@@ -29,18 +29,18 @@ function ScriptCard({ job }: { job: ScriptJob }) {
           className={`${config.color} ${job.status === 'running' ? 'animate-spin' : ''}`}
         />
         <span className="text-xs font-medium text-text flex-1">{job.scriptName}</span>
-        <span className="text-[10px] text-text-muted">{elapsed}s</span>
+        <span className="text-xs text-text-muted">{elapsed}s</span>
         <button onClick={() => removeScript(job.id)} className="text-text-muted hover:text-text">
           <X size={12} />
         </button>
       </div>
       {job.output && (
-        <pre className="px-3 py-2 text-[10px] font-mono text-text-muted max-h-32 overflow-y-auto whitespace-pre-wrap">
+        <pre className="px-3 py-2 text-xs font-mono text-text-muted max-h-32 overflow-y-auto whitespace-pre-wrap">
           {job.output}
         </pre>
       )}
       {job.error && (
-        <div className="px-3 py-2 text-[10px] text-red-400">{job.error}</div>
+        <div className="px-3 py-2 text-xs text-red-400">{job.error}</div>
       )}
     </div>
   );
@@ -98,7 +98,7 @@ export function ScriptRunner() {
         {hasCompleted && (
           <button
             onClick={clearCompleted}
-            className="flex items-center gap-1 text-[10px] text-text-muted hover:text-text"
+            className="flex items-center gap-1 text-xs text-text-muted hover:text-text"
           >
             <Trash2 size={10} />
             Clear finished

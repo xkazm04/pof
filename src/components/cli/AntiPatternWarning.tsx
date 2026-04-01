@@ -2,9 +2,10 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { AlertTriangle, X, ArrowRight, ShieldAlert } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import { apiFetch } from '@/lib/api-utils';
-import { STATUS_SUCCESS, MODULE_COLORS, STATUS_BLOCKER, STATUS_WARNING } from '@/lib/chart-colors';
+import { STATUS_SUCCESS, MODULE_COLORS, STATUS_BLOCKER, STATUS_WARNING, withOpacity, OPACITY_8 } from '@/lib/chart-colors';
+import { CLI_ANIM } from '@/lib/constants';
 import type { AntiPatternWarning as APWarning } from '@/types/pattern-library';
 
 interface AntiPatternWarningProps {
@@ -15,6 +16,7 @@ interface AntiPatternWarningProps {
 }
 
 export function AntiPatternWarning({ prompt, moduleId, onSwitchApproach }: AntiPatternWarningProps) {
+  const shouldReduceMotion = useReducedMotion() ?? false;
   const [warnings, setWarnings] = useState<APWarning[]>([]);
   const [dismissed, setDismissed] = useState<Set<string>>(new Set());
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -73,10 +75,10 @@ export function AntiPatternWarning({ prompt, moduleId, onSwitchApproach }: AntiP
   return (
     <AnimatePresence>
       <motion.div
-        initial={{ height: 0, opacity: 0 }}
-        animate={{ height: 'auto', opacity: 1 }}
-        exit={{ height: 0, opacity: 0 }}
-        transition={{ duration: 0.18 }}
+        initial={shouldReduceMotion ? { opacity: 0 } : { height: 0, opacity: 0 }}
+        animate={shouldReduceMotion ? { opacity: 1 } : { height: 'auto', opacity: 1 }}
+        exit={shouldReduceMotion ? { opacity: 0 } : { height: 0, opacity: 0 }}
+        transition={shouldReduceMotion ? { duration: 0 } : CLI_ANIM.medium}
         className="border-t border-border overflow-hidden"
       >
         {visibleWarnings.map((warning) => {
@@ -86,9 +88,9 @@ export function AntiPatternWarning({ prompt, moduleId, onSwitchApproach }: AntiP
           return (
             <motion.div
               key={antiPattern.id}
-              initial={{ opacity: 0, y: -4 }}
+              initial={shouldReduceMotion ? false : { opacity: 0, y: -4 }}
               animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -4 }}
+              exit={shouldReduceMotion ? { opacity: 0 } : { opacity: 0, y: -4 }}
               className="flex items-start gap-2 px-3 py-2 bg-surface-deep"
             >
               {/* Severity icon */}
@@ -104,7 +106,7 @@ export function AntiPatternWarning({ prompt, moduleId, onSwitchApproach }: AntiP
                     className="text-2xs font-bold uppercase tracking-wider px-1 py-0.5 rounded"
                     style={{
                       color: severityColor,
-                      backgroundColor: `${severityColor}14`,
+                      backgroundColor: withOpacity(severityColor, OPACITY_8),
                     }}
                   >
                     {antiPattern.severity}

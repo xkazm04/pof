@@ -22,6 +22,7 @@ import type {
   ItemCategory,
 } from '@/types/economy-simulator';
 import { MODULE_COLORS, ACCENT_CYAN, ACCENT_EMERALD_DARK, ACCENT_PURPLE_BOLD } from '@/lib/chart-colors';
+import { MOTION } from '@/lib/constants';
 
 // ── Constants ───────────────────────────────────────────────────────────────
 
@@ -138,7 +139,7 @@ export function EconomySimulatorView() {
               initial={{ height: 0, opacity: 0 }}
               animate={{ height: 'auto', opacity: 1 }}
               exit={{ height: 0, opacity: 0 }}
-              transition={{ duration: 0.22 }}
+              transition={{ duration: MOTION.base }}
               className="overflow-hidden mb-4"
             >
               <ConfigPanel config={config} onChange={setConfig} />
@@ -608,7 +609,7 @@ function AlertsSection({ alerts }: { alerts: InflationAlert[] }) {
             initial={{ height: 0, opacity: 0 }}
             animate={{ height: 'auto', opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
-            transition={{ duration: 0.22 }}
+            transition={{ duration: MOTION.base }}
             className="overflow-hidden"
           >
             <div className="border-t border-border px-4 py-3 space-y-2">

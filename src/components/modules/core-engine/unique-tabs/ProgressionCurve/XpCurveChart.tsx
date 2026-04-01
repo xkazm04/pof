@@ -37,7 +37,7 @@ export function XpCurveChart({
 
   return (
     <div className="w-full h-full relative">
-      <div className="absolute left-0 top-0 bottom-6 w-12 flex flex-col justify-between text-[10px] font-mono uppercase tracking-[0.15em] text-text-muted leading-none z-10">
+      <div className="absolute left-0 top-0 bottom-6 w-12 flex flex-col justify-between text-xs font-mono uppercase tracking-[0.15em] text-text-muted leading-none z-10">
         <span>{maxXp >= 1000 ? `${(maxXp / 1000).toFixed(1)}k` : maxXp}</span>
         <span>{maxXp >= 1000 ? `${(maxXp * 0.5 / 1000).toFixed(1)}k` : Math.floor(maxXp * 0.5)}</span>
         <span>0</span>
@@ -103,7 +103,7 @@ export function XpCurveChart({
         </svg>
       </div>
 
-      <div className="absolute left-14 right-2 bottom-0 flex justify-between text-[10px] font-mono uppercase tracking-[0.15em] text-text-muted leading-none pt-1 border-t border-border/40">
+      <div className="absolute left-14 right-2 bottom-0 flex justify-between text-xs font-mono uppercase tracking-[0.15em] text-text-muted leading-none pt-1 border-t border-border/40">
         {data.filter((_, i) => i % 2 === 0).map((d) => (
           <span key={d.level}>Lv {d.level}</span>
         ))}

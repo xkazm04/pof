@@ -47,7 +47,7 @@ export function DropTreemap() {
                 <text
                   x={rect.x + rect.w / 2} y={rect.y + rect.h / 2 + 10}
                   textAnchor="middle" dominantBaseline="central"
-                  className="text-[11px] font-mono fill-white/70 pointer-events-none"
+                  className="text-xs font-mono fill-white/70 pointer-events-none"
                 >
                   {rect.item.probability}%
                 </text>

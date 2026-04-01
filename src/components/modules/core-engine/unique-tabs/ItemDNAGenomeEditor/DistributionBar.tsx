@@ -42,7 +42,7 @@ export function DistributionBar({ genome, rarity }: { genome: ItemGenome; rarity
         {AXIS_CONFIGS.map((cfg) => {
           const Icon = cfg.icon;
           return (
-            <div key={cfg.axis} className="flex items-center gap-1 text-[10px] font-mono uppercase tracking-[0.15em]">
+            <div key={cfg.axis} className="flex items-center gap-1 text-xs font-mono uppercase tracking-[0.15em]">
               <Icon className="w-3 h-3" style={{ color: cfg.color }} />
               <span style={{ color: cfg.color }}>{(dist[cfg.axis] * 100).toFixed(1)}%</span>
             </div>

@@ -75,7 +75,7 @@ export function RelationshipWebEditor({
 
   return (
     <div className="space-y-2">
-      <div className="text-[10px] font-mono uppercase tracking-[0.15em] text-text-muted">Drag from one attribute to another to create a dependency. Click an edge to remove.</div>
+      <div className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted">Drag from one attribute to another to create a dependency. Click an edge to remove.</div>
       <div className="relative overflow-x-auto custom-scrollbar">
         <svg ref={svgRef} width={svgW} height={svgH} viewBox={`0 0 ${svgW} ${svgH}`} className="overflow-visible">
           {relationships.map((rel) => {

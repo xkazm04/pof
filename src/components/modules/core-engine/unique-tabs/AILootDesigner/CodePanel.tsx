@@ -29,7 +29,7 @@ export function CodePanel({ code, concept }: { code: string; concept: ItemConcep
           <SectionHeader icon={Code} label={`UE5 Code: ${concept.displayName}`} color={ACCENT} />
           <button
             onClick={handleCopy}
-            className="flex items-center gap-1 text-[10px] font-mono uppercase tracking-[0.15em] px-2 py-0.5 rounded transition-colors"
+            className="flex items-center gap-1 text-xs font-mono uppercase tracking-[0.15em] px-2 py-0.5 rounded transition-colors"
             style={{
               backgroundColor: copied ? `${STATUS_SUCCESS}${OPACITY_20}` : `${ACCENT}${OPACITY_10}`,
               color: copied ? STATUS_SUCCESS : ACCENT,

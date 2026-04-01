@@ -160,7 +160,7 @@ function ChainSegment({ entry, index, totalChainTime }: {
       />
       {/* Dodge number label */}
       <div
-        className="absolute top-0.5 text-[11px] font-mono font-bold"
+        className="absolute top-0.5 text-xs font-mono font-bold"
         style={{ left: `${leftPct + 1}%`, color: ACCENT_CYAN }}
       >
         #{index + 1}

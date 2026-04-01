@@ -64,7 +64,7 @@ export function ArchetypesTab({
     >
       {/* Group filter bar */}
       <div className="flex items-center gap-2 text-sm">
-        <span className="text-[10px] font-mono uppercase tracking-[0.15em] text-text-muted">Group by:</span>
+        <span className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted">Group by:</span>
         {(['none', 'class', 'role'] as const).map((g) => (
           <button key={g} onClick={() => setGroupBy(g)}
             className={`px-2.5 py-1 rounded text-xs font-medium transition-colors ${
@@ -100,7 +100,7 @@ export function ArchetypesTab({
       {groupedArchetypes.map((group) => (
         <div key={group.header ?? 'all'}>
           {group.header && (
-            <div className="text-[10px] font-mono uppercase tracking-[0.15em] text-text-muted mb-2 mt-2">{group.header}</div>
+            <div className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted mb-2 mt-2">{group.header}</div>
           )}
           <div className="grid grid-cols-1 gap-3 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
             {group.items.map((archetype, i) => (

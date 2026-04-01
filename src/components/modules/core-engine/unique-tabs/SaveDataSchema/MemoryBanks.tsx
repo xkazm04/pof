@@ -32,7 +32,7 @@ export function MemoryBanks() {
                   <div className="w-8 h-8 rounded-full border border-dashed border-border/20 flex items-center justify-center">
                     <Plus className="w-4 h-4 text-text-muted" />
                   </div>
-                  <span className="text-[10px] font-mono uppercase tracking-[0.15em] text-text-muted">{slot.label}</span>
+                  <span className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted">{slot.label}</span>
                   <span className="text-xs text-text-muted">New Save</span>
                 </div>
               ) : (
@@ -40,25 +40,25 @@ export function MemoryBanks() {
                   <div className={`absolute left-0 top-0 bottom-0 w-1 ${slot.isAuto ? 'bg-amber-500' : 'bg-cyan-500 opacity-50 group-hover:opacity-100 transition-opacity'}`} />
 
                   <div className="flex justify-between items-start mb-2 pl-2">
-                    <span className={`text-[10px] font-bold tracking-[0.15em] uppercase ${slot.isAuto ? 'text-amber-400' : 'text-cyan-300'}`}>{slot.label}</span>
-                    <span className="text-[10px] font-mono text-text-muted">{slot.ts}</span>
+                    <span className={`text-xs font-bold tracking-[0.15em] uppercase ${slot.isAuto ? 'text-amber-400' : 'text-cyan-300'}`}>{slot.label}</span>
+                    <span className="text-xs font-mono text-text-muted">{slot.ts}</span>
                   </div>
 
                   <div className="grid grid-cols-2 gap-y-1.5 text-xs pl-2">
                     <div className="flex flex-col">
-                      <span className="text-[10px] font-mono uppercase tracking-[0.15em] text-text-muted">Location</span>
+                      <span className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted">Location</span>
                       <span className="text-cyan-100 truncate pr-2">{slot.zone}</span>
                     </div>
                     <div className="flex flex-col">
-                      <span className="text-[10px] font-mono uppercase tracking-[0.15em] text-text-muted">Integrity</span>
+                      <span className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted">Integrity</span>
                       <span className="text-emerald-400">{slot.integrity}</span>
                     </div>
                     <div className="flex flex-col">
-                      <span className="text-[10px] font-mono uppercase tracking-[0.15em] text-text-muted">Level</span>
+                      <span className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted">Level</span>
                       <span className="text-cyan-100">Lv.{slot.level!.toString().padStart(2, '0')}</span>
                     </div>
                     <div className="flex flex-col">
-                      <span className="text-[10px] font-mono uppercase tracking-[0.15em] text-text-muted">Uptime</span>
+                      <span className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted">Uptime</span>
                       <span className="text-cyan-100">{slot.playtime}</span>
                     </div>
                   </div>

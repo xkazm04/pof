@@ -1,10 +1,10 @@
 'use client';
 
-import { motion } from 'framer-motion';
+import { motion, useReducedMotion } from 'framer-motion';
 import { Sparkles, Zap, ChevronDown, ChevronRight } from 'lucide-react';
 import { ACCENT_ORANGE } from '@/lib/chart-colors';
 import { SurfaceCard } from '@/components/ui/SurfaceCard';
-import { STAGGER_SLOW } from '@/components/modules/core-engine/unique-tabs/_shared';
+import { ANIMATION_PRESETS, motionSafe } from '@/lib/motion';
 import type { SynergyRule } from './data';
 import { SYNERGY_COLORS } from './data';
 
@@ -21,6 +21,7 @@ export function SynergyDetector({
   activeSynergies, expandedSynergies, onToggleExpanded,
   synergyGlow, newSynergyLabels, craftedAffixCount,
 }: SynergyDetectorProps) {
+  const prefersReduced = useReducedMotion();
   return (
     <SurfaceCard
       level={2}
@@ -36,16 +37,16 @@ export function SynergyDetector({
         onClick={onToggleExpanded}
         className="w-full flex items-center justify-between"
       >
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1.5">
           <motion.div
-            animate={synergyGlow ? { scale: [1, 1.3, 1], rotate: [0, 15, -15, 0] } : {}}
-            transition={{ duration: 0.4 }}
+            animate={synergyGlow && !prefersReduced ? { scale: [1, 1.3, 1], rotate: [0, 15, -15, 0] } : {}}
+            transition={prefersReduced ? { duration: 0 } : { duration: 0.4 }}
           >
             <Sparkles className="w-3.5 h-3.5" style={{ color: ACCENT_ORANGE }} />
           </motion.div>
           <span className="text-xs font-bold text-text">Synergy Detector</span>
           {activeSynergies.length > 0 && (
-            <span className="text-[11px] px-1.5 py-0.5 rounded-full font-bold" style={{ backgroundColor: `${SYNERGY_COLORS[activeSynergies[0].severity]}20`, color: SYNERGY_COLORS[activeSynergies[0].severity] }}>
+            <span className="text-xs px-1.5 py-0.5 rounded-full font-bold" style={{ backgroundColor: `${SYNERGY_COLORS[activeSynergies[0].severity]}20`, color: SYNERGY_COLORS[activeSynergies[0].severity] }}>
               {activeSynergies.length} active
             </span>
           )}
@@ -54,7 +55,7 @@ export function SynergyDetector({
       </button>
 
       {expandedSynergies && (
-        <div className="mt-2 space-y-1.5">
+        <div className="mt-3 space-y-3">
           {activeSynergies.length > 0 ? (
             activeSynergies.map((syn, idx) => {
               const isNew = newSynergyLabels.has(syn.label);
@@ -62,14 +63,14 @@ export function SynergyDetector({
               return (
                 <motion.div
                   key={syn.label}
-                  initial={isNew ? { opacity: 0, x: 30, scale: 0.9 } : { opacity: 0, x: -5 }}
+                  initial={prefersReduced ? { opacity: 1 } : isNew ? { opacity: 0, x: 30, scale: 0.9 } : { opacity: 0, x: -5 }}
                   animate={{ opacity: 1, x: 0, scale: 1 }}
-                  transition={isNew ? { delay: 0.2 + idx * STAGGER_SLOW, duration: 0.35, type: 'spring', stiffness: 300, damping: 25 } : undefined}
+                  transition={prefersReduced ? { duration: 0 } : isNew ? { ...ANIMATION_PRESETS.spring, delay: 0.2 + idx * ANIMATION_PRESETS.stagger.slow, duration: 0.35 } : undefined}
                   className="rounded-lg px-2.5 py-2 relative overflow-hidden"
                   style={{ backgroundColor: `${synColor}08`, border: `1px solid ${synColor}30` }}
                 >
-                  {/* Sparkle particles on new synergy */}
-                  {isNew && (
+                  {/* Sparkle particles on new synergy — hidden for reduced motion */}
+                  {isNew && !prefersReduced && (
                     <>
                       {[
                         { x: 12, y: -8, delay: 0.25 },
@@ -83,19 +84,19 @@ export function SynergyDetector({
                           style={{ width: 4, height: 4, backgroundColor: synColor, top: '50%', left: '50%' }}
                           initial={{ opacity: 1, x: 0, y: 0, scale: 1 }}
                           animate={{ opacity: 0, x: p.x * 3, y: p.y * 3, scale: 0 }}
-                          transition={{ delay: p.delay + idx * STAGGER_SLOW, duration: 0.45, ease: 'easeOut' }}
+                          transition={{ delay: p.delay + idx * ANIMATION_PRESETS.stagger.slow, duration: 0.45, ease: 'easeOut' }}
                         />
                       ))}
                     </>
                   )}
-                  <div className="flex items-center gap-2 mb-1">
+                  <div className="flex items-center gap-1.5 mb-1">
                     <Zap className="w-3 h-3" style={{ color: synColor }} />
                     <span className="text-xs font-bold" style={{ color: synColor }}>{syn.label}</span>
-                    <span className="text-[11px] font-bold uppercase px-1.5 py-0.5 rounded" style={{ backgroundColor: `${synColor}15`, color: synColor }}>
+                    <span className="text-xs font-mono uppercase tracking-wider font-bold px-1.5 py-0.5 rounded" style={{ backgroundColor: `${synColor}15`, color: synColor }}>
                       {syn.severity}
                     </span>
                   </div>
-                  <p className="text-[11px] text-text-muted leading-relaxed">{syn.description}</p>
+                  <p className="text-xs text-text-muted leading-relaxed">{syn.description}</p>
                 </motion.div>
               );
             })

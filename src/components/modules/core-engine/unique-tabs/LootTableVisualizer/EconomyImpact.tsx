@@ -27,14 +27,14 @@ export function EconomyImpact() {
       </div>
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-3">
         <div className="flex flex-col items-center p-2 rounded border border-border/30 bg-surface/30">
-          <span className="text-[10px] font-mono uppercase tracking-[0.15em] text-text-muted mb-1">Gold/Hour Injection</span>
+          <span className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted mb-1">Gold/Hour Injection</span>
           <span className="text-lg font-mono font-bold" style={{ color: STATUS_WARNING }}>
             {economyProfile === 'casual' ? '2,300' : '8,400'}
           </span>
           <span className="text-2xs text-text-muted">{economyProfile === 'casual' ? '30 min/day' : '4 hr/day'}</span>
         </div>
         <div className="flex flex-col items-center p-2 rounded border border-border/30 bg-surface/30">
-          <span className="text-[10px] font-mono uppercase tracking-[0.15em] text-text-muted mb-1">Inflation Risk</span>
+          <span className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted mb-1">Inflation Risk</span>
           <div className="w-16 h-16">
             <LiveMetricGauge
               metric={{ label: 'Risk', current: economyProfile === 'casual' ? 35 : 65, target: 100, unit: '%' }}
@@ -44,7 +44,7 @@ export function EconomyImpact() {
           </div>
         </div>
         <div className="flex flex-col items-center p-2 rounded border border-border/30 bg-surface/30">
-          <span className="text-[10px] font-mono uppercase tracking-[0.15em] text-text-muted mb-1">Full Legendary Set</span>
+          <span className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted mb-1">Full Legendary Set</span>
           <span className="text-lg font-mono font-bold" style={{ color: ACCENT_VIOLET }}>
             {economyProfile === 'casual' ? '~42d' : '~6d'}
           </span>
@@ -52,7 +52,7 @@ export function EconomyImpact() {
         </div>
       </div>
       {/* Surplus/deficit */}
-      <div className="text-[10px] font-mono uppercase tracking-[0.15em] text-text-muted mb-1">Item Surplus / Deficit</div>
+      <div className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted mb-1">Item Surplus / Deficit</div>
       <div className="space-y-1">
         {ECONOMY_SURPLUS.map((item) => {
           const multiplied = economyProfile === 'hardcore' ? item.delta * 3 : item.delta;

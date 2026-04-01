@@ -2,27 +2,20 @@ import type { WorkspaceState } from '../../state/types';
 import type { PanelDensity } from '../../types/panel';
 import type { Intent, IntentResult, IntentHandler, ManipulatePayload } from '../types';
 import { NEEDS_LLM } from '../director';
+import { DENSITY_CONFIG, DENSITY_ORDER } from '@/lib/dzin/animation-constants';
 
 // ---------------------------------------------------------------------------
-// Density from Dimensions (inline, avoids needing PanelDefinition)
+// Density from Dimensions
 // ---------------------------------------------------------------------------
 
 /**
- * Determine density from pixel dimensions using fallback thresholds.
- * This mirrors the logic in layout/density.ts but without requiring
- * a PanelDefinition, since the manipulate handler operates on panel instances.
+ * Determine density from pixel dimensions using canonical fallback thresholds.
+ * Uses DENSITY_CONFIG.fallback since the manipulate handler operates on panel
+ * instances without a PanelDefinition.
  */
-const FALLBACK_THRESHOLDS: Record<PanelDensity, { minWidth: number; minHeight: number }> = {
-  full: { minWidth: 400, minHeight: 300 },
-  compact: { minWidth: 180, minHeight: 120 },
-  micro: { minWidth: 60, minHeight: 40 },
-};
-
-const DENSITY_ORDER: PanelDensity[] = ['full', 'compact', 'micro'];
-
 function densityFromDimensions(width: number, height: number): PanelDensity {
   for (const density of DENSITY_ORDER) {
-    const t = FALLBACK_THRESHOLDS[density];
+    const t = DENSITY_CONFIG.fallback[density];
     if (width >= t.minWidth && height >= t.minHeight) {
       return density;
     }

@@ -25,7 +25,7 @@ export function DamagePipelineDiagram() {
       <BlueprintPanel className="p-3" color={ELEMENT_COLORS.Physical}>
         <SectionHeader icon={Flame} label="PostGameplayEffectExecute Pipeline" color={ELEMENT_COLORS.Physical} />
 
-        <p className="text-[10px] font-mono uppercase tracking-[0.15em] text-text-muted mt-1 mb-3 max-w-2xl leading-relaxed"
+        <p className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted mt-1 mb-3 max-w-2xl leading-relaxed"
           data-testid="damage-pipeline-diagram">
           The complete damage/heal flow from{' '}
           <code className="font-mono text-text">UARPGAttributeSet::PostGameplayEffectExecute</code>.
@@ -39,7 +39,7 @@ export function DamagePipelineDiagram() {
             <div key={element} className="flex items-center gap-1.5">
               <span className="w-3 h-3 rounded-sm"
                 style={{ backgroundColor: `${color}${OPACITY_15}`, border: `1.5px solid ${color}` }} />
-              <span className="text-[10px] font-mono uppercase tracking-[0.15em] font-bold" style={{ color }}>
+              <span className="text-xs font-mono uppercase tracking-[0.15em] font-bold" style={{ color }}>
                 {element}
               </span>
             </div>
@@ -58,13 +58,13 @@ export function DamagePipelineDiagram() {
             <div className="mt-3 px-3 py-2 rounded-lg"
               style={{ backgroundColor: `${STATUS_WARNING}${OPACITY_10}` }}
               data-testid="element-detection-detail">
-              <div className="text-[10px] font-mono uppercase tracking-[0.15em] font-bold text-text mb-1.5">
+              <div className="text-xs font-mono uppercase tracking-[0.15em] font-bold text-text mb-1.5">
                 DamageType Detection Order (from AssetTags)
               </div>
               <div className="flex items-center gap-2 flex-wrap">
                 {ELEMENT_TAGS.map((et, i) => (
                   <div key={et.tag} className="flex items-center gap-1">
-                    <span className="font-mono text-[10px] px-1.5 py-0.5 rounded" style={{
+                    <span className="font-mono text-xs px-1.5 py-0.5 rounded" style={{
                       backgroundColor: `${ELEMENT_COLORS[et.element]}${OPACITY_15}`,
                       color: ELEMENT_COLORS[et.element],
                       border: `1px solid ${ELEMENT_COLORS[et.element]}30`,
@@ -72,7 +72,7 @@ export function DamagePipelineDiagram() {
                       {et.tag}
                     </span>
                     {i < ELEMENT_TAGS.length - 1 && (
-                      <span className="text-text-muted font-mono text-[10px]">
+                      <span className="text-text-muted font-mono text-xs">
                         {i < ELEMENT_TAGS.length - 2 ? '\u2192' : '\u2192 fallback'}
                       </span>
                     )}
@@ -96,7 +96,7 @@ export function DamagePipelineDiagram() {
             color={STATUS_STALE}
             testId="pipeline-section-direct">
             <DirectHealthFlow />
-            <div className="mt-2 text-[10px] font-mono uppercase tracking-[0.15em] text-text-muted px-2 py-1.5 rounded-lg bg-surface-deep/50 border border-border/30">
+            <div className="mt-2 text-xs font-mono uppercase tracking-[0.15em] text-text-muted px-2 py-1.5 rounded-lg bg-surface-deep/50 border border-border/30">
               Backward-compatible path for <code className="font-mono text-text">GE_Heal</code> and other effects
               that modify Health directly without going through an execution calculation.
               Negative magnitude triggers the same death/hitreact logic as the IncomingDamage path.
@@ -113,7 +113,7 @@ export function DamagePipelineDiagram() {
         </div>
 
         {/* Dual broadcast pattern note */}
-        <div className="mt-3 flex items-start gap-2 px-3 py-2 rounded-lg text-[10px] font-mono"
+        <div className="mt-3 flex items-start gap-2 px-3 py-2 rounded-lg text-xs font-mono"
           style={{ backgroundColor: `${STATUS_SUCCESS}${OPACITY_10}`, color: STATUS_SUCCESS }}
           data-testid="dual-broadcast-note">
           <span className="font-bold shrink-0 mt-0.5 uppercase tracking-[0.15em]">Dual Broadcast:</span>

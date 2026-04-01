@@ -21,6 +21,7 @@ import type {
 } from '@/types/marketplace';
 import type { SubModuleId } from '@/types/modules';
 import { ACCENT_EMERALD_DARK, MODULE_COLORS, ACCENT_RED } from '@/lib/chart-colors';
+import { MOTION } from '@/lib/constants';
 
 // ── Constants for stable Zustand selectors ──────────────────────────────────
 
@@ -330,7 +331,7 @@ function RecommendationCard({ recommendation, acquiredAssets, projectName }: {
             initial={{ height: 0, opacity: 0 }}
             animate={{ height: 'auto', opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
-            transition={{ duration: 0.22 }}
+            transition={{ duration: MOTION.base }}
             className="overflow-hidden"
           >
             <div className="border-t border-border px-4 py-3 space-y-2">
@@ -632,7 +633,7 @@ function IntegrationCard({ asset, integration }: {
             initial={{ height: 0, opacity: 0 }}
             animate={{ height: 'auto', opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
-            transition={{ duration: 0.12 }}
+            transition={{ duration: MOTION.fast }}
             className="overflow-hidden"
           >
             <div className="border-t border-border">

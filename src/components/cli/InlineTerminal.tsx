@@ -7,6 +7,7 @@ import { CompactTerminal } from './CompactTerminal';
 import { SuggestedActions, type SuggestionAction } from './SuggestedActions';
 import { useCLIPanelStore } from './store/cliPanelStore';
 import { useProjectStore } from '@/stores/projectStore';
+import { MODULE_COLORS, CLI_COLORS } from '@/lib/chart-colors';
 
 interface InlineTerminalProps {
   sessionId: string;
@@ -111,7 +112,7 @@ export function InlineTerminal({
           )}
           <span className="text-xs font-medium text-text">{session.label}</span>
           {session.isRunning && (
-            <span className="text-2xs px-1.5 py-0.5 rounded bg-accent-medium text-[#00ff88]">
+            <span className="text-2xs px-1.5 py-0.5 rounded bg-accent-medium" style={{ color: MODULE_COLORS.setup }}>
               running
             </span>
           )}
@@ -126,7 +127,7 @@ export function InlineTerminal({
           </button>
           <button
             onClick={() => removeSession(sessionId)}
-            className="p-1 text-text-muted hover:text-red-400 transition-colors"
+            className={`p-1 text-text-muted hover:${CLI_COLORS.error} transition-colors`}
             title="Close terminal"
           >
             <X className="w-3 h-3" />

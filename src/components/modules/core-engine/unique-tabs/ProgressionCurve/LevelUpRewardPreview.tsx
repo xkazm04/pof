@@ -34,7 +34,7 @@ export function LevelUpRewardPreview() {
                   <div className="flex items-center gap-2">
                     <span className="text-xs font-bold text-text">{reward.name}</span>
                     <span
-                      className="text-[10px] font-mono uppercase tracking-[0.15em] px-1.5 py-0.5 rounded"
+                      className="text-xs font-mono uppercase tracking-[0.15em] px-1.5 py-0.5 rounded"
                       style={{ backgroundColor: `${reward.color}${OPACITY_10}`, color: reward.color, border: `1px solid ${reward.color}${OPACITY_20}` }}
                     >
                       {reward.type}

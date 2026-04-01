@@ -3,7 +3,7 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  AlertOctagon, AlertTriangle, Info, CheckCircle2,
+  AlertOctagon, AlertTriangle, CheckCircle2,
   RefreshCw, ChevronDown, ChevronRight, X, Shield, Loader2,
   TrendingUp, TrendingDown, Bug, ArrowRight, Eye,
 } from 'lucide-react';
@@ -20,18 +20,9 @@ import {
   ACCENT_ORANGE, STATUS_SUCCESS, STATUS_WARNING, STATUS_ERROR, STATUS_INFO, STATUS_BLOCKER,
   OPACITY_8, OPACITY_10, OPACITY_12, OPACITY_15, OPACITY_20,
 } from '@/lib/chart-colors';
+import { SEVERITY_STYLES_DENSE as SEVERITY_STYLES } from '@/lib/game-director-styles';
 
 const ACCENT = ACCENT_ORANGE;
-
-// ─── Severity helpers ─────────────────────────────────────────────────────────
-
-const SEVERITY_STYLES: Record<FindingSeverity, { icon: typeof AlertOctagon; color: string; bg: string }> = {
-  critical: { icon: AlertOctagon, color: STATUS_ERROR, bg: `${STATUS_ERROR}${OPACITY_12}` },
-  high: { icon: AlertTriangle, color: STATUS_BLOCKER, bg: `${STATUS_BLOCKER}${OPACITY_12}` },
-  medium: { icon: Info, color: STATUS_WARNING, bg: `${STATUS_WARNING}${OPACITY_12}` },
-  low: { icon: Info, color: STATUS_INFO, bg: `${STATUS_INFO}${OPACITY_12}` },
-  positive: { icon: CheckCircle2, color: STATUS_SUCCESS, bg: `${STATUS_SUCCESS}${OPACITY_12}` },
-};
 
 const STATUS_STYLES: Record<string, { color: string; bg: string; label: string }> = {
   open: { color: STATUS_BLOCKER, bg: `${STATUS_BLOCKER}${OPACITY_15}`, label: 'Open' },
@@ -176,7 +167,12 @@ export function RegressionTrackerView() {
               </span>
             )}
             {subTab === id && (
-              <span className="absolute bottom-0 left-0 right-0 h-0.5 rounded-t" style={{ backgroundColor: ACCENT }} />
+              <motion.span
+                layoutId="regression-tab-indicator"
+                className="absolute bottom-0 left-0 right-0 h-0.5 rounded-t"
+                style={{ backgroundColor: ACCENT }}
+                transition={{ type: 'spring', stiffness: 500, damping: 35 }}
+              />
             )}
           </button>
         ))}
@@ -253,8 +249,8 @@ function DashboardTab({
         <SurfaceCard level={2}>
           <div className="p-3">
             <div className="flex items-center gap-2 mb-1">
-              <AlertOctagon className="w-3.5 h-3.5 text-[#f87171]" />
-              <span className="text-xs font-semibold text-[#f87171]">
+              <AlertOctagon className="w-3.5 h-3.5" style={{ color: STATUS_ERROR }} />
+              <span className="text-xs font-semibold" style={{ color: STATUS_ERROR }}>
                 {stats.activeAlerts} Active Regression Alert{stats.activeAlerts > 1 ? 's' : ''}
               </span>
             </div>
@@ -326,10 +322,11 @@ function ReportSummary({ report }: { report: RegressionReport }) {
 
         {report.regressions.length > 0 && (
           <div className="mt-3 space-y-1.5">
-            <span className="text-2xs font-semibold text-[#f87171]">Regressions Detected:</span>
+            <span className="text-2xs font-semibold" style={{ color: STATUS_ERROR }}>Regressions Detected:</span>
             {report.regressions.map(alert => (
-              <div key={alert.id} className="flex items-center gap-2 text-2xs px-2 py-1 rounded bg-[#f8717108] border border-[#f8717115]">
-                <AlertOctagon className="w-3 h-3 text-[#f87171] flex-shrink-0" />
+              <div key={alert.id} className="flex items-center gap-2 text-2xs px-2 py-1 rounded"
+                style={{ backgroundColor: `${STATUS_ERROR}${OPACITY_8}`, border: `1px solid ${STATUS_ERROR}${OPACITY_15}` }}>
+                <AlertOctagon className="w-3 h-3 flex-shrink-0" style={{ color: STATUS_ERROR }} />
                 <span className="text-text truncate flex-1">{alert.title}</span>
                 <span className="text-text-muted flex-shrink-0">{alert.buildGap} build{alert.buildGap !== 1 ? 's' : ''} gap</span>
               </div>
@@ -402,9 +399,28 @@ function FingerprintsTab({
 
       {/* Fingerprint list */}
       {filtered.length === 0 ? (
-        <div className="text-center py-12 text-text-muted text-xs">
-          No tracked issues{filter !== 'all' ? ` with status "${filter}"` : ''}. Process a completed session to start tracking.
-        </div>
+        fingerprints.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-16 text-center">
+            <div className="relative w-16 h-16 mb-5">
+              <div
+                className="absolute inset-0 rounded-2xl"
+                style={{ backgroundColor: `${ACCENT}08`, border: `1px solid ${ACCENT}15` }}
+              />
+              <Bug className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-7 h-7" style={{ color: ACCENT }} />
+              <Shield className="absolute -bottom-1 -right-1 w-5 h-5 opacity-50" style={{ color: ACCENT }} />
+              <Eye className="absolute -top-1 -left-1 w-4 h-4 opacity-30" style={{ color: ACCENT }} />
+            </div>
+            <h3 className="text-sm font-semibold text-text mb-1">No tracked issues yet</h3>
+            <p className="text-xs text-text-muted max-w-xs leading-relaxed">
+              Tracked issues are unique bugs fingerprinted across multiple playtest sessions.
+              Use the &quot;Analyze Session&quot; panel above to process a completed session and start tracking recurring issues.
+            </p>
+          </div>
+        ) : (
+          <div className="text-center py-12 text-text-muted text-xs">
+            No tracked issues with status &quot;{filter}&quot;.
+          </div>
+        )
       ) : (
         <div className="space-y-2">
           {filtered.map(fp => {
@@ -468,7 +484,10 @@ function FingerprintsTab({
                               {(fp.status === 'open' || fp.status === 'regressed') && (
                                 <button
                                   onClick={(e) => { e.stopPropagation(); onResolve(fp.id); }}
-                                  className="text-2xs px-2 py-0.5 rounded text-[#4ade80] bg-[#4ade8012] hover:bg-[#4ade8020] transition-colors"
+                                  className="text-2xs px-2 py-0.5 rounded transition-colors"
+                                  style={{ color: STATUS_SUCCESS, backgroundColor: `${STATUS_SUCCESS}${OPACITY_12}` }}
+                                  onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = `${STATUS_SUCCESS}${OPACITY_20}`; }}
+                                  onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = `${STATUS_SUCCESS}${OPACITY_12}`; }}
                                 >
                                   Mark Resolved
                                 </button>
@@ -525,16 +544,29 @@ function AlertsTab({
   return (
     <div className="space-y-3">
       {active.length === 0 && dismissed.length === 0 ? (
-        <div className="text-center py-12 text-text-muted text-xs">
-          No regression alerts. Process sessions to detect regressions.
+        <div className="flex flex-col items-center justify-center py-16 text-center">
+          <div className="relative w-16 h-16 mb-5">
+            <div
+              className="absolute inset-0 rounded-2xl"
+              style={{ backgroundColor: `${ACCENT}08`, border: `1px solid ${ACCENT}15` }}
+            />
+            <AlertOctagon className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-7 h-7" style={{ color: ACCENT }} />
+            <Shield className="absolute -bottom-1 -right-1 w-5 h-5 opacity-50" style={{ color: ACCENT }} />
+            <CheckCircle2 className="absolute -top-1 -left-1 w-4 h-4 opacity-30" style={{ color: ACCENT }} />
+          </div>
+          <h3 className="text-sm font-semibold text-text mb-1">No regression alerts</h3>
+          <p className="text-xs text-text-muted max-w-xs leading-relaxed">
+            Regression alerts appear when a previously fixed bug reappears in a later playtest.
+            Process multiple sessions over time to enable automatic regression detection.
+          </p>
         </div>
       ) : (
         <>
           {active.length === 0 ? (
             <SurfaceCard level={2}>
               <div className="p-4 flex items-center gap-2">
-                <CheckCircle2 className="w-4 h-4 text-[#4ade80]" />
-                <span className="text-xs font-medium text-[#4ade80]">All clear — no active regression alerts</span>
+                <CheckCircle2 className="w-4 h-4" style={{ color: STATUS_SUCCESS }} />
+                <span className="text-xs font-medium" style={{ color: STATUS_SUCCESS }}>All clear — no active regression alerts</span>
               </div>
             </SurfaceCard>
           ) : (
@@ -592,16 +624,16 @@ function AlertCard({ alert, onDismiss }: { alert: RegressionAlert; onDismiss: (i
             <div className="flex items-center gap-1.5 mt-1 text-2xs text-text-muted">
               <span>{alert.category}</span>
               <span className="text-border">|</span>
-              <span className="font-medium text-[#f87171]">
+              <span className="font-medium" style={{ color: STATUS_ERROR }}>
                 Regressed after {alert.buildGap} build{alert.buildGap !== 1 ? 's' : ''}
               </span>
             </div>
             <div className="flex items-center gap-1.5 mt-2 text-2xs">
-              <span className="text-[#4ade80] bg-[#4ade8010] px-1.5 py-0.5 rounded">
+              <span className="px-1.5 py-0.5 rounded" style={{ color: STATUS_SUCCESS, backgroundColor: `${STATUS_SUCCESS}${OPACITY_10}` }}>
                 Fixed: {alert.fixedInSessionName || 'Unknown'}
               </span>
               <ArrowRight className="w-3 h-3 text-text-muted" />
-              <span className="text-[#f87171] bg-[#f8717110] px-1.5 py-0.5 rounded">
+              <span className="px-1.5 py-0.5 rounded" style={{ color: STATUS_ERROR, backgroundColor: `${STATUS_ERROR}${OPACITY_10}` }}>
                 Reappeared: {alert.reappearedInSessionName || 'Unknown'}
               </span>
             </div>

@@ -107,7 +107,7 @@ export function AssetPipelineDiagram({
             <span className="text-sm font-bold text-violet-100 font-mono tracking-widest uppercase" style={{ textShadow: '0 0 8px rgba(167,139,250,0.4)' }}>
               ASSET_PIPELINE.graph
             </span>
-            <span className="text-xs text-violet-400/80 font-mono uppercase tracking-widest mt-0.5">
+            <span className="text-xs text-violet-400/80 font-mono uppercase mt-0.5">
               Automated Import Sequence // {completedStages.size} OF {PIPELINE_STAGES.length}
             </span>
           </div>
@@ -194,7 +194,7 @@ export function AssetPipelineDiagram({
                             {stage.label}
                           </span>
                           {isCompleted && (
-                            <span className="text-[11px] px-1.5 py-[2px] rounded font-mono uppercase tracking-widest border border-cyan-500/30 text-cyan-400 bg-cyan-500/10">OK</span>
+                            <span className="text-[11px] px-1.5 py-[2px] rounded font-mono uppercase border border-cyan-500/30 text-cyan-400 bg-cyan-500/10">OK</span>
                           )}
                         </div>
                         <p className="text-xs text-text-muted font-mono opacity-80 max-w-[85%]">{stage.description}</p>

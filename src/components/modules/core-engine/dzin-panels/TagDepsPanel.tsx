@@ -7,7 +7,7 @@ import {
   ACCENT_PURPLE_BOLD, ACCENT_RED, ACCENT_ORANGE, ACCENT_CYAN,
 } from '@/lib/chart-colors';
 import { useDensity, PanelFrame } from '@/lib/dzin/core';
-import { DZIN_TIMING } from '@/lib/dzin/animation-constants';
+import { DZIN_TIMING, DZIN_SPACING, TRANSITION_ENTER, TRANSITION_EXIT } from '@/lib/dzin/animation-constants';
 import { useDzinSelection } from '@/lib/dzin/selection-context';
 import { isRelatedToSelection, ENTITY_RELATIONS } from '@/lib/dzin/entity-relations';
 import { SurfaceCard } from '@/components/ui/SurfaceCard';
@@ -64,7 +64,7 @@ function nodeById(id: string): TagDepNode | undefined {
 
 function TagDepsMicro() {
   return (
-    <div className="flex flex-col items-center justify-center gap-1 p-2">
+    <div className={DZIN_SPACING.micro.wrapper}>
       <Network className="w-5 h-5 text-amber-400" />
       <span className="font-mono text-xs">{TAG_DEP_EDGES.length}</span>
     </div>
@@ -77,7 +77,7 @@ function TagDepsCompact() {
   const { selection } = useDzinSelection();
 
   return (
-    <div className="space-y-1.5 p-2 text-xs">
+    <div className={`${DZIN_SPACING.compact.wrapper} text-xs`}>
       {TAG_DEP_EDGES.map((edge, i) => {
         const fromNode = nodeById(edge.from);
         const toNode = nodeById(edge.to);
@@ -126,8 +126,8 @@ function TagDepsFull() {
   }, []);
 
   return (
-    <div className="space-y-2.5">
-      <SurfaceCard level={2} className="p-3 relative overflow-hidden">
+    <div className={DZIN_SPACING.full.wrapper}>
+      <SurfaceCard level={2} className={`${DZIN_SPACING.full.card} relative overflow-hidden`}>
         <SectionLabel label="Tag Dependency Network" />
         <div className="mt-2 flex justify-center">
           <svg
@@ -191,7 +191,7 @@ function TagDepsFull() {
       </SurfaceCard>
 
       {/* Category legend */}
-      <SurfaceCard level={2} className="p-3 relative overflow-hidden">
+      <SurfaceCard level={2} className={`${DZIN_SPACING.full.card} relative overflow-hidden`}>
         <SectionLabel label="Categories" />
         <div className="flex flex-wrap gap-3 mt-2">
           {Object.entries(TAG_DEP_CATEGORIES).map(([cat, color]) => (
@@ -221,8 +221,8 @@ export function TagDepsPanel({ featureMap: _featureMap, defs: _defs }: TagDepsPa
           key={density}
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          transition={{ duration: DZIN_TIMING.DENSITY / 2 }}
+          exit={{ opacity: 0, transition: TRANSITION_EXIT }}
+          transition={TRANSITION_ENTER}
         >
           {density === 'micro' && <TagDepsMicro />}
           {density === 'compact' && <TagDepsCompact />}

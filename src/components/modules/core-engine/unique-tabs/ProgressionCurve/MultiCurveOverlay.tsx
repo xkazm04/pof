@@ -30,7 +30,7 @@ export function MultiCurveOverlay() {
                 aria-label={`Toggle ${s.label} curve visibility`}
               />
               <span className="w-2 h-2 rounded-full" style={{ backgroundColor: s.color }} />
-              <span className="text-[10px] font-mono uppercase tracking-[0.15em] text-text-muted">{s.label}</span>
+              <span className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted">{s.label}</span>
             </label>
           ))}
         </div>

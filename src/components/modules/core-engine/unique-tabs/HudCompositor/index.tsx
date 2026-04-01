@@ -61,7 +61,7 @@ export function HudCompositor({ accent }: HudCompositorProps) {
         <SectionHeader icon={Eye} label="HUD Context Compositor" color={accent} />
         <button
           onClick={() => setShowZLayers(z => !z)}
-          className="flex items-center gap-1 px-2 py-0.5 text-[10px] font-mono uppercase tracking-[0.15em] font-bold rounded border transition-colors"
+          className="flex items-center gap-1 px-2 py-0.5 text-xs font-mono uppercase tracking-[0.15em] font-bold rounded border transition-colors"
           style={{
             backgroundColor: showZLayers ? `${accent}${OPACITY_20}` : 'transparent',
             borderColor: showZLayers ? `${accent}60` : 'var(--border)',
@@ -147,7 +147,7 @@ export function HudCompositor({ accent }: HudCompositorProps) {
                 return (
                   <div key={d} className="flex items-center gap-1.5">
                     <div className="w-2 h-2 rounded-sm" style={{ backgroundColor: info.color }} />
-                    <span className="text-[10px] font-mono uppercase tracking-[0.15em] text-text-muted">
+                    <span className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted">
                       Z{d} {info.label}
                     </span>
                   </div>
@@ -161,14 +161,14 @@ export function HudCompositor({ accent }: HudCompositorProps) {
       {/* Visible / Hidden summary */}
       <div className="grid grid-cols-2 gap-3 mt-2.5">
         <div className="bg-surface/50 p-2 rounded-md border border-border/30">
-          <div className="text-[10px] font-mono uppercase tracking-[0.15em] font-bold text-text-muted mb-1 flex items-center gap-1">
+          <div className="text-xs font-mono uppercase tracking-[0.15em] font-bold text-text-muted mb-1 flex items-center gap-1">
             <Eye className="w-2.5 h-2.5" /> Visible
           </div>
           <div className="flex flex-wrap gap-1">
             {ctx.visible.map(w => (
               <span
                 key={w}
-                className="px-1.5 py-0.5 text-[10px] font-mono rounded border"
+                className="px-1.5 py-0.5 text-xs font-mono rounded border"
                 style={{
                   color: ctx.color,
                   backgroundColor: `${ctx.color}12`,
@@ -181,12 +181,12 @@ export function HudCompositor({ accent }: HudCompositorProps) {
           </div>
         </div>
         <div className="bg-surface/50 p-2 rounded-md border border-border/30">
-          <div className="text-[10px] font-mono uppercase tracking-[0.15em] font-bold text-text-muted mb-1 flex items-center gap-1 opacity-60">
+          <div className="text-xs font-mono uppercase tracking-[0.15em] font-bold text-text-muted mb-1 flex items-center gap-1 opacity-60">
             <Eye className="w-2.5 h-2.5" /> Hidden
           </div>
           <div className="flex flex-wrap gap-1">
             {ctx.hidden.map(w => (
-              <span key={w} className="px-1.5 py-0.5 text-[10px] font-mono text-text-muted opacity-50 rounded border border-border/30">
+              <span key={w} className="px-1.5 py-0.5 text-xs font-mono text-text-muted opacity-50 rounded border border-border/30">
                 {w}
               </span>
             ))}

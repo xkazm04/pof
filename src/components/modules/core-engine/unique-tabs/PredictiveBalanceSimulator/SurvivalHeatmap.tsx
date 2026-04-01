@@ -18,11 +18,11 @@ export function SurvivalHeatmap({ cells, levels, enemies }: {
         <table className="w-full text-xs font-mono border-collapse">
           <thead>
             <tr>
-              <th className="text-left text-text-muted px-1.5 py-1 text-[10px] font-mono uppercase tracking-[0.15em]">
+              <th className="text-left text-text-muted px-1.5 py-1 text-xs font-mono uppercase tracking-[0.15em]">
                 Lv.
               </th>
               {enemies.map(e => (
-                <th key={e} className="text-center text-text-muted px-1 py-1 text-[10px] font-mono uppercase tracking-[0.15em] whitespace-nowrap">
+                <th key={e} className="text-center text-text-muted px-1 py-1 text-xs font-mono uppercase tracking-[0.15em] whitespace-nowrap">
                   {e}
                 </th>
               ))}
@@ -46,7 +46,7 @@ export function SurvivalHeatmap({ cells, levels, enemies }: {
                       onMouseEnter={() => setHovered(cell)}
                       onMouseLeave={() => setHovered(null)}
                     >
-                      <span className="font-bold" style={{ color: survivalColor(cell.survivalRate) }}>
+                      <span className="font-bold tabular-nums" style={{ color: survivalColor(cell.survivalRate) }}>
                         {pct}%
                       </span>
                     </td>
@@ -64,7 +64,7 @@ export function SurvivalHeatmap({ cells, levels, enemies }: {
             initial={{ opacity: 0, y: 4 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0 }}
-            className="flex items-center gap-3 px-3 py-2 rounded-lg bg-surface-deep border border-border/40 text-xs font-mono"
+            className="flex items-center gap-3 px-3 py-2 rounded-lg bg-surface-deep border border-border/40 text-xs font-mono tabular-nums"
           >
             <span className="text-text-muted">Lv.{hovered.playerLevel} vs {hovered.enemyLabel}</span>
             <span style={{ color: survivalColor(hovered.survivalRate) }} className="font-bold">

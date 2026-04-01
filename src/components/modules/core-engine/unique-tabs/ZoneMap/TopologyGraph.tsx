@@ -2,8 +2,9 @@
 
 import { useState } from 'react';
 import { Network } from 'lucide-react';
-import { motion } from 'framer-motion';
+import { motion, useReducedMotion } from 'framer-motion';
 import { STATUS_WARNING, ACCENT_CYAN } from '@/lib/chart-colors';
+import { ANIMATION_PRESETS, motionSafe } from '@/lib/motion';
 import { BlueprintPanel, SectionHeader } from '../_design';
 import {
   TOPOLOGY_NODES, TOPOLOGY_EDGES, EDGE_STYLE_MAP, TOPO_LEVEL_RANGES,
@@ -13,6 +14,7 @@ const ACCENT = ACCENT_CYAN;
 
 export function TopologyGraph() {
   const [hoveredTopoNode, setHoveredTopoNode] = useState<string | null>(null);
+  const prefersReduced = useReducedMotion();
 
   return (
     <BlueprintPanel color={ACCENT} className="p-3">
@@ -71,7 +73,7 @@ export function TopologyGraph() {
                   style={{ filter: `drop-shadow(0 0 6px ${node.color}40)` }}
                 />
                 <text x={node.x!} y={node.y!} textAnchor="middle" dominantBaseline="central"
-                  className="text-[10px] font-mono font-bold select-none pointer-events-none"
+                  className="text-xs font-mono font-bold select-none pointer-events-none"
                   fill={node.color}>
                   {node.label.split(' ').map(w => w[0]).join('')}
                 </text>
@@ -91,16 +93,16 @@ export function TopologyGraph() {
               <foreignObject key={`tip-${node.id}`} x={tx} y={ty} width={tooltipW} height={tooltipH}
                 className="pointer-events-none overflow-visible">
                 <motion.div
-                  initial={{ opacity: 0, scale: 0.9 }}
+                  initial={prefersReduced ? { opacity: 1, scale: 1 } : { opacity: 0, scale: 0.9 }}
                   animate={{ opacity: 1, scale: 1 }}
-                  transition={{ type: 'spring', stiffness: 500, damping: 30, duration: 0.12 }}
+                  transition={motionSafe(ANIMATION_PRESETS.spring, prefersReduced)}
                   className="rounded-lg border border-border/60 shadow-lg"
                   style={{ background: 'var(--surface-deep, #0f172a)', borderTop: `2px solid ${node.color}` }}>
                   <div className="px-2.5 py-2 space-y-1">
                     <div className="text-xs font-bold text-text truncate" style={{ color: node.color }}>
                       {node.label}
                     </div>
-                    <div className="flex items-center gap-2 text-[11px] font-mono text-text-muted">
+                    <div className="flex items-center gap-1.5 text-xs font-mono text-text-muted">
                       <span className="px-1.5 py-0.5 rounded border border-border/40 bg-surface/50 uppercase tracking-wider">
                         {node.group}
                       </span>
@@ -118,12 +120,12 @@ export function TopologyGraph() {
       {/* Legend */}
       <div className="flex flex-wrap items-center gap-4 mt-3 pt-2 border-t border-border/40">
         {Object.entries(EDGE_STYLE_MAP).map(([type, s]) => (
-          <span key={type} className="text-[10px] font-mono uppercase tracking-[0.15em] text-text-muted flex items-center gap-1.5">
+          <span key={type} className="text-xs font-mono uppercase tracking-wider text-text-muted flex items-center gap-1.5">
             <svg width="24" height="4"><line x1="0" y1="2" x2="24" y2="2" stroke={s.color} strokeWidth="2" strokeDasharray={s.dash === '0' ? 'none' : s.dash} /></svg>
             {s.label}
           </span>
         ))}
-        <span className="text-[10px] font-mono uppercase tracking-[0.15em] text-text-muted flex items-center gap-1.5">
+        <span className="text-xs font-mono uppercase tracking-wider text-text-muted flex items-center gap-1.5">
           <svg width="24" height="4"><line x1="0" y1="2" x2="24" y2="2" stroke={STATUS_WARNING} strokeWidth="3" /></svg>
           Critical Path
         </span>

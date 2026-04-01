@@ -65,7 +65,7 @@ export function TemplatePicker({
                       <span className="text-sm font-bold" style={{ color: tpl.color }}>{tpl.name}</span>
                     </div>
                     <p className="text-2xs text-text-muted leading-relaxed mb-2.5 line-clamp-2">{tpl.description}</p>
-                    <div className="flex items-center gap-3 text-[11px] font-mono text-text-muted">
+                    <div className="flex items-center gap-3 text-xs font-mono text-text-muted">
                       <span>{tpl.attributes.length} attrs</span>
                       <span>{tpl.effects.length} effects</span>
                       <span>{tpl.tagRules.length} rules</span>
@@ -73,7 +73,7 @@ export function TemplatePicker({
                     </div>
                     <div className="flex flex-wrap gap-1 mt-2">
                       {tpl.tags.map((tag) => (
-                        <span key={tag} className="text-[11px] font-mono px-1.5 py-0 rounded"
+                        <span key={tag} className="text-xs font-mono px-1.5 py-0 rounded"
                           style={{ backgroundColor: `${tpl.color}10`, color: `${tpl.color}cc`, border: `1px solid ${tpl.color}20` }}>
                           {tag}
                         </span>

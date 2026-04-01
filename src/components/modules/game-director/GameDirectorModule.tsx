@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { motion } from 'framer-motion';
 import {
   Clapperboard, BarChart3, FileSearch, Activity, LayoutDashboard, GitCompareArrows,
 } from 'lucide-react';
@@ -124,7 +125,7 @@ export function GameDirectorModule() {
         )}
 
         {activeTab === 'findings' && (
-          <FindingsExplorer sessions={director.sessions} getFindings={director.getFindings} />
+          <FindingsExplorer sessions={director.sessions} getFindings={director.getFindings} onNewSession={() => setActiveTab('new-session')} />
         )}
 
         {activeTab === 'regressions' && (
@@ -158,9 +159,11 @@ function TabButton({
       <Icon className="w-3 h-3" />
       {label}
       {active && (
-        <span
+        <motion.span
+          layoutId="director-tab-indicator"
           className="absolute bottom-0 left-0 right-0 h-0.5 rounded-t"
           style={{ backgroundColor: accent }}
+          transition={{ type: 'spring', stiffness: 500, damping: 35 }}
         />
       )}
     </button>

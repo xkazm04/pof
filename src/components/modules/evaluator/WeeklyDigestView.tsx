@@ -4,13 +4,14 @@ import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import {
   Calendar, Copy, Check, Image, TrendingUp, TrendingDown,
   Minus, Flame, Clock, BarChart3, Zap, Loader2, RefreshCw,
+  CheckCircle, AlertTriangle, XCircle,
 } from 'lucide-react';
 import { useModuleStore } from '@/stores/moduleStore';
 import { apiFetch } from '@/lib/api-utils';
 import { SUB_MODULES, MODULE_LABELS } from '@/lib/module-registry';
 import type { WeeklyDigest } from '@/types/weekly-digest';
 import { UI_TIMEOUTS } from '@/lib/constants';
-import { STATUS_INFO, MODULE_COLORS, ACCENT_VIOLET, STATUS_SUCCESS, ACCENT_RED, ACCENT_ORANGE, OVERLAY_WHITE } from '@/lib/chart-colors';
+import { STATUS_INFO, MODULE_COLORS, ACCENT_VIOLET, STATUS_SUCCESS, ACCENT_RED, ACCENT_ORANGE, OVERLAY_WHITE, OPACITY_5, OPACITY_8, OPACITY_10 } from '@/lib/chart-colors';
 
 // ── Precompute checklist item IDs (static) ──
 const MODULE_ITEM_IDS: Record<string, string[]> = Object.fromEntries(
@@ -200,22 +201,27 @@ export function WeeklyDigestView() {
             const maxSessions = Math.max(...digest.dailySessions.map((x) => x.total), 1);
             const height = d.total > 0 ? Math.max(4, (d.total / maxSessions) * 48) : 2;
             const rate = d.total > 0 ? d.success / d.total : 0;
+            const dayName = new Date(d.date + 'T12:00:00').toLocaleDateString('en', { weekday: 'long' });
+            const pct = d.total > 0 ? Math.round(rate * 100) : 0;
             return (
               <div key={d.date} className="flex-1 flex flex-col items-center gap-1">
-                <div
-                  className="w-full rounded-sm transition-all"
-                  style={{
-                    height: `${height}px`,
-                    backgroundColor: d.total === 0
-                      ? 'var(--border)'
-                      : rate >= 0.75 ? MODULE_COLORS.setup : rate >= 0.5 ? MODULE_COLORS.content : MODULE_COLORS.evaluator,
-                    opacity: d.total === 0 ? 0.3 : 0.8,
-                  }}
-                  title={`${d.date}: ${d.total} sessions, ${d.success} successful`}
+                <SparklineBar
+                  height={height}
+                  isEmpty={d.total === 0}
+                  color={d.total === 0
+                    ? 'var(--border)'
+                    : rate >= 0.75 ? MODULE_COLORS.setup : rate >= 0.5 ? MODULE_COLORS.content : MODULE_COLORS.evaluator}
+                  dayName={dayName}
+                  total={d.total}
+                  success={d.success}
+                  pct={pct}
                 />
-                <span className="text-2xs text-text-muted">
+                <span className="text-2xs text-text-muted leading-none">
                   {new Date(d.date + 'T12:00:00').toLocaleDateString('en', { weekday: 'narrow' })}
                 </span>
+                {d.total > 0 && (
+                  <span className="text-[9px] tabular-nums text-text-muted leading-none">{pct}%</span>
+                )}
               </div>
             );
           })}
@@ -255,10 +261,16 @@ export function WeeklyDigestView() {
                     />
                   </div>
                   <span className="text-2xs text-text-muted tabular-nums w-8 text-right">{m.sessions}</span>
-                  <span className="text-2xs tabular-nums w-8 text-right" style={{
+                  <span className="flex items-center gap-0.5 w-14 justify-end" style={{
                     color: m.successRate >= 0.75 ? MODULE_COLORS.setup : m.successRate >= 0.5 ? MODULE_COLORS.content : MODULE_COLORS.evaluator,
                   }}>
-                    {Math.round(m.successRate * 100)}%
+                    {m.successRate >= 0.75
+                      ? <CheckCircle className="w-2.5 h-2.5 flex-shrink-0" aria-hidden="true" />
+                      : m.successRate >= 0.5
+                        ? <AlertTriangle className="w-2.5 h-2.5 flex-shrink-0" aria-hidden="true" />
+                        : <XCircle className="w-2.5 h-2.5 flex-shrink-0" aria-hidden="true" />
+                    }
+                    <span className="text-2xs tabular-nums">{Math.round(m.successRate * 100)}%</span>
                   </span>
                 </div>
               );
@@ -316,6 +328,63 @@ function StatCard({ label, value, delta, suffix, icon: Icon, color }: {
             {delta > 0 ? '+' : ''}{delta}{suffix ?? ''}
           </span>
         )}
+      </div>
+    </div>
+  );
+}
+
+// ── Sparkline tooltip bar ───────────────────────────────────────────────────
+
+function SparklineBar({ height, isEmpty, color, dayName, total, success, pct }: {
+  height: number;
+  isEmpty: boolean;
+  color: string;
+  dayName: string;
+  total: number;
+  success: number;
+  pct: number;
+}) {
+  return (
+    <div
+      className="group/tip relative w-full rounded-sm transition-all cursor-default focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1"
+      style={{
+        height: `${height}px`,
+        backgroundColor: color,
+        opacity: isEmpty ? 0.3 : 0.8,
+        outlineColor: color,
+      }}
+      tabIndex={0}
+      role="img"
+      aria-label={`${dayName}: ${total} sessions, ${success} successful, ${pct}% success rate`}
+    >
+      {/* CSS-only tooltip */}
+      <div
+        className="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-2
+          opacity-0 scale-95 group-hover/tip:opacity-100 group-hover/tip:scale-100
+          group-focus-visible/tip:opacity-100 group-focus-visible/tip:scale-100
+          transition-all duration-150 z-10"
+      >
+        <div className="px-2.5 py-2 rounded-md bg-[#1a1a24] border border-border shadow-lg whitespace-nowrap text-left">
+          <p className="text-2xs font-medium text-text mb-1">{dayName}</p>
+          <div className="space-y-0.5">
+            <p className="text-2xs text-text-muted">
+              Sessions: <span className="text-text tabular-nums">{total}</span>
+            </p>
+            <p className="text-2xs text-text-muted">
+              Successful: <span className="text-text tabular-nums">{success}</span>
+            </p>
+            {total > 0 && (
+              <p className="text-2xs text-text-muted">
+                Rate: <span className="tabular-nums font-medium" style={{ color }}>{pct}%</span>
+              </p>
+            )}
+          </div>
+          {/* Arrow */}
+          <div className="absolute top-full left-1/2 -translate-x-1/2 w-0 h-0
+            border-l-[5px] border-l-transparent
+            border-r-[5px] border-r-transparent
+            border-t-[5px] border-t-border" />
+        </div>
       </div>
     </div>
   );
@@ -397,13 +466,13 @@ function renderDigestToCanvas(canvas: HTMLCanvasElement, d: WeeklyDigest): void 
 
   // Subtle gradient overlay
   const grad = ctx.createLinearGradient(0, 0, W, H);
-  grad.addColorStop(0, 'rgba(167, 139, 250, 0.06)');
-  grad.addColorStop(1, 'rgba(0, 255, 136, 0.04)');
+  grad.addColorStop(0, `${ACCENT_VIOLET}${OPACITY_5}`);
+  grad.addColorStop(1, `${MODULE_COLORS.setup}${OPACITY_5}`);
   ctx.fillStyle = grad;
   ctx.fillRect(0, 0, W, H);
 
   // Border
-  ctx.strokeStyle = 'rgba(255, 255, 255, 0.08)';
+  ctx.strokeStyle = `${OVERLAY_WHITE}${OPACITY_8}`;
   ctx.lineWidth = 1;
   ctx.strokeRect(0.5, 0.5, W - 1, H - 1);
 
@@ -432,7 +501,7 @@ function renderDigestToCanvas(canvas: HTMLCanvasElement, d: WeeklyDigest): void 
   for (let i = 0; i < stats.length; i++) {
     const x = 40 + i * (boxW + 10);
     // Box bg
-    ctx.fillStyle = 'rgba(255, 255, 255, 0.04)';
+    ctx.fillStyle = `${OVERLAY_WHITE}${OPACITY_5}`;
     roundRect(ctx, x, y, boxW, 60, 8);
     ctx.fill();
 
@@ -472,11 +541,20 @@ function renderDigestToCanvas(canvas: HTMLCanvasElement, d: WeeklyDigest): void 
     const x = 40 + i * (barW + 6);
     const h = dd.total > 0 ? Math.max(4, (dd.total / maxD) * barMaxH) : 2;
     const rate = dd.total > 0 ? dd.success / dd.total : 0;
-    const color = dd.total === 0 ? 'rgba(255,255,255,0.1)' : rate >= 0.75 ? MODULE_COLORS.setup : rate >= 0.5 ? MODULE_COLORS.content : ACCENT_RED;
+    const color = dd.total === 0 ? `${OVERLAY_WHITE}${OPACITY_10}` : rate >= 0.75 ? MODULE_COLORS.setup : rate >= 0.5 ? MODULE_COLORS.content : ACCENT_RED;
 
     ctx.fillStyle = color;
     roundRect(ctx, x, y + barMaxH - h, barW, h, 2);
     ctx.fill();
+
+    // Percentage label above bar
+    if (dd.total > 0) {
+      const pctLabel = `${Math.round((dd.success / dd.total) * 100)}%`;
+      ctx.font = '9px system-ui, -apple-system, sans-serif';
+      ctx.fillStyle = '#999999';
+      const pctW = ctx.measureText(pctLabel).width;
+      ctx.fillText(pctLabel, x + (barW - pctW) / 2, y + barMaxH - h - 3);
+    }
 
     // Day label
     const dayLabel = new Date(dd.date + 'T12:00:00').toLocaleDateString('en', { weekday: 'narrow' });
@@ -510,8 +588,9 @@ function renderDigestToCanvas(canvas: HTMLCanvasElement, d: WeeklyDigest): void 
       ctx.font = '11px system-ui, -apple-system, sans-serif';
       ctx.fillStyle = '#888888';
       ctx.fillText(`${m.sessions}`, 200 + barW2 + 8, y + 12);
+      const statusLabel = m.successRate >= 0.75 ? '✓' : m.successRate >= 0.5 ? '~' : '✗';
       ctx.fillStyle = color;
-      ctx.fillText(`${Math.round(m.successRate * 100)}%`, W - 80, y + 12);
+      ctx.fillText(`${statusLabel} ${Math.round(m.successRate * 100)}%`, W - 90, y + 12);
 
       y += 22;
     }
@@ -531,7 +610,7 @@ function renderDigestToCanvas(canvas: HTMLCanvasElement, d: WeeklyDigest): void 
       ctx.font = '12px system-ui, -apple-system, sans-serif';
       const tw = ctx.measureText(text).width + 20;
 
-      ctx.fillStyle = 'rgba(255, 255, 255, 0.05)';
+      ctx.fillStyle = `${OVERLAY_WHITE}${OPACITY_5}`;
       roundRect(ctx, ax, y - 2, tw, 24, 12);
       ctx.fill();
 

@@ -16,25 +16,28 @@ import { WarningAggregator } from './WarningAggregator';
 import { BuildSummaryCard } from './BuildSummaryCard';
 import { AssistantMessageContent, parseCodeBlocks } from './CodeBlockHighlighter';
 import type { ListImperativeAPI } from 'react-window';
-import { STATUS_INFO, ACCENT_VIOLET, MODULE_COLORS } from '@/lib/chart-colors';
+import {
+  STATUS_INFO, STATUS_MUTED, ACCENT_VIOLET, MODULE_COLORS, CLI_COLORS,
+  withOpacity, OPACITY_5, OPACITY_8, OPACITY_12, OPACITY_15, OPACITY_20,
+} from '@/lib/chart-colors';
 
 // --- Constants ---
 
 const LOG_ICON_SIZE = 'w-3 h-3';
 
 const LOG_TYPE_ICONS: Record<LogEntry['type'], { icon: typeof User; colorClass: string }> = {
-  user: { icon: User, colorClass: 'text-blue-400' },
+  user: { icon: User, colorClass: CLI_COLORS.prompt },
   assistant: { icon: Bot, colorClass: 'text-purple-400' },
-  tool_use: { icon: Wrench, colorClass: 'text-yellow-400' },
-  tool_result: { icon: CheckCircle, colorClass: 'text-green-400' },
-  error: { icon: AlertCircle, colorClass: 'text-red-400' },
-  system: { icon: ListOrdered, colorClass: 'text-cyan-400' },
+  tool_use: { icon: Wrench, colorClass: CLI_COLORS.warning },
+  tool_result: { icon: CheckCircle, colorClass: CLI_COLORS.success },
+  error: { icon: AlertCircle, colorClass: CLI_COLORS.error },
+  system: { icon: ListOrdered, colorClass: CLI_COLORS.info },
 };
 
 const TOOL_ICONS: Record<string, { icon: typeof FileEdit; colorClass: string }> = {
-  Edit: { icon: FileEdit, colorClass: 'text-yellow-400' },
-  Write: { icon: FilePlus, colorClass: 'text-green-400' },
-  Read: { icon: Eye, colorClass: 'text-blue-400' },
+  Edit: { icon: FileEdit, colorClass: CLI_COLORS.warning },
+  Write: { icon: FilePlus, colorClass: CLI_COLORS.success },
+  Read: { icon: Eye, colorClass: CLI_COLORS.prompt },
 };
 
 const LOG_ITEM_HEIGHT = 24;
@@ -72,10 +75,10 @@ const formatLogContent = (log: LogEntry) => {
 
 const getLogTextClass = (type: LogEntry['type']) => {
   switch (type) {
-    case 'error': return 'text-red-400';
+    case 'error': return CLI_COLORS.error;
     case 'user': return 'text-blue-300';
     case 'tool_result': return 'text-text-muted font-mono';
-    case 'system': return 'text-cyan-400';
+    case 'system': return CLI_COLORS.info;
     default: return 'text-text';
   }
 };
@@ -125,7 +128,7 @@ function ToolPairRow({ toolUse, toolResult, isExpanded, onToggle, buildParsed, o
   const warningGroups = hasBuild ? aggregateWarnings(buildParsed!.diagnostics) : [];
   return (
     <div>
-      <button onClick={onToggle} className="w-full flex items-start gap-2 px-3 py-0.5 hover:bg-surface-hover/40 transition-colors duration-fast text-left">
+      <button onClick={onToggle} className="w-full flex items-start gap-2 px-3 py-0.5 hover:bg-surface-hover/40 transition-colors duration-150 text-left">
         {isExpanded
           ? <ChevronDown className="w-3 h-3 text-text-muted flex-shrink-0 mt-0.5" />
           : <ChevronRight className="w-3 h-3 text-text-muted flex-shrink-0 mt-0.5" />
@@ -134,7 +137,7 @@ function ToolPairRow({ toolUse, toolResult, isExpanded, onToggle, buildParsed, o
         <span className="text-xs leading-relaxed break-all truncate text-text">{formatLogContent(toolUse)}</span>
         {hasBuild && !isExpanded && (
           <span className={`ml-auto text-2xs px-1.5 py-px rounded flex-shrink-0 ${
-            buildParsed!.summary?.success ? 'bg-green-500/15 text-green-400' : 'bg-status-red-medium text-red-400'
+            buildParsed!.summary?.success ? `bg-green-500/15 ${CLI_COLORS.success}` : `bg-status-red-medium ${CLI_COLORS.error}`
           }`}>
             {buildParsed!.summary?.success ? 'Build OK' : `${errors.length} error(s)`}
           </span>
@@ -178,12 +181,12 @@ function ToolBatchRow({ pairs, isExpanded, onToggle, expandedPairs, onTogglePair
 }) {
   return (
     <div>
-      <button onClick={onToggle} className="w-full flex items-start gap-2 px-3 py-0.5 hover:bg-surface-hover/40 transition-colors duration-fast text-left">
+      <button onClick={onToggle} className="w-full flex items-start gap-2 px-3 py-0.5 hover:bg-surface-hover/40 transition-colors duration-150 text-left">
         {isExpanded
           ? <ChevronDown className="w-3 h-3 text-text-muted flex-shrink-0 mt-0.5" />
           : <ChevronRight className="w-3 h-3 text-text-muted flex-shrink-0 mt-0.5" />
         }
-        <Wrench className="w-3 h-3 text-yellow-400 flex-shrink-0 mt-0.5" />
+        <Wrench className={`w-3 h-3 ${CLI_COLORS.warning} flex-shrink-0 mt-0.5`} />
         <span className="text-xs leading-relaxed text-text-muted">{pairs.length} file operations</span>
       </button>
       {isExpanded && (
@@ -213,7 +216,7 @@ interface LogRowData { logs: LogEntry[]; }
 function LogRow({ index, style, logs }: RowComponentProps<LogRowData>) {
   const log = logs[index];
   return (
-    <div style={style} className="flex items-start gap-2 px-3 py-0.5 hover:bg-surface-hover/40 transition-colors duration-fast">
+    <div style={style} className="flex items-start gap-2 px-3 py-0.5 hover:bg-surface-hover/40 transition-colors duration-150">
       <span className="flex-shrink-0 mt-0.5">{getLogIcon(log.type, log.toolName)}</span>
       <span className={`text-xs leading-relaxed break-all truncate ${getLogTextClass(log.type)}`}>{formatLogContent(log)}</span>
     </div>
@@ -378,7 +381,7 @@ function extractInlineEntities(text: string): InlineEntity[] {
 
 const ENTITY_STYLES: Record<InlineEntity['type'], { color: string; icon: typeof Box }> = {
   class:   { color: STATUS_INFO, icon: Box },
-  file:    { color: '#94a3b8', icon: FileCode },
+  file:    { color: STATUS_MUTED, icon: FileCode },
   concept: { color: ACCENT_VIOLET, icon: Lightbulb },
   warning: { color: MODULE_COLORS.content, icon: AlertTriangle },
   step:    { color: MODULE_COLORS.setup, icon: Footprints },
@@ -399,7 +402,7 @@ function EntityTags({ entities, onNavigate }: {
           <span
             key={`${e.type}-${e.value}-${i}`}
             className="inline-flex items-center gap-1 px-1.5 py-px rounded text-2xs cursor-default hover:brightness-125 transition-all"
-            style={{ backgroundColor: `${style.color}12`, color: style.color, border: `1px solid ${style.color}20` }}
+            style={{ backgroundColor: withOpacity(style.color, OPACITY_8), color: style.color, border: `1px solid ${withOpacity(style.color, OPACITY_12)}` }}
             title={e.type === 'warning' ? e.value : `${e.type}: ${e.value}`}
             onClick={() => e.moduleId && onNavigate?.(e.moduleId)}
           >
@@ -556,7 +559,7 @@ export function TerminalOutput({
       const warningGroups = aggregateWarnings(parsed.diagnostics);
       return (
         <div>
-          <div className="flex items-start gap-2 px-3 py-0.5 hover:bg-surface-hover/40 transition-colors duration-fast">
+          <div className="flex items-start gap-2 px-3 py-0.5 hover:bg-surface-hover/40 transition-colors duration-150">
             <span className="flex-shrink-0 mt-0.5">{getLogIcon(log.type, log.toolName)}</span>
             <span className={`text-xs leading-relaxed break-all ${getLogTextClass(log.type)}`}>{formatLogContent(log)}</span>
           </div>
@@ -579,7 +582,7 @@ export function TerminalOutput({
       if (hasCodeBlocks) {
         return (
           <div>
-            <div className="flex items-start gap-2 px-3 py-1 hover:bg-surface-hover/40 transition-colors duration-fast">
+            <div className="flex items-start gap-2 px-3 py-1 hover:bg-surface-hover/40 transition-colors duration-150">
               <span className="flex-shrink-0 mt-0.5">{getLogIcon(log.type, log.toolName)}</span>
               <AssistantMessageContent content={log.content} />
             </div>
@@ -591,7 +594,7 @@ export function TerminalOutput({
       if (entities.length > 0) {
         return (
           <div>
-            <div className="flex items-start gap-2 px-3 py-0.5 hover:bg-surface-hover/40 transition-colors duration-fast">
+            <div className="flex items-start gap-2 px-3 py-0.5 hover:bg-surface-hover/40 transition-colors duration-150">
               <span className="flex-shrink-0 mt-0.5">{getLogIcon(log.type, log.toolName)}</span>
               <span className={`text-xs leading-relaxed break-all ${getLogTextClass(log.type)}`}>{formatLogContent(log)}</span>
             </div>
@@ -602,7 +605,7 @@ export function TerminalOutput({
     }
 
     return (
-      <div className="flex items-start gap-2 px-3 py-0.5 hover:bg-surface-hover/40 transition-colors duration-fast">
+      <div className="flex items-start gap-2 px-3 py-0.5 hover:bg-surface-hover/40 transition-colors duration-150">
         <span className="flex-shrink-0 mt-0.5">{getLogIcon(log.type, log.toolName)}</span>
         <span className={`text-xs leading-relaxed break-all ${getLogTextClass(log.type)}`}>{formatLogContent(log)}</span>
       </div>
@@ -667,8 +670,8 @@ export function TerminalOutput({
             <div
               className="w-10 h-10 rounded-xl border flex items-center justify-center"
               style={{
-                borderColor: `${accentColor}30`,
-                backgroundColor: `${accentColor}08`,
+                borderColor: withOpacity(accentColor, OPACITY_20),
+                backgroundColor: withOpacity(accentColor, OPACITY_5),
               }}
             >
               <Terminal className="w-5 h-5" style={{ color: accentColor }} />
@@ -692,8 +695,8 @@ export function TerminalOutput({
                     className="px-2.5 py-1 rounded-full text-2xs font-medium transition-all hover:brightness-125 cursor-pointer"
                     style={{
                       color: accentColor,
-                      backgroundColor: `${accentColor}0a`,
-                      border: `1px solid ${accentColor}25`,
+                      backgroundColor: withOpacity(accentColor, OPACITY_5),
+                      border: `1px solid ${withOpacity(accentColor, OPACITY_15)}`,
                     }}
                   >
                     {sp.label}

@@ -49,7 +49,7 @@ export function EditorTab({ selected, radarData, genomeCount, updateGenome, upda
         {/* Genome metadata */}
         <div className="space-y-1.5">
           <div className="flex items-center gap-2">
-            <span className="text-[10px] font-mono uppercase tracking-[0.15em] text-text-muted w-14">Name</span>
+            <span className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted w-14">Name</span>
             <input
               type="text" value={selected.name}
               onChange={(e) => updateGenome(selected.id, (g) => ({ ...g, name: e.target.value }))}
@@ -57,7 +57,7 @@ export function EditorTab({ selected, radarData, genomeCount, updateGenome, upda
             />
           </div>
           <div className="flex items-center gap-2">
-            <span className="text-[10px] font-mono uppercase tracking-[0.15em] text-text-muted w-14">Type</span>
+            <span className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted w-14">Type</span>
             <select
               value={selected.itemType}
               onChange={(e) => updateGenome(selected.id, (g) => ({ ...g, itemType: e.target.value as ItemGenome['itemType'] }))}
@@ -69,7 +69,7 @@ export function EditorTab({ selected, radarData, genomeCount, updateGenome, upda
             </select>
           </div>
           <div className="flex items-center gap-2">
-            <span className="text-[10px] font-mono uppercase tracking-[0.15em] text-text-muted w-14">MinRar</span>
+            <span className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted w-14">MinRar</span>
             <select
               value={selected.minRarity}
               onChange={(e) => updateGenome(selected.id, (g) => ({ ...g, minRarity: e.target.value as ItemGenome['minRarity'] }))}
@@ -87,7 +87,7 @@ export function EditorTab({ selected, radarData, genomeCount, updateGenome, upda
             {selected.tags.map((tag) => (
               <span
                 key={tag}
-                className="text-[10px] font-mono uppercase tracking-[0.15em] px-1.5 py-0.5 rounded"
+                className="text-xs font-mono uppercase tracking-[0.15em] px-1.5 py-0.5 rounded"
                 style={{ backgroundColor: `${selected.color}${OPACITY_10}`, color: selected.color }}
               >
                 {tag}
@@ -119,7 +119,7 @@ export function EditorTab({ selected, radarData, genomeCount, updateGenome, upda
           <SectionHeader icon={FlaskConical} label="Mutation Config" color={ACCENT_PINK} />
           <div className="grid grid-cols-3 gap-2">
             <div>
-              <span className="text-[10px] font-mono uppercase tracking-[0.15em] text-text-muted block mb-0.5">Rate</span>
+              <span className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted block mb-0.5">Rate</span>
               <input
                 type="number" min={0} max={100} step={1}
                 value={Math.round(selected.mutation.mutationRate * 100)}
@@ -131,7 +131,7 @@ export function EditorTab({ selected, radarData, genomeCount, updateGenome, upda
               />
             </div>
             <div>
-              <span className="text-[10px] font-mono uppercase tracking-[0.15em] text-text-muted block mb-0.5">Max</span>
+              <span className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted block mb-0.5">Max</span>
               <input
                 type="number" min={0} max={6} step={1}
                 value={selected.mutation.maxMutations}
@@ -143,7 +143,7 @@ export function EditorTab({ selected, radarData, genomeCount, updateGenome, upda
               />
             </div>
             <div>
-              <span className="text-[10px] font-mono uppercase tracking-[0.15em] text-text-muted block mb-0.5">Wild</span>
+              <span className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted block mb-0.5">Wild</span>
               <button
                 onClick={() => updateGenome(selected.id, (g) => ({
                   ...g,

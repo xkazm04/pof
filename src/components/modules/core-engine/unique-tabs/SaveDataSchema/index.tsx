@@ -62,7 +62,7 @@ export function SaveDataSchema({ moduleId }: SaveDataSchemaProps) {
             style={{ color: `${ACCENT}ee`, textShadow: `0 0 8px ${ACCENT}40` }}>
             Save.Data_Schema <span style={{ color: ACCENT }}>{cursorVisible ? '_' : ' '}</span>
           </span>
-          <span className="text-[10px] font-mono uppercase tracking-[0.15em] text-text-muted mt-0.5">
+          <span className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted mt-0.5">
             Protocol: UARPG_SYS_{stats.implemented}/{stats.total}
           </span>
         </div>

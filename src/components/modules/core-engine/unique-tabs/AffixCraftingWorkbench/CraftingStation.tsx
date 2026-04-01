@@ -41,24 +41,24 @@ export function CraftingStation({
       <div className="flex items-center justify-between">
         <button onClick={onToggleCraftPanel} className="flex items-center gap-2">
           <FlaskConical className="w-3.5 h-3.5" style={{ color: ACCENT_PURPLE }} />
-          <span className="text-[10px] font-mono font-bold uppercase tracking-[0.15em] text-text">
+          <span className="text-xs font-mono font-bold uppercase tracking-[0.15em] text-text">
             Crafting Station
           </span>
           {prefixLocked && (
-            <span className="text-[10px] px-1.5 py-0.5 rounded font-bold font-mono"
+            <span className="text-xs px-1.5 py-0.5 rounded font-bold font-mono"
               style={{ backgroundColor: `${ACCENT_PURPLE}${OPACITY_15}`, color: ACCENT_PURPLE, border: `1px solid ${ACCENT_PURPLE}30` }}>
               PRE LOCKED
             </span>
           )}
           {suffixLocked && (
-            <span className="text-[10px] px-1.5 py-0.5 rounded font-bold font-mono"
+            <span className="text-xs px-1.5 py-0.5 rounded font-bold font-mono"
               style={{ backgroundColor: `${ACCENT_PURPLE}${OPACITY_15}`, color: ACCENT_PURPLE, border: `1px solid ${ACCENT_PURPLE}30` }}>
               SUF LOCKED
             </span>
           )}
           {showCraftPanel ? <ChevronDown className="w-3 h-3 text-text-muted" /> : <ChevronRight className="w-3 h-3 text-text-muted" />}
         </button>
-        <div className="flex items-center gap-1.5 text-[10px] font-mono text-text-muted">
+        <div className="flex items-center gap-1.5 text-xs font-mono text-text-muted">
           <Dices className="w-3 h-3" /> {craftCount} crafts
         </div>
       </div>
@@ -75,8 +75,8 @@ export function CraftingStation({
                   backgroundColor: wallet[c.id] === 0 ? `${STATUS_ERROR}08` : `${c.color}05`,
                 }}
                 title={`${c.name}: ${c.description}`}>
-                <span className="text-[10px]">{c.icon}</span>
-                <span className="text-[10px] font-mono font-bold"
+                <span className="text-xs">{c.icon}</span>
+                <span className="text-xs font-mono font-bold"
                   style={{ color: wallet[c.id] === 0 ? STATUS_ERROR : c.color, textShadow: `0 0 12px ${c.color}40` }}>
                   {wallet[c.id]}
                 </span>
@@ -87,9 +87,9 @@ export function CraftingStation({
 
           {/* Wallet reset */}
           <div className="flex items-center justify-between">
-            <span className="text-[10px] font-mono text-text-muted">Forging Potential acts as item durability</span>
+            <span className="text-xs font-mono text-text-muted">Forging Potential acts as item durability</span>
             <button onClick={onResetWallet}
-              className="flex items-center gap-1 px-2 py-1 rounded text-[10px] font-mono text-text-muted hover:text-text transition-colors"
+              className="flex items-center gap-1 px-2 py-1 rounded text-xs font-mono text-text-muted hover:text-text transition-colors"
               style={{ border: `1px solid ${ACCENT_PURPLE}25` }}>
               <RefreshCw className="w-2.5 h-2.5" /> Reset
             </button>
@@ -118,12 +118,12 @@ export function CraftingStation({
                   transition={{ duration: 0.2 }}>
                   <div className="flex items-center gap-1.5 mb-1">
                     <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: action.color }} />
-                    <span className="text-[10px] font-mono font-bold uppercase tracking-[0.15em]"
+                    <span className="text-xs font-mono font-bold uppercase tracking-[0.15em]"
                       style={{ color: enabled ? action.color : 'var(--text-muted)', textShadow: enabled ? `0 0 12px ${action.color}40` : 'none' }}>
                       {action.name}
                     </span>
                   </div>
-                  <p className="text-[10px] text-text-muted leading-snug mb-1.5 line-clamp-2">{action.description}</p>
+                  <p className="text-xs text-text-muted leading-snug mb-1.5 line-clamp-2">{action.description}</p>
 
                   <div className="flex flex-wrap gap-1">
                     {Object.entries(action.costs).map(([cid, amount]) => {
@@ -131,7 +131,7 @@ export function CraftingStation({
                       if (!cur || !amount) return null;
                       const hasEnough = (wallet[cid as CurrencyId] ?? 0) >= amount;
                       return (
-                        <span key={cid} className="text-[10px] font-mono px-1 py-0.5 rounded"
+                        <span key={cid} className="text-xs font-mono px-1 py-0.5 rounded"
                           style={{ backgroundColor: hasEnough ? `${cur.color}10` : `${STATUS_ERROR}15`, color: hasEnough ? cur.color : STATUS_ERROR }}>
                           {amount} {cur.icon}
                         </span>
@@ -140,7 +140,7 @@ export function CraftingStation({
                   </div>
 
                   {action.successChance < 1.0 && (
-                    <div className="mt-1 flex items-center gap-1 text-[10px] font-mono"
+                    <div className="mt-1 flex items-center gap-1 text-xs font-mono"
                       style={{ color: action.successChance >= 0.8 ? STATUS_SUCCESS : STATUS_WARNING }}>
                       <Target className="w-2.5 h-2.5" /> {(action.successChance * 100).toFixed(0)}%
                     </div>

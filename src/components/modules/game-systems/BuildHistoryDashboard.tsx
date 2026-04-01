@@ -9,6 +9,7 @@ import {
 } from 'lucide-react';
 import type { BuildRecord, BuildStats, SizeTrendPoint } from '@/lib/packaging/build-history-store';
 import { apiFetch } from '@/lib/api-utils';
+import { MODULE_COLORS, ACCENT_VIOLET, statusBg } from '@/lib/chart-colors';
 import { SizeTrendChart } from './SizeTrendChart';
 import { SurfaceCard } from '@/components/ui/SurfaceCard';
 import { BuildComparison } from './BuildComparison';
@@ -32,11 +33,11 @@ function SortableHeader({
       onClick={() => onSort(sortKey)}
       className="flex items-center gap-0.5 text-2xs uppercase tracking-wider font-medium transition-colors group cursor-pointer select-none"
     >
-      <span className={active ? 'text-[#a78bfa]' : 'text-text-muted group-hover:text-text'}>{label}</span>
+      <span className={active ? '' : 'text-text-muted group-hover:text-text'} style={active ? { color: ACCENT_VIOLET } : undefined}>{label}</span>
       {active ? (
         dir === 'asc'
-          ? <ChevronUp className="w-2.5 h-2.5 text-[#a78bfa]" />
-          : <ChevronDown className="w-2.5 h-2.5 text-[#a78bfa]" />
+          ? <ChevronUp className="w-2.5 h-2.5" style={{ color: ACCENT_VIOLET }} />
+          : <ChevronDown className="w-2.5 h-2.5" style={{ color: ACCENT_VIOLET }} />
       ) : (
         <ChevronDown className="w-2.5 h-2.5 text-text-muted/0 group-hover:text-text-muted/50" />
       )}
@@ -95,17 +96,17 @@ function BuildRow({ build, onDelete }: { build: BuildRecord; onDelete: (id: numb
 
         <div className="flex items-center gap-1.5 min-w-0">
           {build.status === 'success' ? (
-            <CheckCircle className="w-3 h-3 text-green-400 flex-shrink-0" />
+            <CheckCircle className="w-3 h-3 text-green-400 flex-shrink-0" aria-label="Build succeeded" />
           ) : build.status === 'failed' ? (
-            <XCircle className="w-3 h-3 text-red-400 flex-shrink-0" />
+            <XCircle className="w-3 h-3 text-red-400 flex-shrink-0" aria-label="Build failed" />
           ) : (
-            <Clock className="w-3 h-3 text-yellow-400 flex-shrink-0" />
+            <Clock className="w-3 h-3 text-yellow-400 flex-shrink-0" aria-label="Build in progress" />
           )}
-          <span className="text-[#c8cce0] font-mono truncate">
+          <span className="text-text-muted font-mono truncate">
             #{build.id}
           </span>
           {build.version && (
-            <span className="text-2xs px-1 py-px rounded bg-[#8b5cf6]/15 text-[#a78bfa] font-mono">
+            <span className="text-2xs px-1 py-px rounded font-mono" style={{ backgroundColor: statusBg(MODULE_COLORS.systems, 0.12), color: ACCENT_VIOLET }}>
               v{build.version}
             </span>
           )}
@@ -199,13 +200,13 @@ function RecordBuildForm({ onSubmit, version }: { onSubmit: (data: Record<string
     setDurationMin('');
   };
 
-  const inputClass = 'bg-background border border-border-bright rounded px-2 py-1 text-xs text-[#c8cce0] font-mono outline-none focus:border-[#8b5cf6]/50 w-full';
-  const selectClass = 'bg-background border border-border-bright rounded px-2 py-1 text-xs text-[#c8cce0] outline-none focus:border-[#8b5cf6]/50 w-full';
+  const inputClass = 'bg-background border border-border-bright rounded px-2 py-1 text-xs text-text-muted font-mono outline-none focus:border-violet-500/50 w-full';
+  const selectClass = 'bg-background border border-border-bright rounded px-2 py-1 text-xs text-text-muted outline-none focus:border-violet-500/50 w-full';
 
   return (
     <div className="rounded border border-border-bright bg-surface-deep/80 p-3">
       <div className="flex items-center gap-1.5 mb-2.5">
-        <Plus className="w-3 h-3 text-[#8b5cf6]" />
+        <Plus className="w-3 h-3" style={{ color: MODULE_COLORS.systems }} />
         <span className="text-xs font-medium text-text">Record Build</span>
         <span className="ml-auto text-2xs text-text-muted font-mono">Next: v{version}</span>
       </div>
@@ -247,7 +248,7 @@ function RecordBuildForm({ onSubmit, version }: { onSubmit: (data: Record<string
       </div>
       <button
         onClick={handleSubmit}
-        className="mt-2 w-full py-1.5 rounded text-xs font-medium text-white bg-[#8b5cf6]/80 hover:bg-[#8b5cf6] transition-colors"
+        className="mt-2 w-full py-1.5 rounded text-xs font-medium text-white bg-violet-500/80 hover:bg-violet-500 transition-colors"
       >
         Record Build
       </button>
@@ -261,7 +262,7 @@ function VersionPanel({ version, onBump }: { version: string; onBump: (type: 'ma
   return (
     <div className="rounded border border-border bg-surface-deep/80 px-3 py-2.5">
       <div className="flex items-center gap-1.5 mb-2">
-        <Tag className="w-3 h-3 text-[#8b5cf6]" />
+        <Tag className="w-3 h-3" style={{ color: MODULE_COLORS.systems }} />
         <span className="text-2xs uppercase tracking-wider text-text-muted font-medium">Version</span>
       </div>
       <div className="text-lg font-bold text-text font-mono mb-2">v{version}</div>
@@ -412,7 +413,7 @@ export function BuildHistoryDashboard() {
   const tabClass = (t: DashboardTab) =>
     `px-2.5 py-1 text-xs font-medium rounded-t transition-colors ${
       tab === t
-        ? 'text-text bg-surface-hover border-b-2 border-[#8b5cf6]'
+        ? 'text-text bg-surface-hover border-b-2 border-violet-500'
         : 'text-text-muted hover:text-text-muted'
     }`;
 
@@ -421,7 +422,7 @@ export function BuildHistoryDashboard() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <History className="w-4 h-4 text-[#8b5cf6]" />
+          <History className="w-4 h-4" style={{ color: MODULE_COLORS.systems }} />
           <span className="text-sm font-semibold text-text">Build History</span>
           {stats && (
             <span className="text-xs text-text-muted font-mono">{stats.totalBuilds} builds</span>
@@ -430,7 +431,8 @@ export function BuildHistoryDashboard() {
         <div className="flex items-center gap-1.5">
           <button
             onClick={() => setShowForm(!showForm)}
-            className="flex items-center gap-1 px-2 py-1 rounded text-xs font-medium text-[#8b5cf6] bg-[#8b5cf6]/10 hover:bg-[#8b5cf6]/20 transition-colors"
+            className="flex items-center gap-1 px-2 py-1 rounded text-xs font-medium bg-violet-500/10 hover:bg-violet-500/20 transition-colors"
+            style={{ color: MODULE_COLORS.systems }}
           >
             <Plus className="w-3 h-3" />
             Record
@@ -493,7 +495,7 @@ export function BuildHistoryDashboard() {
           {stats.platforms.map((p) => (
             <div key={p.platform} className="rounded border border-border bg-surface-deep/60 px-2.5 py-2">
               <div className="flex items-center justify-between mb-1">
-                <span className="text-xs font-medium text-[#c8cce0]">{p.platform}</span>
+                <span className="text-xs font-medium text-text-muted">{p.platform}</span>
                 <span className={`text-2xs font-mono ${p.successRate >= 80 ? 'text-green-400' : 'text-yellow-400'}`}>
                   {p.successRate.toFixed(0)}%
                 </span>
@@ -541,9 +543,10 @@ export function BuildHistoryDashboard() {
                     onClick={() => togglePlatform(p)}
                     className={`px-2 py-0.5 rounded-full text-2xs font-medium transition-colors ${
                       active
-                        ? 'bg-[#8b5cf6]/20 text-[#a78bfa] border border-[#8b5cf6]/40'
+                        ? 'bg-violet-500/20 border border-violet-500/40'
                         : 'bg-surface-hover text-text-muted border border-transparent hover:border-border-bright hover:text-text'
                     }`}
+                    style={active ? { color: ACCENT_VIOLET } : undefined}
                   >
                     {p}
                   </button>

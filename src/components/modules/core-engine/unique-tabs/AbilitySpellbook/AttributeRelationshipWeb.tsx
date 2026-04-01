@@ -92,7 +92,7 @@ export function AttributeRelationshipWeb() {
             />
             <text
               x={(from.x + to.x) / 2} y={(from.y + to.y) / 2 - 5}
-              textAnchor="middle" className="text-[11px] font-mono font-bold" fill={edgeColor} style={{ fontSize: 11 }}
+              textAnchor="middle" className="text-xs font-mono font-bold" fill={edgeColor}
             >
               {edge.label}
             </text>
@@ -125,14 +125,14 @@ export function AttributeRelationshipWeb() {
             <text
               x={pos.x} y={pos.y + 1}
               textAnchor="middle" dominantBaseline="central"
-              className="text-[11px] font-mono font-bold" fill={nodeColor} style={{ fontSize: 11 }}
+              className="text-xs font-mono font-bold" fill={nodeColor}
             >
               {node.label.slice(0, 3)}
             </text>
             <text
               x={pos.x} y={pos.y + (pos.y > cy ? 26 : -20)}
               textAnchor="middle"
-              className="text-[11px] font-mono fill-[var(--text-muted)]" style={{ fontSize: 11 }}
+              className="text-xs font-mono fill-[var(--text-muted)]"
             >
               {node.label}
             </text>
@@ -142,9 +142,9 @@ export function AttributeRelationshipWeb() {
       {/* Legend */}
       <g transform={`translate(10, ${size - 30})`}>
         <line x1={0} y1={0} x2={16} y2={0} stroke={ACCENT_EMERALD_DARK} strokeWidth={2} />
-        <text x={20} y={4} className="text-[11px] font-mono fill-[var(--text-muted)]" style={{ fontSize: 11 }}>Scales</text>
+        <text x={20} y={4} className="text-xs font-mono fill-[var(--text-muted)]">Scales</text>
         <line x1={65} y1={0} x2={81} y2={0} stroke={MODULE_COLORS.content} strokeWidth={1.5} strokeDasharray="4 3" />
-        <text x={85} y={4} className="text-[11px] font-mono fill-[var(--text-muted)]" style={{ fontSize: 11 }}>Partial</text>
+        <text x={85} y={4} className="text-xs font-mono fill-[var(--text-muted)]">Partial</text>
       </g>
     </svg>
   );

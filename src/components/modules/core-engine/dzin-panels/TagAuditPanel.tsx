@@ -4,8 +4,7 @@ import { useState, useCallback } from 'react';
 import { ClipboardCheck } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useDensity, PanelFrame } from '@/lib/dzin/core';
-import { DZIN_TIMING } from '@/lib/dzin/animation-constants';
-import { useDzinSelection } from '@/lib/dzin/selection-context';
+import { DZIN_SPACING, TRANSITION_ENTER, TRANSITION_EXIT } from '@/lib/dzin/animation-constants';
 import {
   SectionLabel,
   PipelineFlow,
@@ -140,7 +139,7 @@ function TagAuditMicro() {
   const scoreColor = TAG_AUDIT_SCORE >= 80 ? STATUS_SUCCESS : TAG_AUDIT_SCORE >= 60 ? STATUS_WARNING : STATUS_ERROR;
 
   return (
-    <div className="flex flex-col items-center justify-center gap-1 p-2">
+    <div className={DZIN_SPACING.micro.wrapper}>
       <ClipboardCheck className="w-5 h-5" style={{ color: STATUS_WARNING }} />
       <span className="font-mono text-xs font-bold" style={{ color: scoreColor }}>
         {TAG_AUDIT_SCORE}%
@@ -152,19 +151,13 @@ function TagAuditMicro() {
 /* ── Compact density ────────────────────────────────────────────────────── */
 
 function TagAuditCompact() {
-  const { selection } = useDzinSelection();
-
   return (
-    <div className="space-y-1.5 p-2 text-xs">
+    <div className={`${DZIN_SPACING.compact.wrapper} text-xs`}>
       {TAG_AUDIT_CATEGORIES.map((cat) => {
-        // Audit categories map to tag prefixes; check if any related tag starts with this category name
-        const isRelated = !selection || selection.type !== 'tag' || selection.id.startsWith(cat.name);
         return (
           <motion.div
             key={cat.name}
             className="flex items-center gap-2"
-            animate={{ opacity: selection && !isRelated ? 0.4 : 1 }}
-            transition={{ duration: DZIN_TIMING.HIGHLIGHT }}
           >
             <span
               className="text-xs font-mono font-bold px-1 py-0.5 rounded flex-shrink-0"
@@ -177,7 +170,7 @@ function TagAuditCompact() {
           </motion.div>
         );
       })}
-      <div className="border-t border-border/40 pt-1.5 text-text-muted font-mono">
+      <div className={`border-t border-border/40 ${DZIN_SPACING.compact.divider} text-text-muted font-mono`}>
         Score: {TAG_AUDIT_SCORE}%
       </div>
     </div>
@@ -214,7 +207,7 @@ function TagQuickViewCard({ tag, detail }: { tag: string; detail: TagDetail }) {
         </div>
         {detail.blockingTags.length > 0 && (
           <div>
-            <div className="text-xs font-bold uppercase tracking-widest text-text-muted mb-1">Blocked By</div>
+            <div className="text-xs font-bold uppercase text-text-muted mb-1">Blocked By</div>
             <div className="flex flex-wrap gap-1">
               {detail.blockingTags.map(bt => (
                 <span key={bt} className="text-xs font-mono px-1.5 py-0.5 rounded bg-red-500/10 text-red-400 border border-red-500/20">
@@ -225,7 +218,7 @@ function TagQuickViewCard({ tag, detail }: { tag: string; detail: TagDetail }) {
           </div>
         )}
         <div>
-          <div className="text-xs font-bold uppercase tracking-widest text-text-muted mb-1.5">Lifecycle</div>
+          <div className="text-xs font-bold uppercase text-text-muted mb-1.5">Lifecycle</div>
           <PipelineFlow steps={detail.lifecycle} accent={detail.color} />
         </div>
       </div>
@@ -233,39 +226,82 @@ function TagQuickViewCard({ tag, detail }: { tag: string; detail: TagDetail }) {
   );
 }
 
+/* ── Score Ring Legend ──────────────────────────────────────────────────── */
+
+const SCORE_THRESHOLDS = [
+  { label: '80–100 Healthy', color: STATUS_SUCCESS, min: 80 },
+  { label: '60–79 Needs Attention', color: STATUS_WARNING, min: 60 },
+  { label: '<60 Critical', color: STATUS_ERROR, min: 0 },
+] as const;
+
+function ScoreRingLegend() {
+  return (
+    <div className="flex gap-3 mt-1.5">
+      {SCORE_THRESHOLDS.map(t => (
+        <div key={t.label} className="flex items-center gap-1">
+          <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: t.color }} />
+          <span className="text-[10px] font-mono text-text-muted">{t.label}</span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 /* ── Full density ───────────────────────────────────────────────────────── */
 
 function TagAuditFull() {
   const [selectedTag, setSelectedTag] = useState<string | null>(null);
-  const maxUsage = Math.max(...TAG_USAGE_FREQUENCY.map(t => t.count));
+  const maxUsage = TAG_USAGE_FREQUENCY.length > 0
+    ? Math.max(...TAG_USAGE_FREQUENCY.map(t => t.count))
+    : 0;
 
   const handleTagClick = useCallback((tag: string) => {
     setSelectedTag(prev => prev === tag ? null : tag);
   }, []);
 
+  const scoreColor = TAG_AUDIT_SCORE >= 80 ? STATUS_SUCCESS : TAG_AUDIT_SCORE >= 60 ? STATUS_WARNING : STATUS_ERROR;
+  const needsPulse = TAG_AUDIT_SCORE < 80;
+
   return (
-    <div className="space-y-2.5">
-      <SurfaceCard level={2} className="p-3 relative overflow-hidden">
+    <div className={DZIN_SPACING.full.wrapper}>
+      <SurfaceCard level={2} className={`${DZIN_SPACING.full.card} relative overflow-hidden`}>
         <SectionLabel icon={ClipboardCheck} label="Tag Audit Dashboard" color="#fbbf24" />
 
         {/* Audit score */}
-        <div className="flex items-center gap-2.5 mt-2.5 mb-3">
-          <div className="relative w-12 h-12">
-            <svg width={48} height={48} viewBox="0 0 48 48">
-              <circle cx={24} cy={24} r={20} fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth={4} />
-              <circle
-                cx={24} cy={24} r={20} fill="none"
-                stroke={TAG_AUDIT_SCORE >= 80 ? STATUS_SUCCESS : TAG_AUDIT_SCORE >= 60 ? STATUS_WARNING : STATUS_ERROR}
-                strokeWidth={4}
-                strokeDasharray={2 * Math.PI * 20}
-                strokeDashoffset={2 * Math.PI * 20 * (1 - TAG_AUDIT_SCORE / 100)}
-                strokeLinecap="round"
-                transform="rotate(-90 24 24)"
-              />
-            </svg>
-            <div className="absolute inset-0 flex items-center justify-center">
-              <span className="text-sm font-mono font-bold" style={{ color: STATUS_SUCCESS }}>{TAG_AUDIT_SCORE}</span>
+        <div className={`flex items-center ${DZIN_SPACING.full.gap} ${DZIN_SPACING.full.contentMt} mb-3`}>
+          <div className="flex flex-col items-center">
+            <div className="relative w-12 h-12">
+              <svg width={48} height={48} viewBox="0 0 48 48">
+                <circle cx={24} cy={24} r={20} fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth={4} />
+                {needsPulse && (
+                  <circle
+                    cx={24} cy={24} r={20} fill="none"
+                    stroke={scoreColor}
+                    strokeWidth={4}
+                    strokeDasharray={2 * Math.PI * 20}
+                    strokeDashoffset={2 * Math.PI * 20 * (1 - TAG_AUDIT_SCORE / 100)}
+                    strokeLinecap="round"
+                    transform="rotate(-90 24 24)"
+                    opacity={0.3}
+                  >
+                    <animate attributeName="opacity" values="0.3;0.1;0.3" dur="2s" repeatCount="indefinite" />
+                  </circle>
+                )}
+                <circle
+                  cx={24} cy={24} r={20} fill="none"
+                  stroke={scoreColor}
+                  strokeWidth={4}
+                  strokeDasharray={2 * Math.PI * 20}
+                  strokeDashoffset={2 * Math.PI * 20 * (1 - TAG_AUDIT_SCORE / 100)}
+                  strokeLinecap="round"
+                  transform="rotate(-90 24 24)"
+                />
+              </svg>
+              <div className="absolute inset-0 flex items-center justify-center">
+                <span className="text-sm font-mono font-bold" style={{ color: scoreColor }}>{TAG_AUDIT_SCORE}</span>
+              </div>
             </div>
+            <ScoreRingLegend />
           </div>
           <div>
             <div className="text-sm font-bold text-text">Overall Audit Score</div>
@@ -274,12 +310,12 @@ function TagAuditFull() {
         </div>
 
         {/* Audit categories */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-3">
+        <div className={`grid grid-cols-2 md:grid-cols-4 ${DZIN_SPACING.full.gridGap} mb-3`}>
           {TAG_AUDIT_CATEGORIES.map((cat, i) => (
             <motion.div
               key={cat.name}
               initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.08 }}
-              className="bg-surface-deep border rounded-lg p-3"
+              className={`bg-surface-deep border rounded-lg ${DZIN_SPACING.full.card}`}
               style={{ borderColor: `${statusColor(cat.status)}30` }}
             >
               <div className="flex items-center justify-between mb-1.5">
@@ -297,7 +333,7 @@ function TagAuditFull() {
         </div>
 
         {/* Tag usage frequency */}
-        <div className="text-xs font-bold uppercase tracking-widest text-text-muted mb-3">Tag Usage Frequency (Top 10)</div>
+        <div className={`text-xs font-bold uppercase text-text-muted ${DZIN_SPACING.full.sectionMb}`}>Tag Usage Frequency (Top 10)</div>
         <div className="space-y-1.5">
           {TAG_USAGE_FREQUENCY.map((item, i) => {
             const detail = TAG_DETAIL_MAP[item.tag];
@@ -315,9 +351,9 @@ function TagAuditFull() {
                   <div className="flex-1 h-4 bg-surface-deep/50 rounded-sm overflow-hidden border border-border/30">
                     <motion.div
                       className="h-full rounded-sm"
-                      style={{ backgroundColor: barColor, width: `${(item.count / maxUsage) * 100}%`, opacity: 0.7 }}
+                      style={{ backgroundColor: barColor, width: `${maxUsage > 0 ? (item.count / maxUsage) * 100 : 0}%`, opacity: 0.7 }}
                       initial={{ width: 0 }}
-                      animate={{ width: `${(item.count / maxUsage) * 100}%` }}
+                      animate={{ width: `${maxUsage > 0 ? (item.count / maxUsage) * 100 : 0}%` }}
                       transition={{ delay: i * 0.04 + 0.2, duration: 0.4 }}
                     />
                   </div>
@@ -349,8 +385,8 @@ export function TagAuditPanel({ featureMap: _featureMap, defs: _defs }: TagAudit
           key={density}
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          transition={{ duration: DZIN_TIMING.DENSITY / 2 }}
+          exit={{ opacity: 0, transition: TRANSITION_EXIT }}
+          transition={TRANSITION_ENTER}
         >
           {density === 'micro' && <TagAuditMicro />}
           {density === 'compact' && <TagAuditCompact />}

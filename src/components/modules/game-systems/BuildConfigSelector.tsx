@@ -17,7 +17,7 @@ import { apiFetch } from '@/lib/api-utils';
 import { useModuleCLI } from '@/hooks/useModuleCLI';
 import { PlatformProfileCard } from './PlatformProfileCard';
 import { CookSettingsPanel } from './CookSettingsPanel';
-import { MODULE_COLORS } from '@/lib/chart-colors';
+import { MODULE_COLORS, ACCENT_VIOLET } from '@/lib/chart-colors';
 
 const PLATFORM_ICONS: Record<PlatformId, typeof Monitor> = {
   Win64: Monitor,
@@ -154,7 +154,7 @@ export function BuildConfigSelector() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <Rocket className="w-4 h-4 text-[#8b5cf6]" />
+          <Rocket className="w-4 h-4" style={{ color: MODULE_COLORS.systems }} />
           <span className="text-sm font-semibold text-text">Build Pipeline</span>
           <span className="text-xs text-text-muted font-mono">
             {profiles.length} profile{profiles.length !== 1 ? 's' : ''}
@@ -181,7 +181,7 @@ export function BuildConfigSelector() {
               <button
                 key={p.id}
                 onClick={() => handleNewProfile(p.id)}
-                className="flex items-center gap-1 px-2 py-1 rounded border border-dashed border-border-bright text-xs text-text-muted hover:text-text hover:border-[#8b5cf6]/50 transition-colors"
+                className="flex items-center gap-1 px-2 py-1 rounded border border-dashed border-border-bright text-xs text-text-muted hover:text-text hover:border-violet-500/50 transition-colors"
               >
                 <Icon className="w-3 h-3" />
                 {p.label}
@@ -194,7 +194,8 @@ export function BuildConfigSelector() {
                 const firstPlatform = SUPPORTED_PLATFORMS[0].id;
                 handleNewProfile(grouped.has(firstPlatform) ? (unusedPlatforms[0]?.id ?? firstPlatform) : firstPlatform);
               }}
-              className="flex items-center gap-1 px-2 py-1 rounded border border-dashed border-border-bright text-xs text-[#8b5cf6] hover:border-[#8b5cf6]/50 transition-colors"
+              className="flex items-center gap-1 px-2 py-1 rounded border border-dashed border-border-bright text-xs hover:border-violet-500/50 transition-colors"
+              style={{ color: MODULE_COLORS.systems }}
             >
               <Plus className="w-3 h-3" />
               Custom
@@ -215,7 +216,7 @@ export function BuildConfigSelector() {
                 <button
                   key={p.id}
                   onClick={() => handleNewProfile(p.id)}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded border border-border-bright text-xs text-[#c8cce0] hover:border-[#8b5cf6]/50 hover:bg-surface-hover transition-colors"
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded border border-border-bright text-xs text-text-muted hover:border-violet-500/50 hover:bg-surface-hover transition-colors"
                 >
                   <Icon className="w-3.5 h-3.5" />
                   {p.label}
@@ -271,8 +272,8 @@ function ProfileEditor({ profile, onSave, onClose }: {
     setForm((prev) => ({ ...prev, [key]: value }));
   };
 
-  const selectClass = 'bg-background border border-border-bright rounded px-2 py-1 text-xs text-[#c8cce0] outline-none focus:border-[#8b5cf6]/50 w-full';
-  const inputClass = 'bg-background border border-border-bright rounded px-2 py-1 text-xs text-[#c8cce0] font-mono outline-none focus:border-[#8b5cf6]/50 w-full';
+  const selectClass = 'bg-background border border-border-bright rounded px-2 py-1 text-xs text-text-muted outline-none focus:border-violet-500/50 w-full';
+  const inputClass = 'bg-background border border-border-bright rounded px-2 py-1 text-xs text-text-muted font-mono outline-none focus:border-violet-500/50 w-full';
 
   return (
     <motion.div
@@ -292,7 +293,7 @@ function ProfileEditor({ profile, onSave, onClose }: {
         {/* Header */}
         <div className="flex items-center justify-between px-4 py-3 border-b border-border">
           <div className="flex items-center gap-2">
-            <Settings className="w-4 h-4 text-[#8b5cf6]" />
+            <Settings className="w-4 h-4" style={{ color: MODULE_COLORS.systems }} />
             <span className="text-sm font-semibold text-text">
               {profile.id ? 'Edit Profile' : 'New Profile'}
             </span>
@@ -338,8 +339,8 @@ function ProfileEditor({ profile, onSave, onClose }: {
                   onClick={() => update('config', opt.value)}
                   className={`px-2 py-1.5 rounded border text-xs font-medium text-center transition-colors ${
                     form.config === opt.value
-                      ? 'border-[#8b5cf6] bg-[#8b5cf6]/15 text-text'
-                      : 'border-border-bright text-text-muted hover:border-[#8b5cf6]/30'
+                      ? 'border-violet-500 bg-violet-500/15 text-text'
+                      : 'border-border-bright text-text-muted hover:border-violet-500/30'
                   }`}
                 >
                   {opt.label}
@@ -372,30 +373,30 @@ function ProfileEditor({ profile, onSave, onClose }: {
 
           {/* Toggles row */}
           <div className="flex items-center gap-4">
-            <label className="flex items-center gap-1.5 text-xs text-[#c8cce0] cursor-pointer">
+            <label className="flex items-center gap-1.5 text-xs text-text-muted cursor-pointer">
               <input
                 type="checkbox"
                 checked={form.stage ?? true}
                 onChange={(e) => update('stage', e.target.checked)}
-                className="accent-[#8b5cf6]"
+                className="accent-violet-500"
               />
               Stage
             </label>
-            <label className="flex items-center gap-1.5 text-xs text-[#c8cce0] cursor-pointer">
+            <label className="flex items-center gap-1.5 text-xs text-text-muted cursor-pointer">
               <input
                 type="checkbox"
                 checked={form.archive ?? false}
                 onChange={(e) => update('archive', e.target.checked)}
-                className="accent-[#8b5cf6]"
+                className="accent-violet-500"
               />
               Archive
             </label>
-            <label className="flex items-center gap-1.5 text-xs text-[#c8cce0] cursor-pointer">
+            <label className="flex items-center gap-1.5 text-xs text-text-muted cursor-pointer">
               <input
                 type="checkbox"
                 checked={form.runAfterPackage ?? false}
                 onChange={(e) => update('runAfterPackage', e.target.checked)}
-                className="accent-[#8b5cf6]"
+                className="accent-violet-500"
               />
               Run After Build
             </label>
@@ -432,7 +433,7 @@ function ProfileEditor({ profile, onSave, onClose }: {
           </button>
           <button
             onClick={() => onSave(form)}
-            className="flex items-center gap-1 px-3 py-1.5 rounded text-xs font-medium text-white bg-[#8b5cf6] hover:bg-[#7c3aed] transition-colors"
+            className="flex items-center gap-1 px-3 py-1.5 rounded text-xs font-medium text-white bg-violet-500 hover:bg-violet-600 transition-colors"
           >
             <Save className="w-3 h-3" />
             Save Profile

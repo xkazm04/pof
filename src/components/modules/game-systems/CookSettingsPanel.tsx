@@ -2,6 +2,7 @@
 
 import { Flame, Package, Lock, Zap, Map, Puzzle, Image } from 'lucide-react';
 import type { CookSettings } from '@/lib/packaging/build-profiles';
+import { MODULE_COLORS } from '@/lib/chart-colors';
 
 interface CookSettingsPanelProps {
   settings: CookSettings;
@@ -21,7 +22,7 @@ function Toggle({ label, description, checked, onChange, icon }: {
           onChange={(e) => onChange(e.target.checked)}
           className="sr-only"
         />
-        <div className={`w-7 h-4 rounded-full transition-colors flex items-center ${checked ? 'bg-[#8b5cf6]' : 'bg-border-bright'}`}>
+        <div className={`w-7 h-4 rounded-full transition-colors flex items-center ${checked ? '' : 'bg-border-bright'}`} style={checked ? { backgroundColor: MODULE_COLORS.systems } : undefined}>
           <div className={`w-3 h-3 rounded-full bg-white transition-transform mx-0.5 ${checked ? 'translate-x-3' : 'translate-x-0'}`} />
         </div>
       </div>
@@ -43,7 +44,7 @@ export function CookSettingsPanel({ settings, onChange }: CookSettingsPanelProps
     onChange({ ...settings, [key]: value });
   };
 
-  const inputClass = 'w-full bg-background border border-border-bright rounded px-2 py-1 text-xs text-[#c8cce0] font-mono outline-none focus:border-[#8b5cf6]/50';
+  const inputClass = 'w-full bg-background border border-border-bright rounded px-2 py-1 text-xs text-text-muted font-mono outline-none focus:border-violet-500/50';
 
   return (
     <div className="space-y-4">

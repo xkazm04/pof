@@ -18,8 +18,8 @@ export function MetricsTab() {
           <div className="mt-3 space-y-1.5">
             {DPS_STRATEGIES.map((strat, idx) => (
               <motion.div key={strat.name} initial={{ opacity: 0, x: -8 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: idx * 0.08 }} className="flex items-center gap-3 px-2 py-1.5 rounded hover:bg-surface-hover/30 transition-colors">
-                <span className="text-[10px] font-mono uppercase tracking-[0.15em] text-text w-[130px] flex-shrink-0 truncate">{strat.name}</span>
-                <span className="text-[10px] font-mono uppercase tracking-[0.15em] text-text-muted w-[50px] flex-shrink-0">{strat.time}</span>
+                <span className="text-xs font-mono uppercase tracking-[0.15em] text-text w-[130px] flex-shrink-0 truncate">{strat.name}</span>
+                <span className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted w-[50px] flex-shrink-0">{strat.time}</span>
                 <div className="flex-1">
                   <NeonBar pct={(strat.dps / DPS_MAX) * 100} color={strat.color} />
                 </div>
@@ -28,7 +28,7 @@ export function MetricsTab() {
             ))}
           </div>
           <div className="mt-3 pt-3 border-t border-border/30">
-            <span className="text-[10px] font-mono uppercase tracking-[0.15em] text-text-muted">Cumulative Damage (5s)</span>
+            <span className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted">Cumulative Damage (5s)</span>
             <div className="bg-surface-deep/30 rounded-lg p-2 mt-2 min-h-[200px]">
               <CumulativeDamageSvg />
             </div>
@@ -43,13 +43,13 @@ export function MetricsTab() {
               <SankeyFlowSvg />
               {SANKEY_COLUMNS.map((col) => (
                 <div key={col.label} className="flex flex-col h-full justify-between" style={{ zIndex: 1, width: '25%' }}>
-                  <span className="text-[10px] font-mono uppercase tracking-[0.15em] font-bold text-text-muted text-center mb-2">{col.label}</span>
+                  <span className="text-xs font-mono uppercase tracking-[0.15em] font-bold text-text-muted text-center mb-2">{col.label}</span>
                   {col.items.map((item) => (
                     <div key={item.id} className="flex-1 flex flex-col justify-center items-center py-1 relative">
                       <div className="w-full rounded border py-1.5 px-1 relative overflow-hidden backdrop-blur-sm" style={{ borderColor: `${item.color}40`, backgroundColor: 'rgba(0,0,0,0.5)' }}>
                         <div className="absolute inset-0 opacity-20" style={{ backgroundColor: item.color }} />
                         <div className="text-xs font-mono leading-tight text-center text-text shadow-sm truncate relative z-10">{item.label}</div>
-                        <div className="text-[11px] font-mono font-bold text-center mt-0.5 relative z-10" style={{ color: item.color }}>{item.pct}%</div>
+                        <div className="text-xs font-mono font-bold text-center mt-0.5 relative z-10" style={{ color: item.color }}>{item.pct}%</div>
                       </div>
                     </div>
                   ))}
@@ -62,7 +62,7 @@ export function MetricsTab() {
           <div className="grid grid-cols-2 gap-4">
             {KPI_CARDS.map((kpi, idx) => (
               <BlueprintPanel key={idx} color={kpi.barColor ?? kpi.trendColor ?? ACCENT} className="p-3">
-                <span className="text-[10px] font-mono uppercase tracking-[0.15em] text-text-muted">{kpi.label}</span>
+                <span className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted">{kpi.label}</span>
                 <div className="mt-1 flex items-end justify-between">
                   <span className="text-lg font-mono font-bold text-text-strong">{kpi.value}</span>
                   {kpi.trend && <span className="text-xs font-mono font-bold" style={{ color: kpi.trendColor }}>{kpi.trend}</span>}
@@ -87,7 +87,7 @@ function CumulativeDamageSvg() {
   return (
     <svg width="100%" height="150" viewBox="0 0 260 60" className="overflow-visible" preserveAspectRatio="xMidYMid meet">
       {[0, 20, 40, 60].map(y => <line key={y} x1="30" y1={y + 5} x2="255" y2={y + 5} stroke="rgba(255,255,255,0.04)" strokeWidth="1" />)}
-      {CUMULATIVE_POINTS.map((t) => <text key={t} x={30 + t * 45} y="78" textAnchor="middle" className="text-[11px] font-mono" fill="rgba(255,255,255,0.3)" style={{ fontSize: 11 }}>{t}s</text>)}
+      {CUMULATIVE_POINTS.map((t) => <text key={t} x={30 + t * 45} y="78" textAnchor="middle" className="text-xs font-mono" fill="rgba(255,255,255,0.3)">{t}s</text>)}
       {DPS_STRATEGIES.map((strat) => {
         const maxDmg = DPS_MAX * 5;
         const pts = CUMULATIVE_POINTS.map(t => ({ x: 30 + t * 45, y: 65 - ((strat.dps * t) / maxDmg) * 60 }));

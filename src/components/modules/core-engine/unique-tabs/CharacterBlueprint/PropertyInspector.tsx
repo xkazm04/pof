@@ -4,6 +4,7 @@ import { useState, useMemo, useCallback, useRef, useEffect } from 'react';
 import { Search, SlidersHorizontal, RotateCcw } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { STATUS_WARNING } from '@/lib/chart-colors';
+import { MOTION_CONFIG } from '@/lib/motion';
 import { BlueprintPanel, SectionHeader, NeonBar } from './design';
 import {
   ACCENT, BLUEPRINT_PROPERTIES, PROPERTY_CATEGORIES, PROPERTY_CAT_COLORS,
@@ -73,8 +74,8 @@ export function PropertyInspector() {
               {/* Category header with accent line */}
               <div className="flex items-center gap-2 mb-2 pb-1.5 border-b" style={{ borderColor: `${catColor}20` }}>
                 <span className="w-1 h-3 rounded-full" style={{ backgroundColor: catColor, boxShadow: `0 0 6px ${catColor}60` }} />
-                <span className="text-[10px] font-mono font-bold uppercase tracking-[0.2em]" style={{ color: catColor }}>{cat}</span>
-                <span className="text-[10px] font-mono text-text-muted ml-auto">{catProps.length} props</span>
+                <span className="text-xs font-mono font-bold uppercase tracking-[0.2em]" style={{ color: catColor }}>{cat}</span>
+                <span className="text-xs font-mono text-text-muted ml-auto">{catProps.length} props</span>
               </div>
 
               <div className="space-y-px">
@@ -86,7 +87,7 @@ export function PropertyInspector() {
                       key={prop.name}
                       initial={{ opacity: 0, x: -8 }}
                       animate={{ opacity: 1, x: 0 }}
-                      transition={{ delay: i * 0.03, duration: 0.25 }}
+                      transition={{ delay: i * MOTION_CONFIG.stagger, ...MOTION_CONFIG.standard }}
                       className="flex items-center gap-3 px-2.5 py-1.5 rounded-md text-xs font-mono transition-all group"
                       style={{
                         backgroundColor: isHighlighted ? `${STATUS_WARNING}08` : 'transparent',
@@ -156,13 +157,13 @@ export function PropertyInspector() {
 
       {/* ── Summary Bar ──────────────────────────────────────────────────── */}
       <div className="flex items-center gap-4 mt-4 pt-3 border-t border-border/15">
-        <div className="flex items-center gap-1.5 text-[10px] font-mono text-text-muted">
+        <div className="flex items-center gap-1.5 text-xs font-mono text-text-muted">
           <span className="font-bold text-text">{properties.length}</span> properties
         </div>
         <div className="flex-1 max-w-32">
           <NeonBar pct={(modifiedCount / properties.length) * 100} color={STATUS_WARNING} height={3} />
         </div>
-        <div className="flex items-center gap-3 text-[10px] font-mono">
+        <div className="flex items-center gap-3 text-xs font-mono">
           <span className="flex items-center gap-1">
             <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: STATUS_WARNING }} />
             <span style={{ color: STATUS_WARNING }}>{modifiedCount}</span>

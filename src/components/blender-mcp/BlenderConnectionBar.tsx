@@ -39,7 +39,7 @@ export function BlenderConnectionBar() {
           <Monitor className="w-4 h-4 text-text-muted" />
           <span className="text-xs font-medium text-text">Blender MCP</span>
           <span
-            className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-medium ${
+            className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium ${
               connection.connected
                 ? 'bg-emerald-500/10 text-emerald-400'
                 : isConnecting

@@ -88,7 +88,7 @@ export function AffixSunburst({ tree, size }: { tree: ProbabilityEntry; size: nu
         const ly = cy + (arc.midR + 5) * Math.sin(arc.midAngle);
         return (
           <text key={`label-${i}`} x={lx} y={ly} textAnchor="middle" dominantBaseline="central"
-            className="text-[11px] font-mono fill-[var(--text-muted)] pointer-events-none" style={{ fontSize: 11 }}>
+            className="text-xs font-mono fill-[var(--text-muted)] pointer-events-none">
             {arc.label.split('(')[0].trim()}
           </text>
         );

@@ -1,6 +1,8 @@
 'use client';
 
 import { useState, useEffect, useCallback, useRef } from 'react';
+import { motion } from 'framer-motion';
+import { MOTION } from '@/lib/constants';
 import { useSuspendableEffect } from '@/hooks/useSuspend';
 import {
   Play, Square, Loader2, CheckCircle, XCircle, Clock,
@@ -9,7 +11,7 @@ import {
 import { useProjectStore } from '@/stores/projectStore';
 import { apiFetch } from '@/lib/api-utils';
 import type { SubModuleId } from '@/types/modules';
-import { STATUS_SUCCESS, STATUS_ERROR, MODULE_COLORS, STATUS_INFO } from '@/lib/chart-colors';
+import { STATUS_SUCCESS, STATUS_ERROR, MODULE_COLORS, STATUS_INFO, statusBg, statusBorder, OPACITY_8, OPACITY_10, OPACITY_12, OPACITY_20, OPACITY_30 } from '@/lib/chart-colors';
 
 // ── Types (mirroring API response) ──
 
@@ -164,7 +166,7 @@ export function BatchReviewPanel() {
           {isRunning && (
             <button
               onClick={abortBatch}
-              className="flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium text-[#f87171] bg-[#f8717112] border border-[#f87171]/20 hover:bg-[#f8717120] transition-all"
+              className={`flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium text-[${STATUS_ERROR}] bg-[${statusBg(STATUS_ERROR)}] border border-[${statusBorder(STATUS_ERROR)}] hover:bg-[${statusBg(STATUS_ERROR, 0.12)}] transition-all`}
             >
               <Square className="w-3 h-3" />
               Abort
@@ -185,9 +187,9 @@ export function BatchReviewPanel() {
               disabled={isStarting}
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all disabled:opacity-50 hover:brightness-110"
               style={{
-                backgroundColor: `${ACCENT}18`,
+                backgroundColor: `${ACCENT}${OPACITY_10}`,
                 color: ACCENT,
-                border: `1px solid ${ACCENT}35`,
+                border: `1px solid ${ACCENT}${OPACITY_30}`,
               }}
             >
               {isStarting ? (
@@ -207,7 +209,7 @@ export function BatchReviewPanel() {
       </div>
 
       {error && (
-        <div className="text-xs text-[#f87171] bg-[#f8717110] border border-[#f87171]/20 rounded-md px-3 py-2">
+        <div className={`text-xs text-[${STATUS_ERROR}] bg-[${statusBg(STATUS_ERROR)}] border border-[${statusBorder(STATUS_ERROR)}] rounded-md px-3 py-2`}>
           {error}
         </div>
       )}
@@ -253,15 +255,27 @@ export function BatchReviewPanel() {
           </button>
 
           {expanded && (
-            <div className="space-y-1">
+            <motion.div
+              className="space-y-1"
+              initial="hidden"
+              animate="visible"
+              variants={{
+                hidden: {},
+                visible: { transition: { staggerChildren: MOTION.staggerChildren } },
+              }}
+            >
               {batch.modules.map((mod) => {
                 const Icon = STATUS_ICON[mod.status];
                 const color = STATUS_COLOR[mod.status];
                 const isModRunning = mod.status === 'running';
 
                 return (
-                  <div
+                  <motion.div
                     key={mod.moduleId}
+                    variants={{
+                      hidden: { opacity: 0, y: 6 },
+                      visible: { opacity: 1, y: 0, transition: { duration: MOTION.base } },
+                    }}
                     className="flex items-center gap-2.5 px-3 py-1.5 rounded-md transition-colors"
                     style={{
                       backgroundColor: isModRunning ? `${MODULE_COLORS.core}08` : 'transparent',
@@ -294,10 +308,10 @@ export function BatchReviewPanel() {
                     >
                       {mod.status}
                     </span>
-                  </div>
+                  </motion.div>
                 );
               })}
-            </div>
+            </motion.div>
           )}
         </>
       )}

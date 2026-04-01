@@ -112,7 +112,7 @@ export function CatalogGearTab({ moduleId, featureMap }: CatalogGearTabProps) {
               <option value="all">All Rarities</option>
               {['Common', 'Uncommon', 'Rare', 'Epic', 'Legendary'].map(r => <option key={r} value={r}>{r}</option>)}
             </select>
-            <span className="text-[10px] font-mono uppercase tracking-[0.15em] text-text-muted">{filteredItems.length} items</span>
+            <span className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted">{filteredItems.length} items</span>
             <button onClick={() => setShowAddForm(v => !v)}
               className="flex items-center gap-1.5 text-sm font-medium px-3 py-1.5 rounded-lg transition-colors"
               style={{ backgroundColor: showAddForm ? `${ACCENT}20` : 'var(--surface)', color: showAddForm ? ACCENT : 'var(--text-muted)', border: `1px solid ${showAddForm ? `${ACCENT}50` : 'var(--border)'}` }}>

@@ -99,7 +99,7 @@ export class ModuleErrorBoundary extends Component<Props, State> {
                   {error.message}
                 </p>
                 {error.stack && (
-                  <pre className="text-[10px] text-text-muted font-mono whitespace-pre-wrap max-h-40 overflow-y-auto leading-relaxed">
+                  <pre className="text-xs text-text-muted font-mono whitespace-pre-wrap max-h-40 overflow-y-auto leading-relaxed">
                     {error.stack
                       .split('\n')
                       .slice(1, 8)

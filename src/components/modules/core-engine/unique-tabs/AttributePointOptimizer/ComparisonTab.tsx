@@ -65,7 +65,7 @@ export function ComparisonTab({
                 className="text-center p-3 rounded-lg border"
                 style={{ borderColor: `${color}20`, backgroundColor: `${color}08` }}
               >
-                <div className="text-[10px] font-mono uppercase tracking-[0.15em] text-text-muted mb-1">{label}</div>
+                <div className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted mb-1">{label}</div>
                 <div className="flex items-center justify-center gap-1.5">
                   <span className="text-lg font-mono text-text tabular-nums">{curr}</span>
                   <ArrowRight className="w-3 h-3 text-text-muted" />

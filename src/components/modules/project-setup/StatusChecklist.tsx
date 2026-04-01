@@ -13,7 +13,7 @@ import {
 } from 'lucide-react';
 import type { ChecklistItem } from './useProjectScan';
 import { UI_TIMEOUTS } from '@/lib/constants';
-import { MODULE_COLORS, OPACITY_15, OPACITY_30 } from '@/lib/chart-colors';
+import { WizardButton } from './WizardButton';
 
 const INSTALL_URLS: Record<string, { url: string; label: string }> = {
   engine: { url: 'https://www.unrealengine.com/download', label: 'Get Epic Launcher' },
@@ -136,7 +136,7 @@ export function StatusChecklist({
             <div className="relative mt-[3px] shrink-0">
               <div
                 className={`w-2.5 h-2.5 rounded-full ${
-                  item.ok ? 'bg-[#00ff88]' : 'bg-red-400'
+                  item.ok ? 'bg-accent-setup' : 'bg-red-400'
                 }`}
               />
               {i < checklist.length - 1 && (
@@ -149,7 +149,7 @@ export function StatusChecklist({
               </span>
               <span
                 className={`text-xs leading-tight block mt-0.5 truncate ${
-                  item.ok ? 'text-[#00ff88]/70' : 'text-red-400/70'
+                  item.ok ? 'text-accent-setup/70' : 'text-red-400/70'
                 }`}
                 title={item.detail}
               >
@@ -160,7 +160,7 @@ export function StatusChecklist({
                   href={INSTALL_URLS[item.id].url}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="flex items-center gap-1 text-xs text-[#3b82f6] hover:text-[#60a5fa] mt-0.5 transition-colors"
+                  className="flex items-center gap-1 text-xs text-accent-core hover:text-accent-core/80 mt-0.5 transition-colors"
                 >
                   <ExternalLink className="w-2.5 h-2.5" />
                   {INSTALL_URLS[item.id].label}
@@ -183,23 +183,18 @@ export function StatusChecklist({
       {/* Fix All Missing Tools */}
       {missingToolCount > 0 && (
         <div className="pt-3 mt-2">
-          <button
+          <WizardButton
+            variant="info"
+            size="sm"
             onClick={onFixAllMissing}
-            disabled={isBootstrapping || scanning}
-            className="w-full flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium transition-all disabled:opacity-50"
-            style={{
-              backgroundColor: `${MODULE_COLORS.core}${OPACITY_15}`,
-              color: MODULE_COLORS.core,
-              border: `1px solid ${MODULE_COLORS.core}${OPACITY_30}`,
-            }}
+            disabled={scanning}
+            loading={isBootstrapping}
+            loadingLabel="Installing..."
+            icon={<Wrench className="w-3 h-3" />}
+            className="w-full justify-center"
           >
-            {isBootstrapping ? (
-              <Loader2 className="w-3 h-3 animate-spin" />
-            ) : (
-              <Wrench className="w-3 h-3" />
-            )}
-            {isBootstrapping ? 'Installing...' : `Fix ${missingToolCount} Missing`}
-          </button>
+            Fix {missingToolCount} Missing
+          </WizardButton>
         </div>
       )}
 
@@ -211,7 +206,7 @@ export function StatusChecklist({
             className="w-full flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium text-text-muted hover:text-text hover:bg-surface transition-colors"
           >
             {manifestCopied ? (
-              <Check className="w-3 h-3 text-[#00ff88]" />
+              <Check className="w-3 h-3 text-accent-setup" />
             ) : (
               <Download className="w-3 h-3" />
             )}
@@ -234,7 +229,7 @@ export function StatusChecklist({
                   jsonValidation.status === 'error'
                     ? 'border border-red-400/60 focus:border-red-400'
                     : jsonValidation.status === 'valid'
-                      ? 'border border-[#00ff88]/40 focus:border-[#00ff88]/70'
+                      ? 'border border-accent-setup/40 focus:border-accent-setup/70'
                       : 'border border-border focus:border-border-bright'
                 }`}
                 rows={4}
@@ -244,26 +239,23 @@ export function StatusChecklist({
                 <p className="text-2xs text-red-400 leading-snug">{jsonValidation.message}</p>
               )}
               {jsonValidation.status === 'valid' && (
-                <p className="text-2xs text-[#00ff88]/80 leading-snug">
+                <p className="text-2xs text-accent-setup/80 leading-snug">
                   {jsonValidation.toolCount} tool{jsonValidation.toolCount !== 1 ? 's' : ''} detected
                   {jsonValidation.categoryCount > 1 ? ` across ${jsonValidation.categoryCount} categories` : ''}
                   {jsonValidation.missingCount > 0 ? ` · ${jsonValidation.missingCount} to install` : ' · all installed'}
                 </p>
               )}
               <div className="flex items-center gap-1.5">
-                <button
+                <WizardButton
+                  variant="info"
+                  size="sm"
                   onClick={handleImportManifest}
                   disabled={jsonValidation.status !== 'valid' || jsonValidation.missingCount === 0 || isBootstrapping}
-                  className="flex-1 flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all disabled:opacity-50"
-                  style={{
-                    backgroundColor: `${MODULE_COLORS.core}${OPACITY_15}`,
-                    color: MODULE_COLORS.core,
-                    border: `1px solid ${MODULE_COLORS.core}${OPACITY_30}`,
-                  }}
+                  icon={<Wrench className="w-3 h-3" />}
+                  className="flex-1 justify-center"
                 >
-                  <Wrench className="w-3 h-3" />
                   Install from Manifest
-                </button>
+                </WizardButton>
                 <button
                   onClick={handleFormatJson}
                   disabled={jsonValidation.status !== 'valid'}

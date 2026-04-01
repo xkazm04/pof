@@ -61,7 +61,7 @@ export function DebugDashboard({ moduleId }: DebugDashboardProps) {
           <span className="text-base font-bold font-mono tracking-widest uppercase" style={{ color: `${ACCENT}ee`, textShadow: `0 0 8px ${ACCENT}40` }}>
             CORE_TELEMETRY.exe
           </span>
-          <span className="text-[10px] font-mono uppercase tracking-[0.15em] text-text-muted mt-0.5 flex items-center gap-2">
+          <span className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted mt-0.5 flex items-center gap-1.5">
             <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" /> LIVE STREAM ACTIVE
           </span>
         </div>
@@ -99,7 +99,7 @@ export function DebugDashboard({ moduleId }: DebugDashboardProps) {
                       <span className="text-xs font-bold mt-1" style={{ color: `${ACCENT}cc` }}>&gt; {cmd.syntax}</span>
                       <CopyButton text={cmd.syntax} />
                     </div>
-                    <p className="text-[10px] text-text-muted uppercase">{cmd.description}</p>
+                    <p className="text-xs text-text-muted uppercase">{cmd.description}</p>
                   </div>
                 </div>
               ))}
@@ -125,13 +125,13 @@ export function DebugDashboard({ moduleId }: DebugDashboardProps) {
                     <span className="text-sm font-bold font-mono tracking-widest" style={{ color: `${ACCENT}ee` }}>{opt.title}</span>
                   </div>
                   <div className="sm:ml-auto flex items-center gap-2 flex-wrap pl-9 sm:pl-0">
-                    <span className="text-[10px] font-mono uppercase tracking-[0.15em] px-1.5 py-[2px] rounded border"
+                    <span className="text-xs font-mono uppercase tracking-[0.15em] px-1.5 py-[2px] rounded border"
                       style={{ backgroundColor: `${EFFORT_COLORS[opt.effort]}${OPACITY_10}`, color: EFFORT_COLORS[opt.effort], borderColor: `${EFFORT_COLORS[opt.effort]}${OPACITY_30}` }}>{opt.effort} EFFORT</span>
-                    <span className="text-[10px] font-mono uppercase tracking-[0.15em] px-1.5 py-[2px] rounded border"
+                    <span className="text-xs font-mono uppercase tracking-[0.15em] px-1.5 py-[2px] rounded border"
                       style={{ backgroundColor: `${IMPACT_COLORS[opt.impact]}${OPACITY_10}`, color: IMPACT_COLORS[opt.impact], borderColor: `${IMPACT_COLORS[opt.impact]}${OPACITY_30}` }}>{opt.impact} IMPACT</span>
                     <span className="flex items-center gap-1.5 px-2 py-[2px] rounded border bg-surface" style={{ borderColor: `${sc.dot}40` }}>
                       <span className="w-1.5 h-1.5 rounded-full shadow-[0_0_5px_currentColor]" style={{ backgroundColor: sc.dot, color: sc.dot }} />
-                      <span className="text-[10px] font-mono uppercase tracking-[0.15em]" style={{ color: sc.dot }}>{sc.label}</span>
+                      <span className="text-xs font-mono uppercase tracking-[0.15em]" style={{ color: sc.dot }}>{sc.label}</span>
                     </span>
                   </div>
                 </div>

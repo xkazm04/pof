@@ -67,7 +67,7 @@ export function DonutChart({
         </text>
       )}
       {centerSublabel && (
-        <text x={cx} y={cx + 10} textAnchor="middle" className="text-[11px] font-mono fill-[var(--text-muted)]" style={{ fontSize: 11 }}>
+        <text x={cx} y={cx + 10} textAnchor="middle" className="text-xs font-mono fill-[var(--text-muted)]">
           {centerSublabel}
         </text>
       )}

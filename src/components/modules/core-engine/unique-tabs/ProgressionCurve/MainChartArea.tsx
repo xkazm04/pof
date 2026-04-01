@@ -34,7 +34,7 @@ export function MainChartArea({
           icon={TrendingUp}
           color={ACCENT}
         />
-        <div className="text-[10px] font-mono uppercase tracking-[0.15em] px-3 py-1.5 rounded-full border" style={{ color: ACCENT, backgroundColor: `${ACCENT}10`, borderColor: `${ACCENT}20` }}>
+        <div className="text-xs font-mono uppercase tracking-[0.15em] px-3 py-1.5 rounded-full border" style={{ color: ACCENT, backgroundColor: `${ACCENT}10`, borderColor: `${ACCENT}20` }}>
           Max Level: {MAX_LEVEL} | Max XP: {(compareMode ? sharedMaxXp : maxXp).toLocaleString()}
         </div>
       </div>
@@ -46,10 +46,10 @@ export function MainChartArea({
             <div>
               <div className="flex items-center gap-2 mb-1.5">
                 <Camera className="w-3 h-3" style={{ color: STATUS_INFO }} />
-                <span className="text-[10px] font-mono uppercase tracking-[0.15em] font-bold" style={{ color: STATUS_INFO }}>
+                <span className="text-xs font-mono uppercase tracking-[0.15em] font-bold" style={{ color: STATUS_INFO }}>
                   Snapshot
                 </span>
-                <span className="text-[10px] font-mono text-text-muted">
+                <span className="text-xs font-mono text-text-muted">
                   Base {snapshotBaseXp} | Exp {snapshotCurveExp.toFixed(2)}
                 </span>
               </div>
@@ -60,10 +60,10 @@ export function MainChartArea({
             <div>
               <div className="flex items-center gap-2 mb-1.5">
                 <SlidersHorizontal className="w-3 h-3" style={{ color: ACCENT }} />
-                <span className="text-[10px] font-mono uppercase tracking-[0.15em] font-bold" style={{ color: ACCENT }}>
+                <span className="text-xs font-mono uppercase tracking-[0.15em] font-bold" style={{ color: ACCENT }}>
                   Live
                 </span>
-                <span className="text-[10px] font-mono text-text-muted">
+                <span className="text-xs font-mono text-text-muted">
                   Base {baseXp} | Exp {curveExp.toFixed(2)}
                 </span>
               </div>

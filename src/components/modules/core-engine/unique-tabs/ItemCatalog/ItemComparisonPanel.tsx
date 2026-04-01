@@ -34,7 +34,7 @@ export function ItemComparisonPanel({ items }: { items: ComparableItem[] }) {
           className="flex-1 text-sm font-mono px-3 py-2 rounded-lg bg-surface-deep border border-border/40 text-text cursor-pointer">
           {items.map(i => <option key={i.id} value={i.id}>{i.name} ({i.rarity})</option>)}
         </select>
-        <span className="text-[10px] font-mono uppercase tracking-[0.15em] text-text-muted self-center">vs</span>
+        <span className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted self-center">vs</span>
         <select value={rightId} onChange={e => setRightId(e.target.value)}
           className="flex-1 text-sm font-mono px-3 py-2 rounded-lg bg-surface-deep border border-border/40 text-text cursor-pointer">
           {items.map(i => <option key={i.id} value={i.id}>{i.name} ({i.rarity})</option>)}
@@ -47,14 +47,14 @@ export function ItemComparisonPanel({ items }: { items: ComparableItem[] }) {
           <span className="text-sm font-mono font-bold" style={{ color: RARITY_COLORS[leftItem.rarity] ?? STATUS_MUTED, textShadow: `0 0 12px ${RARITY_COLORS[leftItem.rarity] ?? STATUS_MUTED}40` }}>
             {leftItem.name}
           </span>
-          <div className="text-[10px] font-mono uppercase tracking-[0.15em] text-text-muted">{leftItem.rarity} -- {leftItem.slot}</div>
+          <div className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted">{leftItem.rarity} -- {leftItem.slot}</div>
         </div>
-        <div className="text-[10px] font-mono uppercase tracking-[0.15em] text-text-muted">Delta</div>
+        <div className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted">Delta</div>
         <div className="text-center">
           <span className="text-sm font-mono font-bold" style={{ color: RARITY_COLORS[rightItem.rarity] ?? STATUS_MUTED, textShadow: `0 0 12px ${RARITY_COLORS[rightItem.rarity] ?? STATUS_MUTED}40` }}>
             {rightItem.name}
           </span>
-          <div className="text-[10px] font-mono uppercase tracking-[0.15em] text-text-muted">{rightItem.rarity} -- {rightItem.slot}</div>
+          <div className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted">{rightItem.rarity} -- {rightItem.slot}</div>
         </div>
       </div>
 
@@ -101,7 +101,7 @@ export function ItemComparisonPanel({ items }: { items: ComparableItem[] }) {
       <div className="grid grid-cols-2 gap-2">
         {[leftItem, rightItem].map(item => (
           <div key={item.id}>
-            <div className="text-[10px] font-mono uppercase tracking-[0.15em] text-text-muted mb-1">Affixes</div>
+            <div className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted mb-1">Affixes</div>
             {item.affixes.length > 0 ? item.affixes.map(a => (
               <div key={a.name} className="text-sm font-mono py-0.5" style={{ color: RARITY_COLORS[item.rarity] ?? STATUS_MUTED }}>
                 {a.name}: {a.stat}
@@ -113,13 +113,13 @@ export function ItemComparisonPanel({ items }: { items: ComparableItem[] }) {
 
       {/* Effective DPS / TTK */}
       <div className="p-3 rounded-lg border bg-surface-deep/50" style={{ borderColor: `${ACCENT}20` }}>
-        <div className="text-[10px] font-mono uppercase tracking-[0.15em] text-text-muted mb-2">
+        <div className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted mb-2">
           Combat Impact (GAS Pipeline)
         </div>
         <div className="grid grid-cols-[1fr_auto_1fr] gap-2 items-center">
           <div className="text-center">
             <div className="text-sm font-mono font-bold" style={{ color: ACCENT, textShadow: `0 0 12px ${ACCENT}40` }}>{leftDps.dps.toFixed(1)}</div>
-            <div className="text-[10px] font-mono uppercase tracking-[0.15em] text-text-muted">Effective DPS</div>
+            <div className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted">Effective DPS</div>
           </div>
           <div className="text-center">
             <span className="text-sm font-mono font-bold px-2 py-0.5 rounded-md inline-block"
@@ -129,13 +129,13 @@ export function ItemComparisonPanel({ items }: { items: ComparableItem[] }) {
           </div>
           <div className="text-center">
             <div className="text-sm font-mono font-bold" style={{ color: ACCENT, textShadow: `0 0 12px ${ACCENT}40` }}>{rightDps.dps.toFixed(1)}</div>
-            <div className="text-[10px] font-mono uppercase tracking-[0.15em] text-text-muted">Effective DPS</div>
+            <div className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted">Effective DPS</div>
           </div>
         </div>
         <div className="grid grid-cols-[1fr_auto_1fr] gap-2 items-center mt-1.5">
           <div className="text-center">
             <div className="text-sm font-mono font-bold text-text">{leftDps.ttk.toFixed(2)}s</div>
-            <div className="text-[10px] font-mono uppercase tracking-[0.15em] text-text-muted">TTK (1000 HP)</div>
+            <div className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted">TTK (1000 HP)</div>
           </div>
           <div className="text-center">
             <span className="text-sm font-mono font-bold px-1.5 py-0.5 rounded-md inline-block"
@@ -145,10 +145,10 @@ export function ItemComparisonPanel({ items }: { items: ComparableItem[] }) {
           </div>
           <div className="text-center">
             <div className="text-sm font-mono font-bold text-text">{rightDps.ttk.toFixed(2)}s</div>
-            <div className="text-[10px] font-mono uppercase tracking-[0.15em] text-text-muted">TTK (1000 HP)</div>
+            <div className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted">TTK (1000 HP)</div>
           </div>
         </div>
-        <div className="text-[10px] font-mono text-text-muted mt-2 text-center tracking-wide">
+        <div className="text-xs font-mono text-text-muted mt-2 text-center tracking-wide">
           Formula: (baseDmg + atkPow) x atkSpd x (1 + critChance x (critMult - 1)) -- CritMult = 2.0x
         </div>
       </div>

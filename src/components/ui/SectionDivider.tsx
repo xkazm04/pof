@@ -1,5 +1,7 @@
 'use client';
 
+import { OPACITY_15, OPACITY_30, OPACITY_37, withOpacity } from '@/lib/chart-colors';
+
 interface SectionDividerProps {
   /** Accent color for the center ornament */
   accent?: string;
@@ -17,17 +19,17 @@ export function SectionDivider({ accent = 'var(--border-bright)', ornament = tru
     <div className={`flex items-center gap-2 py-1 ${className}`} aria-hidden="true">
       <div
         className="flex-1 h-[1px]"
-        style={{ background: `linear-gradient(to right, transparent, ${accent}50)` }}
+        style={{ background: `linear-gradient(to right, transparent, ${withOpacity(accent, OPACITY_30)})` }}
       />
       {ornament && (
         <div
           className="w-1.5 h-1.5 rotate-45 rounded-[1px] flex-shrink-0"
-          style={{ backgroundColor: `${accent}60`, boxShadow: `0 0 6px ${accent}30` }}
+          style={{ backgroundColor: withOpacity(accent, OPACITY_37), boxShadow: `0 0 6px ${withOpacity(accent, OPACITY_15)}` }}
         />
       )}
       <div
         className="flex-1 h-[1px]"
-        style={{ background: `linear-gradient(to left, transparent, ${accent}50)` }}
+        style={{ background: `linear-gradient(to left, transparent, ${withOpacity(accent, OPACITY_30)})` }}
       />
     </div>
   );

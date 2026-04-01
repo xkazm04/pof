@@ -40,7 +40,7 @@ export function LaneSection({ lane, featureMap, defs, expanded, onToggle }: Lane
                 className="w-full flex items-center gap-3 px-2 py-1.5 rounded hover:bg-surface-hover/50 transition-colors text-left"
               >
                 <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: lane.color }} />
-                <span className="text-[10px] font-mono uppercase tracking-[0.15em] text-text w-[180px] flex-shrink-0 truncate">{name}</span>
+                <span className="text-xs font-mono uppercase tracking-[0.15em] text-text w-[180px] flex-shrink-0 truncate">{name}</span>
                 <span className="text-2xs px-1.5 py-0.5 rounded font-medium flex-shrink-0" style={{ backgroundColor: sc.bg, color: sc.dot }}>{sc.label}</span>
                 {row?.qualityScore != null && (
                   <span className="text-2xs font-mono text-emerald-400 bg-emerald-400/10 px-1 rounded-sm border border-emerald-400/20 flex-shrink-0">

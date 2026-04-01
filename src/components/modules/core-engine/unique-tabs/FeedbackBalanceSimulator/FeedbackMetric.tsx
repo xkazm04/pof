@@ -62,11 +62,11 @@ export function FeedbackMetric({ label, value, unit, color, description, viz }: 
       <div className="flex items-center gap-1.5">
         {viz && <MiniVizSvg viz={viz} color={color} />}
         <span className="text-xs font-bold font-mono" style={{ color }}>
-          {value}<span className="text-[10px] font-mono uppercase tracking-[0.15em]">{unit}</span>
+          {value}<span className="text-xs font-mono uppercase tracking-[0.15em]">{unit}</span>
         </span>
       </div>
-      <span className="text-[10px] font-mono uppercase tracking-[0.15em] text-text-muted mt-0.5">{label}</span>
-      <span className="text-[10px] font-mono text-text-muted opacity-60 mt-0.5">{description}</span>
+      <span className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted mt-0.5">{label}</span>
+      <span className="text-xs font-mono text-text-muted opacity-60 mt-0.5">{description}</span>
     </div>
   );
 }
@@ -89,7 +89,7 @@ export function DeltaBadge({ label, delta, unit, isPercent, higherIsBetter }: {
       <span className="text-xs font-bold font-mono" style={{ color }}>
         {delta > 0 ? '+' : ''}{displayValue}
       </span>
-      <span className="text-[10px] font-mono uppercase tracking-[0.15em] text-text-muted">{label}</span>
+      <span className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted">{label}</span>
     </div>
   );
 }

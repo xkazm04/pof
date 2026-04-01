@@ -17,14 +17,14 @@ export function LoadoutSection() {
     <div className="space-y-4">
       <BlueprintPanel color={ACCENT_PURPLE_BOLD} className="p-3">
         <SectionHeader icon={Layers} label="Ability Loadout Optimizer" color={ACCENT_PURPLE_BOLD} />
-        <p className="text-[10px] font-mono uppercase tracking-[0.15em] text-text-muted mt-1 mb-4">
+        <p className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted mt-1 mb-4">
           Optimal ability loadout for 4 slots, scored on coverage, synergy, DPS, burst, and utility.
         </p>
 
         <div className="flex flex-wrap gap-1.5 mb-3">
           {OPTIMAL_LOADOUT.map((slot, i) => (
             <button key={slot.ability} onClick={() => setSelectedLoadoutAbility(i)}
-              className={`px-2.5 py-1 rounded-lg text-[10px] font-mono uppercase tracking-[0.15em] font-bold border transition-all cursor-pointer ${
+              className={`px-2.5 py-1 rounded-lg text-xs font-mono uppercase tracking-[0.15em] font-bold border transition-all cursor-pointer ${
                 selectedLoadoutAbility === i ? 'shadow-sm' : 'opacity-50 hover:opacity-80'
               }`}
               style={selectedLoadoutAbility === i ? {
@@ -45,7 +45,7 @@ export function LoadoutSection() {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {/* Loadout slots */}
           <div className="space-y-4">
-            <div className="text-[10px] font-mono font-bold uppercase tracking-[0.15em] text-text-muted mb-2">Optimal Loadout</div>
+            <div className="text-xs font-mono font-bold uppercase tracking-[0.15em] text-text-muted mb-2">Optimal Loadout</div>
             <div className="grid grid-cols-2 gap-3">
               {OPTIMAL_LOADOUT.map((slot, i) => (
                 <motion.div
@@ -57,7 +57,7 @@ export function LoadoutSection() {
                   <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity"
                     style={{ background: `radial-gradient(ellipse at 50% 50%, ${slot.color}10, transparent 70%)` }}
                   />
-                  <div className="text-[10px] font-mono uppercase tracking-[0.15em] text-text-muted mb-1">Slot {slot.slot}</div>
+                  <div className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted mb-1">Slot {slot.slot}</div>
                   <div className="w-10 h-10 mx-auto rounded-lg flex items-center justify-center mb-1.5"
                     style={{ backgroundColor: `${slot.color}20`, border: `1.5px solid ${slot.color}50` }}
                   >
@@ -77,7 +77,7 @@ export function LoadoutSection() {
               <RadarChart data={LOADOUT_RADAR} size={140} accent={ACCENT_PURPLE_BOLD} />
             </div>
 
-            <div className="text-[10px] font-mono font-bold uppercase tracking-[0.15em] text-text-muted mb-2">Alternative Loadouts</div>
+            <div className="text-xs font-mono font-bold uppercase tracking-[0.15em] text-text-muted mb-2">Alternative Loadouts</div>
             <div className="space-y-3">
               {ALTERNATIVE_LOADOUTS.map((alt, i) => (
                 <motion.div

@@ -169,9 +169,8 @@ export function BTFlowchart({ nodes, edges, expandedNodeId, onNodeClick, accent 
             <text
               x={node.x + w / 2} y={node.y + h / 2 + 1}
               textAnchor="middle" dominantBaseline="central"
-              className="text-[11px] font-mono font-bold pointer-events-none"
+              className="text-xs font-mono font-bold pointer-events-none"
               fill={node.active ? accent : 'rgba(255,255,255,0.5)'}
-              style={{ fontSize: 11 }}
               aria-hidden="true"
             >
               {node.label}

@@ -81,7 +81,7 @@ export function KeyboardVisualization() {
           transition={{ delay: 0.3 }}
           className="flex flex-col items-center gap-2"
         >
-          <div className="text-[10px] font-mono font-bold uppercase tracking-[0.15em] text-text-muted flex items-center gap-1.5">
+          <div className="text-xs font-mono font-bold uppercase tracking-[0.15em] text-text-muted flex items-center gap-1.5">
             <Mouse className="w-3 h-3" /> Mouse
           </div>
 
@@ -92,7 +92,7 @@ export function KeyboardVisualization() {
             <div className="flex h-12">
               <motion.div
                 whileHover={{ scale: 1.02 }}
-                className="flex-1 flex items-center justify-center border-r border-b text-[10px] font-mono font-bold rounded-tl-2xl"
+                className="flex-1 flex items-center justify-center border-r border-b text-xs font-mono font-bold rounded-tl-2xl"
                 style={{
                   background: `linear-gradient(180deg, ${ACCENT_CYAN}15 0%, ${ACCENT_CYAN}05 100%)`,
                   borderColor: `${ACCENT_CYAN}30`,
@@ -104,7 +104,7 @@ export function KeyboardVisualization() {
                 LMB
               </motion.div>
               <div
-                className="flex-1 flex items-center justify-center border-b text-[10px] font-mono font-bold rounded-tr-2xl"
+                className="flex-1 flex items-center justify-center border-b text-xs font-mono font-bold rounded-tr-2xl"
                 style={{
                   borderColor: `${OVERLAY_WHITE}08`,
                   color: 'var(--text-muted)',
@@ -142,7 +142,7 @@ export function KeyboardVisualization() {
 
       {/* ── Legend ───────────────────────────────────────────────────────── */}
       <div className="flex items-center gap-5 mt-4 pt-3 border-t border-border/15">
-        <span className="flex items-center gap-2 text-[10px] font-mono text-text-muted">
+        <span className="flex items-center gap-2 text-xs font-mono text-text-muted">
           <span className="w-4 h-4 rounded-md border"
             style={{
               background: `linear-gradient(180deg, ${ACCENT_CYAN}18, ${ACCENT_CYAN}08)`,
@@ -151,7 +151,7 @@ export function KeyboardVisualization() {
             }} />
           Bound Key
         </span>
-        <span className="flex items-center gap-2 text-[10px] font-mono text-text-muted">
+        <span className="flex items-center gap-2 text-xs font-mono text-text-muted">
           <span className="w-4 h-4 rounded-md border"
             style={{
               background: `linear-gradient(180deg, ${OVERLAY_WHITE}06, transparent)`,
@@ -159,7 +159,7 @@ export function KeyboardVisualization() {
             }} />
           Unbound
         </span>
-        <span className="flex items-center gap-2 text-[10px] font-mono text-text-muted ml-auto">
+        <span className="flex items-center gap-2 text-xs font-mono text-text-muted ml-auto">
           <motion.span
             className="w-2 h-2 rounded-full"
             style={{ backgroundColor: ACCENT_CYAN }}

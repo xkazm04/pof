@@ -5,6 +5,8 @@ import { AlertTriangle } from 'lucide-react';
 import {
   STATUS_ERROR, STATUS_INFO, STATUS_WARNING,
   ACCENT_EMERALD, ACCENT_VIOLET,
+  OVERLAY_WHITE, OPACITY_5, OPACITY_8, OPACITY_12,
+  withOpacity,
 } from '@/lib/chart-colors';
 import { SurfaceCard } from '@/components/ui/SurfaceCard';
 import { SectionLabel } from '@/components/modules/core-engine/unique-tabs/_shared';
@@ -48,7 +50,7 @@ export function PowerBudgetRadar({
                   return `${80 + r * Math.cos(angle)},${65 + r * Math.sin(angle)}`;
                 }).join(' ')}
                 fill="none"
-                stroke="rgba(255,255,255,0.08)"
+                stroke={withOpacity(OVERLAY_WHITE, OPACITY_8)}
                 strokeWidth="1"
               />
             );
@@ -61,7 +63,7 @@ export function PowerBudgetRadar({
                 key={i}
                 x1={80} y1={65}
                 x2={80 + 50 * Math.cos(angle)} y2={65 + 50 * Math.sin(angle)}
-                stroke="rgba(255,255,255,0.06)"
+                stroke={withOpacity(OVERLAY_WHITE, OPACITY_5)}
                 strokeWidth="1"
               />
             );
@@ -74,7 +76,7 @@ export function PowerBudgetRadar({
                 const r = Math.min(v, 1.0) * 50;
                 return `${80 + r * Math.cos(angle)},${65 + r * Math.sin(angle)}`;
               }).join(' ')}
-              fill={`${ACCENT_VIOLET}10`}
+              fill={withOpacity(ACCENT_VIOLET, OPACITY_5)}
               stroke={ACCENT_VIOLET}
               strokeWidth="1.5"
               strokeDasharray="4 2"
@@ -88,7 +90,7 @@ export function PowerBudgetRadar({
               const r = Math.min(v, 1.0) * 50;
               return `${80 + r * Math.cos(angle)},${65 + r * Math.sin(angle)}`;
             }).join(' ')}
-            fill={isOverBudget ? `${STATUS_ERROR}20` : `${accentColor}20`}
+            fill={withOpacity(isOverBudget ? STATUS_ERROR : accentColor, OPACITY_12)}
             stroke={isOverBudget ? STATUS_ERROR : accentColor}
             strokeWidth="2"
           />
@@ -116,7 +118,7 @@ export function PowerBudgetRadar({
                 x={lx} y={ly}
                 textAnchor="middle"
                 dominantBaseline="central"
-                className="text-[11px] font-mono fill-[var(--text-muted)]"
+                className="text-xs font-mono uppercase tracking-wider fill-[var(--text-muted)]"
               >
                 {label}
               </text>
@@ -150,13 +152,13 @@ export function PowerBudgetRadar({
       </div>
 
       {/* Category breakdown */}
-      <div className="mt-3 space-y-1">
+      <div className="mt-3 space-y-1.5">
         {[
           { label: 'Offense', value: powerBudget.offense, color: STATUS_ERROR },
           { label: 'Defense', value: powerBudget.defense, color: STATUS_INFO },
           { label: 'Utility', value: powerBudget.utility, color: ACCENT_EMERALD },
         ].map((row) => (
-          <div key={row.label} className="flex items-center gap-2 text-xs font-mono">
+          <div key={row.label} className="flex items-center gap-1.5 text-xs font-mono">
             <span className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ backgroundColor: row.color }} />
             <span className="text-text-muted w-12">{row.label}</span>
             <div className="flex-1 h-1 rounded-full bg-surface-deep overflow-hidden">

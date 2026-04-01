@@ -62,12 +62,12 @@ export function FlowNode({ node, x, y, delay, expanded, onToggle }: FlowNodeProp
             fill="none" stroke={STATUS_WARNING} strokeWidth={2} opacity={0.7} />
           {/* Clamp limit labels */}
           <text x={x - NODE_W / 2 - 6} y={y + NODE_H / 2 + 3} textAnchor="end"
-            className="font-mono font-bold" fill={STATUS_WARNING} opacity={0.8} style={{ fontSize: 11 }}>
+            className="text-2xs font-mono font-bold tabular-nums" fill={STATUS_WARNING} opacity={0.8}>
             0
             <animate attributeName="opacity" values="0.4;0.9;0.4" dur="2s" repeatCount="indefinite" />
           </text>
           <text x={x + NODE_W / 2 + 6} y={y + NODE_H / 2 + 3} textAnchor="start"
-            className="font-mono font-bold" fill={STATUS_WARNING} opacity={0.8} style={{ fontSize: 11 }}>
+            className="text-2xs font-mono font-bold" fill={STATUS_WARNING} opacity={0.8}>
             MAX
             <animate attributeName="opacity" values="0.4;0.9;0.4" dur="2s" begin="1s" repeatCount="indefinite" />
           </text>
@@ -95,7 +95,7 @@ export function FlowNode({ node, x, y, delay, expanded, onToggle }: FlowNodeProp
             );
           })}
           <text x={x + NODE_W / 2 + 6} y={y + NODE_H - 1} textAnchor="start"
-            className="font-mono font-bold" fill={STATUS_ERROR} style={{ fontSize: 11 }}>
+            className="text-2xs font-mono font-bold tabular-nums" fill={STATUS_ERROR}>
             {'\u2192'} 0
             <animate attributeName="opacity" values="0.9;0.3;0.9" dur="2s" repeatCount="indefinite" />
           </text>
@@ -122,29 +122,29 @@ export function FlowNode({ node, x, y, delay, expanded, onToggle }: FlowNodeProp
         fill={borderColor} fillOpacity={0.2} />
       <text x={x + NODE_W / 2 - 27} y={y + 12}
         textAnchor="middle"
-        className="font-mono font-bold uppercase"
-        fill={borderColor} style={{ fontSize: 11 }}>
+        className="text-2xs font-mono font-bold uppercase tracking-[0.15em]"
+        fill={borderColor}>
         {node.kind}
       </text>
 
       {/* Label */}
       <text x={x} y={y + 24} textAnchor="middle"
-        className="text-[11px] font-mono font-bold cursor-pointer"
+        className="text-xs font-mono font-bold cursor-pointer"
         fill={textColor} onClick={onToggle}>
         {node.label}
       </text>
 
       {/* Detail subtitle */}
       <text x={x} y={y + 36} textAnchor="middle"
-        className="font-mono fill-[var(--text-muted)]" style={{ fontSize: 11 }}>
+        className="text-2xs font-mono fill-[var(--text-muted)]">
         {node.detail.length > 44 ? node.detail.slice(0, 42) + '...' : node.detail}
       </text>
 
       {/* Expand indicator */}
       {node.cppRef && (
         <text x={x - NODE_W / 2 + 8} y={y + 13}
-          className="fill-[var(--text-muted)] cursor-pointer"
-          style={{ fontSize: 11 }} onClick={onToggle}>
+          className="text-2xs fill-[var(--text-muted)] cursor-pointer"
+          onClick={onToggle}>
           {expanded ? '\u25BE' : '\u25B8'}
         </text>
       )}
@@ -188,8 +188,7 @@ export function FlowArrow({ x1, y1, x2, y2, color, label, delay, dashed }: {
         <text
           x={(x1 + x2) / 2 + (x1 === x2 ? 8 : 0)}
           y={(y1 + y2) / 2 - 3}
-          className="font-mono font-bold"
-          style={{ fontSize: 11 }}
+          className="text-2xs font-mono font-bold"
           fill={color} textAnchor="middle">
           {label}
         </text>

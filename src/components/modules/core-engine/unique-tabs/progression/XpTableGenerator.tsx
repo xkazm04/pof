@@ -1,14 +1,15 @@
 'use client';
 
 import { useMemo, useState, useCallback } from 'react';
-import { Table2, Code, Copy, CheckCircle2, Download, AlertTriangle } from 'lucide-react';
-import { motion } from 'framer-motion';
+import { Table2, Code, Download, AlertTriangle } from 'lucide-react';
+import { motion, useReducedMotion } from 'framer-motion';
 import {
   STATUS_SUCCESS, ACCENT_CYAN, ACCENT_VIOLET,
   OPACITY_10, OPACITY_15, OPACITY_30,
 } from '@/lib/chart-colors';
+import { motionSafe } from '@/lib/motion';
 import { SurfaceCard } from '@/components/ui/SurfaceCard';
-import { SectionLabel } from '../_shared';
+import { SectionLabel, CopyButton } from '../_shared';
 import { ACCENT, MAX_LEVEL, LEVEL_REWARDS } from './progression-data';
 
 /* ── Data Table Generation ─────────────────────────────────────────────────── */
@@ -173,11 +174,11 @@ interface XpTableGeneratorProps {
 }
 
 export function XpTableGenerator({ baseXp, curveExp }: XpTableGeneratorProps) {
+  const prefersReduced = useReducedMotion();
   const [hpPerLevel, setHpPerLevel] = useState(10);
   const [manaPerLevel, setManaPerLevel] = useState(5);
   const [attrPointsPerLevel, setAttrPointsPerLevel] = useState(3);
   const [xpTableTab, setXpTableTab] = useState<'table' | 'csv' | 'struct' | 'loader'>('table');
-  const [copiedXpTable, setCopiedXpTable] = useState(false);
   const [levelOverrides] = useState<Map<number, Partial<{ xpRequired: number; hpBonus: number; manaBonus: number }>>>(new Map());
 
   const progressionRows = useMemo(
@@ -194,11 +195,8 @@ export function XpTableGenerator({ baseXp, curveExp }: XpTableGeneratorProps) {
     }
   }, [xpTableTab, progressionRows]);
 
-  const handleCopyXpTable = useCallback(() => {
-    const text = xpTableTab === 'table' ? progressionToCSV(progressionRows) : xpTableOutput;
-    navigator.clipboard.writeText(text);
-    setCopiedXpTable(true);
-    setTimeout(() => setCopiedXpTable(false), 2000);
+  const getCopyText = useCallback(() => {
+    return xpTableTab === 'table' ? progressionToCSV(progressionRows) : xpTableOutput;
   }, [xpTableTab, progressionRows, xpTableOutput]);
 
   const handleDownloadCSV = useCallback(() => {
@@ -224,18 +222,7 @@ export function XpTableGenerator({ baseXp, curveExp }: XpTableGeneratorProps) {
           >
             <Download className="w-3 h-3" /> Download .csv
           </button>
-          <button
-            onClick={handleCopyXpTable}
-            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-2xs font-mono font-bold transition-all border"
-            style={{
-              borderColor: copiedXpTable ? `${STATUS_SUCCESS}${OPACITY_30}` : `${ACCENT}${OPACITY_30}`,
-              color: copiedXpTable ? STATUS_SUCCESS : ACCENT,
-              backgroundColor: copiedXpTable ? `${STATUS_SUCCESS}${OPACITY_10}` : `${ACCENT}${OPACITY_10}`,
-            }}
-          >
-            {copiedXpTable ? <CheckCircle2 className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
-            {copiedXpTable ? 'Copied' : 'Copy'}
-          </button>
+          <CopyButton getText={getCopyText} accent={ACCENT} />
         </div>
       </div>
 
@@ -317,9 +304,9 @@ export function XpTableGenerator({ baseXp, curveExp }: XpTableGeneratorProps) {
                 return (
                   <motion.tr
                     key={row.level}
-                    initial={{ opacity: 0, x: -6 }}
+                    initial={prefersReduced ? { opacity: 1, x: 0 } : { opacity: 0, x: -6 }}
                     animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: i * 0.01 }}
+                    transition={motionSafe({ delay: i * 0.01 }, prefersReduced)}
                     className={`border-b border-border/20 transition-colors ${hasReward ? 'bg-amber-950/10' : 'hover:bg-surface-hover/20'}`}
                   >
                     <td className="text-center py-1.5 px-2 font-bold" style={{ color: hasReward ? ACCENT : 'var(--text)' }}>
@@ -375,7 +362,7 @@ export function XpTableGenerator({ baseXp, curveExp }: XpTableGeneratorProps) {
         ].map(stat => (
           <div key={stat.label} className="bg-surface/50 rounded-lg p-2.5 border border-border/30 text-center">
             <div className="text-sm font-mono font-bold" style={{ color: stat.color }}>{stat.value}</div>
-            <div className="text-[11px] text-text-muted mt-0.5">{stat.label}</div>
+            <div className="text-xs text-text-muted mt-0.5">{stat.label}</div>
           </div>
         ))}
       </div>

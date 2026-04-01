@@ -32,7 +32,7 @@ export function LiveStats({
           backgroundColor: `${ACCENT_CYAN}08`,
         }}
       >
-        <div className="text-[10px] font-mono uppercase tracking-[0.15em] text-text-muted">Distance</div>
+        <div className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted">Distance</div>
         <div className="text-sm font-mono font-bold" style={{ color: ACCENT_CYAN, textShadow: `0 0 12px ${ACCENT_CYAN}40` }}>
           {stats.dist.toFixed(0)} <span className="text-xs font-normal text-text-muted">cm</span>
         </div>
@@ -48,7 +48,7 @@ export function LiveStats({
           backgroundColor: `${ACCENT_ORANGE}08`,
         }}
       >
-        <div className="text-[10px] font-mono uppercase tracking-[0.15em] text-text-muted">I-Frames</div>
+        <div className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted">I-Frames</div>
         <div className="text-sm font-mono font-bold" style={{ color: stats.inInvuln ? ACCENT_ORANGE : 'var(--text-muted)', textShadow: stats.inInvuln ? `0 0 12px ${ACCENT_ORANGE}40` : 'none' }}>
           {stats.inInvuln ? 'ACTIVE' : `${params.iFrameDuration}s`}
         </div>
@@ -64,7 +64,7 @@ export function LiveStats({
           backgroundColor: `${ACCENT_VIOLET}08`,
         }}
       >
-        <div className="text-[10px] font-mono uppercase tracking-[0.15em] text-text-muted">Cancel</div>
+        <div className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted">Cancel</div>
         <div className="text-sm font-mono font-bold" style={{ color: stats.inCancel ? ACCENT_VIOLET : 'var(--text-muted)', textShadow: stats.inCancel ? `0 0 12px ${ACCENT_VIOLET}40` : 'none' }}>
           {stats.inCancel ? 'OPEN' : `${params.cancelWindowStart.toFixed(2)}s`}
         </div>
@@ -80,7 +80,7 @@ export function LiveStats({
           backgroundColor: `${STATUS_NEUTRAL}08`,
         }}
       >
-        <div className="text-[10px] font-mono uppercase tracking-[0.15em] text-text-muted">Cooldown</div>
+        <div className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted">Cooldown</div>
         <div className="text-sm font-mono font-bold" style={{ color: stats.inCooldown ? STATUS_NEUTRAL : 'var(--text-muted)', textShadow: stats.inCooldown ? `0 0 12px ${STATUS_NEUTRAL}40` : 'none' }}>
           {stats.inCooldown ? `${Math.max(0, phases.recovery.end - playhead).toFixed(2)}s` : `${params.cooldown}s`}
         </div>

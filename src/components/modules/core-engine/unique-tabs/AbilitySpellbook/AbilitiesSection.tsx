@@ -204,8 +204,8 @@ function CooldownWheel({ ability, index }: { ability: { name: string; cd: number
         </div>
       </div>
       <div className="text-center">
-        <div className="text-[11px] font-mono font-bold text-text truncate max-w-[70px]">{ability.name}</div>
-        <div className="text-[11px] font-mono text-text-muted">{ability.cd}s CD</div>
+        <div className="text-xs font-mono font-bold text-text truncate max-w-[70px]">{ability.name}</div>
+        <div className="text-xs font-mono text-text-muted">{ability.cd}s CD</div>
       </div>
     </motion.div>
   );

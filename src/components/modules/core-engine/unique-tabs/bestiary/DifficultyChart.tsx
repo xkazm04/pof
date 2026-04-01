@@ -36,16 +36,16 @@ export function DifficultyChart({ series }: DifficultyChartProps) {
         <rect x={PAD_L} y={toY(70)} width={PLOT_W} height={toY(40) - toY(70)} fill="rgba(74,222,128,0.08)" />
         <rect x={PAD_L} y={toY(40)} width={PLOT_W} height={toY(0) - toY(40)} fill="rgba(107,114,128,0.06)" />
         {/* Zone labels */}
-        <text x={PAD_L + 3} y={toY(88)} className="text-[11px] font-mono fill-[rgba(239,68,68,0.5)]" style={{ fontSize: 11 }}>DANGER</text>
-        <text x={PAD_L + 3} y={toY(55)} className="text-[11px] font-mono fill-[rgba(74,222,128,0.5)]" style={{ fontSize: 11 }}>SWEET SPOT</text>
-        <text x={PAD_L + 3} y={toY(20)} className="text-[11px] font-mono fill-[rgba(107,114,128,0.4)]" style={{ fontSize: 11 }}>TRIVIAL</text>
+        <text x={PAD_L + 3} y={toY(88)} className="text-xs font-mono fill-[rgba(239,68,68,0.5)]">DANGER</text>
+        <text x={PAD_L + 3} y={toY(55)} className="text-xs font-mono fill-[rgba(74,222,128,0.5)]">SWEET SPOT</text>
+        <text x={PAD_L + 3} y={toY(20)} className="text-xs font-mono fill-[rgba(107,114,128,0.4)]">TRIVIAL</text>
         {/* Grid lines */}
         {[0, 25, 50, 75, 100].map(v => (
           <line key={v} x1={PAD_L} y1={toY(v)} x2={PAD_L + PLOT_W} y2={toY(v)} stroke="rgba(255,255,255,0.06)" strokeWidth="1" />
         ))}
         {/* X axis labels */}
         {[1, 10, 20, 30, 40, 50].map(l => (
-          <text key={l} x={toX(l)} y={CHART_H - 3} textAnchor="middle" className="text-[11px] font-mono fill-[var(--text-muted)]" style={{ fontSize: 11 }}>Lv{l}</text>
+          <text key={l} x={toX(l)} y={CHART_H - 3} textAnchor="middle" className="text-xs font-mono fill-[var(--text-muted)]">Lv{l}</text>
         ))}
         {/* Lines */}
         {series.map(s => (

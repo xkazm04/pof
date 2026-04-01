@@ -192,7 +192,7 @@ export function TagRulesEditor({
               </div>
               {v?.conflict && (
                 <span
-                  className="flex-shrink-0 px-1.5 py-0.5 rounded text-[11px] font-bold"
+                  className="flex-shrink-0 px-1.5 py-0.5 rounded text-xs font-bold"
                   style={{ backgroundColor: `${STATUS_ERROR}20`, color: STATUS_ERROR, border: `1px solid ${STATUS_ERROR}40` }}
                   title={v.conflict}
                 >

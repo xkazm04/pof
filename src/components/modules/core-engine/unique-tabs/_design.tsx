@@ -1,8 +1,9 @@
 'use client';
 
 import { type ReactNode } from 'react';
-import { motion } from 'framer-motion';
+import { motion, useReducedMotion } from 'framer-motion';
 import { MODULE_COLORS, OVERLAY_WHITE } from '@/lib/chart-colors';
+import { ANIMATION_PRESETS, motionSafe } from '@/lib/motion';
 
 const DEFAULT_ACCENT = MODULE_COLORS.core;
 
@@ -52,19 +53,20 @@ export function SectionHeader({ label, color = DEFAULT_ACCENT, icon: Icon }: {
   label: string; color?: string;
   icon?: React.ComponentType<{ className?: string; style?: React.CSSProperties }>;
 }) {
+  const prefersReduced = useReducedMotion();
   return (
-    <div className="flex items-center gap-2.5 mb-3">
+    <div className="flex items-center gap-1.5 mb-3">
       {Icon && (
         <div className="p-1.5 rounded-md" style={{ backgroundColor: `${color}12` }}>
           <Icon className="w-3.5 h-3.5" style={{ color, filter: `drop-shadow(0 0 6px ${color})` }} />
         </div>
       )}
-      <span className="text-xs font-mono font-bold uppercase tracking-[0.2em]"
+      <span className="text-xs font-mono font-bold uppercase tracking-wider"
         style={{ color, textShadow: `0 0 20px ${color}30` }}>{label}</span>
       <motion.div
-        initial={{ scaleX: 0 }}
+        initial={prefersReduced ? { scaleX: 1 } : { scaleX: 0 }}
         animate={{ scaleX: 1 }}
-        transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
+        transition={motionSafe({ ...ANIMATION_PRESETS.fill, duration: 0.8 }, prefersReduced)}
         className="flex-1 h-px origin-left"
         style={{ background: `linear-gradient(90deg, ${color}30, transparent)` }}
       />
@@ -77,20 +79,21 @@ export function SectionHeader({ label, color = DEFAULT_ACCENT, icon: Icon }: {
 export function GlowStat({ label, value, unit, color, delay = 0 }: {
   label: string; value: string | number; unit?: string; color: string; delay?: number;
 }) {
+  const prefersReduced = useReducedMotion();
   return (
     <motion.div
-      initial={{ opacity: 0, y: 8 }}
+      initial={prefersReduced ? { opacity: 1, y: 0 } : { opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ delay, duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
+      transition={motionSafe({ ...ANIMATION_PRESETS.entrance, delay }, prefersReduced)}
       className="relative p-3 rounded-lg border overflow-hidden group"
       style={{ borderColor: `${color}20`, backgroundColor: `${color}08` }}>
       <div className="absolute -top-4 -right-4 w-20 h-20 rounded-full blur-3xl opacity-0 group-hover:opacity-100 transition-opacity duration-700 pointer-events-none"
         style={{ backgroundColor: `${color}25` }} />
-      <div className="text-[10px] font-mono uppercase tracking-[0.15em] mb-1.5 text-text-muted">{label}</div>
+      <div className="text-xs font-mono uppercase tracking-wider mb-1.5 text-text-muted">{label}</div>
       <div className="flex items-baseline gap-1.5">
         <span className="text-xl font-mono font-bold tabular-nums leading-none"
           style={{ color, textShadow: `0 0 12px ${color}40` }}>{value}</span>
-        {unit && <span className="text-[10px] font-mono uppercase tracking-wider text-text-muted">{unit}</span>}
+        {unit && <span className="text-xs font-mono uppercase tracking-wider text-text-muted">{unit}</span>}
       </div>
     </motion.div>
   );
@@ -101,12 +104,13 @@ export function GlowStat({ label, value, unit, color, delay = 0 }: {
 export function NeonBar({ pct, color, height = 6, glow = false }: {
   pct: number; color: string; height?: number; glow?: boolean;
 }) {
+  const prefersReduced = useReducedMotion();
   return (
     <div className="w-full rounded-full overflow-hidden" style={{ height, backgroundColor: `${color}12` }}>
       <motion.div
-        initial={{ width: 0 }}
+        initial={prefersReduced ? { width: `${Math.min(100, pct)}%` } : { width: 0 }}
         animate={{ width: `${Math.min(100, pct)}%` }}
-        transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
+        transition={motionSafe(ANIMATION_PRESETS.fill, prefersReduced)}
         className="h-full rounded-full"
         style={{
           backgroundColor: color,

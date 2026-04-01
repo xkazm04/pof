@@ -38,7 +38,7 @@ export function TravelProgressionGroup() {
         {/* Zone Selectors */}
         <div className="grid grid-cols-2 gap-4 mb-4">
           <div>
-            <div className="text-[10px] font-mono uppercase tracking-[0.15em] text-text-muted font-bold mb-1">Zone A</div>
+            <div className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted font-bold mb-1">Zone A</div>
             <select
               value={compareA}
               onChange={e => setCompareA(Number(e.target.value))}
@@ -51,7 +51,7 @@ export function TravelProgressionGroup() {
             </select>
           </div>
           <div>
-            <div className="text-[10px] font-mono uppercase tracking-[0.15em] text-text-muted font-bold mb-1">Zone B</div>
+            <div className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted font-bold mb-1">Zone B</div>
             <select
               value={compareB}
               onChange={e => setCompareB(Number(e.target.value))}
@@ -72,12 +72,12 @@ export function TravelProgressionGroup() {
             <table className="w-full text-xs font-mono">
               <thead>
                 <tr className="border-b border-border/40">
-                  <th className="text-left py-2 px-2 text-[10px] font-mono uppercase tracking-[0.15em] text-text-muted font-bold">Stat</th>
-                  <th className="text-right py-2 px-2 text-[10px] font-mono uppercase tracking-[0.15em] font-bold" style={{ color: ACCENT }}>
+                  <th className="text-left py-2 px-2 text-xs font-mono uppercase tracking-[0.15em] text-text-muted font-bold">Stat</th>
+                  <th className="text-right py-2 px-2 text-xs font-mono uppercase tracking-[0.15em] font-bold" style={{ color: ACCENT }}>
                     {COMPARE_ZONE_NAMES[compareA]}
                   </th>
-                  <th className="text-center py-2 px-2 text-[10px] font-mono uppercase tracking-[0.15em] text-text-muted font-bold">Delta</th>
-                  <th className="text-left py-2 px-2 text-[10px] font-mono uppercase tracking-[0.15em] font-bold" style={{ color: ACCENT_ORANGE }}>
+                  <th className="text-center py-2 px-2 text-xs font-mono uppercase tracking-[0.15em] text-text-muted font-bold">Delta</th>
+                  <th className="text-left py-2 px-2 text-xs font-mono uppercase tracking-[0.15em] font-bold" style={{ color: ACCENT_ORANGE }}>
                     {COMPARE_ZONE_NAMES[compareB]}
                   </th>
                 </tr>
@@ -132,7 +132,7 @@ function FastTravelNetwork() {
       {/* Coverage Summary */}
       <div className="flex flex-wrap gap-2 mb-2.5 pb-3 border-b border-border/40">
         {FAST_TRAVEL_COVERAGE.map((ftc) => (
-          <div key={ftc.zone} className="flex items-center gap-1.5 text-[10px] font-mono uppercase tracking-[0.15em]">
+          <div key={ftc.zone} className="flex items-center gap-1.5 text-xs font-mono uppercase tracking-[0.15em]">
             <span className="text-text-muted">{ftc.zone}:</span>
             <span className="font-bold" style={{ color: ftc.pct === 100 ? STATUS_SUCCESS : ftc.pct > 0 ? STATUS_WARNING : STATUS_LOCKED }}>
               {ftc.pct}%
@@ -149,9 +149,9 @@ function FastTravelNetwork() {
               <div className="flex items-center gap-2">
                 <Zap className="w-3.5 h-3.5" style={{ color: node.discovered ? ACCENT : STATUS_LOCKED }} />
                 <span className="text-xs font-bold text-text">{node.name}</span>
-                <span className="text-[10px] font-mono uppercase tracking-[0.15em] text-text-muted">({node.zone})</span>
+                <span className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted">({node.zone})</span>
               </div>
-              <span className="text-[10px] font-mono uppercase tracking-[0.15em] font-bold px-1.5 py-0.5 rounded"
+              <span className="text-xs font-mono uppercase tracking-[0.15em] font-bold px-1.5 py-0.5 rounded"
                 style={{
                   color: node.discovered ? STATUS_SUCCESS : STATUS_LOCKED,
                   backgroundColor: node.discovered ? `${STATUS_SUCCESS}15` : 'transparent',
@@ -184,7 +184,7 @@ function ProgressionTimeline() {
     <BlueprintPanel color={ACCENT_EMERALD} className="p-3">
       <SectionHeader icon={Clock} label="Zone Progression Timeline" color={ACCENT_EMERALD} />
 
-      <div className="text-[10px] font-mono uppercase tracking-[0.15em] text-text-muted mb-2">
+      <div className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted mb-2">
         Day <span className="font-bold" style={{ color: ACCENT_PINK }}>{CURRENT_DAY}</span> / {TOTAL_ESTIMATED_DAYS} estimated
       </div>
 
@@ -210,7 +210,7 @@ function ProgressionTimeline() {
 
             return (
               <div key={zp.zone} className="flex items-center gap-3">
-                <span className="text-[10px] font-mono uppercase tracking-[0.15em] text-text-muted w-28 truncate text-right flex-shrink-0">{zp.zone}</span>
+                <span className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted w-28 truncate text-right flex-shrink-0">{zp.zone}</span>
                 <div className="relative flex-1 h-6 bg-surface-deep rounded-md overflow-hidden border border-border/30">
                   {started ? (
                     <motion.div
@@ -224,12 +224,12 @@ function ProgressionTimeline() {
                         border: `1px solid ${gradientColor}60`,
                       }}
                     >
-                      <span className="text-[11px] font-mono font-bold" style={{ color: gradientColor }}>
+                      <span className="text-xs font-mono font-bold" style={{ color: gradientColor }}>
                         {zp.completionPct}%
                       </span>
                     </motion.div>
                   ) : (
-                    <span className="absolute inset-0 flex items-center justify-center text-[11px] font-mono text-text-muted opacity-40">
+                    <span className="absolute inset-0 flex items-center justify-center text-xs font-mono text-text-muted opacity-40">
                       Not visited
                     </span>
                   )}
@@ -242,7 +242,7 @@ function ProgressionTimeline() {
         {/* Day axis */}
         <div className="flex items-center gap-3 mt-2">
           <span className="w-28 flex-shrink-0" />
-          <div className="flex-1 flex justify-between text-[11px] font-mono text-text-muted px-1">
+          <div className="flex-1 flex justify-between text-xs font-mono text-text-muted px-1">
             {Array.from({ length: Math.ceil(TOTAL_ESTIMATED_DAYS / 2) + 1 }, (_, i) => (
               <span key={i}>{i * 2}d</span>
             ))}

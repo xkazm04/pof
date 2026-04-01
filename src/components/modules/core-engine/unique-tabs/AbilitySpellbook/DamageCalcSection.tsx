@@ -29,7 +29,7 @@ export function DamageCalcSection() {
     <div className="space-y-4">
       <BlueprintPanel color={ACCENT_ORANGE} className="p-3">
         <SectionHeader icon={Calculator} label="Damage Formula Sandbox" color={ACCENT_ORANGE} />
-        <p className="text-[10px] font-mono uppercase tracking-[0.15em] text-text-muted mt-1 mb-4">
+        <p className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted mt-1 mb-4">
           Adjust parameters to explore how the GAS damage formula works.
         </p>
 
@@ -45,7 +45,7 @@ export function DamageCalcSection() {
 
           {/* Results */}
           <div className="space-y-3">
-            <div className="text-[10px] font-mono font-bold uppercase tracking-[0.15em] text-text-muted mb-2">Formula Steps</div>
+            <div className="text-xs font-mono font-bold uppercase tracking-[0.15em] text-text-muted mb-2">Formula Steps</div>
 
             <FormulaStep step={1} label="Scaled Damage"
               formula={`${baseDamage} x (1 + ${attackerPower}/100)`}
@@ -81,7 +81,7 @@ function SliderParam({ label, value, min, max, step = 1, onChange, unit, color }
   return (
     <div>
       <div className="flex items-center justify-between mb-1">
-        <span className="text-[10px] font-mono uppercase tracking-[0.15em] text-text-muted">{label}</span>
+        <span className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted">{label}</span>
         <span className="text-sm font-mono font-bold" style={{ color, textShadow: `0 0 12px ${color}40` }}>
           {step < 1 ? value.toFixed(1) : value}{unit ?? ''}
         </span>
@@ -115,7 +115,7 @@ function FormulaStep({ step, label, formula, result, unit, isPercent, color }: {
       </span>
       <div className="flex-1 min-w-0">
         <div className="font-mono font-bold text-text truncate">{label}</div>
-        <div className="text-[10px] font-mono uppercase tracking-[0.15em] text-text-muted truncate">{formula}</div>
+        <div className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted truncate">{formula}</div>
       </div>
       <span className="font-mono font-bold flex-shrink-0" style={{ color, textShadow: `0 0 12px ${color}40` }}>
         {isPercent ? `${(result * 100).toFixed(1)}%` : `${result.toFixed(1)}${unit ?? ''}`}

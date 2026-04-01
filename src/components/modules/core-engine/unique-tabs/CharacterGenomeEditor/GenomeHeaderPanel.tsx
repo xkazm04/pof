@@ -72,7 +72,7 @@ export function GenomeHeaderPanel({
           </div>
         </div>
         <div className="flex items-center gap-2 pt-2 border-t border-border/30">
-          <span className="text-[10px] font-mono uppercase tracking-[0.15em] text-text-muted">Compare:</span>
+          <span className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted">Compare:</span>
           <button onClick={onClearCompare} className="px-2 py-0.5 rounded text-xs font-mono font-bold transition-colors"
             style={{ backgroundColor: compareIds.length === 0 ? `${ACCENT}15` : 'transparent', color: compareIds.length === 0 ? ACCENT : 'var(--text-muted)',
               border: `1px solid ${compareIds.length === 0 ? `${ACCENT}40` : 'rgba(255,255,255,0.08)'}` }}>All</button>
@@ -84,12 +84,12 @@ export function GenomeHeaderPanel({
                   border: `1px solid ${sel ? `${g.color}40` : 'rgba(255,255,255,0.08)'}` }}>{g.name}</button>
             );
           })}
-          {compareIds.length > 0 && <span className="text-[10px] font-mono text-text-muted/50 ml-1">{compareIds.length}/4</span>}
+          {compareIds.length > 0 && <span className="text-xs font-mono text-text-muted/50 ml-1">{compareIds.length}/4</span>}
         </div>
       </BlueprintPanel>
 
       <BlueprintPanel color={ACCENT} className="p-3 flex flex-col items-center justify-center">
-        <div className="text-[10px] font-mono uppercase tracking-[0.15em] text-text-muted mb-1">Archetype Radar</div>
+        <div className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted mb-1">Archetype Radar</div>
         <RadarChart data={genomeToRadar(activeGenome)} accent={activeGenome.color} overlays={radarOverlays} size={160} />
         <div className="flex flex-wrap gap-2 mt-2 justify-center">
           <span className="flex items-center gap-1 text-xs font-mono font-bold" style={{ color: activeGenome.color }}>

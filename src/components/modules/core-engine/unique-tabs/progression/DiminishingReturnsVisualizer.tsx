@@ -2,13 +2,15 @@
 
 import { useState } from 'react';
 import { TrendingUp } from 'lucide-react';
-import { motion } from 'framer-motion';
+import { motion, useReducedMotion } from 'framer-motion';
 import { OPACITY_10, OPACITY_15, OPACITY_20, OPACITY_30 } from '@/lib/chart-colors';
+import { motionSafe } from '@/lib/motion';
 import { SurfaceCard } from '@/components/ui/SurfaceCard';
 import { SectionLabel, NormalizedLineChart } from '../_shared';
 import { ACCENT, DR_ATTRIBUTES } from './progression-data';
 
 export function DiminishingReturnsVisualizer() {
+  const prefersReduced = useReducedMotion();
   const [selectedDRAttr, setSelectedDRAttr] = useState(0);
 
   return (
@@ -52,7 +54,7 @@ export function DiminishingReturnsVisualizer() {
               return (
                 <>
                   <line x1={capX} y1="0" x2={capX} y2="100" stroke={attr.color} strokeWidth="1" strokeDasharray="4 3" vectorEffect="non-scaling-stroke" opacity={0.6} />
-                  <text x={capX} y={8} textAnchor="middle" className="text-[11px] font-mono font-bold" fill={attr.color} vectorEffect="non-scaling-stroke">
+                  <text x={capX} y={8} textAnchor="middle" className="text-xs font-mono font-bold" fill={attr.color} vectorEffect="non-scaling-stroke">
                     Soft Cap
                   </text>
                 </>
@@ -60,7 +62,9 @@ export function DiminishingReturnsVisualizer() {
             })()}
 
             <motion.polyline
-              initial={{ pathLength: 0 }} animate={{ pathLength: 1 }} transition={{ duration: 1 }}
+              initial={prefersReduced ? { pathLength: 1 } : { pathLength: 0 }}
+              animate={{ pathLength: 1 }}
+              transition={motionSafe({ duration: 1 }, prefersReduced)}
               points={attr.curve.map((c) => {
                 const x = (c.points / 100) * 100;
                 const y = 100 - (c.marginalValue / maxMarginal) * 90;
@@ -71,7 +75,9 @@ export function DiminishingReturnsVisualizer() {
             />
 
             <motion.polygon
-              initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.6 }}
+              initial={prefersReduced ? { opacity: 1 } : { opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={motionSafe({ duration: 0.6 }, prefersReduced)}
               points={[
                 ...attr.curve.map(c => `${(c.points / 100) * 100},${100 - (c.marginalValue / maxMarginal) * 90}`),
                 `${(attr.curve[attr.curve.length - 1].points / 100) * 100},100`,

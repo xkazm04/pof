@@ -29,6 +29,7 @@ import { useEvaluatorStore } from '@/stores/evaluatorStore';
 import { InsightCard } from './InsightCard';
 import { SurfaceCard } from '@/components/ui/SurfaceCard';
 import { STATUS_SUCCESS, STATUS_WARNING, STATUS_ERROR, STATUS_BLOCKER, STATUS_INFO, ACCENT_VIOLET, MODULE_COLORS, OPACITY_10 } from '@/lib/chart-colors';
+import { MOTION } from '@/lib/constants';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -372,7 +373,7 @@ function CombinedHealthGauge({ score }: { score: number }) {
     <motion.div
       initial={{ opacity: 0, scale: 0.9 }}
       animate={{ opacity: 1, scale: 1 }}
-      transition={{ duration: 0.45 }}
+      transition={{ duration: MOTION.slow }}
       className="relative"
       style={{ width: size, height: size }}
     >
@@ -387,7 +388,7 @@ function CombinedHealthGauge({ score }: { score: number }) {
             strokeLinecap="round"
             initial={{ pathLength: 0 }}
             animate={{ pathLength: 1 }}
-            transition={{ duration: 1, ease: [0.16, 1, 0.3, 1] }}
+            transition={{ duration: 1, ease: MOTION.ease }}
             style={{ filter: `drop-shadow(0 0 6px ${color}40)` }}
           />
         )}
@@ -422,7 +423,7 @@ function DimensionBar({
           className="h-full rounded-full"
           initial={{ width: 0 }}
           animate={{ width: `${value}%` }}
-          transition={{ duration: 0.45, ease: [0.16, 1, 0.3, 1] }}
+          transition={{ duration: MOTION.slow, ease: MOTION.ease }}
           style={{ backgroundColor: color }}
         />
       </div>
@@ -477,7 +478,7 @@ function ModuleHealthCell({
     <motion.div
       initial={{ opacity: 0, scale: 0.95 }}
       animate={{ opacity: 1, scale: 1 }}
-      transition={{ duration: 0.22, delay: index * 0.03 }}
+      transition={{ duration: MOTION.base, delay: index * 0.03 }}
       className="rounded-lg border border-border/60 p-3 transition-colors hover:border-border-bright"
       style={{ backgroundColor: bg }}
     >

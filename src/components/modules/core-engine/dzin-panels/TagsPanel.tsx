@@ -7,15 +7,15 @@ import {
   ACCENT_PURPLE_BOLD, ACCENT_RED, ACCENT_ORANGE, ACCENT_CYAN, STATUS_SUBDUED,
 } from '@/lib/chart-colors';
 import { useDensity, PanelFrame } from '@/lib/dzin/core';
-import { DZIN_TIMING } from '@/lib/dzin/animation-constants';
+import { DZIN_TIMING, DZIN_SPACING, TRANSITION_ENTER, TRANSITION_EXIT } from '@/lib/dzin/animation-constants';
 import { useDzinSelection } from '@/lib/dzin/selection-context';
 import { ENTITY_RELATIONS, isRelatedToSelection } from '@/lib/dzin/entity-relations';
 import {
   FeatureCard,
-  STATUS_COLORS,
+  statusInfo,
 } from '@/components/modules/core-engine/unique-tabs/_shared';
 import { SurfaceCard } from '@/components/ui/SurfaceCard';
-import type { FeatureRow, FeatureStatus } from '@/types/feature-matrix';
+import type { FeatureRow } from '@/types/feature-matrix';
 
 /* -- Props ----------------------------------------------------------------- */
 
@@ -82,16 +82,11 @@ function countAllTags(nodes: TagNode[]): number {
 
 const TOTAL_TAG_COUNT = countAllTags(TAG_TREE);
 
-function statusDotColor(status: FeatureStatus | undefined): string {
-  if (!status) return STATUS_COLORS.unknown.dot;
-  return STATUS_COLORS[status].dot;
-}
-
 /* -- Micro density --------------------------------------------------------- */
 
 function TagsMicro() {
   return (
-    <div className="flex flex-col items-center justify-center gap-1 p-2">
+    <div className={DZIN_SPACING.micro.wrapper}>
       <Tags className="w-5 h-5 text-amber-400" />
       <span className="font-mono text-xs text-text">{TOTAL_TAG_COUNT}</span>
     </div>
@@ -102,15 +97,16 @@ function TagsMicro() {
 
 function TagsCompact({ featureMap }: TagsPanelProps) {
   const tagStatus = featureMap.get('Gameplay Tags hierarchy')?.status;
-  const dotColor = statusDotColor(tagStatus);
+  const { color: dotColor, label: dotLabel } = statusInfo(tagStatus);
   const { selection, setSelection } = useDzinSelection();
 
   return (
-    <div className="space-y-1.5 p-2 text-xs">
+    <div className={`${DZIN_SPACING.compact.wrapper} text-xs`}>
       <div className="flex items-center gap-2 mb-1.5">
         <span
-          className="w-2 h-2 rounded-full flex-shrink-0"
-          style={{ backgroundColor: dotColor }}
+          className="w-3 h-3 rounded-full flex-shrink-0"
+          style={{ backgroundColor: dotColor, boxShadow: `0 0 0 3px ${dotColor}33` }}
+          title={dotLabel}
         />
         <span className="font-medium text-text">Tag Hierarchy</span>
       </div>
@@ -127,7 +123,7 @@ function TagsCompact({ featureMap }: TagsPanelProps) {
               onClick={() => setSelection({ type: 'tag', id: child.name })}
             >
               <span
-                className="w-1.5 h-1.5 rounded-full flex-shrink-0"
+                className="w-2 h-2 rounded-full flex-shrink-0"
                 style={{ backgroundColor: TAG_CATEGORY_COLORS[cat.name] ?? STATUS_SUBDUED }}
               />
               <span className="text-text-muted">{child.name}</span>
@@ -146,7 +142,7 @@ function TagsFull({ featureMap, defs }: TagsPanelProps) {
   const onToggle = (name: string) => setExpanded((prev) => (prev === name ? null : name));
 
   return (
-    <div className="space-y-2.5">
+    <div className={DZIN_SPACING.full.wrapper}>
       <FeatureCard
         name="Gameplay Tags hierarchy"
         featureMap={featureMap}
@@ -156,8 +152,8 @@ function TagsFull({ featureMap, defs }: TagsPanelProps) {
         accent="#f59e0b"
       />
 
-      <SurfaceCard level={2} className="p-3 relative overflow-hidden">
-        <div className="text-xs font-bold uppercase tracking-widest text-text-muted mb-2.5 flex items-center gap-2">
+      <SurfaceCard level={2} className={`${DZIN_SPACING.full.card} relative overflow-hidden`}>
+        <div className={`text-xs font-bold uppercase text-text-muted ${DZIN_SPACING.full.sectionMb} flex items-center gap-2`}>
           <Tags className="w-4 h-4 text-amber-400" /> Tag Hierarchy
         </div>
 
@@ -173,8 +169,9 @@ function TagsFull({ featureMap, defs }: TagsPanelProps) {
               >
                 <div className="flex items-center gap-2 mb-1">
                   <span
-                    className="w-2 h-2 rounded-full flex-shrink-0"
-                    style={{ backgroundColor: catColor }}
+                    className="w-3 h-3 rounded-full flex-shrink-0"
+                    style={{ backgroundColor: catColor, boxShadow: `0 0 0 3px ${catColor}33` }}
+                    title={category.name}
                   />
                   <span className="text-xs font-bold text-text" style={{ color: catColor }}>
                     {category.name}
@@ -194,7 +191,7 @@ function TagsFull({ featureMap, defs }: TagsPanelProps) {
                         className="flex items-center gap-2 text-xs text-text-muted py-0.5"
                       >
                         <span
-                          className="w-1 h-1 rounded-full flex-shrink-0"
+                          className="w-2 h-2 rounded-full flex-shrink-0"
                           style={{ backgroundColor: catColor, opacity: 0.6 }}
                         />
                         <span className="font-mono">{child.name}</span>
@@ -223,8 +220,8 @@ export function TagsPanel({ featureMap, defs }: TagsPanelProps) {
           key={density}
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          transition={{ duration: DZIN_TIMING.DENSITY / 2 }}
+          exit={{ opacity: 0, transition: TRANSITION_EXIT }}
+          transition={TRANSITION_ENTER}
         >
           {density === 'micro' && <TagsMicro />}
           {density === 'compact' && <TagsCompact featureMap={featureMap} defs={defs} />}

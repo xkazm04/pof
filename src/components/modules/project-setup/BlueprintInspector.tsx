@@ -2,16 +2,17 @@
 
 import { useState, useCallback } from 'react';
 import {
-  Search, Loader2, ChevronDown, ChevronRight, AlertCircle,
+  Search, Loader2, ChevronDown, ChevronRight,
   Box, Variable, Zap, Puzzle, GitBranch, Hash, FileCode,
 } from 'lucide-react';
+import { ErrorBanner } from './ErrorBanner';
 import { SurfaceCard } from '@/components/ui/SurfaceCard';
 import { usePofBridgeStore } from '@/stores/pofBridgeStore';
 import { tryApiFetch } from '@/lib/api-utils';
 import type { BlueprintEntry, FunctionOverride, ComponentEntry, VariableEntry } from '@/types/pof-bridge';
 import {
   ACCENT_CYAN, ACCENT_VIOLET, ACCENT_EMERALD, ACCENT_ORANGE, ACCENT_PINK,
-  STATUS_SUCCESS, STATUS_ERROR, STATUS_NEUTRAL,
+  STATUS_SUCCESS, STATUS_NEUTRAL,
   OPACITY_10, OPACITY_15,
 } from '@/lib/chart-colors';
 
@@ -68,7 +69,7 @@ function InheritanceSection({ bp }: { bp: BlueprintEntry }) {
 }
 
 function FunctionsSection({ fns }: { fns: FunctionOverride[] }) {
-  if (fns.length === 0) return <EmptyHint text="No overridden functions" />;
+  if (fns.length === 0) return <EmptyHint text="No overridden functions" hint="Override C++ functions in the blueprint to see them here" />;
   return (
     <div className="space-y-1">
       {fns.map((fn) => (
@@ -84,7 +85,7 @@ function FunctionsSection({ fns }: { fns: FunctionOverride[] }) {
 }
 
 function ComponentsSection({ comps }: { comps: ComponentEntry[] }) {
-  if (comps.length === 0) return <EmptyHint text="No added components" />;
+  if (comps.length === 0) return <EmptyHint text="No added components" hint="Add components in the blueprint editor to populate this section" />;
   return (
     <div className="space-y-1">
       {comps.map((c) => (
@@ -107,7 +108,7 @@ function ComponentsSection({ comps }: { comps: ComponentEntry[] }) {
 }
 
 function VariablesSection({ vars }: { vars: VariableEntry[] }) {
-  if (vars.length === 0) return <EmptyHint text="No blueprint variables" />;
+  if (vars.length === 0) return <EmptyHint text="No blueprint variables" hint="Variables defined in the blueprint's My Blueprint panel appear here" />;
   return (
     <div className="space-y-1">
       {vars.map((v) => (
@@ -125,8 +126,8 @@ function VariablesSection({ vars }: { vars: VariableEntry[] }) {
   );
 }
 
-function StringListSection({ items, emptyText }: { items: string[]; emptyText: string }) {
-  if (items.length === 0) return <EmptyHint text={emptyText} />;
+function StringListSection({ items, emptyText, emptyHint }: { items: string[]; emptyText: string; emptyHint?: string }) {
+  if (items.length === 0) return <EmptyHint text={emptyText} hint={emptyHint} />;
   return (
     <div className="space-y-0.5 pl-1">
       {items.map((item, i) => (
@@ -156,8 +157,13 @@ function Badge({ text, color }: { text: string; color: string }) {
   );
 }
 
-function EmptyHint({ text }: { text: string }) {
-  return <p className="text-2xs text-text-muted pl-1 italic">{text}</p>;
+function EmptyHint({ text, hint }: { text: string; hint?: string }) {
+  return (
+    <div className="pl-1">
+      <p className="text-xs text-text-muted italic">{text}</p>
+      {hint && <p className="text-xs text-text-muted/50 mt-0.5">{hint}</p>}
+    </div>
+  );
 }
 
 // ── Section renderer ───────────────────────────────────────────────────────
@@ -169,9 +175,9 @@ function SectionContent({ bp, sectionId }: { bp: BlueprintEntry; sectionId: stri
     case 'addedComponents': return <ComponentsSection comps={bp.addedComponents} />;
     case 'variables': return <VariablesSection vars={bp.variables} />;
     case 'eventGraphEntryPoints':
-      return <StringListSection items={bp.eventGraphEntryPoints} emptyText="No event graph entries" />;
+      return <StringListSection items={bp.eventGraphEntryPoints} emptyText="No event graph entries" emptyHint="BeginPlay, Tick, and custom events show up here" />;
     case 'interfaces':
-      return <StringListSection items={bp.interfaces} emptyText="No interfaces implemented" />;
+      return <StringListSection items={bp.interfaces} emptyText="No interfaces implemented" emptyHint="Implement UE interfaces (Class Settings > Interfaces) to see them" />;
     case 'contentHash':
       return <Row label="SHA-256" value={bp.contentHash} mono />;
     default: return null;
@@ -272,24 +278,12 @@ export function BlueprintInspector() {
 
       {/* Disconnected banner */}
       {isDisconnected && (
-        <div
-          className="px-4 py-2 text-xs border-b border-border/40 flex items-center gap-2"
-          style={{ backgroundColor: `${STATUS_ERROR}${OPACITY_10}`, color: STATUS_ERROR }}
-        >
-          Bridge not connected &mdash; connect to inspect blueprints
-        </div>
+        <ErrorBanner message="Bridge not connected — connect to inspect blueprints" className="mx-4 my-2" />
       )}
 
       {/* Error */}
       {error && (
-        <div
-          className="px-4 py-2 text-xs border-b border-border/40 flex items-center gap-2"
-          style={{ color: STATUS_ERROR }}
-          data-testid="blueprint-inspector-error"
-        >
-          <AlertCircle className="w-3.5 h-3.5 shrink-0" />
-          <span className="truncate">{error}</span>
-        </div>
+        <ErrorBanner message={error} className="mx-4 my-2" data-testid="blueprint-inspector-error" />
       )}
 
       {/* Results tree */}
@@ -342,9 +336,13 @@ export function BlueprintInspector() {
 
       {/* Empty state */}
       {!blueprint && !error && !loading && (
-        <div className="px-4 py-6 text-center">
-          <p className="text-2xs text-text-muted">
+        <div className="px-4 py-8 text-center">
+          <FileCode className="w-6 h-6 text-text-muted/20 mx-auto mb-2" />
+          <p className="text-xs text-text-muted">
             Enter a blueprint asset path to inspect its anatomy
+          </p>
+          <p className="text-xs text-text-muted/50 mt-1">
+            e.g. /Game/Blueprints/BP_MyCharacter
           </p>
         </div>
       )}

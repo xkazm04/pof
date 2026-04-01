@@ -1,10 +1,11 @@
 'use client';
 
 import { useCallback } from 'react';
-import { Hammer, Loader2 } from 'lucide-react';
+import { Hammer } from 'lucide-react';
 import { useProjectStore } from '@/stores/projectStore';
 import type { DetectedEngine } from './useProjectScan';
 import { SurfaceCard } from '@/components/ui/SurfaceCard';
+import { WizardButton } from './WizardButton';
 
 interface BuildVerifyPanelProps {
   engines: DetectedEngine[];
@@ -108,23 +109,16 @@ STEP 4 — Report: One summary table. If Source/ was created, mention it. Show b
           Health-check your SDK toolchain and compile the project with UnrealBuildTool to
           verify everything is wired correctly.
         </p>
-        <button
+        <WizardButton
+          variant="warning"
           onClick={handleBuild}
-          disabled={isRunning || engines.length === 0}
-          className="flex items-center gap-2 px-4 py-2 bg-[#f59e0b]/10 text-[#f59e0b] border border-[#f59e0b]/20 rounded-lg text-sm hover:bg-[#f59e0b]/20 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+          disabled={engines.length === 0}
+          loading={isRunning}
+          loadingLabel="Building & Verifying..."
+          icon={<Hammer className="w-4 h-4" />}
         >
-          {isRunning ? (
-            <>
-              <Loader2 className="w-4 h-4 animate-spin" />
-              Building & Verifying...
-            </>
-          ) : (
-            <>
-              <Hammer className="w-4 h-4" />
-              Build & Verify Project
-            </>
-          )}
-        </button>
+          Build & Verify Project
+        </WizardButton>
       </SurfaceCard>
     </div>
   );

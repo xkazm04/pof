@@ -92,7 +92,7 @@ export function OptimizerTab({
                   <div className="flex items-center gap-2 relative z-10">
                     <Icon className="w-4 h-4" style={{ color: preset.color, filter: `drop-shadow(0 0 4px ${preset.color}80)` }} />
                     <div>
-                      <div className="text-[10px] font-mono uppercase tracking-[0.15em] text-text">{preset.label}</div>
+                      <div className="text-xs font-mono uppercase tracking-[0.15em] text-text">{preset.label}</div>
                       <div className="text-xs text-text-muted leading-tight">{preset.description}</div>
                     </div>
                   </div>
@@ -105,7 +105,7 @@ export function OptimizerTab({
             <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} className="mt-3 space-y-3 border-t pt-3" style={{ borderColor: `${ACCENT}18` }}>
               {(['dps', 'ehp', 'mana'] as const).map(key => (
                 <div key={key} className="flex items-center gap-2">
-                  <span className="text-[10px] font-mono uppercase tracking-[0.15em] w-10 text-text-muted">{key}</span>
+                  <span className="text-xs font-mono uppercase tracking-[0.15em] w-10 text-text-muted">{key}</span>
                   <input title={key} type="range" min={0} max={1} step={0.05} value={customWeights[key]}
                     onChange={e => setCustomWeights(w => ({ ...w, [key]: Number(e.target.value) }))}
                     className="flex-1 h-1.5 rounded-lg appearance-none cursor-pointer" style={{ accentColor: ACCENT }}
@@ -131,7 +131,7 @@ export function OptimizerTab({
               <GlowStat label="Per Lv" value={UE5.attributePointsPerLevel} color={ACCENT} delay={0.1} />
             </div>
             <div className="border-t pt-3" style={{ borderColor: `${ACCENT}18` }}>
-              <div className="text-[10px] font-mono uppercase tracking-[0.15em] text-text-muted mb-2">UE5 Per-Point Ratios</div>
+              <div className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted mb-2">UE5 Per-Point Ratios</div>
               <div className="space-y-1.5 text-xs font-mono">
                 <div className="flex justify-between"><span style={{ color: STATUS_ERROR }}>STR</span><span className="text-text">+{UE5.attackPowerPerSTR} AP</span></div>
                 <div className="flex justify-between"><span style={{ color: ACCENT_EMERALD }}>DEX</span><span className="text-text">+{(UE5.critChancePerDEX * 100).toFixed(1)}% Crit</span></div>
@@ -148,10 +148,10 @@ export function OptimizerTab({
           <div className="flex items-center justify-between mb-3">
             <SectionHeader icon={Swords} label="Current Allocation" color={accentColor} />
             <div className="flex gap-1">
-              <button onClick={applyOptimal} className="text-[10px] font-mono uppercase tracking-[0.15em] px-2 py-0.5 rounded border hover:bg-surface-hover/50 transition-colors flex items-center gap-1 text-text-muted hover:text-text" style={{ borderColor: `${STATUS_SUCCESS}30` }}>
+              <button onClick={applyOptimal} className="text-xs font-mono uppercase tracking-[0.15em] px-2 py-0.5 rounded border hover:bg-surface-hover/50 transition-colors flex items-center gap-1 text-text-muted hover:text-text" style={{ borderColor: `${STATUS_SUCCESS}30` }}>
                 <CheckCircle2 className="w-3 h-3" style={{ color: STATUS_SUCCESS }} /> Apply
               </button>
-              <button onClick={resetAlloc} className="text-[10px] font-mono uppercase tracking-[0.15em] px-2 py-0.5 rounded border border-border/40 hover:bg-surface-hover/50 transition-colors flex items-center gap-1 text-text-muted hover:text-text">
+              <button onClick={resetAlloc} className="text-xs font-mono uppercase tracking-[0.15em] px-2 py-0.5 rounded border border-border/40 hover:bg-surface-hover/50 transition-colors flex items-center gap-1 text-text-muted hover:text-text">
                 <RotateCcw className="w-3 h-3" /> Reset
               </button>
             </div>
@@ -164,7 +164,7 @@ export function OptimizerTab({
           </div>
 
           <div className="mt-3 pt-3 flex items-center justify-between text-xs font-mono" style={{ borderTop: `1px solid ${ACCENT}18` }}>
-            <span className="text-[10px] font-mono uppercase tracking-[0.15em] text-text-muted">Unspent</span>
+            <span className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted">Unspent</span>
             <span className={remaining > 0 ? 'text-amber-400 font-bold' : remaining < 0 ? 'text-red-400 font-bold' : 'text-emerald-400'}>
               {remaining > 0 && <AlertTriangle className="w-3 h-3 inline mr-1" />}
               {remaining} pts

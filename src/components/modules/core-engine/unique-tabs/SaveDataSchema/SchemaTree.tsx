@@ -70,7 +70,7 @@ export function SchemaTree({ expandedGroups, toggleGroup }: SchemaTreeProps) {
   return (
     <BlueprintPanel color={ACCENT} className="p-0 flex flex-col h-full overflow-hidden">
       <div className="px-4 py-3 border-b border-border/10 flex items-center justify-between">
-        <span className="text-[10px] font-mono uppercase tracking-[0.15em] text-text-muted">DATA_STRUCTURE.h</span>
+        <span className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted">DATA_STRUCTURE.h</span>
         <span className="flex gap-1.5 items-center">
           <span className="w-2 h-2 rounded-full bg-red-500/50" />
           <span className="w-2 h-2 rounded-full bg-amber-500/50" />

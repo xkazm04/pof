@@ -19,7 +19,7 @@ export function TacticsMap({ enemies, roleColors }: TacticsMapProps) {
       {[30, 60, 90].map(y => <line key={`hg${y}`} x1={4} y1={y} x2={156} y2={y} stroke="rgba(255,255,255,0.03)" strokeWidth="1" />)}
       {/* Player at center */}
       <circle cx={80} cy={60} r={8} fill={`${MODULE_COLORS.core}33`} stroke={MODULE_COLORS.core} strokeWidth="1.5" />
-      <text x={80} y={60} textAnchor="middle" dominantBaseline="central" className="text-[11px] font-mono font-bold" fill={MODULE_COLORS.core} style={{ fontSize: 11 }}>P</text>
+      <text x={80} y={60} textAnchor="middle" dominantBaseline="central" className="text-xs font-mono font-bold" fill={MODULE_COLORS.core}>P</text>
       {/* Enemies */}
       {enemies.map(enemy => {
         const roleColor = roleColors[enemy.role];
@@ -29,12 +29,12 @@ export function TacticsMap({ enemies, roleColors }: TacticsMapProps) {
               fill={`${roleColor}20`} stroke={roleColor} strokeWidth="1.5"
             />
             <text x={enemy.x} y={enemy.y} textAnchor="middle" dominantBaseline="central"
-              className="text-[11px] font-mono font-bold pointer-events-none" fill={roleColor} style={{ fontSize: 11 }}>
+              className="text-xs font-mono font-bold pointer-events-none" fill={roleColor}>
               {enemy.id}
             </text>
             {/* Label */}
             <text x={enemy.x} y={enemy.y + 14} textAnchor="middle"
-              className="text-[11px] font-mono fill-[rgba(255,255,255,0.4)]" style={{ fontSize: 11 }}>
+              className="text-xs font-mono fill-[rgba(255,255,255,0.4)]">
               {enemy.label}
             </text>
             {/* Attack line to player for attackers */}

@@ -60,7 +60,7 @@ export function FlowGraph({ highlightedFlowNode, onToggleNode }: FlowGraphProps)
                 />
                 {edge.label && (
                   <text x={mx} y={my - 6} textAnchor="middle"
-                    className="text-[11px] font-mono"
+                    className="text-xs font-mono"
                     fill={isHighlighted ? ACCENT : 'var(--text-muted)'}
                     style={{ transition: 'fill 0.2s' }}>{edge.label}</text>
                 )}
@@ -89,7 +89,7 @@ export function FlowGraph({ highlightedFlowNode, onToggleNode }: FlowGraphProps)
                   stroke={nodeColor} strokeWidth={isHighlighted ? 3 : 2}
                   style={{ filter: isHighlighted ? `drop-shadow(0 0 10px ${nodeColor})` : `drop-shadow(0 0 4px ${nodeColor}40)`, transition: 'all 0.2s' }} />
                 <text x={x} y={y} textAnchor="middle" dominantBaseline="central"
-                  className="text-[11px] font-mono font-bold pointer-events-none" fill={nodeColor}>{node.label}</text>
+                  className="text-xs font-mono font-bold pointer-events-none" fill={nodeColor}>{node.label}</text>
               </g>
             );
           })}
@@ -97,7 +97,7 @@ export function FlowGraph({ highlightedFlowNode, onToggleNode }: FlowGraphProps)
       </div>
       <div className="flex flex-wrap gap-3 mt-3 justify-center">
         {Object.entries(FLOW_GROUP_COLORS).map(([group, color]) => (
-          <span key={group} className="flex items-center gap-1.5 text-[10px] font-mono uppercase tracking-[0.15em] font-bold" style={{ color }}>
+          <span key={group} className="flex items-center gap-1.5 text-xs font-mono uppercase tracking-[0.15em] font-bold" style={{ color }}>
             <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: color, boxShadow: `0 0 4px ${color}` }} />
             {group}
           </span>

@@ -45,8 +45,8 @@ export function LoadoutEditor({
                 style={{ backgroundColor: `${slot.iconColor}08`, ...(isSelected ? { animation: 'loadout-pulse 1.5s ease-in-out infinite', boxShadow: `0 0 8px 1px ${slot.iconColor}50` } : {}) }}
                 onClick={() => setSelectedId(isSelected ? null : slot.id)}>
                 <Zap className="w-5 h-5" style={{ color: slot.iconColor, filter: `drop-shadow(0 0 6px ${slot.iconColor})` }} />
-                <span className="text-[10px] font-mono font-bold truncate w-full text-center px-0.5" style={{ color: slot.iconColor, textShadow: `0 0 12px ${slot.iconColor}40` }}>{slot.abilityName}</span>
-                <span className="absolute -top-1.5 -left-1.5 w-4 h-4 rounded-full text-[10px] font-bold flex items-center justify-center bg-surface border border-border/60 text-text-muted">{slot.slot}</span>
+                <span className="text-xs font-mono font-bold truncate w-full text-center px-0.5" style={{ color: slot.iconColor, textShadow: `0 0 12px ${slot.iconColor}40` }}>{slot.abilityName}</span>
+                <span className="absolute -top-1.5 -left-1.5 w-4 h-4 rounded-full text-xs font-bold flex items-center justify-center bg-surface border border-border/60 text-text-muted">{slot.slot}</span>
               </motion.button>
             );
           })}

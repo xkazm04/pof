@@ -6,6 +6,8 @@ import {
   Database, TestTube, Camera, Cpu, Activity, Settings, Radio,
 } from 'lucide-react';
 import { SurfaceCard } from '@/components/ui/SurfaceCard';
+import { ConnectionStatusBadge, type ConnectionStatus } from '@/components/ui/ConnectionStatusBadge';
+import { ErrorBanner } from './ErrorBanner';
 import { usePofBridgeStore } from '@/stores/pofBridgeStore';
 import { useUE5BridgeStore } from '@/stores/ue5BridgeStore';
 import {
@@ -214,7 +216,7 @@ export function BridgeEndpointHealth() {
   const checkedCount = Object.keys(health).length;
 
   return (
-    <SurfaceCard className="p-0 overflow-hidden" data-testid="bridge-endpoint-health-panel">
+    <SurfaceCard className="p-0 overflow-hidden" data-testid="bridge-endpoint-health-panel" role="region" aria-label="Bridge Endpoints">
       {/* Header */}
       <div className="px-4 py-3 border-b border-border/40 flex items-center gap-3">
         <div
@@ -224,8 +226,11 @@ export function BridgeEndpointHealth() {
           <Network className="w-4 h-4" style={{ color: ACCENT_CYAN }} />
         </div>
         <div className="flex-1 min-w-0">
-          <h3 className="text-sm font-bold text-text">Bridge Endpoints</h3>
-          <p className="text-2xs text-text-muted">
+          <div className="flex items-center gap-2">
+            <h3 className="text-sm font-bold text-text">Bridge Endpoints</h3>
+            <ConnectionStatusBadge status={connectionStatus as ConnectionStatus} />
+          </div>
+          <p className="text-2xs text-text-muted" aria-live="polite">
             <span className="font-mono" style={{ color: ACCENT_EMERALD }}>:{pofPort}</span>
             <span className="mx-1">/pof</span>
             &middot;
@@ -266,8 +271,9 @@ export function BridgeEndpointHealth() {
         <div className="px-4 py-3 border-b border-border/40 space-y-3" style={{ backgroundColor: `${ACCENT_CYAN}${OPACITY_8}` }} data-testid="bridge-connection-settings">
           {/* Host */}
           <div className="flex items-center gap-3">
-            <label className="text-2xs font-bold text-text-muted uppercase tracking-wider w-20 shrink-0">Host</label>
+            <label htmlFor="beh-host" className="text-2xs font-bold text-text-muted uppercase tracking-wider w-20 shrink-0">Host</label>
             <input
+              id="beh-host"
               type="text"
               value={host}
               onChange={(e) => setHost(e.target.value)}
@@ -283,11 +289,12 @@ export function BridgeEndpointHealth() {
             <div className="space-y-1" data-testid="bridge-pof-port-field">
               <div className="flex items-center gap-1.5">
                 <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: ACCENT_EMERALD }} />
-                <label className="text-2xs font-bold uppercase tracking-wider" style={{ color: ACCENT_EMERALD }}>
+                <label htmlFor="beh-pof-port" className="text-2xs font-bold uppercase tracking-wider" style={{ color: ACCENT_EMERALD }}>
                   PoF Bridge Port
                 </label>
               </div>
               <input
+                id="beh-pof-port"
                 type="number"
                 min={1024}
                 max={65535}
@@ -308,11 +315,12 @@ export function BridgeEndpointHealth() {
             <div className="space-y-1" data-testid="bridge-rc-port-field">
               <div className="flex items-center gap-1.5">
                 <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: ACCENT_CYAN }} />
-                <label className="text-2xs font-bold uppercase tracking-wider" style={{ color: ACCENT_CYAN }}>
+                <label htmlFor="beh-rc-port" className="text-2xs font-bold uppercase tracking-wider" style={{ color: ACCENT_CYAN }}>
                   Remote Control Port
                 </label>
               </div>
               <input
+                id="beh-rc-port"
                 type="number"
                 min={1024}
                 max={65535}
@@ -334,12 +342,7 @@ export function BridgeEndpointHealth() {
 
       {/* Disconnected banner */}
       {isDisconnected && (
-        <div
-          className="px-4 py-2 text-xs border-b border-border/40 flex items-center gap-2"
-          style={{ backgroundColor: `${STATUS_ERROR}${OPACITY_8}`, color: STATUS_ERROR }}
-        >
-          Bridge not connected &mdash; connect to ping endpoints
-        </div>
+        <ErrorBanner message="Bridge not connected — connect to ping endpoints" className="mx-4 my-2" />
       )}
 
       {/* Subsystem groups */}
@@ -355,6 +358,8 @@ export function BridgeEndpointHealth() {
               {/* Group header */}
               <button
                 onClick={() => toggleCollapse(subsystem.id)}
+                aria-expanded={isOpen}
+                aria-controls={`beh-group-${subsystem.id}`}
                 className="w-full flex items-center gap-2.5 px-4 py-2 text-left hover:bg-white/3 transition-colors"
                 data-testid={`bridge-group-${subsystem.id}-toggle`}
               >
@@ -386,7 +391,7 @@ export function BridgeEndpointHealth() {
 
               {/* Endpoints */}
               {isOpen && (
-                <div className={`pb-1${subsystem.notIntegrated ? ' opacity-50' : ''}`}>
+                <div id={`beh-group-${subsystem.id}`} role="region" aria-label={subsystem.label} className={`pb-1${subsystem.notIntegrated ? ' opacity-50' : ''}`}>
                   {subsystem.endpoints.map((ep) => {
                     const h = health[ep.path];
                     const dotColor = h ? healthDotColor(h.status) : STATUS_NEUTRAL;
@@ -399,6 +404,8 @@ export function BridgeEndpointHealth() {
                         {/* Health dot */}
                         <span
                           className="w-1.5 h-1.5 rounded-full shrink-0"
+                          role="img"
+                          aria-label={`Status: ${h?.status ?? 'unknown'}`}
                           style={{
                             backgroundColor: dotColor,
                             boxShadow: h?.status === 'healthy' ? `0 0 6px ${dotColor}` : 'none',

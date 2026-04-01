@@ -110,13 +110,13 @@ export function TagRulesEditor({
                 <input value={rule.targetTag} onChange={(e) => updateRule(rule.id, { targetTag: e.target.value })} className="bg-surface-deep border rounded px-1.5 py-0.5 text-text w-32 focus:outline-none" style={{ borderColor: v?.tgtUnmatched ? `${STATUS_WARNING}80` : undefined }} />
                 {v?.tgtUnmatched && <span className="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full" style={{ backgroundColor: STATUS_WARNING }} title="Unmatched: no effect or loadout uses this tag" />}
               </div>
-              {v?.conflict && <span className="flex-shrink-0 px-1.5 py-0.5 rounded text-[10px] font-bold" style={{ backgroundColor: `${STATUS_ERROR}20`, color: STATUS_ERROR, border: `1px solid ${STATUS_ERROR}40` }} title={v.conflict}>CONFLICT</span>}
+              {v?.conflict && <span className="flex-shrink-0 px-1.5 py-0.5 rounded text-xs font-bold" style={{ backgroundColor: `${STATUS_ERROR}20`, color: STATUS_ERROR, border: `1px solid ${STATUS_ERROR}40` }} title={v.conflict}>CONFLICT</span>}
               <button onClick={() => removeRule(rule.id)} className="text-text-muted hover:text-red-400 flex-shrink-0"><Trash2 className="w-3 h-3" /></button>
             </div>
           );
         })}
       </div>
-      <button onClick={addRule} className="flex items-center gap-1.5 px-2.5 py-1 rounded text-[10px] font-mono uppercase tracking-[0.15em] font-medium" style={{ backgroundColor: `${STATUS_ERROR}15`, color: STATUS_ERROR, border: `1px solid ${STATUS_ERROR}30` }}><Plus className="w-3 h-3" /> Add Rule</button>
+      <button onClick={addRule} className="flex items-center gap-1.5 px-2.5 py-1 rounded text-xs font-mono uppercase tracking-[0.15em] font-medium" style={{ backgroundColor: `${STATUS_ERROR}15`, color: STATUS_ERROR, border: `1px solid ${STATUS_ERROR}30` }}><Plus className="w-3 h-3" /> Add Rule</button>
     </div>
   );
 }

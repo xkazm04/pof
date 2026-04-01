@@ -108,7 +108,7 @@ export function ItemDNAGenomeEditor({ moduleId }: Props) {
             </div>
             <div className="flex flex-col">
               <span className="text-sm font-bold text-text tracking-wide">Item DNA Genome System</span>
-              <span className="text-[10px] font-mono uppercase tracking-[0.15em] text-text-muted">
+              <span className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted">
                 <span className="font-medium" style={{ color: ACCENT }}>{genomes.length}</span>
                 <span className="opacity-60"> genomes defined</span>
               </span>

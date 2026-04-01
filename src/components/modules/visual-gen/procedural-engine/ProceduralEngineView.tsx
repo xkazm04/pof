@@ -266,7 +266,7 @@ function GeneratorTab() {
               <select
                 value={terrainConfig.size}
                 onChange={(e) => setTerrainConfig({ size: Number(e.target.value) })}
-                className="w-full bg-surface border border-border rounded px-2 py-1 text-sm text-text"
+                className="w-full bg-surface border border-border rounded-lg px-2 py-1 text-sm text-text"
               >
                 <option value={65}>65x65</option>
                 <option value={129}>129x129</option>
@@ -291,7 +291,7 @@ function GeneratorTab() {
                 type="number"
                 value={terrainConfig.seed}
                 onChange={(e) => setTerrainConfig({ seed: Number(e.target.value) })}
-                className="w-full bg-surface border border-border rounded px-2 py-1 text-sm text-text"
+                className="w-full bg-surface border border-border rounded-lg px-2 py-1 text-sm text-text"
               />
             </label>
           </div>
@@ -377,7 +377,7 @@ function GeneratorTab() {
                 type="number"
                 value={dungeonConfig.seed}
                 onChange={(e) => setDungeonConfig({ seed: Number(e.target.value) })}
-                className="w-full bg-surface border border-border rounded px-2 py-1 text-sm text-text"
+                className="w-full bg-surface border border-border rounded-lg px-2 py-1 text-sm text-text"
               />
             </label>
           </div>
@@ -427,7 +427,7 @@ function GeneratorTab() {
                 type="number"
                 value={vegetationConfig.seed}
                 onChange={(e) => setVegetationConfig({ seed: Number(e.target.value) })}
-                className="w-full bg-surface border border-border rounded px-2 py-1 text-sm text-text"
+                className="w-full bg-surface border border-border rounded-lg px-2 py-1 text-sm text-text"
               />
             </label>
             <div className="col-span-2">

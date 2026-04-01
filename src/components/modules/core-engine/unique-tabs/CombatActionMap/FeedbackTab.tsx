@@ -36,7 +36,7 @@ export function FeedbackTab({ feedbackValues, juiceLevel, onPreset, onParam }: F
                 <button
                   key={preset.name}
                   onClick={() => onPreset(preset)}
-                  className="text-[10px] font-mono uppercase tracking-[0.15em] font-bold px-2 py-0.5 rounded border transition-colors hover:brightness-125"
+                  className="text-xs font-mono uppercase tracking-[0.15em] font-bold px-2 py-0.5 rounded border transition-colors hover:brightness-125"
                   style={{ color: preset.color, borderColor: `${preset.color}40`, backgroundColor: `${preset.color}10` }}
                 >
                   {preset.name}
@@ -50,7 +50,7 @@ export function FeedbackTab({ feedbackValues, juiceLevel, onPreset, onParam }: F
               const pct = ((val - param.min) / (param.max - param.min)) * 100;
               return (
                 <div key={param.id} className="flex items-center gap-3">
-                  <span className="text-[10px] font-mono uppercase tracking-[0.15em] text-text-muted w-[120px] flex-shrink-0 truncate">{param.label}</span>
+                  <span className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted w-[120px] flex-shrink-0 truncate">{param.label}</span>
                   <div className="flex-1 relative">
                     <NeonBar pct={pct} color={ACCENT} />
                     <input type="range" min={param.min} max={param.max} step={param.step} value={val} onChange={(e) => onParam(param.id, parseFloat(e.target.value))} className="absolute inset-0 w-full opacity-0 cursor-pointer" />
@@ -64,7 +64,7 @@ export function FeedbackTab({ feedbackValues, juiceLevel, onPreset, onParam }: F
           </div>
           <div className="mt-3 pt-3 border-t border-border/30">
             <div className="flex items-center gap-3">
-              <span className="text-[10px] font-mono font-bold uppercase tracking-[0.15em] text-text-muted">Juice Level</span>
+              <span className="text-xs font-mono font-bold uppercase tracking-[0.15em] text-text-muted">Juice Level</span>
               <div className="flex-1">
                 <NeonBar pct={juiceLevel * 100} color={juiceColor} height={10} glow />
               </div>
@@ -82,7 +82,7 @@ export function FeedbackTab({ feedbackValues, juiceLevel, onPreset, onParam }: F
             <div className="mt-3 space-y-3">
               {HITSTOP_ABILITIES.map((ability, idx) => (
                 <motion.div key={ability.name} initial={{ opacity: 0, x: -8 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: idx * 0.08 }} className="flex items-center gap-3">
-                  <span className="text-[10px] font-mono uppercase tracking-[0.15em] text-text-muted w-[100px] flex-shrink-0">{ability.name}</span>
+                  <span className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted w-[100px] flex-shrink-0">{ability.name}</span>
                   <div className="flex-1 h-2 rounded-full border border-border/20 bg-surface-deep relative">
                     <div className="absolute top-0 bottom-0 left-0 bg-surface-hover border-r border-border/50" style={{ width: `${(ability.animDuration / 1.5) * 100}%` }} />
                     <div className="absolute top-0 bottom-0 left-0 animate-pulse" style={{ width: `${(ability.hitstop / MAX_HITSTOP) * 30}%`, left: '10%', backgroundColor: ability.color, boxShadow: `0 0 8px ${ability.color}80` }} />
@@ -98,7 +98,7 @@ export function FeedbackTab({ feedbackValues, juiceLevel, onPreset, onParam }: F
             <SectionHeader label="Stagger Pipeline" color={STATUS_ERROR} icon={TrendingUp} />
             <div className="mt-3">
               <TimelineStrip events={STAGGER_TIMELINE} accent={STATUS_ERROR} />
-              <div className="flex justify-between mt-3 text-[10px] font-mono uppercase tracking-[0.15em] text-text-muted">
+              <div className="flex justify-between mt-3 text-xs font-mono uppercase tracking-[0.15em] text-text-muted">
                 <span>Threshold: {STAGGER_CONFIG.threshold}</span>
                 <span>Decay: {STAGGER_CONFIG.decayRate}/s</span>
               </div>

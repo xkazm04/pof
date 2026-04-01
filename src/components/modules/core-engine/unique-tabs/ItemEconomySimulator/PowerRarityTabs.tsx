@@ -20,7 +20,7 @@ export function PowerTab({ result, config }: {
     <div className="space-y-3">
       <BlueprintPanel color={ACCENT} className="p-3 space-y-3">
         <SectionHeader icon={TrendingUp} label="Item Power vs. Level" color={ACCENT} />
-        <p className="text-[10px] font-mono uppercase tracking-[0.15em] text-text-muted">
+        <p className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted">
           Average equipped item power per level bracket. Band shows P10-P90 spread.
         </p>
         <div className="min-h-[200px] bg-surface-deep/30 rounded-lg p-2">
@@ -48,7 +48,7 @@ export function PowerTab({ result, config }: {
             );
           })}
         </div>
-        <div className="flex justify-between text-[10px] font-mono uppercase tracking-[0.15em] text-text-muted">
+        <div className="flex justify-between text-xs font-mono uppercase tracking-[0.15em] text-text-muted">
           <span>Lv1</span>
           <span>Lv{config.maxLevel}</span>
         </div>
@@ -70,7 +70,7 @@ export function PowerTab({ result, config }: {
             );
           })}
         </div>
-        <div className="flex justify-between text-[10px] font-mono uppercase tracking-[0.15em] text-text-muted">
+        <div className="flex justify-between text-xs font-mono uppercase tracking-[0.15em] text-text-muted">
           <span>Lv1</span>
           <span>Lv{config.maxLevel}</span>
         </div>
@@ -88,7 +88,7 @@ export function RarityTab({ result, config }: {
     <div className="space-y-3">
       <BlueprintPanel color={ACCENT} className="p-3 space-y-3">
         <SectionHeader icon={Layers} label="Rarity Distribution by Level" color={ACCENT} />
-        <p className="text-[10px] font-mono uppercase tracking-[0.15em] text-text-muted">
+        <p className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted">
           Stacked rarity breakdown showing how item quality shifts as players level up.
         </p>
         <div className="min-h-[200px] bg-surface-deep/30 rounded-lg p-2">
@@ -131,10 +131,10 @@ function RarityBreakdown({ label, sublabel, brackets }: {
 }) {
   return (
     <BlueprintPanel color={ACCENT} className="p-2 text-center">
-      <span className="text-[10px] font-mono uppercase tracking-[0.15em] text-text-muted block">
+      <span className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted block">
         {label}
       </span>
-      <span className="text-[10px] font-mono text-text block">{sublabel}</span>
+      <span className="text-xs font-mono text-text block">{sublabel}</span>
       <div className="flex gap-1 mt-1 justify-center">
         {RARITY_LABELS.map((r) => {
           const avg = brackets.reduce((s, b) => s + (b.rarityDistribution[r] ?? 0), 0)

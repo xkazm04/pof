@@ -5,17 +5,18 @@ import { motion } from 'framer-motion';
 import { STATUS_SUCCESS, STATUS_WARNING, STATUS_ERROR } from '@/lib/chart-colors';
 import { LiveMetricGauge } from '../_shared';
 import { BlueprintPanel, SectionHeader } from './design';
+import { ACCENT } from './data';
 import {
-  ACCENT, SERIALIZATION_SEGMENTS, SERIALIZATION_BUDGET_MS,
+  SERIALIZATION_SEGMENTS, SERIALIZATION_BUDGET_MS,
   SERIALIZATION_TOTAL, PERF_METRICS,
-} from './data';
+} from './data-panels';
 
 export function SerializationProfiler() {
   return (
     <BlueprintPanel color={ACCENT} className="p-0 overflow-hidden">
       <div className="px-4 py-3 border-b border-border/10 flex items-center justify-between">
         <SectionHeader label="SERIALIZATION_PROFILER" icon={Timer} color={ACCENT} />
-        <span className="text-[10px] font-mono text-cyan-300 uppercase tracking-[0.15em]">
+        <span className="text-xs font-mono text-cyan-300 uppercase tracking-[0.15em]">
           {SERIALIZATION_TOTAL}ms / {SERIALIZATION_BUDGET_MS}ms budget
         </span>
       </div>
@@ -37,7 +38,7 @@ export function SerializationProfiler() {
                   title={`${seg.label}: ${seg.timeMs}ms`}
                 >
                   {pct > 8 && (
-                    <span className="text-[10px] font-mono font-bold relative z-10" style={{ color: seg.color }}>
+                    <span className="text-xs font-mono font-bold relative z-10" style={{ color: seg.color }}>
                       {seg.timeMs}ms
                     </span>
                   )}
@@ -45,7 +46,7 @@ export function SerializationProfiler() {
               );
             })}
             <div className="flex-1 h-full flex items-center justify-center">
-              <span className="text-[10px] font-mono text-text-muted">{SERIALIZATION_BUDGET_MS - SERIALIZATION_TOTAL}ms free</span>
+              <span className="text-xs font-mono text-text-muted">{SERIALIZATION_BUDGET_MS - SERIALIZATION_TOTAL}ms free</span>
             </div>
           </div>
 
@@ -68,7 +69,7 @@ export function SerializationProfiler() {
             <div key={seg.label} className="border border-border/10 rounded-lg p-2.5" style={{ backgroundColor: `${ACCENT}06` }}>
               <div className="flex items-center gap-1.5 mb-1">
                 <span className="w-2 h-2 rounded-full" style={{ backgroundColor: seg.color }} />
-                <span className="text-cyan-300 text-[10px] font-bold uppercase tracking-[0.15em]">{seg.label}</span>
+                <span className="text-cyan-300 text-xs font-bold uppercase tracking-[0.15em]">{seg.label}</span>
               </div>
               <div className="text-lg font-bold" style={{ color: seg.color }}>{seg.timeMs}<span className="text-xs text-text-muted">ms</span></div>
               <div className="text-xs text-text-muted">{((seg.timeMs / SERIALIZATION_TOTAL) * 100).toFixed(0)}% of total</div>

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useCallback } from 'react';
-import { FileCode, Copy, Check, FolderOpen } from 'lucide-react';
+import { FileCode, Copy, Check, FolderOpen, FilePlus2 } from 'lucide-react';
 import { SurfaceCard } from '@/components/ui/SurfaceCard';
 import { UI_TIMEOUTS } from '@/lib/constants';
 
@@ -30,6 +30,17 @@ export function ProjectFilesPanel({ projectPath, projectFiles, onOpenInExplorer 
         Project Files
       </h2>
       <SurfaceCard className="divide-y divide-border">
+        {projectFiles.length === 0 && (
+          <div className="px-4 py-8 text-center">
+            <div className="inline-flex items-center justify-center w-10 h-10 rounded-lg bg-surface-hover mb-3">
+              <FilePlus2 className="w-5 h-5 text-text-muted/40" />
+            </div>
+            <p className="text-xs text-text-muted">No files created yet</p>
+            <p className="text-xs text-text-muted/50 mt-1">
+              Files will appear here as you generate code via checklists
+            </p>
+          </div>
+        )}
         {projectFiles.map((filePath) => (
           <div key={filePath} className="flex items-center gap-2 px-4 py-2 group">
             <FileCode className="w-3.5 h-3.5 text-text-muted shrink-0" />

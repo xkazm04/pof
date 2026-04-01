@@ -31,8 +31,8 @@ export function PoiEncountersGroup() {
                 <div className="flex items-center justify-between mb-2">
                   <span className="text-xs font-bold text-text">{zp.zone}</span>
                   <div className="flex items-center gap-2">
-                    <span className="text-[10px] font-mono uppercase tracking-[0.15em] text-text-muted">{totalPois} POIs</span>
-                    <span className="text-[10px] font-mono uppercase tracking-[0.15em] font-bold px-1.5 py-0.5 rounded"
+                    <span className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted">{totalPois} POIs</span>
+                    <span className="text-xs font-mono uppercase tracking-[0.15em] font-bold px-1.5 py-0.5 rounded"
                       style={{
                         color: zp.discoveryPct === 100 ? STATUS_SUCCESS : zp.discoveryPct > 0 ? STATUS_WARNING : STATUS_LOCKED,
                         backgroundColor: zp.discoveryPct === 100 ? `${STATUS_SUCCESS}15` : zp.discoveryPct > 0 ? `${STATUS_WARNING}15` : 'transparent',
@@ -80,7 +80,7 @@ function PoiLegend() {
       {Object.entries(POI_ICONS).map(([type, cfg]) => {
         const IconComp = cfg.icon;
         return (
-          <span key={type} className="flex items-center gap-1 text-[10px] font-mono uppercase tracking-[0.15em] font-bold" style={{ color: cfg.color }}>
+          <span key={type} className="flex items-center gap-1 text-xs font-mono uppercase tracking-[0.15em] font-bold" style={{ color: cfg.color }}>
             <IconComp className="w-3 h-3" /> {cfg.label}
           </span>
         );
@@ -99,12 +99,12 @@ function ConnectionTable() {
         <table className="w-full text-xs font-mono">
           <thead>
             <tr className="border-b border-border/40">
-              <th className="text-left py-2 px-2 text-[10px] font-mono uppercase tracking-[0.15em] text-text-muted font-bold">From</th>
+              <th className="text-left py-2 px-2 text-xs font-mono uppercase tracking-[0.15em] text-text-muted font-bold">From</th>
               <th className="text-center py-2 px-2" />
-              <th className="text-left py-2 px-2 text-[10px] font-mono uppercase tracking-[0.15em] text-text-muted font-bold">To</th>
-              <th className="text-center py-2 px-2 text-[10px] font-mono uppercase tracking-[0.15em] text-text-muted font-bold">Type</th>
-              <th className="text-center py-2 px-2 text-[10px] font-mono uppercase tracking-[0.15em] text-text-muted font-bold">Est. Time</th>
-              <th className="text-center py-2 px-2 text-[10px] font-mono uppercase tracking-[0.15em] text-text-muted font-bold">NavMesh</th>
+              <th className="text-left py-2 px-2 text-xs font-mono uppercase tracking-[0.15em] text-text-muted font-bold">To</th>
+              <th className="text-center py-2 px-2 text-xs font-mono uppercase tracking-[0.15em] text-text-muted font-bold">Type</th>
+              <th className="text-center py-2 px-2 text-xs font-mono uppercase tracking-[0.15em] text-text-muted font-bold">Est. Time</th>
+              <th className="text-center py-2 px-2 text-xs font-mono uppercase tracking-[0.15em] text-text-muted font-bold">NavMesh</th>
             </tr>
           </thead>
           <tbody>
@@ -166,9 +166,9 @@ function BossArenaCards() {
                   <Skull className="w-4 h-4" style={{ color: STATUS_ERROR, filter: `drop-shadow(0 0 4px ${STATUS_ERROR}60)` }} />
                   {boss.bossName}
                 </div>
-                <div className="text-[10px] font-mono uppercase tracking-[0.15em] text-text-muted mt-0.5">{boss.zone}</div>
+                <div className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted mt-0.5">{boss.zone}</div>
               </div>
-              <span className="text-[10px] font-mono uppercase tracking-[0.15em] font-bold px-1.5 py-0.5 rounded"
+              <span className="text-xs font-mono uppercase tracking-[0.15em] font-bold px-1.5 py-0.5 rounded"
                 style={{ backgroundColor: `${STATUS_ERROR}15`, color: STATUS_ERROR, border: `1px solid ${STATUS_ERROR}30` }}>
                 Rec. Lv{boss.recommendedLevel}
               </span>
@@ -187,7 +187,7 @@ function BossArenaCards() {
                 <span className="text-text-muted">Hazards</span>
                 <div className="flex flex-wrap gap-1 mt-0.5">
                   {boss.hazards.map((h) => (
-                    <span key={h} className="px-1 py-0.5 rounded text-[11px] font-bold"
+                    <span key={h} className="px-1 py-0.5 rounded text-xs font-bold"
                       style={{ backgroundColor: `${STATUS_WARNING}15`, color: STATUS_WARNING, border: `1px solid ${STATUS_WARNING}25` }}>
                       {h}
                     </span>
@@ -218,7 +218,7 @@ function HazardMap() {
         {ZONE_DANGER_SCORES.map((zds) => {
           const dangerColor = zds.score >= 80 ? STATUS_ERROR : zds.score >= 50 ? ACCENT_ORANGE : zds.score >= 20 ? STATUS_WARNING : STATUS_SUCCESS;
           return (
-            <div key={zds.zone} className="flex items-center gap-1.5 text-[10px] font-mono uppercase tracking-[0.15em]">
+            <div key={zds.zone} className="flex items-center gap-1.5 text-xs font-mono uppercase tracking-[0.15em]">
               <span className="text-text-muted">{zds.zone}:</span>
               <span className="font-bold px-1 py-0.5 rounded" style={{ color: dangerColor, backgroundColor: `${dangerColor}15` }}>
                 {zds.score}
@@ -233,11 +233,11 @@ function HazardMap() {
         <table className="w-full text-xs font-mono">
           <thead>
             <tr className="border-b border-border/40">
-              <th className="text-left py-2 px-2 text-[10px] font-mono uppercase tracking-[0.15em] text-text-muted font-bold">Zone</th>
-              <th className="text-left py-2 px-2 text-[10px] font-mono uppercase tracking-[0.15em] text-text-muted font-bold">Type</th>
-              <th className="text-right py-2 px-2 text-[10px] font-mono uppercase tracking-[0.15em] text-text-muted font-bold">DPS</th>
-              <th className="text-right py-2 px-2 text-[10px] font-mono uppercase tracking-[0.15em] text-text-muted font-bold">Area</th>
-              <th className="text-center py-2 px-2 text-[10px] font-mono uppercase tracking-[0.15em] text-text-muted font-bold">Warning</th>
+              <th className="text-left py-2 px-2 text-xs font-mono uppercase tracking-[0.15em] text-text-muted font-bold">Zone</th>
+              <th className="text-left py-2 px-2 text-xs font-mono uppercase tracking-[0.15em] text-text-muted font-bold">Type</th>
+              <th className="text-right py-2 px-2 text-xs font-mono uppercase tracking-[0.15em] text-text-muted font-bold">DPS</th>
+              <th className="text-right py-2 px-2 text-xs font-mono uppercase tracking-[0.15em] text-text-muted font-bold">Area</th>
+              <th className="text-center py-2 px-2 text-xs font-mono uppercase tracking-[0.15em] text-text-muted font-bold">Warning</th>
             </tr>
           </thead>
           <tbody>

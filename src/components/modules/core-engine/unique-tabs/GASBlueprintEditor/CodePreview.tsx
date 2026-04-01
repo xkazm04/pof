@@ -51,7 +51,7 @@ export function CodePreview({ code, prevCode }: { code: string; prevCode: string
         <div className="flex items-center gap-2">
           <button
             onClick={() => setShowDiff(!showDiff)}
-            className="flex items-center gap-1.5 px-2 py-0.5 rounded text-[10px] font-mono uppercase tracking-[0.15em]"
+            className="flex items-center gap-1.5 px-2 py-0.5 rounded text-xs font-mono uppercase tracking-[0.15em]"
             style={{
               backgroundColor: showDiff ? `${ACCENT_CYAN}15` : 'transparent',
               color: showDiff ? ACCENT_CYAN : 'var(--text-muted)',

@@ -63,7 +63,7 @@ export function LootTableVisualizer({ moduleId }: LootTableVisualizerProps) {
       />
 
       <BlueprintPanel className="p-3">
-        <div className="text-[10px] font-mono uppercase tracking-[0.15em] text-text-muted mb-2">
+        <div className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted mb-2">
           Pipeline
         </div>
         <PipelineFlow steps={PIPELINE_STEPS} accent={ACCENT} />

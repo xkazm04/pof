@@ -1,6 +1,7 @@
 'use client';
 
 import { X } from 'lucide-react';
+import { StyledSlider } from '@/components/ui/StyledSlider';
 import { ACCENT_CYAN } from '@/lib/chart-colors';
 
 export function TuningSlider({ label, value, defaultValue = 1.0, onChange, color }: {
@@ -17,18 +18,15 @@ export function TuningSlider({ label, value, defaultValue = 1.0, onChange, color
 
   return (
     <div className="flex items-center gap-2">
-      <span className="text-[10px] font-mono uppercase tracking-[0.15em] text-text-muted w-20 truncate shrink-0">{label}</span>
+      <span className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted w-20 truncate shrink-0">{label}</span>
       <div className="flex-1 relative">
-        <input
-          type="range"
+        <StyledSlider
           min={0.5}
           max={2.0}
           step={0.05}
           value={value}
-          onChange={(e) => onChange(Number(e.target.value))}
-          className="w-full h-1 rounded-full appearance-none bg-border cursor-pointer relative z-10
-                     [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-2.5 [&::-webkit-slider-thumb]:h-2.5 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:border [&::-webkit-slider-thumb]:border-white [&::-webkit-slider-thumb]:cursor-pointer"
-          style={{ accentColor: c }}
+          onChange={onChange}
+          accentColor={c}
         />
         <div
           className="absolute top-1/2 -translate-y-1/2 w-[2px] h-2.5 rounded-full pointer-events-none z-0"
@@ -40,7 +38,7 @@ export function TuningSlider({ label, value, defaultValue = 1.0, onChange, color
       </span>
       {hasDelta && (
         <span
-          className="text-[10px] font-mono font-bold px-1 py-0.5 rounded shrink-0"
+          className="text-xs font-mono font-bold px-1 py-0.5 rounded shrink-0"
           style={{ color: c, backgroundColor: `${c}15` }}
         >
           {delta > 0 ? '+' : ''}{delta.toFixed(2)}
@@ -63,7 +61,7 @@ export function StatBox({ label, value, color }: { label: string; value: string;
   return (
     <div className="p-1.5 rounded-md bg-black/30 border border-border/30 text-center">
       <div className="text-xs font-mono font-bold" style={{ color }}>{value}</div>
-      <div className="text-[10px] font-mono uppercase tracking-[0.15em] text-text-muted">{label}</div>
+      <div className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted">{label}</div>
     </div>
   );
 }

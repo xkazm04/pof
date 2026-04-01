@@ -19,7 +19,7 @@ import { apiFetch } from '@/lib/api-utils';
 import { MODULE_LABELS } from '@/lib/module-registry';
 import { SurfaceCard } from '@/components/ui/SurfaceCard';
 import type { OverlapReport, OverlapPair, ModuleOverlapSummary } from '@/lib/overlap-detection';
-import { UI_TIMEOUTS } from '@/lib/constants';
+import { UI_TIMEOUTS, MOTION } from '@/lib/constants';
 import { STATUS_ERROR, STATUS_WARNING, STATUS_SUCCESS, OPACITY_30, STATUS_STALE } from '@/lib/chart-colors';
 
 // ── Reason labels + colors ──
@@ -248,7 +248,7 @@ function StatCard({ label, value, color, icon: Icon }: {
     <motion.div
       initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.22 }}
+      transition={{ duration: MOTION.base }}
       className="bg-surface border border-border rounded-lg p-3"
     >
       <div className="flex items-center gap-1.5 mb-1">
@@ -392,7 +392,7 @@ function OverlapRow({ overlap, isExpanded, isCopied, onToggle, onCopy }: {
           initial={{ height: 0, opacity: 0 }}
           animate={{ height: 'auto', opacity: 1 }}
           exit={{ height: 0, opacity: 0 }}
-          transition={{ duration: 0.18 }}
+          transition={{ duration: MOTION.base }}
           className="border-t border-border bg-surface-deep"
         >
           <div className="grid grid-cols-2 gap-4 p-4">

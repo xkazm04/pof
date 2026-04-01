@@ -1,10 +1,11 @@
 'use client';
 
 import { useCallback } from 'react';
-import { Rocket, Loader2 } from 'lucide-react';
+import { Rocket } from 'lucide-react';
 import { useProjectStore } from '@/stores/projectStore';
 import type { DetectedEngine } from './useProjectScan';
 import { SurfaceCard } from '@/components/ui/SurfaceCard';
+import { WizardButton } from './WizardButton';
 
 interface CreateProjectPanelProps {
   engines: DetectedEngine[];
@@ -52,23 +53,16 @@ Enable the EnhancedInput plugin in the .uproject.`;
           Let Claude scaffold a new UE C++ project. This will create the folder structure,
           .uproject, Source/, Build.cs, and basic GameMode class.
         </p>
-        <button
+        <WizardButton
+          variant="primary"
           onClick={handleCreate}
-          disabled={!projectName.trim() || engines.length === 0 || isRunning}
-          className="flex items-center gap-2 px-4 py-2 bg-accent-medium text-[#00ff88] border border-accent-strong rounded-lg text-sm hover:bg-accent-strong transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+          disabled={!projectName.trim() || engines.length === 0}
+          loading={isRunning}
+          loadingLabel="Creating Project..."
+          icon={<Rocket className="w-4 h-4" />}
         >
-          {isRunning ? (
-            <>
-              <Loader2 className="w-4 h-4 animate-spin" />
-              Creating Project...
-            </>
-          ) : (
-            <>
-              <Rocket className="w-4 h-4" />
-              Create Project with Claude
-            </>
-          )}
-        </button>
+          Create Project with Claude
+        </WizardButton>
         {engines.length === 0 && (
           <p className="text-xs text-red-400/80 mt-2">
             Install Unreal Engine first to enable project creation.

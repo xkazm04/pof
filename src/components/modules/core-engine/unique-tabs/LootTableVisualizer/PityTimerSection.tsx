@@ -65,7 +65,7 @@ export function PityTimerSection({ pityThreshold, setPityThreshold }: PityTimerS
           Drop!
         </button>
         <div className="flex items-center gap-2 flex-1">
-          <span className="text-[10px] font-mono uppercase tracking-[0.15em] text-text-muted">Pity Threshold:</span>
+          <span className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted">Pity Threshold:</span>
           <input type="range" min={10} max={50} value={pityThreshold} onChange={(e) => setPityThreshold(Number(e.target.value))} className="flex-1 h-1 accent-blue-500" />
           <span className="text-2xs font-mono" style={{ color: STATUS_INFO }}>{pityThreshold}</span>
         </div>
@@ -80,7 +80,7 @@ export function PityTimerSection({ pityThreshold, setPityThreshold }: PityTimerS
       {/* History */}
       {pityHistory.length > 0 && (
         <div>
-          <div className="text-[10px] font-mono uppercase tracking-[0.15em] text-text-muted mb-1">Drop Gaps (drops between Rare+)</div>
+          <div className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted mb-1">Drop Gaps (drops between Rare+)</div>
           <div className="flex items-end gap-1 h-12">
             {pityHistory.slice(-20).map((gap, i) => (
               <motion.div

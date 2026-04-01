@@ -13,7 +13,7 @@ export function AggroTable() {
       <div className="mt-3 grid grid-cols-1 md:grid-cols-2 gap-4">
         {/* Threat bars */}
         <div className="space-y-3">
-          <div className="text-[10px] font-mono uppercase tracking-[0.15em] text-text-muted">Threat Values</div>
+          <div className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted">Threat Values</div>
           {AGGRO_TABLE.map(entry => (
             <div key={entry.target} className="space-y-1.5">
               <div className="flex items-center justify-between">
@@ -23,7 +23,7 @@ export function AggroTable() {
               <NeonBar pct={entry.threat} color={entry.color} glow />
               <div className="flex gap-2">
                 {entry.breakdown.map(b => (
-                  <span key={b.source} className="text-[11px] font-mono text-text-muted">
+                  <span key={b.source} className="text-xs font-mono text-text-muted">
                     {b.source}={b.pct}%
                   </span>
                 ))}
@@ -34,7 +34,7 @@ export function AggroTable() {
 
         {/* Aggro switch events */}
         <div className="space-y-3">
-          <div className="text-[10px] font-mono uppercase tracking-[0.15em] text-text-muted">Aggro Switch Log</div>
+          <div className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted">Aggro Switch Log</div>
           <div className="space-y-1.5">
             {AGGRO_EVENTS.map((evt, i) => (
               <motion.div key={i}

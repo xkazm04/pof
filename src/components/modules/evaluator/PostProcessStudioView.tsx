@@ -25,6 +25,7 @@ import type {
   PPEffectCategory,
 } from '@/types/post-process-studio';
 import { ACCENT_VIOLET, STATUS_WARNING, STATUS_IMPROVED, ACCENT_EMERALD, ACCENT_PINK, MODULE_COLORS, ACCENT_EMERALD_DARK, STATUS_NEUTRAL } from '@/lib/chart-colors';
+import { MOTION } from '@/lib/constants';
 
 // ── Constants ───────────────────────────────────────────────────────────────
 
@@ -221,7 +222,7 @@ export function PostProcessStudioView() {
                     style={{ backgroundColor: budgetColor }}
                     initial={{ width: 0 }}
                     animate={{ width: `${budgetPct}%` }}
-                    transition={{ duration: 0.45, ease: [0.16, 1, 0.3, 1] }}
+                    transition={{ duration: MOTION.slow, ease: MOTION.ease }}
                   />
                 </div>
               </div>
@@ -294,7 +295,7 @@ export function PostProcessStudioView() {
                     initial={{ opacity: 0, y: 6 }}
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, y: -6 }}
-                    transition={{ duration: 0.12 }}
+                    transition={{ duration: MOTION.fast }}
                   >
                     <EffectCard
                       effect={effect}
@@ -515,12 +516,12 @@ function EffectCard({
             initial={{ height: 0, opacity: 0 }}
             animate={{ height: 'auto', opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
-            transition={{ duration: 0.22 }}
+            transition={{ duration: MOTION.base }}
             className="overflow-hidden"
           >
             <div className="px-3 pb-3 pt-0">
               <div className="ml-[72px] space-y-2.5">
-                <div className="text-2xs font-semibold text-text-muted uppercase tracking-widest mb-1">
+                <div className="text-2xs font-semibold text-text-muted uppercase mb-1">
                   UE: {effect.ueClass}
                 </div>
                 {effect.params.map((param) => (

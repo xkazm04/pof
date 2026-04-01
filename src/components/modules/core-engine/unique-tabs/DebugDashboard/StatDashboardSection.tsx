@@ -29,12 +29,12 @@ export function StatDashboardSection() {
           return (
             <BlueprintPanel key={sg.group} color={ACCENT} className="overflow-hidden">
               <button onClick={() => toggleGroup(sg.group)}
-                className="w-full flex items-center gap-2 px-3 py-2 hover:bg-surface-deep/50 transition-colors">
+                className="w-full flex items-center gap-1.5 px-3 py-2 hover:bg-surface-deep/50 transition-colors">
                 <motion.div animate={{ rotate: isCollapsed ? 0 : 90 }} transition={{ duration: 0.15 }}>
                   <ChevronRight className="w-3 h-3" style={{ color: `${ACCENT}60` }} />
                 </motion.div>
-                <span className="text-[10px] font-mono font-bold uppercase tracking-[0.15em]" style={{ color: ACCENT }}>{sg.group}</span>
-                <span className="ml-auto text-[10px] font-mono text-text-muted">{sg.stats.length} stats</span>
+                <span className="text-xs font-mono font-bold uppercase tracking-[0.15em]" style={{ color: ACCENT }}>{sg.group}</span>
+                <span className="ml-auto text-xs font-mono text-text-muted">{sg.stats.length} stats</span>
               </button>
               <AnimatePresence>
                 {!isCollapsed && (
@@ -43,10 +43,10 @@ export function StatDashboardSection() {
                     <div className="px-3 pb-2 space-y-1 border-t border-border">
                       {sg.stats.map((stat) => (
                         <div key={stat.label} className="flex items-center gap-3 py-1 hover:bg-surface-deep/30 transition-colors rounded px-1">
-                          <span className="text-[10px] font-mono uppercase tracking-[0.15em] w-24 text-text-muted">{stat.label}</span>
+                          <span className="text-xs font-mono uppercase tracking-[0.15em] w-24 text-text-muted">{stat.label}</span>
                           <Sparkline data={stat.sparkline} color={ACCENT} width={60} height={14} />
-                          <span className="text-[10px] font-mono font-bold ml-auto" style={{ color: `${ACCENT}dd` }}>
-                            {stat.value}<span className="text-text-muted text-[10px] ml-0.5">{stat.unit ?? ''}</span>
+                          <span className="text-xs font-mono font-bold ml-auto" style={{ color: `${ACCENT}dd` }}>
+                            {stat.value}<span className="text-text-muted text-xs ml-0.5">{stat.unit ?? ''}</span>
                           </span>
                         </div>
                       ))}

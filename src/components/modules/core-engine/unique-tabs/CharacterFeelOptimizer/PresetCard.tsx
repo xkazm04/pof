@@ -32,10 +32,10 @@ export function PresetCard({ preset, isSelected, isCompareTarget, onSelect, onCo
       <CornerBrackets color={preset.color} size={6} />
       <div className="p-2.5">
         <div className="flex items-center justify-between mb-1">
-          <span className="text-[10px] font-mono uppercase tracking-[0.15em] font-bold" style={{ color: preset.color }}>
+          <span className="text-xs font-mono uppercase tracking-[0.15em] font-bold" style={{ color: preset.color }}>
             {preset.name}
           </span>
-          <span className="text-[10px] font-mono uppercase tracking-[0.15em] text-text-muted px-1.5 py-0.5 rounded bg-surface-deep border border-border/30">
+          <span className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted px-1.5 py-0.5 rounded bg-surface-deep border border-border/30">
             {preset.genre}
           </span>
         </div>
@@ -44,7 +44,7 @@ export function PresetCard({ preset, isSelected, isCompareTarget, onSelect, onCo
           {preset.tags.slice(0, 4).map((tag) => (
             <span
               key={tag}
-              className="text-[10px] font-mono uppercase tracking-[0.15em] px-1.5 py-0.5 rounded-full"
+              className="text-xs font-mono uppercase tracking-[0.15em] px-1.5 py-0.5 rounded-full"
               style={{ backgroundColor: `${preset.color}15`, color: preset.color, border: `1px solid ${preset.color}25` }}
             >
               {tag}
@@ -53,7 +53,7 @@ export function PresetCard({ preset, isSelected, isCompareTarget, onSelect, onCo
         </div>
         <button
           onClick={(e) => { e.stopPropagation(); onCompare(); }}
-          className="flex items-center gap-1 text-[10px] font-mono uppercase tracking-[0.15em] px-2 py-1 rounded transition-colors"
+          className="flex items-center gap-1 text-xs font-mono uppercase tracking-[0.15em] px-2 py-1 rounded transition-colors"
           style={{
             backgroundColor: isCompareTarget ? `${preset.color}25` : 'var(--surface-deep)',
             color: isCompareTarget ? preset.color : 'var(--text-muted)',

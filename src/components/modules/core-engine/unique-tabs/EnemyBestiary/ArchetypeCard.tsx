@@ -67,7 +67,7 @@ export function ArchetypeCard({
               </div>
               <div>
                 <div className="text-sm font-bold text-text leading-tight">{archetype.label}</div>
-                <div className="text-[10px] font-mono uppercase tracking-[0.15em] opacity-80" style={{ color: archetype.color }}>
+                <div className="text-xs font-mono uppercase tracking-[0.15em] opacity-80" style={{ color: archetype.color }}>
                   {archetype.class} / {archetype.role}
                 </div>
               </div>
@@ -81,7 +81,7 @@ export function ArchetypeCard({
           {appliedMods.length > 0 && (
             <div className="flex flex-wrap gap-1 mb-2">
               {appliedMods.map(mod => (
-                <span key={mod.id} className="text-[11px] font-bold px-1.5 py-0.5 rounded-full border inline-flex items-center gap-1"
+                <span key={mod.id} className="text-xs font-bold px-1.5 py-0.5 rounded-full border inline-flex items-center gap-1"
                   style={{ backgroundColor: `${mod.color}15`, borderColor: `${mod.color}40`, color: mod.color }}
                   title={`${mod.name}: ${mod.statMods.map(s => s.label).join(', ')}`}>
                   <span>{mod.icon}</span>
@@ -100,7 +100,7 @@ export function ArchetypeCard({
               const diff = effective - stat.value;
               return (
                 <div key={stat.label} className="flex items-center gap-2 group/stat relative">
-                  <span className="text-[10px] font-mono uppercase tracking-[0.15em] text-text-muted w-10 flex-shrink-0 text-right">
+                  <span className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted w-10 flex-shrink-0 text-right">
                     {stat.label}
                   </span>
                   <div className="flex-1">

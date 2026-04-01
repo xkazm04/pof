@@ -24,9 +24,9 @@ export function BudgetAlerting() {
       <div className="px-4 py-3 border-b border-border/10 flex items-center justify-between">
         <SectionHeader label="BUDGET_ALERTING" icon={TrendingUp} color={ACCENT} />
         <div className="flex items-center gap-2 text-xs font-mono">
-          {overBudget > 0 && <span className="px-1.5 py-0.5 rounded-sm border text-[10px] font-bold" style={{ color: STATUS_ERROR, borderColor: `${STATUS_ERROR}40`, backgroundColor: `${STATUS_ERROR}15` }}>{overBudget} OVER</span>}
-          {nearBudget > 0 && <span className="px-1.5 py-0.5 rounded-sm border text-[10px] font-bold" style={{ color: STATUS_WARNING, borderColor: `${STATUS_WARNING}40`, backgroundColor: `${STATUS_WARNING}15` }}>{nearBudget} WARN</span>}
-          {overBudget === 0 && nearBudget === 0 && <span className="px-1.5 py-0.5 rounded-sm border text-[10px] font-bold" style={{ color: STATUS_SUCCESS, borderColor: `${STATUS_SUCCESS}40`, backgroundColor: `${STATUS_SUCCESS}15` }}>ALL OK</span>}
+          {overBudget > 0 && <span className="px-1.5 py-0.5 rounded-sm border text-xs font-bold" style={{ color: STATUS_ERROR, borderColor: `${STATUS_ERROR}40`, backgroundColor: `${STATUS_ERROR}15` }}>{overBudget} OVER</span>}
+          {nearBudget > 0 && <span className="px-1.5 py-0.5 rounded-sm border text-xs font-bold" style={{ color: STATUS_WARNING, borderColor: `${STATUS_WARNING}40`, backgroundColor: `${STATUS_WARNING}15` }}>{nearBudget} WARN</span>}
+          {overBudget === 0 && nearBudget === 0 && <span className="px-1.5 py-0.5 rounded-sm border text-xs font-bold" style={{ color: STATUS_SUCCESS, borderColor: `${STATUS_SUCCESS}40`, backgroundColor: `${STATUS_SUCCESS}15` }}>ALL OK</span>}
         </div>
       </div>
 
@@ -56,11 +56,11 @@ export function BudgetAlerting() {
                 <div className="flex items-center justify-between mb-2">
                   <div className="flex items-center gap-2">
                     <span className="w-2 h-2 rounded-sm" style={{ backgroundColor: budget.color }} />
-                    <span className="text-cyan-200 font-bold text-[10px] uppercase tracking-[0.15em]">{budget.sectionLabel}</span>
+                    <span className="text-cyan-200 font-bold text-xs uppercase tracking-[0.15em]">{budget.sectionLabel}</span>
                   </div>
                   <div className="flex items-center gap-3">
                     <span className="text-text-muted">{formatBytes(currentBytes)} / {formatBytes(budget.budgetBytes)}</span>
-                    <span className="px-1.5 py-0.5 rounded-sm text-[10px] font-bold uppercase tracking-[0.15em]" style={{ color: statusColor, backgroundColor: `${statusColor}15`, border: `1px solid ${statusColor}30` }}>
+                    <span className="px-1.5 py-0.5 rounded-sm text-xs font-bold uppercase tracking-[0.15em]" style={{ color: statusColor, backgroundColor: `${statusColor}15`, border: `1px solid ${statusColor}30` }}>
                       {status === 'red' ? 'OVER' : status === 'amber' ? 'WARN' : 'OK'}
                     </span>
                   </div>
@@ -71,7 +71,7 @@ export function BudgetAlerting() {
                   <div className="absolute top-0 bottom-0" style={{ left: '80%', width: '1px', backgroundColor: `${STATUS_WARNING}60` }} />
                   {currentBytes < budget.budgetBytes && <div className="absolute top-0 bottom-0 right-0" style={{ width: '1px', backgroundColor: `${STATUS_ERROR}60` }} />}
                 </div>
-                <div className="flex justify-between mt-1 text-[10px] text-text-muted font-mono">
+                <div className="flex justify-between mt-1 text-xs text-text-muted font-mono">
                   <span>0</span>
                   <span style={{ marginLeft: '76%', position: 'relative', left: '-8px', color: `${STATUS_WARNING}90` }}>80%</span>
                   <span>100%</span>
@@ -80,7 +80,7 @@ export function BudgetAlerting() {
                 {/* Sparkline + projected */}
                 <div className="flex items-end gap-4 mt-2 pt-2 border-t border-border/10">
                   <div className="flex-1">
-                    <div className="text-[10px] font-mono uppercase tracking-[0.15em] text-text-muted mb-1">Growth Trend</div>
+                    <div className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted mb-1">Growth Trend</div>
                     <div className="flex items-end gap-0.5 h-8">
                       {history.map((val, hi) => {
                         const barH = maxVal > 0 ? (val / maxVal) * 100 : 0;
@@ -100,9 +100,9 @@ export function BudgetAlerting() {
                     </div>
                   </div>
                   <div className="text-right shrink-0">
-                    <div className="text-[10px] font-mono uppercase tracking-[0.15em] text-text-muted mb-0.5">Projected</div>
+                    <div className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted mb-0.5">Projected</div>
                     <div className="text-sm font-bold" style={{ color: projectedColor }}>{formatBytes(projected)}</div>
-                    <div className="text-[10px]" style={{ color: projectedColor }}>
+                    <div className="text-xs" style={{ color: projectedColor }}>
                       {projected > currentBytes ? `+${formatBytes(projected - currentBytes)}` : projected < currentBytes ? `-${formatBytes(currentBytes - projected)}` : 'stable'}
                     </div>
                   </div>
@@ -114,7 +114,7 @@ export function BudgetAlerting() {
 
         <div className="flex items-center gap-3 px-3 py-2 border border-border/10 rounded-lg font-mono text-xs" style={{ backgroundColor: `${ACCENT}06` }}>
           <TrendingUp className="w-3.5 h-3.5 flex-shrink-0" style={{ color: ACCENT }} />
-          <span className="text-[10px] font-mono uppercase tracking-[0.15em] text-text-muted">Total Budget:</span>
+          <span className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted">Total Budget:</span>
           <span className="text-cyan-300">{formatBytes(TOTAL_BYTES)}</span>
           <span className="text-text-muted">/</span>
           <span className="text-cyan-300">{formatBytes(SECTION_BUDGETS.reduce((s, b) => s + b.budgetBytes, 0))}</span>

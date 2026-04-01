@@ -3,40 +3,20 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  ArrowLeft, Play, Trash2, Loader2, AlertOctagon, AlertTriangle,
-  Info, CheckCircle2, ChevronDown, ChevronRight, Clock, Target,
+  ArrowLeft, Play, Trash2, Loader2,
+  ChevronDown, ChevronRight, Clock, Target,
   Gamepad2, Camera, Wrench, BarChart3, Activity, Sparkles,
+  AlertTriangle, CheckCircle2, AlertOctagon, Info, Zap,
 } from 'lucide-react';
 import type { PlaytestSession, PlaytestFinding, DirectorEvent, FindingSeverity, FindingCategory } from '@/types/game-director';
 import { SurfaceCard } from '@/components/ui/SurfaceCard';
 import {
-  ACCENT_ORANGE, STATUS_SUCCESS, STATUS_WARNING, STATUS_ERROR, STATUS_INFO, STATUS_BLOCKER,
-  OPACITY_8, OPACITY_20,
+  ACCENT_ORANGE, ACCENT_PURPLE, STATUS_SUCCESS, STATUS_WARNING, STATUS_ERROR, STATUS_INFO,
+  OPACITY_10, statusBg, statusBorder,
 } from '@/lib/chart-colors';
+import { SEVERITY_STYLES, CATEGORY_LABELS } from '@/lib/game-director-styles';
 
 const ACCENT = ACCENT_ORANGE;
-
-const SEVERITY_STYLES: Record<FindingSeverity, { icon: typeof AlertOctagon; color: string; bg: string; border: string }> = {
-  critical: { icon: AlertOctagon, color: STATUS_ERROR, bg: `${STATUS_ERROR}${OPACITY_8}`, border: `${STATUS_ERROR}${OPACITY_20}` },
-  high: { icon: AlertTriangle, color: STATUS_BLOCKER, bg: `${STATUS_BLOCKER}${OPACITY_8}`, border: `${STATUS_BLOCKER}${OPACITY_20}` },
-  medium: { icon: Info, color: STATUS_WARNING, bg: `${STATUS_WARNING}${OPACITY_8}`, border: `${STATUS_WARNING}${OPACITY_20}` },
-  low: { icon: Info, color: STATUS_INFO, bg: `${STATUS_INFO}${OPACITY_8}`, border: `${STATUS_INFO}${OPACITY_20}` },
-  positive: { icon: CheckCircle2, color: STATUS_SUCCESS, bg: `${STATUS_SUCCESS}${OPACITY_8}`, border: `${STATUS_SUCCESS}${OPACITY_20}` },
-};
-
-const CATEGORY_LABELS: Record<FindingCategory, string> = {
-  'visual-glitch': 'Visual Glitch',
-  'animation-issue': 'Animation',
-  'gameplay-feel': 'Gameplay Feel',
-  'ux-problem': 'UX Problem',
-  'performance': 'Performance',
-  'crash-bug': 'Crash/Bug',
-  'level-pacing': 'Level Pacing',
-  'audio-issue': 'Audio',
-  'save-load': 'Save/Load',
-  'ai-behavior': 'AI Behavior',
-  'positive-feedback': 'Positive',
-};
 
 const EVENT_ICONS: Record<string, typeof Activity> = {
   action: Activity,
@@ -158,7 +138,10 @@ export function SessionDetail({
             )}
             <button
               onClick={onDelete}
-              className="p-1.5 rounded-md text-text-muted hover:text-[#f87171] hover:bg-[#f8717110] transition-colors"
+              className="p-1.5 rounded-md text-text-muted transition-colors group/del"
+              style={{ ['--del-color' as string]: STATUS_ERROR }}
+              onMouseEnter={(e) => { e.currentTarget.style.color = STATUS_ERROR; e.currentTarget.style.backgroundColor = `${STATUS_ERROR}${OPACITY_10}`; }}
+              onMouseLeave={(e) => { e.currentTarget.style.color = ''; e.currentTarget.style.backgroundColor = ''; }}
             >
               <Trash2 className="w-3.5 h-3.5" />
             </button>
@@ -174,14 +157,14 @@ export function SessionDetail({
           >
             <SummaryStat icon={Target} label="Findings" value={session.findingsCount} color={STATUS_INFO} />
             <SummaryStat icon={Gamepad2} label="Systems" value={session.systemsTestedCount} color={ACCENT} />
-            <SummaryStat icon={Camera} label="Screenshots" value={session.summary.totalScreenshotsAnalyzed} color="#c084fc" />
+            <SummaryStat icon={Camera} label="Screenshots" value={session.summary.totalScreenshotsAnalyzed} color={ACCENT_PURPLE} />
             <SummaryStat icon={Clock} label="Playtime" value={`${Math.floor(session.summary.playtimeSeconds / 60)}m`} color={STATUS_WARNING} />
             <div className="ml-auto flex items-center gap-3 text-2xs">
               {criticals.length > 0 && (
-                <span className="text-[#f87171]">{criticals.length} critical</span>
+                <span style={{ color: STATUS_ERROR }}>{criticals.length} critical</span>
               )}
               {positives.length > 0 && (
-                <span className="text-[#4ade80]">{positives.length} positive</span>
+                <span style={{ color: STATUS_SUCCESS }}>{positives.length} positive</span>
               )}
             </div>
           </motion.div>
@@ -210,8 +193,8 @@ export function SessionDetail({
                 onToggle={(id) => setExpandedFindingId(expandedFindingId === id ? null : id)}
               />
             )}
-            {activeTab === 'timeline' && <TimelineView events={events} />}
-            {activeTab === 'coverage' && <CoverageView session={session} findings={findings} />}
+            {activeTab === 'timeline' && <TimelineView events={events} onSimulate={canSimulate ? onSimulate : undefined} />}
+            {activeTab === 'coverage' && <CoverageView session={session} findings={findings} onSimulate={canSimulate ? onSimulate : undefined} />}
           </>
         )}
       </div>
@@ -246,7 +229,14 @@ function SubTab({ label, icon: Icon, active, onClick, count }: {
       {count !== undefined && count > 0 && (
         <span className="text-2xs px-1 py-0.5 rounded bg-border text-text-muted">{count}</span>
       )}
-      {active && <span className="absolute bottom-0 left-0 right-0 h-0.5 rounded-t" style={{ backgroundColor: ACCENT }} />}
+      {active && (
+        <motion.span
+          layoutId="session-detail-tab-indicator"
+          className="absolute bottom-0 left-0 right-0 h-0.5 rounded-t"
+          style={{ backgroundColor: ACCENT }}
+          transition={{ type: 'spring', stiffness: 500, damping: 35 }}
+        />
+      )}
     </button>
   );
 }
@@ -344,12 +334,34 @@ function FindingsList({ findings, expandedId, onToggle }: {
   );
 }
 
-function TimelineView({ events }: { events: DirectorEvent[] }) {
+function TimelineView({ events, onSimulate }: { events: DirectorEvent[]; onSimulate?: () => Promise<void> }) {
   if (events.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center py-12 text-center">
-        <Activity className="w-6 h-6 text-border-bright mb-2" />
-        <p className="text-xs text-text-muted">No events recorded yet.</p>
+      <div className="flex flex-col items-center justify-center py-16 text-center">
+        <div className="relative w-16 h-16 mb-5">
+          <div
+            className="absolute inset-0 rounded-2xl"
+            style={{ backgroundColor: `${ACCENT}08`, border: `1px solid ${ACCENT}15` }}
+          />
+          <Activity className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-7 h-7" style={{ color: ACCENT }} />
+          <Clock className="absolute -bottom-1 -right-1 w-5 h-5 opacity-50" style={{ color: ACCENT }} />
+          <Zap className="absolute -top-1 -left-1 w-4 h-4 opacity-30" style={{ color: ACCENT }} />
+        </div>
+        <h3 className="text-sm font-semibold text-text mb-1">No events recorded yet</h3>
+        <p className="text-xs text-text-muted max-w-xs leading-relaxed mb-4">
+          The timeline shows every action, observation, and screenshot taken during a playtest.
+          Run a playtest session to see the full sequence of events here.
+        </p>
+        {onSimulate && (
+          <button
+            onClick={onSimulate}
+            className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-medium transition-colors"
+            style={{ backgroundColor: `${ACCENT}15`, color: ACCENT, border: `1px solid ${ACCENT}30` }}
+          >
+            <Play className="w-3.5 h-3.5" />
+            Run Playtest
+          </button>
+        )}
       </div>
     );
   }
@@ -387,7 +399,7 @@ function TimelineView({ events }: { events: DirectorEvent[] }) {
                     className="w-3 h-3 flex-shrink-0"
                     style={{ color: isError ? STATUS_ERROR : isFinding ? STATUS_WARNING : 'var(--text-muted)' }}
                   />
-                  <span className={`text-xs ${isError ? 'text-[#f87171]' : 'text-text'}`}>
+                  <span className="text-xs" style={{ color: isError ? STATUS_ERROR : 'var(--text)' }}>
                     {event.message}
                   </span>
                 </div>
@@ -403,12 +415,34 @@ function TimelineView({ events }: { events: DirectorEvent[] }) {
   );
 }
 
-function CoverageView({ session, findings }: { session: PlaytestSession; findings: PlaytestFinding[] }) {
+function CoverageView({ session, findings, onSimulate }: { session: PlaytestSession; findings: PlaytestFinding[]; onSimulate?: () => Promise<void> }) {
   if (!session.summary) {
     return (
-      <div className="flex flex-col items-center justify-center py-12 text-center">
-        <BarChart3 className="w-6 h-6 text-border-bright mb-2" />
-        <p className="text-xs text-text-muted">Coverage data available after playtest completion.</p>
+      <div className="flex flex-col items-center justify-center py-16 text-center">
+        <div className="relative w-16 h-16 mb-5">
+          <div
+            className="absolute inset-0 rounded-2xl"
+            style={{ backgroundColor: `${ACCENT}08`, border: `1px solid ${ACCENT}15` }}
+          />
+          <BarChart3 className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-7 h-7" style={{ color: ACCENT }} />
+          <Target className="absolute -bottom-1 -right-1 w-5 h-5 opacity-50" style={{ color: ACCENT }} />
+          <CheckCircle2 className="absolute -top-1 -left-1 w-4 h-4 opacity-30" style={{ color: ACCENT }} />
+        </div>
+        <h3 className="text-sm font-semibold text-text mb-1">Coverage data not yet available</h3>
+        <p className="text-xs text-text-muted max-w-xs leading-relaxed mb-4">
+          Coverage shows how thoroughly each game system was tested and breaks down findings by severity and category.
+          Complete a playtest to generate coverage data for this session.
+        </p>
+        {onSimulate && (
+          <button
+            onClick={onSimulate}
+            className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-medium transition-colors"
+            style={{ backgroundColor: `${ACCENT}15`, color: ACCENT, border: `1px solid ${ACCENT}30` }}
+          >
+            <Play className="w-3.5 h-3.5" />
+            Run Playtest
+          </button>
+        )}
       </div>
     );
   }
@@ -504,19 +538,19 @@ function CoverageView({ session, findings }: { session: PlaytestSession; finding
 
       {/* Summary callouts */}
       {session.summary.topIssue && (
-        <div className="p-3 bg-[#f8717108] border border-[#f8717120] rounded-lg">
+        <div className="p-3 rounded-lg" style={{ backgroundColor: statusBg(STATUS_ERROR), border: `1px solid ${statusBorder(STATUS_ERROR)}` }}>
           <div className="flex items-center gap-1.5 mb-1">
-            <AlertTriangle className="w-3 h-3 text-[#f87171]" />
-            <span className="text-2xs uppercase tracking-wider text-[#f87171] font-semibold">Top Issue</span>
+            <AlertTriangle className="w-3 h-3" style={{ color: STATUS_ERROR }} />
+            <span className="text-2xs uppercase tracking-wider font-semibold" style={{ color: STATUS_ERROR }}>Top Issue</span>
           </div>
           <p className="text-xs text-text">{session.summary.topIssue}</p>
         </div>
       )}
       {session.summary.topPraise && (
-        <div className="p-3 bg-[#4ade8008] border border-[#4ade8020] rounded-lg">
+        <div className="p-3 rounded-lg" style={{ backgroundColor: statusBg(STATUS_SUCCESS), border: `1px solid ${statusBorder(STATUS_SUCCESS)}` }}>
           <div className="flex items-center gap-1.5 mb-1">
-            <CheckCircle2 className="w-3 h-3 text-[#4ade80]" />
-            <span className="text-2xs uppercase tracking-wider text-[#4ade80] font-semibold">Top Praise</span>
+            <CheckCircle2 className="w-3 h-3" style={{ color: STATUS_SUCCESS }} />
+            <span className="text-2xs uppercase tracking-wider font-semibold" style={{ color: STATUS_SUCCESS }}>Top Praise</span>
           </div>
           <p className="text-xs text-text">{session.summary.topPraise}</p>
         </div>

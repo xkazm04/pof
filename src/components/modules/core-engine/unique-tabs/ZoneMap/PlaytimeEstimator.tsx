@@ -41,7 +41,7 @@ export function PlaytimeTopologyOverlay({ mode, onModeChange }: OverlayProps) {
           <button
             type="button"
             onClick={() => onModeChange('critical')}
-            className="px-2.5 py-1 text-[10px] font-mono uppercase tracking-[0.15em] rounded-full transition-all"
+            className="px-2.5 py-1 text-xs font-mono uppercase tracking-[0.15em] rounded-full transition-all"
             style={mode === 'critical' ? { backgroundColor: `${ACCENT_ORANGE}25`, color: ACCENT_ORANGE, boxShadow: `0 0 8px ${ACCENT_ORANGE}30` } : { color: 'var(--text-muted)' }}
           >
             Critical Path
@@ -49,7 +49,7 @@ export function PlaytimeTopologyOverlay({ mode, onModeChange }: OverlayProps) {
           <button
             type="button"
             onClick={() => onModeChange('all')}
-            className="px-2.5 py-1 text-[10px] font-mono uppercase tracking-[0.15em] rounded-full transition-all"
+            className="px-2.5 py-1 text-xs font-mono uppercase tracking-[0.15em] rounded-full transition-all"
             style={mode === 'all' ? { backgroundColor: `${ACCENT_ORANGE}25`, color: ACCENT_ORANGE, boxShadow: `0 0 8px ${ACCENT_ORANGE}30` } : { color: 'var(--text-muted)' }}
           >
             All Paths
@@ -106,7 +106,7 @@ export function PlaytimeTopologyOverlay({ mode, onModeChange }: OverlayProps) {
                   style={isOnPath ? { filter: `drop-shadow(0 0 6px ${ACCENT_ORANGE}40)` } : undefined}
                 />
                 <text x={nx} y={ny} textAnchor="middle" dominantBaseline="central"
-                  className="text-[10px] font-mono font-bold select-none pointer-events-none"
+                  className="text-xs font-mono font-bold select-none pointer-events-none"
                   fill={isOnPath ? ACCENT_ORANGE : node.color}>
                   {node.label.split(' ').map(w => w[0]).join('')}
                 </text>
@@ -122,7 +122,7 @@ export function PlaytimeTopologyOverlay({ mode, onModeChange }: OverlayProps) {
                     <text
                       x={nx} y={ny + sz / 2 + 13}
                       textAnchor="middle" dominantBaseline="central"
-                      className="text-[10px] font-mono font-bold"
+                      className="text-xs font-mono font-bold"
                       fill={ACCENT_ORANGE}
                     >
                       {formatPlaytime(cum.cumulativeSec)}
@@ -137,19 +137,19 @@ export function PlaytimeTopologyOverlay({ mode, onModeChange }: OverlayProps) {
 
       {/* Summary footer */}
       <div className="flex flex-wrap items-center gap-4 mt-3 pt-2 border-t border-border/40">
-        <span className="flex items-center gap-1.5 text-[10px] font-mono uppercase tracking-[0.15em]" style={{ color: ACCENT_ORANGE }}>
+        <span className="flex items-center gap-1.5 text-xs font-mono uppercase tracking-[0.15em]" style={{ color: ACCENT_ORANGE }}>
           <Clock className="w-3.5 h-3.5" />
           Total: <span className="font-bold">{formatPlaytime(pathData.totalSec)}</span>
         </span>
-        <span className="flex items-center gap-1.5 text-[10px] font-mono uppercase tracking-[0.15em] text-text-muted">
+        <span className="flex items-center gap-1.5 text-xs font-mono uppercase tracking-[0.15em] text-text-muted">
           <Navigation className="w-3.5 h-3.5" />
           {pathData.nodes.length} zones
         </span>
-        <span className="flex items-center gap-1.5 text-[10px] font-mono uppercase tracking-[0.15em] text-text-muted">
+        <span className="flex items-center gap-1.5 text-xs font-mono uppercase tracking-[0.15em] text-text-muted">
           <ArrowRight className="w-3.5 h-3.5" />
           {pathData.segments.length} transitions
         </span>
-        <span className="ml-auto text-[10px] font-mono uppercase tracking-[0.15em] text-text-muted opacity-60">
+        <span className="ml-auto text-xs font-mono uppercase tracking-[0.15em] text-text-muted opacity-60">
           Includes combat (enemy density x 8s/kill) + boss phases (90s/phase) + exploration
         </span>
       </div>
@@ -173,7 +173,7 @@ export function PlaytimeBreakdownTable({ mode }: { mode: PlaytimePathMode }) {
           const barPct = maxSec > 0 ? (zp.totalSec / maxSec) * 100 : 0;
           return (
             <div key={zp.zoneId} className="flex items-center gap-3" style={{ opacity: onPath ? 1 : 0.4 }}>
-              <span className="text-[10px] font-mono uppercase tracking-[0.15em] text-text-muted w-28 truncate text-right flex-shrink-0">{zp.zoneName}</span>
+              <span className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted w-28 truncate text-right flex-shrink-0">{zp.zoneName}</span>
               <div className="relative flex-1 h-6 bg-surface-deep rounded-md overflow-hidden border border-border/30">
                 <motion.div
                   initial={{ width: 0 }}
@@ -200,7 +200,7 @@ export function PlaytimeBreakdownTable({ mode }: { mode: PlaytimePathMode }) {
                   )}
                 </div>
               </div>
-              <span className="text-[10px] font-mono uppercase tracking-[0.15em] font-bold w-14 text-right flex-shrink-0" style={{ color: onPath ? ACCENT_ORANGE : 'var(--text-muted)' }}>
+              <span className="text-xs font-mono uppercase tracking-[0.15em] font-bold w-14 text-right flex-shrink-0" style={{ color: onPath ? ACCENT_ORANGE : 'var(--text-muted)' }}>
                 {formatPlaytime(zp.totalSec)}
               </span>
             </div>
@@ -209,16 +209,16 @@ export function PlaytimeBreakdownTable({ mode }: { mode: PlaytimePathMode }) {
       </div>
       {/* Legend */}
       <div className="flex flex-wrap items-center gap-4 mt-3 pt-2 border-t border-border/40">
-        <span className="flex items-center gap-1.5 text-[10px] font-mono uppercase tracking-[0.15em] text-text-muted">
+        <span className="flex items-center gap-1.5 text-xs font-mono uppercase tracking-[0.15em] text-text-muted">
           <Swords className="w-3 h-3" style={{ color: STATUS_ERROR }} /> Combat
         </span>
-        <span className="flex items-center gap-1.5 text-[10px] font-mono uppercase tracking-[0.15em] text-text-muted">
+        <span className="flex items-center gap-1.5 text-xs font-mono uppercase tracking-[0.15em] text-text-muted">
           <Skull className="w-3 h-3" style={{ color: ACCENT_VIOLET }} /> Boss
         </span>
-        <span className="flex items-center gap-1.5 text-[10px] font-mono uppercase tracking-[0.15em] text-text-muted">
+        <span className="flex items-center gap-1.5 text-xs font-mono uppercase tracking-[0.15em] text-text-muted">
           <Footprints className="w-3 h-3" style={{ color: ACCENT_EMERALD }} /> Exploration
         </span>
-        <span className="ml-auto text-[10px] font-mono uppercase tracking-[0.15em] text-text-muted opacity-60">
+        <span className="ml-auto text-xs font-mono uppercase tracking-[0.15em] text-text-muted opacity-60">
           Faded zones = off {mode === 'critical' ? 'critical path' : 'selected path'}
         </span>
       </div>

@@ -75,7 +75,7 @@ export function ConfigPanel({
                 <input type="checkbox" checked={feedbackConfig.hitRecoveryIFrames}
                   onChange={e => onUpdateFeedback('hitRecoveryIFrames', e.target.checked)}
                   className="accent-current" style={{ color: ACCENT_EMERALD }} />
-                <span className="text-[10px] font-mono uppercase tracking-[0.15em] text-text-muted">
+                <span className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted">
                   Recovery I-Frames
                 </span>
               </div>
@@ -87,10 +87,10 @@ export function ConfigPanel({
       {/* Iterations */}
       <div className="flex items-center gap-2 px-1">
         <Timer className="w-3 h-3 text-text-muted" />
-        <span className="text-[10px] font-mono uppercase tracking-[0.15em] text-text-muted">Iterations:</span>
+        <span className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted">Iterations:</span>
         <input type="number" min={100} max={5000} step={100} value={iterations}
           onChange={e => onSetIterations(Math.max(100, Number(e.target.value)))}
-          className="w-16 bg-surface-deep border border-border/40 rounded px-1.5 py-0.5 text-[10px] font-mono text-text" />
+          className="w-16 bg-surface-deep border border-border/40 rounded px-1.5 py-0.5 text-xs font-mono text-text" />
       </div>
 
       {/* Run */}
@@ -114,19 +114,19 @@ export function ConfigPanel({
 
       {/* Current config summary */}
       <BlueprintPanel className="p-2 space-y-0.5">
-        <div className="flex items-center gap-1 text-[10px] font-mono text-text-muted">
+        <div className="flex items-center gap-1 text-xs font-mono text-text-muted">
           <Pause className="w-2.5 h-2.5" style={{ color: ACCENT_VIOLET }} />
           Hitstop: {(feedbackConfig.hitstopDurationSec * 1000).toFixed(0)}ms
         </div>
-        <div className="flex items-center gap-1 text-[10px] font-mono text-text-muted">
+        <div className="flex items-center gap-1 text-xs font-mono text-text-muted">
           <Camera className="w-2.5 h-2.5" style={{ color: ACCENT_ORANGE }} />
           Shake: {feedbackConfig.cameraShakeScale.toFixed(1)}x &rarr; {(feedbackConfig.shakeAccuracyPenalty * 100).toFixed(0)}% miss
         </div>
-        <div className="flex items-center gap-1 text-[10px] font-mono text-text-muted">
+        <div className="flex items-center gap-1 text-xs font-mono text-text-muted">
           <Shield className="w-2.5 h-2.5" style={{ color: ACCENT_EMERALD }} />
           Recovery: {(feedbackConfig.hitRecoveryWindowSec * 1000).toFixed(0)}ms {feedbackConfig.hitRecoveryIFrames ? '+ i-frames' : ''}
         </div>
-        <div className="flex items-center gap-1 text-[10px] font-mono text-text-muted">
+        <div className="flex items-center gap-1 text-xs font-mono text-text-muted">
           <Zap className="w-2.5 h-2.5" style={{ color: ACCENT_CYAN }} />
           Effective reaction: {((feedbackConfig.hitstopDurationSec + feedbackConfig.baseReactionTimeSec) * 1000).toFixed(0)}ms
         </div>

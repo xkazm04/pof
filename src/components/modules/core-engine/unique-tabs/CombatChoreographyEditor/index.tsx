@@ -123,7 +123,7 @@ export function CombatChoreographyEditor() {
         <BlueprintPanel className="p-3 space-y-3">
           <SectionHeader label={`Spatial Grid \u2014 Wave ${selectedWave}: ${waves[selectedWave]?.label}`} icon={Users} />
           <div className="flex items-center justify-end -mt-2 mb-1">
-            <div className="flex items-center gap-1.5 text-[10px] font-mono uppercase tracking-[0.15em] text-text-muted">
+            <div className="flex items-center gap-1.5 text-xs font-mono uppercase tracking-[0.15em] text-text-muted">
               <Users className="w-3 h-3" />
               {enemies.filter((e) => e.waveIndex === selectedWave).length} placed
             </div>

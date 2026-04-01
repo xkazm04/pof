@@ -28,13 +28,13 @@ export function HeroMetric({ label, value, unit, icon: Icon, color, compareValue
       style={{ borderColor: `${color}25` }}>
       <div className="flex items-center gap-1.5 mb-1">
         <Icon className="w-3.5 h-3.5" style={{ color, filter: `drop-shadow(0 0 4px ${color}80)` }} />
-        <span className="text-[10px] font-mono uppercase tracking-[0.15em]" style={{ color }}>{label}</span>
+        <span className="text-xs font-mono uppercase tracking-[0.15em]" style={{ color }}>{label}</span>
       </div>
       <span className="text-2xl font-mono font-black text-text leading-none"
         style={{ textShadow: `0 0 20px ${color}30` }}>
         {fmtVal(value)}
       </span>
-      <span className="text-[10px] font-mono text-text-muted mt-0.5">{unit}</span>
+      <span className="text-xs font-mono text-text-muted mt-0.5">{unit}</span>
       {delta != null && delta !== 0 && (
         <span className="text-xs font-mono font-bold mt-1" style={{ color: isGood ? STATUS_SUCCESS : STATUS_ERROR }}>
           {delta > 0 ? '+' : ''}{fmtVal(delta)}
@@ -59,7 +59,7 @@ export function SimStatLine({ label, value, formula, color, barPct, delta, lower
   return (
     <div className="px-2 py-1 rounded-md hover:bg-surface/40 transition-colors" title={formula}>
       <div className="flex items-center justify-between mb-0.5">
-        <span className="text-[10px] font-mono uppercase tracking-[0.15em] text-text-muted">{label}</span>
+        <span className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted">{label}</span>
         <div className="flex items-center gap-1.5">
           {delta && delta.raw !== 0 && (
             <span className="text-xs font-mono font-bold" style={{ color: isGood ? STATUS_SUCCESS : STATUS_ERROR }}>

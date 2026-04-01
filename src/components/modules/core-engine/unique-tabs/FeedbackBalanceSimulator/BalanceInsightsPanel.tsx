@@ -49,7 +49,7 @@ export function BalanceInsightsPanel({ insights }: {
             <button
               key={s.key}
               onClick={() => toggleFilter(s.key)}
-              className="flex items-center gap-1 text-[10px] font-mono uppercase tracking-[0.15em] font-bold px-2 py-0.5 rounded-full border transition-colors"
+              className="flex items-center gap-1 text-xs font-mono uppercase tracking-[0.15em] font-bold px-2 py-0.5 rounded-full border transition-colors"
               style={{
                 borderColor: active ? s.color : 'var(--color-border)',
                 backgroundColor: active ? `${s.color}15` : 'transparent',
@@ -89,22 +89,22 @@ export function BalanceInsightsPanel({ insights }: {
               <div className="min-w-0">
                 <div className="flex items-center gap-2 mb-0.5">
                   <span
-                    className="text-[10px] font-mono uppercase tracking-[0.15em] font-bold px-1.5 py-0.5 rounded"
+                    className="text-xs font-mono uppercase tracking-[0.15em] font-bold px-1.5 py-0.5 rounded"
                     style={{ backgroundColor: `${color}20`, color }}
                   >
                     {insight.severity}
                   </span>
-                  <span className="text-[10px] font-mono uppercase tracking-[0.15em] text-text-muted">
+                  <span className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted">
                     {insight.category}
                   </span>
                 </div>
-                <p className="text-[10px] font-mono text-text leading-relaxed">{insight.message}</p>
+                <p className="text-xs font-mono text-text leading-relaxed">{insight.message}</p>
               </div>
             </motion.div>
           );
         })}
         {filtered.length === 0 && (
-          <p className="text-[10px] font-mono text-text-muted text-center py-2">
+          <p className="text-xs font-mono text-text-muted text-center py-2">
             No insights match the selected filters
           </p>
         )}

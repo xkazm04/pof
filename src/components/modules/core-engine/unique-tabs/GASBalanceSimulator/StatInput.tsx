@@ -18,7 +18,7 @@ export function StatInput({ label, value, onChange, min, max, step, icon: Icon, 
   return (
     <div className="flex items-center gap-1.5 group">
       {Icon && <Icon className="w-3 h-3 flex-shrink-0" style={{ color }} />}
-      <span className="text-2xs text-text-muted w-16 truncate">{label}</span>
+      <span className="text-2xs text-text-muted w-full sm:w-16 truncate">{label}</span>
       <input
         type="range"
         min={min}

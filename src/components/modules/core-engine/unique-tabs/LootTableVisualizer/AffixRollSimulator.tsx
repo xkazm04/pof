@@ -64,7 +64,7 @@ export function AffixRollSimulator() {
       {/* Frequency table */}
       {Object.keys(affixHistory).length > 0 && (
         <div className="space-y-1 mb-3">
-          <div className="text-[10px] font-mono uppercase tracking-[0.15em] text-text-muted">Affix Frequency</div>
+          <div className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted">Affix Frequency</div>
           {Object.entries(affixHistory).sort((a, b) => b[1] - a[1]).map(([affix, count]) => (
             <div key={affix} className="flex items-center gap-2">
               <span className="text-2xs font-mono w-20 text-text truncate">{affix}</span>
@@ -77,7 +77,7 @@ export function AffixRollSimulator() {
         </div>
       )}
       {/* Co-occurrence matrix */}
-      <div className="text-[10px] font-mono uppercase tracking-[0.15em] text-text-muted mb-1">Affix Co-occurrence Matrix</div>
+      <div className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted mb-1">Affix Co-occurrence Matrix</div>
       <HeatmapGrid
         rows={AFFIX_COOCCURRENCE_ROWS}
         cols={AFFIX_COOCCURRENCE_COLS}

@@ -7,7 +7,7 @@ export function WeightDistribution() {
   return (
     <div className="grid grid-cols-1 gap-3 sm:grid-cols-[1fr_auto]">
       <BlueprintPanel className="p-3">
-        <div className="text-[10px] font-mono uppercase tracking-[0.15em] text-text-muted mb-2">
+        <div className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted mb-2">
           Drop Weight Distribution
         </div>
         <div className="flex h-5 rounded overflow-hidden w-full">
@@ -30,7 +30,7 @@ export function WeightDistribution() {
       </BlueprintPanel>
 
       <BlueprintPanel className="p-3 min-w-[140px]">
-        <div className="text-[10px] font-mono uppercase tracking-[0.15em] text-text-muted mb-2">
+        <div className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted mb-2">
           Rarity %
         </div>
         <div className="space-y-1">

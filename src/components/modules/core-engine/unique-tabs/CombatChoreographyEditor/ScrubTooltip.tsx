@@ -27,7 +27,7 @@ export function ScrubTooltip({
       }}
     >
       <div
-        className="mb-1 px-2.5 py-1.5 rounded-lg border text-[11px] font-mono whitespace-nowrap"
+        className="mb-1 px-2.5 py-1.5 rounded-lg border text-xs font-mono tabular-nums whitespace-nowrap"
         style={{
           backgroundColor: 'rgba(10,10,10,0.95)',
           borderColor: 'var(--border)',

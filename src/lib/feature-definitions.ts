@@ -61,6 +61,8 @@ export interface ModulePrereqStatus {
   moduleId: SubModuleId;
   label: string;
   progress: number; // 0-100
+  completed: number;
+  total: number;
 }
 
 export interface RecommendedNextModule {
@@ -143,12 +145,14 @@ export function getUnmetPrerequisites(
   for (const prereqId of prereqs) {
     const progress = checklistProgress[prereqId];
     const total = checklistSizes[prereqId] ?? 0;
+    let completed = 0;
     let pct = 0;
     if (progress && total > 0) {
-      pct = Math.round((Object.values(progress).filter(Boolean).length / total) * 100);
+      completed = Object.values(progress).filter(Boolean).length;
+      pct = Math.round((completed / total) * 100);
     }
     if (pct < 50) {
-      unmet.push({ moduleId: prereqId, label: prereqId, progress: pct });
+      unmet.push({ moduleId: prereqId, label: prereqId, progress: pct, completed, total });
     }
   }
   return unmet;

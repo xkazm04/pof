@@ -3,6 +3,7 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import type { SkillId } from '../skills';
+import { MODULE_COLORS } from '@/lib/chart-colors';
 
 export interface CLISessionState {
   id: string;
@@ -84,7 +85,7 @@ export const useCLIPanelStore = create<CLIPanelStoreState>()(
           currentTaskId: null,
           isRunning: false,
           lastTaskSuccess: null,
-          accentColor: opts?.accentColor || '#3b82f6',
+          accentColor: opts?.accentColor || MODULE_COLORS.core,
           moduleId: opts?.moduleId,
           sessionKey: opts?.sessionKey,
           createdAt: Date.now(),

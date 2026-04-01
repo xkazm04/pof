@@ -37,7 +37,7 @@ export function SceneTree() {
         >
           <Box className="w-3 h-3 shrink-0" />
           <span className="flex-1 text-left truncate">{obj.name}</span>
-          <span className="text-[10px] text-text-muted">{obj.type}</span>
+          <span className="text-xs text-text-muted">{obj.type}</span>
           {obj.visible ? (
             <Eye className="w-3 h-3 text-text-muted" />
           ) : (

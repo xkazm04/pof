@@ -3,6 +3,7 @@
 import { BarChart3, Crown } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { STATUS_SUCCESS, ACCENT_VIOLET, OVERLAY_WHITE } from '@/lib/chart-colors';
+import { MOTION_CONFIG } from '@/lib/motion';
 import { BlueprintPanel, SectionHeader, NeonBar } from './design';
 import { COMPARISON_STATS, COMPARISON_CHARACTERS, type ComparisonCharacter } from './data';
 
@@ -26,7 +27,7 @@ export function ComparisonMatrix({ selectedCharacters, visibleCharacters, onTogg
               key={ch.name}
               initial={{ opacity: 0, y: 6 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: i * 0.05 }}
+              transition={{ delay: i * MOTION_CONFIG.stagger }}
               onClick={() => onToggleCharacter(ch.name)}
               className="relative flex items-center gap-2 px-3 py-1.5 rounded-md text-xs font-mono font-bold border transition-all cursor-pointer overflow-hidden"
               style={active ? {
@@ -62,9 +63,9 @@ export function ComparisonMatrix({ selectedCharacters, visibleCharacters, onTogg
         <table className="w-full text-xs border-collapse font-mono">
           <thead>
             <tr className="border-b" style={{ borderColor: `${OVERLAY_WHITE}08` }}>
-              <th className="text-left py-2 pr-4 text-[10px] font-bold uppercase tracking-[0.15em] text-text-muted w-24">Stat</th>
+              <th className="text-left py-2 pr-4 text-xs font-bold uppercase tracking-[0.15em] text-text-muted w-24">Stat</th>
               {visibleCharacters.map(ch => (
-                <th key={ch.name} className="py-2 px-3 text-[10px] font-bold uppercase tracking-[0.15em] text-center"
+                <th key={ch.name} className="py-2 px-3 text-xs font-bold uppercase tracking-[0.15em] text-center"
                   style={{ color: ch.color }}>
                   {ch.name}
                 </th>
@@ -80,7 +81,7 @@ export function ComparisonMatrix({ selectedCharacters, visibleCharacters, onTogg
                   key={stat.stat}
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
-                  transition={{ delay: si * 0.04 }}
+                  transition={{ delay: si * MOTION_CONFIG.stagger }}
                   className="border-b hover:bg-surface/20 transition-colors"
                   style={{ borderColor: `${OVERLAY_WHITE}04` }}
                 >
@@ -115,7 +116,7 @@ export function ComparisonMatrix({ selectedCharacters, visibleCharacters, onTogg
       </div>
 
       {/* Footer */}
-      <div className="flex items-center gap-2 mt-3 pt-2 border-t border-border/10 text-[10px] font-mono text-text-muted">
+      <div className="flex items-center gap-2 mt-3 pt-2 border-t border-border/10 text-xs font-mono text-text-muted">
         <Crown className="w-3 h-3" style={{ color: STATUS_SUCCESS }} />
         <span className="font-bold" style={{ color: STATUS_SUCCESS }}>Crown</span> = highest in stat
         <span className="ml-auto">{visibleCharacters.length} of {COMPARISON_CHARACTERS.length} visible</span>

@@ -38,7 +38,7 @@ export function AffixPoolPanel({
   return (
     <BlueprintPanel color={ACCENT} className="p-3 space-y-4 max-h-[600px] flex flex-col md:row-span-2 xl:row-span-1 relative">
       <SectionHeader label="Affix Pool" color={ACCENT} />
-      <p className="text-[10px] font-mono uppercase tracking-[0.15em] text-text-muted">
+      <p className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted">
         Drag affixes onto the item or click <Plus className="w-2.5 h-2.5 inline" /> to add.
         {maxAffixes > 0 && (
           <span className="ml-1 font-mono" style={{ color: rarityColor, textShadow: `0 0 12px ${rarityColor}40` }}>
@@ -51,7 +51,7 @@ export function AffixPoolPanel({
       <div className="flex gap-1">
         {(['all', 'offensive', 'defensive', 'utility'] as const).map((cat) => (
           <button key={cat} onClick={() => setPoolFilter(cat)}
-            className="flex-1 px-2 py-1 rounded text-[10px] font-mono uppercase tracking-[0.15em] capitalize transition-all"
+            className="flex-1 px-2 py-1 rounded text-xs font-mono uppercase tracking-[0.15em] capitalize transition-all"
             style={{
               backgroundColor: poolFilter === cat ? `${ACCENT}20` : 'transparent',
               color: poolFilter === cat ? ACCENT : 'var(--text-muted)',
@@ -65,7 +65,7 @@ export function AffixPoolPanel({
       {/* Search */}
       <input type="text" value={poolSearch} onChange={(e) => setPoolSearch(e.target.value)}
         placeholder="Search affixes..."
-        className="w-full px-2 py-1.5 bg-surface-deep rounded text-[10px] font-mono text-text placeholder-text-muted outline-none transition-colors"
+        className="w-full px-2 py-1.5 bg-surface-deep rounded text-xs font-mono text-text placeholder-text-muted outline-none transition-colors"
         style={{ border: `1px solid ${ACCENT}25` }} />
 
       {/* Pool list */}
@@ -91,14 +91,14 @@ export function AffixPoolPanel({
               <GripVertical className="w-3 h-3 text-text-muted opacity-40 group-hover:opacity-80 flex-shrink-0" />
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-1.5">
-                  <span className="text-[10px] font-bold font-mono text-text truncate"
+                  <span className="text-xs font-bold font-mono text-text truncate"
                     style={{ textShadow: `0 0 12px ${catColor}40` }}>{entry.displayName}</span>
-                  <span className="text-[10px] px-1 py-0.5 rounded font-bold font-mono uppercase"
+                  <span className="text-xs px-1 py-0.5 rounded font-bold font-mono uppercase"
                     style={{ backgroundColor: `${rColor}15`, color: rColor, border: `1px solid ${rColor}30` }}>
                     {entry.bIsPrefix ? 'PRE' : 'SUF'}
                   </span>
                 </div>
-                <div className="text-[10px] text-text-muted font-mono truncate">{entry.stat} ({entry.minValue}-{entry.maxValue})</div>
+                <div className="text-xs text-text-muted font-mono truncate">{entry.stat} ({entry.minValue}-{entry.maxValue})</div>
                 <div className="mt-0.5" title={`Weight: ${entry.weight} | Prob: ${totalWeight > 0 ? ((entry.weight / totalWeight) * 100).toFixed(1) : 0}%`}>
                   <NeonBar pct={weightPct} color={catColor} height={3} />
                 </div>
@@ -112,7 +112,7 @@ export function AffixPoolPanel({
           );
         })}
         {filteredPool.length === 0 && (
-          <div className="text-[10px] font-mono text-text-muted italic text-center py-4">
+          <div className="text-xs font-mono text-text-muted italic text-center py-4">
             {craftedAffixCount >= maxAffixes ? 'Item is full -- remove an affix to add more' : 'No matching affixes'}
           </div>
         )}

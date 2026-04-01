@@ -115,7 +115,7 @@ export function AILogicTab({ featureMap, accent }: AILogicTabProps) {
 function PerceptionLegend() {
   return (
     <div className="space-y-3 flex-1 min-w-0">
-      <div className="text-[10px] font-mono uppercase tracking-[0.15em] text-text-muted">Sense Legend</div>
+      <div className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted">Sense Legend</div>
       {[
         { label: 'Sight Cone', desc: '60 deg, 1500cm', color: 'rgba(6,182,212,0.5)', dashed: false },
         { label: 'Hearing Range', desc: '800cm radius', color: 'rgba(6,182,212,0.25)', dashed: true },
@@ -128,7 +128,7 @@ function PerceptionLegend() {
         </div>
       ))}
       <div className="border-t border-border/30 pt-2 space-y-1.5 mt-2">
-        <div className="text-[10px] font-mono uppercase tracking-[0.15em] text-text-muted">Detected</div>
+        <div className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted">Detected</div>
         {DETECTED_ENTITIES.map(e => (
           <div key={e.label} className="flex items-center gap-2 text-xs">
             <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: e.color }} />
@@ -179,7 +179,7 @@ function BtDetailsPanel({ expandedNodeId }: { expandedNodeId: string | null }) {
           { shape: 'rounded', label: 'Task' },
           { shape: 'hexagon', label: 'Decorator' },
         ].map(l => (
-          <span key={l.shape} className="text-[11px] font-mono text-text-muted flex items-center gap-1">
+          <span key={l.shape} className="text-xs font-mono text-text-muted flex items-center gap-1">
             <span className="w-2 h-2 border border-text-muted/40 flex-shrink-0" style={{
               borderRadius: l.shape === 'rounded' ? '50%' : l.shape === 'diamond' ? '0' : '2px',
               transform: l.shape === 'diamond' ? 'rotate(45deg) scale(0.8)' : undefined,

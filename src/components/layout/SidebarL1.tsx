@@ -53,6 +53,7 @@ export function SidebarL1() {
             aria-pressed={isActive}
             className={`
               relative w-10 h-10 flex items-center justify-center rounded-lg transition-all duration-base
+              focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-strong focus-visible:ring-offset-1 focus-visible:ring-offset-surface-deep
               ${isActive
                 ? 'bg-surface-hover'
                 : 'hover:bg-surface'

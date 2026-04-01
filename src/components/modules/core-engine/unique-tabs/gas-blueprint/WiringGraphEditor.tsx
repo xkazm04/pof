@@ -2,11 +2,12 @@
 
 import { useState, useCallback, useMemo, useRef } from 'react';
 import { Circle, Zap, Tag, Cable } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import {
   STATUS_SUCCESS, STATUS_WARNING, STATUS_ERROR,
   ACCENT_CYAN, ACCENT_VIOLET, ACCENT_ORANGE, ACCENT_EMERALD,
 } from '@/lib/chart-colors';
+import { motionSafe, ANIMATION_PRESETS } from '@/lib/motion';
 import type { AttrCategory, EditorAttribute, EditorEffect, TagRule } from '@/lib/gas-codegen';
 import type { AttrRelationship, PinKind, GASGraphNode, GraphWire } from './types';
 import { CAT_COLORS, NODE_W_GRAPH, NODE_H_GRAPH, PIN_R } from './types';
@@ -20,6 +21,7 @@ export function WiringGraphEditor({
   relationships: AttrRelationship[];
   onSelectItem?: (label: string | null) => void;
 }) {
+  const prefersReduced = useReducedMotion();
   const [hoveredWire, setHoveredWire] = useState<string | null>(null);
   const [hoveredNode, setHoveredNode] = useState<string | null>(null);
   const [selectedNodeRaw, setSelectedNodeRaw] = useState<string | null>(null);
@@ -351,18 +353,20 @@ export function WiringGraphEditor({
                   markerEnd="url(#gas-flow-arrow)"
                   className="pointer-events-none transition-opacity duration-200"
                 >
-                  {wire.animated && (
+                  {wire.animated && !prefersReduced && (
                     <animate attributeName="stroke-dashoffset" from="10" to="0" dur="0.8s" repeatCount="indefinite" />
                   )}
                 </path>
-                {/* Flow pulse dot */}
-                <circle r={isHighlighted ? 3 : 2} fill={wire.color} opacity={isHighlighted ? 0.9 : 0.5} className="pointer-events-none">
-                  <animateMotion
-                    dur={wire.animated ? '1.5s' : '3s'}
-                    repeatCount="indefinite"
-                    path={path}
-                  />
-                </circle>
+                {/* Flow pulse dot — skip continuous animation for reduced motion */}
+                {!prefersReduced && (
+                  <circle r={isHighlighted ? 3 : 2} fill={wire.color} opacity={isHighlighted ? 0.9 : 0.5} className="pointer-events-none">
+                    <animateMotion
+                      dur={wire.animated ? '1.5s' : '3s'}
+                      repeatCount="indefinite"
+                      path={path}
+                    />
+                  </circle>
+                )}
               </g>
             );
           })}
@@ -542,9 +546,10 @@ export function WiringGraphEditor({
       <AnimatePresence>
         {selectedDetail && (
           <motion.div
-            initial={{ height: 0, opacity: 0 }}
+            initial={prefersReduced ? { height: 'auto', opacity: 1 } : { height: 0, opacity: 0 }}
             animate={{ height: 'auto', opacity: 1 }}
-            exit={{ height: 0, opacity: 0 }}
+            exit={prefersReduced ? { opacity: 0 } : { height: 0, opacity: 0 }}
+            transition={motionSafe(ANIMATION_PRESETS.entrance, prefersReduced)}
             className="overflow-hidden"
           >
             <div

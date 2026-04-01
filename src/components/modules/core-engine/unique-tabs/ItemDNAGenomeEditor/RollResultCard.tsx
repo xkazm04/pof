@@ -19,15 +19,15 @@ export function RollResultCard({ result, genome }: { result: DNARollResult; geno
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <Sparkles className="w-3.5 h-3.5" style={{ color: genome.color }} />
-          <span className="text-[10px] font-mono uppercase tracking-[0.15em] font-bold text-text">Rolled Affixes</span>
-          <span className="text-[10px] font-mono text-text-muted">({result.affixes.length})</span>
+          <span className="text-xs font-mono uppercase tracking-[0.15em] font-bold text-text">Rolled Affixes</span>
+          <span className="text-xs font-mono text-text-muted">({result.affixes.length})</span>
         </div>
         <div className="flex items-center gap-2">
-          <span className="text-[10px] font-mono uppercase tracking-[0.15em]" style={{ color: result.coherenceScore > 0.6 ? STATUS_SUCCESS : result.coherenceScore > 0.3 ? STATUS_WARNING : STATUS_ERROR }}>
+          <span className="text-xs font-mono uppercase tracking-[0.15em]" style={{ color: result.coherenceScore > 0.6 ? STATUS_SUCCESS : result.coherenceScore > 0.3 ? STATUS_WARNING : STATUS_ERROR }}>
             {(result.coherenceScore * 100).toFixed(0)}% coherent
           </span>
           {result.hasMutations && (
-            <span className="text-[10px] font-mono uppercase tracking-[0.15em] px-1 rounded" style={{ backgroundColor: `${ACCENT_PINK}${OPACITY_20}`, color: ACCENT_PINK }}>
+            <span className="text-xs font-mono uppercase tracking-[0.15em] px-1 rounded" style={{ backgroundColor: `${ACCENT_PINK}${OPACITY_20}`, color: ACCENT_PINK }}>
               MUTANT
             </span>
           )}

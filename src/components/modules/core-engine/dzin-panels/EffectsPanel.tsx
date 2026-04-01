@@ -7,17 +7,17 @@ import {
   ACCENT_RED, ACCENT_EMERALD_DARK, MODULE_COLORS, STATUS_STALE,
 } from '@/lib/chart-colors';
 import { useDensity, PanelFrame } from '@/lib/dzin/core';
-import { DZIN_TIMING } from '@/lib/dzin/animation-constants';
+import { DZIN_TIMING, DZIN_SPACING, TRANSITION_ENTER, TRANSITION_EXIT } from '@/lib/dzin/animation-constants';
 import { useDzinSelection } from '@/lib/dzin/selection-context';
 import { isRelatedToSelection, ENTITY_RELATIONS } from '@/lib/dzin/entity-relations';
 import {
   FeatureCard,
   PipelineFlow,
   SectionLabel,
-  STATUS_COLORS,
+  statusInfo,
 } from '@/components/modules/core-engine/unique-tabs/_shared';
 import { SurfaceCard } from '@/components/ui/SurfaceCard';
-import type { FeatureRow, FeatureStatus } from '@/types/feature-matrix';
+import type { FeatureRow } from '@/types/feature-matrix';
 
 /* ── Props ──────────────────────────────────────────────────────────────── */
 
@@ -41,18 +41,11 @@ const EFFECT_FEATURE_NAMES = ['Core Gameplay Effects', 'Damage execution calcula
 
 const EFFECT_PIPELINE_STEPS = ['Predict', 'Apply', 'Stack', 'Expire', 'Remove'] as const;
 
-/* ── Helpers ────────────────────────────────────────────────────────────── */
-
-function statusDotColor(status: FeatureStatus | undefined): string {
-  if (!status) return STATUS_COLORS.unknown.dot;
-  return STATUS_COLORS[status].dot;
-}
-
 /* ── Micro density ──────────────────────────────────────────────────────── */
 
 function EffectsMicro() {
   return (
-    <div className="flex flex-col items-center justify-center gap-1 p-2">
+    <div className={DZIN_SPACING.micro.wrapper}>
       <Flame className="w-5 h-5 text-red-400" />
       <span className="font-mono text-xs">{EFFECT_TYPES.length}</span>
     </div>
@@ -69,10 +62,11 @@ function EffectsCompact({ featureMap }: EffectsPanelProps) {
     'GE_Damage': 'MeleeAttack',
     'GE_Heal': 'HealOverTime',
     'GE_Buff': 'Shield',
+    'GE_Regen': 'HealOverTime',
   };
 
   return (
-    <div className="space-y-2 p-2 text-xs">
+    <div className={`${DZIN_SPACING.compact.wrapper} text-xs`}>
       {/* Effect type list */}
       <div className="space-y-1">
         {EFFECT_TYPES.map((effect) => {
@@ -88,8 +82,9 @@ function EffectsCompact({ featureMap }: EffectsPanelProps) {
               transition={{ duration: DZIN_TIMING.HIGHLIGHT }}
             >
               <span
-                className="w-2 h-2 rounded-full flex-shrink-0"
-                style={{ backgroundColor: effect.color }}
+                className="w-3 h-3 rounded-full flex-shrink-0"
+                style={{ backgroundColor: effect.color, boxShadow: `0 0 0 3px ${effect.color}33` }}
+                title={effect.name}
               />
               <span className="font-medium text-text">{effect.name}</span>
               <span className="text-text-muted truncate ml-auto text-2xs">{effect.desc}</span>
@@ -99,15 +94,16 @@ function EffectsCompact({ featureMap }: EffectsPanelProps) {
       </div>
 
       {/* Feature status indicators */}
-      <div className="border-t border-border/40 pt-1.5 space-y-1">
+      <div className={`border-t border-border/40 ${DZIN_SPACING.compact.divider} space-y-1`}>
         {EFFECT_FEATURE_NAMES.map((name) => {
           const status = featureMap.get(name)?.status;
-          const dotColor = statusDotColor(status);
+          const { color: dotColor, label: dotLabel } = statusInfo(status);
           return (
             <div key={name} className="flex items-center gap-2">
               <span
-                className="w-1.5 h-1.5 rounded-full flex-shrink-0"
-                style={{ backgroundColor: dotColor }}
+                className="w-3 h-3 rounded-full flex-shrink-0"
+                style={{ backgroundColor: dotColor, boxShadow: `0 0 0 3px ${dotColor}33` }}
+                title={dotLabel}
               />
               <span className="text-text-muted truncate">{name}</span>
             </div>
@@ -125,7 +121,7 @@ function EffectsFull({ featureMap, defs }: EffectsPanelProps) {
   const onToggle = (name: string) => setExpanded((prev) => (prev === name ? null : name));
 
   return (
-    <div className="space-y-2.5">
+    <div className={DZIN_SPACING.full.wrapper}>
       {/* Feature cards */}
       {EFFECT_FEATURE_NAMES.map((name) => (
         <FeatureCard
@@ -140,7 +136,7 @@ function EffectsFull({ featureMap, defs }: EffectsPanelProps) {
       ))}
 
       {/* Effect type cards */}
-      <SurfaceCard level={2} className="p-3 relative overflow-hidden">
+      <SurfaceCard level={2} className={`${DZIN_SPACING.full.card} relative overflow-hidden`}>
         <SectionLabel label="Effect Types" />
         <div className="grid grid-cols-2 gap-2 mt-2">
           {EFFECT_TYPES.map((effect) => (
@@ -159,9 +155,9 @@ function EffectsFull({ featureMap, defs }: EffectsPanelProps) {
       </SurfaceCard>
 
       {/* Effect application pipeline */}
-      <SurfaceCard level={2} className="p-3 relative overflow-hidden">
+      <SurfaceCard level={2} className={`${DZIN_SPACING.full.card} relative overflow-hidden`}>
         <SectionLabel label="Effect Application Pipeline" />
-        <div className="mt-3">
+        <div className={DZIN_SPACING.full.pipelineMt}>
           <PipelineFlow steps={[...EFFECT_PIPELINE_STEPS]} accent={ACCENT} />
         </div>
       </SurfaceCard>
@@ -181,8 +177,8 @@ export function EffectsPanel({ featureMap, defs }: EffectsPanelProps) {
           key={density}
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          transition={{ duration: DZIN_TIMING.DENSITY / 2 }}
+          exit={{ opacity: 0, transition: TRANSITION_EXIT }}
+          transition={TRANSITION_ENTER}
         >
           {density === 'micro' && <EffectsMicro />}
           {density === 'compact' && <EffectsCompact featureMap={featureMap} defs={defs} />}

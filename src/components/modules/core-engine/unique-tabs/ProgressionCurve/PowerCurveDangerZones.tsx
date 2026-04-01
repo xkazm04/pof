@@ -24,7 +24,7 @@ export function PowerCurveDangerZones() {
           {ZONE_THRESHOLDS.map(z => (
             <div key={z.label} className="flex items-center gap-1.5">
               <span className="w-2.5 h-2.5 rounded-sm" style={{ backgroundColor: z.color, opacity: 0.6 }} />
-              <span className="text-[10px] font-mono uppercase tracking-[0.15em] text-text-muted">{z.label}</span>
+              <span className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted">{z.label}</span>
             </div>
           ))}
         </div>
@@ -34,7 +34,7 @@ export function PowerCurveDangerZones() {
         gridColor="rgba(255,255,255,0.05)"
         xLabels={DANGER_ZONE_LEVELS.filter((_, i) => i % 2 === 0).map(lv => `Lv ${lv}`)}
         overlay={
-          <div className="absolute top-2 right-4 flex items-center gap-4 text-[10px] font-mono z-10">
+          <div className="absolute top-2 right-4 flex items-center gap-4 text-xs font-mono z-10">
             <span className="flex items-center gap-1"><span className="w-4 h-[2px] rounded" style={{ backgroundColor: STATUS_SUCCESS }} /> Player</span>
             <span className="flex items-center gap-1"><span className="w-4 h-[2px] rounded border-t border-dashed" style={{ borderColor: STATUS_ERROR, backgroundColor: STATUS_ERROR }} /> Enemy</span>
           </div>

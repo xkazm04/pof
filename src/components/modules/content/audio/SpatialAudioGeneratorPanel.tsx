@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useCallback, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import {
   Wand2, MapPin, Volume2, Loader2, ChevronDown, ChevronRight,
   AlertCircle, CheckCircle2, Music, Radio,
@@ -49,6 +49,7 @@ export function SpatialAudioGeneratorPanel({
   const [result, setResult] = useState<GenerateResult | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [expandedRoom, setExpandedRoom] = useState<string | null>(null);
+  const prefersReduced = useReducedMotion();
 
   // Load available level design docs
   useEffect(() => {
@@ -134,7 +135,7 @@ export function SpatialAudioGeneratorPanel({
         <div className="bg-black/60 border border-blue-900/40 rounded-xl overflow-hidden shadow-lg">
           <div className="px-4 py-3 bg-blue-900/20 border-b border-blue-900/40 flex items-center gap-2">
             <Radio className="w-4 h-4 text-blue-400" />
-            <span className="text-xs uppercase tracking-widest text-blue-300 font-bold">SOURCE_LEVEL_DATA</span>
+            <span className="text-xs text-blue-300 font-bold">Source Level Data</span>
           </div>
 
           <div className="p-4 space-y-4">
@@ -236,10 +237,10 @@ export function SpatialAudioGeneratorPanel({
         <AnimatePresence mode="wait">
           {result && (
             <motion.div
-              initial={{ opacity: 0, y: 10, filter: 'blur(4px)' }}
+              initial={prefersReduced ? false : { opacity: 0, y: 10, filter: 'blur(4px)' }}
               animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
               exit={{ opacity: 0, y: -10, filter: 'blur(4px)' }}
-              transition={{ duration: 0.3 }}
+              transition={prefersReduced ? { duration: 0 } : { duration: 0.3 }}
               className="space-y-4 pt-4 border-t border-blue-900/40"
             >
               {/* Summary bar */}
@@ -261,7 +262,7 @@ export function SpatialAudioGeneratorPanel({
               <div>
                 <div className="flex items-center gap-2 mb-3">
                   <Volume2 className="w-3.5 h-3.5 text-blue-500/60" />
-                  <h4 className="text-xs font-bold uppercase tracking-widest text-blue-400">TELEMETRY_LOG</h4>
+                  <h4 className="text-xs font-bold text-blue-400">Telemetry Log</h4>
                 </div>
                 <div className="space-y-2">
                   {result.report.map((room) => {
@@ -290,16 +291,16 @@ export function SpatialAudioGeneratorPanel({
                         <AnimatePresence>
                           {isExpanded && (
                             <motion.div
-                              initial={{ height: 0, opacity: 0 }}
+                              initial={prefersReduced ? false : { height: 0, opacity: 0 }}
                               animate={{ height: 'auto', opacity: 1 }}
                               exit={{ height: 0, opacity: 0 }}
-                              transition={{ duration: 0.2 }}
+                              transition={prefersReduced ? { duration: 0 } : { duration: 0.2 }}
                               className="overflow-hidden"
                             >
                               <div className="px-4 pb-4 pt-1 space-y-4 border-t border-blue-900/40 bg-black/60">
                                 {/* Reasoning */}
                                 <div className="p-3 rounded-lg bg-blue-900/10 border border-blue-900/30">
-                                  <p className="text-xs font-mono text-blue-200/80 leading-relaxed"><span className="text-blue-400 font-bold uppercase tracking-widest">LOGIC_TRACE: </span>{room.reasoning}</p>
+                                  <p className="text-xs font-mono text-blue-200/80 leading-relaxed"><span className="text-blue-400 font-bold">Logic Trace: </span>{room.reasoning}</p>
                                 </div>
 
                                 {/* Acoustic props */}
@@ -311,7 +312,7 @@ export function SpatialAudioGeneratorPanel({
                                 {/* Emitters */}
                                 {room.emitterNames.length > 0 && (
                                   <div className="space-y-1.5">
-                                    <span className="text-[11px] font-bold uppercase tracking-widest text-blue-500/80">GENERATED_EMITTERS</span>
+                                    <span className="text-[11px] font-bold text-blue-500/80">Generated Emitters</span>
                                     <div className="flex flex-wrap gap-2">
                                       {room.emitterNames.map((name, i) => (
                                         <span

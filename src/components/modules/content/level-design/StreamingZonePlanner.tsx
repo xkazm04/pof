@@ -235,7 +235,7 @@ export function StreamingZonePlanner({ onGenerate, isGenerating }: StreamingZone
     <div className="p-6 space-y-6 overflow-y-auto w-full max-w-6xl mx-auto" style={{ maxHeight: 'calc(100vh - 120px)' }}>
       {/* Paint palette */}
       <div className="flex items-center gap-2 flex-wrap bg-[#03030a] p-3 rounded-2xl border border-violet-900/40 shadow-[inset_0_0_40px_rgba(167,139,250,0.05)]">
-        <span className="text-xs uppercase tracking-widest font-mono text-violet-400/80 font-bold mx-2">PAINT_MODE</span>
+        <span className="text-xs font-mono text-violet-400/80 font-bold mx-2">Paint Mode</span>
         {(Object.entries(ZONE_TYPES) as [ZoneType, typeof ZONE_TYPES[ZoneType]][]).map(([type, cfg]) => {
           const active = paintType === type;
           return (

@@ -10,7 +10,7 @@ export function LootDiffSection() {
   return (
     <BlueprintPanel className="p-3">
       <SectionHeader icon={Diff} label="Loot Table Diff" color={ACCENT_EMERALD} />
-      <div className="text-[10px] font-mono uppercase tracking-[0.15em] text-text-muted mb-2">
+      <div className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted mb-2">
         Level 10 Boss vs Level 20 Boss
       </div>
       <DiffViewer entries={LOOT_DIFF_ENTRIES} accent={ACCENT_EMERALD} />

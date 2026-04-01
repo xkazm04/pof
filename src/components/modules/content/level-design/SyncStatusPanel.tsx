@@ -6,14 +6,14 @@ import {
   ChevronDown, ChevronRight, ArrowRight, Loader2,
 } from 'lucide-react';
 import type { SyncStatus, SyncDivergence } from '@/types/level-design';
-import { STATUS_SUCCESS, STATUS_WARNING, STATUS_INFO, STATUS_ERROR } from '@/lib/chart-colors';
+import { STATUS_SUCCESS, STATUS_WARNING, STATUS_INFO, STATUS_ERROR, STATUS_NEUTRAL } from '@/lib/chart-colors';
 
 const SYNC_CONFIG: Record<SyncStatus, { icon: typeof CheckCircle; color: string; bg: string; label: string; desc: string }> = {
   synced:     { icon: CheckCircle,    color: STATUS_SUCCESS, bg: `${STATUS_SUCCESS}15`, label: 'Synced',     desc: 'Design doc matches generated code' },
   'doc-ahead': { icon: AlertTriangle, color: STATUS_WARNING, bg: `${STATUS_WARNING}15`, label: 'Doc Ahead',  desc: 'Design doc has changes not yet in code' },
   'code-ahead': { icon: AlertTriangle, color: STATUS_INFO, bg: `${STATUS_INFO}15`, label: 'Code Ahead', desc: 'Code has changes not reflected in doc' },
   diverged:   { icon: AlertOctagon,   color: STATUS_ERROR, bg: `${STATUS_ERROR}15`, label: 'Diverged',   desc: 'Both doc and code have independent changes' },
-  unlinked:   { icon: Info,           color: 'var(--text-muted)', bg: 'var(--text-muted)15', label: 'Unlinked',   desc: 'No code generated yet' },
+  unlinked:   { icon: Info,           color: STATUS_NEUTRAL, bg: `${STATUS_NEUTRAL}15`, label: 'Unlinked',   desc: 'No code generated yet' },
 };
 
 const SEVERITY_CONFIG: Record<string, { color: string; icon: typeof Info }> = {
@@ -121,13 +121,13 @@ export function SyncStatusPanel({
                         <div className="grid grid-cols-2 gap-2 mb-1.5">
                           <div>
                             <span className="text-2xs text-text-muted block">Design Doc</span>
-                            <span className="text-xs text-[#b0b4cc] font-mono block truncate">
+                            <span className="text-xs text-text-muted-hover font-mono block truncate">
                               {div.docValue || '(empty)'}
                             </span>
                           </div>
                           <div>
                             <span className="text-2xs text-text-muted block">Code</span>
-                            <span className="text-xs text-[#b0b4cc] font-mono block truncate">
+                            <span className="text-xs text-text-muted-hover font-mono block truncate">
                               {div.codeValue || '(empty)'}
                             </span>
                           </div>

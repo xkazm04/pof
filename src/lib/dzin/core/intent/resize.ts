@@ -1,13 +1,14 @@
 import type { PanelDensity } from '../types/panel';
 import type { PanelDefinition } from '../registry/types';
 import { assignSlotDensity } from '../layout/density';
+import { DENSITY_CONFIG } from '@/lib/dzin/animation-constants';
 
 // ---------------------------------------------------------------------------
 // Constants
 // ---------------------------------------------------------------------------
 
-/** Minimum panel dimension in pixels. No panel can be resized smaller than this. */
-export const MIN_PANEL_PX = 60;
+/** Minimum panel dimension in pixels. Derived from the canonical micro threshold. */
+export const MIN_PANEL_PX = DENSITY_CONFIG.fallback.micro.minWidth;
 
 /** Hysteresis buffer in pixels. After a density change, require this much additional
  *  movement past the threshold before allowing another density change. */

@@ -31,7 +31,7 @@ export function CodegenModal({ mod, onClose }: CodegenModalProps) {
                   UE5 GameplayEffect — {mod.name}
                 </span>
                 <span
-                  className="text-[11px] font-bold px-1.5 py-0.5 rounded-full border"
+                  className="text-xs font-bold px-1.5 py-0.5 rounded-full border"
                   style={{
                     backgroundColor: `${mod.color}15`,
                     borderColor: `${mod.color}40`,

@@ -57,6 +57,8 @@ export {
   estimateSlotDimensions,
   computeSpatialBudget,
   // Density
+  DENSITY_CONFIG,
+  DENSITY_ORDER,
   assignSlotDensity,
   // Viewport
   VIEWPORT_BREAKPOINTS,
@@ -84,6 +86,8 @@ export type {
   ContainerProps,
   SlotProps,
   DzinLayoutProps,
+  DensityThreshold,
+  DensityPreset,
 } from './layout';
 
 // State engine

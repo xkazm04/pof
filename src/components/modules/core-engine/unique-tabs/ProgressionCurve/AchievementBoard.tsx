@@ -71,7 +71,7 @@ export function AchievementBoard() {
                   <Icon className="w-3.5 h-3.5" style={{ color: cat.color }} />
                   <span className="text-xs font-bold text-text">{cat.category}</span>
                 </div>
-                <span className="text-[10px] font-mono font-bold" style={{ color: cat.color }}>{catPct}%</span>
+                <span className="text-xs font-mono font-bold" style={{ color: cat.color }}>{catPct}%</span>
               </div>
 
               <NeonBar pct={catPct} color={cat.color} glow />
@@ -105,10 +105,10 @@ export function AchievementBoard() {
                     </div>
 
                     <div className="flex-1 min-w-0">
-                      <div className="text-[10px] font-bold text-text truncate group-hover/ach:text-amber-400 transition-colors">{ach.name}</div>
-                      <div className="text-[11px] text-text-muted truncate">{ach.desc}</div>
+                      <div className="text-xs font-bold text-text truncate group-hover/ach:text-amber-400 transition-colors">{ach.name}</div>
+                      <div className="text-xs text-text-muted truncate">{ach.desc}</div>
                     </div>
-                    <span className="text-[10px] font-mono font-bold flex-shrink-0" style={{ color: ach.progress === 100 ? STATUS_SUCCESS : 'var(--text-muted)' }}>
+                    <span className="text-xs font-mono font-bold flex-shrink-0" style={{ color: ach.progress === 100 ? STATUS_SUCCESS : 'var(--text-muted)' }}>
                       {ach.progress}%
                     </span>
                   </motion.div>

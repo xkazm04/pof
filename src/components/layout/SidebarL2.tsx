@@ -101,6 +101,11 @@ export function SidebarL2() {
     document.addEventListener('mouseup', handleMouseUp);
   }, [width, activeCategory]);
 
+  const handleResizeDoubleClick = useCallback(() => {
+    setWidth(SIDEBAR_DEFAULT);
+    if (activeCategory) saveWidth(activeCategory, SIDEBAR_DEFAULT);
+  }, [activeCategory]);
+
   const handleKeyDown = useCallback((e: React.KeyboardEvent<HTMLButtonElement>) => {
     if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
       e.preventDefault();
@@ -144,7 +149,7 @@ export function SidebarL2() {
                 {activeCategory === 'core-engine' && (
                   <button
                     onClick={() => setActiveSubModule('core-engine-plan' as SubModuleId)}
-                    className={`inline-flex items-center justify-center w-6 h-6 rounded text-2xs border transition-colors ${
+                    className={`inline-flex items-center justify-center w-6 h-6 rounded text-2xs border transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-strong focus-visible:ring-offset-1 focus-visible:ring-offset-surface-deep ${
                       activeSubModule === 'core-engine-plan'
                         ? 'bg-blue-500/15 text-blue-400 border-blue-500/30'
                         : 'text-text-muted hover:text-text hover:bg-surface border-border'
@@ -173,6 +178,7 @@ export function SidebarL2() {
                     aria-label={mod.label}
                     className={`
                       w-full flex items-center gap-2.5 px-3 py-2 text-left transition-all duration-fast
+                      focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-strong focus-visible:ring-offset-1 focus-visible:ring-offset-surface-deep
                       ${isActive
                         ? 'bg-surface-hover'
                         : 'hover:bg-surface'
@@ -204,21 +210,23 @@ export function SidebarL2() {
               })}
             </StaggerContainer>
           </div>
-          {/* Resize handle — right edge */}
+          {/* Resize handle — right edge (12px hit zone, 2px visual) */}
           <div
             onMouseDown={handleResizeMouseDown}
-            className="absolute top-0 right-0 w-[5px] h-full cursor-ew-resize group z-10"
+            onDoubleClick={handleResizeDoubleClick}
+            className="absolute top-0 right-0 w-3 h-full cursor-ew-resize group z-10"
+            style={{ marginRight: -4 }}
             role="separator"
             aria-orientation="vertical"
-            aria-label="Resize sidebar"
+            aria-label="Resize sidebar (double-click to reset)"
             aria-valuenow={width}
             aria-valuemin={SIDEBAR_MIN}
             aria-valuemax={SIDEBAR_MAX}
           >
             {/* Border line */}
-            <div className="absolute top-0 right-0 w-px h-full bg-border" />
+            <div className="absolute top-0 left-1/2 -translate-x-1/2 w-px h-full bg-border" />
             {/* Hover highlight */}
-            <div className="absolute top-0 right-0 w-[2px] h-full bg-transparent group-hover:bg-border-bright transition-colors duration-fast" />
+            <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[2px] h-full bg-transparent group-hover:bg-border-bright transition-colors duration-fast" />
           </div>
         </motion.nav>
       )}

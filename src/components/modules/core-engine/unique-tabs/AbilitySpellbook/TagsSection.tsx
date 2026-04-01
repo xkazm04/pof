@@ -43,7 +43,7 @@ function TagTreeNode({ node, depth }: { node: TagNode; depth: number }) {
     >
       <button
         onClick={() => hasChildren && setOpen(!open)}
-        className="flex items-center gap-1.5 text-[10px] font-mono uppercase tracking-[0.15em] py-1 hover:bg-surface-hover/50 rounded transition-colors w-full text-left focus:outline-none pr-2"
+        className="flex items-center gap-1.5 text-xs font-mono uppercase tracking-[0.15em] py-1 hover:bg-surface-hover/50 rounded transition-colors w-full text-left focus:outline-none pr-2"
         style={{ paddingLeft: `${depth * 16 + 8}px` }}
       >
         {hasChildren ? (

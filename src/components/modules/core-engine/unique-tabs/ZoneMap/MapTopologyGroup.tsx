@@ -37,7 +37,7 @@ export function MapTopologyGroup({ featureMap, defs }: MapTopologyGroupProps) {
           <BlueprintPanel color={ACCENT} className="p-3">
             <div className="flex justify-between items-center mb-2.5 relative z-10">
               <SectionHeader icon={Compass} label="World Map Preview" color={ACCENT} />
-              <div className="flex gap-4 text-[10px] font-mono uppercase tracking-[0.15em] text-text-muted bg-surface-deep px-3 py-1.5 rounded-full border border-border/40">
+              <div className="flex gap-4 text-xs font-mono uppercase tracking-[0.15em] text-text-muted bg-surface-deep px-3 py-1.5 rounded-full border border-border/40">
                 <span className="flex items-center gap-1.5 hover:text-cyan-400 transition-colors cursor-help">
                   <span className="w-2 h-2 rounded-full shadow-[0_0_5px_currentColor]" style={{ backgroundColor: STATUS_SUCCESS, color: STATUS_SUCCESS }} /> Completed
                 </span>
@@ -58,7 +58,7 @@ export function MapTopologyGroup({ featureMap, defs }: MapTopologyGroupProps) {
                 }}
               />
               <ZoneMapCanvas zones={ZONES} selectedZone={selectedZone} onSelectZone={setSelectedZone} />
-              <div className="absolute bottom-2 right-3 text-[10px] font-mono uppercase tracking-[0.15em] text-cyan-500/50">
+              <div className="absolute bottom-2 right-3 text-xs font-mono uppercase tracking-[0.15em] text-cyan-500/50">
                 WRLD.X: {Math.round(selectedZone.cx * 100)} / Y: {Math.round(selectedZone.cy * 100)}
               </div>
             </div>
@@ -131,7 +131,7 @@ function RegionDetails({ selectedZone, featureMap }: { selectedZone: ZoneRecord;
             </div>
 
             <div className="space-y-4 relative z-10">
-              <div className="text-[10px] font-mono uppercase tracking-[0.15em] text-text-muted font-bold">Connections</div>
+              <div className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted font-bold">Connections</div>
               {selectedZone.connections.length > 0 ? (
                 <div className="flex flex-wrap gap-1.5">
                   {selectedZone.connections.map(connId => {
@@ -151,7 +151,7 @@ function RegionDetails({ selectedZone, featureMap }: { selectedZone: ZoneRecord;
           </div>
 
           <div className="pt-2 border-t border-border/40">
-            <div className="text-[10px] font-mono uppercase tracking-[0.15em] text-text-muted font-bold mb-3">Feature State</div>
+            <div className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted font-bold mb-3">Feature State</div>
             <div className="space-y-3">
               {selectedZone.type === 'hub' && (
                 <FeatureList itemNames={['Game instance', 'Base PlayerController']} featureMap={featureMap} />

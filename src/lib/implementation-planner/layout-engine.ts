@@ -2,6 +2,7 @@ import type { SubModuleId } from '@/types/modules';
 import type { PlanItem } from './plan-generator';
 import { getModuleLabel } from './plan-generator';
 import type { EffortLevel } from './effort-estimator';
+import { PLAN_STATUS_COLORS } from '@/lib/chart-colors';
 
 // ---------- Types ----------
 
@@ -32,14 +33,6 @@ export interface CanvasLayout {
 }
 
 // ---------- Constants ----------
-
-const STATUS_COLORS: Record<string, string> = {
-  implemented: '#4ade80',
-  improved: '#38bdf8',
-  partial: '#fbbf24',
-  missing: '#f87171',
-  unknown: '#6b7280',
-};
 
 const NODE_SPACING_X = 200; 
 const CATEGORY_SPACING_Y = 80;
@@ -176,7 +169,7 @@ export function computeCanvasLayout(items: PlanItem[]): CanvasLayout {
           x: nx,
           y: ny,
           radius: impactRadius(item.impact.score),
-          color: STATUS_COLORS[item.status] ?? STATUS_COLORS.unknown,
+          color: PLAN_STATUS_COLORS[item.status] ?? PLAN_STATUS_COLORS.unknown,
           item,
         };
         nodes.push(node);

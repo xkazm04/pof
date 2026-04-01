@@ -28,6 +28,8 @@ export type { SlotDimensions, SpatialOption, SpatialBudget } from './spatial';
 
 // Density
 export { assignSlotDensity } from './density';
+export { DENSITY_CONFIG, DENSITY_ORDER } from '@/lib/dzin/animation-constants';
+export type { DensityThreshold, DensityPreset } from '@/lib/dzin/animation-constants';
 
 // Viewport
 export { VIEWPORT_BREAKPOINTS, getAllowedLayouts, clampLayoutToViewport } from './viewport';

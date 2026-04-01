@@ -24,6 +24,7 @@ import { useNavigationStore } from '@/stores/navigationStore';
 import { SurfaceCard } from '@/components/ui/SurfaceCard';
 import { FEATURE_STATUS_COLORS, STATUS_SUCCESS, STATUS_WARNING, STATUS_ERROR } from '@/lib/chart-colors';
 import type { SubModuleId } from '@/types/modules';
+import { MOTION } from '@/lib/constants';
 
 const ALL_MODULE_IDS = Object.keys(MODULE_FEATURE_DEFINITIONS) as SubModuleId[];
 
@@ -267,7 +268,7 @@ export function CrossModuleFeatureDashboard() {
                 className="h-full"
                 initial={{ width: 0 }}
                 animate={{ width: `${pct}%` }}
-                transition={{ duration: 0.45, ease: [0.16, 1, 0.3, 1] }}
+                transition={{ duration: MOTION.slow, ease: MOTION.ease }}
                 style={{ backgroundColor: STATUS_COLORS[key] }}
                 title={`${STATUS_LABELS[key]}: ${totals[key]} (${Math.round(pct)}%)`}
               />
@@ -337,7 +338,7 @@ export function CrossModuleFeatureDashboard() {
             <div key={category}>
               {/* Category header */}
               <div className="px-3 py-1.5 bg-surface border-b border-border">
-                <span className="text-2xs font-bold uppercase tracking-widest text-text-muted">
+                <span className="text-2xs font-bold uppercase text-text-muted">
                   {category}
                 </span>
               </div>
@@ -351,7 +352,7 @@ export function CrossModuleFeatureDashboard() {
                     key={cell.moduleId}
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
-                    transition={{ duration: 0.22, delay: i * 0.02 }}
+                    transition={{ duration: MOTION.base, delay: i * 0.02 }}
                     className="grid items-center border-b border-border/50 hover:bg-surface transition-colors cursor-pointer group"
                     style={{ gridTemplateColumns: '180px repeat(4, 1fr) 80px' }}
                     onClick={() => handleCellClick(cell.moduleId)}
@@ -580,7 +581,7 @@ function SummaryCard({
     <motion.div
       initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.22 }}
+      transition={{ duration: MOTION.base }}
       className="bg-surface border border-border rounded-lg p-3"
     >
       <div className="flex items-center gap-1.5 mb-1">

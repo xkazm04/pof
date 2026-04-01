@@ -16,7 +16,7 @@ export function ValueRow({ label, value, unit, color, min, max }: {
       transition={{ duration: 0.3 }}
       className="flex items-center gap-2 text-xs font-mono"
     >
-      <span className="text-[10px] font-mono uppercase tracking-[0.15em] text-text-muted w-28 truncate">
+      <span className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted w-28 truncate">
         {label}
       </span>
       <div className="flex-1">

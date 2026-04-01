@@ -7,8 +7,8 @@ import type { ChatMessage, ChatStore } from './types';
 
 /**
  * React hook that subscribes to a ChatStore and re-renders on message changes.
- * Uses useSyncExternalStore for tear-free reads, following the same pattern
- * as useWorkspaceState from the state module.
+ * Uses useSyncExternalStore with a version counter for O(1) snapshot comparison
+ * instead of JSON serialization.
  */
 export function useChatMessages(store: ChatStore): ChatMessage[] {
   const subscribe = useCallback(
@@ -16,8 +16,8 @@ export function useChatMessages(store: ChatStore): ChatMessage[] {
     [store]
   );
 
-  const getSnapshot = useCallback(() => store.getSnapshot(), [store]);
+  const getVersion = useCallback(() => store.getVersion(), [store]);
 
-  const snapshotStr = useSyncExternalStore(subscribe, getSnapshot, getSnapshot);
-  return JSON.parse(snapshotStr) as ChatMessage[];
+  useSyncExternalStore(subscribe, getVersion, getVersion);
+  return store.messages;
 }

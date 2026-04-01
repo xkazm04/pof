@@ -479,7 +479,7 @@ export function AssetInventory() {
                         </div>
                         <div className="flex flex-col items-end">
                           <span
-                            className="text-xs px-2 py-0.5 rounded font-mono font-bold uppercase tracking-widest border shadow-sm"
+                            className="text-xs px-2 py-0.5 rounded font-mono font-bold uppercase border shadow-sm"
                             style={{ color: conf.color, backgroundColor: conf.color + '15', borderColor: `${conf.color}30` }}
                           >
                             {conf.label}
@@ -517,7 +517,7 @@ export function AssetInventory() {
                         >
                           <div className="p-4 border-t" style={{ borderColor: `${conf.color}20` }}>
                             <div className="flex justify-between items-center mb-4">
-                              <div className="text-xs text-cyan-500 font-mono uppercase tracking-widest flex items-center gap-2">
+                              <div className="text-xs text-cyan-500 font-mono uppercase flex items-center gap-2">
                                 <ScanLine className="w-4 h-4" /> Dependency Graph
                               </div>
                               <button

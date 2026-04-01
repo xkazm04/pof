@@ -39,7 +39,7 @@ export function ParameterEditor({
             const pct = ((val - f.min) / (f.max - f.min)) * 100;
             return (
               <div key={f.key} className="flex items-center gap-2">
-                <span className="text-[10px] font-mono uppercase tracking-[0.15em] text-text-muted w-24 truncate flex-shrink-0">
+                <span className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted w-24 truncate flex-shrink-0">
                   {f.label}
                 </span>
                 <div className="flex-1 relative h-4 flex items-center">

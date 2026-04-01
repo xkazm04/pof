@@ -9,7 +9,7 @@ import { useProjectHealthStore } from '@/stores/projectHealthStore';
 import { useModuleStore } from '@/stores/moduleStore';
 import { useEvaluatorStore } from '@/stores/evaluatorStore';
 import type { Milestone } from '@/types/project-health';
-import { MODULE_COLORS, STATUS_SUCCESS, STATUS_INFO } from '@/lib/chart-colors';
+import { MODULE_COLORS, STATUS_SUCCESS, STATUS_INFO, OVERLAY_WHITE, OPACITY_5 } from '@/lib/chart-colors';
 
 /* ------------------------------------------------------------------ */
 /*  Constants                                                          */
@@ -433,7 +433,7 @@ export function CalendarRoadmapView() {
             <g key={`month-${i}`}>
               <rect
                 x={m.x} y={0} width={m.width} height={20}
-                fill={i % 2 === 0 ? 'rgba(255,255,255,0.02)' : 'rgba(255,255,255,0.04)'}
+                fill={i % 2 === 0 ? 'transparent' : `${OVERLAY_WHITE}${OPACITY_5}`}
               />
               <text
                 x={m.x + 8} y={14}
@@ -454,7 +454,7 @@ export function CalendarRoadmapView() {
               y={HEADER_HEIGHT + i * ROW_HEIGHT}
               width={svgWidth}
               height={ROW_HEIGHT}
-              fill={i % 2 === 0 ? 'transparent' : 'rgba(255,255,255,0.015)'}
+              fill={i % 2 === 0 ? 'transparent' : `${OVERLAY_WHITE}${OPACITY_5}`}
             />
           ))}
 

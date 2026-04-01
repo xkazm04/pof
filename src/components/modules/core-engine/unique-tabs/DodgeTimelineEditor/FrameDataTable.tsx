@@ -66,7 +66,7 @@ export function FrameDataTable({ params }: { params: DodgeParams }) {
       </BlueprintPanel>
 
       {/* Footnote */}
-      <div className="text-[10px] font-mono text-text-muted/40 px-0.5">
+      <div className="text-xs font-mono text-text-muted/40 px-0.5">
         Frame counts at 60 FPS &middot; Forgiveness = i-frame% of dodge &middot; Responsiveness = cancel window / dodge duration &middot; Efficiency = dodges per full stamina bar
       </div>
     </div>
@@ -80,10 +80,10 @@ function FrameDataRows({ rows }: { rows: { label: string; frames: number; second
     <table className="w-full text-xs font-mono">
       <thead>
         <tr className="border-b border-border/30" style={{ backgroundColor: 'rgba(255,255,255,0.02)' }}>
-          <th className="text-left py-1.5 px-2.5 text-[10px] font-mono font-bold uppercase tracking-[0.15em] text-text-muted">Phase</th>
-          <th className="text-right py-1.5 px-2.5 text-[10px] font-mono font-bold uppercase tracking-[0.15em] text-text-muted">Frames</th>
-          <th className="text-right py-1.5 px-2.5 text-[10px] font-mono font-bold uppercase tracking-[0.15em] text-text-muted">Seconds</th>
-          <th className="text-right py-1.5 px-2.5 text-[10px] font-mono font-bold uppercase tracking-[0.15em] text-text-muted">@60fps</th>
+          <th className="text-left py-1.5 px-2.5 text-xs font-mono font-bold uppercase tracking-[0.15em] text-text-muted">Phase</th>
+          <th className="text-right py-1.5 px-2.5 text-xs font-mono font-bold uppercase tracking-[0.15em] text-text-muted">Frames</th>
+          <th className="text-right py-1.5 px-2.5 text-xs font-mono font-bold uppercase tracking-[0.15em] text-text-muted">Seconds</th>
+          <th className="text-right py-1.5 px-2.5 text-xs font-mono font-bold uppercase tracking-[0.15em] text-text-muted">@60fps</th>
         </tr>
       </thead>
       <tbody>
@@ -126,9 +126,9 @@ function MetricRows({ rows }: { rows: { label: string; value: string; rating: Ra
     <table className="w-full text-xs font-mono">
       <thead>
         <tr className="border-b border-border/30" style={{ backgroundColor: 'rgba(255,255,255,0.02)' }}>
-          <th className="text-left py-1.5 px-2.5 text-[10px] font-mono font-bold uppercase tracking-[0.15em] text-text-muted">Game-Feel Metric</th>
-          <th className="text-right py-1.5 px-2.5 text-[10px] font-mono font-bold uppercase tracking-[0.15em] text-text-muted">Value</th>
-          <th className="text-right py-1.5 px-2.5 text-[10px] font-mono font-bold uppercase tracking-[0.15em] text-text-muted">Rating</th>
+          <th className="text-left py-1.5 px-2.5 text-xs font-mono font-bold uppercase tracking-[0.15em] text-text-muted">Game-Feel Metric</th>
+          <th className="text-right py-1.5 px-2.5 text-xs font-mono font-bold uppercase tracking-[0.15em] text-text-muted">Value</th>
+          <th className="text-right py-1.5 px-2.5 text-xs font-mono font-bold uppercase tracking-[0.15em] text-text-muted">Rating</th>
         </tr>
       </thead>
       <tbody>

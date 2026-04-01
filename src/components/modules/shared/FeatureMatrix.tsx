@@ -15,16 +15,16 @@ import { MODULE_LABELS } from '@/lib/module-registry';
 import { MarkdownProse } from '@/components/ui/MarkdownProse';
 import { UI_TIMEOUTS } from '@/lib/constants';
 import type { SubModuleId } from '@/types/modules';
-import { FEATURE_STATUS_COLORS, STATUS_ERROR, STATUS_BLOCKER, STATUS_WARNING, STATUS_LIME, STATUS_SUCCESS, OPACITY_10 } from '@/lib/chart-colors';
+import { FEATURE_STATUS_COLORS, STATUS_ERROR, STATUS_BLOCKER, STATUS_WARNING, STATUS_LIME, STATUS_SUCCESS, STATUS_NEUTRAL, STATUS_IMPROVED, ACCENT_CYAN_LIGHT, OPACITY_10, OPACITY_12, statusBg, statusBorder } from '@/lib/chart-colors';
 import { usePofBridgeStore } from '@/stores/pofBridgeStore';
 import type { VerificationResult } from '@/types/pof-bridge';
 
-const STATUS_CONFIG: Record<FeatureStatus, { color: string; bg: string; label: string }> = {
-  implemented: { color: FEATURE_STATUS_COLORS.implemented, bg: FEATURE_STATUS_COLORS.implemented + OPACITY_10, label: 'Implemented' },
-  improved: { color: FEATURE_STATUS_COLORS.improved, bg: FEATURE_STATUS_COLORS.improved + OPACITY_10, label: 'Improved' },
-  partial: { color: FEATURE_STATUS_COLORS.partial, bg: FEATURE_STATUS_COLORS.partial + OPACITY_10, label: 'Partial' },
-  missing: { color: FEATURE_STATUS_COLORS.missing, bg: FEATURE_STATUS_COLORS.missing + OPACITY_10, label: 'Missing' },
-  unknown: { color: FEATURE_STATUS_COLORS.unknown, bg: 'var(--border)', label: 'Unknown' },
+const STATUS_CONFIG: Record<FeatureStatus, { color: string; bg: string; label: string; plain: string; action: string }> = {
+  implemented: { color: FEATURE_STATUS_COLORS.implemented, bg: FEATURE_STATUS_COLORS.implemented + OPACITY_10, label: 'Implemented', plain: 'Fully built and ready to use', action: 'Review for quality improvements' },
+  improved: { color: FEATURE_STATUS_COLORS.improved, bg: FEATURE_STATUS_COLORS.improved + OPACITY_10, label: 'Improved', plain: 'Built and recently enhanced', action: 'Verify improvements work as expected' },
+  partial: { color: FEATURE_STATUS_COLORS.partial, bg: FEATURE_STATUS_COLORS.partial + OPACITY_10, label: 'Partial', plain: 'Partially built — some work still needed', action: 'Continue implementation to complete' },
+  missing: { color: FEATURE_STATUS_COLORS.missing, bg: FEATURE_STATUS_COLORS.missing + OPACITY_10, label: 'Missing', plain: 'Not yet built — needs implementation', action: 'Start building this feature' },
+  unknown: { color: FEATURE_STATUS_COLORS.unknown, bg: 'var(--border)', label: 'Unknown', plain: 'Not yet reviewed — status unclear', action: 'Run a scan to determine status' },
 };
 
 const STAR_COLORS = [
@@ -471,7 +471,7 @@ export function FeatureMatrix({ moduleId, accentColor, onReview, onSync, isRevie
                 <span className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ backgroundColor: dotColor }} />
                 {label}
                 {isOutdated && (
-                  <span className="text-2xs text-[#f87171]/70 font-medium">outdated</span>
+                  <span className="text-2xs font-medium" style={{ color: STATUS_ERROR, opacity: 0.7 }}>outdated</span>
                 )}
               </span>
             );
@@ -488,7 +488,7 @@ export function FeatureMatrix({ moduleId, accentColor, onReview, onSync, isRevie
                 }
               }}
               disabled={isSyncing}
-              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-xs font-medium transition-all disabled:opacity-50 text-text-muted-hover hover:text-[#d0d4e8] bg-border hover:bg-[#2a2a4a] border border-[#2a2a4a]"
+              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-xs font-medium transition-all disabled:opacity-50 text-text-muted-hover hover:text-text bg-border hover:bg-surface-hover border border-border"
               title="Import latest review from disk"
             >
               {isSyncing ? (
@@ -504,9 +504,9 @@ export function FeatureMatrix({ moduleId, accentColor, onReview, onSync, isRevie
               disabled={isVerifying}
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all disabled:opacity-50"
               style={{
-                backgroundColor: '#4ade8018',
-                color: '#4ade80',
-                border: '1px solid #4ade8038',
+                backgroundColor: statusBg(STATUS_SUCCESS),
+                color: STATUS_SUCCESS,
+                border: `1px solid ${statusBorder(STATUS_SUCCESS)}`,
               }}
               title="Auto-verify features against UE5 asset manifest"
             >
@@ -575,7 +575,7 @@ export function FeatureMatrix({ moduleId, accentColor, onReview, onSync, isRevie
             placeholder="Search features, notes, files..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-8 pr-3 py-1.5 rounded-md bg-surface-deep border border-border text-xs text-text placeholder-text-muted focus:outline-none focus:border-[#3b3b6a] transition-colors"
+            className="w-full pl-8 pr-3 py-1.5 rounded-md bg-surface-deep border border-border text-xs text-text placeholder-text-muted focus:outline-none focus:border-border-hover transition-colors"
           />
         </div>
 
@@ -732,11 +732,11 @@ function QualityRangeFilter({
     <div
       className="flex items-center gap-1.5 px-2 py-1 rounded-md text-xs transition-all"
       style={{
-        backgroundColor: isActive ? '#fbbf2418' : 'transparent',
-        border: isActive ? '1px solid #fbbf2440' : '1px solid var(--border)',
+        backgroundColor: isActive ? statusBg(STATUS_WARNING) : 'transparent',
+        border: isActive ? `1px solid ${statusBorder(STATUS_WARNING)}` : '1px solid var(--border)',
       }}
     >
-      <Star className="w-3 h-3 text-[#fbbf24] flex-shrink-0" style={{ fill: isActive ? '#fbbf24' : 'none' }} />
+      <Star className="w-3 h-3 flex-shrink-0" style={{ color: STATUS_WARNING, fill: isActive ? STATUS_WARNING : 'none' }} />
       <select
         value={min}
         onChange={(e) => {
@@ -816,7 +816,7 @@ function formatRelativeTime(dateStr: string): { label: string; dotColor: string;
   }
 
   // Green <24h, amber 1-7d, red >7d
-  const dotColor = hours < 24 ? '#4ade80' : days <= 7 ? '#fbbf24' : '#f87171';
+  const dotColor = hours < 24 ? STATUS_SUCCESS : days <= 7 ? STATUS_WARNING : STATUS_ERROR;
   const isOutdated = days > 7;
 
   return { label, dotColor, isOutdated };
@@ -839,7 +839,7 @@ function SummaryBar({ summary }: { summary: { total: number; implemented: number
         <div className="flex items-center gap-3">
           {segments.map((s) =>
             s.count > 0 ? (
-              <span key={s.status} className="flex items-center gap-1 text-2xs" style={{ color: STATUS_CONFIG[s.status].color }}>
+              <span key={s.status} className="flex items-center gap-1 text-2xs" style={{ color: STATUS_CONFIG[s.status].color }} title={STATUS_CONFIG[s.status].plain}>
                 <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: STATUS_CONFIG[s.status].color }} />
                 {s.count} {STATUS_CONFIG[s.status].label.toLowerCase()}
               </span>
@@ -883,7 +883,7 @@ function StatusFilterChips({
   const statuses: FeatureStatus[] = ['improved', 'implemented', 'partial', 'missing', 'unknown'];
 
   return (
-    <div className="flex items-center gap-1.5 flex-wrap">
+    <div className="flex items-center gap-2 overflow-x-auto scrollbar-none pb-0.5">
       {statuses.map((status) => {
         const cfg = STATUS_CONFIG[status];
         const count = summary[status];
@@ -893,29 +893,35 @@ function StatusFilterChips({
           <button
             key={status}
             onClick={() => onToggle(status)}
-            className="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium transition-all"
-            style={
-              isActive
-                ? {
-                    backgroundColor: `${cfg.color}20`,
-                    color: cfg.color,
-                    border: `1px solid ${cfg.color}50`,
-                  }
-                : {
-                    backgroundColor: 'transparent',
-                    color: `${cfg.color}80`,
-                    border: `1px solid ${cfg.color}25`,
-                  }
-            }
+            title={`${cfg.plain} — ${count} feature${count !== 1 ? 's' : ''}. ${cfg.action}`}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap shrink-0"
+            style={{
+              backgroundColor: isActive ? `${cfg.color}${OPACITY_12}` : 'transparent',
+              color: cfg.color,
+              border: `1px solid ${isActive ? `${cfg.color}40` : `${cfg.color}20`}`,
+              opacity: isActive ? 1 : 0.4,
+              transition: 'background-color 200ms ease-out, opacity 200ms ease-out, border-color 200ms ease-out',
+            }}
           >
             <span
-              className="w-1.5 h-1.5 rounded-full"
+              className="w-2 h-2 rounded-full shrink-0"
               style={{
-                backgroundColor: isActive ? cfg.color : `${cfg.color}50`,
+                backgroundColor: cfg.color,
+                transition: 'transform 200ms ease-out',
+                transform: isActive ? 'scale(1)' : 'scale(0.75)',
               }}
             />
             {cfg.label}
-            <span style={{ opacity: 0.7 }}>{count}</span>
+            <span
+              className="ml-0.5 text-xs min-w-[18px] h-[18px] inline-flex items-center justify-center rounded-full font-semibold"
+              style={{
+                backgroundColor: isActive ? `${cfg.color}20` : 'transparent',
+                color: cfg.color,
+                transition: 'background-color 200ms ease-out',
+              }}
+            >
+              {count}
+            </span>
           </button>
         );
       })}
@@ -956,7 +962,7 @@ function QualitySparkline({
   const last = qualityPoints[qualityPoints.length - 1];
   const trend = last - first;
   const TrendIcon = trend > 0.2 ? TrendingUp : trend < -0.2 ? TrendingDown : Minus;
-  const trendColor = trend > 0.2 ? '#4ade80' : trend < -0.2 ? '#f87171' : 'var(--text-muted)';
+  const trendColor = trend > 0.2 ? STATUS_SUCCESS : trend < -0.2 ? STATUS_ERROR : 'var(--text-muted)';
 
   return (
     <div className="flex items-center gap-1.5 flex-shrink-0" title={`Quality trend: ${qualityPoints.map((q) => q.toFixed(1)).join(' → ')}`}>
@@ -996,7 +1002,7 @@ function QualityStars({ score }: { score: number | null }) {
             key={i}
             className="w-3 h-3"
             style={{
-              color: i < clamped ? color : '#3a3a5a',
+              color: i < clamped ? color : 'var(--border)',
               fill: i < clamped ? color : 'none',
             }}
           />
@@ -1064,13 +1070,17 @@ function FeatureRowItem({
         onClick={hasDetails ? onToggle : undefined}
         className={`w-full flex items-center gap-3 px-3 py-2 text-left transition-colors ${
           hasDetails ? 'hover:bg-surface-hover cursor-pointer' : 'cursor-default'
-        } ${isExpanded ? 'bg-[#111130]' : ''}`}
+        } ${isExpanded ? 'bg-surface-deep' : ''}`}
       >
         {/* Status dot */}
-        <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: cfg.color }} />
+        <span
+          className="w-2 h-2 rounded-full flex-shrink-0"
+          style={{ backgroundColor: cfg.color }}
+          title={`${cfg.label}: ${cfg.plain}. ${cfg.action}`}
+        />
 
         {/* Feature name */}
-        <span className="text-sm text-[#d0d4e8] w-[150px] flex-shrink-0 truncate">
+        <span className="text-sm text-text w-[150px] flex-shrink-0 truncate">
           {feature.featureName}
         </span>
 
@@ -1109,7 +1119,7 @@ function FeatureRowItem({
             className="p-1 rounded hover:bg-surface-hover transition-colors text-text-muted hover:text-text"
             title={copied ? 'Copied!' : 'Copy feature name & status'}
           >
-            {copied ? <Check className="w-3 h-3 text-[#4ade80]" /> : <Copy className="w-3 h-3" />}
+            {copied ? <Check className="w-3 h-3" style={{ color: STATUS_SUCCESS }} /> : <Copy className="w-3 h-3" />}
           </span>
           {feature.filePaths.length > 0 && (
             <span
@@ -1128,7 +1138,8 @@ function FeatureRowItem({
         {/* Blocked badge */}
         {isBlocked && feature.status !== 'implemented' && (
           <span
-            className="flex items-center gap-1 text-2xs px-1.5 py-0.5 rounded flex-shrink-0 font-medium bg-[#f8717118] text-[#fb923c]"
+            className="flex items-center gap-1 text-2xs px-1.5 py-0.5 rounded flex-shrink-0 font-medium"
+            style={{ backgroundColor: statusBg(STATUS_ERROR), color: STATUS_BLOCKER }}
             title={`Blocked by: ${depInfo!.blockers.map((b) => b.featureName).join(', ')}`}
           >
             <AlertTriangle className="w-2.5 h-2.5" />
@@ -1173,71 +1184,83 @@ function FeatureRowItem({
 
         {/* Expand chevron */}
         {hasDetails && (
-          isExpanded
-            ? <ChevronDown className="w-3 h-3 text-text-muted-hover flex-shrink-0" />
-            : <ChevronRight className="w-3 h-3 text-text-muted-hover flex-shrink-0" />
+          <ChevronRight
+            className="w-3 h-3 text-text-muted-hover flex-shrink-0 transition-transform duration-250 ease-out"
+            style={{ transform: isExpanded ? 'rotate(90deg)' : 'rotate(0deg)' }}
+          />
         )}
       </button>
 
-      {/* Expanded detail */}
-      {isExpanded && hasDetails && (
-        <div className="px-8 pb-3 pt-1 space-y-3 bg-[#111130]">
-          {/* Dependency chain */}
-          {hasDeps && (
-            <DependencyChain depInfo={depInfo!} currentModuleId={feature.moduleId} />
-          )}
+      {/* Expanded detail — CSS grid-rows animation */}
+      {hasDetails && (
+        <div
+          className="grid transition-[grid-template-rows] duration-250 ease-out"
+          style={{ gridTemplateRows: isExpanded ? '1fr' : '0fr' }}
+        >
+          <div className="overflow-hidden">
+            <div
+              className="pl-8 pr-4 pb-3 pt-1 space-y-3 bg-surface-deep"
+              style={{ borderLeft: `3px solid ${cfg.color}` }}
+            >
+              {/* Dependency chain */}
+              {hasDeps && (
+                <DependencyChain depInfo={depInfo!} currentModuleId={feature.moduleId} />
+              )}
 
-          {/* Review notes */}
-          {feature.reviewNotes && (
-            <MarkdownProse content={feature.reviewNotes} className="leading-relaxed" />
-          )}
+              {/* Review notes */}
+              {feature.reviewNotes && (
+                <MarkdownProse content={feature.reviewNotes} className="leading-relaxed" />
+              )}
 
-          {/* Next steps */}
-          {feature.nextSteps && (
-            <div className="space-y-1">
-              <div className="flex items-center gap-1.5">
-                <ArrowRight className="w-3 h-3 text-text-muted" />
-                <span className="text-xs font-semibold uppercase tracking-wider text-text-muted">
-                  Next steps to pro
-                </span>
-              </div>
-              <MarkdownProse content={feature.nextSteps} className="leading-relaxed pl-[18px] text-[#b0b4cc]" />
-              {onFix && feature.status !== 'improved' && !(feature.status === 'implemented' && feature.qualityScore === 5 && !feature.nextSteps?.trim()) && (
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onFix(feature);
-                  }}
-                  disabled={isFixing}
-                  className="ml-[18px] mt-1 flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all disabled:opacity-50 bg-[#4ade8015] text-[#4ade80] border border-[#4ade80]/20 hover:bg-[#4ade8025]"
-                >
-                  {isFixing ? (
-                    <>
-                      <Loader2 className="w-3 h-3 animate-spin" />
-                      Fixing...
-                    </>
-                  ) : (
-                    <>
-                      <Zap className="w-3 h-3" />
-                      Implement This
-                    </>
+              {/* Next steps */}
+              {feature.nextSteps && (
+                <div className="space-y-1">
+                  <div className="flex items-center gap-1.5">
+                    <ArrowRight className="w-3 h-3 text-text-muted" />
+                    <span className="text-xs font-semibold uppercase tracking-wider text-text-muted">
+                      Next steps to pro
+                    </span>
+                  </div>
+                  <MarkdownProse content={feature.nextSteps} className="leading-relaxed pl-[18px] text-text-muted-hover" />
+                  {onFix && feature.status !== 'improved' && !(feature.status === 'implemented' && feature.qualityScore === 5 && !feature.nextSteps?.trim()) && (
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onFix(feature);
+                      }}
+                      disabled={isFixing}
+                      className="ml-[18px] mt-1 flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all disabled:opacity-50"
+                      style={{ backgroundColor: statusBg(STATUS_SUCCESS, 0.05), color: STATUS_SUCCESS, border: `1px solid ${statusBorder(STATUS_SUCCESS, 0.20)}` }}
+                    >
+                      {isFixing ? (
+                        <>
+                          <Loader2 className="w-3 h-3 animate-spin" />
+                          Fixing...
+                        </>
+                      ) : (
+                        <>
+                          <Zap className="w-3 h-3" />
+                          Implement This
+                        </>
+                      )}
+                    </button>
                   )}
-                </button>
+                </div>
+              )}
+
+              {/* File paths */}
+              {feature.filePaths.length > 0 && (
+                <div className="space-y-0.5">
+                  {feature.filePaths.map((fp) => (
+                    <div key={fp} className="flex items-center gap-1.5 text-xs text-text-muted font-mono">
+                      <FileCode className="w-3 h-3 flex-shrink-0" />
+                      {fp}
+                    </div>
+                  ))}
+                </div>
               )}
             </div>
-          )}
-
-          {/* File paths */}
-          {feature.filePaths.length > 0 && (
-            <div className="space-y-0.5">
-              {feature.filePaths.map((fp) => (
-                <div key={fp} className="flex items-center gap-1.5 text-xs text-text-muted font-mono">
-                  <FileCode className="w-3 h-3 flex-shrink-0" />
-                  {fp}
-                </div>
-              ))}
-            </div>
-          )}
+          </div>
         </div>
       )}
     </div>
@@ -1294,7 +1317,7 @@ function DependencyChain({
           Dependencies
         </span>
         {depInfo.isBlocked && (
-          <span className="text-2xs text-[#fb923c]">
+          <span className="text-2xs" style={{ color: STATUS_BLOCKER }}>
             ({depInfo.blockers.length} not implemented)
           </span>
         )}
@@ -1308,11 +1331,11 @@ function DependencyChain({
           return (
             <span
               key={dep.key}
-              className={`inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-md border ${
-                isBlocker
-                  ? 'bg-[#f8717110] border-[#f87171]/30 text-[#fb923c]'
-                  : 'bg-[#4ade8010] border-[#4ade80]/20 text-[#4ade80]'
-              }`}
+              className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-md border"
+              style={isBlocker
+                ? { backgroundColor: statusBg(STATUS_ERROR, 0.05), borderColor: `${STATUS_ERROR}4d`, color: STATUS_BLOCKER }
+                : { backgroundColor: statusBg(STATUS_SUCCESS, 0.05), borderColor: `${STATUS_SUCCESS}33`, color: STATUS_SUCCESS }
+              }
             >
               {isBlocker && <AlertTriangle className="w-2.5 h-2.5" />}
               {isCrossModule && (
@@ -1328,11 +1351,11 @@ function DependencyChain({
 }
 
 const VERIFY_BADGE_CONFIG: Record<string, { icon: typeof ShieldCheck; color: string; label: string }> = {
-  implemented: { icon: ShieldCheck, color: '#4ade80', label: 'verified' },
-  improved: { icon: ShieldCheck, color: '#22d3ee', label: 'verified' },
-  partial: { icon: ShieldCheck, color: '#fbbf24', label: 'partial' },
-  missing: { icon: AlertTriangle, color: '#f87171', label: 'not found' },
-  unknown: { icon: ShieldCheck, color: '#6b7280', label: 'unknown' },
+  implemented: { icon: ShieldCheck, color: STATUS_SUCCESS, label: 'verified' },
+  improved: { icon: ShieldCheck, color: ACCENT_CYAN_LIGHT, label: 'verified' },
+  partial: { icon: ShieldCheck, color: STATUS_WARNING, label: 'partial' },
+  missing: { icon: AlertTriangle, color: STATUS_ERROR, label: 'not found' },
+  unknown: { icon: ShieldCheck, color: STATUS_NEUTRAL, label: 'unknown' },
 };
 
 function VerificationBadge({ result }: { result: VerificationResult }) {
@@ -1373,28 +1396,28 @@ function VerificationSummaryBanner({ results }: { results: VerificationResult[] 
     <div
       className="flex items-center gap-3 px-3 py-2 rounded-lg text-xs"
       style={{
-        backgroundColor: '#4ade8010',
-        border: '1px solid #4ade8025',
+        backgroundColor: statusBg(STATUS_SUCCESS, 0.05),
+        border: `1px solid ${statusBorder(STATUS_SUCCESS, 0.12)}`,
       }}
     >
-      <ShieldCheck className="w-4 h-4 text-[#4ade80] flex-shrink-0" />
-      <span className="text-[#d0d4e8]">
+      <ShieldCheck className="w-4 h-4 flex-shrink-0" style={{ color: STATUS_SUCCESS }} />
+      <span className="text-text">
         <span className="font-medium">Auto-Verify:</span>{' '}
         {results.length} rules checked
       </span>
       <span className="flex items-center gap-2 text-2xs">
         {implemented > 0 && (
-          <span className="text-[#4ade80]">{implemented} found</span>
+          <span style={{ color: STATUS_SUCCESS }}>{implemented} found</span>
         )}
         {partial > 0 && (
-          <span className="text-[#fbbf24]">{partial} partial</span>
+          <span style={{ color: STATUS_WARNING }}>{partial} partial</span>
         )}
         {missing > 0 && (
-          <span className="text-[#f87171]">{missing} missing</span>
+          <span style={{ color: STATUS_ERROR }}>{missing} missing</span>
         )}
       </span>
       {changed.length > 0 && (
-        <span className="text-2xs text-[#22d3ee]">
+        <span className="text-2xs" style={{ color: ACCENT_CYAN_LIGHT }}>
           {changed.length} status{changed.length !== 1 ? 'es' : ''} updated
         </span>
       )}

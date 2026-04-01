@@ -108,5 +108,6 @@ export interface ChatStore {
 
   // Subscription
   subscribe(listener: () => void): () => void;
-  getSnapshot(): string;
+  getSnapshot(): ChatMessage[];
+  getVersion(): number;
 }

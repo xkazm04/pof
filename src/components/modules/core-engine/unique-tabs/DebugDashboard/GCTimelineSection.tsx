@@ -12,7 +12,7 @@ export function GCTimelineSection() {
     <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.35 }}>
       <div className="flex items-center justify-between mb-3">
         <SectionHeader label="GC_TIMELINE" color={ACCENT} icon={Timer} />
-        <span className="text-[10px] font-mono uppercase tracking-[0.15em] text-text-muted shrink-0 ml-2">
+        <span className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted shrink-0 ml-2">
           AVG: {GC_AVG_INTERVAL}s // WARN: {GC_WARNING_THRESHOLD_MS}ms
         </span>
       </div>
@@ -20,12 +20,12 @@ export function GCTimelineSection() {
         {/* Timeline visualization */}
         <div className="relative h-32 min-h-[200px] rounded-sm overflow-hidden mb-3" style={{ backgroundColor: `${ACCENT}06` }}>
           {/* Y-axis labels */}
-          <div className="absolute left-0 top-0 bottom-0 w-10 flex flex-col justify-between py-1 text-[10px] font-mono text-text-muted text-right pr-1">
+          <div className="absolute left-0 top-0 bottom-0 w-10 flex flex-col justify-between py-1 text-xs font-mono text-text-muted text-right pr-1">
             <span>8ms</span><span>4ms</span><span>0ms</span>
           </div>
           {/* Warning threshold line */}
           <div className="absolute left-10 right-0 h-[1px] border-t border-dashed" style={{ top: `${100 - (GC_WARNING_THRESHOLD_MS / 8) * 100}%`, borderColor: `${ACCENT}30` }}>
-            <span className="absolute right-0 -top-3 text-[10px] font-mono text-text-muted">WARN {GC_WARNING_THRESHOLD_MS}ms</span>
+            <span className="absolute right-0 -top-3 text-xs font-mono text-text-muted">WARN {GC_WARNING_THRESHOLD_MS}ms</span>
           </div>
           {/* GC event bars */}
           <div className="absolute left-10 right-0 top-0 bottom-0 flex items-end">
@@ -56,8 +56,8 @@ export function GCTimelineSection() {
         </div>
 
         {/* Last 10 GC events table */}
-        <div className="text-[10px] font-mono uppercase tracking-[0.15em] text-text-muted mb-1.5">LAST 10 GC EVENTS</div>
-        <div className="grid grid-cols-5 gap-2 text-[10px] font-mono uppercase tracking-[0.15em] text-text-muted pb-1 border-b border-border">
+        <div className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted mb-1.5">LAST 10 GC EVENTS</div>
+        <div className="grid grid-cols-5 gap-2 text-xs font-mono uppercase tracking-[0.15em] text-text-muted pb-1 border-b border-border">
           <span>Time</span><span className="text-center">Duration</span><span className="text-center">Heap Before</span><span className="text-center">Heap After</span><span className="text-right">Status</span>
         </div>
         <div className="space-y-0.5 max-h-40 overflow-y-auto custom-scrollbar">
@@ -71,9 +71,9 @@ export function GCTimelineSection() {
                 <span className="text-center text-text-muted">{evt.heapAfter}MB</span>
                 <span className="text-right">
                   {isWarning ? (
-                    <span className="text-[10px] px-1 py-[1px] rounded" style={{ color: STATUS_ERROR, backgroundColor: `${STATUS_ERROR}${OPACITY_10}` }}>WARN</span>
+                    <span className="text-xs px-1 py-[1px] rounded" style={{ color: STATUS_ERROR, backgroundColor: `${STATUS_ERROR}${OPACITY_10}` }}>WARN</span>
                   ) : (
-                    <span className="text-[10px] px-1 py-[1px] rounded" style={{ color: STATUS_SUCCESS, backgroundColor: `${STATUS_SUCCESS}${OPACITY_10}` }}>OK</span>
+                    <span className="text-xs px-1 py-[1px] rounded" style={{ color: STATUS_SUCCESS, backgroundColor: `${STATUS_SUCCESS}${OPACITY_10}` }}>OK</span>
                   )}
                 </span>
               </div>

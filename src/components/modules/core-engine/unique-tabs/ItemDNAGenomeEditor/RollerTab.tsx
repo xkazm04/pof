@@ -34,7 +34,7 @@ export function RollerTab({
         <SectionHeader icon={Shuffle} label="DNA-Biased Roller" color={ACCENT} />
         <div className="flex items-center gap-3">
           <div>
-            <span className="text-[10px] font-mono uppercase tracking-[0.15em] text-text-muted block mb-0.5">Rarity</span>
+            <span className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted block mb-0.5">Rarity</span>
             <select
               value={rollRarity}
               onChange={(e) => setRollRarity(e.target.value)}
@@ -46,7 +46,7 @@ export function RollerTab({
             </select>
           </div>
           <div>
-            <span className="text-[10px] font-mono uppercase tracking-[0.15em] text-text-muted block mb-0.5">Item Level</span>
+            <span className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted block mb-0.5">Item Level</span>
             <input
               type="number" min={1} max={100} value={rollLevel}
               onChange={(e) => setRollLevel(parseInt(e.target.value) || 1)}
@@ -69,8 +69,8 @@ export function RollerTab({
         <BlueprintPanel color={selected.color} className="p-3 space-y-3">
           <div className="flex items-center gap-2">
             <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: selected.color }} />
-            <span className="text-[10px] font-mono uppercase tracking-[0.15em] font-bold text-text">{selected.name}</span>
-            <span className="text-[10px] font-mono text-text-muted">({selected.itemType})</span>
+            <span className="text-xs font-mono uppercase tracking-[0.15em] font-bold text-text">{selected.name}</span>
+            <span className="text-xs font-mono text-text-muted">({selected.itemType})</span>
           </div>
           <DNAStrand genome={selected} />
           <DistributionBar genome={selected} rarity={rollRarity} />
@@ -90,7 +90,7 @@ export function RollerTab({
 
           {/* Rolling pipeline visualization */}
           <BlueprintPanel color={ACCENT} className="p-3 space-y-1.5">
-            <span className="text-[10px] font-mono uppercase tracking-[0.15em] text-text-muted font-bold">Rolling Pipeline</span>
+            <span className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted font-bold">Rolling Pipeline</span>
             {[
               { step: '1. Roll Count', desc: `${rollRarity} = ${({'Common': '0', 'Uncommon': '1-2', 'Rare': '3-4', 'Epic': '4-5', 'Legendary': '5-6'} as Record<string, string>)[rollRarity] ?? '?'} affixes`, color: ACCENT },
               { step: '2. Rarity Gate', desc: 'Filter pool by MinRarity', color: STATUS_WARNING },

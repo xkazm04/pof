@@ -55,24 +55,24 @@ export function ComboTimeline({ ability }: { ability: ForgedAbility }) {
         />
 
         {/* Labels */}
-        <span className="absolute left-1 top-1/2 -translate-y-1/2 text-[10px] font-mono uppercase tracking-[0.15em] text-zinc-500">
+        <span className="absolute left-1 top-1/2 -translate-y-1/2 text-xs font-mono uppercase tracking-[0.15em] text-zinc-500">
           Startup
         </span>
         <span
-          className="absolute top-1/2 -translate-y-1/2 text-[10px] font-mono font-semibold uppercase tracking-[0.15em]"
+          className="absolute top-1/2 -translate-y-1/2 text-xs font-mono font-semibold uppercase tracking-[0.15em]"
           style={{ left: `${startPct + 1}%`, color: dmgColor }}
         >
           Damage
         </span>
         <span
-          className="absolute top-1/2 -translate-y-1/2 text-[10px] font-mono uppercase tracking-[0.15em] text-zinc-500"
+          className="absolute top-1/2 -translate-y-1/2 text-xs font-mono uppercase tracking-[0.15em] text-zinc-500"
           style={{ left: `${recoveryStart + 1}%` }}
         >
           Recovery
         </span>
       </div>
 
-      <div className="flex justify-between text-[10px] font-mono text-zinc-600 tabular-nums">
+      <div className="flex justify-between text-xs font-mono text-zinc-600 tabular-nums">
         <span>0s</span>
         <span>{comboEntry.damageWindow[0].toFixed(2)}s</span>
         <span>{comboEntry.damageWindow[1].toFixed(2)}s</span>

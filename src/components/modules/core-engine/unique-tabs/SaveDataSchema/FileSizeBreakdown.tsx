@@ -11,7 +11,7 @@ export function FileSizeBreakdown() {
     <BlueprintPanel color={ACCENT} className="p-0 overflow-hidden">
       <div className="px-4 py-3 border-b border-border/10 flex items-center justify-between">
         <SectionHeader label="FILE_SIZE_BREAKDOWN" icon={HardDrive} color={ACCENT} />
-        <span className="text-[10px] font-mono uppercase tracking-[0.15em] text-text-muted">{formatBytes(TOTAL_BYTES)} total</span>
+        <span className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted">{formatBytes(TOTAL_BYTES)} total</span>
       </div>
 
       <div className="p-4 space-y-4 relative z-10">
@@ -31,7 +31,7 @@ export function FileSizeBreakdown() {
               >
                 <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity" style={{ backgroundColor: `${sec.color}15` }} />
                 {pct > 12 && (
-                  <div className="p-1.5 font-mono text-[10px] leading-tight relative z-10">
+                  <div className="p-1.5 font-mono text-xs leading-tight relative z-10">
                     <div className="font-bold truncate" style={{ color: sec.color }}>{sec.label}</div>
                     <div className="text-text-muted">{formatBytes(sec.bytes)}</div>
                   </div>
@@ -47,7 +47,7 @@ export function FileSizeBreakdown() {
             <div key={sec.label} className="border border-border/10 rounded-lg p-2 font-mono text-xs" style={{ backgroundColor: `${ACCENT}06` }}>
               <div className="flex items-center gap-1.5 mb-1">
                 <span className="w-2 h-2 rounded-sm" style={{ backgroundColor: sec.color }} />
-                <span className="text-cyan-300 font-bold truncate text-[10px] uppercase tracking-[0.15em]">{sec.label}</span>
+                <span className="text-cyan-300 font-bold truncate text-xs uppercase tracking-[0.15em]">{sec.label}</span>
               </div>
               <div className="text-cyan-100">{formatBytes(sec.bytes)}</div>
               <div className="text-text-muted">{((sec.bytes / TOTAL_BYTES) * 100).toFixed(1)}%</div>
@@ -68,7 +68,7 @@ export function FileSizeBreakdown() {
         {/* Compression ratio */}
         <div className="flex items-center gap-3 px-2 py-2 border border-border/10 rounded-lg font-mono text-xs" style={{ backgroundColor: `${ACCENT}06` }}>
           <Archive className="w-4 h-4 flex-shrink-0" style={{ color: ACCENT }} />
-          <span className="text-[10px] font-mono uppercase tracking-[0.15em] text-text-muted">Compression</span>
+          <span className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted">Compression</span>
           <div className="flex-1 h-2 rounded-full overflow-hidden" style={{ backgroundColor: `${ACCENT}12` }}>
             <motion.div
               initial={{ width: 0 }}

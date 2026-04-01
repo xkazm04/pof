@@ -49,7 +49,7 @@ export function MovementOverview() {
         </div>
 
         {/* Context notes */}
-        <div className="flex flex-col gap-1 mt-3 pt-2 border-t border-border/15 text-[10px] font-mono text-text-muted">
+        <div className="flex flex-col gap-1 mt-3 pt-2 border-t border-border/15 text-xs font-mono text-text-muted">
           <span className="flex items-center gap-1.5">
             <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: ACCENT_ORANGE }} /> Sprint: Shift held
           </span>
@@ -77,11 +77,11 @@ export function MovementOverview() {
               >
                 <span className="w-2 h-2 rounded-sm flex-shrink-0"
                   style={{ backgroundColor: state.color, boxShadow: `0 0 4px ${state.color}40` }} />
-                <span className="text-[10px] font-mono text-text w-12 uppercase tracking-wider">{state.label}</span>
+                <span className="text-xs font-mono text-text w-12 uppercase tracking-wider">{state.label}</span>
                 <div className="flex-1">
                   <NeonBar pct={state.pct} color={state.color} height={5} />
                 </div>
-                <span className="text-[10px] font-mono font-bold tabular-nums w-7 text-right" style={{ color: state.color }}>
+                <span className="text-xs font-mono font-bold tabular-nums w-7 text-right" style={{ color: state.color }}>
                   {state.pct}%
                 </span>
               </motion.div>

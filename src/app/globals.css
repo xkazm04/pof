@@ -50,10 +50,19 @@
   --status-amber-medium:  #f59e0b24;
   --status-amber-strong:  #f59e0b38;
 
+  --status-blue-subtle:  #3b82f614;
+  --status-blue-medium:  #3b82f624;
+  --status-blue-strong:  #3b82f638;
+
+  /* Status glow colors — for boxShadow / indicator halos */
+  --glow-success: rgba(34, 197, 94, 0.4);
+  --glow-info:    rgba(59, 130, 246, 0.4);
+  --glow-warning: rgba(245, 158, 11, 0.4);
+
   /* Animation timing — 3 tiers instead of 7+ arbitrary durations */
-  --duration-fast: 120ms;   /* micro-interactions: hovers, toggles, tooltips */
-  --duration-base: 220ms;   /* standard transitions: panels, dropdowns, fades */
-  --duration-slow: 450ms;   /* dramatic emphasis: progress fills, reveals, stagger */
+  --duration-fast: 150ms;   /* micro-interactions: hovers, toggles, tooltips */
+  --duration-base: 250ms;   /* standard transitions: panels, dropdowns, fades */
+  --duration-slow: 400ms;   /* dramatic emphasis: progress fills, reveals, stagger */
 
   /* Easing curves */
   --ease-out:  cubic-bezier(0.16, 1, 0.3, 1);     /* entries, opens, expands */
@@ -95,6 +104,9 @@
   --color-status-amber-subtle: var(--status-amber-subtle);
   --color-status-amber-medium: var(--status-amber-medium);
   --color-status-amber-strong: var(--status-amber-strong);
+  --color-status-blue-subtle: var(--status-blue-subtle);
+  --color-status-blue-medium: var(--status-blue-medium);
+  --color-status-blue-strong: var(--status-blue-strong);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
   --font-size-2xs: var(--text-2xs);
@@ -120,6 +132,18 @@ body {
   outline: none;
 }
 
+/* Unified focus-ring utilities — consistent keyboard focus indicators */
+.focus-ring:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--background), 0 0 0 4px #60a5fa;
+}
+
+.focus-ring-inset:focus-visible {
+  outline: none;
+  box-shadow: inset 0 0 0 1px #60a5fa;
+  border-color: #60a5fa;
+}
+
 /* Unified disabled state for all interactive elements */
 button:disabled,
 [role="button"][aria-disabled="true"],
@@ -143,6 +167,15 @@ a:active {
 ::selection {
   background-color: var(--setup);
   color: var(--background);
+}
+
+/* Hide scrollbar utility */
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
 }
 
 /* Custom scrollbar */

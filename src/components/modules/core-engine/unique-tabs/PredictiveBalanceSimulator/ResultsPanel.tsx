@@ -40,7 +40,7 @@ export function ResultsPanel({ report, levels, enemyLabels }: {
   return (
     <div className="space-y-3">
       {/* Summary banner */}
-      <div className="px-3 py-2 rounded-lg bg-surface-deep border border-border/30 text-xs font-mono text-text-muted">
+      <div className="px-3 py-2 rounded-lg bg-surface-deep border border-border/30 text-xs font-mono tabular-nums text-text-muted">
         {report.summary}
         <span className="text-text-muted ml-2 opacity-60">({report.durationMs}ms)</span>
       </div>
@@ -94,7 +94,7 @@ export function ResultsPanel({ report, levels, enemyLabels }: {
             const color = SENS_COLORS[curve.attribute] ?? ACCENT;
             return (
               <div key={curve.attribute}>
-                <div className="text-[10px] font-mono font-bold uppercase tracking-[0.15em] mb-1"
+                <div className="text-xs font-mono font-bold uppercase tracking-[0.15em] mb-1"
                   style={{ color }}>
                   {curve.attribute}
                 </div>

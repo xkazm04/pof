@@ -42,7 +42,7 @@ export function DiminishingReturnsVisualizer() {
             yLabels={[maxMarginal.toFixed(1), (maxMarginal / 2).toFixed(1), '0']}
             xLabels={['10 pts', '50 pts', '100 pts']}
             overlay={
-              <div className="absolute top-2 right-4 text-[10px] font-mono uppercase tracking-[0.15em] px-2 py-1 rounded border" style={{ color: attr.color, borderColor: `${attr.color}${OPACITY_20}`, backgroundColor: `${attr.color}${OPACITY_10}` }}>
+              <div className="absolute top-2 right-4 text-xs font-mono uppercase tracking-[0.15em] px-2 py-1 rounded border" style={{ color: attr.color, borderColor: `${attr.color}${OPACITY_20}`, backgroundColor: `${attr.color}${OPACITY_10}` }}>
                 Soft Cap: {attr.softCap} pts
               </div>
             }
@@ -52,7 +52,7 @@ export function DiminishingReturnsVisualizer() {
               return (
                 <>
                   <line x1={capX} y1="0" x2={capX} y2="100" stroke={attr.color} strokeWidth="1" strokeDasharray="4 3" vectorEffect="non-scaling-stroke" opacity={0.6} />
-                  <text x={capX} y={8} textAnchor="middle" className="text-[11px] font-mono font-bold" fill={attr.color} vectorEffect="non-scaling-stroke">
+                  <text x={capX} y={8} textAnchor="middle" className="text-xs font-mono font-bold" fill={attr.color} vectorEffect="non-scaling-stroke">
                     Soft Cap
                   </text>
                 </>

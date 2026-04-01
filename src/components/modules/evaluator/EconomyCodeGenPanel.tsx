@@ -10,7 +10,7 @@ import { SurfaceCard } from '@/components/ui/SurfaceCard';
 import { Badge } from '@/components/ui/Badge';
 import { useEconomySimulatorStore } from '@/stores/economySimulatorStore';
 import type { GeneratedFile } from '@/lib/economy/codegen';
-import { UI_TIMEOUTS } from '@/lib/constants';
+import { UI_TIMEOUTS, MOTION } from '@/lib/constants';
 import { MODULE_COLORS, ACCENT_PURPLE_BOLD } from '@/lib/chart-colors';
 
 // ── Constants ────────────────────────────────────────────────────────────────
@@ -125,7 +125,7 @@ export function EconomyCodeGenPanel() {
             initial={{ height: 0, opacity: 0 }}
             animate={{ height: 'auto', opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
-            transition={{ duration: 0.22 }}
+            transition={{ duration: MOTION.base }}
             className="overflow-hidden"
           >
             <div className="border-t border-border">

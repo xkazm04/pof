@@ -47,7 +47,7 @@ export function DecisionDebugger() {
                   <span className={`text-xs font-mono font-bold flex-shrink-0 ${isUnexpected ? 'text-amber-400' : 'text-text-muted'}`}>
                     #{entry.tick}
                   </span>
-                  <span className={`text-[11px] font-bold uppercase px-1.5 py-0.5 rounded flex-shrink-0 ${
+                  <span className={`text-xs font-bold uppercase px-1.5 py-0.5 rounded flex-shrink-0 ${
                     entry.type === 'evaluation' ? 'bg-blue-500/15 text-blue-400'
                       : entry.type === 'selection' ? 'bg-emerald-500/15 text-emerald-400'
                         : 'bg-amber-500/15 text-amber-400'

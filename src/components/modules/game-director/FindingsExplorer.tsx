@@ -3,44 +3,22 @@
 import { useState, useEffect, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import {
-  AlertOctagon, AlertTriangle, Info, CheckCircle2,
-  Filter, Search, Loader2, Target,
+  Filter, Search, Loader2, Target, FileSearch, Plus,
 } from 'lucide-react';
+import { ACCENT_ORANGE } from '@/lib/chart-colors';
 import type { PlaytestSession, PlaytestFinding, FindingSeverity, FindingCategory } from '@/types/game-director';
 import { SurfaceCard } from '@/components/ui/SurfaceCard';
-import {
-  STATUS_SUCCESS, STATUS_WARNING, STATUS_ERROR, STATUS_INFO, STATUS_BLOCKER,
-  OPACITY_8, OPACITY_20,
-} from '@/lib/chart-colors';
+import { SEVERITY_STYLES, CATEGORY_LABELS } from '@/lib/game-director-styles';
 
-const SEVERITY_STYLES: Record<FindingSeverity, { icon: typeof AlertOctagon; color: string; bg: string; border: string }> = {
-  critical: { icon: AlertOctagon, color: STATUS_ERROR, bg: `${STATUS_ERROR}${OPACITY_8}`, border: `${STATUS_ERROR}${OPACITY_20}` },
-  high: { icon: AlertTriangle, color: STATUS_BLOCKER, bg: `${STATUS_BLOCKER}${OPACITY_8}`, border: `${STATUS_BLOCKER}${OPACITY_20}` },
-  medium: { icon: Info, color: STATUS_WARNING, bg: `${STATUS_WARNING}${OPACITY_8}`, border: `${STATUS_WARNING}${OPACITY_20}` },
-  low: { icon: Info, color: STATUS_INFO, bg: `${STATUS_INFO}${OPACITY_8}`, border: `${STATUS_INFO}${OPACITY_20}` },
-  positive: { icon: CheckCircle2, color: STATUS_SUCCESS, bg: `${STATUS_SUCCESS}${OPACITY_8}`, border: `${STATUS_SUCCESS}${OPACITY_20}` },
-};
-
-const CATEGORY_LABELS: Record<FindingCategory, string> = {
-  'visual-glitch': 'Visual Glitch',
-  'animation-issue': 'Animation',
-  'gameplay-feel': 'Gameplay Feel',
-  'ux-problem': 'UX Problem',
-  'performance': 'Performance',
-  'crash-bug': 'Crash/Bug',
-  'level-pacing': 'Level Pacing',
-  'audio-issue': 'Audio',
-  'save-load': 'Save/Load',
-  'ai-behavior': 'AI Behavior',
-  'positive-feedback': 'Positive',
-};
+const ACCENT = ACCENT_ORANGE;
 
 interface FindingsExplorerProps {
   sessions: PlaytestSession[];
   getFindings: (sessionId: string) => Promise<PlaytestFinding[]>;
+  onNewSession?: () => void;
 }
 
-export function FindingsExplorer({ sessions, getFindings }: FindingsExplorerProps) {
+export function FindingsExplorer({ sessions, getFindings, onNewSession }: FindingsExplorerProps) {
   const [allFindings, setAllFindings] = useState<PlaytestFinding[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
@@ -126,12 +104,39 @@ export function FindingsExplorer({ sessions, getFindings }: FindingsExplorerProp
 
       {/* Findings grid */}
       {filtered.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-12 text-center">
-          <Target className="w-6 h-6 text-border-bright mb-2" />
-          <p className="text-xs text-text-muted">
-            {allFindings.length === 0 ? 'No findings yet. Complete a playtest to see results.' : 'No findings match your filters.'}
-          </p>
-        </div>
+        allFindings.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-16 text-center">
+            <div className="relative w-16 h-16 mb-5">
+              <div
+                className="absolute inset-0 rounded-2xl"
+                style={{ backgroundColor: `${ACCENT}08`, border: `1px solid ${ACCENT}15` }}
+              />
+              <Target className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-7 h-7" style={{ color: ACCENT }} />
+              <FileSearch className="absolute -bottom-1 -right-1 w-5 h-5 opacity-50" style={{ color: ACCENT }} />
+              <Search className="absolute -top-1 -left-1 w-4 h-4 opacity-30" style={{ color: ACCENT }} />
+            </div>
+            <h3 className="text-sm font-semibold text-text mb-1">No findings discovered yet</h3>
+            <p className="text-xs text-text-muted max-w-xs leading-relaxed mb-4">
+              Findings are bugs, issues, and observations uncovered during AI playtests.
+              Complete at least one playtest session to start collecting findings here.
+            </p>
+            {onNewSession && (
+              <button
+                onClick={onNewSession}
+                className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-medium transition-colors"
+                style={{ backgroundColor: `${ACCENT}15`, color: ACCENT, border: `1px solid ${ACCENT}30` }}
+              >
+                <Plus className="w-3.5 h-3.5" />
+                Go to New Session
+              </button>
+            )}
+          </div>
+        ) : (
+          <div className="flex flex-col items-center justify-center py-12 text-center">
+            <Filter className="w-5 h-5 text-border-bright mb-2" />
+            <p className="text-xs text-text-muted">No findings match your current filters.</p>
+          </div>
+        )
       ) : (
         <div className="space-y-2">
           {filtered.map((finding, idx) => {

@@ -253,14 +253,14 @@ function Sparkline({ data, color, width = 200, height = 40, label, currentIdx }:
     <div className="flex items-center gap-2">
       <div className="flex-1 min-w-0">
         <div className="flex items-center justify-between mb-0.5">
-          <span className="text-[11px] font-mono font-bold truncate" style={{ color }}>{label}</span>
+          <span className="text-xs font-mono font-bold truncate" style={{ color }}>{label}</span>
           <div className="flex items-center gap-1.5">
-            <span className="text-[11px] font-mono font-bold" style={{ color }}>
+            <span className="text-xs font-mono font-bold" style={{ color }}>
               {currentVal % 1 === 0 ? currentVal : currentVal.toFixed(1)}
             </span>
             {delta !== 0 && (
               <span
-                className="text-[11px] font-mono"
+                className="text-xs font-mono"
                 style={{ color: delta > 0 ? STATUS_SUCCESS : STATUS_ERROR }}
               >
                 {delta > 0 ? '+' : ''}{delta % 1 === 0 ? delta : delta.toFixed(1)}
@@ -505,10 +505,10 @@ export function SimulationSandbox({ attributes, effects, relationships, accent }
           {/* Effect Queue */}
           <SurfaceCard level={3} className="p-2.5">
             <div className="flex items-center justify-between mb-2">
-              <span className="text-[11px] font-bold uppercase tracking-widest text-text-muted">Effect Queue</span>
+              <span className="text-xs font-bold uppercase tracking-widest text-text-muted">Effect Queue</span>
               <button
                 onClick={addQueueItem}
-                className="flex items-center gap-1 px-1.5 py-0.5 rounded text-[11px] font-medium"
+                className="flex items-center gap-1 px-1.5 py-0.5 rounded text-xs font-medium"
                 style={{ backgroundColor: `${accent}15`, color: accent, border: `1px solid ${accent}30` }}
               >
                 <Plus className="w-2.5 h-2.5" /> Add
@@ -516,12 +516,12 @@ export function SimulationSandbox({ attributes, effects, relationships, accent }
             </div>
             <div className="space-y-1 max-h-[200px] overflow-y-auto custom-scrollbar">
               {queue.length === 0 && (
-                <div className="text-[11px] text-text-muted italic py-2 text-center">No effects queued. Add effects to simulate.</div>
+                <div className="text-xs text-text-muted italic py-2 text-center">No effects queued. Add effects to simulate.</div>
               )}
               {queue.map((item) => {
                 const eff = effects.find(e => e.id === item.effectId);
                 return (
-                  <div key={item.id} className="flex items-center gap-1.5 text-[11px] font-mono">
+                  <div key={item.id} className="flex items-center gap-1.5 text-xs font-mono">
                     <input
                       type="number" value={item.triggerTime} min={0} max={simDuration} step={0.5}
                       onChange={(e) => updateQueueItem(item.id, { triggerTime: Number(e.target.value) })}
@@ -553,7 +553,7 @@ export function SimulationSandbox({ attributes, effects, relationships, accent }
               onClick={() => setExpandedAttrs(!expandedAttrs)}
               className="flex items-center justify-between w-full mb-1"
             >
-              <span className="text-[11px] font-bold uppercase tracking-widest text-text-muted">Initial Values</span>
+              <span className="text-xs font-bold uppercase tracking-widest text-text-muted">Initial Values</span>
               <motion.div animate={{ rotate: expandedAttrs ? 180 : 0 }}>
                 <ChevronDown className="w-3 h-3 text-text-muted" />
               </motion.div>
@@ -570,7 +570,7 @@ export function SimulationSandbox({ attributes, effects, relationships, accent }
                     {attributes.filter(a => a.category !== 'meta').map((attr) => {
                       const val = overrides[attr.name] ?? attr.defaultValue;
                       return (
-                        <div key={attr.id} className="flex items-center gap-1.5 text-[11px] font-mono">
+                        <div key={attr.id} className="flex items-center gap-1.5 text-xs font-mono">
                           <span className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ backgroundColor: CAT_COLORS[attr.category] }} />
                           <span className="truncate flex-1 text-text-muted" title={attr.name}>
                             {attr.name}
@@ -603,7 +603,7 @@ export function SimulationSandbox({ attributes, effects, relationships, accent }
                 <button
                   key={attr.id}
                   onClick={() => toggleTrack(attr.name)}
-                  className="px-2 py-0.5 rounded-full text-[11px] font-mono font-medium transition-all"
+                  className="px-2 py-0.5 rounded-full text-xs font-mono font-medium transition-all"
                   style={{
                     backgroundColor: isTracked ? `${color}20` : 'transparent',
                     color: isTracked ? color : 'var(--text-muted)',
@@ -644,7 +644,7 @@ export function SimulationSandbox({ attributes, effects, relationships, accent }
                   );
                 })}
                 {trackedAttrNames.size === 0 && (
-                  <div className="text-[11px] text-text-muted italic text-center py-4">
+                  <div className="text-xs text-text-muted italic text-center py-4">
                     Select attributes above to track their changes
                   </div>
                 )}
@@ -655,10 +655,10 @@ export function SimulationSandbox({ attributes, effects, relationships, accent }
           {/* Event Log + Active Tags */}
           <div className="grid grid-cols-2 gap-3">
             <SurfaceCard level={3} className="p-2.5">
-              <span className="text-[11px] font-bold uppercase tracking-widest text-text-muted block mb-1.5">Event Log</span>
+              <span className="text-xs font-bold uppercase tracking-widest text-text-muted block mb-1.5">Event Log</span>
               <div className="space-y-0.5 max-h-[140px] overflow-y-auto custom-scrollbar">
                 {eventLog.length === 0 && (
-                  <div className="text-[11px] text-text-muted italic">No events yet</div>
+                  <div className="text-xs text-text-muted italic">No events yet</div>
                 )}
                 {eventLog.map((entry, i) => {
                   const isApply = entry.event.includes('applied');
@@ -666,7 +666,7 @@ export function SimulationSandbox({ attributes, effects, relationships, accent }
                   const isExpired = entry.event.includes('expired');
                   const color = isApply ? STATUS_SUCCESS : isTick ? ACCENT_CYAN : isExpired ? STATUS_WARNING : 'var(--text-muted)';
                   return (
-                    <div key={i} className="flex items-center gap-1.5 text-[11px] font-mono">
+                    <div key={i} className="flex items-center gap-1.5 text-xs font-mono">
                       <span className="text-text-muted w-10 text-right flex-shrink-0">{entry.time.toFixed(1)}s</span>
                       <span className="w-1 h-1 rounded-full flex-shrink-0" style={{ backgroundColor: color }} />
                       <span style={{ color }}>{entry.event}</span>
@@ -677,15 +677,15 @@ export function SimulationSandbox({ attributes, effects, relationships, accent }
             </SurfaceCard>
 
             <SurfaceCard level={3} className="p-2.5">
-              <span className="text-[11px] font-bold uppercase tracking-widest text-text-muted block mb-1.5">Active Tags</span>
+              <span className="text-xs font-bold uppercase tracking-widest text-text-muted block mb-1.5">Active Tags</span>
               <div className="flex flex-wrap gap-1">
                 {(!currentSnap || currentSnap.activeTags.length === 0) && (
-                  <div className="text-[11px] text-text-muted italic">No active tags</div>
+                  <div className="text-xs text-text-muted italic">No active tags</div>
                 )}
                 {currentSnap?.activeTags.map((tag) => (
                   <span
                     key={tag}
-                    className="text-[11px] font-mono px-1.5 py-0.5 rounded"
+                    className="text-xs font-mono px-1.5 py-0.5 rounded"
                     style={{ backgroundColor: `${accent}15`, color: accent, border: `1px solid ${accent}25` }}
                   >
                     {tag}
@@ -696,14 +696,14 @@ export function SimulationSandbox({ attributes, effects, relationships, accent }
               {/* Quick attribute snapshot */}
               {currentSnap && (
                 <div className="mt-2 pt-2 border-t border-border/30">
-                  <span className="text-[11px] font-bold uppercase tracking-widest text-text-muted block mb-1">Snapshot</span>
+                  <span className="text-xs font-bold uppercase tracking-widest text-text-muted block mb-1">Snapshot</span>
                   <div className="grid grid-cols-2 gap-x-3 gap-y-0.5">
                     {attributes.filter(a => a.category === 'vital' || a.category === 'combat').map(attr => {
                       const val = currentSnap.values[attr.name] ?? 0;
                       const initial = overrides[attr.name] ?? attr.defaultValue;
                       const delta = val - initial;
                       return (
-                        <div key={attr.id} className="flex items-center justify-between text-[11px] font-mono">
+                        <div key={attr.id} className="flex items-center justify-between text-xs font-mono">
                           <span className="text-text-muted truncate">{attr.name}</span>
                           <span className="flex items-center gap-1">
                             <span style={{ color: CAT_COLORS[attr.category] }}>

@@ -32,9 +32,9 @@ function JobCard({ job }: { job: GenerationJob }) {
           <span className="text-xs font-medium text-text truncate">
             {job.prompt || `Image-to-3D (${job.providerId})`}
           </span>
-          <span className={`text-[10px] ${config.color}`}>{config.label}</span>
+          <span className={`text-xs ${config.color}`}>{config.label}</span>
         </div>
-        <div className="flex items-center gap-2 mt-1 text-[10px] text-text-muted">
+        <div className="flex items-center gap-2 mt-1 text-xs text-text-muted">
           <span>{job.mode === 'text-to-3d' ? 'Text' : 'Image'} → 3D</span>
           <span>·</span>
           <span>{job.providerId}</span>
@@ -44,8 +44,8 @@ function JobCard({ job }: { job: GenerationJob }) {
         {job.status === 'generating' && (
           <div className="mt-2">
             <div className="flex items-center justify-between mb-1">
-              <span className="text-[10px] text-text-muted">Progress</span>
-              <span className="text-[10px] text-[var(--visual-gen)] font-medium">
+              <span className="text-xs text-text-muted">Progress</span>
+              <span className="text-xs text-[var(--visual-gen)] font-medium">
                 {Math.round(job.progress)}%
               </span>
             </div>
@@ -62,13 +62,13 @@ function JobCard({ job }: { job: GenerationJob }) {
             <div className="h-1 bg-border rounded-full overflow-hidden">
               <div className="h-full bg-blue-400 rounded-full animate-pulse w-full" />
             </div>
-            <p className="text-[10px] text-blue-400 mt-1">
+            <p className="text-xs text-blue-400 mt-1">
               Importing generated model into Blender scene...
             </p>
           </div>
         )}
         {job.error && (
-          <p className="mt-1 text-[10px] text-red-400">{job.error}</p>
+          <p className="mt-1 text-xs text-red-400">{job.error}</p>
         )}
       </div>
       <button
@@ -104,7 +104,7 @@ export function GenerationQueue() {
         {hasCompleted && (
           <button
             onClick={clearCompleted}
-            className="flex items-center gap-1 text-[10px] text-text-muted hover:text-text transition-colors"
+            className="flex items-center gap-1 text-xs text-text-muted hover:text-text transition-colors"
           >
             <Trash2 size={10} />
             Clear completed

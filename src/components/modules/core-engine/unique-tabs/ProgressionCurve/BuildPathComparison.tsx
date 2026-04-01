@@ -57,7 +57,7 @@ export function BuildPathComparison() {
         </div>
 
         <div className="space-y-1">
-          <div className="grid grid-cols-[1fr_repeat(3,60px)] gap-1 text-[10px] font-mono uppercase tracking-[0.15em] font-bold text-text-muted mb-2">
+          <div className="grid grid-cols-[1fr_repeat(3,60px)] gap-1 text-xs font-mono uppercase tracking-[0.15em] font-bold text-text-muted mb-2">
             <span>Stat</span>
             {BUILD_PRESETS.map(b => (
               <span key={b.name} className="text-center" style={{ color: buildVisibility[b.name] ? b.color : 'var(--text-muted)', opacity: buildVisibility[b.name] ? 1 : 0.4 }}>

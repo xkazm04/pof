@@ -7,7 +7,7 @@ export function RatingBadge({ rating }: { rating: Rating }) {
   const { color, label } = RATING_STYLES[rating];
   return (
     <span
-      className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider"
+      className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-xs font-bold uppercase tracking-[0.15em]"
       style={{
         color,
         backgroundColor: `${color}${OPACITY_10}`,

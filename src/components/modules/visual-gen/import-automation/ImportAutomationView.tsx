@@ -2,6 +2,7 @@
 
 import { useState, useMemo } from 'react';
 import { FileUp, Code, Copy, Check } from 'lucide-react';
+import { StyledSlider } from '@/components/ui/StyledSlider';
 import { ReviewableModuleView } from '../../shared/ReviewableModuleView';
 import type { ExtraTab } from '../../shared/ReviewableModuleView';
 import { SUB_MODULE_MAP, getCategoryForSubModule, getModuleChecklist } from '@/lib/module-registry';
@@ -43,7 +44,7 @@ function ConfigTab() {
             type="text"
             value={config.assetName}
             onChange={(e) => updateConfig('assetName', e.target.value)}
-            className="w-full bg-surface border border-border rounded px-2.5 py-1.5 text-sm text-text focus:outline-none focus:border-[var(--visual-gen)]"
+            className="w-full bg-surface border border-border rounded-lg px-2.5 py-1.5 text-sm text-text focus:outline-none focus:border-[var(--visual-gen)]"
           />
         </div>
 
@@ -86,15 +87,14 @@ function ConfigTab() {
         </div>
 
         <div>
-          <label className="text-xs text-text-muted mb-1 block">Scale: {config.scale.toFixed(1)}</label>
-          <input
-            type="range"
-            min={0.01} max={100} step={0.1}
+          <StyledSlider
+            min={0.01}
+            max={100}
+            step={0.1}
             value={config.scale}
-            onChange={(e) => updateConfig('scale', parseFloat(e.target.value))}
-            className="w-full h-1.5 bg-border rounded-full appearance-none cursor-pointer
-                       [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:h-3
-                       [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-[var(--visual-gen)]"
+            onChange={(v) => updateConfig('scale', v)}
+            accentColor="var(--visual-gen)"
+            label={`Scale: ${config.scale.toFixed(1)}`}
           />
         </div>
 
@@ -104,7 +104,7 @@ function ConfigTab() {
             type="text"
             value={config.contentPath}
             onChange={(e) => updateConfig('contentPath', e.target.value)}
-            className="w-full bg-surface border border-border rounded px-2.5 py-1.5 text-sm text-text font-mono focus:outline-none focus:border-[var(--visual-gen)]"
+            className="w-full bg-surface border border-border rounded-lg px-2.5 py-1.5 text-sm text-text font-mono focus:outline-none focus:border-[var(--visual-gen)]"
           />
         </div>
 

@@ -519,7 +519,7 @@ function EventEditor({
             type="text"
             value={event.name}
             onChange={(e) => onUpdate({ name: e.target.value })}
-            className="w-full px-4 py-2.5 bg-black/40 border border-blue-900/60 rounded-xl text-[11px] text-white outline-none focus:border-blue-400 focus:ring-1 focus:ring-blue-400/50 transition-all shadow-inner"
+            className="w-full px-4 py-2.5 bg-black/40 border border-blue-900/60 rounded-xl text-[11px] text-white focus-ring-inset transition-all shadow-inner"
           />
         </div>
 
@@ -531,7 +531,7 @@ function EventEditor({
             value={event.trigger}
             onChange={(e) => onUpdate({ trigger: e.target.value })}
             placeholder="OnGameEvent..."
-            className="w-full px-4 py-2.5 bg-black/40 border border-blue-900/60 rounded-xl text-[11px] text-blue-200 font-mono outline-none focus:border-blue-400 focus:ring-1 focus:ring-blue-400/50 transition-all shadow-inner uppercase tracking-wider"
+            className="w-full px-4 py-2.5 bg-black/40 border border-blue-900/60 rounded-xl text-[11px] text-blue-200 font-mono focus-ring-inset transition-all shadow-inner uppercase tracking-wider"
           />
         </div>
 
@@ -542,7 +542,7 @@ function EventEditor({
             <select
               value={event.category}
               onChange={(e) => onUpdate({ category: e.target.value as EventCategory })}
-              className="w-full px-4 py-2.5 bg-black/40 border border-blue-900/60 rounded-xl text-[11px] font-bold text-white uppercase tracking-widest outline-none focus:border-blue-400 focus:ring-1 focus:ring-blue-400/50 appearance-none transition-all shadow-inner"
+              className="w-full px-4 py-2.5 bg-black/40 border border-blue-900/60 rounded-xl text-[11px] font-bold text-white uppercase tracking-widest focus-ring-inset appearance-none transition-all shadow-inner"
             >
               {CATEGORIES.map((c) => (
                 <option key={c} value={c} className="bg-gray-900">{CATEGORY_CONFIG[c].label}</option>
@@ -613,7 +613,7 @@ function EventEditor({
               value={event.concurrency}
               onChange={(e) => onUpdate({ concurrency: Math.max(1, Math.min(16, Number(e.target.value) || 1)) })}
               min={1} max={16}
-              className="w-full px-4 py-2.5 bg-black/40 border border-blue-900/60 rounded-xl text-[11px] text-blue-200 font-mono text-center outline-none focus:border-blue-400 focus:ring-1 focus:ring-blue-400/50 transition-all shadow-inner"
+              className="w-full px-4 py-2.5 bg-black/40 border border-blue-900/60 rounded-xl text-[11px] text-blue-200 font-mono text-center focus-ring-inset transition-all shadow-inner"
             />
           </div>
 
@@ -624,7 +624,7 @@ function EventEditor({
               value={event.cooldownMs}
               onChange={(e) => onUpdate({ cooldownMs: Math.max(0, Number(e.target.value) || 0) })}
               min={0}
-              className="w-full px-4 py-2.5 bg-black/40 border border-blue-900/60 rounded-xl text-[11px] text-blue-200 font-mono text-center outline-none focus:border-blue-400 focus:ring-1 focus:ring-blue-400/50 transition-all shadow-inner"
+              className="w-full px-4 py-2.5 bg-black/40 border border-blue-900/60 rounded-xl text-[11px] text-blue-200 font-mono text-center focus-ring-inset transition-all shadow-inner"
             />
           </div>
         </div>
@@ -665,7 +665,7 @@ function EventEditor({
             onChange={(e) => setNewTag(e.target.value)}
             onKeyDown={(e) => { if (e.key === 'Enter') addTag(); }}
             placeholder="ADD_TOKEN..."
-            className="flex-1 px-4 py-2 bg-black/40 border border-blue-900/60 rounded-xl text-[11px] uppercase tracking-widest text-blue-200 placeholder-blue-500/40 outline-none focus:border-blue-400 focus:ring-1 focus:ring-blue-400/50 transition-all shadow-inner"
+            className="flex-1 px-4 py-2 bg-black/40 border border-blue-900/60 rounded-xl text-[11px] uppercase tracking-widest text-blue-200 placeholder-blue-500/40 focus-ring-inset transition-all shadow-inner"
           />
           <button
             onClick={addTag}

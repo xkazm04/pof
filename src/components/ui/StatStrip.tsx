@@ -1,5 +1,7 @@
 'use client';
 
+import { OPACITY_15, withOpacity } from '@/lib/chart-colors';
+
 interface StatItem {
   label: string;
   value: string | number;
@@ -26,7 +28,7 @@ export function StatStrip({ stats, className = '' }: StatStripProps) {
           <span className="text-text-muted uppercase tracking-wider text-[9px]">{stat.label}</span>
           <span
             className="font-bold tabular-nums"
-            style={stat.color ? { color: stat.color, textShadow: `0 0 12px ${stat.color}30` } : { color: 'var(--text)' }}
+            style={stat.color ? { color: stat.color, textShadow: `0 0 12px ${withOpacity(stat.color, OPACITY_15)}` } : { color: 'var(--text)' }}
           >
             {stat.value}
           </span>

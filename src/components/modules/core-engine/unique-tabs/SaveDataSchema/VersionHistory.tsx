@@ -43,10 +43,10 @@ export function VersionHistory() {
                 <span className="text-text-muted text-xs">{entry.date}</span>
                 <span className="text-text-muted text-xs">by {entry.author}</span>
                 {entry.isCurrent && (
-                  <span className="px-1.5 py-0.5 bg-cyan-500/20 text-cyan-400 text-[11px] font-bold border border-cyan-500/30 rounded-sm">CURRENT</span>
+                  <span className="px-1.5 py-0.5 bg-cyan-500/20 text-cyan-400 text-xs font-bold border border-cyan-500/30 rounded-sm">CURRENT</span>
                 )}
                 {entry.breaking && (
-                  <span className="px-1.5 py-0.5 bg-amber-500/20 text-amber-400 text-[11px] font-bold border border-amber-500/30 rounded-sm">BREAKING</span>
+                  <span className="px-1.5 py-0.5 bg-amber-500/20 text-amber-400 text-xs font-bold border border-amber-500/30 rounded-sm">BREAKING</span>
                 )}
                 <span className="ml-auto text-xs text-text-muted">{entry.changes.length} changes</span>
               </div>
@@ -65,7 +65,7 @@ export function VersionHistory() {
                       const changeColor = change.type === 'added' ? STATUS_SUCCESS : change.type === 'removed' ? STATUS_ERROR : STATUS_WARNING;
                       const prefix = change.type === 'added' ? '+' : change.type === 'removed' ? '-' : '~';
                       return (
-                        <div key={ci} className="flex items-start gap-2 py-0.5 font-mono text-[11px]">
+                        <div key={ci} className="flex items-start gap-2 py-0.5 font-mono text-xs">
                           <span className="flex-shrink-0 font-bold w-3 text-center" style={{ color: changeColor }}>{prefix}</span>
                           <span className="text-text font-bold flex-shrink-0">{change.field}</span>
                           <span className="text-text-muted truncate">{change.detail}</span>

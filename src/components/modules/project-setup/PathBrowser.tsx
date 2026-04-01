@@ -15,6 +15,7 @@ import {
   Cpu,
   MapPin,
 } from 'lucide-react';
+import { ErrorBanner } from './ErrorBanner';
 
 interface DirectoryEntry {
   name: string;
@@ -386,15 +387,32 @@ export function PathBrowser({ value, startFresh, onSelect, onProjectDetected, on
       )}
 
       {/* Error state */}
-      {error && (
-        <div className="px-3 py-2 text-xs text-red-400 border-b border-border">{error}</div>
-      )}
+      {error && <ErrorBanner message={error} className="mx-3 my-2" />}
 
       {/* Directory listing */}
       <div className="max-h-[200px] overflow-y-auto">
         {directories.length === 0 && !loading && currentPath && (
-          <div className="px-3 py-4 text-xs text-text-muted text-center">
-            Empty directory
+          <div className="px-3 py-6 text-center">
+            <Folder className="w-6 h-6 text-text-muted/20 mx-auto mb-2" />
+            <p className="text-xs text-text-muted mb-2">This directory is empty</p>
+            <div className="flex items-center justify-center gap-2">
+              <button
+                onClick={navigateHome}
+                className="flex items-center gap-1 px-2.5 py-1 text-xs text-[#00ff88]/80 hover:text-[#00ff88] border border-[#00ff88]/20 hover:border-[#00ff88]/40 rounded transition-colors"
+              >
+                <Home className="w-3 h-3" />
+                Go Home
+              </button>
+              {parentPath && (
+                <button
+                  onClick={navigateUp}
+                  className="flex items-center gap-1 px-2.5 py-1 text-xs text-text-muted hover:text-text border border-border hover:border-border-bright rounded transition-colors"
+                >
+                  <ChevronUp className="w-3 h-3" />
+                  Navigate Up
+                </button>
+              )}
+            </div>
           </div>
         )}
         {directories.map((dir) => (

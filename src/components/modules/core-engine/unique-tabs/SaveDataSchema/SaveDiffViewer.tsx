@@ -65,7 +65,7 @@ export function SaveDiffSection() {
             return (
               <span key={type} className="flex items-center gap-1.5">
                 <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: colors[type] }} />
-                <span className="text-[10px] font-mono uppercase tracking-[0.15em]" style={{ color: colors[type] }}>{type}</span>
+                <span className="text-xs font-mono uppercase tracking-[0.15em]" style={{ color: colors[type] }}>{type}</span>
                 <span className="text-cyan-100 font-bold">{count}</span>
               </span>
             );

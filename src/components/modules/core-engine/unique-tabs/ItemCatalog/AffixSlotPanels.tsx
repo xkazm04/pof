@@ -26,7 +26,7 @@ export function AffixSlotPanels({ featureMap }: AffixSlotPanelsProps) {
           className="w-full flex items-center gap-3 px-4 py-3 hover:bg-surface-hover/30 transition-colors text-left focus:outline-none">
           <motion.div animate={{ rotate: affixOpen ? 90 : 0 }}><ChevronRight className="w-4 h-4 text-text-muted" /></motion.div>
           <span className="text-sm font-bold text-text">Affix System Definitions</span>
-          <span className="text-[10px] font-mono uppercase tracking-[0.15em] px-2 py-0.5 rounded-md border shadow-sm ml-auto"
+          <span className="text-xs font-mono uppercase tracking-[0.15em] px-2 py-0.5 rounded-md border shadow-sm ml-auto"
             style={{ backgroundColor: STATUS_COLORS[featureMap.get('Affix system')?.status ?? 'unknown'].bg, color: STATUS_COLORS[featureMap.get('Affix system')?.status ?? 'unknown'].dot, borderColor: `${STATUS_COLORS[featureMap.get('Affix system')?.status ?? 'unknown'].dot}40` }}>
             {STATUS_COLORS[featureMap.get('Affix system')?.status ?? 'unknown'].label}
           </span>
@@ -39,7 +39,7 @@ export function AffixSlotPanels({ featureMap }: AffixSlotPanelsProps) {
                   <thead>
                     <tr className="border-b border-border/30 bg-surface-deep/50">
                       {['Affix', 'Modifier', 'Tier', 'Rarity'].map(h => (
-                        <th key={h} className="text-left px-4 py-2 text-[10px] font-mono uppercase tracking-[0.15em] text-text-muted">{h}</th>
+                        <th key={h} className="text-left px-4 py-2 text-xs font-mono uppercase tracking-[0.15em] text-text-muted">{h}</th>
                       ))}
                     </tr>
                   </thead>

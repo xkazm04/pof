@@ -56,12 +56,12 @@ export function ComparisonMatrix({
           whileTap={{ scale: 0.97 }}
           onClick={addColumn}
           disabled={!canAdd}
-          className="flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-mono uppercase tracking-[0.15em] font-bold border transition-colors hover:brightness-110 disabled:opacity-30 disabled:cursor-not-allowed"
+          className="flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-mono uppercase tracking-[0.15em] font-bold border transition-colors hover:brightness-110 disabled:opacity-30 disabled:cursor-not-allowed"
           style={{ borderColor: 'rgba(255,255,255,0.15)', color: 'var(--text-muted)' }}
         >
           <Plus className="w-3 h-3" /> Add Column
         </motion.button>
-        <span className="text-[10px] font-mono uppercase tracking-[0.15em] text-text-muted">
+        <span className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted">
           {selectedIds.length}/{maxColumns} columns
         </span>
       </div>
@@ -71,7 +71,7 @@ export function ComparisonMatrix({
         <table className="w-full text-xs border-collapse">
           <thead>
             <tr className="border-b border-border/40">
-              <th className="text-left py-2 pr-4 text-[10px] font-mono uppercase tracking-[0.15em] font-bold text-text-muted w-28">
+              <th className="text-left py-2 pr-4 text-xs font-mono uppercase tracking-[0.15em] font-bold text-text-muted w-28">
                 Stat
               </th>
               {selectedEntities.map((entity, idx) => (
@@ -161,14 +161,14 @@ export function ComparisonMatrix({
         {selectedEntities.map((entity) => (
           <span
             key={entity.id}
-            className="flex items-center gap-1.5 text-[10px] font-mono uppercase tracking-[0.15em] font-bold"
+            className="flex items-center gap-1.5 text-xs font-mono uppercase tracking-[0.15em] font-bold"
             style={{ color: entity.color }}
           >
             <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: entity.color }} />
             {entity.name}
           </span>
         ))}
-        <span className="ml-auto text-[10px] font-mono uppercase tracking-[0.15em] text-text-muted flex items-center gap-1">
+        <span className="ml-auto text-xs font-mono uppercase tracking-[0.15em] text-text-muted flex items-center gap-1">
           <span className="font-bold" style={{ color: STATUS_SUCCESS }}>Green</span> = best in stat
         </span>
       </div>

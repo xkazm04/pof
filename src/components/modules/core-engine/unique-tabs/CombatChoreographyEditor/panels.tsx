@@ -49,12 +49,12 @@ export function WaveManager({ waves, selectedWave, waveEnemyCounts, totalEnemies
               <div className="text-xs font-mono font-bold truncate" style={{ color: selectedWave === i ? ACCENT_CYAN : 'var(--text)' }}>
                 {wave.label}
               </div>
-              <div className="flex items-center gap-1 text-[10px] font-mono uppercase tracking-[0.15em] text-text-muted">
+              <div className="flex items-center gap-1 text-xs font-mono uppercase tracking-[0.15em] text-text-muted">
                 <Clock className="w-2.5 h-2.5" />
                 <input type="number" min={0} max={120} step={1} value={wave.spawnTimeSec}
                   onChange={(e) => onUpdateTime(i, Number(e.target.value))}
                   onClick={(e) => e.stopPropagation()}
-                  className="w-10 bg-transparent border-b border-border/40 text-[10px] font-mono text-text-muted focus:outline-none focus:border-cyan-400/50" />
+                  className="w-10 bg-transparent border-b border-border/40 text-xs font-mono text-text-muted focus:outline-none focus:border-cyan-400/50" />
                 s &middot; {waveEnemyCounts[i]} enemies
               </div>
             </div>
@@ -67,7 +67,7 @@ export function WaveManager({ waves, selectedWave, waveEnemyCounts, totalEnemies
           </div>
         ))}
       </div>
-      <div className="pt-2 border-t border-border/30 space-y-1 text-[10px] font-mono uppercase tracking-[0.15em] text-text-muted">
+      <div className="pt-2 border-t border-border/30 space-y-1 text-xs font-mono uppercase tracking-[0.15em] text-text-muted">
         <div className="flex justify-between"><span>Total enemies</span><span className="font-bold text-text">{totalEnemies}</span></div>
         <div className="flex justify-between"><span>Waves</span><span className="font-bold text-text">{waves.length}</span></div>
         <div className="flex justify-between"><span>Est. duration</span><span className="font-bold" style={{ color: ACCENT_CYAN }}>{totalDuration.toFixed(1)}s</span></div>
@@ -102,7 +102,7 @@ export function TimelineSection({ simResult, waves, scrubTime, isPlaying, onScru
         alerts={simResult.alerts} waves={waves} totalDuration={simResult.totalDurationSec}
         scrubTime={scrubTime} onScrub={onScrub}
       />
-      <div className="flex items-center gap-3 text-[10px] font-mono uppercase tracking-[0.15em] text-text-muted pt-1 border-t border-border/20">
+      <div className="flex items-center gap-3 text-xs font-mono uppercase tracking-[0.15em] text-text-muted pt-1 border-t border-border/20">
         <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-sm" style={{ backgroundColor: ACCENT_EMERALD }} /> Player dmg</span>
         <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-sm" style={{ backgroundColor: STATUS_ERROR }} /> Enemy dmg</span>
         <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-sm border" style={{ backgroundColor: `${ACCENT_CYAN}40`, borderColor: ACCENT_CYAN }} /> Wave marker</span>
@@ -132,7 +132,7 @@ export function TuningPanel({ tuning, onUpdate, onReset }: {
       <TuningSlider label="playerHPMul" value={tuning.playerHealthMul} onChange={(v) => onUpdate('playerHealthMul', v)} color={STATUS_SUCCESS} />
       <TuningSlider label="playerArmorMul" value={tuning.playerArmorMul} onChange={(v) => onUpdate('playerArmorMul', v)} color={ACCENT_CYAN} />
       <button onClick={onReset}
-        className="w-full text-[10px] font-mono uppercase tracking-[0.15em] py-1 rounded-md bg-surface-deep border border-border hover:border-border-bright transition-colors text-text-muted">
+        className="w-full text-xs font-mono uppercase tracking-[0.15em] py-1 rounded-md bg-surface-deep border border-border hover:border-border-bright transition-colors text-text-muted">
         Reset to Default
       </button>
     </BlueprintPanel>
@@ -170,7 +170,7 @@ export function ExportPanel({ exportConfig, onCopy, copied }: {
         <SectionHeader label="UE5 Export" />
         <div className="flex items-center gap-1">
           <button onClick={onCopy}
-            className="flex items-center gap-1 px-1.5 py-0.5 text-[10px] font-mono uppercase tracking-[0.15em] font-bold rounded-md bg-surface-deep border border-border hover:border-border-bright transition-colors">
+            className="flex items-center gap-1 px-1.5 py-0.5 text-xs font-mono uppercase tracking-[0.15em] font-bold rounded-md bg-surface-deep border border-border hover:border-border-bright transition-colors">
             {copied ? <Check className="w-2.5 h-2.5" style={{ color: STATUS_SUCCESS }} /> : <Copy className="w-2.5 h-2.5 text-text-muted" />}
             <span className="text-text-muted">{copied ? 'Copied' : 'Copy'}</span>
           </button>
@@ -181,14 +181,14 @@ export function ExportPanel({ exportConfig, onCopy, copied }: {
             a.href = url; a.download = 'EncounterConfig.h'; a.click();
             URL.revokeObjectURL(url);
           }}
-            className="flex items-center gap-1 px-1.5 py-0.5 text-[10px] font-mono uppercase tracking-[0.15em] font-bold rounded-md bg-surface-deep border border-border hover:border-border-bright transition-colors">
+            className="flex items-center gap-1 px-1.5 py-0.5 text-xs font-mono uppercase tracking-[0.15em] font-bold rounded-md bg-surface-deep border border-border hover:border-border-bright transition-colors">
             <Download className="w-2.5 h-2.5 text-text-muted" />
             <span className="text-text-muted">.h</span>
           </button>
         </div>
       </div>
       <div className="rounded-md bg-black/50 border border-border/40 overflow-hidden">
-        <pre className="p-2 text-[11px] font-mono text-text-muted leading-relaxed overflow-auto max-h-[220px] whitespace-pre">
+        <pre className="p-2 text-xs font-mono text-text-muted leading-relaxed overflow-auto max-h-[220px] whitespace-pre">
           {exportConfig}
         </pre>
       </div>

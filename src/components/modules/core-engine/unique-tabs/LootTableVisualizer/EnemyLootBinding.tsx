@@ -60,11 +60,11 @@ export function EnemyLootBindingSection() {
                 <div className="w-7 h-7 rounded-md flex items-center justify-center text-xs font-bold" style={{ backgroundColor: `${binding.color}20`, color: binding.color }}>{binding.icon}</div>
                 <div className="flex-1">
                   <div className="text-xs font-bold" style={{ color: binding.color }}>{binding.archetypeName}</div>
-                  <div className="text-[11px] font-mono text-text-muted">{binding.lootTableName}</div>
+                  <div className="text-xs font-mono text-text-muted">{binding.lootTableName}</div>
                 </div>
                 <Skull className="w-3.5 h-3.5 text-text-muted" />
               </div>
-              <div className="flex items-center gap-3 mb-2.5 text-[11px] font-mono text-text-muted">
+              <div className="flex items-center gap-3 mb-2.5 text-xs font-mono text-text-muted">
                 <span>Drop: <span className="font-bold text-text">{(binding.dropChance * 100).toFixed(0)}%</span></span>
                 <span>Gold: <span className="font-bold text-text">{binding.bonusGold}</span></span>
                 <span>Items: <span className="font-bold" style={{ color: binding.color }}>{totalDrops}</span></span>
@@ -76,12 +76,12 @@ export function EnemyLootBindingSection() {
                   const barW = maxCount > 0 ? (drop.count / maxCount * 100) : 0;
                   return (
                     <div key={tier.name} className="flex items-center gap-1.5">
-                      <span className="text-[11px] font-mono w-12 text-right text-text-muted truncate">{tier.name}</span>
+                      <span className="text-xs font-mono w-12 text-right text-text-muted truncate">{tier.name}</span>
                       <div className="flex-1 h-2.5 bg-surface-deep/50 rounded-full overflow-hidden relative">
                         <motion.div className="h-full rounded-full" style={{ backgroundColor: tier.color }} initial={{ width: 0 }} animate={{ width: `${barW}%` }} transition={{ duration: 0.4, delay: ri * 0.05 }} />
                       </div>
-                      <span className="text-[11px] font-mono w-6 text-right font-bold" style={{ color: tier.color }}>{drop.count}</span>
-                      <span className="text-[11px] font-mono w-8 text-right text-text-muted">{pct.toFixed(0)}%</span>
+                      <span className="text-xs font-mono w-6 text-right font-bold" style={{ color: tier.color }}>{drop.count}</span>
+                      <span className="text-xs font-mono w-8 text-right text-text-muted">{pct.toFixed(0)}%</span>
                     </div>
                   );
                 })}
@@ -93,7 +93,7 @@ export function EnemyLootBindingSection() {
                   return <motion.div key={tier.name} className="h-full" style={{ backgroundColor: tier.color }} initial={{ width: 0 }} animate={{ width: `${pct}%` }} transition={{ duration: 0.5, delay: ri * 0.05 }} title={`${tier.name}: ${drop.count} (${pct.toFixed(1)}%)`} />;
                 })}
               </div>
-              <div className="mt-1.5 flex items-center justify-between text-[11px] font-mono">
+              <div className="mt-1.5 flex items-center justify-between text-xs font-mono">
                 <span className="text-text-muted">Total gold ({simKillCount} kills)</span>
                 <span className="font-bold" style={{ color: STATUS_WARNING }}>{(simKillCount * binding.bonusGold).toLocaleString()}g</span>
               </div>
@@ -105,7 +105,7 @@ export function EnemyLootBindingSection() {
       {/* Rarity legend */}
       <div className="flex items-center gap-3 mt-2.5 flex-wrap">
         {RARITY_TIERS.map(tier => (
-          <div key={tier.name} className="flex items-center gap-1 text-[11px] font-mono">
+          <div key={tier.name} className="flex items-center gap-1 text-xs font-mono">
             <span className="w-2 h-2 rounded-sm" style={{ backgroundColor: tier.color }} />
             <span style={{ color: tier.color }}>{tier.name}</span>
           </div>
@@ -122,7 +122,7 @@ export function EnemyLootBindingSection() {
                   <Code className="w-3 h-3 text-text-muted" />
                   <span className="text-2xs font-mono text-text-muted">ARPGEnemyCharacter -- LootTable Integration</span>
                 </div>
-                <button onClick={handleCopyLootCpp} className="flex items-center gap-1 px-2 py-1 rounded text-[11px] font-mono font-bold"
+                <button onClick={handleCopyLootCpp} className="flex items-center gap-1 px-2 py-1 rounded text-xs font-mono font-bold"
                   style={{ color: copiedLootCpp ? STATUS_SUCCESS : ACCENT, backgroundColor: copiedLootCpp ? `${STATUS_SUCCESS}15` : `${ACCENT}10` }}>
                   {copiedLootCpp ? <CheckCircle2 className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
                   {copiedLootCpp ? 'Copied' : 'Copy'}

@@ -1,7 +1,8 @@
 'use client';
 
 import type { LucideIcon } from 'lucide-react';
-import { MODULE_COLORS } from '@/lib/chart-colors';
+import { OPACITY_5, withOpacity } from '@/lib/chart-colors';
+import { Button } from '@/components/ui/Button';
 
 interface EmptyStateProps {
   icon: LucideIcon;
@@ -36,7 +37,7 @@ export function EmptyState({
     <div className={`flex flex-col items-center justify-center py-16 px-6 ${className}`}>
       <div
         className="w-12 h-12 rounded-xl border border-border flex items-center justify-center mb-4"
-        style={{ backgroundColor: iconColor ? `${iconColor}10` : undefined }}
+        style={{ backgroundColor: iconColor ? withOpacity(iconColor, OPACITY_5) : undefined }}
       >
         <Icon
           className="w-6 h-6"
@@ -50,25 +51,25 @@ export function EmptyState({
       {(action || secondaryAction) && (
         <div className="flex items-center gap-3 mt-4">
           {action && (
-            <button
+            <Button
+              type="button"
+              variant="outline"
+              size="lg"
+              accentColor={action.color}
               onClick={action.onClick}
-              className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-medium transition-colors"
-              style={{
-                backgroundColor: action.color ? `${action.color}14` : 'var(--accent-medium)',
-                color: action.color ?? MODULE_COLORS.setup,
-                border: `1px solid ${action.color ? `${action.color}38` : 'var(--accent-strong)'}`,
-              }}
             >
               {action.label}
-            </button>
+            </Button>
           )}
           {secondaryAction && (
-            <button
+            <Button
+              type="button"
+              variant="ghost"
+              size="lg"
               onClick={secondaryAction.onClick}
-              className="px-4 py-2 rounded-lg text-xs font-medium text-text-muted border border-border hover:text-text hover:border-border-bright transition-colors"
             >
               {secondaryAction.label}
-            </button>
+            </Button>
           )}
         </div>
       )}

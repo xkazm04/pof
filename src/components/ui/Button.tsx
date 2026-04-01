@@ -1,6 +1,7 @@
 'use client';
 
 import { forwardRef } from 'react';
+import { OPACITY_22, withOpacity } from '@/lib/chart-colors';
 
 interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: 'solid' | 'outline' | 'ghost' | 'glass';
@@ -9,7 +10,7 @@ interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
 }
 
 export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
-  ({ variant = 'solid', size = 'md', accentColor, className = '', children, ...props }, ref) => {
+  ({ variant = 'solid', size = 'md', accentColor, type = 'button', className = '', children, ...props }, ref) => {
     const sizeClasses = {
       sm: 'px-2 py-1 text-xs',
       md: 'px-3 py-1.5 text-sm',
@@ -26,8 +27,9 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
     return (
       <button
         ref={ref}
-        className={`rounded-lg font-medium transition-all duration-base ${sizeClasses[size]} ${variantClasses[variant]} ${className}`}
-        style={accentColor ? { borderColor: `${accentColor}38`, color: accentColor } : undefined}
+        type={type}
+        className={`rounded-lg font-medium transition-all duration-base focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-strong focus-visible:ring-offset-1 focus-visible:ring-offset-surface ${sizeClasses[size]} ${variantClasses[variant]} ${className}`}
+        style={accentColor ? { borderColor: withOpacity(accentColor, OPACITY_22), color: accentColor } : undefined}
         {...props}
       >
         {children}

@@ -8,7 +8,7 @@ export function ComboChainPanel() {
   return (
     <BlueprintPanel color={ACCENT} className="p-4">
       <SectionHeader label="Combo Chain Graph" color={ACCENT} />
-      <p className="text-[10px] font-mono uppercase tracking-[0.15em] text-text-muted mt-1 mb-3">
+      <p className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted mt-1 mb-3">
         Attack combo sequence with damage values and combo window timing between nodes.
       </p>
       <div className="flex justify-center overflow-x-auto min-h-[200px]">
@@ -28,7 +28,7 @@ export function ComboChainPanel() {
                   </marker>
                 </defs>
                 <line x1={x1} y1={y} x2={x2} y2={y} stroke={ACCENT} strokeWidth="2" markerEnd={`url(#arrow-${edge.from})`} />
-                <text x={(x1 + x2) / 2} y={y - 10} textAnchor="middle" className="text-[11px] font-mono" fill={ACCENT_CYAN} style={{ fontSize: 11 }}>{edge.window}</text>
+                <text x={(x1 + x2) / 2} y={y - 10} textAnchor="middle" className="text-xs font-mono" fill={ACCENT_CYAN}>{edge.window}</text>
               </g>
             );
           })}
@@ -37,8 +37,8 @@ export function ComboChainPanel() {
             <g key={node.id}>
               <rect x={node.x - 5} y={node.y - 24} width={98} height={47} rx={6} fill={`${ACCENT}15`} stroke={`${ACCENT}50`} strokeWidth="1.5" />
               <text x={node.x + 44} y={node.y - 9} textAnchor="middle" className="text-xs font-bold fill-[var(--text)]" style={{ fontSize: 12 }}>{node.name}</text>
-              <text x={node.x + 44} y={node.y + 2} textAnchor="middle" className="text-[11px] font-mono fill-[var(--text-muted)]" style={{ fontSize: 11 }}>{node.montage}</text>
-              <text x={node.x + 44} y={node.y + 13} textAnchor="middle" className="text-[11px] font-mono font-bold" fill={STATUS_ERROR} style={{ fontSize: 11 }}>
+              <text x={node.x + 44} y={node.y + 2} textAnchor="middle" className="text-xs font-mono fill-[var(--text-muted)]">{node.montage}</text>
+              <text x={node.x + 44} y={node.y + 13} textAnchor="middle" className="text-xs font-mono font-bold" fill={STATUS_ERROR}>
                 {node.damage} dmg
               </text>
             </g>

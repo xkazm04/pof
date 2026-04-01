@@ -3,10 +3,11 @@
 import { useState, useCallback } from 'react';
 import {
   Cpu, Play, Loader2, CheckCircle2, XCircle, RotateCcw,
-  FileCode, ChevronDown, ChevronRight, AlertTriangle, Zap,
+  FileCode, ChevronDown, ChevronRight, Zap,
   FileText, ArrowRight,
 } from 'lucide-react';
 import { SurfaceCard } from '@/components/ui/SurfaceCard';
+import { ErrorBanner } from './ErrorBanner';
 import { useLiveCoding } from '@/hooks/useLiveCoding';
 import {
   STATUS_SUCCESS, STATUS_ERROR, STATUS_WARNING, STATUS_NEUTRAL,
@@ -136,7 +137,7 @@ export function LiveCodingPanel() {
   const warningCount = diagnostics.filter((d: PofHotPatchDiagnostic) => d.severity === 'warning').length;
 
   return (
-    <SurfaceCard className="p-0 overflow-hidden" data-testid="live-coding-panel">
+    <SurfaceCard className="p-0 overflow-hidden" data-testid="live-coding-panel" role="region" aria-label="Live Coding Bridge">
       {/* ── Header ─────────────────────────────────────────────────────────── */}
       <div className="px-4 py-3 border-b border-border/40 flex items-center gap-3">
         <div
@@ -147,7 +148,7 @@ export function LiveCodingPanel() {
         </div>
         <div className="flex-1 min-w-0">
           <h3 className="text-sm font-bold text-text">Live Coding Bridge</h3>
-          <p className="text-2xs text-text-muted">
+          <p className="text-2xs text-text-muted" aria-live="polite">
             {isProbing ? 'Checking availability...' :
               isAvailable ? (
                 <span style={{ color: STATUS_SUCCESS }}>Connected &mdash; Live Coding enabled</span>
@@ -180,6 +181,8 @@ export function LiveCodingPanel() {
       {result && !isCompiling && (
         <div
           className="px-4 py-2 border-b border-border/40 flex items-center gap-2 text-xs"
+          role="status"
+          aria-live="polite"
           style={{
             backgroundColor: `${result.status === 'success' ? STATUS_SUCCESS : STATUS_ERROR}${OPACITY_8}`,
             color: result.status === 'success' ? STATUS_SUCCESS : STATUS_ERROR,
@@ -199,15 +202,7 @@ export function LiveCodingPanel() {
       )}
 
       {/* ── Error banner ─────────────────────────────────────────────────── */}
-      {error && (
-        <div
-          className="px-4 py-2 border-b border-border/40 flex items-center gap-2 text-xs"
-          style={{ backgroundColor: `${STATUS_ERROR}${OPACITY_8}`, color: STATUS_ERROR }}
-        >
-          <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
-          <span className="truncate">{error}</span>
-        </div>
-      )}
+      {error && <ErrorBanner message={error} className="mx-4 my-2" />}
 
       {/* ── Hot-Patch Pipeline Visualization ────────────────────────────── */}
       {(isPatching || hotPatchResult) && (
@@ -218,6 +213,8 @@ export function LiveCodingPanel() {
             </span>
             <span
               className="ml-auto text-2xs font-medium px-1.5 py-0.5 rounded"
+              role="status"
+              aria-live="polite"
               style={{
                 color: currentPhaseColor,
                 backgroundColor: `${currentPhaseColor}${OPACITY_15}`,
@@ -334,6 +331,8 @@ export function LiveCodingPanel() {
         <div className="border-b border-border/40">
           <button
             onClick={() => setShowDiagnostics(!showDiagnostics)}
+            aria-expanded={showDiagnostics}
+            aria-controls="lc-diagnostics-panel"
             className="w-full flex items-center gap-2 px-4 py-2 text-left hover:bg-white/3 transition-colors"
           >
             {showDiagnostics
@@ -359,7 +358,7 @@ export function LiveCodingPanel() {
             )}
           </button>
           {showDiagnostics && (
-            <div className="px-4 pb-2 space-y-1 max-h-48 overflow-y-auto">
+            <div id="lc-diagnostics-panel" role="region" aria-label="Diagnostics" className="px-4 pb-2 space-y-1 max-h-48 overflow-y-auto">
               {diagnostics.map((d: PofHotPatchDiagnostic, i: number) => (
                 <div key={i} className="flex items-start gap-2 text-2xs font-mono">
                   <span
@@ -388,6 +387,8 @@ export function LiveCodingPanel() {
       <div className="border-b border-border/40">
         <button
           onClick={() => setShowHotPatchForm(!showHotPatchForm)}
+          aria-expanded={showHotPatchForm}
+          aria-controls="lc-hotpatch-panel"
           className="w-full flex items-center gap-2 px-4 py-2 text-left hover:bg-white/3 transition-colors"
         >
           {showHotPatchForm
@@ -402,13 +403,14 @@ export function LiveCodingPanel() {
         </button>
 
         {showHotPatchForm && (
-          <div className="px-4 pb-3 space-y-2">
+          <div id="lc-hotpatch-panel" role="region" aria-label="Hot-Patch Form" className="px-4 pb-3 space-y-2">
             {/* File path */}
             <div className="space-y-1">
-              <label className="text-2xs font-bold text-text-muted uppercase tracking-wider">
+              <label htmlFor="lc-hot-patch-file" className="text-2xs font-bold text-text-muted uppercase tracking-wider">
                 File Path <span className="normal-case font-normal">(absolute .cpp/.h path)</span>
               </label>
               <input
+                id="lc-hot-patch-file"
                 type="text"
                 value={hotPatchFile}
                 onChange={(e) => setHotPatchFile(e.target.value)}
@@ -421,10 +423,11 @@ export function LiveCodingPanel() {
 
             {/* File content */}
             <div className="space-y-1">
-              <label className="text-2xs font-bold text-text-muted uppercase tracking-wider">
+              <label htmlFor="lc-hot-patch-content" className="text-2xs font-bold text-text-muted uppercase tracking-wider">
                 File Content
               </label>
               <textarea
+                id="lc-hot-patch-content"
                 value={hotPatchContent}
                 onChange={(e) => setHotPatchContent(e.target.value)}
                 placeholder="#include &quot;MyClass.h&quot;&#10;// ... your C++ code"
@@ -438,10 +441,11 @@ export function LiveCodingPanel() {
             {/* Verification (optional) */}
             <div className="grid grid-cols-2 gap-2">
               <div className="space-y-1">
-                <label className="text-2xs font-bold text-text-muted uppercase tracking-wider">
+                <label htmlFor="lc-verify-object" className="text-2xs font-bold text-text-muted uppercase tracking-wider">
                   Verify Object <span className="normal-case font-normal">(optional)</span>
                 </label>
                 <input
+                  id="lc-verify-object"
                   type="text"
                   value={verifyObject}
                   onChange={(e) => setVerifyObject(e.target.value)}
@@ -451,10 +455,11 @@ export function LiveCodingPanel() {
                 />
               </div>
               <div className="space-y-1">
-                <label className="text-2xs font-bold text-text-muted uppercase tracking-wider">
+                <label htmlFor="lc-verify-function" className="text-2xs font-bold text-text-muted uppercase tracking-wider">
                   Verify Function <span className="normal-case font-normal">(optional)</span>
                 </label>
                 <input
+                  id="lc-verify-function"
                   type="text"
                   value={verifyFunction}
                   onChange={(e) => setVerifyFunction(e.target.value)}
@@ -492,6 +497,8 @@ export function LiveCodingPanel() {
       <div>
         <button
           onClick={() => setShowHistory(!showHistory)}
+          aria-expanded={showHistory}
+          aria-controls="lc-history-panel"
           className="w-full flex items-center gap-2 px-4 py-2 text-left hover:bg-white/3 transition-colors"
         >
           {showHistory
@@ -505,7 +512,7 @@ export function LiveCodingPanel() {
           )}
         </button>
         {showHistory && (
-          <div className="px-4 pb-2 space-y-1 max-h-40 overflow-y-auto">
+          <div id="lc-history-panel" role="region" aria-label="Patch History" className="px-4 pb-2 space-y-1 max-h-40 overflow-y-auto">
             {history.length === 0 && (
               <p className="text-2xs text-text-muted py-1">No hot-patches yet</p>
             )}

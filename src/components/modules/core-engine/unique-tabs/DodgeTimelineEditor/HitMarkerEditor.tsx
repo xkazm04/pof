@@ -71,7 +71,7 @@ export function HitMarkerEditor({
                   className="w-14 text-xs font-mono px-1.5 py-0.5 rounded bg-surface-deep border border-border/40 text-text focus:outline-none text-right"
                 />
                 <span className="text-xs text-text-muted">dmg</span>
-                <span className="text-[10px] font-mono font-bold uppercase tracking-[0.15em] ml-auto" style={{ color: dodged ? ACCENT_EMERALD : STATUS_ERROR, textShadow: `0 0 12px ${dodged ? ACCENT_EMERALD : STATUS_ERROR}40` }}>
+                <span className="text-xs font-mono font-bold uppercase tracking-[0.15em] ml-auto" style={{ color: dodged ? ACCENT_EMERALD : STATUS_ERROR, textShadow: `0 0 12px ${dodged ? ACCENT_EMERALD : STATUS_ERROR}40` }}>
                   {dodged ? 'DODGED' : 'HIT'}
                 </span>
                 <button onClick={() => onRemove(hit.id)} className="text-text-muted hover:text-text transition-colors">

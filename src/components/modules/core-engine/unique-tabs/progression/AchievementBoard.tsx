@@ -113,7 +113,7 @@ export function AchievementBoard() {
 
                     <div className="flex-1 min-w-0">
                       <div className="text-2xs font-bold text-text truncate group-hover/ach:text-amber-400 transition-colors">{ach.name}</div>
-                      <div className="text-[11px] text-text-muted truncate">{ach.desc}</div>
+                      <div className="text-xs text-text-muted truncate">{ach.desc}</div>
                     </div>
                     <span className="text-2xs font-mono font-bold flex-shrink-0" style={{ color: ach.progress === 100 ? STATUS_SUCCESS : 'var(--text-muted)' }}>
                       {ach.progress}%

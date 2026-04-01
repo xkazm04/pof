@@ -58,7 +58,7 @@ export function ArchetypeSuggestionGrid({
                 <Wand2 className="w-3.5 h-3.5 transition-transform group-hover:rotate-12" style={{ color: arch.color }} />
                 <span className="text-xs font-bold" style={{ color: arch.color }}>{arch.name}</span>
                 {isActive && (
-                  <span className="ml-auto text-[11px] px-1.5 py-0.5 rounded-full font-bold" style={{ backgroundColor: `${arch.color}${OPACITY_20}`, color: arch.color }}>
+                  <span className="ml-auto text-xs px-1.5 py-0.5 rounded-full font-bold" style={{ backgroundColor: `${arch.color}${OPACITY_20}`, color: arch.color }}>
                     Active
                   </span>
                 )}
@@ -72,7 +72,7 @@ export function ArchetypeSuggestionGrid({
                   return (
                     <span
                       key={s}
-                      className="text-[11px] font-mono px-1.5 py-0.5 rounded border"
+                      className="text-xs font-mono px-1.5 py-0.5 rounded border"
                       style={{ color: sevColor, borderColor: `${sevColor}${OPACITY_20}`, backgroundColor: `${sevColor}${OPACITY_10}` }}
                     >
                       {s}
@@ -98,7 +98,7 @@ export function ArchetypeSuggestionGrid({
               </div>
 
               {/* Footer */}
-              <div className="mt-2 pt-1.5 border-t border-border/30 flex items-center justify-between text-[11px] font-mono text-text-muted">
+              <div className="mt-2 pt-1.5 border-t border-border/30 flex items-center justify-between text-xs font-mono text-text-muted">
                 <span>{arch.affixTags.length} affixes</span>
                 <span>{arch.synergies.length} synergies</span>
               </div>

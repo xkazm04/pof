@@ -124,19 +124,19 @@ export function UnifiedTimeline({
         {/* Lane labels */}
         <div className="w-14 shrink-0 flex flex-col" style={{ gap: LANE_GAP }}>
           <div className="flex items-center" style={{ height: LANE_PACING_H }}>
-            <span className="text-[10px] font-mono uppercase tracking-[0.15em] text-text-muted">Pacing</span>
+            <span className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted">Pacing</span>
           </div>
           <div className="flex items-center" style={{ height: LANE_DAMAGE_H }}>
-            <span className="text-[10px] font-mono uppercase tracking-[0.15em] text-text-muted">Damage</span>
+            <span className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted">Damage</span>
           </div>
           {hasAlerts && (
             <div className="flex items-center" style={{ height: LANE_ALERT_H }}>
-              <span className="text-[10px] font-mono uppercase tracking-[0.15em]" style={{ color: STATUS_WARNING }}>Alerts</span>
+              <span className="text-xs font-mono uppercase tracking-[0.15em]" style={{ color: STATUS_WARNING }}>Alerts</span>
             </div>
           )}
           {FEEDBACK_CHANNELS.map((ch) => (
             <div key={ch.type} className="flex items-center" style={{ height: LANE_FEEDBACK_H }}>
-              <span className="text-[10px] font-mono uppercase tracking-[0.15em]" style={{ color: ch.color }}>{ch.label}</span>
+              <span className="text-xs font-mono uppercase tracking-[0.15em]" style={{ color: ch.color }}>{ch.label}</span>
             </div>
           ))}
           <div style={{ height: 14 }} />
@@ -159,7 +159,7 @@ export function UnifiedTimeline({
               {waves.map((w, i) => (
                 <div key={i} className="absolute top-0 h-full flex flex-col items-center pointer-events-none" style={{ left: w.spawnTimeSec * pxPerSec }}>
                   <div className="h-full w-px" style={{ backgroundColor: ACCENT_CYAN, opacity: 0.6 }} />
-                  <span className="absolute top-0 left-1 text-[10px] font-mono font-bold whitespace-nowrap"
+                  <span className="absolute top-0 left-1 text-xs font-mono font-bold whitespace-nowrap"
                     style={{ color: ACCENT_CYAN, textShadow: '0 0 4px rgba(0,0,0,0.8)' }}>W{i + 1}</span>
                 </div>
               ))}

@@ -119,19 +119,19 @@ export function GenerationPanel() {
                 <div className="flex items-center gap-1.5">
                   <span className="font-medium text-text">{provider.name}</span>
                   {provider.status === 'coming-soon' && !provider.mcpBacked && (
-                    <span className="flex items-center gap-0.5 text-[10px] text-amber-400 bg-amber-400/10 px-1.5 py-0.5 rounded">
+                    <span className="flex items-center gap-0.5 text-xs text-amber-400 bg-amber-400/10 px-1.5 py-0.5 rounded">
                       <Lock size={10} />
                       Coming Soon
                     </span>
                   )}
                   {provider.mcpBacked && (
-                    <span className="flex items-center gap-0.5 text-[10px] text-blue-400 bg-blue-400/10 px-1.5 py-0.5 rounded">
+                    <span className="flex items-center gap-0.5 text-xs text-blue-400 bg-blue-400/10 px-1.5 py-0.5 rounded">
                       <Monitor size={10} />
                       MCP
                     </span>
                   )}
                   {provider.status === 'free' && !provider.mcpBacked && (
-                    <span className="text-[10px] text-emerald-400 bg-emerald-400/10 px-1.5 py-0.5 rounded">
+                    <span className="text-xs text-emerald-400 bg-emerald-400/10 px-1.5 py-0.5 rounded">
                       Free
                     </span>
                   )}

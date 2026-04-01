@@ -86,8 +86,84 @@ export const OPACITY_12 = '1f';
 export const OPACITY_15 = '26';
 /** 20% opacity suffix */
 export const OPACITY_20 = '33';
+/** 22% opacity suffix */
+export const OPACITY_22 = '38';
 /** 30% opacity suffix */
 export const OPACITY_30 = '4d';
+/** 37% opacity suffix */
+export const OPACITY_37 = '60';
+/** 50% opacity suffix */
+export const OPACITY_50 = '80';
+/** 80% opacity suffix */
+export const OPACITY_80 = 'cc';
+/** 90% opacity suffix */
+export const OPACITY_90 = 'e6';
+
+// ── General opacity helper ────────────────────────────────────────────────
+
+/**
+ * Combine a hex color with an OPACITY_* suffix constant.
+ *
+ * @example withOpacity(STATUS_SUCCESS, OPACITY_8)  // '#4ade8014'
+ * @example withOpacity(accent, OPACITY_20)          // '${accent}33'
+ */
+export function withOpacity(color: string, opacity: string): string {
+  return `${color}${opacity}`;
+}
+
+// ── Semantic opacity helpers ───────────────────────────────────────────────
+
+type OpacityIntensity = 0.05 | 0.08 | 0.12 | 0.20;
+
+const INTENSITY_SUFFIX: Record<number, string> = {
+  0.05: OPACITY_5,
+  0.08: OPACITY_8,
+  0.12: OPACITY_12,
+  0.20: OPACITY_20,
+};
+
+/**
+ * Return a hex color+opacity string at a standardized intensity.
+ * Use for status backgrounds, badges, and card surfaces.
+ *
+ * @example statusBg(STATUS_ERROR, 0.08)  // '#f8717114'  — subtle error bg
+ * @example statusBg(STATUS_SUCCESS, 0.20) // '#4ade8033' — stronger success bg
+ */
+export function statusBg(color: string, intensity: OpacityIntensity = 0.08): string {
+  return `${color}${INTENSITY_SUFFIX[intensity] ?? OPACITY_8}`;
+}
+
+/**
+ * Return a hex color+opacity string for borders at a standardized intensity.
+ * Default is 20% — a visible but not heavy border.
+ */
+export function statusBorder(color: string, intensity: OpacityIntensity = 0.20): string {
+  return `${color}${INTENSITY_SUFFIX[intensity] ?? OPACITY_20}`;
+}
+
+// ── Status glow helpers ────────────────────────────────────────────────────
+
+/** Map a semantic status to its CSS glow custom property (for boxShadow). */
+export function statusGlow(status: 'success' | 'info' | 'warning'): string {
+  const map = { success: 'var(--glow-success)', info: 'var(--glow-info)', warning: 'var(--glow-warning)' } as const;
+  return map[status];
+}
+
+// ── CLI terminal semantic colors (Tailwind class names) ─────────────────────
+
+/** Semantic color classes for CLI terminal components — single source of truth. */
+export const CLI_COLORS = {
+  /** User input, prompt indicator, interactive links */
+  prompt: 'text-blue-400',
+  /** Done state, successful writes, checkmarks */
+  success: 'text-green-400',
+  /** Running state, edits, caution indicators */
+  warning: 'text-yellow-400',
+  /** Error state, abort actions, destructive */
+  error: 'text-red-400',
+  /** System messages, queue indicators */
+  info: 'text-cyan-400',
+} as const;
 
 // ── Module / category accent colors ─────────────────────────────────────────
 
@@ -176,6 +252,22 @@ export const FEATURE_STATUS_COLORS = {
   unknown: 'var(--text-muted)',
 } as const;
 
+/** Canvas-safe status colors (hex only, no CSS vars) for SVG/canvas rendering. */
+export const PLAN_STATUS_COLORS: Record<string, string> = {
+  implemented: STATUS_SUCCESS,
+  improved: STATUS_IMPROVED,
+  partial: STATUS_WARNING,
+  missing: STATUS_ERROR,
+  unknown: STATUS_NEUTRAL,
+} as const;
+
+/** Sector palette — 12 distinct dark hues for visual separation in dense layouts. */
+export const SECTOR_PALETTE = [
+  MODULE_COLORS.core,   ACCENT_RED,         ACCENT_GREEN,       STATUS_WARNING,
+  STATUS_STALE,         ACCENT_CYAN,        HEATMAP_STEP_2,     STATUS_NEUTRAL,
+  ACCENT_PURPLE_BOLD,   HEATMAP_STEP_5,     HEATMAP_STEP_1,     STATUS_INFO,
+] as const;
+
 // ── Insight / severity colors ───────────────────────────────────────────────
 
 export const SEVERITY_COLORS = {
@@ -246,7 +338,7 @@ export function statusToColor(status: string): { bg: string; text: string; borde
     error: { color: STATUS_ERROR, label: 'FAIL' },
   };
   const { color, label } = map[status] ?? { color: STATUS_ERROR, label: 'FAIL' };
-  return { bg: `${color}15`, text: color, border: `${color}30`, label };
+  return { bg: statusBg(color), text: color, border: statusBorder(color), label };
 }
 
 // ── Health score thresholds ─────────────────────────────────────────────────

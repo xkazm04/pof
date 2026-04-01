@@ -8,7 +8,7 @@ export function StateDurationPanel() {
   return (
     <BlueprintPanel color={ACCENT} className="p-4">
       <SectionHeader label="State Duration Statistics" color={ACCENT} />
-      <p className="text-[10px] font-mono uppercase tracking-[0.15em] text-text-muted mt-1 mb-3">
+      <p className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted mt-1 mb-3">
         Box-and-whisker distribution of time spent in each animation state (seconds).
       </p>
       <div className="space-y-3">
@@ -65,7 +65,7 @@ export function StateDurationPanel() {
                   />
                 )}
               </div>
-              <span className="text-[11px] font-mono text-text-muted w-14 text-right">
+              <span className="text-xs font-mono text-text-muted w-14 text-right">
                 {d.median.toFixed(1)}s med
               </span>
             </div>
@@ -74,7 +74,7 @@ export function StateDurationPanel() {
         {/* Scale */}
         <div className="flex items-center gap-3 mt-1">
           <span className="w-20" />
-          <div className="flex-1 flex justify-between text-[11px] font-mono text-text-muted/50">
+          <div className="flex-1 flex justify-between text-xs font-mono text-text-muted/50">
             <span>0s</span><span>8s</span><span>16s</span><span>24s</span><span>32s</span>
           </div>
           <span className="w-14" />

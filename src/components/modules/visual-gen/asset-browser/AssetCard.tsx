@@ -17,7 +17,7 @@ export function AssetCard({ asset, onDownload }: AssetCardProps) {
   const importing = isImporting === asset.id;
 
   return (
-    <div className="rounded-lg border border-border bg-surface/50 overflow-hidden group hover:border-[var(--visual-gen)] transition-colors">
+    <div className="rounded-lg border border-border bg-surface/50 overflow-hidden group hover:border-[var(--visual-gen)] focus-within:border-[var(--visual-gen)] transition-colors">
       {/* Thumbnail */}
       <div className="aspect-square bg-[var(--surface-deep)] relative overflow-hidden">
         {asset.thumbnailUrl ? (
@@ -35,11 +35,11 @@ export function AssetCard({ asset, onDownload }: AssetCardProps) {
         )}
 
         {/* Overlay on hover */}
-        <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
+        <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity flex items-center justify-center gap-2">
           <button
             onClick={() => onDownload(asset)}
-            className="p-2 rounded-full bg-[var(--visual-gen)] text-white hover:brightness-110"
-            title="Download"
+            className="p-2 rounded-full bg-[var(--visual-gen)] text-white hover:brightness-110 focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[var(--visual-gen)] focus-visible:outline-none"
+            aria-label={`Download ${asset.name}`}
           >
             <Download size={16} />
           </button>
@@ -47,8 +47,8 @@ export function AssetCard({ asset, onDownload }: AssetCardProps) {
             <button
               onClick={() => importToBlender(asset.source, asset.id)}
               disabled={importing}
-              className="p-2 rounded-full bg-surface-secondary text-text hover:brightness-110 disabled:opacity-50"
-              title="Import to Blender"
+              className="p-2 rounded-full bg-surface-secondary text-text hover:brightness-110 disabled:opacity-50 focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[var(--visual-gen)] focus-visible:outline-none"
+              aria-label={`Import ${asset.name} to Blender`}
             >
               {importing ? (
                 <Loader2 size={16} className="animate-spin" />
@@ -66,10 +66,10 @@ export function AssetCard({ asset, onDownload }: AssetCardProps) {
           {asset.name}
         </p>
         <div className="flex items-center gap-1.5 mt-1">
-          <span className="text-[10px] text-emerald-400 bg-emerald-400/10 px-1 py-0.5 rounded">
+          <span className="text-xs text-emerald-400 bg-emerald-400/10 px-1 py-0.5 rounded">
             CC0
           </span>
-          <span className="text-[10px] text-text-muted capitalize">{asset.source}</span>
+          <span className="text-xs text-text-muted capitalize">{asset.source}</span>
         </div>
       </div>
     </div>

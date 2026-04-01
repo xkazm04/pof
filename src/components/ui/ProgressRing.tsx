@@ -1,5 +1,6 @@
 'use client';
 
+import { useReducedMotion } from 'framer-motion';
 import { MODULE_COLORS } from '@/lib/chart-colors';
 
 interface ProgressRingProps {
@@ -13,9 +14,12 @@ interface ProgressRingProps {
 }
 
 export function ProgressRing({ value, size = 48, strokeWidth = 4, color = MODULE_COLORS.setup, className = '', label, isLoading }: ProgressRingProps) {
+  const prefersReduced = useReducedMotion();
   const radius = (size - strokeWidth) / 2;
   const circumference = radius * 2 * Math.PI;
   const offset = isLoading ? circumference * 0.75 : circumference - (value / 100) * circumference;
+
+  const shouldSpin = isLoading && !prefersReduced;
 
   return (
     <div
@@ -33,11 +37,11 @@ export function ProgressRing({ value, size = 48, strokeWidth = 4, color = MODULE
           stroke={color} strokeWidth={strokeWidth} fill="none"
           strokeDasharray={circumference} strokeDashoffset={offset}
           strokeLinecap="round"
-          className={`transition-all duration-slow ${isLoading ? 'animate-progress-spin' : ''}`}
+          className={`transition-all duration-slow ${shouldSpin ? 'animate-progress-spin' : ''}`}
         />
       </svg>
       {isLoading ? (
-        <span className="absolute text-xs font-semibold animate-pulse" style={{ color }}>…</span>
+        <span className={`absolute text-xs font-semibold ${prefersReduced ? '' : 'animate-pulse'}`} style={{ color }}>…</span>
       ) : (
         <span className="absolute text-xs font-semibold" style={{ color }}>{value}</span>
       )}

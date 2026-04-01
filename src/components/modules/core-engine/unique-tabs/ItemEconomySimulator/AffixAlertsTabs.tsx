@@ -18,7 +18,7 @@ export function AffixTab({ result }: { result: ItemEconomyResult }) {
     <div className="space-y-3">
       <BlueprintPanel color={ACCENT} className="p-3 space-y-3">
         <SectionHeader icon={BarChart3} label="Affix Saturation Heatmap" color={ACCENT} />
-        <p className="text-[10px] font-mono uppercase tracking-[0.15em] text-text-muted">
+        <p className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted">
           How affix distribution shifts per level. Brighter = higher prevalence.
         </p>
         <AffixHeatmap brackets={result.brackets} />
@@ -71,14 +71,14 @@ export function AlertsTab({ result, config }: {
       <BlueprintPanel color={STATUS_WARNING} className="p-3 space-y-3">
         <div className="flex items-center justify-between">
           <SectionHeader icon={AlertTriangle} label="Balance Alerts" color={STATUS_WARNING} />
-          <span className="text-[10px] font-mono uppercase tracking-[0.15em] text-text-muted">
+          <span className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted">
             {result.alerts.length} alert{result.alerts.length !== 1 ? 's' : ''} detected
           </span>
         </div>
         {result.alerts.length === 0 ? (
           <div className="text-center py-6">
             <span
-              className="text-[10px] font-mono uppercase tracking-[0.15em]"
+              className="text-xs font-mono uppercase tracking-[0.15em]"
               style={{ color: STATUS_SUCCESS }}
             >
               No balance issues detected
@@ -99,7 +99,7 @@ export function AlertsTab({ result, config }: {
       </BlueprintPanel>
 
       <BlueprintPanel color={ACCENT} className="p-2 space-y-1.5">
-        <span className="text-[10px] font-mono font-bold uppercase tracking-[0.15em] text-text-muted">
+        <span className="text-xs font-mono font-bold uppercase tracking-[0.15em] text-text-muted">
           Simulation Pipeline
         </span>
         {[

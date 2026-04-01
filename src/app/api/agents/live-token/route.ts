@@ -162,7 +162,7 @@ export async function POST(request: NextRequest) {
       expiresAt: expireAtIso,
     });
   } catch (error) {
-    logger.error('[live-token] Token creation failed:', error);
+    console.error('[live-token] Token creation failed:', error);
     return apiError(
       error instanceof Error ? error.message : 'Failed to create ephemeral token',
       502,

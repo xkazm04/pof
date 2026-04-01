@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useCallback } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import {
   Download, FolderInput, Workflow, Clapperboard, Bell, Terminal,
   ExternalLink, Check, Zap, ChevronDown, ChevronRight, ArrowRight
@@ -285,6 +285,7 @@ interface AnimationChecklistProps {
 
 export function AnimationChecklist({ onGenerate, isGenerating, completedSteps, onMarkComplete }: AnimationChecklistProps) {
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const prefersReduced = useReducedMotion();
 
   const toggleExpand = useCallback((id: string) => {
     setExpandedId((prev) => (prev === id ? null : id));
@@ -328,9 +329,9 @@ export function AnimationChecklist({ onGenerate, isGenerating, completedSteps, o
                 backgroundColor: ACCENT,
                 boxShadow: `0 0 10px ${ACCENT}, inset 0 0 5px rgba(255,255,255,0.5)`,
               }}
-              initial={{ width: 0 }}
+              initial={prefersReduced ? false : { width: 0 }}
               animate={{ width: `${progressPercent}%` }}
-              transition={{ duration: 0.5, ease: "easeOut" }}
+              transition={prefersReduced ? { duration: 0 } : { duration: 0.5, ease: "easeOut" }}
             />
           </div>
         </div>
@@ -349,6 +350,7 @@ export function AnimationChecklist({ onGenerate, isGenerating, completedSteps, o
               isCompleted={isCompleted}
               isExpanded={isExpanded}
               isGenerating={isGenerating}
+              prefersReduced={prefersReduced}
               onToggle={() => toggleExpand(step.id)}
               onGenerate={() => onGenerate(step)}
               onMarkComplete={() => onMarkComplete(step.id)}
@@ -367,12 +369,13 @@ interface StepCardProps {
   isCompleted: boolean;
   isExpanded: boolean;
   isGenerating: boolean;
+  prefersReduced: boolean | null;
   onToggle: () => void;
   onGenerate: () => void;
   onMarkComplete: () => void;
 }
 
-function StepCard({ step, isCompleted, isExpanded, isGenerating, onToggle, onGenerate, onMarkComplete }: StepCardProps) {
+function StepCard({ step, isCompleted, isExpanded, isGenerating, prefersReduced, onToggle, onGenerate, onMarkComplete }: StepCardProps) {
   const Icon = step.icon;
   const isCode = step.type === 'code';
   const isAuto = step.type === 'auto';
@@ -381,8 +384,8 @@ function StepCard({ step, isCompleted, isExpanded, isGenerating, onToggle, onGen
 
   return (
     <motion.div
-      layout
-      initial={{ borderRadius: 16 }}
+      layout={!prefersReduced}
+      initial={prefersReduced ? false : { borderRadius: 16 }}
       animate={{
         borderColor: isCompleted ? `${STATUS_SUCCESS}50` : isExpanded ? `${typeColor}80` : `${typeColor}20`,
         backgroundColor: isCompleted ? `${STATUS_SUCCESS}0A` : isExpanded ? `${typeColor}0A` : 'var(--surface-deep)',
@@ -394,9 +397,10 @@ function StepCard({ step, isCompleted, isExpanded, isGenerating, onToggle, onGen
       <AnimatePresence>
         {isExpanded && (
           <motion.div
-            initial={{ opacity: 0 }}
+            initial={prefersReduced ? false : { opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
+            transition={prefersReduced ? { duration: 0 } : undefined}
             className="absolute top-0 right-0 w-64 h-full pointer-events-none"
             style={{ background: `linear-gradient(to left, ${typeColor}10, transparent)` }}
           />
@@ -452,7 +456,7 @@ function StepCard({ step, isCompleted, isExpanded, isGenerating, onToggle, onGen
         </div>
 
         {/* Expand indicator */}
-        <motion.div animate={{ rotate: isExpanded ? 180 : 0 }} className="flex-shrink-0 ml-4 p-2 rounded-lg bg-surface/50 border border-border group-hover/card:border-violet-500/50 transition-colors">
+        <motion.div animate={{ rotate: isExpanded ? 180 : 0 }} transition={prefersReduced ? { duration: 0 } : undefined} className="flex-shrink-0 ml-4 p-2 rounded-lg bg-surface/50 border border-border group-hover/card:border-violet-500/50 transition-colors">
           <ChevronDown className="w-4 h-4 text-text-muted group-hover/card:text-violet-400" />
         </motion.div>
       </button>
@@ -461,10 +465,10 @@ function StepCard({ step, isCompleted, isExpanded, isGenerating, onToggle, onGen
       <AnimatePresence>
         {isExpanded && (
           <motion.div
-            initial={{ height: 0, opacity: 0 }}
+            initial={prefersReduced ? false : { height: 0, opacity: 0 }}
             animate={{ height: 'auto', opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
-            transition={{ duration: 0.3, ease: 'easeOut' }}
+            transition={prefersReduced ? { duration: 0 } : { duration: 0.3, ease: 'easeOut' }}
             className="overflow-hidden relative z-10"
           >
             <div className="px-5 pb-5 pl-[72px] space-y-4">

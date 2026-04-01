@@ -5,7 +5,8 @@ import { Wrench, CheckCircle2, AlertTriangle, XCircle, RotateCcw } from 'lucide-
 import { motion } from 'framer-motion';
 import { STATUS_SUCCESS, STATUS_WARNING, STATUS_ERROR } from '@/lib/chart-colors';
 import { BlueprintPanel, SectionHeader } from './design';
-import { ACCENT, RECOVERY_STEPS, RECOVERY_RESULTS, type RecoveryStep } from './data';
+import { ACCENT } from './data';
+import { RECOVERY_STEPS, RECOVERY_RESULTS, type RecoveryStep } from './data-panels';
 
 export function DataRecoveryTool() {
   const [recoveryStep, setRecoveryStep] = useState<RecoveryStep>('confirm');
@@ -69,7 +70,7 @@ export function DataRecoveryTool() {
               <span className="text-lg font-mono font-bold" style={{ color: recoveryOverall >= 80 ? STATUS_SUCCESS : STATUS_WARNING }}>
                 {Math.round(recoveryOverall)}%
               </span>
-              <span className="text-[11px] font-mono text-text-muted uppercase">confidence</span>
+              <span className="text-xs font-mono text-text-muted uppercase">confidence</span>
             </div>
           </div>
         </div>

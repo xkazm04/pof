@@ -33,7 +33,7 @@ export function DodgeTrajectorySection() {
                 initial={{ opacity: 0, scale: 0.8 }}
                 animate={{ opacity: 1, scale: 1 }}
                 transition={{ delay: i * 0.05 + 0.2 }}
-                className="flex items-center gap-1.5 text-[10px] font-mono font-bold px-2 py-1 rounded border"
+                className="flex items-center gap-1.5 text-xs font-mono font-bold px-2 py-1 rounded border"
                 style={{
                   color: traj.color,
                   borderColor: `${traj.color}25`,

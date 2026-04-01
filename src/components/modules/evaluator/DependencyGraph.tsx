@@ -9,8 +9,9 @@ import { MODULE_LABELS } from '@/lib/module-registry';
 import { useManifest } from '@/hooks/useManifest';
 import { SurfaceCard } from '@/components/ui/SurfaceCard';
 import { EmptyState } from '@/components/ui/EmptyState';
-import { MODULE_COLORS as CHART_MODULE_COLORS, STATUS_SUCCESS, STATUS_WARNING, STATUS_ERROR, STATUS_BLOCKER, OPACITY_20 } from '@/lib/chart-colors';
+import { MODULE_COLORS as CHART_MODULE_COLORS, STATUS_SUCCESS, STATUS_WARNING, STATUS_ERROR, STATUS_BLOCKER, OPACITY_5, OPACITY_12, OPACITY_20, statusBorder } from '@/lib/chart-colors';
 import type { SubModuleId } from '@/types/modules';
+import { MOTION } from '@/lib/constants';
 
 // ─── Module layout config ───────────────────────────────────────────────────
 
@@ -481,7 +482,7 @@ export function DependencyGraph({ onNavigateTab }: DependencyGraphProps) {
           Has blockers
         </span>
         <span className="flex items-center gap-1.5">
-          <span className="w-2.5 h-2.5 rounded-full bg-[#f8717120] flex items-center justify-center text-[#fb923c] text-2xs font-bold">!</span>
+          <span className={`w-2.5 h-2.5 rounded-full bg-[${STATUS_ERROR}${OPACITY_12}] flex items-center justify-center text-[${STATUS_BLOCKER}] text-2xs font-bold`}>!</span>
           Module has blocked features
         </span>
         {bridgeConnected && manifestCrossRefs.size > 0 && (
@@ -499,7 +500,7 @@ export function DependencyGraph({ onNavigateTab }: DependencyGraphProps) {
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: 'auto' }}
             exit={{ opacity: 0, height: 0 }}
-            transition={{ duration: 0.22 }}
+            transition={{ duration: MOTION.base }}
             className="overflow-hidden"
           >
             <SurfaceCard className="p-4">
@@ -555,8 +556,8 @@ export function DependencyGraph({ onNavigateTab }: DependencyGraphProps) {
                                 key={dep.key}
                                 className={`inline-flex items-center gap-0.5 text-2xs px-1.5 py-0.5 rounded border ${
                                   isBlocker
-                                    ? 'bg-[#f8717108] border-[#f87171]/20 text-[#fb923c]'
-                                    : 'bg-[#4ade8008] border-[#4ade80]/15 text-text-muted'
+                                    ? `bg-[${STATUS_ERROR}${OPACITY_5}] border-[${statusBorder(STATUS_ERROR)}] text-[${STATUS_BLOCKER}]`
+                                    : `bg-[${STATUS_SUCCESS}${OPACITY_5}] border-[${statusBorder(STATUS_SUCCESS, 0.12)}] text-text-muted`
                                 }`}
                               >
                                 {isCross && (

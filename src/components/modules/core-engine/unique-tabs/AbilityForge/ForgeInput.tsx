@@ -32,7 +32,7 @@ export function ForgeInput({ description, setDescription, isGenerating, onGenera
     <BlueprintPanel color={ACCENT} className="p-4 space-y-3">
       <SectionHeader icon={Wand2} label="Ability Forge" color={ACCENT} />
 
-      <p className="text-[11px] text-zinc-500 leading-relaxed">
+      <p className="text-xs text-zinc-500 leading-relaxed">
         Describe an ability in plain English and the forge will generate a complete GAS
         GameplayAbility class with tags, effects, montage refs, and combo timing.
       </p>
@@ -51,7 +51,7 @@ export function ForgeInput({ description, setDescription, isGenerating, onGenera
           whileTap={{ scale: 0.96 }}
           onClick={onGenerate}
           disabled={!description.trim() || isGenerating}
-          className="absolute right-2 bottom-2 flex items-center gap-1.5 px-3 py-1.5 rounded-md text-[11px] font-mono font-medium transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+          className="absolute right-2 bottom-2 flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-mono font-medium transition-all disabled:opacity-40 disabled:cursor-not-allowed"
           style={{
             background: isGenerating ? 'rgba(255,255,255,0.05)' : `${ACCENT}20`,
             color: isGenerating ? '#a1a1aa' : ACCENT,
@@ -66,14 +66,14 @@ export function ForgeInput({ description, setDescription, isGenerating, onGenera
         </motion.button>
       </div>
 
-      <div className="text-[10px] font-mono text-zinc-600 flex items-center gap-1">
+      <div className="text-xs font-mono text-zinc-600 flex items-center gap-1">
         <span className="bg-zinc-800 px-1 rounded text-zinc-500">Ctrl+Enter</span>
         <span>to generate</span>
       </div>
 
       {/* Example prompts */}
       <div className="space-y-1.5">
-        <span className="text-[10px] font-mono uppercase tracking-[0.15em] text-zinc-600">
+        <span className="text-xs font-mono uppercase tracking-[0.15em] text-zinc-600">
           Try an example
         </span>
         <div className="flex flex-wrap gap-1.5">
@@ -83,7 +83,7 @@ export function ForgeInput({ description, setDescription, isGenerating, onGenera
               whileHover={{ scale: 1.03 }}
               whileTap={{ scale: 0.97 }}
               onClick={() => handleExample(ex)}
-              className="text-[10px] px-2 py-1 rounded-md text-zinc-500 hover:text-zinc-300 transition-colors truncate max-w-[240px]"
+              className="text-xs px-2 py-1 rounded-md text-zinc-500 hover:text-zinc-300 transition-colors truncate max-w-[240px]"
               style={{ background: 'rgba(255,255,255,0.03)' }}
               title={ex}
             >

@@ -35,7 +35,7 @@ export function ExecFormulaSteps({ calcActive, inputs, c, expandedCode, toggleCo
         codeExpanded={expandedCode.has('raw')} onToggleCode={() => toggleCode('raw')}>
         <div className="flex items-center gap-1.5">
           {calcActive && (
-            <span className="text-text-muted text-[10px] font-mono">
+            <span className="text-text-muted text-xs font-mono">
               {fmtNum(inputs.baseDamage)} + {fmtNum(inputs.attackPower)} x {fmtNum(inputs.scaling)} =
             </span>
           )}
@@ -49,8 +49,8 @@ export function ExecFormulaSteps({ calcActive, inputs, c, expandedCode, toggleCo
           {calcActive && (
             <>
               <CalcInput value={inputs.critRoll} onChange={v => upd('critRoll', v)} step={0.05} min={0} max={1} label="CritRoll" />
-              <span className="text-[10px] font-mono text-text-muted">{'<'} {fmtNum(inputs.critChance)}</span>
-              <span className="text-[10px] font-mono font-bold" style={{ color: c.isCrit ? STATUS_SUCCESS : STATUS_ERROR }}>
+              <span className="text-xs font-mono text-text-muted">{'<'} {fmtNum(inputs.critChance)}</span>
+              <span className="text-xs font-mono font-bold" style={{ color: c.isCrit ? STATUS_SUCCESS : STATUS_ERROR }}>
                 {c.isCrit ? 'CRIT' : 'miss'}
               </span>
             </>
@@ -63,7 +63,7 @@ export function ExecFormulaSteps({ calcActive, inputs, c, expandedCode, toggleCo
         codeExpanded={expandedCode.has('ar')} onToggleCode={() => toggleCode('ar')}>
         <div className="flex items-center gap-1.5">
           {calcActive && (
-            <span className="text-text-muted text-[10px] font-mono">
+            <span className="text-text-muted text-xs font-mono">
               {fmtNum(inputs.armor)} / ({fmtNum(inputs.armor)} + 100) =
             </span>
           )}
@@ -77,7 +77,7 @@ export function ExecFormulaSteps({ calcActive, inputs, c, expandedCode, toggleCo
         codeExpanded={expandedCode.has('final')} onToggleCode={() => toggleCode('final')}>
         <div className="flex items-center gap-1.5">
           {calcActive && (
-            <span className="text-text-muted text-[10px] font-mono">
+            <span className="text-text-muted text-xs font-mono">
               {fmtNum(c.rawDamage)} x {fmtNum(c.critMultiplier)} x {(1 - c.armorReduction).toFixed(3)} =
             </span>
           )}
@@ -93,12 +93,12 @@ export function ExecFormulaSteps({ calcActive, inputs, c, expandedCode, toggleCo
         code={`OutExecutionOutput.AddOutputModifier(FGameplayModifierEvaluatedData(\n    UARPGAttributeSet::GetIncomingCritAttribute(),\n    EGameplayModOp::Override,\n    bIsCrit ? 1.f : 0.f));`}
         codeExpanded={expandedCode.has('outcrit')} onToggleCode={() => toggleCode('outcrit')}>
         <div className="flex items-center gap-2">
-          <span className="text-[10px] font-mono px-1.5 py-0.5 rounded font-bold"
+          <span className="text-xs font-mono px-1.5 py-0.5 rounded font-bold"
             style={{ backgroundColor: STATUS_STALE + OPACITY_10, color: ACCENT_VIOLET, border: `1px solid ${STATUS_STALE}${OPACITY_30}` }}>
             Override
           </span>
           <span className="text-text font-bold">{c.isCrit ? '1.0' : '0.0'}</span>
-          <span className="text-[10px] font-mono font-bold" style={{ color: c.isCrit ? STATUS_SUCCESS : STATUS_ERROR }}>
+          <span className="text-xs font-mono font-bold" style={{ color: c.isCrit ? STATUS_SUCCESS : STATUS_ERROR }}>
             ({c.isCrit ? 'crit' : 'no crit'})
           </span>
         </div>
@@ -107,7 +107,7 @@ export function ExecFormulaSteps({ calcActive, inputs, c, expandedCode, toggleCo
         code={`OutExecutionOutput.AddOutputModifier(FGameplayModifierEvaluatedData(\n    UARPGAttributeSet::GetIncomingDamageAttribute(),\n    EGameplayModOp::Additive,\n    FinalDamage));`}
         codeExpanded={expandedCode.has('outdmg')} onToggleCode={() => toggleCode('outdmg')}>
         <div className="flex items-center gap-2">
-          <span className="text-[10px] font-mono px-1.5 py-0.5 rounded font-bold"
+          <span className="text-xs font-mono px-1.5 py-0.5 rounded font-bold"
             style={{ backgroundColor: `${STATUS_SUCCESS}${OPACITY_10}`, color: STATUS_SUCCESS, border: `1px solid ${STATUS_SUCCESS}30` }}>
             Additive
           </span>
@@ -115,7 +115,7 @@ export function ExecFormulaSteps({ calcActive, inputs, c, expandedCode, toggleCo
         </div>
       </ExecPropRow>
 
-      <div className="px-3 py-1.5 text-[10px] font-mono uppercase tracking-[0.15em] text-text-muted border-t border-border/20">
+      <div className="px-3 py-1.5 text-xs font-mono uppercase tracking-[0.15em] text-text-muted border-t border-border/20">
         Output modifiers only applied when <code className="font-mono text-text">FinalDamage {'>'} 0</code>
       </div>
     </>

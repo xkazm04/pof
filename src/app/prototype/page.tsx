@@ -7,7 +7,7 @@ import { DzinLayout } from '@/lib/dzin/core';
 import { pofRegistry } from '@/lib/dzin/panel-definitions';
 import { COMPOSITION_PRESETS } from '@/lib/dzin/composition-presets';
 import { DzinSelectionProvider, useDzinSelection } from '@/lib/dzin/selection-context';
-import { DZIN_TIMING, LAYOUT_EASE } from '@/lib/dzin/animation-constants';
+import { DZIN_TIMING, EASE_ENTER, type CubicBezier } from '@/lib/dzin/animation-constants';
 import { useIntentDispatch } from '@/hooks/useIntentDispatch';
 import { useMultimodalInput } from '@/hooks/useMultimodalInput';
 import { ConversationShell } from '@/components/prototype/chat/ConversationShell';
@@ -114,7 +114,7 @@ const PANEL_COMPONENTS: Record<string, React.FC<{ featureMap: Map<string, Featur
 
 const layoutTransition = {
   duration: DZIN_TIMING.LAYOUT,
-  ease: LAYOUT_EASE as [number, number, number, number],
+  ease: EASE_ENTER as CubicBezier,
 };
 
 /* ── Page ──────────────────────────────────────────────────────────────── */
@@ -398,7 +398,7 @@ function PresetDropdown({
                 </span>
                 <span className="flex flex-col">
                   <span className="text-text font-medium">{preset.label}</span>
-                  <span className="text-text-muted text-[10px]">{preset.description}</span>
+                  <span className="text-text-muted text-xs">{preset.description}</span>
                 </span>
               </button>
             ))}

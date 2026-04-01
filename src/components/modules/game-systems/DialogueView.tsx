@@ -20,7 +20,7 @@ import type {
   WorldScanResult,
   QuestCategory,
 } from '@/types/quest-generation';
-import { MODULE_COLORS, STATUS_SUCCESS } from '@/lib/chart-colors';
+import { MODULE_COLORS, STATUS_SUCCESS, ACCENT_VIOLET, ACCENT_GREEN, withOpacity, OPACITY_80, OPACITY_10, OPACITY_15 } from '@/lib/chart-colors';
 
 // ── Stable empty refs ──
 
@@ -28,6 +28,8 @@ const EMPTY_QUESTS: GeneratedQuest[] = [];
 const EMPTY_NOTES: string[] = [];
 
 // ── Config ──
+
+const ACCENT = MODULE_COLORS.systems;
 
 type ViewTab = 'generator' | 'checklist';
 
@@ -61,18 +63,21 @@ export function DialogueView() {
   const tabClass = (t: ViewTab) =>
     `px-3 py-1.5 text-xs font-medium transition-colors rounded-t ${
       tab === t
-        ? 'text-text bg-surface-hover border-b-2 border-[#8b5cf6]'
+        ? 'text-text bg-surface-hover border-b-2'
         : 'text-text-muted hover:text-text'
     }`;
+
+  const tabStyle = (t: ViewTab) =>
+    tab === t ? { borderColor: ACCENT } : undefined;
 
   return (
     <div className="space-y-4">
       {/* Tab switcher */}
       <div className="flex items-center gap-1 border-b border-border">
-        <button className={tabClass('generator')} onClick={() => setTab('generator')}>
+        <button className={tabClass('generator')} style={tabStyle('generator')} onClick={() => setTab('generator')}>
           <span className="flex items-center gap-1"><Sparkles className="w-2.5 h-2.5" /> Quest Generator</span>
         </button>
-        <button className={tabClass('checklist')} onClick={() => setTab('checklist')}>
+        <button className={tabClass('checklist')} style={tabStyle('checklist')} onClick={() => setTab('checklist')}>
           <span className="flex items-center gap-1"><Scroll className="w-2.5 h-2.5" /> Checklist</span>
         </button>
       </div>
@@ -147,7 +152,7 @@ function QuestGeneratorPanel() {
       {/* Controls */}
       <SurfaceCard level={2} className="px-4 py-3">
         <div className="flex items-center gap-3">
-          <Sparkles className="w-4 h-4 text-[#8b5cf6]" />
+          <Sparkles className="w-4 h-4" style={{ color: ACCENT }} />
           <span className="text-sm font-semibold text-text">Quest Archeologist</span>
           <div className="ml-auto flex items-center gap-2">
             {levelDocs.length > 0 && (
@@ -165,7 +170,8 @@ function QuestGeneratorPanel() {
             <button
               onClick={generate}
               disabled={loading}
-              className="flex items-center gap-1 px-3 py-1.5 rounded text-xs font-medium text-white bg-[#8b5cf6]/80 hover:bg-[#8b5cf6] transition-colors disabled:opacity-50"
+              className="flex items-center gap-1 px-3 py-1.5 rounded text-xs font-medium text-white transition-colors disabled:opacity-50 hover:brightness-125"
+              style={{ backgroundColor: withOpacity(ACCENT, OPACITY_80) }}
             >
               <RefreshCw className={`w-3 h-3 ${loading ? 'animate-spin' : ''}`} />
               {loading ? 'Generating…' : 'Generate Quests'}
@@ -191,7 +197,7 @@ function QuestGeneratorPanel() {
 
       {loading && !result && (
         <SurfaceCard level={2} className="px-4 py-8 text-center">
-          <RefreshCw className="w-6 h-6 text-[#8b5cf6] mx-auto mb-2 animate-spin" />
+          <RefreshCw className="w-6 h-6 mx-auto mb-2 animate-spin" style={{ color: ACCENT }} />
           <p className="text-sm text-text-muted">Scanning world actors and generating quests…</p>
         </SurfaceCard>
       )}
@@ -201,19 +207,37 @@ function QuestGeneratorPanel() {
           {/* World scan summary */}
           <WorldScanSummary scan={result.worldScan} levelDocName={result.levelDocName} />
 
-          {/* Quest metrics */}
-          <div className="grid grid-cols-5 gap-2">
+          {/* Quest metrics — animate as a group first */}
+          <motion.div
+            className="flex flex-wrap gap-2"
+            initial="hidden"
+            animate="visible"
+            variants={{
+              hidden: {},
+              visible: { transition: { staggerChildren: 0.06 } },
+            }}
+          >
             {(['main', 'side', 'bounty', 'exploration', 'fetch'] as QuestCategory[]).map(c => {
               const count = quests.filter(q => q.category === c).length;
               const cfg = CATEGORY_LABELS[c];
               return (
-                <SurfaceCard key={c} level={2} className="px-3 py-2">
-                  <div className="text-2xs uppercase tracking-wider text-text-muted font-medium mb-0.5">{cfg.label}</div>
-                  <div className="text-base font-semibold" style={{ color: count > 0 ? cfg.color : 'var(--text-muted)' }}>{count}</div>
-                </SurfaceCard>
+                <motion.div
+                  key={c}
+                  className="min-w-[100px] flex-1"
+                  variants={{
+                    hidden: { opacity: 0, y: 8 },
+                    visible: { opacity: 1, y: 0 },
+                  }}
+                  transition={{ duration: 0.2, ease: 'easeOut' }}
+                >
+                  <SurfaceCard level={2} className="px-3 py-2 border-l-2" style={{ borderLeftColor: cfg.color }}>
+                    <div className="text-2xs uppercase tracking-wider text-text-muted font-medium mb-0.5">{cfg.label}</div>
+                    <div className="text-base font-semibold" style={{ color: count > 0 ? cfg.color : 'var(--text-muted)' }}>{count}</div>
+                  </SurfaceCard>
+                </motion.div>
               );
             })}
-          </div>
+          </motion.div>
 
           {/* Coherence notes */}
           {notes.length > 0 && (
@@ -230,16 +254,35 @@ function QuestGeneratorPanel() {
             </SurfaceCard>
           )}
 
-          {/* Quest list */}
-          <div className="space-y-2">
+          {/* Quest list — stagger in after metrics */}
+          <motion.div
+            className="space-y-2"
+            initial="hidden"
+            animate="visible"
+            variants={{
+              hidden: {},
+              visible: { transition: { staggerChildren: 0.06, delayChildren: 0.35 } },
+            }}
+          >
             {quests.length === 0 ? (
               <SurfaceCard level={2} className="px-4 py-6 text-center">
                 <p className="text-xs text-text-muted">No quests generated. Add enemy, NPC, or interactable actors to your project and create a level design document.</p>
               </SurfaceCard>
             ) : (
-              quests.map(q => <QuestCard key={q.id} quest={q} />)
+              quests.map(q => (
+                <motion.div
+                  key={q.id}
+                  variants={{
+                    hidden: { opacity: 0, y: 8 },
+                    visible: { opacity: 1, y: 0 },
+                  }}
+                  transition={{ duration: 0.2, ease: 'easeOut' }}
+                >
+                  <QuestCard quest={q} />
+                </motion.div>
+              ))
             )}
-          </div>
+          </motion.div>
         </>
       )}
     </div>
@@ -255,7 +298,7 @@ function WorldScanSummary({ scan, levelDocName }: { scan: WorldScanResult; level
         <Target className="w-3 h-3 text-text-muted" />
         <span className="text-2xs uppercase tracking-wider text-text-muted font-medium">World Scan</span>
         {levelDocName && (
-          <span className="text-2xs text-[#8b5cf6] font-mono ml-auto">{levelDocName}</span>
+          <span className="text-2xs font-mono ml-auto" style={{ color: ACCENT }}>{levelDocName}</span>
         )}
       </div>
       <div className="grid grid-cols-4 gap-3 text-xs">
@@ -284,6 +327,39 @@ function WorldScanSummary({ scan, levelDocName }: { scan: WorldScanResult; level
   );
 }
 
+// ── Difficulty pips ──
+
+const DIFFICULTY_COLORS = [
+  'var(--accent-green, #22c55e)',   // Lv1
+  'var(--accent-green, #84cc16)',   // Lv2
+  'var(--accent-yellow, #eab308)', // Lv3
+  'var(--accent-orange, #f97316)', // Lv4
+  'var(--accent-red, #ef4444)',    // Lv5
+] as const;
+
+const MAX_PIPS = 5;
+
+function DifficultyPips({ level }: { level: number }) {
+  const clamped = Math.max(1, Math.min(MAX_PIPS, level));
+  const color = DIFFICULTY_COLORS[clamped - 1];
+
+  return (
+    <div className="flex items-center gap-0.5" title={`Difficulty ${clamped}/${MAX_PIPS}`}>
+      {Array.from({ length: MAX_PIPS }, (_, i) => (
+        <svg key={i} width="8" height="8" viewBox="0 0 8 8" aria-hidden="true">
+          <circle
+            cx="4" cy="4" r="3"
+            fill={i < clamped ? color : 'transparent'}
+            stroke={i < clamped ? color : 'var(--text-muted)'}
+            strokeWidth="1"
+            opacity={i < clamped ? 1 : 0.3}
+          />
+        </svg>
+      ))}
+    </div>
+  );
+}
+
 // ── Quest card ──
 
 function QuestCard({ quest }: { quest: GeneratedQuest }) {
@@ -309,7 +385,7 @@ function QuestCard({ quest }: { quest: GeneratedQuest }) {
         >
           {catCfg.label}
         </span>
-        <span className="text-2xs text-text-muted font-mono">Lv{quest.difficulty}</span>
+        <DifficultyPips level={quest.difficulty} />
       </button>
 
       {/* Expanded detail */}
@@ -345,7 +421,7 @@ function QuestCard({ quest }: { quest: GeneratedQuest }) {
                   <span className="text-2xs uppercase tracking-wider text-text-muted font-medium">Rewards</span>
                   <div className="flex items-center gap-2 mt-1">
                     {quest.rewards.map((r, i) => (
-                      <span key={i} className="text-2xs px-1.5 py-0.5 rounded bg-[#f59e0b]/10 text-[#f59e0b] font-medium">
+                      <span key={i} className="text-2xs px-1.5 py-0.5 rounded font-medium" style={{ color: MODULE_COLORS.content, backgroundColor: withOpacity(MODULE_COLORS.content, OPACITY_10) }}>
                         {r}
                       </span>
                     ))}
@@ -404,16 +480,16 @@ function DialogueNodePreview({ node }: { node: DialogueNode }) {
   return (
     <div className="rounded border border-border/40 bg-background/40 px-2.5 py-1.5">
       <div className="flex items-center gap-1.5 mb-0.5">
-        <MessageSquare className="w-2.5 h-2.5 text-[#8b5cf6]" />
-        <span className="text-2xs font-semibold text-[#a78bfa]">{node.speaker}</span>
+        <MessageSquare className="w-2.5 h-2.5" style={{ color: ACCENT }} />
+        <span className="text-2xs font-semibold" style={{ color: ACCENT_VIOLET }}>{node.speaker}</span>
       </div>
       <p className="text-2xs text-text leading-relaxed">{node.text}</p>
       {node.choices.length > 0 && (
         <div className="mt-1 space-y-0.5">
           {node.choices.map(ch => (
             <div key={ch.id} className="flex items-center gap-1 text-2xs">
-              <Zap className="w-2 h-2 text-[#22c55e]" />
-              <span className="text-[#22c55e]">{ch.text}</span>
+              <Zap className="w-2 h-2" style={{ color: ACCENT_GREEN }} />
+              <span style={{ color: ACCENT_GREEN }}>{ch.text}</span>
             </div>
           ))}
         </div>

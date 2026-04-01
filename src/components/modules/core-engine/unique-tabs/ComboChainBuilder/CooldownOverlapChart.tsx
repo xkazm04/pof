@@ -1,13 +1,15 @@
 'use client';
 
 import { useMemo } from 'react';
-import { motion } from 'framer-motion';
+import { motion, useReducedMotion } from 'framer-motion';
 import { RotateCcw } from 'lucide-react';
 import { ACCENT_ORANGE, OPACITY_20 } from '@/lib/chart-colors';
+import { motionSafe } from '@/lib/motion';
 import type { ComboAbility } from '@/components/modules/core-engine/unique-tabs/AbilitySpellbook.data';
 import { BlueprintPanel, SectionHeader } from './design';
 
 export function CooldownOverlapChart({ chain, totalDuration }: { chain: ComboAbility[]; totalDuration: number }) {
+  const prefersReduced = useReducedMotion();
   const cdEntries = useMemo(() => {
     const entries: { ability: ComboAbility; startTime: number }[] = [];
     let t = 0;
@@ -58,7 +60,7 @@ export function CooldownOverlapChart({ chain, totalDuration }: { chain: ComboAbi
                 <text
                   x={labelW - 4} y={y + laneH / 2 + 4}
                   textAnchor="end"
-                  className="text-[10px] font-mono font-bold"
+                  className="text-xs font-mono font-bold"
                   fill={entry.ability.color}
                 >
                   {entry.ability.name}
@@ -71,9 +73,9 @@ export function CooldownOverlapChart({ chain, totalDuration }: { chain: ComboAbi
                   fill={`${entry.ability.color}${OPACITY_20}`}
                   stroke={`${entry.ability.color}60`}
                   strokeWidth={1}
-                  initial={{ scaleX: 0 }}
+                  initial={prefersReduced ? { scaleX: 1 } : { scaleX: 0 }}
                   animate={{ scaleX: 1 }}
-                  transition={{ delay: i * 0.1, duration: 0.4 }}
+                  transition={motionSafe({ delay: i * 0.1, duration: 0.4 }, prefersReduced)}
                   style={{ transformOrigin: `${startX}px ${y}px` }}
                 />
                 {/* CD text */}

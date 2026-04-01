@@ -1,10 +1,10 @@
 'use client';
 
 import { useMemo, useState, useCallback } from 'react';
-import { Code, Copy, CheckCircle2, AlertTriangle } from 'lucide-react';
-import { OPACITY_10, OPACITY_15, OPACITY_20, OPACITY_30, STATUS_SUCCESS } from '@/lib/chart-colors';
+import { Code, AlertTriangle } from 'lucide-react';
+import { OPACITY_10, OPACITY_15, OPACITY_20, OPACITY_30 } from '@/lib/chart-colors';
 import { SurfaceCard } from '@/components/ui/SurfaceCard';
-import { SectionLabel, NormalizedLineChart } from '../_shared';
+import { SectionLabel, CopyButton, NormalizedLineChart } from '../_shared';
 import { ACCENT, DR_ATTRIBUTES } from './progression-data';
 
 /* ── DR Config & Code Generation ───────────────────────────────────────────── */
@@ -185,7 +185,6 @@ function generateDataTableJSON(configs: DRConfig[]): string {
 
 export function DRCodeGenerator() {
   const [codeGenTab, setCodeGenTab] = useState<'header' | 'source' | 'csv' | 'datatable'>('header');
-  const [copiedCode, setCopiedCode] = useState(false);
   const [drConfigs, setDRConfigs] = useState<DRConfig[]>(DR_CONFIGS);
 
   const generatedCode = useMemo(() => {
@@ -197,11 +196,7 @@ export function DRCodeGenerator() {
     }
   }, [codeGenTab, drConfigs]);
 
-  const handleCopyCode = useCallback(() => {
-    navigator.clipboard.writeText(generatedCode);
-    setCopiedCode(true);
-    setTimeout(() => setCopiedCode(false), 2000);
-  }, [generatedCode]);
+  const getCopyText = useCallback(() => generatedCode, [generatedCode]);
 
   return (
     <SurfaceCard level={2} className="p-5 relative overflow-hidden">
@@ -299,18 +294,7 @@ export function DRCodeGenerator() {
           </button>
         ))}
         <div className="flex-1" />
-        <button
-          onClick={handleCopyCode}
-          className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-2xs font-mono font-bold transition-all border"
-          style={{
-            borderColor: copiedCode ? `${STATUS_SUCCESS}${OPACITY_30}` : `${ACCENT}${OPACITY_30}`,
-            color: copiedCode ? STATUS_SUCCESS : ACCENT,
-            backgroundColor: copiedCode ? `${STATUS_SUCCESS}${OPACITY_10}` : `${ACCENT}${OPACITY_10}`,
-          }}
-        >
-          {copiedCode ? <CheckCircle2 className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
-          {copiedCode ? 'Copied' : 'Copy'}
-        </button>
+        <CopyButton getText={getCopyText} accent={ACCENT} />
       </div>
 
       {/* Code output */}

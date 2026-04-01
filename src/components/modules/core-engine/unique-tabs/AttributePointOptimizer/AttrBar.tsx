@@ -23,10 +23,10 @@ export function AttrBar({ label, value, max, color, icon: Icon, perPoint, onChan
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-1.5">
           <Icon className="w-3.5 h-3.5" style={{ color, filter: `drop-shadow(0 0 4px ${color}80)` }} />
-          <span className="text-[10px] font-mono uppercase tracking-[0.15em] text-text">{label}</span>
+          <span className="text-xs font-mono uppercase tracking-[0.15em] text-text">{label}</span>
         </div>
         <div className="flex items-center gap-2">
-          <span className="text-[10px] font-mono uppercase tracking-[0.15em] text-text-muted">{perPoint}</span>
+          <span className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted">{perPoint}</span>
           <motion.span
             key={value}
             initial={{ scale: 1.2, opacity: 0.6 }}

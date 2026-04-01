@@ -48,7 +48,7 @@ export function WorkbenchHeader({
             <div className="flex items-center rounded-lg border overflow-hidden"
               style={{ borderColor: `${ACCENT}25` }}>
               <button onClick={() => setViewMode('workbench')}
-                className="flex items-center gap-1.5 px-2.5 py-1.5 text-[10px] font-mono uppercase tracking-[0.15em] transition-all"
+                className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-mono uppercase tracking-[0.15em] transition-all"
                 style={{
                   backgroundColor: viewMode === 'workbench' ? `${ACCENT}${OPACITY_20}` : 'transparent',
                   color: viewMode === 'workbench' ? ACCENT : 'var(--text-muted)',
@@ -56,7 +56,7 @@ export function WorkbenchHeader({
                 <Hammer className="w-3 h-3" /> Workbench
               </button>
               <button onClick={() => setViewMode('breakpoints')}
-                className="flex items-center gap-1.5 px-2.5 py-1.5 text-[10px] font-mono uppercase tracking-[0.15em] transition-all"
+                className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-mono uppercase tracking-[0.15em] transition-all"
                 style={{
                   backgroundColor: viewMode === 'breakpoints' ? `${STATUS_INFO}${OPACITY_20}` : 'transparent',
                   color: viewMode === 'breakpoints' ? STATUS_INFO : 'var(--text-muted)',
@@ -69,23 +69,23 @@ export function WorkbenchHeader({
             {viewMode === 'workbench' && (
               <>
                 <button onClick={onRandomRoll}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-mono uppercase tracking-[0.15em] transition-all"
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-mono uppercase tracking-[0.15em] transition-all"
                   style={{ backgroundColor: `${ACCENT_VIOLET}${OPACITY_15}`, color: ACCENT_VIOLET, border: `1px solid ${ACCENT_VIOLET}${OPACITY_30}` }}>
                   <Shuffle className="w-3 h-3" /> Random Roll
                 </button>
                 <button onClick={onClear}
-                  className="flex items-center gap-1 px-2 py-1.5 rounded-lg text-[10px] text-text-muted hover:text-text transition-colors"
+                  className="flex items-center gap-1 px-2 py-1.5 rounded-lg text-xs text-text-muted hover:text-text transition-colors"
                   style={{ border: `1px solid ${ACCENT}25` }}>
                   <RotateCcw className="w-3 h-3" />
                 </button>
                 <button onClick={onToggleExport}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-mono uppercase tracking-[0.15em] transition-all"
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-mono uppercase tracking-[0.15em] transition-all"
                   style={{ backgroundColor: `${STATUS_SUCCESS}${OPACITY_10}`, color: STATUS_SUCCESS, border: `1px solid ${STATUS_SUCCESS}${OPACITY_20}` }}>
                   <Download className="w-3 h-3" /> Export C++
                 </button>
                 <button onClick={onInjectToUE5}
                   disabled={ue5Status !== 'connected' || craftedAffixCount === 0 || injectStatus === 'sending'}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-mono uppercase tracking-[0.15em] transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-mono uppercase tracking-[0.15em] transition-all disabled:opacity-40 disabled:cursor-not-allowed"
                   style={{ backgroundColor: `${injectColor}${OPACITY_10}`, color: injectColor, border: `1px solid ${injectColor}${OPACITY_20}` }}
                   title={ue5Status !== 'connected' ? 'Connect to UE5 in Project Setup first' : craftedAffixCount === 0 ? 'Add affixes to the item first' : 'Inject this item into the running PIE session'}>
                   {injectStatus === 'sending' ? <Loader2 className="w-3 h-3 animate-spin" /> : injectStatus === 'success' ? <Check className="w-3 h-3" /> : <Send className="w-3 h-3" />}
@@ -101,7 +101,7 @@ export function WorkbenchHeader({
       <AnimatePresence>
         {injectStatus === 'error' && injectError && (
           <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }} className="overflow-hidden">
-            <div className="flex items-center gap-2 px-3 py-2 rounded-lg text-[10px] font-mono"
+            <div className="flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-mono"
               style={{ backgroundColor: `${STATUS_ERROR}${OPACITY_10}`, color: STATUS_ERROR, border: `1px solid ${STATUS_ERROR}${OPACITY_20}` }}>
               <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
               <span className="truncate">{injectError}</span>

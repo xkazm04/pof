@@ -17,9 +17,11 @@ const MAX_MESSAGES = 200;
  */
 export function createChatStore(): ChatStore {
   let messages: ChatMessage[] = [];
+  let version = 0;
   const listeners = new Set<() => void>();
 
   function notify(): void {
+    version++;
     for (const listener of listeners) {
       listener();
     }
@@ -155,8 +157,12 @@ export function createChatStore(): ChatStore {
     };
   }
 
-  function getSnapshot(): string {
-    return JSON.stringify(messages);
+  function getSnapshot(): ChatMessage[] {
+    return messages;
+  }
+
+  function getVersion(): number {
+    return version;
   }
 
   return {
@@ -174,5 +180,6 @@ export function createChatStore(): ChatStore {
     failToolCall,
     subscribe,
     getSnapshot,
+    getVersion,
   };
 }

@@ -25,6 +25,75 @@ function getModuleLabel(moduleId: SubModuleId): string {
   return SUB_MODULE_MAP[moduleId]?.label ?? moduleId;
 }
 
+/** Tiny 16px SVG arc showing proportional completion. */
+function MiniProgressArc({ progress }: { progress: number }) {
+  const size = 16;
+  const strokeWidth = 2;
+  const radius = (size - strokeWidth) / 2;
+  const circumference = radius * 2 * Math.PI;
+  const offset = circumference - (progress / 100) * circumference;
+
+  return (
+    <svg
+      width={size}
+      height={size}
+      className="-rotate-90 flex-shrink-0"
+      aria-hidden="true"
+    >
+      <circle
+        cx={size / 2}
+        cy={size / 2}
+        r={radius}
+        stroke="currentColor"
+        strokeWidth={strokeWidth}
+        fill="none"
+        className="text-amber-500/25"
+      />
+      <circle
+        cx={size / 2}
+        cy={size / 2}
+        r={radius}
+        stroke="currentColor"
+        strokeWidth={strokeWidth}
+        fill="none"
+        strokeDasharray={circumference}
+        strokeDashoffset={offset}
+        strokeLinecap="round"
+        className="text-amber-400 transition-all duration-300"
+      />
+    </svg>
+  );
+}
+
+function PrerequisitePill({
+  label,
+  progress,
+  completed,
+  total,
+  onClick,
+}: {
+  label: string;
+  progress: number;
+  completed: number;
+  total: number;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      className="group relative inline-flex items-center gap-1.5 rounded-md text-xs bg-amber-500/10 text-amber-200 hover:bg-amber-500/20 transition-colors cursor-pointer border border-amber-500/15 px-2 py-1"
+      aria-label={`${label} — ${completed}/${total} items (${progress}%)`}
+    >
+      <MiniProgressArc progress={progress} />
+      <span>{label}</span>
+      {/* CSS-driven hover tooltip with smooth transition */}
+      <span className="absolute -top-8 left-1/2 -translate-x-1/2 px-2 py-1.5 rounded bg-neutral-900 border border-amber-500/20 text-xs text-amber-300 whitespace-nowrap pointer-events-none z-10 opacity-0 translate-y-1 group-hover:opacity-100 group-hover:translate-y-0 transition-all duration-150 ease-out delay-200 group-hover:delay-200">
+        {completed}/{total} items
+      </span>
+    </button>
+  );
+}
+
 interface RecommendedNextBannerProps {
   moduleId: SubModuleId;
   accentColor: string;
@@ -64,14 +133,14 @@ export function RecommendedNextBanner({ moduleId, accentColor }: RecommendedNext
             </p>
             <div className="mt-1.5 flex flex-wrap gap-1.5">
               {unmetPrereqs.map((p) => (
-                <button
+                <PrerequisitePill
                   key={p.moduleId}
+                  label={getModuleLabel(p.moduleId)}
+                  progress={p.progress}
+                  completed={p.completed}
+                  total={p.total}
                   onClick={() => navigateToModule(p.moduleId)}
-                  className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md text-xs bg-amber-500/10 text-amber-200 hover:bg-amber-500/20 transition-colors cursor-pointer border border-amber-500/15"
-                >
-                  <span>{getModuleLabel(p.moduleId)}</span>
-                  <span className="text-amber-400/60">{p.progress}%</span>
-                </button>
+                />
               ))}
             </div>
           </div>

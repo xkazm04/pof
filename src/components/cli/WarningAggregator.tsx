@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { AlertTriangle, ChevronDown, ChevronRight, FileCode } from 'lucide-react';
 import type { WarningGroup } from './UE5BuildParser';
 import { TruncateWithTooltip } from '@/components/ui/TruncateWithTooltip';
+import { CLI_COLORS } from '@/lib/chart-colors';
 
 interface WarningAggregatorProps {
   groups: WarningGroup[];
@@ -31,7 +32,7 @@ export function WarningAggregator({ groups, onFix, isRunning = false }: WarningA
           ? <ChevronDown className="w-3 h-3 text-text-muted flex-shrink-0" />
           : <ChevronRight className="w-3 h-3 text-text-muted flex-shrink-0" />
         }
-        <AlertTriangle className="w-3.5 h-3.5 text-yellow-400 flex-shrink-0" />
+        <AlertTriangle className={`w-3.5 h-3.5 ${CLI_COLORS.warning} flex-shrink-0`} />
         <span className="text-xs text-yellow-300 font-medium">
           {totalCount} warning{totalCount !== 1 ? 's' : ''}
         </span>
@@ -67,7 +68,7 @@ export function WarningAggregator({ groups, onFix, isRunning = false }: WarningA
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-1.5">
                         {group.code && (
-                          <span className="text-2xs font-mono text-yellow-400/80 bg-yellow-500/10 px-1 py-px rounded">
+                          <span className={`text-2xs font-mono ${CLI_COLORS.warning}/80 bg-yellow-500/10 px-1 py-px rounded`}>
                             {group.code}
                           </span>
                         )}
@@ -116,7 +117,7 @@ export function WarningAggregator({ groups, onFix, isRunning = false }: WarningA
                                 onFix(prompt);
                               }}
                               disabled={isRunning}
-                              className="text-2xs font-medium text-blue-400 hover:text-blue-300 transition-colors disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:text-blue-400"
+                              className={`text-2xs font-medium ${CLI_COLORS.prompt} hover:text-blue-300 transition-colors disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:${CLI_COLORS.prompt}`}
                             >
                               Fix all {group.count}
                             </button>

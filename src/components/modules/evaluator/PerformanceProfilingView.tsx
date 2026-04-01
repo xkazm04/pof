@@ -13,7 +13,7 @@ import { Badge } from '@/components/ui/Badge';
 import { ProgressRing } from '@/components/ui/ProgressRing';
 import { usePerformanceProfilingStore } from '@/stores/performanceProfilingStore';
 import { useProjectStore } from '@/stores/projectStore';
-import { MODULE_COLORS, ACCENT_EMERALD_DARK } from '@/lib/chart-colors';
+import { MODULE_COLORS, ACCENT_EMERALD_DARK, ACCENT_RED, OPACITY_8 } from '@/lib/chart-colors';
 import type {
   ProfilingSession,
   TriageResult,
@@ -23,7 +23,7 @@ import type {
   MemoryAllocation,
   OptimizationPriority,
 } from '@/types/performance-profiling';
-import { UI_TIMEOUTS } from '@/lib/constants';
+import { UI_TIMEOUTS, MOTION } from '@/lib/constants';
 
 // ── Constants ───────────────────────────────────────────────────────────────
 
@@ -126,7 +126,7 @@ export function PerformanceProfilingView() {
               initial={{ height: 0, opacity: 0 }}
               animate={{ height: 'auto', opacity: 1 }}
               exit={{ height: 0, opacity: 0 }}
-              transition={{ duration: 0.22 }}
+              transition={{ duration: MOTION.base }}
               className="overflow-hidden mb-3"
             >
               <CSVImportPanel
@@ -233,7 +233,7 @@ export function PerformanceProfilingView() {
 
         {!isLoading && !activeSession && (
           <div className="flex flex-col items-center justify-center py-16 text-center">
-            <div className="w-12 h-12 rounded-xl border border-border flex items-center justify-center mb-4" style={{ backgroundColor: '#f4364c10' }}>
+            <div className="w-12 h-12 rounded-xl border border-border flex items-center justify-center mb-4" style={{ backgroundColor: `${ACCENT_RED}${OPACITY_8}` }}>
               <Gauge className="w-6 h-6 text-rose-400" />
             </div>
             <h3 className="text-sm font-semibold text-text mb-1">No Profiling Data</h3>
@@ -567,7 +567,7 @@ function FindingCard({ finding }: { finding: PerformanceFinding }) {
             initial={{ height: 0, opacity: 0 }}
             animate={{ height: 'auto', opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
-            transition={{ duration: 0.12 }}
+            transition={{ duration: MOTION.fast }}
             className="overflow-hidden"
           >
             <div className="px-3 pb-3 space-y-2">

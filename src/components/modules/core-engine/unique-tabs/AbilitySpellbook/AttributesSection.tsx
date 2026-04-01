@@ -30,7 +30,7 @@ export function AttributesSection({ featureMap, defs, expanded, onToggle }: Sect
         <SectionHeader icon={BarChart3} label="Attribute Set Catalog" color={ACCENT_EMERALD_DARK} />
 
         {/* Core Attributes */}
-        <div className="text-[10px] font-mono font-bold uppercase tracking-[0.15em] text-text-muted mb-2">Core Attributes</div>
+        <div className="text-xs font-mono font-bold uppercase tracking-[0.15em] text-text-muted mb-2">Core Attributes</div>
         <div className="grid grid-cols-3 gap-2 mb-4">
           {CORE_ATTRIBUTES.map((attr, i) => {
             const isInit = attrStatus === 'implemented' || attrStatus === 'improved';
@@ -41,7 +41,7 @@ export function AttributesSection({ featureMap, defs, expanded, onToggle }: Sect
                 initial={{ opacity: 0, y: 5 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: i * 0.05 }}
-                className="flex items-center gap-2 px-3 py-2 rounded-lg text-[10px] font-mono uppercase tracking-[0.15em] font-medium border"
+                className="flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-mono uppercase tracking-[0.15em] font-medium border"
                 style={{
                   backgroundColor: isInit ? `${STATUS_SUCCESS}08` : 'transparent',
                   borderColor: isInit ? `${STATUS_SUCCESS}25` : 'var(--border)',
@@ -56,7 +56,7 @@ export function AttributesSection({ featureMap, defs, expanded, onToggle }: Sect
         </div>
 
         {/* Derived Attributes */}
-        <div className="text-[10px] font-mono font-bold uppercase tracking-[0.15em] text-text-muted mb-2">Derived Attributes</div>
+        <div className="text-xs font-mono font-bold uppercase tracking-[0.15em] text-text-muted mb-2">Derived Attributes</div>
         <div className="grid grid-cols-3 gap-2">
           {DERIVED_ATTRIBUTES.map((attr, i) => {
             const isInit = attrStatus === 'implemented' || attrStatus === 'improved';
@@ -67,7 +67,7 @@ export function AttributesSection({ featureMap, defs, expanded, onToggle }: Sect
                 initial={{ opacity: 0, y: 5 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: (CORE_ATTRIBUTES.length + i) * 0.05 }}
-                className="flex items-center gap-2 px-3 py-2 rounded-lg text-[10px] font-mono uppercase tracking-[0.15em] font-medium border"
+                className="flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-mono uppercase tracking-[0.15em] font-medium border"
                 style={{
                   backgroundColor: isInit ? `${STATUS_IMPROVED}08` : 'transparent',
                   borderColor: isInit ? `${STATUS_IMPROVED}25` : 'var(--border)',

@@ -2,12 +2,13 @@
 
 import { motion, useReducedMotion } from 'framer-motion';
 import type { HTMLMotionProps, Variants } from 'framer-motion';
+import { DURATION, EASE_OUT, STAGGER } from '@/lib/motion';
 
 const containerVariants: Variants = {
   hidden: {},
   visible: {
     transition: {
-      staggerChildren: 0.04,
+      staggerChildren: STAGGER.fast,
     },
   },
 };
@@ -17,7 +18,7 @@ const itemVariants: Variants = {
   visible: {
     opacity: 1,
     y: 0,
-    transition: { duration: 0.12, ease: [0.16, 1, 0.3, 1] as const },
+    transition: { duration: DURATION.fast, ease: EASE_OUT },
   },
 };
 

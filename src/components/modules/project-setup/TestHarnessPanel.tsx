@@ -15,6 +15,7 @@ import {
   AlertTriangle, Clock, Crosshair, Eye, Layers,
 } from 'lucide-react';
 import { SurfaceCard } from '@/components/ui/SurfaceCard';
+import { ErrorBanner } from './ErrorBanner';
 import { useTestRunner } from '@/hooks/useTestRunner';
 import { useSnapshots } from '@/hooks/useSnapshots';
 import {
@@ -349,15 +350,7 @@ export function TestHarnessPanel() {
           </div>
 
           {/* ── Error banner ──────────────────────────────────────────── */}
-          {error && (
-            <div
-              className="flex items-center gap-2 px-3 py-2 rounded text-xs"
-              style={{ background: `${STATUS_ERROR}${OPACITY_10}`, color: STATUS_ERROR }}
-            >
-              <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
-              <span className="truncate">{error}</span>
-            </div>
-          )}
+          {error && <ErrorBanner message={error} />}
 
           {/* ── Suites Tab ───────────────────────────────────────────── */}
           {activeTab === 'suites' && (
@@ -648,7 +641,7 @@ function ScenarioCard({ scenario, index, isExpanded, onToggle, onUpdate, onRemov
         {isExpanded ? <ChevronDown className="w-3 h-3 text-text-muted" /> : <ChevronRight className="w-3 h-3 text-text-muted" />}
         <span className="text-xs font-mono text-text-muted">#{index + 1}</span>
         <span className="text-xs font-medium text-text flex-1 truncate">{scenario.description}</span>
-        <span className="text-[10px] text-text-muted">
+        <span className="text-xs text-text-muted">
           {scenario.setup.length} spawn · {scenario.actions.length} action · {scenario.assertions.length} assert
         </span>
         <button
@@ -666,7 +659,7 @@ function ScenarioCard({ scenario, index, isExpanded, onToggle, onUpdate, onRemov
           {/* Basic fields */}
           <div className="grid grid-cols-3 gap-2">
             <label className="space-y-0.5">
-              <span className="text-[10px] text-text-muted uppercase tracking-wider">Test ID</span>
+              <span className="text-xs text-text-muted uppercase tracking-wider">Test ID</span>
               <input
                 className="w-full bg-surface-2 rounded px-2 py-1 text-xs font-mono text-text outline-none"
                 value={scenario.testId}
@@ -674,7 +667,7 @@ function ScenarioCard({ scenario, index, isExpanded, onToggle, onUpdate, onRemov
               />
             </label>
             <label className="space-y-0.5">
-              <span className="text-[10px] text-text-muted uppercase tracking-wider">Timeout (s)</span>
+              <span className="text-xs text-text-muted uppercase tracking-wider">Timeout (s)</span>
               <input
                 className="w-full bg-surface-2 rounded px-2 py-1 text-xs font-mono text-text outline-none"
                 type="number"
@@ -683,7 +676,7 @@ function ScenarioCard({ scenario, index, isExpanded, onToggle, onUpdate, onRemov
               />
             </label>
             <label className="space-y-0.5">
-              <span className="text-[10px] text-text-muted uppercase tracking-wider">Cleanup</span>
+              <span className="text-xs text-text-muted uppercase tracking-wider">Cleanup</span>
               <select
                 className="w-full bg-surface-2 rounded px-2 py-1 text-xs text-text outline-none"
                 value={scenario.cleanup}
@@ -696,7 +689,7 @@ function ScenarioCard({ scenario, index, isExpanded, onToggle, onUpdate, onRemov
           </div>
 
           <label className="block space-y-0.5">
-            <span className="text-[10px] text-text-muted uppercase tracking-wider">Description</span>
+            <span className="text-xs text-text-muted uppercase tracking-wider">Description</span>
             <input
               className="w-full bg-surface-2 rounded px-2 py-1 text-xs text-text outline-none"
               value={scenario.description}
@@ -717,7 +710,7 @@ function ScenarioCard({ scenario, index, isExpanded, onToggle, onUpdate, onRemov
                 <span className="font-mono text-text-muted truncate flex-1" title={spawn.spawn}>
                   {spawn.tag}
                 </span>
-                <span className="text-[10px] text-text-muted">
+                <span className="text-xs text-text-muted">
                   [{spawn.location.join(', ')}]
                 </span>
               </div>
@@ -784,7 +777,7 @@ function ScenarioSection({
   return (
     <div>
       <button
-        className="flex items-center gap-1.5 w-full text-left text-[10px] uppercase tracking-wider font-medium mb-1"
+        className="flex items-center gap-1.5 w-full text-left text-xs uppercase tracking-wider font-medium mb-1"
         style={{ color }}
         onClick={() => setOpen((p) => !p)}
       >
@@ -834,7 +827,7 @@ function ResultsTab({ history, isRunning, onClear }: ResultsTabProps) {
       <div className="flex items-center justify-between">
         <span className="text-xs text-text-muted">{history.length} run{history.length !== 1 ? 's' : ''}</span>
         <button
-          className="text-[10px] text-text-muted hover:text-text"
+          className="text-xs text-text-muted hover:text-text"
           onClick={onClear}
         >
           Clear History
@@ -858,10 +851,10 @@ function ResultsTab({ history, isRunning, onClear }: ResultsTabProps) {
               {isOpen ? <ChevronDown className="w-3 h-3 text-text-muted" /> : <ChevronRight className="w-3 h-3 text-text-muted" />}
               <StatusIcon className="w-3.5 h-3.5" style={{ color: statusColor }} />
               <span className="text-xs font-medium text-text flex-1">{run.suiteName}</span>
-              <span className="text-[10px] font-mono" style={{ color: statusColor }}>
+              <span className="text-xs font-mono" style={{ color: statusColor }}>
                 {passedCount}/{totalCount} passed
               </span>
-              <span className="text-[10px] text-text-muted">{(duration / 1000).toFixed(1)}s</span>
+              <span className="text-xs text-text-muted">{(duration / 1000).toFixed(1)}s</span>
             </button>
 
             {isOpen && (
@@ -901,11 +894,11 @@ function TestResultCard({ result }: { result: PofTestResult }) {
           style={{ color }}
         />
         <span className="text-xs font-mono text-text flex-1 truncate">{result.testId}</span>
-        <span className="text-[10px]" style={{ color }}>
+        <span className="text-xs" style={{ color }}>
           {passedAsserts}/{result.assertions.length} assertions
         </span>
         {result.durationMs !== undefined && (
-          <span className="text-[10px] text-text-muted">{result.durationMs}ms</span>
+          <span className="text-xs text-text-muted">{result.durationMs}ms</span>
         )}
       </button>
 
@@ -915,7 +908,7 @@ function TestResultCard({ result }: { result: PofTestResult }) {
           {result.assertions.map((a) => (
             <div
               key={a.id}
-              className="flex items-center gap-1.5 text-[10px] pl-5"
+              className="flex items-center gap-1.5 text-xs pl-5"
             >
               {a.status === 'passed' ? (
                 <CheckCircle2 className="w-2.5 h-2.5 shrink-0" style={{ color: STATUS_SUCCESS }} />
@@ -935,7 +928,7 @@ function TestResultCard({ result }: { result: PofTestResult }) {
           {result.errors.length > 0 && (
             <div className="mt-1 space-y-0.5">
               {result.errors.map((err, i) => (
-                <div key={i} className="text-[10px] pl-5" style={{ color: STATUS_ERROR }}>
+                <div key={i} className="text-xs pl-5" style={{ color: STATUS_ERROR }}>
                   {err}
                 </div>
               ))}
@@ -946,7 +939,7 @@ function TestResultCard({ result }: { result: PofTestResult }) {
           {result.logs.length > 0 && (
             <div className="mt-1 max-h-20 overflow-y-auto">
               {result.logs.map((log, i) => (
-                <div key={i} className="text-[10px] text-text-muted pl-5 font-mono">
+                <div key={i} className="text-xs text-text-muted pl-5 font-mono">
                   <span className="opacity-50">[{log.time.toFixed(2)}s]</span> {log.message}
                 </div>
               ))}
@@ -967,7 +960,7 @@ function SnapshotSummaryRow({ report }: { report: PofSnapshotDiffReport }) {
       <div className="flex items-center gap-2 text-xs">
         <Camera className="w-3.5 h-3.5" style={{ color }} />
         <span className="font-medium text-text">Snapshot Diff</span>
-        <span className="ml-auto text-[10px]" style={{ color }}>
+        <span className="ml-auto text-xs" style={{ color }}>
           {report.summary.passed}/{report.summary.totalPresets} passed
         </span>
       </div>
@@ -976,7 +969,7 @@ function SnapshotSummaryRow({ report }: { report: PofSnapshotDiffReport }) {
           {report.results
             .filter((r) => r.status === 'failed')
             .map((r) => (
-              <div key={r.presetId} className="text-[10px] pl-5" style={{ color: STATUS_ERROR }}>
+              <div key={r.presetId} className="text-xs pl-5" style={{ color: STATUS_ERROR }}>
                 {r.presetName}: {r.diffPercentage.toFixed(2)}% diff ({r.diffPixelCount} px)
               </div>
             ))}
@@ -1048,7 +1041,7 @@ function SnapshotsTab({ diffReport, isCapturing, onRefresh }: SnapshotsTabProps)
             <span className="text-xs font-medium text-text">
               {diffReport.overallStatus === 'passed' ? 'All snapshots match' : 'Visual regressions detected'}
             </span>
-            <div className="ml-auto flex gap-3 text-[10px]">
+            <div className="ml-auto flex gap-3 text-xs">
               <span style={{ color: STATUS_SUCCESS }}>{diffReport.summary.passed} passed</span>
               <span style={{ color: STATUS_ERROR }}>{diffReport.summary.failed} failed</span>
               {diffReport.summary.noBaseline > 0 && (
@@ -1062,7 +1055,7 @@ function SnapshotsTab({ diffReport, isCapturing, onRefresh }: SnapshotsTabProps)
             <SnapshotResultRow key={result.presetId} result={result} />
           ))}
 
-          <div className="text-[10px] text-text-muted text-right">
+          <div className="text-xs text-text-muted text-right">
             Threshold: {diffReport.diffThreshold}% · Generated: {new Date(diffReport.generatedAt).toLocaleTimeString()}
           </div>
         </div>
@@ -1083,18 +1076,18 @@ function SnapshotResultRow({ result }: { result: PofSnapshotDiffResult }) {
       <Icon className="w-3.5 h-3.5 shrink-0" style={{ color }} />
       <span className="text-text font-medium truncate flex-1">{result.presetName}</span>
       {result.status === 'failed' && (
-        <span className="text-[10px] font-mono" style={{ color: STATUS_ERROR }}>
+        <span className="text-xs font-mono" style={{ color: STATUS_ERROR }}>
           {result.diffPercentage.toFixed(2)}% ({result.diffPixelCount} px)
         </span>
       )}
       {result.status === 'no-baseline' && (
-        <span className="text-[10px]" style={{ color: STATUS_WARNING }}>No baseline</span>
+        <span className="text-xs" style={{ color: STATUS_WARNING }}>No baseline</span>
       )}
       {result.status === 'resolution-mismatch' && (
-        <span className="text-[10px]" style={{ color: ACCENT_ORANGE }}>Resolution mismatch</span>
+        <span className="text-xs" style={{ color: ACCENT_ORANGE }}>Resolution mismatch</span>
       )}
       {result.status === 'passed' && (
-        <span className="text-[10px]" style={{ color: STATUS_SUCCESS }}>
+        <span className="text-xs" style={{ color: STATUS_SUCCESS }}>
           {result.maxPixelDiff}px max diff
         </span>
       )}

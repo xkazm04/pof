@@ -51,7 +51,7 @@ export function ItemPreviewCard({
           <div className="absolute inset-0 rounded-xl border-2 border-dashed pointer-events-none z-20"
             style={{ borderColor: `${STATUS_SUCCESS}60`, backgroundColor: `${STATUS_SUCCESS}08` }}>
             <div className="absolute inset-0 flex items-center justify-center">
-              <span className="text-[10px] font-mono font-bold uppercase tracking-[0.15em]"
+              <span className="text-xs font-mono font-bold uppercase tracking-[0.15em]"
                 style={{ color: STATUS_SUCCESS }}>Drop affix here</span>
             </div>
           </div>
@@ -69,7 +69,7 @@ export function ItemPreviewCard({
               {fullItemName}
             </span>
           </div>
-          <div className="text-[10px] text-text-muted mt-1 font-mono uppercase tracking-[0.15em]">
+          <div className="text-xs text-text-muted mt-1 font-mono uppercase tracking-[0.15em]">
             {selectedBase.type} | <span style={{ color: rarityColor }}>{selectedBase.rarity}</span> | Level {itemLevel} | Value {selectedBase.baseValue}g
           </div>
         </div>
@@ -77,7 +77,7 @@ export function ItemPreviewCard({
         {/* Crafted affixes */}
         <div className="space-y-3">
           {craftedAffixes.length === 0 ? (
-            <div className="text-center py-6 text-[10px] font-mono text-text-muted italic rounded-lg"
+            <div className="text-center py-6 text-xs font-mono text-text-muted italic rounded-lg"
               style={{ border: `1px dashed ${ACCENT}25` }}>
               Drag affixes from the pool, click +, or use Random Roll
             </div>
@@ -131,10 +131,10 @@ function AffixRow({ affix, itemLevel, onRemove, onUpdateMagnitude, onTogglePlace
       <div className="flex items-center gap-2 mb-2">
         <span className="w-1.5 h-1.5 rounded-full flex-shrink-0"
           style={{ backgroundColor: affix.locked ? ACCENT_PURPLE : catColor }} />
-        <span className="text-[10px] font-bold font-mono text-text"
+        <span className="text-xs font-bold font-mono text-text"
           style={{ textShadow: `0 0 12px ${catColor}40` }}>{affix.displayName}</span>
         <button onClick={() => onTogglePlacement(affix.tag)}
-          className="flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold font-mono uppercase transition-all"
+          className="flex items-center gap-1 px-1.5 py-0.5 rounded text-xs font-bold font-mono uppercase transition-all"
           style={{
             backgroundColor: affix.bIsPrefix ? `${ACCENT_ORANGE}15` : `${ACCENT_CYAN}15`,
             color: affix.bIsPrefix ? ACCENT_ORANGE : ACCENT_CYAN,
@@ -142,7 +142,7 @@ function AffixRow({ affix, itemLevel, onRemove, onUpdateMagnitude, onTogglePlace
           }} title="Toggle prefix/suffix">
           {affix.bIsPrefix ? <><ToggleLeft className="w-2.5 h-2.5" /> PREFIX</> : <><ToggleRight className="w-2.5 h-2.5" /> SUFFIX</>}
         </button>
-        <span className="ml-auto text-[10px] font-mono font-bold"
+        <span className="ml-auto text-xs font-mono font-bold"
           style={{ color: catColor, textShadow: `0 0 12px ${catColor}40` }}>
           +{scaledMag.toFixed(1)} {affix.stat}
         </span>
@@ -154,7 +154,7 @@ function AffixRow({ affix, itemLevel, onRemove, onUpdateMagnitude, onTogglePlace
 
       {/* Magnitude slider */}
       <div className="flex items-center gap-2">
-        <span className="text-[10px] font-mono text-text-muted w-8 text-right">{poolEntry.minValue}</span>
+        <span className="text-xs font-mono text-text-muted w-8 text-right">{poolEntry.minValue}</span>
         <input type="range" min={poolEntry.minValue} max={poolEntry.maxValue} step={0.1}
           value={affix.magnitude}
           onChange={(e) => onUpdateMagnitude(affix.tag, Number(e.target.value))}
@@ -164,8 +164,8 @@ function AffixRow({ affix, itemLevel, onRemove, onUpdateMagnitude, onTogglePlace
           onTouchEnd={() => onSetPreviewTag(null)}
           className="flex-1 h-1 rounded-full appearance-none cursor-pointer"
           style={{ accentColor: catColor }} />
-        <span className="text-[10px] font-mono text-text-muted w-8">{poolEntry.maxValue}</span>
-        <span className="text-[10px] font-mono font-bold w-10 text-right"
+        <span className="text-xs font-mono text-text-muted w-8">{poolEntry.maxValue}</span>
+        <span className="text-xs font-mono font-bold w-10 text-right"
           style={{ color: catColor, textShadow: `0 0 12px ${catColor}40` }}>
           {affix.magnitude.toFixed(1)}
         </span>

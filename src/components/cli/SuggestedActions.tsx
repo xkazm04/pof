@@ -1,10 +1,11 @@
 'use client';
 
 import { useState, useMemo, useCallback, useEffect, useRef } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import { Sparkles, Play, RefreshCw, Package, ChevronRight, X, Undo2 } from 'lucide-react';
 import type { CLISessionState } from './store/cliPanelStore';
-import { MODULE_COLORS } from '@/lib/chart-colors';
+import { MODULE_COLORS, withOpacity, OPACITY_8, OPACITY_20 } from '@/lib/chart-colors';
+import { CLI_ANIM } from '@/lib/constants';
 
 // ── Suggestion types ──
 
@@ -140,7 +141,7 @@ export function generateSuggestions(session: CLISessionState): Suggestion[] {
 
 const UNDO_TIMEOUT_MS = 5000;
 
-function UndoSnackbar({ onUndo, onExpire, accentColor }: { onUndo: () => void; onExpire: () => void; accentColor: string }) {
+function UndoSnackbar({ onUndo, onExpire, accentColor, reducedMotion }: { onUndo: () => void; onExpire: () => void; accentColor: string; reducedMotion: boolean }) {
   const timerRef = useRef<ReturnType<typeof setTimeout>>(undefined);
 
   useEffect(() => {
@@ -150,10 +151,10 @@ function UndoSnackbar({ onUndo, onExpire, accentColor }: { onUndo: () => void; o
 
   return (
     <motion.div
-      initial={{ height: 0, opacity: 0 }}
-      animate={{ height: 'auto', opacity: 1 }}
-      exit={{ height: 0, opacity: 0 }}
-      transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
+      initial={reducedMotion ? { opacity: 0 } : { height: 0, opacity: 0 }}
+      animate={reducedMotion ? { opacity: 1 } : { height: 'auto', opacity: 1 }}
+      exit={reducedMotion ? { opacity: 0 } : { height: 0, opacity: 0 }}
+      transition={reducedMotion ? { duration: 0 } : CLI_ANIM.medium}
       className="border-b border-border bg-surface overflow-hidden"
     >
       <div className="flex items-center gap-2 px-3 py-2">
@@ -163,8 +164,8 @@ function UndoSnackbar({ onUndo, onExpire, accentColor }: { onUndo: () => void; o
           className="flex items-center gap-1 px-2 py-0.5 rounded text-2xs font-medium transition-all hover:brightness-110"
           style={{
             color: accentColor,
-            backgroundColor: `${accentColor}14`,
-            border: `1px solid ${accentColor}30`,
+            backgroundColor: withOpacity(accentColor, OPACITY_8),
+            border: `1px solid ${withOpacity(accentColor, OPACITY_20)}`,
           }}
         >
           <Undo2 className="w-3 h-3" />
@@ -184,6 +185,7 @@ interface SuggestedActionsProps {
 }
 
 export function SuggestedActions({ session, onAction, accentColor = MODULE_COLORS.setup }: SuggestedActionsProps) {
+  const shouldReduceMotion = useReducedMotion() ?? false;
   const [dismissState, setDismissState] = useState<'visible' | 'pending-undo' | 'dismissed'>('visible');
   const [dismissedForSession, setDismissedForSession] = useState<string | null>(null);
 
@@ -217,10 +219,10 @@ export function SuggestedActions({ session, onAction, accentColor = MODULE_COLOR
       {dismissState === 'visible' && (
         <motion.div
           key="suggestions"
-          initial={{ height: 0, opacity: 0 }}
-          animate={{ height: 'auto', opacity: 1 }}
-          exit={{ height: 0, opacity: 0 }}
-          transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
+          initial={shouldReduceMotion ? { opacity: 0 } : { height: 0, opacity: 0 }}
+          animate={shouldReduceMotion ? { opacity: 1 } : { height: 'auto', opacity: 1 }}
+          exit={shouldReduceMotion ? { opacity: 0 } : { height: 0, opacity: 0 }}
+          transition={shouldReduceMotion ? { duration: 0 } : CLI_ANIM.medium}
           className="border-b border-border bg-surface overflow-hidden"
         >
           <div className="flex items-center gap-2 px-3 py-2">
@@ -238,9 +240,9 @@ export function SuggestedActions({ session, onAction, accentColor = MODULE_COLOR
                     onClick={() => onAction(s.action)}
                     className="flex items-center gap-1.5 px-2.5 py-1 rounded-md text-2xs font-medium transition-all hover:brightness-110 whitespace-nowrap flex-shrink-0"
                     style={{
-                      backgroundColor: `${accentColor}14`,
+                      backgroundColor: withOpacity(accentColor, OPACITY_8),
                       color: accentColor,
-                      border: `1px solid ${accentColor}30`,
+                      border: `1px solid ${withOpacity(accentColor, OPACITY_20)}`,
                     }}
                     title={s.description}
                   >
@@ -267,6 +269,7 @@ export function SuggestedActions({ session, onAction, accentColor = MODULE_COLOR
           onUndo={handleUndo}
           onExpire={handleUndoExpire}
           accentColor={accentColor}
+          reducedMotion={shouldReduceMotion}
         />
       )}
     </AnimatePresence>

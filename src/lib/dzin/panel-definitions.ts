@@ -1,6 +1,7 @@
 'use client';
 
 import { createRegistry } from '@/lib/dzin/core';
+import { DENSITY_CONFIG } from '@/lib/dzin/animation-constants';
 import { CorePanel } from '@/components/modules/core-engine/dzin-panels/CorePanel';
 import { AttributesPanel } from '@/components/modules/core-engine/dzin-panels/AttributesPanel';
 import { TagsPanel } from '@/components/modules/core-engine/dzin-panels/TagsPanel';
@@ -62,9 +63,9 @@ pofRegistry.register({
     },
   ],
   densityModes: {
-    micro: { minWidth: 80, minHeight: 60, description: 'Cpu icon with pipeline progress badge (e.g. 3/6)' },
-    compact: { minWidth: 200, minHeight: 160, description: 'ASC feature status, 4 connection indicators, pipeline step count' },
-    full: { minWidth: 400, minHeight: 300, description: 'Full CoreSection with feature card, connections grid, GAS pipeline, architecture explorer' },
+    micro: { ...DENSITY_CONFIG.standard.micro, description: 'Cpu icon with pipeline progress badge (e.g. 3/6)' },
+    compact: { ...DENSITY_CONFIG.standard.compact, description: 'ASC feature status, 4 connection indicators, pipeline step count' },
+    full: { ...DENSITY_CONFIG.standard.full, description: 'Full CoreSection with feature card, connections grid, GAS pipeline, architecture explorer' },
   },
   component: CorePanel as unknown as ComponentType<Record<string, unknown>>,
 });
@@ -89,9 +90,9 @@ pofRegistry.register({
   ],
   outputs: [{ name: 'onAttributeSelect', type: 'string', description: 'Emits selected attribute name for cross-panel filtering' }],
   densityModes: {
-    micro: { minWidth: 80, minHeight: 60, description: 'BarChart3 icon with attribute count badge' },
-    compact: { minWidth: 200, minHeight: 160, description: 'Core vs derived attribute summary with status' },
-    full: { minWidth: 400, minHeight: 300, description: 'Full attribute catalog, relationship web, growth projections' },
+    micro: { ...DENSITY_CONFIG.standard.micro, description: 'BarChart3 icon with attribute count badge' },
+    compact: { ...DENSITY_CONFIG.standard.compact, description: 'Core vs derived attribute summary with status' },
+    full: { ...DENSITY_CONFIG.standard.full, description: 'Full attribute catalog, relationship web, growth projections' },
   },
   component: AttributesPanel as unknown as ComponentType<Record<string, unknown>>,
 });
@@ -116,9 +117,9 @@ pofRegistry.register({
   ],
   outputs: [{ name: 'onTagSelect', type: 'string', description: 'Emits selected tag name for cross-panel filtering' }],
   densityModes: {
-    micro: { minWidth: 80, minHeight: 60, description: 'Tags icon with total tag count' },
-    compact: { minWidth: 200, minHeight: 120, description: 'Tag categories with child counts' },
-    full: { minWidth: 400, minHeight: 280, description: 'Full tag hierarchy tree with category colors' },
+    micro: { ...DENSITY_CONFIG.standard.micro, description: 'Tags icon with total tag count' },
+    compact: { ...DENSITY_CONFIG.standard.compact, minHeight: 120, description: 'Tag categories with child counts' },
+    full: { ...DENSITY_CONFIG.standard.full, minHeight: 280, description: 'Full tag hierarchy tree with category colors' },
   },
   component: TagsPanel as unknown as ComponentType<Record<string, unknown>>,
 });
@@ -143,9 +144,9 @@ pofRegistry.register({
   ],
   outputs: [{ name: 'onAbilitySelect', type: 'string', description: 'Emits selected ability name for cross-panel filtering' }],
   densityModes: {
-    micro: { minWidth: 80, minHeight: 60, description: 'Sparkles icon with ability count' },
-    compact: { minWidth: 200, minHeight: 160, description: 'Ability list with cooldown bars' },
-    full: { minWidth: 400, minHeight: 300, description: 'Full ability radar, cooldown flow, feature cards' },
+    micro: { ...DENSITY_CONFIG.standard.micro, description: 'Sparkles icon with ability count' },
+    compact: { ...DENSITY_CONFIG.standard.compact, description: 'Ability list with cooldown bars' },
+    full: { ...DENSITY_CONFIG.standard.full, description: 'Full ability radar, cooldown flow, feature cards' },
   },
   component: AbilitiesPanel as unknown as ComponentType<Record<string, unknown>>,
 });
@@ -170,9 +171,9 @@ pofRegistry.register({
   ],
   outputs: [{ name: 'onEffectSelect', type: 'string', description: 'Emits selected effect type for cross-panel filtering' }],
   densityModes: {
-    micro: { minWidth: 80, minHeight: 60, description: 'Flame icon with effect count badge (4)' },
-    compact: { minWidth: 200, minHeight: 160, description: 'Effect type list with colored dots and feature status indicators' },
-    full: { minWidth: 400, minHeight: 300, description: 'Full effect type cards with stacking/calculation details and application pipeline' },
+    micro: { ...DENSITY_CONFIG.standard.micro, description: 'Flame icon with effect count badge (4)' },
+    compact: { ...DENSITY_CONFIG.standard.compact, description: 'Effect type list with colored dots and feature status indicators' },
+    full: { ...DENSITY_CONFIG.standard.full, description: 'Full effect type cards with stacking/calculation details and application pipeline' },
   },
   component: EffectsPanel as unknown as ComponentType<Record<string, unknown>>,
 });
@@ -197,9 +198,9 @@ pofRegistry.register({
   ],
   outputs: [{ name: 'onTagDepSelect', type: 'string', description: 'Emits selected tag dependency for cross-panel filtering' }],
   densityModes: {
-    micro: { minWidth: 80, minHeight: 60, description: 'Network icon with dependency edge count badge (6)' },
-    compact: { minWidth: 200, minHeight: 120, description: 'Simplified dependency list showing blocking relationships' },
-    full: { minWidth: 400, minHeight: 300, description: 'SVG network graph with nodes, edges, and category color coding' },
+    micro: { ...DENSITY_CONFIG.standard.micro, description: 'Network icon with dependency edge count badge (6)' },
+    compact: { ...DENSITY_CONFIG.standard.compact, minHeight: 120, description: 'Simplified dependency list showing blocking relationships' },
+    full: { ...DENSITY_CONFIG.standard.full, description: 'SVG network graph with nodes, edges, and category color coding' },
   },
   component: TagDepsPanel as unknown as ComponentType<Record<string, unknown>>,
 });
@@ -224,9 +225,9 @@ pofRegistry.register({
   ],
   outputs: [{ name: 'onTimelineEventSelect', type: 'string', description: 'Emits selected timeline event for cross-panel filtering' }],
   densityModes: {
-    micro: { minWidth: 80, minHeight: 60, description: 'Clock icon with timeline span badge (e.g. 0.5s - 10.5s)' },
-    compact: { minWidth: 240, minHeight: 80, description: 'Condensed timeline bar with color-coded segments' },
-    full: { minWidth: 500, minHeight: 120, description: 'Full interactive TimelineStrip with event details' },
+    micro: { ...DENSITY_CONFIG.wide.micro, description: 'Clock icon with timeline span badge (e.g. 0.5s - 10.5s)' },
+    compact: { ...DENSITY_CONFIG.wide.compact, description: 'Condensed timeline bar with color-coded segments' },
+    full: { ...DENSITY_CONFIG.wide.full, description: 'Full interactive TimelineStrip with event details' },
   },
   component: EffectTimelinePanel as unknown as ComponentType<Record<string, unknown>>,
 });
@@ -251,9 +252,9 @@ pofRegistry.register({
   ],
   outputs: [{ name: 'onStepSelect', type: 'string', description: 'Emits selected pipeline step for cross-panel filtering' }],
   densityModes: {
-    micro: { minWidth: 80, minHeight: 60, description: 'Calculator icon with step count badge' },
-    compact: { minWidth: 200, minHeight: 200, description: 'Pipeline step list with colored dots' },
-    full: { minWidth: 400, minHeight: 400, description: 'Full animated GAS execution sequence diagram' },
+    micro: { ...DENSITY_CONFIG.standard.micro, description: 'Calculator icon with step count badge' },
+    compact: { ...DENSITY_CONFIG.standard.compact, minHeight: 200, description: 'Pipeline step list with colored dots' },
+    full: { ...DENSITY_CONFIG.standard.full, minHeight: 400, description: 'Full animated GAS execution sequence diagram' },
   },
   component: DamageCalcPanel as unknown as ComponentType<Record<string, unknown>>,
 });
@@ -278,9 +279,9 @@ pofRegistry.register({
   ],
   outputs: [{ name: 'onAuditCategorySelect', type: 'string', description: 'Emits selected audit category for cross-panel filtering' }],
   densityModes: {
-    micro: { minWidth: 80, minHeight: 60, description: 'ClipboardCheck icon with pass/fail score badge' },
-    compact: { minWidth: 200, minHeight: 160, description: 'Audit category summary with status indicators' },
-    full: { minWidth: 400, minHeight: 300, description: 'Full audit checklist, usage frequency, tag details' },
+    micro: { ...DENSITY_CONFIG.standard.micro, description: 'ClipboardCheck icon with pass/fail score badge' },
+    compact: { ...DENSITY_CONFIG.standard.compact, description: 'Audit category summary with status indicators' },
+    full: { ...DENSITY_CONFIG.standard.full, description: 'Full audit checklist, usage frequency, tag details' },
   },
   component: TagAuditPanel as unknown as ComponentType<Record<string, unknown>>,
 });
@@ -305,9 +306,9 @@ pofRegistry.register({
   ],
   outputs: [{ name: 'onLoadoutSelect', type: 'string', description: 'Emits selected loadout for cross-panel filtering' }],
   densityModes: {
-    micro: { minWidth: 80, minHeight: 60, description: 'Layers icon with slot count badge' },
-    compact: { minWidth: 200, minHeight: 160, description: 'Loadout slots with ability names and score' },
-    full: { minWidth: 400, minHeight: 300, description: 'Full loadout grid, radar chart, alternatives table' },
+    micro: { ...DENSITY_CONFIG.standard.micro, description: 'Layers icon with slot count badge' },
+    compact: { ...DENSITY_CONFIG.standard.compact, description: 'Loadout slots with ability names and score' },
+    full: { ...DENSITY_CONFIG.standard.full, description: 'Full loadout grid, radar chart, alternatives table' },
   },
   component: LoadoutPanel as unknown as ComponentType<Record<string, unknown>>,
 });

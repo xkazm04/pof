@@ -57,13 +57,13 @@ export function BreakpointTable({
     <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="space-y-4">
       {/* Filters */}
       <div className="flex flex-wrap items-center gap-3">
-        <div className="flex items-center gap-1.5 text-[10px] font-mono uppercase tracking-[0.15em] text-text-muted">
+        <div className="flex items-center gap-1.5 text-xs font-mono uppercase tracking-[0.15em] text-text-muted">
           <Filter className="w-3 h-3" /> Filters:
         </div>
         <div className="flex gap-1">
           {(['all', 'offensive', 'defensive', 'utility'] as const).map(cat => (
             <button key={cat} onClick={() => setBpCategoryFilter(cat)}
-              className="px-2 py-1 rounded text-[10px] font-mono uppercase tracking-[0.15em] capitalize transition-all"
+              className="px-2 py-1 rounded text-xs font-mono uppercase tracking-[0.15em] capitalize transition-all"
               style={{
                 backgroundColor: bpCategoryFilter === cat ? `${cat === 'all' ? ACCENT : CATEGORY_COLORS[cat]}${OPACITY_20}` : 'transparent',
                 color: bpCategoryFilter === cat ? (cat === 'all' ? ACCENT : CATEGORY_COLORS[cat]) : 'var(--text-muted)',
@@ -75,7 +75,7 @@ export function BreakpointTable({
         </div>
         <div className="flex gap-1">
           <button onClick={() => setBpRarityFilter('all')}
-            className="px-2 py-1 rounded text-[10px] font-mono uppercase tracking-[0.15em] transition-all"
+            className="px-2 py-1 rounded text-xs font-mono uppercase tracking-[0.15em] transition-all"
             style={{
               backgroundColor: bpRarityFilter === 'all' ? `${ACCENT}${OPACITY_20}` : 'transparent',
               color: bpRarityFilter === 'all' ? ACCENT : 'var(--text-muted)',
@@ -85,7 +85,7 @@ export function BreakpointTable({
           </button>
           {RARITIES.map(r => (
             <button key={r} onClick={() => setBpRarityFilter(r)}
-              className="px-2 py-1 rounded text-[10px] font-mono uppercase tracking-[0.15em] transition-all"
+              className="px-2 py-1 rounded text-xs font-mono uppercase tracking-[0.15em] transition-all"
               style={{
                 backgroundColor: bpRarityFilter === r ? `${RARITY_COLORS[r]}${OPACITY_20}` : 'transparent',
                 color: bpRarityFilter === r ? RARITY_COLORS[r] : 'var(--text-muted)',
@@ -97,15 +97,15 @@ export function BreakpointTable({
         </div>
         <input type="text" value={bpSearch} onChange={(e) => setBpSearch(e.target.value)}
           placeholder="Search affixes..."
-          className="px-2 py-1 rounded text-[10px] font-mono bg-surface-deep text-text placeholder:text-text-muted/50 w-40 focus:outline-none focus:ring-1"
+          className="px-2 py-1 rounded text-xs font-mono bg-surface-deep text-text placeholder:text-text-muted/50 w-40 focus:outline-none focus:ring-1"
           style={{ border: `1px solid ${ACCENT}25`, '--tw-ring-color': STATUS_INFO } as React.CSSProperties} />
-        <span className="ml-auto text-[10px] font-mono text-text-muted">{breakpointData.length} affix{breakpointData.length !== 1 ? 'es' : ''}</span>
+        <span className="ml-auto text-xs font-mono text-text-muted">{breakpointData.length} affix{breakpointData.length !== 1 ? 'es' : ''}</span>
       </div>
 
       {/* Table */}
       <BlueprintPanel color={STATUS_INFO} className="overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="w-full text-[10px] font-mono">
+          <table className="w-full text-xs font-mono">
             <thead>
               <tr style={{ borderBottom: `1px solid ${STATUS_INFO}25` }}>
                 <th className="text-left px-3 py-2.5 text-text-muted font-bold uppercase tracking-[0.15em] sticky left-0 bg-surface-deep z-10">Affix</th>

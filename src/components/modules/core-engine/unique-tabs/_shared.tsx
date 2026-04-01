@@ -1,8 +1,9 @@
 'use client';
 
 import { type CSSProperties, ReactNode, useMemo, useState, useRef, useCallback } from 'react';
-import { ChevronDown, ChevronRight, ExternalLink } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { ChevronDown, ChevronRight, ExternalLink, Copy, Check } from 'lucide-react';
+import { UI_TIMEOUTS } from '@/lib/constants';
+import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import {
   STATUS_SUCCESS, STATUS_WARNING, STATUS_ERROR, STATUS_IMPROVED,
   OPACITY_8, OPACITY_10, OPACITY_20, OPACITY_30,
@@ -16,11 +17,13 @@ import type {
 
 /* ── Stagger Animation Variants ───────────────────────────────────────────── */
 
+import { ANIMATION_PRESETS } from '@/lib/motion';
+
 /** Stagger delay (seconds) for default grid/list item entrance */
-export const STAGGER_DEFAULT = 0.05;
+export const STAGGER_DEFAULT = ANIMATION_PRESETS.stagger.default;
 
 /** Stagger delay (seconds) for slower, more dramatic item entrance */
-export const STAGGER_SLOW = 0.1;
+export const STAGGER_SLOW = ANIMATION_PRESETS.stagger.slow;
 
 /* ── Shared STATUS_COLORS ─────────────────────────────────────────────────── */
 
@@ -32,18 +35,29 @@ export const STATUS_COLORS: Record<FeatureStatus, { dot: string; bg: string; lab
   unknown: { dot: '#64748b', bg: '#64748b18', label: 'Unknown' },
 };
 
+/* ── Safe status lookup ───────────────────────────────────────────────────── */
+
+const FALLBACK_STATUS = STATUS_COLORS.unknown;
+
+/** Returns dot color + label for a FeatureStatus, falling back to 'unknown' for unrecognized values. */
+export function statusInfo(status: FeatureStatus | undefined): { color: string; label: string } {
+  const sc = (status && STATUS_COLORS[status]) || FALLBACK_STATUS;
+  return { color: sc.dot, label: sc.label };
+}
+
 /* ── StatusDot ────────────────────────────────────────────────────────────── */
 
 export function StatusDot({ status }: { status: FeatureStatus }) {
   const sc = STATUS_COLORS[status];
   const isActive = status === 'implemented' || status === 'improved';
+  const prefersReduced = useReducedMotion();
   return (
     <span className="flex items-center gap-1.5">
       <motion.span
         className="w-1.5 h-1.5 rounded-full flex-shrink-0"
         style={{ backgroundColor: sc.dot, boxShadow: isActive ? `0 0 6px ${sc.dot}` : 'none' }}
-        animate={isActive ? { scale: [1, 1.3, 1], opacity: [0.6, 1, 0.6] } : {}}
-        transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
+        animate={isActive && !prefersReduced ? { scale: [1, 1.3, 1], opacity: [0.6, 1, 0.6] } : {}}
+        transition={prefersReduced ? { duration: 0 } : { duration: 2, repeat: Infinity, ease: 'easeInOut' }}
       />
       <span className="text-xs font-medium" style={{ color: sc.dot }}>{sc.label}</span>
     </span>
@@ -62,13 +76,14 @@ interface TabHeaderProps {
 }
 
 export function TabHeader({ icon: Icon, title, implemented, total, accent, children }: TabHeaderProps) {
+  const prefersReduced = useReducedMotion();
   return (
     <motion.div
-      initial={{ opacity: 0, y: -6 }}
+      initial={prefersReduced ? { opacity: 1, y: 0 } : { opacity: 0, y: -6 }}
       animate={{ opacity: 1, y: 0 }}
       className="flex items-center justify-between pb-2 border-b border-border/40"
     >
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-1.5">
         <div className="p-1.5 rounded-lg relative overflow-hidden group">
           <div className="absolute inset-0 opacity-20" style={{ backgroundColor: accent }} />
           <div className="absolute inset-0 opacity-0 group-hover:opacity-30 transition-opacity blur-md" style={{ backgroundColor: accent }} />
@@ -101,6 +116,7 @@ interface PipelineFlowProps {
 }
 
 export function PipelineFlow({ steps, accent, showStatus }: PipelineFlowProps) {
+  const prefersReduced = useReducedMotion();
   return (
     <div className="flex items-center gap-1 flex-wrap">
       {steps.map((step, i, arr) => {
@@ -112,9 +128,9 @@ export function PipelineFlow({ steps, accent, showStatus }: PipelineFlowProps) {
         return (
           <motion.div
             key={label}
-            initial={{ opacity: 0, x: -6 }}
+            initial={prefersReduced ? { opacity: 1, x: 0 } : { opacity: 0, x: -6 }}
             animate={{ opacity: 1, x: 0 }}
-            transition={{ delay: i * 0.1 }}
+            transition={prefersReduced ? { duration: 0 } : { delay: i * 0.1 }}
             className="flex items-center gap-1"
           >
             <div
@@ -133,13 +149,17 @@ export function PipelineFlow({ steps, accent, showStatus }: PipelineFlowProps) {
             </div>
             {!isLast && (
               <div className="relative w-4 h-[2px] bg-border overflow-hidden rounded-full">
-                <motion.div
-                  className="absolute inset-y-0 left-0 bg-current"
-                  style={{ color: accent }}
-                  initial={{ x: '-100%' }}
-                  animate={{ x: '100%' }}
-                  transition={{ duration: 1.5, repeat: Infinity, ease: 'linear', delay: i * 0.2 }}
-                />
+                {prefersReduced ? (
+                  <div className="absolute inset-0 bg-current opacity-40" style={{ color: accent }} />
+                ) : (
+                  <motion.div
+                    className="absolute inset-y-0 left-0 bg-current"
+                    style={{ color: accent }}
+                    initial={{ x: '-100%' }}
+                    animate={{ x: '100%' }}
+                    transition={{ duration: 1.5, repeat: Infinity, ease: 'linear', delay: i * 0.2 }}
+                  />
+                )}
               </div>
             )}
           </motion.div>
@@ -159,10 +179,66 @@ interface SectionLabelProps {
 
 export function SectionLabel({ icon: Icon, label, color }: SectionLabelProps) {
   return (
-    <div className="flex items-center gap-1 text-sm text-text-muted font-bold uppercase tracking-widest">
+    <div className="flex items-center gap-1.5 text-sm text-text-muted font-bold uppercase tracking-wider">
       {Icon && <Icon className="w-3 h-3" style={color ? { color, filter: `drop-shadow(0 0 3px ${color}80)` } : undefined} />}
       {label}
     </div>
+  );
+}
+
+/* ── CopyButton ──────────────────────────────────────────────────────────── */
+
+interface CopyButtonProps {
+  /** Returns the text to copy — called on click so the value is always fresh. */
+  getText: () => string;
+  /** Accent color used for the idle state. Defaults to the current text color. */
+  accent?: string;
+  /** Label shown next to the icon. Defaults to "Copy" / "Copied". */
+  label?: { idle?: string; copied?: string };
+  className?: string;
+}
+
+export function CopyButton({ getText, accent, label, className }: CopyButtonProps) {
+  const [copied, setCopied] = useState(false);
+
+  const handleCopy = useCallback(() => {
+    navigator.clipboard.writeText(getText());
+    setCopied(true);
+    setTimeout(() => setCopied(false), UI_TIMEOUTS.copyFeedback);
+  }, [getText]);
+
+  const idleLabel = label?.idle ?? 'Copy';
+  const copiedLabel = label?.copied ?? 'Copied';
+
+  // Pill variant (with accent color)
+  if (accent) {
+    return (
+      <button
+        onClick={handleCopy}
+        aria-label={copied ? copiedLabel : idleLabel}
+        className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-2xs font-mono font-bold transition-all border focus:outline-none focus:ring-1 focus:ring-current ${className ?? ''}`}
+        style={{
+          borderColor: copied ? `${STATUS_SUCCESS}${OPACITY_30}` : `${accent}${OPACITY_30}`,
+          color: copied ? STATUS_SUCCESS : accent,
+          backgroundColor: copied ? `${STATUS_SUCCESS}${OPACITY_10}` : `${accent}${OPACITY_10}`,
+        }}
+      >
+        {copied ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
+        {copied ? copiedLabel : idleLabel}
+      </button>
+    );
+  }
+
+  // Minimal variant (no accent — icon-only style like CodeBlock)
+  return (
+    <button
+      onClick={handleCopy}
+      aria-label={copied ? copiedLabel : idleLabel}
+      className={`flex items-center gap-1 text-xs font-mono text-zinc-500 hover:text-zinc-300 transition-colors focus:outline-none focus:ring-1 focus:ring-current ${className ?? ''}`}
+    >
+      {copied ? <Check size={12} className="text-emerald-400" /> : <Copy size={12} />}
+      {copied ? copiedLabel : idleLabel}
+    </button>
   );
 }
 
@@ -183,6 +259,7 @@ export function FeatureCard({ name, featureMap, defs, expanded, onToggle, accent
   const status: FeatureStatus = row?.status ?? 'unknown';
   const sc = STATUS_COLORS[status];
   const isExpanded = expanded === name;
+  const prefersReduced = useReducedMotion();
 
   return (
     <SurfaceCard level={2} className="relative overflow-hidden group">
@@ -196,10 +273,10 @@ export function FeatureCard({ name, featureMap, defs, expanded, onToggle, accent
         onClick={() => onToggle(name)}
         className="relative z-10 w-full text-left px-2.5 py-1.5 transition-colors focus:outline-none"
       >
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1.5">
           <motion.div
             animate={{ rotate: isExpanded ? 90 : 0 }}
-            transition={{ type: "spring", stiffness: 300, damping: 20 }}
+            transition={prefersReduced ? { duration: 0 } : { type: "spring", stiffness: 300, damping: 20 }}
             className="flex-shrink-0"
           >
             <ChevronRight className="w-3 h-3 text-text-muted transition-colors group-hover:text-text" />
@@ -215,10 +292,10 @@ export function FeatureCard({ name, featureMap, defs, expanded, onToggle, accent
       <AnimatePresence>
         {isExpanded && (
           <motion.div
-            initial={{ height: 0, opacity: 0 }}
-            animate={{ height: 'auto', opacity: 1 }}
-            exit={{ height: 0, opacity: 0 }}
-            transition={{ opacity: { duration: 0.2 }, height: { duration: 0.3, type: "spring", bounce: 0 } }}
+            initial={prefersReduced ? { opacity: 1 } : { height: 0, opacity: 0 }}
+            animate={prefersReduced ? { opacity: 1 } : { height: 'auto', opacity: 1 }}
+            exit={prefersReduced ? { opacity: 0 } : { height: 0, opacity: 0 }}
+            transition={prefersReduced ? { duration: 0 } : { opacity: { duration: 0.2 }, height: { duration: 0.3, type: "spring", bounce: 0 } }}
             className="relative z-10 overflow-hidden"
           >
             <div className="px-2.5 pb-2 space-y-1.5 border-t border-border/40 bg-surface/30">
@@ -295,16 +372,27 @@ const itemVariants = {
   visible: { opacity: 1, scale: 1, y: 0, transition: { type: "spring" as const, stiffness: 300, damping: 24 } }
 };
 
+const reducedGridVariants = {
+  hidden: {},
+  visible: {},
+};
+
+const reducedItemVariants = {
+  hidden: { opacity: 1 },
+  visible: { opacity: 1 },
+};
+
 export function FeatureGrid({ featureNames, featureMap, defs, expanded, onToggle, accent }: FeatureGridProps) {
+  const prefersReduced = useReducedMotion();
   return (
     <motion.div
-      variants={gridVariants}
+      variants={prefersReduced ? reducedGridVariants : gridVariants}
       initial="hidden"
       animate="visible"
       className="grid grid-cols-2 gap-1.5"
     >
       {featureNames.map((name) => (
-        <motion.div key={name} variants={itemVariants}>
+        <motion.div key={name} variants={prefersReduced ? reducedItemVariants : itemVariants}>
           <FeatureCard
             name={name}
             featureMap={featureMap}
@@ -322,18 +410,30 @@ export function FeatureGrid({ featureNames, featureMap, defs, expanded, onToggle
 /* ── LoadingSpinner ───────────────────────────────────────────────────────── */
 
 export function LoadingSpinner({ accent }: { accent: string }) {
+  const prefersReduced = useReducedMotion();
   return (
     <div className="flex items-center justify-center py-8">
-      <motion.div
-        className="w-8 h-8 rounded-full"
-        style={{
-          border: `2px solid ${accent}30`,
-          borderTopColor: accent,
-          filter: `drop-shadow(0 0 8px ${accent}60)`
-        }}
-        animate={{ rotate: 360 }}
-        transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
-      />
+      {prefersReduced ? (
+        <div
+          className="w-8 h-8 rounded-full"
+          style={{
+            border: `2px solid ${accent}30`,
+            borderTopColor: accent,
+            filter: `drop-shadow(0 0 8px ${accent}60)`,
+          }}
+        />
+      ) : (
+        <motion.div
+          className="w-8 h-8 rounded-full"
+          style={{
+            border: `2px solid ${accent}30`,
+            borderTopColor: accent,
+            filter: `drop-shadow(0 0 8px ${accent}60)`,
+          }}
+          animate={{ rotate: 360 }}
+          transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
+        />
+      )}
     </div>
   );
 }
@@ -400,7 +500,7 @@ export function RadarChart({ data, size = 220, accent, overlays, showLabels = tr
         const p = toXY(1.15, i);
         return (
           <text key={i} x={p.x} y={p.y} textAnchor="middle" dominantBaseline="central"
-            className="text-[11px] font-mono font-bold fill-[var(--text-muted)]"
+            className="text-xs font-mono font-bold uppercase tracking-wider fill-[var(--text-muted)]"
           >
             {d.axis}
           </text>
@@ -571,7 +671,7 @@ export function LiveMetricGauge({ metric, size = 88, accent }: LiveMetricGaugePr
         </div>
       </div>
       <div className="text-center">
-        <div className="text-sm font-mono font-bold text-text-muted uppercase tracking-widest truncate max-w-[80px]">{metric.label}</div>
+        <div className="text-sm font-mono font-bold text-text-muted uppercase tracking-wider truncate max-w-[80px]">{metric.label}</div>
         <div className="text-sm font-mono text-text">
           {metric.current.toFixed(metric.unit === 'ms' || metric.unit === '%' ? 1 : 0)}
           <span className="text-text-muted text-xs">{metric.unit}</span>
@@ -606,7 +706,7 @@ export function DiffViewer({ entries, accent }: DiffViewerProps) {
       {visibleEntries.map((e) => {
         const c = typeColors[e.changeType];
         return (
-          <div key={e.field} className="flex items-center gap-2 px-1.5 py-0.5 rounded hover:bg-surface-hover/30 transition-colors">
+          <div key={e.field} className="flex items-center gap-1.5 px-1.5 py-0.5 rounded hover:bg-surface-hover/30 transition-colors">
             <span className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ backgroundColor: c }} />
             <span className="text-text-muted font-medium w-32 truncate flex-shrink-0">{e.field}</span>
             {e.changeType === 'changed' ? (
@@ -628,7 +728,7 @@ export function DiffViewer({ entries, accent }: DiffViewerProps) {
       {unchangedCount > 0 && !showUnchanged && (
         <button
           onClick={() => setShowUnchanged(true)}
-          className="w-full flex items-center justify-center gap-2 px-2 py-1 rounded border border-dashed border-slate-700/50 text-slate-500 hover:text-slate-400 hover:border-slate-600/60 transition-colors cursor-pointer"
+          className="w-full flex items-center justify-center gap-1.5 px-2 py-1 rounded border border-dashed border-slate-700/50 text-slate-500 hover:text-slate-400 hover:border-slate-600/60 transition-colors cursor-pointer"
         >
           <ChevronRight className="w-3 h-3" />
           <span>Show {unchangedCount} unchanged</span>
@@ -637,7 +737,7 @@ export function DiffViewer({ entries, accent }: DiffViewerProps) {
       {unchangedCount > 0 && showUnchanged && (
         <button
           onClick={() => setShowUnchanged(false)}
-          className="w-full flex items-center justify-center gap-2 px-2 py-1 rounded border border-dashed border-slate-700/50 text-slate-500 hover:text-slate-400 hover:border-slate-600/60 transition-colors cursor-pointer"
+          className="w-full flex items-center justify-center gap-1.5 px-2 py-1 rounded border border-dashed border-slate-700/50 text-slate-500 hover:text-slate-400 hover:border-slate-600/60 transition-colors cursor-pointer"
         >
           <ChevronDown className="w-3 h-3" />
           <span>Hide {unchangedCount} unchanged</span>
@@ -768,6 +868,7 @@ export interface SubTabNavigationProps {
 }
 
 export function SubTabNavigation({ tabs, activeTabId, onChange, accent }: SubTabNavigationProps) {
+  const prefersReduced = useReducedMotion();
   return (
     <div className="flex gap-1 mb-2 border-b border-border/40 pb-1.5 overflow-x-auto custom-scrollbar">
       {tabs.map(tab => {
@@ -778,7 +879,7 @@ export function SubTabNavigation({ tabs, activeTabId, onChange, accent }: SubTab
             key={tab.id}
             onClick={() => onChange(tab.id)}
             className={`
-              relative flex items-center gap-2 px-2.5 py-1 rounded-lg text-sm font-semibold
+              relative flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-sm font-semibold
               transition-all duration-300 focus:outline-none whitespace-nowrap
               ${isActive ? 'text-white' : 'text-text-muted hover:text-text hover:bg-surface/50'}
             `}
@@ -788,7 +889,7 @@ export function SubTabNavigation({ tabs, activeTabId, onChange, accent }: SubTab
                 layoutId="activeSubTabBg"
                 className="absolute inset-0 rounded-lg opacity-20"
                 style={{ backgroundColor: accent }}
-                transition={{ type: "spring", stiffness: 300, damping: 25 }}
+                transition={prefersReduced ? { duration: 0 } : { type: "spring", stiffness: 300, damping: 25 }}
               />
             )}
             {Icon && (
@@ -833,6 +934,7 @@ export function CollapsibleSection({
   title, color, children, defaultOpen = false, icon: Icon, testId, variant = 'card',
 }: CollapsibleSectionProps) {
   const [open, setOpen] = useState(defaultOpen);
+  const prefersReduced = useReducedMotion();
 
   const Wrapper = variant === 'card' ? SurfaceCard : 'div';
   const wrapperProps = variant === 'card'
@@ -843,10 +945,10 @@ export function CollapsibleSection({
     <Wrapper {...wrapperProps}>
       <button
         onClick={() => setOpen(o => !o)}
-        className="w-full flex items-center gap-2 px-3 py-2 text-left hover:bg-surface-hover/30 transition-colors"
+        className="w-full flex items-center gap-1.5 px-3 py-2 text-left hover:bg-surface-hover/30 transition-colors"
         {...(testId ? { 'data-testid': `${testId}-toggle` } : {})}
       >
-        <motion.div animate={{ rotate: open ? 90 : 0 }} transition={{ type: 'spring', stiffness: 300, damping: 20 }}>
+        <motion.div animate={{ rotate: open ? 90 : 0 }} transition={prefersReduced ? { duration: 0 } : { type: 'spring', stiffness: 300, damping: 20 }}>
           <ChevronRight className="w-3.5 h-3.5 text-text-muted" />
         </motion.div>
         {Icon
@@ -858,10 +960,10 @@ export function CollapsibleSection({
       <AnimatePresence>
         {open && (
           <motion.div
-            initial={{ height: 0, opacity: 0 }}
-            animate={{ height: 'auto', opacity: 1 }}
-            exit={{ height: 0, opacity: 0 }}
-            transition={{ duration: 0.2 }}
+            initial={prefersReduced ? { opacity: 1 } : { height: 0, opacity: 0 }}
+            animate={prefersReduced ? { opacity: 1 } : { height: 'auto', opacity: 1 }}
+            exit={prefersReduced ? { opacity: 0 } : { height: 0, opacity: 0 }}
+            transition={{ duration: prefersReduced ? 0 : 0.2 }}
             className="overflow-hidden"
           >
             <div className="px-3 pb-3">{children}</div>
@@ -950,13 +1052,13 @@ export function NormalizedLineChart({
       </svg>
 
       {yLabels && yLabels.length > 0 && (
-        <div className="absolute left-1 top-4 bottom-4 flex flex-col justify-between text-[11px] text-text-muted font-mono">
+        <div className="absolute left-1 top-4 bottom-4 flex flex-col justify-between text-xs text-text-muted font-mono">
           {yLabels.map((label, i) => <span key={i}>{label}</span>)}
         </div>
       )}
 
       {xLabels && xLabels.length > 0 && (
-        <div className="absolute left-4 right-4 bottom-0 flex justify-between text-[11px] text-text-muted font-mono">
+        <div className="absolute left-4 right-4 bottom-0 flex justify-between text-xs text-text-muted font-mono">
           {xLabels.map((label, i) => <span key={i}>{label}</span>)}
         </div>
       )}

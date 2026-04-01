@@ -1,12 +1,14 @@
 'use client';
 
 import { useState, useCallback } from 'react';
-import { motion } from 'framer-motion';
+import { motion, useReducedMotion } from 'framer-motion';
 import { Copy, Check } from 'lucide-react';
 import {
   STATUS_SUCCESS, STATUS_WARNING, STATUS_ERROR,
-  OPACITY_10, OPACITY_20, OPACITY_30,
+  OPACITY_5, OPACITY_10, OPACITY_20, OPACITY_22, OPACITY_30, OPACITY_80, OPACITY_90,
+  withOpacity,
 } from '@/lib/chart-colors';
+import { ANIMATION_PRESETS, motionSafe } from '@/lib/motion';
 import { BlueprintPanel, NeonBar } from '../_design';
 import { ACCENT } from './data';
 
@@ -20,16 +22,20 @@ export function CircularGauge({ label, current, target, unit }: {
   const circ = 2 * Math.PI * r;
   const color = pct < 0.75 ? STATUS_SUCCESS : pct < 0.95 ? STATUS_WARNING : STATUS_ERROR;
   const statusLabel = pct < 0.75 ? 'NOMINAL' : pct < 0.95 ? 'WARNING' : 'CRITICAL';
+  const prefersReduced = useReducedMotion();
 
   return (
-    <BlueprintPanel color={ACCENT} className="flex flex-col items-center px-2 py-3 gap-2">
+    <BlueprintPanel color={ACCENT} className="flex flex-col items-center px-2 py-3 gap-3">
       <div className="relative">
         <svg width="48" height="48" viewBox="0 0 60 60">
-          <circle cx="30" cy="30" r={r} fill="none" stroke={`${ACCENT}08`} strokeWidth="4" />
-          <circle cx="30" cy="30" r={r} fill="none" stroke={color} strokeWidth="4"
-            strokeDasharray={circ} strokeDashoffset={circ * (1 - pct)}
+          <circle cx="30" cy="30" r={r} fill="none" stroke={withOpacity(ACCENT, OPACITY_5)} strokeWidth="4" />
+          <motion.circle cx="30" cy="30" r={r} fill="none" stroke={color} strokeWidth="4"
+            strokeDasharray={circ}
+            initial={{ strokeDashoffset: circ }}
+            animate={{ strokeDashoffset: circ * (1 - pct) }}
+            transition={motionSafe(ANIMATION_PRESETS.fill, prefersReduced)}
             strokeLinecap="round" transform="rotate(-90 30 30)"
-            style={{ transition: 'stroke-dashoffset 0.3s ease-out', filter: `drop-shadow(0 0 4px ${color})` }}
+            style={{ filter: `drop-shadow(0 0 4px ${color})` }}
           />
         </svg>
         <div className="absolute inset-0 flex items-center justify-center flex-col leading-none">
@@ -38,15 +44,15 @@ export function CircularGauge({ label, current, target, unit }: {
       </div>
 
       <div className="text-center w-full z-10">
-        <div className="text-[10px] font-mono uppercase tracking-[0.15em] mb-0.5" style={{ color: `${ACCENT}cc` }}>{label}</div>
-        <div className="text-sm font-mono" style={{ color: `${ACCENT}ee`, textShadow: `0 0 8px ${ACCENT}50` }}>
-          {current.toFixed(unit === 'ms' ? 1 : 0)}<span className="text-[10px] font-mono uppercase tracking-[0.15em]" style={{ color: `${ACCENT}50` }}>{unit}</span>
+        <div className="text-xs font-mono uppercase tracking-wider mb-0.5" style={{ color: withOpacity(ACCENT, OPACITY_80) }}>{label}</div>
+        <div className="text-sm font-mono" style={{ color: withOpacity(ACCENT, OPACITY_90), textShadow: `0 0 8px ${withOpacity(ACCENT, OPACITY_30)}` }}>
+          {current.toFixed(unit === 'ms' ? 1 : 0)}<span className="text-xs font-mono uppercase tracking-wider" style={{ color: withOpacity(ACCENT, OPACITY_30) }}>{unit}</span>
         </div>
         <div className="mt-1.5">
           <NeonBar pct={pct * 100} color={color} height={3} glow />
         </div>
         <div className="mt-1 flex justify-center">
-          <span className="text-[10px] font-mono uppercase tracking-[0.15em] px-1.5 py-[2px] rounded border"
+          <span className="text-xs font-mono uppercase tracking-wider px-1.5 py-0.5 rounded border"
             style={{ backgroundColor: `${color}${OPACITY_10}`, color, borderColor: `${color}${OPACITY_30}` }}>
             {statusLabel}
           </span>
@@ -69,12 +75,12 @@ export function CopyButton({ text }: { text: string }) {
 
   return (
     <button onClick={handleCopy}
-      className="flex items-center gap-1.5 text-[10px] font-mono uppercase tracking-[0.15em] px-2 py-1 rounded transition-all border shrink-0"
+      className="flex items-center gap-1.5 text-xs font-mono uppercase tracking-wider px-2 py-1 rounded transition-all border shrink-0"
       style={{
         backgroundColor: copied ? `${STATUS_SUCCESS}${OPACITY_20}` : `${ACCENT}${OPACITY_10}`,
         color: copied ? STATUS_SUCCESS : ACCENT,
         borderColor: copied ? STATUS_SUCCESS : `${ACCENT}${OPACITY_30}`,
-        boxShadow: copied ? `0 0 10px ${STATUS_SUCCESS}40` : 'none',
+        boxShadow: copied ? `0 0 10px ${withOpacity(STATUS_SUCCESS, OPACITY_22)}` : 'none',
       }}>
       {copied ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
       {copied ? 'COPIED' : 'EXEC'}

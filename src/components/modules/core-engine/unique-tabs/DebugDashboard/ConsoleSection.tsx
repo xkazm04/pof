@@ -86,7 +86,7 @@ export function ConsoleSection() {
     <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.25 }}>
       <div className="flex items-center justify-between mb-3">
         <SectionHeader label="INTERACTIVE_CONSOLE" color={ACCENT} icon={Terminal} />
-        <span className="text-[10px] font-mono uppercase tracking-[0.15em] text-text-muted shrink-0 ml-2">
+        <span className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted shrink-0 ml-2">
           {cmdHistory.length > 0 ? `${cmdHistory.length} CMD${cmdHistory.length !== 1 ? 'S' : ''} IN HISTORY` : 'NO HISTORY'}
         </span>
       </div>
@@ -94,22 +94,22 @@ export function ConsoleSection() {
         {/* Console output */}
         <div className="max-h-48 overflow-y-auto custom-scrollbar p-3 space-y-1">
           {cmdHistory.length === 0 && (
-            <div className="text-[10px] font-mono uppercase tracking-[0.15em] text-text-muted py-2">
+            <div className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted py-2">
               TYPE A COMMAND BELOW OR CLICK FROM THE CATALOG
             </div>
           )}
           <AnimatePresence initial={false}>
             {cmdHistory.map((entry) => (
               <motion.div key={entry.id} initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }} className="font-mono text-xs">
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-1.5">
                   <span style={{ color: `${ACCENT}60` }}>&gt;</span>
                   <span className="font-bold" style={{ color: `${ACCENT}dd` }}>{entry.command}</span>
-                  <span className="text-text-muted ml-auto text-[10px]">{new Date(entry.timestamp).toLocaleTimeString()}</span>
+                  <span className="text-text-muted ml-auto text-xs">{new Date(entry.timestamp).toLocaleTimeString()}</span>
                 </div>
                 {entry.status === 'pending' ? (
                   <div className="flex items-center gap-1.5 pl-4" style={{ color: `${ACCENT}60` }}>
                     <Loader2 className="w-3 h-3 animate-spin" />
-                    <span className="text-[10px] font-mono uppercase tracking-[0.15em]">EXECUTING...</span>
+                    <span className="text-xs font-mono uppercase tracking-[0.15em]">EXECUTING...</span>
                   </div>
                 ) : (
                   <div className="pl-4 flex items-start gap-1.5">
@@ -135,11 +135,11 @@ export function ConsoleSection() {
             className="flex-1 text-xs font-mono bg-transparent border-none text-text-primary placeholder:text-text-muted focus:outline-none uppercase tracking-[0.15em] disabled:opacity-50"
           />
           <button onClick={() => executeCommand(cmdInput)} disabled={!cmdInput.trim() || isExecuting}
-            className="flex items-center gap-1 text-[10px] font-mono uppercase tracking-[0.15em] px-2 py-1 rounded border transition-all disabled:opacity-30"
+            className="flex items-center gap-1 text-xs font-mono uppercase tracking-[0.15em] px-2 py-1 rounded border transition-all disabled:opacity-30"
             style={{ backgroundColor: `${ACCENT_EMERALD}${OPACITY_10}`, color: ACCENT_EMERALD, borderColor: `${ACCENT_EMERALD}${OPACITY_30}` }}>
             {isExecuting ? <Loader2 className="w-3 h-3 animate-spin" /> : <Play className="w-3 h-3" />} EXEC
           </button>
-          <span className="text-[10px] font-mono text-text-muted hidden sm:inline">
+          <span className="text-xs font-mono text-text-muted hidden sm:inline">
             <CornerDownLeft className="w-3 h-3 inline" /> ENTER
           </span>
         </div>

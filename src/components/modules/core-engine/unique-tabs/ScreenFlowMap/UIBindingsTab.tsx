@@ -30,7 +30,7 @@ export function UIBindingsTab() {
             <InteractivePill items={BREAKPOINT_PILLS} activeIndex={selectedBreakpoint} onChange={setSelectedBreakpoint} accent={ACCENT} layoutId="breakpoint-pill" />
           </div>
           <div className="space-y-1">
-            <div className="grid grid-cols-4 gap-2 text-[10px] font-mono font-bold uppercase tracking-[0.15em] text-text-muted px-2 pb-1 border-b border-border/30">
+            <div className="grid grid-cols-4 gap-2 text-xs font-mono font-bold uppercase tracking-[0.15em] text-text-muted px-2 pb-1 border-b border-border/30">
               <span>Widget</span><span>MinRes</span><span>Scale</span><span>Status</span>
             </div>
             {BREAKPOINT_WIDGETS.map((w, i) => {
@@ -45,7 +45,7 @@ export function UIBindingsTab() {
                   <span className="text-text-muted">{w.minRes}</span>
                   <span className="text-text-muted">{w.scaleMode}</span>
                   <span>
-                    <span className="text-[10px] font-mono uppercase tracking-[0.15em] px-1.5 py-0.5 rounded font-bold border"
+                    <span className="text-xs font-mono uppercase tracking-[0.15em] px-1.5 py-0.5 rounded font-bold border"
                       style={{ backgroundColor: `${statusColor}15`, color: statusColor, borderColor: `${statusColor}30` }}>
                       {w.status === 'ok' ? 'OK' : w.status === 'warn' ? 'WARN' : 'FAIL'}
                     </span>
@@ -83,7 +83,7 @@ export function UIBindingsTab() {
                             stroke={isActive ? INPUT_MODE_COLORS[edge.from] : 'rgba(255,255,255,0.1)'}
                             strokeWidth={isActive ? 2 : 1} strokeDasharray="4 3" markerEnd="url(#sm-arrow)" />
                           <text x={mx + perpX} y={my + perpY - 4} textAnchor="middle"
-                            className="text-[11px] font-mono"
+                            className="text-xs font-mono"
                             fill={isActive ? INPUT_MODE_COLORS[edge.from] : 'var(--text-muted)'}>{edge.trigger}</text>
                         </g>
                       );
@@ -111,7 +111,7 @@ export function UIBindingsTab() {
                             strokeWidth={isActive ? 3 : 1.5}
                             style={{ filter: isActive ? `drop-shadow(0 0 12px ${color})` : 'none', transition: 'all 0.2s' }} />
                           <text x={pos.x} y={pos.y} textAnchor="middle" dominantBaseline="central"
-                            className="text-[11px] font-mono font-bold pointer-events-none" fill={color}>{node.label}</text>
+                            className="text-xs font-mono font-bold pointer-events-none" fill={color}>{node.label}</text>
                           {isActive && <circle cx={pos.x} cy={pos.y} r={36} fill="none" stroke={color} strokeWidth="1" strokeDasharray="3 3" opacity={0.4} />}
                         </g>
                       );
@@ -121,7 +121,7 @@ export function UIBindingsTab() {
               })()}
             </svg>
           </div>
-          <div className="text-center text-[10px] font-mono uppercase tracking-[0.15em] text-text-muted">
+          <div className="text-center text-xs font-mono uppercase tracking-[0.15em] text-text-muted">
             Current Mode: <span className="font-bold" style={{ color: INPUT_MODE_COLORS[currentInputMode] }}>{currentInputMode}</span>
             <span className="ml-2 opacity-60">(click nodes to switch)</span>
           </div>
@@ -134,10 +134,10 @@ export function UIBindingsTab() {
           <table className="w-full text-xs font-mono">
             <thead>
               <tr className="border-b border-border/40">
-                <th className="text-left px-2 py-2 text-[10px] font-mono font-bold uppercase tracking-[0.15em] text-text-muted">Widget</th>
-                <th className="text-left px-2 py-2 text-[10px] font-mono font-bold uppercase tracking-[0.15em] text-text-muted">Attribute</th>
-                <th className="text-left px-2 py-2 text-[10px] font-mono font-bold uppercase tracking-[0.15em] text-text-muted">Method</th>
-                <th className="text-left px-2 py-2 text-[10px] font-mono font-bold uppercase tracking-[0.15em] text-text-muted">Frequency</th>
+                <th className="text-left px-2 py-2 text-xs font-mono font-bold uppercase tracking-[0.15em] text-text-muted">Widget</th>
+                <th className="text-left px-2 py-2 text-xs font-mono font-bold uppercase tracking-[0.15em] text-text-muted">Attribute</th>
+                <th className="text-left px-2 py-2 text-xs font-mono font-bold uppercase tracking-[0.15em] text-text-muted">Method</th>
+                <th className="text-left px-2 py-2 text-xs font-mono font-bold uppercase tracking-[0.15em] text-text-muted">Frequency</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border/20">
@@ -149,7 +149,7 @@ export function UIBindingsTab() {
                   <td className="px-2 py-2"><span className={`text-xs ${w.updateMethod === 'Delegate' ? 'text-emerald-400' : w.updateMethod === 'Poll' ? 'text-amber-400' : 'text-cyan-400'}`}>{w.updateMethod}</span></td>
                   <td className="px-2 py-2 flex items-center gap-2">
                     <span className="text-text-muted text-xs">{w.frequency}</span>
-                    {w.isStale && <span className="ml-auto px-1.5 py-0.5 bg-amber-500/10 text-amber-500 border border-amber-500/20 rounded text-[10px] font-mono uppercase tracking-[0.15em] font-bold">Stale</span>}
+                    {w.isStale && <span className="ml-auto px-1.5 py-0.5 bg-amber-500/10 text-amber-500 border border-amber-500/20 rounded text-xs font-mono uppercase tracking-[0.15em] font-bold">Stale</span>}
                   </td>
                 </motion.tr>
               ))}
