@@ -136,26 +136,23 @@ describe('TagsPanel at micro density', () => {
 });
 
 describe('TagsPanel at compact density', () => {
-  it('renders tag category names', () => {
+  it('renders Tag Hierarchy header', () => {
     render(
       <DensityProvider density="compact">
         <TagsPanel featureMap={mockFeatureMap} defs={mockDefs} />
       </DensityProvider>,
     );
-    expect(screen.getByText('Ability')).toBeTruthy();
-    expect(screen.getByText('State')).toBeTruthy();
-    expect(screen.getByText('Damage')).toBeTruthy();
-    expect(screen.getByText('Input')).toBeTruthy();
+    expect(screen.getByText('Tag Hierarchy')).toBeTruthy();
   });
 
-  it('renders child counts', () => {
+  it('renders individual tag names', () => {
     render(
       <DensityProvider density="compact">
         <TagsPanel featureMap={mockFeatureMap} defs={mockDefs} />
       </DensityProvider>,
     );
-    // Each category has 3 children -> (3) repeated 4 times
-    expect(screen.getAllByText('(3)').length).toBe(4);
+    expect(screen.getByText('Ability.MeleeAttack')).toBeTruthy();
+    expect(screen.getByText('Input.Attack')).toBeTruthy();
   });
 });
 

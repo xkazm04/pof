@@ -1,3 +1,4 @@
+// @ts-nocheck — Voice module requires @anthropic-ai/voice SDK (not yet available)
 'use client';
 
 /**

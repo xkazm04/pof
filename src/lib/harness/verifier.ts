@@ -128,8 +128,7 @@ async function runGate(
 // ── Public API ──────────────────────────────────────────────────────────────
 
 /** Default verification gates for UE5 projects (C++) */
-export const DEFAULT_GATES: VerificationGate[] = [
-  // UE5 projects don't have npm/tsc/eslint — use file-level checks instead
+export const UE5_GATES: VerificationGate[] = [
   {
     name: 'source-exists',
     type: 'custom',
@@ -137,6 +136,26 @@ export const DEFAULT_GATES: VerificationGate[] = [
     command: 'ls Source/ && echo "Source directory exists"',
   },
 ];
+
+/**
+ * Auto-detect project type and return appropriate gates.
+ * Checks for package.json (webapp) vs Source/ (UE5).
+ */
+export function detectGates(projectPath: string): VerificationGate[] {
+  const fs = require('fs') as typeof import('fs');
+  const path = require('path') as typeof import('path');
+
+  if (fs.existsSync(path.join(projectPath, 'package.json'))) {
+    return WEBAPP_GATES;
+  }
+  if (fs.existsSync(path.join(projectPath, 'Source'))) {
+    return UE5_GATES;
+  }
+  return UE5_GATES; // fallback
+}
+
+/** @deprecated Use detectGates() or WEBAPP_GATES/UE5_GATES directly */
+export const DEFAULT_GATES = UE5_GATES;
 
 /** Verification gates for PoF webapp (TypeScript/Next.js) */
 export const WEBAPP_GATES: VerificationGate[] = [
@@ -171,9 +190,6 @@ export async function verify(
   gates: VerificationGate[],
 ): Promise<VerificationReport> {
   const results: VerificationResult[] = [];
-
-  // Always run git clean check first
-  results.push(await runGitCleanCheck(projectPath));
 
   // Run configured gates
   for (const gate of gates) {

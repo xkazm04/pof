@@ -1,0 +1,500 @@
+{
+  "game": "PoF-Dzin-Full",
+  "projectPath": "C:/Users/kazda/kiro/pof",
+  "ueVersion": "5.7.3",
+  "areas": [
+    {
+      "id": "dzin-game-director",
+      "moduleId": "arpg-character",
+      "label": "Game Director Panels",
+      "description": "Create 4 dzin panels for the Game Director module: director-overview (session list, status), director-findings (findings explorer by category/severity), director-regression (regression tracker, trend charts), director-session (session detail with events/screenshots). Follow existing dzin panel pattern in src/components/modules/core-engine/dzin-panels/. Reference data patterns from src/components/modules/game-director/ (GameDirectorModule, FindingsExplorer, RegressionTrackerView, SessionDetail). Register in panel-definitions.ts with domain 'game-director'.",
+      "checklistItemIds": [],
+      "featureNames": [
+        "director-overview",
+        "director-findings",
+        "director-regression",
+        "director-session"
+      ],
+      "dependsOn": [],
+      "status": "completed",
+      "features": [
+        {
+          "id": "dzin::director-overview",
+          "name": "director-overview",
+          "status": "pass",
+          "quality": 5,
+          "lastSession": 8
+        },
+        {
+          "id": "dzin::director-findings",
+          "name": "director-findings",
+          "status": "pass",
+          "quality": 5,
+          "lastSession": 8
+        },
+        {
+          "id": "dzin::director-regression",
+          "name": "director-regression",
+          "status": "pass",
+          "quality": 5,
+          "lastSession": 8
+        },
+        {
+          "id": "dzin::director-session",
+          "name": "director-session",
+          "status": "pass",
+          "quality": 5,
+          "lastSession": 8
+        }
+      ],
+      "completedAt": 8
+    },
+    {
+      "id": "dzin-game-systems",
+      "moduleId": "arpg-character",
+      "label": "Game Systems Panels",
+      "description": "Create 6 dzin panels for Game Systems: ai-sandbox (AI testing sandbox, BT visualizer), physics-system (collision profiles, projectile system), multiplayer-system (replication, RPC dashboard), input-system (key bindings, gamepad), save-load-system (save slots, auto-save config), build-pipeline (build history, cook settings, platform profiles). Reference src/components/modules/game-systems/. Register with domain 'game-systems'.",
+      "checklistItemIds": [],
+      "featureNames": [
+        "ai-sandbox",
+        "physics-system",
+        "multiplayer-system",
+        "input-system",
+        "save-load-system",
+        "build-pipeline"
+      ],
+      "dependsOn": [],
+      "status": "completed",
+      "features": [
+        {
+          "id": "dzin::ai-sandbox",
+          "name": "ai-sandbox",
+          "status": "pass",
+          "quality": 4,
+          "lastSession": 9
+        },
+        {
+          "id": "dzin::physics-system",
+          "name": "physics-system",
+          "status": "pass",
+          "quality": 4,
+          "lastSession": 9
+        },
+        {
+          "id": "dzin::multiplayer-system",
+          "name": "multiplayer-system",
+          "status": "pass",
+          "quality": 4,
+          "lastSession": 9
+        },
+        {
+          "id": "dzin::input-system",
+          "name": "input-system",
+          "status": "pass",
+          "quality": 4,
+          "lastSession": 9
+        },
+        {
+          "id": "dzin::save-load-system",
+          "name": "save-load-system",
+          "status": "pass",
+          "quality": 4,
+          "lastSession": 9
+        },
+        {
+          "id": "dzin::build-pipeline",
+          "name": "build-pipeline",
+          "status": "pass",
+          "quality": 4,
+          "lastSession": 9
+        }
+      ],
+      "completedAt": 9
+    },
+    {
+      "id": "dzin-project-setup",
+      "moduleId": "arpg-character",
+      "label": "Project Setup Panels",
+      "description": "Create 5 dzin panels for Project Setup: setup-wizard (project creation wizard steps), setup-status (status checklist, build verify), ue5-remote (UE5 remote controller, live coding), blueprint-inspector (blueprint parsing, asset inspection), test-harness (test spec editor, suite runner). Reference src/components/modules/project-setup/. Register with domain 'project-setup'.",
+      "checklistItemIds": [],
+      "featureNames": [
+        "setup-wizard",
+        "setup-status",
+        "ue5-remote",
+        "blueprint-inspector",
+        "test-harness"
+      ],
+      "dependsOn": [],
+      "status": "completed",
+      "features": [
+        {
+          "id": "dzin::setup-wizard",
+          "name": "setup-wizard",
+          "status": "pass",
+          "quality": 4,
+          "lastSession": 10
+        },
+        {
+          "id": "dzin::setup-status",
+          "name": "setup-status",
+          "status": "pass",
+          "quality": 4,
+          "lastSession": 10
+        },
+        {
+          "id": "dzin::ue5-remote",
+          "name": "ue5-remote",
+          "status": "pass",
+          "quality": 4,
+          "lastSession": 10
+        },
+        {
+          "id": "dzin::blueprint-inspector",
+          "name": "blueprint-inspector",
+          "status": "pass",
+          "quality": 4,
+          "lastSession": 10
+        },
+        {
+          "id": "dzin::test-harness",
+          "name": "test-harness",
+          "status": "pass",
+          "quality": 4,
+          "lastSession": 10
+        }
+      ],
+      "completedAt": 10
+    },
+    {
+      "id": "dzin-visual-gen",
+      "moduleId": "arpg-character",
+      "label": "Visual Gen / Asset Studio Panels",
+      "description": "Create 6 dzin panels for Visual Generation tools: asset-browser (browse/filter assets), asset-forge (AI generation queue), asset-viewer-3d (3D scene viewer), material-lab-pbr (PBR editor, shader preview), blender-pipeline (Blender integration, script runner), scene-composer (scene tree, exporter). Reference src/components/modules/visual-gen/. Register with domain 'visual-gen'.",
+      "checklistItemIds": [],
+      "featureNames": [
+        "asset-browser",
+        "asset-forge-gen",
+        "asset-viewer-3d",
+        "material-lab-pbr",
+        "blender-pipeline-panel",
+        "scene-composer-panel"
+      ],
+      "dependsOn": [],
+      "status": "completed",
+      "features": [
+        {
+          "id": "dzin::asset-browser",
+          "name": "asset-browser",
+          "status": "pass",
+          "quality": 4,
+          "lastSession": 11
+        },
+        {
+          "id": "dzin::asset-forge-gen",
+          "name": "asset-forge-gen",
+          "status": "pass",
+          "quality": 4,
+          "lastSession": 11
+        },
+        {
+          "id": "dzin::asset-viewer-3d",
+          "name": "asset-viewer-3d",
+          "status": "pass",
+          "quality": 4,
+          "lastSession": 11
+        },
+        {
+          "id": "dzin::material-lab-pbr",
+          "name": "material-lab-pbr",
+          "status": "pass",
+          "quality": 4,
+          "lastSession": 11
+        },
+        {
+          "id": "dzin::blender-pipeline-panel",
+          "name": "blender-pipeline-panel",
+          "status": "pass",
+          "quality": 4,
+          "lastSession": 11
+        },
+        {
+          "id": "dzin::scene-composer-panel",
+          "name": "scene-composer-panel",
+          "status": "pass",
+          "quality": 4,
+          "lastSession": 11
+        }
+      ],
+      "completedAt": 11
+    },
+    {
+      "id": "dzin-evaluator-extended",
+      "moduleId": "arpg-character",
+      "label": "Extended Evaluator Panels",
+      "description": "Create 6 dzin panels for remaining Evaluator views: eval-deep-scan (deep eval results, 3-pass findings), eval-economy (economy simulator, code gen), eval-roadmap (calendar roadmap, weekly digest), eval-performance (performance profiling), eval-session-analytics (session analytics dashboard), eval-pattern-library (pattern library, cross-module overlap). Reference src/components/modules/evaluator/. Register with domain 'evaluator'.",
+      "checklistItemIds": [],
+      "featureNames": [
+        "eval-deep-scan",
+        "eval-economy",
+        "eval-roadmap",
+        "eval-performance",
+        "eval-session-analytics",
+        "eval-pattern-library"
+      ],
+      "dependsOn": [],
+      "status": "completed",
+      "features": [
+        {
+          "id": "dzin::eval-deep-scan",
+          "name": "eval-deep-scan",
+          "status": "pass",
+          "quality": 4,
+          "lastSession": 12
+        },
+        {
+          "id": "dzin::eval-economy",
+          "name": "eval-economy",
+          "status": "pass",
+          "quality": 4,
+          "lastSession": 12
+        },
+        {
+          "id": "dzin::eval-roadmap",
+          "name": "eval-roadmap",
+          "status": "pass",
+          "quality": 4,
+          "lastSession": 12
+        },
+        {
+          "id": "dzin::eval-performance",
+          "name": "eval-performance",
+          "status": "pass",
+          "quality": 4,
+          "lastSession": 12
+        },
+        {
+          "id": "dzin::eval-session-analytics",
+          "name": "eval-session-analytics",
+          "status": "pass",
+          "quality": 4,
+          "lastSession": 12
+        },
+        {
+          "id": "dzin::eval-pattern-library",
+          "name": "eval-pattern-library",
+          "status": "pass",
+          "quality": 4,
+          "lastSession": 12
+        }
+      ],
+      "completedAt": 12
+    },
+    {
+      "id": "dzin-content-extended",
+      "moduleId": "arpg-character",
+      "label": "Extended Content Panels",
+      "description": "Create 6 dzin panels for remaining Content modules: anim-choreographer (AI combo choreographer, state machine editor), audio-event-catalog (audio events, pipeline diagram), level-flow-editor (level flow editor, difficulty arc, streaming zones), material-patterns (material pattern catalog, style transfer), ui-damage-numbers (damage number palette, physics sim), ui-health-bars (enemy health bar FSM, low health pulse). Reference src/components/modules/content/. Register with domain 'content'.",
+      "checklistItemIds": [],
+      "featureNames": [
+        "anim-choreographer",
+        "audio-event-catalog",
+        "level-flow-editor",
+        "material-patterns",
+        "ui-damage-numbers",
+        "ui-health-bars"
+      ],
+      "dependsOn": [],
+      "status": "completed",
+      "features": [
+        {
+          "id": "dzin::anim-choreographer",
+          "name": "anim-choreographer",
+          "status": "pass",
+          "quality": 4,
+          "lastSession": 13
+        },
+        {
+          "id": "dzin::audio-event-catalog",
+          "name": "audio-event-catalog",
+          "status": "pass",
+          "quality": 4,
+          "lastSession": 13
+        },
+        {
+          "id": "dzin::level-flow-editor",
+          "name": "level-flow-editor",
+          "status": "pass",
+          "quality": 4,
+          "lastSession": 13
+        },
+        {
+          "id": "dzin::material-patterns",
+          "name": "material-patterns",
+          "status": "pass",
+          "quality": 4,
+          "lastSession": 13
+        },
+        {
+          "id": "dzin::ui-damage-numbers",
+          "name": "ui-damage-numbers",
+          "status": "pass",
+          "quality": 4,
+          "lastSession": 13
+        },
+        {
+          "id": "dzin::ui-health-bars",
+          "name": "ui-health-bars",
+          "status": "pass",
+          "quality": 4,
+          "lastSession": 13
+        }
+      ],
+      "completedAt": 13
+    },
+    {
+      "id": "dzin-unique-tabs",
+      "moduleId": "arpg-character",
+      "label": "Core Engine Unique Tab Panels",
+      "description": "Create 8 dzin panels for the most important unique-tabs that don't yet have dzin equivalents: ability-forge (ability generation from text), combat-choreography (choreography editor, spatial grid, timeline), combo-chain (combo builder, cooldown overlap), damage-pipeline (damage flow diagram, execution breakdown), debug-dashboard (stat dashboard, memory, network, draw calls), dodge-timeline (dodge chain timeline, frame data, hit markers), genome-editor (character genome, power curves, live sim), gas-blueprint (GAS blueprint editor, wiring graph, simulation). Reference src/components/modules/core-engine/unique-tabs/. Register with domain 'arpg-tools'.",
+      "checklistItemIds": [],
+      "featureNames": [
+        "ability-forge-panel",
+        "combat-choreography",
+        "combo-chain-panel",
+        "damage-pipeline-panel",
+        "debug-dashboard-panel",
+        "dodge-timeline-panel",
+        "genome-editor-panel",
+        "gas-blueprint-panel"
+      ],
+      "dependsOn": [],
+      "status": "completed",
+      "features": [
+        {
+          "id": "dzin::ability-forge-panel",
+          "name": "ability-forge-panel",
+          "status": "pass",
+          "quality": 4,
+          "lastSession": 14
+        },
+        {
+          "id": "dzin::combat-choreography",
+          "name": "combat-choreography",
+          "status": "pass",
+          "quality": 4,
+          "lastSession": 14
+        },
+        {
+          "id": "dzin::combo-chain-panel",
+          "name": "combo-chain-panel",
+          "status": "pass",
+          "quality": 4,
+          "lastSession": 14
+        },
+        {
+          "id": "dzin::damage-pipeline-panel",
+          "name": "damage-pipeline-panel",
+          "status": "pass",
+          "quality": 4,
+          "lastSession": 14
+        },
+        {
+          "id": "dzin::debug-dashboard-panel",
+          "name": "debug-dashboard-panel",
+          "status": "pass",
+          "quality": 4,
+          "lastSession": 14
+        },
+        {
+          "id": "dzin::dodge-timeline-panel",
+          "name": "dodge-timeline-panel",
+          "status": "pass",
+          "quality": 4,
+          "lastSession": 14
+        },
+        {
+          "id": "dzin::genome-editor-panel",
+          "name": "genome-editor-panel",
+          "status": "pass",
+          "quality": 4,
+          "lastSession": 14
+        },
+        {
+          "id": "dzin::gas-blueprint-panel",
+          "name": "gas-blueprint-panel",
+          "status": "pass",
+          "quality": 4,
+          "lastSession": 14
+        }
+      ],
+      "completedAt": 14
+    },
+    {
+      "id": "dzin-e2e-expansion",
+      "moduleId": "arpg-character",
+      "label": "E2E Test Expansion",
+      "description": "Expand e2e/dzin-panels.spec.ts with tests for ALL new panels. Add test suites: (1) Panel Inventory test — verify every registered panel type in panel-definitions.ts has a matching component file. (2) Domain Coverage tests — for each domain (game-director, game-systems, project-setup, visual-gen, evaluator, content, arpg-tools), load a composition preset and verify panels render. (3) Cross-domain composition — test loading panels from different domains simultaneously in grid-4 layout. (4) Panel content validation — for each new domain, verify panels have non-empty body content at full density. (5) New composition presets — add and test presets like 'project-overview', 'build-pipeline', 'asset-studio', 'full-evaluator'. Run npx playwright test to verify all tests pass.",
+      "checklistItemIds": [],
+      "featureNames": [
+        "panel-inventory-test",
+        "domain-coverage-tests",
+        "cross-domain-test",
+        "content-validation-tests",
+        "new-preset-tests"
+      ],
+      "dependsOn": [
+        "dzin-game-director",
+        "dzin-game-systems",
+        "dzin-project-setup",
+        "dzin-visual-gen",
+        "dzin-evaluator-extended",
+        "dzin-content-extended",
+        "dzin-unique-tabs"
+      ],
+      "status": "completed",
+      "features": [
+        {
+          "id": "dzin::panel-inventory-test",
+          "name": "panel-inventory-test",
+          "status": "pass",
+          "quality": 4,
+          "lastSession": 15
+        },
+        {
+          "id": "dzin::domain-coverage-tests",
+          "name": "domain-coverage-tests",
+          "status": "pass",
+          "quality": 4,
+          "lastSession": 15
+        },
+        {
+          "id": "dzin::cross-domain-test",
+          "name": "cross-domain-test",
+          "status": "pass",
+          "quality": 4,
+          "lastSession": 15
+        },
+        {
+          "id": "dzin::content-validation-tests",
+          "name": "content-validation-tests",
+          "status": "pass",
+          "quality": 4,
+          "lastSession": 15
+        },
+        {
+          "id": "dzin::new-preset-tests",
+          "name": "new-preset-tests",
+          "status": "pass",
+          "quality": 4,
+          "lastSession": 15
+        }
+      ],
+      "completedAt": 15
+    }
+  ],
+  "iteration": 15,
+  "totalFeatures": 46,
+  "passingFeatures": 46,
+  "createdAt": "2026-04-01T14:00:00.000Z",
+  "updatedAt": "2026-04-01T19:25:13.157Z"
+}

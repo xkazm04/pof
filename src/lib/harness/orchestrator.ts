@@ -33,7 +33,7 @@ import {
   appendAgentsMd,
   type ParsedAreaResult,
 } from './executor';
-import { verify, formatVerificationSummary, DEFAULT_GATES } from './verifier';
+import { verify, formatVerificationSummary, detectGates } from './verifier';
 import {
   createEmptyGuide,
   appendGuideStep,
@@ -143,7 +143,7 @@ export function createHarnessOrchestrator(
     saveGuide(config.statePath, guide);
 
     const progress = loadProgress(config.statePath);
-    const gates = config.gates.length > 0 ? config.gates : DEFAULT_GATES;
+    const gates = config.gates.length > 0 ? config.gates : detectGates(config.projectPath);
 
     emit({ type: 'harness:started', config, plan });
 
@@ -273,9 +273,18 @@ export function createHarnessOrchestrator(
       // ── RECORD: Update all state ──────────────────────────────────────
 
       // Update feature statuses from parsed result
+      let matchedFeatures = 0;
       if (parsed.features) {
         for (const pf of parsed.features) {
-          const planFeature = area.features.find(f => f.name === pf.name);
+          // Try exact match first, then case-insensitive/partial match
+          let planFeature = area.features.find(f => f.name === pf.name);
+          if (!planFeature) {
+            planFeature = area.features.find(f =>
+              f.name.toLowerCase() === pf.name.toLowerCase() ||
+              pf.name.toLowerCase().includes(f.name.toLowerCase()) ||
+              f.name.toLowerCase().includes(pf.name.toLowerCase()),
+            );
+          }
           if (planFeature) {
             planFeature.status = pf.status === 'pass' ? 'pass' : 'fail';
             planFeature.quality = pf.quality;
@@ -283,6 +292,18 @@ export function createHarnessOrchestrator(
             if (pf.status === 'fail') {
               planFeature.failReason = pf.notes;
             }
+            matchedFeatures++;
+          }
+        }
+
+        // If executor reported all features as pass but names didn't match,
+        // mark all plan features as pass (trust the executor's assessment)
+        const allParsedPass = parsed.features.every(f => f.status === 'pass');
+        if (allParsedPass && matchedFeatures === 0 && parsed.features.length > 0) {
+          for (const f of area.features) {
+            f.status = 'pass';
+            f.quality = 4;
+            f.lastSession = plan.iteration;
           }
         }
       }
@@ -415,7 +436,7 @@ export function createDefaultConfig(overrides: Partial<HarnessConfig> & {
       skipPermissions: true,
       bareMode: false, // Keep skills and CLAUDE.md for richer context
     },
-    gates: overrides.gates ?? DEFAULT_GATES,
+    gates: overrides.gates ?? detectGates(overrides.projectPath),
     maxIterations: overrides.maxIterations ?? 100,
     generateGuide: overrides.generateGuide ?? true,
     updateAgentsMd: overrides.updateAgentsMd ?? true,

@@ -1,0 +1,477 @@
+{
+  "game": "PoF-Dzin",
+  "projectPath": "C:/Users/kazda/kiro/pof",
+  "ueVersion": "5.7.3",
+  "areas": [
+    {
+      "id": "dzin-character-panels",
+      "moduleId": "arpg-character",
+      "label": "Character & Animation Panels",
+      "description": "Create 6 new dzin panels: character-overview, character-movement, animation-state-machine, animation-montages, animation-blend-space, character-input. Follow the exact pattern from existing panels in src/components/modules/core-engine/dzin-panels/ — each panel has micro/compact/full density renderers, uses PanelFrame wrapper, useDensity hook, framer-motion AnimatePresence transitions. Register all panels in src/lib/dzin/panel-definitions.ts with domains, capabilities, useCases, suggestedCompanions, and densityModes. Use data from existing unique-tabs (CharacterBlueprint, CharacterFeelOptimizer, AnimationStateGraph) as reference for what to display.",
+      "checklistItemIds": [],
+      "featureNames": [
+        "character-overview",
+        "character-movement",
+        "animation-state-machine",
+        "animation-montages",
+        "animation-blend-space",
+        "character-input"
+      ],
+      "dependsOn": [],
+      "status": "completed",
+      "features": [
+        {
+          "id": "dzin::character-overview",
+          "name": "character-overview",
+          "status": "pass",
+          "quality": 5,
+          "lastSession": 15
+        },
+        {
+          "id": "dzin::character-movement",
+          "name": "character-movement",
+          "status": "pass",
+          "quality": 5,
+          "lastSession": 15
+        },
+        {
+          "id": "dzin::animation-state-machine",
+          "name": "animation-state-machine",
+          "status": "pass",
+          "quality": 5,
+          "lastSession": 15
+        },
+        {
+          "id": "dzin::animation-montages",
+          "name": "animation-montages",
+          "status": "pass",
+          "quality": 5,
+          "lastSession": 15
+        },
+        {
+          "id": "dzin::animation-blend-space",
+          "name": "animation-blend-space",
+          "status": "pass",
+          "quality": 5,
+          "lastSession": 15
+        },
+        {
+          "id": "dzin::character-input",
+          "name": "character-input",
+          "status": "pass",
+          "quality": 5,
+          "lastSession": 15
+        }
+      ],
+      "completedAt": 15
+    },
+    {
+      "id": "dzin-inventory-loot-panels",
+      "moduleId": "arpg-inventory",
+      "label": "Inventory & Loot Panels",
+      "description": "Create 6 new dzin panels: inventory-catalog, inventory-equipment, loot-table, loot-affix, item-economy, item-dna. Follow existing panel pattern. Register in panel-definitions.ts with domain 'arpg-inventory' and 'arpg-loot'. Use data patterns from unique-tabs (ItemCatalog, LootTableVisualizer, ItemDNAGenomeEditor, AffixCraftingWorkbench, ItemEconomySimulator).",
+      "checklistItemIds": [],
+      "featureNames": [
+        "inventory-catalog",
+        "inventory-equipment",
+        "loot-table",
+        "loot-affix",
+        "item-economy",
+        "item-dna"
+      ],
+      "dependsOn": [],
+      "status": "completed",
+      "features": [
+        {
+          "id": "dzin::inventory-catalog",
+          "name": "inventory-catalog",
+          "status": "pass",
+          "quality": 4,
+          "lastSession": 1
+        },
+        {
+          "id": "dzin::inventory-equipment",
+          "name": "inventory-equipment",
+          "status": "pass",
+          "quality": 4,
+          "lastSession": 1
+        },
+        {
+          "id": "dzin::loot-table",
+          "name": "loot-table",
+          "status": "pass",
+          "quality": 4,
+          "lastSession": 1
+        },
+        {
+          "id": "dzin::loot-affix",
+          "name": "loot-affix",
+          "status": "pass",
+          "quality": 4,
+          "lastSession": 1
+        },
+        {
+          "id": "dzin::item-economy",
+          "name": "item-economy",
+          "status": "pass",
+          "quality": 4,
+          "lastSession": 1
+        },
+        {
+          "id": "dzin::item-dna",
+          "name": "item-dna",
+          "status": "pass",
+          "quality": 4,
+          "lastSession": 1
+        }
+      ],
+      "completedAt": 1
+    },
+    {
+      "id": "dzin-enemy-world-panels",
+      "moduleId": "arpg-enemy-ai",
+      "label": "Enemy AI & World Panels",
+      "description": "Create 6 new dzin panels: enemy-bestiary, enemy-ai-tree, world-zone-map, world-encounters, world-level-design, progression-curves. Follow existing panel pattern. Register in panel-definitions.ts with domains 'arpg-enemy', 'arpg-world', 'arpg-progression'. Use data from unique-tabs (EnemyBestiary, ZoneMap, ProgressionCurve).",
+      "checklistItemIds": [],
+      "featureNames": [
+        "enemy-bestiary",
+        "enemy-ai-tree",
+        "world-zone-map",
+        "world-encounters",
+        "world-level-design",
+        "progression-curves"
+      ],
+      "dependsOn": [],
+      "status": "completed",
+      "features": [
+        {
+          "id": "dzin::enemy-bestiary",
+          "name": "enemy-bestiary",
+          "status": "pass",
+          "quality": 4,
+          "lastSession": 2
+        },
+        {
+          "id": "dzin::enemy-ai-tree",
+          "name": "enemy-ai-tree",
+          "status": "pass",
+          "quality": 4,
+          "lastSession": 2
+        },
+        {
+          "id": "dzin::world-zone-map",
+          "name": "world-zone-map",
+          "status": "pass",
+          "quality": 4,
+          "lastSession": 2
+        },
+        {
+          "id": "dzin::world-encounters",
+          "name": "world-encounters",
+          "status": "pass",
+          "quality": 4,
+          "lastSession": 2
+        },
+        {
+          "id": "dzin::world-level-design",
+          "name": "world-level-design",
+          "status": "pass",
+          "quality": 4,
+          "lastSession": 2
+        },
+        {
+          "id": "dzin::progression-curves",
+          "name": "progression-curves",
+          "status": "pass",
+          "quality": 4,
+          "lastSession": 2
+        }
+      ],
+      "completedAt": 2
+    },
+    {
+      "id": "dzin-ui-save-panels",
+      "moduleId": "arpg-ui",
+      "label": "UI/HUD & Save Panels",
+      "description": "Create 5 new dzin panels: hud-compositor, screen-flow, save-schema, save-slots, menu-flow. Follow existing panel pattern. Register in panel-definitions.ts with domains 'arpg-ui', 'arpg-save'. Use data from unique-tabs (HudCompositor, ScreenFlowMap, SaveDataSchema).",
+      "checklistItemIds": [],
+      "featureNames": [
+        "hud-compositor",
+        "screen-flow",
+        "save-schema",
+        "save-slots",
+        "menu-flow"
+      ],
+      "dependsOn": [],
+      "status": "completed",
+      "features": [
+        {
+          "id": "dzin::hud-compositor",
+          "name": "hud-compositor",
+          "status": "pass",
+          "quality": 4,
+          "lastSession": 3
+        },
+        {
+          "id": "dzin::screen-flow",
+          "name": "screen-flow",
+          "status": "pass",
+          "quality": 4,
+          "lastSession": 3
+        },
+        {
+          "id": "dzin::save-schema",
+          "name": "save-schema",
+          "status": "pass",
+          "quality": 4,
+          "lastSession": 3
+        },
+        {
+          "id": "dzin::save-slots",
+          "name": "save-slots",
+          "status": "pass",
+          "quality": 4,
+          "lastSession": 3
+        },
+        {
+          "id": "dzin::menu-flow",
+          "name": "menu-flow",
+          "status": "pass",
+          "quality": 4,
+          "lastSession": 3
+        }
+      ],
+      "completedAt": 3
+    },
+    {
+      "id": "dzin-evaluator-panels",
+      "moduleId": "arpg-character",
+      "label": "Evaluator & Quality Panels",
+      "description": "Create 5 new dzin panels: eval-quality, eval-deps, eval-insights, project-health, feature-matrix. Follow existing panel pattern. Register in panel-definitions.ts with domain 'evaluator'. Use data from components/modules/evaluator/ (AggregateQualityDashboard, DependencyGraph, InsightCard, ProjectHealthDashboard, FeatureMatrix).",
+      "checklistItemIds": [],
+      "featureNames": [
+        "eval-quality",
+        "eval-deps",
+        "eval-insights",
+        "project-health",
+        "feature-matrix-panel"
+      ],
+      "dependsOn": [],
+      "status": "completed",
+      "features": [
+        {
+          "id": "dzin::eval-quality",
+          "name": "eval-quality",
+          "status": "pass",
+          "quality": 4,
+          "lastSession": 4
+        },
+        {
+          "id": "dzin::eval-deps",
+          "name": "eval-deps",
+          "status": "pass",
+          "quality": 4,
+          "lastSession": 4
+        },
+        {
+          "id": "dzin::eval-insights",
+          "name": "eval-insights",
+          "status": "pass",
+          "quality": 4,
+          "lastSession": 4
+        },
+        {
+          "id": "dzin::project-health",
+          "name": "project-health",
+          "status": "pass",
+          "quality": 4,
+          "lastSession": 4
+        },
+        {
+          "id": "dzin::feature-matrix-panel",
+          "name": "feature-matrix-panel",
+          "status": "pass",
+          "quality": 4,
+          "lastSession": 4
+        }
+      ],
+      "completedAt": 4
+    },
+    {
+      "id": "dzin-content-panels",
+      "moduleId": "arpg-character",
+      "label": "Content & Visual Panels",
+      "description": "Create 5 new dzin panels: material-preview, audio-spatial, model-assets, level-blockout, vfx-particles. Follow existing panel pattern. Register in panel-definitions.ts with domain 'content'. Use data from content modules (MaterialLayerGraph, SpatialAudioGeneratorPanel, AssetInventory, ProceduralLevelWizard, PostProcessStackBuilder).",
+      "checklistItemIds": [],
+      "featureNames": [
+        "material-preview",
+        "audio-spatial",
+        "model-assets",
+        "level-blockout",
+        "vfx-particles"
+      ],
+      "dependsOn": [],
+      "status": "completed",
+      "features": [
+        {
+          "id": "dzin::material-preview",
+          "name": "material-preview",
+          "status": "pass",
+          "quality": 4,
+          "lastSession": 5
+        },
+        {
+          "id": "dzin::audio-spatial",
+          "name": "audio-spatial",
+          "status": "pass",
+          "quality": 4,
+          "lastSession": 5
+        },
+        {
+          "id": "dzin::model-assets",
+          "name": "model-assets",
+          "status": "pass",
+          "quality": 4,
+          "lastSession": 5
+        },
+        {
+          "id": "dzin::level-blockout",
+          "name": "level-blockout",
+          "status": "pass",
+          "quality": 4,
+          "lastSession": 5
+        },
+        {
+          "id": "dzin::vfx-particles",
+          "name": "vfx-particles",
+          "status": "pass",
+          "quality": 4,
+          "lastSession": 5
+        }
+      ],
+      "completedAt": 5
+    },
+    {
+      "id": "dzin-decision-logic",
+      "moduleId": "arpg-character",
+      "label": "Decision Logic & Composition",
+      "description": "Expand the dzin advisor's decision logic. In src/lib/dzin/panel-definitions.ts, verify all 43+ panels are registered. In src/lib/dzin/composition-presets.ts, add 12+ new presets covering character-debug, loot-analysis, world-overview, full-evaluator, save-inspector etc. In src/lib/dzin/advisor/slashCommands.ts, add slash commands for every domain: /character, /loot, /enemies, /world, /save, /eval, /materials, /audio. In src/lib/dzin/selection-context.tsx, extend ENTITY_RELATIONS to cover item, enemy, zone, attribute entity types. In src/app/prototype/page.tsx, update the panel dispatch map to include all new panel types.",
+      "checklistItemIds": [],
+      "featureNames": [
+        "multi-domain-registry",
+        "composition-presets-expansion",
+        "slash-commands-expansion",
+        "entity-relations-expansion",
+        "prototype-page-update"
+      ],
+      "dependsOn": [
+        "dzin-character-panels",
+        "dzin-inventory-loot-panels",
+        "dzin-enemy-world-panels",
+        "dzin-ui-save-panels",
+        "dzin-evaluator-panels",
+        "dzin-content-panels"
+      ],
+      "status": "completed",
+      "features": [
+        {
+          "id": "dzin::multi-domain-registry",
+          "name": "multi-domain-registry",
+          "status": "pass",
+          "quality": 5,
+          "lastSession": 17
+        },
+        {
+          "id": "dzin::composition-presets-expansion",
+          "name": "composition-presets-expansion",
+          "status": "pass",
+          "quality": 5,
+          "lastSession": 17
+        },
+        {
+          "id": "dzin::slash-commands-expansion",
+          "name": "slash-commands-expansion",
+          "status": "pass",
+          "quality": 5,
+          "lastSession": 17
+        },
+        {
+          "id": "dzin::entity-relations-expansion",
+          "name": "entity-relations-expansion",
+          "status": "pass",
+          "quality": 5,
+          "lastSession": 17
+        },
+        {
+          "id": "dzin::prototype-page-update",
+          "name": "prototype-page-update",
+          "status": "pass",
+          "quality": 5,
+          "lastSession": 17
+        }
+      ],
+      "completedAt": 17
+    },
+    {
+      "id": "dzin-testing-quality",
+      "moduleId": "arpg-character",
+      "label": "Testing & Quality Verification",
+      "description": "Verify the expanded dzin system. Run npm run typecheck to ensure all new panels compile. Run npm run lint to check code quality. Verify all panels are importable from panel-definitions.ts. Check that composition presets reference valid panel types. Ensure slash commands dispatch correct intents. Fix any issues found.",
+      "checklistItemIds": [],
+      "featureNames": [
+        "typecheck-pass",
+        "lint-pass",
+        "panel-imports-valid",
+        "presets-valid",
+        "slash-commands-valid"
+      ],
+      "dependsOn": [
+        "dzin-decision-logic"
+      ],
+      "status": "completed",
+      "features": [
+        {
+          "id": "dzin::typecheck-pass",
+          "name": "typecheck-pass",
+          "status": "pass",
+          "quality": 4,
+          "lastSession": 18
+        },
+        {
+          "id": "dzin::lint-pass",
+          "name": "lint-pass",
+          "status": "pass",
+          "quality": 4,
+          "lastSession": 18
+        },
+        {
+          "id": "dzin::panel-imports-valid",
+          "name": "panel-imports-valid",
+          "status": "pass",
+          "quality": 4,
+          "lastSession": 18
+        },
+        {
+          "id": "dzin::presets-valid",
+          "name": "presets-valid",
+          "status": "pass",
+          "quality": 4,
+          "lastSession": 18
+        },
+        {
+          "id": "dzin::slash-commands-valid",
+          "name": "slash-commands-valid",
+          "status": "pass",
+          "quality": 4,
+          "lastSession": 18
+        }
+      ],
+      "completedAt": 18
+    }
+  ],
+  "iteration": 18,
+  "totalFeatures": 43,
+  "passingFeatures": 43,
+  "createdAt": "2026-04-01T07:00:00.000Z",
+  "updatedAt": "2026-04-01T14:06:15.781Z"
+}

@@ -24,12 +24,16 @@ export type IntentSource = 'click' | 'keyboard' | 'drag' | 'menu' | 'llm' | 'sla
 // ---------------------------------------------------------------------------
 
 export interface ComposePayload {
-  action: 'open' | 'close' | 'swap' | 'set-layout';
+  action: 'open' | 'close' | 'swap' | 'set-layout' | 'apply-preset';
   panelType?: string;
   panelId?: string;
   targetSlot?: number;
   template?: LayoutTemplateId;
   directives?: PanelDirective[];
+  /** Preset ID — used with apply-preset action. */
+  presetId?: string;
+  /** Panel directives — used with apply-preset to set all panels at once. */
+  panels?: PanelDirective[];
 }
 
 export interface ManipulatePayload {

@@ -1,0 +1,83 @@
+import { describe, it, expect } from 'vitest';
+import { pofRegistry } from '@/lib/dzin/panel-definitions';
+
+const BATCH4_TYPES = [
+  'arpg-inventory-catalog',
+  'arpg-inventory-equipment',
+  'arpg-loot-table',
+  'arpg-loot-affix',
+  'arpg-item-economy',
+  'arpg-item-dna',
+] as const;
+
+const DOMAIN_MAP: Record<string, string[]> = {
+  'arpg-inventory-catalog': ['arpg-inventory'],
+  'arpg-inventory-equipment': ['arpg-inventory'],
+  'arpg-loot-table': ['arpg-loot'],
+  'arpg-loot-affix': ['arpg-loot', 'arpg-inventory'],
+  'arpg-item-economy': ['arpg-loot', 'arpg-inventory'],
+  'arpg-item-dna': ['arpg-loot', 'arpg-inventory'],
+};
+
+describe.each(BATCH4_TYPES)('pofRegistry %s registration', (panelType) => {
+  it('is registered in pofRegistry', () => {
+    expect(pofRegistry.has(panelType)).toBe(true);
+  });
+
+  it('get returns definition with all required fields populated', () => {
+    const def = pofRegistry.get(panelType);
+    expect(def).toBeDefined();
+    expect(def!.type).toBe(panelType);
+    expect(def!.label).toBeTruthy();
+    expect(def!.defaultRole).toBeTruthy();
+    expect(def!.sizeClass).toBeTruthy();
+    expect(def!.complexity).toBeTruthy();
+    expect(def!.domains.length).toBeGreaterThan(0);
+    expect(def!.description).toBeTruthy();
+    expect(def!.capabilities.length).toBeGreaterThan(0);
+    expect(def!.useCases.length).toBeGreaterThan(0);
+    expect(def!.inputs.length).toBeGreaterThan(0);
+    expect(def!.outputs.length).toBeGreaterThan(0);
+    expect(def!.densityModes).toBeDefined();
+    expect(def!.component).toBeDefined();
+  });
+
+  it('getByDomain includes panel in expected domains', () => {
+    const expectedDomains = DOMAIN_MAP[panelType];
+    for (const domain of expectedDomains) {
+      const panels = pofRegistry.getByDomain(domain);
+      const types = panels.map((p) => p.type);
+      expect(types).toContain(panelType);
+    }
+  });
+
+  it('densityModes has entries for micro, compact, and full', () => {
+    const def = pofRegistry.get(panelType)!;
+    expect(def.densityModes.micro).toBeDefined();
+    expect(def.densityModes.micro!.minWidth).toBeGreaterThan(0);
+    expect(def.densityModes.micro!.minHeight).toBeGreaterThan(0);
+    expect(def.densityModes.micro!.description).toBeTruthy();
+
+    expect(def.densityModes.compact).toBeDefined();
+    expect(def.densityModes.compact!.minWidth).toBeGreaterThan(0);
+    expect(def.densityModes.compact!.minHeight).toBeGreaterThan(0);
+    expect(def.densityModes.compact!.description).toBeTruthy();
+
+    expect(def.densityModes.full).toBeDefined();
+    expect(def.densityModes.full!.minWidth).toBeGreaterThan(0);
+    expect(def.densityModes.full!.minHeight).toBeGreaterThan(0);
+    expect(def.densityModes.full!.description).toBeTruthy();
+  });
+
+  it('inputs array has featureMap and defs entries', () => {
+    const def = pofRegistry.get(panelType)!;
+    const inputNames = def.inputs.map((i) => i.name);
+    expect(inputNames).toContain('featureMap');
+    expect(inputNames).toContain('defs');
+  });
+
+  it('outputs array has at least one entry', () => {
+    const def = pofRegistry.get(panelType)!;
+    expect(def.outputs.length).toBeGreaterThanOrEqual(1);
+  });
+});

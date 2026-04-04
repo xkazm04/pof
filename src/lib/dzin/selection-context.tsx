@@ -4,8 +4,10 @@ import { createContext, useContext, useState, useCallback } from 'react';
 import type { ReactNode } from 'react';
 
 /** The type of entity that can be selected across panels. */
+export type EntityType = 'ability' | 'tag' | 'item' | 'enemy' | 'zone' | 'attribute';
+
 export interface EntitySelection {
-  type: 'ability' | 'tag';
+  type: EntityType;
   id: string;
 }
 

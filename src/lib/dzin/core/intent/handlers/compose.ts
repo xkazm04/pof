@@ -106,6 +106,30 @@ export function createComposeHandler(
         };
       }
 
+      case 'apply-preset': {
+        if (!payload.template || !payload.panels) {
+          return NEEDS_LLM;
+        }
+        const presetPatches: Operation[] = [
+          { op: 'replace', path: '/layout/template', value: payload.template },
+          { op: 'replace', path: '/panels', value: payload.panels.map((d, i) => ({
+            id: `${d.type}-${Date.now()}-${i}`,
+            type: d.type,
+            slotIndex: i,
+            density: d.density ?? 'full',
+            role: d.role ?? (i === 0 ? 'primary' : 'secondary'),
+            dataSlice: d.dataSlice,
+            uiState: {},
+          })) },
+        ];
+        return {
+          status: 'resolved',
+          patches: presetPatches,
+          origin: 'user',
+          description: `Apply preset ${payload.presetId ?? 'custom'}`,
+        };
+      }
+
       case 'swap': {
         // Complex: always defer to LLM
         return NEEDS_LLM;

@@ -21,6 +21,39 @@ import { TagsPanel } from '@/components/modules/core-engine/dzin-panels/TagsPane
 import { TagDepsPanel } from '@/components/modules/core-engine/dzin-panels/TagDepsPanel';
 import { TagAuditPanel } from '@/components/modules/core-engine/dzin-panels/TagAuditPanel';
 import { LoadoutPanel } from '@/components/modules/core-engine/dzin-panels/LoadoutPanel';
+import { CharacterOverviewPanel } from '@/components/modules/core-engine/dzin-panels/CharacterOverviewPanel';
+import { CharacterMovementPanel } from '@/components/modules/core-engine/dzin-panels/CharacterMovementPanel';
+import { AnimationStateMachinePanel } from '@/components/modules/core-engine/dzin-panels/AnimationStateMachinePanel';
+import { AnimationMontagesPanel } from '@/components/modules/core-engine/dzin-panels/AnimationMontagesPanel';
+import { AnimationBlendSpacePanel } from '@/components/modules/core-engine/dzin-panels/AnimationBlendSpacePanel';
+import { CharacterInputPanel } from '@/components/modules/core-engine/dzin-panels/CharacterInputPanel';
+import { InventoryCatalogPanel } from '@/components/modules/core-engine/dzin-panels/InventoryCatalogPanel';
+import { InventoryEquipmentPanel } from '@/components/modules/core-engine/dzin-panels/InventoryEquipmentPanel';
+import { LootTablePanel } from '@/components/modules/core-engine/dzin-panels/LootTablePanel';
+import { LootAffixPanel } from '@/components/modules/core-engine/dzin-panels/LootAffixPanel';
+import { ItemEconomyPanel } from '@/components/modules/core-engine/dzin-panels/ItemEconomyPanel';
+import { ItemDNAPanel } from '@/components/modules/core-engine/dzin-panels/ItemDNAPanel';
+import { EnemyBestiaryPanel } from '@/components/modules/core-engine/dzin-panels/EnemyBestiaryPanel';
+import { EnemyAITreePanel } from '@/components/modules/core-engine/dzin-panels/EnemyAITreePanel';
+import { WorldZoneMapPanel } from '@/components/modules/core-engine/dzin-panels/WorldZoneMapPanel';
+import { WorldEncountersPanel } from '@/components/modules/core-engine/dzin-panels/WorldEncountersPanel';
+import { WorldLevelDesignPanel } from '@/components/modules/core-engine/dzin-panels/WorldLevelDesignPanel';
+import { ProgressionCurvesPanel } from '@/components/modules/core-engine/dzin-panels/ProgressionCurvesPanel';
+import { HudCompositorPanel } from '@/components/modules/core-engine/dzin-panels/HudCompositorPanel';
+import { ScreenFlowPanel } from '@/components/modules/core-engine/dzin-panels/ScreenFlowPanel';
+import { MenuFlowPanel } from '@/components/modules/core-engine/dzin-panels/MenuFlowPanel';
+import { SaveSchemaPanel } from '@/components/modules/core-engine/dzin-panels/SaveSchemaPanel';
+import { SaveSlotsPanel } from '@/components/modules/core-engine/dzin-panels/SaveSlotsPanel';
+import { EvalQualityPanel } from '@/components/modules/core-engine/dzin-panels/EvalQualityPanel';
+import { EvalDepsPanel } from '@/components/modules/core-engine/dzin-panels/EvalDepsPanel';
+import { EvalInsightsPanel } from '@/components/modules/core-engine/dzin-panels/EvalInsightsPanel';
+import { ProjectHealthPanel } from '@/components/modules/core-engine/dzin-panels/ProjectHealthPanel';
+import { FeatureMatrixPanel } from '@/components/modules/core-engine/dzin-panels/FeatureMatrixPanel';
+import { MaterialPreviewPanel } from '@/components/modules/core-engine/dzin-panels/MaterialPreviewPanel';
+import { AudioSpatialPanel } from '@/components/modules/core-engine/dzin-panels/AudioSpatialPanel';
+import { ModelAssetsPanel } from '@/components/modules/core-engine/dzin-panels/ModelAssetsPanel';
+import { LevelBlockoutPanel } from '@/components/modules/core-engine/dzin-panels/LevelBlockoutPanel';
+import { VfxParticlesPanel } from '@/components/modules/core-engine/dzin-panels/VfxParticlesPanel';
 import { useFeatureMatrix } from '@/hooks/useFeatureMatrix';
 import { MODULE_FEATURE_DEFINITIONS } from '@/lib/feature-definitions';
 import type { PanelDensity } from '@/lib/dzin/core/types/panel';
@@ -98,6 +131,7 @@ function TemplateThumbnail({ id }: { id: LayoutTemplateId }) {
 /* ── Panel dispatch ────────────────────────────────────────────────────── */
 
 const PANEL_COMPONENTS: Record<string, React.FC<{ featureMap: Map<string, FeatureRow>; defs: FeatureDefinition[] }>> = {
+  // Combat
   'arpg-combat-core': CorePanel,
   'arpg-combat-abilities': AbilitiesPanel,
   'arpg-combat-attributes': AttributesPanel,
@@ -108,6 +142,45 @@ const PANEL_COMPONENTS: Record<string, React.FC<{ featureMap: Map<string, Featur
   'arpg-combat-tag-deps': TagDepsPanel,
   'arpg-combat-tag-audit': TagAuditPanel,
   'arpg-combat-loadout': LoadoutPanel,
+  // Character & Animation
+  'arpg-character-overview': CharacterOverviewPanel,
+  'arpg-character-movement': CharacterMovementPanel,
+  'arpg-animation-state-machine': AnimationStateMachinePanel,
+  'arpg-animation-montages': AnimationMontagesPanel,
+  'arpg-animation-blend-space': AnimationBlendSpacePanel,
+  'arpg-character-input': CharacterInputPanel,
+  // Inventory & Loot
+  'arpg-inventory-catalog': InventoryCatalogPanel,
+  'arpg-inventory-equipment': InventoryEquipmentPanel,
+  'arpg-loot-table': LootTablePanel,
+  'arpg-loot-affix': LootAffixPanel,
+  'arpg-item-economy': ItemEconomyPanel,
+  'arpg-item-dna': ItemDNAPanel,
+  // Enemies & World
+  'arpg-enemy-bestiary': EnemyBestiaryPanel,
+  'arpg-enemy-ai-tree': EnemyAITreePanel,
+  'arpg-world-zone-map': WorldZoneMapPanel,
+  'arpg-world-encounters': WorldEncountersPanel,
+  'arpg-world-level-design': WorldLevelDesignPanel,
+  'arpg-progression-curves': ProgressionCurvesPanel,
+  // UI & Save
+  'arpg-ui-hud-compositor': HudCompositorPanel,
+  'arpg-ui-screen-flow': ScreenFlowPanel,
+  'arpg-ui-menu-flow': MenuFlowPanel,
+  'arpg-save-schema': SaveSchemaPanel,
+  'arpg-save-slots': SaveSlotsPanel,
+  // Evaluator
+  'evaluator-quality': EvalQualityPanel,
+  'evaluator-deps': EvalDepsPanel,
+  'evaluator-insights': EvalInsightsPanel,
+  'evaluator-project-health': ProjectHealthPanel,
+  'evaluator-feature-matrix': FeatureMatrixPanel,
+  // Content
+  'content-material-preview': MaterialPreviewPanel,
+  'content-audio-spatial': AudioSpatialPanel,
+  'content-model-assets': ModelAssetsPanel,
+  'content-level-blockout': LevelBlockoutPanel,
+  'content-vfx-particles': VfxParticlesPanel,
 };
 
 /* ── Layout transition constants ───────────────────────────────────────── */
