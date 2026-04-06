@@ -6,7 +6,8 @@ import {
 import { motion } from 'framer-motion';
 import {
   STATUS_SUCCESS, STATUS_WARNING, STATUS_ERROR,
-  ACCENT_EMERALD, ACCENT_ORANGE,
+  ACCENT_EMERALD, ACCENT_ORANGE, OVERLAY_WHITE,
+  withOpacity, OPACITY_6,
 } from '@/lib/chart-colors';
 import { SurfaceCard } from '@/components/ui/SurfaceCard';
 import { SectionLabel } from '../_shared';
@@ -92,7 +93,7 @@ export function AchievementBoard() {
                   >
                     <div className="relative flex-shrink-0" style={{ width: 28, height: 28 }}>
                       <svg width={28} height={28} viewBox="0 0 28 28">
-                        <circle cx="14" cy="14" r="11" fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth="2.5" />
+                        <circle cx="14" cy="14" r="11" fill="none" stroke={withOpacity(OVERLAY_WHITE, OPACITY_6)} strokeWidth="2.5" />
                         <circle
                           cx="14" cy="14" r="11" fill="none"
                           stroke={ach.progress === 100 ? STATUS_SUCCESS : cat.color}
@@ -106,7 +107,7 @@ export function AchievementBoard() {
                       </svg>
                       {ach.progress === 100 && (
                         <div className="absolute inset-0 flex items-center justify-center">
-                          <Star className="w-2.5 h-2.5 text-amber-400" />
+                          <Star className="w-2.5 h-2.5" style={{ color: STATUS_WARNING }} />
                         </div>
                       )}
                     </div>

@@ -4,6 +4,7 @@ import { useState, useMemo, useCallback } from 'react';
 import { Zap, Activity, Play } from 'lucide-react';
 import {
   ACCENT_EMERALD, STATUS_SUCCESS,
+  withOpacity, OPACITY_12, OPACITY_25,
 } from '@/lib/chart-colors';
 import {
   FEEL_PRESETS,
@@ -115,9 +116,9 @@ export function CharacterFeelOptimizer({ moduleId }: CharacterFeelOptimizerProps
               disabled={isRunning}
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all disabled:opacity-40"
               style={{
-                backgroundColor: `${STATUS_SUCCESS}20`,
+                backgroundColor: `${withOpacity(STATUS_SUCCESS, OPACITY_12)}`,
                 color: STATUS_SUCCESS,
-                border: `1px solid ${STATUS_SUCCESS}40`,
+                border: `1px solid ${withOpacity(STATUS_SUCCESS, OPACITY_25)}`,
               }}
             >
               <Play className="w-3 h-3" />

@@ -5,7 +5,9 @@ import { Plus, Trash2, Zap } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useCollectionEditor } from '@/hooks/useCollectionEditor';
 import type { GASLoadoutSlot } from '@/lib/gas-codegen';
-import { ACCENT_RED, ACCENT_EMERALD_DARK, MODULE_COLORS, STATUS_STALE } from '@/lib/chart-colors';
+import { ACCENT_RED, ACCENT_EMERALD_DARK, MODULE_COLORS, STATUS_STALE, OVERLAY_WHITE,
+  withOpacity, OPACITY_8, OPACITY_10, OPACITY_12, OPACITY_20, OPACITY_25, OPACITY_30, OPACITY_37,
+} from '@/lib/chart-colors';
 
 const SLOT_COLORS = [ACCENT_RED, ACCENT_EMERALD_DARK, MODULE_COLORS.core, STATUS_STALE, MODULE_COLORS.content];
 
@@ -52,21 +54,21 @@ export function LoadoutEditor({
                 animate={{
                   scale: 1,
                   opacity: 1,
-                  borderColor: isSelected ? slot.iconColor : `${slot.iconColor}60`,
+                  borderColor: isSelected ? slot.iconColor : `${withOpacity(slot.iconColor, OPACITY_37)}`,
                 }}
                 exit={{ scale: 0, opacity: 0 }}
                 transition={{ type: 'spring', stiffness: 500, damping: 30 }}
                 whileHover={{
                   scale: 1.08,
-                  boxShadow: `0 0 12px 2px ${slot.iconColor}40`,
+                  boxShadow: `0 0 12px 2px ${withOpacity(slot.iconColor, OPACITY_25)}`,
                 }}
                 whileTap={{ scale: 0.95 }}
                 className="relative w-14 h-14 rounded-lg border-2 flex flex-col items-center justify-center gap-0.5 group cursor-pointer"
                 style={{
-                  backgroundColor: `${slot.iconColor}10`,
+                  backgroundColor: `${withOpacity(slot.iconColor, OPACITY_8)}`,
                   ...(isSelected ? {
                     animation: 'loadout-pulse 1.5s ease-in-out infinite',
-                    boxShadow: `0 0 8px 1px ${slot.iconColor}50`,
+                    boxShadow: `0 0 8px 1px ${withOpacity(slot.iconColor, OPACITY_30)}`,
                   } : {}),
                 }}
                 onClick={() => setSelectedId(isSelected ? null : slot.id)}
@@ -85,10 +87,10 @@ export function LoadoutEditor({
         <motion.button
           onClick={addSlot}
           className="w-14 h-14 rounded-lg border-2 border-dashed flex items-center justify-center transition-colors"
-          style={{ borderColor: 'var(--border-40, rgba(255,255,255,0.1))' }}
+          style={{ borderColor: `var(--border-40, ${withOpacity(OVERLAY_WHITE, OPACITY_10)})` }}
           whileHover={{
             borderColor: nextSlotColor,
-            boxShadow: `0 0 10px 1px ${nextSlotColor}30`,
+            boxShadow: `0 0 10px 1px ${withOpacity(nextSlotColor, OPACITY_20)}`,
             scale: 1.05,
           }}
           whileTap={{ scale: 0.95 }}
@@ -111,7 +113,7 @@ export function LoadoutEditor({
               transition={{ duration: 0.15 }}
               className="flex items-center gap-1.5 text-2xs font-mono"
             >
-              <span className="w-5 h-5 rounded text-center leading-5 font-bold" style={{ backgroundColor: `${slot.iconColor}20`, color: slot.iconColor }}>
+              <span className="w-5 h-5 rounded text-center leading-5 font-bold" style={{ backgroundColor: `${withOpacity(slot.iconColor, OPACITY_12)}`, color: slot.iconColor }}>
                 {slot.slot}
               </span>
               <input

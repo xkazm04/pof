@@ -6,7 +6,11 @@ import { UI_TIMEOUTS } from '@/lib/constants';
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import {
   STATUS_SUCCESS, STATUS_WARNING, STATUS_ERROR, STATUS_IMPROVED,
-  OPACITY_8, OPACITY_10, OPACITY_20, OPACITY_30,
+  STATUS_SUBDUED, OVERLAY_WHITE,
+  OPACITY_5, OPACITY_6, OPACITY_8, OPACITY_10, OPACITY_12, OPACITY_20, OPACITY_30, OPACITY_37, OPACITY_50,
+  BORDER_DEFAULT, BORDER_SUBTLE,
+  GLOW_SM, GLOW_MD,
+  withOpacity,
 } from '@/lib/chart-colors';
 import { SurfaceCard } from '@/components/ui/SurfaceCard';
 import type { FeatureRow, FeatureStatus } from '@/types/feature-matrix';
@@ -28,11 +32,11 @@ export const STAGGER_SLOW = ANIMATION_PRESETS.stagger.slow;
 /* ── Shared STATUS_COLORS ─────────────────────────────────────────────────── */
 
 export const STATUS_COLORS: Record<FeatureStatus, { dot: string; bg: string; label: string }> = {
-  implemented: { dot: STATUS_SUCCESS, bg: `${STATUS_SUCCESS}${OPACITY_8}`, label: 'Implemented' },
-  improved: { dot: STATUS_IMPROVED, bg: `${STATUS_IMPROVED}${OPACITY_8}`, label: 'Improved' },
-  partial: { dot: STATUS_WARNING, bg: `${STATUS_WARNING}${OPACITY_8}`, label: 'Partial' },
-  missing: { dot: STATUS_ERROR, bg: `${STATUS_ERROR}${OPACITY_8}`, label: 'Missing' },
-  unknown: { dot: '#64748b', bg: '#64748b18', label: 'Unknown' },
+  implemented: { dot: STATUS_SUCCESS, bg: withOpacity(STATUS_SUCCESS, OPACITY_8), label: 'Implemented' },
+  improved: { dot: STATUS_IMPROVED, bg: withOpacity(STATUS_IMPROVED, OPACITY_8), label: 'Improved' },
+  partial: { dot: STATUS_WARNING, bg: withOpacity(STATUS_WARNING, OPACITY_8), label: 'Partial' },
+  missing: { dot: STATUS_ERROR, bg: withOpacity(STATUS_ERROR, OPACITY_8), label: 'Missing' },
+  unknown: { dot: STATUS_SUBDUED, bg: withOpacity(STATUS_SUBDUED, OPACITY_10), label: 'Unknown' },
 };
 
 /* ── Safe status lookup ───────────────────────────────────────────────────── */
@@ -55,7 +59,7 @@ export function StatusDot({ status }: { status: FeatureStatus }) {
     <span className="flex items-center gap-1.5">
       <motion.span
         className="w-1.5 h-1.5 rounded-full flex-shrink-0"
-        style={{ backgroundColor: sc.dot, boxShadow: isActive ? `0 0 6px ${sc.dot}` : 'none' }}
+        style={{ backgroundColor: sc.dot, boxShadow: isActive ? `${GLOW_SM} ${sc.dot}` : 'none' }}
         animate={isActive && !prefersReduced ? { scale: [1, 1.3, 1], opacity: [0.6, 1, 0.6] } : {}}
         transition={prefersReduced ? { duration: 0 } : { duration: 2, repeat: Infinity, ease: 'easeInOut' }}
       />
@@ -87,7 +91,7 @@ export function TabHeader({ icon: Icon, title, implemented, total, accent, child
         <div className="p-1.5 rounded-lg relative overflow-hidden group">
           <div className="absolute inset-0 opacity-20" style={{ backgroundColor: accent }} />
           <div className="absolute inset-0 opacity-0 group-hover:opacity-30 transition-opacity blur-md" style={{ backgroundColor: accent }} />
-          <Icon className="w-4 h-4 relative z-10" style={{ color: accent, filter: `drop-shadow(0 0 4px ${accent}80)` }} />
+          <Icon className="w-4 h-4 relative z-10" style={{ color: accent, filter: `drop-shadow(${GLOW_SM} ${withOpacity(accent, OPACITY_50)})` }} />
         </div>
         <div className="flex flex-col">
           <span className="text-sm font-bold text-text tracking-wide">{title}</span>
@@ -136,14 +140,14 @@ export function PipelineFlow({ steps, accent, showStatus }: PipelineFlowProps) {
             <div
               className="flex items-center gap-1.5 text-sm font-mono px-2 py-0.5 rounded-md"
               style={{
-                backgroundColor: `${accent}15`,
+                backgroundColor: withOpacity(accent, OPACITY_8),
                 color: accent,
-                border: `1px solid ${accent}30`,
-                boxShadow: `inset 0 0 10px ${accent}10`
+                border: `1px solid ${withOpacity(accent, OPACITY_20)}`,
+                boxShadow: `inset 0 0 10px ${withOpacity(accent, OPACITY_5)}`
               }}
             >
               {showStatus && sc && (
-                <span className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ backgroundColor: sc.dot, boxShadow: `0 0 6px ${sc.dot}` }} />
+                <span className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ backgroundColor: sc.dot, boxShadow: `${GLOW_SM} ${sc.dot}` }} />
               )}
               {label}
             </div>
@@ -180,7 +184,7 @@ interface SectionLabelProps {
 export function SectionLabel({ icon: Icon, label, color }: SectionLabelProps) {
   return (
     <div className="flex items-center gap-1.5 text-sm text-text-muted font-bold uppercase tracking-wider">
-      {Icon && <Icon className="w-3 h-3" style={color ? { color, filter: `drop-shadow(0 0 3px ${color}80)` } : undefined} />}
+      {Icon && <Icon className="w-3 h-3" style={color ? { color, filter: `drop-shadow(${GLOW_SM} ${withOpacity(color, OPACITY_50)})` } : undefined} />}
       {label}
     </div>
   );
@@ -236,7 +240,7 @@ export function CopyButton({ getText, accent, label, className }: CopyButtonProp
       aria-label={copied ? copiedLabel : idleLabel}
       className={`flex items-center gap-1 text-xs font-mono text-zinc-500 hover:text-zinc-300 transition-colors focus:outline-none focus:ring-1 focus:ring-current ${className ?? ''}`}
     >
-      {copied ? <Check size={12} className="text-emerald-400" /> : <Copy size={12} />}
+      {copied ? <Check size={12} style={{ color: STATUS_SUCCESS }} /> : <Copy size={12} />}
       {copied ? copiedLabel : idleLabel}
     </button>
   );
@@ -266,7 +270,7 @@ export function FeatureCard({ name, featureMap, defs, expanded, onToggle, accent
       {/* Subtle animated gradient background on hover */}
       <div
         className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none"
-        style={{ background: `radial-gradient(ellipse at 50% 0%, ${accent}15 0%, transparent 70%)` }}
+        style={{ background: `radial-gradient(ellipse at 50% 0%, ${withOpacity(accent, OPACITY_8)} 0%, transparent 70%)` }}
       />
 
       <button
@@ -283,7 +287,7 @@ export function FeatureCard({ name, featureMap, defs, expanded, onToggle, accent
           </motion.div>
           <span className="text-sm font-semibold text-text truncate group-hover:text-text-bright transition-colors">{name}</span>
           <span className="ml-auto flex items-center gap-1.5 flex-shrink-0 bg-surface px-2 py-0.5 rounded-md border border-border/50 shadow-sm">
-            <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: sc.dot, boxShadow: `0 0 6px ${sc.dot}80` }} />
+            <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: sc.dot, boxShadow: `${GLOW_SM} ${withOpacity(sc.dot, OPACITY_50)}` }} />
             <span className="text-xs font-medium" style={{ color: sc.dot }}>{sc.label}</span>
           </span>
         </div>
@@ -309,7 +313,7 @@ export function FeatureCard({ name, featureMap, defs, expanded, onToggle, accent
                     <span
                       key={fp}
                       className="flex items-center gap-1 text-xs font-mono px-1.5 py-0.5 rounded"
-                      style={{ backgroundColor: `${accent}10`, color: accent, border: `1px solid ${accent}30` }}
+                      style={{ backgroundColor: withOpacity(accent, OPACITY_5), color: accent, border: `1px solid ${withOpacity(accent, OPACITY_20)}` }}
                     >
                       <ExternalLink className="w-2.5 h-2.5" />
                       {fp.split('/').pop()}
@@ -322,7 +326,7 @@ export function FeatureCard({ name, featureMap, defs, expanded, onToggle, accent
                 {row?.qualityScore != null && (
                   <div className="flex items-center gap-1.5 bg-surface px-2 py-1 rounded-md text-xs font-mono border border-border/50">
                     <span className="text-text-muted">Quality:</span>
-                    <span className={row.qualityScore >= 8 ? "text-emerald-400" : row.qualityScore >= 5 ? "text-amber-400" : "text-red-400"}>
+                    <span style={{ color: row.qualityScore >= 8 ? STATUS_SUCCESS : row.qualityScore >= 5 ? STATUS_WARNING : STATUS_ERROR }}>
                       {row.qualityScore}/10
                     </span>
                   </div>
@@ -417,18 +421,18 @@ export function LoadingSpinner({ accent }: { accent: string }) {
         <div
           className="w-8 h-8 rounded-full"
           style={{
-            border: `2px solid ${accent}30`,
+            border: `2px solid ${withOpacity(accent, OPACITY_20)}`,
             borderTopColor: accent,
-            filter: `drop-shadow(0 0 8px ${accent}60)`,
+            filter: `drop-shadow(${GLOW_MD} ${withOpacity(accent, OPACITY_37)})`,
           }}
         />
       ) : (
         <motion.div
           className="w-8 h-8 rounded-full"
           style={{
-            border: `2px solid ${accent}30`,
+            border: `2px solid ${withOpacity(accent, OPACITY_20)}`,
             borderTopColor: accent,
-            filter: `drop-shadow(0 0 8px ${accent}60)`,
+            filter: `drop-shadow(${GLOW_MD} ${withOpacity(accent, OPACITY_37)})`,
           }}
           animate={{ rotate: 360 }}
           transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
@@ -472,28 +476,28 @@ export function RadarChart({ data, size = 220, accent, overlays, showLabels = tr
         <polygon
           key={level}
           points={data.map((_, i) => { const p = toXY(level, i); return `${p.x},${p.y}`; }).join(' ')}
-          fill="none" stroke="rgba(255,255,255,0.08)" strokeWidth="1"
+          fill="none" stroke={withOpacity(OVERLAY_WHITE, OPACITY_8)} strokeWidth="1"
         />
       ))}
       {/* Axis lines */}
       {data.map((_, i) => {
         const p = toXY(1, i);
-        return <line key={i} x1={cx} y1={cy} x2={p.x} y2={p.y} stroke="rgba(255,255,255,0.06)" strokeWidth="1" />;
+        return <line key={i} x1={cx} y1={cy} x2={p.x} y2={p.y} stroke={withOpacity(OVERLAY_WHITE, OPACITY_6)} strokeWidth="1" />;
       })}
       {/* Overlay polygons */}
       {overlays?.map((overlay) => (
         <polygon
           key={overlay.label}
           points={polyPoints(overlay.data)}
-          fill={`${overlay.color}15`} stroke={overlay.color} strokeWidth="1.5" strokeDasharray="4 2"
+          fill={withOpacity(overlay.color, OPACITY_8)} stroke={overlay.color} strokeWidth="1.5" strokeDasharray="4 2"
         />
       ))}
       {/* Primary polygon */}
-      <polygon points={polyPoints(data)} fill={`${accent}20`} stroke={accent} strokeWidth="2" />
+      <polygon points={polyPoints(data)} fill={withOpacity(accent, OPACITY_12)} stroke={accent} strokeWidth="2" />
       {/* Data points */}
       {data.map((d, i) => {
         const p = toXY(d.value, i);
-        return <circle key={i} cx={p.x} cy={p.y} r="3" fill={accent} style={{ filter: `drop-shadow(0 0 4px ${accent})` }} />;
+        return <circle key={i} cx={p.x} cy={p.y} r="3" fill={accent} style={{ filter: `drop-shadow(${GLOW_SM} ${accent})` }} />;
       })}
       {/* Labels */}
       {showLabels && data.map((d, i) => {
@@ -543,7 +547,7 @@ export function TimelineStrip({ events, accent, maxVisible = 50, height = 100 }:
             {width ? (
               <div className="h-4 rounded-sm opacity-70" style={{ backgroundColor: evt.color, minWidth: 4 }} />
             ) : (
-              <div className="w-1.5 h-1.5 rounded-full -ml-1" style={{ backgroundColor: evt.color, boxShadow: `0 0 4px ${evt.color}` }} />
+              <div className="w-1.5 h-1.5 rounded-full -ml-1" style={{ backgroundColor: evt.color, boxShadow: `${GLOW_SM} ${evt.color}` }} />
             )}
             <div className="text-sm font-mono text-text-muted mt-0.5 whitespace-nowrap truncate max-w-[60px]">
               {evt.label}
@@ -657,13 +661,13 @@ export function LiveMetricGauge({ metric, size = 88, accent }: LiveMetricGaugePr
     <div className="flex flex-col items-center gap-1.5">
       <div className="relative" style={{ width: size, height: size }}>
         <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
-          <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="rgba(255,255,255,0.05)" strokeWidth="4" />
+          <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke={withOpacity(OVERLAY_WHITE, OPACITY_5)} strokeWidth="4" />
           <circle
             cx={size / 2} cy={size / 2} r={r} fill="none"
             stroke={finalColor} strokeWidth="4"
             strokeDasharray={circ} strokeDashoffset={circ * (1 - clamped)}
             strokeLinecap="round" transform={`rotate(-90 ${size / 2} ${size / 2})`}
-            style={{ transition: 'stroke-dashoffset 0.6s ease-out', filter: `drop-shadow(0 0 4px ${finalColor})` }}
+            style={{ transition: 'stroke-dashoffset 0.6s ease-out', filter: `drop-shadow(${GLOW_SM} ${finalColor})` }}
           />
         </svg>
         <div className="absolute inset-0 flex items-center justify-center flex-col leading-none">
@@ -695,7 +699,7 @@ export function DiffViewer({ entries, accent }: DiffViewerProps) {
     added: STATUS_SUCCESS,
     removed: STATUS_ERROR,
     changed: STATUS_WARNING,
-    unchanged: '#64748b',
+    unchanged: STATUS_SUBDUED,
   };
 
   const unchangedCount = entries.filter(e => e.changeType === 'unchanged').length;
@@ -711,9 +715,9 @@ export function DiffViewer({ entries, accent }: DiffViewerProps) {
             <span className="text-text-muted font-medium w-32 truncate flex-shrink-0">{e.field}</span>
             {e.changeType === 'changed' ? (
               <>
-                <span className="text-red-400 line-through opacity-60">{String(e.oldValue)}</span>
+                <span className="line-through opacity-60" style={{ color: STATUS_ERROR }}>{String(e.oldValue)}</span>
                 <span className="text-text-muted">&rarr;</span>
-                <span className="text-emerald-400">{String(e.newValue)}</span>
+                <span style={{ color: STATUS_SUCCESS }}>{String(e.newValue)}</span>
               </>
             ) : e.changeType === 'added' ? (
               <span style={{ color: c }}>+ {String(e.newValue)}</span>
@@ -775,7 +779,7 @@ export function TagCloud({ tags, accent, maxFontSize = 16, minFontSize = 9 }: Ta
             animate={{ opacity: 1, scale: 1 }}
             whileHover={{ scale: 1.1 }}
             className="font-mono font-bold cursor-default px-1.5 py-0.5 rounded transition-colors"
-            style={{ fontSize, color, opacity, backgroundColor: `${color}10` }}
+            style={{ fontSize, color, opacity, backgroundColor: withOpacity(color, OPACITY_5) }}
             title={`${t.tag}: ${t.count} references${t.category ? ` (${t.category})` : ''}`}
           >
             {t.tag}
@@ -838,9 +842,9 @@ export function TabButtonGroup({ items, selected, onSelect, accent, ariaLabel, c
             className="text-2xs font-mono px-2 py-0.5 rounded border transition-all hover:opacity-80"
             style={{
               borderColor: isSelected
-                ? (item.color ? `${itemColor}60` : `${accent}${OPACITY_30}`)
-                : (item.color ? 'var(--border)' : `${accent}${OPACITY_30}`),
-              backgroundColor: isSelected ? `${itemColor}${OPACITY_20}` : 'transparent',
+                ? (item.color ? withOpacity(itemColor, OPACITY_37) : withOpacity(accent, OPACITY_30))
+                : (item.color ? 'var(--border)' : withOpacity(accent, OPACITY_30)),
+              backgroundColor: isSelected ? withOpacity(itemColor, OPACITY_20) : 'transparent',
               color: item.color ? (isSelected ? itemColor : 'var(--text-muted)') : accent,
             }}
           >
@@ -953,7 +957,7 @@ export function CollapsibleSection({
         </motion.div>
         {Icon
           ? <Icon className="w-3.5 h-3.5" style={{ color }} />
-          : <span className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: color, boxShadow: `0 0 6px ${color}60` }} />
+          : <span className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: color, boxShadow: `${GLOW_SM} ${withOpacity(color, OPACITY_37)}` }} />
         }
         <span className="text-xs font-semibold text-text">{title}</span>
       </button>
@@ -1014,7 +1018,7 @@ interface NormalizedLineChartProps {
   height?: string;
   /** Show horizontal grid lines at 25 / 50 / 75 % */
   showGrid?: boolean;
-  /** Grid stroke color — default "rgba(255,255,255,0.06)" */
+  /** Grid stroke color — default OVERLAY_WHITE at OPACITY_6 */
   gridColor?: string;
   /** Y-axis labels rendered top→bottom on the left edge */
   yLabels?: string[];
@@ -1033,7 +1037,7 @@ interface NormalizedLineChartProps {
 export function NormalizedLineChart({
   height = 'h-[220px]',
   showGrid = true,
-  gridColor = 'rgba(255,255,255,0.06)',
+  gridColor = withOpacity(OVERLAY_WHITE, OPACITY_6),
   yLabels,
   xLabels,
   defs,

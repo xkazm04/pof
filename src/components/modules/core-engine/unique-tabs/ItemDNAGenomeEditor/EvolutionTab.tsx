@@ -4,6 +4,7 @@ import { motion } from 'framer-motion';
 import { TrendingUp, Zap, BarChart3, Dna } from 'lucide-react';
 import {
   ACCENT_ORANGE, STATUS_SUCCESS, STATUS_WARNING, OPACITY_10, OPACITY_20,
+  withOpacity, OPACITY_25,
 } from '@/lib/chart-colors';
 import { BlueprintPanel, SectionHeader, GlowStat, NeonBar } from '@/components/modules/core-engine/unique-tabs/_design';
 import type { ItemGenome } from '@/types/item-genome';
@@ -58,7 +59,7 @@ export function EvolutionTab({ selected, doEvolve }: EvolutionTabProps) {
         <button
           onClick={doEvolve}
           className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-bold transition-all hover:scale-105"
-          style={{ backgroundColor: `${STATUS_SUCCESS}${OPACITY_20}`, color: STATUS_SUCCESS, border: `1px solid ${STATUS_SUCCESS}40` }}
+          style={{ backgroundColor: `${STATUS_SUCCESS}${OPACITY_20}`, color: STATUS_SUCCESS, border: `1px solid ${withOpacity(STATUS_SUCCESS, OPACITY_25)}` }}
         >
           <Zap className="w-3.5 h-3.5" /> Simulate Combat Usage (+50-150 XP)
         </button>
@@ -101,7 +102,7 @@ export function EvolutionTab({ selected, doEvolve }: EvolutionTabProps) {
                 className="flex items-center gap-2 text-xs font-mono px-2 py-1.5 rounded-md"
                 style={{
                   backgroundColor: reached ? `${t.color}${OPACITY_10}` : 'transparent',
-                  border: `1px solid ${reached ? `${t.color}40` : 'var(--border)'}`,
+                  border: `1px solid ${reached ? withOpacity(t.color, OPACITY_25) : 'var(--border)'}`,
                   opacity: reached ? 1 : 0.5,
                 }}
               >

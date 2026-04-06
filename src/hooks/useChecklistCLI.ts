@@ -28,6 +28,7 @@ interface UseChecklistCLIOptions {
  *   useModuleCLI instantiation, and prompt enrichment via TaskFactory + execute.
  */
 export function useChecklistCLI(opts: UseChecklistCLIOptions): UseChecklistCLIResult {
+  const { moduleId, sessionKey, label, accentColor, onItemCompleted } = opts;
   const setChecklistItem = useModuleStore((s) => s.setChecklistItem);
 
   const [activeItemId, setActiveItemId] = useState<string | null>(null);
@@ -35,19 +36,19 @@ export function useChecklistCLI(opts: UseChecklistCLIOptions): UseChecklistCLIRe
   const handleComplete = useCallback(
     (success: boolean) => {
       if (success && activeItemId) {
-        setChecklistItem(opts.moduleId, activeItemId, true);
-        opts.onItemCompleted?.(activeItemId);
+        setChecklistItem(moduleId, activeItemId, true);
+        onItemCompleted?.(activeItemId);
       }
       setActiveItemId(null);
     },
-    [activeItemId, opts.moduleId, opts.onItemCompleted, setChecklistItem],
+    [activeItemId, moduleId, onItemCompleted, setChecklistItem],
   );
 
   const cli = useModuleCLI({
-    moduleId: opts.moduleId,
-    sessionKey: opts.sessionKey,
-    label: opts.label,
-    accentColor: opts.accentColor,
+    moduleId,
+    sessionKey,
+    label,
+    accentColor,
     onComplete: handleComplete,
   });
 
@@ -56,10 +57,10 @@ export function useChecklistCLI(opts: UseChecklistCLIOptions): UseChecklistCLIRe
   const sendPrompt = useCallback(
     (itemId: string, prompt: string) => {
       setActiveItemId(itemId);
-      const task = TaskFactory.checklist(opts.moduleId, itemId, prompt, opts.label, appOrigin);
+      const task = TaskFactory.checklist(moduleId, itemId, prompt, label, appOrigin);
       cli.execute(task);
     },
-    [cli, opts.moduleId, opts.label, appOrigin],
+    [cli, moduleId, label, appOrigin],
   );
 
   return {

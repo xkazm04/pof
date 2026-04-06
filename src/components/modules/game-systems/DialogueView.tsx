@@ -190,7 +190,7 @@ function QuestGeneratorPanel() {
       {!result && !loading && (
         <SurfaceCard level={2} className="px-4 py-8 text-center">
           <Scroll className="w-8 h-8 text-text-muted mx-auto mb-2" />
-          <p className="text-sm text-text-muted">Click "Generate Quests" to scan your world and create quests</p>
+          <p className="text-sm text-text-muted">Click &quot;Generate Quests&quot; to scan your world and create quests</p>
           <p className="text-2xs text-text-muted mt-1">Works best with a level design document and scanned UE5 project</p>
         </SurfaceCard>
       )}

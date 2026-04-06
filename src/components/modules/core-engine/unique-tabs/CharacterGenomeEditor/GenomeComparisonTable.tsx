@@ -1,6 +1,6 @@
 'use client';
 
-import { STATUS_SUCCESS } from '@/lib/chart-colors';
+import { STATUS_SUCCESS, withOpacity, OPACITY_37 } from '@/lib/chart-colors';
 import type { CharacterGenome } from '@/types/character-genome';
 import { COMP_STATS } from './field-data';
 
@@ -50,7 +50,7 @@ export function GenomeComparisonTable({ genomes, activeId }: {
                           style={{
                             width: `${barPct}%`,
                             backgroundColor: g.color,
-                            boxShadow: isBest ? `0 0 6px ${g.color}60` : 'none',
+                            boxShadow: isBest ? `0 0 6px ${withOpacity(g.color, OPACITY_37)}` : 'none',
                             opacity: isActive ? 1 : 0.7,
                           }}
                         />

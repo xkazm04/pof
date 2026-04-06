@@ -2,7 +2,9 @@
 
 import { BarChart3 } from 'lucide-react';
 import { motion, useReducedMotion } from 'framer-motion';
-import { STATUS_ERROR, ACCENT_CYAN, ACCENT_VIOLET, ACCENT_EMERALD } from '@/lib/chart-colors';
+import { STATUS_ERROR, ACCENT_CYAN, ACCENT_VIOLET, ACCENT_EMERALD,
+  withOpacity, OPACITY_25, OPACITY_8,
+} from '@/lib/chart-colors';
 import { motionSafe } from '@/lib/motion';
 import { SurfaceCard } from '@/components/ui/SurfaceCard';
 import { SectionLabel } from '../_shared';
@@ -44,7 +46,7 @@ export function XpSourceBreakdown() {
               />
               <div
                 className="absolute inset-y-0 left-0 rounded-md"
-                style={{ width: `${src.pct}%`, background: `linear-gradient(90deg, ${src.color}40, ${src.color}10)` }}
+                style={{ width: `${src.pct}%`, background: `linear-gradient(90deg, ${withOpacity(src.color, OPACITY_25)}, ${withOpacity(src.color, OPACITY_8)})` }}
               />
               <div className="absolute inset-0 flex items-center px-2">
                 <span className="text-2xs font-mono font-bold text-white/80 drop-shadow-sm">{src.label} - {src.pct}%</span>

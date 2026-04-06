@@ -105,10 +105,10 @@ export function CompactTerminal({
   }, [tq.isStreaming]);
 
   // Empty state prompt chip fill — just fills input without submitting
-  const handlePromptFill = useCallback((prompt: string) => {
+  const handlePromptFill = (prompt: string) => {
     setInput(prompt);
     history.inputRef.current?.focus();
-  }, [history.inputRef]);
+  };
 
   // --- Derived counts ---
 

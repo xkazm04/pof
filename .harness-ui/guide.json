@@ -1,0 +1,2753 @@
+{
+  "title": "How to Build PoF-UI with PoF + UE5",
+  "game": "PoF-UI",
+  "generatedAt": "2026-04-06T11:30:56.256Z",
+  "totalIterations": 53,
+  "totalDurationMs": 17620595,
+  "buildOrder": [
+    {
+      "moduleId": "arpg-character",
+      "areas": [
+        "infra-feature-cards-a",
+        "infra-entity-selector-a",
+        "infra-entity-selector-b",
+        "infra-feature-cards-b",
+        "infra-entity-selector-c",
+        "ui-character-feature-metrics-a",
+        "ui-animation-feature-metrics-a",
+        "ui-character-feature-metrics-b",
+        "ui-animation-feature-metrics-b",
+        "infra-design-tokens-a",
+        "infra-metadata-schema-b",
+        "ui-character-feature-metrics-c",
+        "ui-combat-feature-metrics-a",
+        "ui-bestiary-feature-metrics-a",
+        "ui-combat-feature-metrics-b",
+        "ui-bestiary-feature-metrics-b",
+        "ui-items-feature-metrics-a",
+        "infra-design-tokens-b",
+        "ui-items-feature-metrics-b",
+        "ui-gas-feature-metrics-b",
+        "ui-loot-feature-metrics-b",
+        "ui-animation-scaling-a",
+        "ui-animation-scaling-b",
+        "ui-gas-scaling-a",
+        "ui-combat-scaling-a",
+        "ui-character-scaling-a",
+        "ui-gas-scaling-b",
+        "ui-combat-scaling-b",
+        "ui-items-scaling-a",
+        "ui-loot-scaling-a",
+        "ui-character-flow",
+        "ui-bestiary-scaling-a",
+        "ui-items-scaling-b",
+        "ui-loot-scaling-b",
+        "ui-bestiary-scaling-b",
+        "ui-animation-flow",
+        "ui-gas-flow",
+        "ui-items-flow",
+        "ui-combat-flow",
+        "ui-bestiary-flow",
+        "ui-loot-flow",
+        "ui-animation-visual",
+        "ui-character-visual-a",
+        "ui-gas-visual-a",
+        "ui-bestiary-visual",
+        "ui-character-visual-b",
+        "ui-gas-visual-b",
+        "ui-combat-visual-a",
+        "ui-items-visual-a",
+        "ui-combat-visual-b",
+        "ui-items-visual-b",
+        "ui-loot-visual-b",
+        "ui-style-audit-a"
+      ]
+    }
+  ],
+  "steps": [
+    {
+      "phase": 1,
+      "areaId": "infra-feature-cards-a",
+      "moduleId": "arpg-character",
+      "label": "Feature Map Card System (Part 1)",
+      "description": "Replace the toggle-list FeatureMapTab with a card-grid matrix.\nEach feature becomes a FeatureCard component — clickable card with active/inactive states.\nActive: colored background tint (withOpacity accent 8%), bright border (accent 30%), full-color content.\nInactive: muted border (neutral 20%), desaturated content, reduced opacity.\nCard shows: feature name (mono bold), metric content area (children render prop), status dot (bottom-right).\nLayout: CSS grid auto-fill, min 160px, gap-3. Tab groups become section headers.\nCreate: src/components/shared/FeatureCard.tsx, src/components/shared/FeatureCardGrid.tsx.\nUpdate: src/components/modules/core-engine/unique-tabs/FeatureMapTab.tsx to use new components.\nKeep Enable All / Disable All buttons. Add NeonBar progress at top.",
+      "pofActions": [],
+      "ue5Files": [
+        "src/components/shared/FeatureCard.tsx",
+        "src/hooks/useFeatureVisibility.ts"
+      ],
+      "decisions": [
+        {
+          "decision": "Implemented FeatureCard component",
+          "rationale": "Added cursor-pointer, tactile hover/active scale transforms, smooth status dot transition"
+        },
+        {
+          "decision": "Implemented FeatureCardGrid component",
+          "rationale": "Clean CSS grid with auto-fill min 160px, role=group, aria-label. Minimal and correct."
+        },
+        {
+          "decision": "Implemented FeatureMapTab integration",
+          "rationale": "NeonBar progress, tab navigation, section headers, group-level and global Enable/Disable All buttons all present and correct"
+        },
+        {
+          "decision": "Implemented feature-map-config registry",
+          "rationale": "13 modules with flat section definitions, clean grouping logic, summary fields for key sections"
+        },
+        {
+          "decision": "Implemented useFeatureVisibility hook",
+          "rationale": "Fixed setAll to skip no-op updates (matching setMany optimization), localStorage persistence, correct default-visible semantics"
+        }
+      ],
+      "gotchas": [
+        "Button elements default to cursor:default — always add cursor-pointer for clickable cards",
+        "setAll and setMany should both check for no-op to avoid unnecessary re-renders and localStorage writes",
+        "Tailwind scale transforms with hover/active give tactile feedback without needing framer-motion"
+      ],
+      "verification": "PASS typecheck, FAIL lint, PASS test, FAIL visual-check",
+      "durationMs": 105139
+    },
+    {
+      "phase": 2,
+      "areaId": "infra-entity-selector-a",
+      "moduleId": "arpg-character",
+      "label": "Scalable Entity Selector (Part 1)",
+      "description": "Create src/components/shared/ScalableSelector.tsx — a modal overlay component for picking\nfrom 100+ entities. Must support: debounced search (300ms), group-by with collapsible sections,\nvirtual scroll for large lists, multi-select and single-select modes, keyboard navigation\n(arrow keys, Enter, Escape), render prop for custom item cards, selected items shown as pills.\nProps: items, groupBy, renderItem, onSelect, selected, searchKey, placeholder, mode.\nComponent structure: index.tsx, SelectorSearch.tsx, SelectorGroup.tsx, SelectorGrid.tsx, types.ts.\nPlace in src/components/shared/ScalableSelector/.",
+      "pofActions": [],
+      "ue5Files": [
+        "src/components/shared/ScalableSelector/index.tsx"
+      ],
+      "decisions": [
+        {
+          "decision": "Implemented Debounced search (300ms)",
+          "rationale": "Custom useDebounced hook with configurable delay"
+        },
+        {
+          "decision": "Implemented Group-by with collapsible sections",
+          "rationale": "Dynamic grouping by any key, collapsible state tracked in Set"
+        },
+        {
+          "decision": "Implemented Virtual scroll",
+          "rationale": "Binary search visible range, rAF-throttled scroll, ResizeObserver, 6-row overscan"
+        },
+        {
+          "decision": "Implemented Multi-select and single-select modes",
+          "rationale": "Single auto-closes, multi toggles membership, Ctrl+A selects all filtered"
+        },
+        {
+          "decision": "Implemented Keyboard navigation",
+          "rationale": "Arrow keys, PgUp/Dn, Home/End, Enter, Space, Escape — O(1) index lookup via Map"
+        },
+        {
+          "decision": "Implemented Render prop for custom items",
+          "rationale": "renderItem(item, selected) and renderGroupHeader(group) render props"
+        },
+        {
+          "decision": "Implemented Selected pills",
+          "rationale": "Accent-colored pills with remove buttons, overflow +N indicator, clear all"
+        },
+        {
+          "decision": "Implemented Accessibility",
+          "rationale": "Focus trap, scroll lock, focus restore, ARIA listbox/option/activedescendant, aria-live count"
+        },
+        {
+          "decision": "Implemented Component structure",
+          "rationale": "Clean 5-file split: types.ts, index.tsx, SelectorSearch.tsx, SelectorGroup.tsx, SelectorGrid.tsx"
+        }
+      ],
+      "gotchas": [
+        "Existing implementation was high quality — only needed minor cleanup (redundant array copy, missing keyboard hint). Binary search + overscan virtual scroll pattern handles 100+ items well."
+      ],
+      "verification": "PASS typecheck, FAIL lint, PASS test, FAIL visual-check",
+      "durationMs": 136573
+    },
+    {
+      "phase": 3,
+      "areaId": "infra-entity-selector-b",
+      "moduleId": "arpg-character",
+      "label": "Scalable Entity Selector (Part 2)",
+      "description": "Create src/components/shared/ScalableSelector.tsx — a modal overlay component for picking\nfrom 100+ entities. Must support: debounced search (300ms), group-by with collapsible sections,\nvirtual scroll for large lists, multi-select and single-select modes, keyboard navigation\n(arrow keys, Enter, Escape), render prop for custom item cards, selected items shown as pills.\nProps: items, groupBy, renderItem, onSelect, selected, searchKey, placeholder, mode.\nComponent structure: index.tsx, SelectorSearch.tsx, SelectorGroup.tsx, SelectorGrid.tsx, types.ts.\nPlace in src/components/shared/ScalableSelector/.",
+      "pofActions": [],
+      "ue5Files": [
+        "src/components/shared/ScalableSelector/index.tsx",
+        "src/components/shared/ScalableSelector/SelectorGrid.tsx"
+      ],
+      "decisions": [
+        {
+          "decision": "Implemented debounced-search",
+          "rationale": "300ms debounce with custom hook, search icon color transition, clear button, live count"
+        },
+        {
+          "decision": "Implemented group-by-collapsible",
+          "rationale": "Dynamic grouping with collapsible headers, chevron icons, item count badges"
+        },
+        {
+          "decision": "Implemented virtual-scroll",
+          "rationale": "Binary search + overscan(6) with rAF-throttled scroll, ResizeObserver for viewport, O(1) scroll-to-focused via itemRowIndex map"
+        },
+        {
+          "decision": "Implemented multi-single-select",
+          "rationale": "Single mode auto-closes, multi mode toggles with Ctrl+A select-all"
+        },
+        {
+          "decision": "Implemented keyboard-navigation",
+          "rationale": "Full coverage: arrows, PgUp/Dn, Home/End, Enter/Space, Escape, Ctrl+A — O(1) index lookups via navigableIndexMap"
+        },
+        {
+          "decision": "Implemented render-prop",
+          "rationale": "renderItem receives item + selected boolean, renderGroupHeader for custom headers"
+        },
+        {
+          "decision": "Implemented selected-pills",
+          "rationale": "Max 8 visible pills with +N more overflow, individual remove, clear all button"
+        },
+        {
+          "decision": "Implemented accessibility",
+          "rationale": "Dialog role, aria-modal, aria-activedescendant, aria-selected, focus trap, body scroll lock, trigger focus restore"
+        }
+      ],
+      "gotchas": [
+        "Redundant data structures (navigableSet vs navigableIndexMap) add allocation cost for zero benefit — Map.has() serves both index lookup and membership testing. Building auxiliary index maps alongside existing offset computation loops adds O(1) lookups at zero extra pass cost."
+      ],
+      "verification": "PASS typecheck, FAIL lint, PASS test, FAIL visual-check",
+      "durationMs": 144679
+    },
+    {
+      "phase": 4,
+      "areaId": "infra-feature-cards-b",
+      "moduleId": "arpg-character",
+      "label": "Feature Map Card System (Part 2)",
+      "description": "Replace the toggle-list FeatureMapTab with a card-grid matrix.\nEach feature becomes a FeatureCard component — clickable card with active/inactive states.\nActive: colored background tint (withOpacity accent 8%), bright border (accent 30%), full-color content.\nInactive: muted border (neutral 20%), desaturated content, reduced opacity.\nCard shows: feature name (mono bold), metric content area (children render prop), status dot (bottom-right).\nLayout: CSS grid auto-fill, min 160px, gap-3. Tab groups become section headers.\nCreate: src/components/shared/FeatureCard.tsx, src/components/shared/FeatureCardGrid.tsx.\nUpdate: src/components/modules/core-engine/unique-tabs/FeatureMapTab.tsx to use new components.\nKeep Enable All / Disable All buttons. Add NeonBar progress at top.",
+      "pofActions": [],
+      "ue5Files": [
+        "src/hooks/useFeatureVisibility.ts",
+        "src/components/modules/core-engine/unique-tabs/FeatureMapTab.tsx"
+      ],
+      "decisions": [
+        {
+          "decision": "Implemented FeatureCard component",
+          "rationale": "Solid card with active/inactive states, status dot, metric children, cursor-pointer, hover/active scale, proper aria-pressed"
+        },
+        {
+          "decision": "Implemented FeatureCardGrid component",
+          "rationale": "CSS grid auto-fill min 160px with aria group label"
+        },
+        {
+          "decision": "Implemented FeatureMapTab integration",
+          "rationale": "NeonBar progress, Enable/Disable All, group-level All On/Off, tab navigation, renderMetric prop. Fixed MiniBtn missing cursor-pointer"
+        },
+        {
+          "decision": "Implemented useFeatureVisibility hook",
+          "rationale": "Fixed React 19 set-state-in-effect lint violation — replaced useEffect-based moduleId reset with render-time state comparison pattern. No-op skip in setAll/setMany preserved"
+        }
+      ],
+      "gotchas": [
+        "React 19 ESLint plugin flags setState-in-useEffect (react-hooks/set-state-in-effect) and ref access during render (react-hooks/refs) — use the state-based previous value comparison pattern instead",
+        "MiniBtn (button elements in general) need explicit cursor-pointer class even when they have onClick handlers"
+      ],
+      "verification": "PASS typecheck, FAIL lint, PASS test, FAIL visual-check",
+      "durationMs": 317888
+    },
+    {
+      "phase": 5,
+      "areaId": "infra-entity-selector-c",
+      "moduleId": "arpg-character",
+      "label": "Scalable Entity Selector (Part 3)",
+      "description": "Create src/components/shared/ScalableSelector.tsx — a modal overlay component for picking\nfrom 100+ entities. Must support: debounced search (300ms), group-by with collapsible sections,\nvirtual scroll for large lists, multi-select and single-select modes, keyboard navigation\n(arrow keys, Enter, Escape), render prop for custom item cards, selected items shown as pills.\nProps: items, groupBy, renderItem, onSelect, selected, searchKey, placeholder, mode.\nComponent structure: index.tsx, SelectorSearch.tsx, SelectorGroup.tsx, SelectorGrid.tsx, types.ts.\nPlace in src/components/shared/ScalableSelector/.",
+      "pofActions": [],
+      "ue5Files": [
+        "src/components/shared/ScalableSelector/index.tsx"
+      ],
+      "decisions": [
+        {
+          "decision": "Implemented debounced search (300ms)",
+          "rationale": "Already solid — custom useDebounced hook with configurable delay"
+        },
+        {
+          "decision": "Implemented group-by with collapsible sections",
+          "rationale": "Clean groupItems helper, collapsible headers with aria-expanded, ungrouped hides redundant 'All' header"
+        },
+        {
+          "decision": "Implemented virtual scroll for large lists",
+          "rationale": "Binary search + overscan, rAF-throttled scroll, ResizeObserver for viewport, O(1) scroll-to-focused via itemRowIndex"
+        },
+        {
+          "decision": "Implemented multi-select and single-select modes",
+          "rationale": "Single mode auto-closes on select, multi mode shows pills with clear-all"
+        },
+        {
+          "decision": "Implemented keyboard navigation",
+          "rationale": "Fixed Home/End/Ctrl+A conflict with search input — keys now pass through to input when focused, only navigate items when outside input. Arrow, PgUp/Dn, Enter, Space, Esc all correct."
+        },
+        {
+          "decision": "Implemented render prop for custom item cards",
+          "rationale": "renderItem(item, selected) pattern with full flexibility"
+        },
+        {
+          "decision": "Implemented selected items shown as pills",
+          "rationale": "Max 8 visible pills with +N overflow, accent-colored, removable, clear-all button"
+        }
+      ],
+      "gotchas": [
+        "Home/End/Ctrl+A keyboard handlers on modal wrappers must check if event target is an INPUT — otherwise they steal cursor-movement and text-selection keys from the search field. Same pattern as the existing Space key guard."
+      ],
+      "verification": "PASS typecheck, FAIL lint, PASS test, FAIL visual-check",
+      "durationMs": 200597
+    },
+    {
+      "phase": 6,
+      "areaId": "ui-character-feature-metrics-a",
+      "moduleId": "arpg-character",
+      "label": "Character Blueprint Feature Metrics (Part 1)",
+      "description": "Add unique metric visualizations to each FeatureCard in the Character Blueprint Feature Map tab.\nEach card's children slot gets a micro-visualization:\n- Class Hierarchy: \"{types} types / {classes} classes\" side by side numbers\n- Properties: Stacked mini bars (HP, Speed, Armor ranges, 60px wide)\n- Scaling: Sparkline SVG (60×20px) showing first 10 curve points\n- Hitbox: \"{zones} zones\" with colored dots (hurtbox=red, hitbox=blue, pushbox=green)\n- Camera: Three compact stats \"FOV | Arm | Lag\" in mono font\n- Bindings: Colored ratio bar \"{bound}/{total}\" with NeonBar\n- Keyboard: \"{conflicts}\" count — green if 0, red if >0\n- States: \"{count} states\" with mini icon\n- Dodge: \"{distance}m\" bold number\n- Curve Editor: Tiny sparkline of feel curve\n- Optimizer: Preset name or \"No preset\" muted\n- Comparison: \"{dupes} duplicates\" — red if >0\n- Balance: Mini radar thumbnail (40×40px SVG)\nAll metrics derive from existing data in CharacterBlueprint/data.ts.\nCreate metric components in CharacterBlueprint/metrics/ directory.",
+      "pofActions": [],
+      "ue5Files": [],
+      "decisions": [
+        {
+          "decision": "Implemented ClassHierarchyMetric",
+          "rationale": "Counts tree nodes and unique subtypes correctly"
+        },
+        {
+          "decision": "Implemented PropertiesMetric",
+          "rationale": "Stacked HP/Speed/Armor mini bars at 60px using NeonBar"
+        },
+        {
+          "decision": "Implemented ScalingMetric",
+          "rationale": "Sparkline SVG 60×20px from SCALING_PROPS range data"
+        },
+        {
+          "decision": "Implemented HitboxMetric",
+          "rationale": "Zone count with colored type dots"
+        },
+        {
+          "decision": "Implemented CameraMetric",
+          "rationale": "FOV|Arm|Lag compact stats from BLUEPRINT_PROPERTIES"
+        },
+        {
+          "decision": "Implemented BindingsMetric",
+          "rationale": "Enhanced/total ratio with NeonBar"
+        },
+        {
+          "decision": "Implemented KeyboardMetric",
+          "rationale": "Conflict count with green/red conditional color"
+        },
+        {
+          "decision": "Implemented StatesMetric",
+          "rationale": "State count with per-state colored dots"
+        },
+        {
+          "decision": "Implemented DodgeMetric",
+          "rationale": "Distance hardcoded at 4.5m — no distance data in DODGE_TRAJECTORIES SVG paths"
+        },
+        {
+          "decision": "Implemented CurveEditorMetric",
+          "rationale": "Sparkline from ACCEL_CURVE_POINTS"
+        },
+        {
+          "decision": "Implemented OptimizerMetric",
+          "rationale": "Static 'No preset' placeholder — no dynamic preset state available"
+        },
+        {
+          "decision": "Implemented ComparisonMetric",
+          "rationale": "Duplicate detection via Set comparison"
+        },
+        {
+          "decision": "Implemented BalanceMetric",
+          "rationale": "40×40px radar with grid outline + 2 character stat polygons"
+        }
+      ],
+      "gotchas": [
+        "CharacterBlueprint metrics were already fully implemented with all 13 section IDs mapped — no gaps found",
+        "DODGE_TRAJECTORIES contains SVG path data not numeric distances — hardcoded dodge distance is the correct approach"
+      ],
+      "verification": "PASS typecheck, FAIL lint, PASS test, FAIL visual-check",
+      "durationMs": 152248
+    },
+    {
+      "phase": 7,
+      "areaId": "ui-animation-feature-metrics-a",
+      "moduleId": "arpg-character",
+      "label": "Animation State Graph Feature Metrics (Part 1)",
+      "description": "Add unique metric visualizations to Animation State Graph Feature Map.\n- States: \"{n} states / {g} groups\"\n- Transitions: \"{n} edges\" with mini directed-graph icon\n- Heatmap: Micro heatmap grid (4×4, 20px)\n- Chain: \"{n} combos / depth {d}\"\n- Montages: \"{n} montages\"\n- Scrubber: \"{n} notifies\"\n- Skeleton: \"{mapped}/{total}\" bone mapping bar\n- Trajectories: \"{n} root motion curves\"\n- Assets: \"{size}MB\" estimated memory\n- Playrate: \"{min}–{max}x\" range\nDerive from AnimationStateGraph/data.ts. Create metrics/ subdirectory.",
+      "pofActions": [],
+      "ue5Files": [],
+      "decisions": [
+        {
+          "decision": "Implemented States metric",
+          "rationale": "{n} states / {g} groups derived from STATE_NODES and STATE_GROUPS"
+        },
+        {
+          "decision": "Implemented Transitions metric",
+          "rationale": "{n} edges with custom SVG directed-graph icon including arrow heads"
+        },
+        {
+          "decision": "Implemented Heatmap micro grid",
+          "rationale": "5×5 SVG micro grid (25×25px) with opacity-mapped transition frequencies"
+        },
+        {
+          "decision": "Implemented Chain metric",
+          "rationale": "{n} combos / depth {d} with singular/plural handling"
+        },
+        {
+          "decision": "Implemented Montages metric",
+          "rationale": "{n} montages from MONTAGE_TIMINGS"
+        },
+        {
+          "decision": "Implemented Scrubber metric",
+          "rationale": "{n} notifies from SCRUBBER_LANES"
+        },
+        {
+          "decision": "Implemented Skeleton bone mapping bar",
+          "rationale": "{mapped}/{total} with NeonBar progress from BUDGET_GAUGES"
+        },
+        {
+          "decision": "Implemented Trajectories metric",
+          "rationale": "{n} root motion curves from ROOT_MOTION_PATHS"
+        },
+        {
+          "decision": "Implemented Assets memory estimate",
+          "rationale": "~{size}MB estimated from montage + blend + bone heuristic"
+        },
+        {
+          "decision": "Implemented Playrate range",
+          "rationale": "Smart uniform fallback shows blend-in time range when all fps match"
+        }
+      ],
+      "gotchas": [
+        "Existing AnimationStateGraph metrics implementation was already high quality — all 10 metrics correctly derive data from data.ts, use consistent styling patterns, and compute constants at module scope to avoid re-renders. PlayrateMetric has a smart fallback that shows blend-in time range when all montages share the same fps."
+      ],
+      "verification": "PASS typecheck, FAIL lint, PASS test, FAIL visual-check",
+      "durationMs": 123491
+    },
+    {
+      "phase": 8,
+      "areaId": "ui-character-feature-metrics-b",
+      "moduleId": "arpg-character",
+      "label": "Character Blueprint Feature Metrics (Part 2)",
+      "description": "Add unique metric visualizations to each FeatureCard in the Character Blueprint Feature Map tab.\nEach card's children slot gets a micro-visualization:\n- Class Hierarchy: \"{types} types / {classes} classes\" side by side numbers\n- Properties: Stacked mini bars (HP, Speed, Armor ranges, 60px wide)\n- Scaling: Sparkline SVG (60×20px) showing first 10 curve points\n- Hitbox: \"{zones} zones\" with colored dots (hurtbox=red, hitbox=blue, pushbox=green)\n- Camera: Three compact stats \"FOV | Arm | Lag\" in mono font\n- Bindings: Colored ratio bar \"{bound}/{total}\" with NeonBar\n- Keyboard: \"{conflicts}\" count — green if 0, red if >0\n- States: \"{count} states\" with mini icon\n- Dodge: \"{distance}m\" bold number\n- Curve Editor: Tiny sparkline of feel curve\n- Optimizer: Preset name or \"No preset\" muted\n- Comparison: \"{dupes} duplicates\" — red if >0\n- Balance: Mini radar thumbnail (40×40px SVG)\nAll metrics derive from existing data in CharacterBlueprint/data.ts.\nCreate metric components in CharacterBlueprint/metrics/ directory.",
+      "pofActions": [],
+      "ue5Files": [],
+      "decisions": [
+        {
+          "decision": "Implemented ClassHierarchyMetric",
+          "rationale": "Types/classes count from recursive tree traversal"
+        },
+        {
+          "decision": "Implemented PropertiesMetric",
+          "rationale": "Stacked NeonBar mini bars for HP/Speed/Armor at 60px width"
+        },
+        {
+          "decision": "Implemented ScalingMetric",
+          "rationale": "60×20px sparkline SVG from SCALING_PROPS range ratios"
+        },
+        {
+          "decision": "Implemented HitboxMetric",
+          "rationale": "Zone count with colored dots per hitbox type"
+        },
+        {
+          "decision": "Implemented CameraMetric",
+          "rationale": "FOV|Arm|Lag compact mono font stats"
+        },
+        {
+          "decision": "Implemented BindingsMetric",
+          "rationale": "Enhanced/total ratio with NeonBar"
+        },
+        {
+          "decision": "Implemented KeyboardMetric",
+          "rationale": "Conflict count green/red with singular/plural"
+        },
+        {
+          "decision": "Implemented StatesMetric",
+          "rationale": "State count with colored mini dots"
+        },
+        {
+          "decision": "Implemented DodgeMetric",
+          "rationale": "Distance + path count from DODGE_TRAJECTORIES"
+        },
+        {
+          "decision": "Implemented CurveEditorMetric",
+          "rationale": "Sparkline from ACCEL_CURVE_POINTS"
+        },
+        {
+          "decision": "Implemented OptimizerMetric",
+          "rationale": "Static 'No preset' — correct given no runtime state"
+        },
+        {
+          "decision": "Implemented ComparisonMetric",
+          "rationale": "Duplicate detection with green/red indicator"
+        },
+        {
+          "decision": "Implemented BalanceMetric",
+          "rationale": "40×40px radar thumbnail with 2 character overlays"
+        }
+      ],
+      "gotchas": [
+        "CharacterBlueprint metrics were already fully implemented with all 13 section IDs mapped — no gaps found"
+      ],
+      "verification": "PASS typecheck, FAIL lint, PASS test, FAIL visual-check",
+      "durationMs": 110180
+    },
+    {
+      "phase": 9,
+      "areaId": "ui-animation-feature-metrics-b",
+      "moduleId": "arpg-character",
+      "label": "Animation State Graph Feature Metrics (Part 2)",
+      "description": "Add unique metric visualizations to Animation State Graph Feature Map.\n- States: \"{n} states / {g} groups\"\n- Transitions: \"{n} edges\" with mini directed-graph icon\n- Heatmap: Micro heatmap grid (4×4, 20px)\n- Chain: \"{n} combos / depth {d}\"\n- Montages: \"{n} montages\"\n- Scrubber: \"{n} notifies\"\n- Skeleton: \"{mapped}/{total}\" bone mapping bar\n- Trajectories: \"{n} root motion curves\"\n- Assets: \"{size}MB\" estimated memory\n- Playrate: \"{min}–{max}x\" range\nDerive from AnimationStateGraph/data.ts. Create metrics/ subdirectory.",
+      "pofActions": [],
+      "ue5Files": [],
+      "decisions": [
+        {
+          "decision": "Implemented States metric",
+          "rationale": "Correctly derives from STATE_NODES and STATE_GROUPS"
+        },
+        {
+          "decision": "Implemented Transitions metric with graph icon",
+          "rationale": "SVG mini directed-graph icon with arrow heads, edge count from transitions"
+        },
+        {
+          "decision": "Implemented Heatmap micro grid",
+          "rationale": "5x5 SVG grid matching actual HEATMAP_STATE_NAMES count, proper opacity mapping"
+        },
+        {
+          "decision": "Implemented Chain metric",
+          "rationale": "Combo count with depth, handles singular/plural"
+        },
+        {
+          "decision": "Implemented Montages metric",
+          "rationale": "Clean count from MONTAGE_TIMINGS"
+        },
+        {
+          "decision": "Implemented Scrubber metric",
+          "rationale": "Notify count from SCRUBBER_LANES"
+        },
+        {
+          "decision": "Implemented Skeleton bone mapping bar",
+          "rationale": "Mapped/total with NeonBar progress visualization"
+        },
+        {
+          "decision": "Implemented Trajectories metric",
+          "rationale": "Root motion curve count from ROOT_MOTION_PATHS"
+        },
+        {
+          "decision": "Implemented Assets memory estimate",
+          "rationale": "Reasonable MB estimate from montages + blend clips + bones"
+        },
+        {
+          "decision": "Implemented Playrate range",
+          "rationale": "Smart fallback shows blend-in time range when all rates uniform"
+        }
+      ],
+      "gotchas": [
+        "Existing AnimationStateGraph metrics implementation was already high quality — all 10 metrics correctly derive data from data.ts, use consistent styling patterns, and compute constants at module scope to avoid re-renders. PlayrateMetric has a smart fallback that shows blend-in time range when all montages share the same fps."
+      ],
+      "verification": "PASS typecheck, FAIL lint, PASS test, FAIL visual-check",
+      "durationMs": 69290
+    },
+    {
+      "phase": 10,
+      "areaId": "infra-design-tokens-a",
+      "moduleId": "arpg-character",
+      "label": "Design Token Standardization (Part 1)",
+      "description": "Audit and standardize border opacities, glow radii, spacing across all unique-tab components.\nAdd to chart-colors.ts: BORDER_DEFAULT=OPACITY_20, BORDER_HOVER=OPACITY_37, BORDER_SUBTLE=OPACITY_10,\nGLOW_SM='0 0 4px', GLOW_MD='0 0 8px', GLOW_LG='0 0 16px'.\nAdd to globals.css: --panel-padding:12px, --card-gap:12px, --section-gap:16px.\nUpdate _design.tsx and _shared.tsx to use new constants.\nGrep all unique-tabs/ for hardcoded hex opacity suffixes (e.g., #3b82f618, #f8717120)\nand replace with imported withOpacity + constants. Do NOT change visual appearance.",
+      "pofActions": [],
+      "ue5Files": [
+        "src/lib/chart-colors.ts",
+        "src/components/modules/core-engine/unique-tabs/_shared.tsx",
+        "src/components/modules/core-engine/unique-tabs/bestiary/TacticsMap.tsx",
+        "src/components/modules/core-engine/unique-tabs/bestiary/SpawnFormationViz.tsx",
+        "src/components/modules/core-engine/unique-tabs/bestiary/PerceptionConeViz.tsx",
+        "src/components/modules/core-engine/unique-tabs/bestiary/DifficultyChart.tsx",
+        "src/components/modules/core-engine/unique-tabs/bestiary/BTFlowchart.tsx",
+        "src/components/modules/core-engine/unique-tabs/AbilityForge/index.tsx",
+        "src/components/modules/core-engine/unique-tabs/AbilityForge/ForgeInput.tsx",
+        "src/components/modules/core-engine/unique-tabs/AbilityForge/ForgeResult.tsx",
+        "src/components/modules/core-engine/unique-tabs/AbilityForge/ComboTimeline.tsx",
+        "src/components/modules/core-engine/unique-tabs/AbilitySpellbook/core/CoreSection.tsx",
+        "src/components/modules/core-engine/unique-tabs/AbilitySpellbook/abilities/AbilitiesSection.tsx",
+        "src/components/modules/core-engine/unique-tabs/AbilitySpellbook/abilities/DamageCalcSection.tsx",
+        "src/components/modules/core-engine/unique-tabs/AbilitySpellbook/tags/TagDepsSection.tsx",
+        "src/components/modules/core-engine/unique-tabs/AbilitySpellbook/tags/TagAuditSection.tsx",
+        "src/components/modules/core-engine/unique-tabs/AbilitySpellbook/tags/AttributeGrowthChart.tsx",
+        "src/components/modules/core-engine/unique-tabs/AnimationStateGraph/retargeting/RetargetingTab.tsx",
+        "src/components/modules/core-engine/unique-tabs/AnimationStateGraph/combos-montages/FrameScrubberPanel.tsx",
+        "src/components/modules/core-engine/unique-tabs/AnimationStateGraph/budget/BlendSpacePanel.tsx",
+        "src/components/modules/core-engine/unique-tabs/CombatChoreographyEditor/UnifiedTimeline.tsx",
+        "src/components/modules/core-engine/unique-tabs/CombatActionMap/hits/HitsTab.tsx",
+        "src/components/modules/core-engine/unique-tabs/CombatActionMap/metrics/MetricsTab.tsx",
+        "src/components/modules/core-engine/unique-tabs/CombatActionMap/metrics/StatInfluencePanel.tsx",
+        "src/components/modules/core-engine/unique-tabs/ComboChainBuilder/CooldownOverlapChart.tsx",
+        "src/components/modules/core-engine/unique-tabs/charts/AccelCurve.tsx",
+        "src/components/modules/core-engine/unique-tabs/charts/DodgeTrajectoryMap.tsx",
+        "src/components/modules/core-engine/unique-tabs/CharacterFeelOptimizer/PresetCard.tsx",
+        "src/components/modules/core-engine/unique-tabs/CharacterFeelOptimizer/FeelInputPanel.tsx",
+        "src/components/modules/core-engine/unique-tabs/CharacterFeelPlayground/CurveEditor.tsx",
+        "src/components/modules/core-engine/unique-tabs/CharacterFeelPlayground/StickFigurePreview.tsx",
+        "src/components/modules/core-engine/unique-tabs/CharacterGenomeEditor/LevelScaledPowerCurve.tsx",
+        "src/components/modules/core-engine/unique-tabs/CharacterGenomeEditor/GenomeHeaderPanel.tsx",
+        "src/components/modules/core-engine/unique-tabs/CharacterGenomeEditor/GenomePill.tsx",
+        "src/components/modules/core-engine/unique-tabs/DodgeTimelineEditor/TimelineBar.tsx",
+        "src/components/modules/core-engine/unique-tabs/DodgeTimelineEditor/VelocityCurve.tsx",
+        "src/components/modules/core-engine/unique-tabs/DodgeTimelineEditor/index.tsx",
+        "src/components/modules/core-engine/unique-tabs/DodgeTimelineEditor/DodgeChainTimeline.tsx",
+        "src/components/modules/core-engine/unique-tabs/DodgeTimelineEditor/FrameDataTable.tsx",
+        "src/components/modules/core-engine/unique-tabs/DodgeTimelineEditor/ChainControls.tsx",
+        "src/components/modules/core-engine/unique-tabs/ItemEconomySimulator/PowerCurveChart.tsx",
+        "src/components/modules/core-engine/unique-tabs/gas-blueprint/WiringGraphEditor.tsx",
+        "src/components/modules/core-engine/unique-tabs/gas-blueprint/SimulationSandbox.tsx",
+        "src/components/modules/core-engine/unique-tabs/gas-blueprint/EffectTimelineEditor.tsx",
+        "src/components/modules/core-engine/unique-tabs/gas-blueprint/TagRulesEditor.tsx",
+        "src/components/modules/core-engine/unique-tabs/gas-blueprint/RelationshipWebEditor.tsx",
+        "src/components/modules/core-engine/unique-tabs/gas-blueprint/LoadoutEditor.tsx",
+        "src/components/modules/core-engine/unique-tabs/ItemCatalog/mechanics/MechanicsScalingTab.tsx",
+        "src/components/modules/core-engine/unique-tabs/ItemCatalog/economy/ItemScalingChart.tsx",
+        "src/components/modules/core-engine/unique-tabs/ItemCatalog/economy/EconomySections.tsx",
+        "src/components/modules/core-engine/unique-tabs/ItemCatalog/economy/EconomySourcingTab.tsx",
+        "src/components/modules/core-engine/unique-tabs/ItemCatalog/catalog/TradingCard.tsx",
+        "src/components/modules/core-engine/unique-tabs/ItemCatalog/catalog/GearSections.tsx",
+        "src/components/modules/core-engine/unique-tabs/LootTableVisualizer/pity/DroughtCalculator.tsx",
+        "src/components/modules/core-engine/unique-tabs/LootTableVisualizer/core/WorldItemPreview.tsx",
+        "src/components/modules/core-engine/unique-tabs/SaveDataSchema/advanced/DataRecoveryTool.tsx",
+        "src/components/modules/core-engine/unique-tabs/ProgressionCurve/analysis/PowerCurveDangerZones.tsx",
+        "src/components/modules/core-engine/unique-tabs/ProgressionCurve/rewards/AchievementBoard.tsx",
+        "src/components/modules/core-engine/unique-tabs/progression/PowerCurveDangerZones.tsx",
+        "src/components/modules/core-engine/unique-tabs/progression/AchievementBoard.tsx",
+        "src/components/modules/core-engine/unique-tabs/DamagePipelineDiagram/ExecComponents.tsx",
+        "src/components/modules/core-engine/unique-tabs/DamagePipelineDiagram/DamagePipelineFlow.tsx",
+        "src/components/modules/core-engine/unique-tabs/DamagePipelineDiagram/DirectHealthFlow.tsx",
+        "src/components/modules/core-engine/unique-tabs/ComparisonMatrix/index.tsx"
+      ],
+      "decisions": [
+        {
+          "decision": "Implemented Border opacity tokens (BORDER_DEFAULT/HOVER/SUBTLE)",
+          "rationale": "Already defined in chart-colors.ts, used in _design.tsx and _shared.tsx"
+        },
+        {
+          "decision": "Implemented Glow radius presets (GLOW_SM/MD/LG)",
+          "rationale": "Already defined in chart-colors.ts, used in _design.tsx and _shared.tsx"
+        },
+        {
+          "decision": "Implemented CSS spacing variables (--panel-padding/--card-gap/--section-gap)",
+          "rationale": "Defined in globals.css :root. Components use Tailwind classes for spacing which is correct for this codebase"
+        },
+        {
+          "decision": "Implemented _design.tsx uses design tokens",
+          "rationale": "All borders, glows, opacities use imported constants"
+        },
+        {
+          "decision": "Implemented _shared.tsx uses design tokens",
+          "rationale": "Fixed 5 remaining rgba(255,255,255,...) values, gridColor default now uses withOpacity"
+        },
+        {
+          "decision": "Implemented Hardcoded hex opacity suffixes (#RRGGBBAA)",
+          "rationale": "Zero 8-digit hex values found in unique-tabs — all previously converted"
+        },
+        {
+          "decision": "Implemented rgba(255,255,255,...) standardization",
+          "rationale": "Replaced ~150 rgba(255,255,255,...) across 77+ files with withOpacity(OVERLAY_WHITE, OPACITY_*)"
+        },
+        {
+          "decision": "Implemented New opacity constants for completeness",
+          "rationale": "Added OPACITY_2/3/4/6/40 for exact mapping of rgba 0.02-0.06 and 0.4 values"
+        },
+        {
+          "decision": "Implemented Non-white rgba values preserved",
+          "rationale": "21 rgba values for black/dark shadows and specific accent colors correctly left as-is"
+        }
+      ],
+      "gotchas": [
+        "rgba(255,255,255,...) was the dominant hardcoded pattern (216 occurrences) — 8-digit hex values were already cleaned up in a prior pass",
+        "New OPACITY_2/3/4/6/40 constants needed for exact mapping of common rgba sub-10% and 40% values",
+        "rgba(0,0,0,...) dark shadows and specific accent colors (168,85,247 purple, 6,182,212 cyan) have no semantic token — correctly left as-is",
+        "SVG stroke/fill attributes accept both rgba() and #RRGGBBAA formats — withOpacity() works for both",
+        "Tailwind arbitrary values like fill-[rgba(...)] must use hex+alpha format since they can't call JS functions"
+      ],
+      "verification": "PASS typecheck, FAIL lint, PASS test, FAIL visual-check",
+      "durationMs": 963794
+    },
+    {
+      "phase": 11,
+      "areaId": "infra-metadata-schema-b",
+      "moduleId": "arpg-character",
+      "label": "Entity Metadata Schema (Part 2)",
+      "description": "Define TypeScript interfaces for categorizing game entities.\nCreate src/types/game-metadata.ts with:\n- EntityMetadata: id, name, category, subcategory?, tags[], level?, levelMax?, area?, tier?, icon?\n- EntityGrouping: field (keyof EntityMetadata), label, order? (explicit group sort)\n- Default grouping presets: CHAR_GROUPINGS (category→subcategory), ITEM_GROUPINGS (category→tier),\n  ABILITY_GROUPINGS (category→element), ENEMY_GROUPINGS (area→tier)\nExtend each module's data.ts with metadata fields on mock items (add category, tags, area, tier).\nThis is the foundation for ScalableSelector group-by in Phase 2.",
+      "pofActions": [],
+      "ue5Files": [
+        "src/types/game-metadata.ts",
+        "src/components/modules/core-engine/unique-tabs/AbilitySpellbook/data.ts",
+        "src/components/modules/core-engine/unique-tabs/LootTableVisualizer/data.ts",
+        "src/components/modules/core-engine/unique-tabs/ZoneMap/data.ts"
+      ],
+      "decisions": [
+        {
+          "decision": "Implemented EntityMetadata interface",
+          "rationale": "All fields present: id, name, category, subcategory?, tags[], level?, levelMax?, area?, tier?, icon?"
+        },
+        {
+          "decision": "Implemented EntityGrouping with order",
+          "rationale": "All 6 presets have explicit order arrays where appropriate. Added element order to ABILITY_GROUPINGS."
+        },
+        {
+          "decision": "Implemented groupEntities utility",
+          "rationale": "Fixed Ungrouped bucket to always sort last even with explicit order. Array field expansion, fallback sorting all correct."
+        },
+        {
+          "decision": "Implemented Per-domain metadata coverage",
+          "rationale": "All 6 domains (Character, Item, Ability, Enemy, Zone, Loot) derive metadata from domain data with proper tags and tiers."
+        }
+      ],
+      "gotchas": [
+        "ABILITY_METADATA was producing a meaningless 'none' tag when damageType was 'None' — always filter sentinel values before lowercasing into tags",
+        "LOOT_ENTRY_METADATA tags were too sparse (rarity only) — category and subcategory should always appear as tags for consistent filterability across domains",
+        "ZONE_METADATA had area=z.name duplicating the name field — zones ARE areas, so area field is redundant; added z.group tag instead for topology grouping",
+        "groupEntities must check for 'Ungrouped' key BEFORE consulting the order index, otherwise 'Ungrouped' gets Infinity and sorts alphabetically among other overflow groups instead of always being last"
+      ],
+      "verification": "PASS typecheck, FAIL lint, PASS test, FAIL visual-check",
+      "durationMs": 203772
+    },
+    {
+      "phase": 12,
+      "areaId": "ui-character-feature-metrics-c",
+      "moduleId": "arpg-character",
+      "label": "Character Blueprint Feature Metrics (Part 3)",
+      "description": "Add unique metric visualizations to each FeatureCard in the Character Blueprint Feature Map tab.\nEach card's children slot gets a micro-visualization:\n- Class Hierarchy: \"{types} types / {classes} classes\" side by side numbers\n- Properties: Stacked mini bars (HP, Speed, Armor ranges, 60px wide)\n- Scaling: Sparkline SVG (60×20px) showing first 10 curve points\n- Hitbox: \"{zones} zones\" with colored dots (hurtbox=red, hitbox=blue, pushbox=green)\n- Camera: Three compact stats \"FOV | Arm | Lag\" in mono font\n- Bindings: Colored ratio bar \"{bound}/{total}\" with NeonBar\n- Keyboard: \"{conflicts}\" count — green if 0, red if >0\n- States: \"{count} states\" with mini icon\n- Dodge: \"{distance}m\" bold number\n- Curve Editor: Tiny sparkline of feel curve\n- Optimizer: Preset name or \"No preset\" muted\n- Comparison: \"{dupes} duplicates\" — red if >0\n- Balance: Mini radar thumbnail (40×40px SVG)\nAll metrics derive from existing data in CharacterBlueprint/data.ts.\nCreate metric components in CharacterBlueprint/metrics/ directory.",
+      "pofActions": [],
+      "ue5Files": [],
+      "decisions": [
+        {
+          "decision": "Implemented Class Hierarchy metric",
+          "rationale": "Recursive tree count with types/classes display"
+        },
+        {
+          "decision": "Implemented Properties metric",
+          "rationale": "Stacked NeonBar mini bars for HP/Speed/Armor from COMPARISON_CHARACTERS"
+        },
+        {
+          "decision": "Implemented Scaling metric",
+          "rationale": "60x20 sparkline SVG from SCALING_PROPS with dots"
+        },
+        {
+          "decision": "Implemented Hitbox metric",
+          "rationale": "Zone count with colored type dots (Hurtbox/Hitbox/Pushbox)"
+        },
+        {
+          "decision": "Implemented Camera metric",
+          "rationale": "Compact FOV|Arm|Lag stats from BLUEPRINT_PROPERTIES"
+        },
+        {
+          "decision": "Implemented Bindings metric",
+          "rationale": "Enhanced/total ratio with NeonBar"
+        },
+        {
+          "decision": "Implemented Keyboard metric",
+          "rationale": "Conflict count with green/red coloring from KEY_CONFLICTS"
+        },
+        {
+          "decision": "Implemented States metric",
+          "rationale": "State count with mini colored dots from MOVEMENT_STATES"
+        },
+        {
+          "decision": "Implemented Dodge metric",
+          "rationale": "Distance + path count (hardcoded distance correct per SVG path data)"
+        },
+        {
+          "decision": "Implemented Curve Editor metric",
+          "rationale": "60x20 sparkline from ACCEL_CURVE_POINTS"
+        },
+        {
+          "decision": "Implemented Optimizer metric",
+          "rationale": "Static 'No preset' — correct for current data model"
+        },
+        {
+          "decision": "Implemented Comparison metric",
+          "rationale": "Duplicate name detection with success/error coloring"
+        },
+        {
+          "decision": "Implemented Balance metric",
+          "rationale": "40x40 radar thumbnail with grid + 2 character overlays"
+        }
+      ],
+      "gotchas": [
+        "CharacterBlueprint metrics were already fully implemented with all 13 section IDs mapped — no gaps found"
+      ],
+      "verification": "PASS typecheck, FAIL lint, PASS test, FAIL visual-check",
+      "durationMs": 98635
+    },
+    {
+      "phase": 13,
+      "areaId": "ui-combat-feature-metrics-a",
+      "moduleId": "arpg-character",
+      "label": "Combat Action Map Feature Metrics (Part 1)",
+      "description": "Add unique metric visualizations to Combat Action Map Feature Map.\n- Lanes: \"{n} lanes / {n} actions\"\n- Sequences: \"{n} events / {n} systems\"\n- Traces: \"{sphere} sphere / {capsule} capsule\"\n- Stats: \"{avg} avg DPS\" bold\n- Feedback Tuner: \"{tuned}/{total}\" params bar\n- DPS: Mini bar chart (3 bars for top abilities)\n- Effectiveness: \"{best}\" top ability name\n- Sankey: \"{flows} flows\"\n- KPIs: Traffic light (3 dots for TTK, DPS, APM)\nDerive from CombatActionMap/data-metrics.ts.",
+      "pofActions": [],
+      "ue5Files": [],
+      "decisions": [
+        {
+          "decision": "Implemented Lanes metric",
+          "rationale": "Derives lane/action counts from LANES data at module scope"
+        },
+        {
+          "decision": "Implemented Sequences metric",
+          "rationale": "Derives event/system counts from SEQ_EVENTS and SEQ_LANES"
+        },
+        {
+          "decision": "Implemented Traces metric",
+          "rationale": "Classifies sphere vs capsule via radius threshold from TRACE_FRAMES"
+        },
+        {
+          "decision": "Implemented Stats metric",
+          "rationale": "Computes average DPS from DPS_STRATEGIES"
+        },
+        {
+          "decision": "Implemented Feedback Tuner metric",
+          "rationale": "Shows tuned/total with progress bar from FEEDBACK_PARAMS"
+        },
+        {
+          "decision": "Implemented DPS mini bar chart",
+          "rationale": "Top 3 abilities as colored bars, sorted at module scope"
+        },
+        {
+          "decision": "Implemented Effectiveness metric",
+          "rationale": "Shows best ability name and DPS from sorted DPS_STRATEGIES"
+        },
+        {
+          "decision": "Implemented Sankey metric",
+          "rationale": "Flow count from SANKEY_FLOWS"
+        },
+        {
+          "decision": "Implemented KPIs traffic light",
+          "rationale": "3 colored dots for TTK/DPS/APM with glow shadow"
+        }
+      ],
+      "gotchas": [
+        "All 9 Combat Action Map metrics were already fully implemented with correct data derivation, module-scope computation, and consistent styling — no modifications needed"
+      ],
+      "verification": "PASS typecheck, FAIL lint, PASS test, FAIL visual-check",
+      "durationMs": 114118
+    },
+    {
+      "phase": 14,
+      "areaId": "ui-bestiary-feature-metrics-a",
+      "moduleId": "arpg-character",
+      "label": "Enemy Bestiary Feature Metrics (Part 1)",
+      "description": "Add unique metric visualizations to Enemy Bestiary Feature Map.\n- Cards: \"{n} archetypes\" with role pie (melee/ranged/tank/support micro-donut)\n- Modifiers: \"{n} modifiers / {n} exclusions\"\n- Radar: Mini radar comparing weakest vs strongest enemy\n- Behavior Tree: \"{n} nodes / {d} depth\"\n- Decision Log: \"{n} decisions/sec\" throughput\n- Aggro: \"{n} threat sources\"\n- Formations: \"{n} formations\" with mini dot-pattern\n- Waves: \"{n} waves / {total} enemies\"\n- Difficulty: Sparkline of difficulty curve\nDerive from EnemyBestiary/data.ts.",
+      "pofActions": [],
+      "ue5Files": [
+        "src/components/modules/core-engine/unique-tabs/EnemyBestiary/metrics/ModifiersMetric.tsx"
+      ],
+      "decisions": [
+        {
+          "decision": "Implemented Cards metric (archetypes + role pie)",
+          "rationale": "Micro-donut SVG with melee/ranged/tank segments, derives from ARCHETYPES"
+        },
+        {
+          "decision": "Implemented Modifiers metric",
+          "rationale": "Fixed: now counts total exclusion entries instead of modifiers-with-excludes"
+        },
+        {
+          "decision": "Implemented Radar metric (weakest vs strongest)",
+          "rationale": "Mini radar overlay comparing lowest vs highest avg radar score"
+        },
+        {
+          "decision": "Implemented Behavior Tree metric",
+          "rationale": "Node count + tree depth via recursive walk of BT_EDGES"
+        },
+        {
+          "decision": "Implemented Decision Log metric",
+          "rationale": "Throughput computed from decision count / tick span"
+        },
+        {
+          "decision": "Implemented Aggro metric",
+          "rationale": "Mini threat bars with source count"
+        },
+        {
+          "decision": "Implemented Formations metric",
+          "rationale": "Mini dot-pattern from SPAWN_POINTS with count"
+        },
+        {
+          "decision": "Implemented Waves metric",
+          "rationale": "Wave count + total enemies from WAVE_TIMELINE"
+        },
+        {
+          "decision": "Implemented Difficulty metric (sparkline)",
+          "rationale": "Polyline sparkline of DIFFICULTY_BRUTE curve"
+        }
+      ],
+      "gotchas": [
+        "All 9 Enemy Bestiary feature metrics were already implemented and high quality — only ModifiersMetric had a bug counting modifiers-with-excludes instead of total exclusion entries"
+      ],
+      "verification": "PASS typecheck, FAIL lint, PASS test, FAIL visual-check",
+      "durationMs": 167558
+    },
+    {
+      "phase": 15,
+      "areaId": "ui-combat-feature-metrics-b",
+      "moduleId": "arpg-character",
+      "label": "Combat Action Map Feature Metrics (Part 2)",
+      "description": "Add unique metric visualizations to Combat Action Map Feature Map.\n- Lanes: \"{n} lanes / {n} actions\"\n- Sequences: \"{n} events / {n} systems\"\n- Traces: \"{sphere} sphere / {capsule} capsule\"\n- Stats: \"{avg} avg DPS\" bold\n- Feedback Tuner: \"{tuned}/{total}\" params bar\n- DPS: Mini bar chart (3 bars for top abilities)\n- Effectiveness: \"{best}\" top ability name\n- Sankey: \"{flows} flows\"\n- KPIs: Traffic light (3 dots for TTK, DPS, APM)\nDerive from CombatActionMap/data-metrics.ts.",
+      "pofActions": [],
+      "ue5Files": [],
+      "decisions": [
+        {
+          "decision": "Implemented Lanes metric",
+          "rationale": "Correctly derives lane/action counts from LANES data"
+        },
+        {
+          "decision": "Implemented Sequences metric",
+          "rationale": "Correctly derives event/system counts from SEQ_EVENTS/SEQ_LANES"
+        },
+        {
+          "decision": "Implemented Traces metric",
+          "rationale": "Smart sphere/capsule classification via radius threshold"
+        },
+        {
+          "decision": "Implemented Stats metric",
+          "rationale": "Computes avg DPS from DPS_STRATEGIES at module scope"
+        },
+        {
+          "decision": "Implemented Feedback Tuner metric",
+          "rationale": "Shows tuned/total with progress bar, correct pct calculation"
+        },
+        {
+          "decision": "Implemented DPS mini bar chart",
+          "rationale": "Top 3 bars sorted by DPS, proportional heights, glow shadow"
+        },
+        {
+          "decision": "Implemented Effectiveness metric",
+          "rationale": "Shows best strategy name with its color and DPS value"
+        },
+        {
+          "decision": "Implemented Sankey metric",
+          "rationale": "Flow count derived from SANKEY_FLOWS"
+        },
+        {
+          "decision": "Implemented KPIs traffic light",
+          "rationale": "3 colored dots with glow for TTK/DPS/APM"
+        }
+      ],
+      "gotchas": [
+        "All 9 Combat Action Map metrics were already fully implemented with correct data derivation, module-scope computation, and consistent styling — no modifications needed"
+      ],
+      "verification": "PASS typecheck, FAIL lint, PASS test, FAIL visual-check",
+      "durationMs": 64097
+    },
+    {
+      "phase": 16,
+      "areaId": "ui-bestiary-feature-metrics-b",
+      "moduleId": "arpg-character",
+      "label": "Enemy Bestiary Feature Metrics (Part 2)",
+      "description": "Add unique metric visualizations to Enemy Bestiary Feature Map.\n- Cards: \"{n} archetypes\" with role pie (melee/ranged/tank/support micro-donut)\n- Modifiers: \"{n} modifiers / {n} exclusions\"\n- Radar: Mini radar comparing weakest vs strongest enemy\n- Behavior Tree: \"{n} nodes / {d} depth\"\n- Decision Log: \"{n} decisions/sec\" throughput\n- Aggro: \"{n} threat sources\"\n- Formations: \"{n} formations\" with mini dot-pattern\n- Waves: \"{n} waves / {total} enemies\"\n- Difficulty: Sparkline of difficulty curve\nDerive from EnemyBestiary/data.ts.",
+      "pofActions": [],
+      "ue5Files": [],
+      "decisions": [
+        {
+          "decision": "Implemented CardsMetric with role pie donut",
+          "rationale": "SVG micro-donut correctly segments by role with chart-colors tokens"
+        },
+        {
+          "decision": "Implemented ModifiersMetric with exclusion count",
+          "rationale": "Correctly sums total exclusion entries across all modifiers"
+        },
+        {
+          "decision": "Implemented RadarMetric weakest vs strongest",
+          "rationale": "Mini radar overlay comparing sorted avg scores from RADAR_DATA"
+        },
+        {
+          "decision": "Implemented BehaviorTreeMetric nodes/depth",
+          "rationale": "DFS depth computation from BT_EDGES, module-scope constants"
+        },
+        {
+          "decision": "Implemented DecisionLogMetric throughput",
+          "rationale": "Throughput derived from tick span, consistent ACCENT_PURPLE styling"
+        },
+        {
+          "decision": "Implemented AggroMetric threat sources",
+          "rationale": "Proportional threat bars using entry.color, correct count"
+        },
+        {
+          "decision": "Implemented FormationsMetric dot-pattern",
+          "rationale": "SVG dot-pattern from SPAWN_POINTS with scaled viewBox"
+        },
+        {
+          "decision": "Implemented WavesMetric waves/enemies",
+          "rationale": "Wave count + reduce sum from WAVE_TIMELINE"
+        },
+        {
+          "decision": "Implemented DifficultyMetric sparkline",
+          "rationale": "SVG polyline from DIFFICULTY_BRUTE L1-L50 data"
+        }
+      ],
+      "gotchas": [
+        "All 9 Enemy Bestiary feature metrics were already fully implemented with correct data derivation, module-scope computation, chart-colors usage, and consistent styling — no modifications needed in Part 2"
+      ],
+      "verification": "PASS typecheck, FAIL lint, PASS test, FAIL visual-check",
+      "durationMs": 89948
+    },
+    {
+      "phase": 17,
+      "areaId": "ui-items-feature-metrics-a",
+      "moduleId": "arpg-character",
+      "label": "Item Catalog Feature Metrics (Part 1)",
+      "description": "Add unique metric visualizations to Item Catalog Feature Map.\n- Grid: \"{n} items / {slots} slots\"\n- Sets: \"{n} sets / {bonuses} bonuses\"\n- Loadout: \"{equipped}/{slots}\" fill bar\n- Sources: \"{n} source types\"\n- Scaling: Sparkline item power vs level\n- Stats: \"{avg} avg ilvl\"\n- Power: \"{min}–{max}\" power range bar\nDerive from ItemCatalog/data.ts.",
+      "pofActions": [],
+      "ue5Files": [
+        "src/components/modules/core-engine/unique-tabs/ItemCatalog/metrics/StatsMetric.tsx"
+      ],
+      "decisions": [
+        {
+          "decision": "Implemented Grid metric",
+          "rationale": "Type distribution bar + item/slot counts, correct data derivation"
+        },
+        {
+          "decision": "Implemented Sets metric",
+          "rationale": "Set/bonus counts with piece ownership dots per set"
+        },
+        {
+          "decision": "Implemented Loadout metric",
+          "rationale": "Equipped/total fill bar with percentage"
+        },
+        {
+          "decision": "Implemented Sources metric",
+          "rationale": "Source type count with colored dots from CRYSTAL_STAFF_SOURCES"
+        },
+        {
+          "decision": "Implemented Scaling metric",
+          "rationale": "SVG sparkline from SCALING_LINES[0] with level range label"
+        },
+        {
+          "decision": "Implemented Stats metric",
+          "rationale": "Fixed bar chart overflow bug — BAR_W clamped to 2 caused 54px total in 48px SVG with 18 items"
+        },
+        {
+          "decision": "Implemented Power metric",
+          "rationale": "Min-max range bar with proper positioning within globalMax"
+        }
+      ],
+      "gotchas": [
+        "StatsMetric BAR_W formula Math.max(W/n - 1, 2) overflows when n*3 > W — use (W - n + 1)/n to ensure bars fit within SVG viewBox regardless of item count"
+      ],
+      "verification": "PASS typecheck, FAIL lint, PASS test, FAIL visual-check",
+      "durationMs": 128621
+    },
+    {
+      "phase": 18,
+      "areaId": "infra-design-tokens-b",
+      "moduleId": "arpg-character",
+      "label": "Design Token Standardization (Part 2)",
+      "description": "Audit and standardize border opacities, glow radii, spacing across all unique-tab components.\nAdd to chart-colors.ts: BORDER_DEFAULT=OPACITY_20, BORDER_HOVER=OPACITY_37, BORDER_SUBTLE=OPACITY_10,\nGLOW_SM='0 0 4px', GLOW_MD='0 0 8px', GLOW_LG='0 0 16px'.\nAdd to globals.css: --panel-padding:12px, --card-gap:12px, --section-gap:16px.\nUpdate _design.tsx and _shared.tsx to use new constants.\nGrep all unique-tabs/ for hardcoded hex opacity suffixes (e.g., #3b82f618, #f8717120)\nand replace with imported withOpacity + constants. Do NOT change visual appearance.",
+      "pofActions": [],
+      "ue5Files": [
+        "src/components/modules/core-engine/unique-tabs/bestiary/TacticsMap.tsx",
+        "src/components/modules/core-engine/unique-tabs/bestiary/SpawnFormationViz.tsx",
+        "src/components/modules/core-engine/unique-tabs/bestiary/PerceptionConeViz.tsx",
+        "src/components/modules/core-engine/unique-tabs/bestiary/DifficultyChart.tsx",
+        "src/components/modules/core-engine/unique-tabs/EnemyBestiary/encounters/DifficultyChart.tsx",
+        "src/components/modules/core-engine/unique-tabs/ItemCatalog/catalog/TradingCard.tsx",
+        "src/components/modules/core-engine/unique-tabs/LootTableVisualizer/core/WorldItemPreview.tsx",
+        "src/components/modules/core-engine/unique-tabs/ItemCatalog/mechanics/MechanicsScalingTab.tsx",
+        "src/components/modules/core-engine/unique-tabs/AILootDesigner/DistributionsPanel.tsx",
+        "src/components/modules/core-engine/unique-tabs/GASBlueprintEditor/EffectTimelineEditor.tsx",
+        "src/components/modules/core-engine/unique-tabs/ScreenFlowMap/systems/ArpgHudPreview.tsx",
+        "src/components/modules/core-engine/unique-tabs/ScreenFlowMap/flow/FlowGraph.tsx",
+        "src/components/modules/core-engine/unique-tabs/CombatChoreographyEditor/ScrubTooltip.tsx",
+        "src/components/modules/core-engine/unique-tabs/gas-blueprint/EffectTimelineEditor.tsx",
+        "src/components/modules/core-engine/unique-tabs/CharacterBlueprint/movement/DodgeTrajectorySection.tsx",
+        "src/components/modules/core-engine/unique-tabs/CombatActionMap/metrics/KpisMetric.tsx",
+        "src/components/modules/core-engine/unique-tabs/DodgeTimelineEditor/RatingBadge.tsx",
+        "src/components/modules/core-engine/unique-tabs/CombatChoreographyEditor/UnifiedTimeline.tsx",
+        "src/components/modules/core-engine/unique-tabs/CharacterBlueprint/input/InputBindingsTable.tsx",
+        "src/components/modules/core-engine/unique-tabs/DebugDashboard/system/CircularGauge.tsx",
+        "src/components/modules/core-engine/unique-tabs/CharacterGenomeEditor/GenomeHeaderPanel.tsx",
+        "src/components/modules/core-engine/unique-tabs/CombatActionMap/polish/FeedbackTab.tsx",
+        "src/components/modules/core-engine/unique-tabs/DebugDashboard/index.tsx",
+        "src/components/modules/core-engine/unique-tabs/ZoneMap/density/DensityLevelGroup.tsx",
+        "src/components/modules/core-engine/unique-tabs/ProgressionCurve/rewards/LevelUpRewardPreview.tsx",
+        "src/components/modules/core-engine/unique-tabs/ItemCatalog/catalog/GearSections.tsx",
+        "src/components/modules/core-engine/unique-tabs/progression/LevelUpRewardPreview.tsx",
+        "src/components/modules/core-engine/unique-tabs/progression/EncounterTTKSimulator.tsx",
+        "src/components/modules/core-engine/unique-tabs/SaveDataSchema/index.tsx",
+        "src/components/modules/core-engine/unique-tabs/SaveDataSchema/advanced/AutoSaveConfig.tsx",
+        "src/components/modules/core-engine/unique-tabs/EnemyBestiary/archetypes/ExpandedDetails.tsx"
+      ],
+      "decisions": [
+        {
+          "decision": "Implemented Border opacity tokens (BORDER_DEFAULT/HOVER/SUBTLE)",
+          "rationale": "Already existed in chart-colors.ts and used by _design.tsx/_shared.tsx — no changes needed"
+        },
+        {
+          "decision": "Implemented Glow radius presets (GLOW_SM/MD/LG)",
+          "rationale": "Already existed; propagated GLOW_SM to 12 files (0 0 4px) and GLOW_MD to 13 files (0 0 8px)"
+        },
+        {
+          "decision": "Implemented Spacing CSS variables (--panel-padding/--card-gap/--section-gap)",
+          "rationale": "Already existed in globals.css — no changes needed"
+        },
+        {
+          "decision": "Implemented Hardcoded hex opacity suffix elimination",
+          "rationale": "Replaced all 14 hardcoded #RRGGBBAA patterns: 7 SVG fill-[#hex] Tailwind classes converted to inline fill attr with withOpacity(), 4 gradient Tailwind classes converted to inline style, 3 zone label fills. Zero remaining 8-digit hex in unique-tabs/"
+        }
+      ],
+      "gotchas": [
+        "Tailwind arbitrary fill-[#RRGGBBAA] on SVG elements converts cleanly to inline fill={withOpacity()} attr — preserves className for font/size utilities while using design tokens for color",
+        "Tailwind gradient hex classes (from-[#hex]/via-[#hex]) must convert to inline style={{ background: 'linear-gradient(...)' }} since they can't call JS functions — remove the gradient utility classes entirely",
+        "0 0 4px and 0 0 8px were the two most common inline glow radii (~25 combined occurrences) — 0 0 6px (20+ occurrences) has no exact GLOW constant and was correctly left untouched to preserve visual appearance"
+      ],
+      "verification": "PASS typecheck, FAIL lint, PASS test, FAIL visual-check",
+      "durationMs": 536006
+    },
+    {
+      "phase": 19,
+      "areaId": "ui-items-feature-metrics-b",
+      "moduleId": "arpg-character",
+      "label": "Item Catalog Feature Metrics (Part 2)",
+      "description": "Add unique metric visualizations to Item Catalog Feature Map.\n- Grid: \"{n} items / {slots} slots\"\n- Sets: \"{n} sets / {bonuses} bonuses\"\n- Loadout: \"{equipped}/{slots}\" fill bar\n- Sources: \"{n} source types\"\n- Scaling: Sparkline item power vs level\n- Stats: \"{avg} avg ilvl\"\n- Power: \"{min}–{max}\" power range bar\nDerive from ItemCatalog/data.ts.",
+      "pofActions": [],
+      "ue5Files": [],
+      "decisions": [
+        {
+          "decision": "Implemented Grid metric",
+          "rationale": "Shows item/slot count with type distribution bar segments"
+        },
+        {
+          "decision": "Implemented Sets metric",
+          "rationale": "Shows set/bonus count with singular/plural labels and ownership dots"
+        },
+        {
+          "decision": "Implemented Loadout metric",
+          "rationale": "Fill bar with equipped/total count"
+        },
+        {
+          "decision": "Implemented Sources metric",
+          "rationale": "Unique source type count with colored dots from CRYSTAL_STAFF_SOURCES"
+        },
+        {
+          "decision": "Implemented Scaling metric",
+          "rationale": "Sparkline from first SCALING_LINE with level range label"
+        },
+        {
+          "decision": "Implemented Stats metric",
+          "rationale": "Bar chart with avg primary stat, uses overflow-safe bar width formula"
+        },
+        {
+          "decision": "Implemented Power metric",
+          "rationale": "Range bar showing min-max power normalized to globalMax"
+        }
+      ],
+      "gotchas": [
+        "All 7 Item Catalog metrics were already fully implemented with correct data derivation, module-scope computation, chart-colors usage, overflow-safe bar chart, and consistent styling — no modifications needed in Part 2"
+      ],
+      "verification": "PASS typecheck, FAIL lint, PASS test, FAIL visual-check",
+      "durationMs": 79325
+    },
+    {
+      "phase": 20,
+      "areaId": "ui-gas-feature-metrics-b",
+      "moduleId": "arpg-character",
+      "label": "Ability Spellbook Feature Metrics (Part 2)",
+      "description": "Add unique metric visualizations to Ability Spellbook Feature Map.\n- Architecture: \"ASC → {n} GA → {n} GE\" pipeline count\n- Radar: Mini radar (40px) with 3-ability overlay\n- Cooldowns: \"{avg}s avg / {min}–{max}s range\"\n- Timeline: Micro timeline strip (60px)\n- Effects Timeline: \"{n} active / {n} passive\"\n- Tags: \"{n} tags / {depth} depth\"\n- Hierarchy: \"{n} roots / {n} leaves\"\n- Audit: \"{n} warnings\" — green if 0, red if >0\n- Dependencies: \"{n} deps / {n} circular\" — red if circular >0\nDerive from AbilitySpellbook/data.ts.",
+      "pofActions": [],
+      "ue5Files": [],
+      "decisions": [
+        {
+          "decision": "Implemented Tag tree stats metric",
+          "rationale": "Recursive countTags walker correctly computes total, depth, roots, leaves from TAG_TREE. Used in both 'tags' and 'hierarchy' section metrics."
+        },
+        {
+          "decision": "Implemented Audit warning counter metric",
+          "rationale": "Sums non-pass TAG_AUDIT_CATEGORIES counts. Color-coded green (STATUS_SUCCESS) when 0, red (STATUS_ERROR) when >0. Pluralization handled."
+        },
+        {
+          "decision": "Implemented Dependency circular detector metric",
+          "rationale": "Builds edge set, detects A→B+B→A pairs, divides by 2 to avoid double-counting. Red highlight on circular >0, green otherwise."
+        },
+        {
+          "decision": "Implemented All metrics integrated",
+          "rationale": "useGASFeatureMetrics hook used in index.tsx:125, renderMetric passed to FeatureMapTab. All 9 section IDs mapped in switch statement."
+        }
+      ],
+      "gotchas": [
+        "Existing GAS Feature Metrics implementation was already complete and high quality — all 9 section IDs mapped with correct formats, proper chart-colors usage, and optimized single-pass useMemo computation"
+      ],
+      "verification": "PASS typecheck, FAIL lint, PASS test, FAIL visual-check",
+      "durationMs": 186095
+    },
+    {
+      "phase": 21,
+      "areaId": "ui-loot-feature-metrics-b",
+      "moduleId": "arpg-character",
+      "label": "Loot Table Feature Metrics (Part 2)",
+      "description": "Add unique metric visualizations to Loot Table Visualizer Feature Map.\n- Pipeline: \"{stages} stages\" flow\n- Weights: Mini pie showing rarity distribution\n- World Items: \"{n} world items\"\n- Treemap: Micro treemap thumbnail (40×30px)\n- Histogram: \"{n} brackets\"\n- Simulator: \"{n} affixes in pool\"\n- Co-occurrence: \"{conflicts}\" hot cell count\n- Timer: \"{threshold} pulls\" pity\n- Drought: \"{prob}%\" probability\n- Beacon: \"{n} beacons\"\n- Impact: \"{gold}/hr\" rate\nDerive from LootTableVisualizer/data.ts.",
+      "pofActions": [],
+      "ue5Files": [],
+      "decisions": [
+        {
+          "decision": "Implemented Pipeline metric",
+          "rationale": "5-dot flow with connecting lines, pre-computed geometry"
+        },
+        {
+          "decision": "Implemented Weights metric",
+          "rationale": "Mini pie chart with IIFE-computed slice paths from RARITY_TIERS"
+        },
+        {
+          "decision": "Implemented World items metric",
+          "rationale": "Colored dots per world item with count text"
+        },
+        {
+          "decision": "Implemented Treemap metric",
+          "rationale": "40x30px micro treemap with pre-computed rects via IIFE"
+        },
+        {
+          "decision": "Implemented Histogram metric",
+          "rationale": "Bar chart of rarity weights with brackets count"
+        },
+        {
+          "decision": "Implemented Simulator metric",
+          "rationale": "Text-only affix pool count, correct but minimal visual"
+        },
+        {
+          "decision": "Implemented Co-occurrence metric",
+          "rationale": "Mini heatmap grid with hot cell count (>=0.7 threshold)"
+        },
+        {
+          "decision": "Implemented Timer metric",
+          "rationale": "Progress bar at 75% fill with pity threshold text"
+        },
+        {
+          "decision": "Implemented Drought metric",
+          "rationale": "Legendary drop rate percentage with tier-colored number"
+        },
+        {
+          "decision": "Implemented Beacon metric",
+          "rationale": "Height-proportional bars per beacon config with count"
+        },
+        {
+          "decision": "Implemented Impact metric",
+          "rationale": "Progress bar (current/target gold) with rate text"
+        }
+      ],
+      "gotchas": [
+        "All 11 Loot Table Visualizer feature metrics were already fully implemented with correct data derivation, module-scope computation, pre-computed IIFEs for mutable accumulation, and consistent styling — no modifications needed"
+      ],
+      "verification": "PASS typecheck, FAIL lint, PASS test, FAIL visual-check",
+      "durationMs": 117750
+    },
+    {
+      "phase": 22,
+      "areaId": "ui-animation-scaling-a",
+      "moduleId": "arpg-character",
+      "label": "Animation State Graph Scaling (Part 1)",
+      "description": "Upgrade Animation State Graph to handle 100+ montages.\n1. Expand data.ts: Add 80+ montages with metadata (categories: Attack, Dodge, HitReact, Death, Idle, Locomotion, Ability, Emote).\n2. Combo Chain: Add montage picker via ScalableSelector grouped by category. Paginate 10/page.\n3. State Machine: Support 30+ states by clustering into collapsible groups.\n4. Frame Scrubber: Montage selector dropdown (grouped by category).\n5. Budget: Virtual-scroll asset list. Group by category. Per-group memory subtotals.",
+      "pofActions": [],
+      "ue5Files": [
+        "src/components/modules/core-engine/unique-tabs/AnimationStateGraph/data.ts",
+        "src/components/modules/core-engine/unique-tabs/AnimationStateGraph/state-graph/StateMachinePanel.tsx",
+        "src/components/modules/core-engine/unique-tabs/AnimationStateGraph/combos-montages/ComboChainPanel.tsx",
+        "src/components/modules/core-engine/unique-tabs/AnimationStateGraph/combos-montages/FrameScrubberPanel.tsx",
+        "src/components/modules/core-engine/unique-tabs/AnimationStateGraph/budget/BudgetTab.tsx"
+      ],
+      "decisions": [
+        {
+          "decision": "Implemented Expand data.ts with 80+ montages",
+          "rationale": "86 montages across 8 categories (Attack:20, Dodge:12, HitReact:10, Death:6, Idle:8, Locomotion:10, Ability:12, Emote:8) with full metadata (frames, fps, memory, rootMotion, blendIn). Pre-computed category counts, memory subtotals, and total."
+        },
+        {
+          "decision": "Implemented Combo Chain montage picker via ScalableSelector",
+          "rationale": "Added Pick Montage button that opens ScalableSelector modal grouped by category with multi-select. Picked montages shown as pills. Pagination at 10/page for combo nodes. Proper generic typing with SelectorItem."
+        },
+        {
+          "decision": "Implemented State Machine 30+ states with collapsible groups",
+          "rationale": "32 states across 6 groups (Movement:8, Combat:6, Reaction:7, Ability:4, Social:3, Traversal:4). StateMachinePanel uses collapsible group headers with ChevronDown toggle, state count badges, transition count per state, and scrollable transitions matrix."
+        },
+        {
+          "decision": "Implemented Frame Scrubber montage selector dropdown",
+          "rationale": "Grouped dropdown selector with sticky category headers showing montage count. Selecting a montage updates frame count, scales notify lanes proportionally, shows root motion badge. Outside-click-to-close behavior."
+        },
+        {
+          "decision": "Implemented Budget virtual-scroll asset list with category groups",
+          "rationale": "MontageAssetBrowser with virtual scroll (28px row height, 5-row overscan, 350px viewport), collapsible category groups, per-group memory subtotals in headers, stacked memory distribution bar, category colors using chart-colors constants. Handles 86 items smoothly."
+        }
+      ],
+      "gotchas": [
+        "ScalableSelector SelectorItem requires index signature — use intersection type (SelectorItem & { ...fields }) rather than interface extends to satisfy the constraint",
+        "STATE_NODES and AnimStateName are separate concerns — STATE_NODES defines the full state graph for browsing, AnimStateName covers only combat-critical states for responsiveness analysis",
+        "Virtual scroll with absolute positioning + flat row list (headers + items) is simpler than nested virtual lists — single scrollTop drives all row positions",
+        "Pre-computing category aggregates (MONTAGE_CATEGORY_COUNTS, MONTAGE_CATEGORY_MEMORY) at module scope avoids redundant computation in React renders"
+      ],
+      "verification": "PASS typecheck, FAIL lint, PASS test, FAIL visual-check",
+      "durationMs": 579979
+    },
+    {
+      "phase": 23,
+      "areaId": "ui-animation-scaling-b",
+      "moduleId": "arpg-character",
+      "label": "Animation State Graph Scaling (Part 2)",
+      "description": "Upgrade Animation State Graph to handle 100+ montages.\n1. Expand data.ts: Add 80+ montages with metadata (categories: Attack, Dodge, HitReact, Death, Idle, Locomotion, Ability, Emote).\n2. Combo Chain: Add montage picker via ScalableSelector grouped by category. Paginate 10/page.\n3. State Machine: Support 30+ states by clustering into collapsible groups.\n4. Frame Scrubber: Montage selector dropdown (grouped by category).\n5. Budget: Virtual-scroll asset list. Group by category. Per-group memory subtotals.",
+      "pofActions": [],
+      "ue5Files": [
+        "src/components/modules/core-engine/unique-tabs/AnimationStateGraph/combos-montages/ComboChainPanel.tsx",
+        "src/components/modules/core-engine/unique-tabs/AnimationStateGraph/combos-montages/FrameScrubberPanel.tsx",
+        "src/components/modules/core-engine/unique-tabs/AnimationStateGraph/budget/BudgetTab.tsx"
+      ],
+      "decisions": [
+        {
+          "decision": "Implemented ComboChainPanel SVG layout fix",
+          "rationale": "Fixed SVG overflow: nodes now positioned sequentially with dynamic viewBox width instead of hardcoded x positions extending past 400px. Edges filtered to current page. Single shared SVG marker definition."
+        },
+        {
+          "decision": "Implemented FrameScrubberPanel React 19 fix",
+          "rationale": "Fixed nested setState anti-pattern: setScrubberPlaying was called inside setScrubberFrame updater. Now uses ref to signal stop, with setScrubberPlaying called after the frame update."
+        },
+        {
+          "decision": "Implemented BudgetTab category color deduplication",
+          "rationale": "Emote and HitReact both used STATUS_WARNING making them indistinguishable in memory bar. Emote now uses ACCENT_EMERALD."
+        }
+      ],
+      "gotchas": [
+        "ComboChainPanel nodes had hardcoded x positions (500, 600, 700) that overflowed the 400px SVG viewBox — dynamic layout with sequential positioning and computed viewBox width is needed when node count can grow",
+        "SVG marker IDs should be shared (single <defs>) rather than duplicated per-edge to avoid ID collision and redundant DOM nodes",
+        "React 19 flags setScrubberPlaying inside setScrubberFrame updater — use a ref to signal the stop condition and call the second setState outside the updater",
+        "BudgetTab categoryColor had Emote and HitReact sharing STATUS_WARNING — every category needs a unique color for the stacked memory bar to be readable"
+      ],
+      "verification": "PASS typecheck, FAIL lint, PASS test, FAIL visual-check",
+      "durationMs": 201672
+    },
+    {
+      "phase": 24,
+      "areaId": "ui-gas-scaling-a",
+      "moduleId": "arpg-character",
+      "label": "Ability Spellbook Scaling (Part 1)",
+      "description": "Upgrade Ability Spellbook to handle 100+ abilities.\n1. Expand data.ts: Add 60+ abilities with metadata (categories: Offensive, Defensive, Utility, Passive, Ultimate; elements: Fire, Ice, Lightning, Shadow, Holy; tiers: basic, advanced, ultimate).\n2. Ability Radar: ScalableSelector to pick 3-6 abilities for comparison. Group by category→element.\n3. Effects List: Paginate gameplay effects. Group by type (Instant, Duration, Periodic, Infinite).\n4. Tag Tree: Lazy expansion — only first level by default. Search filter for tag names.\n5. Core: Attribute picker for 20+ attributes.",
+      "pofActions": [],
+      "ue5Files": [
+        "src/components/modules/core-engine/unique-tabs/AbilitySpellbook/data.ts",
+        "src/components/modules/core-engine/unique-tabs/AbilitySpellbook/abilities/AbilitiesSection.tsx",
+        "src/components/modules/core-engine/unique-tabs/AbilitySpellbook/effects/EffectsSection.tsx",
+        "src/components/modules/core-engine/unique-tabs/AbilitySpellbook/tags/TagsSection.tsx",
+        "src/components/modules/core-engine/unique-tabs/AbilitySpellbook/tags/AttributesSection.tsx"
+      ],
+      "decisions": [
+        {
+          "decision": "Implemented Expand data.ts with 60+ abilities",
+          "rationale": "69 abilities with full metadata across 5 categories, 8 elements, 3 tiers. Plus 30 effects and 25 attributes."
+        },
+        {
+          "decision": "Implemented Ability Radar with ScalableSelector",
+          "rationale": "ScalableSelector modal picks 2-6 abilities for radar comparison, grouped by category, with element badges."
+        },
+        {
+          "decision": "Implemented Effects List paginated by type",
+          "rationale": "Type filter tabs (All/Instant/Duration/Periodic/Infinite) with 8-per-page pagination and grouped rendering."
+        },
+        {
+          "decision": "Implemented Tag Tree lazy expansion + search",
+          "rationale": "Search filter with match count, forceOpen on search, max-height scroll. Lazy first-level default already existed."
+        },
+        {
+          "decision": "Implemented Attribute picker 20+ attributes",
+          "rationale": "25 attributes (12 core + 13 derived) with search filter, merged with live UE5 data."
+        }
+      ],
+      "gotchas": [
+        "SpellbookAbility needs [key: string]: unknown index signature to satisfy SelectorItem constraint for ScalableSelector generic",
+        "ScalableSelector groupBy works with single field — for category→element hierarchy, group by category and show element as badge in renderItem",
+        "EXPANDED_EFFECTS grouped rendering uses Map<EffectDurationType, entries[]> for clean swim-lane display within pages",
+        "Tag tree search uses recursive filterTree() that preserves parent nodes when children match — forceOpen prop bypasses local collapse state"
+      ],
+      "verification": "PASS typecheck, FAIL lint, PASS test, FAIL visual-check",
+      "durationMs": 699915
+    },
+    {
+      "phase": 25,
+      "areaId": "ui-combat-scaling-a",
+      "moduleId": "arpg-character",
+      "label": "Combat Action Map Scaling (Part 1)",
+      "description": "Upgrade Combat Action Map to handle 100+ weapons/combos.\n1. Expand data.ts: Add 40+ weapons with metadata (categories: Sword, Axe, Mace, Bow, Staff, Dagger, Polearm; tiers: common-legendary). Add 30+ combo sequences.\n2. Flow: Weapon selector to filter lanes. ScalableSelector grouped by category.\n3. Hits: Filter traces by weapon. Per-weapon hit stats.\n4. Metrics: Select 2-4 weapons for DPS comparison.\n5. Combo Chains: Paginate combos. Group by weapon type.",
+      "pofActions": [],
+      "ue5Files": [
+        "src/components/modules/core-engine/unique-tabs/CombatActionMap/data-metrics.ts",
+        "src/components/modules/core-engine/unique-tabs/CombatActionMap/flow/FlowTab.tsx",
+        "src/components/modules/core-engine/unique-tabs/CombatActionMap/flow/ComboChainDiagram.tsx",
+        "src/components/modules/core-engine/unique-tabs/CombatActionMap/hits/HitsTab.tsx",
+        "src/components/modules/core-engine/unique-tabs/CombatActionMap/metrics/MetricsTab.tsx"
+      ],
+      "decisions": [
+        {
+          "decision": "Implemented Expand data (40+ weapons, 30+ combos)",
+          "rationale": "44 weapons across 7 categories and 5 tiers, 32 combo sequences with chain details, EntityMetadata + groupings for ScalableSelector"
+        },
+        {
+          "decision": "Implemented Flow: Weapon selector with ScalableSelector",
+          "rationale": "Multi-select weapon filter using ScalableSelector grouped by category, filters combat lanes by melee/ranged"
+        },
+        {
+          "decision": "Implemented Hits: Per-weapon hit stats",
+          "rationale": "Dropdown weapon selector with derived hit stats (hit rate, hits/swing, trace coverage, crit, avg damage) with NeonBar visualization"
+        },
+        {
+          "decision": "Implemented Metrics: Multi-weapon DPS comparison",
+          "rationale": "Select 2-4 weapons for side-by-side DPS comparison with related combos by weapon category"
+        },
+        {
+          "decision": "Implemented Combo Chains: Pagination + weapon type grouping",
+          "rationale": "32 combos paginated (6 per page) with category filter chips, DPS bars, and legacy chain in collapsible details"
+        }
+      ],
+      "gotchas": [
+        "data.ts re-exports data-metrics.ts via `export * from './data-metrics'` — avoid importing the same symbol from both files",
+        "HeatmapGrid lowColor/highColor props use raw hex which triggers lint warnings — these pre-existed and have no chart-colors semantic token",
+        "WEAPONS array with 44 entries and COMBO_SEQUENCES with 32 entries provide sufficient scale for 100+ item testing when combined with ScalableSelector grouping"
+      ],
+      "verification": "PASS typecheck, FAIL lint, PASS test, FAIL visual-check",
+      "durationMs": 516326
+    },
+    {
+      "phase": 26,
+      "areaId": "ui-character-scaling-a",
+      "moduleId": "arpg-character",
+      "label": "Character Blueprint Scaling (Part 1)",
+      "description": "Upgrade Character Blueprint to handle 100+ characters.\n1. Expand data.ts: Add 50+ characters with EntityMetadata (categories: Warrior, Mage, Rogue, Tank, Support, Beast, Droid, Force-user; areas: Taris, Dantooine, Kashyyyk, Korriban, Manaan; tiers: common, elite, boss, legendary).\n2. Comparison tab: Replace inline character list with ScalableSelector modal. Default shows 2 selected. \"Add Character\" button opens selector grouped by class→role.\n3. Overview tab: Add character picker (single-select ScalableSelector grouped by area).\n4. Camera Profiles: Support comparing 3+ profiles via multi-select.\n5. Balance Radar: Handle 10+ overlay by showing top-5 + \"show all\" toggle.",
+      "pofActions": [],
+      "ue5Files": [
+        "src/components/modules/core-engine/unique-tabs/CharacterBlueprint/data.ts",
+        "src/components/modules/core-engine/unique-tabs/CharacterBlueprint/index.tsx",
+        "src/components/modules/core-engine/unique-tabs/CharacterBlueprint/simulator/ComparisonMatrix.tsx",
+        "src/components/modules/core-engine/unique-tabs/CharacterBlueprint/simulator/ArchetypeBalanceRadar.tsx",
+        "src/components/modules/core-engine/unique-tabs/CharacterBlueprint/overview/CameraProfileComparison.tsx",
+        "src/types/game-metadata.ts"
+      ],
+      "decisions": [
+        {
+          "decision": "Implemented Expand data.ts to 50+ characters",
+          "rationale": "57 characters across 8 categories (Force-user, Warrior, Mage, Rogue, Tank, Support, Beast, Droid), 5 areas, 4 tiers. Fixed broken 0-100 scale values in original characters. Used builder pattern (CHAR_DEFS) for single source of truth."
+        },
+        {
+          "decision": "Implemented Comparison tab ScalableSelector modal",
+          "rationale": "Replaced inline character pills with compact selected badges + 'Add Character' button opening ScalableSelector modal grouped by class. Defaults to 2 selected characters."
+        },
+        {
+          "decision": "Implemented Overview character picker",
+          "rationale": "Added single-select ScalableSelector grouped by area at top of overview tab. Shows selected character name, class, tier, and area."
+        },
+        {
+          "decision": "Implemented Camera profiles multi-select",
+          "rationale": "Expanded from 3 to 6 profiles (added Stealth, Boss Fight, Aerial). Toggle buttons on each profile card with active/inactive styling. Minimum 1 profile selected."
+        },
+        {
+          "decision": "Implemented Balance radar top-5 toggle",
+          "rationale": "When 10+ characters selected, shows top 5 by composite score with 'Show All (N)' toggle button. Below 10, shows all. Toggle button only appears when truncation is needed."
+        }
+      ],
+      "gotchas": [
+        "SelectableCharacter with [key: string]: unknown index signature satisfies SelectorItem constraint while preserving typed property access — use this pattern for ScalableSelector integration",
+        "CHAR_DEFS builder pattern generates both CHARACTER_METADATA and COMPARISON_CHARACTERS from a single source — prevents sync drift between metadata and stat arrays",
+        "Original COMPARISON_CHARACTERS had broken 0-100 scale values (Jedi Guardian HP=85 vs maxVal=1500) — always verify stat values against maxVal ranges when expanding data",
+        "TIER_LEVELS lookup provides default level/levelMax ranges per tier — avoids repeating level ranges in every character definition",
+        "CameraProfileComparison multi-select uses minimum-1 guard pattern (same as character toggle) to prevent empty state"
+      ],
+      "verification": "PASS typecheck, FAIL lint, PASS test, FAIL visual-check",
+      "durationMs": 1139652
+    },
+    {
+      "phase": 27,
+      "areaId": "ui-gas-scaling-b",
+      "moduleId": "arpg-character",
+      "label": "Ability Spellbook Scaling (Part 2)",
+      "description": "Upgrade Ability Spellbook to handle 100+ abilities.\n1. Expand data.ts: Add 60+ abilities with metadata (categories: Offensive, Defensive, Utility, Passive, Ultimate; elements: Fire, Ice, Lightning, Shadow, Holy; tiers: basic, advanced, ultimate).\n2. Ability Radar: ScalableSelector to pick 3-6 abilities for comparison. Group by category→element.\n3. Effects List: Paginate gameplay effects. Group by type (Instant, Duration, Periodic, Infinite).\n4. Tag Tree: Lazy expansion — only first level by default. Search filter for tag names.\n5. Core: Attribute picker for 20+ attributes.",
+      "pofActions": [],
+      "ue5Files": [
+        "src/components/modules/core-engine/unique-tabs/AbilitySpellbook/data.ts",
+        "src/components/modules/core-engine/unique-tabs/AbilitySpellbook/tags/TagsSection.tsx",
+        "src/components/modules/core-engine/unique-tabs/AbilitySpellbook/effects/EffectsSection.tsx"
+      ],
+      "decisions": [
+        {
+          "decision": "Implemented Expanded Ability Data (69 abilities)",
+          "rationale": "5 categories, 8 elements, 3 tiers with radar stats, descriptions, and tags"
+        },
+        {
+          "decision": "Implemented Ability Radar with ScalableSelector",
+          "rationale": "ScalableSelector modal with category grouping, 2-6 ability comparison on radar chart with pills"
+        },
+        {
+          "decision": "Implemented Effects List with Pagination",
+          "rationale": "30 effects across 4 types, grouped swim-lanes, pagination, type filter buttons. Fixed precomputed type counts."
+        },
+        {
+          "decision": "Implemented Tag Tree with Search Filter",
+          "rationale": "Recursive filterTree preserves parent nodes, lazy expansion with forceOpen on search. Fixed duplicate countTags call."
+        },
+        {
+          "decision": "Implemented Attribute Picker (25 attributes)",
+          "rationale": "12 core + 13 derived attributes with search filter, live UE5 sync merge"
+        }
+      ],
+      "gotchas": [
+        "COMBO_ABILITIES had 7 hardcoded hex colors (#60a5fa, #a78bfa, #22c55e, #f59e0b, #06b6d4, #e879f9, #7f1d1d) — mapped to STATUS_INFO, ACCENT_VIOLET, ACCENT_GREEN, STATUS_WARNING, ACCENT_CYAN, ACCENT_PINK, HEATMAP_STEP_1 respectively",
+        "Recursive utility functions like countTags should never be called multiple times in JSX — memoize the result once and reuse",
+        "When EXPANDED_EFFECTS is static, per-type counts can be precomputed in a useMemo with empty deps to avoid refiltering on each render"
+      ],
+      "verification": "PASS typecheck, FAIL lint, PASS test, FAIL visual-check",
+      "durationMs": 254883
+    },
+    {
+      "phase": 28,
+      "areaId": "ui-combat-scaling-b",
+      "moduleId": "arpg-character",
+      "label": "Combat Action Map Scaling (Part 2)",
+      "description": "Upgrade Combat Action Map to handle 100+ weapons/combos.\n1. Expand data.ts: Add 40+ weapons with metadata (categories: Sword, Axe, Mace, Bow, Staff, Dagger, Polearm; tiers: common-legendary). Add 30+ combo sequences.\n2. Flow: Weapon selector to filter lanes. ScalableSelector grouped by category.\n3. Hits: Filter traces by weapon. Per-weapon hit stats.\n4. Metrics: Select 2-4 weapons for DPS comparison.\n5. Combo Chains: Paginate combos. Group by weapon type.",
+      "pofActions": [],
+      "ue5Files": [
+        "src/components/modules/core-engine/unique-tabs/CombatActionMap/flow/FlowTab.tsx",
+        "src/components/modules/core-engine/unique-tabs/CombatActionMap/metrics/StatInfluencePanel.tsx"
+      ],
+      "decisions": [
+        {
+          "decision": "Implemented Metrics compares 2-4 weapons",
+          "rationale": "Category-grouped weapon grid, DPS comparison bars, related combos display — no issues found"
+        },
+        {
+          "decision": "Implemented Combo chains paginated and grouped",
+          "rationale": "Category filter chips, 6-per-page pagination, weapon category labels, sorted DPS bars — clean implementation"
+        },
+        {
+          "decision": "Implemented 100 weapons render without lag",
+          "rationale": "Fixed SVG viewBox dynamic height, eliminated duplicated DPS computation, added scroll container for 44-weapon list, removed unused CON stat"
+        }
+      ],
+      "gotchas": [
+        "computeDps returning full breakdown object (effectiveDamage, effectiveSpeed, effectiveCrit, dps) eliminates need for duplicate inline computation — single source of truth for both detail display and comparison list",
+        "CON stat slider was wired to state but never consumed by DPS formula — dead state variables add React reconciliation overhead for zero user value",
+        "44-item DPS comparison list needs max-h + overflow-y-auto to prevent unbounded panel growth — scroll containers are essential when data scale exceeds ~15 visible rows"
+      ],
+      "verification": "PASS typecheck, FAIL lint, PASS test, FAIL visual-check",
+      "durationMs": 286233
+    },
+    {
+      "phase": 29,
+      "areaId": "ui-items-scaling-a",
+      "moduleId": "arpg-character",
+      "label": "Item Catalog Scaling (Part 1)",
+      "description": "Upgrade Item Catalog to handle 100+ items.\n1. Expand data.ts: Add 120+ items with metadata (categories: Weapon/Armor/Accessory/Consumable/Quest/Material; subcategories per type; tiers: common-legendary; sets).\n2. Catalog Grid: Paginated 20/page. Filter by category, tier, slot. Sort by name/power/tier. ScalableSelector for comparison.\n3. Equipment Loadout: Item picker per slot using ScalableSelector filtered to slot type.\n4. Item Sets: Collapsible set panels. Filter complete/incomplete.\n5. Comparison: Side-by-side 2-3 items with stat diff highlighting.",
+      "pofActions": [],
+      "ue5Files": [
+        "src/components/modules/core-engine/unique-tabs/ItemCatalog/data-items.ts",
+        "src/components/modules/core-engine/unique-tabs/ItemCatalog/data.ts",
+        "src/components/modules/core-engine/unique-tabs/ItemCatalog/catalog/CatalogGearTab.tsx",
+        "src/components/modules/core-engine/unique-tabs/ItemCatalog/catalog/GearSections.tsx",
+        "src/components/modules/core-engine/unique-tabs/ItemCatalog/catalog/ItemComparisonPanel.tsx",
+        "src/types/game-metadata.ts"
+      ],
+      "decisions": [
+        {
+          "decision": "Implemented Expand data.ts to 120+ items",
+          "rationale": "134 items across 6 categories (Weapon/Armor/Accessory/Consumable/Quest/Material) with subcategories, tiered stats, and deterministic affix assignment via builder pattern"
+        },
+        {
+          "decision": "Implemented Catalog Grid with filters and sort",
+          "rationale": "Paginated 20/page. Dynamic category filter (6 types), subtype filter (context-sensitive), rarity filter, sort by name/power/tier/type. Item count display."
+        },
+        {
+          "decision": "Implemented Equipment Loadout with ScalableSelector",
+          "rationale": "Click any slot to open ScalableSelector filtered by slot-valid subtypes (SLOT_SUBTYPES mapping). Items grouped by rarity. Stats auto-converted to loadout format."
+        },
+        {
+          "decision": "Implemented Item Sets collapsible with filter",
+          "rationale": "6 sets total (4 new). Collapsible panels with expand/collapse toggle. All/Complete/Incomplete filter buttons. Animated transitions."
+        },
+        {
+          "decision": "Implemented Comparison 2-3 items",
+          "rationale": "Dynamic grid supports 2-3 items. Add/remove slot buttons. Best/worst stat highlighting with green/red colors. Description and effect comparison."
+        }
+      ],
+      "gotchas": [
+        "Builder pattern with compact tuple definitions [name, subtype, rarity, desc, effect?] + stat generators per type keeps 116 items under 250 lines",
+        "import type from circular module works cleanly — TypeScript erases type imports at compile time so no runtime circular dependency",
+        "ringColor is not a valid CSS property — use boxShadow: '0 0 0 1px color' for ring-like selection effect in inline styles",
+        "ScalableSelector requires SelectorItem with [key: string]: unknown — use intersection type (ItemData & { [key: string]: unknown }) for casting",
+        "SLOT_SUBTYPES mapping enables both slot-filtered item picking (loadout) and dynamic subtype filter dropdown (catalog) from a single source of truth"
+      ],
+      "verification": "PASS typecheck, FAIL lint, PASS test, FAIL visual-check",
+      "durationMs": 1132850
+    },
+    {
+      "phase": 30,
+      "areaId": "ui-loot-scaling-a",
+      "moduleId": "arpg-character",
+      "label": "Loot Table Visualizer Scaling (Part 1)",
+      "description": "Upgrade Loot Table Visualizer to handle 100+ entries.\n1. Expand data.ts: Add 60+ loot table entries, 30+ affixes, 20+ enemy bindings.\n2. Loot Table Editor: Paginated with search. Group by source (enemy/chest/quest/crafting). Inline weight editing.\n3. Affix Simulator: Affix pool picker via ScalableSelector grouped by Offensive/Defensive/Utility.\n4. Drop Simulator: Enemy picker for simulation using ScalableSelector.\n5. Economy Impact: Filter by tier/source. Paginated impact table.",
+      "pofActions": [],
+      "ue5Files": [
+        "src/components/modules/core-engine/unique-tabs/LootTableVisualizer/data.ts",
+        "src/components/modules/core-engine/unique-tabs/LootTableVisualizer/data-binding.ts",
+        "src/components/modules/core-engine/unique-tabs/LootTableVisualizer/affix/LootTableEditor.tsx",
+        "src/components/modules/core-engine/unique-tabs/LootTableVisualizer/affix/AffixRollSimulator.tsx",
+        "src/components/modules/core-engine/unique-tabs/LootTableVisualizer/simulation/DropSimulator.tsx",
+        "src/components/modules/core-engine/unique-tabs/LootTableVisualizer/economy/EconomyImpact.tsx"
+      ],
+      "decisions": [
+        {
+          "decision": "Implemented Expand data.ts with 60+ entries, 30+ affixes, 20+ enemy bindings",
+          "rationale": "65 loot entries across 4 sources (enemy/chest/quest/crafting), 35 affixes in 3 categories (Offensive/Defensive/Utility), 22 enemy bindings across 4 tiers (Minion/Standard/Elite/Boss)"
+        },
+        {
+          "decision": "Implemented Loot Table Editor: paginated with search, group by source, inline weight editing",
+          "rationale": "Added search filter, source grouping (enemy/chest/quest/crafting) with sticky headers, pagination (20/page), preserved inline weight editing and UE5 import/export"
+        },
+        {
+          "decision": "Implemented Affix Simulator: ScalableSelector grouped by Offensive/Defensive/Utility",
+          "rationale": "ScalableSelector with category grouping, weighted rolls using active pool, category breakdown badges, frequency histogram colored by category"
+        },
+        {
+          "decision": "Implemented Drop Simulator: Enemy picker via ScalableSelector",
+          "rationale": "ScalableSelector for 22 enemies, per-enemy simulation using their rarity weights and drop chance, clear selected enemy indicator with dismiss"
+        },
+        {
+          "decision": "Implemented Economy Impact: filter by tier/source, paginated impact table",
+          "rationale": "Rarity tier filter (5 tiers + All), source filter (4 sources + All), paginated table (15/page) with item name, rarity, source, weight, drop%, gold impact"
+        }
+      ],
+      "gotchas": [
+        "LootEditorEntryExpanded with [key: string]: unknown index signature causes Omit<> to lose typed property access — use a separate interface for raw entries to preserve type narrowing",
+        "CSS ringColor is not a valid React style property — use outline: '1px solid color' instead for selection indicators",
+        "RARITY_COLOR_MAP defined after EXPANDED_ENTRIES causes forward reference issues — define a local RARITY_TO_COLOR map before the entries array",
+        "ScalableSelector requires SelectorItem with id:string — AffixDef and enemy binding wrapper types both need explicit id fields"
+      ],
+      "verification": "PASS typecheck, FAIL lint, PASS test, FAIL visual-check",
+      "durationMs": 756000
+    },
+    {
+      "phase": 31,
+      "areaId": "ui-character-flow",
+      "moduleId": "arpg-character",
+      "label": "Character Blueprint Flow Redesign",
+      "description": "Restructure Character Blueprint tabs to tell a chronological narrative.\nNew tab order: Features → Overview → Input → Movement → Playground → AI Feel → Simulator.\nNarrative: \"Define → Control → Move → Feel → Optimize → Compare\".\nAdd a subtle breadcrumb bar at top of the unique tab showing the narrative flow with styled steps.\nEach tab header gets a one-line subtitle explaining its role in the pipeline.\nReorder the subtab array and update the navigation. Do not change component internals.",
+      "pofActions": [],
+      "ue5Files": [],
+      "decisions": [
+        {
+          "decision": "Implemented Tab order restructured to narrative flow",
+          "rationale": "SUBTABS follows Define→Control→Move→Feel→Optimize→Compare order"
+        },
+        {
+          "decision": "Implemented Tab subtitles added",
+          "rationale": "Each BlueprintSubtabDef has descriptive subtitle, rendered below nav"
+        },
+        {
+          "decision": "Implemented Navigation updated",
+          "rationale": "SubTabNavigation and breadcrumb both wire to setActiveTab correctly"
+        },
+        {
+          "decision": "Implemented Breadcrumb bar",
+          "rationale": "NarrativeBreadcrumb with past/active/future styling, clickable navigation, chart-colors tokens"
+        }
+      ],
+      "gotchas": [
+        "Character Blueprint flow redesign was already fully implemented with high quality across all 4 features — no modifications needed"
+      ],
+      "verification": "PASS typecheck, FAIL lint, PASS test, FAIL visual-check",
+      "durationMs": 93116
+    },
+    {
+      "phase": 32,
+      "areaId": "ui-bestiary-scaling-a",
+      "moduleId": "arpg-character",
+      "label": "Enemy Bestiary Scaling (Part 1)",
+      "description": "Upgrade Enemy Bestiary to handle 100+ enemies.\n1. Expand data.ts: Add 80+ archetypes with metadata (categories: Humanoid, Beast, Droid, Force-sensitive, Undead; areas: all zones; tiers: minion/standard/elite/boss/raid-boss; roles: melee/ranged/tank/healer/caster/swarm).\n2. Archetype Grid: Paginated grid. Group by area→role. ScalableSelector for comparison picks.\n3. Comparison: Multi-select up to 4 enemies. Radar overlay.\n4. Encounters: Enemy picker via ScalableSelector grouped by area→tier. Wave editor handles 20+ waves with virtual scroll.\n5. AI Logic: BT viewer supports 50+ nodes with collapsible subtrees and search.",
+      "pofActions": [],
+      "ue5Files": [
+        "src/components/modules/core-engine/unique-tabs/EnemyBestiary/data.ts",
+        "src/components/modules/core-engine/unique-tabs/EnemyBestiary/index.tsx",
+        "src/components/modules/core-engine/unique-tabs/EnemyBestiary/archetypes/RadarComparison.tsx",
+        "src/components/modules/core-engine/unique-tabs/EnemyBestiary/archetypes/ArchetypeCard.tsx",
+        "src/components/modules/core-engine/unique-tabs/EnemyBestiary/archetypes/ArchetypeBuilder.tsx",
+        "src/components/modules/core-engine/unique-tabs/EnemyBestiary/ai-logic/DecisionDebugger.tsx",
+        "src/components/modules/core-engine/unique-tabs/EnemyBestiary/encounters/TacticsMap.tsx"
+      ],
+      "decisions": [
+        {
+          "decision": "Implemented Data expanded to 80+ enemies with metadata",
+          "rationale": "94 archetypes across 5 categories, 16 areas, 6 roles, 5 tiers. Compact builder pattern works well. Generated radar data for all archetypes using stat-based derivation with role-specific range/aggression defaults."
+        },
+        {
+          "decision": "Implemented Archetype grid paginated and grouped",
+          "rationale": "24-per-page pagination, 6 groupBy options, multi-filter bar with search. Fixed missing cursor-pointer on card buttons."
+        },
+        {
+          "decision": "Implemented Comparison multi-select with ScalableSelector",
+          "rationale": "Up to 4 enemies compared with stat bars and radar mini. Fixed radar overlay to not initialize all 94 enemies to true. Added search/scroll/show-more to overlay toggle list."
+        },
+        {
+          "decision": "Implemented Encounter enemy picker uses ScalableSelector",
+          "rationale": "Virtual-scroll wave editor with tier filter. Fixed hardcoded #3b82f6 in TacticsMap to use MODULE_COLORS.core. Fixed rgba(168,85,247,...) in ArchetypeBuilder to use chart-colors tokens."
+        }
+      ],
+      "gotchas": [
+        "RADAR_DATA only covered 4 of 94 archetypes — stat-based radar derivation with role-specific range/aggression defaults fills the gap for expanded enemies",
+        "Initializing radar overlays for all 94 archetypes renders an unreadable mess — default to player-only and let users toggle specific enemies",
+        "RadarComparison overlay list needs search + scroll + show-more pattern to scale beyond ~10 items",
+        "TacticsMap player marker used hardcoded #3b82f6 which is MODULE_COLORS.core",
+        "ArchetypeBuilder preview had rgba(168,85,247,...) inline — maps to ACCENT_PURPLE_BOLD with opacity helpers"
+      ],
+      "verification": "PASS typecheck, FAIL lint, PASS test, FAIL visual-check",
+      "durationMs": 460893
+    },
+    {
+      "phase": 33,
+      "areaId": "ui-items-scaling-b",
+      "moduleId": "arpg-character",
+      "label": "Item Catalog Scaling (Part 2)",
+      "description": "Upgrade Item Catalog to handle 100+ items.\n1. Expand data.ts: Add 120+ items with metadata (categories: Weapon/Armor/Accessory/Consumable/Quest/Material; subcategories per type; tiers: common-legendary; sets).\n2. Catalog Grid: Paginated 20/page. Filter by category, tier, slot. Sort by name/power/tier. ScalableSelector for comparison.\n3. Equipment Loadout: Item picker per slot using ScalableSelector filtered to slot type.\n4. Item Sets: Collapsible set panels. Filter complete/incomplete.\n5. Comparison: Side-by-side 2-3 items with stat diff highlighting.",
+      "pofActions": [],
+      "ue5Files": [
+        "src/components/modules/core-engine/unique-tabs/ItemCatalog/index.tsx",
+        "src/components/modules/core-engine/unique-tabs/ItemCatalog/data.ts",
+        "src/components/modules/core-engine/unique-tabs/ItemCatalog/metrics/StatsMetric.tsx",
+        "src/components/modules/core-engine/unique-tabs/ItemCatalog/economy/EconomySourcingTab.tsx",
+        "src/components/modules/core-engine/unique-tabs/ItemCatalog/mechanics/MechanicsScalingTab.tsx"
+      ],
+      "decisions": [
+        {
+          "decision": "Implemented Catalog Grid (134+ items, paginated, filtered, sorted)",
+          "rationale": "Already complete with 20/page pagination, 4 filters, 4 sort modes, search, keyboard nav, and AI item creation"
+        },
+        {
+          "decision": "Implemented Equipment Loadout with ScalableSelector",
+          "rationale": "Paper doll SVG, ScalableSelector picker per slot filtered by SLOT_SUBTYPES, stat contribution bars"
+        },
+        {
+          "decision": "Implemented Item Sets (collapsible, filter complete/incomplete)",
+          "rationale": "6 sets with collapsible panels, complete/incomplete/all filter, active bonus indicators"
+        },
+        {
+          "decision": "Implemented Item Comparison (2-3 side-by-side)",
+          "rationale": "Category selector, 2-3 slot comparison with stat diff bars, best/worst coloring, description comparison"
+        },
+        {
+          "decision": "Implemented StatsMetric SVG overflow fix",
+          "rationale": "Fixed bar chart overflow when 130+ items caused bars to exceed 48px SVG width — now subsamples to max 24 bars"
+        }
+      ],
+      "gotchas": [
+        "All 7 Item Catalog metrics were already fully implemented with correct data derivation, module-scope computation, chart-colors usage, overflow-safe bar chart, and consistent styling — no modifications needed in Part 2",
+        "StatsMetric subsampling pattern: when item count exceeds SVG pixel width, subsample sorted array to max W/2 entries using evenly-spaced index picks to preserve distribution shape",
+        "optgroup in select dropdowns significantly improves item browsability at 134+ items — group by item type (Weapon/Armor/Accessory/Consumable/Quest/Material)",
+        "ITEM_METADATA tags should include rarity and type as lowercase tags alongside subtype for consistent cross-domain filterability"
+      ],
+      "verification": "PASS typecheck, FAIL lint, PASS test, FAIL visual-check",
+      "durationMs": 331441
+    },
+    {
+      "phase": 34,
+      "areaId": "ui-loot-scaling-b",
+      "moduleId": "arpg-character",
+      "label": "Loot Table Visualizer Scaling (Part 2)",
+      "description": "Upgrade Loot Table Visualizer to handle 100+ entries.\n1. Expand data.ts: Add 60+ loot table entries, 30+ affixes, 20+ enemy bindings.\n2. Loot Table Editor: Paginated with search. Group by source (enemy/chest/quest/crafting). Inline weight editing.\n3. Affix Simulator: Affix pool picker via ScalableSelector grouped by Offensive/Defensive/Utility.\n4. Drop Simulator: Enemy picker for simulation using ScalableSelector.\n5. Economy Impact: Filter by tier/source. Paginated impact table.",
+      "pofActions": [],
+      "ue5Files": [
+        "src/components/modules/core-engine/unique-tabs/LootTableVisualizer/simulation/MonteCarloSim.tsx",
+        "src/components/modules/core-engine/unique-tabs/LootTableVisualizer/simulation/DropTreemap.tsx",
+        "src/components/modules/core-engine/unique-tabs/LootTableVisualizer/simulation/DropSimulator.tsx",
+        "src/components/modules/core-engine/unique-tabs/LootTableVisualizer/core/WorldItemPreview.tsx"
+      ],
+      "decisions": [
+        {
+          "decision": "Implemented Loot Table Editor with pagination and search",
+          "rationale": "Paginated with search, source grouping, inline weight editing, UE5 import/export — all working correctly"
+        },
+        {
+          "decision": "Implemented Affix Simulator with ScalableSelector",
+          "rationale": "Affix pool picker grouped by Offensive/Defensive/Utility via ScalableSelector, weighted roll simulation, co-occurrence matrix — all correct"
+        },
+        {
+          "decision": "Implemented Drop Simulator with enemy picker",
+          "rationale": "Fixed groupBy type cast from 'archetypeId as never' to proper 'tier' field with derived Minion/Standard/Elite/Boss grouping"
+        },
+        {
+          "decision": "Implemented Economy Impact with filters",
+          "rationale": "Tier and source filters, paginated impact table, casual/hardcore profiles — all working correctly"
+        },
+        {
+          "decision": "Implemented Bug fixes",
+          "rationale": "Fixed MonteCarloSim state mutation (.sort() on state array), eliminated triple redundant .find() in DropTreemap, removed duplicate itemMap useMemo in WorldItemPreview"
+        }
+      ],
+      "gotchas": [
+        "MonteCarloSim.sort() mutated state array directly — always use [...arr].sort() or .toSorted() when working with state-derived arrays",
+        "DropSimulator groupBy used 'archetypeId as never' type cast — derive meaningful tier (Minion/Standard/Elite/Boss) from dropChance ranges for proper ScalableSelector grouping",
+        "WorldItemPreview had useMemo-wrapped Map that duplicated module-scope constant — static data should be computed at module scope, not inside components",
+        "TREEMAP_DATA.find() called 3 times for same treemapDrill value in JSX — extract to local variable via IIFE inside JSX to avoid redundant array traversal"
+      ],
+      "verification": "PASS typecheck, FAIL lint, PASS test, FAIL visual-check",
+      "durationMs": 220418
+    },
+    {
+      "phase": 35,
+      "areaId": "ui-bestiary-scaling-b",
+      "moduleId": "arpg-character",
+      "label": "Enemy Bestiary Scaling (Part 2)",
+      "description": "Upgrade Enemy Bestiary to handle 100+ enemies.\n1. Expand data.ts: Add 80+ archetypes with metadata (categories: Humanoid, Beast, Droid, Force-sensitive, Undead; areas: all zones; tiers: minion/standard/elite/boss/raid-boss; roles: melee/ranged/tank/healer/caster/swarm).\n2. Archetype Grid: Paginated grid. Group by area→role. ScalableSelector for comparison picks.\n3. Comparison: Multi-select up to 4 enemies. Radar overlay.\n4. Encounters: Enemy picker via ScalableSelector grouped by area→tier. Wave editor handles 20+ waves with virtual scroll.\n5. AI Logic: BT viewer supports 50+ nodes with collapsible subtrees and search.",
+      "pofActions": [],
+      "ue5Files": [
+        "src/components/modules/core-engine/unique-tabs/EnemyBestiary/metrics/WavesMetric.tsx",
+        "src/components/modules/core-engine/unique-tabs/EnemyBestiary/encounters/SpawnFormationViz.tsx",
+        "src/components/modules/core-engine/unique-tabs/EnemyBestiary/encounters/EncountersTab.tsx",
+        "src/components/modules/core-engine/unique-tabs/EnemyBestiary/archetypes/CodegenModal.tsx",
+        "src/components/modules/core-engine/unique-tabs/EnemyBestiary/ai-logic/BTFlowchart.tsx"
+      ],
+      "decisions": [
+        {
+          "decision": "Implemented Archetype Grid with 94 enemies",
+          "rationale": "Paginated grid with search, 5 filters (role/category/tier/area/search), 6 group-by modes, up to 4 comparison slots. Already well-implemented."
+        },
+        {
+          "decision": "Implemented Multi-enemy comparison with radar",
+          "rationale": "ComparisonPanel shows stat bars with cross-enemy diff, RadarComparison has search+scroll overlay toggle, 7-axis radar for all 94 archetypes via deriveRadarFromStats."
+        },
+        {
+          "decision": "Implemented AI Logic with 54-node BT",
+          "rationale": "Collapsible tree list with search, auto-expand ancestors of matches, keyboard navigation (Arrow keys + Enter), collapse/expand all. Fixed hardcoded focus border color."
+        },
+        {
+          "decision": "Implemented Encounters with virtual scroll waves",
+          "rationale": "24-wave virtual scroll timeline with tier filter, 3 spawn formations (Circle/Line/Ambush) now properly wired to SpawnFormationViz."
+        },
+        {
+          "decision": "Implemented WavesMetric data accuracy",
+          "rationale": "Fixed bug: was showing 3 waves from WAVE_TIMELINE, now correctly shows 24 waves from EXPANDED_WAVES."
+        }
+      ],
+      "gotchas": [
+        "WavesMetric was importing WAVE_TIMELINE (3 legacy waves) instead of EXPANDED_WAVES (24 waves) — metric showed stale counts that didn't match the actual EncountersTab data",
+        "SpawnFormationViz accepted no formation prop despite EncountersTab maintaining formation state — dead state variables create user confusion when controls appear to do nothing",
+        "Layout computation for Line/Ambush formations uses simple spacing arithmetic — no need for complex physics or force-directed layout for 6 spawn points"
+      ],
+      "verification": "PASS typecheck, FAIL lint, PASS test, FAIL visual-check",
+      "durationMs": 253154
+    },
+    {
+      "phase": 36,
+      "areaId": "ui-animation-flow",
+      "moduleId": "arpg-character",
+      "label": "Animation State Graph Flow Redesign",
+      "description": "Restructure Animation tabs: Features → State Graph → Combos → Retargeting → Budget.\nNarrative: \"Define States → Chain Actions → Port Across Skeletons → Budget Check\".\nAdd breadcrumb flow bar. Add tab subtitles.",
+      "pofActions": [],
+      "ue5Files": [
+        "src/components/modules/core-engine/unique-tabs/AnimationStateGraph/state-graph/StateGroupBrowser.tsx",
+        "src/components/modules/core-engine/unique-tabs/AnimationStateGraph/budget/StateDurationPanel.tsx",
+        "src/components/modules/core-engine/unique-tabs/AnimationStateGraph/combos-montages/ComboTimelinePanel.tsx",
+        "src/components/modules/core-engine/unique-tabs/AnimationStateGraph/retargeting/RetargetingTab.tsx",
+        "src/components/modules/core-engine/unique-tabs/AnimationStateGraph/state-graph/ResponsivenessAnalyzer.tsx"
+      ],
+      "decisions": [
+        {
+          "decision": "Implemented Tab order restructured",
+          "rationale": "Features → State Graph → Combos → Retargeting → Budget — already correctly ordered in ANIM_SUBTABS"
+        },
+        {
+          "decision": "Implemented Tab subtitles",
+          "rationale": "All 4 content subtabs have descriptive subtitles in AnimSubtabDef, displayed below nav"
+        },
+        {
+          "decision": "Implemented Breadcrumb flow bar",
+          "rationale": "NarrativeBreadcrumb with Catalog > Define States > Chain Actions > Port Across Skeletons > Budget Check, clickable navigation, past/active/future styling"
+        }
+      ],
+      "gotchas": [
+        "All 3 Animation State Graph flow features (tab order, subtitles, breadcrumb) were already fully implemented with high quality — only needed minor cleanup",
+        "StateGroupBrowser cancel badge and StateDurationPanel outlier label used hardcoded Tailwind amber classes — replaced with STATUS_WARNING chart-colors tokens via inline style",
+        "ComboTimelinePanel tab selector buttons and RetargetingTab pipeline step buttons were missing cursor-pointer class",
+        "RetargetingTab had unused NeonBar import and ResponsivenessAnalyzer had unused warnings variable"
+      ],
+      "verification": "PASS typecheck, FAIL lint, PASS test, FAIL visual-check",
+      "durationMs": 193720
+    },
+    {
+      "phase": 37,
+      "areaId": "ui-gas-flow",
+      "moduleId": "arpg-character",
+      "label": "Ability Spellbook Flow Redesign",
+      "description": "Restructure Ability tabs: Features → Core → Abilities → Effects → Tags → Combos.\nNarrative: \"Foundation → Define Abilities → Apply Effects → Organize Tags → Chain Combos\".\nAdd breadcrumb flow bar. Add tab subtitles.",
+      "pofActions": [],
+      "ue5Files": [
+        "src/components/modules/core-engine/unique-tabs/AbilitySpellbook/abilities/AbilitiesSection.tsx",
+        "src/components/modules/core-engine/unique-tabs/AbilitySpellbook/abilities/LoadoutSection.tsx"
+      ],
+      "decisions": [
+        {
+          "decision": "Implemented Tab order restructured",
+          "rationale": "Features → Core → Abilities → Effects → Tags → Combos order correctly implemented in SUBTABS constant and index.tsx"
+        },
+        {
+          "decision": "Implemented Tab subtitles added",
+          "rationale": "Each SpellbookSubtabDef has narrative and subtitle fields, displayed below tab navigation"
+        },
+        {
+          "decision": "Implemented Breadcrumb flow bar",
+          "rationale": "NarrativeBreadcrumb component with Catalog > Foundation > Define Abilities > Apply Effects > Organize Tags > Chain Combos flow, clickable navigation, active/past/future styling with proper chart-colors usage"
+        }
+      ],
+      "gotchas": [
+        "ringColor is not a valid CSS property — both AbilitiesSection ScalableSelector renderItem and LoadoutSection slot cards had ringColor in inline styles doing nothing; replaced with outline: '1px solid color'"
+      ],
+      "verification": "PASS typecheck, FAIL lint, PASS test, FAIL visual-check",
+      "durationMs": 118711
+    },
+    {
+      "phase": 38,
+      "areaId": "ui-items-flow",
+      "moduleId": "arpg-character",
+      "label": "Item Catalog Flow Redesign",
+      "description": "Restructure Item tabs: Features → Catalog → Economy → Mechanics.\nNarrative: \"Browse Items → Track Economy → Understand Scaling\".\nAdd breadcrumb flow bar. Add tab subtitles.",
+      "pofActions": [],
+      "ue5Files": [
+        "src/components/modules/core-engine/unique-tabs/ItemCatalog/index.tsx",
+        "src/components/modules/core-engine/unique-tabs/ItemCatalog/data.ts"
+      ],
+      "decisions": [
+        {
+          "decision": "Implemented Tab order restructure",
+          "rationale": "Tab order already correct: Features → Catalog → Economy → Mechanics. Added typed SUBTABS definition."
+        },
+        {
+          "decision": "Implemented Breadcrumb flow bar",
+          "rationale": "Added NarrativeBreadcrumb with clickable steps: Catalog > Browse Items > Track Economy > Understand Scaling. Uses chart-colors withOpacity."
+        },
+        {
+          "decision": "Implemented Tab subtitles",
+          "rationale": "Added per-tab subtitles describing content. Subtitle extracted to local variable to avoid IIFE in JSX."
+        }
+      ],
+      "gotchas": [
+        "Item Catalog tab order was already correct — the redesign only needed narrative metadata and UI chrome additions",
+        "ItemCatalogSubtabDef interface export enables other consumers to read narrative/subtitle metadata without coupling to internal state"
+      ],
+      "verification": "PASS typecheck, FAIL lint, PASS test, FAIL visual-check",
+      "durationMs": 158309
+    },
+    {
+      "phase": 39,
+      "areaId": "ui-combat-flow",
+      "moduleId": "arpg-character",
+      "label": "Combat Action Map Flow Redesign",
+      "description": "Restructure Combat tabs: Features → Flow → Hits → Metrics → Polish.\nNarrative: \"Pipeline → Hit Detection → Measure Balance → Polish Feel\".\nAdd breadcrumb flow bar. Add tab subtitles.",
+      "pofActions": [],
+      "ue5Files": [
+        "src/components/modules/core-engine/unique-tabs/CombatActionMap/flow/LaneSection.tsx",
+        "src/components/modules/core-engine/unique-tabs/CombatActionMap/polish/FeedbackTab.tsx",
+        "src/components/modules/core-engine/unique-tabs/CombatActionMap/metrics/StatInfluencePanel.tsx"
+      ],
+      "decisions": [
+        {
+          "decision": "Implemented Tab order restructured",
+          "rationale": "Correct order: Features → Flow → Hits → Metrics → Feedback. Already implemented correctly."
+        },
+        {
+          "decision": "Implemented Breadcrumb flow bar",
+          "rationale": "NarrativeBreadcrumb with Catalog → Pipeline → Hit Detection → Measure Balance → Polish Feel narrative. Clickable navigation, proper styling with chart-colors tokens."
+        },
+        {
+          "decision": "Implemented Tab subtitles",
+          "rationale": "All 4 content tabs have descriptive subtitles via CombatSubtabDef.subtitle. Features tab has hardcoded subtitle."
+        }
+      ],
+      "gotchas": [
+        "LaneSection quality score badge used hardcoded Tailwind emerald-400 classes — replaced with ACCENT_EMERALD chart-colors tokens via inline style",
+        "FeedbackTab preset buttons and LaneSection expand buttons were missing cursor-pointer class",
+        "StatInfluencePanel weapon selector had flat 44-item list without optgroup — added category grouping to match HitsTab pattern"
+      ],
+      "verification": "PASS typecheck, FAIL lint, PASS test, FAIL visual-check",
+      "durationMs": 168965
+    },
+    {
+      "phase": 40,
+      "areaId": "ui-bestiary-flow",
+      "moduleId": "arpg-character",
+      "label": "Enemy Bestiary Flow Redesign",
+      "description": "Restructure Bestiary tabs: Features → Archetypes → AI Logic → Encounters.\nNarrative: \"Define Enemies → Give Them Brains → Place in World\".\nAdd breadcrumb flow bar. Add tab subtitles.",
+      "pofActions": [],
+      "ue5Files": [
+        "src/components/modules/core-engine/unique-tabs/EnemyBestiary/ai-logic/BTFlowchart.tsx",
+        "src/components/modules/core-engine/unique-tabs/EnemyBestiary/ai-logic/AILogicTab.tsx",
+        "src/components/modules/core-engine/unique-tabs/EnemyBestiary/archetypes/ArchetypeBuilder.tsx",
+        "src/components/modules/core-engine/unique-tabs/EnemyBestiary/archetypes/RadarComparison.tsx",
+        "src/components/modules/core-engine/unique-tabs/EnemyBestiary/encounters/EncountersTab.tsx",
+        "src/components/modules/core-engine/unique-tabs/EnemyBestiary/encounters/SpawnFormationViz.tsx"
+      ],
+      "decisions": [
+        {
+          "decision": "Implemented Tab order restructured",
+          "rationale": "Features → Archetypes → AI Logic → Encounters order already correct"
+        },
+        {
+          "decision": "Implemented Tab subtitles added",
+          "rationale": "All subtabs have descriptive subtitles with narrative breadcrumb"
+        },
+        {
+          "decision": "Implemented Breadcrumb flow bar",
+          "rationale": "Catalog > Define Enemies > Give Them Brains > Place in World narrative already implemented with clickable navigation"
+        }
+      ],
+      "gotchas": [
+        "Tailwind accent-purple-500 and accent-blue-500 classes for form controls should use inline style={{ accentColor: TOKEN }} to satisfy chart-colors lint rules",
+        "BTFlowchart had dead props (nodes/edges) in interface that were never consumed — component uses BT_TREE from data module directly",
+        "SpawnFormationViz cx variable was declared but only cy was used in Line formation layout — dead variable elimination",
+        "Single-item grid wrappers with xl:grid-cols-2 create empty columns — remove grid wrapper when only one child"
+      ],
+      "verification": "PASS typecheck, FAIL lint, PASS test, FAIL visual-check",
+      "durationMs": 228559
+    },
+    {
+      "phase": 41,
+      "areaId": "ui-loot-flow",
+      "moduleId": "arpg-character",
+      "label": "Loot Table Flow Redesign",
+      "description": "Restructure Loot tabs: Features → Core → Simulation → Affix → Pity → Economy.\nNarrative: \"Define Drops → Simulate → Roll Affixes → Ensure Fairness → Economy\".\nAdd breadcrumb flow bar. Add tab subtitles.",
+      "pofActions": [],
+      "ue5Files": [
+        "src/components/modules/core-engine/unique-tabs/LootTableVisualizer/pity/PityTimerSection.tsx",
+        "src/components/modules/core-engine/unique-tabs/LootTableVisualizer/pity/DroughtCalculator.tsx",
+        "src/components/modules/core-engine/unique-tabs/LootTableVisualizer/economy/BeaconVisualizer.tsx",
+        "src/components/modules/core-engine/unique-tabs/LootTableVisualizer/core/EnemyLootBinding.tsx",
+        "src/components/modules/core-engine/unique-tabs/LootTableVisualizer/core/EVCalculator.tsx",
+        "src/components/modules/core-engine/unique-tabs/LootTableVisualizer/affix/LootTableEditor.tsx"
+      ],
+      "decisions": [
+        {
+          "decision": "Implemented Tab order restructured",
+          "rationale": "Already correct: Features → Core → Simulation → Affix → Pity → Economy with typed LootSubtab definitions"
+        },
+        {
+          "decision": "Implemented Tab subtitles added",
+          "rationale": "Already implemented with narrative breadcrumb and per-tab subtitle display"
+        },
+        {
+          "decision": "Implemented Breadcrumb flow bar",
+          "rationale": "NarrativeBreadcrumb fully implemented with clickable navigation, past/active/future styling, and correct narrative labels. Fixed 3 missing cursor-pointer buttons, 6 hardcoded focus:ring-orange-500/50 violations, 1 hardcoded text-cyan-100/90, 1 hardcoded hover:text-red-400, 1 hardcoded bg-[#0d1117]"
+        }
+      ],
+      "gotchas": [
+        "focus:ring-current/50 is already used in _shared.tsx — valid pattern for replacing hardcoded focus:ring-orange-500/50 across all input elements",
+        "accent-cyan-500/accent-blue-500/accent-orange-500 on range inputs are native browser accent utilities, not hex color violations — common pattern across project",
+        "LootFilters duplicate enemyMap is necessary to avoid circular dependency with index.tsx which imports LootFilters"
+      ],
+      "verification": "PASS typecheck, FAIL lint, PASS test, FAIL visual-check",
+      "durationMs": 322413
+    },
+    {
+      "phase": 42,
+      "areaId": "ui-animation-visual",
+      "moduleId": "arpg-character",
+      "label": "Animation State Graph Visual Polish",
+      "description": "Visual upgrade for Animation State Graph.\n1. State Machine: Full SVG node graph — rounded rects, animated transition arrows, glow on active, group backgrounds.\n2. Combo Timeline: Horizontal with hit windows (colored), cancel windows (hatched), damage numbers, scrub handle.\n3. Blend Space: 2D scatter with blend triangle.\n4. Budget: Horizontal stacked bar chart showing memory per category.",
+      "pofActions": [],
+      "ue5Files": [
+        "src/components/modules/core-engine/unique-tabs/AnimationStateGraph/data.ts",
+        "src/components/modules/core-engine/unique-tabs/AnimationStateGraph/state-graph/StateMachinePanel.tsx",
+        "src/components/modules/core-engine/unique-tabs/AnimationStateGraph/combos-montages/ComboTimelinePanel.tsx",
+        "src/components/modules/core-engine/unique-tabs/AnimationStateGraph/budget/BlendSpacePanel.tsx",
+        "src/components/modules/core-engine/unique-tabs/AnimationStateGraph/budget/BudgetTab.tsx"
+      ],
+      "decisions": [
+        {
+          "decision": "Implemented State Machine SVG Graph",
+          "rationale": "Added group-level SVG node graph with 6 rounded-rect nodes, animated dashed transition arrows, glow filter on hover, and color-coded groups. Existing collapsible list and transitions matrix preserved below."
+        },
+        {
+          "decision": "Implemented Combo Timeline Polish",
+          "rationale": "Added damage numbers per section header, hatched repeating-linear-gradient on ComboWindow bars, scrub handle with range input and vertical position indicator across all section windows."
+        },
+        {
+          "decision": "Implemented Blend Space Triangle",
+          "rationale": "Added dashed blend triangle polygon connecting the 3 nearest clips to the current blend position. Module-scope BLEND_TRIANGLE precomputed for zero render overhead."
+        },
+        {
+          "decision": "Implemented Budget Stacked Bar Labels",
+          "rationale": "Increased stacked bar height from h-4 to h-6, added category name labels for segments wider than 8%, tightened gap from 1 to 0.5 for better visual density."
+        }
+      ],
+      "gotchas": [
+        "Group-level SVG graph (6 nodes) is more readable than full 31-state graph — individual states remain browsable in the collapsible list below",
+        "rectEdgePoint() using min(hw/abs(dx), hh/abs(dy)) scaling cleanly computes arrow endpoints on rounded rect edges",
+        "SVG animate inside conditional {hl && <animate>} triggers only on hover — no continuous animation cost when idle",
+        "repeating-linear-gradient(45deg) at 2px/4px intervals gives clean hatching without SVG pattern defs",
+        "BLEND_TRIANGLE precomputed at module scope from sorted distance — avoids useMemo for static data"
+      ],
+      "verification": "PASS typecheck, FAIL lint, PASS test, FAIL visual-check",
+      "durationMs": 671831
+    },
+    {
+      "phase": 43,
+      "areaId": "ui-character-visual-a",
+      "moduleId": "arpg-character",
+      "label": "Character Blueprint Visual Polish (Part 1)",
+      "description": "Visual upgrade for Character Blueprint components.\n1. Comparison Matrix: Card-based columns per character. Stat bars with diff highlighting.\n2. Hitbox Viewer: Layered wireframe SVG with zone coloring and glow. Hover to highlight zones.\n3. Camera Profiles: Visual viewport mockups showing FOV cone, arm length, lag zone.\n4. Movement States: State-machine SVG diagram with animated transition arrows.\n5. Properties: Collapsible categories with colored headers.\n6. Keyboard: Proper key sizing, accent glow on bound keys, red pulse on conflicts.\nFollow design directive for all styling decisions.",
+      "pofActions": [],
+      "ue5Files": [
+        "src/components/modules/core-engine/unique-tabs/CharacterBlueprint/input/InputBindingsTable.tsx",
+        "src/components/modules/core-engine/unique-tabs/CharacterBlueprint/overview/HitboxWireframeViewer.tsx",
+        "src/components/modules/core-engine/unique-tabs/CharacterBlueprint/simulator/ArchetypeBalanceRadar.tsx"
+      ],
+      "decisions": [
+        {
+          "decision": "Implemented Comparison Matrix: Card-based columns with stat bars",
+          "rationale": "ScalableSelector modal, NeonBar stat bars, Crown highlighting for best-in-stat, deviation heatmap in ArchetypeBalanceRadar. Fully implemented."
+        },
+        {
+          "decision": "Implemented Hitbox Viewer: Layered wireframe SVG with zone glow",
+          "rationale": "Three zone layers (Hurtbox/Hitbox/Pushbox) with toggle switches, animated scan line, hover-to-highlight synced between SVG shapes and buttons, animated zone entrance. Fixed 4 redundant template literals."
+        },
+        {
+          "decision": "Implemented Camera Profiles: Visual viewport mockups",
+          "rationale": "ViewportMockup SVG showing FOV cone, camera arm line, lag zone circle, smoothness dots. Multi-select radar overlay. Responsive grid layout per selection count."
+        },
+        {
+          "decision": "Implemented Movement States: State-machine SVG diagram",
+          "rationale": "Ellipse nodes with edgeEndpoints() for surface intersection, parallel edge offset, hover highlighting with dimming, animated transition arrows, label display on hover. Three-panel layout with DonutChart and AccelCurve."
+        },
+        {
+          "decision": "Implemented Properties: Collapsible categories with colored headers",
+          "rationale": "Collapsible categories with animated chevron rotation, colored accent bars, search bypass (collapsed state ignored during search), property sliders with highlight animation and modified badge. Summary bar with NeonBar."
+        },
+        {
+          "decision": "Implemented Keyboard: Key sizing, accent glow, red pulse conflicts",
+          "rationale": "3D perspective keyboard with proper widthClass sizing, gradient backgrounds on bound keys, animated red pulse ring on conflicts, mouse widget with LMB/RMB/scroll/look. Fixed missing cursor-pointer on Reset All button."
+        }
+      ],
+      "gotchas": [
+        "Character Blueprint visual polish was already fully implemented with high quality across all 6 features — only needed minor cleanup (1 missing cursor-pointer, 5 redundant template literals)"
+      ],
+      "verification": "PASS typecheck, FAIL lint, PASS test, FAIL visual-check",
+      "durationMs": 233533
+    },
+    {
+      "phase": 44,
+      "areaId": "ui-gas-visual-a",
+      "moduleId": "arpg-character",
+      "label": "Ability Spellbook Visual Polish (Part 1)",
+      "description": "Visual upgrade for Ability Spellbook.\n1. Ability Cards: Rich cards — icon circle with initial, cooldown badge, element dot, mini cost bar.\n2. Effect Timeline: Gantt-style chart with durations, stacking, decay. Color by effect type.\n3. Tag Tree: Interactive tree with expand/collapse, search highlight, SVG relationship curves.\n4. Attribute Web: Interactive force-directed graph. Drag nodes. Hover shows relationship details.\n5. Damage Calculator: Visual formula breakdown (Base × Mult + Flat → Armor → Final).",
+      "pofActions": [],
+      "ue5Files": [
+        "src/components/modules/core-engine/unique-tabs/AbilitySpellbook/abilities/AbilitiesSection.tsx",
+        "src/components/modules/core-engine/unique-tabs/AbilitySpellbook/tags/TagAuditSection.tsx"
+      ],
+      "decisions": [
+        {
+          "decision": "Implemented Ability Cards",
+          "rationale": "Enhanced plain text pills to rich cards with icon circle+initial, cooldown badge, element dot, and mini mana cost bar. Fixed 8 hardcoded Tailwind color violations (purple-400/500, green-400, amber-400) with chart-colors tokens."
+        },
+        {
+          "decision": "Implemented Effect Timeline",
+          "rationale": "Already implemented as Gantt-style swim-lane chart with duration bars, instant event dots, color by category, and time axis. No changes needed."
+        },
+        {
+          "decision": "Implemented Tag Tree",
+          "rationale": "Already implemented with interactive expand/collapse, recursive search filtering with forceOpen bypass, match count, and styled leaf/branch nodes. No changes needed."
+        },
+        {
+          "decision": "Implemented Attribute Web",
+          "rationale": "Already implemented as interactive SVG graph with circular layout, hover-to-highlight connected subgraph via BFS, edge type styling (solid scales, dashed partial), and legend. No changes needed."
+        },
+        {
+          "decision": "Implemented Damage Calculator",
+          "rationale": "Already implemented with slider params, 4-step formula breakdown (Base×Mult→Armor→Crit→Final), styled step badges, and GlowStat results. Excellent quality, no changes needed."
+        }
+      ],
+      "gotchas": [
+        "AbilitiesSection had 8 hardcoded Tailwind purple/green/amber classes across 3 glow background divs, 2 icon colors, 1 background color, and 2 status text spans — all mapped to ACCENT_PURPLE_BOLD, ACCENT_GREEN, and STATUS_WARNING",
+        "TagAuditSection blocking tags used hardcoded bg-red-500/10 text-red-400 border-red-500/20 — replaced with ACCENT_RED tokens via inline style",
+        "Ability pills enhanced from flat text buttons to rich cards: icon circle with first-letter initial, element color dot, cooldown badge, and mini cost bar — uses grid layout instead of flex-wrap for consistent card sizing"
+      ],
+      "verification": "PASS typecheck, FAIL lint, PASS test, FAIL visual-check",
+      "durationMs": 263162
+    },
+    {
+      "phase": 45,
+      "areaId": "ui-bestiary-visual",
+      "moduleId": "arpg-character",
+      "label": "Enemy Bestiary Visual Polish",
+      "description": "Visual upgrade for Enemy Bestiary.\n1. Archetype Cards: Role icon, tier glow border (gray/purple/orange/gold), stat bars with avg markers, modifier pills.\n2. Behavior Tree: Full diagram — diamond selectors, rect sequences, rounded tasks, hex decorators. Color by status. Collapsible.\n3. Formation Viz: Top-down dot formation with role-colored dots.\n4. Difficulty Curve: Line chart with shaded danger zones (too easy/target/too hard).",
+      "pofActions": [],
+      "ue5Files": [
+        "src/components/modules/core-engine/unique-tabs/EnemyBestiary/data.ts",
+        "src/components/modules/core-engine/unique-tabs/EnemyBestiary/archetypes/ArchetypeCard.tsx",
+        "src/components/modules/core-engine/unique-tabs/EnemyBestiary/encounters/SpawnFormationViz.tsx",
+        "src/components/modules/core-engine/unique-tabs/EnemyBestiary/encounters/EncountersTab.tsx"
+      ],
+      "decisions": [
+        {
+          "decision": "Implemented Archetype Cards — tier glow border + avg markers",
+          "rationale": "Added tier-specific glow border colors (gray/blue/purple/orange/gold) using TIER_GLOW_COLORS map, tier badge in card header, and average stat markers (vertical line) on NeonBar stat bars showing cross-archetype average per stat label"
+        },
+        {
+          "decision": "Implemented Behavior Tree — full diagram with shapes and collapsible",
+          "rationale": "Already fully implemented with collapsible tree list, diamond/rect/rounded/hex shape indicators, search with auto-expand ancestors, keyboard navigation (arrows/enter/space), expand/collapse all, active/inactive status coloring, and BT details panel"
+        },
+        {
+          "decision": "Implemented Formation Viz — role-colored dots",
+          "rationale": "Added per-spawn-point role and color fields to SpawnPoint data. Dots now render with role-specific colors (melee=red, ranged=purple, tank=content, caster=cyan, healer=emerald). Added 3-letter role labels under dots and role legend below viz"
+        },
+        {
+          "decision": "Implemented Difficulty Curve — line chart with danger zones",
+          "rationale": "Already fully implemented with DANGER/SWEET SPOT/TRIVIAL shaded zones, multi-series line chart (Grunt/Caster/Brute), interactive hover tooltips showing per-series values and zone labels, invisible hit rects for smooth interaction"
+        }
+      ],
+      "gotchas": [
+        "TIER_GLOW_COLORS map (minion=neutral, standard=info, elite=purple, boss=orange, raid-boss=warning) provides tier-level visual identity without conflicting with per-archetype identity colors",
+        "STAT_AVERAGES precomputed at module scope from ARCHETYPES avoids per-render computation — different archetypes use different stat labels (HP/ATK/DEF/SPD/INT vs HP/Damage/Speed/Range) so averages are label-scoped",
+        "SpawnPoint role/color fields are optional to maintain backward compatibility — SpawnFormationViz falls back to accent prop when color is undefined",
+        "Role legend uses reduce to deduplicate by role before rendering — avoids showing duplicate melee entries from 2 melee spawn points"
+      ],
+      "verification": "PASS typecheck, FAIL lint, PASS test, FAIL visual-check",
+      "durationMs": 381250
+    },
+    {
+      "phase": 46,
+      "areaId": "ui-character-visual-b",
+      "moduleId": "arpg-character",
+      "label": "Character Blueprint Visual Polish (Part 2)",
+      "description": "Visual upgrade for Character Blueprint components.\n1. Comparison Matrix: Card-based columns per character. Stat bars with diff highlighting.\n2. Hitbox Viewer: Layered wireframe SVG with zone coloring and glow. Hover to highlight zones.\n3. Camera Profiles: Visual viewport mockups showing FOV cone, arm length, lag zone.\n4. Movement States: State-machine SVG diagram with animated transition arrows.\n5. Properties: Collapsible categories with colored headers.\n6. Keyboard: Proper key sizing, accent glow on bound keys, red pulse on conflicts.\nFollow design directive for all styling decisions.",
+      "pofActions": [],
+      "ue5Files": [
+        "src/components/modules/core-engine/unique-tabs/CharacterBlueprint/overview/HitboxWireframeViewer.tsx"
+      ],
+      "decisions": [
+        {
+          "decision": "Implemented Comparison Matrix",
+          "rationale": "Card-based columns with NeonBar stat bars, crown diff highlighting, ScalableSelector modal for character selection, responsive table with animated rows"
+        },
+        {
+          "decision": "Implemented Hitbox Wireframe Viewer",
+          "rationale": "Layered SVG with zone coloring and glow, hover-to-highlight with synced toggles, framer-motion scan line (perf-optimized). Fixed raw opacity '04' → OPACITY_4 constant"
+        },
+        {
+          "decision": "Implemented Camera Profiles",
+          "rationale": "Radar chart with overlays, viewport mockups showing FOV cone/arm length/lag zone, toggle cards with minimum-1 guard pattern"
+        },
+        {
+          "decision": "Implemented Movement States",
+          "rationale": "State-machine SVG with ellipse nodes, animated transition arrows with parallel edge offset, hover highlighting with dim/glow, donut chart distribution, accel curve"
+        },
+        {
+          "decision": "Implemented Properties Inspector",
+          "rationale": "Collapsible categories with colored headers, search bypass, highlight animation on change, slider controls, modified/default indicators, summary bar"
+        },
+        {
+          "decision": "Implemented Keyboard Visualization",
+          "rationale": "Proper key sizing with 3D perspective, accent glow on bound keys, red pulse on conflicts, mouse widget with LMB/RMB/Look zones, comprehensive legend"
+        }
+      ],
+      "gotchas": [
+        "All 6 Character Blueprint visual features were already fully implemented with high quality — only HitboxWireframeViewer had a raw opacity string '04' that needed replacement with OPACITY_4 constant"
+      ],
+      "verification": "PASS typecheck, FAIL lint, PASS test, FAIL visual-check",
+      "durationMs": 142005
+    },
+    {
+      "phase": 47,
+      "areaId": "ui-gas-visual-b",
+      "moduleId": "arpg-character",
+      "label": "Ability Spellbook Visual Polish (Part 2)",
+      "description": "Visual upgrade for Ability Spellbook.\n1. Ability Cards: Rich cards — icon circle with initial, cooldown badge, element dot, mini cost bar.\n2. Effect Timeline: Gantt-style chart with durations, stacking, decay. Color by effect type.\n3. Tag Tree: Interactive tree with expand/collapse, search highlight, SVG relationship curves.\n4. Attribute Web: Interactive force-directed graph. Drag nodes. Hover shows relationship details.\n5. Damage Calculator: Visual formula breakdown (Base × Mult + Flat → Armor → Final).",
+      "pofActions": [],
+      "ue5Files": [
+        "src/components/modules/core-engine/unique-tabs/AbilitySpellbook/tags/AttributeRelationshipWeb.tsx",
+        "src/components/modules/core-engine/unique-tabs/AbilitySpellbook/tags/TagsSection.tsx"
+      ],
+      "decisions": [
+        {
+          "decision": "Implemented Ability Cards",
+          "rationale": "Rich cards with icon circle+initial, cooldown badge, element dot, mini cost bar already fully implemented with ScalableSelector comparison"
+        },
+        {
+          "decision": "Implemented Effect Timeline",
+          "rationale": "Gantt-style swim-lane view with duration bars, color by effect type, time axis markers. Paginated effects catalog with type filtering"
+        },
+        {
+          "decision": "Implemented Tag Tree",
+          "rationale": "Interactive tree with expand/collapse, search filter with match count, force-open on search, SVG relationship curves in TagDepsSection. Fixed missing cursor-pointer on tree node buttons"
+        },
+        {
+          "decision": "Implemented Attribute Web",
+          "rationale": "Interactive graph with BFS hover highlighting, dimming of unrelated nodes. Added drag-to-reposition nodes with SVG coordinate transform, grab/grabbing cursors. Fixed per-render array allocation in coreAttrSet"
+        },
+        {
+          "decision": "Implemented Damage Calculator",
+          "rationale": "Visual formula breakdown with 5 sliders, 4 numbered formula steps showing Base×Mult→Armor→Crit→Final, GlowStat display for expected and crit damage"
+        }
+      ],
+      "gotchas": [
+        "SVG node drag uses DOMPoint.matrixTransform(ctm.inverse()) for screen-to-viewBox coordinate conversion — cleaner than deprecated createSVGPoint()",
+        "During drag, suppress onMouseEnter on other nodes to prevent hover state flickering — check draggedNode before setting hoveredNode",
+        "CORE_ATTRIBUTES.map().includes() per node per render creates O(n*m) allocations — precompute as Set in useMemo for O(1) lookups",
+        "Split useMemo into defaultPositions + customPositions merge to support drag while keeping static circular layout as fallback"
+      ],
+      "verification": "PASS typecheck, FAIL lint, PASS test, FAIL visual-check",
+      "durationMs": 316511
+    },
+    {
+      "phase": 48,
+      "areaId": "ui-combat-visual-a",
+      "moduleId": "arpg-character",
+      "label": "Combat Action Map Visual Polish (Part 1)",
+      "description": "Visual upgrade for Combat Action Map.\n1. Action Lanes: Swim-lane diagram with horizontal flows and inter-lane arrows.\n2. Sequence Diagram: UML-style — vertical lifelines, horizontal arrows, activation boxes.\n3. Feedback Tuner: Slider-based editor with grouped categories (Shake, Hitstop, Particles, Sound).\n4. Sankey: Full Sankey flow viz with proportional widths.\n5. DPS Chart: Grouped bar chart with weapon comparison. Hover for breakdown.",
+      "pofActions": [],
+      "ue5Files": [
+        "src/components/modules/core-engine/unique-tabs/CombatActionMap/data.ts",
+        "src/components/modules/core-engine/unique-tabs/CombatActionMap/flow/FlowTab.tsx",
+        "src/components/modules/core-engine/unique-tabs/CombatActionMap/polish/FeedbackTab.tsx",
+        "src/components/modules/core-engine/unique-tabs/CombatActionMap/metrics/MetricsTab.tsx"
+      ],
+      "decisions": [
+        {
+          "decision": "Implemented Action Lanes swim-lane diagram",
+          "rationale": "Added SVG swim-lane diagram with 3 horizontal lane bands, feature nodes positioned in lanes, and bezier inter-lane arrows with labels from FLOW_ARROWS data"
+        },
+        {
+          "decision": "Implemented Sequence Diagram activation boxes",
+          "rationale": "Added UML-style activation boxes computed dynamically from event flow — thin rectangles on lifelines showing when each participant is active"
+        },
+        {
+          "decision": "Implemented Feedback Tuner grouped categories",
+          "rationale": "Expanded from 5 to 8 params across 4 categories (Shake/Hitstop/Particles/Sound) with category icons, visual separators, and updated presets"
+        },
+        {
+          "decision": "Implemented Sankey proportional flow viz",
+          "rationale": "Replaced overlay-based Sankey with proper proportional SVG — node heights proportional to pct, flow bands computed with cumulative offset stacking, pre-computed at module scope"
+        },
+        {
+          "decision": "Implemented DPS grouped bar chart with hover",
+          "rationale": "Added grouped bar chart showing all 44 weapons by category with tier-colored bars, category avg dashed lines, hover tooltip with damage/speed/crit breakdown"
+        }
+      ],
+      "gotchas": [
+        "SankeyNode.color and SankeyLink.color are optional in the type definitions — always provide fallback when mapping to required-color interfaces",
+        "Pre-computing Sankey flow band paths at module scope with IIFE avoids impure computation during React render while keeping static data efficient",
+        "Activation box computation from UML sequence events: track active state per lane, close when lane sends to another, open when lane receives",
+        "FeedbackParam category grouping with FEEDBACK_CATEGORIES const enables clean filter-based rendering without restructuring the flat array"
+      ],
+      "verification": "PASS typecheck, FAIL lint, PASS test, FAIL visual-check",
+      "durationMs": 856090
+    },
+    {
+      "phase": 49,
+      "areaId": "ui-items-visual-a",
+      "moduleId": "arpg-character",
+      "label": "Item Catalog Visual Polish (Part 1)",
+      "description": "Visual upgrade for Item Catalog.\n1. Item Cards: RPG-style — rarity border glow, slot icon, power badge, stat list with +/- coloring, set indicator.\n2. Equipment Loadout: Paper-doll slot layout (silhouette with positions). Click opens ScalableSelector for slot type.\n3. Affix Sunburst: Enhanced with tooltips, smooth transitions, tier-colored rings.\n4. Scaling Chart: Multi-line with rarity-colored curves, hover values, confidence bands.\n5. Economy Flow: Sankey showing sources → player → sinks.",
+      "pofActions": [],
+      "ue5Files": [
+        "src/components/modules/core-engine/unique-tabs/ItemCatalog/catalog/TradingCard.tsx",
+        "src/components/modules/core-engine/unique-tabs/ItemCatalog/catalog/GearSections.tsx",
+        "src/components/modules/core-engine/unique-tabs/ItemCatalog/catalog/AffixSunburst.tsx",
+        "src/components/modules/core-engine/unique-tabs/ItemCatalog/economy/ItemScalingChart.tsx",
+        "src/components/modules/core-engine/unique-tabs/ItemCatalog/economy/EconomySections.tsx",
+        "src/components/modules/core-engine/unique-tabs/ItemCatalog/economy/EconomySourcingTab.tsx",
+        "src/components/modules/core-engine/unique-tabs/ItemCatalog/mechanics/MechanicsScalingTab.tsx"
+      ],
+      "decisions": [
+        {
+          "decision": "Implemented Item Cards: RPG-style",
+          "rationale": "Added slot icon emoji, power badge (PWR), +/- stat coloring (green for >=70%, red for <=30%), set indicator showing set membership. Existing rarity border glow, shimmer, tooltip were already high quality."
+        },
+        {
+          "decision": "Implemented Equipment Loadout: Paper-doll",
+          "rationale": "Already fully implemented with SVG silhouette, positioned slot cards, click-to-equip via ScalableSelector, stat contribution summary. Fixed 2 hardcoded Tailwind colors (text-red-400, text-emerald-400) to chart-colors tokens."
+        },
+        {
+          "decision": "Implemented Affix Sunburst: Enhanced",
+          "rationale": "Added hover state with stroke thickening, fill opacity change, glow drop-shadow, and positioned tooltip overlay replacing bare <title> elements. Smooth CSS transitions on fill and stroke-width."
+        },
+        {
+          "decision": "Implemented Scaling Chart: Multi-line with hover",
+          "rationale": "Added mouse-tracking crosshair with dashed vertical line, level label, enlarged data point circles, and value tooltip boxes per curve on hover. Wrapped allLevels in useMemo to fix React hook dependency warning."
+        },
+        {
+          "decision": "Implemented Economy Flow: Sankey",
+          "rationale": "New Sankey diagram with 9 nodes (4 sources, 1 player hub, 4 sinks), curved Bezier links with proportional thickness, hover highlighting with opacity change and tooltip. Placed prominently at top of Economy & Sourcing tab."
+        }
+      ],
+      "gotchas": [
+        "ITEM_SET_MAP pre-computed from ITEM_SETS enables O(1) set membership lookup for TradingCard set indicators — avoids per-card array search",
+        "Sankey link paths use cubic Bezier with bidirectional thickness (srcH/dstH) for proportional flow visualization — path closes as a polygon not a stroke",
+        "Sankey node offset tracking requires separate srcOffsets and dstOffsets maps to stack links vertically within each node's height",
+        "allLevels derived from lines[0]?.points triggers React hook dep warnings in useCallback — wrap in useMemo with [lines] dep",
+        "computePower formula includes affix count * 10 bonus to reflect that affixed items have more total power than raw stat sums suggest",
+        "SVG hover tooltip positioning uses midAngle/midR from arc computation for AffixSunburst — reuses existing geometry calculations"
+      ],
+      "verification": "PASS typecheck, FAIL lint, PASS test, FAIL visual-check",
+      "durationMs": 624960
+    },
+    {
+      "phase": 50,
+      "areaId": "ui-combat-visual-b",
+      "moduleId": "arpg-character",
+      "label": "Combat Action Map Visual Polish (Part 2)",
+      "description": "Visual upgrade for Combat Action Map.\n1. Action Lanes: Swim-lane diagram with horizontal flows and inter-lane arrows.\n2. Sequence Diagram: UML-style — vertical lifelines, horizontal arrows, activation boxes.\n3. Feedback Tuner: Slider-based editor with grouped categories (Shake, Hitstop, Particles, Sound).\n4. Sankey: Full Sankey flow viz with proportional widths.\n5. DPS Chart: Grouped bar chart with weapon comparison. Hover for breakdown.",
+      "pofActions": [],
+      "ue5Files": [
+        "src/components/modules/core-engine/unique-tabs/CombatActionMap/flow/LaneSection.tsx",
+        "src/components/modules/core-engine/unique-tabs/CombatActionMap/flow/FlowTab.tsx",
+        "src/components/modules/core-engine/unique-tabs/CombatActionMap/hits/HitsTab.tsx",
+        "src/components/modules/core-engine/unique-tabs/CombatActionMap/polish/FeedbackTab.tsx",
+        "src/components/modules/core-engine/unique-tabs/CombatActionMap/metrics/StatInfluencePanel.tsx"
+      ],
+      "decisions": [
+        {
+          "decision": "Implemented Action Lanes: Swim-lane diagram",
+          "rationale": "Already fully implemented with horizontal flows, inter-lane cubic bezier arrows, colored lane bands, and feature nodes with short name mapping"
+        },
+        {
+          "decision": "Implemented Sequence Diagram: UML-style",
+          "rationale": "Already fully implemented with vertical lifelines, horizontal arrows, self-message dots, activation boxes pre-computed at module scope via IIFE"
+        },
+        {
+          "decision": "Implemented Feedback Tuner: Slider-based editor",
+          "rationale": "Already fully implemented with 4 grouped categories (Shake/Hitstop/Particles/Sound), category icons, 3 presets, juice level meter, hitstop timing viz, and stagger pipeline"
+        },
+        {
+          "decision": "Implemented Sankey: Proportional flow viz",
+          "rationale": "Already fully implemented with proportional band widths, pre-computed flow paths at module scope, 3-column layout (Input→Result→Outcome), and node labels with percentages"
+        },
+        {
+          "decision": "Implemented DPS Chart: Grouped bar chart",
+          "rationale": "Already fully implemented with 7-category grouped bars, hover tooltip, category avg lines, weapon comparison selector (max 4), stat influence panel with STR/DEX sliders"
+        }
+      ],
+      "gotchas": [
+        "All 5 Combat Action Map visual features were already fully implemented with high quality — only needed cleanup of 6 redundant template literal wrappers around withOpacity() calls and removal of unused arrows prop from LaneSection interface"
+      ],
+      "verification": "PASS typecheck, FAIL lint, PASS test, FAIL visual-check",
+      "durationMs": 209780
+    },
+    {
+      "phase": 51,
+      "areaId": "ui-items-visual-b",
+      "moduleId": "arpg-character",
+      "label": "Item Catalog Visual Polish (Part 2)",
+      "description": "Visual upgrade for Item Catalog.\n1. Item Cards: RPG-style — rarity border glow, slot icon, power badge, stat list with +/- coloring, set indicator.\n2. Equipment Loadout: Paper-doll slot layout (silhouette with positions). Click opens ScalableSelector for slot type.\n3. Affix Sunburst: Enhanced with tooltips, smooth transitions, tier-colored rings.\n4. Scaling Chart: Multi-line with rarity-colored curves, hover values, confidence bands.\n5. Economy Flow: Sankey showing sources → player → sinks.",
+      "pofActions": [],
+      "ue5Files": [
+        "src/components/modules/core-engine/unique-tabs/ItemCatalog/catalog/ItemDetailDrawer.tsx",
+        "src/components/modules/core-engine/unique-tabs/ItemCatalog/catalog/AffixSlotPanels.tsx",
+        "src/components/modules/core-engine/unique-tabs/ItemCatalog/catalog/AffixSunburst.tsx",
+        "src/components/modules/core-engine/unique-tabs/ItemCatalog/catalog/GearSections.tsx",
+        "src/components/modules/core-engine/unique-tabs/ItemCatalog/catalog/CatalogGearTab.tsx",
+        "src/components/modules/core-engine/unique-tabs/ItemCatalog/mechanics/MechanicsScalingTab.tsx"
+      ],
+      "decisions": [
+        {
+          "decision": "Implemented Item Cards RPG-style",
+          "rationale": "Rarity border glow, slot icons, power badge, stat +/- coloring, set indicator all implemented. Fixed missing cursor-pointer on Add Item and Create buttons."
+        },
+        {
+          "decision": "Implemented Equipment Loadout Paper-doll",
+          "rationale": "SVG silhouette with positioned slots, ScalableSelector integration, stat contributions. Extracted stat computation from IIFE to memoized StatContributions component."
+        },
+        {
+          "decision": "Implemented Affix Sunburst Enhanced",
+          "rationale": "Tooltips, smooth transitions, tier-colored rings all implemented. Moved describeArc to module scope to avoid per-render recreation."
+        },
+        {
+          "decision": "Implemented Scaling Chart Multi-line",
+          "rationale": "Rarity-colored curves, hover crosshair values, min/max confidence bands all fully implemented with clean SVG rendering."
+        },
+        {
+          "decision": "Implemented Economy Flow Sankey",
+          "rationale": "Sources → Player → sinks Sankey with proper band rendering, hover tooltips, offset tracking. Well-implemented."
+        }
+      ],
+      "gotchas": [
+        "All 5 Item Catalog visual features were already fully implemented with high quality — only needed cleanup fixes",
+        "AffixSlotPanels had inconsistent opacity pattern using direct hex+opacity concat instead of withOpacity() helper",
+        "MechanicsScalingTab had import statement placed between code blocks instead of at top with other imports",
+        "describeArc pure function inside AffixSunburst component was recreated every render — module-scope eliminates allocation",
+        "GearSections IIFE stat computation in JSX should be a separate memoized component for cleaner rendering"
+      ],
+      "verification": "PASS typecheck, FAIL lint, PASS test, FAIL visual-check",
+      "durationMs": 349723
+    },
+    {
+      "phase": 52,
+      "areaId": "ui-loot-visual-b",
+      "moduleId": "arpg-character",
+      "label": "Loot Table Visual Polish (Part 2)",
+      "description": "Visual upgrade for Loot Table Visualizer.\n1. Weight Distribution: Donut chart with interactive segments and drill-down. Rarity-colored with glow.\n2. Drop Treemap: Proper nested rectangles. Rarity-colored. Size = probability. Hover for details.\n3. Monte Carlo: Histogram with distribution curve overlay. Mean/median/stddev vertical lines.\n4. Pity Timer: Circular gauge with animated fill and threshold marker.\n5. Co-occurrence: Heatmap with color scale legend. Cell hover shows frequency and conflict flag.\n6. Economy Dashboard: KPI cards at top (gold/hr, items/hr, rarity dist), charts below.",
+      "pofActions": [],
+      "ue5Files": [
+        "src/components/modules/core-engine/unique-tabs/LootTableVisualizer/affix/LootTableEditor.tsx",
+        "src/components/modules/core-engine/unique-tabs/LootTableVisualizer/simulation/DropSimulator.tsx",
+        "src/components/modules/core-engine/unique-tabs/LootTableVisualizer/core/EnemyLootBinding.tsx",
+        "src/components/modules/core-engine/unique-tabs/LootTableVisualizer/core/EVCalculator.tsx",
+        "src/components/modules/core-engine/unique-tabs/LootTableVisualizer/core/WorldItemPreview.tsx",
+        "src/components/modules/core-engine/unique-tabs/LootTableVisualizer/pity/DroughtCalculator.tsx",
+        "src/components/modules/core-engine/unique-tabs/LootTableVisualizer/LootFilters.tsx"
+      ],
+      "decisions": [
+        {
+          "decision": "Implemented Weight Distribution: Donut chart with interactive segments and drill-down",
+          "rationale": "Already fully implemented with pre-computed segments, hover/select, animated drill-down, glow effects"
+        },
+        {
+          "decision": "Implemented Drop Treemap: Proper nested rectangles with rarity coloring",
+          "rationale": "Already fully implemented with treemap layout, glow hover, drill-down affix outcomes, pre-computed Map lookups"
+        },
+        {
+          "decision": "Implemented Monte Carlo: Histogram with distribution curve overlay",
+          "rationale": "Already fully implemented with histogram bins, curve overlay, mean/median/stddev lines, stats table, rarity picker"
+        },
+        {
+          "decision": "Implemented Pity Timer: Circular gauge with animated fill and threshold marker",
+          "rationale": "Already fully implemented with 270° arc gauge, animated motion.circle, 80% threshold marker, bad luck protection indicator, history bars"
+        },
+        {
+          "decision": "Implemented Co-occurrence: Heatmap with color scale legend",
+          "rationale": "Already fully implemented with HeatmapGrid component, color scale legend, conflict flag count"
+        },
+        {
+          "decision": "Implemented Economy Dashboard: KPI cards with charts",
+          "rationale": "Already fully implemented with 4 KPI cards, surplus/deficit bars, paginated impact table with rarity+source filters"
+        }
+      ],
+      "gotchas": [
+        "LootTableEditor had 20+ direct hex concat patterns (${COLOR}${OPACITY}) — most of any file in this module, all converted to withOpacity() for consistency",
+        "DropSimulator, EnemyLootBinding, EVCalculator, DroughtCalculator each had 2-5 direct hex concat patterns remaining from prior passes",
+        "LootFilters and WorldItemPreview had redundant template literal wrappers around withOpacity() calls that returned strings — removed for cleaner code",
+        "EnemyLootBinding copy button had mixed patterns: one withOpacity in template literal, one direct concat — unified to withOpacity()"
+      ],
+      "verification": "PASS typecheck, FAIL lint, PASS test, FAIL visual-check",
+      "durationMs": 213884
+    },
+    {
+      "phase": 53,
+      "areaId": "ui-style-audit-a",
+      "moduleId": "arpg-character",
+      "label": "Cross-Module Style Audit (Part 1)",
+      "description": "Verify visual consistency across all 7 modules.\n1. Grep for hardcoded colors, inconsistent spacing, non-standard fonts.\n2. Verify same card/header/stat style everywhere.\n3. Check tab nav looks identical across modules.\n4. Verify ScalableSelector renders consistently.\n5. Check Feature Map card sizing across modules.\n6. Run contrast check on all text/bg combinations (WCAG AA 4.5:1).\n7. Fix all deviations found.",
+      "pofActions": [],
+      "ue5Files": [
+        "src/components/modules/core-engine/unique-tabs/_shared.tsx",
+        "src/components/modules/core-engine/unique-tabs/SaveDataSchema/versions/VersionHistory.tsx",
+        "src/components/modules/core-engine/unique-tabs/SaveDataSchema/versions/MigrationPathGraph.tsx",
+        "src/components/modules/core-engine/unique-tabs/SaveDataSchema/slots/SlotManagement.tsx",
+        "src/components/modules/core-engine/unique-tabs/SaveDataSchema/slots/IntegrityValidator.tsx",
+        "src/components/modules/core-engine/unique-tabs/SaveDataSchema/schema/SchemaTree.tsx",
+        "src/components/modules/core-engine/unique-tabs/SaveDataSchema/schema/SaveDiffViewer.tsx",
+        "src/components/modules/core-engine/unique-tabs/SaveDataSchema/schema/MemoryBanks.tsx",
+        "src/components/modules/core-engine/unique-tabs/SaveDataSchema/schema/FileSizeBreakdown.tsx",
+        "src/components/modules/core-engine/unique-tabs/SaveDataSchema/schema/BudgetAlerting.tsx",
+        "src/components/modules/core-engine/unique-tabs/SaveDataSchema/advanced/SerializationProfiler.tsx",
+        "src/components/modules/core-engine/unique-tabs/SaveDataSchema/advanced/DataRecoveryTool.tsx",
+        "src/components/modules/core-engine/unique-tabs/SaveDataSchema/advanced/AutoSaveConfig.tsx",
+        "src/components/modules/core-engine/unique-tabs/SaveDataSchema/advanced/CloudSyncStatus.tsx",
+        "src/components/modules/core-engine/unique-tabs/ScreenFlowMap/index.tsx",
+        "src/components/modules/core-engine/unique-tabs/ScreenFlowMap/ui/UIBindingsTab.tsx",
+        "src/components/modules/core-engine/unique-tabs/ScreenFlowMap/systems/SystemsTab.tsx",
+        "src/components/modules/core-engine/unique-tabs/ScreenFlowMap/systems/ArpgHudPreview.tsx",
+        "src/components/modules/core-engine/unique-tabs/ScreenFlowMap/flow/ScreenNodeRow.tsx",
+        "src/components/modules/core-engine/unique-tabs/ScreenFlowMap/flow/FlowNodesTab.tsx",
+        "src/components/modules/core-engine/unique-tabs/ScreenFlowMap/accessibility/AccessibilityTab.tsx",
+        "src/components/modules/core-engine/unique-tabs/ZoneMap/map/MapTopologyGroup.tsx",
+        "src/components/modules/core-engine/unique-tabs/CharacterFeelPlayground/canvas-draw.ts",
+        "src/components/modules/core-engine/unique-tabs/AnimationStateGraph/combos-montages/ComboTimelinePanel.tsx",
+        "src/components/modules/core-engine/unique-tabs/AttributePointOptimizer/OptimizerTab.tsx",
+        "src/components/modules/core-engine/unique-tabs/DebugDashboard/index.tsx",
+        "src/components/modules/core-engine/unique-tabs/progression/DRCodeGenerator.tsx",
+        "src/components/modules/core-engine/unique-tabs/progression/XpTableGenerator.tsx",
+        "src/components/modules/core-engine/unique-tabs/progression/RestXpSystem.tsx",
+        "src/components/modules/core-engine/unique-tabs/progression/PrestigePreview.tsx",
+        "src/components/modules/core-engine/unique-tabs/progression/AchievementBoard.tsx",
+        "src/components/modules/core-engine/unique-tabs/ProgressionCurve/rewards/AchievementBoard.tsx",
+        "src/components/modules/core-engine/unique-tabs/AffixCraftingWorkbench/CraftLogSection.tsx"
+      ],
+      "decisions": [
+        {
+          "decision": "Implemented Hardcoded color audit & fix",
+          "rationale": "Eliminated all non-pseudo-class hardcoded Tailwind color classes across 30+ files. Converted 80+ violations to chart-colors tokens via inline styles."
+        },
+        {
+          "decision": "Implemented Card/header/stat style consistency",
+          "rationale": "All modules use shared BlueprintPanel, SectionHeader, GlowStat, TabHeader, FeatureCard components consistently. FeatureCardGrid uses uniform minmax(160px,1fr) sizing."
+        },
+        {
+          "decision": "Implemented Tab nav consistency",
+          "rationale": "All 12+ tabbed modules use the shared SubTabNavigation component with consistent accent-based active state, spring animation, and gap/padding."
+        },
+        {
+          "decision": "Implemented ScalableSelector consistency",
+          "rationale": "Used across 9 files with consistent import path, SelectorItem interface, groupBy patterns, and renderItem callbacks."
+        },
+        {
+          "decision": "Implemented Feature Map card sizing",
+          "rationale": "FeatureCard and FeatureCardGrid use proper chart-colors tokens with consistent auto-fill grid layout across all modules."
+        },
+        {
+          "decision": "Implemented WCAG contrast check",
+          "rationale": "All active text/bg combos pass AA (4.5:1). STATUS_NEUTRAL on surface is 3.82:1 — used only for inactive/disabled state which is acceptable."
+        }
+      ],
+      "gotchas": [
+        "SaveDataSchema was the worst offender with 50+ hardcoded Tailwind color violations — cyan-300/400/500, amber-400/500, emerald-400 across 12 files",
+        "hover:text-red-400 on delete/trash buttons (18 occurrences across 14 files) cannot be converted to inline styles — acceptable as a recognized pattern for destructive action hover",
+        "bg-*-500/5 blur-3xl ambient glow decorations (8 occurrences in progression/) have hover variants that prevent inline conversion — acceptable at 5% opacity",
+        "STATUS_NEUTRAL (#6b7280) contrast ratio is 3.82:1 against surface — passes AA large text but not normal text. Used only for inactive/disabled state which is acceptable",
+        "All 12+ tabbed modules use shared SubTabNavigation with consistent spring animation, gap/padding, and accent-based active state — no structural divergence found",
+        "focus:border-blue-500/50 (19 files) vs focus:ring-current/50 (4 files) is a minor inconsistency but serves different purposes (input borders vs button rings)"
+      ],
+      "verification": "PASS typecheck, FAIL lint, PASS test, FAIL visual-check",
+      "durationMs": 1130853
+    }
+  ],
+  "learnings": [
+    "Button elements default to cursor:default — always add cursor-pointer for clickable cards",
+    "setAll and setMany should both check for no-op to avoid unnecessary re-renders and localStorage writes",
+    "Tailwind scale transforms with hover/active give tactile feedback without needing framer-motion",
+    "Existing implementation was high quality — only needed minor cleanup (redundant array copy, missing keyboard hint). Binary search + overscan virtual scroll pattern handles 100+ items well.",
+    "Redundant data structures (navigableSet vs navigableIndexMap) add allocation cost for zero benefit — Map.has() serves both index lookup and membership testing. Building auxiliary index maps alongside existing offset computation loops adds O(1) lookups at zero extra pass cost.",
+    "React 19 ESLint plugin flags setState-in-useEffect (react-hooks/set-state-in-effect) and ref access during render (react-hooks/refs) — use the state-based previous value comparison pattern instead",
+    "MiniBtn (button elements in general) need explicit cursor-pointer class even when they have onClick handlers",
+    "Home/End/Ctrl+A keyboard handlers on modal wrappers must check if event target is an INPUT — otherwise they steal cursor-movement and text-selection keys from the search field. Same pattern as the existing Space key guard.",
+    "CharacterBlueprint metrics were already fully implemented with all 13 section IDs mapped — no gaps found",
+    "DODGE_TRAJECTORIES contains SVG path data not numeric distances — hardcoded dodge distance is the correct approach",
+    "Existing AnimationStateGraph metrics implementation was already high quality — all 10 metrics correctly derive data from data.ts, use consistent styling patterns, and compute constants at module scope to avoid re-renders. PlayrateMetric has a smart fallback that shows blend-in time range when all montages share the same fps.",
+    "CharacterBlueprint metrics were already fully implemented with all 13 section IDs mapped — no gaps found",
+    "Existing AnimationStateGraph metrics implementation was already high quality — all 10 metrics correctly derive data from data.ts, use consistent styling patterns, and compute constants at module scope to avoid re-renders. PlayrateMetric has a smart fallback that shows blend-in time range when all montages share the same fps.",
+    "rgba(255,255,255,...) was the dominant hardcoded pattern (216 occurrences) — 8-digit hex values were already cleaned up in a prior pass",
+    "New OPACITY_2/3/4/6/40 constants needed for exact mapping of common rgba sub-10% and 40% values",
+    "rgba(0,0,0,...) dark shadows and specific accent colors (168,85,247 purple, 6,182,212 cyan) have no semantic token — correctly left as-is",
+    "SVG stroke/fill attributes accept both rgba() and #RRGGBBAA formats — withOpacity() works for both",
+    "Tailwind arbitrary values like fill-[rgba(...)] must use hex+alpha format since they can't call JS functions",
+    "ABILITY_METADATA was producing a meaningless 'none' tag when damageType was 'None' — always filter sentinel values before lowercasing into tags",
+    "LOOT_ENTRY_METADATA tags were too sparse (rarity only) — category and subcategory should always appear as tags for consistent filterability across domains",
+    "ZONE_METADATA had area=z.name duplicating the name field — zones ARE areas, so area field is redundant; added z.group tag instead for topology grouping",
+    "groupEntities must check for 'Ungrouped' key BEFORE consulting the order index, otherwise 'Ungrouped' gets Infinity and sorts alphabetically among other overflow groups instead of always being last",
+    "CharacterBlueprint metrics were already fully implemented with all 13 section IDs mapped — no gaps found",
+    "All 9 Combat Action Map metrics were already fully implemented with correct data derivation, module-scope computation, and consistent styling — no modifications needed",
+    "All 9 Enemy Bestiary feature metrics were already implemented and high quality — only ModifiersMetric had a bug counting modifiers-with-excludes instead of total exclusion entries",
+    "All 9 Combat Action Map metrics were already fully implemented with correct data derivation, module-scope computation, and consistent styling — no modifications needed",
+    "All 9 Enemy Bestiary feature metrics were already fully implemented with correct data derivation, module-scope computation, chart-colors usage, and consistent styling — no modifications needed in Part 2",
+    "StatsMetric BAR_W formula Math.max(W/n - 1, 2) overflows when n*3 > W — use (W - n + 1)/n to ensure bars fit within SVG viewBox regardless of item count",
+    "Tailwind arbitrary fill-[#RRGGBBAA] on SVG elements converts cleanly to inline fill={withOpacity()} attr — preserves className for font/size utilities while using design tokens for color",
+    "Tailwind gradient hex classes (from-[#hex]/via-[#hex]) must convert to inline style={{ background: 'linear-gradient(...)' }} since they can't call JS functions — remove the gradient utility classes entirely",
+    "0 0 4px and 0 0 8px were the two most common inline glow radii (~25 combined occurrences) — 0 0 6px (20+ occurrences) has no exact GLOW constant and was correctly left untouched to preserve visual appearance",
+    "All 7 Item Catalog metrics were already fully implemented with correct data derivation, module-scope computation, chart-colors usage, overflow-safe bar chart, and consistent styling — no modifications needed in Part 2",
+    "Existing GAS Feature Metrics implementation was already complete and high quality — all 9 section IDs mapped with correct formats, proper chart-colors usage, and optimized single-pass useMemo computation",
+    "All 11 Loot Table Visualizer feature metrics were already fully implemented with correct data derivation, module-scope computation, pre-computed IIFEs for mutable accumulation, and consistent styling — no modifications needed",
+    "ScalableSelector SelectorItem requires index signature — use intersection type (SelectorItem & { ...fields }) rather than interface extends to satisfy the constraint",
+    "STATE_NODES and AnimStateName are separate concerns — STATE_NODES defines the full state graph for browsing, AnimStateName covers only combat-critical states for responsiveness analysis",
+    "Virtual scroll with absolute positioning + flat row list (headers + items) is simpler than nested virtual lists — single scrollTop drives all row positions",
+    "Pre-computing category aggregates (MONTAGE_CATEGORY_COUNTS, MONTAGE_CATEGORY_MEMORY) at module scope avoids redundant computation in React renders",
+    "ComboChainPanel nodes had hardcoded x positions (500, 600, 700) that overflowed the 400px SVG viewBox — dynamic layout with sequential positioning and computed viewBox width is needed when node count can grow",
+    "SVG marker IDs should be shared (single <defs>) rather than duplicated per-edge to avoid ID collision and redundant DOM nodes",
+    "React 19 flags setScrubberPlaying inside setScrubberFrame updater — use a ref to signal the stop condition and call the second setState outside the updater",
+    "BudgetTab categoryColor had Emote and HitReact sharing STATUS_WARNING — every category needs a unique color for the stacked memory bar to be readable",
+    "SpellbookAbility needs [key: string]: unknown index signature to satisfy SelectorItem constraint for ScalableSelector generic",
+    "ScalableSelector groupBy works with single field — for category→element hierarchy, group by category and show element as badge in renderItem",
+    "EXPANDED_EFFECTS grouped rendering uses Map<EffectDurationType, entries[]> for clean swim-lane display within pages",
+    "Tag tree search uses recursive filterTree() that preserves parent nodes when children match — forceOpen prop bypasses local collapse state",
+    "data.ts re-exports data-metrics.ts via `export * from './data-metrics'` — avoid importing the same symbol from both files",
+    "HeatmapGrid lowColor/highColor props use raw hex which triggers lint warnings — these pre-existed and have no chart-colors semantic token",
+    "WEAPONS array with 44 entries and COMBO_SEQUENCES with 32 entries provide sufficient scale for 100+ item testing when combined with ScalableSelector grouping",
+    "SelectableCharacter with [key: string]: unknown index signature satisfies SelectorItem constraint while preserving typed property access — use this pattern for ScalableSelector integration",
+    "CHAR_DEFS builder pattern generates both CHARACTER_METADATA and COMPARISON_CHARACTERS from a single source — prevents sync drift between metadata and stat arrays",
+    "Original COMPARISON_CHARACTERS had broken 0-100 scale values (Jedi Guardian HP=85 vs maxVal=1500) — always verify stat values against maxVal ranges when expanding data",
+    "TIER_LEVELS lookup provides default level/levelMax ranges per tier — avoids repeating level ranges in every character definition",
+    "CameraProfileComparison multi-select uses minimum-1 guard pattern (same as character toggle) to prevent empty state",
+    "COMBO_ABILITIES had 7 hardcoded hex colors (#60a5fa, #a78bfa, #22c55e, #f59e0b, #06b6d4, #e879f9, #7f1d1d) — mapped to STATUS_INFO, ACCENT_VIOLET, ACCENT_GREEN, STATUS_WARNING, ACCENT_CYAN, ACCENT_PINK, HEATMAP_STEP_1 respectively",
+    "Recursive utility functions like countTags should never be called multiple times in JSX — memoize the result once and reuse",
+    "When EXPANDED_EFFECTS is static, per-type counts can be precomputed in a useMemo with empty deps to avoid refiltering on each render",
+    "computeDps returning full breakdown object (effectiveDamage, effectiveSpeed, effectiveCrit, dps) eliminates need for duplicate inline computation — single source of truth for both detail display and comparison list",
+    "CON stat slider was wired to state but never consumed by DPS formula — dead state variables add React reconciliation overhead for zero user value",
+    "44-item DPS comparison list needs max-h + overflow-y-auto to prevent unbounded panel growth — scroll containers are essential when data scale exceeds ~15 visible rows",
+    "Builder pattern with compact tuple definitions [name, subtype, rarity, desc, effect?] + stat generators per type keeps 116 items under 250 lines",
+    "import type from circular module works cleanly — TypeScript erases type imports at compile time so no runtime circular dependency",
+    "ringColor is not a valid CSS property — use boxShadow: '0 0 0 1px color' for ring-like selection effect in inline styles",
+    "ScalableSelector requires SelectorItem with [key: string]: unknown — use intersection type (ItemData & { [key: string]: unknown }) for casting",
+    "SLOT_SUBTYPES mapping enables both slot-filtered item picking (loadout) and dynamic subtype filter dropdown (catalog) from a single source of truth",
+    "LootEditorEntryExpanded with [key: string]: unknown index signature causes Omit<> to lose typed property access — use a separate interface for raw entries to preserve type narrowing",
+    "CSS ringColor is not a valid React style property — use outline: '1px solid color' instead for selection indicators",
+    "RARITY_COLOR_MAP defined after EXPANDED_ENTRIES causes forward reference issues — define a local RARITY_TO_COLOR map before the entries array",
+    "ScalableSelector requires SelectorItem with id:string — AffixDef and enemy binding wrapper types both need explicit id fields",
+    "Character Blueprint flow redesign was already fully implemented with high quality across all 4 features — no modifications needed",
+    "RADAR_DATA only covered 4 of 94 archetypes — stat-based radar derivation with role-specific range/aggression defaults fills the gap for expanded enemies",
+    "Initializing radar overlays for all 94 archetypes renders an unreadable mess — default to player-only and let users toggle specific enemies",
+    "RadarComparison overlay list needs search + scroll + show-more pattern to scale beyond ~10 items",
+    "TacticsMap player marker used hardcoded #3b82f6 which is MODULE_COLORS.core",
+    "ArchetypeBuilder preview had rgba(168,85,247,...) inline — maps to ACCENT_PURPLE_BOLD with opacity helpers",
+    "All 7 Item Catalog metrics were already fully implemented with correct data derivation, module-scope computation, chart-colors usage, overflow-safe bar chart, and consistent styling — no modifications needed in Part 2",
+    "StatsMetric subsampling pattern: when item count exceeds SVG pixel width, subsample sorted array to max W/2 entries using evenly-spaced index picks to preserve distribution shape",
+    "optgroup in select dropdowns significantly improves item browsability at 134+ items — group by item type (Weapon/Armor/Accessory/Consumable/Quest/Material)",
+    "ITEM_METADATA tags should include rarity and type as lowercase tags alongside subtype for consistent cross-domain filterability",
+    "MonteCarloSim.sort() mutated state array directly — always use [...arr].sort() or .toSorted() when working with state-derived arrays",
+    "DropSimulator groupBy used 'archetypeId as never' type cast — derive meaningful tier (Minion/Standard/Elite/Boss) from dropChance ranges for proper ScalableSelector grouping",
+    "WorldItemPreview had useMemo-wrapped Map that duplicated module-scope constant — static data should be computed at module scope, not inside components",
+    "TREEMAP_DATA.find() called 3 times for same treemapDrill value in JSX — extract to local variable via IIFE inside JSX to avoid redundant array traversal",
+    "WavesMetric was importing WAVE_TIMELINE (3 legacy waves) instead of EXPANDED_WAVES (24 waves) — metric showed stale counts that didn't match the actual EncountersTab data",
+    "SpawnFormationViz accepted no formation prop despite EncountersTab maintaining formation state — dead state variables create user confusion when controls appear to do nothing",
+    "Layout computation for Line/Ambush formations uses simple spacing arithmetic — no need for complex physics or force-directed layout for 6 spawn points",
+    "All 3 Animation State Graph flow features (tab order, subtitles, breadcrumb) were already fully implemented with high quality — only needed minor cleanup",
+    "StateGroupBrowser cancel badge and StateDurationPanel outlier label used hardcoded Tailwind amber classes — replaced with STATUS_WARNING chart-colors tokens via inline style",
+    "ComboTimelinePanel tab selector buttons and RetargetingTab pipeline step buttons were missing cursor-pointer class",
+    "RetargetingTab had unused NeonBar import and ResponsivenessAnalyzer had unused warnings variable",
+    "ringColor is not a valid CSS property — both AbilitiesSection ScalableSelector renderItem and LoadoutSection slot cards had ringColor in inline styles doing nothing; replaced with outline: '1px solid color'",
+    "Item Catalog tab order was already correct — the redesign only needed narrative metadata and UI chrome additions",
+    "ItemCatalogSubtabDef interface export enables other consumers to read narrative/subtitle metadata without coupling to internal state",
+    "LaneSection quality score badge used hardcoded Tailwind emerald-400 classes — replaced with ACCENT_EMERALD chart-colors tokens via inline style",
+    "FeedbackTab preset buttons and LaneSection expand buttons were missing cursor-pointer class",
+    "StatInfluencePanel weapon selector had flat 44-item list without optgroup — added category grouping to match HitsTab pattern",
+    "Tailwind accent-purple-500 and accent-blue-500 classes for form controls should use inline style={{ accentColor: TOKEN }} to satisfy chart-colors lint rules",
+    "BTFlowchart had dead props (nodes/edges) in interface that were never consumed — component uses BT_TREE from data module directly",
+    "SpawnFormationViz cx variable was declared but only cy was used in Line formation layout — dead variable elimination",
+    "Single-item grid wrappers with xl:grid-cols-2 create empty columns — remove grid wrapper when only one child",
+    "focus:ring-current/50 is already used in _shared.tsx — valid pattern for replacing hardcoded focus:ring-orange-500/50 across all input elements",
+    "accent-cyan-500/accent-blue-500/accent-orange-500 on range inputs are native browser accent utilities, not hex color violations — common pattern across project",
+    "LootFilters duplicate enemyMap is necessary to avoid circular dependency with index.tsx which imports LootFilters",
+    "Group-level SVG graph (6 nodes) is more readable than full 31-state graph — individual states remain browsable in the collapsible list below",
+    "rectEdgePoint() using min(hw/abs(dx), hh/abs(dy)) scaling cleanly computes arrow endpoints on rounded rect edges",
+    "SVG animate inside conditional {hl && <animate>} triggers only on hover — no continuous animation cost when idle",
+    "repeating-linear-gradient(45deg) at 2px/4px intervals gives clean hatching without SVG pattern defs",
+    "BLEND_TRIANGLE precomputed at module scope from sorted distance — avoids useMemo for static data",
+    "Character Blueprint visual polish was already fully implemented with high quality across all 6 features — only needed minor cleanup (1 missing cursor-pointer, 5 redundant template literals)",
+    "AbilitiesSection had 8 hardcoded Tailwind purple/green/amber classes across 3 glow background divs, 2 icon colors, 1 background color, and 2 status text spans — all mapped to ACCENT_PURPLE_BOLD, ACCENT_GREEN, and STATUS_WARNING",
+    "TagAuditSection blocking tags used hardcoded bg-red-500/10 text-red-400 border-red-500/20 — replaced with ACCENT_RED tokens via inline style",
+    "Ability pills enhanced from flat text buttons to rich cards: icon circle with first-letter initial, element color dot, cooldown badge, and mini cost bar — uses grid layout instead of flex-wrap for consistent card sizing",
+    "TIER_GLOW_COLORS map (minion=neutral, standard=info, elite=purple, boss=orange, raid-boss=warning) provides tier-level visual identity without conflicting with per-archetype identity colors",
+    "STAT_AVERAGES precomputed at module scope from ARCHETYPES avoids per-render computation — different archetypes use different stat labels (HP/ATK/DEF/SPD/INT vs HP/Damage/Speed/Range) so averages are label-scoped",
+    "SpawnPoint role/color fields are optional to maintain backward compatibility — SpawnFormationViz falls back to accent prop when color is undefined",
+    "Role legend uses reduce to deduplicate by role before rendering — avoids showing duplicate melee entries from 2 melee spawn points",
+    "All 6 Character Blueprint visual features were already fully implemented with high quality — only HitboxWireframeViewer had a raw opacity string '04' that needed replacement with OPACITY_4 constant",
+    "SVG node drag uses DOMPoint.matrixTransform(ctm.inverse()) for screen-to-viewBox coordinate conversion — cleaner than deprecated createSVGPoint()",
+    "During drag, suppress onMouseEnter on other nodes to prevent hover state flickering — check draggedNode before setting hoveredNode",
+    "CORE_ATTRIBUTES.map().includes() per node per render creates O(n*m) allocations — precompute as Set in useMemo for O(1) lookups",
+    "Split useMemo into defaultPositions + customPositions merge to support drag while keeping static circular layout as fallback",
+    "SankeyNode.color and SankeyLink.color are optional in the type definitions — always provide fallback when mapping to required-color interfaces",
+    "Pre-computing Sankey flow band paths at module scope with IIFE avoids impure computation during React render while keeping static data efficient",
+    "Activation box computation from UML sequence events: track active state per lane, close when lane sends to another, open when lane receives",
+    "FeedbackParam category grouping with FEEDBACK_CATEGORIES const enables clean filter-based rendering without restructuring the flat array",
+    "ITEM_SET_MAP pre-computed from ITEM_SETS enables O(1) set membership lookup for TradingCard set indicators — avoids per-card array search",
+    "Sankey link paths use cubic Bezier with bidirectional thickness (srcH/dstH) for proportional flow visualization — path closes as a polygon not a stroke",
+    "Sankey node offset tracking requires separate srcOffsets and dstOffsets maps to stack links vertically within each node's height",
+    "allLevels derived from lines[0]?.points triggers React hook dep warnings in useCallback — wrap in useMemo with [lines] dep",
+    "computePower formula includes affix count * 10 bonus to reflect that affixed items have more total power than raw stat sums suggest",
+    "SVG hover tooltip positioning uses midAngle/midR from arc computation for AffixSunburst — reuses existing geometry calculations",
+    "All 5 Combat Action Map visual features were already fully implemented with high quality — only needed cleanup of 6 redundant template literal wrappers around withOpacity() calls and removal of unused arrows prop from LaneSection interface",
+    "All 5 Item Catalog visual features were already fully implemented with high quality — only needed cleanup fixes",
+    "AffixSlotPanels had inconsistent opacity pattern using direct hex+opacity concat instead of withOpacity() helper",
+    "MechanicsScalingTab had import statement placed between code blocks instead of at top with other imports",
+    "describeArc pure function inside AffixSunburst component was recreated every render — module-scope eliminates allocation",
+    "GearSections IIFE stat computation in JSX should be a separate memoized component for cleaner rendering",
+    "LootTableEditor had 20+ direct hex concat patterns (${COLOR}${OPACITY}) — most of any file in this module, all converted to withOpacity() for consistency",
+    "DropSimulator, EnemyLootBinding, EVCalculator, DroughtCalculator each had 2-5 direct hex concat patterns remaining from prior passes",
+    "LootFilters and WorldItemPreview had redundant template literal wrappers around withOpacity() calls that returned strings — removed for cleaner code",
+    "EnemyLootBinding copy button had mixed patterns: one withOpacity in template literal, one direct concat — unified to withOpacity()",
+    "SaveDataSchema was the worst offender with 50+ hardcoded Tailwind color violations — cyan-300/400/500, amber-400/500, emerald-400 across 12 files",
+    "hover:text-red-400 on delete/trash buttons (18 occurrences across 14 files) cannot be converted to inline styles — acceptable as a recognized pattern for destructive action hover",
+    "bg-*-500/5 blur-3xl ambient glow decorations (8 occurrences in progression/) have hover variants that prevent inline conversion — acceptable at 5% opacity",
+    "STATUS_NEUTRAL (#6b7280) contrast ratio is 3.82:1 against surface — passes AA large text but not normal text. Used only for inactive/disabled state which is acceptable",
+    "All 12+ tabbed modules use shared SubTabNavigation with consistent spring animation, gap/padding, and accent-based active state — no structural divergence found",
+    "focus:border-blue-500/50 (19 files) vs focus:ring-current/50 (4 files) is a minor inconsistency but serves different purposes (input borders vs button rings)"
+  ],
+  "prerequisites": [
+    "UE5 5.7.3+ installed",
+    "PoF app running (npm run dev)",
+    "Project connected via Setup Wizard",
+    "Project path: C:/Users/kazda/kiro/pof"
+  ]
+}

@@ -4,7 +4,9 @@ import { useCallback, useMemo } from 'react';
 import { Plus, Trash2 } from 'lucide-react';
 import {
   STATUS_SUCCESS, STATUS_WARNING, STATUS_ERROR,
-  ACCENT_ORANGE,
+  ACCENT_ORANGE, OVERLAY_WHITE,
+  withOpacity, OPACITY_10, OPACITY_50, OPACITY_25, OPACITY_12, OPACITY_37, OPACITY_20,
+  OPACITY_3, OPACITY_60,
 } from '@/lib/chart-colors';
 import { useCollectionEditor } from '@/hooks/useCollectionEditor';
 import type { TagRule, EditorEffect, GASLoadoutSlot } from '@/lib/gas-codegen';
@@ -79,15 +81,15 @@ export function TagRulesEditor({
             const v = validations.get(rule.id);
             return (
               <g key={rule.id}>
-                <rect x={4} y={y} width={110} height={18} rx={3} fill={`${color}15`} stroke={v?.srcUnmatched ? `${STATUS_WARNING}80` : `${color}40`} strokeWidth={v?.srcUnmatched ? 1.2 : 0.8} />
+                <rect x={4} y={y} width={110} height={18} rx={3} fill={`${withOpacity(color, OPACITY_10)}`} stroke={v?.srcUnmatched ? `${withOpacity(STATUS_WARNING, OPACITY_50)}` : `${withOpacity(color, OPACITY_25)}`} strokeWidth={v?.srcUnmatched ? 1.2 : 0.8} />
                 <text x={59} y={y + 12} fill={color} fontSize={8} fontFamily="monospace" textAnchor="middle">{rule.sourceTag}</text>
                 {v?.srcUnmatched && <circle cx={4} cy={y} r={3.5} fill={STATUS_WARNING}><title>Unmatched: no effect or loadout uses this tag</title></circle>}
                 <line x1={118} y1={y + 9} x2={168} y2={y + 9} stroke={color} strokeWidth={1.5} strokeDasharray={rule.type === 'cancels' ? '4 2' : undefined} />
                 <text x={143} y={y + 6} fill={color} fontSize={7} fontFamily="monospace" textAnchor="middle" fontWeight="bold">{rule.type}</text>
-                <rect x={172} y={y} width={110} height={18} rx={3} fill="rgba(255,255,255,0.03)" stroke={v?.tgtUnmatched ? `${STATUS_WARNING}80` : 'rgba(255,255,255,0.1)'} strokeWidth={v?.tgtUnmatched ? 1.2 : 0.8} />
-                <text x={227} y={y + 12} fill="rgba(255,255,255,0.6)" fontSize={8} fontFamily="monospace" textAnchor="middle">{rule.targetTag}</text>
+                <rect x={172} y={y} width={110} height={18} rx={3} fill={withOpacity(OVERLAY_WHITE, OPACITY_3)} stroke={v?.tgtUnmatched ? `${withOpacity(STATUS_WARNING, OPACITY_50)}` : withOpacity(OVERLAY_WHITE, OPACITY_10)} strokeWidth={v?.tgtUnmatched ? 1.2 : 0.8} />
+                <text x={227} y={y + 12} fill={withOpacity(OVERLAY_WHITE, OPACITY_60)} fontSize={8} fontFamily="monospace" textAnchor="middle">{rule.targetTag}</text>
                 {v?.tgtUnmatched && <circle cx={282} cy={y} r={3.5} fill={STATUS_WARNING}><title>Unmatched: no effect or loadout uses this tag</title></circle>}
-                {v?.conflict && (<g><rect x={290} y={y + 2} width={80} height={14} rx={3} fill={`${STATUS_ERROR}20`} stroke={`${STATUS_ERROR}60`} strokeWidth={0.8} /><text x={330} y={y + 12} fill={STATUS_ERROR} fontSize={6.5} fontFamily="monospace" textAnchor="middle" fontWeight="bold">CONFLICT</text><title>{v.conflict}</title></g>)}
+                {v?.conflict && (<g><rect x={290} y={y + 2} width={80} height={14} rx={3} fill={`${withOpacity(STATUS_ERROR, OPACITY_12)}`} stroke={`${withOpacity(STATUS_ERROR, OPACITY_37)}`} strokeWidth={0.8} /><text x={330} y={y + 12} fill={STATUS_ERROR} fontSize={6.5} fontFamily="monospace" textAnchor="middle" fontWeight="bold">CONFLICT</text><title>{v.conflict}</title></g>)}
               </g>
             );
           })}
@@ -100,23 +102,23 @@ export function TagRulesEditor({
           return (
             <div key={rule.id} className="flex items-center gap-1.5 text-2xs font-mono">
               <div className="relative">
-                <input value={rule.sourceTag} onChange={(e) => updateRule(rule.id, { sourceTag: e.target.value })} className="bg-surface-deep border rounded px-1.5 py-0.5 text-text w-32 focus:outline-none" style={{ borderColor: v?.srcUnmatched ? `${STATUS_WARNING}80` : undefined }} />
+                <input value={rule.sourceTag} onChange={(e) => updateRule(rule.id, { sourceTag: e.target.value })} className="bg-surface-deep border rounded px-1.5 py-0.5 text-text w-32 focus:outline-none" style={{ borderColor: v?.srcUnmatched ? `${withOpacity(STATUS_WARNING, OPACITY_50)}` : undefined }} />
                 {v?.srcUnmatched && <span className="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full" style={{ backgroundColor: STATUS_WARNING }} title="Unmatched: no effect or loadout uses this tag" />}
               </div>
               <select value={rule.type} onChange={(e) => updateRule(rule.id, { type: e.target.value as TagRule['type'] })} className="bg-surface-deep border border-border/30 rounded px-1 py-0.5 focus:outline-none" style={{ color }}>
                 <option value="blocks">blocks</option><option value="cancels">cancels</option><option value="requires">requires</option>
               </select>
               <div className="relative">
-                <input value={rule.targetTag} onChange={(e) => updateRule(rule.id, { targetTag: e.target.value })} className="bg-surface-deep border rounded px-1.5 py-0.5 text-text w-32 focus:outline-none" style={{ borderColor: v?.tgtUnmatched ? `${STATUS_WARNING}80` : undefined }} />
+                <input value={rule.targetTag} onChange={(e) => updateRule(rule.id, { targetTag: e.target.value })} className="bg-surface-deep border rounded px-1.5 py-0.5 text-text w-32 focus:outline-none" style={{ borderColor: v?.tgtUnmatched ? `${withOpacity(STATUS_WARNING, OPACITY_50)}` : undefined }} />
                 {v?.tgtUnmatched && <span className="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full" style={{ backgroundColor: STATUS_WARNING }} title="Unmatched: no effect or loadout uses this tag" />}
               </div>
-              {v?.conflict && <span className="flex-shrink-0 px-1.5 py-0.5 rounded text-xs font-bold" style={{ backgroundColor: `${STATUS_ERROR}20`, color: STATUS_ERROR, border: `1px solid ${STATUS_ERROR}40` }} title={v.conflict}>CONFLICT</span>}
+              {v?.conflict && <span className="flex-shrink-0 px-1.5 py-0.5 rounded text-xs font-bold" style={{ backgroundColor: `${withOpacity(STATUS_ERROR, OPACITY_12)}`, color: STATUS_ERROR, border: `1px solid ${withOpacity(STATUS_ERROR, OPACITY_25)}` }} title={v.conflict}>CONFLICT</span>}
               <button onClick={() => removeRule(rule.id)} className="text-text-muted hover:text-red-400 flex-shrink-0"><Trash2 className="w-3 h-3" /></button>
             </div>
           );
         })}
       </div>
-      <button onClick={addRule} className="flex items-center gap-1.5 px-2.5 py-1 rounded text-xs font-mono uppercase tracking-[0.15em] font-medium" style={{ backgroundColor: `${STATUS_ERROR}15`, color: STATUS_ERROR, border: `1px solid ${STATUS_ERROR}30` }}><Plus className="w-3 h-3" /> Add Rule</button>
+      <button onClick={addRule} className="flex items-center gap-1.5 px-2.5 py-1 rounded text-xs font-mono uppercase tracking-[0.15em] font-medium" style={{ backgroundColor: `${withOpacity(STATUS_ERROR, OPACITY_10)}`, color: STATUS_ERROR, border: `1px solid ${withOpacity(STATUS_ERROR, OPACITY_20)}` }}><Plus className="w-3 h-3" /> Add Rule</button>
     </div>
   );
 }

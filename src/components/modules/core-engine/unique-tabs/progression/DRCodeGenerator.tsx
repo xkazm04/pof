@@ -2,7 +2,10 @@
 
 import { useMemo, useState, useCallback } from 'react';
 import { Code, AlertTriangle } from 'lucide-react';
-import { OPACITY_10, OPACITY_15, OPACITY_20, OPACITY_30 } from '@/lib/chart-colors';
+import {
+  STATUS_ERROR, STATUS_WARNING, ACCENT_CYAN_LIGHT, OVERLAY_WHITE,
+  withOpacity, OPACITY_10, OPACITY_15, OPACITY_20, OPACITY_30, OPACITY_80, OPACITY_90,
+} from '@/lib/chart-colors';
 import { SurfaceCard } from '@/components/ui/SurfaceCard';
 import { SectionLabel, CopyButton, NormalizedLineChart } from '../_shared';
 import { ACCENT, DR_ATTRIBUTES } from './progression-data';
@@ -262,7 +265,7 @@ export function DRCodeGenerator() {
                     <div className="flex items-center gap-2 text-2xs font-mono">
                       <span className="text-text-muted">Linear: <span className="text-text">{linear.toFixed(1)}</span></span>
                       <span className="text-text-muted">DR: <span style={{ color }}>{effective.toFixed(1)}</span></span>
-                      <span className="text-red-400">-{savings}%</span>
+                      <span style={{ color: STATUS_ERROR }}>-{savings}%</span>
                     </div>
                   );
                 })()}
@@ -308,7 +311,7 @@ export function DRCodeGenerator() {
              'Data/DT_DiminishingReturns.json'}
           </span>
         </div>
-        <pre className="p-4 text-2xs font-mono leading-relaxed text-cyan-100/90 overflow-x-auto custom-scrollbar max-h-[400px] overflow-y-auto">
+        <pre className="p-4 text-2xs font-mono leading-relaxed overflow-x-auto custom-scrollbar max-h-[400px] overflow-y-auto" style={{ color: withOpacity(OVERLAY_WHITE, OPACITY_90) }}>
           {generatedCode}
         </pre>
       </div>
@@ -391,14 +394,14 @@ export function DRCodeGenerator() {
       </div>
 
       {/* UE5 integration note */}
-      <div className="mt-2.5 p-3 rounded-lg border border-amber-500/20 bg-amber-950/10">
+      <div className="mt-2.5 p-3 rounded-lg border" style={{ borderColor: withOpacity(STATUS_WARNING, OPACITY_20), backgroundColor: withOpacity(STATUS_WARNING, OPACITY_10) }}>
         <div className="flex items-start gap-2">
-          <AlertTriangle className="w-3.5 h-3.5 mt-0.5 text-amber-400 shrink-0" />
-          <div className="text-2xs text-amber-200/80 font-mono leading-relaxed">
-            <span className="font-bold text-amber-400">UE5 Integration:</span> The generated GE replaces flat{' '}
-            <span className="text-cyan-300">AttackPowerPerStrength = 2.0f</span> in ARPGPlayerCharacter.
+          <AlertTriangle className="w-3.5 h-3.5 mt-0.5 shrink-0" style={{ color: STATUS_WARNING }} />
+          <div className="text-2xs font-mono leading-relaxed" style={{ color: withOpacity(STATUS_WARNING, OPACITY_80) }}>
+            <span className="font-bold" style={{ color: STATUS_WARNING }}>UE5 Integration:</span> The generated GE replaces flat{' '}
+            <span style={{ color: ACCENT_CYAN_LIGHT }}>AttackPowerPerStrength = 2.0f</span> in ARPGPlayerCharacter.
             Import the CSV as UCurveTable assets and reference them in the GE&apos;s FDiminishingReturnsConfig.
-            Call <span className="text-cyan-300">GetEffectiveBonus(AllocatedPoints)</span> from UI to preview values.
+            Call <span style={{ color: ACCENT_CYAN_LIGHT }}>GetEffectiveBonus(AllocatedPoints)</span> from UI to preview values.
           </div>
         </div>
       </div>

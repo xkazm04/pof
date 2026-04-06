@@ -2,7 +2,7 @@
 
 import { useState, useCallback } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { STATUS_SUCCESS, STATUS_ERROR, STATUS_WARNING } from '@/lib/chart-colors';
+import { STATUS_SUCCESS, STATUS_ERROR, STATUS_WARNING, OVERLAY_WHITE, withOpacity, OPACITY_25 } from '@/lib/chart-colors';
 import { STAGGER_DEFAULT } from '@/components/modules/core-engine/unique-tabs/_shared';
 import { NODE_W, NODE_H, BRANCH_OFFSET_X } from './types';
 import { DAMAGE_PIPELINE } from './pipeline-data';
@@ -82,7 +82,7 @@ export function DamagePipelineFlow() {
             <FlowArrow key={`arrow-${from}-${to}`}
               x1={centerX} y1={rowY(from) + NODE_H}
               x2={centerX} y2={rowY(to)}
-              color="rgba(255,255,255,0.25)"
+              color={withOpacity(OVERLAY_WHITE, OPACITY_25)}
               delay={i * STAGGER_DEFAULT + 0.1} />
           ))}
 

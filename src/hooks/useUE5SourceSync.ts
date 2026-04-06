@@ -46,10 +46,30 @@ export function useUE5SourceSync(): UseUE5SourceSyncResult {
 
   useEffect(() => {
     if (!projectPath || !isSetupComplete) return;
-    // Only fetch once per project path
     if (fetchedPathRef.current === projectPath) return;
-    fetchData(projectPath);
-  }, [projectPath, isSetupComplete, fetchData]);
+    let cancelled = false;
+    async function load() {
+      await Promise.resolve();
+      if (cancelled) return;
+      setIsLoading(true);
+      setError(null);
+      const result = await tryApiFetch<ParsedUE5Data>('/api/ue5-source/parse', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ projectPath }),
+      });
+      if (cancelled) return;
+      if (result.ok) {
+        setData(result.data);
+        fetchedPathRef.current = projectPath;
+      } else {
+        setError(result.error);
+      }
+      setIsLoading(false);
+    }
+    load();
+    return () => { cancelled = true; };
+  }, [projectPath, isSetupComplete]);
 
   const refresh = useCallback(() => {
     if (!projectPath || !isSetupComplete) return;

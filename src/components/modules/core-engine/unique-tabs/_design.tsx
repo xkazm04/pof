@@ -2,7 +2,12 @@
 
 import { type ReactNode } from 'react';
 import { motion, useReducedMotion } from 'framer-motion';
-import { MODULE_COLORS, OVERLAY_WHITE } from '@/lib/chart-colors';
+import {
+  MODULE_COLORS, OVERLAY_WHITE, withOpacity,
+  OPACITY_5, OPACITY_8, OPACITY_15, OPACITY_20, OPACITY_30, OPACITY_37,
+  BORDER_DEFAULT, BORDER_SUBTLE,
+  GLOW_SM, GLOW_MD, GLOW_LG,
+} from '@/lib/chart-colors';
 import { ANIMATION_PRESETS, motionSafe } from '@/lib/motion';
 
 const DEFAULT_ACCENT = MODULE_COLORS.core;
@@ -11,7 +16,7 @@ const DEFAULT_ACCENT = MODULE_COLORS.core;
 
 export function CornerBrackets({ color = DEFAULT_ACCENT, size = 10 }: { color?: string; size?: number }) {
   const s = { width: size, height: size };
-  const bc = `1.5px solid ${color}35`;
+  const bc = `1.5px solid ${withOpacity(color, BORDER_DEFAULT)}`;
   return (
     <>
       <span className="absolute top-0 left-0 pointer-events-none" style={{ ...s, borderTop: bc, borderLeft: bc }} />
@@ -27,7 +32,7 @@ export function CornerBrackets({ color = DEFAULT_ACCENT, size = 10 }: { color?: 
 export function ScanlineOverlay() {
   return (
     <div className="absolute inset-0 pointer-events-none" style={{
-      backgroundImage: `repeating-linear-gradient(0deg, transparent, transparent 3px, ${OVERLAY_WHITE}03 3px, ${OVERLAY_WHITE}03 4px)`,
+      backgroundImage: `repeating-linear-gradient(0deg, transparent, transparent 3px, ${withOpacity(OVERLAY_WHITE, '03')} 3px, ${withOpacity(OVERLAY_WHITE, '03')} 4px)`,
     }} />
   );
 }
@@ -39,7 +44,7 @@ export function BlueprintPanel({
 }: { children: ReactNode; color?: string; className?: string; noBrackets?: boolean }) {
   return (
     <div className={`relative rounded-lg border bg-surface-deep overflow-hidden ${className}`}
-      style={{ borderColor: `${color}18` }}>
+      style={{ borderColor: withOpacity(color, BORDER_SUBTLE) }}>
       {!noBrackets && <CornerBrackets color={color} />}
       <ScanlineOverlay />
       <div className="relative z-[1]">{children}</div>
@@ -57,18 +62,18 @@ export function SectionHeader({ label, color = DEFAULT_ACCENT, icon: Icon }: {
   return (
     <div className="flex items-center gap-1.5 mb-3">
       {Icon && (
-        <div className="p-1.5 rounded-md" style={{ backgroundColor: `${color}12` }}>
-          <Icon className="w-3.5 h-3.5" style={{ color, filter: `drop-shadow(0 0 6px ${color})` }} />
+        <div className="p-1.5 rounded-md" style={{ backgroundColor: withOpacity(color, OPACITY_8) }}>
+          <Icon className="w-3.5 h-3.5" style={{ color, filter: `drop-shadow(${GLOW_SM} ${color})` }} />
         </div>
       )}
       <span className="text-xs font-mono font-bold uppercase tracking-wider"
-        style={{ color, textShadow: `0 0 20px ${color}30` }}>{label}</span>
+        style={{ color, textShadow: `${GLOW_LG} ${withOpacity(color, OPACITY_20)}` }}>{label}</span>
       <motion.div
         initial={prefersReduced ? { scaleX: 1 } : { scaleX: 0 }}
         animate={{ scaleX: 1 }}
         transition={motionSafe({ ...ANIMATION_PRESETS.fill, duration: 0.8 }, prefersReduced)}
         className="flex-1 h-px origin-left"
-        style={{ background: `linear-gradient(90deg, ${color}30, transparent)` }}
+        style={{ background: `linear-gradient(90deg, ${withOpacity(color, OPACITY_20)}, transparent)` }}
       />
     </div>
   );
@@ -86,13 +91,13 @@ export function GlowStat({ label, value, unit, color, delay = 0 }: {
       animate={{ opacity: 1, y: 0 }}
       transition={motionSafe({ ...ANIMATION_PRESETS.entrance, delay }, prefersReduced)}
       className="relative p-3 rounded-lg border overflow-hidden group"
-      style={{ borderColor: `${color}20`, backgroundColor: `${color}08` }}>
+      style={{ borderColor: withOpacity(color, BORDER_DEFAULT), backgroundColor: withOpacity(color, OPACITY_5) }}>
       <div className="absolute -top-4 -right-4 w-20 h-20 rounded-full blur-3xl opacity-0 group-hover:opacity-100 transition-opacity duration-700 pointer-events-none"
-        style={{ backgroundColor: `${color}25` }} />
+        style={{ backgroundColor: withOpacity(color, OPACITY_15) }} />
       <div className="text-xs font-mono uppercase tracking-wider mb-1.5 text-text-muted">{label}</div>
       <div className="flex items-baseline gap-1.5">
         <span className="text-xl font-mono font-bold tabular-nums leading-none"
-          style={{ color, textShadow: `0 0 12px ${color}40` }}>{value}</span>
+          style={{ color, textShadow: `${GLOW_MD} ${withOpacity(color, OPACITY_30)}` }}>{value}</span>
         {unit && <span className="text-xs font-mono uppercase tracking-wider text-text-muted">{unit}</span>}
       </div>
     </motion.div>
@@ -106,7 +111,7 @@ export function NeonBar({ pct, color, height = 6, glow = false }: {
 }) {
   const prefersReduced = useReducedMotion();
   return (
-    <div className="w-full rounded-full overflow-hidden" style={{ height, backgroundColor: `${color}12` }}>
+    <div className="w-full rounded-full overflow-hidden" style={{ height, backgroundColor: withOpacity(color, OPACITY_8) }}>
       <motion.div
         initial={prefersReduced ? { width: `${Math.min(100, pct)}%` } : { width: 0 }}
         animate={{ width: `${Math.min(100, pct)}%` }}
@@ -114,7 +119,7 @@ export function NeonBar({ pct, color, height = 6, glow = false }: {
         className="h-full rounded-full"
         style={{
           backgroundColor: color,
-          boxShadow: glow ? `0 0 8px ${color}60, 0 0 2px ${color}` : 'none',
+          boxShadow: glow ? `${GLOW_MD} ${withOpacity(color, OPACITY_37)}, 0 0 2px ${color}` : 'none',
         }}
       />
     </div>

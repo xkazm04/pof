@@ -3,7 +3,9 @@
 import { useMemo, useState, useCallback } from 'react';
 import { Target, TrendingUp } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ACCENT_CYAN, OPACITY_10 } from '@/lib/chart-colors';
+import { OPACITY_10, OPACITY_20, withOpacity,
+  OPACITY_8,
+} from '@/lib/chart-colors';
 import { SubTabNavigation } from '../_shared';
 import type { SubTab } from '../_shared';
 import type { SubModuleId } from '@/types/modules';
@@ -77,10 +79,10 @@ export function AttributePointOptimizer({ moduleId: _moduleId }: AttributePointO
         initial={{ opacity: 0, y: -6 }}
         animate={{ opacity: 1, y: 0 }}
         className="flex items-center justify-between pb-3 border-b"
-        style={{ borderColor: `${ACCENT}18` }}
+        style={{ borderColor: withOpacity(ACCENT, OPACITY_10) }}
       >
         <div className="flex items-center gap-2.5">
-          <div className="p-1.5 rounded-md relative overflow-hidden" style={{ backgroundColor: `${ACCENT}12` }}>
+          <div className="p-1.5 rounded-md relative overflow-hidden" style={{ backgroundColor: `${withOpacity(ACCENT, OPACITY_8)}` }}>
             <Target className="w-4 h-4 relative z-10" style={{ color: ACCENT, filter: `drop-shadow(0 0 6px ${ACCENT})` }} />
           </div>
           <div className="flex flex-col">
@@ -91,7 +93,7 @@ export function AttributePointOptimizer({ moduleId: _moduleId }: AttributePointO
             </span>
           </div>
         </div>
-        <div className="px-2.5 py-1 rounded-md text-xs font-mono border" style={{ borderColor: `${accentColor}30`, backgroundColor: `${accentColor}${OPACITY_10}`, color: accentColor }}>
+        <div className="px-2.5 py-1 rounded-md text-xs font-mono border" style={{ borderColor: withOpacity(accentColor, OPACITY_20), backgroundColor: `${accentColor}${OPACITY_10}`, color: accentColor }}>
           {efficiency}% efficient
         </div>
       </motion.div>

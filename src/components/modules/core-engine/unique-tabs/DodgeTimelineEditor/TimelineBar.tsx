@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   ACCENT_ORANGE, ACCENT_CYAN, ACCENT_VIOLET,
   ACCENT_EMERALD, STATUS_ERROR, OVERLAY_WHITE,
+  withOpacity, OPACITY_3, OPACITY_8, OPACITY_15, OPACITY_30, OPACITY_10, OPACITY_37, OPACITY_12, OPACITY_20, OPACITY_25, OPACITY_60, OPACITY_80,
 } from '@/lib/chart-colors';
 import type { DodgePhases, Phase, HitMarker } from '../dodge-types';
 import type { HapticEffect } from './types';
@@ -54,12 +55,12 @@ export function TimelineBar({
         ref={barRef}
         className="relative h-8 rounded-md overflow-hidden cursor-pointer select-none"
         style={{
-          backgroundColor: 'rgba(255,255,255,0.03)',
-          border: `1px solid ${isDodgeHaptic ? ACCENT_EMERALD : isHitHaptic ? STATUS_ERROR : 'rgba(255,255,255,0.08)'}`,
+          backgroundColor: withOpacity(OVERLAY_WHITE, OPACITY_3),
+          border: `1px solid ${isDodgeHaptic ? ACCENT_EMERALD : isHitHaptic ? STATUS_ERROR : withOpacity(OVERLAY_WHITE, OPACITY_8)}`,
           boxShadow: isDodgeHaptic
-            ? `0 0 12px ${ACCENT_EMERALD}50, inset 0 0 8px ${ACCENT_EMERALD}15`
+            ? `0 0 12px ${withOpacity(ACCENT_EMERALD, OPACITY_30)}, inset 0 0 8px ${withOpacity(ACCENT_EMERALD, OPACITY_10)}`
             : isHitHaptic
-              ? `0 0 16px ${STATUS_ERROR}60, inset 0 0 10px ${STATUS_ERROR}20`
+              ? `0 0 16px ${withOpacity(STATUS_ERROR, OPACITY_37)}, inset 0 0 10px ${withOpacity(STATUS_ERROR, OPACITY_12)}`
               : 'none',
           transform: isHitHaptic ? 'translateX(2px)' : 'none',
           transition: isDodgeHaptic
@@ -83,8 +84,8 @@ export function TimelineBar({
               transition={{ duration: isDodgeHaptic ? 0.45 : 0.3 }}
               style={{
                 background: isDodgeHaptic
-                  ? `linear-gradient(90deg, transparent, ${ACCENT_EMERALD}30, transparent)`
-                  : `linear-gradient(90deg, ${STATUS_ERROR}40, transparent 30%, transparent 70%, ${STATUS_ERROR}40)`,
+                  ? `linear-gradient(90deg, transparent, ${withOpacity(ACCENT_EMERALD, OPACITY_20)}, transparent)`
+                  : `linear-gradient(90deg, ${withOpacity(STATUS_ERROR, OPACITY_25)}, transparent 30%, transparent 70%, ${withOpacity(STATUS_ERROR, OPACITY_25)})`,
               }}
             />
           )}
@@ -103,15 +104,15 @@ export function TimelineBar({
               style={{
                 left: `${left}%`,
                 width: `${width}%`,
-                backgroundColor: isInvuln || isCancel ? 'transparent' : `${phase.color}25`,
+                backgroundColor: isInvuln || isCancel ? 'transparent' : `${withOpacity(phase.color, OPACITY_15)}`,
                 borderBottom: `2px solid ${phase.color}`,
                 ...(isCancel ? { borderTop: `2px solid ${phase.color}`, borderBottom: 'none' } : {}),
                 ...(isInvuln || isCancel ? {
-                  '--phase-color-10': `${phase.color}1a`,
-                  '--phase-color-18': `${phase.color}2e`,
-                  '--phase-color-20': `${phase.color}33`,
-                  '--phase-color-25': `${phase.color}40`,
-                  '--phase-color-30': `${phase.color}4d`,
+                  '--phase-color-10': `${withOpacity(phase.color, OPACITY_10)}`,
+                  '--phase-color-18': `${withOpacity(phase.color, OPACITY_20)}`,
+                  '--phase-color-20': `${withOpacity(phase.color, OPACITY_20)}`,
+                  '--phase-color-25': `${withOpacity(phase.color, OPACITY_25)}`,
+                  '--phase-color-30': `${withOpacity(phase.color, OPACITY_30)}`,
                 } as React.CSSProperties : {}),
               }}
             />
@@ -123,7 +124,7 @@ export function TimelineBar({
           <div
             key={`boundary-${i}`}
             className="absolute top-0 h-full w-px"
-            style={{ left: `${(t / totalTime) * 100}%`, backgroundColor: 'rgba(255,255,255,0.15)' }}
+            style={{ left: `${(t / totalTime) * 100}%`, backgroundColor: withOpacity(OVERLAY_WHITE, OPACITY_15) }}
           />
         ))}
 
@@ -136,12 +137,12 @@ export function TimelineBar({
           style={{
             left: `${(playhead / totalTime) * 100}%`,
             backgroundColor: OVERLAY_WHITE,
-            boxShadow: '0 0 6px rgba(255,255,255,0.6)',
+            boxShadow: `0 0 6px ${withOpacity(OVERLAY_WHITE, OPACITY_60)}`,
           }}
           layout
           transition={{ type: 'spring', stiffness: 400, damping: 30 }}
         >
-          <div className="absolute -top-1 left-1/2 -translate-x-1/2 w-2 h-2 rotate-45 bg-white rounded-sm" style={{ boxShadow: '0 0 4px rgba(255,255,255,0.8)' }} />
+          <div className="absolute -top-1 left-1/2 -translate-x-1/2 w-2 h-2 rotate-45 bg-white rounded-sm" style={{ boxShadow: `0 0 4px ${withOpacity(OVERLAY_WHITE, OPACITY_80)}` }} />
         </motion.div>
       </div>
 
@@ -174,9 +175,9 @@ function HitMarkerDots({ hitMarkers, phases, totalTime }: {
             <div
               className="w-3 h-3 rounded-full border-2 flex items-center justify-center"
               style={{
-                backgroundColor: `${dotColor}30`,
+                backgroundColor: `${withOpacity(dotColor, OPACITY_20)}`,
                 borderColor: dotColor,
-                boxShadow: `0 0 6px ${dotColor}60`,
+                boxShadow: `0 0 6px ${withOpacity(dotColor, OPACITY_37)}`,
               }}
             >
               <span className="text-[6px] font-bold" style={{ color: dotColor }}>

@@ -3,7 +3,9 @@
 import { useState } from 'react';
 import { ChevronRight, AlertTriangle } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { STATUS_WARNING, STATUS_ERROR } from '@/lib/chart-colors';
+import { STATUS_WARNING, STATUS_ERROR,
+  withOpacity, OPACITY_10, OPACITY_20, OPACITY_25,
+} from '@/lib/chart-colors';
 import { BlueprintPanel, SectionHeader, NeonBar } from '../_design';
 import type { FieldDef, FieldWarning } from './types';
 
@@ -41,7 +43,7 @@ export function ProfileSection({
         <span className="ml-auto flex items-center gap-1.5">
           {warningCount > 0 && (
             <span className="flex items-center gap-1 px-1.5 py-0.5 rounded text-xs font-mono font-bold"
-              style={{ backgroundColor: `${STATUS_WARNING}15`, color: STATUS_WARNING, border: `1px solid ${STATUS_WARNING}30` }}>
+              style={{ backgroundColor: `${withOpacity(STATUS_WARNING, OPACITY_10)}`, color: STATUS_WARNING, border: `1px solid ${withOpacity(STATUS_WARNING, OPACITY_20)}` }}>
               <AlertTriangle className="w-2.5 h-2.5" />
               {warningCount}
             </span>
@@ -93,7 +95,7 @@ export function ProfileSection({
                           if (!isNaN(v)) onChange(f.key, Math.max(f.min, Math.min(f.max, v)));
                         }}
                         className="w-16 text-xs font-mono font-bold text-right px-1.5 py-0.5 rounded bg-surface-deep border border-border/40 text-text focus:outline-none focus:border-blue-500/50"
-                        style={{ textShadow: `0 0 12px ${color}40` }}
+                        style={{ textShadow: `0 0 12px ${withOpacity(color, OPACITY_25)}` }}
                       />
                       <span className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted/60 w-8 flex-shrink-0">{f.unit}</span>
                     </div>

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState } from 'react';
 import { Send, Upload, Sparkles, Lock, Monitor } from 'lucide-react';
 import { GENERATION_PROVIDERS, type GenerationMode } from '@/lib/visual-gen/providers';
 import { useForgeStore } from './useForgeStore';
@@ -22,7 +22,7 @@ export function GenerationPanel() {
   const activeProvider = filteredProviders.find((p) => p.id === activeProviderId) ?? filteredProviders[0];
   const isMcpProvider = activeProvider?.mcpBacked === true;
 
-  const handleSubmit = useCallback(() => {
+  const handleSubmit = () => {
     if (!prompt.trim() && mode === 'text-to-3d') return;
     if (!imageFile && mode === 'image-to-3d') return;
     if (!activeProvider) return;
@@ -54,12 +54,12 @@ export function GenerationPanel() {
 
     setPrompt('');
     setImageFile(null);
-  }, [prompt, mode, imageFile, activeProvider, blenderConnected, addJob, addToHistory, submitMcpJob]);
+  };
 
-  const handleImageChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) setImageFile(file);
-  }, []);
+  };
 
   const canSubmit = (() => {
     if (!activeProvider) return false;

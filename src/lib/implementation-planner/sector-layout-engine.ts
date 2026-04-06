@@ -264,7 +264,7 @@ export function computeSectorLayout(items: PlanItem[]): SectorLayout {
   }
 
   // Determine sectors
-  let sectors = determineSectors(items, moduleGroups);
+  const sectors = determineSectors(items, moduleGroups);
 
   // For < 100 items, return regular layout (fallback)
   if (items.length < 100) {

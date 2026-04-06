@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useSyncExternalStore } from 'react';
 import { motion } from 'framer-motion';
 import { Gamepad2 } from 'lucide-react';
 import { useProjectStore } from '@/stores/projectStore';
@@ -21,8 +21,6 @@ import { EventBusDevTools } from './EventBusDevTools';
 
 export function AppShell() {
   const isSetupComplete = useProjectStore((s) => s.isSetupComplete);
-  const [hydrated, setHydrated] = useState(false);
-
   // Bridge CLI/evaluator events into activity feed
   useActivityFeedBridge();
 
@@ -52,9 +50,11 @@ export function AppShell() {
   }, []);
 
   // Wait for Zustand persist to rehydrate from localStorage
-  useEffect(() => {
-    setHydrated(true);
-  }, []);
+  const hydrated = useSyncExternalStore(
+    () => () => {},
+    () => true,
+    () => false,
+  );
 
   if (!hydrated) {
     return (

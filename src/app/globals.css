@@ -68,6 +68,11 @@
   --ease-out:  cubic-bezier(0.16, 1, 0.3, 1);     /* entries, opens, expands */
   --ease-fill: cubic-bezier(0.4, 0, 0.2, 1);      /* progress bars, gauge fills */
 
+  /* Spacing tokens */
+  --panel-padding: 12px;
+  --card-gap: 12px;
+  --section-gap: 16px;
+
   /* Type scale */
   --text-2xs: 0.625rem;  /* 10px — mono labels, badges, timestamps */
   --text-xs:  0.75rem;   /* 12px — secondary labels, descriptions */

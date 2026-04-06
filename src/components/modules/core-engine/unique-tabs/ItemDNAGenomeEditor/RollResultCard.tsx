@@ -5,6 +5,7 @@ import { Sparkles, Dna } from 'lucide-react';
 import {
   ACCENT_PINK, STATUS_SUCCESS, STATUS_WARNING, STATUS_ERROR,
   OPACITY_10, OPACITY_20,
+  withOpacity, OPACITY_12,
 } from '@/lib/chart-colors';
 import { BlueprintPanel, CornerBrackets } from '@/components/modules/core-engine/unique-tabs/_design';
 import { STAGGER_DEFAULT } from '@/components/modules/core-engine/unique-tabs/_shared';
@@ -48,7 +49,7 @@ export function RollResultCard({ result, genome }: { result: DNARollResult; geno
                 className="relative flex items-center gap-2 px-2 py-1 rounded-md text-xs overflow-hidden"
                 style={{
                   backgroundColor: ra.isMutation ? `${ACCENT_PINK}${OPACITY_10}` : `${cfg?.color ?? ACCENT}${OPACITY_10}`,
-                  border: ra.isMutation ? `1px solid ${ACCENT_PINK}30` : `1px solid ${cfg?.color ?? ACCENT}20`,
+                  border: ra.isMutation ? `1px solid ${withOpacity(ACCENT_PINK, OPACITY_20)}` : `1px solid ${withOpacity(cfg?.color ?? ACCENT, OPACITY_12)}`,
                 }}
               >
                 <CornerBrackets color={ra.isMutation ? ACCENT_PINK : cfg?.color ?? ACCENT} size={6} />

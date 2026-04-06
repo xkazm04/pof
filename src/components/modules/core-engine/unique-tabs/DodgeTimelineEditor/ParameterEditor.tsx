@@ -2,7 +2,9 @@
 
 import { motion } from 'framer-motion';
 import { Settings2 } from 'lucide-react';
-import { ACCENT_CYAN, ACCENT_ORANGE, ACCENT_VIOLET } from '@/lib/chart-colors';
+import { ACCENT_CYAN, ACCENT_ORANGE, ACCENT_VIOLET,
+  withOpacity, OPACITY_25,
+} from '@/lib/chart-colors';
 import type { DodgeParams } from '../dodge-types';
 import { PARAM_FIELDS, DEFAULT_PARAMS } from '../dodge-types';
 import { BlueprintPanel, SectionHeader } from '../_design';
@@ -46,7 +48,7 @@ export function ParameterEditor({
                   <div className="absolute inset-x-0 h-1.5 bg-surface-deep rounded-full" />
                   <div
                     className="absolute h-1.5 rounded-full transition-all duration-150"
-                    style={{ width: `${Math.min(pct, 100)}%`, backgroundColor: f.color, boxShadow: `0 0 6px ${f.color}40` }}
+                    style={{ width: `${Math.min(pct, 100)}%`, backgroundColor: f.color, boxShadow: `0 0 6px ${withOpacity(f.color, OPACITY_25)}` }}
                   />
                   <input
                     type="range" min={f.min} max={f.max} step={f.step} value={val}
@@ -76,19 +78,19 @@ export function ParameterEditor({
         <div className="flex flex-wrap gap-3 mt-2.5 pt-2 border-t border-border/30 text-xs font-mono text-text-muted">
           <span>
             Max Speed:{' '}
-            <span className="font-bold" style={{ color: ACCENT_CYAN, textShadow: `0 0 12px ${ACCENT_CYAN}40` }}>
+            <span className="font-bold" style={{ color: ACCENT_CYAN, textShadow: `0 0 12px ${withOpacity(ACCENT_CYAN, OPACITY_25)}` }}>
               {(params.dodgeDistance / params.dodgeDuration).toFixed(0)} cm/s
             </span>
           </span>
           <span>
             I-Frame Window:{' '}
-            <span className="font-bold" style={{ color: ACCENT_ORANGE, textShadow: `0 0 12px ${ACCENT_ORANGE}40` }}>
+            <span className="font-bold" style={{ color: ACCENT_ORANGE, textShadow: `0 0 12px ${withOpacity(ACCENT_ORANGE, OPACITY_25)}` }}>
               {(params.iFrameDuration / params.dodgeDuration * 100).toFixed(0)}%
             </span>
           </span>
           <span>
             Cancel Window:{' '}
-            <span className="font-bold" style={{ color: ACCENT_VIOLET, textShadow: `0 0 12px ${ACCENT_VIOLET}40` }}>
+            <span className="font-bold" style={{ color: ACCENT_VIOLET, textShadow: `0 0 12px ${withOpacity(ACCENT_VIOLET, OPACITY_25)}` }}>
               {((params.cancelWindowEnd - params.cancelWindowStart) / params.dodgeDuration * 100).toFixed(0)}%
             </span>
           </span>

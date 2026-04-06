@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import type { DifficultyPoint } from '@/components/modules/core-engine/unique-tabs/EnemyBestiary/data';
-import { ACCENT_RED, STATUS_SUCCESS, STATUS_NEUTRAL } from '@/lib/chart-colors';
+import { ACCENT_RED, OPACITY_6, OPACITY_8, OPACITY_15, OPACITY_30, OPACITY_40, OPACITY_50, OVERLAY_WHITE, STATUS_ERROR, STATUS_SUCCESS, STATUS_NEUTRAL, withOpacity } from '@/lib/chart-colors';
 
 interface DifficultySeriesItem {
   label: string;
@@ -32,16 +32,16 @@ export function DifficultyChart({ series }: DifficultyChartProps) {
         onMouseLeave={() => setHoverLevel(null)}
       >
         {/* Zones */}
-        <rect x={PAD_L} y={toY(100)} width={PLOT_W} height={toY(70) - toY(100)} fill="rgba(239,68,68,0.08)" />
-        <rect x={PAD_L} y={toY(70)} width={PLOT_W} height={toY(40) - toY(70)} fill="rgba(74,222,128,0.08)" />
-        <rect x={PAD_L} y={toY(40)} width={PLOT_W} height={toY(0) - toY(40)} fill="rgba(107,114,128,0.06)" />
+        <rect x={PAD_L} y={toY(100)} width={PLOT_W} height={toY(70) - toY(100)} fill={withOpacity(STATUS_ERROR, OPACITY_8)} />
+        <rect x={PAD_L} y={toY(70)} width={PLOT_W} height={toY(40) - toY(70)} fill={withOpacity(STATUS_SUCCESS, OPACITY_8)} />
+        <rect x={PAD_L} y={toY(40)} width={PLOT_W} height={toY(0) - toY(40)} fill={withOpacity(STATUS_NEUTRAL, OPACITY_6)} />
         {/* Zone labels */}
-        <text x={PAD_L + 3} y={toY(88)} className="text-xs font-mono fill-[rgba(239,68,68,0.5)]">DANGER</text>
-        <text x={PAD_L + 3} y={toY(55)} className="text-xs font-mono fill-[rgba(74,222,128,0.5)]">SWEET SPOT</text>
-        <text x={PAD_L + 3} y={toY(20)} className="text-xs font-mono fill-[rgba(107,114,128,0.4)]">TRIVIAL</text>
+        <text x={PAD_L + 3} y={toY(88)} className="text-xs font-mono" fill={withOpacity(STATUS_ERROR, OPACITY_50)}>DANGER</text>
+        <text x={PAD_L + 3} y={toY(55)} className="text-xs font-mono" fill={withOpacity(STATUS_SUCCESS, OPACITY_50)}>SWEET SPOT</text>
+        <text x={PAD_L + 3} y={toY(20)} className="text-xs font-mono" fill={withOpacity(STATUS_NEUTRAL, OPACITY_40)}>TRIVIAL</text>
         {/* Grid lines */}
         {[0, 25, 50, 75, 100].map(v => (
-          <line key={v} x1={PAD_L} y1={toY(v)} x2={PAD_L + PLOT_W} y2={toY(v)} stroke="rgba(255,255,255,0.06)" strokeWidth="1" />
+          <line key={v} x1={PAD_L} y1={toY(v)} x2={PAD_L + PLOT_W} y2={toY(v)} stroke={withOpacity(OVERLAY_WHITE, OPACITY_6)} strokeWidth="1" />
         ))}
         {/* X axis labels */}
         {[1, 10, 20, 30, 40, 50].map(l => (
@@ -62,7 +62,7 @@ export function DifficultyChart({ series }: DifficultyChartProps) {
           const tx = flipLeft ? hx - tooltipW - 6 : hx + 6;
           return (
             <g>
-              <line x1={hx} y1={10} x2={hx} y2={CHART_H - PAD_B} stroke="rgba(255,255,255,0.3)" strokeWidth="1" strokeDasharray="3 3" />
+              <line x1={hx} y1={10} x2={hx} y2={CHART_H - PAD_B} stroke={withOpacity(OVERLAY_WHITE, OPACITY_30)} strokeWidth="1" strokeDasharray="3 3" />
               {archetypes.map(a => (
                 <circle key={a.label} cx={hx} cy={toY(a.value)} r={2.5} fill={a.color} />
               ))}
@@ -73,7 +73,7 @@ export function DifficultyChart({ series }: DifficultyChartProps) {
                     const zone = getZone(a.value);
                     return (
                       <div key={a.label} style={{ display: 'flex', alignItems: 'center', gap: 4, marginBottom: 2 }}>
-                        <span style={{ background: `${a.color}25`, color: a.color, borderRadius: 3, padding: '0 4px', fontFamily: 'monospace', fontWeight: 600, fontSize: 11, whiteSpace: 'nowrap' }}>
+                        <span style={{ background: withOpacity(a.color, OPACITY_15), color: a.color, borderRadius: 3, padding: '0 4px', fontFamily: 'monospace', fontWeight: 600, fontSize: 11, whiteSpace: 'nowrap' }}>
                           {a.label}: {a.value}
                         </span>
                         <span style={{ color: zone.color, fontSize: 11, fontFamily: 'monospace', opacity: 0.8 }}>{zone.label}</span>

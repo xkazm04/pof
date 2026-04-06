@@ -5,7 +5,10 @@ import { Play, Target, Activity } from 'lucide-react';
 import { motion } from 'framer-motion';
 import {
   ACCENT_EMERALD, ACCENT_CYAN,
-  STATUS_SUCCESS, STATUS_WARNING, STATUS_ERROR, OPACITY_20,
+  STATUS_SUCCESS, STATUS_WARNING, STATUS_ERROR,
+  OPACITY_20, OPACITY_25, OPACITY_50,
+  GLOW_SM,
+  withOpacity,
 } from '@/lib/chart-colors';
 import { BlueprintPanel, SectionHeader, GlowStat } from '../_design';
 import { SubTabNavigation } from '../_shared';
@@ -90,7 +93,7 @@ export function ItemEconomySimulator({ moduleId }: Props) {
             <div className="absolute inset-0 opacity-20" style={{ backgroundColor: ACCENT }} />
             <Activity
               className="w-4 h-4 relative z-10"
-              style={{ color: ACCENT, filter: `drop-shadow(0 0 4px ${ACCENT}80)` }}
+              style={{ color: ACCENT, filter: `drop-shadow(${GLOW_SM} ${withOpacity(ACCENT, OPACITY_50)})` }}
             />
           </div>
           <div className="flex flex-col">
@@ -131,7 +134,7 @@ export function ItemEconomySimulator({ moduleId }: Props) {
             style={{
               backgroundColor: `${ACCENT}${OPACITY_20}`,
               color: ACCENT,
-              border: `1px solid ${ACCENT}40`,
+              border: `1px solid ${withOpacity(ACCENT, OPACITY_25)}`,
             }}
           >
             <Play className="w-3.5 h-3.5" />

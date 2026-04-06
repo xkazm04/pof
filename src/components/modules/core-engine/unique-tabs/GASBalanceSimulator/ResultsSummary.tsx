@@ -9,6 +9,7 @@ import {
   STATUS_SUCCESS, STATUS_ERROR, STATUS_WARNING,
   ACCENT_CYAN, ACCENT_ORANGE, ACCENT_EMERALD, ACCENT_VIOLET,
   MODULE_COLORS, OPACITY_15,
+  withOpacity, OPACITY_10,
 } from '@/lib/chart-colors';
 import { BlueprintPanel, SectionHeader, GlowStat } from '../_design';
 import { HistogramChart } from './HistogramChart';
@@ -140,7 +141,7 @@ export function ResultsSummary({ results, scenario }: { results: SimResults; sce
             <div className="absolute bottom-0 pointer-events-none" style={{ left: `${(Math.min(playerArmor, 200) / 200) * 100}%`, height: '100%' }}>
               <div className="absolute bottom-0 w-px h-full" style={{ backgroundColor: STATUS_SUCCESS }} />
               <div className="absolute -top-5 -translate-x-1/2 whitespace-nowrap text-2xs font-mono font-bold px-1 rounded"
-                style={{ color: STATUS_SUCCESS, backgroundColor: `${STATUS_SUCCESS}15` }}>
+                style={{ color: STATUS_SUCCESS, backgroundColor: `${withOpacity(STATUS_SUCCESS, OPACITY_10)}` }}>
                 {playerArmor} \u2192 {(playerMit * 100).toFixed(1)}%
               </div>
             </div>
@@ -148,7 +149,7 @@ export function ResultsSummary({ results, scenario }: { results: SimResults; sce
             <div className="absolute bottom-0 pointer-events-none" style={{ left: `${(threshold50Armor / 200) * 100}%`, height: '100%' }}>
               <div className="absolute bottom-0 w-px h-full opacity-70" style={{ backgroundColor: STATUS_WARNING, borderLeft: `1px dashed ${STATUS_WARNING}` }} />
               <div className="absolute -top-5 -translate-x-1/2 whitespace-nowrap text-2xs font-mono px-1 rounded"
-                style={{ color: STATUS_WARNING, backgroundColor: `${STATUS_WARNING}15` }}>
+                style={{ color: STATUS_WARNING, backgroundColor: `${withOpacity(STATUS_WARNING, OPACITY_10)}` }}>
                 50% @{threshold50Armor}
               </div>
             </div>

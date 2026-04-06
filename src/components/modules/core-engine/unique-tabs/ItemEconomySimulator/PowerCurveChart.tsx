@@ -1,5 +1,6 @@
 'use client';
 
+import { OPACITY_6, OPACITY_8, OPACITY_25, OPACITY_50, GLOW_SM, OVERLAY_WHITE, withOpacity } from '@/lib/chart-colors';
 import { ACCENT } from './constants';
 
 /* ── SVG Power Curve Chart ────────────────────────────────────────────── */
@@ -50,7 +51,7 @@ export function PowerCurveChart({ data }: { data: PowerCurveData[] }) {
           <line
             x1={pad.left} y1={pad.top + ch * (1 - pct)}
             x2={width - pad.right} y2={pad.top + ch * (1 - pct)}
-            stroke="rgba(255,255,255,0.06)" strokeWidth="1"
+            stroke={withOpacity(OVERLAY_WHITE, OPACITY_6)} strokeWidth="1"
           />
           <text
             x={pad.left - 5} y={pad.top + ch * (1 - pct) + 4}
@@ -76,16 +77,16 @@ export function PowerCurveChart({ data }: { data: PowerCurveData[] }) {
         ))}
 
       {/* P10-P90 band */}
-      <path d={bandPath} fill={`${ACCENT}15`} />
+      <path d={bandPath} fill={withOpacity(ACCENT, OPACITY_8)} />
 
       {/* P10 / P90 dashed lines */}
-      <path d={p10Line} fill="none" stroke={`${ACCENT}40`} strokeWidth="1" strokeDasharray="3 2" />
-      <path d={p90Line} fill="none" stroke={`${ACCENT}40`} strokeWidth="1" strokeDasharray="3 2" />
+      <path d={p10Line} fill="none" stroke={withOpacity(ACCENT, OPACITY_25)} strokeWidth="1" strokeDasharray="3 2" />
+      <path d={p90Line} fill="none" stroke={withOpacity(ACCENT, OPACITY_25)} strokeWidth="1" strokeDasharray="3 2" />
 
       {/* Average line */}
       <path
         d={avgLine} fill="none" stroke={ACCENT} strokeWidth="2"
-        style={{ filter: `drop-shadow(0 0 4px ${ACCENT}80)` }}
+        style={{ filter: `drop-shadow(${GLOW_SM} ${withOpacity(ACCENT, OPACITY_50)})` }}
       />
 
       {/* Data points on average */}

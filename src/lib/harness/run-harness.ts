@@ -31,6 +31,7 @@ import {
   buildGamePlan,
   type HarnessEvent,
 } from './index';
+import { UI_OVERHAUL_AREAS, UI_OVERHAUL_SUMMARY } from './ui-overhaul-areas';
 
 // ── Arg Parsing ─────────────────────────────────────────────────────────────
 
@@ -68,11 +69,12 @@ async function main() {
     : path.join(projectPath ?? '.', '.harness');
   const dryRun = args['dry-run'] === 'true';
   const themeDirective = args['theme'] ?? undefined;
+  const scenario = args['scenario'] ?? undefined; // 'ui-overhaul' for webapp UI work
 
   if (!projectPath || !projectName) {
     console.error(`
 Usage: npx tsx src/lib/harness/run-harness.ts \\
-  --project <ue5-project-path> \\
+  --project <project-path> \\
   --name <project-name> \\
   [--ue-version <version>] \\
   [--max-iterations <n>] \\
@@ -80,7 +82,11 @@ Usage: npx tsx src/lib/harness/run-harness.ts \\
   [--timeout <ms>] \\
   [--state-path <dir>] \\
   [--theme "<creative direction>"] \\
+  [--scenario <scenario-name>] \\
   [--dry-run]
+
+Scenarios:
+  ui-overhaul  — Webapp UI/UX overhaul (${UI_OVERHAUL_SUMMARY.total} areas across 6 phases)
 `);
     process.exit(1);
   }
@@ -96,8 +102,25 @@ Usage: npx tsx src/lib/harness/run-harness.ts \\
   console.log(`  Max Iter:    ${maxIterations}`);
   console.log(`  Target:      ${targetPassRate}% pass rate`);
   console.log(`  Timeout:     ${(sessionTimeoutMs / 60_000).toFixed(0)} min per session`);
+  const concurrency = parseInt(args['concurrency'] ?? '4');
+  console.log(`  Concurrent:  ${concurrency} sessions`);
+  if (scenario) console.log(`  Scenario:    ${scenario}`);
   if (themeDirective) console.log(`  Theme:       ${themeDirective.slice(0, 60)}...`);
   console.log();
+
+  // Load custom areas for named scenarios
+  const scenarioAreas = scenario === 'ui-overhaul' ? UI_OVERHAUL_AREAS : undefined;
+  if (scenario === 'ui-overhaul') {
+    console.log(`  Loading UI Overhaul scenario:`);
+    console.log(`    Phase 0 — Infrastructure:    ${UI_OVERHAUL_SUMMARY.phase0_infrastructure} areas`);
+    console.log(`    Phase 1 — Feature Metrics:   ${UI_OVERHAUL_SUMMARY.phase1_featureMetrics} areas`);
+    console.log(`    Phase 2 — Scaling:           ${UI_OVERHAUL_SUMMARY.phase2_scaling} areas`);
+    console.log(`    Phase 3 — Flow Redesign:     ${UI_OVERHAUL_SUMMARY.phase3_flow} areas`);
+    console.log(`    Phase 4 — Visual Polish:     ${UI_OVERHAUL_SUMMARY.phase4_visual} areas`);
+    console.log(`    Phase 5 — Integration:       ${UI_OVERHAUL_SUMMARY.phase5_integration} areas`);
+    console.log(`    Total:                       ${UI_OVERHAUL_SUMMARY.total} areas`);
+    console.log();
+  }
 
   const config = createDefaultConfig({
     projectPath,
@@ -107,12 +130,15 @@ Usage: npx tsx src/lib/harness/run-harness.ts \\
     maxIterations,
     targetPassRate,
     themeDirective,
+    ...(scenarioAreas && { areas: scenarioAreas }),
     executor: {
       sessionTimeoutMs,
       maxRetriesPerArea: 3,
       allowedTools: ['Bash', 'Read', 'Edit', 'Write', 'Glob', 'Grep'],
       skipPermissions: true,
       bareMode: false,
+      maxConcurrent: parseInt(args['concurrency'] ?? '4'),
+      areaPassThreshold: parseInt(args['area-threshold'] ?? '0') || undefined,
     },
   });
 

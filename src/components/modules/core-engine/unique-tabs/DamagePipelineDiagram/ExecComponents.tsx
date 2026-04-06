@@ -1,6 +1,7 @@
 'use client';
 
 import { AnimatePresence, motion } from 'framer-motion';
+import { OVERLAY_WHITE, withOpacity, OPACITY_2 } from '@/lib/chart-colors';
 
 /* ── CalcInput ─ Numeric input for the damage calculator ──────────────────── */
 
@@ -36,7 +37,7 @@ export function ExecPropRow({ name, code, codeExpanded, onToggleCode, even, chil
   onToggleCode?: () => void; even?: boolean; children?: React.ReactNode;
 }) {
   return (
-    <div style={{ backgroundColor: even ? 'rgba(255,255,255,0.015)' : 'transparent' }}>
+    <div style={{ backgroundColor: even ? withOpacity(OVERLAY_WHITE, OPACITY_2) : 'transparent' }}>
       <div className="flex items-center justify-between px-3 py-1 min-h-[28px]">
         <div className="flex items-center gap-1.5">
           {code && onToggleCode && (

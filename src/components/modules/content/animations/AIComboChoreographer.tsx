@@ -452,17 +452,20 @@ function RootMotionPreview({ sections }: { sections: ComboSection[] }) {
   const svgW = 200;
   const svgH = 80;
   const totalDist = sections.reduce((s, sec) => s + sec.rootMotionDistance, 0);
-  let cumDist = 0;
+
+  const sectionSegments = sections.map((sec, i) => {
+    const cumDistBefore = sections.slice(0, i).reduce((s, s2) => s + s2.rootMotionDistance, 0);
+    const startX = 15 + (cumDistBefore / totalDist) * (svgW - 30);
+    const endX = 15 + ((cumDistBefore + sec.rootMotionDistance) / totalDist) * (svgW - 30);
+    return { sec, startX, endX };
+  });
 
   return (
     <svg width={svgW} height={svgH} className="overflow-visible">
       {/* Ground line */}
       <line x1={10} y1={svgH - 10} x2={svgW - 10} y2={svgH - 10} stroke="rgba(255,255,255,0.1)" strokeWidth={1} />
       {/* Character path */}
-      {sections.map((sec, i) => {
-        const startX = 15 + (cumDist / totalDist) * (svgW - 30);
-        cumDist += sec.rootMotionDistance;
-        const endX = 15 + (cumDist / totalDist) * (svgW - 30);
+      {sectionSegments.map(({ sec, startX, endX }, i) => {
         const y = svgH - 16;
         const color = sec.motionWarpTarget ? ACCENT_EMERALD : STATUS_INFO;
         return (

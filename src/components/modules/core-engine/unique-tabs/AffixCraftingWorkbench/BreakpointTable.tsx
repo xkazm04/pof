@@ -6,7 +6,8 @@ import { motion } from 'framer-motion';
 import {
   STATUS_ERROR, STATUS_WARNING, STATUS_INFO,
   ACCENT_EMERALD, ACCENT_CYAN,
-  OPACITY_10, OPACITY_20,
+  OPACITY_5, OPACITY_8, OPACITY_10, OPACITY_15, OPACITY_20, OPACITY_25, OPACITY_30,
+  withOpacity,
 } from '@/lib/chart-colors';
 import { BlueprintPanel } from '../_design';
 import { ACCENT, BREAKPOINT_ILVLS, CATEGORY_COLORS } from './constants';
@@ -67,7 +68,7 @@ export function BreakpointTable({
               style={{
                 backgroundColor: bpCategoryFilter === cat ? `${cat === 'all' ? ACCENT : CATEGORY_COLORS[cat]}${OPACITY_20}` : 'transparent',
                 color: bpCategoryFilter === cat ? (cat === 'all' ? ACCENT : CATEGORY_COLORS[cat]) : 'var(--text-muted)',
-                border: `1px solid ${bpCategoryFilter === cat ? `${cat === 'all' ? ACCENT : CATEGORY_COLORS[cat]}50` : `${ACCENT}25`}`,
+                border: `1px solid ${bpCategoryFilter === cat ? withOpacity(cat === 'all' ? ACCENT : CATEGORY_COLORS[cat], OPACITY_30) : withOpacity(ACCENT, OPACITY_15)}`,
               }}>
               {cat}
             </button>
@@ -79,7 +80,7 @@ export function BreakpointTable({
             style={{
               backgroundColor: bpRarityFilter === 'all' ? `${ACCENT}${OPACITY_20}` : 'transparent',
               color: bpRarityFilter === 'all' ? ACCENT : 'var(--text-muted)',
-              border: `1px solid ${bpRarityFilter === 'all' ? `${ACCENT}50` : `${ACCENT}25`}`,
+              border: `1px solid ${bpRarityFilter === 'all' ? withOpacity(ACCENT, OPACITY_30) : withOpacity(ACCENT, OPACITY_15)}`,
             }}>
             All
           </button>
@@ -89,7 +90,7 @@ export function BreakpointTable({
               style={{
                 backgroundColor: bpRarityFilter === r ? `${RARITY_COLORS[r]}${OPACITY_20}` : 'transparent',
                 color: bpRarityFilter === r ? RARITY_COLORS[r] : 'var(--text-muted)',
-                border: `1px solid ${bpRarityFilter === r ? `${RARITY_COLORS[r]}50` : `${ACCENT}25`}`,
+                border: `1px solid ${bpRarityFilter === r ? withOpacity(RARITY_COLORS[r], OPACITY_30) : withOpacity(ACCENT, OPACITY_15)}`,
               }}>
               {r}
             </button>
@@ -98,7 +99,7 @@ export function BreakpointTable({
         <input type="text" value={bpSearch} onChange={(e) => setBpSearch(e.target.value)}
           placeholder="Search affixes..."
           className="px-2 py-1 rounded text-xs font-mono bg-surface-deep text-text placeholder:text-text-muted/50 w-40 focus:outline-none focus:ring-1"
-          style={{ border: `1px solid ${ACCENT}25`, '--tw-ring-color': STATUS_INFO } as React.CSSProperties} />
+          style={{ border: `1px solid ${withOpacity(ACCENT, OPACITY_15)}`, '--tw-ring-color': STATUS_INFO } as React.CSSProperties} />
         <span className="ml-auto text-xs font-mono text-text-muted">{breakpointData.length} affix{breakpointData.length !== 1 ? 'es' : ''}</span>
       </div>
 
@@ -107,7 +108,7 @@ export function BreakpointTable({
         <div className="overflow-x-auto">
           <table className="w-full text-xs font-mono">
             <thead>
-              <tr style={{ borderBottom: `1px solid ${STATUS_INFO}25` }}>
+              <tr style={{ borderBottom: `1px solid ${withOpacity(STATUS_INFO, OPACITY_15)}` }}>
                 <th className="text-left px-3 py-2.5 text-text-muted font-bold uppercase tracking-[0.15em] sticky left-0 bg-surface-deep z-10">Affix</th>
                 <th className="text-left px-2 py-2.5 text-text-muted font-bold uppercase tracking-[0.15em]">Type</th>
                 <th className="text-left px-2 py-2.5 text-text-muted font-bold uppercase tracking-[0.15em]">Stat</th>
@@ -134,11 +135,11 @@ export function BreakpointTable({
                     initial={{ opacity: 0, x: -8 }} animate={{ opacity: 1, x: 0 }}
                     transition={{ delay: ri * 0.02 }}
                     className="hover:bg-white/[0.02] transition-colors group"
-                    style={{ borderBottom: `1px solid ${ACCENT}12` }}>
+                    style={{ borderBottom: `1px solid ${withOpacity(ACCENT, OPACITY_8)}` }}>
                     <td className="px-3 py-2 sticky left-0 bg-surface-deep z-10 group-hover:bg-white/[0.02] transition-colors">
                       <div className="flex items-center gap-2">
                         <span className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ backgroundColor: catColor }} />
-                        <span className="font-bold text-text" style={{ textShadow: `0 0 12px ${catColor}40` }}>{affix.displayName}</span>
+                        <span className="font-bold text-text" style={{ textShadow: `0 0 12px ${withOpacity(catColor, OPACITY_25)}` }}>{affix.displayName}</span>
                       </div>
                     </td>
                     <td className="px-2 py-2">
@@ -157,7 +158,7 @@ export function BreakpointTable({
                       return (
                         <td key={ilvl} className="px-2 py-2 text-center">
                           <div className="inline-block px-2 py-0.5 rounded"
-                            style={{ backgroundColor: `${catColor}${intensity > 0.7 ? OPACITY_20 : intensity > 0.3 ? OPACITY_10 : '05'}` }}>
+                            style={{ backgroundColor: `${catColor}${intensity > 0.7 ? OPACITY_20 : intensity > 0.3 ? OPACITY_10 : OPACITY_5}` }}>
                             <span className="text-text-muted">{min}</span>
                             <span className="text-text-muted opacity-40">-</span>
                             <span className="font-bold" style={{ color: catColor }}>{max}</span>
@@ -169,7 +170,7 @@ export function BreakpointTable({
                       <span className="font-bold px-1.5 py-0.5 rounded"
                         style={{
                           color: scalingFlag === 'aggressive' ? STATUS_ERROR : scalingFlag === 'flat' ? STATUS_WARNING : ACCENT,
-                          backgroundColor: scalingFlag === 'aggressive' ? `${STATUS_ERROR}${OPACITY_10}` : scalingFlag === 'flat' ? `${STATUS_WARNING}${OPACITY_10}` : `${ACCENT}05`,
+                          backgroundColor: scalingFlag === 'aggressive' ? `${STATUS_ERROR}${OPACITY_10}` : scalingFlag === 'flat' ? `${STATUS_WARNING}${OPACITY_10}` : `${ACCENT}${OPACITY_5}`,
                         }}>
                         {ratio.toFixed(1)}x
                         {scalingFlag === 'aggressive' && <AlertTriangle className="w-3 h-3 inline ml-1" />}
@@ -177,7 +178,7 @@ export function BreakpointTable({
                     </td>
                     <td className="px-3 py-2">
                       <div className="flex items-center gap-2 px-2 py-1 rounded"
-                        style={{ border: `1px solid ${rarityColor}30`, backgroundColor: `${rarityColor}08` }}>
+                        style={{ border: `1px solid ${withOpacity(rarityColor, OPACITY_20)}`, backgroundColor: withOpacity(rarityColor, OPACITY_5) }}>
                         <span className="w-1 h-3 rounded-sm flex-shrink-0" style={{ backgroundColor: rarityColor }} />
                         <span style={{ color: rarityColor }}>{filterName}</span>
                         <span className="ml-auto text-text-muted opacity-50 text-[9px]">+{tiers[tiers.length - 1].min}-{tiers[tiers.length - 1].max} {affix.stat}</span>

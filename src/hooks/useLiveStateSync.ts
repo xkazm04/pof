@@ -52,7 +52,7 @@ export function useLiveStateSync(): UseLiveStateSyncResult {
   const setLiveState = useUE5BridgeStore((s) => s.setLiveState);
 
   const setLiveStateRef = useRef(setLiveState);
-  setLiveStateRef.current = setLiveState;
+  useEffect(() => { setLiveStateRef.current = setLiveState; }, [setLiveState]);
 
   // Subscribe to the singleton client and bridge into store
   useEffect(() => {

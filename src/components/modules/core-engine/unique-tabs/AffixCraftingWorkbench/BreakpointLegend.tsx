@@ -5,6 +5,7 @@ import {
   STATUS_ERROR, STATUS_WARNING,
   ACCENT_EMERALD, ACCENT_CYAN,
   OPACITY_10,
+  withOpacity, OPACITY_15,
 } from '@/lib/chart-colors';
 import { ACCENT } from './constants';
 
@@ -22,7 +23,7 @@ export function BreakpointLegend() {
         <span className="w-2 h-2 rounded-full" style={{ backgroundColor: ACCENT_CYAN }} /> Utility
       </span>
       <span className="flex items-center gap-1.5"
-        style={{ borderLeft: `1px solid ${ACCENT}25`, paddingLeft: '1rem' }}>
+        style={{ borderLeft: `1px solid ${withOpacity(ACCENT, OPACITY_15)}`, paddingLeft: '1rem' }}>
         <AlertTriangle className="w-3 h-3" style={{ color: STATUS_ERROR }} /> Aggressive (&gt;8x)
       </span>
       <span className="flex items-center gap-1.5">

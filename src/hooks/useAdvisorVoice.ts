@@ -1,4 +1,5 @@
-// @ts-nocheck — Voice module requires @anthropic-ai/voice SDK (not yet available)
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-nocheck
 'use client';
 
 /**
@@ -95,10 +96,10 @@ export function useAdvisorVoice({
   useEffect(() => { onTranscriptionRef.current = onTranscription; }, [onTranscription]);
 
   const getStateRef = useRef(getState);
-  getStateRef.current = getState;
+  useEffect(() => { getStateRef.current = getState; }, [getState]);
 
   const onWorkspaceChangeRef = useRef(onWorkspaceChange);
-  onWorkspaceChangeRef.current = onWorkspaceChange;
+  useEffect(() => { onWorkspaceChangeRef.current = onWorkspaceChange; }, [onWorkspaceChange]);
 
   // ─── Tool Call Handler ──────────────────────────
 

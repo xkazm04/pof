@@ -1,5 +1,7 @@
 'use client';
 
+import { withOpacity, OPACITY_37 } from '@/lib/chart-colors';
+
 export interface DonutSegment {
   label: string;
   pct: number;
@@ -29,14 +31,11 @@ export function DonutChart({
   const r = outerRadius ?? 70;
   const ir = innerRadius ?? 42;
 
-  let cumAngle = -90;
-
   return (
     <svg width={size} height={size} viewBox={`0 0 ${vb} ${vb}`}>
-      {segments.map((seg) => {
-        const startAngle = cumAngle;
+      {segments.map((seg, i) => {
+        const startAngle = -90 + segments.slice(0, i).reduce((s, s2) => s + (s2.pct / 100) * 360, 0);
         const sweep = (seg.pct / 100) * 360;
-        cumAngle += sweep;
         const startRad = (startAngle * Math.PI) / 180;
         const endRad = ((startAngle + sweep) * Math.PI) / 180;
         const largeArc = sweep > 180 ? 1 : 0;
@@ -57,7 +56,7 @@ export function DonutChart({
             opacity={0.8}
             stroke="var(--surface)"
             strokeWidth="2"
-            style={{ filter: `drop-shadow(0 0 3px ${seg.color}60)` }}
+            style={{ filter: `drop-shadow(0 0 3px ${withOpacity(seg.color, OPACITY_37)})` }}
           />
         );
       })}

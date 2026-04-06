@@ -4,6 +4,7 @@ import { TrendingUp, Zap, Coins, Layers, PieChart } from 'lucide-react';
 import {
   ACCENT_EMERALD, ACCENT_ORANGE,
   STATUS_SUCCESS, STATUS_WARNING, STATUS_ERROR,
+  withOpacity, OPACITY_20,
 } from '@/lib/chart-colors';
 import { BlueprintPanel, SectionHeader, GlowStat } from '../_design';
 import type { ItemEconomyConfig, ItemEconomyResult } from '@/lib/economy/item-economy-engine';
@@ -40,7 +41,7 @@ export function PowerTab({ result, config }: {
                 className="flex-1 rounded-t-sm transition-all hover:opacity-80"
                 style={{
                   height: `${Math.max(h, 2)}%`,
-                  backgroundColor: b.gearReplacementCount > 0 ? ACCENT_EMERALD : `${ACCENT_EMERALD}30`,
+                  backgroundColor: b.gearReplacementCount > 0 ? ACCENT_EMERALD : `${withOpacity(ACCENT_EMERALD, OPACITY_20)}`,
                   opacity: b.gearReplacementCount > 0 ? 0.7 : 0.2,
                 }}
                 title={`Lv${b.level}: ${b.gearReplacementCount} upgrades`}

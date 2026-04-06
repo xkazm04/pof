@@ -13,7 +13,7 @@
 import { useState, useCallback } from 'react';
 import { Sword } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ACCENT_RED } from '@/lib/chart-colors';
+import { ACCENT_RED, OVERLAY_WHITE, OPACITY_2, OPACITY_5, OPACITY_8, OPACITY_20, OPACITY_25, withOpacity } from '@/lib/chart-colors';
 import { apiFetch } from '@/lib/api-utils';
 import { BlueprintPanel, SectionHeader } from '../_design';
 import {
@@ -90,9 +90,9 @@ export function AbilityForge() {
             exit={{ opacity: 0, height: 0 }}
             className="rounded-lg border px-3 py-2 text-xs"
             style={{
-              borderColor: `${ACCENT_RED}40`,
+              borderColor: withOpacity(ACCENT_RED, OPACITY_25),
               color: ACCENT_RED,
-              background: `${ACCENT_RED}08`,
+              background: withOpacity(ACCENT_RED, OPACITY_5),
             }}
           >
             {error}
@@ -120,8 +120,8 @@ export function AbilityForge() {
                 onClick={() => setResult(h)}
                 className="flex items-center gap-2 p-2 rounded-md text-left transition-colors hover:bg-zinc-800/50"
                 style={{
-                  background: result === h ? `${ACCENT}10` : 'rgba(255,255,255,0.02)',
-                  border: result === h ? `1px solid ${ACCENT}30` : '1px solid transparent',
+                  background: result === h ? withOpacity(ACCENT, OPACITY_8) : withOpacity(OVERLAY_WHITE, OPACITY_2),
+                  border: result === h ? `1px solid ${withOpacity(ACCENT, OPACITY_20)}` : '1px solid transparent',
                 }}
               >
                 <div

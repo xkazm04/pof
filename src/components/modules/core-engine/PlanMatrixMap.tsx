@@ -68,6 +68,7 @@ export function PlanMatrixMap({ moduleId: initialModuleId }: PlanMatrixMapProps 
   const [canvasHeight, setCanvasHeight] = useState(560);
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [expandedModules, setExpandedModules] = useState<Set<string>>(new Set());
+  const [containerSize, setContainerSize] = useState({ w: 800, h: 560 });
 
   // --- Computed ---
 
@@ -163,6 +164,18 @@ export function PlanMatrixMap({ moduleId: initialModuleId }: PlanMatrixMapProps 
     return () => window.removeEventListener('resize', recalc);
   }, []);
 
+  // Track container dimensions for minimap viewport calculation
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+    const observer = new ResizeObserver(() => {
+      setContainerSize({ w: el.clientWidth, h: el.clientHeight });
+    });
+    observer.observe(el);
+    setContainerSize({ w: el.clientWidth, h: el.clientHeight });
+    return () => observer.disconnect();
+  }, []);
+
   // --- Handlers ---
 
   const handleZoomToFit = useCallback(() => {
@@ -235,14 +248,11 @@ export function PlanMatrixMap({ moduleId: initialModuleId }: PlanMatrixMapProps 
   if (!layout || !plan) return null;
 
   // --- Viewport for mini-map ---
-  const containerEl = containerRef.current;
-  const cw = containerEl?.clientWidth ?? 800;
-  const ch = containerEl?.clientHeight ?? 560;
   const viewportWorld = {
     x: -transform.panX / transform.zoom,
     y: -transform.panY / transform.zoom,
-    w: cw / transform.zoom,
-    h: ch / transform.zoom,
+    w: containerSize.w / transform.zoom,
+    h: containerSize.h / transform.zoom,
   };
 
   return (
@@ -780,7 +790,7 @@ export function PlanMatrixMap({ moduleId: initialModuleId }: PlanMatrixMapProps 
       </div>
 
       {/* ── Tooltip ── */}
-      {hoveredNode && !isPanningRef.current && transform.zoom < 0.8 && (
+      {hoveredNode && !isPanningState && transform.zoom < 0.8 && (
         <div
           className="fixed z-50 px-3 py-2 rounded-lg bg-surface-deep/95 backdrop-blur-sm border border-border shadow-2xl pointer-events-none"
           style={{ left: hoverPos.x + 14, top: hoverPos.y - 8, maxWidth: 280 }}
@@ -818,8 +828,8 @@ export function PlanMatrixMap({ moduleId: initialModuleId }: PlanMatrixMapProps 
         onJump={(wx, wy) => {
           setTransform((prev) => ({
             ...prev,
-            panX: cw / 2 - wx * prev.zoom,
-            panY: ch / 2 - wy * prev.zoom,
+            panX: containerSize.w / 2 - wx * prev.zoom,
+            panY: containerSize.h / 2 - wy * prev.zoom,
           }));
         }}
       />

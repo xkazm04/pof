@@ -1,6 +1,6 @@
 'use client';
 
-import { STATUS_SUCCESS, STATUS_ERROR, OPACITY_15 } from '@/lib/chart-colors';
+import { STATUS_SUCCESS, STATUS_ERROR, OPACITY_15, withOpacity } from '@/lib/chart-colors';
 import type { MiniViz } from './types';
 
 /* ── MiniVizSvg ─ Tiny inline visualisation (donut / bar / gauge) ──── */
@@ -14,7 +14,7 @@ function MiniVizSvg({ viz, color }: { viz: MiniViz; color: string }) {
     const filled = Math.min(1, Math.max(0, viz.ratio)) * circumference;
     return (
       <svg width={S} height={S} viewBox={`0 0 ${S} ${S}`} className="flex-shrink-0">
-        <circle cx={cx} cy={cy} r={r} fill="none" stroke={`${color}25`} strokeWidth={3} />
+        <circle cx={cx} cy={cy} r={r} fill="none" stroke={`${withOpacity(color, OPACITY_15)}`} strokeWidth={3} />
         <circle cx={cx} cy={cy} r={r} fill="none" stroke={color} strokeWidth={3}
           strokeDasharray={`${filled} ${circumference - filled}`}
           strokeDashoffset={circumference * 0.25}
@@ -29,7 +29,7 @@ function MiniVizSvg({ viz, color }: { viz: MiniViz; color: string }) {
     const filled = Math.min(1, Math.max(0, viz.ratio)) * barW;
     return (
       <svg width={S} height={S} viewBox={`0 0 ${S} ${S}`} className="flex-shrink-0">
-        <rect x={x0} y={y0} width={barW} height={barH} rx={2} fill={`${color}25`} />
+        <rect x={x0} y={y0} width={barW} height={barH} rx={2} fill={`${withOpacity(color, OPACITY_15)}`} />
         <rect x={x0} y={y0} width={filled} height={barH} rx={2} fill={color} />
       </svg>
     );
@@ -41,7 +41,7 @@ function MiniVizSvg({ viz, color }: { viz: MiniViz; color: string }) {
   const markerX = x0 + clamped * trackW;
   return (
     <svg width={S} height={S} viewBox={`0 0 ${S} ${S}`} className="flex-shrink-0">
-      <rect x={x0} y={y0} width={trackW} height={trackH} rx={2} fill={`${color}25`} />
+      <rect x={x0} y={y0} width={trackW} height={trackH} rx={2} fill={`${withOpacity(color, OPACITY_15)}`} />
       <rect x={x0} y={y0} width={clamped * trackW} height={trackH} rx={2} fill={color} />
       <line x1={markerX} y1={y0 - 2} x2={markerX} y2={y0 + trackH + 2}
         stroke={color} strokeWidth={1.5} strokeLinecap="round" />

@@ -1,7 +1,9 @@
 'use client';
 
 import { GitMerge } from 'lucide-react';
-import { ACCENT_PINK, OPACITY_20 } from '@/lib/chart-colors';
+import { ACCENT_PINK, OPACITY_20,
+  withOpacity, OPACITY_25,
+} from '@/lib/chart-colors';
 import { BlueprintPanel, SectionHeader } from '@/components/modules/core-engine/unique-tabs/_design';
 import { RadarChart } from '@/components/modules/core-engine/unique-tabs/_shared';
 import type { ItemGenome } from '@/types/item-genome';
@@ -61,7 +63,7 @@ export function BreedingTab({
           onClick={doBreed}
           disabled={!breedParentA || !breedParentB || breedParentA === breedParentB}
           className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-bold transition-all disabled:opacity-30 disabled:cursor-not-allowed hover:scale-105"
-          style={{ backgroundColor: `${ACCENT_PINK}${OPACITY_20}`, color: ACCENT_PINK, border: `1px solid ${ACCENT_PINK}40` }}
+          style={{ backgroundColor: `${ACCENT_PINK}${OPACITY_20}`, color: ACCENT_PINK, border: `1px solid ${withOpacity(ACCENT_PINK, OPACITY_25)}` }}
         >
           <GitMerge className="w-3.5 h-3.5" /> Breed Offspring
         </button>

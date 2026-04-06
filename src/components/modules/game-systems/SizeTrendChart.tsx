@@ -22,8 +22,8 @@ const PADDING = { top: 20, right: 16, bottom: 28, left: 56 };
 export function SizeTrendChart({ data, height = 180, accentColor = MODULE_COLORS.systems }: SizeTrendChartProps) {
   const width = 400; // SVG viewBox width, scales responsively
 
-  const { points, yTicks, xLabels, minVal, maxVal } = useMemo(() => {
-    if (data.length === 0) return { points: '', yTicks: [], xLabels: [], minVal: 0, maxVal: 0 };
+  const { points, yTicks, xLabels, minVal, maxVal, dotPoints } = useMemo(() => {
+    if (data.length === 0) return { points: '', yTicks: [], xLabels: [], minVal: 0, maxVal: 0, dotPoints: [] };
 
     const sizes = data.map((d) => d.sizeBytes);
     const min = Math.min(...sizes);
@@ -61,7 +61,7 @@ export function SizeTrendChart({ data, height = 180, accentColor = MODULE_COLORS
       xL.push({ x: p.x, label: `${date.getMonth() + 1}/${date.getDate()}` });
     }
 
-    return { points: polyline, yTicks: yT, xLabels: xL, minVal: min, maxVal: max };
+    return { points: polyline, yTicks: yT, xLabels: xL, minVal: min, maxVal: max, dotPoints: pts };
   }, [data, height]);
 
   if (data.length === 0) {
@@ -137,23 +137,12 @@ export function SizeTrendChart({ data, height = 180, accentColor = MODULE_COLORS
         />
 
         {/* Data points */}
-        {useMemo(() => {
-          const sizes = data.map((d) => d.sizeBytes);
-          const min = Math.min(...sizes);
-          const max = Math.max(...sizes);
-          const range = max - min || 1;
-          const padded = { min: min - range * 0.1, max: max + range * 0.1 };
-          return data.map((d, i) => {
-            const x = PADDING.left + (data.length === 1 ? chartW / 2 : (i / (data.length - 1)) * chartW);
-            const y = PADDING.top + chartH - ((d.sizeBytes - padded.min) / (padded.max - padded.min)) * chartH;
-            return (
-              <g key={d.id}>
-                <circle cx={x} cy={y} r="3" fill={accentColor} />
-                <title>{`${formatBytes(d.sizeBytes)}${d.version ? ` (v${d.version})` : ''}\n${new Date(d.createdAt).toLocaleDateString()}`}</title>
-              </g>
-            );
-          });
-        }, [data, accentColor, chartW, chartH])}
+        {dotPoints.map((p) => (
+          <g key={p.d.id}>
+            <circle cx={p.x} cy={p.y} r="3" fill={accentColor} />
+            <title>{`${formatBytes(p.d.sizeBytes)}${p.d.version ? ` (v${p.d.version})` : ''}\n${new Date(p.d.createdAt).toLocaleDateString()}`}</title>
+          </g>
+        ))}
 
         {/* Y-axis labels */}
         {yTicks.map((t, i) => (

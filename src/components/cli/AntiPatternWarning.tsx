@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { AlertTriangle, X, ArrowRight, ShieldAlert } from 'lucide-react';
+import { X, ArrowRight, ShieldAlert } from 'lucide-react';
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import { apiFetch } from '@/lib/api-utils';
 import { STATUS_SUCCESS, MODULE_COLORS, STATUS_BLOCKER, STATUS_WARNING, withOpacity, OPACITY_8 } from '@/lib/chart-colors';
@@ -22,13 +22,28 @@ export function AntiPatternWarning({ prompt, moduleId, onSwitchApproach }: AntiP
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastCheckedRef = useRef('');
 
+  // Render-time reset: clear warnings when prompt becomes too short
+  const [prevPrompt, setPrevPrompt] = useState(prompt);
+  if (prompt !== prevPrompt) {
+    setPrevPrompt(prompt);
+    if (prompt.trim().length < 20) {
+      setWarnings([]);
+    }
+  }
+
+  // Render-time reset: clear dismissed when warnings change
+  const [prevWarnings, setPrevWarnings] = useState(warnings);
+  if (warnings !== prevWarnings) {
+    setPrevWarnings(warnings);
+    setDismissed(new Set());
+  }
+
   // Debounced check — only fires after 600ms of no typing + minimum 20 chars
   useEffect(() => {
     if (debounceRef.current) clearTimeout(debounceRef.current);
 
     const trimmed = prompt.trim();
     if (trimmed.length < 20 || trimmed === lastCheckedRef.current) {
-      if (trimmed.length < 20) setWarnings([]);
       return;
     }
 
@@ -50,11 +65,6 @@ export function AntiPatternWarning({ prompt, moduleId, onSwitchApproach }: AntiP
       if (debounceRef.current) clearTimeout(debounceRef.current);
     };
   }, [prompt, moduleId]);
-
-  // Reset dismissed set when warnings change
-  useEffect(() => {
-    setDismissed(new Set());
-  }, [warnings]);
 
   const handleDismiss = useCallback((id: string) => {
     setDismissed((prev) => new Set(prev).add(id));

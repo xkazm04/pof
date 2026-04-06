@@ -1,7 +1,9 @@
 'use client';
 
 import { motion } from 'framer-motion';
-import { STATUS_WARNING, STATUS_ERROR } from '@/lib/chart-colors';
+import { STATUS_WARNING, STATUS_ERROR,
+  withOpacity, OPACITY_10,
+} from '@/lib/chart-colors';
 import type { PipelineNode } from './types';
 import { ELEMENT_COLORS, KIND_STYLE, NODE_W, NODE_H } from './types';
 
@@ -107,7 +109,7 @@ export function FlowNode({ node, x, y, delay, expanded, onToggle }: FlowNodeProp
         x={x - NODE_W / 2} y={y}
         width={NODE_W} height={NODE_H}
         rx={node.kind === 'branch' ? 2 : 6}
-        fill={elemColor ? `${elemColor}15` : style.bg}
+        fill={elemColor ? `${withOpacity(elemColor, OPACITY_10)}` : style.bg}
         stroke={borderColor}
         strokeWidth={clamp ? 2 : 1.5}
         strokeDasharray={node.kind === 'branch' ? '6 3' : undefined}

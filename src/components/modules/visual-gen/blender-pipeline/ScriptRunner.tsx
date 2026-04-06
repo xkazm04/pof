@@ -1,5 +1,6 @@
 'use client';
 
+import { useState, useEffect } from 'react';
 import { CheckCircle, AlertCircle, Loader2, X, Trash2 } from 'lucide-react';
 import { tryApiFetch } from '@/lib/api-utils';
 import type { ExecuteOutput } from '@/lib/blender-mcp/types';
@@ -16,10 +17,17 @@ function ScriptCard({ job }: { job: ScriptJob }) {
   const removeScript = useBlenderStore((s) => s.removeScript);
   const config = STATUS_CONFIG[job.status];
   const StatusIcon = config.icon;
+  const [now, setNow] = useState(() => Date.now());
+
+  useEffect(() => {
+    if (job.completedAt) return;
+    const id = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(id);
+  }, [job.completedAt]);
 
   const elapsed = job.completedAt
     ? ((job.completedAt - job.startedAt) / 1000).toFixed(1)
-    : ((Date.now() - job.startedAt) / 1000).toFixed(0);
+    : ((now - job.startedAt) / 1000).toFixed(0);
 
   return (
     <div className="rounded-lg border border-border bg-surface/50 overflow-hidden">

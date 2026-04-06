@@ -1,7 +1,9 @@
 'use client';
 
 import { Play, Pause, RotateCcw } from 'lucide-react';
-import { ACCENT_CYAN, ACCENT_EMERALD } from '@/lib/chart-colors';
+import { ACCENT_CYAN, ACCENT_EMERALD,
+  withOpacity, OPACITY_25, OPACITY_8,
+} from '@/lib/chart-colors';
 
 export function PlaybackControls({
   isPlaying,
@@ -23,7 +25,7 @@ export function PlaybackControls({
       <button
         onClick={isPlaying ? onPause : onPlay}
         className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-bold border transition-colors"
-        style={{ borderColor: `${ACCENT_CYAN}40`, backgroundColor: `${ACCENT_CYAN}12`, color: ACCENT_CYAN }}
+        style={{ borderColor: `${withOpacity(ACCENT_CYAN, OPACITY_25)}`, backgroundColor: `${withOpacity(ACCENT_CYAN, OPACITY_8)}`, color: ACCENT_CYAN }}
       >
         {isPlaying ? <Pause className="w-3 h-3" /> : <Play className="w-3 h-3" />}
         {isPlaying ? 'Pause' : 'Play'}
@@ -37,7 +39,7 @@ export function PlaybackControls({
       </button>
       <div className="ml-auto flex items-center gap-3 text-xs font-mono text-text-muted">
         <span>Playhead: <span className="font-bold text-text">{playhead.toFixed(3)}s</span></span>
-        <span>Stamina: <span className="font-bold" style={{ color: ACCENT_EMERALD, textShadow: `0 0 12px ${ACCENT_EMERALD}40` }}>-{staminaCost}</span></span>
+        <span>Stamina: <span className="font-bold" style={{ color: ACCENT_EMERALD, textShadow: `0 0 12px ${withOpacity(ACCENT_EMERALD, OPACITY_25)}` }}>-{staminaCost}</span></span>
       </div>
     </div>
   );

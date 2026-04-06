@@ -95,9 +95,9 @@ export function ReviewableModuleView({
   // Refs for reliable access in callbacks (avoids stale closures)
   const activeItemIdRef = useRef<string | null>(null);
   const checklistRef = useRef(checklist);
-  checklistRef.current = checklist;
   const batchQueueRef = useRef(batchQueue);
-  batchQueueRef.current = batchQueue;
+  useEffect(() => { checklistRef.current = checklist; }, [checklist]);
+  useEffect(() => { batchQueueRef.current = batchQueue; }, [batchQueue]);
 
   // Helper: advance to next batch item (shared by onComplete and watchdog).
   // Reads from batchQueueRef to avoid stale closures, then performs a pure
@@ -145,8 +145,8 @@ export function ReviewableModuleView({
   });
 
   // Keep a ref so callbacks can access the latest CLI handle
-  const checklistCliRef = useRef(checklistCli);
-  checklistCliRef.current = checklistCli;
+  type ChecklistCliHandle = typeof checklistCli;
+  const checklistCliRef = useRef<ChecklistCliHandle>(checklistCli);
 
   // Watchdog: recover from stuck batch states.
   // If the queue has items but nothing is running and no active item, auto-advance.

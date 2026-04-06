@@ -8,7 +8,7 @@
  * structured pass/fail results with visual diff summaries.
  */
 
-import { useState, useCallback, useMemo, useRef } from 'react';
+import React, { useState, useCallback, useMemo, useRef } from 'react';
 import {
   FlaskConical, Play, Plus, Trash2, Copy, CheckCircle2, XCircle,
   Loader2, Camera, ChevronDown, ChevronRight, FileJson, RotateCcw,
@@ -879,9 +879,9 @@ function ResultsTab({ history, isRunning, onClear }: ResultsTabProps) {
 
 function TestResultCard({ result }: { result: PofTestResult }) {
   const [expanded, setExpanded] = useState(result.status !== 'passed');
-  const Icon = testStatusIcon(result.status);
   const color = testStatusColor(result.status);
   const passedAsserts = result.assertions.filter((a) => a.status === 'passed').length;
+  const iconType = testStatusIcon(result.status);
 
   return (
     <div className="rounded" style={{ background: `${color}${OPACITY_8}` }}>
@@ -889,10 +889,10 @@ function TestResultCard({ result }: { result: PofTestResult }) {
         className="flex items-center gap-2 w-full text-left px-2.5 py-1.5"
         onClick={() => setExpanded((p) => !p)}
       >
-        <Icon
-          className={`w-3.5 h-3.5 shrink-0 ${result.status === 'running' ? 'animate-spin' : ''}`}
-          style={{ color }}
-        />
+        {React.createElement(iconType, {
+          className: `w-3.5 h-3.5 shrink-0 ${result.status === 'running' ? 'animate-spin' : ''}`,
+          style: { color },
+        })}
         <span className="text-xs font-mono text-text flex-1 truncate">{result.testId}</span>
         <span className="text-xs" style={{ color }}>
           {passedAsserts}/{result.assertions.length} assertions

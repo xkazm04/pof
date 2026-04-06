@@ -31,19 +31,21 @@ export function useCanvasTransform(initial?: Partial<CanvasTransform>): UseCanva
     zoom: initial?.zoom ?? 1,
   });
 
-  const isPanning = useRef(false);
+  const isPanningRef = useRef(false);
+  const [isPanning, setIsPanning] = useState(false);
   const panStart = useRef({ x: 0, y: 0 });
   const panOrigin = useRef({ x: 0, y: 0 });
 
   const startPan = useCallback((e: PointerEvent) => {
-    isPanning.current = true;
+    isPanningRef.current = true;
+    setIsPanning(true);
     panStart.current = { x: e.clientX, y: e.clientY };
     panOrigin.current = { x: transform.panX, y: transform.panY };
     (e.target as HTMLElement).setPointerCapture?.(e.pointerId);
   }, [transform.panX, transform.panY]);
 
   const onPointerMove = useCallback((e: PointerEvent) => {
-    if (!isPanning.current) return;
+    if (!isPanningRef.current) return;
     const dx = e.clientX - panStart.current.x;
     const dy = e.clientY - panStart.current.y;
     setTransform((prev) => ({
@@ -54,7 +56,8 @@ export function useCanvasTransform(initial?: Partial<CanvasTransform>): UseCanva
   }, []);
 
   const endPan = useCallback(() => {
-    isPanning.current = false;
+    isPanningRef.current = false;
+    setIsPanning(false);
   }, []);
 
   const onWheel = useCallback((e: WheelEvent) => {
@@ -113,7 +116,7 @@ export function useCanvasTransform(initial?: Partial<CanvasTransform>): UseCanva
 
   return {
     transform,
-    isPanning: isPanning.current,
+    isPanning,
     startPan,
     onPointerMove,
     endPan,

@@ -526,7 +526,7 @@ function IntegrationView({ acquiredAssets }: { acquiredAssets: Record<string, Ac
         <Code className="w-10 h-10 text-text-muted/30 mb-3" />
         <p className="text-sm text-text-muted">No integrations generated yet</p>
         <p className="text-xs text-text-muted/70 mt-1">
-          Acquire an asset and click "Generate Adapter" to create integration code
+          Acquire an asset and click &quot;Generate Adapter&quot; to create integration code
         </p>
       </div>
     );

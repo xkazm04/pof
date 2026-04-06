@@ -2,7 +2,7 @@
 
 import { ArrowRight } from 'lucide-react';
 import { motion } from 'framer-motion';
-import { STATUS_SUCCESS, STATUS_ERROR, STATUS_SUBDUED } from '@/lib/chart-colors';
+import { STATUS_SUCCESS, STATUS_ERROR, STATUS_SUBDUED, OPACITY_5, OPACITY_12, withOpacity } from '@/lib/chart-colors';
 
 /* ── Delta Badge ──────────────────────────────────────────────────────────── */
 
@@ -31,7 +31,7 @@ export function DeltaBadge({ current, optimal, label, unit, higherIsBetter = tru
       animate={{ opacity: 1, x: 0 }}
       transition={{ delay, duration: 0.3 }}
       className="flex items-center justify-between px-3 py-2 rounded-md border"
-      style={{ borderColor: `${isZero ? STATUS_SUBDUED : isPositive ? STATUS_SUCCESS : STATUS_ERROR}20`, backgroundColor: `${isZero ? STATUS_SUBDUED : isPositive ? STATUS_SUCCESS : STATUS_ERROR}08` }}
+      style={{ borderColor: withOpacity(isZero ? STATUS_SUBDUED : isPositive ? STATUS_SUCCESS : STATUS_ERROR, OPACITY_12), backgroundColor: withOpacity(isZero ? STATUS_SUBDUED : isPositive ? STATUS_SUCCESS : STATUS_ERROR, OPACITY_5) }}
     >
       <span className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted">{label}</span>
       <div className="flex items-center gap-2">

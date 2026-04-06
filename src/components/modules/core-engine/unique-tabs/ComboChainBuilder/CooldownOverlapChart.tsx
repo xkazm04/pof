@@ -3,7 +3,9 @@
 import { useMemo } from 'react';
 import { motion, useReducedMotion } from 'framer-motion';
 import { RotateCcw } from 'lucide-react';
-import { ACCENT_ORANGE, OPACITY_20 } from '@/lib/chart-colors';
+import { ACCENT_ORANGE, OVERLAY_WHITE, OPACITY_20,
+  withOpacity, OPACITY_3, OPACITY_5, OPACITY_37,
+} from '@/lib/chart-colors';
 import { motionSafe } from '@/lib/motion';
 import type { ComboAbility } from '@/components/modules/core-engine/unique-tabs/AbilitySpellbook.data';
 import { BlueprintPanel, SectionHeader } from './design';
@@ -34,7 +36,7 @@ export function CooldownOverlapChart({ chain, totalDuration }: { chain: ComboAbi
   return (
     <BlueprintPanel color={ACCENT_ORANGE} className="p-4">
       <div className="absolute left-0 top-0 w-32 h-32 blur-3xl rounded-full pointer-events-none"
-        style={{ backgroundColor: `${ACCENT_ORANGE}08` }} />
+        style={{ backgroundColor: `${withOpacity(ACCENT_ORANGE, OPACITY_5)}` }} />
       <SectionHeader icon={RotateCcw} label="Cooldown Windows" color={ACCENT_ORANGE} />
       <div className="mt-3 overflow-x-auto custom-scrollbar">
         <svg width={w} height={totalH} viewBox={`0 0 ${w} ${totalH}`}>
@@ -43,7 +45,7 @@ export function CooldownOverlapChart({ chain, totalDuration }: { chain: ComboAbi
             x={labelW} y={0}
             width={(totalDuration / maxTime) * barW}
             height={totalH}
-            fill="rgba(255,255,255,0.03)"
+            fill={withOpacity(OVERLAY_WHITE, OPACITY_3)}
             rx={4}
           />
           <text x={labelW + 4} y={12} className="text-[9px] font-mono" fill="var(--text-muted)" opacity={0.5}>
@@ -71,7 +73,7 @@ export function CooldownOverlapChart({ chain, totalDuration }: { chain: ComboAbi
                   width={cdW} height={laneH}
                   rx={4}
                   fill={`${entry.ability.color}${OPACITY_20}`}
-                  stroke={`${entry.ability.color}60`}
+                  stroke={`${withOpacity(entry.ability.color, OPACITY_37)}`}
                   strokeWidth={1}
                   initial={prefersReduced ? { scaleX: 1 } : { scaleX: 0 }}
                   animate={{ scaleX: 1 }}

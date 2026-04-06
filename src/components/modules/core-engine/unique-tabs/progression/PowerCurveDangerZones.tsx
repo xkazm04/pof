@@ -2,7 +2,7 @@
 
 import { AlertTriangle } from 'lucide-react';
 import { motion } from 'framer-motion';
-import { STATUS_SUCCESS, STATUS_WARNING, STATUS_ERROR } from '@/lib/chart-colors';
+import { STATUS_SUCCESS, STATUS_WARNING, STATUS_ERROR, OVERLAY_WHITE, withOpacity, OPACITY_5 } from '@/lib/chart-colors';
 import { SurfaceCard } from '@/components/ui/SurfaceCard';
 import { SectionLabel, NormalizedLineChart } from '../_shared';
 import { DANGER_ZONE_LEVELS, PLAYER_POWER, ENEMY_DIFFICULTY } from './progression-data';
@@ -32,7 +32,7 @@ export function PowerCurveDangerZones() {
       </div>
 
       <NormalizedLineChart
-        gridColor="rgba(255,255,255,0.05)"
+        gridColor={withOpacity(OVERLAY_WHITE, OPACITY_5)}
         xLabels={DANGER_ZONE_LEVELS.filter((_, i) => i % 2 === 0).map(lv => `Lv ${lv}`)}
         overlay={
           <div className="absolute top-2 right-4 flex items-center gap-4 text-2xs font-mono z-10">

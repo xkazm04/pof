@@ -134,7 +134,8 @@ export function ProjectHealthDashboard({ onNavigateTab }: ProjectHealthDashboard
     }
 
     if (alerts.length > 0) {
-      setRegressionAlerts(alerts);
+      const raf = requestAnimationFrame(() => setRegressionAlerts(alerts));
+      return () => cancelAnimationFrame(raf);
     }
   }, [scanHistory]);
 

@@ -4,7 +4,8 @@ import { useRef, useMemo, useCallback, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Zap } from 'lucide-react';
 import {
-  ACCENT_ORANGE, ACCENT_CYAN, ACCENT_EMERALD, OVERLAY_WHITE,
+  ACCENT_ORANGE, ACCENT_CYAN, ACCENT_EMERALD, STATUS_NEUTRAL, OVERLAY_WHITE,
+  withOpacity, OPACITY_2, OPACITY_8, OPACITY_10, OPACITY_12, OPACITY_20, OPACITY_25, OPACITY_30, OPACITY_60, OPACITY_80,
 } from '@/lib/chart-colors';
 import type { DodgeChainEntry } from '../dodge-types';
 import { computePhases } from '../dodge-math';
@@ -66,7 +67,7 @@ export function DodgeChainTimeline({
       <div
         ref={barRef}
         className="relative h-10 rounded-md overflow-hidden cursor-pointer select-none"
-        style={{ backgroundColor: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.08)' }}
+        style={{ backgroundColor: withOpacity(OVERLAY_WHITE, OPACITY_2), border: `1px solid ${withOpacity(OVERLAY_WHITE, OPACITY_8)}` }}
         onMouseDown={(e) => { dragging.current = true; handleInteraction(e.clientX); }}
       >
         {chain.map((entry, i) => (
@@ -87,12 +88,12 @@ export function DodgeChainTimeline({
           style={{
             left: `${(playhead / totalChainTime) * 100}%`,
             backgroundColor: OVERLAY_WHITE,
-            boxShadow: '0 0 6px rgba(255,255,255,0.6)',
+            boxShadow: `0 0 6px ${withOpacity(OVERLAY_WHITE, OPACITY_60)}`,
           }}
           layout
           transition={{ type: 'spring', stiffness: 400, damping: 30 }}
         >
-          <div className="absolute -top-1 left-1/2 -translate-x-1/2 w-2 h-2 rotate-45 bg-white rounded-sm" style={{ boxShadow: '0 0 4px rgba(255,255,255,0.8)' }} />
+          <div className="absolute -top-1 left-1/2 -translate-x-1/2 w-2 h-2 rotate-45 bg-white rounded-sm" style={{ boxShadow: `0 0 4px ${withOpacity(OVERLAY_WHITE, OPACITY_80)}` }} />
         </motion.div>
       </div>
 
@@ -130,7 +131,7 @@ function ChainSegment({ entry, index, totalChainTime }: {
         style={{
           left: `${leftPct}%`,
           width: `${mvPct}%`,
-          backgroundColor: `${ACCENT_CYAN}20`,
+          backgroundColor: `${withOpacity(ACCENT_CYAN, OPACITY_12)}`,
           borderBottom: `2px solid ${ACCENT_CYAN}`,
         }}
       />
@@ -141,11 +142,11 @@ function ChainSegment({ entry, index, totalChainTime }: {
           left: `${invStart}%`,
           width: `${invWidth}%`,
           borderBottom: `2px solid ${ACCENT_ORANGE}`,
-          '--phase-color-10': `${ACCENT_ORANGE}1a`,
-          '--phase-color-18': `${ACCENT_ORANGE}2e`,
-          '--phase-color-20': `${ACCENT_ORANGE}33`,
-          '--phase-color-25': `${ACCENT_ORANGE}40`,
-          '--phase-color-30': `${ACCENT_ORANGE}4d`,
+          '--phase-color-10': `${withOpacity(ACCENT_ORANGE, OPACITY_10)}`,
+          '--phase-color-18': `${withOpacity(ACCENT_ORANGE, OPACITY_20)}`,
+          '--phase-color-20': `${withOpacity(ACCENT_ORANGE, OPACITY_20)}`,
+          '--phase-color-25': `${withOpacity(ACCENT_ORANGE, OPACITY_25)}`,
+          '--phase-color-30': `${withOpacity(ACCENT_ORANGE, OPACITY_30)}`,
         } as React.CSSProperties}
       />
       {/* Cooldown */}
@@ -154,8 +155,8 @@ function ChainSegment({ entry, index, totalChainTime }: {
         style={{
           left: `${leftPct + mvPct}%`,
           width: `${widthPct - mvPct}%`,
-          backgroundColor: 'rgba(100,116,139,0.1)',
-          borderBottom: '2px solid rgba(100,116,139,0.3)',
+          backgroundColor: withOpacity(STATUS_NEUTRAL, OPACITY_10),
+          borderBottom: `2px solid ${withOpacity(STATUS_NEUTRAL, OPACITY_30)}`,
         }}
       />
       {/* Dodge number label */}

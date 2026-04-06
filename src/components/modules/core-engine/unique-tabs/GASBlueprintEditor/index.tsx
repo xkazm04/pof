@@ -5,7 +5,9 @@ import {
   Code, Zap, Shield, Swords, Tag, Cable, FlaskConical, LayoutTemplate, ChevronRight,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ACCENT_CYAN, ACCENT_VIOLET, ACCENT_EMERALD, STATUS_SUCCESS, STATUS_WARNING, STATUS_ERROR } from '@/lib/chart-colors';
+import { ACCENT_CYAN, ACCENT_VIOLET, ACCENT_EMERALD, STATUS_SUCCESS, STATUS_WARNING, STATUS_ERROR,
+  withOpacity, OPACITY_25, OPACITY_10, OPACITY_20, OPACITY_8, OPACITY_15,
+} from '@/lib/chart-colors';
 import { SurfaceCard } from '@/components/ui/SurfaceCard';
 import { BlueprintPanel, SectionHeader } from '../_design';
 import type { EditorAttribute, EditorEffect, TagRule, GASLoadoutSlot } from '@/lib/gas-codegen';
@@ -86,20 +88,20 @@ export function GASBlueprintEditor() {
       )}
 
       {/* Header */}
-      <SurfaceCard level={2} className="p-3 relative overflow-hidden" style={{ borderLeft: `2px solid ${ACCENT}40` }}>
+      <SurfaceCard level={2} className="p-3 relative overflow-hidden" style={{ borderLeft: `2px solid ${withOpacity(ACCENT, OPACITY_25)}` }}>
         <div className="absolute top-0 right-0 w-40 h-40 bg-blue-500/5 blur-3xl rounded-full pointer-events-none" />
         <div className="flex items-center justify-between relative z-10">
           <div>
             <div className="text-xs font-bold uppercase tracking-widest text-text flex items-center gap-2">
               <Code className="w-4 h-4" style={{ color: ACCENT }} /> GAS Blueprint Editor
-              <span className="text-2xs font-mono px-1.5 py-0.5 rounded" style={{ backgroundColor: `${ACCENT_CYAN}15`, color: ACCENT_CYAN, border: `1px solid ${ACCENT_CYAN}30` }}>INTERACTIVE</span>
-              {activeTemplateName && <span className="text-2xs font-mono px-1.5 py-0.5 rounded" style={{ backgroundColor: `${ACCENT_EMERALD}15`, color: ACCENT_EMERALD, border: `1px solid ${ACCENT_EMERALD}30` }}>{activeTemplateName}</span>}
+              <span className="text-2xs font-mono px-1.5 py-0.5 rounded" style={{ backgroundColor: `${withOpacity(ACCENT_CYAN, OPACITY_10)}`, color: ACCENT_CYAN, border: `1px solid ${withOpacity(ACCENT_CYAN, OPACITY_20)}` }}>INTERACTIVE</span>
+              {activeTemplateName && <span className="text-2xs font-mono px-1.5 py-0.5 rounded" style={{ backgroundColor: `${withOpacity(ACCENT_EMERALD, OPACITY_10)}`, color: ACCENT_EMERALD, border: `1px solid ${withOpacity(ACCENT_EMERALD, OPACITY_20)}` }}>{activeTemplateName}</span>}
             </div>
             <div className="text-2xs text-text-muted mt-0.5">Visual editor for Gameplay Ability System — exports C++ code</div>
           </div>
           <div className="flex items-center gap-3">
             <button onClick={() => setShowTemplatePicker(true)} className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-semibold transition-all"
-              style={{ backgroundColor: `${ACCENT}15`, color: ACCENT, border: `1px solid ${ACCENT}30` }}>
+              style={{ backgroundColor: `${withOpacity(ACCENT, OPACITY_10)}`, color: ACCENT, border: `1px solid ${withOpacity(ACCENT, OPACITY_20)}` }}>
               <LayoutTemplate className="w-3.5 h-3.5" /> Templates
             </button>
             <div className="flex items-center gap-3 text-2xs font-mono text-text-muted">
@@ -122,7 +124,7 @@ export function GASBlueprintEditor() {
               {i > 0 && <ChevronRight className="w-3 h-3 text-text-muted/40 flex-shrink-0" />}
               <span className="text-xs font-mono px-1.5 py-0.5 rounded transition-colors"
                 style={{ color: isLast ? ACCENT : 'var(--text-muted)', fontWeight: isLast ? 700 : 400,
-                  backgroundColor: isDetail ? `${ACCENT}10` : 'transparent', border: isDetail ? `1px solid ${ACCENT}25` : '1px solid transparent' }}>
+                  backgroundColor: isDetail ? `${withOpacity(ACCENT, OPACITY_8)}` : 'transparent', border: isDetail ? `1px solid ${withOpacity(ACCENT, OPACITY_15)}` : '1px solid transparent' }}>
                 {crumb}
               </span>
             </span>
@@ -137,7 +139,7 @@ export function GASBlueprintEditor() {
           return (
             <button key={id} onClick={() => { if (id === 'codegen') snapshotCode(); setActivePanel(id); }}
               className="relative flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all whitespace-nowrap"
-              style={{ backgroundColor: isActive ? `${ACCENT}15` : 'transparent', color: isActive ? ACCENT : 'var(--text-muted)', border: `1px solid ${isActive ? `${ACCENT}40` : 'transparent'}` }}>
+              style={{ backgroundColor: isActive ? `${withOpacity(ACCENT, OPACITY_10)}` : 'transparent', color: isActive ? ACCENT : 'var(--text-muted)', border: `1px solid ${isActive ? withOpacity(ACCENT, OPACITY_25) : 'transparent'}` }}>
               <Icon className="w-3.5 h-3.5" /> {label}
             </button>
           );
@@ -158,7 +160,7 @@ export function GASBlueprintEditor() {
               <div className="flex gap-1 mb-2">
                 {([{ id: 'attrs' as const, label: 'AttributeSet.h', count: stats.attrs }, { id: 'tags' as const, label: 'GameplayTags.h', count: stats.rules }, { id: 'effects' as const, label: 'Effects.cpp', count: stats.effects }]).map((tab) => (
                   <button key={tab.id} onClick={() => setCodeTab(tab.id)} className="flex items-center gap-1.5 px-2.5 py-1 rounded text-2xs font-mono transition-all"
-                    style={{ backgroundColor: codeTab === tab.id ? `${ACCENT_CYAN}15` : 'transparent', color: codeTab === tab.id ? ACCENT_CYAN : 'var(--text-muted)', border: `1px solid ${codeTab === tab.id ? `${ACCENT_CYAN}30` : 'transparent'}` }}>
+                    style={{ backgroundColor: codeTab === tab.id ? `${withOpacity(ACCENT_CYAN, OPACITY_10)}` : 'transparent', color: codeTab === tab.id ? ACCENT_CYAN : 'var(--text-muted)', border: `1px solid ${codeTab === tab.id ? withOpacity(ACCENT_CYAN, OPACITY_20) : 'transparent'}` }}>
                     {tab.label} <span className="opacity-60">({tab.count})</span>
                   </button>
                 ))}

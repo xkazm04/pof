@@ -5,6 +5,7 @@ import { motion } from 'framer-motion';
 import {
   STATUS_SUCCESS, STATUS_WARNING, STATUS_STALE,
   OPACITY_10, OPACITY_15,
+  withOpacity, OPACITY_20,
 } from '@/lib/chart-colors';
 import { CollapsibleSection } from '@/components/modules/core-engine/unique-tabs/_shared';
 import { BlueprintPanel, SectionHeader } from '@/components/modules/core-engine/unique-tabs/_design';
@@ -67,7 +68,7 @@ export function DamagePipelineDiagram() {
                     <span className="font-mono text-xs px-1.5 py-0.5 rounded" style={{
                       backgroundColor: `${ELEMENT_COLORS[et.element]}${OPACITY_15}`,
                       color: ELEMENT_COLORS[et.element],
-                      border: `1px solid ${ELEMENT_COLORS[et.element]}30`,
+                      border: `1px solid ${withOpacity(ELEMENT_COLORS[et.element], OPACITY_20)}`,
                     }}>
                       {et.tag}
                     </span>

@@ -27,7 +27,6 @@ export function useNBA(moduleId: SubModuleId): UseNBAResult {
   // Fetch feature statuses once
   useEffect(() => {
     let cancelled = false;
-    setIsLoading(true);
 
     fetch('/api/feature-matrix/all-statuses')
       .then((r) => (r.ok ? r.json() : { statuses: [] }))
@@ -43,7 +42,6 @@ export function useNBA(moduleId: SubModuleId): UseNBAResult {
       })
       .catch(() => {
         if (cancelled) return;
-        // Compute without status data — still useful
         setRecommendations(computeNBA(moduleId));
         setIsLoading(false);
       });

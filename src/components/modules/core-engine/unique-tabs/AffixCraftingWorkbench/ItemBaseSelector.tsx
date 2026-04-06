@@ -1,6 +1,7 @@
 'use client';
 
 import { motion } from 'framer-motion';
+import { OPACITY_8, OPACITY_15, OPACITY_25, OPACITY_37, withOpacity } from '@/lib/chart-colors';
 import { BlueprintPanel, SectionHeader, GlowStat } from '../_design';
 import { ACCENT } from './constants';
 import { ITEM_BASES, RARITY_COLORS, getItemLevelScaling } from './data';
@@ -31,12 +32,12 @@ export function ItemBaseSelector({
                 whileHover={{ scale: 1.03 }}
                 className="px-2 py-1.5 rounded-lg text-left transition-all"
                 style={{
-                  backgroundColor: isSelected ? `${rc}15` : 'transparent',
-                  border: `1px solid ${isSelected ? `${rc}60` : `${rc}25`}`,
+                  backgroundColor: isSelected ? withOpacity(rc, OPACITY_8) : 'transparent',
+                  border: `1px solid ${isSelected ? withOpacity(rc, OPACITY_37) : withOpacity(rc, OPACITY_15)}`,
                   color: isSelected ? rc : 'var(--text-muted)',
                 }}>
                 <div className="font-bold font-mono text-xs uppercase tracking-[0.15em] truncate"
-                  style={isSelected ? { textShadow: `0 0 12px ${rc}40` } : undefined}>
+                  style={isSelected ? { textShadow: `0 0 12px ${withOpacity(rc, OPACITY_25)}` } : undefined}>
                   {base.name}
                 </div>
                 <div className="text-xs font-mono opacity-70">{base.type} | Lv{base.itemLevel}</div>
@@ -53,7 +54,7 @@ export function ItemBaseSelector({
             Item Level
           </span>
           <span className="text-xs font-mono font-bold"
-            style={{ color: ACCENT, textShadow: `0 0 12px ${ACCENT}40` }}>
+            style={{ color: ACCENT, textShadow: `0 0 12px ${withOpacity(ACCENT, OPACITY_25)}` }}>
             {itemLevel}
           </span>
         </div>
@@ -63,7 +64,7 @@ export function ItemBaseSelector({
           style={{ accentColor: ACCENT }} />
         <div className="flex justify-between text-xs text-text-muted font-mono mt-0.5">
           <span>1</span>
-          <span style={{ textShadow: `0 0 12px ${ACCENT}40` }}>
+          <span style={{ textShadow: `0 0 12px ${withOpacity(ACCENT, OPACITY_25)}` }}>
             Scaling: {getItemLevelScaling(itemLevel).toFixed(1)}x
           </span>
           <span>100</span>

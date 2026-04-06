@@ -1,5 +1,7 @@
 'use client';
 
+import { OVERLAY_WHITE, withOpacity, OPACITY_6, OPACITY_8, OPACITY_50 } from '@/lib/chart-colors';
+
 export interface CurvePoint {
   x: number;
   y: number;
@@ -54,7 +56,7 @@ export function AccelCurve({
         const y = toY(v);
         return (
           <g key={v}>
-            <line x1={left} y1={y} x2={right} y2={y} stroke="rgba(255,255,255,0.06)" strokeWidth="1" />
+            <line x1={left} y1={y} x2={right} y2={y} stroke={withOpacity(OVERLAY_WHITE, OPACITY_6)} strokeWidth="1" />
             <text x={left - 4} y={y + 3} textAnchor="end" className="text-xs font-mono fill-[var(--text-muted)]">
               {v}
             </text>
@@ -66,7 +68,7 @@ export function AccelCurve({
         const x = toX(t);
         return (
           <g key={t}>
-            <line x1={x} y1={top} x2={x} y2={bottom} stroke="rgba(255,255,255,0.06)" strokeWidth="1" />
+            <line x1={x} y1={top} x2={x} y2={bottom} stroke={withOpacity(OVERLAY_WHITE, OPACITY_6)} strokeWidth="1" />
             <text x={x} y={bottom + 14} textAnchor="middle" className="text-xs font-mono fill-[var(--text-muted)]">
               {t}s
             </text>
@@ -80,9 +82,9 @@ export function AccelCurve({
         </text>
       )}
       {/* Curve line */}
-      <path d={`M ${linePath}`} fill="none" stroke={accent} strokeWidth="2.5" style={{ filter: `drop-shadow(0 0 4px ${accent}80)` }} />
+      <path d={`M ${linePath}`} fill="none" stroke={accent} strokeWidth="2.5" style={{ filter: `drop-shadow(0 0 4px ${withOpacity(accent, OPACITY_50)})` }} />
       {/* Area fill */}
-      <path d={areaPath} fill={`${accent}12`} />
+      <path d={areaPath} fill={`${withOpacity(accent, OPACITY_8)}`} />
       {/* Key points */}
       {keyPoints?.map((p) => {
         const px = toX(p.x);

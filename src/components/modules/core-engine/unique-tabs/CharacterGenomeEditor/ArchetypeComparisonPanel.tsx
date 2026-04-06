@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { GitCompareArrows } from 'lucide-react';
-import { STATUS_SUCCESS, STATUS_ERROR } from '@/lib/chart-colors';
+import { STATUS_SUCCESS, STATUS_ERROR, OPACITY_8, OPACITY_12, OPACITY_15, OPACITY_20, OPACITY_25, withOpacity } from '@/lib/chart-colors';
 import { BlueprintPanel, SectionHeader } from '../_design';
 import { RadarChart } from '../_shared';
 import type { CharacterGenome } from '@/types/character-genome';
@@ -47,13 +47,13 @@ export function ArchetypeComparisonPanel({ genomes, activeGenome: _activeGenome 
         <div className="flex items-center gap-2">
           <select value={leftId} onChange={(e) => setLeftId(e.target.value)}
             className="flex-1 text-xs font-mono font-bold bg-surface-deep border rounded-lg px-2 py-1.5 text-text focus:outline-none focus:border-blue-500/50"
-            style={{ color: leftGenome.color, borderColor: `${leftGenome.color}25` }}>
+            style={{ color: leftGenome.color, borderColor: withOpacity(leftGenome.color, OPACITY_15) }}>
             {genomes.map((g) => <option key={g.id} value={g.id} style={{ color: 'var(--text)' }}>{g.name}</option>)}
           </select>
           <span className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted">vs</span>
           <select value={rightId} onChange={(e) => setRightId(e.target.value)}
             className="flex-1 text-xs font-mono font-bold bg-surface-deep border rounded-lg px-2 py-1.5 text-text focus:outline-none focus:border-blue-500/50"
-            style={{ color: rightGenome.color, borderColor: `${rightGenome.color}25` }}>
+            style={{ color: rightGenome.color, borderColor: withOpacity(rightGenome.color, OPACITY_15) }}>
             {genomes.map((g) => <option key={g.id} value={g.id} style={{ color: 'var(--text)' }}>{g.name}</option>)}
           </select>
         </div>
@@ -85,22 +85,22 @@ export function ArchetypeComparisonPanel({ genomes, activeGenome: _activeGenome 
                 const sign = d.diff > 0 ? '+' : '';
                 return (
                   <div key={d.label} className="flex items-center justify-between p-1.5 rounded-lg border bg-surface-deep/30"
-                    style={{ borderColor: `${badgeColor}20` }}>
+                    style={{ borderColor: withOpacity(badgeColor, OPACITY_12) }}>
                     <div className="flex flex-col">
                       <span className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted">{d.label}</span>
                       <div className="flex items-center gap-2 mt-0.5">
-                        <span className="text-xs font-mono font-bold" style={{ color: leftGenome.color, textShadow: `0 0 12px ${leftGenome.color}40` }}>
+                        <span className="text-xs font-mono font-bold" style={{ color: leftGenome.color, textShadow: `0 0 12px ${withOpacity(leftGenome.color, OPACITY_25)}` }}>
                           {d.left % 1 !== 0 ? d.left.toFixed(1) : d.left}
                         </span>
                         <span className="text-xs text-text-muted">vs</span>
-                        <span className="text-xs font-mono font-bold" style={{ color: rightGenome.color, textShadow: `0 0 12px ${rightGenome.color}40` }}>
+                        <span className="text-xs font-mono font-bold" style={{ color: rightGenome.color, textShadow: `0 0 12px ${withOpacity(rightGenome.color, OPACITY_25)}` }}>
                           {d.right % 1 !== 0 ? d.right.toFixed(1) : d.right}
                         </span>
                       </div>
                     </div>
                     {d.diff !== 0 && (
                       <span className="text-xs font-mono font-bold px-1.5 py-0.5 rounded-md whitespace-nowrap"
-                        style={{ backgroundColor: `${badgeColor}15`, color: badgeColor, border: `1px solid ${badgeColor}30` }}>
+                        style={{ backgroundColor: withOpacity(badgeColor, OPACITY_8), color: badgeColor, border: `1px solid ${withOpacity(badgeColor, OPACITY_20)}` }}>
                         {sign}{Math.abs(d.pct) >= 1 ? `${d.pct.toFixed(0)}%` : `${d.pct.toFixed(1)}%`}
                       </span>
                     )}

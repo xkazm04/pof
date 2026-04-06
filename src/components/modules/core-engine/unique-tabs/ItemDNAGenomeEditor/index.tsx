@@ -3,7 +3,9 @@
 import { useState, useMemo, useCallback } from 'react';
 import { Dna, Plus } from 'lucide-react';
 import { motion } from 'framer-motion';
-import { STATUS_SUCCESS, OPACITY_10, OPACITY_20 } from '@/lib/chart-colors';
+import { STATUS_SUCCESS, OPACITY_10, OPACITY_20,
+  withOpacity, OPACITY_50, OPACITY_37, OPACITY_25,
+} from '@/lib/chart-colors';
 import { BlueprintPanel, SectionHeader } from '@/components/modules/core-engine/unique-tabs/_design';
 import { SubTabNavigation } from '@/components/modules/core-engine/unique-tabs/_shared';
 import type { ItemGenome, TraitAxis, DNARollResult } from '@/types/item-genome';
@@ -104,7 +106,7 @@ export function ItemDNAGenomeEditor({ moduleId }: Props) {
           <div className="flex items-center gap-2">
             <div className="p-1.5 rounded-lg relative overflow-hidden group">
               <div className="absolute inset-0 opacity-20" style={{ backgroundColor: ACCENT }} />
-              <Dna className="w-4 h-4 relative z-10" style={{ color: ACCENT, filter: `drop-shadow(0 0 4px ${ACCENT}80)` }} />
+              <Dna className="w-4 h-4 relative z-10" style={{ color: ACCENT, filter: `drop-shadow(0 0 4px ${withOpacity(ACCENT, OPACITY_50)})` }} />
             </div>
             <div className="flex flex-col">
               <span className="text-sm font-bold text-text tracking-wide">Item DNA Genome System</span>
@@ -117,7 +119,7 @@ export function ItemDNAGenomeEditor({ moduleId }: Props) {
           <button
             onClick={addGenome}
             className="flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium transition-colors"
-            style={{ backgroundColor: `${ACCENT}${OPACITY_10}`, color: ACCENT, border: `1px solid ${ACCENT}30` }}
+            style={{ backgroundColor: `${ACCENT}${OPACITY_10}`, color: ACCENT, border: `1px solid ${withOpacity(ACCENT, OPACITY_20)}` }}
           >
             <Plus className="w-3 h-3" /> New Genome
           </button>
@@ -135,8 +137,8 @@ export function ItemDNAGenomeEditor({ moduleId }: Props) {
             }`}
             style={{
               backgroundColor: g.id === selectedId ? `${g.color}${OPACITY_20}` : undefined,
-              border: g.id === selectedId ? `1px solid ${g.color}60` : '1px solid transparent',
-              boxShadow: g.id === selectedId ? `0 0 0 1px ${g.color}40` : undefined,
+              border: g.id === selectedId ? `1px solid ${withOpacity(g.color, OPACITY_37)}` : '1px solid transparent',
+              boxShadow: g.id === selectedId ? `0 0 0 1px ${withOpacity(g.color, OPACITY_25)}` : undefined,
             }}
           >
             <span className="w-2 h-2 rounded-full" style={{ backgroundColor: g.color }} />

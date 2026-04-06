@@ -4,6 +4,7 @@ import { Shuffle } from 'lucide-react';
 import {
   ACCENT_PINK, STATUS_SUCCESS, STATUS_WARNING,
   OPACITY_10,
+  withOpacity, OPACITY_12, OPACITY_25,
 } from '@/lib/chart-colors';
 import { BlueprintPanel, SectionHeader, CornerBrackets } from '@/components/modules/core-engine/unique-tabs/_design';
 import type { ItemGenome, DNARollResult } from '@/types/item-genome';
@@ -57,7 +58,7 @@ export function RollerTab({
           <button
             onClick={doRoll}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-bold transition-all hover:scale-105"
-            style={{ backgroundColor: `${ACCENT}20`, color: ACCENT, border: `1px solid ${ACCENT}40` }}
+            style={{ backgroundColor: `${withOpacity(ACCENT, OPACITY_12)}`, color: ACCENT, border: `1px solid ${withOpacity(ACCENT, OPACITY_25)}` }}
           >
             <Shuffle className="w-3.5 h-3.5" /> Roll Affixes
           </button>

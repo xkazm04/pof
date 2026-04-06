@@ -7,6 +7,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   STATUS_SUCCESS, STATUS_ERROR, STATUS_INFO,
   ACCENT_ORANGE, ACCENT_CYAN, ACCENT_EMERALD, ACCENT_PURPLE,
+  OPACITY_5, OPACITY_8, OPACITY_15, OPACITY_20, OPACITY_25, OPACITY_30, OPACITY_37, OPACITY_50,
+  withOpacity,
 } from '@/lib/chart-colors';
 import { BlueprintPanel, NeonBar, CornerBrackets } from '../_design';
 import { ACCENT } from './constants';
@@ -49,7 +51,7 @@ export function ItemPreviewCard({
         {/* Drop highlight */}
         {dragOverItem && (
           <div className="absolute inset-0 rounded-xl border-2 border-dashed pointer-events-none z-20"
-            style={{ borderColor: `${STATUS_SUCCESS}60`, backgroundColor: `${STATUS_SUCCESS}08` }}>
+            style={{ borderColor: withOpacity(STATUS_SUCCESS, OPACITY_37), backgroundColor: withOpacity(STATUS_SUCCESS, OPACITY_5) }}>
             <div className="absolute inset-0 flex items-center justify-center">
               <span className="text-xs font-mono font-bold uppercase tracking-[0.15em]"
                 style={{ color: STATUS_SUCCESS }}>Drop affix here</span>
@@ -60,12 +62,12 @@ export function ItemPreviewCard({
         {/* Item name */}
         <div className="text-center mb-4">
           <div className="inline-flex items-center gap-2 px-4 py-2 rounded-xl"
-            style={{ backgroundColor: `${rarityColor}10`, border: `1px solid ${rarityColor}40` }}>
+            style={{ backgroundColor: withOpacity(rarityColor, OPACITY_8), border: `1px solid ${withOpacity(rarityColor, OPACITY_25)}` }}>
             {selectedBase.rarity === 'Legendary' && (
               <Crown className="w-4 h-4" style={{ color: RARITY_COLORS.Legendary }} />
             )}
             <span className="text-sm font-bold font-mono"
-              style={{ color: rarityColor, textShadow: `0 0 12px ${rarityColor}40` }}>
+              style={{ color: rarityColor, textShadow: `0 0 12px ${withOpacity(rarityColor, OPACITY_25)}` }}>
               {fullItemName}
             </span>
           </div>
@@ -78,7 +80,7 @@ export function ItemPreviewCard({
         <div className="space-y-3">
           {craftedAffixes.length === 0 ? (
             <div className="text-center py-6 text-xs font-mono text-text-muted italic rounded-lg"
-              style={{ border: `1px dashed ${ACCENT}25` }}>
+              style={{ border: `1px dashed ${withOpacity(ACCENT, OPACITY_15)}` }}>
               Drag affixes from the pool, click +, or use Random Roll
             </div>
           ) : (
@@ -120,30 +122,30 @@ function AffixRow({ affix, itemLevel, onRemove, onUpdateMagnitude, onTogglePlace
       exit={{ opacity: 0, x: -20, scale: 0.95 }}
       className="rounded-lg px-3 py-2.5 relative"
       style={{
-        border: `1px solid ${affix.locked ? `${ACCENT_PURPLE}50` : `${catColor}30`}`,
-        backgroundColor: affix.locked ? `${ACCENT_PURPLE}08` : `${catColor}06`,
+        border: `1px solid ${affix.locked ? withOpacity(ACCENT_PURPLE, OPACITY_30) : withOpacity(catColor, OPACITY_20)}`,
+        backgroundColor: affix.locked ? withOpacity(ACCENT_PURPLE, OPACITY_5) : withOpacity(catColor, OPACITY_5),
       }}>
       {affix.locked && (
         <div className="absolute top-1 right-1">
-          <Lock className="w-3 h-3" style={{ color: ACCENT_PURPLE, filter: `drop-shadow(0 0 3px ${ACCENT_PURPLE}80)` }} />
+          <Lock className="w-3 h-3" style={{ color: ACCENT_PURPLE, filter: `drop-shadow(0 0 3px ${withOpacity(ACCENT_PURPLE, OPACITY_50)})` }} />
         </div>
       )}
       <div className="flex items-center gap-2 mb-2">
         <span className="w-1.5 h-1.5 rounded-full flex-shrink-0"
           style={{ backgroundColor: affix.locked ? ACCENT_PURPLE : catColor }} />
         <span className="text-xs font-bold font-mono text-text"
-          style={{ textShadow: `0 0 12px ${catColor}40` }}>{affix.displayName}</span>
+          style={{ textShadow: `0 0 12px ${withOpacity(catColor, OPACITY_25)}` }}>{affix.displayName}</span>
         <button onClick={() => onTogglePlacement(affix.tag)}
           className="flex items-center gap-1 px-1.5 py-0.5 rounded text-xs font-bold font-mono uppercase transition-all"
           style={{
-            backgroundColor: affix.bIsPrefix ? `${ACCENT_ORANGE}15` : `${ACCENT_CYAN}15`,
+            backgroundColor: affix.bIsPrefix ? withOpacity(ACCENT_ORANGE, OPACITY_8) : withOpacity(ACCENT_CYAN, OPACITY_8),
             color: affix.bIsPrefix ? ACCENT_ORANGE : ACCENT_CYAN,
-            border: `1px solid ${affix.bIsPrefix ? `${ACCENT_ORANGE}40` : `${ACCENT_CYAN}40`}`,
+            border: `1px solid ${affix.bIsPrefix ? withOpacity(ACCENT_ORANGE, OPACITY_25) : withOpacity(ACCENT_CYAN, OPACITY_25)}`,
           }} title="Toggle prefix/suffix">
           {affix.bIsPrefix ? <><ToggleLeft className="w-2.5 h-2.5" /> PREFIX</> : <><ToggleRight className="w-2.5 h-2.5" /> SUFFIX</>}
         </button>
         <span className="ml-auto text-xs font-mono font-bold"
-          style={{ color: catColor, textShadow: `0 0 12px ${catColor}40` }}>
+          style={{ color: catColor, textShadow: `0 0 12px ${withOpacity(catColor, OPACITY_25)}` }}>
           +{scaledMag.toFixed(1)} {affix.stat}
         </span>
         <button onClick={() => onRemove(affix.tag)}
@@ -166,7 +168,7 @@ function AffixRow({ affix, itemLevel, onRemove, onUpdateMagnitude, onTogglePlace
           style={{ accentColor: catColor }} />
         <span className="text-xs font-mono text-text-muted w-8">{poolEntry.maxValue}</span>
         <span className="text-xs font-mono font-bold w-10 text-right"
-          style={{ color: catColor, textShadow: `0 0 12px ${catColor}40` }}>
+          style={{ color: catColor, textShadow: `0 0 12px ${withOpacity(catColor, OPACITY_25)}` }}>
           {affix.magnitude.toFixed(1)}
         </span>
       </div>

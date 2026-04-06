@@ -4,8 +4,9 @@ import { useMemo, useState, useCallback } from 'react';
 import { Table2, Code, Download, AlertTriangle } from 'lucide-react';
 import { motion, useReducedMotion } from 'framer-motion';
 import {
-  STATUS_SUCCESS, ACCENT_CYAN, ACCENT_VIOLET,
-  OPACITY_10, OPACITY_15, OPACITY_30,
+  STATUS_SUCCESS, STATUS_WARNING, ACCENT_CYAN, ACCENT_CYAN_LIGHT, ACCENT_VIOLET,
+  OVERLAY_WHITE, withOpacity,
+  OPACITY_10, OPACITY_15, OPACITY_20, OPACITY_30, OPACITY_80, OPACITY_90,
 } from '@/lib/chart-colors';
 import { motionSafe } from '@/lib/motion';
 import { SurfaceCard } from '@/components/ui/SurfaceCard';
@@ -227,7 +228,7 @@ export function XpTableGenerator({ baseXp, curveExp }: XpTableGeneratorProps) {
       </div>
 
       <p className="text-2xs text-text-muted mb-3">
-        Replaces <span className="font-mono text-cyan-400">CalculateXPForLevel()</span> with a UE5 Data Table.
+        Replaces <span className="font-mono" style={{ color: ACCENT_CYAN }}>CalculateXPForLevel()</span> with a UE5 Data Table.
         Uses Base XP ({baseXp}) and Exponent ({curveExp}) from sliders above. Includes HP/Mana/Attr bonuses and milestone rewards.
       </p>
 
@@ -307,7 +308,8 @@ export function XpTableGenerator({ baseXp, curveExp }: XpTableGeneratorProps) {
                     initial={prefersReduced ? { opacity: 1, x: 0 } : { opacity: 0, x: -6 }}
                     animate={{ opacity: 1, x: 0 }}
                     transition={motionSafe({ delay: i * 0.01 }, prefersReduced)}
-                    className={`border-b border-border/20 transition-colors ${hasReward ? 'bg-amber-950/10' : 'hover:bg-surface-hover/20'}`}
+                    className="border-b border-border/20 transition-colors hover:bg-surface-hover/20"
+                    style={hasReward ? { backgroundColor: withOpacity(STATUS_WARNING, OPACITY_10) } : undefined}
                   >
                     <td className="text-center py-1.5 px-2 font-bold" style={{ color: hasReward ? ACCENT : 'var(--text)' }}>
                       {row.level}
@@ -346,7 +348,7 @@ export function XpTableGenerator({ baseXp, curveExp }: XpTableGeneratorProps) {
                'Player/ARPGPlayerCharacter_DataTable.cpp'}
             </span>
           </div>
-          <pre className="p-4 text-2xs font-mono leading-relaxed text-cyan-100/90 overflow-x-auto custom-scrollbar max-h-[400px] overflow-y-auto">
+          <pre className="p-4 text-2xs font-mono leading-relaxed overflow-x-auto custom-scrollbar max-h-[400px] overflow-y-auto" style={{ color: withOpacity(OVERLAY_WHITE, OPACITY_90) }}>
             {xpTableOutput}
           </pre>
         </div>
@@ -368,13 +370,13 @@ export function XpTableGenerator({ baseXp, curveExp }: XpTableGeneratorProps) {
       </div>
 
       {/* UE5 integration note */}
-      <div className="mt-2.5 p-3 rounded-lg border border-amber-500/20 bg-amber-950/10">
+      <div className="mt-2.5 p-3 rounded-lg border" style={{ borderColor: withOpacity(STATUS_WARNING, OPACITY_20), backgroundColor: withOpacity(STATUS_WARNING, OPACITY_10) }}>
         <div className="flex items-start gap-2">
-          <AlertTriangle className="w-3.5 h-3.5 mt-0.5 text-amber-400 shrink-0" />
-          <div className="text-2xs text-amber-200/80 font-mono leading-relaxed">
-            <span className="font-bold text-amber-400">UE5 Import:</span> Download the CSV, then in UE5: Right-click Content Browser →
-            Import → select CSV → choose <span className="text-cyan-300">FProgressionCurveRow</span> as row struct.
-            Set <span className="text-cyan-300">ProgressionTable</span> on your player BP to the imported Data Table.
+          <AlertTriangle className="w-3.5 h-3.5 mt-0.5 shrink-0" style={{ color: STATUS_WARNING }} />
+          <div className="text-2xs font-mono leading-relaxed" style={{ color: withOpacity(STATUS_WARNING, OPACITY_80) }}>
+            <span className="font-bold" style={{ color: STATUS_WARNING }}>UE5 Import:</span> Download the CSV, then in UE5: Right-click Content Browser →
+            Import → select CSV → choose <span style={{ color: ACCENT_CYAN_LIGHT }}>FProgressionCurveRow</span> as row struct.
+            Set <span style={{ color: ACCENT_CYAN_LIGHT }}>ProgressionTable</span> on your player BP to the imported Data Table.
             The loader code falls back to the formula if no table is assigned.
           </div>
         </div>

@@ -3,7 +3,9 @@
 import { useState, useCallback, useRef } from 'react';
 import { Dna, Upload, Plus } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ACCENT_CYAN, STATUS_ERROR } from '@/lib/chart-colors';
+import { ACCENT_CYAN, STATUS_ERROR,
+  withOpacity, OPACITY_25, OPACITY_8, OPACITY_10,
+} from '@/lib/chart-colors';
 import { BlueprintPanel, SectionHeader } from '../_design';
 import { SectionLabel } from '../_shared';
 import type { CharacterGenome } from '@/types/character-genome';
@@ -58,9 +60,9 @@ export function GenomeSelectorBar({
           <SectionHeader icon={Dna} label="Character Genomes" color={ACCENT} />
           <div className="ml-auto flex items-center gap-1.5">
             <button onClick={onAddGenome} className="flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-bold border transition-colors hover:brightness-110"
-              style={{ borderColor: `${ACCENT}40`, backgroundColor: `${ACCENT}10`, color: ACCENT }}><Plus className="w-3 h-3" /> New</button>
+              style={{ borderColor: `${withOpacity(ACCENT, OPACITY_25)}`, backgroundColor: `${withOpacity(ACCENT, OPACITY_8)}`, color: ACCENT }}><Plus className="w-3 h-3" /> New</button>
             <button onClick={() => setShowImport(true)} className="flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-bold border transition-colors hover:brightness-110"
-              style={{ borderColor: `${ACCENT_CYAN}40`, backgroundColor: `${ACCENT_CYAN}10`, color: ACCENT_CYAN }}><Upload className="w-3 h-3" /> Import</button>
+              style={{ borderColor: `${withOpacity(ACCENT_CYAN, OPACITY_25)}`, backgroundColor: `${withOpacity(ACCENT_CYAN, OPACITY_8)}`, color: ACCENT_CYAN }}><Upload className="w-3 h-3" /> Import</button>
             <input ref={fileInputRef} type="file" accept=".json" className="hidden" onChange={handleFileImport} />
           </div>
         </div>
@@ -88,7 +90,7 @@ export function GenomeSelectorBar({
                 {importError && <p className="text-xs font-mono" style={{ color: STATUS_ERROR }}>{importError}</p>}
                 <div className="flex gap-2">
                   <button onClick={() => importGenome(importText)} className="px-3 py-1.5 text-xs font-bold rounded-lg border transition-colors"
-                    style={{ borderColor: `${ACCENT_CYAN}40`, backgroundColor: `${ACCENT_CYAN}15`, color: ACCENT_CYAN }}>Import from JSON</button>
+                    style={{ borderColor: `${withOpacity(ACCENT_CYAN, OPACITY_25)}`, backgroundColor: `${withOpacity(ACCENT_CYAN, OPACITY_10)}`, color: ACCENT_CYAN }}>Import from JSON</button>
                   <button onClick={() => fileInputRef.current?.click()}
                     className="px-3 py-1.5 text-xs font-bold rounded-lg border border-border/40 text-text-muted hover:text-text transition-colors">Import from File</button>
                 </div>

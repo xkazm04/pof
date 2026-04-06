@@ -2,7 +2,7 @@
 
 import { RotateCcw, Star } from 'lucide-react';
 import { motion } from 'framer-motion';
-import { ACCENT_VIOLET, OPACITY_10, OPACITY_20, OPACITY_30 } from '@/lib/chart-colors';
+import { STATUS_ERROR, ACCENT_EMERALD, ACCENT_VIOLET, OPACITY_10, OPACITY_20, OPACITY_30 } from '@/lib/chart-colors';
 import { SurfaceCard } from '@/components/ui/SurfaceCard';
 import { SectionLabel } from '../_shared';
 
@@ -90,10 +90,10 @@ export function PrestigePreview() {
                     </div>
                   </td>
                   <td className="py-2 px-2 text-center">
-                    <span className="text-emerald-400 font-bold">{c.statBonus}</span>
+                    <span className="font-bold" style={{ color: ACCENT_EMERALD }}>{c.statBonus}</span>
                   </td>
                   <td className="py-2 px-2 text-center">
-                    <span className="text-red-400 font-bold">{c.diffMultiplier}</span>
+                    <span className="font-bold" style={{ color: STATUS_ERROR }}>{c.diffMultiplier}</span>
                   </td>
                   <td className="py-2 px-2 text-center text-text-muted">{c.estimatedTime}</td>
                   <td className="py-2 pl-2">

@@ -1,6 +1,6 @@
 'use client';
 
-import { STATUS_SUCCESS, STATUS_ERROR } from '@/lib/chart-colors';
+import { STATUS_SUCCESS, STATUS_ERROR, withOpacity, OPACITY_20 } from '@/lib/chart-colors';
 import { FEEL_FIELD_META, type FeelComparison } from '@/lib/character-feel-optimizer';
 import { NeonBar } from '../_design';
 
@@ -42,7 +42,7 @@ export function ComparisonRow({ item, colorA, colorB }: {
           <div className="absolute inset-0 rounded-full overflow-hidden">
             <div
               className="absolute top-0 left-0 h-full rounded-full opacity-30 border-r-2"
-              style={{ width: `${barB}%`, borderColor: colorB, backgroundColor: `${colorB}30` }}
+              style={{ width: `${barB}%`, borderColor: colorB, backgroundColor: `${withOpacity(colorB, OPACITY_20)}` }}
             />
           </div>
         </div>

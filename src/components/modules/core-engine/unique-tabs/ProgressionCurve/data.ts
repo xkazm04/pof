@@ -1,6 +1,6 @@
 import {
   Swords, Wand2, Sword, FastForward, Layers, Shield,
-  Trophy, Zap, Star,
+  Trophy, Zap, Star, Wind, Award, CloudLightning, Sparkles, Crown,
 } from 'lucide-react';
 import {
   STATUS_WARNING, STATUS_ERROR, STATUS_SUCCESS,
@@ -113,6 +113,22 @@ export const BUILD_PRESETS: BuildPreset[] = [
       { axis: 'DEX', value: 0.95 }, { axis: 'VIT', value: 0.5 }, { axis: 'END', value: 0.45 },
     ],
   },
+  {
+    name: 'Jedi Guardian', icon: Shield, color: '#3b82f6',
+    stats: { Strength: 80, Intelligence: 50, Dexterity: 70, Vitality: 70, Endurance: 60 },
+    radarData: [
+      { axis: 'STR', value: 0.8 }, { axis: 'INT', value: 0.5 },
+      { axis: 'DEX', value: 0.7 }, { axis: 'VIT', value: 0.7 }, { axis: 'END', value: 0.6 },
+    ],
+  },
+  {
+    name: 'Sith Inquisitor', icon: Zap, color: '#ef4444',
+    stats: { Strength: 30, Intelligence: 95, Dexterity: 60, Vitality: 45, Endurance: 35 },
+    radarData: [
+      { axis: 'STR', value: 0.3 }, { axis: 'INT', value: 0.95 },
+      { axis: 'DEX', value: 0.6 }, { axis: 'VIT', value: 0.45 }, { axis: 'END', value: 0.35 },
+    ],
+  },
 ];
 
 /* -- 8.4 Level-Up Reward Preview Data ------------------------------------- */
@@ -126,6 +142,13 @@ export const LEVEL_REWARDS = [
   { level: 30, name: 'Passive Mastery', type: 'Passive', icon: Shield, color: ACCENT_EMERALD },
   { level: 40, name: 'Ascension', type: 'Milestone', icon: Star, color: ACCENT_PINK },
   { level: 50, name: 'Prestige Unlock', type: 'Prestige', icon: Trophy, color: STATUS_WARNING },
+  { level: 5, name: 'Force Push', type: 'Ability', icon: Wind, color: '#60a5fa' },
+  { level: 10, name: 'Lightsaber Form II', type: 'Unlock', icon: Swords, color: '#f59e0b' },
+  { level: 15, name: 'Force Lightning', type: 'Spell', icon: Zap, color: '#a78bfa' },
+  { level: 20, name: 'Advanced Lightsaber', type: 'Milestone', icon: Award, color: '#22c55e' },
+  { level: 30, name: 'Force Storm', type: 'Ultimate', icon: CloudLightning, color: '#ef4444' },
+  { level: 40, name: 'Battle Meditation', type: 'Spell', icon: Sparkles, color: '#e879f9' },
+  { level: 50, name: 'Master of the Force', type: 'Prestige', icon: Crown, color: '#f97316' },
 ];
 
 /* -- 8.6 Power Curve Danger Zones Data ------------------------------------ */

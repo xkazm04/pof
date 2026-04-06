@@ -2,7 +2,7 @@
 
 import { TrendingUp, History } from 'lucide-react';
 import { motion } from 'framer-motion';
-import { STATUS_ERROR, ACCENT_CYAN } from '@/lib/chart-colors';
+import { STATUS_ERROR, ACCENT_CYAN, OPACITY_5, OPACITY_15, withOpacity } from '@/lib/chart-colors';
 import { CURRENCIES, CRAFTING_ACTIONS } from './constants';
 import type { CurrencyId, CraftLogEntry } from './types';
 
@@ -17,7 +17,7 @@ export function CraftLogSection({ craftLog, avgCraftCost, craftCount }: CraftLog
     <div className="space-y-2">
       {avgCraftCost && (
         <div className="flex items-center gap-2 px-2 py-1.5 rounded-lg"
-          style={{ border: `1px solid ${ACCENT_CYAN}25`, backgroundColor: `${ACCENT_CYAN}05` }}>
+          style={{ border: `1px solid ${withOpacity(ACCENT_CYAN, OPACITY_15)}`, backgroundColor: withOpacity(ACCENT_CYAN, OPACITY_5) }}>
           <TrendingUp className="w-3 h-3 flex-shrink-0" style={{ color: ACCENT_CYAN }} />
           <span className="text-xs font-mono font-bold text-text uppercase tracking-[0.15em]">Avg cost/craft:</span>
           <div className="flex flex-wrap gap-1.5">
@@ -44,7 +44,7 @@ export function CraftLogSection({ craftLog, avgCraftCost, craftCount }: CraftLog
               className="flex items-center gap-2 text-xs font-mono">
               <span className="w-1 h-1 rounded-full flex-shrink-0"
                 style={{ backgroundColor: entry.success ? (action?.color ?? ACCENT_CYAN) : STATUS_ERROR }} />
-              <span className={entry.success ? 'text-text-muted' : 'text-red-400 line-through'}>{entry.detail}</span>
+              <span className={entry.success ? 'text-text-muted' : 'line-through'} style={entry.success ? undefined : { color: STATUS_ERROR }}>{entry.detail}</span>
               <span className="ml-auto text-text-muted opacity-50 flex-shrink-0">
                 {Object.entries(entry.spent).map(([cid, amt]) => {
                   const cur = CURRENCIES.find(c => c.id === cid);

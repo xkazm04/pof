@@ -5,7 +5,8 @@ import { useReducedMotion } from 'framer-motion';
 import { Trash2, ArrowRight } from 'lucide-react';
 import {
   STATUS_SUCCESS, STATUS_WARNING,
-  ACCENT_CYAN, ACCENT_VIOLET,
+  ACCENT_CYAN, ACCENT_VIOLET, OVERLAY_WHITE,
+  withOpacity, OPACITY_20, OPACITY_10, OPACITY_30, OPACITY_5, OPACITY_12, OPACITY_40,
 } from '@/lib/chart-colors';
 import type { AttrCategory, EditorAttribute } from '@/lib/gas-codegen';
 import type { AttrRelationship } from './types';
@@ -144,7 +145,7 @@ export function RelationshipWebEditor({
 
           <defs>
             <marker id="gas-arrow" viewBox="0 0 6 4" refX="6" refY="2" markerWidth="6" markerHeight="4" orient="auto">
-              <path d="M0,0 L6,2 L0,4" fill="rgba(255,255,255,0.4)" />
+              <path d="M0,0 L6,2 L0,4" fill={withOpacity(OVERLAY_WHITE, OPACITY_40)} />
             </marker>
           </defs>
 
@@ -163,8 +164,8 @@ export function RelationshipWebEditor({
               >
                 <rect
                   x={pos.x - 2} y={pos.y} width={70} height={20} rx={4}
-                  fill={isDragTarget ? `${color}30` : `${color}15`}
-                  stroke={isDragTarget ? color : `${color}50`}
+                  fill={isDragTarget ? `${withOpacity(color, OPACITY_20)}` : `${withOpacity(color, OPACITY_10)}`}
+                  stroke={isDragTarget ? color : `${withOpacity(color, OPACITY_30)}`}
                   strokeWidth={isDragTarget ? 1.5 : 0.8}
                 />
                 <text x={pos.x + 33} y={pos.y + 13} fill={color} fontSize={8} fontFamily="monospace" textAnchor="middle">
@@ -202,7 +203,7 @@ export function RelationshipWebEditor({
       {/* Active relationships list */}
       <div className="space-y-1">
         {relationships.map((rel) => (
-          <div key={rel.id} className="flex items-center gap-2 px-2 py-1 rounded text-2xs font-mono" style={{ backgroundColor: `${relColors[rel.type]}08`, border: `1px solid ${relColors[rel.type]}20` }}>
+          <div key={rel.id} className="flex items-center gap-2 px-2 py-1 rounded text-2xs font-mono" style={{ backgroundColor: `${withOpacity(relColors[rel.type], OPACITY_5)}`, border: `1px solid ${withOpacity(relColors[rel.type], OPACITY_12)}` }}>
             <span style={{ color: relColors[rel.type] }}>{rel.type}</span>
             <span className="text-text-muted">{attributes.find(a => a.id === rel.sourceId)?.name}</span>
             <ArrowRight className="w-2.5 h-2.5 text-text-muted" />

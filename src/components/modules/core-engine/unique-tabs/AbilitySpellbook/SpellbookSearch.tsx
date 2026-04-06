@@ -7,6 +7,7 @@ import {
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   MODULE_COLORS, ACCENT_EMERALD_DARK,
+  withOpacity, OPACITY_8, OPACITY_20, OPACITY_37,
 } from '@/lib/chart-colors';
 import {
   COMBO_ABILITIES, EFFECT_TYPES,
@@ -147,8 +148,29 @@ export function SpellbookSearch({ onNavigate }: SpellbookSearchProps) {
       .slice(0, MAX_RESULTS);
   }, [query, index]);
 
-  // Reset selection when results change
-  useEffect(() => { setSelectedIdx(0); }, [filtered]);
+  // Reset selection when results change (state-during-render pattern)
+  const [prevFiltered, setPrevFiltered] = useState(filtered);
+  if (prevFiltered !== filtered) {
+    setPrevFiltered(filtered);
+    setSelectedIdx(0);
+  }
+
+  // Reset query/selection when open changes (state-during-render pattern)
+  const [prevOpen, setPrevOpen] = useState(open);
+  if (prevOpen !== open) {
+    setPrevOpen(open);
+    if (open) {
+      setQuery('');
+      setSelectedIdx(0);
+    }
+  }
+
+  // Focus input on open
+  useEffect(() => {
+    if (!open) return;
+    const t = setTimeout(() => inputRef.current?.focus(), 50);
+    return () => clearTimeout(t);
+  }, [open]);
 
   // Global Cmd+K / Ctrl+K
   useEffect(() => {
@@ -161,16 +183,6 @@ export function SpellbookSearch({ onNavigate }: SpellbookSearchProps) {
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
   }, []);
-
-  // Focus input on open
-  useEffect(() => {
-    if (open) {
-      setQuery('');
-      setSelectedIdx(0);
-      const t = setTimeout(() => inputRef.current?.focus(), 50);
-      return () => clearTimeout(t);
-    }
-  }, [open]);
 
   // Scroll selected item into view
   useEffect(() => {
@@ -280,7 +292,7 @@ export function SpellbookSearch({ onNavigate }: SpellbookSearchProps) {
                     >
                       <span
                         className="w-2 h-2 rounded-full flex-shrink-0"
-                        style={{ backgroundColor: r.color, boxShadow: i === selectedIdx ? `0 0 6px ${r.color}60` : 'none' }}
+                        style={{ backgroundColor: r.color, boxShadow: i === selectedIdx ? `0 0 6px ${withOpacity(r.color, OPACITY_37)}` : 'none' }}
                       />
                       <span className={`flex-1 text-sm font-mono truncate ${i === selectedIdx ? 'text-text' : 'text-text-muted'}`}>
                         {r.label}
@@ -289,8 +301,8 @@ export function SpellbookSearch({ onNavigate }: SpellbookSearchProps) {
                         className="text-2xs px-1.5 py-0.5 rounded-full border flex-shrink-0"
                         style={{
                           color: r.color,
-                          borderColor: `${r.color}30`,
-                          backgroundColor: `${r.color}10`,
+                          borderColor: withOpacity(r.color, OPACITY_20),
+                          backgroundColor: withOpacity(r.color, OPACITY_8),
                         }}
                       >
                         {CATEGORY_LABELS[r.category]}

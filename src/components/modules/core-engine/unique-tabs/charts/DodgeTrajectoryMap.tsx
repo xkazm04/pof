@@ -1,5 +1,7 @@
 'use client';
 
+import { OVERLAY_WHITE, withOpacity, OPACITY_2, OPACITY_5, OPACITY_10, OPACITY_37 } from '@/lib/chart-colors';
+
 export interface Trajectory {
   id: number | string;
   path: string;
@@ -20,11 +22,11 @@ export function DodgeTrajectoryMap({
   return (
     <svg width={size} height={size} viewBox="0 0 100 100" className="overflow-visible">
       {/* Grid */}
-      <rect x={0} y={0} width={100} height={100} fill="rgba(255,255,255,0.02)" stroke="rgba(255,255,255,0.1)" strokeWidth="0.5" rx={4} />
+      <rect x={0} y={0} width={100} height={100} fill={withOpacity(OVERLAY_WHITE, OPACITY_2)} stroke={withOpacity(OVERLAY_WHITE, OPACITY_10)} strokeWidth="0.5" rx={4} />
       {[25, 50, 75].map((v) => (
         <g key={v}>
-          <line x1={0} y1={v} x2={100} y2={v} stroke="rgba(255,255,255,0.05)" strokeWidth="0.5" />
-          <line x1={v} y1={0} x2={v} y2={100} stroke="rgba(255,255,255,0.05)" strokeWidth="0.5" />
+          <line x1={0} y1={v} x2={100} y2={v} stroke={withOpacity(OVERLAY_WHITE, OPACITY_5)} strokeWidth="0.5" />
+          <line x1={v} y1={0} x2={v} y2={100} stroke={withOpacity(OVERLAY_WHITE, OPACITY_5)} strokeWidth="0.5" />
         </g>
       ))}
       {/* Player origin */}
@@ -40,7 +42,7 @@ export function DodgeTrajectoryMap({
           strokeWidth="2"
           strokeLinecap="round"
           opacity={0.8}
-          style={{ filter: `drop-shadow(0 0 3px ${traj.color}60)` }}
+          style={{ filter: `drop-shadow(0 0 3px ${withOpacity(traj.color, OPACITY_37)})` }}
         />
       ))}
     </svg>

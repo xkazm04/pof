@@ -4,7 +4,7 @@ import { ArrowRight, Target, TrendingUp } from 'lucide-react';
 import { motion } from 'framer-motion';
 import {
   STATUS_SUCCESS, STATUS_WARNING, STATUS_ERROR,
-  ACCENT_CYAN, ACCENT_EMERALD,
+  OPACITY_5, OPACITY_12, OPACITY_25, withOpacity,
 } from '@/lib/chart-colors';
 import { BlueprintPanel, SectionHeader, NeonBar } from './design';
 import { DeltaBadge } from './DeltaBadge';
@@ -63,7 +63,7 @@ export function ComparisonTab({
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: idx * 0.06, duration: 0.3 }}
                 className="text-center p-3 rounded-lg border"
-                style={{ borderColor: `${color}20`, backgroundColor: `${color}08` }}
+                style={{ borderColor: withOpacity(color, OPACITY_12), backgroundColor: withOpacity(color, OPACITY_5) }}
               >
                 <div className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted mb-1">{label}</div>
                 <div className="flex items-center justify-center gap-1.5">
@@ -94,7 +94,7 @@ export function ComparisonTab({
             initial={{ scale: 1.3, opacity: 0.5 }}
             animate={{ scale: 1, opacity: 1 }}
             className="text-xl font-mono font-bold tabular-nums"
-            style={{ color: effColor, textShadow: `0 0 12px ${effColor}40` }}
+            style={{ color: effColor, textShadow: `0 0 12px ${withOpacity(effColor, OPACITY_25)}` }}
           >
             {efficiency}%
           </motion.span>

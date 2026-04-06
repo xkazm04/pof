@@ -5,6 +5,7 @@ import { STAGGER_SLOW } from '@/components/modules/core-engine/unique-tabs/_shar
 import type { ItemGenome } from '@/types/item-genome';
 import { AXIS_CONFIGS } from './data';
 
+import { withOpacity, OPACITY_25, OPACITY_30 } from '@/lib/chart-colors';
 /* ── DNA Strand Visualization ──────────────────────────────────────────── */
 
 export function DNAStrand({ genome }: { genome: ItemGenome }) {
@@ -25,7 +26,7 @@ export function DNAStrand({ genome }: { genome: ItemGenome }) {
 
         return (
           <g key={i}>
-            <line x1={x} y1={y1} x2={x} y2={y2} stroke={`${cfg.color}40`} strokeWidth="1" />
+            <line x1={x} y1={y1} x2={x} y2={y2} stroke={`${withOpacity(cfg.color, OPACITY_25)}`} strokeWidth="1" />
             <motion.circle
               cx={x} cy={y1} r={2 + intensity * 3}
               fill={cfg.color}
@@ -50,7 +51,7 @@ export function DNAStrand({ genome }: { genome: ItemGenome }) {
           const y = height / 2 + Math.sin((i / bases) * Math.PI * 4) * 25;
           return `${i === 0 ? 'M' : 'L'} ${x} ${y}`;
         }).join(' ')}
-        fill="none" stroke={`${genome.color}50`} strokeWidth="1.5"
+        fill="none" stroke={`${withOpacity(genome.color, OPACITY_30)}`} strokeWidth="1.5"
       />
       <path
         d={Array.from({ length: bases }).map((_, i) => {
@@ -58,7 +59,7 @@ export function DNAStrand({ genome }: { genome: ItemGenome }) {
           const y = height / 2 - Math.sin((i / bases) * Math.PI * 4) * 25;
           return `${i === 0 ? 'M' : 'L'} ${x} ${y}`;
         }).join(' ')}
-        fill="none" stroke={`${genome.color}50`} strokeWidth="1.5"
+        fill="none" stroke={`${withOpacity(genome.color, OPACITY_30)}`} strokeWidth="1.5"
       />
     </svg>
   );

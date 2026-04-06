@@ -7,6 +7,7 @@ import {
   ACCENT_ORANGE, ACCENT_EMERALD, ACCENT_CYAN,
   STATUS_NEUTRAL, OVERLAY_WHITE,
   OPACITY_5, OPACITY_8, OPACITY_10, OPACITY_30,
+  withOpacity, OPACITY_12, OPACITY_20, OPACITY_25, OPACITY_60, OPACITY_80,
 } from '@/lib/chart-colors';
 import { useScrubBar } from '@/hooks/useScrubBar';
 import { BlueprintPanel, SectionHeader } from '../_design';
@@ -67,7 +68,7 @@ export function DodgeChainTimeline({
                 style={{
                   left: `${leftPct}%`,
                   width: `${mvPct}%`,
-                  backgroundColor: `${ACCENT_CYAN}20`,
+                  backgroundColor: `${withOpacity(ACCENT_CYAN, OPACITY_12)}`,
                   borderBottom: `2px solid ${ACCENT_CYAN}`,
                 }}
               />
@@ -78,11 +79,11 @@ export function DodgeChainTimeline({
                   left: `${invStart}%`,
                   width: `${invWidth}%`,
                   borderBottom: `2px solid ${ACCENT_ORANGE}`,
-                  '--phase-color-10': `${ACCENT_ORANGE}1a`,
-                  '--phase-color-18': `${ACCENT_ORANGE}2e`,
-                  '--phase-color-20': `${ACCENT_ORANGE}33`,
-                  '--phase-color-25': `${ACCENT_ORANGE}40`,
-                  '--phase-color-30': `${ACCENT_ORANGE}4d`,
+                  '--phase-color-10': `${withOpacity(ACCENT_ORANGE, OPACITY_10)}`,
+                  '--phase-color-18': `${withOpacity(ACCENT_ORANGE, OPACITY_20)}`,
+                  '--phase-color-20': `${withOpacity(ACCENT_ORANGE, OPACITY_20)}`,
+                  '--phase-color-25': `${withOpacity(ACCENT_ORANGE, OPACITY_25)}`,
+                  '--phase-color-30': `${withOpacity(ACCENT_ORANGE, OPACITY_30)}`,
                 } as React.CSSProperties}
               />
               {/* Cooldown */}
@@ -120,13 +121,13 @@ export function DodgeChainTimeline({
           style={{
             left: `${(playhead / totalChainTime) * 100}%`,
             backgroundColor: OVERLAY_WHITE,
-            boxShadow: `0 0 6px ${OVERLAY_WHITE}99`,
+            boxShadow: `0 0 6px ${withOpacity(OVERLAY_WHITE, OPACITY_60)}`,
           }}
           layout
           transition={{ type: 'spring', stiffness: 400, damping: 30 }}
         >
           <div className="absolute -top-1 left-1/2 -translate-x-1/2 w-2 h-2 rotate-45 bg-white rounded-sm"
-            style={{ boxShadow: `0 0 4px ${OVERLAY_WHITE}cc` }} />
+            style={{ boxShadow: `0 0 4px ${withOpacity(OVERLAY_WHITE, OPACITY_80)}` }} />
         </motion.div>
       </div>
 

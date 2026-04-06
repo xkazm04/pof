@@ -1,7 +1,9 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
-import { STATUS_WARNING } from '@/lib/chart-colors';
+import { STATUS_WARNING,
+  withOpacity, OPACITY_25,
+} from '@/lib/chart-colors';
 import type { SensitivityResult } from './data';
 
 const SENSITIVITY_ASPECT = 0.4;
@@ -92,7 +94,7 @@ export function SensitivityChart({ result, color }: {
                 stroke={color} strokeDasharray="3 3" strokeWidth={1} strokeOpacity={0.6} />
               <foreignObject x={tooltipOnRight ? hx + 8 : hx - 118}
                 y={Math.min(toY(hp.dps) - 10, pad.t + h - 68)} width={110} height={68}>
-                <div className="bg-surface-1 border border-border rounded px-2 py-1.5 text-2xs font-mono shadow-lg" style={{ borderColor: `${color}40` }}>
+                <div className="bg-surface-1 border border-border rounded px-2 py-1.5 text-2xs font-mono shadow-lg" style={{ borderColor: `${withOpacity(color, OPACITY_25)}` }}>
                   <div className="font-bold mb-0.5" style={{ color }}>{result.attribute}: {hp.value.toFixed(0)}</div>
                   <div className="text-text-muted">DPS: <span className="text-text">{hp.dps.toFixed(1)}</span></div>
                   <div className="text-text-muted">TTK: <span className="text-text">{hp.ttk.toFixed(2)}s</span></div>

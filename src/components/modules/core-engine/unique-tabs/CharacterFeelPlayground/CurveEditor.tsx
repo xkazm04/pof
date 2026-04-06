@@ -2,7 +2,9 @@
 
 import { useState, useCallback, useRef, useMemo } from 'react';
 import { motion } from 'framer-motion';
-import { OPACITY_10, OVERLAY_WHITE } from '@/lib/chart-colors';
+import { OPACITY_6, OPACITY_10, OPACITY_80, OVERLAY_WHITE,
+  withOpacity, OPACITY_50,
+} from '@/lib/chart-colors';
 import { BlueprintPanel, SectionHeader } from '../_design';
 import type { CurvePoint } from './types';
 import { SVG_W, SVG_H, PAD, PLOT_W, PLOT_H } from './types';
@@ -114,14 +116,14 @@ export function CurveEditor({
           const y = PAD.top + (1 - t) * PLOT_H;
           return (
             <line key={`gy-${t}`} x1={PAD.left} y1={y} x2={PAD.left + PLOT_W} y2={y}
-              stroke="rgba(255,255,255,0.06)" strokeWidth="1" />
+              stroke={withOpacity(OVERLAY_WHITE, OPACITY_6)} strokeWidth="1" />
           );
         })}
         {[0, 0.25, 0.5, 0.75, 1].map(t => {
           const x = PAD.left + t * PLOT_W;
           return (
             <line key={`gx-${t}`} x1={x} y1={PAD.top} x2={x} y2={PAD.top + PLOT_H}
-              stroke="rgba(255,255,255,0.06)" strokeWidth="1" />
+              stroke={withOpacity(OVERLAY_WHITE, OPACITY_6)} strokeWidth="1" />
           );
         })}
 
@@ -137,7 +139,7 @@ export function CurveEditor({
 
         {/* Curve */}
         <path d={pathD} fill="none" stroke={color} strokeWidth="2.5"
-          style={{ filter: `drop-shadow(0 0 4px ${color}80)` }} />
+          style={{ filter: `drop-shadow(0 0 4px ${withOpacity(color, OPACITY_50)})` }} />
 
         {/* Control points */}
         {points.map((pt, i) => {
@@ -153,7 +155,7 @@ export function CurveEditor({
               )}
               <circle cx={sp.x} cy={sp.y}
                 r={isDraggable ? (isActive ? 6 : 5) : 3}
-                fill={isDraggable ? color : `${color}80`}
+                fill={isDraggable ? color : `${withOpacity(color, OPACITY_50)}`}
                 stroke={isActive ? OVERLAY_WHITE : 'none'}
                 strokeWidth={isActive ? 2 : 0}
                 style={{
@@ -166,7 +168,7 @@ export function CurveEditor({
               {isActive && (
                 <g>
                   <rect x={sp.x - 28} y={sp.y - 24} width={56} height={16} rx={4}
-                    fill="rgba(0,0,0,0.8)" stroke={color} strokeWidth="0.5" />
+                    fill={`#000000${OPACITY_80}`} stroke={color} strokeWidth="0.5" />
                   <text x={sp.x} y={sp.y - 13} textAnchor="middle"
                     fill={color} className="text-[8px] font-mono font-bold" style={{ fontSize: 8 }}>
                     {pt.x.toFixed(2)}, {pt.y.toFixed(2)}

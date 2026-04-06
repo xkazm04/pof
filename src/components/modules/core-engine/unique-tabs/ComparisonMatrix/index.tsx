@@ -2,7 +2,7 @@
 
 import { Plus, X } from 'lucide-react';
 import { motion } from 'framer-motion';
-import { STATUS_SUCCESS } from '@/lib/chart-colors';
+import { STATUS_SUCCESS, OVERLAY_WHITE, withOpacity, OPACITY_15 } from '@/lib/chart-colors';
 import { BlueprintPanel, SectionHeader, NeonBar } from '../_design';
 import type {
   ComparisonMatrixStat,
@@ -57,7 +57,7 @@ export function ComparisonMatrix({
           onClick={addColumn}
           disabled={!canAdd}
           className="flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-mono uppercase tracking-[0.15em] font-bold border transition-colors hover:brightness-110 disabled:opacity-30 disabled:cursor-not-allowed"
-          style={{ borderColor: 'rgba(255,255,255,0.15)', color: 'var(--text-muted)' }}
+          style={{ borderColor: withOpacity(OVERLAY_WHITE, OPACITY_15), color: 'var(--text-muted)' }}
         >
           <Plus className="w-3 h-3" /> Add Column
         </motion.button>

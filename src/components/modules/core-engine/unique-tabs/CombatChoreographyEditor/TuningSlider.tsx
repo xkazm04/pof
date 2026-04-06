@@ -2,7 +2,9 @@
 
 import { X } from 'lucide-react';
 import { StyledSlider } from '@/components/ui/StyledSlider';
-import { ACCENT_CYAN } from '@/lib/chart-colors';
+import { ACCENT_CYAN,
+  withOpacity, OPACITY_10,
+} from '@/lib/chart-colors';
 
 export function TuningSlider({ label, value, defaultValue = 1.0, onChange, color }: {
   label: string;
@@ -39,7 +41,7 @@ export function TuningSlider({ label, value, defaultValue = 1.0, onChange, color
       {hasDelta && (
         <span
           className="text-xs font-mono font-bold px-1 py-0.5 rounded shrink-0"
-          style={{ color: c, backgroundColor: `${c}15` }}
+          style={{ color: c, backgroundColor: `${withOpacity(c, OPACITY_10)}` }}
         >
           {delta > 0 ? '+' : ''}{delta.toFixed(2)}
         </span>

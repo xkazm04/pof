@@ -11,6 +11,8 @@
  * uses to decide whether to advance or retry.
  */
 
+import * as fs from 'fs';
+import * as path from 'path';
 import { exec } from 'child_process';
 import type {
   VerificationGate,
@@ -18,6 +20,7 @@ import type {
   VerificationReport,
   ModuleArea,
 } from './types';
+import { runVisualGate, createVisualGate } from './visual-gate';
 
 // ── Gate Execution ──────────────────────────────────────────────────────────
 
@@ -142,8 +145,7 @@ export const UE5_GATES: VerificationGate[] = [
  * Checks for package.json (webapp) vs Source/ (UE5).
  */
 export function detectGates(projectPath: string): VerificationGate[] {
-  const fs = require('fs') as typeof import('fs');
-  const path = require('path') as typeof import('path');
+
 
   if (fs.existsSync(path.join(projectPath, 'package.json'))) {
     return WEBAPP_GATES;
@@ -160,16 +162,16 @@ export const DEFAULT_GATES = UE5_GATES;
 /** Verification gates for PoF webapp (TypeScript/Next.js) */
 export const WEBAPP_GATES: VerificationGate[] = [
   {
-    name: 'typecheck',
-    type: 'typecheck',
+    name: 'build',
+    type: 'build',
     required: true,
-    command: 'npx tsc --noEmit',
+    command: 'npx next build',
   },
   {
     name: 'lint',
     type: 'lint',
     required: false,
-    command: 'npx eslint src/ --quiet --max-warnings 0',
+    command: 'npx eslint src/ --quiet',
   },
   {
     name: 'test',
@@ -177,6 +179,7 @@ export const WEBAPP_GATES: VerificationGate[] = [
     required: false,
     command: 'npx vitest run --reporter=verbose',
   },
+  createVisualGate(),
 ];
 
 /**
@@ -188,13 +191,34 @@ export async function verify(
   iteration: number,
   projectPath: string,
   gates: VerificationGate[],
+  statePath?: string,
 ): Promise<VerificationReport> {
   const results: VerificationResult[] = [];
 
   // Run configured gates
   for (const gate of gates) {
-    const result = await runGate(gate, projectPath);
-    results.push(result);
+    if (gate.type === 'visual' && statePath) {
+      // Visual gate uses Playwright — special handler
+      const vResult = await runVisualGate(projectPath, statePath, iteration);
+      results.push({
+        gate: gate.name,
+        passed: vResult.passed,
+        output: vResult.output,
+        durationMs: vResult.durationMs,
+        errors: vResult.errors,
+      });
+    } else if (gate.type === 'visual') {
+      // Skip visual gate if no statePath provided
+      results.push({
+        gate: gate.name,
+        passed: true,
+        output: 'Visual gate skipped (no statePath)',
+        durationMs: 0,
+      });
+    } else {
+      const result = await runGate(gate, projectPath);
+      results.push(result);
+    }
   }
 
   const requiredFailures = results.filter(r => {

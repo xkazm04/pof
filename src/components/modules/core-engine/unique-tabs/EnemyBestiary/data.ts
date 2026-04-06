@@ -1,17 +1,42 @@
-import { Skull, Crosshair, Shield, Swords } from 'lucide-react';
+import { Skull, Crosshair, Shield, Swords, Brain } from 'lucide-react';
+import type { LucideIcon } from 'lucide-react';
 import type { RadarDataPoint } from '@/types/unique-tab-improvements';
 import { ENEMY_ARCHETYPES } from '@/lib/combat/definitions';
 import type { EnemyArchetype } from '@/types/combat-simulator';
+import type { EntityMetadata } from '@/types/game-metadata';
+import { EXPANDED_ARCHETYPES } from './data-expanded';
+export type { BtTreeNode, ExpandedWaveConfig } from './data-expanded';
+export { BT_TREE, EXPANDED_WAVES } from './data-expanded';
 import {
   ACCENT_RED, ACCENT_CYAN, ACCENT_PURPLE, ACCENT_EMERALD,
   STATUS_WARNING, STATUS_INFO, ACCENT_ORANGE, ACCENT_PINK,
-  STATUS_SUCCESS, STATUS_NEUTRAL, STATUS_SUBDUED,
+  STATUS_SUCCESS, STATUS_NEUTRAL,
   MODULE_COLORS, ACCENT_PURPLE_BOLD,
 } from '@/lib/chart-colors';
 
+/* ── Subtab definitions ──────────────────────────────────────────────────── */
+
+export type BestiarySubtab = 'features' | 'archetypes' | 'ai-logic' | 'encounters';
+
+export interface BestiarySubtabDef {
+  key: BestiarySubtab;
+  label: string;
+  icon: LucideIcon;
+  narrative: string;
+  subtitle: string;
+}
+
+export const BESTIARY_SUBTABS: BestiarySubtabDef[] = [
+  { key: 'archetypes', label: 'Archetypes & Stats', icon: Skull, narrative: 'Define Enemies', subtitle: 'Enemy roster, stat blocks, radar comparison & elite modifiers' },
+  { key: 'ai-logic', label: 'AI Logic & Senses', icon: Brain, narrative: 'Give Them Brains', subtitle: 'Behavior trees, perception cones & aggro tables' },
+  { key: 'encounters', label: 'Encounters', icon: Swords, narrative: 'Place in World', subtitle: 'Spawn waves, formations, difficulty curves & tactics' },
+];
+
 /* ── Archetype definitions ─────────────────────────────────────────────── */
 
-export type EnemyRole = 'melee' | 'ranged' | 'tank';
+export type EnemyRole = 'melee' | 'ranged' | 'tank' | 'healer' | 'caster' | 'swarm';
+export type EnemyCategory = 'Humanoid' | 'Beast' | 'Droid' | 'Force-sensitive' | 'Undead';
+export type EnemyTier = 'minion' | 'standard' | 'elite' | 'boss' | 'raid-boss';
 
 export interface ArchetypeConfig {
   id: string;
@@ -20,13 +45,16 @@ export interface ArchetypeConfig {
   color: string;
   class: string;
   role: EnemyRole;
+  category: EnemyCategory;
+  tier: EnemyTier;
+  area: string;
   stats: { label: string; value: number }[];
   abilities: string[];
   btSummary: Record<string, string>;
   featureName: string;
 }
 
-export type GroupBy = 'none' | 'class' | 'role';
+export type GroupBy = 'none' | 'class' | 'role' | 'category' | 'tier' | 'area';
 
 /* ── UI metadata per combat archetype ID ─────────────────────────────── */
 
@@ -35,61 +63,36 @@ interface ArchetypeUIMeta {
   color: string;
   class: string;
   role: EnemyRole;
+  category: EnemyCategory;
+  tier: EnemyTier;
+  area: string;
   btSummary: Record<string, string>;
   featureName: string;
 }
 
 const UI_META: Record<string, ArchetypeUIMeta> = {
   'melee-grunt': {
-    icon: Skull,
-    color: ACCENT_RED,
-    class: 'Warrior',
-    role: 'melee',
-    btSummary: {
-      Idle: 'Stand and look around',
-      Patrol: 'Walk waypoint path',
-      Chase: 'Sprint to player',
-      Attack: 'Melee combo swing',
-    },
+    icon: Skull, color: ACCENT_RED, class: 'Warrior', role: 'melee',
+    category: 'Humanoid', tier: 'minion', area: 'Whisper Woods',
+    btSummary: { Idle: 'Stand and look around', Patrol: 'Walk waypoint path', Chase: 'Sprint to player', Attack: 'Melee combo swing' },
     featureName: 'Enemy archetypes',
   },
   'ranged-caster': {
-    icon: Crosshair,
-    color: ACCENT_PURPLE_BOLD,
-    class: 'Mage',
-    role: 'ranged',
-    btSummary: {
-      Idle: 'Scan for threats',
-      Patrol: 'Float between positions',
-      Chase: 'Maintain safe distance',
-      Attack: 'Cast ranged projectile',
-    },
+    icon: Crosshair, color: ACCENT_PURPLE_BOLD, class: 'Mage', role: 'ranged',
+    category: 'Humanoid', tier: 'standard', area: 'Crystal Caves',
+    btSummary: { Idle: 'Scan for threats', Patrol: 'Float between positions', Chase: 'Maintain safe distance', Attack: 'Cast ranged projectile' },
     featureName: 'Enemy archetypes',
   },
   'brute': {
-    icon: Shield,
-    color: MODULE_COLORS.content,
-    class: 'Tank',
-    role: 'melee',
-    btSummary: {
-      Idle: 'Guard assigned area',
-      Patrol: 'Slow stomp circuit',
-      Chase: 'Charge with knockback',
-      Attack: 'Ground slam AoE',
-    },
+    icon: Shield, color: MODULE_COLORS.content, class: 'Tank', role: 'tank',
+    category: 'Humanoid', tier: 'elite', area: 'Bandit Camp',
+    btSummary: { Idle: 'Guard assigned area', Patrol: 'Slow stomp circuit', Chase: 'Charge with knockback', Attack: 'Ground slam AoE' },
     featureName: 'Enemy archetypes',
   },
   'elite-knight': {
-    icon: Swords,
-    color: MODULE_COLORS.core,
-    class: 'Elite',
-    role: 'melee',
-    btSummary: {
-      Idle: 'Guard post vigilantly',
-      Patrol: 'Precise patrol route',
-      Chase: 'Measured pursuit',
-      Attack: 'Slash and shield bash',
-    },
+    icon: Swords, color: MODULE_COLORS.core, class: 'Elite', role: 'melee',
+    category: 'Humanoid', tier: 'elite', area: 'Ruined Keep',
+    btSummary: { Idle: 'Guard post vigilantly', Patrol: 'Precise patrol route', Chase: 'Measured pursuit', Attack: 'Slash and shield bash' },
     featureName: 'Enemy archetypes',
   },
 };
@@ -131,7 +134,7 @@ function deriveRadar(arch: EnemyArchetype): RadarDataPoint[] {
 
 /* ── Build unified ARCHETYPES from combat source ─────────────────────── */
 
-export const ARCHETYPES: ArchetypeConfig[] = ENEMY_ARCHETYPES
+const DERIVED_ARCHETYPES: ArchetypeConfig[] = ENEMY_ARCHETYPES
   .filter(arch => UI_META[arch.id])
   .map(arch => {
     const meta = UI_META[arch.id];
@@ -142,12 +145,102 @@ export const ARCHETYPES: ArchetypeConfig[] = ENEMY_ARCHETYPES
       color: meta.color,
       class: meta.class,
       role: meta.role,
+      category: meta.category,
+      tier: meta.tier,
+      area: meta.area,
       stats: deriveStats(arch),
       abilities: arch.abilities.map(a => a.name),
       btSummary: meta.btSummary,
       featureName: meta.featureName,
     };
   });
+
+/* ── KOTOR Enemy Archetypes ───────────────────────────────────────────── */
+
+const KOTOR_ARCHETYPES: ArchetypeConfig[] = [
+  {
+    id: 'rakghoul', label: 'Rakghoul', icon: Skull, color: STATUS_SUCCESS,
+    class: 'AARPGEnemy_Rakghoul', role: 'swarm', category: 'Beast', tier: 'minion', area: 'Taris',
+    stats: [{ label: 'HP', value: 20 }, { label: 'ATK', value: 25 }, { label: 'DEF', value: 15 }, { label: 'SPD', value: 65 }, { label: 'INT', value: 8 }],
+    abilities: ['Claw Slash', 'Plague Bite'],
+    btSummary: { Sense: 'Proximity 8m', Attack: 'Swarm target', Special: '25% plague on bite' },
+    featureName: 'Rakghoul Enemy',
+  },
+  {
+    id: 'kinrath', label: 'Kinrath', icon: Skull, color: ACCENT_EMERALD,
+    class: 'AARPGEnemy_Kinrath', role: 'melee', category: 'Beast', tier: 'standard', area: 'Kashyyyk',
+    stats: [{ label: 'HP', value: 35 }, { label: 'ATK', value: 30 }, { label: 'DEF', value: 20 }, { label: 'SPD', value: 70 }, { label: 'INT', value: 10 }],
+    abilities: ['Venomous Sting', 'Burrow Ambush'],
+    btSummary: { Sense: 'Vibration 10m', Attack: 'Sting and retreat', Special: '30% poison on sting' },
+    featureName: 'Kinrath Enemy',
+  },
+  {
+    id: 'kath-hound', label: 'Kath Hound', icon: Skull, color: STATUS_WARNING,
+    class: 'AARPGEnemy_KathHound', role: 'swarm', category: 'Beast', tier: 'minion', area: 'Dantooine',
+    stats: [{ label: 'HP', value: 18 }, { label: 'ATK', value: 20 }, { label: 'DEF', value: 12 }, { label: 'SPD', value: 75 }, { label: 'INT', value: 5 }],
+    abilities: ['Bite', 'Pack Howl'],
+    btSummary: { Sense: 'Scent 12m', Attack: 'Lunge bite', Special: 'Pack howl buffs nearby allies' },
+    featureName: 'Kath Hound Enemy',
+  },
+  {
+    id: 'mandalorian-warrior', label: 'Mandalorian Warrior', icon: Shield, color: ACCENT_CYAN,
+    class: 'AARPGEnemy_MandalorianWarrior', role: 'ranged', category: 'Humanoid', tier: 'elite', area: 'Dxun',
+    stats: [{ label: 'HP', value: 60 }, { label: 'ATK', value: 55 }, { label: 'DEF', value: 55 }, { label: 'SPD', value: 45 }, { label: 'INT', value: 50 }],
+    abilities: ['Blaster Volley', 'Wrist Rocket', 'Power Shield'],
+    btSummary: { Sense: 'Visual 20m', Attack: 'Ranged burst then melee close', Special: 'Activates power shield below 50% HP' },
+    featureName: 'Mandalorian Warrior Enemy',
+  },
+  {
+    id: 'sith-assassin', label: 'Sith Assassin', icon: Swords, color: ACCENT_PURPLE_BOLD,
+    class: 'AARPGEnemy_SithAssassin', role: 'melee', category: 'Force-sensitive', tier: 'elite', area: 'Korriban',
+    stats: [{ label: 'HP', value: 55 }, { label: 'ATK', value: 65 }, { label: 'DEF', value: 35 }, { label: 'SPD', value: 60 }, { label: 'INT', value: 55 }],
+    abilities: ['Double-Bladed Strike', 'Force Cloak', 'Sneak Attack'],
+    btSummary: { Sense: 'Force sense 15m', Attack: 'Stealth approach then burst', Special: 'Force Cloak grants invisibility for 4s' },
+    featureName: 'Sith Assassin Enemy',
+  },
+  {
+    id: 'terentatek', label: 'Terentatek', icon: Skull, color: ACCENT_RED,
+    class: 'AARPGEnemy_Terentatek', role: 'tank', category: 'Beast', tier: 'boss', area: 'Korriban',
+    stats: [{ label: 'HP', value: 90 }, { label: 'ATK', value: 75 }, { label: 'DEF', value: 80 }, { label: 'SPD', value: 30 }, { label: 'INT', value: 15 }],
+    abilities: ['Crushing Slam', 'Venomous Claw', 'Force Resistance'],
+    btSummary: { Sense: 'Force attunement 25m', Attack: 'Charge and slam AoE', Special: 'Immune to Force powers' },
+    featureName: 'Terentatek Boss',
+  },
+  {
+    id: 'war-droid', label: 'War Droid', icon: Shield, color: STATUS_INFO,
+    class: 'AARPGEnemy_WarDroid', role: 'ranged', category: 'Droid', tier: 'standard', area: 'Nar Shaddaa',
+    stats: [{ label: 'HP', value: 45 }, { label: 'ATK', value: 40 }, { label: 'DEF', value: 50 }, { label: 'SPD', value: 35 }, { label: 'INT', value: 20 }],
+    abilities: ['Blaster Barrage', 'Shield Generator', 'Flamethrower'],
+    btSummary: { Sense: 'Sensor array 18m', Attack: 'Sustained blaster fire', Special: 'Shield regenerates 10% every 8s' },
+    featureName: 'War Droid Enemy',
+  },
+  {
+    id: 'wookiee-berserker', label: 'Wookiee Berserker', icon: Swords, color: ACCENT_ORANGE,
+    class: 'AARPGEnemy_WookieeBerserker', role: 'melee', category: 'Humanoid', tier: 'elite', area: 'Kashyyyk',
+    stats: [{ label: 'HP', value: 65 }, { label: 'ATK', value: 70 }, { label: 'DEF', value: 45 }, { label: 'SPD', value: 40 }, { label: 'INT', value: 20 }],
+    abilities: ['Bowcaster Shot', 'Wookiee Rage', 'Crushing Grip'],
+    btSummary: { Sense: 'Hearing 14m', Attack: 'Enraged melee chains', Special: 'Wookiee Rage: +40% damage when below 30% HP' },
+    featureName: 'Wookiee Berserker Enemy',
+  },
+  {
+    id: 'hssiss', label: 'Hssiss', icon: Skull, color: ACCENT_PURPLE,
+    class: 'AARPGEnemy_Hssiss', role: 'melee', category: 'Beast', tier: 'elite', area: 'Malachor V',
+    stats: [{ label: 'HP', value: 55 }, { label: 'ATK', value: 50 }, { label: 'DEF', value: 40 }, { label: 'SPD', value: 55 }, { label: 'INT', value: 30 }],
+    abilities: ['Dark Side Bite', 'Force Camouflage', 'Tail Sweep'],
+    btSummary: { Sense: 'Dark Side aura 12m', Attack: 'Ambush from stealth', Special: 'Force Camouflage makes it invisible near dark side nexus' },
+    featureName: 'Hssiss Enemy',
+  },
+  {
+    id: 'darth-malak', label: 'Darth Malak', icon: Swords, color: ACCENT_PINK,
+    class: 'AARPGEnemy_DarthMalak', role: 'melee', category: 'Force-sensitive', tier: 'raid-boss', area: 'Star Forge',
+    stats: [{ label: 'HP', value: 100 }, { label: 'ATK', value: 95 }, { label: 'DEF', value: 85 }, { label: 'SPD', value: 50 }, { label: 'INT', value: 95 }],
+    abilities: ['Lightsaber Flurry', 'Force Lightning', 'Force Drain', 'Stasis Field'],
+    btSummary: { Sense: 'Force omniscience 30m', Attack: 'Lightsaber combos + Force powers', Special: 'Drains life from captured Jedi to heal' },
+    featureName: 'Darth Malak Boss',
+  },
+];
+
+export const ARCHETYPES: ArchetypeConfig[] = [...DERIVED_ARCHETYPES, ...KOTOR_ARCHETYPES, ...EXPANDED_ARCHETYPES];
 
 /* ── Elite Modifier System ────────────────────────────────────────────── */
 
@@ -356,9 +449,38 @@ export const AI_PIPELINE = [
 export const RADAR_AXES = ['HP', 'Damage', 'Speed', 'Range', 'Aggression', 'Resilience', 'Intelligence'];
 
 /** Radar data for each combat archetype, keyed by archetype id */
-export const RADAR_DATA: Record<string, RadarDataPoint[]> = Object.fromEntries(
+const COMBAT_RADAR_DATA: Record<string, RadarDataPoint[]> = Object.fromEntries(
   ENEMY_ARCHETYPES.filter(a => UI_META[a.id]).map(arch => [arch.id, deriveRadar(arch)]),
 );
+
+/** Role-based range/aggression defaults (normalized 0-1) for stat-derived radar */
+const ROLE_RANGE: Record<EnemyRole, number> = { melee: 0.25, ranged: 0.70, tank: 0.20, healer: 0.55, caster: 0.80, swarm: 0.15 };
+const ROLE_AGGRESSION: Record<EnemyRole, number> = { melee: 0.70, ranged: 0.50, tank: 0.40, healer: 0.25, caster: 0.60, swarm: 0.85 };
+
+/** Derive 7-axis radar from stat array (HP/ATK/DEF/SPD/INT 0-100) */
+function deriveRadarFromStats(arch: ArchetypeConfig): RadarDataPoint[] {
+  const val = (label: string) => (arch.stats.find(s => s.label === label)?.value ?? 0) / 100;
+  const hp = val('HP');
+  const def = val('DEF');
+  return [
+    { axis: 'HP', value: round2(hp) },
+    { axis: 'Damage', value: round2(val('ATK')) },
+    { axis: 'Speed', value: round2(val('SPD')) },
+    { axis: 'Range', value: round2(ROLE_RANGE[arch.role]) },
+    { axis: 'Aggression', value: round2(ROLE_AGGRESSION[arch.role]) },
+    { axis: 'Resilience', value: round2(hp * 0.5 + def * 0.5) },
+    { axis: 'Intelligence', value: round2(val('INT')) },
+  ];
+}
+
+/** Unified radar data covering all archetypes */
+export const RADAR_DATA: Record<string, RadarDataPoint[]> = (() => {
+  const combined: Record<string, RadarDataPoint[]> = { ...COMBAT_RADAR_DATA };
+  for (const arch of ARCHETYPES) {
+    if (!combined[arch.id]) combined[arch.id] = deriveRadarFromStats(arch);
+  }
+  return combined;
+})();
 
 /** Player baseline radar */
 export const RADAR_PLAYER: RadarDataPoint[] = [
@@ -450,15 +572,15 @@ export const DIFFICULTY_BRUTE: DifficultyPoint[] = [
 
 /* ── 5.5 Spawn Wave Choreographer data ───────────────────────────────── */
 
-export interface SpawnPoint { id: number; x: number; y: number; order: number; }
+export interface SpawnPoint { id: number; x: number; y: number; order: number; role?: EnemyRole; color?: string; }
 
 export const SPAWN_POINTS: SpawnPoint[] = [
-  { id: 1, x: 70, y: 15.6, order: 1 },
-  { id: 2, x: 116.7, y: 38.9, order: 2 },
-  { id: 3, x: 116.7, y: 93.3, order: 3 },
-  { id: 4, x: 70, y: 120.6, order: 4 },
-  { id: 5, x: 23.3, y: 93.3, order: 5 },
-  { id: 6, x: 23.3, y: 38.9, order: 6 },
+  { id: 1, x: 70, y: 15.6, order: 1, role: 'melee', color: ACCENT_RED },
+  { id: 2, x: 116.7, y: 38.9, order: 2, role: 'ranged', color: ACCENT_PURPLE_BOLD },
+  { id: 3, x: 116.7, y: 93.3, order: 3, role: 'tank', color: MODULE_COLORS.content },
+  { id: 4, x: 70, y: 120.6, order: 4, role: 'melee', color: ACCENT_RED },
+  { id: 5, x: 23.3, y: 93.3, order: 5, role: 'caster', color: ACCENT_CYAN },
+  { id: 6, x: 23.3, y: 38.9, order: 6, role: 'healer', color: ACCENT_EMERALD },
 ];
 
 export interface WaveConfig { id: number; delay: string; count: number; archetype: string; }
@@ -567,3 +689,58 @@ export const TACTICS_ROLE_COLORS: Record<TacticsEnemy['role'], string> = {
   flanking: MODULE_COLORS.content,
   waiting: STATUS_NEUTRAL,
 };
+
+/* ── Entity Metadata ─────────────────────────────────────────────────────── */
+
+const TIER_DISPLAY: Record<string, string> = {
+  'minion': 'Minion', 'standard': 'Standard', 'elite': 'Elite', 'boss': 'Boss', 'raid-boss': 'Raid-Boss',
+};
+
+export const ENEMY_METADATA: EntityMetadata[] = ARCHETYPES.map(arch => ({
+  id: arch.id,
+  name: arch.label,
+  category: arch.category,
+  subcategory: arch.class,
+  tags: [
+    arch.role,
+    arch.category.toLowerCase(),
+    ...arch.abilities.map(a => a.toLowerCase().replace(/\s+/g, '-')),
+  ],
+  tier: TIER_DISPLAY[arch.tier] ?? arch.tier,
+  area: arch.area,
+}));
+
+/* ── Tier glow colors for archetype cards ────────────────────────────── */
+
+export const TIER_GLOW_COLORS: Record<EnemyTier, string> = {
+  'minion': STATUS_NEUTRAL,
+  'standard': STATUS_INFO,
+  'elite': ACCENT_PURPLE_BOLD,
+  'boss': ACCENT_ORANGE,
+  'raid-boss': STATUS_WARNING,
+};
+
+/* ── Precomputed stat averages across all archetypes ─────────────────── */
+
+export const STAT_AVERAGES: Record<string, number> = (() => {
+  const sums: Record<string, { total: number; count: number }> = {};
+  for (const arch of ARCHETYPES) {
+    for (const stat of arch.stats) {
+      if (!sums[stat.label]) sums[stat.label] = { total: 0, count: 0 };
+      sums[stat.label].total += stat.value;
+      sums[stat.label].count += 1;
+    }
+  }
+  return Object.fromEntries(
+    Object.entries(sums).map(([label, { total, count }]) => [label, Math.round(total / count)])
+  );
+})();
+
+/** All unique areas across all archetypes. */
+export const ALL_AREAS = [...new Set(ARCHETYPES.map(a => a.area))].sort();
+/** All unique categories across all archetypes. */
+export const ALL_CATEGORIES: ArchetypeConfig['category'][] = ['Humanoid', 'Beast', 'Droid', 'Force-sensitive', 'Undead'];
+/** All unique tiers across all archetypes. */
+export const ALL_TIERS: ArchetypeConfig['tier'][] = ['minion', 'standard', 'elite', 'boss', 'raid-boss'];
+/** All unique roles across all archetypes. */
+export const ALL_ROLES: ArchetypeConfig['role'][] = ['melee', 'ranged', 'tank', 'healer', 'caster', 'swarm'];

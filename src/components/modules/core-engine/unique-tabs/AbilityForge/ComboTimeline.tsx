@@ -1,6 +1,7 @@
 'use client';
 
 import { Timer } from 'lucide-react';
+import { OVERLAY_WHITE, OPACITY_3, OPACITY_4, OPACITY_6, OPACITY_20, withOpacity } from '@/lib/chart-colors';
 import { SectionHeader } from '../_design';
 import { ACCENT, DAMAGE_TYPE_COLORS } from './constants';
 import type { ForgedAbility } from '@/lib/prompts/ability-forge';
@@ -26,12 +27,12 @@ export function ComboTimeline({ ability }: { ability: ForgedAbility }) {
 
       <div
         className="relative h-10 rounded-lg overflow-hidden"
-        style={{ background: 'rgba(255,255,255,0.03)' }}
+        style={{ background: withOpacity(OVERLAY_WHITE, OPACITY_3) }}
       >
         {/* Startup phase */}
         <div
           className="absolute inset-y-0 rounded-l-lg"
-          style={{ left: 0, width: `${startPct}%`, background: 'rgba(255,255,255,0.06)' }}
+          style={{ left: 0, width: `${startPct}%`, background: withOpacity(OVERLAY_WHITE, OPACITY_6) }}
         />
         {/* Damage window */}
         <div
@@ -39,7 +40,7 @@ export function ComboTimeline({ ability }: { ability: ForgedAbility }) {
           style={{
             left: `${startPct}%`,
             width: `${endPct - startPct}%`,
-            background: `${dmgColor}33`,
+            background: withOpacity(dmgColor, OPACITY_20),
             borderLeft: `2px solid ${dmgColor}`,
             borderRight: `2px solid ${dmgColor}`,
           }}
@@ -50,7 +51,7 @@ export function ComboTimeline({ ability }: { ability: ForgedAbility }) {
           style={{
             left: `${recoveryStart}%`,
             width: `${Math.min(recoveryEnd, 100) - recoveryStart}%`,
-            background: 'rgba(255,255,255,0.04)',
+            background: withOpacity(OVERLAY_WHITE, OPACITY_4),
           }}
         />
 

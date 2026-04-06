@@ -1,10 +1,11 @@
 'use client';
 
-import { useState, useMemo, useCallback, useRef } from 'react';
+import { useState, useMemo, useCallback, useRef, useEffect } from 'react';
 import { AlertTriangle } from 'lucide-react';
 import {
   STATUS_ERROR, STATUS_WARNING, STATUS_INFO,
   ACCENT_CYAN, ACCENT_EMERALD,
+  OVERLAY_WHITE, withOpacity, OPACITY_25, OPACITY_22, OPACITY_12, OPACITY_30, OPACITY_40, OPACITY_50, OPACITY_60, GLOW_SM,
 } from '@/lib/chart-colors';
 import type { DamageEvent, FeedbackEvent, WaveDef } from '@/lib/combat/choreography-sim';
 import {
@@ -29,6 +30,16 @@ export function UnifiedTimeline({
   const wrapperRef = useRef<HTMLDivElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const [hover, setHover] = useState<HoverState | null>(null);
+  const [wrapperWidth, setWrapperWidth] = useState(600);
+
+  useEffect(() => {
+    const el = wrapperRef.current;
+    if (!el) return;
+    const observer = new ResizeObserver(() => setWrapperWidth(el.offsetWidth));
+    observer.observe(el);
+    setWrapperWidth(el.offsetWidth);
+    return () => observer.disconnect();
+  }, []);
 
   const duration = Math.max(totalDuration, 5);
   const pxPerSec = 40;
@@ -116,7 +127,7 @@ export function UnifiedTimeline({
           displayTime={displayTime}
           scrubData={scrubData}
           tooltipLeft={hover.tooltipLeft}
-          containerWidth={wrapperRef.current?.offsetWidth ?? 600}
+          containerWidth={wrapperWidth}
         />
       )}
 
@@ -153,8 +164,8 @@ export function UnifiedTimeline({
               ))}
               <svg className="absolute inset-0" width={totalWidth} height={LANE_PACING_H}
                 viewBox={`0 0 ${totalWidth} ${LANE_PACING_H}`} preserveAspectRatio="none">
-                {playerPath && <path d={playerPath} fill={`${ACCENT_EMERALD}40`} stroke={ACCENT_EMERALD} strokeWidth="1.5" />}
-                {enemyPath && <path d={enemyPath} fill={`${STATUS_ERROR}35`} stroke={STATUS_ERROR} strokeWidth="1.5" />}
+                {playerPath && <path d={playerPath} fill={`${withOpacity(ACCENT_EMERALD, OPACITY_25)}`} stroke={ACCENT_EMERALD} strokeWidth="1.5" />}
+                {enemyPath && <path d={enemyPath} fill={`${withOpacity(STATUS_ERROR, OPACITY_22)}`} stroke={STATUS_ERROR} strokeWidth="1.5" />}
               </svg>
               {waves.map((w, i) => (
                 <div key={i} className="absolute top-0 h-full flex flex-col items-center pointer-events-none" style={{ left: w.spawnTimeSec * pxPerSec }}>
@@ -177,7 +188,7 @@ export function UnifiedTimeline({
                 const h = Math.min(24, 6 + (evt.damage / 20));
                 return (
                   <div key={i} className="absolute bottom-0.5 rounded-t"
-                    style={{ left: x - 1, width: 3, height: h, backgroundColor: color, opacity: evt.isCrit ? 1 : 0.7, boxShadow: evt.isCrit ? `0 0 4px ${color}` : 'none' }}
+                    style={{ left: x - 1, width: 3, height: h, backgroundColor: color, opacity: evt.isCrit ? 1 : 0.7, boxShadow: evt.isCrit ? `${GLOW_SM} ${color}` : 'none' }}
                     title={`${evt.timeSec}s: ${evt.source} \u2192 ${evt.target} (${evt.abilityName}) ${evt.damage}${evt.isCrit ? ' CRIT' : ''}`}
                   />
                 );
@@ -194,7 +205,7 @@ export function UnifiedTimeline({
                     <div key={i} className="absolute top-0 flex items-center justify-center" style={{ left: x - 8, width: 16, height: LANE_ALERT_H }}>
                       <div className="absolute top-0 h-full w-px opacity-30" style={{ backgroundColor: color }} />
                       <div className="relative z-10 flex items-center justify-center rounded-full"
-                        style={{ width: 14, height: 14, backgroundColor: `${color}20`, border: `1.5px solid ${color}`, boxShadow: `0 0 6px ${color}40` }}>
+                        style={{ width: 14, height: 14, backgroundColor: `${withOpacity(color, OPACITY_12)}`, border: `1.5px solid ${color}`, boxShadow: `0 0 6px ${withOpacity(color, OPACITY_25)}` }}>
                         <AlertTriangle className="w-2 h-2" style={{ color }} />
                       </div>
                     </div>
@@ -210,7 +221,7 @@ export function UnifiedTimeline({
                 <div key={ch.type} className="relative bg-black/20 rounded border border-border/10" style={{ height: LANE_FEEDBACK_H }}>
                   {channelEvents.map((evt, i) => (
                     <div key={i} className="absolute top-0.5 rounded-sm"
-                      style={{ left: evt.timeSec * pxPerSec, width: Math.max(3, evt.durationSec * pxPerSec), height: 10, backgroundColor: `${ch.color}50`, border: `1px solid ${ch.color}80` }}
+                      style={{ left: evt.timeSec * pxPerSec, width: Math.max(3, evt.durationSec * pxPerSec), height: 10, backgroundColor: `${withOpacity(ch.color, OPACITY_30)}`, border: `1px solid ${withOpacity(ch.color, OPACITY_50)}` }}
                       title={evt.label} />
                   ))}
                 </div>
@@ -227,13 +238,13 @@ export function UnifiedTimeline({
             {/* Scrub head */}
             <div className="absolute top-0 pointer-events-none z-20" style={{ left: scrubX, height: `calc(100% - 14px)` }}>
               <div className="w-px h-full bg-white" />
-              <div className="absolute -top-0.5 left-1/2 -translate-x-1/2 w-2 h-2 rounded-full bg-white" style={{ boxShadow: '0 0 6px rgba(255,255,255,0.6)' }} />
+              <div className="absolute -top-0.5 left-1/2 -translate-x-1/2 w-2 h-2 rounded-full bg-white" style={{ boxShadow: `0 0 6px ${withOpacity(OVERLAY_WHITE, OPACITY_60)}` }} />
             </div>
 
             {/* Hover line */}
             {hoverX !== null && Math.abs(hoverX - scrubX) > 2 && (
               <div className="absolute top-0 pointer-events-none z-20" style={{ left: hoverX, height: `calc(100% - 14px)` }}>
-                <div className="w-px h-full" style={{ backgroundColor: 'rgba(255,255,255,0.4)' }} />
+                <div className="w-px h-full" style={{ backgroundColor: withOpacity(OVERLAY_WHITE, OPACITY_40) }} />
                 <div className="absolute -top-0.5 left-1/2 -translate-x-1/2 w-1.5 h-1.5 rotate-45 bg-white/60" />
               </div>
             )}

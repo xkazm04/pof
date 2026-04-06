@@ -58,7 +58,21 @@ export function WeeklyDigestView() {
     setLoading(false);
   }, [checklistCompleted]);
 
-  useEffect(() => { fetchDigest(); }, [fetchDigest]);
+  useEffect(() => {
+    let cancelled = false;
+    async function load() {
+      try {
+        const data = await apiFetch<{ digest: WeeklyDigest }>('/api/weekly-digest');
+        if (cancelled) return;
+        const d = data.digest;
+        d.checklistCompleted = checklistCompleted;
+        setDigest(d);
+      } catch { /* ignore */ }
+      if (!cancelled) setLoading(false);
+    }
+    load();
+    return () => { cancelled = true; };
+  }, [checklistCompleted]);
 
   // ── Copy as Markdown ──
   const handleCopy = useCallback(async () => {

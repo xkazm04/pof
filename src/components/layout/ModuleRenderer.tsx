@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef } from 'react';
+import { useState } from 'react';
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import { useNavigationStore } from '@/stores/navigationStore';
 import { CATEGORY_MAP, SUB_MODULE_MAP, MODULE_LABELS } from '@/lib/module-registry';
@@ -122,13 +122,12 @@ const SPECIAL_CATEGORIES: Record<string, React.ComponentType> = {
  * exceeds `cap`, the tail (least-recently-used) entry is evicted.
  * Mutates `list` in place and returns true if the list changed.
  */
-function lruTouch(list: string[], id: string, cap: number): boolean {
-  const idx = list.indexOf(id);
-  if (idx === 0) return false; // already MRU — no change
-  if (idx > 0) list.splice(idx, 1); // remove from old position
-  list.unshift(id); // push to front
-  if (list.length > cap) list.pop(); // evict LRU
-  return true;
+function lruTouched(list: string[], id: string, cap: number): string[] | null {
+  if (list[0] === id) return null; // already MRU — no change
+  const next = list.filter(x => x !== id);
+  next.unshift(id);
+  if (next.length > cap) next.pop();
+  return next;
 }
 
 export function ModuleRenderer() {
@@ -138,8 +137,8 @@ export function ModuleRenderer() {
 
   // LRU list stored in a ref — mutations happen during render before JSX evaluation,
   // and navigation store changes already trigger re-renders.
-  const moduleLru = useRef<string[]>([]);
-  const sessionLru = useRef<string[]>([]);
+  const [moduleLru, setModuleLru] = useState<string[]>([]);
+  const [sessionLru, setSessionLru] = useState<string[]>([]);
 
   const activeModuleId = useActiveModuleId();
 
@@ -153,17 +152,18 @@ export function ModuleRenderer() {
       ? maximizedTabId
       : null;
 
-  // Track visited modules with LRU eviction.
-  // Navigation store changes trigger re-renders, so mutating the ref here is
-  // picked up by the JSX below in the same render pass.
+  // Track visited modules with LRU eviction (render-time state adjustment).
   if (activeSubModule) {
-    lruTouch(moduleLru.current, activeSubModule, LRU_CAP);
+    const next = lruTouched(moduleLru, activeSubModule, LRU_CAP);
+    if (next) setModuleLru(next);
   }
   if (activeCategory && SPECIAL_CATEGORIES[activeCategory]) {
-    lruTouch(moduleLru.current, activeCategory, LRU_CAP);
+    const next = lruTouched(moduleLru, activeCategory, LRU_CAP);
+    if (next) setModuleLru(next);
   }
   if (inlineSessionId) {
-    lruTouch(sessionLru.current, inlineSessionId, SESSION_LRU_CAP);
+    const next = lruTouched(sessionLru, inlineSessionId, SESSION_LRU_CAP);
+    if (next) setSessionLru(next);
   }
 
   // Determine what to render
@@ -171,14 +171,13 @@ export function ModuleRenderer() {
   const hasActiveContent = isSpecialCategory || activeSubModule;
 
   // Track module switches to trigger entrance animations (must be before early return)
-  const prevActiveRef = useRef<string | null>(null);
-  const switchCountRef = useRef(0);
+  const [prevActiveId, setPrevActiveId] = useState<string | null>(null);
+  const [switchKey, setSwitchKey] = useState(0);
   const currentActiveId = isSpecialCategory ? activeCategory : activeSubModule;
-  if (currentActiveId !== prevActiveRef.current) {
-    switchCountRef.current += 1;
-    prevActiveRef.current = currentActiveId ?? null;
+  if (currentActiveId !== prevActiveId) {
+    setPrevActiveId(currentActiveId ?? null);
+    setSwitchKey(k => k + 1);
   }
-  const switchKey = switchCountRef.current;
 
   // Welcome / empty state
   if (!hasActiveContent) {
@@ -204,7 +203,7 @@ export function ModuleRenderer() {
     <div className="flex-1 flex flex-col overflow-hidden">
       {/* Scrollable module content */}
       <div className="flex-1 overflow-y-auto min-h-0 relative">
-        {moduleLru.current.map((moduleId) => {
+        {moduleLru.map((moduleId) => {
           // Special category modules
           if (SPECIAL_CATEGORIES[moduleId]) {
             const SpecialComponent = SPECIAL_CATEGORIES[moduleId];
@@ -275,7 +274,7 @@ export function ModuleRenderer() {
       </div>
 
       {/* Inline terminals — LRU keep-alive: toggle visibility via display */}
-      {sessionLru.current.map((sessionId) => {
+      {sessionLru.map((sessionId) => {
         const isVisible = sessionId === inlineSessionId;
         return (
           <div

@@ -3,7 +3,9 @@
 import { useState, useCallback } from 'react';
 import { Code2, Copy, Check } from 'lucide-react';
 import { motion } from 'framer-motion';
-import { STATUS_SUCCESS } from '@/lib/chart-colors';
+import { STATUS_SUCCESS,
+  withOpacity, OPACITY_30, OPACITY_25, OPACITY_10, OPACITY_8,
+} from '@/lib/chart-colors';
 import { ACCENT } from './field-data';
 
 /* ── Code Preview Modal ────────────────────────────────────────────────── */
@@ -45,8 +47,8 @@ export function CodePreview({ code, title, onClose }: {
             onClick={handleCopy}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold border transition-colors"
             style={{
-              borderColor: copied ? `${STATUS_SUCCESS}50` : `${ACCENT}40`,
-              backgroundColor: copied ? `${STATUS_SUCCESS}15` : `${ACCENT}10`,
+              borderColor: copied ? `${withOpacity(STATUS_SUCCESS, OPACITY_30)}` : `${withOpacity(ACCENT, OPACITY_25)}`,
+              backgroundColor: copied ? `${withOpacity(STATUS_SUCCESS, OPACITY_10)}` : `${withOpacity(ACCENT, OPACITY_8)}`,
               color: copied ? STATUS_SUCCESS : ACCENT,
             }}
           >

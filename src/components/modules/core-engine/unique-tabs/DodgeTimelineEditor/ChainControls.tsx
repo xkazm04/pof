@@ -2,7 +2,9 @@
 
 import { Plus, Trash2 } from 'lucide-react';
 import { Zap } from 'lucide-react';
-import { ACCENT_EMERALD } from '@/lib/chart-colors';
+import { ACCENT_EMERALD, OVERLAY_WHITE,
+  withOpacity, OPACITY_25, OPACITY_8,
+} from '@/lib/chart-colors';
 import type { DodgeChainEntry } from '../dodge-types';
 import { BlueprintPanel, SectionHeader } from '../_design';
 import { DodgeChainTimeline } from './DodgeChainTimeline';
@@ -38,8 +40,8 @@ export function ChainControls({
               onClick={() => { onSetChainMode(true); onBuildChain(n); }}
               className="px-2 py-1 rounded text-xs font-mono font-bold border transition-colors"
               style={{
-                borderColor: chain.length === n && chainMode ? `${ACCENT_EMERALD}40` : 'rgba(255,255,255,0.08)',
-                backgroundColor: chain.length === n && chainMode ? `${ACCENT_EMERALD}10` : 'transparent',
+                borderColor: chain.length === n && chainMode ? `${withOpacity(ACCENT_EMERALD, OPACITY_25)}` : withOpacity(OVERLAY_WHITE, OPACITY_8),
+                backgroundColor: chain.length === n && chainMode ? `${withOpacity(ACCENT_EMERALD, OPACITY_8)}` : 'transparent',
                 color: chain.length === n && chainMode ? ACCENT_EMERALD : 'var(--text-muted)',
               }}
             >
@@ -49,7 +51,7 @@ export function ChainControls({
           <button
             onClick={() => { if (chainMode) onAddDodge(); else { onSetChainMode(true); onBuildChain(1); } }}
             className="flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-bold border transition-colors"
-            style={{ borderColor: `${ACCENT_EMERALD}40`, backgroundColor: `${ACCENT_EMERALD}10`, color: ACCENT_EMERALD }}
+            style={{ borderColor: `${withOpacity(ACCENT_EMERALD, OPACITY_25)}`, backgroundColor: `${withOpacity(ACCENT_EMERALD, OPACITY_8)}`, color: ACCENT_EMERALD }}
           >
             <Plus className="w-3 h-3" />
           </button>

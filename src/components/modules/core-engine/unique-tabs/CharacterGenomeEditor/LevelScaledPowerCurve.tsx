@@ -2,7 +2,9 @@
 
 import { useState, useMemo, useCallback, useRef } from 'react';
 import { TrendingUp } from 'lucide-react';
-import { ACCENT_VIOLET, STATUS_SUCCESS } from '@/lib/chart-colors';
+import { ACCENT_VIOLET, STATUS_SUCCESS, OVERLAY_WHITE,
+  withOpacity, OPACITY_6, OPACITY_10, OPACITY_12, OPACITY_25, OPACITY_30, OPACITY_15, OPACITY_5, OPACITY_8, OPACITY_50, OPACITY_37, OPACITY_80, OPACITY_90,
+} from '@/lib/chart-colors';
 import { BlueprintPanel, SectionHeader, NeonBar } from '../_design';
 import type { CharacterGenome } from '@/types/character-genome';
 import type { PowerCurveStat } from './types';
@@ -83,7 +85,7 @@ export function LevelScaledPowerCurve({ genomes, activeId }: {
       <div className="space-y-3">
         <div className="flex items-center justify-between">
           <SectionHeader icon={TrendingUp} label="Level-Scaled Power Curve" color={ACCENT_VIOLET} />
-          <span className="text-xs font-mono font-bold px-2 py-0.5 rounded" style={{ backgroundColor: `${tabInfo.color}15`, color: tabInfo.color }}>
+          <span className="text-xs font-mono font-bold px-2 py-0.5 rounded" style={{ backgroundColor: `${withOpacity(tabInfo.color, OPACITY_10)}`, color: tabInfo.color }}>
             Lv.{displayLevel}
           </span>
         </div>
@@ -93,27 +95,27 @@ export function LevelScaledPowerCurve({ genomes, activeId }: {
             <button key={s.key} onClick={() => setSelectedStat(s.key)}
               className="px-2.5 py-1 rounded-lg text-xs font-bold transition-all duration-200"
               style={{
-                backgroundColor: selectedStat === s.key ? `${s.color}20` : 'transparent',
+                backgroundColor: selectedStat === s.key ? `${withOpacity(s.color, OPACITY_12)}` : 'transparent',
                 color: selectedStat === s.key ? s.color : 'var(--text-muted)',
-                border: `1px solid ${selectedStat === s.key ? `${s.color}50` : 'rgba(255,255,255,0.08)'}`,
+                border: `1px solid ${selectedStat === s.key ? withOpacity(s.color, OPACITY_30) : withOpacity(OVERLAY_WHITE, OPACITY_8)}`,
               }}>
               {s.label}
             </button>
           ))}
         </div>
 
-        <div className="w-full overflow-hidden rounded-lg bg-surface-deep/50 border" style={{ borderColor: `${ACCENT_VIOLET}25` }}>
+        <div className="w-full overflow-hidden rounded-lg bg-surface-deep/50 border" style={{ borderColor: `${withOpacity(ACCENT_VIOLET, OPACITY_15)}` }}>
           <svg ref={chartRef} viewBox={`0 0 ${PC_W} ${PC_H}`} className="w-full" style={{ height: 'auto' }}
             onMouseMove={handleMouseMove} onMouseLeave={() => setHoverLevel(null)}>
             <g transform={`translate(${PC_M.l},${PC_M.t})`}>
               {yTicks.map((tick) => (
                 <g key={tick}>
-                  <line x1={0} y1={yScale(tick)} x2={PC_PW} y2={yScale(tick)} stroke="rgba(255,255,255,0.06)" strokeWidth={0.5} />
-                  <text x={-8} y={yScale(tick) + 3} textAnchor="end" fill="rgba(255,255,255,0.35)" fontSize={9} fontFamily="monospace">{fmtTick(tick)}</text>
+                  <line x1={0} y1={yScale(tick)} x2={PC_PW} y2={yScale(tick)} stroke={withOpacity(OVERLAY_WHITE, OPACITY_6)} strokeWidth={0.5} />
+                  <text x={-8} y={yScale(tick) + 3} textAnchor="end" fill={withOpacity(OVERLAY_WHITE, OPACITY_37)} fontSize={9} fontFamily="monospace">{fmtTick(tick)}</text>
                 </g>
               ))}
               {[1, 25, 50, 75, 100].map((l) => (
-                <text key={l} x={xScale(l)} y={PC_PH + 18} textAnchor="middle" fill="rgba(255,255,255,0.35)" fontSize={9} fontFamily="monospace">{l}</text>
+                <text key={l} x={xScale(l)} y={PC_PH + 18} textAnchor="middle" fill={withOpacity(OVERLAY_WHITE, OPACITY_37)} fontSize={9} fontFamily="monospace">{l}</text>
               ))}
               {paths.map((p) => (
                 <path key={p.id} d={p.d} fill="none" stroke={p.color} strokeWidth={p.id === activeId ? 2.5 : 1.5} strokeOpacity={p.id === activeId ? 1 : 0.6} strokeLinecap="round" />
@@ -122,21 +124,21 @@ export function LevelScaledPowerCurve({ genomes, activeId }: {
                 const cx = xScale(cp.level), cy = yScale(cp.value);
                 return (
                   <g key={i}>
-                    <circle cx={cx} cy={cy} r={5} fill="rgba(0,0,0,0.5)" stroke="rgba(255,255,255,0.9)" strokeWidth={1.5} />
-                    <text x={cx} y={cy - 9} textAnchor="middle" fill="rgba(255,255,255,0.7)" fontSize={8} fontFamily="monospace" fontWeight="bold">Lv.{Math.round(cp.level)}</text>
+                    <circle cx={cx} cy={cy} r={5} fill={`#000000${OPACITY_50}`} stroke={withOpacity(OVERLAY_WHITE, OPACITY_90)} strokeWidth={1.5} />
+                    <text x={cx} y={cy - 9} textAnchor="middle" fill={withOpacity(OVERLAY_WHITE, OPACITY_80)} fontSize={8} fontFamily="monospace" fontWeight="bold">Lv.{Math.round(cp.level)}</text>
                   </g>
                 );
               })}
-              <line x1={xScale(displayLevel)} y1={0} x2={xScale(displayLevel)} y2={PC_PH} stroke="rgba(255,255,255,0.25)" strokeWidth={1} strokeDasharray="3,3" />
+              <line x1={xScale(displayLevel)} y1={0} x2={xScale(displayLevel)} y2={PC_PH} stroke={withOpacity(OVERLAY_WHITE, OPACITY_25)} strokeWidth={1} strokeDasharray="3,3" />
               {genomes.map((g) => (
                 <circle key={g.id} cx={xScale(displayLevel)} cy={yScale(getScaledStat(g, selectedStat, displayLevel))}
-                  r={g.id === activeId ? 4 : 3} fill={g.color} stroke="rgba(0,0,0,0.3)" strokeWidth={1} />
+                  r={g.id === activeId ? 4 : 3} fill={g.color} stroke={`#000000${OPACITY_30}`} strokeWidth={1} />
               ))}
             </g>
           </svg>
         </div>
 
-        <div className="flex items-center gap-3 px-3 py-2 rounded-lg bg-surface-deep/50 border" style={{ borderColor: `${ACCENT_VIOLET}25` }}>
+        <div className="flex items-center gap-3 px-3 py-2 rounded-lg bg-surface-deep/50 border" style={{ borderColor: `${withOpacity(ACCENT_VIOLET, OPACITY_15)}` }}>
           <span className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted w-10">Lv.</span>
           <div className="flex-1 relative h-5 flex items-center">
             <div className="absolute inset-x-0 h-1.5 bg-surface rounded-full" />
@@ -153,25 +155,25 @@ export function LevelScaledPowerCurve({ genomes, activeId }: {
         <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-1.5">
           {levelStats.map(({ id, name, color, value, isActive }, idx) => (
             <div key={id} className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg border transition-colors"
-              style={{ borderColor: isActive ? `${color}50` : `${color}08`, backgroundColor: isActive ? `${color}10` : 'transparent' }}>
+              style={{ borderColor: isActive ? `${withOpacity(color, OPACITY_30)}` : `${withOpacity(color, OPACITY_5)}`, backgroundColor: isActive ? `${withOpacity(color, OPACITY_8)}` : 'transparent' }}>
               <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: color }} />
-              <span className="text-xs font-mono font-bold truncate" style={{ color, textShadow: `0 0 12px ${color}40` }}>{name}</span>
+              <span className="text-xs font-mono font-bold truncate" style={{ color, textShadow: `0 0 12px ${withOpacity(color, OPACITY_25)}` }}>{name}</span>
               <span className="ml-auto text-xs font-mono font-bold text-text whitespace-nowrap">{fmtVal(value)}</span>
               {idx === 0 && levelStats.length > 1 && (
-                <span className="text-xs font-bold px-1 py-0.5 rounded" style={{ backgroundColor: `${STATUS_SUCCESS}15`, color: STATUS_SUCCESS }}>#1</span>
+                <span className="text-xs font-bold px-1 py-0.5 rounded" style={{ backgroundColor: `${withOpacity(STATUS_SUCCESS, OPACITY_10)}`, color: STATUS_SUCCESS }}>#1</span>
               )}
             </div>
           ))}
         </div>
 
         {crossovers.length > 0 && (
-          <div className="pt-2 border-t" style={{ borderColor: `${ACCENT_VIOLET}20` }}>
+          <div className="pt-2 border-t" style={{ borderColor: `${withOpacity(ACCENT_VIOLET, OPACITY_12)}` }}>
             <span className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted">Crossover Points</span>
             <div className="flex flex-wrap gap-1.5 mt-1.5">
               {crossovers.map((cp, i) => (
                 <button key={i} onClick={() => setPreviewLevel(Math.round(cp.level))}
                   className="flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-mono border bg-surface-deep/50 hover:bg-surface/30 transition-colors"
-                  style={{ borderColor: `${ACCENT_VIOLET}25` }}>
+                  style={{ borderColor: `${withOpacity(ACCENT_VIOLET, OPACITY_15)}` }}>
                   <span className="font-bold text-text">Lv.{Math.round(cp.level)}</span>
                   <span className="text-text-muted">{'\u2014'}</span>
                   <span style={{ color: cp.colorA }}>{cp.nameA}</span>

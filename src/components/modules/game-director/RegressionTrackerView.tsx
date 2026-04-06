@@ -68,7 +68,27 @@ export function RegressionTrackerView() {
     setLoading(false);
   }, []);
 
-  useEffect(() => { refresh(); }, [refresh]);
+  useEffect(() => {
+    let cancelled = false;
+    async function load() {
+      try {
+        const [fpData, alertData, statData, sessData] = await Promise.all([
+          apiFetch<FindingFingerprint[]>('/api/regression-tracker?action=fingerprints'),
+          apiFetch<RegressionAlert[]>('/api/regression-tracker?action=alerts'),
+          apiFetch<{ totalTracked: number; openCount: number; fixedCount: number; regressedCount: number; resolvedCount: number; activeAlerts: number; regressionRate: number }>('/api/regression-tracker?action=stats'),
+          apiFetch<PlaytestSession[]>('/api/regression-tracker?action=sessions'),
+        ]);
+        if (cancelled) return;
+        setFingerprints(fpData);
+        setAlerts(alertData);
+        setStats(statData);
+        setSessions(sessData);
+      } catch { /* ignore */ }
+      if (!cancelled) setLoading(false);
+    }
+    load();
+    return () => { cancelled = true; };
+  }, []);
 
   const handleProcess = useCallback(async () => {
     if (!selectedSessionId) return;
@@ -203,15 +223,15 @@ function DashboardTab({
   lastReport: RegressionReport | null;
   fingerprints: FindingFingerprint[];
 }) {
-  if (!stats) return null;
-
-  const ratePercent = Math.round(stats.regressionRate * 100);
-
   // Top offenders: fingerprints with most regressions
   const topOffenders = useMemo(
     () => [...fingerprints].filter(f => f.regressionCount > 0).sort((a, b) => b.regressionCount - a.regressionCount).slice(0, 5),
     [fingerprints],
   );
+
+  if (!stats) return null;
+
+  const ratePercent = Math.round(stats.regressionRate * 100);
 
   return (
     <div className="space-y-4">

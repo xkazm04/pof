@@ -2,7 +2,11 @@
 
 import { Plus, GripVertical } from 'lucide-react';
 import { motion } from 'framer-motion';
-import { STATUS_SUCCESS } from '@/lib/chart-colors';
+import {
+  STATUS_SUCCESS,
+  OPACITY_8, OPACITY_10, OPACITY_12, OPACITY_15, OPACITY_20, OPACITY_25, OPACITY_30,
+  withOpacity,
+} from '@/lib/chart-colors';
 import { BlueprintPanel, SectionHeader, NeonBar } from '../_design';
 import { ACCENT } from './constants';
 import { RARITY_COLORS } from './data';
@@ -41,9 +45,10 @@ export function AffixPoolPanel({
       <p className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted">
         Drag affixes onto the item or click <Plus className="w-2.5 h-2.5 inline" /> to add.
         {maxAffixes > 0 && (
-          <span className="ml-1 font-mono" style={{ color: rarityColor, textShadow: `0 0 12px ${rarityColor}40` }}>
+          <span className="ml-1 font-mono" style={{ color: rarityColor, textShadow: `0 0 12px ${withOpacity(rarityColor, OPACITY_25)}` }}>
             ({craftedAffixCount}/{maxAffixes})
           </span>
+
         )}
       </p>
 
@@ -53,9 +58,9 @@ export function AffixPoolPanel({
           <button key={cat} onClick={() => setPoolFilter(cat)}
             className="flex-1 px-2 py-1 rounded text-xs font-mono uppercase tracking-[0.15em] capitalize transition-all"
             style={{
-              backgroundColor: poolFilter === cat ? `${ACCENT}20` : 'transparent',
+              backgroundColor: poolFilter === cat ? withOpacity(ACCENT, OPACITY_12) : 'transparent',
               color: poolFilter === cat ? ACCENT : 'var(--text-muted)',
-              border: `1px solid ${poolFilter === cat ? `${ACCENT}50` : `${ACCENT}25`}`,
+              border: `1px solid ${poolFilter === cat ? withOpacity(ACCENT, OPACITY_30) : withOpacity(ACCENT, OPACITY_15)}`,
             }}>
             {cat}
           </button>
@@ -66,7 +71,7 @@ export function AffixPoolPanel({
       <input type="text" value={poolSearch} onChange={(e) => setPoolSearch(e.target.value)}
         placeholder="Search affixes..."
         className="w-full px-2 py-1.5 bg-surface-deep rounded text-xs font-mono text-text placeholder-text-muted outline-none transition-colors"
-        style={{ border: `1px solid ${ACCENT}25` }} />
+        style={{ border: `1px solid ${withOpacity(ACCENT, OPACITY_15)}` }} />
 
       {/* Pool list */}
       <div className="flex-1 overflow-y-auto space-y-1 min-h-0">
@@ -82,7 +87,7 @@ export function AffixPoolPanel({
               className="flex items-center gap-2 px-2 py-1.5 rounded-lg cursor-grab active:cursor-grabbing group"
               style={{
                 backgroundColor: 'var(--surface-deep)',
-                border: `1px solid ${ACCENT}18`,
+                border: `1px solid ${withOpacity(ACCENT, OPACITY_10)}`,
                 opacity: isDragging ? 0.5 : 1,
                 transform: isDragging ? 'scale(0.95)' : 'scale(1)',
                 transition: 'opacity 0.15s ease, transform 0.15s ease',
@@ -92,9 +97,9 @@ export function AffixPoolPanel({
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-1.5">
                   <span className="text-xs font-bold font-mono text-text truncate"
-                    style={{ textShadow: `0 0 12px ${catColor}40` }}>{entry.displayName}</span>
+                    style={{ textShadow: `0 0 12px ${withOpacity(catColor, OPACITY_25)}` }}>{entry.displayName}</span>
                   <span className="text-xs px-1 py-0.5 rounded font-bold font-mono uppercase"
-                    style={{ backgroundColor: `${rColor}15`, color: rColor, border: `1px solid ${rColor}30` }}>
+                    style={{ backgroundColor: withOpacity(rColor, OPACITY_8), color: rColor, border: `1px solid ${withOpacity(rColor, OPACITY_20)}` }}>
                     {entry.bIsPrefix ? 'PRE' : 'SUF'}
                   </span>
                 </div>

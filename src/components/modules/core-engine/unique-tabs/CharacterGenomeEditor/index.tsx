@@ -6,6 +6,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   ACCENT_ORANGE, ACCENT_EMERALD, ACCENT_CYAN,
   ACCENT_VIOLET, ACCENT_PINK, STATUS_WARNING, STATUS_ERROR,
+  withOpacity, OPACITY_20, OPACITY_5,
 } from '@/lib/chart-colors';
 import { BlueprintPanel, SectionHeader } from '../_design';
 import { STAGGER_DEFAULT } from '../_shared';
@@ -140,7 +141,7 @@ export function CharacterGenomeEditor() {
               {CODE_BUTTONS.map((btn) => (
                 <button key={btn.label} onClick={() => setCodePreview(btn.gen())}
                   className="w-full flex items-center gap-2 px-3 py-2 rounded-lg border text-xs font-bold transition-colors hover:brightness-110 text-left"
-                  style={{ borderColor: `${btn.color}30`, backgroundColor: `${btn.color}08`, color: btn.color }}>
+                  style={{ borderColor: `${withOpacity(btn.color, OPACITY_20)}`, backgroundColor: `${withOpacity(btn.color, OPACITY_5)}`, color: btn.color }}>
                   <Code2 className="w-3.5 h-3.5 flex-shrink-0" /><span className="flex-1">{btn.label}</span>
                   <ChevronRight className="w-3 h-3 opacity-50" />
                 </button>

@@ -1,4 +1,4 @@
-import { Swords, Shield, Zap } from 'lucide-react';
+import { Swords, Shield, Zap, GitBranch, Crosshair, Activity, Gauge } from 'lucide-react';
 import {
   STATUS_ERROR, STATUS_WARNING, STATUS_INFO,
   ACCENT_ORANGE, ACCENT_EMERALD, ACCENT_CYAN, ACCENT_VIOLET, ACCENT_RED,
@@ -8,6 +8,25 @@ import {
 export * from './data-metrics';
 
 export const ACCENT = ACCENT_RED;
+
+/* ── Combat Subtab definitions ────────────────────────────────────────── */
+
+export type CombatSubtab = 'features' | 'flow' | 'hits' | 'metrics' | 'feedback';
+
+export interface CombatSubtabDef {
+  key: CombatSubtab;
+  label: string;
+  icon: typeof Swords;
+  narrative: string;
+  subtitle: string;
+}
+
+export const COMBAT_SUBTABS: CombatSubtabDef[] = [
+  { key: 'flow', label: 'Flow & Sequences', icon: GitBranch, narrative: 'Pipeline', subtitle: 'Execution flow, combat lanes & event sequence diagrams' },
+  { key: 'hits', label: 'Analysis & Hits', icon: Crosshair, narrative: 'Hit Detection', subtitle: 'Per-weapon hit analysis, damage types & projectile trajectories' },
+  { key: 'metrics', label: 'Combat Metrics', icon: Activity, narrative: 'Measure Balance', subtitle: 'DPS comparison, combat flow sankey & KPI dashboards' },
+  { key: 'feedback', label: 'Polish & Tuner', icon: Gauge, narrative: 'Polish Feel', subtitle: 'Feedback intensity tuning, hitstop timing & stagger pipeline' },
+];
 
 /* ── Lane definitions ──────────────────────────────────────────────────── */
 
@@ -117,9 +136,13 @@ export const HIT_STATS = [
 
 /* ── Feedback Intensity Tuner data ─────────────────────────────────────── */
 
+export type FeedbackCategory = 'Shake' | 'Hitstop' | 'Particles' | 'Sound';
+export const FEEDBACK_CATEGORIES: FeedbackCategory[] = ['Shake', 'Hitstop', 'Particles', 'Sound'];
+
 export interface FeedbackParam {
   id: string;
   label: string;
+  category: FeedbackCategory;
   min: number;
   max: number;
   step: number;
@@ -128,11 +151,14 @@ export interface FeedbackParam {
 }
 
 export const FEEDBACK_PARAMS: FeedbackParam[] = [
-  { id: 'shakeScale', label: 'ShakeScale', min: 0, max: 2, step: 0.05, defaultValue: 0.8, unit: 'x' },
-  { id: 'hitstopDuration', label: 'HitstopDuration', min: 0, max: 0.2, step: 0.005, defaultValue: 0.05, unit: 's' },
-  { id: 'vfxScale', label: 'VFXScale', min: 0, max: 3, step: 0.1, defaultValue: 1.5, unit: 'x' },
-  { id: 'sfxVolume', label: 'SFXVolume', min: 0, max: 1, step: 0.05, defaultValue: 0.7, unit: '' },
-  { id: 'screenFlashAlpha', label: 'ScreenFlashAlpha', min: 0, max: 0.5, step: 0.01, defaultValue: 0.15, unit: '' },
+  { id: 'shakeScale', label: 'Scale', category: 'Shake', min: 0, max: 2, step: 0.05, defaultValue: 0.8, unit: 'x' },
+  { id: 'shakeDecay', label: 'Decay', category: 'Shake', min: 0.1, max: 2, step: 0.05, defaultValue: 0.5, unit: 's' },
+  { id: 'hitstopDuration', label: 'Duration', category: 'Hitstop', min: 0, max: 0.2, step: 0.005, defaultValue: 0.05, unit: 's' },
+  { id: 'hitstopEase', label: 'Ease Curve', category: 'Hitstop', min: 0, max: 1, step: 0.05, defaultValue: 0.5, unit: '' },
+  { id: 'vfxScale', label: 'VFX Scale', category: 'Particles', min: 0, max: 3, step: 0.1, defaultValue: 1.5, unit: 'x' },
+  { id: 'screenFlashAlpha', label: 'Screen Flash', category: 'Particles', min: 0, max: 0.5, step: 0.01, defaultValue: 0.15, unit: '' },
+  { id: 'sfxVolume', label: 'Volume', category: 'Sound', min: 0, max: 1, step: 0.05, defaultValue: 0.7, unit: '' },
+  { id: 'sfxPitch', label: 'Pitch Shift', category: 'Sound', min: 0.5, max: 2, step: 0.05, defaultValue: 1.0, unit: 'x' },
 ];
 
 export interface FeedbackPreset {
@@ -142,9 +168,9 @@ export interface FeedbackPreset {
 }
 
 export const FEEDBACK_PRESETS: FeedbackPreset[] = [
-  { name: 'Subtle', values: { shakeScale: 0.3, hitstopDuration: 0.02, vfxScale: 0.8, sfxVolume: 0.4, screenFlashAlpha: 0.05 }, color: ACCENT_CYAN },
-  { name: 'Normal', values: { shakeScale: 0.8, hitstopDuration: 0.05, vfxScale: 1.5, sfxVolume: 0.7, screenFlashAlpha: 0.15 }, color: ACCENT_EMERALD },
-  { name: 'Juicy', values: { shakeScale: 1.6, hitstopDuration: 0.12, vfxScale: 2.5, sfxVolume: 0.95, screenFlashAlpha: 0.35 }, color: ACCENT_ORANGE },
+  { name: 'Subtle', values: { shakeScale: 0.3, shakeDecay: 0.3, hitstopDuration: 0.02, hitstopEase: 0.3, vfxScale: 0.8, screenFlashAlpha: 0.05, sfxVolume: 0.4, sfxPitch: 1.1 }, color: ACCENT_CYAN },
+  { name: 'Normal', values: { shakeScale: 0.8, shakeDecay: 0.5, hitstopDuration: 0.05, hitstopEase: 0.5, vfxScale: 1.5, screenFlashAlpha: 0.15, sfxVolume: 0.7, sfxPitch: 1.0 }, color: ACCENT_EMERALD },
+  { name: 'Juicy', values: { shakeScale: 1.6, shakeDecay: 1.2, hitstopDuration: 0.12, hitstopEase: 0.8, vfxScale: 2.5, screenFlashAlpha: 0.35, sfxVolume: 0.95, sfxPitch: 0.85 }, color: ACCENT_ORANGE },
 ];
 
 /* ── Projectile Trajectory data ────────────────────────────────────────── */

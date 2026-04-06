@@ -4,6 +4,7 @@ import { useState, useCallback, useMemo } from 'react';
 import {
   STATUS_SUCCESS, STATUS_ERROR, STATUS_WARNING, STATUS_STALE,
   ACCENT_VIOLET, OPACITY_10, OPACITY_30, MODULE_COLORS,
+  withOpacity, OPACITY_25, OPACITY_20,
 } from '@/lib/chart-colors';
 import { BlueprintPanel } from '@/components/modules/core-engine/unique-tabs/_design';
 import type { CalcInputs } from './types';
@@ -47,7 +48,7 @@ export function ExecutionBreakdownPanel() {
           className="flex items-center gap-1.5 px-2 py-1 rounded-md text-xs font-mono uppercase tracking-[0.15em] font-bold transition-colors border shrink-0"
           style={calcActive ? {
             backgroundColor: `${STATUS_SUCCESS}${OPACITY_10}`,
-            borderColor: `${STATUS_SUCCESS}40`,
+            borderColor: `${withOpacity(STATUS_SUCCESS, OPACITY_25)}`,
             color: STATUS_SUCCESS,
           } : {
             backgroundColor: 'transparent',
@@ -207,7 +208,7 @@ if (TargetASC && TargetASC->HasMatchingGameplayTag(ARPGGameplayTags::State_Invul
             codeExpanded={expandedCode.has('outdmg')} onToggleCode={() => toggleCode('outdmg')}>
             <div className="flex items-center gap-2">
               <span className="text-xs font-mono px-1.5 py-0.5 rounded font-bold"
-                style={{ backgroundColor: `${STATUS_SUCCESS}${OPACITY_10}`, color: STATUS_SUCCESS, border: `1px solid ${STATUS_SUCCESS}30` }}>
+                style={{ backgroundColor: `${STATUS_SUCCESS}${OPACITY_10}`, color: STATUS_SUCCESS, border: `1px solid ${withOpacity(STATUS_SUCCESS, OPACITY_20)}` }}>
                 Additive
               </span>
               <span className="font-bold" style={{ color: STATUS_ERROR }}>{fmtNum(c.finalDamage)}</span>

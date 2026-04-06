@@ -18,7 +18,11 @@ export const SlashCommandMenu = React.memo(function SlashCommandMenu({
   const filtered = matchCommands(query, commands);
   const [activeIndex, setActiveIndex] = useState(0);
 
-  useEffect(() => { setActiveIndex(0); }, [query]);
+  const [prevQuery, setPrevQuery] = useState(query);
+  if (prevQuery !== query) {
+    setPrevQuery(query);
+    setActiveIndex(0);
+  }
 
   const handleKeyDown = useCallback((e: KeyboardEvent) => {
     if (filtered.length === 0) return;

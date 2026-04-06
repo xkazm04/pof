@@ -1327,7 +1327,10 @@ function ChecklistContextMenu({
     if (y + rect.height > window.innerHeight - 8) ny = window.innerHeight - rect.height - 8;
     if (nx < 8) nx = 8;
     if (ny < 8) ny = 8;
-    if (nx !== x || ny !== y) setPos({ x: nx, y: ny });
+    if (nx !== x || ny !== y) {
+      const raf = requestAnimationFrame(() => setPos({ x: nx, y: ny }));
+      return () => cancelAnimationFrame(raf);
+    }
   }, [x, y]);
 
   // Close on click-outside, scroll, or Escape

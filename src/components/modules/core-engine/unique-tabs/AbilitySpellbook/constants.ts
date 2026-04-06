@@ -1,14 +1,24 @@
 import {
-  Cpu, BarChart3, Tags, Sparkles, Flame,
+  Cpu, BarChart3, Tags, Sparkles, Flame, Swords,
   Network, Clock, Calculator, ClipboardCheck, Layers,
 } from 'lucide-react';
 import {
   MODULE_COLORS, ACCENT_EMERALD_DARK, ACCENT_PURPLE_BOLD,
   ACCENT_RED, ACCENT_ORANGE, STATUS_WARNING,
 } from '@/lib/chart-colors';
-import type { SectionConfig } from './types';
+import type { SectionConfig, SpellbookSubtabDef } from './types';
 
 export const ACCENT = MODULE_COLORS.systems;
+
+/* ── Subtab definitions with narrative flow ──────────────────────────── */
+
+export const SUBTABS: SpellbookSubtabDef[] = [
+  { key: 'core', label: 'Core & Architecture', icon: Cpu, narrative: 'Foundation', subtitle: 'GAS component wiring, attribute sets & loadout slots' },
+  { key: 'abilities', label: 'Abilities', icon: Sparkles, narrative: 'Define Abilities', subtitle: 'Ability radar profiles, cooldowns & damage calculator' },
+  { key: 'effects', label: 'Effects', icon: Flame, narrative: 'Apply Effects', subtitle: 'Gameplay effects, duration timelines & execution flow' },
+  { key: 'tags', label: 'Tags & Attributes', icon: Tags, narrative: 'Organize Tags', subtitle: 'Tag hierarchy, dependencies, audit & attribute growth' },
+  { key: 'combos', label: 'Combos', icon: Swords, narrative: 'Chain Combos', subtitle: 'Combo chain builder, timing windows & cancel routes' },
+];
 
 export const SECTIONS: SectionConfig[] = [
   {

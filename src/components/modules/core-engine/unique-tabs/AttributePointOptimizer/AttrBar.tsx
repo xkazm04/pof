@@ -1,6 +1,7 @@
 'use client';
 
 import { motion } from 'framer-motion';
+import { OPACITY_25, OPACITY_50, GLOW_SM, withOpacity } from '@/lib/chart-colors';
 import { NeonBar } from './design';
 
 /* ── Attribute Bar ────────────────────────────────────────────────────────── */
@@ -22,7 +23,7 @@ export function AttrBar({ label, value, max, color, icon: Icon, perPoint, onChan
     <div className="space-y-1">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-1.5">
-          <Icon className="w-3.5 h-3.5" style={{ color, filter: `drop-shadow(0 0 4px ${color}80)` }} />
+          <Icon className="w-3.5 h-3.5" style={{ color, filter: `drop-shadow(${GLOW_SM} ${withOpacity(color, OPACITY_50)})` }} />
           <span className="text-xs font-mono uppercase tracking-[0.15em] text-text">{label}</span>
         </div>
         <div className="flex items-center gap-2">
@@ -32,7 +33,7 @@ export function AttrBar({ label, value, max, color, icon: Icon, perPoint, onChan
             initial={{ scale: 1.2, opacity: 0.6 }}
             animate={{ scale: 1, opacity: 1 }}
             className="text-sm font-mono font-bold tabular-nums"
-            style={{ color, textShadow: `0 0 10px ${color}40` }}
+            style={{ color, textShadow: `0 0 10px ${withOpacity(color, OPACITY_25)}` }}
           >
             {value}
           </motion.span>

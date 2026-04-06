@@ -1,6 +1,7 @@
 'use client';
 
 import { useRef, useEffect } from 'react';
+import { OVERLAY_WHITE, OPACITY_4, OPACITY_30, withOpacity } from '@/lib/chart-colors';
 import type { DerivedGenomeValues } from './types';
 import { invLerp } from './types';
 import { drawGroundLine, drawStickFigure, drawSpeedHUD } from './canvas-draw';
@@ -59,7 +60,7 @@ export function StickFigurePreview({ values, isPlaying }: StickFigureProps) {
       // Speed ramp markers
       [0.25, 0.5, 0.75, 1.0].forEach(m => {
         const mx = 30 + m * (W - 60);
-        ctx.strokeStyle = 'rgba(255,255,255,0.04)';
+        ctx.strokeStyle = withOpacity(OVERLAY_WHITE, OPACITY_4);
         ctx.beginPath();
         ctx.moveTo(mx, 10);
         ctx.lineTo(mx, groundY);
@@ -121,7 +122,7 @@ export function StickFigurePreview({ values, isPlaying }: StickFigureProps) {
       ctx.clearRect(0, 0, W, H);
       drawGroundLine(ctx, W, groundY);
       drawStickFigure(ctx, W / 2, groundY, 0, false);
-      ctx.fillStyle = 'rgba(255,255,255,0.3)';
+      ctx.fillStyle = withOpacity(OVERLAY_WHITE, OPACITY_30);
       ctx.font = '9px monospace';
       ctx.textAlign = 'center';
       ctx.fillText('Press play to preview movement feel', W / 2, H - 4);

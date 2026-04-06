@@ -190,7 +190,7 @@ export function SpatialAudioGeneratorPanel({
                   className="w-4 h-4 rounded border-blue-900/50 bg-black/60 text-blue-500 focus:ring-blue-500/50 focus:ring-offset-0 transition-colors outline-none accent-blue-500"
                 />
                 <span className="text-xs font-bold uppercase tracking-widest text-blue-300/80 flex-1">
-                  APPEND_TO_ACTIVE: <span className="text-blue-200">"{activeDoc.name}"</span>
+                  APPEND_TO_ACTIVE: <span className="text-blue-200">&quot;{activeDoc.name}&quot;</span>
                 </span>
               </label>
             )}

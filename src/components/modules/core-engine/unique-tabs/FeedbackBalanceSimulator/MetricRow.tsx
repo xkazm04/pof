@@ -1,7 +1,9 @@
 'use client';
 
 import { Heart } from 'lucide-react';
-import { STATUS_SUCCESS, STATUS_ERROR, OPACITY_15 } from '@/lib/chart-colors';
+import { STATUS_SUCCESS, STATUS_ERROR, OPACITY_15,
+  withOpacity, OPACITY_25, OPACITY_10,
+} from '@/lib/chart-colors';
 import { formatMetricValue, formatDelta } from './types';
 
 /* ── MetricCell ─ Single metric readout ──────────────────────────────── */
@@ -46,14 +48,14 @@ export function MetricRow({ label, feedbackOn, feedbackOff, unit, higherIsBetter
       <MetricCell label={label} value={feedbackOn} unit={unit} icon={icon} color={color} />
       {/* Connector line with delta */}
       <div className="flex items-center w-20 px-1">
-        <div className="flex-1 h-px" style={{ backgroundColor: `${deltaColor}40` }} />
+        <div className="flex-1 h-px" style={{ backgroundColor: `${withOpacity(deltaColor, OPACITY_25)}` }} />
         <span
           className="text-xs font-mono font-bold px-1.5 py-0.5 rounded-full whitespace-nowrap"
-          style={{ color: deltaColor, backgroundColor: `${deltaColor}15` }}
+          style={{ color: deltaColor, backgroundColor: `${withOpacity(deltaColor, OPACITY_10)}` }}
         >
           {neutral ? '=' : `${delta > 0 ? '+' : ''}${formatDelta(delta, unit)}`}
         </span>
-        <div className="flex-1 h-px" style={{ backgroundColor: `${deltaColor}40` }} />
+        <div className="flex-1 h-px" style={{ backgroundColor: `${withOpacity(deltaColor, OPACITY_25)}` }} />
       </div>
       <MetricCell label={label} value={feedbackOff} unit={unit} icon={icon} color={color} muted />
     </div>

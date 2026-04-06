@@ -62,9 +62,9 @@ export function useModuleCLI(opts: UseModuleCLIOptions): UseModuleCLIResult {
   const onCompleteRef = useRef(opts.onComplete);
   const sessionKeyRef = useRef(opts.sessionKey);
   const moduleIdRef = useRef(opts.moduleId);
-  onCompleteRef.current = opts.onComplete;
-  sessionKeyRef.current = opts.sessionKey;
-  moduleIdRef.current = opts.moduleId;
+  useEffect(() => { onCompleteRef.current = opts.onComplete; }, [opts.onComplete]);
+  useEffect(() => { sessionKeyRef.current = opts.sessionKey; }, [opts.sessionKey]);
+  useEffect(() => { moduleIdRef.current = opts.moduleId; }, [opts.moduleId]);
 
   useEffect(() => {
     if (prevRunningRef.current && !isRunning) {

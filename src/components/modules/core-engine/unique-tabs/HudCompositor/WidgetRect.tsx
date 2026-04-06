@@ -3,7 +3,9 @@
 import { motion } from 'framer-motion';
 import { WIDGET_Z_COLOR } from './data';
 import type { WidgetRectProps } from './data';
-import { STATUS_SUBDUED } from '@/lib/chart-colors';
+import { STATUS_SUBDUED,
+  withOpacity, OPACITY_50, OPACITY_56, OPACITY_15, OPACITY_10, OPACITY_5, OPACITY_37,
+} from '@/lib/chart-colors';
 
 export function WidgetRect({ placement, visible, changed, showZLayer, contextColor }: WidgetRectProps) {
   const zColor = WIDGET_Z_COLOR[placement.id] ?? STATUS_SUBDUED;
@@ -24,8 +26,8 @@ export function WidgetRect({ placement, visible, changed, showZLayer, contextCol
         top: `${placement.y}%`,
         width: `${placement.w}%`,
         height: `${placement.h}%`,
-        borderColor: visible ? `${borderColor}80` : `${borderColor}25`,
-        backgroundColor: visible ? `${borderColor}18` : `${borderColor}06`,
+        borderColor: visible ? `${withOpacity(borderColor, OPACITY_50)}` : `${withOpacity(borderColor, OPACITY_15)}`,
+        backgroundColor: visible ? `${withOpacity(borderColor, OPACITY_10)}` : `${withOpacity(borderColor, OPACITY_5)}`,
         zIndex: placement.zDepth,
       }}
     >
@@ -33,7 +35,7 @@ export function WidgetRect({ placement, visible, changed, showZLayer, contextCol
       {showZLayer && (
         <div
           className="absolute left-0 top-0 bottom-0 w-0.5"
-          style={{ backgroundColor: `${zColor}90` }}
+          style={{ backgroundColor: withOpacity(zColor, OPACITY_56) }}
         />
       )}
 
@@ -42,8 +44,8 @@ export function WidgetRect({ placement, visible, changed, showZLayer, contextCol
         <span
           className="text-[9px] font-mono font-bold leading-none truncate select-none"
           style={{
-            color: visible ? borderColor : `${borderColor}60`,
-            filter: visible ? `drop-shadow(0 0 3px ${borderColor}60)` : 'none',
+            color: visible ? borderColor : `${withOpacity(borderColor, OPACITY_37)}`,
+            filter: visible ? `drop-shadow(0 0 3px ${withOpacity(borderColor, OPACITY_37)})` : 'none',
           }}
         >
           {placement.label}

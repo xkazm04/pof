@@ -1,7 +1,9 @@
 'use client';
 
 import { useState, useRef } from 'react';
-import { STATUS_WARNING } from '@/lib/chart-colors';
+import { STATUS_WARNING,
+  withOpacity, OPACITY_25,
+} from '@/lib/chart-colors';
 import { survivalColor, type SensitivityCurve } from './data';
 
 export function SensitivityChart({ curve, width, height, color }: {
@@ -88,7 +90,7 @@ export function SensitivityChart({ curve, width, height, color }: {
               width={110} height={58}
             >
               <div className="bg-surface-1 border border-border rounded px-2 py-1 text-2xs font-mono shadow-lg"
-                style={{ borderColor: `${color}40` }}>
+                style={{ borderColor: `${withOpacity(color, OPACITY_25)}` }}>
                 <div className="font-bold mb-0.5" style={{ color }}>
                   {curve.attribute}: {hp.value.toFixed(curve.attribute === 'critChance' ? 2 : 0)}
                 </div>

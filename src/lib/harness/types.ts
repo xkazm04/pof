@@ -136,6 +136,10 @@ export interface ExecutorConfig {
   skipPermissions: boolean;
   /** Whether to run in --bare mode (faster startup, no hooks/skills) */
   bareMode: boolean;
+  /** Max concurrent executor sessions (default 1 = sequential) */
+  maxConcurrent?: number;
+  /** Min feature pass % to accept an area as completed (0-100, default: use targetPassRate) */
+  areaPassThreshold?: number;
 }
 
 export interface ExecutorResult {

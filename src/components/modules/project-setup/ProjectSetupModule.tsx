@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback, useRef } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { Rocket } from 'lucide-react';
 import { useProjectStore } from '@/stores/projectStore';
 import { apiFetch } from '@/lib/api-utils';
@@ -58,7 +58,7 @@ export function ProjectSetupModule() {
   } = useProjectScan(projectPath);
 
   // Wire scanRef so the hooks' onComplete can call scan() without circular deps
-  scanRef.current = scan;
+  useEffect(() => { scanRef.current = scan; }, [scan]);
 
   const [manifestJson, setManifestJson] = useState<string | null>(null);
 

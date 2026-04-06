@@ -284,8 +284,11 @@ function ScrollableTabBar({ children, tabBarRef }: { children: React.ReactNode; 
       {/* Scrollable tab container */}
       <div
         ref={(node) => {
-          (scrollRef as React.MutableRefObject<HTMLDivElement | null>).current = node;
-          if (tabBarRef) (tabBarRef as React.MutableRefObject<HTMLDivElement | null>).current = node;
+          scrollRef.current = node;
+          if (tabBarRef) {
+            const mutableTabBarRef = tabBarRef as React.MutableRefObject<HTMLDivElement | null>;
+            mutableTabBarRef.current = node;
+          }
         }}
         role="tablist"
         aria-label="Evaluator tabs"

@@ -57,19 +57,23 @@ export function SidebarL2() {
 
   const [width, setWidth] = useState(() => getWidthForCategory(activeCategory));
   const isDragging = useRef(false);
+  const [isDraggingState, setIsDraggingState] = useState(false);
   const startX = useRef(0);
   const startWidth = useRef(width);
 
   // Sync width when category changes
-  useEffect(() => {
-    if (!isDragging.current) {
+  const [prevCategory, setPrevCategory] = useState(activeCategory);
+  if (prevCategory !== activeCategory) {
+    setPrevCategory(activeCategory);
+    if (!isDraggingState) {
       setWidth(getWidthForCategory(activeCategory));
     }
-  }, [activeCategory]);
+  }
 
   const handleResizeMouseDown = useCallback((e: React.MouseEvent) => {
     e.preventDefault();
     isDragging.current = true;
+    setIsDraggingState(true);
     startX.current = e.clientX;
     startWidth.current = width;
     document.body.style.cursor = 'ew-resize';
@@ -86,6 +90,7 @@ export function SidebarL2() {
 
     const handleMouseUp = () => {
       isDragging.current = false;
+      setIsDraggingState(false);
       document.body.style.cursor = '';
       document.body.style.userSelect = '';
       document.removeEventListener('mousemove', handleMouseMove);
@@ -129,7 +134,7 @@ export function SidebarL2() {
           animate={{ width, opacity: 1 }}
           exit={prefersReduced ? { opacity: 0 } : { width: 0, opacity: 0 }}
           transition={
-            isDragging.current
+            isDraggingState
               ? { duration: 0 }
               : prefersReduced
                 ? { duration: 0 }

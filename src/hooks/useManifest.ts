@@ -40,7 +40,7 @@ export function useManifest(): UseManifestResult {
   }, []);
 
   const checksumRef = useRef(manifestChecksum);
-  checksumRef.current = manifestChecksum;
+  useEffect(() => { checksumRef.current = manifestChecksum; }, [manifestChecksum]);
 
   const isConnected = connectionStatus === 'connected';
 
@@ -86,11 +86,11 @@ export function useManifest(): UseManifestResult {
 
   useEffect(() => {
     if (!isConnected) return;
+    if (manifest) return;
 
     // Only fetch if we don't already have a cached manifest
-    if (!manifest) {
-      fetchFullManifest();
-    }
+    const id = requestAnimationFrame(() => { fetchFullManifest(); });
+    return () => cancelAnimationFrame(id);
   }, [isConnected, manifest, fetchFullManifest]);
 
   // ── Periodic checksum polling ───────────────────────────────────────────────

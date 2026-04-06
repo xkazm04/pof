@@ -3,7 +3,9 @@
 import { useState, useCallback, useMemo } from 'react';
 import { AlertTriangle } from 'lucide-react';
 import { motion } from 'framer-motion';
-import { STATUS_ERROR } from '@/lib/chart-colors';
+import { STATUS_ERROR,
+  withOpacity, OPACITY_10, OPACITY_20, OPACITY_5, OPACITY_12,
+} from '@/lib/chart-colors';
 import { BlueprintPanel, SectionHeader } from '../_design';
 import { INSIGHT_COLORS, INSIGHT_ICONS, SEVERITY_ORDER, SEVERITY_FILTERS } from './types';
 
@@ -52,7 +54,7 @@ export function BalanceInsightsPanel({ insights }: {
               className="flex items-center gap-1 text-xs font-mono uppercase tracking-[0.15em] font-bold px-2 py-0.5 rounded-full border transition-colors"
               style={{
                 borderColor: active ? s.color : 'var(--color-border)',
-                backgroundColor: active ? `${s.color}15` : 'transparent',
+                backgroundColor: active ? `${withOpacity(s.color, OPACITY_10)}` : 'transparent',
                 color: active ? s.color : 'var(--color-text-muted)',
                 opacity: active ? 1 : 0.5,
               }}
@@ -79,8 +81,8 @@ export function BalanceInsightsPanel({ insights }: {
               transition={{ delay: i * 0.04, duration: 0.3 }}
               className="flex items-start gap-2.5 px-3 py-2 rounded-md border overflow-hidden"
               style={{
-                borderColor: `${color}30`,
-                backgroundColor: `${color}08`,
+                borderColor: `${withOpacity(color, OPACITY_20)}`,
+                backgroundColor: `${withOpacity(color, OPACITY_5)}`,
                 borderLeftWidth: isCritical ? 3 : undefined,
                 borderLeftColor: isCritical ? STATUS_ERROR : undefined,
               }}
@@ -90,7 +92,7 @@ export function BalanceInsightsPanel({ insights }: {
                 <div className="flex items-center gap-2 mb-0.5">
                   <span
                     className="text-xs font-mono uppercase tracking-[0.15em] font-bold px-1.5 py-0.5 rounded"
-                    style={{ backgroundColor: `${color}20`, color }}
+                    style={{ backgroundColor: `${withOpacity(color, OPACITY_12)}`, color }}
                   >
                     {insight.severity}
                   </span>

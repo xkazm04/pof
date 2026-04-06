@@ -27,7 +27,7 @@ export function RestXpSystem() {
         <div>
           <div className="flex justify-between text-xs font-mono mb-1.5">
             <span className="text-text">Current Level Progress</span>
-            <span className="text-amber-400">{REST_XP_DATA.currentXP.toLocaleString()} / {REST_XP_DATA.nextLevelXP.toLocaleString()} XP</span>
+            <span style={{ color: STATUS_WARNING }}>{REST_XP_DATA.currentXP.toLocaleString()} / {REST_XP_DATA.nextLevelXP.toLocaleString()} XP</span>
           </div>
           <div className="relative h-6 bg-surface-deep rounded-lg overflow-hidden border border-border/30">
             <motion.div

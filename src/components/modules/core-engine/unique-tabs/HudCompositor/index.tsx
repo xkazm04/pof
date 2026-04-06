@@ -3,7 +3,9 @@
 import { useMemo, useState, useCallback } from 'react';
 import { Eye, Layers } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ACCENT_PINK, OPACITY_20, OPACITY_30 } from '@/lib/chart-colors';
+import { ACCENT_PINK, OPACITY_20, OPACITY_30,
+  withOpacity, OPACITY_5, OPACITY_37, OPACITY_56, OPACITY_8, OPACITY_10,
+} from '@/lib/chart-colors';
 import { InteractivePill } from '@/components/ui/InteractivePill';
 import { BlueprintPanel, SectionHeader } from '../_design';
 import { WidgetRect } from './WidgetRect';
@@ -54,7 +56,7 @@ export function HudCompositor({ accent }: HudCompositorProps) {
   return (
     <BlueprintPanel color={accent} className="p-4 col-span-1 lg:col-span-2">
       <div className="absolute right-0 top-0 w-40 h-40 blur-3xl rounded-full pointer-events-none"
-        style={{ backgroundColor: `${ctx.color}08` }} />
+        style={{ backgroundColor: `${withOpacity(ctx.color, OPACITY_5)}` }} />
 
       {/* Header */}
       <div className="flex items-center justify-between mb-3">
@@ -64,7 +66,7 @@ export function HudCompositor({ accent }: HudCompositorProps) {
           className="flex items-center gap-1 px-2 py-0.5 text-xs font-mono uppercase tracking-[0.15em] font-bold rounded border transition-colors"
           style={{
             backgroundColor: showZLayers ? `${accent}${OPACITY_20}` : 'transparent',
-            borderColor: showZLayers ? `${accent}60` : 'var(--border)',
+            borderColor: showZLayers ? `${withOpacity(accent, OPACITY_37)}` : 'var(--border)',
             color: showZLayers ? accent : 'var(--text-muted)',
           }}
         >
@@ -103,7 +105,7 @@ export function HudCompositor({ accent }: HudCompositorProps) {
         {/* Viewport label */}
         <div className="absolute top-1.5 left-2 flex items-center gap-1.5 z-10 pointer-events-none">
           <span className="text-[9px] font-mono font-bold uppercase tracking-wider"
-            style={{ color: `${ctx.color}90` }}>
+            style={{ color: withOpacity(ctx.color, OPACITY_56) }}>
             {ctx.name} Mode
           </span>
           <span className="text-[9px] font-mono text-text-muted opacity-60">
@@ -127,7 +129,7 @@ export function HudCompositor({ accent }: HudCompositorProps) {
 
         {/* Viewport border glow */}
         <div className="absolute inset-0 pointer-events-none rounded-lg"
-          style={{ boxShadow: `inset 0 0 20px ${ctx.color}10, inset 0 0 2px ${ctx.color}15` }} />
+          style={{ boxShadow: `inset 0 0 20px ${withOpacity(ctx.color, OPACITY_8)}, inset 0 0 2px ${withOpacity(ctx.color, OPACITY_10)}` }} />
       </div>
 
       {/* Z-layer legend */}
@@ -171,7 +173,7 @@ export function HudCompositor({ accent }: HudCompositorProps) {
                 className="px-1.5 py-0.5 text-xs font-mono rounded border"
                 style={{
                   color: ctx.color,
-                  backgroundColor: `${ctx.color}12`,
+                  backgroundColor: `${withOpacity(ctx.color, OPACITY_8)}`,
                   borderColor: `${ctx.color}${OPACITY_30}`,
                 }}
               >

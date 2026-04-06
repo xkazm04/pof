@@ -2,7 +2,7 @@
 
 import { useCallback, useRef } from 'react';
 import type { BtNode, BtEdge } from '@/components/modules/core-engine/unique-tabs/EnemyBestiary/data';
-import { STATUS_SUCCESS, STATUS_INFO } from '@/lib/chart-colors';
+import { OPACITY_5, OPACITY_15, OPACITY_20, OPACITY_50, OVERLAY_WHITE, STATUS_SUCCESS, STATUS_INFO, withOpacity } from '@/lib/chart-colors';
 
 interface BTFlowchartProps {
   nodes: BtNode[];
@@ -143,7 +143,7 @@ export function BTFlowchart({ nodes, edges, expandedNodeId, onNodeClick, accent 
             key={`${edge.from}-${edge.to}`}
             x1={from.x + 30} y1={from.y + 20}
             x2={to.x + 30} y2={to.y}
-            stroke={edge.active ? accent : 'rgba(255,255,255,0.15)'}
+            stroke={edge.active ? accent : withOpacity(OVERLAY_WHITE, OPACITY_15)}
             strokeWidth={edge.active ? 2 : 1}
             strokeDasharray={edge.active ? undefined : '4 4'}
             aria-hidden="true"
@@ -153,8 +153,8 @@ export function BTFlowchart({ nodes, edges, expandedNodeId, onNodeClick, accent 
       {/* Nodes */}
       {nodes.map(node => {
         const isSelected = expandedNodeId === node.id;
-        const fillColor = node.active ? `${accent}26` : 'rgba(255,255,255,0.05)';
-        const strokeColor = isSelected ? STATUS_INFO : node.active ? accent : 'rgba(255,255,255,0.2)';
+        const fillColor = node.active ? withOpacity(accent, OPACITY_15) : withOpacity(OVERLAY_WHITE, OPACITY_5);
+        const strokeColor = isSelected ? STATUS_INFO : node.active ? accent : withOpacity(OVERLAY_WHITE, OPACITY_20);
         const ariaLabel = `${node.label} — ${SHAPE_LABELS[node.shape]}, ${node.active ? 'active' : 'inactive'}. ${node.details}`;
 
         return (
@@ -196,7 +196,7 @@ export function BTFlowchart({ nodes, edges, expandedNodeId, onNodeClick, accent 
               x={node.x + w / 2} y={node.y + h / 2 + 1}
               textAnchor="middle" dominantBaseline="central"
               className="text-xs font-mono font-bold pointer-events-none"
-              fill={node.active ? accent : 'rgba(255,255,255,0.5)'}
+              fill={node.active ? accent : withOpacity(OVERLAY_WHITE, OPACITY_50)}
               aria-hidden="true"
             >
               {node.label}

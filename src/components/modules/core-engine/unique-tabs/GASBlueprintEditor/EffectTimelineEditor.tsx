@@ -7,7 +7,10 @@ import { useCollectionEditor } from '@/hooks/useCollectionEditor';
 import type { EditorEffect, EffectDuration } from '@/lib/gas-codegen';
 import { SegmentedControl } from '../_shared';
 import { ACCENT, DURATION_OPTIONS } from './data';
-import { ACCENT_RED, ACCENT_EMERALD_DARK, MODULE_COLORS, STATUS_STALE, OVERLAY_WHITE } from '@/lib/chart-colors';
+import { ACCENT_RED, ACCENT_EMERALD_DARK, MODULE_COLORS, STATUS_STALE, OVERLAY_WHITE,
+  withOpacity, OPACITY_37, OPACITY_25, OPACITY_5, OPACITY_15, OPACITY_10, OPACITY_20,
+  OPACITY_3, OPACITY_40, GLOW_SM,
+} from '@/lib/chart-colors';
 
 export function EffectTimelineEditor({
   effects, onChange, onSelectItem,
@@ -78,10 +81,10 @@ export function EffectTimelineEditor({
         <svg ref={timelineRef} width="100%" height={80 + effects.length * 28} viewBox={`0 0 400 ${80 + effects.length * 28}`}
           preserveAspectRatio="xMinYMin" className="overflow-visible cursor-crosshair"
           onMouseDown={handleTimelineMouseDown} onMouseMove={handleTimelineMouseMove} onMouseUp={handleTimelineMouseUp} onMouseLeave={handleTimelineMouseUp}>
-          <line x1={40} y1={20} x2={390} y2={20} stroke="rgba(255,255,255,0.1)" strokeWidth={1} />
+          <line x1={40} y1={20} x2={390} y2={20} stroke={withOpacity(OVERLAY_WHITE, OPACITY_10)} strokeWidth={1} />
           {Array.from({ length: Math.ceil(maxTime) + 1 }, (_, i) => {
             const x = 40 + (i / maxTime) * 350;
-            return (<g key={i}><line x1={x} y1={18} x2={x} y2={22} stroke="rgba(255,255,255,0.15)" strokeWidth={1} /><text x={x} y={14} fill="rgba(255,255,255,0.3)" fontSize={7} fontFamily="monospace" textAnchor="middle">{i}s</text></g>);
+            return (<g key={i}><line x1={x} y1={18} x2={x} y2={22} stroke={withOpacity(OVERLAY_WHITE, OPACITY_15)} strokeWidth={1} /><text x={x} y={14} fill={withOpacity(OVERLAY_WHITE, OPACITY_25)} fontSize={7} fontFamily="monospace" textAnchor="middle">{i}s</text></g>);
           })}
           {effects.map((eff, i) => {
             const y = 32 + i * 28;
@@ -91,18 +94,18 @@ export function EffectTimelineEditor({
             if (eff.duration === 'instant') {
               return (<g key={eff.id} className="cursor-pointer" onClick={() => setSelectedEffect(eff.id)} opacity={blockOpacity}>
                 <circle cx={44} cy={y + 10} r={6} fill={eff.color} stroke={isSelected ? OVERLAY_WHITE :isActive && playheadTime !== null ? eff.color : 'none'} strokeWidth={1.5}
-                  style={isActive && playheadTime !== null ? { filter: `drop-shadow(0 0 4px ${eff.color})` } : undefined} />
+                  style={isActive && playheadTime !== null ? { filter: `drop-shadow(${GLOW_SM} ${eff.color})` } : undefined} />
                 <text x={56} y={y + 13} fill={eff.color} fontSize={8} fontFamily="monospace">{eff.name}</text>
               </g>);
             }
             const blockW = Math.max(20, (eff.durationSec / maxTime) * 350);
             return (<g key={eff.id} className="cursor-pointer" onClick={() => setSelectedEffect(eff.id)} opacity={blockOpacity}>
-              <rect x={40} y={y} width={blockW} height={20} rx={3} fill={`${eff.color}${isActive && playheadTime !== null ? '50' : '30'}`} stroke={isSelected ? OVERLAY_WHITE :`${eff.color}60`} strokeWidth={isSelected ? 1.5 : 0.8}
-                style={isActive && playheadTime !== null ? { filter: `drop-shadow(0 0 3px ${eff.color}60)` } : undefined} />
+              <rect x={40} y={y} width={blockW} height={20} rx={3} fill={`${eff.color}${isActive && playheadTime !== null ? '50' : '30'}`} stroke={isSelected ? OVERLAY_WHITE :`${withOpacity(eff.color, OPACITY_37)}`} strokeWidth={isSelected ? 1.5 : 0.8}
+                style={isActive && playheadTime !== null ? { filter: `drop-shadow(0 0 3px ${withOpacity(eff.color, OPACITY_37)})` } : undefined} />
               <text x={44} y={y + 13} fill={eff.color} fontSize={8} fontFamily="monospace">{eff.name}</text>
-              {eff.duration === 'duration' && <text x={40 + blockW - 4} y={y + 13} fill="rgba(255,255,255,0.4)" fontSize={7} fontFamily="monospace" textAnchor="end">{eff.durationSec}s</text>}
-              {eff.duration === 'infinite' && <text x={40 + blockW - 4} y={y + 13} fill="rgba(255,255,255,0.4)" fontSize={7} fontFamily="monospace" textAnchor="end">{'\u221E'}</text>}
-              {eff.cooldownSec > 0 && <rect x={40 + blockW} y={y + 2} width={Math.max(8, (eff.cooldownSec / maxTime) * 350)} height={16} rx={2} fill="rgba(255,255,255,0.03)" stroke="rgba(255,255,255,0.1)" strokeWidth={0.5} strokeDasharray="3 2" />}
+              {eff.duration === 'duration' && <text x={40 + blockW - 4} y={y + 13} fill={withOpacity(OVERLAY_WHITE, OPACITY_40)} fontSize={7} fontFamily="monospace" textAnchor="end">{eff.durationSec}s</text>}
+              {eff.duration === 'infinite' && <text x={40 + blockW - 4} y={y + 13} fill={withOpacity(OVERLAY_WHITE, OPACITY_40)} fontSize={7} fontFamily="monospace" textAnchor="end">{'\u221E'}</text>}
+              {eff.cooldownSec > 0 && <rect x={40 + blockW} y={y + 2} width={Math.max(8, (eff.cooldownSec / maxTime) * 350)} height={16} rx={2} fill={withOpacity(OVERLAY_WHITE, OPACITY_3)} stroke={withOpacity(OVERLAY_WHITE, OPACITY_10)} strokeWidth={0.5} strokeDasharray="3 2" />}
             </g>);
           })}
           {playheadTime !== null && (() => {
@@ -114,24 +117,24 @@ export function EffectTimelineEditor({
         {playheadTime !== null && activeEffectDetails.length > 0 && (
           <div className="absolute top-0 right-0 mt-1 mr-1 p-1.5 rounded-lg border border-border/40 bg-surface-deep/90 backdrop-blur-sm max-w-[160px]">
             <div className="text-xs font-mono font-bold text-text-muted uppercase tracking-[0.15em] mb-1">Active @ {playheadTime.toFixed(1)}s</div>
-            {activeEffectDetails.map((eff) => (<div key={eff.id} className="flex items-center gap-1.5 mb-0.5"><span className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ backgroundColor: eff.color, boxShadow: `0 0 4px ${eff.color}` }} /><span className="text-xs font-mono font-bold truncate" style={{ color: eff.color, textShadow: `0 0 12px ${eff.color}40` }}>{eff.name}</span></div>))}
+            {activeEffectDetails.map((eff) => (<div key={eff.id} className="flex items-center gap-1.5 mb-0.5"><span className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ backgroundColor: eff.color, boxShadow: `${GLOW_SM} ${eff.color}` }} /><span className="text-xs font-mono font-bold truncate" style={{ color: eff.color, textShadow: `0 0 12px ${withOpacity(eff.color, OPACITY_25)}` }}>{eff.name}</span></div>))}
             {activeEffectDetails.some(e => e.grantedTags.length > 0) && (
               <div className="mt-1 pt-1 border-t border-border/30"><div className="text-xs font-mono text-text-muted uppercase tracking-[0.15em] mb-0.5">Tags</div>
-                <div className="flex flex-wrap gap-0.5">{activeEffectDetails.flatMap(e => e.grantedTags.map(t => ({ tag: t, color: e.color }))).map(({ tag, color }) => (<span key={tag} className="text-xs font-mono px-1 py-0 rounded" style={{ backgroundColor: `${color}08`, color, border: `1px solid ${color}25` }}>{tag}</span>))}</div>
+                <div className="flex flex-wrap gap-0.5">{activeEffectDetails.flatMap(e => e.grantedTags.map(t => ({ tag: t, color: e.color }))).map(({ tag, color }) => (<span key={tag} className="text-xs font-mono px-1 py-0 rounded" style={{ backgroundColor: `${withOpacity(color, OPACITY_5)}`, color, border: `1px solid ${withOpacity(color, OPACITY_15)}` }}>{tag}</span>))}</div>
               </div>
             )}
           </div>
         )}
       </div>
       <div className="flex items-center gap-2">
-        <button onClick={addEffect} className="flex items-center gap-1.5 px-2.5 py-1 rounded text-xs font-mono uppercase tracking-[0.15em] font-medium" style={{ backgroundColor: `${ACCENT}15`, color: ACCENT, border: `1px solid ${ACCENT}30` }}><Plus className="w-3 h-3" /> Add Effect</button>
+        <button onClick={addEffect} className="flex items-center gap-1.5 px-2.5 py-1 rounded text-xs font-mono uppercase tracking-[0.15em] font-medium" style={{ backgroundColor: `${withOpacity(ACCENT, OPACITY_10)}`, color: ACCENT, border: `1px solid ${withOpacity(ACCENT, OPACITY_20)}` }}><Plus className="w-3 h-3" /> Add Effect</button>
       </div>
       <AnimatePresence>
         {sel && (
           <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
-            <div className="p-2.5 rounded-lg border space-y-3" style={{ borderColor: `${sel.color}25`, backgroundColor: `${sel.color}08` }}>
+            <div className="p-2.5 rounded-lg border space-y-3" style={{ borderColor: `${withOpacity(sel.color, OPACITY_15)}`, backgroundColor: `${withOpacity(sel.color, OPACITY_5)}` }}>
               <div className="flex items-center justify-between">
-                <input value={sel.name} onChange={(e) => updateEffect(sel.id, { name: e.target.value })} className="bg-transparent text-xs font-mono font-bold text-text border-b border-border/40 focus:border-current focus:outline-none w-40 pb-0.5" style={{ color: sel.color, textShadow: `0 0 12px ${sel.color}40` }} />
+                <input value={sel.name} onChange={(e) => updateEffect(sel.id, { name: e.target.value })} className="bg-transparent text-xs font-mono font-bold text-text border-b border-border/40 focus:border-current focus:outline-none w-40 pb-0.5" style={{ color: sel.color, textShadow: `0 0 12px ${withOpacity(sel.color, OPACITY_25)}` }} />
                 <button onClick={() => removeEffect(sel.id)} className="text-text-muted hover:text-red-400"><Trash2 className="w-3.5 h-3.5" /></button>
               </div>
               <div className="flex items-center gap-2">

@@ -18,14 +18,14 @@ export function useModuleActions(): UseModuleActionsResult {
   const setActiveTab = useCLIPanelStore((s) => s.setActiveTab);
 
   const sendPromptToModule = useCallback((moduleId: SubModuleId, prompt: string) => {
-    const module = SUB_MODULE_MAP[moduleId];
+    const mod = SUB_MODULE_MAP[moduleId];
     const category = getCategoryForSubModule(moduleId);
-    if (!module || !category) return;
+    if (!mod || !category) return;
 
     let tabId = findSessionByModule(moduleId);
     if (!tabId) {
       tabId = createSession({
-        label: module.label,
+        label: mod.label,
         accentColor: category.accentColor,
         moduleId,
         projectPath,

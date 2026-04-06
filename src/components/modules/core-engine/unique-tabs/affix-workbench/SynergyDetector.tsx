@@ -2,7 +2,12 @@
 
 import { motion, useReducedMotion } from 'framer-motion';
 import { Sparkles, Zap, ChevronDown, ChevronRight } from 'lucide-react';
-import { ACCENT_ORANGE } from '@/lib/chart-colors';
+import {
+  ACCENT_ORANGE,
+  OPACITY_5, OPACITY_8, OPACITY_12, OPACITY_20, OPACITY_25,
+  GLOW_LG, GLOW_MD,
+  withOpacity,
+} from '@/lib/chart-colors';
 import { SurfaceCard } from '@/components/ui/SurfaceCard';
 import { ANIMATION_PRESETS, motionSafe } from '@/lib/motion';
 import type { SynergyRule } from './data';
@@ -29,7 +34,7 @@ export function SynergyDetector({
       style={{
         transition: 'box-shadow 0.3s ease',
         boxShadow: synergyGlow && activeSynergies.length > 0
-          ? `0 0 16px ${SYNERGY_COLORS[activeSynergies[0].severity]}40, inset 0 0 8px ${SYNERGY_COLORS[activeSynergies[0].severity]}10`
+          ? `${GLOW_LG} ${withOpacity(SYNERGY_COLORS[activeSynergies[0].severity], OPACITY_25)}, inset ${GLOW_MD} ${withOpacity(SYNERGY_COLORS[activeSynergies[0].severity], OPACITY_8)}`
           : 'none',
       }}
     >
@@ -46,7 +51,7 @@ export function SynergyDetector({
           </motion.div>
           <span className="text-xs font-bold text-text">Synergy Detector</span>
           {activeSynergies.length > 0 && (
-            <span className="text-xs px-1.5 py-0.5 rounded-full font-bold" style={{ backgroundColor: `${SYNERGY_COLORS[activeSynergies[0].severity]}20`, color: SYNERGY_COLORS[activeSynergies[0].severity] }}>
+            <span className="text-xs px-1.5 py-0.5 rounded-full font-bold" style={{ backgroundColor: withOpacity(SYNERGY_COLORS[activeSynergies[0].severity], OPACITY_12), color: SYNERGY_COLORS[activeSynergies[0].severity] }}>
               {activeSynergies.length} active
             </span>
           )}
@@ -67,7 +72,7 @@ export function SynergyDetector({
                   animate={{ opacity: 1, x: 0, scale: 1 }}
                   transition={prefersReduced ? { duration: 0 } : isNew ? { ...ANIMATION_PRESETS.spring, delay: 0.2 + idx * ANIMATION_PRESETS.stagger.slow, duration: 0.35 } : undefined}
                   className="rounded-lg px-2.5 py-2 relative overflow-hidden"
-                  style={{ backgroundColor: `${synColor}08`, border: `1px solid ${synColor}30` }}
+                  style={{ backgroundColor: withOpacity(synColor, OPACITY_5), border: `1px solid ${withOpacity(synColor, OPACITY_20)}` }}
                 >
                   {/* Sparkle particles on new synergy — hidden for reduced motion */}
                   {isNew && !prefersReduced && (
@@ -92,7 +97,7 @@ export function SynergyDetector({
                   <div className="flex items-center gap-1.5 mb-1">
                     <Zap className="w-3 h-3" style={{ color: synColor }} />
                     <span className="text-xs font-bold" style={{ color: synColor }}>{syn.label}</span>
-                    <span className="text-xs font-mono uppercase tracking-wider font-bold px-1.5 py-0.5 rounded" style={{ backgroundColor: `${synColor}15`, color: synColor }}>
+                    <span className="text-xs font-mono uppercase tracking-wider font-bold px-1.5 py-0.5 rounded" style={{ backgroundColor: withOpacity(synColor, OPACITY_8), color: synColor }}>
                       {syn.severity}
                     </span>
                   </div>

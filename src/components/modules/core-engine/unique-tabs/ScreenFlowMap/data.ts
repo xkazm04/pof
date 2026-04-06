@@ -266,6 +266,8 @@ export const HUD_CONTEXTS: HudContext[] = [
   { name: 'Exploration', color: ACCENT_EMERALD, visible: ['HealthBar', 'MiniMap', 'QuestTracker', 'ManaBar'], hidden: ['AbilitySlots', 'EnemyBars', 'DamageNumbers', 'StaminaBar', 'ChatBox'] },
   { name: 'Dialogue', color: ACCENT_CYAN, visible: ['DialogueBox', 'PortraitFrame', 'ChoiceList'], hidden: ['HealthBar', 'ManaBar', 'AbilitySlots', 'MiniMap', 'EnemyBars', 'DamageNumbers'] },
   { name: 'Death', color: STATUS_SUBDUED, visible: ['DeathOverlay', 'RespawnButton', 'DeathStats'], hidden: ['HealthBar', 'ManaBar', 'AbilitySlots', 'MiniMap', 'EnemyBars', 'QuestTracker'] },
+  { name: 'Force Focus', color: '#3b82f6', visible: ['WBP_ForceMenu', 'WBP_ForceMeter', 'WBP_TargetLock'], hidden: ['MiniMap', 'QuestTracker', 'ChatBox', 'AbilitySlots'] },
+  { name: 'Lightsaber Combat', color: '#ef4444', visible: ['WBP_ComboCounter', 'WBP_StaminaArc', 'WBP_TargetFrame'], hidden: ['MiniMap', 'QuestTracker', 'ChatBox', 'DialogueBox'] },
 ];
 
 /* ── Widget Placements ─────────────────────────────────────────────────────── */
@@ -286,6 +288,12 @@ export const WIDGET_PLACEMENTS: WidgetPlacement[] = [
   { id: 'DeathOverlay', label: 'Death Screen', x: 15, y: 20, w: 70, h: 40, zDepth: 4 },
   { id: 'RespawnButton', label: 'Respawn', x: 35, y: 65, w: 30, h: 10, zDepth: 4 },
   { id: 'DeathStats', label: 'Death Stats', x: 30, y: 78, w: 40, h: 12, zDepth: 4 },
+  { id: 'health-globe', label: 'Health Globe', x: 5, y: 80, w: 12, h: 15, zDepth: 5 },
+  { id: 'force-globe', label: 'Force Globe', x: 83, y: 80, w: 12, h: 15, zDepth: 5 },
+  { id: 'skill-bar', label: 'Skill Bar (1-6, Q, R)', x: 25, y: 88, w: 50, h: 8, zDepth: 6 },
+  { id: 'stamina-arc', label: 'Stamina Arc', x: 8, y: 75, w: 8, h: 5, zDepth: 4 },
+  { id: 'combo-counter', label: 'Combo Counter', x: 75, y: 40, w: 10, h: 6, zDepth: 3 },
+  { id: 'loot-feed', label: 'Loot Feed', x: 2, y: 20, w: 15, h: 30, zDepth: 2 },
 ];
 
 export const WIDGET_Z_COLOR: Record<string, string> = {};

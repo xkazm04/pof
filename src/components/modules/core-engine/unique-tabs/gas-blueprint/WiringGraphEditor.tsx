@@ -5,7 +5,8 @@ import { Circle, Zap, Tag, Cable } from 'lucide-react';
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import {
   STATUS_SUCCESS, STATUS_WARNING, STATUS_ERROR,
-  ACCENT_CYAN, ACCENT_VIOLET, ACCENT_ORANGE, ACCENT_EMERALD,
+  ACCENT_CYAN, ACCENT_VIOLET, ACCENT_ORANGE, ACCENT_EMERALD, OVERLAY_WHITE,
+  withOpacity, OPACITY_2, OPACITY_4, OPACITY_10, OPACITY_12, OPACITY_8, OPACITY_5, OPACITY_15, OPACITY_50, OPACITY_25, OPACITY_20, OPACITY_30, OPACITY_40, OPACITY_80,
 } from '@/lib/chart-colors';
 import { motionSafe, ANIMATION_PRESETS } from '@/lib/motion';
 import type { AttrCategory, EditorAttribute, EditorEffect, TagRule } from '@/lib/gas-codegen';
@@ -300,19 +301,19 @@ export function WiringGraphEditor({
         >
           <defs>
             <marker id="gas-flow-arrow" viewBox="0 0 6 4" refX="6" refY="2" markerWidth="5" markerHeight="4" orient="auto">
-              <path d="M0,0 L6,2 L0,4" fill="rgba(255,255,255,0.5)" />
+              <path d="M0,0 L6,2 L0,4" fill={withOpacity(OVERLAY_WHITE, OPACITY_50)} />
             </marker>
           </defs>
 
           {/* Grid background */}
           <pattern id="gas-grid" width="20" height="20" patternUnits="userSpaceOnUse">
-            <path d="M 20 0 L 0 0 0 20" fill="none" stroke="rgba(255,255,255,0.02)" strokeWidth="0.5" />
+            <path d="M 20 0 L 0 0 0 20" fill="none" stroke={withOpacity(OVERLAY_WHITE, OPACITY_2)} strokeWidth="0.5" />
           </pattern>
           <rect width="100%" height="100%" fill="url(#gas-grid)" />
 
           {/* Column dividers */}
-          <line x1={190} y1={0} x2={190} y2={maxY} stroke="rgba(255,255,255,0.04)" strokeWidth={1} strokeDasharray="4 4" />
-          <line x1={420} y1={0} x2={420} y2={maxY} stroke="rgba(255,255,255,0.04)" strokeWidth={1} strokeDasharray="4 4" />
+          <line x1={190} y1={0} x2={190} y2={maxY} stroke={withOpacity(OVERLAY_WHITE, OPACITY_4)} strokeWidth={1} strokeDasharray="4 4" />
+          <line x1={420} y1={0} x2={420} y2={maxY} stroke={withOpacity(OVERLAY_WHITE, OPACITY_4)} strokeWidth={1} strokeDasharray="4 4" />
 
           {/* Wires */}
           {wires.map((wire) => {
@@ -419,8 +420,8 @@ export function WiringGraphEditor({
                   x={nx} y={ny}
                   width={NODE_W_GRAPH} height={nodeH}
                   rx={6}
-                  fill={isDragging ? `${node.color}28` : isSelected ? `${node.color}20` : isHovered ? `${node.color}12` : `${node.color}08`}
-                  stroke={isDragging ? node.color : isSelected ? node.color : isHovered ? `${node.color}80` : `${node.color}40`}
+                  fill={isDragging ? `${withOpacity(node.color, OPACITY_15)}` : isSelected ? `${withOpacity(node.color, OPACITY_12)}` : isHovered ? `${withOpacity(node.color, OPACITY_8)}` : `${withOpacity(node.color, OPACITY_5)}`}
+                  stroke={isDragging ? node.color : isSelected ? node.color : isHovered ? `${withOpacity(node.color, OPACITY_50)}` : `${withOpacity(node.color, OPACITY_25)}`}
                   strokeWidth={isDragging ? 2 : isSelected ? 1.5 : 1}
                 />
 
@@ -436,7 +437,7 @@ export function WiringGraphEditor({
                 {/* Node label */}
                 <text
                   x={nx + 12} y={ny + 12}
-                  fill={isSelected || isHovered || isDragging ? node.color : 'rgba(255,255,255,0.8)'}
+                  fill={isSelected || isHovered || isDragging ? node.color : withOpacity(OVERLAY_WHITE, OPACITY_80)}
                   fontSize={node.type === 'tag-rule' ? 7 : 8.5}
                   fontFamily="monospace"
                   fontWeight="bold"
@@ -469,8 +470,8 @@ export function WiringGraphEditor({
                     <g key={pin.id}>
                       <circle
                         cx={pos.x} cy={pos.y} r={PIN_R}
-                        fill={isConnected ? wireColor : 'rgba(255,255,255,0.1)'}
-                        stroke={isConnected ? wireColor : 'rgba(255,255,255,0.3)'}
+                        fill={isConnected ? wireColor : withOpacity(OVERLAY_WHITE, OPACITY_10)}
+                        stroke={isConnected ? wireColor : withOpacity(OVERLAY_WHITE, OPACITY_30)}
                         strokeWidth={1}
                         className="pointer-events-auto"
                         style={{ cursor: 'crosshair' }}
@@ -487,7 +488,7 @@ export function WiringGraphEditor({
                         <text
                           x={pin.side === 'left' ? pos.x + 6 : pos.x - 6}
                           y={pos.y + 3}
-                          fill="rgba(255,255,255,0.4)" fontSize={6} fontFamily="monospace"
+                          fill={withOpacity(OVERLAY_WHITE, OPACITY_40)} fontSize={6} fontFamily="monospace"
                           textAnchor={pin.side === 'left' ? 'start' : 'end'}
                           className="pointer-events-none"
                         >
@@ -555,8 +556,8 @@ export function WiringGraphEditor({
             <div
               className="p-2.5 rounded-lg border space-y-1.5"
               style={{
-                borderColor: `${selectedDetail.node.color}30`,
-                backgroundColor: `${selectedDetail.node.color}06`,
+                borderColor: `${withOpacity(selectedDetail.node.color, OPACITY_20)}`,
+                backgroundColor: `${withOpacity(selectedDetail.node.color, OPACITY_5)}`,
               }}
             >
               <div className="flex items-center gap-2">

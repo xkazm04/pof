@@ -8,6 +8,7 @@ import type { ItemGenome } from '@/types/item-genome';
 import { predictDistribution } from '@/lib/item-dna/rolling-engine';
 import { AXIS_CONFIGS, DEMO_AFFIX_POOL, ACCENT } from './data';
 
+import { withOpacity, OPACITY_37 } from '@/lib/chart-colors';
 /* ── Predicted Distribution Bar ────────────────────────────────────────── */
 
 export function DistributionBar({ genome, rarity }: { genome: ItemGenome; rarity: string }) {
@@ -27,7 +28,7 @@ export function DistributionBar({ genome, rarity }: { genome: ItemGenome; rarity
             <motion.div
               key={cfg.axis}
               className="h-full flex items-center justify-center text-xs font-mono font-bold"
-              style={{ backgroundColor: `${cfg.color}60`, width: `${pct}%`, color: cfg.color }}
+              style={{ backgroundColor: `${withOpacity(cfg.color, OPACITY_37)}`, width: `${pct}%`, color: cfg.color }}
               initial={{ width: 0 }}
               animate={{ width: `${pct}%` }}
               transition={{ duration: 0.5 }}

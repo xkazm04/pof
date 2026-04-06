@@ -1,7 +1,7 @@
 'use client';
 
 import { Sparkles, Wand2 } from 'lucide-react';
-import { ACCENT_VIOLET } from '@/lib/chart-colors';
+import { ACCENT_VIOLET, OPACITY_8, OPACITY_12, OPACITY_25, OPACITY_50, GLOW_SM, OVERLAY_WHITE, withOpacity } from '@/lib/chart-colors';
 import { FEEL_PRESETS, FEEL_FIELD_META } from '@/lib/character-feel-optimizer';
 import { BlueprintPanel, SectionHeader, GlowStat } from '../_design';
 import { ACCENT, FEEL_HINTS } from './constants';
@@ -24,7 +24,7 @@ export function FeelInputPanel({ customPrompt, isRunning, onPromptChange, onGene
           <div className="flex items-center gap-2">
             <div className="p-1.5 rounded-lg relative overflow-hidden">
               <div className="absolute inset-0 opacity-20" style={{ backgroundColor: ACCENT }} />
-              <Sparkles className="w-4 h-4 relative z-10" style={{ color: ACCENT, filter: `drop-shadow(0 0 4px ${ACCENT}80)` }} />
+              <Sparkles className="w-4 h-4 relative z-10" style={{ color: ACCENT, filter: `drop-shadow(${GLOW_SM} ${withOpacity(ACCENT, OPACITY_50)})` }} />
             </div>
             <div>
               <span className="text-xs font-mono uppercase tracking-[0.15em] font-bold text-text">
@@ -59,9 +59,9 @@ export function FeelInputPanel({ customPrompt, isRunning, onPromptChange, onGene
             disabled={!customPrompt.trim() || isRunning}
             className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-bold transition-all disabled:opacity-40"
             style={{
-              backgroundColor: `${ACCENT_VIOLET}20`,
+              backgroundColor: withOpacity(ACCENT_VIOLET, OPACITY_12),
               color: ACCENT_VIOLET,
-              border: `1px solid ${ACCENT_VIOLET}40`,
+              border: `1px solid ${withOpacity(ACCENT_VIOLET, OPACITY_25)}`,
             }}
           >
             <Sparkles className="w-3.5 h-3.5" />
@@ -77,7 +77,7 @@ export function FeelInputPanel({ customPrompt, isRunning, onPromptChange, onGene
               style={{
                 backgroundColor: 'var(--surface-deep)',
                 color: 'var(--text-muted)',
-                border: '1px solid rgba(255,255,255,0.08)',
+                border: `1px solid ${withOpacity(OVERLAY_WHITE, OPACITY_8)}`,
               }}
             >
               {hint}

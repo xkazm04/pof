@@ -1,12 +1,12 @@
 'use client';
 
-import { useState, useMemo, useCallback, useRef, useEffect } from 'react';
+import { useState, useMemo, useCallback, useEffect } from 'react';
 import { List, type RowComponentProps } from 'react-window';
 import {
   User, Bot, Wrench, CheckCircle, AlertCircle,
   Loader2, ChevronDown, ChevronRight,
   FileEdit, FilePlus, Eye, ListOrdered,
-  Copy, Search, Zap, Terminal, Command, CornerDownLeft,
+  Copy, Search, Zap, Terminal,
   Box, AlertTriangle, FileCode, Lightbulb, Footprints,
 } from 'lucide-react';
 import type { LogEntry } from './types';
@@ -232,7 +232,7 @@ interface TerminalOutputProps {
   scrollRef: React.RefObject<HTMLDivElement | null>;
   listRef: React.RefObject<ListImperativeAPI | null>;
   onScroll: () => void;
-  buildParseCache: React.RefObject<Map<string, BuildParseResult>>;
+  buildParseCache: Map<string, BuildParseResult>;
   onBuildFix: (prompt: string) => void;
   // Scroll button
   scrollBtnVisible: boolean;
@@ -252,12 +252,11 @@ interface SelectionToolbarState {
   y: number;
 }
 
-function SelectionToolbar({ state, onCopy, onSearch, onFix, containerRef }: {
+function SelectionToolbar({ state, onCopy, onSearch, onFix }: {
   state: SelectionToolbarState;
   onCopy: () => void;
   onSearch: () => void;
   onFix: () => void;
-  containerRef: React.RefObject<HTMLDivElement | null>;
 }) {
   return (
     <div
@@ -539,21 +538,23 @@ export function TerminalOutput({
   const groupedTailLogs = useMemo(() => groupLogs(tailLogs), [tailLogs]);
 
   // Track which log IDs have been seen so we only animate new arrivals
-  const seenIdsRef = useRef<Set<string>>(new Set());
+  const [seenIds, setSeenIds] = useState<Set<string>>(new Set());
   useEffect(() => {
-    // Mark all current log ids as seen after render
+    // Mark all current log ids as seen after paint so animation runs once
     const timer = requestAnimationFrame(() => {
-      for (const log of logs) {
-        seenIdsRef.current.add(log.id);
-      }
+      setSeenIds(prev => {
+        const next = new Set(prev);
+        for (const log of logs) next.add(log.id);
+        return next;
+      });
     });
     return () => cancelAnimationFrame(timer);
   }, [logs]);
 
-  const isNewEntry = useCallback((id: string) => !seenIdsRef.current.has(id), []);
+  const isNewEntry = useCallback((id: string) => !seenIds.has(id), [seenIds]);
 
-  const renderSingleLog = useCallback((log: LogEntry) => {
-    const parsed = buildParseCache.current.get(log.id);
+  const renderSingleLog = (log: LogEntry) => {
+    const parsed = buildParseCache.get(log.id);
     if (parsed && parsed.isBuildOutput) {
       const errors = parsed.diagnostics.filter((d) => d.severity === 'error');
       const warningGroups = aggregateWarnings(parsed.diagnostics);
@@ -610,7 +611,7 @@ export function TerminalOutput({
         <span className={`text-xs leading-relaxed break-all ${getLogTextClass(log.type)}`}>{formatLogContent(log)}</span>
       </div>
     );
-  }, [buildParseCache, onBuildFix]);
+  };
 
   const renderGroupedEntries = (entries: GroupedLogEntry[]) => (
     <>
@@ -622,9 +623,9 @@ export function TerminalOutput({
             {entry.kind === 'single' ? (
               renderSingleLog(entry.log)
             ) : entry.kind === 'tool_pair' ? (
-              <ToolPairRow toolUse={entry.toolUse} toolResult={entry.toolResult} isExpanded={expandedPairs.has(entry.toolUse.id)} onToggle={() => togglePair(entry.toolUse.id)} buildParsed={buildParseCache.current.get(entry.toolResult.id)} onBuildFix={onBuildFix} isStreaming={isStreaming} />
+              <ToolPairRow toolUse={entry.toolUse} toolResult={entry.toolResult} isExpanded={expandedPairs.has(entry.toolUse.id)} onToggle={() => togglePair(entry.toolUse.id)} buildParsed={buildParseCache.get(entry.toolResult.id)} onBuildFix={onBuildFix} isStreaming={isStreaming} />
             ) : (
-              <ToolBatchRow pairs={entry.pairs} isExpanded={expandedGroups.has(entry.id)} onToggle={() => toggleGroup(entry.id)} expandedPairs={expandedPairs} onTogglePair={togglePair} buildCache={buildParseCache.current} onBuildFix={onBuildFix} isStreaming={isStreaming} />
+              <ToolBatchRow pairs={entry.pairs} isExpanded={expandedGroups.has(entry.id)} onToggle={() => toggleGroup(entry.id)} expandedPairs={expandedPairs} onTogglePair={togglePair} buildCache={buildParseCache} onBuildFix={onBuildFix} isStreaming={isStreaming} />
             )}
           </div>
         );
@@ -633,18 +634,25 @@ export function TerminalOutput({
   );
 
   // Track scroll button visibility with CSS class
-  const [scrollBtnMounted, setScrollBtnMounted] = useState(false);
-  useEffect(() => {
-    if (scrollBtnVisible && !isAutoScroll && logs.length > 10) {
-      setScrollBtnMounted(true);
-    } else {
-      // Small delay for exit transition
-      const timer = setTimeout(() => setScrollBtnMounted(false), 150);
-      return () => clearTimeout(timer);
-    }
-  }, [scrollBtnVisible, isAutoScroll, logs.length]);
-
   const showScrollBtn = scrollBtnVisible && !isAutoScroll && logs.length > 10;
+  const [scrollBtnMounted, setScrollBtnMounted] = useState(false);
+
+  // Render-time mount: show immediately when conditions met
+  const [prevShowScrollBtn, setPrevShowScrollBtn] = useState(false);
+  if (showScrollBtn && !prevShowScrollBtn) {
+    setPrevShowScrollBtn(true);
+    setScrollBtnMounted(true);
+  }
+  if (!showScrollBtn && prevShowScrollBtn) {
+    setPrevShowScrollBtn(false);
+  }
+
+  // Delayed unmount for exit transition
+  useEffect(() => {
+    if (showScrollBtn) return;
+    const timer = setTimeout(() => setScrollBtnMounted(false), 150);
+    return () => clearTimeout(timer);
+  }, [showScrollBtn]);
 
   return (
     <div ref={scrollRef} onScroll={onScroll} onMouseUp={handleMouseUp} className="flex-1 overflow-y-auto relative">
@@ -655,7 +663,6 @@ export function TerminalOutput({
           onCopy={handleSelectionCopy}
           onSearch={handleSelectionSearch}
           onFix={handleSelectionFix}
-          containerRef={scrollRef}
         />
       )}
 

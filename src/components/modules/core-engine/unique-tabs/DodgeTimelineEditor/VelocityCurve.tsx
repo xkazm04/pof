@@ -1,7 +1,9 @@
 'use client';
 
 import { useMemo } from 'react';
-import { ACCENT_CYAN } from '@/lib/chart-colors';
+import { ACCENT_CYAN, OVERLAY_WHITE,
+  withOpacity, OPACITY_6, OPACITY_37, OPACITY_80,
+} from '@/lib/chart-colors';
 import type { DodgeParams, DodgePhases } from '../dodge-types';
 import { speedCurve } from '../dodge-math';
 
@@ -38,15 +40,15 @@ export function VelocityCurve({
     <div>
       <svg width="100%" height={40} viewBox="0 0 200 40" preserveAspectRatio="none" className="overflow-visible">
         {/* Baseline */}
-        <line x1={0} y1={34} x2={200} y2={34} stroke="rgba(255,255,255,0.06)" strokeWidth="1" />
+        <line x1={0} y1={34} x2={200} y2={34} stroke={withOpacity(OVERLAY_WHITE, OPACITY_6)} strokeWidth="1" />
         {/* Velocity curve */}
         <path
           d={curveD}
           fill="none" stroke={ACCENT_CYAN} strokeWidth="1.5" strokeLinecap="round"
-          style={{ filter: `drop-shadow(0 0 3px ${ACCENT_CYAN}60)` }}
+          style={{ filter: `drop-shadow(0 0 3px ${withOpacity(ACCENT_CYAN, OPACITY_37)})` }}
         />
         {/* Playhead dot */}
-        <circle cx={playX} cy={Math.max(4, playY)} r={3} fill="#fff" style={{ filter: 'drop-shadow(0 0 4px rgba(255,255,255,0.8))' }} />
+        <circle cx={playX} cy={Math.max(4, playY)} r={3} fill="#fff" style={{ filter: `drop-shadow(0 0 4px ${withOpacity(OVERLAY_WHITE, OPACITY_80)})` }} />
       </svg>
       <div className="flex justify-between text-xs font-mono text-text-muted mt-0.5">
         <span style={{ color: ACCENT_CYAN }}>Velocity</span>

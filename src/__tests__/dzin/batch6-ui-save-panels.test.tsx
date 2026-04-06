@@ -34,7 +34,7 @@ describe('HudCompositorPanel at micro density', () => {
         <HudCompositorPanel featureMap={mockFeatureMap} defs={mockDefs} />
       </DensityProvider>,
     );
-    expect(screen.getByText('15 widgets')).toBeTruthy();
+    expect(screen.getByText('21 widgets')).toBeTruthy();
   });
 });
 
@@ -126,7 +126,7 @@ describe('SaveSchemaPanel at micro density', () => {
         <SaveSchemaPanel featureMap={mockFeatureMap} defs={mockDefs} />
       </DensityProvider>,
     );
-    expect(screen.getByText('10 fields')).toBeTruthy();
+    expect(screen.getByText('16 fields')).toBeTruthy();
   });
 });
 

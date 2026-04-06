@@ -456,14 +456,17 @@ export function buildGamePlan(config: HarnessConfig): GamePlan {
 
   // Build areas for each module in sorted order
   const allAreas: ModuleArea[] = [];
-  for (const moduleId of sorted) {
-    const areas = config.areas
-      ? config.areas.filter(a => a.moduleId === moduleId)
-      : buildAreasForModule(moduleId);
-    allAreas.push(...areas);
-  }
 
-  wireAreaDependencies(allAreas);
+  if (config.areas) {
+    // Custom areas already have dependsOn set — use them directly in order
+    allAreas.push(...config.areas);
+  } else {
+    for (const moduleId of sorted) {
+      const areas = buildAreasForModule(moduleId);
+      allAreas.push(...areas);
+    }
+    wireAreaDependencies(allAreas);
+  }
 
   const totalFeatures = allAreas.reduce((sum, a) => sum + a.features.length, 0);
 

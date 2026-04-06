@@ -55,14 +55,16 @@ export function usePofBridge(): UsePofBridgeResult {
       setError(newState.error);
     });
 
-    // Sync initial state
+    // Sync initial state after current render cycle
     const initial = pofBridgeConnection.getState();
-    setState(initial);
-    setConnectionStatus(initial.status);
-    setPluginInfo(initial.pluginInfo);
-    setError(initial.error);
+    const raf = requestAnimationFrame(() => {
+      setState(initial);
+      setConnectionStatus(initial.status);
+      setPluginInfo(initial.pluginInfo);
+      setError(initial.error);
+    });
 
-    return unsubscribe;
+    return () => { cancelAnimationFrame(raf); unsubscribe(); };
   }, [setConnectionStatus, setPluginInfo, setError]);
 
   // ── Auto-connect when autoDetect is enabled ────────────────────────────────

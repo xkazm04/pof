@@ -7,6 +7,7 @@ import {
 import {
   STATUS_SUCCESS, STATUS_WARNING, STATUS_ERROR,
   ACCENT_CYAN, ACCENT_EMERALD, ACCENT_ORANGE, ACCENT_VIOLET,
+  withOpacity, OPACITY_37, OPACITY_8, OPACITY_25,
 } from '@/lib/chart-colors';
 import type { WaveDef } from '@/lib/combat/choreography-sim';
 import type { TuningOverrides } from '@/types/combat-simulator';
@@ -43,7 +44,7 @@ export function WaveManager({ waves, selectedWave, waveEnemyCounts, totalEnemies
         {waves.map((wave, i) => (
           <div key={i}
             className="flex items-center gap-1.5 px-2 py-1.5 rounded-md border cursor-pointer transition-colors"
-            style={{ borderColor: selectedWave === i ? `${ACCENT_CYAN}60` : 'var(--border)', backgroundColor: selectedWave === i ? `${ACCENT_CYAN}10` : 'transparent' }}
+            style={{ borderColor: selectedWave === i ? `${withOpacity(ACCENT_CYAN, OPACITY_37)}` : 'var(--border)', backgroundColor: selectedWave === i ? `${withOpacity(ACCENT_CYAN, OPACITY_8)}` : 'transparent' }}
             onClick={() => onSelect(i)}>
             <div className="flex-1 min-w-0">
               <div className="text-xs font-mono font-bold truncate" style={{ color: selectedWave === i ? ACCENT_CYAN : 'var(--text)' }}>
@@ -105,7 +106,7 @@ export function TimelineSection({ simResult, waves, scrubTime, isPlaying, onScru
       <div className="flex items-center gap-3 text-xs font-mono uppercase tracking-[0.15em] text-text-muted pt-1 border-t border-border/20">
         <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-sm" style={{ backgroundColor: ACCENT_EMERALD }} /> Player dmg</span>
         <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-sm" style={{ backgroundColor: STATUS_ERROR }} /> Enemy dmg</span>
-        <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-sm border" style={{ backgroundColor: `${ACCENT_CYAN}40`, borderColor: ACCENT_CYAN }} /> Wave marker</span>
+        <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-sm border" style={{ backgroundColor: `${withOpacity(ACCENT_CYAN, OPACITY_25)}`, borderColor: ACCENT_CYAN }} /> Wave marker</span>
         {Object.entries(FEEDBACK_CHANNEL_COLORS).map(([type, color]) => (
           <span key={type} className="flex items-center gap-1"><span className="w-2 h-2 rounded-sm" style={{ backgroundColor: color }} /> {type}</span>
         ))}

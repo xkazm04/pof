@@ -3,6 +3,7 @@
 import { AlertTriangle, Activity } from 'lucide-react';
 import { SEVERITY_ICON_COLORS, type BalanceReport } from './data';
 
+import { withOpacity, OPACITY_8, OPACITY_20 } from '@/lib/chart-colors';
 export function AlertBadges({ alerts }: { alerts: BalanceReport['alerts'] }) {
   if (alerts.length === 0) {
     return (
@@ -31,7 +32,7 @@ export function AlertBadges({ alerts }: { alerts: BalanceReport['alerts'] }) {
           <div
             key={i}
             className="flex items-start gap-2 px-2 py-1.5 rounded border text-xs font-mono"
-            style={{ backgroundColor: `${color}10`, borderColor: `${color}30` }}
+            style={{ backgroundColor: `${withOpacity(color, OPACITY_8)}`, borderColor: `${withOpacity(color, OPACITY_20)}` }}
           >
             <Icon className="w-3 h-3 flex-shrink-0 mt-0.5" style={{ color }} />
             <span className="text-text-muted">{alert.message}</span>

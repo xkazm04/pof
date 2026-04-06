@@ -4,6 +4,7 @@ import { useState, useRef } from 'react';
 import { motion } from 'framer-motion';
 import type { HistogramBin } from './simulation';
 
+import { withOpacity, OPACITY_50, OPACITY_37 } from '@/lib/chart-colors';
 /** Histogram bar chart with hover crosshair + tooltip */
 export function HistogramChart({ bins, maxCount, color, formatRange, barHeight = 64 }: {
   bins: HistogramBin[];
@@ -42,7 +43,7 @@ export function HistogramChart({ bins, maxCount, color, formatRange, barHeight =
               {isHovered && (
                 <div
                   className="absolute top-0 left-1/2 -translate-x-px w-px pointer-events-none"
-                  style={{ height: barHeight, backgroundColor: `${color}80` }}
+                  style={{ height: barHeight, backgroundColor: `${withOpacity(color, OPACITY_50)}` }}
                 />
               )}
             </div>
@@ -62,7 +63,7 @@ export function HistogramChart({ bins, maxCount, color, formatRange, barHeight =
             className="px-2 py-1 rounded-md text-2xs font-mono whitespace-nowrap shadow-lg"
             style={{
               backgroundColor: 'var(--surface-deep)',
-              border: `1px solid ${color}60`,
+              border: `1px solid ${withOpacity(color, OPACITY_37)}`,
               color: 'var(--text)',
             }}
           >

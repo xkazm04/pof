@@ -126,7 +126,7 @@ export async function POST(request: NextRequest) {
         const candidate = response.candidates?.[0];
         if (!candidate?.content?.parts) break;
 
-        let hasServerTools = false;
+        const hasServerTools = false;
 
         for (const part of candidate.content.parts) {
           if (part.text) {

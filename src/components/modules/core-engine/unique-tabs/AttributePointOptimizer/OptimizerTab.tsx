@@ -7,9 +7,11 @@ import {
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import {
-  STATUS_SUCCESS, STATUS_ERROR,
+  STATUS_SUCCESS, STATUS_ERROR, STATUS_WARNING,
   ACCENT_CYAN, ACCENT_EMERALD,
-  OPACITY_10,
+  OPACITY_10, OPACITY_20, OPACITY_50, OPACITY_37,
+  GLOW_SM,
+  withOpacity,
 } from '@/lib/chart-colors';
 import { RadarChart } from '../_shared';
 import type { RadarDataPoint } from '@/types/unique-tab-improvements';
@@ -81,7 +83,7 @@ export function OptimizerTab({
                   onClick={() => setTarget(preset.id)}
                   className="relative text-left p-2.5 rounded-lg border transition-all focus-visible:outline-none focus-visible:ring-2"
                   style={{
-                    borderColor: isActive ? `${preset.color}60` : `${preset.color}18`,
+                    borderColor: isActive ? withOpacity(preset.color, OPACITY_37) : withOpacity(preset.color, OPACITY_10),
                     backgroundColor: isActive ? `${preset.color}${OPACITY_10}` : 'transparent',
                     '--tw-ring-color': preset.color,
                   } as React.CSSProperties}
@@ -90,7 +92,7 @@ export function OptimizerTab({
                     <motion.div layoutId="optTargetBg" className="absolute inset-0 rounded-lg opacity-10" style={{ backgroundColor: preset.color }} transition={{ type: 'spring', stiffness: 300, damping: 25 }} />
                   )}
                   <div className="flex items-center gap-2 relative z-10">
-                    <Icon className="w-4 h-4" style={{ color: preset.color, filter: `drop-shadow(0 0 4px ${preset.color}80)` }} />
+                    <Icon className="w-4 h-4" style={{ color: preset.color, filter: `drop-shadow(${GLOW_SM} ${withOpacity(preset.color, OPACITY_50)})` }} />
                     <div>
                       <div className="text-xs font-mono uppercase tracking-[0.15em] text-text">{preset.label}</div>
                       <div className="text-xs text-text-muted leading-tight">{preset.description}</div>
@@ -102,7 +104,7 @@ export function OptimizerTab({
           </div>
 
           {target === 'custom' && (
-            <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} className="mt-3 space-y-3 border-t pt-3" style={{ borderColor: `${ACCENT}18` }}>
+            <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} className="mt-3 space-y-3 border-t pt-3" style={{ borderColor: withOpacity(ACCENT, OPACITY_10) }}>
               {(['dps', 'ehp', 'mana'] as const).map(key => (
                 <div key={key} className="flex items-center gap-2">
                   <span className="text-xs font-mono uppercase tracking-[0.15em] w-10 text-text-muted">{key}</span>
@@ -130,7 +132,7 @@ export function OptimizerTab({
               <GlowStat label="Points" value={totalAvailable} color={ACCENT} delay={0.05} />
               <GlowStat label="Per Lv" value={UE5.attributePointsPerLevel} color={ACCENT} delay={0.1} />
             </div>
-            <div className="border-t pt-3" style={{ borderColor: `${ACCENT}18` }}>
+            <div className="border-t pt-3" style={{ borderColor: withOpacity(ACCENT, OPACITY_10) }}>
               <div className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted mb-2">UE5 Per-Point Ratios</div>
               <div className="space-y-1.5 text-xs font-mono">
                 <div className="flex justify-between"><span style={{ color: STATUS_ERROR }}>STR</span><span className="text-text">+{UE5.attackPowerPerSTR} AP</span></div>
@@ -148,7 +150,7 @@ export function OptimizerTab({
           <div className="flex items-center justify-between mb-3">
             <SectionHeader icon={Swords} label="Current Allocation" color={accentColor} />
             <div className="flex gap-1">
-              <button onClick={applyOptimal} className="text-xs font-mono uppercase tracking-[0.15em] px-2 py-0.5 rounded border hover:bg-surface-hover/50 transition-colors flex items-center gap-1 text-text-muted hover:text-text" style={{ borderColor: `${STATUS_SUCCESS}30` }}>
+              <button onClick={applyOptimal} className="text-xs font-mono uppercase tracking-[0.15em] px-2 py-0.5 rounded border hover:bg-surface-hover/50 transition-colors flex items-center gap-1 text-text-muted hover:text-text" style={{ borderColor: withOpacity(STATUS_SUCCESS, OPACITY_20) }}>
                 <CheckCircle2 className="w-3 h-3" style={{ color: STATUS_SUCCESS }} /> Apply
               </button>
               <button onClick={resetAlloc} className="text-xs font-mono uppercase tracking-[0.15em] px-2 py-0.5 rounded border border-border/40 hover:bg-surface-hover/50 transition-colors flex items-center gap-1 text-text-muted hover:text-text">
@@ -163,9 +165,9 @@ export function OptimizerTab({
             <AttrBar label="Intelligence" value={currentAlloc.int} max={totalAvailable} color={ACCENT_CYAN} icon={Droplets} perPoint={`+${UE5.maxManaPerINT} Mana`} onChange={v => updateAlloc('int', v)} />
           </div>
 
-          <div className="mt-3 pt-3 flex items-center justify-between text-xs font-mono" style={{ borderTop: `1px solid ${ACCENT}18` }}>
+          <div className="mt-3 pt-3 flex items-center justify-between text-xs font-mono" style={{ borderTop: `1px solid ${withOpacity(ACCENT, OPACITY_10)}` }}>
             <span className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted">Unspent</span>
-            <span className={remaining > 0 ? 'text-amber-400 font-bold' : remaining < 0 ? 'text-red-400 font-bold' : 'text-emerald-400'}>
+            <span className={remaining !== 0 ? 'font-bold' : ''} style={{ color: remaining > 0 ? STATUS_WARNING : remaining < 0 ? STATUS_ERROR : ACCENT_EMERALD }}>
               {remaining > 0 && <AlertTriangle className="w-3 h-3 inline mr-1" />}
               {remaining} pts
             </span>

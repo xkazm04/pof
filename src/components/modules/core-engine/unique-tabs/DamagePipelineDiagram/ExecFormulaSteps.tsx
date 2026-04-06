@@ -3,6 +3,7 @@
 import {
   STATUS_SUCCESS, STATUS_ERROR, STATUS_WARNING, STATUS_STALE,
   ACCENT_VIOLET, OPACITY_10, OPACITY_30,
+  withOpacity, OPACITY_20,
 } from '@/lib/chart-colors';
 import type { CalcInputs } from './types';
 import { fmtNum } from './types';
@@ -108,7 +109,7 @@ export function ExecFormulaSteps({ calcActive, inputs, c, expandedCode, toggleCo
         codeExpanded={expandedCode.has('outdmg')} onToggleCode={() => toggleCode('outdmg')}>
         <div className="flex items-center gap-2">
           <span className="text-xs font-mono px-1.5 py-0.5 rounded font-bold"
-            style={{ backgroundColor: `${STATUS_SUCCESS}${OPACITY_10}`, color: STATUS_SUCCESS, border: `1px solid ${STATUS_SUCCESS}30` }}>
+            style={{ backgroundColor: `${STATUS_SUCCESS}${OPACITY_10}`, color: STATUS_SUCCESS, border: `1px solid ${withOpacity(STATUS_SUCCESS, OPACITY_20)}` }}>
             Additive
           </span>
           <span className="font-bold" style={{ color: STATUS_ERROR }}>{fmtNum(c.finalDamage)}</span>

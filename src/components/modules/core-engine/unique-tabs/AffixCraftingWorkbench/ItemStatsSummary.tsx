@@ -5,6 +5,8 @@ import { motion } from 'framer-motion';
 import {
   STATUS_SUCCESS, STATUS_WARNING, STATUS_ERROR,
   ACCENT_EMERALD, ACCENT_PURPLE,
+  OPACITY_10, OPACITY_25,
+  withOpacity,
 } from '@/lib/chart-colors';
 import { BlueprintPanel, SectionHeader, GlowStat } from '../_design';
 import { ACCENT } from './constants';
@@ -54,11 +56,11 @@ export function ItemStatsSummary({
         {rows.map(({ label, value, color }) => (
           <div key={label} className="flex items-center justify-between text-xs font-mono uppercase tracking-[0.15em]">
             <span className="text-text-muted">{label}</span>
-            <span className="font-bold" style={{ color, textShadow: `0 0 12px ${color}40` }}>{value}</span>
+            <span className="font-bold" style={{ color, textShadow: `0 0 12px ${withOpacity(color, OPACITY_25)}` }}>{value}</span>
           </div>
         ))}
 
-        <div className="border-t my-1 pt-1" style={{ borderColor: `${ACCENT}18` }} />
+        <div className="border-t my-1 pt-1" style={{ borderColor: withOpacity(ACCENT, OPACITY_10) }} />
 
         <div className="flex items-center justify-between text-xs font-mono uppercase tracking-[0.15em]">
           <span className="text-text-muted flex items-center gap-1">
@@ -67,7 +69,7 @@ export function ItemStatsSummary({
           <span className="font-bold"
             style={{
               color: wallet.forging <= 10 ? STATUS_ERROR : wallet.forging <= 30 ? STATUS_WARNING : ACCENT_EMERALD,
-              textShadow: `0 0 12px ${ACCENT_EMERALD}40`,
+              textShadow: `0 0 12px ${withOpacity(ACCENT_EMERALD, OPACITY_25)}`,
             }}>
             {wallet.forging}
           </span>
@@ -78,7 +80,7 @@ export function ItemStatsSummary({
             {hasLocks ? <Lock className="w-3 h-3" /> : <Unlock className="w-3 h-3" />} Locks
           </span>
           <span className="font-bold"
-            style={{ color: hasLocks ? ACCENT_PURPLE : 'var(--text-muted)', textShadow: hasLocks ? `0 0 12px ${ACCENT_PURPLE}40` : 'none' }}>
+            style={{ color: hasLocks ? ACCENT_PURPLE : 'var(--text-muted)', textShadow: hasLocks ? `0 0 12px ${withOpacity(ACCENT_PURPLE, OPACITY_25)}` : 'none' }}>
             {lockLabel}
           </span>
         </div>

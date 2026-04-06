@@ -2,7 +2,7 @@
 
 import { Clock, AlertTriangle } from 'lucide-react';
 import {
-  ACCENT_EMERALD, STATUS_ERROR, STATUS_WARNING, STATUS_INFO,
+  ACCENT_EMERALD, STATUS_ERROR, STATUS_WARNING, STATUS_INFO, GLOW_SM,
 } from '@/lib/chart-colors';
 import { FEEDBACK_CHANNELS, type ScrubData } from './types';
 
@@ -66,7 +66,7 @@ export function ScrubTooltip({
                   style={{
                     backgroundColor: active ? ch.color : 'var(--text-muted)',
                     opacity: active ? 1 : 0.3,
-                    boxShadow: active ? `0 0 4px ${ch.color}` : 'none',
+                    boxShadow: active ? `${GLOW_SM} ${ch.color}` : 'none',
                   }}
                 />
                 <span style={{ color: active ? ch.color : 'var(--text-muted)', opacity: active ? 1 : 0.4 }}>

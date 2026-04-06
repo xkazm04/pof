@@ -4,7 +4,9 @@ import { useState, useCallback, useRef } from 'react';
 import { Play, BarChart3, RotateCcw, Check, Download, Upload } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { copyToClipboard } from '@/lib/clipboard';
-import { OPACITY_15, OPACITY_20, OPACITY_30, STATUS_SUCCESS, STATUS_ERROR } from '@/lib/chart-colors';
+import { OPACITY_15, OPACITY_20, OPACITY_30, STATUS_SUCCESS, STATUS_ERROR,
+  withOpacity, OPACITY_8, OPACITY_25,
+} from '@/lib/chart-colors';
 import { BlueprintPanel, SectionHeader } from '../_design';
 import { ScenarioEditor } from './ScenarioEditor';
 import { ResultsSummary } from './ResultsSummary';
@@ -92,7 +94,7 @@ export function GASBalanceSimulator() {
     <div className="space-y-4">
       {/* Header */}
       <BlueprintPanel color={ACCENT} className="p-3 relative overflow-hidden">
-        <div className="absolute right-0 top-0 w-40 h-40 blur-3xl rounded-full pointer-events-none" style={{ backgroundColor: `${ACCENT}10` }} />
+        <div className="absolute right-0 top-0 w-40 h-40 blur-3xl rounded-full pointer-events-none" style={{ backgroundColor: `${withOpacity(ACCENT, OPACITY_8)}` }} />
         <SectionHeader icon={BarChart3} label="Monte Carlo Balance Simulator" color={ACCENT} />
         <p className="text-2xs text-text-muted mt-1">
           Simulate thousands of combat encounters using the full GAS damage pipeline (Strength{'\u2192'}AttackPower scaling, armor/(armor+100) reduction, crit rolls, health depletion).
@@ -139,7 +141,7 @@ export function GASBalanceSimulator() {
           <div className="relative">
             <button onClick={runSim} disabled={isRunning || scenario.enemies.length === 0}
               className="w-full flex items-center justify-center gap-2 py-2 rounded-lg text-sm font-semibold transition-all disabled:opacity-50"
-              style={{ backgroundColor: `${ACCENT}${OPACITY_20}`, color: ACCENT, border: `1px solid ${ACCENT}40` }}>
+              style={{ backgroundColor: `${ACCENT}${OPACITY_20}`, color: ACCENT, border: `1px solid ${withOpacity(ACCENT, OPACITY_25)}` }}>
               {isRunning ? (
                 <motion.div animate={{ rotate: 360 }} transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}>
                   <RotateCcw className="w-4 h-4" />

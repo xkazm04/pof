@@ -8,6 +8,7 @@ import {
 import {
   STATUS_ERROR, ACCENT_CYAN, ACCENT_VIOLET, ACCENT_ORANGE,
   ACCENT_EMERALD, STATUS_WARNING, MODULE_COLORS,
+  withOpacity, OPACITY_10, OPACITY_5,
 } from '@/lib/chart-colors';
 import { BlueprintPanel, SectionHeader } from '../_design';
 import { StatInput } from './StatInput';
@@ -69,7 +70,7 @@ export function ScenarioEditor({ scenario, onChange }: { scenario: SimScenario; 
         <SectionHeader label={`Enemies (${scenario.enemies.reduce((s, e) => s + e.count, 0)} total)`} icon={Users} color={STATUS_ERROR} />
         <div className="space-y-3">
           {scenario.enemies.map(enemy => (
-            <div key={enemy.id} className="rounded-md border p-2 space-y-1.5" style={{ borderColor: `${STATUS_ERROR}18`, backgroundColor: `${STATUS_ERROR}06` }}>
+            <div key={enemy.id} className="rounded-md border p-2 space-y-1.5" style={{ borderColor: `${withOpacity(STATUS_ERROR, OPACITY_10)}`, backgroundColor: `${withOpacity(STATUS_ERROR, OPACITY_5)}` }}>
               <div className="flex items-center justify-between">
                 <span className="text-xs font-semibold text-text">{enemy.stats.name}</span>
                 <div className="flex items-center gap-1.5">

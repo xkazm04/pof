@@ -371,7 +371,7 @@ function DependencyExplorer({
   }, [nodes]);
 
   const filteredNodes = useMemo(() => {
-    let list = typeFilter === 'all' ? nodes : nodes.filter((n) => n.type === typeFilter);
+    const list = typeFilter === 'all' ? nodes : nodes.filter((n) => n.type === typeFilter);
     // Sort by total connections descending
     return list.sort((a, b) => (b.inDegree + b.outDegree) - (a.inDegree + a.outDegree));
   }, [nodes, typeFilter]);

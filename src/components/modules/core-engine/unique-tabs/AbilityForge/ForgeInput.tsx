@@ -3,6 +3,7 @@
 import { useCallback, useRef } from 'react';
 import { Wand2, Sparkles, RefreshCw } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { OVERLAY_WHITE, OPACITY_3, OPACITY_5, OPACITY_12, OPACITY_20, withOpacity } from '@/lib/chart-colors';
 import { BlueprintPanel, SectionHeader } from '../_design';
 import { ACCENT, EXAMPLE_PROMPTS } from './constants';
 
@@ -53,9 +54,9 @@ export function ForgeInput({ description, setDescription, isGenerating, onGenera
           disabled={!description.trim() || isGenerating}
           className="absolute right-2 bottom-2 flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-mono font-medium transition-all disabled:opacity-40 disabled:cursor-not-allowed"
           style={{
-            background: isGenerating ? 'rgba(255,255,255,0.05)' : `${ACCENT}20`,
+            background: isGenerating ? withOpacity(OVERLAY_WHITE, OPACITY_5) : withOpacity(ACCENT, OPACITY_12),
             color: isGenerating ? '#a1a1aa' : ACCENT,
-            border: `1px solid ${isGenerating ? 'transparent' : `${ACCENT}30`}`,
+            border: `1px solid ${isGenerating ? 'transparent' : withOpacity(ACCENT, OPACITY_20)}`,
           }}
         >
           {isGenerating ? (
@@ -84,7 +85,7 @@ export function ForgeInput({ description, setDescription, isGenerating, onGenera
               whileTap={{ scale: 0.97 }}
               onClick={() => handleExample(ex)}
               className="text-xs px-2 py-1 rounded-md text-zinc-500 hover:text-zinc-300 transition-colors truncate max-w-[240px]"
-              style={{ background: 'rgba(255,255,255,0.03)' }}
+              style={{ background: withOpacity(OVERLAY_WHITE, OPACITY_3) }}
               title={ex}
             >
               {ex.length > 45 ? `${ex.slice(0, 45)}...` : ex}

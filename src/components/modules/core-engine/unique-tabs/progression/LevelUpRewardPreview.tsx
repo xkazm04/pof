@@ -2,7 +2,9 @@
 
 import { Award } from 'lucide-react';
 import { motion } from 'framer-motion';
-import { OPACITY_10, OPACITY_20 } from '@/lib/chart-colors';
+import { OPACITY_10, OPACITY_20,
+  withOpacity, OPACITY_37, GLOW_MD,
+} from '@/lib/chart-colors';
 import { SurfaceCard } from '@/components/ui/SurfaceCard';
 import { SectionLabel } from '../_shared';
 import { ACCENT, LEVEL_REWARDS } from './progression-data';
@@ -27,7 +29,7 @@ export function LevelUpRewardPreview() {
               >
                 <div
                   className="w-5 h-5 rounded-full flex items-center justify-center z-10 border-2 border-surface-deep shadow-lg"
-                  style={{ backgroundColor: reward.color, boxShadow: `0 0 8px ${reward.color}60` }}
+                  style={{ backgroundColor: reward.color, boxShadow: `${GLOW_MD} ${withOpacity(reward.color, OPACITY_37)}` }}
                 >
                   <Icon className="w-2.5 h-2.5 text-white" />
                 </div>

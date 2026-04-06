@@ -2,7 +2,9 @@
 
 import { useState, useMemo, useRef, useEffect } from 'react';
 import { AlertTriangle } from 'lucide-react';
-import { STATUS_SUCCESS, STATUS_ERROR, STATUS_WARNING, STATUS_INFO } from '@/lib/chart-colors';
+import { STATUS_SUCCESS, STATUS_ERROR, STATUS_WARNING, STATUS_INFO,
+  withOpacity, OPACITY_12, OPACITY_25, OPACITY_8, OPACITY_20, OPACITY_15, OPACITY_5,
+} from '@/lib/chart-colors';
 import { BlueprintPanel, SectionHeader } from '../_design';
 import type { BalanceAlertSeverity } from '@/types/combat-simulator';
 import type { BalanceAlert } from './types';
@@ -25,12 +27,12 @@ export function BalanceAlertsPanel({ alerts }: { alerts: BalanceAlert[] }) {
       prevAlertsLen.current = alerts.length;
       const critIdx = alerts.findIndex(a => a.severity === 'critical');
       if (critIdx !== -1) {
-        setFlashIdx(critIdx);
-        requestAnimationFrame(() => {
+        const raf = requestAnimationFrame(() => {
+          setFlashIdx(critIdx);
           firstCritRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
         });
         const timer = setTimeout(() => setFlashIdx(null), 600);
-        return () => clearTimeout(timer);
+        return () => { cancelAnimationFrame(raf); clearTimeout(timer); };
       }
     }
   }, [alerts]);
@@ -51,7 +53,7 @@ export function BalanceAlertsPanel({ alerts }: { alerts: BalanceAlert[] }) {
             <span
               key={s.key}
               className="text-xs font-mono uppercase tracking-[0.15em] font-bold px-1.5 py-0.5 rounded-full"
-              style={{ backgroundColor: `${s.color}20`, color: s.color, opacity: counts[s.key] > 0 ? 1 : 0.35 }}
+              style={{ backgroundColor: `${withOpacity(s.color, OPACITY_12)}`, color: s.color, opacity: counts[s.key] > 0 ? 1 : 0.35 }}
             >
               {counts[s.key]} {s.label}
             </span>
@@ -62,7 +64,7 @@ export function BalanceAlertsPanel({ alerts }: { alerts: BalanceAlert[] }) {
       <div ref={listRef} className="max-h-48 overflow-y-auto space-y-1" aria-live="polite" aria-relevant="additions">
         {alerts.length === 0 ? (
           <div className="flex items-center gap-2 p-2 rounded-md border"
-            style={{ borderColor: `${STATUS_SUCCESS}40`, backgroundColor: `${STATUS_SUCCESS}10` }}>
+            style={{ borderColor: `${withOpacity(STATUS_SUCCESS, OPACITY_25)}`, backgroundColor: `${withOpacity(STATUS_SUCCESS, OPACITY_8)}` }}>
             <span className="text-xs font-mono font-bold" style={{ color: STATUS_SUCCESS }}>
               No balance issues detected
             </span>
@@ -78,8 +80,8 @@ export function BalanceAlertsPanel({ alerts }: { alerts: BalanceAlert[] }) {
                 ref={isFirstCrit ? firstCritRef : undefined}
                 className="flex items-start gap-1.5 p-1.5 rounded-md border transition-colors"
                 style={{
-                  borderColor: `${color}30`,
-                  backgroundColor: flashIdx === i ? `${color}25` : `${color}08`,
+                  borderColor: `${withOpacity(color, OPACITY_20)}`,
+                  backgroundColor: flashIdx === i ? `${withOpacity(color, OPACITY_15)}` : `${withOpacity(color, OPACITY_5)}`,
                   transition: 'background-color 0.6s ease-out',
                 }}
               >

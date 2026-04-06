@@ -82,10 +82,8 @@ export function EconomySimulatorView() {
     fetchDefaults();
   }, [fetchDefaults]);
 
-  // Sync config when defaults arrive
-  useEffect(() => {
-    if (defaultConfig && !config) setConfig(defaultConfig);
-  }, [defaultConfig, config]);
+  // Sync config when defaults arrive (state-during-render pattern)
+  if (defaultConfig && !config) setConfig(defaultConfig);
 
   const handleRun = useCallback(async () => {
     if (!config) return;
@@ -201,7 +199,7 @@ export function EconomySimulatorView() {
             <Coins className="w-12 h-12 text-text-muted/30 mb-3" />
             <p className="text-sm text-text-muted">No simulation data yet</p>
             <p className="text-xs text-text-muted/70 mt-1 max-w-sm">
-              Configure your economy parameters and click "Run Simulation" to model
+              Configure your economy parameters and click &quot;Run Simulation&quot; to model
               currency flow across {config?.agentCount ?? 100} virtual players
             </p>
           </div>

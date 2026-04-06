@@ -3,6 +3,7 @@
 import { Dna, Trash2, Target, FlaskConical } from 'lucide-react';
 import {
   ACCENT_PINK, STATUS_SUCCESS, OPACITY_10, OPACITY_20,
+  withOpacity, OPACITY_37,
 } from '@/lib/chart-colors';
 import { BlueprintPanel, SectionHeader } from '@/components/modules/core-engine/unique-tabs/_design';
 import { RadarChart } from '@/components/modules/core-engine/unique-tabs/_shared';
@@ -152,7 +153,7 @@ export function EditorTab({ selected, radarData, genomeCount, updateGenome, upda
                 className="w-full text-xs font-mono font-bold px-1.5 py-1 rounded border transition-colors"
                 style={{
                   backgroundColor: selected.mutation.wildMutation ? `${STATUS_SUCCESS}${OPACITY_20}` : 'transparent',
-                  borderColor: selected.mutation.wildMutation ? `${STATUS_SUCCESS}60` : 'var(--border)',
+                  borderColor: selected.mutation.wildMutation ? `${withOpacity(STATUS_SUCCESS, OPACITY_37)}` : 'var(--border)',
                   color: selected.mutation.wildMutation ? STATUS_SUCCESS : 'var(--text-muted)',
                 }}
               >

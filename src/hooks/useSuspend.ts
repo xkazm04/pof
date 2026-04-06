@@ -49,14 +49,14 @@ export function useSuspendableSelector<S, T>(
   const suspended = useContext(SuspendContext);
   const frozenRef = useRef<T | undefined>(undefined);
   const selectorRef = useRef(selector);
-  selectorRef.current = selector;
+  useEffect(() => { selectorRef.current = selector; }, [selector]);
 
   // When becoming active, clear the frozen value so the next getSnapshot reads fresh state
-  const prevSuspendedRef = useRef(suspended);
-  if (prevSuspendedRef.current && !suspended) {
-    frozenRef.current = undefined;
-  }
-  prevSuspendedRef.current = suspended;
+  useEffect(() => {
+    if (!suspended) {
+      frozenRef.current = undefined;
+    }
+  }, [suspended]);
 
   const subscribe = useCallback(
     (onStoreChange: () => void) => {

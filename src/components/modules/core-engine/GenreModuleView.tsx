@@ -6,14 +6,21 @@ import { SUB_MODULE_MAP } from '@/lib/module-registry';
 import { ReviewableModuleView } from '../shared/ReviewableModuleView';
 import type { ExtraTab } from '../shared/ReviewableModuleView';
 import type { SubModuleId } from '@/types/modules';
-import { ScanSearch } from 'lucide-react';
+import { ScanSearch, LayoutGrid } from 'lucide-react';
 import { ScanTab } from './ScanTab';
 import { getUniqueTab } from './unique-tabs';
+import FeatureMapTab from './unique-tabs/FeatureMapTab';
 
 const CORE_ENGINE_ACCENT = MODULE_COLORS.core;
 
 function buildExtraTabs(moduleId: SubModuleId): ExtraTab[] {
   const tabs: ExtraTab[] = [
+    {
+      id: 'features',
+      label: 'Features',
+      icon: LayoutGrid,
+      render: (mid) => <FeatureMapTab moduleId={mid} />,
+    },
     {
       id: 'scan',
       label: 'Scan',

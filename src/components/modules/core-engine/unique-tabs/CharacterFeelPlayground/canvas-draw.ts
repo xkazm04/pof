@@ -1,4 +1,4 @@
-import { MODULE_COLORS, ACCENT_CYAN } from '@/lib/chart-colors';
+import { MODULE_COLORS, ACCENT_CYAN, OVERLAY_WHITE, withOpacity, OPACITY_5, OPACITY_10, OPACITY_12, OPACITY_40 } from '@/lib/chart-colors';
 
 const ACCENT = MODULE_COLORS.core;
 
@@ -6,7 +6,7 @@ const ACCENT = MODULE_COLORS.core;
 
 /** Draw the dashed ground line across the canvas */
 export function drawGroundLine(ctx: CanvasRenderingContext2D, W: number, groundY: number) {
-  ctx.strokeStyle = 'rgba(255,255,255,0.1)';
+  ctx.strokeStyle = withOpacity(OVERLAY_WHITE, OPACITY_10);
   ctx.lineWidth = 1;
   ctx.setLineDash([4, 4]);
   ctx.beginPath();
@@ -79,7 +79,7 @@ export function drawStickFigure(
   if (isDodgeFrame) {
     ctx.beginPath();
     ctx.arc(0, -bodyH / 2, 18, 0, Math.PI * 2);
-    ctx.fillStyle = `${ACCENT_CYAN}20`;
+    ctx.fillStyle = `${withOpacity(ACCENT_CYAN, OPACITY_12)}`;
     ctx.fill();
   }
 
@@ -96,7 +96,7 @@ export function drawSpeedHUD(
   groundY: number,
 ) {
   const speedPct = currentSpeed / targetSpeed;
-  ctx.fillStyle = 'rgba(255,255,255,0.05)';
+  ctx.fillStyle = withOpacity(OVERLAY_WHITE, OPACITY_5);
   ctx.fillRect(10, 8, 80, 6);
   ctx.fillStyle = isDodging ? ACCENT_CYAN : ACCENT;
   ctx.shadowColor = isDodging ? ACCENT_CYAN : ACCENT;
@@ -104,7 +104,7 @@ export function drawSpeedHUD(
   ctx.fillRect(10, 8, 80 * speedPct, 6);
   ctx.shadowBlur = 0;
 
-  ctx.fillStyle = 'rgba(255,255,255,0.4)';
+  ctx.fillStyle = withOpacity(OVERLAY_WHITE, OPACITY_40);
   ctx.font = '8px monospace';
   ctx.fillText(`${Math.round(currentSpeed)}/${Math.round(targetSpeed)} cm/s`, 10, 22);
 

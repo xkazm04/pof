@@ -2,6 +2,11 @@
 
 import { ArrowLeftRight } from 'lucide-react';
 import { motion } from 'framer-motion';
+import {
+  OPACITY_5, OPACITY_8, OPACITY_10, OPACITY_15, OPACITY_20, OPACITY_25, OPACITY_30, OPACITY_50,
+  OVERLAY_WHITE,
+  withOpacity,
+} from '@/lib/chart-colors';
 import type { FeelPreset } from '@/lib/character-feel-optimizer';
 import { CornerBrackets } from '../_design';
 
@@ -23,9 +28,9 @@ export function PresetCard({ preset, isSelected, isCompareTarget, onSelect, onCo
       whileHover={{ scale: 1.02 }}
       className="relative overflow-hidden rounded-lg border cursor-pointer transition-all"
       style={{
-        borderColor: isSelected ? `${preset.color}80` : isCompareTarget ? `${preset.color}40` : `${preset.color}18`,
-        backgroundColor: isSelected ? `${preset.color}15` : 'transparent',
-        boxShadow: isSelected ? `0 0 12px ${preset.color}30, inset 0 0 12px ${preset.color}08` : 'none',
+        borderColor: isSelected ? withOpacity(preset.color, OPACITY_50) : isCompareTarget ? withOpacity(preset.color, OPACITY_25) : withOpacity(preset.color, OPACITY_10),
+        backgroundColor: isSelected ? withOpacity(preset.color, OPACITY_8) : 'transparent',
+        boxShadow: isSelected ? `0 0 12px ${withOpacity(preset.color, OPACITY_20)}, inset 0 0 12px ${withOpacity(preset.color, OPACITY_5)}` : 'none',
       }}
       onClick={onSelect}
     >
@@ -45,7 +50,7 @@ export function PresetCard({ preset, isSelected, isCompareTarget, onSelect, onCo
             <span
               key={tag}
               className="text-xs font-mono uppercase tracking-[0.15em] px-1.5 py-0.5 rounded-full"
-              style={{ backgroundColor: `${preset.color}15`, color: preset.color, border: `1px solid ${preset.color}25` }}
+              style={{ backgroundColor: withOpacity(preset.color, OPACITY_8), color: preset.color, border: `1px solid ${withOpacity(preset.color, OPACITY_15)}` }}
             >
               {tag}
             </span>
@@ -55,9 +60,9 @@ export function PresetCard({ preset, isSelected, isCompareTarget, onSelect, onCo
           onClick={(e) => { e.stopPropagation(); onCompare(); }}
           className="flex items-center gap-1 text-xs font-mono uppercase tracking-[0.15em] px-2 py-1 rounded transition-colors"
           style={{
-            backgroundColor: isCompareTarget ? `${preset.color}25` : 'var(--surface-deep)',
+            backgroundColor: isCompareTarget ? withOpacity(preset.color, OPACITY_15) : 'var(--surface-deep)',
             color: isCompareTarget ? preset.color : 'var(--text-muted)',
-            border: `1px solid ${isCompareTarget ? preset.color + '50' : 'rgba(255,255,255,0.08)'}`,
+            border: `1px solid ${isCompareTarget ? withOpacity(preset.color, OPACITY_30) : withOpacity(OVERLAY_WHITE, OPACITY_8)}`,
           }}
         >
           <ArrowLeftRight className="w-3 h-3" />

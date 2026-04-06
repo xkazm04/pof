@@ -2,6 +2,16 @@ import type { Cpu } from 'lucide-react';
 import type { FeatureRow } from '@/types/feature-matrix';
 import type { TagNode, TagDepNode, TagDepEdge, AuditCategory, TagDetail } from './data';
 
+export type SpellbookSubtab = 'features' | 'core' | 'abilities' | 'effects' | 'tags' | 'combos';
+
+export interface SpellbookSubtabDef {
+  key: SpellbookSubtab;
+  label: string;
+  icon: typeof Cpu;
+  narrative: string;
+  subtitle: string;
+}
+
 export type SectionId = 'core' | 'attributes' | 'tags' | 'abilities' | 'effects'
   | 'tag-deps' | 'effects-timeline' | 'damage-calc' | 'tag-audit' | 'loadout';
 

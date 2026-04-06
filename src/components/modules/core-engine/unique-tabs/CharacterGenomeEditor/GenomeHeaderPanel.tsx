@@ -1,7 +1,9 @@
 'use client';
 
 import { Download, Trash2, Share2 } from 'lucide-react';
-import { ACCENT_EMERALD, ACCENT_CYAN, STATUS_ERROR } from '@/lib/chart-colors';
+import { ACCENT_EMERALD, ACCENT_CYAN, STATUS_ERROR, OVERLAY_WHITE,
+  withOpacity, OPACITY_37, OPACITY_10, OPACITY_25, OPACITY_8, GLOW_MD,
+} from '@/lib/chart-colors';
 import { BlueprintPanel } from '../_design';
 import { RadarChart } from '../_shared';
 import type { CharacterGenome } from '@/types/character-genome';
@@ -36,7 +38,7 @@ export function GenomeHeaderPanel({
         <div className="flex items-start gap-3 mb-3">
           <div className="flex-1 space-y-3">
             <div className="flex items-center gap-2">
-              <span className="w-3 h-3 rounded-full" style={{ backgroundColor: activeGenome.color, boxShadow: `0 0 8px ${activeGenome.color}60` }} />
+              <span className="w-3 h-3 rounded-full" style={{ backgroundColor: activeGenome.color, boxShadow: `${GLOW_MD} ${withOpacity(activeGenome.color, OPACITY_37)}` }} />
               <input type="text" value={activeGenome.name} onChange={(e) => onUpdateGenome(resolvedActiveId, (g) => ({ ...g, name: e.target.value }))}
                 className="text-sm font-bold bg-transparent border-none text-text focus:outline-none px-0" />
             </div>
@@ -48,7 +50,7 @@ export function GenomeHeaderPanel({
               {(activeGenome.tags?.length ?? 0) > 0 && (
                 <div className="flex gap-1">
                   {activeGenome.tags!.map((tag) => (
-                    <span key={tag} className="px-1.5 py-0.5 rounded text-xs" style={{ backgroundColor: `${activeGenome.color}15`, color: activeGenome.color }}>{tag}</span>
+                    <span key={tag} className="px-1.5 py-0.5 rounded text-xs" style={{ backgroundColor: `${withOpacity(activeGenome.color, OPACITY_10)}`, color: activeGenome.color }}>{tag}</span>
                   ))}
                 </div>
               )}
@@ -56,17 +58,17 @@ export function GenomeHeaderPanel({
           </div>
           <div className="flex gap-1.5 flex-shrink-0">
             <button onClick={() => onExport(activeGenome)} className="p-1.5 rounded-lg border transition-colors hover:brightness-110"
-              style={{ borderColor: `${ACCENT_EMERALD}40`, backgroundColor: `${ACCENT_EMERALD}10`, color: ACCENT_EMERALD }} title="Export JSON">
+              style={{ borderColor: `${withOpacity(ACCENT_EMERALD, OPACITY_25)}`, backgroundColor: `${withOpacity(ACCENT_EMERALD, OPACITY_8)}`, color: ACCENT_EMERALD }} title="Export JSON">
               <Download className="w-3.5 h-3.5" />
             </button>
             <button onClick={() => navigator.clipboard.writeText(JSON.stringify(activeGenome, null, 2))}
               className="p-1.5 rounded-lg border transition-colors hover:brightness-110"
-              style={{ borderColor: `${ACCENT_CYAN}40`, backgroundColor: `${ACCENT_CYAN}10`, color: ACCENT_CYAN }} title="Copy JSON to clipboard">
+              style={{ borderColor: `${withOpacity(ACCENT_CYAN, OPACITY_25)}`, backgroundColor: `${withOpacity(ACCENT_CYAN, OPACITY_8)}`, color: ACCENT_CYAN }} title="Copy JSON to clipboard">
               <Share2 className="w-3.5 h-3.5" />
             </button>
             <button onClick={() => onDelete(resolvedActiveId)} disabled={genomes.length <= 1}
               className="p-1.5 rounded-lg border transition-colors hover:brightness-110 disabled:opacity-30 disabled:cursor-not-allowed"
-              style={{ borderColor: `${STATUS_ERROR}40`, backgroundColor: `${STATUS_ERROR}10`, color: STATUS_ERROR }} title="Delete genome">
+              style={{ borderColor: `${withOpacity(STATUS_ERROR, OPACITY_25)}`, backgroundColor: `${withOpacity(STATUS_ERROR, OPACITY_8)}`, color: STATUS_ERROR }} title="Delete genome">
               <Trash2 className="w-3.5 h-3.5" />
             </button>
           </div>
@@ -74,14 +76,14 @@ export function GenomeHeaderPanel({
         <div className="flex items-center gap-2 pt-2 border-t border-border/30">
           <span className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted">Compare:</span>
           <button onClick={onClearCompare} className="px-2 py-0.5 rounded text-xs font-mono font-bold transition-colors"
-            style={{ backgroundColor: compareIds.length === 0 ? `${ACCENT}15` : 'transparent', color: compareIds.length === 0 ? ACCENT : 'var(--text-muted)',
-              border: `1px solid ${compareIds.length === 0 ? `${ACCENT}40` : 'rgba(255,255,255,0.08)'}` }}>All</button>
+            style={{ backgroundColor: compareIds.length === 0 ? `${withOpacity(ACCENT, OPACITY_10)}` : 'transparent', color: compareIds.length === 0 ? ACCENT : 'var(--text-muted)',
+              border: `1px solid ${compareIds.length === 0 ? withOpacity(ACCENT, OPACITY_25) : withOpacity(OVERLAY_WHITE, OPACITY_8)}` }}>All</button>
           {genomes.filter((g) => g.id !== resolvedActiveId).map((g) => {
             const sel = compareIdSet.has(g.id);
             return (
               <button key={g.id} onClick={() => onToggleCompare(g.id)} className="px-2 py-0.5 rounded text-xs font-mono font-bold transition-colors"
-                style={{ backgroundColor: sel ? `${g.color}15` : 'transparent', color: sel ? g.color : 'var(--text-muted)',
-                  border: `1px solid ${sel ? `${g.color}40` : 'rgba(255,255,255,0.08)'}` }}>{g.name}</button>
+                style={{ backgroundColor: sel ? `${withOpacity(g.color, OPACITY_10)}` : 'transparent', color: sel ? g.color : 'var(--text-muted)',
+                  border: `1px solid ${sel ? withOpacity(g.color, OPACITY_25) : withOpacity(OVERLAY_WHITE, OPACITY_8)}` }}>{g.name}</button>
             );
           })}
           {compareIds.length > 0 && <span className="text-xs font-mono text-text-muted/50 ml-1">{compareIds.length}/4</span>}

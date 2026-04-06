@@ -4,6 +4,7 @@ import { motion } from 'framer-motion';
 import { AlertTriangle, Plus, Trash2 } from 'lucide-react';
 import {
   ACCENT_EMERALD, STATUS_ERROR,
+  withOpacity, OPACITY_25, OPACITY_8, OPACITY_37,
 } from '@/lib/chart-colors';
 import type { DodgePhases, HitMarker } from '../dodge-types';
 import { BlueprintPanel, SectionHeader } from '../_design';
@@ -37,7 +38,7 @@ export function HitMarkerEditor({
           <button
             onClick={onAdd}
             className="ml-auto flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-bold border transition-colors"
-            style={{ borderColor: `${STATUS_ERROR}40`, backgroundColor: `${STATUS_ERROR}10`, color: STATUS_ERROR }}
+            style={{ borderColor: `${withOpacity(STATUS_ERROR, OPACITY_25)}`, backgroundColor: `${withOpacity(STATUS_ERROR, OPACITY_8)}`, color: STATUS_ERROR }}
           >
             <Plus className="w-3 h-3" />
             Add Hit
@@ -51,7 +52,7 @@ export function HitMarkerEditor({
               <div key={hit.id} className="flex items-center gap-2">
                 <span
                   className="w-2 h-2 rounded-full flex-shrink-0"
-                  style={{ backgroundColor: dodged ? ACCENT_EMERALD : STATUS_ERROR, boxShadow: `0 0 4px ${dodged ? ACCENT_EMERALD : STATUS_ERROR}60` }}
+                  style={{ backgroundColor: dodged ? ACCENT_EMERALD : STATUS_ERROR, boxShadow: `0 0 4px ${withOpacity(dodged ? ACCENT_EMERALD : STATUS_ERROR, OPACITY_37)}` }}
                 />
                 <input
                   type="text" value={hit.label}
@@ -71,7 +72,7 @@ export function HitMarkerEditor({
                   className="w-14 text-xs font-mono px-1.5 py-0.5 rounded bg-surface-deep border border-border/40 text-text focus:outline-none text-right"
                 />
                 <span className="text-xs text-text-muted">dmg</span>
-                <span className="text-xs font-mono font-bold uppercase tracking-[0.15em] ml-auto" style={{ color: dodged ? ACCENT_EMERALD : STATUS_ERROR, textShadow: `0 0 12px ${dodged ? ACCENT_EMERALD : STATUS_ERROR}40` }}>
+                <span className="text-xs font-mono font-bold uppercase tracking-[0.15em] ml-auto" style={{ color: dodged ? ACCENT_EMERALD : STATUS_ERROR, textShadow: `0 0 12px ${withOpacity(dodged ? ACCENT_EMERALD : STATUS_ERROR, OPACITY_25)}` }}>
                   {dodged ? 'DODGED' : 'HIT'}
                 </span>
                 <button onClick={() => onRemove(hit.id)} className="text-text-muted hover:text-text transition-colors">

@@ -1,5 +1,6 @@
 'use client';
 
+import { useState, useEffect } from 'react';
 import { Clock, CheckCircle, AlertCircle, Loader2, Trash2, X, Download } from 'lucide-react';
 import { useForgeStore, type GenerationJob, type JobStatus } from './useForgeStore';
 
@@ -15,10 +16,17 @@ function JobCard({ job }: { job: GenerationJob }) {
   const removeJob = useForgeStore((s) => s.removeJob);
   const config = STATUS_CONFIG[job.status];
   const StatusIcon = config.icon;
+  const [now, setNow] = useState(() => Date.now());
+
+  useEffect(() => {
+    if (job.completedAt) return;
+    const id = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(id);
+  }, [job.completedAt]);
 
   const elapsed = job.completedAt
     ? Math.round((job.completedAt - job.createdAt) / 1000)
-    : Math.round((Date.now() - job.createdAt) / 1000);
+    : Math.round((now - job.createdAt) / 1000);
 
   const isAnimated = job.status === 'generating' || job.status === 'importing';
 

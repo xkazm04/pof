@@ -9,6 +9,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   ACCENT_CYAN, ACCENT_RED, ACCENT_PURPLE_BOLD,
   ACCENT_GREEN, ACCENT_EMERALD_DARK, MODULE_COLORS,
+  OVERLAY_WHITE, OPACITY_4, withOpacity,
 } from '@/lib/chart-colors';
 import { BlueprintPanel, SectionHeader } from '../_design';
 import { RadarChart } from '../_shared';
@@ -79,7 +80,7 @@ export function ForgeResult({ ability, existingRadar }: {
         <button
           onClick={handleDownload}
           className="flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs text-zinc-400 hover:text-zinc-200 transition-colors"
-          style={{ background: 'rgba(255,255,255,0.04)' }}
+          style={{ background: withOpacity(OVERLAY_WHITE, OPACITY_4) }}
         >
           <Download size={12} /> Download .h/.cpp
         </button>

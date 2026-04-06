@@ -3,7 +3,9 @@
 import { useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { ChevronRight, X } from 'lucide-react';
-import { ACCENT_GREEN, ACCENT_RED, OVERLAY_WHITE } from '@/lib/chart-colors';
+import { ACCENT_GREEN, ACCENT_RED, OVERLAY_WHITE, OPACITY_25, OPACITY_30, OPACITY_50, GLOW_MD, withOpacity,
+  OPACITY_8,
+} from '@/lib/chart-colors';
 import type { ComboAbility } from '@/components/modules/core-engine/unique-tabs/AbilitySpellbook.data';
 import { TIMELINE_PX_PER_SEC } from './helpers';
 
@@ -44,8 +46,8 @@ export function TimelineBlock({
       <div
         className="h-14 rounded-lg border relative overflow-hidden"
         style={{
-          backgroundColor: `${ability.color}12`,
-          borderColor: `${ability.color}40`,
+          backgroundColor: `${withOpacity(ability.color, OPACITY_8)}`,
+          borderColor: withOpacity(ability.color, OPACITY_25),
         }}
       >
         {/* Startup phase (before damage window) */}
@@ -58,8 +60,8 @@ export function TimelineBlock({
           className="absolute top-0 h-full"
           style={{
             left: dmgStart, width: dmgWidth,
-            backgroundColor: `${ability.color}50`,
-            boxShadow: `inset 0 0 8px ${ability.color}40`,
+            backgroundColor: withOpacity(ability.color, OPACITY_30),
+            boxShadow: `inset ${GLOW_MD} ${withOpacity(ability.color, OPACITY_25)}`,
           }}
         />
         {/* Recovery phase */}
@@ -92,7 +94,7 @@ export function TimelineBlock({
             animate={{ x: [0, 3, 0] }}
             transition={{ duration: 1.2, repeat: Infinity, ease: 'easeInOut' }}
           >
-            <ChevronRight className="w-4 h-4" style={{ color: `${ability.color}80` }} />
+            <ChevronRight className="w-4 h-4" style={{ color: withOpacity(ability.color, OPACITY_50) }} />
           </motion.div>
         </div>
       )}

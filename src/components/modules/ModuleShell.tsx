@@ -20,7 +20,7 @@ interface ModuleShellProps {
 export function ModuleShell({ moduleId }: ModuleShellProps) {
   const [customPrompt, setCustomPrompt] = useState('');
   const [contextExpanded, setContextExpanded] = useState(false);
-  const module = SUB_MODULE_MAP[moduleId];
+  const mod = SUB_MODULE_MAP[moduleId];
   const category = getCategoryForSubModule(moduleId);
   const moduleHealth = useModuleStore((s) => s.moduleHealth[moduleId]);
   const moduleHistory = useModuleStore((s) => s.moduleHistory[moduleId]) ?? EMPTY_HISTORY;
@@ -41,9 +41,9 @@ export function ModuleShell({ moduleId }: ModuleShellProps) {
     localStorage.setItem(`pof-art-gap-dismissed-${moduleId}`, '1');
   };
 
-  if (!module || !category) return null;
+  if (!mod || !category) return null;
 
-  const Icon = module.icon;
+  const Icon = mod.icon;
   const accentColor = category.accentColor;
 
   const sendToTerminal = (prompt: string) => {
@@ -52,7 +52,7 @@ export function ModuleShell({ moduleId }: ModuleShellProps) {
     const isNew = !tabId;
     if (!tabId) {
       tabId = createSession({
-        label: module.label,
+        label: mod.label,
         accentColor,
         moduleId,
         projectPath,
@@ -86,42 +86,42 @@ export function ModuleShell({ moduleId }: ModuleShellProps) {
   };
 
   const feasibilityTooltip: Record<string, string> = {
-    strong: 'AI-assisted code generation effectiveness for this module. Strong = high success rate, well-suited for automated C++ generation.',
-    moderate: 'AI-assisted code generation effectiveness for this module. Moderate = decent success rate, may need manual adjustments for complex patterns.',
-    challenging: 'AI-assisted code generation effectiveness for this module. Challenging = lower success rate, expect significant manual review and iteration.',
+    strong: 'AI-assisted code generation effectiveness for this mod. Strong = high success rate, well-suited for automated C++ generation.',
+    moderate: 'AI-assisted code generation effectiveness for this mod. Moderate = decent success rate, may need manual adjustments for complex patterns.',
+    challenging: 'AI-assisted code generation effectiveness for this mod. Challenging = lower success rate, expect significant manual review and iteration.',
   };
 
-  const feasibilityBadge = module.feasibilityRating && (
+  const feasibilityBadge = mod.feasibilityRating && (
     <span className={`relative group/feas inline-flex items-center cursor-default text-xs px-1.5 py-0.5 rounded border ${
-      module.feasibilityRating === 'strong' ? 'text-green-400 bg-green-400/10 border-green-400/20' :
-      module.feasibilityRating === 'moderate' ? 'text-amber-400 bg-amber-400/10 border-amber-400/20' :
+      mod.feasibilityRating === 'strong' ? 'text-green-400 bg-green-400/10 border-green-400/20' :
+      mod.feasibilityRating === 'moderate' ? 'text-amber-400 bg-amber-400/10 border-amber-400/20' :
       'text-red-400 bg-red-400/10 border-red-400/20'
     }`}>
-      {module.feasibilityRating}
+      {mod.feasibilityRating}
       <span className="pointer-events-none absolute left-0 top-full mt-1.5 z-50 w-[200px] px-2.5 py-2 rounded bg-surface-hover border border-border-bright text-xs leading-relaxed text-[#b0b4cc] opacity-0 group-hover/feas:opacity-100 transition-opacity">
-        {feasibilityTooltip[module.feasibilityRating]}
+        {feasibilityTooltip[mod.feasibilityRating]}
       </span>
     </span>
   );
 
   return (
-    <main className="p-6 max-w-4xl" aria-label={`${module.label} module`}>
+    <main className="p-6 max-w-4xl" aria-label={`${mod.label} module`}>
       {/* Header */}
       <div className="relative overflow-hidden flex items-center gap-3 mb-6">
         <ModuleHeaderDecoration moduleId={moduleId} variant="full" />
         <Icon className="w-6 h-6 relative" style={{ color: accentColor }} aria-hidden="true" />
         <div className="relative">
           <div className="flex items-center gap-2">
-            <h1 className="text-lg font-semibold text-text">{module.label}</h1>
+            <h1 className="text-lg font-semibold text-text">{mod.label}</h1>
             {feasibilityBadge}
           </div>
-          <p className="text-xs text-text-muted">{module.description}</p>
+          <p className="text-xs text-text-muted">{mod.description}</p>
         </div>
       </div>
 
       {/* Art-gap awareness banner for moderate feasibility modules */}
-      {!bannerDismissed && module.feasibilityRating === 'moderate' && (() => {
-        const tip = module.knowledgeTips.find((t) => t.source === 'feasibility');
+      {!bannerDismissed && mod.feasibilityRating === 'moderate' && (() => {
+        const tip = mod.knowledgeTips.find((t) => t.source === 'feasibility');
         if (!tip) return null;
         return (
           <div className="mb-6 flex items-start gap-3 bg-amber-500/5 border-l-2 border-amber-400 px-4 py-3 rounded-r-lg">
@@ -158,7 +158,7 @@ export function ModuleShell({ moduleId }: ModuleShellProps) {
           <h2 className="text-sm font-medium text-text">Quick Actions</h2>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2" role="group" aria-label="Available actions">
-          {module.quickActions.map((action, index) => (
+          {mod.quickActions.map((action, index) => (
             <button
               key={action.id}
               onClick={() => handleQuickAction(action.prompt)}
@@ -198,8 +198,8 @@ export function ModuleShell({ moduleId }: ModuleShellProps) {
             value={customPrompt}
             onChange={(e) => setCustomPrompt(e.target.value)}
             onKeyDown={(e) => { if (e.key === 'Enter') handleCustomPrompt(); }}
-            placeholder={`Ask about ${module.label.toLowerCase()}...`}
-            aria-label={`Ask about ${module.label.toLowerCase()}`}
+            placeholder={`Ask about ${mod.label.toLowerCase()}...`}
+            aria-label={`Ask about ${mod.label.toLowerCase()}`}
             className="flex-1 px-3 py-2 bg-surface border border-border rounded-lg text-xs text-text placeholder-text-muted outline-none focus:border-border-bright transition-colors"
           />
           <button
@@ -219,7 +219,7 @@ export function ModuleShell({ moduleId }: ModuleShellProps) {
         projectName={projectName}
         projectPath={projectPath}
         ueVersion={ueVersion}
-        moduleLabel={module.label}
+        moduleLabel={mod.label}
         isExpanded={contextExpanded}
         onToggle={() => setContextExpanded((v) => !v)}
       />

@@ -34,7 +34,8 @@ export function SessionAnalyticsDashboard({ onNavigateTab }: SessionAnalyticsDas
       const frame = requestAnimationFrame(() => setBarsReady(true));
       return () => cancelAnimationFrame(frame);
     }
-    setBarsReady(false);
+    const frame = requestAnimationFrame(() => setBarsReady(false));
+    return () => cancelAnimationFrame(frame);
   }, [isLoading, dashboard.totalSessions]);
 
   if (isLoading) {

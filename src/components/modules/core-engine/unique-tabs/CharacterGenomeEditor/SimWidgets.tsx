@@ -1,7 +1,9 @@
 'use client';
 
 import { motion } from 'framer-motion';
-import { STATUS_SUCCESS, STATUS_ERROR } from '@/lib/chart-colors';
+import { STATUS_SUCCESS, STATUS_ERROR,
+  withOpacity, OPACITY_15, OPACITY_50, OPACITY_20, OPACITY_25,
+} from '@/lib/chart-colors';
 
 /* ── Hero Metric ─ Large centered stat with optional delta ─────────────── */
 
@@ -25,13 +27,13 @@ export function HeroMetric({ label, value, unit, icon: Icon, color, compareValue
     ? (lowerIsBetter ? delta < 0 : delta > 0) : undefined;
   return (
     <div className="flex flex-col items-center p-3 rounded-xl border bg-surface-deep/50"
-      style={{ borderColor: `${color}25` }}>
+      style={{ borderColor: `${withOpacity(color, OPACITY_15)}` }}>
       <div className="flex items-center gap-1.5 mb-1">
-        <Icon className="w-3.5 h-3.5" style={{ color, filter: `drop-shadow(0 0 4px ${color}80)` }} />
+        <Icon className="w-3.5 h-3.5" style={{ color, filter: `drop-shadow(0 0 4px ${withOpacity(color, OPACITY_50)})` }} />
         <span className="text-xs font-mono uppercase tracking-[0.15em]" style={{ color }}>{label}</span>
       </div>
       <span className="text-2xl font-mono font-black text-text leading-none"
-        style={{ textShadow: `0 0 20px ${color}30` }}>
+        style={{ textShadow: `0 0 20px ${withOpacity(color, OPACITY_20)}` }}>
         {fmtVal(value)}
       </span>
       <span className="text-xs font-mono text-text-muted mt-0.5">{unit}</span>
@@ -66,7 +68,7 @@ export function SimStatLine({ label, value, formula, color, barPct, delta, lower
               {delta.raw > 0 ? '+' : ''}{delta.display}
             </span>
           )}
-          <span className="text-xs font-mono font-bold text-text" style={{ textShadow: `0 0 12px ${color}40` }}>{value}</span>
+          <span className="text-xs font-mono font-bold text-text" style={{ textShadow: `0 0 12px ${withOpacity(color, OPACITY_25)}` }}>{value}</span>
         </div>
       </div>
       <div className="relative h-1.5 bg-surface-deep rounded-full overflow-hidden">

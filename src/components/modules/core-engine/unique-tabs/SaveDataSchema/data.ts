@@ -20,6 +20,8 @@ export const SCHEMA_GROUPS: SchemaGroup[] = [
       { name: 'XP', type: 'int', source: 'arpg-progression', details: 'uint64 absolute' },
       { name: 'Position', type: 'object', source: 'arpg-character', details: 'FVector {X,Y,Z}' },
       { name: 'Attributes', type: 'object', source: 'arpg-gas', details: 'FGameplayAttributeData' },
+      { name: 'ForceAlignment', type: 'float', source: 'arpg-character', details: 'float [-100..100] Light/Dark' },
+      { name: 'LightsaberCrystalColor', type: 'string', source: 'arpg-inventory', details: 'FName crystal color ID' },
     ]
   },
   {
@@ -32,12 +34,16 @@ export const SCHEMA_GROUPS: SchemaGroup[] = [
     id: 'progression', label: 'SYS.PROG_TREES', color: STATUS_SUCCESS, fields: [
       { name: 'UnlockedAbilities', type: 'array', source: 'arpg-gas', details: 'TArray<FName>' },
       { name: 'SpentPoints', type: 'int', source: 'arpg-progression', details: 'uint32 sum' },
+      { name: 'ForcePoints', type: 'int', source: 'arpg-gas', details: 'uint32 [0-500]' },
+      { name: 'ForcePowersLearned', type: 'array', source: 'arpg-gas', details: 'TArray<FGameplayTag>' },
     ]
   },
   {
     id: 'world', label: 'SYS.WORLD_STATE', color: MODULE_COLORS.systems, fields: [
       { name: 'VisitedZones', type: 'array', source: 'arpg-world', details: 'TSet<FName>' },
       { name: 'CompletedEncounters', type: 'array', source: 'arpg-world', details: 'Bitmask/TArray' },
+      { name: 'LightsideChoices', type: 'int', source: 'arpg-world', details: 'uint16 count' },
+      { name: 'DarksideChoices', type: 'int', source: 'arpg-world', details: 'uint16 count' },
     ]
   },
 ];

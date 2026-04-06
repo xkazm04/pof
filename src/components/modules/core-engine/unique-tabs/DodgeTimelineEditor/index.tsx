@@ -9,6 +9,8 @@ import {
   ACCENT_ORANGE, ACCENT_CYAN,
   ACCENT_EMERALD, STATUS_ERROR,
   STATUS_WARNING, STATUS_NEUTRAL,
+  OVERLAY_WHITE,
+  withOpacity, OPACITY_25, OPACITY_8,
 } from '@/lib/chart-colors';
 import { useCharacterCliStore, type CLILogEntry } from '@/stores/cliOptimizationStore';
 import type { DodgeParams, DodgePhases, HitMarker, DodgeChainEntry } from '../dodge-types';
@@ -71,7 +73,12 @@ export function DodgeTimelineEditor({ initialParams }: { initialParams?: Partial
   useHapticDetection(playhead, hitMarkers, params, prevPlayheadRef, triggeredHitsRef, hapticTimerRef, setHapticEffect);
 
   useEffect(() => {
-    if (playhead === 0) { triggeredHitsRef.current.clear(); setHapticEffect(null); }
+    if (playhead !== 0) return;
+    const raf = requestAnimationFrame(() => {
+      triggeredHitsRef.current.clear();
+      setHapticEffect(null);
+    });
+    return () => cancelAnimationFrame(raf);
   }, [playhead]);
   useEffect(() => { triggeredHitsRef.current.clear(); }, [hitMarkers]);
   useEffect(() => () => clearTimeout(hapticTimerRef.current), []);
@@ -213,7 +220,7 @@ function ToggleBtn({ active, onToggle, color, icon: Icon, title }: {
 }) {
   return (
     <button onClick={onToggle} className="p-1.5 rounded-lg border transition-colors" title={title}
-      style={{ borderColor: active ? `${color}40` : 'rgba(255,255,255,0.08)', backgroundColor: active ? `${color}10` : 'transparent', color: active ? color : 'var(--text-muted)' }}>
+      style={{ borderColor: active ? `${withOpacity(color, OPACITY_25)}` : withOpacity(OVERLAY_WHITE, OPACITY_8), backgroundColor: active ? `${withOpacity(color, OPACITY_8)}` : 'transparent', color: active ? color : 'var(--text-muted)' }}>
       <Icon className="w-3 h-3" />
     </button>
   );
@@ -233,7 +240,7 @@ function OptimizeButton({ cliStore, params }: { cliStore: CliStore; params: Dodg
       }}
       disabled={cliStore.isOptimizing}
       className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold border transition-colors hover:brightness-110 disabled:opacity-50 disabled:cursor-not-allowed"
-      style={{ borderColor: `${ACCENT_EMERALD}40`, backgroundColor: `${ACCENT_EMERALD}10`, color: ACCENT_EMERALD }}
+      style={{ borderColor: `${withOpacity(ACCENT_EMERALD, OPACITY_25)}`, backgroundColor: `${withOpacity(ACCENT_EMERALD, OPACITY_8)}`, color: ACCENT_EMERALD }}
     >
       {cliStore.isOptimizing ? 'Optimizing...' : 'Simulate & Optimize'}
     </button>

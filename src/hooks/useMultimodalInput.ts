@@ -7,7 +7,7 @@
 
 'use client';
 
-import { useCallback, useRef } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
 import type { Intent, IntentBus } from '@/lib/dzin/core/intent';
 import type { LayoutTemplateId } from '@/lib/dzin/core/layout/types';
 
@@ -104,7 +104,7 @@ interface UseMultimodalInputOptions {
 
 export function useMultimodalInput({ bus, onLLMFallback }: UseMultimodalInputOptions) {
   const busRef = useRef(bus);
-  busRef.current = bus;
+  useEffect(() => { busRef.current = bus; }, [bus]);
 
   const handleTextInput = useCallback(
     (text: string) => {

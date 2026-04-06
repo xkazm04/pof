@@ -3,7 +3,9 @@
 import { useState, useCallback, useRef, useMemo } from 'react';
 import { Play, Activity, TrendingUp } from 'lucide-react';
 import { motion } from 'framer-motion';
-import { OPACITY_20 } from '@/lib/chart-colors';
+import { OPACITY_20,
+  withOpacity, OPACITY_25,
+} from '@/lib/chart-colors';
 import {
   ACCENT, ENEMY_ARCHETYPES,
   runPredictiveBalance, DEFAULT_PREDICTIVE_CONFIG,
@@ -59,7 +61,7 @@ export function PredictiveBalanceSimulator() {
           style={{
             backgroundColor: `${ACCENT}${OPACITY_20}`,
             color: ACCENT,
-            border: `1px solid ${ACCENT}40`,
+            border: `1px solid ${withOpacity(ACCENT, OPACITY_25)}`,
           }}
         >
           {isRunning ? (

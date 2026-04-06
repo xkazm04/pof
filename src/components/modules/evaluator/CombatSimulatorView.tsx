@@ -265,7 +265,7 @@ export function CombatSimulatorView() {
             {!summary && !isSimulating && (
               <div className="flex flex-col items-center justify-center py-12 text-center">
                 <Swords className="w-12 h-12 text-text-muted/30 mb-3" />
-                <p className="text-sm text-text-muted">Configure encounter and click "Run" to simulate</p>
+                <p className="text-sm text-text-muted">Configure encounter and click &quot;Run&quot; to simulate</p>
               </div>
             )}
           </div>

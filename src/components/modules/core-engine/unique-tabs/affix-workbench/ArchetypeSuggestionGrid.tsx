@@ -4,7 +4,8 @@ import { motion } from 'framer-motion';
 import { Wand2 } from 'lucide-react';
 import {
   STATUS_ERROR, ACCENT_EMERALD, ACCENT_CYAN,
-  OPACITY_10, OPACITY_15, OPACITY_20,
+  OPACITY_5, OPACITY_10, OPACITY_15, OPACITY_20,
+  withOpacity,
 } from '@/lib/chart-colors';
 import { SurfaceCard } from '@/components/ui/SurfaceCard';
 import { SectionLabel } from '@/components/modules/core-engine/unique-tabs/_shared';
@@ -50,8 +51,8 @@ export function ArchetypeSuggestionGrid({
               className="text-left p-3 rounded-lg border transition-all hover:scale-[1.02] group"
               style={{
                 borderColor: isActive ? arch.color : `${arch.color}${OPACITY_20}`,
-                backgroundColor: isActive ? `${arch.color}${OPACITY_15}` : `${arch.color}05`,
-                boxShadow: isActive ? `0 0 12px ${arch.color}30` : 'none',
+                backgroundColor: isActive ? `${arch.color}${OPACITY_15}` : `${arch.color}${OPACITY_5}`,
+                boxShadow: isActive ? `0 0 12px ${withOpacity(arch.color, OPACITY_20)}` : 'none',
               }}
             >
               <div className="flex items-center gap-2 mb-1.5">

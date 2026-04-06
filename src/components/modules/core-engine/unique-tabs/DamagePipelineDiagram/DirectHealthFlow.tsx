@@ -1,5 +1,6 @@
 'use client';
 
+import { OVERLAY_WHITE, withOpacity, OPACITY_25 } from '@/lib/chart-colors';
 import { STAGGER_DEFAULT } from '@/components/modules/core-engine/unique-tabs/_shared';
 import { NODE_W, NODE_H, ELEMENT_COLORS } from './types';
 import { DIRECT_PIPELINE } from './pipeline-data';
@@ -37,7 +38,7 @@ export function DirectHealthFlow() {
           <FlowArrow key={`direct-arrow-${i}`}
             x1={centerX} y1={rowY(i) + NODE_H}
             x2={centerX} y2={rowY(i + 1)}
-            color="rgba(255,255,255,0.25)"
+            color={withOpacity(OVERLAY_WHITE, OPACITY_25)}
             delay={i * STAGGER_DEFAULT + 0.1} />
         ))}
 

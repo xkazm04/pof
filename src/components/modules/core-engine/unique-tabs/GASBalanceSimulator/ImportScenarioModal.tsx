@@ -3,7 +3,9 @@
 import { useState, useCallback } from 'react';
 import { Upload, X, AlertTriangle, Check, ClipboardPaste } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { STATUS_SUCCESS, STATUS_ERROR } from '@/lib/chart-colors';
+import { STATUS_SUCCESS, STATUS_ERROR,
+  withOpacity, OPACITY_10, OPACITY_8, OPACITY_20, OPACITY_12, OPACITY_25,
+} from '@/lib/chart-colors';
 import { BlueprintPanel } from '../_design';
 import type { SimScenario } from './data';
 import { ACCENT, decodeScenario } from './data';
@@ -69,7 +71,7 @@ export function ImportScenarioModal({ onImport, onClose }: {
             {error && (
               <motion.div initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }}
                 className="flex items-center gap-1.5 text-2xs px-2 py-1 rounded-md"
-                style={{ backgroundColor: `${STATUS_ERROR}18`, color: STATUS_ERROR }}>
+                style={{ backgroundColor: `${withOpacity(STATUS_ERROR, OPACITY_10)}`, color: STATUS_ERROR }}>
                 <AlertTriangle className="w-3 h-3 flex-shrink-0" /> {error}
               </motion.div>
             )}
@@ -78,7 +80,7 @@ export function ImportScenarioModal({ onImport, onClose }: {
             {preview && (
               <motion.div initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }}
                 className="rounded-md px-2.5 py-2 space-y-0.5 text-2xs"
-                style={{ backgroundColor: `${STATUS_SUCCESS}12`, border: `1px solid ${STATUS_SUCCESS}30` }}>
+                style={{ backgroundColor: `${withOpacity(STATUS_SUCCESS, OPACITY_8)}`, border: `1px solid ${withOpacity(STATUS_SUCCESS, OPACITY_20)}` }}>
                 <div className="flex items-center gap-1.5 font-semibold" style={{ color: STATUS_SUCCESS }}>
                   <Check className="w-3 h-3" /> Valid Scenario
                 </div>
@@ -97,13 +99,13 @@ export function ImportScenarioModal({ onImport, onClose }: {
               {!preview ? (
                 <button onClick={handleValidate} disabled={!input.trim()}
                   className="text-2xs px-3 py-1.5 rounded-md font-semibold transition-all disabled:opacity-40"
-                  style={{ backgroundColor: `${ACCENT}20`, color: ACCENT, border: `1px solid ${ACCENT}40` }}>
+                  style={{ backgroundColor: `${withOpacity(ACCENT, OPACITY_12)}`, color: ACCENT, border: `1px solid ${withOpacity(ACCENT, OPACITY_25)}` }}>
                   <span className="flex items-center gap-1"><ClipboardPaste className="w-3 h-3" /> Validate</span>
                 </button>
               ) : (
                 <button onClick={handleApply}
                   className="text-2xs px-3 py-1.5 rounded-md font-semibold transition-all"
-                  style={{ backgroundColor: `${STATUS_SUCCESS}20`, color: STATUS_SUCCESS, border: `1px solid ${STATUS_SUCCESS}40` }}>
+                  style={{ backgroundColor: `${withOpacity(STATUS_SUCCESS, OPACITY_12)}`, color: STATUS_SUCCESS, border: `1px solid ${withOpacity(STATUS_SUCCESS, OPACITY_25)}` }}>
                   <span className="flex items-center gap-1"><Check className="w-3 h-3" /> Apply Scenario</span>
                 </button>
               )}

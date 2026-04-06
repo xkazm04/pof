@@ -74,8 +74,18 @@ export const OVERLAY_WHITE = '#ffffff';
 
 // ── Opacity helpers — append to any hex color ───────────────────────────────
 
+/** 0% opacity suffix — transparent (for animation keyframes) */
+export const OPACITY_0 = '00';
+/** 2% opacity suffix — barely-visible grid lines, ultra-subtle fills */
+export const OPACITY_2 = '05';
+/** 3% opacity suffix — faint grid lines, minimal backgrounds */
+export const OPACITY_3 = '08';
+/** 4% opacity suffix — very subtle grid lines and fills */
+export const OPACITY_4 = '0a';
 /** 5% opacity suffix */
 export const OPACITY_5 = '0d';
+/** 6% opacity suffix — standard grid lines, chart backgrounds */
+export const OPACITY_6 = '0f';
 /** 8% opacity suffix */
 export const OPACITY_8 = '14';
 /** 10% opacity suffix */
@@ -88,16 +98,44 @@ export const OPACITY_15 = '26';
 export const OPACITY_20 = '33';
 /** 22% opacity suffix */
 export const OPACITY_22 = '38';
+/** 25% opacity suffix */
+export const OPACITY_25 = '40';
 /** 30% opacity suffix */
 export const OPACITY_30 = '4d';
 /** 37% opacity suffix */
 export const OPACITY_37 = '60';
+/** 40% opacity suffix — medium emphasis fills and strokes */
+export const OPACITY_40 = '66';
 /** 50% opacity suffix */
 export const OPACITY_50 = '80';
+/** 56% opacity suffix */
+export const OPACITY_56 = '90';
+/** 60% opacity suffix */
+export const OPACITY_60 = '99';
 /** 80% opacity suffix */
 export const OPACITY_80 = 'cc';
+/** 87% opacity suffix */
+export const OPACITY_87 = 'dd';
 /** 90% opacity suffix */
 export const OPACITY_90 = 'e6';
+
+// ── Semantic border opacity tokens ────────────────────────────────────────
+
+/** Default border opacity — visible but not heavy (20%) */
+export const BORDER_DEFAULT = OPACITY_20;
+/** Hover border opacity — stronger emphasis on interaction (37%) */
+export const BORDER_HOVER = OPACITY_37;
+/** Subtle border opacity — faint structural hints (10%) */
+export const BORDER_SUBTLE = OPACITY_10;
+
+// ── Glow radius presets ──────────────────────────────────────────────────
+
+/** Small glow — subtle indicator halo */
+export const GLOW_SM = '0 0 4px';
+/** Medium glow — standard emphasis */
+export const GLOW_MD = '0 0 8px';
+/** Large glow — dramatic emphasis */
+export const GLOW_LG = '0 0 16px';
 
 // ── General opacity helper ────────────────────────────────────────────────
 

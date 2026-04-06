@@ -2,7 +2,9 @@
 
 import { useState, useMemo } from 'react';
 import { GitCompare } from 'lucide-react';
-import { STATUS_SUCCESS, STATUS_ERROR, ACCENT_CYAN } from '@/lib/chart-colors';
+import { STATUS_SUCCESS, STATUS_ERROR, ACCENT_CYAN,
+  withOpacity, OPACITY_10, OPACITY_25, OPACITY_8,
+} from '@/lib/chart-colors';
 
 export function CodePreview({ code, prevCode }: { code: string; prevCode: string | null }) {
   const [showDiff, setShowDiff] = useState(false);
@@ -48,9 +50,9 @@ export function CodePreview({ code, prevCode }: { code: string; prevCode: string
             onClick={() => setShowDiff(!showDiff)}
             className="flex items-center gap-1.5 px-2 py-0.5 rounded text-2xs font-medium"
             style={{
-              backgroundColor: showDiff ? `${ACCENT_CYAN}15` : 'transparent',
+              backgroundColor: showDiff ? `${withOpacity(ACCENT_CYAN, OPACITY_10)}` : 'transparent',
               color: showDiff ? ACCENT_CYAN : 'var(--text-muted)',
-              border: `1px solid ${showDiff ? `${ACCENT_CYAN}40` : 'var(--border)'}`,
+              border: `1px solid ${showDiff ? withOpacity(ACCENT_CYAN, OPACITY_25) : 'var(--border)'}`,
             }}
           >
             <GitCompare className="w-3 h-3" />
@@ -67,7 +69,7 @@ export function CodePreview({ code, prevCode }: { code: string; prevCode: string
                 key={i}
                 className="px-1"
                 style={{
-                  backgroundColor: d.type === 'added' ? `${STATUS_SUCCESS}10` : d.type === 'removed' ? `${STATUS_ERROR}10` : 'transparent',
+                  backgroundColor: d.type === 'added' ? `${withOpacity(STATUS_SUCCESS, OPACITY_8)}` : d.type === 'removed' ? `${withOpacity(STATUS_ERROR, OPACITY_8)}` : 'transparent',
                   color: d.type === 'added' ? STATUS_SUCCESS : d.type === 'removed' ? STATUS_ERROR : 'var(--text-muted)',
                 }}
               >

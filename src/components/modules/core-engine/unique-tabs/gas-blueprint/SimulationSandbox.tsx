@@ -8,8 +8,9 @@ import {
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   STATUS_SUCCESS, STATUS_WARNING, STATUS_ERROR,
-  ACCENT_CYAN, ACCENT_VIOLET, ACCENT_ORANGE,
+  ACCENT_CYAN, ACCENT_VIOLET, ACCENT_ORANGE, OVERLAY_WHITE,
   OPACITY_15, OPACITY_20, MODULE_COLORS,
+  withOpacity, OPACITY_10, OPACITY_12, OPACITY_25, OPACITY_30,
 } from '@/lib/chart-colors';
 import { SurfaceCard } from '@/components/ui/SurfaceCard';
 
@@ -272,7 +273,7 @@ function Sparkline({ data, color, width = 200, height = 40, label, currentIdx }:
           {/* Fill area */}
           <polygon
             points={`0,${height} ${points} ${width},${height}`}
-            fill={`${color}15`}
+            fill={`${withOpacity(color, OPACITY_10)}`}
           />
           {/* Line */}
           <polyline
@@ -293,10 +294,10 @@ function Sparkline({ data, color, width = 200, height = 40, label, currentIdx }:
             );
           })()}
           {/* Min/max labels */}
-          <text x={width + 2} y={4} fill="rgba(255,255,255,0.3)" fontSize={9} fontFamily="monospace">
+          <text x={width + 2} y={4} fill={withOpacity(OVERLAY_WHITE, OPACITY_30)} fontSize={9} fontFamily="monospace">
             {max % 1 === 0 ? max : max.toFixed(1)}
           </text>
-          <text x={width + 2} y={height} fill="rgba(255,255,255,0.3)" fontSize={9} fontFamily="monospace">
+          <text x={width + 2} y={height} fill={withOpacity(OVERLAY_WHITE, OPACITY_30)} fontSize={9} fontFamily="monospace">
             {min % 1 === 0 ? min : min.toFixed(1)}
           </text>
         </svg>
@@ -443,7 +444,7 @@ export function SimulationSandbox({ attributes, effects, relationships, accent }
         <button
           onClick={runSim}
           className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all"
-          style={{ backgroundColor: `${STATUS_SUCCESS}20`, color: STATUS_SUCCESS, border: `1px solid ${STATUS_SUCCESS}40` }}
+          style={{ backgroundColor: `${withOpacity(STATUS_SUCCESS, OPACITY_12)}`, color: STATUS_SUCCESS, border: `1px solid ${withOpacity(STATUS_SUCCESS, OPACITY_25)}` }}
         >
           <FlaskConical className="w-3.5 h-3.5" /> Run Simulation
         </button>
@@ -509,7 +510,7 @@ export function SimulationSandbox({ attributes, effects, relationships, accent }
               <button
                 onClick={addQueueItem}
                 className="flex items-center gap-1 px-1.5 py-0.5 rounded text-xs font-medium"
-                style={{ backgroundColor: `${accent}15`, color: accent, border: `1px solid ${accent}30` }}
+                style={{ backgroundColor: `${withOpacity(accent, OPACITY_10)}`, color: accent, border: `1px solid ${withOpacity(accent, OPACITY_20)}` }}
               >
                 <Plus className="w-2.5 h-2.5" /> Add
               </button>
@@ -605,9 +606,9 @@ export function SimulationSandbox({ attributes, effects, relationships, accent }
                   onClick={() => toggleTrack(attr.name)}
                   className="px-2 py-0.5 rounded-full text-xs font-mono font-medium transition-all"
                   style={{
-                    backgroundColor: isTracked ? `${color}20` : 'transparent',
+                    backgroundColor: isTracked ? `${withOpacity(color, OPACITY_12)}` : 'transparent',
                     color: isTracked ? color : 'var(--text-muted)',
-                    border: `1px solid ${isTracked ? `${color}50` : 'var(--border)'}`,
+                    border: `1px solid ${isTracked ? withOpacity(color, OPACITY_30) : 'var(--border)'}`,
                     opacity: isTracked ? 1 : 0.5,
                   }}
                 >
@@ -686,7 +687,7 @@ export function SimulationSandbox({ attributes, effects, relationships, accent }
                   <span
                     key={tag}
                     className="text-xs font-mono px-1.5 py-0.5 rounded"
-                    style={{ backgroundColor: `${accent}15`, color: accent, border: `1px solid ${accent}25` }}
+                    style={{ backgroundColor: `${withOpacity(accent, OPACITY_10)}`, color: accent, border: `1px solid ${withOpacity(accent, OPACITY_15)}` }}
                   >
                     {tag}
                   </span>

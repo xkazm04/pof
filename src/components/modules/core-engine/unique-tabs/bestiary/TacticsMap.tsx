@@ -1,7 +1,7 @@
 'use client';
 
 import type { TacticsEnemy } from '@/components/modules/core-engine/unique-tabs/EnemyBestiary/data';
-import { MODULE_COLORS } from '@/lib/chart-colors';
+import { MODULE_COLORS, OPACITY_3, OPACITY_8, OPACITY_12, OPACITY_20, OPACITY_25, OPACITY_30, OPACITY_40, OVERLAY_WHITE, STATUS_ERROR, withOpacity } from '@/lib/chart-colors';
 
 interface TacticsMapProps {
   enemies: TacticsEnemy[];
@@ -13,12 +13,12 @@ export function TacticsMap({ enemies, roleColors }: TacticsMapProps) {
   return (
     <svg width={200} height={200} viewBox="0 0 160 120" className="flex-shrink-0">
       {/* Arena bounds */}
-      <rect x={4} y={4} width={152} height={112} rx={4} fill="none" stroke="rgba(255,255,255,0.08)" strokeWidth="1" strokeDasharray="4 4" />
+      <rect x={4} y={4} width={152} height={112} rx={4} fill="none" stroke={withOpacity(OVERLAY_WHITE, OPACITY_8)} strokeWidth="1" strokeDasharray="4 4" />
       {/* Grid */}
-      {[40, 80, 120].map(x => <line key={`vg${x}`} x1={x} y1={4} x2={x} y2={116} stroke="rgba(255,255,255,0.03)" strokeWidth="1" />)}
-      {[30, 60, 90].map(y => <line key={`hg${y}`} x1={4} y1={y} x2={156} y2={y} stroke="rgba(255,255,255,0.03)" strokeWidth="1" />)}
+      {[40, 80, 120].map(x => <line key={`vg${x}`} x1={x} y1={4} x2={x} y2={116} stroke={withOpacity(OVERLAY_WHITE, OPACITY_3)} strokeWidth="1" />)}
+      {[30, 60, 90].map(y => <line key={`hg${y}`} x1={4} y1={y} x2={156} y2={y} stroke={withOpacity(OVERLAY_WHITE, OPACITY_3)} strokeWidth="1" />)}
       {/* Player at center */}
-      <circle cx={80} cy={60} r={8} fill={`${MODULE_COLORS.core}33`} stroke={MODULE_COLORS.core} strokeWidth="1.5" />
+      <circle cx={80} cy={60} r={8} fill={withOpacity(MODULE_COLORS.core, OPACITY_20)} stroke={MODULE_COLORS.core} strokeWidth="1.5" />
       <text x={80} y={60} textAnchor="middle" dominantBaseline="central" className="text-xs font-mono font-bold" fill={MODULE_COLORS.core}>P</text>
       {/* Enemies */}
       {enemies.map(enemy => {
@@ -26,7 +26,7 @@ export function TacticsMap({ enemies, roleColors }: TacticsMapProps) {
         return (
           <g key={enemy.id}>
             <circle cx={enemy.x} cy={enemy.y} r={7}
-              fill={`${roleColor}20`} stroke={roleColor} strokeWidth="1.5"
+              fill={withOpacity(roleColor, OPACITY_12)} stroke={roleColor} strokeWidth="1.5"
             />
             <text x={enemy.x} y={enemy.y} textAnchor="middle" dominantBaseline="central"
               className="text-xs font-mono font-bold pointer-events-none" fill={roleColor}>
@@ -34,29 +34,29 @@ export function TacticsMap({ enemies, roleColors }: TacticsMapProps) {
             </text>
             {/* Label */}
             <text x={enemy.x} y={enemy.y + 14} textAnchor="middle"
-              className="text-xs font-mono fill-[rgba(255,255,255,0.4)]">
+              className="text-xs font-mono" fill={withOpacity(OVERLAY_WHITE, OPACITY_40)}>
               {enemy.label}
             </text>
             {/* Attack line to player for attackers */}
             {enemy.role === 'attacking' && (
               <line x1={enemy.x} y1={enemy.y} x2={80} y2={60}
-                stroke={`${roleColor}40`} strokeWidth="1" strokeDasharray="3 3" />
+                stroke={withOpacity(roleColor, OPACITY_25)} strokeWidth="1" strokeDasharray="3 3" />
             )}
             {/* Flanking arc */}
             {enemy.role === 'flanking' && (
               <path
                 d={`M ${enemy.x} ${enemy.y} Q ${enemy.x + 16} ${enemy.y - 24} ${80} ${60}`}
-                fill="none" stroke={`${roleColor}50`} strokeWidth="1" strokeDasharray="3 2"
+                fill="none" stroke={withOpacity(roleColor, OPACITY_30)} strokeWidth="1" strokeDasharray="3 2"
               />
             )}
           </g>
         );
       })}
       {/* Attack slot rotation arrow */}
-      <path d="M 36 24 C 28 12, 56 8, 60 20" fill="none" stroke="rgba(239,68,68,0.3)" strokeWidth="1" markerEnd="url(#arrowhead)" />
+      <path d="M 36 24 C 28 12, 56 8, 60 20" fill="none" stroke={withOpacity(STATUS_ERROR, OPACITY_30)} strokeWidth="1" markerEnd="url(#arrowhead)" />
       <defs>
         <marker id="arrowhead" markerWidth="6" markerHeight="4" refX="6" refY="2" orient="auto">
-          <polygon points="0 0, 6 2, 0 4" fill="rgba(239,68,68,0.4)" />
+          <polygon points="0 0, 6 2, 0 4" fill={withOpacity(STATUS_ERROR, OPACITY_40)} />
         </marker>
       </defs>
     </svg>

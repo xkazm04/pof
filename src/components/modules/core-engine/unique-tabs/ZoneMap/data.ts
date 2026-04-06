@@ -6,6 +6,7 @@ import {
   ACCENT_CYAN, ACCENT_VIOLET, ACCENT_ORANGE, ACCENT_EMERALD,
 } from '@/lib/chart-colors';
 import type { GraphNode, HeatmapConfig, BudgetBar } from '@/types/unique-tab-improvements';
+import type { EntityMetadata } from '@/types/game-metadata';
 
 /* ── Canonical Zone Names ──────────────────────────────────────────────────── */
 
@@ -16,6 +17,11 @@ export const ZONE_NAMES = {
   BANDIT_CAMP: 'Bandit Camp',
   DEEP_CORE: 'Deep Core',
   RUINED_KEEP: 'Ruined Keep',
+  TATOOINE: 'Tatooine',
+  NAR_SHADDAA: 'Nar Shaddaa',
+  KASHYYYK: 'Kashyyyk',
+  KORRIBAN: 'Korriban',
+  MALACHOR_V: 'Malachor V',
 } as const;
 
 export type ZoneName = (typeof ZONE_NAMES)[keyof typeof ZONE_NAMES];
@@ -50,7 +56,37 @@ export const ZONES: ZoneRecord[] = [
   { id: 'z4', name: ZONE_NAMES.BANDIT_CAMP, displayName: ZONE_NAMES.BANDIT_CAMP, cx: 70, cy: 25, type: 'combat', status: 'locked', levelRange: '3-5', levelMin: 3, levelMax: 5, connections: ['z6'], group: 'combat', color: STATUS_LOCKED, topoSize: 22, topoX: 380, topoY: 60 },
   { id: 'z5', name: ZONE_NAMES.DEEP_CORE, displayName: ZONE_NAMES.DEEP_CORE, cx: 65, cy: 85, type: 'combat', status: 'locked', levelRange: '4-6', levelMin: 4, levelMax: 6, connections: ['z6'], group: 'combat', color: STATUS_LOCKED, topoSize: 22, topoX: 380, topoY: 300 },
   { id: 'z6', name: ZONE_NAMES.RUINED_KEEP, displayName: `${ZONE_NAMES.RUINED_KEEP} (Boss)`, cx: 85, cy: 50, type: 'boss', status: 'locked', levelRange: '5-7', levelMin: 5, levelMax: 7, connections: [], group: 'boss', color: STATUS_ERROR, topoSize: 30, topoX: 470, topoY: 180 },
+  { id: 'z-tatooine', name: ZONE_NAMES.TATOOINE, displayName: 'Tatooine Desert', cx: 15, cy: 30, type: 'hub', status: 'active', levelRange: '1-10', levelMin: 1, levelMax: 10, connections: ['z-nar-shaddaa', 'z-kashyyyk'], group: 'hub', color: '#f59e0b', topoSize: 26, topoX: 100, topoY: 200 },
+  { id: 'z-nar-shaddaa', name: ZONE_NAMES.NAR_SHADDAA, displayName: 'Nar Shaddaa Underworld', cx: 40, cy: 50, type: 'combat', status: 'active', levelRange: '8-18', levelMin: 8, levelMax: 18, connections: ['z-tatooine', 'z-kashyyyk', 'z-korriban', 'z-malachor'], group: 'combat', color: '#a78bfa', topoSize: 24, topoX: 300, topoY: 150 },
+  { id: 'z-kashyyyk', name: ZONE_NAMES.KASHYYYK, displayName: 'Kashyyyk Shadowlands', cx: 60, cy: 25, type: 'combat', status: 'locked', levelRange: '15-25', levelMin: 15, levelMax: 25, connections: ['z-tatooine', 'z-nar-shaddaa', 'z-korriban'], group: 'combat', color: '#22c55e', topoSize: 22, topoX: 500, topoY: 250 },
+  { id: 'z-korriban', name: ZONE_NAMES.KORRIBAN, displayName: 'Korriban Sith Academy', cx: 75, cy: 55, type: 'combat', status: 'locked', levelRange: '22-35', levelMin: 22, levelMax: 35, connections: ['z-nar-shaddaa', 'z-kashyyyk', 'z-malachor'], group: 'combat', color: '#ef4444', topoSize: 22, topoX: 700, topoY: 150 },
+  { id: 'z-malachor', name: ZONE_NAMES.MALACHOR_V, displayName: 'Malachor V Ruins', cx: 85, cy: 35, type: 'boss', status: 'locked', levelRange: '30-50', levelMin: 30, levelMax: 50, connections: ['z-korriban', 'z-nar-shaddaa'], group: 'boss', color: '#7f1d1d', topoSize: 20, topoX: 850, topoY: 250 },
 ];
+
+/* ── Entity Metadata ─────────────────────────────────────────────────────── */
+
+function zoneTier(z: ZoneRecord): string {
+  if (z.levelMax <= 5) return 'Starter';
+  if (z.levelMax <= 20) return 'Mid';
+  if (z.levelMax <= 35) return 'High';
+  return 'Endgame';
+}
+
+export const ZONE_METADATA: EntityMetadata[] = ZONES.map(z => ({
+  id: z.id,
+  name: z.name,
+  category: z.type === 'hub' ? 'Hub' : z.type === 'boss' ? 'Boss' : 'Combat',
+  tags: [
+    z.type,
+    z.status,
+    z.group,
+    ...(z.type === 'boss' ? ['endgame'] : []),
+    ...(z.levelMin <= 1 ? ['beginner-friendly'] : []),
+  ],
+  level: z.levelMin,
+  levelMax: z.levelMax,
+  tier: zoneTier(z),
+}));
 
 /* ── Canonical Zone Edges ──────────────────────────────────────────────────── */
 
@@ -72,6 +108,21 @@ export const ZONE_EDGES: ZoneEdge[] = [
   { fromId: 'z3', toId: 'z5', edgeType: 'portal', locked: true, criticalPath: false, transitionType: 'Portal', estTime: '0.6s', navMeshContinuity: false },
   { fromId: 'z4', toId: 'z6', edgeType: 'door', locked: true, criticalPath: true, transitionType: 'Loading', estTime: '2.4s', navMeshContinuity: false },
   { fromId: 'z5', toId: 'z6', edgeType: 'portal', locked: true, criticalPath: true, transitionType: 'Portal', estTime: '0.8s', navMeshContinuity: false },
+  { fromId: 'z-tatooine', toId: 'z-nar-shaddaa', edgeType: 'portal', locked: false, criticalPath: true, transitionType: 'Loading', estTime: '2.0s', navMeshContinuity: false },
+  { fromId: 'z-tatooine', toId: 'z-kashyyyk', edgeType: 'portal', locked: true, criticalPath: false, transitionType: 'Loading', estTime: '2.2s', navMeshContinuity: false },
+  { fromId: 'z-nar-shaddaa', toId: 'z-kashyyyk', edgeType: 'door', locked: true, criticalPath: true, transitionType: 'Loading', estTime: '1.8s', navMeshContinuity: false },
+  { fromId: 'z-nar-shaddaa', toId: 'z-korriban', edgeType: 'portal', locked: true, criticalPath: false, transitionType: 'Portal', estTime: '1.5s', navMeshContinuity: false },
+  { fromId: 'z-kashyyyk', toId: 'z-korriban', edgeType: 'door', locked: true, criticalPath: true, transitionType: 'Loading', estTime: '2.4s', navMeshContinuity: false },
+  { fromId: 'z-korriban', toId: 'z-malachor', edgeType: 'portal', locked: true, criticalPath: true, transitionType: 'Portal', estTime: '3.0s', navMeshContinuity: false },
+  // Reverse edges for bidirectional KOTOR zone connections
+  { fromId: 'z-nar-shaddaa', toId: 'z-tatooine', edgeType: 'portal', locked: false, criticalPath: false, transitionType: 'Loading', estTime: '2.0s', navMeshContinuity: false },
+  { fromId: 'z-kashyyyk', toId: 'z-tatooine', edgeType: 'portal', locked: true, criticalPath: false, transitionType: 'Loading', estTime: '2.2s', navMeshContinuity: false },
+  { fromId: 'z-kashyyyk', toId: 'z-nar-shaddaa', edgeType: 'door', locked: true, criticalPath: false, transitionType: 'Loading', estTime: '1.8s', navMeshContinuity: false },
+  { fromId: 'z-korriban', toId: 'z-nar-shaddaa', edgeType: 'portal', locked: true, criticalPath: false, transitionType: 'Portal', estTime: '1.5s', navMeshContinuity: false },
+  { fromId: 'z-korriban', toId: 'z-kashyyyk', edgeType: 'door', locked: true, criticalPath: false, transitionType: 'Loading', estTime: '2.4s', navMeshContinuity: false },
+  { fromId: 'z-malachor', toId: 'z-korriban', edgeType: 'portal', locked: true, criticalPath: false, transitionType: 'Portal', estTime: '3.0s', navMeshContinuity: false },
+  { fromId: 'z-malachor', toId: 'z-nar-shaddaa', edgeType: 'portal', locked: true, criticalPath: false, transitionType: 'Portal', estTime: '2.5s', navMeshContinuity: false },
+  { fromId: 'z-nar-shaddaa', toId: 'z-malachor', edgeType: 'portal', locked: true, criticalPath: false, transitionType: 'Portal', estTime: '2.5s', navMeshContinuity: false },
 ];
 
 /* ── Derived: Topology Graph ───────────────────────────────────────────────── */
@@ -269,6 +320,24 @@ export const BOSS_ARENAS: BossArena[] = [
     hazards: ['Cursed Ground', 'Spirit Pillars', 'Collapse'],
     recommendedLevel: 7,
     musicTheme: 'Requiem of Ruin',
+  },
+  {
+    bossName: 'Krayt Dragon',
+    zone: ZONE_NAMES.TATOOINE,
+    phases: 3,
+    arenaSize: '70x50m',
+    hazards: ['Sand Pits', 'Tail Sweep', 'Burrow Strike'],
+    recommendedLevel: 8,
+    musicTheme: 'Dune Sea Terror',
+  },
+  {
+    bossName: 'Darth Malak',
+    zone: ZONE_NAMES.MALACHOR_V,
+    phases: 5,
+    arenaSize: '80x80m',
+    hazards: ['Force Drain Pillars', 'Dark Side Vortex', 'Lightsaber Throw'],
+    recommendedLevel: 45,
+    musicTheme: 'Fall of the Sith',
   },
 ];
 

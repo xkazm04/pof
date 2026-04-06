@@ -195,12 +195,12 @@ export function useTaskQueue(opts: UseTaskQueueOpts) {
 
   // Keep a ref for the current taskId so callbacks can read it without re-rendering
   const currentTaskIdRef = useRef<string | null>(null);
-  currentTaskIdRef.current = taskId;
+  useEffect(() => { currentTaskIdRef.current = taskId; }, [taskId]);
 
   /** Tracks task IDs already dispatched to prevent duplicate execution */
   const dispatchedTaskIds = useRef<Set<string>>(new Set());
   /** Capped at 200 entries — oldest evicted first when full */
-  const buildParseCache = useRef<Map<string, BuildParseResult>>(new Map());
+  const [buildParseCache, setBuildParseCache] = useState<Map<string, BuildParseResult>>(() => new Map());
   const eventSourceRef = useRef<EventSource | null>(null);
   /** Accumulated assistant output for current task — used for callback extraction */
   const assistantOutputRef = useRef<string>('');
@@ -294,11 +294,15 @@ export function useTaskQueue(opts: UseTaskQueueOpts) {
         const logId = `result-${Date.now()}-${Math.random().toString(36).slice(2)}`;
         const parsed = parseBuildOutput(fullContent);
         if (parsed.isBuildOutput) {
-          buildParseCache.current.set(logId, parsed);
-          if (buildParseCache.current.size > 200) {
-            const firstKey = buildParseCache.current.keys().next().value;
-            if (firstKey !== undefined) buildParseCache.current.delete(firstKey);
-          }
+          setBuildParseCache(prev => {
+            const next = new Map(prev);
+            next.set(logId, parsed);
+            if (next.size > 200) {
+              const firstKey = next.keys().next().value;
+              if (firstKey !== undefined) next.delete(firstKey);
+            }
+            return next;
+          });
         }
         addLog({ id: logId, type: 'tool_result', content: fullContent.slice(0, 200), timestamp: event.timestamp });
         break;
@@ -451,7 +455,7 @@ export function useTaskQueue(opts: UseTaskQueueOpts) {
     setLogs([]);
     setFileChanges([]);
     dispatchedTaskIds.current.clear();
-    buildParseCache.current.clear();
+    setBuildParseCache(new Map());
     clearHeartbeat();
     if (stuckCheckIntervalRef.current) { clearInterval(stuckCheckIntervalRef.current); stuckCheckIntervalRef.current = null; }
     dispatch({ type: 'CLEAR' });

@@ -38,7 +38,8 @@ export function TruncateWithTooltip({
 
   // Re-check when children change
   useEffect(() => {
-    checkOverflow();
+    const raf = requestAnimationFrame(() => checkOverflow());
+    return () => cancelAnimationFrame(raf);
   }, [checkOverflow, children]);
 
   // Observe resize

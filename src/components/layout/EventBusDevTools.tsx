@@ -40,7 +40,7 @@ export function EventBusDevTools() {
   const [selectedEvent, setSelectedEvent] = useState<BusEvent | null>(null);
   const listRef = useRef<HTMLDivElement>(null);
   const pausedRef = useRef(false);
-  pausedRef.current = paused;
+  useEffect(() => { pausedRef.current = paused; }, [paused]);
 
   // Toggle with Ctrl+Shift+E
   useEffect(() => {
@@ -54,13 +54,19 @@ export function EventBusDevTools() {
     return () => window.removeEventListener('keydown', handler);
   }, []);
 
+  // Hydrate from replay buffer when opening (render-time state adjustment)
+  const [prevOpen, setPrevOpen] = useState(false);
+  if (open && !prevOpen) {
+    setPrevOpen(true);
+    setEvents(eventBus.getReplayBuffer().slice(-MAX_DISPLAY));
+  }
+  if (!open && prevOpen) {
+    setPrevOpen(false);
+  }
+
   // Subscribe to all events
   useEffect(() => {
     if (!open) return;
-
-    // Hydrate from replay buffer
-    setEvents(eventBus.getReplayBuffer().slice(-MAX_DISPLAY));
-
     return eventBus.onAny((event: BusEvent) => {
       if (pausedRef.current) return;
       setEvents((prev) => [...prev, event].slice(-MAX_DISPLAY));

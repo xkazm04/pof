@@ -2,7 +2,8 @@
 
 import {
   ACCENT_ORANGE, ACCENT_CYAN, ACCENT_VIOLET,
-  ACCENT_EMERALD, STATUS_NEUTRAL,
+  ACCENT_EMERALD, STATUS_NEUTRAL, OVERLAY_WHITE,
+  withOpacity, OPACITY_2, OPACITY_25,
 } from '@/lib/chart-colors';
 import { BlueprintPanel } from '../_design';
 import type { DodgeParams } from '../dodge-types';
@@ -79,7 +80,7 @@ function FrameDataRows({ rows }: { rows: { label: string; frames: number; second
   return (
     <table className="w-full text-xs font-mono">
       <thead>
-        <tr className="border-b border-border/30" style={{ backgroundColor: 'rgba(255,255,255,0.02)' }}>
+        <tr className="border-b border-border/30" style={{ backgroundColor: withOpacity(OVERLAY_WHITE, OPACITY_2) }}>
           <th className="text-left py-1.5 px-2.5 text-xs font-mono font-bold uppercase tracking-[0.15em] text-text-muted">Phase</th>
           <th className="text-right py-1.5 px-2.5 text-xs font-mono font-bold uppercase tracking-[0.15em] text-text-muted">Frames</th>
           <th className="text-right py-1.5 px-2.5 text-xs font-mono font-bold uppercase tracking-[0.15em] text-text-muted">Seconds</th>
@@ -94,7 +95,7 @@ function FrameDataRows({ rows }: { rows: { label: string; frames: number; second
               key={row.label}
               className={isSeparator ? 'border-t border-border/40' : ''}
               style={{
-                backgroundColor: i % 2 === 1 ? 'rgba(255,255,255,0.015)' : 'transparent',
+                backgroundColor: i % 2 === 1 ? withOpacity(OVERLAY_WHITE, OPACITY_2) : 'transparent',
                 ...(isSeparator ? { borderTopStyle: 'dashed' as const } : {}),
               }}
             >
@@ -105,7 +106,7 @@ function FrameDataRows({ rows }: { rows: { label: string; frames: number; second
                 </span>
               </td>
               <td className="py-1 px-2.5 text-right">
-                <span className={isSeparator ? 'font-bold' : ''} style={{ color: row.color, textShadow: `0 0 12px ${row.color}40` }}>
+                <span className={isSeparator ? 'font-bold' : ''} style={{ color: row.color, textShadow: `0 0 12px ${withOpacity(row.color, OPACITY_25)}` }}>
                   {row.frames}f
                 </span>
               </td>
@@ -125,7 +126,7 @@ function MetricRows({ rows }: { rows: { label: string; value: string; rating: Ra
   return (
     <table className="w-full text-xs font-mono">
       <thead>
-        <tr className="border-b border-border/30" style={{ backgroundColor: 'rgba(255,255,255,0.02)' }}>
+        <tr className="border-b border-border/30" style={{ backgroundColor: withOpacity(OVERLAY_WHITE, OPACITY_2) }}>
           <th className="text-left py-1.5 px-2.5 text-xs font-mono font-bold uppercase tracking-[0.15em] text-text-muted">Game-Feel Metric</th>
           <th className="text-right py-1.5 px-2.5 text-xs font-mono font-bold uppercase tracking-[0.15em] text-text-muted">Value</th>
           <th className="text-right py-1.5 px-2.5 text-xs font-mono font-bold uppercase tracking-[0.15em] text-text-muted">Rating</th>
@@ -133,7 +134,7 @@ function MetricRows({ rows }: { rows: { label: string; value: string; rating: Ra
       </thead>
       <tbody>
         {rows.map((row, i) => (
-          <tr key={row.label} style={{ backgroundColor: i % 2 === 1 ? 'rgba(255,255,255,0.015)' : 'transparent' }}>
+          <tr key={row.label} style={{ backgroundColor: i % 2 === 1 ? withOpacity(OVERLAY_WHITE, OPACITY_2) : 'transparent' }}>
             <td className="py-1.5 px-2.5">
               <span className="flex items-center gap-1.5">
                 <span className="w-1.5 h-1.5 rounded-sm flex-shrink-0" style={{ backgroundColor: row.color }} />
@@ -141,7 +142,7 @@ function MetricRows({ rows }: { rows: { label: string; value: string; rating: Ra
               </span>
             </td>
             <td className="py-1.5 px-2.5 text-right">
-              <span className="font-bold" style={{ color: row.color, textShadow: `0 0 12px ${row.color}40` }}>{row.value}</span>
+              <span className="font-bold" style={{ color: row.color, textShadow: `0 0 12px ${withOpacity(row.color, OPACITY_25)}` }}>{row.value}</span>
             </td>
             <td className="py-1.5 px-2.5 text-right">
               <RatingBadge rating={row.rating} />

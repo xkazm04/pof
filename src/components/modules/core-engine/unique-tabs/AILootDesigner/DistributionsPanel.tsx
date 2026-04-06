@@ -6,6 +6,7 @@ import { motion } from 'framer-motion';
 import type { AffixPoolEntry, DropSimResult } from '@/lib/loot-designer/drop-simulator';
 import { BlueprintPanel, SectionHeader, NeonBar } from './design';
 import { ACCENT, AXIS_COLORS, ACCENT_EMERALD, STATUS_WARNING } from './constants';
+import { GLOW_SM } from '@/lib/chart-colors';
 
 export function DistributionsPanel({ simResult }: { simResult: DropSimResult; affixPool: AffixPoolEntry[] }) {
   const sorted = useMemo(() =>
@@ -63,7 +64,7 @@ export function DistributionsPanel({ simResult }: { simResult: DropSimResult; af
                     style={{
                       backgroundColor: AXIS_COLORS[dist.axis],
                       left: `${((dist.avgMagnitude - dist.minMagnitude) / (dist.maxMagnitude - dist.minMagnitude)) * 100}%`,
-                      boxShadow: `0 0 4px ${AXIS_COLORS[dist.axis]}`,
+                      boxShadow: `${GLOW_SM} ${AXIS_COLORS[dist.axis]}`,
                     }}
                   />
                 )}

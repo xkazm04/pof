@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import type { CharacterGenome } from '@/types/character-genome';
 import { GENOME_PALETTE, HEX_REGEX } from './field-data';
 
+import { withOpacity, OPACITY_8, OPACITY_12, OPACITY_30, OPACITY_10, OVERLAY_WHITE } from '@/lib/chart-colors';
 /* ── Color Picker Popover ──────────────────────────────────────────────── */
 
 function GenomeColorPicker({ currentColor, onSelect, onClose }: {
@@ -99,10 +100,10 @@ export function GenomePill({ genome, isActive, onSelect, onColorChange }: {
       onClick={onSelect}
       className="relative flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold transition-all duration-200 focus:outline-none whitespace-nowrap"
       style={{
-        backgroundColor: isActive ? `${genome.color}20` : 'transparent',
+        backgroundColor: isActive ? `${withOpacity(genome.color, OPACITY_12)}` : 'transparent',
         color: isActive ? genome.color : 'var(--text-muted)',
-        border: `1px solid ${isActive ? `${genome.color}50` : 'rgba(255,255,255,0.08)'}`,
-        boxShadow: isActive ? `0 0 10px ${genome.color}15` : 'none',
+        border: `1px solid ${isActive ? withOpacity(genome.color, OPACITY_30) : withOpacity(OVERLAY_WHITE, OPACITY_8)}`,
+        boxShadow: isActive ? `0 0 10px ${withOpacity(genome.color, OPACITY_10)}` : 'none',
       }}
     >
       <span className="relative w-2 h-2 flex-shrink-0">

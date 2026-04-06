@@ -191,7 +191,8 @@ export function useProjectScan(projectPath: string) {
   useEffect(() => {
     if (initialScanDone.current) return;
     initialScanDone.current = true;
-    scan();
+    const timer = setTimeout(() => scan(), 0);
+    return () => clearTimeout(timer);
   }, [scan]);
 
   const hasProject = checklist.find((c) => c.id === 'uproject')?.ok ?? false;

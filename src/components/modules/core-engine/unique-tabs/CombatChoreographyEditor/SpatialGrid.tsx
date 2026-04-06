@@ -3,7 +3,9 @@
 import { useState, useCallback, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { Plus, Trash2 } from 'lucide-react';
-import { STATUS_ERROR, ACCENT_CYAN } from '@/lib/chart-colors';
+import { STATUS_ERROR, ACCENT_CYAN,
+  withOpacity, OPACITY_12, OPACITY_25, OPACITY_5, OPACITY_22, OPACITY_30, OPACITY_20, OPACITY_10, OPACITY_0,
+} from '@/lib/chart-colors';
 import { ENEMY_ARCHETYPES } from '@/lib/combat/definitions';
 import type { PlacedEnemy } from '@/lib/combat/choreography-sim';
 import {
@@ -23,6 +25,7 @@ export function SpatialGrid({ enemies, selectedWave, totalWaves, onPlace, onRemo
   const dragRef = useRef<DragState | null>(null);
   const [dropTarget, setDropTarget] = useState<{ x: number; y: number } | null>(null);
   const [isDragging, setIsDragging] = useState(false);
+  const [draggingEnemyId, setDraggingEnemyId] = useState<string | null>(null);
 
   const waveEnemies = enemies.filter((e) => e.waveIndex === selectedWave);
   const prevWaveEnemies = selectedWave > 0
@@ -38,6 +41,7 @@ export function SpatialGrid({ enemies, selectedWave, totalWaves, onPlace, onRemo
       sourceWave: enemy.waveIndex, shiftHeld: e.shiftKey,
     };
     setIsDragging(true);
+    setDraggingEnemyId(enemy.id);
   }, []);
 
   const handlePointerMove = useCallback((e: React.PointerEvent) => {
@@ -61,6 +65,7 @@ export function SpatialGrid({ enemies, selectedWave, totalWaves, onPlace, onRemo
     if (!drag) return;
     dragRef.current = null;
     setIsDragging(false);
+    setDraggingEnemyId(null);
     setDropTarget(null);
 
     const gridEl = e.currentTarget as HTMLElement;
@@ -103,11 +108,11 @@ export function SpatialGrid({ enemies, selectedWave, totalWaves, onPlace, onRemo
           if (enemy) {
             const color = ARCHETYPE_COLORS[enemy.archetypeId] ?? ACCENT_CYAN;
             const icon = ARCHETYPE_ICONS[enemy.archetypeId] ?? '??';
-            const beingDragged = isDragging && dragRef.current?.enemyId === enemy.id;
+            const beingDragged = isDragging && draggingEnemyId === enemy.id;
             return (
               <div key={i}
                 className="relative flex items-center justify-center rounded-md border-2 cursor-grab group select-none touch-none"
-                style={{ width: CELL_SIZE, height: CELL_SIZE, borderColor: color, backgroundColor: `${color}20`, opacity: beingDragged ? 0.4 : 1, transition: 'opacity 0.15s' }}
+                style={{ width: CELL_SIZE, height: CELL_SIZE, borderColor: color, backgroundColor: `${withOpacity(color, OPACITY_12)}`, opacity: beingDragged ? 0.4 : 1, transition: 'opacity 0.15s' }}
                 onPointerDown={(e) => handleDragStart(e, enemy)}
                 onClick={() => { if (!isDragging) onRemove(enemy.id); }}
                 title={`${ENEMY_ARCHETYPES.find((a) => a.id === enemy.archetypeId)?.name} Lv${enemy.level} — drag to move, click to remove`}
@@ -126,7 +131,7 @@ export function SpatialGrid({ enemies, selectedWave, totalWaves, onPlace, onRemo
             return (
               <div key={i}
                 className="relative flex items-center justify-center rounded-md cursor-pointer hover:border-border/50 transition-colors"
-                style={{ width: CELL_SIZE, height: CELL_SIZE, border: `1px dashed ${color}40`, backgroundColor: `${color}08`, opacity: 0.45 }}
+                style={{ width: CELL_SIZE, height: CELL_SIZE, border: `1px dashed ${withOpacity(color, OPACITY_25)}`, backgroundColor: `${withOpacity(color, OPACITY_5)}`, opacity: 0.45 }}
                 onClick={() => onPlace(x, y)}
                 title={`Previous wave: ${ENEMY_ARCHETYPES.find((a) => a.id === prevGhost.archetypeId)?.name ?? prevGhost.archetypeId} Lv${prevGhost.level}`}
               >
@@ -142,8 +147,8 @@ export function SpatialGrid({ enemies, selectedWave, totalWaves, onPlace, onRemo
             return (
               <motion.div key={i}
                 className="relative flex items-center justify-center rounded-md cursor-pointer"
-                style={{ width: CELL_SIZE, height: CELL_SIZE, border: `1px dashed ${color}35`, backgroundColor: `${color}05` }}
-                animate={{ borderColor: [`${color}20`, `${color}50`, `${color}20`], boxShadow: [`0 0 0px ${color}00`, `0 0 6px ${color}30`, `0 0 0px ${color}00`] }}
+                style={{ width: CELL_SIZE, height: CELL_SIZE, border: `1px dashed ${withOpacity(color, OPACITY_22)}`, backgroundColor: `${withOpacity(color, OPACITY_5)}` }}
+                animate={{ borderColor: [`${withOpacity(color, OPACITY_12)}`, `${withOpacity(color, OPACITY_30)}`, `${withOpacity(color, OPACITY_12)}`], boxShadow: [`0 0 0px ${withOpacity(color, OPACITY_0)}`, `0 0 6px ${withOpacity(color, OPACITY_20)}`, `0 0 0px ${withOpacity(color, OPACITY_0)}`] }}
                 transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
                 onClick={() => onPlace(x, y)}
                 title={`Next wave: ${ENEMY_ARCHETYPES.find((a) => a.id === nextGhost.archetypeId)?.name ?? nextGhost.archetypeId} Lv${nextGhost.level}`}
@@ -159,7 +164,7 @@ export function SpatialGrid({ enemies, selectedWave, totalWaves, onPlace, onRemo
               className={`flex items-center justify-center rounded-md border cursor-pointer transition-all ${
                 isDropTarget ? 'border-2 border-dashed' : 'border-border/20 bg-surface-deep/30 hover:border-border/50 hover:bg-surface-deep/60'
               }`}
-              style={{ width: CELL_SIZE, height: CELL_SIZE, ...(isDropTarget ? { borderColor: ACCENT_CYAN, backgroundColor: `${ACCENT_CYAN}15`, boxShadow: `inset 0 0 8px ${ACCENT_CYAN}20` } : {}) }}
+              style={{ width: CELL_SIZE, height: CELL_SIZE, ...(isDropTarget ? { borderColor: ACCENT_CYAN, backgroundColor: `${withOpacity(ACCENT_CYAN, OPACITY_10)}`, boxShadow: `inset 0 0 8px ${withOpacity(ACCENT_CYAN, OPACITY_12)}` } : {}) }}
               onClick={() => { if (!isDragging) onPlace(x, y); }}
             >
               {isDropTarget

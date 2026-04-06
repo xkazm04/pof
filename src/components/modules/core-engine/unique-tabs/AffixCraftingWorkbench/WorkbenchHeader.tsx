@@ -9,6 +9,7 @@ import {
   STATUS_SUCCESS, STATUS_ERROR, STATUS_INFO,
   ACCENT_VIOLET, ACCENT_CYAN,
   OPACITY_10, OPACITY_15, OPACITY_20, OPACITY_30,
+  withOpacity,
 } from '@/lib/chart-colors';
 import { BlueprintPanel, SectionHeader } from '../_design';
 import { ACCENT } from './constants';
@@ -46,7 +47,7 @@ export function WorkbenchHeader({
           <div className="flex items-center gap-2">
             {/* View mode toggle */}
             <div className="flex items-center rounded-lg border overflow-hidden"
-              style={{ borderColor: `${ACCENT}25` }}>
+              style={{ borderColor: `${withOpacity(ACCENT, OPACITY_15)}` }}>
               <button onClick={() => setViewMode('workbench')}
                 className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-mono uppercase tracking-[0.15em] transition-all"
                 style={{
@@ -60,7 +61,7 @@ export function WorkbenchHeader({
                 style={{
                   backgroundColor: viewMode === 'breakpoints' ? `${STATUS_INFO}${OPACITY_20}` : 'transparent',
                   color: viewMode === 'breakpoints' ? STATUS_INFO : 'var(--text-muted)',
-                  borderLeft: `1px solid ${ACCENT}25`,
+                  borderLeft: `1px solid ${withOpacity(ACCENT, OPACITY_15)}`,
                 }}>
                 <Table2 className="w-3 h-3" /> Breakpoints
               </button>
@@ -75,7 +76,7 @@ export function WorkbenchHeader({
                 </button>
                 <button onClick={onClear}
                   className="flex items-center gap-1 px-2 py-1.5 rounded-lg text-xs text-text-muted hover:text-text transition-colors"
-                  style={{ border: `1px solid ${ACCENT}25` }}>
+                  style={{ border: `1px solid ${withOpacity(ACCENT, OPACITY_15)}` }}>
                   <RotateCcw className="w-3 h-3" />
                 </button>
                 <button onClick={onToggleExport}

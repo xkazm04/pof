@@ -7,6 +7,7 @@ import {
   STATUS_SUCCESS, STATUS_WARNING, STATUS_ERROR,
   ACCENT_CYAN, ACCENT_EMERALD, ACCENT_VIOLET, ACCENT_ORANGE,
   OPACITY_10, OPACITY_15, OPACITY_20, OPACITY_30,
+  withOpacity, OPACITY_5, OPACITY_12, GLOW_MD,
 } from '@/lib/chart-colors';
 import { SurfaceCard } from '@/components/ui/SurfaceCard';
 import { SectionLabel } from '../_shared';
@@ -135,7 +136,7 @@ export function EncounterTTKSimulator() {
 
   return (
     <SurfaceCard level={2} className="p-5 relative overflow-hidden group">
-      <div className="absolute top-0 right-0 w-56 h-56 blur-3xl rounded-full pointer-events-none" style={{ backgroundColor: `${verdict.color}08` }} />
+      <div className="absolute top-0 right-0 w-56 h-56 blur-3xl rounded-full pointer-events-none" style={{ backgroundColor: `${withOpacity(verdict.color, OPACITY_5)}` }} />
       <div className="flex items-center justify-between mb-3 relative z-10">
         <SectionLabel icon={Crosshair} label="Encounter TTK Simulator" color={ACCENT_ORANGE} />
         <div className="flex items-center gap-1.5 text-2xs font-mono px-2 py-1 rounded border" style={{
@@ -294,11 +295,11 @@ export function EncounterTTKSimulator() {
           <div className="text-xs font-bold uppercase tracking-widest text-text-muted mb-2">Balance Gauge</div>
           <div className="relative h-6 bg-surface-deep rounded-full border border-border/40 overflow-hidden mb-2">
             <div className="absolute inset-0 flex">
-              <div className="h-full" style={{ width: '15%', backgroundColor: `${STATUS_ERROR}20` }} />
-              <div className="h-full" style={{ width: '15%', backgroundColor: `${ACCENT_ORANGE}15` }} />
-              <div className="h-full" style={{ width: '40%', backgroundColor: `${STATUS_WARNING}15` }} />
-              <div className="h-full" style={{ width: '15%', backgroundColor: `${STATUS_SUCCESS}15` }} />
-              <div className="h-full" style={{ width: '15%', backgroundColor: `${ACCENT_CYAN}15` }} />
+              <div className="h-full" style={{ width: '15%', backgroundColor: `${withOpacity(STATUS_ERROR, OPACITY_12)}` }} />
+              <div className="h-full" style={{ width: '15%', backgroundColor: `${withOpacity(ACCENT_ORANGE, OPACITY_10)}` }} />
+              <div className="h-full" style={{ width: '40%', backgroundColor: `${withOpacity(STATUS_WARNING, OPACITY_10)}` }} />
+              <div className="h-full" style={{ width: '15%', backgroundColor: `${withOpacity(STATUS_SUCCESS, OPACITY_10)}` }} />
+              <div className="h-full" style={{ width: '15%', backgroundColor: `${withOpacity(ACCENT_CYAN, OPACITY_10)}` }} />
             </div>
             <div className="absolute inset-0 flex items-center text-[9px] font-mono text-text-muted">
               <span className="w-[15%] text-center">Lethal</span>
@@ -317,7 +318,7 @@ export function EncounterTTKSimulator() {
               return (
                 <motion.div
                   className="absolute top-0 bottom-0 w-1 rounded-full"
-                  style={{ backgroundColor: verdict.color, boxShadow: `0 0 8px ${verdict.color}` }}
+                  style={{ backgroundColor: verdict.color, boxShadow: `${GLOW_MD} ${verdict.color}` }}
                   animate={{ left: `${pct}%` }}
                   transition={{ type: 'spring', stiffness: 200, damping: 20 }}
                 />

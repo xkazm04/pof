@@ -1,5 +1,7 @@
 'use client';
 
+import { OPACITY_8, withOpacity } from '@/lib/chart-colors';
+
 /* ── Tag row ─────────────────────────────────────────────────────────── */
 
 export function TagRow({ label, tag, color }: {
@@ -14,7 +16,7 @@ export function TagRow({ label, tag, color }: {
       </span>
       <code
         className="text-xs px-1.5 py-0.5 rounded font-mono"
-        style={{ color, background: `${color}15` }}
+        style={{ color, background: withOpacity(color, OPACITY_8) }}
       >
         {tag}
       </code>

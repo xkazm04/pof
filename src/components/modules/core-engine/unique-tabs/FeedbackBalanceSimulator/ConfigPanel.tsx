@@ -8,6 +8,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   ACCENT_CYAN, ACCENT_VIOLET, ACCENT_ORANGE, ACCENT_EMERALD,
   STATUS_WARNING, OPACITY_20,
+  withOpacity, OPACITY_25,
 } from '@/lib/chart-colors';
 import type { FeedbackConfig } from '@/types/combat-simulator';
 import { BlueprintPanel } from '../_design';
@@ -99,7 +100,7 @@ export function ConfigPanel({
         style={{
           backgroundColor: `${ACCENT_VIOLET}${OPACITY_20}`,
           color: ACCENT_VIOLET,
-          border: `1px solid ${ACCENT_VIOLET}40`,
+          border: `1px solid ${withOpacity(ACCENT_VIOLET, OPACITY_25)}`,
         }}
       >
         {isRunning ? (

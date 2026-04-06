@@ -2,7 +2,9 @@
 
 import { motion } from 'framer-motion';
 import { AlertTriangle } from 'lucide-react';
-import { OPACITY_10 } from '@/lib/chart-colors';
+import { OPACITY_10,
+  withOpacity, OPACITY_20,
+} from '@/lib/chart-colors';
 import { ALERT_COLORS } from './constants';
 import { STATUS_WARNING } from '@/lib/chart-colors';
 import type { EconomyAlert } from '@/lib/economy/item-economy-engine';
@@ -19,7 +21,7 @@ export function AlertCard({ alert }: { alert: EconomyAlert }) {
       className="flex items-start gap-2 px-2.5 py-2 rounded-md text-xs"
       style={{
         backgroundColor: `${color}${OPACITY_10}`,
-        border: `1px solid ${color}30`,
+        border: `1px solid ${withOpacity(color, OPACITY_20)}`,
       }}
     >
       <AlertTriangle

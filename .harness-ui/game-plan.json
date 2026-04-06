@@ -1,0 +1,2566 @@
+{
+  "game": "PoF-UI",
+  "projectPath": "C:/Users/kazda/kiro/pof",
+  "ueVersion": "5.7.3",
+  "areas": [
+    {
+      "id": "infra-entity-selector-a",
+      "moduleId": "arpg-character",
+      "label": "Scalable Entity Selector (Part 1)",
+      "description": "Create src/components/shared/ScalableSelector.tsx — a modal overlay component for picking\nfrom 100+ entities. Must support: debounced search (300ms), group-by with collapsible sections,\nvirtual scroll for large lists, multi-select and single-select modes, keyboard navigation\n(arrow keys, Enter, Escape), render prop for custom item cards, selected items shown as pills.\nProps: items, groupBy, renderItem, onSelect, selected, searchKey, placeholder, mode.\nComponent structure: index.tsx, SelectorSearch.tsx, SelectorGroup.tsx, SelectorGrid.tsx, types.ts.\nPlace in src/components/shared/ScalableSelector/.",
+      "checklistItemIds": [],
+      "featureNames": [
+        "Modal overlay with backdrop and focus trap",
+        "Debounced search filtering (300ms)",
+        "Group-by collapsible sections with count badges"
+      ],
+      "dependsOn": [],
+      "status": "completed",
+      "features": [
+        {
+          "id": "Modal overlay with backdrop and focus trap",
+          "name": "Modal overlay with backdrop and focus trap",
+          "status": "pass",
+          "quality": 4,
+          "lastSession": 1
+        },
+        {
+          "id": "Debounced search filtering (300ms)",
+          "name": "Debounced search filtering (300ms)",
+          "status": "pass",
+          "quality": 4,
+          "lastSession": 1
+        },
+        {
+          "id": "Group-by collapsible sections with count badges",
+          "name": "Group-by collapsible sections with count badges",
+          "status": "pass",
+          "quality": 4,
+          "lastSession": 1
+        }
+      ],
+      "completedAt": 1
+    },
+    {
+      "id": "infra-entity-selector-b",
+      "moduleId": "arpg-character",
+      "label": "Scalable Entity Selector (Part 2)",
+      "description": "Create src/components/shared/ScalableSelector.tsx — a modal overlay component for picking\nfrom 100+ entities. Must support: debounced search (300ms), group-by with collapsible sections,\nvirtual scroll for large lists, multi-select and single-select modes, keyboard navigation\n(arrow keys, Enter, Escape), render prop for custom item cards, selected items shown as pills.\nProps: items, groupBy, renderItem, onSelect, selected, searchKey, placeholder, mode.\nComponent structure: index.tsx, SelectorSearch.tsx, SelectorGroup.tsx, SelectorGrid.tsx, types.ts.\nPlace in src/components/shared/ScalableSelector/.",
+      "checklistItemIds": [],
+      "featureNames": [
+        "Virtual scroll for 100+ items",
+        "Multi-select and single-select modes",
+        "Keyboard navigation (arrows, Enter, Escape)"
+      ],
+      "dependsOn": [
+        "infra-entity-selector-a"
+      ],
+      "status": "completed",
+      "features": [
+        {
+          "id": "Virtual scroll for 100+ items",
+          "name": "Virtual scroll for 100+ items",
+          "status": "pass",
+          "quality": 4,
+          "lastSession": 1
+        },
+        {
+          "id": "Multi-select and single-select modes",
+          "name": "Multi-select and single-select modes",
+          "status": "pass",
+          "quality": 4,
+          "lastSession": 1
+        },
+        {
+          "id": "Keyboard navigation (arrows, Enter, Escape)",
+          "name": "Keyboard navigation (arrows, Enter, Escape)",
+          "status": "pass",
+          "quality": 4,
+          "lastSession": 1
+        }
+      ],
+      "completedAt": 1
+    },
+    {
+      "id": "infra-entity-selector-c",
+      "moduleId": "arpg-character",
+      "label": "Scalable Entity Selector (Part 3)",
+      "description": "Create src/components/shared/ScalableSelector.tsx — a modal overlay component for picking\nfrom 100+ entities. Must support: debounced search (300ms), group-by with collapsible sections,\nvirtual scroll for large lists, multi-select and single-select modes, keyboard navigation\n(arrow keys, Enter, Escape), render prop for custom item cards, selected items shown as pills.\nProps: items, groupBy, renderItem, onSelect, selected, searchKey, placeholder, mode.\nComponent structure: index.tsx, SelectorSearch.tsx, SelectorGroup.tsx, SelectorGrid.tsx, types.ts.\nPlace in src/components/shared/ScalableSelector/.",
+      "checklistItemIds": [],
+      "featureNames": [
+        "Selected items as compact pills",
+        "Render prop slot for custom item cards"
+      ],
+      "dependsOn": [
+        "infra-entity-selector-b"
+      ],
+      "status": "completed",
+      "features": [
+        {
+          "id": "Selected items as compact pills",
+          "name": "Selected items as compact pills",
+          "status": "pass",
+          "quality": 4,
+          "lastSession": 1
+        },
+        {
+          "id": "Render prop slot for custom item cards",
+          "name": "Render prop slot for custom item cards",
+          "status": "pass",
+          "quality": 4,
+          "lastSession": 1
+        }
+      ],
+      "completedAt": 1
+    },
+    {
+      "id": "infra-feature-cards-a",
+      "moduleId": "arpg-character",
+      "label": "Feature Map Card System (Part 1)",
+      "description": "Replace the toggle-list FeatureMapTab with a card-grid matrix.\nEach feature becomes a FeatureCard component — clickable card with active/inactive states.\nActive: colored background tint (withOpacity accent 8%), bright border (accent 30%), full-color content.\nInactive: muted border (neutral 20%), desaturated content, reduced opacity.\nCard shows: feature name (mono bold), metric content area (children render prop), status dot (bottom-right).\nLayout: CSS grid auto-fill, min 160px, gap-3. Tab groups become section headers.\nCreate: src/components/shared/FeatureCard.tsx, src/components/shared/FeatureCardGrid.tsx.\nUpdate: src/components/modules/core-engine/unique-tabs/FeatureMapTab.tsx to use new components.\nKeep Enable All / Disable All buttons. Add NeonBar progress at top.",
+      "checklistItemIds": [],
+      "featureNames": [
+        "FeatureCard with click-to-toggle",
+        "Active/inactive visual states with accent coloring",
+        "Metric content slot (children render prop)",
+        "Status indicator dot (green/amber/red)"
+      ],
+      "dependsOn": [],
+      "status": "completed",
+      "features": [
+        {
+          "id": "FeatureCard with click-to-toggle",
+          "name": "FeatureCard with click-to-toggle",
+          "status": "pass",
+          "quality": 4,
+          "lastSession": 1
+        },
+        {
+          "id": "Active/inactive visual states with accent coloring",
+          "name": "Active/inactive visual states with accent coloring",
+          "status": "pass",
+          "quality": 4,
+          "lastSession": 1
+        },
+        {
+          "id": "Metric content slot (children render prop)",
+          "name": "Metric content slot (children render prop)",
+          "status": "pass",
+          "quality": 4,
+          "lastSession": 1
+        },
+        {
+          "id": "Status indicator dot (green/amber/red)",
+          "name": "Status indicator dot (green/amber/red)",
+          "status": "pass",
+          "quality": 4,
+          "lastSession": 1
+        }
+      ],
+      "completedAt": 1
+    },
+    {
+      "id": "infra-feature-cards-b",
+      "moduleId": "arpg-character",
+      "label": "Feature Map Card System (Part 2)",
+      "description": "Replace the toggle-list FeatureMapTab with a card-grid matrix.\nEach feature becomes a FeatureCard component — clickable card with active/inactive states.\nActive: colored background tint (withOpacity accent 8%), bright border (accent 30%), full-color content.\nInactive: muted border (neutral 20%), desaturated content, reduced opacity.\nCard shows: feature name (mono bold), metric content area (children render prop), status dot (bottom-right).\nLayout: CSS grid auto-fill, min 160px, gap-3. Tab groups become section headers.\nCreate: src/components/shared/FeatureCard.tsx, src/components/shared/FeatureCardGrid.tsx.\nUpdate: src/components/modules/core-engine/unique-tabs/FeatureMapTab.tsx to use new components.\nKeep Enable All / Disable All buttons. Add NeonBar progress at top.",
+      "checklistItemIds": [],
+      "featureNames": [
+        "FeatureCardGrid with CSS grid layout",
+        "Section headers from tab groups",
+        "NeonBar progress bar at top",
+        "Responsive grid (2→3→4 columns)"
+      ],
+      "dependsOn": [
+        "infra-feature-cards-a"
+      ],
+      "status": "completed",
+      "features": [
+        {
+          "id": "FeatureCardGrid with CSS grid layout",
+          "name": "FeatureCardGrid with CSS grid layout",
+          "status": "pass",
+          "quality": 4,
+          "lastSession": 1
+        },
+        {
+          "id": "Section headers from tab groups",
+          "name": "Section headers from tab groups",
+          "status": "pass",
+          "quality": 4,
+          "lastSession": 1
+        },
+        {
+          "id": "NeonBar progress bar at top",
+          "name": "NeonBar progress bar at top",
+          "status": "pass",
+          "quality": 4,
+          "lastSession": 1
+        },
+        {
+          "id": "Responsive grid (2→3→4 columns)",
+          "name": "Responsive grid (2→3→4 columns)",
+          "status": "pass",
+          "quality": 4,
+          "lastSession": 1
+        }
+      ],
+      "completedAt": 1
+    },
+    {
+      "id": "infra-design-tokens-a",
+      "moduleId": "arpg-character",
+      "label": "Design Token Standardization (Part 1)",
+      "description": "Audit and standardize border opacities, glow radii, spacing across all unique-tab components.\nAdd to chart-colors.ts: BORDER_DEFAULT=OPACITY_20, BORDER_HOVER=OPACITY_37, BORDER_SUBTLE=OPACITY_10,\nGLOW_SM='0 0 4px', GLOW_MD='0 0 8px', GLOW_LG='0 0 16px'.\nAdd to globals.css: --panel-padding:12px, --card-gap:12px, --section-gap:16px.\nUpdate _design.tsx and _shared.tsx to use new constants.\nGrep all unique-tabs/ for hardcoded hex opacity suffixes (e.g., #3b82f618, #f8717120)\nand replace with imported withOpacity + constants. Do NOT change visual appearance.",
+      "checklistItemIds": [],
+      "featureNames": [
+        "Border opacity constants in chart-colors.ts",
+        "Glow size constants in chart-colors.ts",
+        "Spacing CSS variables in globals.css"
+      ],
+      "dependsOn": [],
+      "status": "completed",
+      "features": [
+        {
+          "id": "Border opacity constants in chart-colors.ts",
+          "name": "Border opacity constants in chart-colors.ts",
+          "status": "pass",
+          "quality": 4,
+          "lastSession": 1
+        },
+        {
+          "id": "Glow size constants in chart-colors.ts",
+          "name": "Glow size constants in chart-colors.ts",
+          "status": "pass",
+          "quality": 4,
+          "lastSession": 1
+        },
+        {
+          "id": "Spacing CSS variables in globals.css",
+          "name": "Spacing CSS variables in globals.css",
+          "status": "pass",
+          "quality": 4,
+          "lastSession": 1
+        }
+      ],
+      "completedAt": 1
+    },
+    {
+      "id": "infra-design-tokens-b",
+      "moduleId": "arpg-character",
+      "label": "Design Token Standardization (Part 2)",
+      "description": "Audit and standardize border opacities, glow radii, spacing across all unique-tab components.\nAdd to chart-colors.ts: BORDER_DEFAULT=OPACITY_20, BORDER_HOVER=OPACITY_37, BORDER_SUBTLE=OPACITY_10,\nGLOW_SM='0 0 4px', GLOW_MD='0 0 8px', GLOW_LG='0 0 16px'.\nAdd to globals.css: --panel-padding:12px, --card-gap:12px, --section-gap:16px.\nUpdate _design.tsx and _shared.tsx to use new constants.\nGrep all unique-tabs/ for hardcoded hex opacity suffixes (e.g., #3b82f618, #f8717120)\nand replace with imported withOpacity + constants. Do NOT change visual appearance.",
+      "checklistItemIds": [],
+      "featureNames": [
+        "_design.tsx updated to use new tokens",
+        "_shared.tsx updated to use new tokens",
+        "Hardcoded opacity suffixes replaced in components"
+      ],
+      "dependsOn": [
+        "infra-design-tokens-a"
+      ],
+      "status": "completed",
+      "features": [
+        {
+          "id": "_design.tsx updated to use new tokens",
+          "name": "_design.tsx updated to use new tokens",
+          "status": "pass",
+          "quality": 4,
+          "lastSession": 1
+        },
+        {
+          "id": "_shared.tsx updated to use new tokens",
+          "name": "_shared.tsx updated to use new tokens",
+          "status": "pass",
+          "quality": 4,
+          "lastSession": 1
+        },
+        {
+          "id": "Hardcoded opacity suffixes replaced in components",
+          "name": "Hardcoded opacity suffixes replaced in components",
+          "status": "pass",
+          "quality": 4,
+          "lastSession": 1
+        }
+      ],
+      "completedAt": 1
+    },
+    {
+      "id": "infra-metadata-schema-a",
+      "moduleId": "arpg-character",
+      "label": "Entity Metadata Schema (Part 1)",
+      "description": "Define TypeScript interfaces for categorizing game entities.\nCreate src/types/game-metadata.ts with:\n- EntityMetadata: id, name, category, subcategory?, tags[], level?, levelMax?, area?, tier?, icon?\n- EntityGrouping: field (keyof EntityMetadata), label, order? (explicit group sort)\n- Default grouping presets: CHAR_GROUPINGS (category→subcategory), ITEM_GROUPINGS (category→tier),\n  ABILITY_GROUPINGS (category→element), ENEMY_GROUPINGS (area→tier)\nExtend each module's data.ts with metadata fields on mock items (add category, tags, area, tier).\nThis is the foundation for ScalableSelector group-by in Phase 2.",
+      "checklistItemIds": [],
+      "featureNames": [
+        "EntityMetadata interface",
+        "EntityGrouping interface",
+        "Default grouping presets per module type",
+        "Character mock data annotated with metadata"
+      ],
+      "dependsOn": [],
+      "status": "completed",
+      "features": [
+        {
+          "id": "EntityMetadata interface",
+          "name": "EntityMetadata interface",
+          "status": "pass",
+          "quality": 5,
+          "lastSession": 1
+        },
+        {
+          "id": "EntityGrouping interface",
+          "name": "EntityGrouping interface",
+          "status": "pass",
+          "quality": 5,
+          "lastSession": 1
+        },
+        {
+          "id": "Default grouping presets per module type",
+          "name": "Default grouping presets per module type",
+          "status": "pass",
+          "quality": 5,
+          "lastSession": 1
+        },
+        {
+          "id": "Character mock data annotated with metadata",
+          "name": "Character mock data annotated with metadata",
+          "status": "pending",
+          "quality": null,
+          "lastSession": null
+        }
+      ],
+      "completedAt": 1
+    },
+    {
+      "id": "infra-metadata-schema-b",
+      "moduleId": "arpg-character",
+      "label": "Entity Metadata Schema (Part 2)",
+      "description": "Define TypeScript interfaces for categorizing game entities.\nCreate src/types/game-metadata.ts with:\n- EntityMetadata: id, name, category, subcategory?, tags[], level?, levelMax?, area?, tier?, icon?\n- EntityGrouping: field (keyof EntityMetadata), label, order? (explicit group sort)\n- Default grouping presets: CHAR_GROUPINGS (category→subcategory), ITEM_GROUPINGS (category→tier),\n  ABILITY_GROUPINGS (category→element), ENEMY_GROUPINGS (area→tier)\nExtend each module's data.ts with metadata fields on mock items (add category, tags, area, tier).\nThis is the foundation for ScalableSelector group-by in Phase 2.",
+      "checklistItemIds": [],
+      "featureNames": [
+        "Item mock data annotated with metadata",
+        "Enemy mock data annotated with metadata",
+        "Ability mock data annotated with metadata"
+      ],
+      "dependsOn": [
+        "infra-metadata-schema-a"
+      ],
+      "status": "completed",
+      "features": [
+        {
+          "id": "Item mock data annotated with metadata",
+          "name": "Item mock data annotated with metadata",
+          "status": "pass",
+          "quality": 4,
+          "lastSession": 1
+        },
+        {
+          "id": "Enemy mock data annotated with metadata",
+          "name": "Enemy mock data annotated with metadata",
+          "status": "pass",
+          "quality": 4,
+          "lastSession": 1
+        },
+        {
+          "id": "Ability mock data annotated with metadata",
+          "name": "Ability mock data annotated with metadata",
+          "status": "pass",
+          "quality": 4,
+          "lastSession": 1
+        }
+      ],
+      "completedAt": 1
+    },
+    {
+      "id": "ui-character-feature-metrics-a",
+      "moduleId": "arpg-character",
+      "label": "Character Blueprint Feature Metrics (Part 1)",
+      "description": "Add unique metric visualizations to each FeatureCard in the Character Blueprint Feature Map tab.\nEach card's children slot gets a micro-visualization:\n- Class Hierarchy: \"{types} types / {classes} classes\" side by side numbers\n- Properties: Stacked mini bars (HP, Speed, Armor ranges, 60px wide)\n- Scaling: Sparkline SVG (60×20px) showing first 10 curve points\n- Hitbox: \"{zones} zones\" with colored dots (hurtbox=red, hitbox=blue, pushbox=green)\n- Camera: Three compact stats \"FOV | Arm | Lag\" in mono font\n- Bindings: Colored ratio bar \"{bound}/{total}\" with NeonBar\n- Keyboard: \"{conflicts}\" count — green if 0, red if >0\n- States: \"{count} states\" with mini icon\n- Dodge: \"{distance}m\" bold number\n- Curve Editor: Tiny sparkline of feel curve\n- Optimizer: Preset name or \"No preset\" muted\n- Comparison: \"{dupes} duplicates\" — red if >0\n- Balance: Mini radar thumbnail (40×40px SVG)\nAll metrics derive from existing data in CharacterBlueprint/data.ts.\nCreate metric components in CharacterBlueprint/metrics/ directory.",
+      "checklistItemIds": [],
+      "featureNames": [
+        "Class Hierarchy metric component",
+        "Properties mini-bar metric",
+        "Scaling sparkline metric",
+        "Hitbox zone-dots metric"
+      ],
+      "dependsOn": [
+        "infra-feature-cards-a"
+      ],
+      "status": "completed",
+      "features": [
+        {
+          "id": "Class Hierarchy metric component",
+          "name": "Class Hierarchy metric component",
+          "status": "pass",
+          "quality": 4,
+          "lastSession": 1
+        },
+        {
+          "id": "Properties mini-bar metric",
+          "name": "Properties mini-bar metric",
+          "status": "pass",
+          "quality": 4,
+          "lastSession": 1
+        },
+        {
+          "id": "Scaling sparkline metric",
+          "name": "Scaling sparkline metric",
+          "status": "pass",
+          "quality": 4,
+          "lastSession": 1
+        },
+        {
+          "id": "Hitbox zone-dots metric",
+          "name": "Hitbox zone-dots metric",
+          "status": "pass",
+          "quality": 4,
+          "lastSession": 1
+        }
+      ],
+      "completedAt": 1
+    },
+    {
+      "id": "ui-character-feature-metrics-b",
+      "moduleId": "arpg-character",
+      "label": "Character Blueprint Feature Metrics (Part 2)",
+      "description": "Add unique metric visualizations to each FeatureCard in the Character Blueprint Feature Map tab.\nEach card's children slot gets a micro-visualization:\n- Class Hierarchy: \"{types} types / {classes} classes\" side by side numbers\n- Properties: Stacked mini bars (HP, Speed, Armor ranges, 60px wide)\n- Scaling: Sparkline SVG (60×20px) showing first 10 curve points\n- Hitbox: \"{zones} zones\" with colored dots (hurtbox=red, hitbox=blue, pushbox=green)\n- Camera: Three compact stats \"FOV | Arm | Lag\" in mono font\n- Bindings: Colored ratio bar \"{bound}/{total}\" with NeonBar\n- Keyboard: \"{conflicts}\" count — green if 0, red if >0\n- States: \"{count} states\" with mini icon\n- Dodge: \"{distance}m\" bold number\n- Curve Editor: Tiny sparkline of feel curve\n- Optimizer: Preset name or \"No preset\" muted\n- Comparison: \"{dupes} duplicates\" — red if >0\n- Balance: Mini radar thumbnail (40×40px SVG)\nAll metrics derive from existing data in CharacterBlueprint/data.ts.\nCreate metric components in CharacterBlueprint/metrics/ directory.",
+      "checklistItemIds": [],
+      "featureNames": [
+        "Camera compact stats metric",
+        "Bindings ratio bar metric",
+        "Keyboard conflict counter metric",
+        "States count metric"
+      ],
+      "dependsOn": [
+        "ui-character-feature-metrics-a"
+      ],
+      "status": "completed",
+      "features": [
+        {
+          "id": "Camera compact stats metric",
+          "name": "Camera compact stats metric",
+          "status": "pass",
+          "quality": 4,
+          "lastSession": 1
+        },
+        {
+          "id": "Bindings ratio bar metric",
+          "name": "Bindings ratio bar metric",
+          "status": "pass",
+          "quality": 4,
+          "lastSession": 1
+        },
+        {
+          "id": "Keyboard conflict counter metric",
+          "name": "Keyboard conflict counter metric",
+          "status": "pass",
+          "quality": 4,
+          "lastSession": 1
+        },
+        {
+          "id": "States count metric",
+          "name": "States count metric",
+          "status": "pass",
+          "quality": 4,
+          "lastSession": 1
+        }
+      ],
+      "completedAt": 1
+    },
+    {
+      "id": "ui-character-feature-metrics-c",
+      "moduleId": "arpg-character",
+      "label": "Character Blueprint Feature Metrics (Part 3)",
+      "description": "Add unique metric visualizations to each FeatureCard in the Character Blueprint Feature Map tab.\nEach card's children slot gets a micro-visualization:\n- Class Hierarchy: \"{types} types / {classes} classes\" side by side numbers\n- Properties: Stacked mini bars (HP, Speed, Armor ranges, 60px wide)\n- Scaling: Sparkline SVG (60×20px) showing first 10 curve points\n- Hitbox: \"{zones} zones\" with colored dots (hurtbox=red, hitbox=blue, pushbox=green)\n- Camera: Three compact stats \"FOV | Arm | Lag\" in mono font\n- Bindings: Colored ratio bar \"{bound}/{total}\" with NeonBar\n- Keyboard: \"{conflicts}\" count — green if 0, red if >0\n- States: \"{count} states\" with mini icon\n- Dodge: \"{distance}m\" bold number\n- Curve Editor: Tiny sparkline of feel curve\n- Optimizer: Preset name or \"No preset\" muted\n- Comparison: \"{dupes} duplicates\" — red if >0\n- Balance: Mini radar thumbnail (40×40px SVG)\nAll metrics derive from existing data in CharacterBlueprint/data.ts.\nCreate metric components in CharacterBlueprint/metrics/ directory.",
+      "checklistItemIds": [],
+      "featureNames": [
+        "Comparison duplicate detector metric",
+        "Balance mini-radar metric",
+        "All metrics integrated into FeatureMapTab"
+      ],
+      "dependsOn": [
+        "ui-character-feature-metrics-b"
+      ],
+      "status": "completed",
+      "features": [
+        {
+          "id": "Comparison duplicate detector metric",
+          "name": "Comparison duplicate detector metric",
+          "status": "pass",
+          "quality": 4,
+          "lastSession": 1
+        },
+        {
+          "id": "Balance mini-radar metric",
+          "name": "Balance mini-radar metric",
+          "status": "pass",
+          "quality": 4,
+          "lastSession": 1
+        },
+        {
+          "id": "All metrics integrated into FeatureMapTab",
+          "name": "All metrics integrated into FeatureMapTab",
+          "status": "pass",
+          "quality": 4,
+          "lastSession": 1
+        }
+      ],
+      "completedAt": 1
+    },
+    {
+      "id": "ui-animation-feature-metrics-a",
+      "moduleId": "arpg-character",
+      "label": "Animation State Graph Feature Metrics (Part 1)",
+      "description": "Add unique metric visualizations to Animation State Graph Feature Map.\n- States: \"{n} states / {g} groups\"\n- Transitions: \"{n} edges\" with mini directed-graph icon\n- Heatmap: Micro heatmap grid (4×4, 20px)\n- Chain: \"{n} combos / depth {d}\"\n- Montages: \"{n} montages\"\n- Scrubber: \"{n} notifies\"\n- Skeleton: \"{mapped}/{total}\" bone mapping bar\n- Trajectories: \"{n} root motion curves\"\n- Assets: \"{size}MB\" estimated memory\n- Playrate: \"{min}–{max}x\" range\nDerive from AnimationStateGraph/data.ts. Create metrics/ subdirectory.",
+      "checklistItemIds": [],
+      "featureNames": [
+        "States/groups count metric",
+        "Transitions edge count metric",
+        "Micro heatmap metric",
+        "Combo chain depth metric"
+      ],
+      "dependsOn": [
+        "infra-feature-cards-a"
+      ],
+      "status": "completed",
+      "features": [
+        {
+          "id": "States/groups count metric",
+          "name": "States/groups count metric",
+          "status": "pass",
+          "quality": 4,
+          "lastSession": 1
+        },
+        {
+          "id": "Transitions edge count metric",
+          "name": "Transitions edge count metric",
+          "status": "pass",
+          "quality": 4,
+          "lastSession": 1
+        },
+        {
+          "id": "Micro heatmap metric",
+          "name": "Micro heatmap metric",
+          "status": "pass",
+          "quality": 4,
+          "lastSession": 1
+        },
+        {
+          "id": "Combo chain depth metric",
+          "name": "Combo chain depth metric",
+          "status": "pass",
+          "quality": 4,
+          "lastSession": 1
+        }
+      ],
+      "completedAt": 1
+    },
+    {
+      "id": "ui-animation-feature-metrics-b",
+      "moduleId": "arpg-character",
+      "label": "Animation State Graph Feature Metrics (Part 2)",
+      "description": "Add unique metric visualizations to Animation State Graph Feature Map.\n- States: \"{n} states / {g} groups\"\n- Transitions: \"{n} edges\" with mini directed-graph icon\n- Heatmap: Micro heatmap grid (4×4, 20px)\n- Chain: \"{n} combos / depth {d}\"\n- Montages: \"{n} montages\"\n- Scrubber: \"{n} notifies\"\n- Skeleton: \"{mapped}/{total}\" bone mapping bar\n- Trajectories: \"{n} root motion curves\"\n- Assets: \"{size}MB\" estimated memory\n- Playrate: \"{min}–{max}x\" range\nDerive from AnimationStateGraph/data.ts. Create metrics/ subdirectory.",
+      "checklistItemIds": [],
+      "featureNames": [
+        "Montage count metric",
+        "Bone mapping bar metric",
+        "Memory estimate metric",
+        "All metrics integrated"
+      ],
+      "dependsOn": [
+        "ui-animation-feature-metrics-a"
+      ],
+      "status": "completed",
+      "features": [
+        {
+          "id": "Montage count metric",
+          "name": "Montage count metric",
+          "status": "pass",
+          "quality": 4,
+          "lastSession": 1
+        },
+        {
+          "id": "Bone mapping bar metric",
+          "name": "Bone mapping bar metric",
+          "status": "pass",
+          "quality": 4,
+          "lastSession": 1
+        },
+        {
+          "id": "Memory estimate metric",
+          "name": "Memory estimate metric",
+          "status": "pass",
+          "quality": 4,
+          "lastSession": 1
+        },
+        {
+          "id": "All metrics integrated",
+          "name": "All metrics integrated",
+          "status": "pass",
+          "quality": 4,
+          "lastSession": 1
+        }
+      ],
+      "completedAt": 1
+    },
+    {
+      "id": "ui-gas-feature-metrics-a",
+      "moduleId": "arpg-character",
+      "label": "Ability Spellbook Feature Metrics (Part 1)",
+      "description": "Add unique metric visualizations to Ability Spellbook Feature Map.\n- Architecture: \"ASC → {n} GA → {n} GE\" pipeline count\n- Radar: Mini radar (40px) with 3-ability overlay\n- Cooldowns: \"{avg}s avg / {min}–{max}s range\"\n- Timeline: Micro timeline strip (60px)\n- Effects Timeline: \"{n} active / {n} passive\"\n- Tags: \"{n} tags / {depth} depth\"\n- Hierarchy: \"{n} roots / {n} leaves\"\n- Audit: \"{n} warnings\" — green if 0, red if >0\n- Dependencies: \"{n} deps / {n} circular\" — red if circular >0\nDerive from AbilitySpellbook/data.ts.",
+      "checklistItemIds": [],
+      "featureNames": [
+        "Architecture pipeline metric",
+        "Mini radar metric",
+        "Cooldown stats metric",
+        "Effect type split metric"
+      ],
+      "dependsOn": [
+        "infra-feature-cards-a"
+      ],
+      "status": "completed",
+      "features": [
+        {
+          "id": "Architecture pipeline metric",
+          "name": "Architecture pipeline metric",
+          "status": "pending",
+          "quality": null,
+          "lastSession": null
+        },
+        {
+          "id": "Mini radar metric",
+          "name": "Mini radar metric",
+          "status": "pass",
+          "quality": 5,
+          "lastSession": 1
+        },
+        {
+          "id": "Cooldown stats metric",
+          "name": "Cooldown stats metric",
+          "status": "pending",
+          "quality": null,
+          "lastSession": null
+        },
+        {
+          "id": "Effect type split metric",
+          "name": "Effect type split metric",
+          "status": "pending",
+          "quality": null,
+          "lastSession": null
+        }
+      ],
+      "completedAt": 1
+    },
+    {
+      "id": "ui-gas-feature-metrics-b",
+      "moduleId": "arpg-character",
+      "label": "Ability Spellbook Feature Metrics (Part 2)",
+      "description": "Add unique metric visualizations to Ability Spellbook Feature Map.\n- Architecture: \"ASC → {n} GA → {n} GE\" pipeline count\n- Radar: Mini radar (40px) with 3-ability overlay\n- Cooldowns: \"{avg}s avg / {min}–{max}s range\"\n- Timeline: Micro timeline strip (60px)\n- Effects Timeline: \"{n} active / {n} passive\"\n- Tags: \"{n} tags / {depth} depth\"\n- Hierarchy: \"{n} roots / {n} leaves\"\n- Audit: \"{n} warnings\" — green if 0, red if >0\n- Dependencies: \"{n} deps / {n} circular\" — red if circular >0\nDerive from AbilitySpellbook/data.ts.",
+      "checklistItemIds": [],
+      "featureNames": [
+        "Tag tree stats metric",
+        "Audit warning counter metric",
+        "Dependency circular detector metric",
+        "All metrics integrated"
+      ],
+      "dependsOn": [
+        "ui-gas-feature-metrics-a"
+      ],
+      "status": "completed",
+      "features": [
+        {
+          "id": "Tag tree stats metric",
+          "name": "Tag tree stats metric",
+          "status": "pass",
+          "quality": 5,
+          "lastSession": 1
+        },
+        {
+          "id": "Audit warning counter metric",
+          "name": "Audit warning counter metric",
+          "status": "pass",
+          "quality": 5,
+          "lastSession": 1
+        },
+        {
+          "id": "Dependency circular detector metric",
+          "name": "Dependency circular detector metric",
+          "status": "pass",
+          "quality": 5,
+          "lastSession": 1
+        },
+        {
+          "id": "All metrics integrated",
+          "name": "All metrics integrated",
+          "status": "pass",
+          "quality": 5,
+          "lastSession": 1
+        }
+      ],
+      "completedAt": 1
+    },
+    {
+      "id": "ui-combat-feature-metrics-a",
+      "moduleId": "arpg-character",
+      "label": "Combat Action Map Feature Metrics (Part 1)",
+      "description": "Add unique metric visualizations to Combat Action Map Feature Map.\n- Lanes: \"{n} lanes / {n} actions\"\n- Sequences: \"{n} events / {n} systems\"\n- Traces: \"{sphere} sphere / {capsule} capsule\"\n- Stats: \"{avg} avg DPS\" bold\n- Feedback Tuner: \"{tuned}/{total}\" params bar\n- DPS: Mini bar chart (3 bars for top abilities)\n- Effectiveness: \"{best}\" top ability name\n- Sankey: \"{flows} flows\"\n- KPIs: Traffic light (3 dots for TTK, DPS, APM)\nDerive from CombatActionMap/data-metrics.ts.",
+      "checklistItemIds": [],
+      "featureNames": [
+        "Lane and action count metric",
+        "Sequence event count metric",
+        "Trace type count metric",
+        "Feedback tuner progress bar"
+      ],
+      "dependsOn": [
+        "infra-feature-cards-a"
+      ],
+      "status": "completed",
+      "features": [
+        {
+          "id": "Lane and action count metric",
+          "name": "Lane and action count metric",
+          "status": "pass",
+          "quality": 4,
+          "lastSession": 1
+        },
+        {
+          "id": "Sequence event count metric",
+          "name": "Sequence event count metric",
+          "status": "pass",
+          "quality": 4,
+          "lastSession": 1
+        },
+        {
+          "id": "Trace type count metric",
+          "name": "Trace type count metric",
+          "status": "pass",
+          "quality": 4,
+          "lastSession": 1
+        },
+        {
+          "id": "Feedback tuner progress bar",
+          "name": "Feedback tuner progress bar",
+          "status": "pass",
+          "quality": 4,
+          "lastSession": 1
+        }
+      ],
+      "completedAt": 1
+    },
+    {
+      "id": "ui-combat-feature-metrics-b",
+      "moduleId": "arpg-character",
+      "label": "Combat Action Map Feature Metrics (Part 2)",
+      "description": "Add unique metric visualizations to Combat Action Map Feature Map.\n- Lanes: \"{n} lanes / {n} actions\"\n- Sequences: \"{n} events / {n} systems\"\n- Traces: \"{sphere} sphere / {capsule} capsule\"\n- Stats: \"{avg} avg DPS\" bold\n- Feedback Tuner: \"{tuned}/{total}\" params bar\n- DPS: Mini bar chart (3 bars for top abilities)\n- Effectiveness: \"{best}\" top ability name\n- Sankey: \"{flows} flows\"\n- KPIs: Traffic light (3 dots for TTK, DPS, APM)\nDerive from CombatActionMap/data-metrics.ts.",
+      "checklistItemIds": [],
+      "featureNames": [
+        "Mini DPS bar chart",
+        "KPI traffic light metric",
+        "All metrics integrated"
+      ],
+      "dependsOn": [
+        "ui-combat-feature-metrics-a"
+      ],
+      "status": "completed",
+      "features": [
+        {
+          "id": "Mini DPS bar chart",
+          "name": "Mini DPS bar chart",
+          "status": "pass",
+          "quality": 4,
+          "lastSession": 1
+        },
+        {
+          "id": "KPI traffic light metric",
+          "name": "KPI traffic light metric",
+          "status": "pass",
+          "quality": 4,
+          "lastSession": 1
+        },
+        {
+          "id": "All metrics integrated",
+          "name": "All metrics integrated",
+          "status": "pass",
+          "quality": 4,
+          "lastSession": 1
+        }
+      ],
+      "completedAt": 1
+    },
+    {
+      "id": "ui-bestiary-feature-metrics-a",
+      "moduleId": "arpg-character",
+      "label": "Enemy Bestiary Feature Metrics (Part 1)",
+      "description": "Add unique metric visualizations to Enemy Bestiary Feature Map.\n- Cards: \"{n} archetypes\" with role pie (melee/ranged/tank/support micro-donut)\n- Modifiers: \"{n} modifiers / {n} exclusions\"\n- Radar: Mini radar comparing weakest vs strongest enemy\n- Behavior Tree: \"{n} nodes / {d} depth\"\n- Decision Log: \"{n} decisions/sec\" throughput\n- Aggro: \"{n} threat sources\"\n- Formations: \"{n} formations\" with mini dot-pattern\n- Waves: \"{n} waves / {total} enemies\"\n- Difficulty: Sparkline of difficulty curve\nDerive from EnemyBestiary/data.ts.",
+      "checklistItemIds": [],
+      "featureNames": [
+        "Archetype count with role pie metric",
+        "Modifier count metric",
+        "Min/max radar metric",
+        "BT node count metric"
+      ],
+      "dependsOn": [
+        "infra-feature-cards-a"
+      ],
+      "status": "completed",
+      "features": [
+        {
+          "id": "Archetype count with role pie metric",
+          "name": "Archetype count with role pie metric",
+          "status": "pass",
+          "quality": 4,
+          "lastSession": 1
+        },
+        {
+          "id": "Modifier count metric",
+          "name": "Modifier count metric",
+          "status": "pass",
+          "quality": 4,
+          "lastSession": 1
+        },
+        {
+          "id": "Min/max radar metric",
+          "name": "Min/max radar metric",
+          "status": "pass",
+          "quality": 4,
+          "lastSession": 1
+        },
+        {
+          "id": "BT node count metric",
+          "name": "BT node count metric",
+          "status": "pass",
+          "quality": 4,
+          "lastSession": 1
+        }
+      ],
+      "completedAt": 1
+    },
+    {
+      "id": "ui-bestiary-feature-metrics-b",
+      "moduleId": "arpg-character",
+      "label": "Enemy Bestiary Feature Metrics (Part 2)",
+      "description": "Add unique metric visualizations to Enemy Bestiary Feature Map.\n- Cards: \"{n} archetypes\" with role pie (melee/ranged/tank/support micro-donut)\n- Modifiers: \"{n} modifiers / {n} exclusions\"\n- Radar: Mini radar comparing weakest vs strongest enemy\n- Behavior Tree: \"{n} nodes / {d} depth\"\n- Decision Log: \"{n} decisions/sec\" throughput\n- Aggro: \"{n} threat sources\"\n- Formations: \"{n} formations\" with mini dot-pattern\n- Waves: \"{n} waves / {total} enemies\"\n- Difficulty: Sparkline of difficulty curve\nDerive from EnemyBestiary/data.ts.",
+      "checklistItemIds": [],
+      "featureNames": [
+        "Formation dot-pattern metric",
+        "Wave summary metric",
+        "Difficulty sparkline metric",
+        "All metrics integrated"
+      ],
+      "dependsOn": [
+        "ui-bestiary-feature-metrics-a"
+      ],
+      "status": "completed",
+      "features": [
+        {
+          "id": "Formation dot-pattern metric",
+          "name": "Formation dot-pattern metric",
+          "status": "pass",
+          "quality": 4,
+          "lastSession": 1
+        },
+        {
+          "id": "Wave summary metric",
+          "name": "Wave summary metric",
+          "status": "pass",
+          "quality": 4,
+          "lastSession": 1
+        },
+        {
+          "id": "Difficulty sparkline metric",
+          "name": "Difficulty sparkline metric",
+          "status": "pass",
+          "quality": 4,
+          "lastSession": 1
+        },
+        {
+          "id": "All metrics integrated",
+          "name": "All metrics integrated",
+          "status": "pass",
+          "quality": 4,
+          "lastSession": 1
+        }
+      ],
+      "completedAt": 1
+    },
+    {
+      "id": "ui-items-feature-metrics-a",
+      "moduleId": "arpg-character",
+      "label": "Item Catalog Feature Metrics (Part 1)",
+      "description": "Add unique metric visualizations to Item Catalog Feature Map.\n- Grid: \"{n} items / {slots} slots\"\n- Sets: \"{n} sets / {bonuses} bonuses\"\n- Loadout: \"{equipped}/{slots}\" fill bar\n- Sources: \"{n} source types\"\n- Scaling: Sparkline item power vs level\n- Stats: \"{avg} avg ilvl\"\n- Power: \"{min}–{max}\" power range bar\nDerive from ItemCatalog/data.ts.",
+      "checklistItemIds": [],
+      "featureNames": [
+        "Item/slot count metric",
+        "Set bonus count metric",
+        "Loadout fill bar metric",
+        "Source type count metric"
+      ],
+      "dependsOn": [
+        "infra-feature-cards-a"
+      ],
+      "status": "completed",
+      "features": [
+        {
+          "id": "Item/slot count metric",
+          "name": "Item/slot count metric",
+          "status": "pass",
+          "quality": 4,
+          "lastSession": 1
+        },
+        {
+          "id": "Set bonus count metric",
+          "name": "Set bonus count metric",
+          "status": "pass",
+          "quality": 4,
+          "lastSession": 1
+        },
+        {
+          "id": "Loadout fill bar metric",
+          "name": "Loadout fill bar metric",
+          "status": "pass",
+          "quality": 4,
+          "lastSession": 1
+        },
+        {
+          "id": "Source type count metric",
+          "name": "Source type count metric",
+          "status": "pass",
+          "quality": 4,
+          "lastSession": 1
+        }
+      ],
+      "completedAt": 1
+    },
+    {
+      "id": "ui-items-feature-metrics-b",
+      "moduleId": "arpg-character",
+      "label": "Item Catalog Feature Metrics (Part 2)",
+      "description": "Add unique metric visualizations to Item Catalog Feature Map.\n- Grid: \"{n} items / {slots} slots\"\n- Sets: \"{n} sets / {bonuses} bonuses\"\n- Loadout: \"{equipped}/{slots}\" fill bar\n- Sources: \"{n} source types\"\n- Scaling: Sparkline item power vs level\n- Stats: \"{avg} avg ilvl\"\n- Power: \"{min}–{max}\" power range bar\nDerive from ItemCatalog/data.ts.",
+      "checklistItemIds": [],
+      "featureNames": [
+        "Scaling sparkline metric",
+        "Power range bar metric",
+        "All metrics integrated"
+      ],
+      "dependsOn": [
+        "ui-items-feature-metrics-a"
+      ],
+      "status": "completed",
+      "features": [
+        {
+          "id": "Scaling sparkline metric",
+          "name": "Scaling sparkline metric",
+          "status": "pass",
+          "quality": 4,
+          "lastSession": 1
+        },
+        {
+          "id": "Power range bar metric",
+          "name": "Power range bar metric",
+          "status": "pass",
+          "quality": 4,
+          "lastSession": 1
+        },
+        {
+          "id": "All metrics integrated",
+          "name": "All metrics integrated",
+          "status": "pass",
+          "quality": 4,
+          "lastSession": 1
+        }
+      ],
+      "completedAt": 1
+    },
+    {
+      "id": "ui-loot-feature-metrics-a",
+      "moduleId": "arpg-character",
+      "label": "Loot Table Feature Metrics (Part 1)",
+      "description": "Add unique metric visualizations to Loot Table Visualizer Feature Map.\n- Pipeline: \"{stages} stages\" flow\n- Weights: Mini pie showing rarity distribution\n- World Items: \"{n} world items\"\n- Treemap: Micro treemap thumbnail (40×30px)\n- Histogram: \"{n} brackets\"\n- Simulator: \"{n} affixes in pool\"\n- Co-occurrence: \"{conflicts}\" hot cell count\n- Timer: \"{threshold} pulls\" pity\n- Drought: \"{prob}%\" probability\n- Beacon: \"{n} beacons\"\n- Impact: \"{gold}/hr\" rate\nDerive from LootTableVisualizer/data.ts.",
+      "checklistItemIds": [],
+      "featureNames": [
+        "Pipeline stage count metric",
+        "Rarity mini pie metric",
+        "Micro treemap metric",
+        "Affix pool count metric"
+      ],
+      "dependsOn": [
+        "infra-feature-cards-a"
+      ],
+      "status": "completed",
+      "features": [
+        {
+          "id": "Pipeline stage count metric",
+          "name": "Pipeline stage count metric",
+          "status": "pending",
+          "quality": null,
+          "lastSession": null
+        },
+        {
+          "id": "Rarity mini pie metric",
+          "name": "Rarity mini pie metric",
+          "status": "pending",
+          "quality": null,
+          "lastSession": null
+        },
+        {
+          "id": "Micro treemap metric",
+          "name": "Micro treemap metric",
+          "status": "pass",
+          "quality": 5,
+          "lastSession": 1
+        },
+        {
+          "id": "Affix pool count metric",
+          "name": "Affix pool count metric",
+          "status": "pending",
+          "quality": null,
+          "lastSession": null
+        }
+      ],
+      "completedAt": 1
+    },
+    {
+      "id": "ui-loot-feature-metrics-b",
+      "moduleId": "arpg-character",
+      "label": "Loot Table Feature Metrics (Part 2)",
+      "description": "Add unique metric visualizations to Loot Table Visualizer Feature Map.\n- Pipeline: \"{stages} stages\" flow\n- Weights: Mini pie showing rarity distribution\n- World Items: \"{n} world items\"\n- Treemap: Micro treemap thumbnail (40×30px)\n- Histogram: \"{n} brackets\"\n- Simulator: \"{n} affixes in pool\"\n- Co-occurrence: \"{conflicts}\" hot cell count\n- Timer: \"{threshold} pulls\" pity\n- Drought: \"{prob}%\" probability\n- Beacon: \"{n} beacons\"\n- Impact: \"{gold}/hr\" rate\nDerive from LootTableVisualizer/data.ts.",
+      "checklistItemIds": [],
+      "featureNames": [
+        "Pity threshold metric",
+        "Economy rate metric",
+        "All metrics integrated"
+      ],
+      "dependsOn": [
+        "ui-loot-feature-metrics-a"
+      ],
+      "status": "completed",
+      "features": [
+        {
+          "id": "Pity threshold metric",
+          "name": "Pity threshold metric",
+          "status": "pass",
+          "quality": 4,
+          "lastSession": 1
+        },
+        {
+          "id": "Economy rate metric",
+          "name": "Economy rate metric",
+          "status": "pass",
+          "quality": 4,
+          "lastSession": 1
+        },
+        {
+          "id": "All metrics integrated",
+          "name": "All metrics integrated",
+          "status": "pass",
+          "quality": 4,
+          "lastSession": 1
+        }
+      ],
+      "completedAt": 1
+    },
+    {
+      "id": "ui-character-scaling-a",
+      "moduleId": "arpg-character",
+      "label": "Character Blueprint Scaling (Part 1)",
+      "description": "Upgrade Character Blueprint to handle 100+ characters.\n1. Expand data.ts: Add 50+ characters with EntityMetadata (categories: Warrior, Mage, Rogue, Tank, Support, Beast, Droid, Force-user; areas: Taris, Dantooine, Kashyyyk, Korriban, Manaan; tiers: common, elite, boss, legendary).\n2. Comparison tab: Replace inline character list with ScalableSelector modal. Default shows 2 selected. \"Add Character\" button opens selector grouped by class→role.\n3. Overview tab: Add character picker (single-select ScalableSelector grouped by area).\n4. Camera Profiles: Support comparing 3+ profiles via multi-select.\n5. Balance Radar: Handle 10+ overlay by showing top-5 + \"show all\" toggle.",
+      "checklistItemIds": [],
+      "featureNames": [
+        "Data expanded to 50+ characters with metadata",
+        "Comparison uses ScalableSelector modal",
+        "Overview has character picker"
+      ],
+      "dependsOn": [
+        "infra-entity-selector-a",
+        "infra-metadata-schema-a"
+      ],
+      "status": "completed",
+      "features": [
+        {
+          "id": "Data expanded to 50+ characters with metadata",
+          "name": "Data expanded to 50+ characters with metadata",
+          "status": "pass",
+          "quality": 4,
+          "lastSession": 1
+        },
+        {
+          "id": "Comparison uses ScalableSelector modal",
+          "name": "Comparison uses ScalableSelector modal",
+          "status": "pass",
+          "quality": 4,
+          "lastSession": 1
+        },
+        {
+          "id": "Overview has character picker",
+          "name": "Overview has character picker",
+          "status": "pass",
+          "quality": 4,
+          "lastSession": 1
+        }
+      ],
+      "completedAt": 1
+    },
+    {
+      "id": "ui-character-scaling-b",
+      "moduleId": "arpg-character",
+      "label": "Character Blueprint Scaling (Part 2)",
+      "description": "Upgrade Character Blueprint to handle 100+ characters.\n1. Expand data.ts: Add 50+ characters with EntityMetadata (categories: Warrior, Mage, Rogue, Tank, Support, Beast, Droid, Force-user; areas: Taris, Dantooine, Kashyyyk, Korriban, Manaan; tiers: common, elite, boss, legendary).\n2. Comparison tab: Replace inline character list with ScalableSelector modal. Default shows 2 selected. \"Add Character\" button opens selector grouped by class→role.\n3. Overview tab: Add character picker (single-select ScalableSelector grouped by area).\n4. Camera Profiles: Support comparing 3+ profiles via multi-select.\n5. Balance Radar: Handle 10+ overlay by showing top-5 + \"show all\" toggle.",
+      "checklistItemIds": [],
+      "featureNames": [
+        "Camera supports 3+ profile comparison",
+        "Balance radar handles 10+ characters",
+        "100 characters render without lag"
+      ],
+      "dependsOn": [
+        "ui-character-scaling-a"
+      ],
+      "status": "completed",
+      "features": [
+        {
+          "id": "Camera supports 3+ profile comparison",
+          "name": "Camera supports 3+ profile comparison",
+          "status": "pass",
+          "quality": 4,
+          "lastSession": 1
+        },
+        {
+          "id": "Balance radar handles 10+ characters",
+          "name": "Balance radar handles 10+ characters",
+          "status": "pass",
+          "quality": 4,
+          "lastSession": 1
+        },
+        {
+          "id": "100 characters render without lag",
+          "name": "100 characters render without lag",
+          "status": "pass",
+          "quality": 4,
+          "lastSession": 1
+        }
+      ],
+      "completedAt": 1
+    },
+    {
+      "id": "ui-animation-scaling-a",
+      "moduleId": "arpg-character",
+      "label": "Animation State Graph Scaling (Part 1)",
+      "description": "Upgrade Animation State Graph to handle 100+ montages.\n1. Expand data.ts: Add 80+ montages with metadata (categories: Attack, Dodge, HitReact, Death, Idle, Locomotion, Ability, Emote).\n2. Combo Chain: Add montage picker via ScalableSelector grouped by category. Paginate 10/page.\n3. State Machine: Support 30+ states by clustering into collapsible groups.\n4. Frame Scrubber: Montage selector dropdown (grouped by category).\n5. Budget: Virtual-scroll asset list. Group by category. Per-group memory subtotals.",
+      "checklistItemIds": [],
+      "featureNames": [
+        "Data expanded to 80+ montages with metadata",
+        "Combo chain uses ScalableSelector",
+        "State machine clusters into collapsible groups"
+      ],
+      "dependsOn": [
+        "infra-entity-selector-a",
+        "infra-metadata-schema-a"
+      ],
+      "status": "completed",
+      "features": [
+        {
+          "id": "Data expanded to 80+ montages with metadata",
+          "name": "Data expanded to 80+ montages with metadata",
+          "status": "pass",
+          "quality": 4,
+          "lastSession": 1
+        },
+        {
+          "id": "Combo chain uses ScalableSelector",
+          "name": "Combo chain uses ScalableSelector",
+          "status": "pass",
+          "quality": 4,
+          "lastSession": 1
+        },
+        {
+          "id": "State machine clusters into collapsible groups",
+          "name": "State machine clusters into collapsible groups",
+          "status": "pass",
+          "quality": 4,
+          "lastSession": 1
+        }
+      ],
+      "completedAt": 1
+    },
+    {
+      "id": "ui-animation-scaling-b",
+      "moduleId": "arpg-character",
+      "label": "Animation State Graph Scaling (Part 2)",
+      "description": "Upgrade Animation State Graph to handle 100+ montages.\n1. Expand data.ts: Add 80+ montages with metadata (categories: Attack, Dodge, HitReact, Death, Idle, Locomotion, Ability, Emote).\n2. Combo Chain: Add montage picker via ScalableSelector grouped by category. Paginate 10/page.\n3. State Machine: Support 30+ states by clustering into collapsible groups.\n4. Frame Scrubber: Montage selector dropdown (grouped by category).\n5. Budget: Virtual-scroll asset list. Group by category. Per-group memory subtotals.",
+      "checklistItemIds": [],
+      "featureNames": [
+        "Frame scrubber has grouped montage selector",
+        "Budget asset list virtual-scrolls",
+        "100 montages render without lag"
+      ],
+      "dependsOn": [
+        "ui-animation-scaling-a"
+      ],
+      "status": "completed",
+      "features": [
+        {
+          "id": "Frame scrubber has grouped montage selector",
+          "name": "Frame scrubber has grouped montage selector",
+          "status": "pass",
+          "quality": 4,
+          "lastSession": 1
+        },
+        {
+          "id": "Budget asset list virtual-scrolls",
+          "name": "Budget asset list virtual-scrolls",
+          "status": "pass",
+          "quality": 4,
+          "lastSession": 1
+        },
+        {
+          "id": "100 montages render without lag",
+          "name": "100 montages render without lag",
+          "status": "pass",
+          "quality": 4,
+          "lastSession": 1
+        }
+      ],
+      "completedAt": 1
+    },
+    {
+      "id": "ui-gas-scaling-a",
+      "moduleId": "arpg-character",
+      "label": "Ability Spellbook Scaling (Part 1)",
+      "description": "Upgrade Ability Spellbook to handle 100+ abilities.\n1. Expand data.ts: Add 60+ abilities with metadata (categories: Offensive, Defensive, Utility, Passive, Ultimate; elements: Fire, Ice, Lightning, Shadow, Holy; tiers: basic, advanced, ultimate).\n2. Ability Radar: ScalableSelector to pick 3-6 abilities for comparison. Group by category→element.\n3. Effects List: Paginate gameplay effects. Group by type (Instant, Duration, Periodic, Infinite).\n4. Tag Tree: Lazy expansion — only first level by default. Search filter for tag names.\n5. Core: Attribute picker for 20+ attributes.",
+      "checklistItemIds": [],
+      "featureNames": [
+        "Data expanded to 60+ abilities with metadata",
+        "Ability radar uses ScalableSelector",
+        "Effects list paginated and grouped"
+      ],
+      "dependsOn": [
+        "infra-entity-selector-a",
+        "infra-metadata-schema-a"
+      ],
+      "status": "completed",
+      "features": [
+        {
+          "id": "Data expanded to 60+ abilities with metadata",
+          "name": "Data expanded to 60+ abilities with metadata",
+          "status": "pass",
+          "quality": 4,
+          "lastSession": 1
+        },
+        {
+          "id": "Ability radar uses ScalableSelector",
+          "name": "Ability radar uses ScalableSelector",
+          "status": "pass",
+          "quality": 4,
+          "lastSession": 1
+        },
+        {
+          "id": "Effects list paginated and grouped",
+          "name": "Effects list paginated and grouped",
+          "status": "pass",
+          "quality": 4,
+          "lastSession": 1
+        }
+      ],
+      "completedAt": 1
+    },
+    {
+      "id": "ui-gas-scaling-b",
+      "moduleId": "arpg-character",
+      "label": "Ability Spellbook Scaling (Part 2)",
+      "description": "Upgrade Ability Spellbook to handle 100+ abilities.\n1. Expand data.ts: Add 60+ abilities with metadata (categories: Offensive, Defensive, Utility, Passive, Ultimate; elements: Fire, Ice, Lightning, Shadow, Holy; tiers: basic, advanced, ultimate).\n2. Ability Radar: ScalableSelector to pick 3-6 abilities for comparison. Group by category→element.\n3. Effects List: Paginate gameplay effects. Group by type (Instant, Duration, Periodic, Infinite).\n4. Tag Tree: Lazy expansion — only first level by default. Search filter for tag names.\n5. Core: Attribute picker for 20+ attributes.",
+      "checklistItemIds": [],
+      "featureNames": [
+        "Tag tree lazy-expands with search",
+        "Attribute picker for large lists",
+        "100 abilities render without lag"
+      ],
+      "dependsOn": [
+        "ui-gas-scaling-a"
+      ],
+      "status": "completed",
+      "features": [
+        {
+          "id": "Tag tree lazy-expands with search",
+          "name": "Tag tree lazy-expands with search",
+          "status": "pass",
+          "quality": 4,
+          "lastSession": 1
+        },
+        {
+          "id": "Attribute picker for large lists",
+          "name": "Attribute picker for large lists",
+          "status": "pass",
+          "quality": 4,
+          "lastSession": 1
+        },
+        {
+          "id": "100 abilities render without lag",
+          "name": "100 abilities render without lag",
+          "status": "pass",
+          "quality": 4,
+          "lastSession": 1
+        }
+      ],
+      "completedAt": 1
+    },
+    {
+      "id": "ui-combat-scaling-a",
+      "moduleId": "arpg-character",
+      "label": "Combat Action Map Scaling (Part 1)",
+      "description": "Upgrade Combat Action Map to handle 100+ weapons/combos.\n1. Expand data.ts: Add 40+ weapons with metadata (categories: Sword, Axe, Mace, Bow, Staff, Dagger, Polearm; tiers: common-legendary). Add 30+ combo sequences.\n2. Flow: Weapon selector to filter lanes. ScalableSelector grouped by category.\n3. Hits: Filter traces by weapon. Per-weapon hit stats.\n4. Metrics: Select 2-4 weapons for DPS comparison.\n5. Combo Chains: Paginate combos. Group by weapon type.",
+      "checklistItemIds": [],
+      "featureNames": [
+        "Data expanded to 40+ weapons with metadata",
+        "Flow tab has weapon ScalableSelector",
+        "Hits tab filters by weapon"
+      ],
+      "dependsOn": [
+        "infra-entity-selector-a",
+        "infra-metadata-schema-a"
+      ],
+      "status": "completed",
+      "features": [
+        {
+          "id": "Data expanded to 40+ weapons with metadata",
+          "name": "Data expanded to 40+ weapons with metadata",
+          "status": "pass",
+          "quality": 4,
+          "lastSession": 1
+        },
+        {
+          "id": "Flow tab has weapon ScalableSelector",
+          "name": "Flow tab has weapon ScalableSelector",
+          "status": "pass",
+          "quality": 4,
+          "lastSession": 1
+        },
+        {
+          "id": "Hits tab filters by weapon",
+          "name": "Hits tab filters by weapon",
+          "status": "pass",
+          "quality": 4,
+          "lastSession": 1
+        }
+      ],
+      "completedAt": 1
+    },
+    {
+      "id": "ui-combat-scaling-b",
+      "moduleId": "arpg-character",
+      "label": "Combat Action Map Scaling (Part 2)",
+      "description": "Upgrade Combat Action Map to handle 100+ weapons/combos.\n1. Expand data.ts: Add 40+ weapons with metadata (categories: Sword, Axe, Mace, Bow, Staff, Dagger, Polearm; tiers: common-legendary). Add 30+ combo sequences.\n2. Flow: Weapon selector to filter lanes. ScalableSelector grouped by category.\n3. Hits: Filter traces by weapon. Per-weapon hit stats.\n4. Metrics: Select 2-4 weapons for DPS comparison.\n5. Combo Chains: Paginate combos. Group by weapon type.",
+      "checklistItemIds": [],
+      "featureNames": [
+        "Metrics compares 2-4 weapons",
+        "Combo chains paginated and grouped",
+        "100 weapons render without lag"
+      ],
+      "dependsOn": [
+        "ui-combat-scaling-a"
+      ],
+      "status": "completed",
+      "features": [
+        {
+          "id": "Metrics compares 2-4 weapons",
+          "name": "Metrics compares 2-4 weapons",
+          "status": "pass",
+          "quality": 5,
+          "lastSession": 1
+        },
+        {
+          "id": "Combo chains paginated and grouped",
+          "name": "Combo chains paginated and grouped",
+          "status": "pass",
+          "quality": 5,
+          "lastSession": 1
+        },
+        {
+          "id": "100 weapons render without lag",
+          "name": "100 weapons render without lag",
+          "status": "pass",
+          "quality": 5,
+          "lastSession": 1
+        }
+      ],
+      "completedAt": 1
+    },
+    {
+      "id": "ui-bestiary-scaling-a",
+      "moduleId": "arpg-character",
+      "label": "Enemy Bestiary Scaling (Part 1)",
+      "description": "Upgrade Enemy Bestiary to handle 100+ enemies.\n1. Expand data.ts: Add 80+ archetypes with metadata (categories: Humanoid, Beast, Droid, Force-sensitive, Undead; areas: all zones; tiers: minion/standard/elite/boss/raid-boss; roles: melee/ranged/tank/healer/caster/swarm).\n2. Archetype Grid: Paginated grid. Group by area→role. ScalableSelector for comparison picks.\n3. Comparison: Multi-select up to 4 enemies. Radar overlay.\n4. Encounters: Enemy picker via ScalableSelector grouped by area→tier. Wave editor handles 20+ waves with virtual scroll.\n5. AI Logic: BT viewer supports 50+ nodes with collapsible subtrees and search.",
+      "checklistItemIds": [],
+      "featureNames": [
+        "Data expanded to 80+ enemies with metadata",
+        "Archetype grid paginated and grouped",
+        "Comparison multi-select with ScalableSelector",
+        "Encounter enemy picker uses ScalableSelector"
+      ],
+      "dependsOn": [
+        "infra-entity-selector-a",
+        "infra-metadata-schema-a"
+      ],
+      "status": "completed",
+      "features": [
+        {
+          "id": "Data expanded to 80+ enemies with metadata",
+          "name": "Data expanded to 80+ enemies with metadata",
+          "status": "pass",
+          "quality": 5,
+          "lastSession": 1
+        },
+        {
+          "id": "Archetype grid paginated and grouped",
+          "name": "Archetype grid paginated and grouped",
+          "status": "pass",
+          "quality": 5,
+          "lastSession": 1
+        },
+        {
+          "id": "Comparison multi-select with ScalableSelector",
+          "name": "Comparison multi-select with ScalableSelector",
+          "status": "pass",
+          "quality": 5,
+          "lastSession": 1
+        },
+        {
+          "id": "Encounter enemy picker uses ScalableSelector",
+          "name": "Encounter enemy picker uses ScalableSelector",
+          "status": "pass",
+          "quality": 5,
+          "lastSession": 1
+        }
+      ],
+      "completedAt": 1
+    },
+    {
+      "id": "ui-bestiary-scaling-b",
+      "moduleId": "arpg-character",
+      "label": "Enemy Bestiary Scaling (Part 2)",
+      "description": "Upgrade Enemy Bestiary to handle 100+ enemies.\n1. Expand data.ts: Add 80+ archetypes with metadata (categories: Humanoid, Beast, Droid, Force-sensitive, Undead; areas: all zones; tiers: minion/standard/elite/boss/raid-boss; roles: melee/ranged/tank/healer/caster/swarm).\n2. Archetype Grid: Paginated grid. Group by area→role. ScalableSelector for comparison picks.\n3. Comparison: Multi-select up to 4 enemies. Radar overlay.\n4. Encounters: Enemy picker via ScalableSelector grouped by area→tier. Wave editor handles 20+ waves with virtual scroll.\n5. AI Logic: BT viewer supports 50+ nodes with collapsible subtrees and search.",
+      "checklistItemIds": [],
+      "featureNames": [
+        "Wave editor virtual-scrolls 20+ waves",
+        "BT viewer collapses 50+ nodes",
+        "100 enemies render without lag"
+      ],
+      "dependsOn": [
+        "ui-bestiary-scaling-a"
+      ],
+      "status": "completed",
+      "features": [
+        {
+          "id": "Wave editor virtual-scrolls 20+ waves",
+          "name": "Wave editor virtual-scrolls 20+ waves",
+          "status": "pass",
+          "quality": 4,
+          "lastSession": 1
+        },
+        {
+          "id": "BT viewer collapses 50+ nodes",
+          "name": "BT viewer collapses 50+ nodes",
+          "status": "pass",
+          "quality": 4,
+          "lastSession": 1
+        },
+        {
+          "id": "100 enemies render without lag",
+          "name": "100 enemies render without lag",
+          "status": "pass",
+          "quality": 4,
+          "lastSession": 1
+        }
+      ],
+      "completedAt": 1
+    },
+    {
+      "id": "ui-items-scaling-a",
+      "moduleId": "arpg-character",
+      "label": "Item Catalog Scaling (Part 1)",
+      "description": "Upgrade Item Catalog to handle 100+ items.\n1. Expand data.ts: Add 120+ items with metadata (categories: Weapon/Armor/Accessory/Consumable/Quest/Material; subcategories per type; tiers: common-legendary; sets).\n2. Catalog Grid: Paginated 20/page. Filter by category, tier, slot. Sort by name/power/tier. ScalableSelector for comparison.\n3. Equipment Loadout: Item picker per slot using ScalableSelector filtered to slot type.\n4. Item Sets: Collapsible set panels. Filter complete/incomplete.\n5. Comparison: Side-by-side 2-3 items with stat diff highlighting.",
+      "checklistItemIds": [],
+      "featureNames": [
+        "Data expanded to 120+ items with metadata",
+        "Catalog grid paginated with filters",
+        "Equipment loadout slot pickers"
+      ],
+      "dependsOn": [
+        "infra-entity-selector-a",
+        "infra-metadata-schema-a"
+      ],
+      "status": "completed",
+      "features": [
+        {
+          "id": "Data expanded to 120+ items with metadata",
+          "name": "Data expanded to 120+ items with metadata",
+          "status": "pass",
+          "quality": 4,
+          "lastSession": 1
+        },
+        {
+          "id": "Catalog grid paginated with filters",
+          "name": "Catalog grid paginated with filters",
+          "status": "pass",
+          "quality": 4,
+          "lastSession": 1
+        },
+        {
+          "id": "Equipment loadout slot pickers",
+          "name": "Equipment loadout slot pickers",
+          "status": "pass",
+          "quality": 4,
+          "lastSession": 1
+        }
+      ],
+      "completedAt": 1
+    },
+    {
+      "id": "ui-items-scaling-b",
+      "moduleId": "arpg-character",
+      "label": "Item Catalog Scaling (Part 2)",
+      "description": "Upgrade Item Catalog to handle 100+ items.\n1. Expand data.ts: Add 120+ items with metadata (categories: Weapon/Armor/Accessory/Consumable/Quest/Material; subcategories per type; tiers: common-legendary; sets).\n2. Catalog Grid: Paginated 20/page. Filter by category, tier, slot. Sort by name/power/tier. ScalableSelector for comparison.\n3. Equipment Loadout: Item picker per slot using ScalableSelector filtered to slot type.\n4. Item Sets: Collapsible set panels. Filter complete/incomplete.\n5. Comparison: Side-by-side 2-3 items with stat diff highlighting.",
+      "checklistItemIds": [],
+      "featureNames": [
+        "Item set panels collapsible and filterable",
+        "Item comparison with stat diff highlighting",
+        "100 items render without lag"
+      ],
+      "dependsOn": [
+        "ui-items-scaling-a"
+      ],
+      "status": "completed",
+      "features": [
+        {
+          "id": "Item set panels collapsible and filterable",
+          "name": "Item set panels collapsible and filterable",
+          "status": "pass",
+          "quality": 4,
+          "lastSession": 1
+        },
+        {
+          "id": "Item comparison with stat diff highlighting",
+          "name": "Item comparison with stat diff highlighting",
+          "status": "pass",
+          "quality": 4,
+          "lastSession": 1
+        },
+        {
+          "id": "100 items render without lag",
+          "name": "100 items render without lag",
+          "status": "pass",
+          "quality": 4,
+          "lastSession": 1
+        }
+      ],
+      "completedAt": 1
+    },
+    {
+      "id": "ui-loot-scaling-a",
+      "moduleId": "arpg-character",
+      "label": "Loot Table Visualizer Scaling (Part 1)",
+      "description": "Upgrade Loot Table Visualizer to handle 100+ entries.\n1. Expand data.ts: Add 60+ loot table entries, 30+ affixes, 20+ enemy bindings.\n2. Loot Table Editor: Paginated with search. Group by source (enemy/chest/quest/crafting). Inline weight editing.\n3. Affix Simulator: Affix pool picker via ScalableSelector grouped by Offensive/Defensive/Utility.\n4. Drop Simulator: Enemy picker for simulation using ScalableSelector.\n5. Economy Impact: Filter by tier/source. Paginated impact table.",
+      "checklistItemIds": [],
+      "featureNames": [
+        "Data expanded to 60+ loot entries",
+        "Loot table editor paginated and grouped",
+        "Affix pool uses ScalableSelector"
+      ],
+      "dependsOn": [
+        "infra-entity-selector-a",
+        "infra-metadata-schema-a"
+      ],
+      "status": "completed",
+      "features": [
+        {
+          "id": "Data expanded to 60+ loot entries",
+          "name": "Data expanded to 60+ loot entries",
+          "status": "pass",
+          "quality": 4,
+          "lastSession": 1
+        },
+        {
+          "id": "Loot table editor paginated and grouped",
+          "name": "Loot table editor paginated and grouped",
+          "status": "pass",
+          "quality": 4,
+          "lastSession": 1
+        },
+        {
+          "id": "Affix pool uses ScalableSelector",
+          "name": "Affix pool uses ScalableSelector",
+          "status": "pass",
+          "quality": 4,
+          "lastSession": 1
+        }
+      ],
+      "completedAt": 1
+    },
+    {
+      "id": "ui-loot-scaling-b",
+      "moduleId": "arpg-character",
+      "label": "Loot Table Visualizer Scaling (Part 2)",
+      "description": "Upgrade Loot Table Visualizer to handle 100+ entries.\n1. Expand data.ts: Add 60+ loot table entries, 30+ affixes, 20+ enemy bindings.\n2. Loot Table Editor: Paginated with search. Group by source (enemy/chest/quest/crafting). Inline weight editing.\n3. Affix Simulator: Affix pool picker via ScalableSelector grouped by Offensive/Defensive/Utility.\n4. Drop Simulator: Enemy picker for simulation using ScalableSelector.\n5. Economy Impact: Filter by tier/source. Paginated impact table.",
+      "checklistItemIds": [],
+      "featureNames": [
+        "Drop simulator has enemy ScalableSelector",
+        "Economy table paginated and filterable",
+        "100 loot entries render without lag"
+      ],
+      "dependsOn": [
+        "ui-loot-scaling-a"
+      ],
+      "status": "completed",
+      "features": [
+        {
+          "id": "Drop simulator has enemy ScalableSelector",
+          "name": "Drop simulator has enemy ScalableSelector",
+          "status": "pass",
+          "quality": 4,
+          "lastSession": 1
+        },
+        {
+          "id": "Economy table paginated and filterable",
+          "name": "Economy table paginated and filterable",
+          "status": "pass",
+          "quality": 4,
+          "lastSession": 1
+        },
+        {
+          "id": "100 loot entries render without lag",
+          "name": "100 loot entries render without lag",
+          "status": "pass",
+          "quality": 4,
+          "lastSession": 1
+        }
+      ],
+      "completedAt": 1
+    },
+    {
+      "id": "ui-character-flow",
+      "moduleId": "arpg-character",
+      "label": "Character Blueprint Flow Redesign",
+      "description": "Restructure Character Blueprint tabs to tell a chronological narrative.\nNew tab order: Features → Overview → Input → Movement → Playground → AI Feel → Simulator.\nNarrative: \"Define → Control → Move → Feel → Optimize → Compare\".\nAdd a subtle breadcrumb bar at top of the unique tab showing the narrative flow with styled steps.\nEach tab header gets a one-line subtitle explaining its role in the pipeline.\nReorder the subtab array and update the navigation. Do not change component internals.",
+      "checklistItemIds": [],
+      "featureNames": [
+        "Tab order restructured to narrative flow",
+        "Breadcrumb bar with flow visualization",
+        "Tab subtitles added",
+        "Navigation updated"
+      ],
+      "dependsOn": [
+        "ui-character-scaling-b"
+      ],
+      "status": "completed",
+      "features": [
+        {
+          "id": "Tab order restructured to narrative flow",
+          "name": "Tab order restructured to narrative flow",
+          "status": "pass",
+          "quality": 5,
+          "lastSession": 1
+        },
+        {
+          "id": "Breadcrumb bar with flow visualization",
+          "name": "Breadcrumb bar with flow visualization",
+          "status": "pass",
+          "quality": 5,
+          "lastSession": 1
+        },
+        {
+          "id": "Tab subtitles added",
+          "name": "Tab subtitles added",
+          "status": "pass",
+          "quality": 5,
+          "lastSession": 1
+        },
+        {
+          "id": "Navigation updated",
+          "name": "Navigation updated",
+          "status": "pass",
+          "quality": 5,
+          "lastSession": 1
+        }
+      ],
+      "completedAt": 1
+    },
+    {
+      "id": "ui-animation-flow",
+      "moduleId": "arpg-character",
+      "label": "Animation State Graph Flow Redesign",
+      "description": "Restructure Animation tabs: Features → State Graph → Combos → Retargeting → Budget.\nNarrative: \"Define States → Chain Actions → Port Across Skeletons → Budget Check\".\nAdd breadcrumb flow bar. Add tab subtitles.",
+      "checklistItemIds": [],
+      "featureNames": [
+        "Tab order restructured",
+        "Breadcrumb flow bar added",
+        "Tab subtitles added"
+      ],
+      "dependsOn": [
+        "ui-animation-scaling-b"
+      ],
+      "status": "completed",
+      "features": [
+        {
+          "id": "Tab order restructured",
+          "name": "Tab order restructured",
+          "status": "pass",
+          "quality": 5,
+          "lastSession": 1
+        },
+        {
+          "id": "Breadcrumb flow bar added",
+          "name": "Breadcrumb flow bar added",
+          "status": "pass",
+          "quality": 5,
+          "lastSession": 1
+        },
+        {
+          "id": "Tab subtitles added",
+          "name": "Tab subtitles added",
+          "status": "pass",
+          "quality": 5,
+          "lastSession": 1
+        }
+      ],
+      "completedAt": 1
+    },
+    {
+      "id": "ui-gas-flow",
+      "moduleId": "arpg-character",
+      "label": "Ability Spellbook Flow Redesign",
+      "description": "Restructure Ability tabs: Features → Core → Abilities → Effects → Tags → Combos.\nNarrative: \"Foundation → Define Abilities → Apply Effects → Organize Tags → Chain Combos\".\nAdd breadcrumb flow bar. Add tab subtitles.",
+      "checklistItemIds": [],
+      "featureNames": [
+        "Tab order restructured",
+        "Breadcrumb flow bar added",
+        "Tab subtitles added"
+      ],
+      "dependsOn": [
+        "ui-gas-scaling-b"
+      ],
+      "status": "completed",
+      "features": [
+        {
+          "id": "Tab order restructured",
+          "name": "Tab order restructured",
+          "status": "pass",
+          "quality": 5,
+          "lastSession": 1
+        },
+        {
+          "id": "Breadcrumb flow bar added",
+          "name": "Breadcrumb flow bar added",
+          "status": "pass",
+          "quality": 5,
+          "lastSession": 1
+        },
+        {
+          "id": "Tab subtitles added",
+          "name": "Tab subtitles added",
+          "status": "pass",
+          "quality": 5,
+          "lastSession": 1
+        }
+      ],
+      "completedAt": 1
+    },
+    {
+      "id": "ui-combat-flow",
+      "moduleId": "arpg-character",
+      "label": "Combat Action Map Flow Redesign",
+      "description": "Restructure Combat tabs: Features → Flow → Hits → Metrics → Polish.\nNarrative: \"Pipeline → Hit Detection → Measure Balance → Polish Feel\".\nAdd breadcrumb flow bar. Add tab subtitles.",
+      "checklistItemIds": [],
+      "featureNames": [
+        "Tab order restructured",
+        "Breadcrumb flow bar added",
+        "Tab subtitles added"
+      ],
+      "dependsOn": [
+        "ui-combat-scaling-b"
+      ],
+      "status": "completed",
+      "features": [
+        {
+          "id": "Tab order restructured",
+          "name": "Tab order restructured",
+          "status": "pass",
+          "quality": 5,
+          "lastSession": 1
+        },
+        {
+          "id": "Breadcrumb flow bar added",
+          "name": "Breadcrumb flow bar added",
+          "status": "pass",
+          "quality": 5,
+          "lastSession": 1
+        },
+        {
+          "id": "Tab subtitles added",
+          "name": "Tab subtitles added",
+          "status": "pass",
+          "quality": 5,
+          "lastSession": 1
+        }
+      ],
+      "completedAt": 1
+    },
+    {
+      "id": "ui-bestiary-flow",
+      "moduleId": "arpg-character",
+      "label": "Enemy Bestiary Flow Redesign",
+      "description": "Restructure Bestiary tabs: Features → Archetypes → AI Logic → Encounters.\nNarrative: \"Define Enemies → Give Them Brains → Place in World\".\nAdd breadcrumb flow bar. Add tab subtitles.",
+      "checklistItemIds": [],
+      "featureNames": [
+        "Tab order restructured",
+        "Breadcrumb flow bar added",
+        "Tab subtitles added"
+      ],
+      "dependsOn": [
+        "ui-bestiary-scaling-b"
+      ],
+      "status": "completed",
+      "features": [
+        {
+          "id": "Tab order restructured",
+          "name": "Tab order restructured",
+          "status": "pass",
+          "quality": 5,
+          "lastSession": 1
+        },
+        {
+          "id": "Breadcrumb flow bar added",
+          "name": "Breadcrumb flow bar added",
+          "status": "pass",
+          "quality": 5,
+          "lastSession": 1
+        },
+        {
+          "id": "Tab subtitles added",
+          "name": "Tab subtitles added",
+          "status": "pass",
+          "quality": 5,
+          "lastSession": 1
+        }
+      ],
+      "completedAt": 1
+    },
+    {
+      "id": "ui-items-flow",
+      "moduleId": "arpg-character",
+      "label": "Item Catalog Flow Redesign",
+      "description": "Restructure Item tabs: Features → Catalog → Economy → Mechanics.\nNarrative: \"Browse Items → Track Economy → Understand Scaling\".\nAdd breadcrumb flow bar. Add tab subtitles.",
+      "checklistItemIds": [],
+      "featureNames": [
+        "Tab order restructured",
+        "Breadcrumb flow bar added",
+        "Tab subtitles added"
+      ],
+      "dependsOn": [
+        "ui-items-scaling-b"
+      ],
+      "status": "completed",
+      "features": [
+        {
+          "id": "Tab order restructured",
+          "name": "Tab order restructured",
+          "status": "pass",
+          "quality": 5,
+          "lastSession": 1
+        },
+        {
+          "id": "Breadcrumb flow bar added",
+          "name": "Breadcrumb flow bar added",
+          "status": "pass",
+          "quality": 5,
+          "lastSession": 1
+        },
+        {
+          "id": "Tab subtitles added",
+          "name": "Tab subtitles added",
+          "status": "pass",
+          "quality": 5,
+          "lastSession": 1
+        }
+      ],
+      "completedAt": 1
+    },
+    {
+      "id": "ui-loot-flow",
+      "moduleId": "arpg-character",
+      "label": "Loot Table Flow Redesign",
+      "description": "Restructure Loot tabs: Features → Core → Simulation → Affix → Pity → Economy.\nNarrative: \"Define Drops → Simulate → Roll Affixes → Ensure Fairness → Economy\".\nAdd breadcrumb flow bar. Add tab subtitles.",
+      "checklistItemIds": [],
+      "featureNames": [
+        "Tab order restructured",
+        "Breadcrumb flow bar added",
+        "Tab subtitles added"
+      ],
+      "dependsOn": [
+        "ui-loot-scaling-b"
+      ],
+      "status": "completed",
+      "features": [
+        {
+          "id": "Tab order restructured",
+          "name": "Tab order restructured",
+          "status": "pass",
+          "quality": 5,
+          "lastSession": 1
+        },
+        {
+          "id": "Breadcrumb flow bar added",
+          "name": "Breadcrumb flow bar added",
+          "status": "pass",
+          "quality": 5,
+          "lastSession": 1
+        },
+        {
+          "id": "Tab subtitles added",
+          "name": "Tab subtitles added",
+          "status": "pass",
+          "quality": 5,
+          "lastSession": 1
+        }
+      ],
+      "completedAt": 1
+    },
+    {
+      "id": "ui-character-visual-a",
+      "moduleId": "arpg-character",
+      "label": "Character Blueprint Visual Polish (Part 1)",
+      "description": "Visual upgrade for Character Blueprint components.\n1. Comparison Matrix: Card-based columns per character. Stat bars with diff highlighting.\n2. Hitbox Viewer: Layered wireframe SVG with zone coloring and glow. Hover to highlight zones.\n3. Camera Profiles: Visual viewport mockups showing FOV cone, arm length, lag zone.\n4. Movement States: State-machine SVG diagram with animated transition arrows.\n5. Properties: Collapsible categories with colored headers.\n6. Keyboard: Proper key sizing, accent glow on bound keys, red pulse on conflicts.\nFollow design directive for all styling decisions.",
+      "checklistItemIds": [],
+      "featureNames": [
+        "Comparison matrix card-based columns",
+        "Hitbox wireframe SVG with glow",
+        "Camera viewport mockups"
+      ],
+      "dependsOn": [
+        "ui-character-flow"
+      ],
+      "status": "completed",
+      "features": [
+        {
+          "id": "Comparison matrix card-based columns",
+          "name": "Comparison matrix card-based columns",
+          "status": "pass",
+          "quality": 4,
+          "lastSession": 1
+        },
+        {
+          "id": "Hitbox wireframe SVG with glow",
+          "name": "Hitbox wireframe SVG with glow",
+          "status": "pass",
+          "quality": 4,
+          "lastSession": 1
+        },
+        {
+          "id": "Camera viewport mockups",
+          "name": "Camera viewport mockups",
+          "status": "pass",
+          "quality": 4,
+          "lastSession": 1
+        }
+      ],
+      "completedAt": 1
+    },
+    {
+      "id": "ui-character-visual-b",
+      "moduleId": "arpg-character",
+      "label": "Character Blueprint Visual Polish (Part 2)",
+      "description": "Visual upgrade for Character Blueprint components.\n1. Comparison Matrix: Card-based columns per character. Stat bars with diff highlighting.\n2. Hitbox Viewer: Layered wireframe SVG with zone coloring and glow. Hover to highlight zones.\n3. Camera Profiles: Visual viewport mockups showing FOV cone, arm length, lag zone.\n4. Movement States: State-machine SVG diagram with animated transition arrows.\n5. Properties: Collapsible categories with colored headers.\n6. Keyboard: Proper key sizing, accent glow on bound keys, red pulse on conflicts.\nFollow design directive for all styling decisions.",
+      "checklistItemIds": [],
+      "featureNames": [
+        "Movement state-machine SVG",
+        "Properties collapsible categories",
+        "Keyboard enhanced visualization"
+      ],
+      "dependsOn": [
+        "ui-character-visual-a"
+      ],
+      "status": "completed",
+      "features": [
+        {
+          "id": "Movement state-machine SVG",
+          "name": "Movement state-machine SVG",
+          "status": "pass",
+          "quality": 4,
+          "lastSession": 1
+        },
+        {
+          "id": "Properties collapsible categories",
+          "name": "Properties collapsible categories",
+          "status": "pass",
+          "quality": 4,
+          "lastSession": 1
+        },
+        {
+          "id": "Keyboard enhanced visualization",
+          "name": "Keyboard enhanced visualization",
+          "status": "pass",
+          "quality": 4,
+          "lastSession": 1
+        }
+      ],
+      "completedAt": 1
+    },
+    {
+      "id": "ui-animation-visual",
+      "moduleId": "arpg-character",
+      "label": "Animation State Graph Visual Polish",
+      "description": "Visual upgrade for Animation State Graph.\n1. State Machine: Full SVG node graph — rounded rects, animated transition arrows, glow on active, group backgrounds.\n2. Combo Timeline: Horizontal with hit windows (colored), cancel windows (hatched), damage numbers, scrub handle.\n3. Blend Space: 2D scatter with blend triangle.\n4. Budget: Horizontal stacked bar chart showing memory per category.",
+      "checklistItemIds": [],
+      "featureNames": [
+        "State machine SVG node graph",
+        "Combo timeline with hit/cancel windows",
+        "Blend space 2D scatter",
+        "Budget stacked bar chart"
+      ],
+      "dependsOn": [
+        "ui-animation-flow"
+      ],
+      "status": "completed",
+      "features": [
+        {
+          "id": "State machine SVG node graph",
+          "name": "State machine SVG node graph",
+          "status": "pass",
+          "quality": 4,
+          "lastSession": 1
+        },
+        {
+          "id": "Combo timeline with hit/cancel windows",
+          "name": "Combo timeline with hit/cancel windows",
+          "status": "pass",
+          "quality": 4,
+          "lastSession": 1
+        },
+        {
+          "id": "Blend space 2D scatter",
+          "name": "Blend space 2D scatter",
+          "status": "pass",
+          "quality": 4,
+          "lastSession": 1
+        },
+        {
+          "id": "Budget stacked bar chart",
+          "name": "Budget stacked bar chart",
+          "status": "pass",
+          "quality": 4,
+          "lastSession": 1
+        }
+      ],
+      "completedAt": 1
+    },
+    {
+      "id": "ui-gas-visual-a",
+      "moduleId": "arpg-character",
+      "label": "Ability Spellbook Visual Polish (Part 1)",
+      "description": "Visual upgrade for Ability Spellbook.\n1. Ability Cards: Rich cards — icon circle with initial, cooldown badge, element dot, mini cost bar.\n2. Effect Timeline: Gantt-style chart with durations, stacking, decay. Color by effect type.\n3. Tag Tree: Interactive tree with expand/collapse, search highlight, SVG relationship curves.\n4. Attribute Web: Interactive force-directed graph. Drag nodes. Hover shows relationship details.\n5. Damage Calculator: Visual formula breakdown (Base × Mult + Flat → Armor → Final).",
+      "checklistItemIds": [],
+      "featureNames": [
+        "Rich ability cards",
+        "Gantt-style effect timeline",
+        "Interactive tag tree with search"
+      ],
+      "dependsOn": [
+        "ui-gas-flow"
+      ],
+      "status": "completed",
+      "features": [
+        {
+          "id": "Rich ability cards",
+          "name": "Rich ability cards",
+          "status": "pass",
+          "quality": 4,
+          "lastSession": 1
+        },
+        {
+          "id": "Gantt-style effect timeline",
+          "name": "Gantt-style effect timeline",
+          "status": "pass",
+          "quality": 4,
+          "lastSession": 1
+        },
+        {
+          "id": "Interactive tag tree with search",
+          "name": "Interactive tag tree with search",
+          "status": "pass",
+          "quality": 4,
+          "lastSession": 1
+        }
+      ],
+      "completedAt": 1
+    },
+    {
+      "id": "ui-gas-visual-b",
+      "moduleId": "arpg-character",
+      "label": "Ability Spellbook Visual Polish (Part 2)",
+      "description": "Visual upgrade for Ability Spellbook.\n1. Ability Cards: Rich cards — icon circle with initial, cooldown badge, element dot, mini cost bar.\n2. Effect Timeline: Gantt-style chart with durations, stacking, decay. Color by effect type.\n3. Tag Tree: Interactive tree with expand/collapse, search highlight, SVG relationship curves.\n4. Attribute Web: Interactive force-directed graph. Drag nodes. Hover shows relationship details.\n5. Damage Calculator: Visual formula breakdown (Base × Mult + Flat → Armor → Final).",
+      "checklistItemIds": [],
+      "featureNames": [
+        "Force-directed attribute web",
+        "Visual damage calculator formula"
+      ],
+      "dependsOn": [
+        "ui-gas-visual-a"
+      ],
+      "status": "completed",
+      "features": [
+        {
+          "id": "Force-directed attribute web",
+          "name": "Force-directed attribute web",
+          "status": "pass",
+          "quality": 5,
+          "lastSession": 1
+        },
+        {
+          "id": "Visual damage calculator formula",
+          "name": "Visual damage calculator formula",
+          "status": "pass",
+          "quality": 5,
+          "lastSession": 1
+        }
+      ],
+      "completedAt": 1
+    },
+    {
+      "id": "ui-combat-visual-a",
+      "moduleId": "arpg-character",
+      "label": "Combat Action Map Visual Polish (Part 1)",
+      "description": "Visual upgrade for Combat Action Map.\n1. Action Lanes: Swim-lane diagram with horizontal flows and inter-lane arrows.\n2. Sequence Diagram: UML-style — vertical lifelines, horizontal arrows, activation boxes.\n3. Feedback Tuner: Slider-based editor with grouped categories (Shake, Hitstop, Particles, Sound).\n4. Sankey: Full Sankey flow viz with proportional widths.\n5. DPS Chart: Grouped bar chart with weapon comparison. Hover for breakdown.",
+      "checklistItemIds": [],
+      "featureNames": [
+        "Swim-lane action diagram",
+        "UML sequence diagram",
+        "Slider-based feedback tuner"
+      ],
+      "dependsOn": [
+        "ui-combat-flow"
+      ],
+      "status": "completed",
+      "features": [
+        {
+          "id": "Swim-lane action diagram",
+          "name": "Swim-lane action diagram",
+          "status": "pass",
+          "quality": 4,
+          "lastSession": 1
+        },
+        {
+          "id": "UML sequence diagram",
+          "name": "UML sequence diagram",
+          "status": "pass",
+          "quality": 4,
+          "lastSession": 1
+        },
+        {
+          "id": "Slider-based feedback tuner",
+          "name": "Slider-based feedback tuner",
+          "status": "pass",
+          "quality": 4,
+          "lastSession": 1
+        }
+      ],
+      "completedAt": 1
+    },
+    {
+      "id": "ui-combat-visual-b",
+      "moduleId": "arpg-character",
+      "label": "Combat Action Map Visual Polish (Part 2)",
+      "description": "Visual upgrade for Combat Action Map.\n1. Action Lanes: Swim-lane diagram with horizontal flows and inter-lane arrows.\n2. Sequence Diagram: UML-style — vertical lifelines, horizontal arrows, activation boxes.\n3. Feedback Tuner: Slider-based editor with grouped categories (Shake, Hitstop, Particles, Sound).\n4. Sankey: Full Sankey flow viz with proportional widths.\n5. DPS Chart: Grouped bar chart with weapon comparison. Hover for breakdown.",
+      "checklistItemIds": [],
+      "featureNames": [
+        "Sankey flow visualization",
+        "Grouped DPS bar chart"
+      ],
+      "dependsOn": [
+        "ui-combat-visual-a"
+      ],
+      "status": "completed",
+      "features": [
+        {
+          "id": "Sankey flow visualization",
+          "name": "Sankey flow visualization",
+          "status": "pass",
+          "quality": 4,
+          "lastSession": 1
+        },
+        {
+          "id": "Grouped DPS bar chart",
+          "name": "Grouped DPS bar chart",
+          "status": "pass",
+          "quality": 4,
+          "lastSession": 1
+        }
+      ],
+      "completedAt": 1
+    },
+    {
+      "id": "ui-bestiary-visual",
+      "moduleId": "arpg-character",
+      "label": "Enemy Bestiary Visual Polish",
+      "description": "Visual upgrade for Enemy Bestiary.\n1. Archetype Cards: Role icon, tier glow border (gray/purple/orange/gold), stat bars with avg markers, modifier pills.\n2. Behavior Tree: Full diagram — diamond selectors, rect sequences, rounded tasks, hex decorators. Color by status. Collapsible.\n3. Formation Viz: Top-down dot formation with role-colored dots.\n4. Difficulty Curve: Line chart with shaded danger zones (too easy/target/too hard).",
+      "checklistItemIds": [],
+      "featureNames": [
+        "Enhanced archetype cards with tier glow",
+        "Behavior tree diagram with node types",
+        "Formation dot visualization",
+        "Difficulty curve with danger zones"
+      ],
+      "dependsOn": [
+        "ui-bestiary-flow"
+      ],
+      "status": "completed",
+      "features": [
+        {
+          "id": "Enhanced archetype cards with tier glow",
+          "name": "Enhanced archetype cards with tier glow",
+          "status": "pass",
+          "quality": 4,
+          "lastSession": 1
+        },
+        {
+          "id": "Behavior tree diagram with node types",
+          "name": "Behavior tree diagram with node types",
+          "status": "pass",
+          "quality": 4,
+          "lastSession": 1
+        },
+        {
+          "id": "Formation dot visualization",
+          "name": "Formation dot visualization",
+          "status": "pass",
+          "quality": 4,
+          "lastSession": 1
+        },
+        {
+          "id": "Difficulty curve with danger zones",
+          "name": "Difficulty curve with danger zones",
+          "status": "pass",
+          "quality": 4,
+          "lastSession": 1
+        }
+      ],
+      "completedAt": 1
+    },
+    {
+      "id": "ui-items-visual-a",
+      "moduleId": "arpg-character",
+      "label": "Item Catalog Visual Polish (Part 1)",
+      "description": "Visual upgrade for Item Catalog.\n1. Item Cards: RPG-style — rarity border glow, slot icon, power badge, stat list with +/- coloring, set indicator.\n2. Equipment Loadout: Paper-doll slot layout (silhouette with positions). Click opens ScalableSelector for slot type.\n3. Affix Sunburst: Enhanced with tooltips, smooth transitions, tier-colored rings.\n4. Scaling Chart: Multi-line with rarity-colored curves, hover values, confidence bands.\n5. Economy Flow: Sankey showing sources → player → sinks.",
+      "checklistItemIds": [],
+      "featureNames": [
+        "RPG-style item cards with rarity glow",
+        "Paper-doll equipment layout",
+        "Enhanced affix sunburst"
+      ],
+      "dependsOn": [
+        "ui-items-flow"
+      ],
+      "status": "completed",
+      "features": [
+        {
+          "id": "RPG-style item cards with rarity glow",
+          "name": "RPG-style item cards with rarity glow",
+          "status": "pass",
+          "quality": 4,
+          "lastSession": 1
+        },
+        {
+          "id": "Paper-doll equipment layout",
+          "name": "Paper-doll equipment layout",
+          "status": "pass",
+          "quality": 4,
+          "lastSession": 1
+        },
+        {
+          "id": "Enhanced affix sunburst",
+          "name": "Enhanced affix sunburst",
+          "status": "pass",
+          "quality": 4,
+          "lastSession": 1
+        }
+      ],
+      "completedAt": 1
+    },
+    {
+      "id": "ui-items-visual-b",
+      "moduleId": "arpg-character",
+      "label": "Item Catalog Visual Polish (Part 2)",
+      "description": "Visual upgrade for Item Catalog.\n1. Item Cards: RPG-style — rarity border glow, slot icon, power badge, stat list with +/- coloring, set indicator.\n2. Equipment Loadout: Paper-doll slot layout (silhouette with positions). Click opens ScalableSelector for slot type.\n3. Affix Sunburst: Enhanced with tooltips, smooth transitions, tier-colored rings.\n4. Scaling Chart: Multi-line with rarity-colored curves, hover values, confidence bands.\n5. Economy Flow: Sankey showing sources → player → sinks.",
+      "checklistItemIds": [],
+      "featureNames": [
+        "Multi-line scaling chart",
+        "Economy Sankey flow"
+      ],
+      "dependsOn": [
+        "ui-items-visual-a"
+      ],
+      "status": "completed",
+      "features": [
+        {
+          "id": "Multi-line scaling chart",
+          "name": "Multi-line scaling chart",
+          "status": "pass",
+          "quality": 4,
+          "lastSession": 1
+        },
+        {
+          "id": "Economy Sankey flow",
+          "name": "Economy Sankey flow",
+          "status": "pass",
+          "quality": 4,
+          "lastSession": 1
+        }
+      ],
+      "completedAt": 1
+    },
+    {
+      "id": "ui-loot-visual-a",
+      "moduleId": "arpg-character",
+      "label": "Loot Table Visual Polish (Part 1)",
+      "description": "Visual upgrade for Loot Table Visualizer.\n1. Weight Distribution: Donut chart with interactive segments and drill-down. Rarity-colored with glow.\n2. Drop Treemap: Proper nested rectangles. Rarity-colored. Size = probability. Hover for details.\n3. Monte Carlo: Histogram with distribution curve overlay. Mean/median/stddev vertical lines.\n4. Pity Timer: Circular gauge with animated fill and threshold marker.\n5. Co-occurrence: Heatmap with color scale legend. Cell hover shows frequency and conflict flag.\n6. Economy Dashboard: KPI cards at top (gold/hr, items/hr, rarity dist), charts below.",
+      "checklistItemIds": [],
+      "featureNames": [
+        "Interactive donut chart",
+        "Nested treemap visualization",
+        "Monte Carlo histogram with overlay"
+      ],
+      "dependsOn": [
+        "ui-loot-flow"
+      ],
+      "status": "completed",
+      "features": [
+        {
+          "id": "Interactive donut chart",
+          "name": "Interactive donut chart",
+          "status": "pending",
+          "quality": null,
+          "lastSession": null
+        },
+        {
+          "id": "Nested treemap visualization",
+          "name": "Nested treemap visualization",
+          "status": "pending",
+          "quality": null,
+          "lastSession": null
+        },
+        {
+          "id": "Monte Carlo histogram with overlay",
+          "name": "Monte Carlo histogram with overlay",
+          "status": "pass",
+          "quality": 5,
+          "lastSession": 1
+        }
+      ],
+      "completedAt": 1
+    },
+    {
+      "id": "ui-loot-visual-b",
+      "moduleId": "arpg-character",
+      "label": "Loot Table Visual Polish (Part 2)",
+      "description": "Visual upgrade for Loot Table Visualizer.\n1. Weight Distribution: Donut chart with interactive segments and drill-down. Rarity-colored with glow.\n2. Drop Treemap: Proper nested rectangles. Rarity-colored. Size = probability. Hover for details.\n3. Monte Carlo: Histogram with distribution curve overlay. Mean/median/stddev vertical lines.\n4. Pity Timer: Circular gauge with animated fill and threshold marker.\n5. Co-occurrence: Heatmap with color scale legend. Cell hover shows frequency and conflict flag.\n6. Economy Dashboard: KPI cards at top (gold/hr, items/hr, rarity dist), charts below.",
+      "checklistItemIds": [],
+      "featureNames": [
+        "Circular pity gauge",
+        "Enhanced co-occurrence heatmap",
+        "Economy KPI dashboard layout"
+      ],
+      "dependsOn": [
+        "ui-loot-visual-a"
+      ],
+      "status": "completed",
+      "features": [
+        {
+          "id": "Circular pity gauge",
+          "name": "Circular pity gauge",
+          "status": "pass",
+          "quality": 4,
+          "lastSession": 1
+        },
+        {
+          "id": "Enhanced co-occurrence heatmap",
+          "name": "Enhanced co-occurrence heatmap",
+          "status": "pass",
+          "quality": 4,
+          "lastSession": 1
+        },
+        {
+          "id": "Economy KPI dashboard layout",
+          "name": "Economy KPI dashboard layout",
+          "status": "pass",
+          "quality": 4,
+          "lastSession": 1
+        }
+      ],
+      "completedAt": 1
+    },
+    {
+      "id": "ui-style-audit-a",
+      "moduleId": "arpg-character",
+      "label": "Cross-Module Style Audit (Part 1)",
+      "description": "Verify visual consistency across all 7 modules.\n1. Grep for hardcoded colors, inconsistent spacing, non-standard fonts.\n2. Verify same card/header/stat style everywhere.\n3. Check tab nav looks identical across modules.\n4. Verify ScalableSelector renders consistently.\n5. Check Feature Map card sizing across modules.\n6. Run contrast check on all text/bg combinations (WCAG AA 4.5:1).\n7. Fix all deviations found.",
+      "checklistItemIds": [],
+      "featureNames": [
+        "No hardcoded colors remain",
+        "Consistent card and header styles",
+        "Tab navigation identical across modules"
+      ],
+      "dependsOn": [
+        "ui-character-visual-b",
+        "ui-animation-visual",
+        "ui-gas-visual-b",
+        "ui-combat-visual-b",
+        "ui-bestiary-visual",
+        "ui-items-visual-b",
+        "ui-loot-visual-b"
+      ],
+      "status": "completed",
+      "features": [
+        {
+          "id": "No hardcoded colors remain",
+          "name": "No hardcoded colors remain",
+          "status": "pass",
+          "quality": 4,
+          "lastSession": 1
+        },
+        {
+          "id": "Consistent card and header styles",
+          "name": "Consistent card and header styles",
+          "status": "pass",
+          "quality": 4,
+          "lastSession": 1
+        },
+        {
+          "id": "Tab navigation identical across modules",
+          "name": "Tab navigation identical across modules",
+          "status": "pass",
+          "quality": 4,
+          "lastSession": 1
+        }
+      ],
+      "completedAt": 1
+    },
+    {
+      "id": "ui-style-audit-b",
+      "moduleId": "arpg-character",
+      "label": "Cross-Module Style Audit (Part 2)",
+      "description": "Verify visual consistency across all 7 modules.\n1. Grep for hardcoded colors, inconsistent spacing, non-standard fonts.\n2. Verify same card/header/stat style everywhere.\n3. Check tab nav looks identical across modules.\n4. Verify ScalableSelector renders consistently.\n5. Check Feature Map card sizing across modules.\n6. Run contrast check on all text/bg combinations (WCAG AA 4.5:1).\n7. Fix all deviations found.",
+      "checklistItemIds": [],
+      "featureNames": [
+        "ScalableSelector consistent",
+        "Feature Map cards uniform sizing",
+        "WCAG AA contrast verified"
+      ],
+      "dependsOn": [
+        "ui-style-audit-a"
+      ],
+      "status": "pending",
+      "features": [
+        {
+          "id": "ScalableSelector consistent",
+          "name": "ScalableSelector consistent",
+          "status": "pending",
+          "quality": null,
+          "lastSession": null
+        },
+        {
+          "id": "Feature Map cards uniform sizing",
+          "name": "Feature Map cards uniform sizing",
+          "status": "pending",
+          "quality": null,
+          "lastSession": null
+        },
+        {
+          "id": "WCAG AA contrast verified",
+          "name": "WCAG AA contrast verified",
+          "status": "pending",
+          "quality": null,
+          "lastSession": null
+        }
+      ]
+    },
+    {
+      "id": "ui-responsive-audit-a",
+      "moduleId": "arpg-character",
+      "label": "Responsive & Performance Audit (Part 1)",
+      "description": "Verify responsive behavior and performance.\n1. Test at 1280px, 1440px, 1920px widths.\n2. Verify card grids reflow (2→3→4 cols).\n3. Check virtual scroll perf with 200+ items.\n4. No layout shifts on feature toggle.\n5. 100+ items render without jank.\n6. Add React.memo where needed.\n7. Modal overlays no body scroll lock issues.",
+      "checklistItemIds": [],
+      "featureNames": [
+        "Responsive at 1280/1440/1920px",
+        "Grid reflow verified",
+        "Virtual scroll perf verified"
+      ],
+      "dependsOn": [
+        "ui-style-audit-b"
+      ],
+      "status": "pending",
+      "features": [
+        {
+          "id": "Responsive at 1280/1440/1920px",
+          "name": "Responsive at 1280/1440/1920px",
+          "status": "pending",
+          "quality": null,
+          "lastSession": null
+        },
+        {
+          "id": "Grid reflow verified",
+          "name": "Grid reflow verified",
+          "status": "pending",
+          "quality": null,
+          "lastSession": null
+        },
+        {
+          "id": "Virtual scroll perf verified",
+          "name": "Virtual scroll perf verified",
+          "status": "pending",
+          "quality": null,
+          "lastSession": null
+        }
+      ]
+    },
+    {
+      "id": "ui-responsive-audit-b",
+      "moduleId": "arpg-character",
+      "label": "Responsive & Performance Audit (Part 2)",
+      "description": "Verify responsive behavior and performance.\n1. Test at 1280px, 1440px, 1920px widths.\n2. Verify card grids reflow (2→3→4 cols).\n3. Check virtual scroll perf with 200+ items.\n4. No layout shifts on feature toggle.\n5. 100+ items render without jank.\n6. Add React.memo where needed.\n7. Modal overlays no body scroll lock issues.",
+      "checklistItemIds": [],
+      "featureNames": [
+        "No layout shifts",
+        "No render jank with 100+ items",
+        "React.memo applied where needed"
+      ],
+      "dependsOn": [
+        "ui-responsive-audit-a"
+      ],
+      "status": "pending",
+      "features": [
+        {
+          "id": "No layout shifts",
+          "name": "No layout shifts",
+          "status": "pending",
+          "quality": null,
+          "lastSession": null
+        },
+        {
+          "id": "No render jank with 100+ items",
+          "name": "No render jank with 100+ items",
+          "status": "pending",
+          "quality": null,
+          "lastSession": null
+        },
+        {
+          "id": "React.memo applied where needed",
+          "name": "React.memo applied where needed",
+          "status": "pending",
+          "quality": null,
+          "lastSession": null
+        }
+      ]
+    }
+  ],
+  "iteration": 1,
+  "totalFeatures": 197,
+  "passingFeatures": 179,
+  "createdAt": "2026-04-06T08:58:58.725Z",
+  "updatedAt": "2026-04-06T11:30:56.258Z"
+}
