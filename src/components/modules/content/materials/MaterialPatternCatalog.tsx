@@ -462,7 +462,7 @@ function PatternCard({ pattern, isExpanded, onToggle, onGenerate, isGenerating, 
             <button
               onClick={(e) => { e.stopPropagation(); onGenerate(); }}
               disabled={isGenerating}
-              className="relative w-full overflow-hidden flex items-center justify-center gap-2 px-6 py-4 rounded-xl text-xs font-bold uppercase transition-all disabled:opacity-50 mt-2 group outline-none"
+              className="relative w-full overflow-hidden flex items-center justify-center gap-2 px-6 py-4 rounded-xl text-xs font-bold uppercase transition-all disabled:opacity-50 mt-2 group outline-none focus-visible:ring-1 focus-visible:ring-text/40"
               style={{
                 backgroundColor: `${catMeta.color}15`,
                 color: catMeta.color,
@@ -491,7 +491,7 @@ function PatternCard({ pattern, isExpanded, onToggle, onGenerate, isGenerating, 
               <button
                 onClick={(e) => { e.stopPropagation(); onBlenderPreview(); }}
                 disabled={!blenderConnected || isBlenderPreviewing}
-                className="relative w-full overflow-hidden flex items-center justify-center gap-2 px-6 py-3 rounded-xl text-xs font-bold uppercase transition-all disabled:opacity-40 group outline-none border border-emerald-500/40 bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20"
+                className="relative w-full overflow-hidden flex items-center justify-center gap-2 px-6 py-3 rounded-xl text-xs font-bold uppercase transition-all disabled:opacity-40 group outline-none border border-emerald-500/40 bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 focus-visible:ring-1 focus-visible:ring-text/40"
                 title={!blenderConnected ? 'Connect to Blender first' : `Preview ${pattern.name} shader in Blender`}
               >
                 {isBlenderPreviewing ? (

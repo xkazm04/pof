@@ -299,7 +299,7 @@ export function PostProcessStackBuilder({ onGenerate, isGenerating }: PostProces
         <button
           onClick={handleGenerate}
           disabled={isGenerating || enabledCount === 0}
-          className="relative w-full overflow-hidden flex items-center justify-center gap-2 px-6 py-4 rounded-xl text-xs font-bold uppercase transition-all disabled:opacity-50 mt-4 group outline-none"
+          className="relative w-full overflow-hidden flex items-center justify-center gap-2 px-6 py-4 rounded-xl text-xs font-bold uppercase transition-all disabled:opacity-50 mt-4 group outline-none focus-visible:ring-1 focus-visible:ring-text/40"
           style={{
             backgroundColor: `${MODULE_COLORS.content}15`,
             color: MODULE_COLORS.content,
@@ -327,7 +327,7 @@ export function PostProcessStackBuilder({ onGenerate, isGenerating }: PostProces
         <button
           onClick={handleBlenderPreview}
           disabled={!blenderConnected || blenderPreviewing || enabledCount === 0}
-          className="relative w-full overflow-hidden flex items-center justify-center gap-2 px-6 py-4 rounded-xl text-xs font-bold uppercase transition-all disabled:opacity-40 group outline-none border border-emerald-500/40 bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20"
+          className="relative w-full overflow-hidden flex items-center justify-center gap-2 px-6 py-4 rounded-xl text-xs font-bold uppercase transition-all disabled:opacity-40 group outline-none border border-emerald-500/40 bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 focus-visible:ring-1 focus-visible:ring-text/40"
           title={!blenderConnected ? 'Connect to Blender first' : 'Preview compositor stack in Blender'}
         >
           {blenderPreviewing ? (
