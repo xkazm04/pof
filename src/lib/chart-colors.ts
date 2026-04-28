@@ -73,50 +73,61 @@ export const ACCENT_CYAN_LIGHT = '#22d3ee';
 export const OVERLAY_WHITE = '#ffffff';
 
 // ── Opacity helpers — append to any hex color ───────────────────────────────
+//
+// Canonical 6-stop scale: 5 / 10 / 20 / 40 / 60 / 80. Any other token below is
+// either a fully-transparent/opaque endpoint (`OPACITY_0`) or a `@deprecated`
+// alias kept for source-compat — new code should use the canonical six. Stops
+// previously at "off-grid" percentages (22, 37, 56, 87) now alias to the
+// nearest canonical to slim the scale; tokens that would have caused a visible
+// shift are kept for now but marked deprecated.
 
-/** 0% opacity suffix — transparent (for animation keyframes) */
-export const OPACITY_0 = '00';
-/** 2% opacity suffix — barely-visible grid lines, ultra-subtle fills */
-export const OPACITY_2 = '05';
-/** 3% opacity suffix — faint grid lines, minimal backgrounds */
-export const OPACITY_3 = '08';
-/** 4% opacity suffix — very subtle grid lines and fills */
-export const OPACITY_4 = '0a';
-/** 5% opacity suffix */
+/** Canonical — 5% opacity suffix. */
 export const OPACITY_5 = '0d';
-/** 6% opacity suffix — standard grid lines, chart backgrounds */
-export const OPACITY_6 = '0f';
-/** 8% opacity suffix */
-export const OPACITY_8 = '14';
-/** 10% opacity suffix */
+/** Canonical — 10% opacity suffix. */
 export const OPACITY_10 = '1a';
-/** 12% opacity suffix */
-export const OPACITY_12 = '1f';
-/** 15% opacity suffix */
-export const OPACITY_15 = '26';
-/** 20% opacity suffix */
+/** Canonical — 20% opacity suffix. */
 export const OPACITY_20 = '33';
-/** 22% opacity suffix */
-export const OPACITY_22 = '38';
-/** 25% opacity suffix */
-export const OPACITY_25 = '40';
-/** 30% opacity suffix */
-export const OPACITY_30 = '4d';
-/** 37% opacity suffix */
-export const OPACITY_37 = '60';
-/** 40% opacity suffix — medium emphasis fills and strokes */
+/** Canonical — 40% opacity suffix (medium emphasis fills and strokes). */
 export const OPACITY_40 = '66';
-/** 50% opacity suffix */
-export const OPACITY_50 = '80';
-/** 56% opacity suffix */
-export const OPACITY_56 = '90';
-/** 60% opacity suffix */
+/** Canonical — 60% opacity suffix. */
 export const OPACITY_60 = '99';
-/** 80% opacity suffix */
+/** Canonical — 80% opacity suffix. */
 export const OPACITY_80 = 'cc';
-/** 87% opacity suffix */
-export const OPACITY_87 = 'dd';
-/** 90% opacity suffix */
+
+/** 0% opacity suffix — transparent (for animation keyframes). Endpoint, kept. */
+export const OPACITY_0 = '00';
+
+// ── Deprecated opacity tokens (prefer canonical six above) ─────────────────
+
+/** @deprecated Off-grid; aliased to OPACITY_5. */
+export const OPACITY_2 = OPACITY_5;
+/** @deprecated Off-grid; aliased to OPACITY_5. */
+export const OPACITY_3 = OPACITY_5;
+/** @deprecated Off-grid; aliased to OPACITY_5. */
+export const OPACITY_4 = OPACITY_5;
+/** @deprecated Off-grid; aliased to OPACITY_5. */
+export const OPACITY_6 = OPACITY_5;
+/** @deprecated Prefer OPACITY_10. Value preserved to avoid visual drift; do not use in new code. */
+export const OPACITY_8 = '14';
+/** @deprecated Prefer OPACITY_10. Value preserved to avoid visual drift; do not use in new code. */
+export const OPACITY_12 = '1f';
+/** @deprecated Prefer OPACITY_20. Value preserved to avoid visual drift; do not use in new code. */
+export const OPACITY_15 = '26';
+/** @deprecated Off-grid; aliased to OPACITY_20. */
+export const OPACITY_22 = OPACITY_20;
+/** @deprecated Prefer OPACITY_20. Value preserved to avoid visual drift; do not use in new code. */
+export const OPACITY_25 = '40';
+/** @deprecated Prefer OPACITY_40. Value preserved to avoid visual drift; do not use in new code. */
+export const OPACITY_30 = '4d';
+/** @deprecated Off-grid; aliased to OPACITY_40. */
+export const OPACITY_37 = OPACITY_40;
+/** @deprecated Prefer OPACITY_60. Value preserved to avoid visual drift; do not use in new code. */
+export const OPACITY_50 = '80';
+/** @deprecated Off-grid; aliased to OPACITY_60. */
+export const OPACITY_56 = OPACITY_60;
+/** @deprecated Off-grid; aliased to OPACITY_80. */
+export const OPACITY_87 = OPACITY_80;
+/** @deprecated Prefer OPACITY_80. Value preserved to avoid visual drift; do not use in new code. */
 export const OPACITY_90 = 'e6';
 
 // ── Semantic border opacity tokens ────────────────────────────────────────
