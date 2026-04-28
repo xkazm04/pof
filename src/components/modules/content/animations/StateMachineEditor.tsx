@@ -16,6 +16,7 @@ import { tryApiFetch } from '@/lib/api-utils';
 import { nlaStateMachineScript } from '@/lib/blender-mcp/scripts/nla-state-machine';
 import type { ExecuteOutput } from '@/lib/blender-mcp/types';
 import { useBlenderMCPStore } from '@/stores/blenderMCPStore';
+import { computeEdgeGeometry } from '@/components/ui/svg/graph-edges';
 
 const EDITOR_ACCENT = ACCENT_VIOLET;
 
@@ -785,25 +786,10 @@ export function StateMachineEditor() {
               // Offset for bidirectional edges
               const reverseExists = transitions.some((r) => r.from === t.to && r.to === t.from);
               const isForward = t.from < t.to;
-              const perpOffset = reverseExists ? (isForward ? -1.5 : 1.5) : 0;
 
-              const dx = to.x - from.x;
-              const dy = to.y - from.y;
-              const dist = Math.sqrt(dx * dx + dy * dy);
-              if (dist === 0) return null;
-              const nx = dx / dist;
-              const ny = dy / dist;
-              const px = -ny;
-              const py = nx;
-              const edgeOffset = 8;
-
-              const x1 = from.x + nx * edgeOffset + px * perpOffset;
-              const y1 = from.y + ny * edgeOffset + py * perpOffset;
-              const x2 = to.x - nx * edgeOffset + px * perpOffset;
-              const y2 = to.y - ny * edgeOffset + py * perpOffset;
-
-              const midX = (x1 + x2) / 2;
-              const midY = (y1 + y2) / 2;
+              const geom = computeEdgeGeometry(from, to, { reverseExists, isForward });
+              if (!geom) return null;
+              const { x1, y1, x2, y2, midX, midY } = geom;
 
               const strokeColor = isSelected ? ACCENT_CYAN : `${EDITOR_ACCENT}40`;
               const strokeWidth = isSelected ? 2.5 : 1.5;

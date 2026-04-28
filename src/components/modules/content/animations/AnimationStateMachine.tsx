@@ -20,6 +20,7 @@ import { tryApiFetch } from '@/lib/api-utils';
 import { nlaStateMachineScript } from '@/lib/blender-mcp/scripts/nla-state-machine';
 import type { ExecuteOutput } from '@/lib/blender-mcp/types';
 import { logger } from '@/lib/logger';
+import { computeEdgeGeometry } from '@/components/ui/svg/graph-edges';
 
 const ANIM_ACCENT = ACCENT_VIOLET;
 
@@ -704,25 +705,10 @@ export function AnimationStateMachine({ onSelectState, isRunning, activeStateId 
 
             const reverseExists = displayTransitions.some((t) => t.from === to && t.to === from);
             const isForward = from < to;
-            const perpOffset = reverseExists ? (isForward ? -1.5 : 1.5) : 0;
 
-            const dx = toNode.x - fromNode.x;
-            const dy = toNode.y - fromNode.y;
-            const dist = Math.sqrt(dx * dx + dy * dy);
-            if (dist === 0) return null;
-            const nx = dx / dist;
-            const ny = dy / dist;
-            const px = -ny;
-            const py = nx;
-            const edgeOffset = 8;
-
-            const x1 = fromNode.x + nx * edgeOffset + px * perpOffset;
-            const y1 = fromNode.y + ny * edgeOffset + py * perpOffset;
-            const x2 = toNode.x - nx * edgeOffset + px * perpOffset;
-            const y2 = toNode.y - ny * edgeOffset + py * perpOffset;
-
-            const midX = (x1 + x2) / 2;
-            const midY = (y1 + y2) / 2;
+            const geom = computeEdgeGeometry(fromNode, toNode, { reverseExists, isForward });
+            if (!geom) return null;
+            const { x1, y1, x2, y2, midX, midY } = geom;
             const ruleText = rule ?? transitionRuleMap.get(edgeKey) ?? null;
 
             let strokeColor = bothDone ? `${STATUS_SUCCESS}50` : `${ANIM_ACCENT}30`;

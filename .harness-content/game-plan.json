@@ -1,0 +1,807 @@
+{
+  "game": "PoF-Content",
+  "projectPath": "C:/Users/kazda/kiro/pof",
+  "ueVersion": "5.7.3",
+  "areas": [
+    {
+      "id": "content-feature-map-config",
+      "moduleId": "animations",
+      "label": "Add Content Modules to Feature Map Config",
+      "description": "Add all 6 content modules to src/components/modules/core-engine/unique-tabs/feature-map-config.ts.\nDefine sections for each:\n- animations: Setup (anim-bp, locomotion), Montages (attacks, notifies), Combos (choreographer, chains)\n- audio: Pipeline (manager, spatial), Zones (reverb, ambient), Events (catalog, triggers)\n- level-design: Layout (blockout, rooms), Streaming (zones, LOD), Procedural (pcg, generation)\n- materials: Master (base, functions), Instances (dynamic, MPC), Effects (post-process, HLSL)\n- models: Pipeline (import, FBX), Assets (LOD, collision), Validation (Nanite, slots)\n- ui-hud: Menus (main, settings), HUD (health, abilities), Inventory (grid, slots), Polish (damage-numbers, effects)\nRegister with getTabGroups() so FeatureMapTab works for content modules.",
+      "checklistItemIds": [],
+      "featureNames": [
+        "animations sections defined in feature-map-config",
+        "audio sections defined",
+        "level-design sections defined",
+        "materials sections defined"
+      ],
+      "dependsOn": [],
+      "status": "completed",
+      "features": [
+        {
+          "id": "animations sections defined in feature-map-config",
+          "name": "animations sections defined in feature-map-config",
+          "status": "pass",
+          "quality": 5,
+          "lastSession": 1
+        },
+        {
+          "id": "audio sections defined",
+          "name": "audio sections defined",
+          "status": "pass",
+          "quality": 5,
+          "lastSession": 1
+        },
+        {
+          "id": "level-design sections defined",
+          "name": "level-design sections defined",
+          "status": "pass",
+          "quality": 5,
+          "lastSession": 1
+        },
+        {
+          "id": "materials sections defined",
+          "name": "materials sections defined",
+          "status": "pass",
+          "quality": 5,
+          "lastSession": 1
+        }
+      ],
+      "completedAt": 1
+    },
+    {
+      "id": "content-feature-map-config-b",
+      "moduleId": "animations",
+      "label": "Add Content Feature Map Config (Part 2)",
+      "description": "Continue adding content modules to feature-map-config.ts:\n- models sections defined\n- ui-hud sections defined\nVerify getTabGroups() returns correct groups for all 6 content modules.\nAdd FeatureMapTab as a tab in each content module's view component.",
+      "checklistItemIds": [],
+      "featureNames": [
+        "models sections defined",
+        "ui-hud sections defined",
+        "FeatureMapTab integrated in all 6 content views"
+      ],
+      "dependsOn": [
+        "content-feature-map-config"
+      ],
+      "status": "completed",
+      "features": [
+        {
+          "id": "models sections defined",
+          "name": "models sections defined",
+          "status": "pass",
+          "quality": 5,
+          "lastSession": 1
+        },
+        {
+          "id": "ui-hud sections defined",
+          "name": "ui-hud sections defined",
+          "status": "pass",
+          "quality": 5,
+          "lastSession": 1
+        },
+        {
+          "id": "FeatureMapTab integrated in all 6 content views",
+          "name": "FeatureMapTab integrated in all 6 content views",
+          "status": "pending",
+          "quality": null,
+          "lastSession": null
+        }
+      ],
+      "completedAt": 1
+    },
+    {
+      "id": "content-design-consistency",
+      "moduleId": "animations",
+      "label": "Apply Design System to Content Modules",
+      "description": "Audit all 6 content modules for design system compliance.\nAll content module views should use:\n- BlueprintPanel from _design.tsx for card containers\n- SectionHeader for section labels\n- Colors from chart-colors.ts (no hardcoded hex)\n- Consistent typography: mono headers, sans body, mono stats\n- withOpacity() for all color manipulation\n- ACCENT color from MODULE_COLORS.content for all content modules\nRead each view's main component and fix design system violations.\nFocus on the top-level layout and headers, not deep component internals.",
+      "checklistItemIds": [],
+      "featureNames": [
+        "AnimationsView uses design system components",
+        "AudioView uses design system components",
+        "LevelDesignView uses design system components",
+        "MaterialsView uses design system components"
+      ],
+      "dependsOn": [
+        "content-feature-map-config-b"
+      ],
+      "status": "completed",
+      "features": [
+        {
+          "id": "AnimationsView uses design system components",
+          "name": "AnimationsView uses design system components",
+          "status": "pass",
+          "quality": 4,
+          "lastSession": 1
+        },
+        {
+          "id": "AudioView uses design system components",
+          "name": "AudioView uses design system components",
+          "status": "pass",
+          "quality": 4,
+          "lastSession": 1
+        },
+        {
+          "id": "LevelDesignView uses design system components",
+          "name": "LevelDesignView uses design system components",
+          "status": "pass",
+          "quality": 4,
+          "lastSession": 1
+        },
+        {
+          "id": "MaterialsView uses design system components",
+          "name": "MaterialsView uses design system components",
+          "status": "pass",
+          "quality": 4,
+          "lastSession": 1
+        }
+      ],
+      "completedAt": 1
+    },
+    {
+      "id": "content-animations-scaling",
+      "moduleId": "animations",
+      "label": "Animations Module Scaling",
+      "description": "AnimationStateMachine.tsx and AnimationChecklist.tsx need to handle 100+ animations.\n1. Add search/filter to the state machine view for finding states by name\n2. Add pagination or virtual scroll to the checklist (currently shows all items)\n3. Add grouping for montages by category (Attack, Dodge, HitReact, etc.)\n4. Combo choreographer should support filtering combos by weapon type",
+      "checklistItemIds": [],
+      "featureNames": [
+        "State machine view has search filter",
+        "Checklist supports pagination for 100+ items",
+        "Montages grouped by category"
+      ],
+      "dependsOn": [
+        "content-design-consistency"
+      ],
+      "status": "completed",
+      "features": [
+        {
+          "id": "State machine view has search filter",
+          "name": "State machine view has search filter",
+          "status": "pass",
+          "quality": 4,
+          "lastSession": 1
+        },
+        {
+          "id": "Checklist supports pagination for 100+ items",
+          "name": "Checklist supports pagination for 100+ items",
+          "status": "pass",
+          "quality": 4,
+          "lastSession": 1
+        },
+        {
+          "id": "Montages grouped by category",
+          "name": "Montages grouped by category",
+          "status": "pass",
+          "quality": 4,
+          "lastSession": 1
+        }
+      ],
+      "completedAt": 1
+    },
+    {
+      "id": "content-animations-flow",
+      "moduleId": "animations",
+      "label": "Animations Module Tab Flow",
+      "description": "Restructure tabs for logical flow:\nCurrent: Setup Guide, State Machine, Combo Designer, Ask Claude\nNew: Features → Setup Guide → State Machine → Combos → Ask Claude\nNarrative: \"Configure → Define States → Chain Combos → Explore\"\nAdd breadcrumb flow bar. Add one-line subtitle per tab.",
+      "checklistItemIds": [],
+      "featureNames": [
+        "Tab order restructured with narrative flow",
+        "Breadcrumb bar added",
+        "Tab subtitles describe pipeline stage"
+      ],
+      "dependsOn": [
+        "content-animations-scaling"
+      ],
+      "status": "completed",
+      "features": [
+        {
+          "id": "Tab order restructured with narrative flow",
+          "name": "Tab order restructured with narrative flow",
+          "status": "pass",
+          "quality": 5,
+          "lastSession": 1
+        },
+        {
+          "id": "Breadcrumb bar added",
+          "name": "Breadcrumb bar added",
+          "status": "pending",
+          "quality": null,
+          "lastSession": null
+        },
+        {
+          "id": "Tab subtitles describe pipeline stage",
+          "name": "Tab subtitles describe pipeline stage",
+          "status": "pass",
+          "quality": 5,
+          "lastSession": 1
+        }
+      ],
+      "completedAt": 1
+    },
+    {
+      "id": "content-animations-visual",
+      "moduleId": "animations",
+      "label": "Animations Module Visual Polish",
+      "description": "Upgrade visual quality of animation tools:\n1. State machine: nodes should have rounded rects with glow, animated transition arrows\n2. Combo choreographer: timeline with hit windows as colored blocks\n3. Setup checklist: progress indicators with NeonBar per section\n4. Use consistent ACCENT color from MODULE_COLORS.content",
+      "checklistItemIds": [],
+      "featureNames": [
+        "State machine nodes with styled SVG",
+        "Combo timeline with colored windows",
+        "Checklist progress bars"
+      ],
+      "dependsOn": [
+        "content-animations-flow"
+      ],
+      "status": "completed",
+      "features": [
+        {
+          "id": "State machine nodes with styled SVG",
+          "name": "State machine nodes with styled SVG",
+          "status": "pass",
+          "quality": 4,
+          "lastSession": 1
+        },
+        {
+          "id": "Combo timeline with colored windows",
+          "name": "Combo timeline with colored windows",
+          "status": "pass",
+          "quality": 4,
+          "lastSession": 1
+        },
+        {
+          "id": "Checklist progress bars",
+          "name": "Checklist progress bars",
+          "status": "pass",
+          "quality": 4,
+          "lastSession": 1
+        }
+      ],
+      "completedAt": 1
+    },
+    {
+      "id": "content-audio-scaling",
+      "moduleId": "animations",
+      "label": "Audio Module Scaling",
+      "description": "Audio module (AudioView.tsx + 6 child components) needs to handle 100+ audio events.\n1. AudioEventCatalog: add search/filter and virtual scroll for large event lists\n2. AudioScenePainter: support 50+ zones with grouping by area\n3. Add pagination to zone and emitter lists",
+      "checklistItemIds": [],
+      "featureNames": [
+        "Event catalog has search and virtual scroll",
+        "Scene painter groups zones by area",
+        "Zone/emitter lists paginated"
+      ],
+      "dependsOn": [
+        "content-design-consistency"
+      ],
+      "status": "completed",
+      "features": [
+        {
+          "id": "Event catalog has search and virtual scroll",
+          "name": "Event catalog has search and virtual scroll",
+          "status": "pass",
+          "quality": 4,
+          "lastSession": 1
+        },
+        {
+          "id": "Scene painter groups zones by area",
+          "name": "Scene painter groups zones by area",
+          "status": "pass",
+          "quality": 4,
+          "lastSession": 1
+        },
+        {
+          "id": "Zone/emitter lists paginated",
+          "name": "Zone/emitter lists paginated",
+          "status": "pass",
+          "quality": 5,
+          "lastSession": 1
+        }
+      ],
+      "completedAt": 1
+    },
+    {
+      "id": "content-audio-flow",
+      "moduleId": "animations",
+      "label": "Audio Module Tab Flow",
+      "description": "Restructure audio tabs for logical flow.\nEnsure tabs follow: Features → Pipeline → Scene Painter → Events → Code Gen\nNarrative: \"Design Pipeline → Paint Scenes → Define Events → Generate Code\"\nAdd breadcrumb bar and subtitles.",
+      "checklistItemIds": [],
+      "featureNames": [
+        "Tab order follows pipeline narrative",
+        "Breadcrumb bar added",
+        "Tab subtitles added"
+      ],
+      "dependsOn": [
+        "content-audio-scaling"
+      ],
+      "status": "completed",
+      "features": [
+        {
+          "id": "Tab order follows pipeline narrative",
+          "name": "Tab order follows pipeline narrative",
+          "status": "pending",
+          "quality": null,
+          "lastSession": null
+        },
+        {
+          "id": "Breadcrumb bar added",
+          "name": "Breadcrumb bar added",
+          "status": "pending",
+          "quality": null,
+          "lastSession": null
+        },
+        {
+          "id": "Tab subtitles added",
+          "name": "Tab subtitles added",
+          "status": "pass",
+          "quality": 5,
+          "lastSession": 1
+        }
+      ],
+      "completedAt": 1
+    },
+    {
+      "id": "content-audio-visual",
+      "moduleId": "animations",
+      "label": "Audio Module Visual Polish",
+      "description": "Upgrade audio module visuals:\n1. Pipeline diagram: proper flow visualization with node types\n2. Spatial painter: enhanced zone visualization with opacity/radius indicators\n3. Event catalog: card-based layout with type-colored badges\n4. Consistent MODULE_COLORS.content accent",
+      "checklistItemIds": [],
+      "featureNames": [
+        "Pipeline has styled flow nodes",
+        "Spatial painter enhanced zones",
+        "Event catalog card-based layout"
+      ],
+      "dependsOn": [
+        "content-audio-flow"
+      ],
+      "status": "completed",
+      "features": [
+        {
+          "id": "Pipeline has styled flow nodes",
+          "name": "Pipeline has styled flow nodes",
+          "status": "pass",
+          "quality": 5,
+          "lastSession": 1
+        },
+        {
+          "id": "Spatial painter enhanced zones",
+          "name": "Spatial painter enhanced zones",
+          "status": "pass",
+          "quality": 5,
+          "lastSession": 1
+        },
+        {
+          "id": "Event catalog card-based layout",
+          "name": "Event catalog card-based layout",
+          "status": "pass",
+          "quality": 5,
+          "lastSession": 1
+        }
+      ],
+      "completedAt": 1
+    },
+    {
+      "id": "content-level-scaling",
+      "moduleId": "animations",
+      "label": "Level Design Module Scaling",
+      "description": "Level design (8 files, 3805 LOC) needs to handle 50+ rooms and zones.\n1. LevelFlowEditor: support 50+ rooms with auto-layout and search\n2. StreamingZonePlanner: paginate zone list, group by area\n3. ProceduralLevelWizard: handle large generation parameters",
+      "checklistItemIds": [],
+      "featureNames": [
+        "Flow editor supports 50+ rooms with search",
+        "Streaming planner paginated and grouped",
+        "Procedural wizard handles large params"
+      ],
+      "dependsOn": [
+        "content-design-consistency"
+      ],
+      "status": "completed",
+      "features": [
+        {
+          "id": "Flow editor supports 50+ rooms with search",
+          "name": "Flow editor supports 50+ rooms with search",
+          "status": "pass",
+          "quality": 4,
+          "lastSession": 1
+        },
+        {
+          "id": "Streaming planner paginated and grouped",
+          "name": "Streaming planner paginated and grouped",
+          "status": "pass",
+          "quality": 4,
+          "lastSession": 1
+        },
+        {
+          "id": "Procedural wizard handles large params",
+          "name": "Procedural wizard handles large params",
+          "status": "pass",
+          "quality": 4,
+          "lastSession": 1
+        }
+      ],
+      "completedAt": 1
+    },
+    {
+      "id": "content-level-flow",
+      "moduleId": "animations",
+      "label": "Level Design Module Tab Flow",
+      "description": "Restructure level design tabs for logical flow.\nCurrent: overview, roadmap, flow, procgen, narrative, sync, arc, streaming (8 tabs — too many)\nConsolidate to 5: Features → Layout → Streaming → Procedural → Difficulty\nMove narrative into Layout. Move sync into Layout. Merge arc into Difficulty.\nAdd breadcrumb and subtitles.",
+      "checklistItemIds": [],
+      "featureNames": [
+        "Tabs consolidated from 8 to 5",
+        "Breadcrumb flow bar added",
+        "Tab subtitles describe pipeline stage"
+      ],
+      "dependsOn": [
+        "content-level-scaling"
+      ],
+      "status": "completed",
+      "features": [
+        {
+          "id": "Tabs consolidated from 8 to 5",
+          "name": "Tabs consolidated from 8 to 5",
+          "status": "pending",
+          "quality": null,
+          "lastSession": null
+        },
+        {
+          "id": "Breadcrumb flow bar added",
+          "name": "Breadcrumb flow bar added",
+          "status": "pending",
+          "quality": null,
+          "lastSession": null
+        },
+        {
+          "id": "Tab subtitles describe pipeline stage",
+          "name": "Tab subtitles describe pipeline stage",
+          "status": "pass",
+          "quality": 5,
+          "lastSession": 1
+        }
+      ],
+      "completedAt": 1
+    },
+    {
+      "id": "content-level-visual",
+      "moduleId": "animations",
+      "label": "Level Design Module Visual Polish",
+      "description": "Upgrade level design visuals:\n1. Room flow graph: styled node graph with room-type icons\n2. Streaming zones: visual map with zone boundaries\n3. Difficulty arc: line chart with shaded target zone\n4. Consistent MODULE_COLORS.content accent",
+      "checklistItemIds": [],
+      "featureNames": [
+        "Room flow graph styled with icons",
+        "Streaming zones visual map",
+        "Difficulty chart with target zones"
+      ],
+      "dependsOn": [
+        "content-level-flow"
+      ],
+      "status": "completed",
+      "features": [
+        {
+          "id": "Room flow graph styled with icons",
+          "name": "Room flow graph styled with icons",
+          "status": "pass",
+          "quality": 4,
+          "lastSession": 1
+        },
+        {
+          "id": "Streaming zones visual map",
+          "name": "Streaming zones visual map",
+          "status": "pass",
+          "quality": 4,
+          "lastSession": 1
+        },
+        {
+          "id": "Difficulty chart with target zones",
+          "name": "Difficulty chart with target zones",
+          "status": "pass",
+          "quality": 4,
+          "lastSession": 1
+        }
+      ],
+      "completedAt": 1
+    },
+    {
+      "id": "content-materials-scaling",
+      "moduleId": "animations",
+      "label": "Materials Module Scaling",
+      "description": "Materials module (6 files, 2594 LOC) needs to handle 100+ materials.\n1. MaterialPatternCatalog: search, filter by type, virtual scroll\n2. MaterialLayerGraph: support 20+ layers with zoom/pan\n3. MaterialParameterConfigurator: paginate parameters",
+      "checklistItemIds": [],
+      "featureNames": [
+        "Pattern catalog has search and virtual scroll",
+        "Layer graph supports 20+ layers",
+        "Parameter list paginated"
+      ],
+      "dependsOn": [
+        "content-design-consistency"
+      ],
+      "status": "completed",
+      "features": [
+        {
+          "id": "Pattern catalog has search and virtual scroll",
+          "name": "Pattern catalog has search and virtual scroll",
+          "status": "pass",
+          "quality": 5,
+          "lastSession": 1
+        },
+        {
+          "id": "Layer graph supports 20+ layers",
+          "name": "Layer graph supports 20+ layers",
+          "status": "pass",
+          "quality": 5,
+          "lastSession": 1
+        },
+        {
+          "id": "Parameter list paginated",
+          "name": "Parameter list paginated",
+          "status": "pass",
+          "quality": 5,
+          "lastSession": 1
+        }
+      ],
+      "completedAt": 1
+    },
+    {
+      "id": "content-materials-visual",
+      "moduleId": "animations",
+      "label": "Materials Module Flow & Visual Polish",
+      "description": "Restructure tabs and polish visuals:\nTab flow: Features → Patterns → Layer Graph → Parameters → Post-Process → Style Transfer\n1. Pattern catalog: card-based grid with material type badges\n2. Layer graph: proper node graph with connection lines\n3. Post-process: stack visualization with reorderable stages\n4. Add breadcrumb and subtitles",
+      "checklistItemIds": [],
+      "featureNames": [
+        "Tab flow restructured with breadcrumb",
+        "Pattern catalog card-based",
+        "Post-process stack visualization"
+      ],
+      "dependsOn": [
+        "content-materials-scaling"
+      ],
+      "status": "completed",
+      "features": [
+        {
+          "id": "Tab flow restructured with breadcrumb",
+          "name": "Tab flow restructured with breadcrumb",
+          "status": "pass",
+          "quality": 4,
+          "lastSession": 1
+        },
+        {
+          "id": "Pattern catalog card-based",
+          "name": "Pattern catalog card-based",
+          "status": "pass",
+          "quality": 4,
+          "lastSession": 1
+        },
+        {
+          "id": "Post-process stack visualization",
+          "name": "Post-process stack visualization",
+          "status": "pass",
+          "quality": 4,
+          "lastSession": 1
+        }
+      ],
+      "completedAt": 1
+    },
+    {
+      "id": "content-models-upgrade",
+      "moduleId": "animations",
+      "label": "Models Module Scaling & Polish",
+      "description": "Models module is the smallest (3 files, 940 LOC). Upgrade in one pass:\n1. AssetInventory: add search, filter by type (static mesh, skeletal, etc.), virtual scroll for 200+ assets\n2. AssetPipelineDiagram: enhance with styled flow nodes and status indicators\n3. Add tab flow: Features → Asset Inventory → Import Pipeline\n4. Add breadcrumb and subtitles\n5. Apply design system (BlueprintPanel, SectionHeader, MODULE_COLORS.content)",
+      "checklistItemIds": [],
+      "featureNames": [
+        "Asset inventory search and virtual scroll",
+        "Pipeline diagram styled flow nodes",
+        "Tab flow with breadcrumb",
+        "Design system applied"
+      ],
+      "dependsOn": [
+        "content-design-consistency"
+      ],
+      "status": "completed",
+      "features": [
+        {
+          "id": "Asset inventory search and virtual scroll",
+          "name": "Asset inventory search and virtual scroll",
+          "status": "pass",
+          "quality": 5,
+          "lastSession": 1
+        },
+        {
+          "id": "Pipeline diagram styled flow nodes",
+          "name": "Pipeline diagram styled flow nodes",
+          "status": "pass",
+          "quality": 5,
+          "lastSession": 1
+        },
+        {
+          "id": "Tab flow with breadcrumb",
+          "name": "Tab flow with breadcrumb",
+          "status": "pass",
+          "quality": 5,
+          "lastSession": 1
+        },
+        {
+          "id": "Design system applied",
+          "name": "Design system applied",
+          "status": "pass",
+          "quality": 5,
+          "lastSession": 1
+        }
+      ],
+      "completedAt": 1
+    },
+    {
+      "id": "content-uihud-scaling",
+      "moduleId": "animations",
+      "label": "UI/HUD Module Scaling",
+      "description": "UI/HUD module (8 files, 4108 LOC — largest content module).\n1. InventoryGridDesigner: support 100+ item slots with virtual scroll\n2. MenuFlowDiagram: support 30+ screens with search\n3. HudThemeEditor: paginate theme parameters\n4. DamageNumberPalette: handle 20+ number styles",
+      "checklistItemIds": [],
+      "featureNames": [
+        "Inventory designer virtual scrolls 100+ slots",
+        "Menu flow supports 30+ screens with search",
+        "Theme editor paginated"
+      ],
+      "dependsOn": [
+        "content-design-consistency"
+      ],
+      "status": "completed",
+      "features": [
+        {
+          "id": "Inventory designer virtual scrolls 100+ slots",
+          "name": "Inventory designer virtual scrolls 100+ slots",
+          "status": "pass",
+          "quality": 4,
+          "lastSession": 1
+        },
+        {
+          "id": "Menu flow supports 30+ screens with search",
+          "name": "Menu flow supports 30+ screens with search",
+          "status": "pass",
+          "quality": 4,
+          "lastSession": 1
+        },
+        {
+          "id": "Theme editor paginated",
+          "name": "Theme editor paginated",
+          "status": "pass",
+          "quality": 4,
+          "lastSession": 1
+        }
+      ],
+      "completedAt": 1
+    },
+    {
+      "id": "content-uihud-flow",
+      "moduleId": "animations",
+      "label": "UI/HUD Module Tab Flow",
+      "description": "Restructure UI/HUD tabs for logical flow.\nTab flow: Features → Menus → HUD → Inventory → Polish\nNarrative: \"Design Menus → Build HUD → Create Inventory → Polish Effects\"\nMerge damage number tools into Polish tab.\nAdd breadcrumb and subtitles.",
+      "checklistItemIds": [],
+      "featureNames": [
+        "Tab order follows UI development narrative",
+        "Breadcrumb flow bar added",
+        "Damage number tools merged into Polish"
+      ],
+      "dependsOn": [
+        "content-uihud-scaling"
+      ],
+      "status": "completed",
+      "features": [
+        {
+          "id": "Tab order follows UI development narrative",
+          "name": "Tab order follows UI development narrative",
+          "status": "pass",
+          "quality": 4,
+          "lastSession": 1
+        },
+        {
+          "id": "Breadcrumb flow bar added",
+          "name": "Breadcrumb flow bar added",
+          "status": "pass",
+          "quality": 4,
+          "lastSession": 1
+        },
+        {
+          "id": "Damage number tools merged into Polish",
+          "name": "Damage number tools merged into Polish",
+          "status": "pass",
+          "quality": 4,
+          "lastSession": 1
+        }
+      ],
+      "completedAt": 1
+    },
+    {
+      "id": "content-uihud-visual",
+      "moduleId": "animations",
+      "label": "UI/HUD Module Visual Polish",
+      "description": "Upgrade UI/HUD visuals:\n1. Menu flow: proper flowchart with screen-type icons\n2. Inventory grid: visual slot layout with drag preview\n3. HUD theme: live preview panel with parameter sliders\n4. Damage numbers: physics simulation with visual tuning",
+      "checklistItemIds": [],
+      "featureNames": [
+        "Menu flow chart with screen icons",
+        "Inventory grid visual layout",
+        "HUD theme live preview"
+      ],
+      "dependsOn": [
+        "content-uihud-flow"
+      ],
+      "status": "completed",
+      "features": [
+        {
+          "id": "Menu flow chart with screen icons",
+          "name": "Menu flow chart with screen icons",
+          "status": "pass",
+          "quality": 4,
+          "lastSession": 1
+        },
+        {
+          "id": "Inventory grid visual layout",
+          "name": "Inventory grid visual layout",
+          "status": "pass",
+          "quality": 4,
+          "lastSession": 1
+        },
+        {
+          "id": "HUD theme live preview",
+          "name": "HUD theme live preview",
+          "status": "pass",
+          "quality": 4,
+          "lastSession": 1
+        }
+      ],
+      "completedAt": 1
+    },
+    {
+      "id": "content-style-audit",
+      "moduleId": "animations",
+      "label": "Content Module Style Audit",
+      "description": "Verify visual consistency across all 6 content modules.\n1. All modules use MODULE_COLORS.content accent consistently\n2. All use BlueprintPanel, SectionHeader from design system\n3. No hardcoded hex colors\n4. Typography hierarchy consistent with core-engine modules\n5. Feature Map tab works for all modules\n6. Fix any deviations found",
+      "checklistItemIds": [],
+      "featureNames": [
+        "Consistent accent color across all 6 modules",
+        "Design system components used everywhere",
+        "No hardcoded colors",
+        "Feature Map functional for all modules"
+      ],
+      "dependsOn": [
+        "content-animations-visual",
+        "content-audio-visual",
+        "content-level-visual",
+        "content-materials-visual",
+        "content-models-upgrade",
+        "content-uihud-visual"
+      ],
+      "status": "completed",
+      "features": [
+        {
+          "id": "Consistent accent color across all 6 modules",
+          "name": "Consistent accent color across all 6 modules",
+          "status": "pass",
+          "quality": 4,
+          "lastSession": 1
+        },
+        {
+          "id": "Design system components used everywhere",
+          "name": "Design system components used everywhere",
+          "status": "pass",
+          "quality": 4,
+          "lastSession": 1
+        },
+        {
+          "id": "No hardcoded colors",
+          "name": "No hardcoded colors",
+          "status": "pass",
+          "quality": 4,
+          "lastSession": 1
+        },
+        {
+          "id": "Feature Map functional for all modules",
+          "name": "Feature Map functional for all modules",
+          "status": "pass",
+          "quality": 4,
+          "lastSession": 1
+        }
+      ],
+      "completedAt": 1
+    }
+  ],
+  "iteration": 1,
+  "totalFeatures": 61,
+  "passingFeatures": 55,
+  "createdAt": "2026-04-06T12:38:16.402Z",
+  "updatedAt": "2026-04-06T14:25:36.563Z"
+}
