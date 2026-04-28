@@ -13,7 +13,7 @@ import {
 } from 'lucide-react';
 import type { ChecklistItem } from './useProjectScan';
 import { UI_TIMEOUTS } from '@/lib/constants';
-import { WizardButton } from './WizardButton';
+import { Button } from '@/components/ui/Button';
 
 const INSTALL_URLS: Record<string, { url: string; label: string }> = {
   engine: { url: 'https://www.unrealengine.com/download', label: 'Get Epic Launcher' },
@@ -183,18 +183,18 @@ export function StatusChecklist({
       {/* Fix All Missing Tools */}
       {missingToolCount > 0 && (
         <div className="pt-3 mt-2">
-          <WizardButton
-            variant="info"
+          <Button
+            intent="info"
             size="sm"
             onClick={onFixAllMissing}
             disabled={scanning}
             loading={isBootstrapping}
             loadingLabel="Installing..."
-            icon={<Wrench className="w-3 h-3" />}
+            leftIcon={<Wrench className="w-3 h-3" />}
             className="w-full justify-center"
           >
             Fix {missingToolCount} Missing
-          </WizardButton>
+          </Button>
         </div>
       )}
 
@@ -246,16 +246,16 @@ export function StatusChecklist({
                 </p>
               )}
               <div className="flex items-center gap-1.5">
-                <WizardButton
-                  variant="info"
+                <Button
+                  intent="info"
                   size="sm"
                   onClick={handleImportManifest}
                   disabled={jsonValidation.status !== 'valid' || jsonValidation.missingCount === 0 || isBootstrapping}
-                  icon={<Wrench className="w-3 h-3" />}
+                  leftIcon={<Wrench className="w-3 h-3" />}
                   className="flex-1 justify-center"
                 >
                   Install from Manifest
-                </WizardButton>
+                </Button>
                 <button
                   onClick={handleFormatJson}
                   disabled={jsonValidation.status !== 'valid'}

@@ -5,7 +5,7 @@ import { Hammer } from 'lucide-react';
 import { useProjectStore } from '@/stores/projectStore';
 import type { DetectedEngine } from './useProjectScan';
 import { SurfaceCard } from '@/components/ui/SurfaceCard';
-import { WizardButton } from './WizardButton';
+import { Button } from '@/components/ui/Button';
 
 interface BuildVerifyPanelProps {
   engines: DetectedEngine[];
@@ -109,16 +109,16 @@ STEP 4 — Report: One summary table. If Source/ was created, mention it. Show b
           Health-check your SDK toolchain and compile the project with UnrealBuildTool to
           verify everything is wired correctly.
         </p>
-        <WizardButton
-          variant="warning"
+        <Button
+          intent="warning"
           onClick={handleBuild}
           disabled={engines.length === 0}
           loading={isRunning}
           loadingLabel="Building & Verifying..."
-          icon={<Hammer className="w-4 h-4" />}
+          leftIcon={<Hammer className="w-4 h-4" />}
         >
           Build & Verify Project
-        </WizardButton>
+        </Button>
       </SurfaceCard>
     </div>
   );
