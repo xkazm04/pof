@@ -164,14 +164,14 @@ export function ActivityFeedPanel() {
           {unreadCount > 0 && (
             <button
               onClick={dismissAll}
-              className="text-2xs text-text-muted hover:text-text px-2 py-1 rounded transition-colors hover:bg-border"
+              className="text-2xs text-text-muted hover:text-text px-2 py-1 rounded transition-colors hover:bg-border focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
             >
               Read all
             </button>
           )}
           <button
             onClick={() => setOpen(false)}
-            className="p-1 rounded-md text-text-muted hover:text-text hover:bg-border transition-colors"
+            className="p-1 rounded-md text-text-muted hover:text-text hover:bg-border transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
           >
             <X className="w-3.5 h-3.5" />
           </button>
@@ -401,7 +401,7 @@ function EventCard({
           {event.moduleId && event.meta?.prompt && (
             <button
               onClick={(e) => { e.stopPropagation(); onAct(event); }}
-              className="flex items-center gap-1 px-1.5 py-0.5 rounded text-2xs font-medium opacity-30 group-hover:opacity-100 text-[#00ff88] hover:bg-accent-subtle transition-all scale-95 group-hover:scale-100"
+              className="flex items-center gap-1 px-1.5 py-0.5 rounded text-2xs font-medium opacity-30 group-hover:opacity-100 focus-visible:opacity-100 text-[#00ff88] hover:bg-accent-subtle transition-all scale-95 group-hover:scale-100 focus-visible:scale-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
               title="Fix with Claude"
             >
               <Zap className="w-2.5 h-2.5" />
@@ -411,7 +411,7 @@ function EventCard({
           {isUnread && (
             <button
               onClick={(e) => onDismiss(event.id, e)}
-              className="flex-shrink-0 p-0.5 rounded opacity-30 group-hover:opacity-100 text-text-muted hover:text-text hover:bg-border transition-all scale-95 group-hover:scale-100"
+              className="flex-shrink-0 p-0.5 rounded opacity-30 group-hover:opacity-100 focus-visible:opacity-100 text-text-muted hover:text-text hover:bg-border transition-all scale-95 group-hover:scale-100 focus-visible:scale-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
               title="Dismiss"
             >
               <X className="w-3 h-3" />

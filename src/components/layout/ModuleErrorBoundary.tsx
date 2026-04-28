@@ -66,14 +66,14 @@ export class ModuleErrorBoundary extends Component<Props, State> {
           <div className="flex items-center justify-center gap-2 mb-4">
             <button
               onClick={this.handleRetry}
-              className="flex items-center gap-2 px-4 py-2 rounded-lg bg-surface-hover text-text text-sm font-medium border border-border-bright hover:bg-border-bright transition-colors"
+              className="flex items-center gap-2 px-4 py-2 rounded-lg bg-surface-hover text-text text-sm font-medium border border-border-bright hover:bg-border-bright transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
             >
               <RefreshCw className="w-4 h-4" />
               Retry
             </button>
             <button
               onClick={this.handleCopyError}
-              className="flex items-center gap-2 px-3 py-2 rounded-lg bg-transparent text-text-muted text-sm border border-border hover:bg-surface-hover transition-colors"
+              className="flex items-center gap-2 px-3 py-2 rounded-lg bg-transparent text-text-muted text-sm border border-border hover:bg-surface-hover transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
             >
               <Copy className="w-4 h-4" />
               Copy
@@ -84,7 +84,7 @@ export class ModuleErrorBoundary extends Component<Props, State> {
           <div className="rounded-lg border border-border bg-surface/50">
             <button
               onClick={() => this.setState({ showDetails: !showDetails })}
-              className="w-full flex items-center justify-between px-3 py-2 text-xs text-text-muted hover:text-text transition-colors"
+              className="w-full flex items-center justify-between px-3 py-2 text-xs text-text-muted hover:text-text transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent rounded-lg"
             >
               <span>Error details</span>
               {showDetails ? (
