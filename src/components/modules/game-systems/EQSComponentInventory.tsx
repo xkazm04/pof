@@ -6,6 +6,7 @@ import {
   Gauge, Shield, Compass,
 } from 'lucide-react';
 import { SurfaceCard } from '@/components/ui/SurfaceCard';
+import { ChipButton } from '@/components/ui/ChipButton';
 import {
   ACCENT_CYAN, ACCENT_VIOLET, ACCENT_EMERALD, ACCENT_ORANGE,
   STATUS_SUCCESS, STATUS_WARNING,
@@ -393,24 +394,20 @@ function ComponentCard({ comp }: { comp: EQSComponentDef }) {
         <span className="text-xs font-bold text-text">{comp.displayName}</span>
 
         {/* Kind badge */}
-        <span
-          className="text-2xs font-medium px-1.5 py-0.5 rounded ml-auto shrink-0"
-          style={{ color: km.color, backgroundColor: `${km.color}${OPACITY_15}` }}
-        >
+        <ChipButton as="span" color={km.color} className="ml-auto shrink-0">
           {km.label}
-        </span>
+        </ChipButton>
 
         {/* Cost badge (tests only) */}
         {comp.cost && (
-          <span
-            className="text-2xs font-mono px-1.5 py-0.5 rounded shrink-0"
-            style={{
-              color: comp.cost === 'High' ? STATUS_WARNING : STATUS_SUCCESS,
-              backgroundColor: `${comp.cost === 'High' ? STATUS_WARNING : STATUS_SUCCESS}${OPACITY_15}`,
-            }}
+          <ChipButton
+            as="span"
+            color={comp.cost === 'High' ? STATUS_WARNING : STATUS_SUCCESS}
+            mono
+            className="shrink-0"
           >
             Cost: {comp.cost}
-          </span>
+          </ChipButton>
         )}
 
         {/* Property count */}

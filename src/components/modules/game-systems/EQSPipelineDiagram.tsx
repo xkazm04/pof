@@ -6,6 +6,7 @@ import {
   ChevronDown, ChevronRight, AlertTriangle, Gauge,
 } from 'lucide-react';
 import { SurfaceCard } from '@/components/ui/SurfaceCard';
+import { ChipButton } from '@/components/ui/ChipButton';
 import {
   ACCENT_CYAN, ACCENT_VIOLET, ACCENT_EMERALD, ACCENT_ORANGE,
   STATUS_SUCCESS, STATUS_WARNING,
@@ -287,22 +288,18 @@ function StepCard({ step, expanded, onToggle }: { step: PipelineStep; expanded: 
         }
         <span style={{ color: step.color }}><KindIcon className="w-3.5 h-3.5" /></span>
         <span className="text-xs font-bold text-text">{step.label}</span>
-        <span
-          className="text-2xs font-medium px-1.5 py-0.5 rounded ml-auto shrink-0"
-          style={{ color: step.color, backgroundColor: `${step.color}${OPACITY_15}` }}
-        >
+        <ChipButton as="span" color={step.color} className="ml-auto shrink-0">
           {KIND_LABELS[step.kind]}
-        </span>
+        </ChipButton>
         {step.cost && (
-          <span
-            className="text-2xs font-mono px-1.5 py-0.5 rounded shrink-0"
-            style={{
-              color: step.cost === 'High' ? STATUS_WARNING : STATUS_SUCCESS,
-              backgroundColor: `${step.cost === 'High' ? STATUS_WARNING : STATUS_SUCCESS}${OPACITY_15}`,
-            }}
+          <ChipButton
+            as="span"
+            color={step.cost === 'High' ? STATUS_WARNING : STATUS_SUCCESS}
+            mono
+            className="shrink-0"
           >
             Cost: {step.cost}
-          </span>
+          </ChipButton>
         )}
       </button>
 
@@ -372,16 +369,9 @@ function QueryPipelineCard({ pipeline }: { pipeline: QueryPipeline }) {
       <div className="px-4 py-2.5 border-b border-border/20 flex items-center gap-1 flex-wrap">
         {pipeline.steps.map((step, i) => (
           <div key={step.id} className="flex items-center gap-1">
-            <span
-              className="text-2xs font-mono px-2 py-0.5 rounded-md"
-              style={{
-                backgroundColor: `${step.color}${OPACITY_10}`,
-                color: step.color,
-                border: `1px solid ${step.color}30`,
-              }}
-            >
+            <ChipButton as="span" color={step.color} mono tone="outline">
               {step.label}
-            </span>
+            </ChipButton>
             {i < pipeline.steps.length - 1 && (
               <ArrowRight className="w-3 h-3 text-text-muted" />
             )}
