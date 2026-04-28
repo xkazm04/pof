@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { apiFetch } from '@/lib/api-utils';
@@ -260,7 +260,7 @@ export function PathBrowser({ value, startFresh, onSelect, onProjectDetected, on
     <div className="border border-border rounded-lg overflow-hidden bg-[#0d0d24]">
       {/* Path bar */}
       <div className="flex items-center gap-2 px-3 py-2 bg-surface border-b border-border">
-        <FolderOpen className="w-4 h-4 text-[#00ff88] shrink-0" />
+        <FolderOpen className="w-4 h-4 text-accent-setup shrink-0" />
         <input
           type="text"
           value={pathInput}
@@ -337,8 +337,8 @@ export function PathBrowser({ value, startFresh, onSelect, onProjectDetected, on
                 onClick={() => selectSuggestion(dir)}
                 className="w-full flex items-center gap-2 px-3 py-1.5 text-left hover:bg-accent-subtle transition-colors"
               >
-                <ChevronRight className="w-3 h-3 text-[#00ff88] shrink-0" />
-                <span className="text-xs text-[#00ff88] font-medium">{dir.label}</span>
+                <ChevronRight className="w-3 h-3 text-accent-setup shrink-0" />
+                <span className="text-xs text-accent-setup font-medium">{dir.label}</span>
                 <span className="text-xs text-text-muted truncate ml-auto">{dir.path}</span>
               </button>
             ))}
@@ -360,15 +360,15 @@ export function PathBrowser({ value, startFresh, onSelect, onProjectDetected, on
                 onClick={() => selectProject(project)}
                 className="w-full flex items-center gap-2 px-3 py-1.5 text-left hover:bg-accent-subtle transition-colors group"
               >
-                <ChevronRight className="w-3 h-3 text-[#00ff88] shrink-0" />
-                <span className="text-xs text-[#00ff88] font-medium">{project.name}</span>
+                <ChevronRight className="w-3 h-3 text-accent-setup shrink-0" />
+                <span className="text-xs text-accent-setup font-medium">{project.name}</span>
                 {project.engineVersion && (
-                  <span className="text-2xs px-1.5 py-0.5 rounded bg-accent-medium text-[#00ff88]/80 shrink-0">
+                  <span className="text-2xs px-1.5 py-0.5 rounded bg-accent-medium text-accent-setup/80 shrink-0">
                     {project.engineVersion}
                   </span>
                 )}
                 {!project.validated && (
-                  <span className="text-2xs px-1.5 py-0.5 rounded bg-amber-400/10 text-amber-400/70 shrink-0" title="Missing Config/DefaultEngine.ini — may be incomplete">
+                  <span className="text-2xs px-1.5 py-0.5 rounded bg-amber-400/10 text-amber-400/70 shrink-0" title="Missing Config/DefaultEngine.ini â€” may be incomplete">
                     unverified
                   </span>
                 )}
@@ -398,7 +398,7 @@ export function PathBrowser({ value, startFresh, onSelect, onProjectDetected, on
             <div className="flex items-center justify-center gap-2">
               <button
                 onClick={navigateHome}
-                className="flex items-center gap-1 px-2.5 py-1 text-xs text-[#00ff88]/80 hover:text-[#00ff88] border border-[#00ff88]/20 hover:border-[#00ff88]/40 rounded transition-colors"
+                className="flex items-center gap-1 px-2.5 py-1 text-xs text-accent-setup/80 hover:text-accent-setup border border-accent-setup/20 hover:border-accent-setup/40 rounded transition-colors"
               >
                 <Home className="w-3 h-3" />
                 Go Home
@@ -426,15 +426,15 @@ export function PathBrowser({ value, startFresh, onSelect, onProjectDetected, on
             }`}
           >
             <Folder
-              className={`w-3.5 h-3.5 shrink-0 ${dir.hasUProject ? 'text-[#00ff88]' : 'text-text-muted'}`}
+              className={`w-3.5 h-3.5 shrink-0 ${dir.hasUProject ? 'text-accent-setup' : 'text-text-muted'}`}
             />
             <span
-              className={`text-xs truncate ${dir.hasUProject ? 'text-[#00ff88]' : 'text-text'}`}
+              className={`text-xs truncate ${dir.hasUProject ? 'text-accent-setup' : 'text-text'}`}
             >
               {dir.name}
             </span>
             {dir.hasUProject && (
-              <span className="text-2xs text-[#00ff88]/70 ml-auto shrink-0">UE Project</span>
+              <span className="text-2xs text-accent-setup/70 ml-auto shrink-0">UE Project</span>
             )}
           </button>
         ))}
@@ -445,9 +445,9 @@ export function PathBrowser({ value, startFresh, onSelect, onProjectDetected, on
         <div className="px-3 py-2 border-t border-border bg-accent-subtle">
           {uprojectFiles.map((f) => (
             <div key={f} className="flex items-center gap-2">
-              <FileCode className="w-3.5 h-3.5 text-[#00ff88]" />
-              <span className="text-xs text-[#00ff88]">{f}</span>
-              <span className="text-2xs text-[#00ff88]/60 ml-1">UE project found!</span>
+              <FileCode className="w-3.5 h-3.5 text-accent-setup" />
+              <span className="text-xs text-accent-setup">{f}</span>
+              <span className="text-2xs text-accent-setup/60 ml-1">UE project found!</span>
             </div>
           ))}
         </div>
@@ -458,7 +458,7 @@ export function PathBrowser({ value, startFresh, onSelect, onProjectDetected, on
         <button
           onClick={selectDirectory}
           disabled={!currentPath}
-          className="w-full py-1.5 text-xs font-medium rounded-md transition-colors disabled:opacity-30 disabled:cursor-not-allowed bg-accent-medium text-[#00ff88] border border-accent-strong hover:bg-accent-strong"
+          className="w-full py-1.5 text-xs font-medium rounded-md transition-colors disabled:opacity-30 disabled:cursor-not-allowed bg-accent-medium text-accent-setup border border-accent-strong hover:bg-accent-strong"
         >
           {isUEProject
             ? 'Select This Project'

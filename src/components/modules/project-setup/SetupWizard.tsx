@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import { useState, useEffect, useMemo } from 'react';
 import { Rocket, Plus, FolderOpen, Loader2, Info, AlertTriangle } from 'lucide-react';
@@ -62,7 +62,7 @@ export function SetupWizard() {
     return p.engineVersion.startsWith(selectedMajorMinor);
   });
 
-  // Open an existing project — one click
+  // Open an existing project â€” one click
   const handleOpenExisting = (project: DetectedProject) => {
     // Match detected version to closest option
     const matchedVersion = project.engineVersion
@@ -99,7 +99,7 @@ export function SetupWizard() {
     if (newName.trim().length === 0) return 'Name cannot be only whitespace';
     if (INVALID_CHARS_RE.test(newName)) {
       const found = [...new Set(newName.split('').filter((c) => INVALID_CHARS_RE.test(c)))];
-      return `Name cannot contain ${found.map((c) => `"${c}"`).join(' ')}  — invalid characters: < > : " | ? * \\ /`;
+      return `Name cannot contain ${found.map((c) => `"${c}"`).join(' ')}  â€” invalid characters: < > : " | ? * \\ /`;
     }
     return null;
   }, [newName]);
@@ -109,7 +109,7 @@ export function SetupWizard() {
       <div className="w-full max-w-xl">
         {/* Logo */}
         <div className="flex items-center justify-center gap-3 mb-6">
-          <Rocket className="w-7 h-7 text-[#00ff88]" />
+          <Rocket className="w-7 h-7 text-accent-setup" />
           <div>
             <h1 className="text-xl font-bold text-text">POF</h1>
             <p className="text-xs text-text-muted">Power of Fun</p>
@@ -124,7 +124,7 @@ export function SetupWizard() {
               onClick={() => setProject({ ueVersion: v.value })}
               className={`px-4 py-1.5 rounded-full text-xs font-medium transition-all ${
                 ueVersion === v.value
-                  ? 'bg-[#00ff88] text-background'
+                  ? 'bg-accent-setup text-background'
                   : 'bg-surface border border-border text-text-muted hover:border-border-bright hover:text-text'
               }`}
             >
@@ -146,7 +146,7 @@ export function SetupWizard() {
             onClick={() => setMode('existing')}
             className={`flex-1 flex items-center justify-center gap-1.5 py-2 text-xs font-medium transition-colors ${
               mode === 'existing'
-                ? 'text-[#00ff88] border-b-2 border-[#00ff88]'
+                ? 'text-accent-setup border-b-2 border-accent-setup'
                 : 'text-text-muted hover:text-text'
             }`}
           >
@@ -157,7 +157,7 @@ export function SetupWizard() {
             onClick={() => setMode('fresh')}
             className={`flex-1 flex items-center justify-center gap-1.5 py-2 text-xs font-medium transition-colors ${
               mode === 'fresh'
-                ? 'text-[#00ff88] border-b-2 border-[#00ff88]'
+                ? 'text-accent-setup border-b-2 border-accent-setup'
                 : 'text-text-muted hover:text-text'
             }`}
           >
@@ -180,26 +180,26 @@ export function SetupWizard() {
                   <button
                     key={project.path}
                     onClick={() => handleOpenExisting(project)}
-                    className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg bg-surface border border-border hover:border-[#00ff88]/40 hover:bg-accent-subtle transition-all text-left group"
+                    className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg bg-surface border border-border hover:border-accent-setup/40 hover:bg-accent-subtle transition-all text-left group"
                   >
-                    <FolderOpen className="w-4 h-4 text-text-muted group-hover:text-[#00ff88] transition-colors shrink-0" />
+                    <FolderOpen className="w-4 h-4 text-text-muted group-hover:text-accent-setup transition-colors shrink-0" />
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-text group-hover:text-[#00ff88] transition-colors">
+                      <p className="text-sm font-medium text-text group-hover:text-accent-setup transition-colors">
                         {project.name}
                       </p>
                       <p className="text-xs text-text-muted truncate">{project.path}</p>
                     </div>
                     {project.engineVersion && (
-                      <span className="text-xs px-1.5 py-0.5 rounded bg-accent-medium text-[#00ff88]/80 shrink-0">
+                      <span className="text-xs px-1.5 py-0.5 rounded bg-accent-medium text-accent-setup/80 shrink-0">
                         {project.engineVersion}
                       </span>
                     )}
                     {!project.validated && (
-                      <span title="Missing Config — may be incomplete">
+                      <span title="Missing Config â€” may be incomplete">
                         <AlertTriangle className="w-3.5 h-3.5 text-amber-400/70 shrink-0" />
                       </span>
                     )}
-                    <Rocket className="w-3.5 h-3.5 text-text-muted group-hover:text-[#00ff88] opacity-0 group-hover:opacity-100 transition-all shrink-0" />
+                    <Rocket className="w-3.5 h-3.5 text-text-muted group-hover:text-accent-setup opacity-0 group-hover:opacity-100 transition-all shrink-0" />
                   </button>
                 ))}
               </div>
@@ -214,7 +214,7 @@ export function SetupWizard() {
                     <button
                       key={v.value}
                       onClick={() => setProject({ ueVersion: v.value })}
-                      className="text-xs text-[#00ff88]/80 hover:text-[#00ff88] underline underline-offset-2 transition-colors"
+                      className="text-xs text-accent-setup/80 hover:text-accent-setup underline underline-offset-2 transition-colors"
                     >
                       Switch to {v.label}
                     </button>
@@ -222,7 +222,7 @@ export function SetupWizard() {
                   <span className="text-text-muted/30">|</span>
                   <button
                     onClick={() => setMode('fresh')}
-                    className="text-xs text-[#00ff88]/80 hover:text-[#00ff88] underline underline-offset-2 transition-colors"
+                    className="text-xs text-accent-setup/80 hover:text-accent-setup underline underline-offset-2 transition-colors"
                   >
                     Start fresh project
                   </button>
@@ -253,7 +253,7 @@ export function SetupWizard() {
                 className={`w-full px-3 py-2.5 bg-surface border rounded-lg text-sm text-text placeholder-text-muted outline-none transition-colors ${
                   nameError
                     ? 'border-red-400/60 focus:border-red-400'
-                    : 'border-border focus:border-[#00ff88]/40'
+                    : 'border-border focus:border-accent-setup/40'
                 }`}
               />
               {nameError ? (
@@ -273,7 +273,7 @@ export function SetupWizard() {
             <button
               onClick={handleStartFresh}
               disabled={!nameValid}
-              className="w-full flex items-center justify-center gap-2 py-2.5 bg-[#00ff88] text-background rounded-lg text-sm font-semibold hover:bg-[#00ff88]/90 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+              className="w-full flex items-center justify-center gap-2 py-2.5 bg-accent-setup text-background rounded-lg text-sm font-semibold hover:bg-accent-setup/90 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
             >
               <Rocket className="w-4 h-4" />
               Create & Launch

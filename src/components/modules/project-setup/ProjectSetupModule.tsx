@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { Rocket } from 'lucide-react';
@@ -19,7 +19,7 @@ import type { SubModuleId } from '@/types/modules';
 export function ProjectSetupModule() {
   const projectPath = useProjectStore((s) => s.projectPath);
 
-  // Ref for scan callback — allows hooks to call scan() without circular dependency
+  // Ref for scan callback â€” allows hooks to call scan() without circular dependency
   const scanRef = useRef<() => void>(() => {});
 
   const setupCLI = useModuleCLI({
@@ -82,7 +82,7 @@ export function ProjectSetupModule() {
 
   return (
     <div className="flex h-full">
-      {/* Left rail — status checklist */}
+      {/* Left rail â€” status checklist */}
       <StatusChecklist
         checklist={checklist}
         scanning={scanning}
@@ -99,7 +99,7 @@ export function ProjectSetupModule() {
       <div className="flex-1 overflow-y-auto p-6">
         {/* Header */}
         <div className="flex items-center gap-3 mb-1">
-          <Rocket className="w-6 h-6 text-[#00ff88]" />
+          <Rocket className="w-6 h-6 text-accent-setup" />
           <h1 className="text-xl font-semibold text-text">Project Setup</h1>
         </div>
         <p className="text-sm text-text-muted mb-6">
