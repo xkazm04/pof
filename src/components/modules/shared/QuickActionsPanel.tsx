@@ -7,6 +7,7 @@ import type { QuickAction, ActionComplexity, SubModuleId } from '@/types/modules
 import { UI_TIMEOUTS } from '@/lib/constants';
 import { STATUS_SUCCESS } from '@/lib/chart-colors';
 import { AccentButton } from '@/components/ui/AccentButton';
+import { CopyButton } from '@/components/ui/CopyButton';
 
 const COMPLEXITY_CONFIG: Record<ActionComplexity, { label: string; color: string; bg: string; border: string }> = {
   beginner:     { label: 'Beginner',      color: STATUS_SUCCESS, bg: 'var(--status-green-subtle)',   border: 'var(--status-green-strong)' },
@@ -129,22 +130,13 @@ export function QuickActionsPanel({ actions, onRunPrompt, accentColor, isRunning
 }
 
 function CopyPromptButton({ prompt }: { prompt: string }) {
-  const [copied, setCopied] = useState(false);
-
-  const handleCopy = useCallback(async (e: React.MouseEvent) => {
-    e.stopPropagation();
-    await navigator.clipboard.writeText(prompt);
-    setCopied(true);
-    setTimeout(() => setCopied(false), UI_TIMEOUTS.copyFeedback);
-  }, [prompt]);
-
   return (
-    <button
-      onClick={handleCopy}
-      className="absolute right-1.5 top-1.5 p-1 rounded text-text-muted hover:text-text hover:bg-border transition-all opacity-30 scale-95 group-hover/action:opacity-100 group-hover/action:scale-100"
-      title={copied ? 'Copied!' : 'Copy prompt'}
-    >
-      {copied ? <Check className="w-3 h-3 text-[#4ade80]" /> : <Copy className="w-3 h-3" />}
-    </button>
+    <CopyButton
+      text={prompt}
+      size="xs"
+      tooltip="Copy prompt"
+      className="absolute right-1.5 top-1.5 p-1 opacity-30 scale-95 group-hover/action:opacity-100 group-hover/action:scale-100"
+    />
   );
 }
+

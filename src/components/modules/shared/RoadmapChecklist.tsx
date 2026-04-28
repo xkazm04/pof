@@ -13,6 +13,7 @@ import { usePatternLibraryStore } from '@/stores/patternLibraryStore';
 import { useNBA } from '@/hooks/useNBA';
 import { StaggerContainer, StaggerItem } from '@/components/ui/Stagger';
 import { AccentButton } from '@/components/ui/AccentButton';
+import { CopyButton } from '@/components/ui/CopyButton';
 import type { ChecklistItem, SubModuleId } from '@/types/modules';
 import type { PatternSuggestion } from '@/types/pattern-library';
 import type { NBARecommendation } from '@/lib/nba-engine';
@@ -1440,22 +1441,5 @@ function ContextMenuDivider() {
 // ── Copy button ──────────────────────────────────────────────────────────────
 
 function CopyItemButton({ text, tooltip = 'Copy' }: { text: string; tooltip?: string }) {
-  const [copied, setCopied] = useState(false);
-
-  const handleCopy = useCallback(async (e: React.MouseEvent) => {
-    e.stopPropagation();
-    await navigator.clipboard.writeText(text);
-    setCopied(true);
-    setTimeout(() => setCopied(false), UI_TIMEOUTS.copyFeedback);
-  }, [text]);
-
-  return (
-    <button
-      onClick={handleCopy}
-      className="p-1.5 rounded-md text-text-muted hover:text-text hover:bg-surface-hover transition-colors"
-      title={copied ? 'Copied!' : tooltip}
-    >
-      {copied ? <Check className="w-3 h-3 text-[#4ade80]" /> : <Copy className="w-3 h-3" />}
-    </button>
-  );
+  return <CopyButton text={text} size="sm" tooltip={tooltip} />;
 }
