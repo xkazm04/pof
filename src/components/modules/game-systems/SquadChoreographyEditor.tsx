@@ -11,6 +11,7 @@ import {
   MODULE_COLORS, ACCENT_VIOLET, ACCENT_CYAN, ACCENT_EMERALD,
   ACCENT_ORANGE, STATUS_SUCCESS, STATUS_WARNING, STATUS_ERROR,
   OPACITY_10, OPACITY_15,
+  heatmapScale,
 } from '@/lib/chart-colors';
 import type { SquadRole, DirectorConfig } from '@/types/squad-tactics';
 import {
@@ -56,19 +57,8 @@ const SUB_TABS: SubTab[] = [
 /* ── Flank color helper (matches FlankAngleHeatmap) ───────────────────────── */
 
 function flankColor(angleDeg: number): string {
-  const t = Math.min(angleDeg / 180, 1);
-  if (t <= 0.5) {
-    const f = t / 0.5;
-    const r = Math.round(255 + (234 - 255) * f);
-    const g = Math.round(68 + (179 - 68) * f);
-    const b = Math.round(68 + (8 - 68) * f);
-    return `rgb(${r},${g},${b})`;
-  }
-  const f = (t - 0.5) / 0.5;
-  const r = Math.round(234 + (34 - 234) * f);
-  const g = Math.round(179 + (197 - 179) * f);
-  const b = Math.round(8 + (94 - 8) * f);
-  return `rgb(${r},${g},${b})`;
+  // Matches FlankAngleHeatmap: shared canonical heatmap ramp.
+  return heatmapScale(Math.min(angleDeg / 180, 1));
 }
 
 /* ── Pipeline step colors ─────────────────────────────────────────────────── */

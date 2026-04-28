@@ -13,7 +13,7 @@ import { FetchError } from '../shared/FetchError';
 import { useModuleCLI } from '@/hooks/useModuleCLI';
 import { useProjectStore } from '@/stores/projectStore';
 import { AITestingSandbox } from './AITestingSandbox';
-import { MODULE_COLORS, STATUS_SUCCESS } from '@/lib/chart-colors';
+import { MODULE_COLORS, STATUS_SUCCESS, STATUS_ERROR } from '@/lib/chart-colors';
 import {
   buildGenerateTestsPrompt,
   buildSingleScenarioTestPrompt,
@@ -175,10 +175,10 @@ export function AIBehaviorView() {
               {summary.totalScenarios > 0 && (
                 <div className="flex items-center gap-2 mt-1.5">
                   {summary.passedCount > 0 && (
-                    <span className="text-2xs text-[#4ade80]">{summary.passedCount} passed</span>
+                    <span className="text-2xs" style={{ color: STATUS_SUCCESS }}>{summary.passedCount} passed</span>
                   )}
                   {summary.failedCount > 0 && (
-                    <span className="text-2xs text-[#f87171]">{summary.failedCount} failed</span>
+                    <span className="text-2xs" style={{ color: STATUS_ERROR }}>{summary.failedCount} failed</span>
                   )}
                   {summary.draftCount > 0 && (
                     <span className="text-2xs text-text-muted">{summary.draftCount} draft</span>
@@ -264,7 +264,7 @@ export function AIBehaviorView() {
                   </div>
                   <button
                     onClick={() => deleteSuite(activeSuite.id)}
-                    className="px-2 py-1.5 rounded-md text-text-muted hover:text-[#f87171] hover:bg-[#f8717110] transition-colors"
+                    className="px-2 py-1.5 rounded-md text-text-muted hover:text-red-400 hover:bg-red-400/10 transition-colors"
                     title="Delete suite"
                   >
                     <Trash2 className="w-3.5 h-3.5" />

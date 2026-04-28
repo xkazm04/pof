@@ -6,6 +6,7 @@ import { SurfaceCard } from '@/components/ui/SurfaceCard';
 import {
   ACCENT_VIOLET, ACCENT_CYAN, STATUS_WARNING,
   OPACITY_10, OPACITY_15,
+  heatmapScale,
 } from '@/lib/chart-colors';
 
 // ── Constants matching C++ defaults ──────────────────────────────────────────
@@ -22,22 +23,8 @@ const DRAW_RADIUS = (SVG_SIZE - SVG_PADDING * 2) / 2;
 // ── Flank angle color: 0°=red(front) → 90°=yellow(side) → 180°=green(behind)
 
 function flankColor(angleDeg: number): string {
-  const t = Math.min(angleDeg / 180, 1);
-  // red → yellow → green
-  if (t <= 0.5) {
-    // red(255,68,68) → yellow(234,179,8)
-    const f = t / 0.5;
-    const r = Math.round(255 + (234 - 255) * f);
-    const g = Math.round(68 + (179 - 68) * f);
-    const b = Math.round(68 + (8 - 68) * f);
-    return `rgb(${r},${g},${b})`;
-  }
-  // yellow(234,179,8) → green(34,197,94)
-  const f = (t - 0.5) / 0.5;
-  const r = Math.round(234 + (34 - 234) * f);
-  const g = Math.round(179 + (197 - 179) * f);
-  const b = Math.round(8 + (94 - 8) * f);
-  return `rgb(${r},${g},${b})`;
+  // 0° (front, exposed) → low end of heatmap; 180° (behind, safe) → high end.
+  return heatmapScale(Math.min(angleDeg / 180, 1));
 }
 
 // ── Compute flank angle exactly like C++ ─────────────────────────────────────

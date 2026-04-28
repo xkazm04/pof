@@ -7,6 +7,7 @@ import {
   ACCENT_VIOLET, ACCENT_CYAN, ACCENT_EMERALD, ACCENT_ORANGE,
   STATUS_SUCCESS, STATUS_WARNING,
   OPACITY_10, OPACITY_15,
+  heatmapScale,
 } from '@/lib/chart-colors';
 
 // ── Constants ───────────────────────────────────────────────────────────────
@@ -167,20 +168,8 @@ function generateCoverPoints(
 // ── Color mapping ───────────────────────────────────────────────────────────
 
 function coverColor(score: number): string {
-  // Red (exposed) -> Yellow (partial) -> Green (good cover)
-  const t = Math.min(Math.max(score, 0), 1);
-  if (t <= 0.5) {
-    const f = t / 0.5;
-    const r = Math.round(248 + (251 - 248) * f);
-    const g = Math.round(113 + (191 - 113) * f);
-    const b = Math.round(113 + (36 - 113) * f);
-    return `rgb(${r},${g},${b})`;
-  }
-  const f = (t - 0.5) / 0.5;
-  const r = Math.round(251 + (74 - 251) * f);
-  const g = Math.round(191 + (222 - 191) * f);
-  const b = Math.round(36 + (128 - 36) * f);
-  return `rgb(${r},${g},${b})`;
+  // 0 (exposed) → low end of heatmap; 1 (good cover) → high end.
+  return heatmapScale(Math.min(Math.max(score, 0), 1));
 }
 
 // ── SVG arc path helper ─────────────────────────────────────────────────────
