@@ -10,8 +10,7 @@ import {
 import { SurfaceCard } from '@/components/ui/SurfaceCard';
 import { apiFetch } from '@/lib/api-utils';
 import { useProjectStore } from '@/stores/projectStore';
-import { ReviewableModuleView } from '../shared/ReviewableModuleView';
-import { SUB_MODULE_MAP, getCategoryForSubModule, getModuleChecklist } from '@/lib/module-registry';
+import { createTabbedModuleView } from '../shared/createTabbedModuleView';
 import type {
   QuestGenerationResult,
   GeneratedQuest,
@@ -30,8 +29,6 @@ const EMPTY_NOTES: string[] = [];
 // ── Config ──
 
 const ACCENT = MODULE_COLORS.systems;
-
-type ViewTab = 'generator' | 'checklist';
 
 const CATEGORY_LABELS: Record<QuestCategory, { label: string; color: string }> = {
   main: { label: 'Main', color: MODULE_COLORS.content },
@@ -52,51 +49,22 @@ const OBJ_ICONS: Record<string, typeof Swords> = {
 };
 
 // ── Main view ──
+//
+// DialogueView used to hand-roll its own `generator | checklist` tab bar (with
+// inline `style={{ borderColor: ACCENT }}` underline drift and duplicated
+// ReviewableModuleView prop wiring). It now defers to the shared
+// `createTabbedModuleView` factory, which threads the QuestGenerator panel
+// through ReviewableModuleView's existing `extraTabs` slot. Brings DialogueView
+// in line with its 4 createSimpleModuleView siblings (see ui-perfectionist 16.1).
 
-export function DialogueView() {
-  const mod = SUB_MODULE_MAP['dialogue-quests'];
-  const cat = getCategoryForSubModule('dialogue-quests');
-  const [tab, setTab] = useState<ViewTab>('generator');
-
-  if (!mod || !cat) return null;
-
-  const tabClass = (t: ViewTab) =>
-    `px-3 py-1.5 text-xs font-medium transition-colors rounded-t ${
-      tab === t
-        ? 'text-text bg-surface-hover border-b-2'
-        : 'text-text-muted hover:text-text'
-    }`;
-
-  const tabStyle = (t: ViewTab) =>
-    tab === t ? { borderColor: ACCENT } : undefined;
-
-  return (
-    <div className="space-y-4">
-      {/* Tab switcher */}
-      <div className="flex items-center gap-1 border-b border-border">
-        <button className={tabClass('generator')} style={tabStyle('generator')} onClick={() => setTab('generator')}>
-          <span className="flex items-center gap-1"><Sparkles className="w-2.5 h-2.5" /> Quest Generator</span>
-        </button>
-        <button className={tabClass('checklist')} style={tabStyle('checklist')} onClick={() => setTab('checklist')}>
-          <span className="flex items-center gap-1"><Scroll className="w-2.5 h-2.5" /> Checklist</span>
-        </button>
-      </div>
-
-      {tab === 'generator' && <QuestGeneratorPanel />}
-      {tab === 'checklist' && (
-        <ReviewableModuleView
-          moduleId="dialogue-quests"
-          moduleLabel={mod.label}
-          moduleDescription={mod.description}
-          moduleIcon={mod.icon}
-          accentColor={cat.accentColor}
-          checklist={getModuleChecklist('dialogue-quests')}
-          quickActions={mod.quickActions}
-        />
-      )}
-    </div>
-  );
-}
+export const DialogueView = createTabbedModuleView('dialogue-quests', [
+  {
+    id: 'generator',
+    label: 'Quest Generator',
+    icon: Sparkles,
+    render: () => <QuestGeneratorPanel />,
+  },
+]);
 
 // ── Quest Generator Panel ──
 
