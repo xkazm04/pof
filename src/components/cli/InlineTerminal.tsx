@@ -127,7 +127,7 @@ export function InlineTerminal({
           </button>
           <button
             onClick={() => removeSession(sessionId)}
-            className={`p-1 text-text-muted hover:${CLI_COLORS.error} transition-colors`}
+            className="p-1 text-text-muted hover:text-red-400 transition-colors"
             title="Close terminal"
           >
             <X className="w-3 h-3" />

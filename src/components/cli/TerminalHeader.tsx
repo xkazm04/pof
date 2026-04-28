@@ -63,7 +63,7 @@ export function TerminalHeader({
               <RotateCcw className="w-3 h-3" />
             </button>
           )}
-          <button onClick={onClear} disabled={isStreaming} className={`p-1 hover:bg-surface-hover rounded text-text-muted hover:${CLI_COLORS.error} disabled:opacity-50 transition-colors`} title="Clear">
+          <button onClick={onClear} disabled={isStreaming} className="p-1 hover:bg-surface-hover rounded text-text-muted hover:text-red-400 disabled:opacity-50 transition-colors" title="Clear">
             <Trash2 className="w-3 h-3" />
           </button>
         </div>

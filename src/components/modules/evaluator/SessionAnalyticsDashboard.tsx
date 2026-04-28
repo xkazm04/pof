@@ -105,7 +105,10 @@ export function SessionAnalyticsDashboard({ onNavigateTab }: SessionAnalyticsDas
           <div className="flex items-center gap-2 mb-3">
             <Lightbulb className="w-3.5 h-3.5" style={{ color: STATUS_WARNING }} />
             <h3 className="text-xs font-semibold text-text">Learned Insights</h3>
-            <span className={`text-2xs px-1.5 py-0.5 rounded bg-[${STATUS_WARNING}${OPACITY_10}] text-[${STATUS_WARNING}] font-medium`}>
+            <span
+              className="text-2xs px-1.5 py-0.5 rounded font-medium"
+              style={{ backgroundColor: `${STATUS_WARNING}${OPACITY_10}`, color: STATUS_WARNING }}
+            >
               {dashboard.insights.length}
             </span>
           </div>
@@ -378,7 +381,10 @@ function RecentSessionRow({ session }: { session: SessionRecord }) {
       <span className="text-xs text-text-muted-hover flex-1 min-w-0 truncate">{session.promptPreview}</span>
       <span className="text-2xs text-text-muted flex-shrink-0">{durationStr}</span>
       {session.hadProjectContext && (
-        <span className={`text-2xs px-1 py-0.5 rounded bg-[${STATUS_SUCCESS}${OPACITY_10}] text-[${STATUS_SUCCESS}] flex-shrink-0`}>ctx</span>
+        <span
+          className="text-2xs px-1 py-0.5 rounded flex-shrink-0"
+          style={{ backgroundColor: `${STATUS_SUCCESS}${OPACITY_10}`, color: STATUS_SUCCESS }}
+        >ctx</span>
       )}
     </div>
   );

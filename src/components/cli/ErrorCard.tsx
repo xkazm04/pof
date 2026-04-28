@@ -181,7 +181,7 @@ export function ErrorCard({ diagnostic, onFix, isRunning = false }: ErrorCardPro
                 if (!isRunning) onFix(buildQuickFixPrompt(diagnostic));
               }}
               disabled={isRunning}
-              className={`mt-1.5 flex items-center gap-1 text-xs font-medium ${CLI_COLORS.prompt} hover:text-blue-300 bg-blue-500/10 hover:bg-blue-500/20 px-2 py-1 rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:${CLI_COLORS.prompt} disabled:hover:bg-blue-500/10`}
+              className={`mt-1.5 flex items-center gap-1 text-xs font-medium ${CLI_COLORS.prompt} hover:text-blue-300 bg-blue-500/10 hover:bg-blue-500/20 px-2 py-1 rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:text-blue-400 disabled:hover:bg-blue-500/10`}
             >
               <Zap className="w-3 h-3" />
               Fix This
@@ -205,7 +205,7 @@ export function ErrorCard({ diagnostic, onFix, isRunning = false }: ErrorCardPro
                 if (!isRunning) onFix(buildQuickFixPrompt(diagnostic));
               }}
               disabled={isRunning}
-              className={`ml-auto text-2xs font-medium ${CLI_COLORS.prompt} hover:text-blue-300 transition-colors disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:${CLI_COLORS.prompt}`}
+              className={`ml-auto text-2xs font-medium ${CLI_COLORS.prompt} hover:text-blue-300 transition-colors disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:text-blue-400`}
             >
               Fix
             </button>

@@ -117,7 +117,7 @@ export function WarningAggregator({ groups, onFix, isRunning = false }: WarningA
                                 onFix(prompt);
                               }}
                               disabled={isRunning}
-                              className={`text-2xs font-medium ${CLI_COLORS.prompt} hover:text-blue-300 transition-colors disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:${CLI_COLORS.prompt}`}
+                              className={`text-2xs font-medium ${CLI_COLORS.prompt} hover:text-blue-300 transition-colors disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:text-blue-400`}
                             >
                               Fix all {group.count}
                             </button>
