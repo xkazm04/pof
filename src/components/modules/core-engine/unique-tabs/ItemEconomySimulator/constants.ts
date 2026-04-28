@@ -5,6 +5,7 @@ import {
   MODULE_COLORS, ACCENT_ORANGE, ACCENT_VIOLET,
   STATUS_SUCCESS, STATUS_WARNING, STATUS_ERROR, STATUS_NEUTRAL,
 } from '@/lib/chart-colors';
+import { RARITY_COLOR_MAP } from '@/lib/economy/definitions';
 import type { SubTab } from '../_shared';
 import type { ItemRarity } from '@/types/economy-simulator';
 
@@ -12,14 +13,14 @@ import type { ItemRarity } from '@/types/economy-simulator';
 
 export const ACCENT = ACCENT_ORANGE;
 
-/* ── Rarity colors ────────────────────────────────────────────────────── */
+/* ── Rarity colors (canonical map from @/lib/economy/definitions) ─────── */
 
 export const RARITY_COLORS: Record<ItemRarity, string> = {
-  common: STATUS_NEUTRAL,
-  uncommon: STATUS_SUCCESS,
-  rare: MODULE_COLORS.core,
-  epic: ACCENT_VIOLET,
-  legendary: STATUS_WARNING,
+  common: RARITY_COLOR_MAP.Common,
+  uncommon: RARITY_COLOR_MAP.Uncommon,
+  rare: RARITY_COLOR_MAP.Rare,
+  epic: RARITY_COLOR_MAP.Epic,
+  legendary: RARITY_COLOR_MAP.Legendary,
 };
 
 export const RARITY_LABELS: ItemRarity[] = [

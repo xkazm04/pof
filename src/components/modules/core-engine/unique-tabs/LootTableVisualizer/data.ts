@@ -1,4 +1,5 @@
 import { ACCENT_EMERALD, ACCENT_ORANGE, STATUS_MUTED, STATUS_INFO, ACCENT_VIOLET, STATUS_WARNING } from '@/lib/chart-colors';
+import { RARITY_COLOR_MAP } from '@/lib/economy/definitions';
 import type { GaugeMetric, DiffEntry, HeatmapCell } from '@/types/unique-tab-improvements';
 import type { EntityMetadata } from '@/types/game-metadata';
 import { Layers, FlaskConical, Dices, Shield, DollarSign } from 'lucide-react';
@@ -35,11 +36,11 @@ export interface RarityTier {
 }
 
 export const RARITY_TIERS: RarityTier[] = [
-  { name: 'Common', color: STATUS_MUTED, weight: 50 },
-  { name: 'Uncommon', color: ACCENT_EMERALD, weight: 25 },
-  { name: 'Rare', color: STATUS_INFO, weight: 15 },
-  { name: 'Epic', color: ACCENT_VIOLET, weight: 8 },
-  { name: 'Legendary', color: STATUS_WARNING, weight: 2 },
+  { name: 'Common', color: RARITY_COLOR_MAP.Common, weight: 50 },
+  { name: 'Uncommon', color: RARITY_COLOR_MAP.Uncommon, weight: 25 },
+  { name: 'Rare', color: RARITY_COLOR_MAP.Rare, weight: 15 },
+  { name: 'Epic', color: RARITY_COLOR_MAP.Epic, weight: 8 },
+  { name: 'Legendary', color: RARITY_COLOR_MAP.Legendary, weight: 2 },
 ];
 
 export const TOTAL_WEIGHT = RARITY_TIERS.reduce((sum, t) => sum + t.weight, 0);
@@ -47,11 +48,11 @@ export const TOTAL_WEIGHT = RARITY_TIERS.reduce((sum, t) => sum + t.weight, 0);
 /* -- World item examples per rarity --------------------------------------- */
 
 export const WORLD_ITEMS = [
-  { name: 'Iron Sword', rarity: 'Common', beamColor: STATUS_MUTED, pickup: 'Auto-pickup on overlap' },
-  { name: 'Forest Bow', rarity: 'Uncommon', beamColor: ACCENT_EMERALD, pickup: 'Prompt on interact' },
-  { name: 'Azure Staff', rarity: 'Rare', beamColor: STATUS_INFO, pickup: 'Highlight + prompt' },
-  { name: 'Shadow Cloak', rarity: 'Epic', beamColor: ACCENT_VIOLET, pickup: 'Prompt + SFX' },
-  { name: 'Sunfire Amulet', rarity: 'Legendary', beamColor: STATUS_WARNING, pickup: 'Beam + VFX + fanfare' },
+  { name: 'Iron Sword', rarity: 'Common', beamColor: RARITY_COLOR_MAP.Common, pickup: 'Auto-pickup on overlap' },
+  { name: 'Forest Bow', rarity: 'Uncommon', beamColor: RARITY_COLOR_MAP.Uncommon, pickup: 'Prompt on interact' },
+  { name: 'Azure Staff', rarity: 'Rare', beamColor: RARITY_COLOR_MAP.Rare, pickup: 'Highlight + prompt' },
+  { name: 'Shadow Cloak', rarity: 'Epic', beamColor: RARITY_COLOR_MAP.Epic, pickup: 'Prompt + SFX' },
+  { name: 'Sunfire Amulet', rarity: 'Legendary', beamColor: RARITY_COLOR_MAP.Legendary, pickup: 'Beam + VFX + fanfare' },
 ];
 
 /* -- Feature names for this module ---------------------------------------- */
@@ -301,13 +302,8 @@ export const DEFAULT_EDITOR_ENTRIES: LootEditorEntry[] = EXPANDED_ENTRIES;
 /** All unique sources for grouping. */
 export const LOOT_SOURCES: LootSource[] = ['enemy', 'chest', 'quest', 'crafting'];
 
-export const RARITY_COLOR_MAP: Record<string, string> = {
-  Common: STATUS_MUTED,
-  Uncommon: ACCENT_EMERALD,
-  Rare: STATUS_INFO,
-  Epic: ACCENT_VIOLET,
-  Legendary: STATUS_WARNING,
-};
+// Re-exported from canonical source (@/lib/economy/definitions) for back-compat.
+export { RARITY_COLOR_MAP } from '@/lib/economy/definitions';
 
 export const RARITY_ENUM_VALUES = ['Common', 'Uncommon', 'Rare', 'Epic', 'Legendary'];
 

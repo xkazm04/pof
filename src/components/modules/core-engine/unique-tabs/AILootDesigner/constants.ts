@@ -7,6 +7,7 @@ import {
   ACCENT_VIOLET, STATUS_SUCCESS, STATUS_WARNING, STATUS_ERROR,
   STATUS_INFO, STATUS_NEUTRAL,
 } from '@/lib/chart-colors';
+import { RARITY_COLOR_MAP } from '@/lib/economy/definitions';
 import type { TraitAxis } from '@/types/item-genome';
 import type { Rarity, AffixPoolEntry } from '@/lib/loot-designer/drop-simulator';
 import type { SubTab } from '../_shared';
@@ -36,11 +37,11 @@ export const AXIS_LABELS: Record<TraitAxis, string> = {
 /* -- Rarity colors --------------------------------------------------------- */
 
 export const RARITY_COLORS: Record<Rarity, string> = {
-  Common: STATUS_NEUTRAL,
-  Uncommon: ACCENT_EMERALD,
-  Rare: STATUS_INFO,
-  Epic: ACCENT_VIOLET,
-  Legendary: STATUS_WARNING,
+  Common: RARITY_COLOR_MAP.Common,
+  Uncommon: RARITY_COLOR_MAP.Uncommon,
+  Rare: RARITY_COLOR_MAP.Rare,
+  Epic: RARITY_COLOR_MAP.Epic,
+  Legendary: RARITY_COLOR_MAP.Legendary,
 };
 
 export const RARITIES: Rarity[] = ['Common', 'Uncommon', 'Rare', 'Epic', 'Legendary'];

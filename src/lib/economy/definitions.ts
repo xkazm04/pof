@@ -1,4 +1,26 @@
 import type { EconomyFlow, EconomyItem, XPCurvePoint, SimulationConfig } from '@/types/economy-simulator';
+import {
+  ACCENT_EMERALD, ACCENT_VIOLET,
+  STATUS_INFO, STATUS_MUTED, STATUS_WARNING,
+} from '@/lib/chart-colors';
+
+// ── Canonical rarity → colour map (single source of truth) ──────────────────
+// Chosen to match LootTableVisualizer (most-used set across loot consumers).
+// Keys are capitalised; lowercase consumers should map via toLowerCase().
+
+export type CanonicalRarity = 'Common' | 'Uncommon' | 'Rare' | 'Epic' | 'Legendary';
+
+export const RARITY_COLOR_MAP: Record<CanonicalRarity, string> & Record<string, string> = {
+  Common: STATUS_MUTED,
+  Uncommon: ACCENT_EMERALD,
+  Rare: STATUS_INFO,
+  Epic: ACCENT_VIOLET,
+  Legendary: STATUS_WARNING,
+};
+
+export const RARITY_ORDER: CanonicalRarity[] = [
+  'Common', 'Uncommon', 'Rare', 'Epic', 'Legendary',
+];
 
 // ── XP Curve (standard aRPG exponential) ────────────────────────────────────
 
