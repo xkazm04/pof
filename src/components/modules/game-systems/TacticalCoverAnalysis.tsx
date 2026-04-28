@@ -9,6 +9,7 @@ import {
   OPACITY_10, OPACITY_15,
   heatmapScale,
 } from '@/lib/chart-colors';
+import { arcPath } from '@/components/ui/svg/arc-helpers';
 
 // ── Constants ───────────────────────────────────────────────────────────────
 
@@ -170,28 +171,6 @@ function generateCoverPoints(
 function coverColor(score: number): string {
   // 0 (exposed) → low end of heatmap; 1 (good cover) → high end.
   return heatmapScale(Math.min(Math.max(score, 0), 1));
-}
-
-// ── SVG arc path helper ─────────────────────────────────────────────────────
-
-function arcPath(
-  cx: number, cy: number,
-  innerR: number, outerR: number,
-  startAngle: number, endAngle: number,
-): string {
-  const cos1 = Math.cos(startAngle);
-  const sin1 = Math.sin(startAngle);
-  const cos2 = Math.cos(endAngle);
-  const sin2 = Math.sin(endAngle);
-  const largeArc = endAngle - startAngle > Math.PI ? 1 : 0;
-
-  return [
-    `M ${cx + outerR * cos1} ${cy + outerR * sin1}`,
-    `A ${outerR} ${outerR} 0 ${largeArc} 1 ${cx + outerR * cos2} ${cy + outerR * sin2}`,
-    `L ${cx + innerR * cos2} ${cy + innerR * sin2}`,
-    `A ${innerR} ${innerR} 0 ${largeArc} 0 ${cx + innerR * cos1} ${cy + innerR * sin1}`,
-    `Z`,
-  ].join(' ');
 }
 
 // ── Component ───────────────────────────────────────────────────────────────
