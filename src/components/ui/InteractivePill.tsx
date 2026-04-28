@@ -60,7 +60,7 @@ export function MultiInteractivePill({
           <button
             key={item.id}
             onClick={() => onToggle(item.id)}
-            className="relative flex-1 text-center px-2.5 py-1 rounded-lg text-xs font-mono font-bold transition-colors focus:outline-none"
+            className="relative flex-1 text-center px-2.5 py-1 rounded-lg text-xs font-mono font-bold transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-1 focus-visible:ring-offset-transparent"
             style={{
               color: isActive ? item.color : 'var(--text-muted)',
             }}
@@ -128,7 +128,7 @@ export function InteractivePill({
           <button
             key={item.id}
             onClick={() => onChange(i)}
-            className="relative flex-1 text-center px-2.5 py-1 rounded-lg text-xs font-mono font-bold transition-colors focus:outline-none"
+            className="relative flex-1 text-center px-2.5 py-1 rounded-lg text-xs font-mono font-bold transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-1 focus-visible:ring-offset-transparent"
             style={{
               color: isActive ? color : 'var(--text-muted)',
             }}
