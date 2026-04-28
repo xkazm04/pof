@@ -12,6 +12,7 @@ import { EmptyState } from '@/components/ui/EmptyState';
 import { MODULE_COLORS as CHART_MODULE_COLORS, STATUS_SUCCESS, STATUS_WARNING, STATUS_ERROR, STATUS_BLOCKER, OPACITY_5, OPACITY_12, OPACITY_20, statusBorder } from '@/lib/chart-colors';
 import type { SubModuleId } from '@/types/modules';
 import { MOTION } from '@/lib/constants';
+import { TOPOLOGY_COMPACT, getNodeCenter as getCenter } from './_shared/moduleTopology';
 
 // ─── Module layout config ───────────────────────────────────────────────────
 
@@ -30,36 +31,11 @@ const MODULE_COLORS: Record<string, string> = {
   'arpg-polish': CHART_MODULE_COLORS.core,
 };
 
-// Arrange modules in a roughly logical flow (left→right, top→bottom)
-// 4 columns × 3 rows
-const MODULE_POSITIONS: Record<string, { col: number; row: number }> = {
-  'arpg-character':    { col: 0, row: 0 },
-  'arpg-animation':    { col: 1, row: 0 },
-  'arpg-gas':          { col: 2, row: 0 },
-  'arpg-combat':       { col: 3, row: 0 },
-  'arpg-enemy-ai':     { col: 0, row: 1 },
-  'arpg-inventory':    { col: 1, row: 1 },
-  'arpg-loot':         { col: 2, row: 1 },
-  'arpg-ui':           { col: 3, row: 1 },
-  'arpg-progression':  { col: 0, row: 2 },
-  'arpg-world':        { col: 1, row: 2 },
-  'arpg-save':         { col: 2, row: 2 },
-  'arpg-polish':       { col: 3, row: 2 },
-};
-
-const COL_WIDTH = 180;
-const ROW_HEIGHT = 120;
-const NODE_W = 140;
-const NODE_H = 72;
-const PAD_X = 40;
-const PAD_Y = 40;
+// Layout (positions + node sizes) shared with NexusView via _shared/moduleTopology.
+const { colWidth: COL_WIDTH, rowHeight: ROW_HEIGHT, nodeW: NODE_W, nodeH: NODE_H, padX: PAD_X, padY: PAD_Y } = TOPOLOGY_COMPACT;
 
 function getNodeCenter(moduleId: SubModuleId) {
-  const pos = MODULE_POSITIONS[moduleId] ?? { col: 0, row: 0 };
-  return {
-    x: PAD_X + pos.col * COL_WIDTH + NODE_W / 2,
-    y: PAD_Y + pos.row * ROW_HEIGHT + NODE_H / 2,
-  };
+  return getCenter(moduleId, TOPOLOGY_COMPACT);
 }
 
 // ─── Types ──────────────────────────────────────────────────────────────────────

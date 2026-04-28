@@ -20,37 +20,14 @@ import type { SubModuleId, ChecklistItem } from '@/types/modules';
 import type { Recommendation } from '@/types/evaluator';
 import { STATUS_SUCCESS, STATUS_WARNING, STATUS_ERROR, STATUS_INFO, STATUS_BLOCKER, STATUS_NEUTRAL, ACCENT_VIOLET, MODULE_COLORS, OPACITY_10, OPACITY_15, OPACITY_20, OPACITY_30 } from '@/lib/chart-colors';
 import { MOTION } from '@/lib/constants';
+import { TOPOLOGY_ROOMY, getNodeCenter as getCenter } from './_shared/moduleTopology';
 
-// ─── Layout constants (same as DependencyGraph) ────────────────────────────
+// ─── Layout constants (shared with DependencyGraph via _shared/moduleTopology) ──
 
-const MODULE_POSITIONS: Record<string, { col: number; row: number }> = {
-  'arpg-character':    { col: 0, row: 0 },
-  'arpg-animation':    { col: 1, row: 0 },
-  'arpg-gas':          { col: 2, row: 0 },
-  'arpg-combat':       { col: 3, row: 0 },
-  'arpg-enemy-ai':     { col: 0, row: 1 },
-  'arpg-inventory':    { col: 1, row: 1 },
-  'arpg-loot':         { col: 2, row: 1 },
-  'arpg-ui':           { col: 3, row: 1 },
-  'arpg-progression':  { col: 0, row: 2 },
-  'arpg-world':        { col: 1, row: 2 },
-  'arpg-save':         { col: 2, row: 2 },
-  'arpg-polish':       { col: 3, row: 2 },
-};
-
-const COL_WIDTH = 200;
-const ROW_HEIGHT = 130;
-const NODE_W = 160;
-const NODE_H = 80;
-const PAD_X = 50;
-const PAD_Y = 50;
+const { colWidth: COL_WIDTH, rowHeight: ROW_HEIGHT, nodeW: NODE_W, nodeH: NODE_H, padX: PAD_X, padY: PAD_Y } = TOPOLOGY_ROOMY;
 
 function getNodeCenter(moduleId: SubModuleId) {
-  const pos = MODULE_POSITIONS[moduleId] ?? { col: 0, row: 0 };
-  return {
-    x: PAD_X + pos.col * COL_WIDTH + NODE_W / 2,
-    y: PAD_Y + pos.row * ROW_HEIGHT + NODE_H / 2,
-  };
+  return getCenter(moduleId, TOPOLOGY_ROOMY);
 }
 
 // ─── Data layer toggle ─────────────────────────────────────────────────────
