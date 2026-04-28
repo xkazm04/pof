@@ -12,6 +12,7 @@ import { motionSafe, ANIMATION_PRESETS } from '@/lib/motion';
 import type { AttrCategory, EditorAttribute, EditorEffect, TagRule } from '@/lib/gas-codegen';
 import type { AttrRelationship, PinKind, GASGraphNode, GraphWire } from './types';
 import { CAT_COLORS, NODE_W_GRAPH, NODE_H_GRAPH, PIN_R } from './types';
+import { wirePath as svgWirePath } from '@/components/ui/svg/wire-path';
 
 export function WiringGraphEditor({
   attributes, effects, tagRules, relationships, onSelectItem,
@@ -259,11 +260,11 @@ export function WiringGraphEditor({
     return y + nodeH + 20;
   }), 300);
 
-  // Wire path (bezier curve)
-  const wirePath = useCallback((fromPos: { x: number; y: number }, toPos: { x: number; y: number }) => {
-    const cpOffset = Math.min(80, Math.abs(toPos.x - fromPos.x) * 0.4);
-    return `M ${fromPos.x} ${fromPos.y} C ${fromPos.x + cpOffset} ${fromPos.y}, ${toPos.x - cpOffset} ${toPos.y}, ${toPos.x} ${toPos.y}`;
-  }, []);
+  // Wire path (bezier curve) — see @/components/ui/svg/wire-path
+  const wirePath = useCallback(
+    (fromPos: { x: number; y: number }, toPos: { x: number; y: number }) => svgWirePath(fromPos, toPos),
+    [],
+  );
 
   // Detail text for selected node
   const selectedDetail = useMemo(() => {
