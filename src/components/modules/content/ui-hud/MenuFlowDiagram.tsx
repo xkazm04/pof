@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import { useState, useCallback, useRef, useMemo } from 'react';
 import {
@@ -9,7 +9,7 @@ import { SurfaceCard } from '@/components/ui/SurfaceCard';
 import { MODULE_COLORS } from '@/lib/constants';
 import { STATUS_INFO, ACCENT_VIOLET, STATUS_WARNING, ACCENT_EMERALD, ACCENT_PINK, STATUS_BLOCKER, STATUS_ERROR, STATUS_SUBDUED, STATUS_STALE } from '@/lib/chart-colors';
 
-// ── Types ──
+// â”€â”€ Types â”€â”€
 
 export type ScreenType =
   | 'main-menu'
@@ -43,7 +43,7 @@ export interface MenuFlowConfig {
   transitions: ScreenTransition[];
 }
 
-// ── Constants ──
+// â”€â”€ Constants â”€â”€
 
 const NODE_W = 170;
 const NODE_H = 72;
@@ -54,8 +54,8 @@ const SCREEN_TYPES: Record<ScreenType, { color: string; label: string; icon: str
   'pause-menu': { color: STATUS_WARNING, label: 'Pause Menu', icon: 'P' },
   'hud': { color: ACCENT_EMERALD, label: 'HUD', icon: 'H' },
   'loading': { color: STATUS_SUBDUED, label: 'Loading', icon: 'L' },
-  'splash': { color: ACCENT_PINK, label: 'Splash', icon: '◆' },
-  'popup': { color: STATUS_BLOCKER, label: 'Popup', icon: '□' },
+  'splash': { color: ACCENT_PINK, label: 'Splash', icon: 'â—†' },
+  'popup': { color: STATUS_BLOCKER, label: 'Popup', icon: 'â–ˇ' },
   'custom': { color: 'var(--text-muted)', label: 'Custom', icon: '?' },
 };
 
@@ -75,14 +75,14 @@ export const DEFAULT_MENU_FLOW: MenuFlowConfig = {
   transitions: DEFAULT_TRANSITIONS,
 };
 
-// ── Props ──
+// â”€â”€ Props â”€â”€
 
 interface MenuFlowDiagramProps {
   onGenerate: (config: MenuFlowConfig) => void;
   isGenerating: boolean;
 }
 
-// ── Component ──
+// â”€â”€ Component â”€â”€
 
 export function MenuFlowDiagram({ onGenerate, isGenerating }: MenuFlowDiagramProps) {
   const [screens, setScreens] = useState<ScreenNode[]>(() => structuredClone(DEFAULT_SCREENS));
@@ -102,7 +102,7 @@ export function MenuFlowDiagram({ onGenerate, isGenerating }: MenuFlowDiagramPro
     offsetY: number;
   } | null>(null);
 
-  // ── CRUD ──
+  // â”€â”€ CRUD â”€â”€
 
   const addScreen = useCallback(() => {
     const id = `scr-${Date.now()}`;
@@ -130,7 +130,7 @@ export function MenuFlowDiagram({ onGenerate, isGenerating }: MenuFlowDiagramPro
     setScreens((prev) => prev.map((s) => s.id === id ? { ...s, ...patch } : s));
   }, []);
 
-  // ── Connections ──
+  // â”€â”€ Connections â”€â”€
 
   const startConnection = useCallback((fromId: string) => {
     setConnectingFrom(fromId);
@@ -170,7 +170,7 @@ export function MenuFlowDiagram({ onGenerate, isGenerating }: MenuFlowDiagramPro
     );
   }, []);
 
-  // ── SVG interaction ──
+  // â”€â”€ SVG interaction â”€â”€
 
   const getSVGPoint = useCallback((e: React.MouseEvent) => {
     if (!svgRef.current) return { x: 0, y: 0 };
@@ -235,7 +235,7 @@ export function MenuFlowDiagram({ onGenerate, isGenerating }: MenuFlowDiagramPro
     }
   }, [connectingFrom, pan]);
 
-  // ── Helpers ──
+  // â”€â”€ Helpers â”€â”€
 
   const getNodeCenter = useCallback((id: string) => {
     const s = screens.find((scr) => scr.id === id);
@@ -250,7 +250,7 @@ export function MenuFlowDiagram({ onGenerate, isGenerating }: MenuFlowDiagramPro
 
   const config: MenuFlowConfig = useMemo(() => ({ screens, transitions }), [screens, transitions]);
 
-  // ── Arrow head math ──
+  // â”€â”€ Arrow head math â”€â”€
 
   const getArrowPath = useCallback(
     (from: { x: number; y: number }, to: { x: number; y: number }, bidir: boolean) => {
@@ -293,22 +293,22 @@ export function MenuFlowDiagram({ onGenerate, isGenerating }: MenuFlowDiagramPro
   );
 
   return (
-    <div className="space-y-6 bg-[#03030a] p-6 rounded-2xl border border-indigo-900/30 shadow-[inset_0_0_80px_rgba(99,102,241,0.05)] relative w-full overflow-hidden">
+    <div className="space-y-6 bg-[#03030a] p-6 rounded-2xl border border-violet-900/30 shadow-[inset_0_0_80px_rgba(167,139,250,0.05)] relative w-full overflow-hidden">
       {/* Ambient tech background */}
       <div className="absolute inset-0 pointer-events-none z-0">
-        <div className="absolute -top-1/4 -right-1/4 w-[500px] h-[500px] bg-indigo-600/10 blur-[120px] rounded-full pointer-events-none" />
+        <div className="absolute -top-1/4 -right-1/4 w-[500px] h-[500px] bg-violet-600/10 blur-[120px] rounded-full pointer-events-none" />
         <div className="absolute bottom-1/4 -left-1/4 w-[500px] h-[500px] bg-violet-600/10 blur-[120px] rounded-full pointer-events-none" />
         <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.02)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.02)_1px,transparent_1px)] bg-[size:32px_32px] [mask-image:radial-gradient(ellipse_at_center,black_20%,transparent_70%)] opacity-30 pointer-events-none" />
       </div>
 
-      <div className="relative z-10 w-full mb-6 border-b border-indigo-900/40 pb-4">
+      <div className="relative z-10 w-full mb-6 border-b border-violet-900/40 pb-4">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center shadow-[inset_0_0_15px_rgba(99,102,241,0.1)]">
-            <Link className="w-5 h-5 text-indigo-400" />
+          <div className="w-10 h-10 rounded-xl bg-violet-500/10 border border-violet-500/20 flex items-center justify-center shadow-[inset_0_0_15px_rgba(167,139,250,0.1)]">
+            <Link className="w-5 h-5 text-violet-400" />
           </div>
           <div>
-            <h3 className="text-sm font-bold tracking-widest uppercase text-indigo-100 shadow-[0_0_10px_rgba(99,102,241,0.5)]">UI Node Flow Matrix</h3>
-            <p className="text-xs text-indigo-400/60 uppercase mt-1">
+            <h3 className="text-sm font-bold tracking-widest uppercase text-violet-100 shadow-[0_0_10px_rgba(167,139,250,0.5)]">UI Node Flow Matrix</h3>
+            <p className="text-xs text-violet-400/60 uppercase mt-1">
               INTERFACE_TOPOLOGY_AND_SCREEN_ROUTING
             </p>
           </div>
@@ -316,15 +316,15 @@ export function MenuFlowDiagram({ onGenerate, isGenerating }: MenuFlowDiagramPro
       </div>
 
       {/* Canvas area */}
-      <div className="relative w-full bg-black/60 rounded-2xl border border-indigo-900/40 overflow-hidden shadow-[inset_0_0_40px_rgba(49,46,129,0.5)] ring-1 ring-white/5 z-10" style={{ height: 420 }}>
+      <div className="relative w-full bg-black/60 rounded-2xl border border-violet-900/40 overflow-hidden shadow-[inset_0_0_40px_rgba(49,46,129,0.5)] ring-1 ring-white/5 z-10" style={{ height: 420 }}>
         {/* Glow effect */}
-        <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-500/5 blur-[80px] pointer-events-none" />
+        <div className="absolute top-0 right-0 w-64 h-64 bg-violet-500/5 blur-[80px] pointer-events-none" />
 
         {/* Toolbar */}
         <div className="absolute top-4 left-4 z-10 flex items-center gap-2">
           <button
             onClick={addScreen}
-            className="flex items-center gap-2 px-3 py-2 rounded-lg text-xs uppercase font-bold bg-indigo-950/40 border border-indigo-900/50 text-indigo-300 hover:text-white hover:bg-indigo-600/30 hover:border-indigo-500/50 transition-all shadow-[0_0_15px_rgba(0,0,0,0.5)] group backdrop-blur-sm"
+            className="flex items-center gap-2 px-3 py-2 rounded-lg text-xs uppercase font-bold bg-violet-950/40 border border-violet-900/50 text-violet-300 hover:text-white hover:bg-violet-600/30 hover:border-violet-500/50 transition-all shadow-[0_0_15px_rgba(0,0,0,0.5)] group backdrop-blur-sm"
           >
             <Plus className="w-3.5 h-3.5 group-hover:scale-110 transition-transform" />
             Add Screen
@@ -349,8 +349,8 @@ export function MenuFlowDiagram({ onGenerate, isGenerating }: MenuFlowDiagramPro
         </div>
 
         {/* Badge */}
-        <div className="absolute top-4 right-4 z-10 px-3 py-1.5 rounded-lg text-[11px] uppercase font-bold bg-indigo-950/40 border border-indigo-900/50 text-indigo-400/80 shadow-[0_0_15px_rgba(0,0,0,0.5)] backdrop-blur-sm">
-          {screens.length} SCREENS <span className="text-indigo-900 font-black mx-1">/</span> {transitions.length} ROUTES
+        <div className="absolute top-4 right-4 z-10 px-3 py-1.5 rounded-lg text-[11px] uppercase font-bold bg-violet-950/40 border border-violet-900/50 text-violet-400/80 shadow-[0_0_15px_rgba(0,0,0,0.5)] backdrop-blur-sm">
+          {screens.length} SCREENS <span className="text-violet-900 font-black mx-1">/</span> {transitions.length} ROUTES
         </div>
 
         {/* SVG */}
@@ -391,8 +391,8 @@ export function MenuFlowDiagram({ onGenerate, isGenerating }: MenuFlowDiagramPro
               return (
                 <g key={tr.id}>
                   {/* Visible line */}
-                  <path d={line} stroke="rgba(99,102,241,0.5)" strokeWidth={2} fill="none" style={{ filter: 'url(#neon-glow)' }} />
-                  <path d={arrows} stroke="rgba(99,102,241,0.8)" strokeWidth={2} fill="none" strokeLinecap="round" />
+                  <path d={line} stroke="rgba(167,139,250,0.5)" strokeWidth={2} fill="none" style={{ filter: 'url(#neon-glow)' }} />
+                  <path d={arrows} stroke="rgba(167,139,250,0.8)" strokeWidth={2} fill="none" strokeLinecap="round" />
 
                   {/* Trigger label */}
                   {midX !== undefined && midY !== undefined && (
@@ -404,7 +404,7 @@ export function MenuFlowDiagram({ onGenerate, isGenerating }: MenuFlowDiagramPro
                         height={20}
                         rx={6}
                         fill="rgba(3,3,10,0.8)"
-                        stroke="rgba(99,102,241,0.4)"
+                        stroke="rgba(167,139,250,0.4)"
                         strokeWidth={1}
                       />
                       <text
@@ -442,7 +442,7 @@ export function MenuFlowDiagram({ onGenerate, isGenerating }: MenuFlowDiagramPro
 
                   {/* Bidirectional indicator */}
                   {tr.bidirectional && midX !== undefined && midY !== undefined && (
-                    <circle cx={midX} cy={midY - 16} r={4} fill="rgba(99,102,241,0.8)" />
+                    <circle cx={midX} cy={midY - 16} r={4} fill="rgba(167,139,250,0.8)" />
                   )}
                 </g>
               );
@@ -482,8 +482,8 @@ export function MenuFlowDiagram({ onGenerate, isGenerating }: MenuFlowDiagramPro
                       x={-4} y={-4}
                       width={NODE_W + 8} height={NODE_H + 8}
                       rx={12} ry={12}
-                      fill="rgba(99,102,241,0.05)"
-                      stroke="rgba(99,102,241,0.6)"
+                      fill="rgba(167,139,250,0.05)"
+                      stroke="rgba(167,139,250,0.6)"
                       strokeWidth={2}
                       style={{ filter: 'url(#neon-glow)' }}
                     />
@@ -510,7 +510,7 @@ export function MenuFlowDiagram({ onGenerate, isGenerating }: MenuFlowDiagramPro
                     width={NODE_W} height={NODE_H}
                     rx={8} ry={8}
                     fill="rgba(0,0,0,0.6)"
-                    stroke={isSelected ? 'rgba(99,102,241,1)' : `${cfg.color}50`}
+                    stroke={isSelected ? 'rgba(167,139,250,1)' : `${cfg.color}50`}
                     strokeWidth={isSelected ? 2 : 1}
                   />
 
@@ -551,7 +551,7 @@ export function MenuFlowDiagram({ onGenerate, isGenerating }: MenuFlowDiagramPro
 
                   {/* Screen name */}
                   <text x={42} y={24} fontSize={11} fill="white" fontFamily="sans-serif" fontWeight={700} letterSpacing="0.5">
-                    {scr.name.length > 15 ? scr.name.slice(0, 15) + '…' : scr.name}
+                    {scr.name.length > 15 ? scr.name.slice(0, 15) + 'â€¦' : scr.name}
                   </text>
 
                   {/* Type label */}
@@ -588,7 +588,7 @@ export function MenuFlowDiagram({ onGenerate, isGenerating }: MenuFlowDiagramPro
                         className="group"
                       >
                         <rect x={0} y={0} width={20} height={20} rx={6} fill="rgba(52,211,153,0.15)" stroke="rgba(52,211,153,0.4)" strokeWidth={1} />
-                        <text x={10} y={13} fontSize={10} fill="rgba(52,211,153,1)" textAnchor="middle">→</text>
+                        <text x={10} y={13} fontSize={10} fill="rgba(52,211,153,1)" textAnchor="middle">â†’</text>
                       </g>
                       {/* Delete button */}
                       <g
@@ -601,7 +601,7 @@ export function MenuFlowDiagram({ onGenerate, isGenerating }: MenuFlowDiagramPro
                         className="group"
                       >
                         <rect x={0} y={0} width={20} height={20} rx={6} fill="rgba(244,63,94,0.15)" stroke="rgba(244,63,94,0.4)" strokeWidth={1} />
-                        <text x={10} y={14} fontSize={12} fill="rgba(244,63,94,1)" textAnchor="middle" fontWeight="bold">×</text>
+                        <text x={10} y={14} fontSize={12} fill="rgba(244,63,94,1)" textAnchor="middle" fontWeight="bold">Ă—</text>
                       </g>
                     </>
                   )}
@@ -619,7 +619,7 @@ export function MenuFlowDiagram({ onGenerate, isGenerating }: MenuFlowDiagramPro
         )}
       </div>
 
-      {/* ── Screen Editor Panel ── */}
+      {/* â”€â”€ Screen Editor Panel â”€â”€ */}
       {selectedScreen && editingScreen && (
         <ScreenEditor
           screen={selectedScreen}
@@ -628,10 +628,10 @@ export function MenuFlowDiagram({ onGenerate, isGenerating }: MenuFlowDiagramPro
         />
       )}
 
-      {/* ── Transition List ── */}
+      {/* â”€â”€ Transition List â”€â”€ */}
       {transitions.length > 0 && (
-        <div className="p-5 bg-black/40 border border-indigo-900/40 rounded-2xl shadow-inner relative z-10">
-          <div className="flex items-center gap-2 text-xs uppercase text-indigo-400 font-bold mb-4">
+        <div className="p-5 bg-black/40 border border-violet-900/40 rounded-2xl shadow-inner relative z-10">
+          <div className="flex items-center gap-2 text-xs uppercase text-violet-400 font-bold mb-4">
             <Unlink className="w-3.5 h-3.5" />
             Active Routing Pathways
           </div>
@@ -643,14 +643,14 @@ export function MenuFlowDiagram({ onGenerate, isGenerating }: MenuFlowDiagramPro
               return (
                 <div
                   key={tr.id}
-                  className="flex items-center gap-3 px-4 py-3 rounded-xl bg-black/60 border border-indigo-900/50 shadow-sm"
+                  className="flex items-center gap-3 px-4 py-3 rounded-xl bg-black/60 border border-violet-900/50 shadow-sm"
                 >
-                  <div className="flex-1 flex items-center justify-between text-[11px] font-bold tracking-wider uppercase bg-indigo-950/20 rounded-md px-3 py-1.5 border border-indigo-900/30">
+                  <div className="flex-1 flex items-center justify-between text-[11px] font-bold tracking-wider uppercase bg-violet-950/20 rounded-md px-3 py-1.5 border border-violet-900/30">
                     <span className="text-white drop-shadow-md" style={{ color: SCREEN_TYPES[fromScr.type].color }}>{fromScr.name}</span>
                     <div className="flex flex-col items-center flex-1 px-4">
-                      <span className="text-[11px] text-indigo-400/60 font-mono mb-0.5 truncate max-w-[120px]">{tr.trigger}</span>
-                      <div className="w-full h-px bg-indigo-900/40 relative">
-                        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-black px-1 text-indigo-500">{tr.bidirectional ? '⟷' : '→'}</div>
+                      <span className="text-[11px] text-violet-400/60 font-mono mb-0.5 truncate max-w-[120px]">{tr.trigger}</span>
+                      <div className="w-full h-px bg-violet-900/40 relative">
+                        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-black px-1 text-violet-500">{tr.bidirectional ? 'âź·' : 'â†’'}</div>
                       </div>
                     </div>
                     <span className="text-white drop-shadow-md" style={{ color: SCREEN_TYPES[toScr.type].color }}>{toScr.name}</span>
@@ -681,17 +681,17 @@ export function MenuFlowDiagram({ onGenerate, isGenerating }: MenuFlowDiagramPro
         </div>
       )}
 
-      {/* ── Summary & Generate ── */}
-      <div className="relative z-10 pt-6 mt-2 border-t border-indigo-900/40">
+      {/* â”€â”€ Summary & Generate â”€â”€ */}
+      <div className="relative z-10 pt-6 mt-2 border-t border-violet-900/40">
         <button
           onClick={() => onGenerate(config)}
           disabled={isGenerating || screens.length === 0}
-          className="relative w-full overflow-hidden flex items-center justify-center gap-3 px-6 py-4 rounded-xl text-[11px] font-bold uppercase transition-all disabled:opacity-50 group outline-none focus:ring-2 focus:ring-indigo-500/50 focus:ring-offset-2 focus:ring-offset-[#03030a]"
+          className="relative w-full overflow-hidden flex items-center justify-center gap-3 px-6 py-4 rounded-xl text-[11px] font-bold uppercase transition-all disabled:opacity-50 group outline-none focus:ring-2 focus:ring-violet-500/50 focus:ring-offset-2 focus:ring-offset-[#03030a]"
           style={{
-            backgroundColor: 'rgba(99,102,241,0.15)',
+            backgroundColor: 'rgba(167,139,250,0.15)',
             color: STATUS_STALE,
-            border: '1px solid rgba(99,102,241,0.5)',
-            boxShadow: '0 0 20px rgba(99,102,241,0.2), inset 0 0 10px rgba(99,102,241,0.1)',
+            border: '1px solid rgba(167,139,250,0.5)',
+            boxShadow: '0 0 20px rgba(167,139,250,0.2), inset 0 0 10px rgba(167,139,250,0.1)',
           }}
         >
           <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/40 to-transparent opacity-50" />
@@ -714,7 +714,7 @@ export function MenuFlowDiagram({ onGenerate, isGenerating }: MenuFlowDiagramPro
   );
 }
 
-// ── Screen Editor Sub-component ──
+// â”€â”€ Screen Editor Sub-component â”€â”€
 
 function ScreenEditor({
   screen,
@@ -741,8 +741,8 @@ function ScreenEditor({
   const cfg = SCREEN_TYPES[screen.type];
 
   return (
-    <div className="p-6 bg-black/60 border border-indigo-900/50 rounded-2xl shadow-[0_0_30px_rgba(99,102,241,0.1)_inset] relative z-10 animate-in slide-in-from-bottom-2 fade-in duration-300">
-      <div className="flex items-center justify-between mb-6 pb-4 border-b border-indigo-900/40">
+    <div className="p-6 bg-black/60 border border-violet-900/50 rounded-2xl shadow-[0_0_30px_rgba(167,139,250,0.1)_inset] relative z-10 animate-in slide-in-from-bottom-2 fade-in duration-300">
+      <div className="flex items-center justify-between mb-6 pb-4 border-b border-violet-900/40">
         <div className="flex items-center gap-3">
           <div
             className="w-8 h-8 rounded-lg flex items-center justify-center text-sm font-bold shadow-inner"
@@ -752,7 +752,7 @@ function ScreenEditor({
           </div>
           <span className="text-[11px] font-bold uppercase text-white drop-shadow-md">Node Configuration</span>
         </div>
-        <button onClick={onClose} className="p-2 rounded-lg bg-indigo-950/40 border border-indigo-900/40 text-indigo-400 hover:text-white hover:bg-indigo-600/30 hover:border-indigo-500/50 transition-colors">
+        <button onClick={onClose} className="p-2 rounded-lg bg-violet-950/40 border border-violet-900/40 text-violet-400 hover:text-white hover:bg-violet-600/30 hover:border-violet-500/50 transition-colors">
           <X className="w-4 h-4" />
         </button>
       </div>
@@ -761,44 +761,44 @@ function ScreenEditor({
         <div className="space-y-4">
           {/* Name */}
           <div className="space-y-1.5 flex flex-col">
-            <label className="text-[11px] uppercase text-indigo-400 font-bold ml-1 flex items-center gap-2">
-              <div className="w-1.5 h-1.5 rounded-full bg-indigo-500" /> Identifier String
+            <label className="text-[11px] uppercase text-violet-400 font-bold ml-1 flex items-center gap-2">
+              <div className="w-1.5 h-1.5 rounded-full bg-violet-500" /> Identifier String
             </label>
             <input
               type="text"
               value={screen.name}
               onChange={(e) => onUpdate({ name: e.target.value })}
-              className="w-full px-4 py-2.5 bg-black/50 border border-indigo-900/60 rounded-xl text-xs font-bold text-white outline-none focus:border-indigo-400 focus:ring-1 focus:ring-indigo-400/50 shadow-inner transition-all"
+              className="w-full px-4 py-2.5 bg-black/50 border border-violet-900/60 rounded-xl text-xs font-bold text-white outline-none focus:border-violet-400 focus:ring-1 focus:ring-violet-400/50 shadow-inner transition-all"
             />
           </div>
 
           {/* Type */}
           <div className="space-y-1.5 flex flex-col">
-            <label className="text-[11px] uppercase text-indigo-400 font-bold ml-1 flex items-center gap-2">
-              <div className="w-1.5 h-1.5 rounded-full bg-indigo-500" /> Class Designation
+            <label className="text-[11px] uppercase text-violet-400 font-bold ml-1 flex items-center gap-2">
+              <div className="w-1.5 h-1.5 rounded-full bg-violet-500" /> Class Designation
             </label>
             <div className="relative">
               <select
                 value={screen.type}
                 onChange={(e) => onUpdate({ type: e.target.value as ScreenType })}
-                className="w-full px-4 py-2.5 bg-black/50 border border-indigo-900/60 rounded-xl text-xs font-bold text-white outline-none focus:border-indigo-400 focus:ring-1 focus:ring-indigo-400/50 shadow-inner appearance-none transition-all cursor-pointer"
+                className="w-full px-4 py-2.5 bg-black/50 border border-violet-900/60 rounded-xl text-xs font-bold text-white outline-none focus:border-violet-400 focus:ring-1 focus:ring-violet-400/50 shadow-inner appearance-none transition-all cursor-pointer"
                 style={{ color: cfg.color }}
               >
                 {(Object.entries(SCREEN_TYPES) as [ScreenType, typeof SCREEN_TYPES[ScreenType]][]).map(([key, val]) => (
                   <option key={key} value={key} style={{ backgroundColor: '#0f172a', color: val.color }}>{val.label.toUpperCase()}</option>
                 ))}
               </select>
-              <ChevronDown className="w-4 h-4 text-indigo-500 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+              <ChevronDown className="w-4 h-4 text-violet-500 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
             </div>
           </div>
         </div>
 
         {/* Widgets */}
         <div className="space-y-2.5 flex flex-col">
-          <label className="text-[11px] uppercase text-indigo-400 font-bold ml-1 flex items-center gap-2">
-            <div className="w-1.5 h-1.5 rounded-full bg-indigo-500" /> Embedded UI Elements <span className="bg-indigo-900/50 text-indigo-200 px-1.5 py-0.5 rounded text-[11px]">{screen.widgets.length}</span>
+          <label className="text-[11px] uppercase text-violet-400 font-bold ml-1 flex items-center gap-2">
+            <div className="w-1.5 h-1.5 rounded-full bg-violet-500" /> Embedded UI Elements <span className="bg-violet-900/50 text-violet-200 px-1.5 py-0.5 rounded text-[11px]">{screen.widgets.length}</span>
           </label>
-          <div className="flex-1 bg-black/40 border border-indigo-900/50 rounded-xl p-3 flex flex-col gap-3 shadow-inner max-h-[140px] overflow-y-auto global-scrollbar">
+          <div className="flex-1 bg-black/40 border border-violet-900/50 rounded-xl p-3 flex flex-col gap-3 shadow-inner max-h-[140px] overflow-y-auto global-scrollbar">
             {screen.widgets.length > 0 ? (
               <div className="flex flex-wrap gap-2">
                 {screen.widgets.map((w, i) => (
@@ -823,7 +823,7 @@ function ScreenEditor({
                 ))}
               </div>
             ) : (
-              <div className="text-xs text-indigo-900/50 font-mono uppercase text-center my-auto">
+              <div className="text-xs text-violet-900/50 font-mono uppercase text-center my-auto">
                 No embedded elements assigned
               </div>
             )}
@@ -836,7 +836,7 @@ function ScreenEditor({
               onChange={(e) => setNewWidget(e.target.value)}
               onKeyDown={(e) => { if (e.key === 'Enter') addWidget(); }}
               placeholder="E.G. PROGRESS_BAR_01"
-              className="flex-1 px-3 py-2 bg-black/50 border border-indigo-900/60 rounded-lg text-xs font-mono text-white placeholder-indigo-900/40 outline-none focus:border-indigo-400 focus:ring-1 focus:ring-indigo-400/50 shadow-inner transition-all uppercase"
+              className="flex-1 px-3 py-2 bg-black/50 border border-violet-900/60 rounded-lg text-xs font-mono text-white placeholder-violet-900/40 outline-none focus:border-violet-400 focus:ring-1 focus:ring-violet-400/50 shadow-inner transition-all uppercase"
             />
             <button
               onClick={addWidget}
