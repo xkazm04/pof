@@ -11,6 +11,7 @@ import type { DirectorStats } from '@/lib/game-director-db';
 import {
   ACCENT_ORANGE, STATUS_SUCCESS, STATUS_WARNING, STATUS_ERROR, STATUS_INFO,
 } from '@/lib/chart-colors';
+import { ScoreRing } from '@/components/ui/ScoreRing';
 
 const ACCENT = ACCENT_ORANGE;
 
@@ -93,28 +94,7 @@ export function DirectorOverview({
             <span className="text-xs font-medium text-text">Game Health Score</span>
           </div>
           <div className="flex items-center gap-4">
-            <div className="relative w-16 h-16">
-              <svg className="w-16 h-16 -rotate-90" viewBox="0 0 64 64">
-                <circle
-                  cx="32" cy="32" r="28"
-                  fill="none"
-                  stroke="var(--border)"
-                  strokeWidth="4"
-                />
-                <circle
-                  cx="32" cy="32" r="28"
-                  fill="none"
-                  stroke={stats.avgScore >= 70 ? STATUS_SUCCESS : stats.avgScore >= 40 ? STATUS_WARNING : STATUS_ERROR}
-                  strokeWidth="4"
-                  strokeDasharray={`${(stats.avgScore / 100) * 175.9} 175.9`}
-                  strokeLinecap="round"
-                  className="transition-all duration-slow"
-                />
-              </svg>
-              <span className="absolute inset-0 flex items-center justify-center text-sm font-bold text-text">
-                {stats.avgScore}
-              </span>
-            </div>
+            <ScoreRing value={stats.avgScore} size={64} strokeWidth={4} />
             <div className="flex-1 space-y-1.5">
               <ScoreBar label="Completed" value={stats.completedSessions} max={stats.totalSessions} color={STATUS_SUCCESS} />
               <ScoreBar label="Findings" value={stats.totalFindings} max={Math.max(stats.totalFindings, 20)} color={STATUS_INFO} />
@@ -241,22 +221,12 @@ function SessionCard({
     >
       {/* Score ring or status dot */}
       {session.summary ? (
-        <div className="relative w-9 h-9 flex-shrink-0">
-          <svg className="w-9 h-9 -rotate-90" viewBox="0 0 36 36">
-            <circle cx="18" cy="18" r="15" fill="none" stroke="var(--border)" strokeWidth="2.5" />
-            <circle
-              cx="18" cy="18" r="15"
-              fill="none"
-              stroke={session.summary.overallScore >= 70 ? STATUS_SUCCESS : session.summary.overallScore >= 40 ? STATUS_WARNING : STATUS_ERROR}
-              strokeWidth="2.5"
-              strokeDasharray={`${(session.summary.overallScore / 100) * 94.2} 94.2`}
-              strokeLinecap="round"
-            />
-          </svg>
-          <span className="absolute inset-0 flex items-center justify-center text-xs font-bold text-text">
-            {session.summary.overallScore}
-          </span>
-        </div>
+        <ScoreRing
+          value={session.summary.overallScore}
+          size={36}
+          strokeWidth={2.5}
+          className="flex-shrink-0"
+        />
       ) : (
         <div
           className="w-9 h-9 flex-shrink-0 rounded-lg flex items-center justify-center"

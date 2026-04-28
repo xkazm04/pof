@@ -10,6 +10,7 @@ import {
 } from 'lucide-react';
 import type { PlaytestSession, PlaytestFinding, DirectorEvent, FindingSeverity, FindingCategory } from '@/types/game-director';
 import { SurfaceCard } from '@/components/ui/SurfaceCard';
+import { ScoreRing } from '@/components/ui/ScoreRing';
 import {
   ACCENT_ORANGE, ACCENT_PURPLE, STATUS_SUCCESS, STATUS_WARNING, STATUS_ERROR, STATUS_INFO,
   OPACITY_10, statusBg, statusBorder,
@@ -100,22 +101,7 @@ export function SessionDetail({
           {/* Score badge */}
           {session.summary && (
             <div className="flex items-center gap-2">
-              <div className="relative w-10 h-10">
-                <svg className="w-10 h-10 -rotate-90" viewBox="0 0 40 40">
-                  <circle cx="20" cy="20" r="17" fill="none" stroke="var(--border)" strokeWidth="3" />
-                  <circle
-                    cx="20" cy="20" r="17"
-                    fill="none"
-                    stroke={session.summary.overallScore >= 70 ? STATUS_SUCCESS : session.summary.overallScore >= 40 ? STATUS_WARNING : STATUS_ERROR}
-                    strokeWidth="3"
-                    strokeDasharray={`${(session.summary.overallScore / 100) * 106.8} 106.8`}
-                    strokeLinecap="round"
-                  />
-                </svg>
-                <span className="absolute inset-0 flex items-center justify-center text-xs font-bold text-text">
-                  {session.summary.overallScore}
-                </span>
-              </div>
+              <ScoreRing value={session.summary.overallScore} size={40} strokeWidth={3} />
             </div>
           )}
 
