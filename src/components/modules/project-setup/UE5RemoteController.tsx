@@ -13,6 +13,7 @@ import {
 } from '@/lib/chart-colors';
 import { SurfaceCard } from '@/components/ui/SurfaceCard';
 import { ConnectionStatusBadge } from '@/components/ui/ConnectionStatusBadge';
+import { TintedButton } from '@/components/ui/TintedButton';
 import { ErrorBanner } from './ErrorBanner';
 import { tryApiFetch } from '@/lib/api-utils';
 import type { UE5ConnectionState, UE5AssetSearchResult } from '@/types/ue5-bridge';
@@ -251,15 +252,14 @@ function ObjectInspectorPanel({ onAddHistory }: { onAddHistory: (e: HistoryEntry
       )}
 
       {/* Execute button */}
-      <button
+      <TintedButton
         onClick={execute}
         disabled={loading || !objectPath.trim()}
-        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold border transition-colors disabled:opacity-40"
-        style={{ borderColor: `${ACCENT}40`, backgroundColor: `${ACCENT}15`, color: ACCENT }}
+        color={ACCENT}
+        leftIcon={loading ? <RotateCcw className="w-3 h-3 animate-spin" /> : <Send className="w-3 h-3" />}
       >
-        {loading ? <RotateCcw className="w-3 h-3 animate-spin" /> : <Send className="w-3 h-3" />}
         {mode === 'describe' ? 'Describe Object' : mode === 'read' ? 'Read Property' : 'Write Property'}
-      </button>
+      </TintedButton>
 
       {error && <ErrorBanner message={error} />}
 
@@ -387,15 +387,14 @@ function FunctionCallerPanel({ onAddHistory }: { onAddHistory: (e: HistoryEntry)
         ))}
       </div>
 
-      <button
+      <TintedButton
         onClick={execute}
         disabled={loading || !objectPath.trim() || !functionName.trim()}
-        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold border transition-colors disabled:opacity-40"
-        style={{ borderColor: `${ACCENT_VIOLET}40`, backgroundColor: `${ACCENT_VIOLET}15`, color: ACCENT_VIOLET }}
+        color={ACCENT_VIOLET}
+        leftIcon={loading ? <RotateCcw className="w-3 h-3 animate-spin" /> : <Play className="w-3 h-3" />}
       >
-        {loading ? <RotateCcw className="w-3 h-3 animate-spin" /> : <Play className="w-3 h-3" />}
         Call Function
-      </button>
+      </TintedButton>
 
       {error && <ErrorBanner message={error} />}
 
@@ -480,15 +479,14 @@ function AssetSearchPanel({ onAddHistory }: { onAddHistory: (e: HistoryEntry) =>
         ))}
       </div>
 
-      <button
+      <TintedButton
         onClick={execute}
         disabled={loading || !query.trim()}
-        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold border transition-colors disabled:opacity-40"
-        style={{ borderColor: `${ACCENT_EMERALD}40`, backgroundColor: `${ACCENT_EMERALD}15`, color: ACCENT_EMERALD }}
+        color={ACCENT_EMERALD}
+        leftIcon={loading ? <RotateCcw className="w-3 h-3 animate-spin" /> : <Search className="w-3 h-3" />}
       >
-        {loading ? <RotateCcw className="w-3 h-3 animate-spin" /> : <Search className="w-3 h-3" />}
         Search Assets
-      </button>
+      </TintedButton>
 
       {error && <ErrorBanner message={error} />}
 
@@ -715,24 +713,24 @@ export function UE5RemoteController() {
                 <InputField label="Host" value={host} onChange={setHost} placeholder="127.0.0.1" mono className="w-40" />
                 <InputField label="Port" value={port} onChange={setPort} placeholder="30010" mono className="w-24" />
                 {!isConnected ? (
-                  <button
+                  <TintedButton
                     onClick={() => { connect(); startPolling(); }}
                     disabled={connecting}
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold border transition-colors mb-0.5"
-                    style={{ borderColor: `${ACCENT_EMERALD}40`, backgroundColor: `${ACCENT_EMERALD}15`, color: ACCENT_EMERALD }}
+                    color={ACCENT_EMERALD}
+                    className="mb-0.5"
+                    leftIcon={connecting ? <RotateCcw className="w-3 h-3 animate-spin" /> : <PlugZap className="w-3 h-3" />}
                   >
-                    {connecting ? <RotateCcw className="w-3 h-3 animate-spin" /> : <PlugZap className="w-3 h-3" />}
                     Connect
-                  </button>
+                  </TintedButton>
                 ) : (
-                  <button
+                  <TintedButton
                     onClick={() => { disconnect(); if (pollRef.current) clearInterval(pollRef.current); }}
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold border transition-colors mb-0.5"
-                    style={{ borderColor: `${STATUS_ERROR}40`, backgroundColor: `${STATUS_ERROR}15`, color: STATUS_ERROR }}
+                    color={STATUS_ERROR}
+                    className="mb-0.5"
+                    leftIcon={<Plug className="w-3 h-3" />}
                   >
-                    <Plug className="w-3 h-3" />
                     Disconnect
-                  </button>
+                  </TintedButton>
                 )}
               </div>
               {connState.error && <ErrorBanner message={connState.error} className="mt-2" />}
