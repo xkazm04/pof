@@ -21,7 +21,15 @@ export interface CallstackFrame {
   isCrashOrigin: boolean;
 }
 
-/** Crash severity based on type and frequency */
+/**
+ * Crash severity based on type and frequency.
+ *
+ * Values are a strict subset of the canonical `Severity` from
+ * `@/types/severity` (no `info`/`positive`), so a `CrashSeverity` value can be
+ * passed directly to UI components that expect canonical `Severity` without
+ * conversion. Persisted enum values (e.g. `crash_severity TEXT` in the DB)
+ * remain unchanged.
+ */
 export type CrashSeverity = 'critical' | 'high' | 'medium' | 'low';
 
 /** Crash type categories */

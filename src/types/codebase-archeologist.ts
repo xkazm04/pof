@@ -8,7 +8,16 @@ export type AntiPatternCategory =
   | 'deprecated-api'
   | 'god-class';
 
+/**
+ * @deprecated Engine-internal severity scale. New UI code should consume
+ * `Severity` from `@/types/severity` and map at the boundary via
+ * `legacyToCanonical(severity)`. Kept here because the engine logic and
+ * aggregate counts in codebase-archeologist.ts rely on these specific values.
+ */
 export type Severity = 'critical' | 'warning' | 'info';
+
+// Re-export the canonical UI-facing severity for views that consume archeologist output.
+export type { Severity as CanonicalSeverity } from './severity';
 
 export interface AntiPatternHit {
   id: string;

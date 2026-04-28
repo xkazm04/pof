@@ -2,6 +2,11 @@
 
 export type ProfileSourceType = 'unreal-insights' | 'csv-stats' | 'manual';
 export type FrameBudgetCategory = 'game-thread' | 'render-thread' | 'gpu' | 'rhi' | 'gc';
+/**
+ * Optimization priority — a strict subset of the canonical `Severity` from
+ * `@/types/severity`, so values pass through to UI components expecting
+ * canonical severity without conversion.
+ */
 export type OptimizationPriority = 'critical' | 'high' | 'medium' | 'low';
 
 /** Raw frame timing data from a profiling session */

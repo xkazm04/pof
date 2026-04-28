@@ -20,6 +20,12 @@ import type {
 
 // ── Result types ────────────────────────────────────────────────────────────
 
+/**
+ * @deprecated For UI consumption, prefer the canonical `Severity` from
+ * `@/types/severity`. Map at the boundary: `legacyToCanonical(severity)`
+ * converts `error → high` and `warning → medium`. Engine-internal logic in
+ * this file continues to use these values.
+ */
 export type ViolationSeverity = 'error' | 'warning' | 'info';
 
 export type ViolationType =
