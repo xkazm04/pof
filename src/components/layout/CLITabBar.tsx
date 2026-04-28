@@ -61,10 +61,10 @@ export function CLITabBar({ className, filteredTabOrder, activeTabId: activeTabI
             aria-label={`${session.label || tabId}${isRunning ? ' (running)' : ''}`}
             onClick={() => handleTabSelect(tabId)}
             className={`
-              flex items-center gap-1.5 px-2.5 py-1 rounded-t text-xs transition-all duration-fast min-w-0 max-w-[160px] group
+              flex items-center gap-1.5 px-2.5 py-1 rounded-t text-xs transition-all duration-fast min-w-0 max-w-[160px] group border-t-2 border-transparent
               focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-strong focus-visible:ring-offset-1 focus-visible:ring-offset-surface-deep
               ${isActive
-                ? 'bg-surface text-text border-t-2'
+                ? 'bg-surface text-text'
                 : 'text-text-muted hover:text-text hover:bg-surface/50'
               }
             `}

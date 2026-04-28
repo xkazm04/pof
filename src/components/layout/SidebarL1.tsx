@@ -1,25 +1,16 @@
 'use client';
 
-import { useMemo } from 'react';
+import { motion, useReducedMotion } from 'framer-motion';
 import { CATEGORIES } from '@/lib/module-registry';
 import { useNavigationStore } from '@/stores/navigationStore';
 import type { CategoryId } from '@/types/modules';
 
-// Button height (h-10 = 40px) + gap-1 (4px) = 44px stride
-const BUTTON_STRIDE = 44;
-// py-3 = 12px top padding, center indicator (h-5 = 20px) in button (h-10 = 40px) → offset 10px
-const TOP_OFFSET = 22;
+const ACTIVE_INDICATOR_ID = 'sidebar-l1-active-indicator';
 
 export function SidebarL1() {
   const activeCategory = useNavigationStore((s) => s.activeCategory);
   const setActiveCategory = useNavigationStore((s) => s.setActiveCategory);
-
-  const activeIndex = useMemo(
-    () => CATEGORIES.findIndex((c) => c.id === activeCategory),
-    [activeCategory],
-  );
-
-  const activeAccent = activeIndex >= 0 ? CATEGORIES[activeIndex].accentColor : undefined;
+  const prefersReduced = useReducedMotion();
 
   const handleClick = (id: CategoryId) => {
     if (activeCategory === id) {
@@ -31,16 +22,6 @@ export function SidebarL1() {
 
   return (
     <nav className="relative w-14 flex flex-col items-center py-3 gap-1 border-r border-border bg-background" aria-label="Module categories">
-      {/* Sliding active indicator */}
-      <div
-        className="absolute left-0 w-[3px] h-5 rounded-r-full transition-all duration-300 ease-[cubic-bezier(0.4,0,0.2,1)]"
-        style={{
-          transform: `translateY(${TOP_OFFSET + activeIndex * BUTTON_STRIDE}px)`,
-          backgroundColor: activeAccent ?? 'transparent',
-          opacity: activeIndex >= 0 ? 1 : 0,
-        }}
-      />
-
       {CATEGORIES.map((cat) => {
         const Icon = cat.icon;
         const isActive = activeCategory === cat.id;
@@ -61,6 +42,21 @@ export function SidebarL1() {
             `}
             title={cat.label}
           >
+            {/* Sliding active indicator — Framer layoutId animates across siblings,
+                so positioning is derived from the live DOM rather than magic numbers. */}
+            {isActive && (
+              <motion.span
+                layoutId={ACTIVE_INDICATOR_ID}
+                className="absolute -left-2 top-1/2 -translate-y-1/2 w-[3px] h-5 rounded-r-full"
+                style={{ backgroundColor: cat.accentColor }}
+                transition={
+                  prefersReduced
+                    ? { duration: 0 }
+                    : { type: 'spring', stiffness: 500, damping: 40 }
+                }
+                aria-hidden
+              />
+            )}
             <Icon
               className="w-5 h-5 transition-colors duration-base"
               style={{ color: isActive ? cat.accentColor : 'var(--text-muted)' }}
