@@ -1,0 +1,2856 @@
+{
+  "contexts": [
+    {
+      "idx": "01",
+      "name": "Feature Matrix UI & API",
+      "report": "01-feature-matrix-ui-api.md",
+      "critical": 0,
+      "high": 3,
+      "medium": 5,
+      "low": 1,
+      "total": 9
+    },
+    {
+      "idx": "02",
+      "name": "Module Registry & Feature Graph (instance 2)",
+      "report": "02-module-registry-feature-graph.md",
+      "critical": 0,
+      "high": 3,
+      "medium": 4,
+      "low": 1,
+      "total": 8
+    },
+    {
+      "idx": "03",
+      "name": "Module Registry & Feature Graph (instance 1)",
+      "report": "03-module-registry-feature-graph.md",
+      "critical": 0,
+      "high": 3,
+      "medium": 3,
+      "low": 1,
+      "total": 7
+    },
+    {
+      "idx": "04",
+      "name": "Game Data & Debug Tools",
+      "report": "04-game-data-debug-tools.md",
+      "critical": 0,
+      "high": 3,
+      "medium": 4,
+      "low": 1,
+      "total": 8
+    },
+    {
+      "idx": "05",
+      "name": "Abilities & Progression",
+      "report": "05-abilities-progression.md",
+      "critical": 0,
+      "high": 4,
+      "medium": 3,
+      "low": 1,
+      "total": 8
+    },
+    {
+      "idx": "06",
+      "name": "Loot, Items & Economy",
+      "report": "06-loot-items-economy.md",
+      "critical": 1,
+      "high": 4,
+      "medium": 3,
+      "low": 1,
+      "total": 9
+    },
+    {
+      "idx": "07",
+      "name": "Combat & Balance Simulation",
+      "report": "07-combat-balance-simulation.md",
+      "critical": 0,
+      "high": 3,
+      "medium": 4,
+      "low": 1,
+      "total": 8
+    },
+    {
+      "idx": "08",
+      "name": "Character Design & Genome",
+      "report": "08-character-design-genome.md",
+      "critical": 0,
+      "high": 3,
+      "medium": 5,
+      "low": 1,
+      "total": 9
+    },
+    {
+      "idx": "09",
+      "name": "Core Engine Panels & Views",
+      "report": "09-core-engine-panels-views.md",
+      "critical": 0,
+      "high": 4,
+      "medium": 3,
+      "low": 1,
+      "total": 8
+    },
+    {
+      "idx": "10",
+      "name": "Dzin Layout & State Engine",
+      "report": "10-dzin-layout-state-engine.md",
+      "critical": 0,
+      "high": 2,
+      "medium": 3,
+      "low": 1,
+      "total": 6
+    },
+    {
+      "idx": "11",
+      "name": "Dzin Panel Framework",
+      "report": "11-dzin-panel-framework.md",
+      "critical": 0,
+      "high": 3,
+      "medium": 2,
+      "low": 1,
+      "total": 6
+    },
+    {
+      "idx": "12",
+      "name": "UI/HUD & Models",
+      "report": "12-ui-hud-models.md",
+      "critical": 1,
+      "high": 4,
+      "medium": 3,
+      "low": 1,
+      "total": 9
+    },
+    {
+      "idx": "13",
+      "name": "Level Design",
+      "report": "13-level-design.md",
+      "critical": 0,
+      "high": 4,
+      "medium": 3,
+      "low": 1,
+      "total": 8
+    },
+    {
+      "idx": "14",
+      "name": "Materials & Visual Effects",
+      "report": "14-materials-visual-effects.md",
+      "critical": 0,
+      "high": 4,
+      "medium": 3,
+      "low": 1,
+      "total": 8
+    },
+    {
+      "idx": "15",
+      "name": "Animation & Audio",
+      "report": "15-animation-audio.md",
+      "critical": 0,
+      "high": 4,
+      "medium": 4,
+      "low": 1,
+      "total": 9
+    },
+    {
+      "idx": "16",
+      "name": "Gameplay Subsystems",
+      "report": "16-gameplay-subsystems.md",
+      "critical": 0,
+      "high": 3,
+      "medium": 3,
+      "low": 1,
+      "total": 7
+    },
+    {
+      "idx": "17",
+      "name": "Build & Packaging",
+      "report": "17-build-packaging.md",
+      "critical": 0,
+      "high": 3,
+      "medium": 4,
+      "low": 1,
+      "total": 8
+    },
+    {
+      "idx": "18",
+      "name": "AI Behavior & Tactics",
+      "report": "18-ai-behavior-tactics.md",
+      "critical": 1,
+      "high": 4,
+      "medium": 3,
+      "low": 1,
+      "total": 9
+    },
+    {
+      "idx": "19",
+      "name": "Localization & Marketplace",
+      "report": "19-localization-marketplace.md",
+      "critical": 0,
+      "high": 2,
+      "medium": 3,
+      "low": 1,
+      "total": 6
+    },
+    {
+      "idx": "20",
+      "name": "Evaluator UI Dashboards",
+      "report": "20-evaluator-ui-dashboards.md",
+      "critical": 1,
+      "high": 4,
+      "medium": 5,
+      "low": 1,
+      "total": 11
+    },
+    {
+      "idx": "21",
+      "name": "Project Health & Crash Analysis",
+      "report": "21-project-health-crash-analysis.md",
+      "critical": 0,
+      "high": 2,
+      "medium": 2,
+      "low": 1,
+      "total": 5
+    },
+    {
+      "idx": "22",
+      "name": "Evaluation Engine & Quality",
+      "report": "22-evaluation-engine-quality.md",
+      "critical": 0,
+      "high": 2,
+      "medium": 2,
+      "low": 1,
+      "total": 5
+    },
+    {
+      "idx": "23",
+      "name": "Procedural Generation & Rigging",
+      "report": "23-procedural-generation-rigging.md",
+      "critical": 0,
+      "high": 3,
+      "medium": 3,
+      "low": 1,
+      "total": 7
+    },
+    {
+      "idx": "24",
+      "name": "Asset Generation & Pipeline",
+      "report": "24-asset-generation-pipeline.md",
+      "critical": 0,
+      "high": 4,
+      "medium": 3,
+      "low": 1,
+      "total": 8
+    },
+    {
+      "idx": "25",
+      "name": "UE5 & POF Bridge",
+      "report": "25-ue5-pof-bridge.md",
+      "critical": 0,
+      "high": 4,
+      "medium": 3,
+      "low": 1,
+      "total": 8
+    },
+    {
+      "idx": "26",
+      "name": "Project Setup Wizard",
+      "report": "26-project-setup-wizard.md",
+      "critical": 0,
+      "high": 3,
+      "medium": 4,
+      "low": 1,
+      "total": 8
+    },
+    {
+      "idx": "27",
+      "name": "Task System & Prompt Engineering",
+      "report": "27-task-system-prompt-engineering.md",
+      "critical": 0,
+      "high": 4,
+      "medium": 3,
+      "low": 1,
+      "total": 8
+    },
+    {
+      "idx": "28",
+      "name": "CLI Terminal",
+      "report": "28-cli-terminal.md",
+      "critical": 0,
+      "high": 4,
+      "medium": 3,
+      "low": 1,
+      "total": 8
+    },
+    {
+      "idx": "29",
+      "name": "UI Primitives & Shared Infrastructure",
+      "report": "29-ui-primitives-shared-infrastructure.md",
+      "critical": 0,
+      "high": 4,
+      "medium": 5,
+      "low": 1,
+      "total": 10
+    },
+    {
+      "idx": "30",
+      "name": "Layout & Navigation",
+      "report": "30-layout-navigation.md",
+      "critical": 0,
+      "high": 4,
+      "medium": 5,
+      "low": 1,
+      "total": 10
+    },
+    {
+      "idx": "31",
+      "name": "Game Director & Regression",
+      "report": "31-game-director-regression.md",
+      "critical": 0,
+      "high": 4,
+      "medium": 3,
+      "low": 1,
+      "total": 8
+    },
+    {
+      "idx": "32",
+      "name": "Session Tracking & Telemetry",
+      "report": "32-session-tracking-telemetry.md",
+      "critical": 0,
+      "high": 3,
+      "medium": 3,
+      "low": 1,
+      "total": 7
+    }
+  ],
+  "findings": [
+    {
+      "context_idx": "01",
+      "context_name": "Feature Matrix UI & API",
+      "finding_idx": "1",
+      "title": "\"Accent button\" pattern is copy-pasted across 6+ surfaces with magic opacity suffixes",
+      "severity": "High",
+      "category": "component-architecture",
+      "file": "src/components/modules/shared/FeatureMatrix.tsx:425-444, 526-547, 1226-1247; src/components/modules/shared/QuickActionsPanel.tsx:116-127; src/components/modules/shared/RoadmapChecklist.tsx:646-660, 1208-1220",
+      "report": "01-feature-matrix-ui-api.md"
+    },
+    {
+      "context_idx": "01",
+      "context_name": "Feature Matrix UI & API",
+      "finding_idx": "2",
+      "title": "Three near-identical Copy buttons with separate `useState(copied)` machinery",
+      "severity": "High",
+      "category": "component-architecture",
+      "file": "src/components/modules/shared/FeatureMatrix.tsx:1043-1051, 1114-1123 (inline within FeatureRowItem); src/components/modules/shared/QuickActionsPanel.tsx:134-153 (CopyPromptButton); src/components/modules/shared/RoadmapChecklist.tsx:1463-1482 (CopyItemButton), 1064-1069 (BulkActionBar copy)",
+      "report": "01-feature-matrix-ui-api.md"
+    },
+    {
+      "context_idx": "01",
+      "context_name": "Feature Matrix UI & API",
+      "finding_idx": "3",
+      "title": "RoadmapChecklist abandons the chart-colors token system for hard-coded hex + Tailwind colour classes",
+      "severity": "High",
+      "category": "design-system",
+      "file": "src/components/modules/shared/RoadmapChecklist.tsx:469-477, 518-528, 545-563, 587-606, 615-619, 639, 749, 760-771, 786-797, 962-1004",
+      "report": "01-feature-matrix-ui-api.md"
+    },
+    {
+      "context_idx": "01",
+      "context_name": "Feature Matrix UI & API",
+      "finding_idx": "4",
+      "title": "QuickActionsPanel hardcodes amber/red/green hexes parallel to existing tokens",
+      "severity": "Medium",
+      "category": "design-system",
+      "file": "src/components/modules/shared/QuickActionsPanel.tsx:10-14, 98-101, 150",
+      "report": "01-feature-matrix-ui-api.md"
+    },
+    {
+      "context_idx": "01",
+      "context_name": "Feature Matrix UI & API",
+      "finding_idx": "5",
+      "title": "Search input has no clear button and no visible focus state",
+      "severity": "Medium",
+      "category": "polish",
+      "file": "src/components/modules/shared/FeatureMatrix.tsx:570-580",
+      "report": "01-feature-matrix-ui-api.md"
+    },
+    {
+      "context_idx": "01",
+      "context_name": "Feature Matrix UI & API",
+      "finding_idx": "6",
+      "title": "Loading state is a 5\u00d75 px spinner \u2014 no skeleton, no shape preview",
+      "severity": "Medium",
+      "category": "polish",
+      "file": "src/components/modules/shared/FeatureMatrix.tsx:389-395",
+      "report": "01-feature-matrix-ui-api.md"
+    },
+    {
+      "context_idx": "01",
+      "context_name": "Feature Matrix UI & API",
+      "finding_idx": "7",
+      "title": "Status filter chip count badges duplicate the SummaryBar \u2014 and they disagree under filtering",
+      "severity": "Medium",
+      "category": "visual-consistency",
+      "file": "src/components/modules/shared/FeatureMatrix.tsx:825-870 (SummaryBar), 872-930 (StatusFilterChips), 612-617 (Result count)",
+      "report": "01-feature-matrix-ui-api.md"
+    },
+    {
+      "context_idx": "01",
+      "context_name": "Feature Matrix UI & API",
+      "finding_idx": "8",
+      "title": "Icon-only hover-revealed action buttons have no focus-visible state \u2014 keyboard users see nothing",
+      "severity": "Medium",
+      "category": "accessibility-polish",
+      "file": "src/components/modules/shared/FeatureMatrix.tsx:1100-1136 (FeatureRowItem hover actions); src/components/modules/shared/RoadmapChecklist.tsx:610-661 (cards layout hover actions), 893-904 (PriorityDropdown flag), 1280-1289 (NBARunnerRow Run)",
+      "report": "01-feature-matrix-ui-api.md"
+    },
+    {
+      "context_idx": "01",
+      "context_name": "Feature Matrix UI & API",
+      "finding_idx": "9",
+      "title": "Sticky header z-index uses magic numbers without a layered system",
+      "severity": "Low",
+      "category": "design-system",
+      "file": "src/components/modules/shared/FeatureMatrix.tsx:569 (`z-10`), 657 (`top-[40px] z-[5]`); src/components/modules/shared/RoadmapChecklist.tsx:1080 (`z-20`), 1360 (`z-[9999]`)",
+      "report": "01-feature-matrix-ui-api.md"
+    },
+    {
+      "context_idx": "02",
+      "context_name": "Module Registry & Feature Graph (instance 2)",
+      "finding_idx": "1",
+      "title": "Inline `style={{ width, height }}` for tiny dots is widespread drift from Tailwind tokens",
+      "severity": "High",
+      "category": "design-system",
+      "file": "src/components/modules/shared/ContextHealthBadge.tsx:139-145, 178-185, 290-299",
+      "report": "02-module-registry-feature-graph.md"
+    },
+    {
+      "context_idx": "02",
+      "context_name": "Module Registry & Feature Graph (instance 2)",
+      "finding_idx": "2",
+      "title": "Color values bypass the design-token system via inline `style` and `var(--\u2026)` arbitrary values",
+      "severity": "High",
+      "category": "design-system",
+      "file": "src/components/modules/shared/ContextHealthBadge.tsx:191,219,272,297; src/components/modules/shared/FetchError.tsx:89-127",
+      "report": "02-module-registry-feature-graph.md"
+    },
+    {
+      "context_idx": "02",
+      "context_name": "Module Registry & Feature Graph (instance 2)",
+      "finding_idx": "3",
+      "title": "Inline `onMouseEnter`/`onMouseLeave` background swaps for a button instead of `:hover`",
+      "severity": "High",
+      "category": "polish",
+      "file": "src/components/modules/shared/FetchError.tsx:101-114",
+      "report": "02-module-registry-feature-graph.md"
+    },
+    {
+      "context_idx": "02",
+      "context_name": "Module Registry & Feature Graph (instance 2)",
+      "finding_idx": "4",
+      "title": "Tooltip arrow border edge appears chipped due to `rotate-45` on a single-side-bordered square",
+      "severity": "Medium",
+      "category": "visual-consistency",
+      "file": "src/components/modules/shared/ContextHealthBadge.tsx:279-281",
+      "report": "02-module-registry-feature-graph.md"
+    },
+    {
+      "context_idx": "02",
+      "context_name": "Module Registry & Feature Graph (instance 2)",
+      "finding_idx": "5",
+      "title": "`RecommendedNextBanner` rebuilds the same hover-tooltip pattern that `ContextHealthBadge` already implements",
+      "severity": "Medium",
+      "category": "component-architecture",
+      "file": "src/components/modules/shared/RecommendedNextBanner.tsx:82-95; src/components/modules/shared/ContextHealthBadge.tsx:157-282",
+      "report": "02-module-registry-feature-graph.md"
+    },
+    {
+      "context_idx": "02",
+      "context_name": "Module Registry & Feature Graph (instance 2)",
+      "finding_idx": "6",
+      "title": "Toast notification uses `absolute` positioning that breaks on small or non-positioned parents",
+      "severity": "Medium",
+      "category": "responsive",
+      "file": "src/components/modules/shared/ReviewableModuleView.tsx:423-439",
+      "report": "02-module-registry-feature-graph.md"
+    },
+    {
+      "context_idx": "02",
+      "context_name": "Module Registry & Feature Graph (instance 2)",
+      "finding_idx": "7",
+      "title": "Quick Actions toggle button uses `display: none` via inline style instead of conditional render",
+      "severity": "Medium",
+      "category": "polish",
+      "file": "src/components/modules/shared/ReviewableModuleView.tsx:367-374",
+      "report": "02-module-registry-feature-graph.md"
+    },
+    {
+      "context_idx": "02",
+      "context_name": "Module Registry & Feature Graph (instance 2)",
+      "finding_idx": "8",
+      "title": "`MiniProgressArc` is hard-coded to amber instead of taking the module accent",
+      "severity": "Low",
+      "category": "visual-consistency",
+      "file": "src/components/modules/shared/RecommendedNextBanner.tsx:29-66",
+      "report": "02-module-registry-feature-graph.md"
+    },
+    {
+      "context_idx": "03",
+      "context_name": "Module Registry & Feature Graph (instance 1)",
+      "finding_idx": "1",
+      "title": "`knowledgeTips` data slot exists registry-wide but only one shape consumes it",
+      "severity": "High",
+      "category": "component-architecture",
+      "file": "src/lib/module-registry.ts:432-554 (and ~12 more empty arrays); consumed only at src/components/modules/ModuleShell.tsx:122-142",
+      "report": "03-module-registry-feature-graph.md"
+    },
+    {
+      "context_idx": "03",
+      "context_name": "Module Registry & Feature Graph (instance 1)",
+      "finding_idx": "2",
+      "title": "Two incompatible module shells coexist with divergent registry-driven UI",
+      "severity": "High",
+      "category": "component-architecture",
+      "file": "src/components/modules/shared/ReviewableModuleView.tsx:291-442 vs src/components/modules/ModuleShell.tsx:107-246",
+      "report": "03-module-registry-feature-graph.md"
+    },
+    {
+      "context_idx": "03",
+      "context_name": "Module Registry & Feature Graph (instance 1)",
+      "finding_idx": "3",
+      "title": "`RecommendedNextBanner` collapses three distinct registry signals into one cramped strip",
+      "severity": "High",
+      "category": "visual-consistency",
+      "file": "src/components/modules/shared/RecommendedNextBanner.tsx:124-175",
+      "report": "03-module-registry-feature-graph.md"
+    },
+    {
+      "context_idx": "03",
+      "context_name": "Module Registry & Feature Graph (instance 1)",
+      "finding_idx": "4",
+      "title": "`MiniProgressArc` and `ContextHealthBadge` dot encode the same idea with hand-rolled inline geometry",
+      "severity": "Medium",
+      "category": "design-system",
+      "file": "src/components/modules/shared/RecommendedNextBanner.tsx:29-66; src/components/modules/shared/ContextHealthBadge.tsx:137-155, 175-197, 289-303",
+      "report": "03-module-registry-feature-graph.md"
+    },
+    {
+      "context_idx": "03",
+      "context_name": "Module Registry & Feature Graph (instance 1)",
+      "finding_idx": "5",
+      "title": "Tab system treats all registry-driven content as full-height except Overview/Roadmap, leaking layout math",
+      "severity": "Medium",
+      "category": "responsive",
+      "file": "src/components/modules/shared/ReviewableModuleView.tsx:361-363",
+      "report": "03-module-registry-feature-graph.md"
+    },
+    {
+      "context_idx": "03",
+      "context_name": "Module Registry & Feature Graph (instance 1)",
+      "finding_idx": "6",
+      "title": "Toast and Quick-Actions toggle hard-code z-index ordering and use absolute/fixed inconsistently",
+      "severity": "Medium",
+      "category": "polish",
+      "file": "src/components/modules/shared/ReviewableModuleView.tsx:367-391, 423-439",
+      "report": "03-module-registry-feature-graph.md"
+    },
+    {
+      "context_idx": "03",
+      "context_name": "Module Registry & Feature Graph (instance 1)",
+      "finding_idx": "7",
+      "title": "`getChecklistSizes()` rebuilds a registry-wide dictionary on every banner mount",
+      "severity": "Low",
+      "category": "polish",
+      "file": "src/components/modules/shared/RecommendedNextBanner.tsx:16-22, 105",
+      "report": "03-module-registry-feature-graph.md"
+    },
+    {
+      "context_idx": "04",
+      "context_name": "Game Data & Debug Tools",
+      "finding_idx": "1",
+      "title": "Two parallel radar/gauge implementations diverge in style and capability",
+      "severity": "High",
+      "category": "component-architecture",
+      "file": "src/components/modules/core-engine/unique-tabs/_shared.tsx:455-515 vs src/components/modules/core-engine/unique-tabs/affix-workbench/PowerBudgetRadar.tsx:39-128 (and DebugDashboard/system/CircularGauge.tsx:17-63 vs _shared.tsx:646-686)",
+      "report": "04-game-data-debug-tools.md"
+    },
+    {
+      "context_idx": "04",
+      "context_name": "Game Data & Debug Tools",
+      "finding_idx": "2",
+      "title": "Hard-coded hex colors leak into \"polished\" data files, bypassing chart-colors tokens",
+      "severity": "High",
+      "category": "design-system",
+      "file": "src/components/modules/core-engine/unique-tabs/ZoneMap/data.ts:59-63; src/components/modules/core-engine/unique-tabs/_shared.tsx:585 (`lowColor = '#1e293b'`); src/components/modules/core-engine/unique-tabs/DebugDashboard/system/SystemHealthSection.tsx:28,34",
+      "report": "04-game-data-debug-tools.md"
+    },
+    {
+      "context_idx": "04",
+      "context_name": "Game Data & Debug Tools",
+      "finding_idx": "3",
+      "title": "SaveDataSchema/AttributePointOptimizer \"design.tsx\" files are pure re-exports \u2014 a non-feature",
+      "severity": "Medium",
+      "category": "component-architecture",
+      "file": "src/components/modules/core-engine/unique-tabs/SaveDataSchema/design.tsx:1-5; src/components/modules/core-engine/unique-tabs/AttributePointOptimizer/design.tsx:1-5",
+      "report": "04-game-data-debug-tools.md"
+    },
+    {
+      "context_idx": "04",
+      "context_name": "Game Data & Debug Tools",
+      "finding_idx": "4",
+      "title": "CircularGauge variants diverge in \"status badge\" treatment and label casing",
+      "severity": "Medium",
+      "category": "visual-consistency",
+      "file": "src/components/modules/core-engine/unique-tabs/DebugDashboard/system/CircularGauge.tsx:46-60 vs src/components/modules/core-engine/unique-tabs/_shared.tsx:660-686",
+      "report": "04-game-data-debug-tools.md"
+    },
+    {
+      "context_idx": "04",
+      "context_name": "Game Data & Debug Tools",
+      "finding_idx": "5",
+      "title": "Missing empty/loading/error states across data panels",
+      "severity": "High",
+      "category": "polish",
+      "file": "src/components/modules/core-engine/unique-tabs/affix-workbench/SynergyDetector.tsx:108-114; src/components/modules/core-engine/unique-tabs/affix-workbench/PowerBudgetRadar.tsx:39-128; src/components/modules/core-engine/unique-tabs/ProgressionCurve/curves/XpCurveChart.tsx:38-104; src/components/modules/core-engine/unique-tabs/_shared.tsx:526-558 (TimelineStrip)",
+      "report": "04-game-data-debug-tools.md"
+    },
+    {
+      "context_idx": "04",
+      "context_name": "Game Data & Debug Tools",
+      "finding_idx": "6",
+      "title": "ZoneMap topology lock icon is a literal emoji embedded in SVG `<text>`",
+      "severity": "Medium",
+      "category": "accessibility-polish",
+      "file": "src/components/modules/core-engine/unique-tabs/ZoneMap/map/TopologyGraph.tsx:42-51",
+      "report": "04-game-data-debug-tools.md"
+    },
+    {
+      "context_idx": "04",
+      "context_name": "Game Data & Debug Tools",
+      "finding_idx": "7",
+      "title": "Magic-number radar/topology coordinates and bespoke padding leak into render code",
+      "severity": "Medium",
+      "category": "design-system",
+      "file": "src/components/modules/core-engine/unique-tabs/affix-workbench/PowerBudgetRadar.tsx:41,50-51,113-114; src/components/modules/core-engine/unique-tabs/ZoneMap/map/TopologyGraph.tsx:25,88-92",
+      "report": "04-game-data-debug-tools.md"
+    },
+    {
+      "context_idx": "04",
+      "context_name": "Game Data & Debug Tools",
+      "finding_idx": "8",
+      "title": "DiffViewer uses raw `border-slate-700/50` while the rest of the file uses tokens",
+      "severity": "Low",
+      "category": "design-system",
+      "file": "src/components/modules/core-engine/unique-tabs/_shared.tsx:735,744",
+      "report": "04-game-data-debug-tools.md"
+    },
+    {
+      "context_idx": "05",
+      "context_name": "Abilities & Progression",
+      "finding_idx": "1",
+      "title": "Two SVG-graph editors implement node/wire/pin primitives independently with subtly different visual rules",
+      "severity": "High",
+      "category": "component-architecture",
+      "file": "src/components/modules/core-engine/unique-tabs/gas-blueprint/RelationshipWebEditor.tsx:107-200; src/components/modules/core-engine/unique-tabs/gas-blueprint/WiringGraphEditor.tsx:278-516",
+      "report": "05-abilities-progression.md"
+    },
+    {
+      "context_idx": "05",
+      "context_name": "Abilities & Progression",
+      "finding_idx": "2",
+      "title": "Code-output panel chrome is hand-rolled with hardcoded `#0d1117`/`#0a0a15` four times",
+      "severity": "High",
+      "category": "design-system",
+      "file": "src/components/modules/core-engine/unique-tabs/progression/XpTableGenerator.tsx:288, 342-355; src/components/modules/core-engine/unique-tabs/progression/DRCodeGenerator.tsx:304-317; src/components/modules/core-engine/unique-tabs/gas-blueprint/CodePreview.tsx:64; src/components/modules/core-engine/unique-tabs/AbilityForge/CodeBlock.tsx:11-23",
+      "report": "05-abilities-progression.md"
+    },
+    {
+      "context_idx": "05",
+      "context_name": "Abilities & Progression",
+      "finding_idx": "3",
+      "title": "Tab-pill button is reimplemented inline in three editors with the same structure",
+      "severity": "High",
+      "category": "component-architecture",
+      "file": "src/components/modules/core-engine/unique-tabs/progression/XpTableGenerator.tsx:264-284; src/components/modules/core-engine/unique-tabs/progression/DRCodeGenerator.tsx:279-298; src/components/modules/core-engine/unique-tabs/progression/DiminishingReturnsVisualizer.tsx:21-35",
+      "report": "05-abilities-progression.md"
+    },
+    {
+      "context_idx": "05",
+      "context_name": "Abilities & Progression",
+      "finding_idx": "4",
+      "title": "Tag concatenation `${color}${OPACITY_X}` mixed with `withOpacity(color, OPACITY_X)` in the same file",
+      "severity": "High",
+      "category": "design-system",
+      "file": "src/components/modules/core-engine/unique-tabs/progression/XpTableGenerator.tsx:222, 276-278, 312, 326, 361-363, 373; src/components/modules/core-engine/unique-tabs/progression/DRCodeGenerator.tsx:214, 290-292; src/components/modules/core-engine/unique-tabs/gas-blueprint/WiringGraphEditor.tsx:423-424; src/components/modules/core-engine/unique-tabs/gas-blueprint/RelationshipWebEditor.tsx:167-169, 206",
+      "report": "05-abilities-progression.md"
+    },
+    {
+      "context_idx": "05",
+      "context_name": "Abilities & Progression",
+      "finding_idx": "5",
+      "title": "`XpSourceBreakdown` renders the bar label twice, overlapping the percentage label",
+      "severity": "Medium",
+      "category": "polish",
+      "file": "src/components/modules/core-engine/unique-tabs/progression/XpSourceBreakdown.tsx:35-54",
+      "report": "05-abilities-progression.md"
+    },
+    {
+      "context_idx": "05",
+      "context_name": "Abilities & Progression",
+      "finding_idx": "6",
+      "title": "Tag-rule SVG visualization uses a fixed `380` viewBox while the editor below is responsive",
+      "severity": "Medium",
+      "category": "responsive",
+      "file": "src/components/modules/core-engine/unique-tabs/gas-blueprint/TagRulesEditor.tsx:106-145",
+      "report": "05-abilities-progression.md"
+    },
+    {
+      "context_idx": "05",
+      "context_name": "Abilities & Progression",
+      "finding_idx": "7",
+      "title": "Per-editor bespoke chrome (column headers, intro text, stat strip) instead of a panel-frame primitive",
+      "severity": "Medium",
+      "category": "component-architecture",
+      "file": "src/components/modules/core-engine/unique-tabs/gas-blueprint/WiringGraphEditor.tsx:280-291, 519-544; src/components/modules/core-engine/unique-tabs/gas-blueprint/RelationshipWebEditor.tsx:108-110; src/components/modules/core-engine/unique-tabs/gas-blueprint/TagRulesEditor.tsx:104-105",
+      "report": "05-abilities-progression.md"
+    },
+    {
+      "context_idx": "05",
+      "context_name": "Abilities & Progression",
+      "finding_idx": "8",
+      "title": "Form-input styling string duplicated across every editor with no `<NumberField>` component",
+      "severity": "Low",
+      "category": "design-system",
+      "file": "src/components/modules/core-engine/unique-tabs/progression/XpTableGenerator.tsx:240-242, 247-249, 254-256; src/components/modules/core-engine/unique-tabs/progression/DRCodeGenerator.tsx:222-227, 231-236, 240-245; src/components/modules/core-engine/unique-tabs/gas-blueprint/TagRulesEditor.tsx:155-159, 180-184",
+      "report": "05-abilities-progression.md"
+    },
+    {
+      "context_idx": "06",
+      "context_name": "Loot, Items & Economy",
+      "finding_idx": "1",
+      "title": "Rarity colour scale forks across three sibling tabs",
+      "severity": "Critical",
+      "category": "design-system",
+      "file": "src/components/modules/core-engine/unique-tabs/LootTableVisualizer/data.ts:37-43, src/components/modules/core-engine/unique-tabs/ItemEconomySimulator/constants.ts:17-23, src/components/modules/core-engine/unique-tabs/AILootDesigner/constants.ts:38-44",
+      "report": "06-loot-items-economy.md"
+    },
+    {
+      "context_idx": "06",
+      "context_name": "Loot, Items & Economy",
+      "finding_idx": "2",
+      "title": "EconomySimulatorView bypasses the chart-colors token system entirely",
+      "severity": "High",
+      "category": "design-system",
+      "file": "src/components/modules/evaluator/EconomySimulatorView.tsx:33-54, 103-178, 339-567",
+      "report": "06-loot-items-economy.md"
+    },
+    {
+      "context_idx": "06",
+      "context_name": "Loot, Items & Economy",
+      "finding_idx": "3",
+      "title": "Three different chart axis/grid implementations across the four visualizers",
+      "severity": "High",
+      "category": "component-architecture",
+      "file": "src/components/modules/core-engine/unique-tabs/ItemEconomySimulator/PowerCurveChart.tsx:46-114, src/components/modules/core-engine/unique-tabs/ItemEconomySimulator/RarityStackChart.tsx:21-66, src/components/modules/core-engine/unique-tabs/ItemEconomySimulator/AffixHeatmap.tsx:31-79, src/components/modules/evaluator/EconomySimulatorView.tsx:322-497",
+      "report": "06-loot-items-economy.md"
+    },
+    {
+      "context_idx": "06",
+      "context_name": "Loot, Items & Economy",
+      "finding_idx": "4",
+      "title": "AffixCraftingWorkbench has two divergent definitions of category colour",
+      "severity": "High",
+      "category": "visual-consistency",
+      "file": "src/components/modules/core-engine/unique-tabs/AffixCraftingWorkbench/constants.ts:67-79",
+      "report": "06-loot-items-economy.md"
+    },
+    {
+      "context_idx": "06",
+      "context_name": "Loot, Items & Economy",
+      "finding_idx": "5",
+      "title": "TraitSlider is a bespoke range-input rebuild that won't compose with the rest of the slider surface",
+      "severity": "High",
+      "category": "component-architecture",
+      "file": "src/components/modules/core-engine/unique-tabs/ItemDNAGenomeEditor/TraitSlider.tsx:12-82",
+      "report": "06-loot-items-economy.md"
+    },
+    {
+      "context_idx": "06",
+      "context_name": "Loot, Items & Economy",
+      "finding_idx": "6",
+      "title": "Hard-coded SVG dimensions break responsive at small viewports",
+      "severity": "Medium",
+      "category": "responsive",
+      "file": "src/components/modules/core-engine/unique-tabs/LootTableVisualizer/simulation/DropTreemap.tsx:23, src/components/modules/core-engine/unique-tabs/ItemEconomySimulator/PowerCurveChart.tsx:16-17, src/components/modules/core-engine/unique-tabs/ItemEconomySimulator/RarityStackChart.tsx:14-15, src/components/modules/core-engine/unique-tabs/ItemEconomySimulator/AffixHeatmap.tsx:26-29, src/components/modules/core-engine/unique-tabs/ItemDNAGenomeEditor/DNAStrand.tsx:13-15",
+      "report": "06-loot-items-economy.md"
+    },
+    {
+      "context_idx": "06",
+      "context_name": "Loot, Items & Economy",
+      "finding_idx": "7",
+      "title": "Drop Simulator chip row will wrap awkwardly because chips have no min/max width policy",
+      "severity": "Medium",
+      "category": "polish",
+      "file": "src/components/modules/core-engine/unique-tabs/LootTableVisualizer/simulation/DropSimulator.tsx:149-176",
+      "report": "06-loot-items-economy.md"
+    },
+    {
+      "context_idx": "06",
+      "context_name": "Loot, Items & Economy",
+      "finding_idx": "8",
+      "title": "RollResultCard composes its own border + corner-bracket shell instead of a hover-only Card primitive",
+      "severity": "Medium",
+      "category": "component-architecture",
+      "file": "src/components/modules/core-engine/unique-tabs/ItemDNAGenomeEditor/RollResultCard.tsx:42-67, src/components/modules/core-engine/unique-tabs/ItemCatalog/catalog/TradingCard.tsx:38-97",
+      "report": "06-loot-items-economy.md"
+    },
+    {
+      "context_idx": "06",
+      "context_name": "Loot, Items & Economy",
+      "finding_idx": "9",
+      "title": "Rarity stat row \"Avg per 100 kills\" loses precision but copies the rate cell verbatim",
+      "severity": "Low",
+      "category": "polish",
+      "file": "src/components/modules/core-engine/unique-tabs/LootTableVisualizer/core/WeightDistribution.tsx:128-138",
+      "report": "06-loot-items-economy.md"
+    },
+    {
+      "context_idx": "07",
+      "context_name": "Combat & Balance Simulation",
+      "finding_idx": "1",
+      "title": "CombatSimulatorView lives in a parallel design system from every other sim in this context",
+      "severity": "High",
+      "category": "design-system",
+      "file": "src/components/modules/evaluator/CombatSimulatorView.tsx:114-275",
+      "report": "07-combat-balance-simulation.md"
+    },
+    {
+      "context_idx": "07",
+      "context_name": "Combat & Balance Simulation",
+      "finding_idx": "2",
+      "title": "StatInput exists but the same pattern is reimplemented inline ~17 times across the context",
+      "severity": "High",
+      "category": "component-architecture",
+      "file": "src/components/modules/evaluator/CombatSimulatorView.tsx:204-224, src/components/modules/core-engine/unique-tabs/GASBalanceSimulator/ScenarioEditor.tsx:78-80,108-112",
+      "report": "07-combat-balance-simulation.md"
+    },
+    {
+      "context_idx": "07",
+      "context_name": "Combat & Balance Simulation",
+      "finding_idx": "3",
+      "title": "Three nearly-identical SVG hover-tooltip charts diverge in tooltip chrome and styling",
+      "severity": "High",
+      "category": "visual-consistency",
+      "file": "src/components/modules/core-engine/unique-tabs/GASBalanceSimulator/SensitivityChart.tsx:95-103, src/components/modules/core-engine/unique-tabs/GASBalanceSimulator/LevelSweepChart.tsx:113-125, src/components/modules/core-engine/unique-tabs/GASBalanceSimulator/HistogramChart.tsx:53-74",
+      "report": "07-combat-balance-simulation.md"
+    },
+    {
+      "context_idx": "07",
+      "context_name": "Combat & Balance Simulation",
+      "finding_idx": "4",
+      "title": "RatingBadge's pattern is duplicated as Badge variants and as inline severity pills",
+      "severity": "Medium",
+      "category": "component-architecture",
+      "file": "src/components/modules/core-engine/unique-tabs/DodgeTimelineEditor/RatingBadge.tsx:6-25, src/components/modules/evaluator/CombatSimulatorView.tsx:31-35,540-546",
+      "report": "07-combat-balance-simulation.md"
+    },
+    {
+      "context_idx": "07",
+      "context_name": "Combat & Balance Simulation",
+      "finding_idx": "5",
+      "title": "SensitivityChart skips empty-state rendering during the first frame, causing a layout pop",
+      "severity": "Medium",
+      "category": "polish",
+      "file": "src/components/modules/core-engine/unique-tabs/GASBalanceSimulator/SensitivityChart.tsx:30-31,69-71",
+      "report": "07-combat-balance-simulation.md"
+    },
+    {
+      "context_idx": "07",
+      "context_name": "Combat & Balance Simulation",
+      "finding_idx": "6",
+      "title": "SurvivalHeatmap cells skip cell-level keyboard focus and ARIA semantics",
+      "severity": "Medium",
+      "category": "accessibility-polish",
+      "file": "src/components/modules/core-engine/unique-tabs/PredictiveBalanceSimulator/SurvivalHeatmap.tsx:42-53",
+      "report": "07-combat-balance-simulation.md"
+    },
+    {
+      "context_idx": "07",
+      "context_name": "Combat & Balance Simulation",
+      "finding_idx": "7",
+      "title": "SpatialGrid and the GAS sliders both color-code by stat but the palettes don't match",
+      "severity": "Medium",
+      "category": "visual-consistency",
+      "file": "src/components/modules/core-engine/unique-tabs/CombatChoreographyEditor/SpatialGrid.tsx:109,129,145, src/components/modules/core-engine/unique-tabs/GASBalanceSimulator/ScenarioEditor.tsx:50-64",
+      "report": "07-combat-balance-simulation.md"
+    },
+    {
+      "context_idx": "07",
+      "context_name": "Combat & Balance Simulation",
+      "finding_idx": "8",
+      "title": "FlowNode hardcodes a 44-char label truncation instead of using CSS",
+      "severity": "Low",
+      "category": "polish",
+      "file": "src/components/modules/core-engine/unique-tabs/DamagePipelineDiagram/FlowNode.tsx:140-143",
+      "report": "07-combat-balance-simulation.md"
+    },
+    {
+      "context_idx": "08",
+      "context_name": "Character Design & Genome",
+      "finding_idx": "1",
+      "title": "Two parallel \"category-grouped collapsible parameter list\" components drift apart",
+      "severity": "High",
+      "category": "component-architecture",
+      "file": "src/components/modules/core-engine/unique-tabs/CharacterBlueprint/overview/PropertyInspector.tsx:76-184 ; src/components/modules/core-engine/unique-tabs/CharacterFeelOptimizer/ParameterDetails.tsx:30-101",
+      "report": "08-character-design-genome.md"
+    },
+    {
+      "context_idx": "08",
+      "context_name": "Character Design & Genome",
+      "finding_idx": "2",
+      "title": "Hard-coded character hex colours bypass the design-system token registry",
+      "severity": "High",
+      "category": "design-system",
+      "file": "src/components/modules/core-engine/unique-tabs/CharacterBlueprint/data.ts:366-428",
+      "report": "08-character-design-genome.md"
+    },
+    {
+      "context_idx": "08",
+      "context_name": "Character Design & Genome",
+      "finding_idx": "3",
+      "title": "PropertyInspector slider max is computed from the row's own value, so the thumb never reaches the right edge",
+      "severity": "High",
+      "category": "polish",
+      "file": "src/components/modules/core-engine/unique-tabs/CharacterBlueprint/overview/PropertyInspector.tsx:135-144",
+      "report": "08-character-design-genome.md"
+    },
+    {
+      "context_idx": "08",
+      "context_name": "Character Design & Genome",
+      "finding_idx": "4",
+      "title": "CharacterScalingPreview is missing a marker on the NeonBar showing where the current level sits",
+      "severity": "Medium",
+      "category": "polish",
+      "file": "src/components/modules/core-engine/unique-tabs/CharacterBlueprint/overview/CharacterScalingPreview.tsx:38-79",
+      "report": "08-character-design-genome.md"
+    },
+    {
+      "context_idx": "08",
+      "context_name": "Character Design & Genome",
+      "finding_idx": "5",
+      "title": "Comparison rows in ComparisonRow.tsx render two stacked bars in one track that obscure each other",
+      "severity": "Medium",
+      "category": "visual-consistency",
+      "file": "src/components/modules/core-engine/unique-tabs/CharacterFeelOptimizer/ComparisonRow.tsx:35-48",
+      "report": "08-character-design-genome.md"
+    },
+    {
+      "context_idx": "08",
+      "context_name": "Character Design & Genome",
+      "finding_idx": "6",
+      "title": "CameraProfileComparison ViewportMockup uses a fixed 180\u00d7120 viewBox, so the FOV cone clips when 3 viewports squeeze into `grid-cols-3`",
+      "severity": "Medium",
+      "category": "responsive",
+      "file": "src/components/modules/core-engine/unique-tabs/CharacterBlueprint/overview/CameraProfileComparison.tsx:25-83, 161",
+      "report": "08-character-design-genome.md"
+    },
+    {
+      "context_idx": "08",
+      "context_name": "Character Design & Genome",
+      "finding_idx": "7",
+      "title": "PresetCard hover scale clips inside the parent grid cell because parent does not define `overflow-visible`",
+      "severity": "Medium",
+      "category": "polish",
+      "file": "src/components/modules/core-engine/unique-tabs/CharacterFeelOptimizer/PresetCard.tsx:25-36",
+      "report": "08-character-design-genome.md"
+    },
+    {
+      "context_idx": "08",
+      "context_name": "Character Design & Genome",
+      "finding_idx": "8",
+      "title": "NarrativeBreadcrumb in CharacterBlueprint uses inline `style={{ fontWeight, opacity }}` instead of state classes \u2014 diverges from the SubTabNavigation pattern below it",
+      "severity": "Medium",
+      "category": "visual-consistency",
+      "file": "src/components/modules/core-engine/unique-tabs/CharacterBlueprint/index.tsx:57-84",
+      "report": "08-character-design-genome.md"
+    },
+    {
+      "context_idx": "08",
+      "context_name": "Character Design & Genome",
+      "finding_idx": "9",
+      "title": "Many tabular layouts in this context use `w-12`, `w-14`, `w-20`, `w-28` width prescriptions that do not survive narrow viewports",
+      "severity": "Low",
+      "category": "responsive",
+      "file": "src/components/modules/core-engine/unique-tabs/CharacterFeelOptimizer/ComparisonRow.tsx:28-58 ; src/components/modules/core-engine/unique-tabs/CharacterFeelOptimizer/ParameterDetails.tsx:77-83 ; src/components/modules/core-engine/unique-tabs/CharacterBlueprint/overview/PropertyInspector.tsx:126-143",
+      "report": "08-character-design-genome.md"
+    },
+    {
+      "context_idx": "09",
+      "context_name": "Core Engine Panels & Views",
+      "finding_idx": "1",
+      "title": "Section header chrome forked into two divergent variants across 10 panels",
+      "severity": "High",
+      "category": "component-architecture",
+      "file": "src/components/modules/core-engine/dzin-panels/CorePanel.tsx:142-144, AbilitiesPanel.tsx:127-128, AttributesPanel.tsx:159-161, TagsPanel.tsx:156-158 (variant A); AttributesPanel.tsx:214,222, DamageCalcPanel.tsx:139, EffectsPanel.tsx:140,159, EffectTimelinePanel.tsx:94, LoadoutPanel.tsx:91, TagDepsPanel.tsx:131,195, TagAuditPanel.tsx:268 (variant B / `SectionLabel`)",
+      "report": "09-core-engine-panels-views.md"
+    },
+    {
+      "context_idx": "09",
+      "context_name": "Core Engine Panels & Views",
+      "finding_idx": "2",
+      "title": "\"Status dot\" pill is reimplemented inline in 8+ places with three competing sizes/glow recipes",
+      "severity": "High",
+      "category": "component-architecture",
+      "file": "src/components/modules/core-engine/dzin-panels/CorePanel.tsx:79-83, 101, 151; AbilitiesPanel.tsx:142-145; AttributesPanel.tsx:109-112, 126, 180, 204; EffectsPanel.tsx:84-87, 103-106, 146-148; TagsPanel.tsx:106-110, 124-128, 171-175, 193-196; TagDepsPanel.tsx:200-202; LoadoutPanel.tsx:71-74; DamageCalcPanel.tsx (no instance \u2014 but Compact uses identical pattern at 121-124)",
+      "report": "09-core-engine-panels-views.md"
+    },
+    {
+      "context_idx": "09",
+      "context_name": "Core Engine Panels & Views",
+      "finding_idx": "3",
+      "title": "Compact-density wrapper has 3+ ad-hoc deviations from `DZIN_SPACING.compact.wrapper`",
+      "severity": "High",
+      "category": "design-system",
+      "file": "src/components/modules/core-engine/dzin-panels/EffectTimelinePanel.tsx:61 (raw `p-2`), TagAuditPanel.tsx:155 (uses spacing token correctly but adds `text-xs` collision); EffectsPanel.tsx:69 + nested wrappers at 71, 97 (token + manual `space-y-1` + manual `border-t pl-...`); TagsPanel.tsx:104-105 (token + `mb-1.5` adds extra spacing); AttributesPanel.tsx:107-108 (token + interleaved `w-full` bars that break the standard list rhythm)",
+      "report": "09-core-engine-panels-views.md"
+    },
+    {
+      "context_idx": "09",
+      "context_name": "Core Engine Panels & Views",
+      "finding_idx": "4",
+      "title": "Accent colors specified as raw hex strings inline instead of imported tokens",
+      "severity": "High",
+      "category": "design-system",
+      "file": "src/components/modules/core-engine/dzin-panels/AbilitiesPanel.tsx:122 (`accent=\"#a855f7\"`), AttributesPanel.tsx:153, 154 (`accent=\"#10b981\"`), 214, 222 (`color=\"#10b981\"`); TagsPanel.tsx:152 (`accent=\"#f59e0b\"`); LoadoutPanel.tsx:91, 136 (`color=\"#a855f7\"` / `accent=\"#a855f7\"`); DamageCalcPanel.tsx:139 (`color=\"#f97316\"`); TagAuditPanel.tsx:268 (`color=\"#fbbf24\"`)",
+      "report": "09-core-engine-panels-views.md"
+    },
+    {
+      "context_idx": "09",
+      "context_name": "Core Engine Panels & Views",
+      "finding_idx": "5",
+      "title": "Two SVG diagrams ship without empty / loading / error states and `<title>`/aria-labels",
+      "severity": "Medium",
+      "category": "accessibility-polish",
+      "file": "src/components/modules/core-engine/dzin-panels/AttributesPanel.tsx:285-368 (AttributeRelationshipWeb) + 386-425 (AttributeGrowthChart); TagDepsPanel.tsx:133-190; DamageCalcPanel.tsx:42-100",
+      "report": "09-core-engine-panels-views.md"
+    },
+    {
+      "context_idx": "09",
+      "context_name": "Core Engine Panels & Views",
+      "finding_idx": "6",
+      "title": "`SurfaceCard level={2}` \"card with section header\" pattern repeats 18+ times verbatim",
+      "severity": "Medium",
+      "category": "component-architecture",
+      "file": "src/components/modules/core-engine/dzin-panels/CorePanel.tsx:141-156, 159-164; AbilitiesPanel.tsx:126-150, 153-188; AttributesPanel.tsx:158-210, 213-218, 221-226; DamageCalcPanel.tsx:138-143; EffectsPanel.tsx:139-155, 158-163; EffectTimelinePanel.tsx:93-102; LoadoutPanel.tsx:90-162; TagDepsPanel.tsx:130-191, 194-207; TagAuditPanel.tsx:267-371; TagsPanel.tsx:155-206",
+      "report": "09-core-engine-panels-views.md"
+    },
+    {
+      "context_idx": "09",
+      "context_name": "Core Engine Panels & Views",
+      "finding_idx": "7",
+      "title": "Mixed font-size scale: `text-2xs`, `text-[10px]`, `text-[11px]`, `text-xs` used interchangeably for the same hierarchy",
+      "severity": "Medium",
+      "category": "visual-consistency",
+      "file": "src/components/modules/core-engine/dzin-panels/EffectTimelinePanel.tsx:48-49, 80; AbilitiesPanel.tsx:141; EffectsPanel.tsx:90, 151; TagsPanel.tsx:179, 191; AttributesPanel.tsx:163, 187, 314, 363, 365, 394, 400, 416 (all `text-[11px]`); TagDepsPanel.tsx:157, 181 (`text-[11px]`); DamageCalcPanel.tsx:61, 71 (`text-[11px]`); TagAuditPanel.tsx:243 (`text-[10px]`)",
+      "report": "09-core-engine-panels-views.md"
+    },
+    {
+      "context_idx": "09",
+      "context_name": "Core Engine Panels & Views",
+      "finding_idx": "8",
+      "title": "PlanView's tab bar is a one-off implementation that diverges from project tab patterns",
+      "severity": "Low",
+      "category": "component-architecture",
+      "file": "src/components/modules/core-engine/PlanView.tsx:35-83",
+      "report": "09-core-engine-panels-views.md"
+    },
+    {
+      "context_idx": "10",
+      "context_name": "Dzin Layout & State Engine",
+      "finding_idx": "1",
+      "title": "`DZIN_TOKENS` map drifts from the actual CSS variables in `default.css`",
+      "severity": "High",
+      "category": "Design",
+      "file": "src/lib/dzin/core/theme/tokens.ts:4-46 (cross-ref src/lib/dzin/core/theme/default.css:11-53; src/lib/dzin/core/theme/state.css:49,72)",
+      "report": "10-dzin-layout-state-engine.md"
+    },
+    {
+      "context_idx": "10",
+      "context_name": "Dzin Layout & State Engine",
+      "finding_idx": "2",
+      "title": "PanelFrame has no `:focus-visible` / focused-region styling and no token for it",
+      "severity": "High",
+      "category": "Accessibility-as-polish",
+      "file": "src/lib/dzin/core/panel/PanelFrame.tsx:52-85; src/lib/dzin/core/theme/default.css:125-134",
+      "report": "10-dzin-layout-state-engine.md"
+    },
+    {
+      "context_idx": "10",
+      "context_name": "Dzin Layout & State Engine",
+      "finding_idx": "3",
+      "title": "Panel-header height is hard-coded at 28px / 36px in the density rules but the matching token is never re-pointed",
+      "severity": "Medium",
+      "category": "Design",
+      "file": "src/lib/dzin/core/theme/default.css:195-211",
+      "report": "10-dzin-layout-state-engine.md"
+    },
+    {
+      "context_idx": "10",
+      "context_name": "Dzin Layout & State Engine",
+      "finding_idx": "4",
+      "title": "Density change announcement leaks initial mount and doesn't reset",
+      "severity": "Medium",
+      "category": "Accessibility-as-polish",
+      "file": "src/lib/dzin/core/panel/PanelFrame.tsx:42-50, 64-70",
+      "report": "10-dzin-layout-state-engine.md"
+    },
+    {
+      "context_idx": "10",
+      "context_name": "Dzin Layout & State Engine",
+      "finding_idx": "5",
+      "title": "PanelFrame spreads arbitrary `...rest` props onto a `role=\"region\"` div",
+      "severity": "Medium",
+      "category": "Component",
+      "file": "src/lib/dzin/core/panel/PanelFrame.tsx:37, 61",
+      "report": "10-dzin-layout-state-engine.md"
+    },
+    {
+      "context_idx": "10",
+      "context_name": "Dzin Layout & State Engine",
+      "finding_idx": "6",
+      "title": "Two competing tokens for the same look (`--dzin-panel-bg` aliases `--dzin-surface-2`)",
+      "severity": "Low",
+      "category": "Design",
+      "file": "src/lib/dzin/core/theme/default.css:48-52",
+      "report": "10-dzin-layout-state-engine.md"
+    },
+    {
+      "context_idx": "11",
+      "context_name": "Dzin Panel Framework",
+      "finding_idx": "1",
+      "title": "`DZIN_SPACING.compact` is missing the `card` / `gap` / `sectionMb` / `contentMt` tokens that `full` defines",
+      "severity": "High",
+      "category": "Design",
+      "file": "src/lib/dzin/animation-constants.ts:116-136",
+      "report": "11-dzin-panel-framework.md"
+    },
+    {
+      "context_idx": "11",
+      "context_name": "Dzin Panel Framework",
+      "finding_idx": "2",
+      "title": "`VALID_LAYOUTS` Set duplicates `LayoutTemplateId` union \u2014 drifts silently",
+      "severity": "High",
+      "category": "Design",
+      "file": "src/lib/dzin/advisor/slashCommands.ts:88-90",
+      "report": "11-dzin-panel-framework.md"
+    },
+    {
+      "context_idx": "11",
+      "context_name": "Dzin Panel Framework",
+      "finding_idx": "3",
+      "title": "Panel-type aliases and PoF panel enum diverge \u2014 slash commands accept panels Gemini can't compose, and vice versa",
+      "severity": "High",
+      "category": "Component",
+      "file": "src/lib/dzin/advisor/slashCommands.ts:16-78 vs src/lib/dzin/advisor/advisorTools.ts:12-23",
+      "report": "11-dzin-panel-framework.md"
+    },
+    {
+      "context_idx": "11",
+      "context_name": "Dzin Panel Framework",
+      "finding_idx": "4",
+      "title": "`DENSITY_CONFIG` defines a `wide` preset but no panel registration uses it",
+      "severity": "Medium",
+      "category": "Design",
+      "file": "src/lib/dzin/animation-constants.ts:91-96, src/lib/dzin/panel-definitions.ts (252 occurrences of `DENSITY_CONFIG.standard|fallback`, 0 of `.wide`)",
+      "report": "11-dzin-panel-framework.md"
+    },
+    {
+      "context_idx": "11",
+      "context_name": "Dzin Panel Framework",
+      "finding_idx": "5",
+      "title": "`IntentResult.description` is overloaded as both human prose and a side-effect command channel",
+      "severity": "Medium",
+      "category": "Component",
+      "file": "src/lib/dzin/core/intent/bus.ts:43-51, handlers/system.ts:22-52",
+      "report": "11-dzin-panel-framework.md"
+    },
+    {
+      "context_idx": "11",
+      "context_name": "Dzin Panel Framework",
+      "finding_idx": "6",
+      "title": "`useIntent` parses bus snapshot via `JSON.parse` on every store change",
+      "severity": "Low",
+      "category": "Polish",
+      "file": "src/lib/dzin/core/intent/hooks.tsx:60-75, src/lib/dzin/core/intent/bus.ts:63-66",
+      "report": "11-dzin-panel-framework.md"
+    },
+    {
+      "context_idx": "12",
+      "context_name": "UI/HUD & Models",
+      "finding_idx": "1",
+      "title": "Two completely different visual languages inside the same tab group",
+      "severity": "Critical",
+      "category": "Visual",
+      "file": "src/components/modules/content/ui-hud/InventoryGridDesigner.tsx:141-205, src/components/modules/content/ui-hud/MenuFlowDiagram.tsx:317-340 (vs.) src/components/modules/content/ui-hud/HudThemeEditor.tsx:541-585, src/components/modules/content/ui-hud/LowHealthPulse.tsx:114-156, src/components/modules/content/ui-hud/EnemyHealthBarFSM.tsx:85-100",
+      "report": "12-ui-hud-models.md"
+    },
+    {
+      "context_idx": "12",
+      "context_name": "UI/HUD & Models",
+      "finding_idx": "2",
+      "title": "Element color palette has three sources of truth",
+      "severity": "High",
+      "category": "Design",
+      "file": "src/components/modules/content/ui-hud/DamageNumberPalette.tsx:17-45, src/components/modules/content/ui-hud/DamageNumberPhysicsSimulator.tsx:24-30, src/components/modules/content/ui-hud/HudThemeEditor.tsx:52-58",
+      "report": "12-ui-hud-models.md"
+    },
+    {
+      "context_idx": "12",
+      "context_name": "UI/HUD & Models",
+      "finding_idx": "3",
+      "title": "Three slider components, three contracts",
+      "severity": "High",
+      "category": "Component",
+      "file": "src/components/modules/content/ui-hud/DamageNumberPhysicsSimulator.tsx:341-359 (`SliderParam`), src/components/modules/content/ui-hud/HudThemeEditor.tsx:232-255 (`SliderField` wrapping `StyledSlider`), src/components/modules/content/ui-hud/LowHealthPulse.tsx:202-212 (uses `StyledSlider` directly), src/components/modules/content/ui-hud/InventoryGridDesigner.tsx:635-670 (`DimensionControl` +/- buttons, no slider)",
+      "report": "12-ui-hud-models.md"
+    },
+    {
+      "context_idx": "12",
+      "context_name": "UI/HUD & Models",
+      "finding_idx": "4",
+      "title": "Hard-coded indigo color spectrum violates token discipline",
+      "severity": "High",
+      "category": "Design",
+      "file": "src/components/modules/content/ui-hud/InventoryGridDesigner.tsx:141-160, 197-206, 471-501, 530-555 (and 30+ more sites), src/components/modules/content/ui-hud/MenuFlowDiagram.tsx:318-389, 432-484, 525-555 (50+ sites)",
+      "report": "12-ui-hud-models.md"
+    },
+    {
+      "context_idx": "12",
+      "context_name": "UI/HUD & Models",
+      "finding_idx": "5",
+      "title": "FSM/MenuFlow/Pipeline reinvent flow-graph primitives independently",
+      "severity": "High",
+      "category": "Component",
+      "file": "src/components/modules/content/ui-hud/EnemyHealthBarFSM.tsx:101-225 (SVG nodes + arrow math), src/components/modules/content/ui-hud/MenuFlowDiagram.tsx:275-651 (SVG nodes + arrow math + pan/drag), src/components/modules/content/models/AssetPipelineDiagram.tsx:118-251 (vertical chain + animated flow particles), src/components/modules/content/models/AssetInventory.tsx:65-148 (mini dependency graph)",
+      "report": "12-ui-hud-models.md"
+    },
+    {
+      "context_idx": "12",
+      "context_name": "UI/HUD & Models",
+      "finding_idx": "6",
+      "title": "AssetInventory mixes two scrollbar conventions and inline border radii",
+      "severity": "Medium",
+      "category": "Visual",
+      "file": "src/components/modules/content/models/AssetInventory.tsx:469-475, 500-510, 580",
+      "report": "12-ui-hud-models.md"
+    },
+    {
+      "context_idx": "12",
+      "context_name": "UI/HUD & Models",
+      "finding_idx": "7",
+      "title": "Three Generate CTAs, three different button systems",
+      "severity": "Medium",
+      "category": "Visual",
+      "file": "src/components/modules/content/ui-hud/InventoryGridDesigner.tsx:570-595, src/components/modules/content/ui-hud/MenuFlowDiagram.tsx:725-752, src/components/modules/content/ui-hud/HudThemeEditor.tsx:557-576 (export buttons), src/components/modules/content/models/AssetPipelineDiagram.tsx:227-240 (Execute AI Task)",
+      "report": "12-ui-hud-models.md"
+    },
+    {
+      "context_idx": "12",
+      "context_name": "UI/HUD & Models",
+      "finding_idx": "8",
+      "title": "Interactive SVG nodes are not keyboard-reachable",
+      "severity": "Medium",
+      "category": "Accessibility-as-polish",
+      "file": "src/components/modules/content/ui-hud/EnemyHealthBarFSM.tsx:185-223, src/components/modules/content/ui-hud/MenuFlowDiagram.tsx:497-651",
+      "report": "12-ui-hud-models.md"
+    },
+    {
+      "context_idx": "12",
+      "context_name": "UI/HUD & Models",
+      "finding_idx": "9",
+      "title": "SVG text font-size is a per-instance magic number",
+      "severity": "Low",
+      "category": "Magic",
+      "file": "src/components/modules/content/ui-hud/EnemyHealthBarFSM.tsx:170, 207, 215, src/components/modules/content/ui-hud/LowHealthPulse.tsx:303, 308, src/components/modules/content/ui-hud/MenuFlowDiagram.tsx:451, 593, 598, 610, src/components/modules/content/ui-hud/HudThemeEditor.tsx:643 (`fontSize={5}`)",
+      "report": "12-ui-hud-models.md"
+    },
+    {
+      "context_idx": "13",
+      "context_name": "Level Design",
+      "finding_idx": "1",
+      "title": "Two cohabiting visual languages \u2014 neutral surface tokens vs. hard-coded \"violet sci-fi\"",
+      "severity": "High",
+      "category": "Visual",
+      "file": "src/components/modules/content/level-design/LevelFlowEditor.tsx:325-470, ProceduralLevelWizard.tsx:260-533, RoomDetailPanel.tsx:79-348, StreamingZonePlanner.tsx:260-820",
+      "report": "13-level-design.md"
+    },
+    {
+      "context_idx": "13",
+      "context_name": "Level Design",
+      "finding_idx": "2",
+      "title": "Difficulty arc chart re-implements axis/grid/tooltip primitives instead of a shared chart kit",
+      "severity": "High",
+      "category": "Component",
+      "file": "src/components/modules/content/level-design/DifficultyArcChart.tsx:60-302",
+      "report": "13-level-design.md"
+    },
+    {
+      "context_idx": "13",
+      "context_name": "Level Design",
+      "finding_idx": "3",
+      "title": "Toast in `LevelDesignView` re-implements a notification system instead of using `sonner`",
+      "severity": "High",
+      "category": "Design",
+      "file": "src/components/modules/content/level-design/LevelDesignView.tsx:161-205, 341-355",
+      "report": "13-level-design.md"
+    },
+    {
+      "context_idx": "13",
+      "context_name": "Level Design",
+      "finding_idx": "4",
+      "title": "`LevelFlowEditor` reimplements graph node + wire primitives that already exist (or should) as a shared `FlowGraph`",
+      "severity": "High",
+      "category": "Component",
+      "file": "src/components/modules/content/level-design/LevelFlowEditor.tsx:280-707",
+      "report": "13-level-design.md"
+    },
+    {
+      "context_idx": "13",
+      "context_name": "Level Design",
+      "finding_idx": "5",
+      "title": "Wizard sections lack a shared `StepNav` / section primitive \u2014 section headers diverge",
+      "severity": "Medium",
+      "category": "Component",
+      "file": "src/components/modules/content/level-design/ProceduralLevelWizard.tsx:267-463",
+      "report": "13-level-design.md"
+    },
+    {
+      "context_idx": "13",
+      "context_name": "Level Design",
+      "finding_idx": "6",
+      "title": "Missing empty/loading/error states for procedurally generated config and Blender failures",
+      "severity": "Medium",
+      "category": "Polish",
+      "file": "src/components/modules/content/level-design/ProceduralLevelWizard.tsx:194-248, 525-530; LevelFlowEditor.tsx:466-470",
+      "report": "13-level-design.md"
+    },
+    {
+      "context_idx": "13",
+      "context_name": "Level Design",
+      "finding_idx": "7",
+      "title": "Inline-style and magic-number drift: opacity literals, color literals, raw rgba",
+      "severity": "Medium",
+      "category": "Design",
+      "file": "src/components/modules/content/level-design/ProceduralLevelWizard.tsx:292-475 (ProceduralLevelWizard uses `${alg.color}15` string concatenation), RoomDetailPanel.tsx:88, 120-123, 327-331; LevelFlowEditor.tsx:328-329, 461-462; StreamingZonePlanner.tsx:262, 380-382, 653",
+      "report": "13-level-design.md"
+    },
+    {
+      "context_idx": "13",
+      "context_name": "Level Design",
+      "finding_idx": "8",
+      "title": "SVG charts/diagrams have no accessibility affordances or reduced-motion gating",
+      "severity": "Low",
+      "category": "Accessibility-as-Polish",
+      "file": "src/components/modules/content/level-design/DifficultyArcChart.tsx:147-298, LevelFlowEditor.tsx:473-705, StreamingZonePlanner.tsx:368-648",
+      "report": "13-level-design.md"
+    },
+    {
+      "context_idx": "14",
+      "context_name": "Materials & Visual Effects",
+      "finding_idx": "1",
+      "title": "Two parallel post-process editors with divergent visual systems",
+      "severity": "High",
+      "category": "Component",
+      "file": "src/components/modules/content/materials/PostProcessStackBuilder.tsx:51-148, src/lib/post-process-studio/effects.ts:11-163",
+      "report": "14-materials-visual-effects.md"
+    },
+    {
+      "context_idx": "14",
+      "context_name": "Materials & Visual Effects",
+      "finding_idx": "2",
+      "title": "Three independent slider implementations across the surface",
+      "severity": "High",
+      "category": "Component",
+      "file": "src/components/modules/content/materials/MaterialParameterConfigurator.tsx:333-348, src/components/modules/content/materials/MaterialStyleTransfer.tsx:594-636, src/components/modules/evaluator/PostProcessStudioView.tsx:546-623",
+      "report": "14-materials-visual-effects.md"
+    },
+    {
+      "context_idx": "14",
+      "context_name": "Materials & Visual Effects",
+      "finding_idx": "3",
+      "title": "MaterialsView tab chrome violates the rest of the surface's design language",
+      "severity": "High",
+      "category": "Visual",
+      "file": "src/components/modules/content/materials/MaterialLayerGraph.tsx:258-290, src/components/modules/content/materials/MaterialPatternCatalog.tsx:296-318, src/components/modules/content/materials/PostProcessStackBuilder.tsx:249-273",
+      "report": "14-materials-visual-effects.md"
+    },
+    {
+      "context_idx": "14",
+      "context_name": "Materials & Visual Effects",
+      "finding_idx": "4",
+      "title": "Hard-coded raw rgba/violet hexes throughout \u2014 colour-token drift",
+      "severity": "High",
+      "category": "Design",
+      "file": "src/components/modules/content/materials/MaterialLayerGraph.tsx:258-263, MaterialPatternCatalog.tsx:297-300, PostProcessStackBuilder.tsx:250-253, MaterialPatternCatalog.tsx:344-347, PostProcessStackBuilder.tsx:382-390",
+      "report": "14-materials-visual-effects.md"
+    },
+    {
+      "context_idx": "14",
+      "context_name": "Materials & Visual Effects",
+      "finding_idx": "5",
+      "title": "GPU cost shown as raw numbers, not typed badges (and only in one place)",
+      "severity": "Medium",
+      "category": "Component",
+      "file": "src/components/modules/evaluator/PostProcessStudioView.tsx:495-501, 642-670, src/components/modules/content/materials/PostProcessStackBuilder.tsx (no cost display)",
+      "report": "14-materials-visual-effects.md"
+    },
+    {
+      "context_idx": "14",
+      "context_name": "Materials & Visual Effects",
+      "finding_idx": "6",
+      "title": "Pattern-catalog category colour ramps duplicated as `${color}NN` inline strings",
+      "severity": "Medium",
+      "category": "Visual",
+      "file": "src/components/modules/content/materials/MaterialPatternCatalog.tsx:40-44, 343-356, 416-422, 432-437, 446-449, 487-518, src/components/modules/content/materials/MaterialStyleTransfer.tsx:62-71, 401-407, 673-678, src/components/modules/content/materials/PostProcessStackBuilder.tsx:382-390, 419-419, 446-449",
+      "report": "14-materials-visual-effects.md"
+    },
+    {
+      "context_idx": "14",
+      "context_name": "Materials & Visual Effects",
+      "finding_idx": "7",
+      "title": "Missing focus-visible ring on every custom button across these editors",
+      "severity": "Medium",
+      "category": "Accessibility-as-polish",
+      "file": "src/components/modules/content/materials/MaterialLayerGraph.tsx:366-389, MaterialPatternCatalog.tsx:339-354, 426-462, 508-555, PostProcessStackBuilder.tsx:299-344, 414-467, MaterialParameterConfigurator.tsx:201-217, 229-247, 262-290",
+      "report": "14-materials-visual-effects.md"
+    },
+    {
+      "context_idx": "14",
+      "context_name": "Materials & Visual Effects",
+      "finding_idx": "8",
+      "title": "EffectRow expand-arrow duplicated inside same row (PP Studio)",
+      "severity": "Low",
+      "category": "Component",
+      "file": "src/components/modules/evaluator/PostProcessStudioView.tsx:481-509",
+      "report": "14-materials-visual-effects.md"
+    },
+    {
+      "context_idx": "15",
+      "context_name": "Animation & Audio",
+      "finding_idx": "1",
+      "title": "Two parallel state-machine canvases drift apart with duplicated SVG/node primitives",
+      "severity": "High",
+      "category": "Component",
+      "file": "src/components/modules/content/animations/AnimationStateMachine.tsx:686-1002, src/components/modules/content/animations/StateMachineEditor.tsx:746-957",
+      "report": "15-animation-audio.md"
+    },
+    {
+      "context_idx": "15",
+      "context_name": "Animation & Audio",
+      "finding_idx": "2",
+      "title": "AudioEventCatalog and SpatialAudioGeneratorPanel hardcode a parallel \"cyber/blue\" theme outside the design system",
+      "severity": "High",
+      "category": "Design",
+      "file": "src/components/modules/content/audio/AudioEventCatalog.tsx:185-360, src/components/modules/content/audio/SpatialAudioGeneratorPanel.tsx:103-340, src/components/modules/content/audio/AudioPipelineDiagram.tsx:82-296",
+      "report": "15-animation-audio.md"
+    },
+    {
+      "context_idx": "15",
+      "context_name": "Animation & Audio",
+      "finding_idx": "3",
+      "title": "AudioPropertyPanel's preset/mode pill grid is reimplemented per-control",
+      "severity": "High",
+      "category": "Component",
+      "file": "src/components/modules/content/audio/AudioPropertyPanel.tsx:73-123, 191-209",
+      "report": "15-animation-audio.md"
+    },
+    {
+      "context_idx": "15",
+      "context_name": "Animation & Audio",
+      "finding_idx": "4",
+      "title": "Code-output panel + copy-button + filename header is duplicated across animation and audio codegen",
+      "severity": "High",
+      "category": "Component",
+      "file": "src/components/modules/content/animations/StateMachineEditor.tsx:1321-1393, src/components/modules/content/animations/AIComboChoreographer.tsx:843-884, src/components/modules/content/audio/AudioCodeGenPanel.tsx:148-232",
+      "report": "15-animation-audio.md"
+    },
+    {
+      "context_idx": "15",
+      "context_name": "Animation & Audio",
+      "finding_idx": "5",
+      "title": "Magic-number opacity literals leak everywhere \u2014 `${color}40`, `${color}0A`, `${color}80` instead of OPACITY tokens",
+      "severity": "Medium",
+      "category": "Design",
+      "file": "src/components/modules/content/animations/StateMachineEditor.tsx:438-470, 808-870, src/components/modules/content/animations/AnimationStateMachine.tsx:472-517, 700-722, 893-925",
+      "report": "15-animation-audio.md"
+    },
+    {
+      "context_idx": "15",
+      "context_name": "Animation & Audio",
+      "finding_idx": "6",
+      "title": "AnimationChecklist header uses retro CRT chrome that nothing else in the module shares",
+      "severity": "Medium",
+      "category": "Visual",
+      "file": "src/components/modules/content/animations/AnimationChecklist.tsx:312-344, 484-501",
+      "report": "15-animation-audio.md"
+    },
+    {
+      "context_idx": "15",
+      "context_name": "Animation & Audio",
+      "finding_idx": "7",
+      "title": "Property-panel field grid is reimplemented in StateMachineEditor instead of reusing AudioPropertyPanel's `Field`/`SliderField`",
+      "severity": "Medium",
+      "category": "Component",
+      "file": "src/components/modules/content/animations/StateMachineEditor.tsx:1070-1151, src/components/modules/content/audio/AudioPropertyPanel.tsx:251-283",
+      "report": "15-animation-audio.md"
+    },
+    {
+      "context_idx": "15",
+      "context_name": "Animation & Audio",
+      "finding_idx": "8",
+      "title": "AnimationStateMachine status copy mixes \"RUNTIME / BRIDGE / SCANNED FROM PROJECT // CLICK TO IMPLEMENT\" in one breath",
+      "severity": "Medium",
+      "category": "Polish",
+      "file": "src/components/modules/content/animations/AnimationStateMachine.tsx:488-505",
+      "report": "15-animation-audio.md"
+    },
+    {
+      "context_idx": "15",
+      "context_name": "Animation & Audio",
+      "finding_idx": "9",
+      "title": "AudioPipelineDiagram active state has no responsive-narrow handling and `NODE_W` magic number leaks",
+      "severity": "Low",
+      "category": "Responsive",
+      "file": "src/components/modules/content/audio/AudioPipelineDiagram.tsx:82-262, src/components/modules/content/animations/AnimationStateMachine.tsx:166-167, src/components/modules/content/animations/StateMachineEditor.tsx:343",
+      "report": "15-animation-audio.md"
+    },
+    {
+      "context_idx": "16",
+      "context_name": "Gameplay Subsystems",
+      "finding_idx": "1",
+      "title": "DialogueView is a structural outlier vs. its 4 siblings",
+      "severity": "High",
+      "category": "Component",
+      "file": "src/components/modules/game-systems/DialogueView.tsx:56-99 vs. InputView.tsx:1-3, PhysicsView.tsx:1-3, SaveLoadView.tsx:1-3, MultiplayerView.tsx:1-3",
+      "report": "16-gameplay-subsystems.md"
+    },
+    {
+      "context_idx": "16",
+      "context_name": "Gameplay Subsystems",
+      "finding_idx": "2",
+      "title": "Tab bar uses inline `style={{ borderColor: ACCENT }}` instead of CSS custom property",
+      "severity": "High",
+      "category": "Design",
+      "file": "src/components/modules/game-systems/DialogueView.tsx:63-71, 77, 80",
+      "report": "16-gameplay-subsystems.md"
+    },
+    {
+      "context_idx": "16",
+      "context_name": "Gameplay Subsystems",
+      "finding_idx": "3",
+      "title": "Difficulty pip palette uses CSS-var fallback chain that may never resolve",
+      "severity": "High",
+      "category": "Design",
+      "file": "src/components/modules/game-systems/DialogueView.tsx:332-338",
+      "report": "16-gameplay-subsystems.md"
+    },
+    {
+      "context_idx": "16",
+      "context_name": "Gameplay Subsystems",
+      "finding_idx": "4",
+      "title": "Reward and category pills reimplement the same chip primitive",
+      "severity": "Medium",
+      "category": "Component",
+      "file": "src/components/modules/game-systems/DialogueView.tsx:382-387 (category pill), 423-426 (reward pill), 244-254 (coherence note row)",
+      "report": "16-gameplay-subsystems.md"
+    },
+    {
+      "context_idx": "16",
+      "context_name": "Gameplay Subsystems",
+      "finding_idx": "5",
+      "title": "Quest summary metric cards lose their accent color when count is zero",
+      "severity": "Medium",
+      "category": "Visual",
+      "file": "src/components/modules/game-systems/DialogueView.tsx:233-236",
+      "report": "16-gameplay-subsystems.md"
+    },
+    {
+      "context_idx": "16",
+      "context_name": "Gameplay Subsystems",
+      "finding_idx": "6",
+      "title": "Quest generator missing skeleton/empty-list separation; collapse animation has no FLIP guard",
+      "severity": "Medium",
+      "category": "Polish",
+      "file": "src/components/modules/game-systems/DialogueView.tsx:198-203, 267-285, 392-454",
+      "report": "16-gameplay-subsystems.md"
+    },
+    {
+      "context_idx": "16",
+      "context_name": "Gameplay Subsystems",
+      "finding_idx": "7",
+      "title": "Generator status messaging duplicates `text-text-muted` strings; quest \"no result\" empty state and \"no quests after generation\" empty state look identical",
+      "severity": "Low",
+      "category": "Visual",
+      "file": "src/components/modules/game-systems/DialogueView.tsx:191-196 vs. 267-270",
+      "report": "16-gameplay-subsystems.md"
+    },
+    {
+      "context_idx": "17",
+      "context_name": "Build & Packaging",
+      "finding_idx": "1",
+      "title": "`formatBytes` / `formatDuration` duplicated verbatim across siblings",
+      "severity": "High",
+      "category": "Component",
+      "file": "src/components/modules/game-systems/BuildComparison.tsx:11-24, src/components/modules/game-systems/BuildHistoryDashboard.tsx:48-61",
+      "report": "17-build-packaging.md"
+    },
+    {
+      "context_idx": "17",
+      "context_name": "Build & Packaging",
+      "finding_idx": "2",
+      "title": "Inline `inputClass` / `selectClass` strings reinvented in every form",
+      "severity": "High",
+      "category": "Design",
+      "file": "src/components/modules/game-systems/BuildConfigSelector.tsx:275-276, src/components/modules/game-systems/BuildHistoryDashboard.tsx:203-204, src/components/modules/game-systems/CookSettingsPanel.tsx:47, src/components/modules/game-systems/BuildComparison.tsx:97 & 110",
+      "report": "17-build-packaging.md"
+    },
+    {
+      "context_idx": "17",
+      "context_name": "Build & Packaging",
+      "finding_idx": "3",
+      "title": "Three different `Badge`/chip implementations on the same screen",
+      "severity": "High",
+      "category": "Visual",
+      "file": "src/components/modules/game-systems/PlatformProfileCard.tsx:207-213 (Badge), src/components/modules/game-systems/PlatformProfileCard.tsx:78-85 (PAK/COMP/ENC pills), src/components/modules/game-systems/BuildHistoryDashboard.tsx:108-112 (version pill), src/components/modules/game-systems/BuildHistoryDashboard.tsx:541-553 (platform filter chip)",
+      "report": "17-build-packaging.md"
+    },
+    {
+      "context_idx": "17",
+      "context_name": "Build & Packaging",
+      "finding_idx": "4",
+      "title": "CompareRow vs BuildRow vs MetricCard reinvent the row primitive",
+      "severity": "Medium",
+      "category": "Component",
+      "file": "src/components/modules/game-systems/BuildComparison.tsx:46-70, src/components/modules/game-systems/BuildHistoryDashboard.tsx:65-79 & 83-184",
+      "report": "17-build-packaging.md"
+    },
+    {
+      "context_idx": "17",
+      "context_name": "Build & Packaging",
+      "finding_idx": "5",
+      "title": "Missing loading skeleton \u2014 entire screens flash empty before fetch resolves",
+      "severity": "Medium",
+      "category": "Polish",
+      "file": "src/components/modules/game-systems/BuildConfigSelector.tsx:152-256, src/components/modules/game-systems/BuildHistoryDashboard.tsx:420-602",
+      "report": "17-build-packaging.md"
+    },
+    {
+      "context_idx": "17",
+      "context_name": "Build & Packaging",
+      "finding_idx": "6",
+      "title": "Custom toggle switch in CookSettingsPanel \u2014 tiny, hard to hit, no focus ring, while the same screen uses native checkboxes",
+      "severity": "Medium",
+      "category": "Accessibility-as-polish",
+      "file": "src/components/modules/game-systems/CookSettingsPanel.tsx:16-39, src/components/modules/game-systems/BuildConfigSelector.tsx:375-403",
+      "report": "17-build-packaging.md"
+    },
+    {
+      "context_idx": "17",
+      "context_name": "Build & Packaging",
+      "finding_idx": "7",
+      "title": "Platform list duplicated between Pipeline and History with different label conventions",
+      "severity": "Medium",
+      "category": "Visual",
+      "file": "src/components/modules/game-systems/BuildHistoryDashboard.tsx:22 & 217-221, src/components/modules/game-systems/PlatformProfileCard.tsx:15-29, src/components/modules/game-systems/BuildConfigSelector.tsx:22-28",
+      "report": "17-build-packaging.md"
+    },
+    {
+      "context_idx": "17",
+      "context_name": "Build & Packaging",
+      "finding_idx": "8",
+      "title": "Tab styling drift inside BuildHistoryDashboard \u2014 only one of three tabs gets a hover state on the label",
+      "severity": "Low",
+      "category": "Polish",
+      "file": "src/components/modules/game-systems/BuildHistoryDashboard.tsx:413-418",
+      "report": "17-build-packaging.md"
+    },
+    {
+      "context_idx": "18",
+      "context_name": "AI Behavior & Tactics",
+      "finding_idx": "1",
+      "title": "Mountain icon positioned with `x`/`y` props inside an SVG \u2014 broken visual placement",
+      "severity": "Critical",
+      "category": "Polish",
+      "file": "src/components/modules/game-systems/TacticalCoverAnalysis.tsx:451-455",
+      "report": "18-ai-behavior-tactics.md"
+    },
+    {
+      "context_idx": "18",
+      "context_name": "AI Behavior & Tactics",
+      "finding_idx": "2",
+      "title": "Three independent RGB-lerp heatmap ramps ignore central `heatmapScale()`",
+      "severity": "High",
+      "category": "Design",
+      "file": "src/components/modules/game-systems/FlankAngleHeatmap.tsx:24-41 vs. TacticalCoverAnalysis.tsx:169-184 vs. SquadChoreographyEditor.tsx:58-72",
+      "report": "18-ai-behavior-tactics.md"
+    },
+    {
+      "context_idx": "18",
+      "context_name": "AI Behavior & Tactics",
+      "finding_idx": "3",
+      "title": "Pipeline-step chip primitive reimplemented 4\u00d7 with subtle drift",
+      "severity": "High",
+      "category": "Component",
+      "file": "EQSPipelineDiagram.tsx:289-306 + 376-388, EQSComponentInventory.tsx:395-419, AITestingSandbox.tsx:92-107, SquadChoreographyEditor.tsx:701-716 + 736-742",
+      "report": "18-ai-behavior-tactics.md"
+    },
+    {
+      "context_idx": "18",
+      "context_name": "AI Behavior & Tactics",
+      "finding_idx": "4",
+      "title": "AITestingSandbox loses loading feedback when regenerating with stale results",
+      "severity": "High",
+      "category": "Polish",
+      "file": "src/components/modules/game-systems/AITestingSandbox.tsx:111-137 (toolbar buttons) + AIBehaviorView.tsx:149-159 (sandbox tab loading branch)",
+      "report": "18-ai-behavior-tactics.md"
+    },
+    {
+      "context_idx": "18",
+      "context_name": "AI Behavior & Tactics",
+      "finding_idx": "5",
+      "title": "SVG drawing primitives (arcPath, ring generation, draggable arrow handle) duplicated across 4 files",
+      "severity": "High",
+      "category": "Component",
+      "file": "arcPath: FlankAngleHeatmap.tsx:116-143 \u2261 TacticalCoverAnalysis.tsx:188-206; draggable forward arrow + handle: FlankAngleHeatmap.tsx:298-334 \u2248 SquadChoreographyEditor.tsx:415-456; gradient-legend rect: FlankAngleHeatmap.tsx:451-465 \u2248 TacticalCoverAnalysis.tsx:618-632; degree markings: FlankAngleHeatmap.tsx:278-296 \u2248 TacticalCoverAnalysis.tsx:635-651 \u2248 SquadChoreographyEditor.tsx:396-413; ring generation loop: AttackRingVisualizer.tsx:47-74 \u2248 FlankAngleHeatmap.tsx:73-88",
+      "report": "18-ai-behavior-tactics.md"
+    },
+    {
+      "context_idx": "18",
+      "context_name": "AI Behavior & Tactics",
+      "finding_idx": "6",
+      "title": "AttackRingVisualizer is the structural outlier \u2014 different shell, raw rgba grid, no header strip",
+      "severity": "Medium",
+      "category": "Visual",
+      "file": "src/components/modules/game-systems/AttackRingVisualizer.tsx:79-99 (shell) + 119-125 (raw grid colors) vs. FlankAngleHeatmap.tsx:202-232, TacticalCoverAnalysis.tsx:282-311, PatrolPointsDistribution.tsx:73-102, SquadChoreographyEditor.tsx:150-193",
+      "report": "18-ai-behavior-tactics.md"
+    },
+    {
+      "context_idx": "18",
+      "context_name": "AI Behavior & Tactics",
+      "finding_idx": "7",
+      "title": "AITestingSandbox suite sidebar uses fixed `w-56` with no responsive collapse",
+      "severity": "Medium",
+      "category": "Responsive",
+      "file": "src/components/modules/game-systems/AIBehaviorView.tsx:163-252 (the sandbox `extraTab.render`)",
+      "report": "18-ai-behavior-tactics.md"
+    },
+    {
+      "context_idx": "18",
+      "context_name": "AI Behavior & Tactics",
+      "finding_idx": "8",
+      "title": "AIBehaviorView uses raw hex `text-[#4ade80]` / `text-[#f87171]` while the file already imports STATUS_SUCCESS / STATUS_ERROR",
+      "severity": "Medium",
+      "category": "Design",
+      "file": "src/components/modules/game-systems/AIBehaviorView.tsx:177-186, 266-271",
+      "report": "18-ai-behavior-tactics.md"
+    },
+    {
+      "context_idx": "18",
+      "context_name": "AI Behavior & Tactics",
+      "finding_idx": "9",
+      "title": "SquadChoreographyEditor codegen pre block lacks copy button, language label, and theming",
+      "severity": "Low",
+      "category": "Polish",
+      "file": "src/components/modules/game-systems/SquadChoreographyEditor.tsx:928-932",
+      "report": "18-ai-behavior-tactics.md"
+    },
+    {
+      "context_idx": "19",
+      "context_name": "Localization & Marketplace",
+      "finding_idx": "1",
+      "title": "Inline `text-{color}-400` Tailwind classes drift away from the chart-colors token system",
+      "severity": "High",
+      "category": "Design",
+      "file": "src/components/modules/evaluator/LocalizationPipelineView.tsx:38-49, 197-235, 287-362, 549-559, 753-757, 815, 821",
+      "report": "19-localization-marketplace.md"
+    },
+    {
+      "context_idx": "19",
+      "context_name": "Localization & Marketplace",
+      "finding_idx": "2",
+      "title": "Tab-count badge is not visually distinct from the tab label, and active count badge does not change weight",
+      "severity": "High",
+      "category": "Component",
+      "file": "src/components/modules/evaluator/LocalizationPipelineView.tsx:594-607, 242-247",
+      "report": "19-localization-marketplace.md"
+    },
+    {
+      "context_idx": "19",
+      "context_name": "Localization & Marketplace",
+      "finding_idx": "3",
+      "title": "Magic-number progress thresholds and width clamps duplicated across three bars",
+      "severity": "Medium",
+      "category": "Design",
+      "file": "src/components/modules/evaluator/LocalizationPipelineView.tsx:311-320, 706-719, 837-883, 840-845",
+      "report": "19-localization-marketplace.md"
+    },
+    {
+      "context_idx": "19",
+      "context_name": "Localization & Marketplace",
+      "finding_idx": "4",
+      "title": "Empty/loading/error states for sub-tabs are missing \u2014 only the top-level scan has them",
+      "severity": "Medium",
+      "category": "Missing",
+      "file": "src/components/modules/evaluator/LocalizationPipelineView.tsx:392-469, 471-542, 463-467, 533",
+      "report": "19-localization-marketplace.md"
+    },
+    {
+      "context_idx": "19",
+      "context_name": "Localization & Marketplace",
+      "finding_idx": "5",
+      "title": "Stat bar accent thresholds are silently asymmetric (Hazards vs Hardcoded)",
+      "severity": "Medium",
+      "category": "Visual",
+      "file": "src/components/modules/evaluator/LocalizationPipelineView.tsx:229-237",
+      "report": "19-localization-marketplace.md"
+    },
+    {
+      "context_idx": "19",
+      "context_name": "Localization & Marketplace",
+      "finding_idx": "6",
+      "title": "Filter `<select>` styling lacks chevron, focus ring, and dark-mode option contrast",
+      "severity": "Low",
+      "category": "Accessibility",
+      "file": "src/components/modules/evaluator/LocalizationPipelineView.tsx:411-440, 491-501",
+      "report": "19-localization-marketplace.md"
+    },
+    {
+      "context_idx": "20",
+      "context_name": "Evaluator UI Dashboards",
+      "finding_idx": "1",
+      "title": "Eleven local `StatCard`/`MetricCard` reimplementations across the dashboard suite",
+      "severity": "Critical",
+      "category": "Component",
+      "file": "src/components/modules/evaluator/AggregateQualityDashboard.tsx:773-805 \u00b7 CrossModuleOverlapPanel.tsx:241-265 \u00b7 AssetCodeOracleView.tsx:256 \u00b7 AssetScoutView.tsx:206 \u00b7 CombatSimulatorView.tsx:555 \u00b7 EconomySimulatorView.tsx:645 \u00b7 PatternLibraryView.tsx:287 \u00b7 PromptEvolutionView.tsx:1187 \u00b7 PerformanceProfilingView.tsx:621 \u00b7 PostProcessStudioView.tsx:822 \u00b7 SessionAnalyticsDashboard.tsx:170 \u00b7 WeeklyDigestView.tsx:323",
+      "report": "20-evaluator-ui-dashboards.md"
+    },
+    {
+      "context_idx": "20",
+      "context_name": "Evaluator UI Dashboards",
+      "finding_idx": "2",
+      "title": "Each dashboard hand-rolls its own page header (icon-tile + title + sub + action)",
+      "severity": "High",
+      "category": "Visual",
+      "file": "src/components/modules/evaluator/AssetScoutView.tsx:91-100 \u00b7 PerformanceProfilingView.tsx:95-104 \u00b7 PatternLibraryView.tsx:108-117 \u00b7 CombatSimulatorView.tsx:118-127 \u00b7 EconomySimulatorView.tsx:102-111 \u00b7 HolisticHealthView.tsx:103-114 \u00b7 CalendarRoadmapView.tsx:238-247 \u00b7 GameDesignDocView.tsx (similar) \u00b7 CodebaseArcheologistView.tsx (similar)",
+      "report": "20-evaluator-ui-dashboards.md"
+    },
+    {
+      "context_idx": "20",
+      "context_name": "Evaluator UI Dashboards",
+      "finding_idx": "3",
+      "title": "Tailwind named colors fight CSS-token colors \u2014 same pixel ends up two ways",
+      "severity": "High",
+      "category": "Design",
+      "file": "src/components/modules/evaluator/HolisticHealthView.tsx:91-93,118,128,239-241,350-356 \u00b7 CrashAnalyzerView.tsx:35-39 \u00b7 PerformanceProfilingView.tsx:32-37 \u00b7 CodebaseArcheologistView.tsx:44-48 \u00b7 PatternLibraryView.tsx:27-31 \u00b7 AggregateQualityDashboard.tsx:381,386,473-475 \u00b7 GDDComplianceView.tsx:59,71,97",
+      "report": "20-evaluator-ui-dashboards.md"
+    },
+    {
+      "context_idx": "20",
+      "context_name": "Evaluator UI Dashboards",
+      "finding_idx": "4",
+      "title": "Three hand-rolled SVG chart libraries with three different axis/grid conventions",
+      "severity": "High",
+      "category": "Visual",
+      "file": "src/components/modules/evaluator/HolisticHealthView.tsx:531-687 (BarChartSimple, LineChartSimple, AreaChartSimple, BurndownChart) \u00b7 AggregateQualityDashboard.tsx:833-872 (MiniSparkline) and 874-948 (TrendChart) \u00b7 UnifiedSummaryView.tsx:345-404 (CombinedHealthGauge \u2014 radial) \u00b7 CalendarRoadmapView.tsx:393-612 (SVG Gantt) \u00b7 ProjectHealthDashboard.tsx:54-68 (radar polar helpers)",
+      "report": "20-evaluator-ui-dashboards.md"
+    },
+    {
+      "context_idx": "20",
+      "context_name": "Evaluator UI Dashboards",
+      "finding_idx": "5",
+      "title": "CrossModuleOverlapPanel duplicates DependencyGraph node code & DependencyGraph/NexusView duplicate each other",
+      "severity": "High",
+      "category": "Component",
+      "file": "src/components/modules/evaluator/DependencyGraph.tsx:33-63 vs. NexusView.tsx:26-54 \u00b7 CrossModuleOverlapPanel.tsx:267-283 (ModuleBubble) vs. DependencyGraph.tsx (graph nodes)",
+      "report": "20-evaluator-ui-dashboards.md"
+    },
+    {
+      "context_idx": "20",
+      "context_name": "Evaluator UI Dashboards",
+      "finding_idx": "6",
+      "title": "Multiple \"ProgressRing\" gauge implementations live alongside the shared `ProgressRing` primitive",
+      "severity": "Medium",
+      "category": "Component",
+      "file": "src/components/modules/evaluator/UnifiedSummaryView.tsx:345-404 (CombinedHealthGauge \u2014 bespoke arc) \u00b7 ProjectHealthDashboard.tsx:54-68 (radar polar helpers, separate file) \u00b7 GDDComplianceView.tsx:91 (ScoreRing \u2014 bespoke?) \u00b7 HolisticHealthView.tsx:172,189,359 (uses shared ProgressRing) \u00b7 PerformanceProfilingView.tsx (uses ProgressRing) \u00b7 PatternLibraryView.tsx (uses ProgressRing)",
+      "report": "20-evaluator-ui-dashboards.md"
+    },
+    {
+      "context_idx": "20",
+      "context_name": "Evaluator UI Dashboards",
+      "finding_idx": "7",
+      "title": "Sub-tab bar styling is forked across six files instead of one shared `<SubTabs>` primitive",
+      "severity": "Medium",
+      "category": "Component",
+      "file": "src/components/modules/evaluator/EvaluatorModule.tsx:318-352 (TabButton \u2014 top-level) \u00b7 HolisticHealthView.tsx:395-407 (SubTab) \u00b7 PromptEvolutionView.tsx:194-211 (inline sub-tabs) \u00b7 CodebaseArcheologistView.tsx:110-115 (tabClass helper) \u00b7 CrashAnalyzerView.tsx (viewTab pattern) \u00b7 DeepEvalResults.tsx (filter pills act as tabs)",
+      "report": "20-evaluator-ui-dashboards.md"
+    },
+    {
+      "context_idx": "20",
+      "context_name": "Evaluator UI Dashboards",
+      "finding_idx": "8",
+      "title": "Empty/loading/error states are reimplemented per file even though `<EmptyState>` exists",
+      "severity": "Medium",
+      "category": "Visual",
+      "file": "src/components/modules/evaluator/HolisticHealthView.tsx:136-163 (loading + empty) \u00b7 CrossModuleOverlapPanel.tsx:97-117 (loading + empty) \u00b7 GameDesignDocView.tsx:74-118 (loading + error + empty, three branches) \u00b7 AggregateQualityDashboard.tsx:222-228 (loading only) \u00b7 UnifiedSummaryView.tsx:171-177 (loading) and 329-338 (empty) \u00b7 GDDComplianceView.tsx:55-78 (loading + error)",
+      "report": "20-evaluator-ui-dashboards.md"
+    },
+    {
+      "context_idx": "20",
+      "context_name": "Evaluator UI Dashboards",
+      "finding_idx": "9",
+      "title": "Pill/chip primitive is reinvented per row of the same file",
+      "severity": "Medium",
+      "category": "Design",
+      "file": "src/components/modules/evaluator/CrossModuleOverlapPanel.tsx:367-380 (similarity badge + reason badge \u2014 both `text-2xs px-1.5 py-0.5 rounded font-medium` with `${color}18` bg) \u00b7 UnifiedSummaryView.tsx:266-280 (severity counters, three near-identical `${color}15` chips) \u00b7 CodebaseArcheologistView.tsx:50-58 (SeverityBadge) \u00b7 DeepEvalResults.tsx:42-47 (SEVERITY_CONFIG with `${OPACITY_8}` bg) \u00b7 PerformanceProfilingView.tsx:32-37 (PRIORITY_STYLE with Tailwind classes)",
+      "report": "20-evaluator-ui-dashboards.md"
+    },
+    {
+      "context_idx": "20",
+      "context_name": "Evaluator UI Dashboards",
+      "finding_idx": "10",
+      "title": "AggregateQualityDashboard \u2014 quality-cell color ramp uses dark dirt colors that fail contrast on small text",
+      "severity": "Medium",
+      "category": "Polish",
+      "file": "src/components/modules/evaluator/AggregateQualityDashboard.tsx:30-43, 346-483",
+      "report": "20-evaluator-ui-dashboards.md"
+    },
+    {
+      "context_idx": "20",
+      "context_name": "Evaluator UI Dashboards",
+      "finding_idx": "11",
+      "title": "CalendarRoadmap \u2014 variance chip and deadline state are visually similar to milestone progress; \"overdue\" not loud enough",
+      "severity": "Low",
+      "category": "Polish",
+      "file": "src/components/modules/evaluator/CalendarRoadmapView.tsx:377-388, 543-588",
+      "report": "20-evaluator-ui-dashboards.md"
+    },
+    {
+      "context_idx": "21",
+      "context_name": "Project Health & Crash Analysis",
+      "finding_idx": "1",
+      "title": "Severity vocabulary fragmentation across four sibling subsystems",
+      "severity": "High",
+      "category": "Design",
+      "file": "src/types/crash-analyzer.ts:25; src/types/codebase-archeologist.ts:11; src/lib/asset-code-oracle.ts:23; src/types/performance-profiling.ts:5",
+      "report": "21-project-health-crash-analysis.md"
+    },
+    {
+      "context_idx": "21",
+      "context_name": "Project Health & Crash Analysis",
+      "finding_idx": "2",
+      "title": "Chart colour baked into project-health domain type",
+      "severity": "High",
+      "category": "Design",
+      "file": "src/types/project-health.ts:53-54",
+      "report": "21-project-health-crash-analysis.md"
+    },
+    {
+      "context_idx": "21",
+      "context_name": "Project Health & Crash Analysis",
+      "finding_idx": "3",
+      "title": "Status sentinel mismatch between sibling enums",
+      "severity": "Medium",
+      "category": "Visual",
+      "file": "src/types/project-health.ts:6, src/types/project-health.ts:101",
+      "report": "21-project-health-crash-analysis.md"
+    },
+    {
+      "context_idx": "21",
+      "context_name": "Project Health & Crash Analysis",
+      "finding_idx": "4",
+      "title": "Confidence and percentage values shipped as raw floats with no formatter",
+      "severity": "Medium",
+      "category": "Polish",
+      "file": "src/types/crash-analyzer.ts:90; src/lib/crash-analyzer/sample-crashes.ts:261, :283, :312, :330, :348, :365, :383",
+      "report": "21-project-health-crash-analysis.md"
+    },
+    {
+      "context_idx": "21",
+      "context_name": "Project Health & Crash Analysis",
+      "finding_idx": "5",
+      "title": "Frame budget magic number duplicated across CSV parser and triage scoring",
+      "severity": "Low",
+      "category": "Design",
+      "file": "src/lib/profiling/csv-parser.ts:310, :347; src/lib/profiling/triage-engine.ts (uses `summary.frameBudgetMs` everywhere)",
+      "report": "21-project-health-crash-analysis.md"
+    },
+    {
+      "context_idx": "22",
+      "context_name": "Evaluation Engine & Quality",
+      "finding_idx": "1",
+      "title": "Three divergent severity vocabularies feed the same UI surface",
+      "severity": "High",
+      "category": "Design",
+      "file": "src/lib/evaluator/finding-collector.ts:10; src/types/gdd-compliance.ts:4; src/lib/evaluator/insight-generator.ts:3",
+      "report": "22-evaluation-engine-quality.md"
+    },
+    {
+      "context_idx": "22",
+      "context_name": "Evaluation Engine & Quality",
+      "finding_idx": "2",
+      "title": "Three \"done/error\" status vocabularies for the same scan lifecycle",
+      "severity": "High",
+      "category": "Status",
+      "file": "src/lib/evaluator/deep-eval-engine.ts:22, 31; src/types/project-health.ts (referenced by health-engine.ts:9-15)",
+      "report": "22-evaluation-engine-quality.md"
+    },
+    {
+      "context_idx": "22",
+      "context_name": "Evaluation Engine & Quality",
+      "finding_idx": "3",
+      "title": "Severity icons hardcoded inside engine output (not themeable)",
+      "severity": "Medium",
+      "category": "Inline",
+      "file": "src/lib/gdd-synthesizer.ts:584-601",
+      "report": "22-evaluation-engine-quality.md"
+    },
+    {
+      "context_idx": "22",
+      "context_name": "Evaluation Engine & Quality",
+      "finding_idx": "4",
+      "title": "Health-score \u2192 colour thresholds defined in three incompatible places",
+      "severity": "Medium",
+      "category": "Design",
+      "file": "src/lib/health-engine.ts:72-76; src/lib/evaluator/combined-health.ts:34-39; src/lib/gdd-compliance.ts:131-162",
+      "report": "22-evaluation-engine-quality.md"
+    },
+    {
+      "context_idx": "22",
+      "context_name": "Evaluation Engine & Quality",
+      "finding_idx": "5",
+      "title": "InsightCategory has priority but no canonical presentation map",
+      "severity": "Low",
+      "category": "Design",
+      "file": "src/lib/evaluator/insight-generator.ts:7-15, 37-194",
+      "report": "22-evaluation-engine-quality.md"
+    },
+    {
+      "context_idx": "23",
+      "context_name": "Procedural Generation & Rigging",
+      "finding_idx": "1",
+      "title": "Slider control inconsistency across sibling Views",
+      "severity": "High",
+      "category": "Component",
+      "file": "src/components/modules/visual-gen/procedural-engine/ProceduralEngineView.tsx:278-432; src/components/modules/visual-gen/import-automation/ImportAutomationView.tsx:89-99",
+      "report": "23-procedural-generation-rigging.md"
+    },
+    {
+      "context_idx": "23",
+      "context_name": "Procedural Generation & Rigging",
+      "finding_idx": "2",
+      "title": "Selectable card pattern duplicated, not extracted",
+      "severity": "High",
+      "category": "Component",
+      "file": "src/components/modules/visual-gen/procedural-engine/ProceduralEngineView.tsx:243-256; src/components/modules/visual-gen/auto-rig/AutoRigView.tsx:78-84",
+      "report": "23-procedural-generation-rigging.md"
+    },
+    {
+      "context_idx": "23",
+      "context_name": "Procedural Generation & Rigging",
+      "finding_idx": "3",
+      "title": "Generator selector button has no focus-visible / keyboard cue",
+      "severity": "High",
+      "category": "Accessibility-as-polish",
+      "file": "src/components/modules/visual-gen/procedural-engine/ProceduralEngineView.tsx:243-256; auto-rig RigPresetCard inner button at AutoRigView.tsx:85-116",
+      "report": "23-procedural-generation-rigging.md"
+    },
+    {
+      "context_idx": "23",
+      "context_name": "Procedural Generation & Rigging",
+      "finding_idx": "4",
+      "title": "ImportAutomation toggle-pill style diverges from generator selector",
+      "severity": "Medium",
+      "category": "Visual",
+      "file": "src/components/modules/visual-gen/import-automation/ImportAutomationView.tsx:53-87, 134-153",
+      "report": "23-procedural-generation-rigging.md"
+    },
+    {
+      "context_idx": "23",
+      "context_name": "Procedural Generation & Rigging",
+      "finding_idx": "5",
+      "title": "Empty-preview placeholder shape inconsistent with generated-preview shape",
+      "severity": "Medium",
+      "category": "Polish",
+      "file": "src/components/modules/visual-gen/procedural-engine/ProceduralEngineView.tsx:470-509",
+      "report": "23-procedural-generation-rigging.md"
+    },
+    {
+      "context_idx": "23",
+      "context_name": "Procedural Generation & Rigging",
+      "finding_idx": "6",
+      "title": "ExportFeedback and rig CreateResult use different success/error visual languages",
+      "severity": "Medium",
+      "category": "Visual",
+      "file": "src/components/modules/visual-gen/procedural-engine/ProceduralEngineView.tsx:137-164; src/components/modules/visual-gen/auto-rig/AutoRigView.tsx:132-143",
+      "report": "23-procedural-generation-rigging.md"
+    },
+    {
+      "context_idx": "23",
+      "context_name": "Procedural Generation & Rigging",
+      "finding_idx": "7",
+      "title": "Magic numbers in centered-content max-widths drift between siblings",
+      "severity": "Low",
+      "category": "Design",
+      "file": "ProceduralEngineView.tsx:229 (`max-w-4xl`); AutoRigView.tsx:183 (`max-w-3xl`); ImportAutomationView.tsx:38 (`flex h-full`, no max-w)",
+      "report": "23-procedural-generation-rigging.md"
+    },
+    {
+      "context_idx": "24",
+      "context_name": "Asset Generation & Pipeline",
+      "finding_idx": "1",
+      "title": "Sibling editor surfaces each fork their own page header pattern",
+      "severity": "High",
+      "category": "Component",
+      "file": "src/components/modules/visual-gen/asset-forge/AssetForgeView.tsx:10-23, src/components/modules/visual-gen/asset-browser/AssetBrowserView.tsx:10-23, src/components/modules/visual-gen/blender-pipeline/BlenderPipelineView.tsx:69-82, src/components/modules/visual-gen/blender-pipeline/BlenderPipelineView.tsx:103-110, 182-189, 275-282",
+      "report": "24-asset-generation-pipeline.md"
+    },
+    {
+      "context_idx": "24",
+      "context_name": "Asset Generation & Pipeline",
+      "finding_idx": "2",
+      "title": "Blender Pipeline tabs duplicate a `Card + LabeledInput + PrimaryButton + connection warning` form three times",
+      "severity": "High",
+      "category": "Component",
+      "file": "src/components/modules/visual-gen/blender-pipeline/BlenderPipelineView.tsx:103-159, 161-254, 256-336",
+      "report": "24-asset-generation-pipeline.md"
+    },
+    {
+      "context_idx": "24",
+      "context_name": "Asset Generation & Pipeline",
+      "finding_idx": "3",
+      "title": "The 'visual-gen primary button' is hand-rolled six different ways",
+      "severity": "High",
+      "category": "Visual",
+      "file": "src/components/modules/visual-gen/asset-forge/GenerationPanel.tsx:207-216, src/components/modules/visual-gen/asset-browser/BrowsePanel.tsx:116-126, src/components/modules/visual-gen/asset-viewer/ViewerToolbar.tsx:66-73, src/components/modules/visual-gen/material-lab/MaterialLabView.tsx:58-69, src/components/modules/visual-gen/blender-pipeline/BlenderPipelineView.tsx:140-149, 235-244, 317-326",
+      "report": "24-asset-generation-pipeline.md"
+    },
+    {
+      "context_idx": "24",
+      "context_name": "Asset Generation & Pipeline",
+      "finding_idx": "4",
+      "title": "AssetCard is the only `Card` primitive \u2014 but the rest of the cluster reinvents card surfaces inline",
+      "severity": "High",
+      "category": "Component",
+      "file": "src/components/modules/visual-gen/asset-browser/AssetCard.tsx:20, src/components/modules/visual-gen/asset-forge/GenerationQueue.tsx:34, src/components/modules/visual-gen/blender-pipeline/ScriptRunner.tsx:33, src/components/modules/visual-gen/blender-pipeline/BlenderPipelineView.tsx:112, 191, 284, 50-63",
+      "report": "24-asset-generation-pipeline.md"
+    },
+    {
+      "context_idx": "24",
+      "context_name": "Asset Generation & Pipeline",
+      "finding_idx": "5",
+      "title": "Tab/segmented selector pattern is hand-rolled three different ways with magic-number heights",
+      "severity": "Medium",
+      "category": "Visual",
+      "file": "src/components/modules/visual-gen/asset-forge/GenerationPanel.tsx:75-98, 103-147, src/components/modules/visual-gen/asset-browser/BrowsePanel.tsx:73-87, 89-104, src/components/modules/visual-gen/asset-viewer/ViewerToolbar.tsx:84-99, src/components/modules/visual-gen/material-lab/PBREditor.tsx:159-173",
+      "report": "24-asset-generation-pipeline.md"
+    },
+    {
+      "context_idx": "24",
+      "context_name": "Asset Generation & Pipeline",
+      "finding_idx": "6",
+      "title": "Toast/result feedback is implemented inline with diverging shapes \u2014 and BrowsePanel just swallows errors",
+      "severity": "Medium",
+      "category": "Missing",
+      "file": "src/components/modules/visual-gen/asset-browser/BrowsePanel.tsx:51-57, src/components/modules/visual-gen/asset-browser/useAssetBrowserStore.ts:67-93, src/components/modules/visual-gen/material-lab/MaterialLabView.tsx:71-83, src/components/modules/visual-gen/blender-pipeline/BlenderPipelineView.tsx:47-65",
+      "report": "24-asset-generation-pipeline.md"
+    },
+    {
+      "context_idx": "24",
+      "context_name": "Asset Generation & Pipeline",
+      "finding_idx": "7",
+      "title": "ScriptCard elapsed-time formatting drifts from JobCard's",
+      "severity": "Medium",
+      "category": "Visual",
+      "file": "src/components/modules/visual-gen/blender-pipeline/ScriptRunner.tsx:28-30, src/components/modules/visual-gen/asset-forge/GenerationQueue.tsx:27-29",
+      "report": "24-asset-generation-pipeline.md"
+    },
+    {
+      "context_idx": "24",
+      "context_name": "Asset Generation & Pipeline",
+      "finding_idx": "8",
+      "title": "ViewerToolbar accent-color contrast risk on tinted toggle background",
+      "severity": "Low",
+      "category": "Accessibility-as-polish",
+      "file": "src/components/modules/visual-gen/asset-viewer/ViewerToolbar.tsx:138-144",
+      "report": "24-asset-generation-pipeline.md"
+    },
+    {
+      "context_idx": "25",
+      "context_name": "UE5 & POF Bridge",
+      "finding_idx": "1",
+      "title": "Three independent ad\u2011hoc \"action button\" primitives reinvented per panel",
+      "severity": "High",
+      "category": "Component",
+      "file": "src/components/modules/project-setup/UE5RemoteController.tsx:254-262, 390-398, 483-491, 717-735; LiveStateSyncPanel.tsx:225-244; BidirectionalStateSyncPanel.tsx:440-456, 515-535, 710-723; LiveCodingPanel.tsx:162-177, 474-491; BridgeEndpointHealth.tsx:255-266",
+      "report": "25-ue5-pof-bridge.md"
+    },
+    {
+      "context_idx": "25",
+      "context_name": "UE5 & POF Bridge",
+      "finding_idx": "2",
+      "title": "Connection-status pill is shared but two panels invented their own \"LIVE\" / \"Live\" badges anyway",
+      "severity": "High",
+      "category": "Visual",
+      "file": "src/components/modules/project-setup/BidirectionalStateSyncPanel.tsx:394-405; LiveStateSyncPanel.tsx:183 (uses `label=\"Live\"` override); LiveCodingPanel.tsx:151-158 (text-only \"Connected \u2014 Live Coding enabled\"); src/components/ui/ConnectionStatusBadge.tsx:17-23",
+      "report": "25-ue5-pof-bridge.md"
+    },
+    {
+      "context_idx": "25",
+      "context_name": "UE5 & POF Bridge",
+      "finding_idx": "3",
+      "title": "Inconsistent \"section disclosure\" header pattern across the bridge panels",
+      "severity": "High",
+      "category": "Component",
+      "file": "src/components/modules/project-setup/LiveCodingPanel.tsx:332-358, 388-403, 498-513; LiveStateSyncPanel.tsx:293-307, 374-393, 437-447; BidirectionalStateSyncPanel.tsx:482-504, 561-572, 654-664, 734-751, 788-813; BridgeEndpointHealth.tsx:359-390",
+      "report": "25-ue5-pof-bridge.md"
+    },
+    {
+      "context_idx": "25",
+      "context_name": "UE5 & POF Bridge",
+      "finding_idx": "4",
+      "title": "Hot-Patch pipeline stepper is bespoke; should be a reusable PipelineStepper primitive",
+      "severity": "High",
+      "category": "Component",
+      "file": "src/components/modules/project-setup/LiveCodingPanel.tsx:228-271 (PIPELINE_STEPS, phaseIndex, phaseColor, phaseLabel + render)",
+      "report": "25-ue5-pof-bridge.md"
+    },
+    {
+      "context_idx": "25",
+      "context_name": "UE5 & POF Bridge",
+      "finding_idx": "5",
+      "title": "Hex-with-opacity-suffix tokens are mixed with `OPACITY_*` constants \u2014 drift is already inconsistent",
+      "severity": "Medium",
+      "category": "Design",
+      "file": "src/components/modules/project-setup/UE5RemoteController.tsx:74,76,99,101,232,258,394,475,543 (raw `${COLOR}15`, `${COLOR}40`, `${COLOR}50`, `rgba(255,255,255,0.06)`); LiveStateSyncPanel.tsx:332,337,340 (raw `${ACCENT_CYAN}15`); BidirectionalStateSyncPanel.tsx & LiveCodingPanel.tsx (use `${COLOR}${OPACITY_15}` constants); BridgeEndpointHealth.tsx (uses constants consistently)",
+      "report": "25-ue5-pof-bridge.md"
+    },
+    {
+      "context_idx": "25",
+      "context_name": "UE5 & POF Bridge",
+      "finding_idx": "6",
+      "title": "JSON viewers, history rows, log rows, and \"empty state\" placeholders are duplicated across panels",
+      "severity": "Medium",
+      "category": "Component",
+      "file": "src/components/modules/project-setup/UE5RemoteController.tsx:85-116 (JsonViewer), 528-534 (empty state), 549-602 (history rows); LiveCodingPanel.tsx:514-549 (history rows), 516-518 (empty state); LiveStateSyncPanel.tsx:280-286, 396-397 (empty states); BidirectionalStateSyncPanel.tsx:461-473 (empty state), 846-868 (log rows)",
+      "report": "25-ue5-pof-bridge.md"
+    },
+    {
+      "context_idx": "25",
+      "context_name": "UE5 & POF Bridge",
+      "finding_idx": "7",
+      "title": "Form input fields are reinvented in every panel; only UE5RemoteController has an `InputField` wrapper",
+      "severity": "Medium",
+      "category": "Component",
+      "file": "src/components/modules/project-setup/UE5RemoteController.tsx:118-135 (local InputField); LiveCodingPanel.tsx:412-421, 429-438, 447-455, 461-469 (raw `<input>` and `<textarea>` x4); LiveStateSyncPanel.tsx:107-114, 119-125, 258-269 (raw `<input>` x3); BidirectionalStateSyncPanel.tsx:602-632, 678-705 (raw `<input>` x7)",
+      "report": "25-ue5-pof-bridge.md"
+    },
+    {
+      "context_idx": "25",
+      "context_name": "UE5 & POF Bridge",
+      "finding_idx": "8",
+      "title": "Mini SVG viewport \"minimap\" has no axis labels, no scale legend, and silently clamps off-screen positions",
+      "severity": "Low",
+      "category": "Polish",
+      "file": "src/components/modules/project-setup/LiveStateSyncPanel.tsx:330-365",
+      "report": "25-ue5-pof-bridge.md"
+    },
+    {
+      "context_idx": "26",
+      "context_name": "Project Setup Wizard",
+      "finding_idx": "1",
+      "title": "Brand-green hex `#00ff88` hardcoded across the wizard surface \u2014 bypasses the design token system",
+      "severity": "High",
+      "category": "Design",
+      "file": "src/components/modules/project-setup/SetupWizard.tsx:112,127,149,160,183,185,187,193,202,217,225,256,276,278; src/components/modules/project-setup/PathBrowser.tsx:263,318-319,340-341,363-366,401,429-437,448-450,461; src/components/modules/project-setup/ProjectFilesPanel.tsx:52,57,76; src/components/modules/project-setup/ProjectSetupModule.tsx:102",
+      "report": "26-project-setup-wizard.md"
+    },
+    {
+      "context_idx": "26",
+      "context_name": "Project Setup Wizard",
+      "finding_idx": "2",
+      "title": "Two parallel \"select an item\" list patterns reinvented \u2014 SetupWizard, PathBrowser, StatusChecklist all roll their own row",
+      "severity": "High",
+      "category": "Component",
+      "file": "src/components/modules/project-setup/SetupWizard.tsx:178-205 (project picker); src/components/modules/project-setup/PathBrowser.tsx:312-323 (engines), 334-345 (suggestions), 357-378 (detected projects), 418-440 (directories); src/components/modules/project-setup/StatusChecklist.tsx:134-171 (checklist rows)",
+      "report": "26-project-setup-wizard.md"
+    },
+    {
+      "context_idx": "26",
+      "context_name": "Project Setup Wizard",
+      "finding_idx": "3",
+      "title": "Missing-state and empty-state treatments inconsistent \u2014 three different empty-state visual recipes within one module",
+      "severity": "Medium",
+      "category": "Visual",
+      "file": "src/components/modules/project-setup/SetupWizard.tsx:206-231 (empty: no projects); src/components/modules/project-setup/PathBrowser.tsx:394-417 (empty: empty directory); src/components/modules/project-setup/ProjectFilesPanel.tsx:33-43 (empty: no files); src/components/modules/project-setup/ProjectSetupModule.tsx:155-161 (empty: no path)",
+      "report": "26-project-setup-wizard.md"
+    },
+    {
+      "context_idx": "26",
+      "context_name": "Project Setup Wizard",
+      "finding_idx": "4",
+      "title": "Three step-indicator / mode-tab patterns \u2014 none extracted, all subtly different",
+      "severity": "Medium",
+      "category": "Component",
+      "file": "src/components/modules/project-setup/SetupWizard.tsx:120-134 (UE version pills); src/components/modules/project-setup/SetupWizard.tsx:144-167 (Open Existing / Start Fresh tabs); src/components/modules/project-setup/TestHarnessPanel.tsx:332-350 (Suites / Results / Snapshots tabs)",
+      "report": "26-project-setup-wizard.md"
+    },
+    {
+      "context_idx": "26",
+      "context_name": "Project Setup Wizard",
+      "finding_idx": "5",
+      "title": "WizardButton variants don't cover the wizard's most prominent buttons \u2014 primary/destructive coverage gap",
+      "severity": "Medium",
+      "category": "Design",
+      "file": "src/components/modules/project-setup/WizardButton.tsx:6-23; src/components/modules/project-setup/SetupWizard.tsx:273-280 (Create & Launch); src/components/modules/project-setup/PathBrowser.tsx:458-468 (Select This Project)",
+      "report": "26-project-setup-wizard.md"
+    },
+    {
+      "context_idx": "26",
+      "context_name": "Project Setup Wizard",
+      "finding_idx": "6",
+      "title": "Inline `style={{}}` color drift in TestHarnessPanel and BlueprintInspector \u2014 abandons Tailwind layer entirely",
+      "severity": "High",
+      "category": "Design",
+      "file": "src/components/modules/project-setup/TestHarnessPanel.tsx:319-322,338-341,452-456,465-466,498-503,521-524,562-563,573-577,634,649,658,820-821,840,846,852,854,887,893-895,914,916,920,931,943,957,959,963,972 (60+ inline-style sites); src/components/modules/project-setup/BlueprintInspector.tsx:79,80,93-94,119,151-153,239-243,271,309-322",
+      "report": "26-project-setup-wizard.md"
+    },
+    {
+      "context_idx": "26",
+      "context_name": "Project Setup Wizard",
+      "finding_idx": "7",
+      "title": "PathBrowser is a 480-line god-component mixing data fetching, navigation, and four list flavors",
+      "severity": "Medium",
+      "category": "Component",
+      "file": "src/components/modules/project-setup/PathBrowser.tsx:55-486",
+      "report": "26-project-setup-wizard.md"
+    },
+    {
+      "context_idx": "26",
+      "context_name": "Project Setup Wizard",
+      "finding_idx": "8",
+      "title": "`text-2xs` used inconsistently \u2014 defined locally, not part of the design system",
+      "severity": "Low",
+      "category": "Design",
+      "file": "src/components/modules/project-setup/SetupWizard.tsx:261; src/components/modules/project-setup/StatusChecklist.tsx:239,242; src/components/modules/project-setup/PathBrowser.tsx:366,371,437,450; src/components/modules/project-setup/ProjectFilesPanel.tsx; src/components/modules/project-setup/BlueprintInspector.tsx:78,80,98,100,117,118,121,143,247,318",
+      "report": "26-project-setup-wizard.md"
+    },
+    {
+      "context_idx": "27",
+      "context_name": "Task System & Prompt Engineering",
+      "finding_idx": "1",
+      "title": "Chat overlay chrome reinvents SurfaceCard at level 3",
+      "severity": "High",
+      "category": "Component",
+      "file": "src/components/prototype/chat/ConversationShell.tsx:55-73",
+      "report": "27-task-system-prompt-engineering.md"
+    },
+    {
+      "context_idx": "27",
+      "context_name": "Task System & Prompt Engineering",
+      "finding_idx": "2",
+      "title": "SlashCommandMenu styled in CSS file while siblings use Tailwind utilities",
+      "severity": "High",
+      "category": "Visual",
+      "file": "src/components/prototype/chat/SlashCommandMenu.tsx:46-55, src/components/prototype/chat/chat.css:17-43",
+      "report": "27-task-system-prompt-engineering.md"
+    },
+    {
+      "context_idx": "27",
+      "context_name": "Task System & Prompt Engineering",
+      "finding_idx": "3",
+      "title": "Workflow node status palette diverges from chart-color tokens",
+      "severity": "High",
+      "category": "Design",
+      "file": "src/components/modules/evaluator/WorkflowOrchestratorView.tsx:30-38",
+      "report": "27-task-system-prompt-engineering.md"
+    },
+    {
+      "context_idx": "27",
+      "context_name": "Task System & Prompt Engineering",
+      "finding_idx": "4",
+      "title": "Module tag selector reimplements a chip/pill component inline",
+      "severity": "High",
+      "category": "Component",
+      "file": "src/components/modules/evaluator/WorkflowOrchestratorView.tsx:261-278",
+      "report": "27-task-system-prompt-engineering.md"
+    },
+    {
+      "context_idx": "27",
+      "context_name": "Task System & Prompt Engineering",
+      "finding_idx": "5",
+      "title": "Title-bar drag handle has no keyboard or focus affordance",
+      "severity": "Medium",
+      "category": "Accessibility-as-polish",
+      "file": "src/components/prototype/chat/ConversationShell.tsx:65-73, src/components/prototype/chat/useChatOverlay.ts:53-96",
+      "report": "27-task-system-prompt-engineering.md"
+    },
+    {
+      "context_idx": "27",
+      "context_name": "Task System & Prompt Engineering",
+      "finding_idx": "6",
+      "title": "ChatMessages auto-scroll runs on every length change with no \"user scrolled up\" detection",
+      "severity": "Medium",
+      "category": "Polish",
+      "file": "src/components/prototype/chat/ChatMessages.tsx:71-88",
+      "report": "27-task-system-prompt-engineering.md"
+    },
+    {
+      "context_idx": "27",
+      "context_name": "Task System & Prompt Engineering",
+      "finding_idx": "7",
+      "title": "ChatInput textarea height ceiling and Send button affordance are off-system",
+      "severity": "Medium",
+      "category": "Visual",
+      "file": "src/components/prototype/chat/ChatInput.tsx:19-24, 79-87, src/components/prototype/chat/chat.css:45-57",
+      "report": "27-task-system-prompt-engineering.md"
+    },
+    {
+      "context_idx": "27",
+      "context_name": "Task System & Prompt Engineering",
+      "finding_idx": "8",
+      "title": "Magic z-index 9000 and ad-hoc edge margin in overlay layer",
+      "severity": "Low",
+      "category": "Design",
+      "file": "src/components/prototype/chat/ConversationShell.tsx:39, 55, src/components/prototype/chat/useChatOverlay.ts:7-12",
+      "report": "27-task-system-prompt-engineering.md"
+    },
+    {
+      "context_idx": "28",
+      "context_name": "CLI Terminal",
+      "finding_idx": "1",
+      "title": "Three card primitives (ErrorCard, BuildSummaryCard, WarningAggregator) reimplement the same scaffold three different ways",
+      "severity": "High",
+      "category": "Component",
+      "file": "src/components/cli/ErrorCard.tsx:80-86, src/components/cli/BuildSummaryCard.tsx:18-27, src/components/cli/WarningAggregator.tsx:24-25",
+      "report": "28-cli-terminal.md"
+    },
+    {
+      "context_idx": "28",
+      "context_name": "CLI Terminal",
+      "finding_idx": "2",
+      "title": "CLI_COLORS Tailwind classes interpolated into `hover:` and `disabled:hover:` produce broken selectors at build time",
+      "severity": "High",
+      "category": "Design",
+      "file": "src/components/cli/InlineTerminal.tsx:130, src/components/cli/TerminalHeader.tsx:66, src/components/cli/ErrorCard.tsx:184, src/components/cli/ErrorCard.tsx:208, src/components/cli/WarningAggregator.tsx:120",
+      "report": "28-cli-terminal.md"
+    },
+    {
+      "context_idx": "28",
+      "context_name": "CLI Terminal",
+      "finding_idx": "3",
+      "title": "Magic-number sizing on textarea and resize handle drifts from the design-system spacing scale",
+      "severity": "Medium",
+      "category": "Polish",
+      "file": "src/components/cli/TerminalInput.tsx:42-56, src/components/cli/InlineTerminal.tsx:95-102",
+      "report": "28-cli-terminal.md"
+    },
+    {
+      "context_idx": "28",
+      "context_name": "CLI Terminal",
+      "finding_idx": "4",
+      "title": "Empty state and prompt-suggestion chips duplicate ChipButton scaffolding three times in the same module",
+      "severity": "High",
+      "category": "Component",
+      "file": "src/components/cli/TerminalOutput.tsx:697-712, src/components/cli/SuggestedActions.tsx:238-253, src/components/cli/SuggestedActions.tsx:163-173",
+      "report": "28-cli-terminal.md"
+    },
+    {
+      "context_idx": "28",
+      "context_name": "CLI Terminal",
+      "finding_idx": "5",
+      "title": "Inline `style={{ color: ... }}` for icon tinting bypasses the theme in ~25 places, blocking theme switching",
+      "severity": "High",
+      "category": "Design",
+      "file": "src/components/cli/TerminalHeader.tsx:47, 62, 84; src/components/cli/TerminalInput.tsx:42, 63; src/components/cli/InlineTerminal.tsx:109-115; src/components/cli/TerminalOutput.tsx:684, 752, 769; src/components/cli/SuggestedActions.tsx:229, 242",
+      "report": "28-cli-terminal.md"
+    },
+    {
+      "context_idx": "28",
+      "context_name": "CLI Terminal",
+      "finding_idx": "6",
+      "title": "Streaming/idle state indicator is rendered three different ways across header, output footer, and InlineTerminal header",
+      "severity": "Medium",
+      "category": "Visual",
+      "file": "src/components/cli/TerminalHeader.tsx:75-83, src/components/cli/TerminalOutput.tsx:751-756, src/components/cli/InlineTerminal.tsx:108-118",
+      "report": "28-cli-terminal.md"
+    },
+    {
+      "context_idx": "28",
+      "context_name": "CLI Terminal",
+      "finding_idx": "7",
+      "title": "Suggestion-chip dismiss state has 3 phases ('visible' / 'pending-undo' / 'dismissed') but only 2 visible UI states; missing announcement of the auto-expire countdown",
+      "severity": "Medium",
+      "category": "Missing",
+      "file": "src/components/cli/SuggestedActions.tsx:142-177, 188-213",
+      "report": "28-cli-terminal.md"
+    },
+    {
+      "context_idx": "28",
+      "context_name": "CLI Terminal",
+      "finding_idx": "8",
+      "title": "Selection toolbar position math has no viewport-edge clamping on the right side or below the visible scroll container",
+      "severity": "Low",
+      "category": "Responsive",
+      "file": "src/components/cli/TerminalOutput.tsx:262-299, 442-470",
+      "report": "28-cli-terminal.md"
+    },
+    {
+      "context_idx": "29",
+      "context_name": "UI Primitives & Shared Infrastructure",
+      "finding_idx": "1",
+      "title": "Button has no `disabled` styling, no `loading` state, no `icon` slot, and missing semantic variants \u2014 consumers fork it as `WizardButton`",
+      "severity": "High",
+      "category": "Component",
+      "file": "src/components/ui/Button.tsx:6-39",
+      "report": "29-ui-primitives-shared-infrastructure.md"
+    },
+    {
+      "context_idx": "29",
+      "context_name": "UI Primitives & Shared Infrastructure",
+      "finding_idx": "2",
+      "title": "`Tooltip` has no keyboard/focus support, no escape-to-dismiss, no portal, no positioning logic, and no role attributes",
+      "severity": "High",
+      "category": "Accessibility",
+      "file": "src/components/ui/Tooltip.tsx:10-23",
+      "report": "29-ui-primitives-shared-infrastructure.md"
+    },
+    {
+      "context_idx": "29",
+      "context_name": "UI Primitives & Shared Infrastructure",
+      "finding_idx": "3",
+      "title": "`motion.ts` ships four overlapping motion-config systems \u2014 DURATION, SPRING, MOTION_CONFIG, ANIMATION_PRESETS \u2014 with conflicting numbers",
+      "severity": "High",
+      "category": "Design",
+      "file": "src/lib/motion.ts:1-75",
+      "report": "29-ui-primitives-shared-infrastructure.md"
+    },
+    {
+      "context_idx": "29",
+      "context_name": "UI Primitives & Shared Infrastructure",
+      "finding_idx": "4",
+      "title": "Hierarchy of card primitives is unclear: `Card` is a thin re-export, `SurfaceCard` is the real one, no headed `Card.Header/.Body/.Footer` slots",
+      "severity": "High",
+      "category": "Component",
+      "file": "src/components/ui/Card.tsx:1-3, src/components/ui/SurfaceCard.tsx:1-39",
+      "report": "29-ui-primitives-shared-infrastructure.md"
+    },
+    {
+      "context_idx": "29",
+      "context_name": "UI Primitives & Shared Infrastructure",
+      "finding_idx": "5",
+      "title": "`chart-colors.ts` opacity tokens are inconsistent in granularity and have a footgun: numeric label != actual percent",
+      "severity": "Medium",
+      "category": "Design",
+      "file": "src/lib/chart-colors.ts:75-120",
+      "report": "29-ui-primitives-shared-infrastructure.md"
+    },
+    {
+      "context_idx": "29",
+      "context_name": "UI Primitives & Shared Infrastructure",
+      "finding_idx": "6",
+      "title": "`Badge` is missing `info`, `neutral`, `subtle`, and `live` variants \u2014 and has no size/intent props, forcing inline style overrides",
+      "severity": "Medium",
+      "category": "Design",
+      "file": "src/components/ui/Badge.tsx:3-22",
+      "report": "29-ui-primitives-shared-infrastructure.md"
+    },
+    {
+      "context_idx": "29",
+      "context_name": "UI Primitives & Shared Infrastructure",
+      "finding_idx": "7",
+      "title": "`InteractivePill` and `MultiInteractivePill` have weak a11y: no `role=\"tablist\"/\"tab\"`, no `aria-pressed`, no keyboard arrow navigation, and no focus-visible ring",
+      "severity": "Medium",
+      "category": "Accessibility",
+      "file": "src/components/ui/InteractivePill.tsx:48-105, 113-154",
+      "report": "29-ui-primitives-shared-infrastructure.md"
+    },
+    {
+      "context_idx": "29",
+      "context_name": "UI Primitives & Shared Infrastructure",
+      "finding_idx": "8",
+      "title": "`MarkdownProse` uses unsanitized regex-based markdown\u2192HTML and renders via `dangerouslySetInnerHTML`",
+      "severity": "Medium",
+      "category": "Polish",
+      "file": "src/components/ui/MarkdownProse.tsx:11-125",
+      "report": "29-ui-primitives-shared-infrastructure.md"
+    },
+    {
+      "context_idx": "29",
+      "context_name": "UI Primitives & Shared Infrastructure",
+      "finding_idx": "9",
+      "title": "`EmptyState` action API is closed over `{label, onClick, color}` \u2014 no support for icons, loading, or disabled, and no destructive intent",
+      "severity": "Medium",
+      "category": "Component",
+      "file": "src/components/ui/EmptyState.tsx:13-78",
+      "report": "29-ui-primitives-shared-infrastructure.md"
+    },
+    {
+      "context_idx": "29",
+      "context_name": "UI Primitives & Shared Infrastructure",
+      "finding_idx": "10",
+      "title": "`GradientText` defaults force `font-bold` and have no `prefers-reduced-transparency` consideration; `as` enum is fixed",
+      "severity": "Low",
+      "category": "Polish",
+      "file": "src/components/ui/GradientText.tsx:16-34",
+      "report": "29-ui-primitives-shared-infrastructure.md"
+    },
+    {
+      "context_idx": "30",
+      "context_name": "Layout & Navigation",
+      "finding_idx": "1",
+      "title": "Module Renderer has no Suspense/skeleton boundary \u2014 every module fends for itself",
+      "severity": "High",
+      "category": "Component",
+      "file": "src/components/layout/ModuleRenderer.tsx:200-274",
+      "report": "30-layout-navigation.md"
+    },
+    {
+      "context_idx": "30",
+      "context_name": "Layout & Navigation",
+      "finding_idx": "2",
+      "title": "SidebarL1 active indicator math is fragile and uses hard-coded magic numbers",
+      "severity": "High",
+      "category": "Component",
+      "file": "src/components/layout/SidebarL1.tsx:8-12, 35-42",
+      "report": "30-layout-navigation.md"
+    },
+    {
+      "context_idx": "30",
+      "context_name": "Layout & Navigation",
+      "finding_idx": "3",
+      "title": "CLI tab \"active\" border-top adds 2px and shifts non-active tabs vertically",
+      "severity": "High",
+      "category": "Visual",
+      "file": "src/components/layout/CLITabBar.tsx:62-72",
+      "report": "30-layout-navigation.md"
+    },
+    {
+      "context_idx": "30",
+      "context_name": "Layout & Navigation",
+      "finding_idx": "4",
+      "title": "Activity Feed \"Read all\" and dismiss buttons lack visible focus rings",
+      "severity": "High",
+      "category": "Accessibility-as-polish",
+      "file": "src/components/layout/ActivityFeedPanel.tsx:165-178, 263-265, 411-417",
+      "report": "30-layout-navigation.md"
+    },
+    {
+      "context_idx": "30",
+      "context_name": "Layout & Navigation",
+      "finding_idx": "5",
+      "title": "EventBusDevTools panel ignores `useReducedMotion` and uses a spring slide",
+      "severity": "Medium",
+      "category": "Accessibility-as-polish",
+      "file": "src/components/layout/EventBusDevTools.tsx:99-104",
+      "report": "30-layout-navigation.md"
+    },
+    {
+      "context_idx": "30",
+      "context_name": "Layout & Navigation",
+      "finding_idx": "6",
+      "title": "Welcome / \"Select a category\" empty state is a bare `<p>` \u2014 no shell-grade treatment",
+      "severity": "Medium",
+      "category": "Polish",
+      "file": "src/components/layout/ModuleRenderer.tsx:182-198",
+      "report": "30-layout-navigation.md"
+    },
+    {
+      "context_idx": "30",
+      "context_name": "Layout & Navigation",
+      "finding_idx": "7",
+      "title": "Top-bar `h-11` vs sidebar L2 header `py-3` produce a half-pixel header alignment drift",
+      "severity": "Medium",
+      "category": "Visual",
+      "file": "src/components/layout/TopBar.tsx:215; src/components/layout/SidebarL2.tsx:146",
+      "report": "30-layout-navigation.md"
+    },
+    {
+      "context_idx": "30",
+      "context_name": "Layout & Navigation",
+      "finding_idx": "8",
+      "title": "SearchTrigger dispatches a synthetic Ctrl+K KeyboardEvent instead of toggling state directly",
+      "severity": "Medium",
+      "category": "Component",
+      "file": "src/components/layout/TopBar.tsx:667-685; src/components/layout/GlobalSearchPanel.tsx:46-58",
+      "report": "30-layout-navigation.md"
+    },
+    {
+      "context_idx": "30",
+      "context_name": "Layout & Navigation",
+      "finding_idx": "9",
+      "title": "ModuleErrorBoundary \"Retry\" button bypasses the standard focus-ring style and renders edge-to-edge inside the boundary",
+      "severity": "Medium",
+      "category": "Accessibility-as-polish",
+      "file": "src/components/layout/ModuleErrorBoundary.tsx:67-81",
+      "report": "30-layout-navigation.md"
+    },
+    {
+      "context_idx": "30",
+      "context_name": "Layout & Navigation",
+      "finding_idx": "10",
+      "title": "ResizeHandle (CLI bottom panel) ships a hard-coded `boxShadow` and isn't keyboard-resizable",
+      "severity": "Low",
+      "category": "Accessibility-as-polish",
+      "file": "src/components/layout/ResizeHandle.tsx:40-52",
+      "report": "30-layout-navigation.md"
+    },
+    {
+      "context_idx": "31",
+      "context_name": "Game Director & Regression",
+      "finding_idx": "1",
+      "title": "Score-ring SVG geometry duplicated three times with magic numbers",
+      "severity": "High",
+      "category": "Component",
+      "file": "src/components/modules/game-director/DirectorOverview.tsx:96-117, 244-259; src/components/modules/game-director/SessionDetail.tsx:103-118",
+      "report": "31-game-director-regression.md"
+    },
+    {
+      "context_idx": "31",
+      "context_name": "Game Director & Regression",
+      "finding_idx": "2",
+      "title": "Finding row primitive reimplemented across SessionDetail and FindingsExplorer with diverging affordances",
+      "severity": "High",
+      "category": "Component",
+      "file": "src/components/modules/game-director/SessionDetail.tsx:266-332; src/components/modules/game-director/FindingsExplorer.tsx:147-176",
+      "report": "31-game-director-regression.md"
+    },
+    {
+      "context_idx": "31",
+      "context_name": "Game Director & Regression",
+      "finding_idx": "3",
+      "title": "Empty-state illustration block copy-pasted five times verbatim",
+      "severity": "High",
+      "category": "Component",
+      "file": "src/components/modules/game-director/DirectorOverview.tsx:306-337; src/components/modules/game-director/SessionDetail.tsx:339-366, 419-447; src/components/modules/game-director/FindingsExplorer.tsx:106-133; src/components/modules/game-director/RegressionTrackerView.tsx:421-438, 566-582",
+      "report": "31-game-director-regression.md"
+    },
+    {
+      "context_idx": "31",
+      "context_name": "Game Director & Regression",
+      "finding_idx": "4",
+      "title": "Status-pill color treatment reimplemented inconsistently between status maps",
+      "severity": "High",
+      "category": "Design",
+      "file": "src/components/modules/game-director/DirectorOverview.tsx:17-24; src/components/modules/game-director/RegressionTrackerView.tsx:27-32",
+      "report": "31-game-director-regression.md"
+    },
+    {
+      "context_idx": "31",
+      "context_name": "Game Director & Regression",
+      "finding_idx": "5",
+      "title": "Three independent tab-bar implementations with `layoutId`-collision risk",
+      "severity": "Medium",
+      "category": "Component",
+      "file": "src/components/modules/game-director/GameDirectorModule.tsx:139-171; src/components/modules/game-director/SessionDetail.tsx:217-242; src/components/modules/game-director/RegressionTrackerView.tsx:169-199",
+      "report": "31-game-director-regression.md"
+    },
+    {
+      "context_idx": "31",
+      "context_name": "Game Director & Regression",
+      "finding_idx": "6",
+      "title": "StatCard duplicated with subtly different layout between Overview and Regression",
+      "severity": "Medium",
+      "category": "Visual",
+      "file": "src/components/modules/game-director/DirectorOverview.tsx:170-202; src/components/modules/game-director/RegressionTrackerView.tsx:678-692",
+      "report": "31-game-director-regression.md"
+    },
+    {
+      "context_idx": "31",
+      "context_name": "Game Director & Regression",
+      "finding_idx": "7",
+      "title": "Confidence shown as bare percent with no visual weight",
+      "severity": "Medium",
+      "category": "Polish",
+      "file": "src/components/modules/game-director/SessionDetail.tsx:291; src/components/modules/game-director/FindingsExplorer.tsx:173",
+      "report": "31-game-director-regression.md"
+    },
+    {
+      "context_idx": "31",
+      "context_name": "Game Director & Regression",
+      "finding_idx": "8",
+      "title": "NewSessionPanel \"Aggressive\" toggle is a button not a switch",
+      "severity": "Low",
+      "category": "Accessibility",
+      "file": "src/components/modules/game-director/NewSessionPanel.tsx:266-286",
+      "report": "31-game-director-regression.md"
+    },
+    {
+      "context_idx": "32",
+      "context_name": "Session Tracking & Telemetry",
+      "finding_idx": "1",
+      "title": "Two more local `StatCard` forks reinforce the suite-wide KPI drift",
+      "severity": "High",
+      "category": "Component",
+      "file": "src/components/modules/evaluator/SessionAnalyticsDashboard.tsx:170-190 \u00b7 src/components/modules/evaluator/WeeklyDigestView.tsx:323-348",
+      "report": "32-session-tracking-telemetry.md"
+    },
+    {
+      "context_idx": "32",
+      "context_name": "Session Tracking & Telemetry",
+      "finding_idx": "2",
+      "title": "Local `MODULE_COLORS.setup` / `content` / `evaluator` mapping for \"good/fair/bad\" is wrong-semantic and forks the threshold ramp four ways",
+      "severity": "High",
+      "category": "Design",
+      "file": "src/components/modules/evaluator/WeeklyDigestView.tsx:227, 273, 279, 558, 592 \u00b7 src/components/modules/evaluator/SessionAnalyticsDashboard.tsx:215, 267 \u00b7 cross-ref src/lib/chart-colors.ts (STATUS_SUCCESS / STATUS_WARNING / STATUS_ERROR exist)",
+      "report": "32-session-tracking-telemetry.md"
+    },
+    {
+      "context_idx": "32",
+      "context_name": "Session Tracking & Telemetry",
+      "finding_idx": "3",
+      "title": "Tailwind arbitrary-value class `bg-[${STATUS_WARNING}${OPACITY_10}]` does not work \u2014 the badge background is invisible",
+      "severity": "High",
+      "category": "Polish",
+      "file": "src/components/modules/evaluator/SessionAnalyticsDashboard.tsx:107, 380",
+      "report": "32-session-tracking-telemetry.md"
+    },
+    {
+      "context_idx": "32",
+      "context_name": "Session Tracking & Telemetry",
+      "finding_idx": "4",
+      "title": "Sub-tab and stat icons are not interactive even though the visual treatment hints they are",
+      "severity": "Medium",
+      "category": "Accessibility-as-polish",
+      "file": "src/components/modules/evaluator/SessionAnalyticsDashboard.tsx:212-251 (QualityScoreRow) \u00b7 364-384 (RecentSessionRow)",
+      "report": "32-session-tracking-telemetry.md"
+    },
+    {
+      "context_idx": "32",
+      "context_name": "Session Tracking & Telemetry",
+      "finding_idx": "5",
+      "title": "The streak section uses tabular-nums and a divider that don't match the Module Activity row's number formatting",
+      "severity": "Medium",
+      "category": "Visual",
+      "file": "src/components/modules/evaluator/WeeklyDigestView.tsx:196-208 vs. 256-294",
+      "report": "32-session-tracking-telemetry.md"
+    },
+    {
+      "context_idx": "32",
+      "context_name": "Session Tracking & Telemetry",
+      "finding_idx": "6",
+      "title": "Daily-activity tooltip loses its \"darker than surface\" backdrop in light mode (hard-coded `bg-[#1a1a24]`)",
+      "severity": "Medium",
+      "category": "Design",
+      "file": "src/components/modules/evaluator/WeeklyDigestView.tsx:381",
+      "report": "32-session-tracking-telemetry.md"
+    },
+    {
+      "context_idx": "32",
+      "context_name": "Session Tracking & Telemetry",
+      "finding_idx": "7",
+      "title": "The PNG-export canvas renderer is a maintenance trap \u2014 a parallel rendering of the same data with no shared layout source",
+      "severity": "Low",
+      "category": "Component",
+      "file": "src/components/modules/evaluator/WeeklyDigestView.tsx:470-658 (renderDigestToCanvas + roundRect)",
+      "report": "32-session-tracking-telemetry.md"
+    }
+  ]
+}
