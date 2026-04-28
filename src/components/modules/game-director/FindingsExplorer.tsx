@@ -9,6 +9,7 @@ import { ACCENT_ORANGE } from '@/lib/chart-colors';
 import type { PlaytestSession, PlaytestFinding, FindingSeverity, FindingCategory } from '@/types/game-director';
 import { SurfaceCard } from '@/components/ui/SurfaceCard';
 import { SEVERITY_STYLES, CATEGORY_LABELS } from '@/lib/game-director-styles';
+import { EmptyState } from '@/components/ui/EmptyState';
 
 const ACCENT = ACCENT_ORANGE;
 
@@ -105,32 +106,14 @@ export function FindingsExplorer({ sessions, getFindings, onNewSession }: Findin
       {/* Findings grid */}
       {filtered.length === 0 ? (
         allFindings.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-16 text-center">
-            <div className="relative w-16 h-16 mb-5">
-              <div
-                className="absolute inset-0 rounded-2xl"
-                style={{ backgroundColor: `${ACCENT}08`, border: `1px solid ${ACCENT}15` }}
-              />
-              <Target className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-7 h-7" style={{ color: ACCENT }} />
-              <FileSearch className="absolute -bottom-1 -right-1 w-5 h-5 opacity-50" style={{ color: ACCENT }} />
-              <Search className="absolute -top-1 -left-1 w-4 h-4 opacity-30" style={{ color: ACCENT }} />
-            </div>
-            <h3 className="text-sm font-semibold text-text mb-1">No findings discovered yet</h3>
-            <p className="text-xs text-text-muted max-w-xs leading-relaxed mb-4">
-              Findings are bugs, issues, and observations uncovered during AI playtests.
-              Complete at least one playtest session to start collecting findings here.
-            </p>
-            {onNewSession && (
-              <button
-                onClick={onNewSession}
-                className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-medium transition-colors"
-                style={{ backgroundColor: `${ACCENT}15`, color: ACCENT, border: `1px solid ${ACCENT}30` }}
-              >
-                <Plus className="w-3.5 h-3.5" />
-                Go to New Session
-              </button>
-            )}
-          </div>
+          <EmptyState
+            icon={Target}
+            iconColor={ACCENT}
+            satelliteIcons={[FileSearch, Search]}
+            title="No findings discovered yet"
+            description="Findings are bugs, issues, and observations uncovered during AI playtests. Complete at least one playtest session to start collecting findings here."
+            action={onNewSession ? { label: 'Go to New Session', onClick: onNewSession, icon: Plus } : undefined}
+          />
         ) : (
           <div className="flex flex-col items-center justify-center py-12 text-center">
             <Filter className="w-5 h-5 text-border-bright mb-2" />

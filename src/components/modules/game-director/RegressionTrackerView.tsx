@@ -21,6 +21,7 @@ import {
   OPACITY_8, OPACITY_10, OPACITY_12, OPACITY_15, OPACITY_20,
 } from '@/lib/chart-colors';
 import { SEVERITY_STYLES_DENSE as SEVERITY_STYLES } from '@/lib/game-director-styles';
+import { EmptyState } from '@/components/ui/EmptyState';
 
 const ACCENT = ACCENT_ORANGE;
 
@@ -420,22 +421,13 @@ function FingerprintsTab({
       {/* Fingerprint list */}
       {filtered.length === 0 ? (
         fingerprints.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-16 text-center">
-            <div className="relative w-16 h-16 mb-5">
-              <div
-                className="absolute inset-0 rounded-2xl"
-                style={{ backgroundColor: `${ACCENT}08`, border: `1px solid ${ACCENT}15` }}
-              />
-              <Bug className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-7 h-7" style={{ color: ACCENT }} />
-              <Shield className="absolute -bottom-1 -right-1 w-5 h-5 opacity-50" style={{ color: ACCENT }} />
-              <Eye className="absolute -top-1 -left-1 w-4 h-4 opacity-30" style={{ color: ACCENT }} />
-            </div>
-            <h3 className="text-sm font-semibold text-text mb-1">No tracked issues yet</h3>
-            <p className="text-xs text-text-muted max-w-xs leading-relaxed">
-              Tracked issues are unique bugs fingerprinted across multiple playtest sessions.
-              Use the &quot;Analyze Session&quot; panel above to process a completed session and start tracking recurring issues.
-            </p>
-          </div>
+          <EmptyState
+            icon={Bug}
+            iconColor={ACCENT}
+            satelliteIcons={[Shield, Eye]}
+            title="No tracked issues yet"
+            description={`Tracked issues are unique bugs fingerprinted across multiple playtest sessions. Use the "Analyze Session" panel above to process a completed session and start tracking recurring issues.`}
+          />
         ) : (
           <div className="text-center py-12 text-text-muted text-xs">
             No tracked issues with status &quot;{filter}&quot;.
@@ -564,22 +556,13 @@ function AlertsTab({
   return (
     <div className="space-y-3">
       {active.length === 0 && dismissed.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-16 text-center">
-          <div className="relative w-16 h-16 mb-5">
-            <div
-              className="absolute inset-0 rounded-2xl"
-              style={{ backgroundColor: `${ACCENT}08`, border: `1px solid ${ACCENT}15` }}
-            />
-            <AlertOctagon className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-7 h-7" style={{ color: ACCENT }} />
-            <Shield className="absolute -bottom-1 -right-1 w-5 h-5 opacity-50" style={{ color: ACCENT }} />
-            <CheckCircle2 className="absolute -top-1 -left-1 w-4 h-4 opacity-30" style={{ color: ACCENT }} />
-          </div>
-          <h3 className="text-sm font-semibold text-text mb-1">No regression alerts</h3>
-          <p className="text-xs text-text-muted max-w-xs leading-relaxed">
-            Regression alerts appear when a previously fixed bug reappears in a later playtest.
-            Process multiple sessions over time to enable automatic regression detection.
-          </p>
-        </div>
+        <EmptyState
+          icon={AlertOctagon}
+          iconColor={ACCENT}
+          satelliteIcons={[Shield, CheckCircle2]}
+          title="No regression alerts"
+          description="Regression alerts appear when a previously fixed bug reappears in a later playtest. Process multiple sessions over time to enable automatic regression detection."
+        />
       ) : (
         <>
           {active.length === 0 ? (

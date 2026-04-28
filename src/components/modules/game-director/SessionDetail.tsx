@@ -16,6 +16,7 @@ import {
   OPACITY_10, statusBg, statusBorder,
 } from '@/lib/chart-colors';
 import { SEVERITY_STYLES, CATEGORY_LABELS } from '@/lib/game-director-styles';
+import { EmptyState } from '@/components/ui/EmptyState';
 
 const ACCENT = ACCENT_ORANGE;
 
@@ -323,32 +324,14 @@ function FindingsList({ findings, expandedId, onToggle }: {
 function TimelineView({ events, onSimulate }: { events: DirectorEvent[]; onSimulate?: () => Promise<void> }) {
   if (events.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center py-16 text-center">
-        <div className="relative w-16 h-16 mb-5">
-          <div
-            className="absolute inset-0 rounded-2xl"
-            style={{ backgroundColor: `${ACCENT}08`, border: `1px solid ${ACCENT}15` }}
-          />
-          <Activity className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-7 h-7" style={{ color: ACCENT }} />
-          <Clock className="absolute -bottom-1 -right-1 w-5 h-5 opacity-50" style={{ color: ACCENT }} />
-          <Zap className="absolute -top-1 -left-1 w-4 h-4 opacity-30" style={{ color: ACCENT }} />
-        </div>
-        <h3 className="text-sm font-semibold text-text mb-1">No events recorded yet</h3>
-        <p className="text-xs text-text-muted max-w-xs leading-relaxed mb-4">
-          The timeline shows every action, observation, and screenshot taken during a playtest.
-          Run a playtest session to see the full sequence of events here.
-        </p>
-        {onSimulate && (
-          <button
-            onClick={onSimulate}
-            className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-medium transition-colors"
-            style={{ backgroundColor: `${ACCENT}15`, color: ACCENT, border: `1px solid ${ACCENT}30` }}
-          >
-            <Play className="w-3.5 h-3.5" />
-            Run Playtest
-          </button>
-        )}
-      </div>
+      <EmptyState
+        icon={Activity}
+        iconColor={ACCENT}
+        satelliteIcons={[Clock, Zap]}
+        title="No events recorded yet"
+        description="The timeline shows every action, observation, and screenshot taken during a playtest. Run a playtest session to see the full sequence of events here."
+        action={onSimulate ? { label: 'Run Playtest', onClick: () => { void onSimulate(); }, icon: Play } : undefined}
+      />
     );
   }
 
@@ -404,32 +387,14 @@ function TimelineView({ events, onSimulate }: { events: DirectorEvent[]; onSimul
 function CoverageView({ session, findings, onSimulate }: { session: PlaytestSession; findings: PlaytestFinding[]; onSimulate?: () => Promise<void> }) {
   if (!session.summary) {
     return (
-      <div className="flex flex-col items-center justify-center py-16 text-center">
-        <div className="relative w-16 h-16 mb-5">
-          <div
-            className="absolute inset-0 rounded-2xl"
-            style={{ backgroundColor: `${ACCENT}08`, border: `1px solid ${ACCENT}15` }}
-          />
-          <BarChart3 className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-7 h-7" style={{ color: ACCENT }} />
-          <Target className="absolute -bottom-1 -right-1 w-5 h-5 opacity-50" style={{ color: ACCENT }} />
-          <CheckCircle2 className="absolute -top-1 -left-1 w-4 h-4 opacity-30" style={{ color: ACCENT }} />
-        </div>
-        <h3 className="text-sm font-semibold text-text mb-1">Coverage data not yet available</h3>
-        <p className="text-xs text-text-muted max-w-xs leading-relaxed mb-4">
-          Coverage shows how thoroughly each game system was tested and breaks down findings by severity and category.
-          Complete a playtest to generate coverage data for this session.
-        </p>
-        {onSimulate && (
-          <button
-            onClick={onSimulate}
-            className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-medium transition-colors"
-            style={{ backgroundColor: `${ACCENT}15`, color: ACCENT, border: `1px solid ${ACCENT}30` }}
-          >
-            <Play className="w-3.5 h-3.5" />
-            Run Playtest
-          </button>
-        )}
-      </div>
+      <EmptyState
+        icon={BarChart3}
+        iconColor={ACCENT}
+        satelliteIcons={[Target, CheckCircle2]}
+        title="Coverage data not yet available"
+        description="Coverage shows how thoroughly each game system was tested and breaks down findings by severity and category. Complete a playtest to generate coverage data for this session."
+        action={onSimulate ? { label: 'Run Playtest', onClick: () => { void onSimulate(); }, icon: Play } : undefined}
+      />
     );
   }
 

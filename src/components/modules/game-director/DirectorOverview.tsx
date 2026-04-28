@@ -12,6 +12,7 @@ import {
   ACCENT_ORANGE, STATUS_SUCCESS, STATUS_WARNING, STATUS_ERROR, STATUS_INFO,
 } from '@/lib/chart-colors';
 import { ScoreRing } from '@/components/ui/ScoreRing';
+import { EmptyState as SharedEmptyState } from '@/components/ui/EmptyState';
 
 const ACCENT = ACCENT_ORANGE;
 
@@ -275,33 +276,15 @@ function SessionCard({
 
 function EmptyState({ onNewSession }: { onNewSession: () => void }) {
   return (
-    <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      className="flex flex-col items-center justify-center py-16 text-center"
-    >
-      <div
-        className="w-14 h-14 rounded-2xl flex items-center justify-center mb-4"
-        style={{ backgroundColor: `${ACCENT}08`, border: `1px solid ${ACCENT}15` }}
-      >
-        <Clapperboard className="w-7 h-7 text-border-bright" />
-      </div>
-      <h3 className="text-sm font-medium text-text mb-1">No playtest sessions yet</h3>
-      <p className="text-xs text-text-muted max-w-xs mb-4">
-        Create a session to launch the AI agent that plays your game, finds bugs, and generates critiques.
-      </p>
-      <button
-        onClick={onNewSession}
-        className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium transition-all"
-        style={{
-          backgroundColor: `${ACCENT}15`,
-          color: ACCENT,
-          border: `1px solid ${ACCENT}30`,
-        }}
-      >
-        <Plus className="w-3.5 h-3.5" />
-        Create First Session
-      </button>
+    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+      <SharedEmptyState
+        icon={Clapperboard}
+        iconColor={ACCENT}
+        satelliteIcons={[Target, CheckCircle2]}
+        title="No playtest sessions yet"
+        description="Create a session to launch the AI agent that plays your game, finds bugs, and generates critiques."
+        action={{ label: 'Create First Session', onClick: onNewSession, icon: Plus }}
+      />
     </motion.div>
   );
 }
