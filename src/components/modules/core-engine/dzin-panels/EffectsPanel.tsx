@@ -17,6 +17,7 @@ import {
   statusInfo,
 } from '@/components/modules/core-engine/unique-tabs/_shared';
 import { SurfaceCard } from '@/components/ui/SurfaceCard';
+import { StatusDot } from '@/components/ui/StatusDot';
 import type { FeatureRow } from '@/types/feature-matrix';
 
 /* ── Props ──────────────────────────────────────────────────────────────── */
@@ -81,11 +82,7 @@ function EffectsCompact({ featureMap }: EffectsPanelProps) {
               animate={{ opacity: selection && !isRelated ? 0.4 : 1 }}
               transition={{ duration: DZIN_TIMING.HIGHLIGHT }}
             >
-              <span
-                className="w-3 h-3 rounded-full flex-shrink-0"
-                style={{ backgroundColor: effect.color, boxShadow: `0 0 0 3px ${effect.color}33` }}
-                title={effect.name}
-              />
+              <StatusDot color={effect.color} size="md" emphasis="ring" title={effect.name} />
               <span className="font-medium text-text">{effect.name}</span>
               <span className="text-text-muted truncate ml-auto text-2xs">{effect.desc}</span>
             </motion.div>
@@ -100,11 +97,7 @@ function EffectsCompact({ featureMap }: EffectsPanelProps) {
           const { color: dotColor, label: dotLabel } = statusInfo(status);
           return (
             <div key={name} className="flex items-center gap-2">
-              <span
-                className="w-3 h-3 rounded-full flex-shrink-0"
-                style={{ backgroundColor: dotColor, boxShadow: `0 0 0 3px ${dotColor}33` }}
-                title={dotLabel}
-              />
+              <StatusDot color={dotColor} size="md" emphasis="ring" title={dotLabel} />
               <span className="text-text-muted truncate">{name}</span>
             </div>
           );

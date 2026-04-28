@@ -11,6 +11,7 @@ import {
   statusInfo,
 } from '@/components/modules/core-engine/unique-tabs/_shared';
 import { SurfaceCard } from '@/components/ui/SurfaceCard';
+import { StatusDot } from '@/components/ui/StatusDot';
 import {
   STATUS_SUCCESS, STATUS_IMPROVED, ACCENT_RED, MODULE_COLORS, ACCENT_GREEN,
   ACCENT_EMERALD_DARK, STATUS_WARNING,
@@ -106,10 +107,7 @@ function AttributesCompact({ featureMap }: AttributesPanelProps) {
   return (
     <div className={`${DZIN_SPACING.compact.wrapper} text-xs`}>
       <div className="flex items-center gap-2">
-        <span
-          className="w-2 h-2 rounded-full flex-shrink-0"
-          style={{ backgroundColor: dotColor }}
-        />
+        <StatusDot color={dotColor} size="sm" />
         <span className="font-medium text-text">Core Attributes</span>
         <span className="ml-auto font-mono text-text-muted">{CORE_ATTRIBUTES.length}</span>
       </div>

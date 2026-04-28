@@ -15,6 +15,7 @@ import {
   statusInfo,
 } from '@/components/modules/core-engine/unique-tabs/_shared';
 import { SurfaceCard } from '@/components/ui/SurfaceCard';
+import { StatusDot } from '@/components/ui/StatusDot';
 import type { FeatureRow } from '@/types/feature-matrix';
 
 /* -- Props ----------------------------------------------------------------- */
@@ -103,11 +104,7 @@ function TagsCompact({ featureMap }: TagsPanelProps) {
   return (
     <div className={`${DZIN_SPACING.compact.wrapper} text-xs`}>
       <div className="flex items-center gap-2 mb-1.5">
-        <span
-          className="w-3 h-3 rounded-full flex-shrink-0"
-          style={{ backgroundColor: dotColor, boxShadow: `0 0 0 3px ${dotColor}33` }}
-          title={dotLabel}
-        />
+        <StatusDot color={dotColor} size="md" emphasis="ring" title={dotLabel} />
         <span className="font-medium text-text">Tag Hierarchy</span>
       </div>
       {TAG_TREE.map((cat) =>

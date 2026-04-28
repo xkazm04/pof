@@ -15,6 +15,7 @@ import {
   RadarChart,
 } from '@/components/modules/core-engine/unique-tabs/_shared';
 import { SurfaceCard } from '@/components/ui/SurfaceCard';
+import { StatusDot } from '@/components/ui/StatusDot';
 import type { FeatureRow } from '@/types/feature-matrix';
 import type { RadarDataPoint } from '@/types/unique-tab-improvements';
 
@@ -139,10 +140,7 @@ function AbilitiesFull({ featureMap, defs }: AbilitiesPanelProps) {
         <div className="flex items-center justify-center gap-3 mt-2">
           {ABILITY_RADAR_DATA.map((ability) => (
             <div key={ability.name} className="flex items-center gap-1.5 text-2xs">
-              <span
-                className="w-2 h-2 rounded-full flex-shrink-0"
-                style={{ backgroundColor: ability.color }}
-              />
+              <StatusDot color={ability.color} size="sm" />
               <span className="text-text-muted font-mono">{ability.name}</span>
             </div>
           ))}

@@ -14,6 +14,7 @@ import {
   statusInfo,
 } from '@/components/modules/core-engine/unique-tabs/_shared';
 import { SurfaceCard } from '@/components/ui/SurfaceCard';
+import { StatusDot } from '@/components/ui/StatusDot';
 import { MODULE_COLORS } from '@/lib/chart-colors';
 import type { FeatureRow } from '@/types/feature-matrix';
 
@@ -76,11 +77,7 @@ function CoreCompact({ featureMap }: CorePanelProps) {
     <div className={`${DZIN_SPACING.compact.wrapper} text-xs`}>
       {/* ASC status */}
       <div className="flex items-center gap-2">
-        <span
-          className="w-3 h-3 rounded-full flex-shrink-0"
-          style={{ backgroundColor: dotColor, boxShadow: `0 0 0 3px ${dotColor}33` }}
-          title={dotLabel}
-        />
+        <StatusDot color={dotColor} size="md" emphasis="ring" title={dotLabel} />
         <span className="font-medium text-text">AbilitySystemComponent</span>
       </div>
 
@@ -98,7 +95,7 @@ function CoreCompact({ featureMap }: CorePanelProps) {
               animate={{ opacity: selection && !isRelated ? 0.4 : 1 }}
               transition={{ duration: DZIN_TIMING.HIGHLIGHT }}
             >
-              <span className="w-2 h-2 rounded-full bg-blue-400 flex-shrink-0" />
+              <StatusDot color="#60a5fa" size="sm" />
               <span className="text-text-muted">{conn}</span>
             </motion.div>
           );
@@ -148,7 +145,7 @@ function CoreFull({ featureMap, defs }: CorePanelProps) {
               key={conn}
               className="flex items-center gap-2 text-sm bg-surface p-2.5 rounded-lg border border-border/50 shadow-sm"
             >
-              <span className="w-3 h-3 rounded-full bg-blue-400" style={{ boxShadow: '0 0 0 3px rgba(96,165,250,0.2)' }} />
+              <StatusDot color="#60a5fa" size="md" emphasis="ring" />
               <span className="text-text font-medium">{conn}</span>
             </div>
           ))}
