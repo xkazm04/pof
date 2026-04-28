@@ -436,6 +436,35 @@ export function FeatureGrid({ featureNames, featureMap, defs, expanded, onToggle
   );
 }
 
+/* ── EmptyPanel ───────────────────────────────────────────────────────────── */
+
+/**
+ * Lightweight empty-state placeholder for chart/data panels inside the unique
+ * tabs. Used as a short-circuit when `data.length` falls below the chart's
+ * minimum (typically 1 or 2). Compact enough to fit inside a SurfaceCard
+ * level=2 without disrupting the surrounding grid.
+ */
+export function EmptyPanel({
+  label,
+  hint,
+  height = 120,
+}: {
+  label: string;
+  hint?: string;
+  height?: number;
+}) {
+  return (
+    <div
+      className="flex flex-col items-center justify-center text-center px-4 rounded-md border border-dashed border-border/60 bg-surface-deep/40"
+      style={{ minHeight: height }}
+      role="status"
+    >
+      <p className="text-xs font-medium text-text-muted">{label}</p>
+      {hint && <p className="text-2xs text-text-muted/70 mt-1 max-w-xs">{hint}</p>}
+    </div>
+  );
+}
+
 /* ── LoadingSpinner ───────────────────────────────────────────────────────── */
 
 export function LoadingSpinner({ accent }: { accent: string }) {
@@ -549,9 +578,19 @@ interface TimelineStripProps {
 }
 
 export function TimelineStrip({ events, accent, maxVisible = 50, height = 100 }: TimelineStripProps) {
+  if (events.length === 0) {
+    return (
+      <EmptyPanel
+        label="No timeline events"
+        hint="Run the simulation to populate this timeline."
+        height={height}
+      />
+    );
+  }
+
   const visible = events.slice(0, maxVisible);
-  const minT = visible.length > 0 ? Math.min(...visible.map((e) => e.timestamp)) : 0;
-  const maxT = visible.length > 0 ? Math.max(...visible.map((e) => e.timestamp + (e.duration ?? 0))) : 1;
+  const minT = Math.min(...visible.map((e) => e.timestamp));
+  const maxT = Math.max(...visible.map((e) => e.timestamp + (e.duration ?? 0)));
   const range = maxT - minT || 1;
 
   return (

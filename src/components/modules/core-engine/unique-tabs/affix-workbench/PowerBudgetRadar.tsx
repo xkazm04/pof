@@ -9,7 +9,7 @@ import {
   withOpacity,
 } from '@/lib/chart-colors';
 import { SurfaceCard } from '@/components/ui/SurfaceCard';
-import { SectionLabel } from '@/components/modules/core-engine/unique-tabs/_shared';
+import { SectionLabel, EmptyPanel } from '@/components/modules/core-engine/unique-tabs/_shared';
 
 interface PowerBudgetRadarProps {
   radarAxes: string[];
@@ -29,6 +29,22 @@ export function PowerBudgetRadar({
   isOverBudget, powerBudget, budgetMax, budgetRatio,
   rarityLabel, rarityColor, accentColor,
 }: PowerBudgetRadarProps) {
+  if (radarAxes.length < 3 || radarValues.length !== radarAxes.length) {
+    return (
+      <SurfaceCard level={2} className="p-3">
+        <SectionLabel label="Power Budget" />
+        <p className="text-2xs text-text-muted mt-1 mb-3">
+          vs. max for <span style={{ color: rarityColor }}>{rarityLabel}</span> tier ({budgetMax} budget)
+        </p>
+        <EmptyPanel
+          label="No affixes selected"
+          hint="Add at least 3 affixes to see the power-budget radar."
+          height={180}
+        />
+      </SurfaceCard>
+    );
+  }
+
   return (
     <SurfaceCard level={2} className="p-3">
       <SectionLabel label="Power Budget" />

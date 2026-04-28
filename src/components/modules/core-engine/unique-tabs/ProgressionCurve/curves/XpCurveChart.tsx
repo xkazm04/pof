@@ -2,6 +2,7 @@
 
 import { motion } from 'framer-motion';
 import { ACCENT } from '../data';
+import { EmptyPanel } from '@/components/modules/core-engine/unique-tabs/_shared';
 
 /* -- XP Curve Chart SVG --------------------------------------------------- */
 
@@ -15,6 +16,18 @@ interface XpCurveChartProps {
 export function XpCurveChart({
   data, maxXp, chartId = 'main', color = ACCENT,
 }: XpCurveChartProps) {
+  if (data.length < 2 || maxXp <= 0) {
+    return (
+      <div className="w-full h-full flex items-center justify-center p-4">
+        <EmptyPanel
+          label="Not enough data points"
+          hint="The XP curve needs at least two levels with positive XP to render."
+          height={120}
+        />
+      </div>
+    );
+  }
+
   const gradientId = `areaGradient-${chartId}`;
   const filterId = `glow-curve-${chartId}`;
 
