@@ -448,11 +448,12 @@ export function TacticalCoverAnalysis() {
                       opacity={0.7}
                       strokeDasharray="3 2"
                     />
-                    <Mountain
-                      className="w-2.5 h-2.5"
-                      x={sx - 5} y={sy - 5}
-                      style={{ color: ACCENT_ORANGE }}
-                    />
+                    <g transform={`translate(${sx - 5}, ${sy - 5})`}>
+                      <Mountain
+                        className="w-2.5 h-2.5"
+                        style={{ color: ACCENT_ORANGE }}
+                      />
+                    </g>
                     <text
                       x={sx} y={sy + sh / 2 + 8}
                       textAnchor="middle"
