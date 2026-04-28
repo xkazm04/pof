@@ -1,6 +1,17 @@
 /** Available CSS custom property tokens in the Dzin default theme.
- *  Import and reference for autocomplete; these are not runtime values.
- *  Override these variables in your app's CSS to customize the theme. */
+ *
+ *  Each entry is a CSS-variable *name* (not a runtime hex value); the runtime
+ *  value lives in `default.css`. Override the corresponding `--dzin-*` custom
+ *  property in your app's CSS to retheme.
+ *
+ *  Naming policy: prefer overriding `surface*` to retheme globally; override
+ *  `panel*` only to break the alias chain for component-specific exceptions
+ *  (`--dzin-panel-bg` aliases `--dzin-surface-2`, `--dzin-panel-header-bg`
+ *  aliases `--dzin-surface-1`).
+ *
+ *  Source-of-truth contract: this map MUST stay in lockstep with the variables
+ *  declared in `default.css`. When adding/removing a variable, update both.
+ */
 export const DZIN_TOKENS = {
   // Surface colors (background layers)
   surface1: '--dzin-surface-1',
@@ -42,5 +53,9 @@ export const DZIN_TOKENS = {
   panelBorder: '--dzin-panel-border',
   panelRadius: '--dzin-panel-radius',
   panelHeaderBg: '--dzin-panel-header-bg',
+  /** Header height at full density (default 36px). The compact-density rule
+   *  shadows this variable to 28px on the matching `[data-dzin-density]`
+   *  selector — read it via the cascade rather than overriding it directly
+   *  unless you intend to break the density-dependent behaviour. */
   panelHeaderHeight: '--dzin-panel-header-height',
 } as const;

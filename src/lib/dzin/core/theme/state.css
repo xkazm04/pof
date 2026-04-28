@@ -46,7 +46,8 @@
    --------------------------------------------------------------------------- */
 
 [data-dzin-panel][data-dzin-highlight="llm"] {
-  box-shadow: 0 0 0 2px var(--dzin-accent, #06b6d4);
+  /* `--dzin-accent` is part of the theme contract; no hex fallback. */
+  box-shadow: 0 0 0 2px var(--dzin-accent);
   transition: box-shadow 1s ease-out;
 }
 
@@ -69,7 +70,8 @@
   display: inline-block;
   width: 2px;
   height: 1em;
-  background: var(--dzin-accent, #06b6d4);
+  /* `--dzin-accent` is part of the theme contract; no hex fallback. */
+  background: var(--dzin-accent);
   animation: dzin-cursor-blink 1s step-end infinite;
   margin-left: 1px;
   vertical-align: text-bottom;
