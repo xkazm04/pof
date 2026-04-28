@@ -6,6 +6,7 @@ import { usePromptSuggestions } from '@/hooks/useSessionAnalytics';
 import type { QuickAction, ActionComplexity, SubModuleId } from '@/types/modules';
 import { UI_TIMEOUTS } from '@/lib/constants';
 import { STATUS_SUCCESS } from '@/lib/chart-colors';
+import { AccentButton } from '@/components/ui/AccentButton';
 
 const COMPLEXITY_CONFIG: Record<ActionComplexity, { label: string; color: string; bg: string; border: string }> = {
   beginner:     { label: 'Beginner',      color: STATUS_SUCCESS, bg: 'var(--status-green-subtle)',   border: 'var(--status-green-strong)' },
@@ -113,18 +114,14 @@ export function QuickActionsPanel({ actions, onRunPrompt, accentColor, isRunning
             placeholder={`Ask about ${moduleLabel.toLowerCase()}...`}
             className="flex-1 px-3 py-2.5 bg-surface border border-border rounded-lg text-sm text-text placeholder-text-muted outline-none focus:border-border-bright transition-colors min-w-0"
           />
-          <button
+          <AccentButton
             onClick={handleCustomPrompt}
             disabled={!customPrompt.trim() || isRunning}
-            className="px-4 py-2.5 rounded-lg text-sm font-medium transition-colors disabled:opacity-50 flex-shrink-0"
-            style={{
-              backgroundColor: `${accentColor}24`,
-              color: accentColor,
-              border: `1px solid ${accentColor}38`,
-            }}
+            accentColor={accentColor}
+            className="flex-shrink-0"
           >
             Send
-          </button>
+          </AccentButton>
         </div>
       </div>
     </div>

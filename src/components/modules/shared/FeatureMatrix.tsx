@@ -5,6 +5,7 @@ import { useSuspendableEffect } from '@/hooks/useSuspend';
 import { Check, ChevronDown, ChevronRight, FileCode, Loader2, RefreshCw, Star, ArrowRight, Download, TrendingUp, TrendingDown, Minus, AlertTriangle, Link2, Zap, Search, ArrowUpDown, ArrowUp, ArrowDown, Play, Copy, Eye, LayoutList, LayoutGrid, ShieldCheck } from 'lucide-react';
 import { useFeatureMatrix } from '@/hooks/useFeatureMatrix';
 import { StaggerContainer, StaggerItem } from '@/components/ui/Stagger';
+import { AccentButton } from '@/components/ui/AccentButton';
 import { FetchError } from './FetchError';
 import { useProjectStore } from '@/stores/projectStore';
 import type { FeatureRow, FeatureStatus } from '@/types/feature-matrix';
@@ -420,28 +421,18 @@ export function FeatureMatrix({ moduleId, accentColor, onReview, onSync, isRevie
             {features.length} feature{features.length !== 1 ? 's' : ''} to analyze
           </span>
 
-          <button
+          <AccentButton
             onClick={onReview}
             disabled={isReviewing}
-            className="mt-1 flex items-center gap-2 px-5 py-2.5 rounded-lg text-xs font-semibold transition-all disabled:opacity-50 hover:brightness-110"
-            style={{
-              backgroundColor: `${accentColor}24`,
-              color: accentColor,
-              border: `1px solid ${accentColor}38`,
-            }}
+            loading={isReviewing}
+            accentColor={accentColor}
+            size="md"
+            className="mt-1"
+            leftIcon={<RefreshCw className="w-3.5 h-3.5" />}
+            loadingLabel={<>Reviewing...</>}
           >
-            {isReviewing ? (
-              <>
-                <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                Reviewing...
-              </>
-            ) : (
-              <>
-                <RefreshCw className="w-3.5 h-3.5" />
-                Review with Claude
-              </>
-            )}
-          </button>
+            Review with Claude
+          </AccentButton>
 
           {isReviewing && reviewProgress && reviewProgress.total > 0 && (
             <ReviewProgressBar
@@ -523,28 +514,17 @@ export function FeatureMatrix({ moduleId, accentColor, onReview, onSync, isRevie
               )}
             </button>
           )}
-          <button
+          <AccentButton
             onClick={onReview}
             disabled={isReviewing}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all disabled:opacity-50"
-            style={{
-              backgroundColor: `${accentColor}24`,
-              color: accentColor,
-              border: `1px solid ${accentColor}38`,
-            }}
+            loading={isReviewing}
+            accentColor={accentColor}
+            size="sm"
+            leftIcon={<RefreshCw className="w-3 h-3" />}
+            loadingLabel={<>Reviewing...</>}
           >
-            {isReviewing ? (
-              <>
-                <Loader2 className="w-3 h-3 animate-spin" />
-                Reviewing...
-              </>
-            ) : (
-              <>
-                <RefreshCw className="w-3 h-3" />
-                Review with Claude
-              </>
-            )}
-          </button>
+            Review with Claude
+          </AccentButton>
         </div>
       </div>
 

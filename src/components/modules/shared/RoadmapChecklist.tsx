@@ -12,6 +12,7 @@ import { useModuleStore } from '@/stores/moduleStore';
 import { usePatternLibraryStore } from '@/stores/patternLibraryStore';
 import { useNBA } from '@/hooks/useNBA';
 import { StaggerContainer, StaggerItem } from '@/components/ui/Stagger';
+import { AccentButton } from '@/components/ui/AccentButton';
 import type { ChecklistItem, SubModuleId } from '@/types/modules';
 import type { PatternSuggestion } from '@/types/pattern-library';
 import type { NBARecommendation } from '@/lib/nba-engine';
@@ -644,19 +645,15 @@ export function RoadmapChecklist({
                   )}
                   {/* Claude */}
                   {!checked && !isActive && (
-                    <button
+                    <AccentButton
                       onClick={() => onRunPrompt(item.id, item.prompt)}
                       disabled={isRunning}
-                      className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-xs font-medium transition-all disabled:opacity-50"
-                      style={{
-                        backgroundColor: `${accentColor}24`,
-                        color: accentColor,
-                        border: `1px solid ${accentColor}38`,
-                      }}
+                      accentColor={accentColor}
+                      size="sm"
+                      leftIcon={<Play className="w-3 h-3" />}
                     >
-                      <Play className="w-3 h-3" />
                       Claude
-                    </button>
+                    </AccentButton>
                   )}
                 </div>
               </div>
@@ -828,28 +825,17 @@ function CompactChecklist({
       {/* Run All Unchecked button */}
       {uncheckedIds.length > 0 && onBatchRun && (
         <div className="flex items-center gap-2">
-          <button
+          <AccentButton
             onClick={() => onBatchRun(uncheckedIds)}
             disabled={isRunning}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all disabled:opacity-50"
-            style={{
-              backgroundColor: `${accentColor}24`,
-              color: accentColor,
-              border: `1px solid ${accentColor}38`,
-            }}
+            loading={isRunning}
+            accentColor={accentColor}
+            size="sm"
+            leftIcon={<Play className="w-3 h-3" />}
+            loadingLabel={<>Running ({batchQueue.length} queued)</>}
           >
-            {isRunning ? (
-              <>
-                <Loader2 className="w-3 h-3 animate-spin" />
-                Running ({batchQueue.length} queued)
-              </>
-            ) : (
-              <>
-                <Play className="w-3 h-3" />
-                Run All Unchecked ({uncheckedIds.length})
-              </>
-            )}
-          </button>
+            Run All Unchecked ({uncheckedIds.length})
+          </AccentButton>
           {batchQueue.length > 0 && (
             <span className="text-2xs text-text-muted">
               {batchQueue.length} remaining in queue
@@ -1102,19 +1088,15 @@ function BulkActionBar({
         </button>
       )}
 
-      <button
+      <AccentButton
         onClick={handleBatchRun}
         disabled={isRunning || allDone}
-        className="flex items-center gap-1 px-2 py-1 rounded text-2xs font-medium transition-colors"
-        style={{
-          backgroundColor: `${accentColor}24`,
-          color: accentColor,
-          border: `1px solid ${accentColor}38`,
-        }}
+        accentColor={accentColor}
+        size="sm"
+        leftIcon={<Play className="w-3 h-3" />}
       >
-        <Play className="w-3 h-3" />
         Run with Claude
-      </button>
+      </AccentButton>
 
       <button
         onClick={handleCopyPrompts}
@@ -1205,19 +1187,16 @@ function NBABanner({
           </div>
 
           {/* Run button */}
-          <button
+          <AccentButton
             onClick={() => onRun(top)}
             disabled={isRunning}
-            className="flex-shrink-0 flex items-center gap-1.5 px-3 py-2 rounded-md text-xs font-medium transition-all disabled:opacity-50"
-            style={{
-              backgroundColor: `${accentColor}24`,
-              color: accentColor,
-              border: `1px solid ${accentColor}38`,
-            }}
+            accentColor={accentColor}
+            size="sm"
+            className="flex-shrink-0"
+            leftIcon={<Play className="w-3.5 h-3.5" />}
           >
-            <Play className="w-3.5 h-3.5" />
             Run
-          </button>
+          </AccentButton>
         </div>
       </div>
 
