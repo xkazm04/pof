@@ -2,6 +2,7 @@
 
 import { useState, useCallback, useEffect, useRef, type ReactNode } from 'react';
 import { motion } from 'framer-motion';
+import { toast } from 'sonner';
 import { useSuspendableEffect } from '@/hooks/useSuspend';
 import type { LucideIcon } from 'lucide-react';
 import { ChevronLeft, ChevronRight, Zap } from 'lucide-react';
@@ -17,7 +18,6 @@ import { FeatureMatrix } from './FeatureMatrix';
 import { QuickActionsPanel } from './QuickActionsPanel';
 import { ContextHealthBadge } from './ContextHealthBadge';
 import { RecommendedNextBanner } from './RecommendedNextBanner';
-import { STATUS_SUCCESS, STATUS_ERROR } from '@/lib/chart-colors';
 import type { SubModuleId, ChecklistItem, QuickAction } from '@/types/modules';
 
 export interface ExtraTab {
@@ -65,13 +65,6 @@ export function ReviewableModuleView({
 
   const allTabIds = ['overview', 'roadmap', ...extraTabs.map((t) => t.id)];
   const [activeTab, setActiveTab] = useState(allTabIds[0]);
-  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
-
-  useEffect(() => {
-    if (!toast) return;
-    const timer = setTimeout(() => setToast(null), UI_TIMEOUTS.toast);
-    return () => clearTimeout(timer);
-  }, [toast]);
 
   // Listen for suggested-action tab navigation events
   useEffect(() => {
@@ -222,7 +215,7 @@ export function ReviewableModuleView({
     // Just refresh the UI after a short delay for the DB write to settle.
     await new Promise((r) => setTimeout(r, UI_TIMEOUTS.dbSettle));
     setReviewRefetchTrigger((n) => n + 1);
-    setToast({ message: 'Review complete — features updated', type: 'success' });
+    toast.success('Review complete — features updated');
   }, []);
 
   const reviewCli = useModuleCLI({
@@ -257,13 +250,13 @@ export function ReviewableModuleView({
       });
       if (!res.ok) {
         const err = await res.json().catch(() => ({ error: 'Sync failed' }));
-        setToast({ message: err.error ?? `Sync failed (${res.status})`, type: 'error' });
+        toast.error(err.error ?? `Sync failed (${res.status})`);
         return;
       }
       const data = await res.json();
-      setToast({ message: `Imported ${data.imported} features`, type: 'success' });
+      toast.success(`Imported ${data.imported} features`);
     } catch (err) {
-      setToast({ message: err instanceof Error ? err.message : 'Failed to sync review results', type: 'error' });
+      toast.error(err instanceof Error ? err.message : 'Failed to sync review results');
     }
   }, [moduleId, projectPath]);
 
@@ -415,23 +408,6 @@ export function ReviewableModuleView({
         />
       </div>
 
-      {/* Toast notification */}
-      {toast && (
-        <div
-          className={`absolute bottom-4 right-4 flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium shadow-lg border animate-in fade-in slide-in-from-bottom-2 ${
-            toast.type === 'success'
-              ? 'bg-surface border-green-500/30 text-green-400'
-              : 'bg-surface border-status-red-strong text-red-400'
-          }`}
-          style={{ zIndex: Z_INDEX.toast }}
-        >
-          <span
-            className="w-1.5 h-1.5 rounded-full flex-shrink-0"
-            style={{ backgroundColor: toast.type === 'success' ? STATUS_SUCCESS : STATUS_ERROR }}
-          />
-          {toast.message}
-        </div>
-      )}
     </div>
   );
 }
