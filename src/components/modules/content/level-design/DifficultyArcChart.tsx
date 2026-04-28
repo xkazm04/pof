@@ -4,6 +4,7 @@ import type { RoomNode } from '@/types/level-design';
 import {
   STATUS_SUCCESS, STATUS_LIME, STATUS_WARNING, STATUS_BLOCKER, STATUS_ERROR,
 } from '@/lib/chart-colors';
+import { HorizontalGridLines } from '@/components/ui/svg/ChartAxes';
 
 const DIFFICULTY_COLORS: Record<number, string> = {
   1: STATUS_SUCCESS,
@@ -77,15 +78,16 @@ export function DifficultyArcChart({
     <div className="overflow-x-auto min-h-[200px] bg-surface-deep/30 rounded-lg">
       <svg width={chartW} height={chartH} className="min-w-full">
         {/* Grid lines */}
-        {[1, 2, 3, 4, 5].map((d) => {
-          const y = padY + plotH - ((d - 1) / 4) * plotH;
-          return (
-            <g key={d}>
-              <line x1={padX} y1={y} x2={padX + plotW} y2={y} stroke="var(--border)" strokeWidth={0.5} />
-              <text x={padX - 6} y={y + 3} fontSize={11} fill="var(--text-muted)" textAnchor="end">{d}</text>
-            </g>
-          );
-        })}
+        <HorizontalGridLines
+          values={[1, 2, 3, 4, 5]}
+          min={1}
+          max={5}
+          left={padX}
+          right={padX + plotW}
+          top={padY}
+          bottom={padY + plotH}
+          formatLabel={(d) => String(d)}
+        />
 
         {/* Area gradient */}
         <defs>

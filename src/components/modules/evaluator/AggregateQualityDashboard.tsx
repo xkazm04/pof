@@ -23,6 +23,7 @@ import { KPICard } from '@/components/ui/KPICard';
 import { STATUS_SUCCESS, STATUS_WARNING, STATUS_ERROR, STATUS_STALE, MODULE_COLORS } from '@/lib/chart-colors';
 import type { SubModuleId } from '@/types/modules';
 import { MOTION } from '@/lib/constants';
+import { HorizontalGridLines } from '@/components/ui/svg/ChartAxes';
 
 const ALL_MODULE_IDS = Object.keys(MODULE_FEATURE_DEFINITIONS) as SubModuleId[];
 
@@ -902,14 +903,15 @@ function TrendChart({
     <div className="mt-1">
       <svg width={w} height={h} className="w-full">
         {/* Reference lines at quality 1-5 */}
-        {[1, 2, 3, 4, 5]
-          .filter((v) => v >= min && v <= max)
-          .map((v) => {
-            const y = h - pad - ((v - min) / range) * (h - pad * 2);
-            return (
-              <line key={v} x1={pad} y1={y} x2={w - pad} y2={y} stroke="var(--border)" strokeWidth="0.5" />
-            );
-          })}
+        <HorizontalGridLines
+          values={[1, 2, 3, 4, 5]}
+          min={min}
+          max={max}
+          left={pad}
+          right={w - pad}
+          top={pad}
+          bottom={h - pad}
+        />
         {/* Area fill */}
         <defs>
           <linearGradient id="trend-grad" x1="0" y1="0" x2="0" y2="1">
