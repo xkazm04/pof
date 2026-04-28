@@ -8,6 +8,7 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { SurfaceCard } from '@/components/ui/SurfaceCard';
+import { KPICard } from '@/components/ui/KPICard';
 import { Badge } from '@/components/ui/Badge';
 import { ProgressRing } from '@/components/ui/ProgressRing';
 import { usePatternLibraryStore } from '@/stores/patternLibraryStore';
@@ -291,13 +292,11 @@ function StatCard({ icon, value, label, color }: {
   color: string;
 }) {
   return (
-    <SurfaceCard className="flex items-center gap-2.5 px-3 py-2 flex-1" level={2}>
-      {icon}
-      <div>
-        <div className={`text-sm font-semibold ${color}`}>{value}</div>
-        <div className="text-2xs text-text-muted">{label}</div>
-      </div>
-    </SurfaceCard>
+    <KPICard
+      icon={icon}
+      label={label}
+      value={<span className={color}>{value}</span>}
+    />
   );
 }
 

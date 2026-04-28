@@ -10,6 +10,7 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { SurfaceCard } from '@/components/ui/SurfaceCard';
+import { KPICard } from '@/components/ui/KPICard';
 import { Badge } from '@/components/ui/Badge';
 import { ProgressRing } from '@/components/ui/ProgressRing';
 import { usePromptEvolutionStore } from '@/stores/promptEvolutionStore';
@@ -1196,13 +1197,12 @@ function StatCard({
   color?: string;
 }) {
   return (
-    <SurfaceCard level={2} className="p-3">
-      <div className="flex items-center gap-2 mb-1.5">
-        <Icon className="w-3.5 h-3.5" style={{ color }} />
-        <span className="text-xs text-text-muted">{label}</span>
-      </div>
-      <span className="text-lg font-semibold text-text">{value}</span>
-    </SurfaceCard>
+    <KPICard
+      layout="vertical"
+      icon={<Icon className="w-3.5 h-3.5" style={{ color }} />}
+      label={label}
+      value={value}
+    />
   );
 }
 

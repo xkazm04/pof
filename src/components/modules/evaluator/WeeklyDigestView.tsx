@@ -7,6 +7,7 @@ import {
   CheckCircle, AlertTriangle, XCircle,
 } from 'lucide-react';
 import { useModuleStore } from '@/stores/moduleStore';
+import { KPICard } from '@/components/ui/KPICard';
 import { apiFetch } from '@/lib/api-utils';
 import { SUB_MODULES, MODULE_LABELS } from '@/lib/module-registry';
 import type { WeeklyDigest } from '@/types/weekly-digest';
@@ -328,22 +329,24 @@ function StatCard({ label, value, delta, suffix, icon: Icon, color }: {
   icon: typeof BarChart3;
   color: string;
 }) {
-  return (
-    <div className="px-3 py-2.5 rounded-lg bg-surface border border-border">
-      <div className="flex items-center gap-1.5 mb-1">
-        <Icon className="w-3 h-3" style={{ color }} />
-        <span className="text-2xs text-text-muted">{label}</span>
-      </div>
-      <div className="flex items-baseline gap-1.5">
-        <span className="text-lg font-bold text-text tabular-nums">{value}</span>
-        {delta !== undefined && delta !== 0 && (
-          <span className="flex items-center gap-0.5 text-2xs" style={{ color: delta > 0 ? STATUS_SUCCESS : ACCENT_RED }}>
-            {delta > 0 ? <TrendingUp className="w-2.5 h-2.5" /> : delta < 0 ? <TrendingDown className="w-2.5 h-2.5" /> : <Minus className="w-2.5 h-2.5" />}
-            {delta > 0 ? '+' : ''}{delta}{suffix ?? ''}
-          </span>
-        )}
-      </div>
+  const valueNode = (
+    <div className="flex items-baseline gap-1.5">
+      <span className="text-lg font-bold text-text tabular-nums">{value}</span>
+      {delta !== undefined && delta !== 0 && (
+        <span className="flex items-center gap-0.5 text-2xs" style={{ color: delta > 0 ? STATUS_SUCCESS : ACCENT_RED }}>
+          {delta > 0 ? <TrendingUp className="w-2.5 h-2.5" /> : delta < 0 ? <TrendingDown className="w-2.5 h-2.5" /> : <Minus className="w-2.5 h-2.5" />}
+          {delta > 0 ? '+' : ''}{delta}{suffix ?? ''}
+        </span>
+      )}
     </div>
+  );
+  return (
+    <KPICard
+      layout="vertical"
+      icon={<Icon className="w-3 h-3" style={{ color }} />}
+      label={label}
+      value={valueNode}
+    />
   );
 }
 

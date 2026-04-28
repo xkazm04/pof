@@ -18,6 +18,7 @@ import {
 import { apiFetch } from '@/lib/api-utils';
 import { MODULE_LABELS } from '@/lib/module-registry';
 import { SurfaceCard } from '@/components/ui/SurfaceCard';
+import { KPICard } from '@/components/ui/KPICard';
 import type { OverlapReport, OverlapPair, ModuleOverlapSummary } from '@/lib/overlap-detection';
 import { UI_TIMEOUTS, MOTION } from '@/lib/constants';
 import { STATUS_ERROR, STATUS_WARNING, STATUS_SUCCESS, OPACITY_30, STATUS_STALE } from '@/lib/chart-colors';
@@ -245,22 +246,14 @@ function StatCard({ label, value, color, icon: Icon }: {
   icon: typeof AlertTriangle;
 }) {
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 8 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: MOTION.base }}
-      className="bg-surface border border-border rounded-lg p-3"
-    >
-      <div className="flex items-center gap-1.5 mb-1">
-        <Icon className="w-3 h-3" style={{ color }} />
-        <span className="text-2xs font-semibold uppercase tracking-wider text-text-muted">
-          {label}
-        </span>
-      </div>
-      <div className="text-lg font-bold" style={{ color }}>
-        {value}
-      </div>
-    </motion.div>
+    <KPICard
+      layout="vertical"
+      animated
+      accent={color}
+      icon={<Icon className="w-3 h-3" style={{ color }} />}
+      label={label}
+      value={value}
+    />
   );
 }
 

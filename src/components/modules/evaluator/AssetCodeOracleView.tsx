@@ -8,6 +8,7 @@ import {
   Link2, FileCode, Box, Package,
 } from 'lucide-react';
 import { SurfaceCard } from '@/components/ui/SurfaceCard';
+import { KPICard } from '@/components/ui/KPICard';
 import { Badge } from '@/components/ui/Badge';
 import { ProgressRing } from '@/components/ui/ProgressRing';
 import { useProjectStore } from '@/stores/projectStore';
@@ -255,22 +256,20 @@ export function AssetCodeOracleView() {
 
 function StatCard({ label, value, ring }: { label: string; value: string | number; ring?: number }) {
   return (
-    <SurfaceCard level={2}>
-      <div className="px-3 py-2.5 flex items-center gap-2">
-        {ring !== undefined && (
+    <KPICard
+      label={label}
+      value={value}
+      icon={
+        ring !== undefined ? (
           <ProgressRing
             value={ring}
             size={28}
             strokeWidth={3}
             color={ring >= 80 ? STATUS_SUCCESS : ring >= 50 ? STATUS_WARNING : STATUS_ERROR}
           />
-        )}
-        <div>
-          <p className="text-lg font-bold text-text tabular-nums">{value}</p>
-          <p className="text-2xs text-text-muted">{label}</p>
-        </div>
-      </div>
-    </SurfaceCard>
+        ) : undefined
+      }
+    />
   );
 }
 

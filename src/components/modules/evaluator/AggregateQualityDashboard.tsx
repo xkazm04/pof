@@ -19,6 +19,7 @@ import { MODULE_FEATURE_DEFINITIONS } from '@/lib/feature-definitions';
 import { MODULE_LABELS } from '@/lib/module-registry';
 import { apiFetch } from '@/lib/api-utils';
 import { SurfaceCard } from '@/components/ui/SurfaceCard';
+import { KPICard } from '@/components/ui/KPICard';
 import { STATUS_SUCCESS, STATUS_WARNING, STATUS_ERROR, STATUS_STALE, MODULE_COLORS } from '@/lib/chart-colors';
 import type { SubModuleId } from '@/types/modules';
 import { MOTION } from '@/lib/constants';
@@ -784,23 +785,15 @@ function MetricCard({
   accent: string;
 }) {
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 8 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: MOTION.base }}
-      className="bg-surface border border-border rounded-lg p-3"
-    >
-      <div className="flex items-center gap-2 mb-1.5">
-        <Icon className="w-3.5 h-3.5" style={{ color: accent }} />
-        <span className="text-xs font-semibold uppercase tracking-wider text-text-muted">
-          {label}
-        </span>
-      </div>
-      <div className="text-lg font-bold" style={{ color: accent }}>
-        {value}
-      </div>
-      <div className="text-xs text-text-muted mt-0.5">{sub}</div>
-    </motion.div>
+    <KPICard
+      layout="vertical"
+      animated
+      accent={accent}
+      icon={<Icon className="w-3.5 h-3.5" style={{ color: accent }} />}
+      label={label}
+      value={value}
+      sub={sub}
+    />
   );
 }
 

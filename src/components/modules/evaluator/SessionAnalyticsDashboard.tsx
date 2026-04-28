@@ -8,6 +8,7 @@ import {
 import { useSessionDashboard } from '@/hooks/useSessionAnalytics';
 import { FetchError } from '../shared/FetchError';
 import { SurfaceCard } from '@/components/ui/SurfaceCard';
+import { KPICard } from '@/components/ui/KPICard';
 import { EmptyState } from '@/components/ui/EmptyState';
 import type {
   ModuleStats,
@@ -179,13 +180,13 @@ function StatCard({
   color: string;
 }) {
   return (
-    <SurfaceCard level={2} className="px-4 py-3">
-      <div className="flex items-center gap-2 mb-1.5">
-        <Icon className="w-3 h-3" style={{ color }} />
-        <span className="text-2xs uppercase tracking-wider text-text-muted font-semibold">{label}</span>
-      </div>
-      <div className="text-lg font-bold" style={{ color }}>{value}</div>
-    </SurfaceCard>
+    <KPICard
+      layout="vertical"
+      accent={color}
+      icon={<Icon className="w-3 h-3" style={{ color }} />}
+      label={label}
+      value={value}
+    />
   );
 }
 
