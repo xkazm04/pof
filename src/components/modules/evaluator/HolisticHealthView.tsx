@@ -11,6 +11,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { SurfaceCard } from '@/components/ui/SurfaceCard';
 import { Badge } from '@/components/ui/Badge';
 import { ProgressRing } from '@/components/ui/ProgressRing';
+import { DashboardHeader } from '@/components/ui/DashboardHeader';
 import { useProjectHealthStore } from '@/stores/projectHealthStore';
 import { useModuleStore } from '@/stores/moduleStore';
 import { useEvaluatorStore } from '@/stores/evaluatorStore';
@@ -100,27 +101,24 @@ export function HolisticHealthView() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-start justify-between">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-lg bg-emerald-500/10 flex items-center justify-center">
-            <HeartPulse className="w-5 h-5 text-emerald-400" />
-          </div>
-          <div>
-            <h2 className="text-base font-semibold text-text">Project Health Dashboard</h2>
-            <p className="text-2xs text-text-muted mt-0.5">
-              Unified view of completion, quality, velocity, and milestone predictions
-            </p>
-          </div>
-        </div>
-        <button
-          onClick={handleRefresh}
-          disabled={isLoading}
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 transition-colors disabled:opacity-40"
-        >
-          {isLoading ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <RefreshCw className="w-3.5 h-3.5" />}
-          Refresh
-        </button>
-      </div>
+      <DashboardHeader
+        icon={HeartPulse}
+        title="Project Health Dashboard"
+        subtitle="Unified view of completion, quality, velocity, and milestone predictions"
+        accent="emerald"
+        variant="soft"
+        size="md"
+        action={
+          <button
+            onClick={handleRefresh}
+            disabled={isLoading}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 transition-colors disabled:opacity-40"
+          >
+            {isLoading ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <RefreshCw className="w-3.5 h-3.5" />}
+            Refresh
+          </button>
+        }
+      />
 
       {/* Error */}
       {error && (

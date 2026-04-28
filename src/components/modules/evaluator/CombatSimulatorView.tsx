@@ -12,6 +12,7 @@ import { SurfaceCard } from '@/components/ui/SurfaceCard';
 import { KPICard } from '@/components/ui/KPICard';
 import { Badge } from '@/components/ui/Badge';
 import { ProgressRing } from '@/components/ui/ProgressRing';
+import { DashboardHeader } from '@/components/ui/DashboardHeader';
 import { useCombatSimulatorStore } from '@/stores/combatSimulatorStore';
 import { MODULE_COLORS, ACCENT_EMERALD_DARK, STATUS_NEUTRAL } from '@/lib/chart-colors';
 import type {
@@ -116,25 +117,24 @@ export function CombatSimulatorView() {
     <div className="flex flex-col h-full">
       {/* Header */}
       <div className="px-6 pt-6 pb-4">
-        <div className="flex items-center gap-3 mb-4">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-red-500/20 to-orange-500/20 border border-status-red-strong flex items-center justify-center">
-            <Swords className="w-5 h-5 text-red-400" />
-          </div>
-          <div className="flex-1">
-            <h1 className="text-lg font-semibold text-text">Combat Balance Simulator</h1>
-            <p className="text-xs text-text-muted">
-              GAS-based Monte Carlo combat simulation with balance tuning
-            </p>
-          </div>
-          <button
-            onClick={handleRun}
-            disabled={isSimulating || !tuning}
-            className="flex items-center gap-1.5 px-4 py-2 bg-status-red-subtle border border-status-red-strong rounded-lg text-red-400 text-xs font-medium hover:bg-status-red-medium transition-colors disabled:opacity-50"
-          >
-            {isSimulating ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Play className="w-3.5 h-3.5" />}
-            {isSimulating ? `Simulating ${iterations}...` : `Run ${iterations} Fights`}
-          </button>
-        </div>
+        <DashboardHeader
+          icon={Swords}
+          title="Combat Balance Simulator"
+          subtitle="GAS-based Monte Carlo combat simulation with balance tuning"
+          accent="red"
+          accentTo="orange"
+          className="mb-4"
+          action={
+            <button
+              onClick={handleRun}
+              disabled={isSimulating || !tuning}
+              className="flex items-center gap-1.5 px-4 py-2 bg-status-red-subtle border border-status-red-strong rounded-lg text-red-400 text-xs font-medium hover:bg-status-red-medium transition-colors disabled:opacity-50"
+            >
+              {isSimulating ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Play className="w-3.5 h-3.5" />}
+              {isSimulating ? `Simulating ${iterations}...` : `Run ${iterations} Fights`}
+            </button>
+          }
+        />
 
         {/* Summary stats */}
         {summary && (

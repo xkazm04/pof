@@ -12,6 +12,7 @@ import { SurfaceCard } from '@/components/ui/SurfaceCard';
 import { KPICard } from '@/components/ui/KPICard';
 import { Badge } from '@/components/ui/Badge';
 import { ProgressRing } from '@/components/ui/ProgressRing';
+import { DashboardHeader } from '@/components/ui/DashboardHeader';
 import { EconomyCodeGenPanel } from './EconomyCodeGenPanel';
 import { useEconomySimulatorStore } from '@/stores/economySimulatorStore';
 import type {
@@ -100,36 +101,37 @@ export function EconomySimulatorView() {
     <div className="flex flex-col h-full">
       {/* Header */}
       <div className="px-6 pt-6 pb-4">
-        <div className="flex items-center gap-3 mb-4">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-500/20 to-orange-500/20 border border-amber-500/30 flex items-center justify-center">
-            <Coins className="w-5 h-5 text-amber-400" />
-          </div>
-          <div className="flex-1">
-            <h1 className="text-lg font-semibold text-text">Economy Simulator</h1>
-            <p className="text-xs text-text-muted">
-              Agent-based economy simulation with inflation prediction
-            </p>
-          </div>
-          <button
-            onClick={() => setShowConfig(!showConfig)}
-            className="flex items-center gap-1.5 px-3 py-2 bg-surface border border-border rounded-lg text-text-muted text-xs font-medium hover:text-text hover:border-border-bright transition-colors"
-          >
-            <Settings2 className="w-3.5 h-3.5" />
-            Config
-          </button>
-          <button
-            onClick={handleRun}
-            disabled={isSimulating || !config}
-            className="flex items-center gap-1.5 px-4 py-2 bg-amber-500/10 border border-amber-500/25 rounded-lg text-amber-400 text-xs font-medium hover:bg-amber-500/20 transition-colors disabled:opacity-50"
-          >
-            {isSimulating ? (
-              <RefreshCw className="w-3.5 h-3.5 animate-spin" />
-            ) : (
-              <Play className="w-3.5 h-3.5" />
-            )}
-            {isSimulating ? 'Simulating...' : 'Run Simulation'}
-          </button>
-        </div>
+        <DashboardHeader
+          icon={Coins}
+          title="Economy Simulator"
+          subtitle="Agent-based economy simulation with inflation prediction"
+          accent="amber"
+          accentTo="orange"
+          className="mb-4"
+          secondaryAction={
+            <button
+              onClick={() => setShowConfig(!showConfig)}
+              className="flex items-center gap-1.5 px-3 py-2 bg-surface border border-border rounded-lg text-text-muted text-xs font-medium hover:text-text hover:border-border-bright transition-colors"
+            >
+              <Settings2 className="w-3.5 h-3.5" />
+              Config
+            </button>
+          }
+          action={
+            <button
+              onClick={handleRun}
+              disabled={isSimulating || !config}
+              className="flex items-center gap-1.5 px-4 py-2 bg-amber-500/10 border border-amber-500/25 rounded-lg text-amber-400 text-xs font-medium hover:bg-amber-500/20 transition-colors disabled:opacity-50"
+            >
+              {isSimulating ? (
+                <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+              ) : (
+                <Play className="w-3.5 h-3.5" />
+              )}
+              {isSimulating ? 'Simulating...' : 'Run Simulation'}
+            </button>
+          }
+        />
 
         {/* Config panel */}
         <AnimatePresence>

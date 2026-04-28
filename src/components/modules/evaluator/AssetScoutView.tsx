@@ -11,6 +11,7 @@ import { SurfaceCard } from '@/components/ui/SurfaceCard';
 import { KPICard } from '@/components/ui/KPICard';
 import { Badge } from '@/components/ui/Badge';
 import { ProgressRing } from '@/components/ui/ProgressRing';
+import { DashboardHeader } from '@/components/ui/DashboardHeader';
 import { useMarketplaceStore } from '@/stores/marketplaceStore';
 import { useProjectStore } from '@/stores/projectStore';
 import type {
@@ -89,17 +90,14 @@ export function AssetScoutView() {
     <div className="flex flex-col h-full">
       {/* Header */}
       <div className="px-6 pt-6 pb-4">
-        <div className="flex items-center gap-3 mb-4">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-500/20 to-cyan-500/20 border border-emerald-500/30 flex items-center justify-center">
-            <ShoppingBag className="w-5 h-5 text-emerald-400" />
-          </div>
-          <div>
-            <h1 className="text-lg font-semibold text-text">Asset Scout</h1>
-            <p className="text-xs text-text-muted">
-              Marketplace recommendations based on your project gaps
-            </p>
-          </div>
-        </div>
+        <DashboardHeader
+          icon={ShoppingBag}
+          title="Asset Scout"
+          subtitle="Marketplace recommendations based on your project gaps"
+          accent="emerald"
+          accentTo="cyan"
+          className="mb-4"
+        />
 
         {/* Stats bar */}
         <div className="flex gap-3 mb-4">

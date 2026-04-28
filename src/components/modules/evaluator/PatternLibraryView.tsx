@@ -11,6 +11,7 @@ import { SurfaceCard } from '@/components/ui/SurfaceCard';
 import { KPICard } from '@/components/ui/KPICard';
 import { Badge } from '@/components/ui/Badge';
 import { ProgressRing } from '@/components/ui/ProgressRing';
+import { DashboardHeader } from '@/components/ui/DashboardHeader';
 import { usePatternLibraryStore } from '@/stores/patternLibraryStore';
 import type { ImplementationPattern, PatternCategory, PatternConfidence } from '@/types/pattern-library';
 import type { SubModuleId } from '@/types/modules';
@@ -106,25 +107,24 @@ export function PatternLibraryView() {
     <div className="flex flex-col h-full">
       {/* Header */}
       <div className="px-6 pt-6 pb-4">
-        <div className="flex items-center gap-3 mb-4">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-violet-500/20 to-blue-500/20 border border-violet-500/30 flex items-center justify-center">
-            <BookOpen className="w-5 h-5 text-violet-400" />
-          </div>
-          <div className="flex-1">
-            <h1 className="text-lg font-semibold text-text">Pattern Library</h1>
-            <p className="text-xs text-text-muted">
-              Implementation patterns learned from successful CLI sessions
-            </p>
-          </div>
-          <button
-            onClick={handleExtract}
-            disabled={isExtracting}
-            className="flex items-center gap-1.5 px-3 py-2 bg-violet-500/10 border border-violet-500/25 rounded-lg text-violet-400 text-xs font-medium hover:bg-violet-500/20 transition-colors disabled:opacity-50"
-          >
-            <RefreshCw className={`w-3.5 h-3.5 ${isExtracting ? 'animate-spin' : ''}`} />
-            {isExtracting ? 'Extracting...' : 'Extract Patterns'}
-          </button>
-        </div>
+        <DashboardHeader
+          icon={BookOpen}
+          title="Pattern Library"
+          subtitle="Implementation patterns learned from successful CLI sessions"
+          accent="violet"
+          accentTo="blue"
+          className="mb-4"
+          action={
+            <button
+              onClick={handleExtract}
+              disabled={isExtracting}
+              className="flex items-center gap-1.5 px-3 py-2 bg-violet-500/10 border border-violet-500/25 rounded-lg text-violet-400 text-xs font-medium hover:bg-violet-500/20 transition-colors disabled:opacity-50"
+            >
+              <RefreshCw className={`w-3.5 h-3.5 ${isExtracting ? 'animate-spin' : ''}`} />
+              {isExtracting ? 'Extracting...' : 'Extract Patterns'}
+            </button>
+          }
+        />
 
         {/* Extract result toast */}
         <AnimatePresence>

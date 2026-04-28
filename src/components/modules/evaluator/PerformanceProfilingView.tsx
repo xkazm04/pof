@@ -12,6 +12,7 @@ import { SurfaceCard } from '@/components/ui/SurfaceCard';
 import { KPICard } from '@/components/ui/KPICard';
 import { Badge } from '@/components/ui/Badge';
 import { ProgressRing } from '@/components/ui/ProgressRing';
+import { DashboardHeader } from '@/components/ui/DashboardHeader';
 import { usePerformanceProfilingStore } from '@/stores/performanceProfilingStore';
 import { useProjectStore } from '@/stores/projectStore';
 import { MODULE_COLORS, ACCENT_EMERALD_DARK, ACCENT_RED, OPACITY_8 } from '@/lib/chart-colors';
@@ -93,32 +94,33 @@ export function PerformanceProfilingView() {
     <div className="flex flex-col h-full">
       {/* Header */}
       <div className="px-6 pt-6 pb-4">
-        <div className="flex items-center gap-3 mb-4">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-rose-500/20 to-orange-500/20 border border-rose-500/30 flex items-center justify-center">
-            <Gauge className="w-5 h-5 text-rose-400" />
-          </div>
-          <div className="flex-1">
-            <h1 className="text-lg font-semibold text-text">Performance Profiling</h1>
-            <p className="text-xs text-text-muted">
-              UE5 runtime analysis with AI-powered optimization triage
-            </p>
-          </div>
-          <button
-            onClick={() => setShowImport(!showImport)}
-            className="flex items-center gap-1.5 px-3 py-2 bg-surface border border-border rounded-lg text-text-muted text-xs font-medium hover:text-text hover:border-border-bright transition-colors"
-          >
-            <Upload className="w-3.5 h-3.5" />
-            Import CSV
-          </button>
-          <button
-            onClick={handleGenerate}
-            disabled={isImporting}
-            className="flex items-center gap-1.5 px-4 py-2 bg-rose-500/10 border border-rose-500/25 rounded-lg text-rose-400 text-xs font-medium hover:bg-rose-500/20 transition-colors disabled:opacity-50"
-          >
-            {isImporting ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Play className="w-3.5 h-3.5" />}
-            {isImporting ? 'Generating...' : 'Generate Sample'}
-          </button>
-        </div>
+        <DashboardHeader
+          icon={Gauge}
+          title="Performance Profiling"
+          subtitle="UE5 runtime analysis with AI-powered optimization triage"
+          accent="rose"
+          accentTo="orange"
+          className="mb-4"
+          secondaryAction={
+            <button
+              onClick={() => setShowImport(!showImport)}
+              className="flex items-center gap-1.5 px-3 py-2 bg-surface border border-border rounded-lg text-text-muted text-xs font-medium hover:text-text hover:border-border-bright transition-colors"
+            >
+              <Upload className="w-3.5 h-3.5" />
+              Import CSV
+            </button>
+          }
+          action={
+            <button
+              onClick={handleGenerate}
+              disabled={isImporting}
+              className="flex items-center gap-1.5 px-4 py-2 bg-rose-500/10 border border-rose-500/25 rounded-lg text-rose-400 text-xs font-medium hover:bg-rose-500/20 transition-colors disabled:opacity-50"
+            >
+              {isImporting ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Play className="w-3.5 h-3.5" />}
+              {isImporting ? 'Generating...' : 'Generate Sample'}
+            </button>
+          }
+        />
 
         {/* Import panel */}
         <AnimatePresence>
