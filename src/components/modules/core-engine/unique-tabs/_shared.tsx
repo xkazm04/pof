@@ -178,13 +178,38 @@ export function PipelineFlow({ steps, accent, showStatus }: PipelineFlowProps) {
 interface SectionLabelProps {
   icon?: React.ComponentType<{ className?: string; style?: React.CSSProperties }>;
   label: string;
+  /** Hex color for the icon (also drives the soft drop-shadow glow). */
   color?: string;
+  /**
+   * Optional Tailwind color utility for the icon — used when migrating
+   * legacy variant-A panels that used `text-{color}-400` inline tints.
+   * Takes precedence over the `color` style if both are passed.
+   */
+  iconClassName?: string;
+  /** Extra classes on the wrapper (e.g. spacing tokens like `DZIN_SPACING.full.sectionMb`). */
+  className?: string;
+  /** Type scale: `xs` matches the dzin variant-A header rhythm; `sm` (default) matches the existing tab usage. */
+  size?: 'xs' | 'sm';
 }
 
-export function SectionLabel({ icon: Icon, label, color }: SectionLabelProps) {
+export function SectionLabel({
+  icon: Icon,
+  label,
+  color,
+  iconClassName,
+  className = '',
+  size = 'sm',
+}: SectionLabelProps) {
+  const textSize = size === 'xs' ? 'text-xs gap-2' : 'text-sm gap-1.5';
+  const iconSize = size === 'xs' ? 'w-4 h-4' : 'w-3 h-3';
+  const iconClass = iconClassName ? `${iconSize} ${iconClassName}` : iconSize;
+  const iconStyle = !iconClassName && color
+    ? { color, filter: `drop-shadow(${GLOW_SM} ${withOpacity(color, OPACITY_50)})` }
+    : undefined;
+
   return (
-    <div className="flex items-center gap-1.5 text-sm text-text-muted font-bold uppercase tracking-wider">
-      {Icon && <Icon className="w-3 h-3" style={color ? { color, filter: `drop-shadow(${GLOW_SM} ${withOpacity(color, OPACITY_50)})` } : undefined} />}
+    <div className={`flex items-center ${textSize} text-text-muted font-bold uppercase tracking-wider ${className}`}>
+      {Icon && <Icon className={iconClass} style={iconStyle} />}
       {label}
     </div>
   );

@@ -114,9 +114,13 @@ function MovementFull({ featureMap, defs }: CharacterMovementPanelProps) {
 
       {/* Movement Parameters */}
       <SurfaceCard level={2} className={`${DZIN_SPACING.full.card} relative overflow-hidden`}>
-        <div className={`text-xs font-bold uppercase text-text-muted ${DZIN_SPACING.full.sectionMb} flex items-center gap-2`}>
-          <Move className="w-4 h-4 text-emerald-400" /> Movement Parameters
-        </div>
+        <SectionLabel
+          icon={Move}
+          label="Movement Parameters"
+          iconClassName="text-emerald-400"
+          size="xs"
+          className={DZIN_SPACING.full.sectionMb}
+        />
         <div className={`grid grid-cols-2 lg:grid-cols-3 ${DZIN_SPACING.full.gridGap}`}>
           {MOVEMENT_PARAMS.map((param) => (
             <div

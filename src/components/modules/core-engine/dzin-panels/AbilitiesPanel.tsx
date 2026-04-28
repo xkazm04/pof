@@ -13,6 +13,7 @@ import { ENTITY_RELATIONS, isRelatedToSelection } from '@/lib/dzin/entity-relati
 import {
   FeatureCard,
   RadarChart,
+  SectionLabel,
 } from '@/components/modules/core-engine/unique-tabs/_shared';
 import { SurfaceCard } from '@/components/ui/SurfaceCard';
 import { StatusDot } from '@/components/ui/StatusDot';
@@ -125,9 +126,13 @@ function AbilitiesFull({ featureMap, defs }: AbilitiesPanelProps) {
 
       {/* Radar comparison */}
       <SurfaceCard level={2} className={`${DZIN_SPACING.full.card} relative overflow-hidden`}>
-        <div className={`text-xs font-bold uppercase text-text-muted ${DZIN_SPACING.full.sectionMb} flex items-center gap-2`}>
-          <Sparkles className="w-4 h-4 text-purple-400" /> Ability Radar Comparison
-        </div>
+        <SectionLabel
+          icon={Sparkles}
+          label="Ability Radar Comparison"
+          iconClassName="text-purple-400"
+          size="xs"
+          className={DZIN_SPACING.full.sectionMb}
+        />
         <div className="flex justify-center">
           <RadarChart
             data={primaryRadar}
@@ -149,9 +154,13 @@ function AbilitiesFull({ featureMap, defs }: AbilitiesPanelProps) {
 
       {/* Cooldown flow */}
       <SurfaceCard level={2} className={`${DZIN_SPACING.full.card} relative overflow-hidden`}>
-        <div className={`text-xs font-bold uppercase text-text-muted ${DZIN_SPACING.full.sectionMb} flex items-center gap-2`}>
-          <Sparkles className="w-4 h-4 text-purple-400" /> Cooldown Flow
-        </div>
+        <SectionLabel
+          icon={Sparkles}
+          label="Cooldown Flow"
+          iconClassName="text-purple-400"
+          size="xs"
+          className={DZIN_SPACING.full.sectionMb}
+        />
         <div className="space-y-2">
           {COOLDOWN_ABILITIES.map((ability, i) => {
             const pct = ability.cd > 0 ? ((ability.cd - ability.remaining) / ability.cd) * 100 : 100;

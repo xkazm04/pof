@@ -136,9 +136,13 @@ function CoreFull({ featureMap, defs }: CorePanelProps) {
 
       {/* ASC Connections grid */}
       <SurfaceCard level={2} className={`${DZIN_SPACING.full.card} relative overflow-hidden`}>
-        <div className={`text-xs font-bold uppercase text-text-muted ${DZIN_SPACING.full.sectionMb} flex items-center gap-2`}>
-          <Cpu className="w-4 h-4 text-blue-400" /> ASC Connections
-        </div>
+        <SectionLabel
+          icon={Cpu}
+          label="ASC Connections"
+          iconClassName="text-blue-400"
+          size="xs"
+          className={DZIN_SPACING.full.sectionMb}
+        />
         <div className={`grid grid-cols-2 lg:grid-cols-4 ${DZIN_SPACING.full.gridGap}`}>
           {ASC_CONNECTIONS_FULL.map((conn) => (
             <div

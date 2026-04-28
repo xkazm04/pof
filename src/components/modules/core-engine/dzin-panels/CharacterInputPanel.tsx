@@ -124,9 +124,13 @@ function InputFull({ featureMap, defs }: CharacterInputPanelProps) {
 
       {/* Input Actions Catalog */}
       <SurfaceCard level={2} className={`${DZIN_SPACING.full.card} relative overflow-hidden`}>
-        <div className={`text-xs font-bold uppercase text-text-muted ${DZIN_SPACING.full.sectionMb} flex items-center gap-2`}>
-          <Gamepad2 className="w-4 h-4 text-cyan-400" /> Input Actions
-        </div>
+        <SectionLabel
+          icon={Gamepad2}
+          label="Input Actions"
+          iconClassName="text-cyan-400"
+          size="xs"
+          className={DZIN_SPACING.full.sectionMb}
+        />
         <div className={`grid grid-cols-2 lg:grid-cols-3 ${DZIN_SPACING.full.gridGap}`}>
           {INPUT_ACTIONS.map((ia, i) => (
             <motion.div

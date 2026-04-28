@@ -12,6 +12,7 @@ import { useDzinSelection } from '@/lib/dzin/selection-context';
 import { ENTITY_RELATIONS, isRelatedToSelection } from '@/lib/dzin/entity-relations';
 import {
   FeatureCard,
+  SectionLabel,
   statusInfo,
 } from '@/components/modules/core-engine/unique-tabs/_shared';
 import { SurfaceCard } from '@/components/ui/SurfaceCard';
@@ -150,9 +151,13 @@ function TagsFull({ featureMap, defs }: TagsPanelProps) {
       />
 
       <SurfaceCard level={2} className={`${DZIN_SPACING.full.card} relative overflow-hidden`}>
-        <div className={`text-xs font-bold uppercase text-text-muted ${DZIN_SPACING.full.sectionMb} flex items-center gap-2`}>
-          <Tags className="w-4 h-4 text-amber-400" /> Tag Hierarchy
-        </div>
+        <SectionLabel
+          icon={Tags}
+          label="Tag Hierarchy"
+          iconClassName="text-amber-400"
+          size="xs"
+          className={DZIN_SPACING.full.sectionMb}
+        />
 
         <div className="space-y-2">
           {TAG_TREE.map((category, ci) => {

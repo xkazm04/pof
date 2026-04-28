@@ -154,9 +154,13 @@ function AttributesFull({ featureMap, defs }: AttributesPanelProps) {
 
       {/* Attribute catalog */}
       <SurfaceCard level={2} className={`${DZIN_SPACING.full.card} relative`}>
-        <div className={`text-xs font-bold uppercase text-text-muted ${DZIN_SPACING.full.sectionMb} flex items-center gap-2`}>
-          <BarChart3 className="w-4 h-4 text-emerald-400" /> Attribute Set Catalog
-        </div>
+        <SectionLabel
+          icon={BarChart3}
+          label="Attribute Set Catalog"
+          iconClassName="text-emerald-400"
+          size="xs"
+          className={DZIN_SPACING.full.sectionMb}
+        />
 
         <div className="text-2xs font-bold uppercase tracking-wider text-text-muted mb-2">Core Attributes</div>
         <div className={`grid grid-cols-3 gap-2 ${DZIN_SPACING.full.sectionMb}`}>

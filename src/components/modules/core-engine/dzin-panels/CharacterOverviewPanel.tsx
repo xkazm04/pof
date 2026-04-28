@@ -107,9 +107,13 @@ function OverviewFull({ featureMap, defs }: CharacterOverviewPanelProps) {
 
       {/* Class Hierarchy */}
       <SurfaceCard level={2} className={`${DZIN_SPACING.full.card} relative overflow-hidden`}>
-        <div className={`text-xs font-bold uppercase text-text-muted ${DZIN_SPACING.full.sectionMb} flex items-center gap-2`}>
-          <User className="w-4 h-4 text-blue-400" /> Class Hierarchy
-        </div>
+        <SectionLabel
+          icon={User}
+          label="Class Hierarchy"
+          iconClassName="text-blue-400"
+          size="xs"
+          className={DZIN_SPACING.full.sectionMb}
+        />
         <div className="space-y-1">
           {CLASS_HIERARCHY.map((cls, i) => (
             <div key={cls.name} className="flex items-center gap-2 text-sm" style={{ paddingLeft: `${i * 16}px` }}>
