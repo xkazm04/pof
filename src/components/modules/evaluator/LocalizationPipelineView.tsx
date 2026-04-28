@@ -595,12 +595,22 @@ function SubTab({ label, active, onClick, count }: { label: string; active: bool
   return (
     <button
       onClick={onClick}
-      className={`flex items-center gap-1 px-3 py-2 text-xs font-medium transition-colors relative ${
+      className={`flex items-center gap-1.5 px-3 py-2 text-xs font-medium transition-colors relative ${
         active ? 'text-text' : 'text-text-muted hover:text-text'
       }`}
     >
       {label}
-      {count !== undefined && <span className="text-2xs text-text-muted">({count})</span>}
+      {count !== undefined && (
+        <span
+          className={`inline-flex items-center justify-center min-w-[1.25rem] px-1.5 py-0.5 rounded-full text-2xs font-semibold tabular-nums transition-colors ${
+            active
+              ? 'bg-indigo-500/15 text-indigo-300'
+              : 'bg-surface-2 text-text-muted'
+          }`}
+        >
+          {count}
+        </span>
+      )}
       {active && <span className="absolute bottom-0 left-0 right-0 h-0.5 rounded-t bg-indigo-400" />}
     </button>
   );
