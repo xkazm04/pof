@@ -1,4 +1,11 @@
-/** Unified animation timing — matches CSS custom properties in globals.css */
+/**
+ * Single source of truth for motion timing.
+ *
+ * Canonical taxonomy: DURATION + EASE_OUT/EASE_FILL + SPRING + STAGGER.
+ * Use these directly for new code. MOTION_CONFIG and ANIMATION_PRESETS are
+ * kept as @deprecated aliases that point at the canonical tokens — do not
+ * extend them; migrate call sites onto the canonical names when touched.
+ */
 
 export const DURATION = {
   fast: 0.12,   // micro-interactions: hovers, toggles, tooltips
@@ -27,37 +34,42 @@ export const STAGGER = {
   fast: 0.04,
 } as const;
 
+/* ── Deprecated aliases (do not extend) ──────────────────────────────────── */
+
 /**
- * Unified motion config for consistent animation feel across Character Design panels.
- * Use these presets instead of inline transition objects.
+ * @deprecated Prefer canonical tokens directly:
+ * `standard` → `{ duration: DURATION.base, ease: EASE_OUT }`,
+ * `spring`   → `SPRING.snappy`,
+ * `stagger`  → `STAGGER.fast`,
+ * `micro`    → `{ duration: DURATION.fast }`.
  */
 export const MOTION_CONFIG = {
-  /** Standard tween: 0.3s with custom ease-out curve */
-  standard: { duration: 0.3, ease: [0.22, 1, 0.36, 1] as const },
-  /** Spring for toggles, chevrons, interactive controls */
-  spring: { type: 'spring' as const, stiffness: 400, damping: 30 },
-  /** Per-item stagger delay (multiply by index) */
-  stagger: 0.06,
-  /** Quick micro-interaction (tooltips, chevron flips) */
-  micro: { duration: 0.15 },
+  /** @deprecated Use `{ duration: DURATION.base, ease: EASE_OUT }`. */
+  standard: { duration: DURATION.base, ease: EASE_OUT },
+  /** @deprecated Use `SPRING.snappy`. */
+  spring: SPRING.snappy,
+  /** @deprecated Use `STAGGER.fast`. */
+  stagger: STAGGER.fast,
+  /** @deprecated Use `{ duration: DURATION.fast }`. */
+  micro: { duration: DURATION.fast },
 } as const;
 
-/* ── Centralized Animation Presets ────────────────────────────────────────── */
-
 /**
- * Four canonical animation presets used across all unique-tab components.
- * Import these instead of defining inline transition objects.
- *
- * - `entrance` — standard appear/reveal (panels, tooltips, sections)
- * - `fill`     — progress bars, gauge fills, waterfall bars
- * - `spring`   — interactive physics (toggles, synergy pop-in, tooltip scale)
- * - `stagger`  — per-item delays for lists/grids
+ * @deprecated Prefer canonical tokens directly:
+ * `entrance` → `{ duration: DURATION.base, ease: EASE_OUT }`,
+ * `fill`     → `{ duration: DURATION.slow, ease: EASE_FILL }`,
+ * `spring`   → `SPRING.snappy`,
+ * `stagger`  → `STAGGER.fast`.
  */
 export const ANIMATION_PRESETS = {
-  entrance: { duration: 0.3, ease: [0.22, 1, 0.36, 1] as const },
-  fill:     { duration: 0.7, ease: [0.22, 1, 0.36, 1] as const },
-  spring:   { type: 'spring' as const, stiffness: 300, damping: 20 },
-  stagger:  { default: 0.05, slow: 0.1 },
+  /** @deprecated Use `{ duration: DURATION.base, ease: EASE_OUT }`. */
+  entrance: { duration: DURATION.base, ease: EASE_OUT },
+  /** @deprecated Use `{ duration: DURATION.slow, ease: EASE_FILL }`. */
+  fill: { duration: DURATION.slow, ease: EASE_FILL },
+  /** @deprecated Use `SPRING.snappy`. */
+  spring: SPRING.snappy,
+  /** @deprecated Use `STAGGER.fast`. The `slow` 0.1s is preserved for parity with old call sites; new code should use `STAGGER.fast`. */
+  stagger: { default: STAGGER.fast, slow: 0.1 },
 } as const;
 
 /** No-op transition for reduced-motion contexts. */
