@@ -3,6 +3,7 @@
 import { FolderOpen } from 'lucide-react';
 import { ReviewableModuleView } from '@/components/modules/shared/ReviewableModuleView';
 import type { ExtraTab } from '@/components/modules/shared/ReviewableModuleView';
+import { TabHeader } from '@/components/modules/shared/TabHeader';
 import { SUB_MODULE_MAP, getCategoryForSubModule, getModuleChecklist } from '@/lib/module-registry';
 import { BrowsePanel } from '@/components/modules/visual-gen/asset-browser/BrowsePanel';
 import { BlenderConnectionBar } from '@/components/blender-mcp/BlenderConnectionBar';
@@ -11,12 +12,10 @@ function BrowseTab() {
   return (
     <div className="space-y-4">
       <BlenderConnectionBar />
-      <div className="text-center">
-        <h2 className="text-base font-semibold text-text">Free Asset Browser</h2>
-        <p className="text-xs text-text-muted mt-1">
-          Browse and download CC0-licensed 3D models, textures, HDRIs, and PBR materials
-        </p>
-      </div>
+      <TabHeader
+        title="Free Asset Browser"
+        description="Browse and download CC0-licensed 3D models, textures, HDRIs, and PBR materials"
+      />
       <BrowsePanel />
     </div>
   );

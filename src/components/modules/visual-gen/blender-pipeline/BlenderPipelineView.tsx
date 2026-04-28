@@ -11,6 +11,7 @@ import type { ExecuteOutput } from '@/lib/blender-mcp/types';
 import { generateLodsScript } from '@/lib/blender-mcp/scripts/generate-lods';
 import { optimizeMeshScript } from '@/lib/blender-mcp/scripts/optimize-mesh';
 import { convertFbxScript } from '@/lib/blender-mcp/scripts/convert-fbx';
+import { TabHeader } from '@/components/modules/shared/TabHeader';
 import { BlenderSetup } from './BlenderSetup';
 import { ScriptRunner } from './ScriptRunner';
 import { executeViaMCP } from './ScriptRunner';
@@ -69,12 +70,10 @@ function ResultBlock({ result, error }: { result: string | null; error: string |
 function PipelineTab() {
   return (
     <div className="max-w-2xl mx-auto space-y-6">
-      <div className="text-center">
-        <h2 className="text-base font-semibold text-text">Blender Automation Pipeline</h2>
-        <p className="text-xs text-text-muted mt-1">
-          Execute Blender scripts remotely via MCP for batch conversion, LOD generation, and mesh optimization
-        </p>
-      </div>
+      <TabHeader
+        title="Blender Automation Pipeline"
+        description="Execute Blender scripts remotely via MCP for batch conversion, LOD generation, and mesh optimization"
+      />
       <BlenderSetup />
       <ScriptRunner />
     </div>
@@ -102,12 +101,10 @@ function LODGenerationTab() {
 
   return (
     <div className="max-w-2xl mx-auto space-y-6">
-      <div className="text-center">
-        <h2 className="text-base font-semibold text-text">LOD Generation</h2>
-        <p className="text-xs text-text-muted mt-1">
-          Generate Level-of-Detail meshes via decimation in Blender
-        </p>
-      </div>
+      <TabHeader
+        title="LOD Generation"
+        description="Generate Level-of-Detail meshes via decimation in Blender"
+      />
 
       <div className="rounded-lg border border-border bg-surface-secondary p-4 space-y-3">
         <div>
@@ -181,12 +178,10 @@ function MeshOptimizationTab() {
 
   return (
     <div className="max-w-2xl mx-auto space-y-6">
-      <div className="text-center">
-        <h2 className="text-base font-semibold text-text">Mesh Optimization</h2>
-        <p className="text-xs text-text-muted mt-1">
-          Clean up meshes by removing doubles and recalculating normals
-        </p>
-      </div>
+      <TabHeader
+        title="Mesh Optimization"
+        description="Clean up meshes by removing doubles and recalculating normals"
+      />
 
       <div className="rounded-lg border border-border bg-surface-secondary p-4 space-y-3">
         <div>
@@ -274,12 +269,10 @@ function FBXConversionTab() {
 
   return (
     <div className="max-w-2xl mx-auto space-y-6">
-      <div className="text-center">
-        <h2 className="text-base font-semibold text-text">FBX to glTF Conversion</h2>
-        <p className="text-xs text-text-muted mt-1">
-          Convert FBX files to GLB format with optional Draco compression
-        </p>
-      </div>
+      <TabHeader
+        title="FBX to glTF Conversion"
+        description="Convert FBX files to GLB format with optional Draco compression"
+      />
 
       <div className="rounded-lg border border-border bg-surface-secondary p-4 space-y-3">
         <div>
