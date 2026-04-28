@@ -2,6 +2,7 @@
 import { getModuleChecklist } from '@/lib/module-registry';
 
 import { useState, useCallback, useEffect, useRef } from 'react';
+import { toast } from 'sonner';
 import {
   Map, Plus, Trash2, FileText, Loader2,
   Zap, BookOpen, GitCompare, BarChart3, Layers, Grid3X3, Eye, ListChecks,
@@ -134,14 +135,7 @@ export function LevelDesignView() {
   const MODULE_LABEL = 'Level Design';
 
   const [rvLastCompletedId, setRvLastCompletedId] = useState<string | null>(null);
-  const [rvToast, setRvToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
   const [rvRefetch, setRvRefetch] = useState(0);
-
-  useEffect(() => {
-    if (!rvToast) return;
-    const t = setTimeout(() => setRvToast(null), 3000);
-    return () => clearTimeout(t);
-  }, [rvToast]);
 
   const handleRvItemCompleted = useCallback((itemId: string) => {
     setRvLastCompletedId(itemId);
@@ -167,13 +161,13 @@ export function LevelDesignView() {
       });
       if (!res.ok) {
         const err = await res.json().catch(() => ({ error: 'Import failed' }));
-        setRvToast({ message: err.error ?? `Import failed (${res.status})`, type: 'error' });
+        toast.error(err.error ?? `Import failed (${res.status})`);
         return;
       }
       const data = await res.json();
-      setRvToast({ message: `Imported ${data.imported} features`, type: 'success' });
+      toast.success(`Imported ${data.imported} features`);
     } catch (err) {
-      setRvToast({ message: err instanceof Error ? err.message : 'Failed to import review results', type: 'error' });
+      toast.error(err instanceof Error ? err.message : 'Failed to import review results');
       return;
     }
     setRvRefetch((n) => n + 1);
@@ -210,13 +204,13 @@ export function LevelDesignView() {
       });
       if (!res.ok) {
         const err = await res.json().catch(() => ({ error: 'Sync failed' }));
-        setRvToast({ message: err.error ?? `Sync failed (${res.status})`, type: 'error' });
+        toast.error(err.error ?? `Sync failed (${res.status})`);
         return;
       }
       const data = await res.json();
-      setRvToast({ message: `Imported ${data.imported} features`, type: 'success' });
+      toast.success(`Imported ${data.imported} features`);
     } catch (err) {
-      setRvToast({ message: err instanceof Error ? err.message : 'Failed to sync', type: 'error' });
+      toast.error(err instanceof Error ? err.message : 'Failed to sync');
     }
   }, [projectPath]);
 
@@ -312,23 +306,6 @@ export function LevelDesignView() {
 
   return (
     <div className="flex h-full relative">
-      {/* Toast notification */}
-      {rvToast && (
-        <div
-          className={`absolute bottom-4 right-4 z-50 flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium shadow-lg border animate-in fade-in slide-in-from-bottom-2 ${
-            rvToast.type === 'success'
-              ? 'bg-surface border-green-500/30 text-green-400'
-              : 'bg-surface border-status-red-strong text-red-400'
-          }`}
-        >
-          <span
-            className="w-1.5 h-1.5 rounded-full flex-shrink-0"
-            style={{ backgroundColor: rvToast.type === 'success' ? STATUS_SUCCESS : STATUS_ERROR }}
-          />
-          {rvToast.message}
-        </div>
-      )}
-
       {/* Left sidebar — Document list */}
       <div className="w-52 border-r border-border bg-surface-deep flex-shrink-0 flex flex-col">
         {/* Header */}
