@@ -117,11 +117,19 @@ export const DZIN_SPACING = {
   /** Micro: icon + single metric, tightest layout. */
   micro: {
     wrapper: 'flex flex-col items-center justify-center gap-1 p-2',
+    card: 'p-1.5',
+    gap: 'gap-1.5',
   },
   /** Compact: scannable list, moderate breathing room. */
   compact: {
     wrapper: 'space-y-1.5 p-2',
     divider: 'pt-1.5',
+    card: 'p-2',
+    gap: 'gap-2',
+    gridGap: 'gap-2',
+    sectionMb: 'mb-1.5',
+    contentMt: 'mt-1.5',
+    pipelineMt: 'mt-2',
   },
   /** Full: rich cards, generous whitespace. */
   full: {
