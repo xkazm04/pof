@@ -204,8 +204,8 @@ export function UnifiedTimeline({
                   return (
                     <div key={i} className="absolute top-0 flex items-center justify-center" style={{ left: x - 8, width: 16, height: LANE_ALERT_H }}>
                       <div className="absolute top-0 h-full w-px opacity-30" style={{ backgroundColor: color }} />
-                      <div className="relative z-10 flex items-center justify-center rounded-full"
-                        style={{ width: 14, height: 14, backgroundColor: `${withOpacity(color, OPACITY_12)}`, border: `1.5px solid ${color}`, boxShadow: `0 0 6px ${withOpacity(color, OPACITY_25)}` }}>
+                      <div className="relative z-10 flex items-center justify-center rounded-full w-3.5 h-3.5"
+                        style={{ backgroundColor: `${withOpacity(color, OPACITY_12)}`, border: `1.5px solid ${color}`, boxShadow: `0 0 6px ${withOpacity(color, OPACITY_25)}` }}>
                         <AlertTriangle className="w-2 h-2" style={{ color }} />
                       </div>
                     </div>

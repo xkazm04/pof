@@ -85,8 +85,8 @@ export function SynergyDetector({
                       ].map((p, i) => (
                         <motion.div
                           key={i}
-                          className="absolute rounded-full pointer-events-none"
-                          style={{ width: 4, height: 4, backgroundColor: synColor, top: '50%', left: '50%' }}
+                          className="absolute rounded-full pointer-events-none w-1 h-1"
+                          style={{ backgroundColor: synColor, top: '50%', left: '50%' }}
                           initial={{ opacity: 1, x: 0, y: 0, scale: 1 }}
                           animate={{ opacity: 0, x: p.x * 3, y: p.y * 3, scale: 0 }}
                           transition={{ delay: p.delay + idx * ANIMATION_PRESETS.stagger.slow, duration: 0.45, ease: 'easeOut' }}

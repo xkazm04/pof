@@ -139,7 +139,7 @@ function BindingsMetric() {
       <span className="text-[10px] font-mono" style={{ color: ACCENT }}>
         {enhanced}<span className="text-text-muted">/{total}</span>
       </span>
-      <div style={{ width: 32 }}>
+      <div className="w-8">
         <NeonBar pct={(enhanced / total) * 100} color={STATUS_SUCCESS} height={3} />
       </div>
     </div>

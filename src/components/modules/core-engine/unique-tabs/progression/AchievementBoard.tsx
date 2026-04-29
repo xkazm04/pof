@@ -91,7 +91,7 @@ export function AchievementBoard() {
                     initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: ci * 0.1 + ai * 0.05 }}
                     className="flex items-center gap-2 group/ach"
                   >
-                    <div className="relative flex-shrink-0" style={{ width: 28, height: 28 }}>
+                    <div className="relative flex-shrink-0 w-7 h-7">
                       <svg width={28} height={28} viewBox="0 0 28 28">
                         <circle cx="14" cy="14" r="11" fill="none" stroke={withOpacity(OVERLAY_WHITE, OPACITY_6)} strokeWidth="2.5" />
                         <circle
