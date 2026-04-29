@@ -58,7 +58,7 @@ function TimelineCompact() {
   const range = MAX_TIMESTAMP - MIN_TIMESTAMP || 1;
 
   return (
-    <div className="p-2">
+    <div className={DZIN_SPACING.compact.wrapper}>
       <div className="relative w-full h-6 bg-surface-deep rounded-md overflow-hidden">
         {EFFECT_TIMELINE_EVENTS.map((evt) => {
           const left = ((evt.timestamp - MIN_TIMESTAMP) / range) * 100;
