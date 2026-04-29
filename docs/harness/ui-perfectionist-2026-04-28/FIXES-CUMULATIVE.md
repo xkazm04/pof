@@ -1,8 +1,8 @@
-# UI Perfectionist — Cumulative Fix Summary (Waves 1–7)
+# UI Perfectionist — Cumulative Fix Summary (Waves 1–8)
 
-> All 7 waves complete. 41 fix commits, 41+ findings closed across 100+ files.
+> All 8 waves complete. 47 fix commits, 47+ findings closed across 100+ files.
 
-This document consolidates the seven waves of the UI Perfectionist scan-fix pipeline. Each wave was scoped to a coherent theme (primitives, tokens, dashboards, SVG math, data states, a11y / JIT / taxonomy) and built on the patterns established by prior waves. The patterns catalogue (37 entries) is the durable artifact — the per-wave commit hashes are pointers for later forensic work.
+This document consolidates the eight waves of the UI Perfectionist scan-fix pipeline. Each wave was scoped to a coherent theme (primitives, tokens, dashboards, SVG math, data states, a11y / JIT / taxonomy, micro-spacing + copy polish) and built on the patterns established by prior waves. The patterns catalogue (40 entries) is the durable artifact — the per-wave commit hashes are pointers for later forensic work.
 
 ## Per-wave summary
 
@@ -34,7 +34,11 @@ Empty/loading/feedback. `<EmptyState>` extended with `satelliteIcons` for the ro
 
 The scan-cleanup wave. Fixed `focus:outline-none` without replacement on InteractivePill, ActivityFeed/ErrorBoundary chrome, and Materials buttons (12 sites). Tooltip rewritten with `role="tooltip"`, `aria-describedby`, focus support, and Escape dismissal. Tailwind JIT-incompatible runtime classes fixed (`bg-[${STATUS_WARNING}${OPACITY_10}]` and `hover:${CLI_COLORS.error}` template-string forms — JIT cannot scan these, so they emitted nothing). SidebarL1 active indicator switched from magic-number positioning to Framer Motion `layoutId`. CLI tab 2px-jump fixed by reserving the active border with `border-transparent`. Canonical `Severity` vocabulary + `legacyToCanonical` boundary mapper added so the four sibling subsystems (crash/codebase/asset/perf) can hand off to UI without four parallel color/icon maps. 7 commits.
 
-## Cumulative pattern catalogue (37 entries)
+### Wave 8 — Micro-spacing + copy tone polish (catalogue 38–40)
+
+The polish wave. Inline `style={{ width: N, height: N }}` dots/badges (5 sites) migrated to Tailwind sizing utility classes. `EffectTimelinePanel.TimelineCompact` finally adopted `DZIN_SPACING.compact.wrapper` (last residual; the other dzin-panel deviations were cleaned up in earlier waves). `BridgeEndpointHealth` form labels (3 sites) unified from `text-2xs` to the canonical `text-xs` form-label sizing used by `UE5RemoteController`. Three-dot ASCII (`...`) replaced with the typographic ellipsis (`…`) on six high-visibility in-progress labels (Loading, Connecting, Compiling, Processing, etc.). Empty-state titles unified to sentence-case with `yet` suffix where appropriate (4 consumers). `StatusChecklist` sidebar heading upgraded from `<span>` to `<h2>` to match sibling project-setup panels — other heading-mismatch candidates left alone per the conservative-on-semantics caveat. 6 commits.
+
+## Cumulative pattern catalogue (40 entries)
 
 ### Primitives + tokens (1–6, Wave 1)
 
@@ -94,9 +98,15 @@ The scan-cleanup wave. Fixed `focus:outline-none` without replacement on Interac
 36. **`<motion.span layoutId={…}>` for sliding active indicators** — replaces `transform: translateY(N * STRIDE + OFFSET)` magic-number positioning. Indicator position derives from live DOM via Framer's shared-layout animation.
 37. **`border-t-2 border-transparent` reservation for tab indicators** — when active tab needs a colored top border, always reserve the height with `border-transparent` so non-active siblings don't shift.
 
+### Micro-spacing + copy tone polish (38–40, Wave 8)
+
+38. **`style={{ width: N, height: N }}` is forbidden when N maps to a Tailwind size.** Migrate to `w-N h-N` (or `w-3.5 / h-3.5` for half-step values like 14px). Inline-style sizing is permitted only for non-standard values (e.g. `width: 60`) where no clean utility exists.
+39. **In-progress UI states use the typographic ellipsis `…`, not `...`.** A single Unicode glyph reads as one shape rather than three dots; matters at small sizes and on hi-DPI displays.
+40. **Empty-state titles are sentence-case with a `yet` suffix where appropriate.** "No findings yet", "No A/B tests yet". Descriptions are complete sentences with periods. UPPERCASE titles in tracking-wider roles are unaffected (different design language).
+
 ## What remains
 
-The original scan surfaced ~150 findings across 32 context reports. Across 7 waves, ~41 findings were closed (full or partial) plus a comparable count of ad-hoc drift fixes folded into the migration commits. The remaining ~110+ medium/low findings break down into roughly:
+The original scan surfaced ~150 findings across 32 context reports. Across 8 waves, ~47 findings were closed (full or partial) plus a comparable count of ad-hoc drift fixes folded into the migration commits. The remaining ~100+ medium/low findings break down into roughly:
 
 ### Mechanical sweeps (one-wave-each candidates)
 
@@ -121,4 +131,4 @@ The original scan surfaced ~150 findings across 32 context reports. Across 7 wav
 
 See each `FIXES-WAVE-N.md` "What remains" section for wave-specific followups. Common themes: callsite migration of newly-shipped primitives (Pattern 14 leverage), and per-module variants of generic primitives (e.g. tailored skeletons for R3F-heavy modules).
 
-`tsc --noEmit` was 0 before each commit and remains 0 across all seven waves.
+`tsc --noEmit` was 0 before each commit and remains 0 across all eight waves.
