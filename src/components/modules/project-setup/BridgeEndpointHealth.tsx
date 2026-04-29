@@ -271,7 +271,7 @@ export function BridgeEndpointHealth() {
         <div className="px-4 py-3 border-b border-border/40 space-y-3" style={{ backgroundColor: `${ACCENT_CYAN}${OPACITY_8}` }} data-testid="bridge-connection-settings">
           {/* Host */}
           <div className="flex items-center gap-3">
-            <label htmlFor="beh-host" className="text-2xs font-bold text-text-muted uppercase tracking-wider w-20 shrink-0">Host</label>
+            <label htmlFor="beh-host" className="text-xs font-bold text-text-muted uppercase tracking-wider w-20 shrink-0">Host</label>
             <input
               id="beh-host"
               type="text"
@@ -289,7 +289,7 @@ export function BridgeEndpointHealth() {
             <div className="space-y-1" data-testid="bridge-pof-port-field">
               <div className="flex items-center gap-1.5">
                 <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: ACCENT_EMERALD }} />
-                <label htmlFor="beh-pof-port" className="text-2xs font-bold uppercase tracking-wider" style={{ color: ACCENT_EMERALD }}>
+                <label htmlFor="beh-pof-port" className="text-xs font-bold uppercase tracking-wider" style={{ color: ACCENT_EMERALD }}>
                   PoF Bridge Port
                 </label>
               </div>
@@ -315,7 +315,7 @@ export function BridgeEndpointHealth() {
             <div className="space-y-1" data-testid="bridge-rc-port-field">
               <div className="flex items-center gap-1.5">
                 <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: ACCENT_CYAN }} />
-                <label htmlFor="beh-rc-port" className="text-2xs font-bold uppercase tracking-wider" style={{ color: ACCENT_CYAN }}>
+                <label htmlFor="beh-rc-port" className="text-xs font-bold uppercase tracking-wider" style={{ color: ACCENT_CYAN }}>
                   Remote Control Port
                 </label>
               </div>
