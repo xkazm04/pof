@@ -677,7 +677,7 @@ export function ProjectHealthDashboard({ onNavigateTab }: ProjectHealthDashboard
       {!lastScan && !isScanning && (
         <EmptyState
           icon={RadarIcon}
-          title="No Health Data"
+          title="No health data yet"
           description="Scan your project to generate a health radar with per-module scores, issues, and actionable recommendations."
           iconColor={EVAL_ACCENT}
           action={onNavigateTab ? {

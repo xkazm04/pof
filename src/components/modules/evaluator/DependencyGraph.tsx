@@ -233,7 +233,7 @@ export function DependencyGraph({ onNavigateTab }: DependencyGraphProps) {
     return (
       <EmptyState
         icon={Link2}
-        title="No Feature Data Yet"
+        title="No feature data yet"
         description="Review your module features first so the dependency graph can show implementation status and blockers across modules."
         iconColor={CHART_MODULE_COLORS.evaluator}
         action={onNavigateTab ? {

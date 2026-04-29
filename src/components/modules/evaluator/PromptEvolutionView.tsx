@@ -590,8 +590,8 @@ function TestsPanel({
     return (
       <EmptyState
         icon={FlaskConical}
-        title="No A/B tests"
-        description="Create variants and start an A/B test to compare their effectiveness"
+        title="No A/B tests yet"
+        description="Create variants and start an A/B test to compare their effectiveness."
       />
     );
   }

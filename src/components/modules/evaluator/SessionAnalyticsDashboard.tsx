@@ -55,7 +55,7 @@ export function SessionAnalyticsDashboard({ onNavigateTab }: SessionAnalyticsDas
     return (
       <EmptyState
         icon={BarChart3}
-        title="No Sessions Recorded Yet"
+        title="No sessions recorded yet"
         description="Run CLI tasks from any module to start building your analytics profile. The system learns from every interaction to optimize future prompts."
         iconColor={EVALUATOR_ACCENT}
         action={onNavigateTab ? {
