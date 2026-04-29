@@ -114,9 +114,9 @@ export function StatusChecklist({
   return (
     <div className="w-56 shrink-0 border-r border-border bg-background/50 p-4 flex flex-col">
       <div className="flex items-center justify-between mb-4">
-        <span className="text-xs font-semibold text-text-muted uppercase tracking-wider">
+        <h2 className="text-xs font-semibold text-text-muted uppercase tracking-wider">
           Status
-        </span>
+        </h2>
         {scanning ? (
           <Loader2 className="w-3 h-3 text-text-muted animate-spin" />
         ) : (
