@@ -319,7 +319,7 @@ const ProgressRing = memo(function ProgressRing({
     : RING_CIRCUMFERENCE * (1 - pct);
 
   const tooltipText = isLoading
-    ? 'Loading...'
+    ? 'Loading…'
     : `${completed}/${total} complete (${pctInt}%)`;
   const showInlineCount = sidebarWidth > WIDE_SIDEBAR_THRESHOLD && !isLoading;
 

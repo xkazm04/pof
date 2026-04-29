@@ -16,8 +16,8 @@ interface StatusConfig {
 
 const STATUS_CONFIG: Record<ConnectionStatus, StatusConfig> = {
   connected:    { color: STATUS_SUCCESS, label: 'Connected', pulse: true },
-  connecting:   { color: ACCENT_ORANGE,  label: 'Connecting...', pulse: true },
-  reconnecting: { color: ACCENT_ORANGE,  label: 'Reconnecting...', pulse: true },
+  connecting:   { color: ACCENT_ORANGE,  label: 'Connecting…', pulse: true },
+  reconnecting: { color: ACCENT_ORANGE,  label: 'Reconnecting…', pulse: true },
   disconnected: { color: STATUS_NEUTRAL, label: 'Offline', pulse: false },
   error:        { color: STATUS_ERROR,   label: 'Error', pulse: false },
 };

@@ -272,7 +272,7 @@ export function BlueprintInspector() {
           data-testid="blueprint-inspector-fetch-btn"
         >
           {loading ? <Loader2 className="w-3 h-3 animate-spin" /> : <Search className="w-3 h-3" />}
-          {loading ? 'Loading...' : 'Inspect'}
+          {loading ? 'Loading…' : 'Inspect'}
         </button>
       </div>
 

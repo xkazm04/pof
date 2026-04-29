@@ -55,11 +55,11 @@ function phaseColor(phase: PofPatchPhase): string {
 function phaseLabel(phase: PofPatchPhase): string {
   switch (phase) {
     case 'idle': return 'Idle';
-    case 'writing_file': return 'Writing File...';
-    case 'compiling': return 'Compiling...';
-    case 'verifying': return 'Verifying...';
+    case 'writing_file': return 'Writing file…';
+    case 'compiling': return 'Compiling…';
+    case 'verifying': return 'Verifying…';
     case 'complete': return 'Patch Complete';
-    case 'reverting': return 'Reverting...';
+    case 'reverting': return 'Reverting…';
     case 'reverted': return 'Reverted';
     case 'failed': return 'Failed';
     default: return 'Unknown';
@@ -173,7 +173,7 @@ export function LiveCodingPanel() {
             ? <Loader2 className="w-3 h-3 animate-spin" />
             : <Play className="w-3 h-3" />
           }
-          {isCompiling ? 'Compiling...' : 'Compile'}
+          {isCompiling ? 'Compiling…' : 'Compile'}
         </button>
       </div>
 

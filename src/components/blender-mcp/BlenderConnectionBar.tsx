@@ -59,7 +59,7 @@ export function BlenderConnectionBar() {
             {connection.connected
               ? `Connected${connection.blenderVersion ? ` (${connection.blenderVersion})` : ''}`
               : isConnecting
-                ? 'Connecting...'
+                ? 'Connecting…'
                 : 'Disconnected'}
           </span>
         </div>

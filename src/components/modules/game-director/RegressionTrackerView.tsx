@@ -160,7 +160,7 @@ export function RegressionTrackerView() {
               style={{ backgroundColor: `${ACCENT}20`, color: ACCENT, border: `1px solid ${ACCENT}30` }}
             >
               {processing ? <Loader2 className="w-3 h-3 animate-spin" /> : <RefreshCw className="w-3 h-3" />}
-              {processing ? 'Processing...' : 'Analyze'}
+              {processing ? 'Processing…' : 'Analyze'}
             </button>
           </div>
         </div>
