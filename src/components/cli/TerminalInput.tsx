@@ -42,6 +42,7 @@ export function TerminalInput({
       <span className="text-xs font-mono mt-[5px]" style={{ color: MODULE_COLORS.core }}>{'>'}</span>
       <textarea
         ref={inputRef}
+        data-testid="pof-cli-panel-input"
         value={input}
         onChange={(e) => {
           setInput(e.target.value);
@@ -60,7 +61,7 @@ export function TerminalInput({
           <Square className="w-3 h-3" />
         </button>
       ) : (
-        <button onClick={() => onSubmit(false)} disabled={!input.trim()} className="p-1 mt-[3px] hover:bg-blue-500/20 rounded transition-colors" style={{ color: MODULE_COLORS.core }}>
+        <button data-testid="pof-cli-panel-send-btn" onClick={() => onSubmit(false)} disabled={!input.trim()} className="p-1 mt-[3px] hover:bg-blue-500/20 rounded transition-colors" style={{ color: MODULE_COLORS.core }}>
           <Send className="w-3 h-3" />
         </button>
       )}

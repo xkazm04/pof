@@ -56,6 +56,7 @@ export function CLITabBar({ className, filteredTabOrder, activeTabId: activeTabI
         return (
           <button
             key={tabId}
+            data-testid={`pof-cli-panel-tab-${tabId}`}
             role="tab"
             aria-selected={isActive}
             aria-label={`${session.label || tabId}${isRunning ? ' (running)' : ''}`}

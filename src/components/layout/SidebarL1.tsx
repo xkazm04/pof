@@ -29,6 +29,7 @@ export function SidebarL1() {
         return (
           <button
             key={cat.id}
+            data-testid={`pof-sidebar-nav-item-${cat.id}`}
             onClick={() => handleClick(cat.id)}
             aria-label={cat.label}
             aria-pressed={isActive}

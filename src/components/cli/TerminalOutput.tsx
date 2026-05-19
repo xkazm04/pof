@@ -655,7 +655,7 @@ export function TerminalOutput({
   }, [showScrollBtn]);
 
   return (
-    <div ref={scrollRef} onScroll={onScroll} onMouseUp={handleMouseUp} className="flex-1 overflow-y-auto relative">
+    <div ref={scrollRef} data-testid="pof-cli-panel-output" onScroll={onScroll} onMouseUp={handleMouseUp} className="flex-1 overflow-y-auto relative">
       {/* Selection floating toolbar */}
       {selectionToolbar && (
         <SelectionToolbar

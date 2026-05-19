@@ -176,6 +176,7 @@ export function SidebarL2() {
                   <StaggerItem key={mod.id}>
                   <button
                     data-sidebar-item
+                    data-testid={`pof-sidebar-l2-nav-item-${mod.id}`}
                     onClick={() => setActiveSubModule(mod.id)}
                     onKeyDown={handleKeyDown}
                     role="option"
