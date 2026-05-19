@@ -2,11 +2,11 @@
 
 import { useMemo, useState, useCallback } from 'react';
 import { Swords, LayoutGrid } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import { withOpacity, OPACITY_10 } from '@/lib/chart-colors';
 import { useTabFeatures } from '@/hooks/useTabFeatures';
 import type { SubModuleId } from '@/types/modules';
-import { TabHeader, LoadingSpinner, SubTabNavigation } from '../_shared';
+import { TabHeader, LoadingSpinner } from '../_shared';
 import type { SubTab } from '../_shared';
 import { VisibleSection } from '../VisibleSection';
 import { ACCENT, FEEDBACK_PARAMS, COMBAT_SUBTABS, type CombatSubtab } from './data';
@@ -46,6 +46,56 @@ function NarrativeBreadcrumb({ activeTab, onNavigate }: { activeTab: CombatSubta
               {step.narrative}
             </button>
           </div>
+        );
+      })}
+    </div>
+  );
+}
+
+/* ── Sub-Tab Navigation (local copy of shared SubTabNavigation, with testIds) ── */
+
+function CombatSubTabNav({
+  tabs,
+  activeTabId,
+  onChange,
+}: {
+  tabs: SubTab[];
+  activeTabId: string;
+  onChange: (id: string) => void;
+}) {
+  const prefersReduced = useReducedMotion();
+  return (
+    <div className="flex gap-1 mb-2 border-b border-border/40 pb-1.5 overflow-x-auto custom-scrollbar">
+      {tabs.map(tab => {
+        const isActive = activeTabId === tab.id;
+        const Icon = tab.icon;
+        return (
+          <button
+            key={tab.id}
+            data-testid={`pof-module-arpg-combat-tab-${tab.id}`}
+            onClick={() => onChange(tab.id)}
+            className={`
+              relative flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-sm font-semibold
+              transition-all duration-300 focus:outline-none whitespace-nowrap
+              ${isActive ? 'text-white' : 'text-text-muted hover:text-text hover:bg-surface/50'}
+            `}
+          >
+            {isActive && (
+              <motion.div
+                layoutId="activeCombatSubTabBg"
+                className="absolute inset-0 rounded-lg opacity-20"
+                style={{ backgroundColor: ACCENT }}
+                transition={prefersReduced ? { duration: 0 } : { type: 'spring', stiffness: 300, damping: 25 }}
+              />
+            )}
+            {Icon && (
+              <Icon
+                className="w-3.5 h-3.5 relative z-10 transition-colors duration-300"
+                style={{ color: isActive ? ACCENT : 'currentColor' }}
+              />
+            )}
+            <span className="relative z-10">{tab.label}</span>
+          </button>
         );
       })}
     </div>
@@ -113,11 +163,10 @@ export function CombatActionMap({ moduleId }: CombatActionMapProps) {
       <NarrativeBreadcrumb activeTab={activeTab} onNavigate={setActiveTab} />
 
       {/* ── Sub-Tab Navigation ────────────────────────────────────────────── */}
-      <SubTabNavigation
+      <CombatSubTabNav
         tabs={tabs}
         activeTabId={activeTab}
         onChange={(id) => setActiveTab(id as CombatSubtab)}
-        accent={ACCENT}
       />
 
       {/* ── Active Tab Subtitle ──────────────────────────────────────────── */}

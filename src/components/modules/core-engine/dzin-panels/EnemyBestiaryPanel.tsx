@@ -100,7 +100,7 @@ function BestiaryFull({ featureMap, defs }: EnemyBestiaryPanelProps) {
         {/* Archetypes */}
         <SurfaceCard level={2} className={`${DZIN_SPACING.full.card} relative overflow-hidden`}>
           <SectionLabel icon={Skull} label="Enemy Archetypes" color={ACCENT} />
-          <div className="space-y-2 mt-2">
+          <div className="space-y-2 mt-2" data-testid="pof-module-arpg-enemy-ai-archetype-list">
             {ARCHETYPES.map((a, i) => (
               <motion.div
                 key={a.name}

@@ -88,7 +88,7 @@ function AITreeFull({ featureMap, defs }: EnemyAITreePanelProps) {
       {/* BT States */}
       <SurfaceCard level={2} className={`${DZIN_SPACING.full.card} relative overflow-hidden`}>
         <SectionLabel icon={Brain} label="Behavior Tree States" color={ACCENT} />
-        <div className="space-y-2 mt-2">
+        <div className="space-y-2 mt-2" data-testid="pof-module-arpg-enemy-ai-bt-states">
           {BT_STATES.map((s, i) => (
             <motion.div
               key={s.name}

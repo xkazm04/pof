@@ -93,12 +93,14 @@ export function AnimationsView() {
       label: 'Setup Guide',
       icon: ListChecks,
       render: () => (
-        <AnimationChecklist
-          onGenerate={handleGenerateStep}
-          isGenerating={checklistCli.isRunning}
-          completedSteps={completedSteps}
-          onMarkComplete={handleMarkComplete}
-        />
+        <div data-testid="pof-module-arpg-animation-tab-setup">
+          <AnimationChecklist
+            onGenerate={handleGenerateStep}
+            isGenerating={checklistCli.isRunning}
+            completedSteps={completedSteps}
+            onMarkComplete={handleMarkComplete}
+          />
+        </div>
       ),
     },
     {
@@ -106,25 +108,31 @@ export function AnimationsView() {
       label: 'State Machine',
       icon: Workflow,
       render: () => (
-        <AnimationStateMachine
-          onSelectState={handleSelectState}
-          isRunning={smCli.isRunning}
-          activeStateId={smCli.activeItemId}
-        />
+        <div data-testid="pof-module-arpg-animation-tab-states">
+          <AnimationStateMachine
+            onSelectState={handleSelectState}
+            isRunning={smCli.isRunning}
+            activeStateId={smCli.activeItemId}
+          />
+        </div>
       ),
     },
     {
       id: 'combo-ai',
       label: 'Combo Designer',
       icon: Sparkles,
-      render: () => <AIComboChoreographer />,
+      render: () => (
+        <div data-testid="pof-module-arpg-animation-tab-combo-ai">
+          <AIComboChoreographer />
+        </div>
+      ),
     },
     {
       id: 'ask',
       label: 'Ask Claude',
       icon: Send,
       render: () => (
-        <div className="space-y-2">
+        <div className="space-y-2" data-testid="pof-module-arpg-animation-tab-ask">
           <div className="flex items-center gap-2">
             <Send className="w-3.5 h-3.5 text-text-muted" />
             <h3 className="text-xs font-medium text-text">Ask Claude</h3>

@@ -385,6 +385,7 @@ function StepCard({ step, isCompleted, isExpanded, isGenerating, prefersReduced,
   return (
     <motion.div
       layout={!prefersReduced}
+      data-testid={`pof-module-arpg-animation-step-${step.id}`}
       initial={prefersReduced ? false : { borderRadius: 16 }}
       animate={{
         borderColor: isCompleted ? `${STATUS_SUCCESS}50` : isExpanded ? `${typeColor}80` : `${typeColor}20`,
@@ -409,6 +410,7 @@ function StepCard({ step, isCompleted, isExpanded, isGenerating, prefersReduced,
 
       <button
         onClick={onToggle}
+        data-testid={`pof-module-arpg-animation-toggle-${step.id}`}
         className="w-full flex items-center gap-4 px-5 py-4 text-left relative z-10"
       >
         {/* Step Indicator */}
@@ -514,6 +516,7 @@ function StepCard({ step, isCompleted, isExpanded, isGenerating, prefersReduced,
                   <button
                     onClick={(e) => { e.stopPropagation(); onGenerate(); }}
                     disabled={isGenerating}
+                    data-testid={`pof-module-arpg-animation-generate-${step.id}`}
                     className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider transition-all disabled:opacity-50"
                     style={{
                       backgroundColor: `${ACCENT}20`,
@@ -530,6 +533,7 @@ function StepCard({ step, isCompleted, isExpanded, isGenerating, prefersReduced,
                 {!isCompleted && (
                   <button
                     onClick={(e) => { e.stopPropagation(); onMarkComplete(); }}
+                    data-testid={`pof-module-arpg-animation-mark-${step.id}`}
                     className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider transition-all text-text-muted bg-surface/80 border border-border hover:border-green-500/50 hover:text-green-400 hover:shadow-[0_0_15px_rgba(34,197,94,0.2)]"
                   >
                     <Check className="w-4 h-4" />

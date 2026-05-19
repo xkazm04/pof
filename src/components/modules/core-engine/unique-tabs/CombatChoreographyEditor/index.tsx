@@ -116,7 +116,7 @@ export function CombatChoreographyEditor() {
 
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.4 }}
-      className="space-y-4" data-testid="combat-choreography-editor">
+      className="space-y-4" data-testid="pof-module-arpg-combat-choreography-editor">
 
       {/* Row 1: Grid + Archetype Palette + Waves */}
       <div className="grid grid-cols-1 xl:grid-cols-[1fr_auto] gap-4">
