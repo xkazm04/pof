@@ -112,7 +112,7 @@ export function StatusChecklist({
   }, [jsonValidation, onBootstrapFromManifest]);
 
   return (
-    <div className="w-56 shrink-0 border-r border-border bg-background/50 p-4 flex flex-col">
+    <div data-testid="pof-setup-wizard-checklist" className="w-56 shrink-0 border-r border-border bg-background/50 p-4 flex flex-col">
       <div className="flex items-center justify-between mb-4">
         <h2 className="text-xs font-semibold text-text-muted uppercase tracking-wider">
           Status
@@ -121,6 +121,7 @@ export function StatusChecklist({
           <Loader2 className="w-3 h-3 text-text-muted animate-spin" />
         ) : (
           <button
+            data-testid="pof-setup-wizard-scan-btn"
             onClick={onScan}
             className="p-0.5 text-text-muted hover:text-text transition-colors"
             title="Re-scan"
@@ -132,7 +133,11 @@ export function StatusChecklist({
 
       <div className="space-y-3 flex-1">
         {checklist.map((item, i) => (
-          <div key={item.id} className="flex items-start gap-2.5">
+          <div
+            key={item.id}
+            data-testid={`pof-setup-wizard-checklist-item-${item.id}`}
+            className="flex items-start gap-2.5"
+          >
             <div className="relative mt-[3px] shrink-0">
               <div
                 className={`w-2.5 h-2.5 rounded-full ${

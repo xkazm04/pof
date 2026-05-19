@@ -54,6 +54,7 @@ Enable the EnhancedInput plugin in the .uproject.`;
           .uproject, Source/, Build.cs, and basic GameMode class.
         </p>
         <Button
+          data-testid="pof-setup-wizard-create-project-btn"
           intent="primary"
           onClick={handleCreate}
           disabled={!projectName.trim() || engines.length === 0}

@@ -29,6 +29,7 @@ export function ToolingBootstrapPanel({
           or manually install from the links in the sidebar.
         </p>
         <Button
+          data-testid="pof-setup-wizard-fix-tools-btn"
           intent="info"
           onClick={onFixAllMissing}
           disabled={scanning}

@@ -58,7 +58,7 @@ export function EvaluatorModule() {
   }, []);
 
   return (
-    <div className="h-full flex flex-col">
+    <div data-testid="pof-module-evaluator" className="h-full flex flex-col">
       {/* Header */}
       <div className="px-6 pt-6 pb-0">
         <div className="flex items-center gap-3 mb-4">

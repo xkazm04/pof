@@ -280,7 +280,7 @@ export function ReviewableModuleView({
   const isAnyRunning = checklistCli.isRunning || reviewCli.isRunning || fixCli.isRunning;
 
   return (
-    <div className="flex h-full relative">
+    <div data-testid={`pof-module-${moduleId}`} className="flex h-full relative">
       {/* Main content */}
       <div className="flex-1 overflow-y-auto p-6 min-w-0">
         {/* Header */}

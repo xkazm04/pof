@@ -19,6 +19,7 @@ import type { SubModuleId } from '@/types/modules';
 import { FEATURE_STATUS_COLORS, STATUS_ERROR, STATUS_BLOCKER, STATUS_WARNING, STATUS_LIME, STATUS_SUCCESS, STATUS_NEUTRAL, STATUS_IMPROVED, ACCENT_CYAN_LIGHT, OPACITY_10, OPACITY_12, statusBg, statusBorder } from '@/lib/chart-colors';
 import { usePofBridgeStore } from '@/stores/pofBridgeStore';
 import type { VerificationResult } from '@/types/pof-bridge';
+import { slugifyForTestId } from '@/lib/test-ids';
 
 const STATUS_CONFIG: Record<FeatureStatus, { color: string; bg: string; label: string; plain: string; action: string }> = {
   implemented: { color: FEATURE_STATUS_COLORS.implemented, bg: FEATURE_STATUS_COLORS.implemented + OPACITY_10, label: 'Implemented', plain: 'Fully built and ready to use', action: 'Review for quality improvements' },
@@ -422,6 +423,7 @@ export function FeatureMatrix({ moduleId, accentColor, onReview, onSync, isRevie
           </span>
 
           <AccentButton
+            data-testid="pof-feature-matrix-scan-btn"
             onClick={onReview}
             disabled={isReviewing}
             loading={isReviewing}
@@ -515,6 +517,7 @@ export function FeatureMatrix({ moduleId, accentColor, onReview, onSync, isRevie
             </button>
           )}
           <AccentButton
+            data-testid="pof-feature-matrix-scan-btn"
             onClick={onReview}
             disabled={isReviewing}
             loading={isReviewing}
@@ -1041,8 +1044,11 @@ function FeatureRowItem({
     if (!isExpanded) onToggle();
   }, [isExpanded, onToggle]);
 
+  const testIdSlug = slugifyForTestId(feature.featureName);
+
   return (
     <div
+      data-testid={`pof-feature-matrix-row-${testIdSlug}`}
       className="group/row rounded-md overflow-hidden"
       style={{ borderLeft: `4px solid ${cfg.color}` }}
     >
@@ -1139,7 +1145,9 @@ function FeatureRowItem({
         )}
 
         {/* Quality stars */}
-        <QualityStars score={feature.qualityScore} />
+        <span data-testid={`pof-feature-matrix-quality-${testIdSlug}`} className="contents">
+          <QualityStars score={feature.qualityScore} />
+        </span>
 
         {/* File count badge */}
         {feature.filePaths.length > 0 && (
@@ -1156,6 +1164,7 @@ function FeatureRowItem({
 
         {/* Status badge */}
         <span
+          data-testid={`pof-feature-matrix-status-${testIdSlug}`}
           className="text-2xs px-1.5 py-0.5 rounded flex-shrink-0 font-medium"
           style={{ backgroundColor: cfg.bg, color: cfg.color }}
         >

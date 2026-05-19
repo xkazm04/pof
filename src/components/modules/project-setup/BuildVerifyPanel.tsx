@@ -110,6 +110,7 @@ STEP 4 — Report: One summary table. If Source/ was created, mention it. Show b
           verify everything is wired correctly.
         </p>
         <Button
+          data-testid="pof-setup-wizard-build-verify-btn"
           intent="warning"
           onClick={handleBuild}
           disabled={engines.length === 0}

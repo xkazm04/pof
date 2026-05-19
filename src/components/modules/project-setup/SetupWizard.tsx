@@ -4,6 +4,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { Rocket, Plus, FolderOpen, Loader2, Info, AlertTriangle } from 'lucide-react';
 import { useProjectStore } from '@/stores/projectStore';
 import { apiFetch } from '@/lib/api-utils';
+import { slugifyForTestId } from '@/lib/test-ids';
 
 const UE_VERSIONS = [
   { value: '5.5.4', label: '5.5', note: 'best AI coverage' },
@@ -121,6 +122,7 @@ export function SetupWizard() {
           {UE_VERSIONS.map((v) => (
             <button
               key={v.value}
+              data-testid={`pof-setup-wizard-version-pill-${v.value}`}
               onClick={() => setProject({ ueVersion: v.value })}
               className={`px-4 py-1.5 rounded-full text-xs font-medium transition-all ${
                 ueVersion === v.value
@@ -143,6 +145,7 @@ export function SetupWizard() {
         {/* Mode tabs */}
         <div className="flex border-b border-border mb-4">
           <button
+            data-testid="pof-setup-wizard-tab-existing"
             onClick={() => setMode('existing')}
             className={`flex-1 flex items-center justify-center gap-1.5 py-2 text-xs font-medium transition-colors ${
               mode === 'existing'
@@ -154,6 +157,7 @@ export function SetupWizard() {
             Open Existing
           </button>
           <button
+            data-testid="pof-setup-wizard-tab-fresh"
             onClick={() => setMode('fresh')}
             className={`flex-1 flex items-center justify-center gap-1.5 py-2 text-xs font-medium transition-colors ${
               mode === 'fresh'
@@ -179,6 +183,7 @@ export function SetupWizard() {
                 {filteredProjects.map((project) => (
                   <button
                     key={project.path}
+                    data-testid={`pof-setup-wizard-project-item-${slugifyForTestId(project.name)}`}
                     onClick={() => handleOpenExisting(project)}
                     className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg bg-surface border border-border hover:border-accent-setup/40 hover:bg-accent-subtle transition-all text-left group"
                   >
@@ -245,6 +250,7 @@ export function SetupWizard() {
             <div className="mb-4">
               <input
                 type="text"
+                data-testid="pof-setup-wizard-project-name-input"
                 value={newName}
                 onChange={(e) => setNewName(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && nameValid && handleStartFresh()}
@@ -271,6 +277,7 @@ export function SetupWizard() {
               )}
             </div>
             <button
+              data-testid="pof-setup-wizard-create-btn"
               onClick={handleStartFresh}
               disabled={!nameValid}
               className="w-full flex items-center justify-center gap-2 py-2.5 bg-accent-setup text-background rounded-lg text-sm font-semibold hover:bg-accent-setup/90 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
