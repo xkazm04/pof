@@ -12,21 +12,21 @@
 
 ## 2. End-to-end Playwright operator flow
 
-> Each numbered step lists: **target PoF screen → testIds clicked → expected PoF outcome → expected UE5 artifact**. testId names are stable and defined in [testid-coverage.md](./testid-coverage.md). Gap references point at blockers; `(blocked by GAP-NNN)` means sub-project B must close that gap before this step can run unmodified.
+> Each numbered step lists: **target PoF screen → testIds clicked → expected PoF outcome → expected UE5 artifact**. testId names are stable and defined in [testid-coverage.md](./testid-coverage.md). Gap references point at remaining blockers; `(deferred to C: GAP-NNN)` means sub-project C will close that gap before sub-project D executes. Sub-project B closed all 11 hard blockers — the remaining annotations are non-blocking quality-of-assertion gaps.
 
 ### Phase 0 — Bootstrap (Wave 0, project-setup)
 
 1. **Launch PoF** (`npm run dev` → `http://localhost:3000`). No clicks; assert the app loads. _Blocked by GAP-015/016/017 generally — without sidebar/CLI testIds the operator can't proceed reliably._
-2. **Sidebar → Project Setup category.** Click `pof-sidebar-nav-item-project-setup` → expect SidebarL2 to expand showing project-setup sub-items _(blocked by GAP-015)_.
-3. **Open Setup Wizard.** Click `pof-sidebar-l2-nav-item-project-setup` _(blocked by GAP-016)_. Expect SetupWizard rendered.
-4. **Select existing project.** Click `pof-setup-wizard-tab-existing` → assert project list visible → click `pof-setup-wizard-project-item-PoF` _(blocked by GAP-010)_. **Expected UE5 artifact:** none yet; PoF loads context for the existing UE5 project at `C:\Users\kazda\Documents\Unreal Projects\PoF`.
-5. **Wait for status checks.** Assert `pof-setup-wizard-checklist-item-engine` shows ✓, `pof-setup-wizard-checklist-item-uproject` shows ✓, all `pof-setup-wizard-checklist-item-tool-{toolId}` items ✓ _(blocked by GAP-011)_.
-6. **Verify build.** Click `pof-setup-wizard-build-verify-btn` _(blocked by GAP-012)_ → CLI panel opens → terminal prints UAT Build output → assert success message in `pof-cli-panel-output` _(blocked by GAP-017)_. **Expected UE5 artifact:** project rebuilds with no errors.
+2. **Sidebar → Project Setup category.** Click `pof-sidebar-nav-item-project-setup` → expect SidebarL2 to expand showing project-setup sub-items.
+3. **Open Setup Wizard.** Click `pof-sidebar-l2-nav-item-project-setup`. Expect SetupWizard rendered.
+4. **Select existing project.** Click `pof-setup-wizard-tab-existing` → assert project list visible → click `pof-setup-wizard-project-item-PoF` _(deferred to C: GAP-010)_. **Expected UE5 artifact:** none yet; PoF loads context for the existing UE5 project at `C:\Users\kazda\Documents\Unreal Projects\PoF`.
+5. **Wait for status checks.** Assert `pof-setup-wizard-checklist-item-engine` shows ✓, `pof-setup-wizard-checklist-item-uproject` shows ✓, all `pof-setup-wizard-checklist-item-tool-{toolId}` items ✓ _(deferred to C: GAP-011)_.
+6. **Verify build.** Click `pof-setup-wizard-build-verify-btn` _(deferred to C: GAP-012)_ → CLI panel opens → terminal prints UAT Build output → assert success message in `pof-cli-panel-output`. **Expected UE5 artifact:** project rebuilds with no errors.
 
 ### Phase 1 — Wave 0 modules (in any order: arpg-character, input-handling)
 
 7. **Navigate to arpg-character.** `pof-sidebar-nav-item-core-engine` → `pof-sidebar-l2-nav-item-arpg-character`. Assert module renders. **Per [modules/arpg-character.md](./modules/arpg-character.md):** no Playwright-touched controls; module is output-focused (UE5 C++). Verification happens in PIE later.
-8. **Navigate to input-handling.** `pof-sidebar-nav-item-game-systems` → `pof-sidebar-l2-nav-item-input-handling`. Click `pof-module-input-handling-checklist-item-ih-1` → CLI panel runs ih-1 prompt _(prompt is over-scoped, blocked by GAP-005)_. After completion, click `pof-module-input-handling-checklist-item-ih-2` _(blocked by GAP-006)_. **Expected UE5 artifacts:** `IA_Move`, `IA_Attack`, `IMC_Default` data assets created in `Content/Input/`.
+8. **Navigate to input-handling.** `pof-sidebar-nav-item-game-systems` → `pof-sidebar-l2-nav-item-input-handling`. Click `pof-module-input-handling-checklist-item-ih-1` → CLI panel runs ih-1 prompt (now narrowed to IA_Move + IA_Attack — see 0c0274c). After completion, click `pof-module-input-handling-checklist-item-ih-2`. **Expected UE5 artifacts:** `IA_Move`, `IA_Attack`, `IMC_Default` data assets created in `Content/Input/`.
 
 ### Phase 2 — Wave 1 modules (arpg-animation, arpg-gas)
 
@@ -45,19 +45,19 @@
 
 ### Phase 5 — Feature-matrix verification
 
-15. **Open feature matrix per module.** Navigate to each in-scope module → click `pof-feature-matrix-scan-btn` → assert key rows show `pof-feature-matrix-status-{featureName} === "implemented"` _(blocked by GAP-019)_.
+15. **Open feature matrix per module.** Navigate to each in-scope module → click `pof-feature-matrix-scan-btn` → assert key rows show `pof-feature-matrix-status-{featureName} === "implemented"` _(deferred to C: GAP-019)_.
 
 ### Phase 6 — Evaluator gate
 
-16. **Run 3-pass eval on arpg-combat.** Navigate to `pof-module-evaluator` → click `pof-module-evaluator-run-btn` (target: arpg-combat). Assert `pof-module-evaluator-result-quality` ≥ 3 _(blocked by GAP-020)_. Repeat for arpg-gas, arpg-enemy-ai, arpg-loot, arpg-ui.
+16. **Run 3-pass eval on arpg-combat.** Navigate to `pof-module-evaluator` → click `pof-module-evaluator-run-btn` (target: arpg-combat). Assert `pof-module-evaluator-result-quality` ≥ 3 _(deferred to C: GAP-020)_. Repeat for arpg-gas, arpg-enemy-ai, arpg-loot, arpg-ui.
 
 ### Phase 7 — Packaging
 
 17. **Navigate to packaging.** `pof-sidebar-nav-item-game-systems` → `pof-sidebar-l2-nav-item-packaging`.
-18. **Select Win64 Shipping.** Click `pof-module-packaging-add-platform` (or select existing Win64 profile) → click `pof-module-packaging-config-shipping` _(blocked by GAP-010-tier testIds + the testIds themselves missing today)_.
-19. **Trigger cook.** Click `pof-module-packaging-start-cook` → **EXPECTED FAILURE TODAY: no backend cook endpoint exists (GAP-001).** Sub-project B must add `/api/packaging/execute` invoking RunUAT.bat. Until then, sub-project D falls back to invoking RunUAT manually via Bash and continues.
-20. **Wait for cook to finish.** Poll `pof-module-packaging-status` until "success" _(blocked by GAP-007 — no CookProgress UI today)_.
-21. **Read .exe path.** Read `pof-module-packaging-exe-path` _(blocked by GAP-007 + GAP-019)_. **Expected UE5 artifact:** `Saved/StagedBuilds/Windows/PoF.exe` (or similar path).
+18. **Select Win64 Shipping.** Click `pof-module-packaging-add-platform` (or select existing Win64 profile) → click `pof-module-packaging-config-shipping` _(deferred to C: packaging testIds GAP-019 tier — Stream A wired the backend but did not add testIds to BuildConfigSelector controls)_.
+19. **Trigger cook.** Click `pof-module-packaging-start-cook` → POST `/api/packaging/execute` returns SSE stream; CookProgress mounts. **(Backend now exists per a8072e6.)**
+20. **Wait for cook to finish.** Watch `pof-cook-progress-phase` advance through Cooking → Staging → Packaging → Finished; `pof-cook-progress-percent` reaches 100. **(CookProgress UI added in a8072e6.)**
+21. **Read .exe path.** Read `pof-cook-progress-exe-path` text content. **Expected UE5 artifact:** `Saved/StagedBuilds/Windows/PoF.exe` (or similar path).
 
 ### Phase 8 — Slice verification (outside PoF)
 
@@ -67,13 +67,13 @@
 
 ### Summary of step-level blockers
 
-- **Phase 0-1 navigation blocked by GAP-015, GAP-016, GAP-017** (infra testIds).
-- **Phase 2-4 prompt scoping blocked by GAP-004, GAP-005, GAP-006, GAP-008** (prompt-defects re: inventory dep + over-scoped inputs).
-- **Phase 3 combat correctness blocked by GAP-002, GAP-003** (behavior bugs in hit dedup + death flow).
-- **Phase 5-6 assertions blocked by GAP-019, GAP-020** (non-blocking but degrade assertion quality).
-- **Phase 7 packaging blocked by GAP-001 (critical), GAP-007** (no backend cook, no progress UI).
+- ~~**Phase 0-1 navigation blocked by GAP-015, GAP-016, GAP-017** (infra testIds).~~ **CLOSED in sub-project B (3e3df3f).**
+- ~~**Phase 2-4 prompt scoping blocked by GAP-004, GAP-005, GAP-006, GAP-008** (prompt-defects re: inventory dep + over-scoped inputs).~~ **CLOSED in sub-project B (0c0274c).**
+- ~~**Phase 3 combat correctness blocked by GAP-002, GAP-003** (behavior bugs in hit dedup + death flow).~~ **CLOSED in sub-project B (0c0274c — evaluator-level checks).**
+- **Phase 5-6 assertions still degraded by GAP-019, GAP-020** (non-blocking but degrade assertion quality — deferred to sub-project C).
+- ~~**Phase 7 packaging blocked by GAP-001 (critical), GAP-007** (no backend cook, no progress UI).~~ **CLOSED in sub-project B (a8072e6).**
 
-8 module-side blockers + 3 infra blockers = **11 blockers total** that sub-project B must close before sub-project D can execute the unmodified flow.
+8 module-side blockers + 3 infra blockers = **11 blockers total — all closed in sub-project B.** Sub-project D can now execute the unmodified flow once sub-project C closes the remaining 9 non-blocking testId/UI gaps.
 
 ## 3. Module dependency wave order
 
