@@ -135,7 +135,12 @@ function BuildRow({ build, onDelete }: { build: BuildRecord; onDelete: (id: numb
               {build.outputPath && (
                 <div>
                   <span className="text-text-muted">Output: </span>
-                  <span className="text-text-muted font-mono break-all">{build.outputPath}</span>
+                  <span
+                    data-testid={`pof-module-packaging-exe-path-${build.id}`}
+                    className="text-text-muted font-mono break-all"
+                  >
+                    {build.outputPath}
+                  </span>
                 </div>
               )}
               {build.cookTimeMs != null && (

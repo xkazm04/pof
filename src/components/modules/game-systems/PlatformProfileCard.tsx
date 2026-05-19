@@ -90,6 +90,7 @@ export function PlatformProfileCard({
         <div className="flex items-center gap-1">
           <button
             onClick={() => onPackage(profile)}
+            data-testid={`pof-module-packaging-start-cook-${profile.id}`}
             className="flex items-center gap-1 px-2 py-1 rounded text-2xs font-medium text-white transition-colors"
             style={{ backgroundColor: `${color}cc` }}
             title="Package"

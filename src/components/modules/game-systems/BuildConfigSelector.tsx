@@ -188,6 +188,7 @@ export function BuildConfigSelector() {
               <button
                 key={p.id}
                 onClick={() => handleNewProfile(p.id)}
+                data-testid={`pof-module-packaging-add-platform-${p.id.toLowerCase()}`}
                 className="flex items-center gap-1 px-2 py-1 rounded border border-dashed border-border-bright text-xs text-text-muted hover:text-text hover:border-violet-500/50 transition-colors"
               >
                 <Icon className="w-3 h-3" />
@@ -223,6 +224,7 @@ export function BuildConfigSelector() {
                 <button
                   key={p.id}
                   onClick={() => handleNewProfile(p.id)}
+                  data-testid={`pof-module-packaging-add-platform-${p.id.toLowerCase()}`}
                   className="flex items-center gap-1.5 px-3 py-1.5 rounded border border-border-bright text-xs text-text-muted hover:border-violet-500/50 hover:bg-surface-hover transition-colors"
                 >
                   <Icon className="w-3.5 h-3.5" />
@@ -347,6 +349,7 @@ function ProfileEditor({ profile, onSave, onClose }: {
                 <button
                   key={opt.value}
                   onClick={() => update('config', opt.value)}
+                  data-testid={`pof-module-packaging-config-${opt.value.toLowerCase()}`}
                   className={`px-2 py-1.5 rounded border text-xs font-medium text-center transition-colors ${
                     form.config === opt.value
                       ? 'border-violet-500 bg-violet-500/15 text-text'
