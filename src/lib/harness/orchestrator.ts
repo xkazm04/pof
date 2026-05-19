@@ -10,6 +10,7 @@
  */
 
 import * as fs from 'fs';
+import * as http from 'http';
 import * as path from 'path';
 import { exec, spawn, type ChildProcess } from 'child_process';
 import type { ProjectContext } from '@/lib/prompt-context';
@@ -102,7 +103,7 @@ async function ensureDevServer(projectPath: string): Promise<void> {
 
 function checkPort(port: number): Promise<boolean> {
   return new Promise((resolve) => {
-    const req = require('http').get(`http://localhost:${port}`, () => {
+    const req = http.get(`http://localhost:${port}`, () => {
       resolve(true);
     });
     req.on('error', () => resolve(false));
