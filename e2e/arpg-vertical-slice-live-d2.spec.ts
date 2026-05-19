@@ -71,18 +71,30 @@ test.describe('ARPG vertical slice — D2 live attempt', () => {
         await page.getByRole('tab', { name: 'Roadmap' }).click();
         await page.waitForTimeout(500);
 
+        // D3: switch to Cards layout — per-row "Claude" button only renders there
+        // and has an accessible name. Compact layout (default) uses an icon-only
+        // Play button with no text/aria-label that's hard to locate uniquely.
+        // Cards toggle has title="Card view" per RoadmapChecklist.tsx:331-337.
+        await page.getByRole('button', { name: 'Card view' }).click();
+        await page.waitForTimeout(300);
+
         const ih1 = page.getByTestId('pof-module-input-handling-checklist-item-ih-1');
         const ih1Count = await ih1.count();
         if (ih1Count === 0) {
-          return { success: false, durationMs: 0, timedOut: false, notes: 'pof-module-input-handling-checklist-item-ih-1 not visible' };
+          return { success: false, durationMs: 0, timedOut: false, notes: 'pof-module-input-handling-checklist-item-ih-1 not visible after layout switch' };
         }
 
-        const playBtn = ih1.locator('button').filter({ hasText: /Run|Claude|Play/i }).first();
-        const btnCount = await playBtn.count();
+        // Hover the row to reveal hover-only action buttons.
+        // Cards: opacity-30 → group-hover:opacity-100 at RoadmapChecklist.tsx:613.
+        await ih1.hover();
+
+        // Locate by accessible name (AccentButton text "Claude" at RoadmapChecklist.tsx:656).
+        const claudeBtn = ih1.getByRole('button', { name: /^Claude$/i });
+        const btnCount = await claudeBtn.count();
         if (btnCount === 0) {
-          return { success: false, durationMs: 0, timedOut: false, notes: 'No Run/Claude/Play button inside ih-1 row' };
+          return { success: false, durationMs: 0, timedOut: false, notes: 'No "Claude" button inside ih-1 row (Cards layout); hover may not have triggered the visibility change' };
         }
-        await playBtn.click();
+        await claudeBtn.click();
         const result = await waitForCliComplete(page, 'input-handling-ih-1', STEP_TIMEOUT_MS);
 
         const expectedPaths = [
@@ -111,7 +123,7 @@ test.describe('ARPG vertical slice — D2 live attempt', () => {
         };
       });
     } finally {
-      await harness.writeFindings({ filenameSuffix: 'd2' });
+      await harness.writeFindings({ filenameSuffix: 'd3' });
     }
   });
 });
