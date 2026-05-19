@@ -20,7 +20,7 @@ export interface HarnessHandle {
   /** Drains window.__pofHarnessDispatches and merges into the recorder. */
   drainCliDispatches(page: Page): Promise<void>;
   /** Writes the findings markdown + the dispatches JSON artifact. */
-  writeFindings(): Promise<void>;
+  writeFindings(opts?: { filenameSuffix?: string }): Promise<void>;
 }
 
 declare global {
@@ -130,11 +130,12 @@ export async function setupHarnessMode(page: Page): Promise<HarnessHandle> {
         recorder.record({ kind: 'cli-prompt', body: d.detail });
       }
     },
-    async writeFindings() {
+    async writeFindings(opts?: { filenameSuffix?: string }) {
       const finishedAt = new Date().toISOString();
       const date = new Date().toISOString().slice(0, 10);
       const jsonPath = `e2e/artifacts/dispatched-prompts-${Date.now()}.json`;
-      const mdPath = `docs/features/arpg-vertical-slice/scenario-runs/${date}-${mode}.md`;
+      const suffix = opts?.filenameSuffix ? `-${opts.filenameSuffix}` : '';
+      const mdPath = `docs/features/arpg-vertical-slice/scenario-runs/${date}-${mode}${suffix}.md`;
 
       await recorder.writeJSON(jsonPath, { runMode: mode, startedAt, finishedAt });
 
@@ -208,4 +209,114 @@ export async function seedPackagingProfile(page: Page, name: string = 'D2-Win64-
   }
   const body = await res.json();
   return body?.data?.profile?.id ?? '';
+}
+
+export interface WaitResult {
+  success: boolean;
+  durationMs: number;
+  timedOut: boolean;
+  /** Captured terminal output excerpt (live mode only — empty/null in stub). */
+  outputExcerpt?: string;
+}
+
+/**
+ * Wait until a CLI session transitions running → stopped, OR timeoutMs elapses.
+ *
+ * Polling strategy: DOM-based via the `pof-cli-panel-running-indicator`
+ * testId (added by sub-project B). When the indicator is no longer attached,
+ * the active session is considered done.
+ *
+ * Stub mode: short-circuits with success=true after ~200ms (no real session
+ * runs because capture-phase listener stopped propagation).
+ *
+ * On timeout: tries to click a Stop button (if visible) to abort; records
+ * timedOut: true and success: false.
+ */
+export async function waitForCliComplete(
+  page: Page,
+  sessionLabel: string,
+  timeoutMs: number = 600_000,
+): Promise<WaitResult> {
+  const start = Date.now();
+
+  if (process.env.HARNESS_MODE !== 'live') {
+    await page.waitForTimeout(200);
+    return { success: true, durationMs: Date.now() - start, timedOut: false };
+  }
+
+  const indicator = page.getByTestId('pof-cli-panel-running-indicator');
+  try {
+    await indicator.first().waitFor({ state: 'attached', timeout: 10_000 });
+  } catch {
+    return {
+      success: false,
+      durationMs: Date.now() - start,
+      timedOut: false,
+      outputExcerpt: `waitForCliComplete(${sessionLabel}): running indicator never appeared within 10s — dispatch likely never fired`,
+    };
+  }
+
+  try {
+    await indicator.first().waitFor({ state: 'detached', timeout: timeoutMs });
+  } catch {
+    let output = '';
+    try {
+      const outputEl = page.getByTestId('pof-cli-panel-output');
+      output = (await outputEl.first().textContent({ timeout: 2000 })) ?? '';
+    } catch { /* noop */ }
+
+    try {
+      const stopBtn = page.locator('button[aria-label*="abort" i], button[aria-label*="stop" i]').first();
+      if ((await stopBtn.count()) > 0) {
+        await stopBtn.click({ timeout: 2000 });
+      }
+    } catch { /* noop */ }
+
+    return {
+      success: false,
+      durationMs: Date.now() - start,
+      timedOut: true,
+      outputExcerpt: output.slice(-2000),
+    };
+  }
+
+  let output = '';
+  try {
+    const outputEl = page.getByTestId('pof-cli-panel-output');
+    output = (await outputEl.first().textContent({ timeout: 2000 })) ?? '';
+  } catch { /* noop */ }
+
+  return {
+    success: true,
+    durationMs: Date.now() - start,
+    timedOut: false,
+    outputExcerpt: output.slice(-2000),
+  };
+}
+
+/**
+ * Wait until the cook completes, signalled by the appearance of the
+ * pof-cook-progress-result testId (added by sub-project B).
+ *
+ * Stub mode: synthetic SSE in setupHarnessMode finishes in <2s; this
+ * just waits for the result element.
+ */
+export async function waitForCookComplete(
+  page: Page,
+  timeoutMs: number = 600_000,
+): Promise<WaitResult> {
+  const start = Date.now();
+  const result = page.getByTestId('pof-cook-progress-result');
+  try {
+    await result.first().waitFor({ state: 'visible', timeout: timeoutMs });
+    const status = await result.first().getAttribute('data-status');
+    return {
+      success: status === 'success',
+      durationMs: Date.now() - start,
+      timedOut: false,
+      outputExcerpt: (await result.first().textContent()) ?? '',
+    };
+  } catch {
+    return { success: false, durationMs: Date.now() - start, timedOut: true };
+  }
 }
