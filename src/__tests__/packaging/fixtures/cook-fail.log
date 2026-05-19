@@ -1,0 +1,8 @@
+***** UAT *****
+BUILD COMMAND STARTED
+Cook commandlet started
+progress=10%
+LogCook: Cooking content for PoF
+LogCook: Error: Asset /Game/Maps/MainLevel failed to load
+LogCook: Cook commandlet failed
+BUILD FAILED

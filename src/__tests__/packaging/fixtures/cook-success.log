@@ -1,0 +1,15 @@
+***** UAT *****
+BUILD COMMAND STARTED
+Cook commandlet started
+progress=10%
+LogCook: Cooking content for PoF
+progress=42%
+LogCook: Cook is taking longer than expected
+Stage commandlet started
+progress=70%
+LogStage: Staging files
+LogStage: Staged executable: C:\Users\kazda\Documents\Unreal Projects\PoF\Saved\StagedBuilds\Windows\PoF.exe
+Package commandlet started
+progress=95%
+BUILD COMMAND COMPLETED
+All commands succeeded

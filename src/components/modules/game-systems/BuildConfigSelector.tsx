@@ -11,12 +11,11 @@ import {
   SUPPORTED_PLATFORMS, createDefaultProfile,
   DEFAULT_COOK_SETTINGS, DEFAULT_PLATFORM_SETTINGS,
 } from '@/lib/packaging/build-profiles';
-import { generatePackagePrompt } from '@/lib/packaging/uat-command-generator';
 import { useProjectStore } from '@/stores/projectStore';
 import { apiFetch } from '@/lib/api-utils';
-import { useModuleCLI } from '@/hooks/useModuleCLI';
 import { PlatformProfileCard } from './PlatformProfileCard';
 import { CookSettingsPanel } from './CookSettingsPanel';
+import { CookProgress } from './CookProgress';
 import { MODULE_COLORS, ACCENT_VIOLET } from '@/lib/chart-colors';
 
 const PLATFORM_ICONS: Record<PlatformId, typeof Monitor> = {
@@ -47,12 +46,9 @@ export function BuildConfigSelector() {
   const projectPath = useProjectStore((s) => s.projectPath);
   const ueVersion = useProjectStore((s) => s.ueVersion);
 
-  const { sendPrompt, isRunning } = useModuleCLI({
-    moduleId: 'packaging',
-    sessionKey: 'package-build',
-    label: 'Package Build',
-    accentColor: MODULE_COLORS.systems,
-  });
+  const [cookRequest, setCookRequest] = useState<{
+    profileId: string; projectPath: string; projectName: string; ueVersion: string;
+  } | null>(null);
 
   // Fetch profiles
   const fetchProfiles = useCallback(async () => {
@@ -118,10 +114,21 @@ export function BuildConfigSelector() {
 
   // Package
   const handlePackage = useCallback((profile: BuildProfile) => {
-    if (isRunning) return;
-    const prompt = generatePackagePrompt(profile, projectPath, projectName, ueVersion);
-    sendPrompt(prompt);
-  }, [isRunning, projectPath, projectName, ueVersion, sendPrompt]);
+    if (cookRequest !== null) return;
+    setCookRequest({
+      profileId: profile.id,
+      projectPath,
+      projectName,
+      ueVersion,
+    });
+  }, [cookRequest, projectPath, projectName, ueVersion]);
+
+  const handleCookComplete = useCallback((result: { status: 'success' | 'failed' }) => {
+    setCookRequest(null);
+    if (result.status === 'success') {
+      fetchProfiles();
+    }
+  }, [fetchProfiles]);
 
   // New profile
   const handleNewProfile = useCallback((platform: PlatformId) => {
@@ -240,6 +247,9 @@ export function BuildConfigSelector() {
           ))}
         </div>
       )}
+
+      {/* Cook progress */}
+      <CookProgress request={cookRequest} onComplete={handleCookComplete} />
 
       {/* Profile editor modal */}
       <AnimatePresence>
