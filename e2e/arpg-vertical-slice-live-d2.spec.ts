@@ -1,5 +1,5 @@
 import { test, expect, type Page } from '@playwright/test';
-import { stat } from 'node:fs/promises';
+import { stat, readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { setupHarnessMode, waitForCliComplete, seedPackagingProfile, resetProgressForTestProject, type HarnessHandle, type StepResult } from './helpers/harness-mode';
 
@@ -197,8 +197,72 @@ test.describe('ARPG vertical slice — D2 live attempt', () => {
           notes: (result.outputExcerpt ?? '') + '\nArtifact check:\n' + artifactCheck,
         };
       });
+
+      await runLiveStep(harness, page, 'Step 10 ag-1 (LIVE): Add AbilitySystemComponent to character', async () => {
+        // Navigate: Core Engine → arpg-gas.
+        await page.getByTestId('pof-sidebar-nav-item-core-engine').click();
+        await page.getByTestId('pof-sidebar-l2-nav-item-arpg-gas').click();
+        await page.getByRole('tab', { name: 'Roadmap' }).click();
+        await page.waitForTimeout(500);
+
+        // RoadmapChecklist pattern (same as Step 8 ih-1):
+        // 1. Switch to Cards layout (Compact's Play button is icon-only).
+        await page.getByRole('button', { name: 'Card view' }).click();
+        await page.waitForTimeout(300);
+
+        const ag1 = page.getByTestId('pof-module-arpg-gas-checklist-item-ag-1');
+        const ag1Count = await ag1.count();
+        if (ag1Count === 0) {
+          return { success: false, durationMs: 0, timedOut: false, notes: 'pof-module-arpg-gas-checklist-item-ag-1 not visible after layout switch' };
+        }
+
+        // 2. Hover the row to reveal hover-only action buttons.
+        await ag1.hover();
+
+        // 3. Click the "Claude" button via accessible name.
+        const claudeBtn = ag1.getByRole('button', { name: /^Claude$/i });
+        const btnCount = await claudeBtn.count();
+        if (btnCount === 0) {
+          return { success: false, durationMs: 0, timedOut: false, notes: 'No "Claude" button inside ag-1 row (Cards layout); hover may not have triggered' };
+        }
+        await claudeBtn.click();
+        const result = await waitForCliComplete(page, 'arpg-gas-ag-1', STEP_TIMEOUT_MS);
+
+        // ag-1 is a code MODIFICATION to AARPGCharacterBase (not a new file).
+        // Verify by reading the .h file and checking for UAbilitySystemComponent.
+        const candidatePaths = [
+          join(PROJECT_PATH, 'Source', 'PoF', 'Characters', 'ARPGCharacterBase.h'),
+          join(PROJECT_PATH, 'Source', 'PoF', 'Player', 'ARPGCharacterBase.h'),
+          join(PROJECT_PATH, 'Source', 'PoF', 'ARPGCharacterBase.h'),
+        ];
+
+        let artifactCheck = '';
+        let modificationFound = false;
+        for (const p of candidatePaths) {
+          try {
+            const content = await readFile(p, 'utf-8');
+            const hasASC = content.includes('UAbilitySystemComponent');
+            const hasInterface = content.includes('IAbilitySystemInterface');
+            artifactCheck += `Found ${p} — UAbilitySystemComponent:${hasASC} IAbilitySystemInterface:${hasInterface}\n`;
+            if (hasASC) modificationFound = true;
+            break; // first match wins
+          } catch {
+            artifactCheck += `Not at: ${p}\n`;
+          }
+        }
+        if (!modificationFound) {
+          artifactCheck += '(File not found OR file exists but UAbilitySystemComponent not added; check output excerpt.)';
+        }
+
+        return {
+          success: result.success && modificationFound,
+          durationMs: result.durationMs,
+          timedOut: result.timedOut,
+          notes: (result.outputExcerpt ?? '') + '\nArtifact check:\n' + artifactCheck,
+        };
+      });
     } finally {
-      await harness.writeFindings({ filenameSuffix: 'd6' });
+      await harness.writeFindings({ filenameSuffix: 'd7' });
     }
   });
 });
