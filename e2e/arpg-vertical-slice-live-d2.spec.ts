@@ -129,7 +129,7 @@ test.describe('ARPG vertical slice — D2 live attempt', () => {
         };
       });
 
-      await runLiveStep(harness, page, 'Step 9 aa-1 (LIVE): Locomotion blend space (BS1D)', async () => {
+      await runLiveStep(harness, page, 'Step 9 commandlet-assets (LIVE): all 8 animation assets', async () => {
         // Navigate: Content → animations (registry id, not arpg-animation).
         await page.getByTestId('pof-sidebar-nav-item-content').click();
         await page.getByTestId('pof-sidebar-l2-nav-item-animations').click();
@@ -138,26 +138,29 @@ test.describe('ARPG vertical slice — D2 live attempt', () => {
         await page.getByRole('tab', { name: 'Setup Guide' }).click();
         await page.waitForTimeout(500);
 
-        // Direct testId on per-step "Execute Process" button (sub-project C bbca96c).
-        // No Cards-layout switch / hover needed — AnimationChecklist exposes per-button testIds.
-        const generateBtn = page.getByTestId('pof-module-arpg-animation-generate-aa-1');
+        // D6: the actual step ID is `step-commandlet-assets`, NOT `aa-1`. The
+        // module-registry uses aa-1..aa-8 but AnimationChecklist.tsx has its own
+        // ANIMATION_STEPS array with descriptive IDs. Verified at
+        // src/components/modules/content/animations/AnimationChecklist.tsx:30+.
+        const generateBtn = page.getByTestId('pof-module-arpg-animation-generate-step-commandlet-assets');
         const btnCount = await generateBtn.count();
         if (btnCount === 0) {
           return {
             success: false,
             durationMs: 0,
             timedOut: false,
-            notes: 'pof-module-arpg-animation-generate-aa-1 not visible — Setup Guide tab may not have mounted or step ordering differs',
+            notes: 'pof-module-arpg-animation-generate-step-commandlet-assets not visible — Setup Guide tab may not have mounted or step has been renamed',
           };
         }
         await generateBtn.click();
-        const result = await waitForCliComplete(page, 'arpg-animation-aa-1', STEP_TIMEOUT_MS);
+        const result = await waitForCliComplete(page, 'arpg-animation-commandlet-assets', STEP_TIMEOUT_MS);
 
-        // aa-1 deliverable per sub-project A analysis: BS1D_Locomotion blend space.
-        // Try multiple plausible paths since aa-1's prompt is less prescriptive than ih-1's.
+        // D6: the commandlet creates 8 assets at Content/Characters/Player/Animations/
+        // (per prompt at AnimationChecklist.tsx:40 — "/Game/Characters/Player/Animations/").
+        // Spot-check the two most slice-relevant outputs.
         const candidatePaths = [
-          join(PROJECT_PATH, 'Content', 'Animations', 'BS1D_Locomotion.uasset'),
-          join(PROJECT_PATH, 'Content', 'Animations', 'BlendSpaces', 'BS1D_Locomotion.uasset'),
+          join(PROJECT_PATH, 'Content', 'Characters', 'Player', 'Animations', 'BS1D_Locomotion.uasset'),
+          join(PROJECT_PATH, 'Content', 'Characters', 'Player', 'Animations', 'Montages', 'AM_MeleeCombo.uasset'),
         ];
 
         let artifactCheck = '';
@@ -183,7 +186,7 @@ test.describe('ARPG vertical slice — D2 live attempt', () => {
         };
       });
     } finally {
-      await harness.writeFindings({ filenameSuffix: 'd5' });
+      await harness.writeFindings({ filenameSuffix: 'd6' });
     }
   });
 });
