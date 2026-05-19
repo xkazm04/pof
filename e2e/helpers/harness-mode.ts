@@ -320,3 +320,35 @@ export async function waitForCookComplete(
     return { success: false, durationMs: Date.now() - start, timedOut: true };
   }
 }
+
+const TEST_PROJECT_PATH = 'C:\\Users\\kazda\\Documents\\Unreal Projects\\PoF';
+
+/**
+ * Reset all module progress (checklist progress, module health, verification,
+ * history) for the PoF UE5 project at the documented path. POSTs an empty
+ * progress blob to /api/project-progress — the route accepts the full snapshot
+ * and overwrites the existing row keyed by sha256(projectPath).slice(0,16)
+ * (per src/app/api/project-progress/route.ts).
+ *
+ * Call from a beforeEach so each test starts with a clean checklist DB
+ * regardless of prior runs. Without this, completing a checklist item in
+ * one run hides its "Run Claude" button in the next run because
+ * RoadmapChecklist.tsx:648 only renders the AccentButton when !checked.
+ * This was D4's regression cause.
+ */
+export async function resetProgressForTestProject(page: Page): Promise<void> {
+  const res = await page.request.post('/api/project-progress', {
+    data: {
+      projectPath: TEST_PROJECT_PATH,
+      checklistProgress: {},
+      moduleHealth: {},
+      checklistVerification: {},
+      moduleHistory: {},
+    },
+  });
+  if (!res.ok()) {
+    throw new Error(
+      `resetProgressForTestProject: POST /api/project-progress returned ${res.status()} — ${await res.text()}`,
+    );
+  }
+}

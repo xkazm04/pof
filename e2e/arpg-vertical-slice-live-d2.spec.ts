@@ -1,7 +1,7 @@
 import { test, expect, type Page } from '@playwright/test';
 import { stat } from 'node:fs/promises';
 import { join } from 'node:path';
-import { setupHarnessMode, waitForCliComplete, seedPackagingProfile, type HarnessHandle, type StepResult } from './helpers/harness-mode';
+import { setupHarnessMode, waitForCliComplete, seedPackagingProfile, resetProgressForTestProject, type HarnessHandle, type StepResult } from './helpers/harness-mode';
 
 const PROJECT_PATH = 'C:\\Users\\kazda\\Documents\\Unreal Projects\\PoF';
 const STEP_TIMEOUT_MS = 10 * 60_000;
@@ -37,6 +37,12 @@ async function runLiveStep(
 
 test.describe('ARPG vertical slice — D2 live attempt', () => {
   test.setTimeout(30 * 60_000);
+
+  test.beforeEach(async ({ page }) => {
+    // D5: reset checklist progress so prior-run state doesn't hide
+    // already-completed items' "Run Claude" buttons. (D4 finding.)
+    await resetProgressForTestProject(page);
+  });
 
   test('attempts Step 6 + Step 8 ih-1 in live mode', async ({ page }) => {
     expect(
@@ -177,7 +183,7 @@ test.describe('ARPG vertical slice — D2 live attempt', () => {
         };
       });
     } finally {
-      await harness.writeFindings({ filenameSuffix: 'd4' });
+      await harness.writeFindings({ filenameSuffix: 'd5' });
     }
   });
 });
