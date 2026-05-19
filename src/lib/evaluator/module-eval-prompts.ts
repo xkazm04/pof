@@ -51,7 +51,7 @@ interface ModuleEvalContext {
   performanceChecks: string;
 }
 
-const MODULE_CONTEXTS: Record<string, ModuleEvalContext> = {
+export const MODULE_CONTEXTS: Record<string, ModuleEvalContext> = {
   'arpg-character': {
     focus: 'Player character classes, input handling, camera, movement (sprint, dodge)',
     structureChecks: `- AARPGCharacterBase should be abstract with shared logic, not a concrete class
@@ -119,12 +119,14 @@ const MODULE_CONTEXTS: Record<string, ModuleEvalContext> = {
 - Combo system should advance via anim notify, not timer
 - Hit detection should use anim notify state windows
 - Damage should flow through GAS (GE application), not direct attribute set
-- Death flow should use State.Dead tag to block all abilities`,
+- Death flow should use State.Dead tag to block all abilities
+Additionally: on death, the character must apply the State.Dead gameplay tag via GE_Death and rely on the tag to block subsequent ability activations. Disabling input alone is not sufficient — abilities triggered by other systems must also be blocked.`,
     qualityChecks: `- Hit detection should use TSet for deduplication (hit each actor once per swing)
 - Weapon trace should use sweep, not line trace for accurate melee
 - Combo timeout should reset combo count (not just on miss)
 - Hit reaction montage should interrupt current montage properly
-- Camera shake and hitstop should be proportional to damage`,
+- Camera shake and hitstop should be proportional to damage
+Additionally: verify GA_MeleeAttack stores HitActors as TSet<AActor*> on the ability instance (not on the notify), and clears the set at ability activation. Multi-hit-per-swing without dedup is a regression.`,
     performanceChecks: `- Weapon trace should only run during anim notify window, not every tick
 - Damage numbers should use object pooling
 - Hit VFX should be spawned from pool, not SpawnEmitter every hit

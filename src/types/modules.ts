@@ -66,6 +66,10 @@ export interface ChecklistItem {
   label: string;
   description: string;
   prompt: string;
+  /** Optional list of other checklist item ids in the same module that must complete first. */
+  dependsOn?: string[];
+  /** Optional list of feature names from feature-definitions.ts that this item produces. */
+  features?: string[];
 }
 
 export interface KnowledgeTip {
