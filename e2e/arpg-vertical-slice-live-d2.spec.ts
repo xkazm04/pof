@@ -231,6 +231,10 @@ test.describe('ARPG vertical slice — D2 live attempt', () => {
         // ag-1 is a code MODIFICATION to AARPGCharacterBase (not a new file).
         // Verify by reading the .h file and checking for UAbilitySystemComponent.
         const candidatePaths = [
+          // D7.5: D7's first attempt used "Characters" (plural). The actual project
+          // layout uses "Character" (singular) — discovered from Claude's captured
+          // output: "Source/PoF/Character/ARPGCharacterBase.h".
+          join(PROJECT_PATH, 'Source', 'PoF', 'Character', 'ARPGCharacterBase.h'),
           join(PROJECT_PATH, 'Source', 'PoF', 'Characters', 'ARPGCharacterBase.h'),
           join(PROJECT_PATH, 'Source', 'PoF', 'Player', 'ARPGCharacterBase.h'),
           join(PROJECT_PATH, 'Source', 'PoF', 'ARPGCharacterBase.h'),
