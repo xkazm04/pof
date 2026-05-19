@@ -59,6 +59,36 @@ export async function setupHarnessMode(page: Page): Promise<HarnessHandle> {
   // 2. Intercept cook endpoint.
   //    Stub mode: respond with synthetic SSE; live mode: pass through.
   if (mode === 'stub') {
+    // Mock /pof/status so useProjectStore.scanProject() and pofBridgeConnection
+    // resolve cleanly in test env. The PoF Bridge plugin is not running on
+    // localhost:30040 in headless tests; without this mock the bridge client
+    // fails fast and downstream stores (including useProjectStore) are stuck.
+    await page.route('**/pof/status', async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          version: '1.0.0',
+          pluginName: 'PillarsOfFortuneBridge',
+          connected: true,
+          projectName: 'PoF',
+          ueVersion: '5.7.3',
+        }),
+      });
+    });
+
+    // Mock the Next.js proxy too (in case any caller goes through /api/pof-bridge/status).
+    await page.route('**/api/pof-bridge/status**', async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          success: true,
+          data: { connected: true, version: '1.0.0', pluginName: 'PillarsOfFortuneBridge' },
+        }),
+      });
+    });
+
     await page.route('**/api/packaging/execute', async (route) => {
       const req = route.request();
       let body: unknown = null;
@@ -136,4 +166,46 @@ export async function setupHarnessMode(page: Page): Promise<HarnessHandle> {
       await writeFile(mdPath, md, 'utf-8');
     },
   };
+}
+
+/**
+ * POST a default Win64 Shipping profile to /api/packaging/profiles so the
+ * BuildConfigSelector renders the start-cook button. Call this once per
+ * test run before navigating to packaging.
+ *
+ * Returns the new profile id (or empty string if the API envelope doesn't
+ * surface one — caller should handle either case).
+ */
+export async function seedPackagingProfile(page: Page, name: string = 'D2-Win64-Shipping-Seed'): Promise<string> {
+  const profile = {
+    name,
+    platform: 'Win64',
+    config: 'Shipping',
+    isDefault: false,
+    cookSettings: {
+      mapsToInclude: [],
+      pluginsToDisable: [],
+      usePak: true,
+      compressPak: true,
+      encryptPak: false,
+      useIoStore: true,
+      iterativeCooking: false,
+      cookOnTheFly: false,
+      textureStreamingBudgetMB: 0,
+      compressTextures: true,
+    },
+    platformSettings: { architecture: 'x64', customFlags: [] },
+    outputDir: '',
+    stage: true,
+    archive: false,
+    archiveDir: '',
+    runAfterPackage: false,
+  };
+  // POST envelope: { action: 'save', profile: {...} } — server wraps response as { data: { profile } }.
+  const res = await page.request.post('/api/packaging/profiles', { data: { action: 'save', profile } });
+  if (!res.ok()) {
+    throw new Error(`seedPackagingProfile: POST /api/packaging/profiles returned ${res.status()} — ${await res.text()}`);
+  }
+  const body = await res.json();
+  return body?.data?.profile?.id ?? '';
 }

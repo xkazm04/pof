@@ -1,5 +1,5 @@
 import { test, expect, type Page } from '@playwright/test';
-import { setupHarnessMode, type HarnessHandle, type StepResult } from './helpers/harness-mode';
+import { setupHarnessMode, seedPackagingProfile, type HarnessHandle, type StepResult } from './helpers/harness-mode';
 
 async function enterWorkspace(page: Page): Promise<void> {
   await page.goto('/', { waitUntil: 'networkidle' });
@@ -310,6 +310,14 @@ test.describe('ARPG vertical slice — operator flow', () => {
       }
     });
 
+
+    // ─────────── Pre-Step 19: Seed packaging profile ──────────────
+    // Without this, BuildConfigSelector has no profile cards and Step 19
+    // cannot trigger the cook stub. (D1 finding 2.)
+
+    await runStep(harness, page, 'Pre-Step 19: Seed Win64 Shipping packaging profile', async () => {
+      await seedPackagingProfile(page);
+    });
 
     // ─────────── Phase 7: Packaging (Steps 17-21) ───────────
 
