@@ -463,6 +463,7 @@ export function RoadmapChecklist({
           return (
             <StaggerItem
               key={item.id}
+              data-testid={`pof-module-${subModuleId}-checklist-item-${item.id}`}
               tabIndex={0}
               onContextMenu={(e) => handleContextMenu(e, item.id)}
               className={`group p-3 rounded-lg border transition-all duration-base ${
@@ -743,6 +744,7 @@ function CompactChecklist({
           return (
             <div
               key={item.id}
+              data-testid={`pof-module-${subModuleId}-checklist-item-${item.id}`}
               className={`border-b border-border/40 last:border-b-0 transition-colors ${
                 justCompleted ? 'bg-green-900/15' : isActive ? 'bg-[#111130]' : isHovered ? 'bg-surface-hover/30' : ''
               }`}

@@ -224,6 +224,7 @@ export function DeepEvalResults() {
             </button>
           ) : (
             <button
+              data-testid="pof-module-evaluator-run-btn"
               onClick={handleRunEval}
               disabled={selectedModuleIds.size === 0}
               className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-medium transition-all disabled:opacity-50"
@@ -305,13 +306,13 @@ export function DeepEvalResults() {
 
       {/* ── Results summary ───────────────────────────────────────────────── */}
       {result && (
-        <div className="space-y-4">
+        <div data-testid="pof-module-evaluator-result-summary" className="space-y-4">
           {/* Summary bar */}
           <SurfaceCard className="p-4">
             <div className="flex items-center gap-4">
               <div className="flex items-center gap-2">
                 <ScanSearch className="w-4 h-4 text-[#ef4444]" />
-                <span className="text-xs font-semibold text-text">
+                <span data-testid="pof-module-evaluator-result-findings-count" className="text-xs font-semibold text-text">
                   {result.findings.totalFindings} findings
                 </span>
               </div>
