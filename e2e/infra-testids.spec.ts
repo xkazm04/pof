@@ -25,9 +25,11 @@ test.describe('Infra testIds — sidebar + CLI', () => {
 
   test('clicking a SidebarL1 category reveals SidebarL2 sub-module items', async ({ page }) => {
     await enterWorkspace(page);
-    const firstCat = page.locator('[data-testid^="pof-sidebar-nav-item-"]').first();
-    await firstCat.waitFor({ state: 'visible', timeout: 15000 });
-    await firstCat.click();
+    // Use core-engine specifically: project-setup is the default-active category
+    // and has zero sub-modules, so clicking the first L1 item would never show L2.
+    const coreEngineCat = page.getByTestId('pof-sidebar-nav-item-core-engine');
+    await coreEngineCat.waitFor({ state: 'visible', timeout: 15000 });
+    await coreEngineCat.click();
     const l2 = page.locator('[data-testid^="pof-sidebar-l2-nav-item-"]');
     await expect(l2.first()).toBeVisible({ timeout: 5000 });
   });
