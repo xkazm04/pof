@@ -131,23 +131,37 @@ _(no Playwright-touched controls in this module — GAS authoring UI is design/d
 
 **Total proposed testIds: 55** (40 per-module + 15 infra)
 
-**Currently present (Y): 2** — both pre-existing non-conforming testIds in `arpg-ui` design tools (`damage-number-palette-panel`, `health-pct-slider`); left alone per convention rule 4.
+### Coverage as of sub-project C completion
 
-**Currently missing (N): 53** — sub-project C's work.
+| Surface | testIds | Status | Closed in |
+|---|---|---|---|
+| `sidebar` (`pof-sidebar-nav-item-{categoryId}`) | 1 pattern | ✅ Present | sub-project B (3e3df3f) |
+| `sidebar-l2` (`pof-sidebar-l2-nav-item-{subModuleId}`) | 1 pattern | ✅ Present | sub-project B (3e3df3f) |
+| `cli-panel` (input, send-btn, output, tabs, running-indicator) | 5 | ✅ Present | sub-project B (3e3df3f) |
+| `cook-progress` (phase, percent, log, result, exe-path) | 6 | ✅ Present | sub-project B (a8072e6) |
+| `setup-wizard` (tabs, version pill, project items, status checklist, action btns) | 14 | ✅ Present | sub-project C (0ebc6f2) |
+| `module-input-handling` (per-checklist-item via RoadmapChecklist) | 5+ | ✅ Present | sub-project C (0ebc6f2 + 78963e8) |
+| `module-arpg-animation` (steps + tabs) | 8 | ✅ Present | sub-project C (bbca96c) |
+| `module-arpg-combat` (choreography-editor + tabs) | 2 | ✅ Present | sub-project C (bbca96c) |
+| `module-arpg-enemy-ai` (archetype-list + bt-states) | 2 | ✅ Present (display panels) | sub-project C (bbca96c) |
+| `module-arpg-ui` (root via ReviewableModuleView) | 1 | ✅ Present | sub-project C (0ebc6f2) |
+| `module-packaging` (add-platform, config, start-cook, exe-path) | 5 | ✅ Present | sub-project C (bd8d7c0) |
+| `feature-matrix` (row, status, quality, scan-btn) | 4 | ✅ Present (slugified feature name) | sub-project C (0ebc6f2) |
+| `module-evaluator` (root + run-btn + result-summary + findings-count) | 3+ | ✅ Present | sub-project C (0ebc6f2 + 78963e8) |
+| `module-arpg-loot` (editor-root, optional) | 1 | ⏸ Skipped (LootTableVisualizer is purely static design exports) | — |
 
-**By surface:**
-- `setup-wizard`: 14 testIds, all missing
-- `module-input-handling`: 5 testIds, all missing
-- `module-arpg-animation`: 8 testIds, all missing
-- `module-arpg-combat`: 2 testIds, both missing (1 has non-conforming existing testId — see GAP-013)
-- `module-arpg-enemy-ai`: 2 testIds, both missing
-- `module-arpg-loot`: 1 testId, missing (optional)
-- `module-arpg-ui`: 3 testIds (1 missing, 2 existing non-conforming — left alone)
-- `module-packaging`: 5 testIds, all missing
-- `sidebar`: 1 pattern (interpolated per category, all missing)
-- `sidebar-l2`: 1 pattern (interpolated per sub-module, missing)
-- `cli-panel`: 5 testIds, all missing
-- `feature-matrix`: 4 testIds, all missing
-- `module-evaluator`: 3 testIds, all missing
+### Pre-existing non-conforming testIds (left alone per convention rule 4)
+- `damage-number-palette-panel` — design reference, not used in slice flow.
+- `health-pct-slider` — design tool, not used in slice flow.
 
-**Cross-references:** Each row notes the related `GAP-NNN` from [gap-inventory.md](./gap-inventory.md). Sub-project C closes the testId-missing gaps; sub-project B closes the prompt/api/ui gaps.
+### Spec deviations during sub-project C
+- **`pof-module-evaluator-result-quality` → split into `result-summary` + `result-findings-count`** because the actual evaluator is severity/findings-based, not a 1-5 score model.
+- **`pof-module-packaging-status` (PlatformProfileCard cook status badge) skipped** because no separate badge element exists in PlatformProfileCard — CookProgress handles status. Per spec rule, no new element introduced just to host a testId.
+- **`module-arpg-enemy-ai` testIds applied to dzin panels** which only render under `/prototype`, not the standard module page. e2e spec falls back to asserting the ReviewableModuleView root (`pof-module-arpg-enemy-ai`) for the standard navigation flow.
+- **`module-arpg-animation` tab testIds applied to render-output wrappers** (not the actual tab buttons, which are owned by ReviewableModuleView). For tab CLICKING, the e2e spec uses `getByRole('tab', { name: ... })`; for tab PANEL ASSERTION, the new wrapper testIds work.
+
+### Verification
+- `e2e/infra-testids.spec.ts`: **10/10 tests passing** (3 sidebar + CLI + 7 module-group smoke checks).
+- `npm run validate`: green (typecheck + lint 0 errors + 791/791 unit tests).
+
+**Initiative status: 18/20 gaps closed. 2 deferred non-blockers remain (GAP-014, GAP-018).**
