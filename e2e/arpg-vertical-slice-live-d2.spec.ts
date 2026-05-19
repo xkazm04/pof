@@ -138,10 +138,22 @@ test.describe('ARPG vertical slice — D2 live attempt', () => {
         await page.getByRole('tab', { name: 'Setup Guide' }).click();
         await page.waitForTimeout(500);
 
-        // D6: the actual step ID is `step-commandlet-assets`, NOT `aa-1`. The
-        // module-registry uses aa-1..aa-8 but AnimationChecklist.tsx has its own
-        // ANIMATION_STEPS array with descriptive IDs. Verified at
-        // src/components/modules/content/animations/AnimationChecklist.tsx:30+.
+        // D6.5: the generate button is INSIDE the per-step expanded panel
+        // (AnimationChecklist.tsx:515 wraps it in `{(isCode || isAuto) && step.prompt && ...}`).
+        // Steps render collapsed by default; must click the toggle first.
+        const toggleBtn = page.getByTestId('pof-module-arpg-animation-toggle-step-commandlet-assets');
+        const toggleCount = await toggleBtn.count();
+        if (toggleCount === 0) {
+          return {
+            success: false,
+            durationMs: 0,
+            timedOut: false,
+            notes: 'pof-module-arpg-animation-toggle-step-commandlet-assets not visible — Setup Guide tab may not have mounted',
+          };
+        }
+        await toggleBtn.click();
+        await page.waitForTimeout(300); // wait for expand animation
+
         const generateBtn = page.getByTestId('pof-module-arpg-animation-generate-step-commandlet-assets');
         const btnCount = await generateBtn.count();
         if (btnCount === 0) {
@@ -149,7 +161,7 @@ test.describe('ARPG vertical slice — D2 live attempt', () => {
             success: false,
             durationMs: 0,
             timedOut: false,
-            notes: 'pof-module-arpg-animation-generate-step-commandlet-assets not visible — Setup Guide tab may not have mounted or step has been renamed',
+            notes: 'pof-module-arpg-animation-generate-step-commandlet-assets not visible AFTER expanding the step — generate button may be conditional on more than just type=auto + prompt',
           };
         }
         await generateBtn.click();
