@@ -122,8 +122,62 @@ test.describe('ARPG vertical slice — D2 live attempt', () => {
           notes: (result.outputExcerpt ?? '') + artifactCheck,
         };
       });
+
+      await runLiveStep(harness, page, 'Step 9 aa-1 (LIVE): Locomotion blend space (BS1D)', async () => {
+        // Navigate: Content → animations (registry id, not arpg-animation).
+        await page.getByTestId('pof-sidebar-nav-item-content').click();
+        await page.getByTestId('pof-sidebar-l2-nav-item-animations').click();
+
+        // AnimationChecklist lives on the Setup Guide tab.
+        await page.getByRole('tab', { name: 'Setup Guide' }).click();
+        await page.waitForTimeout(500);
+
+        // Direct testId on per-step "Execute Process" button (sub-project C bbca96c).
+        // No Cards-layout switch / hover needed — AnimationChecklist exposes per-button testIds.
+        const generateBtn = page.getByTestId('pof-module-arpg-animation-generate-aa-1');
+        const btnCount = await generateBtn.count();
+        if (btnCount === 0) {
+          return {
+            success: false,
+            durationMs: 0,
+            timedOut: false,
+            notes: 'pof-module-arpg-animation-generate-aa-1 not visible — Setup Guide tab may not have mounted or step ordering differs',
+          };
+        }
+        await generateBtn.click();
+        const result = await waitForCliComplete(page, 'arpg-animation-aa-1', STEP_TIMEOUT_MS);
+
+        // aa-1 deliverable per sub-project A analysis: BS1D_Locomotion blend space.
+        // Try multiple plausible paths since aa-1's prompt is less prescriptive than ih-1's.
+        const candidatePaths = [
+          join(PROJECT_PATH, 'Content', 'Animations', 'BS1D_Locomotion.uasset'),
+          join(PROJECT_PATH, 'Content', 'Animations', 'BlendSpaces', 'BS1D_Locomotion.uasset'),
+        ];
+
+        let artifactCheck = '';
+        let assetFound = false;
+        for (const p of candidatePaths) {
+          try {
+            await stat(p);
+            artifactCheck += `Found: ${p}\n`;
+            assetFound = true;
+          } catch {
+            artifactCheck += `Not at: ${p}\n`;
+          }
+        }
+        if (!assetFound) {
+          artifactCheck += '(Claude may have used a different filename or directory; check output excerpt for the actual path.)';
+        }
+
+        return {
+          success: result.success && assetFound,
+          durationMs: result.durationMs,
+          timedOut: result.timedOut,
+          notes: (result.outputExcerpt ?? '') + '\nArtifact check:\n' + artifactCheck,
+        };
+      });
     } finally {
-      await harness.writeFindings({ filenameSuffix: 'd3' });
+      await harness.writeFindings({ filenameSuffix: 'd4' });
     }
   });
 });
