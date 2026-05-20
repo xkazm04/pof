@@ -68,6 +68,9 @@ export const UI_TIMEOUTS = {
   raceConditionBuffer: 50,
   /** Delay for terminal component to mount before dispatching events. */
   mountDelay: 100,
+  /** Safety fallback: dispatch a CLI prompt anyway if the terminal never
+   *  announces readiness (loud-failure backstop, not the normal path). */
+  terminalReadyFallback: 5000,
   /** Flash duration after a checklist item completes. */
   completionFlash: 2000,
   /** Delay between batch-queued checklist items. */
