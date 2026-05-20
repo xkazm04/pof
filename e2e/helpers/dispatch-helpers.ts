@@ -18,13 +18,6 @@ export interface RoadmapDispatchTarget {
 }
 
 /**
- * Navigate to a module, open its Roadmap tab in Cards layout, hover the
- * checklist row, click its "Claude" button, and wait for the CLI to complete.
- * Encapsulates the RoadmapChecklist dispatch pattern proven by D-spec Steps
- * 8/10. On a locator miss it returns a synthetic failure WaitResult (rather
- * than throwing) so the caller records a `fail` step and the run continues.
- */
-/**
  * Click an L1 sidebar category only if it is not already active.
  *
  * SidebarL1 toggles — clicking an already-active category deactivates it
@@ -39,6 +32,13 @@ export async function openSidebarCategory(page: Page, categoryTestId: string): P
   }
 }
 
+/**
+ * Navigate to a module, open its Roadmap tab in Cards layout, hover the
+ * checklist row, click its "Claude" button, and wait for the CLI to complete.
+ * Encapsulates the RoadmapChecklist dispatch pattern proven by D-spec Steps
+ * 8/10. On a locator miss it returns a synthetic failure WaitResult (rather
+ * than throwing) so the caller records a `fail` step and the run continues.
+ */
 export async function dispatchRoadmapChecklistItem(
   page: Page,
   target: RoadmapDispatchTarget,
