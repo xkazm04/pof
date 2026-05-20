@@ -197,8 +197,14 @@ export function useProjectScan(projectPath: string) {
   useEffect(() => {
     if (initialScanDone.current) return;
     initialScanDone.current = true;
-    const timer = setTimeout(() => scan(), 0);
-    return () => clearTimeout(timer);
+    // Defer scan() off the effect body (avoids a synchronous setState cascade)
+    // but DO NOT clear the timer on cleanup: under React 19 dev StrictMode the
+    // mount→cleanup→mount cycle would clearTimeout the only scheduled scan,
+    // while the initialScanDone ref persists across cleanup and blocks the
+    // remount from rescheduling — leaving scanState stuck at 'idle' and
+    // BuildVerifyPanel never rendering (SP-A Finding A). The ref guard already
+    // ensures the scan is scheduled exactly once for the component's lifetime.
+    setTimeout(() => scan(), 0);
   }, [scan]);
 
   const hasProject = checklist.find((c) => c.id === 'uproject')?.ok ?? false;

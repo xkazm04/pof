@@ -1,19 +1,14 @@
 import { test, expect, type Page } from '@playwright/test';
 import { stat, readFile } from 'node:fs/promises';
 import { join } from 'node:path';
-import { setupHarnessMode, waitForCliComplete, seedPackagingProfile, resetProgressForTestProject, type HarnessHandle, type StepResult } from './helpers/harness-mode';
+import { setupHarnessMode, waitForCliComplete, seedPackagingProfile, resetProgressForTestProject, completeSetupWizard, type HarnessHandle, type StepResult } from './helpers/harness-mode';
 
 const PROJECT_PATH = 'C:\\Users\\kazda\\Documents\\Unreal Projects\\PoF';
 const STEP_TIMEOUT_MS = 10 * 60_000;
 
 async function enterWorkspace(page: Page): Promise<void> {
   await page.goto('/', { waitUntil: 'networkidle' });
-  try {
-    const pofBtn = page.locator('button', { hasText: 'PoF' }).first();
-    await pofBtn.waitFor({ state: 'visible', timeout: 5000 });
-    await pofBtn.click();
-    await page.waitForTimeout(2000);
-  } catch { /* already past launcher */ }
+  await completeSetupWizard(page);
 }
 
 async function runLiveStep(
@@ -56,6 +51,11 @@ test.describe('ARPG vertical slice — D2 live attempt', () => {
       await runLiveStep(harness, page, 'Step 6 (LIVE): Verify build', async () => {
         await enterWorkspace(page);
         await page.getByTestId('pof-sidebar-nav-item-project-setup').click();
+        // Wait for the project scan to settle — BuildVerifyPanel renders only
+        // after useProjectScan confirms a project (SP-A scanState signal).
+        await page
+          .locator('[data-testid="pof-project-setup-content"][data-scan-state="settled"]')
+          .waitFor({ state: 'attached', timeout: 30_000 });
         const verifyBtn = page.getByTestId('pof-setup-wizard-build-verify-btn');
         const verifyCount = await verifyBtn.count();
         if (verifyCount === 0) {

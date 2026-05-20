@@ -392,3 +392,22 @@ export async function resetProgressForTestProject(page: Page): Promise<void> {
     );
   }
 }
+
+/**
+ * Drive the full-screen SetupWizard to completion by selecting the existing
+ * PoF project. The app boots into <SetupWizard /> when setup is incomplete
+ * (AppShell.tsx) — no sidebar exists until a project is chosen. Idempotent: if
+ * the wizard is already past (sidebar present), it just returns.
+ */
+export async function completeSetupWizard(page: Page): Promise<void> {
+  const existingTab = page.getByTestId('pof-setup-wizard-tab-existing');
+  if ((await existingTab.count()) > 0) {
+    await existingTab.click();
+    // project-item testId is slugified from the project name ("PoF" -> "pof").
+    await page.getByTestId('pof-setup-wizard-project-item-pof').click({ timeout: 20_000 });
+  }
+  // App shell renders only after isSetupComplete flips true.
+  await page
+    .getByTestId('pof-sidebar-nav-item-project-setup')
+    .waitFor({ state: 'visible', timeout: 15_000 });
+}
