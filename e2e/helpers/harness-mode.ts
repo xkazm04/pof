@@ -236,8 +236,11 @@ export async function waitForCliComplete(
   page: Page,
   sessionLabel: string,
   timeoutMs: number = 600_000,
+  opts: { appearGraceMs?: number; redispatch?: boolean } = {},
 ): Promise<WaitResult> {
   const start = Date.now();
+  const appearGraceMs = opts.appearGraceMs ?? 4_000;
+  const redispatch = opts.redispatch ?? true;
 
   if (process.env.HARNESS_MODE !== 'live') {
     await page.waitForTimeout(200);
@@ -245,20 +248,57 @@ export async function waitForCliComplete(
   }
 
   const indicator = page.getByTestId('pof-cli-panel-running-indicator');
+  let attached = false;
   try {
-    await indicator.first().waitFor({ state: 'attached', timeout: 10_000 });
+    await indicator.first().waitFor({ state: 'attached', timeout: appearGraceMs });
+    attached = true;
   } catch {
+    // Grace elapsed without the indicator. The pof-cli-prompt event was likely
+    // dispatched into the 100ms mountDelay window before CompactTerminal's
+    // listener registered, so nothing started the session. Strategy B: re-fire
+    // the SAME recorded event ONCE via page.evaluate — never a second UI click
+    // (a second click can spawn a duplicate Claude session; see D8 regression,
+    // commit 370edbd). The re-dispatch reaches the now-mounted terminal listener.
+    if (redispatch) {
+      const reDispatched = await page.evaluate(() => {
+        const list = window.__pofHarnessDispatches ?? [];
+        const last = list[list.length - 1];
+        if (last?.detail) {
+          window.dispatchEvent(new CustomEvent('pof-cli-prompt', { detail: last.detail }));
+          return true;
+        }
+        return false;
+      });
+      if (reDispatched) {
+        try {
+          await indicator.first().waitFor({ state: 'attached', timeout: appearGraceMs });
+          attached = true;
+        } catch { /* still nothing after replay */ }
+      }
+    }
+  }
+  if (!attached) {
     return {
       success: false,
       durationMs: Date.now() - start,
       timedOut: false,
-      outputExcerpt: `waitForCliComplete(${sessionLabel}): running indicator never appeared within 10s — dispatch likely never fired`,
+      outputExcerpt: `waitForCliComplete(${sessionLabel}): running indicator never appeared within ${appearGraceMs}ms even after one re-dispatch — dispatch likely never fired, or no recorded dispatch to replay`,
     };
   }
 
-  try {
-    await indicator.first().waitFor({ state: 'detached', timeout: timeoutMs });
-  } catch {
+  // Wall-clock backstop: bounds a genuinely-stuck session (indicator attached
+  // forever) so it fails at ~timeoutMs instead of consuming the full Playwright
+  // test timeout. NOTE: a setTimeout is suspended during OS sleep, so this does
+  // NOT defend against machine sleep (see D8 5.4h run) — sleep is handled by the
+  // keep-awake pre-flight, not here.
+  const detachOutcome = await Promise.race([
+    indicator.first().waitFor({ state: 'detached', timeout: timeoutMs })
+      .then(() => 'detached' as const)
+      .catch(() => 'detach-timeout' as const),
+    new Promise<'guard'>((resolve) => setTimeout(() => resolve('guard'), timeoutMs + 30_000)),
+  ]);
+
+  if (detachOutcome !== 'detached') {
     let output = '';
     try {
       const outputEl = page.getByTestId('pof-cli-panel-output');
