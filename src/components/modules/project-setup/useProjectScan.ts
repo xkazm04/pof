@@ -30,13 +30,13 @@ export interface ChecklistItem {
   subDetail?: string;
 }
 
+/** Lifecycle of the project scan, for deterministic test waits. */
+export type ScanState = 'idle' | 'scanning' | 'settled';
+
 /**
  * Encapsulates the environment scanning state machine:
  * engine detection, tooling detection, project path validation, and directory scanning.
  */
-/** Lifecycle of the project scan, for deterministic test waits. */
-export type ScanState = 'idle' | 'scanning' | 'settled';
-
 export function useProjectScan(projectPath: string) {
   const [engines, setEngines] = useState<DetectedEngine[]>([]);
   const [checklist, setChecklist] = useState<ChecklistItem[]>([]);
