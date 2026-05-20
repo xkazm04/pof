@@ -266,7 +266,7 @@ test.describe('ARPG vertical slice — D2 live attempt', () => {
         };
       });
     } finally {
-      await harness.writeFindings({ filenameSuffix: 'd7' });
+      await harness.writeFindings({ filenameSuffix: 'd9' });
     }
   });
 });
