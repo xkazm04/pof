@@ -76,7 +76,8 @@ export function CompactTerminal({
     setTimeout(() => handleSubmit(true), 0);
   }, [handleSubmit]);
 
-  // Listen for pof-cli-prompt events
+  // Listen for pof-cli-prompt events + announce readiness so a just-dispatched
+  // sendPrompt can target this terminal (replaces the old fixed mount-delay).
   useEffect(() => {
     const handler = (e: Event) => {
       const { tabId, prompt } = (e as CustomEvent).detail;
@@ -85,7 +86,16 @@ export function CompactTerminal({
       setInput(prompt);
     };
     window.addEventListener('pof-cli-prompt', handler);
-    return () => window.removeEventListener('pof-cli-prompt', handler);
+
+    (window.__pofReadyTerminals ??= new Set<string>()).add(instanceId);
+    window.dispatchEvent(
+      new CustomEvent('pof-cli-terminal-ready', { detail: { instanceId } }),
+    );
+
+    return () => {
+      window.removeEventListener('pof-cli-prompt', handler);
+      window.__pofReadyTerminals?.delete(instanceId);
+    };
   }, [instanceId]);
 
   // Auto-submit when input is set from a pof-cli-prompt event

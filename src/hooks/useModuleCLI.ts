@@ -7,6 +7,7 @@ import { recordSessionOutcome } from '@/hooks/useSessionAnalytics';
 import { buildTaskPrompt, type CLITask } from '@/lib/cli-task';
 import type { SkillId } from '@/components/cli/skills';
 import { UI_TIMEOUTS } from '@/lib/constants';
+import { dispatchPromptWhenReady } from '@/lib/cli-dispatch';
 import type { SubModuleId } from '@/types/modules';
 
 interface UseModuleCLIOptions {
@@ -118,14 +119,10 @@ export function useModuleCLI(opts: UseModuleCLIOptions): UseModuleCLIResult {
       }
       setActiveTab(tabId);
 
-      // Small delay to allow the terminal component to mount and attach its event listener
-      setTimeout(() => {
-        window.dispatchEvent(
-          new CustomEvent('pof-cli-prompt', {
-            detail: { tabId, prompt },
-          })
-        );
-      }, UI_TIMEOUTS.mountDelay);
+      // Dispatch when the target terminal announces readiness (handshake) —
+      // replaces a fixed mount-delay timer that could lose the event.
+      // See src/lib/cli-dispatch.ts.
+      dispatchPromptWhenReady(tabId, prompt);
     },
     [findSessionByKey, createSession, setActiveTab, projectPath, opts.sessionKey, opts.moduleId, opts.label, opts.accentColor]
   );
