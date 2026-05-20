@@ -24,6 +24,21 @@ export interface RoadmapDispatchTarget {
  * 8/10. On a locator miss it returns a synthetic failure WaitResult (rather
  * than throwing) so the caller records a `fail` step and the run continues.
  */
+/**
+ * Click an L1 sidebar category only if it is not already active.
+ *
+ * SidebarL1 toggles — clicking an already-active category deactivates it
+ * (SidebarL1.tsx handleClick) and unmounts the L2 module sidebar. Any harness
+ * navigation that re-enters an already-open category must therefore guard the
+ * click on `aria-pressed`. Use this for every L1 category click.
+ */
+export async function openSidebarCategory(page: Page, categoryTestId: string): Promise<void> {
+  const category = page.getByTestId(categoryTestId);
+  if ((await category.getAttribute('aria-pressed')) !== 'true') {
+    await category.click();
+  }
+}
+
 export async function dispatchRoadmapChecklistItem(
   page: Page,
   target: RoadmapDispatchTarget,
@@ -37,15 +52,9 @@ export async function dispatchRoadmapChecklistItem(
     outputExcerpt: `dispatchRoadmapChecklistItem(${target.sessionLabel}): ${msg}`,
   });
 
-  // SidebarL1 toggles: clicking an already-active category deactivates it
-  // (SidebarL1.tsx handleClick). When dispatching consecutive items in the
-  // same L1 category, only click the category if it is not already active
-  // (aria-pressed). SidebarL2's setActiveSubModule is idempotent, so the L2
-  // click is always safe.
-  const category = page.getByTestId(target.categoryTestId);
-  if ((await category.getAttribute('aria-pressed')) !== 'true') {
-    await category.click();
-  }
+  // SidebarL2's setActiveSubModule is idempotent, so the L2 click is always
+  // safe; the L1 click is guarded by openSidebarCategory.
+  await openSidebarCategory(page, target.categoryTestId);
   await page.getByTestId(target.moduleTestId).click();
 
   const roadmapTab = page.getByRole('tab', { name: 'Roadmap' });
