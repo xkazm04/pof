@@ -51,6 +51,7 @@ export function ProjectSetupModule() {
     checklist,
     projectFiles,
     scanning,
+    scanState,
     scan,
     hasProject,
     okCount,
@@ -96,7 +97,11 @@ export function ProjectSetupModule() {
       />
 
       {/* Main content */}
-      <div className="flex-1 overflow-y-auto p-6">
+      <div
+        className="flex-1 overflow-y-auto p-6"
+        data-testid="pof-project-setup-content"
+        data-scan-state={scanState}
+      >
         {/* Header */}
         <div className="flex items-center gap-3 mb-1">
           <Rocket className="w-6 h-6 text-accent-setup" />

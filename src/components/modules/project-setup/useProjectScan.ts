@@ -34,15 +34,20 @@ export interface ChecklistItem {
  * Encapsulates the environment scanning state machine:
  * engine detection, tooling detection, project path validation, and directory scanning.
  */
+/** Lifecycle of the project scan, for deterministic test waits. */
+export type ScanState = 'idle' | 'scanning' | 'settled';
+
 export function useProjectScan(projectPath: string) {
   const [engines, setEngines] = useState<DetectedEngine[]>([]);
   const [checklist, setChecklist] = useState<ChecklistItem[]>([]);
   const [projectFiles, setProjectFiles] = useState<string[]>([]);
   const [scanning, setScanning] = useState(false);
+  const [scanState, setScanState] = useState<ScanState>('idle');
   const initialScanDone = useRef(false);
 
   const scan = useCallback(async () => {
     setScanning(true);
+    setScanState('scanning');
     const items: ChecklistItem[] = [];
     let detectedEngines: DetectedEngine[] = [];
     let dirData: ListResponse | null = null;
@@ -186,6 +191,7 @@ export function useProjectScan(projectPath: string) {
     }
     setProjectFiles(files);
     setScanning(false);
+    setScanState('settled');
   }, [projectPath]);
 
   useEffect(() => {
@@ -206,6 +212,7 @@ export function useProjectScan(projectPath: string) {
     checklist,
     projectFiles,
     scanning,
+    scanState,
     scan,
     hasProject,
     okCount,
