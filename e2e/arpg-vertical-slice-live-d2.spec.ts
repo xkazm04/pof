@@ -101,12 +101,6 @@ test.describe('ARPG vertical slice — D2 live attempt', () => {
           return { success: false, durationMs: 0, timedOut: false, notes: 'No "Claude" button inside ih-1 row (Cards layout); hover may not have triggered the visibility change' };
         }
         await claudeBtn.click();
-        // D8: re-click if first dispatch was lost in the 100ms mountDelay window.
-        // Button is disabled if first dispatch succeeded → second click is a safe no-op.
-        await page.waitForTimeout(1000);
-        if (await claudeBtn.isEnabled().catch(() => false)) {
-          await claudeBtn.click();
-        }
         const result = await waitForCliComplete(page, 'input-handling-ih-1', STEP_TIMEOUT_MS);
 
         const expectedPaths = [
@@ -171,12 +165,6 @@ test.describe('ARPG vertical slice — D2 live attempt', () => {
           };
         }
         await generateBtn.click();
-        // D8: re-click if first dispatch was lost in the 100ms mountDelay window.
-        // Button is disabled (isGenerating) if first dispatch succeeded → second click is a safe no-op.
-        await page.waitForTimeout(1000);
-        if (await generateBtn.isEnabled().catch(() => false)) {
-          await generateBtn.click();
-        }
         const result = await waitForCliComplete(page, 'arpg-animation-commandlet-assets', STEP_TIMEOUT_MS);
 
         // D6: the commandlet creates 8 assets at Content/Characters/Player/Animations/
@@ -238,12 +226,6 @@ test.describe('ARPG vertical slice — D2 live attempt', () => {
           return { success: false, durationMs: 0, timedOut: false, notes: 'No "Claude" button inside ag-1 row (Cards layout); hover may not have triggered' };
         }
         await claudeBtn.click();
-        // D8: re-click if first dispatch was lost in the 100ms mountDelay window.
-        // Button is disabled if first dispatch succeeded → second click is a safe no-op.
-        await page.waitForTimeout(1000);
-        if (await claudeBtn.isEnabled().catch(() => false)) {
-          await claudeBtn.click();
-        }
         const result = await waitForCliComplete(page, 'arpg-gas-ag-1', STEP_TIMEOUT_MS);
 
         // ag-1 is a code MODIFICATION to AARPGCharacterBase (not a new file).
@@ -284,7 +266,7 @@ test.describe('ARPG vertical slice — D2 live attempt', () => {
         };
       });
     } finally {
-      await harness.writeFindings({ filenameSuffix: 'd8' });
+      await harness.writeFindings({ filenameSuffix: 'd7' });
     }
   });
 });
