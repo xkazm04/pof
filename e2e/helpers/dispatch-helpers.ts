@@ -37,7 +37,15 @@ export async function dispatchRoadmapChecklistItem(
     outputExcerpt: `dispatchRoadmapChecklistItem(${target.sessionLabel}): ${msg}`,
   });
 
-  await page.getByTestId(target.categoryTestId).click();
+  // SidebarL1 toggles: clicking an already-active category deactivates it
+  // (SidebarL1.tsx handleClick). When dispatching consecutive items in the
+  // same L1 category, only click the category if it is not already active
+  // (aria-pressed). SidebarL2's setActiveSubModule is idempotent, so the L2
+  // click is always safe.
+  const category = page.getByTestId(target.categoryTestId);
+  if ((await category.getAttribute('aria-pressed')) !== 'true') {
+    await category.click();
+  }
   await page.getByTestId(target.moduleTestId).click();
 
   const roadmapTab = page.getByRole('tab', { name: 'Roadmap' });
