@@ -14,7 +14,7 @@
 
 **What we actually proved:** PoF's core value loop works, and PoF drove autonomous Claude to build the ARPG gameplay chain. A click on a module checklist item dispatches an autonomous Claude Code session that writes real UE5 C++ and assets. We demonstrated this end-to-end, live, across **operator-flow steps 6–16** — input handling, animation, GAS, combat, the enemy character, loot-on-death, the HUD, and floating damage numbers. SP-B's run produced genuine autonomous generation: a loot system (`ARPGLootDropComponent`, `ARPGWorldItem`), HUD widgets, and a damage-number system — real C++ files written by Claude through PoF. Re-runs are idempotent (Claude verifies-and-skips existing work). **SP-C** then drove PoF's packaging UI to cook that project into a Win64 Shipping build — `PoF.exe` is staged on disk (steps 17–21).
 
-**What we did NOT prove:** a *complete, playable* slice. Of the 24-step operator flow, the live harness now drives steps 6–21. The remaining work — in-PIE verification (steps 22–24) — is designed and gap-cleared but not yet live-run. Getting each phase to run live was *hard*: SP-B took a four-run remediation saga (a cluster of CLI-session bugs), and SP-C's cook only went green after five pre-existing blockers were fixed (three `cook-executor` bugs in the app, two UE-project build-config defects) — see §2.
+**What we did NOT prove:** a *playable* slice. The live harness drives operator-flow steps 6–22 — the gameplay systems are generated (SP-B), packaged (SP-C), and the packaged build's launch is smoke-tested (SP-E). But steps 23–24's gameplay verification cannot be done: the project has **no playable content** — no level, no GameMode/default map, no Blueprints, no placed actors. The autonomous build produced gameplay *systems* as C++ and a *packaged binary*, but never an assembled, runnable game. Closing that gap — authoring UE content, which is binary and cannot be generated as text — is the next phase, scoped in the SP-E findings doc.
 
 **Efficiency verdict (before further development):**
 
@@ -23,17 +23,17 @@
 | Feature scaffolding (dispatch → generate → verify) | **Strong** | steps 6–16 produced verified artifacts live; SP-B generated a loot system + HUD + damage numbers |
 | Idempotency / re-runnability | **Strong** | verify-and-skip proven across D5–SP-B |
 | Reliability of the dispatch loop | **Solid — after heavy remediation** | the dispatch path took SP-A + a 4-run SP-B saga to harden (handshake, cold-start window, auto-submit, abnormal-exit release, callback-POST timeout, single-dispatch isolation) |
-| End-to-end "one-click game" | **Partial** | gameplay chain + packaging (6–21) run live; PIE verification (22–24) not yet run |
+| End-to-end "one-click game" | **Partial** | systems + packaging + launch (6–22) run live; gameplay verification (23–24) impossible — no playable content was ever generated |
 | Packaging (cook → `.exe`) | **Works — after fixes** | SP-C cooked a Win64 Shipping `.exe`; required fixing three `cook-executor` bugs + two UE-project build-config defects first |
 | Operator ergonomics | **Moderate** | works, but per-step latency, no in-app run dashboard, machine-sleep fragility, and a CLI-session subsystem that needed deep fixes to drive autonomously |
 
-**Bottom line:** PoF can drive autonomous Claude to build an ARPG's gameplay systems and package the result — proven live through step 21. But getting there was *not* turnkey: the CLI-session subsystem took a sustained remediation to drive autonomously, and the packaging path had its own cluster of latent bugs. PoF is a capable *system-by-system* generator and now a *packager*; turning it into a one-click vertical-slice builder still needs the CLI subsystem hardened for chained autonomy and the PIE-verification step run. See §5.
+**Bottom line:** PoF can drive autonomous Claude to build an ARPG's gameplay systems, package the result, and launch the packaged build — proven live through step 22. But getting there was *not* turnkey: the CLI-session subsystem took a sustained remediation to drive autonomously, and the packaging path had its own cluster of latent bugs. And the packaged build, while it launches, is **not a playable game** — no level, Blueprints, or content were ever generated, so the gameplay success criteria cannot be met. PoF is a capable *system-by-system code generator* and a *packager*; turning it into a one-click vertical-slice builder still needs the CLI subsystem hardened for chained autonomy **and a way to author runnable UE content** (binary maps/Blueprints Claude cannot write as text). See §5 and the SP-E findings.
 
 ---
 
 ## 2. Chronological activity log
 
-The initiative was decomposed into four sub-projects (A–D); D (execution) was split into iterations D1–D9 as live runs surfaced issues. A post-D9 roadmap (P0–P3, see §5) adds sub-projects SP-A through SP-E; **SP-A, SP-B, and SP-C are complete.**
+The initiative was decomposed into four sub-projects (A–D); D (execution) was split into iterations D1–D9 as live runs surfaced issues. A post-D9 roadmap (P0–P3, see §5) adds sub-projects SP-A through SP-E; **SP-A, SP-B, SP-C, and SP-E are complete — the roadmap is closed.**
 
 ### Sub-project A — Analysis (2026-05-19)
 Deep-read the codebase and produced the readiness map: 10 in-scope modules, a 24-step Playwright operator flow across 8 phases, 5 vertical-slice success criteria, and a dependency-wave order. Captured per-module analysis (`modules/*.md`) and hoisted every blocker into a 20-item gap inventory. **Deliverable:** [`INDEX.md`](./INDEX.md), [`gap-inventory.md`](./gap-inventory.md), [`testid-coverage.md`](./testid-coverage.md).
@@ -98,6 +98,27 @@ A sixth, harness-only issue: a successful cook reported an empty exe path — `c
 
 **Result — SP-C delivered.** The cook spec passes live (1/1); `PoF.exe` is staged at `Saved\StagedBuilds\Windows\PoF.exe` and `CookProgress` surfaces the path. The headline: every blocker was a pre-existing defect in PoF's own `cook-executor` or the UE project's build config — the autonomously-generated game code packaged without a single change.
 
+### Sub-project SP-E — packaged-build smoke-test + honest verdict (2026-05-21)
+
+Final roadmap sub-project (operator-flow steps 22–24). Exploring the project
+invalidated the original "verify the slice in PIE" premise: there is **no
+playable content** — zero `.umap` files, no `GlobalDefaultGameMode`/default
+map, no Blueprints, no placed actors. SP-B generated the gameplay systems as
+C++ and SP-C packaged them, but a runnable level was never assembled.
+
+SP-E was re-scoped to a **launch smoke-test plus an honest verdict**.
+`e2e/arpg-vertical-slice-sp-e.spec.ts` spawns the staged `PoF.exe`, observes
+whether the real game process survives a 25 s window, and captures the engine
+log. Outcome: **PASS — the packaged build launches and the game process
+survives.** Of the five success criteria, **#1 (the build launches)** is
+verified by the smoke-test; **#2–#5 (gameplay)** are honestly recorded as
+**not verifiable** — there is nothing runnable to exercise.
+
+The SP-E findings doc scopes the next phase: the artifacts and dependencies
+(a level, Blueprints, GameMode/default-map wiring, asset deps, a verification
+mechanism) needed for an actually-runnable slice — see
+[`2026-05-21-live-sp-e-smoke.md`](./scenario-runs/2026-05-21-live-sp-e-smoke.md).
+
 ---
 
 ## 3. Per-step status & recommendations
@@ -151,8 +172,9 @@ Status legend: **✅ Proven live** (executed, artifacts verified) · **◐ Exerc
 ### Phase 8 — Slice verification (outside PoF)
 | # | Step | Status | Notes & recommendation |
 |---|---|---|---|
-| 22–23 | Launch `.exe`, drive WASD+LMB, verify 5 success bullets | ○ | Not attempted. **Rec:** this is the hardest-to-automate phase (needs keyboard simulation or frame-diffing). Consider a manual checkpoint here first, automate later. |
-| 24 | Capture findings | ✅ (ongoing) | This report + the per-run docs are that deliverable. |
+| 22 | Launch the packaged `.exe` | ✅ | **SP-E: done.** `e2e/arpg-vertical-slice-sp-e.spec.ts` spawned the staged `PoF.exe`; the real game process survived a 25 s window. Result in [`2026-05-21-live-sp-e-smoke.md`](./scenario-runs/2026-05-21-live-sp-e-smoke.md). |
+| 23 | Drive WASD+LMB, verify gameplay bullets | ⛔ | **Not verifiable.** The project has no playable level (no `.umap`, no GameMode/default map, no Blueprints, no placed actors) — criteria #2–#5 cannot be exercised. The next phase must assemble runnable content first; scope in the SP-E findings doc. |
+| 24 | Capture findings | ✅ | This report + the per-run docs. SP-E adds the packaged-build verdict. |
 
 ---
 
@@ -207,3 +229,4 @@ Status legend: **✅ Proven live** (executed, artifacts verified) · **◐ Exerc
 - SP-A (P0 reliability): spec [`2026-05-20-...-sp-a-design.md`](../../superpowers/specs/2026-05-20-arpg-vertical-slice-sp-a-design.md), plan [`2026-05-20-...-sp-a.md`](../../superpowers/plans/2026-05-20-arpg-vertical-slice-sp-a.md), tests `e2e/sp-a-finding-a.spec.ts` + `src/__tests__/lib/cli-dispatch.test.ts`
 - SP-B (gameplay chain): spec [`2026-05-20-...-sp-b-design.md`](../../superpowers/specs/2026-05-20-arpg-vertical-slice-sp-b-design.md), the remediation specs/plans `2026-05-21-harness-cli-session-detection-fix`, `2026-05-21-cli-session-subsystem-fix`, `2026-05-21-sp-b-single-dispatch-rework`, spec `e2e/arpg-vertical-slice-sp-b.spec.ts`, findings [`2026-05-21-live-sp-b-chunk1-summary.md`](./scenario-runs/2026-05-21-live-sp-b-chunk1-summary.md) + [`-chunk2-summary.md`](./scenario-runs/2026-05-21-live-sp-b-chunk2-summary.md), CLI-subsystem investigation [`2026-05-21-cli-subsystem-findings.md`](./scenario-runs/2026-05-21-cli-subsystem-findings.md)
 - SP-C (packaging): spec [`2026-05-21-...-sp-c-design.md`](../../superpowers/specs/2026-05-21-arpg-vertical-slice-sp-c-design.md), plan [`2026-05-21-...-sp-c.md`](../../superpowers/plans/2026-05-21-arpg-vertical-slice-sp-c.md), spec `e2e/arpg-vertical-slice-sp-c.spec.ts`, live findings [`2026-05-21-live-sp-c-cook.md`](./scenario-runs/2026-05-21-live-sp-c-cook.md)
+- SP-E (packaged-build smoke-test): spec [`2026-05-21-...-sp-e-design.md`](../../superpowers/specs/2026-05-21-arpg-vertical-slice-sp-e-design.md), plan [`2026-05-21-...-sp-e.md`](../../superpowers/plans/2026-05-21-arpg-vertical-slice-sp-e.md), spec `e2e/arpg-vertical-slice-sp-e.spec.ts`, findings [`2026-05-21-live-sp-e-smoke.md`](./scenario-runs/2026-05-21-live-sp-e-smoke.md)
