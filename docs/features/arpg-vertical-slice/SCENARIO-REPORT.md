@@ -2,7 +2,7 @@
 
 > Capstone synthesis of the end-to-end test & development initiative: drive the PoF UI to make autonomous Claude build a playable ARPG vertical slice in UE5. Covers chronology, per-step status, per-step recommendations, and an executive read on how efficient the app is as a game-building tool.
 >
-> **Period:** 2026-05-19 → 2026-05-20. **Branch:** `master`. **Target UE5 project:** `C:\Users\kazda\Documents\Unreal Projects\PoF` (UE 5.7.3).
+> **Period:** 2026-05-19 → 2026-05-21. **Branch:** `master`. **Target UE5 project:** `C:\Users\kazda\Documents\Unreal Projects\PoF` (UE 5.7.3).
 
 ---
 
@@ -10,27 +10,27 @@
 
 **What we set out to prove:** that PoF can drive Claude — through its own UI, using stable testIds — to build a primitive but real ARPG game, and to surface what the app still needs to get there.
 
-**What we actually proved:** PoF's core value loop works and is now reliable. A single click on a module checklist item dispatches an autonomous Claude Code session that writes real UE5 C++ and assets, and the harness verifies the output at the file level. We demonstrated this end-to-end, live, for three foundational domains — **input handling, animation, and the Gameplay Ability System** — each producing genuine, build-clean artifacts (validated `.uasset` files, compiling C++, `0 error(s)` UE builds). Re-runs are idempotent (Claude verifies-and-skips existing work). After two false starts, the one reliability defect (an intermittent dispatch race) is now closed and regression-guarded.
+**What we actually proved:** PoF's core value loop works, and PoF drove autonomous Claude to build the ARPG gameplay chain. A click on a module checklist item dispatches an autonomous Claude Code session that writes real UE5 C++ and assets. We demonstrated this end-to-end, live, across **operator-flow steps 6–16** — input handling, animation, GAS, combat, the enemy character, loot-on-death, the HUD, and floating damage numbers. SP-B's run produced genuine autonomous generation: a loot system (`ARPGLootDropComponent`, `ARPGWorldItem`), HUD widgets, and a damage-number system — real C++ files written by Claude through PoF. Re-runs are idempotent (Claude verifies-and-skips existing work).
 
-**What we did NOT prove:** a *complete, packaged, playable* slice. Of the 24-step operator flow, the live harness drives steps 6–10. The downstream gameplay chain — combat → dummy enemy → loot drop → HUD → packaged `.exe` → in-PIE verification (steps 11–24) — is fully designed, gap-cleared, and testId-wired, but has **not yet been executed in a live run**. The two P0 reliability blockers (Finding A; the dispatch race) are now **closed** — see sub-project SP-A in §2.
+**What we did NOT prove:** a *complete, packaged, playable* slice. Of the 24-step operator flow, the live harness now drives steps 6–16. The remaining work — packaged `.exe` (steps 17–21) and in-PIE verification (steps 22–24) — is designed and gap-cleared but not yet live-run. Getting the gameplay chain to run live was *hard*: it took a four-run remediation saga (see SP-B in §2) that surfaced and fixed a cluster of real CLI-session bugs in the app.
 
 **Efficiency verdict (before further development):**
 
 | Dimension | Rating | Basis |
 |---|---|---|
-| Feature scaffolding (dispatch → generate → verify) | **Strong** | 3/3 attempted domains produced verified artifacts, first-try, ~1–4 min each |
-| Idempotency / re-runnability | **Strong** | verify-and-skip proven across D5–D9 |
-| Reliability of the dispatch loop | **Solid** | dispatch race fixed at the app level (SP-A ready-handshake) + D9 harness backstop; deterministically tested |
-| End-to-end "one-click game" | **Unproven** | 14 of 24 steps wired-but-unrun; no packaged slice yet |
-| Operator ergonomics | **Moderate** | works, but per-step latency + no in-app run dashboard + machine-sleep fragility |
+| Feature scaffolding (dispatch → generate → verify) | **Strong** | steps 6–16 produced verified artifacts live; SP-B generated a loot system + HUD + damage numbers |
+| Idempotency / re-runnability | **Strong** | verify-and-skip proven across D5–SP-B |
+| Reliability of the dispatch loop | **Solid — after heavy remediation** | the dispatch path took SP-A + a 4-run SP-B saga to harden (handshake, cold-start window, auto-submit, abnormal-exit release, callback-POST timeout, single-dispatch isolation) |
+| End-to-end "one-click game" | **Partial** | gameplay chain (6–16) runs live; packaging + PIE verification (17–24) not yet run |
+| Operator ergonomics | **Moderate** | works, but per-step latency, no in-app run dashboard, machine-sleep fragility, and a CLI-session subsystem that needed deep fixes to drive autonomously |
 
-**Bottom line:** PoF is already an effective *system-by-system UE5 scaffolding harness* — high leverage for standing up individual gameplay systems with verification. It is **not yet a turnkey vertical-slice builder**. With the P0 reliability blockers closed (SP-A), the shortest path to that claim is: (1) drive the remaining gameplay + packaging steps in a live run, (2) reduce per-step friction. See §5 for the prioritized roadmap.
+**Bottom line:** PoF can drive autonomous Claude to build an ARPG's gameplay systems — proven live through step 16. But the CLI-session subsystem was *not* robust enough for unattended back-to-back dispatch; it took a sustained remediation (a handful of real app-bug fixes plus a single-dispatch execution model) to get there. PoF is a capable *system-by-system* generator; turning it into a turnkey vertical-slice builder still needs the CLI subsystem hardened for chained autonomy and the packaging/verification steps run. See §5.
 
 ---
 
 ## 2. Chronological activity log
 
-The initiative was decomposed into four sub-projects (A–D); D (execution) was split into iterations D1–D9 as live runs surfaced issues. A post-D9 roadmap (P0–P3, see §5) adds sub-projects SP-A through SP-E; SP-A is complete.
+The initiative was decomposed into four sub-projects (A–D); D (execution) was split into iterations D1–D9 as live runs surfaced issues. A post-D9 roadmap (P0–P3, see §5) adds sub-projects SP-A through SP-E; **SP-A and SP-B are complete.**
 
 ### Sub-project A — Analysis (2026-05-19)
 Deep-read the codebase and produced the readiness map: 10 in-scope modules, a 24-step Playwright operator flow across 8 phases, 5 vertical-slice success criteria, and a dependency-wave order. Captured per-module analysis (`modules/*.md`) and hoisted every blocker into a 20-item gap inventory. **Deliverable:** [`INDEX.md`](./INDEX.md), [`gap-inventory.md`](./gap-inventory.md), [`testid-coverage.md`](./testid-coverage.md).
@@ -64,6 +64,21 @@ First sub-project of the post-D9 P0–P3 roadmap. Closed both P0 reliability def
 - **Finding A — closed.** The Step-6 build-verify button failed to render in every D-series run. SP-A found the true root cause ran deeper than the original diagnosis: beyond the harness querying before the wizard/scan completed, a **pre-existing React StrictMode bug cancelled the project scan entirely** (the mount effect's `clearTimeout` cleanup killed the only scheduled scan; the `initialScanDone` ref then blocked rescheduling), so `BuildVerifyPanel` never mounted in dev. Fix: drop the `clearTimeout`; add a `completeSetupWizard` harness helper that drives the real wizard; add a 3-state `scanState` (`idle`/`scanning`/`settled`) signal for a deterministic wait. `e2e/sp-a-finding-a.spec.ts` proves the button is reachable + enabled.
 - **Dispatch race — closed at the app level.** `useModuleCLI` previously dispatched the `pof-cli-prompt` event on a fixed 100 ms timer that could beat the terminal's listener registration. Replaced with a ready-handshake: `CompactTerminal` announces `pof-cli-terminal-ready`; the new `dispatchPromptWhenReady` helper dispatches on that signal (immediate if already ready), with a 5 s loud-failure fallback. TDD'd via `src/__tests__/lib/cli-dispatch.test.ts` (4/4). D9's harness-side re-dispatch remains as a backstop.
 
+### Sub-project SP-B — gameplay chain live (2026-05-20 → 2026-05-21)
+
+P1 of the roadmap: drive operator-flow steps 11–16 live (combat, enemy, loot, HUD + verification). This took **four failed 40-minute chained-run attempts**, each surfacing and fixing a distinct CLI-session defect, before a strategic pivot made it succeed:
+
+| Attempt | Failure | Fix |
+|---|---|---|
+| Run 1 | dispatch race / D9 re-dispatch double-submit → stuck `isRunning` | (superseded) |
+| Run 2 | `waitForCliComplete`'s 8 s session-start window < a live `claude.exe` cold start; the prompt never auto-submitted | cold-start window 4 s→90 s; re-dispatch removed (`0f5c2fd`) |
+| Run 3 | `CompactTerminal` auto-submit unreliable; abnormal process exit didn't release `isRunning` | direct-submit (`ca41688`) + `onerror` completes the task (`b68e459`) |
+| Run 4 | `onTaskComplete` gated behind a hangable callback POST → `isRunning` stuck | callback POST raced against a 10 s timeout (`28ed4e1`) |
+
+**The pivot — single-dispatch execution.** A diagnostic probe proved a *single isolated dispatch* always worked; only *chained back-to-back same-module dispatches in one page* failed. SP-B was reworked so each step runs as its own isolated Playwright test (fresh page) — structurally eliminating the chained-`isRunning` collision and any single-test hang (`822b9ff`). A broken nvm-for-windows Claude CLI install (a half-done self-update leaving `claude.exe` missing) was also a recurring blocker; it was removed so the working `AppData` install is used.
+
+**Result — SP-B 10/10.** Chunk 1 (3/3, 5.8 min): combat acb-1/acb-4 (verify-and-skip — classes pre-existed) + ae-2 (extended `ARPGEnemyCharacter`). Chunk 2 (7/7, 16 min): loot al-5/al-6, HUD au-1/au-2/au-7, feature-matrix scan, evaluator — **12 UE source files of real autonomous generation** (loot system, HUD widgets, damage-number system). One minor non-blocking gap: step 16's evaluator run-button testId was not located (informational step, skipped cleanly).
+
 ---
 
 ## 3. Per-step status & recommendations
@@ -94,20 +109,20 @@ Status legend: **✅ Proven live** (executed, artifacts verified) · **◐ Exerc
 ### Phase 3 — Wave 2 (combat, enemy AI)
 | # | Step | Status | Notes & recommendation |
 |---|---|---|---|
-| 11 | arpg-combat (acb-1, acb-4) | ○ | Prompts gap-cleared (hit-dedup, death flow); not run live. **Rec:** this is the next live step to wire — it's the first that depends on both prior waves and exercises cross-module deps. |
-| 12 | arpg-enemy-ai (dummy enemy) | ○ | "Minimal dummy" path designed (ASC, no BT/EQS). **Rec:** confirm the slice-mode quick action exists in the registry before running; the analysis flagged this as an open question. |
+| 11 | arpg-combat (acb-1, acb-4) | ✅ | SP-B: both dispatched live as isolated tests (42 s / 125 s sessions). Verify-and-skip — `GA_MeleeAttack` and the GAS damage execution already existed. **Rec:** none — foundation confirmed. |
+| 12 | arpg-enemy-ai (ae-2) | ✅ | SP-B: ae-2 dispatched live (~118 s) — extended `ARPGEnemyCharacter.cpp/.h`. Used `ae-2` directly (skip the over-scoped ae-1/ae-3..ae-8). **Rec:** none. |
 
 ### Phase 4 — Wave 3 (loot, UI)
 | # | Step | Status | Notes & recommendation |
 |---|---|---|---|
-| 13 | arpg-loot (al-5, al-6) | ○ | Inventory-free cheat-path designed. **Rec:** run after enemy death flow exists (al-5 spawns on death). |
-| 14 | arpg-ui (au-1, au-2, au-7) | ○ | HUD + GAS-bound health + floating damage. **Rec:** run last in the gameplay chain; depends on attributes existing. |
+| 13 | arpg-loot (al-5, al-6) | ✅ | SP-B: both dispatched live — real generation: `ARPGLootDropComponent`, `ARPGWorldItem` (slice-mode loot-on-death + overlap pickup). |
+| 14 | arpg-ui (au-1, au-2, au-7) | ✅ | SP-B: all three dispatched live — real generation: `ARPGMainHUDWidget`, `DamageNumberWidget`/`Manager`. |
 
 ### Phase 5–6 — Verification gates
 | # | Step | Status | Notes & recommendation |
 |---|---|---|---|
-| 15 | Feature-matrix scan per module | ○ | testIds exist (GAP-019 closed). **Rec:** cheap, high-value — wire this as an assertion after each gameplay step to confirm features flip to `implemented`. |
-| 16 | Evaluator deep-eval gate | ○ | testIds exist (GAP-020 closed); eval is severity/findings-based. **Rec:** gate "module done" on findings-count below threshold rather than eyeballing. |
+| 15 | Feature-matrix scan | ✅ (informational) | SP-B: scan ran on arpg-combat (~122 s). Informational — recorded, never gates. |
+| 16 | Evaluator deep-eval | ◐ | SP-B: navigated, but `pof-module-evaluator-run-btn` was not located → step skipped cleanly (informational). **Rec:** verify the evaluator run-button testId / its render path — minor harness wiring gap. |
 
 ### Phase 7 — Packaging
 | # | Step | Status | Notes & recommendation |
@@ -130,7 +145,9 @@ Status legend: **✅ Proven live** (executed, artifacts verified) · **◐ Exerc
 4. **Registry vs. component drift bites.** The animation step used component-level IDs (`step-commandlet-assets`) not registry IDs, and the generate button lived inside a collapsed panel (D6). Artifact paths differed from prompts (`Character` vs `Characters`, D7.5). **Rec:** a single source of truth for testIds + artifact paths would remove a whole class of these.
 5. **The dispatch race may affect real users, not just the harness.** The flake came from the app's own `useModuleCLI` 100 ms `mountDelay` firing before `CompactTerminal`'s listener mounts. The harness re-dispatched to work around it — but a real user clicking fast could hit the same lost dispatch. **Done in SP-A** — `useModuleCLI` now dispatches on a `pof-cli-terminal-ready` handshake; the 100 ms timer is gone.
 6. **A latent bug stays hidden until a consumer demands determinism.** Finding A's real root cause — the project scan never running under React dev StrictMode — had existed for the project's whole life, masked by the manual "Scan" button that developers click out of habit. It only became *blocking* when the autonomous harness needed the scan to auto-complete. **Rec:** treat "the harness can't do X" findings as candidates for a real underlying bug, not just a test-wiring gap.
-7. **App bug — `CompactTerminal` auto-submit is unreliable (discovered in SP-B).** When a module's "Claude" button is clicked, the app dispatches a `pof-cli-prompt` event that *populates* the terminal input with the full prompt — but `CompactTerminal`'s effect meant to auto-submit that prompt does not reliably fire. The prompt then sits in the input unsent, terminal status "Ready", no session ever starts. The D-series only worked because D9's re-dispatch happened to give the auto-submit a second chance; SP-B exposed it once that crutch was removed. A real user clicking a module "Claude" button can hit the same dead prompt. The SP-B harness now works around it by explicitly clicking the Send button after dispatch (`dispatchRoadmapChecklistItem`, commit `dbd2c92`). **Rec (P0-class app fix):** make `CompactTerminal`'s auto-submit deterministic — a prompt set from a `pof-cli-prompt` event must always submit.
+7. **The CLI-session subsystem had a *cluster* of compounding bugs.** SP-B's four failed runs each surfaced a distinct one: auto-submit gated on a re-render-cancelled timer; an abnormal process exit (`onerror`) not releasing `session.isRunning`; `onTaskComplete` gated behind a hangable callback POST. All are now fixed at the app level (`ca41688`, `b68e459`, `28ed4e1`). The pattern: each fix was real and correct, and each revealed the next layer — a sign that a subsystem was never exercised under the determinism an autonomous consumer demands.
+8. **When fix-and-rerun stops converging, change the execution model.** Four 40-minute chained runs failed before the pivot to single-dispatch isolation (one isolated test per step). The lesson mirrors D8→D9: chained autonomy is fragile; *isolated* dispatch is robust and was provably reliable. Don't keep betting long runs on "the next fix is the last one" — change the model.
+9. **The toolchain itself is a moving part.** A broken nvm-for-windows Claude CLI install (a half-done self-update) blocked SP-B repeatedly and *regenerated* after deletion. Autonomous harnesses need a stable, single CLI install — verify `claude --version` as a pre-flight, not an assumption.
 
 ---
 
@@ -141,14 +158,16 @@ Status legend: **✅ Proven live** (executed, artifacts verified) · **◐ Exerc
 - ~~Fix the dispatch race at the app level~~ — **closed.** `useModuleCLI` now dispatches on a `pof-cli-terminal-ready` handshake instead of the 100 ms timer.
 - *Residual (non-blocking, deferred):* a session evicted from the 5-session terminal LRU and unmounted could lose a dispatch after the 5 s fallback — pre-existing class, ≤2 sessions in harness use; candidate for a future CLI-robustness pass.
 
-**P1 — close the end-to-end claim**
-- Wire and run the **gameplay chain live** (steps 11–14: combat → dummy enemy → loot → HUD), then **packaging** (17–21), as gated background runs. This is the difference between "scaffolds systems" and "builds a slice."
-- Add **feature-matrix + evaluator assertions** (15–16) after each gameplay step — cheap signal that generated features actually register as implemented.
+**P1 — gameplay chain ✅ DONE (sub-project SP-B, 2026-05-21)**
+- ~~Wire and run the gameplay chain live (steps 11–16)~~ — **done.** 10/10 steps ran live as isolated single-dispatch tests; combat / enemy / loot / HUD / damage-numbers generated. Required a 4-run remediation that fixed a cluster of CLI-session bugs (see §2 SP-B, §4 lessons 7–9).
+- *Still open:* **packaging** (steps 17–21 → a `.exe`) is the next sub-project, **SP-C**.
+- *Carry-forward:* harness artifact checks are loose (`fileNameContains` can match pre-existing files — the real pass signal is session completion + observed file writes); step 16's evaluator run-button testId needs a fix. Both non-blocking.
 
 **P2 — operator efficiency**
 - Single source of truth for **testIds + artifact paths** (registry-driven) to kill the drift class of failures.
 - An **in-app run dashboard** (GAP-018) so non-CLI users can launch + watch multi-step runs; today it's Playwright/API only.
 - Reduce per-step latency where possible (parallel-safe steps, cached builds).
+- **Harden the CLI-session subsystem** for chained autonomy — the single-dispatch model works but a real user/automation doing back-to-back dispatches still benefits from the subsystem being robust end to end.
 
 **P3 — full autonomy**
 - Automate **Phase 8 PIE verification** (keyboard sim / frame-diff). Highest effort, lowest current confidence; a manual checkpoint is acceptable in the interim.
@@ -161,6 +180,7 @@ Status legend: **✅ Proven live** (executed, artifacts verified) · **◐ Exerc
 - Gaps (20, 18 closed): [`gap-inventory.md`](./gap-inventory.md)
 - testId coverage: [`testid-coverage.md`](./testid-coverage.md)
 - Per-module analysis: [`modules/`](./modules/)
-- Live-run findings: [`scenario-runs/`](./scenario-runs/) (D1 stub → D9)
-- D9 dispatch-race fix: spec [`2026-05-20-...-d9-design.md`](../../superpowers/specs/2026-05-20-arpg-vertical-slice-scenario-d9-design.md), plan [`2026-05-20-...-d9.md`](../../superpowers/plans/2026-05-20-arpg-vertical-slice-scenario-d9.md), fixture `e2e/harness-redispatch.spec.ts`, live findings [`2026-05-20-live-d9.md`](./scenario-runs/2026-05-20-live-d9.md)
-- SP-A (P0 reliability): spec [`2026-05-20-...-sp-a-design.md`](../../superpowers/specs/2026-05-20-arpg-vertical-slice-sp-a-design.md), plan [`2026-05-20-...-sp-a.md`](../../superpowers/plans/2026-05-20-arpg-vertical-slice-sp-a.md), Finding A test `e2e/sp-a-finding-a.spec.ts`, dispatch handshake test `src/__tests__/lib/cli-dispatch.test.ts`
+- Live-run findings: [`scenario-runs/`](./scenario-runs/) (D1 stub → D9, SP-B per-step + chunk summaries)
+- D9 dispatch-race fix: spec [`2026-05-20-...-d9-design.md`](../../superpowers/specs/2026-05-20-arpg-vertical-slice-scenario-d9-design.md), plan [`2026-05-20-...-d9.md`](../../superpowers/plans/2026-05-20-arpg-vertical-slice-scenario-d9.md), live findings [`2026-05-20-live-d9.md`](./scenario-runs/2026-05-20-live-d9.md)
+- SP-A (P0 reliability): spec [`2026-05-20-...-sp-a-design.md`](../../superpowers/specs/2026-05-20-arpg-vertical-slice-sp-a-design.md), plan [`2026-05-20-...-sp-a.md`](../../superpowers/plans/2026-05-20-arpg-vertical-slice-sp-a.md), tests `e2e/sp-a-finding-a.spec.ts` + `src/__tests__/lib/cli-dispatch.test.ts`
+- SP-B (gameplay chain): spec [`2026-05-20-...-sp-b-design.md`](../../superpowers/specs/2026-05-20-arpg-vertical-slice-sp-b-design.md), the remediation specs/plans `2026-05-21-harness-cli-session-detection-fix`, `2026-05-21-cli-session-subsystem-fix`, `2026-05-21-sp-b-single-dispatch-rework`, spec `e2e/arpg-vertical-slice-sp-b.spec.ts`, findings [`2026-05-21-live-sp-b-chunk1-summary.md`](./scenario-runs/2026-05-21-live-sp-b-chunk1-summary.md) + [`-chunk2-summary.md`](./scenario-runs/2026-05-21-live-sp-b-chunk2-summary.md), CLI-subsystem investigation [`2026-05-21-cli-subsystem-findings.md`](./scenario-runs/2026-05-21-cli-subsystem-findings.md)
