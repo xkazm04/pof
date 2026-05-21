@@ -3,6 +3,8 @@
 > Capstone synthesis of the end-to-end test & development initiative: drive the PoF UI to make autonomous Claude build a playable ARPG vertical slice in UE5. Covers chronology, per-step status, per-step recommendations, and an executive read on how efficient the app is as a game-building tool.
 >
 > **Period:** 2026-05-19 → 2026-05-21. **Branch:** `master`. **Target UE5 project:** `C:\Users\kazda\Documents\Unreal Projects\PoF` (UE 5.7.3).
+>
+> **Latest:** sub-project SP-C complete — PoF packaged the autonomously-built project into a Win64 Shipping `.exe`.
 
 ---
 
@@ -10,9 +12,9 @@
 
 **What we set out to prove:** that PoF can drive Claude — through its own UI, using stable testIds — to build a primitive but real ARPG game, and to surface what the app still needs to get there.
 
-**What we actually proved:** PoF's core value loop works, and PoF drove autonomous Claude to build the ARPG gameplay chain. A click on a module checklist item dispatches an autonomous Claude Code session that writes real UE5 C++ and assets. We demonstrated this end-to-end, live, across **operator-flow steps 6–16** — input handling, animation, GAS, combat, the enemy character, loot-on-death, the HUD, and floating damage numbers. SP-B's run produced genuine autonomous generation: a loot system (`ARPGLootDropComponent`, `ARPGWorldItem`), HUD widgets, and a damage-number system — real C++ files written by Claude through PoF. Re-runs are idempotent (Claude verifies-and-skips existing work).
+**What we actually proved:** PoF's core value loop works, and PoF drove autonomous Claude to build the ARPG gameplay chain. A click on a module checklist item dispatches an autonomous Claude Code session that writes real UE5 C++ and assets. We demonstrated this end-to-end, live, across **operator-flow steps 6–16** — input handling, animation, GAS, combat, the enemy character, loot-on-death, the HUD, and floating damage numbers. SP-B's run produced genuine autonomous generation: a loot system (`ARPGLootDropComponent`, `ARPGWorldItem`), HUD widgets, and a damage-number system — real C++ files written by Claude through PoF. Re-runs are idempotent (Claude verifies-and-skips existing work). **SP-C** then drove PoF's packaging UI to cook that project into a Win64 Shipping build — `PoF.exe` is staged on disk (steps 17–21).
 
-**What we did NOT prove:** a *complete, packaged, playable* slice. Of the 24-step operator flow, the live harness now drives steps 6–16. The remaining work — packaged `.exe` (steps 17–21) and in-PIE verification (steps 22–24) — is designed and gap-cleared but not yet live-run. Getting the gameplay chain to run live was *hard*: it took a four-run remediation saga (see SP-B in §2) that surfaced and fixed a cluster of real CLI-session bugs in the app.
+**What we did NOT prove:** a *complete, playable* slice. Of the 24-step operator flow, the live harness now drives steps 6–21. The remaining work — in-PIE verification (steps 22–24) — is designed and gap-cleared but not yet live-run. Getting each phase to run live was *hard*: SP-B took a four-run remediation saga (a cluster of CLI-session bugs), and SP-C's cook only went green after five pre-existing blockers were fixed (three `cook-executor` bugs in the app, two UE-project build-config defects) — see §2.
 
 **Efficiency verdict (before further development):**
 
@@ -21,16 +23,17 @@
 | Feature scaffolding (dispatch → generate → verify) | **Strong** | steps 6–16 produced verified artifacts live; SP-B generated a loot system + HUD + damage numbers |
 | Idempotency / re-runnability | **Strong** | verify-and-skip proven across D5–SP-B |
 | Reliability of the dispatch loop | **Solid — after heavy remediation** | the dispatch path took SP-A + a 4-run SP-B saga to harden (handshake, cold-start window, auto-submit, abnormal-exit release, callback-POST timeout, single-dispatch isolation) |
-| End-to-end "one-click game" | **Partial** | gameplay chain (6–16) runs live; packaging + PIE verification (17–24) not yet run |
+| End-to-end "one-click game" | **Partial** | gameplay chain + packaging (6–21) run live; PIE verification (22–24) not yet run |
+| Packaging (cook → `.exe`) | **Works — after fixes** | SP-C cooked a Win64 Shipping `.exe`; required fixing three `cook-executor` bugs + two UE-project build-config defects first |
 | Operator ergonomics | **Moderate** | works, but per-step latency, no in-app run dashboard, machine-sleep fragility, and a CLI-session subsystem that needed deep fixes to drive autonomously |
 
-**Bottom line:** PoF can drive autonomous Claude to build an ARPG's gameplay systems — proven live through step 16. But the CLI-session subsystem was *not* robust enough for unattended back-to-back dispatch; it took a sustained remediation (a handful of real app-bug fixes plus a single-dispatch execution model) to get there. PoF is a capable *system-by-system* generator; turning it into a turnkey vertical-slice builder still needs the CLI subsystem hardened for chained autonomy and the packaging/verification steps run. See §5.
+**Bottom line:** PoF can drive autonomous Claude to build an ARPG's gameplay systems and package the result — proven live through step 21. But getting there was *not* turnkey: the CLI-session subsystem took a sustained remediation to drive autonomously, and the packaging path had its own cluster of latent bugs. PoF is a capable *system-by-system* generator and now a *packager*; turning it into a one-click vertical-slice builder still needs the CLI subsystem hardened for chained autonomy and the PIE-verification step run. See §5.
 
 ---
 
 ## 2. Chronological activity log
 
-The initiative was decomposed into four sub-projects (A–D); D (execution) was split into iterations D1–D9 as live runs surfaced issues. A post-D9 roadmap (P0–P3, see §5) adds sub-projects SP-A through SP-E; **SP-A and SP-B are complete.**
+The initiative was decomposed into four sub-projects (A–D); D (execution) was split into iterations D1–D9 as live runs surfaced issues. A post-D9 roadmap (P0–P3, see §5) adds sub-projects SP-A through SP-E; **SP-A, SP-B, and SP-C are complete.**
 
 ### Sub-project A — Analysis (2026-05-19)
 Deep-read the codebase and produced the readiness map: 10 in-scope modules, a 24-step Playwright operator flow across 8 phases, 5 vertical-slice success criteria, and a dependency-wave order. Captured per-module analysis (`modules/*.md`) and hoisted every blocker into a 20-item gap inventory. **Deliverable:** [`INDEX.md`](./INDEX.md), [`gap-inventory.md`](./gap-inventory.md), [`testid-coverage.md`](./testid-coverage.md).
@@ -78,6 +81,22 @@ P1 of the roadmap: drive operator-flow steps 11–16 live (combat, enemy, loot, 
 **The pivot — single-dispatch execution.** A diagnostic probe proved a *single isolated dispatch* always worked; only *chained back-to-back same-module dispatches in one page* failed. SP-B was reworked so each step runs as its own isolated Playwright test (fresh page) — structurally eliminating the chained-`isRunning` collision and any single-test hang (`822b9ff`). A broken nvm-for-windows Claude CLI install (a half-done self-update leaving `claude.exe` missing) was also a recurring blocker; it was removed so the working `AppData` install is used.
 
 **Result — SP-B 10/10.** Chunk 1 (3/3, 5.8 min): combat acb-1/acb-4 (verify-and-skip — classes pre-existed) + ae-2 (extended `ARPGEnemyCharacter`). Chunk 2 (7/7, 16 min): loot al-5/al-6, HUD au-1/au-2/au-7, feature-matrix scan, evaluator — **12 UE source files of real autonomous generation** (loot system, HUD widgets, damage-number system). One minor non-blocking gap: step 16's evaluator run-button testId was not located (informational step, skipped cleanly).
+
+### Sub-project SP-C — packaging live (2026-05-21)
+
+P1 continuation: drive operator-flow steps 17–21 — cook the autonomously-built project into a Win64 Shipping `.exe` via PoF's packaging UI. **Part A** (build-verify pre-flight, a direct `UnrealBuildTool` run on `PoFEditor`) was clean. **Part B** (a new isolated cook spec, `e2e/arpg-vertical-slice-sp-c.spec.ts`) reached green only after **five distinct pre-existing blockers** — none in SP-B's generated code, which compiled cleanly in Shipping:
+
+| # | Blocker | Where | Fix |
+|---|---|---|---|
+| 1 | `cmd.exe` spawn mangled the quoted UAT command → cook never launched (exit 1) | PoF `cook-executor.ts` | `windowsVerbatimArguments` + outer-quote wrapping (`8b149ab`, `bff53bc`) |
+| 2 | child `stderr` discarded → failures undiagnosable | PoF `cook-executor.ts` | drain stderr into the error message (`8b149ab`) |
+| 3 | Shipping target's custom `GlobalDefinitions` not allowed | UE `PoF.Target.cs` | `bOverrideBuildEnvironment = true` (UE project, not under git) |
+| 4 | editor-only `FEditorDelegates` unguarded in a runtime module | UE `PofTestRunner.cpp` | `#if WITH_EDITOR` guard (UE project) |
+| 5 | empty `ProjectID` → cook commandlet config-import error | UE `DefaultGame.ini` | filled with a generated GUID (UE project) |
+
+A sixth, harness-only issue: a successful cook reported an empty exe path — `cook-executor` searched for a line RunUAT never prints; now derives the path from the stage directory (`697370e`).
+
+**Result — SP-C delivered.** The cook spec passes live (1/1); `PoF.exe` is staged at `Saved\StagedBuilds\Windows\PoF.exe` and `CookProgress` surfaces the path. The headline: every blocker was a pre-existing defect in PoF's own `cook-executor` or the UE project's build config — the autonomously-generated game code packaged without a single change.
 
 ---
 
@@ -127,7 +146,7 @@ Status legend: **✅ Proven live** (executed, artifacts verified) · **◐ Exerc
 ### Phase 7 — Packaging
 | # | Step | Status | Notes & recommendation |
 |---|---|---|---|
-| 17–21 | Navigate → Win64 Shipping → cook → progress → read `.exe` path | ○ | Backend (`/api/packaging/execute`) + `CookProgress` UI built in B; stub-validated in D1, never run live. **Rec:** the cook is long (minutes); run it as its own gated background step with a generous cap, like the D9 live run. |
+| 17–21 | Navigate → Win64 Shipping → cook → progress → read `.exe` path | ✅ | **SP-C: done.** PoF's packaging UI cooked a Win64 Shipping build; `PoF.exe` staged on disk, path surfaced by `CookProgress`. Required fixing 3 `cook-executor` bugs + 2 UE-project build-config defects (see §2 SP-C). **Rec:** none for the path; later run the `.exe` in PIE/standalone (Phase 8). |
 
 ### Phase 8 — Slice verification (outside PoF)
 | # | Step | Status | Notes & recommendation |
@@ -160,8 +179,11 @@ Status legend: **✅ Proven live** (executed, artifacts verified) · **◐ Exerc
 
 **P1 — gameplay chain ✅ DONE (sub-project SP-B, 2026-05-21)**
 - ~~Wire and run the gameplay chain live (steps 11–16)~~ — **done.** 10/10 steps ran live as isolated single-dispatch tests; combat / enemy / loot / HUD / damage-numbers generated. Required a 4-run remediation that fixed a cluster of CLI-session bugs (see §2 SP-B, §4 lessons 7–9).
-- *Still open:* **packaging** (steps 17–21 → a `.exe`) is the next sub-project, **SP-C**.
+- ~~*Still open:* **packaging** (steps 17–21 → a `.exe`)~~ — **done (sub-project SP-C, 2026-05-21).** PoF's packaging UI cooked a Win64 Shipping `.exe`; required fixing 3 `cook-executor` bugs + 2 UE-project build-config defects (see §2 SP-C).
 - *Carry-forward:* harness artifact checks are loose (`fileNameContains` can match pre-existing files — the real pass signal is session completion + observed file writes); step 16's evaluator run-button testId needs a fix. Both non-blocking.
+
+**P1.5 — packaging ✅ DONE (sub-project SP-C, 2026-05-21)**
+- ~~Cook the project to a Win64 Shipping `.exe` via PoF's packaging UI~~ — **done.** The five blockers fixed along the way were all pre-existing: the PoF `cook-executor` had never actually launched a real cook (the `cmd.exe` spawn was broken), and the UE project's Shipping build config had latent defects. **Rec:** the `cook-executor` fixes (spawn, stderr, exe-path) are real app improvements worth keeping regardless of the harness.
 
 **P2 — operator efficiency**
 - Single source of truth for **testIds + artifact paths** (registry-driven) to kill the drift class of failures.
@@ -184,3 +206,4 @@ Status legend: **✅ Proven live** (executed, artifacts verified) · **◐ Exerc
 - D9 dispatch-race fix: spec [`2026-05-20-...-d9-design.md`](../../superpowers/specs/2026-05-20-arpg-vertical-slice-scenario-d9-design.md), plan [`2026-05-20-...-d9.md`](../../superpowers/plans/2026-05-20-arpg-vertical-slice-scenario-d9.md), live findings [`2026-05-20-live-d9.md`](./scenario-runs/2026-05-20-live-d9.md)
 - SP-A (P0 reliability): spec [`2026-05-20-...-sp-a-design.md`](../../superpowers/specs/2026-05-20-arpg-vertical-slice-sp-a-design.md), plan [`2026-05-20-...-sp-a.md`](../../superpowers/plans/2026-05-20-arpg-vertical-slice-sp-a.md), tests `e2e/sp-a-finding-a.spec.ts` + `src/__tests__/lib/cli-dispatch.test.ts`
 - SP-B (gameplay chain): spec [`2026-05-20-...-sp-b-design.md`](../../superpowers/specs/2026-05-20-arpg-vertical-slice-sp-b-design.md), the remediation specs/plans `2026-05-21-harness-cli-session-detection-fix`, `2026-05-21-cli-session-subsystem-fix`, `2026-05-21-sp-b-single-dispatch-rework`, spec `e2e/arpg-vertical-slice-sp-b.spec.ts`, findings [`2026-05-21-live-sp-b-chunk1-summary.md`](./scenario-runs/2026-05-21-live-sp-b-chunk1-summary.md) + [`-chunk2-summary.md`](./scenario-runs/2026-05-21-live-sp-b-chunk2-summary.md), CLI-subsystem investigation [`2026-05-21-cli-subsystem-findings.md`](./scenario-runs/2026-05-21-cli-subsystem-findings.md)
+- SP-C (packaging): spec [`2026-05-21-...-sp-c-design.md`](../../superpowers/specs/2026-05-21-arpg-vertical-slice-sp-c-design.md), plan [`2026-05-21-...-sp-c.md`](../../superpowers/plans/2026-05-21-arpg-vertical-slice-sp-c.md), spec `e2e/arpg-vertical-slice-sp-c.spec.ts`, live findings [`2026-05-21-live-sp-c-cook.md`](./scenario-runs/2026-05-21-live-sp-c-cook.md)
