@@ -327,7 +327,15 @@ export function useTaskQueue(opts: UseTaskQueueOpts) {
 
         assistantOutputRef.current = '';
 
-        cbPromise.finally(() => {
+        // Complete the task once the callback POST settles — but never wait on
+        // it indefinitely. resolveCallback's POST can hang; gating onTaskComplete
+        // on it alone strands session.isRunning forever (the SP-B chunk-1 run #4
+        // hang). Race it against callbackSettleMax so the completion — and the
+        // isRunning release — always fires within a bounded window.
+        Promise.race([
+          cbPromise,
+          new Promise<void>((resolve) => setTimeout(resolve, UI_TIMEOUTS.callbackSettleMax)),
+        ]).finally(() => {
           const tid = currentTaskIdRef.current;
           if (tid) {
             registerTaskComplete(tid, instanceId, !data.isError);

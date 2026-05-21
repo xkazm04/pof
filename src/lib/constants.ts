@@ -71,6 +71,10 @@ export const UI_TIMEOUTS = {
   /** Safety fallback: dispatch a CLI prompt anyway if the terminal never
    *  announces readiness (loud-failure backstop, not the normal path). */
   terminalReadyFallback: 5000,
+  /** Max time the result handler waits for the callback POST before firing
+   *  onTaskComplete anyway — bounds a hung POST so session.isRunning is always
+   *  released (a ceiling; a healthy POST settles well within it). */
+  callbackSettleMax: 10000,
   /** Flash duration after a checklist item completes. */
   completionFlash: 2000,
   /** Delay between batch-queued checklist items. */
