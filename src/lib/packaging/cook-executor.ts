@@ -41,11 +41,27 @@ export async function* cookExecutor(opts: CookExecutorOptions): AsyncGenerator<C
   const spawnImpl = opts.spawnFn ?? (spawn as unknown as SpawnFn);
 
   const cmdString = generateUATCommand(opts.profile, opts.projectPath, opts.projectName, opts.ueVersion);
-  const child = spawnImpl('cmd.exe', ['/c', cmdString], { stdio: ['ignore', 'pipe', 'pipe'] });
+  // windowsVerbatimArguments: cmdString embeds quoted paths. Without this Node
+  // escapes those quotes as \" , which cmd.exe cannot parse — the command
+  // fails to launch and exits 1 before the cook ever starts.
+  const child = spawnImpl('cmd.exe', ['/c', cmdString], {
+    stdio: ['ignore', 'pipe', 'pipe'],
+    windowsVerbatimArguments: true,
+  });
 
   if (opts.signal) {
     opts.signal.addEventListener('abort', () => {
       try { child.kill('SIGTERM'); } catch { /* noop */ }
+    });
+  }
+
+  // Drain stderr concurrently: an unread stderr pipe can stall the child, and
+  // its tail is the only diagnostic when the cook fails before any stdout.
+  let stderrTail = '';
+  if (child.stderr) {
+    child.stderr.setEncoding('utf-8');
+    child.stderr.on('data', (d: string) => {
+      stderrTail = (stderrTail + d).slice(-4000);
     });
   }
 
@@ -115,9 +131,12 @@ export async function* cookExecutor(opts: CookExecutorOptions): AsyncGenerator<C
       t: t(),
     };
   } else {
+    const tail = stderrTail.trim();
     yield {
       type: 'error',
-      message: `cook exited with code ${exit}`,
+      message: tail
+        ? `cook exited with code ${exit}\n${tail}`
+        : `cook exited with code ${exit}`,
       status: 'failed',
       t: t(),
     };

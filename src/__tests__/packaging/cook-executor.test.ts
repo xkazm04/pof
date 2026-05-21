@@ -11,11 +11,11 @@ const FIXTURES = join(__dirname, 'fixtures');
 const SUCCESS_LOG = readFileSync(join(FIXTURES, 'cook-success.log'), 'utf-8');
 const FAIL_LOG = readFileSync(join(FIXTURES, 'cook-fail.log'), 'utf-8');
 
-function makeFakeChild(stdout: string, exitCode: number): ChildProcess {
+function makeFakeChild(stdout: string, exitCode: number, stderr: string = ''): ChildProcess {
   const emitter = new EventEmitter() as ChildProcess;
   Object.assign(emitter, {
     stdout: Readable.from([stdout]),
-    stderr: Readable.from([]),
+    stderr: Readable.from(stderr ? [stderr] : []),
     stdin: null,
     pid: 1234,
     exitCode: null as number | null,
@@ -110,6 +110,20 @@ describe('cookExecutor', () => {
     if (last?.type === 'error') {
       expect(last.status).toBe('failed');
       expect(last.message).toMatch(/code 1/);
+    }
+  });
+
+  it('includes the stderr tail in the error message on failure', async () => {
+    const events: CookEvent[] = [];
+    const stderr = 'RunUAT.bat is not recognized as an internal or external command';
+    for await (const ev of cookExecutor({ ...baseOpts, spawnFn: () => makeFakeChild('', 1, stderr) })) {
+      events.push(ev);
+    }
+    const last = events.at(-1);
+    expect(last?.type).toBe('error');
+    if (last?.type === 'error') {
+      expect(last.message).toMatch(/code 1/);
+      expect(last.message).toContain('is not recognized');
     }
   });
 
