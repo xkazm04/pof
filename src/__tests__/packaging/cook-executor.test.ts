@@ -3,7 +3,7 @@ import { EventEmitter } from 'node:events';
 import { Readable } from 'node:stream';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import type { ChildProcess } from 'node:child_process';
+import type { ChildProcess, SpawnOptions } from 'node:child_process';
 import { cookExecutor, type CookEvent } from '@/lib/packaging/cook-executor';
 import type { BuildProfile } from '@/lib/packaging/build-profiles';
 
@@ -111,6 +111,22 @@ describe('cookExecutor', () => {
       expect(last.status).toBe('failed');
       expect(last.message).toMatch(/code 1/);
     }
+  });
+
+  it('spawns cmd.exe with the command wrapped and verbatim args', async () => {
+    let capturedArgs: string[] | undefined;
+    let capturedOpts: SpawnOptions | undefined;
+    const spawnFn = (_cmd: string, args: string[], optsArg?: SpawnOptions): ChildProcess => {
+      capturedArgs = args;
+      capturedOpts = optsArg;
+      return makeFakeChild(SUCCESS_LOG, 0);
+    };
+    for await (const _ev of cookExecutor({ ...baseOpts, spawnFn })) { /* drain */ }
+    expect(capturedArgs?.[0]).toBe('/c');
+    // The command must be wrapped in an outer quote pair so `cmd /c` does not
+    // strip the inner quotes off the embedded paths.
+    expect(capturedArgs?.[1]).toMatch(/^".*"$/);
+    expect(capturedOpts?.windowsVerbatimArguments).toBe(true);
   });
 
   it('includes the stderr tail in the error message on failure', async () => {

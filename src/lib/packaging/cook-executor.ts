@@ -41,10 +41,12 @@ export async function* cookExecutor(opts: CookExecutorOptions): AsyncGenerator<C
   const spawnImpl = opts.spawnFn ?? (spawn as unknown as SpawnFn);
 
   const cmdString = generateUATCommand(opts.profile, opts.projectPath, opts.projectName, opts.ueVersion);
-  // windowsVerbatimArguments: cmdString embeds quoted paths. Without this Node
-  // escapes those quotes as \" , which cmd.exe cannot parse — the command
-  // fails to launch and exits 1 before the cook ever starts.
-  const child = spawnImpl('cmd.exe', ['/c', cmdString], {
+  // cmdString embeds quoted paths. Two Windows quirks must both be handled or
+  // the command never launches (exit 1):
+  //  - windowsVerbatimArguments stops Node escaping the inner quotes as \" ;
+  //  - `cmd /c` strips the outer quote pair off its argument, so the whole
+  //    command is wrapped in an extra pair to keep the inner quotes intact.
+  const child = spawnImpl('cmd.exe', ['/c', `"${cmdString}"`], {
     stdio: ['ignore', 'pipe', 'pipe'],
     windowsVerbatimArguments: true,
   });
