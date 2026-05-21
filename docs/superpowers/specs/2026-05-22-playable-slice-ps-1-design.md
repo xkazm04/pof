@@ -43,7 +43,9 @@ already works.
 5. Enemy with Health ≤ 0 is destroyed; one loot pickup actor spawns at its
    death location.
 
-Criterion #1 is already verified (SP-E). **PS-1 targets #2–#5.**
+Criterion #1 is already verified (SP-E). **PS-1 targets #2–#5**, with #3
+scoped to ability activation — the "montage plays" visual is deferred to PS-2,
+since no real attack animation exists in the project.
 
 ## Goals
 
@@ -69,10 +71,14 @@ Criterion #1 is already verified (SP-E). **PS-1 targets #2–#5.**
 ## Decision record (from brainstorming)
 
 1. **Playable-first** — PS-1 (gray-box) before PS-2/PS-3 (content).
-2. **Mannequin player + box-dummy enemy** — the player is the UE engine
-   mannequin (`SK_Mannequin`) so the generated locomotion blendspace + melee
-   montage are reusable and criterion #3 is genuinely verifiable; the enemy is
-   a simple box dummy with a Health attribute.
+2. **Primitive player + box enemy** — a UE-project inventory (2026-05-22)
+   established that the project has **no skeleton, no skeletal mesh, and no real
+   animation data** — the generated `BS*_Locomotion` / `AM_MeleeCombo` assets
+   are empty commandlet-generated shells, and no `SK_Mannequin` exists. So the
+   gray-box player is a capsule with an engine primitive static-mesh body, and
+   the enemy is a box. Character visuals and animation are deferred to PS-2
+   (Blender). Criterion #3 is verified at the **ability-activation** level, not
+   the montage-animation level (see the design and the criteria table).
 3. **In-engine automation test** — criteria #2–#5 are verified by a UE
    automation/functional test asserting real game state, not external input
    simulation or fuzzy vision.
@@ -97,6 +103,34 @@ Scripts are run headless:
 The scripts are authored by Claude and run by the harness/controller — no PoF
 UI, no Claude-CLI dispatch.
 
+### Wiring gaps PS-1 must close
+
+The inventory found SP-B's generated code has gaps that block a runnable slice
+(the code compiles but was never wired into anything). Closing these is PS-1
+scope:
+
+- **The player ASC is never granted any ability.** `GA_MeleeAttack` is
+  activated by gameplay tag, but no code grants it to the player. PS-1 adds a
+  minimal grant path — preferred: a small C++ `DefaultAbilities`
+  (`TArray<TSubclassOf<UGameplayAbility>>`) UPROPERTY on `ARPGCharacterBase`
+  granted on possession, so it can be populated from a Blueprint CDO via
+  Python (authoring Blueprint event graphs from Python is not practical).
+- **Enhanced Input lives on `ARPGPlayerController`, not the character.** PS-1
+  creates a `BP_VSPlayerController` with the `DefaultMappingContext` and the
+  `IA_Move` / `IA_PrimaryAttack` action properties assigned.
+- **No Input Mapping Context exists.** PS-1 creates an `IMC` asset mapping
+  WASD → `IA_Move` and LMB → `IA_Attack`.
+- **`GA_MeleeAttack` self-disables** unless `AttackMontage` is non-null and
+  `ComboSectionNames` is non-empty. PS-1 configures a `BP_GA_MeleeAttack` with
+  the (empty-shell) `AM_MeleeCombo` as a non-null montage, a section name, and
+  a `DamageEffect` GameplayEffect — enough to pass `CanActivateAbility` and
+  apply damage. Plan Task 1 confirms whether damage application is gated on a
+  montage notify (which the empty shell lacks); if so, that gating is the bug
+  to fix.
+- **Loot auto-drop only fires for `AARPGEnemyCharacter`** (the loot component
+  binds that class's `OnEnemyDeath` delegate). PS-1's enemy is therefore
+  `AARPGEnemyCharacter` (visually a box), not `ARPGCombatTestDummy`.
+
 ### What PS-1 builds
 
 **1. The level — `/Game/Maps/VerticalSlice.umap`.** A UE Python script
@@ -104,35 +138,37 @@ creates a new level containing:
 - a floor (a large box / plane static mesh with collision),
 - a `DirectionalLight` + a `SkyLight` (so the scene is lit, not black),
 - a `PlayerStart`,
-- one placed dummy enemy (see below).
+- one placed enemy (see below).
 
 **2. The player — `BP_VSPlayer`.** A Blueprint subclass of the SP-B-generated
 `ARPGPlayerCharacter`, created by UE Python and configured via its
 class-default object:
-- `SK_Mannequin` (engine mannequin) as the skeletal mesh,
-- an AnimInstance using the existing generated `BS1D_Locomotion` blendspace
-  and `AM_MeleeCombo` montage (a minimal AnimBlueprint, or the project's
-  `ARPGAnimInstance`, whichever the generated assets target),
-- the generated `GA_MeleeAttack` ability granted via the character's GAS
-  default ability set,
-- an `IMC_Default` Input Mapping Context wired to the existing `IA_Move` /
-  `IA_Attack` Input Actions. `IMC_Default` does not exist (operator-step ih-2
-  was never run) — PS-1 creates it.
+- an engine primitive static mesh (e.g. `/Engine/BasicShapes/Cylinder`) as a
+  visible body attached to the character, so it is not invisible. No skeletal
+  mesh, no AnimInstance — character animation is deferred to PS-2.
+- `GA_MeleeAttack` (configured via `BP_GA_MeleeAttack`) listed in the new
+  `DefaultAbilities` array so it is granted on possession,
+- the attribute-init data the character base expects (`AttributeInitTable` /
+  row name) so GAS attributes initialise.
 
-**3. The enemy — `BP_VSDummy`.** A Blueprint subclass of the generated
-`ARPGCombatTestDummy` (or `ARPGEnemyCharacter` if the dummy class is not
-viable), configured via UE Python:
-- a box static mesh as its visible body,
-- a GAS AttributeSet with a Health attribute initialised to a small value
+**3. The player controller — `BP_VSPlayerController`.** A Blueprint subclass of
+`ARPGPlayerController` with `DefaultMappingContext` → the new `IMC`,
+`IA_Move` → `IA_Move`, and `IA_PrimaryAttack` → `IA_Attack`.
+
+**4. The enemy — `BP_VSEnemy`.** A Blueprint subclass of `AARPGEnemyCharacter`,
+created by UE Python:
+- an engine box static mesh (`/Engine/BasicShapes/Cube`) as its visible body,
+- the attribute-init data so its GAS `Health` initialises to a small value
   (so a couple of hits kill it),
-- the generated `ARPGLootDropComponent`, configured to drop one
-  `ARPGWorldItem` on death.
+- its `LootDropComponent` configured with a minimal loot output (a loot table
+  or gold drop), `bSliceMode` / `bAutoDropOnDeath` left on, so killing it
+  drops a self-cleaning `ARPGWorldItem`.
 
-**4. Project wiring — `DefaultEngine.ini`.** UE Python (or a direct config
-edit) sets:
-- `GlobalDefaultGameMode` → `ARPGGameMode`,
-- the GameMode's default pawn → `BP_VSPlayer`,
-- `GameDefaultMap` and `EditorStartupMap` → `/Game/Maps/VerticalSlice`.
+**5. Project wiring.** A `BP_VSGameMode` (subclass of `ARPGGameMode`) with
+`DefaultPawnClass` → `BP_VSPlayer` and `PlayerControllerClass` →
+`BP_VSPlayerController`; and `DefaultEngine.ini` set so `GlobalDefaultGameMode`
+→ `BP_VSGameMode` and `GameDefaultMap` / `EditorStartupMap` →
+`/Game/Maps/VerticalSlice`.
 
 ### Verification — the C++ functional test
 
@@ -144,13 +180,15 @@ or an `FAutomationTestBase`) compiled into the project verifies criteria
 The test:
 - **#2 movement** — possesses the player, injects a movement input for N
   frames, asserts the pawn's world location changed by more than a threshold.
-- **#3 attack** — triggers the `IA_Attack` action / activates `GA_MeleeAttack`,
-  asserts the ability activated and the melee montage is playing on the mesh.
-- **#4 damage** — positions the player in melee range of the dummy, performs an
-  attack, asserts the dummy's Health attribute decreased.
-- **#5 death + loot** — drives the dummy's Health to ≤ 0, asserts the enemy
-  actor is destroyed and exactly one `ARPGWorldItem` (or loot pickup actor)
-  exists in the world near the death location.
+- **#3 attack** — activates `GA_MeleeAttack` (by tag, as the input path does),
+  asserts the ability **successfully activated** — entered, not rejected by
+  `CanActivateAbility`. The "montage plays" visual is *not* asserted; no real
+  attack animation exists, so #3 is scoped to ability activation.
+- **#4 damage** — positions the player in melee range of the enemy, performs an
+  attack, asserts the enemy's GAS `Health` attribute decreased.
+- **#5 death + loot** — drives the enemy's `Health` to ≤ 0, asserts the enemy
+  actor is destroyed and a loot actor (`ARPGWorldItem`) spawned near the death
+  location.
 
 A Gemini-vision screenshot of a PIE frame is captured as a **secondary visual
 sanity check** (e.g. "a character stands on a lit floor with a box enemy") —
@@ -166,7 +204,7 @@ build, but that is not PS-1's gate.)
 ## Verification (of PS-1 itself)
 
 - The UE Python authoring scripts run without error and produce the
-  `.umap` / Blueprint / `IMC_Default` assets and the config edits.
+  `.umap`, the Blueprints, the `IMC` and the config edits.
 - `UnrealEditor-Cmd` runs the C++ functional test headless; PS-1 passes when
   the test reports all of #2–#5 green.
 - A findings doc records the result, the Gemini sanity-check, and any bugs
@@ -187,8 +225,8 @@ build, but that is not PS-1's gate.)
 ## Definition of done
 
 1. UE Python authoring scripts created and run; the `VerticalSlice` map,
-   `BP_VSPlayer`, `BP_VSDummy`, `IMC_Default`, and the project-config wiring
-   exist.
+   `BP_VSPlayer`, `BP_VSPlayerController`, `BP_VSEnemy`, `BP_VSGameMode`,
+   `BP_GA_MeleeAttack`, the `IMC`, and the project-config wiring exist.
 2. The C++ functional test created, compiled, and run headless.
 3. Criteria #2–#5 verified green by the functional test. Any blocking bug in
    SP-B's generated systems found along the way is fixed and recorded.
@@ -197,26 +235,32 @@ build, but that is not PS-1's gate.)
 5. Committed to `master`; chat summary.
 
 **Success criterion:** the gray-box slice runs in PIE and a deterministic
-in-engine test confirms WASD movement, attack + montage, enemy damage, and
-enemy death + loot drop — a genuinely playable, verifiable vertical slice
-(criteria #2–#5), ready for PS-2/PS-3 to dress with real content.
+in-engine test confirms WASD movement, attack-ability activation, enemy
+damage, and enemy death + loot drop — a genuinely playable, verifiable
+vertical slice (criteria #2–#5, #3 at the ability-activation level), ready for
+PS-2/PS-3 to dress with real content and animation.
 
 ## Risks & mitigations
 
-- **SP-B's generated gameplay C++ has never run.** It compiles (SP-C), but GAS
-  ability-granting, the loot-drop component, the attack/damage flow, and input
-  binding have never executed. PS-1 will likely surface logic bugs. Mitigation:
-  this is expected and in scope — PS-1 fixes blocking bugs in the generated
-  systems and records them; it is the point of the sub-project, not a detour.
-- **Animation-asset skeleton mismatch.** The generated `BS1D_Locomotion` /
-  `AM_MeleeCombo` target some skeleton; if it is not the UE mannequin's, a
-  retarget is needed (the project has Mixamo-retarget Python). Confirmed at
-  plan time; if a retarget is required it is a planned step.
-- **UE Python cannot do everything from a script.** Some asset wiring (e.g.
-  AnimBlueprint graph authoring) is hard to script. Mitigation: keep the
-  gray-box minimal — prefer the simplest AnimInstance that drives locomotion +
-  the montage; if a piece genuinely cannot be scripted, fall back to a small
-  C++ class default or a one-time editor action, recorded as a finding.
+- **SP-B's generated gameplay C++ has never run.** It compiles (SP-C), but it
+  was never wired into anything runnable — the inventory already found four
+  concrete gaps (no ability granted to the player, input on the controller not
+  the character, no `IMC`, the loot delegate bound only to `AARPGEnemyCharacter`)
+  and PS-1 will likely surface more logic bugs once it runs. Mitigation: this
+  is expected and in scope — PS-1 closes the known gaps and fixes blocking bugs
+  it finds, recording each; it is the point of the sub-project, not a detour.
+- **`GA_MeleeAttack` damage may be gated on a montage notify.** `AM_MeleeCombo`
+  is an empty shell with no notifies. If the ability applies its damage GE from
+  a hit-window AnimNotify rather than on activation, criterion #4 fails until
+  that path is fixed. Mitigation: plan Task 1 reads `GA_MeleeAttack.cpp` to
+  determine the damage path; if notify-gated, PS-1 adds a direct damage
+  application (or a minimal notify) as a recorded wiring fix.
+- **UE Python cannot do everything from a script.** Some Blueprint wiring (e.g.
+  event-graph logic) is not practical to author from Python. Mitigation: PS-1
+  is designed around CDO-property configuration only — the `DefaultAbilities`
+  C++ array exists precisely so ability-granting is a CDO array set, not graph
+  authoring. If a piece genuinely cannot be scripted, fall back to a small C++
+  class default, recorded as a finding.
 - **Headless automation + PIE quirks.** Running PIE under `-unattended -nullrhi`
   can behave differently from interactive PIE. Mitigation: if `-nullrhi` breaks
   the test, run with a real RHI windowed; the test asserts game state, not
