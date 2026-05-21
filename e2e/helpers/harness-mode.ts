@@ -236,11 +236,14 @@ export async function waitForCliComplete(
   page: Page,
   sessionLabel: string,
   timeoutMs: number = 600_000,
-  opts: { appearGraceMs?: number; redispatch?: boolean } = {},
+  opts: { appearGraceMs?: number } = {},
 ): Promise<WaitResult> {
   const start = Date.now();
-  const appearGraceMs = opts.appearGraceMs ?? 4_000;
-  const redispatch = opts.redispatch ?? true;
+  // Cold-start ceiling. A live `claude.exe` start (process spawn + auth + MCP
+  // init + first streamed token) can take tens of seconds before the running
+  // indicator appears. waitFor returns the instant the indicator attaches, so
+  // a fast start is not slowed — this is only an upper bound.
+  const appearGraceMs = opts.appearGraceMs ?? 90_000;
 
   if (process.env.HARNESS_MODE !== 'live') {
     await page.waitForTimeout(200);
@@ -253,36 +256,19 @@ export async function waitForCliComplete(
     await indicator.first().waitFor({ state: 'attached', timeout: appearGraceMs });
     attached = true;
   } catch {
-    // Grace elapsed without the indicator. The pof-cli-prompt event was likely
-    // dispatched into the 100ms mountDelay window before CompactTerminal's
-    // listener registered, so nothing started the session. Strategy B: re-fire
-    // the SAME recorded event ONCE via page.evaluate — never a second UI click
-    // (a second click can spawn a duplicate Claude session; see D8 regression,
-    // commit 370edbd). The re-dispatch reaches the now-mounted terminal listener.
-    if (redispatch) {
-      const reDispatched = await page.evaluate(() => {
-        const list = window.__pofHarnessDispatches ?? [];
-        const last = list[list.length - 1];
-        if (last?.detail) {
-          window.dispatchEvent(new CustomEvent('pof-cli-prompt', { detail: last.detail }));
-          return true;
-        }
-        return false;
-      });
-      if (reDispatched) {
-        try {
-          await indicator.first().waitFor({ state: 'attached', timeout: appearGraceMs });
-          attached = true;
-        } catch { /* still nothing after replay */ }
-      }
-    }
+    // Indicator never appeared within the cold-start ceiling — the CLI session
+    // genuinely did not start. No re-dispatch: SP-A's dispatchPromptWhenReady
+    // app handshake guarantees a dispatch reaches a mounted terminal, so a
+    // harness-level re-dispatch could only double-submit (the SP-B chunk-1
+    // failure: a slow start was mis-read as a lost dispatch, re-dispatched,
+    // and the duplicate task stuck session.isRunning true).
   }
   if (!attached) {
     return {
       success: false,
       durationMs: Date.now() - start,
       timedOut: false,
-      outputExcerpt: `waitForCliComplete(${sessionLabel}): running indicator never appeared within ${appearGraceMs}ms even after one re-dispatch — dispatch likely never fired, or no recorded dispatch to replay`,
+      outputExcerpt: `waitForCliComplete(${sessionLabel}): running indicator never appeared within ${appearGraceMs}ms — the CLI session did not start`,
     };
   }
 
