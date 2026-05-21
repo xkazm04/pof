@@ -77,6 +77,34 @@ export async function dispatchRoadmapChecklistItem(
   if ((await claudeBtn.count()) === 0) return fail(`no "Claude" button in row ${target.itemId}`);
   await claudeBtn.click();
 
+  // The Claude-button click dispatches a pof-cli-prompt event that populates
+  // the terminal input, but CompactTerminal's auto-submit is unreliable — it
+  // often leaves the prompt sitting unsent (proven by the SP-B diagnostic
+  // probe: 9226-char prompt in the input, terminal "Ready", no session).
+  // Explicitly submit by clicking the Send button once the input is populated.
+  // CompactTerminal.handleSubmit guards on empty-input / isStreaming, so this
+  // cannot double-submit even if the auto-submit also fires. Live mode only:
+  // in stub mode the capture listener stops the event so the input never fills.
+  if (process.env.HARNESS_MODE === 'live') {
+    const input = page.getByTestId('pof-cli-panel-input').first();
+    const pollStart = Date.now();
+    let populated = false;
+    while (Date.now() - pollStart < 15_000) {
+      const value = await input.inputValue().catch(() => '');
+      if (value.trim().length > 0) {
+        populated = true;
+        break;
+      }
+      await page.waitForTimeout(300);
+    }
+    if (populated) {
+      const sendBtn = page.getByTestId('pof-cli-panel-send-btn').first();
+      if (await sendBtn.isEnabled().catch(() => false)) {
+        await sendBtn.click();
+      }
+    }
+  }
+
   return waitForCliComplete(page, target.sessionLabel, timeoutMs);
 }
 
