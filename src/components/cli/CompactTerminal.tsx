@@ -12,7 +12,6 @@ import { TerminalInput } from './TerminalInput';
 import { AntiPatternWarning } from './AntiPatternWarning';
 import { useCLIPanelStore } from './store/cliPanelStore';
 import { MODULE_COLORS } from '@/lib/chart-colors';
-import { UI_TIMEOUTS } from '@/lib/constants';
 
 export function CompactTerminal({
   instanceId, projectPath, title = 'Terminal', className = '',
@@ -37,6 +36,11 @@ export function CompactTerminal({
     onTaskStart, onTaskComplete, onQueueEmpty, onStreamingChange,
     onBatchFlushed,
   });
+  // tqRef always points at the latest task queue. The pof-cli-prompt handler
+  // is registered in an [instanceId]-keyed effect, so it must reach the
+  // current submitPrompt/sessionId through this ref, not a stale closure.
+  const tqRef = useRef(tq);
+  tqRef.current = tq;
 
   // Always virtualize — older logs go to react-window, recent tail (8) stays outside
   const virtualizedLogCount = useMemo(() => Math.max(0, tq.logs.length - 8), [tq.logs.length]);
@@ -54,8 +58,6 @@ export function CompactTerminal({
   }, [scroll.addUnseenCount]);
 
   // --- Submit / Resume / BuildFix ---
-
-  const pendingPromptRef = useRef<string | null>(null);
 
   const handleSubmit = useCallback(async (resume = false) => {
     if (!input.trim() || tq.isStreaming) return;
@@ -82,8 +84,14 @@ export function CompactTerminal({
     const handler = (e: Event) => {
       const { tabId, prompt } = (e as CustomEvent).detail;
       if (tabId !== instanceId) return;
-      pendingPromptRef.current = prompt;
-      setInput(prompt);
+      // Submit the dispatched prompt DIRECTLY. The previous design set `input`
+      // state and relied on a separate effect to auto-submit it — but that
+      // effect's clearTimeout cleanup cancelled the submit timer on every
+      // re-render (unstable handleSubmit dep), so the prompt routinely sat
+      // unsent. Submitting straight through removes the race entirely.
+      const queue = tqRef.current;
+      if (typeof prompt !== 'string' || !prompt.trim() || queue.isStreaming) return;
+      void queue.submitPrompt(prompt, queue.sessionId !== null);
     };
     window.addEventListener('pof-cli-prompt', handler);
 
@@ -98,21 +106,13 @@ export function CompactTerminal({
     };
   }, [instanceId]);
 
-  // Auto-submit when input is set from a pof-cli-prompt event
-  useEffect(() => {
-    if (pendingPromptRef.current && input === pendingPromptRef.current && !tq.isStreaming) {
-      pendingPromptRef.current = null;
-      const timer = setTimeout(() => handleSubmit(tq.sessionId !== null), UI_TIMEOUTS.autoSubmitDelay);
-      return () => clearTimeout(timer);
-    }
-  }, [input, tq.isStreaming, tq.sessionId, handleSubmit]);
-
-  // Build fix prompt injection
+  // Build fix prompt injection — submit directly (the auto-submit effect that
+  // this previously depended on has been removed; see the pof-cli-prompt
+  // handler above).
   const handleBuildFix = useCallback((prompt: string) => {
-    if (tq.isStreaming) return;
-    setInput(prompt);
-    pendingPromptRef.current = prompt;
-  }, [tq.isStreaming]);
+    if (!prompt.trim() || tq.isStreaming) return;
+    void tq.submitPrompt(prompt, tq.sessionId !== null);
+  }, [tq]);
 
   // Empty state prompt chip fill — just fills input without submitting
   const handlePromptFill = (prompt: string) => {
