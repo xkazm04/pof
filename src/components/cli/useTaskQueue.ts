@@ -358,19 +358,39 @@ export function useTaskQueue(opts: UseTaskQueueOpts) {
     savedStreamUrlRef.current = streamUrl;
     const eventSource = new EventSource(streamUrl);
     eventSourceRef.current = eventSource;
+    // Tracks whether this connection has already completed its task — set by a
+    // terminal result/error SSE event, checked by onerror, so the task is
+    // completed exactly once regardless of which path observes the stream end.
+    let completed = false;
     eventSource.onmessage = (event) => {
       try {
         const data = JSON.parse(event.data) as CLISSEEvent;
         handleSSEEvent(data);
         if (data.type === 'result' || data.type === 'error') {
+          completed = true;
           eventSource.close();
           eventSourceRef.current = null;
           savedStreamUrlRef.current = null;
         }
       } catch (e) { console.error('Failed to parse SSE:', e); }
     };
-    eventSource.onerror = () => { eventSource.close(); eventSourceRef.current = null; };
-  }, [handleSSEEvent]);
+    eventSource.onerror = () => {
+      eventSource.close();
+      eventSourceRef.current = null;
+      // Abnormal stream termination — e.g. the Claude process exited non-zero
+      // without emitting a clean result/error SSE event. Complete the in-flight
+      // task as failed so onTaskComplete fires and session.isRunning is
+      // released; otherwise every same-module dispatch stays blocked behind a
+      // disabled "Claude" button (the SP-B chunk-1 37-minute hang).
+      if (completed) return;
+      completed = true;
+      const tid = currentTaskIdRef.current;
+      if (tid) {
+        registerTaskComplete(tid, instanceId, false);
+        onTaskComplete?.(tid, false);
+      }
+    };
+  }, [handleSSEEvent, instanceId, onTaskComplete]);
 
   // --- Task execution ---
 
