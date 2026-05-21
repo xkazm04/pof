@@ -31,7 +31,9 @@ const PHASE_MARKERS: ReadonlyArray<{ pattern: RegExp; phase: CookPhase }> = [
 ];
 
 const PROGRESS_REGEX = /progress=(\d+)%/i;
-const EXE_PATH_REGEX = /Staged executable:?\s*([A-Z]:\\[^"\r\n]+?\.exe)/i;
+// RunUAT does not print the staged exe path directly; it prints the stage
+// directory. The staged launcher exe is <stageDir>\<ProjectName>.exe.
+const STAGE_DIR_REGEX = /(?:Cleaning Stage Directory|to staging directory):\s*([A-Z]:\\.+?)\s*$/i;
 const LOG_THROTTLE_MS = 100;
 
 export async function* cookExecutor(opts: CookExecutorOptions): AsyncGenerator<CookEvent> {
@@ -74,7 +76,7 @@ export async function* cookExecutor(opts: CookExecutorOptions): AsyncGenerator<C
   }
 
   let currentPhase: CookPhase | null = null;
-  let exePath: string | null = null;
+  let stageDir: string | null = null;
   let lastLogEmit = 0;
   let buffer = '';
 
@@ -102,8 +104,8 @@ export async function* cookExecutor(opts: CookExecutorOptions): AsyncGenerator<C
         }
       }
 
-      const em = EXE_PATH_REGEX.exec(line);
-      if (em) exePath = em[1];
+      const sm = STAGE_DIR_REGEX.exec(line);
+      if (sm) stageDir = sm[1].trim();
 
       const tn = t();
       const isImportant = /\b(error|warning|fail)/i.test(line);
@@ -126,7 +128,7 @@ export async function* cookExecutor(opts: CookExecutorOptions): AsyncGenerator<C
   if (exit === 0) {
     yield {
       type: 'done',
-      exePath: exePath ?? '',
+      exePath: stageDir ? `${stageDir}\\${opts.projectName}.exe` : '',
       durationMs: t(),
       sizeBytes: 0,
       status: 'success',

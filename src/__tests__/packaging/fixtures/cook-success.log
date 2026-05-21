@@ -8,7 +8,7 @@ LogCook: Cook is taking longer than expected
 Stage commandlet started
 progress=70%
 LogStage: Staging files
-LogStage: Staged executable: C:\Users\kazda\Documents\Unreal Projects\PoF\Saved\StagedBuilds\Windows\PoF.exe
+Cleaning Stage Directory: C:\Users\kazda\Documents\Unreal Projects\PoF\Saved\StagedBuilds\Windows
 Package commandlet started
 progress=95%
 BUILD COMMAND COMPLETED
