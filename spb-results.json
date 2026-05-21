@@ -1,0 +1,251 @@
+{
+  "config": {
+    "configFile": "C:\\Users\\kazda\\kiro\\pof\\playwright.spb-debug.config.ts",
+    "rootDir": "C:/Users/kazda/kiro/pof/e2e",
+    "forbidOnly": false,
+    "fullyParallel": false,
+    "globalSetup": null,
+    "globalTeardown": null,
+    "globalTimeout": 0,
+    "grep": {},
+    "grepInvert": null,
+    "maxFailures": 0,
+    "metadata": {
+      "actualWorkers": 1
+    },
+    "preserveOutput": "always",
+    "projects": [
+      {
+        "outputDir": "C:/Users/kazda/kiro/pof/test-results",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {
+          "actualWorkers": 1
+        },
+        "id": "chromium",
+        "name": "chromium",
+        "testDir": "C:/Users/kazda/kiro/pof/e2e",
+        "testIgnore": [],
+        "testMatch": [
+          "**/*.@(spec|test).?(c|m)[jt]s?(x)"
+        ],
+        "timeout": 30000
+      }
+    ],
+    "quiet": false,
+    "reporter": [
+      [
+        "json",
+        {
+          "outputFile": "spb-results.json"
+        }
+      ]
+    ],
+    "reportSlowTests": {
+      "max": 5,
+      "threshold": 300000
+    },
+    "shard": null,
+    "tags": [],
+    "updateSnapshots": "missing",
+    "updateSourceMethod": "patch",
+    "version": "1.59.1",
+    "workers": 1,
+    "webServer": {
+      "command": "npm run dev -- -p 3010",
+      "url": "http://localhost:3010",
+      "reuseExistingServer": true,
+      "timeout": 60000
+    }
+  },
+  "suites": [
+    {
+      "title": "arpg-vertical-slice-sp-b.spec.ts",
+      "file": "arpg-vertical-slice-sp-b.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "ARPG vertical slice — SP-B gameplay chain",
+          "file": "arpg-vertical-slice-sp-b.spec.ts",
+          "line": 66,
+          "column": 6,
+          "specs": [
+            {
+              "title": "SP-B chunk 1: combat + enemy",
+              "ok": false,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 2400000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "timedOut",
+                      "duration": 2400089,
+                      "error": {
+                        "message": "\u001b[31mTest timeout of 2400000ms exceeded.\u001b[39m",
+                        "stack": "\u001b[31mTest timeout of 2400000ms exceeded.\u001b[39m"
+                      },
+                      "errors": [
+                        {
+                          "message": "\u001b[31mTest timeout of 2400000ms exceeded.\u001b[39m"
+                        },
+                        {
+                          "location": {
+                            "file": "C:\\Users\\kazda\\kiro\\pof\\e2e\\helpers\\dispatch-helpers.ts",
+                            "column": 47,
+                            "line": 41
+                          },
+                          "message": "Error: locator.click: Test timeout of 2400000ms exceeded.\nCall log:\n\u001b[2m  - waiting for getByTestId('pof-sidebar-l2-nav-item-arpg-combat')\u001b[22m\n\u001b[2m    - locator resolved to <button role=\"option\" aria-selected=\"true\" data-sidebar-item=\"true\" aria-label=\"Combat System\" data-testid=\"pof-sidebar-l2-nav-item-arpg-combat\" class=\"↵                      w-full flex items-center gap-2.5 px-3 py-2 text-left transition-all duration-fast↵                      focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-strong focus-visible:ring-offset-1 focus-visible:ring-offset-surface-deep↵                      bg-surface-hover↵                      ↵                 …>…</button>\u001b[22m\n\u001b[2m  - attempting click action\u001b[22m\n\u001b[2m    - waiting for element to be visible, enabled and stable\u001b[22m\n\u001b[2m    - element is visible, enabled and stable\u001b[22m\n\u001b[2m    - scrolling into view if needed\u001b[22m\n\u001b[2m    - done scrolling\u001b[22m\n\u001b[2m    - <div class=\"flex-1 flex items-center justify-center\">…</div> intercepts pointer events\u001b[22m\n\u001b[2m  - retrying click action\u001b[22m\n\u001b[2m    - waiting for element to be visible, enabled and stable\u001b[22m\n\u001b[2m    - element is visible, enabled and stable\u001b[22m\n\u001b[2m    - scrolling into view if needed\u001b[22m\n\u001b[2m    - done scrolling\u001b[22m\n\u001b[2m    - <button aria-pressed=\"false\" title=\"Game Systems\" aria-label=\"Game Systems\" data-testid=\"pof-sidebar-nav-item-game-systems\" class=\"↵              relative w-10 h-10 flex items-center justify-center rounded-lg transition-all duration-base↵              focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-strong focus-visible:ring-offset-1 focus-visible:ring-offset-surface-deep↵              hover:bg-surface↵            \">…</button> from <nav aria-label=\"Module categories\" class=\"relative w-14 flex flex-col items-center py-3 gap-1 border-r border-border bg-background\">…</nav> subtree intercepts pointer events\u001b[22m\n\u001b[2m  - retrying click action\u001b[22m\n\u001b[2m    - waiting 20ms\u001b[22m\n\u001b[2m    - waiting for element to be visible, enabled and stable\u001b[22m\n\u001b[2m    - element is visible, enabled and stable\u001b[22m\n\u001b[2m    - scrolling into view if needed\u001b[22m\n\u001b[2m    - done scrolling\u001b[22m\n\u001b[2m    - <div class=\"flex-1 flex items-center justify-center\">…</div> intercepts pointer events\u001b[22m\n\u001b[2m  - retrying click action\u001b[22m\n\u001b[2m    - waiting 100ms\u001b[22m\n\u001b[2m    - waiting for element to be visible, enabled and stable\u001b[22m\n\u001b[2m  - element was detached from the DOM, retrying\u001b[22m\n\n\n   at helpers\\dispatch-helpers.ts:41\n\n  39 |\n  40 |   await page.getByTestId(target.categoryTestId).click();\n> 41 |   await page.getByTestId(target.moduleTestId).click();\n     |                                               ^\n  42 |\n  43 |   const roadmapTab = page.getByRole('tab', { name: 'Roadmap' });\n  44 |   if ((await roadmapTab.count()) === 0) return fail('no \"Roadmap\" tab');\n    at dispatchRoadmapChecklistItem (C:\\Users\\kazda\\kiro\\pof\\e2e\\helpers\\dispatch-helpers.ts:41:47)\n    at dispatchStep (C:\\Users\\kazda\\kiro\\pof\\e2e\\arpg-vertical-slice-sp-b.spec.ts:52:18)\n    at C:\\Users\\kazda\\kiro\\pof\\e2e\\arpg-vertical-slice-sp-b.spec.ts:34:20\n    at runLiveStep (C:\\Users\\kazda\\kiro\\pof\\e2e\\arpg-vertical-slice-sp-b.spec.ts:32:3)\n    at C:\\Users\\kazda\\kiro\\pof\\e2e\\arpg-vertical-slice-sp-b.spec.ts:92:7"
+                        }
+                      ],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "steps": [
+                        {
+                          "title": "Step 11a acb-1: Create melee attack ability",
+                          "duration": 2837
+                        },
+                        {
+                          "title": "Step 11b acb-4: Apply damage via GAS",
+                          "duration": 2397025,
+                          "error": {
+                            "message": "Error: locator.click: Test timeout of 2400000ms exceeded.\nCall log:\n\u001b[2m  - waiting for getByTestId('pof-sidebar-l2-nav-item-arpg-combat')\u001b[22m\n\u001b[2m    - locator resolved to <button role=\"option\" aria-selected=\"true\" data-sidebar-item=\"true\" aria-label=\"Combat System\" data-testid=\"pof-sidebar-l2-nav-item-arpg-combat\" class=\"↵                      w-full flex items-center gap-2.5 px-3 py-2 text-left transition-all duration-fast↵                      focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-strong focus-visible:ring-offset-1 focus-visible:ring-offset-surface-deep↵                      bg-surface-hover↵                      ↵                 …>…</button>\u001b[22m\n\u001b[2m  - attempting click action\u001b[22m\n\u001b[2m    - waiting for element to be visible, enabled and stable\u001b[22m\n\u001b[2m    - element is visible, enabled and stable\u001b[22m\n\u001b[2m    - scrolling into view if needed\u001b[22m\n\u001b[2m    - done scrolling\u001b[22m\n\u001b[2m    - <div class=\"flex-1 flex items-center justify-center\">…</div> intercepts pointer events\u001b[22m\n\u001b[2m  - retrying click action\u001b[22m\n\u001b[2m    - waiting for element to be visible, enabled and stable\u001b[22m\n\u001b[2m    - element is visible, enabled and stable\u001b[22m\n\u001b[2m    - scrolling into view if needed\u001b[22m\n\u001b[2m    - done scrolling\u001b[22m\n\u001b[2m    - <button aria-pressed=\"false\" title=\"Game Systems\" aria-label=\"Game Systems\" data-testid=\"pof-sidebar-nav-item-game-systems\" class=\"↵              relative w-10 h-10 flex items-center justify-center rounded-lg transition-all duration-base↵              focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-strong focus-visible:ring-offset-1 focus-visible:ring-offset-surface-deep↵              hover:bg-surface↵            \">…</button> from <nav aria-label=\"Module categories\" class=\"relative w-14 flex flex-col items-center py-3 gap-1 border-r border-border bg-background\">…</nav> subtree intercepts pointer events\u001b[22m\n\u001b[2m  - retrying click action\u001b[22m\n\u001b[2m    - waiting 20ms\u001b[22m\n\u001b[2m    - waiting for element to be visible, enabled and stable\u001b[22m\n\u001b[2m    - element is visible, enabled and stable\u001b[22m\n\u001b[2m    - scrolling into view if needed\u001b[22m\n\u001b[2m    - done scrolling\u001b[22m\n\u001b[2m    - <div class=\"flex-1 flex items-center justify-center\">…</div> intercepts pointer events\u001b[22m\n\u001b[2m  - retrying click action\u001b[22m\n\u001b[2m    - waiting 100ms\u001b[22m\n\u001b[2m    - waiting for element to be visible, enabled and stable\u001b[22m\n\u001b[2m  - element was detached from the DOM, retrying\u001b[22m\n",
+                            "stack": "Error: locator.click: Test timeout of 2400000ms exceeded.\nCall log:\n\u001b[2m  - waiting for getByTestId('pof-sidebar-l2-nav-item-arpg-combat')\u001b[22m\n\u001b[2m    - locator resolved to <button role=\"option\" aria-selected=\"true\" data-sidebar-item=\"true\" aria-label=\"Combat System\" data-testid=\"pof-sidebar-l2-nav-item-arpg-combat\" class=\"↵                      w-full flex items-center gap-2.5 px-3 py-2 text-left transition-all duration-fast↵                      focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-strong focus-visible:ring-offset-1 focus-visible:ring-offset-surface-deep↵                      bg-surface-hover↵                      ↵                 …>…</button>\u001b[22m\n\u001b[2m  - attempting click action\u001b[22m\n\u001b[2m    - waiting for element to be visible, enabled and stable\u001b[22m\n\u001b[2m    - element is visible, enabled and stable\u001b[22m\n\u001b[2m    - scrolling into view if needed\u001b[22m\n\u001b[2m    - done scrolling\u001b[22m\n\u001b[2m    - <div class=\"flex-1 flex items-center justify-center\">…</div> intercepts pointer events\u001b[22m\n\u001b[2m  - retrying click action\u001b[22m\n\u001b[2m    - waiting for element to be visible, enabled and stable\u001b[22m\n\u001b[2m    - element is visible, enabled and stable\u001b[22m\n\u001b[2m    - scrolling into view if needed\u001b[22m\n\u001b[2m    - done scrolling\u001b[22m\n\u001b[2m    - <button aria-pressed=\"false\" title=\"Game Systems\" aria-label=\"Game Systems\" data-testid=\"pof-sidebar-nav-item-game-systems\" class=\"↵              relative w-10 h-10 flex items-center justify-center rounded-lg transition-all duration-base↵              focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-strong focus-visible:ring-offset-1 focus-visible:ring-offset-surface-deep↵              hover:bg-surface↵            \">…</button> from <nav aria-label=\"Module categories\" class=\"relative w-14 flex flex-col items-center py-3 gap-1 border-r border-border bg-background\">…</nav> subtree intercepts pointer events\u001b[22m\n\u001b[2m  - retrying click action\u001b[22m\n\u001b[2m    - waiting 20ms\u001b[22m\n\u001b[2m    - waiting for element to be visible, enabled and stable\u001b[22m\n\u001b[2m    - element is visible, enabled and stable\u001b[22m\n\u001b[2m    - scrolling into view if needed\u001b[22m\n\u001b[2m    - done scrolling\u001b[22m\n\u001b[2m    - <div class=\"flex-1 flex items-center justify-center\">…</div> intercepts pointer events\u001b[22m\n\u001b[2m  - retrying click action\u001b[22m\n\u001b[2m    - waiting 100ms\u001b[22m\n\u001b[2m    - waiting for element to be visible, enabled and stable\u001b[22m\n\u001b[2m  - element was detached from the DOM, retrying\u001b[22m\n\n    at dispatchRoadmapChecklistItem (C:\\Users\\kazda\\kiro\\pof\\e2e\\helpers\\dispatch-helpers.ts:41:47)\n    at dispatchStep (C:\\Users\\kazda\\kiro\\pof\\e2e\\arpg-vertical-slice-sp-b.spec.ts:52:18)\n    at C:\\Users\\kazda\\kiro\\pof\\e2e\\arpg-vertical-slice-sp-b.spec.ts:34:20\n    at runLiveStep (C:\\Users\\kazda\\kiro\\pof\\e2e\\arpg-vertical-slice-sp-b.spec.ts:32:3)\n    at C:\\Users\\kazda\\kiro\\pof\\e2e\\arpg-vertical-slice-sp-b.spec.ts:92:7",
+                            "location": {
+                              "file": "C:\\Users\\kazda\\kiro\\pof\\e2e\\helpers\\dispatch-helpers.ts",
+                              "column": 47,
+                              "line": 41
+                            },
+                            "snippet": "\u001b[90m   at \u001b[39mhelpers\\dispatch-helpers.ts:41\n\n\u001b[0m \u001b[90m 39 |\u001b[39m\n \u001b[90m 40 |\u001b[39m   \u001b[36mawait\u001b[39m page\u001b[33m.\u001b[39mgetByTestId(target\u001b[33m.\u001b[39mcategoryTestId)\u001b[33m.\u001b[39mclick()\u001b[33m;\u001b[39m\n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m 41 |\u001b[39m   \u001b[36mawait\u001b[39m page\u001b[33m.\u001b[39mgetByTestId(target\u001b[33m.\u001b[39mmoduleTestId)\u001b[33m.\u001b[39mclick()\u001b[33m;\u001b[39m\n \u001b[90m    |\u001b[39m                                               \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 42 |\u001b[39m\n \u001b[90m 43 |\u001b[39m   \u001b[36mconst\u001b[39m roadmapTab \u001b[33m=\u001b[39m page\u001b[33m.\u001b[39mgetByRole(\u001b[32m'tab'\u001b[39m\u001b[33m,\u001b[39m { name\u001b[33m:\u001b[39m \u001b[32m'Roadmap'\u001b[39m })\u001b[33m;\u001b[39m\n \u001b[90m 44 |\u001b[39m   \u001b[36mif\u001b[39m ((\u001b[36mawait\u001b[39m roadmapTab\u001b[33m.\u001b[39mcount()) \u001b[33m===\u001b[39m \u001b[35m0\u001b[39m) \u001b[36mreturn\u001b[39m fail(\u001b[32m'no \"Roadmap\" tab'\u001b[39m)\u001b[33m;\u001b[39m\u001b[0m"
+                          }
+                        }
+                      ],
+                      "startTime": "2026-05-20T14:35:48.639Z",
+                      "annotations": [],
+                      "attachments": [
+                        {
+                          "name": "screenshot",
+                          "contentType": "image/png",
+                          "path": "C:\\Users\\kazda\\kiro\\pof\\test-results\\arpg-vertical-slice-sp-b-A-496c4-n-SP-B-chunk-1-combat-enemy-chromium\\test-failed-1.png"
+                        },
+                        {
+                          "name": "error-context",
+                          "contentType": "text/markdown",
+                          "path": "C:\\Users\\kazda\\kiro\\pof\\test-results\\arpg-vertical-slice-sp-b-A-496c4-n-SP-B-chunk-1-combat-enemy-chromium\\error-context.md"
+                        }
+                      ]
+                    }
+                  ],
+                  "status": "unexpected"
+                }
+              ],
+              "id": "83efe866ab7a3cafd85d-d93c63e60461e8d46c11",
+              "file": "arpg-vertical-slice-sp-b.spec.ts",
+              "line": 72,
+              "column": 7
+            },
+            {
+              "title": "SP-B chunk 2: loot + ui + verify",
+              "ok": false,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 2700000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 1,
+                      "parallelIndex": 0,
+                      "status": "timedOut",
+                      "duration": 2700074,
+                      "error": {
+                        "message": "\u001b[31mTest timeout of 2700000ms exceeded.\u001b[39m",
+                        "stack": "\u001b[31mTest timeout of 2700000ms exceeded.\u001b[39m"
+                      },
+                      "errors": [
+                        {
+                          "message": "\u001b[31mTest timeout of 2700000ms exceeded.\u001b[39m"
+                        },
+                        {
+                          "location": {
+                            "file": "C:\\Users\\kazda\\kiro\\pof\\e2e\\helpers\\dispatch-helpers.ts",
+                            "column": 47,
+                            "line": 41
+                          },
+                          "message": "Error: locator.click: Test timeout of 2700000ms exceeded.\nCall log:\n\u001b[2m  - waiting for getByTestId('pof-sidebar-l2-nav-item-arpg-loot')\u001b[22m\n\u001b[2m    - locator resolved to <button role=\"option\" aria-selected=\"true\" data-sidebar-item=\"true\" aria-label=\"Loot & Drops\" data-testid=\"pof-sidebar-l2-nav-item-arpg-loot\" class=\"↵                      w-full flex items-center gap-2.5 px-3 py-2 text-left transition-all duration-fast↵                      focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-strong focus-visible:ring-offset-1 focus-visible:ring-offset-surface-deep↵                      bg-surface-hover↵                      ↵                    \">…</button>\u001b[22m\n\u001b[2m  - attempting click action\u001b[22m\n\u001b[2m    - waiting for element to be visible, enabled and stable\u001b[22m\n\u001b[2m    - element is visible, enabled and stable\u001b[22m\n\u001b[2m    - scrolling into view if needed\u001b[22m\n\u001b[2m    - done scrolling\u001b[22m\n\u001b[2m    - <div class=\"flex-1 flex items-center justify-center\">…</div> intercepts pointer events\u001b[22m\n\u001b[2m  - retrying click action\u001b[22m\n\u001b[2m    - waiting for element to be visible, enabled and stable\u001b[22m\n\u001b[2m    - element is visible, enabled and stable\u001b[22m\n\u001b[2m    - scrolling into view if needed\u001b[22m\n\u001b[2m    - done scrolling\u001b[22m\n\u001b[2m    - <button aria-pressed=\"false\" title=\"Game Director\" aria-label=\"Game Director\" data-testid=\"pof-sidebar-nav-item-game-director\" class=\"↵              relative w-10 h-10 flex items-center justify-center rounded-lg transition-all duration-base↵              focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-strong focus-visible:ring-offset-1 focus-visible:ring-offset-surface-deep↵              hover:bg-surface↵            \">…</button> from <nav aria-label=\"Module categories\" class=\"relative w-14 flex flex-col items-center py-3 gap-1 border-r border-border bg-background\">…</nav> subtree intercepts pointer events\u001b[22m\n\u001b[2m  - retrying click action\u001b[22m\n\u001b[2m    - waiting 20ms\u001b[22m\n\u001b[2m    - waiting for element to be visible, enabled and stable\u001b[22m\n\u001b[2m    - element is visible, enabled and stable\u001b[22m\n\u001b[2m    - scrolling into view if needed\u001b[22m\n\u001b[2m    - done scrolling\u001b[22m\n\u001b[2m    - <div class=\"flex-1 flex items-center justify-center\">…</div> intercepts pointer events\u001b[22m\n\u001b[2m  - retrying click action\u001b[22m\n\u001b[2m    - waiting 100ms\u001b[22m\n\u001b[2m    - waiting for element to be visible, enabled and stable\u001b[22m\n\u001b[2m  - element was detached from the DOM, retrying\u001b[22m\n\n\n   at helpers\\dispatch-helpers.ts:41\n\n  39 |\n  40 |   // SidebarL1 toggles: clicking an already-active category deactivates it\n> 41 |   // (SidebarL1.tsx handleClick). When dispatching consecutive items in the\n     |                                               ^\n  42 |   // same L1 category, only click the category if it is not already active\n  43 |   // (aria-pressed). SidebarL2's setActiveSubModule is idempotent, so the L2\n  44 |   // click is always safe.\n    at dispatchRoadmapChecklistItem (C:\\Users\\kazda\\kiro\\pof\\e2e\\helpers\\dispatch-helpers.ts:41:47)\n    at dispatchStep (C:\\Users\\kazda\\kiro\\pof\\e2e\\arpg-vertical-slice-sp-b.spec.ts:52:18)\n    at C:\\Users\\kazda\\kiro\\pof\\e2e\\arpg-vertical-slice-sp-b.spec.ts:34:20\n    at runLiveStep (C:\\Users\\kazda\\kiro\\pof\\e2e\\arpg-vertical-slice-sp-b.spec.ts:32:3)\n    at C:\\Users\\kazda\\kiro\\pof\\e2e\\arpg-vertical-slice-sp-b.spec.ts:147:7"
+                        }
+                      ],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "steps": [
+                        {
+                          "title": "Step 13a al-5: Loot drop on death",
+                          "duration": 2915
+                        },
+                        {
+                          "title": "Step 13b al-6: Item pickup (overlap-destroy)",
+                          "duration": 2697075,
+                          "error": {
+                            "message": "Error: locator.click: Test timeout of 2700000ms exceeded.\nCall log:\n\u001b[2m  - waiting for getByTestId('pof-sidebar-l2-nav-item-arpg-loot')\u001b[22m\n\u001b[2m    - locator resolved to <button role=\"option\" aria-selected=\"true\" data-sidebar-item=\"true\" aria-label=\"Loot & Drops\" data-testid=\"pof-sidebar-l2-nav-item-arpg-loot\" class=\"↵                      w-full flex items-center gap-2.5 px-3 py-2 text-left transition-all duration-fast↵                      focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-strong focus-visible:ring-offset-1 focus-visible:ring-offset-surface-deep↵                      bg-surface-hover↵                      ↵                    \">…</button>\u001b[22m\n\u001b[2m  - attempting click action\u001b[22m\n\u001b[2m    - waiting for element to be visible, enabled and stable\u001b[22m\n\u001b[2m    - element is visible, enabled and stable\u001b[22m\n\u001b[2m    - scrolling into view if needed\u001b[22m\n\u001b[2m    - done scrolling\u001b[22m\n\u001b[2m    - <div class=\"flex-1 flex items-center justify-center\">…</div> intercepts pointer events\u001b[22m\n\u001b[2m  - retrying click action\u001b[22m\n\u001b[2m    - waiting for element to be visible, enabled and stable\u001b[22m\n\u001b[2m    - element is visible, enabled and stable\u001b[22m\n\u001b[2m    - scrolling into view if needed\u001b[22m\n\u001b[2m    - done scrolling\u001b[22m\n\u001b[2m    - <button aria-pressed=\"false\" title=\"Game Director\" aria-label=\"Game Director\" data-testid=\"pof-sidebar-nav-item-game-director\" class=\"↵              relative w-10 h-10 flex items-center justify-center rounded-lg transition-all duration-base↵              focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-strong focus-visible:ring-offset-1 focus-visible:ring-offset-surface-deep↵              hover:bg-surface↵            \">…</button> from <nav aria-label=\"Module categories\" class=\"relative w-14 flex flex-col items-center py-3 gap-1 border-r border-border bg-background\">…</nav> subtree intercepts pointer events\u001b[22m\n\u001b[2m  - retrying click action\u001b[22m\n\u001b[2m    - waiting 20ms\u001b[22m\n\u001b[2m    - waiting for element to be visible, enabled and stable\u001b[22m\n\u001b[2m    - element is visible, enabled and stable\u001b[22m\n\u001b[2m    - scrolling into view if needed\u001b[22m\n\u001b[2m    - done scrolling\u001b[22m\n\u001b[2m    - <div class=\"flex-1 flex items-center justify-center\">…</div> intercepts pointer events\u001b[22m\n\u001b[2m  - retrying click action\u001b[22m\n\u001b[2m    - waiting 100ms\u001b[22m\n\u001b[2m    - waiting for element to be visible, enabled and stable\u001b[22m\n\u001b[2m  - element was detached from the DOM, retrying\u001b[22m\n",
+                            "stack": "Error: locator.click: Test timeout of 2700000ms exceeded.\nCall log:\n\u001b[2m  - waiting for getByTestId('pof-sidebar-l2-nav-item-arpg-loot')\u001b[22m\n\u001b[2m    - locator resolved to <button role=\"option\" aria-selected=\"true\" data-sidebar-item=\"true\" aria-label=\"Loot & Drops\" data-testid=\"pof-sidebar-l2-nav-item-arpg-loot\" class=\"↵                      w-full flex items-center gap-2.5 px-3 py-2 text-left transition-all duration-fast↵                      focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-strong focus-visible:ring-offset-1 focus-visible:ring-offset-surface-deep↵                      bg-surface-hover↵                      ↵                    \">…</button>\u001b[22m\n\u001b[2m  - attempting click action\u001b[22m\n\u001b[2m    - waiting for element to be visible, enabled and stable\u001b[22m\n\u001b[2m    - element is visible, enabled and stable\u001b[22m\n\u001b[2m    - scrolling into view if needed\u001b[22m\n\u001b[2m    - done scrolling\u001b[22m\n\u001b[2m    - <div class=\"flex-1 flex items-center justify-center\">…</div> intercepts pointer events\u001b[22m\n\u001b[2m  - retrying click action\u001b[22m\n\u001b[2m    - waiting for element to be visible, enabled and stable\u001b[22m\n\u001b[2m    - element is visible, enabled and stable\u001b[22m\n\u001b[2m    - scrolling into view if needed\u001b[22m\n\u001b[2m    - done scrolling\u001b[22m\n\u001b[2m    - <button aria-pressed=\"false\" title=\"Game Director\" aria-label=\"Game Director\" data-testid=\"pof-sidebar-nav-item-game-director\" class=\"↵              relative w-10 h-10 flex items-center justify-center rounded-lg transition-all duration-base↵              focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-strong focus-visible:ring-offset-1 focus-visible:ring-offset-surface-deep↵              hover:bg-surface↵            \">…</button> from <nav aria-label=\"Module categories\" class=\"relative w-14 flex flex-col items-center py-3 gap-1 border-r border-border bg-background\">…</nav> subtree intercepts pointer events\u001b[22m\n\u001b[2m  - retrying click action\u001b[22m\n\u001b[2m    - waiting 20ms\u001b[22m\n\u001b[2m    - waiting for element to be visible, enabled and stable\u001b[22m\n\u001b[2m    - element is visible, enabled and stable\u001b[22m\n\u001b[2m    - scrolling into view if needed\u001b[22m\n\u001b[2m    - done scrolling\u001b[22m\n\u001b[2m    - <div class=\"flex-1 flex items-center justify-center\">…</div> intercepts pointer events\u001b[22m\n\u001b[2m  - retrying click action\u001b[22m\n\u001b[2m    - waiting 100ms\u001b[22m\n\u001b[2m    - waiting for element to be visible, enabled and stable\u001b[22m\n\u001b[2m  - element was detached from the DOM, retrying\u001b[22m\n\n    at dispatchRoadmapChecklistItem (C:\\Users\\kazda\\kiro\\pof\\e2e\\helpers\\dispatch-helpers.ts:41:47)\n    at dispatchStep (C:\\Users\\kazda\\kiro\\pof\\e2e\\arpg-vertical-slice-sp-b.spec.ts:52:18)\n    at C:\\Users\\kazda\\kiro\\pof\\e2e\\arpg-vertical-slice-sp-b.spec.ts:34:20\n    at runLiveStep (C:\\Users\\kazda\\kiro\\pof\\e2e\\arpg-vertical-slice-sp-b.spec.ts:32:3)\n    at C:\\Users\\kazda\\kiro\\pof\\e2e\\arpg-vertical-slice-sp-b.spec.ts:147:7",
+                            "location": {
+                              "file": "C:\\Users\\kazda\\kiro\\pof\\e2e\\helpers\\dispatch-helpers.ts",
+                              "column": 47,
+                              "line": 41
+                            },
+                            "snippet": "\u001b[90m   at \u001b[39mhelpers\\dispatch-helpers.ts:41\n\n\u001b[0m \u001b[90m 39 |\u001b[39m\n \u001b[90m 40 |\u001b[39m   \u001b[90m// SidebarL1 toggles: clicking an already-active category deactivates it\u001b[39m\n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m 41 |\u001b[39m   \u001b[90m// (SidebarL1.tsx handleClick). When dispatching consecutive items in the\u001b[39m\n \u001b[90m    |\u001b[39m                                               \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 42 |\u001b[39m   \u001b[90m// same L1 category, only click the category if it is not already active\u001b[39m\n \u001b[90m 43 |\u001b[39m   \u001b[90m// (aria-pressed). SidebarL2's setActiveSubModule is idempotent, so the L2\u001b[39m\n \u001b[90m 44 |\u001b[39m   \u001b[90m// click is always safe.\u001b[39m\u001b[0m"
+                          }
+                        }
+                      ],
+                      "startTime": "2026-05-20T15:15:49.352Z",
+                      "annotations": [],
+                      "attachments": [
+                        {
+                          "name": "screenshot",
+                          "contentType": "image/png",
+                          "path": "C:\\Users\\kazda\\kiro\\pof\\test-results\\arpg-vertical-slice-sp-b-A-73e05-SP-B-chunk-2-loot-ui-verify-chromium\\test-failed-1.png"
+                        },
+                        {
+                          "name": "error-context",
+                          "contentType": "text/markdown",
+                          "path": "C:\\Users\\kazda\\kiro\\pof\\test-results\\arpg-vertical-slice-sp-b-A-73e05-SP-B-chunk-2-loot-ui-verify-chromium\\error-context.md"
+                        }
+                      ]
+                    }
+                  ],
+                  "status": "unexpected"
+                }
+              ],
+              "id": "83efe866ab7a3cafd85d-cdd06f4a920dc7550072",
+              "file": "arpg-vertical-slice-sp-b.spec.ts",
+              "line": 127,
+              "column": 7
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "errors": [],
+  "stats": {
+    "startTime": "2026-05-20T14:35:47.316Z",
+    "duration": 5102275.9860000005,
+    "expected": 0,
+    "skipped": 0,
+    "unexpected": 2,
+    "flaky": 0
+  }
+}
