@@ -15,6 +15,13 @@ AVSFunctionalTest::AVSFunctionalTest()
 {
 	PrimaryActorTick.bCanEverTick = true;
 	TimeLimit = 30.f;
+
+	// This is a gray-box slice: characters have no skeletal mesh, montages are
+	// empty shells. That legitimately produces incidental engine *warnings*
+	// (e.g. anim/montage warnings) which are NOT test failures — the pass/fail
+	// criteria of this test are its four AssertTrue checks. Ignore warning-level
+	// log output so it cannot fail the run; genuine Error-level output still does.
+	LogWarningHandling = EFunctionalTestLogHandling::OutputIgnored;
 }
 
 void AVSFunctionalTest::PrepareTest()
