@@ -346,18 +346,20 @@ def rebuild_level():
         _log("Loaded level: " + LEVEL_PATH)
 
         cube_mesh = load_object(CUBE_MESH_PATH)
+        if cube_mesh is None:
+            raise RuntimeError("could not load " + CUBE_MESH_PATH)
         arena_mesh = load_object(SM_ARENA_PATH)
         if arena_mesh is None:
             raise RuntimeError("SM_Arena missing; cannot rebuild level")
 
-        actors = actor_subsystem.get_all_level_actors()
+        initial_actors = actor_subsystem.get_all_level_actors()
 
         # --- Identify and delete the gray-box cube floor ---------------------
         # It is an AStaticMeshActor whose mesh is /Engine/BasicShapes/Cube and
         # whose scale is large (the PS-1 floor was scaled ~40x40x1). The arena
         # SM_Arena actor we spawn this run is NOT a basic cube so it is safe.
         deleted_floor = 0
-        for actor in actors:
+        for actor in initial_actors:
             if not isinstance(actor, unreal.StaticMeshActor):
                 continue
             smc = actor.static_mesh_component
@@ -366,8 +368,7 @@ def rebuild_level():
             sm = smc.get_editor_property("static_mesh")
             if sm is None:
                 continue
-            if sm.get_path_name() != (cube_mesh.get_path_name()
-                                      if cube_mesh else CUBE_MESH_PATH):
+            if sm.get_path_name() != cube_mesh.get_path_name():
                 continue
             scale = actor.get_actor_scale3d()
             is_large = max(scale.x, scale.y) >= 5.0

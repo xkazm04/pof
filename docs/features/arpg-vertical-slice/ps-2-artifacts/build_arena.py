@@ -69,4 +69,5 @@ arena.name = "Arena"
 bpy.ops.export_scene.fbx(filepath=OUT, use_selection=True,
     apply_unit_scale=True, global_scale=1.0, object_types={'MESH'},
     mesh_smooth_type='FACE', path_mode='COPY')
+assert os.path.isfile(OUT), "FBX export failed: " + OUT
 print("ARENA_EXPORTED", OUT)
