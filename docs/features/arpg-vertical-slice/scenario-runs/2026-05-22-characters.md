@@ -18,7 +18,7 @@ The UE Mannequin assets ship inside the `MoverTests` engine plugin (enabled in T
 | Enemy mesh | `/MoverTests/Characters/Mannequins/Meshes/SKM_Manny_Simple` |
 | Animation Blueprint | `/MoverTests/Characters/Mannequins/Animations/ABP_Manny` |
 | Player material | `/MoverTests/Characters/Mannequins/Materials/Instances/Manny/MI_Manny_01` (default) |
-| Enemy material | `/MoverTests/Characters/Mannequins/Materials/Instances/Manny/MI_Manny_02` |
+| Enemy material | `/Game/VerticalSlice/M_EnemyRed` — a custom red material (see "Enemy distinction" below) |
 
 ---
 
@@ -95,7 +95,23 @@ Captured via `PrintWindow` API from a `-game -windowed -ResX=1280 -ResY=720` lau
 >
 > Both characters are standing in a **natural idle pose** with their feet planted firmly on the checkered floor. Neither is in a stiff T-pose, and neither is sunk into the ground.
 
-**Interpretation:** Gate criteria met — two humanoid characters, natural poses, feet on the floor. The `MI_Manny_02` material override (gray-blue vs. gray-brown) was subtle enough that Gemini did not call out the distinction at the scale and lighting of this screenshot. This is a cosmetic gap: the intent (visual separation) is in the Blueprint data, but the material hue difference is not dramatic. Follow-up option: use a clearly contrasting material (e.g., a red tinted instance) for the enemy in a future pass.
+**Interpretation:** Gate criteria met — two humanoid characters, natural poses, feet on the floor. The initial `MI_Manny_02` mannequin material override was too subtle — Gemini read both characters as the same silver/grey model.
+
+## Enemy distinction — resolved
+
+A follow-up fix replaced the subtle `MI_Manny_02` override with a custom,
+clearly-contrasting material. `setup_characters_ue.py` now creates
+`/Game/VerticalSlice/M_EnemyRed` (a `Material` with a strong red base colour
+plus emissive) and applies it to every slot of the enemy's skeletal mesh; the
+player keeps the default mannequin look. Diagnosing this surfaced a real UE
+Python pitfall — `MaterialExpressionConstant3Vector`'s output pin is `""`, not
+`"RGB"`; `connect_material_property(node, "RGB", ...)` silently returns `False`
+and leaves the material black. Fixed by using the empty-string pin.
+
+A fresh launch + Gemini check confirmed the resolution: the enemy is *"a
+bright, glowing reddish-orange ... extremely easy to tell apart"* from the
+default-coloured player. The visual-distinction goal is now genuinely met.
+Commits `cd1372f` + `4a99d3d` (UE repo).
 
 ---
 
@@ -113,5 +129,7 @@ The characters sub-project is complete. The vertical-slice Blueprints now carry 
 
 | Commit | Repo | Description |
 |--------|------|-------------|
+| `c103e7e` | `pof-exp` (UE) | feat(characters): enable the MoverTests plugin for the UE Mannequin |
 | `6603927` | `pof-exp` (UE) | feat(characters): mannequin meshes on BP_VSPlayer / BP_VSEnemy |
 | `ca04c73` | `pof-exp` (UE) | fix(abilities): pre-arm bUsingFallbackWindow before ReadyForActivation |
+| `cd1372f`, `4a99d3d` | `pof-exp` (UE) | fix(characters): give the enemy a clearly distinct red material |
