@@ -75,6 +75,11 @@ For each of **floor / wall / pillar**:
   carved stone"; pillar: "seamless tileable carved stone column surface".
 - Poll `GET /generations/{id}`; download the resulting albedo to
   `<UE>/Content/ArenaBuild/textures_v2/{slot}_albedo.png`.
+- **Then `DELETE /generations/{id}`** — once the image is saved locally, the
+  generation is deleted from the Leonardo account so working assets do not
+  accumulate in the Leonardo library/UI. Every Leonardo generation in PS-3 is
+  download-then-delete; the local PNG is the only retained copy. A retry that
+  produced an unused generation is deleted too.
 
 Then for each albedo, **derive a tangent-space normal map** (treat luminance as
 a height field, Sobel gradient → normal) to `{slot}_normal.png`, so the stone
@@ -130,7 +135,9 @@ themed dungeon arena rather than a grid.
 ## Definition of done
 
 1. `fetch_arena_textures.mjs` generates 3 themed seamless albedo textures via
-   the Leonardo API and derives 3 normal maps.
+   the Leonardo API, saves them locally, **deletes each generation from the
+   Leonardo account after download** (including retries), and derives 3 normal
+   maps.
 2. `retexture_arena_ue.py` imports them and updates the `M_Arena_*` materials
    with a corrected tiling scale.
 3. The PS-1 functional test re-runs green (#2–#5).
