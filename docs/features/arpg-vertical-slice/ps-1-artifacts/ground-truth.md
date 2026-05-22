@@ -69,7 +69,7 @@ void AARPGCharacterBase::PossessedBy(AController* NewController)
 
 ### Enemy override of `PossessedBy`
 
-`AARPGEnemyCharacter::PossessedBy` **overrides** the base and re-calls `InitAbilityActorInfo(this, this)` (both owner and avatar are `this`, which is correct for AI characters), then calls:
+`AARPGEnemyCharacter::PossessedBy` calls `Super::PossessedBy(NewController)` on line 40, which resolves to `AARPGCharacterBase::PossessedBy` (the direct parent). That base call runs `InitAbilityActorInfo(NewController, this)` **and** `InitializeAttributes()`. After `Super` returns, the enemy override immediately re-calls `InitAbilityActorInfo(this, this)` to correct the owner — for AI characters, both owner and avatar must be `this`, not the controller. It then calls:
 
 ```
 ApplyArchetypeDefaults()
@@ -80,7 +80,7 @@ InitializeHealthBarWidget()
 
 `GrantAbilitiesToASC()` iterates `GrantedAbilities` (a `TArray<TSubclassOf<UGameplayAbility>>` on the enemy — must be populated in Blueprint/CDO) and calls `GiveAbility`. This runs **after** `InitAbilityActorInfo`, which is the correct order.
 
-**Note:** `AARPGEnemyCharacter::PossessedBy` does **not** call `Super::PossessedBy` on the base class `AARPGCharacterBase::PossessedBy` — it only calls `Super::PossessedBy(NewController)` which goes to `ACharacter`. This means `InitializeAttributes()` is **not called** from `AARPGCharacterBase::PossessedBy` for enemies — the enemy's `PossessedBy` skips that path. Attributes for enemies are initialized only if the enemy explicitly does so elsewhere. (This is a potential concern to verify in the Blueprint default for `AttributeInitTable`.)
+**Key nuance:** There are two `InitAbilityActorInfo` calls in the enemy possession path — first `(NewController, this)` from the base, then `(this, this)` from the override. The second call is the authoritative one for AI. `InitializeAttributes()` is called once, from the base `PossessedBy`, which is correct because `InitAbilityActorInfo` has already run by that point. Enemies **do** get their attributes initialized, provided `AttributeInitTable` is set on the Blueprint CDO.
 
 ### Enemy death flow
 
@@ -92,7 +92,7 @@ InitializeHealthBarWidget()
 6. `AARPGEnemyCharacter::OnDeathFromAbility`:
    - Sets `bIsAlive = false`.
    - Calls `HandleDeathCleanup()` (disables capsule collision, stops movement, stops BT).
-   - Awards XP to killer via `GE_AwardXP`.
+   - Awards XP to the killer: resolves the killer's ASC, calls `CalculateXPReward(KillerLevel)`, then applies `GE_AwardXP` via `ApplyGameplayEffectSpecToSelf` on that ASC. The XP award happens here inside `OnDeathFromAbility`, **not** inside `GA_Death` itself — `GA_Death` only calls `OnDeathFromAbility` and delegates all XP logic to the enemy character.
    - Broadcasts `OnEnemyDeath.Broadcast(this)`.
 7. `OnEnemyDeath` delegate fires `UARPGLootDropComponent::OnOwnerDeath` (bound in `BeginPlay` when `bAutoDropOnDeath=true`), which calls `DropLoot()`.
 8. Back in `GA_Death`, after the death montage finishes, `Character->SetLifeSpan(EnemyDestroyDelay)` is called — the enemy **does** eventually `Destroy()` itself via `SetLifeSpan` (not immediately; after `EnemyDestroyDelay` seconds, defaulting to whatever the Blueprint sets, or 0 which would be immediate).
@@ -176,4 +176,4 @@ No `UARPGLootTable` data asset exists in Content.
 | 5 | No `DT_AttributeDefaults` DataTable exists → `InitializeAttributes()` returns early → attributes use constructor defaults (non-zero but not designed values) | High | Create DataTable with rows `"Player"` and `"Skeleton"` |
 | 6 | No `UARPGLootTable` data asset exists → LootTable drop path never runs (gold path works, no asset needed) | Low for slice | Create loot table asset if non-gold drops are needed |
 | 7 | `GA_Death` must be in `GrantedAbilities` on each character Blueprint — not granted automatically | Must verify | Confirm Blueprint CDOs include `UGA_Death` in `GrantedAbilities` |
-| 8 | Enemy `PossessedBy` does not call base class `InitializeAttributes` — attributes init only if enemy also has path to it | Must verify | Confirm enemy Blueprint has `AttributeInitTable` set or attributes are otherwise initialized |
+| 8 | Enemy `PossessedBy` calls base `InitializeAttributes` (via `Super`), but it still requires `AttributeInitTable` to be set on the Blueprint CDO — without it, the call returns early and attributes use constructor defaults | Must verify | Confirm enemy Blueprint CDO has `AttributeInitTable` assigned |
