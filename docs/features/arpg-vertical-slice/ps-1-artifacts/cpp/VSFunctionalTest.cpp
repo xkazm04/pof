@@ -3,6 +3,7 @@
 #include "Character/ARPGEnemyCharacter.h"
 #include "AbilitySystem/ARPGAttributeSet.h"
 #include "AbilitySystem/ARPGGameplayTags.h"
+#include "AbilitySystem/Effects/GE_Damage.h"
 #include "AbilitySystemComponent.h"
 #include "AbilitySystemBlueprintLibrary.h"
 #include "GameplayTagContainer.h"
@@ -185,48 +186,67 @@ void AVSFunctionalTest::Tick(float DeltaSeconds)
 	}
 
 	// =========================================================================
-	// Phase 3 — #5 Death + Loot: kill the enemy and assert death + loot spawn
+	// Phase 3 — #5 Death + Loot: kill the enemy through the REAL damage pipeline
 	//
-	// Strategy: send Event.Death directly to the enemy ASC.
-	// GA_Death is configured with AbilityTriggers on Event.Death (TriggerSource=
-	// GameplayEvent). This skips the attribute damage path but triggers the
-	// full death chain: GA_Death -> OnDeathFromAbility -> OnEnemyDeath ->
-	// LootDropComponent drops loot -> SetLifeSpan(EnemyDestroyDelay).
-	// We do NOT assert that the actor is destroyed — it uses SetLifeSpan(5s).
+	// We do NOT poke Health and we do NOT send Event.Death ourselves. Instead we
+	// apply real damage the same way criterion #4 does — a GE_Damage spec built
+	// from the player ASC via MakeOutgoingSpec, with the Data.Damage.Base
+	// SetByCaller, applied to the enemy ASC via ApplyGameplayEffectSpecToTarget.
+	// This is exactly GA_MeleeAttack::OnMeleeHit's path (GE_Damage ->
+	// UARPGDamageExecution -> PostGameplayEffectExecute), just with a lethal
+	// magnitude. PostGameplayEffectExecute, on seeing Health reach 0, raises
+	// Event.Death itself -> GA_Death (GameplayEvent trigger) -> OnDeathFromAbility
+	// -> OnEnemyDeath -> LootDropComponent drops loot. Death is therefore an
+	// observed CONSEQUENCE of Health depletion, not something the test triggers.
+	//
+	// We apply damage on the first tick, then keep applying it each tick (until
+	// Health <= 0) as a guard against any single-spec rounding/clamping, before
+	// asserting. The asserted Health value is always READ from the enemy ASC.
+	// We do NOT assert the actor is destroyed — it uses SetLifeSpan(5s).
 	// =========================================================================
 	if (Phase == 3)
 	{
-		if (PhaseTime <= DeltaSeconds + KINDA_SMALL_NUMBER)
+		if (Enemy.IsValid())
 		{
-			if (Enemy.IsValid())
+			UAbilitySystemComponent* EnemyASC = Enemy->GetAbilitySystemComponent();
+			UAbilitySystemComponent* PlayerASC = Player->GetAbilitySystemComponent();
+
+			if (EnemyASC && PlayerASC)
 			{
-				FGameplayEventData DeathPayload;
-				DeathPayload.Instigator = Player.Get();
-				DeathPayload.Target = Enemy.Get();
-				DeathPayload.EventMagnitude = 1.f;
+				const float HealthNow = EnemyASC->GetNumericAttribute(UARPGAttributeSet::GetHealthAttribute());
 
-				// Send death event directly to the enemy actor; GA_Death triggers on it
-				UAbilitySystemBlueprintLibrary::SendGameplayEventToActor(
-					Enemy.Get(),
-					ARPGGameplayTags::Event_Death,
-					DeathPayload);
-
-				// Also zero Health directly so the attribute-based assertion (#5 enemy died)
-				// holds even if GA_Death doesn't fire (e.g., not granted yet)
-				UAbilitySystemComponent* EnemyASC = Enemy->GetAbilitySystemComponent();
-				if (EnemyASC)
+				// Keep applying real damage until the enemy's Health is depleted.
+				if (HealthNow > 0.f)
 				{
-					// ApplyModToAttribute with Override sets the base value directly.
-					// This ensures Health == 0 for our assertion regardless of GE path.
-					EnemyASC->SetNumericAttributeBase(UARPGAttributeSet::GetHealthAttribute(), 0.f);
+					// Build a GE_Damage outgoing spec from the player (source) ASC —
+					// same effect class, same execution, same SetByCaller key that
+					// GA_MeleeAttack::OnMeleeHit uses, just with a lethal base value.
+					FGameplayEffectContextHandle Context = PlayerASC->MakeEffectContext();
+					Context.AddSourceObject(Player.Get());
+
+					FGameplayEffectSpecHandle SpecHandle = PlayerASC->MakeOutgoingSpec(
+						UGE_Damage::StaticClass(), 1.f, Context);
+
+					if (SpecHandle.IsValid())
+					{
+						FGameplayEffectSpec* Spec = SpecHandle.Data.Get();
+						// Lethal magnitude: far above MaxHealth so a single application
+						// depletes Health even after the armor/resist formula.
+						Spec->SetSetByCallerMagnitude(ARPGGameplayTags::Data_Damage_Base, 9999.f);
+						Spec->AddDynamicAssetTag(ARPGGameplayTags::Damage_Physical);
+
+						PlayerASC->ApplyGameplayEffectSpecToTarget(*Spec, EnemyASC);
+					}
 				}
 			}
 		}
 
-		// Wait long enough for the death chain: GA_Death activation + loot drop
+		// Wait long enough for the death chain: damage -> Event.Death -> GA_Death
+		// -> OnDeathFromAbility -> OnEnemyDeath -> loot drop.
 		if (PhaseTime >= 3.0f)
 		{
-			// Assert #5a: enemy health is zero
+			// Assert #5a: enemy Health depleted — value READ from the enemy ASC,
+			// never written by this test.
 			if (Enemy.IsValid())
 			{
 				UAbilitySystemComponent* EnemyASC = Enemy->GetAbilitySystemComponent();
@@ -234,10 +254,17 @@ void AVSFunctionalTest::Tick(float DeltaSeconds)
 				{
 					const float FinalHealth = EnemyASC->GetNumericAttribute(UARPGAttributeSet::GetHealthAttribute());
 					AssertTrue(FinalHealth <= 0.f,
-						FString::Printf(TEXT("#5 death: enemy Health should be <= 0, is %.1f"), FinalHealth));
+						FString::Printf(TEXT("#5 death: enemy Health should be <= 0 (observed depletion via real damage), is %.1f"), FinalHealth));
+				}
+				else
+				{
+					AssertTrue(false, TEXT("#5 death: enemy has no ASC to read Health from"));
 				}
 			}
-			// (if actor already destroyed, the health assertion is moot — that's fine, count as pass)
+			else
+			{
+				AssertTrue(false, TEXT("#5 death: enemy actor invalid at health check"));
+			}
 
 			// Assert #5b: at least one loot world item spawned
 			int32 LootCount = 0;
