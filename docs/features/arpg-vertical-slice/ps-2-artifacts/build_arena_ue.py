@@ -18,6 +18,9 @@ What it does (each section is idempotent and wrapped in try/except):
      SM_Arena StaticMeshActor at the origin, keep PlayerStart / BP_VSEnemy /
      AVSFunctionalTest / DirectionalLight / SkyLight, reposition PlayerStart and
      the enemy onto the arena floor.
+  6. Force the DirectionalLight + SkyLight to Movable mobility so the STATIC
+     arena mesh is lit dynamically -- no Lightmass bake is run in this headless
+     pipeline, and STATIONARY lights leave un-baked static geometry pitch black.
 
 Run headless:
     "C:\\Program Files\\Epic Games\\UE_5.7\\Engine\\Binaries\\Win64\\UnrealEditor-Cmd.exe" ^
@@ -429,6 +432,36 @@ def rebuild_level():
             if not found:
                 unreal.log_warning(
                     "[build_arena_ue] expected actor not found: " + label)
+
+        # --- Force lights Movable so the STATIC arena is lit without a bake --
+        # The arena StaticMesh is STATIC mobility and this pipeline never runs
+        # Lightmass. With STATIONARY/STATIC lights the un-baked arena renders
+        # pitch black (UE shows "LIGHTING NEEDS TO BE REBUILT"). Movable lights
+        # light it fully dynamically -- no build step required.
+        #
+        # The DirectionalLight is also angled down (pitch -50 deg) and given a
+        # healthy intensity: at its default rotation (0,0,0) it points straight
+        # along +X, grazing the floor at ~0 deg so the floor reads near-black.
+        # The SkyLight intensity is raised so walls/floor in shadow still read.
+        for actor in actor_subsystem.get_all_level_actors():
+            if isinstance(actor, unreal.DirectionalLight):
+                actor.set_actor_rotation(
+                    unreal.Rotator(0.0, -50.0, -35.0), False)
+                for comp in actor.get_components_by_class(
+                        unreal.DirectionalLightComponent):
+                    comp.set_mobility(unreal.ComponentMobility.MOVABLE)
+                    comp.set_editor_property("intensity", 6.0)
+                _log("DirectionalLight -> Movable, pitch -50, intensity 6.0")
+            elif isinstance(actor, unreal.SkyLight):
+                for comp in actor.get_components_by_class(
+                        unreal.SkyLightComponent):
+                    comp.set_mobility(unreal.ComponentMobility.MOVABLE)
+                    comp.set_editor_property("intensity", 3.0)
+                    try:
+                        comp.set_editor_property("real_time_capture", True)
+                    except Exception:
+                        pass
+                _log("SkyLight -> Movable, intensity 3.0, real-time capture")
 
         level_subsystem.save_current_level()
         _log("Saved level: " + LEVEL_PATH)
