@@ -38,8 +38,10 @@ bool UGA_MeleeAttack::CanActivateAbility(
 		return false;
 	}
 
-	// Need a montage to play
-	if (!AttackMontage || ComboSectionNames.Num() == 0)
+	// A null montage is allowed — the runtime fallback (timer-driven attack window)
+	// handles characters without a skeletal mesh / anim instance. We only block
+	// activation when there are no combo sections, which is a real structural gap.
+	if (ComboSectionNames.Num() == 0)
 	{
 		return false;
 	}

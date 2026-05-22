@@ -129,6 +129,15 @@ void UGA_Death::OnMontageCancelled()
 
 void UGA_Death::OnDeathMontageFinished()
 {
+	// OnBlendOut and OnCompleted both fire when a real montage plays — guard
+	// against the second invocation to avoid double-broadcasting and double
+	// calls to SetLifeSpan.
+	if (bDeathMontageFinished)
+	{
+		return;
+	}
+	bDeathMontageFinished = true;
+
 	AARPGCharacterBase* Character = GetARPGCharacter();
 	if (!Character) return;
 
