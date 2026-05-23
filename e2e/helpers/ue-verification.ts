@@ -108,3 +108,37 @@ export async function geminiCheck(screenshotPath: string, promptOrFixture: strin
   const { out } = await run('node', args, { cwd: PERSONAS_DIR, timeout: 120_000 });
   return out.trim();
 }
+
+export interface CookedSmokeResult {
+  /** PASS verdict — derived from the process exit code (0 = PASS). */
+  passed: boolean;
+  exitCode: number;
+  out: string;
+}
+
+/**
+ * Run the cooked-build self-check: launch the packaged exe with
+ * `-ExecCmds="ARPG.Verify.SliceCI"`, which runs the slice gameplay self-check
+ * and exits with the verdict as the process exit code (0 = PASS, 1 = FAIL).
+ *
+ * Exit code is the reliable signal because the Shipping target compiles out
+ * logging (bUseLoggingInShipping=false) — a PASS *log* line never appears, so
+ * the SP-E smoke-test (which greps the log) can't see the verdict. This bridges
+ * SP-E (process-level "it boots") to the functional test (PIE "gameplay works")
+ * for the packaged path.
+ */
+export async function runCookedVerifySlice(opts: {
+  exePath: string;
+  resX?: number;
+  resY?: number;
+  timeoutMs?: number;
+}): Promise<CookedSmokeResult> {
+  const resX = opts.resX ?? 1280;
+  const resY = opts.resY ?? 720;
+  const { code, out } = await run(opts.exePath, [
+    '-windowed', `-ResX=${resX}`, `-ResY=${resY}`,
+    '-ExecCmds=ARPG.Verify.SliceCI',
+    '-unattended', '-nopause',
+  ], { timeout: opts.timeoutMs ?? 120_000 });
+  return { passed: code === 0, exitCode: code, out };
+}

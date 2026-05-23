@@ -7,6 +7,7 @@ import {
   pickNewestScreenshot,
   resolveGeminiPrompt,
   buildGeminiArgs,
+  parseVerifyResult,
 } from './verification-core';
 
 describe('parseAutomationLog', () => {
@@ -90,5 +91,22 @@ describe('buildGeminiArgs', () => {
     expect(buildGeminiArgs('/tools/gemini.mjs', '/shot.png', 'is it red?')).toEqual([
       '/tools/gemini.mjs', '--input', '/shot.png', '--prompt', 'is it red?',
     ]);
+  });
+});
+
+describe('parseVerifyResult', () => {
+  it('reads a PASS verdict for the named system', () => {
+    const log = 'LogARPGVerify: Display: ARPG.Verify.Slice: PASS';
+    expect(parseVerifyResult(log, 'Slice')).toEqual({ found: true, passed: true });
+  });
+
+  it('reads a FAIL verdict with a reason', () => {
+    const log = 'LogARPGVerify: Error: ARPG.Verify.Slice: FAIL (no enemy character)';
+    expect(parseVerifyResult(log, 'Slice')).toEqual({ found: true, passed: false });
+  });
+
+  it('reports not-found when the system line is absent', () => {
+    expect(parseVerifyResult('unrelated log output', 'Slice')).toEqual({ found: false, passed: false });
+    expect(parseVerifyResult('ARPG.Verify.Combat: PASS', 'Slice')).toEqual({ found: false, passed: false });
   });
 });

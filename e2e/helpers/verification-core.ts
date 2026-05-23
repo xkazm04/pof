@@ -83,3 +83,23 @@ export function resolveGeminiPrompt(promptOrName: string, fixturesDir: string): 
 export function buildGeminiArgs(scriptPath: string, screenshotPath: string, prompt: string): string[] {
   return [scriptPath, '--input', screenshotPath, '--prompt', prompt];
 }
+
+export interface VerifyResult {
+  /** A `ARPG.Verify.<system>:` line was found in the log. */
+  found: boolean;
+  /** The verdict, when found (`PASS` → true). */
+  passed: boolean;
+}
+
+/**
+ * Parse an `ARPG.Verify.<system>: PASS|FAIL (...)` line out of an engine log.
+ * Used by the cooked smoke-pak / live PIE self-check on Development builds
+ * (where logging is on). On Shipping builds logging is compiled out, so the
+ * exit code is the signal instead — see runCookedVerifySlice.
+ */
+export function parseVerifyResult(log: string, system: string): VerifyResult {
+  const re = new RegExp(`ARPG\\.Verify\\.${system}:\\s*(PASS|FAIL)`, 'i');
+  const m = re.exec(log);
+  if (!m) return { found: false, passed: false };
+  return { found: true, passed: /pass/i.test(m[1]) };
+}
