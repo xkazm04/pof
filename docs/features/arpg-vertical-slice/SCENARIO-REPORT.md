@@ -4,7 +4,7 @@
 >
 > **Period:** 2026-05-19 → 2026-05-21. **Branch:** `master`. **Target UE5 project:** `C:\Users\kazda\Documents\Unreal Projects\PoF` (UE 5.7.3).
 >
-> **Latest:** sub-project SP-C complete — PoF packaged the autonomously-built project into a Win64 Shipping `.exe`.
+> **Latest:** the vertical-slice build-out is complete (gameplay → packaged build → gray-box → arena → textures → HUD → mannequin characters). A forward-looking synthesis of the lessons into per-concern improvement plans now lives at [`../../improvements/`](../../improvements/INDEX.md) — eight isolated subfolders (generation-quality, character, combat, HUD/UI, environment, textures+materials, packaging, harness+testing), each with PoF-app + game-side improvements + test-coverage extensions, designed so a separate CLI session can pick up one concern without conflicting with the others.
 
 ---
 
@@ -230,3 +230,5 @@ Status legend: **✅ Proven live** (executed, artifacts verified) · **◐ Exerc
 - SP-B (gameplay chain): spec [`2026-05-20-...-sp-b-design.md`](../../superpowers/specs/2026-05-20-arpg-vertical-slice-sp-b-design.md), the remediation specs/plans `2026-05-21-harness-cli-session-detection-fix`, `2026-05-21-cli-session-subsystem-fix`, `2026-05-21-sp-b-single-dispatch-rework`, spec `e2e/arpg-vertical-slice-sp-b.spec.ts`, findings [`2026-05-21-live-sp-b-chunk1-summary.md`](./scenario-runs/2026-05-21-live-sp-b-chunk1-summary.md) + [`-chunk2-summary.md`](./scenario-runs/2026-05-21-live-sp-b-chunk2-summary.md), CLI-subsystem investigation [`2026-05-21-cli-subsystem-findings.md`](./scenario-runs/2026-05-21-cli-subsystem-findings.md)
 - SP-C (packaging): spec [`2026-05-21-...-sp-c-design.md`](../../superpowers/specs/2026-05-21-arpg-vertical-slice-sp-c-design.md), plan [`2026-05-21-...-sp-c.md`](../../superpowers/plans/2026-05-21-arpg-vertical-slice-sp-c.md), spec `e2e/arpg-vertical-slice-sp-c.spec.ts`, live findings [`2026-05-21-live-sp-c-cook.md`](./scenario-runs/2026-05-21-live-sp-c-cook.md)
 - SP-E (packaged-build smoke-test): spec [`2026-05-21-...-sp-e-design.md`](../../superpowers/specs/2026-05-21-arpg-vertical-slice-sp-e-design.md), plan [`2026-05-21-...-sp-e.md`](../../superpowers/plans/2026-05-21-arpg-vertical-slice-sp-e.md), spec `e2e/arpg-vertical-slice-sp-e.spec.ts`, findings [`2026-05-21-live-sp-e-smoke.md`](./scenario-runs/2026-05-21-live-sp-e-smoke.md)
+- Playable Slice phase (PS-1 → PS-2 → PS-3 → HUD → Characters): specs and plans under [`../../superpowers/specs/2026-05-22-*`](../../superpowers/) and [`../../superpowers/plans/2026-05-22-*`](../../superpowers/); per-sub-project findings under [`scenario-runs/2026-05-22-*`](./scenario-runs/).
+- **Improvements synthesis:** eight isolated per-concern improvement folders at [`../../improvements/`](../../improvements/INDEX.md) — generation-quality, character, combat, HUD/UI, environment, textures+materials, packaging, harness+testing.
