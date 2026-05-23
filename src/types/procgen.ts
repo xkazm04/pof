@@ -4,3 +4,10 @@ export interface ProcgenRun {
   seed: number;
   createdAt: string;
 }
+
+export interface ScatterRun {
+  id: number;
+  instanceCount: number;
+  seed: number;
+  createdAt: string;
+}
