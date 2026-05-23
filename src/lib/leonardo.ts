@@ -10,6 +10,7 @@ const LUCID_ORIGIN_MODEL_ID = '7b592283-e8a7-4c5a-9ba6-d18c31f258b9';
 export const LUCID_REALISM_MODEL_ID = '05ce0082-2d80-4a2d-8653-4d1c85e2418e';
 const POLL_INTERVAL_MS = 2000;
 const MAX_POLL_ATTEMPTS = 30;
+export const MAX_PROMPT_LENGTH = 1500;
 
 interface GenerationResponse {
   sdGenerationJob: {
@@ -66,12 +67,14 @@ export async function generateImage(
   prompt: string,
   opts: GenerateImageOptions = {},
 ): Promise<GenerateImageResult> {
-  const trimmedPrompt = prompt.slice(0, 1500);
+  if (prompt.length > MAX_PROMPT_LENGTH) {
+    throw new Error(`Prompt exceeds ${MAX_PROMPT_LENGTH} character limit`);
+  }
   const pollMs = opts.pollIntervalMs ?? POLL_INTERVAL_MS;
 
   const body: Record<string, unknown> = {
     modelId: opts.modelId ?? LUCID_ORIGIN_MODEL_ID,
-    prompt: trimmedPrompt,
+    prompt,
     width: opts.width ?? 512,
     height: opts.height ?? 512,
     num_images: opts.numImages ?? 1,

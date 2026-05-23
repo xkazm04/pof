@@ -1,5 +1,5 @@
 import { apiSuccess, apiError } from '@/lib/api-utils';
-import { generateImage, upscaleImage, generateTextureOn3DModel, type GenerateImageOptions } from '@/lib/leonardo';
+import { generateImage, upscaleImage, generateTextureOn3DModel, MAX_PROMPT_LENGTH, type GenerateImageOptions } from '@/lib/leonardo';
 import { logger } from '@/lib/logger';
 
 type Mode = 'image' | 'upscale' | 'texture3d';
@@ -16,7 +16,7 @@ export async function POST(request: Request) {
     if (mode === 'image') {
       const prompt = body?.prompt;
       if (!prompt || typeof prompt !== 'string') return apiError('Missing or invalid "prompt" field', 400);
-      if (prompt.length > 1500) return apiError('Prompt exceeds 1500 character limit', 400);
+      if (prompt.length > MAX_PROMPT_LENGTH) return apiError(`Prompt exceeds ${MAX_PROMPT_LENGTH} character limit`, 400);
       const opts: GenerateImageOptions = body?.opts ?? {};
       const result = await generateImage(prompt, opts);
       return apiSuccess(result);

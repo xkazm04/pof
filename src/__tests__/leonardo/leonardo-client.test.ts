@@ -200,3 +200,12 @@ describe('generateTextureOn3DModel', () => {
     expect(calls.some((c) => c.method === 'DELETE' && c.url.endsWith('/models-3d/m-leak'))).toBe(true);
   });
 });
+
+describe('generateImage prompt length', () => {
+  it('rejects a prompt longer than the limit instead of silently truncating', async () => {
+    installGenFetch(); // would otherwise resolve successfully
+    await expect(
+      generateImage('x'.repeat(1501), { pollIntervalMs: 1 }),
+    ).rejects.toThrow(/1500|limit/i);
+  });
+});

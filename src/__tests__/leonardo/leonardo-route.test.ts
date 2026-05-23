@@ -4,6 +4,7 @@ vi.mock('@/lib/leonardo', () => ({
   generateImage: vi.fn(async () => ({ imageUrl: 'u', generationId: 'g', imageBase64: 'YQ==' })),
   upscaleImage: vi.fn(async () => ({ upscaleJobId: 'up-1' })),
   generateTextureOn3DModel: vi.fn(async () => ({ modelAssetId: 'm', albedoUrl: 'a', normalUrl: 'n', roughnessUrl: 'r' })),
+  MAX_PROMPT_LENGTH: 1500,
 }));
 
 import { POST } from '@/app/api/leonardo/route';
