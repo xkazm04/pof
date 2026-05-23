@@ -32,3 +32,21 @@ describe('arpg-ui HUD prompts default to the pure-C++ widget pattern', () => {
     expect(p).toMatch(/BindWidgetOptional/);
   });
 });
+
+describe('arpg-ui widget-creating HUD steps carry the pure-C++ default', () => {
+  for (const id of ['au-3', 'au-4', 'au-8']) {
+    it(`${id} instructs RebuildWidget-based tree construction`, () => {
+      expect(uiItem(id).prompt).toMatch(/RebuildWidget/);
+    });
+
+    it(`${id} forbids BindWidget / a companion WBP`, () => {
+      expect(uiItem(id).prompt).toMatch(
+        /do not use `?BindWidget`?|don't use `?BindWidget`?|no companion Widget Blueprint/i,
+      );
+    });
+  }
+
+  it('au-3 styles its ProgressBar explicitly (dark track + bright fill)', () => {
+    expect(uiItem('au-3').prompt).toMatch(/FProgressBarStyle|dark track/i);
+  });
+});
