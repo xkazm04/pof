@@ -72,16 +72,28 @@ as `OnMeleeHit` does, so combo scaling is preserved across both paths.
 
 ### Functional-test integration (retiring the hack)
 
-`AVSFunctionalTest` phase #4 currently *sends* `Event.MeleeHit` manually. With `false`
-mode self-applying, that would double-hit. Combat-1 updates phase #4 to:
+> **Coordination decision (2026-05-23):** the shared UE working tree already holds
+> *uncommitted* test infra from sibling forks — CLI #8's `AARPGFunctionalTestBase`
+> (+`HealthCheck/`) and CLI #1's `Debug/ARPGVerifyCommands.cpp`. CLI #8 owns
+> `VSFunctionalTest.cpp` (08's game.md §1 reparents it to the base). To avoid a
+> cross-fork file collision and any compile-coupling to uncommitted siblings, Combat-1:
+> - does **not** edit `VSFunctionalTest.cpp`, and
+> - parents its new tests off the stock `AFunctionalTest` (not #8's base). A later
+>   reparent to `AARPGFunctionalTestBase` is a cheap follow-up once #8's base lands.
 
-- Position **and orient** the player within `MeleeHitRange` of the enemy and facing it
-  (the forward cone misses otherwise — this is the real risk; see below).
-- Activate `GA_MeleeAttack` and **stop sending `Event.MeleeHit`**.
-- Assert the enemy's `Health` dropped after `GrayBoxHitDelay` elapses.
+The hack-retirement goal is met by a *new, owned* test rather than by editing the
+shared one. The new `AVSCombatGrayBoxPathTest`:
 
-This retires the test-sends-the-event hack — the whole point. Phase #5's lethal-damage
-drive to death + loot is unchanged.
+- Teleports the player to within `MeleeHitRange` of the enemy and orients it to face
+  the enemy (the forward cone misses otherwise — this is the real risk; see below).
+- Activates `GA_MeleeAttack` and **never sends `Event.MeleeHit`**.
+- Asserts the enemy's `Health` dropped after `GrayBoxHitDelay` elapses.
+
+`VSFunctionalTest` phase #4's manual `Event.MeleeHit` send becomes redundant but stays
+**harmless**: with `false`-mode self-applying, its enemy takes the self-applied hit too,
+but #4 only asserts `Health < EnemyStartHealth` (strictly less-than), which still holds.
+CLI #8 can remove the now-redundant send when it reparents that file. Phase #5 is
+unaffected.
 
 ### PoF app side
 
@@ -101,29 +113,34 @@ damage. No app-runtime change; this is a generated-prompt-default change only.
   entry granted (a discoverable spec per ability class). Forward-looks to sub-project (2)
   but belongs to combat coverage.
 
-Both follow the existing `AFunctionalTest` four-phase Tick pattern (and will reparent to
-`AARPGFunctionalTestBase` if/when `08-harness-testing` lands it — not a dependency here).
+Both are self-contained `AFunctionalTest` actors (own minimal phased Tick), placed in the
+`/Game/Maps/VerticalSlice` map via a Python script and run by their specific automation
+name (so each gets a fresh map load — the enemy stays alive and `VSFunctionalTest` does
+not run alongside them).
 
 ## Files touched
 
 **UE project repo** (`…/Unreal Projects/PoF`, pushes to `github.com/xkazm04/pof-exp`):
-- `Source/PoF/AbilitySystem/GA_MeleeAttack.h` — 3 new UPROPERTYs + 2 method decls.
+- `Source/PoF/AbilitySystem/GA_MeleeAttack.h` — 3 new UPROPERTYs + 3 method decls.
 - `Source/PoF/AbilitySystem/GA_MeleeAttack.cpp` — refactors + the `false`-mode WaitDelay
   self-apply branch.
-- `Source/PoF/Test/VSFunctionalTest.cpp` — phase #4 update (orient + drop the event send).
-- `Source/PoF/Test/AVSCombatGrayBoxPathTest.{h,cpp}` (or `Combat/` subfolder) — new.
-- `Source/PoF/Test/AVSCombatAbilityGrantTest.{h,cpp}` — new.
+- `Source/PoF/Test/Combat/VSCombatGrayBoxPathTest.{h,cpp}` — new (self-contained `AFunctionalTest`).
+- `Source/PoF/Test/Combat/VSCombatAbilityGrantTest.{h,cpp}` — new (self-contained `AFunctionalTest`).
+- `Content/Python/place_combat_tests.py` — new (idempotent: places the two test actors
+  in the VerticalSlice map + saves).
+- `Source/PoF/Test/VSFunctionalTest.cpp` — **not touched** (see coordination note).
 
 **PoF app repo** (`C:\Users\kazda\kiro\pof`, commit locally only — do **not** push):
-- `src/lib/module-registry.ts` — `arpg-combat` prompt default.
+- `src/lib/module-registry.ts` — `arpg-combat` checklist item `acb-1` prompt default.
 - This spec.
 
 ## Risks / open verification gates
 
 1. **Forward-cone orientation.** `FindForwardTarget` requires the enemy to be within
-   `MeleeHitRange` *and inside the forward cone*. The functional-test phase #4 must
-   actively orient the player toward the enemy before the attack, or the search returns
-   null and damage never applies. The re-run of `VSFunctionalTest` is the gate.
+   `MeleeHitRange` *and inside the forward cone*. The enemy sits 400 cm from PlayerStart
+   in the slice — outside `MeleeHitRange` (180 cm) — so `AVSCombatGrayBoxPathTest` must
+   teleport the player adjacent (~150 cm) and orient it toward the enemy before attacking,
+   or the search returns null and damage never applies. The test run is the gate.
 2. **Double-hit avoidance.** Once #4 drops the manual event send, confirm damage is
    applied exactly once (no stray notify, no leftover send). The `Health` delta should
    equal `BaseDamage × ComboMultiplier[0]`, not twice that.
