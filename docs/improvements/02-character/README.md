@@ -9,16 +9,27 @@ character creation, not just *systems*.
 
 ## Current state
 
-After the Characters sub-project (2026-05-22):
+**Update 2026-05-23** — the **enemy-AI + player-takes-damage** deliverable
+shipped (game.md §2 + §3, tests.md UE §3). The enemy is now hostile and the
+player takes damage; the two ✅ items below are resolved. See
+[`OUTCOME-enemy-ai.md`](OUTCOME-enemy-ai.md) and the next-directions roadmap in
+`../../superpowers/plans/2026-05-23-character-enemy-ai.md`.
+
+After the Characters sub-project (2026-05-22) + the enemy-AI deliverable:
 
 - Both player and enemy use the **UE Mannequin** from UE 5.7's experimental
   `MoverTests` plugin (`SKM_Manny` player, `SKM_Manny_Simple` enemy with a
   red `M_EnemyRed` material).
 - They animate (idle / walk / run) via the ready-made `ABP_Manny`.
-- Enemy is **passive** — `AARPGEnemyCharacter` has AI scaffolding (BT host,
-  squad manager, EQS contexts, BT tasks/services) but **no Behaviour Tree
-  asset** is assigned, so the enemy stands still.
-- The melee **attack plays no real swing animation** — `AM_MeleeCombo` is an
+- ✅ Enemy is **hostile** — a pure-C++ `ARPGSimpleAIController` chases the
+  player (nav-independent steering) and activates `GA_EnemyMeleeAttack` on
+  cooldown; `AARPGEnemyCharacter`'s BT scaffolding (BT host, squad manager, EQS
+  contexts, BT tasks/services) remains but is unused (no BT asset — sidestepped,
+  not solved).
+- ✅ The **player takes damage** — the enemy's melee applies `GE_Damage` via the
+  gray-box fallback in `GA_EnemyMeleeAttack`; the player's GAS Health drops and
+  the HUD player bar moves. Verified by `AVSEnemyAttackTest` + the PS-1 re-run.
+- The melee **attack still plays no real swing animation** — `AM_MeleeCombo` is an
   empty montage shell with no skeleton-bound sequences. The ability fires
   and applies damage via `GA_MeleeAttack`'s fallback timer window, not via
   a montage notify.
