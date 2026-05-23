@@ -149,7 +149,8 @@ export type CLITaskType =
   | 'ask-claude'
   | 'feature-fix'
   | 'feature-review'
-  | 'module-scan';
+  | 'module-scan'
+  | 'wbp-starter';
 
 export interface CLITask {
   type: CLITaskType;
@@ -202,6 +203,17 @@ export interface ModuleScanTask extends CLITask {
   type: 'module-scan';
   passes: EvalPass[];
   previousFindings?: string;
+  appOrigin: string;
+}
+
+/**
+ * Extended WBP-starter task — scaffolds a stub Widget Blueprint + a wiring README
+ * for a BindWidget-coupled C++ widget class (folder-04 §6 / Phase 2b).
+ */
+export interface WBPStarterTask extends CLITask {
+  type: 'wbp-starter';
+  /** The C++ UUserWidget subclass to scaffold a companion WBP for (e.g. UARPGHUDWidget). */
+  targetClass: string;
   appOrigin: string;
 }
 
@@ -419,6 +431,34 @@ ${buildCallbackSection(getCallback(cbId)!)}`;
 ${buildCallbackSection(getCallback(cbId)!)}`;
     }
 
+    case 'wbp-starter': {
+      const wt = task as WBPStarterTask;
+      const header = buildProjectContextHeader(ctx);
+      const cls = wt.targetClass;
+      const name = cls.replace(/^U/, '');
+      return `${header}
+
+## Task: Scaffold a Widget Blueprint stub for \`${cls}\`
+
+\`${cls}\` is a C++ UUserWidget that uses \`UPROPERTY(meta=(BindWidget))\` members, so it cannot run without a companion Widget Blueprint authored in the UMG editor — and the widget tree itself cannot be created from Python. Scaffold the stub asset plus a wiring README so the operator can finish it by hand.
+
+1. **Find and read the header** for \`${cls}\` under \`Source/\` (e.g. \`Source/PoF/UI/${name}.h\`).
+2. **Extract the bind targets**: every \`UPROPERTY(meta=(BindWidget))\` and \`UPROPERTY(meta=(BindWidgetOptional))\` member. Record each property name, its \`UWidget\` subtype (UProgressBar, UTextBlock, UImage, UCanvasPanel, …), and whether it is required (BindWidget) or optional (BindWidgetOptional).
+3. **Create the stub WBP via the full editor.** Do NOT use \`-run=pythonscript\` — that commandlet path is unreliable for asset creation. Use the full editor with \`-ExecutePythonScript=\` instead:
+   \`& "<UnrealEditor.exe>" "<the .uproject in ${ctx.projectPath}>" -ExecutePythonScript="<your script>"\`
+   The Python should:
+   - build \`factory = unreal.WidgetBlueprintFactory()\` and set its parent class to \`${cls}\` (\`unreal.load_class(None, "/Script/PoF.${name}")\`, adjusting the module path if needed);
+   - call \`unreal.AssetToolsHelpers.get_asset_tools().create_asset("WBP_${name}", "/Game/UI", unreal.WidgetBlueprint, factory)\`;
+   - save the new asset. The result is an empty shell — that is expected; Python cannot author the widget tree or resolve BindWidget names.
+4. **Write the wiring README** to \`Source/PoF/UI/WBP_${name}.README.md\` containing:
+   - the parent C++ class (\`${cls}\`) and the WBP asset path (\`/Game/UI/WBP_${name}\`);
+   - a markdown table with one row per bind target: \`| Property name | Widget type | Required? | Suggested parent/slot |\`;
+   - a "How to finish in the UMG editor" section: open the WBP, add each child widget using the EXACT property name (BindWidget resolves by name), parent them under a root Canvas Panel, then compile.
+5. **Report** a one-paragraph summary: the WBP asset path, how many bind targets were found, and the README path.
+
+This is a scaffold only — laying out the widget tree is the operator's manual UMG-editor step. Do not attempt the tree from Python.`;
+    }
+
     default:
       return task.prompt;
   }
@@ -498,6 +538,18 @@ export const TaskFactory = {
       passes,
       appOrigin,
       previousFindings,
+    };
+  },
+
+  /** Create a task for the WBP-starter tool (scaffold a stub WBP for a BindWidget C++ class) */
+  wbpStarter(moduleId: SubModuleId, targetClass: string, appOrigin: string, label: string): WBPStarterTask {
+    return {
+      type: 'wbp-starter',
+      moduleId,
+      prompt: '', // assembled by buildTaskPrompt
+      label,
+      targetClass,
+      appOrigin,
     };
   },
 };
