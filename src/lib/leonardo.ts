@@ -205,7 +205,7 @@ export async function generateTextureOn3DModel(req: Texture3DRequest): Promise<T
   const putRes = await fetch(modelUploadUrl, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/octet-stream' },
-    body: req.objBytes,
+    body: req.objBytes as unknown as BodyInit,
   });
   if (!putRes.ok) throw new Error(`Leonardo OBJ PUT failed (${putRes.status})`);
 
