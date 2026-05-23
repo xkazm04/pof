@@ -17,6 +17,39 @@
 
 ---
 
+## Status — ✅ COMPLETE (2026-05-23)
+
+All four deliverables implemented TDD (RED→GREEN), full validate green at each
+step. Originally committed across three branches due to shared-tree HEAD churn,
+then **consolidated onto `master` by cherry-pick** (zero conflicts). Final master
+state validated green: **959/959 tests, typecheck + lint clean**.
+
+| Deliverable | What shipped | master commit |
+|---|---|---|
+| Audit fix (pre-req) | `generateTextureOn3DModel` S3-failure leak fixed (try wraps steps 2–4) + regression test | `623fa9b` |
+| Spec | design doc | `641d6db` |
+| Plan | this document | `d0a6802` |
+| **D0** prompt-length | `MAX_PROMPT_LENGTH` single source of truth; lib throws (no silent slice); route reuses it; route-mock updated | `5d7f8da` |
+| **D1 (#3)** normal-from-albedo | `src/lib/texture-maps.ts` `deriveNormalFromAlbedo` (wrap-around Sobel, tiling-safe); `sharp` added as direct dep | `a2280b4` |
+| **D1 (#3)** route | `POST /api/texture-maps` `{albedoBase64,strength?}→{normalBase64}` | `023c524` |
+| **D2 (#7)** biome→texture | `src/lib/visual-gen/biome-textures.ts` `BIOME_TEXTURES` + `pickBiomeTexture` (ambientCG search, PolyHaven fallback); anti-asphalt guard test | `f94a385` |
+| **D3 (#1)** panel | `AdvancedTexturePanel` (Scenario PBR + Universal Upscaler tiles, key-gated hint) | `fc1d6cc` |
+| **D3 (#1)** mount | Advanced tab wired into `MaterialLabView` | `a3a39b6` |
+| Findings | run-log round-2 note | `2f58450` |
+
+**Tests added:** prompt-length rejection (leonardo-client); `deriveNormalFromAlbedo`
+flat/edge (real sharp); texture-maps route; biome-textures guard + pick/fallback;
+`AdvancedTexturePanel` Scenario/upscale/configure-hint.
+
+**Not pushed** — `master` is local-ahead of `origin/master`; the user pushes manually.
+
+**Deviations from the as-written plan:** (1) D0 also required adding
+`MAX_PROMPT_LENGTH` to the strict `vi.mock` in `leonardo-route.test.ts`. (2) The
+per-commit "landing branch" varied (shared-tree HEAD churn) rather than a single
+branch; resolved by the cherry-pick consolidation above.
+
+---
+
 ## Task 1: Deliverable 0 — prompt-length harmonization
 
 **Files:**
@@ -24,7 +57,7 @@
 - Modify: `src/app/api/leonardo/route.ts` (reference the shared constant)
 - Test: `src/__tests__/leonardo/leonardo-client.test.ts` (add one case)
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 Add this `describe` block to the end of `src/__tests__/leonardo/leonardo-client.test.ts` (it reuses the file's existing `installGenFetch` helper):
 
@@ -39,12 +72,12 @@ describe('generateImage prompt length', () => {
 });
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `npx vitest run src/__tests__/leonardo/leonardo-client.test.ts -t "silently truncating"`
 Expected: FAIL — current code `slice(0,1500)`s and resolves, so the promise does not reject.
 
-- [ ] **Step 3: Add the constant and the guard**
+- [x] **Step 3: Add the constant and the guard**
 
 In `src/lib/leonardo.ts`, add the export near the other module constants (after `const MAX_POLL_ATTEMPTS = 30;`):
 
@@ -70,7 +103,7 @@ with:
 
 Then in the request `body`, replace `prompt: trimmedPrompt,` with `prompt,`.
 
-- [ ] **Step 4: Point the route at the shared constant**
+- [x] **Step 4: Point the route at the shared constant**
 
 In `src/app/api/leonardo/route.ts`, change the import:
 
@@ -84,12 +117,12 @@ and the guard in the `image` branch:
       if (prompt.length > MAX_PROMPT_LENGTH) return apiError(`Prompt exceeds ${MAX_PROMPT_LENGTH} character limit`, 400);
 ```
 
-- [ ] **Step 5: Run tests to verify they pass**
+- [x] **Step 5: Run tests to verify they pass**
 
 Run: `npx vitest run src/__tests__/leonardo`
 Expected: PASS — all leonardo client + route tests green (the new case rejects).
 
-- [ ] **Step 6: Full validate + commit**
+- [x] **Step 6: Full validate + commit**
 
 Run: `npm run validate`
 Expected: typecheck clean, lint warnings-only, tests pass.
@@ -119,7 +152,7 @@ git branch --show-current
 - Create: `src/lib/texture-maps.ts`
 - Test: `src/__tests__/texture-maps/derive-normal.test.ts`
 
-- [ ] **Step 1: Declare sharp as a direct dependency**
+- [x] **Step 1: Declare sharp as a direct dependency**
 
 `sharp@0.34.5` is already installed (transitively) and in the lockfile; declare it directly. In `package.json`, add to the `dependencies` object (keep alphabetical order):
 
@@ -130,7 +163,7 @@ git branch --show-current
 Run: `npm install`
 Expected: completes with no version change to sharp (records it as a direct dep). If `npm install` races with another session's package.json edit, re-read `package.json`, re-apply the one-line add, and re-run.
 
-- [ ] **Step 2: Write the failing test**
+- [x] **Step 2: Write the failing test**
 
 Create `src/__tests__/texture-maps/derive-normal.test.ts`:
 
@@ -181,12 +214,12 @@ describe('deriveNormalFromAlbedo', () => {
 });
 ```
 
-- [ ] **Step 3: Run test to verify it fails**
+- [x] **Step 3: Run test to verify it fails**
 
 Run: `npx vitest run src/__tests__/texture-maps/derive-normal.test.ts`
 Expected: FAIL — `deriveNormalFromAlbedo` is not defined / module not found.
 
-- [ ] **Step 4: Implement the lib**
+- [x] **Step 4: Implement the lib**
 
 Create `src/lib/texture-maps.ts`:
 
@@ -254,12 +287,12 @@ export async function deriveNormalFromAlbedo(
 }
 ```
 
-- [ ] **Step 5: Run test to verify it passes**
+- [x] **Step 5: Run test to verify it passes**
 
 Run: `npx vitest run src/__tests__/texture-maps/derive-normal.test.ts`
 Expected: PASS — flat → (128,128,255); rising edge → X < 128.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 Run: `npm run typecheck`
 Expected: clean.
@@ -287,7 +320,7 @@ git branch --show-current
 - Create: `src/app/api/texture-maps/route.ts`
 - Test: `src/__tests__/texture-maps/texture-maps-route.test.ts`
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 Create `src/__tests__/texture-maps/texture-maps-route.test.ts`:
 
@@ -324,12 +357,12 @@ describe('POST /api/texture-maps', () => {
 });
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `npx vitest run src/__tests__/texture-maps/texture-maps-route.test.ts`
 Expected: FAIL — route module not found.
 
-- [ ] **Step 3: Implement the route**
+- [x] **Step 3: Implement the route**
 
 Create `src/app/api/texture-maps/route.ts`:
 
@@ -359,12 +392,12 @@ export async function POST(request: Request) {
 
 Note: the mock returns `deriveNormalFromAlbedo(..., { strength: 3 })`; when `strength` is absent the route passes `{ strength: undefined }` — that is intentional and matches the lib's `opts.strength ?? 2` default.
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
 Run: `npx vitest run src/__tests__/texture-maps`
 Expected: PASS — route + lib tests green.
 
-- [ ] **Step 5: Full validate + commit**
+- [x] **Step 5: Full validate + commit**
 
 Run: `npm run validate`
 Expected: green.
@@ -391,7 +424,7 @@ git branch --show-current
 - Create: `src/lib/visual-gen/biome-textures.ts`
 - Test: `src/__tests__/visual-gen/biome-textures.test.ts`
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 Create `src/__tests__/visual-gen/biome-textures.test.ts`:
 
@@ -454,12 +487,12 @@ describe('pickBiomeTexture', () => {
 });
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `npx vitest run src/__tests__/visual-gen/biome-textures.test.ts`
 Expected: FAIL — `biome-textures` module not found.
 
-- [ ] **Step 3: Implement the lib**
+- [x] **Step 3: Implement the lib**
 
 Create `src/lib/visual-gen/biome-textures.ts`:
 
@@ -549,12 +582,12 @@ export async function pickBiomeTexture(biome: Biome): Promise<AssetSearchResult>
 }
 ```
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
 Run: `npx vitest run src/__tests__/visual-gen/biome-textures.test.ts`
 Expected: PASS — guard checks + pick/fallback paths green.
 
-- [ ] **Step 5: Full validate + commit**
+- [x] **Step 5: Full validate + commit**
 
 Run: `npm run validate`
 Expected: green.
@@ -583,7 +616,7 @@ git branch --show-current
 - Create: `src/components/modules/visual-gen/material-lab/AdvancedTexturePanel.tsx`
 - Test: `src/__tests__/components/advanced-texture-panel.test.tsx`
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 Create `src/__tests__/components/advanced-texture-panel.test.tsx` (mirrors `wiring-assets-panel.test.tsx`; no jest-dom — assert with `.toBeTruthy()`/`.textContent`):
 
@@ -631,12 +664,12 @@ describe('AdvancedTexturePanel — Upscaler tile', () => {
 });
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `npx vitest run src/__tests__/components/advanced-texture-panel.test.tsx`
 Expected: FAIL — component module not found.
 
-- [ ] **Step 3: Implement the component**
+- [x] **Step 3: Implement the component**
 
 Create `src/components/modules/visual-gen/material-lab/AdvancedTexturePanel.tsx`:
 
@@ -794,12 +827,12 @@ export function AdvancedTexturePanel() {
 }
 ```
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
 Run: `npx vitest run src/__tests__/components/advanced-texture-panel.test.tsx`
 Expected: PASS — Scenario tile posts + renders thumbnails; configure-hint path; upscale tile posts mode=upscale + shows job id.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 Run: `npm run typecheck`
 Expected: clean.
@@ -826,7 +859,7 @@ git branch --show-current
 **Files:**
 - Modify: `src/components/modules/visual-gen/material-lab/MaterialLabView.tsx`
 
-- [ ] **Step 1: Add the import**
+- [x] **Step 1: Add the import**
 
 In `MaterialLabView.tsx`, add to the imports (near `import { PBREditor } from './PBREditor';`):
 
@@ -840,7 +873,7 @@ and add `Sparkles` to the existing `lucide-react` import:
 import { Paintbrush, Send, Loader2, CheckCircle2, XCircle, Sparkles } from 'lucide-react';
 ```
 
-- [ ] **Step 2: Add the tab**
+- [x] **Step 2: Add the tab**
 
 In `MaterialLabView()`, extend the `extraTabs` array with a second entry:
 
@@ -861,12 +894,12 @@ In `MaterialLabView()`, extend the `extraTabs` array with a second entry:
   ];
 ```
 
-- [ ] **Step 3: Verify typecheck + full validate**
+- [x] **Step 3: Verify typecheck + full validate**
 
 Run: `npm run validate`
 Expected: typecheck clean, lint warnings-only, all tests pass (936/946-class total, no failures from these files).
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add src/components/modules/visual-gen/material-lab/MaterialLabView.tsx
@@ -879,7 +912,7 @@ EOF
 git branch --show-current
 ```
 
-- [ ] **Step 5: Append a findings note**
+- [x] **Step 5: Append a findings note**
 
 Add a short entry to `docs/improvements/06-textures-materials/runs/2026-05-23-run.md` (a new `## Follow-ups (later same day)` section) recording: the four items closed, the commit hashes, and which branch each landed on. Commit it:
 
