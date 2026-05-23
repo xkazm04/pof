@@ -30,6 +30,14 @@ export const UE_GOTCHAS: Gotcha[] = [
     source: 'vertical-slice: HUD',
   },
   {
+    id: 'umg-debug-text-overlay',
+    summary: 'AddOnScreenDebugMessage debug text draws over UMG and pins to the top-left',
+    detail:
+      'GEngine->AddOnScreenDebugMessage prints above all UMG and pins to the top-left corner, colliding with anything placed there and confounding screenshot/vision HUD checks. Either offset HUD elements down (the slice put the player health bar at y=90) or disable it in dev with the DisableAllScreenMessages console command.',
+    appliesTo: ['ue-cpp'],
+    source: 'vertical-slice: HUD',
+  },
+  {
     id: 'cmd-quote-wrap',
     summary: 'cmd.exe /c with an embedded quoted command needs windowsVerbatimArguments + an outer-quote wrap',
     detail:

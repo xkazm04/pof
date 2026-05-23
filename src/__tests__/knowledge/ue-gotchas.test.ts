@@ -34,6 +34,12 @@ describe('formatGotchas', () => {
     expect(out).toContain('WITH_EDITOR');
   });
 
+  it('includes the debug-text overlay pitfall for ue-cpp', () => {
+    const out = formatGotchas('ue-cpp');
+    expect(out).toContain('AddOnScreenDebugMessage');
+    expect(out).toMatch(/DisableAllScreenMessages/);
+  });
+
   it('excludes python-only gotchas from the ue-cpp block', () => {
     expect(formatGotchas('ue-cpp')).not.toContain('Constant3Vector');
   });
