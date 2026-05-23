@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useSuspendableEffect } from '@/hooks/useSuspend';
-import { Check, ChevronDown, ChevronRight, FileCode, Loader2, RefreshCw, Star, ArrowRight, Download, TrendingUp, TrendingDown, Minus, AlertTriangle, Link2, Zap, Search, ArrowUpDown, ArrowUp, ArrowDown, Play, Copy, Eye, LayoutList, LayoutGrid, ShieldCheck } from 'lucide-react';
+import { Check, ChevronDown, ChevronRight, FileCode, Loader2, RefreshCw, Star, ArrowRight, Download, TrendingUp, TrendingDown, Minus, AlertTriangle, Link2, Zap, Search, ArrowUpDown, ArrowUp, ArrowDown, Play, Copy, Eye, LayoutList, LayoutGrid, ShieldCheck, Boxes } from 'lucide-react';
 import { useFeatureMatrix } from '@/hooks/useFeatureMatrix';
 import { StaggerContainer, StaggerItem } from '@/components/ui/Stagger';
 import { AccentButton } from '@/components/ui/AccentButton';
@@ -10,7 +10,7 @@ import { FetchError } from './FetchError';
 import { useProjectStore } from '@/stores/projectStore';
 import type { FeatureRow, FeatureStatus } from '@/types/feature-matrix';
 import type { ReviewSnapshot } from '@/lib/feature-matrix-db';
-import { buildDependencyMap, computeBlockers } from '@/lib/feature-definitions';
+import { buildDependencyMap, computeBlockers, moduleNeedsBinaryContent } from '@/lib/feature-definitions';
 import type { DependencyInfo, ResolvedDependency } from '@/lib/feature-definitions';
 import { MODULE_LABELS } from '@/lib/module-registry';
 import { MarkdownProse } from '@/components/ui/MarkdownProse';
@@ -150,6 +150,7 @@ export function FeatureMatrix({ moduleId, accentColor, onReview, onSync, isRevie
   const { features, summary, isLoading, error, retry, refetch, runAutoVerify, isVerifying, verificationResults } = useFeatureMatrix(moduleId);
   const projectPath = useProjectStore((s) => s.projectPath);
   const bridgeConnected = usePofBridgeStore((s) => s.connectionStatus === 'connected');
+  const needsBinaryContent = useMemo(() => moduleNeedsBinaryContent(moduleId), [moduleId]);
 
   // Build a lookup map for verification results by feature name
   const verificationMap = useMemo(() => {
@@ -453,6 +454,20 @@ export function FeatureMatrix({ moduleId, accentColor, onReview, onSync, isRevie
       {/* Summary bar + Sparkline + Review button */}
       <div className="flex items-center gap-4">
         <SummaryBar summary={summary} />
+        {needsBinaryContent && (
+          <span
+            className="flex items-center gap-1 text-2xs px-2 py-0.5 rounded-full flex-shrink-0 font-medium"
+            style={{
+              backgroundColor: statusBg(STATUS_WARNING),
+              color: STATUS_WARNING,
+              border: `1px solid ${statusBorder(STATUS_WARNING)}`,
+            }}
+            title="This module depends on binary content (Widget/Animation Blueprint or Behavior Tree) that cannot be generated from code — it must be authored in the editor."
+          >
+            <Boxes className="w-3 h-3" />
+            needs binary content
+          </span>
+        )}
         {snapshots.length >= 2 && (
           <QualitySparkline snapshots={snapshots} accentColor={accentColor} />
         )}
