@@ -15,6 +15,7 @@ import { ProgressionCurve } from './ProgressionCurve';
 import { ZoneMap } from './ZoneMap';
 import { EnemyBestiary } from './EnemyBestiary';
 import { ItemCatalog } from './ItemCatalog';
+import { WBPStarterPanel } from '../arpg-ui/WBPStarterPanel';
 
 /**
  * Registry of unique domain-specific tabs for each core engine submodule.
@@ -55,7 +56,12 @@ const UNIQUE_TAB_MAP: Partial<Record<SubModuleId, ExtraTab>> = {
     id: 'screen-flow',
     label: 'Screen Flow',
     icon: Monitor,
-    render: (mid) => <ScreenFlowMap moduleId={mid} />,
+    render: (mid) => (
+      <div className="flex flex-col gap-4">
+        <WBPStarterPanel moduleId={mid} />
+        <ScreenFlowMap moduleId={mid} />
+      </div>
+    ),
   },
   'arpg-progression': {
     id: 'progression',
