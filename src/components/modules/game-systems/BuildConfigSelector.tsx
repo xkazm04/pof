@@ -17,6 +17,7 @@ import { PlatformProfileCard } from './PlatformProfileCard';
 import { CookSettingsPanel } from './CookSettingsPanel';
 import { CookProgress } from './CookProgress';
 import { PreflightPanel, type PreflightStatusSummary } from './PreflightPanel';
+import { SmokeTest, type SmokeTestRequest } from './SmokeTest';
 import { MODULE_COLORS, ACCENT_VIOLET, STATUS_ERROR } from '@/lib/chart-colors';
 
 const PLATFORM_ICONS: Record<PlatformId, typeof Monitor> = {
@@ -56,6 +57,9 @@ export function BuildConfigSelector() {
   // long cook starts rather than 20 minutes in.
   const [preflight, setPreflight] = useState<PreflightStatusSummary>({ canCook: true, overall: 'idle' });
   const [gateBlock, setGateBlock] = useState<BuildProfile | null>(null);
+
+  // After a successful Win64 cook, auto-run the runnable-exe smoke-test.
+  const [smokeRequest, setSmokeRequest] = useState<SmokeTestRequest | null>(null);
 
   // Fetch profiles
   const fetchProfiles = useCallback(async () => {
@@ -143,12 +147,23 @@ export function BuildConfigSelector() {
     setCookRequest({ profileId: profile.id, projectPath, projectName, ueVersion });
   }, [cookRequest, gateBlock, projectPath, projectName, ueVersion]);
 
-  const handleCookComplete = useCallback((result: { status: 'success' | 'failed' }) => {
+  const handleCookComplete = useCallback((result: { status: 'success' | 'failed'; exePath?: string }) => {
+    const profileId = cookRequest?.profileId;
     setCookRequest(null);
-    if (result.status === 'success') {
-      fetchProfiles();
+    if (result.status !== 'success') return;
+    fetchProfiles();
+
+    // Kick off the post-cook smoke-test for runnable (Win64) builds.
+    const profile = profiles.find((p) => p.id === profileId);
+    if (result.exePath && profile && profile.platform === 'Win64') {
+      setSmokeRequest({
+        exePath: result.exePath,
+        projectName,
+        platform: profile.platform,
+        config: profile.config,
+      });
     }
-  }, [fetchProfiles]);
+  }, [cookRequest, profiles, projectName, fetchProfiles]);
 
   // New profile
   const handleNewProfile = useCallback((platform: PlatformId) => {
@@ -314,6 +329,9 @@ export function BuildConfigSelector() {
 
       {/* Cook progress */}
       <CookProgress request={cookRequest} onComplete={handleCookComplete} />
+
+      {/* Post-cook runnable-exe smoke-test */}
+      <SmokeTest key={smokeRequest?.exePath ?? 'idle'} request={smokeRequest} />
 
       {/* Profile editor modal */}
       <AnimatePresence>

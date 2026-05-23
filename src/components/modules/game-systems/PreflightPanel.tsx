@@ -88,8 +88,12 @@ export function PreflightPanel({ projectPath, projectName, ueVersion, mapName, o
   }, [projectPath, projectName, ueVersion, mapName]);
 
   // Auto-run the cheap config + audit checks on mount / when the project changes.
+  // Deferred to a macrotask so the running-state update isn't a synchronous
+  // setState inside the effect body (which would risk a cascading render).
   useEffect(() => {
-    if (projectPath && projectName) void runCheck('fast');
+    if (!projectPath || !projectName) return;
+    const id = setTimeout(() => { void runCheck('fast'); }, 0);
+    return () => clearTimeout(id);
   }, [projectPath, projectName, runCheck]);
 
   const toggleExpand = (id: string) => {

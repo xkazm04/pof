@@ -151,6 +151,22 @@ export function deleteBuild(id: number): boolean {
   return result.changes > 0;
 }
 
+/**
+ * Attach a post-cook smoke-test note to the most recent successful build for a
+ * platform+config. The smoke-test runs immediately after a cook, so the latest
+ * matching success is reliably the build it verified. Returns the updated
+ * record, or null if no matching build exists.
+ */
+export function attachSmokeResultToLatestBuild(platform: string, config: string, note: string): BuildRecord | null {
+  const db = getDb();
+  const row = db.prepare(
+    "SELECT id FROM build_history WHERE platform = ? AND config = ? AND status = 'success' ORDER BY created_at DESC LIMIT 1"
+  ).get(platform, config) as { id: number } | undefined;
+  if (!row) return null;
+  db.prepare('UPDATE build_history SET notes = ? WHERE id = ?').run(note, row.id);
+  return getBuild(row.id);
+}
+
 // ---------- Analytics ----------
 
 export function getBuildStats(): BuildStats {
