@@ -15,6 +15,8 @@ import {
 } from '@/lib/prompt-context';
 import type { FeatureDefinition } from '@/lib/feature-definitions';
 import { buildEvalPrompt, type EvalPass } from '@/lib/evaluator/module-eval-prompts';
+import { getModuleChecklist } from '@/lib/module-registry';
+import { buildVisualCheckSection } from '@/lib/prompts/visual-check';
 
 // ── Task callback system ────────────────────────────────────────────────────
 
@@ -235,7 +237,18 @@ export function buildTaskPrompt(task: CLITask, ctx: ProjectContext): string {
         schemaHint: '  "completed": true',
       });
 
-      return `${header}${domainSection}\n\n## Task\n${task.prompt}\n\n${buildCallbackSection(getCallback(cbId)!)}`;
+      const itemDef = getModuleChecklist(task.moduleId).find((i) => i.id === ct.itemId);
+      const visualBlock =
+        isUE5 && itemDef?.visualCheck
+          ? `\n\n${buildVisualCheckSection({
+              projectPath: ctx.projectPath,
+              appOrigin: ct.appOrigin,
+              moduleId: task.moduleId,
+              itemId: ct.itemId,
+            })}`
+          : '';
+
+      return `${header}${domainSection}\n\n## Task\n${task.prompt}\n\n${buildCallbackSection(getCallback(cbId)!)}${visualBlock}`;
     }
 
     case 'quick-action':

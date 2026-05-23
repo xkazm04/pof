@@ -42,6 +42,14 @@ export interface EvaluatorEvents {
     priority: string;
     suggestedPrompt?: string;
   };
+  'eval.visual': {
+    moduleId: string;
+    itemId: string;
+    verdict: 'pass' | 'fail';
+    anyEmpty: boolean;
+    notes: string;
+    screenshotPath: string;
+  };
 }
 
 /** Build events */
