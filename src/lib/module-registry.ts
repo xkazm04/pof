@@ -239,7 +239,7 @@ SLICE MODE (vertical slice — no inventory): The primary slice variant is overl
     { id: 'al-8', label: 'Create chest and container actors', description: 'Interactive chests that use loot tables when opened, with open animation and cooldown.', prompt: 'Create an AARPGLootChest actor. When the player interacts: play open animation (flip lid), roll its assigned loot table, spawn world items in front of the chest. The chest should have a visual state (closed/open), not be re-openable once looted, and persist its opened state for save/load. Create variants: wooden chest (common loot), golden chest (rare+ loot).' },
   ],
   'arpg-ui': [
-    { id: 'au-1', label: 'Set up HUD framework', description: 'Create main HUD widget with health/mana bars, ability bar, and minimap placeholder.', prompt: 'Create the main HUD widget for my aRPG using UMG. Layout: bottom-left health bar (red) and mana bar (blue) with numeric values, bottom-center ability hotbar (4 slots with cooldown overlays), top-right minimap placeholder, top-left zone name. Create the C++ UUserWidget base class and bind to GAS attribute delegates for real-time updates.' },
+    { id: 'au-1', label: 'Set up HUD framework', description: 'Create main HUD widget with health/mana bars, ability bar, and minimap placeholder.', prompt: `Create the main HUD widget for my aRPG as a pure-C++ UUserWidget — no companion Widget Blueprint, and do not use BindWidget. Build the widget tree in RebuildWidget() (before Super::RebuildWidget()), NOT in NativeConstruct() (which runs after the Slate tree is built, so WidgetTree mutations there do not render). Layout: top-left player health bar (green) and top-centre enemy/target health bar (red), each with numeric values. Style every UProgressBar with an explicit FProgressBarStyle — a dark track (BackgroundImage) and a bright fill (FillImage) — because an empty ProgressBar is invisible with the engine default. Bind to GAS attribute-change delegates (GetGameplayAttributeValueChangeDelegate) for real-time updates. Use UVSHUDWidget as the reference implementation.` },
     { id: 'au-2', label: 'Bind HUD to GAS attributes', description: 'Listen for Health, MaxHealth, Mana, MaxMana attribute changes and update bars in real time.', prompt: 'Bind my HUD health and mana bars to the GAS AttributeSet. Use AbilitySystemComponent->GetGameplayAttributeValueChangeDelegate() to listen for Health and Mana changes. Update the progress bar fill percentage (Health/MaxHealth). Show numeric values. Add smooth interpolation for bar movement. Change bar color when health is low (< 25% = pulsing red).' },
     { id: 'au-3', label: 'Create floating enemy health bars', description: 'UWidgetComponent on enemies showing health bar, enemy name, and level.', prompt: 'Create a floating health bar widget for enemies. Use UWidgetComponent attached to enemy characters, set to Screen space. The widget shows: enemy name, level number, health bar that updates on damage. The health bar should fade in when the enemy takes damage and fade out after 3 seconds of no damage. Hide for dead enemies.' },
     { id: 'au-4', label: 'Implement ability cooldown UI', description: 'Ability bar slots show icon, cooldown sweep overlay, mana cost, and keybind label.', prompt: 'Implement the ability bar UI for my aRPG. Create 4 ability slots at the bottom of the screen. Each slot shows: ability icon (UTexture2D from ability data), cooldown sweep overlay (circular wipe that counts down), mana cost number, and the keybind label (1/2/3/4). Bind to GAS ability cooldown tags to drive the sweep animation.' },
@@ -249,7 +249,7 @@ Create the inventory screen UI for my aRPG. Grid layout (6 columns x 5 rows) of 
     { id: 'au-6', label: 'Create character stats screen', description: 'Display all character attributes, equipped item bonuses, and derived stats.', prompt: `[SLICE: skip — requires arpg-inventory (out of scope for the vertical slice)]
 
 Create a character stats panel for my aRPG. Show all attributes from the AttributeSet: Health/MaxHealth, Mana/MaxMana, Strength, Dexterity, Intelligence, Armor, AttackPower, CriticalChance, CriticalDamage. For each, show base value + bonus from equipment in a different color. Add a section showing damage reduction percentage calculated from Armor.` },
-    { id: 'au-7', label: 'Implement floating damage numbers', description: 'Spawn floating text at hit location showing damage amount, colored by type, with animation.', prompt: 'Implement floating damage numbers for my aRPG. When damage is dealt: spawn a UMG widget at the hit location in world space. Show the damage number with color (white=physical, red=fire, blue=ice, yellow=lightning), animate it floating upward and fading out over 1 second. Critical hits show larger text with "CRIT!" prefix. Heal numbers show green with "+" prefix.' },
+    { id: 'au-7', label: 'Implement floating damage numbers', description: 'Spawn floating text at hit location showing damage amount, colored by type, with animation.', prompt: `Implement floating damage numbers for my aRPG. Reference pattern: a UDamageNumberManagerComponent on the player controller auto-subscribes to a global damage delegate and spawns a UDamageNumberWidget per hit. Make UDamageNumberWidget a pure-C++ widget — build its tree in RebuildWidget() and mark the text block UPROPERTY(meta=(BindWidgetOptional)) so it works without a Widget Blueprint. When damage is dealt: spawn at the hit location in screen space, color by type (white=physical, red=fire, blue=ice, yellow=lightning), float upward and fade out over 1 second. Critical hits show larger text with a "CRIT!" prefix; heal numbers show green with a "+" prefix.` },
     { id: 'au-8', label: 'Create pause and settings menus', description: 'Pause menu with Resume, Settings (audio/video), Save, Quit. Settings save to GameUserSettings.', prompt: 'Create a pause menu for my aRPG. On ESC press: pause game (SetGamePaused), show menu with buttons: Resume, Settings, Save Game, Quit to Main Menu. Settings screen with tabs: Graphics (resolution, quality presets, vsync, frame limit), Audio (master/music/sfx volume sliders), Controls (show keybindings). Save settings using UGameUserSettings.' },
   ],
   'arpg-progression': [
@@ -507,7 +507,23 @@ export const SUB_MODULES: SubModuleDefinition[] = [
     categoryId: 'core-engine',
     icon: Monitor,
     quickActions: ARPG_QUICK_ACTIONS['arpg-ui'],
-    knowledgeTips: [],
+    knowledgeTips: [
+      {
+        title: 'Build code-only widget trees in RebuildWidget(), not NativeConstruct()',
+        content: 'For a pure-C++ UUserWidget (no Widget Blueprint), construct the WidgetTree inside RebuildWidget() before calling Super::RebuildWidget(). NativeConstruct() runs after the Slate tree is already built, so mutating WidgetTree there has no visible effect — a common cause of "the widget compiles but nothing renders".',
+        source: 'feasibility',
+      },
+      {
+        title: 'An empty UProgressBar is invisible without an explicit FProgressBarStyle',
+        content: 'The engine default ProgressBar has a transparent background image, so an empty or low bar renders as nothing. Set an explicit style with a dark track (BackgroundImage) and a bright fill (FillImage) so the bar is visible at any percent.',
+        source: 'feasibility',
+      },
+      {
+        title: 'AddOnScreenDebugMessage overlays the whole viewport',
+        content: 'GEngine->AddOnScreenDebugMessage draws above all UMG and confounds screenshot/vision verification of the HUD. Suppress debug text in tests, and add slice HUD widgets at Z-order 30 so they sit above the main HUD layers.',
+        source: 'best-practice',
+      },
+    ],
     checklist: ARPG_CHECKLISTS['arpg-ui'],
   },
   {
