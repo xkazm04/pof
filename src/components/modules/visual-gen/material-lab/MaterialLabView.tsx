@@ -2,11 +2,12 @@
 
 import { useState } from 'react';
 import dynamic from 'next/dynamic';
-import { Paintbrush, Send, Loader2, CheckCircle2, XCircle } from 'lucide-react';
+import { Paintbrush, Send, Loader2, CheckCircle2, XCircle, Sparkles } from 'lucide-react';
 import { ReviewableModuleView } from '@/components/modules/shared/ReviewableModuleView';
 import type { ExtraTab } from '@/components/modules/shared/ReviewableModuleView';
 import { SUB_MODULE_MAP, getCategoryForSubModule, getModuleChecklist } from '@/lib/module-registry';
 import { PBREditor } from './PBREditor';
+import { AdvancedTexturePanel } from './AdvancedTexturePanel';
 import { useMaterialStore } from './useMaterialStore';
 import { BlenderConnectionBar } from '@/components/blender-mcp/BlenderConnectionBar';
 import { ViewportPreview } from '@/components/blender-mcp/ViewportPreview';
@@ -113,6 +114,12 @@ export function MaterialLabView() {
       label: 'Editor',
       icon: Paintbrush,
       render: () => <EditorTab />,
+    },
+    {
+      id: 'advanced',
+      label: 'Advanced',
+      icon: Sparkles,
+      render: () => <AdvancedTexturePanel />,
     },
   ];
 
