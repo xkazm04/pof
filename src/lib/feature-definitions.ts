@@ -513,3 +513,114 @@ export function computeBlockers(
   }
   return result;
 }
+
+// ─── Module wiring assets (binary-content dependencies) ───────────────────────
+// Declares the editor-authored assets each module needs to be runnable. Every
+// SubModuleId MUST have an explicit entry (possibly []) — enforced by
+// feature-definitions-wiring.test.ts so a new module forces a wiring decision.
+
+export interface WiringAsset {
+  name: string;
+  kind:
+    | 'WidgetBlueprint'
+    | 'AnimBlueprint'
+    | 'BehaviorTree'
+    | 'DataTable'
+    | 'InputMappingContext'
+    | 'GameMode'
+    | 'Material'
+    | 'Other';
+  note: string;
+}
+
+/** Kinds that cannot be authored from code at all — drive the matrix indicator. */
+const BINARY_AUTHORABLE_ONLY: WiringAsset['kind'][] = ['WidgetBlueprint', 'AnimBlueprint', 'BehaviorTree'];
+
+export const MODULE_WIRING_ASSETS: Partial<Record<SubModuleId, WiringAsset[]>> = {
+  // Core Engine — aRPG
+  'arpg-character': [
+    { name: 'BP_ARPGPlayerCharacter', kind: 'Other', note: 'Blueprint subclass of the C++ player character used as DefaultPawn' },
+    { name: 'IMC_Default', kind: 'InputMappingContext', note: 'Input Mapping Context added to the Enhanced Input subsystem on possess' },
+    { name: 'BP_ARPGGameMode', kind: 'GameMode', note: 'GameMode with DefaultPawnClass / PlayerControllerClass / HUDClass set' },
+  ],
+  'arpg-animation': [
+    { name: 'ABP_ARPGCharacter', kind: 'AnimBlueprint', note: 'Animation Blueprint reparented to the C++ UARPGAnimInstance; AnimGraph cannot be authored from code' },
+  ],
+  'arpg-gas': [],
+  'arpg-combat': [
+    { name: 'DT_DamageTypes', kind: 'DataTable', note: 'Damage/type rows referenced by the damage execution' },
+    { name: 'AM_MeleeCombo', kind: 'Other', note: 'Combo montage — montage shell is automatable, section timing is editor work' },
+  ],
+  'arpg-enemy-ai': [
+    { name: 'BT_Enemy', kind: 'BehaviorTree', note: 'Behavior Tree graph (Idle/Patrol/Chase/Attack) — graph cannot be authored from code' },
+    { name: 'BB_Enemy', kind: 'Other', note: 'Blackboard asset with typed keys consumed by the BT' },
+  ],
+  'arpg-inventory': [],
+  'arpg-loot': [
+    { name: 'DT_LootTable', kind: 'DataTable', note: 'Weighted loot entries' },
+  ],
+  'arpg-ui': [
+    { name: 'WBP_ARPGHUD', kind: 'WidgetBlueprint', note: 'UMG widget bound to the C++ HUD base via BindWidget — requires a WBP asset' },
+  ],
+  'arpg-progression': [
+    { name: 'DT_XPCurve', kind: 'DataTable', note: 'XP-per-level curve table' },
+  ],
+  'arpg-world': [],
+  'arpg-save': [],
+  'arpg-polish': [],
+  'core-engine-plan': [],
+
+  // Content
+  'models': [],
+  'animations': [
+    { name: 'ABP_Character', kind: 'AnimBlueprint', note: 'Animation Blueprint over the C++ AnimInstance base' },
+  ],
+  'materials': [
+    { name: 'M_Master', kind: 'Material', note: 'Master material graph with static-switch parameters' },
+  ],
+  'level-design': [],
+  'ui-hud': [
+    { name: 'WBP_HUD', kind: 'WidgetBlueprint', note: 'UMG overlay for the AHUD subclass' },
+  ],
+  'audio': [],
+
+  // Game Systems
+  'ai-behavior': [
+    { name: 'BT_Default', kind: 'BehaviorTree', note: 'Behavior Tree graph for the AI controller' },
+  ],
+  'physics': [],
+  'multiplayer': [],
+  'save-load': [],
+  'input-handling': [
+    { name: 'IMC_Default', kind: 'InputMappingContext', note: 'Input Mapping Context with the action bindings' },
+  ],
+  'dialogue-quests': [],
+  'packaging': [],
+  'blueprint-transpiler': [],
+
+  // Evaluator
+  'game-design-doc': [],
+
+  // Visual Generation (Asset Studio)
+  'asset-viewer': [],
+  'asset-forge': [],
+  'material-lab': [
+    { name: 'M_LabMaster', kind: 'Material', note: 'Master material authored in the lab' },
+  ],
+  'blender-pipeline': [],
+  'asset-browser': [],
+  'import-automation': [],
+  'auto-rig': [],
+  'procedural-engine': [],
+  'scene-composer': [],
+};
+
+/** Wiring assets for a module ([] when none declared). */
+export function getWiringAssets(moduleId: SubModuleId): WiringAsset[] {
+  return MODULE_WIRING_ASSETS[moduleId] ?? [];
+}
+
+/** True when a module depends on an asset that cannot be authored from code. */
+export function moduleNeedsBinaryContent(moduleId: SubModuleId): boolean {
+  return getWiringAssets(moduleId).some((a) => BINARY_AUTHORABLE_ONLY.includes(a.kind));
+}
