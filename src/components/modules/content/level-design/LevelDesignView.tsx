@@ -5,7 +5,7 @@ import { useState, useCallback, useEffect, useRef } from 'react';
 import { toast } from 'sonner';
 import {
   Map, Plus, Trash2, FileText, Loader2,
-  Zap, BookOpen, GitCompare, BarChart3, Layers, Grid3X3, Eye, ListChecks,
+  Zap, BookOpen, GitCompare, BarChart3, Layers, Grid3X3, Eye, ListChecks, Boxes,
 } from 'lucide-react';
 import { useDesignDocument } from '@/hooks/useDesignDocument';
 import { FetchError } from '../../shared/FetchError';
@@ -26,6 +26,7 @@ import { DifficultyArcChart } from './DifficultyArcChart';
 import { LevelDesignSpatialDiagram } from './LevelDesignSpatialDiagram';
 import { StreamingZonePlanner } from './StreamingZonePlanner';
 import { ProceduralLevelWizard } from './ProceduralLevelWizard';
+import { ProcGenDungeonPanel } from './ProcGenDungeonPanel';
 import {
   buildRoomCodegenPrompt,
   buildSyncCheckPrompt,
@@ -40,7 +41,7 @@ import type { ProceduralLevelConfig } from './ProceduralLevelWizard';
 import { MODULE_COLORS, getAppOrigin } from '@/lib/constants';
 import { STATUS_SUCCESS, STATUS_ERROR, STATUS_WARNING, STATUS_INFO } from '@/lib/chart-colors';
 
-type TabId = 'overview' | 'roadmap' | 'flow' | 'procgen' | 'narrative' | 'sync' | 'arc' | 'streaming';
+type TabId = 'overview' | 'roadmap' | 'flow' | 'procgen' | 'narrative' | 'sync' | 'arc' | 'streaming' | 'dungeon-ue';
 
 export function LevelDesignView() {
   const {
@@ -128,6 +129,21 @@ export function LevelDesignView() {
     const prompt = buildProceduralLevelPrompt(config, { projectName, projectPath, ueVersion });
     procgenCli.sendPrompt(prompt);
   }, [procgenCli, projectName, projectPath, ueVersion]);
+
+  // ── Dungeon (UE): drive the real ARPGLevelGenerator via build_procgen_dungeon.py ──
+
+  const dungeonCli = useModuleCLI({
+    moduleId: 'level-design',
+    sessionKey: 'level-design-procgen-ue',
+    label: 'Dungeon (UE)',
+    accentColor: MODULE_COLORS.content,
+  });
+
+  const handleGenerateDungeon = useCallback((roomCount: number, seed: number) => {
+    dungeonCli.execute(
+      TaskFactory.procgenDungeon('level-design', { roomCount, seed }, getAppOrigin(), 'Dungeon (UE)'),
+    );
+  }, [dungeonCli]);
 
   // ── Review/Checklist inline CLI sessions ──
 
@@ -463,6 +479,7 @@ export function LevelDesignView() {
               <TabButton label="Roadmap" icon={ListChecks} active={activeTab === 'roadmap'} onClick={() => setActiveTab('roadmap')} accent={MODULE_COLORS.content} />
               <TabButton label="Flow Editor" icon={Map} active={activeTab === 'flow'} onClick={() => setActiveTab('flow')} accent={MODULE_COLORS.content} />
               <TabButton label="Procgen" icon={Grid3X3} active={activeTab === 'procgen'} onClick={() => setActiveTab('procgen')} accent={MODULE_COLORS.content} />
+              <TabButton label="Dungeon (UE)" icon={Boxes} active={activeTab === 'dungeon-ue'} onClick={() => setActiveTab('dungeon-ue')} accent={MODULE_COLORS.content} />
               <TabButton label="Streaming" icon={Layers} active={activeTab === 'streaming'} onClick={() => setActiveTab('streaming')} accent={MODULE_COLORS.content} />
               <TabButton label="Narrative" icon={BookOpen} active={activeTab === 'narrative'} onClick={() => setActiveTab('narrative')} accent={MODULE_COLORS.content} />
               <TabButton label="Sync" icon={GitCompare} active={activeTab === 'sync'} onClick={() => setActiveTab('sync')} accent={MODULE_COLORS.content} />
@@ -538,6 +555,13 @@ export function LevelDesignView() {
                 <ProceduralLevelWizard
                   onGenerate={handleGenerateProcgen}
                   isGenerating={procgenCli.isRunning}
+                />
+              )}
+
+              {activeTab === 'dungeon-ue' && (
+                <ProcGenDungeonPanel
+                  onGenerate={handleGenerateDungeon}
+                  isGenerating={dungeonCli.isRunning}
                 />
               )}
 
