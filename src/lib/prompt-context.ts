@@ -8,6 +8,9 @@
 
 import type { SubModuleId } from '@/types/modules';
 import type { ErrorContextEntry } from '@/types/error-memory';
+import type { PromptKind } from '@/lib/knowledge/types';
+import { formatGotchas } from '@/lib/knowledge/ue-gotchas';
+import { formatBinaryContentTripwire } from '@/lib/knowledge/binary-content';
 
 export interface ProjectContext {
   projectName: string;
@@ -237,6 +240,8 @@ interface ContextHeaderOptions {
   extraRules?: string[];
   /** Past build errors relevant to this task — injected as warnings */
   errorMemory?: ErrorContextEntry[];
+  /** The kind of prompt — drives which UE pitfalls + tripwire are injected (default: 'ue-cpp' in the UE branch) */
+  promptKind?: PromptKind;
 }
 
 /**
@@ -321,6 +326,7 @@ export function buildProjectContextHeader(
     includeRules = true,
     extraRules = [],
     errorMemory = [],
+    promptKind = 'ue-cpp',
   } = opts;
 
   const moduleName = getModuleName(ctx.projectName);
@@ -371,6 +377,12 @@ export function buildProjectContextHeader(
 
     header += '\n\n## Rules\n' + rules.map((r) => `- ${r}`).join('\n');
   }
+
+  const gotchas = formatGotchas(promptKind);
+  if (gotchas) header += `\n\n${gotchas}`;
+
+  const tripwire = formatBinaryContentTripwire(promptKind);
+  if (tripwire) header += `\n\n${tripwire}`;
 
   return header;
 }
