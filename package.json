@@ -16,7 +16,7 @@
     "test:e2e:headed": "npx playwright test --headed"
   },
   "dependencies": {
-    "@google/genai": "^1.48.0",
+    "@google/genai": "^2.6.0",
     "@react-three/drei": "^10.7.7",
     "@react-three/fiber": "^9.6.1",
     "better-sqlite3": "^12.10.0",
