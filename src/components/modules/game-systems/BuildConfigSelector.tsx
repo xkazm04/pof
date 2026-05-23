@@ -16,7 +16,8 @@ import { apiFetch } from '@/lib/api-utils';
 import { PlatformProfileCard } from './PlatformProfileCard';
 import { CookSettingsPanel } from './CookSettingsPanel';
 import { CookProgress } from './CookProgress';
-import { MODULE_COLORS, ACCENT_VIOLET } from '@/lib/chart-colors';
+import { PreflightPanel, type PreflightStatusSummary } from './PreflightPanel';
+import { MODULE_COLORS, ACCENT_VIOLET, STATUS_ERROR } from '@/lib/chart-colors';
 
 const PLATFORM_ICONS: Record<PlatformId, typeof Monitor> = {
   Win64: Monitor,
@@ -49,6 +50,12 @@ export function BuildConfigSelector() {
   const [cookRequest, setCookRequest] = useState<{
     profileId: string; projectPath: string; projectName: string; ueVersion: string;
   } | null>(null);
+
+  // Pre-flight gate: a failing check blocks the cook until the operator fixes
+  // it or explicitly overrides. Catches the build-config defect class before a
+  // long cook starts rather than 20 minutes in.
+  const [preflight, setPreflight] = useState<PreflightStatusSummary>({ canCook: true, overall: 'idle' });
+  const [gateBlock, setGateBlock] = useState<BuildProfile | null>(null);
 
   // Fetch profiles
   const fetchProfiles = useCallback(async () => {
@@ -115,13 +122,26 @@ export function BuildConfigSelector() {
   // Package
   const handlePackage = useCallback((profile: BuildProfile) => {
     if (cookRequest !== null) return;
+    if (!preflight.canCook) {
+      setGateBlock(profile);
+      return;
+    }
+    setGateBlock(null);
     setCookRequest({
       profileId: profile.id,
       projectPath,
       projectName,
       ueVersion,
     });
-  }, [cookRequest, projectPath, projectName, ueVersion]);
+  }, [cookRequest, preflight.canCook, projectPath, projectName, ueVersion]);
+
+  // Override the pre-flight gate and cook anyway (operator's explicit choice).
+  const handleOverridePackage = useCallback(() => {
+    if (cookRequest !== null || !gateBlock) return;
+    const profile = gateBlock;
+    setGateBlock(null);
+    setCookRequest({ profileId: profile.id, projectPath, projectName, ueVersion });
+  }, [cookRequest, gateBlock, projectPath, projectName, ueVersion]);
 
   const handleCookComplete = useCallback((result: { status: 'success' | 'failed' }) => {
     setCookRequest(null);
@@ -212,6 +232,16 @@ export function BuildConfigSelector() {
         </div>
       )}
 
+      {/* Pre-flight gate */}
+      {projectPath && projectName && (
+        <PreflightPanel
+          projectPath={projectPath}
+          projectName={projectName}
+          ueVersion={ueVersion}
+          onStatusChange={setPreflight}
+        />
+      )}
+
       {/* Profile cards */}
       {profiles.length === 0 && !loading ? (
         <div className="text-center py-8 space-y-3">
@@ -247,6 +277,38 @@ export function BuildConfigSelector() {
               onPackage={handlePackage}
             />
           ))}
+        </div>
+      )}
+
+      {/* Pre-flight gate block notice */}
+      {gateBlock && (
+        <div
+          data-testid="pof-preflight-gate-block"
+          className="rounded border p-3 text-xs space-y-2"
+          style={{ borderColor: `${STATUS_ERROR}66`, background: `${STATUS_ERROR}14` }}
+        >
+          <div className="font-medium" style={{ color: STATUS_ERROR }}>
+            Pre-flight checks failed — cooking now will likely fail.
+          </div>
+          <div className="text-text-muted">
+            Fix the red checks above and re-run, or package anyway if you know what you&apos;re doing.
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setGateBlock(null)}
+              className="px-3 py-1.5 rounded text-xs text-text-muted hover:text-text hover:bg-surface-hover transition-colors"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={handleOverridePackage}
+              data-testid="pof-preflight-override"
+              className="px-3 py-1.5 rounded text-xs font-medium text-white transition-colors"
+              style={{ background: STATUS_ERROR }}
+            >
+              Package anyway
+            </button>
+          </div>
         </div>
       )}
 
