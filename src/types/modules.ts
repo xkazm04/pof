@@ -70,6 +70,8 @@ export interface ChecklistItem {
   dependsOn?: string[];
   /** Optional list of feature names from feature-definitions.ts that this item produces. */
   features?: string[];
+  /** When true, dispatching this item appends an agentic screenshot+Gemini visual-verification step (see src/lib/prompts/visual-check.ts). Set on items that render an on-screen element. */
+  visualCheck?: boolean;
 }
 
 export interface KnowledgeTip {
