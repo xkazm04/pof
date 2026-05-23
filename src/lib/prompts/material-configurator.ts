@@ -109,6 +109,8 @@ export function buildMaterialConfiguratorPrompt(config: MaterialConfiguratorConf
       'Group UPROPERTYs by category: "Material|Surface", "Material|Features"',
       'Include UPROPERTY metadata: ClampMin, ClampMax, UIMin, UIMax matching the parameter ranges above',
       'For UE 5.7+: Substrate is production-ready. Prefer Substrate Slab over legacy shading models for new materials. Substrate unifies PBR, subsurface, cloth, eye, thin-film, and clearcoat into a single flexible material graph',
+      'CRITICAL UE5 authoring gotcha: a Constant3Vector expression\'s color output pin is "" (the empty string), NOT "RGB". connect_material_property(node, "RGB", ...) silently returns false and the material renders black. Use a VectorParameter for tunable colors (its output IS "RGB"), or pass "" when wiring a Constant3Vector.',
+      'Prefer emitting a MaterialInstanceConstant of the shared master M_ARPG_Surface_Master over authoring a new one-off Material. Instances share the compiled shader, keep the project consolidated, and expose Albedo/Normal/Roughness texture params + BaseColorTint + TilingScale + EmissiveStrength.',
     ])
     .build();
 }
