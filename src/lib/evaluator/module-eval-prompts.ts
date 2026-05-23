@@ -11,11 +11,12 @@
 
 import type { SubModuleId } from '@/types/modules';
 
-export type EvalPass = 'structure' | 'quality' | 'performance';
+export type EvalPass = 'ground-truth' | 'structure' | 'quality' | 'performance';
 
-export const EVAL_PASSES: EvalPass[] = ['structure', 'quality', 'performance'];
+export const EVAL_PASSES: EvalPass[] = ['ground-truth', 'structure', 'quality', 'performance'];
 
 export const PASS_LABELS: Record<EvalPass, string> = {
+  'ground-truth': 'Ground Truth',
   structure: 'Structure',
   quality: 'Quality',
   performance: 'Performance',
@@ -39,6 +40,16 @@ Rules:
 - If no findings, output: []
 - Be specific about file paths and line numbers when possible
 - suggestedFix should be actionable — say exactly what to change`;
+
+// ─── Pass 0 — Ground Truth (module-agnostic) ─────────────────────────────────
+
+const GROUND_TRUTH_DESCRIPTION =
+  'Pass 0 — establish ground truth before proposing any change. Confirm the real classes, parents, and properties this module depends on actually exist in the source.';
+
+const GROUND_TRUTH_CHECKS = `- For each class you reference, name its parent class and its file path under Source/
+- Name the specific UPROPERTY/UFUNCTION members you depend on
+- Name ONE observable runtime behaviour you can verify for each
+- If you CANNOT confirm any of the above from the actual source, do NOT propose changes — first request a read-only inventory of the missing class`;
 
 // ─── Module-specific context ─────────────────────────────────────────────────
 
@@ -349,6 +360,7 @@ ${FINDING_SCHEMA}`;
 }
 
 function getPassDescription(pass: EvalPass): string {
+  if (pass === 'ground-truth') return GROUND_TRUTH_DESCRIPTION;
   switch (pass) {
     case 'structure':
       return 'Analyze code organization, file layout, class hierarchy, and module boundaries. Are classes in the right files? Is the inheritance correct? Are responsibilities properly separated?';
@@ -360,6 +372,7 @@ function getPassDescription(pass: EvalPass): string {
 }
 
 function getPassChecks(ctx: ModuleEvalContext | undefined, pass: EvalPass): string {
+  if (pass === 'ground-truth') return GROUND_TRUTH_CHECKS;
   if (!ctx) {
     switch (pass) {
       case 'structure':

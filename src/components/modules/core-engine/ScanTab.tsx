@@ -36,6 +36,7 @@ const EFFORT_CONFIG: Record<string, { color: string; label: string }> = {
 };
 
 const PASS_ICONS: Record<EvalPass, typeof Shield> = {
+  'ground-truth': ScanSearch,
   structure: Shield,
   quality: Bug,
   performance: Gauge,
@@ -251,7 +252,7 @@ export function ScanTab({ moduleId }: ScanTabProps) {
 
   // Stats by pass
   const passCounts = useMemo(() => {
-    const counts: Record<EvalPass, number> = { structure: 0, quality: 0, performance: 0 };
+    const counts: Record<EvalPass, number> = { 'ground-truth': 0, structure: 0, quality: 0, performance: 0 };
     for (const f of activeFindings) {
       counts[f.pass]++;
     }
