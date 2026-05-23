@@ -5,7 +5,7 @@ import { useState, useCallback, useEffect, useRef } from 'react';
 import { toast } from 'sonner';
 import {
   Map, Plus, Trash2, FileText, Loader2,
-  Zap, BookOpen, GitCompare, BarChart3, Layers, Grid3X3, Eye, ListChecks, Boxes,
+  Zap, BookOpen, GitCompare, BarChart3, Layers, Grid3X3, Eye, ListChecks, Boxes, Trees,
 } from 'lucide-react';
 import { useDesignDocument } from '@/hooks/useDesignDocument';
 import { FetchError } from '../../shared/FetchError';
@@ -27,6 +27,7 @@ import { LevelDesignSpatialDiagram } from './LevelDesignSpatialDiagram';
 import { StreamingZonePlanner } from './StreamingZonePlanner';
 import { ProceduralLevelWizard } from './ProceduralLevelWizard';
 import { ProcGenDungeonPanel } from './ProcGenDungeonPanel';
+import { BiomeScatterPanel } from './BiomeScatterPanel';
 import {
   buildRoomCodegenPrompt,
   buildSyncCheckPrompt,
@@ -41,7 +42,7 @@ import type { ProceduralLevelConfig } from './ProceduralLevelWizard';
 import { MODULE_COLORS, getAppOrigin } from '@/lib/constants';
 import { STATUS_SUCCESS, STATUS_ERROR, STATUS_WARNING, STATUS_INFO } from '@/lib/chart-colors';
 
-type TabId = 'overview' | 'roadmap' | 'flow' | 'procgen' | 'narrative' | 'sync' | 'arc' | 'streaming' | 'dungeon-ue';
+type TabId = 'overview' | 'roadmap' | 'flow' | 'procgen' | 'narrative' | 'sync' | 'arc' | 'streaming' | 'dungeon-ue' | 'scatter-ue';
 
 export function LevelDesignView() {
   const {
@@ -144,6 +145,19 @@ export function LevelDesignView() {
       TaskFactory.procgenDungeon('level-design', { roomCount, seed }, getAppOrigin(), 'Dungeon (UE)'),
     );
   }, [dungeonCli]);
+
+  const scatterCli = useModuleCLI({
+    moduleId: 'level-design',
+    sessionKey: 'level-design-scatter-ue',
+    label: 'Scatter (UE)',
+    accentColor: MODULE_COLORS.content,
+  });
+
+  const handleScatter = useCallback((density: number, seed: number) => {
+    scatterCli.execute(
+      TaskFactory.scatterBiome('level-design', { density, seed }, getAppOrigin(), 'Scatter (UE)'),
+    );
+  }, [scatterCli]);
 
   // ── Review/Checklist inline CLI sessions ──
 
@@ -480,6 +494,7 @@ export function LevelDesignView() {
               <TabButton label="Flow Editor" icon={Map} active={activeTab === 'flow'} onClick={() => setActiveTab('flow')} accent={MODULE_COLORS.content} />
               <TabButton label="Procgen" icon={Grid3X3} active={activeTab === 'procgen'} onClick={() => setActiveTab('procgen')} accent={MODULE_COLORS.content} />
               <TabButton label="Dungeon (UE)" icon={Boxes} active={activeTab === 'dungeon-ue'} onClick={() => setActiveTab('dungeon-ue')} accent={MODULE_COLORS.content} />
+              <TabButton label="Scatter (UE)" icon={Trees} active={activeTab === 'scatter-ue'} onClick={() => setActiveTab('scatter-ue')} accent={MODULE_COLORS.content} />
               <TabButton label="Streaming" icon={Layers} active={activeTab === 'streaming'} onClick={() => setActiveTab('streaming')} accent={MODULE_COLORS.content} />
               <TabButton label="Narrative" icon={BookOpen} active={activeTab === 'narrative'} onClick={() => setActiveTab('narrative')} accent={MODULE_COLORS.content} />
               <TabButton label="Sync" icon={GitCompare} active={activeTab === 'sync'} onClick={() => setActiveTab('sync')} accent={MODULE_COLORS.content} />
@@ -562,6 +577,13 @@ export function LevelDesignView() {
                 <ProcGenDungeonPanel
                   onGenerate={handleGenerateDungeon}
                   isGenerating={dungeonCli.isRunning}
+                />
+              )}
+
+              {activeTab === 'scatter-ue' && (
+                <BiomeScatterPanel
+                  onGenerate={handleScatter}
+                  isGenerating={scatterCli.isRunning}
                 />
               )}
 
