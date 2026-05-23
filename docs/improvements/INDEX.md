@@ -3,9 +3,12 @@
 This folder collects **improvement plans** for both PoF (the Next.js app that
 drives autonomous Claude to build UE games) and the UE game project itself,
 synthesised from the end-to-end vertical-slice initiative (D1 → SP-A → SP-B →
-SP-C → SP-E → Playable Slice PS-1/2/3 → HUD → Characters). Each subfolder is
-**one isolated concern**, designed so a separate CLI session can pick it up
-and work without conflicting with the others.
+SP-C → SP-E → Playable Slice PS-1/2/3 → HUD → Characters). Folders 01–08 are
+each **one isolated concern**, designed so a separate CLI session can pick it up
+and work without conflicting with the others. Folder **09 is the deliberate
+cross-cutting exception** — a roadmap layer that unifies 01–08 into a
+generation-focused architecture and then *slices back out* into isolated,
+single-CLI deliverables for the next rounds.
 
 ## Why this structure
 
@@ -39,6 +42,7 @@ Each subfolder contains:
 | 06 | [`06-textures-materials/`](06-textures-materials/) | Texture and material pipeline (Leonardo, PolyHaven, PBR maps). Includes Leonardo's advanced API (3D-texture endpoint, ControlNet) we have not yet used. |
 | 07 | [`07-packaging-build/`](07-packaging-build/) | Cook, package, build-verify. The cook-executor's `cmd.exe` quote/stderr/exe-path defects and the build-environment / ProjectID / WITH_EDITOR-guard class of issues. |
 | 08 | [`08-harness-testing/`](08-harness-testing/) | E2E harness, in-engine functional tests, Gemini-vision verification, dispatch reliability. The single-dispatch / fix-and-rerun lessons. |
+| 09 | [`09-core-engine-generator/`](09-core-engine-generator/) | **Cross-cutting roadmap** (not an isolated concern): turn PoF into a high-quality *generator* for the 8 Core Engine modules — a scalable catalog/authoring UI (hundreds of assets, deep hierarchy, faceted nav) + a recipe-based generation engine. Consumes 01's wiring/gotchas + 02–06's per-domain panels; slices into the next multi-CLI rounds. |
 
 ## How to assign a CLI session to one concern
 
