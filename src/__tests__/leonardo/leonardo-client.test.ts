@@ -127,12 +127,21 @@ describe('upscaleImage', () => {
 });
 
 describe('generateTextureOn3DModel', () => {
-  it('uploads the OBJ, starts a texture job, polls, returns PBR urls, attempts cleanup', async () => {
-    const { calls } = installFetch((url, method) => {
+  const S3 = 'https://s3upload.example/put';
+
+  function install3D(handler?: (url: string, method: string) => ReturnType<Parameters<typeof installFetch>[0]>): { calls: Call[] } {
+    return installFetch((url, method) => {
       if (method === 'POST' && url.endsWith('/models-3d/upload')) {
-        return { body: { uploadModelAsset: { modelId: 'm-1', modelUploadUrl: 'https://s3/put' } } };
+        return { body: { uploadModelAsset: {
+          modelId: 'm-1', modelUrl: S3,
+          modelFields: JSON.stringify({ key: 'users/x/mesh.obj', Policy: 'p', 'X-Amz-Signature': 's' }),
+        } } };
       }
-      if (method === 'PUT' && url.includes('s3/put')) return { body: {} };
+      if (method === 'POST' && url === S3) return { status: 204 };
+      if (handler) {
+        const r = handler(url, method);
+        if (r) return r;
+      }
       if (method === 'POST' && url.endsWith('/generations-texture')) {
         return { body: { textureGenerationJob: { id: 'tex-1' } } };
       }
@@ -142,6 +151,10 @@ describe('generateTextureOn3DModel', () => {
       }
       return { body: {} };
     });
+  }
+
+  it('uploads the OBJ via S3 multipart POST, starts a job, polls, returns PBR urls, cleans up', async () => {
+    const { calls } = install3D();
     const objBytes = new Uint8Array([1, 2, 3]);
     const res = await generateTextureOn3DModel({ objBytes, prompt: 'dark dungeon stone', pollIntervalMs: 1 });
     expect(res.albedoUrl).toBe('https://cdn/albedo.png');
@@ -149,9 +162,23 @@ describe('generateTextureOn3DModel', () => {
     expect(res.roughnessUrl).toBe('https://cdn/rough.png');
     expect(res.modelAssetId).toBe('m-1');
 
+    const init = calls.find((c) => c.method === 'POST' && c.url.endsWith('/models-3d/upload'));
+    expect(init!.body).toEqual({ name: 'arena', modelExtension: 'obj' });
+    expect(calls.some((c) => c.method === 'POST' && c.url === S3)).toBe(true); // S3 multipart upload
     const startTex = calls.find((c) => c.method === 'POST' && c.url.endsWith('/generations-texture'));
-    expect(startTex!.body).toEqual({ modelAssetId: 'm-1', prompt: 'dark dungeon stone', preview: false });
-    expect(calls.some((c) => c.method === 'PUT' && c.url.includes('s3/put'))).toBe(true);
-    expect(calls.some((c) => c.method === 'DELETE')).toBe(true); // cleanup attempt
+    expect(startTex!.body).toEqual({ modelId: 'm-1', prompt: 'dark dungeon stone', preview: false });
+    expect(calls.some((c) => c.method === 'DELETE')).toBe(true); // cleanup
+  });
+
+  it('throws a clear error when the texture-generation create endpoint is unavailable (404)', async () => {
+    install3D((url, method) => {
+      if (method === 'POST' && url.endsWith('/generations-texture')) {
+        return { ok: false, status: 404, body: { error: 'Endpoint not found' } };
+      }
+      return undefined as unknown as ReturnType<Parameters<typeof installFetch>[0]>;
+    });
+    await expect(
+      generateTextureOn3DModel({ objBytes: new Uint8Array([1]), prompt: 'stone', pollIntervalMs: 1 }),
+    ).rejects.toThrow(/texture.*generation|404|not available/i);
   });
 });

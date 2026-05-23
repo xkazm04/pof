@@ -182,44 +182,64 @@ export interface Texture3DResult {
 }
 
 /**
- * Texture a UV-mapped OBJ via the legacy 3-step Leonardo 3D-texture endpoint:
- *   POST /models-3d/upload -> PUT <presigned> -> POST /generations-texture -> poll.
- * Best-effort field parsing (endpoint is legacy). Attempts to delete the job after.
+ * Texture a UV-mapped OBJ via Leonardo's 3D pipeline:
+ *   1. POST /models-3d/upload { name, modelExtension: 'obj' } -> presigned S3
+ *      POST (modelUrl + modelFields) + modelId.
+ *   2. multipart/form-data POST the OBJ to the S3 modelUrl (fields + file last).
+ *   3. POST /generations-texture { modelId, prompt, preview } -> job id.
+ *   4. poll GET /generations-texture/{id} -> PBR maps; then delete the model.
+ *
+ * NOTE (verified live 2026-05-23): step 3's create endpoint currently returns
+ * 404 — Leonardo's public API supports 3D model UPLOAD + retrieval/deletion but
+ * NOT PBR texture generation. This function therefore throws a clear error at
+ * step 3 against the live API; the upload (steps 1-2) is real and works.
  */
 export async function generateTextureOn3DModel(req: Texture3DRequest): Promise<Texture3DResult> {
   const pollMs = req.pollIntervalMs ?? POLL_INTERVAL_MS;
 
+  // 1. init upload
   const upRes = await fetch(`${LEONARDO_API_BASE}/models-3d/upload`, {
     method: 'POST',
     headers: authHeaders(true),
-    body: JSON.stringify({ name: 'arena', modelType: 'OBJ' }),
+    body: JSON.stringify({ name: 'arena', modelExtension: 'obj' }),
   });
   if (!upRes.ok) throw new Error(`Leonardo 3D upload init failed (${upRes.status})`);
   const upData = (await upRes.json()) as {
-    uploadModelAsset?: { modelId?: string; modelUploadUrl?: string };
+    uploadModelAsset?: { modelId?: string; modelUrl?: string; modelFields?: string };
   };
-  const modelAssetId = upData.uploadModelAsset?.modelId;
-  const modelUploadUrl = upData.uploadModelAsset?.modelUploadUrl;
-  if (!modelAssetId || !modelUploadUrl) throw new Error('Leonardo 3D upload returned no presigned URL');
+  const asset = upData.uploadModelAsset;
+  const modelAssetId = asset?.modelId;
+  if (!modelAssetId || !asset?.modelUrl || !asset?.modelFields) {
+    throw new Error('Leonardo 3D upload returned no presigned S3 POST');
+  }
 
-  const putRes = await fetch(modelUploadUrl, {
-    method: 'PUT',
-    headers: { 'Content-Type': 'application/octet-stream' },
-    body: req.objBytes as unknown as BodyInit,
-  });
-  if (!putRes.ok) throw new Error(`Leonardo OBJ PUT failed (${putRes.status})`);
-
-  const startRes = await fetch(`${LEONARDO_API_BASE}/generations-texture`, {
-    method: 'POST',
-    headers: authHeaders(true),
-    body: JSON.stringify({ modelAssetId, prompt: req.prompt, preview: req.preview ?? false }),
-  });
-  if (!startRes.ok) throw new Error(`Leonardo texture job start failed (${startRes.status})`);
-  const startData = (await startRes.json()) as { textureGenerationJob?: { id?: string } };
-  const jobId = startData.textureGenerationJob?.id;
-  if (!jobId) throw new Error('Leonardo texture job returned no id');
+  // 2. S3 presigned multipart POST (fields first, file last)
+  const fields = JSON.parse(asset.modelFields) as Record<string, string>;
+  const form = new FormData();
+  for (const [k, v] of Object.entries(fields)) form.append(k, v);
+  form.append('file', new Blob([req.objBytes as unknown as BlobPart]), 'mesh.obj');
+  const s3Res = await fetch(asset.modelUrl, { method: 'POST', body: form });
+  if (!s3Res.ok && s3Res.status !== 204) throw new Error(`Leonardo OBJ S3 upload failed (${s3Res.status})`);
 
   try {
+    // 3. start the texture-generation job
+    const startRes = await fetch(`${LEONARDO_API_BASE}/generations-texture`, {
+      method: 'POST',
+      headers: authHeaders(true),
+      body: JSON.stringify({ modelId: modelAssetId, prompt: req.prompt, preview: req.preview ?? false }),
+    });
+    if (startRes.status === 404) {
+      throw new Error(
+        'Leonardo 3D texture-generation is not available: POST /generations-texture returned 404. ' +
+        'The current public API supports 3D model upload + retrieval but not PBR texture generation.',
+      );
+    }
+    if (!startRes.ok) throw new Error(`Leonardo texture job start failed (${startRes.status})`);
+    const startData = (await startRes.json()) as { textureGenerationJob?: { id?: string } };
+    const jobId = startData.textureGenerationJob?.id;
+    if (!jobId) throw new Error('Leonardo texture job returned no id');
+
+    // 4. poll for the PBR maps
     for (let attempt = 0; attempt < MAX_POLL_ATTEMPTS; attempt++) {
       await sleep(pollMs);
       const pollRes = await fetch(`${LEONARDO_API_BASE}/generations-texture/${jobId}`, {
@@ -237,10 +257,10 @@ export async function generateTextureOn3DModel(req: Texture3DRequest): Promise<T
     }
     throw new Error('Leonardo texture generation timed out');
   } finally {
-    // Cleanup: delete the texture job (mirrors the generation cleanup protocol).
-    const del = await fetch(`${LEONARDO_API_BASE}/generations-texture/${jobId}`, {
+    // Cleanup: delete the uploaded model asset (mirrors the cleanup protocol).
+    const del = await fetch(`${LEONARDO_API_BASE}/models-3d/${modelAssetId}`, {
       method: 'DELETE', headers: authHeaders(),
     });
-    if (!del.ok) logger.warn(`[leonardo] texture job ${jobId} delete returned ${del.status}`);
+    if (!del.ok) logger.warn(`[leonardo] model asset ${modelAssetId} delete returned ${del.status}`);
   }
 }
