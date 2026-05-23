@@ -24,15 +24,15 @@
     "framer-motion": "^12.38.0",
     "lucide-react": "^1.7.0",
     "markdown-to-jsx": "^9.7.13",
-    "next": "16.2.2",
-    "react": "19.2.4",
-    "react-dom": "19.2.4",
+    "next": "16.2.6",
+    "react": "19.2.6",
+    "react-dom": "19.2.6",
     "react-window": "^2.2.7",
     "shiki": "^4.0.2",
     "sonner": "^2.0.7",
     "three": "^0.183.2",
     "zod": "^4.3.6",
-    "zustand": "^5.0.12"
+    "zustand": "^5.0.13"
   },
   "devDependencies": {
     "@playwright/test": "^1.59.1",
@@ -40,16 +40,16 @@
     "@testing-library/dom": "^10.4.1",
     "@testing-library/react": "^16.3.2",
     "@types/better-sqlite3": "^7.6.13",
-    "@types/node": "^20.19.39",
-    "@types/react": "^19.2.14",
+    "@types/node": "^20.19.41",
+    "@types/react": "^19.2.15",
     "@types/react-dom": "^19",
     "@types/react-window": "^1.8.8",
     "@types/three": "^0.183.1",
     "eslint": "^9",
-    "eslint-config-next": "16.2.2",
-    "jsdom": "^29.0.1",
+    "eslint-config-next": "16.2.6",
+    "jsdom": "^29.1.1",
     "tailwindcss": "^4.2.2",
-    "typescript": "^6.0.2",
-    "vitest": "^4.1.2"
+    "typescript": "^6.0.3",
+    "vitest": "^4.1.7"
   }
 }
