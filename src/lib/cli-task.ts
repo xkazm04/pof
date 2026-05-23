@@ -151,7 +151,8 @@ export type CLITaskType =
   | 'feature-review'
   | 'module-scan'
   | 'wbp-starter'
-  | 'procgen-dungeon';
+  | 'procgen-dungeon'
+  | 'biome-scatter';
 
 export interface CLITask {
   type: CLITaskType;
@@ -225,6 +226,17 @@ export interface WBPStarterTask extends CLITask {
 export interface ProcgenDungeonTask extends CLITask {
   type: 'procgen-dungeon';
   roomCount: number;
+  seed: number;
+  appOrigin: string;
+}
+
+/**
+ * Biome-scatter task — runs scatter_biome_ue.py via the full editor to populate
+ * the arena floor with props and reports the instance count through a callback.
+ */
+export interface BiomeScatterTask extends CLITask {
+  type: 'biome-scatter';
+  density: number;
   seed: number;
   appOrigin: string;
 }
@@ -503,6 +515,37 @@ Steps:
 ${buildCallbackSection(getCallback(cbId)!)}`;
     }
 
+    case 'biome-scatter': {
+      const st = task as BiomeScatterTask;
+      const header = buildProjectContextHeader(ctx);
+      const cbId = registerCallback({
+        url: `${st.appOrigin}/api/level-design/scatter-result`,
+        method: 'POST',
+        staticFields: { moduleId: task.moduleId, seed: st.seed },
+        schemaHint: '  "instanceCount": <number of instances the scatter reported>',
+      });
+      return `${header}
+
+## Task: Scatter the arena floor with props (AARPGVegetationScatter)
+
+Run the placement script \`scatter_biome_ue.py\` to author the biome + scatter
+greybox props onto \`/Game/Maps/VerticalSlice\`'s arena floor, with:
+- Density multiplier: **${st.density}**
+- Seed: **${st.seed}**
+
+Steps:
+1. Find the \`.uproject\` under \`${ctx.projectPath}\` and the script at
+   \`${ctx.projectPath}/Content/Python/scatter_biome_ue.py\`.
+2. Run it via the FULL editor with the params as environment variables — NOT
+   \`-run=pythonscript\`. PowerShell:
+   \`$env:SCATTER_DENSITY=${st.density}; $env:SCATTER_SEED=${st.seed}; & "<UnrealEditor.exe>" "<.uproject>" -ExecutePythonScript="<the script path above>" -unattended -nopause -nosplash\`
+3. The headless editor exits non-zero on a benign shutdown crash — judge by the
+   LOG. In the newest \`Saved/Logs/PoF*.log\`, find \`[scatter_biome] Scattered N instances\`.
+4. Submit the instance count via the callback below.
+
+${buildCallbackSection(getCallback(cbId)!)}`;
+    }
+
     default:
       return task.prompt;
   }
@@ -610,6 +653,24 @@ export const TaskFactory = {
       prompt: '', // assembled by buildTaskPrompt
       label,
       roomCount: params.roomCount,
+      seed: params.seed,
+      appOrigin,
+    };
+  },
+
+  /** Create a task that runs scatter_biome_ue.py via the editor */
+  scatterBiome(
+    moduleId: SubModuleId,
+    params: { density: number; seed: number },
+    appOrigin: string,
+    label: string,
+  ): BiomeScatterTask {
+    return {
+      type: 'biome-scatter',
+      moduleId,
+      prompt: '', // assembled by buildTaskPrompt
+      label,
+      density: params.density,
       seed: params.seed,
       appOrigin,
     };
