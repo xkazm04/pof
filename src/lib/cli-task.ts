@@ -150,7 +150,8 @@ export type CLITaskType =
   | 'feature-fix'
   | 'feature-review'
   | 'module-scan'
-  | 'wbp-starter';
+  | 'wbp-starter'
+  | 'procgen-dungeon';
 
 export interface CLITask {
   type: CLITaskType;
@@ -214,6 +215,17 @@ export interface WBPStarterTask extends CLITask {
   type: 'wbp-starter';
   /** The C++ UUserWidget subclass to scaffold a companion WBP for (e.g. UARPGHUDWidget). */
   targetClass: string;
+  appOrigin: string;
+}
+
+/**
+ * Procgen-dungeon task — runs the env-parameterized build_procgen_dungeon.py via
+ * the full editor and reports the generated room count through a callback.
+ */
+export interface ProcgenDungeonTask extends CLITask {
+  type: 'procgen-dungeon';
+  roomCount: number;
+  seed: number;
   appOrigin: string;
 }
 
@@ -459,6 +471,38 @@ ${buildCallbackSection(getCallback(cbId)!)}`;
 This is a scaffold only — laying out the widget tree is the operator's manual UMG-editor step. Do not attempt the tree from Python.`;
     }
 
+    case 'procgen-dungeon': {
+      const pt = task as ProcgenDungeonTask;
+      const header = buildProjectContextHeader(ctx);
+      const cbId = registerCallback({
+        url: `${pt.appOrigin}/api/level-design/procgen-result`,
+        method: 'POST',
+        staticFields: { moduleId: task.moduleId, seed: pt.seed },
+        schemaHint: '  "roomCount": <number of rooms the generator reported>',
+      });
+      return `${header}
+
+## Task: Generate a procedural dungeon with ARPGLevelGenerator
+
+Run the existing placement script \`build_procgen_dungeon.py\` to bake a fresh
+multi-room dungeon into \`/Game/Maps/ProcGenDungeon\` with these parameters:
+- Room count: **${pt.roomCount}**
+- Seed: **${pt.seed}**
+
+Steps:
+1. Find the \`.uproject\` under \`${ctx.projectPath}\` and the script at
+   \`${ctx.projectPath}/Content/Python/build_procgen_dungeon.py\`.
+2. Run it via the FULL editor with the params as environment variables — NOT
+   \`-run=pythonscript\`. PowerShell:
+   \`$env:PROCGEN_ROOMS=${pt.roomCount}; $env:PROCGEN_SEED=${pt.seed}; & "<UnrealEditor.exe>" "<.uproject>" -ExecutePythonScript="<the script path above>" -unattended -nopause -nosplash\`
+3. The headless editor exits non-zero on a benign shutdown crash — judge success
+   by the LOG, not the exit code. In the newest \`Saved/Logs/PoF*.log\`, find the
+   line \`[LevelGenerator] ... Generated N rooms\` and \`Baked N BlockoutRoom actors\`.
+4. Submit the generated room count via the callback below.
+
+${buildCallbackSection(getCallback(cbId)!)}`;
+    }
+
     default:
       return task.prompt;
   }
@@ -549,6 +593,24 @@ export const TaskFactory = {
       prompt: '', // assembled by buildTaskPrompt
       label,
       targetClass,
+      appOrigin,
+    };
+  },
+
+  /** Create a task that runs the parameterized build_procgen_dungeon.py via the editor */
+  procgenDungeon(
+    moduleId: SubModuleId,
+    params: { roomCount: number; seed: number },
+    appOrigin: string,
+    label: string,
+  ): ProcgenDungeonTask {
+    return {
+      type: 'procgen-dungeon',
+      moduleId,
+      prompt: '', // assembled by buildTaskPrompt
+      label,
+      roomCount: params.roomCount,
+      seed: params.seed,
       appOrigin,
     };
   },
