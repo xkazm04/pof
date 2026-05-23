@@ -200,7 +200,7 @@ Additionally: verify GA_MeleeAttack stores HitActors as TSet<AActor*> on the abi
   },
   'arpg-ui': {
     focus: 'HUD, health bars, ability cooldowns, inventory screen, menus',
-    structureChecks: `- HUD should use UMG with C++ base classes for game UI
+    structureChecks: `- Code-only HUD widgets should be pure-C++ UUserWidgets that build their tree in RebuildWidget() (not NativeConstruct) — a UPROPERTY(meta=(BindWidget)) member requires a companion WBP that cannot be authored from code
 - Health/mana bars should bind to GAS attribute delegates
 - Inventory screen should not duplicate inventory logic (use component)
 - Floating damage numbers should use a widget pool

@@ -86,3 +86,11 @@ describe('arpg-combat evaluator prompts', () => {
     expect(combat?.structureChecks ?? '').toMatch(/GE_Death/);
   });
 });
+
+describe('arpg-ui evaluator prompts', () => {
+  it('structure pass requires the pure-C++ RebuildWidget pattern for code-only HUDs', () => {
+    const ui = (MODULE_CONTEXTS as Record<string, { structureChecks?: string }>)['arpg-ui'];
+    expect(ui?.structureChecks ?? '').toMatch(/RebuildWidget/);
+    expect(ui?.structureChecks ?? '').toMatch(/BindWidget/);
+  });
+});
