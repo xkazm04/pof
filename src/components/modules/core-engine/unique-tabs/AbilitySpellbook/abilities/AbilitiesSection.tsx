@@ -12,12 +12,15 @@ import {
   FeatureCard as SharedFeatureCard, PipelineFlow, SectionLabel, RadarChart,
 } from '../../_shared';
 import {
-  ABILITY_RADAR_AXES, SPELLBOOK_ABILITIES, ELEMENT_COLORS,
+  ABILITY_RADAR_AXES, ELEMENT_COLORS,
   type SpellbookAbility, type AbilityElement,
 } from '../data';
 import { useSpellbookData } from '../context';
 import type { SectionProps } from '../types';
 import { ScalableSelector } from '@/components/shared/ScalableSelector';
+import { useSpellbookEntries } from '@/stores/catalogStore';
+import { LifecycleBadge } from '@/components/catalog/LifecycleBadge';
+import type { LifecycleState } from '@/lib/catalog/types';
 
 const DEFAULT_SELECTED = ['off-fire-01', 'off-ice-01', 'off-ltn-01', 'def-phy-03'];
 const MAX_COMPARE = 6;
@@ -30,11 +33,18 @@ export function AbilitiesSection({ featureMap, defs, expanded, onToggle }: Secti
   const [selectedCooldownAbility, setSelectedCooldownAbility] = useState(0);
   const [primaryIdx, setPrimaryIdx] = useState(0);
 
+  const entries = useSpellbookEntries();
+  const abilities = useMemo(() => entries.map((e) => e.data), [entries]);
+  const lifecycleById = useMemo(
+    () => new Map<string, LifecycleState>(entries.map((e) => [e.id, e.lifecycle])),
+    [entries],
+  );
+
   const selectedAbilities = useMemo(
     () => selectedIds
-      .map(id => SPELLBOOK_ABILITIES.find(a => a.id === id))
+      .map(id => abilities.find(a => a.id === id))
       .filter((a): a is SpellbookAbility => a != null),
-    [selectedIds],
+    [selectedIds, abilities],
   );
 
   const handleSelect = useCallback((items: SpellbookAbility[]) => {
@@ -107,7 +117,7 @@ export function AbilitiesSection({ featureMap, defs, expanded, onToggle }: Secti
         </div>
 
         <p className="text-xs font-mono text-text-muted mb-3">
-          Select {MIN_COMPARE}–{MAX_COMPARE} abilities from the {SPELLBOOK_ABILITIES.length} available to compare on radar.
+          Select {MIN_COMPARE}–{MAX_COMPARE} abilities from the {abilities.length} available to compare on radar.
         </p>
 
         {/* Ability cards */}
@@ -138,6 +148,7 @@ export function AbilitiesSection({ featureMap, defs, expanded, onToggle }: Secti
                       {/* Element dot */}
                       <span className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ backgroundColor: ELEMENT_COLORS[ability.element as AbilityElement] ?? ability.color }} />
                       <span className="text-2xs font-mono text-text-muted">{ability.element}</span>
+                      <LifecycleBadge state={lifecycleById.get(ability.id) ?? 'planned'} />
                     </div>
                   </div>
                   {/* Cooldown badge */}
@@ -189,7 +200,7 @@ export function AbilitiesSection({ featureMap, defs, expanded, onToggle }: Secti
 
         {/* ScalableSelector modal */}
         <ScalableSelector<SpellbookAbility>
-          items={SPELLBOOK_ABILITIES}
+          items={abilities}
           groupBy="category"
           searchKey="name"
           selected={selectedIds}
@@ -197,7 +208,7 @@ export function AbilitiesSection({ featureMap, defs, expanded, onToggle }: Secti
           mode="multi"
           open={selectorOpen}
           onClose={() => setSelectorOpen(false)}
-          title={`Compare Abilities (${SPELLBOOK_ABILITIES.length} available)`}
+          title={`Compare Abilities (${abilities.length} available)`}
           placeholder="Search abilities..."
           accent={ACCENT_PURPLE_BOLD}
           renderItem={(item, selected) => (
