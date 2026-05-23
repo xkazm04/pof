@@ -140,3 +140,29 @@ export async function downloadThenDelete(imageUrl: string, generationId: string)
   await deleteGeneration(generationId);
   return bytes;
 }
+
+/**
+ * Universal Upscaler. The exact response key is endpoint-version-dependent;
+ * parse the common candidates and surface the job id.
+ */
+export async function upscaleImage(
+  generatedImageId: string,
+  style: string = 'GENERAL',
+): Promise<{ upscaleJobId: string }> {
+  const res = await fetch(`${LEONARDO_API_BASE}/universal-upscaler`, {
+    method: 'POST',
+    headers: authHeaders(true),
+    body: JSON.stringify({ generatedImageId, upscalerStyle: style }),
+  });
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`Leonardo upscale failed (${res.status}): ${text}`);
+  }
+  const data = (await res.json()) as {
+    universalUpscaler?: { id?: string };
+    sdUpscaleJob?: { id?: string };
+  };
+  const upscaleJobId = data.universalUpscaler?.id ?? data.sdUpscaleJob?.id;
+  if (!upscaleJobId) throw new Error('Leonardo upscale returned no job id');
+  return { upscaleJobId };
+}

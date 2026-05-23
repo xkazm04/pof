@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { deleteGeneration, downloadThenDelete, generateImage } from '@/lib/leonardo';
+import { deleteGeneration, downloadThenDelete, generateImage, upscaleImage } from '@/lib/leonardo';
 
 const BASE = 'https://cloud.leonardo.ai/api/rest/v1';
 
@@ -107,5 +107,20 @@ describe('generateImage', () => {
       width: 1024, height: 1024, num_images: 2, contrast: 4,
       tiling: true, transparency: 'foreground',
     });
+  });
+});
+
+describe('upscaleImage', () => {
+  it('POSTs the image id + style to /universal-upscaler', async () => {
+    const { calls } = installFetch((url, method) => {
+      if (method === 'POST' && url.endsWith('/universal-upscaler')) {
+        return { body: { universalUpscaler: { id: 'up-1' } } };
+      }
+      return { body: {} };
+    });
+    const res = await upscaleImage('img-7', 'GENERAL');
+    const post = calls.find((c) => c.url.endsWith('/universal-upscaler'));
+    expect(post!.body).toEqual({ generatedImageId: 'img-7', upscalerStyle: 'GENERAL' });
+    expect(res.upscaleJobId).toBe('up-1');
   });
 });
