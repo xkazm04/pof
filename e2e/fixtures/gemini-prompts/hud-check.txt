@@ -1,0 +1,1 @@
+Look at this game screenshot. Is there a health bar UI element in the top-left corner? Is there a second health bar near the top-centre? List every on-screen HUD element (bars, text) and its position. Do any of them read as empty / zero-width? Answer each question explicitly with yes/no.

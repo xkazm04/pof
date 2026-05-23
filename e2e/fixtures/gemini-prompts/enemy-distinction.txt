@@ -1,0 +1,1 @@
+This game screenshot should show a player character and one or more enemy characters. Can you tell the player apart from the enemy by looks alone (different mesh, colour, size, or marker)? Or do they look identical? How many distinct character figures are visible? Answer each question explicitly.

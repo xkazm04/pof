@@ -1,0 +1,1 @@
+Look at the surfaces in this game screenshot (floor, walls, props). Do they have real materials/textures applied (colour, pattern, detail), or do they show the default checkerboard / flat grey "missing material" look? Are any surfaces pure untextured white or magenta (a shader error)? Answer each question explicitly with yes/no, and name which surfaces look untextured if any.

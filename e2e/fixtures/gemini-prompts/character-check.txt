@@ -1,0 +1,1 @@
+Describe the two characters in this game scene. Are they humanoid figures (a person/character model), or simple geometric shapes (a cylinder, a box)? Are the two visually distinct from each other? Is each standing in a natural pose with feet on the floor, or in a stiff T-pose / sunk into the ground? Answer each question explicitly.
