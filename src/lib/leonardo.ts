@@ -213,15 +213,17 @@ export async function generateTextureOn3DModel(req: Texture3DRequest): Promise<T
     throw new Error('Leonardo 3D upload returned no presigned S3 POST');
   }
 
-  // 2. S3 presigned multipart POST (fields first, file last)
-  const fields = JSON.parse(asset.modelFields) as Record<string, string>;
-  const form = new FormData();
-  for (const [k, v] of Object.entries(fields)) form.append(k, v);
-  form.append('file', new Blob([req.objBytes as unknown as BlobPart]), 'mesh.obj');
-  const s3Res = await fetch(asset.modelUrl, { method: 'POST', body: form });
-  if (!s3Res.ok && s3Res.status !== 204) throw new Error(`Leonardo OBJ S3 upload failed (${s3Res.status})`);
-
+  // The model asset now exists on the account — from here on, any failure must
+  // still delete it (cleanup protocol), so steps 2-4 run inside the try/finally.
   try {
+    // 2. S3 presigned multipart POST (fields first, file last)
+    const fields = JSON.parse(asset.modelFields) as Record<string, string>;
+    const form = new FormData();
+    for (const [k, v] of Object.entries(fields)) form.append(k, v);
+    form.append('file', new Blob([req.objBytes as unknown as BlobPart]), 'mesh.obj');
+    const s3Res = await fetch(asset.modelUrl, { method: 'POST', body: form });
+    if (!s3Res.ok && s3Res.status !== 204) throw new Error(`Leonardo OBJ S3 upload failed (${s3Res.status})`);
+
     // 3. start the texture-generation job
     const startRes = await fetch(`${LEONARDO_API_BASE}/generations-texture`, {
       method: 'POST',

@@ -181,4 +181,22 @@ describe('generateTextureOn3DModel', () => {
       generateTextureOn3DModel({ objBytes: new Uint8Array([1]), prompt: 'stone', pollIntervalMs: 1 }),
     ).rejects.toThrow(/texture.*generation|404|not available/i);
   });
+
+  it('deletes the uploaded model asset when the S3 upload fails (no leak)', async () => {
+    const { calls } = installFetch((url, method) => {
+      if (method === 'POST' && url.endsWith('/models-3d/upload')) {
+        return { body: { uploadModelAsset: {
+          modelId: 'm-leak', modelUrl: S3,
+          modelFields: JSON.stringify({ key: 'users/x/mesh.obj' }),
+        } } };
+      }
+      if (method === 'POST' && url === S3) return { ok: false, status: 403 }; // S3 rejects the upload
+      return { body: {} }; // DELETE /models-3d/m-leak
+    });
+    await expect(
+      generateTextureOn3DModel({ objBytes: new Uint8Array([1]), prompt: 'stone', pollIntervalMs: 1 }),
+    ).rejects.toThrow(/S3 upload failed/i);
+    // The model asset created at step 1 must be cleaned up even though step 2 threw.
+    expect(calls.some((c) => c.method === 'DELETE' && c.url.endsWith('/models-3d/m-leak'))).toBe(true);
+  });
 });
