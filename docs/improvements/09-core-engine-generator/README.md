@@ -122,13 +122,19 @@ props on placed *instances*, not just CDOs); and the **shared-tree** discipline
 This roadmap is built to be parallelized across the next CLI rounds. Slice it so
 the shared substrate lands first, then fan out:
 
-1. **Round 1 — Catalog framework + generation engine (foundational, 1 CLI).**
-   The `CatalogView` UI framework (tree + facets + virtualization + detail
-   drawer + URL routing), the catalog data model, the lifecycle store, and the
-   recipe/batch-dispatch engine. *Everything else depends on this.* Prove it
-   end-to-end through **one** section — recommend **Spellbook** (`arpg-gas`),
-   because abilities are pure-C++/Python (no binary wall) and the character CLI
-   already shipped the GA/GE/grant/functional-test path.
+1. **Round 1 — Catalog framework + generation engine + studio foundation
+   (foundational, 1 CLI).** The `CatalogView` UI framework (tree + facets +
+   virtualization + detail drawer + URL routing), the catalog data model, the
+   lifecycle store, and the recipe/batch-dispatch engine — built *already
+   conforming* to the two polish dimensions: the **design-token layer + `viz/`
+   chart primitives** ([`ux-design.md`](ux-design.md)) and the **200-LOC rule +
+   feature-folder structure + lazy/virtualized performance + the ESLint
+   `max-lines` gate** ([`code-standards.md`](code-standards.md)). Landing the
+   lint gate here means every later section *physically cannot* regress.
+   *Everything else depends on this.* Prove it end-to-end through **one**
+   section — recommend **Spellbook** (`arpg-gas`), because abilities are
+   pure-C++/Python (no binary wall) and the character CLI already shipped the
+   GA/GE/grant/functional-test path.
 2. **Round 2 — known-assets registry + lifecycle wiring (1 CLI).** The
    single-source-of-truth registry of generated UE asset paths + lifecycle
    state (extends folder 02 §2's `ue-known-assets.ts`), surfaced as catalog
@@ -147,7 +153,14 @@ subagent-driven execution + functional-test gate), exactly like the character
 CLI. Dependencies between catalogs (a Bestiary entry references Ability + Loot
 entries) are modeled as cross-catalog links — see [`pof-app.md`](pof-app.md).
 
-## The four files in this folder
+**The two polish dimensions are global constraints, not a separate round.**
+Every slice — Round 1 onward — honors [`ux-design.md`](ux-design.md) (tokens,
+viz primitives, motion, premium states) and [`code-standards.md`](code-standards.md)
+(≤200 LOC/`.tsx`, feature-folder structure, virtualized + lazy-loaded, lint-gated).
+Round 1 *establishes* them in the framework + lands the lint gate; later rounds
+*inherit* them automatically.
+
+## The files in this folder
 
 - [`pof-app.md`](pof-app.md) — the PoF Next.js app architecture: catalog data
   model, the `CatalogView` framework + new UI primitives, the generation engine,
@@ -157,3 +170,10 @@ entries) are modeled as cross-catalog links — see [`pof-app.md`](pof-app.md).
 - [`tests.md`](tests.md) — verification strategy: app-side tests for the catalog
   framework, and the per-asset functional-test gates that make generation
   trustworthy at scale.
+- [`ux-design.md`](ux-design.md) — **Dimension 1:** studio-grade UI/UX — a
+  design-token system, the per-section visual-chart/viz layer, 3D asset preview,
+  motion/micro-interactions, the multi-pane studio layout, and premium states.
+- [`code-standards.md`](code-standards.md) — **Dimension 2:** code quality —
+  the 200-LOC-per-`.tsx` rule, balanced feature-based folder structure,
+  separation of concerns, performance + staggered/lazy loading, and the lint/CI
+  gate that enforces them.
