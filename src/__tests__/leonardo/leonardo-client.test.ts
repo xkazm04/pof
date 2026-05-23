@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { deleteGeneration, downloadThenDelete } from '@/lib/leonardo';
+import { deleteGeneration, downloadThenDelete, generateImage } from '@/lib/leonardo';
 
 const BASE = 'https://cloud.leonardo.ai/api/rest/v1';
 
@@ -47,5 +47,65 @@ describe('downloadThenDelete', () => {
     const delIdx = calls.findIndex((c) => c.method === 'DELETE');
     expect(getIdx).toBeGreaterThanOrEqual(0);
     expect(delIdx).toBeGreaterThan(getIdx); // download precedes delete
+  });
+});
+
+function installGenFetch(opts: { status?: string } = {}): { calls: Call[] } {
+  const status = opts.status ?? 'COMPLETE';
+  return installFetch((url, method) => {
+    if (method === 'POST' && url.endsWith('/generations')) {
+      return { body: { sdGenerationJob: { generationId: 'gen-1' } } };
+    }
+    if (method === 'GET' && url.includes('/generations/gen-1')) {
+      return { body: { generations_by_pk: { status, generated_images: [{ url: 'https://cdn.leonardo.ai/x.png', id: 'img-1' }] } } };
+    }
+    if (url.includes('cdn.leonardo.ai')) return { bytes: new ArrayBuffer(4) };
+    return { body: {} }; // DELETE
+  });
+}
+
+describe('generateImage', () => {
+  it('back-compat: string-only call sends the legacy 512x512 Lucid Origin body', async () => {
+    const { calls } = installGenFetch();
+    const result = await generateImage('a stone wall', { pollIntervalMs: 1 });
+    const post = calls.find((c) => c.method === 'POST' && c.url.endsWith('/generations'));
+    expect(post!.body).toEqual({
+      modelId: '7b592283-e8a7-4c5a-9ba6-d18c31f258b9',
+      prompt: 'a stone wall',
+      width: 512,
+      height: 512,
+      num_images: 1,
+      contrast: 3.5,
+    });
+    expect(result.imageUrl).toBe('https://cdn.leonardo.ai/x.png');
+    expect(result.generationId).toBe('gen-1');
+  });
+
+  it('cleanup=true (default) downloads bytes then DELETEs the generation', async () => {
+    const { calls } = installGenFetch();
+    const result = await generateImage('a stone wall', { pollIntervalMs: 1 });
+    expect(calls.some((c) => c.method === 'DELETE' && c.url.includes('/generations/gen-1'))).toBe(true);
+    expect(result.imageBase64).toBeDefined();
+  });
+
+  it('cleanup=false leaves the generation (no DELETE)', async () => {
+    const { calls } = installGenFetch();
+    await generateImage('x', { pollIntervalMs: 1, cleanup: false });
+    expect(calls.some((c) => c.method === 'DELETE')).toBe(false);
+  });
+
+  it('opts add tiling + model + dimensions to the request body', async () => {
+    const { calls } = installGenFetch();
+    await generateImage('seamless rock', {
+      pollIntervalMs: 1, modelId: '05ce0082-2d80-4a2d-8653-4d1c85e2418e',
+      width: 1024, height: 1024, tiling: true, transparency: 'foreground', contrast: 4, numImages: 2,
+    });
+    const post = calls.find((c) => c.method === 'POST' && c.url.endsWith('/generations'));
+    expect(post!.body).toEqual({
+      modelId: '05ce0082-2d80-4a2d-8653-4d1c85e2418e',
+      prompt: 'seamless rock',
+      width: 1024, height: 1024, num_images: 2, contrast: 4,
+      tiling: true, transparency: 'foreground',
+    });
   });
 });
