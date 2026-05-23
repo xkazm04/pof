@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { deleteGeneration, downloadThenDelete, generateImage, upscaleImage } from '@/lib/leonardo';
+import { deleteGeneration, downloadThenDelete, generateImage, upscaleImage, generateTextureOn3DModel } from '@/lib/leonardo';
 
 const BASE = 'https://cloud.leonardo.ai/api/rest/v1';
 
@@ -10,9 +10,10 @@ function installFetch(handler: (url: string, method: string) => {
   ok?: boolean; status?: number; body?: unknown; bytes?: ArrayBuffer;
 }): { calls: Call[] } {
   const calls: Call[] = [];
-  globalThis.fetch = vi.fn(async (url: string, init?: { method?: string; body?: string }) => {
+  globalThis.fetch = vi.fn(async (url: string, init?: { method?: string; body?: unknown }) => {
     const method = init?.method ?? 'GET';
-    calls.push({ url, method, body: init?.body ? JSON.parse(init.body) : undefined });
+    const body = typeof init?.body === 'string' ? JSON.parse(init.body) : init?.body;
+    calls.push({ url, method, body });
     const r = handler(url, method);
     return {
       ok: r.ok ?? true,
@@ -122,5 +123,35 @@ describe('upscaleImage', () => {
     const post = calls.find((c) => c.url.endsWith('/universal-upscaler'));
     expect(post!.body).toEqual({ generatedImageId: 'img-7', upscalerStyle: 'GENERAL' });
     expect(res.upscaleJobId).toBe('up-1');
+  });
+});
+
+describe('generateTextureOn3DModel', () => {
+  it('uploads the OBJ, starts a texture job, polls, returns PBR urls, attempts cleanup', async () => {
+    const { calls } = installFetch((url, method) => {
+      if (method === 'POST' && url.endsWith('/models-3d/upload')) {
+        return { body: { uploadModelAsset: { modelId: 'm-1', modelUploadUrl: 'https://s3/put' } } };
+      }
+      if (method === 'PUT' && url.includes('s3/put')) return { body: {} };
+      if (method === 'POST' && url.endsWith('/generations-texture')) {
+        return { body: { textureGenerationJob: { id: 'tex-1' } } };
+      }
+      if (method === 'GET' && url.includes('/generations-texture/tex-1')) {
+        return { body: { texture_generation: { status: 'COMPLETE',
+          albedo: 'https://cdn/albedo.png', normal: 'https://cdn/normal.png', roughness: 'https://cdn/rough.png' } } };
+      }
+      return { body: {} };
+    });
+    const objBytes = new Uint8Array([1, 2, 3]);
+    const res = await generateTextureOn3DModel({ objBytes, prompt: 'dark dungeon stone', pollIntervalMs: 1 });
+    expect(res.albedoUrl).toBe('https://cdn/albedo.png');
+    expect(res.normalUrl).toBe('https://cdn/normal.png');
+    expect(res.roughnessUrl).toBe('https://cdn/rough.png');
+    expect(res.modelAssetId).toBe('m-1');
+
+    const startTex = calls.find((c) => c.method === 'POST' && c.url.endsWith('/generations-texture'));
+    expect(startTex!.body).toEqual({ modelAssetId: 'm-1', prompt: 'dark dungeon stone', preview: false });
+    expect(calls.some((c) => c.method === 'PUT' && c.url.includes('s3/put'))).toBe(true);
+    expect(calls.some((c) => c.method === 'DELETE')).toBe(true); // cleanup attempt
   });
 });

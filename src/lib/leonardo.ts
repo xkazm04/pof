@@ -166,3 +166,81 @@ export async function upscaleImage(
   if (!upscaleJobId) throw new Error('Leonardo upscale returned no job id');
   return { upscaleJobId };
 }
+
+export interface Texture3DRequest {
+  objBytes: Uint8Array;
+  prompt: string;
+  preview?: boolean;
+  pollIntervalMs?: number;
+}
+
+export interface Texture3DResult {
+  modelAssetId: string;
+  albedoUrl: string;
+  normalUrl?: string;
+  roughnessUrl?: string;
+}
+
+/**
+ * Texture a UV-mapped OBJ via the legacy 3-step Leonardo 3D-texture endpoint:
+ *   POST /models-3d/upload -> PUT <presigned> -> POST /generations-texture -> poll.
+ * Best-effort field parsing (endpoint is legacy). Attempts to delete the job after.
+ */
+export async function generateTextureOn3DModel(req: Texture3DRequest): Promise<Texture3DResult> {
+  const pollMs = req.pollIntervalMs ?? POLL_INTERVAL_MS;
+
+  const upRes = await fetch(`${LEONARDO_API_BASE}/models-3d/upload`, {
+    method: 'POST',
+    headers: authHeaders(true),
+    body: JSON.stringify({ name: 'arena', modelType: 'OBJ' }),
+  });
+  if (!upRes.ok) throw new Error(`Leonardo 3D upload init failed (${upRes.status})`);
+  const upData = (await upRes.json()) as {
+    uploadModelAsset?: { modelId?: string; modelUploadUrl?: string };
+  };
+  const modelAssetId = upData.uploadModelAsset?.modelId;
+  const modelUploadUrl = upData.uploadModelAsset?.modelUploadUrl;
+  if (!modelAssetId || !modelUploadUrl) throw new Error('Leonardo 3D upload returned no presigned URL');
+
+  const putRes = await fetch(modelUploadUrl, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/octet-stream' },
+    body: req.objBytes,
+  });
+  if (!putRes.ok) throw new Error(`Leonardo OBJ PUT failed (${putRes.status})`);
+
+  const startRes = await fetch(`${LEONARDO_API_BASE}/generations-texture`, {
+    method: 'POST',
+    headers: authHeaders(true),
+    body: JSON.stringify({ modelAssetId, prompt: req.prompt, preview: req.preview ?? false }),
+  });
+  if (!startRes.ok) throw new Error(`Leonardo texture job start failed (${startRes.status})`);
+  const startData = (await startRes.json()) as { textureGenerationJob?: { id?: string } };
+  const jobId = startData.textureGenerationJob?.id;
+  if (!jobId) throw new Error('Leonardo texture job returned no id');
+
+  try {
+    for (let attempt = 0; attempt < MAX_POLL_ATTEMPTS; attempt++) {
+      await sleep(pollMs);
+      const pollRes = await fetch(`${LEONARDO_API_BASE}/generations-texture/${jobId}`, {
+        headers: authHeaders(),
+      });
+      if (!pollRes.ok) continue;
+      const data = (await pollRes.json()) as {
+        texture_generation?: { status?: string; albedo?: string; normal?: string; roughness?: string };
+      };
+      const t = data.texture_generation;
+      if (t?.status === 'COMPLETE' && t.albedo) {
+        return { modelAssetId, albedoUrl: t.albedo, normalUrl: t.normal, roughnessUrl: t.roughness };
+      }
+      if (t?.status === 'FAILED') throw new Error('Leonardo texture generation failed');
+    }
+    throw new Error('Leonardo texture generation timed out');
+  } finally {
+    // Cleanup: delete the texture job (mirrors the generation cleanup protocol).
+    const del = await fetch(`${LEONARDO_API_BASE}/generations-texture/${jobId}`, {
+      method: 'DELETE', headers: authHeaders(),
+    });
+    if (!del.ok) logger.warn(`[leonardo] texture job ${jobId} delete returned ${del.status}`);
+  }
+}
