@@ -27,12 +27,33 @@
   the `-ExecutePythonScript` run, `@@CALLBACK`, the `roomCount` schema) 2/2.
 - **typecheck** clean (filtering the pre-existing `leonardo.ts:208` error);
   **lint** 0 errors on the new files; **full suite** 1001 tests / 108 files green.
-- **Live in-app dispatch — NOT driven here.** The click → CLI terminal → Claude
-  runs `UnrealEditor.exe` → `@@CALLBACK` → panel-updates round-trip needs the
-  running PoF dev server + an interactive CLI session + a UE round-trip, which
-  this environment can't drive. **Operator-verified:** open Level Design →
-  Dungeon (UE), set room count + seed, click Generate, and confirm the result
-  line updates with the room count after the terminal run completes.
+## Live verification (2026-05-23, dev server + Playwright)
+
+Driven against `npm run dev` with a Chromium Playwright session
+(`e2e/procgen-driver-panel.spec.ts`):
+
+- **Callback route, live:** `POST /api/level-design/procgen-result {roomCount,
+  seed}` persists; `GET` returns the latest — confirmed against the running
+  server.
+- **Panel renders + reads the live API:** navigated project picker → Content →
+  Level Design → (select a design doc) → **Dungeon (UE)** tab. The panel shows
+  "PROCEDURAL DUNGEON (UE) — DRIVE ARPGLEVELGENERATOR → /GAME/MAPS/
+  PROCGENDUNGEON", the room-count (6) + seed (1337) inputs, the Generate
+  button, and a **"Last run: 8 rooms (seed 99)"** line read from the route
+  (a value POSTed earlier). The committed spec self-seeds `{12, 4242}` and
+  asserts the result line + heading + button.
+- **Generate dispatches, live:** clicking "Generate Dungeon (UE)" flips the
+  button to "GENERATING…" and opens a **"Dungeon (UE)" CLI session ("running")**;
+  the dev log shows `POST /api/session-log` + `POST /api/claude-terminal/query`
+  + `GET /api/claude-terminal/stream?executionId=…` — a real Claude terminal
+  execution was spawned from the panel.
+
+**Still operator-/CI-out-of-scope:** the spawned Claude session actually
+running `UnrealEditor.exe` to completion + POSTing the `@@CALLBACK` (the generic
+CLI/harness leg — needs an authenticated, permission-approving session + a
+~30s+ UE launch). Its two ends are proven independently here: the UE script
+(`Generated 8/6 rooms`) and the callback route (live POST/GET). The committed
+e2e spec deliberately does NOT click Generate (no `claude.exe` spawn = CI-safe).
 
 ## Outcome
 
