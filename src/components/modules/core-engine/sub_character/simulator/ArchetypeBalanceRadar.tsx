@@ -32,7 +32,7 @@ export function ArchetypeBalanceRadar({ balanceResults, scoreMean }: ArchetypeBa
       .slice(0, TOP_N);
   }, [balanceResults, showAll, needsTruncation]);
   return (
-    <BlueprintPanel className="p-4" color={ACCENT_CYAN}>
+    <BlueprintPanel className="p-3" color={ACCENT_CYAN}>
       <div className="flex items-center gap-3 mb-1">
         <SectionHeader icon={Radar} label="Balance Radar" color={ACCENT_CYAN} />
         {needsTruncation && (
