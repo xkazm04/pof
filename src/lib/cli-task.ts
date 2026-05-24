@@ -159,6 +159,7 @@ export type CLITaskType =
   | 'biome-scatter'
   | 'mixamo-import'
   | 'character-setup'
+  | 'audio-import'
   | 'generate';
 
 /** Task types that generate or modify UE code and therefore get a Wiring Requirements section. */
@@ -293,6 +294,29 @@ export interface CharacterSetupTask extends CLITask {
   enemyMesh: string;
   animBlueprint: string;
   enemyMaterial: string;
+  appOrigin: string;
+}
+
+/**
+ * Reference to one source clip on disk for the audio-import dispatch (folder-05 §7).
+ */
+export interface AudioImportAssetRef {
+  filename: string;
+  srcAbsPath: string;
+}
+
+/**
+ * Audio-import task — runs Content/Python/import_audio_set.py to create
+ * USoundWaves + a randomising USoundCue under /Game/Audio/<setName>/ from a
+ * set's variation clips. Callback POSTs { assetsImported, cuePath, wiredEvent }
+ * to /api/audio/import-result.
+ */
+export interface AudioImportTask extends CLITask {
+  type: 'audio-import';
+  setName: string;
+  eventKey: string | null;
+  surface: string | null;
+  assets: AudioImportAssetRef[];
   appOrigin: string;
 }
 
@@ -708,6 +732,41 @@ ${sourceNote}
    humanoid/pose check) — you do NOT need to add a callback here.`;
     }
 
+    case 'audio-import': {
+      const at = task as AudioImportTask;
+      const header = buildProjectContextHeader(ctx, { knownAssetDomains });
+      const cbId = registerCallback({
+        url: `${at.appOrigin}/api/audio/import-result`,
+        method: 'POST',
+        staticFields: {
+          setName: at.setName,
+          eventKey: at.eventKey,
+          surface: at.surface,
+        },
+        schemaHint: '  "assetsImported": 3,\n  "cuePath": "/Game/Audio/footstep-stone/SC_footstep_stone",\n  "wiredEvent": "AnimNotify_FootstepEffect|stone"',
+      });
+
+      const assetsArg = at.assets.map((a) => a.srcAbsPath).join(';');
+      const editorExe = 'C:\\Program Files\\Epic Games\\UE_5.7\\Engine\\Binaries\\Win64\\UnrealEditor.exe';
+
+      return `${header}
+
+## Task: Import audio set into UE (import_audio_set.py)
+
+Import the **${at.setName}** set into the UE project as USoundWaves + a
+randomising USoundCue, and (best-effort) wire it to the corresponding
+AnimNotify.
+
+1. From the UE project root, set the env vars then run the FULL editor with
+   \`-ExecutePythonScript\` (PowerShell):
+   \`$env:AUDIO_SET_NAME="${at.setName}"; $env:AUDIO_EVENT_KEY="${at.eventKey ?? ''}"; $env:AUDIO_SURFACE="${at.surface ?? ''}"; $env:AUDIO_SOURCES="${assetsArg}"; & "${editorExe}" "<the .uproject>" -ExecutePythonScript="Content/Python/import_audio_set.py" -unattended -nopause -nosplash\`
+2. Read the script's final \`[import_audio_set] DONE\` line: it prints
+   \`assetsImported=N cuePath=/Game/Audio/<set>/SC_<set> wiredEvent=<name|null>\`.
+3. Submit the result via @@CALLBACK:
+
+${buildCallbackSection(getCallback(cbId)!)}`;
+    }
+
     case 'generate': {
       const gt = task as GenerateTask;
       const recipe = getRecipe(gt.entity.catalogId);
@@ -900,6 +959,28 @@ export const TaskFactory = {
       enemyMesh: params.enemyMesh,
       animBlueprint: params.animBlueprint,
       enemyMaterial: params.enemyMaterial,
+      appOrigin,
+    };
+  },
+
+  /**
+   * Create an audio-import task — wires a set's variation clips into UE as
+   * USoundWaves + a randomising USoundCue under /Game/Audio/<setName>/.
+   */
+  importAudioSet(
+    params: { setName: string; eventKey?: string | null; surface?: string | null; assets: AudioImportAssetRef[] },
+    appOrigin: string,
+    label = 'Audio Import',
+  ): AudioImportTask {
+    return {
+      type: 'audio-import',
+      moduleId: 'audio',
+      prompt: '',
+      label,
+      setName: params.setName,
+      eventKey: params.eventKey ?? null,
+      surface: params.surface ?? null,
+      assets: params.assets,
       appOrigin,
     };
   },
