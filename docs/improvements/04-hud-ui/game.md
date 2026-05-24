@@ -99,3 +99,33 @@ will look more "shipped" without it.
   damage event).
 - One of the two `UARPGHUDWidget`-family paths is chosen, documented, and
   the slice uses the chosen HUD (with `UVSHUDWidget` retired).
+
+## Implementation status (2026-05-24)
+
+Plan: `docs/superpowers/plans/2026-05-24-hud-ui-04-game-reparent.md`. Game C++
+written to `xkazm04/pof-exp`; **uncommitted pending the operator's
+`Build.bat PoFEditor`** (the editor module build is monolithic + shared).
+
+- **§1 `UARPGCodeWidgetBase`** — already shipped (`5be678c`); `UVSHUDWidget`
+  reparented (`fa5bafb`).
+- **§2 damage numbers** — already shipped (`97b7e90`/`005425d`).
+- **§5 (chosen: reparent-to-code)** — `UARPGHUDWidget`, `UAbilityBarWidget`,
+  `UAbilitySlotWidget`, `UEnemyHealthBarWidget` reparented onto
+  `UARPGCodeWidgetBase`: `meta=(BindWidget)` dropped, each builds its named
+  children in a `BuildTree()` override; all existing bind/tick/fade logic kept.
+  `AARPGHUD` now defaults `HUDWidgetClass`/`AbilityBarClass` to the C++ classes
+  so it needs no WBP.
+- **§3 ability hotbar** — delivered *as* the reparented `UAbilityBarWidget` +
+  `UAbilitySlotWidget` (bottom-centre `SlotContainer`, default
+  `SlotWidgetClass`), **not** a throwaway `UVSAbilityBarWidget` (which §5 would
+  have immediately retired).
+- **§4 hit indicator** — full-screen `HitVignette` `UImage` on
+  `UARPGHUDWidget`, flashed (peak 0.7, ~250 ms decay) from the existing GAS
+  `OnHealthChanged` callback when health drops.
+- **§6 debug text** — gated behind the `ARPG.ShowDebugStats` cvar (off by
+  default) in `ARPGCharacterBase`/`ARPGPlayerCharacter`.
+- **§5 retire (GATED — not yet done):** switching `BP_VSGameMode.HUDClass` to
+  `AARPGHUD` (needs an in-editor Python BP edit) and deleting `UVSHUDWidget`/
+  `AVSHUD` is deferred until the operator confirms the reparented HUD renders
+  (build + launch/Gemini). Until then the slice stays on the known-good
+  `UVSHUDWidget`; `AVSHUDFunctionalTest` is untouched.

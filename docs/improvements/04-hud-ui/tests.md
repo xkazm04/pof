@@ -59,6 +59,20 @@
    needed a sharper prompt than the first attempt to detect the empty
    bar.
 
+## Implementation status (2026-05-24)
+
+- The four specced UE HUD tests (1-4) are covered by the existing consolidated
+  `AVSHUDFunctionalTest` (phases HUDStructure → HUDBinding → DamageNumbers).
+- Added `Source/PoF/Test/HUD/ARPGHUDWidgetTest` for the **reparented real HUD**
+  (phases HUDStructure → Hotbar → HitVignette → HUDBinding) — asserts the
+  code-built widget tree (HealthBar/ManaBar/StaminaBar/XPBar/LevelText/
+  HitVignette), that the hotbar produces slot widgets, that the §4 vignette's
+  render-opacity rises after player damage, and that the player bar tracks GAS
+  health. **Uncommitted pending the operator's build** (shared monolithic build).
+- App-side prompt/wiring tests, the `hud-check.txt` Gemini fixture, and the e2e
+  `hud-from-scratch.spec.ts` were shipped earlier; the `arpg-ui` prompt test now
+  also asserts the prompts name `UARPGCodeWidgetBase`.
+
 ## Lessons that motivate each test
 
 - **The `RebuildWidget` timing bug rendered an empty widget.** The tree-
