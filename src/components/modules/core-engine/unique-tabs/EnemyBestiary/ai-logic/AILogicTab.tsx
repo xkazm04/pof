@@ -13,7 +13,7 @@ import { AI_PIPELINE, DETECTED_ENTITIES, BT_TREE } from '../data';
 import { BTFlowchart } from './BTFlowchart';
 import { PerceptionConeViz } from './PerceptionConeViz';
 import { DecisionDebugger } from './DecisionDebugger';
-import { AbilityQuickPicker } from '../../CharacterBlueprint/input/AbilityQuickPicker';
+import { AbilityQuickPicker } from '../../../sub_character/input/AbilityQuickPicker';
 
 interface AILogicTabProps {
   featureMap: Map<string, FeatureRow>;

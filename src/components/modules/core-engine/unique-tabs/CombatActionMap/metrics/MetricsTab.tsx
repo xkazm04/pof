@@ -11,7 +11,7 @@ import {
 import { WEAPONS, COMBO_SEQUENCES, parseDamageMidpoint } from '../data-metrics';
 import type { Weapon, WeaponCategory } from '../data-metrics';
 import { StatInfluencePanel } from './StatInfluencePanel';
-import { AbilityQuickPicker } from '../../CharacterBlueprint/input/AbilityQuickPicker';
+import { AbilityQuickPicker } from '../../../sub_character/input/AbilityQuickPicker';
 
 import { OVERLAY_WHITE, withOpacity, OPACITY_4, OPACITY_8, OPACITY_10, OPACITY_30, OPACITY_50 } from '@/lib/chart-colors';
 
