@@ -3,13 +3,23 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import { useShallow } from 'zustand/react/shallow';
-import type { CatalogEntityBase, AbilityEntry } from '@/lib/catalog/types';
+import type {
+  CatalogEntityBase, AbilityEntry, LifecycleState, TestResult, LifecycleRecord,
+} from '@/lib/catalog/types';
+import { resolveTransition } from '@/lib/catalog/lifecycle';
 import { seedSpellbookEntries } from '@/lib/catalog/seed-spellbook';
 
 interface CatalogState {
   /** entitiesByCatalog[catalogId][entityId] */
   entitiesByCatalog: Record<string, Record<string, CatalogEntityBase>>;
   setEntities: (catalogId: string, entities: CatalogEntityBase[]) => void;
+  /** Advance an entity's lifecycle in-memory through the shared gate (optimistic + post-callback sync). */
+  applyLifecycle: (input: {
+    catalogId: string; entityId: string; nextLifecycle: LifecycleState;
+    ueAssets?: string[]; testResult?: TestResult;
+  }) => void;
+  /** Merge server-side lifecycle records over seeded entities (called on load). */
+  loadLifecycle: (records: LifecycleRecord[]) => void;
 }
 
 function indexById(entities: CatalogEntityBase[]): Record<string, CatalogEntityBase> {
@@ -30,6 +40,53 @@ export const useCatalogStore = create<CatalogState>()(
         set((s) => ({
           entitiesByCatalog: { ...s.entitiesByCatalog, [catalogId]: indexById(entities) },
         })),
+
+      applyLifecycle: ({ catalogId, entityId, nextLifecycle, ueAssets, testResult }) =>
+        set((s) => {
+          const current = s.entitiesByCatalog[catalogId]?.[entityId];
+          if (!current) return s;
+          const resolved = resolveTransition(current.lifecycle, nextLifecycle, testResult);
+          if (!resolved) return s;
+          const mergedAssets = ueAssets
+            ? Array.from(new Set([...(current.ueAssets ?? []), ...ueAssets]))
+            : current.ueAssets;
+          const updated: CatalogEntityBase = {
+            ...current,
+            lifecycle: resolved,
+            ...(mergedAssets ? { ueAssets: mergedAssets } : {}),
+            ...(testResult ? { lastTestResult: testResult } : {}),
+            ...(resolved === 'verified' ? { lastVerifiedAt: new Date().toISOString() } : {}),
+          };
+          return {
+            entitiesByCatalog: {
+              ...s.entitiesByCatalog,
+              [catalogId]: { ...s.entitiesByCatalog[catalogId], [entityId]: updated },
+            },
+          };
+        }),
+
+      loadLifecycle: (records) =>
+        set((s) => {
+          if (records.length === 0) return s;
+          let changed = false;
+          const next = { ...s.entitiesByCatalog };
+          for (const r of records) {
+            const ent = next[r.catalogId]?.[r.entityId];
+            if (!ent) continue;
+            changed = true;
+            next[r.catalogId] = {
+              ...next[r.catalogId],
+              [r.entityId]: {
+                ...ent,
+                lifecycle: r.lifecycle,
+                ueAssets: r.ueAssets,
+                ...(r.lastTestResult ? { lastTestResult: r.lastTestResult } : {}),
+                ...(r.lastVerifiedAt ? { lastVerifiedAt: r.lastVerifiedAt } : {}),
+              },
+            };
+          }
+          return changed ? { entitiesByCatalog: next } : s;
+        }),
     }),
     {
       name: 'pof-catalog',
