@@ -13,7 +13,8 @@ import {
   getModuleDomainContext,
   getModuleName,
 } from '@/lib/prompt-context';
-import type { FeatureDefinition } from '@/lib/feature-definitions';
+import { type FeatureDefinition, getWiringAssets } from '@/lib/feature-definitions';
+import { formatWiringRequirements } from '@/lib/knowledge/wiring-requirements';
 import { buildEvalPrompt, type EvalPass } from '@/lib/evaluator/module-eval-prompts';
 import { getModuleChecklist } from '@/lib/module-registry';
 import { buildVisualCheckSection } from '@/lib/prompts/visual-check';
@@ -154,6 +155,9 @@ export type CLITaskType =
   | 'procgen-dungeon'
   | 'biome-scatter';
 
+/** Task types that generate or modify UE code and therefore get a Wiring Requirements section. */
+const WIRING_TASK_TYPES = new Set<CLITaskType>(['checklist', 'quick-action', 'feature-fix']);
+
 export interface CLITask {
   type: CLITaskType;
   /** The raw user/system prompt (before context injection) */
@@ -253,6 +257,11 @@ export interface BiomeScatterTask extends CLITask {
 export function buildTaskPrompt(task: CLITask, ctx: ProjectContext): string {
   const isUE5 = !ctx.dynamicContext?.projectType || ctx.dynamicContext.projectType === 'ue5';
 
+  const wiringBlock =
+    isUE5 && WIRING_TASK_TYPES.has(task.type)
+      ? `\n\n${formatWiringRequirements({ moduleAssets: getWiringAssets(task.moduleId) })}`
+      : '';
+
   switch (task.type) {
     case 'checklist': {
       const ct = task as ChecklistTask;
@@ -284,7 +293,7 @@ export function buildTaskPrompt(task: CLITask, ctx: ProjectContext): string {
             })}`
           : '';
 
-      return `${header}${domainSection}\n\n## Task\n${task.prompt}\n\n${buildCallbackSection(getCallback(cbId)!)}${visualBlock}`;
+      return `${header}${domainSection}\n\n## Task\n${task.prompt}${wiringBlock}\n\n${buildCallbackSection(getCallback(cbId)!)}${visualBlock}`;
     }
 
     case 'quick-action':
@@ -294,7 +303,7 @@ export function buildTaskPrompt(task: CLITask, ctx: ProjectContext): string {
       const domainSection = domainContext
         ? `\n\n## Domain Context\n${domainContext}`
         : '';
-      return `${header}${domainSection}\n\n## Task\n${task.prompt}`;
+      return `${header}${domainSection}\n\n## Task\n${task.prompt}${wiringBlock}`;
     }
 
     case 'feature-fix': {
@@ -322,7 +331,7 @@ export function buildTaskPrompt(task: CLITask, ctx: ProjectContext): string {
         schemaHint: '  "completed": true',
       });
 
-      return `${header}${domainSection}\n${fileSection}\n\n## Task: Improve "${ft.featureName}"\n\nCurrent status: **${ft.status}**${qualityNote}\n\n### What needs to be done\n${ft.nextSteps}\n\nImplement all the improvements listed above. Work through them methodically — read existing code first, then make targeted changes. The goal is to bring this feature to production quality (5/5).\n\n### Completion\n\nAfter you have completed **all** improvements and verified they compile correctly, mark the feature as improved.\n\n${buildCallbackSection(getCallback(cbId)!)}`;
+      return `${header}${domainSection}\n${fileSection}\n\n## Task: Improve "${ft.featureName}"\n\nCurrent status: **${ft.status}**${qualityNote}\n\n### What needs to be done\n${ft.nextSteps}\n\nImplement all the improvements listed above. Work through them methodically — read existing code first, then make targeted changes. The goal is to bring this feature to production quality (5/5).${wiringBlock}\n\n### Completion\n\nAfter you have completed **all** improvements and verified they compile correctly, mark the feature as improved.\n\n${buildCallbackSection(getCallback(cbId)!)}`;
     }
 
     case 'feature-review': {
