@@ -465,7 +465,22 @@ Co-Authored-By: Claude Opus 4.7 (1M context) <noreply@anthropic.com>"
 
 ---
 
-## Task 8: (app repo) Live `HARNESS_MODE=wiring-smoke` mode
+## Task 8: (app repo) e2e wiring-smoke spec — ✅ IMPLEMENTED 2026-05-24
+
+**Shipped as** `e2e/wiring-smoke.spec.ts` (commit `test(e2e): wiring-smoke …`).
+
+**Refinement vs. the original step plan:** ground-truth of `harness-mode.ts` showed **stub mode already
+captures the dispatched `pof-cli-prompt` prompt without spawning Claude** (capture-phase listener +
+`stopImmediatePropagation`). So no new `HARNESS_MODE` and no Claude CLI are needed — `harness-mode.ts`
+is **not** modified, and the spec is a normal stub-mode e2e (consistent with `sp-a-finding-a.spec.ts`)
+rather than a skip-by-default `-live` spec. It drives `arpg-ui`/`au-1` and `arpg-combat`/`acb-1` via the
+proven `dispatchRoadmapChecklistItem` helper and asserts the captured prompt contains
+`## Wiring Requirements` (+ `WBP_ARPGHUD` for `arpg-ui`, proving `MODULE_WIRING_ASSETS` feeds the prompt
+through the real UI path). Verified via `npx playwright test --list` (parses + 2 tests discovered); a
+full live run needs the dev server and mutates the shared `~/.pof` checklist DB, so it is the operator's
+call. The original step-by-step below is retained for historical context.
+
+<details><summary>Original (superseded) step plan</summary>
 
 **Files:**
 - Modify: `e2e/helpers/harness-mode.ts` (register the mode)
@@ -504,9 +519,22 @@ git commit -m "test(e2e): opt-in live wiring-smoke harness mode
 Co-Authored-By: Claude Opus 4.7 (1M context) <noreply@anthropic.com>"
 ```
 
+</details>
+
 ---
 
-## Task 9: (app repo) gemini-recognize plumbing spec
+## Task 9: (app repo) gemini-recognize plumbing spec — ✅ IMPLEMENTED 2026-05-24
+
+**Shipped as** `docs/improvements/01-generation-quality/gemini-recognize-plumbing-spec.md` (commit
+`docs(tests): gemini-recognize plumbing spec …`).
+
+**Refinement:** ground-truth confirmed `gemini-recognize.mjs` is absent, **but** the load-bearing Gemini
+path is alive as `POST /api/verify/visual` (`@google/genai`, `gemini-2.0-flash`). The shipped spec
+re-targets tests.md's intent at that route: a deterministic no-key plumbing test (in `npm run validate`),
+an opt-in key-gated **shape-only** snapshot, and the CLI-form test for if/when `gemini-recognize.mjs`
+returns. The original step below is retained for context.
+
+<details><summary>Original step plan</summary>
 
 **Files:**
 - Create: `docs/improvements/01-generation-quality/gemini-recognize-plumbing-spec.md`
@@ -530,6 +558,8 @@ git commit -m "docs(tests): gemini-recognize plumbing spec (CLI absent — spec 
 
 Co-Authored-By: Claude Opus 4.7 (1M context) <noreply@anthropic.com>"
 ```
+
+</details>
 
 ---
 

@@ -45,10 +45,18 @@ Verified state (UE repo, 2026-05-24):
 | §5 | `PofTestRunner` `FEditorDelegates` already `#if WITH_EDITOR` | Recorded runtime-module audit (Shipping-clean) |
 | §6 | `ARPG.Verify.Characters/HUD/Combat/Slice/SliceCI` | Add `ARPG.Verify.Loot` + `ARPG.Verify.All` |
 
-## Tests pending
+## Tests
 
-- Game-side #1/#2/#3 → Tasks 2/1/7 of the game-side plan (UE functional tests + Verify commands).
-- e2e `HARNESS_MODE=wiring-smoke` (live) → game-side plan Task 8 (app repo; deterministic vitest
-  stand-in already merged here).
-- `gemini-recognize` plumbing → game-side plan Task 9 — **spec only**: the `gemini-recognize.mjs` CLI is
-  absent from the repo, so there is nothing to plumb against until it is (re)added.
+App-repo test items — DONE ✅ (2026-05-24):
+- e2e wiring-smoke → `e2e/wiring-smoke.spec.ts`. Stub-mode e2e: drives a real checklist dispatch through
+  the UI and asserts the captured `pof-cli-prompt` prompt carries `## Wiring Requirements` (+ `arpg-ui`'s
+  `WBP_ARPGHUD`). No new `HARNESS_MODE` / no Claude CLI needed (stub capture). Complements the
+  deterministic `src/__tests__/registry/wiring-smoke.test.ts`. Verified via `playwright test --list`;
+  a full live run needs the dev server + mutates the shared checklist DB (operator's call).
+- gemini plumbing → `docs/improvements/01-generation-quality/gemini-recognize-plumbing-spec.md`. Spec
+  re-targeted at the live path `POST /api/verify/visual` (`gemini-2.0-flash`) since `gemini-recognize.mjs`
+  is absent: deterministic no-key plumbing test (in validate) + opt-in key-gated shape snapshot + the
+  CLI-form test for if/when the CLI returns.
+
+Game-side (UE repo) tests still pending → Tasks 1/2/7 of the game-side plan (UE functional tests +
+`ARPG.Verify.*` commands), to be executed by a UE-capable session.
