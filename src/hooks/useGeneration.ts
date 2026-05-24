@@ -21,6 +21,11 @@ const CATALOG_MODULE: Record<string, SubModuleId> = {
   spellbook: 'arpg-gas',
   items: 'arpg-inventory',
   'loot-tables': 'arpg-loot',
+  bestiary: 'arpg-enemy-ai',
+  'combat-map': 'arpg-combat',
+  'screen-flow': 'arpg-ui',
+  'zone-map': 'arpg-world',
+  'state-graph': 'arpg-animation',
 };
 
 /**
