@@ -10,7 +10,7 @@
 | 2 | **Entity Inspector primitive** | `2026-05-24-pof-ecw-phase-02-entity-inspector.md` | ✅ DONE @ `ecw-phase-2-complete` (04d4fcc) |
 | 3 | **Catalog Hub** | `2026-05-24-pof-ecw-phase-03-catalog-hub.md` | ✅ DONE @ `ecw-phase-3-complete` |
 | 4 | **CLI Rail + two-way binding** | `2026-05-24-pof-ecw-phase-04-cli-rail.md` | ✅ DONE @ `ecw-phase-4-complete` (core scope; ~12 enhancement ideas → P4b) |
-| 5 | **Mission Control** | `2026-05-24-pof-ecw-phase-05-mission-control.md` | ⏳ |
+| 5 | **Mission Control** | `2026-05-24-pof-ecw-phase-05-mission-control.md` | ✅ DONE @ `ecw-phase-5-complete` (focused scope; full dash consolidation → P10) |
 | 6 | **Live State** | `2026-05-24-pof-ecw-phase-06-live-state.md` | ⏳ |
 | 7 | **Module migration A — Core Engine catalogs** | `2026-05-24-pof-ecw-phase-07-migrate-core.md` | ⏳ |
 | 8 | **Module migration B — Promote Materials/Audio/Animation-Assets** | `2026-05-24-pof-ecw-phase-08-promote-catalogs.md` | ⏳ |
