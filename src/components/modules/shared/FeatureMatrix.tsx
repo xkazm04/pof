@@ -10,8 +10,9 @@ import { FetchError } from './FetchError';
 import { useProjectStore } from '@/stores/projectStore';
 import type { FeatureRow, FeatureStatus } from '@/types/feature-matrix';
 import type { ReviewSnapshot } from '@/lib/feature-matrix-db';
-import { buildDependencyMap, computeBlockers, moduleNeedsBinaryContent } from '@/lib/feature-definitions';
+import { buildDependencyMap, computeBlockers, moduleNeedsBinaryContent, getWiringAssets } from '@/lib/feature-definitions';
 import type { DependencyInfo, ResolvedDependency } from '@/lib/feature-definitions';
+import { WiringAssetsPanel } from './WiringAssetsPanel';
 import { MODULE_LABELS } from '@/lib/module-registry';
 import { MarkdownProse } from '@/components/ui/MarkdownProse';
 import { UI_TIMEOUTS } from '@/lib/constants';
@@ -151,6 +152,8 @@ export function FeatureMatrix({ moduleId, accentColor, onReview, onSync, isRevie
   const projectPath = useProjectStore((s) => s.projectPath);
   const bridgeConnected = usePofBridgeStore((s) => s.connectionStatus === 'connected');
   const needsBinaryContent = useMemo(() => moduleNeedsBinaryContent(moduleId), [moduleId]);
+  const wiringAssets = useMemo(() => getWiringAssets(moduleId), [moduleId]);
+  const [showWiring, setShowWiring] = useState(false);
 
   // Build a lookup map for verification results by feature name
   const verificationMap = useMemo(() => {
@@ -455,18 +458,22 @@ export function FeatureMatrix({ moduleId, accentColor, onReview, onSync, isRevie
       <div className="flex items-center gap-4">
         <SummaryBar summary={summary} />
         {needsBinaryContent && (
-          <span
-            className="flex items-center gap-1 text-2xs px-2 py-0.5 rounded-full flex-shrink-0 font-medium"
+          <button
+            type="button"
+            onClick={() => setShowWiring((v) => !v)}
+            aria-expanded={showWiring}
+            className="flex items-center gap-1 text-2xs px-2 py-0.5 rounded-full flex-shrink-0 font-medium transition-colors"
             style={{
               backgroundColor: statusBg(STATUS_WARNING),
               color: STATUS_WARNING,
               border: `1px solid ${statusBorder(STATUS_WARNING)}`,
             }}
-            title="This module depends on binary content (Widget/Animation Blueprint or Behavior Tree) that cannot be generated from code — it must be authored in the editor."
+            title="This module depends on binary content (Widget/Animation Blueprint or Behavior Tree) that cannot be generated from code — it must be authored in the editor. Click to list it."
           >
             <Boxes className="w-3 h-3" />
             needs binary content
-          </span>
+            {showWiring ? <ChevronDown className="w-3 h-3" /> : <ChevronRight className="w-3 h-3" />}
+          </button>
         )}
         {snapshots.length >= 2 && (
           <QualitySparkline snapshots={snapshots} accentColor={accentColor} />
@@ -545,6 +552,10 @@ export function FeatureMatrix({ moduleId, accentColor, onReview, onSync, isRevie
           </AccentButton>
         </div>
       </div>
+
+      {showWiring && wiringAssets.length > 0 && (
+        <WiringAssetsPanel assets={wiringAssets} />
+      )}
 
       {/* Review progress bar */}
       {isReviewing && reviewProgress && reviewProgress.total > 0 && (
