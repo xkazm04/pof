@@ -26,6 +26,12 @@ describe('arpg-ui HUD prompts default to the pure-C++ widget pattern', () => {
     expect(p).toMatch(/FProgressBarStyle|dark track/i);
   });
 
+  it('pure-C++ HUD prompts name UARPGCodeWidgetBase as the parent class', () => {
+    for (const id of ['au-1', 'au-3', 'au-4', 'au-7', 'au-8']) {
+      expect(uiItem(id).prompt).toMatch(/UARPGCodeWidgetBase/);
+    }
+  });
+
   it('au-7 references the pure-C++ damage-number manager + widget pattern', () => {
     const p = uiItem('au-7').prompt;
     expect(p).toMatch(/RebuildWidget/);
