@@ -3,7 +3,7 @@
 import { Filter, Skull } from 'lucide-react';
 import { BlueprintPanel } from './design';
 import { ACCENT, RARITY_TIERS } from './data';
-import { ARCHETYPES } from '../EnemyBestiary/data';
+import { ARCHETYPES } from '../../sub_bestiary/_shared/data';
 
 import { withOpacity, OPACITY_10, OPACITY_15, OPACITY_12, OPACITY_50, OPACITY_25 } from '@/lib/chart-colors';
 const enemyMap = new Map(ARCHETYPES.map(a => [a.id, a]));

@@ -1,7 +1,7 @@
 import {
   ARCHETYPES,
   type ArchetypeConfig,
-} from '@/components/modules/core-engine/unique-tabs/EnemyBestiary/data';
+} from '@/components/modules/core-engine/sub_bestiary/_shared/data';
 import { DEFAULT_ENEMY_LOOT_BINDINGS } from '@/components/modules/core-engine/unique-tabs/LootTableVisualizer/data-binding';
 import { seedSpellbookEntries } from './seed-spellbook';
 import type { BestiaryEntry, CatalogLink } from './types';

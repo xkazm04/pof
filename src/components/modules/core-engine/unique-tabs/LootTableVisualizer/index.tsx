@@ -9,7 +9,7 @@ import { TabHeader, PipelineFlow, FeatureCard, LoadingSpinner, SubTabNavigation,
 import { BlueprintPanel } from './design';
 import { ACCENT, LOOT_FEATURES, RARITY_TIERS, LOOT_SUBTABS, type LootSubtab } from './data';
 import { DUMMY_ITEMS } from '../ItemCatalog/data';
-import { ARCHETYPES } from '../EnemyBestiary/data';
+import { ARCHETYPES } from '../../sub_bestiary/_shared/data';
 import { LootFilters } from './LootFilters';
 import type { SubModuleId } from '@/types/modules';
 import FeatureMapTab from '../FeatureMapTab';

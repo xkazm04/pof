@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { archetypeToEntry, seedBestiaryEntries } from '@/lib/catalog/seed-bestiary';
-import { ARCHETYPES } from '@/components/modules/core-engine/unique-tabs/EnemyBestiary/data';
+import { ARCHETYPES } from '@/components/modules/core-engine/sub_bestiary/_shared/data';
 
 describe('archetypeToEntry', () => {
   const a0 = ARCHETYPES[0];

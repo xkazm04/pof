@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { getRecipe } from '@/lib/catalog/recipe';
 import type { BestiaryEntry } from '@/lib/catalog/types';
-import { ARCHETYPES } from '@/components/modules/core-engine/unique-tabs/EnemyBestiary/data';
+import { ARCHETYPES } from '@/components/modules/core-engine/sub_bestiary/_shared/data';
 import type { ProjectContext } from '@/lib/prompt-context';
 
 const ctx: ProjectContext = { projectName: 'PoF', projectPath: 'C:/p', ueVersion: '5.7', dynamicContext: undefined };

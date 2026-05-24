@@ -14,7 +14,7 @@ import { SaveDataSchema } from '../sub_save';
 import { DebugDashboard } from '../sub_debug';
 import { ProgressionCurve } from '../sub_progression';
 import { ZoneMap } from '../sub_world';
-import { EnemyBestiary } from './EnemyBestiary';
+import { EnemyBestiary } from '../sub_bestiary';
 import { ItemCatalog } from './ItemCatalog';
 import { WBPStarterPanel } from '../arpg-ui/WBPStarterPanel';
 
