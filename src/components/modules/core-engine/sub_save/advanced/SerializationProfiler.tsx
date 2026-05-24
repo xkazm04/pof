@@ -5,13 +5,13 @@ import { motion } from 'framer-motion';
 import { STATUS_SUCCESS, STATUS_WARNING, STATUS_ERROR, ACCENT_CYAN_LIGHT,
   withOpacity, OPACITY_8, OPACITY_25, OPACITY_37, OPACITY_5,
 } from '@/lib/chart-colors';
-import { LiveMetricGauge } from '../../_shared';
-import { BlueprintPanel, SectionHeader } from '../design';
-import { ACCENT } from '../data';
+import { LiveMetricGauge } from '../../unique-tabs/_shared';
+import { BlueprintPanel, SectionHeader } from '../_shared/design';
+import { ACCENT } from '../_shared/data';
 import {
   SERIALIZATION_SEGMENTS, SERIALIZATION_BUDGET_MS,
   SERIALIZATION_TOTAL, PERF_METRICS,
-} from '../data-panels';
+} from '../_shared/data-panels';
 
 export function SerializationProfiler() {
   return (

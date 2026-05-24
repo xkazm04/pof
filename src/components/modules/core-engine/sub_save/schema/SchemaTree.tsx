@@ -2,8 +2,8 @@
 
 import { useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { BlueprintPanel } from '../design';
-import { SCHEMA_GROUPS, TYPE_COLORS, ACCENT, type FieldType } from '../data';
+import { BlueprintPanel } from '../_shared/design';
+import { SCHEMA_GROUPS, TYPE_COLORS, ACCENT, type FieldType } from '../_shared/data';
 
 import { withOpacity, OPACITY_5, OPACITY_15, OPACITY_80, OPACITY_25, OPACITY_50,
   STATUS_ERROR, STATUS_WARNING, STATUS_SUCCESS, ACCENT_PURPLE, ACCENT_EMERALD, OVERLAY_WHITE,

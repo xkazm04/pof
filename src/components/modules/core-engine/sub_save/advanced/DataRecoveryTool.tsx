@@ -6,9 +6,9 @@ import { motion } from 'framer-motion';
 import { STATUS_SUCCESS, STATUS_WARNING, STATUS_ERROR, OVERLAY_WHITE, ACCENT_CYAN, ACCENT_CYAN_LIGHT, ACCENT_EMERALD,
   withOpacity, OPACITY_5, OPACITY_20, OPACITY_40,
 } from '@/lib/chart-colors';
-import { BlueprintPanel, SectionHeader } from '../design';
-import { ACCENT } from '../data';
-import { RECOVERY_STEPS, RECOVERY_RESULTS, type RecoveryStep } from '../data-panels';
+import { BlueprintPanel, SectionHeader } from '../_shared/design';
+import { ACCENT } from '../_shared/data';
+import { RECOVERY_STEPS, RECOVERY_RESULTS, type RecoveryStep } from '../_shared/data-panels';
 
 export function DataRecoveryTool() {
   const [recoveryStep, setRecoveryStep] = useState<RecoveryStep>('confirm');

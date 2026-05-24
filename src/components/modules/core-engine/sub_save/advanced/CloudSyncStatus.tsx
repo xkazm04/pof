@@ -5,9 +5,9 @@ import { motion } from 'framer-motion';
 import { STATUS_SUCCESS, STATUS_INFO, STATUS_ERROR, STATUS_WARNING,
   ACCENT_CYAN_LIGHT, withOpacity, OPACITY_5,
 } from '@/lib/chart-colors';
-import { BlueprintPanel, SectionHeader, GlowStat } from '../design';
-import { ACCENT } from '../data';
-import { CLOUD_SYNC } from '../data-panels';
+import { BlueprintPanel, SectionHeader, GlowStat } from '../_shared/design';
+import { ACCENT } from '../_shared/data';
+import { CLOUD_SYNC } from '../_shared/data-panels';
 
 export function CloudSyncSection() {
   const statusColor = CLOUD_SYNC.status === 'synced' ? STATUS_SUCCESS

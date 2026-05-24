@@ -5,9 +5,9 @@ import { FileText } from 'lucide-react';
 import { STATUS_SUCCESS, STATUS_WARNING, STATUS_ERROR, STATUS_SUBDUED, ACCENT_CYAN_LIGHT, OVERLAY_WHITE,
   withOpacity, OPACITY_5, OPACITY_80,
 } from '@/lib/chart-colors';
-import { DiffViewer } from '../../_shared';
-import { BlueprintPanel, SectionHeader } from '../design';
-import { ACCENT, ENHANCED_SLOTS, SAVE_DIFF_ENTRIES, buildSlotDiff } from '../data';
+import { DiffViewer } from '../../unique-tabs/_shared';
+import { BlueprintPanel, SectionHeader } from '../_shared/design';
+import { ACCENT, ENHANCED_SLOTS, SAVE_DIFF_ENTRIES, buildSlotDiff } from '../_shared/data';
 import type { DiffEntry } from '@/types/unique-tab-improvements';
 
 export function SaveDiffSection() {

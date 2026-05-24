@@ -6,9 +6,9 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { STATUS_SUCCESS, STATUS_WARNING, STATUS_ERROR, ACCENT_CYAN, ACCENT_CYAN_LIGHT, OPACITY_8,
   withOpacity, OPACITY_10, OPACITY_5, OPACITY_20, OPACITY_30,
 } from '@/lib/chart-colors';
-import { BlueprintPanel, SectionHeader } from '../design';
-import { ACCENT } from '../data';
-import { MIGRATION_PATH, COMPAT_VERSIONS, COMPAT_LOOKUP } from '../data-panels';
+import { BlueprintPanel, SectionHeader } from '../_shared/design';
+import { ACCENT } from '../_shared/data';
+import { MIGRATION_PATH, COMPAT_VERSIONS, COMPAT_LOOKUP } from '../_shared/data-panels';
 
 export function MigrationPathGraph() {
   const [expandedMigration, setExpandedMigration] = useState<string | null>('V2.0');

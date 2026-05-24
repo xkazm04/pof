@@ -6,8 +6,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { STATUS_SUCCESS, STATUS_WARNING, STATUS_ERROR, ACCENT_CYAN, ACCENT_CYAN_LIGHT,
   withOpacity, OPACITY_20, OPACITY_30, OPACITY_50, OPACITY_5, OPACITY_15,
 } from '@/lib/chart-colors';
-import { BlueprintPanel, SectionHeader } from '../design';
-import { ACCENT, SCHEMA_VERSION_HISTORY } from '../data';
+import { BlueprintPanel, SectionHeader } from '../_shared/design';
+import { ACCENT, SCHEMA_VERSION_HISTORY } from '../_shared/data';
 
 export function VersionHistory() {
   const [expandedVersion, setExpandedVersion] = useState<string | null>('v2.0.0');

@@ -17,7 +17,7 @@ import {
   SCHEMA_GROUPS,
   SCHEMA_VERSION_HISTORY,
   FEATURE_NAMES,
-} from '@/components/modules/core-engine/unique-tabs/SaveDataSchema/data';
+} from '@/components/modules/core-engine/sub_save/_shared/data';
 
 /* ── Props ──────────────────────────────────────────────────────────────── */
 

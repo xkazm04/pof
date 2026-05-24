@@ -5,9 +5,9 @@ import { motion } from 'framer-motion';
 import { STATUS_SUCCESS, STATUS_WARNING, STATUS_ERROR, OVERLAY_WHITE,
   withOpacity, OPACITY_12, OPACITY_25, OPACITY_5, OPACITY_37,
 } from '@/lib/chart-colors';
-import { BlueprintPanel, SectionHeader } from '../design';
-import { ACCENT } from '../data';
-import { VALIDATION_CHECKS } from '../data-panels';
+import { BlueprintPanel, SectionHeader } from '../_shared/design';
+import { ACCENT } from '../_shared/data';
+import { VALIDATION_CHECKS } from '../_shared/data-panels';
 
 export function IntegrityValidator() {
   const overallValidation = VALIDATION_CHECKS.every(c => c.status === 'pass') ? 'PASS' :

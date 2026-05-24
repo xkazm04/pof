@@ -10,7 +10,7 @@ import { CharacterBlueprint } from '../sub_character';
 import { CharacterSourceWizard } from '../sub_character/wizard/CharacterSourceWizard';
 import { AnimationStateGraph } from './AnimationStateGraph';
 import { ScreenFlowMap } from './ScreenFlowMap';
-import { SaveDataSchema } from './SaveDataSchema';
+import { SaveDataSchema } from '../sub_save';
 import { DebugDashboard } from './DebugDashboard';
 import { ProgressionCurve } from './ProgressionCurve';
 import { ZoneMap } from '../sub_world';

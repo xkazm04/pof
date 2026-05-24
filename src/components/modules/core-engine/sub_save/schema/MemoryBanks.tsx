@@ -2,8 +2,8 @@
 
 import { Database, Plus } from 'lucide-react';
 import { motion } from 'framer-motion';
-import { BlueprintPanel, SectionHeader } from '../design';
-import { SAVE_SLOTS, ACCENT } from '../data';
+import { BlueprintPanel, SectionHeader } from '../_shared/design';
+import { SAVE_SLOTS, ACCENT } from '../_shared/data';
 
 import { withOpacity, OPACITY_5, STATUS_WARNING, STATUS_SUCCESS, ACCENT_CYAN, ACCENT_CYAN_LIGHT, OVERLAY_WHITE } from '@/lib/chart-colors';
 export function MemoryBanks() {

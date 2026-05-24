@@ -5,8 +5,8 @@ import { motion } from 'framer-motion';
 import { ACCENT_EMERALD, ACCENT_CYAN_LIGHT, OVERLAY_WHITE, STATUS_SUCCESS,
   withOpacity, OPACITY_20, OPACITY_10, OPACITY_5, OPACITY_8,
 } from '@/lib/chart-colors';
-import { BlueprintPanel, SectionHeader } from '../design';
-import { FILE_SIZE_SECTIONS, TOTAL_BYTES, COMPRESSION_RATIO, ACCENT, formatBytes } from '../data';
+import { BlueprintPanel, SectionHeader } from '../_shared/design';
+import { FILE_SIZE_SECTIONS, TOTAL_BYTES, COMPRESSION_RATIO, ACCENT, formatBytes } from '../_shared/data';
 
 export function FileSizeBreakdown() {
   return (

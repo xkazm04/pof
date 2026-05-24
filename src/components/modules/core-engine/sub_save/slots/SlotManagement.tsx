@@ -5,8 +5,8 @@ import { motion } from 'framer-motion';
 import { STATUS_SUCCESS, STATUS_ERROR, STATUS_INFO, STATUS_WARNING, ACCENT_CYAN, ACCENT_CYAN_LIGHT, OVERLAY_WHITE,
   withOpacity, OPACITY_5, OPACITY_20, OPACITY_30,
 } from '@/lib/chart-colors';
-import { BlueprintPanel, SectionHeader } from '../design';
-import { ACCENT, ENHANCED_SLOTS } from '../data';
+import { BlueprintPanel, SectionHeader } from '../_shared/design';
+import { ACCENT, ENHANCED_SLOTS } from '../_shared/data';
 
 export function SlotManagement() {
   return (

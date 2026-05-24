@@ -5,11 +5,11 @@ import { motion } from 'framer-motion';
 import { STATUS_SUCCESS, STATUS_WARNING, STATUS_ERROR, ACCENT_CYAN_LIGHT,
   withOpacity, OPACITY_25, OPACITY_56, OPACITY_10, OPACITY_5, OPACITY_20, OPACITY_8, OPACITY_37, OPACITY_50,
 } from '@/lib/chart-colors';
-import { BlueprintPanel, SectionHeader } from '../design';
+import { BlueprintPanel, SectionHeader } from '../_shared/design';
 import {
   ACCENT, SECTION_BUDGETS, FILE_SIZE_SECTIONS, GROWTH_HISTORY, TOTAL_BYTES,
   formatBytes, getBudgetStatus, projectGrowth,
-} from '../data';
+} from '../_shared/data';
 
 export function BudgetAlerting() {
   const overBudget = SECTION_BUDGETS.filter(b => {

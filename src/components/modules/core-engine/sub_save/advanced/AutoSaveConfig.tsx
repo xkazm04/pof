@@ -4,9 +4,9 @@ import { Settings, CheckCircle2 } from 'lucide-react';
 import { ACCENT_CYAN, ACCENT_CYAN_LIGHT, ACCENT_EMERALD, STATUS_ERROR, OVERLAY_WHITE,
   withOpacity, OPACITY_8, OPACITY_25, OPACITY_5, OPACITY_12, OPACITY_20, OPACITY_30, GLOW_MD,
 } from '@/lib/chart-colors';
-import { BlueprintPanel, SectionHeader, GlowStat } from '../design';
-import { ACCENT } from '../data';
-import { AUTO_SAVE_TRIGGERS, AUTO_SAVE_CONFIG } from '../data-panels';
+import { BlueprintPanel, SectionHeader, GlowStat } from '../_shared/design';
+import { ACCENT } from '../_shared/data';
+import { AUTO_SAVE_TRIGGERS, AUTO_SAVE_CONFIG } from '../_shared/data-panels';
 
 export function AutoSaveConfigPanel() {
   return (
