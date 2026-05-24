@@ -8,8 +8,8 @@ import { OPACITY_10, OPACITY_30,
   ACCENT_EMERALD_DARK,
 } from '@/lib/chart-colors';
 import { useTabFeatures } from '@/hooks/useTabFeatures';
-import { SectionHeader, BlueprintPanel } from '../_design';
-import { STATUS_COLORS, FeatureCard, LoadingSpinner, SubTabNavigation, type SubTab } from '../_shared';
+import { SectionHeader, BlueprintPanel } from '../unique-tabs/_design';
+import { STATUS_COLORS, FeatureCard, LoadingSpinner, SubTabNavigation, type SubTab } from '../unique-tabs/_shared';
 import { CircularGauge, CopyButton } from './system/CircularGauge';
 import { SystemHealthMatrix, FrameTimeWaterfall } from './system/SystemHealthSection';
 import { MemorySection } from './performance/MemorySection';
@@ -23,11 +23,11 @@ import { RegressionSection } from './crashes/RegressionSection';
 import {
   ACCENT, INITIAL_BUDGETS, DEBUG_COMMANDS, OPTIMIZATIONS,
   EFFORT_COLORS, IMPACT_COLORS, FEATURE_NAMES,
-} from './data';
+} from './_shared/data';
 import type { SubModuleId } from '@/types/modules';
 import type { FeatureStatus } from '@/types/feature-matrix';
-import FeatureMapTab from '../FeatureMapTab';
-import { VisibleSection } from '../VisibleSection';
+import FeatureMapTab from '../unique-tabs/FeatureMapTab';
+import { VisibleSection } from '../unique-tabs/VisibleSection';
 
 interface DebugDashboardProps { moduleId: SubModuleId }
 

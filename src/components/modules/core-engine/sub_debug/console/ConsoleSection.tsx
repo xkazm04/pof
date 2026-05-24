@@ -12,9 +12,9 @@ import {
   withOpacity, OPACITY_37, OPACITY_80, OPACITY_87, OPACITY_5,
 } from '@/lib/chart-colors';
 import { ue5Connection } from '@/lib/ue5-bridge/connection-manager';
-import { BlueprintPanel, SectionHeader } from '../../_design';
+import { BlueprintPanel, SectionHeader } from '../../unique-tabs/_design';
 import { CommandCatalog } from './CommandCatalog';
-import { ACCENT, type ConsoleHistoryEntry } from '../data';
+import { ACCENT, type ConsoleHistoryEntry } from '../_shared/data';
 
 /* -- Interactive Console --------------------------------------------------- */
 

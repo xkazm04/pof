@@ -6,12 +6,12 @@ import { STATUS_SUCCESS, STATUS_WARNING, STATUS_ERROR, OPACITY_5, OPACITY_8, OPA
   OPACITY_80,
 } from '@/lib/chart-colors';
 import { ANIMATION_PRESETS, motionSafe } from '@/lib/motion';
-import { BlueprintPanel, SectionHeader } from '../../_design';
-import { HeatmapGrid } from '../../_shared';
+import { BlueprintPanel, SectionHeader } from '../../unique-tabs/_design';
+import { HeatmapGrid } from '../../unique-tabs/_shared';
 import {
   ACCENT, HEALTH_MATRIX_ROWS, HEALTH_MATRIX_COLS, HEALTH_MATRIX_CELLS,
   FRAME_TIME_BARS, FRAME_TARGET_MS, FRAME_TOTAL_MS,
-} from '../data';
+} from '../_shared/data';
 
 /* ── 12.1 System Health Matrix ─────────────────────────────────────────── */
 

@@ -5,8 +5,8 @@ import { PieChart } from 'lucide-react';
 import { STATUS_SUCCESS, OPACITY_25, withOpacity,
   OPACITY_90,
 } from '@/lib/chart-colors';
-import { BlueprintPanel, SectionHeader, NeonBar } from '../../_design';
-import { ACCENT, MEMORY_SLICES, MEMORY_TOTAL_MB, MEMORY_PEAK_MB, MEMORY_BUDGET_MB } from '../data';
+import { BlueprintPanel, SectionHeader, NeonBar } from '../../unique-tabs/_design';
+import { ACCENT, MEMORY_SLICES, MEMORY_TOTAL_MB, MEMORY_PEAK_MB, MEMORY_BUDGET_MB } from '../_shared/data';
 
 export function MemorySection() {
   return (

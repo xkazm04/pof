@@ -11,7 +11,7 @@ import { CharacterSourceWizard } from '../sub_character/wizard/CharacterSourceWi
 import { AnimationStateGraph } from './AnimationStateGraph';
 import { ScreenFlowMap } from './ScreenFlowMap';
 import { SaveDataSchema } from '../sub_save';
-import { DebugDashboard } from './DebugDashboard';
+import { DebugDashboard } from '../sub_debug';
 import { ProgressionCurve } from './ProgressionCurve';
 import { ZoneMap } from '../sub_world';
 import { EnemyBestiary } from './EnemyBestiary';

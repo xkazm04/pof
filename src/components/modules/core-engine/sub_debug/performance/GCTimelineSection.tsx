@@ -5,9 +5,9 @@ import { Timer } from 'lucide-react';
 import { STATUS_SUCCESS, STATUS_ERROR, ACCENT_ORANGE, OPACITY_10,
   withOpacity, OPACITY_5, OPACITY_20, OPACITY_50, OPACITY_37,
 } from '@/lib/chart-colors';
-import { BlueprintPanel, SectionHeader } from '../../_design';
-import { ACCENT } from '../data';
-import { GC_EVENTS, GC_AVG_INTERVAL, GC_WARNING_THRESHOLD_MS } from '../data-perf';
+import { BlueprintPanel, SectionHeader } from '../../unique-tabs/_design';
+import { ACCENT } from '../_shared/data';
+import { GC_EVENTS, GC_AVG_INTERVAL, GC_WARNING_THRESHOLD_MS } from '../_shared/data-perf';
 
 export function GCTimelineSection() {
   return (

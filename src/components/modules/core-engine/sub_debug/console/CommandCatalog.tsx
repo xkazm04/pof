@@ -6,12 +6,12 @@ import {
   ACCENT_EMERALD, OPACITY_10, OPACITY_20, OPACITY_30,
   withOpacity, OPACITY_12, OPACITY_37, OPACITY_5, OPACITY_80,
 } from '@/lib/chart-colors';
-import { BlueprintPanel, SectionHeader } from '../../_design';
+import { BlueprintPanel, SectionHeader } from '../../unique-tabs/_design';
 import { CopyButton } from '../system/CircularGauge';
 import {
   ACCENT, CONSOLE_COMMANDS, COMMAND_CATEGORIES, CATEGORY_COLORS,
   type CommandCategory,
-} from '../data';
+} from '../_shared/data';
 
 interface Props {
   onExecute: (command: string) => void;

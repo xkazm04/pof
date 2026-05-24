@@ -9,8 +9,8 @@ import {
   withOpacity, GLOW_MD,
 } from '@/lib/chart-colors';
 import { ANIMATION_PRESETS, motionSafe } from '@/lib/motion';
-import { BlueprintPanel, NeonBar } from '../../_design';
-import { ACCENT } from '../data';
+import { BlueprintPanel, NeonBar } from '../../unique-tabs/_design';
+import { ACCENT } from '../_shared/data';
 
 /* ── Circular Gauge ────────────────────────────────────────────────────── */
 

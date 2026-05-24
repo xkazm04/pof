@@ -5,9 +5,9 @@ import { Layers } from 'lucide-react';
 import { STATUS_ERROR, STATUS_WARNING, OPACITY_10,
   withOpacity, OPACITY_80,
 } from '@/lib/chart-colors';
-import { BlueprintPanel, SectionHeader, NeonBar } from '../../_design';
-import { ACCENT } from '../data';
-import { DRAW_CALL_CATEGORIES, DRAW_CALL_TOTAL, DRAW_CALL_BUDGET, EXPENSIVE_MATERIALS } from '../data-perf';
+import { BlueprintPanel, SectionHeader, NeonBar } from '../../unique-tabs/_design';
+import { ACCENT } from '../_shared/data';
+import { DRAW_CALL_CATEGORIES, DRAW_CALL_TOTAL, DRAW_CALL_BUDGET, EXPENSIVE_MATERIALS } from '../_shared/data-perf';
 
 export function DrawCallSection() {
   return (

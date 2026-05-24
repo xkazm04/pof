@@ -3,10 +3,10 @@
 import { useState, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { LayoutGrid, ChevronRight } from 'lucide-react';
-import { BlueprintPanel, SectionHeader } from '../../_design';
+import { BlueprintPanel, SectionHeader } from '../../unique-tabs/_design';
 import { Sparkline } from '../system/CircularGauge';
-import { ACCENT } from '../data';
-import { STAT_GROUPS } from '../data-perf';
+import { ACCENT } from '../_shared/data';
+import { STAT_GROUPS } from '../_shared/data-perf';
 
 import { withOpacity, OPACITY_37, OPACITY_87 } from '@/lib/chart-colors';
 export function StatDashboardSection() {

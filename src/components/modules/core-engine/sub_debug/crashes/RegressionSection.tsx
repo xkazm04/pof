@@ -7,12 +7,12 @@ import {
   ACCENT_CYAN, OPACITY_10, OPACITY_30,
   withOpacity, OPACITY_80, OPACITY_87, OPACITY_5, OPACITY_8, OPACITY_37,
 } from '@/lib/chart-colors';
-import { BlueprintPanel, SectionHeader } from '../../_design';
-import { ACCENT } from '../data';
+import { BlueprintPanel, SectionHeader } from '../../unique-tabs/_design';
+import { ACCENT } from '../_shared/data';
 import {
   REGRESSION_METRICS, REGRESSION_STATUS_COLORS,
   REGRESSION_BUILDS,
-} from '../data-perf';
+} from '../_shared/data-perf';
 
 export function RegressionSection() {
   return (

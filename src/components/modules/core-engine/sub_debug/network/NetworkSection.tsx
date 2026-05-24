@@ -5,11 +5,11 @@ import { Wifi, Zap } from 'lucide-react';
 import { ACCENT_CYAN, OPACITY_10,
   withOpacity, OPACITY_90, OPACITY_80, OPACITY_30,
 } from '@/lib/chart-colors';
-import { BlueprintPanel, SectionHeader, NeonBar } from '../../_design';
+import { BlueprintPanel, SectionHeader, NeonBar } from '../../unique-tabs/_design';
 import {
   ACCENT, NET_BANDWIDTH, NET_REPLICATED_ACTORS, NET_RPC_FREQ,
   NET_SUGGESTIONS, PRIORITY_COLORS,
-} from '../data';
+} from '../_shared/data';
 
 export function NetworkSection() {
   return (

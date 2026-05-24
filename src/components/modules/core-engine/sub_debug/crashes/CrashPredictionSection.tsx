@@ -5,12 +5,12 @@ import { ShieldAlert, CheckCircle2, AlertTriangle } from 'lucide-react';
 import { STATUS_SUCCESS, OPACITY_10, OPACITY_30,
   withOpacity, OPACITY_5, OPACITY_25, OPACITY_37, OPACITY_80,
 } from '@/lib/chart-colors';
-import { BlueprintPanel, SectionHeader, GlowStat } from '../../_design';
-import { ACCENT } from '../data';
+import { BlueprintPanel, SectionHeader, GlowStat } from '../../unique-tabs/_design';
+import { ACCENT } from '../_shared/data';
 import {
   CRASH_RISK_OVERALL, CRASH_RISK_FACTORS,
   CRASH_RECOMMENDATIONS, RISK_COLORS,
-} from '../data-perf';
+} from '../_shared/data-perf';
 
 export function CrashPredictionSection() {
   return (
