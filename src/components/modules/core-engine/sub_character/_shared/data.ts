@@ -514,3 +514,100 @@ export const CHARACTER_METADATA: EntityMetadata[] = CHAR_DEFS.map(d => ({
   level: TIER_LEVELS[d.tier]?.[0] ?? 1,
   levelMax: TIER_LEVELS[d.tier]?.[1] ?? 50,
 }));
+
+/* ── Ability Categorization (Phase 2 F3) ────────────────────────────────────
+ *
+ * Each input binding that triggers a CHARACTER ability gets a category, tier,
+ * and base-damage entry so the UI can group + sort them ("hierarchy per type
+ * and per damage dealt").
+ *
+ * SYNC SOURCE: Mirror of UE5 DT_AbilityCatalog (at /Game/Abilities/) — keep
+ *   `id` ↔ DataTable RowName,
+ *   `category` ↔ FAbilityCatalogRow::Category (EAbilityCategory),
+ *   `tier`, `baseDamage`, `gameplayTag` in sync.
+ * See: Source/PoF/Abilities/FAbilityCatalogRow.h, EAbilityCategory.h
+ */
+
+export type AbilityCategory = 'melee' | 'ranged' | 'magical' | 'utility' | 'movement';
+
+interface AbilityCategoryDef {
+  key: AbilityCategory;
+  label: string;
+  color: string;
+}
+
+export const ABILITY_CATEGORIES: ReadonlyArray<AbilityCategoryDef> = [
+  { key: 'melee',    label: 'Melee',    color: ACCENT_RED },
+  { key: 'ranged',   label: 'Ranged',   color: ACCENT_CYAN },
+  { key: 'magical',  label: 'Magical',  color: ACCENT_VIOLET },
+  { key: 'utility',  label: 'Utility',  color: ACCENT_EMERALD },
+  { key: 'movement', label: 'Movement', color: ACCENT_PINK },
+];
+
+export const ABILITY_CATEGORY_MAP = new Map(ABILITY_CATEGORIES.map((c) => [c.key, c] as const));
+
+export interface AbilityMeta {
+  id: string;
+  /** Matches an INPUT_BINDINGS.action for join — empty string if not key-bound. */
+  action: string;
+  name: string;
+  category: AbilityCategory;
+  tier: 1 | 2 | 3 | 4 | 5;
+  /** 0 for non-damage utility / movement abilities. */
+  baseDamage: number;
+  description: string;
+  /** Dotted UE5 GameplayTag (e.g. "Ability.Melee.LightAttack"). */
+  gameplayTag?: string;
+}
+
+export const CHARACTER_ABILITIES: AbilityMeta[] = [
+  /* ── Movement ─────────────────────────────────────────────────────────── */
+  { id: 'dodge',  action: 'IA_Dodge',  name: 'Dodge',  category: 'movement', tier: 1, baseDamage: 0, description: 'Roll/dash with i-frames',  gameplayTag: 'Ability.Movement.Dodge' },
+  { id: 'sprint', action: 'IA_Sprint', name: 'Sprint', category: 'movement', tier: 1, baseDamage: 0, description: 'Hold to sprint',           gameplayTag: 'Ability.Movement.Sprint' },
+
+  /* ── Melee ────────────────────────────────────────────────────────────── */
+  { id: 'light_attack', action: 'Primary Attack', name: 'Light Attack', category: 'melee', tier: 1, baseDamage: 20, description: 'Quick saber strike',     gameplayTag: 'Ability.Melee.LightAttack' },
+  { id: 'heavy_attack', action: 'Heavy Attack',   name: 'Heavy Attack', category: 'melee', tier: 2, baseDamage: 35, description: 'Wind-up saber strike',   gameplayTag: 'Ability.Melee.HeavyAttack' },
+
+  /* ── Magical (Force Powers) ───────────────────────────────────────────── */
+  { id: 'force_push',      action: 'Force Power 1', name: 'Force Push',      category: 'magical', tier: 1, baseDamage: 15, description: 'Knockback shove',       gameplayTag: 'Ability.Force.Push' },
+  { id: 'force_pull',      action: 'Force Power 2', name: 'Force Pull',      category: 'magical', tier: 2, baseDamage: 10, description: 'Pull target close',     gameplayTag: 'Ability.Force.Pull' },
+  { id: 'force_heal',      action: 'Force Power 3', name: 'Force Heal',      category: 'magical', tier: 3, baseDamage:  0, description: 'Restore HP over time',  gameplayTag: 'Ability.Force.Heal' },
+  { id: 'mind_trick',      action: 'Force Power 4', name: 'Mind Trick',      category: 'magical', tier: 3, baseDamage:  0, description: 'Persuade target NPC',   gameplayTag: 'Ability.Force.MindTrick' },
+  { id: 'force_lightning', action: 'Force Power 5', name: 'Force Lightning', category: 'magical', tier: 4, baseDamage: 60, description: 'AoE chain damage',      gameplayTag: 'Ability.Force.Lightning' },
+  { id: 'force_choke',     action: 'Force Power 6', name: 'Force Choke',     category: 'magical', tier: 5, baseDamage: 80, description: 'Hold + crushing damage',gameplayTag: 'Ability.Force.Choke' },
+
+  /* ── Utility ──────────────────────────────────────────────────────────── */
+  { id: 'quick_stim',    action: 'Quick Item 1',  name: 'Stim Pack',    category: 'utility', tier: 1, baseDamage: 0, description: 'Restore HP burst',      gameplayTag: 'Item.QuickUse.StimPack' },
+  { id: 'quick_adrenal', action: 'Quick Item 2',  name: 'Adrenal',      category: 'utility', tier: 2, baseDamage: 0, description: 'Boost speed briefly',   gameplayTag: 'Item.QuickUse.Adrenal' },
+  { id: 'force_focus',   action: 'Force Focus',   name: 'Force Focus',  category: 'utility', tier: 2, baseDamage: 0, description: 'Bullet-time aim assist',gameplayTag: 'Ability.Force.Focus' },
+  { id: 'interact',      action: 'IA_Interact',   name: 'Interact',     category: 'utility', tier: 1, baseDamage: 0, description: 'Generic interaction',   gameplayTag: 'Ability.Utility.Interact' },
+];
+
+/** Index abilities by action so the input table / keyboard viz can join on key bindings. */
+export const ABILITY_BY_ACTION = new Map(CHARACTER_ABILITIES.map((a) => [a.action, a] as const));
+
+/** Returns the category color for a given action, or null if the action is not an ability. */
+export function abilityCategoryColorForAction(action: string): string | null {
+  const ab = ABILITY_BY_ACTION.get(action);
+  if (!ab) return null;
+  return ABILITY_CATEGORY_MAP.get(ab.category)?.color ?? null;
+}
+
+export type AbilitySortKey = 'tier' | 'damage' | 'name';
+export type AbilitySortDir = 'asc' | 'desc';
+
+export function sortAbilities(
+  abilities: AbilityMeta[],
+  key: AbilitySortKey,
+  dir: AbilitySortDir,
+): AbilityMeta[] {
+  const m = dir === 'asc' ? 1 : -1;
+  const copy = [...abilities];
+  copy.sort((a, b) => {
+    if (key === 'tier')   return (a.tier - b.tier) * m;
+    if (key === 'damage') return (a.baseDamage - b.baseDamage) * m;
+    return a.name.localeCompare(b.name) * m;
+  });
+  return copy;
+}
