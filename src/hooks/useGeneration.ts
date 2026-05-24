@@ -3,29 +3,41 @@
 import { useCallback } from 'react';
 import { useModuleCLI } from '@/hooks/useModuleCLI';
 import { TaskFactory } from '@/lib/cli-task';
-import type { AbilityEntry, LifecycleRecord } from '@/lib/catalog/types';
+import type { LifecycleRecord, StoredCatalogEntity } from '@/lib/catalog/types';
 import type { GenerationStep } from '@/lib/catalog/recipe';
 import { useCatalogStore } from '@/stores/catalogStore';
 import { getAppOrigin } from '@/lib/constants';
 import { apiFetch } from '@/lib/api-utils';
 import { MODULE_COLORS } from '@/lib/chart-colors';
+import type { SubModuleId } from '@/types/modules';
 
 export interface UseGenerationResult {
   generate: (step: GenerationStep) => void;
   isRunning: boolean;
 }
 
+/** Map a catalog id to its owning PoF module (for session labelling + analytics). */
+const CATALOG_MODULE: Record<string, SubModuleId> = {
+  spellbook: 'arpg-gas',
+  items: 'arpg-inventory',
+  'loot-tables': 'arpg-loot',
+};
+
 /**
  * Drives folder-09 generation for one catalog entity: dispatches a recipe step
  * through the CLI (`TaskFactory.generate`), and once the session's `@@CALLBACK`
  * has persisted the lifecycle transition to `/api/catalog`, refetches + merges
- * it so the Spellbook lifecycle badge reflects server truth.
+ * it so the catalog's lifecycle cell reflects server truth.
+ *
+ * Entity-generic since R2: works for any registered catalog (spellbook, items,
+ * loot-tables, …). The owning PoF module is derived from `entity.catalogId`.
  */
-export function useGeneration(entity: AbilityEntry): UseGenerationResult {
+export function useGeneration(entity: StoredCatalogEntity): UseGenerationResult {
   const loadLifecycle = useCatalogStore((s) => s.loadLifecycle);
+  const moduleId = CATALOG_MODULE[entity.catalogId] ?? 'arpg-gas';
 
   const cli = useModuleCLI({
-    moduleId: 'arpg-gas',
+    moduleId,
     sessionKey: `gen-${entity.id}`,
     label: `Gen ${entity.name}`,
     accentColor: MODULE_COLORS.core,
@@ -39,10 +51,10 @@ export function useGeneration(entity: AbilityEntry): UseGenerationResult {
   const generate = useCallback(
     (step: GenerationStep) => {
       void cli.execute(
-        TaskFactory.generate('arpg-gas', entity, step, getAppOrigin(), `Gen ${entity.name} · ${step}`),
+        TaskFactory.generate(moduleId, entity, step, getAppOrigin(), `Gen ${entity.name} · ${step}`),
       );
     },
-    [cli, entity],
+    [cli, entity, moduleId],
   );
 
   return { generate, isRunning: cli.isRunning };

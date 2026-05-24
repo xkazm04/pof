@@ -110,7 +110,7 @@ export class PromptBuilder {
    */
   withAssetSpec(entity: {
     id: string; name: string; categoryPath: string[]; tags: string[];
-    data?: Record<string, unknown>;
+    data?: unknown;
   }): this {
     const lines = [
       '## Asset Specification',
@@ -120,7 +120,7 @@ export class PromptBuilder {
       `- **category**: ${entity.categoryPath.join(' ▸ ')}`,
       `- **tags**: ${entity.tags.length ? entity.tags.join(', ') : '(none)'}`,
     ];
-    if (entity.data && Object.keys(entity.data).length > 0) {
+    if (entity.data && typeof entity.data === 'object' && Object.keys(entity.data).length > 0) {
       lines.push('', '```json', JSON.stringify(entity.data, null, 2), '```');
     }
     this._assetSpec = lines.join('\n');

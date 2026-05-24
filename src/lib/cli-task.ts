@@ -19,7 +19,7 @@ import { buildEvalPrompt, type EvalPass } from '@/lib/evaluator/module-eval-prom
 import { getModuleChecklist } from '@/lib/module-registry';
 import { buildVisualCheckSection } from '@/lib/prompts/visual-check';
 import { knownAssetDomainsForModule } from '@/lib/knowledge/ue-known-assets';
-import type { AbilityEntry } from '@/lib/catalog/types';
+import type { StoredCatalogEntity } from '@/lib/catalog/types';
 import { getRecipe, STEP_TO_LIFECYCLE, type GenerationStep } from '@/lib/catalog/recipe';
 
 // ── Task callback system ────────────────────────────────────────────────────
@@ -257,7 +257,7 @@ export interface BiomeScatterTask extends CLITask {
  */
 export interface GenerateTask extends CLITask {
   type: 'generate';
-  entity: AbilityEntry;
+  entity: StoredCatalogEntity;
   step: GenerationStep;
   appOrigin: string;
 }
@@ -907,7 +907,7 @@ export const TaskFactory = {
   /** Create a generation task for one recipe step of a catalog entity (folder-09). */
   generate(
     moduleId: SubModuleId,
-    entity: AbilityEntry,
+    entity: StoredCatalogEntity,
     step: GenerationStep,
     appOrigin: string,
     label: string,
