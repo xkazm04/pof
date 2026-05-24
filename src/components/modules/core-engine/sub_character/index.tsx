@@ -17,6 +17,7 @@ import { MovementTab } from './movement/MovementTab';
 import { SimulatorTab } from './simulator/SimulatorTab';
 import { CharacterFeelPlayground } from './playground/PlaygroundTab';
 import { CharacterFeelOptimizer } from './ai-feel/AIFeelTab';
+import { CharacterSourceWizard } from './wizard/CharacterSourceWizard';
 
 /* ── Narrative Breadcrumb steps ───────────────────────────────────────────── */
 
@@ -85,6 +86,7 @@ export function CharacterBlueprint({ moduleId }: CharacterBlueprintProps) {
           transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
         >
           {activeTab === 'features' && <FeaturesTab moduleId={moduleId} />}
+          {activeTab === 'wizard' && <CharacterSourceWizard moduleId={moduleId} />}
           {activeTab === 'overview' && (
             <OverviewTab moduleId={moduleId} featureMap={featureMap} defs={defs} />
           )}

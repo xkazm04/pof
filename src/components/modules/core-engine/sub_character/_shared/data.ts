@@ -5,7 +5,7 @@ import {
   ACCENT_VIOLET, ACCENT_PINK, ACCENT_PURPLE, ACCENT_RED, ACCENT_GREEN,
 } from '@/lib/chart-colors';
 import {
-  User, Gamepad2, Wind, SlidersHorizontal, Sparkles, FlaskConical,
+  User, Gamepad2, Wind, SlidersHorizontal, Sparkles, FlaskConical, Wand2,
 } from 'lucide-react';
 import type { RadarDataPoint } from '@/types/unique-tab-improvements';
 import type { EntityMetadata } from '@/types/game-metadata';
@@ -14,7 +14,7 @@ export const ACCENT = MODULE_COLORS.core;
 
 /* ── Subtab types ──────────────────────────────────────────────────────────── */
 
-export type BlueprintSubtab = 'features' | 'overview' | 'input' | 'movement' | 'playground' | 'ai-feel' | 'simulator';
+export type BlueprintSubtab = 'features' | 'wizard' | 'overview' | 'input' | 'movement' | 'playground' | 'ai-feel' | 'simulator';
 
 export interface BlueprintSubtabDef {
   key: BlueprintSubtab;
@@ -25,6 +25,7 @@ export interface BlueprintSubtabDef {
 }
 
 export const SUBTABS: BlueprintSubtabDef[] = [
+  { key: 'wizard', label: 'Wizard', icon: Wand2, narrative: 'Source', subtitle: 'Bootstrap a character source (template, Mixamo, Quixel…)' },
   { key: 'overview', label: 'Overview', icon: User, narrative: 'Define', subtitle: 'Class hierarchy, scaling & hitbox architecture' },
   { key: 'input', label: 'Input', icon: Gamepad2, narrative: 'Control', subtitle: 'Key bindings, conflicts & ability mapping' },
   { key: 'movement', label: 'Movement', icon: Wind, narrative: 'Move', subtitle: 'States, acceleration curves & dodge trajectories' },

@@ -1,68 +1,20 @@
 'use client';
 
 import { useState, useCallback, useMemo } from 'react';
-import { User, Download, Boxes, Loader2, ArrowRight, Wand2, Eye } from 'lucide-react';
-import type { LucideIcon } from 'lucide-react';
+import { User, ArrowRight, Wand2, Eye } from 'lucide-react';
 import {
-  MODULE_COLORS, OPACITY_8, OPACITY_12, OPACITY_20, OPACITY_30, OPACITY_50, withOpacity,
+  MODULE_COLORS, OPACITY_8, OPACITY_12, OPACITY_20, OPACITY_50, withOpacity,
 } from '@/lib/chart-colors';
 import type { SubModuleId } from '@/types/modules';
 import { useModuleCLI } from '@/hooks/useModuleCLI';
 import { TaskFactory, type CharacterSource } from '@/lib/cli-task';
 import { getAppOrigin } from '@/lib/constants';
-import { UE_KNOWN_ASSETS, ENEMY_CONTRAST_MATERIALS } from '@/lib/knowledge/ue-known-assets';
+import {
+  SOURCES, SOURCE_DEFAULTS, ENABLE_PROMPT, ASSET_LABELS, type SetupAssets,
+} from './wizard-data';
+import { Step, DispatchButton } from './WizardChrome';
 
 const ACCENT = MODULE_COLORS.core;
-
-const knownPath = (id: string) => UE_KNOWN_ASSETS.find((a) => a.id === id)?.path ?? '';
-const ENEMY_RED = ENEMY_CONTRAST_MATERIALS.find((m) => m.isDefault)?.path ?? '/Game/VerticalSlice/M_EnemyRed';
-
-interface SourceOption {
-  id: CharacterSource;
-  label: string;
-  icon: LucideIcon;
-  blurb: string;
-}
-
-const SOURCES: SourceOption[] = [
-  { id: 'mannequin', label: 'UE Mannequin', icon: User, blurb: 'Free, no download — the MoverTests engine plugin. Fastest path.' },
-  { id: 'mixamo', label: 'Mixamo', icon: Download, blurb: 'Manual FBX download + retarget. Library of attack/locomotion anims.' },
-  { id: 'blender', label: 'Custom (Blender)', icon: Boxes, blurb: 'Procedural / authored mesh. Hardest — author at unit scale 1.0.' },
-];
-
-interface SetupAssets {
-  playerMesh: string;
-  enemyMesh: string;
-  animBlueprint: string;
-  enemyMaterial: string;
-}
-
-const SOURCE_DEFAULTS: Record<CharacterSource, SetupAssets> = {
-  mannequin: {
-    playerMesh: knownPath('skm-manny'),
-    enemyMesh: knownPath('skm-manny-simple'),
-    animBlueprint: knownPath('abp-manny'),
-    enemyMaterial: ENEMY_RED,
-  },
-  mixamo: {
-    playerMesh: '/Game/Characters/Mixamo/SK_Player',
-    enemyMesh: '/Game/Characters/Mixamo/SK_Enemy',
-    animBlueprint: '/Game/Characters/ABP_ARPGCharacter',
-    enemyMaterial: ENEMY_RED,
-  },
-  blender: {
-    playerMesh: '/Game/Characters/Custom/SK_Player',
-    enemyMesh: '/Game/Characters/Custom/SK_Enemy',
-    animBlueprint: '/Game/Characters/ABP_ARPGCharacter',
-    enemyMaterial: ENEMY_RED,
-  },
-};
-
-const ENABLE_PROMPT: Record<CharacterSource, string> = {
-  mannequin: 'Prepare the UE Mannequin character source: enable the experimental MoverTests engine plugin in the .uproject if it is not already enabled, regenerate project files, and trigger an asset-registry rescan of the /MoverTests mount so SKM_Manny, SKM_Manny_Simple and ABP_Manny become referenceable (newly-enabled plugin content is invisible until rescanned). Confirm the asset paths resolve.',
-  mixamo: 'Prepare the Mixamo character source: confirm the target skeleton (SK_Mannequin) exists, then use the Mixamo Import workflow (Animations module / mixamo_pipeline.py) to import + retarget the downloaded FBX animations. Report the resulting skeletal mesh + skeleton content paths.',
-  blender: 'Prepare the Custom (Blender) character source: author/export the character mesh from Blender at unit scale 1.0 and import it into UE under /Game/Characters/Custom (import_uniform_scale = 1.0). Report the imported skeletal mesh + skeleton content paths.',
-};
 
 /**
  * Character-source wizard (folder-02 §1).
@@ -151,9 +103,9 @@ export function CharacterSourceWizard({ moduleId }: { moduleId: SubModuleId }) {
       <Step n={2} title="Wire mesh + skeleton + AnimBP">
         {(['playerMesh', 'enemyMesh', 'animBlueprint', 'enemyMaterial'] as const).map((key) => (
           <label key={key} className="flex flex-col gap-1 text-xs text-text-muted">
-            <span>{LABELS[key]}</span>
+            <span>{ASSET_LABELS[key]}</span>
             <input
-              aria-label={LABELS[key]}
+              aria-label={ASSET_LABELS[key]}
               value={assets[key]}
               onChange={(e) => setAsset(key, e.target.value)}
               spellCheck={false}
@@ -174,44 +126,5 @@ export function CharacterSourceWizard({ moduleId }: { moduleId: SubModuleId }) {
         <DispatchButton onClick={dispatchVerify} isRunning={isRunning} icon={Eye} label="Verify Locomotes" />
       </Step>
     </div>
-  );
-}
-
-const LABELS: Record<keyof SetupAssets, string> = {
-  playerMesh: 'Player skeletal mesh',
-  enemyMesh: 'Enemy skeletal mesh',
-  animBlueprint: 'Animation Blueprint',
-  enemyMaterial: 'Enemy material (strong contrast)',
-};
-
-function Step({ n, title, children }: { n: number; title: string; children: React.ReactNode }) {
-  return (
-    <div className="flex flex-col gap-2">
-      <div className="flex items-center gap-2">
-        <span
-          className="flex-shrink-0 w-5 h-5 rounded-full grid place-items-center text-[11px] font-bold font-mono"
-          style={{ backgroundColor: withOpacity(ACCENT, OPACITY_20), color: ACCENT }}
-        >
-          {n}
-        </span>
-        <span className="text-xs font-semibold text-text">{title}</span>
-      </div>
-      <div className="flex flex-col gap-2 pl-7">{children}</div>
-    </div>
-  );
-}
-
-function DispatchButton({ onClick, isRunning, icon: Icon, label }: { onClick: () => void; isRunning: boolean; icon: LucideIcon; label: string }) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      disabled={isRunning}
-      className="flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-xs font-mono cursor-pointer transition-all hover:brightness-110 active:scale-[0.98] disabled:opacity-60 disabled:cursor-not-allowed w-fit"
-      style={{ backgroundColor: withOpacity(ACCENT, OPACITY_12), border: `1px solid ${withOpacity(ACCENT, OPACITY_30)}`, color: ACCENT }}
-    >
-      {isRunning ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Icon className="w-3.5 h-3.5" />}
-      <span>{label}</span>
-    </button>
   );
 }
