@@ -50,7 +50,7 @@ export const SPELLBOOK_RECIPE: GenerationRecipe<AbilityEntry> = {
   id: 'spellbook-ga',
   catalogId: 'spellbook',
   steps: ['scaffold-cpp', 'author-python', 'wire', 'verify'],
-  testPath: 'Project.Functional Tests.Maps.VSAbility.VSAbilityTest',
+  testPath: 'Project.Functional Tests.Maps.VS09Ability.VSAbility09Test',
   buildStepPrompt(entity, step, ctx) {
     const builder = new PromptBuilder()
       .withProjectContext(ctx)
