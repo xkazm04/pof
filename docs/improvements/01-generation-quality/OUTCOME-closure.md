@@ -25,25 +25,27 @@ and lint clean. The project-wide `npm run validate` was red **only** because of 
 in-flight edits to unrelated files (`leonardo.ts`, `ue-known-assets`, `visual-check`) — none of the
 failures are in §01 files.
 
-## Game side (separate `pof-exp` UE repo) — SPEC + PLAN written, not executed here
+## Game side (separate `pof-exp` UE repo) — PARTIAL ✅ (4 of 6 deltas landed)
 
 A read-only ground-truth pass (the §01 "ground-truth first" discipline) found that **folders 02–08
 already shipped most of game.md** — exactly as the §01 README predicted. The remaining work is small
-*deltas*, captured for a UE-capable session in:
+*deltas*, captured in the spec/plan:
 
 - Spec: `docs/superpowers/specs/2026-05-24-generation-quality-game-side-design.md`
 - Plan: `docs/superpowers/plans/2026-05-24-generation-quality-game-side.md`
 
-Verified state (UE repo, 2026-05-24):
+Status of each delta (UE repo, 2026-05-24, local commits on `main`, not pushed):
 
-| § | Already exists | Remaining delta |
+| § | Delta | Status |
 |---|---|---|
-| §1 | `ARPGCharacterBase::DefaultAbilities` granted in `PossessedBy` | Generalise via `IARPGDefaultsProvider` (effects + IMC arrays) |
-| §2 | `UARPGCodeWidgetBase` (RebuildWidget+BuildTree+helper toolbox); `VSHUDWidget` uses it | Migrate `BossHealthBarWidget` off `NativeConstruct` |
-| §3 | `AnimAssetCommandlet` produces real data | `EmptyShell` marker + fail-loud on degenerate output |
-| §4 | `ARPGLogCategories.h` (10 categories) | `LogARPGLifecycle` + `ARPG_LIFECYCLE_LOG` macro |
-| §5 | `PofTestRunner` `FEditorDelegates` already `#if WITH_EDITOR` | Recorded runtime-module audit (Shipping-clean) |
-| §6 | `ARPG.Verify.Characters/HUD/Combat/Slice/SliceCI` | Add `ARPG.Verify.Loot` + `ARPG.Verify.All` |
+| §1 | Generalise `DefaultAbilities` → `IARPGDefaultsProvider` | **Pending** — modifies core `ARPGCharacterBase`; needs functional-test run before commit |
+| §2 | Migrate `BossHealthBarWidget` off `NativeConstruct` | **Pending** — RHI-needing widget test; medium risk |
+| §3 | `EmptyShell` marker + fail-loud `AnimAssetCommandlet` | **Pending** — running the commandlet mutates shared `Content/`; highest collision risk |
+| §4 | `LogARPGLifecycle` category + `ARPG_LIFECYCLE_LOG` macro | **DONE** ✅ `29b1bdb` (`Source/PoF/Debug/ARPGLifecycleLog.h` + categories + migrated `UARPGSaveSubsystem::Initialize/Deinitialize`) |
+| §5 | Recorded WITH_EDITOR audit of bridge runtime | **DONE** ✅ `837d777` (`Plugins/PillarsOfFortuneBridge/WITH_EDITOR-audit.md`). Source-level: clean (every editor-only site already guarded). Stronger Shipping-compile gate attempted; failed on a **separate game-module issue** (`PoF.Build.cs` `FunctionalTesting` → `AutomationController` → `UnrealEdMessages`) — logged as a folder-07 follow-up. |
+| §6 | `ARPG.Verify.Loot` + `ARPG.Verify.All` | **DONE** ✅ `fdd9f31` (Loot) + `cc2918d` (All registry iteration). Both `FAutoConsoleCommandWithWorld`, shipping-safe. Loot folded into `ARPG.Verify.Slice` aggregate. |
+
+Each landed UE delta was built clean (`Build.bat PoFEditor Win64 Development`, 20–22s incremental, `Result: Succeeded`). Tests-game-side #3 (iterate self-checks) is `ARPG.Verify.All` and is also DONE. Game tests #1 (CodeWidget pattern) and #2 (DefaultAbilities smoke) remain pending — they're the test surface for §2 and §1 respectively.
 
 ## Tests
 
@@ -58,5 +60,7 @@ App-repo test items — DONE ✅ (2026-05-24):
   is absent: deterministic no-key plumbing test (in validate) + opt-in key-gated shape snapshot + the
   CLI-form test for if/when the CLI returns.
 
-Game-side (UE repo) tests still pending → Tasks 1/2/7 of the game-side plan (UE functional tests +
-`ARPG.Verify.*` commands), to be executed by a UE-capable session.
+Game-side (UE repo) tests:
+- #3 iterate self-checks → **DONE** ✅ as `ARPG.Verify.All` (commit `cc2918d`, game-side plan Task 7).
+- #1 CodeWidget pattern test → pending; ships with §2 `BossHealthBarWidget` migration.
+- #2 `DefaultAbilities` smoke test → pending; ships with §1 `IARPGDefaultsProvider`.

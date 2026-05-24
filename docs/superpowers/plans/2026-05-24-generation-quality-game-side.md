@@ -239,7 +239,10 @@ Co-Authored-By: Claude Opus 4.7 (1M context) <noreply@anthropic.com>"
 
 ---
 
-## Task 3: §4 — `LogARPGLifecycle` category + `ARPG_LIFECYCLE_LOG` macro
+## Task 3: §4 — `LogARPGLifecycle` category + `ARPG_LIFECYCLE_LOG` macro — ✅ IMPLEMENTED 2026-05-24 (UE commit `29b1bdb`)
+
+Shipped: `Source/PoF/Debug/ARPGLogCategories.{h,cpp}` (new `LogARPGLifecycle` category) + new `Source/PoF/Debug/ARPGLifecycleLog.h` (macro auto-prefixes `[__FUNCTION__]` via `ANSI_TO_TCHAR`). Migrated `UARPGSaveSubsystem::Initialize` and `::Deinitialize` as first real consumers (the `[GA_MeleeAttack]`/`[VSHUD]` markers cited in the spec turned out to be runtime events, not lifecycle, so they stay on their domain categories). Build clean (`PoFEditor Win64 Development`, 22.2s).
+
 
 **Files:**
 - Modify: `Source/PoF/Debug/ARPGLogCategories.h`, `Source/PoF/Debug/ARPGLogCategories.cpp`
@@ -294,7 +297,10 @@ Co-Authored-By: Claude Opus 4.7 (1M context) <noreply@anthropic.com>"
 
 ---
 
-## Task 4: §6 — `ARPG.Verify.Loot` (+ add to `Slice` aggregate)
+## Task 4: §6 — `ARPG.Verify.Loot` (+ add to `Slice` aggregate) — ✅ IMPLEMENTED 2026-05-24 (UE commit `fdd9f31`)
+
+Shipped: `Source/PoF/Debug/ARPGVerifyCommands.cpp` adds `ARPGVerify::DoLootCheck` shared helper, `VerifyLoot`, and the `ARPG.Verify.Loot` `FAutoConsoleCommandWithWorld` registration. Synchronous death→drop chain confirmed at `ARPGEnemyCharacter.cpp:145` + `ARPGLootDropComponent.cpp:21,163`, so `TActorIterator<AARPGWorldItem>` after damage sees the spawn. Targets `AARPGEnemyCharacter` specifically (PS-1 lesson). Folded into `VerifySlice` aggregate. Build clean (19.9s).
+
 
 **Files:**
 - Modify: `Source/PoF/Debug/ARPGVerifyCommands.cpp`
@@ -397,7 +403,10 @@ Co-Authored-By: Claude Opus 4.7 (1M context) <noreply@anthropic.com>"
 
 ---
 
-## Task 6: §5 — Recorded WITH_EDITOR audit of the bridge runtime module
+## Task 6: §5 — Recorded WITH_EDITOR audit of the bridge runtime module — ✅ IMPLEMENTED 2026-05-24 (UE commit `837d777`)
+
+Shipped: `Plugins/PillarsOfFortuneBridge/WITH_EDITOR-audit.md`. Source-level grep over the bridge runtime found **every** editor-only API (`FEditorDelegates`, `GEditor`, `FLevelEditorViewportClient`, editor-only `#include`s, `UnrealEd` Build.cs dep) already guarded by `#if WITH_EDITOR` / `if (Target.bBuildEditor)`. PS-1/SP-C's original unguarded finding is fully addressed; **no bridge runtime code edits needed**. The stronger Shipping-compile gate (`Build.bat PoF Win64 Shipping`) was attempted and FAILED — but on a **separate game-module issue** (`Source/PoF/PoF.Build.cs` unconditional `FunctionalTesting` → `AutomationController` → `UnrealEdMessages`); logged in the audit doc as a folder-07 follow-up that doesn't belong to §5.
+
 
 **Files:**
 - Create: `Plugins/PillarsOfFortuneBridge/WITH_EDITOR-audit.md`
@@ -434,7 +443,10 @@ Co-Authored-By: Claude Opus 4.7 (1M context) <noreply@anthropic.com>"
 
 ---
 
-## Task 7: tests #3 — Iterate every `ARPG.Verify.*`
+## Task 7: tests #3 — Iterate every `ARPG.Verify.*` — ✅ IMPLEMENTED 2026-05-24 (UE commit `cc2918d`)
+
+Shipped: `Source/PoF/Debug/ARPGVerifyCommands.cpp` adds `ARPGVerify::FVerifyEntry` + `GVerifyRegistry[]` (Characters / HUD / Combat / Loot — Slice/SliceCI deliberately excluded), `VerifyAll()`, and `ARPG.Verify.All` `FAutoConsoleCommandWithWorld`. A future `ARPG.Verify.X` auto-joins by appending one registry entry. Build clean (20.7s).
+
 
 **Files:**
 - Modify: `Source/PoF/Debug/ARPGVerifyCommands.cpp`
