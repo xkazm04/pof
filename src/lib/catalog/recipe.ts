@@ -167,8 +167,9 @@ export const COMBAT_MAP_RECIPE: GenerationRecipe<CombatInteractionEntry> = {
   id: 'combat-map-interaction',
   catalogId: 'combat-map',
   steps: ['wire', 'verify'],
-  // Per-section gate: reuses the existing combat damage-formula test.
-  testPath: 'Project.Functional Tests.Maps.VerticalSlice.VSCombatDamageFormulaTest',
+  // Per-section gate: reuses the existing gray-box combat path test (the
+  // damage-formula test exists in source but isn't placed in any saved map).
+  testPath: 'Project.Functional Tests.Maps.VerticalSlice.VSCombatGrayBoxPathTest',
   buildStepPrompt(entity, step, ctx) {
     const task =
       step === 'wire'
@@ -259,9 +260,10 @@ export const STATE_GRAPH_RECIPE: GenerationRecipe<AnimationEntry> = {
   id: 'state-graph-montage',
   catalogId: 'state-graph',
   steps: ['author-python', 'verify'],
-  // Per-section gate: reuses the existing footstep-wiring test (closest
-  // animation/montage-driven gate currently shipped).
-  testPath: 'Project.Functional Tests.Maps.VerticalSlice.VSFootstepWiringTest',
+  // Per-section gate: reuses ProcGenWalkTest (animation-locomotion validation
+  // in the procgen dungeon map; the footstep-wiring test exists in source but
+  // isn't placed in any saved map).
+  testPath: 'Project.Functional Tests.Maps.ProcGenDungeon.ProcGenWalkTest',
   buildStepPrompt(entity, step, ctx) {
     const task =
       step === 'author-python'
