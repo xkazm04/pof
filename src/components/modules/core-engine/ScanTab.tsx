@@ -40,6 +40,7 @@ const PASS_ICONS: Record<EvalPass, typeof Shield> = {
   structure: Shield,
   quality: Bug,
   performance: Gauge,
+  'combat-trace': Zap,
 };
 
 const ACCENT = MODULE_COLORS.core;
@@ -252,7 +253,7 @@ export function ScanTab({ moduleId }: ScanTabProps) {
 
   // Stats by pass
   const passCounts = useMemo(() => {
-    const counts: Record<EvalPass, number> = { 'ground-truth': 0, structure: 0, quality: 0, performance: 0 };
+    const counts: Record<EvalPass, number> = { 'ground-truth': 0, structure: 0, quality: 0, performance: 0, 'combat-trace': 0 };
     for (const f of activeFindings) {
       counts[f.pass]++;
     }
