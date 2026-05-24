@@ -21,8 +21,8 @@ describe('getRecipe', () => {
   it('returns the spellbook recipe for the spellbook catalog', () => {
     expect(getRecipe('spellbook')).toBe(SPELLBOOK_RECIPE);
   });
-  it('returns undefined for a catalog with no recipe yet', () => {
-    expect(getRecipe('bestiary')).toBeUndefined();
+  it('returns undefined for a catalog that does not exist', () => {
+    expect(getRecipe('not-a-real-catalog')).toBeUndefined();
   });
 });
 

@@ -1,5 +1,5 @@
 import type { ProjectContext } from '@/lib/prompt-context';
-import type { AbilityEntry, CatalogEntityBase, ItemEntry, LifecycleState, LootTableEntry } from '@/lib/catalog/types';
+import type { AbilityEntry, CatalogEntityBase, ItemEntry, LifecycleState, LootTableEntry, BestiaryEntry } from '@/lib/catalog/types';
 import { PromptBuilder } from '@/lib/prompts/prompt-builder';
 
 export type GenerationStep = 'scaffold-cpp' | 'author-python' | 'wire' | 'verify';
@@ -124,10 +124,41 @@ export const LOOT_RECIPE: GenerationRecipe<LootTableEntry> = {
   },
 };
 
+const BESTIARY_BEST_PRACTICES = [
+  'Author a `BP_<id>Enemy` Blueprint subclassing `AARPGEnemyCharacter` via FULL editor (-ExecutePythonScript), not -run=pythonscript.',
+  'Grant the archetype\'s abilities on the placed instance (CDO-vs-instance trap — Python set_editor_property bakes the native default into the .umap, silently beating the CDO at PIE load).',
+  'Use the strong-red `M_EnemyRed` material variant by default for visual distinction from the player.',
+  'Place the asset under `/Game/Enemies/` and report its content path.',
+];
+
+export const BESTIARY_RECIPE: GenerationRecipe<BestiaryEntry> = {
+  id: 'bestiary-archetype',
+  catalogId: 'bestiary',
+  steps: ['author-python', 'wire', 'verify'],
+  testPath: 'Project.Functional Tests.Maps.VSBestiary.VSBestiary_DefaultTest',
+  buildStepPrompt(entity, step, ctx) {
+    const task =
+      step === 'author-python'
+        ? `Author the BP_${entity.data.id}Enemy Blueprint subclassing AARPGEnemyCharacter from "${entity.name}"'s spec.`
+        : step === 'wire'
+          ? `Wire BP_${entity.data.id}Enemy: grant its abilities (cross-catalog links provide spellbook ids) + bind the loot table (lt-${entity.data.id}) on the placed instance.`
+          : `Run AVSBestiary_${entity.data.id}Test: spawn → chases + attacks (player Health drops) → drops linked loot on death.`;
+    const b = new PromptBuilder()
+      .withProjectContext(ctx)
+      .withDomainContext('AARPGEnemyCharacter Blueprint authoring + cross-catalog wiring for the PoF ARPG.')
+      .withAssetSpec(entity)
+      .withTask(`Bestiary · ${step}`, task)
+      .withBestPractices(BESTIARY_BEST_PRACTICES);
+    if (step === 'verify') b.withSuccessCriteria([`The functional test \`${this.testPath}\` returns Result={Success}.`]);
+    return b.build();
+  },
+};
+
 const RECIPES: Record<string, GenerationRecipe> = {
   spellbook: SPELLBOOK_RECIPE,
   items: ITEMS_RECIPE,
   'loot-tables': LOOT_RECIPE,
+  bestiary: BESTIARY_RECIPE,
 };
 
 /** The recipe for a catalog, or undefined if none is registered yet. */
