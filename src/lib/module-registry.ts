@@ -319,7 +319,7 @@ const ARPG_QUICK_ACTIONS: Record<string, QuickAction[]> = {
   ],
   'arpg-enemy-ai': [
     { id: 'qae-1', label: 'Debug AI Behavior', prompt: 'Debug enemy AI behavior: stuck in state, not detecting player, pathfinding issues, or not attacking properly.', icon: RotateCcw, complexity: 'intermediate' },
-    { id: 'qae-2', label: 'Create Enemy Type', prompt: 'Create a new enemy archetype with unique behavior tree, abilities, and stats.', icon: UserPlus, complexity: 'advanced' },
+    { id: 'qae-2', label: 'Create Enemy Type', prompt: 'Create a new enemy archetype with unique abilities and stats (a pure-C++ controller is fine — see the "Pure-C++ AI controller" checklist item if no Behaviour Tree asset exists yet). VISUAL DISTINCTION: give the enemy a strongly-contrasting material so it reads as obviously different from the player at a glance — default to red (M_EnemyRed), or blue / green for additional factions. Do NOT reuse a subtle mannequin material instance (e.g. MI_Manny_02 was too close to the player mesh to tell apart). If the contrast material does not exist yet, create a simple unlit/emissive M_Enemy<Color> and assign it to the enemy mesh.', icon: UserPlus, complexity: 'advanced' },
     { id: 'qae-3', label: 'Tune AI Difficulty', prompt: 'Balance enemy AI difficulty: attack frequency, reaction time, aggro range, damage, and health scaling.', icon: BarChart3, complexity: 'intermediate' },
   ],
   'arpg-inventory': [

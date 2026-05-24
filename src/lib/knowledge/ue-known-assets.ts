@@ -90,6 +90,51 @@ export const UE_KNOWN_ASSETS: KnownAsset[] = [
 ];
 
 /**
+ * Strongly-contrasting enemy materials for the "create enemy variant" flow.
+ *
+ * Lesson from the Characters sub-project: `MI_Manny_02` was TOO SUBTLE to tell
+ * the enemy apart from the player, so the slice switched to a strong-red
+ * `M_EnemyRed`. The variant flow therefore defaults to a high-contrast colour
+ * (red / blue / green), never a mannequin material instance.
+ */
+export interface EnemyContrastMaterial {
+  id: string;
+  label: string;
+  /** Plain colour name (not a hex literal) — the visual-distinction intent. */
+  color: string;
+  /** Suggested project material path to create / reuse. */
+  path: string;
+  isDefault?: boolean;
+  description: string;
+}
+
+export const ENEMY_CONTRAST_MATERIALS: EnemyContrastMaterial[] = [
+  {
+    id: 'enemy-red',
+    label: 'Red (default)',
+    color: 'red',
+    path: '/Game/VerticalSlice/M_EnemyRed',
+    isDefault: true,
+    description:
+      'Strong red base + emissive — the proven enemy-distinction default, clearly distinct from the silver player mannequin.',
+  },
+  {
+    id: 'enemy-blue',
+    label: 'Blue',
+    color: 'blue',
+    path: '/Game/VerticalSlice/M_EnemyBlue',
+    description: 'Strong blue alternative for a second enemy faction / archetype.',
+  },
+  {
+    id: 'enemy-green',
+    label: 'Green',
+    color: 'green',
+    path: '/Game/VerticalSlice/M_EnemyGreen',
+    description: 'Strong green alternative for a third enemy faction / archetype.',
+  },
+];
+
+/**
  * Render the known assets whose `domains` intersect `domains` as a markdown
  * block. Returns '' when `domains` is empty or nothing matches — so prompts
  * that don't opt in (or aren't character/animation) are unaffected.
