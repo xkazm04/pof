@@ -155,7 +155,8 @@ export type CLITaskType =
   | 'wbp-starter'
   | 'procgen-dungeon'
   | 'biome-scatter'
-  | 'mixamo-import';
+  | 'mixamo-import'
+  | 'character-setup';
 
 /** Task types that generate or modify UE code and therefore get a Wiring Requirements section. */
 const WIRING_TASK_TYPES = new Set<CLITaskType>(['checklist', 'quick-action', 'feature-fix']);
@@ -258,6 +259,26 @@ export interface MixamoImportTask extends CLITask {
   importDir: string;
   /** Target skeleton content path to retarget onto (default SK_Mannequin). */
   targetSkeleton: string;
+  appOrigin: string;
+}
+
+/** A rigged-character source PoF knows how to wire (character-source wizard, §1). */
+export type CharacterSource = 'mannequin' | 'mixamo' | 'blender';
+
+/**
+ * Character-setup task — the wiring step of the character-source wizard (§1).
+ * Runs the project's setup_characters_ue.py via the FULL editor to assign the
+ * chosen skeletal mesh + AnimBP to the player/enemy and apply the enemy's
+ * contrast material. No callback — verification is the separate §6 character
+ * Gemini gate (the ac-6 checklist item).
+ */
+export interface CharacterSetupTask extends CLITask {
+  type: 'character-setup';
+  source: CharacterSource;
+  playerMesh: string;
+  enemyMesh: string;
+  animBlueprint: string;
+  enemyMaterial: string;
   appOrigin: string;
 }
 
@@ -633,6 +654,46 @@ a watched folder. Run the project's import/retarget pipeline over them.
 ${buildCallbackSection(getCallback(cbId)!)}`;
     }
 
+    case 'character-setup': {
+      const cst = task as CharacterSetupTask;
+      const header = buildProjectContextHeader(ctx, { knownAssetDomains });
+      const sourceNote =
+        cst.source === 'mannequin'
+          ? 'Source = **UE Mannequin** (MoverTests plugin — free, no download). Enable the `MoverTests` plugin if it is not already enabled, then trigger an asset-registry rescan of `/MoverTests` before referencing its assets (newly-enabled plugin content is invisible until rescanned).'
+          : cst.source === 'mixamo'
+            ? 'Source = **Mixamo**. The skeletal mesh + retargeted animations come from the Mixamo import step (see the Animations module). Use the imported mesh/skeleton paths if they differ from the defaults below.'
+            : 'Source = **Custom (Blender)**. The skeletal mesh is the Blender-exported + UE-imported asset; ensure it imported at unit scale 1.0 before wiring.';
+
+      return `${header}
+
+## Task: Wire the slice characters (setup_characters_ue.py)
+
+Assign the chosen rigged mesh + AnimBP to the player and enemy pawns, and apply
+the enemy's contrast material — the wiring step of the character-source wizard.
+
+${sourceNote}
+
+**Assets to wire (use these EXACT paths — do not invent):**
+- Player skeletal mesh: \`${cst.playerMesh}\`
+- Enemy skeletal mesh: \`${cst.enemyMesh}\`
+- Animation Blueprint: \`${cst.animBlueprint}\`
+- Enemy material (strong contrast): \`${cst.enemyMaterial}\`
+
+**Run the wiring script:**
+1. Find the \`.uproject\` under \`${ctx.projectPath}\` and the script at
+   \`${ctx.projectPath}/Content/Python/setup_characters_ue.py\`.
+2. Run it via the FULL editor with the asset paths as environment variables —
+   NOT \`-run=pythonscript\`. PowerShell:
+   \`$env:CHAR_SOURCE="${cst.source}"; $env:CHAR_PLAYER_MESH="${cst.playerMesh}"; $env:CHAR_ENEMY_MESH="${cst.enemyMesh}"; $env:CHAR_ANIMBP="${cst.animBlueprint}"; $env:CHAR_ENEMY_MATERIAL="${cst.enemyMaterial}"; & "<UnrealEditor.exe>" "<.uproject>" -ExecutePythonScript="<the script path above>" -unattended -nopause -nosplash\`
+3. Set the SkeletalMesh + AnimClass on the **placed instances** in the slice map,
+   not only the Blueprint CDO — a Python session can bake the native default into
+   the .umap and silently override the CDO at runtime. The standard mannequin
+   mesh offset is (0,0,-90) with yaw -90.
+4. Build if any C++ changed, then report what was wired. Verification is the
+   separate "Verify character locomotes" step (an agentic screenshot + Gemini
+   humanoid/pose check) — you do NOT need to add a callback here.`;
+    }
+
     default:
       return task.prompt;
   }
@@ -777,6 +838,33 @@ export const TaskFactory = {
       label,
       importDir: params.importDir,
       targetSkeleton: params.targetSkeleton,
+      appOrigin,
+    };
+  },
+
+  /** Create the wiring-step task of the character-source wizard (setup_characters_ue.py) */
+  characterSetup(
+    moduleId: SubModuleId,
+    params: {
+      source: CharacterSource;
+      playerMesh: string;
+      enemyMesh: string;
+      animBlueprint: string;
+      enemyMaterial: string;
+    },
+    appOrigin: string,
+    label: string,
+  ): CharacterSetupTask {
+    return {
+      type: 'character-setup',
+      moduleId,
+      prompt: '', // assembled by buildTaskPrompt
+      label,
+      source: params.source,
+      playerMesh: params.playerMesh,
+      enemyMesh: params.enemyMesh,
+      animBlueprint: params.animBlueprint,
+      enemyMaterial: params.enemyMaterial,
       appOrigin,
     };
   },
