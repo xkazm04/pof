@@ -14,3 +14,20 @@ describe('known assets — items/loot', () => {
     expect(knownAssetDomainsForModule('arpg-polish')).toEqual([]);
   });
 });
+
+describe('known assets — bestiary/combat/screen/zone/anim', () => {
+  it('maps each remaining module to its domain', () => {
+    expect(knownAssetDomainsForModule('arpg-combat')).toEqual(['combat']);
+    expect(knownAssetDomainsForModule('arpg-ui')).toEqual(['ui']);
+    expect(knownAssetDomainsForModule('arpg-world')).toEqual(['world']);
+    expect(knownAssetDomainsForModule('arpg-enemy-ai')).toEqual(expect.arrayContaining(['bestiary']));
+    expect(knownAssetDomainsForModule('arpg-animation')).toEqual(expect.arrayContaining(['state-graph']));
+  });
+  it('formats the 5 new base-class known assets', () => {
+    expect(formatKnownAssets(['bestiary'])).toContain('AARPGEnemyCharacter');
+    expect(formatKnownAssets(['combat'])).toContain('UARPGDamageExecution');
+    expect(formatKnownAssets(['ui'])).toContain('UARPGCodeWidgetBase');
+    expect(formatKnownAssets(['world'])).toContain('/Game/Maps/');
+    expect(formatKnownAssets(['state-graph'])).toContain('SK_Mannequin');
+  });
+});

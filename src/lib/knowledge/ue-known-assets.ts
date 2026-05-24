@@ -103,6 +103,46 @@ export const UE_KNOWN_ASSETS: KnownAsset[] = [
     source: 'project',
     domains: ['loot'],
   },
+  {
+    id: 'arpg-enemy-character',
+    path: '/Script/PoF.ARPGEnemyCharacter',
+    type: 'C++ Class (AARPGEnemyCharacter)',
+    description: 'Base C++ class for enemy archetypes — subclass via Blueprint under /Game/Enemies/.',
+    source: 'project',
+    domains: ['bestiary'],
+  },
+  {
+    id: 'arpg-damage-execution',
+    path: '/Script/PoF.ARPGDamageExecution',
+    type: 'C++ Class (UARPGDamageExecution)',
+    description: 'GE damage execution calc — used by GE_Damage. Combat-Map wiring connects abilities → this execution.',
+    source: 'project',
+    domains: ['combat'],
+  },
+  {
+    id: 'arpg-code-widget-base',
+    path: '/Script/PoF.ARPGCodeWidgetBase',
+    type: 'C++ Class (UARPGCodeWidgetBase)',
+    description: 'Pure-C++ UMG widget parent (no BindWidget; build tree in RebuildWidget). All Screen Flow widgets extend this.',
+    source: 'project',
+    domains: ['ui'],
+  },
+  {
+    id: 'game-maps-root',
+    path: '/Game/Maps/',
+    type: 'Content path',
+    description: 'Root for zone .umap assets authored by Zone Map recipes (extends build_arena.py / build_procgen_dungeon.py).',
+    source: 'project',
+    domains: ['world'],
+  },
+  {
+    id: 'sk-mannequin-retarget',
+    path: '/MoverTests/Characters/Mannequins/Meshes/SK_Mannequin',
+    type: 'Skeleton',
+    description: 'Target skeleton for Mixamo retargeting (mixamo_pipeline.py default). State Graph recipes retarget onto this.',
+    source: 'MoverTests plugin',
+    domains: ['state-graph', 'animation'],
+  },
 ];
 
 /**
@@ -176,13 +216,19 @@ export function knownAssetDomainsForModule(moduleId: string): string[] {
   switch (moduleId) {
     case 'arpg-character':
     case 'arpg-animation':
-      return ['character', 'animation'];
+      return ['character', 'animation', 'state-graph'];
     case 'arpg-enemy-ai':
-      return ['character'];
+      return ['character', 'bestiary'];
     case 'arpg-inventory':
       return ['items'];
     case 'arpg-loot':
       return ['loot'];
+    case 'arpg-combat':
+      return ['combat'];
+    case 'arpg-ui':
+      return ['ui'];
+    case 'arpg-world':
+      return ['world'];
     default:
       return [];
   }
