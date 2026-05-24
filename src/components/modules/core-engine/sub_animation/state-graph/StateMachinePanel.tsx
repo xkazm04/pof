@@ -2,85 +2,13 @@
 
 import { useMemo, useState, useCallback } from 'react';
 import { Activity, ChevronDown } from 'lucide-react';
-import {
-  STATUS_SUCCESS, STATUS_ERROR, STATUS_WARNING,
-  ACCENT_CYAN, ACCENT_EMERALD, OVERLAY_WHITE,
-  withOpacity, OPACITY_8, OPACITY_12, OPACITY_20, OPACITY_30,
-} from '@/lib/chart-colors';
+import { withOpacity, OPACITY_8 } from '@/lib/chart-colors';
 import { BlueprintPanel, SectionHeader } from '../../unique-tabs/_design';
 import { STATUS_COLORS } from '../../unique-tabs/_shared';
 import { ACCENT, STATE_GROUPS, STATE_NODES, type StateNode } from '../_shared/data';
 import type { FeatureStatus, FeatureRow } from '@/types/feature-matrix';
-
-/* ── Module-scope graph data for SVG visualization ────────────────────────── */
-
-const STATE_TO_GROUP_MAP = (() => {
-  const map = new Map<string, string>();
-  for (const g of STATE_GROUPS) for (const s of g.states) map.set(s, g.group);
-  return map;
-})();
-
-function groupNodeColor(group: string): string {
-  switch (group) {
-    case 'Movement': return STATUS_SUCCESS;
-    case 'Combat': return STATUS_ERROR;
-    case 'Reaction': return STATUS_WARNING;
-    case 'Ability': return ACCENT;
-    case 'Social': return ACCENT_EMERALD;
-    case 'Traversal': return ACCENT_CYAN;
-    default: return ACCENT;
-  }
-}
-
-const GN_W = 130;
-const GN_H = 48;
-
-interface GraphNode { group: string; cx: number; cy: number; color: string; stateCount: number }
-interface GraphEdge { from: string; to: string; count: number }
-
-const GRAPH_NODES: GraphNode[] = STATE_GROUPS.map((g, i) => ({
-  group: g.group,
-  cx: 100 + (i % 3) * 200,
-  cy: 55 + Math.floor(i / 3) * 100,
-  color: groupNodeColor(g.group),
-  stateCount: g.states.length,
-}));
-
-const GRAPH_NODE_MAP = new Map(GRAPH_NODES.map(n => [n.group, n]));
-
-const GRAPH_EDGES: GraphEdge[] = (() => {
-  const map = new Map<string, number>();
-  for (const node of STATE_NODES) {
-    const fg = STATE_TO_GROUP_MAP.get(node.name);
-    for (const t of node.transitions) {
-      const tg = STATE_TO_GROUP_MAP.get(t.to);
-      if (fg && tg && fg !== tg) {
-        const key = `${fg}->${tg}`;
-        map.set(key, (map.get(key) ?? 0) + 1);
-      }
-    }
-  }
-  return Array.from(map, ([key, count]) => {
-    const [from, to] = key.split('->');
-    return { from, to, count };
-  });
-})();
-
-/** Compute point on rectangle edge closest to a target direction. */
-function rectEdgePoint(cx: number, cy: number, tx: number, ty: number): { x: number; y: number } {
-  const dx = tx - cx;
-  const dy = ty - cy;
-  if (dx === 0 && dy === 0) return { x: cx, y: cy };
-  const hw = GN_W / 2;
-  const hh = GN_H / 2;
-  const ax = Math.abs(dx);
-  const ay = Math.abs(dy);
-  const t = Math.min(
-    ax > 0.001 ? hw / ax : Infinity,
-    ay > 0.001 ? hh / ay : Infinity,
-  );
-  return { x: cx + dx * t, y: cy + dy * t };
-}
+import { GRAPH_EDGES } from './state-machine-graph-data';
+import { StateMachineSvg } from './StateMachineSvg';
 
 interface StateMachinePanelProps {
   featureMap: Map<string, FeatureRow>;
@@ -111,86 +39,7 @@ export function StateMachinePanel({ featureMap }: StateMachinePanelProps) {
 
       {/* SVG State Group Graph */}
       <div className="flex justify-center mb-4">
-        <svg width="100%" viewBox="0 0 600 210" className="overflow-visible max-w-[600px]">
-          <defs>
-            <marker id="sg-arrow" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
-              <path d="M0,0 L8,3 L0,6" fill="var(--text-muted)" opacity="0.5" />
-            </marker>
-            <filter id="sg-glow">
-              <feGaussianBlur stdDeviation="4" result="blur" />
-              <feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge>
-            </filter>
-          </defs>
-          {/* Edges — animated dash when hovered */}
-          {GRAPH_EDGES.map(edge => {
-            const from = GRAPH_NODE_MAP.get(edge.from);
-            const to = GRAPH_NODE_MAP.get(edge.to);
-            if (!from || !to) return null;
-            const p1 = rectEdgePoint(from.cx, from.cy, to.cx, to.cy);
-            const p2 = rectEdgePoint(to.cx, to.cy, from.cx, from.cy);
-            const hl = hoveredGroup === edge.from || hoveredGroup === edge.to;
-            return (
-              <line
-                key={`${edge.from}-${edge.to}`}
-                x1={p1.x} y1={p1.y} x2={p2.x} y2={p2.y}
-                stroke={hl ? from.color : withOpacity(OVERLAY_WHITE, OPACITY_12)}
-                strokeWidth={Math.min(1 + edge.count * 0.5, 4)}
-                strokeDasharray="5 3"
-                markerEnd="url(#sg-arrow)"
-                style={{ transition: 'stroke 0.2s' }}
-              >
-                {hl && <animate attributeName="stroke-dashoffset" from="16" to="0" dur="0.8s" repeatCount="indefinite" />}
-              </line>
-            );
-          })}
-          {/* Group nodes — rounded rects with glow on hover */}
-          {GRAPH_NODES.map(node => {
-            const hl = hoveredGroup === node.group;
-            return (
-              <g
-                key={node.group}
-                onMouseEnter={() => setHoveredGroup(node.group)}
-                onMouseLeave={() => setHoveredGroup(null)}
-                className="cursor-pointer"
-              >
-                {hl && (
-                  <rect
-                    x={node.cx - GN_W / 2 - 4} y={node.cy - GN_H / 2 - 4}
-                    width={GN_W + 8} height={GN_H + 8} rx={12}
-                    fill="none" stroke={node.color} strokeWidth="1" opacity={0.3}
-                    filter="url(#sg-glow)"
-                  />
-                )}
-                <rect
-                  x={node.cx - GN_W / 2} y={node.cy - GN_H / 2}
-                  width={GN_W} height={GN_H} rx={10}
-                  fill={withOpacity(node.color, hl ? OPACITY_20 : OPACITY_8)}
-                  stroke={hl ? node.color : withOpacity(node.color, OPACITY_30)}
-                  strokeWidth={hl ? 2 : 1}
-                  style={{ transition: 'all 0.2s' }}
-                />
-                <text
-                  x={node.cx} y={node.cy - 3}
-                  textAnchor="middle"
-                  className="text-xs font-mono font-bold"
-                  fill={hl ? node.color : 'var(--text)'}
-                  style={{ transition: 'fill 0.2s', pointerEvents: 'none' }}
-                >
-                  {node.group}
-                </text>
-                <text
-                  x={node.cx} y={node.cy + 12}
-                  textAnchor="middle"
-                  className="text-[10px] font-mono"
-                  fill="var(--text-muted)"
-                  style={{ pointerEvents: 'none' }}
-                >
-                  {node.stateCount} states
-                </text>
-              </g>
-            );
-          })}
-        </svg>
+        <StateMachineSvg hoveredGroup={hoveredGroup} onHoverGroup={setHoveredGroup} />
       </div>
 
       <div className="space-y-1">
