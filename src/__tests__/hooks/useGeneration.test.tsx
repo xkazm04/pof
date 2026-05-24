@@ -57,22 +57,17 @@ describe('useGeneration · CATALOG_MODULE routing', () => {
     categoryPath: ['x'], tags: [], lifecycle: 'planned' as const, data,
   });
 
-  const bestiary = stub<BestiaryEntry['data']>('bestiary', {
-    id: 'brute', name: 'Brute', role: 'tank', baseStats: { health: 1, damage: 1, speed: 1 },
-    abilities: [], aiBehavior: 'aggressive', element: 'Physical', threatLevel: 1, scale: 1,
-  } as BestiaryEntry['data']);
-  const combat = stub<CombatInteractionEntry['data']>('combat-map', {
-    id: 'c1', name: 'c1', inputs: ['light'], window: 0.3, damageMultiplier: 1,
-  } as CombatInteractionEntry['data']);
-  const screen = stub<ScreenEntry['data']>('screen-flow', {
-    id: 's1', label: 's1', kind: 'menu', edges: [],
-  } as unknown as ScreenEntry['data']);
-  const zone = stub<ZoneEntry['data']>('zone-map', {
-    id: 'z1', name: 'z1', kind: 'arena', size: 'medium',
-  } as unknown as ZoneEntry['data']);
-  const montage = stub<AnimationEntry['data']>('state-graph', {
-    id: 'm1', name: 'm1', category: 'Combat', hasRootMotion: false, frames: 30,
-  } as unknown as AnimationEntry['data']);
+  // Routing-only stubs: only catalogId is meaningful; data shape is unchecked.
+  const bestiary = stub<BestiaryEntry['data']>('bestiary',
+    { id: 'brute' } as unknown as BestiaryEntry['data']);
+  const combat = stub<CombatInteractionEntry['data']>('combat-map',
+    { id: 'c1' } as unknown as CombatInteractionEntry['data']);
+  const screen = stub<ScreenEntry['data']>('screen-flow',
+    { id: 's1' } as unknown as ScreenEntry['data']);
+  const zone = stub<ZoneEntry['data']>('zone-map',
+    { id: 'z1' } as unknown as ZoneEntry['data']);
+  const montage = stub<AnimationEntry['data']>('state-graph',
+    { id: 'm1' } as unknown as AnimationEntry['data']);
 
   it.each([
     ['bestiary',     bestiary, 'arpg-enemy-ai'],

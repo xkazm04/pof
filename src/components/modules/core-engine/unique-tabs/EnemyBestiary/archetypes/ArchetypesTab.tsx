@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Skull } from 'lucide-react';
 import type { FeatureRow } from '@/types/feature-matrix';
 import type { ArchetypeConfig, GroupBy, EliteModifier, EnemyRole } from '../data';
 import { ARCHETYPES, RADAR_DATA } from '../data';
@@ -13,6 +13,11 @@ import { KillDeathStats } from '../encounters/KillDeathStats';
 import { BestiaryFilters } from './BestiaryFilters';
 
 import { withOpacity, OPACITY_37, OPACITY_25 } from '@/lib/chart-colors';
+import { useCatalogEntities } from '@/stores/catalogStore';
+import { useGeneration } from '@/hooks/useGeneration';
+import { CatalogLifecycleCell } from '@/components/catalog/CatalogLifecycleCell';
+import type { BestiaryEntry } from '@/lib/catalog/types';
+import type { GenerationStep } from '@/lib/catalog/recipe';
 
 const PAGE_SIZE = 24;
 
@@ -99,6 +104,22 @@ export function ArchetypesTab({
     return [{ header: null, items: filteredArchetypes.slice(start, start + PAGE_SIZE) }];
   }, [groupBy, groupedArchetypes, filteredArchetypes, page]);
 
+  /* folder-09 R3 UI: lifecycle + (Re)generate for the primary archetype. */
+  const bestiaryEntries = useCatalogEntities('bestiary') as BestiaryEntry[];
+  const entryByArchetypeId = useMemo(
+    () => new Map(bestiaryEntries.map((e) => [e.data.id, e])),
+    [bestiaryEntries],
+  );
+  const primaryArchetypeId = expandedArchetype ?? filteredArchetypes[0]?.id;
+  const primaryEntry =
+    (primaryArchetypeId != null ? entryByArchetypeId.get(primaryArchetypeId) : undefined)
+    ?? bestiaryEntries[0];
+  const gen = useGeneration(primaryEntry!);
+  const nextStep: GenerationStep =
+    primaryEntry?.lifecycle === 'generated' ? 'wire'
+      : primaryEntry?.lifecycle === 'wired' ? 'verify'
+        : 'author-python';
+
 
   return (
     <motion.div
@@ -117,6 +138,21 @@ export function ArchetypesTab({
         groupBy={groupBy} setGroupBy={setGroupBy}
         filteredCount={filteredArchetypes.length}
       />
+
+      {/* folder-09 R3: catalog lifecycle cell for the primary archetype */}
+      {primaryEntry && (
+        <div className="flex items-center justify-between gap-2 px-1">
+          <span className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted">
+            {primaryEntry.data.label ?? primaryEntry.data.id}
+          </span>
+          <CatalogLifecycleCell
+            lifecycle={primaryEntry.lifecycle}
+            ueAssetCount={primaryEntry.ueAssets?.length ?? 0}
+            busy={gen.isRunning}
+            onRegenerate={() => gen.generate(nextStep)}
+          />
+        </div>
+      )}
 
       {/* Compare selection hint */}
       {compareIds.length > 0 ? (
@@ -142,8 +178,31 @@ export function ArchetypesTab({
         <ComparisonPanel enemies={compareArchetypes} accent={accent} />
       )}
 
+      {/* Empty state when filters narrow to zero results */}
+      {filteredArchetypes.length === 0 ? (
+        <div className="flex flex-col items-center justify-center py-12 text-center">
+          <Skull className="w-8 h-8 text-border-bright mb-3" />
+          <p className="text-sm text-text">No enemies match your filters</p>
+          <p className="text-xs text-text-muted mt-1 max-w-xs">
+            Try widening the search or clearing one of the role / category / tier / area filters.
+          </p>
+          <button
+            onClick={() => {
+              setSearchTerm('');
+              setRoleFilter('all');
+              setCategoryFilter('all');
+              setTierFilter('all');
+              setAreaFilter('all');
+            }}
+            className="mt-4 px-3 py-1.5 rounded-md text-xs font-medium text-text-muted hover:text-text border border-border/40 hover:border-border-bright bg-transparent hover:bg-surface transition-colors cursor-pointer"
+          >
+            Clear filters
+          </button>
+        </div>
+      ) : null}
+
       {/* Archetype cards */}
-      {paginatedGroups.map((group) => (
+      {filteredArchetypes.length > 0 && paginatedGroups.map((group) => (
         <div key={group.header ?? 'all'}>
           {group.header && (
             <div className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted mb-2 mt-2">
