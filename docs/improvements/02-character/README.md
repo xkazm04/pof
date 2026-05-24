@@ -15,6 +15,14 @@ player takes damage; the two ✅ items below are resolved. See
 [`OUTCOME-enemy-ai.md`](OUTCOME-enemy-ai.md) and the next-directions roadmap in
 `../../superpowers/plans/2026-05-23-character-enemy-ai.md`.
 
+**Update 2026-05-24** — the entire **PoF-app** side shipped: pof-app.md §1–§6
+(known-assets registry, AI BT-wall + pure-C++ controller, enemy-contrast
+defaults, Mixamo import, character-source wizard, locomotes Gemini gate) plus
+all three app-side tests. See [`OUTCOME-app-modules.md`](OUTCOME-app-modules.md).
+**Game pending** (real attack anim §1, ranged archetype §4, custom AnimBP §6)
+and the UE-side functional tests remain — they need the `pof-exp` UE editor +
+manual Mixamo downloads, not an app-repo session.
+
 After the Characters sub-project (2026-05-22) + the enemy-AI deliverable:
 
 - Both player and enemy use the **UE Mannequin** from UE 5.7's experimental
