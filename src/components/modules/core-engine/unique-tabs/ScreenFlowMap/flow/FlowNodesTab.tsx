@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback } from 'react';
+import { useCallback, useMemo } from 'react';
 import { Monitor, ChevronRight } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ACCENT_PINK, STATUS_WARNING,
@@ -13,6 +13,11 @@ import { HUD_CHILDREN, HUD_OVERLAYS, FLOATING_NODES, INPUT_MODE_COLORS, SCREEN_T
 import type { InputMode } from '../data';
 import { ScreenNodeRow, InputModeBadge } from './ScreenNodeRow';
 import { FlowGraph } from './FlowGraph';
+import { useCatalogEntities } from '@/stores/catalogStore';
+import { useGeneration } from '@/hooks/useGeneration';
+import { CatalogLifecycleCell } from '@/components/catalog/CatalogLifecycleCell';
+import type { ScreenEntry } from '@/lib/catalog/types';
+import type { GenerationStep } from '@/lib/catalog/recipe';
 
 const ACCENT = ACCENT_PINK;
 
@@ -38,8 +43,37 @@ export function FlowNodesTab({
   const hudStatus: FeatureStatus = featureMap.get('Main HUD widget')?.status ?? 'unknown';
   const hudSc = STATUS_COLORS[hudStatus];
 
+  /* folder-09 R3 UI: lifecycle + (Re)generate for the primary screen node. */
+  const screenEntries = useCatalogEntities('screen-flow') as ScreenEntry[];
+  const entryByNodeId = useMemo(
+    () => new Map(screenEntries.map((e) => [e.data.id, e])),
+    [screenEntries],
+  );
+  const primaryNodeId = expandedNode ?? FLOW_NODES[0]?.id;
+  const primaryEntry =
+    (primaryNodeId != null ? entryByNodeId.get(primaryNodeId) : undefined)
+    ?? screenEntries[0];
+  const gen = useGeneration(primaryEntry!);
+  const nextStep: GenerationStep =
+    primaryEntry?.lifecycle === 'generated' ? 'wire'
+      : primaryEntry?.lifecycle === 'wired' ? 'verify'
+        : 'author-python';
+
   return (
     <motion.div key="flow" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} transition={{ duration: 0.2 }} className="space-y-4">
+      {primaryEntry && (
+        <div className="flex items-center justify-between gap-2 px-1">
+          <span className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted">
+            {primaryEntry.data.label ?? primaryEntry.data.id}
+          </span>
+          <CatalogLifecycleCell
+            lifecycle={primaryEntry.lifecycle}
+            ueAssetCount={primaryEntry.ueAssets?.length ?? 0}
+            busy={gen.isRunning}
+            onRegenerate={() => gen.generate(nextStep)}
+          />
+        </div>
+      )}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         <div className="space-y-4">
           <BlueprintPanel color={ACCENT} className="p-4 group">
