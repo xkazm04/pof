@@ -2,22 +2,16 @@
 
 import { useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
-import { ChevronLeft, ChevronRight, Skull } from 'lucide-react';
 import type { FeatureRow } from '@/types/feature-matrix';
 import type { ArchetypeConfig, GroupBy, EliteModifier, EnemyRole } from '../_shared/data';
 import { ARCHETYPES, RADAR_DATA } from '../_shared/data';
-import { ArchetypeCard } from './ArchetypeCard';
 import { ComparisonPanel } from './ComparisonPanel';
 import { RadarComparison } from './RadarComparison';
 import { KillDeathStats } from '../encounters/KillDeathStats';
 import { BestiaryFilters } from './BestiaryFilters';
-
-import { withOpacity, OPACITY_37, OPACITY_25 } from '@/lib/chart-colors';
-import { useCatalogEntities } from '@/stores/catalogStore';
-import { useGeneration } from '@/hooks/useGeneration';
-import { CatalogLifecycleCell } from '@/components/catalog/CatalogLifecycleCell';
-import type { BestiaryEntry } from '@/lib/catalog/types';
-import type { GenerationStep } from '@/lib/catalog/recipe';
+import { CompareHint } from './CompareHint';
+import { ArchetypeGrid } from './ArchetypeGrid';
+import { PrimaryArchetypeLifecycle } from './PrimaryArchetypeLifecycle';
 
 const PAGE_SIZE = 24;
 
@@ -104,22 +98,13 @@ export function ArchetypesTab({
     return [{ header: null, items: filteredArchetypes.slice(start, start + PAGE_SIZE) }];
   }, [groupBy, groupedArchetypes, filteredArchetypes, page]);
 
-  /* folder-09 R3 UI: lifecycle + (Re)generate for the primary archetype. */
-  const bestiaryEntries = useCatalogEntities('bestiary') as BestiaryEntry[];
-  const entryByArchetypeId = useMemo(
-    () => new Map(bestiaryEntries.map((e) => [e.data.id, e])),
-    [bestiaryEntries],
-  );
-  const primaryArchetypeId = expandedArchetype ?? filteredArchetypes[0]?.id;
-  const primaryEntry =
-    (primaryArchetypeId != null ? entryByArchetypeId.get(primaryArchetypeId) : undefined)
-    ?? bestiaryEntries[0];
-  const gen = useGeneration(primaryEntry!);
-  const nextStep: GenerationStep =
-    primaryEntry?.lifecycle === 'generated' ? 'wire'
-      : primaryEntry?.lifecycle === 'wired' ? 'verify'
-        : 'author-python';
-
+  const resetFilters = () => {
+    setSearchTerm('');
+    setRoleFilter('all');
+    setCategoryFilter('all');
+    setTierFilter('all');
+    setAreaFilter('all');
+  };
 
   return (
     <motion.div
@@ -140,122 +125,42 @@ export function ArchetypesTab({
       />
 
       {/* folder-09 R3: catalog lifecycle cell for the primary archetype */}
-      {primaryEntry && (
-        <div className="flex items-center justify-between gap-2 px-1">
-          <span className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted">
-            {primaryEntry.data.label ?? primaryEntry.data.id}
-          </span>
-          <CatalogLifecycleCell
-            lifecycle={primaryEntry.lifecycle}
-            ueAssetCount={primaryEntry.ueAssets?.length ?? 0}
-            busy={gen.isRunning}
-            onRegenerate={() => gen.generate(nextStep)}
-          />
-        </div>
-      )}
+      <PrimaryArchetypeLifecycle
+        expandedArchetype={expandedArchetype}
+        filteredArchetypes={filteredArchetypes}
+      />
 
       {/* Compare selection hint */}
-      {compareIds.length > 0 ? (
-        <div className="text-sm text-text-muted mb-2">
-          Comparing <strong>{compareIds.length}</strong> enemies (max 4).
-          {compareArchetypes.map(a => (
-            <span key={a.id} className="inline-flex items-center gap-1 ml-2">
-              <span className="w-2 h-2 rounded-full" style={{ backgroundColor: a.color }} />
-              <span className="font-bold" style={{ color: a.color }}>{a.label}</span>
-            </span>
-          ))}
-          <button onClick={() => { for (const id of compareIds) toggleCompare(id); }}
-            className="ml-2 text-xs text-text-muted underline hover:text-text cursor-pointer">
-            Clear
-          </button>
-        </div>
-      ) : (
-        <p className="text-xs text-text-muted">Click enemies to compare (up to 4)</p>
-      )}
+      <CompareHint
+        compareIds={compareIds}
+        compareArchetypes={compareArchetypes}
+        toggleCompare={toggleCompare}
+      />
 
       {/* Multi-enemy comparison */}
       {compareArchetypes.length >= 2 && (
         <ComparisonPanel enemies={compareArchetypes} accent={accent} />
       )}
 
-      {/* Empty state when filters narrow to zero results */}
-      {filteredArchetypes.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-12 text-center">
-          <Skull className="w-8 h-8 text-border-bright mb-3" />
-          <p className="text-sm text-text">No enemies match your filters</p>
-          <p className="text-xs text-text-muted mt-1 max-w-xs">
-            Try widening the search or clearing one of the role / category / tier / area filters.
-          </p>
-          <button
-            onClick={() => {
-              setSearchTerm('');
-              setRoleFilter('all');
-              setCategoryFilter('all');
-              setTierFilter('all');
-              setAreaFilter('all');
-            }}
-            className="mt-4 px-3 py-1.5 rounded-md text-xs font-medium text-text-muted hover:text-text border border-border/40 hover:border-border-bright bg-transparent hover:bg-surface transition-colors cursor-pointer"
-          >
-            Clear filters
-          </button>
-        </div>
-      ) : null}
-
-      {/* Archetype cards */}
-      {filteredArchetypes.length > 0 && paginatedGroups.map((group) => (
-        <div key={group.header ?? 'all'}>
-          {group.header && (
-            <div className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted mb-2 mt-2">
-              {group.header} <span className="text-text-muted/60">({groupedArchetypes.find(g => g.header === group.header)?.items.length ?? 0})</span>
-            </div>
-          )}
-          <div className="grid grid-cols-1 gap-3 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
-            {group.items.map((archetype) => (
-              <div key={archetype.id} className="relative">
-                <ArchetypeCard
-                  archetype={archetype}
-                  featureMap={featureMap}
-                  expanded={expandedArchetype === archetype.id}
-                  onToggle={toggleArchetype}
-                  activeModifiers={cardModifiers[archetype.id] ?? []}
-                  onToggleModifier={(modId) => toggleCardModifier(archetype.id, modId)}
-                  onViewCodegen={setCodegenMod}
-                />
-                {/* Compare toggle badge */}
-                <button
-                  onClick={(e) => { e.stopPropagation(); toggleCompare(archetype.id); }}
-                  className="absolute top-1 right-1 z-30 w-5 h-5 rounded-full border text-xs font-bold flex items-center justify-center transition-all cursor-pointer"
-                  title={compareIds.includes(archetype.id) ? 'Remove from comparison' : 'Add to comparison'}
-                  style={compareIds.includes(archetype.id)
-                    ? { backgroundColor: withOpacity(archetype.color, OPACITY_25), borderColor: withOpacity(archetype.color, OPACITY_37), color: archetype.color }
-                    : { backgroundColor: 'var(--surface-deep)', borderColor: 'var(--border)', color: 'var(--text-muted)' }}
-                >
-                  {compareIds.includes(archetype.id)
-                    ? (compareIds.indexOf(archetype.id) + 1)
-                    : '+'}
-                </button>
-              </div>
-            ))}
-          </div>
-        </div>
-      ))}
-
-      {/* Pagination controls (flat mode only) */}
-      {groupBy === 'none' && totalPages > 1 && (
-        <div className="flex items-center justify-center gap-3 mt-4">
-          <button onClick={() => setPage(p => Math.max(0, p - 1))} disabled={page === 0}
-            className="p-1.5 rounded border border-border/30 bg-surface disabled:opacity-30 hover:bg-surface-hover transition-colors cursor-pointer disabled:cursor-default">
-            <ChevronLeft className="w-4 h-4 text-text-muted" />
-          </button>
-          <span className="text-xs font-mono text-text-muted">
-            Page {page + 1} / {totalPages} &middot; {filteredArchetypes.length} enemies
-          </span>
-          <button onClick={() => setPage(p => Math.min(totalPages - 1, p + 1))} disabled={page >= totalPages - 1}
-            className="p-1.5 rounded border border-border/30 bg-surface disabled:opacity-30 hover:bg-surface-hover transition-colors cursor-pointer disabled:cursor-default">
-            <ChevronRight className="w-4 h-4 text-text-muted" />
-          </button>
-        </div>
-      )}
+      {/* Archetype cards + pagination + empty state */}
+      <ArchetypeGrid
+        filteredArchetypes={filteredArchetypes}
+        paginatedGroups={paginatedGroups}
+        groupedArchetypes={groupedArchetypes}
+        groupBy={groupBy}
+        totalPages={totalPages}
+        page={page}
+        setPage={setPage}
+        featureMap={featureMap}
+        expandedArchetype={expandedArchetype}
+        toggleArchetype={toggleArchetype}
+        cardModifiers={cardModifiers}
+        toggleCardModifier={toggleCardModifier}
+        setCodegenMod={setCodegenMod}
+        compareIds={compareIds}
+        toggleCompare={toggleCompare}
+        resetFilters={resetFilters}
+      />
 
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
         <RadarComparison
