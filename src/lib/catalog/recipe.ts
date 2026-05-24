@@ -1,5 +1,5 @@
 import type { ProjectContext } from '@/lib/prompt-context';
-import type { AbilityEntry, CatalogEntityBase, ItemEntry, LifecycleState, LootTableEntry, BestiaryEntry, CombatInteractionEntry, ScreenEntry, ZoneEntry } from '@/lib/catalog/types';
+import type { AbilityEntry, CatalogEntityBase, ItemEntry, LifecycleState, LootTableEntry, BestiaryEntry, CombatInteractionEntry, ScreenEntry, ZoneEntry, AnimationEntry } from '@/lib/catalog/types';
 import { PromptBuilder } from '@/lib/prompts/prompt-builder';
 
 export type GenerationStep = 'scaffold-cpp' | 'author-python' | 'wire' | 'verify';
@@ -242,6 +242,34 @@ export const ZONE_MAP_RECIPE: GenerationRecipe<ZoneEntry> = {
   },
 };
 
+const STATE_GRAPH_BEST_PRACTICES = [
+  'MANUAL STEP REQUIRED: the AnimBP graph (state machine, transitions, blendspaces, notify graphs) CANNOT be authored from Python. After this recipe completes, the operator must finish the AnimBP graph in the UE AnimBP editor by hand.',
+  'Use the proven mixamo_pipeline.py pattern: download from Mixamo → retarget to SK_Mannequin → create the montage shell.',
+  'Place montage assets under `/Game/Animations/` and report their content paths.',
+  '`verify` only gates Python-authorable parts (montage asset exists + correct skeleton). Never claim the AnimBP graph is complete.',
+];
+
+export const STATE_GRAPH_RECIPE: GenerationRecipe<AnimationEntry> = {
+  id: 'state-graph-montage',
+  catalogId: 'state-graph',
+  steps: ['author-python', 'verify'],
+  testPath: 'Project.Functional Tests.Maps.VSAnim.VSAnim_LocomotionTest',
+  buildStepPrompt(entity, step, ctx) {
+    const task =
+      step === 'author-python'
+        ? `Author the ${entity.data.name} montage shell from Mixamo (retarget to SK_Mannequin); place under /Game/Animations/${entity.data.category}/. Do NOT touch the AnimBP graph.`
+        : `Run VSAnim_LocomotionTest: AnimInstance locomotion state updates under movement (the Python-authorable verify; AnimBP graph completeness is the operator's manual responsibility).`;
+    const b = new PromptBuilder()
+      .withProjectContext(ctx)
+      .withDomainContext('Mixamo + montage authoring for the PoF ARPG. AnimBP graph stays manual.')
+      .withAssetSpec(entity)
+      .withTask(`State Graph · ${step}`, task)
+      .withBestPractices(STATE_GRAPH_BEST_PRACTICES);
+    if (step === 'verify') b.withSuccessCriteria([`The functional test \`${this.testPath}\` returns Result={Success}.`]);
+    return b.build();
+  },
+};
+
 const RECIPES: Record<string, GenerationRecipe> = {
   spellbook: SPELLBOOK_RECIPE,
   items: ITEMS_RECIPE,
@@ -250,6 +278,7 @@ const RECIPES: Record<string, GenerationRecipe> = {
   'combat-map': COMBAT_MAP_RECIPE,
   'screen-flow': SCREEN_FLOW_RECIPE,
   'zone-map': ZONE_MAP_RECIPE,
+  'state-graph': STATE_GRAPH_RECIPE,
 };
 
 /** The recipe for a catalog, or undefined if none is registered yet. */
