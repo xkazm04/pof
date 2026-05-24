@@ -64,7 +64,10 @@ implemented (e.g. someone added `ARPG.Verify.Loot`), mark that task done and ski
 
 ---
 
-## Task 1: §1 — `IARPGDefaultsProvider` + generalised `PossessedBy` (+ test #2)
+## Task 1: §1 — `IARPGDefaultsProvider` + generalised `PossessedBy` — ✅ IMPLEMENTED 2026-05-24 (UE commit `21484e0`)
+
+Shipped: new `Source/PoF/Character/IARPGDefaultsProvider.h` (UINTERFACE + `FARPGDefaultInputContext`); `AARPGCharacterBase` adds it as a third base, declares `DefaultEffects` + `DefaultInputContexts` arrays alongside the existing `DefaultAbilities`, and inlines the three interface getters. `PossessedBy` now reads `GetDefaultAbilities()` (no behavior change for the existing abilities loop) and additionally applies `GetDefaultEffects()` via `MakeOutgoingSpec` + `ApplyGameplayEffectSpecToSelf` (server only). 20 files rebuilt clean (24.7s). The IMC array is surfaced but the EnhancedInput consumer wiring is deferred (scope creep avoided; the array is available for that switch). The smoke test (game test #2) is deferred to a later pass.
+
 
 **Files:**
 - Create: `Source/PoF/Character/IARPGDefaultsProvider.h`

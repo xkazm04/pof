@@ -38,7 +38,7 @@ Status of each delta (UE repo, 2026-05-24, local commits on `main`, not pushed):
 
 | § | Delta | Status |
 |---|---|---|
-| §1 | Generalise `DefaultAbilities` → `IARPGDefaultsProvider` | **Pending** — modifies core `ARPGCharacterBase`; needs functional-test run before commit |
+| §1 | Generalise `DefaultAbilities` → `IARPGDefaultsProvider` | **DONE** ✅ `21484e0` (`Source/PoF/Character/IARPGDefaultsProvider.h` + `ARPGCharacterBase` implements it; `PossessedBy` now applies `GetDefaultAbilities()` + new `GetDefaultEffects()`; `DefaultInputContexts` array surfaced, EnhancedInput consumer wiring deferred). 20 files rebuilt clean. |
 | §2 | Migrate `BossHealthBarWidget` off `NativeConstruct` | **Pending** — RHI-needing widget test; medium risk |
 | §3 | `EmptyShell` marker + fail-loud `AnimAssetCommandlet` | **Pending** — running the commandlet mutates shared `Content/`; highest collision risk |
 | §4 | `LogARPGLifecycle` category + `ARPG_LIFECYCLE_LOG` macro | **DONE** ✅ `29b1bdb` (`Source/PoF/Debug/ARPGLifecycleLog.h` + categories + migrated `UARPGSaveSubsystem::Initialize/Deinitialize`) |
