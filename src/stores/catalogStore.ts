@@ -4,10 +4,10 @@ import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import { useShallow } from 'zustand/react/shallow';
 import type {
-  CatalogEntityBase, AbilityEntry, LifecycleState, TestResult, LifecycleRecord,
+  CatalogEntityBase, AbilityEntry, ItemEntry, LifecycleState, TestResult, LifecycleRecord,
 } from '@/lib/catalog/types';
 import { resolveTransition } from '@/lib/catalog/lifecycle';
-import { seedSpellbookEntries } from '@/lib/catalog/seed-spellbook';
+import { seedAllCatalogs } from '@/lib/catalog/sections';
 
 interface CatalogState {
   /** entitiesByCatalog[catalogId][entityId] */
@@ -29,7 +29,7 @@ function indexById(entities: CatalogEntityBase[]): Record<string, CatalogEntityB
 }
 
 function buildInitial(): Record<string, Record<string, CatalogEntityBase>> {
-  return { spellbook: indexById(seedSpellbookEntries()) };
+  return seedAllCatalogs();
 }
 
 export const useCatalogStore = create<CatalogState>()(
@@ -123,5 +123,12 @@ export function useCatalogEntity(
 export function useSpellbookEntries(): AbilityEntry[] {
   return useCatalogStore(
     useShallow((s) => Object.values(s.entitiesByCatalog.spellbook ?? {}) as AbilityEntry[]),
+  );
+}
+
+/** Typed convenience for the items catalog. */
+export function useItemEntries(): ItemEntry[] {
+  return useCatalogStore(
+    useShallow((s) => Object.values(s.entitiesByCatalog.items ?? {}) as ItemEntry[]),
   );
 }
