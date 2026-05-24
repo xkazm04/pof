@@ -1,5 +1,5 @@
 import type { ProjectContext } from '@/lib/prompt-context';
-import type { AbilityEntry, CatalogEntityBase, LifecycleState } from '@/lib/catalog/types';
+import type { AbilityEntry, CatalogEntityBase, ItemEntry, LifecycleState, LootTableEntry } from '@/lib/catalog/types';
 import { PromptBuilder } from '@/lib/prompts/prompt-builder';
 
 export type GenerationStep = 'scaffold-cpp' | 'author-python' | 'wire' | 'verify';
@@ -68,8 +68,66 @@ export const SPELLBOOK_RECIPE: GenerationRecipe<AbilityEntry> = {
   },
 };
 
-const RECIPES: Record<string, GenerationRecipe<AbilityEntry>> = {
+const ITEM_BEST_PRACTICES = [
+  'Author a `UARPGItemDefinition` data asset (Python, FULL editor via -ExecutePythonScript), not -run=pythonscript.',
+  'Set the item type/rarity/stats from the Asset Specification; do not invent new fields.',
+  'Place the asset under `/Game/Items/` and report its content path.',
+];
+
+export const ITEMS_RECIPE: GenerationRecipe<ItemEntry> = {
+  id: 'items-definition',
+  catalogId: 'items',
+  steps: ['author-python', 'wire', 'verify'],
+  testPath: 'Project.Functional Tests.Maps.VSItems.VSItemsDefinitionsTest',
+  buildStepPrompt(entity, step, ctx) {
+    const task =
+      step === 'author-python'
+        ? `Author a UARPGItemDefinition data asset for "${entity.name}" from its spec.`
+        : step === 'wire'
+          ? `Register "${entity.name}" so it is discoverable by the item registry / a loot table.`
+          : `Run the item-definitions functional test; assert the asset loads with valid fields.`;
+    const b = new PromptBuilder()
+      .withProjectContext(ctx)
+      .withDomainContext('UARPGItemDefinition data-asset authoring for the PoF ARPG.')
+      .withAssetSpec(entity)
+      .withTask(`Items · ${step}`, task)
+      .withBestPractices(ITEM_BEST_PRACTICES);
+    if (step === 'verify') b.withSuccessCriteria([`The functional test \`${this.testPath}\` returns Result={Success}.`]);
+    return b.build();
+  },
+};
+
+const LOOT_BEST_PRACTICES = [
+  'Author a `UARPGLootTable` data asset (Python, FULL editor) with weighted entries from the spec.',
+  'Preserve the configured drop chance and rarity weights; do not invent items.',
+  'Place the asset under `/Game/Loot/` and report its content path.',
+];
+
+export const LOOT_RECIPE: GenerationRecipe<LootTableEntry> = {
+  id: 'loot-table',
+  catalogId: 'loot-tables',
+  steps: ['author-python', 'verify'],
+  testPath: 'Project.Functional Tests.Maps.VSLoot.VSLootDistributionTest',
+  buildStepPrompt(entity, step, ctx) {
+    const task =
+      step === 'author-python'
+        ? `Author a UARPGLootTable data asset "${entity.name}" with the spec's weighted entries.`
+        : `Run the loot-distribution functional test; assert empirical drops match the configured weights within tolerance.`;
+    const b = new PromptBuilder()
+      .withProjectContext(ctx)
+      .withDomainContext('UARPGLootTable data-asset authoring for the PoF ARPG.')
+      .withAssetSpec(entity)
+      .withTask(`Loot · ${step}`, task)
+      .withBestPractices(LOOT_BEST_PRACTICES);
+    if (step === 'verify') b.withSuccessCriteria([`The functional test \`${this.testPath}\` returns Result={Success}.`]);
+    return b.build();
+  },
+};
+
+const RECIPES: Record<string, GenerationRecipe> = {
   spellbook: SPELLBOOK_RECIPE,
+  items: ITEMS_RECIPE,
+  'loot-tables': LOOT_RECIPE,
 };
 
 /** The recipe for a catalog, or undefined if none is registered yet. */
