@@ -1,6 +1,11 @@
 import type { SpellbookAbility } from '@/components/modules/core-engine/unique-tabs/AbilitySpellbook/data';
 import type { ItemData } from '@/components/modules/core-engine/unique-tabs/ItemCatalog/data';
 import type { EnemyLootBinding } from '@/components/modules/core-engine/unique-tabs/LootTableVisualizer/data-binding';
+import type { ArchetypeConfig } from '@/components/modules/core-engine/unique-tabs/EnemyBestiary/data';
+import type { ComboSequence } from '@/components/modules/core-engine/unique-tabs/CombatActionMap/data-metrics';
+import type { GraphNode } from '@/types/unique-tab-improvements';
+import type { ZoneRecord } from '@/components/modules/core-engine/unique-tabs/ZoneMap/data';
+import type { MontageEntry } from '@/components/modules/core-engine/unique-tabs/AnimationStateGraph/data';
 
 /** Where a catalog entity is in the generate-into-UE pipeline. */
 export type LifecycleState =
@@ -8,6 +13,13 @@ export type LifecycleState =
 
 /** Functional-test verdict from the verify step. */
 export type TestResult = 'pass' | 'fail';
+
+/** A typed cross-catalog reference (e.g. a Bestiary entry → its abilities/loot). */
+export interface CatalogLink {
+  catalogId: string;
+  entityId: string;
+  role: string;
+}
 
 /** The shared envelope every catalog entity carries. */
 export interface CatalogEntityBase {
@@ -25,6 +37,8 @@ export interface CatalogEntityBase {
   lastTestResult?: TestResult;
   /** ISO timestamp of the last passing verify. */
   lastVerifiedAt?: string;
+  /** Cross-catalog references (e.g. Bestiary → Abilities + Loot). */
+  links?: CatalogLink[];
 }
 
 /** Ability catalog entity — payload reuses the existing UI shape, rendered unchanged. */
@@ -43,6 +57,36 @@ export interface ItemEntry extends CatalogEntityBase {
 export interface LootTableEntry extends CatalogEntityBase {
   catalogId: 'loot-tables';
   data: EnemyLootBinding;
+}
+
+/** Bestiary catalog entity — composes abilities + loot via `links` (resolved at seed time). */
+export interface BestiaryEntry extends CatalogEntityBase {
+  catalogId: 'bestiary';
+  data: ArchetypeConfig;
+}
+
+/** Combat Map catalog entity — combo/interaction shape from CombatActionMap. */
+export interface CombatInteractionEntry extends CatalogEntityBase {
+  catalogId: 'combat-map';
+  data: ComboSequence;
+}
+
+/** Screen Flow catalog entity — one screen node from FLOW_NODES. */
+export interface ScreenEntry extends CatalogEntityBase {
+  catalogId: 'screen-flow';
+  data: GraphNode;
+}
+
+/** Zone Map catalog entity — one zone from ZoneMap. */
+export interface ZoneEntry extends CatalogEntityBase {
+  catalogId: 'zone-map';
+  data: ZoneRecord;
+}
+
+/** State Graph catalog entity — one montage from ALL_MONTAGES (AnimBP graph stays manual). */
+export interface AnimationEntry extends CatalogEntityBase {
+  catalogId: 'state-graph';
+  data: MontageEntry;
 }
 
 /**
