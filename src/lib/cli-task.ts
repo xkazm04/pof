@@ -18,6 +18,7 @@ import { formatWiringRequirements } from '@/lib/knowledge/wiring-requirements';
 import { buildEvalPrompt, type EvalPass } from '@/lib/evaluator/module-eval-prompts';
 import { getModuleChecklist } from '@/lib/module-registry';
 import { buildVisualCheckSection } from '@/lib/prompts/visual-check';
+import { knownAssetDomainsForModule } from '@/lib/knowledge/ue-known-assets';
 
 // ── Task callback system ────────────────────────────────────────────────────
 
@@ -257,6 +258,8 @@ export interface BiomeScatterTask extends CLITask {
 export function buildTaskPrompt(task: CLITask, ctx: ProjectContext): string {
   const isUE5 = !ctx.dynamicContext?.projectType || ctx.dynamicContext.projectType === 'ue5';
 
+  const knownAssetDomains = isUE5 ? knownAssetDomainsForModule(task.moduleId) : [];
+
   const wiringBlock =
     isUE5 && WIRING_TASK_TYPES.has(task.type)
       ? `\n\n${formatWiringRequirements({ moduleAssets: getWiringAssets(task.moduleId) })}`
@@ -265,7 +268,7 @@ export function buildTaskPrompt(task: CLITask, ctx: ProjectContext): string {
   switch (task.type) {
     case 'checklist': {
       const ct = task as ChecklistTask;
-      const header = buildProjectContextHeader(ctx);
+      const header = buildProjectContextHeader(ctx, { knownAssetDomains });
       const domainContext = isUE5 ? getModuleDomainContext(task.moduleId) : undefined;
       const domainSection = domainContext
         ? `\n\n## Domain Context\n${domainContext}`
@@ -298,7 +301,7 @@ export function buildTaskPrompt(task: CLITask, ctx: ProjectContext): string {
 
     case 'quick-action':
     case 'ask-claude': {
-      const header = buildProjectContextHeader(ctx);
+      const header = buildProjectContextHeader(ctx, { knownAssetDomains });
       const domainContext = isUE5 ? getModuleDomainContext(task.moduleId) : undefined;
       const domainSection = domainContext
         ? `\n\n## Domain Context\n${domainContext}`
@@ -308,7 +311,7 @@ export function buildTaskPrompt(task: CLITask, ctx: ProjectContext): string {
 
     case 'feature-fix': {
       const ft = task as FeatureFixTask;
-      const header = buildProjectContextHeader(ctx);
+      const header = buildProjectContextHeader(ctx, { knownAssetDomains });
       const domainContext = isUE5 ? getModuleDomainContext(task.moduleId) : undefined;
       const domainSection = domainContext
         ? `\n\n## Domain Context\n${domainContext}`

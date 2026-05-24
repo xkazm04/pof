@@ -1,0 +1,13 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`formatKnownAssets > snapshot of the character block 1`] = `
+"## Known Project Assets (use these EXACT paths — do not invent paths)
+- **/MoverTests/Characters/Mannequins/Meshes/SKM_Manny** (SkeletalMesh, MoverTests plugin) — Rigged player mannequin (UE 5.7 MoverTests plugin). No download — enable the plugin.
+- **/MoverTests/Characters/Mannequins/Meshes/SKM_Manny_Simple** (SkeletalMesh, MoverTests plugin) — Simplified mannequin used for the enemy in the vertical slice.
+- **/MoverTests/Characters/Mannequins/Meshes/SK_Mannequin** (Skeleton, MoverTests plugin) — Target skeleton for Mixamo retargeting (mixamo_pipeline.py default).
+- **/MoverTests/Characters/Mannequins/Animations/ABP_Manny** (AnimBlueprint, MoverTests plugin) — Ready-made locomotion AnimBP (idle/walk/run) — avoids the AnimBP-authoring wall. Generated class: ABP_Manny_C.
+- **/MoverTests/Characters/Mannequins/Materials/Instances/Manny/MI_Manny_01** (MaterialInstance, MoverTests plugin) — Default mannequin material instance (player).
+- **/MoverTests/Characters/Mannequins/Materials/Instances/Manny/MI_Manny_02** (MaterialInstance, MoverTests plugin) — Alternate mannequin MI — TOO SUBTLE for visual enemy distinction; prefer M_EnemyRed.
+- **/Game/VerticalSlice/M_EnemyRed** (Material, project) — Strong-red enemy material (base + emissive) — the enemy-distinction default, clearly distinct from the silver player mannequin.
+- **/Game/Characters/Mannequins/ (ThirdPerson template — only if migrated)** (SkeletalMesh + AnimBlueprint, ThirdPerson template) — FALLBACK only: the ACharacter-based ThirdPerson mannequin + ABP_Manny/ABP_Quinn, to migrate into /Game/Characters/ if MoverTests ABP_Manny is ever found Mover-coupled. Documented, not the default."
+`;

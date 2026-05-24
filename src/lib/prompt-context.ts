@@ -11,6 +11,7 @@ import type { ErrorContextEntry } from '@/types/error-memory';
 import type { PromptKind } from '@/lib/knowledge/types';
 import { formatGotchas } from '@/lib/knowledge/ue-gotchas';
 import { formatBinaryContentTripwire } from '@/lib/knowledge/binary-content';
+import { formatKnownAssets } from '@/lib/knowledge/ue-known-assets';
 
 export interface ProjectContext {
   projectName: string;
@@ -242,6 +243,8 @@ interface ContextHeaderOptions {
   errorMemory?: ErrorContextEntry[];
   /** The kind of prompt — drives which UE pitfalls + tripwire are injected (default: 'ue-cpp' in the UE branch) */
   promptKind?: PromptKind;
+  /** Known-asset domains to inject (e.g. ['character','animation']). Empty/omitted → nothing injected. */
+  knownAssetDomains?: string[];
 }
 
 /**
@@ -383,6 +386,9 @@ export function buildProjectContextHeader(
 
   const tripwire = formatBinaryContentTripwire(promptKind);
   if (tripwire) header += `\n\n${tripwire}`;
+
+  const knownAssets = formatKnownAssets(opts.knownAssetDomains ?? []);
+  if (knownAssets) header += `\n\n${knownAssets}`;
 
   return header;
 }
