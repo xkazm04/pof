@@ -8,7 +8,7 @@
 |---|---|---|---|
 | 1 | **L1 shell scaffold** | `2026-05-24-pof-ecw-phase-01-shell.md` | ✅ DONE @ `ecw-phase-1-complete` (fd83f25) |
 | 2 | **Entity Inspector primitive** | `2026-05-24-pof-ecw-phase-02-entity-inspector.md` | ✅ DONE @ `ecw-phase-2-complete` (04d4fcc) |
-| 3 | **Catalog Hub** | `2026-05-24-pof-ecw-phase-03-catalog-hub.md` | ⏳ |
+| 3 | **Catalog Hub** | `2026-05-24-pof-ecw-phase-03-catalog-hub.md` | ✅ DONE @ `ecw-phase-3-complete` |
 | 4 | **CLI Rail + two-way binding** | `2026-05-24-pof-ecw-phase-04-cli-rail.md` | ⏳ |
 | 5 | **Mission Control** | `2026-05-24-pof-ecw-phase-05-mission-control.md` | ⏳ |
 | 6 | **Live State** | `2026-05-24-pof-ecw-phase-06-live-state.md` | ⏳ |
