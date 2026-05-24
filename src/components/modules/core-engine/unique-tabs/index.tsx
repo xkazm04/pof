@@ -5,7 +5,7 @@ import type { SubModuleId } from '@/types/modules';
 import { Swords, BookOpen, Brain, Package, Coins, Monitor, TrendingUp, Map, Save, Wrench, User, Activity } from 'lucide-react';
 import { CombatActionMap } from '../sub_combat';
 import { AbilitySpellbook } from '../sub_ability';
-import { LootTableVisualizer } from './LootTableVisualizer';
+import { LootTableVisualizer } from '../sub_loot';
 import { CharacterBlueprint } from '../sub_character';
 import { CharacterSourceWizard } from '../sub_character/wizard/CharacterSourceWizard';
 import { AnimationStateGraph } from '../sub_animation';

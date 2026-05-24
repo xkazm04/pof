@@ -1,6 +1,6 @@
 import type { SpellbookAbility } from '@/components/modules/core-engine/sub_ability/_shared/data';
 import type { ItemData } from '@/components/modules/core-engine/sub_inventory/_shared/data';
-import type { EnemyLootBinding } from '@/components/modules/core-engine/unique-tabs/LootTableVisualizer/data-binding';
+import type { EnemyLootBinding } from '@/components/modules/core-engine/sub_loot/_shared/data-binding';
 import type { ArchetypeConfig } from '@/components/modules/core-engine/sub_bestiary/_shared/data';
 import type { ComboSequence } from '@/components/modules/core-engine/sub_combat/_shared/data-metrics';
 import type { GraphNode } from '@/types/unique-tab-improvements';

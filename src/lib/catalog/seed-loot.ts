@@ -1,7 +1,7 @@
 import {
   DEFAULT_ENEMY_LOOT_BINDINGS,
   type EnemyLootBinding,
-} from '@/components/modules/core-engine/unique-tabs/LootTableVisualizer/data-binding';
+} from '@/components/modules/core-engine/sub_loot/_shared/data-binding';
 import type { LootTableEntry } from './types';
 
 /** Bucket a drop chance into a difficulty tier for the L4 taxonomy. */
