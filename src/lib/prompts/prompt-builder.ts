@@ -47,6 +47,7 @@ export class PromptBuilder {
   private _projectContext: string | null = null;
   private _domainContext: string | null = null;
   private _taskInstructions: string | null = null;
+  private _assetSpec: string | null = null;
   private _wiringRequirements: string | null = null;
   private _bestPractices: string | null = null;
   private _outputSchema: string | null = null;
@@ -99,6 +100,30 @@ export class PromptBuilder {
    */
   withRawTask(instructions: string): this {
     this._taskInstructions = instructions;
+    return this;
+  }
+
+  /**
+   * Set the Asset Specification section — serializes a catalog entity's identity
+   * and typed `data` payload so a generation recipe can turn it into UE. Rendered
+   * immediately after Task Instructions.
+   */
+  withAssetSpec(entity: {
+    id: string; name: string; categoryPath: string[]; tags: string[];
+    data?: Record<string, unknown>;
+  }): this {
+    const lines = [
+      '## Asset Specification',
+      '',
+      `- **id**: \`${entity.id}\``,
+      `- **name**: ${entity.name}`,
+      `- **category**: ${entity.categoryPath.join(' ▸ ')}`,
+      `- **tags**: ${entity.tags.length ? entity.tags.join(', ') : '(none)'}`,
+    ];
+    if (entity.data && Object.keys(entity.data).length > 0) {
+      lines.push('', '```json', JSON.stringify(entity.data, null, 2), '```');
+    }
+    this._assetSpec = lines.join('\n');
     return this;
   }
 
@@ -179,6 +204,10 @@ export class PromptBuilder {
     }
 
     parts.push(this._taskInstructions);
+
+    if (this._assetSpec) {
+      parts.push(this._assetSpec);
+    }
 
     if (this._wiringRequirements) {
       parts.push(this._wiringRequirements);
