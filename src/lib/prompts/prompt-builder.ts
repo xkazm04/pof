@@ -18,6 +18,9 @@ import {
   type ProjectContext,
 } from '@/lib/prompt-context';
 import type { ErrorContextEntry } from '@/types/error-memory';
+import { formatWiringRequirements, type WiringRequirement } from '@/lib/knowledge/wiring-requirements';
+
+export type { WiringRequirement };
 
 // ── Section types ───────────────────────────────────────────────────────────
 
@@ -36,14 +39,6 @@ export interface PromptSections {
   outputSchema: string | null;
   /** Section 6 — what "done" looks like. */
   successCriteria: string | null;
-}
-
-export interface WiringRequirement {
-  artifact: string;
-  grantedBy?: string;
-  activatedBy?: string;
-  dependencies?: string[];
-  verification?: string;
 }
 
 // ── Builder ─────────────────────────────────────────────────────────────────
@@ -114,26 +109,7 @@ export class PromptBuilder {
    * known hints are rendered as a table.
    */
   withWiringRequirements(reqs: WiringRequirement[] = []): this {
-    const lines: string[] = ['## Wiring Requirements'];
-    lines.push('For EVERY artifact you generate, make it runnable out-of-the-box — do not stop at "it compiles":');
-    lines.push('- **Granting / registration**: state how the artifact is granted or registered (ability granted to the ASC, GameMode class set, IMC added to the input subsystem, component added to the actor).');
-    lines.push('- **Activation**: state what triggers it at runtime (input action, gameplay event, BeginPlay, overlap).');
-    lines.push('- **Dependencies**: list the companion assets it needs and FLAG any binary-content dependency (Widget/Animation Blueprint, Behavior Tree, .umap) that cannot be authored from code.');
-    lines.push('- **Verification**: give ONE observable check that proves the wiring works (a log line, an on-screen value, a functional-test assertion).');
-    lines.push('In your output, include a `wiring` field for each generated artifact summarizing the four points above.');
-
-    if (reqs.length > 0) {
-      lines.push('');
-      lines.push('Known wiring for this task:');
-      lines.push('| Artifact | Granted by | Activated by | Dependencies | Verify |');
-      lines.push('| --- | --- | --- | --- | --- |');
-      for (const r of reqs) {
-        const deps = (r.dependencies ?? []).join(', ') || '—';
-        lines.push(`| ${r.artifact} | ${r.grantedBy ?? '—'} | ${r.activatedBy ?? '—'} | ${deps} | ${r.verification ?? '—'} |`);
-      }
-    }
-
-    this._wiringRequirements = lines.join('\n');
+    this._wiringRequirements = formatWiringRequirements({ reqs });
     return this;
   }
 
