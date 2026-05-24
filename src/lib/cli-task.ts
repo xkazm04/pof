@@ -154,7 +154,8 @@ export type CLITaskType =
   | 'module-scan'
   | 'wbp-starter'
   | 'procgen-dungeon'
-  | 'biome-scatter';
+  | 'biome-scatter'
+  | 'mixamo-import';
 
 /** Task types that generate or modify UE code and therefore get a Wiring Requirements section. */
 const WIRING_TASK_TYPES = new Set<CLITaskType>(['checklist', 'quick-action', 'feature-fix']);
@@ -246,6 +247,20 @@ export interface BiomeScatterTask extends CLITask {
   appOrigin: string;
 }
 
+/**
+ * Mixamo-import task — runs the project's mixamo_pipeline.py via the FULL editor
+ * to import + retarget the FBX files the operator dropped into a watched folder,
+ * and reports how many animations landed through a callback.
+ */
+export interface MixamoImportTask extends CLITask {
+  type: 'mixamo-import';
+  /** Absolute path to the watched folder the operator dropped Mixamo FBX into. */
+  importDir: string;
+  /** Target skeleton content path to retarget onto (default SK_Mannequin). */
+  targetSkeleton: string;
+  appOrigin: string;
+}
+
 // ── Prompt assembly ─────────────────────────────────────────────────────────
 
 /**
@@ -296,7 +311,18 @@ export function buildTaskPrompt(task: CLITask, ctx: ProjectContext): string {
             })}`
           : '';
 
-      return `${header}${domainSection}\n\n## Task\n${task.prompt}${wiringBlock}\n\n${buildCallbackSection(getCallback(cbId)!)}${visualBlock}`;
+      const lightingBlock =
+        isUE5 && itemDef?.lightingCheck
+          ? `\n\n${buildVisualCheckSection({
+              projectPath: ctx.projectPath,
+              appOrigin: ct.appOrigin,
+              moduleId: task.moduleId,
+              itemId: ct.itemId,
+              mode: 'lighting',
+            })}`
+          : '';
+
+      return `${header}${domainSection}\n\n## Task\n${task.prompt}${wiringBlock}\n\n${buildCallbackSection(getCallback(cbId)!)}${visualBlock}${lightingBlock}`;
     }
 
     case 'quick-action':
@@ -558,6 +584,44 @@ Steps:
 ${buildCallbackSection(getCallback(cbId)!)}`;
     }
 
+    case 'mixamo-import': {
+      const mt = task as MixamoImportTask;
+      const header = buildProjectContextHeader(ctx);
+      const cbId = registerCallback({
+        url: `${mt.appOrigin}/api/animations/mixamo-result`,
+        method: 'POST',
+        staticFields: { moduleId: task.moduleId, importDir: mt.importDir },
+        schemaHint: '  "importedCount": <number of animations imported + retargeted>',
+      });
+      return `${header}
+
+## Task: Import + retarget Mixamo animations (mixamo_pipeline.py)
+
+The operator has downloaded animations from Mixamo and dropped the FBX files into
+a watched folder. Run the project's import/retarget pipeline over them.
+
+**Manual-download contract (verify the FBX, do not re-download):**
+- Files come from mixamo.com as **FBX Binary**, 30 FPS, one animation per file.
+- The first/character download is "**With Skin**" (creates the mesh+skeleton);
+  every animation is "**Without Skin**" to reuse one skeleton.
+- Locomotion (idle/walk/run) is "**In Place**"; attacks/dodges keep root motion.
+- Mixamo bones use the \`mixamorig:\` prefix — the pipeline strips/handles it on import.
+
+**Run the pipeline:**
+1. Find the \`.uproject\` under \`${ctx.projectPath}\` and the script at
+   \`${ctx.projectPath}/Content/Python/mixamo_pipeline.py\`.
+2. Run it via the FULL editor with the import dir + target skeleton as environment
+   variables — NOT \`-run=pythonscript\` (the Interchange FBX path crashes there).
+   PowerShell:
+   \`$env:MIXAMO_IMPORT_DIR="${mt.importDir}"; $env:MIXAMO_TARGET_SKELETON="${mt.targetSkeleton}"; & "<UnrealEditor.exe>" "<.uproject>" -ExecutePythonScript="<the script path above>" -unattended -nopause -nosplash\`
+3. The headless editor exits non-zero on a benign shutdown crash — judge by the
+   LOG, not the exit code. In the newest \`Saved/Logs/PoF*.log\`, find the pipeline's
+   \`unreal.ScopedSlowTask\` progress lines and the final imported/retargeted count.
+4. Submit the imported animation count via the callback below.
+
+${buildCallbackSection(getCallback(cbId)!)}`;
+    }
+
     default:
       return task.prompt;
   }
@@ -684,6 +748,24 @@ export const TaskFactory = {
       label,
       density: params.density,
       seed: params.seed,
+      appOrigin,
+    };
+  },
+
+  /** Create a task that imports + retargets dropped Mixamo FBX via mixamo_pipeline.py */
+  mixamoImport(
+    moduleId: SubModuleId,
+    params: { importDir: string; targetSkeleton: string },
+    appOrigin: string,
+    label: string,
+  ): MixamoImportTask {
+    return {
+      type: 'mixamo-import',
+      moduleId,
+      prompt: '', // assembled by buildTaskPrompt
+      label,
+      importDir: params.importDir,
+      targetSkeleton: params.targetSkeleton,
       appOrigin,
     };
   },

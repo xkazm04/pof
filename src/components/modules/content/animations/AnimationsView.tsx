@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useCallback } from 'react';
-import { Send, ListChecks, Workflow, Sparkles } from 'lucide-react';
+import { Send, ListChecks, Workflow, Sparkles, Download } from 'lucide-react';
 import { ReviewableModuleView } from '../../shared/ReviewableModuleView';
 import type { ExtraTab } from '../../shared/ReviewableModuleView';
 import { SUB_MODULE_MAP, getCategoryForSubModule, getModuleChecklist } from '@/lib/module-registry';
@@ -14,6 +14,7 @@ import { getAppOrigin } from '@/lib/constants';
 import { AnimationStateMachine } from './AnimationStateMachine';
 import { AnimationChecklist } from './AnimationChecklist';
 import { AIComboChoreographer } from './AIComboChoreographer';
+import { MixamoImport } from './MixamoImport';
 import type { ChecklistStep } from './AnimationChecklist';
 import { ACCENT_VIOLET, OPACITY_15, OPACITY_30 } from '@/lib/chart-colors';
 
@@ -100,6 +101,16 @@ export function AnimationsView() {
             completedSteps={completedSteps}
             onMarkComplete={handleMarkComplete}
           />
+        </div>
+      ),
+    },
+    {
+      id: 'mixamo',
+      label: 'Mixamo Import',
+      icon: Download,
+      render: () => (
+        <div className="max-w-2xl mx-auto p-4" data-testid="pof-module-animations-tab-mixamo">
+          <MixamoImport />
         </div>
       ),
     },
