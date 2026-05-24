@@ -4,6 +4,59 @@
 **Provenance:** [`docs/improvements/09-core-engine-generator/`](../../improvements/09-core-engine-generator/)
 (`README.md`, `pof-app.md`, `game.md`, `tests.md`, `ux-design.md`, `code-standards.md`).
 
+---
+
+## 0. REVISION 2026-05-24 — Extends merged "Step 1" (supersedes conflicting parts below)
+
+**A parallel CLI already built and merged folder-09 "Step 1"** (plan
+`docs/superpowers/plans/2026-05-23-catalog-step1-spellbook-retrofit.md`; commits
+`b9345fa → c80d832 → f0d7810 → bfde298`). Step-1 is a *tracking layer*:
+
+- `src/lib/catalog/types.ts` — minimal `CatalogEntityBase`
+  (`id, catalogId, name, categoryPath, tags, lifecycle`) + `AbilityEntry` whose
+  `data` reuses the existing `SpellbookAbility` UI shape. `LifecycleState`
+  (`planned→scaffolded→generated→wired→verified|failed`) is already defined.
+- `src/stores/catalogStore.ts` — Zustand+persist, **seed-only** (seeds from the
+  static `SPELLBOOK_ABILITIES`), `setEntities` + `useCatalogEntities`/
+  `useCatalogEntity`/`useSpellbookEntries` selectors, a re-seed `merge`.
+- `src/components/catalog/LifecycleBadge.tsx`; `AbilitySpellbook` unique-tab UI
+  retrofitted to read from the store; `catalog-seed` + store tests.
+
+**This revision reuses all of Step-1 unchanged** and re-scopes Round 1 to the
+*unbuilt, non-conflicting* layer that Step-1 explicitly anticipated:
+
+| Reuse from Step-1 (do not rebuild/replace) | Add (this revised Round 1) |
+|---|---|
+| `types.ts` `CatalogEntityBase`/`AbilityEntry`/`LifecycleState` | **Additive optional fields only:** `ueAssets?`, `lastTestResult?`, `lastVerifiedAt?` on `CatalogEntityBase` |
+| `catalogStore.ts` seed + selectors + `merge` | **Additive** gated `applyGenerationResult` action + `loadLifecycle` (merge DB lifecycle over seed) |
+| `seed-spellbook.ts`, `LifecycleBadge`, Spellbook UI | (consumed as-is; badge already renders lifecycle) |
+
+**Net Round-1 deliverables (revised):** `lifecycle.ts` (shared gate), zod
+`validation.ts` (callback payload), `catalog-db.ts` + `/api/catalog`
+(server-side lifecycle persistence — the dispatched-CLI `@@CALLBACK` target),
+the generation engine (`recipe.ts`/`batch.ts` + `PromptBuilder.withAssetSpec` +
+a `'generate'` `CLITaskType`/`TaskFactory.generate`), and the **live-UE Spellbook
+generate+verify** for `GA_Fireball`.
+
+**Corrections to the sections below:**
+- D1 (routing), the full `CatalogView` UI framework (§3.5), `design-tokens.ts`,
+  and `viz/` are **deferred** — Step-1 reuses the existing rich `AbilitySpellbook`
+  UI, so a new generic catalog UI is not Round-1 work. Round 1 surfaces generation
+  via the existing Spellbook tab (a "(Re)generate" affordance + the existing
+  `LifecycleBadge`), not a new framework.
+- D2 (scoped `max-lines` lint gate) still applies to any new `.tsx` (only
+  `LifecycleBadge` exists so far; keep new components ≤200 LOC).
+- D4/D5/D6/D7 (reuse `cli-task.ts`/`@@CALLBACK`, `ability-forge` knowledge,
+  functional-test gate, runtime `ProjectContext` path) are **unchanged**.
+- The richer entity model in §3.2 (`recipeId`/`links` as required fields) is
+  **dropped** for Round 1 — recipe is derived from `catalogId` (YAGNI); links
+  return when a section needs them.
+
+The phases in §4 are replaced by the phases in the revised plan
+(`2026-05-24-folder-09-generation-engine.md`).
+
+---
+
 ## 1. Scope
 
 Round 1 of the folder-09 roadmap: the **shared catalog substrate + generation
