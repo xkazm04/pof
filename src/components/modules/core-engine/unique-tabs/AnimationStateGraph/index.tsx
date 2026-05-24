@@ -1,11 +1,26 @@
 'use client';
 
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Activity, LayoutGrid } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { withOpacity, OPACITY_5, OPACITY_10, OPACITY_20, OPACITY_30 } from '@/lib/chart-colors';
 import { useTabFeatures } from '@/hooks/useTabFeatures';
-import { TabHeader, LoadingSpinner, HeatmapGrid, SubTabNavigation, CollapsibleSection, type SubTab } from '../_shared';
+import { useCatalogEntities } from '@/stores/catalogStore';
+import { useGeneration } from '@/hooks/useGeneration';
+import { CatalogLifecycleCell } from '@/components/catalog/CatalogLifecycleCell';
+import type { AnimationEntry } from '@/lib/catalog/types';
+import type { GenerationStep } from '@/lib/catalog/recipe';
+import { ALL_MONTAGES } from './data';
+import {
+  TabHeader,
+  LoadingSpinner,
+  HeatmapGrid,
+  SubTabNavigation,
+  CollapsibleSection,
+  NarrativeBreadcrumb,
+  type NarrativeBreadcrumbStep,
+  type SubTab,
+} from '../_shared';
 import type { SubModuleId } from '@/types/modules';
 import { ACCENT, HEATMAP_STATE_NAMES, HEATMAP_CELLS, COMBO_CHAIN_NODES, ANIM_SUBTABS, type AnimSubtab } from './data';
 import { BlueprintPanel, SectionHeader } from '../_design';
@@ -24,39 +39,12 @@ import FeatureMapTab from '../FeatureMapTab';
 import { VisibleSection } from '../VisibleSection';
 import { renderAnimMetric } from './metrics';
 
-/* ── Narrative Breadcrumb ──────────────────────────────────────────────── */
+/* ── Narrative Breadcrumb steps ────────────────────────────────────────── */
 
-const FEATURES_STEP = { key: 'features' as AnimSubtab, narrative: 'Catalog' };
-const NARRATIVE_STEPS = [FEATURES_STEP, ...ANIM_SUBTABS.map(t => ({ key: t.key, narrative: t.narrative }))];
-
-function NarrativeBreadcrumb({ activeTab, onNavigate }: { activeTab: AnimSubtab; onNavigate: (tab: AnimSubtab) => void }) {
-  const activeIdx = NARRATIVE_STEPS.findIndex(s => s.key === activeTab);
-  return (
-    <div className="flex items-center gap-0.5 text-[10px] font-mono tracking-wide overflow-x-auto custom-scrollbar pb-0.5">
-      {NARRATIVE_STEPS.map((step, i) => {
-        const isPast = i < activeIdx;
-        const isActive = i === activeIdx;
-        return (
-          <div key={step.key} className="flex items-center gap-0.5 flex-shrink-0">
-            {i > 0 && <span className="text-text-muted/40 mx-0.5">{'>'}</span>}
-            <button
-              onClick={() => onNavigate(step.key)}
-              className="px-1.5 py-0.5 rounded transition-all cursor-pointer"
-              style={{
-                color: isActive ? ACCENT : isPast ? withOpacity(ACCENT, '99') : 'var(--text-muted)',
-                backgroundColor: isActive ? withOpacity(ACCENT, OPACITY_10) : 'transparent',
-                fontWeight: isActive ? 700 : isPast ? 600 : 400,
-                opacity: !isActive && !isPast ? 0.5 : 1,
-              }}
-            >
-              {step.narrative}
-            </button>
-          </div>
-        );
-      })}
-    </div>
-  );
-}
+const NARRATIVE_STEPS: ReadonlyArray<NarrativeBreadcrumbStep<AnimSubtab>> = [
+  { key: 'features', narrative: 'Catalog' },
+  ...ANIM_SUBTABS.map((t) => ({ key: t.key, narrative: t.narrative })),
+];
 
 /* ── Active tab subtitle ──────────────────────────────────────────────── */
 
@@ -80,6 +68,25 @@ export function AnimationStateGraph({ moduleId }: AnimationStateGraphProps) {
   const [activeTab, setActiveTab] = useState<AnimSubtab>('state-graph');
   const [selectedComboNode, setSelectedComboNode] = useState<string | null>(null);
 
+  /* folder-09 R3 UI: lifecycle + (Re)generate for the primary montage.
+   * NB: the State Graph recipe loudly flags `author-python` as MANUAL — the AnimBP
+   * graph itself cannot be authored from Python. The cell still drives dispatch;
+   * the recipe's prompt text handles the MANUAL framing. */
+  const animEntries = useCatalogEntities('state-graph') as AnimationEntry[];
+  const entryByMontageId = useMemo(
+    () => new Map(animEntries.map((e) => [e.data.id, e])),
+    [animEntries],
+  );
+  const primaryMontageId = ALL_MONTAGES[0]?.id;
+  const primaryEntry =
+    (primaryMontageId != null ? entryByMontageId.get(primaryMontageId) : undefined)
+    ?? animEntries[0];
+  const gen = useGeneration(primaryEntry!);
+  const nextStep: GenerationStep =
+    primaryEntry?.lifecycle === 'generated' ? 'wire'
+      : primaryEntry?.lifecycle === 'wired' ? 'verify'
+        : 'author-python';
+
   if (isLoading) return <LoadingSpinner accent={ACCENT} />;
 
   const subtitle = getActiveSubtitle(activeTab);
@@ -89,10 +96,30 @@ export function AnimationStateGraph({ moduleId }: AnimationStateGraphProps) {
       <TabHeader icon={Activity} title="Animation State Graph" implemented={stats.implemented} total={stats.total} accent={ACCENT} />
 
       {/* ── Narrative Breadcrumb ─────────────────────────────────────────── */}
-      <NarrativeBreadcrumb activeTab={activeTab} onNavigate={setActiveTab} />
+      <NarrativeBreadcrumb
+        steps={NARRATIVE_STEPS}
+        activeKey={activeTab}
+        accent={ACCENT}
+        onNavigate={setActiveTab}
+      />
 
       {/* ── Sub-Tab Navigation ──────────────────────────────────────────── */}
       <SubTabNavigation tabs={TABS} activeTabId={activeTab} onChange={(id) => setActiveTab(id as AnimSubtab)} accent={ACCENT} />
+
+      {/* folder-09 R3: catalog lifecycle cell for the primary montage */}
+      {primaryEntry && (
+        <div className="flex items-center justify-between gap-2 px-1">
+          <span className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted">
+            {primaryEntry.data.name ?? primaryEntry.data.id}
+          </span>
+          <CatalogLifecycleCell
+            lifecycle={primaryEntry.lifecycle}
+            ueAssetCount={primaryEntry.ueAssets?.length ?? 0}
+            busy={gen.isRunning}
+            onRegenerate={() => gen.generate(nextStep)}
+          />
+        </div>
+      )}
 
       {/* ── Active Tab Subtitle ─────────────────────────────────────────── */}
       {subtitle && <p className="text-xs font-mono text-text-muted/70 -mt-1 mb-1 pl-0.5">{subtitle}</p>}
