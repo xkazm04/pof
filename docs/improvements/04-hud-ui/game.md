@@ -103,8 +103,8 @@ will look more "shipped" without it.
 ## Implementation status (2026-05-24)
 
 Plan: `docs/superpowers/plans/2026-05-24-hud-ui-04-game-reparent.md`. Game C++
-written to `xkazm04/pof-exp`; **uncommitted pending the operator's
-`Build.bat PoFEditor`** (the editor module build is monolithic + shared).
+**built green** (`Build.bat PoFEditor Win64 Development` = Succeeded) and
+**committed** to `xkazm04/pof-exp` (`2b50d45` code, `936fbbd` BP wiring).
 
 - **§1 `UARPGCodeWidgetBase`** — already shipped (`5be678c`); `UVSHUDWidget`
   reparented (`fa5bafb`).
@@ -124,8 +124,11 @@ written to `xkazm04/pof-exp`; **uncommitted pending the operator's
   `OnHealthChanged` callback when health drops.
 - **§6 debug text** — gated behind the `ARPG.ShowDebugStats` cvar (off by
   default) in `ARPGCharacterBase`/`ARPGPlayerCharacter`.
-- **§5 retire (GATED — not yet done):** switching `BP_VSGameMode.HUDClass` to
-  `AARPGHUD` (needs an in-editor Python BP edit) and deleting `UVSHUDWidget`/
-  `AVSHUD` is deferred until the operator confirms the reparented HUD renders
-  (build + launch/Gemini). Until then the slice stays on the known-good
-  `UVSHUDWidget`; `AVSHUDFunctionalTest` is untouched.
+- **§5 slice wiring — DONE:** `Tools/set_vs_gamemode_hud.py` flipped
+  `BP_VSGameMode.HUDClass` AVSHUD→`AARPGHUD` (verified idempotent on a fresh
+  headless load). The slice now uses the reparented real HUD.
+- **§5 retire (STILL GATED):** deleting `UVSHUDWidget`/`AVSHUD` + migrating
+  `AVSHUDFunctionalTest` is deferred until a launch render check confirms the
+  reparented `AARPGHUD` draws (the empty-bar / RebuildWidget failure class).
+  Until then both are kept as a fallback (still compiled; revert = one BP
+  change). `AVSHUDFunctionalTest` is untouched.
