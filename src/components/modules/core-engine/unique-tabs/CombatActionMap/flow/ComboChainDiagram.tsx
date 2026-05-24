@@ -10,6 +10,11 @@ import { BlueprintPanel, SectionHeader, NeonBar } from '../../_design';
 import { ACCENT, COMBO_SECTIONS } from '../data';
 import { COMBO_SEQUENCES } from '../data-metrics';
 import type { WeaponCategory } from '../data-metrics';
+import { useCatalogEntities } from '@/stores/catalogStore';
+import { useGeneration } from '@/hooks/useGeneration';
+import { CatalogLifecycleCell } from '@/components/catalog/CatalogLifecycleCell';
+import type { CombatInteractionEntry } from '@/lib/catalog/types';
+import type { GenerationStep } from '@/lib/catalog/recipe';
 
 const CATEGORIES: WeaponCategory[] = ['Sword', 'Axe', 'Mace', 'Bow', 'Staff', 'Dagger', 'Polearm'];
 const PAGE_SIZE = 6;
@@ -29,10 +34,34 @@ export function ComboChainDiagram({ status }: { status: FeatureStatus }) {
   const paged = filtered.slice(safePages * PAGE_SIZE, (safePages + 1) * PAGE_SIZE);
   const maxDps = Math.max(...COMBO_SEQUENCES.map(c => c.dps), 1);
 
+  /* folder-09 R3 UI: lifecycle + (Re)generate for the primary visible combo. */
+  const comboEntries = useCatalogEntities('combat-map') as CombatInteractionEntry[];
+  const entryByComboId = useMemo(
+    () => new Map(comboEntries.map((e) => [e.data.id, e])),
+    [comboEntries],
+  );
+  const primaryComboId = paged[0]?.id;
+  const primaryEntry =
+    (primaryComboId != null ? entryByComboId.get(primaryComboId) : undefined)
+    ?? comboEntries[0];
+  const gen = useGeneration(primaryEntry!);
+  const nextStep: GenerationStep =
+    primaryEntry?.lifecycle === 'generated' ? 'wire'
+      : primaryEntry?.lifecycle === 'wired' ? 'verify'
+        : 'author-python';
+
   return (
     <BlueprintPanel color={ACCENT} className="p-3">
       <div className="flex items-center gap-4 mb-2">
         <SectionHeader label="Combo Chain Analysis" color={ACCENT} icon={Play} />
+        {primaryEntry && (
+          <CatalogLifecycleCell
+            lifecycle={primaryEntry.lifecycle}
+            ueAssetCount={primaryEntry.ueAssets?.length ?? 0}
+            busy={gen.isRunning}
+            onRegenerate={() => gen.generate(nextStep)}
+          />
+        )}
         <span className="text-2xs px-2 py-0.5 rounded-md ml-auto" style={{ backgroundColor: sc.bg, color: sc.dot }}>
           {sc.label}
         </span>
