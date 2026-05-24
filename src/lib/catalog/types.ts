@@ -1,4 +1,6 @@
 import type { SpellbookAbility } from '@/components/modules/core-engine/unique-tabs/AbilitySpellbook/data';
+import type { ItemData } from '@/components/modules/core-engine/unique-tabs/ItemCatalog/data';
+import type { EnemyLootBinding } from '@/components/modules/core-engine/unique-tabs/LootTableVisualizer/data-binding';
 
 /** Where a catalog entity is in the generate-into-UE pipeline. */
 export type LifecycleState =
@@ -30,6 +32,25 @@ export interface AbilityEntry extends CatalogEntityBase {
   catalogId: 'spellbook';
   data: SpellbookAbility;
 }
+
+/** Items catalog entity — payload reuses the existing ItemCatalog UI shape. */
+export interface ItemEntry extends CatalogEntityBase {
+  catalogId: 'items';
+  data: ItemData;
+}
+
+/** Loot-table catalog entity — payload reuses the existing enemy→loot binding shape. */
+export interface LootTableEntry extends CatalogEntityBase {
+  catalogId: 'loot-tables';
+  data: EnemyLootBinding;
+}
+
+/**
+ * Generic stored shape used by the entity-generic dispatch path: any catalog
+ * entity carries a `data` blob opaque to the dispatch (each section's recipe
+ * knows how to interpret its own `data`).
+ */
+export type StoredCatalogEntity = CatalogEntityBase & { data?: unknown };
 
 /**
  * A lifecycle/generation record persisted server-side (DB) and merged over the
