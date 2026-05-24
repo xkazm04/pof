@@ -7,6 +7,7 @@ import { CombatActionMap } from './CombatActionMap';
 import { AbilitySpellbook } from './AbilitySpellbook';
 import { LootTableVisualizer } from './LootTableVisualizer';
 import { CharacterBlueprint } from './CharacterBlueprint';
+import { CharacterSourceWizard } from '../arpg-character/CharacterSourceWizard';
 import { AnimationStateGraph } from './AnimationStateGraph';
 import { ScreenFlowMap } from './ScreenFlowMap';
 import { SaveDataSchema } from './SaveDataSchema';
@@ -89,9 +90,14 @@ const UNIQUE_TAB_MAP: Partial<Record<SubModuleId, ExtraTab>> = {
   },
   'arpg-character': {
     id: 'blueprint',
-    label: 'Blueprint',
+    label: 'Character',
     icon: User,
-    render: (mid) => <CharacterBlueprint moduleId={mid} />,
+    render: (mid) => (
+      <div className="flex flex-col gap-4">
+        <CharacterSourceWizard moduleId={mid} />
+        <CharacterBlueprint moduleId={mid} />
+      </div>
+    ),
   },
   'arpg-animation': {
     id: 'state-graph',
