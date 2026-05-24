@@ -28,28 +28,28 @@ export function ComparisonMatrix({ selected, onSelectionChange }: ComparisonMatr
   );
 
   return (
-    <BlueprintPanel className="p-4" color={ACCENT_VIOLET}>
+    <BlueprintPanel className="p-3" color={ACCENT_VIOLET}>
       <SectionHeader icon={BarChart3} label="Character Comparison" color={ACCENT_VIOLET} />
 
       {/* Selected characters + Add button */}
-      <div className="flex items-center gap-2 mb-4 flex-wrap">
+      <div className="flex items-center gap-1.5 mb-3 flex-wrap">
         {visibleCharacters.map(ch => (
-          <span key={ch.id} className="flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-mono font-bold border"
+          <span key={ch.id} className="flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-mono font-bold border"
             style={{
               borderColor: withOpacity(ch.color, OPACITY_22),
               color: ch.color,
               backgroundColor: withOpacity(ch.color, OPACITY_8),
             }}>
-            <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: ch.color }} />
+            <span className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ backgroundColor: ch.color }} />
             {ch.name}
           </span>
         ))}
         <button
           onClick={() => setSelectorOpen(true)}
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-mono font-bold border border-dashed border-border/50 text-text-muted hover:text-text hover:border-border transition-colors cursor-pointer"
+          className="flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-mono font-bold border border-dashed border-border/50 text-text-muted hover:text-text hover:border-border transition-colors cursor-pointer"
         >
           <Plus className="w-3 h-3" />
-          Add Character
+          Add
         </button>
         <span className="ml-auto text-xs font-mono text-text-muted flex items-center gap-1">
           <Users className="w-3 h-3" />
@@ -84,9 +84,9 @@ export function ComparisonMatrix({ selected, onSelectionChange }: ComparisonMatr
         <table className="w-full text-xs border-collapse font-mono">
           <thead>
             <tr className="border-b" style={{ borderColor: withOpacity(OVERLAY_WHITE, OPACITY_5) }}>
-              <th className="text-left py-2 pr-4 text-xs font-bold uppercase tracking-[0.15em] text-text-muted w-24">Stat</th>
+              <th className="text-left py-1.5 pr-3 text-[10px] font-bold uppercase tracking-[0.12em] text-text-muted w-20">Stat</th>
               {visibleCharacters.map(ch => (
-                <th key={ch.id} className="py-2 px-3 text-xs font-bold uppercase tracking-[0.15em] text-center"
+                <th key={ch.id} className="py-1.5 px-2 text-[11px] font-bold uppercase tracking-[0.12em] text-center"
                   style={{ color: ch.color }}>
                   {ch.name}
                 </th>
@@ -106,7 +106,7 @@ export function ComparisonMatrix({ selected, onSelectionChange }: ComparisonMatr
                   className="border-b hover:bg-surface/20 transition-colors"
                   style={{ borderColor: withOpacity(OVERLAY_WHITE, OPACITY_5) }}
                 >
-                  <td className="py-3 pr-4 font-bold text-text-muted">
+                  <td className="py-2 pr-3 font-bold text-text-muted text-[11px]">
                     {stat.stat}
                     {stat.unit && <span className="text-[9px] opacity-50 ml-0.5">({stat.unit})</span>}
                   </td>
@@ -115,10 +115,10 @@ export function ComparisonMatrix({ selected, onSelectionChange }: ComparisonMatr
                     const barPct = (val / stat.maxVal) * 100;
                     const isBest = val === maxV && visibleCharacters.length > 1;
                     return (
-                      <td key={ch.id} className="py-3 px-3">
-                        <div className="flex flex-col items-center gap-1.5">
-                          <NeonBar pct={barPct} color={ch.color} height={6} glow={isBest} />
-                          <span className="flex items-center gap-1 tabular-nums" style={{
+                      <td key={ch.id} className="py-2 px-2">
+                        <div className="flex flex-col items-center gap-1">
+                          <NeonBar pct={barPct} color={ch.color} height={4} glow={isBest} />
+                          <span className="flex items-center gap-0.5 tabular-nums text-[11px]" style={{
                             color: isBest ? STATUS_SUCCESS : 'var(--text)',
                             fontWeight: isBest ? 700 : 500,
                           }}>
