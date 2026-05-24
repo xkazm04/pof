@@ -4,7 +4,7 @@ import { motion, useReducedMotion } from 'framer-motion';
 import { Plus } from 'lucide-react';
 import { OPACITY_15, OPACITY_30 } from '@/lib/chart-colors';
 import { FOCUS_RING_CLASS, focusRingStyle } from '@/lib/ui/focus-ring';
-import type { ComboAbility } from '@/components/modules/core-engine/unique-tabs/AbilitySpellbook.data';
+import type { ComboAbility } from '@/components/modules/core-engine/sub_ability/_shared/AbilitySpellbook.data';
 
 export function AbilityChip({ ability, onAdd }: { ability: ComboAbility; onAdd: (id: string) => void }) {
   const prefersReduced = useReducedMotion();

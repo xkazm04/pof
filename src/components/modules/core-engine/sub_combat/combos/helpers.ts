@@ -1,4 +1,4 @@
-import { COMBO_ABILITY_MAP } from '@/components/modules/core-engine/unique-tabs/AbilitySpellbook.data';
+import { COMBO_ABILITY_MAP } from '@/components/modules/core-engine/sub_ability/_shared/AbilitySpellbook.data';
 
 export const TIMELINE_PX_PER_SEC = 160;
 

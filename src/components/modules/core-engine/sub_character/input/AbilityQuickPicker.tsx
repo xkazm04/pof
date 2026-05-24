@@ -2,7 +2,7 @@
 import React, { useState, useMemo } from 'react';
 import { Search } from 'lucide-react';
 import { ACCENT_EMERALD, OPACITY_8, OPACITY_15, withOpacity } from '@/lib/chart-colors';
-import { COMBO_ABILITIES } from '../../unique-tabs/AbilitySpellbook/data';
+import { COMBO_ABILITIES } from '../../sub_ability/_shared/data';
 
 interface AbilityQuickPickerProps {
   onSelect?: (abilityId: string) => void;

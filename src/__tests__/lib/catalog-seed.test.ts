@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { abilityToEntry, seedSpellbookEntries } from '@/lib/catalog/seed-spellbook';
-import { SPELLBOOK_ABILITIES } from '@/components/modules/core-engine/unique-tabs/AbilitySpellbook/data';
+import { SPELLBOOK_ABILITIES } from '@/components/modules/core-engine/sub_ability/_shared/data';
 
 describe('abilityToEntry', () => {
   const a = SPELLBOOK_ABILITIES[0];

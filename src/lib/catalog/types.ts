@@ -1,4 +1,4 @@
-import type { SpellbookAbility } from '@/components/modules/core-engine/unique-tabs/AbilitySpellbook/data';
+import type { SpellbookAbility } from '@/components/modules/core-engine/sub_ability/_shared/data';
 import type { ItemData } from '@/components/modules/core-engine/unique-tabs/ItemCatalog/data';
 import type { EnemyLootBinding } from '@/components/modules/core-engine/unique-tabs/LootTableVisualizer/data-binding';
 import type { ArchetypeConfig } from '@/components/modules/core-engine/sub_bestiary/_shared/data';

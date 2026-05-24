@@ -7,7 +7,7 @@ import { ACCENT_ORANGE, OVERLAY_WHITE, OPACITY_20,
   withOpacity, OPACITY_3, OPACITY_5, OPACITY_37,
 } from '@/lib/chart-colors';
 import { motionSafe } from '@/lib/motion';
-import type { ComboAbility } from '@/components/modules/core-engine/unique-tabs/AbilitySpellbook.data';
+import type { ComboAbility } from '@/components/modules/core-engine/sub_ability/_shared/AbilitySpellbook.data';
 import { BlueprintPanel, SectionHeader } from './design';
 
 export function CooldownOverlapChart({ chain, totalDuration }: { chain: ComboAbility[]; totalDuration: number }) {

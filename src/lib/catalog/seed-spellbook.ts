@@ -1,7 +1,7 @@
 import {
   SPELLBOOK_ABILITIES,
   type SpellbookAbility,
-} from '@/components/modules/core-engine/unique-tabs/AbilitySpellbook/data';
+} from '@/components/modules/core-engine/sub_ability/_shared/data';
 import type { AbilityEntry } from './types';
 
 /** Convert one static SpellbookAbility into a catalog AbilityEntry. */

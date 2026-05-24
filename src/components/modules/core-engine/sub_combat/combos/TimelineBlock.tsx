@@ -6,7 +6,7 @@ import { ChevronRight, X } from 'lucide-react';
 import { ACCENT_GREEN, ACCENT_RED, OVERLAY_WHITE, OPACITY_25, OPACITY_30, OPACITY_50, GLOW_MD, withOpacity,
   OPACITY_8,
 } from '@/lib/chart-colors';
-import type { ComboAbility } from '@/components/modules/core-engine/unique-tabs/AbilitySpellbook.data';
+import type { ComboAbility } from '@/components/modules/core-engine/sub_ability/_shared/AbilitySpellbook.data';
 import { TIMELINE_PX_PER_SEC } from './helpers';
 
 /* ── Timeline block ─────────────────────────────────────────────────── */

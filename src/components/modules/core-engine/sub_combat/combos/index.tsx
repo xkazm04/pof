@@ -15,7 +15,7 @@ import {
   COMBO_ABILITIES, COMBO_ABILITY_MAP, COMBO_EVENT_TAGS,
   PRESET_COMBOS,
   type ComboAbility, type ComboChain,
-} from '@/components/modules/core-engine/unique-tabs/AbilitySpellbook.data';
+} from '@/components/modules/core-engine/sub_ability/_shared/AbilitySpellbook.data';
 import { FOCUS_RING_CLASS, focusRingStyle } from '@/lib/ui/focus-ring';
 import { BlueprintPanel, SectionHeader, GlowStat } from './design';
 import { AbilityChip } from './AbilityChip';

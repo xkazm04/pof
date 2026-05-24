@@ -9,7 +9,7 @@
  * so the LLM can match existing code style and tag conventions.
  */
 
-import type { ComboAbility } from '@/components/modules/core-engine/unique-tabs/AbilitySpellbook.data';
+import type { ComboAbility } from '@/components/modules/core-engine/sub_ability/_shared/AbilitySpellbook.data';
 
 /* ── Tag registry from ARPGGameplayTags.h ─────────────────────────────── */
 
@@ -128,6 +128,20 @@ export interface ForgeInput {
   description: string;
   comboAbilities: ComboAbility[];
   radarData: { name: string; values: number[] }[];
+  /**
+   * When present, the forge runs in refinement mode: instead of generating
+   * from scratch it takes a previously-forged ability and applies a single
+   * follow-up instruction ("make it AoE", "cut mana cost 30%"), returning the
+   * complete updated ability in the same schema.
+   */
+  refine?: ForgeRefinement;
+}
+
+export interface ForgeRefinement {
+  /** The ability the designer is iterating on. */
+  prior: ForgedAbility;
+  /** The natural-language follow-up, e.g. "add a 2s stun". */
+  instruction: string;
 }
 
 export interface ForgedAbility {
@@ -159,19 +173,51 @@ export interface ForgedAbility {
 
 /* ── Prompt builder ──────────────────────────────────────────────────── */
 
+/** Task framing for a fresh, one-shot generation. */
+function buildGenerateTask(input: ForgeInput): string {
+  return `## Task: Generate a GameplayAbility Class
+
+Given the following natural-language description, generate a complete GA_* class (header + cpp) that follows the existing project conventions.
+
+### User's Ability Description
+"${input.description}"`;
+}
+
+/** Task framing for an iterative refinement of an already-forged ability. */
+function buildRefineTask(input: ForgeInput, refine: ForgeRefinement): string {
+  const priorJson = JSON.stringify(refine.prior, null, 2);
+  return `## Task: Refine an Existing Ability
+
+You previously forged the ability below. The designer wants to iterate on it with a single follow-up instruction. Apply that instruction, keep everything else consistent, and return the COMPLETE updated ability in the exact same JSON schema.
+
+### Designer's Refinement Instruction
+"${refine.instruction}"
+
+### Original Concept (for reference)
+"${input.description}"
+
+### Current Ability (the JSON to refine)
+${priorJson}
+
+### Refinement Rules
+- Only change what the instruction asks for; preserve unrelated stats, tags, and code so the diff stays minimal.
+- Keep the same className unless the instruction fundamentally changes the ability's identity.
+- Re-derive dependent values where the change implies them (e.g. adding AoE should raise the AOE radar value and add a sweep/overlap in code; cutting mana should lower manaCost and AbilityManaCost in the constructor).
+- Regenerate headerCode and cppCode in full so they remain compilable and reflect the change — do not return diffs or fragments.`;
+}
+
 export function buildAbilityForgePrompt(input: ForgeInput): string {
   const tagRegistry = Object.entries(KNOWN_TAGS)
     .map(([cat, tags]) => `  ${cat}: ${tags.join(', ')}`)
     .join('\n');
 
+  const task = input.refine
+    ? buildRefineTask(input, input.refine)
+    : buildGenerateTask(input);
+
   return `You are an expert UE5 C++ Gameplay Ability System (GAS) developer for the PoF ARPG project.
 
-## Task: Generate a GameplayAbility Class
-
-Given the following natural-language description, generate a complete GA_* class (header + cpp) that follows the existing project conventions.
-
-### User's Ability Description
-"${input.description}"
+${task}
 
 ## Existing Project Context
 

@@ -4,7 +4,7 @@ import type { ExtraTab } from '../../shared/ReviewableModuleView';
 import type { SubModuleId } from '@/types/modules';
 import { Swords, BookOpen, Brain, Package, Coins, Monitor, TrendingUp, Map, Save, Wrench, User, Activity } from 'lucide-react';
 import { CombatActionMap } from '../sub_combat';
-import { AbilitySpellbook } from './AbilitySpellbook';
+import { AbilitySpellbook } from '../sub_ability';
 import { LootTableVisualizer } from './LootTableVisualizer';
 import { CharacterBlueprint } from '../sub_character';
 import { CharacterSourceWizard } from '../sub_character/wizard/CharacterSourceWizard';

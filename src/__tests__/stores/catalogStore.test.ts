@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { useCatalogStore } from '@/stores/catalogStore';
-import { SPELLBOOK_ABILITIES } from '@/components/modules/core-engine/unique-tabs/AbilitySpellbook/data';
+import { SPELLBOOK_ABILITIES } from '@/components/modules/core-engine/sub_ability/_shared/data';
 
 describe('useCatalogStore', () => {
   it('seeds the spellbook catalog from SPELLBOOK_ABILITIES', () => {
