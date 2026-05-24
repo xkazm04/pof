@@ -5,8 +5,8 @@ import { Network } from 'lucide-react';
 import { ACCENT_PINK, OVERLAY_WHITE,
   withOpacity, OPACITY_50, OPACITY_25, OPACITY_12, OPACITY_20, GLOW_SM,
 } from '@/lib/chart-colors';
-import { BlueprintPanel, SectionHeader } from '../../_design';
-import { FLOW_NODES, FLOW_EDGES, FLOW_GROUP_COLORS } from '../data';
+import { BlueprintPanel, SectionHeader } from '../../unique-tabs/_design';
+import { FLOW_NODES, FLOW_EDGES, FLOW_GROUP_COLORS } from '../_shared/data';
 
 const ACCENT = ACCENT_PINK;
 

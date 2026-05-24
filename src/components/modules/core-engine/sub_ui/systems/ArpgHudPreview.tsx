@@ -8,7 +8,7 @@ import {
   withOpacity, OPACITY_8, OPACITY_20, OPACITY_30, OPACITY_37, OPACITY_50, OPACITY_90,
   GLOW_SM, GLOW_MD, GLOW_LG,
 } from '@/lib/chart-colors';
-import { BlueprintPanel, SectionHeader } from '../../_design';
+import { BlueprintPanel, SectionHeader } from '../../unique-tabs/_design';
 
 const ACCENT = ACCENT_PINK;
 

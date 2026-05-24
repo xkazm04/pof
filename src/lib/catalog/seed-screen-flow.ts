@@ -1,4 +1,4 @@
-import { FLOW_NODES } from '@/components/modules/core-engine/unique-tabs/ScreenFlowMap/data';
+import { FLOW_NODES } from '@/components/modules/core-engine/sub_ui/_shared/data';
 import type { GraphNode } from '@/types/unique-tab-improvements';
 import type { ScreenEntry } from './types';
 

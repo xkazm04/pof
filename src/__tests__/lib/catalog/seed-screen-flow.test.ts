@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { screenNodeToEntry, seedScreenEntries } from '@/lib/catalog/seed-screen-flow';
-import { FLOW_NODES } from '@/components/modules/core-engine/unique-tabs/ScreenFlowMap/data';
+import { FLOW_NODES } from '@/components/modules/core-engine/sub_ui/_shared/data';
 
 describe('screenNodeToEntry', () => {
   const n0 = FLOW_NODES[0];

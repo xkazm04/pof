@@ -7,16 +7,16 @@ import { ACCENT_PINK, STATUS_WARNING,
   withOpacity, OPACITY_10, OPACITY_20, OPACITY_50,
 } from '@/lib/chart-colors';
 import { useTabFeatures } from '@/hooks/useTabFeatures';
-import { TabHeader, LoadingSpinner, SubTabNavigation } from '../_shared';
-import type { SubTab } from '../_shared';
+import { TabHeader, LoadingSpinner, SubTabNavigation } from '../unique-tabs/_shared';
+import type { SubTab } from '../unique-tabs/_shared';
 import type { SubModuleId } from '@/types/modules';
 import { FlowNodesTab } from './flow/FlowNodesTab';
 import { SystemsTab } from './systems/SystemsTab';
 import { UIBindingsTab } from './ui/UIBindingsTab';
 import { AccessibilityTab } from './accessibility/AccessibilityTab';
 import { ArpgHudPreview } from './systems/ArpgHudPreview';
-import FeatureMapTab from '../FeatureMapTab';
-import { VisibleSection } from '../VisibleSection';
+import FeatureMapTab from '../unique-tabs/FeatureMapTab';
+import { VisibleSection } from '../unique-tabs/VisibleSection';
 
 const ACCENT = ACCENT_PINK;
 

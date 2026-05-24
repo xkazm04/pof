@@ -2,17 +2,17 @@ import type { PillItem } from '@/components/ui/InteractivePill';
 import {
   HUD_CONTEXTS,
   WIDGET_PLACEMENTS,
-} from '../ScreenFlowMap/data';
-import type { WidgetPlacement } from '../ScreenFlowMap/data';
+} from '../_shared/data';
+import type { WidgetPlacement } from '../_shared/data';
 
-export type { HudContext, WidgetPlacement } from '../ScreenFlowMap/data';
+export type { HudContext, WidgetPlacement } from '../_shared/data';
 export {
   HUD_CONTEXTS,
   WIDGET_PLACEMENTS,
   WIDGET_Z_COLOR,
   Z_DEPTH_LABELS,
   Z_LAYERS,
-} from '../ScreenFlowMap/data';
+} from '../_shared/data';
 
 /* ── Constants ─────────────────────────────────────────────────────────────── */
 

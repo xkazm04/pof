@@ -7,14 +7,14 @@ import {
   ACCENT_PINK, ACCENT_CYAN, ACCENT_CYAN_LIGHT, OVERLAY_WHITE, STATUS_SUCCESS, STATUS_WARNING, STATUS_ERROR,
   withOpacity, OPACITY_10, OPACITY_20, OPACITY_30,
 } from '@/lib/chart-colors';
-import { BlueprintPanel, SectionHeader } from '../../_design';
+import { BlueprintPanel, SectionHeader } from '../../unique-tabs/_design';
 import { InteractivePill } from '@/components/ui/InteractivePill';
 import {
   BREAKPOINTS, BREAKPOINT_PILLS, BREAKPOINT_WIDGETS,
   SM_NODES, SM_EDGES, INPUT_MODE_COLORS,
   WIDGET_BINDINGS, ANIM_CATALOG,
-} from '../data';
-import type { InputMode } from '../data';
+} from '../_shared/data';
+import type { InputMode } from '../_shared/data';
 
 const ACCENT = ACCENT_PINK;
 

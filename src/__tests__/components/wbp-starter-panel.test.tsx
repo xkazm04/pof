@@ -6,7 +6,7 @@ vi.mock('@/hooks/useModuleCLI', () => ({
   useModuleCLI: () => ({ execute: mockExecute, sendPrompt: vi.fn(), isRunning: false }),
 }));
 
-import { WBPStarterPanel } from '@/components/modules/core-engine/arpg-ui/WBPStarterPanel';
+import { WBPStarterPanel } from '@/components/modules/core-engine/sub_ui/wbp-starter/WBPStarterPanel';
 
 beforeEach(() => vi.clearAllMocks());
 afterEach(() => cleanup());

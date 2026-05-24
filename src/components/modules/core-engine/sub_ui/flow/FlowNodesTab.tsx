@@ -6,11 +6,11 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { ACCENT_PINK, STATUS_WARNING,
   withOpacity, OPACITY_10, OPACITY_12, OPACITY_25,
 } from '@/lib/chart-colors';
-import { BlueprintPanel, SectionHeader } from '../../_design';
-import { STATUS_COLORS } from '../../_shared';
+import { BlueprintPanel, SectionHeader } from '../../unique-tabs/_design';
+import { STATUS_COLORS } from '../../unique-tabs/_shared';
 import type { FeatureRow, FeatureStatus } from '@/types/feature-matrix';
-import { HUD_CHILDREN, HUD_OVERLAYS, FLOATING_NODES, INPUT_MODE_COLORS, SCREEN_TO_FLOW, FLOW_NODES } from '../data';
-import type { InputMode } from '../data';
+import { HUD_CHILDREN, HUD_OVERLAYS, FLOATING_NODES, INPUT_MODE_COLORS, SCREEN_TO_FLOW, FLOW_NODES } from '../_shared/data';
+import type { InputMode } from '../_shared/data';
 import { ScreenNodeRow, InputModeBadge } from './ScreenNodeRow';
 import { FlowGraph } from './FlowGraph';
 import { useCatalogEntities } from '@/stores/catalogStore';

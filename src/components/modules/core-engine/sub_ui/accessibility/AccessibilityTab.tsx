@@ -6,12 +6,12 @@ import { motion } from 'framer-motion';
 import { ACCENT_PINK, STATUS_SUCCESS, STATUS_WARNING, STATUS_ERROR,
   withOpacity, OPACITY_8, OPACITY_10, OPACITY_30,
 } from '@/lib/chart-colors';
-import { BlueprintPanel, SectionHeader, GlowStat, NeonBar } from '../../_design';
+import { BlueprintPanel, SectionHeader, GlowStat, NeonBar } from '../../unique-tabs/_design';
 import { InteractivePill } from '@/components/ui/InteractivePill';
 import {
   LANGUAGES, LANGUAGE_PILLS,
   A11Y_OVERALL_GRADE, A11Y_OVERALL_SCORE, A11Y_CATEGORIES,
-} from '../data';
+} from '../_shared/data';
 
 const ACCENT = ACCENT_PINK;
 

@@ -7,7 +7,7 @@ import { ACCENT_PINK, OPACITY_20, OPACITY_30,
   withOpacity, OPACITY_5, OPACITY_37, OPACITY_56, OPACITY_8, OPACITY_10,
 } from '@/lib/chart-colors';
 import { InteractivePill } from '@/components/ui/InteractivePill';
-import { BlueprintPanel, SectionHeader } from '../_design';
+import { BlueprintPanel, SectionHeader } from '../../unique-tabs/_design';
 import { WidgetRect } from './WidgetRect';
 import {
   VIEWPORT_ASPECT, ALL_WIDGETS, CONTEXT_PILLS, HUD_CONTEXTS,

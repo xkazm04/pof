@@ -9,14 +9,14 @@ import { LootTableVisualizer } from '../sub_loot';
 import { CharacterBlueprint } from '../sub_character';
 import { CharacterSourceWizard } from '../sub_character/wizard/CharacterSourceWizard';
 import { AnimationStateGraph } from '../sub_animation';
-import { ScreenFlowMap } from './ScreenFlowMap';
+import { ScreenFlowMap } from '../sub_ui';
 import { SaveDataSchema } from '../sub_save';
 import { DebugDashboard } from '../sub_debug';
 import { ProgressionCurve } from '../sub_progression';
 import { ZoneMap } from '../sub_world';
 import { EnemyBestiary } from '../sub_bestiary';
 import { ItemCatalog } from '../sub_inventory';
-import { WBPStarterPanel } from '../arpg-ui/WBPStarterPanel';
+import { WBPStarterPanel } from '../sub_ui/wbp-starter/WBPStarterPanel';
 
 /**
  * Registry of unique domain-specific tabs for each core engine submodule.

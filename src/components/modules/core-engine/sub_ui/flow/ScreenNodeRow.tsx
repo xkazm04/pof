@@ -6,11 +6,11 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { ACCENT_PINK, STATUS_WARNING,
   withOpacity, OPACITY_10, OPACITY_25, OPACITY_8, OPACITY_20,
 } from '@/lib/chart-colors';
-import { BlueprintPanel } from '../../_design';
-import { STATUS_COLORS } from '../../_shared';
+import { BlueprintPanel } from '../../unique-tabs/_design';
+import { STATUS_COLORS } from '../../unique-tabs/_shared';
 import type { FeatureRow, FeatureStatus } from '@/types/feature-matrix';
-import type { ScreenNode, InputMode } from '../data';
-import { INPUT_MODE_COLORS } from '../data';
+import type { ScreenNode, InputMode } from '../_shared/data';
+import { INPUT_MODE_COLORS } from '../_shared/data';
 
 const ACCENT = ACCENT_PINK;
 

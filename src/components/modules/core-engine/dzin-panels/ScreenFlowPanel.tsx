@@ -17,7 +17,7 @@ import {
   FLOW_NODES,
   FLOW_EDGES,
   SM_NODES,
-} from '@/components/modules/core-engine/unique-tabs/ScreenFlowMap/data';
+} from '@/components/modules/core-engine/sub_ui/_shared/data';
 
 /* ── Props ──────────────────────────────────────────────────────────────── */
 

@@ -16,7 +16,7 @@ import type { FeatureRow } from '@/types/feature-matrix';
 import {
   HUD_CONTEXTS,
   WIDGET_PLACEMENTS,
-} from '@/components/modules/core-engine/unique-tabs/ScreenFlowMap/data';
+} from '@/components/modules/core-engine/sub_ui/_shared/data';
 
 /* ── Props ──────────────────────────────────────────────────────────────── */
 

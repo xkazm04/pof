@@ -4,10 +4,10 @@ import { useMemo } from 'react';
 import { Gauge, Layers, AlertCircle } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { ACCENT_PINK, STATUS_SUCCESS, STATUS_WARNING, STATUS_ERROR } from '@/lib/chart-colors';
-import { BlueprintPanel, SectionHeader, NeonBar } from '../../_design';
-import { HudCompositor } from '../../HudCompositor';
+import { BlueprintPanel, SectionHeader, NeonBar } from '../../unique-tabs/_design';
+import { HudCompositor } from '../hud-compositor';
 import { ArpgHudPreview } from './ArpgHudPreview';
-import { PERFORMANCE_BUDGETS, Z_LAYERS } from '../data';
+import { PERFORMANCE_BUDGETS, Z_LAYERS } from '../_shared/data';
 
 const ACCENT = ACCENT_PINK;
 

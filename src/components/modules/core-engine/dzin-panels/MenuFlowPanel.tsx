@@ -18,7 +18,7 @@ import {
   ANIM_CATALOG,
   A11Y_CATEGORIES,
   A11Y_OVERALL_GRADE,
-} from '@/components/modules/core-engine/unique-tabs/ScreenFlowMap/data';
+} from '@/components/modules/core-engine/sub_ui/_shared/data';
 
 /* ── Props ──────────────────────────────────────────────────────────────── */
 
