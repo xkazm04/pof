@@ -21,6 +21,11 @@ import { PoiEncountersGroup } from './travel/PoiEncountersGroup';
 import { TravelProgressionGroup } from './travel/TravelProgressionGroup';
 import FeatureMapTab from '../FeatureMapTab';
 import { VisibleSection } from '../VisibleSection';
+import { useCatalogEntities } from '@/stores/catalogStore';
+import { useGeneration } from '@/hooks/useGeneration';
+import { CatalogLifecycleCell } from '@/components/catalog/CatalogLifecycleCell';
+import type { ZoneEntry } from '@/lib/catalog/types';
+import type { GenerationStep } from '@/lib/catalog/recipe';
 
 const ACCENT = ACCENT_CYAN;
 
@@ -49,6 +54,22 @@ export function ZoneMap({ moduleId }: ZoneMapProps) {
     [playerLevel],
   );
   const matchingIds = useMemo(() => new Set(matchingZones.map(z => z.id)), [matchingZones]);
+
+  /* folder-09 R3 UI: lifecycle + (Re)generate for the primary (first matching) zone. */
+  const zoneEntries = useCatalogEntities('zone-map') as ZoneEntry[];
+  const entryByZoneId = useMemo(
+    () => new Map(zoneEntries.map((e) => [e.data.id, e])),
+    [zoneEntries],
+  );
+  const primaryZoneId = matchingZones[0]?.id ?? ZONES[0]?.id;
+  const primaryEntry =
+    (primaryZoneId != null ? entryByZoneId.get(primaryZoneId) : undefined)
+    ?? zoneEntries[0];
+  const gen = useGeneration(primaryEntry!);
+  const nextStep: GenerationStep =
+    primaryEntry?.lifecycle === 'generated' ? 'wire'
+      : primaryEntry?.lifecycle === 'wired' ? 'verify'
+        : 'author-python';
   const toggleGroup = useCallback((idx: number) => {
     setOpenGroups(prev => {
       const next = new Set(prev);
@@ -65,6 +86,21 @@ export function ZoneMap({ moduleId }: ZoneMapProps) {
       <TabHeader icon={MapIcon} title="Zone & Level Architecture" implemented={stats.implemented} total={stats.total} accent={ACCENT} />
 
       <SubTabNavigation tabs={tabs} activeTabId={activeTab} onChange={setActiveTab} accent={ACCENT} />
+
+      {/* folder-09 R3: catalog lifecycle cell for the primary zone */}
+      {primaryEntry && (
+        <div className="flex items-center justify-between gap-2 px-1">
+          <span className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted">
+            {primaryEntry.data.displayName ?? primaryEntry.data.id}
+          </span>
+          <CatalogLifecycleCell
+            lifecycle={primaryEntry.lifecycle}
+            ueAssetCount={primaryEntry.ueAssets?.length ?? 0}
+            busy={gen.isRunning}
+            onRegenerate={() => gen.generate(nextStep)}
+          />
+        </div>
+      )}
 
       {/* Player level filter */}
       <div className="rounded-lg border p-3" style={{ borderColor: `${withOpacity(ACCENT, OPACITY_10)}`, backgroundColor: `${withOpacity(ACCENT, OPACITY_5)}` }}>
