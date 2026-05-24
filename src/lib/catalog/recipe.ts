@@ -135,7 +135,10 @@ export const BESTIARY_RECIPE: GenerationRecipe<BestiaryEntry> = {
   id: 'bestiary-archetype',
   catalogId: 'bestiary',
   steps: ['author-python', 'wire', 'verify'],
-  testPath: 'Project.Functional Tests.Maps.VSBestiary.VSBestiary_DefaultTest',
+  // Per-section gate: reuses the existing VSEnemyAttack live test (the
+  // catalog gate the bestiary recipe satisfies until a per-archetype test
+  // is authored).
+  testPath: 'Project.Functional Tests.Maps.VSEnemyAttack.VSEnemyAttackTest',
   buildStepPrompt(entity, step, ctx) {
     const task =
       step === 'author-python'
@@ -164,7 +167,8 @@ export const COMBAT_MAP_RECIPE: GenerationRecipe<CombatInteractionEntry> = {
   id: 'combat-map-interaction',
   catalogId: 'combat-map',
   steps: ['wire', 'verify'],
-  testPath: 'Project.Functional Tests.Maps.VSCombat.VSCombat_DamageMatrixTest',
+  // Per-section gate: reuses the existing combat damage-formula test.
+  testPath: 'Project.Functional Tests.Maps.VerticalSlice.VSCombatDamageFormulaTest',
   buildStepPrompt(entity, step, ctx) {
     const task =
       step === 'wire'
@@ -192,7 +196,8 @@ export const SCREEN_FLOW_RECIPE: GenerationRecipe<ScreenEntry> = {
   id: 'screen-flow-screen',
   catalogId: 'screen-flow',
   steps: ['scaffold-cpp', 'author-python', 'wire', 'verify'],
-  testPath: 'Project.Functional Tests.Maps.VSScreens.VSScreen_DefaultTest',
+  // Per-section gate: reuses the existing HUD functional test.
+  testPath: 'Project.Functional Tests.Maps.VerticalSlice.VSHUDFunctionalTest',
   buildStepPrompt(entity, step, ctx) {
     const cls = `U${entity.data.id}Widget`;
     const task =
@@ -225,7 +230,8 @@ export const ZONE_MAP_RECIPE: GenerationRecipe<ZoneEntry> = {
   id: 'zone-map-zone',
   catalogId: 'zone-map',
   steps: ['author-python', 'verify'],
-  testPath: 'Project.Functional Tests.Maps.VSZone.VSZone_DefaultTest',
+  // Per-section gate: reuses the existing arena-setup test.
+  testPath: 'Project.Functional Tests.Maps.VerticalSlice.VSArenaSetupTest',
   buildStepPrompt(entity, step, ctx) {
     const task =
       step === 'author-python'
@@ -253,7 +259,9 @@ export const STATE_GRAPH_RECIPE: GenerationRecipe<AnimationEntry> = {
   id: 'state-graph-montage',
   catalogId: 'state-graph',
   steps: ['author-python', 'verify'],
-  testPath: 'Project.Functional Tests.Maps.VSAnim.VSAnim_LocomotionTest',
+  // Per-section gate: reuses the existing footstep-wiring test (closest
+  // animation/montage-driven gate currently shipped).
+  testPath: 'Project.Functional Tests.Maps.VerticalSlice.VSFootstepWiringTest',
   buildStepPrompt(entity, step, ctx) {
     const task =
       step === 'author-python'
