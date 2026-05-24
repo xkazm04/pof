@@ -1,5 +1,5 @@
 import type { ProjectContext } from '@/lib/prompt-context';
-import type { AbilityEntry, CatalogEntityBase, ItemEntry, LifecycleState, LootTableEntry, BestiaryEntry } from '@/lib/catalog/types';
+import type { AbilityEntry, CatalogEntityBase, ItemEntry, LifecycleState, LootTableEntry, BestiaryEntry, CombatInteractionEntry } from '@/lib/catalog/types';
 import { PromptBuilder } from '@/lib/prompts/prompt-builder';
 
 export type GenerationStep = 'scaffold-cpp' | 'author-python' | 'wire' | 'verify';
@@ -154,11 +154,39 @@ export const BESTIARY_RECIPE: GenerationRecipe<BestiaryEntry> = {
   },
 };
 
+const COMBAT_MAP_BEST_PRACTICES = [
+  'Combat Map is wiring of EXISTING abilities — do not author new GAs or assets.',
+  'Wire each combo step (`Ability → HitReact montage → Damage tag`) on the placed-instance damage table; the CDO can be stale (CDO-vs-instance trap).',
+  'Use GAS `SetByCaller Data.Damage.Base` for damage, never hardcoded GE magnitudes.',
+];
+
+export const COMBAT_MAP_RECIPE: GenerationRecipe<CombatInteractionEntry> = {
+  id: 'combat-map-interaction',
+  catalogId: 'combat-map',
+  steps: ['wire', 'verify'],
+  testPath: 'Project.Functional Tests.Maps.VSCombat.VSCombat_DamageMatrixTest',
+  buildStepPrompt(entity, step, ctx) {
+    const task =
+      step === 'wire'
+        ? `Wire combo "${entity.name}" (${entity.data.weaponCategory}): connect each chain step to its HitReact montage + Damage tag on the placed-instance damage table.`
+        : `Run VSCombat_DamageMatrixTest: assert each interaction applies the expected damage/reaction to the target.`;
+    const b = new PromptBuilder()
+      .withProjectContext(ctx)
+      .withDomainContext('Combat interaction wiring (no new assets) for the PoF ARPG.')
+      .withAssetSpec(entity)
+      .withTask(`Combat Map · ${step}`, task)
+      .withBestPractices(COMBAT_MAP_BEST_PRACTICES);
+    if (step === 'verify') b.withSuccessCriteria([`The functional test \`${this.testPath}\` returns Result={Success}.`]);
+    return b.build();
+  },
+};
+
 const RECIPES: Record<string, GenerationRecipe> = {
   spellbook: SPELLBOOK_RECIPE,
   items: ITEMS_RECIPE,
   'loot-tables': LOOT_RECIPE,
   bestiary: BESTIARY_RECIPE,
+  'combat-map': COMBAT_MAP_RECIPE,
 };
 
 /** The recipe for a catalog, or undefined if none is registered yet. */
