@@ -3,7 +3,6 @@
 import { useMemo, useState } from 'react';
 import { Activity, LayoutGrid } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { withOpacity, OPACITY_5, OPACITY_10, OPACITY_20, OPACITY_30 } from '@/lib/chart-colors';
 import { useTabFeatures } from '@/hooks/useTabFeatures';
 import { useCatalogEntities } from '@/stores/catalogStore';
 import { useGeneration } from '@/hooks/useGeneration';
@@ -14,30 +13,22 @@ import { ALL_MONTAGES } from './_shared/data';
 import {
   TabHeader,
   LoadingSpinner,
-  HeatmapGrid,
   SubTabNavigation,
-  CollapsibleSection,
   NarrativeBreadcrumb,
   type NarrativeBreadcrumbStep,
   type SubTab,
 } from '../unique-tabs/_shared';
 import type { SubModuleId } from '@/types/modules';
-import { ACCENT, HEATMAP_STATE_NAMES, HEATMAP_CELLS, COMBO_CHAIN_NODES, ANIM_SUBTABS, type AnimSubtab } from './_shared/data';
-import { BlueprintPanel, SectionHeader } from '../unique-tabs/_design';
-import { StateMachinePanel } from './state-graph/StateMachinePanel';
-import { BlendSpacePanel } from './budget/BlendSpacePanel';
-import { StateDurationPanel } from './budget/StateDurationPanel';
-import { ResponsivenessAnalyzer } from './state-graph/ResponsivenessAnalyzer';
-import { ComboTimelinePanel } from './combos-montages/ComboTimelinePanel';
-import { ComboChainPanel } from './combos-montages/ComboChainPanel';
-import { FrameScrubberPanel } from './combos-montages/FrameScrubberPanel';
-import { EventTimelinePanel } from './combos-montages/EventTimelinePanel';
-import { RetargetingTab } from './retargeting/RetargetingTab';
-import { BudgetTab } from './budget/BudgetTab';
-import { StateGroupBrowser } from './state-graph/StateGroupBrowser';
-import FeatureMapTab from '../unique-tabs/FeatureMapTab';
+import { ACCENT, ANIM_SUBTABS, type AnimSubtab } from './_shared/data';
 import { VisibleSection } from '../unique-tabs/VisibleSection';
+import FeatureMapTab from '../unique-tabs/FeatureMapTab';
 import { renderAnimMetric } from './metrics';
+import {
+  StateGraphTabContent,
+  CombosMontagesTabContent,
+  RetargetingTabContent,
+  BudgetTabContent,
+} from './AnimTabContent';
 
 /* ── Narrative Breadcrumb steps ────────────────────────────────────────── */
 
@@ -137,91 +128,28 @@ export function AnimationStateGraph({ moduleId }: AnimationStateGraphProps) {
 
           {activeTab === 'state-graph' && (
             <VisibleSection moduleId={moduleId} sectionId="states">
-              <div className="space-y-4">
-                <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
-                  <StateMachinePanel featureMap={featureMap} />
-                  <BlendSpacePanel />
-                </div>
-                <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
-                  <BlueprintPanel color={ACCENT} className="p-4">
-                    <SectionHeader label="State Transition Heatmap" color={ACCENT} />
-                    <p className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted mt-1 mb-3">
-                      Normalized transition frequency between animation states. Brighter cells indicate more frequent transitions.
-                    </p>
-                    <HeatmapGrid rows={HEATMAP_STATE_NAMES} cols={HEATMAP_STATE_NAMES} cells={HEATMAP_CELLS} accent={ACCENT} />
-                  </BlueprintPanel>
-                  <StateDurationPanel />
-                </div>
-                <ResponsivenessAnalyzer />
-                <CollapsibleSection title="State Browser" color={ACCENT}>
-                  <StateGroupBrowser />
-                </CollapsibleSection>
-              </div>
+              <StateGraphTabContent featureMap={featureMap} />
             </VisibleSection>
           )}
 
           {activeTab === 'combos-montages' && (
             <VisibleSection moduleId={moduleId} sectionId="chain">
-              <div className="space-y-4">
-                {/* Combo node selector chips */}
-                <div className="flex flex-wrap items-center gap-2">
-                  <span className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted">Select combo:</span>
-                  {COMBO_CHAIN_NODES.map((node) => {
-                    const active = selectedComboNode === node.id;
-                    return (
-                      <button
-                        key={node.id}
-                        onClick={() => setSelectedComboNode(active ? null : node.id)}
-                        className="px-2.5 py-1 rounded-md text-xs font-mono font-bold border transition-all cursor-pointer"
-                        style={active
-                          ? { backgroundColor: withOpacity(ACCENT, OPACITY_10), borderColor: withOpacity(ACCENT, OPACITY_30), color: ACCENT }
-                          : { backgroundColor: 'transparent', borderColor: 'var(--border)', color: 'var(--text-muted)' }
-                        }
-                      >
-                        {node.name}
-                      </button>
-                    );
-                  })}
-                </div>
-
-                {selectedComboNode && (() => {
-                  const node = COMBO_CHAIN_NODES.find(n => n.id === selectedComboNode);
-                  if (!node) return null;
-                  return (
-                    <div className="rounded-lg border p-3 text-xs font-mono space-y-1"
-                      style={{ borderColor: withOpacity(ACCENT, OPACITY_20), backgroundColor: withOpacity(ACCENT, OPACITY_5) }}>
-                      <div className="font-bold text-sm" style={{ color: ACCENT }}>{node.name}</div>
-                      <div className="text-text-muted">Montage: <span className="text-text">{node.montage}</span></div>
-                      <div className="text-text-muted">Damage: <span className="font-bold text-text">{node.damage}</span></div>
-                    </div>
-                  );
-                })()}
-
-                <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
-                  <ComboTimelinePanel />
-                  <ComboChainPanel selectedNodeId={selectedComboNode} onSelectNode={setSelectedComboNode} />
-                </div>
-                <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
-                  <FrameScrubberPanel />
-                  <EventTimelinePanel />
-                </div>
-              </div>
+              <CombosMontagesTabContent
+                selectedComboNode={selectedComboNode}
+                setSelectedComboNode={setSelectedComboNode}
+              />
             </VisibleSection>
           )}
 
           {activeTab === 'retargeting' && (
             <VisibleSection moduleId={moduleId} sectionId="skeleton">
-              <div className="space-y-4">
-                <RetargetingTab />
-              </div>
+              <RetargetingTabContent />
             </VisibleSection>
           )}
 
           {activeTab === 'budget' && (
             <VisibleSection moduleId={moduleId} sectionId="assets">
-              <div className="space-y-4">
-                <BudgetTab featureMap={featureMap} defs={defs} />
-              </div>
+              <BudgetTabContent featureMap={featureMap} defs={defs} />
             </VisibleSection>
           )}
         </motion.div>
