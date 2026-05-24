@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import type { DodgeParams } from '@/components/modules/core-engine/unique-tabs/dodge-types';
+import type { DodgeParams } from '@/components/modules/core-engine/sub_combat/_shared/dodge-types';
 
 /* ── Generic CLI Optimization Store Factory ──────────────────────────────── */
 

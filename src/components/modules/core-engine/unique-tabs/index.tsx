@@ -3,7 +3,7 @@
 import type { ExtraTab } from '../../shared/ReviewableModuleView';
 import type { SubModuleId } from '@/types/modules';
 import { Swords, BookOpen, Brain, Package, Coins, Monitor, TrendingUp, Map, Save, Wrench, User, Activity } from 'lucide-react';
-import { CombatActionMap } from './CombatActionMap';
+import { CombatActionMap } from '../sub_combat';
 import { AbilitySpellbook } from './AbilitySpellbook';
 import { LootTableVisualizer } from './LootTableVisualizer';
 import { CharacterBlueprint } from '../sub_character';

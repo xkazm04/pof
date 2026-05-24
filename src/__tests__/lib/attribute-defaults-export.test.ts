@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   buildAttributeDefaultsPython, DEFAULT_ATTRIBUTE_ROWS, type AttributeRow,
-} from '@/components/modules/core-engine/unique-tabs/CombatActionMap/attributes/attribute-defaults-export';
+} from '@/components/modules/core-engine/sub_combat/attributes/attribute-defaults-export';
 
 describe('attribute-defaults Python emitter', () => {
   it('ships Player / Skeleton / Boss default rows', () => {

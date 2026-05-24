@@ -1,7 +1,7 @@
 import {
   COMBO_SEQUENCES,
   type ComboSequence,
-} from '@/components/modules/core-engine/unique-tabs/CombatActionMap/data-metrics';
+} from '@/components/modules/core-engine/sub_combat/_shared/data-metrics';
 import type { CombatInteractionEntry } from './types';
 
 /** Convert one ComboSequence into a Combat Map entry. */

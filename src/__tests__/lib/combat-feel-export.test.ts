@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { buildCombatFeelPython } from '@/components/modules/core-engine/unique-tabs/CombatActionMap/polish/combat-feel-export';
+import { buildCombatFeelPython } from '@/components/modules/core-engine/sub_combat/polish/combat-feel-export';
 
 describe('combat-feel Python emitter', () => {
   const values = { shakeScale: 1.2, hitstopDuration: 0.08, screenFlashAlpha: 0.2, vfxScale: 2, sfxVolume: 0.7, sfxPitch: 1, shakeDecay: 0.5, hitstopEase: 0.5 };

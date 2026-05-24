@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { comboToEntry, seedCombatInteractionEntries } from '@/lib/catalog/seed-combat-map';
-import { COMBO_SEQUENCES } from '@/components/modules/core-engine/unique-tabs/CombatActionMap/data-metrics';
+import { COMBO_SEQUENCES } from '@/components/modules/core-engine/sub_combat/_shared/data-metrics';
 
 describe('comboToEntry', () => {
   const c0 = COMBO_SEQUENCES[0];

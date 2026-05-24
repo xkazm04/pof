@@ -2,7 +2,7 @@ import type { SpellbookAbility } from '@/components/modules/core-engine/unique-t
 import type { ItemData } from '@/components/modules/core-engine/unique-tabs/ItemCatalog/data';
 import type { EnemyLootBinding } from '@/components/modules/core-engine/unique-tabs/LootTableVisualizer/data-binding';
 import type { ArchetypeConfig } from '@/components/modules/core-engine/sub_bestiary/_shared/data';
-import type { ComboSequence } from '@/components/modules/core-engine/unique-tabs/CombatActionMap/data-metrics';
+import type { ComboSequence } from '@/components/modules/core-engine/sub_combat/_shared/data-metrics';
 import type { GraphNode } from '@/types/unique-tab-improvements';
 import type { ZoneRecord } from '@/components/modules/core-engine/sub_world/_shared/data';
 import type { MontageEntry } from '@/components/modules/core-engine/sub_animation/_shared/data';

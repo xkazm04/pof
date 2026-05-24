@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { getRecipe } from '@/lib/catalog/recipe';
 import type { CombatInteractionEntry } from '@/lib/catalog/types';
-import { COMBO_SEQUENCES } from '@/components/modules/core-engine/unique-tabs/CombatActionMap/data-metrics';
+import { COMBO_SEQUENCES } from '@/components/modules/core-engine/sub_combat/_shared/data-metrics';
 import type { ProjectContext } from '@/lib/prompt-context';
 
 const ctx: ProjectContext = { projectName: 'PoF', projectPath: 'C:/p', ueVersion: '5.7', dynamicContext: undefined };

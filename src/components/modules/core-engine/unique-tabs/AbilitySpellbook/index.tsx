@@ -26,7 +26,7 @@ import {
   buildLiveTagDeps, buildLiveTagDetailMap, buildLiveTagUsageFrequency,
   buildLiveAttributes,
 } from './data';
-import { ComboChainBuilder } from '../ComboChainBuilder';
+import { ComboChainBuilder } from '../../sub_combat/combos';
 
 import { SpellbookDataCtx } from './context';
 import { ACCENT, SUBTABS } from './constants';
