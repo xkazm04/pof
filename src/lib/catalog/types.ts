@@ -89,6 +89,15 @@ export interface AnimationEntry extends CatalogEntityBase {
   data: MontageEntry;
 }
 
+/** Materials catalog entity (Phase 8 — substrate only; data lift in Phase 8b). */
+export interface MaterialCatalogEntry extends CatalogEntityBase {
+  catalogId: 'materials';
+  data: {
+    displayName: string;
+    baseColor?: string;
+  };
+}
+
 /**
  * Generic stored shape used by the entity-generic dispatch path: any catalog
  * entity carries a `data` blob opaque to the dispatch (each section's recipe
