@@ -39,3 +39,52 @@ describe('AdvancedTexturePanel — Upscaler tile', () => {
     expect(JSON.parse((init as RequestInit).body as string)).toMatchObject({ mode: 'upscale', imageId: 'img-7', style: 'GENERAL' });
   });
 });
+
+describe('AdvancedTexturePanel — Unzoom tile', () => {
+  it('posts mode=unzoom with the image id (+ optional prompt) and shows the job id', async () => {
+    const fetchMock = mockFetch({ body: { success: true, data: { unzoomJobId: 'uz-1' } } });
+    render(<AdvancedTexturePanel />);
+    fireEvent.change(screen.getByTestId('unzoom-image-id'), { target: { value: 'img-3' } });
+    fireEvent.change(screen.getByTestId('unzoom-prompt'), { target: { value: 'more floor' } });
+    fireEvent.click(screen.getByTestId('unzoom-run'));
+
+    await waitFor(() => expect(screen.getByTestId('unzoom-job').textContent).toContain('uz-1'));
+    const [url, init] = fetchMock.mock.calls[0];
+    expect(url).toBe('/api/leonardo');
+    expect(JSON.parse((init as RequestInit).body as string)).toMatchObject({ mode: 'unzoom', imageId: 'img-3', prompt: 'more floor' });
+  });
+});
+
+describe('AdvancedTexturePanel — ControlNet tile', () => {
+  it('posts mode=image with a controlnets[] opt and shows the result url', async () => {
+    const fetchMock = mockFetch({ body: { success: true, data: { imageUrl: 'cn.png', generationId: 'g1' } } });
+    render(<AdvancedTexturePanel />);
+    fireEvent.change(screen.getByTestId('controlnet-prompt'), { target: { value: 'icon' } });
+    fireEvent.change(screen.getByTestId('controlnet-image-id'), { target: { value: 'init-9' } });
+    fireEvent.click(screen.getByTestId('controlnet-run'));
+
+    await waitFor(() => expect(screen.getByTestId('controlnet-result')).toBeTruthy());
+    const [url, init] = fetchMock.mock.calls[0];
+    expect(url).toBe('/api/leonardo');
+    const sent = JSON.parse((init as RequestInit).body as string);
+    expect(sent).toMatchObject({ mode: 'image', prompt: 'icon' });
+    expect(sent.opts.controlnets[0]).toMatchObject({ initImageId: 'init-9' });
+  });
+});
+
+describe('AdvancedTexturePanel — Inpaint tile', () => {
+  it('posts mode=image with an inpaint opt (base + mask) and shows the result url', async () => {
+    const fetchMock = mockFetch({ body: { success: true, data: { imageUrl: 'ip.png', generationId: 'g2' } } });
+    render(<AdvancedTexturePanel />);
+    fireEvent.change(screen.getByTestId('inpaint-prompt'), { target: { value: 'patch wall' } });
+    fireEvent.change(screen.getByTestId('inpaint-image-id'), { target: { value: 'base-1' } });
+    fireEvent.change(screen.getByTestId('inpaint-mask-id'), { target: { value: 'mask-1' } });
+    fireEvent.click(screen.getByTestId('inpaint-run'));
+
+    await waitFor(() => expect(screen.getByTestId('inpaint-result')).toBeTruthy());
+    const [, init] = fetchMock.mock.calls[0];
+    const sent = JSON.parse((init as RequestInit).body as string);
+    expect(sent).toMatchObject({ mode: 'image', prompt: 'patch wall' });
+    expect(sent.opts.inpaint).toMatchObject({ initImageId: 'base-1', maskImageId: 'mask-1' });
+  });
+});

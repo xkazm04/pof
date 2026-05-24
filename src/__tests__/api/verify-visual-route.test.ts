@@ -107,4 +107,38 @@ describe('POST /api/verify/visual', () => {
     const res = await POST(req({ moduleId: 'arpg-ui' }) as never);
     expect(res.status).toBe(400);
   });
+
+  describe('mode=texture (seamless/tileable check)', () => {
+    const texBody = { mode: 'texture', moduleId: 'materials', itemId: 'tm-floor', screenshotPath: realShot };
+
+    it('passes a seamless texture: verdict pass, anyEmpty false, issues recorded as elements', async () => {
+      geminiReturns({ tileable: true, issues: [], verdict: 'pass', notes: 'no visible seam' });
+      const res = await POST(req(texBody) as never);
+      const json = await res.json();
+      expect(json.success).toBe(true);
+      expect(json.data.verdict).toBe('pass');
+      expect(mockRecord).toHaveBeenCalledWith(
+        expect.objectContaining({ moduleId: 'materials', itemId: 'tm-floor', verdict: 'pass', anyEmpty: false }),
+      );
+    });
+
+    it('fails a non-tileable texture: a seam maps to a recorded defect (anyEmpty true)', async () => {
+      geminiReturns({ tileable: false, issues: ['visible vertical seam', 'baked lighting top-left'], verdict: 'fail', notes: 'seam' });
+      const res = await POST(req(texBody) as never);
+      const json = await res.json();
+      expect(json.data.verdict).toBe('fail');
+      expect(mockRecord).toHaveBeenCalledWith(
+        expect.objectContaining({ verdict: 'fail', anyEmpty: true, elements: ['visible vertical seam', 'baked lighting top-left'] }),
+      );
+    });
+
+    it('uses a texture-specific prompt (mentions seamless/tileable, not HUD bars)', async () => {
+      geminiReturns({ tileable: true, issues: [], verdict: 'pass', notes: '' });
+      await POST(req(texBody) as never);
+      const sent = mockGenerate.mock.calls[0][0];
+      const promptText = JSON.stringify(sent);
+      expect(promptText.toLowerCase()).toContain('seamless');
+      expect(promptText.toLowerCase()).toContain('tileable');
+    });
+  });
 });

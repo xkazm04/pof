@@ -41,6 +41,31 @@ function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+/**
+ * A single ControlNet guidance input for `POST /generations`. Field names match
+ * Leonardo's documented `controlnets[]` shape (doc-derived; the advanced controls
+ * below are key-gated and were not live-verified — only basic `tiling`/
+ * `transparency` generation has been smoke-tested. Each capability is isolated so
+ * a field-name correction is a one-line change, mirroring scenario.ts).
+ */
+export interface ControlNetInput {
+  /** Id of an uploaded/generated init image to guide from. */
+  initImageId: string;
+  initImageType?: 'GENERATED' | 'UPLOADED';
+  /** Preprocessor id selects the ControlNet type (depth/normal/edge/pose/style/…). */
+  preprocessorId: number;
+  weight?: number;
+  strengthType?: string;
+}
+
+/** Inpaint a region of an existing image (Leonardo canvas request). */
+export interface InpaintInput {
+  /** Id of the base image to inpaint into. */
+  initImageId: string;
+  /** Id of the mask image marking the region to regenerate. */
+  maskImageId?: string;
+}
+
 export interface GenerateImageOptions {
   modelId?: string;
   width?: number;
@@ -49,6 +74,10 @@ export interface GenerateImageOptions {
   transparency?: 'disabled' | 'foreground';
   contrast?: number;
   numImages?: number;
+  /** ControlNet guidance inputs (depth/normal/edge/pose/style/…). */
+  controlnets?: ControlNetInput[];
+  /** Inpaint a region of an existing image via a canvas request. */
+  inpaint?: InpaintInput;
   /** Download bytes + delete the generation after completion. Default true. */
   cleanup?: boolean;
   /** Poll interval; defaults to POLL_INTERVAL_MS. Lowered in tests. */
@@ -82,6 +111,13 @@ export async function generateImage(
   };
   if (opts.tiling) body.tiling = true;
   if (opts.transparency) body.transparency = opts.transparency;
+  if (opts.controlnets && opts.controlnets.length > 0) body.controlnets = opts.controlnets;
+  if (opts.inpaint) {
+    body.init_image_id = opts.inpaint.initImageId;
+    body.canvas_request = true;
+    body.canvas_request_type = 'INPAINT';
+    if (opts.inpaint.maskImageId) body.mask_file_id = opts.inpaint.maskImageId;
+  }
 
   const genRes = await fetch(`${LEONARDO_API_BASE}/generations`, {
     method: 'POST',
@@ -168,6 +204,40 @@ export async function upscaleImage(
   const upscaleJobId = data.universalUpscaler?.id ?? data.sdUpscaleJob?.id;
   if (!upscaleJobId) throw new Error('Leonardo upscale returned no job id');
   return { upscaleJobId };
+}
+
+export interface UnzoomOptions {
+  /** Optional prompt describing what to paint into the extended border region. */
+  prompt?: string;
+}
+
+/**
+ * Unzoom (outpaint) a previously-generated image — extends it beyond its borders.
+ * Leonardo exposes this as a variation job (`POST /variations/unzoom`); the result
+ * is fetched later via the variations API. Returns the variation job id.
+ */
+export async function unzoomImage(
+  generatedImageId: string,
+  opts: UnzoomOptions = {},
+): Promise<{ unzoomJobId: string }> {
+  const body: Record<string, unknown> = { id: generatedImageId, isVariation: false };
+  if (opts.prompt) body.prompt = opts.prompt;
+  const res = await fetch(`${LEONARDO_API_BASE}/variations/unzoom`, {
+    method: 'POST',
+    headers: authHeaders(true),
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`Leonardo unzoom failed (${res.status}): ${text}`);
+  }
+  const data = (await res.json()) as {
+    sdUnzoomJob?: { id?: string };
+    sdVariationJob?: { id?: string };
+  };
+  const unzoomJobId = data.sdUnzoomJob?.id ?? data.sdVariationJob?.id;
+  if (!unzoomJobId) throw new Error('Leonardo unzoom returned no job id');
+  return { unzoomJobId };
 }
 
 export interface Texture3DRequest {

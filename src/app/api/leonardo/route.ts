@@ -1,8 +1,8 @@
 import { apiSuccess, apiError } from '@/lib/api-utils';
-import { generateImage, upscaleImage, generateTextureOn3DModel, MAX_PROMPT_LENGTH, type GenerateImageOptions } from '@/lib/leonardo';
+import { generateImage, upscaleImage, unzoomImage, generateTextureOn3DModel, MAX_PROMPT_LENGTH, type GenerateImageOptions } from '@/lib/leonardo';
 import { logger } from '@/lib/logger';
 
-type Mode = 'image' | 'upscale' | 'texture3d';
+type Mode = 'image' | 'upscale' | 'unzoom' | 'texture3d';
 
 export async function POST(request: Request) {
   try {
@@ -26,6 +26,13 @@ export async function POST(request: Request) {
       const imageId = body?.imageId;
       if (!imageId || typeof imageId !== 'string') return apiError('Missing "imageId" for upscale', 400);
       const result = await upscaleImage(imageId, typeof body?.style === 'string' ? body.style : 'GENERAL');
+      return apiSuccess(result);
+    }
+
+    if (mode === 'unzoom') {
+      const imageId = body?.imageId;
+      if (!imageId || typeof imageId !== 'string') return apiError('Missing "imageId" for unzoom', 400);
+      const result = await unzoomImage(imageId, typeof body?.prompt === 'string' ? { prompt: body.prompt } : {});
       return apiSuccess(result);
     }
 

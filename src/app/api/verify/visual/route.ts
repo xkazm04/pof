@@ -42,15 +42,98 @@ Respond with ONLY a JSON object (no prose, no markdown fences) of exactly this s
 }
 Set "verdict" to "fail" if anyEmptyOrZeroWidth is true or if no HUD is visible at all.`;
 
-interface VisualVerdict {
-  visibleElements: string[];
-  anyEmptyOrZeroWidth: boolean;
+/* ── Server-owned texture-quality prompt (folder-06 §6) ── */
+
+const TEXTURE_CHECK_PROMPT = `You are inspecting a single texture image intended to tile seamlessly across a 3D surface.
+Determine whether it is a genuinely SEAMLESS, TILEABLE texture: imagine it repeated edge-to-edge in a grid.
+List any obvious defects — a visible SEAM at the edges, BAKED-IN lighting or shadow/highlight, a dominant feature that would visibly repeat, or anything that breaks the tile.
+Respond with ONLY a JSON object (no prose, no markdown fences) of exactly this shape:
+{
+  "tileable": boolean,
+  "issues": string[],
+  "verdict": "pass" | "fail",
+  "notes": string
+}
+Set "verdict" to "fail" if tileable is false or any seam / baked-in lighting is present.`;
+
+/* ── Server-owned lighting-smoke prompt (folder-05 §5) ── */
+
+const LIGHTING_CHECK_PROMPT = `You are inspecting a screenshot of a 3D game environment (an arena or level) taken right after an environment/lighting change.
+Determine whether the scene is actually LIT and rendering — not a black / un-lit failure (the class of bug where static-mesh geometry renders black because lighting was never baked).
+- Is the scene lit (surfaces and colour visible), or is it black / un-lit?
+- Do surfaces show shading and shadows (graded lighting, depth), or are they flat-shaded / uniformly bright?
+Respond with ONLY a JSON object (no prose, no markdown fences) of exactly this shape:
+{
+  "lit": boolean,
+  "shadowed": boolean,
+  "verdict": "pass" | "fail",
+  "notes": string
+}
+Set "verdict" to "fail" if the scene reads as black / un-lit (lit is false).`;
+
+type CheckMode = 'hud' | 'texture' | 'lighting';
+
+/** Normalised verdict written to the (shared) visual_verifications record. */
+interface NormalisedVerdict {
   verdict: 'pass' | 'fail';
+  /** A flagged defect exists (empty HUD element, or a seam/non-tileable texture). */
+  anyEmpty: boolean;
+  elements: string[];
   notes: string;
 }
 
+interface HudVerdict {
+  visibleElements?: string[];
+  anyEmptyOrZeroWidth?: boolean;
+  verdict: 'pass' | 'fail';
+  notes?: string;
+}
+
+interface TextureVerdict {
+  tileable?: boolean;
+  issues?: string[];
+  verdict: 'pass' | 'fail';
+  notes?: string;
+}
+
+interface LightingVerdict {
+  lit?: boolean;
+  shadowed?: boolean;
+  verdict: 'pass' | 'fail';
+  notes?: string;
+}
+
+function normaliseVerdict(mode: CheckMode, raw: HudVerdict | TextureVerdict | LightingVerdict): NormalisedVerdict {
+  if (mode === 'texture') {
+    const t = raw as TextureVerdict;
+    return {
+      verdict: t.verdict,
+      anyEmpty: t.tileable === false || (t.issues?.length ?? 0) > 0,
+      elements: t.issues ?? [],
+      notes: t.notes ?? '',
+    };
+  }
+  if (mode === 'lighting') {
+    const l = raw as LightingVerdict;
+    return {
+      verdict: l.verdict,
+      // A black / un-lit scene is the flagged defect (mirrors anyEmpty for HUD).
+      anyEmpty: l.lit === false,
+      elements: [],
+      notes: l.notes ?? '',
+    };
+  }
+  const h = raw as HudVerdict;
+  return {
+    verdict: h.verdict,
+    anyEmpty: !!h.anyEmptyOrZeroWidth,
+    elements: h.visibleElements ?? [],
+    notes: h.notes ?? '',
+  };
+}
+
 export async function POST(request: NextRequest) {
-  let body: { moduleId?: string; itemId?: string; screenshotPath?: string; projectPath?: string };
+  let body: { moduleId?: string; itemId?: string; screenshotPath?: string; projectPath?: string; mode?: string };
   try {
     body = await request.json();
   } catch {
@@ -61,6 +144,10 @@ export async function POST(request: NextRequest) {
   if (!moduleId || !itemId || !screenshotPath) {
     return apiError('Missing "moduleId", "itemId", or "screenshotPath"', 400);
   }
+  const mode: CheckMode =
+    body.mode === 'texture' ? 'texture' : body.mode === 'lighting' ? 'lighting' : 'hud';
+  const prompt =
+    mode === 'texture' ? TEXTURE_CHECK_PROMPT : mode === 'lighting' ? LIGHTING_CHECK_PROMPT : HUD_CHECK_PROMPT;
 
   if (!existsSync(screenshotPath)) {
     return apiError(`Screenshot not found: ${screenshotPath}`, 404);
@@ -78,7 +165,7 @@ export async function POST(request: NextRequest) {
     return apiError(`Failed to read screenshot: ${e instanceof Error ? e.message : 'unknown'}`, 500);
   }
 
-  let verdict: VisualVerdict;
+  let raw: HudVerdict | TextureVerdict | LightingVerdict;
   try {
     const response = await client.models.generateContent({
       model: 'gemini-2.0-flash',
@@ -87,7 +174,7 @@ export async function POST(request: NextRequest) {
           role: 'user',
           parts: [
             { inlineData: { mimeType: 'image/png', data: pngBase64 } },
-            { text: HUD_CHECK_PROMPT },
+            { text: prompt },
           ],
         },
       ],
@@ -98,24 +185,26 @@ export async function POST(request: NextRequest) {
     if (!text) return apiError('Empty response from Gemini', 502);
 
     const cleaned = text.replace(/^```(?:json)?\s*\n?/m, '').replace(/\n?```\s*$/m, '').trim();
-    verdict = JSON.parse(cleaned) as VisualVerdict;
+    raw = JSON.parse(cleaned) as HudVerdict | TextureVerdict | LightingVerdict;
   } catch (e) {
     return apiError(e instanceof Error ? e.message : 'Gemini visual check failed', 502);
   }
 
-  if (verdict.verdict !== 'pass' && verdict.verdict !== 'fail') {
+  if (raw.verdict !== 'pass' && raw.verdict !== 'fail') {
     return apiError('Gemini returned an invalid verdict shape', 502);
   }
+
+  const norm = normaliseVerdict(mode, raw);
 
   recordVisualVerification({
     moduleId,
     itemId,
     projectPath: projectPath ?? null,
     screenshotPath,
-    verdict: verdict.verdict,
-    anyEmpty: !!verdict.anyEmptyOrZeroWidth,
-    elements: verdict.visibleElements ?? [],
-    notes: verdict.notes ?? '',
+    verdict: norm.verdict,
+    anyEmpty: norm.anyEmpty,
+    elements: norm.elements,
+    notes: norm.notes,
   });
 
   eventBus.emit(
@@ -123,13 +212,13 @@ export async function POST(request: NextRequest) {
     {
       moduleId,
       itemId,
-      verdict: verdict.verdict,
-      anyEmpty: !!verdict.anyEmptyOrZeroWidth,
-      notes: verdict.notes ?? '',
+      verdict: norm.verdict,
+      anyEmpty: norm.anyEmpty,
+      notes: norm.notes,
       screenshotPath,
     },
     'verify-visual-route',
   );
 
-  return apiSuccess(verdict);
+  return apiSuccess(raw);
 }

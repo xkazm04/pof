@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { deleteGeneration, downloadThenDelete, generateImage, upscaleImage, generateTextureOn3DModel } from '@/lib/leonardo';
+import { deleteGeneration, downloadThenDelete, generateImage, upscaleImage, unzoomImage, generateTextureOn3DModel } from '@/lib/leonardo';
 
 const BASE = 'https://cloud.leonardo.ai/api/rest/v1';
 
@@ -108,6 +108,76 @@ describe('generateImage', () => {
       width: 1024, height: 1024, num_images: 2, contrast: 4,
       tiling: true, transparency: 'foreground',
     });
+  });
+});
+
+describe('generateImage advanced controls (ControlNet / inpaint)', () => {
+  it('passes controlnets[] through to the generation body verbatim', async () => {
+    const { calls } = installGenFetch();
+    await generateImage('icon matching this silhouette', {
+      pollIntervalMs: 1,
+      controlnets: [
+        { initImageId: 'img-9', initImageType: 'UPLOADED', preprocessorId: 67, weight: 0.6, strengthType: 'Mid' },
+      ],
+    });
+    const post = calls.find((c) => c.method === 'POST' && c.url.endsWith('/generations'));
+    expect(post!.body).toMatchObject({
+      controlnets: [
+        { initImageId: 'img-9', initImageType: 'UPLOADED', preprocessorId: 67, weight: 0.6, strengthType: 'Mid' },
+      ],
+    });
+  });
+
+  it('sets canvas_request INPAINT + init_image_id (+ mask) for inpaint', async () => {
+    const { calls } = installGenFetch();
+    await generateImage('repair the cracked region', {
+      pollIntervalMs: 1,
+      inpaint: { initImageId: 'base-1', maskImageId: 'mask-1' },
+    });
+    const post = calls.find((c) => c.method === 'POST' && c.url.endsWith('/generations'));
+    expect(post!.body).toMatchObject({
+      init_image_id: 'base-1',
+      canvas_request: true,
+      canvas_request_type: 'INPAINT',
+      mask_file_id: 'mask-1',
+    });
+  });
+
+  it('inpaint without a mask omits mask_file_id', async () => {
+    const { calls } = installGenFetch();
+    await generateImage('extend', { pollIntervalMs: 1, inpaint: { initImageId: 'base-2' } });
+    const post = calls.find((c) => c.method === 'POST' && c.url.endsWith('/generations'));
+    expect(post!.body).toMatchObject({ init_image_id: 'base-2', canvas_request_type: 'INPAINT' });
+    expect((post!.body as Record<string, unknown>).mask_file_id).toBeUndefined();
+  });
+});
+
+describe('unzoomImage', () => {
+  it('POSTs the generated-image id to /variations/unzoom and returns the job id', async () => {
+    const { calls } = installFetch((url, method) => {
+      if (method === 'POST' && url.endsWith('/variations/unzoom')) {
+        return { body: { sdUnzoomJob: { id: 'uz-1' } } };
+      }
+      return { body: {} };
+    });
+    const res = await unzoomImage('img-7');
+    const post = calls.find((c) => c.url.endsWith('/variations/unzoom'));
+    expect(post!.body).toMatchObject({ id: 'img-7', isVariation: false });
+    expect(res.unzoomJobId).toBe('uz-1');
+  });
+
+  it('forwards an optional prompt for the extended region', async () => {
+    const { calls } = installFetch((url) =>
+      url.endsWith('/variations/unzoom') ? { body: { sdUnzoomJob: { id: 'uz-2' } } } : { body: {} },
+    );
+    await unzoomImage('img-8', { prompt: 'more dungeon floor' });
+    const post = calls.find((c) => c.url.endsWith('/variations/unzoom'));
+    expect((post!.body as Record<string, unknown>).prompt).toBe('more dungeon floor');
+  });
+
+  it('throws when the unzoom job returns no id', async () => {
+    installFetch(() => ({ body: {} }));
+    await expect(unzoomImage('img-9')).rejects.toThrow(/no.*id/i);
   });
 });
 
