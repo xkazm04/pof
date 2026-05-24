@@ -1,20 +1,15 @@
 'use client';
 
 import { useMemo } from 'react';
-import { Filter, Eye, AlertTriangle } from 'lucide-react';
+import { Eye } from 'lucide-react';
 import { motion } from 'framer-motion';
-import {
-  STATUS_ERROR, STATUS_WARNING, STATUS_INFO,
-  ACCENT_EMERALD, ACCENT_CYAN,
-  OPACITY_5, OPACITY_8, OPACITY_10, OPACITY_15, OPACITY_20, OPACITY_25, OPACITY_30,
-  withOpacity,
-} from '@/lib/chart-colors';
+import { STATUS_INFO, OPACITY_15, withOpacity } from '@/lib/chart-colors';
 import { BlueprintPanel } from '../../unique-tabs/_design';
-import { ACCENT, BREAKPOINT_ILVLS, CATEGORY_COLORS } from './constants';
-import {
-  AFFIX_POOL, RARITIES, RARITY_COLORS, getItemLevelScaling,
-} from './data';
+import { BREAKPOINT_ILVLS } from './constants';
+import { AFFIX_POOL, RARITIES, getItemLevelScaling } from './data';
 import { BreakpointLegend } from './BreakpointLegend';
+import { BreakpointFilters } from './BreakpointFilters';
+import { BreakpointRow } from './BreakpointRow';
 import type { Rarity } from './data';
 import type { PoolCategory } from './types';
 
@@ -56,52 +51,15 @@ export function BreakpointTable({
 
   return (
     <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="space-y-4">
-      {/* Filters */}
-      <div className="flex flex-wrap items-center gap-3">
-        <div className="flex items-center gap-1.5 text-xs font-mono uppercase tracking-[0.15em] text-text-muted">
-          <Filter className="w-3 h-3" /> Filters:
-        </div>
-        <div className="flex gap-1">
-          {(['all', 'offensive', 'defensive', 'utility'] as const).map(cat => (
-            <button key={cat} onClick={() => setBpCategoryFilter(cat)}
-              className="px-2 py-1 rounded text-xs font-mono uppercase tracking-[0.15em] capitalize transition-all"
-              style={{
-                backgroundColor: bpCategoryFilter === cat ? `${cat === 'all' ? ACCENT : CATEGORY_COLORS[cat]}${OPACITY_20}` : 'transparent',
-                color: bpCategoryFilter === cat ? (cat === 'all' ? ACCENT : CATEGORY_COLORS[cat]) : 'var(--text-muted)',
-                border: `1px solid ${bpCategoryFilter === cat ? withOpacity(cat === 'all' ? ACCENT : CATEGORY_COLORS[cat], OPACITY_30) : withOpacity(ACCENT, OPACITY_15)}`,
-              }}>
-              {cat}
-            </button>
-          ))}
-        </div>
-        <div className="flex gap-1">
-          <button onClick={() => setBpRarityFilter('all')}
-            className="px-2 py-1 rounded text-xs font-mono uppercase tracking-[0.15em] transition-all"
-            style={{
-              backgroundColor: bpRarityFilter === 'all' ? `${ACCENT}${OPACITY_20}` : 'transparent',
-              color: bpRarityFilter === 'all' ? ACCENT : 'var(--text-muted)',
-              border: `1px solid ${bpRarityFilter === 'all' ? withOpacity(ACCENT, OPACITY_30) : withOpacity(ACCENT, OPACITY_15)}`,
-            }}>
-            All
-          </button>
-          {RARITIES.map(r => (
-            <button key={r} onClick={() => setBpRarityFilter(r)}
-              className="px-2 py-1 rounded text-xs font-mono uppercase tracking-[0.15em] transition-all"
-              style={{
-                backgroundColor: bpRarityFilter === r ? `${RARITY_COLORS[r]}${OPACITY_20}` : 'transparent',
-                color: bpRarityFilter === r ? RARITY_COLORS[r] : 'var(--text-muted)',
-                border: `1px solid ${bpRarityFilter === r ? withOpacity(RARITY_COLORS[r], OPACITY_30) : withOpacity(ACCENT, OPACITY_15)}`,
-              }}>
-              {r}
-            </button>
-          ))}
-        </div>
-        <input type="text" value={bpSearch} onChange={(e) => setBpSearch(e.target.value)}
-          placeholder="Search affixes..."
-          className="px-2 py-1 rounded text-xs font-mono bg-surface-deep text-text placeholder:text-text-muted/50 w-40 focus:outline-none focus:ring-1"
-          style={{ border: `1px solid ${withOpacity(ACCENT, OPACITY_15)}`, '--tw-ring-color': STATUS_INFO } as React.CSSProperties} />
-        <span className="ml-auto text-xs font-mono text-text-muted">{breakpointData.length} affix{breakpointData.length !== 1 ? 'es' : ''}</span>
-      </div>
+      <BreakpointFilters
+        bpCategoryFilter={bpCategoryFilter}
+        setBpCategoryFilter={setBpCategoryFilter}
+        bpRarityFilter={bpRarityFilter}
+        setBpRarityFilter={setBpRarityFilter}
+        bpSearch={bpSearch}
+        setBpSearch={setBpSearch}
+        resultCount={breakpointData.length}
+      />
 
       {/* Table */}
       <BlueprintPanel color={STATUS_INFO} className="overflow-hidden">
@@ -126,67 +84,16 @@ export function BreakpointTable({
               </tr>
             </thead>
             <tbody>
-              {breakpointData.map(({ affix, tiers, scalingFlag, ratio }, ri) => {
-                const catColor = CATEGORY_COLORS[affix.category] ?? ACCENT;
-                const rarityColor = RARITY_COLORS[affix.minRarity];
-                const filterName = affix.bIsPrefix ? `${affix.displayName} [Item]` : `[Item] ${affix.displayName}`;
-                return (
-                  <motion.tr key={affix.id}
-                    initial={{ opacity: 0, x: -8 }} animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: ri * 0.02 }}
-                    className="hover:bg-white/[0.02] transition-colors group"
-                    style={{ borderBottom: `1px solid ${withOpacity(ACCENT, OPACITY_8)}` }}>
-                    <td className="px-3 py-2 sticky left-0 bg-surface-deep z-10 group-hover:bg-white/[0.02] transition-colors">
-                      <div className="flex items-center gap-2">
-                        <span className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ backgroundColor: catColor }} />
-                        <span className="font-bold text-text" style={{ textShadow: `0 0 12px ${withOpacity(catColor, OPACITY_25)}` }}>{affix.displayName}</span>
-                      </div>
-                    </td>
-                    <td className="px-2 py-2">
-                      <span className="px-1.5 py-0.5 rounded font-bold uppercase"
-                        style={{ backgroundColor: affix.bIsPrefix ? `${ACCENT_CYAN}${OPACITY_10}` : `${ACCENT_EMERALD}${OPACITY_10}`, color: affix.bIsPrefix ? ACCENT_CYAN : ACCENT_EMERALD }}>
-                        {affix.bIsPrefix ? 'Prefix' : 'Suffix'}
-                      </span>
-                    </td>
-                    <td className="px-2 py-2 text-text-muted">{affix.stat}</td>
-                    <td className="px-2 py-2">
-                      <span className="font-bold" style={{ color: rarityColor }}>{affix.minRarity}</span>
-                    </td>
-                    {tiers.map(({ ilvl, min, max }) => {
-                      const maxAtHighest = tiers[tiers.length - 1].max;
-                      const intensity = maxAtHighest > 0 ? max / maxAtHighest : 0;
-                      return (
-                        <td key={ilvl} className="px-2 py-2 text-center">
-                          <div className="inline-block px-2 py-0.5 rounded"
-                            style={{ backgroundColor: `${catColor}${intensity > 0.7 ? OPACITY_20 : intensity > 0.3 ? OPACITY_10 : OPACITY_5}` }}>
-                            <span className="text-text-muted">{min}</span>
-                            <span className="text-text-muted opacity-40">-</span>
-                            <span className="font-bold" style={{ color: catColor }}>{max}</span>
-                          </div>
-                        </td>
-                      );
-                    })}
-                    <td className="px-2 py-2 text-center">
-                      <span className="font-bold px-1.5 py-0.5 rounded"
-                        style={{
-                          color: scalingFlag === 'aggressive' ? STATUS_ERROR : scalingFlag === 'flat' ? STATUS_WARNING : ACCENT,
-                          backgroundColor: scalingFlag === 'aggressive' ? `${STATUS_ERROR}${OPACITY_10}` : scalingFlag === 'flat' ? `${STATUS_WARNING}${OPACITY_10}` : `${ACCENT}${OPACITY_5}`,
-                        }}>
-                        {ratio.toFixed(1)}x
-                        {scalingFlag === 'aggressive' && <AlertTriangle className="w-3 h-3 inline ml-1" />}
-                      </span>
-                    </td>
-                    <td className="px-3 py-2">
-                      <div className="flex items-center gap-2 px-2 py-1 rounded"
-                        style={{ border: `1px solid ${withOpacity(rarityColor, OPACITY_20)}`, backgroundColor: withOpacity(rarityColor, OPACITY_5) }}>
-                        <span className="w-1 h-3 rounded-sm flex-shrink-0" style={{ backgroundColor: rarityColor }} />
-                        <span style={{ color: rarityColor }}>{filterName}</span>
-                        <span className="ml-auto text-text-muted opacity-50 text-[9px]">+{tiers[tiers.length - 1].min}-{tiers[tiers.length - 1].max} {affix.stat}</span>
-                      </div>
-                    </td>
-                  </motion.tr>
-                );
-              })}
+              {breakpointData.map(({ affix, tiers, scalingFlag, ratio }, ri) => (
+                <BreakpointRow
+                  key={affix.id}
+                  affix={affix}
+                  tiers={tiers}
+                  scalingFlag={scalingFlag}
+                  ratio={ratio}
+                  index={ri}
+                />
+              ))}
               {breakpointData.length === 0 && (
                 <tr><td colSpan={9 + BREAKPOINT_ILVLS.length} className="px-4 py-8 text-center text-text-muted">No affixes match the current filters.</td></tr>
               )}
