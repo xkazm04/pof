@@ -5,7 +5,6 @@ import { BookOpen, LayoutGrid } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useTabFeatures } from '@/hooks/useTabFeatures';
 import { useUE5SourceSync } from '@/hooks/useUE5SourceSync';
-import { withOpacity, OPACITY_10 } from '@/lib/chart-colors';
 import type { SubModuleId } from '@/types/modules';
 import {
   TabHeader, LoadingSpinner, SubTabNavigation, type SubTab,
@@ -26,68 +25,15 @@ import {
   buildLiveTagDeps, buildLiveTagDetailMap, buildLiveTagUsageFrequency,
   buildLiveAttributes,
 } from './_shared/data';
-import { ComboChainBuilder } from '../sub_combat/combos';
 
 import { SpellbookDataCtx } from './_shared/context';
 import { ACCENT, SUBTABS } from './_shared/constants';
 import type { SpellbookLiveData, SpellbookSubtab } from './_shared/types';
-import { CoreSection } from './core/CoreSection';
-import { AttributesSection } from './tags/AttributesSection';
-import { TagsSection } from './tags/TagsSection';
-import { AbilitiesSection } from './abilities/AbilitiesSection';
-import { EffectsSection } from './effects/EffectsSection';
-import { TagDepsSection } from './tags/TagDepsSection';
-import { EffectsTimelineSection } from './effects/EffectsTimelineSection';
-import { DamageCalcSection } from './abilities/DamageCalcSection';
-import { TagAuditSection } from './tags/TagAuditSection';
-import { LoadoutSection } from './abilities/LoadoutSection';
 import { SpellbookSearch } from './SpellbookSearch';
 import { SyncStatusBadge } from './SpellbookHeader';
-import FeatureMapTab from '../unique-tabs/FeatureMapTab';
-import { VisibleSection } from '../unique-tabs/VisibleSection';
 import { useGASFeatureMetrics } from './FeatureMetrics';
-
-/* ── Narrative Breadcrumb ─────────────────────────────────────────────── */
-
-const FEATURES_STEP = { key: 'features' as SpellbookSubtab, narrative: 'Catalog' };
-const NARRATIVE_STEPS = [FEATURES_STEP, ...SUBTABS.map(t => ({ key: t.key, narrative: t.narrative }))];
-
-function NarrativeBreadcrumb({ activeTab, onNavigate }: { activeTab: SpellbookSubtab; onNavigate: (tab: SpellbookSubtab) => void }) {
-  const activeIdx = NARRATIVE_STEPS.findIndex(s => s.key === activeTab);
-  return (
-    <div className="flex items-center gap-0.5 text-[10px] font-mono tracking-wide overflow-x-auto custom-scrollbar pb-0.5">
-      {NARRATIVE_STEPS.map((step, i) => {
-        const isPast = i < activeIdx;
-        const isActive = i === activeIdx;
-        return (
-          <div key={step.key} className="flex items-center gap-0.5 flex-shrink-0">
-            {i > 0 && <span className="text-text-muted/40 mx-0.5">{'>'}</span>}
-            <button
-              onClick={() => onNavigate(step.key)}
-              className="px-1.5 py-0.5 rounded transition-all cursor-pointer"
-              style={{
-                color: isActive ? ACCENT : isPast ? withOpacity(ACCENT, '99') : 'var(--text-muted)',
-                backgroundColor: isActive ? withOpacity(ACCENT, OPACITY_10) : 'transparent',
-                fontWeight: isActive ? 700 : isPast ? 600 : 400,
-                opacity: !isActive && !isPast ? 0.5 : 1,
-              }}
-            >
-              {step.narrative}
-            </button>
-          </div>
-        );
-      })}
-    </div>
-  );
-}
-
-/* ── Active tab subtitle ──────────────────────────────────────────────── */
-
-function getActiveSubtitle(tab: SpellbookSubtab): string | null {
-  if (tab === 'features') return 'Feature implementation status & metrics';
-  const def = SUBTABS.find(t => t.key === tab);
-  return def?.subtitle ?? null;
-}
+import { NarrativeBreadcrumb, getActiveSubtitle } from './NarrativeBreadcrumb';
+import { SpellbookTabContent } from './SpellbookTabContent';
 
 /* ── Component ─────────────────────────────────────────────────────────── */
 
@@ -196,58 +142,15 @@ export function AbilitySpellbook({ moduleId }: AbilitySpellbookProps) {
             exit={{ opacity: 0, y: -8 }}
             transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
           >
-          {activeTab === 'features' && <FeatureMapTab moduleId={moduleId} renderMetric={renderMetric} />}
-          {activeTab === 'core' && (
-            <VisibleSection moduleId={moduleId} sectionId="architecture">
-            <div className="space-y-4">
-              <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
-                <div data-section-id="core"><CoreSection featureMap={featureMap} defs={defs} expanded={expandedFeature} onToggle={toggleFeature} /></div>
-                <div data-section-id="loadout"><LoadoutSection /></div>
-              </div>
-            </div>
-            </VisibleSection>
-          )}
-          {activeTab === 'abilities' && (
-            <VisibleSection moduleId={moduleId} sectionId="radar">
-            <div className="space-y-4">
-              <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
-                <div data-section-id="abilities"><AbilitiesSection featureMap={featureMap} defs={defs} expanded={expandedFeature} onToggle={toggleFeature} /></div>
-                <div data-section-id="damage-calc"><DamageCalcSection /></div>
-              </div>
-            </div>
-            </VisibleSection>
-          )}
-          {activeTab === 'effects' && (
-            <VisibleSection moduleId={moduleId} sectionId="effects-timeline">
-            <div className="space-y-4">
-              <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
-                <div data-section-id="effects"><EffectsSection featureMap={featureMap} defs={defs} expanded={expandedFeature} onToggle={toggleFeature} /></div>
-                <div data-section-id="effects-timeline"><EffectsTimelineSection /></div>
-              </div>
-            </div>
-            </VisibleSection>
-          )}
-          {activeTab === 'tags' && (
-            <VisibleSection moduleId={moduleId} sectionId="hierarchy">
-            <div className="space-y-4">
-              <div data-section-id="attributes"><AttributesSection featureMap={featureMap} defs={defs} expanded={expandedFeature} onToggle={toggleFeature} /></div>
-              <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
-                <div data-section-id="tags"><TagsSection featureMap={featureMap} defs={defs} expanded={expandedFeature} onToggle={toggleFeature} /></div>
-                <div className="space-y-4">
-                  <div data-section-id="tag-deps"><TagDepsSection /></div>
-                  <div data-section-id="tag-audit"><TagAuditSection /></div>
-                </div>
-              </div>
-            </div>
-            </VisibleSection>
-          )}
-          {activeTab === 'combos' && (
-            <VisibleSection moduleId={moduleId} sectionId="timeline">
-            <div data-section-id="combos">
-              <ComboChainBuilder />
-            </div>
-            </VisibleSection>
-          )}
+            <SpellbookTabContent
+              activeTab={activeTab}
+              moduleId={moduleId}
+              featureMap={featureMap}
+              defs={defs}
+              expandedFeature={expandedFeature}
+              toggleFeature={toggleFeature}
+              renderMetric={renderMetric}
+            />
           </motion.div>
         </AnimatePresence>
       </div>
@@ -255,4 +158,3 @@ export function AbilitySpellbook({ moduleId }: AbilitySpellbookProps) {
     </SpellbookDataCtx.Provider>
   );
 }
-
