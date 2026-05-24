@@ -974,6 +974,54 @@ export function SubTabNavigation({ tabs, activeTabId, onChange, accent }: SubTab
   );
 }
 
+/* ── NarrativeBreadcrumb ─────────────────────────────────────────────────── */
+
+export interface NarrativeBreadcrumbStep<T extends string = string> {
+  /** Subtab key this breadcrumb navigates to. */
+  key: T;
+  /** Human-readable label shown in the breadcrumb. */
+  narrative: string;
+}
+
+export interface NarrativeBreadcrumbProps<T extends string = string> {
+  steps: ReadonlyArray<NarrativeBreadcrumbStep<T>>;
+  activeKey: T;
+  accent: string;
+  onNavigate: (key: T) => void;
+}
+
+/** Horizontal "Catalog > Step > Step" breadcrumb that doubles as subtab navigation. */
+export function NarrativeBreadcrumb<T extends string = string>({
+  steps, activeKey, accent, onNavigate,
+}: NarrativeBreadcrumbProps<T>) {
+  const activeIdx = steps.findIndex(s => s.key === activeKey);
+  return (
+    <div className="flex items-center gap-0.5 text-[10px] font-mono tracking-wide overflow-x-auto custom-scrollbar pb-0.5">
+      {steps.map((step, i) => {
+        const isPast = i < activeIdx;
+        const isActive = i === activeIdx;
+        return (
+          <div key={step.key} className="flex items-center gap-0.5 flex-shrink-0">
+            {i > 0 && <span className="text-text-muted/40 mx-0.5">{'>'}</span>}
+            <button
+              onClick={() => onNavigate(step.key)}
+              className="px-1.5 py-0.5 rounded transition-all cursor-pointer"
+              style={{
+                color: isActive ? accent : isPast ? withOpacity(accent, '99') : 'var(--text-muted)',
+                backgroundColor: isActive ? withOpacity(accent, OPACITY_10) : 'transparent',
+                fontWeight: isActive ? 700 : isPast ? 600 : 400,
+                opacity: !isActive && !isPast ? 0.5 : 1,
+              }}
+            >
+              {step.narrative}
+            </button>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 /* ── SegmentedControl ────────────────────────────────────────────────────── */
 
 export interface SegmentedControlProps {
