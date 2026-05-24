@@ -1,6 +1,6 @@
 'use client';
 
-import { STATE_NODES, ACCENT } from '../data';
+import { STATE_NODES, ACCENT } from '../_shared/data';
 import { withOpacity, OPACITY_30, OPACITY_50 } from '@/lib/chart-colors';
 
 const edgeCount = STATE_NODES.reduce((sum, n) => sum + n.transitions.length, 0);

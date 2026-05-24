@@ -1,6 +1,6 @@
 'use client';
 
-import { SCRUBBER_LANES, ACCENT } from '../data';
+import { SCRUBBER_LANES, ACCENT } from '../_shared/data';
 import { withOpacity, OPACITY_50 } from '@/lib/chart-colors';
 
 const notifyCount = SCRUBBER_LANES.length;

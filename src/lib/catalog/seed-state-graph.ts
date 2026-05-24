@@ -1,7 +1,7 @@
 import {
   ALL_MONTAGES,
   type MontageEntry,
-} from '@/components/modules/core-engine/unique-tabs/AnimationStateGraph/data';
+} from '@/components/modules/core-engine/sub_animation/_shared/data';
 import type { AnimationEntry } from './types';
 
 /** Convert one MontageEntry into a State Graph entry. */

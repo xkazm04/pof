@@ -4,8 +4,8 @@ import { useState, useMemo } from 'react';
 import { Play } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { ACCENT_CYAN, STATUS_ERROR, STATUS_WARNING, OVERLAY_WHITE, withOpacity, OPACITY_5, OPACITY_8, OPACITY_15, OPACITY_25, OPACITY_30, OPACITY_50, GLOW_MD } from '@/lib/chart-colors';
-import { BlueprintPanel, SectionHeader } from '../../_design';
-import { ACCENT, COMBO_DEFS, COMBO_SECTIONS, type ComboSection } from '../data';
+import { BlueprintPanel, SectionHeader } from '../../unique-tabs/_design';
+import { ACCENT, COMBO_DEFS, COMBO_SECTIONS, type ComboSection } from '../_shared/data';
 
 export function ComboTimelinePanel() {
   const [activeCombo, setActiveCombo] = useState(COMBO_DEFS[0].id);

@@ -5,11 +5,11 @@ import {
   STATUS_SUCCESS, STATUS_WARNING, STATUS_ERROR,
   withOpacity, OPACITY_8, OPACITY_20, OPACITY_25, GLOW_SM,
 } from '@/lib/chart-colors';
-import { BlueprintPanel, SectionHeader, GlowStat } from '../../_design';
+import { BlueprintPanel, SectionHeader, GlowStat } from '../../unique-tabs/_design';
 import {
   ACCENT, RESPONSIVENESS_RESULTS, getGrade,
   type AnimStateName,
-} from '../data';
+} from '../_shared/data';
 
 export function ResponsivenessAnalyzer() {
   return (

@@ -1,6 +1,6 @@
 'use client';
 
-import { COMBO_DEFS, ACCENT } from '../data';
+import { COMBO_DEFS, ACCENT } from '../_shared/data';
 import { withOpacity, OPACITY_50 } from '@/lib/chart-colors';
 
 const comboCount = COMBO_DEFS.length;

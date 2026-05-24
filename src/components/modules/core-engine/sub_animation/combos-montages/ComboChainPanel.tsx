@@ -3,8 +3,8 @@
 import { useState, useCallback, useMemo } from 'react';
 import { Plus } from 'lucide-react';
 import { ACCENT_CYAN, STATUS_ERROR, withOpacity, OPACITY_8, OPACITY_10, OPACITY_20, OPACITY_30 } from '@/lib/chart-colors';
-import { BlueprintPanel, SectionHeader } from '../../_design';
-import { ACCENT, COMBO_CHAIN_NODES, COMBO_CHAIN_EDGES, ALL_MONTAGES } from '../data';
+import { BlueprintPanel, SectionHeader } from '../../unique-tabs/_design';
+import { ACCENT, COMBO_CHAIN_NODES, COMBO_CHAIN_EDGES, ALL_MONTAGES } from '../_shared/data';
 import { ScalableSelector, type SelectorItem } from '@/components/shared/ScalableSelector';
 
 interface ComboChainPanelProps {

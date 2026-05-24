@@ -1,6 +1,6 @@
 'use client';
 
-import { ROOT_MOTION_PATHS, ACCENT } from '../data';
+import { ROOT_MOTION_PATHS, ACCENT } from '../_shared/data';
 import { withOpacity, OPACITY_50 } from '@/lib/chart-colors';
 
 const curveCount = ROOT_MOTION_PATHS.length;

@@ -4,11 +4,11 @@ import { useState } from 'react';
 import { ChevronDown } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { OVERLAY_WHITE, withOpacity, OPACITY_4, OPACITY_6, OPACITY_30, OPACITY_50 } from '@/lib/chart-colors';
-import { BlueprintPanel, SectionHeader } from '../../_design';
-import { PipelineFlow } from '../../_shared';
+import { BlueprintPanel, SectionHeader } from '../../unique-tabs/_design';
+import { PipelineFlow } from '../../unique-tabs/_shared';
 import {
   ACCENT, RETARGET_PIPELINE_STEPS, ROOT_MOTION_PATHS,
-} from '../data';
+} from '../_shared/data';
 
 export function RetargetingTab() {
   return (

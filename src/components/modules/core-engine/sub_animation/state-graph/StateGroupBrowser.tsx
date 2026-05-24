@@ -3,8 +3,8 @@
 import { useState, useMemo } from 'react';
 import { ChevronDown, X, ArrowRightLeft } from 'lucide-react';
 import { STATUS_WARNING, withOpacity, OPACITY_8, OPACITY_10, OPACITY_30 } from '@/lib/chart-colors';
-import { BlueprintPanel, SectionHeader } from '../../_design';
-import { ACCENT, STATE_GROUPS, STATE_NODES, TRANSITION_RULES, type TransitionRule } from '../data';
+import { BlueprintPanel, SectionHeader } from '../../unique-tabs/_design';
+import { ACCENT, STATE_GROUPS, STATE_NODES, TRANSITION_RULES, type TransitionRule } from '../_shared/data';
 
 export function StateGroupBrowser() {
   const [selectedState, setSelectedState] = useState<string | null>(null);

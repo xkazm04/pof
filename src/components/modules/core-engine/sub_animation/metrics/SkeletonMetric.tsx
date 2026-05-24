@@ -1,7 +1,7 @@
 'use client';
 
-import { BUDGET_GAUGES, ACCENT } from '../data';
-import { NeonBar } from '../../_design';
+import { BUDGET_GAUGES, ACCENT } from '../_shared/data';
+import { NeonBar } from '../../unique-tabs/_design';
 import { withOpacity, OPACITY_50 } from '@/lib/chart-colors';
 
 const boneGauge = BUDGET_GAUGES.find(g => g.label === 'Bone Count');

@@ -1,10 +1,11 @@
 'use client';
 
-import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { Play, ChevronDown } from 'lucide-react';
 import { OVERLAY_WHITE, withOpacity, OPACITY_5, OPACITY_8, OPACITY_12, OPACITY_25, OPACITY_37 } from '@/lib/chart-colors';
-import { BlueprintPanel, SectionHeader } from '../../_design';
-import { ACCENT, SCRUBBER_LANES, SCRUBBER_TOTAL_FRAMES, ALL_MONTAGES, MONTAGE_CATEGORIES, type MontageCategory, type MontageEntry } from '../data';
+import { BlueprintPanel, SectionHeader } from '../../unique-tabs/_design';
+import { ACCENT, SCRUBBER_LANES, ALL_MONTAGES, MONTAGE_CATEGORIES, type MontageCategory, type MontageEntry } from '../_shared/data';
+import { useSafeMontage } from './useSafeMontage';
 
 /** Group montages by category for dropdown. */
 const GROUPED_MONTAGES: { category: MontageCategory; montages: MontageEntry[] }[] =
@@ -21,12 +22,10 @@ export function FrameScrubberPanel() {
   const scrubberRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
-  const selectedMontage = useMemo(
-    () => ALL_MONTAGES.find(m => m.id === selectedMontageId) ?? ALL_MONTAGES[0],
-    [selectedMontageId],
-  );
-
-  const totalFrames = selectedMontage.totalFrames;
+  // Guard all scrubber math (gradient %, lane bars, playhead) against zero-frame
+  // assets and empty montage lists — a 0-frame montage otherwise yields NaN% widths.
+  const { isEmpty, selectedMontage, safeTotalFrames, scaledLanes, framePercent } =
+    useSafeMontage(ALL_MONTAGES, SCRUBBER_LANES, selectedMontageId);
 
   // Close dropdown on outside click
   useEffect(() => {
@@ -48,13 +47,13 @@ export function FrameScrubberPanel() {
     shouldStopRef.current = false;
     scrubberRef.current = setInterval(() => {
       setScrubberFrame((f) => {
-        if (f >= totalFrames) { shouldStopRef.current = true; return 0; }
+        if (f >= safeTotalFrames) { shouldStopRef.current = true; return 0; }
         return f + 1;
       });
       if (shouldStopRef.current) setScrubberPlaying(false);
     }, 80);
     return () => { if (scrubberRef.current) clearInterval(scrubberRef.current); };
-  }, [scrubberPlaying, totalFrames]);
+  }, [scrubberPlaying, safeTotalFrames]);
 
   const handleSelectMontage = useCallback((id: string) => {
     setSelectedMontageId(id);
@@ -63,12 +62,18 @@ export function FrameScrubberPanel() {
     setDropdownOpen(false);
   }, []);
 
-  // Scale scrubber lanes to the selected montage's frame count
-  const scaledLanes = useMemo(() => SCRUBBER_LANES.map(lane => ({
-    ...lane,
-    startFrame: Math.round((lane.startFrame / SCRUBBER_TOTAL_FRAMES) * totalFrames),
-    endFrame: Math.round((lane.endFrame / SCRUBBER_TOTAL_FRAMES) * totalFrames),
-  })), [totalFrames]);
+  // No montages available → render an empty state rather than dereferencing null.
+  if (isEmpty || !selectedMontage) {
+    return (
+      <BlueprintPanel color={ACCENT} className="p-4">
+        <SectionHeader label="Montage Frame Scrubber" color={ACCENT} />
+        <p className="mt-3 text-xs font-mono text-text-muted">No montages available.</p>
+      </BlueprintPanel>
+    );
+  }
+
+  // Real frame count for display only; math uses safeTotalFrames / framePercent.
+  const totalFrames = selectedMontage.totalFrames;
 
   return (
     <BlueprintPanel color={ACCENT} className="p-4">
@@ -144,11 +149,11 @@ export function FrameScrubberPanel() {
           <input
             type="range"
             min={0}
-            max={totalFrames}
+            max={safeTotalFrames}
             value={scrubberFrame}
             onChange={(e) => { setScrubberFrame(Number(e.target.value)); setScrubberPlaying(false); }}
             className="w-full h-2 rounded-lg appearance-none cursor-pointer"
-            style={{ accentColor: ACCENT, background: `linear-gradient(to right, ${withOpacity(ACCENT, OPACITY_25)} ${(scrubberFrame / totalFrames) * 100}%, ${withOpacity(OVERLAY_WHITE, OPACITY_5)} ${(scrubberFrame / totalFrames) * 100}%)` }}
+            style={{ accentColor: ACCENT, background: `linear-gradient(to right, ${withOpacity(ACCENT, OPACITY_25)} ${framePercent(scrubberFrame)}%, ${withOpacity(OVERLAY_WHITE, OPACITY_5)} ${framePercent(scrubberFrame)}%)` }}
           />
         </div>
 
@@ -161,8 +166,8 @@ export function FrameScrubberPanel() {
                 <div
                   className="absolute top-0 h-full rounded opacity-70"
                   style={{
-                    left: `${(lane.startFrame / totalFrames) * 100}%`,
-                    width: `${((lane.endFrame - lane.startFrame) / totalFrames) * 100}%`,
+                    left: `${framePercent(lane.startFrame)}%`,
+                    width: `${framePercent(lane.endFrame - lane.startFrame)}%`,
                     backgroundColor: withOpacity(lane.color, OPACITY_37),
                     borderLeft: `2px solid ${lane.color}`,
                   }}
@@ -170,7 +175,7 @@ export function FrameScrubberPanel() {
                 {/* Current frame marker */}
                 <div
                   className="absolute top-0 w-[2px] h-full bg-white/60 z-10"
-                  style={{ left: `${(scrubberFrame / totalFrames) * 100}%` }}
+                  style={{ left: `${framePercent(scrubberFrame)}%` }}
                 />
               </div>
             </div>

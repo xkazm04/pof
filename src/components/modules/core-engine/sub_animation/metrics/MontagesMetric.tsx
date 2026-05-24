@@ -1,6 +1,6 @@
 'use client';
 
-import { MONTAGE_TIMINGS, ACCENT } from '../data';
+import { MONTAGE_TIMINGS, ACCENT } from '../_shared/data';
 import { withOpacity, OPACITY_50 } from '@/lib/chart-colors';
 
 const montageCount = MONTAGE_TIMINGS.length;

@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { montageToEntry, seedAnimationEntries } from '@/lib/catalog/seed-state-graph';
-import { ALL_MONTAGES } from '@/components/modules/core-engine/unique-tabs/AnimationStateGraph/data';
+import { ALL_MONTAGES } from '@/components/modules/core-engine/sub_animation/_shared/data';
 
 describe('montageToEntry', () => {
   const m0 = ALL_MONTAGES[0];

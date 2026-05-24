@@ -1,6 +1,6 @@
 'use client';
 
-import { STATE_NODES, STATE_GROUPS, ACCENT } from '../data';
+import { STATE_NODES, STATE_GROUPS, ACCENT } from '../_shared/data';
 import { withOpacity, OPACITY_50 } from '@/lib/chart-colors';
 
 const stateCount = STATE_NODES.length;

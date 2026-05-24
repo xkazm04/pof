@@ -1,9 +1,9 @@
 'use client';
 
 import { STATUS_INFO, STATUS_WARNING, ACCENT_EMERALD } from '@/lib/chart-colors';
-import { BlueprintPanel, SectionHeader } from '../../_design';
-import { TimelineStrip } from '../../_shared';
-import { ACCENT, ANIMATION_TIMELINE_EVENTS } from '../data';
+import { BlueprintPanel, SectionHeader } from '../../unique-tabs/_design';
+import { TimelineStrip } from '../../unique-tabs/_shared';
+import { ACCENT, ANIMATION_TIMELINE_EVENTS } from '../_shared/data';
 
 export function EventTimelinePanel() {
   return (

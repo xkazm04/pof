@@ -10,7 +10,7 @@ import { useGeneration } from '@/hooks/useGeneration';
 import { CatalogLifecycleCell } from '@/components/catalog/CatalogLifecycleCell';
 import type { AnimationEntry } from '@/lib/catalog/types';
 import type { GenerationStep } from '@/lib/catalog/recipe';
-import { ALL_MONTAGES } from './data';
+import { ALL_MONTAGES } from './_shared/data';
 import {
   TabHeader,
   LoadingSpinner,
@@ -20,10 +20,10 @@ import {
   NarrativeBreadcrumb,
   type NarrativeBreadcrumbStep,
   type SubTab,
-} from '../_shared';
+} from '../unique-tabs/_shared';
 import type { SubModuleId } from '@/types/modules';
-import { ACCENT, HEATMAP_STATE_NAMES, HEATMAP_CELLS, COMBO_CHAIN_NODES, ANIM_SUBTABS, type AnimSubtab } from './data';
-import { BlueprintPanel, SectionHeader } from '../_design';
+import { ACCENT, HEATMAP_STATE_NAMES, HEATMAP_CELLS, COMBO_CHAIN_NODES, ANIM_SUBTABS, type AnimSubtab } from './_shared/data';
+import { BlueprintPanel, SectionHeader } from '../unique-tabs/_design';
 import { StateMachinePanel } from './state-graph/StateMachinePanel';
 import { BlendSpacePanel } from './budget/BlendSpacePanel';
 import { StateDurationPanel } from './budget/StateDurationPanel';
@@ -35,8 +35,8 @@ import { EventTimelinePanel } from './combos-montages/EventTimelinePanel';
 import { RetargetingTab } from './retargeting/RetargetingTab';
 import { BudgetTab } from './budget/BudgetTab';
 import { StateGroupBrowser } from './state-graph/StateGroupBrowser';
-import FeatureMapTab from '../FeatureMapTab';
-import { VisibleSection } from '../VisibleSection';
+import FeatureMapTab from '../unique-tabs/FeatureMapTab';
+import { VisibleSection } from '../unique-tabs/VisibleSection';
 import { renderAnimMetric } from './metrics';
 
 /* ── Narrative Breadcrumb steps ────────────────────────────────────────── */

@@ -1,6 +1,6 @@
 'use client';
 
-import { HEATMAP_CELLS, HEATMAP_STATE_NAMES, ACCENT } from '../data';
+import { HEATMAP_CELLS, HEATMAP_STATE_NAMES, ACCENT } from '../_shared/data';
 import { withOpacity, OPACITY_10 } from '@/lib/chart-colors';
 
 const CELL_PX = 5;

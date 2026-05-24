@@ -8,7 +8,7 @@ import { AbilitySpellbook } from './AbilitySpellbook';
 import { LootTableVisualizer } from './LootTableVisualizer';
 import { CharacterBlueprint } from '../sub_character';
 import { CharacterSourceWizard } from '../sub_character/wizard/CharacterSourceWizard';
-import { AnimationStateGraph } from './AnimationStateGraph';
+import { AnimationStateGraph } from '../sub_animation';
 import { ScreenFlowMap } from './ScreenFlowMap';
 import { SaveDataSchema } from '../sub_save';
 import { DebugDashboard } from '../sub_debug';

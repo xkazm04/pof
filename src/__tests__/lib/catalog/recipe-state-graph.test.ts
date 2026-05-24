@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { getRecipe } from '@/lib/catalog/recipe';
 import type { AnimationEntry } from '@/lib/catalog/types';
-import { ALL_MONTAGES } from '@/components/modules/core-engine/unique-tabs/AnimationStateGraph/data';
+import { ALL_MONTAGES } from '@/components/modules/core-engine/sub_animation/_shared/data';
 import type { ProjectContext } from '@/lib/prompt-context';
 
 const ctx: ProjectContext = { projectName: 'PoF', projectPath: 'C:/p', ueVersion: '5.7', dynamicContext: undefined };

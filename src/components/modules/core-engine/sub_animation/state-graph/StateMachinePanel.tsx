@@ -7,9 +7,9 @@ import {
   ACCENT_CYAN, ACCENT_EMERALD, OVERLAY_WHITE,
   withOpacity, OPACITY_8, OPACITY_12, OPACITY_20, OPACITY_30,
 } from '@/lib/chart-colors';
-import { BlueprintPanel, SectionHeader } from '../../_design';
-import { STATUS_COLORS } from '../../_shared';
-import { ACCENT, STATE_GROUPS, STATE_NODES, type StateNode } from '../data';
+import { BlueprintPanel, SectionHeader } from '../../unique-tabs/_design';
+import { STATUS_COLORS } from '../../unique-tabs/_shared';
+import { ACCENT, STATE_GROUPS, STATE_NODES, type StateNode } from '../_shared/data';
 import type { FeatureStatus, FeatureRow } from '@/types/feature-matrix';
 
 /* ── Module-scope graph data for SVG visualization ────────────────────────── */

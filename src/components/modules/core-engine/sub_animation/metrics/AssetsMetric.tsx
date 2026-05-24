@@ -1,6 +1,6 @@
 'use client';
 
-import { MONTAGE_TIMINGS, BUDGET_GAUGES, BLEND_CLIPS, ACCENT } from '../data';
+import { MONTAGE_TIMINGS, BUDGET_GAUGES, BLEND_CLIPS, ACCENT } from '../_shared/data';
 import { withOpacity, OPACITY_50 } from '@/lib/chart-colors';
 
 // Rough memory estimate: montages ~0.5MB each, blend clips ~0.2MB each, bone data ~0.1MB per bone slot

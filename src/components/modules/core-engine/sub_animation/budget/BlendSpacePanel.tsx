@@ -1,8 +1,8 @@
 'use client';
 
 import { ACCENT_CYAN, OVERLAY_WHITE, withOpacity, OPACITY_5, OPACITY_8, OPACITY_12, OPACITY_25 } from '@/lib/chart-colors';
-import { BlueprintPanel, SectionHeader } from '../../_design';
-import { ACCENT, BLEND_CLIPS, BLEND_CURRENT } from '../data';
+import { BlueprintPanel, SectionHeader } from '../../unique-tabs/_design';
+import { ACCENT, BLEND_CLIPS, BLEND_CURRENT } from '../_shared/data';
 
 /** The 3 clips closest to the current blend position — forms the blend triangle. */
 const BLEND_TRIANGLE = (() => {

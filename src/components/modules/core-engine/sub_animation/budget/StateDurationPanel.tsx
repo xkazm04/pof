@@ -1,8 +1,8 @@
 'use client';
 
 import { STATUS_WARNING, withOpacity, OPACITY_15, OPACITY_20, OPACITY_30 } from '@/lib/chart-colors';
-import { BlueprintPanel, SectionHeader } from '../../_design';
-import { ACCENT, STATE_DURATIONS, DURATION_SCALE_MAX } from '../data';
+import { BlueprintPanel, SectionHeader } from '../../unique-tabs/_design';
+import { ACCENT, STATE_DURATIONS, DURATION_SCALE_MAX } from '../_shared/data';
 
 export function StateDurationPanel() {
   return (

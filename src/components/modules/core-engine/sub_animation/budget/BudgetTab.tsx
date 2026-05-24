@@ -7,14 +7,14 @@ import { STATUS_SUCCESS, STATUS_WARNING, STATUS_ERROR, STATUS_INFO,
   ACCENT_CYAN_LIGHT, ACCENT_VIOLET, ACCENT_PINK, ACCENT_EMERALD,
   withOpacity, OPACITY_8, OPACITY_5, OPACITY_20, OPACITY_12, OPACITY_10, OPACITY_30,
 } from '@/lib/chart-colors';
-import { BlueprintPanel, SectionHeader, NeonBar } from '../../_design';
-import { FeatureCard, LiveMetricGauge } from '../../_shared';
+import { BlueprintPanel, SectionHeader, NeonBar } from '../../unique-tabs/_design';
+import { FeatureCard, LiveMetricGauge } from '../../unique-tabs/_shared';
 import {
   ACCENT, ASSET_FEATURES, BUDGET_GAUGES,
   NOTIFY_ISSUES, MONTAGE_COVERAGES,
   ALL_MONTAGES, MONTAGE_CATEGORIES, MONTAGE_CATEGORY_COUNTS, MONTAGE_CATEGORY_MEMORY, TOTAL_MONTAGE_MEMORY,
   type MontageCategory,
-} from '../data';
+} from '../_shared/data';
 import type { FeatureRow } from '@/types/feature-matrix';
 
 interface BudgetTabProps {
