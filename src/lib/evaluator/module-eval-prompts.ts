@@ -142,7 +142,8 @@ Additionally: on death, the character must apply the State.Dead gameplay tag via
 - Combo timeout should reset combo count (not just on miss)
 - Hit reaction montage should interrupt current montage properly
 - Camera shake and hitstop should be proportional to damage
-Additionally: verify GA_MeleeAttack stores HitActors as TSet<AActor*> on the ability instance (not on the notify), and clears the set at ability activation. Multi-hit-per-swing without dedup is a regression.`,
+Additionally: verify GA_MeleeAttack stores HitActors as TSet<AActor*> on the ability instance (not on the notify), and clears the set at ability activation. Multi-hit-per-swing without dedup is a regression.
+Additionally: detect parallel Health bookkeeping — a plain float Health/MaxHealth member on the character (e.g. AARPGPlayerCharacter::GetHealth) alongside the GAS Health attribute (UARPGAttributeSet). The HUD and damage pipeline use GAS; the float is a latent inconsistency. Flag it and recommend: deprecate the plain float OR sync it from GAS in PostGameplayEffectExecute. Two Health systems must not drift.`,
     performanceChecks: `- Weapon trace should only run during anim notify window, not every tick
 - Damage numbers should use object pooling
 - Hit VFX should be spawned from pool, not SpawnEmitter every hit
