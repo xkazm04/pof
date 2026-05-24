@@ -7,7 +7,7 @@ import { EcwTopBar } from './EcwTopBar';
 import { CliRail } from './CliRail';
 import { EcwCommandPalette } from './EcwCommandPalette';
 import { CatalogsTab } from './catalogs/CatalogsTab';
-import { MissionControlTabPlaceholder } from './tabs/MissionControlTabPlaceholder';
+import { MissionControlTab } from './mission/MissionControlTab';
 import { LiveStateTabPlaceholder } from './tabs/LiveStateTabPlaceholder';
 
 /**
@@ -33,7 +33,7 @@ export function NewAppShell() {
       <div className="flex-1 flex overflow-hidden">
         <main className="flex-1 flex overflow-hidden">
           {tab === 'catalogs' && <CatalogsTab />}
-          {tab === 'mission-control' && <MissionControlTabPlaceholder />}
+          {tab === 'mission-control' && <MissionControlTab />}
           {tab === 'live-state' && <LiveStateTabPlaceholder />}
         </main>
         <CliRail />
