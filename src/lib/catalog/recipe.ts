@@ -1,5 +1,5 @@
 import type { ProjectContext } from '@/lib/prompt-context';
-import type { AbilityEntry, CatalogEntityBase, ItemEntry, LifecycleState, LootTableEntry, BestiaryEntry, CombatInteractionEntry, ScreenEntry } from '@/lib/catalog/types';
+import type { AbilityEntry, CatalogEntityBase, ItemEntry, LifecycleState, LootTableEntry, BestiaryEntry, CombatInteractionEntry, ScreenEntry, ZoneEntry } from '@/lib/catalog/types';
 import { PromptBuilder } from '@/lib/prompts/prompt-builder';
 
 export type GenerationStep = 'scaffold-cpp' | 'author-python' | 'wire' | 'verify';
@@ -214,6 +214,34 @@ export const SCREEN_FLOW_RECIPE: GenerationRecipe<ScreenEntry> = {
   },
 };
 
+const ZONE_MAP_BEST_PRACTICES = [
+  'Author the `.umap` via a `build_<zone_id>.py` script run through the FULL editor (-ExecutePythonScript), extending the proven `build_arena.py` / `build_procgen_dungeon.py` pattern.',
+  'Place the map under `/Game/Maps/` and report its content path.',
+  'Set Movable lights for headless cooks (Lightmass bake is skipped headlessly — folder-05 lesson).',
+  'Spawn placement: use ZONE_EDGES portals + Bestiary archetype links (resolved at recipe time, not seed time).',
+];
+
+export const ZONE_MAP_RECIPE: GenerationRecipe<ZoneEntry> = {
+  id: 'zone-map-zone',
+  catalogId: 'zone-map',
+  steps: ['author-python', 'verify'],
+  testPath: 'Project.Functional Tests.Maps.VSZone.VSZone_DefaultTest',
+  buildStepPrompt(entity, step, ctx) {
+    const task =
+      step === 'author-python'
+        ? `Author /Game/Maps/${entity.data.id}.umap via a build_${entity.data.id}.py script (FULL editor): floor + lights + PlayerStart + zone-specific placement + portals from ZONE_EDGES.`
+        : `Run VSZone_${entity.data.id}Test: player spawns, nav exists, encounter triggers; layout sane (Gemini-vision optional).`;
+    const b = new PromptBuilder()
+      .withProjectContext(ctx)
+      .withDomainContext('Zone (.umap) authoring + spawn/nav placement for the PoF ARPG.')
+      .withAssetSpec(entity)
+      .withTask(`Zone Map · ${step}`, task)
+      .withBestPractices(ZONE_MAP_BEST_PRACTICES);
+    if (step === 'verify') b.withSuccessCriteria([`The functional test \`${this.testPath}\` returns Result={Success}.`]);
+    return b.build();
+  },
+};
+
 const RECIPES: Record<string, GenerationRecipe> = {
   spellbook: SPELLBOOK_RECIPE,
   items: ITEMS_RECIPE,
@@ -221,6 +249,7 @@ const RECIPES: Record<string, GenerationRecipe> = {
   bestiary: BESTIARY_RECIPE,
   'combat-map': COMBAT_MAP_RECIPE,
   'screen-flow': SCREEN_FLOW_RECIPE,
+  'zone-map': ZONE_MAP_RECIPE,
 };
 
 /** The recipe for a catalog, or undefined if none is registered yet. */
