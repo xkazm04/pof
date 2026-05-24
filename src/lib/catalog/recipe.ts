@@ -1,5 +1,5 @@
 import type { ProjectContext } from '@/lib/prompt-context';
-import type { AbilityEntry, CatalogEntityBase, ItemEntry, LifecycleState, LootTableEntry, BestiaryEntry, CombatInteractionEntry } from '@/lib/catalog/types';
+import type { AbilityEntry, CatalogEntityBase, ItemEntry, LifecycleState, LootTableEntry, BestiaryEntry, CombatInteractionEntry, ScreenEntry } from '@/lib/catalog/types';
 import { PromptBuilder } from '@/lib/prompts/prompt-builder';
 
 export type GenerationStep = 'scaffold-cpp' | 'author-python' | 'wire' | 'verify';
@@ -181,12 +181,46 @@ export const COMBAT_MAP_RECIPE: GenerationRecipe<CombatInteractionEntry> = {
   },
 };
 
+const SCREEN_FLOW_BEST_PRACTICES = [
+  'Scaffold a pure-C++ `UUserWidget` subclass extending `UARPGCodeWidgetBase` (folder-04 keystone) — do NOT use `meta=(BindWidget)`.',
+  'Build the widget tree in `RebuildWidget()` (not `NativeConstruct` — the RebuildWidget timing trap).',
+  'Place the header under `Source/PoF/UI/` and the WBP stub (if any) under `/Game/UI/`.',
+  'Wire transitions into the screen-flow state machine; never assume a stale CDO.',
+];
+
+export const SCREEN_FLOW_RECIPE: GenerationRecipe<ScreenEntry> = {
+  id: 'screen-flow-screen',
+  catalogId: 'screen-flow',
+  steps: ['scaffold-cpp', 'author-python', 'wire', 'verify'],
+  testPath: 'Project.Functional Tests.Maps.VSScreens.VSScreen_DefaultTest',
+  buildStepPrompt(entity, step, ctx) {
+    const cls = `U${entity.data.id}Widget`;
+    const task =
+      step === 'scaffold-cpp'
+        ? `Scaffold ${cls} extending UARPGCodeWidgetBase (pure-C++, build the tree in RebuildWidget()).`
+        : step === 'author-python'
+          ? `Author the WBP_${entity.data.id} stub if BindWidget meta is unavoidable; otherwise pure-C++ is preferred.`
+          : step === 'wire'
+            ? `Wire screen "${entity.name}" into the screen-flow state machine (push/pop/replace), respecting its group "${entity.data.group ?? 'Misc'}".`
+            : `Run VSScreen_${entity.data.id}Test: widget mounts/binds/transitions; bar moves on attribute change.`;
+    const b = new PromptBuilder()
+      .withProjectContext(ctx)
+      .withDomainContext('Pure-C++ UMG widgets (UARPGCodeWidgetBase) for the PoF ARPG.')
+      .withAssetSpec(entity)
+      .withTask(`Screen Flow · ${step}`, task)
+      .withBestPractices(SCREEN_FLOW_BEST_PRACTICES);
+    if (step === 'verify') b.withSuccessCriteria([`The functional test \`${this.testPath}\` returns Result={Success}.`]);
+    return b.build();
+  },
+};
+
 const RECIPES: Record<string, GenerationRecipe> = {
   spellbook: SPELLBOOK_RECIPE,
   items: ITEMS_RECIPE,
   'loot-tables': LOOT_RECIPE,
   bestiary: BESTIARY_RECIPE,
   'combat-map': COMBAT_MAP_RECIPE,
+  'screen-flow': SCREEN_FLOW_RECIPE,
 };
 
 /** The recipe for a catalog, or undefined if none is registered yet. */
