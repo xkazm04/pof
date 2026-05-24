@@ -5,15 +5,17 @@ import { BarChart3, Activity, Swords } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { BlueprintPanel, SectionHeader, NeonBar } from '../../unique-tabs/_design';
 import {
-  ACCENT, DPS_STRATEGIES, DPS_MAX, CUMULATIVE_POINTS,
-  SANKEY_COLUMNS, SANKEY_FLOWS, KPI_CARDS,
+  ACCENT, DPS_STRATEGIES, DPS_MAX, KPI_CARDS,
 } from '../_shared/data';
 import { WEAPONS, COMBO_SEQUENCES, parseDamageMidpoint } from '../_shared/data-metrics';
 import type { Weapon, WeaponCategory } from '../_shared/data-metrics';
 import { StatInfluencePanel } from './StatInfluencePanel';
 import { AbilityQuickPicker } from '../../sub_character/input/AbilityQuickPicker';
+import { CumulativeDamageSvg } from './CumulativeDamageSvg';
+import { ProportionalSankey } from './ProportionalSankey';
+import { GroupedDpsBarChart } from './GroupedDpsBarChart';
 
-import { OVERLAY_WHITE, withOpacity, OPACITY_4, OPACITY_8, OPACITY_10, OPACITY_30, OPACITY_50 } from '@/lib/chart-colors';
+import { withOpacity, OPACITY_10, OPACITY_30 } from '@/lib/chart-colors';
 
 const MAX_COMPARE = 4;
 const WEAPON_CATEGORIES: WeaponCategory[] = ['Sword', 'Axe', 'Mace', 'Bow', 'Staff', 'Dagger', 'Polearm'];
@@ -185,195 +187,5 @@ export function MetricsTab() {
       {/* Ability Reference */}
       <AbilityQuickPicker />
     </motion.div>
-  );
-}
-
-/* ── Cumulative Damage SVG ─────────────────────────────────────────────── */
-
-function CumulativeDamageSvg() {
-  return (
-    <svg width="100%" height="150" viewBox="0 0 260 60" className="overflow-visible" preserveAspectRatio="xMidYMid meet">
-      {[0, 20, 40, 60].map(y => <line key={y} x1="30" y1={y + 5} x2="255" y2={y + 5} stroke={withOpacity(OVERLAY_WHITE, OPACITY_4)} strokeWidth="1" />)}
-      {CUMULATIVE_POINTS.map((t) => <text key={t} x={30 + t * 45} y="78" textAnchor="middle" className="text-xs font-mono" fill={withOpacity(OVERLAY_WHITE, OPACITY_30)}>{t}s</text>)}
-      {DPS_STRATEGIES.map((strat) => {
-        const maxDmg = DPS_MAX * 5;
-        const pts = CUMULATIVE_POINTS.map(t => ({ x: 30 + t * 45, y: 65 - ((strat.dps * t) / maxDmg) * 60 }));
-        const d = `M ${pts.map(p => `${p.x},${p.y}`).join(' L ')}`;
-        return (
-          <g key={strat.name}>
-            <path d={d} fill="none" stroke={strat.color} strokeWidth="1.5" opacity="0.8" />
-            {pts.map((p, i) => <circle key={i} cx={p.x} cy={p.y} r="2" fill={strat.color} />)}
-          </g>
-        );
-      })}
-    </svg>
-  );
-}
-
-/* ── Proportional Sankey SVG ───────────────────────────────────────────── */
-
-const SANKEY_SVG_W = 380;
-const SANKEY_SVG_H = 190;
-const SANKEY_NODE_W = 60;
-const SANKEY_MARGIN = 18;
-const SANKEY_GAP = 4;
-
-const SANKEY_COL_X = Array.from(
-  { length: SANKEY_COLUMNS.length },
-  (_, i) => 25 + i * ((SANKEY_SVG_W - SANKEY_NODE_W - 50) / (SANKEY_COLUMNS.length - 1)),
-);
-
-interface SankeyNode { x: number; y: number; h: number; color: string; label: string; pct: number }
-
-const SANKEY_NODE_MAP = new Map<string, SankeyNode>();
-for (let ci = 0; ci < SANKEY_COLUMNS.length; ci++) {
-  const items = SANKEY_COLUMNS[ci].items;
-  const totalGap = (items.length - 1) * SANKEY_GAP;
-  const usableH = SANKEY_SVG_H - SANKEY_MARGIN - totalGap;
-  let y = SANKEY_MARGIN;
-  for (const item of items) {
-    const h = Math.max(10, (item.pct / 100) * usableH);
-    SANKEY_NODE_MAP.set(item.id, { x: SANKEY_COL_X[ci], y, h, color: item.color ?? ACCENT, label: item.label, pct: item.pct });
-    y += h + SANKEY_GAP;
-  }
-}
-
-/* Pre-compute flow band paths at module scope */
-const SANKEY_FLOW_PATHS: { d: string; color: string }[] = (() => {
-  const rightY = new Map<string, number>();
-  const leftY = new Map<string, number>();
-  for (const [id, node] of SANKEY_NODE_MAP) {
-    rightY.set(id, node.y);
-    leftY.set(id, node.y);
-  }
-  const paths: { d: string; color: string }[] = [];
-  for (const flow of SANKEY_FLOWS) {
-    const src = SANKEY_NODE_MAP.get(flow.source);
-    const tgt = SANKEY_NODE_MAP.get(flow.target);
-    if (!src || !tgt) continue;
-    const srcH = (flow.value / src.pct) * src.h;
-    const tgtH = (flow.value / tgt.pct) * tgt.h;
-    const x1 = src.x + SANKEY_NODE_W;
-    const y1 = rightY.get(flow.source)!;
-    rightY.set(flow.source, y1 + srcH);
-    const x2 = tgt.x;
-    const y2 = leftY.get(flow.target)!;
-    leftY.set(flow.target, y2 + tgtH);
-    const mx = (x1 + x2) / 2;
-    paths.push({
-      d: `M ${x1} ${y1} C ${mx} ${y1}, ${mx} ${y2}, ${x2} ${y2} L ${x2} ${y2 + tgtH} C ${mx} ${y2 + tgtH}, ${mx} ${y1 + srcH}, ${x1} ${y1 + srcH} Z`,
-      color: flow.color ?? ACCENT,
-    });
-  }
-  return paths;
-})();
-
-function ProportionalSankey() {
-  return (
-    <svg width="100%" height={SANKEY_SVG_H + 10} viewBox={`0 0 ${SANKEY_SVG_W} ${SANKEY_SVG_H + 10}`} className="overflow-visible" preserveAspectRatio="xMidYMid meet">
-      {/* Column labels */}
-      {SANKEY_COLUMNS.map((col, ci) => (
-        <text key={col.label} x={SANKEY_COL_X[ci] + SANKEY_NODE_W / 2} y={12} textAnchor="middle" style={{ fontSize: 9 }} className="font-mono font-bold uppercase" fill="var(--text-muted)">{col.label}</text>
-      ))}
-      {/* Flow bands */}
-      {SANKEY_FLOW_PATHS.map((fp, i) => (
-        <path key={i} d={fp.d} fill={fp.color} opacity={0.18} />
-      ))}
-      {/* Nodes */}
-      {Array.from(SANKEY_NODE_MAP.entries()).map(([id, node]) => (
-        <g key={id}>
-          <rect x={node.x} y={node.y} width={SANKEY_NODE_W} height={node.h} rx={2}
-            fill={withOpacity(node.color, OPACITY_8)} stroke={node.color} strokeWidth={0.5} strokeOpacity={0.5} />
-          {node.h >= 16 ? (
-            <>
-              <text x={node.x + SANKEY_NODE_W / 2} y={node.y + node.h / 2 - 1} textAnchor="middle" style={{ fontSize: 8 }} className="font-mono" fill={node.color}>{node.label}</text>
-              <text x={node.x + SANKEY_NODE_W / 2} y={node.y + node.h / 2 + 9} textAnchor="middle" style={{ fontSize: 7 }} className="font-mono font-bold" fill={node.color}>{node.pct}%</text>
-            </>
-          ) : (
-            <text x={node.x + SANKEY_NODE_W + 4} y={node.y + node.h / 2 + 3} style={{ fontSize: 7 }} className="font-mono" fill={node.color}>{node.label} {node.pct}%</text>
-          )}
-        </g>
-      ))}
-    </svg>
-  );
-}
-
-/* ── Grouped DPS Bar Chart ────────────────────────────────────────────── */
-
-const DPS_GROUPS = WEAPON_CATEGORIES.map(cat => {
-  const weapons = WEAPONS.filter(w => w.category === cat);
-  const dpsList = weapons.map(w => ({ weapon: w, dps: weaponDps(w) })).sort((a, b) => b.dps - a.dps);
-  const avgDps = dpsList.reduce((s, d) => s + d.dps, 0) / dpsList.length;
-  return { category: cat, weapons: dpsList, avgDps };
-});
-const DPS_GLOBAL_MAX = Math.max(...WEAPONS.map(w => weaponDps(w)));
-
-function GroupedDpsBarChart() {
-  const [hoveredWeapon, setHoveredWeapon] = useState<Weapon | null>(null);
-
-  const svgW = 520;
-  const svgH = 200;
-  const mTop = 10, mRight = 10, mBottom = 22, mLeft = 36;
-  const chartW = svgW - mLeft - mRight;
-  const chartH = svgH - mTop - mBottom;
-  const groupW = chartW / DPS_GROUPS.length;
-
-  return (
-    <div className="relative">
-      <svg width="100%" height={svgH} viewBox={`0 0 ${svgW} ${svgH}`} className="overflow-visible" preserveAspectRatio="xMidYMid meet">
-        {/* Y-axis grid */}
-        {[0, 0.25, 0.5, 0.75, 1].map(pct => {
-          const y = mTop + chartH * (1 - pct);
-          return (
-            <g key={pct}>
-              <line x1={mLeft} y1={y} x2={svgW - mRight} y2={y} stroke={withOpacity(OVERLAY_WHITE, OPACITY_4)} />
-              <text x={mLeft - 4} y={y + 3} textAnchor="end" style={{ fontSize: 7 }} className="font-mono" fill={withOpacity(OVERLAY_WHITE, OPACITY_30)}>{Math.round(DPS_GLOBAL_MAX * pct)}</text>
-            </g>
-          );
-        })}
-        {/* Bars by category */}
-        {DPS_GROUPS.map((group, gi) => {
-          const gx = mLeft + gi * groupW;
-          const barW = Math.max(2, (groupW - 6) / group.weapons.length - 1);
-          return (
-            <g key={group.category}>
-              <text x={gx + groupW / 2} y={svgH - 4} textAnchor="middle" style={{ fontSize: 8 }} className="font-mono uppercase" fill="var(--text-muted)">{group.category}</text>
-              {group.weapons.map((entry, bi) => {
-                const barH = Math.max(1, (entry.dps / DPS_GLOBAL_MAX) * chartH);
-                const x = gx + 3 + bi * (barW + 1);
-                const y = mTop + chartH - barH;
-                const isHov = hoveredWeapon?.id === entry.weapon.id;
-                return (
-                  <rect key={entry.weapon.id} x={x} y={y} width={barW} height={barH} rx={1}
-                    fill={isHov ? entry.weapon.color : withOpacity(entry.weapon.color, OPACITY_50)}
-                    onMouseEnter={() => setHoveredWeapon(entry.weapon)}
-                    onMouseLeave={() => setHoveredWeapon(null)}
-                    style={{ cursor: 'pointer' }} />
-                );
-              })}
-              {/* Category avg line */}
-              <line x1={gx + 2} y1={mTop + chartH - (group.avgDps / DPS_GLOBAL_MAX) * chartH}
-                x2={gx + groupW - 2} y2={mTop + chartH - (group.avgDps / DPS_GLOBAL_MAX) * chartH}
-                stroke={ACCENT} strokeWidth={1} strokeDasharray="3 2" opacity={0.4} />
-            </g>
-          );
-        })}
-      </svg>
-      {/* Hover tooltip */}
-      {hoveredWeapon && (
-        <div className="absolute top-1 right-1 p-2 rounded border text-xs font-mono z-10" style={{
-          backgroundColor: 'var(--surface-deep)',
-          borderColor: withOpacity(hoveredWeapon.color, OPACITY_30),
-        }}>
-          <div className="font-bold" style={{ color: hoveredWeapon.color }}>{hoveredWeapon.name}</div>
-          <div className="text-text-muted mt-1 space-y-0.5">
-            <div>Damage: {hoveredWeapon.baseDamage}</div>
-            <div>Speed: {hoveredWeapon.attackSpeed}</div>
-            <div>Crit: {hoveredWeapon.critChance}</div>
-            <div className="font-bold mt-1" style={{ color: hoveredWeapon.color }}>DPS: {weaponDps(hoveredWeapon).toFixed(1)}</div>
-          </div>
-        </div>
-      )}
-    </div>
   );
 }

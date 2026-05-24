@@ -2,41 +2,25 @@
 
 import { useState, useMemo, useCallback, useRef, useEffect } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import {
-  Crosshair, Settings2, Table2, AlertTriangle,
-} from 'lucide-react';
-import {
-  ACCENT_ORANGE, ACCENT_CYAN,
-  ACCENT_EMERALD, STATUS_ERROR,
-  STATUS_WARNING, STATUS_NEUTRAL,
-  OVERLAY_WHITE,
-  withOpacity, OPACITY_25, OPACITY_8,
-} from '@/lib/chart-colors';
-import { useCharacterCliStore, type CLILogEntry } from '@/stores/cliOptimizationStore';
-import type { DodgeParams, DodgePhases, HitMarker, DodgeChainEntry } from '../_shared/dodge-types';
+import { ACCENT_CYAN } from '@/lib/chart-colors';
+import { useCharacterCliStore } from '@/stores/cliOptimizationStore';
+import type { DodgeParams, HitMarker, DodgeChainEntry } from '../_shared/dodge-types';
 import { DEFAULT_PARAMS } from '../_shared/dodge-types';
-import { computePhases, speedCurve, distanceCurve } from '../_shared/dodge-math';
-import { BlueprintPanel, SectionHeader } from '../../unique-tabs/_design';
-import { FOCUS_RING_CLASS, focusRingStyle } from '@/lib/ui/focus-ring';
-import type { HapticEffect, PlayheadStats } from './types';
+import { computePhases } from '../_shared/dodge-math';
+import { BlueprintPanel } from '../../unique-tabs/_design';
+import type { HapticEffect } from './types';
 import { TimelineBar } from './TimelineBar';
 import { VelocityCurve } from './VelocityCurve';
 import { LiveStats } from './LiveStats';
 import { PlaybackControls } from './PlaybackControls';
-import { FrameDataTable } from './FrameDataTable';
 import { ParameterEditor } from './ParameterEditor';
 import { HitMarkerEditor } from './HitMarkerEditor';
 import { ChainControls } from './ChainControls';
+import { HeaderToolbar, type CliStore } from './HeaderToolbar';
+import { PhaseLegend, FrameDataPanel } from './PhaseLegend';
+import { useHapticDetection, usePlayheadStats } from './useDodgeTimelineState';
 
 export type { DodgeParams } from '../_shared/dodge-types';
-
-type CliStore = {
-  log: CLILogEntry[]; isOptimizing: boolean; sidebarOpen: boolean;
-  pendingResult: DodgeParams | null;
-  addLogEntry: (entry: Omit<CLILogEntry, 'id' | 'timestamp'>) => void;
-  startOptimization: () => void; finishOptimization: (result?: DodgeParams) => void;
-  toggleSidebar: () => void; applyPendingResult: () => DodgeParams | null;
-};
 
 /* ── Main Component ──────────────────────────────────────────────────────── */
 
@@ -191,140 +175,4 @@ export function DodgeTimelineEditor({ initialParams }: { initialParams?: Partial
       />
     </motion.div>
   );
-}
-
-/* ── Header Toolbar (inline) ─────────────────────────────────────────────── */
-
-function HeaderToolbar({ cliStore, params, showFrameData, setShowFrameData, showParams, setShowParams, showHitEditor, setShowHitEditor }: {
-  cliStore: CliStore;
-  params: DodgeParams;
-  showFrameData: boolean; setShowFrameData: (v: boolean) => void;
-  showParams: boolean; setShowParams: (v: boolean) => void;
-  showHitEditor: boolean; setShowHitEditor: (v: boolean) => void;
-}) {
-  return (
-    <div className="flex items-center gap-2 mb-2.5">
-      <SectionHeader icon={Crosshair} label="Interactive Dodge Timeline" color={ACCENT_CYAN} />
-      <div className="ml-auto flex items-center gap-1">
-        <OptimizeButton cliStore={cliStore} params={params} />
-        <ToggleBtn active={showFrameData} onToggle={() => setShowFrameData(!showFrameData)} color={STATUS_WARNING} icon={Table2} title="Toggle frame data table" />
-        <ToggleBtn active={showParams} onToggle={() => setShowParams(!showParams)} color={ACCENT_CYAN} icon={Settings2} title="Toggle parameter editor" />
-        <ToggleBtn active={showHitEditor} onToggle={() => setShowHitEditor(!showHitEditor)} color={STATUS_ERROR} icon={AlertTriangle} title="Toggle hit marker editor" />
-      </div>
-    </div>
-  );
-}
-
-function ToggleBtn({ active, onToggle, color, icon: Icon, title }: {
-  active: boolean; onToggle: () => void; color: string;
-  icon: React.ComponentType<{ className?: string }>; title: string;
-}) {
-  return (
-    <button onClick={onToggle} className={`p-1.5 rounded-lg border transition-colors ${FOCUS_RING_CLASS}`} title={title}
-      style={{ borderColor: active ? `${withOpacity(color, OPACITY_25)}` : withOpacity(OVERLAY_WHITE, OPACITY_8), backgroundColor: active ? `${withOpacity(color, OPACITY_8)}` : 'transparent', color: active ? color : 'var(--text-muted)', ...focusRingStyle(color) }}>
-      <Icon className="w-3 h-3" />
-    </button>
-  );
-}
-
-function OptimizeButton({ cliStore, params }: { cliStore: CliStore; params: DodgeParams }) {
-  return (
-    <button
-      onClick={() => {
-        cliStore.startOptimization();
-        cliStore.addLogEntry({ type: 'info', message: 'Starting dodge parameter optimization...', detail: `Current params: distance=${params.dodgeDistance}, duration=${params.dodgeDuration}, iFrameStart=${params.iFrameStart}` });
-        setTimeout(() => { cliStore.addLogEntry({ type: 'change', message: 'Analyzing i-frame window coverage...' }); }, 800);
-        setTimeout(() => {
-          cliStore.addLogEntry({ type: 'result', message: 'Optimization complete -- suggested adjustments ready', detail: 'Increased i-frame window by 15%, reduced cooldown by 10%' });
-          cliStore.finishOptimization({ ...params, iFrameDuration: Math.min(params.iFrameDuration * 1.15, params.dodgeDuration * 0.8), cooldown: params.cooldown * 0.9 });
-        }, 2000);
-      }}
-      disabled={cliStore.isOptimizing}
-      className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold border transition-colors hover:brightness-110 disabled:opacity-50 disabled:cursor-not-allowed ${FOCUS_RING_CLASS}`}
-      style={{ borderColor: `${withOpacity(ACCENT_EMERALD, OPACITY_25)}`, backgroundColor: `${withOpacity(ACCENT_EMERALD, OPACITY_8)}`, color: ACCENT_EMERALD, ...focusRingStyle(ACCENT_EMERALD) }}
-    >
-      {cliStore.isOptimizing ? 'Optimizing...' : 'Simulate & Optimize'}
-    </button>
-  );
-}
-
-/* ── Phase Legend ─────────────────────────────────────────────────────────── */
-
-function PhaseLegend({ phases, hitMarkers, stats }: { phases: DodgePhases; hitMarkers: HitMarker[]; stats: PlayheadStats }) {
-  return (
-    <div className="flex flex-wrap gap-2 mb-2">
-      {[phases.movement, phases.invuln, phases.cancel, phases.recovery].map((phase) => (
-        <span key={phase.label} className="flex items-center gap-1 text-xs font-mono uppercase tracking-[0.15em]" style={{ color: phase.color }}>
-          <span className="w-3 h-1 rounded-full" style={{ backgroundColor: phase.color }} />
-          {phase.label}
-        </span>
-      ))}
-      {hitMarkers.length > 0 && (
-        <span className="flex items-center gap-1 text-xs font-mono uppercase tracking-[0.15em]" style={{ color: STATUS_ERROR }}>
-          <span className="w-2 h-2 rounded-full border" style={{ borderColor: STATUS_ERROR }} />
-          Hits ({stats.dodgedHits}/{stats.totalHits} dodged)
-        </span>
-      )}
-    </div>
-  );
-}
-
-/* ── Frame Data Panel Wrapper ────────────────────────────────────────────── */
-
-function FrameDataPanel({ params }: { params: DodgeParams }) {
-  return (
-    <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
-      <BlueprintPanel color={STATUS_WARNING} className="p-3">
-        <div className="flex items-center gap-2 mb-2.5">
-          <SectionHeader icon={Table2} label="Frame Data" color={STATUS_WARNING} />
-          <span className="ml-auto text-xs font-mono uppercase tracking-[0.15em] text-text-muted/50">@60 FPS &middot; Dustloop-style</span>
-        </div>
-        <FrameDataTable params={params} />
-      </BlueprintPanel>
-    </motion.div>
-  );
-}
-
-/* ── Custom hooks (inlined to keep under limit) ──────────────────────────── */
-
-function useHapticDetection(
-  playhead: number, hitMarkers: HitMarker[], params: DodgeParams,
-  prevRef: React.MutableRefObject<number>,
-  triggeredRef: React.MutableRefObject<Set<string>>,
-  timerRef: React.MutableRefObject<ReturnType<typeof setTimeout> | undefined>,
-  setEffect: (e: HapticEffect) => void,
-) {
-  useEffect(() => {
-    const prev = prevRef.current;
-    prevRef.current = playhead;
-    if (playhead <= prev) return;
-    for (const hit of hitMarkers) {
-      if (hit.time > prev && hit.time <= playhead && !triggeredRef.current.has(hit.id)) {
-        triggeredRef.current.add(hit.id);
-        const dodged = hit.time >= params.iFrameStart && hit.time < params.iFrameStart + params.iFrameDuration;
-        clearTimeout(timerRef.current);
-        setEffect({ type: dodged ? 'dodge' : 'hit', id: hit.id });
-        timerRef.current = setTimeout(() => setEffect(null), dodged ? 500 : 400);
-      }
-    }
-  }, [playhead, hitMarkers, params.iFrameStart, params.iFrameDuration, prevRef, triggeredRef, timerRef, setEffect]);
-}
-
-function usePlayheadStats(playhead: number, params: DodgeParams, phases: DodgePhases, hitMarkers: HitMarker[]): PlayheadStats {
-  return useMemo(() => {
-    const t = playhead;
-    const alpha = params.dodgeDuration > 0 ? Math.min(t / params.dodgeDuration, 1) : 0;
-    const maxSpeed = params.dodgeDistance / params.dodgeDuration;
-    const speed = t <= params.dodgeDuration ? speedCurve(alpha) * maxSpeed : 0;
-    const dist = t <= params.dodgeDuration ? distanceCurve(alpha) * params.dodgeDistance : params.dodgeDistance;
-    return {
-      speed, dist,
-      inMovement: t >= phases.movement.start && t < phases.movement.end,
-      inInvuln: t >= phases.invuln.start && t < phases.invuln.end,
-      inCancel: t >= phases.cancel.start && t < phases.cancel.end,
-      inCooldown: t >= phases.recovery.start,
-      dodgedHits: hitMarkers.filter((h) => h.time >= phases.invuln.start && h.time < phases.invuln.end).length,
-      totalHits: hitMarkers.length,
-    };
-  }, [playhead, params, phases, hitMarkers]);
 }

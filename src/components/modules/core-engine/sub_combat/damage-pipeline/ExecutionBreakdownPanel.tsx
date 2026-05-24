@@ -3,13 +3,15 @@
 import { useState, useCallback, useMemo } from 'react';
 import {
   STATUS_SUCCESS, STATUS_ERROR, STATUS_WARNING, STATUS_STALE,
-  ACCENT_VIOLET, OPACITY_10, OPACITY_30, MODULE_COLORS,
+  ACCENT_VIOLET, OPACITY_10, OPACITY_30,
   withOpacity, OPACITY_25, OPACITY_20,
 } from '@/lib/chart-colors';
 import { BlueprintPanel } from '@/components/modules/core-engine/unique-tabs/_design';
 import type { CalcInputs } from './types';
 import { DEFAULT_CALC, fmtNum } from './types';
 import { CalcInput, ExecPhaseHeader, ExecPropRow } from './ExecComponents';
+import { EXEC_SNIPPETS } from './exec-snippets';
+import { ExecAttributePhase } from './ExecAttributePhase';
 
 export function ExecutionBreakdownPanel() {
   const [calcActive, setCalcActive] = useState(false);
@@ -67,50 +69,18 @@ export function ExecutionBreakdownPanel() {
       <BlueprintPanel className="overflow-hidden">
         <div data-testid="execution-steps">
           <ExecPhaseHeader label="Invulnerability Check" color={STATUS_WARNING} />
-          <ExecPropRow name="State_Invulnerable"
-            code={`const UAbilitySystemComponent* TargetASC = ExecutionParams.GetTargetAbilitySystemComponent();
-if (TargetASC && TargetASC->HasMatchingGameplayTag(ARPGGameplayTags::State_Invulnerable))
-{
-    return; // Skip all damage
-}`}
-            codeExpanded={expandedCode.has('invuln')}
-            onToggleCode={() => toggleCode('invuln')}>
-            <span className="text-text-muted">{'\u2192'} skip all damage</span>
+          <ExecPropRow name="State_Invulnerable" code={EXEC_SNIPPETS.invuln}
+            codeExpanded={expandedCode.has('invuln')} onToggleCode={() => toggleCode('invuln')}>
+            <span className="text-text-muted">{'→'} skip all damage</span>
           </ExecPropRow>
 
-          <ExecPhaseHeader label="1. Attribute Capture" color={MODULE_COLORS.core} />
-          <ExecPropRow name="Source > AttackPower" even
-            code={`float AttackPower = 0.f;\nExecutionParams.AttemptCalculateCapturedAttributeMagnitude(\n    DamageStatics().AttackPowerDef, FAggregatorEvaluateParameters(), AttackPower);`}
-            codeExpanded={expandedCode.has('ap')} onToggleCode={() => toggleCode('ap')}>
-            {calcActive
-              ? <CalcInput value={inputs.attackPower} onChange={v => upd('attackPower', v)} step={5} min={0} label="AttackPower" />
-              : <span className="text-text">{fmtNum(inputs.attackPower)}</span>}
-          </ExecPropRow>
-          <ExecPropRow name="Source > CriticalChance"
-            code={`float CriticalChance = 0.f;\nExecutionParams.AttemptCalculateCapturedAttributeMagnitude(\n    DamageStatics().CriticalChanceDef, FAggregatorEvaluateParameters(), CriticalChance);`}
-            codeExpanded={expandedCode.has('cc')} onToggleCode={() => toggleCode('cc')}>
-            {calcActive
-              ? <CalcInput value={inputs.critChance} onChange={v => upd('critChance', v)} step={0.05} min={0} max={1} label="CriticalChance" />
-              : <span className="text-text">{fmtNum(inputs.critChance)}</span>}
-          </ExecPropRow>
-          <ExecPropRow name="Source > CriticalDamage" even
-            code={`float CriticalDamage = 1.5f;\nExecutionParams.AttemptCalculateCapturedAttributeMagnitude(\n    DamageStatics().CriticalDamageDef, FAggregatorEvaluateParameters(), CriticalDamage);`}
-            codeExpanded={expandedCode.has('cd')} onToggleCode={() => toggleCode('cd')}>
-            {calcActive
-              ? <CalcInput value={inputs.critDamage} onChange={v => upd('critDamage', v)} step={0.1} min={0} label="CriticalDamage" />
-              : <span className="text-text">{fmtNum(inputs.critDamage)}</span>}
-          </ExecPropRow>
-          <ExecPropRow name="Target > Armor"
-            code={`float Armor = 0.f;\nExecutionParams.AttemptCalculateCapturedAttributeMagnitude(\n    DamageStatics().ArmorDef, FAggregatorEvaluateParameters(), Armor);`}
-            codeExpanded={expandedCode.has('armor')} onToggleCode={() => toggleCode('armor')}>
-            {calcActive
-              ? <CalcInput value={inputs.armor} onChange={v => upd('armor', v)} step={5} min={0} label="Armor" />
-              : <span className="text-text">{fmtNum(inputs.armor)}</span>}
-          </ExecPropRow>
+          <ExecAttributePhase
+            calcActive={calcActive} inputs={inputs} upd={upd}
+            expandedCode={expandedCode} toggleCode={toggleCode}
+          />
 
           <ExecPhaseHeader label="2. SetByCaller Resolution" color={ACCENT_VIOLET} />
-          <ExecPropRow name="Data.Damage.Base" even
-            code={`const float BaseDamage = Spec.GetSetByCallerMagnitude(\n    ARPGGameplayTags::Data_Damage_Base, /*WarnIfNotFound=*/ true, /*DefaultIfNotFound=*/ 0.f);`}
+          <ExecPropRow name="Data.Damage.Base" even code={EXEC_SNIPPETS.base}
             codeExpanded={expandedCode.has('base')} onToggleCode={() => toggleCode('base')}>
             <div className="flex items-center gap-2">
               {calcActive
@@ -119,8 +89,7 @@ if (TargetASC && TargetASC->HasMatchingGameplayTag(ARPGGameplayTags::State_Invul
               <span className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted">(required)</span>
             </div>
           </ExecPropRow>
-          <ExecPropRow name="Data.Damage.Scaling"
-            code={`const float Scaling = Spec.GetSetByCallerMagnitude(\n    ARPGGameplayTags::Data_Damage_Scaling, /*WarnIfNotFound=*/ false, /*DefaultIfNotFound=*/ 1.f);`}
+          <ExecPropRow name="Data.Damage.Scaling" code={EXEC_SNIPPETS.scaling}
             codeExpanded={expandedCode.has('scaling')} onToggleCode={() => toggleCode('scaling')}>
             <div className="flex items-center gap-2">
               {calcActive
@@ -131,8 +100,7 @@ if (TargetASC && TargetASC->HasMatchingGameplayTag(ARPGGameplayTags::State_Invul
           </ExecPropRow>
 
           <ExecPhaseHeader label="3. Damage Formula" color={STATUS_ERROR} />
-          <ExecPropRow name="Step 1 > RawDamage" even
-            code="const float RawDamage = BaseDamage + AttackPower * Scaling;"
+          <ExecPropRow name="Step 1 > RawDamage" even code={EXEC_SNIPPETS.raw}
             codeExpanded={expandedCode.has('raw')} onToggleCode={() => toggleCode('raw')}>
             <div className="flex items-center gap-1.5">
               {calcActive && (
@@ -143,8 +111,7 @@ if (TargetASC && TargetASC->HasMatchingGameplayTag(ARPGGameplayTags::State_Invul
               <span className="font-bold text-text">{fmtNum(c.rawDamage)}</span>
             </div>
           </ExecPropRow>
-          <ExecPropRow name="Step 2 > CritRoll"
-            code={`const bool bIsCrit = FMath::FRand() < CriticalChance;\nconst float CritMultiplier = bIsCrit ? (1.f + CriticalDamage) : 1.f;`}
+          <ExecPropRow name="Step 2 > CritRoll" code={EXEC_SNIPPETS.crit}
             codeExpanded={expandedCode.has('crit')} onToggleCode={() => toggleCode('crit')}>
             <div className="flex items-center gap-2">
               {calcActive && (
@@ -159,8 +126,7 @@ if (TargetASC && TargetASC->HasMatchingGameplayTag(ARPGGameplayTags::State_Invul
               <span className="font-bold text-text">x{fmtNum(c.critMultiplier)}</span>
             </div>
           </ExecPropRow>
-          <ExecPropRow name="Step 3 > ArmorReduction" even
-            code="const float ArmorReduction = Armor / (Armor + 100.f);"
+          <ExecPropRow name="Step 3 > ArmorReduction" even code={EXEC_SNIPPETS.ar}
             codeExpanded={expandedCode.has('ar')} onToggleCode={() => toggleCode('ar')}>
             <div className="flex items-center gap-1.5">
               {calcActive && (
@@ -173,8 +139,7 @@ if (TargetASC && TargetASC->HasMatchingGameplayTag(ARPGGameplayTags::State_Invul
               </span>
             </div>
           </ExecPropRow>
-          <ExecPropRow name="Step 4 > FinalDamage"
-            code={`float FinalDamage = RawDamage * CritMultiplier * (1.f - ArmorReduction);\nFinalDamage = FMath::Max(FinalDamage, 0.f);`}
+          <ExecPropRow name="Step 4 > FinalDamage" code={EXEC_SNIPPETS.final}
             codeExpanded={expandedCode.has('final')} onToggleCode={() => toggleCode('final')}>
             <div className="flex items-center gap-1.5">
               {calcActive && (
@@ -189,8 +154,7 @@ if (TargetASC && TargetASC->HasMatchingGameplayTag(ARPGGameplayTags::State_Invul
           </ExecPropRow>
 
           <ExecPhaseHeader label="4. Meta Attribute Output" color={STATUS_SUCCESS} />
-          <ExecPropRow name="IncomingCrit" even
-            code={`OutExecutionOutput.AddOutputModifier(FGameplayModifierEvaluatedData(\n    UARPGAttributeSet::GetIncomingCritAttribute(),\n    EGameplayModOp::Override,\n    bIsCrit ? 1.f : 0.f));`}
+          <ExecPropRow name="IncomingCrit" even code={EXEC_SNIPPETS.outcrit}
             codeExpanded={expandedCode.has('outcrit')} onToggleCode={() => toggleCode('outcrit')}>
             <div className="flex items-center gap-2">
               <span className="text-xs font-mono px-1.5 py-0.5 rounded font-bold"
@@ -203,8 +167,7 @@ if (TargetASC && TargetASC->HasMatchingGameplayTag(ARPGGameplayTags::State_Invul
               </span>
             </div>
           </ExecPropRow>
-          <ExecPropRow name="IncomingDamage"
-            code={`OutExecutionOutput.AddOutputModifier(FGameplayModifierEvaluatedData(\n    UARPGAttributeSet::GetIncomingDamageAttribute(),\n    EGameplayModOp::Additive,\n    FinalDamage));`}
+          <ExecPropRow name="IncomingDamage" code={EXEC_SNIPPETS.outdmg}
             codeExpanded={expandedCode.has('outdmg')} onToggleCode={() => toggleCode('outdmg')}>
             <div className="flex items-center gap-2">
               <span className="text-xs font-mono px-1.5 py-0.5 rounded font-bold"
