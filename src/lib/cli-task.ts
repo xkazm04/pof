@@ -19,6 +19,8 @@ import { buildEvalPrompt, type EvalPass } from '@/lib/evaluator/module-eval-prom
 import { getModuleChecklist } from '@/lib/module-registry';
 import { buildVisualCheckSection } from '@/lib/prompts/visual-check';
 import { knownAssetDomainsForModule } from '@/lib/knowledge/ue-known-assets';
+import type { AbilityEntry } from '@/lib/catalog/types';
+import { getRecipe, STEP_TO_LIFECYCLE, type GenerationStep } from '@/lib/catalog/recipe';
 
 // ── Task callback system ────────────────────────────────────────────────────
 
@@ -156,7 +158,8 @@ export type CLITaskType =
   | 'procgen-dungeon'
   | 'biome-scatter'
   | 'mixamo-import'
-  | 'character-setup';
+  | 'character-setup'
+  | 'generate';
 
 /** Task types that generate or modify UE code and therefore get a Wiring Requirements section. */
 const WIRING_TASK_TYPES = new Set<CLITaskType>(['checklist', 'quick-action', 'feature-fix']);
@@ -245,6 +248,17 @@ export interface BiomeScatterTask extends CLITask {
   type: 'biome-scatter';
   density: number;
   seed: number;
+  appOrigin: string;
+}
+
+/**
+ * Generation task (folder-09) — drives one recipe step for a catalog entity and
+ * reports the produced UE assets + lifecycle transition back to /api/catalog.
+ */
+export interface GenerateTask extends CLITask {
+  type: 'generate';
+  entity: AbilityEntry;
+  step: GenerationStep;
   appOrigin: string;
 }
 
@@ -694,6 +708,27 @@ ${sourceNote}
    humanoid/pose check) — you do NOT need to add a callback here.`;
     }
 
+    case 'generate': {
+      const gt = task as GenerateTask;
+      const recipe = getRecipe(gt.entity.catalogId);
+      if (!recipe) return gt.entity.name; // no recipe registered — nothing to dispatch
+      const base = recipe.buildStepPrompt(gt.entity, gt.step, ctx);
+      const cbId = registerCallback({
+        url: `${gt.appOrigin}/api/catalog`,
+        method: 'POST',
+        staticFields: {
+          action: 'transition',
+          catalogId: gt.entity.catalogId,
+          entityId: gt.entity.id,
+          nextLifecycle: STEP_TO_LIFECYCLE[gt.step],
+        },
+        schemaHint:
+          '  "ueAssets": ["<UE asset path(s) you created/modified>"],\n' +
+          '  "testResult": "pass|fail"  // only required for the verify step',
+      });
+      return `${base}\n\n${buildCallbackSection(getCallback(cbId)!)}`;
+    }
+
     default:
       return task.prompt;
   }
@@ -867,5 +902,16 @@ export const TaskFactory = {
       enemyMaterial: params.enemyMaterial,
       appOrigin,
     };
+  },
+
+  /** Create a generation task for one recipe step of a catalog entity (folder-09). */
+  generate(
+    moduleId: SubModuleId,
+    entity: AbilityEntry,
+    step: GenerationStep,
+    appOrigin: string,
+    label: string,
+  ): GenerateTask {
+    return { type: 'generate', moduleId, prompt: '', label, entity, step, appOrigin };
   },
 };
