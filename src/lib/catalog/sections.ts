@@ -2,6 +2,11 @@ import type { CatalogEntityBase } from './types';
 import { seedSpellbookEntries } from './seed-spellbook';
 import { seedItemEntries } from './seed-items';
 import { seedLootEntries } from './seed-loot';
+import { seedBestiaryEntries } from './seed-bestiary';
+import { seedCombatInteractionEntries } from './seed-combat-map';
+import { seedScreenEntries } from './seed-screen-flow';
+import { seedZoneEntries } from './seed-zone-map';
+import { seedAnimationEntries } from './seed-state-graph';
 
 /** A Core Engine catalog section: its id, label, and how to seed it. */
 export interface CatalogSection {
@@ -14,6 +19,11 @@ export const CATALOG_SECTIONS: CatalogSection[] = [
   { catalogId: 'spellbook', label: 'Spellbook', seed: seedSpellbookEntries },
   { catalogId: 'items', label: 'Items', seed: seedItemEntries },
   { catalogId: 'loot-tables', label: 'Loot Tables', seed: seedLootEntries },
+  { catalogId: 'bestiary', label: 'Bestiary', seed: seedBestiaryEntries },
+  { catalogId: 'combat-map', label: 'Combat Map', seed: seedCombatInteractionEntries },
+  { catalogId: 'screen-flow', label: 'Screen Flow', seed: seedScreenEntries },
+  { catalogId: 'zone-map', label: 'Zone Map', seed: seedZoneEntries },
+  { catalogId: 'state-graph', label: 'State Graph', seed: seedAnimationEntries },
 ];
 
 function indexById(entities: CatalogEntityBase[]): Record<string, CatalogEntityBase> {

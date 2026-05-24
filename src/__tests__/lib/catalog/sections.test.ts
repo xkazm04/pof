@@ -2,9 +2,18 @@ import { describe, it, expect } from 'vitest';
 import { CATALOG_SECTIONS, seedAllCatalogs } from '@/lib/catalog/sections';
 
 describe('CATALOG_SECTIONS', () => {
-  it('registers spellbook, items, and loot-tables', () => {
+  it('registers all 8 Core Engine catalogs', () => {
     expect(CATALOG_SECTIONS.map((s) => s.catalogId).sort())
-      .toEqual(['items', 'loot-tables', 'spellbook']);
+      .toEqual([
+        'bestiary',
+        'combat-map',
+        'items',
+        'loot-tables',
+        'screen-flow',
+        'spellbook',
+        'state-graph',
+        'zone-map',
+      ]);
   });
 });
 
