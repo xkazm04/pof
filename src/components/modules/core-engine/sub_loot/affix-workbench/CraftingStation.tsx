@@ -9,7 +9,7 @@ import {
   ACCENT_PURPLE, OPACITY_5, OPACITY_8, OPACITY_10, OPACITY_12, OPACITY_15, OPACITY_20, OPACITY_25, OPACITY_30, OPACITY_50,
   withOpacity,
 } from '@/lib/chart-colors';
-import { BlueprintPanel } from '../_design';
+import { BlueprintPanel } from '../../unique-tabs/_design';
 import { CURRENCIES, CRAFTING_ACTIONS } from './constants';
 import type { CurrencyId, CraftingActionId, CraftLogEntry, CraftingActionDef } from './types';
 import type { CraftedAffix } from './data';

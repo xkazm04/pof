@@ -9,7 +9,7 @@ import {
   OPACITY_5, OPACITY_8, OPACITY_10, OPACITY_15, OPACITY_20, OPACITY_25, OPACITY_30,
   withOpacity,
 } from '@/lib/chart-colors';
-import { BlueprintPanel } from '../_design';
+import { BlueprintPanel } from '../../unique-tabs/_design';
 import { ACCENT, BREAKPOINT_ILVLS, CATEGORY_COLORS } from './constants';
 import {
   AFFIX_POOL, RARITIES, RARITY_COLORS, getItemLevelScaling,

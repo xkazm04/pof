@@ -15,10 +15,10 @@ import { ItemPreviewCard } from './ItemPreviewCard';
 import { CraftingStation } from './CraftingStation';
 import { ItemStatsSummary } from './ItemStatsSummary';
 import { BreakpointTable } from './BreakpointTable';
-import { PowerBudgetRadar } from '../affix-workbench/PowerBudgetRadar';
-import { SynergyDetector } from '../affix-workbench/SynergyDetector';
-import { ArchetypeSuggestionGrid } from '../affix-workbench/ArchetypeSuggestionGrid';
-import { AffixExportPanel } from '../affix-workbench/AffixExportPanel';
+import { PowerBudgetRadar } from '../_orphan/PowerBudgetRadar';
+import { SynergyDetector } from '../_orphan/SynergyDetector';
+import { ArchetypeSuggestionGrid } from '../_orphan/ArchetypeSuggestionGrid';
+import { AffixExportPanel } from '../_orphan/AffixExportPanel';
 import { generateExportCode } from './data';
 import type { SubModuleId } from '@/types/modules';
 

@@ -8,7 +8,7 @@ import {
   OPACITY_10, OPACITY_25,
   withOpacity,
 } from '@/lib/chart-colors';
-import { BlueprintPanel, SectionHeader, GlowStat } from '../_design';
+import { BlueprintPanel, SectionHeader, GlowStat } from '../../unique-tabs/_design';
 import { ACCENT } from './constants';
 import { SYNERGY_COLORS, getItemLevelScaling } from './data';
 import type { CraftedAffix, SynergyRule } from './data';

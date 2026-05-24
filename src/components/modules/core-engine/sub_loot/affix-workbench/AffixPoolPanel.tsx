@@ -7,7 +7,7 @@ import {
   OPACITY_8, OPACITY_10, OPACITY_12, OPACITY_15, OPACITY_20, OPACITY_25, OPACITY_30,
   withOpacity,
 } from '@/lib/chart-colors';
-import { BlueprintPanel, SectionHeader, NeonBar } from '../_design';
+import { BlueprintPanel, SectionHeader, NeonBar } from '../../unique-tabs/_design';
 import { ACCENT } from './constants';
 import { RARITY_COLORS } from './data';
 import type { AffixPoolEntry } from './data';

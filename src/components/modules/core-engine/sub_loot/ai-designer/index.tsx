@@ -5,7 +5,7 @@ import { Wand2 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import type { Rarity, AffixPoolEntry, DropSimConfig, DropSimResult, ItemDesign } from '@/lib/loot-designer/drop-simulator';
 import { runDropSimulation, generateUE5Code } from '@/lib/loot-designer/drop-simulator';
-import { TabHeader, SubTabNavigation } from '../_shared';
+import { TabHeader, SubTabNavigation } from '../../unique-tabs/_shared';
 import { ACCENT, ITEM_PRESETS, BASE_AFFIX_POOL, SUB_TABS } from './constants';
 import { DesignerPanel } from './DesignerPanel';
 import { DistributionsPanel } from './DistributionsPanel';

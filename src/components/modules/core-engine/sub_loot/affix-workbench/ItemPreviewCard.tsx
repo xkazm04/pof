@@ -10,7 +10,7 @@ import {
   OPACITY_5, OPACITY_8, OPACITY_15, OPACITY_20, OPACITY_25, OPACITY_30, OPACITY_37, OPACITY_50,
   withOpacity,
 } from '@/lib/chart-colors';
-import { BlueprintPanel, NeonBar, CornerBrackets } from '../_design';
+import { BlueprintPanel, NeonBar, CornerBrackets } from '../../unique-tabs/_design';
 import { ACCENT } from './constants';
 import { AFFIX_POOL, RARITY_COLORS, getItemLevelScaling } from './data';
 import type { CraftedAffix, ItemBase } from './data';

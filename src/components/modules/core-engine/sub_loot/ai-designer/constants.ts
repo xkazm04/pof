@@ -10,7 +10,7 @@ import {
 import { RARITY_COLOR_MAP } from '@/lib/economy/definitions';
 import type { TraitAxis } from '@/types/item-genome';
 import type { Rarity, AffixPoolEntry } from '@/lib/loot-designer/drop-simulator';
-import type { SubTab } from '../_shared';
+import type { SubTab } from '../../unique-tabs/_shared';
 
 export const ACCENT = MODULE_COLORS.core;
 

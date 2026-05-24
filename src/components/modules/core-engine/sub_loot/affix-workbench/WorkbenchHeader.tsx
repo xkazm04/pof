@@ -11,7 +11,7 @@ import {
   OPACITY_10, OPACITY_15, OPACITY_20, OPACITY_30,
   withOpacity,
 } from '@/lib/chart-colors';
-import { BlueprintPanel, SectionHeader } from '../_design';
+import { BlueprintPanel, SectionHeader } from '../../unique-tabs/_design';
 import { ACCENT } from './constants';
 import type { ViewMode } from './types';
 

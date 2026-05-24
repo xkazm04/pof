@@ -6,7 +6,7 @@ import { motion } from 'framer-motion';
 import { OPACITY_10 } from '@/lib/chart-colors';
 import type { AffixPoolEntry, DropSimResult } from '@/lib/loot-designer/drop-simulator';
 import type { HeatmapCell } from '@/types/unique-tab-improvements';
-import { HeatmapGrid } from '../_shared';
+import { HeatmapGrid } from '../../unique-tabs/_shared';
 import { BlueprintPanel, SectionHeader } from './design';
 import { ACCENT, AXIS_COLORS, ACCENT_VIOLET } from './constants';
 
