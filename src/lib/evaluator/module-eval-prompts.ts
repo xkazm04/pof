@@ -11,8 +11,10 @@
 
 import type { SubModuleId } from '@/types/modules';
 
-export type EvalPass = 'ground-truth' | 'structure' | 'quality' | 'performance';
+export type EvalPass = 'ground-truth' | 'structure' | 'quality' | 'performance' | 'combat-trace';
 
+/** The default passes that run for EVERY module. Module-specific extra passes
+ * (e.g. arpg-combat's combat-trace) are appended via getPassesForModule. */
 export const EVAL_PASSES: EvalPass[] = ['ground-truth', 'structure', 'quality', 'performance'];
 
 export const PASS_LABELS: Record<EvalPass, string> = {
@@ -20,6 +22,7 @@ export const PASS_LABELS: Record<EvalPass, string> = {
   structure: 'Structure',
   quality: 'Quality',
   performance: 'Performance',
+  'combat-trace': 'Combat Trace',
 };
 
 // ─── Finding output schema (shared across all prompts) ───────────────────────
@@ -60,6 +63,8 @@ interface ModuleEvalContext {
   structureChecks: string;
   qualityChecks: string;
   performanceChecks: string;
+  /** Optional combat-specific "trace one hit" pass (only arpg-combat sets it). */
+  tracePass?: string;
 }
 
 export const MODULE_CONTEXTS: Record<string, ModuleEvalContext> = {
@@ -137,11 +142,21 @@ Additionally: on death, the character must apply the State.Dead gameplay tag via
 - Combo timeout should reset combo count (not just on miss)
 - Hit reaction montage should interrupt current montage properly
 - Camera shake and hitstop should be proportional to damage
-Additionally: verify GA_MeleeAttack stores HitActors as TSet<AActor*> on the ability instance (not on the notify), and clears the set at ability activation. Multi-hit-per-swing without dedup is a regression.`,
+Additionally: verify GA_MeleeAttack stores HitActors as TSet<AActor*> on the ability instance (not on the notify), and clears the set at ability activation. Multi-hit-per-swing without dedup is a regression.
+Additionally: detect parallel Health bookkeeping — a plain float Health/MaxHealth member on the character (e.g. AARPGPlayerCharacter::GetHealth) alongside the GAS Health attribute (UARPGAttributeSet). The HUD and damage pipeline use GAS; the float is a latent inconsistency. Flag it and recommend: deprecate the plain float OR sync it from GAS in PostGameplayEffectExecute. Two Health systems must not drift.`,
     performanceChecks: `- Weapon trace should only run during anim notify window, not every tick
 - Damage numbers should use object pooling
 - Hit VFX should be spawned from pool, not SpawnEmitter every hit
 - Combat events should not broadcast to all actors`,
+    tracePass: `For ability GA_MeleeAttack, trace ONE hit end-to-end. Produce a numbered call graph naming, in order:
+1. The actor that activates the ability and HOW (input action / tag / AI controller call).
+2. The activation tag/event and the ability's ActivateAbility entry point.
+3. The damage path taken — Direct (gray-box self-apply) vs Animation-driven (Event.MeleeHit notify) — and which branch runs when bUseAnimationDrivenDamage is false.
+4. The GameplayEffect applied (GE_Damage) and the execution calc (UARPGDamageExecution).
+5. The attributes READ (e.g. AttackPower, Armor, CriticalChance, resistances) and the attributes WRITTEN (IncomingDamage, Health).
+6. The delegate(s) broadcast on damage/death (OnHealthChanged, Event.Death, OnEnemyDeath) and their listeners.
+Then FLAG any step that needs a binary asset (montage, AnimNotify in a montage, BT, .umap) that cannot be authored from code. If the damage GE reads an attribute that no GE/DataTable sets (e.g. Armor with no DT_AttributeDefaults), flag it as a no-op.
+Output the numbered call graph first, then the JSON findings array.`,
   },
   'arpg-enemy-ai': {
     focus: 'AI controllers, behavior trees, State Trees (5.7+), perception, EQS, spawn system',
@@ -368,11 +383,16 @@ function getPassDescription(pass: EvalPass): string {
       return 'Analyze UE5 best practices, coding conventions, correctness, and anti-patterns. Is the code following Unreal conventions? Are there bugs, incorrect usage, or missed edge cases?';
     case 'performance':
       return 'Analyze performance patterns: tick usage, memory allocation, object pooling, async loading, and scalability. Are there unnecessary per-frame costs? Missing pooling? Synchronous loads?';
+    case 'combat-trace':
+      return 'Trace one hit end-to-end and produce a check-able call graph, flagging any step that depends on a binary asset or reads an attribute nothing sets.';
   }
 }
 
 function getPassChecks(ctx: ModuleEvalContext | undefined, pass: EvalPass): string {
   if (pass === 'ground-truth') return GROUND_TRUTH_CHECKS;
+  if (pass === 'combat-trace') {
+    return ctx?.tracePass ?? '- (No combat-trace defined for this module.)';
+  }
   if (!ctx) {
     switch (pass) {
       case 'structure':
@@ -399,6 +419,15 @@ function getPassChecks(ctx: ModuleEvalContext | undefined, pass: EvalPass): stri
  */
 export function getEvaluableModuleIds(): SubModuleId[] {
   return Object.keys(MODULE_CONTEXTS) as SubModuleId[];
+}
+
+/**
+ * The passes to run for a module: the global defaults plus any module-specific
+ * extra pass (e.g. arpg-combat's combat-trace). Non-combat modules are unchanged.
+ */
+export function getPassesForModule(moduleId: string): EvalPass[] {
+  const extra: EvalPass[] = MODULE_CONTEXTS[moduleId]?.tracePass ? ['combat-trace'] : [];
+  return [...EVAL_PASSES, ...extra];
 }
 
 /**

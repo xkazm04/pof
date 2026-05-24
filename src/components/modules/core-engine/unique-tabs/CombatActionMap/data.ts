@@ -1,4 +1,4 @@
-import { Swords, Shield, Zap, GitBranch, Crosshair, Activity, Gauge } from 'lucide-react';
+import { Swords, Shield, Zap, GitBranch, Crosshair, Activity, Gauge, Table } from 'lucide-react';
 import {
   STATUS_ERROR, STATUS_WARNING, STATUS_INFO,
   ACCENT_ORANGE, ACCENT_EMERALD, ACCENT_CYAN, ACCENT_VIOLET, ACCENT_RED,
@@ -11,7 +11,7 @@ export const ACCENT = ACCENT_RED;
 
 /* ── Combat Subtab definitions ────────────────────────────────────────── */
 
-export type CombatSubtab = 'features' | 'flow' | 'hits' | 'metrics' | 'feedback';
+export type CombatSubtab = 'features' | 'flow' | 'hits' | 'metrics' | 'feedback' | 'attributes';
 
 export interface CombatSubtabDef {
   key: CombatSubtab;
@@ -26,6 +26,7 @@ export const COMBAT_SUBTABS: CombatSubtabDef[] = [
   { key: 'hits', label: 'Analysis & Hits', icon: Crosshair, narrative: 'Hit Detection', subtitle: 'Per-weapon hit analysis, damage types & projectile trajectories' },
   { key: 'metrics', label: 'Combat Metrics', icon: Activity, narrative: 'Measure Balance', subtitle: 'DPS comparison, combat flow sankey & KPI dashboards' },
   { key: 'feedback', label: 'Polish & Tuner', icon: Gauge, narrative: 'Polish Feel', subtitle: 'Feedback intensity tuning, hitstop timing & stagger pipeline' },
+  { key: 'attributes', label: 'Attribute Defaults', icon: Table, narrative: 'Seed Stats', subtitle: 'DT_AttributeDefaults — per-archetype base attributes, emits a UE Python builder' },
 ];
 
 /* ── Lane definitions ──────────────────────────────────────────────────── */

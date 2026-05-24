@@ -1,0 +1,46 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`combat-trace evaluator pass > produces a one-hit call-graph prompt for arpg-combat 1`] = `
+"You are evaluating the "arpg-combat" module of UE5 project "PoF".
+
+## Focus Area
+Melee attacks, combo system, hit detection, damage, reactions, death
+
+## Evaluation Pass: Combat Trace
+Trace one hit end-to-end and produce a check-able call graph, flagging any step that depends on a binary asset or reads an attribute nothing sets.
+
+## What to Check
+For ability GA_MeleeAttack, trace ONE hit end-to-end. Produce a numbered call graph naming, in order:
+1. The actor that activates the ability and HOW (input action / tag / AI controller call).
+2. The activation tag/event and the ability's ActivateAbility entry point.
+3. The damage path taken — Direct (gray-box self-apply) vs Animation-driven (Event.MeleeHit notify) — and which branch runs when bUseAnimationDrivenDamage is false.
+4. The GameplayEffect applied (GE_Damage) and the execution calc (UARPGDamageExecution).
+5. The attributes READ (e.g. AttackPower, Armor, CriticalChance, resistances) and the attributes WRITTEN (IncomingDamage, Health).
+6. The delegate(s) broadcast on damage/death (OnHealthChanged, Event.Death, OnEnemyDeath) and their listeners.
+Then FLAG any step that needs a binary asset (montage, AnimNotify in a montage, BT, .umap) that cannot be authored from code. If the damage GE reads an attribute that no GE/DataTable sets (e.g. Armor with no DT_AttributeDefaults), flag it as a no-op.
+Output the numbered call graph first, then the JSON findings array.
+
+## Instructions
+1. Read the source files under Source/PoF relevant to this module
+2. Analyze against the checks listed above
+3. For each issue found, note the specific file and line number
+4. Rate severity based on impact: critical (crashes/data loss), high (incorrect behavior), medium (suboptimal), low (style/convention)
+5. Estimate fix effort: trivial (< 5 min), small (< 30 min), medium (< 2 hours), large (> 2 hours)
+
+Output ONLY a JSON array of findings. Each finding:
+{
+  "category": "string — the area of concern",
+  "severity": "critical" | "high" | "medium" | "low",
+  "file": "relative path from Source/ (or null if general)",
+  "line": number | null,
+  "description": "what the issue is",
+  "suggestedFix": "specific fix description",
+  "effort": "trivial" | "small" | "medium" | "large"
+}
+
+Rules:
+- Output ONLY the JSON array, no markdown, no explanation
+- If no findings, output: []
+- Be specific about file paths and line numbers when possible
+- suggestedFix should be actionable — say exactly what to change"
+`;

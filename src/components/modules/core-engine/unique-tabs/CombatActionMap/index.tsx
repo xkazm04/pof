@@ -16,6 +16,7 @@ import { HitsTab } from './hits/HitsTab';
 import { FeedbackTab } from './polish/FeedbackTab';
 import { MetricsTab } from './metrics/MetricsTab';
 import { renderCombatMetric } from './metrics';
+import { AttributeDefaultsTab } from './attributes/AttributeDefaultsTab';
 import FeatureMapTab from '../FeatureMapTab';
 
 /* ── Narrative Breadcrumb ──────────────────────────────────────────────── */
@@ -206,6 +207,11 @@ export function CombatActionMap({ moduleId }: CombatActionMapProps) {
                   onPreset={applyPreset}
                   onParam={updateFeedbackParam}
                 />
+              </VisibleSection>
+            )}
+            {activeTab === 'attributes' && (
+              <VisibleSection moduleId={moduleId} sectionId="attribute-defaults">
+                <AttributeDefaultsTab />
               </VisibleSection>
             )}
           </motion.div>

@@ -76,3 +76,32 @@ A session assigned this concern works on:
 
 It does *not* touch character mesh/AI (folder 02), HUD/UMG (folder 04),
 environment (folder 05), or packaging (folder 07).
+
+## Status (2026-05-24)
+
+The "nothing shipped" framing is **stale** — a prior session and parallel CLIs
+already landed a meaningful chunk. Reconciled state after the
+`combat-pending-resolution` work
+(see `docs/superpowers/plans/2026-05-24-combat-pending-resolution.md`):
+
+- **Already done (before this work):** `UGA_MeleeAttack::bUseAnimationDrivenDamage`
+  (game §1); the full `UARPGDamageExecution` formula — base+AP, crit, armor DR,
+  elemental resist (game §4); the `FARPGAttributeInitRow` struct; the `acb-1`
+  gray-box prompt (app §2); UE `VSCombatGrayBoxPathTest` + `VSCombatAbilityGrantTest`;
+  and `EnableRagdoll()` was already invoked from `GA_Death` (most of game §7).
+- **Done by this work — PoF app (branch `combat-03-improvements`):** per-ability
+  wiring contracts on the `arpg-combat` checklist (§1); a combat-trace "trace one
+  hit" evaluator pass guarded to `arpg-combat` (§3); a `DT_AttributeDefaults`
+  editor + UE-Python emitter subtab (§4); a "Export to UE" combat-feel emitter on
+  the FeedbackTab (§5); the parallel-Health flag in the combat evaluator (§6);
+  plus app vitests + a `combat-loop` e2e and a (skipped) `DT_AttributeDefaults`
+  presence test.
+- **Done by this work — UE C++ (shared `main`, committed; needs an editor-closed
+  rebuild to compile/run):** GAS-backed player Health getters + float mirror
+  (game §5); hit-pause + camera-shake feel knobs on `UGA_MeleeAttack` (game §6);
+  corpse fade-out on enemy death (the remaining half of §7); and the
+  `VSCombatDamageFormulaTest` / `VSCombatTwoHealthSystemsTest` /
+  `VSCombatAnimationDrivenPathTest` (disabled) functional tests.
+- **Still pending (hard-blocked / deferred):** real montages (game §2) and the
+  `BP_VSPlayer` side of granting the other abilities (game §3) — binary
+  asset/Blueprint authoring; the Gemini "hit feel" e2e (tests e2e §2).

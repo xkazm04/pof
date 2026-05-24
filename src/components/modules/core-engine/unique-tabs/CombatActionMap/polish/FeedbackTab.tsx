@@ -1,7 +1,9 @@
 'use client';
 
-import { Gauge, Timer, TrendingUp, Vibrate, Sparkles, Volume2 } from 'lucide-react';
+import { useState, useMemo, useCallback } from 'react';
+import { Gauge, Timer, TrendingUp, Vibrate, Sparkles, Volume2, Download, Copy, Check } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { buildCombatFeelPython } from './combat-feel-export';
 import {
   STATUS_ERROR, ACCENT_CYAN, ACCENT_EMERALD, ACCENT_ORANGE,
   withOpacity, OPACITY_25, OPACITY_8, OPACITY_50, GLOW_MD,
@@ -31,6 +33,14 @@ interface FeedbackTabProps {
 
 export function FeedbackTab({ feedbackValues, juiceLevel, onPreset, onParam }: FeedbackTabProps) {
   const juiceColor = juiceLevel < 0.33 ? ACCENT_CYAN : juiceLevel < 0.66 ? ACCENT_EMERALD : ACCENT_ORANGE;
+
+  const [copied, setCopied] = useState(false);
+  const feelScript = useMemo(() => buildCombatFeelPython(feedbackValues), [feedbackValues]);
+  const copyFeel = useCallback(() => {
+    void navigator.clipboard?.writeText(feelScript);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 1500);
+  }, [feelScript]);
 
   return (
     <motion.div key="feedback" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} transition={{ duration: 0.2 }} className="space-y-4">
@@ -128,6 +138,17 @@ export function FeedbackTab({ feedbackValues, juiceLevel, onPreset, onParam }: F
           </BlueprintPanel>
         </div>
       </div>
+
+      {/* Export to UE — push the tuner values onto GA_MeleeAttack's feel knobs */}
+      <BlueprintPanel color={ACCENT} className="p-3">
+        <div className="flex items-center justify-between mb-2">
+          <SectionHeader label="Export to UE (apply to GA_MeleeAttack)" color={ACCENT} icon={Download} />
+          <button data-testid="combat-feel-export" onClick={copyFeel} className="flex items-center gap-1 text-xs font-mono px-2 py-0.5 rounded border border-border/50 hover:bg-surface/50 cursor-pointer">
+            {copied ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}{copied ? 'Copied' : 'Copy Python'}
+          </button>
+        </div>
+        <pre className="text-[10px] font-mono whitespace-pre-wrap max-h-48 overflow-y-auto text-text-muted">{feelScript}</pre>
+      </BlueprintPanel>
     </motion.div>
   );
 }

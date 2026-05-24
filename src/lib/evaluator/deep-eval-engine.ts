@@ -10,7 +10,7 @@
  */
 
 import type { SubModuleId } from '@/types/modules';
-import { buildEvalPrompt, EVAL_PASSES, PASS_LABELS, getEvaluableModuleIds } from './module-eval-prompts';
+import { buildEvalPrompt, PASS_LABELS, getEvaluableModuleIds, getPassesForModule } from './module-eval-prompts';
 import type { EvalPass } from './module-eval-prompts';
 import { parseFindings, deduplicateFindings, aggregateFindings } from './finding-collector';
 import type { EvalFinding, ScanFindings } from './finding-collector';
@@ -73,11 +73,19 @@ export function cancelDeepEval(): void {
 export async function runDeepEval(options: DeepEvalOptions): Promise<DeepEvalResult> {
   const {
     moduleIds = getEvaluableModuleIds(),
-    passes = EVAL_PASSES,
+    passes,
     projectContext,
     projectPath,
     onProgress,
   } = options;
+
+  // When the caller doesn't pin specific passes, expand per module so that a
+  // module with an extra pass (arpg-combat's combat-trace) runs it and others
+  // are unchanged. An explicit `passes` override is honored verbatim.
+  const passesFor = (moduleId: string): EvalPass[] => passes ?? getPassesForModule(moduleId);
+  const passesRun: EvalPass[] = passes
+    ? passes
+    : Array.from(new Set(moduleIds.flatMap((m) => passesFor(m))));
 
   abortController = new AbortController();
   const signal = abortController.signal;
@@ -93,12 +101,12 @@ export async function runDeepEval(options: DeepEvalOptions): Promise<DeepEvalRes
   const passStatuses: Record<string, Record<EvalPass, 'pending' | 'running' | 'done' | 'error' | 'skipped'>> = {};
   for (const moduleId of moduleIds) {
     passStatuses[moduleId] = {} as Record<EvalPass, 'pending' | 'running' | 'done' | 'error' | 'skipped'>;
-    for (const pass of passes) {
+    for (const pass of passesFor(moduleId)) {
       passStatuses[moduleId][pass] = 'pending';
     }
   }
 
-  const totalSteps = moduleIds.length * passes.length;
+  const totalSteps = moduleIds.reduce((sum, m) => sum + passesFor(m).length, 0);
   let completedSteps = 0;
 
   const progress: EvalProgress = {
@@ -125,7 +133,7 @@ export async function runDeepEval(options: DeepEvalOptions): Promise<DeepEvalRes
     for (const moduleId of moduleIds) {
       if (signal.aborted) throw new DOMException('Evaluation cancelled', 'AbortError');
 
-      for (const pass of passes) {
+      for (const pass of passesFor(moduleId)) {
         if (signal.aborted) throw new DOMException('Evaluation cancelled', 'AbortError');
 
         progress.currentModule = moduleId;
@@ -205,7 +213,7 @@ ${prompt}`;
       findings: aggregated,
       duration: Date.now() - startTime,
       modulesEvaluated: moduleIds,
-      passesRun: passes,
+      passesRun,
     };
   } catch (err) {
     if ((err as Error).name === 'AbortError') {
@@ -227,7 +235,7 @@ ${prompt}`;
       findings: aggregated,
       duration: Date.now() - startTime,
       modulesEvaluated: moduleIds,
-      passesRun: passes,
+      passesRun,
     };
   } finally {
     abortController = null;
