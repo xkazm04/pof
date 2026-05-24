@@ -12,12 +12,12 @@
 | 4 | **CLI Rail + two-way binding** | `2026-05-24-pof-ecw-phase-04-cli-rail.md` | ✅ DONE @ `ecw-phase-4-complete` (core scope; ~12 enhancement ideas → P4b) |
 | 5 | **Mission Control** | `2026-05-24-pof-ecw-phase-05-mission-control.md` | ✅ DONE @ `ecw-phase-5-complete` (focused scope; full dash consolidation → P10) |
 | 6 | **Live State** | `2026-05-24-pof-ecw-phase-06-live-state.md` | ✅ DONE @ `ecw-phase-6-complete` (focused scope; UObject/crashes/3D-twin → P6b/P10) |
-| 7 | **Module migration A — Core Engine catalogs** | `2026-05-24-pof-ecw-phase-07-migrate-core.md` | ⏳ |
-| 8 | **Module migration B — Promote Materials/Audio/Animation-Assets** | `2026-05-24-pof-ecw-phase-08-promote-catalogs.md` | ⏳ |
-| 9 | **Module migration C — Fold Evaluator + Game Director + Game Systems** | `2026-05-24-pof-ecw-phase-09-fold-evaluator.md` | ⏳ |
-| 10 | **Per-catalog enhancements (KEEP-ENHANCE batches)** | `2026-05-24-pof-ecw-phase-10-enhancements.md` | ⏳ |
-| 11 | **Design-system + a11y + observability pass** | `2026-05-24-pof-ecw-phase-11-infra.md` | ⏳ |
-| 12 | **Cutover, cleanup, live proof** | `2026-05-24-pof-ecw-phase-12-cutover.md` | ⏳ |
+| 7 | **Module migration A — Core Engine catalogs** | `2026-05-24-pof-ecw-phase-07-migrate-core.md` | ✅ DONE @ `ecw-phase-7-complete` (foundation + Bestiary proof; 4 remaining modules → P7b) |
+| 8 | **Module migration B — Promote Materials/Audio/Animation-Assets** | `2026-05-24-pof-ecw-phase-08-promote-catalogs.md` | ✅ DONE @ `ecw-phase-8-complete` (Materials substrate; Audio + Anim-Assets → P8b) |
+| 9 | **Module migration C — Fold Evaluator + Game Director + Game Systems** | `2026-05-24-pof-ecw-phase-09-fold-evaluator.md` | ✅ AUDIT @ `ecw-phase-9-audit-complete` (fold-in table mapped; execution → P10-MC) |
+| 10 | **Per-catalog enhancements (KEEP-ENHANCE batches)** | `2026-05-24-pof-ecw-phase-10-enhancements.md` | 📋 ROADMAP — 6 batches mapped; multi-session execution |
+| 11 | **Design-system + a11y + observability pass** | `2026-05-24-pof-ecw-phase-11-infra.md` | 📋 ROADMAP — 4 batches mapped; multi-session execution |
+| 12 | **Cutover, cleanup, live proof** | `2026-05-24-pof-ecw-phase-12-cutover.md` | ✅ PLAN @ `ecw-phase-12-plan-complete` (8/8 UE gates GREEN; cutover gated on P7b/8b/10/11) |
 
 ## Cross-phase invariants
 
