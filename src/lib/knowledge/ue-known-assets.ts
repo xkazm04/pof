@@ -87,6 +87,22 @@ export const UE_KNOWN_ASSETS: KnownAsset[] = [
     source: 'ThirdPerson template',
     domains: ['character', 'animation'],
   },
+  {
+    id: 'arpg-item-definition',
+    path: '/Script/PoF.ARPGItemDefinition',
+    type: 'C++ Class (UARPGItemDefinition)',
+    description: 'Base data-asset class for items — author instances under /Game/Items/.',
+    source: 'project',
+    domains: ['items'],
+  },
+  {
+    id: 'arpg-loot-table',
+    path: '/Script/PoF.ARPGLootTable',
+    type: 'C++ Class (UARPGLootTable)',
+    description: 'Base data-asset class for weighted loot tables — author instances under /Game/Loot/.',
+    source: 'project',
+    domains: ['loot'],
+  },
 ];
 
 /**
@@ -163,6 +179,10 @@ export function knownAssetDomainsForModule(moduleId: string): string[] {
       return ['character', 'animation'];
     case 'arpg-enemy-ai':
       return ['character'];
+    case 'arpg-inventory':
+      return ['items'];
+    case 'arpg-loot':
+      return ['loot'];
     default:
       return [];
   }
