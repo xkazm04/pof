@@ -2,10 +2,12 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { render, screen, fireEvent, cleanup } from '@testing-library/react';
 import { CliRail } from '@/components/ecw/CliRail';
 import { useEcwStore } from '@/stores/ecwStore';
+import { useCLIPanelStore } from '@/components/cli/store/cliPanelStore';
 
 describe('CliRail', () => {
   beforeEach(() => {
     useEcwStore.setState({ cliRailMode: 'auto', activeCatalogId: null, activeEntityId: null });
+    useCLIPanelStore.setState({ sessions: {}, tabOrder: [], activeTabId: null, maximizedTabId: null });
   });
   afterEach(cleanup);
 

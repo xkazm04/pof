@@ -2,6 +2,7 @@
 
 import { Terminal, PanelRightOpen, PanelRightClose } from 'lucide-react';
 import { useEcwStore } from '@/stores/ecwStore';
+import { SessionList } from './cli/SessionList';
 
 const WIDTH_BY_MODE: Record<string, string> = {
   auto: 'w-[360px]',
@@ -48,9 +49,7 @@ export function CliRail() {
       </header>
       {!collapsed && (
         <div data-testid="cli-rail-body" className="flex-1 overflow-auto p-3">
-          <p className="text-xs text-text-muted/70">
-            CLI sessions land in Phase 4. Two-way binding + run history + per-task diff review.
-          </p>
+          <SessionList />
         </div>
       )}
     </aside>
