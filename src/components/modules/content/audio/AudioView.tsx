@@ -5,6 +5,7 @@ import { useState, useCallback, useEffect } from 'react';
 import {
   Music, Plus, Trash2, FileText, Loader2,
   Zap, Volume2, Radio, Settings, List, Eye, ListChecks, Code2, Wand2,
+  Library, Sparkles,
 } from 'lucide-react';
 import { useAudioScene } from '@/hooks/useAudioScene';
 import { FetchError } from '../../shared/FetchError';
@@ -24,6 +25,8 @@ import { AudioPipelineDiagram } from './AudioPipelineDiagram';
 import { AudioEventCatalog } from './AudioEventCatalog';
 import { AudioCodeGenPanel } from './AudioCodeGenPanel';
 import { SpatialAudioGeneratorPanel } from './SpatialAudioGeneratorPanel';
+import { SoundForgePanel } from './SoundForgePanel';
+import { AudioLibraryPanel } from './AudioLibraryPanel';
 import {
   buildAudioSystemPrompt,
   buildZoneCodegenPrompt,
@@ -35,7 +38,7 @@ import type { AudioEventCatalogConfig } from './AudioEventCatalog';
 import { MODULE_COLORS, getAppOrigin } from '@/lib/constants';
 import { STATUS_SUCCESS, STATUS_ERROR, ACCENT_VIOLET, OPACITY_15, OPACITY_30 } from '@/lib/chart-colors';
 
-type TabId = 'overview' | 'roadmap' | 'painter' | 'soundscapes' | 'settings' | 'events' | 'codegen' | 'autogen';
+type TabId = 'overview' | 'roadmap' | 'painter' | 'soundscapes' | 'settings' | 'events' | 'codegen' | 'autogen' | 'forge' | 'library';
 
 export function AudioView() {
   const {
@@ -427,6 +430,8 @@ export function AudioView() {
               <TabButton label="Settings" icon={Settings} active={activeTab === 'settings'} onClick={() => setActiveTab('settings')} accent={MODULE_COLORS.content} />
               <TabButton label="Code Gen" icon={Code2} active={activeTab === 'codegen'} onClick={() => setActiveTab('codegen')} accent={MODULE_COLORS.content} />
               <TabButton label="Auto Gen" icon={Wand2} active={activeTab === 'autogen'} onClick={() => setActiveTab('autogen')} accent={MODULE_COLORS.content} />
+              <TabButton label="Sound Forge" icon={Sparkles} active={activeTab === 'forge'} onClick={() => setActiveTab('forge')} accent={MODULE_COLORS.content} />
+              <TabButton label="Library" icon={Library} active={activeTab === 'library'} onClick={() => setActiveTab('library')} accent={MODULE_COLORS.content} />
             </div>
 
             {/* Tab content */}
@@ -704,6 +709,14 @@ export function AudioView() {
                     onSceneCreated={refetch}
                   />
                 </div>
+              )}
+
+              {activeTab === 'forge' && (
+                <SoundForgePanel />
+              )}
+
+              {activeTab === 'library' && (
+                <AudioLibraryPanel />
               )}
             </div>
           </>
