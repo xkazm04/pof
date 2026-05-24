@@ -71,7 +71,24 @@ Respond with ONLY a JSON object (no prose, no markdown fences) of exactly this s
 }
 Set "verdict" to "fail" if the scene reads as black / un-lit (lit is false).`;
 
-type CheckMode = 'hud' | 'texture' | 'lighting';
+/* ── Server-owned character-check prompt (folder-02 §6) ── */
+
+const CHARACTER_CHECK_PROMPT = `You are inspecting a screenshot of a 3D game taken right after a character setup change.
+Determine whether the on-screen character(s) render correctly:
+- Is a HUMANOID character visible at all (not missing / invisible / a bare capsule)?
+- Is it in a NATURAL pose (idle / standing / walking), or stuck in a default T-POSE / A-POSE (arms straight out to the sides = the Animation Blueprint never drove the mesh)?
+- If two characters are present (player + enemy), are they clearly VISUALLY DISTINCT from each other (e.g. obviously different colours), or too similar to tell apart?
+Respond with ONLY a JSON object (no prose, no markdown fences) of exactly this shape:
+{
+  "humanoidVisible": boolean,
+  "tPosed": boolean,
+  "distinct": boolean,
+  "verdict": "pass" | "fail",
+  "notes": string
+}
+Set "verdict" to "fail" if humanoidVisible is false or tPosed is true.`;
+
+type CheckMode = 'hud' | 'texture' | 'lighting' | 'character';
 
 /** Normalised verdict written to the (shared) visual_verifications record. */
 interface NormalisedVerdict {
@@ -103,7 +120,17 @@ interface LightingVerdict {
   notes?: string;
 }
 
-function normaliseVerdict(mode: CheckMode, raw: HudVerdict | TextureVerdict | LightingVerdict): NormalisedVerdict {
+interface CharacterVerdict {
+  humanoidVisible?: boolean;
+  tPosed?: boolean;
+  distinct?: boolean;
+  verdict: 'pass' | 'fail';
+  notes?: string;
+}
+
+type AnyVerdict = HudVerdict | TextureVerdict | LightingVerdict | CharacterVerdict;
+
+function normaliseVerdict(mode: CheckMode, raw: AnyVerdict): NormalisedVerdict {
   if (mode === 'texture') {
     const t = raw as TextureVerdict;
     return {
@@ -121,6 +148,16 @@ function normaliseVerdict(mode: CheckMode, raw: HudVerdict | TextureVerdict | Li
       anyEmpty: l.lit === false,
       elements: [],
       notes: l.notes ?? '',
+    };
+  }
+  if (mode === 'character') {
+    const c = raw as CharacterVerdict;
+    return {
+      verdict: c.verdict,
+      // A missing humanoid or a T-posed mesh is the flagged defect.
+      anyEmpty: c.humanoidVisible === false || c.tPosed === true,
+      elements: [],
+      notes: c.notes ?? '',
     };
   }
   const h = raw as HudVerdict;
@@ -145,9 +182,21 @@ export async function POST(request: NextRequest) {
     return apiError('Missing "moduleId", "itemId", or "screenshotPath"', 400);
   }
   const mode: CheckMode =
-    body.mode === 'texture' ? 'texture' : body.mode === 'lighting' ? 'lighting' : 'hud';
+    body.mode === 'texture'
+      ? 'texture'
+      : body.mode === 'lighting'
+        ? 'lighting'
+        : body.mode === 'character'
+          ? 'character'
+          : 'hud';
   const prompt =
-    mode === 'texture' ? TEXTURE_CHECK_PROMPT : mode === 'lighting' ? LIGHTING_CHECK_PROMPT : HUD_CHECK_PROMPT;
+    mode === 'texture'
+      ? TEXTURE_CHECK_PROMPT
+      : mode === 'lighting'
+        ? LIGHTING_CHECK_PROMPT
+        : mode === 'character'
+          ? CHARACTER_CHECK_PROMPT
+          : HUD_CHECK_PROMPT;
 
   if (!existsSync(screenshotPath)) {
     return apiError(`Screenshot not found: ${screenshotPath}`, 404);
@@ -165,7 +214,7 @@ export async function POST(request: NextRequest) {
     return apiError(`Failed to read screenshot: ${e instanceof Error ? e.message : 'unknown'}`, 500);
   }
 
-  let raw: HudVerdict | TextureVerdict | LightingVerdict;
+  let raw: AnyVerdict;
   try {
     const response = await client.models.generateContent({
       model: 'gemini-2.0-flash',
@@ -185,7 +234,7 @@ export async function POST(request: NextRequest) {
     if (!text) return apiError('Empty response from Gemini', 502);
 
     const cleaned = text.replace(/^```(?:json)?\s*\n?/m, '').replace(/\n?```\s*$/m, '').trim();
-    raw = JSON.parse(cleaned) as HudVerdict | TextureVerdict | LightingVerdict;
+    raw = JSON.parse(cleaned) as AnyVerdict;
   } catch (e) {
     return apiError(e instanceof Error ? e.message : 'Gemini visual check failed', 502);
   }

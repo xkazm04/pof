@@ -322,7 +322,18 @@ export function buildTaskPrompt(task: CLITask, ctx: ProjectContext): string {
             })}`
           : '';
 
-      return `${header}${domainSection}\n\n## Task\n${task.prompt}${wiringBlock}\n\n${buildCallbackSection(getCallback(cbId)!)}${visualBlock}${lightingBlock}`;
+      const characterBlock =
+        isUE5 && itemDef?.characterCheck
+          ? `\n\n${buildVisualCheckSection({
+              projectPath: ctx.projectPath,
+              appOrigin: ct.appOrigin,
+              moduleId: task.moduleId,
+              itemId: ct.itemId,
+              mode: 'character',
+            })}`
+          : '';
+
+      return `${header}${domainSection}\n\n## Task\n${task.prompt}${wiringBlock}\n\n${buildCallbackSection(getCallback(cbId)!)}${visualBlock}${lightingBlock}${characterBlock}`;
     }
 
     case 'quick-action':

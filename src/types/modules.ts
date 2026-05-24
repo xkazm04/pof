@@ -72,6 +72,10 @@ export interface ChecklistItem {
   features?: string[];
   /** When true, dispatching this item appends an agentic screenshot+Gemini visual-verification step (see src/lib/prompts/visual-check.ts). Set on items that render an on-screen element. */
   visualCheck?: boolean;
+  /** When true, dispatching this item appends the lighting-smoke variant of the screenshot+Gemini step (mode:'lighting' — "is the scene lit, not black?"). Set on items that produce a renderable environment scene (folder-05 §5). */
+  lightingCheck?: boolean;
+  /** When true, dispatching this item appends the character variant of the screenshot+Gemini step (mode:'character' — "humanoid in a natural pose, not T-posed, enemy distinct?"). Set on items that wire a playable character (folder-02 §6). */
+  characterCheck?: boolean;
 }
 
 export interface KnowledgeTip {
