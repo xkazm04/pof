@@ -3,7 +3,7 @@
 import { useMemo, useState, useCallback } from 'react';
 import { Eye, Layers } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ACCENT_PINK, OPACITY_20, OPACITY_30,
+import { ACCENT_PINK, OPACITY_20,
   withOpacity, OPACITY_5, OPACITY_37, OPACITY_56, OPACITY_8, OPACITY_10,
 } from '@/lib/chart-colors';
 import { InteractivePill } from '@/components/ui/InteractivePill';
@@ -14,6 +14,7 @@ import {
   Z_DEPTH_LABELS, widgetChangedBetween,
 } from './data';
 import type { WidgetPlacement } from './data';
+import { HudWidgetSummary } from './HudWidgetSummary';
 
 /* ── Filtered placements ───────────────────────────────────────────────────── */
 
@@ -161,40 +162,7 @@ export function HudCompositor({ accent }: HudCompositorProps) {
       </AnimatePresence>
 
       {/* Visible / Hidden summary */}
-      <div className="grid grid-cols-2 gap-3 mt-2.5">
-        <div className="bg-surface/50 p-2 rounded-md border border-border/30">
-          <div className="text-xs font-mono uppercase tracking-[0.15em] font-bold text-text-muted mb-1 flex items-center gap-1">
-            <Eye className="w-2.5 h-2.5" /> Visible
-          </div>
-          <div className="flex flex-wrap gap-1">
-            {ctx.visible.map(w => (
-              <span
-                key={w}
-                className="px-1.5 py-0.5 text-xs font-mono rounded border"
-                style={{
-                  color: ctx.color,
-                  backgroundColor: `${withOpacity(ctx.color, OPACITY_8)}`,
-                  borderColor: `${ctx.color}${OPACITY_30}`,
-                }}
-              >
-                {w}
-              </span>
-            ))}
-          </div>
-        </div>
-        <div className="bg-surface/50 p-2 rounded-md border border-border/30">
-          <div className="text-xs font-mono uppercase tracking-[0.15em] font-bold text-text-muted mb-1 flex items-center gap-1 opacity-60">
-            <Eye className="w-2.5 h-2.5" /> Hidden
-          </div>
-          <div className="flex flex-wrap gap-1">
-            {ctx.hidden.map(w => (
-              <span key={w} className="px-1.5 py-0.5 text-xs font-mono text-text-muted opacity-50 rounded border border-border/30">
-                {w}
-              </span>
-            ))}
-          </div>
-        </div>
-      </div>
+      <HudWidgetSummary visible={ctx.visible} hidden={ctx.hidden} contextColor={ctx.color} />
     </BlueprintPanel>
   );
 }
