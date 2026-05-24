@@ -8,7 +8,7 @@ import { CliRail } from './CliRail';
 import { EcwCommandPalette } from './EcwCommandPalette';
 import { CatalogsTab } from './catalogs/CatalogsTab';
 import { MissionControlTab } from './mission/MissionControlTab';
-import { LiveStateTabPlaceholder } from './tabs/LiveStateTabPlaceholder';
+import { LiveStateTab } from './live/LiveStateTab';
 
 /**
  * Entity-Centric Workspace top-level shell. Gated behind `?ecw=1` URL param
@@ -34,7 +34,7 @@ export function NewAppShell() {
         <main className="flex-1 flex overflow-hidden">
           {tab === 'catalogs' && <CatalogsTab />}
           {tab === 'mission-control' && <MissionControlTab />}
-          {tab === 'live-state' && <LiveStateTabPlaceholder />}
+          {tab === 'live-state' && <LiveStateTab />}
         </main>
         <CliRail />
       </div>
