@@ -14,6 +14,10 @@ import { EquipmentLoadoutSection, SetBonusSection } from './GearSections';
 import { AffixSlotPanels } from './AffixSlotPanels';
 import { CatalogPagination } from './CatalogPagination';
 import { ACCENT, RARITY_COLORS, DUMMY_ITEMS, ALL_ITEM_TYPES, RARITY_ORDER, type ItemData } from '../data';
+import { useItemEntries } from '@/stores/catalogStore';
+import { useGeneration } from '@/hooks/useGeneration';
+import { CatalogLifecycleCell } from '@/components/catalog/CatalogLifecycleCell';
+import type { GenerationStep } from '@/lib/catalog/recipe';
 
 import { withOpacity, OPACITY_12, OPACITY_30, OPACITY_25 } from '@/lib/chart-colors';
 /* ── Main CatalogGearTab ───────────────────────────────────────────────── */
@@ -36,6 +40,14 @@ export function CatalogGearTab({ moduleId, featureMap }: CatalogGearTabProps) {
   const [selectedItem, setSelectedItem] = useState<ItemData | null>(null);
 
   const { execute: executeCli, isRunning: isCliRunning } = useModuleCLI({ moduleId, sessionKey: 'item-gen', label: 'Item Generator', accentColor: ACCENT });
+
+  // folder-09 R3: source lifecycle/ueAssets from the catalog store; the static
+  // DUMMY_ITEMS array still drives the rich UI (the seed converter wraps it 1:1).
+  const entries = useItemEntries();
+  const entryByItemId = useMemo(
+    () => new Map(entries.map((e) => [e.data.id, e])),
+    [entries],
+  );
 
   const items = DUMMY_ITEMS;
   const availableSubtypes = useMemo(() => {
@@ -67,6 +79,15 @@ export function CatalogGearTab({ moduleId, featureMap }: CatalogGearTabProps) {
 
   const totalPages = Math.ceil(filteredItems.length / ITEMS_PER_PAGE);
   const pageItems = filteredItems.slice(currentPage * ITEMS_PER_PAGE, (currentPage + 1) * ITEMS_PER_PAGE);
+
+  // folder-09 R3: dispatch generation for the primary (selected or first visible) item.
+  const primaryItem = selectedItem ?? pageItems[0];
+  const primaryEntry = (primaryItem && entryByItemId.get(primaryItem.id)) ?? entries[0]!;
+  const gen = useGeneration(primaryEntry);
+  const nextStep: GenerationStep =
+    primaryEntry?.lifecycle === 'generated' ? 'wire'
+      : primaryEntry?.lifecycle === 'wired' ? 'verify'
+        : 'author-python';
 
   const gridRef = useRef<HTMLDivElement>(null);
   const cardRefs = useRef<(HTMLDivElement | null)[]>([]);
@@ -192,12 +213,25 @@ export function CatalogGearTab({ moduleId, featureMap }: CatalogGearTabProps) {
           <motion.div ref={gridRef} layout role="grid" aria-label="Item catalog" onKeyDown={handleGridKeyDown}
             className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
             <AnimatePresence mode="popLayout">
-              {pageItems.map((item, index) => (
-                <div key={item.id} onClick={() => setSelectedItem(prev => prev?.id === item.id ? null : item)} className="cursor-pointer">
-                  <TradingCard ref={(el: HTMLDivElement | null) => { cardRefs.current[index] = el; }}
-                    item={item} tabIndex={index === focusedIndex ? 0 : -1} onFocus={() => setFocusedIndex(index)} />
-                </div>
-              ))}
+              {pageItems.map((item, index) => {
+                const entry = entryByItemId.get(item.id);
+                const isPrimary = !!entry && entry.id === primaryEntry?.id;
+                return (
+                  <div key={item.id} onClick={() => setSelectedItem(prev => prev?.id === item.id ? null : item)} className="cursor-pointer">
+                    <TradingCard ref={(el: HTMLDivElement | null) => { cardRefs.current[index] = el; }}
+                      item={item} tabIndex={index === focusedIndex ? 0 : -1} onFocus={() => setFocusedIndex(index)} />
+                    {/* folder-09 R3: lifecycle cell + (Re)generate for the primary item. */}
+                    <div className="mt-1 px-1" onClick={(e) => e.stopPropagation()}>
+                      <CatalogLifecycleCell
+                        lifecycle={entry?.lifecycle ?? 'planned'}
+                        ueAssetCount={entry?.ueAssets?.length ?? 0}
+                        busy={isPrimary && gen.isRunning}
+                        onRegenerate={isPrimary ? () => gen.generate(nextStep) : undefined}
+                      />
+                    </div>
+                  </div>
+                );
+              })}
             </AnimatePresence>
           </motion.div>
           {filteredItems.length === 0 && (
