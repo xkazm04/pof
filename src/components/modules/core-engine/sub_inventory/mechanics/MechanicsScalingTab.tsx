@@ -1,13 +1,13 @@
 'use client';
 
 import { useState, useMemo, useCallback } from 'react';
-import { Layers, Target, TreePine, TrendingUp, Scale, Loader2 } from 'lucide-react';
+import { Layers, Target, TreePine, TrendingUp } from 'lucide-react';
 import { useModuleCLI } from '@/hooks/useModuleCLI';
 import { motion } from 'framer-motion';
 import type { SubModuleId } from '@/types/modules';
 import type { FeatureStatus, FeatureRow } from '@/types/feature-matrix';
 import { PipelineFlow, RadarChart } from '../../unique-tabs/_shared';
-import { BlueprintPanel, SectionHeader, GlowStat } from '../../unique-tabs/_design';
+import { BlueprintPanel, SectionHeader } from '../../unique-tabs/_design';
 import { AffixSunburst } from '../catalog/AffixSunburst';
 import { ItemScalingChart } from '../economy/ItemScalingChart';
 import { ItemDetailDrawer } from '../catalog/ItemDetailDrawer';
@@ -16,10 +16,11 @@ import type { ItemData } from '../_shared/data';
 import {
   ACCENT, RARITY_COLORS, SYSTEM_PIPELINE, POWER_BUDGET_AXES,
   IRON_LONGSWORD_RADAR, VOID_DAGGERS_RADAR, AFFIX_PROB_TREE,
-  SCALING_LINES, DUMMY_ITEMS, AFFIX_EXAMPLES, ITEM_SETS, RARITY_DIST,
+  SCALING_LINES, DUMMY_ITEMS,
   ALL_ITEM_TYPES,
 } from '../_shared/data';
-import { STATUS_SUCCESS, STATUS_ERROR as DELTA_NEG, withOpacity, OVERLAY_WHITE, OPACITY_2, OPACITY_25, OPACITY_8, OPACITY_12, OPACITY_37, OPACITY_10 } from '@/lib/chart-colors';
+import { STATUS_SUCCESS, STATUS_ERROR as DELTA_NEG, withOpacity, OVERLAY_WHITE, OPACITY_2, OPACITY_25, OPACITY_8, OPACITY_12 } from '@/lib/chart-colors';
+import { BalanceAdvisorPanel } from './BalanceAdvisorPanel';
 
 /* ── Pre-compute items grouped by type for optgroup dropdown ──────────── */
 
@@ -169,35 +170,7 @@ export function MechanicsScalingTab({ moduleId, featureMap }: MechanicsScalingTa
       </BlueprintPanel>
 
       {/* AI Balance Advisor */}
-      <BlueprintPanel color={ACCENT} className="p-4 relative overflow-hidden">
-        <div className="absolute top-0 left-0 right-0 h-[2px]" style={{ background: `linear-gradient(90deg, ${withOpacity(ACCENT, OPACITY_37)}, transparent)` }} />
-        <div className="flex items-center justify-between">
-          <div>
-            <SectionHeader icon={Scale} label="AI Balance Advisor" color={ACCENT} />
-            <p className="text-xs font-mono text-text-muted">
-              Analyze power budgets, affix scaling, DPS outliers, set bonus balance, and rarity distribution health.
-            </p>
-          </div>
-          <button onClick={handleAnalyzeBalance} disabled={isBalanceRunning}
-            className="flex items-center gap-2 text-sm font-medium px-4 py-2 rounded-lg transition-all disabled:opacity-50 flex-shrink-0 cursor-pointer"
-            style={{ backgroundColor: isBalanceRunning ? `${withOpacity(ACCENT, OPACITY_8)}` : `${withOpacity(ACCENT, OPACITY_12)}`, color: ACCENT, border: `1px solid ${withOpacity(ACCENT, OPACITY_25)}`, boxShadow: isBalanceRunning ? 'none' : `0 0 12px ${withOpacity(ACCENT, OPACITY_10)}` }}>
-            {isBalanceRunning
-              ? <><Loader2 className="w-3.5 h-3.5 animate-spin" />Analyzing...</>
-              : <><Scale className="w-3.5 h-3.5" />Analyze Balance</>}
-          </button>
-        </div>
-        <div className="mt-3 grid grid-cols-2 md:grid-cols-5 gap-2">
-          {[
-            { label: 'Items', value: `${items.length}`, sub: 'catalog entries' },
-            { label: 'Affixes', value: `${AFFIX_EXAMPLES.length}`, sub: 'pool definitions' },
-            { label: 'Scaling', value: `${SCALING_LINES.length}`, sub: 'stat curves' },
-            { label: 'Sets', value: `${ITEM_SETS.length}`, sub: 'bonus sets' },
-            { label: 'Rarities', value: `${RARITY_DIST.length}`, sub: 'tiers tracked' },
-          ].map((metric, i) => (
-            <GlowStat key={metric.label} label={metric.label} value={metric.value} color={ACCENT} delay={i * 0.05} />
-          ))}
-        </div>
-      </BlueprintPanel>
+      <BalanceAdvisorPanel itemsCount={items.length} isRunning={isBalanceRunning} onAnalyze={handleAnalyzeBalance} />
     </motion.div>
   );
 }

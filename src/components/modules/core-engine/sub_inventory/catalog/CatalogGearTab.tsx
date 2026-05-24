@@ -1,25 +1,23 @@
 'use client';
 
 import { useMemo, useState, useCallback, useRef } from 'react';
-import { Search, Plus, Sparkles, X } from 'lucide-react';
 import { useModuleCLI } from '@/hooks/useModuleCLI';
 import { motion, AnimatePresence } from 'framer-motion';
 import type { SubModuleId } from '@/types/modules';
 import type { FeatureRow } from '@/types/feature-matrix';
-import { BlueprintPanel } from '../../unique-tabs/_design';
-import { TradingCard } from './TradingCard';
 import { ItemComparisonPanel } from './ItemComparisonPanel';
 import { ItemDetailDrawer } from './ItemDetailDrawer';
 import { EquipmentLoadoutSection, SetBonusSection } from './GearSections';
 import { AffixSlotPanels } from './AffixSlotPanels';
 import { CatalogPagination } from './CatalogPagination';
-import { ACCENT, RARITY_COLORS, DUMMY_ITEMS, ALL_ITEM_TYPES, RARITY_ORDER, type ItemData } from '../_shared/data';
+import { ACCENT, DUMMY_ITEMS, RARITY_ORDER, type ItemData } from '../_shared/data';
 import { useItemEntries } from '@/stores/catalogStore';
 import { useGeneration } from '@/hooks/useGeneration';
-import { CatalogLifecycleCell } from '@/components/catalog/CatalogLifecycleCell';
 import type { GenerationStep } from '@/lib/catalog/recipe';
+import { CatalogFiltersBar, type SortBy } from './CatalogFiltersBar';
+import { AddItemForm, type NewItemState } from './AddItemForm';
+import { CatalogItemGrid } from './CatalogItemGrid';
 
-import { withOpacity, OPACITY_12, OPACITY_30, OPACITY_25 } from '@/lib/chart-colors';
 /* ── Main CatalogGearTab ───────────────────────────────────────────────── */
 
 interface CatalogGearTabProps {
@@ -34,9 +32,9 @@ export function CatalogGearTab({ moduleId, featureMap }: CatalogGearTabProps) {
   const [rarityFilter, setRarityFilter] = useState<string | 'all'>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [subtypeFilter, setSubtypeFilter] = useState<string | 'all'>('all');
-  const [sortBy, setSortBy] = useState<'name' | 'rarity' | 'type' | 'power'>('name');
+  const [sortBy, setSortBy] = useState<SortBy>('name');
   const [showAddForm, setShowAddForm] = useState(false);
-  const [newItem, setNewItem] = useState({ name: '', type: 'Weapon' as ItemData['type'], rarity: 'Common', description: '' });
+  const [newItem, setNewItem] = useState<NewItemState>({ name: '', type: 'Weapon' as ItemData['type'], rarity: 'Common', description: '' });
   const [selectedItem, setSelectedItem] = useState<ItemData | null>(null);
 
   const { execute: executeCli, isRunning: isCliRunning } = useModuleCLI({ moduleId, sessionKey: 'item-gen', label: 'Item Generator', accentColor: ACCENT });
@@ -137,109 +135,45 @@ export function CatalogGearTab({ moduleId, featureMap }: CatalogGearTabProps) {
     <motion.div key="catalog-gear" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} transition={{ duration: 0.2 }} className="space-y-4">
       <div className="flex flex-col gap-4">
         {/* Filters bar */}
-        <BlueprintPanel color={ACCENT} className="p-3 sticky top-4 z-20 shadow-md space-y-3">
-          <div className="flex flex-wrap items-center gap-3" role="toolbar" aria-label="Item filters">
-            <div className="relative flex-1 min-w-[200px]">
-              <Search className="w-4 h-4 absolute left-2.5 top-1/2 -translate-y-1/2 text-text-muted" />
-              <input type="text" placeholder="Search items..." value={searchQuery}
-                onChange={e => { setSearchQuery(e.target.value); setCurrentPage(0); }}
-                className="w-full text-sm font-mono pl-9 pr-3 py-2 rounded-lg bg-surface-deep border border-border/40 text-text placeholder:text-text-muted/50 focus:outline-none focus:border-blue-500/50" />
-            </div>
-            <select value={categoryFilter} onChange={e => { setCategoryFilter(e.target.value); setSubtypeFilter('all'); setCurrentPage(0); }}
-              className="text-sm font-mono px-3 py-2 rounded-lg bg-surface-deep border border-border/40 text-text cursor-pointer">
-              <option value="all">All Types</option>
-              {ALL_ITEM_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
-            </select>
-            <select value={subtypeFilter} onChange={e => { setSubtypeFilter(e.target.value); setCurrentPage(0); }}
-              className="text-sm font-mono px-3 py-2 rounded-lg bg-surface-deep border border-border/40 text-text cursor-pointer">
-              <option value="all">All Slots</option>
-              {availableSubtypes.map(s => <option key={s} value={s}>{s}</option>)}
-            </select>
-            <select value={rarityFilter} onChange={e => { setRarityFilter(e.target.value); setCurrentPage(0); }}
-              className="text-sm font-mono px-3 py-2 rounded-lg bg-surface-deep border border-border/40 text-text cursor-pointer">
-              <option value="all">All Rarities</option>
-              {['Common', 'Uncommon', 'Rare', 'Epic', 'Legendary'].map(r => <option key={r} value={r}>{r}</option>)}
-            </select>
-            <select value={sortBy} onChange={e => setSortBy(e.target.value as typeof sortBy)}
-              className="text-sm font-mono px-3 py-2 rounded-lg bg-surface-deep border border-border/40 text-text cursor-pointer">
-              <option value="name">Sort: Name</option>
-              <option value="power">Sort: Power</option>
-              <option value="rarity">Sort: Tier</option>
-              <option value="type">Sort: Type</option>
-            </select>
-            <span className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted">{filteredItems.length} items</span>
-            <button onClick={() => setShowAddForm(v => !v)}
-              className="flex items-center gap-1.5 text-sm font-medium px-3 py-1.5 rounded-lg transition-colors cursor-pointer"
-              style={{ backgroundColor: showAddForm ? `${withOpacity(ACCENT, OPACITY_12)}` : 'var(--surface)', color: showAddForm ? ACCENT : 'var(--text-muted)', border: `1px solid ${showAddForm ? withOpacity(ACCENT, OPACITY_30) : 'var(--border)'}` }}>
-              {showAddForm ? <X className="w-3 h-3" /> : <Plus className="w-3 h-3" />}
-              {showAddForm ? 'Cancel' : 'Add Item'}
-            </button>
-          </div>
-        </BlueprintPanel>
+        <CatalogFiltersBar
+          searchQuery={searchQuery} setSearchQuery={setSearchQuery}
+          categoryFilter={categoryFilter} setCategoryFilter={setCategoryFilter}
+          subtypeFilter={subtypeFilter} setSubtypeFilter={setSubtypeFilter}
+          rarityFilter={rarityFilter} setRarityFilter={setRarityFilter}
+          sortBy={sortBy} setSortBy={setSortBy}
+          availableSubtypes={availableSubtypes}
+          filteredCount={filteredItems.length}
+          showAddForm={showAddForm} setShowAddForm={setShowAddForm}
+          resetPage={() => setCurrentPage(0)}
+        />
 
         {/* Add Item Form */}
         <AnimatePresence>
           {showAddForm && (
-            <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
-              <BlueprintPanel color={ACCENT} className="p-4 space-y-3">
-                <div className="grid grid-cols-3 gap-3">
-                  <input type="text" placeholder="Item Name" value={newItem.name}
-                    onChange={e => setNewItem(prev => ({ ...prev, name: e.target.value }))}
-                    className="col-span-1 text-sm px-3 py-2 rounded-lg bg-surface-deep border border-border/50 text-text placeholder:text-text-muted focus:outline-none focus:border-text-muted/50" />
-                  <select value={newItem.type} onChange={e => setNewItem(prev => ({ ...prev, type: e.target.value as ItemData['type'] }))}
-                    className="text-sm px-3 py-2 rounded-lg bg-surface-deep border border-border/50 text-text focus:outline-none">
-                    {ALL_ITEM_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
-                  </select>
-                  <select value={newItem.rarity} onChange={e => setNewItem(prev => ({ ...prev, rarity: e.target.value }))}
-                    className="text-sm px-3 py-2 rounded-lg bg-surface-deep border border-border/50 text-text focus:outline-none">
-                    {Object.keys(RARITY_COLORS).map(r => <option key={r} value={r}>{r}</option>)}
-                  </select>
-                </div>
-                <textarea placeholder="Brief description..." value={newItem.description}
-                  onChange={e => setNewItem(prev => ({ ...prev, description: e.target.value }))} rows={2}
-                  className="w-full text-sm px-3 py-2 rounded-lg bg-surface-deep border border-border/50 text-text placeholder:text-text-muted focus:outline-none resize-none" />
-                <button onClick={handleCreateItem} disabled={!newItem.name.trim() || isCliRunning}
-                  className="flex items-center gap-2 text-sm font-medium px-4 py-2 rounded-lg transition-colors disabled:opacity-50 cursor-pointer"
-                  style={{ backgroundColor: `${withOpacity(ACCENT, OPACITY_12)}`, color: ACCENT, border: `1px solid ${withOpacity(ACCENT, OPACITY_25)}` }}>
-                  <Sparkles className="w-3.5 h-3.5" />{isCliRunning ? 'Creating...' : 'Create with AI Image'}
-                </button>
-              </BlueprintPanel>
-            </motion.div>
+            <AddItemForm
+              newItem={newItem}
+              setNewItem={setNewItem}
+              isCliRunning={isCliRunning}
+              onCreate={handleCreateItem}
+            />
           )}
         </AnimatePresence>
 
         {/* Item Grid */}
-        <div className="relative min-h-[300px]">
-          <motion.div ref={gridRef} layout role="grid" aria-label="Item catalog" onKeyDown={handleGridKeyDown}
-            className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
-            <AnimatePresence mode="popLayout">
-              {pageItems.map((item, index) => {
-                const entry = entryByItemId.get(item.id);
-                const isPrimary = !!entry && entry.id === primaryEntry?.id;
-                return (
-                  <div key={item.id} onClick={() => setSelectedItem(prev => prev?.id === item.id ? null : item)} className="cursor-pointer">
-                    <TradingCard ref={(el: HTMLDivElement | null) => { cardRefs.current[index] = el; }}
-                      item={item} tabIndex={index === focusedIndex ? 0 : -1} onFocus={() => setFocusedIndex(index)} />
-                    {/* folder-09 R3: lifecycle cell + (Re)generate for the primary item. */}
-                    <div className="mt-1 px-1" onClick={(e) => e.stopPropagation()}>
-                      <CatalogLifecycleCell
-                        lifecycle={entry?.lifecycle ?? 'planned'}
-                        ueAssetCount={entry?.ueAssets?.length ?? 0}
-                        busy={isPrimary && gen.isRunning}
-                        onRegenerate={isPrimary ? () => gen.generate(nextStep) : undefined}
-                      />
-                    </div>
-                  </div>
-                );
-              })}
-            </AnimatePresence>
-          </motion.div>
-          {filteredItems.length === 0 && (
-            <div className="absolute inset-0 flex flex-col items-center justify-center text-text-muted opacity-50">
-              <Search className="w-12 h-12 mb-2.5" /><p className="text-sm">No items found matching the current filters.</p>
-            </div>
-          )}
-        </div>
+        <CatalogItemGrid
+          gridRef={gridRef}
+          cardRefs={cardRefs}
+          pageItems={pageItems}
+          filteredCount={filteredItems.length}
+          focusedIndex={focusedIndex}
+          setFocusedIndex={setFocusedIndex}
+          setSelectedItem={setSelectedItem}
+          entryByItemId={entryByItemId}
+          primaryEntry={primaryEntry}
+          isGenRunning={gen.isRunning}
+          onRegenerate={() => gen.generate(nextStep)}
+          onGridKeyDown={handleGridKeyDown}
+        />
 
         {/* Pagination */}
         <CatalogPagination currentPage={currentPage} totalPages={totalPages} setCurrentPage={setCurrentPage} />
