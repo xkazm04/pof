@@ -8,6 +8,8 @@ import { EntityLifecyclePanel } from './EntityLifecyclePanel';
 import { EntityCrossLinksPanel } from './EntityCrossLinksPanel';
 import { EntityFunctionalTestPanel } from './EntityFunctionalTestPanel';
 import { EntityFacetsTabStrip } from './EntityFacetsTabStrip';
+// Side-effect imports — register per-catalog custom facets at module load.
+import '@/components/ecw/facets/bestiary/BestiaryDetailFacet';
 
 interface Props {
   entity: StoredCatalogEntity | null;
@@ -33,7 +35,7 @@ export function EntityInspector({ entity }: Props) {
       <EntityLifecyclePanel entity={entity} />
       <EntityCrossLinksPanel entity={entity} />
       <EntityFunctionalTestPanel entity={entity} />
-      <EntityFacetsTabStrip />
+      <EntityFacetsTabStrip entity={entity} />
     </div>
   );
 }

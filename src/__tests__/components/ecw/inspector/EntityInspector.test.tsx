@@ -39,7 +39,7 @@ describe('EntityInspector', () => {
     expect(screen.getByText('loot')).toBeTruthy();
     // Functional Test (bestiary recipe testPath)
     expect(screen.getByText(/VSEnemyAttackTest/)).toBeTruthy();
-    // Facets strip placeholder
-    expect(screen.getByText('Facets')).toBeTruthy();
+    // Facets strip: bestiary catalog has the Detail facet registered (Phase 7)
+    expect(screen.getByRole('tab', { name: /Detail/ })).toBeTruthy();
   });
 });
