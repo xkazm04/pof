@@ -6,7 +6,7 @@ import { useEcwStore } from '@/stores/ecwStore';
 import { EcwTopBar } from './EcwTopBar';
 import { CliRail } from './CliRail';
 import { EcwCommandPalette } from './EcwCommandPalette';
-import { CatalogsTabPlaceholder } from './tabs/CatalogsTabPlaceholder';
+import { CatalogsTab } from './catalogs/CatalogsTab';
 import { MissionControlTabPlaceholder } from './tabs/MissionControlTabPlaceholder';
 import { LiveStateTabPlaceholder } from './tabs/LiveStateTabPlaceholder';
 
@@ -32,7 +32,7 @@ export function NewAppShell() {
       <EcwTopBar />
       <div className="flex-1 flex overflow-hidden">
         <main className="flex-1 flex overflow-hidden">
-          {tab === 'catalogs' && <CatalogsTabPlaceholder />}
+          {tab === 'catalogs' && <CatalogsTab />}
           {tab === 'mission-control' && <MissionControlTabPlaceholder />}
           {tab === 'live-state' && <LiveStateTabPlaceholder />}
         </main>

@@ -3,6 +3,8 @@ import { render, screen, cleanup } from '@testing-library/react';
 import { NewAppShell } from '@/components/ecw/NewAppShell';
 import { useEcwStore } from '@/stores/ecwStore';
 import { useProjectStore } from '@/stores/projectStore';
+import { useCatalogStore } from '@/stores/catalogStore';
+import { CATALOG_SECTIONS } from '@/lib/catalog/sections';
 
 // Stub heavy SetupWizard so we don't boot project-setup machinery in the test.
 vi.mock('@/components/modules/project-setup/SetupWizard', () => ({
@@ -11,8 +13,18 @@ vi.mock('@/components/modules/project-setup/SetupWizard', () => ({
 
 describe('NewAppShell', () => {
   beforeEach(() => {
-    useEcwStore.setState({ activeL1Tab: 'catalogs', cliRailMode: 'auto', isPaletteOpen: false });
+    useEcwStore.setState({
+      activeL1Tab: 'catalogs',
+      cliRailMode: 'auto',
+      isPaletteOpen: false,
+      activeCatalogId: null,
+      activeEntityId: null,
+    });
     useProjectStore.setState({ isSetupComplete: true });
+    // Reset catalog store to known empty state (the Catalog Hub now reads it).
+    const seeded: Record<string, Record<string, never>> = {};
+    for (const s of CATALOG_SECTIONS) seeded[s.catalogId] = {};
+    useCatalogStore.setState({ entitiesByCatalog: seeded });
   });
   afterEach(cleanup);
 
@@ -21,9 +33,10 @@ describe('NewAppShell', () => {
     expect(screen.getByText('PoF')).toBeTruthy();
   });
 
-  it('renders the catalogs placeholder by default', () => {
+  it('renders the Catalog Hub root by default', () => {
     render(<NewAppShell />);
-    expect(screen.getByRole('heading', { level: 1, name: /Catalogs/ })).toBeTruthy();
+    // Phase 3: catalogs tab now shows the real Catalog Hub root, not the placeholder.
+    expect(screen.getByRole('heading', { level: 1, name: /^Catalogs$/ })).toBeTruthy();
   });
 
   it('switching tab swaps the body', () => {
