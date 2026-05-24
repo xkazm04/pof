@@ -1,13 +1,9 @@
 'use client';
 
 import { useState, useMemo, useCallback } from 'react';
-import { Dna, Plus, Upload, Barcode } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { STATUS_SUCCESS, ACCENT_CYAN, ACCENT_VIOLET, OPACITY_10, OPACITY_20,
-  withOpacity, OPACITY_50, OPACITY_37, OPACITY_25, OPACITY_8,
-} from '@/lib/chart-colors';
-import { BlueprintPanel } from '@/components/modules/core-engine/unique-tabs/_design';
 import { SubTabNavigation } from '@/components/modules/core-engine/unique-tabs/_shared';
+import { ACCENT_VIOLET } from '@/lib/chart-colors';
 import type { ItemGenome, TraitAxis, DNARollResult } from '@/types/item-genome';
 import { rollAffixesWithDNA, inheritGenomes, evolveGenome } from '@/lib/item-dna/rolling-engine';
 import { sanitizeItemGenome } from '@/lib/item-dna/defaults';
@@ -23,6 +19,8 @@ import { EvolutionTab } from './EvolutionTab';
 import { CodePreview } from './CodePreview';
 import { GenomeImportPanel } from '../../unique-tabs/_genome-share/GenomeImportPanel';
 import { BuildCodeExportPanel } from '../../unique-tabs/_genome-share/BuildCodeExport';
+import { GenomeEditorHeader } from './GenomeEditorHeader';
+import { GenomeSelector } from './GenomeSelector';
 
 /* ── Main Component ────────────────────────────────────────────────────── */
 
@@ -112,46 +110,12 @@ export function ItemDNAGenomeEditor({ moduleId }: Props) {
       className="space-y-3 p-2"
     >
       {/* Header */}
-      <BlueprintPanel color={ACCENT} className="p-3" noBrackets>
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <div className="p-1.5 rounded-lg relative overflow-hidden group">
-              <div className="absolute inset-0 opacity-20" style={{ backgroundColor: ACCENT }} />
-              <Dna className="w-4 h-4 relative z-10" style={{ color: ACCENT, filter: `drop-shadow(0 0 4px ${withOpacity(ACCENT, OPACITY_50)})` }} />
-            </div>
-            <div className="flex flex-col">
-              <span className="text-sm font-bold text-text tracking-wide">Item DNA Genome System</span>
-              <span className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted">
-                <span className="font-medium" style={{ color: ACCENT }}>{genomes.length}</span>
-                <span className="opacity-60"> genomes defined</span>
-              </span>
-            </div>
-          </div>
-          <div className="flex items-center gap-1.5">
-            <button
-              onClick={() => { setShowExport((v) => !v); setShowImport(false); }}
-              className="flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium transition-colors"
-              style={{ backgroundColor: withOpacity(ACCENT_VIOLET, OPACITY_8), color: ACCENT_VIOLET, border: `1px solid ${withOpacity(ACCENT_VIOLET, OPACITY_20)}` }}
-            >
-              <Barcode className="w-3 h-3" /> Build Code
-            </button>
-            <button
-              onClick={() => { setShowImport((v) => !v); setShowExport(false); }}
-              className="flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium transition-colors"
-              style={{ backgroundColor: withOpacity(ACCENT_CYAN, OPACITY_8), color: ACCENT_CYAN, border: `1px solid ${withOpacity(ACCENT_CYAN, OPACITY_20)}` }}
-            >
-              <Upload className="w-3 h-3" /> Import
-            </button>
-            <button
-              onClick={addGenome}
-              className="flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium transition-colors"
-              style={{ backgroundColor: `${ACCENT}${OPACITY_10}`, color: ACCENT, border: `1px solid ${withOpacity(ACCENT, OPACITY_20)}` }}
-            >
-              <Plus className="w-3 h-3" /> New Genome
-            </button>
-          </div>
-        </div>
-      </BlueprintPanel>
+      <GenomeEditorHeader
+        genomesCount={genomes.length}
+        onToggleExport={() => { setShowExport((v) => !v); setShowImport(false); }}
+        onToggleImport={() => { setShowImport((v) => !v); setShowExport(false); }}
+        onAdd={addGenome}
+      />
 
       {/* Build code export / import */}
       <AnimatePresence>
@@ -182,28 +146,7 @@ export function ItemDNAGenomeEditor({ moduleId }: Props) {
       </AnimatePresence>
 
       {/* Genome selector */}
-      <div className="flex gap-1.5 overflow-x-auto custom-scrollbar pb-1">
-        {genomes.map((g) => (
-          <button
-            key={g.id}
-            onClick={() => setSelectedId(g.id)}
-            className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all flex-shrink-0 ${
-              g.id === selectedId ? 'ring-1 text-white' : 'text-text-muted hover:text-text'
-            }`}
-            style={{
-              backgroundColor: g.id === selectedId ? `${g.color}${OPACITY_20}` : undefined,
-              border: g.id === selectedId ? `1px solid ${withOpacity(g.color, OPACITY_37)}` : '1px solid transparent',
-              boxShadow: g.id === selectedId ? `0 0 0 1px ${withOpacity(g.color, OPACITY_25)}` : undefined,
-            }}
-          >
-            <span className="w-2 h-2 rounded-full" style={{ backgroundColor: g.color }} />
-            {g.name}
-            {g.evolution && g.evolution.tier > 0 && (
-              <span className="text-xs font-mono" style={{ color: STATUS_SUCCESS }}>+{g.evolution.tier}</span>
-            )}
-          </button>
-        ))}
-      </div>
+      <GenomeSelector genomes={genomes} selectedId={selectedId} onSelect={setSelectedId} />
 
       {/* Sub-tabs */}
       <SubTabNavigation tabs={SUB_TABS} activeTabId={activeTab} onChange={setActiveTab} accent={ACCENT} />

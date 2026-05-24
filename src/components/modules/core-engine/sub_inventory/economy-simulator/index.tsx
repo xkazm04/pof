@@ -2,141 +2,26 @@
 
 import { useState, useMemo, useCallback } from 'react';
 import { Play, Target, Activity } from 'lucide-react';
-import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import {
-  ACCENT_EMERALD, ACCENT_CYAN,
-  STATUS_SUCCESS, STATUS_WARNING, STATUS_ERROR,
-  OPACITY_5, OPACITY_8, OPACITY_15, OPACITY_20, OPACITY_25, OPACITY_50,
+  OPACITY_20, OPACITY_25, OPACITY_50,
   GLOW_SM,
-  BORDER_DEFAULT,
   withOpacity,
 } from '@/lib/chart-colors';
-import { motionSafe, EASE_OUT } from '@/lib/motion';
-import { BlueprintPanel, SectionHeader, GlowStat } from '../../unique-tabs/_design';
-import { SubTabNavigation } from '../../unique-tabs/_shared';
+import { EASE_OUT } from '@/lib/motion';
+import { BlueprintPanel, SectionHeader } from '../../unique-tabs/_design';
 import {
   runItemEconomySim, DEFAULT_ITEM_ECON_CONFIG,
   type ItemEconomyConfig, type ItemEconomyResult,
 } from '@/lib/economy/item-economy-engine';
-import { ACCENT, SUB_TABS } from './constants';
-import { PowerTab, RarityTab } from './PowerRarityTabs';
-import { AffixTab, AlertsTab } from './AffixAlertsTabs';
-
-/* ── Config Input ─────────────────────────────────────────────────────── */
-
-const INPUT_CLS =
-  'w-16 text-xs font-mono font-bold px-1.5 py-1 rounded bg-surface-deep border border-border/40 text-text focus:outline-none focus:border-blue-500/50';
-
-function ConfigInput({ label, value, onChange, min, max, step, wide }: {
-  label: string; value: number; onChange: (v: number) => void;
-  min: number; max: number; step: number; wide?: boolean;
-}) {
-  return (
-    <div>
-      <span className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted block mb-0.5">
-        {label}
-      </span>
-      <input
-        type="number" min={min} max={max} step={step} value={value}
-        onChange={(e) => onChange(parseInt(e.target.value) || min)}
-        className={wide ? 'w-20 ' + INPUT_CLS.replace('w-16 ', '') : INPUT_CLS}
-      />
-    </div>
-  );
-}
+import { ACCENT } from './constants';
+import { ConfigInput } from './ConfigInput';
+import { SimulationSkeleton } from './SimulationSkeleton';
+import { SimulationResults } from './SimulationResults';
 
 /* ── Tab transition timing ────────────────────────────────────────────── */
 
 const TAB_TRANSITION = { duration: 0.16, ease: EASE_OUT };
-
-/* ── Shimmer Skeleton ─ shown while sim is running ───────────────────── */
-
-function SkeletonStat({ color, delay }: { color: string; delay: number }) {
-  const prefersReduced = useReducedMotion();
-  return (
-    <motion.div
-      initial={prefersReduced ? { opacity: 1, y: 0 } : { opacity: 0, y: 8 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={motionSafe({ duration: 0.22, ease: EASE_OUT, delay }, prefersReduced)}
-      className="relative p-3 rounded-lg border overflow-hidden"
-      style={{
-        borderColor: withOpacity(color, BORDER_DEFAULT),
-        backgroundColor: withOpacity(color, OPACITY_5),
-      }}
-    >
-      <div
-        className="h-2 w-12 rounded animate-pulse mb-2"
-        style={{ backgroundColor: withOpacity(color, OPACITY_15) }}
-      />
-      <div
-        className="h-5 w-16 rounded animate-pulse"
-        style={{ backgroundColor: withOpacity(color, OPACITY_25) }}
-      />
-    </motion.div>
-  );
-}
-
-function IndeterminateProgressBar({ color }: { color: string }) {
-  const prefersReduced = useReducedMotion();
-  return (
-    <div
-      className="w-full rounded-full overflow-hidden relative"
-      style={{ height: 4, backgroundColor: withOpacity(color, OPACITY_8) }}
-      role="progressbar"
-      aria-label="Simulation running"
-      aria-busy="true"
-    >
-      {prefersReduced ? (
-        <div
-          className="h-full rounded-full animate-pulse"
-          style={{
-            width: '40%',
-            backgroundColor: color,
-            boxShadow: `${GLOW_SM} ${withOpacity(color, OPACITY_50)}`,
-          }}
-        />
-      ) : (
-        <motion.div
-          className="h-full rounded-full absolute top-0"
-          style={{
-            width: '40%',
-            backgroundColor: color,
-            boxShadow: `${GLOW_SM} ${withOpacity(color, OPACITY_50)}`,
-          }}
-          initial={{ x: '-100%' }}
-          animate={{ x: '250%' }}
-          transition={{ duration: 1.2, repeat: Infinity, ease: 'easeInOut' }}
-        />
-      )}
-    </div>
-  );
-}
-
-function SimulationSkeleton() {
-  return (
-    <div className="space-y-3">
-      <IndeterminateProgressBar color={ACCENT} />
-      <div className="grid grid-cols-6 gap-2">
-        <SkeletonStat color={ACCENT} delay={0} />
-        <SkeletonStat color={ACCENT_EMERALD} delay={0.05} />
-        <SkeletonStat color={ACCENT_CYAN} delay={0.1} />
-        <SkeletonStat color={STATUS_SUCCESS} delay={0.15} />
-        <SkeletonStat color={STATUS_WARNING} delay={0.2} />
-        <SkeletonStat color={STATUS_ERROR} delay={0.25} />
-      </div>
-      <BlueprintPanel color={ACCENT} className="p-3 space-y-3">
-        <div
-          className="h-3 w-32 rounded animate-pulse"
-          style={{ backgroundColor: withOpacity(ACCENT, OPACITY_15) }}
-        />
-        <div
-          className="h-[200px] rounded-lg animate-pulse"
-          style={{ backgroundColor: withOpacity(ACCENT, OPACITY_8) }}
-        />
-      </BlueprintPanel>
-    </div>
-  );
-}
 
 /* ── Main Component ───────────────────────────────────────────────────── */
 
@@ -257,44 +142,14 @@ export function ItemEconomySimulator({ moduleId }: Props) {
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -8 }}
             transition={TAB_TRANSITION}
-            className="space-y-3"
           >
-            {/* Summary stats */}
-            <div className="grid grid-cols-6 gap-2">
-              <GlowStat label="Peak Power" value={summary.peakPower.toFixed(0)}
-                color={ACCENT} delay={0} />
-              <GlowStat label="Mid Power" value={summary.midPower.toFixed(0)}
-                color={ACCENT_EMERALD} delay={0.05} />
-              <GlowStat label="End Power" value={summary.endgamePower.toFixed(0)}
-                color={ACCENT_CYAN} delay={0.1} />
-              <GlowStat label="Inflation" value={`${summary.rarityInflation.toFixed(1)}x`}
-                color={summary.rarityInflation > 3 ? STATUS_WARNING : STATUS_SUCCESS} delay={0.15} />
-              <GlowStat label="Alerts" value={String(summary.alertCount)}
-                color={summary.criticalCount > 0 ? STATUS_ERROR
-                  : summary.alertCount > 0 ? STATUS_WARNING : STATUS_SUCCESS} delay={0.2} />
-              <GlowStat label="Critical" value={String(summary.criticalCount)}
-                color={summary.criticalCount > 0 ? STATUS_ERROR : STATUS_SUCCESS} delay={0.25} />
-            </div>
-
-            {/* Tab navigation */}
-            <SubTabNavigation tabs={SUB_TABS} activeTabId={activeTab}
-              onChange={setActiveTab} accent={ACCENT} />
-
-            {/* Tab content with 160ms crossfade keyed on activeTab */}
-            <AnimatePresence mode="wait" initial={false}>
-              <motion.div
-                key={activeTab}
-                initial={{ opacity: 0, y: 8 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -8 }}
-                transition={TAB_TRANSITION}
-              >
-                {activeTab === 'power' && <PowerTab result={result} config={config} />}
-                {activeTab === 'rarity' && <RarityTab result={result} config={config} />}
-                {activeTab === 'affixes' && <AffixTab result={result} />}
-                {activeTab === 'alerts' && <AlertsTab result={result} config={config} />}
-              </motion.div>
-            </AnimatePresence>
+            <SimulationResults
+              summary={summary}
+              result={result}
+              config={config}
+              activeTab={activeTab}
+              setActiveTab={setActiveTab}
+            />
           </motion.div>
         ) : (
           <motion.div

@@ -11,11 +11,10 @@
  */
 
 import { useState, useCallback } from 'react';
-import { Sword } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ACCENT_RED, OVERLAY_WHITE, OPACITY_2, OPACITY_5, OPACITY_8, OPACITY_20, OPACITY_25, withOpacity } from '@/lib/chart-colors';
+import { ACCENT_RED, OPACITY_5, OPACITY_25, withOpacity } from '@/lib/chart-colors';
 import { apiFetch } from '@/lib/api-utils';
-import { BlueprintPanel, SectionHeader } from '../../unique-tabs/_design';
+import { BlueprintPanel } from '../../unique-tabs/_design';
 import {
   COMBO_ABILITIES,
   ABILITY_RADAR_DATA as STATIC_RADAR_DATA,
@@ -24,11 +23,12 @@ import {
   buildAbilityForgePrompt,
   type ForgedAbility,
 } from '@/lib/prompts/ability-forge';
-import { ACCENT, DAMAGE_TYPE_COLORS } from './constants';
+import { ACCENT } from './constants';
 import { ForgeInput } from './ForgeInput';
 import { ForgeResult } from './ForgeResult';
 import { RefineBar } from './RefineBar';
 import { AbilityDiff } from './AbilityDiff';
+import { ForgeHistoryPanel } from './ForgeHistoryPanel';
 
 /* ── Main component ──────────────────────────────────────────────────── */
 
@@ -177,37 +177,7 @@ export function AbilityForge() {
       {result && <RefineBar isRefining={isGenerating} onRefine={handleRefine} />}
 
       {/* History */}
-      {history.length > 1 && (
-        <BlueprintPanel color={ACCENT} className="p-3 space-y-2">
-          <SectionHeader icon={Sword} label="Recent Forges" color={ACCENT} />
-          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-2">
-            {history.map((h, i) => (
-              <motion.button
-                key={`${h.className}-${i}`}
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
-                onClick={() => handleSelectHistory(h)}
-                className="flex items-center gap-2 p-2 rounded-md text-left transition-colors hover:bg-zinc-800/50"
-                style={{
-                  background: result === h ? withOpacity(ACCENT, OPACITY_8) : withOpacity(OVERLAY_WHITE, OPACITY_2),
-                  border: result === h ? `1px solid ${withOpacity(ACCENT, OPACITY_20)}` : '1px solid transparent',
-                }}
-              >
-                <div
-                  className="w-1.5 h-1.5 rounded-full shrink-0"
-                  style={{
-                    background: DAMAGE_TYPE_COLORS[h.stats.damageType] ?? DAMAGE_TYPE_COLORS.None,
-                  }}
-                />
-                <div className="min-w-0">
-                  <div className="text-xs text-zinc-300 truncate">{h.displayName}</div>
-                  <div className="text-[9px] font-mono text-zinc-600 truncate">{h.className}</div>
-                </div>
-              </motion.button>
-            ))}
-          </div>
-        </BlueprintPanel>
-      )}
+      <ForgeHistoryPanel history={history} current={result} onSelect={handleSelectHistory} />
     </motion.div>
   );
 }

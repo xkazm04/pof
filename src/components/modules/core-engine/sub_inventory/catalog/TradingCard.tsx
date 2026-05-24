@@ -3,13 +3,14 @@
 import { useState, useCallback, useRef, forwardRef } from 'react';
 import { Package } from 'lucide-react';
 import Image from 'next/image';
-import { AFFIX_CATEGORY_COLORS, OVERLAY_WHITE, STATUS_SUCCESS, STATUS_ERROR,
-  withOpacity, OPACITY_37, OPACITY_10, OPACITY_20, OPACITY_5, OPACITY_8, OPACITY_25, OPACITY_12, OPACITY_30,
+import { OVERLAY_WHITE, STATUS_SUCCESS, STATUS_ERROR,
+  withOpacity, OPACITY_10, OPACITY_20, OPACITY_5, OPACITY_8, OPACITY_25, OPACITY_12, OPACITY_30,
 } from '@/lib/chart-colors';
 import { motion, AnimatePresence } from 'framer-motion';
 import { BlueprintPanel } from '../../unique-tabs/_design';
 import type { ItemData } from '../_shared/data';
 import { RARITY_COLORS, ITEM_SETS } from '../_shared/data';
+import { TradingCardTooltip } from './TradingCardTooltip';
 
 /* ── Pre-compute set membership ──────────────────────────────────────── */
 const ITEM_SET_MAP = new Map<string, { setName: string; color: string }>();
@@ -32,69 +33,6 @@ const SLOT_ICONS: Record<string, string> = {
   Shield: '\uD83D\uDEE1', Ring: '\uD83D\uDC8D', Amulet: '\uD83D\uDCFF',
   Potion: '\uD83E\uDDEA', Elixir: '\u2728',
 };
-
-/* ── Tooltip ───────────────────────────────────────────────────────────── */
-
-function TradingCardTooltip({ item, color }: { item: ItemData; color: string }) {
-  return (
-    <motion.div
-      layoutId={`tooltip-${item.id}`}
-      initial={{ opacity: 0, x: 10, scale: 0.95 }}
-      animate={{ opacity: 1, x: 0, scale: 1 }}
-      exit={{ opacity: 0, x: 10, scale: 0.95 }}
-      transition={{ type: 'spring', stiffness: 400, damping: 30 }}
-      className="absolute left-full top-0 ml-2 z-50 w-64 rounded-xl shadow-2xl border-2 overflow-hidden"
-      style={{ borderColor: `${withOpacity(color, OPACITY_37)}`, backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)', backgroundColor: 'var(--surface-deep)' }}
-    >
-      <div className="absolute top-0 left-0 w-full h-1" style={{ background: `linear-gradient(90deg, ${color}, transparent)` }} />
-      <div className="p-3.5 space-y-3">
-        <div>
-          <h4 className="text-sm font-bold text-text">{item.name}</h4>
-          <p className="text-xs font-mono uppercase tracking-widest mt-0.5" style={{ color }}>{item.rarity} {item.subtype}</p>
-        </div>
-        <p className="text-xs text-text-muted italic leading-relaxed">{item.description}</p>
-        <div className="space-y-2">
-          <p className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted">Stats</p>
-          {item.stats.map(s => {
-            const pct = s.numericValue != null && s.maxValue ? Math.min(100, (s.numericValue / s.maxValue) * 100) : null;
-            return (
-              <div key={s.label} className="space-y-0.5">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs text-text-muted">{s.label}</span>
-                  <span className="text-xs font-mono font-bold text-text">{s.value}</span>
-                </div>
-                {pct != null && (
-                  <div className="h-1.5 rounded-full overflow-hidden" style={{ backgroundColor: `${withOpacity(color, OPACITY_10)}` }}>
-                    <motion.div className="h-full rounded-full" style={{ backgroundColor: color }}
-                      initial={{ width: 0 }} animate={{ width: `${pct}%` }} transition={{ duration: 0.5, ease: 'easeOut' }} />
-                  </div>
-                )}
-              </div>
-            );
-          })}
-        </div>
-        {item.effect && (
-          <div className="p-2 rounded-lg border text-xs" style={{ borderColor: `${withOpacity(color, OPACITY_20)}`, backgroundColor: `${withOpacity(color, OPACITY_5)}` }}>
-            <span className="font-bold mr-1" style={{ color }}>Effect:</span>
-            <span className="text-text">{item.effect}</span>
-          </div>
-        )}
-        {item.affixes && item.affixes.length > 0 && (
-          <div className="space-y-1.5">
-            <p className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted">Affixes</p>
-            {item.affixes.map(a => (
-              <div key={a.name} className="flex items-center gap-2 px-2 py-1 rounded-md" style={{ backgroundColor: `${withOpacity(AFFIX_CATEGORY_COLORS[a.category], OPACITY_8)}` }}>
-                <span className="w-1 h-1 rounded-full flex-shrink-0" style={{ backgroundColor: AFFIX_CATEGORY_COLORS[a.category] }} />
-                <span className="text-xs font-medium text-text">{a.name}</span>
-                <span className="text-xs text-text-muted ml-auto font-mono">{a.stat}</span>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
-    </motion.div>
-  );
-}
 
 /* ── Trading Card ──────────────────────────────────────────────────────── */
 
