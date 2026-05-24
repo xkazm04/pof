@@ -57,6 +57,9 @@ interface CLIPanelStoreState {
 
 let tabCounter = 0;
 
+/** Hard cap on simultaneous terminal sessions. Exceeded only when every session is running (a running dispatch must never be clobbered). */
+const MAX_SESSIONS = 8;
+
 function generateTabId(): string {
   tabCounter++;
   return `tab-${Date.now()}-${tabCounter}`;
@@ -73,8 +76,18 @@ export const useCLIPanelStore = create<CLIPanelStoreState>()(
 
       createSession: (opts) => {
         const id = generateTabId();
-        const { tabOrder } = get();
-        if (tabOrder.length >= 8) return tabOrder[tabOrder.length - 1];
+        const { tabOrder, sessions } = get();
+        if (tabOrder.length >= MAX_SESSIONS) {
+          // At cap: reuse the least-recently-active IDLE session. Never reuse a
+          // running session — that would clobber its live dispatch. If every
+          // session is running, fall through and create a new one (exceeding the
+          // cap beats losing a dispatch).
+          const idle = tabOrder
+            .map((tid) => sessions[tid])
+            .filter((s): s is CLISessionState => !!s && !s.isRunning)
+            .sort((a, b) => a.lastActivityAt - b.lastActivityAt);
+          if (idle.length > 0) return idle[0].id;
+        }
 
         const session: CLISessionState = {
           id,
