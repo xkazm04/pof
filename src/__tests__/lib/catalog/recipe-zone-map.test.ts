@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { getRecipe } from '@/lib/catalog/recipe';
 import type { ZoneEntry } from '@/lib/catalog/types';
-import { ZONES } from '@/components/modules/core-engine/unique-tabs/ZoneMap/data';
+import { ZONES } from '@/components/modules/core-engine/sub_world/_shared/data';
 import type { ProjectContext } from '@/lib/prompt-context';
 
 const ctx: ProjectContext = { projectName: 'PoF', projectPath: 'C:/p', ueVersion: '5.7', dynamicContext: undefined };

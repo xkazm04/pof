@@ -4,19 +4,25 @@ import { useState } from 'react';
 import { Network } from 'lucide-react';
 import { motion, useReducedMotion } from 'framer-motion';
 import { STATUS_WARNING, ACCENT_CYAN,
-  withOpacity, OPACITY_37, OPACITY_15, OPACITY_25,
+  withOpacity, OPACITY_37, OPACITY_15, OPACITY_25, OPACITY_50,
 } from '@/lib/chart-colors';
 import { ANIMATION_PRESETS, motionSafe } from '@/lib/motion';
-import { BlueprintPanel, SectionHeader } from '../../_design';
+import { BlueprintPanel, SectionHeader } from '../../unique-tabs/_design';
 import {
   TOPOLOGY_NODES, TOPOLOGY_EDGES, EDGE_STYLE_MAP, TOPO_LEVEL_RANGES,
-} from '../data';
+} from '../_shared/data';
 
 const ACCENT = ACCENT_CYAN;
 
-export function TopologyGraph() {
+interface TopologyGraphProps {
+  matchingIds?: Set<string>;
+}
+
+export function TopologyGraph({ matchingIds }: TopologyGraphProps = {}) {
   const [hoveredTopoNode, setHoveredTopoNode] = useState<string | null>(null);
   const prefersReduced = useReducedMotion();
+  const hasFilter = matchingIds !== undefined && matchingIds.size > 0;
+  const isInRange = (id: string) => !hasFilter || matchingIds!.has(id);
 
   return (
     <BlueprintPanel color={ACCENT} className="p-3">
@@ -29,8 +35,9 @@ export function TopologyGraph() {
             const tgt = TOPOLOGY_NODES.find(n => n.id === edge.to);
             if (!src || !tgt) return null;
             const style = EDGE_STYLE_MAP[edge.type];
+            const edgeInRange = isInRange(edge.from) && isInRange(edge.to);
             return (
-              <g key={`${edge.from}-${edge.to}`}>
+              <g key={`${edge.from}-${edge.to}`} style={{ transition: 'opacity 200ms ease-out' }} opacity={edgeInRange ? 1 : 0.2}>
                 <line
                   x1={src.x!} y1={src.y!} x2={tgt.x!} y2={tgt.y!}
                   stroke={edge.criticalPath ? STATUS_WARNING : style.color}
@@ -56,12 +63,16 @@ export function TopologyGraph() {
           {TOPOLOGY_NODES.map((node) => {
             const sz = node.size ?? 22;
             const isHovered = hoveredTopoNode === node.id;
+            const inRange = isInRange(node.id);
+            const baseGlowAlpha = hasFilter && inRange ? OPACITY_50 : OPACITY_25;
             return (
               <g
                 key={node.id}
                 onMouseEnter={() => setHoveredTopoNode(node.id)}
                 onMouseLeave={() => setHoveredTopoNode(null)}
                 className="cursor-pointer"
+                opacity={inRange ? 1 : 0.3}
+                style={{ transition: 'opacity 200ms ease-out' }}
               >
                 {isHovered && (
                   <circle
@@ -72,7 +83,7 @@ export function TopologyGraph() {
                 <circle
                   cx={node.x!} cy={node.y!} r={sz / 2}
                   fill={`${withOpacity(node.color ?? '', OPACITY_15)}`} stroke={node.color} strokeWidth="2"
-                  style={{ filter: `drop-shadow(0 0 6px ${withOpacity(node.color ?? '', OPACITY_25)})` }}
+                  style={{ filter: `drop-shadow(0 0 ${hasFilter && inRange ? '8px' : '6px'} ${withOpacity(node.color ?? '', baseGlowAlpha)})` }}
                 />
                 <text x={node.x!} y={node.y!} textAnchor="middle" dominantBaseline="central"
                   className="text-xs font-mono font-bold select-none pointer-events-none"

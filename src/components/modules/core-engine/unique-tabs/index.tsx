@@ -13,7 +13,7 @@ import { ScreenFlowMap } from './ScreenFlowMap';
 import { SaveDataSchema } from './SaveDataSchema';
 import { DebugDashboard } from './DebugDashboard';
 import { ProgressionCurve } from './ProgressionCurve';
-import { ZoneMap } from './ZoneMap';
+import { ZoneMap } from '../sub_world';
 import { EnemyBestiary } from './EnemyBestiary';
 import { ItemCatalog } from './ItemCatalog';
 import { WBPStarterPanel } from '../arpg-ui/WBPStarterPanel';

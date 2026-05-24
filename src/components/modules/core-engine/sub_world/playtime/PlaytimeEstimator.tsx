@@ -13,12 +13,12 @@ import {
   GLOW_MD,
   withOpacity,
 } from '@/lib/chart-colors';
-import { BlueprintPanel, SectionHeader } from '../../_design';
+import { BlueprintPanel, SectionHeader } from '../../unique-tabs/_design';
 import {
   TOPOLOGY_NODES, TOPOLOGY_EDGES, EDGE_STYLE_MAP,
   ZONE_PLAYTIME, CRITICAL_PATH, ALL_PATHS, formatPlaytime,
-} from '../data';
-import type { PlaytimePathMode } from '../data';
+} from '../_shared/data';
+import type { PlaytimePathMode } from '../_shared/data';
 
 const SVG_W = 560;
 const SVG_H = 340;

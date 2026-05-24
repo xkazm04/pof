@@ -1,7 +1,7 @@
 import {
   ZONES,
   type ZoneRecord,
-} from '@/components/modules/core-engine/unique-tabs/ZoneMap/data';
+} from '@/components/modules/core-engine/sub_world/_shared/data';
 import type { ZoneEntry } from './types';
 
 /** Convert one ZoneRecord into a Zone Map entry. */

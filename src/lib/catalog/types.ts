@@ -4,7 +4,7 @@ import type { EnemyLootBinding } from '@/components/modules/core-engine/unique-t
 import type { ArchetypeConfig } from '@/components/modules/core-engine/unique-tabs/EnemyBestiary/data';
 import type { ComboSequence } from '@/components/modules/core-engine/unique-tabs/CombatActionMap/data-metrics';
 import type { GraphNode } from '@/types/unique-tab-improvements';
-import type { ZoneRecord } from '@/components/modules/core-engine/unique-tabs/ZoneMap/data';
+import type { ZoneRecord } from '@/components/modules/core-engine/sub_world/_shared/data';
 import type { MontageEntry } from '@/components/modules/core-engine/unique-tabs/AnimationStateGraph/data';
 
 /** Where a catalog entity is in the generate-into-UE pipeline. */

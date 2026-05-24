@@ -4,7 +4,7 @@ import { motion } from 'framer-motion';
 import { STATUS_SUCCESS, STATUS_WARNING, STATUS_LOCKED, STATUS_LOCKED_STROKE, ACCENT_CYAN, OVERLAY_WHITE,
   withOpacity, OPACITY_50,
 } from '@/lib/chart-colors';
-import type { ZoneRecord } from '../data';
+import type { ZoneRecord } from '../_shared/data';
 
 const ACCENT = ACCENT_CYAN;
 
@@ -12,9 +12,12 @@ interface MapCanvasProps {
   zones: ZoneRecord[];
   selectedZone: ZoneRecord;
   onSelectZone: (z: ZoneRecord) => void;
+  matchingIds?: Set<string>;
 }
 
-export function ZoneMapCanvas({ zones, selectedZone, onSelectZone }: MapCanvasProps) {
+export function ZoneMapCanvas({ zones, selectedZone, onSelectZone, matchingIds }: MapCanvasProps) {
+  const hasFilter = matchingIds !== undefined && matchingIds.size > 0;
+  const isInRange = (id: string) => !hasFilter || matchingIds!.has(id);
   const getZoneColor = (z: ZoneRecord) => {
     switch (z.status) {
       case 'completed': return STATUS_SUCCESS;
@@ -49,6 +52,7 @@ export function ZoneMapCanvas({ zones, selectedZone, onSelectZone }: MapCanvasPr
         zone.connections.map((connId) => {
           const target = zones.find((z) => z.id === connId);
           if (!target) return null;
+          const edgeInRange = isInRange(zone.id) && isInRange(target.id);
           return (
             <motion.line
               key={`${zone.id}-${connId}`}
@@ -62,7 +66,8 @@ export function ZoneMapCanvas({ zones, selectedZone, onSelectZone }: MapCanvasPr
               stroke="url(#lineGrad)"
               strokeWidth="2"
               strokeDasharray="4 4"
-              className="opacity-50"
+              className={edgeInRange ? 'opacity-50' : 'opacity-15'}
+              style={{ transition: 'opacity 200ms ease-out' }}
             />
           );
         }),
@@ -75,9 +80,16 @@ export function ZoneMapCanvas({ zones, selectedZone, onSelectZone }: MapCanvasPr
         const strokeColor = getStrokeColor(zone);
         const isBoss = zone.type === 'boss';
         const isHub = zone.type === 'hub';
+        const inRange = isInRange(zone.id);
+        const glowFilter = `drop-shadow(0 0 6px ${withOpacity(color, OPACITY_50)})`;
 
         return (
-          <g key={zone.id} onClick={() => onSelectZone(zone)} className="cursor-pointer group">
+          <g
+            key={zone.id}
+            onClick={() => onSelectZone(zone)}
+            className={`cursor-pointer group ${inRange ? '' : 'opacity-30'}`}
+            style={{ transition: 'opacity 200ms ease-out' }}
+          >
             {/* Hover ring */}
             <motion.circle
               initial={{ r: 0 }}
@@ -112,7 +124,7 @@ export function ZoneMapCanvas({ zones, selectedZone, onSelectZone }: MapCanvasPr
                 fill={color}
                 stroke={isSelected ? OVERLAY_WHITE : strokeColor}
                 strokeWidth="2"
-                style={{ transformOrigin: `${zone.cx}% ${zone.cy}%` }}
+                style={{ transformOrigin: `${zone.cx}% ${zone.cy}%`, filter: hasFilter && inRange ? glowFilter : undefined }}
               />
             ) : isHub ? (
               <motion.rect
@@ -125,6 +137,7 @@ export function ZoneMapCanvas({ zones, selectedZone, onSelectZone }: MapCanvasPr
                 stroke={isSelected ? OVERLAY_WHITE : strokeColor}
                 strokeWidth="2"
                 rx="4"
+                style={{ filter: hasFilter && inRange ? glowFilter : undefined }}
               />
             ) : (
               <motion.circle
@@ -136,7 +149,7 @@ export function ZoneMapCanvas({ zones, selectedZone, onSelectZone }: MapCanvasPr
                 fill={color}
                 stroke={isSelected ? OVERLAY_WHITE : strokeColor}
                 strokeWidth="2"
-                style={{ filter: zone.status !== 'locked' ? 'url(#glow)' : 'none' }}
+                style={{ filter: hasFilter && inRange ? glowFilter : (zone.status !== 'locked' ? 'url(#glow)' : 'none') }}
               />
             )}
 

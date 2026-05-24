@@ -185,6 +185,7 @@ export const TRANSITION_COLORS: Record<ZoneConnection['transitionType'], string>
 /* ── Derived: Level Range Bars ─────────────────────────────────────────────── */
 
 export interface LevelRangeBar {
+  id: string;
   zone: string;
   min: number;
   max: number;
@@ -192,7 +193,7 @@ export interface LevelRangeBar {
 }
 
 export const LEVEL_RANGE_BARS: LevelRangeBar[] = ZONES.map(z => ({
-  zone: z.name, min: z.levelMin, max: z.levelMax, color: z.color,
+  id: z.id, zone: z.name, min: z.levelMin, max: z.levelMax, color: z.color,
 }));
 
 export const PLAYER_LEVEL = 3;

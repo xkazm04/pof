@@ -7,16 +7,28 @@ import {
   ACCENT_CYAN, ACCENT_VIOLET, ACCENT_PINK,
   withOpacity, OPACITY_50, OPACITY_12, OPACITY_25, OPACITY_37, GLOW_MD,
 } from '@/lib/chart-colors';
-import { BlueprintPanel, SectionHeader, NeonBar } from '../../_design';
-import { HeatmapGrid } from '../../_shared';
+import { BlueprintPanel, SectionHeader, NeonBar } from '../../unique-tabs/_design';
+import { HeatmapGrid } from '../../unique-tabs/_shared';
 import {
   ENEMY_DENSITY_CONFIG, LEVEL_RANGE_BARS, PLAYER_LEVEL, MAX_LEVEL,
   STREAMING_BUDGETS,
-} from '../data';
+} from '../_shared/data';
 
 const ACCENT = ACCENT_CYAN;
 
-export function DensityLevelGroup() {
+interface DensityLevelGroupProps {
+  matchingIds?: Set<string>;
+  playerLevel?: number;
+}
+
+export function DensityLevelGroup({ matchingIds, playerLevel }: DensityLevelGroupProps = {}) {
+  const hasFilter = matchingIds !== undefined && matchingIds.size > 0;
+  const isInRange = (id: string) => !hasFilter || matchingIds!.has(id);
+  // Clamp the indicator level so it stays inside the local axis (which uses
+  // MAX_LEVEL); the label still reports the unclamped value from the slider.
+  const realLevel = playerLevel ?? PLAYER_LEVEL;
+  const indicatorLevel = Math.max(1, Math.min(realLevel, MAX_LEVEL));
+
   return (
     <>
       {/* Enemy Density Heatmap */}
@@ -49,14 +61,15 @@ export function DensityLevelGroup() {
           <div
             className="absolute top-0 bottom-0 w-[2px] z-10"
             style={{
-              left: `${((PLAYER_LEVEL - 0.5) / MAX_LEVEL) * 100}%`,
+              left: `${((indicatorLevel - 0.5) / MAX_LEVEL) * 100}%`,
               backgroundColor: ACCENT_PINK,
               boxShadow: `${GLOW_MD} ${withOpacity(ACCENT_PINK, OPACITY_50)}`,
+              transition: 'left 200ms ease-out',
             }}
           >
             <div className="absolute -top-5 left-1/2 -translate-x-1/2 text-xs font-mono font-bold whitespace-nowrap px-1.5 py-0.5 rounded"
               style={{ backgroundColor: `${withOpacity(ACCENT_PINK, OPACITY_12)}`, color: ACCENT_PINK, border: `1px solid ${withOpacity(ACCENT_PINK, OPACITY_25)}` }}>
-              Player Lvl {PLAYER_LEVEL}
+              Player Lvl {realLevel}
             </div>
           </div>
 
@@ -64,8 +77,13 @@ export function DensityLevelGroup() {
             {LEVEL_RANGE_BARS.map((bar) => {
               const leftPct = ((bar.min - 0.5) / MAX_LEVEL) * 100;
               const widthPct = ((bar.max - bar.min + 1) / MAX_LEVEL) * 100;
+              const inRange = isInRange(bar.id);
               return (
-                <div key={bar.zone} className="flex items-center gap-3">
+                <div
+                  key={bar.zone}
+                  className="flex items-center gap-3"
+                  style={{ opacity: inRange ? 1 : 0.3, transition: 'opacity 200ms ease-out' }}
+                >
                   <span className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted w-28 truncate text-right flex-shrink-0">{bar.zone}</span>
                   <div className="relative flex-1 h-6 bg-surface-deep rounded-md overflow-hidden border border-border/30">
                     <motion.div
@@ -77,6 +95,7 @@ export function DensityLevelGroup() {
                         left: `${leftPct}%`,
                         backgroundColor: `${withOpacity(bar.color, OPACITY_25)}`,
                         border: `1px solid ${withOpacity(bar.color, OPACITY_37)}`,
+                        boxShadow: hasFilter && inRange ? `0 0 8px ${withOpacity(bar.color, OPACITY_50)}` : undefined,
                       }}
                     >
                       <span className="absolute inset-0 flex items-center justify-center text-xs font-mono font-bold" style={{ color: bar.color }}>

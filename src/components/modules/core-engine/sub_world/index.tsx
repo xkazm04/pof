@@ -8,19 +8,19 @@ import {
   withOpacity, OPACITY_10, OPACITY_5, OPACITY_25, OPACITY_8,
 } from '@/lib/chart-colors';
 import { useTabFeatures } from '@/hooks/useTabFeatures';
-import { TabHeader, LoadingSpinner, SubTabNavigation, type SubTab } from '../_shared';
+import { TabHeader, LoadingSpinner, SubTabNavigation, type SubTab } from '../unique-tabs/_shared';
 import type { SubModuleId } from '@/types/modules';
-import type { PlaytimePathMode } from './data';
-import { ZONES } from './data';
+import type { PlaytimePathMode } from './_shared/data';
+import { ZONES } from './_shared/data';
 
-import { CollapsibleGroup } from './CollapsibleGroup';
+import { CollapsibleGroup } from './_shared/CollapsibleGroup';
 import { MapTopologyGroup } from './map/MapTopologyGroup';
 import { PlaytimeTopologyOverlay, PlaytimeBreakdownTable } from './playtime/PlaytimeEstimator';
 import { DensityLevelGroup } from './density/DensityLevelGroup';
 import { PoiEncountersGroup } from './travel/PoiEncountersGroup';
 import { TravelProgressionGroup } from './travel/TravelProgressionGroup';
-import FeatureMapTab from '../FeatureMapTab';
-import { VisibleSection } from '../VisibleSection';
+import FeatureMapTab from '../unique-tabs/FeatureMapTab';
+import { VisibleSection } from '../unique-tabs/VisibleSection';
 import { useCatalogEntities } from '@/stores/catalogStore';
 import { useGeneration } from '@/hooks/useGeneration';
 import { CatalogLifecycleCell } from '@/components/catalog/CatalogLifecycleCell';
@@ -118,8 +118,16 @@ export function ZoneMap({ moduleId }: ZoneMapProps) {
         <input type="range" min={1} max={50} value={playerLevel} onChange={e => setPlayerLevel(Number(e.target.value))}
           className="w-full h-1.5 rounded-full appearance-none cursor-pointer"
           style={{ accentColor: ACCENT }} />
-        <div className="flex justify-between text-[10px] font-mono text-text-muted mt-1">
-          <span>1</span><span>10</span><span>20</span><span>30</span><span>40</span><span>50</span>
+        <div className="relative h-4 text-[10px] font-mono text-text-muted mt-1">
+          {[1, 10, 20, 30, 40, 50].map(v => (
+            <span
+              key={v}
+              className="absolute -translate-x-1/2 tabular-nums"
+              style={{ left: `${((v - 1) / 49) * 100}%` }}
+            >
+              {v}
+            </span>
+          ))}
         </div>
         {matchingZones.length > 0 && (
           <div className="flex flex-wrap gap-1 mt-2">
@@ -138,7 +146,7 @@ export function ZoneMap({ moduleId }: ZoneMapProps) {
       {activeTab === 'map' && (
         <VisibleSection moduleId={moduleId} sectionId="topology">
         <CollapsibleGroup title="Map & Topology" accent={ACCENT} sectionCount={3} isOpen={openGroups.has(0)} onToggle={() => toggleGroup(0)}>
-          <MapTopologyGroup featureMap={featureMap} defs={defs} />
+          <MapTopologyGroup featureMap={featureMap} defs={defs} matchingIds={matchingIds} />
         </CollapsibleGroup>
         </VisibleSection>
       )}
@@ -155,7 +163,7 @@ export function ZoneMap({ moduleId }: ZoneMapProps) {
       {activeTab === 'density' && (
         <VisibleSection moduleId={moduleId} sectionId="heatmap">
         <CollapsibleGroup title="Density & Level Range" accent={STATUS_ERROR} sectionCount={3} isOpen={openGroups.has(2)} onToggle={() => toggleGroup(2)}>
-          <DensityLevelGroup />
+          <DensityLevelGroup matchingIds={matchingIds} playerLevel={playerLevel} />
         </CollapsibleGroup>
         </VisibleSection>
       )}

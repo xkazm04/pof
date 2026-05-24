@@ -1,6 +1,6 @@
 'use client';
 
-import { STATUS_COLORS } from '../../_shared';
+import { STATUS_COLORS } from '../../unique-tabs/_shared';
 import type { FeatureRow } from '@/types/feature-matrix';
 
 import { withOpacity, OPACITY_50 } from '@/lib/chart-colors';

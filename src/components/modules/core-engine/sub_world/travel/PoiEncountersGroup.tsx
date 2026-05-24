@@ -12,12 +12,12 @@ import {
   GLOW_SM,
   withOpacity,
 } from '@/lib/chart-colors';
-import { BlueprintPanel, SectionHeader } from '../../_design';
+import { BlueprintPanel, SectionHeader } from '../../unique-tabs/_design';
 import {
   POI_ICONS, ZONE_POIS, ZONE_CONNECTIONS, TRANSITION_COLORS,
   BOSS_ARENAS, ENV_HAZARDS, HAZARD_TYPE_COLORS, HAZARD_WARNING_COLORS,
   ZONE_DANGER_SCORES,
-} from '../data';
+} from '../_shared/data';
 
 export function PoiEncountersGroup() {
   return (

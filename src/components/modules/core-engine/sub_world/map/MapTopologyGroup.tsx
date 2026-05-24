@@ -8,10 +8,10 @@ import {
   ACCENT_CYAN, ACCENT_CYAN_LIGHT, ACCENT_EMERALD,
   withOpacity, OPACITY_10, OPACITY_30, OPACITY_50,
 } from '@/lib/chart-colors';
-import { BlueprintPanel, SectionHeader } from '../../_design';
-import { PipelineFlow, FeatureGrid } from '../../_shared';
-import { ZONES, ASSET_FEATURES } from '../data';
-import type { ZoneRecord } from '../data';
+import { BlueprintPanel, SectionHeader } from '../../unique-tabs/_design';
+import { PipelineFlow, FeatureGrid } from '../../unique-tabs/_shared';
+import { ZONES, ASSET_FEATURES } from '../_shared/data';
+import type { ZoneRecord } from '../_shared/data';
 import type { FeatureRow } from '@/types/feature-matrix';
 import { ZoneMapCanvas } from './MapCanvas';
 import { FeatureList } from './FeatureList';
@@ -22,9 +22,10 @@ const ACCENT = ACCENT_CYAN;
 interface MapTopologyGroupProps {
   featureMap: Map<string, FeatureRow>;
   defs: { featureName: string; description: string; dependsOn?: string[] }[];
+  matchingIds?: Set<string>;
 }
 
-export function MapTopologyGroup({ featureMap, defs }: MapTopologyGroupProps) {
+export function MapTopologyGroup({ featureMap, defs, matchingIds }: MapTopologyGroupProps) {
   const [selectedZone, setSelectedZone] = useState<ZoneRecord>(ZONES[0]);
   const [expandedAsset, setExpandedAsset] = useState<string | null>(null);
   const toggleAsset = useCallback((name: string) => {
@@ -59,7 +60,7 @@ export function MapTopologyGroup({ featureMap, defs }: MapTopologyGroupProps) {
                   backgroundSize: '20px 20px',
                 }}
               />
-              <ZoneMapCanvas zones={ZONES} selectedZone={selectedZone} onSelectZone={setSelectedZone} />
+              <ZoneMapCanvas zones={ZONES} selectedZone={selectedZone} onSelectZone={setSelectedZone} matchingIds={matchingIds} />
               <div className="absolute bottom-2 right-3 text-xs font-mono uppercase tracking-[0.15em]" style={{ color: withOpacity(ACCENT_CYAN, OPACITY_50) }}>
                 WRLD.X: {Math.round(selectedZone.cx * 100)} / Y: {Math.round(selectedZone.cy * 100)}
               </div>
@@ -85,7 +86,7 @@ export function MapTopologyGroup({ featureMap, defs }: MapTopologyGroupProps) {
         <FeatureGrid featureNames={ASSET_FEATURES} featureMap={featureMap} defs={defs} expanded={expandedAsset} onToggle={toggleAsset} accent={ACCENT} />
       </BlueprintPanel>
 
-      <TopologyGraph />
+      <TopologyGraph matchingIds={matchingIds} />
     </>
   );
 }

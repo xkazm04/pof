@@ -12,12 +12,12 @@ import {
   withOpacity,
   OPACITY_22,
 } from '@/lib/chart-colors';
-import { BlueprintPanel, SectionHeader } from '../../_design';
+import { BlueprintPanel, SectionHeader } from '../../unique-tabs/_design';
 import {
   FAST_TRAVEL_NODES, FAST_TRAVEL_COVERAGE,
   ZONE_PROGRESSION, TOTAL_ESTIMATED_DAYS, CURRENT_DAY,
-} from '../data';
-import { COMPARE_ZONE_NAMES, buildZoneComparisons } from '../helpers';
+} from '../_shared/data';
+import { COMPARE_ZONE_NAMES, buildZoneComparisons } from '../_shared/helpers';
 
 const ACCENT = ACCENT_CYAN;
 

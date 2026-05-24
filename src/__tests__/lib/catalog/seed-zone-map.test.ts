@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { zoneToEntry, seedZoneEntries } from '@/lib/catalog/seed-zone-map';
-import { ZONES } from '@/components/modules/core-engine/unique-tabs/ZoneMap/data';
+import { ZONES } from '@/components/modules/core-engine/sub_world/_shared/data';
 
 describe('zoneToEntry', () => {
   const z0 = ZONES[0];
