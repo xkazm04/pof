@@ -21,6 +21,8 @@ import { ScalableSelector } from '@/components/shared/ScalableSelector';
 import { useSpellbookEntries } from '@/stores/catalogStore';
 import { LifecycleBadge } from '@/components/catalog/LifecycleBadge';
 import type { LifecycleState } from '@/lib/catalog/types';
+import { useGeneration } from '@/hooks/useGeneration';
+import type { GenerationStep } from '@/lib/catalog/recipe';
 
 const DEFAULT_SELECTED = ['off-fire-01', 'off-ice-01', 'off-ltn-01', 'def-phy-03'];
 const MAX_COMPARE = 6;
@@ -58,6 +60,15 @@ export function AbilitiesSection({ featureMap, defs, expanded, onToggle }: Secti
   ];
 
   const primary = selectedAbilities[primaryIdx] ?? selectedAbilities[0];
+
+  // folder-09: dispatch generation for the primary compared ability.
+  const primaryEntry = (entries.find((e) => e.id === primary?.id) ?? entries[0])!;
+  const gen = useGeneration(primaryEntry);
+  const nextStep: GenerationStep =
+    primaryEntry?.lifecycle === 'scaffolded' ? 'author-python'
+      : primaryEntry?.lifecycle === 'generated' ? 'wire'
+        : primaryEntry?.lifecycle === 'wired' ? 'verify'
+          : 'scaffold-cpp';
 
   return (
     <div className="space-y-4">
@@ -102,6 +113,21 @@ export function AbilitiesSection({ featureMap, defs, expanded, onToggle }: Secti
         <div className="absolute left-0 top-0 w-40 h-40 blur-3xl rounded-full pointer-events-none" style={{ backgroundColor: withOpacity(ACCENT_PURPLE_BOLD, OPACITY_5) }} />
         <div className="flex items-center justify-between mb-3">
           <SectionLabel icon={Sparkles} label="Ability Comparison Radar" color={ACCENT_PURPLE_BOLD} />
+          <div className="flex items-center gap-2">
+          <button
+            onClick={() => gen.generate(nextStep)}
+            disabled={gen.isRunning}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-mono font-bold border transition-all cursor-pointer hover:shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
+            style={{
+              backgroundColor: withOpacity(ACCENT_GREEN, OPACITY_8),
+              borderColor: withOpacity(ACCENT_GREEN, OPACITY_25),
+              color: ACCENT_GREEN,
+            }}
+            title={`Generate "${primaryEntry?.name}" into UE — next step: ${nextStep}`}
+          >
+            <Sparkles className="w-3.5 h-3.5" />
+            {gen.isRunning ? 'Generating…' : `(Re)generate · ${nextStep}`}
+          </button>
           <button
             onClick={() => setSelectorOpen(true)}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-mono font-bold border transition-all cursor-pointer hover:shadow-sm"
@@ -114,6 +140,7 @@ export function AbilitiesSection({ featureMap, defs, expanded, onToggle }: Secti
             <GitCompareArrows className="w-3.5 h-3.5" />
             Compare ({selectedAbilities.length}/{MAX_COMPARE})
           </button>
+          </div>
         </div>
 
         <p className="text-xs font-mono text-text-muted mb-3">
