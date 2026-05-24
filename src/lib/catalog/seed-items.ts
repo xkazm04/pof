@@ -1,4 +1,4 @@
-import { DUMMY_ITEMS, type ItemData } from '@/components/modules/core-engine/unique-tabs/ItemCatalog/data';
+import { DUMMY_ITEMS, type ItemData } from '@/components/modules/core-engine/sub_inventory/_shared/data';
 import type { ItemEntry } from './types';
 
 /** Convert one static ItemData into a catalog ItemEntry. */

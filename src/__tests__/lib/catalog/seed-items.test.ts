@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { itemToEntry, seedItemEntries } from '@/lib/catalog/seed-items';
-import { DUMMY_ITEMS } from '@/components/modules/core-engine/unique-tabs/ItemCatalog/data';
+import { DUMMY_ITEMS } from '@/components/modules/core-engine/sub_inventory/_shared/data';
 
 describe('itemToEntry', () => {
   const it0 = DUMMY_ITEMS[0];

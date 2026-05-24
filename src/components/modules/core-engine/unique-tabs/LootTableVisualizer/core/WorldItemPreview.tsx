@@ -3,7 +3,7 @@
 import { Package } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { WORLD_ITEMS } from '../data';
-import { DUMMY_ITEMS } from '../../ItemCatalog/data';
+import { DUMMY_ITEMS } from '../../../sub_inventory/_shared/data';
 import { BlueprintPanel, SectionHeader } from '../design';
 
 import { withOpacity, OVERLAY_WHITE, OPACITY_5, OPACITY_12, OPACITY_50, OPACITY_25, OPACITY_8 } from '@/lib/chart-colors';

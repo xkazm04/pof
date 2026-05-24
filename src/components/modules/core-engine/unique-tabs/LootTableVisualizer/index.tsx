@@ -8,7 +8,7 @@ import { useTabFeatures } from '@/hooks/useTabFeatures';
 import { TabHeader, PipelineFlow, FeatureCard, LoadingSpinner, SubTabNavigation, type SubTab } from '../_shared';
 import { BlueprintPanel } from './design';
 import { ACCENT, LOOT_FEATURES, RARITY_TIERS, LOOT_SUBTABS, type LootSubtab } from './data';
-import { DUMMY_ITEMS } from '../ItemCatalog/data';
+import { DUMMY_ITEMS } from '../../sub_inventory/_shared/data';
 import { ARCHETYPES } from '../../sub_bestiary/_shared/data';
 import { LootFilters } from './LootFilters';
 import type { SubModuleId } from '@/types/modules';

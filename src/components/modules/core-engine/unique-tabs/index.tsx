@@ -15,7 +15,7 @@ import { DebugDashboard } from '../sub_debug';
 import { ProgressionCurve } from '../sub_progression';
 import { ZoneMap } from '../sub_world';
 import { EnemyBestiary } from '../sub_bestiary';
-import { ItemCatalog } from './ItemCatalog';
+import { ItemCatalog } from '../sub_inventory';
 import { WBPStarterPanel } from '../arpg-ui/WBPStarterPanel';
 
 /**
