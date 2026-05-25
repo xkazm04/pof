@@ -18,40 +18,66 @@ function describeEffect(e: EditorEffect): string {
   return `- "${e.name}" — DurationPolicy ${POLICY[e.duration]}${dur}; modifiers: ${mods}${period}${tags}`;
 }
 
+const RULE_TARGET: Record<TagRule['type'], string> = {
+  blocks: 'ActivationBlockedTags',
+  requires: 'ActivationRequiredTags',
+  cancels: 'CancelAbilitiesWithTag',
+};
+
+/** One bullet describing how a tag rule maps onto the generated ability. */
+function describeRule(r: TagRule): string {
+  return `- ${r.type} "${r.targetTag}" → ${RULE_TARGET[r.type]}`;
+}
+
 /**
- * Build the authoring contract for the generate-gas-effects dispatch (B3a). Pure.
- * Tells Claude to write one buildable UGameplayEffect subclass per effect into the
- * UE project's additive Effects/Generated/ folder, following the project's bespoke
- * GE_* conventions, then build the PoF module and report. `tagRules` is passed only
- * so the tag-delta report covers the rules' tags too. No UE files are authored here
- * — this is the prompt the CLI dispatch hands to Claude.
+ * Build the authoring contract for the "Generate C++" bundle dispatch (B3a + B3b).
+ * Pure. Instructs Claude to write, additively into the UE project: (A) one buildable
+ * UGameplayEffect subclass per effect (Effects/Generated/), and (B) a UARPGGameplayAbility
+ * subclass (Abilities/Generated/) that applies those effects and carries the activation
+ * tag rules — then (C) build the PoF module and report. The GE idiom matches what the
+ * B3a UE proof confirmed compiles. No UE files are authored here.
  */
-export function buildGenerateEffectsPrompt(ability: AbilityRef, effects: EditorEffect[], tagRules: TagRule[]): string {
+export function buildGenerateAbilityBundlePrompt(
+  ability: AbilityRef,
+  effects: EditorEffect[],
+  tagRules: TagRule[],
+  scalars?: { manaCost?: number; cooldown?: number },
+): string {
   const effectList = effects.length
     ? effects.map(describeEffect).join('\n')
     : '- (none authored yet — report that there is nothing to generate and stop)';
-  const ruleTags = [...new Set(tagRules.flatMap((r) => [r.sourceTag, r.targetTag]))].filter(Boolean);
-  const ruleTagNote = ruleTags.length
-    ? `\nActivation rules reference these tags (include them in the tag-delta report if undeclared): ${ruleTags.join(', ')}.`
-    : '';
+  const ruleList = tagRules.length ? tagRules.map(describeRule).join('\n') : '- (no activation rules)';
+  const manaNote = scalars?.manaCost != null
+    ? `Set \`AbilityManaCost = ${scalars.manaCost}\`.`
+    : 'No mana cost provided — leave a `// TODO: mana cost` comment.';
 
   return [
-    `Generate GameplayEffect C++ classes for the ability "${ability.name}" (gameplay tag ${ability.tag || 'Ability'}, ${ability.category}/${ability.element}/${ability.tier}) from its authored effects.`,
+    `Generate the C++ bundle for the ability "${ability.name}" (gameplay tag ${ability.tag || 'Ability'}, ${ability.category}/${ability.element}/${ability.tier}): its GameplayEffects AND the ability that applies them.`,
     '',
     'Effects to generate:',
     effectList,
-    ruleTagNote,
     '',
-    '## Contract',
+    'Activation tag rules to wire onto the ability:',
+    ruleList,
+    '',
+    '## Contract — Part A: GameplayEffects',
     '1. READ FIRST for the project idiom — do NOT invent a new system:',
-    '   - `Source/PoF/AbilitySystem/Effects/GE_Heal.h` and `.cpp` (and one more `GE_*`) for the UGameplayEffect constructor pattern;',
-    '   - `Source/PoF/AbilitySystem/ARPGAttributeSet.h` for the real attribute names (Health, MaxHealth, Mana, Strength, Armor, AttackPower, …);',
-    '   - `Source/PoF/AbilitySystem/ARPGGameplayTags.h` for the natively-declared gameplay tags.',
-    '2. Write ONE `UGameplayEffect` subclass per effect into `Source/PoF/AbilitySystem/Effects/Generated/` (create the folder if absent). Name each `UGE_Gen_<AbilityName>_<EffectName>` with both parts sanitized to a valid C++ identifier. This folder is ADDITIVE — never edit or overwrite any hand-written `GE_*`.',
-    '3. In each constructor: set `DurationPolicy` (Instant / HasDuration / Infinite) per the effect; for HasDuration set `DurationMagnitude = FScalableFloat(durationSec)`; if a period was given, set `Period = FScalableFloat(periodSec)` and add a comment that ability cooldown is a separate cooldown-GE concern. For each modifier add an `FGameplayModifierInfo` targeting `UARPGAttributeSet::Get<Attr>Attribute()` with `EGameplayModOp::Additive` (for `+=`) or `Multiplicitive` (for `*=`) and `FScalableFloat(magnitude)`. If an attribute name is not real, still emit it but mark it `// TODO: unknown attribute` rather than guessing.',
-    '4. Granted tags → the effect\'s owned-tags container via `FGameplayTag::RequestGameplayTag(FName("<tag>"), /*ErrorIfNotFound*/ false)` so the class compiles even if the tag is not yet registered.',
-    '5. Write `Source/PoF/AbilitySystem/Effects/Generated/README.md` listing the files created, the attribute mapping, and the TAG DELTA — every granted/rule tag NOT already declared in `ARPGGameplayTags.h`. Do NOT auto-edit the hand-written tags header.',
-    '6. Build the PoF module (per the build command above; regenerate project files if a new `.cpp` requires it). The headless build/editor exits non-zero on a benign shutdown crash — judge success by the newest `Saved/Logs/PoF*.log`, NOT the exit code.',
-    '7. Report: the files written, the attributes mapped, and any missing tags from the delta.',
+    '   - `Source/PoF/AbilitySystem/Effects/GE_Heal.cpp` (instant additive), `GE_Regen_Health.cpp` (periodic duration), `GE_Stun.cpp` (granted tags) for the UGameplayEffect constructor patterns;',
+    '   - `Source/PoF/AbilitySystem/ARPGAttributeSet.h` for the real attributes and their `Get<Attr>Attribute()` accessors;',
+    '   - `Source/PoF/AbilitySystem/ARPGGameplayTags.h` for the natively-declared tags.',
+    '2. Write ONE `UGameplayEffect` subclass per effect into `Source/PoF/AbilitySystem/Effects/Generated/`. Name each `UGE_Gen_<AbilityName>_<EffectName>` (file `GE_Gen_<AbilityName>_<EffectName>.{h,cpp}`, both parts sanitized; include bare `GE_Gen_<…>.generated.h`). Additive — never edit hand-written `GE_*`.',
+    '3. Constructor: `DurationPolicy = EGameplayEffectDurationType::{Instant|HasDuration|Infinite}`; for HasDuration `DurationMagnitude = FGameplayEffectModifierMagnitude(FScalableFloat)` (set `.Value`); for a period set `Period.Value =` and `bExecutePeriodicEffectOnApplication = false` (DoT tick, NOT ability cooldown). Each modifier → `FGameplayModifierInfo` with `.Attribute = UARPGAttributeSet::Get<Attr>Attribute()`, `.ModifierOp = EGameplayModOp::Additive` (`+=`) or `Multiplicitive` (`*=`), `.ModifierMagnitude = FGameplayEffectModifierMagnitude(FScalableFloat)`; then `Modifiers.Add(...)`. Unknown attribute → `// TODO: unknown attribute` comment.',
+    '4. Granted tags (UE 5.7 component idiom — see `GE_Stun.cpp`): create a `UTargetTagsGameplayEffectComponent`, add it to `GEComponents`, and `SetAndApplyTargetTagChanges` an `FInheritedTagContainer`. Declared tags via native refs `ARPGGameplayTags::<Tag>`; an UNdeclared tag via `FGameplayTag::RequestGameplayTag(FName("<tag>"), /*ErrorIfNotFound*/ false)` guarded by `IsValid()` (skip if invalid) and record it in the tag delta.',
+    '',
+    '## Contract — Part B: the wiring ability',
+    '5. READ `Source/PoF/AbilitySystem/ARPGGameplayAbility.h` (base: `ApplyEffectToSelf`/`ApplyEffectToTarget`, `bAutoEndAbility`, `AbilityManaCost`) and `Source/PoF/AbilitySystem/GA_WarCry.cpp` (the commit → apply-GE → end idiom).',
+    '6. Write ONE `UARPGGameplayAbility` subclass `UGA_Gen_<AbilityName>` (file `GA_Gen_<AbilityName>.{h,cpp}`) into `Source/PoF/AbilitySystem/Abilities/Generated/` (create the folder; additive — never touch hand-written `GA_*`).',
+    `7. Constructor: ${manaNote} Set \`bAutoEndAbility = true\`. Wire the activation tag rules above — \`blocks\`→\`ActivationBlockedTags\`, \`requires\`→\`ActivationRequiredTags\`, \`cancels\`→\`CancelAbilitiesWithTag\` — using native refs \`ARPGGameplayTags::<Tag>\` for declared tags and the guarded \`RequestGameplayTag(...,false)\`+\`IsValid()\` pattern for undeclared ones (record those in the tag delta). Leave a \`// TODO: cooldown GE\` comment (out of scope).`,
+    '8. `ActivateAbility`: `CommitAbility` (on failure `EndAbility(Handle, ActorInfo, ActivationInfo, true, true)` and return); then apply each generated GE — DAMAGING effects (a modifier reducing Health) via `ApplyEffectToTarget(TargetASC, UGE_Gen_<AbilityName>_<EffectName>::StaticClass())`, BUFFS/HEALS via `ApplyEffectToSelf(...)`; if ambiguous default to target and comment. Finish with `EndAbility(Handle, ActorInfo, ActivationInfo, true, false)`.',
+    '',
+    '## Contract — Part C: report + build',
+    '9. Write `Source/PoF/AbilitySystem/Effects/Generated/README.md` listing the GE + ability files, the attribute mapping, the tag→ActivationTags wiring, and the TAG DELTA — every granted/rule tag NOT declared in `ARPGGameplayTags.h` (do NOT auto-edit the tags header).',
+    '10. Build the PoF module (per the build command above; regenerate project files if new `.cpp` files require it). The headless build/editor exits non-zero on a benign shutdown crash — judge success by the newest `Saved/Logs/PoF*.log`, NOT the exit code.',
+    '11. Report: files written, attributes mapped, activation tags wired, and any missing tags.',
   ].join('\n');
 }

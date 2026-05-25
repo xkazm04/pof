@@ -23,7 +23,7 @@ import type { StoredCatalogEntity } from '@/lib/catalog/types';
 import { getRecipe, STEP_TO_LIFECYCLE, type GenerationStep } from '@/lib/catalog/recipe';
 import { trackLabel, trackHint, type PipelineTrackId } from '@/lib/pipeline/tracks';
 import { buildAbilitySpecDraftPrompt, type AbilityRef } from '@/lib/ability/logic-prompts';
-import { buildGenerateEffectsPrompt } from '@/lib/ability/effect-codegen-prompt';
+import { buildGenerateAbilityBundlePrompt } from '@/lib/ability/effect-codegen-prompt';
 import type { EditorEffect, TagRule } from '@/lib/ability/spec';
 
 // ── Task callback system ────────────────────────────────────────────────────
@@ -884,7 +884,7 @@ ${buildCallbackSection(getCallback(cbId)!)}`;
     case 'generate-gas-effects': {
       const gt = task as GenerateGasEffectsTask;
       const header = buildProjectContextHeader(ctx, { knownAssetDomains });
-      const body = buildGenerateEffectsPrompt(gt.ref, gt.effects, gt.tagRules);
+      const body = buildGenerateAbilityBundlePrompt(gt.ref, gt.effects, gt.tagRules);
       return `${header}\n\n## Task\n${body}`;
     }
 
