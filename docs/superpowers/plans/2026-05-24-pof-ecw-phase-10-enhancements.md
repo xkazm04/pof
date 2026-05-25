@@ -10,8 +10,13 @@ Ideas: `058687cb` (C++↔BP roundtrip), `158f9e5e` (auto-balance pipe), `21f15b6
 ### Batch 10-I · Items deepening
 Ideas: `05f25f33` (XP curve morph), `327e3733` (closed-loop balance), `3f7e7c81` (curve library), `5eee9409` (sensitivity sweep), `84abc79e` (faucet/sink tables). Facets in `facets/items/`.
 
-### Batch 10-L · Loot Tables deepening (largest batch — 12 ideas)
-Ideas: `0b7d17a0`, `1aa2d0a2`, `1ae5a8f8`, `1d82300f`, `448c5209`, `56f5c3dc`, `5b1db241`, `884b95bd`, `cc0b91ba`, `f88f6bbf`, `eed3b9d2`, `ff6ff0d2`. The loot economy is the biggest enhancement surface. Plan to ship 3-4 ideas per session.
+### Batch 10-L · Loot Tables deepening — ROUND 1 SHIPPED (3 facets)
+Loot-tables had **no** custom facets before this; now it has **3**: Economy · Author · Baseline.
+- ✅ Economy (`690454b` lib + `305a1dd` facet) → `src/lib/loot/economy.ts` (`computeExpectedValue` gold/kill, `rarityBreakdown`, `lintLootEconomy` — weight count/sum, drop-chance range, negative weights, roster-aware EV outlier) + LootEconomyFacet. Pure-function template.
+- ✅ Author (`e384973`) → `loot-author-prompt.ts` (`buildLootPrompt` — reuse UARPGLootTable/FLootEntry, existing item pool, tier-consistent weights) + LootAuthorFacet (NL→CLI via `arpg-loot`). CLI-dispatch template.
+- ✅ Baseline (`3c6f482`) → LootBaselineFacet (EV as score, per-rarity contribution as breakdown) over the **shared** `EntityBaselinePanel` extracted this round. Persisted-store template — reuses baseline-db/api/store; no new infra.
+- Extracted `src/components/ecw/facets/shared/EntityBaselinePanel.tsx` — domain-agnostic persisted-baseline UI (fetch-load + capture + score/breakdown drift). BestiaryBaselineFacet refactored onto it (behaviour unchanged, tests green). The persisted-store template is now a reusable shell, not copy-paste.
+- ⏳ remaining 10-L ideas (round 2+): `0b7d17a0`, `1aa2d0a2`, `1ae5a8f8`, `1d82300f`, `448c5209`, `56f5c3dc`, `5b1db241`, `884b95bd`, `cc0b91ba`, `f88f6bbf`, `eed3b9d2`, `ff6ff0d2` — map to drop-sim / smart-loot / economy-surplus visualisations + further authoring. Triage against real `EnemyLootBinding` data (dropChance, rarityWeights[5], bonusGold) before building, per the no-stubs rule.
 
 ### Batch 10-B · Bestiary deepening — PER-ENTITY FACETS SATURATED (7 facets shipped)
 Bestiary entities now have **7 facets**: Detail (P7) · Balance · Threat · AI · Remix · Baseline · Encounter.
