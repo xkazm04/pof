@@ -83,10 +83,16 @@ A **test gate** is an explicit pass/fail checkpoint (automated + human) before a
 
 _Each session appends one-liners here when it discovers reuse/synergy between catalogs._
 
-- _(none yet — first complete item: Skill/Ability → Fireball)_
+- **[skill-ability/Fireball]** A GAS GameplayEffect and a `status-effects` entry are the **same UE artifact** — Fireball's generated `UGE_Gen_Fireball_Burning` IS the `status-effects` "Burning" starter. One generation run can seed both catalogs.
+- **[skill-ability/Fireball]** `vfx` / `icon-sets` / `hud-elements` / `audio` are **shared presentation catalogs** every Game-Asset row consumes — produce them as referenced libraries, not per-asset. The pipeline's VFX/SFX/Icon/UI steps are really "bind to a presentation-catalog entry."
+- **[skill-ability/Fireball]** The B3 `generate-gas-effects` dispatch is the reusable engine for the effect-logic/formulas/packaging steps of **every** ability — ability CLIs should call it, not re-implement.
 
 ## Gaps / Blockers Register (living log)
 
 _Each session appends gaps/blockers it hit so future sessions (and tooling investment) are informed._
 
-- _(none yet)_
+- **[skill-ability/Fireball] Generation read a fixture, not the entity.** The B3 dispatch generated the impact GE at −40 (fixture) vs canonical damage 35; aligned by hand to −35 this session. **Fix:** `generate-gas-effects` must pull the entity's persisted spec/scalars. _(High priority — blocks faithful generation for all abilities.)_
+- **[skill-ability/Fireball] No ability-animation pipeline** (montage authoring/import for abilities). Timing data exists on the entity; no asset path.
+- **[skill-ability/Fireball] No Niagara-VFX, camera-feedback, or localization systems** — gaps for every presentation-bearing catalog. Candidate shared-infra investments.
+- **[skill-ability/Fireball] Generated GEs bypass `UARPGDamageExecution`** (flat additive skips crit/armor/resist). Decide policy: simple authored GEs vs route through the execution.
+- **[skill-ability/Fireball] No lightweight per-asset runtime test harness.** The config gate works as a pure automation test (no map edit); a reusable "apply GE to a dummy ASC, assert attribute delta" fixture would let every ability/status row gate *runtime* behavior, not just config.
