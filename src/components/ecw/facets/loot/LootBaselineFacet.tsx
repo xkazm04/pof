@@ -3,23 +3,11 @@
 import { useMemo } from 'react';
 import { registerFacet } from '@/components/ecw/inspector/facetRegistry';
 import { EntityBaselinePanel } from '@/components/ecw/facets/shared/EntityBaselinePanel';
-import { computeExpectedValue, rarityBreakdown, type LootBindingLike } from '@/lib/loot/economy';
+import { asLootBinding, computeExpectedValue, rarityBreakdown } from '@/lib/loot/economy';
 import type { StoredCatalogEntity } from '@/lib/catalog/types';
 
 interface Props {
   entity: StoredCatalogEntity;
-}
-
-function asBinding(data: unknown): LootBindingLike | null {
-  if (!data || typeof data !== 'object') return null;
-  const d = data as Record<string, unknown>;
-  if (typeof d.dropChance !== 'number' || !Array.isArray(d.rarityWeights) || typeof d.bonusGold !== 'number') return null;
-  return {
-    lootTableName: typeof d.lootTableName === 'string' ? d.lootTableName : '',
-    dropChance: d.dropChance,
-    rarityWeights: d.rarityWeights as number[],
-    bonusGold: d.bonusGold,
-  };
 }
 
 /**
@@ -30,7 +18,7 @@ function asBinding(data: unknown): LootBindingLike | null {
  */
 export function LootBaselineFacet({ entity }: Props) {
   const current = useMemo(() => {
-    const binding = asBinding(entity.data);
+    const binding = asLootBinding(entity.data);
     if (!binding) return null;
     const stats = rarityBreakdown(binding).map((b) => ({ label: b.rarity, value: Math.round(b.contribution) }));
     return { score: computeExpectedValue(binding), stats };

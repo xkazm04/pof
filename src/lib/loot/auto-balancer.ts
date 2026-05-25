@@ -64,7 +64,7 @@ export function solveWeightsForTargetEV(
   const hi = RARITY_ORDER.reduce((best, _, i) => (goldAt(i, rarityGold) > goldAt(best, rarityGold) ? i : best), 0);
   const lo = RARITY_ORDER.reduce((best, _, i) => (goldAt(i, rarityGold) < goldAt(best, rarityGold) ? i : best), 0);
   const extremeIdx = targetEV >= currentEV ? hi : lo;
-  const extreme = RARITY_ORDER.map((_, i) => (i === extremeIdx ? 100 : 0));
+  const extreme: number[] = RARITY_ORDER.map((_, i) => (i === extremeIdx ? 100 : 0));
 
   // Sum-weighted gold of each distribution; EV(α) = d/100 · ((1-α)A + αE) + g.
   const A = cw.reduce((s, w, i) => s + w * goldAt(i, rarityGold), 0);

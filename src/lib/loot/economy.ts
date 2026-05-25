@@ -19,6 +19,19 @@ export interface LootBindingLike {
   bonusGold: number;
 }
 
+/** Narrow an arbitrary catalog entity's `data` to a loot binding, or null. */
+export function asLootBinding(data: unknown): LootBindingLike | null {
+  if (!data || typeof data !== 'object') return null;
+  const d = data as Record<string, unknown>;
+  if (typeof d.dropChance !== 'number' || !Array.isArray(d.rarityWeights) || typeof d.bonusGold !== 'number') return null;
+  return {
+    lootTableName: typeof d.lootTableName === 'string' ? d.lootTableName : '',
+    dropChance: d.dropChance,
+    rarityWeights: d.rarityWeights as number[],
+    bonusGold: d.bonusGold,
+  };
+}
+
 export interface RarityContribution {
   rarity: string;
   weightPct: number;

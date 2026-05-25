@@ -5,6 +5,7 @@ import { Coins, CheckCircle2, AlertTriangle, XCircle } from 'lucide-react';
 import { useCatalogEntities } from '@/stores/catalogStore';
 import { registerFacet } from '@/components/ecw/inspector/facetRegistry';
 import {
+  asLootBinding,
   computeExpectedValue,
   rarityBreakdown,
   lintLootEconomy,
@@ -15,18 +16,6 @@ import type { StoredCatalogEntity } from '@/lib/catalog/types';
 
 interface Props {
   entity: StoredCatalogEntity;
-}
-
-function asBinding(data: unknown): LootBindingLike | null {
-  if (!data || typeof data !== 'object') return null;
-  const d = data as Record<string, unknown>;
-  if (typeof d.dropChance !== 'number' || !Array.isArray(d.rarityWeights) || typeof d.bonusGold !== 'number') return null;
-  return {
-    lootTableName: typeof d.lootTableName === 'string' ? d.lootTableName : '',
-    dropChance: d.dropChance,
-    rarityWeights: d.rarityWeights as number[],
-    bonusGold: d.bonusGold,
-  };
 }
 
 const ICON: Record<EconomyFinding['severity'], typeof CheckCircle2> = {
@@ -50,10 +39,10 @@ export function LootEconomyFacet({ entity }: Props) {
   const roster = useCatalogEntities('loot-tables');
 
   const model = useMemo(() => {
-    const binding = asBinding(entity.data);
+    const binding = asLootBinding(entity.data);
     if (!binding) return null;
     const peers = roster
-      .map((e) => asBinding((e as StoredCatalogEntity).data))
+      .map((e) => asLootBinding((e as StoredCatalogEntity).data))
       .filter((b): b is LootBindingLike => b !== null);
     const breakdown = rarityBreakdown(binding);
     const max = Math.max(...breakdown.map((b) => b.contribution), 0.0001);

@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import {
+  asLootBinding,
   computeExpectedValue,
   rarityBreakdown,
   lintLootEconomy,
@@ -16,6 +17,20 @@ function bind(over: Partial<LootBindingLike> = {}): LootBindingLike {
     ...over,
   };
 }
+
+describe('asLootBinding', () => {
+  it('parses a well-shaped binding', () => {
+    const b = asLootBinding({ lootTableName: 'LT_X', dropChance: 0.4, rarityWeights: [50, 30, 15, 4, 1], bonusGold: 20 });
+    expect(b).not.toBeNull();
+    expect(b!.dropChance).toBe(0.4);
+  });
+
+  it('returns null when required fields are missing', () => {
+    expect(asLootBinding({ id: 'x' })).toBeNull();
+    expect(asLootBinding(null)).toBeNull();
+    expect(asLootBinding({ dropChance: 0.5, bonusGold: 10 })).toBeNull(); // no rarityWeights
+  });
+});
 
 describe('computeExpectedValue', () => {
   it('combines drop chance, rarity-weighted item gold, and bonus gold', () => {
