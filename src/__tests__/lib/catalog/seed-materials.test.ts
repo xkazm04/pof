@@ -3,8 +3,9 @@ import { CATALOG_SECTIONS } from '@/lib/catalog/sections';
 import { seedMaterialEntries } from '@/lib/catalog/seed-materials';
 
 describe('materials catalog substrate (Phase 8)', () => {
-  it('CATALOG_SECTIONS now has 9 entries', () => {
-    expect(CATALOG_SECTIONS).toHaveLength(9);
+  it('CATALOG_SECTIONS includes the materials substrate', () => {
+    expect(CATALOG_SECTIONS.length).toBeGreaterThanOrEqual(9);
+    expect(CATALOG_SECTIONS.map((s) => s.catalogId)).toContain('materials');
   });
 
   it('includes materials in CATALOG_SECTIONS', () => {

@@ -98,6 +98,27 @@ export interface MaterialCatalogEntry extends CatalogEntityBase {
   };
 }
 
+/** Audio catalog entity (Phase 8b — substrate only; data lift in Phase 10). */
+export interface AudioCatalogEntry extends CatalogEntityBase {
+  catalogId: 'audio';
+  data: {
+    setName: string;
+    surface?: string;
+    license?: string;
+  };
+}
+
+/** Animation-Assets catalog entity (Phase 8b — separate from state-graph; tracks
+ *  the skeletal-mesh + retargeted montage assets, not the AnimBP graph). */
+export interface AnimationAssetCatalogEntry extends CatalogEntityBase {
+  catalogId: 'animation-assets';
+  data: {
+    assetName: string;
+    skeleton?: string;
+    source?: 'mixamo' | 'authored' | 'imported';
+  };
+}
+
 /**
  * Generic stored shape used by the entity-generic dispatch path: any catalog
  * entity carries a `data` blob opaque to the dispatch (each section's recipe

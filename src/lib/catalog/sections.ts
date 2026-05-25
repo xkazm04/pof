@@ -8,6 +8,8 @@ import { seedScreenEntries } from './seed-screen-flow';
 import { seedZoneEntries } from './seed-zone-map';
 import { seedAnimationEntries } from './seed-state-graph';
 import { seedMaterialEntries } from './seed-materials';
+import { seedAudioEntries } from './seed-audio';
+import { seedAnimationAssetEntries } from './seed-animation-assets';
 
 /** A Core Engine catalog section: its id, label, and how to seed it. */
 export interface CatalogSection {
@@ -25,8 +27,10 @@ export const CATALOG_SECTIONS: CatalogSection[] = [
   { catalogId: 'screen-flow', label: 'Screen Flow', seed: seedScreenEntries },
   { catalogId: 'zone-map', label: 'Zone Map', seed: seedZoneEntries },
   { catalogId: 'state-graph', label: 'State Graph', seed: seedAnimationEntries },
-  // Phase 8 substrate proof — empty seed; data lift from material-db.ts is Phase 8b.
+  // Phase 8 / 8b substrate proofs — empty seeds; data lift in Phase 10.
   { catalogId: 'materials', label: 'Materials', seed: seedMaterialEntries },
+  { catalogId: 'audio', label: 'Audio', seed: seedAudioEntries },
+  { catalogId: 'animation-assets', label: 'Animation Assets', seed: seedAnimationAssetEntries },
 ];
 
 function indexById(entities: CatalogEntityBase[]): Record<string, CatalogEntityBase> {
