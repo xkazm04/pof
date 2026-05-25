@@ -1,18 +1,16 @@
 'use client';
 
 import { useMemo } from 'react';
-import { Activity, CheckCircle2, AlertTriangle, XCircle } from 'lucide-react';
+import { Activity } from 'lucide-react';
 import { useCatalogEntities } from '@/stores/catalogStore';
 import { registerFacet } from '@/components/ecw/inspector/facetRegistry';
-import { asMontage, montageMetrics, lintMontage, type MontageLike, type MontageFinding } from '@/lib/animation/montage-analysis';
+import { FindingList } from '@/components/ecw/infra/FindingList';
+import { asMontage, montageMetrics, lintMontage, type MontageLike } from '@/lib/animation/montage-analysis';
 import type { StoredCatalogEntity } from '@/lib/catalog/types';
 
 interface Props {
   entity: StoredCatalogEntity;
 }
-
-const ICON: Record<MontageFinding['severity'], typeof CheckCircle2> = { ok: CheckCircle2, warn: AlertTriangle, error: XCircle };
-const COLOR: Record<MontageFinding['severity'], string> = { ok: 'text-emerald-500', warn: 'text-amber-500', error: 'text-red-500' };
 
 /**
  * Montage Analysis facet (ECW Phase 10-F). Shows duration + memory and runs the
@@ -45,17 +43,7 @@ export function MontageAnalysisFacet({ entity }: Props) {
         </span>
       </div>
 
-      <ul className="space-y-1.5">
-        {model.findings.map((f, i) => {
-          const Icon = ICON[f.severity];
-          return (
-            <li key={`${f.rule}-${i}`} className="flex items-start gap-2 text-xs">
-              <Icon className={`w-3.5 h-3.5 shrink-0 mt-0.5 ${COLOR[f.severity]}`} />
-              <span className="text-text">{f.message}</span>
-            </li>
-          );
-        })}
-      </ul>
+      <FindingList findings={model.findings} />
     </div>
   );
 }

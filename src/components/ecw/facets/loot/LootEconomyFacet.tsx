@@ -1,33 +1,22 @@
 'use client';
 
 import { useMemo } from 'react';
-import { Coins, CheckCircle2, AlertTriangle, XCircle } from 'lucide-react';
+import { Coins } from 'lucide-react';
 import { useCatalogEntities } from '@/stores/catalogStore';
 import { registerFacet } from '@/components/ecw/inspector/facetRegistry';
+import { FindingList } from '@/components/ecw/infra/FindingList';
 import {
   asLootBinding,
   computeExpectedValue,
   rarityBreakdown,
   lintLootEconomy,
   type LootBindingLike,
-  type EconomyFinding,
 } from '@/lib/loot/economy';
 import type { StoredCatalogEntity } from '@/lib/catalog/types';
 
 interface Props {
   entity: StoredCatalogEntity;
 }
-
-const ICON: Record<EconomyFinding['severity'], typeof CheckCircle2> = {
-  ok: CheckCircle2,
-  warn: AlertTriangle,
-  error: XCircle,
-};
-const COLOR: Record<EconomyFinding['severity'], string> = {
-  ok: 'text-emerald-500',
-  warn: 'text-amber-500',
-  error: 'text-red-500',
-};
 
 /**
  * Loot Economy facet (ECW Phase 10-L). Turns the enemy→loot binding into a
@@ -86,17 +75,7 @@ export function LootEconomyFacet({ entity }: Props) {
         ))}
       </div>
 
-      <ul className="space-y-1.5">
-        {model.findings.map((f, i) => {
-          const Icon = ICON[f.severity];
-          return (
-            <li key={`${f.rule}-${i}`} className="flex items-start gap-2 text-xs">
-              <Icon className={`w-3.5 h-3.5 shrink-0 mt-0.5 ${COLOR[f.severity]}`} />
-              <span className="text-text">{f.message}</span>
-            </li>
-          );
-        })}
-      </ul>
+      <FindingList findings={model.findings} />
     </div>
   );
 }

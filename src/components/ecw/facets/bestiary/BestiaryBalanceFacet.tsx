@@ -1,10 +1,11 @@
 'use client';
 
 import { useMemo } from 'react';
-import { Scale, CheckCircle2, AlertTriangle, XCircle } from 'lucide-react';
+import { Scale } from 'lucide-react';
 import { useCatalogEntities } from '@/stores/catalogStore';
 import { registerFacet } from '@/components/ecw/inspector/facetRegistry';
-import { lintArchetypeBalance, type ArchetypeLintInput, type BalanceSeverity } from '@/lib/balance/bestiary-guardrails';
+import { FindingList } from '@/components/ecw/infra/FindingList';
+import { lintArchetypeBalance, type ArchetypeLintInput } from '@/lib/balance/bestiary-guardrails';
 import type { StoredCatalogEntity } from '@/lib/catalog/types';
 
 interface Props {
@@ -23,16 +24,6 @@ function asLintInput(data: unknown): ArchetypeLintInput | null {
   };
 }
 
-const ICON: Record<BalanceSeverity, typeof CheckCircle2> = {
-  ok: CheckCircle2,
-  warn: AlertTriangle,
-  error: XCircle,
-};
-const COLOR: Record<BalanceSeverity, string> = {
-  ok: 'text-emerald-500',
-  warn: 'text-amber-500',
-  error: 'text-red-500',
-};
 
 /**
  * Bestiary Balance facet (ECW Phase 10-B). Runs the cross-archetype balance
@@ -63,17 +54,7 @@ export function BestiaryBalanceFacet({ entity }: Props) {
         <Scale className="w-4 h-4 text-text-muted" />
         <span className="text-xs font-mono uppercase tracking-wider text-text-muted">Balance Guardrails</span>
       </div>
-      <ul className="space-y-1.5">
-        {findings.map((f, i) => {
-          const Icon = ICON[f.severity];
-          return (
-            <li key={`${f.rule}-${i}`} className="flex items-start gap-2 text-xs">
-              <Icon className={`w-3.5 h-3.5 shrink-0 mt-0.5 ${COLOR[f.severity]}`} />
-              <span className="text-text">{f.message}</span>
-            </li>
-          );
-        })}
-      </ul>
+      <FindingList findings={findings} />
     </div>
   );
 }

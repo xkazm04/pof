@@ -1,18 +1,16 @@
 'use client';
 
 import { useMemo } from 'react';
-import { Map as MapIcon, CheckCircle2, AlertTriangle, XCircle } from 'lucide-react';
+import { Map as MapIcon } from 'lucide-react';
 import { useCatalogEntities } from '@/stores/catalogStore';
 import { registerFacet } from '@/components/ecw/inspector/facetRegistry';
-import { asZone, lintZone, type ZoneLike, type ZoneFinding } from '@/lib/world/zone-analysis';
+import { FindingList } from '@/components/ecw/infra/FindingList';
+import { asZone, lintZone, type ZoneLike } from '@/lib/world/zone-analysis';
 import type { StoredCatalogEntity } from '@/lib/catalog/types';
 
 interface Props {
   entity: StoredCatalogEntity;
 }
-
-const ICON: Record<ZoneFinding['severity'], typeof CheckCircle2> = { ok: CheckCircle2, warn: AlertTriangle, error: XCircle };
-const COLOR: Record<ZoneFinding['severity'], string> = { ok: 'text-emerald-500', warn: 'text-amber-500', error: 'text-red-500' };
 
 /**
  * Zone Analysis facet (ECW Phase 10-F). Runs the connectivity + level-progression
@@ -46,17 +44,7 @@ export function ZoneAnalysisFacet({ entity }: Props) {
         </span>
       </div>
 
-      <ul className="space-y-1.5">
-        {model.findings.map((f, i) => {
-          const Icon = ICON[f.severity];
-          return (
-            <li key={`${f.rule}-${i}`} className="flex items-start gap-2 text-xs">
-              <Icon className={`w-3.5 h-3.5 shrink-0 mt-0.5 ${COLOR[f.severity]}`} />
-              <span className="text-text">{f.message}</span>
-            </li>
-          );
-        })}
-      </ul>
+      <FindingList findings={model.findings} />
     </div>
   );
 }
