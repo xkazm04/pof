@@ -14,6 +14,7 @@ import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import { useActivityFeedStore } from '@/stores/activityFeedStore';
 import { MODULE_COLORS } from '@/lib/chart-colors';
 import { usePofBridgeStore } from '@/stores/pofBridgeStore';
+import { ShellSwitcher } from '@/components/ecw/ShellSwitcher';
 
 const dropdownMotion = {
   initial: { opacity: 0, y: -4, scale: 0.98 },
@@ -212,10 +213,12 @@ export function TopBar() {
   const prefersReduced = useReducedMotion();
 
   return (
-    <header role="banner" className="h-11 flex items-center justify-between px-4 border-b border-border bg-surface-deep">
+    <header role="banner" className="h-11 flex items-center justify-between px-4 border-b border-border bg-surface-deep" style={{ ['--focus-accent' as string]: 'var(--setup)' }}>
       <div className="flex items-center gap-3">
         <Gamepad2 className="w-5 h-5" style={{ color: MODULE_COLORS.setup }} aria-hidden="true" />
         <span className="text-sm font-semibold tracking-wide text-text">POF</span>
+        {/* ECW: lets the operator jump to the new entity-centric shell (and back). Legacy stays default until Phase 12. */}
+        <ShellSwitcher />
         {isSetupComplete && projectName && (
           <>
             <span className="text-border-bright" aria-hidden="true">/</span>
@@ -230,7 +233,7 @@ export function TopBar() {
                 aria-label={`Project: ${projectName}`}
                 aria-expanded={dropdownOpen}
                 aria-haspopup="menu"
-                className="flex items-center gap-1 text-sm text-text-muted hover:text-text transition-colors rounded px-1.5 py-0.5 hover:bg-surface focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-strong focus-visible:ring-offset-1 focus-visible:ring-offset-surface-deep"
+                className="flex items-center gap-1 text-sm text-text-muted hover:text-text transition-colors rounded px-1.5 py-0.5 hover:bg-surface focus-ring"
               >
                 {projectName}
                 <ChevronDown className={`w-3 h-3 transition-transform ${dropdownOpen ? 'rotate-180' : ''}`} />
@@ -289,7 +292,7 @@ export function TopBar() {
                         setRenaming(false);
                         setConfirmDelete(false);
                       }}
-                      className="w-full flex items-center gap-2.5 px-3 py-2.5 text-xs text-text hover:bg-surface-hover transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent-strong"
+                      className="w-full flex items-center gap-2.5 px-3 py-2.5 text-xs text-text hover:bg-surface-hover transition-colors focus-ring-inset"
                     >
                       <FolderOpen className="w-3.5 h-3.5 text-text-muted" />
                       Switch Project
@@ -338,7 +341,7 @@ export function TopBar() {
                       ) : (
                         <button
                           onClick={handleRenameStart}
-                          className="w-full flex items-center gap-2.5 px-3 py-2.5 text-xs text-text hover:bg-surface-hover transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent-strong"
+                          className="w-full flex items-center gap-2.5 px-3 py-2.5 text-xs text-text hover:bg-surface-hover transition-colors focus-ring-inset"
                         >
                           <Pencil className="w-3.5 h-3.5 text-text-muted" />
                           Rename Project
@@ -372,7 +375,7 @@ export function TopBar() {
                             setConfirmDelete(true);
                             setRenaming(false);
                           }}
-                          className="w-full flex items-center gap-2.5 px-3 py-2.5 text-xs text-red-400 hover:bg-status-red-subtle transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent-strong"
+                          className="w-full flex items-center gap-2.5 px-3 py-2.5 text-xs text-red-400 hover:bg-status-red-subtle transition-colors focus-ring-inset"
                         >
                           <Trash2 className="w-3.5 h-3.5" />
                           Delete Project
@@ -607,7 +610,7 @@ function NotificationBadge() {
       onClick={toggleOpen}
       aria-label={`Activity feed${unreadCount > 0 ? `, ${unreadCount} unread` : ''}`}
       aria-expanded={isOpen}
-      className={`relative p-1.5 rounded-md transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-strong focus-visible:ring-offset-1 focus-visible:ring-offset-surface-deep ${
+      className={`relative p-1.5 rounded-md transition-colors focus-ring ${
         isOpen
           ? 'bg-status-red-subtle text-[#ef4444]'
           : 'text-text-muted hover:text-text hover:bg-surface'
@@ -672,7 +675,7 @@ function SearchTrigger() {
   return (
     <button
       onClick={handleClick}
-      className="flex items-center gap-2 px-2.5 py-1 rounded-md text-xs text-text-muted hover:text-text bg-background border border-border hover:border-border-bright transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-strong focus-visible:ring-offset-1 focus-visible:ring-offset-surface-deep"
+      className="flex items-center gap-2 px-2.5 py-1 rounded-md text-xs text-text-muted hover:text-text bg-background border border-border hover:border-border-bright transition-colors focus-ring"
       title="Search (Ctrl+K)"
     >
       <Search className="w-3 h-3" />

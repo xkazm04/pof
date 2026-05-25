@@ -3,6 +3,7 @@
 import { Gamepad2, Search, Settings } from 'lucide-react';
 import { useEcwStore } from '@/stores/ecwStore';
 import { EcwL1Tabs } from './EcwL1Tabs';
+import { ShellSwitcher } from './ShellSwitcher';
 
 /**
  * Slimmer top bar for the ECW shell: brand · 3 L1 tabs · ⌘K palette button ·
@@ -22,6 +23,7 @@ export function EcwTopBar() {
       <EcwL1Tabs />
 
       <div className="ml-auto flex items-center gap-2">
+        <ShellSwitcher />
         <button
           onClick={() => setPaletteOpen(true)}
           className="focus-ring flex items-center gap-2 px-3 py-1.5 rounded-md text-sm text-text-muted hover:text-text hover:bg-surface/50 transition-colors"
