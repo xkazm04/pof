@@ -3,13 +3,12 @@
 import type { StoredCatalogEntity } from '@/lib/catalog/types';
 import { EmptyInspector } from './EmptyInspector';
 import { EntityHeader } from './EntityHeader';
-import { EntitySpecPanel } from './EntitySpecPanel';
 import { EntityLifecyclePanel } from './EntityLifecyclePanel';
 import { EntityCrossLinksPanel } from './EntityCrossLinksPanel';
-import { EntityFunctionalTestPanel } from './EntityFunctionalTestPanel';
-import { EntityFacetsTabStrip } from './EntityFacetsTabStrip';
 import { TrackTabStrip } from '@/components/ecw/pipeline/TrackTabStrip';
-// Side-effect imports — register per-catalog custom facets at module load.
+// Side-effect import — register the specialized track workspaces (Logic absorbs the facets).
+import '@/components/ecw/pipeline/workspaces/register';
+// Side-effect imports — register per-catalog custom facets at module load (now rendered inside the Logic workspace).
 import '@/components/ecw/facets/bestiary/BestiaryDetailFacet';
 import '@/components/ecw/facets/bestiary/BestiaryBalanceFacet';
 import '@/components/ecw/facets/bestiary/ThreatScoreFacet';
@@ -41,17 +40,16 @@ interface Props {
 }
 
 /**
- * The universal Entity Inspector primitive. For a selected entity it renders,
- * top to bottom:
+ * The universal Entity Inspector primitive (ECW Part 3). For a selected entity:
  *  - EntityHeader (name · breadcrumb · (Re)generate · lifecycle badge)
- *  - EntityPipelinePanel (the production pipeline — the "is this playable?"
- *    answer; top panel per ECW addendum 13.2)
- *  - generic panels: Spec · Lifecycle+UE · CrossLinks · Functional Test
- *  - EntityFacetsTabStrip (per-catalog custom facets from facetRegistry)
+ *  - EntityLifecyclePanel + EntityCrossLinksPanel (always-visible: lifecycle/UE
+ *    state + cross-entity nav)
+ *  - TrackTabStrip (the Production Pipeline as primary tabs; each track tab hosts
+ *    its workspace — Logic absorbs Spec + the per-catalog facets, Test hosts the
+ *    functional test, 2D hosts Leonardo, others status + CLI).
  *
- * Composition only. Mutations are scoped to the children (CrossLinks →
- * ecwStore.selectEntity; pipeline track-state → pipelineStore + /api/pipeline;
- * (Re)generate → CLI Rail via useGeneration).
+ * Composition only. Mutations are scoped to children (CrossLinks →
+ * ecwStore.selectEntity; track-state → pipelineStore + /api/pipeline).
  */
 export function EntityInspector({ entity }: Props) {
   if (!entity) return <EmptyInspector />;
@@ -59,12 +57,9 @@ export function EntityInspector({ entity }: Props) {
   return (
     <div className="flex-1 flex flex-col overflow-auto">
       <EntityHeader entity={entity} />
-      <TrackTabStrip entity={entity} />
-      <EntitySpecPanel data={entity.data} />
       <EntityLifecyclePanel entity={entity} />
       <EntityCrossLinksPanel entity={entity} />
-      <EntityFunctionalTestPanel entity={entity} />
-      <EntityFacetsTabStrip entity={entity} />
+      <TrackTabStrip entity={entity} />
     </div>
   );
 }
