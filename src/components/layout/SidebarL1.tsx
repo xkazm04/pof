@@ -21,7 +21,7 @@ export function SidebarL1() {
   };
 
   return (
-    <nav className="relative w-14 flex flex-col items-center py-3 gap-1 border-r border-border bg-background" aria-label="Module categories">
+    <nav className="relative w-14 flex flex-col items-center py-3 gap-1 border-r border-border bg-background" aria-label="Module categories" style={{ ['--focus-accent' as string]: 'var(--setup)' }}>
       {CATEGORIES.map((cat) => {
         const Icon = cat.icon;
         const isActive = activeCategory === cat.id;
@@ -35,7 +35,7 @@ export function SidebarL1() {
             aria-pressed={isActive}
             className={`
               relative w-10 h-10 flex items-center justify-center rounded-lg transition-all duration-base
-              focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-strong focus-visible:ring-offset-1 focus-visible:ring-offset-surface-deep
+              focus-ring
               ${isActive
                 ? 'bg-surface-hover'
                 : 'hover:bg-surface'

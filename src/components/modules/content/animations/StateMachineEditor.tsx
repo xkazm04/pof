@@ -4,7 +4,7 @@ import { useState, useCallback, useMemo, useRef, useEffect } from 'react';
 import {
   Plus, Trash2, GripVertical, ArrowRight, Code2, Download,
   Copy, Check, ChevronDown, ChevronRight, RotateCcw,
-  Diff, Settings2, Layers, Zap,
+  Diff, Settings2, Layers, Zap, AlertTriangle, AlertCircle, Info,
 } from 'lucide-react';
 import {
   ACCENT_VIOLET, ACCENT_ORANGE, ACCENT_CYAN,
@@ -17,6 +17,13 @@ import { nlaStateMachineScript } from '@/lib/blender-mcp/scripts/nla-state-machi
 import type { ExecuteOutput } from '@/lib/blender-mcp/types';
 import { useBlenderMCPStore } from '@/stores/blenderMCPStore';
 import { computeEdgeGeometry } from '@/components/ui/svg/graph-edges';
+import {
+  validateStateMachine,
+  groupWarningsByState,
+  highestSeverity,
+  type ValidationWarning,
+  type WarningSeverity,
+} from '@/lib/state-machine-validator';
 
 const EDITOR_ACCENT = ACCENT_VIOLET;
 
@@ -574,6 +581,29 @@ export function StateMachineEditor() {
   // Priority sorted for display
   const sortedByPriority = useMemo(() => [...states].sort((a, b) => a.priority - b.priority), [states]);
 
+  // ── Lint warnings ──
+  const warnings = useMemo(
+    () => validateStateMachine(states, transitions, KNOWN_FLAGS),
+    [states, transitions],
+  );
+  const warningsByState = useMemo(() => groupWarningsByState(warnings), [warnings]);
+  const errorCount = warnings.filter((w) => w.severity === 'error').length;
+  const warnCount = warnings.filter((w) => w.severity === 'warning').length;
+  const infoCount = warnings.filter((w) => w.severity === 'info').length;
+  const [showWarnings, setShowWarnings] = useState(true);
+
+  const focusWarning = useCallback((w: ValidationWarning) => {
+    if (w.transitionIds.length > 0) {
+      setSelectedTransitionId(w.transitionIds[0]);
+      setSelectedStateId(null);
+      setEditingPanel('transition');
+    } else if (w.stateIds.length > 0) {
+      setSelectedStateId(w.stateIds[0]);
+      setSelectedTransitionId(null);
+      setEditingPanel('state');
+    }
+  }, []);
+
   const hasChanges = snapshot !== null;
   const diffTotal = diff ? diff.newStates.length + diff.removedStates.length + diff.modifiedStates.length + diff.newTransitions.length + diff.removedTransitions.length + diff.modifiedTransitions.length : 0;
 
@@ -743,6 +773,19 @@ export function StateMachineEditor() {
         </div>
       )}
 
+      {/* ── Linter warnings ── */}
+      {warnings.length > 0 && (
+        <WarningsPanel
+          warnings={warnings}
+          errorCount={errorCount}
+          warnCount={warnCount}
+          infoCount={infoCount}
+          collapsed={!showWarnings}
+          onToggle={() => setShowWarnings(!showWarnings)}
+          onFocus={focusWarning}
+        />
+      )}
+
       {/* ── Main grid: Canvas + Property Panel ── */}
       <div className="grid grid-cols-1 xl:grid-cols-[1fr_320px] gap-4">
         {/* ── Canvas ── */}
@@ -841,6 +884,8 @@ export function StateMachineEditor() {
             const isSelected = selectedStateId === state.id;
             const isDrawSource = drawingTransition === state.id;
             const color = STATE_TYPE_COLORS[state.stateType];
+            const nodeWarnings = warningsByState.get(state.id) ?? [];
+            const nodeSeverity = highestSeverity(nodeWarnings);
 
             let borderColor = `${color}40`;
             let bgColor = `${color}0A`;
@@ -854,6 +899,11 @@ export function StateMachineEditor() {
               borderColor = `${ACCENT_ORANGE}80`;
               bgColor = `${ACCENT_ORANGE}20`;
               shadow = `0 0 15px ${ACCENT_ORANGE}40`;
+            } else if (nodeSeverity === 'error') {
+              borderColor = `${STATUS_ERROR}80`;
+              shadow = `0 0 12px ${STATUS_ERROR}40`;
+            } else if (nodeSeverity === 'warning') {
+              borderColor = `${STATUS_WARNING}70`;
             }
 
             return (
@@ -899,6 +949,27 @@ export function StateMachineEditor() {
                 >
                   {state.priority}
                 </div>
+
+                {/* Lint warning badge */}
+                {nodeSeverity && (
+                  <div
+                    className="absolute -top-2 -left-2 w-5 h-5 rounded-full flex items-center justify-center border"
+                    style={{
+                      backgroundColor: `${severityColor(nodeSeverity)}25`,
+                      borderColor: `${severityColor(nodeSeverity)}80`,
+                      color: severityColor(nodeSeverity),
+                    }}
+                    title={nodeWarnings.map((w) => `[${w.severity}] ${w.message}`).join('\n')}
+                  >
+                    {nodeSeverity === 'error' ? (
+                      <AlertCircle className="w-3 h-3" />
+                    ) : nodeSeverity === 'warning' ? (
+                      <AlertTriangle className="w-3 h-3" />
+                    ) : (
+                      <Info className="w-3 h-3" />
+                    )}
+                  </div>
+                )}
 
                 <div className="flex flex-col items-start justify-center h-full px-3 pl-4 overflow-hidden">
                   <span className="text-[11px] font-bold font-mono text-text truncate w-full">{state.name}</span>
@@ -1022,6 +1093,115 @@ export function StateMachineEditor() {
 }
 
 // ── Sub-components ──
+
+function severityColor(severity: WarningSeverity): string {
+  if (severity === 'error') return STATUS_ERROR;
+  if (severity === 'warning') return STATUS_WARNING;
+  return STATUS_INFO;
+}
+
+function WarningsPanel({
+  warnings,
+  errorCount,
+  warnCount,
+  infoCount,
+  collapsed,
+  onToggle,
+  onFocus,
+}: {
+  warnings: ValidationWarning[];
+  errorCount: number;
+  warnCount: number;
+  infoCount: number;
+  collapsed: boolean;
+  onToggle: () => void;
+  onFocus: (w: ValidationWarning) => void;
+}) {
+  const headerColor =
+    errorCount > 0 ? STATUS_ERROR : warnCount > 0 ? STATUS_WARNING : STATUS_INFO;
+  const headerIcon =
+    errorCount > 0 ? (
+      <AlertCircle className="w-3.5 h-3.5" style={{ color: STATUS_ERROR }} />
+    ) : warnCount > 0 ? (
+      <AlertTriangle className="w-3.5 h-3.5" style={{ color: STATUS_WARNING }} />
+    ) : (
+      <Info className="w-3.5 h-3.5" style={{ color: STATUS_INFO }} />
+    );
+
+  return (
+    <div
+      className="rounded-lg border bg-surface-deep"
+      style={{ borderColor: `${headerColor}${OPACITY_30}` }}
+    >
+      <button
+        onClick={onToggle}
+        className="w-full flex items-center justify-between px-3 py-2 text-xs font-bold"
+        aria-expanded={!collapsed}
+      >
+        <span className="flex items-center gap-2 text-text">
+          {headerIcon}
+          Linter ({warnings.length} {warnings.length === 1 ? 'finding' : 'findings'})
+          <span className="flex items-center gap-1.5 ml-2 font-normal">
+            {errorCount > 0 && (
+              <span className="text-2xs px-1.5 py-0.5 rounded" style={{ backgroundColor: `${STATUS_ERROR}${OPACITY_15}`, color: STATUS_ERROR }}>
+                {errorCount} error{errorCount === 1 ? '' : 's'}
+              </span>
+            )}
+            {warnCount > 0 && (
+              <span className="text-2xs px-1.5 py-0.5 rounded" style={{ backgroundColor: `${STATUS_WARNING}${OPACITY_15}`, color: STATUS_WARNING }}>
+                {warnCount} warning{warnCount === 1 ? '' : 's'}
+              </span>
+            )}
+            {infoCount > 0 && (
+              <span className="text-2xs px-1.5 py-0.5 rounded" style={{ backgroundColor: `${STATUS_INFO}${OPACITY_15}`, color: STATUS_INFO }}>
+                {infoCount} info
+              </span>
+            )}
+          </span>
+        </span>
+        {collapsed ? (
+          <ChevronRight className="w-3 h-3 text-text-muted" />
+        ) : (
+          <ChevronDown className="w-3 h-3 text-text-muted" />
+        )}
+      </button>
+      {!collapsed && (
+        <ul className="px-3 pb-2.5 space-y-1 max-h-[180px] overflow-y-auto">
+          {warnings.map((w, idx) => {
+            const c = severityColor(w.severity);
+            return (
+              <li key={idx}>
+                <button
+                  onClick={() => onFocus(w)}
+                  className="w-full flex items-start gap-2 px-2 py-1.5 rounded text-left text-2xs transition-colors hover:bg-surface-hover/30 border"
+                  style={{ borderColor: `${c}${OPACITY_20}`, backgroundColor: `${c}08` }}
+                  title="Click to focus the offending state/transition"
+                >
+                  <span className="flex-shrink-0 mt-0.5" style={{ color: c }}>
+                    {w.severity === 'error' ? (
+                      <AlertCircle className="w-3 h-3" />
+                    ) : w.severity === 'warning' ? (
+                      <AlertTriangle className="w-3 h-3" />
+                    ) : (
+                      <Info className="w-3 h-3" />
+                    )}
+                  </span>
+                  <span className="flex-1 text-text">{w.message}</span>
+                  <span
+                    className="font-mono text-[10px] uppercase tracking-wider flex-shrink-0"
+                    style={{ color: c }}
+                  >
+                    {w.kind.replace(/-/g, ' ')}
+                  </span>
+                </button>
+              </li>
+            );
+          })}
+        </ul>
+      )}
+    </div>
+  );
+}
 
 function StatePropertyEditor({
   state,

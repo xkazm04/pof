@@ -2,6 +2,7 @@
 
 import { useRef, useCallback } from 'react';
 import { Upload, Grid3x3, Compass, RotateCcw, Camera, Box } from 'lucide-react';
+import { VISUAL_GEN_FOCUS_RING } from '@/lib/visual-gen/ui';
 import type { RenderMode } from './useViewerStore';
 
 interface ViewerToolbarProps {
@@ -87,7 +88,8 @@ export function ViewerToolbar({
           <button
             key={value}
             onClick={() => onRenderModeChange(value)}
-            className={`px-2 py-1 rounded text-xs transition-colors ${
+            aria-pressed={renderMode === value}
+            className={`px-2 py-1 rounded text-xs transition-colors ${VISUAL_GEN_FOCUS_RING} ${
               renderMode === value
                 ? 'bg-[var(--visual-gen)] text-white'
                 : 'text-text-muted hover:text-text'
@@ -135,7 +137,8 @@ function ToggleButton({
   return (
     <button
       onClick={onClick}
-      className={`flex items-center gap-1 px-2 py-1.5 rounded text-xs transition-colors ${
+      aria-pressed={active}
+      className={`flex items-center gap-1 px-2 py-1.5 rounded text-xs transition-colors ${VISUAL_GEN_FOCUS_RING} ${
         active
           ? 'text-[var(--visual-gen)] bg-[var(--visual-gen)]/10'
           : 'text-text-muted hover:text-text'

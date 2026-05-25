@@ -4,6 +4,7 @@ import { useCallback } from 'react';
 import { Search, Loader2 } from 'lucide-react';
 import { useAssetBrowserStore } from './useAssetBrowserStore';
 import { AssetCard } from './AssetCard';
+import { VISUAL_GEN_FOCUS_RING } from '@/lib/visual-gen/ui';
 import type { AssetSearchResult, AssetSource, AssetCategory } from '@/lib/visual-gen/asset-sources';
 
 const SOURCES: { value: AssetSource; label: string }[] = [
@@ -75,7 +76,8 @@ export function BrowsePanel() {
           <button
             key={value}
             onClick={() => setActiveSource(value)}
-            className={`flex-1 px-3 py-2 rounded-lg text-xs font-medium transition-colors border ${
+            aria-pressed={activeSource === value}
+            className={`flex-1 px-3 py-2 rounded-lg text-xs font-medium transition-colors border ${VISUAL_GEN_FOCUS_RING} ${
               activeSource === value
                 ? 'border-[var(--visual-gen)] bg-[var(--visual-gen)]/10 text-[var(--visual-gen)]'
                 : 'border-border text-text-muted hover:text-text'
@@ -92,7 +94,8 @@ export function BrowsePanel() {
           <button
             key={value}
             onClick={() => setActiveCategory(value)}
-            className={`px-2.5 py-1 rounded text-xs transition-colors ${
+            aria-pressed={activeCategory === value}
+            className={`px-2.5 py-1 rounded text-xs transition-colors ${VISUAL_GEN_FOCUS_RING} ${
               activeCategory === value
                 ? 'bg-[var(--visual-gen)] text-white'
                 : 'text-text-muted hover:text-text border border-border'

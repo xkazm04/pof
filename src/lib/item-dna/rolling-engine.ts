@@ -266,6 +266,120 @@ export function evolveGenome(
   };
 }
 
+/* ── Monte Carlo batch simulation ──────────────────────────────────────── */
+
+/** Aggregated stats from running rollAffixesWithDNA many times. */
+export interface SimulationStats {
+  iterations: number;
+  /** Average affix count per roll */
+  avgAffixCount: number;
+  /** Average coherence score (0-1) across all rolls that produced affixes */
+  avgCoherence: number;
+  /** 10-bucket histogram of coherence scores (counts), buckets 0.0-0.1 … 0.9-1.0 */
+  coherenceHistogram: number[];
+  /** Configured mutation rate from the genome */
+  configuredMutationRate: number;
+  /** Observed mutation rate = mutated affix slots / total affix slots */
+  observedMutationRate: number;
+  /** Per-axis appearance frequency across all affix slots (0-1) */
+  axisFrequency: Record<TraitAxis, number>;
+  /** Per-affix appearance frequency: avg occurrences per roll, keyed by affix id */
+  affixFrequency: Record<string, { affix: DNAAffix; appearances: number; perRoll: number }>;
+  /** Fraction of rolls whose coherence >= godRollThreshold AND affix count == max for rarity */
+  godRollProbability: number;
+  /** Threshold used for god-roll classification */
+  godRollThreshold: number;
+}
+
+/**
+ * Run rollAffixesWithDNA many times and aggregate the outcome distribution.
+ * Pure function (Math.random aside) — suitable for synchronous batch runs.
+ *
+ * God-roll definition: a roll where the coherence score >= godRollThreshold
+ * AND the rolled affix count equals the maximum for the chosen rarity.
+ */
+export function simulateRolls(
+  genome: ItemGenome,
+  rarity: string,
+  itemLevel: number,
+  affixPool: DNAAffix[],
+  iterations: number,
+  godRollThreshold = 0.85,
+): SimulationStats {
+  const safeIterations = Math.max(1, Math.floor(iterations));
+  const [, maxCount] = AFFIX_COUNT_RANGES[rarity] ?? [0, 0];
+
+  const histogram = new Array(10).fill(0) as number[];
+  const axisCounts: Record<TraitAxis, number> = {
+    offensive: 0, defensive: 0, utility: 0, economic: 0,
+  };
+  const affixCounts: Record<string, { affix: DNAAffix; count: number }> = {};
+
+  let totalAffixSlots = 0;
+  let totalMutationSlots = 0;
+  let coherenceSum = 0;
+  let coherenceRollsWithAffixes = 0;
+  let godRolls = 0;
+
+  for (let i = 0; i < safeIterations; i++) {
+    const result = rollAffixesWithDNA(genome, rarity, itemLevel, affixPool);
+    totalAffixSlots += result.affixes.length;
+    totalMutationSlots += result.mutationIndices.length;
+
+    if (result.affixes.length > 0) {
+      coherenceSum += result.coherenceScore;
+      coherenceRollsWithAffixes += 1;
+      const bucket = Math.min(9, Math.floor(result.coherenceScore * 10));
+      histogram[bucket] += 1;
+
+      for (const ra of result.affixes) {
+        axisCounts[ra.affix.axis] += 1;
+        const entry = affixCounts[ra.affix.id] ?? { affix: ra.affix, count: 0 };
+        entry.count += 1;
+        affixCounts[ra.affix.id] = entry;
+      }
+
+      if (
+        result.coherenceScore >= godRollThreshold &&
+        maxCount > 0 &&
+        result.affixes.length === maxCount
+      ) {
+        godRolls += 1;
+      }
+    }
+  }
+
+  const axisFrequency: Record<TraitAxis, number> = {
+    offensive: totalAffixSlots > 0 ? axisCounts.offensive / totalAffixSlots : 0,
+    defensive: totalAffixSlots > 0 ? axisCounts.defensive / totalAffixSlots : 0,
+    utility: totalAffixSlots > 0 ? axisCounts.utility / totalAffixSlots : 0,
+    economic: totalAffixSlots > 0 ? axisCounts.economic / totalAffixSlots : 0,
+  };
+
+  const affixFrequency: SimulationStats['affixFrequency'] = {};
+  for (const id of Object.keys(affixCounts)) {
+    const { affix, count } = affixCounts[id];
+    affixFrequency[id] = {
+      affix,
+      appearances: count,
+      perRoll: count / safeIterations,
+    };
+  }
+
+  return {
+    iterations: safeIterations,
+    avgAffixCount: totalAffixSlots / safeIterations,
+    avgCoherence: coherenceRollsWithAffixes > 0 ? coherenceSum / coherenceRollsWithAffixes : 0,
+    coherenceHistogram: histogram,
+    configuredMutationRate: genome.mutation.mutationRate,
+    observedMutationRate: totalAffixSlots > 0 ? totalMutationSlots / totalAffixSlots : 0,
+    axisFrequency,
+    affixFrequency,
+    godRollProbability: godRolls / safeIterations,
+    godRollThreshold,
+  };
+}
+
 /* ── Predicted distribution ────────────────────────────────────────────── */
 
 /**

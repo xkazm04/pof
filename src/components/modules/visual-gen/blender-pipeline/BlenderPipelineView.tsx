@@ -15,6 +15,11 @@ import { TabHeader } from '@/components/modules/shared/TabHeader';
 import { BlenderSetup } from './BlenderSetup';
 import { ScriptRunner } from './ScriptRunner';
 import { executeViaMCP } from './ScriptRunner';
+import {
+  SUCCESS_RESULT,
+  ERROR_RESULT,
+  WARNING_TEXT,
+} from '@/lib/blender-mcp/status-tokens';
 
 /* ─── Shared execution hook ─────────────────────────────────────────────── */
 
@@ -50,13 +55,13 @@ function ResultBlock({ result, error }: { result: string | null; error: string |
   return (
     <div className="mt-3">
       {result && (
-        <div className="flex items-start gap-2 p-3 rounded bg-emerald-400/5 border border-emerald-400/20">
-          <CheckCircle size={14} className="text-emerald-400 mt-0.5 shrink-0" />
+        <div className={`flex items-start gap-2 p-3 rounded ${SUCCESS_RESULT}`}>
+          <CheckCircle size={14} className="text-green-400 mt-0.5 shrink-0" />
           <pre className="text-xs font-mono text-text-muted whitespace-pre-wrap">{result}</pre>
         </div>
       )}
       {error && (
-        <div className="flex items-start gap-2 p-3 rounded bg-red-400/5 border border-red-400/20">
+        <div className={`flex items-start gap-2 p-3 rounded ${ERROR_RESULT}`}>
           <AlertCircle size={14} className="text-red-400 mt-0.5 shrink-0" />
           <span className="text-xs text-red-400">{error}</span>
         </div>
@@ -146,7 +151,7 @@ function LODGenerationTab() {
         </button>
 
         {!connected && (
-          <p className="text-xs text-amber-400">Connect to Blender MCP first.</p>
+          <p className={`text-xs ${WARNING_TEXT}`}>Connect to Blender MCP first.</p>
         )}
       </div>
 
@@ -239,7 +244,7 @@ function MeshOptimizationTab() {
         </button>
 
         {!connected && (
-          <p className="text-xs text-amber-400">Connect to Blender MCP first.</p>
+          <p className={`text-xs ${WARNING_TEXT}`}>Connect to Blender MCP first.</p>
         )}
       </div>
 
@@ -319,7 +324,7 @@ function FBXConversionTab() {
         </button>
 
         {!connected && (
-          <p className="text-xs text-amber-400">Connect to Blender MCP first.</p>
+          <p className={`text-xs ${WARNING_TEXT}`}>Connect to Blender MCP first.</p>
         )}
       </div>
 

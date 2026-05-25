@@ -17,6 +17,29 @@ import type {
 const EMPTY_EFFECTS: PPStudioEffect[] = [];
 const EMPTY_PRESETS: PPPreset[] = [];
 
+/** localStorage key for the opt-in plain-language "explain mode" preference. */
+const EXPLAIN_MODE_KEY = 'pof.ppStudio.explainMode';
+
+/** Read the persisted explain-mode preference (client-only, SSR-safe). */
+function readExplainMode(): boolean {
+  if (typeof window === 'undefined') return false;
+  try {
+    return window.localStorage.getItem(EXPLAIN_MODE_KEY) === '1';
+  } catch {
+    return false;
+  }
+}
+
+/** Persist the explain-mode preference (best-effort, never throws). */
+function writeExplainMode(on: boolean): void {
+  if (typeof window === 'undefined') return;
+  try {
+    window.localStorage.setItem(EXPLAIN_MODE_KEY, on ? '1' : '0');
+  } catch {
+    /* ignore quota / privacy-mode failures */
+  }
+}
+
 // ── Helpers ─────────────────────────────────────────────────────────────────
 
 function cloneEffects(effects: PPStudioEffect[]): PPStudioEffect[] {
@@ -63,9 +86,12 @@ interface PostProcessStudioState {
   isLoading: boolean;
   isGenerating: boolean;
   error: string | null;
+  /** Opt-in plain-language decoder for cryptic UE effect params. */
+  explainMode: boolean;
 
   // Actions
   init: () => void;
+  toggleExplainMode: () => void;
   setEffectEnabled: (effectId: string, enabled: boolean) => void;
   setEffectParam: (effectId: string, paramName: string, value: number) => void;
   moveEffect: (effectId: string, direction: 'up' | 'down') => void;
@@ -99,11 +125,18 @@ export const usePostProcessStudioStore = create<PostProcessStudioState>((set, ge
   isLoading: false,
   isGenerating: false,
   error: null,
+  explainMode: false,
 
   init: () => {
     const effects = cloneEffects(DEFAULT_EFFECTS);
     const budget = estimateGPUBudget(effects, '1080p');
-    set({ effects, presets: PRESETS, budget, isLoading: false });
+    set({ effects, presets: PRESETS, budget, isLoading: false, explainMode: readExplainMode() });
+  },
+
+  toggleExplainMode: () => {
+    const next = !get().explainMode;
+    writeExplainMode(next);
+    set({ explainMode: next });
   },
 
   setEffectEnabled: (effectId, enabled) => {

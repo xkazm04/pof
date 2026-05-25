@@ -1,5 +1,6 @@
 import { apiSuccess, apiError } from '@/lib/api-utils';
 import { generateTexture, type ScenarioTextureOptions } from '@/lib/scenario';
+import { detectSeamsFromUrl } from '@/lib/visual-gen/seam-check';
 import { logger } from '@/lib/logger';
 
 export async function POST(request: Request) {
@@ -21,7 +22,13 @@ export async function POST(request: Request) {
       height: typeof body?.height === 'number' ? body.height : undefined,
     };
     const result = await generateTexture(opts);
-    return apiSuccess(result);
+
+    // Seam / tileability pass on the albedo — Scenario's "seamless" output is
+    // best-effort, so flag a visible wrap-around mismatch before it reaches UE5.
+    // Never let a seam-check failure break generation (detectSeamsFromUrl returns null).
+    const seam = result.albedoUrl ? await detectSeamsFromUrl(result.albedoUrl) : null;
+
+    return apiSuccess({ ...result, seam });
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Unknown error';
     logger.warn(`[api/scenario] ${message}`);

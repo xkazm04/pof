@@ -13,6 +13,7 @@ import { SUB_MODULES, MODULE_LABELS } from '@/lib/module-registry';
 import type { WeeklyDigest } from '@/types/weekly-digest';
 import { UI_TIMEOUTS } from '@/lib/constants';
 import { STATUS_INFO, MODULE_COLORS, ACCENT_VIOLET, STATUS_SUCCESS, ACCENT_RED, ACCENT_ORANGE, OVERLAY_WHITE, OPACITY_5, OPACITY_8, OPACITY_10 } from '@/lib/chart-colors';
+import { FetchError } from '../shared/FetchError';
 
 // ── Precompute checklist item IDs (static) ──
 const MODULE_ITEM_IDS: Record<string, string[]> = Object.fromEntries(
@@ -28,9 +29,16 @@ const EMPTY_PROGRESS: Record<string, Record<string, boolean>> = {};
 export function WeeklyDigestView() {
   const [digest, setDigest] = useState<WeeklyDigest | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const [exporting, setExporting] = useState(false);
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const mountedRef = useRef(true);
+
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => { mountedRef.current = false; };
+  }, []);
 
   const checklistProgress = useModuleStore((s) => s.checklistProgress) || EMPTY_PROGRESS;
 
@@ -50,30 +58,22 @@ export function WeeklyDigestView() {
   // Fetch digest
   const fetchDigest = useCallback(async () => {
     setLoading(true);
+    setError(null);
     try {
       const data = await apiFetch<{ digest: WeeklyDigest }>('/api/weekly-digest');
+      if (!mountedRef.current) return;
       const d = data.digest;
       d.checklistCompleted = checklistCompleted;
       setDigest(d);
-    } catch { /* ignore */ }
-    setLoading(false);
+    } catch (err) {
+      if (!mountedRef.current) return;
+      setError(err instanceof Error ? err.message : 'Failed to load weekly digest');
+    } finally {
+      if (mountedRef.current) setLoading(false);
+    }
   }, [checklistCompleted]);
 
-  useEffect(() => {
-    let cancelled = false;
-    async function load() {
-      try {
-        const data = await apiFetch<{ digest: WeeklyDigest }>('/api/weekly-digest');
-        if (cancelled) return;
-        const d = data.digest;
-        d.checklistCompleted = checklistCompleted;
-        setDigest(d);
-      } catch { /* ignore */ }
-      if (!cancelled) setLoading(false);
-    }
-    load();
-    return () => { cancelled = true; };
-  }, [checklistCompleted]);
+  useEffect(() => { void fetchDigest(); }, [fetchDigest]);
 
   // ── Copy as Markdown ──
   const handleCopy = useCallback(async () => {
@@ -105,12 +105,16 @@ export function WeeklyDigestView() {
     }, 'image/png');
   }, [digest]);
 
-  if (loading) {
+  if (loading && !digest) {
     return (
       <div className="flex items-center justify-center py-20">
         <Loader2 className="w-5 h-5 animate-spin text-text-muted" />
       </div>
     );
+  }
+
+  if (error && !digest) {
+    return <FetchError message={error} onRetry={fetchDigest} />;
   }
 
   if (!digest) {

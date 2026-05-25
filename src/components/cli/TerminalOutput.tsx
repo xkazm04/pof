@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo, useCallback, useEffect } from 'react';
+import { useState, useMemo, useCallback, useEffect, useLayoutEffect, useRef } from 'react';
 import { List, type RowComponentProps } from 'react-window';
 import {
   User, Bot, Wrench, CheckCircle, AlertCircle,
@@ -27,7 +27,7 @@ const LOG_ICON_SIZE = 'w-3 h-3';
 
 const LOG_TYPE_ICONS: Record<LogEntry['type'], { icon: typeof User; colorClass: string }> = {
   user: { icon: User, colorClass: CLI_COLORS.prompt },
-  assistant: { icon: Bot, colorClass: 'text-purple-400' },
+  assistant: { icon: Bot, colorClass: CLI_COLORS.assistant },
   tool_use: { icon: Wrench, colorClass: CLI_COLORS.warning },
   tool_result: { icon: CheckCircle, colorClass: CLI_COLORS.success },
   error: { icon: AlertCircle, colorClass: CLI_COLORS.error },
@@ -59,7 +59,7 @@ const getLogIcon = (type: LogEntry['type'], toolName?: string) => {
     const Icon = config.icon;
     return <Icon className={`${LOG_ICON_SIZE} ${config.colorClass}`} />;
   }
-  return <Bot className={`${LOG_ICON_SIZE} text-gray-400`} />;
+  return <Bot className={`${LOG_ICON_SIZE} ${CLI_COLORS.fallback}`} />;
 };
 
 const formatLogContent = (log: LogEntry) => {
@@ -76,7 +76,7 @@ const formatLogContent = (log: LogEntry) => {
 const getLogTextClass = (type: LogEntry['type']) => {
   switch (type) {
     case 'error': return CLI_COLORS.error;
-    case 'user': return 'text-blue-300';
+    case 'user': return CLI_COLORS.userText;
     case 'tool_result': return 'text-text-muted font-mono';
     case 'system': return CLI_COLORS.info;
     default: return 'text-text';
@@ -137,7 +137,7 @@ function ToolPairRow({ toolUse, toolResult, isExpanded, onToggle, buildParsed, o
         <span className="text-xs leading-relaxed break-all truncate text-text">{formatLogContent(toolUse)}</span>
         {hasBuild && !isExpanded && (
           <span className={`ml-auto text-2xs px-1.5 py-px rounded flex-shrink-0 ${
-            buildParsed!.summary?.success ? `bg-green-500/15 ${CLI_COLORS.success}` : `bg-status-red-medium ${CLI_COLORS.error}`
+            buildParsed!.summary?.success ? `${CLI_COLORS.buildOkBg} ${CLI_COLORS.success}` : `bg-status-red-medium ${CLI_COLORS.error}`
           }`}>
             {buildParsed!.summary?.success ? 'Build OK' : `${errors.length} error(s)`}
           </span>
@@ -248,25 +248,125 @@ interface TerminalOutputProps {
 
 interface SelectionToolbarState {
   text: string;
-  x: number;
-  y: number;
+  /** Horizontal center of the selection, in container content coords. */
+  anchorX: number;
+  /** Top of the selection rect, in container content coords. */
+  anchorTop: number;
+  /** Bottom of the selection rect, in container content coords (used when flipping below). */
+  anchorBottom: number;
 }
 
-function SelectionToolbar({ state, onCopy, onSearch, onFix }: {
+interface ToolbarPosition {
+  left: number;
+  top: number;
+  caretX: number;
+  flipped: boolean;
+}
+
+const TOOLBAR_PADDING = 6;
+const TOOLBAR_GAP = 8;
+const CARET_INSET = 12;
+
+function SelectionToolbar({ state, containerRef, onCopy, onSearch, onFix }: {
   state: SelectionToolbarState;
+  containerRef: React.RefObject<HTMLDivElement | null>;
   onCopy: () => void;
   onSearch: () => void;
   onFix: () => void;
 }) {
+  const toolbarRef = useRef<HTMLDivElement>(null);
+  const [pos, setPos] = useState<ToolbarPosition | null>(null);
+
+  useLayoutEffect(() => {
+    const node = toolbarRef.current;
+    const scrollContainer = containerRef.current;
+    if (!node || !scrollContainer) return;
+    const measure = () => {
+      const tb = node.getBoundingClientRect();
+      const w = tb.width;
+      const h = tb.height;
+      const cw = scrollContainer.clientWidth;
+      const ch = scrollContainer.clientHeight;
+      const st = scrollContainer.scrollTop;
+
+      // Default: center above selection
+      let left = state.anchorX - w / 2;
+      let top = state.anchorTop - h - TOOLBAR_GAP;
+      let flipped = false;
+
+      // Flip below if there isn't room above (within visible viewport)
+      if (top < st + TOOLBAR_PADDING) {
+        top = state.anchorBottom + TOOLBAR_GAP;
+        flipped = true;
+      }
+
+      // Clamp horizontally within container's visible width
+      left = Math.max(TOOLBAR_PADDING, Math.min(left, cw - w - TOOLBAR_PADDING));
+      // Clamp vertically within the currently-visible scroll viewport
+      top = Math.max(st + TOOLBAR_PADDING, Math.min(top, st + ch - h - TOOLBAR_PADDING));
+
+      // Caret X relative to toolbar, kept inside the toolbar's rounded corners
+      const caretX = Math.max(CARET_INSET, Math.min(w - CARET_INSET, state.anchorX - left));
+
+      setPos({ left, top, caretX, flipped });
+    };
+    measure();
+  }, [state.anchorX, state.anchorTop, state.anchorBottom, containerRef]);
+
+  const caretSide = pos?.flipped ? 'top' : 'bottom';
+  const transformOrigin = pos
+    ? `${pos.caretX}px ${pos.flipped ? 'top' : 'bottom'}`
+    : 'center';
+
   return (
     <div
-      className="absolute z-50 flex items-center gap-0.5 px-1 py-0.5 rounded-lg bg-surface border border-border-bright shadow-xl"
+      ref={toolbarRef}
+      role="toolbar"
+      aria-label="Selection actions"
+      className="absolute z-50 flex items-center gap-0.5 px-1 py-0.5 rounded-lg bg-surface border border-border-bright shadow-xl selection-toolbar-enter"
       style={{
-        left: Math.max(8, state.x),
-        top: Math.max(0, state.y - 4),
-        transform: 'translateY(-100%)',
+        left: pos?.left ?? 0,
+        top: pos?.top ?? 0,
+        visibility: pos ? 'visible' : 'hidden',
+        transformOrigin,
       }}
     >
+      {pos && (
+        <>
+          {/* Caret border (back layer) */}
+          <span
+            aria-hidden
+            className="absolute pointer-events-none"
+            style={{
+              left: pos.caretX - 6,
+              [caretSide]: -6,
+              width: 0,
+              height: 0,
+              borderLeft: '6px solid transparent',
+              borderRight: '6px solid transparent',
+              ...(pos.flipped
+                ? { borderBottom: '6px solid var(--border-bright)' }
+                : { borderTop: '6px solid var(--border-bright)' }),
+            }}
+          />
+          {/* Caret fill (front layer, 1px inset on slanted edges) */}
+          <span
+            aria-hidden
+            className="absolute pointer-events-none"
+            style={{
+              left: pos.caretX - 5,
+              [caretSide]: -5,
+              width: 0,
+              height: 0,
+              borderLeft: '5px solid transparent',
+              borderRight: '5px solid transparent',
+              ...(pos.flipped
+                ? { borderBottom: '5px solid var(--surface)' }
+                : { borderTop: '5px solid var(--surface)' }),
+            }}
+          />
+        </>
+      )}
       <button
         onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); onCopy(); }}
         className="flex items-center gap-1.5 px-2 py-1 rounded-md text-2xs font-medium text-text-muted hover:text-text hover:bg-surface-hover transition-colors"
@@ -459,13 +559,20 @@ export function TerminalOutput({
       const container = scrollRef.current;
       if (!container) return;
 
+      // Empty rect (e.g. selection inside an offscreen/zero-size node) → bail
+      if (rect.width === 0 && rect.height === 0) {
+        setSelectionToolbar(null);
+        return;
+      }
+
       const containerRect = container.getBoundingClientRect();
 
-      // Position relative to container
-      const x = rect.left - containerRect.left + rect.width / 2 - 80; // Center roughly
-      const y = rect.top - containerRect.top + container.scrollTop;
+      // Anchor in container content coords (accounts for scroll)
+      const anchorX = rect.left - containerRect.left + rect.width / 2;
+      const anchorTop = rect.top - containerRect.top + container.scrollTop;
+      const anchorBottom = rect.bottom - containerRect.top + container.scrollTop;
 
-      setSelectionToolbar({ text, x, y });
+      setSelectionToolbar({ text, anchorX, anchorTop, anchorBottom });
     });
   }, [scrollRef]);
 
@@ -659,7 +766,9 @@ export function TerminalOutput({
       {/* Selection floating toolbar */}
       {selectionToolbar && (
         <SelectionToolbar
+          key={`${selectionToolbar.anchorX.toFixed(1)}-${selectionToolbar.anchorTop.toFixed(1)}`}
           state={selectionToolbar}
+          containerRef={scrollRef}
           onCopy={handleSelectionCopy}
           onSearch={handleSelectionSearch}
           onFix={handleSelectionFix}

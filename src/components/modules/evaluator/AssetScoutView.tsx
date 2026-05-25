@@ -8,6 +8,7 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { SurfaceCard } from '@/components/ui/SurfaceCard';
+import { CodeViewer } from '@/components/ui/CodeViewer';
 import { KPICard } from '@/components/ui/KPICard';
 import { Badge } from '@/components/ui/Badge';
 import { ProgressRing } from '@/components/ui/ProgressRing';
@@ -395,13 +396,21 @@ function AssetRow({ scored, isAcquired, moduleId, projectName }: {
     setIsGenerating(false);
   }, [generateIntegration, asset.id, moduleId, projectName, dynamicContext]);
 
+  const ringColor = matchScore > 70 ? ACCENT_EMERALD_DARK : matchScore > 40 ? MODULE_COLORS.content : ACCENT_RED;
+
   return (
-    <SurfaceCard level={2} className="flex items-center gap-3 px-3 py-2.5">
-      {/* Match score ring */}
-      <ProgressRing value={matchScore} size={36} strokeWidth={3} color={matchScore > 70 ? ACCENT_EMERALD_DARK : matchScore > 40 ? MODULE_COLORS.content : ACCENT_RED} />
+    <SurfaceCard
+      level={2}
+      className="grid grid-cols-[auto_1fr_auto] items-center gap-3 px-3 py-2.5 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md hover:border-border-bright"
+    >
+      {/* Thumbnail + match score */}
+      <div className="flex items-center gap-3">
+        <AssetThumbnail url={asset.thumbnailUrl} name={asset.name} />
+        <ProgressRing value={matchScore} size={36} strokeWidth={3} color={ringColor} />
+      </div>
 
       {/* Asset info */}
-      <div className="flex-1 min-w-0">
+      <div className="min-w-0">
         <div className="flex items-center gap-2">
           <span className="text-xs font-medium text-text truncate">{asset.name}</span>
           <span className={`px-1.5 py-0.5 rounded text-2xs font-medium ${diff.bg} ${diff.text}`}>
@@ -411,53 +420,96 @@ function AssetRow({ scored, isAcquired, moduleId, projectName }: {
             <span className="px-1.5 py-0.5 bg-blue-400/10 text-blue-400 rounded text-2xs font-medium">GAS</span>
           )}
         </div>
-        <div className="flex items-center gap-2 mt-0.5">
-          <span className="text-2xs text-text-muted">{asset.publisher}</span>
-          <span className="text-2xs text-text-muted/50">|</span>
-          <span className="text-2xs text-text-muted">{SOURCE_LABELS[asset.source]}</span>
-          <span className="text-2xs text-text-muted/50">|</span>
-          <span className="flex items-center gap-0.5 text-2xs text-amber-400">
+        {/* Metadata chips */}
+        <div className="flex flex-wrap items-center gap-2 mt-1">
+          <MetaChip>{asset.publisher}</MetaChip>
+          <MetaChip>{SOURCE_LABELS[asset.source]}</MetaChip>
+          <MetaChip tone="amber">
             <Star className="w-3 h-3 fill-amber-400" />
             {asset.rating}
-          </span>
-          <span className="text-2xs text-text-muted/50">|</span>
-          <span className="text-2xs text-emerald-400 font-medium">
+          </MetaChip>
+          <MetaChip tone="emerald">
             {asset.price === 0 ? 'Free' : `$${asset.price}`}
-          </span>
+          </MetaChip>
         </div>
-        <p className="text-2xs text-text-muted/80 mt-0.5 line-clamp-1">{matchReasons.join(' · ')}</p>
+        <p className="text-2xs text-text-muted/80 mt-1 line-clamp-1">{matchReasons.join(' · ')}</p>
       </div>
 
-      {/* Time saved */}
-      {timeSavedMinutes > 0 && (
-        <div className="flex items-center gap-1 px-2 py-1 bg-emerald-400/5 border border-emerald-400/15 rounded text-emerald-400 flex-shrink-0">
-          <Zap className="w-3 h-3" />
-          <span className="text-2xs font-medium">Save {formatTime(timeSavedMinutes)}</span>
-        </div>
-      )}
-
-      {/* Actions */}
-      <div className="flex gap-1.5 flex-shrink-0">
-        {!isAcquired ? (
-          <button
-            onClick={handleAcquire}
-            className="flex items-center gap-1 px-2.5 py-1.5 bg-emerald-500/10 border border-emerald-500/25 rounded-lg text-emerald-400 text-2xs font-medium hover:bg-emerald-500/20 transition-colors"
-          >
-            <Download className="w-3 h-3" />
-            Acquire
-          </button>
-        ) : (
-          <button
-            onClick={handleGenerate}
-            disabled={isGenerating}
-            className="flex items-center gap-1 px-2.5 py-1.5 bg-cyan-500/10 border border-cyan-500/25 rounded-lg text-cyan-400 text-2xs font-medium hover:bg-cyan-500/20 transition-colors disabled:opacity-50"
-          >
-            <Code className="w-3 h-3" />
-            {isGenerating ? 'Generating...' : 'Generate Adapter'}
-          </button>
+      {/* Time saved + actions */}
+      <div className="flex items-center gap-3">
+        {timeSavedMinutes > 0 && (
+          <div className="flex items-center gap-1 px-2 py-1 bg-emerald-400/5 border border-emerald-400/15 rounded text-emerald-400 flex-shrink-0">
+            <Zap className="w-3 h-3" />
+            <span className="text-2xs font-medium">Save {formatTime(timeSavedMinutes)}</span>
+          </div>
         )}
+
+        <div className="flex gap-1.5 flex-shrink-0">
+          {!isAcquired ? (
+            <button
+              onClick={handleAcquire}
+              className="flex items-center gap-1 px-2.5 py-1.5 bg-emerald-500/10 border border-emerald-500/25 rounded-lg text-emerald-400 text-2xs font-medium hover:bg-emerald-500/20 transition-colors"
+            >
+              <Download className="w-3 h-3" />
+              Acquire
+            </button>
+          ) : (
+            <button
+              onClick={handleGenerate}
+              disabled={isGenerating}
+              className="flex items-center gap-1 px-2.5 py-1.5 bg-cyan-500/10 border border-cyan-500/25 rounded-lg text-cyan-400 text-2xs font-medium hover:bg-cyan-500/20 transition-colors disabled:opacity-50"
+            >
+              <Code className="w-3 h-3" />
+              {isGenerating ? 'Generating...' : 'Generate Adapter'}
+            </button>
+          )}
+        </div>
       </div>
     </SurfaceCard>
+  );
+}
+
+// ── Asset Thumbnail ─────────────────────────────────────────────────────────
+
+/** 56×56 preview slot; renders the asset image when available, else a Package icon. */
+function AssetThumbnail({ url, name }: { url?: string; name: string }) {
+  const [errored, setErrored] = useState(false);
+  const showImage = Boolean(url) && !errored;
+
+  return (
+    <div className="w-14 h-14 rounded-lg bg-surface-hover border border-border flex items-center justify-center overflow-hidden flex-shrink-0">
+      {showImage ? (
+        // eslint-disable-next-line @next/next/no-img-element -- thumbnails are arbitrary external marketplace URLs, not project-owned assets
+        <img
+          src={url}
+          alt={name}
+          loading="lazy"
+          className="w-full h-full object-cover"
+          onError={() => setErrored(true)}
+        />
+      ) : (
+        <Package className="w-6 h-6 text-text-muted/50" />
+      )}
+    </div>
+  );
+}
+
+// ── Metadata Chip ───────────────────────────────────────────────────────────
+
+const META_CHIP_TONES = {
+  neutral: 'bg-surface-hover border-border text-text-muted',
+  amber: 'bg-amber-400/10 border-amber-400/20 text-amber-400',
+  emerald: 'bg-emerald-400/10 border-emerald-400/20 text-emerald-400',
+} as const;
+
+function MetaChip({ children, tone = 'neutral' }: {
+  children: React.ReactNode;
+  tone?: keyof typeof META_CHIP_TONES;
+}) {
+  return (
+    <span className={`inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded border text-2xs font-medium ${META_CHIP_TONES[tone]}`}>
+      {children}
+    </span>
   );
 }
 
@@ -634,9 +686,12 @@ function IntegrationCard({ asset, integration }: {
             className="overflow-hidden"
           >
             <div className="border-t border-border">
-              <pre className="px-4 py-3 text-2xs text-text/80 font-mono overflow-x-auto bg-surface-deep">
-                {showCode === 'header' ? integration.adapterHeader : integration.adapterSource}
-              </pre>
+              <CodeViewer
+                key={showCode}
+                code={showCode === 'header' ? integration.adapterHeader : integration.adapterSource}
+                fileName={adapterFileName(integration, showCode)}
+                lang="cpp"
+              />
             </div>
           </motion.div>
         )}
@@ -646,6 +701,23 @@ function IntegrationCard({ asset, integration }: {
 }
 
 // ── Helpers ─────────────────────────────────────────────────────────────────
+
+/**
+ * Derive the download filename for an adapter file. The generated code embeds
+ * the adapter class name (e.g. `UPoFSwordAdapter`) in its includes, so we parse
+ * it back out to match exactly what a UE5 project expects on disk; falls back to
+ * a sanitized asset name if the includes can't be parsed.
+ */
+function adapterFileName(integration: IntegrationSpec, kind: 'header' | 'source'): string {
+  const ext = kind === 'header' ? 'h' : 'cpp';
+  const fromSource = integration.adapterSource.match(/#include\s+"[^"]*?([A-Za-z0-9_]+Adapter)\.h"/);
+  const fromHeader = integration.adapterHeader.match(/([A-Za-z0-9_]+Adapter)\.generated\.h/);
+  const base =
+    fromSource?.[1] ??
+    fromHeader?.[1] ??
+    `${integration.assetName.replace(/[^A-Za-z0-9]/g, '')}Adapter`;
+  return `${base}.${ext}`;
+}
 
 function formatTime(minutes: number): string {
   if (minutes < 60) return `${minutes}m`;

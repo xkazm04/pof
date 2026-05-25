@@ -16,6 +16,7 @@ import {
 import { useBlenderMCPStore } from '@/stores/blenderMCPStore';
 import { BlenderConnectionBar } from '@/components/blender-mcp/BlenderConnectionBar';
 import { tryApiFetch } from '@/lib/api-utils';
+import { safeDivide } from '@/lib/math-utils';
 import { comboAnimationScript } from '@/lib/blender-mcp/scripts/combo-animation';
 import type { ComboHit } from '@/lib/blender-mcp/scripts/combo-animation';
 import type { ExecuteOutput } from '@/lib/blender-mcp/types';
@@ -218,7 +219,8 @@ function generateCombo(prompt: string): GeneratedCombo {
     edges,
     totalDuration: Math.round(totalDuration * 100) / 100,
     totalDamage,
-    avgDPS: Math.round(totalDamage / totalDuration),
+    // Guard against a 0s combo (empty/degenerate input) → avoid NaN DPS.
+    avgDPS: Math.round(safeDivide(totalDamage, totalDuration)),
   };
 }
 
@@ -329,7 +331,7 @@ function MontageTimeline({ sections }: { sections: ComboSection[] }) {
   return (
     <div className="space-y-2">
       {sections.map((sec, i) => {
-        const widthPct = (sec.duration / totalDuration) * 100;
+        const widthPct = safeDivide(sec.duration, totalDuration) * 100;
         const sortedWindows = [...sec.windows].sort((a, b) =>
           WINDOW_ORDER.indexOf(a.name as typeof WINDOW_ORDER[number]) - WINDOW_ORDER.indexOf(b.name as typeof WINDOW_ORDER[number])
         );
@@ -452,6 +454,21 @@ function RootMotionPreview({ sections }: { sections: ComboSection[] }) {
   const svgW = 200;
   const svgH = 80;
   const totalDist = sections.reduce((s, sec) => s + sec.rootMotionDistance, 0);
+
+  // No root motion at all → every segment would divide by zero (NaN x-positions)
+  // and collapse the layout. Short-circuit with a friendly empty state instead.
+  if (totalDist <= 0) {
+    return (
+      <svg width={svgW} height={svgH} className="overflow-visible">
+        <line x1={10} y1={svgH - 10} x2={svgW - 10} y2={svgH - 10} stroke="rgba(255,255,255,0.1)" strokeWidth={1} />
+        <circle cx={15} cy={svgH - 16} r={4} fill={ACCENT} />
+        <text x={15} y={svgH - 24} textAnchor="middle" className="text-[11px] font-mono" fill={ACCENT}>Start</text>
+        <text x={svgW / 2} y={svgH / 2 + 4} textAnchor="middle" className="text-[11px] font-mono" fill="var(--text-muted)">
+          No root motion (0cm)
+        </text>
+      </svg>
+    );
+  }
 
   const sectionSegments = sections.map((sec, i) => {
     const cumDistBefore = sections.slice(0, i).reduce((s, s2) => s + s2.rootMotionDistance, 0);

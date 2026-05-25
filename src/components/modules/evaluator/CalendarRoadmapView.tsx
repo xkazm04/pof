@@ -9,7 +9,11 @@ import { useProjectHealthStore } from '@/stores/projectHealthStore';
 import { useModuleStore } from '@/stores/moduleStore';
 import { useEvaluatorStore } from '@/stores/evaluatorStore';
 import type { Milestone } from '@/types/project-health';
-import { MODULE_COLORS, STATUS_SUCCESS, STATUS_INFO, OVERLAY_WHITE, OPACITY_5 } from '@/lib/chart-colors';
+import {
+  MODULE_COLORS, STATUS_SUCCESS, STATUS_INFO, ACCENT_EMERALD,
+  OVERLAY_WHITE, OVERLAY_BLACK, OPACITY_5,
+} from '@/lib/chart-colors';
+import { parseDateInput, formatDateInput, toLocalNoon } from '@/lib/roadmap-dates';
 
 /* ------------------------------------------------------------------ */
 /*  Constants                                                          */
@@ -52,10 +56,6 @@ function formatWeekLabel(d: Date): string {
   return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 }
 
-function formatDateInput(d: Date): string {
-  return d.toISOString().split('T')[0];
-}
-
 /* ------------------------------------------------------------------ */
 /*  Types                                                              */
 /* ------------------------------------------------------------------ */
@@ -68,6 +68,8 @@ interface DragState {
   milestoneId: string;
   startX: number;
   originalDate: string;
+  /** Latest dragged target (local-noon ISO) — read on mouseup to persist. */
+  currentDate: string;
 }
 
 /* ------------------------------------------------------------------ */
@@ -87,7 +89,12 @@ export function CalendarRoadmapView() {
   const [editDate, setEditDate] = useState('');
   const [scrollOffset, setScrollOffset] = useState(0);
   const dragRef = useRef<DragState | null>(null);
+  const dragAbortRef = useRef<AbortController | null>(null);
   const svgRef = useRef<SVGSVGElement>(null);
+
+  // Tear down any in-flight drag listeners if we unmount mid-drag, so they
+  // can't fire setState on an unmounted component or leak on window.
+  useEffect(() => () => dragAbortRef.current?.abort(), []);
 
   // Fetch project health on mount
   useEffect(() => {
@@ -187,39 +194,51 @@ export function CalendarRoadmapView() {
     return months;
   }, [weeks, svgWidth]);
 
-  // Drag handlers for deadline markers
+  // Drag handlers for deadline markers. Listeners are scoped to a per-drag
+  // AbortController so they tear down reliably — on mouseup, when a new drag
+  // starts, and (via the unmount effect above) if the component goes away
+  // mid-drag rather than leaking on window.
   const handleDragStart = useCallback((e: React.MouseEvent, milestoneId: string) => {
     e.preventDefault();
     const dl = deadlines[milestoneId];
     if (!dl) return;
-    dragRef.current = { milestoneId, startX: e.clientX, originalDate: dl.targetDate };
+
+    dragAbortRef.current?.abort(); // tear down any drag still in flight
+    const controller = new AbortController();
+    dragAbortRef.current = controller;
+    dragRef.current = {
+      milestoneId,
+      startX: e.clientX,
+      originalDate: dl.targetDate,
+      currentDate: dl.targetDate,
+    };
 
     const onMove = (me: MouseEvent) => {
-      if (!dragRef.current || !svgRef.current) return;
+      const drag = dragRef.current;
+      if (!drag || !svgRef.current) return;
       const rect = svgRef.current.getBoundingClientRect();
       const svgX = me.clientX - rect.left + svgRef.current.parentElement!.scrollLeft;
-      const newDate = xToDate(svgX);
+      const newDate = toLocalNoon(xToDate(svgX)).toISOString();
+      drag.currentDate = newDate;
       setDeadlines((prev) => ({
         ...prev,
-        [dragRef.current!.milestoneId]: {
-          ...prev[dragRef.current!.milestoneId],
-          targetDate: newDate.toISOString(),
-        },
+        [drag.milestoneId]: { ...prev[drag.milestoneId], targetDate: newDate },
       }));
     };
 
     const onUp = () => {
-      if (dragRef.current) {
-        const dl2 = deadlines[dragRef.current.milestoneId];
-        if (dl2) saveDeadline(dragRef.current.milestoneId, dl2.targetDate);
+      const drag = dragRef.current;
+      if (drag) {
+        // Persist the dragged-to date, not the stale value captured at start.
+        saveDeadline(drag.milestoneId, drag.currentDate);
         dragRef.current = null;
       }
-      window.removeEventListener('mousemove', onMove);
-      window.removeEventListener('mouseup', onUp);
+      controller.abort(); // removes both listeners via the shared signal
+      dragAbortRef.current = null;
     };
 
-    window.addEventListener('mousemove', onMove);
-    window.addEventListener('mouseup', onUp);
+    window.addEventListener('mousemove', onMove, { signal: controller.signal });
+    window.addEventListener('mouseup', onUp, { signal: controller.signal });
   }, [deadlines, xToDate, saveDeadline]);
 
   // Compute variance for each milestone
@@ -237,7 +256,7 @@ export function CalendarRoadmapView() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <CalendarDays className="w-5 h-5 text-[#60a5fa]" />
+          <CalendarDays className="w-5 h-5" style={{ color: STATUS_INFO }} />
           <h2 className="text-base font-semibold text-text">Calendar Roadmap</h2>
           {summary && (
             <span className="text-xs text-text-muted">
@@ -270,7 +289,10 @@ export function CalendarRoadmapView() {
       {/* Legend */}
       <div className="flex items-center gap-4 text-xs text-text-muted">
         <span className="flex items-center gap-1.5">
-          <span className="w-8 h-2 rounded-full bg-gradient-to-r from-[#34d399]/60 to-[#34d399]" />
+          <span
+            className="w-8 h-2 rounded-full"
+            style={{ backgroundImage: `linear-gradient(to right, ${ACCENT_EMERALD}99, ${ACCENT_EMERALD})` }}
+          />
           Predicted
         </span>
         <span className="flex items-center gap-1.5">
@@ -335,7 +357,7 @@ export function CalendarRoadmapView() {
                   />
                   <button
                     onClick={() => {
-                      if (editDate) saveDeadline(ms.id, new Date(editDate + 'T00:00:00').toISOString());
+                      if (editDate) saveDeadline(ms.id, parseDateInput(editDate).toISOString());
                       setEditingId(null);
                     }}
                     className="p-1 text-green-400 hover:bg-surface-hover rounded"
@@ -545,6 +567,7 @@ export function CalendarRoadmapView() {
             return (
               <g
                 key={`deadline-${ms.id}`}
+                data-testid={`deadline-marker-${ms.id}`}
                 style={{ cursor: 'ew-resize' }}
                 onMouseDown={(e) => handleDragStart(e, ms.id)}
               >
@@ -603,7 +626,7 @@ export function CalendarRoadmapView() {
           <text
             x={todayX} y={10}
             textAnchor="middle"
-            fill="#000"
+            fill={OVERLAY_BLACK}
             fontSize={8}
             fontWeight={700}
           >

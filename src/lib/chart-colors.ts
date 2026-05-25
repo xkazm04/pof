@@ -72,6 +72,12 @@ export const ACCENT_CYAN_LIGHT = '#22d3ee';
 /** White — for overlays, borders, glows on dark backgrounds */
 export const OVERLAY_WHITE = '#ffffff';
 
+/** Pure black — overlays, text on bright surfaces */
+export const OVERLAY_BLACK = '#000000';
+
+/** Vivid blue used for primary action button glows (matches Tailwind blue-600). */
+export const ACCENT_BLUE_BOLD = '#2563eb';
+
 // ── Opacity helpers — append to any hex color ───────────────────────────────
 //
 // Canonical 6-stop scale: 5 / 10 / 20 / 40 / 60 / 80. Any other token below is
@@ -212,6 +218,18 @@ export const CLI_COLORS = {
   error: 'text-red-400',
   /** System messages, queue indicators */
   info: 'text-cyan-400',
+  /** Assistant (Claude) icon in log entries */
+  assistant: 'text-purple-400',
+  /** User-authored message text in log entries */
+  userText: 'text-blue-300',
+  /** Unknown / fallback icon tint */
+  fallback: 'text-gray-400',
+  /** Build OK badge background tint */
+  buildOkBg: 'bg-green-500/15',
+  /** Info badge background tint (queue counters, system pills) */
+  infoBadgeBg: 'bg-cyan-500/10',
+  /** Info badge border tint (queue counters, system pills) */
+  infoBadgeBorder: 'border-cyan-500/20',
 } as const;
 
 // ── Module / category accent colors ─────────────────────────────────────────
@@ -291,6 +309,18 @@ export function qualityColor(score: number | null): string {
   return QUALITY_COLORS[score];
 }
 
+/**
+ * Map a 0-100 build success-rate to a semantic color: ≥80 healthy (green),
+ * ≥50 caution (amber), else failing (red). Keeps the build-history threshold
+ * logic in one place so a metric value, its label, and the progress-bar fill
+ * always draw the same band color instead of drifting between greens.
+ */
+export function successRateColor(rate: number): string {
+  if (rate >= 80) return STATUS_SUCCESS;
+  if (rate >= 50) return STATUS_WARNING;
+  return STATUS_ERROR;
+}
+
 // ── Feature status colors ───────────────────────────────────────────────────
 
 export const FEATURE_STATUS_COLORS = {
@@ -326,6 +356,61 @@ export const SEVERITY_COLORS = {
   positive: STATUS_SUCCESS,
 } as const;
 
+// ── Unified severity tokens ────────────────────────────────────────────────
+//
+// Single source of truth for severity / gap coloring across the evaluator
+// (Deep Eval, GDD Compliance, Codebase Archeologist, quality dashboards).
+// Each token bundles the solid color with ready-to-use translucent bg/border
+// fills, so a `critical` finding renders identically wherever it appears —
+// instead of one view using #ef4444, another #f87171, and a third text-red-400.
+
+export interface SeverityToken {
+  /** Solid hex — text, icons, SVG/canvas fills, progress fills. */
+  color: string;
+  /** Translucent fill (color @ 8%) — badge / card backgrounds. */
+  bg: string;
+  /** Translucent border (color @ 20%). */
+  border: string;
+}
+
+function makeSeverityToken(color: string): SeverityToken {
+  return { color, bg: statusBg(color), border: statusBorder(color) };
+}
+
+/**
+ * Canonical severity → visual token. Keys cover the four deep-eval finding
+ * levels (critical/high/medium/low) plus the vocabulary other evaluator
+ * domains use: `warning`/`info`/`positive` (insights, archeologist) and
+ * `major`/`minor` (GDD gaps). Each alias shares the underlying status hue with
+ * its canonical band, so equivalent severities stay visually consistent.
+ */
+export const SEVERITY_TOKENS = {
+  critical: makeSeverityToken(STATUS_ERROR),   // red
+  high: makeSeverityToken(STATUS_BLOCKER),     // orange
+  medium: makeSeverityToken(STATUS_WARNING),   // amber
+  low: makeSeverityToken(STATUS_INFO),         // blue
+  // ── domain aliases (same hue as a canonical band) ──
+  warning: makeSeverityToken(STATUS_WARNING),  // amber  → medium
+  info: makeSeverityToken(STATUS_INFO),        // blue   → low
+  positive: makeSeverityToken(STATUS_SUCCESS), // green
+  major: makeSeverityToken(STATUS_BLOCKER),    // orange → high
+  minor: makeSeverityToken(STATUS_INFO),       // blue   → low
+} as const;
+
+export type SeverityLevel = keyof typeof SEVERITY_TOKENS;
+
+/**
+ * Map a 0-100 health/compliance score to a severity-band token: high score =
+ * healthy (green), low = critical (red). Used by GDD compliance scores and the
+ * quality dashboards so the same number always maps to the same band color.
+ */
+export function scoreBandToken(score: number): SeverityToken {
+  if (score >= 80) return SEVERITY_TOKENS.positive;
+  if (score >= 60) return SEVERITY_TOKENS.medium;
+  if (score >= 40) return SEVERITY_TOKENS.high;
+  return SEVERITY_TOKENS.critical;
+}
+
 // ── Neutral base colors ──────────────────────────────────────────────────────
 
 /** Slate-500 — subdued text, secondary labels */
@@ -345,6 +430,18 @@ export const STATUS_LOCKED_STROKE = '#334155';
 export const HEATMAP_HIGH = HEATMAP_STEP_5;
 export const HEATMAP_MID = HEATMAP_STEP_3;
 export const HEATMAP_LOW = HEATMAP_STEP_1;
+
+// ── Quality heatmap surfaces (dark score-band cell fills) ──────────────────
+
+/** Deep red — lowest-quality heatmap cell background. */
+export const QUALITY_HEATMAP_LOW = HEATMAP_STEP_1; // '#7f1d1d'
+/** Amber-900 — mid-quality heatmap cell background. */
+export const QUALITY_HEATMAP_MID = '#78350f';
+/** Green-900 — highest-quality heatmap cell background. */
+export const QUALITY_HEATMAP_HIGH = '#14532d';
+
+/** Dark slate — unfilled star / inactive rating indicator. */
+export const RATING_EMPTY = '#2a2a4a';
 
 // ── Item rarity colors ─────────────────────────────────────────────────
 
@@ -389,6 +486,53 @@ export function statusToColor(status: string): { bg: string; text: string; borde
   const { color, label } = map[status] ?? { color: STATUS_ERROR, label: 'FAIL' };
   return { bg: statusBg(color), text: color, border: statusBorder(color), label };
 }
+
+// ── Plan / DAG canvas surfaces ─────────────────────────────────────────────
+
+/** Base surface for DAG node cards / cluster backgrounds. */
+export const SURFACE_DAG_NODE = '#161626';
+/** Ready-to-use DAG node fill at ~85% alpha (set as `backgroundColor`). */
+export const SURFACE_DAG_NODE_FILL = `${SURFACE_DAG_NODE}d9`;
+
+/** Base hover surface for DAG node cards. */
+export const SURFACE_DAG_NODE_HOVER = '#1e1e2d';
+/** Ready-to-use DAG node hover fill at ~95% alpha. */
+export const SURFACE_DAG_NODE_HOVER_FILL = `${SURFACE_DAG_NODE_HOVER}f2`;
+
+/** Filtered-out cluster background (heavily dimmed canvas zone). */
+export const SURFACE_DAG_CLUSTER_DIM = '#0f0f19';
+/** Ready-to-use filtered cluster fill at ~15% alpha. */
+export const SURFACE_DAG_CLUSTER_DIM_FILL = `${SURFACE_DAG_CLUSTER_DIM}26`;
+
+/** Minimap cluster fill base. */
+export const SURFACE_MINIMAP_CLUSTER = '#323246';
+/** Minimap cluster fill at 50% alpha. */
+export const SURFACE_MINIMAP_CLUSTER_FILL = `${SURFACE_MINIMAP_CLUSTER}80`;
+
+/** Neutral cool-gray border tint for DAG canvas overlays (rgba(100,100,130,…)). */
+export const BORDER_DAG_NEUTRAL = '#646482';
+
+// ── Roadmap checklist state surfaces ───────────────────────────────────────
+
+/** Card background for items in partial-verification state (warm dark amber). */
+export const STATE_PARTIAL_BG = '#1a1700';
+/** Card border for items in partial-verification state. */
+export const STATE_PARTIAL_BORDER = '#3a3000';
+
+/** Card background for completed/done items (deep green). */
+export const STATE_DONE_BG = '#0d1a0d';
+/** Card border for completed/done items. */
+export const STATE_DONE_BORDER = '#1a3a1a';
+
+/** Card background for currently-active (CLI running) item (deep blue). */
+export const STATE_ACTIVE_BG = '#111130';
+/** Card border for currently-active item. */
+export const STATE_ACTIVE_BORDER = '#2e2e6a';
+
+/** Default border for unchecked checkbox controls (cool-gray indigo). */
+export const CHECKBOX_BORDER = '#3e3e6a';
+/** Hover border for unchecked checkbox controls. */
+export const CHECKBOX_BORDER_HOVER = '#5e5e8a';
 
 // ── Health score thresholds ─────────────────────────────────────────────────
 

@@ -26,6 +26,52 @@ describe('AdvancedTexturePanel — Scenario PBR tile', () => {
   });
 });
 
+describe('AdvancedTexturePanel — seam check', () => {
+  const seamData = {
+    albedoUrl: 'a.png',
+    seam: {
+      horizontal: { axis: 'left', delta: 0.3, seam: true },
+      vertical: { axis: 'top', delta: 0.01, seam: false },
+      hasSeam: true,
+      threshold: 0.08,
+      worstEdge: 'left edge',
+    },
+  };
+
+  it('renders a seam warning badge + reroll button when the albedo has a seam', async () => {
+    mockFetch({ body: { success: true, data: seamData } });
+    render(<AdvancedTexturePanel />);
+    fireEvent.change(screen.getByTestId('scenario-prompt'), { target: { value: 'dungeon stone' } });
+    fireEvent.click(screen.getByTestId('scenario-generate'));
+
+    await waitFor(() => expect(screen.getByTestId('scenario-seam-badge')).toBeTruthy());
+    expect(screen.getByTestId('scenario-seam-badge').textContent).toMatch(/left edge/i);
+    expect(screen.getByTestId('scenario-reroll')).toBeTruthy();
+  });
+
+  it('does not render the seam badge for a clean tile', async () => {
+    mockFetch({ body: { success: true, data: { albedoUrl: 'a.png', seam: { ...seamData.seam, hasSeam: false, worstEdge: undefined } } } });
+    render(<AdvancedTexturePanel />);
+    fireEvent.click(screen.getByTestId('scenario-generate'));
+
+    await waitFor(() => expect(screen.getByTestId('pbr-albedo')).toBeTruthy());
+    expect(screen.queryByTestId('scenario-seam-badge')).toBeNull();
+  });
+
+  it('reroll re-posts to /api/scenario', async () => {
+    const fetchMock = mockFetch({ body: { success: true, data: seamData } });
+    render(<AdvancedTexturePanel />);
+    fireEvent.change(screen.getByTestId('scenario-prompt'), { target: { value: 'dungeon stone' } });
+    fireEvent.click(screen.getByTestId('scenario-generate'));
+
+    await waitFor(() => expect(screen.getByTestId('scenario-reroll')).toBeTruthy());
+    fireEvent.click(screen.getByTestId('scenario-reroll'));
+
+    await waitFor(() => expect(fetchMock.mock.calls.length).toBeGreaterThanOrEqual(2));
+    expect(fetchMock.mock.calls[1][0]).toBe('/api/scenario');
+  });
+});
+
 describe('AdvancedTexturePanel — Upscaler tile', () => {
   it('posts mode=upscale with the image id + style and shows the job id', async () => {
     const fetchMock = mockFetch({ body: { success: true, data: { upscaleJobId: 'up-1' } } });

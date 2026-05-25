@@ -1,4 +1,4 @@
-import type { ChatMessage, ChatStore, MessageRole, ToolCall } from './types';
+import type { ChatMessage, ChatStore, MessageRole, SuggestedCompose, ToolCall } from './types';
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -46,9 +46,29 @@ export function createChatStore(): ChatStore {
     return id;
   }
 
+  function addSuggestion(content: string, compose: SuggestedCompose): string {
+    const id = crypto.randomUUID();
+    const message: ChatMessage = {
+      id,
+      role: 'system',
+      content,
+      timestamp: Date.now(),
+      suggestedAction: { compose, status: 'pending' },
+    };
+    messages = [...messages, message];
+
+    // Trim oldest if over capacity
+    if (messages.length > MAX_MESSAGES) {
+      messages = messages.slice(messages.length - MAX_MESSAGES);
+    }
+
+    notify();
+    return id;
+  }
+
   function updateMessage(
     id: string,
-    updates: Partial<Pick<ChatMessage, 'content' | 'role' | 'isStreaming'>>
+    updates: Partial<Pick<ChatMessage, 'content' | 'role' | 'isStreaming' | 'suggestedAction'>>
   ): void {
     messages = messages.map((msg) =>
       msg.id === id ? { ...msg, ...updates } : msg
@@ -170,6 +190,7 @@ export function createChatStore(): ChatStore {
       return messages;
     },
     addMessage,
+    addSuggestion,
     updateMessage,
     appendContent,
     removeMessage,

@@ -29,6 +29,31 @@ describe('createChatStore', () => {
     expect(msgs[0].timestamp).toBeLessThanOrEqual(after);
   });
 
+  it('addSuggestion adds a pending system message carrying the compose payload', () => {
+    const store = makeStore();
+    const compose = {
+      action: 'replace' as const,
+      panels: [{ type: 'arpg-combat-core', role: 'primary' }],
+      layout: 'split-2' as const,
+    };
+    const id = store.addSuggestion('Try the combat overview', compose);
+
+    const msg = store.messages[0];
+    expect(msg.id).toBe(id);
+    expect(msg.role).toBe('system');
+    expect(msg.content).toBe('Try the combat overview');
+    expect(msg.suggestedAction).toEqual({ compose, status: 'pending' });
+  });
+
+  it('updateMessage can transition a suggestion to applied', () => {
+    const store = makeStore();
+    const id = store.addSuggestion('Suggestion', { action: 'clear', panels: [] });
+    const action = store.messages[0].suggestedAction!;
+    store.updateMessage(id, { suggestedAction: { ...action, status: 'applied' } });
+
+    expect(store.messages[0].suggestedAction?.status).toBe('applied');
+  });
+
   it('updateMessage modifies specified message fields', () => {
     const store = makeStore();
     const id = store.addMessage('user', 'Draft');

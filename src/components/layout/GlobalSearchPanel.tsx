@@ -171,6 +171,7 @@ export function GlobalSearchPanel() {
             key="search-panel"
             {...panelMotion}
             className="relative w-full max-w-xl bg-surface border border-border rounded-xl shadow-2xl overflow-hidden"
+            style={{ ['--focus-accent' as string]: 'var(--setup)' }}
             onClick={(e) => e.stopPropagation()}
           >
             {/* Search input */}
@@ -193,7 +194,8 @@ export function GlobalSearchPanel() {
               </kbd>
               <button
                 onClick={() => setOpen(false)}
-                className="p-0.5 rounded text-text-muted hover:text-text transition-colors"
+                aria-label="Close search"
+                className="p-0.5 rounded text-text-muted hover:text-text transition-colors focus-ring"
               >
                 <X className="w-4 h-4" />
               </button>
@@ -322,7 +324,7 @@ function SearchResultRow({
       data-index={index}
       onClick={() => onSelect(result)}
       onMouseEnter={() => onHover(index)}
-      className={`w-full flex items-start gap-3 px-4 py-2.5 text-left transition-colors ${
+      className={`w-full flex items-start gap-3 px-4 py-2.5 text-left transition-colors focus-ring-inset ${
         active ? 'bg-surface-hover' : 'hover:bg-surface-hover/50'
       }`}
     >

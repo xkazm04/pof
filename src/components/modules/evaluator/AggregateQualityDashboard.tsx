@@ -20,7 +20,11 @@ import { MODULE_LABELS } from '@/lib/module-registry';
 import { apiFetch } from '@/lib/api-utils';
 import { SurfaceCard } from '@/components/ui/SurfaceCard';
 import { KPICard } from '@/components/ui/KPICard';
-import { STATUS_SUCCESS, STATUS_WARNING, STATUS_ERROR, STATUS_STALE, MODULE_COLORS } from '@/lib/chart-colors';
+import {
+  STATUS_SUCCESS, STATUS_WARNING, STATUS_ERROR, STATUS_STALE, MODULE_COLORS,
+  QUALITY_HEATMAP_LOW, QUALITY_HEATMAP_MID, QUALITY_HEATMAP_HIGH, RATING_EMPTY,
+  statusBg, statusBorder,
+} from '@/lib/chart-colors';
 import type { SubModuleId } from '@/types/modules';
 import { MOTION } from '@/lib/constants';
 import { HorizontalGridLines } from '@/components/ui/svg/ChartAxes';
@@ -37,11 +41,11 @@ function qualityToColor(avgQuality: number | null, pctReviewed: number): string 
   if (t < 0.5) {
     // red → amber
     const s = t / 0.5;
-    return lerpColor('#7f1d1d', '#78350f', s);
+    return lerpColor(QUALITY_HEATMAP_LOW, QUALITY_HEATMAP_MID, s);
   }
   // amber → green
   const s = (t - 0.5) / 0.5;
-  return lerpColor('#78350f', '#14532d', s);
+  return lerpColor(QUALITY_HEATMAP_MID, QUALITY_HEATMAP_HIGH, s);
 }
 
 function qualityToAccent(avgQuality: number | null, pctReviewed: number): string {
@@ -310,7 +314,7 @@ export function AggregateQualityDashboard({ staleDays = 7, onReviewModule, onBat
       <div>
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-2">
-            <Activity className="w-3.5 h-3.5 text-[#ef4444]" />
+            <Activity className="w-3.5 h-3.5" style={{ color: MODULE_COLORS.evaluator }} />
             <span className="text-xs font-semibold text-text-muted uppercase tracking-wider">
               Module Quality Heatmap
             </span>
@@ -319,15 +323,15 @@ export function AggregateQualityDashboard({ staleDays = 7, onReviewModule, onBat
             {/* Legend */}
             <div className="flex items-center gap-2 text-2xs text-text-muted">
               <span className="flex items-center gap-1">
-                <span className="w-2.5 h-2.5 rounded-sm" style={{ backgroundColor: '#7f1d1d' }} />
+                <span className="w-2.5 h-2.5 rounded-sm" style={{ backgroundColor: QUALITY_HEATMAP_LOW }} />
                 Low
               </span>
               <span className="flex items-center gap-1">
-                <span className="w-2.5 h-2.5 rounded-sm" style={{ backgroundColor: '#78350f' }} />
+                <span className="w-2.5 h-2.5 rounded-sm" style={{ backgroundColor: QUALITY_HEATMAP_MID }} />
                 Mid
               </span>
               <span className="flex items-center gap-1">
-                <span className="w-2.5 h-2.5 rounded-sm" style={{ backgroundColor: '#14532d' }} />
+                <span className="w-2.5 h-2.5 rounded-sm" style={{ backgroundColor: QUALITY_HEATMAP_HIGH }} />
                 High
               </span>
               <span className="flex items-center gap-1">
@@ -380,12 +384,12 @@ export function AggregateQualityDashboard({ staleDays = 7, onReviewModule, onBat
                 <div className="absolute top-1.5 right-1.5 flex items-center gap-1">
                   {isWorst && (
                     <span title="Low quality">
-                      <AlertTriangle className="w-3 h-3 text-[#f87171]" />
+                      <AlertTriangle className="w-3 h-3" style={{ color: STATUS_ERROR }} />
                     </span>
                   )}
                   {isStale && (
                     <span title="Stale review">
-                      <Clock className="w-3 h-3 text-[#8b5cf6]" />
+                      <Clock className="w-3 h-3" style={{ color: STATUS_STALE }} />
                     </span>
                   )}
                 </div>
@@ -408,7 +412,7 @@ export function AggregateQualityDashboard({ staleDays = 7, onReviewModule, onBat
                               color:
                                 si < Math.round(cell.avgQuality!)
                                   ? accentColor
-                                  : '#2a2a4a',
+                                  : RATING_EMPTY,
                               fill:
                                 si < Math.round(cell.avgQuality!)
                                   ? accentColor
@@ -472,9 +476,9 @@ export function AggregateQualityDashboard({ staleDays = 7, onReviewModule, onBat
 
                 {/* Status counts */}
                 <div className="flex items-center gap-2 text-2xs">
-                  <span className="text-[#4ade80]">{cell.implemented}</span>
-                  <span className="text-[#fbbf24]">{cell.partial}</span>
-                  <span className="text-[#f87171]">{cell.missing}</span>
+                  <span style={{ color: STATUS_SUCCESS }}>{cell.implemented}</span>
+                  <span style={{ color: STATUS_WARNING }}>{cell.partial}</span>
+                  <span style={{ color: STATUS_ERROR }}>{cell.missing}</span>
                   <span className="text-text-muted ml-auto">
                     {cell.total} total
                   </span>
@@ -592,7 +596,7 @@ export function AggregateQualityDashboard({ staleDays = 7, onReviewModule, onBat
                                       selected.avgQuality,
                                       selected.pctReviewed,
                                     )
-                                  : '#2a2a4a',
+                                  : RATING_EMPTY,
                               fill:
                                 si < Math.round(selected.avgQuality!)
                                   ? qualityToAccent(
@@ -650,10 +654,10 @@ export function AggregateQualityDashboard({ staleDays = 7, onReviewModule, onBat
 
       {/* ── Worst quality modules ────────────────────────────────────────── */}
       {worstModules.length > 0 && (
-        <div className="bg-surface border border-[#f87171]/20 rounded-lg p-4">
+        <div className="bg-surface border rounded-lg p-4" style={{ borderColor: statusBorder(STATUS_ERROR) }}>
           <div className="flex items-center gap-2 mb-3">
-            <AlertTriangle className="w-3.5 h-3.5 text-[#f87171]" />
-            <span className="text-xs font-semibold text-[#f87171] uppercase tracking-wider">
+            <AlertTriangle className="w-3.5 h-3.5" style={{ color: STATUS_ERROR }} />
+            <span className="text-xs font-semibold uppercase tracking-wider" style={{ color: STATUS_ERROR }}>
               Needs Attention
             </span>
             <span className="text-2xs text-text-muted">
@@ -667,7 +671,7 @@ export function AggregateQualityDashboard({ staleDays = 7, onReviewModule, onBat
                 className="flex items-center gap-3 px-3 py-2 rounded-md hover:bg-surface-hover transition-colors cursor-pointer"
                 onClick={() => setSelectedModule(m.moduleId)}
               >
-                <XCircle className="w-3.5 h-3.5 text-[#f87171] flex-shrink-0" />
+                <XCircle className="w-3.5 h-3.5 flex-shrink-0" style={{ color: STATUS_ERROR }} />
                 <span className="text-xs text-text font-medium flex-1">
                   {m.label}
                 </span>
@@ -677,13 +681,13 @@ export function AggregateQualityDashboard({ staleDays = 7, onReviewModule, onBat
                       key={i}
                       className="w-2.5 h-2.5"
                       style={{
-                        color: i < Math.round(m.avgQuality!) ? STATUS_ERROR : '#2a2a4a',
+                        color: i < Math.round(m.avgQuality!) ? STATUS_ERROR : RATING_EMPTY,
                         fill: i < Math.round(m.avgQuality!) ? STATUS_ERROR : 'none',
                       }}
                     />
                   ))}
                 </div>
-                <span className="text-xs text-[#f87171] font-medium w-6 text-right">
+                <span className="text-xs font-medium w-6 text-right" style={{ color: STATUS_ERROR }}>
                   {m.avgQuality}
                 </span>
                 <span className="text-xs text-text-muted">
@@ -699,8 +703,8 @@ export function AggregateQualityDashboard({ staleDays = 7, onReviewModule, onBat
       <SurfaceCard className="p-4">
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-2">
-            <Clock className="w-3.5 h-3.5 text-[#8b5cf6]" />
-            <span className="text-xs font-semibold text-[#8b5cf6] uppercase tracking-wider">
+            <Clock className="w-3.5 h-3.5" style={{ color: STATUS_STALE }} />
+            <span className="text-xs font-semibold uppercase tracking-wider" style={{ color: STATUS_STALE }}>
               Stale Reviews
             </span>
           </div>
@@ -727,7 +731,7 @@ export function AggregateQualityDashboard({ staleDays = 7, onReviewModule, onBat
                   className="flex items-center gap-3 px-3 py-1.5 rounded-md hover:bg-surface-hover transition-colors cursor-pointer"
                   onClick={() => setSelectedModule(m.moduleId)}
                 >
-                  <Clock className="w-3 h-3 text-[#8b5cf6] flex-shrink-0" />
+                  <Clock className="w-3 h-3 flex-shrink-0" style={{ color: STATUS_STALE }} />
                   <span className="text-xs text-text flex-1">{m.label}</span>
                   <span className="text-xs text-text-muted">
                     {m.lastReviewedAt
@@ -741,7 +745,8 @@ export function AggregateQualityDashboard({ staleDays = 7, onReviewModule, onBat
               <button
                 onClick={handleBatchReview}
                 disabled={isBatchReviewing}
-                className="flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-medium transition-all disabled:opacity-50 bg-[#8b5cf6]/10 text-[#8b5cf6] border border-[#8b5cf6]/20 hover:bg-[#8b5cf6]/20"
+                className="flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-medium transition-all disabled:opacity-50 hover:brightness-125"
+                style={{ backgroundColor: statusBg(STATUS_STALE), color: STATUS_STALE, border: `1px solid ${statusBorder(STATUS_STALE)}` }}
               >
                 {isBatchReviewing ? (
                   <>
@@ -759,8 +764,8 @@ export function AggregateQualityDashboard({ staleDays = 7, onReviewModule, onBat
           </>
         ) : (
           <div className="flex items-center gap-2 px-3 py-3">
-            <CheckCircle2 className="w-4 h-4 text-[#4ade80]" />
-            <span className="text-xs text-[#4ade80]">
+            <CheckCircle2 className="w-4 h-4" style={{ color: STATUS_SUCCESS }} />
+            <span className="text-xs" style={{ color: STATUS_SUCCESS }}>
               All modules reviewed within {customStaleDays} days
             </span>
           </div>

@@ -128,6 +128,11 @@ export type {
   CompositionSummary,
   SlashCommand,
   ChatStore,
+  SuggestedComposeAction,
+  SuggestedPanel,
+  SuggestedCompose,
+  SuggestedActionStatus,
+  SuggestedAction,
 } from './chat';
 
 // Intent

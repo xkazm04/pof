@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
-import type { Highlighter } from 'shiki';
+import { getCachedHighlight, highlight } from '@/lib/shiki-highlighter';
 
 // --- Fenced code block parser ---
 
@@ -48,87 +48,21 @@ export function parseCodeBlocks(content: string): ContentSegment[] | null {
   return segments;
 }
 
-// --- Shiki singleton (lazy) ---
-
-const SUPPORTED_LANGS = ['cpp', 'c', 'python', 'json', 'javascript', 'typescript', 'ini', 'yaml', 'bash', 'text'] as const;
-
-const LANG_ALIASES: Record<string, string> = {
-  'c++': 'cpp',
-  'h': 'cpp',
-  'hpp': 'cpp',
-  'py': 'python',
-  'js': 'javascript',
-  'ts': 'typescript',
-  'sh': 'bash',
-  'shell': 'bash',
-  'zsh': 'bash',
-  'cmd': 'bash',
-  'powershell': 'bash',
-  'yml': 'yaml',
-  'toml': 'ini',
-  'cfg': 'ini',
-  'txt': 'text',
-  'plaintext': 'text',
-  'log': 'text',
-  '': 'text',
-};
-
-let highlighterPromise: Promise<Highlighter> | null = null;
-
-function getHighlighter(): Promise<Highlighter> {
-  if (!highlighterPromise) {
-    highlighterPromise = import('shiki').then((mod) =>
-      mod.createHighlighter({
-        themes: ['vitesse-dark'],
-        langs: [...SUPPORTED_LANGS],
-      })
-    );
-  }
-  return highlighterPromise;
-}
-
-function resolveLang(lang: string): string {
-  const lower = lang.toLowerCase();
-  return LANG_ALIASES[lower] ?? (SUPPORTED_LANGS as readonly string[]).includes(lower) ? lower : 'text';
-}
-
-// --- Highlight cache ---
-
-const highlightCache = new Map<string, string>();
-const CACHE_LIMIT = 200;
-
-function getCacheKey(code: string, lang: string): string {
-  return `${lang}::${code}`;
-}
-
 // --- React component ---
 
 export function HighlightedCodeBlock({ code, lang }: { code: string; lang: string }) {
-  const resolved = resolveLang(lang);
-  const cacheKey = getCacheKey(code, resolved);
-  const [html, setHtml] = useState<string | null>(() => highlightCache.get(cacheKey) ?? null);
+  const [html, setHtml] = useState<string | null>(() => getCachedHighlight(code, lang));
 
   useEffect(() => {
     if (html !== null) return;
 
     let cancelled = false;
-    getHighlighter().then((hl) => {
-      if (cancelled) return;
-      const result = hl.codeToHtml(code, {
-        lang: resolved,
-        theme: 'vitesse-dark',
-      });
-      if (highlightCache.size >= CACHE_LIMIT) {
-        // Evict oldest entry
-        const firstKey = highlightCache.keys().next().value;
-        if (firstKey !== undefined) highlightCache.delete(firstKey);
-      }
-      highlightCache.set(cacheKey, result);
-      setHtml(result);
+    highlight(code, lang).then((result) => {
+      if (!cancelled) setHtml(result);
     });
 
     return () => { cancelled = true; };
-  }, [code, resolved, cacheKey, html]);
+  }, [code, lang, html]);
 
   if (html === null) {
     // Fallback: monospace pre while shiki loads

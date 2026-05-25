@@ -33,17 +33,19 @@ import { useProjectStore } from '@/stores/projectStore';
 import { useModuleCLI } from '@/hooks/useModuleCLI';
 import { MOTION } from '@/lib/constants';
 import { SurfaceCard } from '@/components/ui/SurfaceCard';
-import { MODULE_COLORS, STATUS_SUCCESS, STATUS_ERROR, STATUS_BLOCKER, STATUS_WARNING, OPACITY_8, statusBg, statusBorder } from '@/lib/chart-colors';
+import { MODULE_COLORS, STATUS_SUCCESS, STATUS_ERROR, STATUS_WARNING, STATUS_INFO, SEVERITY_TOKENS, statusBorder, type SeverityToken } from '@/lib/chart-colors';
 
 // ─── Constants ───────────────────────────────────────────────────────────────
 
 const EVAL_ACCENT = MODULE_COLORS.evaluator;
 
-const SEVERITY_CONFIG: Record<FindingSeverity, { label: string; color: string; bg: string; icon: typeof AlertOctagon }> = {
-  critical: { label: 'Critical', color: STATUS_ERROR, bg: `${STATUS_ERROR}${OPACITY_8}`, icon: AlertOctagon },
-  high: { label: 'High', color: STATUS_BLOCKER, bg: `${STATUS_BLOCKER}${OPACITY_8}`, icon: AlertTriangle },
-  medium: { label: 'Medium', color: STATUS_WARNING, bg: `${STATUS_WARNING}${OPACITY_8}`, icon: Info },
-  low: { label: 'Low', color: 'var(--text-muted)', bg: 'var(--text-muted)12', icon: Info },
+// Severity colors come from the shared SEVERITY_TOKENS map so a critical
+// finding looks identical here, in GDD Compliance, and in the Archeologist.
+const SEVERITY_CONFIG: Record<FindingSeverity, SeverityToken & { label: string; icon: typeof AlertOctagon }> = {
+  critical: { label: 'Critical', icon: AlertOctagon, ...SEVERITY_TOKENS.critical },
+  high: { label: 'High', icon: AlertTriangle, ...SEVERITY_TOKENS.high },
+  medium: { label: 'Medium', icon: Info, ...SEVERITY_TOKENS.medium },
+  low: { label: 'Low', icon: Info, ...SEVERITY_TOKENS.low },
 };
 
 const EFFORT_LABELS: Record<string, string> = {
@@ -55,9 +57,9 @@ const EFFORT_LABELS: Record<string, string> = {
 
 const PASS_STATUS_ICONS = {
   pending: <span className="w-2 h-2 rounded-full bg-border-bright" />,
-  running: <Loader2 className="w-3 h-3 animate-spin text-[#fbbf24]" />,
-  done: <Check className="w-3 h-3 text-[#4ade80]" />,
-  error: <X className="w-3 h-3 text-[#f87171]" />,
+  running: <Loader2 className="w-3 h-3 animate-spin" style={{ color: STATUS_WARNING }} />,
+  done: <Check className="w-3 h-3" style={{ color: STATUS_SUCCESS }} />,
+  error: <X className="w-3 h-3" style={{ color: STATUS_ERROR }} />,
   skipped: <span className="w-2 h-2 rounded-full bg-border" />,
 };
 
@@ -195,7 +197,7 @@ export function DeepEvalResults() {
       <div className="flex items-center gap-3">
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 mb-1">
-            <ScanSearch className="w-4 h-4 text-[#ef4444]" />
+            <ScanSearch className="w-4 h-4" style={{ color: EVAL_ACCENT }} />
             <h3 className="text-sm font-semibold text-text">Deep Module Evaluation</h3>
           </div>
           <p className="text-xs text-text-muted">
@@ -217,7 +219,12 @@ export function DeepEvalResults() {
           {isRunning ? (
             <button
               onClick={handleCancel}
-              className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-medium transition-all bg-[${statusBg(STATUS_ERROR)}] text-[${STATUS_ERROR}] border border-[${statusBorder(STATUS_ERROR, 0.12)}] hover:bg-[${statusBg(STATUS_ERROR, 0.12)}]`}
+              className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-medium transition-all hover:brightness-125"
+              style={{
+                backgroundColor: SEVERITY_TOKENS.critical.bg,
+                color: SEVERITY_TOKENS.critical.color,
+                border: `1px solid ${SEVERITY_TOKENS.critical.border}`,
+              }}
             >
               <Square className="w-3.5 h-3.5" />
               Cancel
@@ -259,7 +266,8 @@ export function DeepEvalResults() {
                 <div className="flex items-center gap-2">
                   <button
                     onClick={() => setSelectedModuleIds(new Set(getEvaluableModuleIds()))}
-                    className="text-2xs text-[#60a5fa] hover:text-[#93bbfd] transition-colors"
+                    className="text-2xs transition-colors hover:brightness-125"
+                    style={{ color: STATUS_INFO }}
                   >
                     Select all
                   </button>
@@ -286,8 +294,9 @@ export function DeepEvalResults() {
                     >
                       <span
                         className={`w-2.5 h-2.5 rounded-sm border transition-colors ${
-                          selected ? 'bg-[#ef4444] border-[#ef4444]' : 'border-border-bright'
+                          selected ? '' : 'border-border-bright'
                         }`}
+                        style={selected ? { backgroundColor: EVAL_ACCENT, borderColor: EVAL_ACCENT } : undefined}
                       />
                       {MODULE_LABELS[id] ?? id}
                     </button>
@@ -311,7 +320,7 @@ export function DeepEvalResults() {
           <SurfaceCard className="p-4">
             <div className="flex items-center gap-4">
               <div className="flex items-center gap-2">
-                <ScanSearch className="w-4 h-4 text-[#ef4444]" />
+                <ScanSearch className="w-4 h-4" style={{ color: EVAL_ACCENT }} />
                 <span data-testid="pof-module-evaluator-result-findings-count" className="text-xs font-semibold text-text">
                   {result.findings.totalFindings} findings
                 </span>
@@ -361,8 +370,8 @@ export function DeepEvalResults() {
 
           {/* Empty results */}
           {result.findings.totalFindings === 0 && (
-            <div className={`bg-surface border border-[${statusBorder(STATUS_SUCCESS, 0.12)}] rounded-lg p-8 text-center`}>
-              <Check className="w-8 h-8 mx-auto text-[#4ade80] mb-3" />
+            <div className="bg-surface border rounded-lg p-8 text-center" style={{ borderColor: statusBorder(STATUS_SUCCESS, 0.12) }}>
+              <Check className="w-8 h-8 mx-auto mb-3" style={{ color: STATUS_SUCCESS }} />
               <h3 className="text-sm font-semibold text-text mb-1">No Issues Found</h3>
               <p className="text-xs text-text-muted">
                 All evaluated modules passed the deep analysis checks.
@@ -401,7 +410,7 @@ function ProgressPanel({ progress }: { progress: EvalProgress }) {
     >
       {/* Progress bar */}
       <div className="flex items-center gap-3 mb-3">
-        <Loader2 className="w-4 h-4 animate-spin text-[#fbbf24]" />
+        <Loader2 className="w-4 h-4 animate-spin" style={{ color: STATUS_WARNING }} />
         <div className="flex-1">
           <div className="flex items-center justify-between mb-1">
             <span className="text-xs font-medium text-text">
@@ -415,7 +424,8 @@ function ProgressPanel({ progress }: { progress: EvalProgress }) {
           </div>
           <div className="h-1.5 bg-border rounded-full overflow-hidden">
             <motion.div
-              className="h-full rounded-full bg-[#ef4444]"
+              className="h-full rounded-full"
+              style={{ backgroundColor: EVAL_ACCENT }}
               animate={{ width: `${pct}%` }}
               transition={{ duration: MOTION.base }}
             />
@@ -648,7 +658,7 @@ function FindingRow({
   return (
     <div
       className="rounded-md border px-3 py-2.5 transition-colors"
-      style={{ backgroundColor: cfg.bg, borderColor: `${cfg.color}15` }}
+      style={{ backgroundColor: cfg.bg, borderColor: cfg.border }}
     >
       <div className="flex items-start gap-2.5">
         <SeverityIcon className="w-3.5 h-3.5 flex-shrink-0 mt-0.5" style={{ color: cfg.color }} />
@@ -685,7 +695,7 @@ function FindingRow({
           <div className="flex items-center gap-2">
             <span
               className="text-2xs font-bold uppercase tracking-wider px-1.5 py-0.5 rounded"
-              style={{ color: cfg.color, backgroundColor: `${cfg.color}15` }}
+              style={{ color: cfg.color, backgroundColor: cfg.bg }}
             >
               {cfg.label}
             </span>

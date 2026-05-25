@@ -180,13 +180,16 @@ function parseVariable(raw: RawVariable): BlueprintVariable {
   const varType = typeof raw.VarType === 'string'
     ? raw.VarType
     : raw.VarType?.PinCategory ?? 'unknown';
+  const isRepNotify = flags.includes('CPF_RepNotify') || flags.includes('RepNotify');
   return {
     name: raw.VarName ?? 'unnamed',
     type: varType,
     category: raw.Category || undefined,
     defaultValue: raw.DefaultValue || undefined,
     isExposedToEditor: flags.includes('CPF_Edit') || flags.includes('EditAnywhere'),
-    isReplicated: flags.includes('CPF_Net') || flags.includes('Replicated'),
+    // RepNotify properties are inherently replicated even if CPF_Net isn't listed separately.
+    isReplicated: isRepNotify || flags.includes('CPF_Net') || flags.includes('Replicated'),
+    isRepNotify,
     tooltip: raw.Tooltip || undefined,
   };
 }
@@ -246,7 +249,8 @@ export function summarizeBlueprintForPrompt(asset: BlueprintAsset): string {
     for (const v of asset.variables) {
       const flags: string[] = [];
       if (v.isExposedToEditor) flags.push('EditAnywhere');
-      if (v.isReplicated) flags.push('Replicated');
+      if (v.isRepNotify) flags.push('RepNotify');
+      else if (v.isReplicated) flags.push('Replicated');
       const flagStr = flags.length ? ` [${flags.join(', ')}]` : '';
       lines.push(`- ${v.name}: ${v.type}${flagStr}${v.defaultValue ? ` = ${v.defaultValue}` : ''}`);
     }

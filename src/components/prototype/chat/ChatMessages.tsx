@@ -2,7 +2,9 @@
 
 import React, { useEffect, useRef } from 'react';
 import Markdown from 'markdown-to-jsx';
+import { Check, Sparkles, X } from 'lucide-react';
 import type { ChatMessage } from '@/lib/dzin/core/chat';
+import { summarizeSuggestion } from '@/lib/dzin/advisor/suggestionActions';
 
 function relativeTime(timestamp: number): string {
   const delta = Math.floor((Date.now() - timestamp) / 1000);
@@ -32,8 +34,89 @@ const markdownOverrides = {
   },
 };
 
+/* ── Suggestion card ──────────────────────────────────────────────────── */
+
+function SuggestionCard({
+  message,
+  onApply,
+  onDismiss,
+}: {
+  message: ChatMessage;
+  onApply?: (message: ChatMessage) => void;
+  onDismiss?: (message: ChatMessage) => void;
+}) {
+  const suggestion = message.suggestedAction!;
+  const { status, compose } = suggestion;
+
+  return (
+    <div className="px-4 py-3">
+      <div className="flex items-center gap-2 mb-1">
+        <Sparkles size={12} className="text-blue-400" />
+        <span className="text-xs font-semibold text-blue-400">Suggestion</span>
+        <span className="text-xs text-text-muted">{relativeTime(message.timestamp)}</span>
+      </div>
+
+      <div className="rounded-lg border border-blue-500/30 bg-blue-500/5 p-3">
+        <p className="text-sm text-text leading-relaxed whitespace-pre-wrap">{message.content}</p>
+        <p className="mt-1.5 text-xs text-text-muted">{summarizeSuggestion(compose)}</p>
+
+        {status === 'pending' ? (
+          <div className="mt-3 flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => onApply?.(message)}
+              className="flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium rounded-md bg-blue-600 text-white hover:bg-blue-500 transition-colors cursor-pointer"
+              aria-label="Apply suggestion"
+            >
+              <Check size={12} /> Apply
+            </button>
+            <button
+              type="button"
+              onClick={() => onDismiss?.(message)}
+              className="flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium rounded-md border border-border text-text-muted hover:text-text hover:border-border/80 transition-colors cursor-pointer"
+              aria-label="Dismiss suggestion"
+            >
+              <X size={12} /> Dismiss
+            </button>
+          </div>
+        ) : (
+          <div className="mt-3 flex items-center gap-1.5 text-xs">
+            {status === 'applied' ? (
+              <span className="flex items-center gap-1 text-green-400">
+                <Check size={12} /> Applied
+              </span>
+            ) : (
+              <span className="text-text-muted">Dismissed</span>
+            )}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+/* ── Message item ─────────────────────────────────────────────────────── */
+
 const MessageItem = React.memo(
-  function MessageItem({ message }: { message: ChatMessage }) {
+  function MessageItem({
+    message,
+    onApplySuggestion,
+    onDismissSuggestion,
+  }: {
+    message: ChatMessage;
+    onApplySuggestion?: (message: ChatMessage) => void;
+    onDismissSuggestion?: (message: ChatMessage) => void;
+  }) {
+    if (message.suggestedAction) {
+      return (
+        <SuggestionCard
+          message={message}
+          onApply={onApplySuggestion}
+          onDismiss={onDismissSuggestion}
+        />
+      );
+    }
+
     const isUser = message.role === 'user';
     const isSystem = message.role === 'system';
     const label = isUser ? 'You' : isSystem ? 'System' : 'Dzin';
@@ -58,16 +141,28 @@ const MessageItem = React.memo(
     );
   },
   (prev, next) => {
-    if (prev.message.id === next.message.id && !prev.message.isStreaming && !next.message.isStreaming && prev.message.content === next.message.content) return true;
+    // Handlers are intentionally excluded: they close over a stable engine
+    // reference and read live state, so a memoized stale closure stays correct.
+    if (
+      prev.message.id === next.message.id &&
+      !prev.message.isStreaming &&
+      !next.message.isStreaming &&
+      prev.message.content === next.message.content &&
+      prev.message.suggestedAction?.status === next.message.suggestedAction?.status
+    ) {
+      return true;
+    }
     return false;
   },
 );
 
 interface ChatMessagesProps {
   messages: ChatMessage[];
+  onApplySuggestion?: (message: ChatMessage) => void;
+  onDismissSuggestion?: (message: ChatMessage) => void;
 }
 
-export function ChatMessages({ messages }: ChatMessagesProps) {
+export function ChatMessages({ messages, onApplySuggestion, onDismissSuggestion }: ChatMessagesProps) {
   const bottomRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -81,7 +176,14 @@ export function ChatMessages({ messages }: ChatMessagesProps) {
           Ask Dzin to compose your workspace...
         </div>
       )}
-      {messages.map((msg) => <MessageItem key={msg.id} message={msg} />)}
+      {messages.map((msg) => (
+        <MessageItem
+          key={msg.id}
+          message={msg}
+          onApplySuggestion={onApplySuggestion}
+          onDismissSuggestion={onDismissSuggestion}
+        />
+      ))}
       <div ref={bottomRef} />
     </div>
   );

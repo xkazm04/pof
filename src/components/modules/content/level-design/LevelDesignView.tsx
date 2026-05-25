@@ -1,12 +1,14 @@
 'use client';
 import { getModuleChecklist } from '@/lib/module-registry';
 
-import { useState, useCallback, useEffect, useRef } from 'react';
+import { useState, useCallback, useEffect, useMemo, useRef } from 'react';
 import { toast } from 'sonner';
 import {
   Map, Plus, Trash2, FileText, Loader2,
   Zap, BookOpen, GitCompare, BarChart3, Layers, Grid3X3, Eye, ListChecks, Boxes, Trees,
+  ShieldAlert, Check, ArrowUp, ArrowDown, AlertTriangle, Circle,
 } from 'lucide-react';
+import type { LucideIcon } from 'lucide-react';
 import { useDesignDocument } from '@/hooks/useDesignDocument';
 import { FetchError } from '../../shared/FetchError';
 import { useModuleCLI } from '@/hooks/useModuleCLI';
@@ -23,6 +25,8 @@ import { LevelFlowEditor } from './LevelFlowEditor';
 import { RoomDetailPanel } from './RoomDetailPanel';
 import { SyncStatusPanel } from './SyncStatusPanel';
 import { DifficultyArcChart } from './DifficultyArcChart';
+import { PacingReportPanel } from './PacingReportPanel';
+import { lintLevelPacing } from '@/lib/level-design/pacing-linter';
 import { LevelDesignSpatialDiagram } from './LevelDesignSpatialDiagram';
 import { StreamingZonePlanner } from './StreamingZonePlanner';
 import { ProceduralLevelWizard } from './ProceduralLevelWizard';
@@ -36,13 +40,13 @@ import {
   buildStreamingZonePrompt,
   buildProceduralLevelPrompt,
 } from '@/lib/prompts/level-design';
-import type { RoomNode, SyncDivergence, LevelDesignDocument } from '@/types/level-design';
+import type { RoomNode, SyncDivergence, LevelDesignDocument, SyncStatus } from '@/types/level-design';
 import type { StreamingZonePlannerConfig } from './StreamingZonePlanner';
 import type { ProceduralLevelConfig } from './ProceduralLevelWizard';
 import { MODULE_COLORS, getAppOrigin } from '@/lib/constants';
 import { STATUS_SUCCESS, STATUS_ERROR, STATUS_WARNING, STATUS_INFO } from '@/lib/chart-colors';
 
-type TabId = 'overview' | 'roadmap' | 'flow' | 'procgen' | 'narrative' | 'sync' | 'arc' | 'streaming' | 'dungeon-ue' | 'scatter-ue';
+type TabId = 'overview' | 'roadmap' | 'flow' | 'procgen' | 'narrative' | 'sync' | 'arc' | 'pacing' | 'streaming' | 'dungeon-ue' | 'scatter-ue';
 
 export function LevelDesignView() {
   const {
@@ -322,6 +326,11 @@ export function LevelDesignView() {
   const selectedRoom = activeDoc?.rooms.find((r) => r.id === selectedRoomId) ?? null;
   const isAnyRunning = codegenCli.isRunning || syncCli.isRunning;
 
+  const pacingLint = useMemo(
+    () => (activeDoc ? lintLevelPacing(activeDoc) : null),
+    [activeDoc],
+  );
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-full">
@@ -499,6 +508,20 @@ export function LevelDesignView() {
               <TabButton label="Narrative" icon={BookOpen} active={activeTab === 'narrative'} onClick={() => setActiveTab('narrative')} accent={MODULE_COLORS.content} />
               <TabButton label="Sync" icon={GitCompare} active={activeTab === 'sync'} onClick={() => setActiveTab('sync')} accent={MODULE_COLORS.content} />
               <TabButton label="Difficulty" icon={BarChart3} active={activeTab === 'arc'} onClick={() => setActiveTab('arc')} accent={MODULE_COLORS.content} />
+              <TabButton
+                label="Pacing"
+                icon={ShieldAlert}
+                active={activeTab === 'pacing'}
+                onClick={() => setActiveTab('pacing')}
+                accent={MODULE_COLORS.content}
+                badgeCount={pacingLint?.findings.length ?? 0}
+                badgeColor={
+                  (pacingLint?.counts.critical ?? 0) > 0 ? STATUS_ERROR
+                  : (pacingLint?.counts.warning ?? 0) > 0 ? STATUS_WARNING
+                  : (pacingLint?.findings.length ?? 0) > 0 ? STATUS_INFO
+                  : undefined
+                }
+              />
             </ScrollableTabBar>
 
             {/* Tab content */}
@@ -548,6 +571,7 @@ export function LevelDesignView() {
                       onSelectRoom={setSelectedRoomId}
                       selectedRoomId={selectedRoomId}
                       accentColor={MODULE_COLORS.content}
+                      findingsByRoom={pacingLint?.byRoom}
                     />
                   </div>
 
@@ -671,6 +695,24 @@ export function LevelDesignView() {
                     onReconcile={handleReconcile}
                     isChecking={syncCli.isRunning}
                     accentColor={MODULE_COLORS.content}
+                  />
+                </div>
+              )}
+
+              {activeTab === 'pacing' && (
+                <div className="overflow-y-auto p-5">
+                  <div className="mb-4">
+                    <h3 className="text-xs font-semibold text-text mb-1">Pacing & Difficulty Linter</h3>
+                    <p className="text-xs text-text-muted">
+                      Walks the level&apos;s difficulty arc, room types, and connections to flag pacing anti-patterns —
+                      consecutive combat rooms, difficulty cliffs, monotonic ramps, missing safe zones before bosses,
+                      and unreachable rooms.
+                    </p>
+                  </div>
+                  <PacingReportPanel
+                    doc={activeDoc}
+                    accentColor={MODULE_COLORS.content}
+                    onSelectRoom={(id) => { setSelectedRoomId(id); setActiveTab('flow'); }}
                   />
                 </div>
               )}
@@ -836,12 +878,16 @@ function TabButton({
   active,
   onClick,
   accent,
+  badgeCount,
+  badgeColor,
 }: {
   label: string;
   icon: typeof Map;
   active: boolean;
   onClick: () => void;
   accent: string;
+  badgeCount?: number;
+  badgeColor?: string;
 }) {
   return (
     <button
@@ -853,6 +899,18 @@ function TabButton({
     >
       <Icon className="w-3 h-3" />
       {label}
+      {badgeCount && badgeCount > 0 && badgeColor ? (
+        <span
+          className="ml-0.5 px-1.5 py-0.5 rounded-full text-2xs font-mono font-bold leading-none"
+          style={{
+            backgroundColor: `${badgeColor}20`,
+            color: badgeColor,
+            border: `1px solid ${badgeColor}40`,
+          }}
+        >
+          {badgeCount > 99 ? '99+' : badgeCount}
+        </span>
+      ) : null}
       {active && (
         <span
           className="absolute bottom-0 left-0 right-0 h-0.5 rounded-t"
@@ -863,19 +921,31 @@ function TabButton({
   );
 }
 
-function SyncDot({ status }: { status: string }) {
-  const colors: Record<string, string> = {
-    synced: STATUS_SUCCESS,
-    'doc-ahead': STATUS_WARNING,
-    'code-ahead': STATUS_INFO,
-    diverged: STATUS_ERROR,
-    unlinked: 'var(--text-muted)',
-  };
+/**
+ * Sync-status indicator. Communicates state with BOTH color and a glyph (not
+ * color alone) plus an accessible label, so color-blind and screen-reader users
+ * can distinguish synced / diverged docs. Colors come from the STATUS_* tokens.
+ */
+const SYNC_DISPLAY: Record<SyncStatus, { color: string; Icon: LucideIcon; label: string }> = {
+  synced: { color: STATUS_SUCCESS, Icon: Check, label: 'In sync' },
+  'doc-ahead': { color: STATUS_WARNING, Icon: ArrowUp, label: 'Doc ahead of code' },
+  'code-ahead': { color: STATUS_INFO, Icon: ArrowDown, label: 'Code ahead of doc' },
+  diverged: { color: STATUS_ERROR, Icon: AlertTriangle, label: 'Diverged' },
+  unlinked: { color: 'var(--text-muted)', Icon: Circle, label: 'Not linked' },
+};
+
+export function SyncDot({ status }: { status: SyncStatus }) {
+  const { color, Icon, label } = SYNC_DISPLAY[status] ?? SYNC_DISPLAY.unlinked;
   return (
     <span
-      className="w-1.5 h-1.5 rounded-full inline-block"
-      style={{ backgroundColor: colors[status] ?? 'var(--text-muted)' }}
-    />
+      role="img"
+      aria-label={`Sync status: ${label}`}
+      title={label}
+      className="inline-flex items-center"
+      style={{ color }}
+    >
+      <Icon className="w-3 h-3" aria-hidden="true" />
+    </span>
   );
 }
 

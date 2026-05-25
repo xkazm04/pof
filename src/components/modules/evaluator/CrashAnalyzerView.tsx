@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState, useCallback } from 'react';
 import {
-  Bug, Play, AlertTriangle, ChevronDown, ChevronRight,
+  Bug, Play, ChevronDown, ChevronRight,
   Copy, Check, Search, RefreshCw, XCircle, FileText,
   ShieldAlert, Layers, ArrowRight, Clock, Cpu,
   TrendingUp, Eye, Upload, Terminal,
@@ -23,7 +23,7 @@ import type {
   CallstackFrame,
 } from '@/types/crash-analyzer';
 import { UI_TIMEOUTS } from '@/lib/constants';
-import { ACCENT_EMERALD, STATUS_ERROR, STATUS_BLOCKER, STATUS_WARNING, STATUS_INFO } from '@/lib/chart-colors';
+import { ACCENT_EMERALD, STATUS_ERROR, STATUS_WARNING, SEVERITY_TOKENS } from '@/lib/chart-colors';
 
 // ── Constants ───────────────────────────────────────────────────────────────
 
@@ -31,11 +31,17 @@ const EMPTY_REPORTS: CrashReport[] = [];
 const EMPTY_DIAGNOSES: CrashDiagnosis[] = [];
 const EMPTY_PATTERNS: CrashPattern[] = [];
 
-const SEVERITY_STYLE: Record<CrashSeverity, { bg: string; border: string; text: string; badge: 'error' | 'warning' | 'success' | 'default' }> = {
-  critical: { bg: 'bg-status-red-subtle', border: 'border-status-red-medium', text: 'text-red-400', badge: 'error' },
-  high:     { bg: 'bg-orange-500/5', border: 'border-orange-500/20', text: 'text-orange-400', badge: 'warning' },
-  medium:   { bg: 'bg-amber-500/5', border: 'border-amber-500/20', text: 'text-amber-400', badge: 'default' },
-  low:      { bg: 'bg-blue-500/5', border: 'border-blue-500/20', text: 'text-blue-400', badge: 'success' },
+// Crash severities draw from the shared SEVERITY_TOKENS map (chart-colors), the
+// same source Deep Eval / GDD Compliance / Archeologist use — so a `critical`
+// crash renders with the identical hue everywhere instead of mixing status-red
+// design tokens with raw orange/amber/blue palette classes. `CrashSeverity`
+// (critical|high|medium|low) is a subset of the token keys, so direct indexing
+// is type-safe.
+const SEVERITY_LABELS: Record<CrashSeverity, string> = {
+  critical: 'Critical',
+  high: 'High',
+  medium: 'Medium',
+  low: 'Low',
 };
 
 const CRASH_TYPE_LABELS: Record<CrashType, string> = {
@@ -101,10 +107,10 @@ export function CrashAnalyzerView() {
   }, [reports]);
 
   const SEVERITY_PILLS: MultiPillItem[] = useMemo(() => [
-    { id: 'critical', label: 'Critical', color: STATUS_ERROR, count: severityCounts.critical },
-    { id: 'high', label: 'High', color: STATUS_BLOCKER, count: severityCounts.high },
-    { id: 'medium', label: 'Medium', color: STATUS_WARNING, count: severityCounts.medium },
-    { id: 'low', label: 'Low', color: STATUS_INFO, count: severityCounts.low },
+    { id: 'critical', label: SEVERITY_LABELS.critical, color: SEVERITY_TOKENS.critical.color, count: severityCounts.critical },
+    { id: 'high', label: SEVERITY_LABELS.high, color: SEVERITY_TOKENS.high.color, count: severityCounts.high },
+    { id: 'medium', label: SEVERITY_LABELS.medium, color: SEVERITY_TOKENS.medium.color, count: severityCounts.medium },
+    { id: 'low', label: SEVERITY_LABELS.low, color: SEVERITY_TOKENS.low.color, count: severityCounts.low },
   ], [severityCounts]);
 
   const toggleSeverity = useCallback((id: string) => {
@@ -166,10 +172,10 @@ export function CrashAnalyzerView() {
       {/* Stats bar */}
       {hasData && (
         <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 gap-3">
-          <MiniStat label="Total Crashes" value={stats.totalCrashes} accent="text-red-400" />
-          <MiniStat label="Critical" value={stats.crashesBySeverity.critical} accent={stats.crashesBySeverity.critical > 0 ? 'text-red-400' : undefined} />
-          <MiniStat label="Patterns" value={stats.patternsDetected} accent="text-amber-400" />
-          <MiniStat label="Systemic" value={stats.systemicIssues} accent={stats.systemicIssues > 0 ? 'text-red-400' : undefined} />
+          <MiniStat label="Total Crashes" value={stats.totalCrashes} accent={STATUS_ERROR} />
+          <MiniStat label="Critical" value={stats.crashesBySeverity.critical} accent={stats.crashesBySeverity.critical > 0 ? SEVERITY_TOKENS.critical.color : undefined} />
+          <MiniStat label="Patterns" value={stats.patternsDetected} accent={STATUS_WARNING} />
+          <MiniStat label="Systemic" value={stats.systemicIssues} accent={stats.systemicIssues > 0 ? SEVERITY_TOKENS.critical.color : undefined} />
           <MiniStat label="Recent (24h)" value={stats.recentCrashes} />
           <MiniStat label="Top Type" value={CRASH_TYPE_LABELS[stats.mostCommonType]} />
         </div>
@@ -310,8 +316,25 @@ function MiniStat({ label, value, accent }: { label: string; value: number | str
   return (
     <SurfaceCard level={2}>
       <p className="text-2xs text-text-muted">{label}</p>
-      <p className={`text-lg font-bold ${accent ?? 'text-text'}`}>{value}</p>
+      <p className={`text-lg font-bold ${accent ? '' : 'text-text'}`} style={accent ? { color: accent } : undefined}>
+        {value}
+      </p>
     </SurfaceCard>
+  );
+}
+
+/** Severity pill chip driven by the shared SEVERITY_TOKENS, so its color always
+ *  matches the corresponding filter pill (fixing the old green-badge-on-blue-row
+ *  mismatch on `low`). */
+function SeverityBadge({ severity }: { severity: CrashSeverity }) {
+  const token = SEVERITY_TOKENS[severity];
+  return (
+    <span
+      className="inline-flex items-center px-1.5 py-0.5 text-2xs font-medium rounded border capitalize"
+      style={{ color: token.color, backgroundColor: token.bg, borderColor: token.border }}
+    >
+      {SEVERITY_LABELS[severity]}
+    </span>
   );
 }
 
@@ -326,22 +349,21 @@ function CrashListItem({
   onClick: () => void;
   diagnosis: CrashDiagnosis | undefined;
 }) {
-  const style = SEVERITY_STYLE[report.severity];
+  const token = SEVERITY_TOKENS[report.severity];
   const timeAgo = getTimeAgo(report.timestamp);
 
   return (
     <div
       onClick={onClick}
       className={`rounded-lg border p-3 cursor-pointer transition-all ${
-        isSelected
-          ? `${style.border} ${style.bg} ring-1 ring-${report.severity === 'critical' ? 'red' : 'amber'}-500/30`
-          : 'border-border hover:border-border/80 hover:bg-surface-2/50'
+        isSelected ? '' : 'border-border hover:border-border/80 hover:bg-surface-2/50'
       }`}
+      style={isSelected ? { borderColor: token.color, backgroundColor: token.bg } : undefined}
     >
       <div className="flex items-start justify-between gap-2">
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-1.5 mb-1">
-            <Badge variant={style.badge}>{report.severity}</Badge>
+            <SeverityBadge severity={report.severity} />
             <Badge variant="default">{CRASH_TYPE_LABELS[report.crashType]}</Badge>
             {report.mappedModule && (
               <span className="text-2xs text-text-muted">{report.mappedModule}</span>
@@ -396,9 +418,9 @@ function CrashDetailPanel({
       <SurfaceCard>
         <div className="flex items-start justify-between mb-2">
           <div className="flex items-center gap-2">
-            <Bug className={`w-4 h-4 ${SEVERITY_STYLE[report.severity].text}`} />
+            <Bug className="w-4 h-4" style={{ color: SEVERITY_TOKENS[report.severity].color }} />
             <span className="text-xs font-semibold text-text">{report.id}</span>
-            <Badge variant={SEVERITY_STYLE[report.severity].badge}>{report.severity}</Badge>
+            <SeverityBadge severity={report.severity} />
           </div>
           <button onClick={onClose} className="text-text-muted hover:text-text">
             <XCircle className="w-4 h-4" />
@@ -515,13 +537,14 @@ function CrashDetailPanel({
 
 function FrameRow({ frame }: { frame: CallstackFrame }) {
   return (
-    <div className={`flex items-center gap-2 px-2 py-1 rounded text-xs leading-relaxed ${
-      frame.isCrashOrigin
-        ? 'bg-status-red-subtle border border-status-red-medium'
-        : frame.isGameCode
-          ? 'bg-surface-2/50'
-          : ''
-    }`}>
+    <div
+      className={`flex items-center gap-2 px-2 py-1 rounded text-xs leading-relaxed ${
+        frame.isCrashOrigin ? 'border' : frame.isGameCode ? 'bg-surface-2/50' : ''
+      }`}
+      style={frame.isCrashOrigin
+        ? { backgroundColor: SEVERITY_TOKENS.critical.bg, borderColor: SEVERITY_TOKENS.critical.border }
+        : undefined}
+    >
       <span className="text-text-muted w-4 text-right shrink-0">#{frame.index}</span>
       <span className={`font-mono truncate ${frame.isGameCode ? 'text-text' : 'text-text-muted'}`}>
         {frame.functionName}

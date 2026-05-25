@@ -3,6 +3,8 @@
 import { useCallback } from 'react';
 import { Volume2, Radio, Waves, Settings2 } from 'lucide-react';
 import { ACCENT_VIOLET } from '@/lib/chart-colors';
+import { ZONE_COLORS } from './AudioScenePainter';
+import { ReverbDecayGlyph } from './ReverbDecayGlyph';
 import type {
   AudioZone,
   SoundEmitter,
@@ -70,23 +72,32 @@ export function ZonePropertyPanel({
         />
       </Field>
 
-      {/* Reverb preset */}
+      {/* Reverb preset — each chip previews its acoustic decay signature */}
       <Field label="Reverb Preset">
-        <div className="flex flex-wrap gap-1">
-          {REVERB_PRESETS.map((preset) => (
-            <button
-              key={preset}
-              onClick={() => update('reverbPreset', preset)}
-              className={`px-2 py-1 rounded text-2xs transition-colors ${
-                zone.reverbPreset === preset
-                  ? 'bg-border-bright text-text border-[#3e3e6a]'
-                  : 'bg-surface text-text-muted border-border hover:bg-surface-hover'
-              }`}
-              style={{ border: '1px solid' }}
-            >
-              {preset}
-            </button>
-          ))}
+        <div className="grid grid-cols-2 gap-1">
+          {REVERB_PRESETS.map((preset) => {
+            const selected = zone.reverbPreset === preset;
+            const color = ZONE_COLORS[preset] ?? 'var(--text-muted)';
+            return (
+              <button
+                key={preset}
+                type="button"
+                onClick={() => update('reverbPreset', preset)}
+                title={`${preset} — hover to preview its acoustic decay`}
+                aria-label={`Reverb preset ${preset}`}
+                aria-pressed={selected}
+                className={`group flex flex-col items-center gap-0.5 px-1.5 py-1 rounded transition-colors focus-ring-inset ${
+                  selected
+                    ? 'bg-border-bright text-text'
+                    : 'bg-surface text-text-muted hover:bg-surface-hover'
+                }`}
+                style={{ border: `1px solid ${selected ? 'var(--checkbox-border)' : 'var(--border)'}` }}
+              >
+                <ReverbDecayGlyph preset={preset} color={color} decayTimeSeconds={zone.reverbDecayTime} />
+                <span className="text-2xs leading-none truncate max-w-full">{preset}</span>
+              </button>
+            );
+          })}
         </div>
       </Field>
 

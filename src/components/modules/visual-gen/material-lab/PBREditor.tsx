@@ -1,8 +1,14 @@
 'use client';
 
-import { useCallback } from 'react';
+import { useCallback, useEffect, useState } from 'react';
+import { motion, useAnimationControls } from 'framer-motion';
 import { Upload, X } from 'lucide-react';
-import { useMaterialStore, BUILT_IN_PRESETS, type PreviewMesh } from './useMaterialStore';
+import {
+  useMaterialStore,
+  BUILT_IN_PRESETS,
+  type PreviewMesh,
+  type TextureChannel,
+} from './useMaterialStore';
 import { StyledSlider } from '@/components/ui/StyledSlider';
 
 function Slider({
@@ -40,10 +46,29 @@ function TextureSlot({
   textureUrl,
 }: {
   label: string;
-  channel: 'albedo' | 'normal' | 'metallic' | 'roughness' | 'ao';
+  channel: TextureChannel;
   textureUrl: string | null;
 }) {
   const setTexture = useMaterialStore((s) => s.setTexture);
+  const highlightTick = useMaterialStore((s) => s.textureHighlightTick[channel]);
+  const controls = useAnimationControls();
+  const [seenTick, setSeenTick] = useState(highlightTick);
+
+  // Flash the slot whenever the channel's tick advances (e.g. piped in from
+  // the Advanced panel). Skip the initial mount so we don't animate cold.
+  useEffect(() => {
+    if (highlightTick === seenTick) return;
+    setSeenTick(highlightTick);
+    controls.start({
+      boxShadow: [
+        '0 0 0 0 rgba(var(--visual-gen-rgb, 6, 182, 212), 0)',
+        '0 0 0 4px rgba(var(--visual-gen-rgb, 6, 182, 212), 0.55)',
+        '0 0 0 0 rgba(var(--visual-gen-rgb, 6, 182, 212), 0)',
+      ],
+      scale: [1, 1.08, 1],
+      transition: { duration: 0.9, ease: 'easeOut' },
+    });
+  }, [highlightTick, seenTick, controls]);
 
   const handleUpload = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -55,7 +80,11 @@ function TextureSlot({
 
   return (
     <div className="flex items-center gap-2">
-      <label className="flex items-center justify-center w-10 h-10 rounded border border-border cursor-pointer hover:border-[var(--visual-gen)] transition-colors overflow-hidden">
+      <motion.label
+        data-testid={`texture-slot-${channel}`}
+        animate={controls}
+        className="flex items-center justify-center w-10 h-10 rounded border border-border cursor-pointer hover:border-[var(--visual-gen)] transition-colors overflow-hidden"
+      >
         {textureUrl ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img src={textureUrl} alt={label} className="w-full h-full object-cover" />
@@ -63,7 +92,7 @@ function TextureSlot({
           <Upload size={12} className="text-text-muted" />
         )}
         <input type="file" accept="image/*" onChange={handleUpload} className="hidden" />
-      </label>
+      </motion.label>
       <div className="flex-1 min-w-0">
         <span className="text-xs text-text">{label}</span>
       </div>

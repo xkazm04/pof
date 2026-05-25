@@ -4,6 +4,7 @@ import { Download, ExternalLink, Loader2 } from 'lucide-react';
 import type { AssetSearchResult } from '@/lib/visual-gen/asset-sources';
 import { useBlenderMCPStore } from '@/stores/blenderMCPStore';
 import { useAssetBrowserStore } from '@/components/modules/visual-gen/asset-browser/useAssetBrowserStore';
+import { VISUAL_GEN_FOCUS_RING } from '@/lib/visual-gen/ui';
 
 interface AssetCardProps {
   asset: AssetSearchResult;
@@ -38,7 +39,7 @@ export function AssetCard({ asset, onDownload }: AssetCardProps) {
         <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity flex items-center justify-center gap-2">
           <button
             onClick={() => onDownload(asset)}
-            className="p-2 rounded-full bg-[var(--visual-gen)] text-white hover:brightness-110 focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[var(--visual-gen)] focus-visible:outline-none"
+            className={`p-2 rounded-full bg-[var(--visual-gen)] text-white hover:brightness-110 ${VISUAL_GEN_FOCUS_RING}`}
             aria-label={`Download ${asset.name}`}
           >
             <Download size={16} />
@@ -47,7 +48,7 @@ export function AssetCard({ asset, onDownload }: AssetCardProps) {
             <button
               onClick={() => importToBlender(asset.source, asset.id)}
               disabled={importing}
-              className="p-2 rounded-full bg-surface-secondary text-text hover:brightness-110 disabled:opacity-50 focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[var(--visual-gen)] focus-visible:outline-none"
+              className={`p-2 rounded-full bg-surface-secondary text-text hover:brightness-110 disabled:opacity-50 ${VISUAL_GEN_FOCUS_RING}`}
               aria-label={`Import ${asset.name} to Blender`}
             >
               {importing ? (

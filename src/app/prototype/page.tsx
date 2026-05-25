@@ -11,6 +11,8 @@ import { DZIN_TIMING, EASE_ENTER, type CubicBezier } from '@/lib/dzin/animation-
 import { useIntentDispatch } from '@/hooks/useIntentDispatch';
 import { useMultimodalInput } from '@/hooks/useMultimodalInput';
 import { ConversationShell } from '@/components/prototype/chat/ConversationShell';
+import { applyComposeSuggestion } from '@/lib/dzin/advisor/suggestionActions';
+import type { ChatMessage } from '@/lib/dzin/core/chat';
 import { CorePanel } from '@/components/modules/core-engine/dzin-panels/CorePanel';
 import { AbilitiesPanel } from '@/components/modules/core-engine/dzin-panels/AbilitiesPanel';
 import { AttributesPanel } from '@/components/modules/core-engine/dzin-panels/AttributesPanel';
@@ -212,11 +214,34 @@ export default function PrototypePage() {
     setActivePresetId(null);
   }, []);
 
-  const { bus, chatStore, advisorClient } = useIntentDispatch(
+  const { bus, chatStore, advisorClient, getDirectives, getTemplateId } = useIntentDispatch(
     firstPreset.directives,
     firstPreset.templateId,
     handleWorkspaceChange,
   );
+
+  /* ── Advisor suggestion cards (one-click Apply) ─────────────────────── */
+
+  const handleApplySuggestion = useCallback((message: ChatMessage) => {
+    const action = message.suggestedAction;
+    if (!action || action.status !== 'pending') return;
+    applyComposeSuggestion(action.compose, {
+      bus,
+      currentDirectives: getDirectives(),
+      currentTemplate: getTemplateId(),
+    });
+    chatStore.updateMessage(message.id, {
+      suggestedAction: { ...action, status: 'applied' },
+    });
+  }, [bus, chatStore, getDirectives, getTemplateId]);
+
+  const handleDismissSuggestion = useCallback((message: ChatMessage) => {
+    const action = message.suggestedAction;
+    if (!action || action.status !== 'pending') return;
+    chatStore.updateMessage(message.id, {
+      suggestedAction: { ...action, status: 'dismissed' },
+    });
+  }, [chatStore]);
 
   const { handleTextInput } = useMultimodalInput({
     bus,
@@ -373,7 +398,13 @@ export default function PrototypePage() {
       </div>
 
       {/* Chat overlay */}
-      <ConversationShell chatStore={chatStore} bus={bus} onSend={handleTextInput} />
+      <ConversationShell
+        chatStore={chatStore}
+        bus={bus}
+        onSend={handleTextInput}
+        onApplySuggestion={handleApplySuggestion}
+        onDismissSuggestion={handleDismissSuggestion}
+      />
 
       {/* Layout container with selection context */}
       <DzinSelectionProvider>

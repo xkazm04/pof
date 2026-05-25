@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef } from 'react';
+import type { KeyboardEvent } from 'react';
 import {
   Zap, Grid3X3, Waves, Hexagon, Mountain,
   Castle, Sword, Trophy, MapPin, Package, Gem, Loader2, Monitor,
@@ -151,6 +152,43 @@ interface ProceduralLevelWizardProps {
   isGenerating: boolean;
 }
 
+/**
+ * Roving-tabindex keyboard navigation for a single-select `role="radiogroup"`.
+ * Arrow keys (and Home/End) move selection + focus between the radios so the
+ * group is a single tab stop, per the WAI-ARIA radio group pattern.
+ */
+function useRovingRadioGroup(count: number, onSelectIndex: (i: number) => void) {
+  const refs = useRef<(HTMLButtonElement | null)[]>([]);
+  const onKeyDown = useCallback(
+    (e: KeyboardEvent<HTMLButtonElement>, idx: number) => {
+      let next = -1;
+      switch (e.key) {
+        case 'ArrowRight':
+        case 'ArrowDown':
+          next = (idx + 1) % count;
+          break;
+        case 'ArrowLeft':
+        case 'ArrowUp':
+          next = (idx - 1 + count) % count;
+          break;
+        case 'Home':
+          next = 0;
+          break;
+        case 'End':
+          next = count - 1;
+          break;
+        default:
+          return;
+      }
+      e.preventDefault();
+      onSelectIndex(next);
+      refs.current[next]?.focus();
+    },
+    [count, onSelectIndex],
+  );
+  return { refs, onKeyDown };
+}
+
 export function ProceduralLevelWizard({ onGenerate, isGenerating }: ProceduralLevelWizardProps) {
   const [algorithm, setAlgorithm] = useState<GenAlgorithm>('bsp');
   const [levelType, setLevelType] = useState<LevelType>('dungeon');
@@ -240,11 +278,17 @@ export function ProceduralLevelWizard({ onGenerate, isGenerating }: ProceduralLe
     }
   }, [size, constraints]);
 
+  const algNav = useRovingRadioGroup(ALGORITHMS.length, (i) => setAlgorithm(ALGORITHMS[i].id));
+  const ltNav = useRovingRadioGroup(LEVEL_TYPES.length, (i) => selectLevelType(LEVEL_TYPES[i].id));
+
   const algDef = ALGORITHMS.find((a) => a.id === algorithm)!;
   const ltDef = LEVEL_TYPES.find((lt) => lt.id === levelType)!;
 
   return (
-    <div className="w-full h-full space-y-6 p-6 overflow-y-auto bg-[#03030a] rounded-2xl border border-violet-900/30 shadow-[inset_0_0_80px_rgba(167,139,250,0.05)] text-violet-100 font-mono relative">
+    <div
+      className="w-full h-full space-y-6 p-6 overflow-y-auto bg-[#03030a] rounded-2xl border border-violet-900/30 shadow-[inset_0_0_80px_rgba(167,139,250,0.05)] text-violet-100 font-mono relative"
+      style={{ ['--focus-accent' as string]: ACCENT_VIOLET }}
+    >
       <div className="absolute inset-0 pointer-events-none z-0 overflow-hidden rounded-2xl">
         <div className="absolute top-0 right-0 w-96 h-96 bg-violet-600/10 blur-[120px] rounded-full pointer-events-none" />
         <div className="absolute bottom-0 left-0 w-96 h-96 bg-emerald-600/5 blur-[100px] rounded-full pointer-events-none" />
@@ -266,15 +310,21 @@ export function ProceduralLevelWizard({ onGenerate, isGenerating }: ProceduralLe
         <h4 className="flex items-center gap-2 text-xs font-bold text-violet-400 uppercase tracking-widest">
           <Zap className="w-3 h-3" /> Core Subroutine
         </h4>
-        <div className="grid grid-cols-2 gap-3">
-          {ALGORITHMS.map((alg) => {
+        <div className="grid grid-cols-2 gap-3" role="radiogroup" aria-label="Generation algorithm">
+          {ALGORITHMS.map((alg, idx) => {
             const isActive = algorithm === alg.id;
             const Icon = alg.icon;
             return (
               <button
                 key={alg.id}
+                ref={(el) => { algNav.refs.current[idx] = el; }}
+                role="radio"
+                aria-checked={isActive}
+                aria-label={`${alg.label}. ${alg.description}`}
+                tabIndex={isActive ? 0 : -1}
                 onClick={() => setAlgorithm(alg.id)}
-                className="relative flex items-start gap-4 p-4 rounded-xl text-left transition-all group overflow-hidden"
+                onKeyDown={(e) => algNav.onKeyDown(e, idx)}
+                className="focus-ring-outline relative flex items-start gap-4 p-4 rounded-xl text-left transition-all group overflow-hidden"
                 style={{
                   backgroundColor: isActive ? `${alg.color}15` : 'rgba(10,10,25,0.6)',
                   border: `1px solid ${isActive ? `${alg.color}60` : 'rgba(139,92,246,0.15)'}`,
@@ -318,15 +368,21 @@ export function ProceduralLevelWizard({ onGenerate, isGenerating }: ProceduralLe
         <h4 className="flex items-center gap-2 text-xs font-bold text-violet-400 uppercase tracking-widest">
           <Hexagon className="w-3 h-3" /> Output Topology
         </h4>
-        <div className="grid grid-cols-3 gap-3">
-          {LEVEL_TYPES.map((lt) => {
+        <div className="grid grid-cols-3 gap-3" role="radiogroup" aria-label="Level type">
+          {LEVEL_TYPES.map((lt, idx) => {
             const isActive = levelType === lt.id;
             const Icon = lt.icon;
             return (
               <button
                 key={lt.id}
+                ref={(el) => { ltNav.refs.current[idx] = el; }}
+                role="radio"
+                aria-checked={isActive}
+                aria-label={`${lt.label}. ${lt.description}`}
+                tabIndex={isActive ? 0 : -1}
                 onClick={() => selectLevelType(lt.id)}
-                className="relative flex flex-col items-center gap-3 p-4 rounded-xl text-center transition-all group overflow-hidden"
+                onKeyDown={(e) => ltNav.onKeyDown(e, idx)}
+                className="focus-ring-outline relative flex flex-col items-center gap-3 p-4 rounded-xl text-center transition-all group overflow-hidden"
                 style={{
                   backgroundColor: isActive ? `${lt.color}15` : 'rgba(255,255,255,0.02)',
                   border: `1px solid ${isActive ? `${lt.color}60` : 'rgba(139,92,246,0.1)'}`,
@@ -402,8 +458,10 @@ export function ProceduralLevelWizard({ onGenerate, isGenerating }: ProceduralLe
             return (
               <button
                 key={c.key}
+                aria-pressed={isActive}
+                aria-label={`${c.label}. ${c.description}`}
                 onClick={() => toggleConstraint(c.key)}
-                className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-left transition-all border group relative overflow-hidden"
+                className="focus-ring-outline flex items-center gap-3 px-3 py-2.5 rounded-xl text-left transition-all border group relative overflow-hidden"
                 style={{
                   backgroundColor: isActive ? `${MODULE_COLORS.content}15` : 'rgba(0,0,0,0.4)',
                   borderColor: isActive ? `${MODULE_COLORS.content}50` : 'rgba(139,92,246,0.15)',
@@ -447,7 +505,7 @@ export function ProceduralLevelWizard({ onGenerate, isGenerating }: ProceduralLe
         <button
           onClick={handleGenerate}
           disabled={isGenerating}
-          className="relative w-full overflow-hidden flex items-center justify-center gap-2 px-6 py-4 rounded-xl text-xs font-bold uppercase tracking-widest transition-all disabled:opacity-50 group outline-none"
+          className="focus-ring-outline relative w-full overflow-hidden flex items-center justify-center gap-2 px-6 py-4 rounded-xl text-xs font-bold uppercase tracking-widest transition-all disabled:opacity-50 group"
           style={{
             backgroundColor: `${MODULE_COLORS.content}20`,
             color: MODULE_COLORS.content,
@@ -479,7 +537,7 @@ export function ProceduralLevelWizard({ onGenerate, isGenerating }: ProceduralLe
         <button
           onClick={handleExportToBlender}
           disabled={!blenderConnected || blenderExporting}
-          className="relative w-full overflow-hidden flex items-center justify-center gap-2 px-6 py-4 rounded-xl text-xs font-bold uppercase tracking-widest transition-all disabled:opacity-40 group outline-none"
+          className="focus-ring-outline relative w-full overflow-hidden flex items-center justify-center gap-2 px-6 py-4 rounded-xl text-xs font-bold uppercase tracking-widest transition-all disabled:opacity-40 group"
           style={{
             backgroundColor: 'rgba(16,185,129,0.12)',
             color: 'rgb(52,211,153)',

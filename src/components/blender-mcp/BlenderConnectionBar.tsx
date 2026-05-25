@@ -3,6 +3,13 @@
 import { useState } from 'react';
 import { Monitor, Plug, PlugZap, Settings, AlertTriangle } from 'lucide-react';
 import { useBlenderMCPStore } from '@/stores/blenderMCPStore';
+import {
+  PILL_BY_STATE,
+  DOT_BY_STATE,
+  CONNECT_BUTTON,
+  DISCONNECT_BUTTON,
+  ERROR_BANNER,
+} from '@/lib/blender-mcp/status-tokens';
 
 export function BlenderConnectionBar() {
   const {
@@ -32,6 +39,12 @@ export function BlenderConnectionBar() {
     setShowSettings(false);
   };
 
+  const state = connection.connected
+    ? 'connected'
+    : isConnecting
+      ? 'connecting'
+      : 'disconnected';
+
   return (
     <div className="rounded-lg border border-border bg-surface-secondary p-3 space-y-2">
       <div className="flex items-center justify-between">
@@ -39,23 +52,9 @@ export function BlenderConnectionBar() {
           <Monitor className="w-4 h-4 text-text-muted" />
           <span className="text-xs font-medium text-text">Blender MCP</span>
           <span
-            className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium ${
-              connection.connected
-                ? 'bg-emerald-500/10 text-emerald-400'
-                : isConnecting
-                  ? 'bg-amber-500/10 text-amber-400'
-                  : 'bg-zinc-500/10 text-zinc-400'
-            }`}
+            className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium ${PILL_BY_STATE[state]}`}
           >
-            <span
-              className={`w-1.5 h-1.5 rounded-full ${
-                connection.connected
-                  ? 'bg-emerald-400'
-                  : isConnecting
-                    ? 'bg-amber-400 animate-pulse'
-                    : 'bg-zinc-400'
-              }`}
-            />
+            <span className={`w-1.5 h-1.5 rounded-full ${DOT_BY_STATE[state]}`} />
             {connection.connected
               ? `Connected${connection.blenderVersion ? ` (${connection.blenderVersion})` : ''}`
               : isConnecting
@@ -76,9 +75,7 @@ export function BlenderConnectionBar() {
             onClick={handleConnect}
             disabled={isConnecting}
             className={`flex items-center gap-1 px-2 py-1 rounded text-[11px] font-medium transition-colors ${
-              connection.connected
-                ? 'bg-red-500/10 text-red-400 hover:bg-red-500/20'
-                : 'bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20'
+              connection.connected ? DISCONNECT_BUTTON : CONNECT_BUTTON
             } disabled:opacity-50`}
           >
             {connection.connected ? (
@@ -95,7 +92,7 @@ export function BlenderConnectionBar() {
       </div>
 
       {lastError && (
-        <div className="flex items-start gap-2 text-[11px] text-red-400 bg-red-500/5 rounded px-2 py-1.5">
+        <div className={`flex items-start gap-2 text-[11px] rounded px-2 py-1.5 ${ERROR_BANNER}`}>
           <AlertTriangle className="w-3.5 h-3.5 mt-0.5 shrink-0" />
           <span>{lastError}</span>
         </div>

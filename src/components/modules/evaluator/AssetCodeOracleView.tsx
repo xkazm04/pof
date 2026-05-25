@@ -6,19 +6,22 @@ import {
   ScanSearch, AlertTriangle, AlertCircle, Info,
   Loader2, ChevronDown, ChevronRight, RefreshCw,
   Link2, FileCode, Box, Package,
+  ArrowUp, ArrowDown, Minus,
 } from 'lucide-react';
 import { SurfaceCard } from '@/components/ui/SurfaceCard';
 import { KPICard } from '@/components/ui/KPICard';
 import { Badge } from '@/components/ui/Badge';
-import { ProgressRing } from '@/components/ui/ProgressRing';
+import { ScoreRing } from '@/components/ui/ScoreRing';
 import { useProjectStore } from '@/stores/projectStore';
+import { useMarketplaceStore } from '@/stores/marketplaceStore';
+import { letterGrade, gradeBandLabel, gradeBandCaption, formatSince } from '@/lib/consistency-grade';
 import type {
   OracleResult,
   ConsistencyViolation,
   ViolationType,
   ViolationSeverity,
 } from '@/lib/asset-code-oracle';
-import { STATUS_ERROR, STATUS_WARNING, STATUS_INFO, STATUS_SUCCESS, MODULE_COLORS, statusBg, statusBorder } from '@/lib/chart-colors';
+import { STATUS_ERROR, STATUS_WARNING, STATUS_INFO, STATUS_SUCCESS, STATUS_NEUTRAL, statusBg, statusBorder, successRateColor } from '@/lib/chart-colors';
 
 // ── Constants ───────────────────────────────────────────────────────────────
 
@@ -43,6 +46,7 @@ type FilterSeverity = 'all' | ViolationSeverity;
 export function AssetCodeOracleView() {
   const projectPath = useProjectStore((s) => s.projectPath);
   const projectName = useProjectStore((s) => s.projectName);
+  const recordConsistencyScan = useMarketplaceStore((s) => s.recordConsistencyScan);
 
   const [result, setResult] = useState<OracleResult | null>(null);
   const [loading, setLoading] = useState(false);
@@ -50,6 +54,8 @@ export function AssetCodeOracleView() {
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [filterSeverity, setFilterSeverity] = useState<FilterSeverity>('all');
   const [activeSection, setActiveSection] = useState<'violations' | 'graph'>('violations');
+  /** Delta of the consistency score vs. the previous recorded scan (null on first scan). */
+  const [scanDelta, setScanDelta] = useState<{ delta: number; sinceLabel: string } | null>(null);
 
   const runAnalysis = useCallback(async () => {
     if (!projectPath || !projectName) {
@@ -93,13 +99,25 @@ export function AssetCodeOracleView() {
       const oracleJson = await oracleRes.json();
       if (!oracleJson.success) throw new Error(oracleJson.error ?? 'Analysis failed');
 
+      // Compute delta vs. the previous recorded scan *before* recording this one.
+      const projectKey = projectPath ?? projectName ?? 'default';
+      const history = useMarketplaceStore.getState().consistencyScans[projectKey] ?? [];
+      const previous = history[history.length - 1];
+      const newScore: number = oracleJson.data.stats.consistencyScore;
+      setScanDelta(
+        previous
+          ? { delta: newScore - previous.score, sinceLabel: formatSince(previous.timestamp) }
+          : null,
+      );
+
       setResult(oracleJson.data);
+      recordConsistencyScan(projectKey, newScore);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Analysis failed');
     } finally {
       setLoading(false);
     }
-  }, [projectPath, projectName]);
+  }, [projectPath, projectName, recordConsistencyScan]);
 
   const filteredViolations = useMemo(() => {
     if (!result) return [];
@@ -127,7 +145,12 @@ export function AssetCodeOracleView() {
         <button
           onClick={runAnalysis}
           disabled={loading || !projectPath}
-          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all disabled:opacity-50 bg-[${statusBg(STATUS_ERROR)}] text-[${STATUS_ERROR}] border border-[${statusBorder(STATUS_ERROR)}]`}
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all disabled:opacity-50 hover:brightness-110"
+          style={{
+            backgroundColor: statusBg(STATUS_ERROR),
+            color: STATUS_ERROR,
+            border: `1px solid ${statusBorder(STATUS_ERROR)}`,
+          }}
         >
           {loading ? (
             <Loader2 className="w-3 h-3 animate-spin" />
@@ -145,7 +168,14 @@ export function AssetCodeOracleView() {
 
       {/* Error */}
       {error && (
-        <div className={`flex items-center gap-2 text-xs text-[${STATUS_ERROR}] bg-[${statusBg(STATUS_ERROR)}] border border-[${statusBorder(STATUS_ERROR)}] rounded-lg px-3 py-2`}>
+        <div
+          className="flex items-center gap-2 text-xs rounded-lg px-3 py-2"
+          style={{
+            color: STATUS_ERROR,
+            backgroundColor: statusBg(STATUS_ERROR),
+            border: `1px solid ${statusBorder(STATUS_ERROR)}`,
+          }}
+        >
           <AlertCircle className="w-3.5 h-3.5 flex-shrink-0" />
           {error}
         </div>
@@ -154,16 +184,14 @@ export function AssetCodeOracleView() {
       {/* Results */}
       {result && (
         <>
-          {/* Stats bar */}
-          <div className="grid grid-cols-4 gap-3">
-            <StatCard
-              label="Consistency"
-              value={`${result.stats.consistencyScore}%`}
-              ring={result.stats.consistencyScore}
-            />
-            <StatCard label="Classes" value={result.stats.totalClasses} />
-            <StatCard label="Assets" value={result.stats.totalAssets} />
-            <StatCard label="Dep. Edges" value={result.stats.totalDependencyEdges} />
+          {/* Stats bar — consistency hero spans 2 columns, supporting metrics fill the rest */}
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+            <ConsistencyHeroCard score={result.stats.consistencyScore} delta={scanDelta} />
+            <div className="md:col-span-2 grid grid-cols-3 gap-3">
+              <StatCard label="Classes" value={result.stats.totalClasses} />
+              <StatCard label="Assets" value={result.stats.totalAssets} />
+              <StatCard label="Dep. Edges" value={result.stats.totalDependencyEdges} />
+            </div>
           </div>
 
           {/* Section toggle */}
@@ -254,22 +282,82 @@ export function AssetCodeOracleView() {
 
 // ── Sub-components ──────────────────────────────────────────────────────────
 
-function StatCard({ label, value, ring }: { label: string; value: string | number; ring?: number }) {
+function StatCard({ label, value }: { label: string; value: string | number }) {
+  return <KPICard label={label} value={value} />;
+}
+
+/**
+ * Hero card for the headline consistency metric: a 96px color-graded ring with
+ * a large letter-grade centerpiece, the raw percentage, a qualitative band
+ * label, a delta-vs-last-scan indicator, and a plain-language caption.
+ */
+function ConsistencyHeroCard({
+  score,
+  delta,
+}: {
+  score: number;
+  delta: { delta: number; sinceLabel: string } | null;
+}) {
+  const color = successRateColor(score);
+  const grade = letterGrade(score);
+  const band = gradeBandLabel(score);
+
   return (
-    <KPICard
-      label={label}
-      value={value}
-      icon={
-        ring !== undefined ? (
-          <ProgressRing
-            value={ring}
-            size={28}
-            strokeWidth={3}
-            color={ring >= 80 ? STATUS_SUCCESS : ring >= 50 ? STATUS_WARNING : STATUS_ERROR}
-          />
-        ) : undefined
-      }
-    />
+    <SurfaceCard
+      level={2}
+      className="md:col-span-2 flex items-center gap-4 px-4 py-3"
+    >
+      <ScoreRing
+        value={score}
+        size={96}
+        strokeWidth={8}
+        color={color}
+        labelClassName="leading-none"
+        label={
+          <span className="flex flex-col items-center leading-none">
+            <span className="text-[2rem] font-extrabold" style={{ color }}>{grade}</span>
+            <span className="mt-1 text-2xs font-semibold text-text-muted tabular-nums">{score}%</span>
+          </span>
+        }
+      />
+      <div className="min-w-0 flex-1 space-y-1.5">
+        <div className="flex items-center gap-2 flex-wrap">
+          <span className="text-2xs uppercase tracking-wider text-text-muted font-semibold">
+            Consistency Score
+          </span>
+          <span
+            className="inline-flex items-center px-1.5 py-0.5 text-2xs font-medium rounded border"
+            style={{ color, backgroundColor: statusBg(color), borderColor: statusBorder(color) }}
+          >
+            {band}
+          </span>
+        </div>
+        <DeltaIndicator delta={delta} />
+        <p className="text-2xs text-text-muted leading-relaxed">{gradeBandCaption(score)}</p>
+      </div>
+    </SurfaceCard>
+  );
+}
+
+/** Up/down/flat delta vs. the previous scan, e.g. "+3% since Tuesday". */
+function DeltaIndicator({ delta }: { delta: { delta: number; sinceLabel: string } | null }) {
+  if (!delta) {
+    return <p className="text-2xs text-text-muted">First scan recorded — re-run to track change over time.</p>;
+  }
+
+  const { delta: d, sinceLabel } = delta;
+  const flat = d === 0;
+  const positive = d > 0;
+  const color = flat ? STATUS_NEUTRAL : positive ? STATUS_SUCCESS : STATUS_ERROR;
+  const Icon = flat ? Minus : positive ? ArrowUp : ArrowDown;
+  const sign = positive ? '+' : d < 0 ? '−' : '';
+
+  return (
+    <div className="flex items-center gap-1 text-xs font-medium" style={{ color }}>
+      <Icon className="w-3.5 h-3.5 flex-shrink-0" aria-hidden="true" />
+      <span className="tabular-nums">{sign}{Math.abs(d)}%</span>
+      <span className="text-text-muted font-normal">{sinceLabel}</span>
+    </div>
   );
 }
 
@@ -420,10 +508,9 @@ function DependencyExplorer({
                 key={node.name}
                 onClick={() => setSelectedNode(isSelected ? null : node.name)}
                 className={`w-full flex items-center gap-2 px-2.5 py-1.5 rounded text-xs text-left transition-colors ${
-                  isSelected
-                    ? `bg-[${statusBg(STATUS_ERROR)}] text-text`
-                    : 'hover:bg-surface-hover text-text-muted-hover'
+                  isSelected ? 'text-text' : 'hover:bg-surface-hover text-text-muted-hover'
                 }`}
+                style={isSelected ? { backgroundColor: statusBg(STATUS_ERROR) } : undefined}
               >
                 <NodeIcon className="w-3 h-3 flex-shrink-0 text-text-muted" />
                 <span className="flex-1 truncate font-mono text-2xs">{node.name}</span>

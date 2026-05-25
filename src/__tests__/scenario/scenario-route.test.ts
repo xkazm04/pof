@@ -10,8 +10,19 @@ vi.mock('@/lib/scenario', () => ({
   })),
 }));
 
+vi.mock('@/lib/visual-gen/seam-check', () => ({
+  detectSeamsFromUrl: vi.fn(async () => ({
+    horizontal: { axis: 'left', delta: 0.3, seam: true },
+    vertical: { axis: 'top', delta: 0.01, seam: false },
+    hasSeam: true,
+    threshold: 0.08,
+    worstEdge: 'left edge',
+  })),
+}));
+
 import { POST } from '@/app/api/scenario/route';
 import * as scenario from '@/lib/scenario';
+import { detectSeamsFromUrl } from '@/lib/visual-gen/seam-check';
 
 function req(body: unknown): Request {
   return new Request('http://localhost/api/scenario', { method: 'POST', body: JSON.stringify(body) });
@@ -30,6 +41,13 @@ describe('POST /api/scenario', () => {
     expect(scenario.generateTexture).toHaveBeenCalledWith(
       expect.objectContaining({ prompt: 'dungeon stone', modelId: 'flux.1' }),
     );
+  });
+
+  it('attaches a seam check run on the generated albedo', async () => {
+    const res = await POST(req({ prompt: 'dungeon stone' }));
+    const json = await res.json();
+    expect(detectSeamsFromUrl).toHaveBeenCalledWith('https://cdn/albedo.png');
+    expect(json.data.seam).toMatchObject({ hasSeam: true, worstEdge: 'left edge' });
   });
 
   it('rejects a missing prompt', async () => {

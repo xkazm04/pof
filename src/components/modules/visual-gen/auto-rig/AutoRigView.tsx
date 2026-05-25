@@ -10,6 +10,7 @@ import { createArmatureScript, type BoneDefinition } from '@/lib/blender-mcp/scr
 import { tryApiFetch } from '@/lib/api-utils';
 import { BlenderConnectionBar } from '@/components/blender-mcp/BlenderConnectionBar';
 import { useBlenderMCPStore } from '@/stores/blenderMCPStore';
+import { VISUAL_GEN_FOCUS_RING } from '@/lib/visual-gen/ui';
 
 /** Convert an IK chain from a rig preset into BoneDefinition[] for Blender. */
 function presetToBones(preset: RigPreset): BoneDefinition[] {
@@ -82,7 +83,11 @@ function RigPresetCard({ preset, selected, onSelect, onCreateInBlender, isCreati
           : 'border-border hover:border-text-muted'
       }`}
     >
-      <button onClick={onSelect} className="w-full text-left">
+      <button
+        onClick={onSelect}
+        aria-pressed={selected}
+        className={`w-full text-left rounded-lg ${VISUAL_GEN_FOCUS_RING}`}
+      >
         {selected && (
           <CheckCircle size={16} className="absolute top-2 right-2 text-[var(--visual-gen)]" />
         )}

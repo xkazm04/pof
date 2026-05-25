@@ -166,7 +166,12 @@ export function BatchReviewPanel() {
           {isRunning && (
             <button
               onClick={abortBatch}
-              className={`flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium text-[${STATUS_ERROR}] bg-[${statusBg(STATUS_ERROR)}] border border-[${statusBorder(STATUS_ERROR)}] hover:bg-[${statusBg(STATUS_ERROR, 0.12)}] transition-all`}
+              className="flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium transition-all hover:brightness-110"
+              style={{
+                color: STATUS_ERROR,
+                backgroundColor: statusBg(STATUS_ERROR),
+                border: `1px solid ${statusBorder(STATUS_ERROR)}`,
+              }}
             >
               <Square className="w-3 h-3" />
               Abort
@@ -209,7 +214,14 @@ export function BatchReviewPanel() {
       </div>
 
       {error && (
-        <div className={`text-xs text-[${STATUS_ERROR}] bg-[${statusBg(STATUS_ERROR)}] border border-[${statusBorder(STATUS_ERROR)}] rounded-md px-3 py-2`}>
+        <div
+          className="text-xs rounded-md px-3 py-2"
+          style={{
+            color: STATUS_ERROR,
+            backgroundColor: statusBg(STATUS_ERROR),
+            border: `1px solid ${statusBorder(STATUS_ERROR)}`,
+          }}
+        >
           {error}
         </div>
       )}

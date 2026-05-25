@@ -21,6 +21,7 @@ import { AudioIOManager } from '@dzin/voice';
 import { UI_TIMEOUTS } from '@/lib/constants';
 import { logger } from '@/lib/logger';
 import { apiFetch } from '@/lib/api-utils';
+import { parseComposeOnAccept } from '@/lib/dzin/advisor/suggestionActions';
 import type { IntentBus } from '@dzin/core';
 import type { ChatStore } from '@dzin/core';
 import type { WorkspaceState } from '@dzin/core';
@@ -181,9 +182,14 @@ export function useAdvisorVoice({
         }
 
         case 'suggest_action': {
-          const { content } = call.args as { content: string };
+          const { content, compose_on_accept } = call.args as { content: string; compose_on_accept?: unknown };
           if (content) {
-            chatStore.addMessage('system', content);
+            const compose = parseComposeOnAccept(compose_on_accept);
+            if (compose) {
+              chatStore.addSuggestion(content, compose);
+            } else {
+              chatStore.addMessage('system', content);
+            }
           }
           liveClient?.respondToToolCall(call.id, call.name, { success: true });
           break;

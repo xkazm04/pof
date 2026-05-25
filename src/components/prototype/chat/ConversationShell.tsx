@@ -4,7 +4,7 @@ import React, { useMemo, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { MessageCircle, X } from 'lucide-react';
 import { useChatMessages } from '@/lib/dzin/core/chat';
-import type { ChatStore } from '@/lib/dzin/core/chat';
+import type { ChatMessage, ChatStore } from '@/lib/dzin/core/chat';
 import type { IntentBus } from '@/lib/dzin/core/intent';
 
 import { useChatOverlay } from './useChatOverlay';
@@ -17,9 +17,13 @@ interface ConversationShellProps {
   chatStore: ChatStore;
   bus: IntentBus;
   onSend: (text: string) => void;
+  /** Apply an advisor suggestion's composition (one-click Apply). */
+  onApplySuggestion?: (message: ChatMessage) => void;
+  /** Dismiss an advisor suggestion. */
+  onDismissSuggestion?: (message: ChatMessage) => void;
 }
 
-export function ConversationShell({ chatStore, bus, onSend }: ConversationShellProps) {
+export function ConversationShell({ chatStore, bus, onSend, onApplySuggestion, onDismissSuggestion }: ConversationShellProps) {
   const messages = useChatMessages(chatStore);
   const overlay = useChatOverlay();
   const commands = useMemo(() => createPofSlashCommands(bus, chatStore), [bus, chatStore]);
@@ -72,7 +76,11 @@ export function ConversationShell({ chatStore, bus, onSend }: ConversationShellP
               </button>
             </div>
 
-            <ChatMessages messages={messages} />
+            <ChatMessages
+              messages={messages}
+              onApplySuggestion={onApplySuggestion}
+              onDismissSuggestion={onDismissSuggestion}
+            />
             <ChatInput onSend={handleSend} commands={commands} />
           </motion.div>
         )}

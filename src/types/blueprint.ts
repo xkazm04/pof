@@ -46,10 +46,32 @@ export interface BlueprintVariable {
   defaultValue?: string;
   isExposedToEditor: boolean;
   isReplicated: boolean;
+  /** RepNotify — replicated *and* fires an OnRep_ handler (CPF_RepNotify). Implies isReplicated. */
+  isRepNotify: boolean;
   tooltip?: string;
 }
 
 // ─── Transpilation Types ─────────────────────────────────────────────────────
+
+/** A single replicated property and how it is wired for network replication. */
+export interface ReplicatedPropertyInfo {
+  /** Property name as it appears in C++ (matches the Blueprint variable name). */
+  name: string;
+  /** Resolved C++ type, e.g. 'float', 'int32', 'FVector'. */
+  cppType: string;
+  /** True when the property uses ReplicatedUsing (RepNotify) and an OnRep_ handler. */
+  repNotify: boolean;
+  /** OnRep handler name (e.g. 'OnRep_Health') — only present when repNotify is true. */
+  onRepHandler?: string;
+}
+
+/** Replication scaffolding derived from a Blueprint's replicated properties. */
+export interface ReplicationInfo {
+  /** True when the class has at least one replicated property. */
+  hasReplication: boolean;
+  /** Every replicated property and its RepNotify status. */
+  properties: ReplicatedPropertyInfo[];
+}
 
 /** Result of transpiling a Blueprint graph to C++. */
 export interface TranspileResult {
@@ -61,6 +83,8 @@ export interface TranspileResult {
   warnings: TranspileWarning[];
   nodeCount: number;
   functionCount: number;
+  /** Replication scaffolding metadata (GetLifetimeReplicatedProps, RepNotify fields). */
+  replication: ReplicationInfo;
 }
 
 export interface TranspileWarning {

@@ -252,7 +252,7 @@ export function DependencyGraph({ onNavigateTab }: DependencyGraphProps) {
       {/* Controls */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <Link2 className="w-3.5 h-3.5 text-[#ef4444]" />
+          <Link2 className="w-3.5 h-3.5" style={{ color: CHART_MODULE_COLORS.evaluator }} />
           <span className="text-xs font-semibold text-text-muted uppercase tracking-wider">
             Cross-Module Dependencies
           </span>
@@ -458,13 +458,16 @@ export function DependencyGraph({ onNavigateTab }: DependencyGraphProps) {
           Has blockers
         </span>
         <span className="flex items-center gap-1.5">
-          <span className={`w-2.5 h-2.5 rounded-full bg-[${STATUS_ERROR}${OPACITY_12}] flex items-center justify-center text-[${STATUS_BLOCKER}] text-2xs font-bold`}>!</span>
+          <span
+            className="w-2.5 h-2.5 rounded-full flex items-center justify-center text-2xs font-bold"
+            style={{ backgroundColor: `${STATUS_ERROR}${OPACITY_12}`, color: STATUS_BLOCKER }}
+          >!</span>
           Module has blocked features
         </span>
         {bridgeConnected && manifestCrossRefs.size > 0 && (
           <span className="flex items-center gap-1.5">
-            <Plug className="w-3 h-3 text-green-400" />
-            <span className="text-green-400">{manifestCrossRefs.size} bridge assets with cross-refs</span>
+            <Plug className="w-3 h-3" style={{ color: STATUS_SUCCESS }} />
+            <span style={{ color: STATUS_SUCCESS }}>{manifestCrossRefs.size} bridge assets with cross-refs</span>
           </span>
         )}
       </div>
@@ -518,7 +521,7 @@ export function DependencyGraph({ onNavigateTab }: DependencyGraphProps) {
                             {feat.featureName}
                           </span>
                           {feat.isBlocked && (
-                            <AlertTriangle className="w-3 h-3 text-[#fb923c] flex-shrink-0" />
+                            <AlertTriangle className="w-3 h-3 flex-shrink-0" style={{ color: STATUS_BLOCKER }} />
                           )}
                         </div>
 
@@ -530,11 +533,12 @@ export function DependencyGraph({ onNavigateTab }: DependencyGraphProps) {
                             return (
                               <span
                                 key={dep.key}
-                                className={`inline-flex items-center gap-0.5 text-2xs px-1.5 py-0.5 rounded border ${
+                                className="inline-flex items-center gap-0.5 text-2xs px-1.5 py-0.5 rounded border"
+                                style={
                                   isBlocker
-                                    ? `bg-[${STATUS_ERROR}${OPACITY_5}] border-[${statusBorder(STATUS_ERROR)}] text-[${STATUS_BLOCKER}]`
-                                    : `bg-[${STATUS_SUCCESS}${OPACITY_5}] border-[${statusBorder(STATUS_SUCCESS, 0.12)}] text-text-muted`
-                                }`}
+                                    ? { backgroundColor: `${STATUS_ERROR}${OPACITY_5}`, borderColor: statusBorder(STATUS_ERROR), color: STATUS_BLOCKER }
+                                    : { backgroundColor: `${STATUS_SUCCESS}${OPACITY_5}`, borderColor: statusBorder(STATUS_SUCCESS, 0.12), color: 'var(--text-muted)' }
+                                }
                               >
                                 {isCross && (
                                   <span className="text-2xs text-text-muted">

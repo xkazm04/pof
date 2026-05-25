@@ -9,6 +9,7 @@ import {
 import { useBlueprintTranspiler } from '@/hooks/useBlueprintTranspiler';
 import { useProjectStore } from '@/stores/projectStore';
 import { StaggerContainer, StaggerItem } from '@/components/ui/Stagger';
+import { TermChip, DecoratedJargon } from '@/components/ui/TermChip';
 import type { TranspilerTab, SemanticChange, DiffConflictLevel } from '@/types/blueprint';
 import { UI_TIMEOUTS } from '@/lib/constants';
 import {
@@ -244,7 +245,8 @@ function TranspilePane({
           <div className="flex-1 flex flex-col items-center justify-center text-text-muted gap-3 px-8">
             <Code className="w-10 h-10 opacity-30" />
             <p className="text-xs text-center">
-              Paste Blueprint JSON on the left and click Transpile to generate C++ with proper UPROPERTY/UFUNCTION bindings.
+              Paste Blueprint JSON on the left and click Transpile to generate C++ with proper{' '}
+              <TermChip term="UPROPERTY" />/<TermChip term="UFUNCTION" /> bindings.
             </p>
           </div>
         )}
@@ -323,7 +325,7 @@ function TranspilePane({
                       <AlertTriangle className={`w-3 h-3 flex-shrink-0 mt-0.5 ${
                         w.severity === 'error' ? 'text-red-400' : w.severity === 'warning' ? 'text-amber-400' : 'text-text-muted'
                       }`} />
-                      <span className="text-text-muted">{w.message}</span>
+                      <DecoratedJargon text={w.message} className="text-text-muted" />
                     </StaggerItem>
                   ))}
                 </StaggerContainer>
@@ -493,13 +495,13 @@ function ChangeCard({ change }: { change: SemanticChange }) {
     >
       <div className="flex items-center gap-2">
         {expanded ? <ChevronDown className="w-3 h-3 text-text-muted" /> : <ChevronRight className="w-3 h-3 text-text-muted" />}
-        <span
-          className="text-2xs font-bold px-1.5 py-0.5 rounded"
+        <TermChip
+          term={t.label}
+          underline={false}
+          className="font-bold px-1.5 py-0.5 rounded"
           style={{ color: t.color, backgroundColor: `${t.color}15` }}
-        >
-          {t.label}
-        </span>
-        <span className="text-2xs uppercase text-text-muted">{change.scope}</span>
+        />
+        <TermChip term={change.scope} className="uppercase text-text-muted" />
         <span className="text-xs font-medium text-text">{change.name}</span>
         <span
           className="ml-auto w-2 h-2 rounded-full"

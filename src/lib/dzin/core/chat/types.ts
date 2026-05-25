@@ -1,3 +1,5 @@
+import type { LayoutTemplateId } from '../layout/types';
+
 // ---------------------------------------------------------------------------
 // Message Role
 // ---------------------------------------------------------------------------
@@ -37,6 +39,51 @@ export interface ToolCall {
 }
 
 // ---------------------------------------------------------------------------
+// Suggested Action (compose_on_accept)
+// ---------------------------------------------------------------------------
+
+/** Compose actions an advisor suggestion can request when accepted. */
+export type SuggestedComposeAction = 'show' | 'hide' | 'replace' | 'clear';
+
+/** A single panel referenced by a suggestion's compose payload. */
+export interface SuggestedPanel {
+  /** Panel type string matching a PanelDefinition.type. */
+  type: string;
+  /** Optional role override (primary/secondary/tertiary/sidebar). */
+  role?: string;
+  /** Optional density override (full/compact/micro). */
+  density?: string;
+}
+
+/**
+ * The parsed `compose_on_accept` payload from a `suggest_action` tool call.
+ * Mirrors the `compose_workspace` argument shape so it can be replayed
+ * through the IntentBus when the user accepts the suggestion.
+ */
+export interface SuggestedCompose {
+  /** How to apply the panels relative to the current workspace. */
+  action: SuggestedComposeAction;
+  /** Panels the suggestion proposes (empty for `clear`). */
+  panels: SuggestedPanel[];
+  /** Optional layout preset to switch to. */
+  layout?: LayoutTemplateId;
+}
+
+/** Lifecycle of a proactive suggestion card. */
+export type SuggestedActionStatus = 'pending' | 'applied' | 'dismissed';
+
+/**
+ * A proactive suggestion attached to a system message, rendered as an
+ * actionable card with Apply / Dismiss controls.
+ */
+export interface SuggestedAction {
+  /** The composition to dispatch when the user clicks Apply. */
+  compose: SuggestedCompose;
+  /** Whether the suggestion is still actionable, applied, or dismissed. */
+  status: SuggestedActionStatus;
+}
+
+// ---------------------------------------------------------------------------
 // Chat Message
 // ---------------------------------------------------------------------------
 
@@ -54,6 +101,8 @@ export interface ChatMessage {
   toolCalls?: ToolCall[];
   /** Whether content is still being streamed. */
   isStreaming?: boolean;
+  /** Proactive suggestion (from `suggest_action` with `compose_on_accept`). */
+  suggestedAction?: SuggestedAction;
 }
 
 // ---------------------------------------------------------------------------
@@ -95,7 +144,9 @@ export interface ChatStore {
 
   // Message operations
   addMessage(role: MessageRole, content: string): string;
-  updateMessage(id: string, updates: Partial<Pick<ChatMessage, 'content' | 'role' | 'isStreaming'>>): void;
+  /** Add a system message carrying an actionable compose suggestion. */
+  addSuggestion(content: string, compose: SuggestedCompose): string;
+  updateMessage(id: string, updates: Partial<Pick<ChatMessage, 'content' | 'role' | 'isStreaming' | 'suggestedAction'>>): void;
   appendContent(id: string, chunk: string): void;
   removeMessage(id: string): void;
   clear(): void;

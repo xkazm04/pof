@@ -1,6 +1,15 @@
 import { NextRequest } from 'next/server';
 import { apiSuccess, apiError } from '@/lib/api-utils';
 import { parseBlueprintJson, summarizeBlueprintForPrompt, blueprintTypeToCpp } from '@/lib/blueprint-parser';
+import {
+  REPLICATION_INCLUDE,
+  buildReplicationInfo,
+  replicationSpecifier,
+  lifetimeReplicatedPropsDeclaration,
+  lifetimeReplicatedPropsDefinition,
+  onRepDeclarations,
+  onRepDefinitions,
+} from '@/lib/replication-scaffolder';
 import type { TranspileResult, TranspileWarning, SemanticDiffResult, SemanticChange, BlueprintAsset } from '@/types/blueprint';
 
 // ─── POST /api/blueprint-transpiler ─────────────────────────────────────────
@@ -93,6 +102,11 @@ function generateCppFromBlueprint(
   const mod = moduleName ?? projectName;
   const apiMacro = `${mod.toUpperCase()}_API`;
 
+  // Replication scaffolding — drives the GetLifetimeReplicatedProps body,
+  // the ReplicatedUsing specifiers, OnRep handlers, and the UnrealNetwork include.
+  const replication = buildReplicationInfo(asset);
+  const repProps = replication.properties;
+
   // Strip BP_ prefix for C++ class name
   const cppClassName = asset.className.startsWith('BP_')
     ? `A${asset.className.slice(3)}`
@@ -140,7 +154,7 @@ function generateCppFromBlueprint(
       const cppType = blueprintTypeToCpp(v.type);
       const specifiers: string[] = [];
       if (v.isExposedToEditor) specifiers.push('EditAnywhere');
-      if (v.isReplicated) specifiers.push('Replicated');
+      if (v.isReplicated) specifiers.push(replicationSpecifier({ name: v.name, repNotify: v.isRepNotify }));
       specifiers.push('BlueprintReadWrite');
       if (v.category) specifiers.push(`Category = "${v.category}"`);
 
@@ -221,12 +235,32 @@ function generateCppFromBlueprint(
     }
   }
 
+  // ── Networking / replication ──
+  if (replication.hasReplication) {
+    headerLines.push('public:');
+    headerLines.push('\t// ── Networking ──');
+    headerLines.push(`\t${lifetimeReplicatedPropsDeclaration()}`);
+    headerLines.push('');
+
+    const onRepDecls = onRepDeclarations(repProps);
+    if (onRepDecls.length > 0) {
+      headerLines.push('protected:');
+      headerLines.push('\t// ── RepNotify Handlers ──');
+      for (const line of onRepDecls) {
+        headerLines.push(`\t${line}`);
+      }
+      headerLines.push('');
+    }
+  }
+
   headerLines.push('};');
 
   // ── Source generation ──
 
   const sourceLines: string[] = [];
   sourceLines.push(`#include "${cppClassName}.h"`);
+  // DOREPLIFETIME macros live in Net/UnrealNetwork.h — mandatory for replicated classes.
+  if (replication.hasReplication) sourceLines.push(`#include "${REPLICATION_INCLUDE}"`);
   sourceLines.push('');
   sourceLines.push(`${cppClassName}::${cppClassName}()`);
   sourceLines.push('{');
@@ -302,6 +336,16 @@ function generateCppFromBlueprint(
     sourceLines.push('');
   }
 
+  // Replication: GetLifetimeReplicatedProps + OnRep handler bodies.
+  if (replication.hasReplication) {
+    sourceLines.push(lifetimeReplicatedPropsDefinition(cppClassName, repProps));
+    sourceLines.push('');
+    for (const def of onRepDefinitions(cppClassName, repProps)) {
+      sourceLines.push(def);
+      sourceLines.push('');
+    }
+  }
+
   return {
     headerCode: headerLines.join('\n'),
     sourceCode: sourceLines.join('\n'),
@@ -311,6 +355,7 @@ function generateCppFromBlueprint(
     warnings,
     nodeCount: asset.eventGraph.nodes.length + asset.functions.reduce((s, f) => s + f.nodes.length, 0),
     functionCount: asset.functions.length + customEvents.length,
+    replication,
   };
 }
 

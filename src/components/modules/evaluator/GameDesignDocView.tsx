@@ -11,7 +11,7 @@ import { useGameDesignDoc } from '@/hooks/useGameDesignDoc';
 import { SurfaceCard } from '@/components/ui/SurfaceCard';
 import type { GDDSection } from '@/lib/gdd-synthesizer';
 import { UI_TIMEOUTS } from '@/lib/constants';
-import { MODULE_COLORS } from '@/lib/chart-colors';
+import { MODULE_COLORS, STATUS_ERROR, STATUS_SUCCESS } from '@/lib/chart-colors';
 
 const ACCENT = MODULE_COLORS.evaluator;
 
@@ -83,7 +83,7 @@ export function GameDesignDocView() {
   if (error && !gdd) {
     return (
       <SurfaceCard className="m-4 p-6 text-center">
-        <p className="text-sm text-red-400 mb-3">{error}</p>
+        <p className="text-sm mb-3" style={{ color: STATUS_ERROR }}>{error}</p>
         <button
           onClick={generate}
           className="px-3 py-1.5 text-xs rounded-lg transition-colors"
@@ -182,7 +182,7 @@ export function GameDesignDocView() {
               className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-xs text-text-muted hover:text-text hover:bg-surface-hover transition-colors"
               title="Copy as Markdown"
             >
-              {copied ? <Check className="w-3 h-3 text-green-400" /> : <ClipboardCopy className="w-3 h-3" />}
+              {copied ? <Check className="w-3 h-3" style={{ color: STATUS_SUCCESS }} /> : <ClipboardCopy className="w-3 h-3" />}
               {copied ? 'Copied' : 'Copy'}
             </button>
             <button

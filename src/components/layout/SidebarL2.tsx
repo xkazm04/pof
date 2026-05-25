@@ -1,6 +1,7 @@
 'use client';
 
-import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { memo, useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
+import { createPortal } from 'react-dom';
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import { Check, ListOrdered } from 'lucide-react';
 import { useNavigationStore } from '@/stores/navigationStore';
@@ -21,6 +22,13 @@ const SIDEBAR_MIN = 140;
 const SIDEBAR_MAX = 260;
 const SIDEBAR_DEFAULT = 180;
 const STORAGE_KEY = 'pof-sidebar-l2-width';
+
+// Magnetic snap points + keyboard tuning for the resize handle
+const SNAP_POINTS: number[] = [140, 180, 220, 260];
+const SNAP_THRESHOLD = 8;   // px proximity that pulls the drag onto a snap point
+const SNAP_PULSE_MS = 120;  // border-bright "tick" duration when landing on a snap
+const KEYBOARD_STEP = 10;       // ArrowLeft/Right
+const KEYBOARD_STEP_SHIFT = 20; // Shift + ArrowLeft/Right
 
 function getSavedWidths(): Record<string, number> {
   try {
@@ -61,6 +69,40 @@ export function SidebarL2() {
   const startX = useRef(0);
   const startWidth = useRef(width);
 
+  // Live readout pill: follows the cursor while dragging
+  const [cursor, setCursor] = useState({ x: 0, y: 0 });
+  // Snap "tick": brief border-bright pulse when landing on a snap point
+  const [snapPulse, setSnapPulse] = useState(false);
+  const lastSnapRef = useRef<number | null>(null);
+  const snapTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Portal guard — render the floating pill only after hydration (avoids SSR document access)
+  const hydrated = useSyncExternalStore(
+    () => () => {},
+    () => true,
+    () => false,
+  );
+
+  // Clear any pending snap-pulse timer on unmount
+  useEffect(() => {
+    return () => {
+      if (snapTimeoutRef.current) clearTimeout(snapTimeoutRef.current);
+    };
+  }, []);
+
+  // Pull a raw width onto the nearest snap point when within threshold
+  const applySnap = useCallback((raw: number): number => {
+    for (const sp of SNAP_POINTS) {
+      if (Math.abs(raw - sp) <= SNAP_THRESHOLD) return sp;
+    }
+    return raw;
+  }, []);
+
+  const triggerSnapPulse = useCallback(() => {
+    setSnapPulse(true);
+    if (snapTimeoutRef.current) clearTimeout(snapTimeoutRef.current);
+    snapTimeoutRef.current = setTimeout(() => setSnapPulse(false), SNAP_PULSE_MS);
+  }, []);
+
   // Sync width when category changes
   const [prevCategory, setPrevCategory] = useState(activeCategory);
   if (prevCategory !== activeCategory) {
@@ -76,21 +118,33 @@ export function SidebarL2() {
     setIsDraggingState(true);
     startX.current = e.clientX;
     startWidth.current = width;
+    lastSnapRef.current = null;
+    setCursor({ x: e.clientX, y: e.clientY });
     document.body.style.cursor = 'ew-resize';
     document.body.style.userSelect = 'none';
 
     const handleMouseMove = (ev: MouseEvent) => {
       if (!isDragging.current) return;
       const deltaX = ev.clientX - startX.current;
-      const newWidth = Math.round(
-        Math.min(SIDEBAR_MAX, Math.max(SIDEBAR_MIN, startWidth.current + deltaX))
-      );
+      const clamped = Math.min(SIDEBAR_MAX, Math.max(SIDEBAR_MIN, startWidth.current + deltaX));
+      const newWidth = Math.round(applySnap(clamped));
+      // Pulse a "tick" only when newly landing on a snap point (not every frame held there)
+      if (SNAP_POINTS.includes(newWidth)) {
+        if (lastSnapRef.current !== newWidth) {
+          lastSnapRef.current = newWidth;
+          triggerSnapPulse();
+        }
+      } else {
+        lastSnapRef.current = null;
+      }
+      setCursor({ x: ev.clientX, y: ev.clientY });
       setWidth(newWidth);
     };
 
     const handleMouseUp = () => {
       isDragging.current = false;
       setIsDraggingState(false);
+      lastSnapRef.current = null;
       document.body.style.cursor = '';
       document.body.style.userSelect = '';
       document.removeEventListener('mousemove', handleMouseMove);
@@ -104,12 +158,35 @@ export function SidebarL2() {
 
     document.addEventListener('mousemove', handleMouseMove);
     document.addEventListener('mouseup', handleMouseUp);
-  }, [width, activeCategory]);
+  }, [width, activeCategory, applySnap, triggerSnapPulse]);
 
   const handleResizeDoubleClick = useCallback(() => {
     setWidth(SIDEBAR_DEFAULT);
     if (activeCategory) saveWidth(activeCategory, SIDEBAR_DEFAULT);
   }, [activeCategory]);
+
+  // Keyboard resize on the role="separator" handle: ←/→ in 10px steps (20px with Shift),
+  // Home/End jump to min/max. The aria-value* attrs are already wired, so this just
+  // makes the announced values actually adjustable.
+  const handleSeparatorKeyDown = useCallback((e: React.KeyboardEvent<HTMLDivElement>) => {
+    const isArrow = e.key === 'ArrowLeft' || e.key === 'ArrowRight';
+    const isHomeEnd = e.key === 'Home' || e.key === 'End';
+    if (!isArrow && !isHomeEnd) return;
+    e.preventDefault();
+    setWidth((w) => {
+      let next = w;
+      if (isArrow) {
+        const step = e.shiftKey ? KEYBOARD_STEP_SHIFT : KEYBOARD_STEP;
+        next = w + (e.key === 'ArrowRight' ? step : -step);
+      } else {
+        next = e.key === 'End' ? SIDEBAR_MAX : SIDEBAR_MIN;
+      }
+      next = Math.round(Math.min(SIDEBAR_MAX, Math.max(SIDEBAR_MIN, next)));
+      if (SNAP_POINTS.includes(next)) triggerSnapPulse();
+      if (activeCategory) saveWidth(activeCategory, next);
+      return next;
+    });
+  }, [activeCategory, triggerSnapPulse]);
 
   const handleKeyDown = useCallback((e: React.KeyboardEvent<HTMLButtonElement>) => {
     if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
@@ -141,6 +218,7 @@ export function SidebarL2() {
                 : { duration: 0.22, ease: [0.16, 1, 0.3, 1] }
           }
           className="relative h-full bg-surface-deep overflow-hidden"
+          style={{ ['--focus-accent' as string]: 'var(--setup)' }}
         >
           <div style={{ width }} className="flex flex-col h-full">
             <div className="px-3 py-3 border-b border-border">
@@ -154,7 +232,7 @@ export function SidebarL2() {
                 {activeCategory === 'core-engine' && (
                   <button
                     onClick={() => setActiveSubModule('core-engine-plan' as SubModuleId)}
-                    className={`inline-flex items-center justify-center w-6 h-6 rounded text-2xs border transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-strong focus-visible:ring-offset-1 focus-visible:ring-offset-surface-deep ${
+                    className={`inline-flex items-center justify-center w-6 h-6 rounded text-2xs border transition-colors focus-ring ${
                       activeSubModule === 'core-engine-plan'
                         ? 'bg-blue-500/15 text-blue-400 border-blue-500/30'
                         : 'text-text-muted hover:text-text hover:bg-surface border-border'
@@ -184,7 +262,7 @@ export function SidebarL2() {
                     aria-label={mod.label}
                     className={`
                       w-full flex items-center gap-2.5 px-3 py-2 text-left transition-all duration-fast
-                      focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-strong focus-visible:ring-offset-1 focus-visible:ring-offset-surface-deep
+                      focus-ring-inset
                       ${isActive
                         ? 'bg-surface-hover'
                         : 'hover:bg-surface'
@@ -220,20 +298,62 @@ export function SidebarL2() {
           <div
             onMouseDown={handleResizeMouseDown}
             onDoubleClick={handleResizeDoubleClick}
-            className="absolute top-0 right-0 w-3 h-full cursor-ew-resize group z-10"
+            onKeyDown={handleSeparatorKeyDown}
+            tabIndex={0}
+            className="absolute top-0 right-0 w-3 h-full cursor-ew-resize group z-10 rounded-sm focus-ring-inset"
             style={{ marginRight: -4 }}
             role="separator"
             aria-orientation="vertical"
-            aria-label="Resize sidebar (double-click to reset)"
+            aria-label="Resize sidebar (arrow keys to adjust, double-click to reset)"
             aria-valuenow={width}
             aria-valuemin={SIDEBAR_MIN}
             aria-valuemax={SIDEBAR_MAX}
           >
             {/* Border line */}
             <div className="absolute top-0 left-1/2 -translate-x-1/2 w-px h-full bg-border" />
-            {/* Hover highlight */}
-            <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[2px] h-full bg-transparent group-hover:bg-border-bright transition-colors duration-fast" />
+            {/* Hover highlight + active-drag / snap-tick pulse */}
+            <div
+              className="absolute top-0 left-1/2 -translate-x-1/2 w-[2px] h-full bg-transparent group-hover:bg-border-bright transition-colors duration-fast"
+              style={
+                snapPulse
+                  ? { backgroundColor: category.accentColor }
+                  : isDraggingState
+                    ? { backgroundColor: 'var(--border-bright)' }
+                    : undefined
+              }
+            />
           </div>
+
+          {/* Live width readout — floating pill anchored to the cursor while dragging */}
+          {hydrated && createPortal(
+            <AnimatePresence>
+              {isDraggingState && (
+                <motion.div
+                  key="sidebar-l2-width-readout"
+                  aria-hidden="true"
+                  initial={prefersReduced ? { opacity: 1, scale: 1 } : { opacity: 0, scale: 0.92 }}
+                  animate={{ opacity: 1, scale: snapPulse && !prefersReduced ? 1.06 : 1 }}
+                  exit={prefersReduced ? { opacity: 0 } : { opacity: 0, scale: 0.92 }}
+                  transition={
+                    prefersReduced
+                      ? { duration: 0 }
+                      : { type: 'spring', stiffness: 300, damping: 30, opacity: { duration: 0.08 } }
+                  }
+                  className="fixed z-[100] pointer-events-none select-none rounded-md border px-2 py-1 text-2xs font-mono font-semibold tabular-nums shadow-lg"
+                  style={{
+                    left: cursor.x + 16,
+                    top: cursor.y - 14,
+                    backgroundColor: 'var(--surface)',
+                    borderColor: SNAP_POINTS.includes(width) ? category.accentColor : 'var(--border)',
+                    color: SNAP_POINTS.includes(width) ? category.accentColor : 'var(--text)',
+                  }}
+                >
+                  {width}px
+                </motion.div>
+              )}
+            </AnimatePresence>,
+            document.body,
+          )}
         </motion.nav>
       )}
     </AnimatePresence>

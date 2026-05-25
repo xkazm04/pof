@@ -1,17 +1,17 @@
 'use client';
 
-import { useState, useCallback, useRef } from 'react';
+import { useState, useCallback, useRef, useMemo } from 'react';
 import { Plus, Volume2, Radio } from 'lucide-react';
 import type { AudioZone, SoundEmitter, AudioZoneShape, EmitterType } from '@/types/audio-scene';
 import {
   STATUS_INFO, ACCENT_VIOLET, STATUS_SUCCESS, STATUS_BLOCKER,
   STATUS_WARNING, ACCENT_EMERALD, ACCENT_PINK, STATUS_ERROR,
-  STATUS_SUBDUED, ACCENT_CYAN_LIGHT,
+  STATUS_SUBDUED, ACCENT_CYAN_LIGHT, withOpacity, OPACITY_20, OPACITY_60,
 } from '@/lib/chart-colors';
 
 // ── Constants ──
 
-const ZONE_COLORS: Record<string, string> = {
+export const ZONE_COLORS: Record<string, string> = {
   'none': 'var(--text-muted)',
   'small-room': STATUS_INFO,
   'large-hall': ACCENT_VIOLET,
@@ -73,6 +73,16 @@ export function AudioScenePainter({
   const [dragState, setDragState] = useState<{ id: string; type: 'zone' | 'emitter'; offsetX: number; offsetY: number } | null>(null);
   const [drawState, setDrawState] = useState<DrawState | null>(null);
   const [resizeState, setResizeState] = useState<{ zoneId: string; handle: string; startX: number; startY: number; origW: number; origH: number } | null>(null);
+
+  // ── Parent ↔ child relationship highlighting ──
+  // Selecting an emitter clears the zone selection (and vice-versa), so the
+  // parent-zone ring and the child-emitter cues are never active simultaneously.
+  const zoneById = useMemo(() => new Map(zones.map((z) => [z.id, z])), [zones]);
+  const selectedEmitter = selectedEmitterId
+    ? emitters.find((em) => em.id === selectedEmitterId) ?? null
+    : null;
+  /** Zone whose child emitter is currently selected — gets the soft highlight ring. */
+  const highlightedParentZoneId = selectedEmitter?.zoneId ?? null;
 
   const getSVGPoint = useCallback((e: React.MouseEvent | MouseEvent) => {
     if (!svgRef.current) return { x: 0, y: 0 };
@@ -349,6 +359,7 @@ export function AudioScenePainter({
           {zones.map((zone) => {
             const isSelected = selectedZoneId === zone.id;
             const zoneColor = zone.color || ZONE_COLORS[zone.reverbPreset] || 'var(--text-muted)';
+            const isParentOfSelectedEmitter = highlightedParentZoneId === zone.id;
 
             return (
               <g key={zone.id}>
@@ -395,6 +406,39 @@ export function AudioScenePainter({
                     strokeWidth={isSelected ? 2 : 1.5}
                     onMouseDown={(e) => handleZoneMouseDown(e, zone.id)}
                     style={{ cursor: paintMode === 'select' ? 'pointer' : undefined, filter: isSelected ? `drop-shadow(0 0 10px ${accentColor}40)` : 'none' }}
+                  />
+                )}
+
+                {/* Parent-zone highlight — soft ring shown while a child emitter is selected.
+                    Always mounted; stroke-opacity toggles so it eases in/out over 200ms. */}
+                {zone.shape === 'circle' ? (
+                  <circle
+                    cx={zone.x} cy={zone.y}
+                    r={zone.width / 2}
+                    fill="none"
+                    stroke={zoneColor}
+                    strokeWidth={4}
+                    strokeOpacity={isParentOfSelectedEmitter ? 0.4 : 0}
+                    style={{
+                      pointerEvents: 'none',
+                      filter: `drop-shadow(0 0 12px ${zoneColor})`,
+                      transition: 'stroke-opacity 200ms var(--ease-out)',
+                    }}
+                  />
+                ) : (
+                  <rect
+                    x={zone.x} y={zone.y}
+                    width={zone.width} height={zone.height}
+                    rx={2}
+                    fill="none"
+                    stroke={zoneColor}
+                    strokeWidth={4}
+                    strokeOpacity={isParentOfSelectedEmitter ? 0.4 : 0}
+                    style={{
+                      pointerEvents: 'none',
+                      filter: `drop-shadow(0 0 12px ${zoneColor})`,
+                      transition: 'stroke-opacity 200ms var(--ease-out)',
+                    }}
                   />
                 )}
 
@@ -457,10 +501,36 @@ export function AudioScenePainter({
             );
           })}
 
+          {/* Zone ↔ child-emitter connectors — faint dashed leaders from a zone's
+              centroid to each of its emitters, revealed while that zone is selected.
+              Rendered before the emitters so the lines pass beneath the glyphs. */}
+          {emitters.map((em) => {
+            if (!em.zoneId) return null;
+            const parentZone = zoneById.get(em.zoneId);
+            if (!parentZone) return null;
+            const centroid = zoneCentroid(parentZone);
+            const active = parentZone.id === selectedZoneId;
+            return (
+              <line
+                key={`zone-link-${em.id}`}
+                x1={centroid.x} y1={centroid.y}
+                x2={em.x} y2={em.y}
+                stroke={resolveZoneColor(parentZone)}
+                strokeWidth={1}
+                strokeDasharray="2,6"
+                opacity={active ? 0.25 : 0}
+                style={{ pointerEvents: 'none', transition: 'opacity 200ms var(--ease-out)' }}
+              />
+            );
+          })}
+
           {/* Sound emitters */}
           {emitters.map((em) => {
             const isSelected = selectedEmitterId === em.id;
             const emColor = EMITTER_COLORS[em.type] || STATUS_INFO;
+            const parentZone = em.zoneId ? zoneById.get(em.zoneId) : undefined;
+            const isChildOfSelectedZone = !!parentZone && parentZone.id === selectedZoneId;
+            const parentZoneColor = parentZone ? resolveZoneColor(parentZone) : emColor;
 
             return (
               <g key={em.id}>
@@ -486,6 +556,18 @@ export function AudioScenePainter({
                   style={{ cursor: paintMode === 'select' ? 'pointer' : undefined, filter: isSelected ? `drop-shadow(0 0 10px ${accentColor}50)` : `drop-shadow(0 0 5px ${emColor}40)` }}
                 />
 
+                {/* Membership ring — 1px stroke in the parent zone's color, eased in
+                    while that zone is selected so the emitter reads as a child of it. */}
+                <circle
+                  cx={em.x} cy={em.y}
+                  r={13}
+                  fill="none"
+                  stroke={parentZoneColor}
+                  strokeWidth={1}
+                  opacity={isChildOfSelectedZone ? 1 : 0}
+                  style={{ pointerEvents: 'none', transition: 'opacity 200ms var(--ease-out)' }}
+                />
+
                 {/* Inner dot */}
                 <circle
                   cx={em.x} cy={em.y}
@@ -507,6 +589,25 @@ export function AudioScenePainter({
                   <rect x={em.x - 30} y={em.y - 28} width={60} height={14} rx={2} fill="rgba(0,0,0,0.7)" stroke={`${emColor}40`} strokeWidth={1} />
                   <text x={em.x} y={em.y - 18} textAnchor="middle" fontSize={7} fill={emColor} fontFamily="monospace" fontWeight={700} style={{ textTransform: 'uppercase' }}>{em.name}</text>
                 </g>
+
+                {/* Unzoned indicator — selected emitter has no parent zone to highlight */}
+                {isSelected && !em.zoneId && (
+                  <g className="audio-rel-pill" style={{ pointerEvents: 'none' }}>
+                    <rect
+                      x={em.x - 26} y={em.y - 44}
+                      width={52} height={13} rx={6.5}
+                      fill={withOpacity(STATUS_WARNING, OPACITY_20)}
+                      stroke={withOpacity(STATUS_WARNING, OPACITY_60)}
+                      strokeWidth={1}
+                    />
+                    <text
+                      x={em.x} y={em.y - 34.5}
+                      textAnchor="middle" fontSize={7}
+                      fill={STATUS_WARNING} fontFamily="monospace" fontWeight={700}
+                      style={{ textTransform: 'uppercase', letterSpacing: '0.08em' }}
+                    >Unzoned</text>
+                  </g>
+                )}
 
                 {/* Delete on selection */}
                 {isSelected && paintMode === 'select' && (
@@ -562,6 +663,18 @@ export function AudioScenePainter({
 }
 
 // ── Helpers ──
+
+/** Resolve a zone's display color, falling back to its reverb preset hue. */
+function resolveZoneColor(zone: AudioZone): string {
+  return zone.color || ZONE_COLORS[zone.reverbPreset] || 'var(--text-muted)';
+}
+
+/** Geometric center of a zone — circle origin is already its center, rect is top-left. */
+function zoneCentroid(zone: AudioZone): { x: number; y: number } {
+  return zone.shape === 'circle'
+    ? { x: zone.x, y: zone.y }
+    : { x: zone.x + zone.width / 2, y: zone.y + zone.height / 2 };
+}
 
 function findContainingZone(x: number, y: number, zones: AudioZone[]): string | null {
   for (const zone of zones) {

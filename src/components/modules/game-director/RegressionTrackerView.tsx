@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   AlertOctagon, AlertTriangle, CheckCircle2,
@@ -22,6 +22,7 @@ import {
 } from '@/lib/chart-colors';
 import { SEVERITY_STYLES_DENSE as SEVERITY_STYLES } from '@/lib/game-director-styles';
 import { EmptyState } from '@/components/ui/EmptyState';
+import { FetchError } from '../shared/FetchError';
 
 const ACCENT = ACCENT_ORANGE;
 
@@ -48,12 +49,20 @@ export function RegressionTrackerView() {
     regressedCount: number; resolvedCount: number; activeAlerts: number; regressionRate: number;
   } | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [processing, setProcessing] = useState(false);
   const [selectedSessionId, setSelectedSessionId] = useState<string>('');
   const [lastReport, setLastReport] = useState<RegressionReport | null>(null);
+  const mountedRef = useRef(true);
+
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => { mountedRef.current = false; };
+  }, []);
 
   const refresh = useCallback(async () => {
     setLoading(true);
+    setError(null);
     try {
       const [fpData, alertData, statData, sessData] = await Promise.all([
         apiFetch<FindingFingerprint[]>('/api/regression-tracker?action=fingerprints'),
@@ -61,35 +70,20 @@ export function RegressionTrackerView() {
         apiFetch<{ totalTracked: number; openCount: number; fixedCount: number; regressedCount: number; resolvedCount: number; activeAlerts: number; regressionRate: number }>('/api/regression-tracker?action=stats'),
         apiFetch<PlaytestSession[]>('/api/regression-tracker?action=sessions'),
       ]);
+      if (!mountedRef.current) return;
       setFingerprints(fpData);
       setAlerts(alertData);
       setStats(statData);
       setSessions(sessData);
-    } catch { /* ignore */ }
-    setLoading(false);
+    } catch (err) {
+      if (!mountedRef.current) return;
+      setError(err instanceof Error ? err.message : 'Failed to load regression data');
+    } finally {
+      if (mountedRef.current) setLoading(false);
+    }
   }, []);
 
-  useEffect(() => {
-    let cancelled = false;
-    async function load() {
-      try {
-        const [fpData, alertData, statData, sessData] = await Promise.all([
-          apiFetch<FindingFingerprint[]>('/api/regression-tracker?action=fingerprints'),
-          apiFetch<RegressionAlert[]>('/api/regression-tracker?action=alerts'),
-          apiFetch<{ totalTracked: number; openCount: number; fixedCount: number; regressedCount: number; resolvedCount: number; activeAlerts: number; regressionRate: number }>('/api/regression-tracker?action=stats'),
-          apiFetch<PlaytestSession[]>('/api/regression-tracker?action=sessions'),
-        ]);
-        if (cancelled) return;
-        setFingerprints(fpData);
-        setAlerts(alertData);
-        setStats(statData);
-        setSessions(sessData);
-      } catch { /* ignore */ }
-      if (!cancelled) setLoading(false);
-    }
-    load();
-    return () => { cancelled = true; };
-  }, []);
+  useEffect(() => { void refresh(); }, [refresh]);
 
   const handleProcess = useCallback(async () => {
     if (!selectedSessionId) return;
@@ -131,6 +125,10 @@ export function RegressionTrackerView() {
         Loading regression data...
       </div>
     );
+  }
+
+  if (error && !stats) {
+    return <FetchError message={error} onRetry={refresh} />;
   }
 
   return (
@@ -372,25 +370,35 @@ function FingerprintsTab({
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [occurrences, setOccurrences] = useState<FingerprintOccurrence[]>([]);
   const [loadingOcc, setLoadingOcc] = useState(false);
+  const [occError, setOccError] = useState<string | null>(null);
 
   const filtered = useMemo(() => {
     if (filter === 'all') return fingerprints;
     return fingerprints.filter(fp => fp.status === filter);
   }, [fingerprints, filter]);
 
-  const loadOccurrences = useCallback(async (fpId: string) => {
+  const fetchOccurrences = useCallback(async (fpId: string) => {
+    setLoadingOcc(true);
+    setOccError(null);
+    try {
+      const occData = await apiFetch<FingerprintOccurrence[]>(`/api/regression-tracker?action=occurrences&fpId=${fpId}`);
+      setOccurrences(occData);
+    } catch (err) {
+      setOccError(err instanceof Error ? err.message : 'Failed to load occurrence history');
+      setOccurrences([]);
+    } finally {
+      setLoadingOcc(false);
+    }
+  }, []);
+
+  const loadOccurrences = useCallback((fpId: string) => {
     if (expandedId === fpId) {
       setExpandedId(null);
       return;
     }
     setExpandedId(fpId);
-    setLoadingOcc(true);
-    try {
-      const occData = await apiFetch<FingerprintOccurrence[]>(`/api/regression-tracker?action=occurrences&fpId=${fpId}`);
-      setOccurrences(occData);
-    } catch { /* ignore */ }
-    setLoadingOcc(false);
-  }, [expandedId]);
+    void fetchOccurrences(fpId);
+  }, [expandedId, fetchOccurrences]);
 
   const statusCounts = useMemo(() => {
     const counts: Record<string, number> = { all: fingerprints.length, open: 0, fixed: 0, regressed: 0, resolved: 0 };
@@ -488,6 +496,23 @@ function FingerprintsTab({
                         {loadingOcc ? (
                           <div className="flex items-center gap-2 text-2xs text-text-muted">
                             <Loader2 className="w-3 h-3 animate-spin" /> Loading history...
+                          </div>
+                        ) : occError ? (
+                          <div className="flex items-center justify-between gap-2 px-2 py-1.5 rounded text-2xs"
+                            style={{ color: STATUS_ERROR, backgroundColor: `${STATUS_ERROR}${OPACITY_8}`, border: `1px solid ${STATUS_ERROR}${OPACITY_15}` }}
+                            role="alert"
+                          >
+                            <div className="flex items-center gap-1.5 min-w-0">
+                              <AlertTriangle className="w-3 h-3 flex-shrink-0" />
+                              <span className="truncate">Couldn&apos;t load history: {occError}</span>
+                            </div>
+                            <button
+                              onClick={(e) => { e.stopPropagation(); void fetchOccurrences(fp.id); }}
+                              className="flex items-center gap-1 px-1.5 py-0.5 rounded font-medium flex-shrink-0 hover:opacity-80 transition-opacity"
+                              style={{ color: STATUS_ERROR, backgroundColor: `${STATUS_ERROR}${OPACITY_15}` }}
+                            >
+                              <RefreshCw className="w-2.5 h-2.5" /> Retry
+                            </button>
                           </div>
                         ) : (
                           <>

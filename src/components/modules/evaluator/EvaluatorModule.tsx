@@ -62,7 +62,7 @@ export function EvaluatorModule() {
       {/* Header */}
       <div className="px-6 pt-6 pb-0">
         <div className="flex items-center gap-3 mb-4">
-          <Radar className="w-6 h-6 text-[#ef4444]" />
+          <Radar className="w-6 h-6" style={{ color: MODULE_COLORS.evaluator }} />
           <h1 className="text-lg font-semibold text-text">Project Evaluator</h1>
         </div>
 

@@ -311,13 +311,15 @@ function OverlapRow({ overlap, isExpanded, isCopied, onToggle, onCopy }: {
   const simPct = Math.round(overlap.similarity * 100);
   const simColor = similarityColor(overlap.similarity);
 
+  const toggleLabel = `${isExpanded ? 'Collapse' : 'Expand'} overlap between ${overlap.featureA} (${moduleLabel(overlap.moduleA)}) and ${overlap.featureB} (${moduleLabel(overlap.moduleB)}) — ${simPct}% ${cfg.label}`;
+
   return (
-    <div className="group rounded-lg overflow-hidden">
+    <div className={`group rounded-lg overflow-hidden flex items-stretch transition-colors hover:bg-surface-hover ${isExpanded ? 'bg-[#111130]' : ''}`}>
       <button
         onClick={onToggle}
-        className={`w-full flex items-center gap-3 px-3 py-2.5 text-left transition-colors hover:bg-surface-hover ${
-          isExpanded ? 'bg-[#111130]' : ''
-        }`}
+        aria-expanded={isExpanded}
+        aria-label={toggleLabel}
+        className="flex-1 min-w-0 flex items-center gap-3 px-3 py-2.5 text-left outline-none focus-visible:ring-2 focus-visible:ring-border-bright focus-visible:ring-inset"
       >
         {/* Reason dot */}
         <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: cfg.color }} />
@@ -344,18 +346,6 @@ function OverlapRow({ overlap, isExpanded, isCopied, onToggle, onCopy }: {
         {/* Spacer */}
         <span className="flex-1" />
 
-        {/* Hover copy button */}
-        <span
-          role="button"
-          tabIndex={0}
-          onClick={(e) => { e.stopPropagation(); onCopy(); }}
-          onKeyDown={(e) => { if (e.key === 'Enter') { e.stopPropagation(); onCopy(); } }}
-          className="p-1 rounded hover:bg-border transition-all text-text-muted hover:text-text opacity-30 scale-95 group-hover:opacity-100 group-hover:scale-100 flex-shrink-0"
-          title={isCopied ? 'Copied!' : 'Copy overlap details'}
-        >
-          {isCopied ? <Check className="w-3 h-3" style={{ color: STATUS_SUCCESS }} /> : <Copy className="w-3 h-3" />}
-        </span>
-
         {/* Similarity badge */}
         <span
           className="text-2xs px-1.5 py-0.5 rounded font-medium flex-shrink-0"
@@ -377,6 +367,16 @@ function OverlapRow({ overlap, isExpanded, isCopied, onToggle, onCopy }: {
           ? <ChevronDown className="w-3 h-3 text-text-muted flex-shrink-0" />
           : <ChevronRight className="w-3 h-3 text-text-muted flex-shrink-0" />
         }
+      </button>
+
+      {/* Copy button — sibling of toggle button to avoid nested interactive controls */}
+      <button
+        onClick={onCopy}
+        aria-label={isCopied ? 'Copied overlap details to clipboard' : 'Copy overlap details to clipboard'}
+        title={isCopied ? 'Copied!' : 'Copy overlap details'}
+        className="px-2 my-1 mr-1 rounded text-text-muted hover:text-text hover:bg-border transition-all opacity-30 scale-95 group-hover:opacity-100 group-hover:scale-100 focus-visible:opacity-100 focus-visible:scale-100 outline-none focus-visible:ring-2 focus-visible:ring-border-bright flex-shrink-0 flex items-center"
+      >
+        {isCopied ? <Check className="w-3 h-3" style={{ color: STATUS_SUCCESS }} /> : <Copy className="w-3 h-3" />}
       </button>
 
       {/* Expanded details */}

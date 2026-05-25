@@ -51,6 +51,8 @@ export interface MarketplaceAsset {
   difficulty: IntegrationDifficulty;
   /** Estimated integration time in minutes */
   integrationTimeMinutes: number;
+  /** Optional preview thumbnail URL; falls back to a Package icon when absent */
+  thumbnailUrl?: string;
 }
 
 // ── Feature Gap ─────────────────────────────────────────────────────────────

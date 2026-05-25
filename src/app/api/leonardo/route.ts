@@ -1,5 +1,6 @@
 import { apiSuccess, apiError } from '@/lib/api-utils';
 import { generateImage, upscaleImage, unzoomImage, generateTextureOn3DModel, MAX_PROMPT_LENGTH, type GenerateImageOptions } from '@/lib/leonardo';
+import { detectSeamsSafe, detectSeamsFromUrl, type SeamCheckResult } from '@/lib/visual-gen/seam-check';
 import { logger } from '@/lib/logger';
 
 type Mode = 'image' | 'upscale' | 'unzoom' | 'texture3d';
@@ -19,7 +20,17 @@ export async function POST(request: Request) {
       if (prompt.length > MAX_PROMPT_LENGTH) return apiError(`Prompt exceeds ${MAX_PROMPT_LENGTH} character limit`, 400);
       const opts: GenerateImageOptions = body?.opts ?? {};
       const result = await generateImage(prompt, opts);
-      return apiSuccess(result);
+
+      // Tileability pass — only meaningful when a seamless tile was requested.
+      // Prefer the already-downloaded bytes; fall back to the URL if cleanup was off.
+      let seam: SeamCheckResult | null = null;
+      if (opts.tiling) {
+        seam = result.imageBase64
+          ? await detectSeamsSafe(new Uint8Array(Buffer.from(result.imageBase64, 'base64')))
+          : await detectSeamsFromUrl(result.imageUrl);
+      }
+
+      return apiSuccess({ ...result, seam });
     }
 
     if (mode === 'upscale') {

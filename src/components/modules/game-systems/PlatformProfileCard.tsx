@@ -10,7 +10,7 @@ import {
 import type { BuildProfile, PlatformId } from '@/lib/packaging/build-profiles';
 import { PLATFORM_NOTES } from '@/lib/packaging/uat-command-generator';
 import { UI_TIMEOUTS } from '@/lib/constants';
-import { MODULE_COLORS, STATUS_SUCCESS, ACCENT_ORANGE, ACCENT_VIOLET } from '@/lib/chart-colors';
+import { MODULE_COLORS, STATUS_SUCCESS, STATUS_WARNING, STATUS_INFO, STATUS_ERROR, ACCENT_ORANGE, ACCENT_VIOLET } from '@/lib/chart-colors';
 
 const PLATFORM_ICONS: Record<PlatformId, typeof Monitor> = {
   Win64: Monitor,
@@ -66,7 +66,7 @@ export function PlatformProfileCard({
           <div className="flex items-center gap-1.5">
             <span className="text-xs font-semibold text-text truncate">{profile.name}</span>
             {profile.isDefault && (
-              <Star className="w-3 h-3 text-yellow-400 flex-shrink-0" fill="currentColor" />
+              <Star className="w-3 h-3 flex-shrink-0" style={{ color: STATUS_WARNING }} fill="currentColor" />
             )}
           </div>
           <div className="flex items-center gap-1.5 mt-0.5">
@@ -177,21 +177,24 @@ export function PlatformProfileCard({
               <div className="flex items-center gap-2 pt-1 border-t border-border/30">
                 <button
                   onClick={() => onEdit(profile)}
-                  className="text-2xs text-blue-400 hover:text-blue-300 transition-colors"
+                  className="text-2xs transition hover:brightness-125"
+                  style={{ color: STATUS_INFO }}
                 >
                   Edit
                 </button>
                 {!profile.isDefault && (
                   <button
                     onClick={() => onSetDefault(profile.id)}
-                    className="text-2xs text-yellow-400 hover:text-yellow-300 transition-colors"
+                    className="text-2xs transition hover:brightness-125"
+                    style={{ color: STATUS_WARNING }}
                   >
                     Set Default
                   </button>
                 )}
                 <button
                   onClick={() => onDelete(profile.id)}
-                  className="flex items-center gap-0.5 text-2xs text-red-400/60 hover:text-red-400 transition-colors ml-auto"
+                  className="flex items-center gap-0.5 text-2xs opacity-60 hover:opacity-100 transition-opacity ml-auto"
+                  style={{ color: STATUS_ERROR }}
                 >
                   <Trash2 className="w-2.5 h-2.5" />
                   Delete

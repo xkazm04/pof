@@ -3,6 +3,7 @@
 import { useState, useCallback, useRef } from 'react';
 import { Plus, Unlink, Monitor } from 'lucide-react';
 import type { RoomNode, RoomConnection, RoomType, DifficultyLevel } from '@/types/level-design';
+import type { PacingFinding, PacingSeverity } from '@/lib/level-design/pacing-linter';
 import {
   STATUS_ERROR, STATUS_SUCCESS, STATUS_LIME, STATUS_WARNING, STATUS_BLOCKER, STATUS_INFO, STATUS_SUBDUED,
   ACCENT_VIOLET, ACCENT_EMERALD, ACCENT_PINK, ACCENT_CYAN_LIGHT, OVERLAY_WHITE,
@@ -38,6 +39,26 @@ const DIFFICULTY_COLORS: Record<DifficultyLevel, string> = {
   5: STATUS_ERROR,
 };
 
+const SEVERITY_COLORS: Record<PacingSeverity, string> = {
+  info: STATUS_INFO,
+  warning: STATUS_WARNING,
+  critical: STATUS_ERROR,
+};
+
+const SEVERITY_RANK: Record<PacingSeverity, number> = {
+  info: 1,
+  warning: 2,
+  critical: 3,
+};
+
+function highestSeverity(findings: PacingFinding[]): PacingSeverity | null {
+  let best: PacingSeverity | null = null;
+  for (const f of findings) {
+    if (!best || SEVERITY_RANK[f.severity] > SEVERITY_RANK[best]) best = f.severity;
+  }
+  return best;
+}
+
 interface LevelFlowEditorProps {
   rooms: RoomNode[];
   connections: RoomConnection[];
@@ -47,6 +68,8 @@ interface LevelFlowEditorProps {
   selectedRoomId: string | null;
   accentColor: string;
   readOnly?: boolean;
+  /** Pacing-linter findings keyed by primary room id — drives inline warning badges. */
+  findingsByRoom?: Record<string, PacingFinding[]>;
 }
 
 export function LevelFlowEditor({
@@ -58,6 +81,7 @@ export function LevelFlowEditor({
   selectedRoomId,
   accentColor,
   readOnly = false,
+  findingsByRoom,
 }: LevelFlowEditorProps) {
   const svgRef = useRef<SVGSVGElement>(null);
   const [dragState, setDragState] = useState<{
@@ -425,6 +449,13 @@ export function LevelFlowEditor({
             const isSelected = selectedRoomId === room.id;
             const isConnectTarget = connectingFrom && connectingFrom !== room.id;
             const diffColor = DIFFICULTY_COLORS[room.difficulty];
+            const findings = findingsByRoom?.[room.id] ?? [];
+            const topSeverity = findings.length > 0 ? highestSeverity(findings) : null;
+            const badgeColor = topSeverity ? SEVERITY_COLORS[topSeverity] : null;
+            const badgeTooltip = findings
+              .slice(0, 3)
+              .map((f) => `[${f.severity}] ${f.title}: ${f.suggestion}`)
+              .join('\n');
 
             return (
               <g
@@ -542,6 +573,57 @@ export function LevelFlowEditor({
                     <text x={9} y={9} style={{ fontSize: 11 }} fill={cfg.color} textAnchor="middle" fontFamily="monospace" fontWeight="bold">
                       {String(room.spawnEntries.reduce((s, e) => s + e.count, 0)).padStart(2, '0')}
                     </text>
+                  </g>
+                )}
+
+                {/* Pacing-linter warning badge */}
+                {badgeColor && (
+                  <g transform={`translate(${-10}, ${-10})`}>
+                    <title>{badgeTooltip}</title>
+                    <circle
+                      cx={10} cy={10} r={11}
+                      fill={badgeColor}
+                      opacity={0.25}
+                      filter="url(#glow-node)"
+                    />
+                    <circle
+                      cx={10} cy={10} r={9}
+                      fill="#0a0a1e"
+                      stroke={badgeColor}
+                      strokeWidth={1.5}
+                    />
+                    <text
+                      x={10} y={13.5}
+                      textAnchor="middle"
+                      fontFamily="monospace"
+                      fontWeight="bold"
+                      style={{ fontSize: 11 }}
+                      fill={badgeColor}
+                    >
+                      !
+                    </text>
+                    {findings.length > 1 && (
+                      <g transform="translate(14, -2)">
+                        <rect
+                          x={0} y={0}
+                          width={findings.length > 9 ? 14 : 10}
+                          height={10}
+                          rx={5}
+                          fill={badgeColor}
+                        />
+                        <text
+                          x={findings.length > 9 ? 7 : 5}
+                          y={8}
+                          textAnchor="middle"
+                          fontFamily="monospace"
+                          fontWeight="bold"
+                          style={{ fontSize: 9 }}
+                          fill="#0a0a1e"
+                        >
+                          {findings.length > 9 ? '9+' : findings.length}
+                        </text>
+                      </g>
+                    )}
                   </g>
                 )}
               </g>

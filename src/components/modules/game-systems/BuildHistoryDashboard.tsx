@@ -9,7 +9,10 @@ import {
 } from 'lucide-react';
 import type { BuildRecord, BuildStats, SizeTrendPoint } from '@/lib/packaging/build-history-store';
 import { apiFetch } from '@/lib/api-utils';
-import { MODULE_COLORS, ACCENT_VIOLET, statusBg } from '@/lib/chart-colors';
+import {
+  MODULE_COLORS, ACCENT_VIOLET, statusBg, successRateColor, withOpacity, OPACITY_80,
+  STATUS_SUCCESS, STATUS_WARNING, STATUS_ERROR, STATUS_INFO, STATUS_STALE,
+} from '@/lib/chart-colors';
 import { SizeTrendChart } from './SizeTrendChart';
 import { SurfaceCard } from '@/components/ui/SurfaceCard';
 import { BuildComparison } from './BuildComparison';
@@ -69,7 +72,7 @@ function MetricCard({ label, value, sub, icon, color }: {
   return (
     <SurfaceCard level={2} className="px-3 py-2.5">
       <div className="flex items-center gap-1.5 mb-1">
-        <span className={color}>{icon}</span>
+        <span style={{ color }}>{icon}</span>
         <span className="text-2xs uppercase tracking-wider text-text-muted font-medium">{label}</span>
       </div>
       <div className="text-base font-semibold text-text leading-tight">{value}</div>
@@ -96,11 +99,11 @@ function BuildRow({ build, onDelete }: { build: BuildRecord; onDelete: (id: numb
 
         <div className="flex items-center gap-1.5 min-w-0">
           {build.status === 'success' ? (
-            <CheckCircle className="w-3 h-3 text-green-400 flex-shrink-0" aria-label="Build succeeded" />
+            <CheckCircle className="w-3 h-3 flex-shrink-0" style={{ color: STATUS_SUCCESS }} aria-label="Build succeeded" />
           ) : build.status === 'failed' ? (
-            <XCircle className="w-3 h-3 text-red-400 flex-shrink-0" aria-label="Build failed" />
+            <XCircle className="w-3 h-3 flex-shrink-0" style={{ color: STATUS_ERROR }} aria-label="Build failed" />
           ) : (
-            <Clock className="w-3 h-3 text-yellow-400 flex-shrink-0" aria-label="Build in progress" />
+            <Clock className="w-3 h-3 flex-shrink-0" style={{ color: STATUS_WARNING }} aria-label="Build in progress" />
           )}
           <span className="text-text-muted font-mono truncate">
             #{build.id}
@@ -152,17 +155,17 @@ function BuildRow({ build, onDelete }: { build: BuildRecord; onDelete: (id: numb
               {(build.warningCount > 0 || build.errorCount > 0) && (
                 <div className="flex items-center gap-2">
                   {build.errorCount > 0 && (
-                    <span className="text-red-400">{build.errorCount} error{build.errorCount !== 1 ? 's' : ''}</span>
+                    <span style={{ color: STATUS_ERROR }}>{build.errorCount} error{build.errorCount !== 1 ? 's' : ''}</span>
                   )}
                   {build.warningCount > 0 && (
-                    <span className="text-yellow-400">{build.warningCount} warning{build.warningCount !== 1 ? 's' : ''}</span>
+                    <span style={{ color: STATUS_WARNING }}>{build.warningCount} warning{build.warningCount !== 1 ? 's' : ''}</span>
                   )}
                 </div>
               )}
               {build.errorSummary && (
                 <div className="col-span-2">
                   <span className="text-text-muted">Error: </span>
-                  <span className="text-red-400/80 font-mono">{build.errorSummary}</span>
+                  <span className="font-mono" style={{ color: withOpacity(STATUS_ERROR, OPACITY_80) }}>{build.errorSummary}</span>
                 </div>
               )}
               {build.notes && (
@@ -174,7 +177,8 @@ function BuildRow({ build, onDelete }: { build: BuildRecord; onDelete: (id: numb
               <div className="col-span-2 pt-1">
                 <button
                   onClick={(e) => { e.stopPropagation(); onDelete(build.id); }}
-                  className="flex items-center gap-1 text-2xs text-red-400/60 hover:text-red-400 transition-colors"
+                  className="flex items-center gap-1 text-2xs opacity-60 hover:opacity-100 transition-opacity"
+                  style={{ color: STATUS_ERROR }}
                 >
                   <Trash2 className="w-2.5 h-2.5" />
                   Delete
@@ -469,26 +473,26 @@ export function BuildHistoryDashboard() {
             value={`${stats.successRate.toFixed(0)}%`}
             sub={`${stats.successCount}/${stats.totalBuilds}`}
             icon={<CheckCircle className="w-3 h-3" />}
-            color={stats.successRate >= 80 ? 'text-green-400' : stats.successRate >= 50 ? 'text-yellow-400' : 'text-red-400'}
+            color={successRateColor(stats.successRate)}
           />
           <MetricCard
             label="Avg Duration"
             value={stats.avgDurationMs ? formatDuration(stats.avgDurationMs) : '-'}
             icon={<Clock className="w-3 h-3" />}
-            color="text-blue-400"
+            color={STATUS_INFO}
           />
           <MetricCard
             label="Avg Size"
             value={stats.avgSizeBytes ? formatBytes(stats.avgSizeBytes) : '-'}
             icon={<HardDrive className="w-3 h-3" />}
-            color="text-purple-400"
+            color={STATUS_STALE}
           />
           <MetricCard
             label="Failed"
             value={stats.failedCount}
             sub={stats.totalBuilds > 0 ? `${(100 - stats.successRate).toFixed(0)}%` : undefined}
             icon={<AlertTriangle className="w-3 h-3" />}
-            color="text-red-400"
+            color={STATUS_ERROR}
           />
           <VersionPanel version={version} onBump={handleBump} />
         </div>
@@ -501,14 +505,14 @@ export function BuildHistoryDashboard() {
             <div key={p.platform} className="rounded border border-border bg-surface-deep/60 px-2.5 py-2">
               <div className="flex items-center justify-between mb-1">
                 <span className="text-xs font-medium text-text-muted">{p.platform}</span>
-                <span className={`text-2xs font-mono ${p.successRate >= 80 ? 'text-green-400' : 'text-yellow-400'}`}>
+                <span className="text-2xs font-mono" style={{ color: successRateColor(p.successRate) }}>
                   {p.successRate.toFixed(0)}%
                 </span>
               </div>
               <div className="w-full h-1 rounded-full bg-surface-hover overflow-hidden mb-1">
                 <div
-                  className={`h-full rounded-full transition-all ${p.successRate >= 80 ? 'bg-green-500' : p.successRate >= 50 ? 'bg-yellow-500' : 'bg-red-500'}`}
-                  style={{ width: `${p.successRate}%` }}
+                  className="h-full rounded-full transition-all"
+                  style={{ width: `${p.successRate}%`, backgroundColor: successRateColor(p.successRate) }}
                 />
               </div>
               <div className="flex items-center gap-2 text-2xs text-text-muted">

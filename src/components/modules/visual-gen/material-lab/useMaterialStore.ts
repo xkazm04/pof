@@ -20,6 +20,8 @@ export interface MaterialPreset {
 
 export type PreviewMesh = 'sphere' | 'cube' | 'plane' | 'cylinder';
 
+export type TextureChannel = 'albedo' | 'normal' | 'metallic' | 'roughness' | 'ao';
+
 /** Convert a hex color string like "#c0c0c0" to [r, g, b] in 0-1 range. */
 function hexToRgb(hex: string): [number, number, number] {
   const h = hex.replace('#', '');
@@ -42,10 +44,15 @@ interface MaterialState {
   roughnessTexture: string | null;
   aoTexture: string | null;
 
+  // Per-channel "just updated" tick — increments whenever setTexture is called.
+  // TextureSlot subscribes to its channel's tick to trigger a Framer Motion
+  // highlight when a value is piped in from another panel (e.g. Advanced).
+  textureHighlightTick: Record<TextureChannel, number>;
+
   setParam: <K extends keyof PBRParams>(key: K, value: PBRParams[K]) => void;
   setParams: (params: Partial<PBRParams>) => void;
   setPreviewMesh: (mesh: PreviewMesh) => void;
-  setTexture: (channel: 'albedo' | 'normal' | 'metallic' | 'roughness' | 'ao', url: string | null) => void;
+  setTexture: (channel: TextureChannel, url: string | null) => void;
   addPreset: (name: string) => string;
   loadPreset: (id: string) => void;
   removePreset: (id: string) => void;
@@ -84,6 +91,8 @@ export const useMaterialStore = create<MaterialState>((set, get) => ({
   roughnessTexture: null,
   aoTexture: null,
 
+  textureHighlightTick: { albedo: 0, normal: 0, metallic: 0, roughness: 0, ao: 0 },
+
   setParam: (key, value) =>
     set((s) => ({ params: { ...s.params, [key]: value }, activePresetId: null })),
 
@@ -94,7 +103,13 @@ export const useMaterialStore = create<MaterialState>((set, get) => ({
 
   setTexture: (channel, url) => {
     const key = `${channel}Texture` as keyof MaterialState;
-    set({ [key]: url } as Partial<MaterialState>);
+    set((s) => ({
+      [key]: url,
+      textureHighlightTick: {
+        ...s.textureHighlightTick,
+        [channel]: s.textureHighlightTick[channel] + 1,
+      },
+    } as Partial<MaterialState>));
   },
 
   addPreset: (name) => {
@@ -130,6 +145,7 @@ export const useMaterialStore = create<MaterialState>((set, get) => ({
       metallicTexture: null,
       roughnessTexture: null,
       aoTexture: null,
+      textureHighlightTick: { albedo: 0, normal: 0, metallic: 0, roughness: 0, ao: 0 },
     }),
 
   sendToBlender: async (materialName?: string) => {

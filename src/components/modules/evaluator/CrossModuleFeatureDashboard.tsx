@@ -203,10 +203,22 @@ export function CrossModuleFeatureDashboard() {
     return groups.slice(0, 8);
   }, [allStatuses]);
 
-  // Cell intensity (opacity based on count relative to module total)
+  // Cell intensity (0.15..1.0 for non-zero cells; 0 when empty).
   function cellIntensity(count: number, total: number): number {
     if (total === 0 || count === 0) return 0;
     return 0.15 + (count / total) * 0.85;
+  }
+
+  // Map intensity to a perceptually-spaced alpha hex in 0x26..0xE6 (~15%..90%).
+  // Why: the prior `intensity * 20` ramp capped at ~8% alpha, so even saturated
+  // cells were nearly transparent and the grid didn't read as a heatmap. A sqrt
+  // curve lifts low-density cells into the visible range without crushing the
+  // top end.
+  function cellAlphaHex(intensity: number): string {
+    if (intensity <= 0) return '00';
+    const t = Math.min(1, Math.max(0, (intensity - 0.15) / 0.85));
+    const alpha = Math.round(38 + Math.sqrt(t) * 192);
+    return alpha.toString(16).padStart(2, '0');
   }
 
   const handleCellClick = useCallback((moduleId: SubModuleId) => {
@@ -346,6 +358,7 @@ export function CrossModuleFeatureDashboard() {
               {/* Module rows */}
               {groupCells.map((cell, i) => {
                 const pctDone = cell.total > 0 ? Math.round(cell.pctComplete * 100) : 0;
+                const rowAriaLabel = `${cell.label} — ${pctDone}% complete. ${STATUS_KEYS.map((k) => `${cell[k]} ${STATUS_LABELS[k].toLowerCase()}`).join(', ')}. Open module.`;
 
                 return (
                   <motion.div
@@ -353,9 +366,18 @@ export function CrossModuleFeatureDashboard() {
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     transition={{ duration: MOTION.base, delay: i * 0.02 }}
-                    className="grid items-center border-b border-border/50 hover:bg-surface transition-colors cursor-pointer group"
+                    role="button"
+                    tabIndex={0}
+                    aria-label={rowAriaLabel}
+                    className="grid items-center border-b border-border/50 hover:bg-surface transition-colors cursor-pointer group outline-none focus-visible:ring-2 focus-visible:ring-border-bright focus-visible:ring-inset focus-visible:bg-surface"
                     style={{ gridTemplateColumns: '180px repeat(4, 1fr) 80px' }}
                     onClick={() => handleCellClick(cell.moduleId)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        handleCellClick(cell.moduleId);
+                      }
+                    }}
                   >
                     {/* Module name */}
                     <div className="px-3 py-2.5 flex items-center gap-2">
@@ -370,6 +392,10 @@ export function CrossModuleFeatureDashboard() {
                       const count = cell[key];
                       const intensity = cellIntensity(count, cell.total);
                       const isHovered = hoveredCell?.module === cell.moduleId && hoveredCell?.status === key;
+                      const cellPct = cell.total > 0 ? Math.round((count / cell.total) * 100) : 0;
+                      const cellTitle = count > 0
+                        ? `${count}/${cell.total} ${STATUS_LABELS[key].toLowerCase()} (${cellPct}%)`
+                        : `0 ${STATUS_LABELS[key].toLowerCase()}`;
 
                       return (
                         <div
@@ -380,15 +406,17 @@ export function CrossModuleFeatureDashboard() {
                         >
                           <div
                             className="w-full h-7 rounded-md flex items-center justify-center transition-all duration-base"
+                            title={cellTitle}
+                            aria-label={cellTitle}
                             style={{
-                              backgroundColor: count > 0 ? `${STATUS_COLORS[key]}${Math.round(intensity * 20).toString(16).padStart(2, '0')}` : 'transparent',
-                              border: isHovered && count > 0 ? `1px solid ${STATUS_COLORS[key]}60` : '1px solid transparent',
+                              backgroundColor: count > 0 ? `${STATUS_COLORS[key]}${cellAlphaHex(intensity)}` : 'transparent',
+                              border: isHovered && count > 0 ? `1px solid ${STATUS_COLORS[key]}` : '1px solid transparent',
                             }}
                           >
                             {count > 0 && (
                               <span
                                 className="text-xs font-semibold"
-                                style={{ color: `${STATUS_COLORS[key]}${intensity > 0.5 ? 'ee' : '99'}` }}
+                                style={{ color: intensity > 0.55 ? 'var(--text)' : STATUS_COLORS[key] }}
                               >
                                 {count}
                               </span>
@@ -398,7 +426,8 @@ export function CrossModuleFeatureDashboard() {
                           {/* Tooltip */}
                           {isHovered && count > 0 && (
                             <div
-                              className="absolute z-20 bottom-full mb-1 px-2 py-1 rounded-md text-2xs font-medium whitespace-nowrap"
+                              role="tooltip"
+                              className="absolute z-20 bottom-full mb-1 px-2 py-1 rounded-md text-2xs font-medium whitespace-nowrap pointer-events-none"
                               style={{
                                 backgroundColor: 'var(--surface-hover)',
                                 border: `1px solid ${STATUS_COLORS[key]}40`,
@@ -406,7 +435,7 @@ export function CrossModuleFeatureDashboard() {
                               }}
                             >
                               {count}/{cell.total} {STATUS_LABELS[key].toLowerCase()}
-                              <span className="text-text-muted"> ({Math.round((count / cell.total) * 100)}%)</span>
+                              <span className="text-text-muted"> ({cellPct}%)</span>
                             </div>
                           )}
                         </div>

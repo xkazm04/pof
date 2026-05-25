@@ -20,7 +20,12 @@ import { useProjectStore } from '@/stores/projectStore';
 import { buildProjectContextHeader } from '@/lib/prompt-context';
 import {
   MODULE_COLORS, STATUS_SUCCESS, STATUS_WARNING, STATUS_ERROR, STATUS_NEUTRAL, STATUS_INFO,
-  ACCENT_RED,
+  ACCENT_RED, ACCENT_BLUE_BOLD,
+  SURFACE_DAG_NODE_FILL, SURFACE_DAG_NODE_HOVER_FILL, SURFACE_DAG_CLUSTER_DIM_FILL,
+  SURFACE_MINIMAP_CLUSTER, SURFACE_MINIMAP_CLUSTER_FILL,
+  BORDER_DAG_NEUTRAL, OVERLAY_WHITE, OVERLAY_BLACK,
+  OPACITY_5, OPACITY_10, OPACITY_20, OPACITY_30, OPACITY_40, OPACITY_60, OPACITY_80,
+  withOpacity,
 } from '@/lib/chart-colors';
 import type { SubModuleId } from '@/types/modules';
 
@@ -409,7 +414,7 @@ export function PlanMatrixMap({ moduleId: initialModuleId }: PlanMatrixMapProps 
         style={{
           cursor: isPanningState ? 'grabbing' : 'grab',
           outline: 'none',
-          backgroundImage: `radial-gradient(circle at 1px 1px, rgba(255,255,255,0.05) 1px, transparent 0)`,
+          backgroundImage: `radial-gradient(circle at 1px 1px, ${withOpacity(OVERLAY_WHITE, OPACITY_5)} 1px, transparent 0)`,
           backgroundSize: `${40 * transform.zoom}px ${40 * transform.zoom}px`,
           backgroundPosition: `${transform.panX}px ${transform.panY}px`,
           willChange: 'transform', // Performance hint
@@ -512,8 +517,8 @@ export function PlanMatrixMap({ moduleId: initialModuleId }: PlanMatrixMapProps 
                 width: c.width,
                 height: c.height,
                 background: filterModuleId && filterModuleId !== c.moduleId
-                  ? 'rgba(15,15,25,0.15)'
-                  : 'rgba(22,22,38,0.85)',
+                  ? SURFACE_DAG_CLUSTER_DIM_FILL
+                  : SURFACE_DAG_NODE_FILL,
                 backdropFilter: 'blur(12px)',
                 transition: 'opacity 0.2s', // Removed background transition for performance
                 opacity: filterModuleId && filterModuleId !== c.moduleId ? 0.3 : 1,
@@ -529,7 +534,10 @@ export function PlanMatrixMap({ moduleId: initialModuleId }: PlanMatrixMapProps 
                 className="absolute left-6 top-4 px-5 py-2.5 text-2xl font-black tracking-widest text-white uppercase select-none whitespace-nowrap flex items-center gap-3 bg-surface-deep/80 backdrop-blur-md rounded-lg border border-border/40 shadow-lg"
                 style={{ transform: `scale(${Math.max(1, 1 / transform.zoom)})`, transformOrigin: 'top left' }}
               >
-                <div className="w-3 h-3 rounded-full bg-blue-400 shadow-[0_0_12px_rgba(96,165,250,0.8)]" />
+                <div
+                  className="w-3 h-3 rounded-full bg-blue-400"
+                  style={{ boxShadow: `0 0 12px ${withOpacity(STATUS_INFO, OPACITY_80)}` }}
+                />
                 {c.label}
                 <span className="ml-3 opacity-80 font-mono text-sm bg-background/80 px-2 py-1 rounded-md text-blue-200">
                   {c.nodes.length} NODES
@@ -677,11 +685,15 @@ export function PlanMatrixMap({ moduleId: initialModuleId }: PlanMatrixMapProps 
                       top: node.y - 14,  // Adjusted for shorter card
                       width: 180,
                       height: 28,
-                      backgroundColor: isSelected ? `${node.color}15` : isHovered ? 'rgba(30, 30, 45, 0.95)' : 'rgba(22, 22, 38, 0.85)',
+                      backgroundColor: isSelected ? `${node.color}15` : isHovered ? SURFACE_DAG_NODE_HOVER_FILL : SURFACE_DAG_NODE_FILL,
                       backdropFilter: 'blur(4px)',
-                      borderColor: isSelected ? node.color : isHovered ? `${node.color}80` : 'rgba(100,100,130,0.2)',
+                      borderColor: isSelected ? node.color : isHovered ? `${node.color}${OPACITY_80}` : withOpacity(BORDER_DAG_NEUTRAL, OPACITY_20),
                       opacity: o,
-                      boxShadow: isSelected ? `0 0 0 1px ${node.color}40, 0 4px 12px rgba(0,0,0,0.4)` : isHovered ? `0 2px 8px rgba(0,0,0,0.3)` : 'none',
+                      boxShadow: isSelected
+                        ? `0 0 0 1px ${node.color}${OPACITY_40}, 0 4px 12px ${withOpacity(OVERLAY_BLACK, OPACITY_40)}`
+                        : isHovered
+                          ? `0 2px 8px ${withOpacity(OVERLAY_BLACK, OPACITY_30)}`
+                          : 'none',
                       transform: isHovered ? 'scale(1.02) translateY(-1px)' : isSelected ? 'scale(1.02)' : 'scale(1)',
                       cursor: 'pointer',
                       zIndex: isHovered || isSelected ? 10 : 1,
@@ -747,7 +759,7 @@ export function PlanMatrixMap({ moduleId: initialModuleId }: PlanMatrixMapProps 
                         : isReady
                           ? `0 0 6px ${node.color}50`
                           : isOnCp
-                            ? '0 0 4px #f59e0b50'
+                            ? `0 0 4px ${withOpacity(MODULE_COLORS.content, OPACITY_60)}`
                             : 'none',
                     transform: isHovered ? 'scale(1.4)' : isSelected ? 'scale(1.3)' : undefined,
                     transition: 'transform 0.15s, box-shadow 0.15s, opacity 0.3s',
@@ -889,9 +901,10 @@ function ToggleBtn({ icon: Icon, active, onClick, label }: { icon: typeof Link2;
       onClick={onClick}
       className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-all ${
         active
-          ? 'bg-blue-500/20 text-blue-400 border border-blue-500/30 shadow-[0_0_10px_rgba(59,130,246,0.2)]'
+          ? 'bg-blue-500/20 text-blue-400 border border-blue-500/30'
           : 'text-text-muted hover:text-text hover:bg-surface-hover border border-transparent'
       }`}
+      style={active ? { boxShadow: `0 0 10px ${withOpacity(MODULE_COLORS.core, OPACITY_20)}` } : undefined}
     >
       <Icon className="w-3.5 h-3.5" />
       {label}
@@ -938,8 +951,8 @@ function MiniMap({
             top: offsetY + (c.y - bounds.minY) * scale,
             width: Math.max(4, c.width * scale),
             height: Math.max(4, c.height * scale),
-            backgroundColor: filterModuleId === c.moduleId ? 'rgba(59,130,246,0.3)' : 'rgba(50,50,70,0.5)',
-            border: '1px solid rgba(100,100,130,0.3)',
+            backgroundColor: filterModuleId === c.moduleId ? withOpacity(MODULE_COLORS.core, OPACITY_30) : SURFACE_MINIMAP_CLUSTER_FILL,
+            border: `1px solid ${withOpacity(BORDER_DAG_NEUTRAL, OPACITY_30)}`,
           }}
         />
       ))}
@@ -952,7 +965,7 @@ function MiniMap({
           top: offsetY + (viewport.y - bounds.minY) * scale,
           width: viewport.w * scale,
           height: viewport.h * scale,
-          backgroundColor: 'rgba(59,130,246,0.06)',
+          backgroundColor: withOpacity(MODULE_COLORS.core, OPACITY_5),
         }}
       />
     </div>
@@ -1040,9 +1053,9 @@ function DetailPanel({
                     onClick={() => dn && onSelectNode(dep)}
                     className="text-left text-sm px-3 py-2.5 rounded-lg font-mono transition-all hover:brightness-125 border flex items-center gap-3"
                     style={{ 
-                      backgroundColor: dn ? `${dn.color}10` : 'rgba(50,50,70,0.3)', 
+                      backgroundColor: dn ? `${dn.color}${OPACITY_10}` : withOpacity(SURFACE_MINIMAP_CLUSTER, OPACITY_30),
                       color: dn?.color ?? STATUS_NEUTRAL,
-                      borderColor: dn ? `${dn.color}20` : 'rgba(100,100,130,0.2)'
+                      borderColor: dn ? `${dn.color}${OPACITY_20}` : withOpacity(BORDER_DAG_NEUTRAL, OPACITY_20)
                     }}
                   >
                     <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: dn?.color ?? STATUS_NEUTRAL }} />
@@ -1087,7 +1100,14 @@ function DetailPanel({
           {/* Execute */}
           <button
             onClick={() => onExecute(item)}
-            className="w-full flex items-center justify-center gap-3 text-base font-bold text-white bg-blue-600 hover:bg-blue-500 px-6 py-4 rounded-xl transition-all shadow-[0_0_20px_rgba(37,99,235,0.3)] hover:shadow-[0_0_30px_rgba(37,99,235,0.5)]"
+            onMouseEnter={(e) => {
+              e.currentTarget.style.boxShadow = `0 0 30px ${withOpacity(ACCENT_BLUE_BOLD, OPACITY_60)}`;
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.boxShadow = `0 0 20px ${withOpacity(ACCENT_BLUE_BOLD, OPACITY_30)}`;
+            }}
+            className="w-full flex items-center justify-center gap-3 text-base font-bold text-white bg-blue-600 hover:bg-blue-500 px-6 py-4 rounded-xl transition-all"
+            style={{ boxShadow: `0 0 20px ${withOpacity(ACCENT_BLUE_BOLD, OPACITY_30)}` }}
           >
             <ArrowRight className="w-5 h-5" />
             Implement Feature

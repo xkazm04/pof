@@ -12,6 +12,7 @@ import { generateVegetation } from '@/lib/visual-gen/generators/vegetation';
 import type { CellType } from '@/lib/visual-gen/generators/dungeon';
 import { BlenderConnectionBar } from '@/components/blender-mcp/BlenderConnectionBar';
 import { useBlenderMCPStore } from '@/stores/blenderMCPStore';
+import { VISUAL_GEN_FOCUS_RING } from '@/lib/visual-gen/ui';
 
 const GENERATOR_OPTIONS: { id: GeneratorType; label: string; description: string }[] = [
   { id: 'terrain', label: 'Terrain Heightmap', description: 'Diamond-Square algorithm for realistic terrain elevation' },
@@ -243,7 +244,8 @@ function GeneratorTab() {
           <button
             key={opt.id}
             onClick={() => setActiveGenerator(opt.id)}
-            className={`text-left p-3 rounded-lg border transition-colors ${
+            aria-pressed={activeGenerator === opt.id}
+            className={`text-left p-3 rounded-lg border transition-colors ${VISUAL_GEN_FOCUS_RING} ${
               activeGenerator === opt.id
                 ? 'border-[var(--visual-gen)] bg-[var(--visual-gen)]/10'
                 : 'border-border hover:border-text-muted'

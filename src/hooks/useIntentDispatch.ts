@@ -26,6 +26,7 @@ import type { PanelDirective, LayoutTemplateId } from '@/lib/dzin/core/layout/ty
 import { pofRegistry } from '@/lib/dzin/panel-definitions';
 import { AdvisorClient } from '@/lib/dzin/advisor/AdvisorClient';
 import type { AdvisorToolCall } from '@/lib/dzin/advisor/AdvisorClient';
+import { parseComposeOnAccept } from '@/lib/dzin/advisor/suggestionActions';
 import { logger } from '@/lib/logger';
 
 /* ── Types ────────────────────────────────────────────────────────────── */
@@ -141,7 +142,13 @@ export function useIntentDispatch(
           handleComposeToolCall(call.args, system);
         } else if (call.name === 'suggest_action') {
           const content = call.args.content as string;
-          if (content) system.chatStore.addMessage('system', content);
+          if (!content) continue;
+          const compose = parseComposeOnAccept(call.args.compose_on_accept);
+          if (compose) {
+            system.chatStore.addSuggestion(content, compose);
+          } else {
+            system.chatStore.addMessage('system', content);
+          }
         }
       }
     });

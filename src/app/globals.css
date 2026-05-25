@@ -59,6 +59,27 @@
   --glow-info:    rgba(59, 130, 246, 0.4);
   --glow-warning: rgba(245, 158, 11, 0.4);
 
+  /* Plan / DAG canvas surfaces (mirrors @/lib/chart-colors) */
+  --surface-dag-node: #161626;
+  --surface-dag-node-fill: #161626d9;
+  --surface-dag-node-hover-fill: #1e1e2df2;
+  --surface-dag-cluster-dim-fill: #0f0f1926;
+  --surface-minimap-cluster-fill: #32324680;
+  --border-dag-neutral: #646482;
+
+  /* Roadmap checklist state surfaces (mirrors @/lib/chart-colors) */
+  --state-partial-bg: #1a1700;
+  --state-partial-border: #3a3000;
+  --state-done-bg: #0d1a0d;
+  --state-done-border: #1a3a1a;
+  --state-active-bg: #111130;
+  --state-active-border: #2e2e6a;
+  --checkbox-border: #3e3e6a;
+  --checkbox-border-hover: #5e5e8a;
+
+  /* Misc accents (mirrors @/lib/chart-colors) */
+  --accent-blue-bold: #2563eb;
+
   /* Animation timing — 3 tiers instead of 7+ arbitrary durations */
   --duration-fast: 150ms;   /* micro-interactions: hovers, toggles, tooltips */
   --duration-base: 250ms;   /* standard transitions: panels, dropdowns, fades */
@@ -112,6 +133,15 @@
   --color-status-blue-subtle: var(--status-blue-subtle);
   --color-status-blue-medium: var(--status-blue-medium);
   --color-status-blue-strong: var(--status-blue-strong);
+  --color-state-partial-bg: var(--state-partial-bg);
+  --color-state-partial-border: var(--state-partial-border);
+  --color-state-done-bg: var(--state-done-bg);
+  --color-state-done-border: var(--state-done-border);
+  --color-state-active-bg: var(--state-active-bg);
+  --color-state-active-border: var(--state-active-border);
+  --color-checkbox-border: var(--checkbox-border);
+  --color-checkbox-border-hover: var(--checkbox-border-hover);
+  --color-accent-blue-bold: var(--accent-blue-bold);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
   --font-size-2xs: var(--text-2xs);
@@ -137,16 +167,28 @@ body {
   outline: none;
 }
 
-/* Unified focus-ring utilities — consistent keyboard focus indicators */
+/* Unified focus-ring utilities — consistent keyboard focus indicators.
+   Ring color reads `--focus-accent` (set per region/panel), falling back to a
+   neutral blue when unset. The shell sets `--focus-accent: var(--setup)` so its
+   rings match the brand-green base `:focus-visible` outline above. */
 .focus-ring:focus-visible {
   outline: none;
-  box-shadow: 0 0 0 2px var(--background), 0 0 0 4px #60a5fa;
+  box-shadow: 0 0 0 2px var(--background), 0 0 0 4px var(--focus-accent, #60a5fa);
 }
 
 .focus-ring-inset:focus-visible {
   outline: none;
-  box-shadow: inset 0 0 0 1px #60a5fa;
-  border-color: #60a5fa;
+  box-shadow: inset 0 0 0 1px var(--focus-accent, #60a5fa);
+  border-color: var(--focus-accent, #60a5fa);
+}
+
+/* Outline-based variant of the focus ring. Use on elements that drive their own
+   `box-shadow` via inline styles (e.g. glowing selectable cards) — an inline
+   box-shadow would override the `.focus-ring` class rule, so those elements need
+   an `outline`, which inline box-shadow can't suppress. Reads `--focus-accent`. */
+.focus-ring-outline:focus-visible {
+  outline: 2px solid var(--focus-accent, #60a5fa);
+  outline-offset: 2px;
 }
 
 /* Unified disabled state for all interactive elements */
@@ -225,6 +267,23 @@ a:active {
   }
 }
 
+/* Reverb decay glyph — the envelope redraws from t=0 → t=decay on chip hover.
+   Duration comes from the inline --reverb-dur var (longer tail = slower draw).
+   The reduced-motion block above neutralises the animation automatically. */
+.reverb-glyph-path {
+  stroke-dasharray: 100;
+  stroke-dashoffset: 0;
+}
+
+@keyframes reverb-decay-draw {
+  from { stroke-dashoffset: 100; }
+  to   { stroke-dashoffset: 0; }
+}
+
+.group:hover .reverb-glyph-path {
+  animation: reverb-decay-draw var(--reverb-dur, 0.6s) var(--ease-out, ease-out);
+}
+
 /* Pulse animation for status indicators */
 @keyframes pulse-glow {
   0%, 100% { opacity: 1; }
@@ -276,6 +335,26 @@ a:active {
 /* Scroll-to-bottom button transitions */
 .scroll-btn-enter {
   animation: log-slide-in var(--duration-fast) var(--ease-out) both;
+}
+
+/* Selection toolbar scale-in (transform-origin set inline based on caret position) */
+@keyframes selection-toolbar-enter {
+  from { opacity: 0; transform: scale(0.92); }
+  to   { opacity: 1; transform: scale(1); }
+}
+
+.selection-toolbar-enter {
+  animation: selection-toolbar-enter var(--duration-fast) var(--ease-out) both;
+}
+
+/* Audio scene painter — UNZONED pill reveal (eases in alongside the relationship cues) */
+@keyframes audio-rel-pill-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+.audio-rel-pill {
+  animation: audio-rel-pill-in 200ms var(--ease-out) both;
 }
 
 .scroll-btn-exit {
@@ -363,6 +442,37 @@ a:active {
 
 .md-prose .md-list li::marker {
   color: var(--text-muted);
+}
+
+/* ── CodeViewer: Shiki output + line-number gutter (CodeViewer.tsx) ───────────
+   `.line` stays inline so Shiki's literal "\n" text nodes (under white-space:
+   pre) provide the line breaks; the gutter is an inline-block ::before counter,
+   per the official Shiki line-numbers recipe. */
+.code-viewer-shiki pre {
+  margin: 0;
+  padding: 0.75rem 0;
+  background: transparent !important;
+  font-family: var(--font-mono), monospace;
+  line-height: 1.55;
+}
+
+.code-viewer-shiki code {
+  counter-reset: code-line;
+}
+
+.code-viewer-shiki .line::before {
+  counter-increment: code-line;
+  content: counter(code-line);
+  display: inline-block;
+  width: 2.5rem;
+  margin-right: 1rem;
+  padding-right: 0.75rem;
+  text-align: right;
+  color: var(--text-muted);
+  opacity: 0.45;
+  border-right: 1px solid var(--border);
+  user-select: none;
+  -webkit-user-select: none;
 }
 
 .md-prose .md-list-ordered {

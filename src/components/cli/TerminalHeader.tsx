@@ -3,6 +3,7 @@
 import { useCallback, useState } from 'react';
 import {
   Terminal, CheckCircle, Loader2, Trash2, RotateCcw, FileText, Copy,
+  ListTodo, FileEdit, FilePlus, ArrowDown, ArrowUp,
 } from 'lucide-react';
 import type { ExecutionInfo, ExecutionResult } from './types';
 import { UI_TIMEOUTS } from '@/lib/constants';
@@ -48,14 +49,39 @@ export function TerminalHeader({
           <span className="text-xs font-medium text-text">{title}</span>
           {sessionId && <span className="text-xs text-text-muted font-mono">{sessionId.slice(0, 6)}</span>}
         </div>
-        <div className="flex items-center gap-1">
-          {queuePendingCount > 0 && (
-            <span className={`text-xs ${CLI_COLORS.info} px-1.5 py-0.5 bg-cyan-500/10 rounded border border-cyan-500/20`}>Q:{queuePendingCount}</span>
-          )}
-          {(editCount > 0 || writeCount > 0) && (
-            <div className="flex items-center gap-1 mr-2 text-xs">
-              {editCount > 0 && <span className={CLI_COLORS.warning}>{editCount}E</span>}
-              {writeCount > 0 && <span className={CLI_COLORS.success}>{writeCount}W</span>}
+        <div className="flex items-center gap-1.5">
+          {(queuePendingCount > 0 || editCount > 0 || writeCount > 0) && (
+            <div className="flex items-center gap-1.5 text-2xs" data-testid="pof-cli-metric-cluster">
+              {queuePendingCount > 0 && (
+                <span
+                  className={`flex items-center gap-1 px-1.5 py-0.5 rounded ${CLI_COLORS.info} ${CLI_COLORS.infoBadgeBg}`}
+                  title={`${queuePendingCount} prompt${queuePendingCount === 1 ? '' : 's'} queued`}
+                  aria-label={`${queuePendingCount} prompt${queuePendingCount === 1 ? '' : 's'} queued`}
+                >
+                  <ListTodo className="w-3 h-3" aria-hidden="true" />
+                  {queuePendingCount}
+                </span>
+              )}
+              {editCount > 0 && (
+                <span
+                  className={`flex items-center gap-1 px-1.5 py-0.5 rounded ${CLI_COLORS.warning}`}
+                  title={`${editCount} file${editCount === 1 ? '' : 's'} edited`}
+                  aria-label={`${editCount} file${editCount === 1 ? '' : 's'} edited`}
+                >
+                  <FileEdit className="w-3 h-3" aria-hidden="true" />
+                  {editCount}
+                </span>
+              )}
+              {writeCount > 0 && (
+                <span
+                  className={`flex items-center gap-1 px-1.5 py-0.5 rounded ${CLI_COLORS.success}`}
+                  title={`${writeCount} file${writeCount === 1 ? '' : 's'} created`}
+                  aria-label={`${writeCount} file${writeCount === 1 ? '' : 's'} created`}
+                >
+                  <FilePlus className="w-3 h-3" aria-hidden="true" />
+                  {writeCount}
+                </span>
+              )}
             </div>
           )}
           {sessionId && !isStreaming && (
@@ -113,7 +139,17 @@ export function TerminalHeader({
             </button>
           )}
           {lastResult?.usage && (
-            <span className="text-text-muted">{(lastResult.usage.inputTokens / 1000).toFixed(1)}k/{(lastResult.usage.outputTokens / 1000).toFixed(1)}k</span>
+            <span
+              className="flex items-center gap-1 px-1.5 py-0.5 rounded text-2xs text-text-muted"
+              title={`${lastResult.usage.inputTokens.toLocaleString()} input tokens · ${lastResult.usage.outputTokens.toLocaleString()} output tokens`}
+              aria-label={`${(lastResult.usage.inputTokens / 1000).toFixed(1)}k tokens in, ${(lastResult.usage.outputTokens / 1000).toFixed(1)}k tokens out`}
+            >
+              <ArrowDown className="w-2.5 h-2.5" aria-hidden="true" />
+              {(lastResult.usage.inputTokens / 1000).toFixed(1)}k in
+              <span className="text-text-muted/50" aria-hidden="true">·</span>
+              <ArrowUp className="w-2.5 h-2.5" aria-hidden="true" />
+              {(lastResult.usage.outputTokens / 1000).toFixed(1)}k out
+            </span>
           )}
         </div>
       </div>

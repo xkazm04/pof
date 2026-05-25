@@ -5,7 +5,7 @@ import {
   Globe, Play, AlertTriangle, CheckCircle2, FileText,
   ChevronDown, ChevronRight, Search, Copy, Check,
   Languages, ShieldAlert, BookOpen, Table2, RefreshCw,
-  ArrowRight, XCircle, Info, Eye, X,
+  ArrowRight, ArrowLeft, XCircle, Info, Eye, X,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { SurfaceCard } from '@/components/ui/SurfaceCard';
@@ -699,6 +699,9 @@ function StringCard({ str }: { str: LocalizableString }) {
 function TranslationCard({ entry, sourceText }: { entry: TranslationEntry; sourceText: string }) {
   const locInfo = SUPPORTED_LOCALES.find((l) => l.code === entry.locale);
   const style = STATUS_STYLE[entry.status];
+  const targetDir = locInfo?.direction ?? 'ltr';
+  const isRtl = targetDir === 'rtl';
+  const DirectionArrow = isRtl ? ArrowLeft : ArrowRight;
 
   return (
     <SurfaceCard level={2}>
@@ -711,8 +714,15 @@ function TranslationCard({ entry, sourceText }: { entry: TranslationEntry; sourc
               <Badge variant="warning">expansion</Badge>
             )}
           </div>
-          <p className="text-xs text-text-muted mt-0.5">&quot;{sourceText}&quot;</p>
-          <p className="text-xs text-text font-medium mt-0.5">→ &quot;{entry.translatedText}&quot;</p>
+          <p dir="ltr" className="text-xs text-text-muted mt-0.5">&quot;{sourceText}&quot;</p>
+          <p
+            dir={targetDir}
+            lang={entry.locale}
+            className="text-xs text-text font-medium mt-0.5 flex items-center gap-1"
+          >
+            <DirectionArrow className="w-3 h-3 shrink-0 text-text-muted" aria-hidden="true" />
+            <span>&quot;{entry.translatedText}&quot;</span>
+          </p>
           {locInfo && locInfo.expansionFactor !== 1.0 && (
             <div className="flex items-center gap-2 mt-1.5">
               <div className="flex-1 h-1.5 bg-surface-2 rounded-full overflow-hidden max-w-[120px]">

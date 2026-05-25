@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import type { CookEvent, CookPhase } from '@/lib/packaging/cook-executor';
+import { STATUS_SUCCESS, STATUS_ERROR } from '@/lib/chart-colors';
 
 interface CookProgressProps {
   request: { profileId: string; projectPath: string; projectName: string; ueVersion: string } | null;
@@ -121,7 +122,7 @@ export function CookProgress({ request, onComplete }: CookProgressProps) {
         <div
           data-testid="pof-cook-progress-result"
           data-status={result.status}
-          className={result.status === 'success' ? 'text-status-success' : 'text-status-error'}
+          style={{ color: result.status === 'success' ? STATUS_SUCCESS : STATUS_ERROR }}
         >
           {result.status === 'success'
             ? <>Cook succeeded: <span data-testid="pof-cook-progress-exe-path">{result.exePath}</span></>

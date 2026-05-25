@@ -19,7 +19,7 @@ import type {
   ShotgunSurgery,
   RefactoringItem,
 } from '@/types/codebase-archeologist';
-import { MODULE_COLORS } from '@/lib/chart-colors';
+import { SEVERITY_TOKENS, scoreBandToken, STATUS_SUCCESS, STATUS_STALE, type SeverityToken } from '@/lib/chart-colors';
 
 // ── Stable empty references (Zustand selector safety) ──
 
@@ -41,17 +41,22 @@ const CATEGORY_LABELS: Record<AntiPatternCategory, string> = {
   'god-class': 'God Class',
 };
 
-const SEVERITY_CONFIG: Record<Severity, { icon: typeof AlertCircle; color: string; bg: string }> = {
-  critical: { icon: AlertCircle, color: 'text-red-400', bg: 'bg-red-400/10' },
-  warning:  { icon: AlertTriangle, color: 'text-yellow-400', bg: 'bg-yellow-400/10' },
-  info:     { icon: Info, color: 'text-blue-400', bg: 'bg-blue-400/10' },
+// Shared severity tokens — keeps critical/warning/info identical to Deep Eval
+// and GDD Compliance instead of the local text-red-400 / text-yellow-400 set.
+const SEVERITY_CONFIG: Record<Severity, SeverityToken & { icon: typeof AlertCircle }> = {
+  critical: { icon: AlertCircle, ...SEVERITY_TOKENS.critical },
+  warning:  { icon: AlertTriangle, ...SEVERITY_TOKENS.warning },
+  info:     { icon: Info, ...SEVERITY_TOKENS.info },
 };
 
 function SeverityBadge({ severity }: { severity: Severity }) {
   const cfg = SEVERITY_CONFIG[severity];
   const Icon = cfg.icon;
   return (
-    <span className={`inline-flex items-center gap-0.5 px-1.5 py-px rounded text-2xs font-medium ${cfg.color} ${cfg.bg}`}>
+    <span
+      className="inline-flex items-center gap-0.5 px-1.5 py-px rounded text-2xs font-medium"
+      style={{ color: cfg.color, backgroundColor: cfg.bg }}
+    >
       <Icon className="w-2.5 h-2.5" />
       {severity}
     </span>
@@ -138,7 +143,14 @@ export function CodebaseArcheologistView() {
       </div>
 
       {error && (
-        <div className="rounded border border-red-400/30 bg-red-400/5 px-3 py-2 text-xs text-red-400">
+        <div
+          className="rounded border px-3 py-2 text-xs"
+          style={{
+            color: SEVERITY_TOKENS.critical.color,
+            backgroundColor: SEVERITY_TOKENS.critical.bg,
+            borderColor: SEVERITY_TOKENS.critical.border,
+          }}
+        >
           {error}
         </div>
       )}
@@ -163,31 +175,31 @@ export function CodebaseArcheologistView() {
           <div className="grid grid-cols-5 gap-2">
             <SurfaceCard level={2} className="px-3 py-2.5">
               <div className="flex items-center gap-1.5 mb-1">
-                <AlertCircle className="w-3 h-3 text-red-400" />
+                <AlertCircle className="w-3 h-3" style={{ color: SEVERITY_TOKENS.critical.color }} />
                 <span className="text-2xs uppercase tracking-wider text-text-muted font-medium">Critical</span>
               </div>
-              <div className="text-base font-semibold text-red-400">{analysis.bySeverity.critical}</div>
+              <div className="text-base font-semibold" style={{ color: SEVERITY_TOKENS.critical.color }}>{analysis.bySeverity.critical}</div>
             </SurfaceCard>
             <SurfaceCard level={2} className="px-3 py-2.5">
               <div className="flex items-center gap-1.5 mb-1">
-                <AlertTriangle className="w-3 h-3 text-yellow-400" />
+                <AlertTriangle className="w-3 h-3" style={{ color: SEVERITY_TOKENS.warning.color }} />
                 <span className="text-2xs uppercase tracking-wider text-text-muted font-medium">Warnings</span>
               </div>
-              <div className="text-base font-semibold text-yellow-400">{analysis.bySeverity.warning}</div>
+              <div className="text-base font-semibold" style={{ color: SEVERITY_TOKENS.warning.color }}>{analysis.bySeverity.warning}</div>
             </SurfaceCard>
             <SurfaceCard level={2} className="px-3 py-2.5">
               <div className="flex items-center gap-1.5 mb-1">
-                <Info className="w-3 h-3 text-blue-400" />
+                <Info className="w-3 h-3" style={{ color: SEVERITY_TOKENS.info.color }} />
                 <span className="text-2xs uppercase tracking-wider text-text-muted font-medium">Info</span>
               </div>
-              <div className="text-base font-semibold text-blue-400">{analysis.bySeverity.info}</div>
+              <div className="text-base font-semibold" style={{ color: SEVERITY_TOKENS.info.color }}>{analysis.bySeverity.info}</div>
             </SurfaceCard>
             <SurfaceCard level={2} className="px-3 py-2.5">
               <div className="flex items-center gap-1.5 mb-1">
-                <GitCommit className="w-3 h-3 text-purple-400" />
+                <GitCommit className="w-3 h-3" style={{ color: STATUS_STALE }} />
                 <span className="text-2xs uppercase tracking-wider text-text-muted font-medium">High Churn</span>
               </div>
-              <div className="text-base font-semibold text-purple-400">{churn.filter(c => c.commits >= 5).length}</div>
+              <div className="text-base font-semibold" style={{ color: STATUS_STALE }}>{churn.filter(c => c.commits >= 5).length}</div>
             </SurfaceCard>
             <SurfaceCard level={2} className="px-3 py-2.5">
               <div className="flex items-center gap-1.5 mb-1">
@@ -261,7 +273,7 @@ export function CodebaseArcheologistView() {
 
 function OverviewTab({ analysis }: { analysis: ArcheologistAnalysis }) {
   const healthScore = Math.max(0, 100 - analysis.bySeverity.critical * 15 - analysis.bySeverity.warning * 3 - analysis.bySeverity.info);
-  const ringColor = healthScore >= 70 ? MODULE_COLORS.setup : healthScore >= 40 ? MODULE_COLORS.content : MODULE_COLORS.evaluator;
+  const ringColor = scoreBandToken(healthScore).color;
 
   return (
     <div className="space-y-3">
@@ -411,7 +423,7 @@ function AntiPatternRow({ hit }: { hit: AntiPatternHit }) {
               </div>
               <div>
                 <span className="text-text-muted">Suggestion: </span>
-                <span className="text-green-400/80">{hit.suggestion}</span>
+                <span style={{ color: STATUS_SUCCESS }}>{hit.suggestion}</span>
               </div>
             </div>
           </motion.div>
@@ -442,8 +454,8 @@ function ChurnTab({ churn, surgeries }: { churn: FileChurn[]; surgeries: Shotgun
                 <span className="text-text font-mono truncate flex-1" title={c.file}>{c.file}</span>
                 <div className="w-24 h-1.5 rounded-full bg-surface-hover overflow-hidden flex-shrink-0">
                   <div
-                    className="h-full rounded-full bg-purple-500 transition-all"
-                    style={{ width: `${(c.commits / maxCommits) * 100}%` }}
+                    className="h-full rounded-full transition-all"
+                    style={{ width: `${(c.commits / maxCommits) * 100}%`, backgroundColor: STATUS_STALE }}
                   />
                 </div>
                 <span className="text-text-muted font-mono w-8 text-right flex-shrink-0">{c.commits}</span>

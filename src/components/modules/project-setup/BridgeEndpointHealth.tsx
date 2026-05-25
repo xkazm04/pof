@@ -128,6 +128,92 @@ function healthDotColor(status: HealthStatus): string {
   }
 }
 
+// ── Latency sparkline ─────────────────────────────────────────────────────────
+
+/** Samples retained per endpoint in the latency ring buffer. */
+const MAX_LATENCY_SAMPLES = 30;
+/** Inline sparkline canvas size (px). */
+const SPARK_W = 60;
+const SPARK_H = 16;
+
+/** Map a single latency reading (ms) to a semantic gradient color. */
+function latencyColor(ms: number): string {
+  if (ms < 150) return STATUS_SUCCESS;
+  if (ms < 750) return STATUS_WARNING;
+  return STATUS_ERROR;
+}
+
+/** Median of a non-empty numeric list (used for the baseline reference). */
+function median(values: number[]): number {
+  const sorted = [...values].sort((a, b) => a - b);
+  const mid = Math.floor(sorted.length / 2);
+  return sorted.length % 2 === 0 ? (sorted[mid - 1] + sorted[mid]) / 2 : sorted[mid];
+}
+
+/**
+ * Inline 60×16 latency sparkline. Plots the per-endpoint ring buffer as a
+ * gradient-filled trend line colored by the latest sample, over a faint dashed
+ * baseline at the median so spikes and dropouts read at a glance.
+ */
+function LatencySparkline({ samples, gradientId }: { samples: number[]; gradientId: string }) {
+  if (samples.length === 0) return null;
+
+  const latest = samples[samples.length - 1];
+  const color = latencyColor(latest);
+  const min = Math.min(...samples);
+  const max = Math.max(...samples);
+  const range = max - min || 1;
+  const n = samples.length;
+
+  // x: spread samples across the width (centered when a single sample exists).
+  const xFor = (i: number) => (n <= 1 ? SPARK_W / 2 : (i / (n - 1)) * SPARK_W);
+  // y: invert so higher latency sits higher; 1.5px padding keeps the line/dot in-bounds.
+  const yFor = (v: number) => SPARK_H - ((v - min) / range) * (SPARK_H - 3) - 1.5;
+
+  const linePts = samples.map((v, i) => `${xFor(i).toFixed(1)},${yFor(v).toFixed(1)}`).join(' ');
+  const medY = yFor(median(samples)).toFixed(1);
+  const lastX = xFor(n - 1).toFixed(1);
+  const lastY = yFor(latest).toFixed(1);
+
+  return (
+    <svg
+      width={SPARK_W}
+      height={SPARK_H}
+      viewBox={`0 0 ${SPARK_W} ${SPARK_H}`}
+      className="shrink-0 overflow-visible"
+      role="img"
+      aria-label={`Latency trend: latest ${latest}ms across last ${n} ping${n === 1 ? '' : 's'}`}
+    >
+      <defs>
+        <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor={color} stopOpacity={0.4} />
+          <stop offset="100%" stopColor={color} stopOpacity={0} />
+        </linearGradient>
+      </defs>
+      {/* faint median baseline — spikes read as deviations from this line */}
+      <line
+        x1={0} y1={medY} x2={SPARK_W} y2={medY}
+        stroke={STATUS_NEUTRAL} strokeOpacity={0.5} strokeWidth={0.75} strokeDasharray="2 2"
+      />
+      {n > 1 && (
+        <>
+          <polygon points={`0,${SPARK_H} ${linePts} ${SPARK_W},${SPARK_H}`} fill={`url(#${gradientId})`} />
+          <polyline
+            points={linePts}
+            fill="none"
+            stroke={color}
+            strokeWidth={1.25}
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            style={{ filter: `drop-shadow(0 0 1.5px ${color})` }}
+          />
+        </>
+      )}
+      <circle cx={lastX} cy={lastY} r={1.5} fill={color} />
+    </svg>
+  );
+}
+
 // ── Component ───────────────────────────────────────────────────────────────
 
 export function BridgeEndpointHealth() {
@@ -142,6 +228,8 @@ export function BridgeEndpointHealth() {
 
   const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
   const [health, setHealth] = useState<Record<string, EndpointHealth>>({});
+  /** Per-path ring buffer of the last MAX_LATENCY_SAMPLES response times (ms). */
+  const [latencyHistory, setLatencyHistory] = useState<Record<string, number[]>>({});
   const [pinging, setPinging] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
 
@@ -197,13 +285,22 @@ export function BridgeEndpointHealth() {
 
     for (const subsystem of SUBSYSTEMS) {
       for (const ep of subsystem.endpoints) {
+        let result: EndpointHealth;
         try {
-          results[ep.path] = await pingEndpoint(ep);
+          result = await pingEndpoint(ep);
         } catch {
-          results[ep.path] = { status: 'error', lastChecked: Date.now() };
+          result = { status: 'error', lastChecked: Date.now() };
         }
+        results[ep.path] = result;
         // Update progressively
-        setHealth((prev) => ({ ...prev, [ep.path]: results[ep.path] }));
+        setHealth((prev) => ({ ...prev, [ep.path]: result }));
+        // Append the latest reading to the per-path ring buffer (keep last N).
+        if (result.responseMs !== undefined) {
+          setLatencyHistory((prev) => {
+            const buf = prev[ep.path] ?? [];
+            return { ...prev, [ep.path]: [...buf, result.responseMs!].slice(-MAX_LATENCY_SAMPLES) };
+          });
+        }
       }
     }
 
@@ -395,6 +492,7 @@ export function BridgeEndpointHealth() {
                   {subsystem.endpoints.map((ep) => {
                     const h = health[ep.path];
                     const dotColor = h ? healthDotColor(h.status) : STATUS_NEUTRAL;
+                    const samples = latencyHistory[ep.path] ?? [];
                     return (
                       <div
                         key={ep.path}
@@ -443,8 +541,16 @@ export function BridgeEndpointHealth() {
                               </span>
                             )}
                             {h.responseMs !== undefined && (
-                              <span className="text-2xs font-mono text-text-muted w-12 text-right">
-                                {h.responseMs}ms
+                              <span className="flex items-center gap-1.5">
+                                {samples.length > 0 && (
+                                  <LatencySparkline
+                                    samples={samples}
+                                    gradientId={`beh-spark-${ep.path.replaceAll('/', '-').slice(1)}`}
+                                  />
+                                )}
+                                <span className="text-2xs font-mono text-text-muted w-12 text-right tabular-nums">
+                                  {h.responseMs}ms
+                                </span>
                               </span>
                             )}
                           </span>

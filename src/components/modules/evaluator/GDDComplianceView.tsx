@@ -9,14 +9,16 @@ import {
 import { useGDDComplianceStore } from '@/stores/gddComplianceStore';
 import { useModuleStore } from '@/stores/moduleStore';
 import type { ComplianceGap, ModuleCompliance, GapSeverity, ReconciliationSuggestion } from '@/types/gdd-compliance';
-import { MODULE_COLORS } from '@/lib/chart-colors';
+import { MODULE_COLORS, SEVERITY_TOKENS, scoreBandToken, STATUS_ERROR, STATUS_WARNING, STATUS_SUCCESS, type SeverityToken } from '@/lib/chart-colors';
 import { useState } from 'react';
 
-const SEVERITY_CONFIG: Record<GapSeverity, { icon: typeof AlertTriangle; color: string; label: string }> = {
-  critical: { icon: AlertCircle, color: MODULE_COLORS.evaluator, label: 'Critical' },
-  major: { icon: AlertTriangle, color: MODULE_COLORS.content, label: 'Major' },
-  minor: { icon: Info, color: MODULE_COLORS.core, label: 'Minor' },
-  info: { icon: Info, color: 'var(--text-muted)', label: 'Info' },
+// Gap severities use the shared SEVERITY_TOKENS map so a critical gap matches a
+// critical finding in Deep Eval / the Archeologist (major→high, minor→low).
+const SEVERITY_CONFIG: Record<GapSeverity, SeverityToken & { icon: typeof AlertTriangle; label: string }> = {
+  critical: { icon: AlertCircle, label: 'Critical', ...SEVERITY_TOKENS.critical },
+  major: { icon: AlertTriangle, label: 'Major', ...SEVERITY_TOKENS.major },
+  minor: { icon: Info, label: 'Minor', ...SEVERITY_TOKENS.minor },
+  info: { icon: Info, label: 'Info', ...SEVERITY_TOKENS.info },
 };
 
 const EFFORT_LABELS: Record<string, string> = {
@@ -26,10 +28,9 @@ const EFFORT_LABELS: Record<string, string> = {
   large: '1+ week',
 };
 
+/** Compliance score → shared score-band color (green / amber / orange / red). */
 function scoreColor(score: number): string {
-  if (score >= 80) return MODULE_COLORS.setup;
-  if (score >= 60) return MODULE_COLORS.content;
-  return MODULE_COLORS.evaluator;
+  return scoreBandToken(score).color;
 }
 
 export function GDDComplianceView() {
@@ -68,7 +69,7 @@ export function GDDComplianceView() {
       <div className="flex items-center justify-center py-20">
         <div className="flex flex-col items-center gap-3 text-center">
           <AlertCircle className="w-6 h-6 text-[#ef4444]" />
-          <span className="text-xs text-red-400">{error}</span>
+          <span className="text-xs" style={{ color: STATUS_ERROR }}>{error}</span>
           <button onClick={handleAudit} className="text-xs text-[#ef4444] hover:underline">
             Retry
           </button>
@@ -94,7 +95,7 @@ export function GDDComplianceView() {
             <p className="text-xs text-text-muted mt-0.5">
               {report.totalGaps} gap{report.totalGaps !== 1 ? 's' : ''} detected
               {report.criticalGaps > 0 && (
-                <span className="text-red-400 ml-1">
+                <span className="ml-1" style={{ color: SEVERITY_TOKENS.critical.color }}>
                   ({report.criticalGaps} critical)
                 </span>
               )}
@@ -212,7 +213,7 @@ function ModuleCard({ module, isSelected, onClick }: {
         <span>{module.implemented}/{module.totalFeatures} features</span>
         <span>{module.checklistDone}/{module.checklistTotal} checklist</span>
         {unresolvedGaps > 0 && (
-          <span className="text-[#f59e0b] flex items-center gap-0.5">
+          <span className="flex items-center gap-0.5" style={{ color: STATUS_WARNING }}>
             <AlertTriangle className="w-2.5 h-2.5" />
             {unresolvedGaps}
           </span>
@@ -249,7 +250,7 @@ function ModuleDetail({ module, onResolve }: {
       </div>
 
       {unresolvedGaps.length === 0 ? (
-        <div className="flex items-center gap-2 py-4 justify-center text-xs text-[#00ff88]">
+        <div className="flex items-center gap-2 py-4 justify-center text-xs" style={{ color: STATUS_SUCCESS }}>
           <CheckCircle2 className="w-4 h-4" />
           No compliance gaps
         </div>
@@ -313,8 +314,8 @@ function GapRow({ gap, onResolve }: { gap: ComplianceGap; onResolve: () => void 
                 className="px-1.5 py-0.5 rounded text-2xs font-medium"
                 style={{
                   color: config.color,
-                  backgroundColor: `${config.color}14`,
-                  border: `1px solid ${config.color}38`,
+                  backgroundColor: config.bg,
+                  border: `1px solid ${config.border}`,
                 }}
               >
                 {config.label}
@@ -358,7 +359,7 @@ function SuggestionsPanel({ suggestions }: { suggestions: ReconciliationSuggesti
         onClick={() => setCollapsed(!collapsed)}
         className="w-full flex items-center gap-2 px-4 py-3 text-left"
       >
-        <Lightbulb className="w-4 h-4 text-[#f59e0b]" />
+        <Lightbulb className="w-4 h-4" style={{ color: STATUS_WARNING }} />
         <span className="text-xs font-semibold text-text flex-1">
           Reconciliation Suggestions ({suggestions.length})
         </span>

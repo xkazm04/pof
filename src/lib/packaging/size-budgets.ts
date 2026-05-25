@@ -1,0 +1,153 @@
+import { getSetting, setSetting } from '@/lib/db';
+
+const BUDGETS_KEY = 'build_size_budgets';
+
+export interface SizeBudget {
+  /** Hard budget in bytes (0 = no budget) */
+  budgetBytes: number;
+  /** Maximum allowed percent growth vs last green build (0 = disabled) */
+  growthPercent: number;
+}
+
+export type SizeBudgetMap = Record<string, SizeBudget>;
+
+export interface SizeBudgetConfig {
+  /** Per-platform budgets, keyed by platform name (e.g. 'Windows') */
+  budgets: SizeBudgetMap;
+  /** When true, record API returns a non-success envelope on regression (gate the pipeline) */
+  failOnRegression: boolean;
+}
+
+export interface SizeRegression {
+  /** Build size in bytes */
+  sizeBytes: number;
+  /** Budget that was applied (bytes, 0 if no platform budget) */
+  budgetBytes: number;
+  /** Configured percent growth threshold (0 if disabled) */
+  growthPercent: number;
+  /** Last green build size for the same platform (bytes) */
+  lastGreenSizeBytes: number | null;
+  /** Actual percent growth vs last green (signed; positive = bloat) */
+  actualGrowthPercent: number | null;
+  /** True if the build's size exceeds the budget */
+  exceedsBudget: boolean;
+  /** True if growth vs last green exceeds the configured percent */
+  exceedsGrowth: boolean;
+  /** Human-readable summary, suitable for build notes */
+  note: string;
+}
+
+// 5 GB / 5 GB / 8 GB / 4 GB / 4 GB defaults — typical UE5 shipping sizes.
+const DEFAULT_BUDGETS: SizeBudgetMap = {
+  Windows: { budgetBytes: 5 * 1024 ** 3, growthPercent: 10 },
+  Linux:   { budgetBytes: 5 * 1024 ** 3, growthPercent: 10 },
+  Mac:     { budgetBytes: 8 * 1024 ** 3, growthPercent: 10 },
+  Android: { budgetBytes: 4 * 1024 ** 3, growthPercent: 10 },
+  iOS:     { budgetBytes: 4 * 1024 ** 3, growthPercent: 10 },
+  // Cook-executor uses UE platform tokens — accept both spellings.
+  Win64: { budgetBytes: 5 * 1024 ** 3, growthPercent: 10 },
+  IOS:   { budgetBytes: 4 * 1024 ** 3, growthPercent: 10 },
+};
+
+export const SIZE_REGRESSION_NOTE_PREFIX = '[SIZE_BUDGET]';
+
+export function getDefaultBudgets(): SizeBudgetMap {
+  return JSON.parse(JSON.stringify(DEFAULT_BUDGETS));
+}
+
+export function getBudgetConfig(): SizeBudgetConfig {
+  const raw = getSetting(BUDGETS_KEY);
+  if (!raw) {
+    return { budgets: getDefaultBudgets(), failOnRegression: false };
+  }
+  try {
+    const parsed = JSON.parse(raw) as Partial<SizeBudgetConfig>;
+    return {
+      budgets: parsed.budgets && typeof parsed.budgets === 'object' ? parsed.budgets : getDefaultBudgets(),
+      failOnRegression: Boolean(parsed.failOnRegression),
+    };
+  } catch {
+    return { budgets: getDefaultBudgets(), failOnRegression: false };
+  }
+}
+
+export function setBudgetConfig(config: SizeBudgetConfig): void {
+  setSetting(BUDGETS_KEY, JSON.stringify(config));
+}
+
+function platformBudget(platform: string, budgets: SizeBudgetMap): SizeBudget {
+  return budgets[platform] ?? { budgetBytes: 0, growthPercent: 0 };
+}
+
+function formatBytes(bytes: number): string {
+  const abs = Math.abs(bytes);
+  if (abs < 1024) return `${bytes} B`;
+  if (abs < 1024 ** 2) return `${(bytes / 1024).toFixed(1)} KB`;
+  if (abs < 1024 ** 3) return `${(bytes / 1024 ** 2).toFixed(1)} MB`;
+  return `${(bytes / 1024 ** 3).toFixed(2)} GB`;
+}
+
+/**
+ * Evaluate a successful build's size against the per-platform budget and the
+ * size of the last green build. Returns a regression record when either the
+ * absolute budget or the growth threshold is exceeded; otherwise null.
+ */
+export function evaluateBuildSize(
+  platform: string,
+  sizeBytes: number | null | undefined,
+  lastGreenSizeBytes: number | null,
+  config: SizeBudgetConfig = getBudgetConfig(),
+): SizeRegression | null {
+  if (sizeBytes == null || sizeBytes <= 0) return null;
+  const budget = platformBudget(platform, config.budgets);
+
+  const exceedsBudget = budget.budgetBytes > 0 && sizeBytes > budget.budgetBytes;
+
+  let actualGrowthPercent: number | null = null;
+  let exceedsGrowth = false;
+  if (lastGreenSizeBytes && lastGreenSizeBytes > 0) {
+    actualGrowthPercent = ((sizeBytes - lastGreenSizeBytes) / lastGreenSizeBytes) * 100;
+    exceedsGrowth = budget.growthPercent > 0 && actualGrowthPercent > budget.growthPercent;
+  }
+
+  if (!exceedsBudget && !exceedsGrowth) return null;
+
+  const parts: string[] = [];
+  if (exceedsBudget) {
+    const overBy = sizeBytes - budget.budgetBytes;
+    const overPct = (overBy / budget.budgetBytes) * 100;
+    parts.push(
+      `exceeds ${formatBytes(budget.budgetBytes)} budget by ${formatBytes(overBy)} (+${overPct.toFixed(1)}%)`,
+    );
+  }
+  if (exceedsGrowth && actualGrowthPercent != null && lastGreenSizeBytes != null) {
+    const delta = sizeBytes - lastGreenSizeBytes;
+    parts.push(
+      `grew ${actualGrowthPercent.toFixed(1)}% vs last green (+${formatBytes(delta)}, threshold ${budget.growthPercent}%)`,
+    );
+  }
+
+  const note = `${SIZE_REGRESSION_NOTE_PREFIX} ${platform} ${formatBytes(sizeBytes)} — ${parts.join('; ')}`;
+
+  return {
+    sizeBytes,
+    budgetBytes: budget.budgetBytes,
+    growthPercent: budget.growthPercent,
+    lastGreenSizeBytes,
+    actualGrowthPercent,
+    exceedsBudget,
+    exceedsGrowth,
+    note,
+  };
+}
+
+export function hasSizeRegressionNote(notes: string | null | undefined): boolean {
+  return !!notes && notes.includes(SIZE_REGRESSION_NOTE_PREFIX);
+}
+
+export function extractRegressionNote(notes: string | null | undefined): string | null {
+  if (!notes) return null;
+  const lines = notes.split('\n');
+  const hit = lines.find((l) => l.includes(SIZE_REGRESSION_NOTE_PREFIX));
+  return hit ? hit.trim() : null;
+}

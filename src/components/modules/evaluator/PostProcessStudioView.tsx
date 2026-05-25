@@ -5,13 +5,14 @@ import {
   Palette, Play, RefreshCw, Sun, Eye, Wind, Circle, Move,
   Aperture, ChevronDown, ChevronUp, GripVertical, Zap,
   Gauge, Layers, SplitSquareHorizontal, Camera, Cpu, Sparkles,
-  AlertTriangle, Monitor, Film,
+  AlertTriangle, Monitor, Film, BookOpen,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { SurfaceCard } from '@/components/ui/SurfaceCard';
 import { KPICard } from '@/components/ui/KPICard';
 import { Badge } from '@/components/ui/Badge';
 import { ProgressRing } from '@/components/ui/ProgressRing';
+import { ParamCue } from '@/components/modules/evaluator/ParamCue';
 import { usePostProcessStudioStore } from '@/stores/postProcessStudioStore';
 import { useModuleCLI } from '@/hooks/useModuleCLI';
 import type {
@@ -69,8 +70,10 @@ export function PostProcessStudioView() {
   const activeSlot = usePostProcessStudioStore((s) => s.activeSlot);
   const isGenerating = usePostProcessStudioStore((s) => s.isGenerating);
   const error = usePostProcessStudioStore((s) => s.error);
+  const explainMode = usePostProcessStudioStore((s) => s.explainMode);
 
   const init = usePostProcessStudioStore((s) => s.init);
+  const toggleExplainMode = usePostProcessStudioStore((s) => s.toggleExplainMode);
   const setEffectEnabled = usePostProcessStudioStore((s) => s.setEffectEnabled);
   const setEffectParam = usePostProcessStudioStore((s) => s.setEffectParam);
   const moveEffect = usePostProcessStudioStore((s) => s.moveEffect);
@@ -161,6 +164,21 @@ export function PostProcessStudioView() {
                 </button>
               ))}
             </div>
+
+            {/* Explain mode toggle — plain-language decoder for cryptic params */}
+            <button
+              onClick={toggleExplainMode}
+              aria-pressed={explainMode}
+              title="Explain effect parameters in plain language"
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors ${
+                explainMode
+                  ? 'bg-emerald-500/10 border-emerald-500/25 text-emerald-400'
+                  : 'bg-surface border-border text-text-muted hover:text-text'
+              }`}
+            >
+              <BookOpen className="w-3.5 h-3.5" />
+              Explain
+            </button>
 
             {/* A/B Compare toggle */}
             <button
@@ -303,6 +321,7 @@ export function PostProcessStudioView() {
                       isFirst={idx === 0}
                       isLast={idx === sortedEffects.length - 1}
                       isExpanded={expandedId === effect.id}
+                      explainMode={explainMode}
                       onToggle={() => setEffectEnabled(effect.id, !effect.enabled)}
                       onMoveUp={() => moveEffect(effect.id, 'up')}
                       onMoveDown={() => moveEffect(effect.id, 'down')}
@@ -401,6 +420,7 @@ function EffectCard({
   isFirst,
   isLast,
   isExpanded,
+  explainMode,
   onToggle,
   onMoveUp,
   onMoveDown,
@@ -412,6 +432,7 @@ function EffectCard({
   isFirst: boolean;
   isLast: boolean;
   isExpanded: boolean;
+  explainMode: boolean;
   onToggle: () => void;
   onMoveUp: () => void;
   onMoveDown: () => void;
@@ -522,14 +543,22 @@ function EffectCard({
           >
             <div className="px-3 pb-3 pt-0">
               <div className="ml-[72px] space-y-2.5">
-                <div className="text-2xs font-semibold text-text-muted uppercase mb-1">
-                  UE: {effect.ueClass}
-                </div>
+                {explainMode ? (
+                  <div className="flex items-center gap-1.5 text-2xs text-emerald-400/80 mb-1">
+                    <BookOpen className="w-3 h-3" />
+                    <span>Plain-language mode — hover a name to see its UE term</span>
+                  </div>
+                ) : (
+                  <div className="text-2xs font-semibold text-text-muted uppercase mb-1">
+                    UE: {effect.ueClass}
+                  </div>
+                )}
                 {effect.params.map((param) => (
                   <ParamSlider
                     key={param.name}
                     param={param}
                     color={catColor}
+                    explainMode={explainMode}
                     onChange={(val) => onParamChange(param.name, val)}
                   />
                 ))}
@@ -547,28 +576,52 @@ function EffectCard({
 function ParamSlider({
   param,
   color,
+  explainMode,
   onChange,
 }: {
   param: PPStudioParam;
   color: string;
+  explainMode: boolean;
   onChange: (value: number) => void;
 }) {
   const isModified = param.value !== param.defaultValue;
   const pct = ((param.value - param.min) / (param.max - param.min)) * 100;
+  const plain = param.plain;
+  // Explain mode only kicks in when the param actually carries plain metadata.
+  const explain = explainMode && plain != null;
 
   return (
     <div className="px-2.5 py-2 rounded-lg bg-[#0a0a1e] border border-border">
       <div className="flex items-center justify-between mb-1.5">
-        <div className="flex items-center gap-1.5">
-          <span className="text-2xs font-mono font-medium text-[#c0c4e0]">{param.name}</span>
-          <span
-            className="text-2xs px-1 py-0 rounded font-medium uppercase"
-            style={{ backgroundColor: `${color}15`, color: `${color}cc` }}
-          >
-            {param.ueProperty}
-          </span>
+        <div className="flex items-center gap-1.5 min-w-0">
+          {explain && plain && (
+            <ParamCue
+              kind={plain.cue}
+              value={pct / 100}
+              accent={color}
+              title={`${plain.label}: ${plain.explanation}`}
+            />
+          )}
+          {explain && plain ? (
+            <span
+              className="text-2xs font-medium text-[#c0c4e0] truncate"
+              title={`UE: ${param.ueProperty}`}
+            >
+              {plain.label}
+            </span>
+          ) : (
+            <>
+              <span className="text-2xs font-mono font-medium text-[#c0c4e0]">{param.name}</span>
+              <span
+                className="text-2xs px-1 py-0 rounded font-medium uppercase"
+                style={{ backgroundColor: `${color}15`, color: `${color}cc` }}
+              >
+                {param.ueProperty}
+              </span>
+            </>
+          )}
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-shrink-0">
           {isModified && (
             <button
               onClick={() => onChange(param.defaultValue)}
@@ -582,10 +635,10 @@ function ParamSlider({
           </span>
         </div>
       </div>
-      <p className="text-2xs text-text-muted/60 mb-2">{param.description}</p>
+      <p className="text-2xs text-text-muted/60 mb-2">{explain && plain ? plain.explanation : param.description}</p>
       <div className="flex items-center gap-2">
-        <span className="text-2xs text-text-muted w-10 text-right flex-shrink-0 font-mono">
-          {formatValue(param.min, param.step)}
+        <span className={`text-2xs text-text-muted text-right flex-shrink-0 ${explain ? 'w-16 truncate' : 'w-10 font-mono'}`}>
+          {explain && plain ? plain.lowLabel : formatValue(param.min, param.step)}
         </span>
         <div className="flex-1 relative h-4 flex items-center">
           {/* Track background */}
@@ -615,8 +668,8 @@ function ParamSlider({
             }}
           />
         </div>
-        <span className="text-2xs text-text-muted w-10 flex-shrink-0 font-mono">
-          {formatValue(param.max, param.step)}
+        <span className={`text-2xs text-text-muted flex-shrink-0 ${explain ? 'w-16 truncate' : 'w-10 font-mono'}`}>
+          {explain && plain ? plain.highLabel : formatValue(param.max, param.step)}
         </span>
       </div>
     </div>

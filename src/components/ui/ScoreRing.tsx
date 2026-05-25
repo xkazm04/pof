@@ -1,5 +1,6 @@
 'use client';
 
+import type { ReactNode } from 'react';
 import { STATUS_ERROR, STATUS_SUCCESS, STATUS_WARNING } from '@/lib/chart-colors';
 
 interface ScoreRingProps {
@@ -11,8 +12,8 @@ interface ScoreRingProps {
   strokeWidth?: number;
   /** Override the value→color mapping; defaults to the SUCCESS/WARNING/ERROR ladder. */
   color?: string;
-  /** Override label rendered in the ring center (default: rounded value). */
-  label?: string;
+  /** Override content rendered in the ring center (default: rounded value). Accepts rich nodes (e.g. a grade + sub-label). */
+  label?: ReactNode;
   /** Tailwind class for the center label. */
   labelClassName?: string;
   className?: string;

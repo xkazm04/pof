@@ -47,7 +47,7 @@ export class ModuleErrorBoundary extends Component<Props, State> {
     const { moduleName } = this.props;
 
     return (
-      <div className="h-full flex items-center justify-center p-8">
+      <div className="h-full flex items-center justify-center p-8" style={{ ['--focus-accent' as string]: 'var(--setup)' }}>
         <div className="max-w-md w-full">
           {/* Icon + heading */}
           <div className="flex flex-col items-center text-center mb-6">
@@ -66,14 +66,14 @@ export class ModuleErrorBoundary extends Component<Props, State> {
           <div className="flex items-center justify-center gap-2 mb-4">
             <button
               onClick={this.handleRetry}
-              className="flex items-center gap-2 px-4 py-2 rounded-lg bg-surface-hover text-text text-sm font-medium border border-border-bright hover:bg-border-bright transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+              className="flex items-center gap-2 px-4 py-2 rounded-lg bg-surface-hover text-text text-sm font-medium border border-border-bright hover:bg-border-bright transition-colors focus-ring"
             >
               <RefreshCw className="w-4 h-4" />
               Retry
             </button>
             <button
               onClick={this.handleCopyError}
-              className="flex items-center gap-2 px-3 py-2 rounded-lg bg-transparent text-text-muted text-sm border border-border hover:bg-surface-hover transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+              className="flex items-center gap-2 px-3 py-2 rounded-lg bg-transparent text-text-muted text-sm border border-border hover:bg-surface-hover transition-colors focus-ring"
             >
               <Copy className="w-4 h-4" />
               Copy
@@ -84,7 +84,7 @@ export class ModuleErrorBoundary extends Component<Props, State> {
           <div className="rounded-lg border border-border bg-surface/50">
             <button
               onClick={() => this.setState({ showDetails: !showDetails })}
-              className="w-full flex items-center justify-between px-3 py-2 text-xs text-text-muted hover:text-text transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent rounded-lg"
+              className="w-full flex items-center justify-between px-3 py-2 text-xs text-text-muted hover:text-text transition-colors focus-ring-inset rounded-lg"
             >
               <span>Error details</span>
               {showDetails ? (

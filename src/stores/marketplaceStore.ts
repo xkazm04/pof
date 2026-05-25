@@ -12,6 +12,16 @@ import type {
 } from '@/types/marketplace';
 import type { FeatureStatus } from '@/types/feature-matrix';
 
+/** One recorded run of the Asset-Code Consistency Oracle. */
+export interface ConsistencyScanEntry {
+  score: number;
+  /** ISO timestamp of when the scan completed. */
+  timestamp: string;
+}
+
+/** Keep at most this many scans per project — enough for delta + future trends. */
+const MAX_CONSISTENCY_SCANS = 30;
+
 interface MarketplaceState {
   /** Cached recommendations from the API */
   recommendations: AssetRecommendation[];
@@ -28,6 +38,12 @@ interface MarketplaceState {
 
   /** Active module filter */
   moduleFilter: SubModuleId | null;
+
+  /** Per-project consistency-score scan history (oldest→newest), keyed by project path/name. */
+  consistencyScans: Record<string, ConsistencyScanEntry[]>;
+
+  /** Append a consistency score to a project's scan history (capped, persisted). */
+  recordConsistencyScan: (projectKey: string, score: number) => void;
 
   /** Fetch recommendations from the API */
   fetchRecommendations: (statusMap?: Record<string, FeatureStatus>, moduleId?: string) => Promise<void>;
@@ -56,6 +72,13 @@ export const useMarketplaceStore = create<MarketplaceState>()(
       isLoading: false,
       error: null,
       moduleFilter: null,
+      consistencyScans: {},
+
+      recordConsistencyScan: (projectKey, score) => set((state) => {
+        const prev = state.consistencyScans[projectKey] ?? [];
+        const next = [...prev, { score, timestamp: new Date().toISOString() }].slice(-MAX_CONSISTENCY_SCANS);
+        return { consistencyScans: { ...state.consistencyScans, [projectKey]: next } };
+      }),
 
       fetchRecommendations: async (statusMap, moduleId) => {
         const { isLoading } = get();
@@ -150,6 +173,7 @@ export const useMarketplaceStore = create<MarketplaceState>()(
       storage: createJSONStorage(() => localStorage),
       partialize: (state) => ({
         acquiredAssets: state.acquiredAssets,
+        consistencyScans: state.consistencyScans,
       }),
     },
   ),

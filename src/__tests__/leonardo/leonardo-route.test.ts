@@ -8,8 +8,19 @@ vi.mock('@/lib/leonardo', () => ({
   MAX_PROMPT_LENGTH: 1500,
 }));
 
+vi.mock('@/lib/visual-gen/seam-check', () => ({
+  detectSeamsSafe: vi.fn(async () => ({
+    horizontal: { axis: 'left', delta: 0.3, seam: true },
+    vertical: { axis: 'top', delta: 0.01, seam: false },
+    hasSeam: true,
+    threshold: 0.08,
+    worstEdge: 'left edge',
+  })),
+}));
+
 import { POST } from '@/app/api/leonardo/route';
 import * as leo from '@/lib/leonardo';
+import { detectSeamsSafe } from '@/lib/visual-gen/seam-check';
 
 function req(body: unknown): Request {
   return new Request('http://localhost/api/leonardo', { method: 'POST', body: JSON.stringify(body) });
@@ -30,6 +41,20 @@ describe('POST /api/leonardo', () => {
   it('mode=image forwards opts', async () => {
     await POST(req({ mode: 'image', prompt: 'rock', opts: { tiling: true } }));
     expect(leo.generateImage).toHaveBeenCalledWith('rock', { tiling: true });
+  });
+
+  it('runs a seam check and attaches it when tiling is requested', async () => {
+    const res = await POST(req({ mode: 'image', prompt: 'rock', opts: { tiling: true } }));
+    const json = await res.json();
+    expect(detectSeamsSafe).toHaveBeenCalled();
+    expect(json.data.seam).toMatchObject({ hasSeam: true, worstEdge: 'left edge' });
+  });
+
+  it('skips the seam check for non-tiling image generation', async () => {
+    const res = await POST(req({ mode: 'image', prompt: 'a sword' }));
+    const json = await res.json();
+    expect(detectSeamsSafe).not.toHaveBeenCalled();
+    expect(json.data.seam ?? null).toBeNull();
   });
 
   it('mode=image forwards controlnets + inpaint opts', async () => {
