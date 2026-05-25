@@ -22,6 +22,7 @@ export const ZONE_NAMES = {
   KASHYYYK: 'Kashyyyk',
   KORRIBAN: 'Korriban',
   MALACHOR_V: 'Malachor V',
+  ASHEN_FOREST: 'Ashen Forest',
 } as const;
 
 export type ZoneName = (typeof ZONE_NAMES)[keyof typeof ZONE_NAMES];
@@ -51,7 +52,7 @@ export interface ZoneRecord {
 
 export const ZONES: ZoneRecord[] = [
   { id: 'z1', name: ZONE_NAMES.SANCTUARY, displayName: `${ZONE_NAMES.SANCTUARY} (Hub)`, cx: 20, cy: 50, type: 'hub', status: 'completed', levelRange: '1', levelMin: 1, levelMax: 1, connections: ['z2', 'z3'], group: 'hub', color: STATUS_SUCCESS, topoSize: 28, topoX: 80, topoY: 180 },
-  { id: 'z2', name: ZONE_NAMES.WHISPER_WOODS, displayName: ZONE_NAMES.WHISPER_WOODS, cx: 45, cy: 30, type: 'combat', status: 'completed', levelRange: '1-3', levelMin: 1, levelMax: 3, connections: ['z4'], group: 'combat', color: STATUS_SUCCESS, topoSize: 22, topoX: 220, topoY: 80 },
+  { id: 'z2', name: ZONE_NAMES.WHISPER_WOODS, displayName: ZONE_NAMES.WHISPER_WOODS, cx: 45, cy: 30, type: 'combat', status: 'completed', levelRange: '1-3', levelMin: 1, levelMax: 3, connections: ['z4', 'z-ashen'], group: 'combat', color: STATUS_SUCCESS, topoSize: 22, topoX: 220, topoY: 80 },
   { id: 'z3', name: ZONE_NAMES.CRYSTAL_CAVES, displayName: ZONE_NAMES.CRYSTAL_CAVES, cx: 40, cy: 75, type: 'combat', status: 'active', levelRange: '2-4', levelMin: 2, levelMax: 4, connections: ['z5'], group: 'combat', color: STATUS_WARNING, topoSize: 22, topoX: 220, topoY: 280 },
   { id: 'z4', name: ZONE_NAMES.BANDIT_CAMP, displayName: ZONE_NAMES.BANDIT_CAMP, cx: 70, cy: 25, type: 'combat', status: 'locked', levelRange: '3-5', levelMin: 3, levelMax: 5, connections: ['z6'], group: 'combat', color: STATUS_LOCKED, topoSize: 22, topoX: 380, topoY: 60 },
   { id: 'z5', name: ZONE_NAMES.DEEP_CORE, displayName: ZONE_NAMES.DEEP_CORE, cx: 65, cy: 85, type: 'combat', status: 'locked', levelRange: '4-6', levelMin: 4, levelMax: 6, connections: ['z6'], group: 'combat', color: STATUS_LOCKED, topoSize: 22, topoX: 380, topoY: 300 },
@@ -61,6 +62,9 @@ export const ZONES: ZoneRecord[] = [
   { id: 'z-kashyyyk', name: ZONE_NAMES.KASHYYYK, displayName: 'Kashyyyk Shadowlands', cx: 60, cy: 25, type: 'combat', status: 'locked', levelRange: '15-25', levelMin: 15, levelMax: 25, connections: ['z-tatooine', 'z-nar-shaddaa', 'z-korriban'], group: 'combat', color: '#22c55e', topoSize: 22, topoX: 500, topoY: 250 },
   { id: 'z-korriban', name: ZONE_NAMES.KORRIBAN, displayName: 'Korriban Sith Academy', cx: 75, cy: 55, type: 'combat', status: 'locked', levelRange: '22-35', levelMin: 22, levelMax: 35, connections: ['z-nar-shaddaa', 'z-kashyyyk', 'z-malachor'], group: 'combat', color: '#ef4444', topoSize: 22, topoX: 700, topoY: 150 },
   { id: 'z-malachor', name: ZONE_NAMES.MALACHOR_V, displayName: 'Malachor V Ruins', cx: 85, cy: 35, type: 'boss', status: 'locked', levelRange: '30-50', levelMin: 30, levelMax: 50, connections: ['z-korriban', 'z-nar-shaddaa'], group: 'boss', color: '#7f1d1d', topoSize: 20, topoX: 850, topoY: 250 },
+  // Ashen Forest — catalog-pipeline target asset (zone-map). Scorched continuation of Whisper Woods.
+  // Appended last so the hand-indexed ENEMY_DENSITY_CONFIG.cells rows (0–5) stay valid.
+  { id: 'z-ashen', name: ZONE_NAMES.ASHEN_FOREST, displayName: 'Ashen Forest', cx: 58, cy: 16, type: 'combat', status: 'active', levelRange: '3-5', levelMin: 3, levelMax: 5, connections: ['z4'], group: 'combat', color: ACCENT_ORANGE, topoSize: 22, topoX: 300, topoY: 30 },
 ];
 
 /* ── Entity Metadata ─────────────────────────────────────────────────────── */
@@ -103,6 +107,9 @@ export interface ZoneEdge {
 
 export const ZONE_EDGES: ZoneEdge[] = [
   { fromId: 'z1', toId: 'z2', edgeType: 'door', locked: false, criticalPath: true, transitionType: 'Loading', estTime: '1.2s', navMeshContinuity: false },
+  // Ashen Forest branch: a seamless burnt continuation of Whisper Woods, looping back to Bandit Camp.
+  { fromId: 'z2', toId: 'z-ashen', edgeType: 'seamless', locked: false, criticalPath: false, transitionType: 'Seamless', estTime: '0.0s', navMeshContinuity: true },
+  { fromId: 'z-ashen', toId: 'z4', edgeType: 'door', locked: false, criticalPath: false, transitionType: 'Loading', estTime: '1.5s', navMeshContinuity: false },
   { fromId: 'z1', toId: 'z3', edgeType: 'seamless', locked: false, criticalPath: false, transitionType: 'Seamless', estTime: '0.0s', navMeshContinuity: true },
   { fromId: 'z2', toId: 'z4', edgeType: 'door', locked: true, criticalPath: true, transitionType: 'Loading', estTime: '1.8s', navMeshContinuity: false },
   { fromId: 'z3', toId: 'z5', edgeType: 'portal', locked: true, criticalPath: false, transitionType: 'Portal', estTime: '0.6s', navMeshContinuity: false },
@@ -228,6 +235,8 @@ export const ENEMY_DENSITY_CONFIG: HeatmapConfig = {
     { row: 4, col: 0, value: 0.8, label: '16' }, { row: 4, col: 1, value: 0.9, label: '18' }, { row: 4, col: 2, value: 1.0, label: '20' }, { row: 4, col: 3, value: 0.85, label: '17' }, { row: 4, col: 4, value: 0.7, label: '14' },
     // Ruined Keep
     { row: 5, col: 0, value: 0.4, label: '8' }, { row: 5, col: 1, value: 0.35, label: '7' }, { row: 5, col: 2, value: 1.0, label: '20' }, { row: 5, col: 3, value: 0.4, label: '8' }, { row: 5, col: 4, value: 0.35, label: '7' },
+    // Ashen Forest (row 11 — appended index) — scorched woods, moderate ash-wraith density (~38, on par with Whisper Woods)
+    { row: 11, col: 0, value: 0.3, label: '6' }, { row: 11, col: 1, value: 0.45, label: '9' }, { row: 11, col: 2, value: 0.55, label: '11' }, { row: 11, col: 3, value: 0.25, label: '5' }, { row: 11, col: 4, value: 0.35, label: '7' },
   ],
 };
 
@@ -271,6 +280,7 @@ export const ZONE_POIS: ZonePoi[] = [
   { zone: ZONE_NAMES.BANDIT_CAMP, pois: [{ type: 'quest', count: 5 }, { type: 'vendor', count: 1 }, { type: 'treasure', count: 2 }, { type: 'boss', count: 1 }], discoveryPct: 0 },
   { zone: ZONE_NAMES.DEEP_CORE, pois: [{ type: 'shrine', count: 2 }, { type: 'treasure', count: 4 }, { type: 'boss', count: 1 }, { type: 'bonfire', count: 1 }], discoveryPct: 0 },
   { zone: ZONE_NAMES.RUINED_KEEP, pois: [{ type: 'boss', count: 1 }, { type: 'treasure', count: 1 }, { type: 'shrine', count: 1 }], discoveryPct: 0 },
+  { zone: ZONE_NAMES.ASHEN_FOREST, pois: [{ type: 'quest', count: 3 }, { type: 'treasure', count: 2 }, { type: 'shrine', count: 1 }, { type: 'bonfire', count: 1 }], discoveryPct: 0 },
 ];
 
 /* ── 10.7 Boss Arena Details Data ──────────────────────────────────────────── */
@@ -360,6 +370,9 @@ export const ENV_HAZARDS: EnvHazard[] = [
   { zone: ZONE_NAMES.DEEP_CORE, type: 'Poison', damagePerSec: 10, affectedArea: '15%', warningLevel: 'Medium' },
   { zone: ZONE_NAMES.RUINED_KEEP, type: 'Trap', damagePerSec: 35, affectedArea: '10%', warningLevel: 'High' },
   { zone: ZONE_NAMES.RUINED_KEEP, type: 'Falling', damagePerSec: 50, affectedArea: '18%', warningLevel: 'Critical' },
+  // Ashen Forest: smoldering ember pits (fire-as-Lava — enum lacks a 'Fire' type) + collapsing charred deadfall
+  { zone: ZONE_NAMES.ASHEN_FOREST, type: 'Lava', damagePerSec: 18, affectedArea: '8%', warningLevel: 'Medium' },
+  { zone: ZONE_NAMES.ASHEN_FOREST, type: 'Falling', damagePerSec: 20, affectedArea: '10%', warningLevel: 'Medium' },
 ];
 
 export const HAZARD_TYPE_COLORS: Record<EnvHazard['type'], string> = {
@@ -402,6 +415,7 @@ export const FAST_TRAVEL_NODES: FastTravelNode[] = [
   { name: 'Camp Outskirts', zone: ZONE_NAMES.BANDIT_CAMP, discovered: false, travelTimes: [{ to: 'Woods Gate', seconds: 15 }, { to: 'Keep Gates', seconds: 20 }] },
   { name: 'Core Rift', zone: ZONE_NAMES.DEEP_CORE, discovered: false, travelTimes: [{ to: 'Cave Entrance', seconds: 18 }, { to: 'Keep Gates', seconds: 22 }] },
   { name: 'Keep Gates', zone: ZONE_NAMES.RUINED_KEEP, discovered: false, travelTimes: [{ to: 'Camp Outskirts', seconds: 20 }, { to: 'Core Rift', seconds: 22 }] },
+  { name: 'Ashen Crossing', zone: ZONE_NAMES.ASHEN_FOREST, discovered: false, travelTimes: [{ to: 'Woods Gate', seconds: 10 }, { to: 'Camp Outskirts', seconds: 12 }] },
 ];
 
 // Derived: Fast travel coverage per zone from FAST_TRAVEL_NODES
@@ -427,6 +441,7 @@ export const ZONE_PROGRESSION: ZoneProgressionBar[] = [
   { zone: ZONE_NAMES.BANDIT_CAMP, firstVisitDay: -1, completionDay: null, completionPct: 0, color: STATUS_LOCKED },
   { zone: ZONE_NAMES.DEEP_CORE, firstVisitDay: -1, completionDay: null, completionPct: 0, color: STATUS_LOCKED },
   { zone: ZONE_NAMES.RUINED_KEEP, firstVisitDay: -1, completionDay: null, completionPct: 0, color: STATUS_LOCKED },
+  { zone: ZONE_NAMES.ASHEN_FOREST, firstVisitDay: 2, completionDay: null, completionPct: 15, color: STATUS_WARNING },
 ];
 
 export const TOTAL_ESTIMATED_DAYS = 14;
