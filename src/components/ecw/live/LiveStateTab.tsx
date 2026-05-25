@@ -3,6 +3,7 @@
 import { BridgeStatusCard } from './BridgeStatusCard';
 import { AssetManifestCard } from './AssetManifestCard';
 import { LiveStatePlaceholderCards } from './LiveStatePlaceholderCards';
+import { CatalogLiveGrid } from './CatalogLiveGrid';
 
 /**
  * Top-level body for the Live State L1 tab. Phase 6 focused scope:
@@ -23,6 +24,10 @@ export function LiveStateTab() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4 max-w-5xl">
         <BridgeStatusCard />
         <AssetManifestCard />
+      </div>
+
+      <div className="mb-6">
+        <CatalogLiveGrid />
       </div>
 
       <div className="max-w-5xl">
