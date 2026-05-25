@@ -43,8 +43,14 @@ Bestiary entities now have **7 facets**: Detail (P7) · Balance · Threat · AI 
 3. **Persisted-store facet** (Baseline): pure model+calc + `<domain>-db.ts` (table + `rowTo*` pure mapper) + `/api/<domain>` GET/POST + a no-persist Zustand store (DB is source of truth, loaded on entity open) + facet that fetch-loads on mount and POSTs on action. Mirrors Phase 13 pipeline-db/pipelineStore.
 Every remaining 10-* idea maps to one of these three.
 
-### Batch 10-C · Combat Map deepening
-Ideas: `01131c98` (dramatic tension), `0545ec6c` (combat auto-tuner), `1d6c71ad` (encounter sim), `1d108361` (A/B scenarios), `3d267f25` (difficulty topology), `43c47c8b` (self-balancing encounters), `5f579b32` (NL encounter design), `61e19e05` (combo library), `6bf2f7a3` (bot playtesting), `7b5e0a4a` (pacing curve), `b59a3d1d` (touch/kbd timelines), `c3d28b98` (LLM combo chor), `d098f8dc` (difficulty budget), `e1a395e5` (live PIE feel sync).
+### Batch 10-C · Combat Map deepening — COMPLETE (5 facets; catalog saturated)
+Combat-map had 1 facet (Detail, P7b); now has **5**: Detail · Analysis · Choreograph · Baseline · Tuner. Built over `ComboSequence` (hits/totalTime/dps/chain/weaponCategory).
+- ✅ Analysis (`f363953` lib + `363d0b6` facet) → `src/lib/combat/combo-analysis.ts` (`parseSeconds`, `comboMetrics` total-damage/cadence/damage-per-hit, `lintCombo` chain-hit consistency + same-weapon DPS outlier + long-commitment, `asCombo`) + CombatAnalysisFacet. Pure-function template. Covers ideas `01131c98`/`7b5e0a4a`/`0545ec6c`(audit half).
+- ✅ Choreograph (`1f852a0`) → `combo-prompt.ts` `buildComboPrompt` (reuse AnimMontage combo windows + GAS) + CombatChoreographerFacet (NL→CLI via `arpg-combat`). CLI-dispatch template. Covers `5f579b32`/`c3d28b98`.
+- ✅ Baseline (`a075a1a`) → CombatBaselineFacet (DPS=score, hits+total-damage breakdown) over shared `EntityBaselinePanel`. 3rd catalog on the persisted-store shell. Covers `61e19e05` (regression-tracking half).
+- ✅ Tuner (`8381ca1` solver + `f38d566` facet) → `combo-tuner.ts` `tuneComboToTargetDps` (dps=damage/time ⇒ two exact levers: retime OR damage-scale) + CombatTunerFacet (target DPS → levers → CLI apply). Goal-seek. Covers `0545ec6c` (auto-tuner half).
+- **Triaged out (no-stubs / cross-subsystem):** `6bf2f7a3` (bot playtesting — needs a sim runtime), `e1a395e5` (live PIE feel sync — UE telemetry), `1d6c71ad`/`43c47c8b`/`d098f8dc`/`3d267f25` (encounter sim / self-balancing / difficulty budget+topology — cross-catalog encounter-design with bestiary; no combat-map data model — belong to a future encounter-design batch), `1d108361`/`b59a3d1d` (A/B scenarios overlap Baseline; input-timeline needs per-step timing not on ComboSequence).
+- **Verdict: combat-map catalog facet-saturated** for `ComboSequence` data (evaluate→Analysis, author→Choreograph, regression→Baseline, auto-tune→Tuner).
 
 ### Batch 10-F · Screen Flow + Zone Map + State Graph deepening
 Combined batch (smaller individually):
