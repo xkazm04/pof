@@ -26,9 +26,9 @@ export function CatalogRow({ catalogId, label, total, verified, failingCount, on
     >
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2 mb-1.5">
-          <span className="font-semibold text-text">{label}</span>
+          <span className="text-sm font-semibold text-text">{label}</span>
           {failingCount > 0 && (
-            <span className="flex items-center gap-1 text-2xs font-mono text-red-500">
+            <span className="flex items-center gap-1 text-2xs text-red-500">
               <AlertTriangle className="w-3 h-3" />
               {failingCount} failing
             </span>
@@ -41,7 +41,7 @@ export function CatalogRow({ catalogId, label, total, verified, failingCount, on
             style={{ width: `${pct}%` }}
           />
         </div>
-        <div className="text-2xs font-mono text-text-muted">
+        <div className="text-xs text-text-muted">
           {total} entries · {verified} verified
         </div>
       </div>
