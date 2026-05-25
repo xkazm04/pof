@@ -5,6 +5,7 @@ import { ActivityFeedCard } from './ActivityFeedCard';
 import { ForecastCard } from './ForecastCard';
 import { QualityRollupCard } from './QualityRollupCard';
 import { FeatureCoverageCard } from './FeatureCoverageCard';
+import { SessionActivityCard } from './SessionActivityCard';
 
 /**
  * Top-level body for the Mission Control L1 tab. Consolidates the project-wide
@@ -12,10 +13,11 @@ import { FeatureCoverageCard } from './FeatureCoverageCard';
  * - CatalogRollupCard + ForecastCard (Phase 5)
  * - QualityRollupCard (← AggregateQuality / ProjectHealth / UnifiedSummary)
  * - FeatureCoverageCard (← CrossModuleFeatureDashboard)
+ * - SessionActivityCard (← DirectorOverview / UnifiedSummary session signal)
  * - ActivityFeedCard (full-width)
  *
- * Phase 10-MC fold-in (Phase 9 audit execution). Session-analytics + critical-path
- * panels land in later 10-MC rounds; legacy `/` still reaches the originals.
+ * Phase 10-MC fold-in (Phase 9 audit execution). The critical-path DAG lands in
+ * a later 10-MC round; legacy `/` still reaches the original dashboards.
  */
 export function MissionControlTab() {
   return (
@@ -32,6 +34,7 @@ export function MissionControlTab() {
         <ForecastCard />
         <QualityRollupCard />
         <FeatureCoverageCard />
+        <SessionActivityCard />
       </div>
 
       <div className="max-w-5xl">
