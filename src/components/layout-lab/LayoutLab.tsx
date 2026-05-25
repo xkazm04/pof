@@ -2,29 +2,30 @@
 /* eslint-disable no-restricted-syntax -- identity-lab chrome: neutral monochrome bar, bespoke by design */
 
 import { useState, type ReactNode } from 'react';
-import { useLabCatalogData, type LabGroup } from './useLabCatalogData';
-import { Atelier } from './variants/Atelier';
+import { useLabCatalogData, useLabDetail, type LabGroup, type LabDetail } from './useLabCatalogData';
 import { Forge } from './variants/Forge';
 import { Blueprint } from './variants/Blueprint';
-import { Soft } from './variants/Soft';
 import { Studio } from './variants/Studio';
 
-const VARIANTS: { id: string; label: string; render: (g: LabGroup[]) => ReactNode }[] = [
-  { id: 'atelier', label: 'Atelier', render: (g) => <Atelier groups={g} /> },
-  { id: 'forge', label: 'Forge', render: (g) => <Forge groups={g} /> },
-  { id: 'blueprint', label: 'Blueprint', render: (g) => <Blueprint groups={g} /> },
-  { id: 'soft', label: 'Soft', render: (g) => <Soft groups={g} /> },
-  { id: 'studio', label: 'Studio', render: (g) => <Studio groups={g} /> },
+interface VariantProps { groups: LabGroup[]; detail: LabDetail | null; onSelect: (id: string) => void; onBack: () => void }
+
+const VARIANTS: { id: string; label: string; render: (p: VariantProps) => ReactNode }[] = [
+  { id: 'forge', label: 'Forge', render: (p) => <Forge {...p} /> },
+  { id: 'blueprint', label: 'Blueprint', render: (p) => <Blueprint {...p} /> },
+  { id: 'studio', label: 'Studio', render: (p) => <Studio {...p} /> },
 ];
 
 /**
- * UI identity lab (/layout). A neutral, monochrome tab bar switches between five
- * fully self-styled identity prototypes of the catalog-row-selection screen.
- * The bar is intentionally chrome (no identity) so it doesn't bias the variants.
+ * UI identity lab (/layout). Neutral monochrome tab bar switches between the
+ * remaining identity prototypes (Forge · Blueprint · Studio). Selecting a catalog
+ * row opens that variant's distinct detail screen (entity selection + pipeline +
+ * metadata); the selection persists across variant switches for side-by-side compare.
  */
 export function LayoutLab() {
   const groups = useLabCatalogData();
-  const [active, setActive] = useState('atelier');
+  const [active, setActive] = useState('studio');
+  const [selected, setSelected] = useState<string | null>(null);
+  const detail = useLabDetail(selected);
   const current = VARIANTS.find((v) => v.id === active) ?? VARIANTS[0];
 
   return (
@@ -44,8 +45,15 @@ export function LayoutLab() {
             {v.label}
           </button>
         ))}
+        {selected && (
+          <span style={{ marginLeft: 'auto', color: '#777', fontSize: 12, fontFamily: 'ui-monospace, monospace' }}>
+            detail · {selected}
+          </span>
+        )}
       </div>
-      <div style={{ flex: 1, minHeight: 0 }}>{current.render(groups)}</div>
+      <div style={{ flex: 1, minHeight: 0 }}>
+        {current.render({ groups, detail, onSelect: setSelected, onBack: () => setSelected(null) })}
+      </div>
     </div>
   );
 }
