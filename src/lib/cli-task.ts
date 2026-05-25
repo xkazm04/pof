@@ -23,6 +23,8 @@ import type { StoredCatalogEntity } from '@/lib/catalog/types';
 import { getRecipe, STEP_TO_LIFECYCLE, type GenerationStep } from '@/lib/catalog/recipe';
 import { trackLabel, trackHint, type PipelineTrackId } from '@/lib/pipeline/tracks';
 import { buildAbilitySpecDraftPrompt, type AbilityRef } from '@/lib/ability/logic-prompts';
+import { buildGenerateEffectsPrompt } from '@/lib/ability/effect-codegen-prompt';
+import type { EditorEffect, TagRule } from '@/lib/ability/spec';
 
 // ── Task callback system ────────────────────────────────────────────────────
 
@@ -164,7 +166,8 @@ export type CLITaskType =
   | 'audio-import'
   | 'generate'
   | 'evaluate-track'
-  | 'draft-ability-spec';
+  | 'draft-ability-spec'
+  | 'generate-gas-effects';
 
 /** Task types that generate or modify UE code and therefore get a Wiring Requirements section. */
 const WIRING_TASK_TYPES = new Set<CLITaskType>(['checklist', 'quick-action', 'feature-fix']);
@@ -292,6 +295,21 @@ export interface DraftAbilitySpecTask extends CLITask {
   entityId: string;
   ref: AbilityRef;
   instruction: string;
+  appOrigin: string;
+}
+
+/**
+ * Generate-gas-effects task (ECW Option B3a) — hands Claude an ability's authored
+ * effects + an authoring contract; Claude writes buildable UGameplayEffect
+ * subclasses additively into the UE project's Effects/Generated/, then builds the
+ * PoF module and reports. Callback-free (verification is the build/-abslog, like
+ * character-setup). No UE files are authored app-side.
+ */
+export interface GenerateGasEffectsTask extends CLITask {
+  type: 'generate-gas-effects';
+  ref: AbilityRef;
+  effects: EditorEffect[];
+  tagRules: TagRule[];
   appOrigin: string;
 }
 
@@ -863,6 +881,13 @@ ${buildCallbackSection(getCallback(cbId)!)}`;
       return `${base}\n\n${buildCallbackSection(getCallback(cbId)!)}`;
     }
 
+    case 'generate-gas-effects': {
+      const gt = task as GenerateGasEffectsTask;
+      const header = buildProjectContextHeader(ctx, { knownAssetDomains });
+      const body = buildGenerateEffectsPrompt(gt.ref, gt.effects, gt.tagRules);
+      return `${header}\n\n## Task\n${body}`;
+    }
+
     default:
       return task.prompt;
   }
@@ -1100,6 +1125,26 @@ export const TaskFactory = {
       entityId: params.entityId,
       ref: params.ref,
       instruction: params.instruction ?? '',
+      appOrigin,
+    };
+  },
+
+  /** Create a generate-gas-effects task (ECW B3a) — Claude writes buildable
+   *  UGameplayEffect C++ from the ability's effects into Effects/Generated/. */
+  generateGasEffects(
+    moduleId: SubModuleId,
+    params: { ref: AbilityRef; effects: EditorEffect[]; tagRules: TagRule[] },
+    appOrigin: string,
+    label: string,
+  ): GenerateGasEffectsTask {
+    return {
+      type: 'generate-gas-effects',
+      moduleId,
+      prompt: '',
+      label,
+      ref: params.ref,
+      effects: params.effects,
+      tagRules: params.tagRules,
       appOrigin,
     };
   },
