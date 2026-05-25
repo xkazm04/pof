@@ -32,19 +32,19 @@ describe('UI identity lab (Blueprint baseline · Items example)', () => {
     expect(screen.getAllByText('lifecycle').length).toBeGreaterThan(0); // moved title-block stat
   });
 
-  it('Concept Brief step renders View/Produce/Acceptance with a char-count gate', () => {
+  it('opens directly on the Concept Brief step (Acceptance gate + Produce panel)', () => {
     render(<LayoutLab />);
-    fireEvent.click(screen.getByText('Concept Brief'));
+    // stepIdx defaults to 0 → Concept Brief renders without a click
     expect(screen.getByText(/at least 300 characters/)).toBeTruthy();
-    expect(screen.getByText('View')).toBeTruthy();
-    expect(screen.getByText('Produce')).toBeTruthy();
+    expect(screen.getByText('Current brief')).toBeTruthy();   // a View panel label
+    expect(screen.getByText('Produce')).toBeTruthy();          // the Produce panel label
     expect(screen.getByText(/Generate with CLI/)).toBeTruthy();
   });
 
   it('Economy step renders charts + power-score acceptance', () => {
     render(<LayoutLab />);
     fireEvent.click(screen.getByText('Economy'));
-    expect(screen.getByText(/Stat budget vs peers/)).toBeTruthy();
+    expect(screen.getByText(/Stat budget vs tier/)).toBeTruthy();
     expect(screen.getByText(/Tune within budget/)).toBeTruthy();
     expect(screen.getByText(/Power within ±10%/)).toBeTruthy();
   });

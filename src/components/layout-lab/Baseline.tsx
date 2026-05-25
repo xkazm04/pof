@@ -24,7 +24,7 @@ const pad2 = (n: number) => String(n).padStart(2, '0');
  */
 export function Baseline({ theme: t, catalogs, detail, onSelectCatalog }: Props) {
   const [entityId, setEntityId] = useState<string | null>(null);
-  const [stepIdx, setStepIdx] = useState<number | null>(null);
+  const [stepIdx, setStepIdx] = useState<number | null>(0);
 
   const entities = detail?.entities ?? [];
   const entity = entities.find((e) => e.id === entityId) ?? entities[0] ?? null;
@@ -48,14 +48,14 @@ export function Baseline({ theme: t, catalogs, detail, onSelectCatalog }: Props)
       <header style={{ display: 'flex', alignItems: 'center', gap: 20, padding: '16px 28px', borderBottom: `2px solid ${t.ink}`, ...panel({ borderTop: 'none', borderLeft: 'none', borderRight: 'none' }) }}>
         <select
           value={detail?.catalog.catalogId ?? ''}
-          onChange={(e) => { onSelectCatalog(e.target.value); setEntityId(null); setStepIdx(null); }}
+          onChange={(e) => { onSelectCatalog(e.target.value); setEntityId(null); setStepIdx(0); }}
           className={t.fontMono}
-          style={{ background: t.bg, color: t.ink, border: `1px solid ${t.line}`, padding: '6px 10px', fontSize: 12, cursor: 'pointer' }}
+          style={{ background: t.bg, color: t.ink, border: `1px solid ${t.line}`, padding: '8px 10px', fontSize: 14, cursor: 'pointer' }}
         >
           {catalogs.map((c) => <option key={c.catalogId} value={c.catalogId}>{c.label}</option>)}
         </select>
         <div style={{ minWidth: 0 }}>
-          <div className={t.fontMono} style={{ fontSize: 10.5, letterSpacing: '0.14em', textTransform: 'uppercase', color: t.muted }}>{detail?.catalog.label ?? '—'}</div>
+          <div className={t.fontMono} style={{ fontSize: 14, letterSpacing: '0.12em', textTransform: 'uppercase', color: t.muted }}>{detail?.catalog.label ?? '—'}</div>
           <h1 style={{ fontSize: 26, fontWeight: 700, color: t.inkDeep, margin: 0, lineHeight: 1.1 }}>{entity?.name ?? '—'}</h1>
         </div>
         {/* stat strip (moved from the title block) */}
@@ -65,45 +65,45 @@ export function Baseline({ theme: t, catalogs, detail, onSelectCatalog }: Props)
         </div>
       </header>
 
-      {/* ── Body: [ list + pipeline sidebar | main content ] ── */}
-      <div style={{ flex: 1, display: 'grid', gridTemplateColumns: '360px 1fr', minHeight: 0 }}>
-        {/* left sidebar */}
+      {/* ── Body: [ entity list | pipeline | main content ] ── */}
+      <div style={{ flex: 1, display: 'grid', gridTemplateColumns: '230px 320px 1fr', minHeight: 0 }}>
+        {/* entity list column */}
         <aside style={{ borderRight: `1px solid ${t.line}`, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
-          {/* entity list */}
-          <div style={{ flex: '0 0 auto', maxHeight: '42%', display: 'flex', flexDirection: 'column', minHeight: 0 }}>
-            <div className={t.fontMono} style={{ fontSize: 11, letterSpacing: '0.12em', textTransform: 'uppercase', color: t.ink, padding: '12px 18px 8px' }}>Entities · {entities.length}</div>
-            <div style={{ overflow: 'auto', padding: '0 10px 10px' }}>
-              {entities.map((e) => {
-                const on = e.id === entity?.id;
-                return (
-                  <button key={e.id} onClick={() => { setEntityId(e.id); setStepIdx(null); }}
-                    style={{ display: 'block', width: '100%', textAlign: 'left', padding: '9px 12px', fontSize: 17, cursor: 'pointer', border: 'none', borderLeft: on ? `3px solid ${t.ink}` : '3px solid transparent', background: on ? t.accentBg : 'transparent', color: on ? t.inkDeep : t.text, fontWeight: on ? 600 : 400 }}>
-                    {e.name}
+          <div className={t.fontMono} style={{ fontSize: 14, letterSpacing: '0.12em', textTransform: 'uppercase', color: t.ink, padding: '14px 18px 8px' }}>Entities · {entities.length}</div>
+          <div style={{ overflow: 'auto', padding: '0 10px 10px' }}>
+            {entities.map((e) => {
+              const on = e.id === entity?.id;
+              return (
+                <button key={e.id} onClick={() => setEntityId(e.id)}
+                  style={{ display: 'block', width: '100%', textAlign: 'left', padding: '9px 12px', fontSize: 17, cursor: 'pointer', border: 'none', borderLeft: on ? `3px solid ${t.ink}` : '3px solid transparent', background: on ? t.accentBg : 'transparent', color: on ? t.inkDeep : t.text, fontWeight: on ? 600 : 400 }}>
+                  {e.name}
+                </button>
+              );
+            })}
+          </div>
+        </aside>
+
+        {/* pipeline column (right of the list) */}
+        <aside style={{ borderRight: `1px solid ${t.line}`, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
+          <div className={t.fontMono} style={{ fontSize: 14, letterSpacing: '0.12em', textTransform: 'uppercase', color: t.ink, padding: '14px 18px 8px' }}>Pipeline · {done}/{steps.length}</div>
+          <div style={{ overflow: 'auto', padding: '4px 18px 18px', position: 'relative' }}>
+            <div style={{ position: 'absolute', left: 27, top: 12, bottom: 22, width: 2, background: t.line }} />
+            {steps.map((step, i) => {
+              const isDone = i < done;
+              const current = i === stepIdx;
+              const live = !!(detail && getStepComponent(detail.catalog.catalogId, step)); // has a prototyped V/P/A UI
+              return (
+                <button key={step} onClick={() => setStepIdx(i)} title={live ? 'Prototyped step' : 'Placeholder (not yet built)'}
+                  style={{ display: 'flex', alignItems: 'center', gap: 12, width: '100%', textAlign: 'left', padding: '7px 0', cursor: 'pointer', border: 'none', background: 'transparent', position: 'relative' }}>
+                  <span style={{ width: 20, height: 20, flexShrink: 0, zIndex: 1, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', background: isDone ? t.ink : t.bg, border: `2px solid ${current ? t.ink : isDone ? t.ink : t.line}`, boxShadow: current ? `0 0 0 3px ${t.accentBg}` : 'none', color: t.onAccent, fontSize: 14, fontWeight: 700 }}>{isDone ? '✓' : ''}</span>
+                  <span style={{ fontSize: 16, lineHeight: 1.25, color: live ? (current ? t.inkDeep : t.text) : t.muted, fontWeight: current ? 700 : live ? 500 : 400, display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                    <span className={t.fontMono} style={{ color: t.muted, fontSize: 14 }}>{pad2(i + 1)}</span>{step}
+                    {live && <span style={{ width: 6, height: 6, borderRadius: 999, background: t.ok, flexShrink: 0 }} title="Prototyped" />}
+                  </span>
                   </button>
                 );
               })}
             </div>
-          </div>
-          {/* pipeline vertical timeline */}
-          <div style={{ flex: 1, borderTop: `1px solid ${t.line}`, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
-            <div className={t.fontMono} style={{ fontSize: 11, letterSpacing: '0.12em', textTransform: 'uppercase', color: t.ink, padding: '12px 18px 8px' }}>Pipeline · {done}/{steps.length}</div>
-            <div style={{ overflow: 'auto', padding: '4px 18px 18px', position: 'relative' }}>
-              <div style={{ position: 'absolute', left: 27, top: 12, bottom: 22, width: 2, background: t.line }} />
-              {steps.map((step, i) => {
-                const isDone = i < done;
-                const current = i === stepIdx;
-                return (
-                  <button key={step} onClick={() => setStepIdx(i)}
-                    style={{ display: 'flex', alignItems: 'center', gap: 12, width: '100%', textAlign: 'left', padding: '7px 0', cursor: 'pointer', border: 'none', background: 'transparent', position: 'relative' }}>
-                    <span style={{ width: 18, height: 18, flexShrink: 0, zIndex: 1, background: isDone ? t.ink : t.bg, border: `2px solid ${current ? t.ink : isDone ? t.ink : t.line}`, boxShadow: current ? `0 0 0 3px ${t.accentBg}` : 'none' }} />
-                    <span style={{ fontSize: 16, lineHeight: 1.25, color: isDone ? t.text : current ? t.inkDeep : t.muted, fontWeight: current ? 700 : isDone ? 500 : 400 }}>
-                      <span className={t.fontMono} style={{ color: t.muted, fontSize: 12, marginRight: 8 }}>{pad2(i + 1)}</span>{step}
-                    </span>
-                  </button>
-                );
-              })}
-            </div>
-          </div>
         </aside>
 
         {/* main content — roomy work canvas */}
@@ -112,13 +112,13 @@ export function Baseline({ theme: t, catalogs, detail, onSelectCatalog }: Props)
             const StepComp = detail && entity ? getStepComponent(detail.catalog.catalogId, steps[stepIdx]) : null;
             return (
               <>
-                <div className={t.fontMono} style={{ fontSize: 12, letterSpacing: '0.14em', color: t.muted, textTransform: 'uppercase' }}>Step {pad2(stepIdx + 1)} / {pad2(steps.length)}{stepIdx < done ? ' · complete' : ''}</div>
+                <div className={t.fontMono} style={{ fontSize: 14, letterSpacing: '0.12em', color: t.muted, textTransform: 'uppercase' }}>Step {pad2(stepIdx + 1)} / {pad2(steps.length)}{stepIdx < done ? ' · complete' : ''}</div>
                 <h2 style={{ fontSize: 30, fontWeight: 700, color: t.inkDeep, margin: '6px 0 18px' }}>{steps[stepIdx]}</h2>
                 {StepComp && entity ? (
-                  <StepComp t={t} entity={entity} />
+                  <StepComp key={entity.id} t={t} entity={entity} />
                 ) : (
                   <div style={panel({ borderRadius: t.glass ? 12 : 0, padding: 28, minHeight: 360 })}>
-                    <div className={t.fontMono} style={{ fontSize: 12, color: t.muted, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 10 }}>Compose</div>
+                    <div className={t.fontMono} style={{ fontSize: 14, color: t.muted, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 10 }}>Compose</div>
                     <p style={{ fontSize: 15, color: t.muted, maxWidth: 520, lineHeight: 1.6 }}>
                       Work canvas for <strong style={{ color: t.text }}>{steps[stepIdx]}</strong> on <strong style={{ color: t.text }}>{entity?.name}</strong>. View / Produce / Acceptance UI for this step is not prototyped yet — see the Items · Concept Brief / Attributes / Economy steps for the pattern.
                     </p>
@@ -131,7 +131,7 @@ export function Baseline({ theme: t, catalogs, detail, onSelectCatalog }: Props)
               <h2 style={{ fontSize: 28, fontWeight: 700, color: t.inkDeep, margin: '0 0 10px' }}>{entity?.name ?? 'Select an entity'}</h2>
               <p style={{ fontSize: 15, color: t.muted, lineHeight: 1.65 }}>{detail?.catalog.description}</p>
               <div style={panel({ borderRadius: t.glass ? 12 : 0, padding: 24, marginTop: 20 })}>
-                <span className={t.fontMono} style={{ fontSize: 13, color: t.muted }}>← Select a pipeline step to compose it.</span>
+                <span className={t.fontMono} style={{ fontSize: 14, color: t.muted }}>← Select a pipeline step to compose it.</span>
               </div>
             </div>
           )}
@@ -144,8 +144,8 @@ export function Baseline({ theme: t, catalogs, detail, onSelectCatalog }: Props)
 function Stat({ t, label, value, accent }: { t: LabTheme; label: string; value: string; accent?: boolean }) {
   return (
     <div style={{ padding: '4px 12px', border: `1px solid ${t.line}`, background: t.panel, ...(t.glass ? { borderRadius: 8 } : {}) }}>
-      <div className={t.fontMono} style={{ fontSize: 9.5, letterSpacing: '0.08em', textTransform: 'uppercase', color: t.muted }}>{label}</div>
-      <div className={t.fontMono} style={{ fontSize: 15, fontWeight: 600, color: accent ? t.ink : t.inkDeep }}>{value}</div>
+      <div className={t.fontMono} style={{ fontSize: 14, letterSpacing: '0.06em', textTransform: 'uppercase', color: t.muted }}>{label}</div>
+      <div className={t.fontMono} style={{ fontSize: 16, fontWeight: 600, color: accent ? t.ink : t.inkDeep }}>{value}</div>
     </div>
   );
 }
