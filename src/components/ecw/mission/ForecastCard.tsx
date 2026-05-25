@@ -48,7 +48,7 @@ export function ForecastCard() {
             <span className="text-2xl font-bold text-text">{forecast.daysRemaining}</span>
             <span className="text-xs text-text-muted">days until verified</span>
           </div>
-          <div className="text-2xs font-mono text-text-muted space-y-0.5">
+          <div className="text-xs text-text-muted space-y-0.5">
             <div>velocity · <span className="text-text">{forecast.velocityPerDay} verified / day</span></div>
             <div>confidence · <span className="text-text">{(forecast.confidence * 100).toFixed(0)}%</span></div>
           </div>

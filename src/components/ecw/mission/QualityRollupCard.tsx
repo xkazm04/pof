@@ -47,14 +47,14 @@ export function QualityRollupCard() {
       </header>
 
       {isLoading && model.total === 0 ? (
-        <p className="text-2xs font-mono text-text-muted/60">Loading quality…</p>
+        <p className="text-xs text-text-muted/60">Loading quality…</p>
       ) : model.reviewedCount === 0 ? (
-        <p className="text-2xs font-mono text-text-muted/60">
+        <p className="text-xs text-text-muted/60">
           No module reviews yet. Run a module review to populate quality scores.
         </p>
       ) : (
         <>
-          <div className="text-2xs font-mono text-text-muted mb-3">
+          <div className="text-xs text-text-muted mb-3">
             {model.reviewedCount} of {model.total} modules reviewed
           </div>
           <div className="space-y-1">

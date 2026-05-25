@@ -45,13 +45,13 @@ export function FeatureCoverageCard() {
       <header className="flex items-center gap-2 mb-3">
         <Grid3x3 className="w-4 h-4 text-text-muted" />
         <h2 className="text-sm font-semibold text-text">Feature Coverage</h2>
-        <span className="ml-auto text-2xs font-mono text-text-muted">{model.donePct}% done</span>
+        <span className="ml-auto text-xs text-text-muted">{model.donePct}% done</span>
       </header>
 
       {isLoading && model.total === 0 ? (
-        <p className="text-2xs font-mono text-text-muted/60">Loading coverage…</p>
+        <p className="text-xs text-text-muted/60">Loading coverage…</p>
       ) : model.total === 0 ? (
-        <p className="text-2xs font-mono text-text-muted/60">
+        <p className="text-xs text-text-muted/60">
           No tracked features yet. Feature statuses populate as modules are scanned.
         </p>
       ) : (
@@ -61,7 +61,7 @@ export function FeatureCoverageCard() {
             <div style={{ width: `${(model.partial / model.total) * 100}%`, backgroundColor: STATUS_WARNING }} />
             <div style={{ width: `${(model.missing / model.total) * 100}%`, backgroundColor: STATUS_NEUTRAL }} />
           </div>
-          <div className="flex items-center gap-3 text-2xs font-mono text-text-muted mb-3">
+          <div className="flex items-center gap-3 text-xs text-text-muted mb-3">
             <span style={{ color: STATUS_SUCCESS }}>{model.done} done</span>
             <span style={{ color: STATUS_WARNING }}>{model.partial} partial</span>
             <span style={{ color: STATUS_NEUTRAL }}>{model.missing} missing</span>

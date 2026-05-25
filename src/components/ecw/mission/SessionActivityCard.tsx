@@ -48,14 +48,14 @@ export function SessionActivityCard() {
       </header>
 
       {isLoading && model.totalSessions === 0 ? (
-        <p className="text-2xs font-mono text-text-muted/60">Loading sessions…</p>
+        <p className="text-xs text-text-muted/60">Loading sessions…</p>
       ) : model.totalSessions === 0 ? (
-        <p className="text-2xs font-mono text-text-muted/60">
+        <p className="text-xs text-text-muted/60">
           No CLI sessions recorded yet. Dispatch work from a module or facet to populate activity.
         </p>
       ) : (
         <>
-          <div className="text-2xs font-mono text-text-muted mb-3">
+          <div className="text-xs text-text-muted mb-3">
             {model.totalSessions} session{model.totalSessions === 1 ? '' : 's'} across {model.topModules.length === TOP_COUNT ? 'top' : 'all'} modules
           </div>
           <div className="space-y-1">

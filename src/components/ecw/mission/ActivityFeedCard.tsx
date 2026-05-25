@@ -45,7 +45,7 @@ export function ActivityFeedCard() {
       <header className="flex items-center gap-2 mb-3">
         <Activity className="w-4 h-4 text-text-muted" />
         <h2 className="text-sm font-semibold text-text">Activity</h2>
-        <span className="ml-auto text-2xs font-mono text-text-muted">
+        <span className="ml-auto text-xs text-text-muted">
           {events.length} total
         </span>
       </header>
@@ -64,7 +64,7 @@ export function ActivityFeedCard() {
               >
                 <Icon className="w-3.5 h-3.5 text-text-muted shrink-0" />
                 <span className="flex-1 truncate text-text">{e.title}</span>
-                <span className="text-2xs font-mono text-text-muted/70 shrink-0">
+                <span className="text-xs text-text-muted/70 shrink-0">
                   {shortRelative(e.timestamp)}
                 </span>
               </li>

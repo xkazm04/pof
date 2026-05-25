@@ -36,14 +36,14 @@ export function PlaytestsCard() {
       </header>
 
       {isLoading && data.totalSessions === 0 ? (
-        <p className="text-2xs font-mono text-text-muted/60">Loading playtests…</p>
+        <p className="text-xs text-text-muted/60">Loading playtests…</p>
       ) : data.totalSessions === 0 ? (
-        <p className="text-2xs font-mono text-text-muted/60">
+        <p className="text-xs text-text-muted/60">
           No playtest sessions yet. Run a Game Director session to populate playtest health.
         </p>
       ) : (
         <>
-          <div className="text-2xs font-mono text-text-muted mb-3">
+          <div className="text-xs text-text-muted mb-3">
             {data.completedSessions} of {data.totalSessions} sessions complete · {data.totalFindings} findings
           </div>
           {data.criticalFindings > 0 && (

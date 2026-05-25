@@ -46,9 +46,9 @@ export function NextBestActionsCard() {
       </header>
 
       {isLoading && recs.length === 0 ? (
-        <p className="text-2xs font-mono text-text-muted/60">Computing recommendations…</p>
+        <p className="text-xs text-text-muted/60">Computing recommendations…</p>
       ) : recs.length === 0 ? (
-        <p className="text-2xs font-mono text-text-muted/60">
+        <p className="text-xs text-text-muted/60">
           Nothing recommended right now — every tracked checklist item is complete or blocked.
         </p>
       ) : (
@@ -60,7 +60,7 @@ export function NextBestActionsCard() {
               </span>
               <div className="min-w-0">
                 <div className="text-xs text-text truncate">{r.item.label}</div>
-                <div className="text-2xs font-mono text-text-muted/70 truncate">
+                <div className="text-xs text-text-muted/70 truncate">
                   <span className="text-text-muted">{r.moduleId}</span> · {r.reason}
                 </div>
               </div>

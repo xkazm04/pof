@@ -25,7 +25,7 @@ export function CatalogRollupCard() {
       <header className="flex items-center gap-2 mb-3">
         <Layers className="w-4 h-4 text-text-muted" />
         <h2 className="text-sm font-semibold text-text">Catalog Lifecycle</h2>
-        <span className="ml-auto text-2xs font-mono text-text-muted">
+        <span className="ml-auto text-xs text-text-muted">
           {totals.verified} of {totals.total} verified
           {totals.failing > 0 && <span className="text-red-500"> · {totals.failing} failing</span>}
         </span>
