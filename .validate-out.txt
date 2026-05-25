@@ -1,0 +1,1348 @@
+
+> pof@0.1.0 validate
+> npm run typecheck && npm run lint && npm run test
+
+
+> pof@0.1.0 typecheck
+> tsc --noEmit
+
+
+> pof@0.1.0 lint
+> eslint
+
+
+C:\Users\kazda\kiro\pof\docs\features\arpg-vertical-slice\ps-2-artifacts\fetch_textures.mjs
+  48:5  warning  Unexpected console statement. Only these console methods are allowed: error  no-console
+  54:1  warning  Unexpected console statement. Only these console methods are allowed: error  no-console
+
+C:\Users\kazda\kiro\pof\e2e\arpg-vertical-slice-live-d2.spec.ts
+  4:48   warning  'seedPackagingProfile' is defined but never used  @typescript-eslint/no-unused-vars
+  4:145  warning  'StepResult' is defined but never used            @typescript-eslint/no-unused-vars
+
+C:\Users\kazda\kiro\pof\e2e\arpg-vertical-slice-sp-e.spec.ts
+  73:5  warning  Unexpected console statement. Only these console methods are allowed: error  no-console
+
+C:\Users\kazda\kiro\pof\e2e\arpg-vertical-slice.spec.ts
+  2:75  warning  'StepResult' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\kazda\kiro\pof\e2e\dzin-panels.spec.ts
+  185:16  warning  'getPanelTitles' is defined but never used  @typescript-eslint/no-unused-vars
+  189:16  warning  'getPanelTypes' is defined but never used   @typescript-eslint/no-unused-vars
+
+C:\Users\kazda\kiro\pof\scripts\retexture-arena-runner.mjs
+  19:3   warning  Unexpected console statement. Only these console methods are allowed: error  no-console
+  32:5   warning  Unexpected console statement. Only these console methods are allowed: error  no-console
+  39:3   warning  Unexpected console statement. Only these console methods are allowed: error  no-console
+  42:23  warning  Unexpected console statement. Only these console methods are allowed: error  no-console
+
+C:\Users\kazda\kiro\pof\src\__tests__\dzin\core-panel-density.test.tsx
+  155:11  warning  'moduleSource' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\kazda\kiro\pof\src\__tests__\hooks\useGeneration.test.tsx
+  5:57  warning  '_task' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\kazda\kiro\pof\src\__tests__\lib\blender-mcp\service.test.ts
+   87:9   warning  'callCount' is assigned a value but never used  @typescript-eslint/no-unused-vars
+  126:52  warning  'data' is defined but never used                @typescript-eslint/no-unused-vars
+
+C:\Users\kazda\kiro\pof\src\__tests__\lib\cli-task.test.ts
+  1:32  warning  'beforeEach' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\kazda\kiro\pof\src\__tests__\lib\module-registration.test.ts
+  11:41  warning  Avoid hardcoded hex colors. Import from @/lib/chart-colors or use a CSS variable  no-restricted-syntax
+
+C:\Users\kazda\kiro\pof\src\__tests__\lib\procgen-db.test.ts
+  5:20  error  A `require()` style import is forbidden  @typescript-eslint/no-require-imports
+
+C:\Users\kazda\kiro\pof\src\__tests__\lib\scatter-db.test.ts
+  4:20  error  A `require()` style import is forbidden  @typescript-eslint/no-require-imports
+
+C:\Users\kazda\kiro\pof\src\__tests__\lib\ue5-import-templates.test.ts
+  6:8  warning  'ImportConfig' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\kazda\kiro\pof\src\__tests__\packaging\cook-executor.test.ts
+  124:22  warning  '_ev' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\kazda\kiro\pof\src\__tests__\stores\materialStore.test.ts
+   8:20  warning  Avoid hardcoded hex colors. Import from @/lib/chart-colors or use a CSS variable  no-restricted-syntax
+  27:35  warning  Avoid hardcoded hex colors. Import from @/lib/chart-colors or use a CSS variable  no-restricted-syntax
+  44:35  warning  Avoid hardcoded hex colors. Import from @/lib/chart-colors or use a CSS variable  no-restricted-syntax
+
+C:\Users\kazda\kiro\pof\src\app\api\agents\live-token\route.ts
+  13:10  warning  'logger' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\kazda\kiro\pof\src\app\api\blueprint-transpiler\route.ts
+  402:3  warning  '_projectName' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\kazda\kiro\pof\src\app\api\error-memory\route.ts
+  10:29  warning  'extractTaskKeywords' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\kazda\kiro\pof\src\app\api\filesystem\browse\route.ts
+  7:11  warning  'ListResponse' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\kazda\kiro\pof\src\app\api\filesystem\verify-semantic\route.ts
+  14:39  warning  'ChecklistExpectation' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\kazda\kiro\pof\src\app\api\harness\route.ts
+  21:8  warning  'GamePlan' is defined but never used        @typescript-eslint/no-unused-vars
+  22:8  warning  'GameBuildGuide' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\kazda\kiro\pof\src\app\api\prompt-evolution\route.ts
+  11:3  warning  'getActiveTests' is defined but never used  @typescript-eslint/no-unused-vars
+  12:3  warning  'getAllTests' is defined but never used     @typescript-eslint/no-unused-vars
+
+C:\Users\kazda\kiro\pof\src\app\api\style-transfer\route.ts
+  46:145  warning  Avoid hardcoded hex colors. Import from @/lib/chart-colors or use a CSS variable  no-restricted-syntax
+  46:156  warning  Avoid hardcoded hex colors. Import from @/lib/chart-colors or use a CSS variable  no-restricted-syntax
+  46:167  warning  Avoid hardcoded hex colors. Import from @/lib/chart-colors or use a CSS variable  no-restricted-syntax
+  46:178  warning  Avoid hardcoded hex colors. Import from @/lib/chart-colors or use a CSS variable  no-restricted-syntax
+  46:189  warning  Avoid hardcoded hex colors. Import from @/lib/chart-colors or use a CSS variable  no-restricted-syntax
+  47:134  warning  Avoid hardcoded hex colors. Import from @/lib/chart-colors or use a CSS variable  no-restricted-syntax
+  47:145  warning  Avoid hardcoded hex colors. Import from @/lib/chart-colors or use a CSS variable  no-restricted-syntax
+  47:156  warning  Avoid hardcoded hex colors. Import from @/lib/chart-colors or use a CSS variable  no-restricted-syntax
+  47:167  warning  Avoid hardcoded hex colors. Import from @/lib/chart-colors or use a CSS variable  no-restricted-syntax
+  47:178  warning  Avoid hardcoded hex colors. Import from @/lib/chart-colors or use a CSS variable  no-restricted-syntax
+  48:165  warning  Avoid hardcoded hex colors. Import from @/lib/chart-colors or use a CSS variable  no-restricted-syntax
+  48:176  warning  Avoid hardcoded hex colors. Import from @/lib/chart-colors or use a CSS variable  no-restricted-syntax
+  48:187  warning  Avoid hardcoded hex colors. Import from @/lib/chart-colors or use a CSS variable  no-restricted-syntax
+  48:198  warning  Avoid hardcoded hex colors. Import from @/lib/chart-colors or use a CSS variable  no-restricted-syntax
+  48:209  warning  Avoid hardcoded hex colors. Import from @/lib/chart-colors or use a CSS variable  no-restricted-syntax
+  49:180  warning  Avoid hardcoded hex colors. Import from @/lib/chart-colors or use a CSS variable  no-restricted-syntax
+  49:191  warning  Avoid hardcoded hex colors. Import from @/lib/chart-colors or use a CSS variable  no-restricted-syntax
+  49:202  warning  Avoid hardcoded hex colors. Import from @/lib/chart-colors or use a CSS variable  no-restricted-syntax
+  49:213  warning  Avoid hardcoded hex colors. Import from @/lib/chart-colors or use a CSS variable  no-restricted-syntax
+  49:224  warning  Avoid hardcoded hex colors. Import from @/lib/chart-colors or use a CSS variable  no-restricted-syntax
+  50:167  warning  Avoid hardcoded hex colors. Import from @/lib/chart-colors or use a CSS variable  no-restricted-syntax
+  50:178  warning  Avoid hardcoded hex colors. Import from @/lib/chart-colors or use a CSS variable  no-restricted-syntax
+  50:189  warning  Avoid hardcoded hex colors. Import from @/lib/chart-colors or use a CSS variable  no-restricted-syntax
+  50:200  warning  Avoid hardcoded hex colors. Import from @/lib/chart-colors or use a CSS variable  no-restricted-syntax
+  50:211  warning  Avoid hardcoded hex colors. Import from @/lib/chart-colors or use a CSS variable  no-restricted-syntax
+  51:152  warning  Avoid hardcoded hex colors. Import from @/lib/chart-colors or use a CSS variable  no-restricted-syntax
+  51:163  warning  Avoid hardcoded hex colors. Import from @/lib/chart-colors or use a CSS variable  no-restricted-syntax
+  51:174  warning  Avoid hardcoded hex colors. Import from @/lib/chart-colors or use a CSS variable  no-restricted-syntax
+  51:185  warning  Avoid hardcoded hex colors. Import from @/lib/chart-colors or use a CSS variable  no-restricted-syntax
+  51:196  warning  Avoid hardcoded hex colors. Import from @/lib/chart-colors or use a CSS variable  no-restricted-syntax
+  52:162  warning  Avoid hardcoded hex colors. Import from @/lib/chart-colors or use a CSS variable  no-restricted-syntax
+  52:173  warning  Avoid hardcoded hex colors. Import from @/lib/chart-colors or use a CSS variable  no-restricted-syntax
+  52:184  warning  Avoid hardcoded hex colors. Import from @/lib/chart-colors or use a CSS variable  no-restricted-syntax
+  52:195  warning  Avoid hardcoded hex colors. Import from @/lib/chart-colors or use a CSS variable  no-restricted-syntax
+  52:206  warning  Avoid hardcoded hex colors. Import from @/lib/chart-colors or use a CSS variable  no-restricted-syntax
+  53:185  warning  Avoid hardcoded hex colors. Import from @/lib/chart-colors or use a CSS variable  no-restricted-syntax
+  53:196  warning  Avoid hardcoded hex colors. Import from @/lib/chart-colors or use a CSS variable  no-restricted-syntax
+  53:207  warning  Avoid hardcoded hex colors. Import from @/lib/chart-colors or use a CSS variable  no-restricted-syntax
+  53:218  warning  Avoid hardcoded hex colors. Import from @/lib/chart-colors or use a CSS variable  no-restricted-syntax
+  53:229  warning  Avoid hardcoded hex colors. Import from @/lib/chart-colors or use a CSS variable  no-restricted-syntax
+  54:113  warning  Avoid hardcoded hex colors. Import from @/lib/chart-colors or use a CSS variable  no-restricted-syntax
+  54:124  warning  Avoid hardcoded hex colors. Import from @/lib/chart-colors or use a CSS variable  no-restricted-syntax
+  54:135  warning  Avoid hardcoded hex colors. Import from @/lib/chart-colors or use a CSS variable  no-restricted-syntax
+  54:146  warning  Avoid hardcoded hex colors. Import from @/lib/chart-colors or use a CSS variable  no-restricted-syntax
+  54:157  warning  Avoid hardcoded hex colors. Import from @/lib/chart-colors or use a CSS variable  no-restricted-syntax
+  74:108  warning  Avoid hardcoded hex colors. Import from @/lib/chart-colors or use a CSS variable  no-restricted-syntax
+  74:119  warning  Avoid hardcoded hex colors. Import from @/lib/chart-colors or use a CSS variable  no-restricted-syntax
+  74:130  warning  Avoid hardcoded hex colors. Import from @/lib/chart-colors or use a CSS variable  no-restricted-syntax
+  74:141  warning  Avoid hardcoded hex colors. Import from @/lib/chart-colors or use a CSS variable  no-restricted-syntax
+  74:152  warning  Avoid hardcoded hex colors. Import from @/lib/chart-colors or use a CSS variable  no-restricted-syntax
+  75:104  warning  Avoid hardcoded hex colors. Import from @/lib/chart-colors or use a CSS variable  no-restricted-syntax
+  75:115  warning  Avoid hardcoded hex colors. Import from @/lib/chart-colors or use a CSS variable  no-restricted-syntax
+  75:126  warning  Avoid hardcoded hex colors. Import from @/lib/chart-colors or use a CSS variable  no-restricted-syntax
+  75:137  warning  Avoid hardcoded hex colors. Import from @/lib/chart-colors or use a CSS variable  no-restricted-syntax
+  75:148  warning  Avoid hardcoded hex colors. Import from @/lib/chart-colors or use a CSS variable  no-restricted-syntax
+  76:98   warning  Avoid hardcoded hex colors. Import from @/lib/chart-colors or use a CSS variable  no-restricted-syntax
+  76:109  warning  Avoid hardcoded hex colors. Import from @/lib/chart-colors or use a CSS variable  no-restricted-syntax
+  76:120  warning  Avoid hardcoded hex colors. Import from @/lib/chart-colors or use a CSS variable  no-restricted-syntax
+  76:131  warning  Avoid hardcoded hex colors. Import from @/lib/chart-colors or use a CSS variable  no-restricted-syntax
+  76:142  warning  Avoid hardcoded hex colors. Import from @/lib/chart-colors or use a CSS variable  no-restricted-syntax
+  77:87   warning  Avoid hardcoded hex colors. Import from @/lib/chart-colors or use a CSS variable  no-restricted-syntax
+  77:98   warning  Avoid hardcoded hex colors. Import from @/lib/chart-colors or use a CSS variable  no-restricted-syntax
+  77:109  warning  Avoid hardcoded hex colors. Import from @/lib/chart-colors or use a CSS variable  no-restricted-syntax
+  77:120  warning  Avoid hardcoded hex colors. Import from @/lib/chart-colors or use a CSS variable  no-restricted-syntax
+  77:131  warning  Avoid hardcoded hex colors. Import from @/lib/chart-colors or use a CSS variable  no-restricted-syntax
+  93:27   warning  Avoid hardcoded hex colors. Import from @/lib/chart-colors or use a CSS variable  no-restricted-syntax
+  93:38   warning  Avoid hardcoded hex colors. Import from @/lib/chart-colors or use a CSS variable  no-restricted-syntax
+  93:49   warning  Avoid hardcoded hex colors. Import from @/lib/chart-colors or use a CSS variable  no-restricted-syntax
+  93:60   warning  Avoid hardcoded hex colors. Import from @/lib/chart-colors or use a CSS variable  no-restricted-syntax
+  93:71   warning  Avoid hardcoded hex colors. Import from @/lib/chart-colors or use a CSS variable  no-restricted-syntax
+
+C:\Users\kazda\kiro\pof\src\app\layout.tsx
+  37:27  warning  Avoid hardcoded hex colors. Import from @/lib/chart-colors or use a CSS variable  no-restricted-syntax
+  39:22  warning  Avoid hardcoded hex colors. Import from @/lib/chart-colors or use a CSS variable  no-restricted-syntax
+
+C:\Users\kazda\kiro\pof\src\app\prototype\page.tsx
+  233:9  warning  The 'defs' logical expression could make the dependencies of useCallback Hook (at line 286) change on every render. Move it inside the useCallback callback. Alternatively, wrap the initialization of 'defs' in its own useMemo() Hook  react-hooks/exhaustive-deps
+
+C:\Users\kazda\kiro\pof\src\components\blender-mcp\ViewportPreview.tsx
+  54:11  warning  Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+
+C:\Users\kazda\kiro\pof\src\components\cli\InlineTerminal.tsx
+  10:25  warning  'CLI_COLORS' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\kazda\kiro\pof\src\components\cli\SuggestedActions.tsx
+  5:37  warning  'Package' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\kazda\kiro\pof\src\components\layout\ActivityFeedPanel.tsx
+  44:9  warning  'date' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\kazda\kiro\pof\src\components\layout\EventBusDevTools.tsx
+    7:25  warning  'EventChannel' is defined but never used                                          @typescript-eslint/no-unused-vars
+    8:79  warning  'OPACITY_15' is defined but never used                                            @typescript-eslint/no-unused-vars
+   26:53  warning  Avoid hardcoded hex colors. Import from @/lib/chart-colors or use a CSS variable  no-restricted-syntax
+  158:55  warning  Avoid hardcoded hex colors. Import from @/lib/chart-colors or use a CSS variable  no-restricted-syntax
+
+C:\Users\kazda\kiro\pof\src\components\layout\GlobalSearchPanel.tsx
+  22:54  warning  Avoid hardcoded hex colors. Import from @/lib/chart-colors or use a CSS variable  no-restricted-syntax
+  34:10  warning  'lastRebuilt' is assigned a value but never used                                  @typescript-eslint/no-unused-vars
+
+C:\Users\kazda\kiro\pof\src\components\layout\ModuleRenderer.tsx
+  6:10  warning  'CATEGORY_MAP' is defined but never used    @typescript-eslint/no-unused-vars
+  6:24  warning  'SUB_MODULE_MAP' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\kazda\kiro\pof\src\components\layout\SidebarL2.tsx
+  3:29  warning  'useEffect' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\kazda\kiro\pof\src\components\layout\TopBar.tsx
+  639:34  warning  Avoid hardcoded hex colors. Import from @/lib/chart-colors or use a CSS variable  no-restricted-syntax
+  639:56  warning  Avoid hardcoded hex colors. Import from @/lib/chart-colors or use a CSS variable  no-restricted-syntax
+  639:68  warning  Avoid hardcoded hex colors. Import from @/lib/chart-colors or use a CSS variable  no-restricted-syntax
+
+C:\Users\kazda\kiro\pof\src\components\modules\content\animations\AnimationChecklist.tsx
+    7:42  warning  'ChevronRight' is defined but never used                                          @typescript-eslint/no-unused-vars
+  274:3   warning  'OPACITY_10' is defined but never used                                            @typescript-eslint/no-unused-vars
+  274:15  warning  'OPACITY_12' is defined but never used                                            @typescript-eslint/no-unused-vars
+  274:27  warning  'OPACITY_15' is defined but never used                                            @typescript-eslint/no-unused-vars
+  274:39  warning  'OPACITY_20' is defined but never used                                            @typescript-eslint/no-unused-vars
+  274:51  warning  'OPACITY_30' is defined but never used                                            @typescript-eslint/no-unused-vars
+  379:9   warning  'Icon' is assigned a value but never used                                         @typescript-eslint/no-unused-vars
+  440:80  warning  Avoid hardcoded hex colors. Import from @/lib/chart-colors or use a CSS variable  no-restricted-syntax
+
+C:\Users\kazda\kiro\pof\src\components\modules\content\animations\AnimationStateMachine.tsx
+   15:3    warning  'OPACITY_8' is defined but never used                                             @typescript-eslint/no-unused-vars
+   15:14   warning  'OPACITY_10' is defined but never used                                            @typescript-eslint/no-unused-vars
+   15:26   warning  'OPACITY_15' is defined but never used                                            @typescript-eslint/no-unused-vars
+  425:13   warning  'fps' is assigned a value but never used                                          @typescript-eslint/no-unused-vars
+  672:50   warning  Avoid hardcoded hex colors. Import from @/lib/chart-colors or use a CSS variable  no-restricted-syntax
+  683:50   warning  Avoid hardcoded hex colors. Import from @/lib/chart-colors or use a CSS variable  no-restricted-syntax
+  790:28   warning  Avoid hardcoded hex colors. Import from @/lib/chart-colors or use a CSS variable  no-restricted-syntax
+  908:126  warning  Avoid hardcoded hex colors. Import from @/lib/chart-colors or use a CSS variable  no-restricted-syntax
+
+C:\Users\kazda\kiro\pof\src\components\modules\content\audio\AudioCodeGenPanel.tsx
+   7:12  warning  'Download' is defined but never used      @typescript-eslint/no-unused-vars
+  15:76  warning  'STATUS_ERROR' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\kazda\kiro\pof\src\components\modules\content\audio\AudioEventCatalog.tsx
+  10:10  warning  'SurfaceCard' is defined but never used    @typescript-eslint/no-unused-vars
+  11:10  warning  'MODULE_COLORS' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\kazda\kiro\pof\src\components\modules\content\audio\AudioLibraryPanel.tsx
+  28:21  error  Error: Calling setState synchronously within an effect can trigger cascading renders
+
+Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
+* Update external systems with the latest state from React.
+* Subscribe for updates from some external system, calling setState in a callback function when external state changes.
+
+Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
+
+C:\Users\kazda\kiro\pof\src\components\modules\content\audio\AudioLibraryPanel.tsx:28:21
+  26 |   }, []);
+  27 |
+> 28 |   useEffect(() => { refresh(); }, [refresh]);
+     |                     ^^^^^^^ Avoid calling setState() directly within an effect
+  29 |
+  30 |   const importCli = useModuleCLI({
+  31 |     moduleId: 'audio',  react-hooks/set-state-in-effect
+
+C:\Users\kazda\kiro\pof\src\components\modules\content\audio\AudioPipelineDiagram.tsx
+  6:10  warning  'MODULE_COLORS' is defined but never used   @typescript-eslint/no-unused-vars
+  7:10  warning  'STATUS_SUCCESS' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\kazda\kiro\pof\src\components\modules\content\audio\AudioPropertyPanel.tsx
+  117:75  warning  Avoid hardcoded hex colors. Import from @/lib/chart-colors or use a CSS variable  no-restricted-syntax
+  203:69  warning  Avoid hardcoded hex colors. Import from @/lib/chart-colors or use a CSS variable  no-restricted-syntax
+
+C:\Users\kazda\kiro\pof\src\components\modules\content\audio\AudioView.tsx
+  68:9  warning  The 'ctx' object makes the dependencies of useCallback Hook (at line 248) change on every render. To fix this, wrap the initialization of 'ctx' in its own useMemo() Hook  react-hooks/exhaustive-deps
+  68:9  warning  The 'ctx' object makes the dependencies of useCallback Hook (at line 254) change on every render. To fix this, wrap the initialization of 'ctx' in its own useMemo() Hook  react-hooks/exhaustive-deps
+  68:9  warning  The 'ctx' object makes the dependencies of useCallback Hook (at line 259) change on every render. To fix this, wrap the initialization of 'ctx' in its own useMemo() Hook  react-hooks/exhaustive-deps
+
+C:\Users\kazda\kiro\pof\src\components\modules\content\audio\LicenseBadge.tsx
+  7:15  warning  Avoid hardcoded hex colors. Import from @/lib/chart-colors or use a CSS variable  no-restricted-syntax
+
+C:\Users\kazda\kiro\pof\src\components\modules\content\audio\SpatialAudioGeneratorPanel.tsx
+    9:10  warning  'SurfaceCard' is defined but never used             @typescript-eslint/no-unused-vars
+   14:19  warning  'STATUS_ERROR' is defined but never used            @typescript-eslint/no-unused-vars
+   15:32  warning  'OPACITY_10' is defined but never used              @typescript-eslint/no-unused-vars
+   15:44  warning  'OPACITY_30' is defined but never used              @typescript-eslint/no-unused-vars
+   40:3   warning  'accentColor' is defined but never used             @typescript-eslint/no-unused-vars
+  104:9   warning  'selectedLevel' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\kazda\kiro\pof\src\components\modules\content\level-design\LevelDesignView.tsx
+  70:9  warning  The 'ctx' object makes the dependencies of useCallback Hook (at line 287) change on every render. To fix this, wrap the initialization of 'ctx' in its own useMemo() Hook  react-hooks/exhaustive-deps
+  70:9  warning  The 'ctx' object makes the dependencies of useCallback Hook (at line 293) change on every render. To fix this, wrap the initialization of 'ctx' in its own useMemo() Hook  react-hooks/exhaustive-deps
+  70:9  warning  The 'ctx' object makes the dependencies of useCallback Hook (at line 299) change on every render. To fix this, wrap the initialization of 'ctx' in its own useMemo() Hook  react-hooks/exhaustive-deps
+  70:9  warning  The 'ctx' object makes the dependencies of useCallback Hook (at line 305) change on every render. To fix this, wrap the initialization of 'ctx' in its own useMemo() Hook  react-hooks/exhaustive-deps
+
+C:\Users\kazda\kiro\pof\src\components\modules\content\level-design\LevelFlowEditor.tsx
+  402:90  warning  Avoid hardcoded hex colors. Import from @/lib/chart-colors or use a CSS variable  no-restricted-syntax
+  456:57  warning  Avoid hardcoded hex colors. Import from @/lib/chart-colors or use a CSS variable  no-restricted-syntax
+  501:39  warning  Avoid hardcoded hex colors. Import from @/lib/chart-colors or use a CSS variable  no-restricted-syntax
+
+C:\Users\kazda\kiro\pof\src\components\modules\content\level-design\StreamingZonePlanner.tsx
+    5:3   warning  'Plus' is defined but never used                                                                                 @typescript-eslint/no-unused-vars
+   11:10  warning  'motion' is defined but never used                                                                               @typescript-eslint/no-unused-vars
+   11:18  warning  'AnimatePresence' is defined but never used                                                                      @typescript-eslint/no-unused-vars
+  107:9   warning  'getAdjacentZoneIds' is assigned a value but never used                                                          @typescript-eslint/no-unused-vars
+  188:6   warning  React Hook useCallback has an unnecessary dependency: 'zones'. Either exclude it or remove the dependency array  react-hooks/exhaustive-deps
+  343:25  warning  Avoid hardcoded hex colors. Import from @/lib/chart-colors or use a CSS variable                                 no-restricted-syntax
+
+C:\Users\kazda\kiro\pof\src\components\modules\content\materials\MaterialLayerGraph.tsx
+  4:57  warning  'ChevronDown' is defined but never used     @typescript-eslint/no-unused-vars
+  7:10  warning  'MODULE_COLORS' is defined but never used   @typescript-eslint/no-unused-vars
+  8:10  warning  'STATUS_SUCCESS' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\kazda\kiro\pof\src\components\modules\content\materials\MaterialParameterConfigurator.tsx
+  52:64   warning  Avoid hardcoded hex colors. Import from @/lib/chart-colors or use a CSS variable  no-restricted-syntax
+  65:166  warning  Avoid hardcoded hex colors. Import from @/lib/chart-colors or use a CSS variable  no-restricted-syntax
+
+C:\Users\kazda\kiro\pof\src\components\modules\content\materials\MaterialStyleTransfer.tsx
+   70:10  warning  Avoid hardcoded hex colors. Import from @/lib/chart-colors or use a CSS variable  no-restricted-syntax
+  426:97  warning  Avoid hardcoded hex colors. Import from @/lib/chart-colors or use a CSS variable  no-restricted-syntax
+
+C:\Users\kazda\kiro\pof\src\components\modules\content\models\AssetInventory.tsx
+    6:21  warning  'ArrowUpDown' is defined but never used                                           @typescript-eslint/no-unused-vars
+    8:3   warning  'ChevronRight' is defined but never used                                          @typescript-eslint/no-unused-vars
+  106:22  warning  Avoid hardcoded hex colors. Import from @/lib/chart-colors or use a CSS variable  no-restricted-syntax
+  129:22  warning  Avoid hardcoded hex colors. Import from @/lib/chart-colors or use a CSS variable  no-restricted-syntax
+  230:9   warning  'toggleSort' is assigned a value but never used                                   @typescript-eslint/no-unused-vars
+  239:9   warning  'SortIcon' is assigned a value but never used                                     @typescript-eslint/no-unused-vars
+
+C:\Users\kazda\kiro\pof\src\components\modules\content\models\AssetPipelineDiagram.tsx
+   9:3   warning  'Box' is defined but never used            @typescript-eslint/no-unused-vars
+  19:38  warning  'MODULE_COLORS' is defined but never used  @typescript-eslint/no-unused-vars
+  19:53  warning  'OPACITY_10' is defined but never used     @typescript-eslint/no-unused-vars
+  19:65  warning  'OPACITY_30' is defined but never used     @typescript-eslint/no-unused-vars
+
+C:\Users\kazda\kiro\pof\src\components\modules\content\ui-hud\HudThemeEditor.tsx
+   9:31  warning  'ACCENT_EMERALD' is defined but never used  @typescript-eslint/no-unused-vars
+  10:15  warning  'OPACITY_20' is defined but never used      @typescript-eslint/no-unused-vars
+
+C:\Users\kazda\kiro\pof\src\components\modules\content\ui-hud\InventoryGridDesigner.tsx
+   11:3   warning  'EquipmentSlotConfig' is defined but never used                                   @typescript-eslint/no-unused-vars
+   18:10  warning  'SurfaceCard' is defined but never used                                           @typescript-eslint/no-unused-vars
+   19:10  warning  'MODULE_COLORS' is defined but never used                                         @typescript-eslint/no-unused-vars
+  230:30  warning  Avoid hardcoded hex colors. Import from @/lib/chart-colors or use a CSS variable  no-restricted-syntax
+  367:28  warning  Avoid hardcoded hex colors. Import from @/lib/chart-colors or use a CSS variable  no-restricted-syntax
+  373:67  warning  Avoid hardcoded hex colors. Import from @/lib/chart-colors or use a CSS variable  no-restricted-syntax
+  400:53  warning  Avoid hardcoded hex colors. Import from @/lib/chart-colors or use a CSS variable  no-restricted-syntax
+  456:48  warning  Avoid hardcoded hex colors. Import from @/lib/chart-colors or use a CSS variable  no-restricted-syntax
+  457:52  warning  Avoid hardcoded hex colors. Import from @/lib/chart-colors or use a CSS variable  no-restricted-syntax
+
+C:\Users\kazda\kiro\pof\src\components\modules\content\ui-hud\MenuFlowDiagram.tsx
+    8:10  warning  'SurfaceCard' is defined but never used                                           @typescript-eslint/no-unused-vars
+    9:10  warning  'MODULE_COLORS' is defined but never used                                         @typescript-eslint/no-unused-vars
+   10:99  warning  'STATUS_ERROR' is defined but never used                                          @typescript-eslint/no-unused-vars
+  662:49  warning  Avoid hardcoded hex colors. Import from @/lib/chart-colors or use a CSS variable  no-restricted-syntax
+  788:75  warning  Avoid hardcoded hex colors. Import from @/lib/chart-colors or use a CSS variable  no-restricted-syntax
+
+C:\Users\kazda\kiro\pof\src\components\modules\content\ui-hud\UIHudView.tsx
+  3:10  warning  'useState' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\kazda\kiro\pof\src\components\modules\core-engine\PlanMatrixMap.tsx
+     6:60  warning  'CircleDashed' is defined but never used  @typescript-eslint/no-unused-vars
+    22:80  warning  'STATUS_INFO' is defined but never used   @typescript-eslint/no-unused-vars
+  1036:24  warning  'mod' is assigned a value but never used  @typescript-eslint/no-unused-vars
+  1066:24  warning  'mod' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\kazda\kiro\pof\src\components\modules\core-engine\TelemetryEvolution.tsx
+  7:12  warning  'AlertTriangle' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\kazda\kiro\pof\src\components\modules\core-engine\dzin-panels\AbilitiesPanel.tsx
+  124:16  warning  Avoid hardcoded hex colors. Import from @/lib/chart-colors or use a CSS variable  no-restricted-syntax
+
+C:\Users\kazda\kiro\pof\src\components\modules\core-engine\dzin-panels\AttributesPanel.tsx
+  151:130  warning  Avoid hardcoded hex colors. Import from @/lib/chart-colors or use a CSS variable  no-restricted-syntax
+  152:145  warning  Avoid hardcoded hex colors. Import from @/lib/chart-colors or use a CSS variable  no-restricted-syntax
+  216:79   warning  Avoid hardcoded hex colors. Import from @/lib/chart-colors or use a CSS variable  no-restricted-syntax
+  224:93   warning  Avoid hardcoded hex colors. Import from @/lib/chart-colors or use a CSS variable  no-restricted-syntax
+  364:51   warning  Avoid hardcoded hex colors. Import from @/lib/chart-colors or use a CSS variable  no-restricted-syntax
+  366:52   warning  Avoid hardcoded hex colors. Import from @/lib/chart-colors or use a CSS variable  no-restricted-syntax
+
+C:\Users\kazda\kiro\pof\src\components\modules\core-engine\dzin-panels\CorePanel.tsx
+   98:32  warning  Avoid hardcoded hex colors. Import from @/lib/chart-colors or use a CSS variable  no-restricted-syntax
+  152:32  warning  Avoid hardcoded hex colors. Import from @/lib/chart-colors or use a CSS variable  no-restricted-syntax
+
+C:\Users\kazda\kiro\pof\src\components\modules\core-engine\dzin-panels\DamageCalcPanel.tsx
+  139:81  warning  Avoid hardcoded hex colors. Import from @/lib/chart-colors or use a CSS variable  no-restricted-syntax
+  150:47  warning  '_featureMap' is defined but never used                                           @typescript-eslint/no-unused-vars
+  150:66  warning  '_defs' is defined but never used                                                 @typescript-eslint/no-unused-vars
+
+C:\Users\kazda\kiro\pof\src\components\modules\core-engine\dzin-panels\EffectTimelinePanel.tsx
+   98:20  warning  Avoid hardcoded hex colors. Import from @/lib/chart-colors or use a CSS variable  no-restricted-syntax
+  109:51  warning  '_featureMap' is defined but never used                                           @typescript-eslint/no-unused-vars
+  109:70  warning  '_defs' is defined but never used                                                 @typescript-eslint/no-unused-vars
+
+C:\Users\kazda\kiro\pof\src\components\modules\core-engine\dzin-panels\EnemyBestiaryPanel.tsx
+  15:50  warning  'ACCENT_EMERALD' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\kazda\kiro\pof\src\components\modules\core-engine\dzin-panels\EvalQualityPanel.tsx
+  12:71  warning  'ACCENT_CYAN' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\kazda\kiro\pof\src\components\modules\core-engine\dzin-panels\LoadoutPanel.tsx
+   91:77  warning  Avoid hardcoded hex colors. Import from @/lib/chart-colors or use a CSS variable  no-restricted-syntax
+  136:66  warning  Avoid hardcoded hex colors. Import from @/lib/chart-colors or use a CSS variable  no-restricted-syntax
+  169:44  warning  '_featureMap' is defined but never used                                           @typescript-eslint/no-unused-vars
+  169:63  warning  '_defs' is defined but never used                                                 @typescript-eslint/no-unused-vars
+
+C:\Users\kazda\kiro\pof\src\components\modules\core-engine\dzin-panels\SaveSchemaPanel.tsx
+  19:3  warning  'FEATURE_NAMES' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\kazda\kiro\pof\src\components\modules\core-engine\dzin-panels\SaveSlotsPanel.tsx
+  14:26  warning  'ACCENT_CYAN' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\kazda\kiro\pof\src\components\modules\core-engine\dzin-panels\ScreenFlowPanel.tsx
+  14:36  warning  'ACCENT_EMERALD' is defined but never used  @typescript-eslint/no-unused-vars
+  14:52  warning  'ACCENT_ORANGE' is defined but never used   @typescript-eslint/no-unused-vars
+  14:82  warning  'STATUS_ERROR' is defined but never used    @typescript-eslint/no-unused-vars
+
+C:\Users\kazda\kiro\pof\src\components\modules\core-engine\dzin-panels\TagAuditPanel.tsx
+  268:79  warning  Avoid hardcoded hex colors. Import from @/lib/chart-colors or use a CSS variable  no-restricted-syntax
+  378:45  warning  '_featureMap' is defined but never used                                           @typescript-eslint/no-unused-vars
+  378:64  warning  '_defs' is defined but never used                                                 @typescript-eslint/no-unused-vars
+
+C:\Users\kazda\kiro\pof\src\components\modules\core-engine\dzin-panels\TagDepsPanel.tsx
+  214:44  warning  '_featureMap' is defined but never used  @typescript-eslint/no-unused-vars
+  214:63  warning  '_defs' is defined but never used        @typescript-eslint/no-unused-vars
+
+C:\Users\kazda\kiro\pof\src\components\modules\core-engine\dzin-panels\TagsPanel.tsx
+  150:16  warning  Avoid hardcoded hex colors. Import from @/lib/chart-colors or use a CSS variable  no-restricted-syntax
+
+C:\Users\kazda\kiro\pof\src\components\modules\core-engine\unique-tabs\AILootDesigner\constants.ts
+  8:16  warning  'STATUS_NEUTRAL' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\kazda\kiro\pof\src\components\modules\core-engine\unique-tabs\AbilityForge\ForgeInput.tsx
+  58:35  warning  Avoid hardcoded hex colors. Import from @/lib/chart-colors or use a CSS variable  no-restricted-syntax
+
+C:\Users\kazda\kiro\pof\src\components\modules\core-engine\unique-tabs\AbilitySpellbook\data.ts
+    7:15  warning  'ParsedUE5Data' is defined but never used    @typescript-eslint/no-unused-vars
+  545:13  warning  'hasAoE' is assigned a value but never used  @typescript-eslint/no-unused-vars
+  569:62  warning  'tags' is defined but never used             @typescript-eslint/no-unused-vars
+  669:72  warning  'tags' is defined but never used             @typescript-eslint/no-unused-vars
+
+C:\Users\kazda\kiro\pof\src\components\modules\core-engine\unique-tabs\AbilitySpellbook\tags\AttributeRelationshipWeb.tsx
+  35:6  warning  React Hook useMemo has missing dependencies: 'cx', 'cy', 'n', and 'r'. Either include them or remove the dependency array  react-hooks/exhaustive-deps
+
+C:\Users\kazda\kiro\pof\src\components\modules\core-engine\unique-tabs\AffixCraftingWorkbench\AffixPoolPanel.tsx
+  38:47  warning  'rarity' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\kazda\kiro\pof\src\components\modules\core-engine\unique-tabs\AffixCraftingWorkbench\CraftingStation.tsx
+  9:100  warning  'OPACITY_30' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\kazda\kiro\pof\src\components\modules\core-engine\unique-tabs\AffixCraftingWorkbench\ItemBaseSelector.tsx
+  5:41  warning  'GlowStat' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\kazda\kiro\pof\src\components\modules\core-engine\unique-tabs\AffixCraftingWorkbench\ItemPreviewCard.tsx
+  38:20  warning  'maxAffixes' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\kazda\kiro\pof\src\components\modules\core-engine\unique-tabs\AffixCraftingWorkbench\ItemStatsSummary.tsx
+   4:10  warning  'motion' is defined but never used          @typescript-eslint/no-unused-vars
+   6:3   warning  'STATUS_SUCCESS' is defined but never used  @typescript-eslint/no-unused-vars
+  11:41  warning  'GlowStat' is defined but never used        @typescript-eslint/no-unused-vars
+
+C:\Users\kazda\kiro\pof\src\components\modules\core-engine\unique-tabs\AffixCraftingWorkbench\WorkbenchHeader.tsx
+  34:3  warning  'showExport' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\kazda\kiro\pof\src\components\modules\core-engine\unique-tabs\AffixCraftingWorkbench\constants.ts
+  2:3  warning  'STATUS_SUCCESS' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\kazda\kiro\pof\src\components\modules\core-engine\unique-tabs\AffixCraftingWorkbench\data.ts
+  3:3   warning  'ACCENT_EMERALD' is defined but never used  @typescript-eslint/no-unused-vars
+  3:19  warning  'ACCENT_CYAN' is defined but never used     @typescript-eslint/no-unused-vars
+
+C:\Users\kazda\kiro\pof\src\components\modules\core-engine\unique-tabs\AffixCraftingWorkbench\hooks.ts
+  6:33  warning  'getItemLevelScaling' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\kazda\kiro\pof\src\components\modules\core-engine\unique-tabs\AffixCraftingWorkbench\index.tsx
+  5:22  warning  'OPACITY_25' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\kazda\kiro\pof\src\components\modules\core-engine\unique-tabs\AffixCraftingWorkbench\types.ts
+  1:63  warning  'RarityArchetype' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\kazda\kiro\pof\src\components\modules\core-engine\unique-tabs\AttributePointOptimizer\index.tsx
+  17:10  warning  'BlueprintPanel' is defined but never used  @typescript-eslint/no-unused-vars
+  17:26  warning  'SectionHeader' is defined but never used   @typescript-eslint/no-unused-vars
+  27:53  warning  '_moduleId' is defined but never used       @typescript-eslint/no-unused-vars
+
+C:\Users\kazda\kiro\pof\src\components\modules\core-engine\unique-tabs\CharacterBlueprint\data.ts
+  366:222  warning  Avoid hardcoded hex colors. Import from @/lib/chart-colors or use a CSS variable  no-restricted-syntax
+  368:225  warning  Avoid hardcoded hex colors. Import from @/lib/chart-colors or use a CSS variable  no-restricted-syntax
+  370:225  warning  Avoid hardcoded hex colors. Import from @/lib/chart-colors or use a CSS variable  no-restricted-syntax
+  371:214  warning  Avoid hardcoded hex colors. Import from @/lib/chart-colors or use a CSS variable  no-restricted-syntax
+  373:205  warning  Avoid hardcoded hex colors. Import from @/lib/chart-colors or use a CSS variable  no-restricted-syntax
+  376:199  warning  Avoid hardcoded hex colors. Import from @/lib/chart-colors or use a CSS variable  no-restricted-syntax
+  377:202  warning  Avoid hardcoded hex colors. Import from @/lib/chart-colors or use a CSS variable  no-restricted-syntax
+  378:193  warning  Avoid hardcoded hex colors. Import from @/lib/chart-colors or use a CSS variable  no-restricted-syntax
+  379:197  warning  Avoid hardcoded hex colors. Import from @/lib/chart-colors or use a CSS variable  no-restricted-syntax
+  384:202  warning  Avoid hardcoded hex colors. Import from @/lib/chart-colors or use a CSS variable  no-restricted-syntax
+  386:193  warning  Avoid hardcoded hex colors. Import from @/lib/chart-colors or use a CSS variable  no-restricted-syntax
+  387:204  warning  Avoid hardcoded hex colors. Import from @/lib/chart-colors or use a CSS variable  no-restricted-syntax
+  388:196  warning  Avoid hardcoded hex colors. Import from @/lib/chart-colors or use a CSS variable  no-restricted-syntax
+  393:213  warning  Avoid hardcoded hex colors. Import from @/lib/chart-colors or use a CSS variable  no-restricted-syntax
+  394:201  warning  Avoid hardcoded hex colors. Import from @/lib/chart-colors or use a CSS variable  no-restricted-syntax
+  398:170  warning  Avoid hardcoded hex colors. Import from @/lib/chart-colors or use a CSS variable  no-restricted-syntax
+  399:212  warning  Avoid hardcoded hex colors. Import from @/lib/chart-colors or use a CSS variable  no-restricted-syntax
+  401:195  warning  Avoid hardcoded hex colors. Import from @/lib/chart-colors or use a CSS variable  no-restricted-syntax
+  403:200  warning  Avoid hardcoded hex colors. Import from @/lib/chart-colors or use a CSS variable  no-restricted-syntax
+  404:216  warning  Avoid hardcoded hex colors. Import from @/lib/chart-colors or use a CSS variable  no-restricted-syntax
+  408:192  warning  Avoid hardcoded hex colors. Import from @/lib/chart-colors or use a CSS variable  no-restricted-syntax
+  409:200  warning  Avoid hardcoded hex colors. Import from @/lib/chart-colors or use a CSS variable  no-restricted-syntax
+  410:207  warning  Avoid hardcoded hex colors. Import from @/lib/chart-colors or use a CSS variable  no-restricted-syntax
+  411:198  warning  Avoid hardcoded hex colors. Import from @/lib/chart-colors or use a CSS variable  no-restricted-syntax
+  412:192  warning  Avoid hardcoded hex colors. Import from @/lib/chart-colors or use a CSS variable  no-restricted-syntax
+  415:198  warning  Avoid hardcoded hex colors. Import from @/lib/chart-colors or use a CSS variable  no-restricted-syntax
+  416:183  warning  Avoid hardcoded hex colors. Import from @/lib/chart-colors or use a CSS variable  no-restricted-syntax
+  417:199  warning  Avoid hardcoded hex colors. Import from @/lib/chart-colors or use a CSS variable  no-restricted-syntax
+  419:173  warning  Avoid hardcoded hex colors. Import from @/lib/chart-colors or use a CSS variable  no-restricted-syntax
+  421:193  warning  Avoid hardcoded hex colors. Import from @/lib/chart-colors or use a CSS variable  no-restricted-syntax
+  425:186  warning  Avoid hardcoded hex colors. Import from @/lib/chart-colors or use a CSS variable  no-restricted-syntax
+  426:195  warning  Avoid hardcoded hex colors. Import from @/lib/chart-colors or use a CSS variable  no-restricted-syntax
+  427:201  warning  Avoid hardcoded hex colors. Import from @/lib/chart-colors or use a CSS variable  no-restricted-syntax
+  428:190  warning  Avoid hardcoded hex colors. Import from @/lib/chart-colors or use a CSS variable  no-restricted-syntax
+
+C:\Users\kazda\kiro\pof\src\components\modules\core-engine\unique-tabs\CharacterFeelOptimizer\ComparisonRow.tsx
+  5:10  warning  'NeonBar' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\kazda\kiro\pof\src\components\modules\core-engine\unique-tabs\CharacterFeelPlayground\CurveEditor.tsx
+  4:10  warning  'motion' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\kazda\kiro\pof\src\components\modules\core-engine\unique-tabs\CharacterGenomeEditor\ArchetypeComparisonPanel.tsx
+  14:67  warning  '_activeGenome' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\kazda\kiro\pof\src\components\modules\core-engine\unique-tabs\CharacterGenomeEditor\GenomePill.tsx
+  62:23  warning  Avoid hardcoded hex colors. Import from @/lib/chart-colors or use a CSS variable  no-restricted-syntax
+
+C:\Users\kazda\kiro\pof\src\components\modules\core-engine\unique-tabs\CombatActionMap\hits\HitsTab.tsx
+  112:98   warning  Avoid hardcoded hex colors. Import from @/lib/chart-colors or use a CSS variable  no-restricted-syntax
+  112:118  warning  Avoid hardcoded hex colors. Import from @/lib/chart-colors or use a CSS variable  no-restricted-syntax
+
+C:\Users\kazda\kiro\pof\src\components\modules\core-engine\unique-tabs\CombatActionMap\metrics\StatInfluencePanel.tsx
+  30:48  warning  '_moduleId' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\kazda\kiro\pof\src\components\modules\core-engine\unique-tabs\CombatChoreographyEditor\index.tsx
+  6:10  warning  'ACCENT_CYAN' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\kazda\kiro\pof\src\components\modules\core-engine\unique-tabs\CombatChoreographyEditor\panels.tsx
+  17:24  warning  'StatBox' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\kazda\kiro\pof\src\components\modules\core-engine\unique-tabs\CombatChoreographyEditor\types.ts
+  2:3  warning  'STATUS_SUCCESS' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\kazda\kiro\pof\src\components\modules\core-engine\unique-tabs\ComboChainBuilder\index.tsx
+  6:21  warning  'Flame' is defined but never used   @typescript-eslint/no-unused-vars
+  6:28  warning  'Shield' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\kazda\kiro\pof\src\components\modules\core-engine\unique-tabs\ComparisonMatrix\index.tsx
+  6:26  warning  'SectionHeader' is defined but never used         @typescript-eslint/no-unused-vars
+  8:3   warning  'ComparisonMatrixStat' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\kazda\kiro\pof\src\components\modules\core-engine\unique-tabs\DamagePipelineDiagram\types.ts
+  14:13  warning  Avoid hardcoded hex colors. Import from @/lib/chart-colors or use a CSS variable  no-restricted-syntax
+
+C:\Users\kazda\kiro\pof\src\components\modules\core-engine\unique-tabs\DebugDashboard\console\CommandCatalog.tsx
+  3:29  warning  'useCallback' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\kazda\kiro\pof\src\components\modules\core-engine\unique-tabs\DebugDashboard\crashes\CrashPredictionSection.tsx
+  8:41  warning  'GlowStat' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\kazda\kiro\pof\src\components\modules\core-engine\unique-tabs\DebugDashboard\system\SystemHealthSection.tsx
+   5:10  warning  'STATUS_SUCCESS' is defined but never used                                        @typescript-eslint/no-unused-vars
+  28:20  warning  Avoid hardcoded hex colors. Import from @/lib/chart-colors or use a CSS variable  no-restricted-syntax
+  34:76  warning  Avoid hardcoded hex colors. Import from @/lib/chart-colors or use a CSS variable  no-restricted-syntax
+
+C:\Users\kazda\kiro\pof\src\components\modules\core-engine\unique-tabs\DodgeTimelineEditor\LiveStats.tsx
+  10:10  warning  'GlowStat' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\kazda\kiro\pof\src\components\modules\core-engine\unique-tabs\DodgeTimelineEditor\ParameterEditor.tsx
+  9:24  warning  'DEFAULT_PARAMS' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\kazda\kiro\pof\src\components\modules\core-engine\unique-tabs\DodgeTimelineEditor\index.tsx
+   9:3   warning  'ACCENT_ORANGE' is defined but never used   @typescript-eslint/no-unused-vars
+  11:19  warning  'STATUS_NEUTRAL' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\kazda\kiro\pof\src\components\modules\core-engine\unique-tabs\FeatureInitButton.tsx
+  13:10  warning  'TaskFactory' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\kazda\kiro\pof\src\components\modules\core-engine\unique-tabs\GASBalanceSimulator\ResultsAnalysis.tsx
+  14:28  warning  'SimResults' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\kazda\kiro\pof\src\components\modules\core-engine\unique-tabs\GASBalanceSimulator\ResultsSummary.tsx
+  14:41  warning  'GlowStat' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\kazda\kiro\pof\src\components\modules\core-engine\unique-tabs\GASBalanceSimulator\index.tsx
+   4:63  warning  'Square' is defined but never used                    @typescript-eslint/no-unused-vars
+  29:10  warning  'runAnnouncement' is assigned a value but never used  @typescript-eslint/no-unused-vars
+  93:9   warning  'cancelSim' is assigned a value but never used        @typescript-eslint/no-unused-vars
+
+C:\Users\kazda\kiro\pof\src\components\modules\core-engine\unique-tabs\GASBlueprintEditor\WiringGraphEditor.tsx
+  11:61  warning  'OPACITY_3' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\kazda\kiro\pof\src\components\modules\core-engine\unique-tabs\GASBlueprintEditor\data.ts
+   9:35  warning  'STATUS_ERROR' is defined but never used    @typescript-eslint/no-unused-vars
+  11:50  warning  'STATUS_SUBDUED' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\kazda\kiro\pof\src\components\modules\core-engine\unique-tabs\HudCompositor\data.ts
+  4:3  warning  'WIDGET_PLACEMENTS' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\kazda\kiro\pof\src\components\modules\core-engine\unique-tabs\ItemCatalog\balance-prompt.ts
+  2:3  warning  'DUMMY_ITEMS' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\kazda\kiro\pof\src\components\modules\core-engine\unique-tabs\ItemCatalog\data-comparison.ts
+  1:10  warning  'RARITY_COLORS' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\kazda\kiro\pof\src\components\modules\core-engine\unique-tabs\ItemDNAGenomeEditor\data.ts
+  8:32  warning  'STATUS_SUCCESS' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\kazda\kiro\pof\src\components\modules\core-engine\unique-tabs\ItemDNAGenomeEditor\index.tsx
+  9:26  warning  'SectionHeader' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\kazda\kiro\pof\src\components\modules\core-engine\unique-tabs\ItemEconomySimulator\constants.ts
+  5:33  warning  'ACCENT_VIOLET' is defined but never used   @typescript-eslint/no-unused-vars
+  6:3   warning  'STATUS_SUCCESS' is defined but never used  @typescript-eslint/no-unused-vars
+  6:49  warning  'STATUS_NEUTRAL' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\kazda\kiro\pof\src\components\modules\core-engine\unique-tabs\PredictiveBalanceSimulator\DPSBreakdownChart.tsx
+  3:10  warning  'motion' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\kazda\kiro\pof\src\components\modules\core-engine\unique-tabs\PredictiveBalanceSimulator\ResultsPanel.tsx
+  4:30  warning  'Shield' is defined but never used      @typescript-eslint/no-unused-vars
+  5:3   warning  'Heart' is defined but never used       @typescript-eslint/no-unused-vars
+  5:29  warning  'Timer' is defined but never used       @typescript-eslint/no-unused-vars
+  9:33  warning  'OPACITY_15' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\kazda\kiro\pof\src\components\modules\core-engine\unique-tabs\ProgressionCurve\data.ts
+  117:49  warning  Avoid hardcoded hex colors. Import from @/lib/chart-colors or use a CSS variable  no-restricted-syntax
+  125:48  warning  Avoid hardcoded hex colors. Import from @/lib/chart-colors or use a CSS variable  no-restricted-syntax
+  145:71  warning  Avoid hardcoded hex colors. Import from @/lib/chart-colors or use a CSS variable  no-restricted-syntax
+  146:81  warning  Avoid hardcoded hex colors. Import from @/lib/chart-colors or use a CSS variable  no-restricted-syntax
+  147:74  warning  Avoid hardcoded hex colors. Import from @/lib/chart-colors or use a CSS variable  no-restricted-syntax
+  148:84  warning  Avoid hardcoded hex colors. Import from @/lib/chart-colors or use a CSS variable  no-restricted-syntax
+  149:84  warning  Avoid hardcoded hex colors. Import from @/lib/chart-colors or use a CSS variable  no-restricted-syntax
+  150:81  warning  Avoid hardcoded hex colors. Import from @/lib/chart-colors or use a CSS variable  no-restricted-syntax
+  151:83  warning  Avoid hardcoded hex colors. Import from @/lib/chart-colors or use a CSS variable  no-restricted-syntax
+
+C:\Users\kazda\kiro\pof\src\components\modules\core-engine\unique-tabs\SaveDataSchema\advanced\AutoSaveConfig.tsx
+  4:72  warning  'OVERLAY_WHITE' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\kazda\kiro\pof\src\components\modules\core-engine\unique-tabs\SaveDataSchema\advanced\CloudSyncStatus.tsx
+  3:23  warning  'CheckCircle2' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\kazda\kiro\pof\src\components\modules\core-engine\unique-tabs\SaveDataSchema\schema\SchemaTree.tsx
+  109:21  warning  Elements with the ARIA role "treeitem" must have the following attributes defined: aria-selected  jsx-a11y/role-has-required-aria-props
+  121:49  warning  Elements with the ARIA role "treeitem" must have the following attributes defined: aria-selected  jsx-a11y/role-has-required-aria-props
+
+C:\Users\kazda\kiro\pof\src\components\modules\core-engine\unique-tabs\ScreenFlowMap\accessibility\AccessibilityTab.tsx
+  9:41  warning  'GlowStat' is defined but never used  @typescript-eslint/no-unused-vars
+  9:51  warning  'NeonBar' is defined but never used   @typescript-eslint/no-unused-vars
+
+C:\Users\kazda\kiro\pof\src\components\modules\core-engine\unique-tabs\ScreenFlowMap\data.ts
+  269:33  warning  Avoid hardcoded hex colors. Import from @/lib/chart-colors or use a CSS variable  no-restricted-syntax
+  270:39  warning  Avoid hardcoded hex colors. Import from @/lib/chart-colors or use a CSS variable  no-restricted-syntax
+
+C:\Users\kazda\kiro\pof\src\components\modules\core-engine\unique-tabs\ScreenFlowMap\systems\ArpgHudPreview.tsx
+   65:86  warning  Avoid hardcoded hex colors. Import from @/lib/chart-colors or use a CSS variable  no-restricted-syntax
+   88:25  warning  'label' is defined but never used                                                 @typescript-eslint/no-unused-vars
+  149:65  warning  Avoid hardcoded hex colors. Import from @/lib/chart-colors or use a CSS variable  no-restricted-syntax
+  150:66  warning  Avoid hardcoded hex colors. Import from @/lib/chart-colors or use a CSS variable  no-restricted-syntax
+  184:43  warning  Avoid hardcoded hex colors. Import from @/lib/chart-colors or use a CSS variable  no-restricted-syntax
+  185:42  warning  Avoid hardcoded hex colors. Import from @/lib/chart-colors or use a CSS variable  no-restricted-syntax
+  186:40  warning  Avoid hardcoded hex colors. Import from @/lib/chart-colors or use a CSS variable  no-restricted-syntax
+  188:54  warning  Avoid hardcoded hex colors. Import from @/lib/chart-colors or use a CSS variable  no-restricted-syntax
+
+C:\Users\kazda\kiro\pof\src\components\modules\core-engine\unique-tabs\ZoneMap\data.ts
+  59:243  warning  Avoid hardcoded hex colors. Import from @/lib/chart-colors or use a CSS variable  no-restricted-syntax
+  60:287  warning  Avoid hardcoded hex colors. Import from @/lib/chart-colors or use a CSS variable  no-restricted-syntax
+  61:270  warning  Avoid hardcoded hex colors. Import from @/lib/chart-colors or use a CSS variable  no-restricted-syntax
+  62:271  warning  Avoid hardcoded hex colors. Import from @/lib/chart-colors or use a CSS variable  no-restricted-syntax
+  63:250  warning  Avoid hardcoded hex colors. Import from @/lib/chart-colors or use a CSS variable  no-restricted-syntax
+
+C:\Users\kazda\kiro\pof\src\components\modules\core-engine\unique-tabs\ZoneMap\index.tsx
+  51:9  warning  'matchingIds' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\kazda\kiro\pof\src\components\modules\core-engine\unique-tabs\ZoneMap\travel\TravelProgressionGroup.tsx
+  11:14  warning  'OPACITY_15' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\kazda\kiro\pof\src\components\modules\core-engine\unique-tabs\_shared.tsx
+   11:3   warning  'BORDER_DEFAULT' is defined but never used                                        @typescript-eslint/no-unused-vars
+   11:19  warning  'BORDER_SUBTLE' is defined but never used                                         @typescript-eslint/no-unused-vars
+  580:41  warning  'accent' is defined but never used                                                @typescript-eslint/no-unused-vars
+  649:61  warning  Avoid hardcoded hex colors. Import from @/lib/chart-colors or use a CSS variable  no-restricted-syntax
+  759:39  warning  'accent' is defined but never used                                                @typescript-eslint/no-unused-vars
+
+C:\Users\kazda\kiro\pof\src\components\modules\core-engine\unique-tabs\affix-workbench\SynergyDetector.tsx
+  12:29  warning  'motionSafe' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\kazda\kiro\pof\src\components\modules\core-engine\unique-tabs\gas-blueprint\SimulationSandbox.tsx
+  107:9  warning  'attrMap' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\kazda\kiro\pof\src\components\modules\core-engine\unique-tabs\gas-blueprint\types.ts
+  2:19  warning  'STATUS_WARNING' is defined but never used  @typescript-eslint/no-unused-vars
+  2:35  warning  'STATUS_ERROR' is defined but never used    @typescript-eslint/no-unused-vars
+
+C:\Users\kazda\kiro\pof\src\components\modules\core-engine\unique-tabs\index.tsx
+  116:10  warning  'ComingSoon' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\kazda\kiro\pof\src\components\modules\core-engine\unique-tabs\progression\DRCodeGenerator.tsx
+  46:27  warning  'configs' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\kazda\kiro\pof\src\components\modules\core-engine\unique-tabs\progression\TimeToLevelEstimator.tsx
+  5:10  warning  'STATUS_WARNING' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\kazda\kiro\pof\src\components\modules\evaluator\AggregateQualityDashboard.tsx
+   23:70  warning  'MODULE_COLORS' is defined but never used                                         @typescript-eslint/no-unused-vars
+   40:22  warning  Avoid hardcoded hex colors. Import from @/lib/chart-colors or use a CSS variable  no-restricted-syntax
+   40:33  warning  Avoid hardcoded hex colors. Import from @/lib/chart-colors or use a CSS variable  no-restricted-syntax
+   44:20  warning  Avoid hardcoded hex colors. Import from @/lib/chart-colors or use a CSS variable  no-restricted-syntax
+   44:31  warning  Avoid hardcoded hex colors. Import from @/lib/chart-colors or use a CSS variable  no-restricted-syntax
+  478:35  warning  Avoid hardcoded hex colors. Import from @/lib/chart-colors or use a CSS variable  no-restricted-syntax
+  655:37  warning  Avoid hardcoded hex colors. Import from @/lib/chart-colors or use a CSS variable  no-restricted-syntax
+  740:79  warning  Avoid hardcoded hex colors. Import from @/lib/chart-colors or use a CSS variable  no-restricted-syntax
+
+C:\Users\kazda\kiro\pof\src\components\modules\evaluator\AssetCodeOracleView.tsx
+  21:69  warning  'MODULE_COLORS' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\kazda\kiro\pof\src\components\modules\evaluator\AssetScoutView.tsx
+  466:47  warning  'projectName' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\kazda\kiro\pof\src\components\modules\evaluator\BatchReviewPanel.tsx
+    3:20   warning  'useEffect' is defined but never used                                                                                                               @typescript-eslint/no-unused-vars
+   14:55   warning  'STATUS_INFO' is defined but never used                                                                                                             @typescript-eslint/no-unused-vars
+   14:92   warning  'OPACITY_8' is defined but never used                                                                                                               @typescript-eslint/no-unused-vars
+   14:115  warning  'OPACITY_12' is defined but never used                                                                                                              @typescript-eslint/no-unused-vars
+   14:127  warning  'OPACITY_20' is defined but never used                                                                                                              @typescript-eslint/no-unused-vars
+  123:6    warning  React Hook useCallback has missing dependencies: 'projectName', 'projectPath', and 'ueVersion'. Either include them or remove the dependency array  react-hooks/exhaustive-deps
+
+C:\Users\kazda\kiro\pof\src\components\modules\evaluator\CombatSimulatorView.tsx
+    6:3   warning  'ChevronDown' is defined but never used      @typescript-eslint/no-unused-vars
+    6:16  warning  'ChevronRight' is defined but never used     @typescript-eslint/no-unused-vars
+    7:24  warning  'Users' is defined but never used            @typescript-eslint/no-unused-vars
+    8:3   warning  'TrendingUp' is defined but never used       @typescript-eslint/no-unused-vars
+   10:10  warning  'motion' is defined but never used           @typescript-eslint/no-unused-vars
+   10:18  warning  'AnimatePresence' is defined but never used  @typescript-eslint/no-unused-vars
+   22:3   warning  'CombatSummary' is defined but never used    @typescript-eslint/no-unused-vars
+  297:74  warning  Unexpected any. Specify a different type     @typescript-eslint/no-explicit-any
+  297:80  warning  Unexpected any. Specify a different type     @typescript-eslint/no-explicit-any
+  384:44  warning  Unexpected any. Specify a different type     @typescript-eslint/no-explicit-any
+
+C:\Users\kazda\kiro\pof\src\components\modules\evaluator\CrashAnalyzerView.tsx
+  5:14  warning  'AlertTriangle' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\kazda\kiro\pof\src\components\modules\evaluator\DeepEvalResults.tsx
+    3:33  warning  'useMemo' is defined but never used                                    @typescript-eslint/no-unused-vars
+    3:42  warning  'useRef' is defined but never used                                     @typescript-eslint/no-unused-vars
+    8:3   warning  'ArrowRight' is defined but never used                                 @typescript-eslint/no-unused-vars
+   29:45  warning  'ScanFindings' is defined but never used                               @typescript-eslint/no-unused-vars
+   30:15  warning  'FixPlan' is defined but never used                                    @typescript-eslint/no-unused-vars
+  162:7   warning  Expected an assignment or function call and instead saw an expression  @typescript-eslint/no-unused-expressions
+  170:7   warning  Expected an assignment or function call and instead saw an expression  @typescript-eslint/no-unused-expressions
+  178:7   warning  Expected an assignment or function call and instead saw an expression  @typescript-eslint/no-unused-expressions
+
+C:\Users\kazda\kiro\pof\src\components\modules\evaluator\DependencyGraph.tsx
+  7:15  warning  'DependencyInfo' is defined but never used      @typescript-eslint/no-unused-vars
+  7:31  warning  'ResolvedDependency' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\kazda\kiro\pof\src\components\modules\evaluator\EconomySimulatorView.tsx
+   5:22  warning  'TrendingDown' is defined but never used  @typescript-eslint/no-unused-vars
+  14:10  warning  'ProgressRing' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\kazda\kiro\pof\src\components\modules\evaluator\GDDComplianceView.tsx
+  5:3   warning  'ShieldCheck' is defined but never used  @typescript-eslint/no-unused-vars
+  7:33  warning  'X' is defined but never used            @typescript-eslint/no-unused-vars
+
+C:\Users\kazda\kiro\pof\src\components\modules\evaluator\HolisticHealthView.tsx
+   7:39  warning  'ChevronRight' is defined but never used                                          @typescript-eslint/no-unused-vars
+   8:3   warning  'ArrowUpRight' is defined but never used                                          @typescript-eslint/no-unused-vars
+  10:10  warning  'motion' is defined but never used                                                @typescript-eslint/no-unused-vars
+  10:18  warning  'AnimatePresence' is defined but never used                                       @typescript-eslint/no-unused-vars
+  42:18  warning  Avoid hardcoded hex colors. Import from @/lib/chart-colors or use a CSS variable  no-restricted-syntax
+
+C:\Users\kazda\kiro\pof\src\components\modules\evaluator\LocalizationPipelineView.tsx
+    5:45  warning  'FileText' is defined but never used                                              @typescript-eslint/no-unused-vars
+    8:30  warning  'Eye' is defined but never used                                                   @typescript-eslint/no-unused-vars
+   75:9   warning  'supportedLocales' is assigned a value but never used                             @typescript-eslint/no-unused-vars
+  280:82  warning  Avoid hardcoded hex colors. Import from @/lib/chart-colors or use a CSS variable  no-restricted-syntax
+  646:9   warning  'usageColor' is assigned a value but never used                                   @typescript-eslint/no-unused-vars
+
+C:\Users\kazda\kiro\pof\src\components\modules\evaluator\NexusView.tsx
+    3:53   warning  'useRef' is defined but never used                                     @typescript-eslint/no-unused-vars
+    6:18   warning  'Link2' is defined but never used                                      @typescript-eslint/no-unused-vars
+    7:25   warning  'Play' is defined but never used                                       @typescript-eslint/no-unused-vars
+    7:54   warning  'Clock' is defined but never used                                      @typescript-eslint/no-unused-vars
+   21:85   warning  'STATUS_NEUTRAL' is defined but never used                             @typescript-eslint/no-unused-vars
+   21:131  warning  'OPACITY_10' is defined but never used                                 @typescript-eslint/no-unused-vars
+  300:7    warning  Expected an assignment or function call and instead saw an expression  @typescript-eslint/no-unused-expressions
+
+C:\Users\kazda\kiro\pof\src\components\modules\evaluator\PatternLibraryView.tsx
+  6:32  warning  'Clock' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\kazda\kiro\pof\src\components\modules\evaluator\PerformanceProfilingView.tsx
+   3:10  warning  'useEffect' is defined but never used         @typescript-eslint/no-unused-vars
+   3:21  warning  'useMemo' is defined but never used           @typescript-eslint/no-unused-vars
+   6:48  warning  'Trash2' is defined but never used            @typescript-eslint/no-unused-vars
+   8:9   warning  'Clock' is defined but never used             @typescript-eslint/no-unused-vars
+  20:3   warning  'ProfilingSession' is defined but never used  @typescript-eslint/no-unused-vars
+  21:3   warning  'TriageResult' is defined but never used      @typescript-eslint/no-unused-vars
+
+C:\Users\kazda\kiro\pof\src\components\modules\evaluator\PostProcessStudioView.tsx
+  23:3  warning  'GPUCostEstimate' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\kazda\kiro\pof\src\components\modules\evaluator\ProjectHealthDashboard.tsx
+   3:53  warning  'useRef' is defined but never used                     @typescript-eslint/no-unused-vars
+   7:3   warning  'Check' is defined but never used                      @typescript-eslint/no-unused-vars
+   8:3   warning  'ChevronDown' is defined but never used                @typescript-eslint/no-unused-vars
+   9:3   warning  'ChevronUp' is defined but never used                  @typescript-eslint/no-unused-vars
+  21:32  warning  'ModuleScore' is defined but never used                @typescript-eslint/no-unused-vars
+  80:9   warning  'setScanning' is assigned a value but never used       @typescript-eslint/no-unused-vars
+  81:9   warning  'setLastScan' is assigned a value but never used       @typescript-eslint/no-unused-vars
+  82:9   warning  'addScanToHistory' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\kazda\kiro\pof\src\components\modules\evaluator\PromptEvolutionView.tsx
+   7:17  warning  'XCircle' is defined but never used              @typescript-eslint/no-unused-vars
+   8:27  warning  'ArrowRight' is defined but never used           @typescript-eslint/no-unused-vars
+  22:3   warning  'EvolutionSuggestion' is defined but never used  @typescript-eslint/no-unused-vars
+  95:9   warning  'loadStats' is assigned a value but never used   @typescript-eslint/no-unused-vars
+
+C:\Users\kazda\kiro\pof\src\components\modules\evaluator\SessionAnalyticsDashboard.tsx
+  29:47  warning  'refetch' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\kazda\kiro\pof\src\components\modules\evaluator\UnifiedSummaryView.tsx
+   14:3   warning  'TrendingDown' is defined but never used                                          @typescript-eslint/no-unused-vars
+   15:3   warning  'TrendingUp' is defined but never used                                            @typescript-eslint/no-unused-vars
+   26:15  warning  'EvaluatorReport' is defined but never used                                       @typescript-eslint/no-unused-vars
+  457:50  warning  Avoid hardcoded hex colors. Import from @/lib/chart-colors or use a CSS variable  no-restricted-syntax
+  467:3   warning  'correlation' is defined but never used                                           @typescript-eslint/no-unused-vars
+
+C:\Users\kazda\kiro\pof\src\components\modules\evaluator\WeeklyDigestView.tsx
+   12:23  warning  'MODULE_LABELS' is defined but never used                                                                    @typescript-eslint/no-unused-vars
+  160:73  warning  Image elements must have an alt prop, either with meaningful text, or an empty string for decorative images  jsx-a11y/alt-text
+  481:19  warning  Avoid hardcoded hex colors. Import from @/lib/chart-colors or use a CSS variable                             no-restricted-syntax
+  505:19  warning  Avoid hardcoded hex colors. Import from @/lib/chart-colors or use a CSS variable                             no-restricted-syntax
+  527:21  warning  Avoid hardcoded hex colors. Import from @/lib/chart-colors or use a CSS variable                             no-restricted-syntax
+  541:19  warning  Avoid hardcoded hex colors. Import from @/lib/chart-colors or use a CSS variable                             no-restricted-syntax
+  547:19  warning  Avoid hardcoded hex colors. Import from @/lib/chart-colors or use a CSS variable                             no-restricted-syntax
+  571:23  warning  Avoid hardcoded hex colors. Import from @/lib/chart-colors or use a CSS variable                             no-restricted-syntax
+  579:21  warning  Avoid hardcoded hex colors. Import from @/lib/chart-colors or use a CSS variable                             no-restricted-syntax
+  588:21  warning  Avoid hardcoded hex colors. Import from @/lib/chart-colors or use a CSS variable                             no-restricted-syntax
+  598:23  warning  Avoid hardcoded hex colors. Import from @/lib/chart-colors or use a CSS variable                             no-restricted-syntax
+  606:23  warning  Avoid hardcoded hex colors. Import from @/lib/chart-colors or use a CSS variable                             no-restricted-syntax
+  620:21  warning  Avoid hardcoded hex colors. Import from @/lib/chart-colors or use a CSS variable                             no-restricted-syntax
+  634:23  warning  Avoid hardcoded hex colors. Import from @/lib/chart-colors or use a CSS variable                             no-restricted-syntax
+  645:19  warning  Avoid hardcoded hex colors. Import from @/lib/chart-colors or use a CSS variable                             no-restricted-syntax
+
+C:\Users\kazda\kiro\pof\src\components\modules\evaluator\WorkflowOrchestratorView.tsx
+  3:42  warning  'useEffect' is defined but never used      @typescript-eslint/no-unused-vars
+  7:32  warning  'AlertTriangle' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\kazda\kiro\pof\src\components\modules\game-director\DirectorOverview.tsx
+   6:3   warning  'Clock' is defined but never used                                                 @typescript-eslint/no-unused-vars
+   6:10  warning  'Trash2' is defined but never used                                                @typescript-eslint/no-unused-vars
+  23:23  warning  Avoid hardcoded hex colors. Import from @/lib/chart-colors or use a CSS variable  no-restricted-syntax
+
+C:\Users\kazda\kiro\pof\src\components\modules\game-director\FindingsExplorer.tsx
+  9:66  warning  'FindingCategory' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\kazda\kiro\pof\src\components\modules\game-director\RegressionTrackerView.tsx
+   8:3   warning  'TrendingUp' is defined but never used       @typescript-eslint/no-unused-vars
+  12:32  warning  'FindingSeverity' is defined but never used  @typescript-eslint/no-unused-vars
+  12:49  warning  'FindingCategory' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\kazda\kiro\pof\src\components\modules\game-director\SessionDetail.tsx
+  78:9  warning  'highs' is assigned a value but never used    @typescript-eslint/no-unused-vars
+  79:9  warning  'mediums' is assigned a value but never used  @typescript-eslint/no-unused-vars
+  80:9  warning  'lows' is assigned a value but never used     @typescript-eslint/no-unused-vars
+
+C:\Users\kazda\kiro\pof\src\components\modules\game-systems\AIBehaviorView.tsx
+  55:9  warning  The 'ctx' object makes the dependencies of useCallback Hook (at line 108) change on every render. To fix this, wrap the initialization of 'ctx' in its own useMemo() Hook  react-hooks/exhaustive-deps
+  55:9  warning  The 'ctx' object makes the dependencies of useCallback Hook (at line 116) change on every render. To fix this, wrap the initialization of 'ctx' in its own useMemo() Hook  react-hooks/exhaustive-deps
+  55:9  warning  The 'ctx' object makes the dependencies of useCallback Hook (at line 129) change on every render. To fix this, wrap the initialization of 'ctx' in its own useMemo() Hook  react-hooks/exhaustive-deps
+  55:9  warning  The 'ctx' object makes the dependencies of useCallback Hook (at line 136) change on every render. To fix this, wrap the initialization of 'ctx' in its own useMemo() Hook  react-hooks/exhaustive-deps
+
+C:\Users\kazda\kiro\pof\src\components\modules\game-systems\BuildConfigSelector.tsx
+   7:3   warning  'Play' is defined but never used           @typescript-eslint/no-unused-vars
+   7:45  warning  'ChevronDown' is defined but never used    @typescript-eslint/no-unused-vars
+  21:25  warning  'ACCENT_VIOLET' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\kazda\kiro\pof\src\components\modules\game-systems\CookSettingsPanel.tsx
+  104:17  warning  Image elements must have an alt prop, either with meaningful text, or an empty string for decorative images  jsx-a11y/alt-text
+
+C:\Users\kazda\kiro\pof\src\components\modules\game-systems\DialogueView.tsx
+  22:107  warning  'OPACITY_15' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\kazda\kiro\pof\src\components\modules\game-systems\EQSComponentInventory.tsx
+  13:15  warning  'OPACITY_15' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\kazda\kiro\pof\src\components\modules\game-systems\EQSPipelineDiagram.tsx
+  13:15  warning  'OPACITY_15' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\kazda\kiro\pof\src\components\modules\game-systems\SizeTrendChart.tsx
+  25:36  warning  'minVal' is assigned a value but never used  @typescript-eslint/no-unused-vars
+  25:44  warning  'maxVal' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\kazda\kiro\pof\src\components\modules\project-setup\LiveStateSyncPanel.tsx
+  24:38  warning  'OPACITY_20' is defined but never used           @typescript-eslint/no-unused-vars
+  26:52  warning  'PropertyWatchUpdate' is defined but never used  @typescript-eslint/no-unused-vars
+  28:7   warning  'ACCENT' is assigned a value but never used      @typescript-eslint/no-unused-vars
+
+C:\Users\kazda\kiro\pof\src\components\modules\project-setup\SetupWizard.tsx
+    4:45  warning  'Info' is defined but never used                                                                                   @typescript-eslint/no-unused-vars
+  106:6   warning  React Hook useMemo has a missing dependency: 'INVALID_CHARS_RE'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+C:\Users\kazda\kiro\pof\src\components\modules\project-setup\TestHarnessPanel.tsx
+   22:65  warning  'STATUS_INFO' is defined but never used           @typescript-eslint/no-unused-vars
+   23:62  warning  'ACCENT_PINK' is defined but never used           @typescript-eslint/no-unused-vars
+   28:3   warning  'PofAssertionResult' is defined but never used    @typescript-eslint/no-unused-vars
+   29:30  warning  'PofCameraPreset' is defined but never used       @typescript-eslint/no-unused-vars
+  128:29  warning  'testResults' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\kazda\kiro\pof\src\components\modules\project-setup\UE5RemoteController.tsx
+  12:48  warning  'STATUS_NEUTRAL' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\kazda\kiro\pof\src\components\modules\shared\FeatureMatrix.tsx
+  14:31   warning  'ResolvedDependency' is defined but never used  @typescript-eslint/no-unused-vars
+  20:124  warning  'STATUS_IMPROVED' is defined but never used     @typescript-eslint/no-unused-vars
+
+C:\Users\kazda\kiro\pof\src\components\modules\shared\QuickActionsPanel.tsx
+   3:20  warning  'useCallback' is defined but never used                                           @typescript-eslint/no-unused-vars
+   4:27  warning  'Copy' is defined but never used                                                  @typescript-eslint/no-unused-vars
+   4:33  warning  'Check' is defined but never used                                                 @typescript-eslint/no-unused-vars
+   7:10  warning  'UI_TIMEOUTS' is defined but never used                                           @typescript-eslint/no-unused-vars
+  14:50  warning  Avoid hardcoded hex colors. Import from @/lib/chart-colors or use a CSS variable  no-restricted-syntax
+  15:50  warning  Avoid hardcoded hex colors. Import from @/lib/chart-colors or use a CSS variable  no-restricted-syntax
+
+C:\Users\kazda\kiro\pof\src\components\modules\shared\ReviewableModuleView.tsx
+  66:9  warning  The 'allTabIds' array makes the dependencies of useEffect Hook (at line 79) change on every render. To fix this, wrap the initialization of 'allTabIds' in its own useMemo() Hook  react-hooks/exhaustive-deps
+
+C:\Users\kazda\kiro\pof\src\components\modules\shared\RoadmapChecklist.tsx
+     5:41  warning  'Copy' is defined but never used                                                  @typescript-eslint/no-unused-vars
+   870:29  warning  'itemId' is defined but never used                                                @typescript-eslint/no-unused-vars
+   923:25  warning  'itemId' is defined but never used                                                @typescript-eslint/no-unused-vars
+  1033:9   warning  'toggleItem' is assigned a value but never used                                   @typescript-eslint/no-unused-vars
+  1387:21  warning  Avoid hardcoded hex colors. Import from @/lib/chart-colors or use a CSS variable  no-restricted-syntax
+  1401:19  warning  Avoid hardcoded hex colors. Import from @/lib/chart-colors or use a CSS variable  no-restricted-syntax
+
+C:\Users\kazda\kiro\pof\src\components\modules\visual-gen\asset-browser\useAssetBrowserStore.ts
+  35:69  warning  'get' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\kazda\kiro\pof\src\components\modules\visual-gen\asset-viewer\SceneViewer.tsx
+   15:18  warning  'threeScene' is assigned a value but never used                                                                                                                                                                                                                                    @typescript-eslint/no-unused-vars
+   48:9   warning  Unused eslint-disable directive (no problems were reported from 'no-console')
+   54:5   warning  Unused eslint-disable directive (no problems were reported from 'react-hooks/exhaustive-deps')
+   92:25  warning  The ref value 'originalMaterials.current' will likely have changed by the time this effect cleanup function runs. If this ref points to a node rendered by React, copy 'originalMaterials.current' to a variable inside the effect, and use that variable in the cleanup function  react-hooks/exhaustive-deps
+  167:25  warning  Avoid hardcoded hex colors. Import from @/lib/chart-colors or use a CSS variable                                                                                                                                                                                                   no-restricted-syntax
+  170:28  warning  Avoid hardcoded hex colors. Import from @/lib/chart-colors or use a CSS variable                                                                                                                                                                                                   no-restricted-syntax
+  181:30  warning  Avoid hardcoded hex colors. Import from @/lib/chart-colors or use a CSS variable                                                                                                                                                                                                   no-restricted-syntax
+  181:41  warning  Avoid hardcoded hex colors. Import from @/lib/chart-colors or use a CSS variable                                                                                                                                                                                                   no-restricted-syntax
+  181:52  warning  Avoid hardcoded hex colors. Import from @/lib/chart-colors or use a CSS variable                                                                                                                                                                                                   no-restricted-syntax
+
+C:\Users\kazda\kiro\pof\src\components\modules\visual-gen\asset-viewer\ViewerToolbar.tsx
+  4:55  warning  'Box' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\kazda\kiro\pof\src\components\modules\visual-gen\blender-pipeline\BlenderPipelineView.tsx
+   9:10  warning  'tryApiFetch' is defined but never used    @typescript-eslint/no-unused-vars
+  10:15  warning  'ExecuteOutput' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\kazda\kiro\pof\src\components\modules\visual-gen\import-automation\ImportAutomationView.tsx
+  4:18  warning  'Code' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\kazda\kiro\pof\src\components\modules\visual-gen\material-lab\useMaterialStore.ts
+  57:14  warning  Avoid hardcoded hex colors. Import from @/lib/chart-colors or use a CSS variable  no-restricted-syntax
+  65:50  warning  Avoid hardcoded hex colors. Import from @/lib/chart-colors or use a CSS variable  no-restricted-syntax
+  66:47  warning  Avoid hardcoded hex colors. Import from @/lib/chart-colors or use a CSS variable  no-restricted-syntax
+  67:40  warning  Avoid hardcoded hex colors. Import from @/lib/chart-colors or use a CSS variable  no-restricted-syntax
+  68:43  warning  Avoid hardcoded hex colors. Import from @/lib/chart-colors or use a CSS variable  no-restricted-syntax
+  69:40  warning  Avoid hardcoded hex colors. Import from @/lib/chart-colors or use a CSS variable  no-restricted-syntax
+  70:42  warning  Avoid hardcoded hex colors. Import from @/lib/chart-colors or use a CSS variable  no-restricted-syntax
+
+C:\Users\kazda\kiro\pof\src\components\modules\visual-gen\procedural-engine\ProceduralEngineView.tsx
+   23:10  warning  Avoid hardcoded hex colors. Import from @/lib/chart-colors or use a CSS variable  no-restricted-syntax
+   24:10  warning  Avoid hardcoded hex colors. Import from @/lib/chart-colors or use a CSS variable  no-restricted-syntax
+   25:9   warning  Avoid hardcoded hex colors. Import from @/lib/chart-colors or use a CSS variable  no-restricted-syntax
+   26:9   warning  Avoid hardcoded hex colors. Import from @/lib/chart-colors or use a CSS variable  no-restricted-syntax
+   27:13  warning  Avoid hardcoded hex colors. Import from @/lib/chart-colors or use a CSS variable  no-restricted-syntax
+  114:21  warning  Avoid hardcoded hex colors. Import from @/lib/chart-colors or use a CSS variable  no-restricted-syntax
+
+C:\Users\kazda\kiro\pof\src\components\ui\ConnectionStatusBadge.tsx
+  5:33  warning  'STATUS_WARNING' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\kazda\kiro\pof\src\hooks\useAdvisorVoice.ts
+  33:10  warning  'nextId' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\kazda\kiro\pof\src\hooks\useDynamicTitle.ts
+  41:19  warning  Avoid hardcoded hex colors. Import from @/lib/chart-colors or use a CSS variable  no-restricted-syntax
+  85:18  warning  Avoid hardcoded hex colors. Import from @/lib/chart-colors or use a CSS variable  no-restricted-syntax
+  89:18  warning  Avoid hardcoded hex colors. Import from @/lib/chart-colors or use a CSS variable  no-restricted-syntax
+
+C:\Users\kazda\kiro\pof\src\hooks\useGameDirector.ts
+  45:55  warning  'mutate' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\kazda\kiro\pof\src\hooks\useSuspend.ts
+  100:3  warning  Unused eslint-disable directive (no problems were reported from 'react-hooks/exhaustive-deps')
+
+C:\Users\kazda\kiro\pof\src\lib\asset-code-oracle.ts
+  111:9  warning  'classNameSet' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\kazda\kiro\pof\src\lib\audio-codegen.ts
+   15:3   warning  'SoundEmitter' is defined but never used        @typescript-eslint/no-unused-vars
+   18:3   warning  'EmitterType' is defined but never used         @typescript-eslint/no-unused-vars
+  207:63  warning  'moduleName' is defined but never used          @typescript-eslint/no-unused-vars
+  275:53  warning  'moduleName' is defined but never used          @typescript-eslint/no-unused-vars
+  276:9   warning  'zoneInits' is assigned a value but never used  @typescript-eslint/no-unused-vars
+  370:58  warning  'moduleName' is defined but never used          @typescript-eslint/no-unused-vars
+  520:61  warning  'moduleName' is defined but never used          @typescript-eslint/no-unused-vars
+  677:51  warning  'moduleName' is defined but never used          @typescript-eslint/no-unused-vars
+  797:59  warning  'moduleName' is defined but never used          @typescript-eslint/no-unused-vars
+
+C:\Users\kazda\kiro\pof\src\lib\character-feel-optimizer.ts
+   46:12  warning  Avoid hardcoded hex colors. Import from @/lib/chart-colors or use a CSS variable  no-restricted-syntax
+   90:12  warning  Avoid hardcoded hex colors. Import from @/lib/chart-colors or use a CSS variable  no-restricted-syntax
+  134:12  warning  Avoid hardcoded hex colors. Import from @/lib/chart-colors or use a CSS variable  no-restricted-syntax
+  178:12  warning  Avoid hardcoded hex colors. Import from @/lib/chart-colors or use a CSS variable  no-restricted-syntax
+  221:12  warning  Avoid hardcoded hex colors. Import from @/lib/chart-colors or use a CSS variable  no-restricted-syntax
+  265:12  warning  Avoid hardcoded hex colors. Import from @/lib/chart-colors or use a CSS variable  no-restricted-syntax
+
+C:\Users\kazda\kiro\pof\src\lib\chart-colors.ts
+   11:31  warning  Avoid hardcoded hex colors. Import from @/lib/chart-colors or use a CSS variable  no-restricted-syntax
+   14:31  warning  Avoid hardcoded hex colors. Import from @/lib/chart-colors or use a CSS variable  no-restricted-syntax
+   17:29  warning  Avoid hardcoded hex colors. Import from @/lib/chart-colors or use a CSS variable  no-restricted-syntax
+   20:28  warning  Avoid hardcoded hex colors. Import from @/lib/chart-colors or use a CSS variable  no-restricted-syntax
+   23:31  warning  Avoid hardcoded hex colors. Import from @/lib/chart-colors or use a CSS variable  no-restricted-syntax
+   26:29  warning  Avoid hardcoded hex colors. Import from @/lib/chart-colors or use a CSS variable  no-restricted-syntax
+   29:31  warning  Avoid hardcoded hex colors. Import from @/lib/chart-colors or use a CSS variable  no-restricted-syntax
+   32:28  warning  Avoid hardcoded hex colors. Import from @/lib/chart-colors or use a CSS variable  no-restricted-syntax
+   35:32  warning  Avoid hardcoded hex colors. Import from @/lib/chart-colors or use a CSS variable  no-restricted-syntax
+   40:30  warning  Avoid hardcoded hex colors. Import from @/lib/chart-colors or use a CSS variable  no-restricted-syntax
+   43:30  warning  Avoid hardcoded hex colors. Import from @/lib/chart-colors or use a CSS variable  no-restricted-syntax
+   46:31  warning  Avoid hardcoded hex colors. Import from @/lib/chart-colors or use a CSS variable  no-restricted-syntax
+   49:28  warning  Avoid hardcoded hex colors. Import from @/lib/chart-colors or use a CSS variable  no-restricted-syntax
+   52:28  warning  Avoid hardcoded hex colors. Import from @/lib/chart-colors or use a CSS variable  no-restricted-syntax
+   55:30  warning  Avoid hardcoded hex colors. Import from @/lib/chart-colors or use a CSS variable  no-restricted-syntax
+   58:27  warning  Avoid hardcoded hex colors. Import from @/lib/chart-colors or use a CSS variable  no-restricted-syntax
+   61:35  warning  Avoid hardcoded hex colors. Import from @/lib/chart-colors or use a CSS variable  no-restricted-syntax
+   64:29  warning  Avoid hardcoded hex colors. Import from @/lib/chart-colors or use a CSS variable  no-restricted-syntax
+   67:36  warning  Avoid hardcoded hex colors. Import from @/lib/chart-colors or use a CSS variable  no-restricted-syntax
+   70:34  warning  Avoid hardcoded hex colors. Import from @/lib/chart-colors or use a CSS variable  no-restricted-syntax
+   73:30  warning  Avoid hardcoded hex colors. Import from @/lib/chart-colors or use a CSS variable  no-restricted-syntax
+   76:30  warning  Avoid hardcoded hex colors. Import from @/lib/chart-colors or use a CSS variable  no-restricted-syntax
+   79:29  warning  Avoid hardcoded hex colors. Import from @/lib/chart-colors or use a CSS variable  no-restricted-syntax
+  226:10  warning  Avoid hardcoded hex colors. Import from @/lib/chart-colors or use a CSS variable  no-restricted-syntax
+  227:9   warning  Avoid hardcoded hex colors. Import from @/lib/chart-colors or use a CSS variable  no-restricted-syntax
+  228:12  warning  Avoid hardcoded hex colors. Import from @/lib/chart-colors or use a CSS variable  no-restricted-syntax
+  229:12  warning  Avoid hardcoded hex colors. Import from @/lib/chart-colors or use a CSS variable  no-restricted-syntax
+  230:14  warning  Avoid hardcoded hex colors. Import from @/lib/chart-colors or use a CSS variable  no-restricted-syntax
+  231:17  warning  Avoid hardcoded hex colors. Import from @/lib/chart-colors or use a CSS variable  no-restricted-syntax
+  253:31  warning  Avoid hardcoded hex colors. Import from @/lib/chart-colors or use a CSS variable  no-restricted-syntax
+  255:31  warning  Avoid hardcoded hex colors. Import from @/lib/chart-colors or use a CSS variable  no-restricted-syntax
+  257:31  warning  Avoid hardcoded hex colors. Import from @/lib/chart-colors or use a CSS variable  no-restricted-syntax
+  259:31  warning  Avoid hardcoded hex colors. Import from @/lib/chart-colors or use a CSS variable  no-restricted-syntax
+  261:31  warning  Avoid hardcoded hex colors. Import from @/lib/chart-colors or use a CSS variable  no-restricted-syntax
+  338:31  warning  Avoid hardcoded hex colors. Import from @/lib/chart-colors or use a CSS variable  no-restricted-syntax
+  341:29  warning  Avoid hardcoded hex colors. Import from @/lib/chart-colors or use a CSS variable  no-restricted-syntax
+  344:30  warning  Avoid hardcoded hex colors. Import from @/lib/chart-colors or use a CSS variable  no-restricted-syntax
+  347:37  warning  Avoid hardcoded hex colors. Import from @/lib/chart-colors or use a CSS variable  no-restricted-syntax
+  356:33  warning  Avoid hardcoded hex colors. Import from @/lib/chart-colors or use a CSS variable  no-restricted-syntax
+
+C:\Users\kazda\kiro\pof\src\lib\combat\choreography-sim.ts
+  252:9  warning  'totalPlayerDmgTaken' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\kazda\kiro\pof\src\lib\combat\predictive-balance.ts
+  255:25  warning  Avoid hardcoded hex colors. Import from @/lib/chart-colors or use a CSS variable  no-restricted-syntax
+  255:36  warning  Avoid hardcoded hex colors. Import from @/lib/chart-colors or use a CSS variable  no-restricted-syntax
+  255:47  warning  Avoid hardcoded hex colors. Import from @/lib/chart-colors or use a CSS variable  no-restricted-syntax
+  255:58  warning  Avoid hardcoded hex colors. Import from @/lib/chart-colors or use a CSS variable  no-restricted-syntax
+  255:69  warning  Avoid hardcoded hex colors. Import from @/lib/chart-colors or use a CSS variable  no-restricted-syntax
+  255:80  warning  Avoid hardcoded hex colors. Import from @/lib/chart-colors or use a CSS variable  no-restricted-syntax
+  255:91  warning  Avoid hardcoded hex colors. Import from @/lib/chart-colors or use a CSS variable  no-restricted-syntax
+  295:13  warning  'abilityDamage' is assigned a value but never used                                @typescript-eslint/no-unused-vars
+  301:9   warning  'totalDealt' is assigned a value but never used                                   @typescript-eslint/no-unused-vars
+
+C:\Users\kazda\kiro\pof\src\lib\combat\simulation-engine.ts
+  252:25  warning  'isCrit' is assigned a value but never used  @typescript-eslint/no-unused-vars
+  399:3   warning  'config' is defined but never used           @typescript-eslint/no-unused-vars
+  468:3   warning  'config' is defined but never used           @typescript-eslint/no-unused-vars
+
+C:\Users\kazda\kiro\pof\src\lib\crash-analyzer\analysis-engine.ts
+  86:15  warning  'sig' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\kazda\kiro\pof\src\lib\crash-analyzer\sample-crashes.ts
+  10:3  warning  'CrashType' is defined but never used      @typescript-eslint/no-unused-vars
+  11:3  warning  'CrashSeverity' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\kazda\kiro\pof\src\lib\economy\codegen.ts
+    6:3   warning  'EconomyMetrics' is defined but never used     @typescript-eslint/no-unused-vars
+    7:3   warning  'SupplyDemandPoint' is defined but never used  @typescript-eslint/no-unused-vars
+   77:10  warning  'toUpperSnake' is defined but never used       @typescript-eslint/no-unused-vars
+   97:10  warning  'rarityToEnum' is defined but never used       @typescript-eslint/no-unused-vars
+  108:10  warning  'categoryToEnum' is defined but never used     @typescript-eslint/no-unused-vars
+  116:3   warning  'faucets' is defined but never used            @typescript-eslint/no-unused-vars
+  117:3   warning  'sinks' is defined but never used              @typescript-eslint/no-unused-vars
+  118:3   warning  'items' is defined but never used              @typescript-eslint/no-unused-vars
+  119:3   warning  'xpCurve' is defined but never used            @typescript-eslint/no-unused-vars
+  335:38  warning  'config' is defined but never used             @typescript-eslint/no-unused-vars
+  527:3   warning  'config' is defined but never used             @typescript-eslint/no-unused-vars
+  528:3   warning  'result' is defined but never used             @typescript-eslint/no-unused-vars
+  684:3   warning  'items' is defined but never used              @typescript-eslint/no-unused-vars
+  775:3   warning  'config' is defined but never used             @typescript-eslint/no-unused-vars
+  776:3   warning  'items' is defined but never used              @typescript-eslint/no-unused-vars
+
+C:\Users\kazda\kiro\pof\src\lib\evaluator\correlation-engine.ts
+  2:32  warning  'ReviewSnapshot' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\kazda\kiro\pof\src\lib\evaluator\deep-eval-engine.ts
+  13:27  warning  'PASS_LABELS' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\kazda\kiro\pof\src\lib\evaluator\module-eval-prompts.ts
+  347:40  warning  'moduleName' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\kazda\kiro\pof\src\lib\gdd-compliance.ts
+   7:10  warning  'getDb' is defined but never used                   @typescript-eslint/no-unused-vars
+   8:23  warning  'SUB_MODULE_MAP' is defined but never used          @typescript-eslint/no-unused-vars
+   9:50  warning  'getAllModuleAggregates' is defined but never used  @typescript-eslint/no-unused-vars
+  13:29  warning  'GapSeverity' is defined but never used             @typescript-eslint/no-unused-vars
+  13:42  warning  'GapDirection' is defined but never used            @typescript-eslint/no-unused-vars
+
+C:\Users\kazda\kiro\pof\src\lib\gdd-synthesizer.ts
+    7:38  warning  'getCategoryForSubModule' is defined but never used  @typescript-eslint/no-unused-vars
+  122:15  warning  'moduleId' is assigned a value but never used        @typescript-eslint/no-unused-vars
+
+C:\Users\kazda\kiro\pof\src\lib\genre-evolution-engine.ts
+   15:3  warning  'GenreChecklistItem' is defined but never used    @typescript-eslint/no-unused-vars
+  131:3  warning  'projectPath' is defined but never used           @typescript-eslint/no-unused-vars
+  134:9  warning  'plugins' is assigned a value but never used      @typescript-eslint/no-unused-vars
+  139:9  warning  'headerPaths' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\kazda\kiro\pof\src\lib\harness\orchestrator.ts
+  25:25  warning  'pickNextArea' is defined but never used      @typescript-eslint/no-unused-vars
+  31:8   warning  'ParsedAreaResult' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\kazda\kiro\pof\src\lib\harness\run-harness.ts
+   94:3   warning  Unexpected console statement. Only these console methods are allowed: error  no-console
+   95:3   warning  Unexpected console statement. Only these console methods are allowed: error  no-console
+   96:3   warning  Unexpected console statement. Only these console methods are allowed: error  no-console
+   97:3   warning  Unexpected console statement. Only these console methods are allowed: error  no-console
+   98:3   warning  Unexpected console statement. Only these console methods are allowed: error  no-console
+   99:3   warning  Unexpected console statement. Only these console methods are allowed: error  no-console
+  100:3   warning  Unexpected console statement. Only these console methods are allowed: error  no-console
+  101:3   warning  Unexpected console statement. Only these console methods are allowed: error  no-console
+  102:3   warning  Unexpected console statement. Only these console methods are allowed: error  no-console
+  103:3   warning  Unexpected console statement. Only these console methods are allowed: error  no-console
+  104:3   warning  Unexpected console statement. Only these console methods are allowed: error  no-console
+  106:3   warning  Unexpected console statement. Only these console methods are allowed: error  no-console
+  107:17  warning  Unexpected console statement. Only these console methods are allowed: error  no-console
+  108:23  warning  Unexpected console statement. Only these console methods are allowed: error  no-console
+  109:3   warning  Unexpected console statement. Only these console methods are allowed: error  no-console
+  114:5   warning  Unexpected console statement. Only these console methods are allowed: error  no-console
+  115:5   warning  Unexpected console statement. Only these console methods are allowed: error  no-console
+  116:5   warning  Unexpected console statement. Only these console methods are allowed: error  no-console
+  117:5   warning  Unexpected console statement. Only these console methods are allowed: error  no-console
+  118:5   warning  Unexpected console statement. Only these console methods are allowed: error  no-console
+  119:5   warning  Unexpected console statement. Only these console methods are allowed: error  no-console
+  120:5   warning  Unexpected console statement. Only these console methods are allowed: error  no-console
+  121:5   warning  Unexpected console statement. Only these console methods are allowed: error  no-console
+  122:5   warning  Unexpected console statement. Only these console methods are allowed: error  no-console
+  148:5   warning  Unexpected console statement. Only these console methods are allowed: error  no-console
+  149:5   warning  Unexpected console statement. Only these console methods are allowed: error  no-console
+  155:7   warning  Unexpected console statement. Only these console methods are allowed: error  no-console
+  157:5   warning  Unexpected console statement. Only these console methods are allowed: error  no-console
+  169:9   warning  Unexpected console statement. Only these console methods are allowed: error  no-console
+  172:9   warning  Unexpected console statement. Only these console methods are allowed: error  no-console
+  175:9   warning  Unexpected console statement. Only these console methods are allowed: error  no-console
+  178:9   warning  Unexpected console statement. Only these console methods are allowed: error  no-console
+  181:9   warning  Unexpected console statement. Only these console methods are allowed: error  no-console
+  184:9   warning  Unexpected console statement. Only these console methods are allowed: error  no-console
+  187:9   warning  Unexpected console statement. Only these console methods are allowed: error  no-console
+  190:9   warning  Unexpected console statement. Only these console methods are allowed: error  no-console
+  196:9   warning  Unexpected console statement. Only these console methods are allowed: error  no-console
+  203:9   warning  Unexpected console statement. Only these console methods are allowed: error  no-console
+  209:9   warning  Unexpected console statement. Only these console methods are allowed: error  no-console
+  210:9   warning  Unexpected console statement. Only these console methods are allowed: error  no-console
+  211:9   warning  Unexpected console statement. Only these console methods are allowed: error  no-console
+  212:9   warning  Unexpected console statement. Only these console methods are allowed: error  no-console
+  213:9   warning  Unexpected console statement. Only these console methods are allowed: error  no-console
+  221:5   warning  Unexpected console statement. Only these console methods are allowed: error  no-console
+  226:5   warning  Unexpected console statement. Only these console methods are allowed: error  no-console
+  232:5   warning  Unexpected console statement. Only these console methods are allowed: error  no-console
+  233:5   warning  Unexpected console statement. Only these console methods are allowed: error  no-console
+
+C:\Users\kazda\kiro\pof\src\lib\harness\verifier.ts
+  84:16  warning  'runGitCleanCheck' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\kazda\kiro\pof\src\lib\harness\visual-gate.ts
+  17:16  warning  'spawn' is defined but never used    @typescript-eslint/no-unused-vars
+  38:3   warning  'baseURL' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\kazda\kiro\pof\src\lib\health-engine.ts
+  181:14  warning  Avoid hardcoded hex colors. Import from @/lib/chart-colors or use a CSS variable  no-restricted-syntax
+  190:14  warning  Avoid hardcoded hex colors. Import from @/lib/chart-colors or use a CSS variable  no-restricted-syntax
+  199:14  warning  Avoid hardcoded hex colors. Import from @/lib/chart-colors or use a CSS variable  no-restricted-syntax
+  208:14  warning  Avoid hardcoded hex colors. Import from @/lib/chart-colors or use a CSS variable  no-restricted-syntax
+
+C:\Users\kazda\kiro\pof\src\lib\implementation-planner\impact-scorer.ts
+  4:8  warning  'ResolvedDependency' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\kazda\kiro\pof\src\lib\implementation-planner\layout-engine.ts
+  4:15  warning  'EffortLevel' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\kazda\kiro\pof\src\lib\implementation-planner\plan-generator.ts
+  6:8  warning  'ResolvedDependency' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\kazda\kiro\pof\src\lib\implementation-planner\sector-layout-engine.ts
+   55:7   warning  'NODE_SPACING_X' is assigned a value but never used  @typescript-eslint/no-unused-vars
+  200:9   warning  'contentHeight' is assigned a value but never used   @typescript-eslint/no-unused-vars
+  222:11  warning  'effort' is assigned a value but never used          @typescript-eslint/no-unused-vars
+  298:9   warning  'totalWidth' is assigned a value but never used      @typescript-eslint/no-unused-vars
+  299:9   warning  'totalHeight' is assigned a value but never used     @typescript-eslint/no-unused-vars
+
+C:\Users\kazda\kiro\pof\src\lib\localization\scan-engine.ts
+  86:39  warning  'context' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\kazda\kiro\pof\src\lib\localization\translation-engine.ts
+   27:10  warning  'hashStr' is defined but never used  @typescript-eslint/no-unused-vars
+  185:48  warning  'locale' is defined but never used   @typescript-eslint/no-unused-vars
+  185:64  warning  'rng' is defined but never used      @typescript-eslint/no-unused-vars
+
+C:\Users\kazda\kiro\pof\src\lib\marketplace\integration-generator.ts
+   98:9  warning  'hasASC' is assigned a value but never used            @typescript-eslint/no-unused-vars
+  214:3  warning  'buildDeps' is defined but never used                  @typescript-eslint/no-unused-vars
+  215:3  warning  'pluginDeps' is defined but never used                 @typescript-eslint/no-unused-vars
+  217:9  warning  'hasInventoryComp' is assigned a value but never used  @typescript-eslint/no-unused-vars
+  309:3  warning  'pluginDeps' is defined but never used                 @typescript-eslint/no-unused-vars
+  393:3  warning  'buildDeps' is defined but never used                  @typescript-eslint/no-unused-vars
+  394:3  warning  'pluginDeps' is defined but never used                 @typescript-eslint/no-unused-vars
+
+C:\Users\kazda\kiro\pof\src\lib\module-registry.ts
+  378:18  warning  Avoid hardcoded hex colors. Import from @/lib/chart-colors or use a CSS variable  no-restricted-syntax
+  386:18  warning  Avoid hardcoded hex colors. Import from @/lib/chart-colors or use a CSS variable  no-restricted-syntax
+  394:18  warning  Avoid hardcoded hex colors. Import from @/lib/chart-colors or use a CSS variable  no-restricted-syntax
+  402:18  warning  Avoid hardcoded hex colors. Import from @/lib/chart-colors or use a CSS variable  no-restricted-syntax
+  410:18  warning  Avoid hardcoded hex colors. Import from @/lib/chart-colors or use a CSS variable  no-restricted-syntax
+  418:18  warning  Avoid hardcoded hex colors. Import from @/lib/chart-colors or use a CSS variable  no-restricted-syntax
+  426:18  warning  Avoid hardcoded hex colors. Import from @/lib/chart-colors or use a CSS variable  no-restricted-syntax
+
+C:\Users\kazda\kiro\pof\src\lib\nba-engine.ts
+  17:8  warning  'DependencyInfo' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\kazda\kiro\pof\src\lib\pattern-extractor.ts
+  392:11  warning  'successful' is assigned a value but never used     @typescript-eslint/no-unused-vars
+  420:13  warning  'allFailedText' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\kazda\kiro\pof\src\lib\post-process-studio\presets.ts
+   16:19  warning  Avoid hardcoded hex colors. Import from @/lib/chart-colors or use a CSS variable  no-restricted-syntax
+   17:17  warning  Avoid hardcoded hex colors. Import from @/lib/chart-colors or use a CSS variable  no-restricted-syntax
+   32:19  warning  Avoid hardcoded hex colors. Import from @/lib/chart-colors or use a CSS variable  no-restricted-syntax
+   33:17  warning  Avoid hardcoded hex colors. Import from @/lib/chart-colors or use a CSS variable  no-restricted-syntax
+   47:19  warning  Avoid hardcoded hex colors. Import from @/lib/chart-colors or use a CSS variable  no-restricted-syntax
+   48:17  warning  Avoid hardcoded hex colors. Import from @/lib/chart-colors or use a CSS variable  no-restricted-syntax
+   64:19  warning  Avoid hardcoded hex colors. Import from @/lib/chart-colors or use a CSS variable  no-restricted-syntax
+   65:17  warning  Avoid hardcoded hex colors. Import from @/lib/chart-colors or use a CSS variable  no-restricted-syntax
+   79:19  warning  Avoid hardcoded hex colors. Import from @/lib/chart-colors or use a CSS variable  no-restricted-syntax
+   80:17  warning  Avoid hardcoded hex colors. Import from @/lib/chart-colors or use a CSS variable  no-restricted-syntax
+   94:19  warning  Avoid hardcoded hex colors. Import from @/lib/chart-colors or use a CSS variable  no-restricted-syntax
+   95:17  warning  Avoid hardcoded hex colors. Import from @/lib/chart-colors or use a CSS variable  no-restricted-syntax
+  110:19  warning  Avoid hardcoded hex colors. Import from @/lib/chart-colors or use a CSS variable  no-restricted-syntax
+  111:17  warning  Avoid hardcoded hex colors. Import from @/lib/chart-colors or use a CSS variable  no-restricted-syntax
+
+C:\Users\kazda\kiro\pof\src\lib\profiling\csv-parser.ts
+  57:40  warning  'header' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\kazda\kiro\pof\src\lib\profiling\sample-generator.ts
+  8:10  warning  'buildSessionFromStats' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\kazda\kiro\pof\src\lib\profiling\triage-engine.ts
+    7:3   warning  'OptimizationPriority' is defined but never used            @typescript-eslint/no-unused-vars
+   16:64  warning  'frameSamples' is assigned a value but never used           @typescript-eslint/no-unused-vars
+   60:3   warning  'budgetMs' is defined but never used                        @typescript-eslint/no-unused-vars
+  220:7   warning  'dummySummary' is assigned a value but only used as a type  @typescript-eslint/no-unused-vars
+  251:3   warning  'summary' is defined but never used                         @typescript-eslint/no-unused-vars
+
+C:\Users\kazda\kiro\pof\src\lib\prompt-evolution\ab-testing.ts
+   1:23  warning  'ABTestStatus' is defined but never used          @typescript-eslint/no-unused-vars
+  37:9   warning  'totalTrials' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\kazda\kiro\pof\src\lib\prompts\audio-scene.ts
+  1:46  warning  'SoundEmitter' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\kazda\kiro\pof\src\lib\prompts\inventory.ts
+  31:43  warning  Avoid hardcoded hex colors. Import from @/lib/chart-colors or use a CSS variable  no-restricted-syntax
+  32:41  warning  Avoid hardcoded hex colors. Import from @/lib/chart-colors or use a CSS variable  no-restricted-syntax
+  33:51  warning  Avoid hardcoded hex colors. Import from @/lib/chart-colors or use a CSS variable  no-restricted-syntax
+  34:46  warning  Avoid hardcoded hex colors. Import from @/lib/chart-colors or use a CSS variable  no-restricted-syntax
+  35:47  warning  Avoid hardcoded hex colors. Import from @/lib/chart-colors or use a CSS variable  no-restricted-syntax
+  36:46  warning  Avoid hardcoded hex colors. Import from @/lib/chart-colors or use a CSS variable  no-restricted-syntax
+
+C:\Users\kazda\kiro\pof\src\lib\prompts\level-design.ts
+  3:43  warning  'StreamingZone' is defined but never used   @typescript-eslint/no-unused-vars
+  3:58  warning  'ZoneTransition' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\kazda\kiro\pof\src\lib\prompts\menu-flow.ts
+  2:43  warning  'ScreenTransition' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\kazda\kiro\pof\src\lib\quest-generator.ts
+   19:3   warning  'DialogueChoice' is defined but never used  @typescript-eslint/no-unused-vars
+   21:3   warning  'QuestCategory' is defined but never used   @typescript-eslint/no-unused-vars
+   52:38  warning  'prefix' is defined but never used          @typescript-eslint/no-unused-vars
+  238:3   warning  'docName' is defined but never used         @typescript-eslint/no-unused-vars
+
+C:\Users\kazda\kiro\pof\src\lib\spatial-audio-generator.ts
+  25:12  warning  Avoid hardcoded hex colors. Import from @/lib/chart-colors or use a CSS variable  no-restricted-syntax
+  33:12  warning  Avoid hardcoded hex colors. Import from @/lib/chart-colors or use a CSS variable  no-restricted-syntax
+  41:12  warning  Avoid hardcoded hex colors. Import from @/lib/chart-colors or use a CSS variable  no-restricted-syntax
+  49:12  warning  Avoid hardcoded hex colors. Import from @/lib/chart-colors or use a CSS variable  no-restricted-syntax
+  57:12  warning  Avoid hardcoded hex colors. Import from @/lib/chart-colors or use a CSS variable  no-restricted-syntax
+  65:12  warning  Avoid hardcoded hex colors. Import from @/lib/chart-colors or use a CSS variable  no-restricted-syntax
+  73:12  warning  Avoid hardcoded hex colors. Import from @/lib/chart-colors or use a CSS variable  no-restricted-syntax
+  81:12  warning  Avoid hardcoded hex colors. Import from @/lib/chart-colors or use a CSS variable  no-restricted-syntax
+
+C:\Users\kazda\kiro\pof\src\lib\task-dag-orchestrator.ts
+  16:3  warning  'DAGNodeStatus' is defined but never used   @typescript-eslint/no-unused-vars
+  19:3  warning  'WorkflowStatus' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\kazda\kiro\pof\src\lib\telemetry-db.ts
+  4:3  warning  'TelemetrySignals' is defined but never used    @typescript-eslint/no-unused-vars
+  5:3  warning  'PatternDetection' is defined but never used    @typescript-eslint/no-unused-vars
+  9:3  warning  'GenreChecklistItem' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\kazda\kiro\pof\src\lib\ue5-bridge\ws-live-state.ts
+  16:3  warning  'WSConnectionStatus' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\kazda\kiro\pof\src\lib\visual-gen\generators\vegetation.ts
+  36:57  warning  Avoid hardcoded hex colors. Import from @/lib/chart-colors or use a CSS variable  no-restricted-syntax
+  37:59  warning  Avoid hardcoded hex colors. Import from @/lib/chart-colors or use a CSS variable  no-restricted-syntax
+  38:49  warning  Avoid hardcoded hex colors. Import from @/lib/chart-colors or use a CSS variable  no-restricted-syntax
+  39:49  warning  Avoid hardcoded hex colors. Import from @/lib/chart-colors or use a CSS variable  no-restricted-syntax
+  40:65  warning  Avoid hardcoded hex colors. Import from @/lib/chart-colors or use a CSS variable  no-restricted-syntax
+
+C:\Users\kazda\kiro\pof\src\lib\visual-gen\ue5-import-templates.ts
+  26:9  warning  'meshClass' is assigned a value but never used     @typescript-eslint/no-unused-vars
+  27:9  warning  'factoryClass' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\kazda\kiro\pof\src\lib\weekly-digest.ts
+  38:9  warning  'prevStartStr' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\kazda\kiro\pof\src\stores\gddComplianceStore.ts
+  24:71  warning  'get' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\kazda\kiro\pof\src\stores\marketplaceStore.ts
+  105:28  warning  '_' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\kazda\kiro\pof\src\stores\promptEvolutionStore.ts
+  78:75  warning  'get' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\kazda\kiro\pof\src\stores\taskDAGStore.ts
+  7:3  warning  'WorkflowStatus' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\kazda\kiro\pof\src\types\gdd-compliance.ts
+  1:15  warning  'FeatureStatus' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\kazda\kiro\pof\src\types\regression-tracker.ts
+  1:49  warning  'PlaytestFinding' is defined but never used  @typescript-eslint/no-unused-vars
+  1:66  warning  'PlaytestSession' is defined but never used  @typescript-eslint/no-unused-vars
+
+✖ 825 problems (3 errors, 822 warnings)
+  0 errors and 3 warnings potentially fixable with the `--fix` option.
+

@@ -3,13 +3,14 @@ import { seedSpellbookEntries } from './seed-spellbook';
 import { seedItemEntries } from './seed-items';
 import { seedLootEntries } from './seed-loot';
 import { seedBestiaryEntries } from './seed-bestiary';
-import { seedCombatInteractionEntries } from './seed-combat-map';
+import { seedCombatInteractionEntries, seedArenaSliceEntries } from './seed-combat-map';
 import { seedScreenEntries } from './seed-screen-flow';
 import { seedZoneEntries } from './seed-zone-map';
 import { seedAnimationEntries } from './seed-state-graph';
 import { seedMaterialEntries } from './seed-materials';
 import { seedAudioEntries } from './seed-audio';
 import { seedAnimationAssetEntries } from './seed-animation-assets';
+import { seedCharacterEntries } from './seed-characters';
 import { NEW_CATALOGS, newCatalogStarters } from './new-catalogs';
 
 /** A catalog section: its id, label, spreadsheet category (for grouping), and seed. */
@@ -28,7 +29,7 @@ export const CATALOG_SECTIONS: CatalogSection[] = [
   { catalogId: 'items', label: 'Items', category: 'Core / Existing', description: 'Equippable, consumable, or quest items.', seed: seedItemEntries },
   { catalogId: 'loot-tables', label: 'Loot Tables', category: 'Core / Existing', description: 'Drop distributions for enemies, containers, quests, vendors.', seed: seedLootEntries },
   { catalogId: 'bestiary', label: 'Bestiary', category: 'Core / Existing', description: 'Creature/NPC archetypes with stats, AI, and presentation.', seed: seedBestiaryEntries },
-  { catalogId: 'combat-map', label: 'Combat Map', category: 'Core / Existing', description: 'Tactical encounter arenas with rules and spawn logic.', seed: seedCombatInteractionEntries },
+  { catalogId: 'combat-map', label: 'Combat Map', category: 'Core / Existing', description: 'Tactical encounter arenas with rules and spawn logic.', seed: () => [...seedArenaSliceEntries(), ...seedCombatInteractionEntries()] },
   { catalogId: 'screen-flow', label: 'Screen Flow', category: 'Core / Existing', description: 'UI navigation graph between screens/menus.', seed: seedScreenEntries },
   { catalogId: 'zone-map', label: 'Zone Map', category: 'Core / Existing', description: 'Explorable regions with POIs, navigation, ambient systems.', seed: seedZoneEntries },
   { catalogId: 'state-graph', label: 'State Graph', category: 'Core / Existing', description: 'Generic finite state machines used across systems.', seed: seedAnimationEntries },
@@ -37,9 +38,11 @@ export const CATALOG_SECTIONS: CatalogSection[] = [
   { catalogId: 'audio', label: 'Audio', category: 'Audio & FX', description: 'SFX sets imported into UE.', seed: seedAudioEntries },
   { catalogId: 'animation-assets', label: 'Animation Assets', category: 'Core / Existing', description: 'Imported/retargeted animation assets.', seed: seedAnimationAssetEntries },
   // Catalog Pipeline Expansion — the 21 new catalogs, derived from NEW_CATALOGS.
+  // `characters` uses its dedicated designed seed (the Captain Vael target asset);
+  // the rest fall back to the generic planned starter.
   ...NEW_CATALOGS.map((c) => ({
     catalogId: c.catalogId, label: c.label, category: c.category, description: c.description,
-    seed: () => newCatalogStarters(c),
+    seed: c.catalogId === 'characters' ? seedCharacterEntries : () => newCatalogStarters(c),
   })),
 ];
 
