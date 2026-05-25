@@ -7,18 +7,21 @@ import { QualityRollupCard } from './QualityRollupCard';
 import { FeatureCoverageCard } from './FeatureCoverageCard';
 import { SessionActivityCard } from './SessionActivityCard';
 import { NextBestActionsCard } from './NextBestActionsCard';
+import { PlaytestsCard } from './PlaytestsCard';
+import { RoadmapCard } from './RoadmapCard';
 
 /**
  * Top-level body for the Mission Control L1 tab. Consolidates the project-wide
- * signals that previously lived in five separate legacy dashboards:
+ * signals that previously lived in the legacy dashboards:
  * - CatalogRollupCard + ForecastCard (Phase 5)
  * - QualityRollupCard (← AggregateQuality / ProjectHealth / UnifiedSummary)
  * - FeatureCoverageCard (← CrossModuleFeatureDashboard)
  * - SessionActivityCard (← DirectorOverview / UnifiedSummary session signal)
- * - ActivityFeedCard (full-width)
+ * - PlaytestsCard (← Game Director overview), RoadmapCard (← EvalRoadmap/CalendarRoadmap)
+ * - NextBestActionsCard (critical path) + ActivityFeedCard (full-width)
  *
- * Phase 10-MC fold-in (Phase 9 audit execution). The critical-path DAG lands in
- * a later 10-MC round; legacy `/` still reaches the original dashboards.
+ * Phase 10-MC fold-in (Phase 9 audit execution). Build History deferred (no build
+ * telemetry source yet); legacy `/` still reaches the original dashboards until P12.
  */
 export function MissionControlTab() {
   return (
@@ -36,6 +39,8 @@ export function MissionControlTab() {
         <QualityRollupCard />
         <FeatureCoverageCard />
         <SessionActivityCard />
+        <PlaytestsCard />
+        <RoadmapCard />
       </div>
 
       <div className="max-w-5xl space-y-4">
