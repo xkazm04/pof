@@ -21,6 +21,7 @@ import { buildVisualCheckSection } from '@/lib/prompts/visual-check';
 import { knownAssetDomainsForModule } from '@/lib/knowledge/ue-known-assets';
 import type { StoredCatalogEntity } from '@/lib/catalog/types';
 import { getRecipe, STEP_TO_LIFECYCLE, type GenerationStep } from '@/lib/catalog/recipe';
+import { trackLabel, trackHint, type PipelineTrackId } from '@/lib/pipeline/tracks';
 
 // ── Task callback system ────────────────────────────────────────────────────
 
@@ -160,7 +161,8 @@ export type CLITaskType =
   | 'mixamo-import'
   | 'character-setup'
   | 'audio-import'
-  | 'generate';
+  | 'generate'
+  | 'evaluate-track';
 
 /** Task types that generate or modify UE code and therefore get a Wiring Requirements section. */
 const WIRING_TASK_TYPES = new Set<CLITaskType>(['checklist', 'quick-action', 'feature-fix']);
@@ -260,6 +262,19 @@ export interface GenerateTask extends CLITask {
   type: 'generate';
   entity: StoredCatalogEntity;
   step: GenerationStep;
+  appOrigin: string;
+}
+
+/**
+ * Evaluate-track task (ECW Phase 13b) — asks Claude to assess one production
+ * track (logic/ai/art/animation/audio/vfx/test) of a catalog entity, then
+ * writes the assessed state back to /api/pipeline via @@CALLBACK so the
+ * pipeline node updates without the operator setting it by hand.
+ */
+export interface EvaluateTrackTask extends CLITask {
+  type: 'evaluate-track';
+  entity: StoredCatalogEntity;
+  trackId: PipelineTrackId;
   appOrigin: string;
 }
 
@@ -788,6 +803,31 @@ ${buildCallbackSection(getCallback(cbId)!)}`;
       return `${base}\n\n${buildCallbackSection(getCallback(cbId)!)}`;
     }
 
+    case 'evaluate-track': {
+      const et = task as EvaluateTrackTask;
+      const label = trackLabel(et.trackId);
+      const base =
+        `Evaluate the "${label}" production track for the ${et.entity.catalogId} entity "${et.entity.name}".\n\n` +
+        `Track scope: ${trackHint(et.trackId)}\n\n` +
+        `Assess what exists today (in the UE project + this catalog entity's data), then judge ` +
+        `whether the "${label}" track is not-started / in-progress / done / blocked, and list the ` +
+        `concrete next steps to bring it to a playable "done" state. Be specific about file paths, ` +
+        `asset names, and which existing PoF systems to reuse.`;
+      const cbId = registerCallback({
+        url: `${et.appOrigin}/api/pipeline`,
+        method: 'POST',
+        staticFields: {
+          catalogId: et.entity.catalogId,
+          entityId: et.entity.id,
+          trackId: et.trackId,
+        },
+        schemaHint:
+          '  "state": "not-started|in-progress|done|blocked",  // your assessed coverage of this track\n' +
+          '  "note": "<one-line summary of current state / the key next step>"',
+      });
+      return `${base}\n\n${buildCallbackSection(getCallback(cbId)!)}`;
+    }
+
     default:
       return task.prompt;
   }
@@ -994,5 +1034,17 @@ export const TaskFactory = {
     label: string,
   ): GenerateTask {
     return { type: 'generate', moduleId, prompt: '', label, entity, step, appOrigin };
+  },
+
+  /** Create a track-evaluation task (ECW Phase 13b) — assesses one production
+   *  track and writes the assessed state back to /api/pipeline via callback. */
+  evaluateTrack(
+    moduleId: SubModuleId,
+    entity: StoredCatalogEntity,
+    trackId: PipelineTrackId,
+    appOrigin: string,
+    label: string,
+  ): EvaluateTrackTask {
+    return { type: 'evaluate-track', moduleId, prompt: '', label, entity, trackId, appOrigin };
   },
 };

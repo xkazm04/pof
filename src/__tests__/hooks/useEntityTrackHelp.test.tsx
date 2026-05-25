@@ -24,14 +24,15 @@ const entity: StoredCatalogEntity = {
 describe('useEntityTrackHelp', () => {
   beforeEach(() => { execute.mockClear(); lastConfig.value = null; });
 
-  it('dispatches a quickAction task mentioning the entity + track', () => {
+  it('dispatches an evaluate-track task carrying the entity + track', () => {
     const { result } = renderHook(() => useEntityTrackHelp(entity));
     act(() => result.current.evaluate('art-3d'));
     expect(execute).toHaveBeenCalledTimes(1);
-    const task = execute.mock.calls[0][0] as { type: string; prompt: string };
-    expect(task.type).toBe('quick-action');
-    expect(task.prompt).toContain('Brute');
-    expect(task.prompt).toContain('3D Art');
+    const task = execute.mock.calls[0][0] as { type: string; trackId: string; entity: { id: string }; label: string };
+    expect(task.type).toBe('evaluate-track');
+    expect(task.trackId).toBe('art-3d');
+    expect(task.entity.id).toBe('brute');
+    expect(task.label).toContain('3D Art');
   });
 
   it('scopes the session key to entity + track so it shows in the entity-scoped rail', () => {
