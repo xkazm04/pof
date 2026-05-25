@@ -34,3 +34,22 @@ export function buildLogicChangePrompt(aspect: LogicAspect, ability: AbilityRef,
     `Report the asset path and the exact fields you changed for ${ability.name}.`,
   ].join('\n');
 }
+
+/**
+ * CLI prompt to DRAFT a starter EnrichedAbilitySpec (GameplayEffects + activation
+ * tag rules) for a spellbook ability. App-side data authoring only — the callback
+ * POSTs the proposed effects[]/tagRules[] to /api/ability-spec; no UE files are
+ * touched. Pure; SpellbookLogicWorkspace dispatches it via "Draft with AI".
+ */
+export function buildAbilitySpecDraftPrompt(ability: AbilityRef, instruction: string): string {
+  const trimmed = instruction.trim();
+  const element = ability.element || 'physical';
+  return [
+    `Draft a GAS authoring spec for the spellbook ability "${ability.name}" (gameplay tag ${ability.tag || 'Ability'}, ${ability.category}/${ability.element}/${ability.tier}).`,
+    `Propose the GameplayEffects it applies and the activation tag rules that gate it, reusing standard GAS conventions for a ${element} ability — do NOT invent new systems.`,
+    trimmed ? `Designer intent: "${trimmed}"` : 'No extra intent — propose a sensible, on-theme starter set.',
+    'Each effect: id, name (GE_-style), duration ("instant"|"duration"|"infinite"), durationSec, cooldownSec, color (hex), modifiers (each {attribute, operation:"add"|"multiply", magnitude}), grantedTags (string[]).',
+    'Each tag rule: id, sourceTag, targetTag, type ("blocks"|"cancels"|"requires"). Include the standard "blocked while State.Dead / State.Stunned" activation rules.',
+    'This edits ONLY the app-side ability spec — do not modify any UE C++ or assets.',
+  ].join('\n');
+}

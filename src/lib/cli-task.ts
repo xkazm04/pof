@@ -22,6 +22,7 @@ import { knownAssetDomainsForModule } from '@/lib/knowledge/ue-known-assets';
 import type { StoredCatalogEntity } from '@/lib/catalog/types';
 import { getRecipe, STEP_TO_LIFECYCLE, type GenerationStep } from '@/lib/catalog/recipe';
 import { trackLabel, trackHint, type PipelineTrackId } from '@/lib/pipeline/tracks';
+import { buildAbilitySpecDraftPrompt, type AbilityRef } from '@/lib/ability/logic-prompts';
 
 // ── Task callback system ────────────────────────────────────────────────────
 
@@ -162,7 +163,8 @@ export type CLITaskType =
   | 'character-setup'
   | 'audio-import'
   | 'generate'
-  | 'evaluate-track';
+  | 'evaluate-track'
+  | 'draft-ability-spec';
 
 /** Task types that generate or modify UE code and therefore get a Wiring Requirements section. */
 const WIRING_TASK_TYPES = new Set<CLITaskType>(['checklist', 'quick-action', 'feature-fix']);
@@ -275,6 +277,21 @@ export interface EvaluateTrackTask extends CLITask {
   type: 'evaluate-track';
   entity: StoredCatalogEntity;
   trackId: PipelineTrackId;
+  appOrigin: string;
+}
+
+/**
+ * Draft-ability-spec task (ECW Option B2) — asks Claude to propose a starter
+ * EnrichedAbilitySpec (GameplayEffects + tag rules) for a catalog ability, then
+ * writes effects[]/tagRules[] back to /api/ability-spec via @@CALLBACK so the
+ * rich editors populate. App-side only; no UE files touched.
+ */
+export interface DraftAbilitySpecTask extends CLITask {
+  type: 'draft-ability-spec';
+  catalogId: string;
+  entityId: string;
+  ref: AbilityRef;
+  instruction: string;
   appOrigin: string;
 }
 
@@ -828,6 +845,24 @@ ${buildCallbackSection(getCallback(cbId)!)}`;
       return `${base}\n\n${buildCallbackSection(getCallback(cbId)!)}`;
     }
 
+    case 'draft-ability-spec': {
+      const dt = task as DraftAbilitySpecTask;
+      const base = buildAbilitySpecDraftPrompt(dt.ref, dt.instruction);
+      const cbId = registerCallback({
+        url: `${dt.appOrigin}/api/ability-spec`,
+        method: 'POST',
+        staticFields: { catalogId: dt.catalogId, entityId: dt.entityId },
+        schemaHint:
+          '  "effects": [\n' +
+          '    { "id": "<id>", "name": "GE_<Name>", "duration": "instant|duration|infinite", "durationSec": 0, "cooldownSec": 0, "color": "#rrggbb", "modifiers": [{ "attribute": "Health", "operation": "add|multiply", "magnitude": 0 }], "grantedTags": [] }\n' +
+          '  ],\n' +
+          '  "tagRules": [\n' +
+          '    { "id": "<id>", "sourceTag": "<tag>", "targetTag": "State.Dead", "type": "blocks|cancels|requires" }\n' +
+          '  ]',
+      });
+      return `${base}\n\n${buildCallbackSection(getCallback(cbId)!)}`;
+    }
+
     default:
       return task.prompt;
   }
@@ -1046,5 +1081,26 @@ export const TaskFactory = {
     label: string,
   ): EvaluateTrackTask {
     return { type: 'evaluate-track', moduleId, prompt: '', label, entity, trackId, appOrigin };
+  },
+
+  /** Create a draft-ability-spec task (ECW B2) — proposes a starter GAS spec and
+   *  writes effects[]/tagRules[] back to /api/ability-spec via callback. */
+  draftAbilitySpec(
+    moduleId: SubModuleId,
+    params: { catalogId: string; entityId: string; ref: AbilityRef; instruction?: string },
+    appOrigin: string,
+    label: string,
+  ): DraftAbilitySpecTask {
+    return {
+      type: 'draft-ability-spec',
+      moduleId,
+      prompt: '',
+      label,
+      catalogId: params.catalogId,
+      entityId: params.entityId,
+      ref: params.ref,
+      instruction: params.instruction ?? '',
+      appOrigin,
+    };
   },
 };
