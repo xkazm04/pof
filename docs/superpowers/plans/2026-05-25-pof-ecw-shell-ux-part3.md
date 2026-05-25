@@ -1,5 +1,7 @@
 # ECW Shell UX Pass — Part 3 (track-tab inspector) Implementation Plan
 
+> **STATUS: COMPLETE (2026-05-25).** 3a framework (`dfcbe25` registry+default, `5639c90` TrackTabStrip+inspector swap), 3b Logic+Test workspaces + facet-strip retired (`10f9174`), 3c 2D Leonardo (`5fcb1ef`). **3d/3e scope call (YAGNI):** Animation/Audio/3D/VFX fall through to `DefaultTrackWorkspace` (status + Evaluate-CLI; 3D/VFX add a "generation pending" note) — their design facets are absorbed under Logic, and bespoke per-track facet routing wasn't worth building until those tracks have real dedicated tooling. Registry test proves the default fallback; DefaultTrackWorkspace test proves the pending note. 242/242 ECW+app tests green, no new tsc errors.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: superpowers:executing-plans. Steps use `- [ ]`.
 
 **Goal:** Turn the entity inspector into a status-colored Production-Pipeline track-tab switcher; each track tab hosts that stage's tooling. Per-catalog facets are absorbed into the matching track.
