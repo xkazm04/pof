@@ -7,7 +7,10 @@ import { registerTrackWorkspace } from '@/components/ecw/inspector/trackWorkspac
 import { LogicWorkspace } from './LogicWorkspace';
 import { TestWorkspace } from './TestWorkspace';
 import { Leonardo2DWorkspace } from './Leonardo2DWorkspace';
+import { SpellbookLogicWorkspace } from './SpellbookLogicWorkspace';
 
 registerTrackWorkspace('*', 'logic', LogicWorkspace);
 registerTrackWorkspace('*', 'test', TestWorkspace);
 registerTrackWorkspace('*', 'art-2d', Leonardo2DWorkspace);
+// Spellbook gets the rich aspect-card Logic editor (exact wins over the wildcard).
+registerTrackWorkspace('spellbook', 'logic', SpellbookLogicWorkspace);
