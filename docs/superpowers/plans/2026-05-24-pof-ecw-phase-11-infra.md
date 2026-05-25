@@ -2,6 +2,25 @@
 
 > Multi-session work. ~37 KEEP-INFRA ideas, mostly cross-cutting polish.
 
+## Status (2026-05-25) — CUTOVER-CRITICAL SLICE DONE; remainder triaged
+
+Reframed against the Phase 12 cutover: only infra that hardens the **surfaces ECW keeps** is in
+scope. The bulk of the 37 ideas polish **legacy UI that cutover deletes** (combat/range sliders, cook
+toggles, BP design-system extract, planning-view headers, autosave radios, disclosure widgets, …) —
+**moot at cutover, dropped.** Shipped the concentrated ECW-relevant infra:
+
+- ✅ **Batch 1 (earlier):** GlossaryTerm + 28-entry glossary, computeVelocityForecast + ForecastCard real numbers (`ecw-phase-11-batch1-complete`).
+- ✅ **11-DS — `FindingList`** (`858eb36` + `43b672b`): shared lint-finding list colored from `SEVERITY_TOKENS` (not hardcoded `text-*-500`); the 5 analysis facets (Balance/Economy/Combat/Zone/Montage) refactored onto it (removed 5 duplicated ICON/COLOR maps). Covers `1a0c060d`/`ae37291c` (token + card/color unify) where it ships.
+- ✅ **11-OBS / a11y — `FacetErrorBoundary`** (`748a701`): isolates a throwing facet so it can't white-screen the inspector once ECW is the only shell; logs via console.error; `role=tabpanel` added to the facet tab strip. Cutover-critical robustness (no legacy fallback post-12).
+
+**Deferred (genuine ECW enhancements, NOT cutover blockers):** `3b8efd65` retry/DLQ for CLI dispatch
+(touches useModuleCLI — bigger piece), arrow-key roving-tabindex on the L1/facet tablists (current
+tabs already have role/aria-selected + focus-ring), `5258d1c7` Shiki in CLI code blocks (shared
+highlighter already exists). These can land post-cutover without risk.
+
+**Verdict: Phase 11 resolved for cutover purposes.** The default shell has consistent design-system
+severity coloring and per-facet error isolation; nothing legacy-polish-shaped blocks Phase 12.
+
 ## Batch 11-DS · Design system unification
 
 Tokenization + primitive extraction:
