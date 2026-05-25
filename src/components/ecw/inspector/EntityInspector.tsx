@@ -16,6 +16,7 @@ import '@/components/ecw/facets/bestiary/ThreatScoreFacet';
 import '@/components/ecw/facets/bestiary/BestiaryAiFacet';
 import '@/components/ecw/facets/bestiary/BestiaryRemixFacet';
 import '@/components/ecw/facets/bestiary/BestiaryBaselineFacet';
+import '@/components/ecw/facets/bestiary/BestiaryEncounterFacet';
 import '@/components/ecw/facets/combat-map/CombatMapDetailFacet';
 import '@/components/ecw/facets/screen-flow/ScreenFlowDetailFacet';
 import '@/components/ecw/facets/zone-map/ZoneMapDetailFacet';
