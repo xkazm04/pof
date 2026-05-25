@@ -1,30 +1,62 @@
 'use client';
 
-import { TrendingUp } from 'lucide-react';
+import { useMemo } from 'react';
+import { TrendingUp, Sparkles } from 'lucide-react';
+import { useCatalogRoster } from '@/components/ecw/catalogs/useCatalogRoster';
+import { computeVelocityForecast } from '@/lib/ecw/forecast';
 
 /**
- * Mission Control forecast card. Placeholder for Phase 5 — the real
- * forecaster (playable-by ETA · velocity · NBA queue · cook forecaster ·
- * what-if simulator) lands as Phase 10 enhancement work pulling from the
- * KEEP-CORE ideas (925151c6, 8a45533b, 21cea6d3, 96f25afc, d67fa562, etc.).
+ * Mission Control forecast card. Phase 5 shipped this as a placeholder; the
+ * Phase 11-OBS batch added `computeVelocityForecast` and this card now
+ * exercises it with current totals + a single-point history bootstrap (the
+ * project's earliest known catalog snapshot — for now, "now minus 7 days" with
+ * 50% of current verified, so the card always shows a non-null forecast even
+ * before lifecycle history persistence lands).
+ *
+ * Phase 10-MC will replace the bootstrap with real lifecycle-history snapshots
+ * from a new persistent store. The forecast shape and rendering here stay.
  */
 export function ForecastCard() {
+  const roster = useCatalogRoster();
+
+  const forecast = useMemo(() => {
+    const total = roster.reduce((s, r) => s + r.total, 0);
+    const verified = roster.reduce((s, r) => s + r.verified, 0);
+    // Bootstrap: synthesize a 7-day-ago snapshot at half the current verified
+    // count. Replaces with persisted history in Phase 10-MC.
+    const history = verified > 0
+      ? [{ verified: Math.floor(verified / 2), at: Date.now() - 7 * 86_400_000 }]
+      : [];
+    return computeVelocityForecast({ verified, total, history });
+  }, [roster]);
+
   return (
     <section className="rounded-lg border border-border/40 bg-surface-deep p-4">
       <header className="flex items-center gap-2 mb-3">
         <TrendingUp className="w-4 h-4 text-text-muted" />
         <h2 className="text-sm font-semibold text-text">Forecast</h2>
       </header>
-      <p className="text-xs text-text-muted/70 italic mb-2">
-        Lands in Phase 10 enhancement work:
-      </p>
-      <ul className="text-2xs font-mono text-text-muted space-y-1 list-disc list-inside">
-        <li>playable-by ETA + confidence</li>
-        <li>NBA queue (next best action)</li>
-        <li>predictive cook forecaster</li>
-        <li>what-if scenario simulator</li>
-        <li>critical-path DAG overlay</li>
-      </ul>
+
+      {forecast ? (
+        <div className="space-y-2">
+          <div className="flex items-baseline gap-2">
+            <span className="text-2xl font-bold text-text">{forecast.daysRemaining}</span>
+            <span className="text-xs text-text-muted">days until verified</span>
+          </div>
+          <div className="text-2xs font-mono text-text-muted space-y-0.5">
+            <div>velocity · <span className="text-text">{forecast.velocityPerDay} verified / day</span></div>
+            <div>confidence · <span className="text-text">{(forecast.confidence * 100).toFixed(0)}%</span></div>
+          </div>
+          <p className="text-2xs text-text-muted/60 italic pt-1 border-t border-border/20">
+            Bootstrapped from a 7-day estimate · real history persistence in P10-MC
+          </p>
+        </div>
+      ) : (
+        <div className="text-xs text-text-muted/70 italic flex items-center gap-2">
+          <Sparkles className="w-3.5 h-3.5" />
+          Awaiting first verified entity to compute velocity.
+        </div>
+      )}
     </section>
   );
 }
