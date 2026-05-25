@@ -3,6 +3,7 @@
 import { useState, useMemo } from 'react';
 import type { StoredCatalogEntity } from '@/lib/catalog/types';
 import { getFacetsForCatalog } from './facetRegistry';
+import { FacetErrorBoundary } from '@/components/ecw/infra/FacetErrorBoundary';
 
 interface Props {
   entity?: StoredCatalogEntity;
@@ -61,8 +62,10 @@ export function EntityFacetsTabStrip({ entity }: Props) {
           );
         })}
       </div>
-      <div>
-        <active.Component entity={entity} />
+      <div role="tabpanel" aria-label={`${active.label} facet`}>
+        <FacetErrorBoundary key={active.id} facetLabel={active.label}>
+          <active.Component entity={entity} />
+        </FacetErrorBoundary>
       </div>
     </section>
   );
