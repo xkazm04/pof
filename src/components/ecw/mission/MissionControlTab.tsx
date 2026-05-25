@@ -6,6 +6,7 @@ import { ForecastCard } from './ForecastCard';
 import { QualityRollupCard } from './QualityRollupCard';
 import { FeatureCoverageCard } from './FeatureCoverageCard';
 import { SessionActivityCard } from './SessionActivityCard';
+import { NextBestActionsCard } from './NextBestActionsCard';
 
 /**
  * Top-level body for the Mission Control L1 tab. Consolidates the project-wide
@@ -37,7 +38,8 @@ export function MissionControlTab() {
         <SessionActivityCard />
       </div>
 
-      <div className="max-w-5xl">
+      <div className="max-w-5xl space-y-4">
+        <NextBestActionsCard />
         <ActivityFeedCard />
       </div>
     </div>
