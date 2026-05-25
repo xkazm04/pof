@@ -77,6 +77,20 @@ git push origin master v2.0-entity-centric
 
 Implement the first-run guided tour as a one-off post-cutover task. Show new users the 3 L1 tabs + the (Re)generate flow in one entity.
 
+---
+
+## EXECUTED 2026-05-25 (on `feature/entity-centric-workspace`, NOT merged)
+
+- ✅ Snapshot tag `ecw-pre-cutover`.
+- ✅ **Step 2** (`e2952aa`): default flipped — `page.tsx` renders `<NewAppShell/>`; `?ecw=1` gate removed; page test trimmed.
+- ✅ **Consolidation** (`b1ef5f4`): the tree had 84 modified + 59 untracked files (accumulated prior-session work) across the delete-zone — `git rm` aborted to protect it. Operator confirmed no concurrent sessions → committed all src+docs as one checkpoint (excluded `.claude/worktrees/` + `.validate-out.txt`).
+- ✅ **Step 3** (`c44665e`): deleted `src/components/layout/` (13 files) + `cli/InlineTerminal.tsx` — clean closed set; tsc unchanged (only 3 pre-existing `AssetInspector.tsx` errors from the consolidated work, unrelated to cutover); 226/226 ECW+app tests pass. **ECW is the sole shell.**
+- ⏸ **Steps 3.4 / 4 (delete navigationStore + module Views) DEFERRED.** Reality vs plan: `components/modules/**` is **NOT bulk-deletable** — the dzin-panels system (~90 `dzin-panels/*Panel`), `SetupWizard`, and content components (MaterialStyleTransfer, AnimationChecklist, …) are still imported by kept code (lib/dzin, `/prototype`). The module Views are now unreachable dead code, but deleting `navigationStore` cascades into Views that import the legacy hooks/shared (`useKeyboardShortcuts`/`useActiveModuleId`/`ContextHealthBadge`/`RecommendedNextBanner`). A per-file View purge that preserves the still-used dzin tree + `_shared/data` is a separate careful follow-up — **not a functional cutover blocker** (Constraints A + B both held: module-registry + `_shared/data*` preserved).
+- ✅ **Step 5** (8 live UE gates): **8/8 `Result={Success}`, 0 fails** headless on `UE_5.7` vs `PoF.uproject` (ProcGenWalk, VSArenaSetup, VSCombatGrayBoxPath, VSHUDFunctional, VSAbility09, VSEnemyAttack, VSItemsDefinitions, VSLootDistribution).
+- ⏸ **Step 6 (tag `v2.0-entity-centric` + merge to master): PENDING OPERATOR** — branch commits are local; the user pushes/merges.
+
+**Known follow-ups:** (1) the per-file legacy View / navigationStore purge; (2) 3 pre-existing `AssetInspector.tsx` tsc errors in the consolidated work (foreign WIP — `ViewerState` missing `stats`/`budget`/`setBudget`) make full `npm run validate` red — owner to fix or delete that View.
+
 ## Backout strategy
 
 If cutover surfaces a critical regression:
