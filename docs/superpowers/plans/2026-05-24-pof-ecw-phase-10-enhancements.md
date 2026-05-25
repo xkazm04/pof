@@ -14,7 +14,9 @@ Ideas: `05f25f33` (XP curve morph), `327e3733` (closed-loop balance), `3f7e7c81`
 Ideas: `0b7d17a0`, `1aa2d0a2`, `1ae5a8f8`, `1d82300f`, `448c5209`, `56f5c3dc`, `5b1db241`, `884b95bd`, `cc0b91ba`, `f88f6bbf`, `eed3b9d2`, `ff6ff0d2`. The loot economy is the biggest enhancement surface. Plan to ship 3-4 ideas per session.
 
 ### Batch 10-B · Bestiary deepening
-Ideas: `1e6353c7` (perception tuner), `375a9f88` (balance baselines), `3bf34f3d` (sensitivity), `3e817d61` (LLM combat director), `40a97970` (archetype guardrails), `42f7d140` (frame data), `7d150641` (describe-a-boss), `7f745e3c` (describe-your-hero), `acca239f` (NL enemy AI), `ce107528` (custom archetype lib). Already has the Phase 7 BestiaryDetailFacet base.
+Ideas: `1e6353c7` (perception tuner), `375a9f88` (balance baselines), `3bf34f3d` (sensitivity), `3e817d61` (LLM combat director), ✅ `40a97970` (archetype guardrails — DONE `ecw-phase-10-B-kickoff`: `lintArchetypeBalance` + BestiaryBalanceFacet), `42f7d140` (frame data), `7d150641` (describe-a-boss), `7f745e3c` (describe-your-hero), `acca239f` (NL enemy AI), `ce107528` (custom archetype lib). Already has the Phase 7 BestiaryDetailFacet base.
+
+**Template established (10-B kickoff):** per-catalog enhancement = pure `src/lib/<domain>/*.ts` function (fully unit-tested) + a facet in `src/components/ecw/facets/<catalog>/*Facet.tsx` that reads needed data from stores, runs the function, renders results, and self-registers via `registerFacet`. Side-effect import added to `EntityInspector.tsx`. Each remaining 10-* idea follows this shape.
 
 ### Batch 10-C · Combat Map deepening
 Ideas: `01131c98` (dramatic tension), `0545ec6c` (combat auto-tuner), `1d6c71ad` (encounter sim), `1d108361` (A/B scenarios), `3d267f25` (difficulty topology), `43c47c8b` (self-balancing encounters), `5f579b32` (NL encounter design), `61e19e05` (combo library), `6bf2f7a3` (bot playtesting), `7b5e0a4a` (pacing curve), `b59a3d1d` (touch/kbd timelines), `c3d28b98` (LLM combo chor), `d098f8dc` (difficulty budget), `e1a395e5` (live PIE feel sync).
