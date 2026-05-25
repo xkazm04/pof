@@ -12,16 +12,19 @@
 @custom-variant density-compact (&:is([data-dzin-density="compact"], [data-dzin-density="compact"] *));
 @custom-variant density-full (&:is([data-dzin-density="full"], [data-dzin-density="full"] *));
 
+/* ECW typography convention (sub-project A): readable content = text-sm/text-xs sans + text-text;
+   font-mono only for IDs/paths/code/keybindings; eyebrow labels stay small + text-text-muted;
+   titles = text-sm font-semibold text-text. Surface ladder: background < surface-deep < surface (cards). */
 :root {
-  --background: #0a0a1a;
-  --surface: #111128;
-  --surface-hover: #1a1a3a;
-  --border: #1e1e3a;
+  --background: #0a0a16;     /* page floor (darkest) */
+  --surface: #1e1e3a;        /* raised cards — clearly above the page */
+  --surface-hover: #2a2a4e;  /* obvious hover */
+  --border: #30305a;         /* visible separators */
   --border-bright: #2e2e5a;
   --text: #e0e4f0;
-  --text-muted: #7d82a8;
+  --text-muted: #9aa0c4;     /* brighter secondary text */
   --text-muted-hover: #8b8fb0;
-  --surface-deep: #0d0d22;
+  --surface-deep: #14142c;   /* insets / wells */
 
   /* Category accents */
   --setup: #00ff88;
