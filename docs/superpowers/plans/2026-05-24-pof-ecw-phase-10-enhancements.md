@@ -13,14 +13,19 @@ Ideas: `05f25f33` (XP curve morph), `327e3733` (closed-loop balance), `3f7e7c81`
 ### Batch 10-L · Loot Tables deepening (largest batch — 12 ideas)
 Ideas: `0b7d17a0`, `1aa2d0a2`, `1ae5a8f8`, `1d82300f`, `448c5209`, `56f5c3dc`, `5b1db241`, `884b95bd`, `cc0b91ba`, `f88f6bbf`, `eed3b9d2`, `ff6ff0d2`. The loot economy is the biggest enhancement surface. Plan to ship 3-4 ideas per session.
 
-### Batch 10-B · Bestiary deepening — IN PROGRESS (6 facets shipped)
-Bestiary entities now have **6 facets**: Detail (P7) · Balance · Threat · AI · Remix · Baseline.
+### Batch 10-B · Bestiary deepening — PER-ENTITY FACETS SATURATED (7 facets shipped)
+Bestiary entities now have **7 facets**: Detail (P7) · Balance · Threat · AI · Remix · Baseline · Encounter.
 - ✅ `40a97970` (archetype guardrails) → `lintArchetypeBalance` + BestiaryBalanceFacet (`ecw-phase-10-B-kickoff`)
 - ✅ `3bf34f3d` (stat-weight/sensitivity flavor) → `threat-score.ts` + ThreatScoreFacet (`ecw-phase-10-B-facets`)
 - ✅ `acca239f` (NL enemy AI — coverage view) → `ai-coverage.ts` + BestiaryAiFacet (`ecw-phase-10-B-facets`)
 - ✅ `7d150641` (describe-a-boss) + `acca239f` (NL authoring) → `remix-prompt.ts` + BestiaryRemixFacet (`ecw-phase-10-B-remix`)
 - ✅ `375a9f88` (balance baselines) → `baseline.ts` (drift calc) + `baseline-db.ts` + `/api/balance-baseline` + `baselineStore` + BestiaryBaselineFacet (`7b5717b`). **First non-pipeline use of the persisted-store template.**
-- ⏳ remaining: `1e6353c7` (perception tuner — needs perception radius data), `42f7d140` (frame data — combat-map data, not bestiary), `3e817d61` (LLM combat director — CLI dispatch, use remix template), `7f745e3c` (describe-your-hero — character catalog), `ce107528` (custom archetype lib — persistence, reuse baseline-db pattern)
+- ✅ `3e817d61` (encounter/combat director) → `encounter-mix.ts` (`suggestEncounterMix` + `buildEncounterPrompt`) + BestiaryEncounterFacet (`db06266`). Pure-fn + CLI-dispatch combined.
+- ❌ `1e6353c7` (perception tuner) — SKIPPED: no perception/aggro/radius data on `ArchetypeConfig`, would be a stub (no-stubs directive).
+- ↪ moved to other catalogs: `42f7d140` (frame data → combat-map), `7f745e3c` (describe-your-hero → character catalog).
+- ⏳ only remaining bestiary-scoped idea: `ce107528` (custom archetype library — catalog-level, persisted-store template). Different surface than per-entity facets (a library panel / save-template flow), so a deliberate scope decision rather than another facet.
+
+**Per-entity facets exploit all of `ArchetypeConfig`'s data** (stats → Balance/Threat/Baseline, btSummary → AI, role/tier+roster → Encounter, NL → Remix). Further bestiary value lives at the catalog level (archetype library) or in other catalogs.
 
 **Three enhancement templates now proven:**
 1. **Pure-function facet** (Balance/Threat/AI): pure `src/lib/<domain>/*.ts` (unit-tested) + facet reads stores/runs fn/renders + `registerFacet` + side-effect import in `EntityInspector.tsx`.
