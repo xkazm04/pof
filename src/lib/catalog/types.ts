@@ -3,6 +3,7 @@ import type { ItemData } from '@/components/modules/core-engine/sub_inventory/_s
 import type { EnemyLootBinding } from '@/components/modules/core-engine/sub_loot/_shared/data-binding';
 import type { ArchetypeConfig } from '@/components/modules/core-engine/sub_bestiary/_shared/data';
 import type { ComboSequence } from '@/components/modules/core-engine/sub_combat/_shared/data-metrics';
+import type { ArenaSliceSpec } from './arena-slice';
 import type { GraphNode } from '@/types/unique-tab-improvements';
 import type { ZoneRecord } from '@/components/modules/core-engine/sub_world/_shared/data';
 import type { MontageEntry } from '@/components/modules/core-engine/sub_animation/_shared/data';
@@ -71,6 +72,16 @@ export interface CombatInteractionEntry extends CatalogEntityBase {
   data: ComboSequence;
 }
 
+/**
+ * Combat Map catalog entity — tactical encounter arena. Shares the `combat-map`
+ * catalog with `CombatInteractionEntry`; the `data.kind === 'arena-slice'`
+ * discriminator tells the two apart (see `arena-slice.ts`).
+ */
+export interface ArenaSliceEntry extends CatalogEntityBase {
+  catalogId: 'combat-map';
+  data: ArenaSliceSpec;
+}
+
 /** Screen Flow catalog entity — one screen node from FLOW_NODES. */
 export interface ScreenEntry extends CatalogEntityBase {
   catalogId: 'screen-flow';
@@ -89,13 +100,46 @@ export interface AnimationEntry extends CatalogEntityBase {
   data: MontageEntry;
 }
 
-/** Materials catalog entity (Phase 8 — substrate only; data lift in Phase 8b). */
+/**
+ * Design spec for a material-instance entity: a parameter set layered over the
+ * shared surface master (`/Game/Materials/M_ARPG_Surface_Master`). The UE Python
+ * builder (`Content/Python/build_weathered_stone.py`) mirrors these values — the
+ * app is the SYNC SOURCE (the `seed_ability_catalog.py` convention). Most fields
+ * are optional so a thin material can omit them; the catalog-pipeline target
+ * "Weathered Stone" populates the full set.
+ */
+export interface MaterialSpec {
+  /** Display name (kept from the Phase-8 substrate shape). */
+  displayName: string;
+  /** Surface-type classification (pipeline step 2). */
+  surfaceType?: 'stone' | 'metal' | 'wood' | 'cloth' | 'glass' | 'organic' | 'fabric';
+  /** Hex swatch for the catalog UI (kept from the Phase-8 substrate shape). */
+  baseColor?: string;
+  /** Master material this instance derives from. */
+  parentMaterial?: string;
+  /** Content path of the generated MaterialInstanceConstant. */
+  instancePath?: string;
+  /** Texture-parameter assignments (pipeline step 5). */
+  textures?: {
+    albedo?: string;
+    normal?: string;
+    roughness?: string;
+    detailNormal?: string;
+  };
+  /** `BaseColorTint` VectorParameter as linear RGB (pipeline step 4). */
+  baseColorTint?: [number, number, number];
+  /** Scalar-parameter overrides (pipeline steps 4 / 8 / 9). */
+  scalars?: {
+    tilingScale?: number;
+    detailTiling?: number;
+    emissiveStrength?: number;
+  };
+}
+
+/** Materials catalog entity — a parameter set over the shared surface master. */
 export interface MaterialCatalogEntry extends CatalogEntityBase {
   catalogId: 'materials';
-  data: {
-    displayName: string;
-    baseColor?: string;
-  };
+  data: MaterialSpec;
 }
 
 /** Audio catalog entity (Phase 8b — substrate only; data lift in Phase 10). */
@@ -117,6 +161,48 @@ export interface AnimationAssetCatalogEntry extends CatalogEntityBase {
     skeleton?: string;
     source?: 'mixamo' | 'authored' | 'imported';
   };
+}
+
+/** NPC role — mirrors UE `EARPGNPCRole` (Dialogue/ARPGNPCActor.h). */
+export type CharacterNPCRole =
+  | 'None' | 'QuestGiver' | 'Merchant' | 'Trainer' | 'Innkeeper' | 'Lorekeeper';
+
+/**
+ * Base attribute stats — mirrors UE `FARPGAttributeInitRow`
+ * (AbilitySystem/ARPGAttributeInitData.h), the row struct of `DT_AttributeDefaults`.
+ * These are the Level-1 base values; per-level scaling is a Curve Table in UE.
+ */
+export interface CharacterAttributeRow {
+  health: number; maxHealth: number; mana: number; maxMana: number;
+  strength: number; dexterity: number; intelligence: number;
+  armor: number; attackPower: number; criticalChance: number; criticalDamage: number;
+  characterLevel: number;
+}
+
+/** Character/NPC design payload — drives the `AARPGNPCActor` + attribute-row artifacts. */
+export interface CharacterData {
+  description: string;
+  /** → `AARPGNPCActor.NPCID` (FName); the TalkTo objective key. */
+  npcId: string;
+  /** → `AARPGNPCActor.NPCRole`. */
+  role: CharacterNPCRole;
+  /** Short archetype/fantasy tag for design grouping. */
+  archetype: string;
+  /** → `AARPGNPCActor.bFacePlayerInDialogue`. */
+  facePlayerInDialogue: boolean;
+  /** Row name to author into `DT_AttributeDefaults` (the shared stat source). */
+  attributeRowName: string;
+  attributes: CharacterAttributeRow;
+  /** Ability names granted; resolved to `spellbook` cross-catalog links at seed time. */
+  abilities: string[];
+  /** Skeletal-mesh + AnimBP targets (reuse the `setup_characters_ue.py` mannequin path). */
+  bodyMesh?: { skeletalMesh: string; animClass: string };
+}
+
+/** Characters catalog entity — a playable/named NPC with presentation + behavior. */
+export interface CharacterEntry extends CatalogEntityBase {
+  catalogId: 'characters';
+  data: CharacterData;
 }
 
 /**

@@ -30,8 +30,10 @@ describe('seedAllCatalogs', () => {
     for (const cid of ['spellbook', 'items', 'loot-tables', 'bestiary', 'combat-map', 'screen-flow', 'zone-map', 'state-graph']) {
       expect(Object.keys(seeded[cid]).length).toBeGreaterThan(0);
     }
-    // The 3 substrate-only catalogs are empty (Phase 8 / 8b).
-    expect(Object.keys(seeded.materials)).toHaveLength(0);
+    // materials lifted in its first catalog-pipeline entity (Weathered Stone);
+    // audio + animation-assets remain substrate-only (Phase 8b).
+    expect(Object.keys(seeded.materials)).toHaveLength(1);
+    expect(seeded.materials['mat-weathered-stone']).toBeDefined();
     expect(Object.keys(seeded.audio)).toHaveLength(0);
     expect(Object.keys(seeded['animation-assets'])).toHaveLength(0);
   });
