@@ -85,6 +85,8 @@ export const UI_TIMEOUTS = {
   pollInterval: 3000,
   /** Short settle time for DB writes before UI refresh. */
   dbSettle: 300,
+  /** Debounce before persisting an edited ability spec to /api/ability-spec. */
+  specSaveDebounce: 600,
   /** Heartbeat interval for long-running tasks. */
   heartbeatInterval: 2 * 60 * 1000,
   /** Interval to check for stuck/stale tasks. */
