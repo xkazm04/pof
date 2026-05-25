@@ -52,11 +52,13 @@ Combat-map had 1 facet (Detail, P7b); now has **5**: Detail · Analysis · Chore
 - **Triaged out (no-stubs / cross-subsystem):** `6bf2f7a3` (bot playtesting — needs a sim runtime), `e1a395e5` (live PIE feel sync — UE telemetry), `1d6c71ad`/`43c47c8b`/`d098f8dc`/`3d267f25` (encounter sim / self-balancing / difficulty budget+topology — cross-catalog encounter-design with bestiary; no combat-map data model — belong to a future encounter-design batch), `1d108361`/`b59a3d1d` (A/B scenarios overlap Baseline; input-timeline needs per-step timing not on ComboSequence).
 - **Verdict: combat-map catalog facet-saturated** for `ComboSequence` data (evaluate→Analysis, author→Choreograph, regression→Baseline, auto-tune→Tuner).
 
-### Batch 10-F · Screen Flow + Zone Map + State Graph deepening
-Combined batch (smaller individually):
-- Screen Flow: `c9dd5463` (branching dialogue), `79afa857` (game master quests)
-- Zone Map: `0b977d4d`, `2a2e30d7`, `2cca4005`, `3d267f25`, `671327ea`, `6ceabe12`, `8fe58af0`, `9a559a37`, `c2d7c71c`, `def6a488`, `ee2fd596`
-- State Graph: `141c2420`, `1d108361`, `381106a5`, `4a0cf97d`, `6ef3584f`, `9c3f9b79`, `dbe71c3d`
+### Batch 10-F · Screen Flow + Zone Map + State Graph — COMPLETE (built to what each catalog's data supports)
+Each catalog got the facets its `data` shape can ground (no-stubs rule):
+- ✅ **Zone Map** (3 facets: Detail · Analysis · Author) — `40b4d8e`. `ZoneRecord` (type/status/levelMin-Max/connections[]) → `zone-analysis.ts` `lintZone` (inverted range, dangling/dead-end connections, level-jump spikes, unreachable — roster-aware) + ZoneAnalysisFacet; `zone-prompt.ts` + ZoneAuthorFacet (`arpg-world`). Covers the connectivity/topology/progression cluster of the 11 zone ideas.
+- ✅ **State Graph** (4 facets: Detail · Analysis · Baseline · Author) — `dacf63a`. `MontageEntry` (totalFrames/fps/memorySizeMB/hasRootMotion/blendInTime) → `montage-analysis.ts` `lintMontage` (same-category memory outlier, missing root motion, long blend-in) + MontageAnalysisFacet; MontageBaselineFacet (memory=score, 4th catalog on shared `EntityBaselinePanel`); `montage-prompt.ts` + MontageAuthorFacet (`arpg-animation`).
+- ✅ **Screen Flow** (2 facets: Detail · Author) — `91026c7`. `GraphNode` is sparse (label/group/pos only) → no numeric analysis/baseline possible; `screen-prompt.ts` + ScreenAuthorFacet (`arpg-ui`) covers branching-dialogue (`c9dd5463`) + game-master-quest (`79afa857`).
+- **Triaged out (cross-subsystem / no per-entity data):** several zone/state ideas are encounter-design / playtime-topology / difficulty (cross-catalog, future encounter-design batch) or need richer per-node data the catalog doesn't carry.
+- **All four core+content catalogs (bestiary/loot/combat/zone/state) now have their designer suites; screen-flow is authoring-only by data.**
 
 ### Batch 10-MC · Mission Control consolidation — ROUND 1 COMPLETE (5 legacy dashboards folded in)
 Mission Control went from 3 cards (Phase 5) to **6**: CatalogRollup · Forecast · **Quality · Coverage · CLI Activity · Next Best Actions** + ActivityFeed. The 5 legacy dashboards' core signals now live in Mission Control (originals still reachable via legacy `/` until the Phase 12 cutover — 10-MC builds the replacement, doesn't delete).
