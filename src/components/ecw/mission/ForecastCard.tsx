@@ -5,6 +5,11 @@ import { TrendingUp, Sparkles } from 'lucide-react';
 import { useCatalogRoster } from '@/components/ecw/catalogs/useCatalogRoster';
 import { computeVelocityForecast } from '@/lib/ecw/forecast';
 
+// Bootstrap anchor captured ONCE at module load — never read wall-clock in
+// render (react-hooks/purity rule; see reference_react_hooks_purity_rule).
+// Replaced by persisted lifecycle history in Phase 10-MC.
+const BOOTSTRAP_HISTORY_AT = Date.now() - 7 * 86_400_000;
+
 /**
  * Mission Control forecast card. Phase 5 shipped this as a placeholder; the
  * Phase 11-OBS batch added `computeVelocityForecast` and this card now
@@ -25,7 +30,7 @@ export function ForecastCard() {
     // Bootstrap: synthesize a 7-day-ago snapshot at half the current verified
     // count. Replaces with persisted history in Phase 10-MC.
     const history = verified > 0
-      ? [{ verified: Math.floor(verified / 2), at: Date.now() - 7 * 86_400_000 }]
+      ? [{ verified: Math.floor(verified / 2), at: BOOTSTRAP_HISTORY_AT }]
       : [];
     return computeVelocityForecast({ verified, total, history });
   }, [roster]);
