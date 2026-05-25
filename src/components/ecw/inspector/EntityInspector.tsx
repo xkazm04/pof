@@ -8,22 +8,30 @@ import { EntityLifecyclePanel } from './EntityLifecyclePanel';
 import { EntityCrossLinksPanel } from './EntityCrossLinksPanel';
 import { EntityFunctionalTestPanel } from './EntityFunctionalTestPanel';
 import { EntityFacetsTabStrip } from './EntityFacetsTabStrip';
+import { EntityPipelinePanel } from '@/components/ecw/pipeline/EntityPipelinePanel';
 // Side-effect imports — register per-catalog custom facets at module load.
 import '@/components/ecw/facets/bestiary/BestiaryDetailFacet';
+import '@/components/ecw/facets/combat-map/CombatMapDetailFacet';
+import '@/components/ecw/facets/screen-flow/ScreenFlowDetailFacet';
+import '@/components/ecw/facets/zone-map/ZoneMapDetailFacet';
+import '@/components/ecw/facets/state-graph/StateGraphDetailFacet';
 
 interface Props {
   entity: StoredCatalogEntity | null;
 }
 
 /**
- * The universal Entity Inspector primitive. Reads any `StoredCatalogEntity`
- * and renders five generic panels (Header · Spec · Lifecycle+UE · CrossLinks ·
- * Functional Test) plus a `Facets` strip slot for per-catalog custom facets
- * (Phase 7).
+ * The universal Entity Inspector primitive. For a selected entity it renders,
+ * top to bottom:
+ *  - EntityHeader (name · breadcrumb · (Re)generate · lifecycle badge)
+ *  - EntityPipelinePanel (the production pipeline — the "is this playable?"
+ *    answer; top panel per ECW addendum 13.2)
+ *  - generic panels: Spec · Lifecycle+UE · CrossLinks · Functional Test
+ *  - EntityFacetsTabStrip (per-catalog custom facets from facetRegistry)
  *
- * Composition only — no store mutations of its own (CrossLinks mutates
- * `ecwStore.selectEntity`, that's it). Wired into the Catalog Hub in Phase 3;
- * (Re)generate wires to CLI Rail in Phase 4.
+ * Composition only. Mutations are scoped to the children (CrossLinks →
+ * ecwStore.selectEntity; pipeline track-state → pipelineStore + /api/pipeline;
+ * (Re)generate → CLI Rail via useGeneration).
  */
 export function EntityInspector({ entity }: Props) {
   if (!entity) return <EmptyInspector />;
@@ -31,6 +39,7 @@ export function EntityInspector({ entity }: Props) {
   return (
     <div className="flex-1 flex flex-col overflow-auto">
       <EntityHeader entity={entity} />
+      <EntityPipelinePanel entity={entity} />
       <EntitySpecPanel data={entity.data} />
       <EntityLifecyclePanel entity={entity} />
       <EntityCrossLinksPanel entity={entity} />
