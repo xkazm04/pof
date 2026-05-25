@@ -138,6 +138,8 @@ export function SpellbookLogicWorkspace({ entity }: TrackWorkspaceProps) {
     void cli.execute(TaskFactory.quickAction('arpg-gas', buildLogicChangePrompt(aspect, ref, instruction), `Logic · ${entity.name}`));
   const draftSpec = () =>
     void cli.execute(TaskFactory.draftAbilitySpec('arpg-gas', { catalogId: entity.catalogId, entityId: entity.id, ref, instruction }, getAppOrigin(), `Draft · ${entity.name}`));
+  const generateCpp = () =>
+    void cli.execute(TaskFactory.generateGasEffects('arpg-gas', { ref, effects: spec.effects, tagRules: spec.tagRules }, getAppOrigin(), `Gen C++ · ${entity.name}`));
 
   const damage = a.damage ?? 0;
   const manaCost = a.manaCost ?? 0;
@@ -181,6 +183,15 @@ export function SpellbookLogicWorkspace({ entity }: TrackWorkspaceProps) {
         </Card>
 
         <Card icon={<Sparkles className="w-4 h-4 text-text-muted" />} title="Effect Mapping" action="Draft with AI" busy={cli.isRunning} onChange={draftSpec}>
+          <div className="flex justify-end">
+            <button
+              onClick={generateCpp}
+              disabled={cli.isRunning || spec.effects.length === 0}
+              className="focus-ring px-2 py-1 rounded text-2xs border border-border/50 text-text hover:bg-surface/40 disabled:opacity-50"
+            >
+              Generate C++
+            </button>
+          </div>
           <EffectTimelineEditor effects={spec.effects} onChange={onEffectsChange} />
         </Card>
 

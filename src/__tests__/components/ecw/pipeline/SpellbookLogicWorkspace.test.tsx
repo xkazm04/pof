@@ -57,6 +57,13 @@ describe('SpellbookLogicWorkspace', () => {
     expect((execute.mock.calls[0][0] as { type: string }).type).toBe('draft-ability-spec');
   });
 
+  it('dispatches a generate-gas-effects task from "Generate C++"', () => {
+    render(<SpellbookLogicWorkspace entity={fireball} trackId="logic" />);
+    fireEvent.click(screen.getByRole('button', { name: /generate c\+\+/i }));
+    expect(execute).toHaveBeenCalledTimes(1);
+    expect((execute.mock.calls[0][0] as { type: string }).type).toBe('generate-gas-effects');
+  });
+
   it('persists an edit via debounced POST /api/ability-spec', async () => {
     vi.useFakeTimers();
     try {
