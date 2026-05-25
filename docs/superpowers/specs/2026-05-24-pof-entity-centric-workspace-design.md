@@ -425,3 +425,59 @@ Refactor is complete when:
 ---
 
 **End of spec. Implementation plans for each of the 12 phases follow under `docs/superpowers/plans/2026-05-24-pof-ecw-phase-{NN}-*.md`.**
+
+---
+
+## 13 · ADDENDUM (2026-05-25) — Shell Switcher + Production Pipeline
+
+Two operator-requested additions folded into the design after the foundation phases landed.
+
+### 13.1 · Shell Switcher in the header (request 1)
+
+Legacy is NOT descoped. Instead of typing `?ecw=1`, both shells get a header toggle:
+- A shared `<ShellSwitcher />` renders a 2-state toggle (Legacy ⇄ New).
+- It reads the current `?ecw` param and, on click, flips it via `history.pushState` + a dispatched `popstate` (which `page.tsx`'s `useSyncExternalStore` already listens to) — swapping the shell with no full reload.
+- Mounted in `EcwTopBar` (new shell) and the legacy `TopBar` (minimal one-line addition, re-read-gated for shared-tree safety).
+- The `?ecw=1` URL gate stays as the underlying mechanism; the switcher is just a visible control over it. Full legacy removal remains Phase 12.
+
+### 13.2 · Production Pipeline per entity (request 2)
+
+**The gap:** the Entity Inspector showed a single linear `lifecycle` (planned→…→verified). But "playable" actually requires multiple **production tracks** completed in parallel — gameplay logic, AI, 2D art, 3D art, animation, audio, VFX, and the functional-test gate. An entity can be `verified` on its core logic yet have no icon, no mesh, no SFX.
+
+**The feature:** clicking a first-level entity surfaces, as the **top panel** of the inspector, a visualized **factory pipeline** — one node per track the entity's catalog needs, each colored by coverage state. Clicking a node opens its detail: current state, what's still needed, and an **"Evaluate with CLI"** action that dispatches Claude (into the CLI Rail) to assess that track and recommend next steps.
+
+**Tracks** (`PipelineTrackId`): `logic · ai · art-2d · art-3d · animation · audio · vfx · test`.
+
+**State** (`TrackState`): `not-started · in-progress · done · blocked`.
+
+**Per-catalog pipeline** (`PIPELINE_BY_CATALOG`) — which tracks each catalog requires:
+| Catalog | Tracks |
+|---|---|
+| spellbook | logic · art-2d · animation · vfx · audio · test |
+| items | logic · art-2d · art-3d · test |
+| loot-tables | logic · test |
+| bestiary | logic · ai · art-3d · animation · audio · test |
+| combat-map | logic · animation · test |
+| screen-flow | logic · art-2d · test |
+| zone-map | logic · art-3d · test |
+| state-graph | animation · test |
+| materials | art-3d · test |
+| audio | audio · test |
+| animation-assets | animation · test |
+| (default) | logic · test |
+
+**Persistence (operator decision: persisted store from the start).** Track state is stored, not just heuristically derived:
+- `src/lib/pipeline/tracks.ts` — track defs + `PIPELINE_BY_CATALOG` + `pipelineForCatalog` (pure).
+- `src/lib/pipeline-db.ts` — `pipeline_tracks` table (catalog_id, entity_id, track_id, state, note, updated_at; PK composite) + `rowToTrack` (pure, tested) + `listTracks`/`upsertTrack`. Mirrors `catalog-db.ts` exactly.
+- `src/app/api/pipeline/route.ts` — GET `?catalogId=&entityId=` → records; POST `{catalogId,entityId,trackId,state,note?}` → upsert. `{success,data}` envelope.
+- `src/stores/pipelineStore.ts` — `tracksByEntity['catalogId/entityId'][trackId] = TrackState`; `loadTracks`, `setTrackState`, `useEntityTracks` selector. Mirrors `catalogStore` lifecycle-merge conventions; transient nothing persisted (DB is source of truth, loaded on entity open).
+
+**UI (top panel):**
+- `src/components/ecw/pipeline/PipelineOverview.tsx` — horizontal track nodes, state-colored, click → select.
+- `src/components/ecw/pipeline/PipelineTrackDetail.tsx` — selected track state + state-setter buttons (→ POST /api/pipeline) + "Evaluate with CLI" button.
+- `src/hooks/useEntityTrackHelp.ts` — wraps `useModuleCLI` + `TaskFactory.quickAction`, dispatches a track-scoped evaluation prompt into the CLI Rail.
+- Wired into `EntityInspector` ABOVE the Header/Spec panels; loads tracks on entity open.
+
+**Deferred to 13b:** CLI auto-writeback of track state via `@@CALLBACK` (Phase 13 keeps "Evaluate with CLI" as a help dispatch; user reads the evaluation and sets the state). Richer per-track asset detection.
+
+This addition directly deepens pain #3 ("see current state of the game") — the pipeline answers *"what's left to make this entity playable?"* at a glance, per entity, with a one-click path to CLI help on any gap.
