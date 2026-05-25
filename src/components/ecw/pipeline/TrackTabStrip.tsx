@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, createElement } from 'react';
 import { Factory } from 'lucide-react';
 import { pipelineForCatalog, trackLabel, type PipelineTrackId } from '@/lib/pipeline/tracks';
 import { useEntityTracks } from '@/stores/pipelineStore';
@@ -39,8 +39,6 @@ export function TrackTabStrip({ entity }: Props) {
     return <div className="px-4 py-3 text-xs text-text-muted/70 italic">No production tracks for this catalog.</div>;
   }
 
-  const Workspace = getTrackWorkspace(entity.catalogId, active);
-
   return (
     <section className="border-b border-border/40">
       <header className="flex items-center gap-2 px-4 pt-3">
@@ -78,7 +76,7 @@ export function TrackTabStrip({ entity }: Props) {
 
       <div role="tabpanel" aria-label={`${trackLabel(active)} track`}>
         <FacetErrorBoundary key={active} facetLabel={trackLabel(active)}>
-          <Workspace entity={entity} trackId={active} />
+          {createElement(getTrackWorkspace(entity.catalogId, active), { entity, trackId: active })}
         </FacetErrorBoundary>
       </div>
     </section>
