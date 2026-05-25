@@ -257,3 +257,19 @@ export function getTopRecommendation(
   const recs = computeNBA(moduleId, featureStatusMap);
   return recs[0] ?? null;
 }
+
+/**
+ * Project-wide Next Best Actions: compute NBA for every sub-module and return
+ * the top `limit` recommendations across the whole project, sorted by score.
+ * Powers Mission Control's critical-path / what-to-do-next card (ECW Phase 10-MC).
+ */
+export function computeProjectNBA(
+  featureStatusMap?: Map<string, string>,
+  limit = 5,
+): NBARecommendation[] {
+  const all: NBARecommendation[] = [];
+  for (const moduleId of Object.keys(SUB_MODULE_MAP) as SubModuleId[]) {
+    all.push(...computeNBA(moduleId, featureStatusMap));
+  }
+  return all.sort((a, b) => b.score - a.score).slice(0, Math.max(0, limit));
+}
