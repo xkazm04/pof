@@ -36,7 +36,7 @@ export function CliRail() {
         {!collapsed && (
           <>
             <span className="text-xs font-mono uppercase tracking-wider text-text-muted">CLI</span>
-            <span className="text-2xs font-mono text-text-muted/70 truncate">· {scope}</span>
+            <span className="text-xs text-text-muted/70 truncate">· {scope}</span>
           </>
         )}
         <button

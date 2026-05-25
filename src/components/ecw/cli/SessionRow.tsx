@@ -45,8 +45,8 @@ export function SessionRow({ session, onSelect }: Props) {
         {status === 'failed' && <XCircle className="w-3.5 h-3.5 text-red-500" />}
         {status === 'idle' && <Circle className="w-3.5 h-3.5 text-text-muted" />}
       </span>
-      <span className="flex-1 truncate font-mono">{session.label}</span>
-      <span className="text-2xs font-mono text-text-muted/70 shrink-0">
+      <span className="flex-1 truncate text-xs text-text">{session.label}</span>
+      <span className="text-2xs text-text-muted/70 shrink-0">
         {shortRelative(session.lastActivityAt)}
       </span>
     </button>
