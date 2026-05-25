@@ -1,5 +1,10 @@
 # Phase 12 · Cutover, cleanup, live UE proof — Plan
 
+> **READ FIRST:** `2026-05-25-pof-ecw-phase-12-readiness.md` (post-Phase-10 readiness audit). It
+> CORRECTS two steps below: **(A) `module-registry` is NOT deletable** (55 consumers incl. nba-engine /
+> useModuleCLI / facets) — keep it; only the sidebar navigation goes. **(B) the 8 `sub_*/_shared/data*`
+> files are catalog-seed sources** — preserve them when deleting module Views.
+
 > **Prerequisite:** Phases 7-11 (all batches) substantially complete OR explicit operator decision to cutover with remaining surfaces deferred. The legacy `/` shell is reachable through Phase 11.
 
 ## Cutover steps
@@ -28,8 +33,9 @@ In order (every step → `npm run validate` clean + git commit):
 1. Remove `src/components/layout/AppShell.tsx` import from `src/app/page.tsx`
 2. Delete `src/components/layout/{AppShell,SidebarL1,SidebarL2,Sidebar,ModuleRenderer,CLIBottomPanel,TopBar,GlobalSearchPanel}.tsx`
 3. Delete `src/components/cli/InlineTerminal.tsx` (replaced by CLI Rail)
-4. Delete `src/stores/navigationStore.ts` (replaced by ecwStore)
-5. Delete or trim `src/lib/module-registry.ts` (37-module roster no longer needed; keep only what catalog substrate consumes)
+4. Delete `src/stores/navigationStore.ts` (replaced by ecwStore — confirmed 0 ECW consumers, 12 legacy consumers all deleted with the Views above)
+5. ~~Delete or trim `src/lib/module-registry.ts`~~ **KEEP `module-registry.ts`** (Constraint A — 55 consumers: nba-engine `SUB_MODULE_MAP`, useModuleCLI, every facet's module ID, batch-review API). Only the sidebars that *render* its roster are removed (step 2 above).
+6. **PRESERVE all `src/components/modules/core-engine/sub_*/_shared/data*.ts`** (Constraint B — these are the catalog seed sources). Delete `*View.tsx` components, keep `_shared/`.
 
 ### Step 4 · Delete the dead modules
 
