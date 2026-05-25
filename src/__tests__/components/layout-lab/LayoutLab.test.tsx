@@ -4,21 +4,14 @@ import { render, screen, fireEvent, cleanup, renderHook } from '@testing-library
 // next/font is a Next compiler transform; stub it for the vitest environment.
 vi.mock('next/font/google', () => {
   const f = () => ({ className: 'font-mock' });
-  return { Oswald: f, IBM_Plex_Mono: f, Inter: f, JetBrains_Mono: f };
+  return { IBM_Plex_Mono: f, Inter: f, JetBrains_Mono: f };
 });
 
 import { LayoutLab } from '@/components/layout-lab/LayoutLab';
-import { useLabCatalogData, useLabDetail } from '@/components/layout-lab/useLabCatalogData';
+import { useLabDetail } from '@/components/layout-lab/useLabCatalogData';
 
-describe('UI identity lab', () => {
+describe('UI identity lab (Blueprint baseline)', () => {
   afterEach(cleanup);
-
-  it('useLabCatalogData groups catalogs by category with counts', () => {
-    const { result } = renderHook(() => useLabCatalogData());
-    const groups = result.current;
-    expect(groups.length).toBeGreaterThan(0);
-    expect(groups.find((g) => g.category === 'Economy / Meta')?.catalogs.some((c) => c.catalogId === 'currencies')).toBe(true);
-  });
 
   it('useLabDetail returns entities + the fine pipeline steps for spellbook', () => {
     const { result } = renderHook(() => useLabDetail('spellbook'));
@@ -27,22 +20,27 @@ describe('UI identity lab', () => {
     expect(result.current?.steps).toContain('UE Ability Asset Packaging');
   });
 
-  it('renders the three tabs (Atelier + Soft removed)', () => {
+  it('renders the Light/Dark theme toggle (Forge/Studio/Atelier/Soft tabs gone)', () => {
     render(<LayoutLab />);
-    for (const t of ['Forge', 'Blueprint', 'Studio']) {
-      expect(screen.getByRole('button', { name: t })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Blueprint' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Studio Dark' })).toBeTruthy();
+    for (const gone of ['Forge', 'Atelier', 'Soft', 'Studio']) {
+      expect(screen.queryByRole('button', { name: gone })).toBeNull();
     }
-    expect(screen.queryByRole('button', { name: 'Atelier' })).toBeNull();
-    expect(screen.queryByRole('button', { name: 'Soft' })).toBeNull();
   });
 
-  it('selecting a catalog opens the detail screen with the pipeline', () => {
+  it('opens on the spellbook detail with the pipeline + header stats', () => {
     render(<LayoutLab />);
-    // default variant = Studio; hub shows catalog cards
-    expect(screen.getByText('Asset Studio')).toBeTruthy();
-    fireEvent.click(screen.getByRole('button', { name: /Spellbook/ }));
-    // detail renders the fine pipeline steps
+    // default catalog = spellbook; pipeline steps render in the sidebar
     expect(screen.getByText('Concept Brief & Fantasy')).toBeTruthy();
-    expect(screen.getAllByText('Pipeline').length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/Pipeline/).length).toBeGreaterThan(0);
+    // header stat strip carries lifecycle (moved title-block)
+    expect(screen.getAllByText('lifecycle').length).toBeGreaterThan(0);
+  });
+
+  it('selecting a pipeline step opens its work canvas in the main content', () => {
+    render(<LayoutLab />);
+    fireEvent.click(screen.getByText('Combat Test Gate'));
+    expect(screen.getByText('Compose')).toBeTruthy();
   });
 });
