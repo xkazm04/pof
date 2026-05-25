@@ -6,6 +6,8 @@
 import { registerTrackWorkspace } from '@/components/ecw/inspector/trackWorkspaceRegistry';
 import { LogicWorkspace } from './LogicWorkspace';
 import { TestWorkspace } from './TestWorkspace';
+import { Leonardo2DWorkspace } from './Leonardo2DWorkspace';
 
 registerTrackWorkspace('*', 'logic', LogicWorkspace);
 registerTrackWorkspace('*', 'test', TestWorkspace);
+registerTrackWorkspace('*', 'art-2d', Leonardo2DWorkspace);
