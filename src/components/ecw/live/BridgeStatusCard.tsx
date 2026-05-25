@@ -32,7 +32,7 @@ export function BridgeStatusCard() {
           aria-label={status}
           title={status}
         />
-        <span className="text-2xs font-mono text-text-muted capitalize">{status}</span>
+        <span className="text-xs text-text-muted capitalize">{status}</span>
       </header>
 
       {info ? (

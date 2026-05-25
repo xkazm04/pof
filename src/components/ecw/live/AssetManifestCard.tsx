@@ -48,7 +48,7 @@ export function AssetManifestCard() {
       <header className="flex items-center gap-2 mb-3">
         <Database className="w-4 h-4 text-text-muted" />
         <h2 className="text-sm font-semibold text-text">Asset Manifest</h2>
-        <span className="ml-auto text-2xs font-mono text-text-muted">
+        <span className="ml-auto text-xs text-text-muted">
           {totalEntities} entities defined
           {pluginInfo && ` · ${pluginInfo.manifestAssetCount.toLocaleString()} assets in UE`}
         </span>

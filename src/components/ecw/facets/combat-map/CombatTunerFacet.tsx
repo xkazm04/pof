@@ -54,10 +54,10 @@ export function CombatTunerFacet({ entity }: Props) {
       <div className="flex items-center gap-2">
         <Target className="w-4 h-4 text-text-muted" />
         <span className="text-xs font-mono uppercase tracking-wider text-text-muted">DPS Tuner</span>
-        <span className="ml-auto text-2xs font-mono text-text-muted">now {proposal.currentDps}</span>
+        <span className="ml-auto text-xs text-text-muted">now {proposal.currentDps}</span>
       </div>
 
-      <label className="flex items-center gap-2 text-2xs font-mono text-text-muted">
+      <label className="flex items-center gap-2 text-xs text-text-muted">
         Target DPS
         <input
           type="number"
@@ -90,7 +90,7 @@ export function CombatTunerFacet({ entity }: Props) {
       )}
 
       {proposal.reachable && (
-        <div className="flex items-center gap-2 text-2xs font-mono text-text-muted/70">
+        <div className="flex items-center gap-2 text-xs text-text-muted/70">
           <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
           <span>Either lever reaches {effectiveTarget} DPS exactly.</span>
         </div>

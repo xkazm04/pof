@@ -33,7 +33,7 @@ export function BestiaryDetailFacet({ entity }: Props) {
         <Skull className="w-4 h-4 text-text-muted" />
         <span className="text-xs font-mono uppercase tracking-wider text-text-muted">{data.role}</span>
         <span className="text-2xs font-mono px-1.5 py-0.5 rounded bg-surface text-text">{data.tier}</span>
-        <span className="text-2xs font-mono text-text-muted">· {data.class}</span>
+        <span className="text-xs text-text-muted">· {data.class}</span>
       </div>
 
       <section>

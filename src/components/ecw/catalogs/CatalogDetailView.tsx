@@ -37,7 +37,7 @@ export function CatalogDetailView({ catalogId }: Props) {
           <span>Catalogs</span>
         </button>
         <h1 className="text-lg font-bold text-text">{label}</h1>
-        <span className="ml-auto text-2xs font-mono text-text-muted">
+        <span className="ml-auto text-xs text-text-muted">
           {entities.length} entities
         </span>
       </header>

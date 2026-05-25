@@ -52,7 +52,7 @@ export function ThreatScoreFacet({ entity }: Props) {
         <span className="ml-auto text-2xl font-bold text-text">{model.score}</span>
       </div>
 
-      <div className="text-2xs font-mono text-text-muted">
+      <div className="text-xs text-text-muted">
         {model.percentile}th percentile across the bestiary roster
       </div>
 

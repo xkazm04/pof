@@ -61,10 +61,10 @@ export function LootBalancerFacet({ entity }: Props) {
       <div className="flex items-center gap-2">
         <Target className="w-4 h-4 text-text-muted" />
         <span className="text-xs font-mono uppercase tracking-wider text-text-muted">Goal-Seek Balancer</span>
-        <span className="ml-auto text-2xs font-mono text-text-muted">now {currentEV}g</span>
+        <span className="ml-auto text-xs text-text-muted">now {currentEV}g</span>
       </div>
 
-      <label className="flex items-center gap-2 text-2xs font-mono text-text-muted">
+      <label className="flex items-center gap-2 text-xs text-text-muted">
         Target gold / kill
         <input
           type="number"

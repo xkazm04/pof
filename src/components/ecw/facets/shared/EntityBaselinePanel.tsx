@@ -128,7 +128,7 @@ export function EntityBaselinePanel({
           </div>
 
           {baseline.capturedAt && (
-            <div className="text-2xs font-mono text-text-muted/50">
+            <div className="text-xs text-text-muted/50">
               Baseline captured {new Date(baseline.capturedAt).toLocaleString()}
             </div>
           )}
@@ -136,7 +136,7 @@ export function EntityBaselinePanel({
           <div className="space-y-1">
             <div className="text-2xs font-mono uppercase tracking-wider text-text-muted/70">{breakdownLabel}</div>
             {statDrift.length === 0 ? (
-              <div className="text-2xs font-mono text-text-muted/60">No changes since baseline.</div>
+              <div className="text-xs text-text-muted/60">No changes since baseline.</div>
             ) : (
               statDrift.map((d) => (
                 <div key={d.label} className="flex items-center gap-2 text-2xs font-mono">

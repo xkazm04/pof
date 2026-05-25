@@ -40,7 +40,7 @@ export class FacetErrorBoundary extends Component<Props, State> {
           <AlertTriangle className="w-3.5 h-3.5 shrink-0 mt-0.5" style={{ color: SEVERITY_TOKENS.critical.color }} aria-hidden="true" />
           <div className="text-text-muted">
             <div className="text-text">This facet failed to render.</div>
-            <div className="text-2xs font-mono text-text-muted/70 mt-0.5">{this.state.error.message}</div>
+            <div className="text-xs text-text-muted/70 mt-0.5">{this.state.error.message}</div>
           </div>
         </div>
       );

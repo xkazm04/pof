@@ -39,7 +39,7 @@ export function ZoneAnalysisFacet({ entity }: Props) {
       <div className="flex items-center gap-2">
         <MapIcon className="w-4 h-4 text-text-muted" />
         <span className="text-xs font-mono uppercase tracking-wider text-text-muted">Zone Analysis</span>
-        <span className="ml-auto text-2xs font-mono text-text-muted">
+        <span className="ml-auto text-xs text-text-muted">
           Lv {model.zone.levelMin}–{model.zone.levelMax} · {model.zone.connections.length} link{model.zone.connections.length === 1 ? '' : 's'}
         </span>
       </div>

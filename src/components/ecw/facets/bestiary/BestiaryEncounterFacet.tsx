@@ -63,7 +63,7 @@ export function BestiaryEncounterFacet({ entity }: Props) {
       <div className="flex items-center gap-2">
         <Swords className="w-4 h-4 text-text-muted" />
         <span className="text-xs font-mono uppercase tracking-wider text-text-muted">Encounter Director</span>
-        <label className="ml-auto flex items-center gap-1.5 text-2xs font-mono text-text-muted">
+        <label className="ml-auto flex items-center gap-1.5 text-xs text-text-muted">
           Size
           <select
             value={size}

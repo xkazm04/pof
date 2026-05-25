@@ -37,7 +37,7 @@ export function BestiaryAiFacet({ entity }: Props) {
       <div className="flex items-center gap-2">
         <Brain className="w-4 h-4 text-text-muted" />
         <span className="text-xs font-mono uppercase tracking-wider text-text-muted">AI Coverage</span>
-        <span className="ml-auto text-2xs font-mono text-text-muted">{coveredCount} / {findings.length} core behaviors</span>
+        <span className="ml-auto text-xs text-text-muted">{coveredCount} / {findings.length} core behaviors</span>
       </div>
 
       <ul className="space-y-1.5">
