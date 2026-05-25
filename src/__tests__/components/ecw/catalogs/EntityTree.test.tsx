@@ -14,15 +14,11 @@ describe('EntityTree', () => {
   beforeEach(() => useEcwStore.setState({ activeCatalogId: 'spellbook', activeEntityId: null }));
   afterEach(cleanup);
 
-  it('groups entities by first categoryPath segment', () => {
+  it('groups entities by categoryPath (nested) + renders names', () => {
     render(<EntityTree catalogId="spellbook" entities={entities} />);
-    // Two groups: Offensive (2 entries) + Support (1 entry)
-    expect(screen.getByText(/Offensive/)).toBeTruthy();
-    expect(screen.getByText(/Support/)).toBeTruthy();
-  });
-
-  it('renders all entity names', () => {
-    render(<EntityTree catalogId="spellbook" entities={entities} />);
+    expect(screen.getByText('Offensive')).toBeTruthy();
+    expect(screen.getByText('Support')).toBeTruthy();
+    expect(screen.getByText('Fire')).toBeTruthy(); // 2nd level
     expect(screen.getByText('Fireball')).toBeTruthy();
     expect(screen.getByText('Frost')).toBeTruthy();
     expect(screen.getByText('Heal')).toBeTruthy();
@@ -30,18 +26,33 @@ describe('EntityTree', () => {
 
   it('clicking an entity selects it in ecwStore', () => {
     render(<EntityTree catalogId="spellbook" entities={entities} />);
-    fireEvent.click(screen.getByRole('button', { name: /Frost/ }));
+    fireEvent.click(screen.getByRole('treeitem', { name: /Frost/ }));
     expect(useEcwStore.getState().activeEntityId).toBe('b');
     expect(useEcwStore.getState().activeCatalogId).toBe('spellbook');
   });
 
-  it('marks the selected entity with aria-current', () => {
+  it('marks the selected entity with aria-selected', () => {
     useEcwStore.setState({ activeCatalogId: 'spellbook', activeEntityId: 'a' });
     render(<EntityTree catalogId="spellbook" entities={entities} />);
-    const fireball = screen.getByRole('button', { name: /Fireball/ });
-    expect(fireball.getAttribute('aria-current')).toBe('true');
-    const frost = screen.getByRole('button', { name: /Frost/ });
-    expect(frost.getAttribute('aria-current')).toBeNull();
+    expect(screen.getByRole('treeitem', { name: /Fireball/ }).getAttribute('aria-selected')).toBe('true');
+    expect(screen.getByRole('treeitem', { name: /Frost/ }).getAttribute('aria-selected')).toBe('false');
+  });
+
+  it('collapsing a top group hides its descendants', () => {
+    render(<EntityTree catalogId="spellbook" entities={entities} />);
+    fireEvent.click(screen.getByText('Offensive'));
+    expect(screen.queryByText('Fire')).toBeNull();
+    expect(screen.queryByText('Fireball')).toBeNull();
+    expect(screen.getByText('Offensive')).toBeTruthy(); // header itself stays
+  });
+
+  it('filter prunes to matching entities + their ancestor groups', () => {
+    render(<EntityTree catalogId="spellbook" entities={entities} />);
+    fireEvent.change(screen.getByPlaceholderText(/filter/i), { target: { value: 'frost' } });
+    expect(screen.getByText('Frost')).toBeTruthy();
+    expect(screen.getByText('Ice')).toBeTruthy();
+    expect(screen.queryByText('Fireball')).toBeNull();
+    expect(screen.queryByText('Support')).toBeNull();
   });
 
   it('shows an empty message when no entities', () => {
