@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { summarizeEntityData } from '@/lib/ecw/entity-summary';
 import { labStepsDone } from './labPipelines';
+import { getStepComponent } from './steps';
 import type { LabTheme } from './theme';
 import type { LabCatalog, LabDetail } from './useLabCatalogData';
 
@@ -107,18 +108,25 @@ export function Baseline({ theme: t, catalogs, detail, onSelectCatalog }: Props)
 
         {/* main content — roomy work canvas */}
         <main style={{ padding: '28px 36px', overflow: 'auto', minHeight: 0 }}>
-          {stepIdx != null && steps[stepIdx] ? (
-            <>
-              <div className={t.fontMono} style={{ fontSize: 12, letterSpacing: '0.14em', color: t.muted, textTransform: 'uppercase' }}>Step {pad2(stepIdx + 1)} / {pad2(steps.length)}{stepIdx < done ? ' · complete' : ''}</div>
-              <h2 style={{ fontSize: 30, fontWeight: 700, color: t.inkDeep, margin: '6px 0 18px' }}>{steps[stepIdx]}</h2>
-              <div style={panel({ borderRadius: t.glass ? 12 : 0, padding: 28, minHeight: 360 })}>
-                <div className={t.fontMono} style={{ fontSize: 12, color: t.muted, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 10 }}>Compose</div>
-                <p style={{ fontSize: 15, color: t.muted, maxWidth: 520, lineHeight: 1.6 }}>
-                  This is the work canvas for <strong style={{ color: t.text }}>{steps[stepIdx]}</strong> on <strong style={{ color: t.text }}>{entity?.name}</strong>. The per-step composition UI (the &ldquo;golden rule&rdquo; example) lands here.
-                </p>
-              </div>
-            </>
-          ) : (
+          {stepIdx != null && steps[stepIdx] ? (() => {
+            const StepComp = detail && entity ? getStepComponent(detail.catalog.catalogId, steps[stepIdx]) : null;
+            return (
+              <>
+                <div className={t.fontMono} style={{ fontSize: 12, letterSpacing: '0.14em', color: t.muted, textTransform: 'uppercase' }}>Step {pad2(stepIdx + 1)} / {pad2(steps.length)}{stepIdx < done ? ' · complete' : ''}</div>
+                <h2 style={{ fontSize: 30, fontWeight: 700, color: t.inkDeep, margin: '6px 0 18px' }}>{steps[stepIdx]}</h2>
+                {StepComp && entity ? (
+                  <StepComp t={t} entity={entity} />
+                ) : (
+                  <div style={panel({ borderRadius: t.glass ? 12 : 0, padding: 28, minHeight: 360 })}>
+                    <div className={t.fontMono} style={{ fontSize: 12, color: t.muted, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 10 }}>Compose</div>
+                    <p style={{ fontSize: 15, color: t.muted, maxWidth: 520, lineHeight: 1.6 }}>
+                      Work canvas for <strong style={{ color: t.text }}>{steps[stepIdx]}</strong> on <strong style={{ color: t.text }}>{entity?.name}</strong>. View / Produce / Acceptance UI for this step is not prototyped yet — see the Items · Concept Brief / Attributes / Economy steps for the pattern.
+                    </p>
+                  </div>
+                )}
+              </>
+            );
+          })() : (
             <div style={{ maxWidth: 620 }}>
               <h2 style={{ fontSize: 28, fontWeight: 700, color: t.inkDeep, margin: '0 0 10px' }}>{entity?.name ?? 'Select an entity'}</h2>
               <p style={{ fontSize: 15, color: t.muted, lineHeight: 1.65 }}>{detail?.catalog.description}</p>

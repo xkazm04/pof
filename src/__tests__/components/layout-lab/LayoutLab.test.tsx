@@ -10,37 +10,42 @@ vi.mock('next/font/google', () => {
 import { LayoutLab } from '@/components/layout-lab/LayoutLab';
 import { useLabDetail } from '@/components/layout-lab/useLabCatalogData';
 
-describe('UI identity lab (Blueprint baseline)', () => {
+describe('UI identity lab (Blueprint baseline · Items example)', () => {
   afterEach(cleanup);
 
-  it('useLabDetail returns entities + the fine pipeline steps for spellbook', () => {
-    const { result } = renderHook(() => useLabDetail('spellbook'));
+  it('useLabDetail exposes the Items example pipeline steps', () => {
+    const { result } = renderHook(() => useLabDetail('items'));
     expect(result.current?.entities.length).toBeGreaterThan(0);
-    expect(result.current?.steps).toContain('Concept Brief & Fantasy');
-    expect(result.current?.steps).toContain('UE Ability Asset Packaging');
+    for (const s of ['Concept Brief', 'Attributes', 'Economy']) expect(result.current?.steps).toContain(s);
   });
 
-  it('renders the Light/Dark theme toggle (Forge/Studio/Atelier/Soft tabs gone)', () => {
+  it('renders the Light/Dark theme toggle', () => {
     render(<LayoutLab />);
     expect(screen.getByRole('button', { name: 'Blueprint' })).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Studio Dark' })).toBeTruthy();
-    for (const gone of ['Forge', 'Atelier', 'Soft', 'Studio']) {
-      expect(screen.queryByRole('button', { name: gone })).toBeNull();
-    }
+    expect(screen.queryByRole('button', { name: 'Forge' })).toBeNull();
   });
 
-  it('opens on the spellbook detail with the pipeline + header stats', () => {
+  it('opens on the Items pipeline with header stats', () => {
     render(<LayoutLab />);
-    // default catalog = spellbook; pipeline steps render in the sidebar
-    expect(screen.getByText('Concept Brief & Fantasy')).toBeTruthy();
-    expect(screen.getAllByText(/Pipeline/).length).toBeGreaterThan(0);
-    // header stat strip carries lifecycle (moved title-block)
-    expect(screen.getAllByText('lifecycle').length).toBeGreaterThan(0);
+    expect(screen.getByText('Attributes')).toBeTruthy(); // a pipeline step in the sidebar
+    expect(screen.getAllByText('lifecycle').length).toBeGreaterThan(0); // moved title-block stat
   });
 
-  it('selecting a pipeline step opens its work canvas in the main content', () => {
+  it('Concept Brief step renders View/Produce/Acceptance with a char-count gate', () => {
     render(<LayoutLab />);
-    fireEvent.click(screen.getByText('Combat Test Gate'));
-    expect(screen.getByText('Compose')).toBeTruthy();
+    fireEvent.click(screen.getByText('Concept Brief'));
+    expect(screen.getByText(/at least 300 characters/)).toBeTruthy();
+    expect(screen.getByText('View')).toBeTruthy();
+    expect(screen.getByText('Produce')).toBeTruthy();
+    expect(screen.getByText(/Generate with CLI/)).toBeTruthy();
+  });
+
+  it('Economy step renders charts + power-score acceptance', () => {
+    render(<LayoutLab />);
+    fireEvent.click(screen.getByText('Economy'));
+    expect(screen.getByText(/Stat budget vs peers/)).toBeTruthy();
+    expect(screen.getByText(/Tune within budget/)).toBeTruthy();
+    expect(screen.getByText(/Power within ±10%/)).toBeTruthy();
   });
 });

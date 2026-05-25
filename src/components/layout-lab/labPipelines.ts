@@ -15,9 +15,9 @@ const FINE_STEPS: Record<string, string[]> = {
     'Localization', 'AI Usage Hints', 'Combat Test Gate', 'UE Ability Asset Packaging',
   ],
   items: [
-    'Concept Brief', 'Data Schema', 'Stat & Rules Logic', 'Economy & Rarity Balancing',
-    'Icon 2D Art', '3D Mesh', 'Material & Texture', 'Pickup / Equip Animation',
-    'VFX', 'SFX', 'Inventory UI', 'Tooltip & Compare', 'Test Gate', 'UE Packaging',
+    'Concept Brief', 'Attributes', 'Economy', 'Icon 2D Art', '3D Generation',
+    'Material / Texture', 'Animations', 'VFX', 'SFX', 'Inventory UI Integration',
+    'Tooltip / Compare', 'Test Gate', 'UE Packaging',
   ],
   bestiary: [
     'Concept Brief & Role', 'Lore & Codex Text', 'Stat Block & Resistances', 'Ability Set',

@@ -16,7 +16,7 @@ export function LayoutLab() {
   const groups = useLabCatalogData();
   const catalogs = useMemo(() => groups.flatMap((g) => g.catalogs), [groups]);
   const [themeId, setThemeId] = useState<'light' | 'dark'>('light');
-  const [catalogId, setCatalogId] = useState('spellbook');
+  const [catalogId, setCatalogId] = useState('items');
   const detail = useLabDetail(catalogId);
   const theme = LAB_THEMES.find((t) => t.id === themeId) ?? LIGHT;
 
