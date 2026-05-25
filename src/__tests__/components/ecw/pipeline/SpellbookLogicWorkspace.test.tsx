@@ -57,11 +57,14 @@ describe('SpellbookLogicWorkspace', () => {
     expect((execute.mock.calls[0][0] as { type: string }).type).toBe('draft-ability-spec');
   });
 
-  it('dispatches a generate-gas-effects task from "Generate C++"', () => {
+  it('dispatches a generate-gas-effects task carrying entity scalars from "Generate C++"', () => {
     render(<SpellbookLogicWorkspace entity={fireball} trackId="logic" />);
     fireEvent.click(screen.getByRole('button', { name: /generate c\+\+/i }));
     expect(execute).toHaveBeenCalledTimes(1);
-    expect((execute.mock.calls[0][0] as { type: string }).type).toBe('generate-gas-effects');
+    const task = execute.mock.calls[0][0] as { type: string; scalars?: { manaCost?: number; cooldown?: number } };
+    expect(task.type).toBe('generate-gas-effects');
+    expect(task.scalars?.manaCost).toBe(20); // fireball fixture manaCost
+    expect(task.scalars?.cooldown).toBe(6);  // fireball fixture cooldown
   });
 
   it('persists an edit via debounced POST /api/ability-spec', async () => {

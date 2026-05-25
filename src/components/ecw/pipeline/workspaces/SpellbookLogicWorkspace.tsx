@@ -139,7 +139,7 @@ export function SpellbookLogicWorkspace({ entity }: TrackWorkspaceProps) {
   const draftSpec = () =>
     void cli.execute(TaskFactory.draftAbilitySpec('arpg-gas', { catalogId: entity.catalogId, entityId: entity.id, ref, instruction }, getAppOrigin(), `Draft · ${entity.name}`));
   const generateCpp = () =>
-    void cli.execute(TaskFactory.generateGasEffects('arpg-gas', { ref, effects: spec.effects, tagRules: spec.tagRules }, getAppOrigin(), `Gen C++ · ${entity.name}`));
+    void cli.execute(TaskFactory.generateGasEffects('arpg-gas', { ref, effects: spec.effects, tagRules: spec.tagRules, scalars: { manaCost: a.manaCost, cooldown: a.cooldown } }, getAppOrigin(), `Gen C++ · ${entity.name}`));
 
   const damage = a.damage ?? 0;
   const manaCost = a.manaCost ?? 0;
