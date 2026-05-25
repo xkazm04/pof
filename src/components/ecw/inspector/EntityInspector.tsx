@@ -8,7 +8,7 @@ import { EntityLifecyclePanel } from './EntityLifecyclePanel';
 import { EntityCrossLinksPanel } from './EntityCrossLinksPanel';
 import { EntityFunctionalTestPanel } from './EntityFunctionalTestPanel';
 import { EntityFacetsTabStrip } from './EntityFacetsTabStrip';
-import { EntityPipelinePanel } from '@/components/ecw/pipeline/EntityPipelinePanel';
+import { TrackTabStrip } from '@/components/ecw/pipeline/TrackTabStrip';
 // Side-effect imports — register per-catalog custom facets at module load.
 import '@/components/ecw/facets/bestiary/BestiaryDetailFacet';
 import '@/components/ecw/facets/bestiary/BestiaryBalanceFacet';
@@ -59,7 +59,7 @@ export function EntityInspector({ entity }: Props) {
   return (
     <div className="flex-1 flex flex-col overflow-auto">
       <EntityHeader entity={entity} />
-      <EntityPipelinePanel entity={entity} />
+      <TrackTabStrip entity={entity} />
       <EntitySpecPanel data={entity.data} />
       <EntityLifecyclePanel entity={entity} />
       <EntityCrossLinksPanel entity={entity} />
