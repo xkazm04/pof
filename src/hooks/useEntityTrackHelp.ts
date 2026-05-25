@@ -9,24 +9,12 @@ import { trackLabel, type PipelineTrackId } from '@/lib/pipeline/tracks';
 import { usePipelineStore } from '@/stores/pipelineStore';
 import type { PipelineTrackRecord } from '@/lib/pipeline/types';
 import type { StoredCatalogEntity } from '@/lib/catalog/types';
-import type { SubModuleId } from '@/types/modules';
+import { catalogModule } from '@/lib/catalog/catalog-module';
 
 export interface UseEntityTrackHelpResult {
   evaluate: (trackId: PipelineTrackId) => void;
   isRunning: boolean;
 }
-
-/** Catalog → owning PoF module for session labelling (matches useGeneration). */
-const CATALOG_MODULE: Record<string, SubModuleId> = {
-  spellbook: 'arpg-gas',
-  items: 'arpg-inventory',
-  'loot-tables': 'arpg-loot',
-  bestiary: 'arpg-enemy-ai',
-  'combat-map': 'arpg-combat',
-  'screen-flow': 'arpg-ui',
-  'zone-map': 'arpg-world',
-  'state-graph': 'arpg-animation',
-};
 
 /**
  * Dispatches a CLI evaluation for one production track of an entity (ECW
@@ -40,7 +28,7 @@ const CATALOG_MODULE: Record<string, SubModuleId> = {
  * CLI Rail filter alongside generation sessions.
  */
 export function useEntityTrackHelp(entity: StoredCatalogEntity): UseEntityTrackHelpResult {
-  const moduleId = CATALOG_MODULE[entity.catalogId] ?? 'arpg-gas';
+  const moduleId = catalogModule(entity.catalogId);
   const loadTracks = usePipelineStore((s) => s.loadTracks);
 
   const cli = useModuleCLI({

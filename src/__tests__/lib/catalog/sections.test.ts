@@ -1,21 +1,22 @@
 import { describe, it, expect } from 'vitest';
 import { CATALOG_SECTIONS, seedAllCatalogs } from '@/lib/catalog/sections';
+import { NEW_CATALOGS } from '@/lib/catalog/new-catalogs';
+
+const BASE_CATALOGS = [
+  'animation-assets', 'audio', 'bestiary', 'combat-map', 'items', 'loot-tables',
+  'materials', 'screen-flow', 'spellbook', 'state-graph', 'zone-map',
+];
 
 describe('CATALOG_SECTIONS', () => {
-  it('registers the 11 catalogs (8 Core Engine + 3 Phase 8/8b substrates)', () => {
-    expect(CATALOG_SECTIONS.map((s) => s.catalogId).sort()).toEqual([
-      'animation-assets',
-      'audio',
-      'bestiary',
-      'combat-map',
-      'items',
-      'loot-tables',
-      'materials',
-      'screen-flow',
-      'spellbook',
-      'state-graph',
-      'zone-map',
-    ]);
+  it('keeps the 11 base catalogs (8 Core Engine + 3 Phase 8/8b substrates)', () => {
+    const ids = new Set(CATALOG_SECTIONS.map((s) => s.catalogId));
+    for (const id of BASE_CATALOGS) expect(ids.has(id)).toBe(true);
+  });
+
+  it('adds the Catalog Pipeline Expansion catalogs (11 base + the new driver)', () => {
+    const ids = new Set(CATALOG_SECTIONS.map((s) => s.catalogId));
+    for (const c of NEW_CATALOGS) expect(ids.has(c.catalogId), c.catalogId).toBe(true);
+    expect(CATALOG_SECTIONS.length).toBe(BASE_CATALOGS.length + NEW_CATALOGS.length);
   });
 });
 

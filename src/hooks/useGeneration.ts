@@ -9,24 +9,12 @@ import { useCatalogStore } from '@/stores/catalogStore';
 import { getAppOrigin } from '@/lib/constants';
 import { apiFetch } from '@/lib/api-utils';
 import { MODULE_COLORS } from '@/lib/chart-colors';
-import type { SubModuleId } from '@/types/modules';
+import { catalogModule } from '@/lib/catalog/catalog-module';
 
 export interface UseGenerationResult {
   generate: (step: GenerationStep) => void;
   isRunning: boolean;
 }
-
-/** Map a catalog id to its owning PoF module (for session labelling + analytics). */
-const CATALOG_MODULE: Record<string, SubModuleId> = {
-  spellbook: 'arpg-gas',
-  items: 'arpg-inventory',
-  'loot-tables': 'arpg-loot',
-  bestiary: 'arpg-enemy-ai',
-  'combat-map': 'arpg-combat',
-  'screen-flow': 'arpg-ui',
-  'zone-map': 'arpg-world',
-  'state-graph': 'arpg-animation',
-};
 
 /**
  * Drives folder-09 generation for one catalog entity: dispatches a recipe step
@@ -39,7 +27,7 @@ const CATALOG_MODULE: Record<string, SubModuleId> = {
  */
 export function useGeneration(entity: StoredCatalogEntity): UseGenerationResult {
   const loadLifecycle = useCatalogStore((s) => s.loadLifecycle);
-  const moduleId = CATALOG_MODULE[entity.catalogId] ?? 'arpg-gas';
+  const moduleId = catalogModule(entity.catalogId);
 
   const cli = useModuleCLI({
     moduleId,

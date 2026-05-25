@@ -6,6 +6,8 @@
  * track ids → icons).
  */
 
+import { NEW_CATALOGS } from '@/lib/catalog/new-catalogs';
+
 export type PipelineTrackId =
   | 'logic'
   | 'ai'
@@ -38,7 +40,8 @@ export const ALL_TRACKS: PipelineTrackDef[] = [
   { id: 'test', label: 'Test Gate', hint: 'Functional test proves it works in-engine.' },
 ];
 
-/** Which production tracks each catalog's entities require, in delivery order. */
+/** Which production tracks each catalog's entities require, in delivery order.
+ *  New catalogs (Catalog Pipeline Expansion) merge in from the NEW_CATALOGS driver. */
 export const PIPELINE_BY_CATALOG: Record<string, PipelineTrackId[]> = {
   spellbook: ['logic', 'art-2d', 'animation', 'vfx', 'audio', 'test'],
   items: ['logic', 'art-2d', 'art-3d', 'test'],
@@ -51,6 +54,7 @@ export const PIPELINE_BY_CATALOG: Record<string, PipelineTrackId[]> = {
   materials: ['art-3d', 'test'],
   audio: ['audio', 'test'],
   'animation-assets': ['animation', 'test'],
+  ...Object.fromEntries(NEW_CATALOGS.map((c) => [c.catalogId, c.tracks])),
 };
 
 const DEFAULT_PIPELINE: PipelineTrackId[] = ['logic', 'test'];
