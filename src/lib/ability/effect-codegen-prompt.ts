@@ -79,5 +79,10 @@ export function buildGenerateAbilityBundlePrompt(
     '9. Write `Source/PoF/AbilitySystem/Effects/Generated/README.md` listing the GE + ability files, the attribute mapping, the tag→ActivationTags wiring, and the TAG DELTA — every granted/rule tag NOT declared in `ARPGGameplayTags.h` (do NOT auto-edit the tags header).',
     '10. Build the PoF module (per the build command above; regenerate project files if new `.cpp` files require it). The headless build/editor exits non-zero on a benign shutdown crash — judge success by the newest `Saved/Logs/PoF*.log`, NOT the exit code.',
     '11. Report: files written, attributes mapped, activation tags wired, and any missing tags.',
+    '',
+    '## Contract — Part D: register in the data-driven catalog',
+    '12. Merge `Source/PoF/AbilitySystem/Effects/Generated/manifest.json` (create with `{ "abilities": [] }` if absent): upsert THIS ability keyed by `name` — `{ "name": "<AbilityName>", "gameplayTag": "<ability tag>", "abilityClass": "/Script/PoF.GA_Gen_<AbilityName>", "effectClasses": ["/Script/PoF.GE_Gen_<AbilityName>_<EffectName>", …] }`. Preserve any other abilities already in the file.',
+    '13. After the build succeeds, run `Content/Python/seed_generated_abilities.py` via the FULL editor headless — `& "<UnrealEditor-Cmd.exe>" "<the .uproject>" -run=pythonscript -script="<abs path to the script>" -unattended -nopause -abslog="<a log path>"`. It reads the manifest and writes `/Game/Abilities/Generated/DT_GeneratedAbilities`. Judge success by the log line `[seed_generated_abilities] Saved … N rows` (ignore a non-zero exit from the benign shutdown crash).',
+    '14. Report the manifest entry written and the row count the seeder saved.',
   ].join('\n');
 }

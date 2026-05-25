@@ -59,6 +59,14 @@ describe('buildGenerateAbilityBundlePrompt', () => {
     expect(p).toContain('README.md');
   });
 
+  it('Part D — instructs the manifest merge + DataTable seeder run', () => {
+    const p = buildGenerateAbilityBundlePrompt(ref, effects, tagRules);
+    expect(p).toContain('manifest.json');
+    expect(p).toContain('/Script/PoF.GA_Gen_'); // soft-class path format in the manifest
+    expect(p).toContain('seed_generated_abilities.py');
+    expect(p).toContain('DT_GeneratedAbilities');
+  });
+
   it('handles an ability with no effects without crashing', () => {
     const p = buildGenerateAbilityBundlePrompt(ref, [], []);
     expect(p).toContain('Fireball');

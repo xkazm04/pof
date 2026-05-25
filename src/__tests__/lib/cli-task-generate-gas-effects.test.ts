@@ -46,4 +46,12 @@ describe('generate-gas-effects task (ECW B3a + B3b bundle)', () => {
     const prompt = buildTaskPrompt(t, ctx);
     expect(prompt).toMatch(/TODO: mana cost/);
   });
+
+  it('the assembled prompt includes the B3c manifest + seeder registration step', () => {
+    const t = TaskFactory.generateGasEffects('arpg-gas', { ref, effects, tagRules }, 'http://localhost:3000', 'Gen');
+    const prompt = buildTaskPrompt(t, ctx);
+    expect(prompt).toContain('manifest.json');
+    expect(prompt).toContain('seed_generated_abilities.py');
+    expect(prompt).toContain('DT_GeneratedAbilities');
+  });
 });
