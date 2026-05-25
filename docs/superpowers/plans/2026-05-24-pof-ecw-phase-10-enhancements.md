@@ -58,8 +58,14 @@ Combined batch (smaller individually):
 - Zone Map: `0b977d4d`, `2a2e30d7`, `2cca4005`, `3d267f25`, `671327ea`, `6ceabe12`, `8fe58af0`, `9a559a37`, `c2d7c71c`, `def6a488`, `ee2fd596`
 - State Graph: `141c2420`, `1d108361`, `381106a5`, `4a0cf97d`, `6ef3584f`, `9c3f9b79`, `dbe71c3d`
 
-### Batch 10-MC · Mission Control consolidation (Phase 9 fold-in execution)
-Each Mission Control panel from the Phase 9 audit lands here. Insights, Quality, Critical Path DAG, Playtests, Roadmap, Build History panels.
+### Batch 10-MC · Mission Control consolidation — ROUND 1 COMPLETE (5 legacy dashboards folded in)
+Mission Control went from 3 cards (Phase 5) to **6**: CatalogRollup · Forecast · **Quality · Coverage · CLI Activity · Next Best Actions** + ActivityFeed. The 5 legacy dashboards' core signals now live in Mission Control (originals still reachable via legacy `/` until the Phase 12 cutover — 10-MC builds the replacement, doesn't delete).
+- ✅ Quality (`f36730a`) → QualityRollupCard reads `/api/feature-matrix/aggregate` via useCRUD; overall reviewed-quality score + weakest modules. Folds **AggregateQualityDashboard / ProjectHealthDashboard / UnifiedSummaryView** (quality half).
+- ✅ Coverage (`f36730a`) → FeatureCoverageCard, same endpoint's status counts; done/partial/missing + lowest-coverage modules. Folds **CrossModuleFeatureDashboard**.
+- ✅ CLI Activity (`346cc2e`) → SessionActivityCard reads `/api/session-analytics?action=dashboard`; total sessions, success rate, most-active modules. Folds **DirectorOverviewPanel / UnifiedSummaryView** (session half).
+- ✅ Next Best Actions (`f7b55f1` engine + `49efec9` card) → added `computeProjectNBA(statusMap, limit)` to nba-engine (aggregates `computeNBA` across all modules); NextBestActionsCard fetches statuses + lists top recommendations. The audit's **Critical Path** panel (the actionable NBA list rather than a raw DAG render).
+- **Pattern:** API-backed card = `useCRUD<T>(endpoint, initial)` + `type`-only DB-type import (keeps better-sqlite3 out of the client bundle) + empty/loading states; test by mocking `@/hooks/useCRUD`.
+- ⏳ later 10-MC rounds: Playtests, Roadmap, Build History panels (need ai-testing-db / game-director-db / build telemetry triage); a richer Critical-Path DAG viz if the list proves insufficient. Legacy dashboard **deletion** is Phase 12 cutover, not here.
 
 ## Sequencing recommendation
 1. Start with 10-MC — extends Mission Control which is highest-traffic.
