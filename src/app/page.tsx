@@ -1,10 +1,25 @@
+'use client';
+
+import { useSyncExternalStore } from 'react';
+import { AppShell } from '@/components/layout/AppShell';
 import { NewAppShell } from '@/components/ecw/NewAppShell';
+import { readShellPref } from '@/lib/ecw/shell-pref';
 
 /**
- * Root page. Renders the Entity-Centric Workspace shell — the sole shell as of
- * the Phase 12 cutover (the legacy AppShell + `?ecw=1` gate were removed). See
- * `docs/superpowers/plans/2026-05-25-pof-ecw-phase-12-readiness.md`.
+ * Root page. ECW is the default shell; the legacy shell is reachable via the
+ * ShellSwitcher (which sets `?legacy=1` + a stored preference). Both shells
+ * coexist while the migration completes. `useSyncExternalStore(popstate)` lets
+ * the switcher swap the shell live, with an SSR snapshot of 'ecw'.
  */
 export default function Home() {
-  return <NewAppShell />;
+  const pref = useSyncExternalStore(
+    (cb) => {
+      window.addEventListener('popstate', cb);
+      return () => window.removeEventListener('popstate', cb);
+    },
+    readShellPref,
+    () => 'ecw' as const,
+  );
+
+  return pref === 'legacy' ? <AppShell /> : <NewAppShell />;
 }
