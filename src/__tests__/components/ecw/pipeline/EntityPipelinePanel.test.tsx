@@ -7,7 +7,7 @@ import type { StoredCatalogEntity } from '@/lib/catalog/types';
 vi.mock('@/hooks/useEntityTrackHelp', () => ({
   useEntityTrackHelp: () => ({ evaluate: vi.fn(), isRunning: false }),
 }));
-const fetchMock = vi.fn(() => Promise.resolve({ ok: true, json: () => Promise.resolve({ success: true, data: [] }) }));
+const fetchMock = vi.fn((..._args: unknown[]) => Promise.resolve({ ok: true, json: () => Promise.resolve({ success: true, data: [] }) }));
 vi.stubGlobal('fetch', fetchMock);
 
 const entity: StoredCatalogEntity = {

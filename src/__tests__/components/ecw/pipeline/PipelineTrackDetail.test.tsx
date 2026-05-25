@@ -10,7 +10,7 @@ vi.mock('@/hooks/useEntityTrackHelp', () => ({
 }));
 
 // Stub fetch so setTrackState's POST doesn't hit the network.
-const fetchMock = vi.fn(() => Promise.resolve({ ok: true, json: () => Promise.resolve({ success: true, data: {} }) }));
+const fetchMock = vi.fn((..._args: unknown[]) => Promise.resolve({ ok: true, json: () => Promise.resolve({ success: true, data: {} }) }));
 vi.stubGlobal('fetch', fetchMock);
 
 const entity: StoredCatalogEntity = {
