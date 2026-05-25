@@ -46,7 +46,7 @@ export function TrackTabStrip({ entity }: Props) {
       <header className="flex items-center gap-2 px-4 pt-3">
         <Factory className="w-4 h-4 text-text-muted" />
         <h3 className="text-xs font-mono uppercase tracking-wider text-text-muted">Production Pipeline</h3>
-        <span className="ml-auto text-2xs font-mono text-text-muted">{doneCount} / {tracks.length} done</span>
+        <span className="ml-auto text-xs text-text-muted">{doneCount} / {tracks.length} done</span>
       </header>
 
       <div role="tablist" aria-label="Production tracks" className="flex items-center gap-1 overflow-x-auto px-3 pt-2 pb-1">

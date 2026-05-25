@@ -23,7 +23,7 @@ export function DefaultTrackWorkspace({ entity, trackId }: Props) {
     <div>
       <PipelineTrackDetail entity={entity} trackId={trackId} />
       {PENDING_TOOLING.has(trackId) && (
-        <p className="px-4 py-3 text-2xs font-mono text-text-muted/70 italic">
+        <p className="px-4 py-3 text-xs text-text-muted/70 italic">
           Generation pipeline pending — author/evaluate via CLI for now; one-click generation lands when the external tooling matures.
         </p>
       )}
