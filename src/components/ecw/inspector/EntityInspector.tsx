@@ -11,6 +11,7 @@ import { EntityFacetsTabStrip } from './EntityFacetsTabStrip';
 import { EntityPipelinePanel } from '@/components/ecw/pipeline/EntityPipelinePanel';
 // Side-effect imports — register per-catalog custom facets at module load.
 import '@/components/ecw/facets/bestiary/BestiaryDetailFacet';
+import '@/components/ecw/facets/bestiary/BestiaryBalanceFacet';
 import '@/components/ecw/facets/combat-map/CombatMapDetailFacet';
 import '@/components/ecw/facets/screen-flow/ScreenFlowDetailFacet';
 import '@/components/ecw/facets/zone-map/ZoneMapDetailFacet';
