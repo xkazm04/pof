@@ -48,4 +48,14 @@ describe('UI identity lab (Blueprint baseline · Items example)', () => {
     expect(screen.getByText(/Tune within budget/)).toBeTruthy();
     expect(screen.getByText(/Power within ±10%/)).toBeTruthy();
   });
+
+  it('the full Items pipeline is prototyped (later steps render their step UI)', () => {
+    render(<LayoutLab />);
+    // a late step has a real V/P/A component, not the placeholder
+    fireEvent.click(screen.getByText('Test Gate'));
+    expect(screen.getByText(/Run functional test/)).toBeTruthy();
+    expect(screen.getByText(/All gate checks pass/)).toBeTruthy();
+    fireEvent.click(screen.getByText('UE Packaging'));
+    expect(screen.getByText('Asset manifest')).toBeTruthy();
+  });
 });
