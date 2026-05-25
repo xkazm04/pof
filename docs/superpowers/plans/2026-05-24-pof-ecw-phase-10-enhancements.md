@@ -10,13 +10,18 @@ Ideas: `058687cb` (C++↔BP roundtrip), `158f9e5e` (auto-balance pipe), `21f15b6
 ### Batch 10-I · Items deepening
 Ideas: `05f25f33` (XP curve morph), `327e3733` (closed-loop balance), `3f7e7c81` (curve library), `5eee9409` (sensitivity sweep), `84abc79e` (faucet/sink tables). Facets in `facets/items/`.
 
-### Batch 10-L · Loot Tables deepening — ROUND 1 SHIPPED (3 facets)
-Loot-tables had **no** custom facets before this; now it has **3**: Economy · Author · Baseline.
+### Batch 10-L · Loot Tables deepening — ROUNDS 1+2 COMPLETE (4 facets; catalog saturated)
+Loot-tables had **no** custom facets before this; now it has **4**: Economy · Author · Baseline · Balancer.
 - ✅ Economy (`690454b` lib + `305a1dd` facet) → `src/lib/loot/economy.ts` (`computeExpectedValue` gold/kill, `rarityBreakdown`, `lintLootEconomy` — weight count/sum, drop-chance range, negative weights, roster-aware EV outlier) + LootEconomyFacet. Pure-function template.
 - ✅ Author (`e384973`) → `loot-author-prompt.ts` (`buildLootPrompt` — reuse UARPGLootTable/FLootEntry, existing item pool, tier-consistent weights) + LootAuthorFacet (NL→CLI via `arpg-loot`). CLI-dispatch template.
 - ✅ Baseline (`3c6f482`) → LootBaselineFacet (EV as score, per-rarity contribution as breakdown) over the **shared** `EntityBaselinePanel` extracted this round. Persisted-store template — reuses baseline-db/api/store; no new infra.
 - Extracted `src/components/ecw/facets/shared/EntityBaselinePanel.tsx` — domain-agnostic persisted-baseline UI (fetch-load + capture + score/breakdown drift). BestiaryBaselineFacet refactored onto it (behaviour unchanged, tests green). The persisted-store template is now a reusable shell, not copy-paste.
-- ⏳ remaining 10-L ideas (round 2+): `0b7d17a0`, `1aa2d0a2`, `1ae5a8f8`, `1d82300f`, `448c5209`, `56f5c3dc`, `5b1db241`, `884b95bd`, `cc0b91ba`, `f88f6bbf`, `eed3b9d2`, `ff6ff0d2` — map to drop-sim / smart-loot / economy-surplus visualisations + further authoring. Triage against real `EnemyLootBinding` data (dropChance, rarityWeights[5], bonusGold) before building, per the no-stubs rule.
+- ✅ **Round 2 — Balancer** (`908d481` solver + `72bb7ef` facet) → `src/lib/loot/auto-balancer.ts` `solveWeightsForTargetEV` (set a target gold/kill; lerp current↔extreme weights, EV linear in α ⇒ closed-form, no search; reports reachability + weight diff) + LootBalancerFacet (target input → diff → CLI apply). **Consolidates 4 ideas: `0b7d17a0`+`1aa2d0a2`+`1d82300f`+`eed3b9d2`** (all "auto-balancer / goal-seek / self-balancing"). Also extracted `asLootBinding` into economy.ts (3 facet copies → 1).
+- **Round-2 triage of the other 8 ideas (no-stubs rule):**
+  - covered by existing facets → `448c5209`, `f88f6bbf`, `cc0b91ba`, `ff6ff0d2` (NL/conversational design = Author + Balancer CLI dispatch); `56f5c3dc` (audit-lint = Economy lint).
+  - **wrong subsystem** (the ItemEconomySimulator `src/lib/economy/*` faucets/sinks/Gini/flowOverrides, NOT the loot-tables catalog's `EnemyLootBinding`) → `1ae5a8f8` (multiverse branch/diff), `884b95bd` (digital twin). These belong to a future "Economy Simulator deepening" batch, not 10-L. `884b95bd` is also a self-described stub (needs live UE telemetry).
+  - **no backing data model** → `5b1db241` (PoE-style player loot-filter; no filter-rule data on EnemyLootBinding — would be inventing a subsystem).
+- **Verdict: loot-tables catalog is facet-saturated** for its `EnemyLootBinding` data (evaluate→Economy, author→Author, regression→Baseline, auto-tune→Balancer). Further loot work = the Economy Simulator subsystem (separate batch).
 
 ### Batch 10-B · Bestiary deepening — PER-ENTITY FACETS SATURATED (7 facets shipped)
 Bestiary entities now have **7 facets**: Detail (P7) · Balance · Threat · AI · Remix · Baseline · Encounter.
