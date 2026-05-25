@@ -52,6 +52,12 @@ describe('buildGenerateAbilityBundlePrompt', () => {
     expect(p).toContain('AbilityManaCost = 15');
   });
 
+  it('pins the primary damage modifier to the canonical damage scalar', () => {
+    const p = buildGenerateAbilityBundlePrompt(ref, effects, tagRules, { damage: 35 });
+    expect(p).toMatch(/canonical damage/i);
+    expect(p).toContain('-35'); // the primary Health modifier must equal -<damage>
+  });
+
   it('Part C — instructs the build + report + tag-delta manifest', () => {
     const p = buildGenerateAbilityBundlePrompt(ref, effects, tagRules);
     expect(p).toMatch(/build/i);

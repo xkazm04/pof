@@ -41,7 +41,7 @@ export function buildGenerateAbilityBundlePrompt(
   ability: AbilityRef,
   effects: EditorEffect[],
   tagRules: TagRule[],
-  scalars?: { manaCost?: number; cooldown?: number },
+  scalars?: { manaCost?: number; cooldown?: number; damage?: number },
 ): string {
   const effectList = effects.length
     ? effects.map(describeEffect).join('\n')
@@ -50,9 +50,16 @@ export function buildGenerateAbilityBundlePrompt(
   const manaNote = scalars?.manaCost != null
     ? `Set \`AbilityManaCost = ${scalars.manaCost}\`.`
     : 'No mana cost provided — leave a `// TODO: mana cost` comment.';
+  // Faithfulness guard: the catalog entity's `damage` is authoritative. Pin the
+  // primary damaging effect to it so the generated asset can't drift from the
+  // entity (e.g. via stale spec edits) — the discrepancy that bit the B3 proof.
+  const damageNote = scalars?.damage != null
+    ? `\nCanonical damage (authoritative, from the catalog entity): **${scalars.damage}**. The primary damaging effect's Health modifier MUST equal \`-${scalars.damage}\`; reconcile any spec drift to this value.`
+    : '';
 
   return [
     `Generate the C++ bundle for the ability "${ability.name}" (gameplay tag ${ability.tag || 'Ability'}, ${ability.category}/${ability.element}/${ability.tier}): its GameplayEffects AND the ability that applies them.`,
+    damageNote,
     '',
     'Effects to generate:',
     effectList,

@@ -61,10 +61,11 @@ describe('SpellbookLogicWorkspace', () => {
     render(<SpellbookLogicWorkspace entity={fireball} trackId="logic" />);
     fireEvent.click(screen.getByRole('button', { name: /generate c\+\+/i }));
     expect(execute).toHaveBeenCalledTimes(1);
-    const task = execute.mock.calls[0][0] as { type: string; scalars?: { manaCost?: number; cooldown?: number } };
+    const task = execute.mock.calls[0][0] as { type: string; scalars?: { manaCost?: number; cooldown?: number; damage?: number } };
     expect(task.type).toBe('generate-gas-effects');
     expect(task.scalars?.manaCost).toBe(20); // fireball fixture manaCost
     expect(task.scalars?.cooldown).toBe(6);  // fireball fixture cooldown
+    expect(task.scalars?.damage).toBe(40);   // fireball fixture damage — the canonical-damage guard
   });
 
   it('persists an edit via debounced POST /api/ability-spec', async () => {
