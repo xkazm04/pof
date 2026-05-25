@@ -22,6 +22,7 @@ import '@/components/ecw/facets/loot/LootAuthorFacet';
 import '@/components/ecw/facets/loot/LootBaselineFacet';
 import '@/components/ecw/facets/loot/LootBalancerFacet';
 import '@/components/ecw/facets/combat-map/CombatMapDetailFacet';
+import '@/components/ecw/facets/combat-map/CombatAnalysisFacet';
 import '@/components/ecw/facets/screen-flow/ScreenFlowDetailFacet';
 import '@/components/ecw/facets/zone-map/ZoneMapDetailFacet';
 import '@/components/ecw/facets/state-graph/StateGraphDetailFacet';
