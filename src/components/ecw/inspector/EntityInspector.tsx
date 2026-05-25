@@ -3,8 +3,6 @@
 import type { StoredCatalogEntity } from '@/lib/catalog/types';
 import { EmptyInspector } from './EmptyInspector';
 import { EntityHeader } from './EntityHeader';
-import { EntityLifecyclePanel } from './EntityLifecyclePanel';
-import { EntityCrossLinksPanel } from './EntityCrossLinksPanel';
 import { TrackTabStrip } from '@/components/ecw/pipeline/TrackTabStrip';
 // Side-effect import — register the specialized track workspaces (Logic absorbs the facets).
 import '@/components/ecw/pipeline/workspaces/register';
@@ -40,13 +38,11 @@ interface Props {
 }
 
 /**
- * The universal Entity Inspector primitive (ECW Part 3). For a selected entity:
- *  - EntityHeader (name · breadcrumb · (Re)generate · lifecycle badge)
- *  - EntityLifecyclePanel + EntityCrossLinksPanel (always-visible: lifecycle/UE
- *    state + cross-entity nav)
- *  - TrackTabStrip (the Production Pipeline as primary tabs; each track tab hosts
- *    its workspace — Logic absorbs Spec + the per-catalog facets, Test hosts the
- *    functional test, 2D hosts Leonardo, others status + CLI).
+ * The universal Entity Inspector primitive (ECW Part 3 + Overview B). For a
+ * selected entity: EntityHeader (name · breadcrumb · (Re)generate · lifecycle
+ * badge) + TrackTabStrip — whose default Overview tab hosts metadata/assets/
+ * cross-links, and whose track tabs host their workspaces (Logic absorbs Spec +
+ * the per-catalog facets, Test the functional test, 2D Leonardo, others status + CLI).
  *
  * Composition only. Mutations are scoped to children (CrossLinks →
  * ecwStore.selectEntity; track-state → pipelineStore + /api/pipeline).
@@ -57,8 +53,6 @@ export function EntityInspector({ entity }: Props) {
   return (
     <div className="flex-1 flex flex-col overflow-auto">
       <EntityHeader entity={entity} />
-      <EntityLifecyclePanel entity={entity} />
-      <EntityCrossLinksPanel entity={entity} />
       <TrackTabStrip entity={entity} />
     </div>
   );

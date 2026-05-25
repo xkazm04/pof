@@ -28,18 +28,18 @@ describe('EntityInspector', () => {
     expect(screen.getByText(/Select an entity from a catalog/i)).toBeTruthy();
   });
 
-  it('renders header + always-visible panels + the Logic track workspace by default', () => {
+  it('renders header + the Overview tab (metadata/assets/cross-links) by default', () => {
     render(<EntityInspector entity={sample} />);
     // Header
     expect(screen.getByRole('heading', { level: 2, name: /Brute/ })).toBeTruthy();
-    // Always-visible: lifecycle + UE assets + cross-links
+    // Entity-views tab strip with Overview selected by default
+    expect(screen.getByRole('tablist', { name: /entity views/i })).toBeTruthy();
+    expect(screen.getByRole('tab', { name: /overview/i }).getAttribute('aria-selected')).toBe('true');
+    // Overview content: lifecycle + UE assets + cross-links + raw spec
     expect(screen.getByText(/Lifecycle/i)).toBeTruthy();
     expect(screen.getByText('/Script/PoF.BP_Brute')).toBeTruthy();
     expect(screen.getByText(/Cross-links/i)).toBeTruthy();
     expect(screen.getByText('loot')).toBeTruthy();
-    // Production Pipeline tab strip
-    expect(screen.getByRole('tablist', { name: /production tracks/i })).toBeTruthy();
-    // Logic is the first/default track → its workspace shows the Spec JSON
     expect(screen.getByText(/"power"/)).toBeTruthy();
   });
 
