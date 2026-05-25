@@ -310,6 +310,8 @@ export interface GenerateGasEffectsTask extends CLITask {
   ref: AbilityRef;
   effects: EditorEffect[];
   tagRules: TagRule[];
+  /** Optional entity scalars (catalog data) — used for AbilityManaCost on the generated ability. */
+  scalars?: { manaCost?: number; cooldown?: number };
   appOrigin: string;
 }
 
@@ -884,7 +886,7 @@ ${buildCallbackSection(getCallback(cbId)!)}`;
     case 'generate-gas-effects': {
       const gt = task as GenerateGasEffectsTask;
       const header = buildProjectContextHeader(ctx, { knownAssetDomains });
-      const body = buildGenerateAbilityBundlePrompt(gt.ref, gt.effects, gt.tagRules);
+      const body = buildGenerateAbilityBundlePrompt(gt.ref, gt.effects, gt.tagRules, gt.scalars);
       return `${header}\n\n## Task\n${body}`;
     }
 
@@ -1129,11 +1131,11 @@ export const TaskFactory = {
     };
   },
 
-  /** Create a generate-gas-effects task (ECW B3a) — Claude writes buildable
-   *  UGameplayEffect C++ from the ability's effects into Effects/Generated/. */
+  /** Create a generate-gas-effects task (ECW B3a/B3b) — Claude writes buildable
+   *  UGameplayEffect C++ + a UGA_Gen_* wiring ability into the additive Generated/ folders. */
   generateGasEffects(
     moduleId: SubModuleId,
-    params: { ref: AbilityRef; effects: EditorEffect[]; tagRules: TagRule[] },
+    params: { ref: AbilityRef; effects: EditorEffect[]; tagRules: TagRule[]; scalars?: { manaCost?: number; cooldown?: number } },
     appOrigin: string,
     label: string,
   ): GenerateGasEffectsTask {
@@ -1145,6 +1147,7 @@ export const TaskFactory = {
       ref: params.ref,
       effects: params.effects,
       tagRules: params.tagRules,
+      scalars: params.scalars,
       appOrigin,
     };
   },

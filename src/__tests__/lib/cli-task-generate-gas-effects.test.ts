@@ -17,23 +17,33 @@ const effects: EditorEffect[] = [{
   id: 'off-fire-01-primary', name: 'Fire Strike', duration: 'instant', durationSec: 0, cooldownSec: 0,
   color: '#f87171', modifiers: [{ attribute: 'Health', operation: 'add', magnitude: -40 }], grantedTags: [],
 }];
-const tagRules: TagRule[] = [];
+const tagRules: TagRule[] = [{ id: 'r1', sourceTag: 'Ability.Fire.Fireball', targetTag: 'State.Dead', type: 'blocks' }];
 
-describe('generate-gas-effects task (ECW B3a)', () => {
-  it('TaskFactory.generateGasEffects builds a typed task', () => {
-    const t = TaskFactory.generateGasEffects('arpg-gas', { ref, effects, tagRules }, 'http://localhost:3000', 'Gen C++ Fireball');
+describe('generate-gas-effects task (ECW B3a + B3b bundle)', () => {
+  it('TaskFactory.generateGasEffects builds a typed task and carries scalars', () => {
+    const t = TaskFactory.generateGasEffects('arpg-gas', { ref, effects, tagRules, scalars: { manaCost: 20, cooldown: 6 } }, 'http://localhost:3000', 'Gen C++ Fireball');
     expect(t.type).toBe('generate-gas-effects');
     expect(t.ref.name).toBe('Fireball');
     expect(t.effects).toHaveLength(1);
+    expect(t.scalars?.manaCost).toBe(20);
     expect(t.appOrigin).toBe('http://localhost:3000');
   });
 
-  it('buildTaskPrompt embeds the authoring contract and is callback-free', () => {
-    const t = TaskFactory.generateGasEffects('arpg-gas', { ref, effects, tagRules }, 'http://localhost:3000', 'Gen');
+  it('buildTaskPrompt embeds the GE + ability bundle contract and is callback-free', () => {
+    const t = TaskFactory.generateGasEffects('arpg-gas', { ref, effects, tagRules, scalars: { manaCost: 20 } }, 'http://localhost:3000', 'Gen');
     const prompt = buildTaskPrompt(t, ctx);
     expect(prompt).toContain('Fireball');
     expect(prompt).toContain('Fire Strike');
-    expect(prompt).toContain('Effects/Generated/');
-    expect(prompt).not.toContain('@@CALLBACK'); // callback-free, like character-setup
+    expect(prompt).toContain('Effects/Generated/');   // Part A
+    expect(prompt).toContain('Abilities/Generated/');  // Part B
+    expect(prompt).toContain('UGA_Gen_');
+    expect(prompt).toContain('AbilityManaCost = 20');  // scalar threaded
+    expect(prompt).not.toContain('@@CALLBACK');        // callback-free
+  });
+
+  it('omits the mana cost when no scalars are supplied', () => {
+    const t = TaskFactory.generateGasEffects('arpg-gas', { ref, effects, tagRules }, 'http://localhost:3000', 'Gen');
+    const prompt = buildTaskPrompt(t, ctx);
+    expect(prompt).toMatch(/TODO: mana cost/);
   });
 });
