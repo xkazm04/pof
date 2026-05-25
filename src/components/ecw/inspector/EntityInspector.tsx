@@ -28,6 +28,8 @@ import '@/components/ecw/facets/combat-map/CombatBaselineFacet';
 import '@/components/ecw/facets/combat-map/CombatTunerFacet';
 import '@/components/ecw/facets/screen-flow/ScreenFlowDetailFacet';
 import '@/components/ecw/facets/zone-map/ZoneMapDetailFacet';
+import '@/components/ecw/facets/zone-map/ZoneAnalysisFacet';
+import '@/components/ecw/facets/zone-map/ZoneAuthorFacet';
 import '@/components/ecw/facets/state-graph/StateGraphDetailFacet';
 
 interface Props {
