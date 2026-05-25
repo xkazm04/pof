@@ -27,10 +27,14 @@ import '@/components/ecw/facets/combat-map/CombatChoreographerFacet';
 import '@/components/ecw/facets/combat-map/CombatBaselineFacet';
 import '@/components/ecw/facets/combat-map/CombatTunerFacet';
 import '@/components/ecw/facets/screen-flow/ScreenFlowDetailFacet';
+import '@/components/ecw/facets/screen-flow/ScreenAuthorFacet';
 import '@/components/ecw/facets/zone-map/ZoneMapDetailFacet';
 import '@/components/ecw/facets/zone-map/ZoneAnalysisFacet';
 import '@/components/ecw/facets/zone-map/ZoneAuthorFacet';
 import '@/components/ecw/facets/state-graph/StateGraphDetailFacet';
+import '@/components/ecw/facets/state-graph/MontageAnalysisFacet';
+import '@/components/ecw/facets/state-graph/MontageBaselineFacet';
+import '@/components/ecw/facets/state-graph/MontageAuthorFacet';
 
 interface Props {
   entity: StoredCatalogEntity | null;
