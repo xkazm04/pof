@@ -67,7 +67,9 @@ Mission Control went from 3 cards (Phase 5) to **6**: CatalogRollup · Forecast 
 - ✅ CLI Activity (`346cc2e`) → SessionActivityCard reads `/api/session-analytics?action=dashboard`; total sessions, success rate, most-active modules. Folds **DirectorOverviewPanel / UnifiedSummaryView** (session half).
 - ✅ Next Best Actions (`f7b55f1` engine + `49efec9` card) → added `computeProjectNBA(statusMap, limit)` to nba-engine (aggregates `computeNBA` across all modules); NextBestActionsCard fetches statuses + lists top recommendations. The audit's **Critical Path** panel (the actionable NBA list rather than a raw DAG render).
 - **Pattern:** API-backed card = `useCRUD<T>(endpoint, initial)` + `type`-only DB-type import (keeps better-sqlite3 out of the client bundle) + empty/loading states; test by mocking `@/hooks/useCRUD`.
-- ⏳ later 10-MC rounds: Playtests, Roadmap, Build History panels (need ai-testing-db / game-director-db / build telemetry triage); a richer Critical-Path DAG viz if the list proves insufficient. Legacy dashboard **deletion** is Phase 12 cutover, not here.
+- ✅ **Round 2** (`b9ea515`): **PlaytestsCard** reads `/api/game-director?action=stats` (sessions/findings/avg score — folds **DirectorOverview / Game Director**). **RoadmapCard** drives the canonical milestone ladder (`lib/roadmap/milestones.ts`, vertical-slice→release) from REAL catalog completion (useCatalogRoster) — folds **EvalRoadmap / CalendarRoadmap** without the legacy health-engine's simulated fallback. Mission Control now: CatalogRollup · Forecast · Quality · Coverage · CLI Activity · Playtests · Roadmap · NextBestActions + ActivityFeed (**8 cards**).
+- ❌ **Build History deferred** — no build/compile telemetry source exists (telemetry-db is genre-evolution snapshots, not build events). Would be a stub; revisit when a build-event source exists. regression-tracker is the nearest real signal for a future "Stability" panel.
+- Legacy dashboard **deletion** is Phase 12 cutover, not here.
 
 ## Sequencing recommendation
 1. Start with 10-MC — extends Mission Control which is highest-traffic.
