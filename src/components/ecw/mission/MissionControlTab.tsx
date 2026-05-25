@@ -3,16 +3,19 @@
 import { CatalogRollupCard } from './CatalogRollupCard';
 import { ActivityFeedCard } from './ActivityFeedCard';
 import { ForecastCard } from './ForecastCard';
+import { QualityRollupCard } from './QualityRollupCard';
+import { FeatureCoverageCard } from './FeatureCoverageCard';
 
 /**
- * Top-level body for the Mission Control L1 tab. Composes:
- * - CatalogRollupCard (left) + ForecastCard (right) at top
- * - ActivityFeedCard full-width below
+ * Top-level body for the Mission Control L1 tab. Consolidates the project-wide
+ * signals that previously lived in five separate legacy dashboards:
+ * - CatalogRollupCard + ForecastCard (Phase 5)
+ * - QualityRollupCard (← AggregateQuality / ProjectHealth / UnifiedSummary)
+ * - FeatureCoverageCard (← CrossModuleFeatureDashboard)
+ * - ActivityFeedCard (full-width)
  *
- * Focused Phase 5 scope. The full 5-dashboard consolidation
- * (UnifiedSummaryView, ProjectHealthDashboard, AggregateQualityDashboard,
- * DirectorOverview, CrossModuleFeatureDashboard) lands incrementally as
- * Phase 10 enhancement work; legacy `/` still reaches them.
+ * Phase 10-MC fold-in (Phase 9 audit execution). Session-analytics + critical-path
+ * panels land in later 10-MC rounds; legacy `/` still reaches the originals.
  */
 export function MissionControlTab() {
   return (
@@ -20,13 +23,15 @@ export function MissionControlTab() {
       <header className="mb-6">
         <h1 className="text-2xl font-bold text-text mb-1">Mission Control</h1>
         <p className="text-sm text-text-muted">
-          Project-wide state at a glance. Full forecaster + critical-path DAG land in Phase 10.
+          Project-wide state at a glance — catalog lifecycle, quality, feature coverage, and recent activity.
         </p>
       </header>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4 max-w-5xl">
         <CatalogRollupCard />
         <ForecastCard />
+        <QualityRollupCard />
+        <FeatureCoverageCard />
       </div>
 
       <div className="max-w-5xl">
