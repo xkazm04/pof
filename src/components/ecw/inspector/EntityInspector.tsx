@@ -25,6 +25,7 @@ import '@/components/ecw/facets/combat-map/CombatMapDetailFacet';
 import '@/components/ecw/facets/combat-map/CombatAnalysisFacet';
 import '@/components/ecw/facets/combat-map/CombatChoreographerFacet';
 import '@/components/ecw/facets/combat-map/CombatBaselineFacet';
+import '@/components/ecw/facets/combat-map/CombatTunerFacet';
 import '@/components/ecw/facets/screen-flow/ScreenFlowDetailFacet';
 import '@/components/ecw/facets/zone-map/ZoneMapDetailFacet';
 import '@/components/ecw/facets/state-graph/StateGraphDetailFacet';
