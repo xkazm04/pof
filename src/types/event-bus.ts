@@ -137,6 +137,14 @@ export interface NavigationEvents {
   };
 }
 
+/** One-shot catalog job events */
+export interface OneShotJobEvents {
+  'oneshot.started':        { jobId: string; jobName: string; totalSteps: number; catalogId: string; entityId: string };
+  'oneshot.step-completed': { jobId: string; stepIndex: number; totalSteps: number; stepName: string; outcome: 'pass' | 'fail' | 'skipped' | 'deferred'; reason?: string };
+  'oneshot.completed':      { jobId: string; jobName: string; totalSteps: number; ran: number; passed: number; failed: number; skipped: number; deferred: number; catalogId: string; entityId: string };
+  'oneshot.failed':         { jobId: string; jobName: string; stepIndex: number; totalSteps: number; error: string };
+}
+
 /** The complete event map — union of all channel groups */
 export interface EventMap
   extends CLIEvents,
@@ -147,7 +155,8 @@ export interface EventMap
     NavigationEvents,
     UE5Events,
     BuildPipelineEvents,
-    PofBridgeEvents {}
+    PofBridgeEvents,
+    OneShotJobEvents {}
 
 /** Any valid channel name */
 export type EventChannel = keyof EventMap;
