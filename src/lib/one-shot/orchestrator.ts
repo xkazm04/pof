@@ -49,6 +49,7 @@ function defaultStepsFor(catalogId: string): OrchestratorStepRef[] {
 export function createOrchestrator(opts: OrchestratorOptions = {}): Orchestrator {
   const fetchImpl = opts.fetchImpl ?? fetch;
   const stepsFor = opts.stepsFor ?? defaultStepsFor;
+  let _cancelled = false;
 
   async function postJson<T>(url: string, body: unknown): Promise<T> {
     const res = await fetchImpl(url, {
@@ -65,6 +66,7 @@ export function createOrchestrator(opts: OrchestratorOptions = {}): Orchestrator
     async start(catalogId: string, userHint?: string) {
       const store = useOneShotJobStore.getState();
       if (!store.canStart()) throw new Error('another one-shot is in flight — cancel it first');
+      _cancelled = false;
       store.reset();
       store.setPhase('analyzing', { catalogId, jobId: mkJobId(), userHint });
       const distribution = await postJson<import('@/lib/catalog/gap-analysis').CatalogDistribution>('/api/one-shot/analyze', { catalogId, userHint });
@@ -94,6 +96,7 @@ export function createOrchestrator(opts: OrchestratorOptions = {}): Orchestrator
     },
 
     async approveAndRun() {
+      _cancelled = false;
       const store = useOneShotJobStore.getState();
       if (!['proposing', 'awaitingRun'].includes(store.phase)) {
         throw new Error('no approvable proposal');
@@ -124,6 +127,7 @@ export function createOrchestrator(opts: OrchestratorOptions = {}): Orchestrator
       });
 
       for (let i = 0; i < steps.length; i++) {
+        if (_cancelled) break;
         const s = steps[i];
         const dec = decide(s.archetype, s.tier, s.view, { autoMode: s.autoMode });
         let outcome: 'pass' | 'fail' | 'skipped' | 'deferred' = 'pass';
@@ -161,6 +165,7 @@ export function createOrchestrator(opts: OrchestratorOptions = {}): Orchestrator
         });
       }
 
+      if (_cancelled) return;
       useOneShotJobStore.getState().markCompleted();
       const sum = useOneShotJobStore.getState().lastSummary!;
       eventBus.emit('oneshot.completed', {
@@ -174,6 +179,7 @@ export function createOrchestrator(opts: OrchestratorOptions = {}): Orchestrator
     },
 
     cancel() {
+      _cancelled = true;
       useOneShotJobStore.getState().setPhase('failed', { failureReason: 'cancelled' });
     },
   };

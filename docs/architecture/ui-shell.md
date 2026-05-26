@@ -250,6 +250,59 @@ every open entity.
 
 ---
 
+## §8 One-Shot Authoring (Autonomous Catalog Row)
+
+The lab's normal authoring flow requires opening an entity, selecting each step in the pipeline timeline, typing a direction, clicking Produce, and reviewing the output — thirteen manual driving cycles for an items row. One-Shot mode compresses this into a single click: it gap-analyses the catalog's existing content, asks the LLM to propose a new entity that fills the most under-represented bucket, and then runs every autonomously-achievable step in sequence. The manual step pipeline still exists and is the right choice when you need to curate a specific concept-gallery selection or drive a 3D mesh step; one-shot is the "skip the per-step manual driving" shortcut.
+
+### Architecture
+
+```
+[+ One-shot button] → createOrchestrator()
+        │
+        ├─ POST /api/one-shot/analyze   → gap analysis (underrepresented buckets)
+        ├─ POST /api/one-shot/propose   → LLM proposal via cli-service
+        │         ↕  (refine loop, max 3 turns)
+        ├─ POST /api/one-shot/refine    → LLM refinement via cli-service
+        │
+        └─ approveAndRun():
+             for each step in the pipeline:
+               ├─ POST /api/one-shot/step  (cli or deterministic mode)
+               ├─ skip-needs-art          (gallery → skip)
+               └─ defer-runtime           (L3/L4 → deferred)
+```
+
+**Stores:**
+- `oneShotJobStore` (`src/stores/oneShotJobStore.ts`) — the state machine: phases `idle → analyzing → proposing → refining → running → completed/failed`, per-step results, summary, refinement turn counter, and the draft entity id.
+- `oneShotLabStore` (`src/stores/oneShotLabStore.ts`) — UI layer: `pendingNavigation` (the `catalogId + entityId` to navigate to after completion) and `panelOpen` (the right-rail panel open/closed flag).
+
+### Skip policy
+
+`src/lib/one-shot/skip-policy.ts` maps each step's `(archetype, tier, view)` triple to an action:
+
+| Step archetype / tier | Action | Outcome |
+|-----------------------|--------|---------|
+| `gallery` (any tier) | skip-needs-art | `skipped` — needs human L1 selection |
+| any archetype, tier `L3` or `L4` | defer-runtime | `deferred` — pending the test-gate runner |
+| `brief`, `graph`, `rules`+prose view | run-cli | POST `/api/one-shot/step` with `mode: 'cli'` |
+| everything else | run-deterministic | POST `/api/one-shot/step` with `mode: 'deterministic'` |
+
+### UI surfaces
+
+- **`+ One-shot` button** — rendered in the `Baseline` header; visible when no job is in flight (`canStart()` true).
+- **`LabJobsChip`** (`src/components/layout-lab/LabJobsChip.tsx`) — header chip showing live phase + step progress during a run; click opens the panel.
+- **`OneShotPanel`** (`src/components/layout-lab/one-shot/OneShotPanel.tsx`) — right-rail slide-over with the proposal form, refinement input, approve/cancel buttons, and the per-step results list after the run.
+- **Completion toast** — fires on `oneshot.completed`; click navigates to the new draft entity in the catalog tree via `pendingNavigation`.
+
+### Failure policy
+
+If a step's `/api/one-shot/step` call returns `outcome: 'fail'` or throws, the orchestrator records a `fail` outcome for that step and **continues** to the next one. The run ends with `phase: 'completed'` regardless of per-step failures; the `lastSummary` breakdown (`passed/failed/skipped/deferred`) reflects all outcomes. This is the locked continue-and-summarize policy — partial failures are surfaced in the panel rather than aborting the run.
+
+### Concurrency
+
+A single `_cancelled` flag per `createOrchestrator()` closure guards the run loop. `cancel()` sets `_cancelled = true` and immediately transitions the store to `phase: 'failed'`. The loop checks the flag at the top of each iteration and at the post-loop completion check, so the next step does not start and `markCompleted` is not called. `canStart()` (store-side) blocks a second orchestrator from starting while any run is in-flight.
+
+---
+
 ## See also
 
 - [Overview](overview.md) — top-level architecture
@@ -258,3 +311,4 @@ every open entity.
 - [L3/L4 live-UE runner](../catalog/L3-L4-RUNNER.md) — what `drainGates` triggers server-side
 - [Runtime patterns](runtime-patterns.md) — `Lifecycle<T>`, `useSuspendableEffect`, LRU suspend,
   event bus
+- [Catalog authoring](../catalog/AUTHORING.md) — manual-authoring recipe + the one-shot alternative path

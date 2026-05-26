@@ -1,5 +1,21 @@
 # Authoring a catalog row pipeline (the chassis recipe)
 
+## Alternative: One-Shot Mode
+
+Instead of opening a new entity row and driving each step manually, click **`+ One-shot`** in the lab header to have an LLM propose an entity that fills the catalog's most under-represented bucket, then run the achievable steps autonomously.
+
+**How it works:** the orchestrator calls `/api/one-shot/analyze` (gap analysis), `/api/one-shot/propose` (LLM proposal via `cli-service`), and — after you approve the proposal — loops over the catalog's registered `StepSpec` pipeline, dispatching each step to `/api/one-shot/step`. You may refine the proposal up to 3 turns before approving; a forceMore checkbox at turn 3 lets you go further if needed.
+
+**Pipeline coverage:** L0 data, L1-selection-only, and L2 deterministic + structured CLI steps run automatically. L1 gallery/3D steps are skipped (need human selection); L3/L4 steps are deferred to the existing test-gate runner.
+
+**Where it lives:** `OneShotPanel` right-rail in `/layout`; state machine in `src/stores/oneShotJobStore.ts`; orchestrator in `src/lib/one-shot/orchestrator.ts`; 5 API routes under `src/app/api/one-shot/`.
+
+**Limits:** single in-flight job (a second `start()` throws while any run is in-flight); max 3 refinement turns by default; failure policy is continue-and-summarize (a failed step does not abort the loop).
+
+**When to use manual authoring instead:** when you need to curate a specific concept-gallery selection (L1 human selection) or run a 3D mesh generation step — neither of which the one-shot mode attempts. Manual authoring also gives you full control over per-step direction text and lets you iterate on individual steps without re-running the whole pipeline.
+
+---
+
 **This is the current execution model for building a catalog row.** A row is a small **`StepSpec[]` spec file** that renders through the shared chassis — not a hand-built pipeline. For the system overview (the chassis, the acceptance ladder, the Canon) see [`index.md`](index.md).
 
 Read alongside (don't duplicate these — they're the source of truth for their topic):
