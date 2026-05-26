@@ -2,6 +2,7 @@
 
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
+import type { CatalogLinkRef } from '@/lib/catalog/acceptance/linkCheckers';
 
 /**
  * Real (persisted) per-step production state for the /layout lab — the data the
@@ -23,7 +24,7 @@ export interface LabStepArtifact {
   error?: string;
 }
 
-export type StepOutput = { data?: Record<string, unknown>; ueAssets?: string[] };
+export type StepOutput = { data?: Record<string, unknown>; ueAssets?: string[]; links?: CatalogLinkRef[] };
 
 interface LabPipelineState {
   /** byEntity[entityId][stepName] → artifact. */
@@ -44,7 +45,8 @@ export const useLabPipelineStore = create<LabPipelineState>()(
       byEntity: {},
 
       produce: (entityId, step, out) => {
-        const artifact: LabStepArtifact = { done: true, data: out?.data ?? {}, ueAssets: out?.ueAssets ?? [], at: new Date().toISOString() };
+        const data = { ...(out?.data ?? {}), ...(out?.links ? { links: out.links } : {}) };
+        const artifact: LabStepArtifact = { done: true, data, ueAssets: out?.ueAssets ?? [], at: new Date().toISOString() };
         set((s) => ({ byEntity: { ...s.byEntity, [entityId]: { ...s.byEntity[entityId], [step]: artifact } } }));
         _labSync?.(entityId, step, artifact);
       },

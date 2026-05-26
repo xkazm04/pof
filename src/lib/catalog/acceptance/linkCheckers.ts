@@ -15,3 +15,9 @@ export function linkTargetsExist(
   if (missing.length === 0) return { label, tier: 'L2', status: 'pass', detail: `${links.length}/${links.length} links resolve` };
   return { label, tier: 'L2', status: 'deferred', detail: `${links.length - missing.length}/${links.length} resolve`, reason: `unresolved: ${missing.map((m) => `${m.catalogId}::${m.entityId}`).join(', ')}` };
 }
+
+/** Read a step's declared links from its persisted data (links are stored at data.links). */
+export function readLinks(data: Record<string, unknown>): CatalogLinkRef[] {
+  const l = (data as { links?: unknown }).links;
+  return Array.isArray(l) ? (l as CatalogLinkRef[]) : [];
+}

@@ -22,15 +22,16 @@ Read alongside (don't duplicate these — they're the source of truth for their 
 ```ts
 { archetype, label, view, produce, accept, /* optional: */ staticChecks }
 ```
-- `archetype` ∈ `brief | schema | rules | balance | gallery | checklist | manifest | custom`. It drives both the generic `ArchetypeStep` View AND which **canon** categories inject (brief→game; schema/rules/balance→project+game; gallery→art+game; checklist/manifest→project).
-- `view` — a `ViewDescriptor` (`prose | table | gallery | checklist | manifest`); see `src/lib/catalog/stepSpec.ts`.
+- `archetype` ∈ `brief | schema | rules | balance | gallery | checklist | manifest | graph | custom`. It drives both the generic `ArchetypeStep` View AND which **canon** categories inject (brief→game; schema/rules/balance→project+game; gallery→art+game; checklist/manifest→project; graph→game+project).
+- `view` — a `ViewDescriptor` (`prose | table | gallery | checklist | manifest | graph` (node/edge)); see `src/lib/catalog/stepSpec.ts`.
 - `produce(entity)` → `{ data, ueAssets? }` — the produced payload. Asset names use UE prefixes (`T_`/`SM_`/`MI_`/`A_`/`NS_`/`GE_`/`DT_`, see canon `proj-naming`). Use `()` not `(e)` when the entity is unused (eslint).
 - `accept` — a **derived** `Checker` from `src/lib/catalog/acceptance/`:
   - **L0 (data):** `minLength`, `fieldsPopulated`, `withinPercent`, `minCount` (`dataCheckers.ts`).
+  - **L0 (graph):** `graphValid(field, label)` (`graphCheckers.ts`) — L0 reachability + terminal check; use for objective graphs, dialog branches, FSMs, screen flow, step sequences.
   - **L1 (human selection):** `selected` (`dataCheckers.ts`) — the gate for art/gallery steps.
   - **L3 (runtime):** `runtimeDeferred('VS<Name>Test', label)` (`deferred.ts`) — for the Test Gate; stays `deferred` until the live-UE runner exists.
 - `staticChecks?: (entity) => UeChecker[]` — **L2** static codebase analysis (`ueStaticCheckers.ts`): `cppSymbolExists('FStruct'|'AClass', label)`, `seedRowPresent('seed_x.py', rowName, label)`. Read-only, parallel-safe. Missing → `deferred`, not fail.
-- **Cross-catalog links:** put them in `produce`'s `data.links: [{ catalogId, entityId, role }]`. `ArchetypeStep` auto-validates them via `linkTargetsExist` and surfaces a banner (unresolved targets → `deferred`, never a hard fail). See bestiary's `Abilities` step.
+- **Cross-catalog links:** may be declared either inline as `data.links: [{ catalogId, entityId, role }]` OR (preferred, typed) as the top-level `links: CatalogLinkRef[]` on the produce return — the store folds top-level `links` into `data.links`. `ArchetypeStep` reads them via `readLinks` and validates with `linkTargetsExist` (unresolved targets → `deferred`, never a hard fail). See bestiary's `Abilities` step or quests' `Rewards` step (typed path).
 
 **3. The universal Icon step.** Every row includes an **Icon 2D Art** step (`archetype: 'gallery'`, `accept: selected(...)`, L1) — even logic rows. Bind its asset to the shared `icon-sets` presentation library conceptually.
 

@@ -27,15 +27,15 @@ describe('quests pipeline', () => {
     const brief = p!.steps.find((s) => s.label === 'Concept Brief')!;
     expect(brief.accept(brief.produce(entity).data ?? {}).status).toBe('pass');
 
-    // Objective Graph: produce → accept → pass
+    // Objective Graph: produce → accept → pass (demo graph is valid + has terminals)
     const graph = p!.steps.find((s) => s.label === 'Objective Graph')!;
     expect(graph.accept(graph.produce(entity).data ?? {}).status).toBe('pass');
 
-    // Rewards: produce contains cross-catalog links and accept → pass
+    // Rewards: produce contains typed top-level links and accept → pass
     const rewards = p!.steps.find((s) => s.label === 'Rewards')!;
     const rewardsOutput = rewards.produce(entity);
-    expect(rewardsOutput.data?.links).toBeDefined();
-    const links = rewardsOutput.data!.links as Array<{ catalogId: string; entityId: string; role: string }>;
+    expect(rewardsOutput.links).toBeDefined();
+    const links = rewardsOutput.links as Array<{ catalogId: string; entityId: string; role: string }>;
     expect(links.some((l) => l.catalogId === 'loot-tables')).toBe(true);
     expect(links.some((l) => l.catalogId === 'currencies')).toBe(true);
     expect(rewards.accept(rewardsOutput.data ?? {}).status).toBe('pass');

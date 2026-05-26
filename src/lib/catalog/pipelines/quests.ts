@@ -1,5 +1,6 @@
 import { registerCatalogPipeline } from '../pipeline-registry';
 import { minLength, fieldsPopulated, selected, minCount } from '../acceptance/dataCheckers';
+import { graphValid } from '../acceptance/graphCheckers';
 import { runtimeDeferred } from '../acceptance/deferred';
 import type { LabEntity } from '@/components/layout-lab/useLabCatalogData';
 
@@ -15,25 +16,19 @@ registerCatalogPipeline({
       accept: minLength('brief', 'Brief ≥ 300 characters', 300),
     },
     {
-      archetype: 'rules', label: 'Objective Graph',
-      view: { kind: 'table', field: 'stages', columns: [{ key: 'count' }, { key: 'branching' }, { key: 'terminal' }] },
-      produce: (e: LabEntity) => ({
-        data: {
-          stages: {
-            count: 4,
-            branching: 'stage-2 forks on player choice (honor / betray)',
-            terminal: 'stage-4: Ember Pact sealed OR pact broken',
-          },
-          stageDefs: [
-            { id: 'stage-1', label: 'Seek the Embers', type: 'explore' },
-            { id: 'stage-2', label: 'The Price of Power', type: 'choice' },
-            { id: 'stage-3', label: 'Ember Trials', type: 'combat' },
-            { id: 'stage-4', label: `${e.name} — Conclusion`, type: 'terminal' },
-          ],
-        },
-        ueAssets: [`/Game/Quests/${slug(e.name)}/DT_QuestStages_${slug(e.name)}`],
-      }),
-      accept: fieldsPopulated('stages', 'Stage count, branching, and terminal defined', ['count', 'branching', 'terminal']),
+      archetype: 'graph', label: 'Objective Graph',
+      view: { kind: 'graph', field: 'graph' },
+      produce: () => ({ data: { graph: {
+        nodes: [
+          { id: 'start', label: 'Accept' },
+          { id: 'gather', label: 'Gather embers' },
+          { id: 'choice', label: 'Choose' },
+          { id: 'done', label: 'Resolve', terminal: true },
+          { id: 'failed', label: 'Failed', terminal: true },
+        ],
+        edges: [ { from: 'start', to: 'gather' }, { from: 'gather', to: 'choice' }, { from: 'choice', to: 'done' }, { from: 'choice', to: 'failed' } ],
+      } } }),
+      accept: graphValid('graph', 'Objective graph is reachable + has a terminal'),
     },
     {
       archetype: 'rules', label: 'Triggers & World-State',
@@ -55,17 +50,13 @@ registerCatalogPipeline({
       view: { kind: 'manifest', field: 'rewards' },
       produce: () => ({
         data: {
-          rewards: [
-            'loot-tables::lt_ember_pact_chest (on completion)',
-            'currencies::currency-gold (500)',
-            'factions::faction-ember-court (+200 rep)',
-          ],
-          links: [
-            { catalogId: 'loot-tables', entityId: 'lt_ember_pact_chest', role: 'completion-loot' },
-            { catalogId: 'currencies', entityId: 'currency-gold', role: 'gold-reward' },
-            { catalogId: 'factions', entityId: 'faction-ember-court', role: 'reputation-grant' },
-          ],
+          rewards: ['loot', 'gold', 'rep'],
         },
+        links: [
+          { catalogId: 'loot-tables', entityId: 'lt_ember_pact_chest', role: 'completion-loot' },
+          { catalogId: 'currencies', entityId: 'currency-gold', role: 'gold-reward' },
+          { catalogId: 'factions', entityId: 'faction-ember-court', role: 'reputation-grant' },
+        ],
         ueAssets: [`/Game/Quests/EmberPact/DA_EmberPact_Rewards`],
       }),
       accept: minCount('rewards', '≥1 reward linked', 1),

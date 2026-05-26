@@ -5,7 +5,7 @@ import type { StepOutput } from '@/components/layout-lab/labPipelineStore';
 
 /** The common archetypes (Hybrid: these use the generic renderer; complex rows may register a bespoke component instead). */
 export type ArchetypeId =
-  | 'brief' | 'schema' | 'balance' | 'gallery' | 'rules' | 'checklist' | 'manifest' | 'custom';
+  | 'brief' | 'schema' | 'balance' | 'gallery' | 'rules' | 'checklist' | 'manifest' | 'graph' | 'custom';
 
 /** Declarative View for the generic ArchetypeStep renderer. */
 export type ViewDescriptor =
@@ -13,7 +13,8 @@ export type ViewDescriptor =
   | { kind: 'table'; field: string; columns: { key: string; unit?: string }[] }
   | { kind: 'gallery'; field: string; candidates: number }
   | { kind: 'checklist'; field: string }
-  | { kind: 'manifest'; field: string };
+  | { kind: 'manifest'; field: string }
+  | { kind: 'graph'; field: string };
 
 export interface StepSpec {
   archetype: ArchetypeId;
