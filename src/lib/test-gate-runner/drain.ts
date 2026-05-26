@@ -39,17 +39,16 @@ export async function drainOne(job: GateJob, executor: GateExecutor): Promise<Dr
 }
 
 /**
- * Drain deferred gates one at a time (the implicit single-resource lease). Each
- * job goes to the first tier-matched, available executor; jobs with no executor,
- * no available executor, or (for L3) no recovered test name are skipped and stay
- * deferred — never failed. `opts.limit` caps the number actually run.
+ * Drain a given set of jobs one at a time (the implicit single-resource lease).
+ * Each job goes to the first tier-matched, available executor; jobs with no
+ * executor, no available executor, or (for L3) no recovered test name are skipped
+ * and stay deferred — never failed. `opts.limit` caps the number actually run.
  */
-export async function drainAll(
+export async function drainJobs(
+  jobs: GateJob[],
   executors: GateExecutor[],
-  filter?: DrainFilter,
   opts?: { limit?: number },
 ): Promise<DrainSummary> {
-  const jobs = collectDeferred(filter);
   const results: DrainResult[] = [];
   let runCount = 0;
 
@@ -88,4 +87,13 @@ export async function drainAll(
     skipped: results.filter((r) => r.skipped).length,
     results,
   };
+}
+
+/** Collect all matching deferred gates, then drain them. The one-shot entry point. */
+export async function drainAll(
+  executors: GateExecutor[],
+  filter?: DrainFilter,
+  opts?: { limit?: number },
+): Promise<DrainSummary> {
+  return drainJobs(collectDeferred(filter), executors, opts);
 }
