@@ -5,6 +5,7 @@ import { useState } from 'react';
 import { useLabCatalogData, useLabDetail } from './useLabCatalogData';
 import { Baseline } from './Baseline';
 import { LAB_THEMES, LIGHT } from './theme';
+import { LabBridgeStrip } from './LabBridgeStrip';
 
 /**
  * UI identity lab (/layout). Consolidated to a single Blueprint baseline with a
@@ -36,6 +37,7 @@ export function LayoutLab() {
             {t.label}
           </button>
         ))}
+        <LabBridgeStrip t={theme} />
       </div>
       <div style={{ flex: 1, minHeight: 0, overflow: 'hidden' }}>
         <Baseline theme={theme} groups={groups} detail={detail} onSelectCatalog={setCatalogId} />
