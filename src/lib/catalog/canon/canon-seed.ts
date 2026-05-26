@@ -18,4 +18,5 @@ export const CANON_SEED: ProjectRule[] = [
   { id: 'proj-balance', category: 'project', scope: 'global', title: 'Balance envelopes', body: 'Tier power target ≈ 100 (±10%). Price/power ratio 0.8–1.2×. Document any intentional outlier.' },
   { id: 'proj-links', category: 'project', scope: 'global', title: 'Cross-catalog links', body: 'bestiary→abilities + loot; loot→items; vendor→items + economy; currency defines caps + sinks. Reference upstream entities via CatalogLink (they may still be deferred).' },
   { id: 'proj-quality', category: 'project', scope: 'global', title: 'Quality bar', body: 'config-complete (the parallel-dev done bar) = every step passes at L0–L2 or is deferred at L3/L4. Brief ≥ 300 chars; all schema fields populated; an icon selected.' },
+  { id: 'proj-economy', category: 'project', scope: 'currency', title: 'Economy laws', body: 'Every currency must define at least one sink; caps prevent runaway inflation; the per-hour faucet and sink should stay balanced within ±15%. Premium and soft currencies never inter-convert freely.' },
 ];
