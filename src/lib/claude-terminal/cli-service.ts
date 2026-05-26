@@ -343,3 +343,128 @@ export function cleanupExecutions(maxAgeMs: number = 3600000): void {
     }
   }
 }
+
+// ── Callback registry ────────────────────────────────────────────────────────
+// Minimal map of executionId → resolver. Resolved when @@CALLBACK JSON is
+// extracted from the execution's text events (done server-side by the routes
+// that need a structured result back from a CLI run).
+
+const globalForCallbacks = globalThis as unknown as {
+  cliCallbackRegistry: Map<string, (payload: unknown) => void> | undefined;
+};
+
+const callbackRegistry =
+  globalForCallbacks.cliCallbackRegistry ?? new Map<string, (payload: unknown) => void>();
+
+if (!globalForCallbacks.cliCallbackRegistry) {
+  globalForCallbacks.cliCallbackRegistry = callbackRegistry;
+}
+
+/** Register a one-shot callback resolver for an execution.  Internal. */
+function registerCallbackResolver(executionId: string, resolve: (payload: unknown) => void): void {
+  callbackRegistry.set(executionId, resolve);
+}
+
+/** Attempt to extract a @@CALLBACK JSON block from a text event. */
+function extractCallbackPayload(text: string): unknown | null {
+  const match = /@@CALLBACK:[^\n]*\n([\s\S]*?)@@END_CALLBACK/.exec(text);
+  if (!match) return null;
+  try {
+    return JSON.parse(match[1].trim());
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Await the @@CALLBACK resolution from a running CLI execution.
+ * Resolves when the execution emits a text event containing a valid
+ * @@CALLBACK...@@END_CALLBACK block, or rejects on timeout / error.
+ */
+export function awaitCallback(
+  executionId: string,
+  opts: { timeoutMs?: number } = {},
+): Promise<unknown> {
+  const timeoutMs = opts.timeoutMs ?? 5 * 60 * 1000;
+
+  return new Promise((resolve, reject) => {
+    const execution = activeExecutions.get(executionId);
+    if (!execution) {
+      reject(new Error(`execution ${executionId} not found`));
+      return;
+    }
+
+    // Check already-collected events first (execution may have finished already).
+    for (const ev of execution.events) {
+      if (ev.type === 'text' && typeof ev.data.content === 'string') {
+        const payload = extractCallbackPayload(ev.data.content);
+        if (payload !== null) { resolve(payload); return; }
+      }
+    }
+    if (execution.status !== 'running') {
+      reject(new Error(`execution ${executionId} ended without a callback`));
+      return;
+    }
+
+    const timer = setTimeout(() => {
+      execution.listeners.delete(listener);
+      reject(new Error(`callback timeout after ${timeoutMs}ms for execution ${executionId}`));
+    }, timeoutMs);
+
+    registerCallbackResolver(executionId, (payload) => {
+      clearTimeout(timer);
+      execution.listeners.delete(listener);
+      resolve(payload);
+    });
+
+    const listener: CLIEventListener = (event) => {
+      if (event.type === 'text' && typeof event.data.content === 'string') {
+        const payload = extractCallbackPayload(event.data.content);
+        if (payload !== null) {
+          const res = callbackRegistry.get(executionId);
+          if (res) { callbackRegistry.delete(executionId); res(payload); }
+        }
+      }
+      if (event.type === 'error') {
+        clearTimeout(timer);
+        execution.listeners.delete(listener);
+        const res = callbackRegistry.get(executionId);
+        if (res) callbackRegistry.delete(executionId);
+        reject(new Error(String(event.data.message ?? 'execution error')));
+      }
+      if (event.type === 'result' && event.data.isError) {
+        clearTimeout(timer);
+        execution.listeners.delete(listener);
+        const res = callbackRegistry.get(executionId);
+        if (res) callbackRegistry.delete(executionId);
+        reject(new Error('CLI execution reported an error result'));
+      }
+    };
+
+    execution.listeners.add(listener);
+  });
+}
+
+/**
+ * Return a snapshot of an execution's current state, or null if not found.
+ * Used by GET /api/one-shot/status/:executionId.
+ */
+export function getExecutionStatus(
+  executionId: string,
+): { state: 'running' | 'completed' | 'failed'; exitCode?: number; lastEvent?: CLIExecutionEvent } | null {
+  const execution = activeExecutions.get(executionId);
+  if (!execution) return null;
+
+  const stateMap: Record<CLIExecution['status'], 'running' | 'completed' | 'failed'> = {
+    running: 'running',
+    completed: 'completed',
+    error: 'failed',
+    aborted: 'failed',
+  };
+
+  const lastEvent = execution.events[execution.events.length - 1];
+  return {
+    state: stateMap[execution.status],
+    lastEvent,
+  };
+}
