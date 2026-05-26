@@ -23,6 +23,12 @@ Run a single test file:
 npx vitest run src/__tests__/stores/moduleStore.test.ts
 ```
 
+## Documentation
+
+Full architecture documentation lives in `docs/README.md` — a whole-app map (`docs/architecture/`: overview, ui-shell, module-system, prompts-and-cli, state-and-persistence, runtime-patterns) plus the catalog-pipeline reference (`docs/catalog/`). Read the relevant doc before changing a subsystem.
+
+**Keep the docs in sync with the code — they mirror the implementation, so treat updating them as part of the change, not an afterthought.** When your work alters architecture (a new or removed subsystem, store, API pattern, event-bus channel, acceptance or pipeline mechanism, or a project convention), update the matching `docs/architecture/*` or `docs/catalog/*` file in the **same** change — and `docs/README.md`'s doc map if you add or remove a doc. Don't land a structural change with stale docs. (The `docs/` summaries below are a quick orientation; the files in `docs/` are the maintained source of truth.)
+
 ## Architecture
 
 ### Module System
