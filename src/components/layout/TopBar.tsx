@@ -14,7 +14,6 @@ import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import { useActivityFeedStore } from '@/stores/activityFeedStore';
 import { MODULE_COLORS } from '@/lib/chart-colors';
 import { usePofBridgeStore } from '@/stores/pofBridgeStore';
-import { ShellSwitcher } from '@/components/ecw/ShellSwitcher';
 
 const dropdownMotion = {
   initial: { opacity: 0, y: -4, scale: 0.98 },
@@ -217,8 +216,6 @@ export function TopBar() {
       <div className="flex items-center gap-3">
         <Gamepad2 className="w-5 h-5" style={{ color: MODULE_COLORS.setup }} aria-hidden="true" />
         <span className="text-sm font-semibold tracking-wide text-text">POF</span>
-        {/* ECW: lets the operator jump to the new entity-centric shell (and back). Legacy stays default until Phase 12. */}
-        <ShellSwitcher />
         {isSetupComplete && projectName && (
           <>
             <span className="text-border-bright" aria-hidden="true">/</span>

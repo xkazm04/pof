@@ -2,14 +2,14 @@
 
 import { useSyncExternalStore } from 'react';
 import { AppShell } from '@/components/layout/AppShell';
-import { NewAppShell } from '@/components/ecw/NewAppShell';
+import { NewHome } from '@/components/layout-lab/NewHome';
 import { readShellPref } from '@/lib/ecw/shell-pref';
 
 /**
- * Root page. ECW is the default shell; the legacy shell is reachable via the
- * ShellSwitcher (which sets `?legacy=1` + a stored preference). Both shells
- * coexist while the migration completes. `useSyncExternalStore(popstate)` lets
- * the switcher swap the shell live, with an SSR snapshot of 'ecw'.
+ * Root page. The New variant is the catalog-pipeline lab (/layout). The legacy
+ * shell is reachable via the "Legacy shell" button in the lab top bar (which sets
+ * a stored preference). `useSyncExternalStore(popstate)` lets the switcher swap
+ * the shell live, with an SSR snapshot of 'ecw'.
  */
 export default function Home() {
   const pref = useSyncExternalStore(
@@ -21,5 +21,5 @@ export default function Home() {
     () => 'ecw' as const,
   );
 
-  return pref === 'legacy' ? <AppShell /> : <NewAppShell />;
+  return pref === 'legacy' ? <AppShell /> : <NewHome />;
 }

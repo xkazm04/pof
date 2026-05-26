@@ -2,7 +2,7 @@ import { describe, it, expect, afterEach, vi } from 'vitest';
 import { render, screen, cleanup } from '@testing-library/react';
 import Home from '@/app/page';
 
-vi.mock('@/components/ecw/NewAppShell', () => ({ NewAppShell: () => <div data-testid="ecw-shell">ecw</div> }));
+vi.mock('@/components/layout-lab/NewHome', () => ({ NewHome: () => <div data-testid="ecw-shell">ecw</div> }));
 vi.mock('@/components/layout/AppShell', () => ({ AppShell: () => <div data-testid="legacy-shell">legacy</div> }));
 
 describe('app/page.tsx shell gate (ECW default)', () => {

@@ -1,11 +1,12 @@
 'use client';
 /* eslint-disable no-restricted-syntax -- identity-lab chrome: neutral monochrome bar, bespoke by design */
 
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { useLabCatalogData, useLabDetail } from './useLabCatalogData';
 import { Baseline } from './Baseline';
 import { LAB_THEMES, LIGHT } from './theme';
 import { LabBridgeStrip } from './LabBridgeStrip';
+import { writeShellPref } from '@/lib/ecw/shell-pref';
 
 /**
  * UI identity lab (/layout). Consolidated to a single Blueprint baseline with a
@@ -19,6 +20,14 @@ export function LayoutLab() {
   const [catalogId, setCatalogId] = useState('items');
   const detail = useLabDetail(catalogId);
   const theme = LAB_THEMES.find((t) => t.id === themeId) ?? LIGHT;
+
+  const switchToLegacy = useCallback(() => {
+    writeShellPref('legacy');
+    const url = new URL(window.location.href);
+    url.searchParams.set('legacy', '1');
+    window.history.pushState({}, '', url);
+    window.dispatchEvent(new PopStateEvent('popstate'));
+  }, []);
 
   return (
     <div style={{ height: '100vh', display: 'flex', flexDirection: 'column', background: '#000' }}>
@@ -37,6 +46,16 @@ export function LayoutLab() {
             {t.label}
           </button>
         ))}
+        <button
+          onClick={switchToLegacy}
+          style={{
+            marginLeft: 'auto', padding: '6px 14px', borderRadius: 6, fontSize: 13,
+            cursor: 'pointer', border: '1px solid #333', background: 'transparent',
+            color: '#aaa', fontWeight: 400,
+          }}
+        >
+          Legacy shell
+        </button>
         <LabBridgeStrip t={theme} />
       </div>
       <div style={{ flex: 1, minHeight: 0, overflow: 'hidden' }}>
