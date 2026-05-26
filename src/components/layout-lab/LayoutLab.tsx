@@ -1,11 +1,13 @@
 'use client';
 /* eslint-disable no-restricted-syntax -- identity-lab chrome: neutral monochrome bar, bespoke by design */
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { useLabCatalogData, useLabDetail } from './useLabCatalogData';
 import { Baseline } from './Baseline';
+import { CanonView } from './CanonView';
 import { LAB_THEMES, LIGHT } from './theme';
 import { LabBridgeStrip } from './LabBridgeStrip';
+import { useCanonStore } from './canonStore';
 import { writeShellPref } from '@/lib/ecw/shell-pref';
 
 /**
@@ -18,8 +20,12 @@ export function LayoutLab() {
   const groups = useLabCatalogData();
   const [themeId, setThemeId] = useState<'light' | 'dark'>('light');
   const [catalogId, setCatalogId] = useState('items');
+  const [view, setView] = useState<'catalogs' | 'canon'>('catalogs');
   const detail = useLabDetail(catalogId);
   const theme = LAB_THEMES.find((t) => t.id === themeId) ?? LIGHT;
+  const hydrate = useCanonStore((s) => s.hydrate);
+
+  useEffect(() => { hydrate(); }, [hydrate]);
 
   const switchToLegacy = useCallback(() => {
     writeShellPref('legacy');
@@ -33,6 +39,26 @@ export function LayoutLab() {
     <div style={{ height: '100vh', display: 'flex', flexDirection: 'column', background: '#000' }}>
       <div style={{ flex: '0 0 auto', display: 'flex', alignItems: 'center', gap: 6, padding: '10px 16px', background: '#0c0c0c', borderBottom: '1px solid #262626' }}>
         <span style={{ color: '#777', fontSize: 12, marginRight: 12, fontFamily: 'ui-monospace, monospace' }}>/layout · Blueprint baseline</span>
+        <button
+          onClick={() => setView('catalogs')}
+          style={{
+            padding: '6px 14px', borderRadius: 6, fontSize: 13, cursor: 'pointer', border: '1px solid #333',
+            background: view === 'catalogs' ? '#fff' : 'transparent', color: view === 'catalogs' ? '#000' : '#aaa',
+            fontWeight: view === 'catalogs' ? 600 : 400,
+          }}
+        >
+          Catalogs
+        </button>
+        <button
+          onClick={() => setView('canon')}
+          style={{
+            padding: '6px 14px', borderRadius: 6, fontSize: 13, cursor: 'pointer', border: '1px solid #333',
+            background: view === 'canon' ? '#fff' : 'transparent', color: view === 'canon' ? '#000' : '#aaa',
+            fontWeight: view === 'canon' ? 600 : 400,
+          }}
+        >
+          Canon
+        </button>
         {LAB_THEMES.map((t) => (
           <button
             key={t.id}
@@ -58,8 +84,11 @@ export function LayoutLab() {
         </button>
         <LabBridgeStrip t={theme} />
       </div>
-      <div style={{ flex: 1, minHeight: 0, overflow: 'hidden' }}>
-        <Baseline theme={theme} groups={groups} detail={detail} onSelectCatalog={setCatalogId} />
+      <div style={{ flex: 1, minHeight: 0, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+        {view === 'canon'
+          ? <CanonView t={theme} />
+          : <Baseline theme={theme} groups={groups} detail={detail} onSelectCatalog={setCatalogId} />
+        }
       </div>
     </div>
   );

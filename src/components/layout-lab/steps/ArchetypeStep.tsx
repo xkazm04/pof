@@ -3,9 +3,22 @@
 import { StepFrame } from './StepFrame';
 import { CliProduce } from './shared/CliProduce';
 import { useLabStep, useLabPipelineStore } from '../labPipelineStore';
+import { useCanonStore } from '../canonStore';
+import { canonContextFor } from '@/lib/catalog/canon/canonContext';
 import type { LabTheme } from '../theme';
 import type { LabEntity } from '../useLabCatalogData';
 import type { StepSpec, ViewDescriptor } from '@/lib/catalog/stepSpec';
+import type { RuleCategory } from '@/lib/catalog/canon/types';
+
+const ARCHETYPE_CANON: Record<string, RuleCategory[]> = {
+  brief: ['game'],
+  schema: ['project', 'game'],
+  rules: ['project', 'game'],
+  balance: ['project', 'game'],
+  gallery: ['art', 'game'],
+  checklist: ['project'],
+  manifest: ['project'],
+};
 
 function ViewPanel({ t, view, data }: { t: LabTheme; view: ViewDescriptor; data: Record<string, unknown> }) {
   if (view.kind === 'prose') {
@@ -38,9 +51,10 @@ function ViewPanel({ t, view, data }: { t: LabTheme; view: ViewDescriptor; data:
 }
 
 /** Hybrid generic renderer: drives any common-archetype StepSpec from persisted artifacts. */
-export function ArchetypeStep({ t, entity, step, spec }: { t: LabTheme; entity: LabEntity; step: string; spec: StepSpec }) {
+export function ArchetypeStep({ t, entity, step, spec, catalogId }: { t: LabTheme; entity: LabEntity; step: string; spec: StepSpec; catalogId?: string }) {
   const art = useLabStep(entity.id, step);
   const produce = useLabPipelineStore((s) => s.produce);
+  const canonRules = useCanonStore((s) => s.rules);
   const data = art?.data ?? {};
   return (
     <StepFrame t={t} acceptance={spec.accept(data)}
@@ -49,7 +63,10 @@ export function ArchetypeStep({ t, entity, step, spec }: { t: LabTheme; entity: 
         { label: 'Produce', node: (
           <CliProduce t={t} label={`Generate ${spec.label} (CLI)`} rows={3}
             defaultDirection={spec.defaultDirection} note={spec.produceNote}
-            buildPrompt={(dir) => `Produce ${spec.label} for ${entity.name}. ${dir}`}
+            buildPrompt={(dir) => {
+              const canon = canonContextFor(canonRules, catalogId, ARCHETYPE_CANON[spec.archetype]);
+              return [canon, `Produce ${spec.label} for ${entity.name}. ${dir}`].filter(Boolean).join('\n\n');
+            }}
             onComplete={() => produce(entity.id, step, spec.produce(entity))} />
         ) },
       ]}

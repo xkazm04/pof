@@ -193,7 +193,7 @@ export function Baseline({ theme: t, groups, detail, onSelectCatalog }: Props) {
                 {Bespoke && entity ? (
                   <Bespoke key={`${entity.id}:${stepName}`} t={t} entity={entity} step={stepName} />
                 ) : spec && entity ? (
-                  <ArchetypeStep key={`${entity.id}:${stepName}`} t={t} entity={entity} step={stepName} spec={spec} />
+                  <ArchetypeStep key={`${entity.id}:${stepName}`} t={t} entity={entity} step={stepName} spec={spec} catalogId={detail?.catalog.catalogId} />
                 ) : (
                   <div style={panel({ borderRadius: t.glass ? 12 : 0, padding: 28, minHeight: 360 })}>
                     <div className={t.fontMono} style={{ fontSize: 14, color: t.muted, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 10 }}>Compose</div>
