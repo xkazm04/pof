@@ -11,7 +11,7 @@ import { useLabPipelineStore, useEntitySteps, setLabSync } from './labPipelineSt
 import { getCatalogPipeline } from '@/lib/catalog/pipeline-registry';
 import { fetchArtifacts, postArtifact } from './labArtifactClient';
 import { resolveAccept } from './labAcceptance';
-import { summarizeEntity } from '@/lib/catalog/rollup';
+import { PipelineRollup } from './PipelineRollup';
 import { CatalogTree } from './CatalogTree';
 import type { LabTheme } from './theme';
 import type { LabDetail, LabGroup } from './useLabCatalogData';
@@ -90,8 +90,6 @@ export function Baseline({ theme: t, groups, detail, onSelectCatalog }: Props) {
         return { catalogId, entityId: entity?.id ?? '', step: s, data: art.data, ueAssets: art.ueAssets, status: res?.status ?? 'pass', ...(res?.tier ? { tier: res.tier } : {}) };
       })
     : [];
-  const rollup = summarizeEntity(artifacts, steps.length);
-
   const panel = (extra?: React.CSSProperties): React.CSSProperties => ({
     background: t.panel, border: `1px solid ${t.line}`, ...(t.glass ? { backdropFilter: 'blur(12px)' } : {}), ...extra,
   });
@@ -148,12 +146,7 @@ export function Baseline({ theme: t, groups, detail, onSelectCatalog }: Props) {
 
         {/* pipeline column (right of the tree) */}
         <aside style={{ borderRight: `1px solid ${t.line}`, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
-          <div className={t.fontMono} style={{ fontSize: 14, letterSpacing: '0.12em', textTransform: 'uppercase', color: t.ink, padding: '14px 18px 8px' }}>
-            Pipeline · {done}/{steps.length}
-            {rollup.configComplete
-              ? <span style={{ color: t.ok }}> · config-complete</span>
-              : rollup.highestTier ? <span style={{ color: t.muted }}> · {rollup.highestTier}</span> : null}
-          </div>
+          <div className={t.fontMono} style={{ fontSize: 14, letterSpacing: '0.12em', textTransform: 'uppercase', color: t.ink, padding: '14px 18px 8px' }}>Pipeline · {done}/{steps.length}</div>
           {isItems && entity && (
             <div style={{ display: 'flex', gap: 8, padding: '0 18px 8px' }}>
               <button onClick={() => populateItemDemo(entity, produce)} className={t.fontMono}
@@ -194,6 +187,7 @@ export function Baseline({ theme: t, groups, detail, onSelectCatalog }: Props) {
             const spec = pipeline?.steps.find((s) => s.label === stepName) ?? null;
             return (
               <>
+                {entity && <div style={{ marginBottom: 16 }}><PipelineRollup t={t} steps={steps} artifacts={artifacts} /></div>}
                 <div className={t.fontMono} style={{ fontSize: 14, letterSpacing: '0.12em', color: t.muted, textTransform: 'uppercase' }}>Step {pad2(stepIdx + 1)} / {pad2(steps.length)}{stepDone(stepName, stepIdx) ? ' · complete' : ''}</div>
                 <h2 style={{ fontSize: 30, fontWeight: 700, color: t.inkDeep, margin: '6px 0 18px' }}>{stepName}</h2>
                 {Bespoke && entity ? (

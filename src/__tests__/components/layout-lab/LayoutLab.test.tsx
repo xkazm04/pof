@@ -33,7 +33,7 @@ describe('UI identity lab (Blueprint baseline · Items example)', () => {
 
   it('opens on the Items pipeline with header stats', () => {
     render(<LayoutLab />);
-    expect(screen.getByText('Attributes')).toBeTruthy(); // a pipeline step in the sidebar
+    expect(screen.getByRole('button', { name: /Attributes/ })).toBeTruthy(); // a pipeline step in the sidebar
     expect(screen.getAllByText('lifecycle').length).toBeGreaterThan(0); // moved title-block stat
   });
 
@@ -48,7 +48,7 @@ describe('UI identity lab (Blueprint baseline · Items example)', () => {
 
   it('Economy step renders charts + power-score acceptance', () => {
     render(<LayoutLab />);
-    fireEvent.click(screen.getByText('Economy'));
+    fireEvent.click(screen.getByRole('button', { name: /Economy/ }));
     expect(screen.getByText(/Stat budget vs tier/)).toBeTruthy();
     expect(screen.getByText(/Tune within budget/)).toBeTruthy();
     expect(screen.getByText(/Power within ±10%/)).toBeTruthy();
@@ -57,10 +57,10 @@ describe('UI identity lab (Blueprint baseline · Items example)', () => {
   it('the full Items pipeline is prototyped (later steps render their step UI)', () => {
     render(<LayoutLab />);
     // a late step has a real V/P/A component, not the placeholder
-    fireEvent.click(screen.getByText('Test Gate'));
+    fireEvent.click(screen.getByRole('button', { name: /Test Gate/ }));
     expect(screen.getByText(/Run functional test/)).toBeTruthy();
     expect(screen.getByText(/All gate checks pass/)).toBeTruthy();
-    fireEvent.click(screen.getByText('UE Packaging'));
+    fireEvent.click(screen.getByRole('button', { name: /UE Packaging/ }));
     expect(screen.getByText('Asset manifest')).toBeTruthy();
   });
 
@@ -82,10 +82,10 @@ describe('UI identity lab (Blueprint baseline · Items example)', () => {
     // pipeline progress is derived from the store, not faked.
     expect(screen.getAllByText('13/13').length).toBeGreaterThan(0);
     // persisted attribute data renders in the Attributes View.
-    fireEvent.click(screen.getByText('Attributes'));
+    fireEvent.click(screen.getByRole('button', { name: /Attributes/ }));
     expect(screen.getByText('34 hp')).toBeTruthy();
     // persisted UE asset paths render in the Packaging manifest (slug = IronLongsword).
-    fireEvent.click(screen.getByText('UE Packaging'));
+    fireEvent.click(screen.getByRole('button', { name: /UE Packaging/ }));
     expect(screen.getByText('T_IronLongsword_Icon')).toBeTruthy();
     // resetting clears the persisted state back to pending.
     fireEvent.click(screen.getByText('Reset'));
