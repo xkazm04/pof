@@ -23,6 +23,22 @@ describe('interpretAutomationResult', () => {
     expect(interpretAutomationResult(null)).toMatchObject({ terminal: false });
     expect(interpretAutomationResult({ foo: 1 })).toMatchObject({ terminal: false });
   });
+
+  it('maps the real GET /pof/test/results array shape', () => {
+    expect(interpretAutomationResult({ results: [{ testId: 'a', status: 'passed' }, { testId: 'b', status: 'passed' }] }))
+      .toMatchObject({ terminal: true, status: 'pass' });
+    expect(interpretAutomationResult({ results: [{ testId: 'a', status: 'passed' }, { testId: 'b', status: 'failed' }] }))
+      .toMatchObject({ terminal: true, status: 'fail' });
+    expect(interpretAutomationResult({ results: [] })).toMatchObject({ terminal: false });
+  });
+
+  it('correlates the results array to our test by name (else keeps polling)', () => {
+    const payload = { results: [{ testId: 'Project.Functional Tests.PoF.VSItemsTest', status: 'failed' }, { testId: 'Other.Test', status: 'passed' }] };
+    // matchName isolates our test → fail
+    expect(interpretAutomationResult(payload, 'VSItemsTest')).toMatchObject({ terminal: true, status: 'fail' });
+    // a name not yet recorded → non-terminal (keep polling), not a false pass
+    expect(interpretAutomationResult(payload, 'VSNotRecordedTest')).toMatchObject({ terminal: false });
+  });
 });
 
 describe('makeBridgeExecutor', () => {
@@ -59,6 +75,19 @@ describe('makeBridgeExecutor', () => {
     const ex = makeBridgeExecutor({ fetchImpl, pollMs: 1, maxPolls: 5 });
     const v = await ex.run(job);
     expect(v.status).toBe('fail');
+  });
+
+  it('run() handles the real async flow: accepted POST → poll results → find by name', async () => {
+    let polls = 0;
+    const fetchImpl = ((url: string) => {
+      if (/run-automation$/.test(url)) return resp({ status: 'accepted', message: 'received' });
+      // results endpoint: empty until the 2nd poll, then our test appears as passed
+      polls++;
+      return resp({ results: polls >= 2 ? [{ testId: 'Project.Functional Tests.PoF.VSItemsTest', status: 'passed' }] : [] });
+    }) as unknown as typeof fetch;
+    const ex = makeBridgeExecutor({ fetchImpl, pollMs: 1, maxPolls: 5 });
+    const v = await ex.run(job);
+    expect(v.status).toBe('pass');
   });
 
   it('run() throws on a non-ok HTTP response', async () => {

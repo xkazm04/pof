@@ -17,7 +17,11 @@ export interface SpawnExecutorOptions {
   uproject?: string;
 }
 
-/** Args for `UnrealEditor-Cmd` to run one automation test headlessly. Pure (tested). */
+/**
+ * Args for `UnrealEditor-Cmd` to run one automation test headlessly. Pure (tested).
+ * Mirrors the project's real invocation (Source/PoF/Test/README + VS*Test headers):
+ * `UnrealEditor-Cmd PoF.uproject -ExecCmds="Automation RunTests <name>;Quit" -unattended -nopause -nullrhi -log -abslog=<file>`.
+ */
 export function buildAutomationArgs(testName: string, uproject: string, abslog: string): string[] {
   return [
     uproject,
@@ -26,20 +30,23 @@ export function buildAutomationArgs(testName: string, uproject: string, abslog: 
     '-nopause',
     '-nosplash',
     '-nullrhi',
+    '-log',
     `-abslog=${abslog}`,
   ];
 }
 
 /**
  * Read the verdict from an `-abslog`. Judged by markers, not exit code —
- * headless runs exit non-zero on the benign bridge shutdown null-deref.
- * Pure (tested).
+ * headless runs exit non-zero on the benign bridge shutdown null-deref. Markers
+ * confirmed against ground truth: the UE automation controller emits
+ * `LogAutomationController: ... Result={Success}` / `Result={Failure}`; some
+ * project Python gates emit `[gate] RESULT=PASS/FAIL`. Pure (tested).
  */
 export function parseAbslogVerdict(log: string): { status: 'pass' | 'fail'; detail: string } {
   if (/\[gate\]\s*RESULT=PASS/i.test(log)) return { status: 'pass', detail: '[gate] RESULT=PASS' };
   if (/\[gate\]\s*RESULT=FAIL/i.test(log)) return { status: 'fail', detail: '[gate] RESULT=FAIL' };
   if (/Result=\{Success\}/i.test(log)) return { status: 'pass', detail: 'Result={Success}' };
-  if (/Result=\{Fail\}/i.test(log)) return { status: 'fail', detail: 'Result={Fail}' };
+  if (/Result=\{Fail(?:ure)?\}/i.test(log)) return { status: 'fail', detail: 'Result={Failure}' };
   // No success marker found → treat as failure (a crashed/aborted run never passed).
   return { status: 'fail', detail: 'no success marker in abslog' };
 }

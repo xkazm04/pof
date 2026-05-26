@@ -32,6 +32,7 @@ export async function POST(req: NextRequest) {
     const body = (await req.json().catch(() => ({}))) as {
       tier?: string; catalogId?: string; entityId?: string;
       executor?: 'bridge' | 'spawn'; port?: number; allowSpawn?: boolean; limit?: number;
+      screenshotPath?: string; visualMode?: 'hud' | 'texture' | 'lighting' | 'character';
     };
     const filter: DrainFilter = {
       ...(parseTier(body.tier) ? { tier: parseTier(body.tier) } : {}),
@@ -42,6 +43,8 @@ export async function POST(req: NextRequest) {
       executor: body.executor === 'spawn' ? 'spawn' : 'bridge',
       ...(body.port ? { port: body.port } : {}),
       ...(body.allowSpawn ? { allowSpawn: true } : {}),
+      ...(body.screenshotPath ? { screenshotPath: body.screenshotPath } : {}),
+      ...(body.visualMode ? { visualMode: body.visualMode } : {}),
       appOrigin: getOriginFromRequest(req),
     });
     const summary = await drainAll(executors, filter, body.limit != null ? { limit: body.limit } : undefined);

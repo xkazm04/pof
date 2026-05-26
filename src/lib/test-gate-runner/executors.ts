@@ -11,6 +11,9 @@ export interface ExecutorConfig {
   /** Absolute origin for the L4 visual executor's /api/verify/visual call. */
   appOrigin?: string;
   projectPath?: string;
+  /** L4: an operator-supplied screenshot path (autonomous capture is a plugin follow-up). */
+  screenshotPath?: string;
+  visualMode?: 'hud' | 'texture' | 'lighting' | 'character';
   screenshotResolver?: (job: GateJob) => Promise<string | null>;
 }
 
@@ -23,11 +26,16 @@ export function buildExecutors(cfg: ExecutorConfig): GateExecutor[] {
       : makeBridgeExecutor({ ...(cfg.port ? { port: cfg.port } : {}) }),
   );
   if (cfg.appOrigin) {
+    // A provided screenshotPath becomes a trivial resolver, so a single-entity L4
+    // drain runs end-to-end through the real Gemini check today.
+    const resolver =
+      cfg.screenshotResolver ?? (cfg.screenshotPath ? async () => cfg.screenshotPath! : undefined);
     list.push(
       makeVisualExecutor({
         appOrigin: cfg.appOrigin,
         ...(cfg.projectPath ? { projectPath: cfg.projectPath } : {}),
-        ...(cfg.screenshotResolver ? { screenshotResolver: cfg.screenshotResolver } : {}),
+        ...(cfg.visualMode ? { mode: cfg.visualMode } : {}),
+        ...(resolver ? { screenshotResolver: resolver } : {}),
       }),
     );
   }

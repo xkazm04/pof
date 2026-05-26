@@ -31,6 +31,15 @@ interface GateExecutor {
 
 The seam means the **mode is chosen at call time**, not baked in (the contract's "configurable (both)"). An always-on worker is just a loop that calls `drainAll` on an interval — not built yet; the operator-triggered API is.
 
+## Plugin contract — ground truth (verified against the C++)
+
+The executors are aligned to what the PoF Bridge plugin actually does (`PofHttpServer.cpp` / `PofTestRunner.h`), not assumptions:
+
+- **`GET /pof/test/results`** returns `{ results: [{ testId, status: "passed"|"failed", startTime, endTime, durationMs }] }` — `status` is binary (every non-`Passed` enum maps to `"failed"`). `interpretAutomationResult` parses exactly this and correlates to our test by matching `testId` against the automation name.
+- **`POST /pof/test/run-automation` is currently a STUB** — it returns `{status:"accepted"}`, ignores the body/filter, and runs nothing; `UPofTestRunner` is a *spec*-based PIE runner (`ExecuteTestSpec`) with no path to run a `VS*Test` **automation** test by name. **So today the bridge cannot drive our automation Test Gates** — it will poll, find no matching result, and the job stays `deferred` (honest). Making the bridge real needs a plugin change: `run-automation` must run the test (e.g. `FAutomationTestFramework::StartTestByName`/`StopTest`) and store the `FPofTestResult`. **Until then, `spawn` is the working L3 mechanism** — it runs `Automation RunTests <name>` headlessly exactly as the project's own VS*Tests are run (`Source/PoF/Test/README`, `VSGenFireballEffectTest.cpp:18`).
+- **`POST /pof/snapshot/capture` is also a STUB** (returns `{status:"accepted"}`, captures nothing). The real `UPofSnapshotCapture::CapturePreset()` exists but isn't HTTP-wired, and needs a camera preset. So **autonomous L4 capture is a plugin follow-up**; L4 runs today with an **operator-supplied `screenshotPath`** (drain body) through the real `/api/verify/visual` Gemini check.
+- **abslog markers** (spawn): the UE automation controller emits `Result={Success}` / `Result={Failure}`; some project Python gates emit `[gate] RESULT=PASS/FAIL`. `parseAbslogVerdict` matches all, judged by markers not exit code (headless exits non-zero on the benign shutdown null-deref).
+
 ## Trigger — operator-driven API
 
 `POST /api/pipeline-artifacts/drain` — body `{ tier?: 'L3'|'L4'|'all', catalogId?, entityId?, executor?: 'bridge'|'spawn', port?, allowSpawn? }` → runs `drainAll`, returns a `DrainSummary` (`ran/passed/failed/skipped` + per-job results). `GET` lists the currently-deferred jobs so the UI shows what's drainable.
