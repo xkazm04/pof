@@ -37,14 +37,18 @@ Read alongside (don't duplicate these — they're the source of truth for their 
 
 **4. Grow the canon.** The Project Canon (`src/lib/catalog/canon/canon-seed.ts`) auto-injects into every Produce prompt. If your row reveals a reusable law (an economy rule, a creature-design rule, an art-family rule…), **append a rule** (`scope: '<catalogId>'` or `'global'`). Append-only — don't reorder/edit others'.
 
-**5. Done = config-complete (L0–L2).** A row is done for parallel dev when every step passes at L0/L1/L2 **or** is honestly `deferred` at L3/L4. Don't fake runtime/visual — defer it.
+**5. Produce REAL content (not stubs) + reach config-complete (L0–L2).** Each producible step's `produce()` returns **real, law-faithful content** per [`ARPG-LAWS.md`](ARPG-LAWS.md) (a genuinely affixed item, a monster with a resistance profile + ability set, real lore — not placeholder data); where a deterministic generator exists (GAS codegen), invoke it with example inputs. A row is config-complete when every step passes at L0/L1/L2 **or** is honestly `deferred` at L3/L4 — don't fake runtime/visual.
 
-**6. Add a test** mirroring an exemplar's `src/__tests__/lib/catalog/pipelines/<id>.test.ts`: assert it registers under the right catalogId, key step labels exist, a couple of `accept(produce(entity).data)` results, and that the Test Gate is `{ tier:'L3', status:'deferred' }`.
+**6. Pass the quality gate (blocking).** Tests passing is necessary, not sufficient. A reviewer subagent scores the row on **content fidelity + wiring** ([`QUALITY-GATE.md`](QUALITY-GATE.md)) and returns APPROVE / REVISE; the row is **not done** until it's APPROVE.
+
+**7. Add a test** mirroring an exemplar's `src/__tests__/lib/catalog/pipelines/<id>.test.ts`: assert it registers under the right catalogId, key step labels exist, a couple of `accept(produce(entity).data)` results, and that the Test Gate is `{ tier:'L3', status:'deferred' }`.
 
 ## The loop (per row)
 ```
 author src/lib/catalog/pipelines/<catalogId>.ts   (+ its test, + optional canon-seed append)
+  ↳ produce REAL, law-faithful content per step (ARPG-LAWS.md) — not placeholder stubs
 npm run check:scoped        # per-CLI gate: tsc (AssetInspector-tolerant) + lint/test on YOUR changed files
+quality-gate review         # BLOCKING: reviewer subagent scores fidelity + wiring (QUALITY-GATE.md) → REVISE until APPROVE
 git add <your pipeline file> <your test> [canon-seed.ts]   # narrow — see "do not touch"
 git commit                  # local only; do not push
 ```
@@ -62,6 +66,8 @@ Leave alone: `registry.generated.ts` (auto-gen), other rows' pipeline files, and
 | **AUTHORING.md** (this) | *How* to build a row | the recipe + the loop |
 | `PIPELINE_REVIEW.md` | the archetype library + per-row archetype sequence | your row's step list |
 | `WIRING-AND-ACCEPTANCE.md` | data contract + acceptance tiers | which tier each step targets |
+| `ARPG-LAWS.md` | the **Diablo/PoE-grade systems** (items/affixes, damage/resist, ailments, monsters, loot, classes, crafting, scaling) | the real rules your produced content must obey |
+| `QUALITY-GATE.md` | the **blocking** content-fidelity + wiring review rubric | the bar your row must pass beyond green tests |
 | `.claude/CLAUDE.md` | coding rules + component manifest | conventions |
 | `<cat>/<row>/plan.md` | the row's **design intent** + cross-catalog deps + findings | *what* to build (ignore its old execution framing) |
 | `index.md` | catalog list + the living **findings/opportunities logs** | reuse insights (its execution-contract section is superseded by this doc) |
