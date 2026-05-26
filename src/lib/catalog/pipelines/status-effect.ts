@@ -1,6 +1,7 @@
 import { registerCatalogPipeline } from '../pipeline-registry';
 import { minLength, fieldsPopulated, withinPercent, selected, minCount } from '../acceptance/dataCheckers';
 import { runtimeDeferred } from '../acceptance/deferred';
+import { cppSymbolExists, seedRowPresent } from '../acceptance/ueStaticCheckers';
 import type { LabEntity } from '@/components/layout-lab/useLabCatalogData';
 
 const slug = (n: string) => n.replace(/[^a-z0-9]+/gi, '');
@@ -19,6 +20,7 @@ registerCatalogPipeline({
       view: { kind: 'table', field: 'effect', columns: [{ key: 'magnitude' }, { key: 'period', unit: 's' }, { key: 'duration', unit: 's' }, { key: 'tag' }] },
       produce: (e) => ({ data: { effect: { magnitude: -5, period: 1, duration: 3, tag: `State.${slug(e.name)}` } }, ueAssets: [`/Game/Abilities/Generated/GE_Gen_${slug(e.name)}`] }),
       accept: fieldsPopulated('effect', 'Effect rules complete (magnitude/period/duration/tag)', ['magnitude', 'period', 'duration', 'tag']),
+      staticChecks: (e) => [cppSymbolExists(`UGE_Gen_${slug(e.name)}`, 'Effect GameplayEffect C++ compiled')],
     },
     {
       archetype: 'balance', label: 'Balance',
@@ -47,6 +49,7 @@ registerCatalogPipeline({
         return { data: { assets }, ueAssets: assets.map((a) => `/Game/Abilities/Generated/${a}`) };
       },
       accept: minCount('assets', 'All produced assets packaged', 3),
+      staticChecks: (e) => [seedRowPresent('seed_generated_abilities.py', slug(e.name), 'Row present in the generated-abilities seed')],
     },
   ],
 });

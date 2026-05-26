@@ -13,5 +13,6 @@ describe('summarizeEntity', () => {
   it('configComplete is true when every authored step is pass-at-L2-or-below or deferred-above', () => {
     expect(summarizeEntity([a('A', 'pass', 'L0'), a('B', 'deferred', 'L3')], 2).configComplete).toBe(true);
     expect(summarizeEntity([a('A', 'pending', 'L0')], 1).configComplete).toBe(false);
+    expect(summarizeEntity([a('A', 'deferred', 'L0')], 1).configComplete).toBe(false); // deferred below L3 is not config-complete
   });
 });

@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest';
+import { join } from 'node:path';
 import { _resetRegistry, getCatalogPipeline } from '@/lib/catalog/pipeline-registry';
 
 describe('status-effect pilot pipeline', () => {
@@ -16,5 +17,15 @@ describe('status-effect pilot pipeline', () => {
     expect(logic.accept(logic.produce(entity).data ?? {}).status).toBe('pass');
     const gate = p!.steps.find((s) => s.label === 'Test Gate')!;
     expect(gate.accept({})).toMatchObject({ tier: 'L3', status: 'deferred' });
+
+    // L2 static checks are now expressible + resolve to an L2 result. Against the test
+    // fixture UE tree, Burning's not-yet-generated symbol resolves to `deferred` (the honest
+    // "generate the C++ then re-check" gap) — proving the L2 path is wired, not absent.
+    const ueRoot = join(process.cwd(), 'src/__tests__/fixtures/ue');
+    const logicChecks = logic.staticChecks!(entity);
+    expect(logicChecks).toHaveLength(1);
+    const l2 = logicChecks[0](ueRoot);
+    expect(l2.tier).toBe('L2');
+    expect(['pass', 'deferred']).toContain(l2.status);
   });
 });

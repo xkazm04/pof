@@ -29,7 +29,7 @@ export function selected(field: string, label: string): Checker {
   return (data) => {
     const v = data[field];
     const ok = typeof v === 'number' && v >= 0;
-    return { label, tier: 'L0', status: ok ? 'pass' : 'pending', detail: ok ? `candidate ${v}` : 'none selected' };
+    return { label, tier: 'L1', status: ok ? 'pass' : 'pending', detail: ok ? `candidate ${v}` : 'none selected' };
   };
 }
 

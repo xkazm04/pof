@@ -26,6 +26,7 @@ function filesContain(root: string, subdir: string, ext: string, needle: RegExp)
   return walk(join(root, subdir), ext).some((f) => needle.test(readFileSync(f, 'utf8')));
 }
 
+// Best-effort: matches the symbol anywhere in a .h (incl. comments/forward-decls). Adequate for an "exists in source" L2 gate, not a semantic guarantee.
 /** L2: the C++ class/struct symbol is declared somewhere in Source/. */
 export function cppSymbolExists(symbol: string, label: string): UeChecker {
   return (ueRoot) => {
@@ -47,4 +48,9 @@ export function seedRowPresent(seedFile: string, rowName: string, label: string)
       ? { label, tier: 'L2', status: 'pass', detail: `${rowName} seeded in ${seedFile}` }
       : { label, tier: 'L2', status: 'deferred', detail: `${rowName} not in ${seedFile}`, reason: `${rowName} not found in ${seedFile}` };
   };
+}
+
+/** Run a step's declared L2 static checks against the UE root (server/CLI-side). */
+export function runStaticChecks(checks: UeChecker[], ueRoot: string | null): AcceptanceResult[] {
+  return checks.map((c) => c(ueRoot));
 }

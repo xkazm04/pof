@@ -15,10 +15,13 @@ export interface EntityRollup {
 }
 
 export function summarizeEntity(artifacts: PipelineArtifact[], totalSteps: number): EntityRollup {
-  let done = 0, deferred = 0, pending = 0, failed = 0, hi = -1;
+  let done = 0, deferred = 0, pending = 0, failed = 0, hi = -1, earlyDeferred = 0;
   for (const art of artifacts) {
     if (art.status === 'pass') done++;
-    else if (art.status === 'deferred') deferred++;
+    else if (art.status === 'deferred') {
+      deferred++;
+      if (art.tier !== 'L3' && art.tier !== 'L4') earlyDeferred++;
+    }
     else if (art.status === 'fail') failed++;
     else pending++;
     if (art.status === 'pass' && art.tier) hi = Math.max(hi, TIER_ORDER.indexOf(art.tier));
@@ -29,6 +32,6 @@ export function summarizeEntity(artifacts: PipelineArtifact[], totalSteps: numbe
     total: totalSteps, done, deferred, failed,
     pending: pendingTotal,
     highestTier: hi >= 0 ? TIER_ORDER[hi] : null,
-    configComplete: failed === 0 && pendingTotal === 0,
+    configComplete: failed === 0 && pendingTotal === 0 && earlyDeferred === 0,
   };
 }

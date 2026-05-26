@@ -3,6 +3,7 @@ import schema from './ue-schema.generated.json';
 
 export type UeSchema = Record<string, string[]>; // structName → field names
 
+// Best-effort regex parse: misses single-line structs, multi-line UPROPERTY decls, and bodies with nested braces. Use as a field-name hint, not an authoritative schema.
 /** Parse one .h file's `USTRUCT ... FTableRowBase` blocks → { StructName: [fields] }. */
 export function parseRowStructs(headerPath: string): UeSchema {
   if (!existsSync(headerPath)) return {};
