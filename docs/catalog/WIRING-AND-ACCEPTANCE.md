@@ -99,12 +99,12 @@ So a single UE "live check" job can **combine** L2 (always, free) with L3 (when 
 
 **Net:** 5–9 CLIs all make real progress in parallel (data + config + human-selection + source edits); only L3/L4 verification serializes through one runner, and it never blocks a CLI. `deferred` is a first-class, expected state — Rule 4's "reports the reason" applies to skips too.
 
-## 5. Open decisions for the operator
+## 5. Resolved decisions (operator, 2026-05-26)
 
-1. **Per-step artifact store** — promote `labPipelineStore` to a SQLite `pipeline_artifacts` table (§1)? Confirm shape.
-2. **Schema-down / content-up + drift diff** — confirm the app validates against UE schema (never re-authors it), and that the typed `data` stays in seed files (import-only) rather than migrating wholesale into SQLite.
-3. **Acceptance ladder** — confirm the L0–L4 tiers + the `deferred` status, and which tiers each archetype must reach to count as "done for parallel dev" (proposal: config-complete = L0–L2; runtime-verified = L3 where a functional test is feasible; L4 only for presentation-heavy rows).
-4. **Live-UE runner** — operator-triggered drain vs. a dedicated always-on serialized worker for the lease/queue.
-5. **Reuse vs extend** — keep `headless_builds` (lease), `visual_verifications` (L4), `ability_specs` (GAS) as-is and add only `pipeline_artifacts`?
+1. **Per-step artifact store → new `pipeline_artifacts` SQLite table.** Promote `labPipelineStore` to a server table keyed `(catalog_id, entity_id, step)` with `data / ue_assets / status / tier / reason / updated_at` (shape in §1), written via the `@@CALLBACK` → API path like `catalog_lifecycle`. Server-authoritative, shared across CLIs/sessions/machines. `catalog_lifecycle.ue_assets` remains the rolled-up manifest.
+2. **Schema-down / content-up — ACCEPTED.** The app **validates against** the UE schema (`UARPGAttributeSet`, the `F*Row` structs, `ARPGDamageExecution`) and never re-authors it; content/spec flows app→UE via seed scripts / generated C++. The typed `data` stays in seed files as *import-only* (not migrated wholesale into SQLite). A drift diff (app-spec vs UE DataTable row) is part of the L2 check.
+3. **"Done for parallel dev" bar → config-complete (L0–L2).** A step is done when it reaches **data (L0) + human selection (L1, where applicable) + config/static (L2) + source committed**; **runtime (L3) and visual (L4) are deferred** to the serialized runner and do not block the CLI. `deferred` is a first-class status. (Per-archetype *which* tiers apply is specified per row in the plan, but the parallel-dev completion bar is uniformly L0–L2.)
+4. **Live-UE runner → configurable (both).** Build the L3/L4 lease/queue (reuse `headless_builds`) so it works **either** operator-triggered (manual drain) **or** with an optional always-on serialized worker; operating mode chosen later. Per-run unique `-abslog`; one editor on the shared tree at a time.
+5. **Reuse, add one table.** Keep `headless_builds` (lease/queue), `visual_verifications` (L4), `ability_specs` (GAS) as-is; the only new persistence is `pipeline_artifacts`.
 
-Next: operator picks on §5, then this folds into the per-row archetype plan as the data-contract + acceptance spec for parallel development.
+Next: fold this data-contract + acceptance spec into the per-row archetype plan (the L0–L2 completion bar, the `pipeline_artifacts` write path, the live-UE lease, human-gated presentation steps), then finalize for multi-pipeline parallel development.
