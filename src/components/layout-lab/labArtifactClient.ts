@@ -31,3 +31,15 @@ export async function postArtifact(body: ArtifactUpsertBody): Promise<void> {
     body: JSON.stringify(body),
   });
 }
+
+export interface DrainSummaryLite { ran: number; passed: number; failed: number; skipped: number }
+
+/** Operator-triggered: run this entity's deferred L3/L4 gates through the live-UE runner. */
+export async function drainGates(catalogId: string, entityId: string): Promise<DrainSummaryLite | null> {
+  const r = await tryApiFetch<DrainSummaryLite>('/api/pipeline-artifacts/drain', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ catalogId, entityId }),
+  });
+  return r.ok ? r.data : null;
+}

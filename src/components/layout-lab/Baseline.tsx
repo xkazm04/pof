@@ -9,7 +9,7 @@ import { ArchetypeStep } from './steps/ArchetypeStep';
 import { populateItemDemo } from './steps/itemsSteps';
 import { useLabPipelineStore, useEntitySteps, setLabSync } from './labPipelineStore';
 import { getCatalogPipeline } from '@/lib/catalog/pipeline-registry';
-import { fetchArtifacts, postArtifact } from './labArtifactClient';
+import { fetchArtifacts, postArtifact, drainGates } from './labArtifactClient';
 import { resolveAccept } from './labAcceptance';
 import { PipelineRollup } from './PipelineRollup';
 import { CatalogTree } from './CatalogTree';
@@ -35,6 +35,10 @@ const pad2 = (n: number) => String(n).padStart(2, '0');
 export function Baseline({ theme: t, groups, detail, onSelectCatalog }: Props) {
   const [entityId, setEntityId] = useState<string | null>(null);
   const [stepIdx, setStepIdx] = useState<number | null>(0);
+  const [draining, setDraining] = useState(false);
+  // Server-stored verdicts, keyed by step — used to overlay the runner's L3/L4 pass/fail
+  // onto the local recompute (which can only ever yield `deferred` for a Test Gate).
+  const [serverArts, setServerArts] = useState<Record<string, PipelineArtifact>>({});
 
   const entities = detail?.entities ?? [];
   const entity = entities.find((e) => e.id === entityId) ?? entities[0] ?? null;
@@ -69,17 +73,33 @@ export function Baseline({ theme: t, groups, detail, onSelectCatalog }: Props) {
     return () => setLabSync(null);
   }, [catalogId]);
 
-  // Hydrate: load server artifacts into the cache (add-only — never wipes local state).
+  // Hydrate: load server artifacts into the cache (add-only — never wipes local state)
+  // and record their stored verdicts so the runner's L3/L4 outcomes can overlay.
   useEffect(() => {
-    if (!catalogId || !entity) return;
+    if (!catalogId || !entity) { setServerArts({}); return; }
     let cancelled = false;
+    setServerArts({});
     fetchArtifacts(catalogId, entity.id).then((arts) => {
       if (cancelled || !arts.length) return;
+      setServerArts(Object.fromEntries(arts.map((a) => [a.step, a])));
       hydrateEntity(entity.id, arts.map((a) => ({ step: a.step, artifact: { done: true, data: a.data, ueAssets: a.ueAssets, at: a.updatedAt ?? new Date().toISOString() } })));
     });
     return () => { cancelled = true; };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [catalogId, entity?.id, hydrateEntity]); // entity?.id is the stable identity key; full entity ref changes on every render
+
+  // Operator-triggered drain of this entity's deferred L3/L4 gates, then refresh verdicts.
+  const runDrain = async () => {
+    if (!catalogId || !entity || draining) return;
+    setDraining(true);
+    try {
+      await drainGates(catalogId, entity.id);
+      const arts = await fetchArtifacts(catalogId, entity.id);
+      setServerArts(Object.fromEntries(arts.map((a) => [a.step, a])));
+    } finally {
+      setDraining(false);
+    }
+  };
 
   // Server-faithful rollup: derives config-complete/tier using the same accept logic the server stored.
   const artifacts: PipelineArtifact[] = catalogId
@@ -87,7 +107,12 @@ export function Baseline({ theme: t, groups, detail, onSelectCatalog }: Props) {
         const art = entitySteps![s];
         const accept = resolveAccept(catalogId, s);
         const res = accept ? accept(art.data) : null;
-        return { catalogId, entityId: entity?.id ?? '', step: s, data: art.data, ueAssets: art.ueAssets, status: res?.status ?? 'pass', ...(res?.tier ? { tier: res.tier } : {}) };
+        const localStatus = res?.status ?? 'pass';
+        // Overlay the runner's verdict: when the local recompute is still `deferred`
+        // (an unrun L3/L4 gate) but the server has a real pass/fail, the server wins.
+        const srv = serverArts[s];
+        const status = localStatus === 'deferred' && srv && srv.status !== 'deferred' && srv.status !== 'pending' ? srv.status : localStatus;
+        return { catalogId, entityId: entity?.id ?? '', step: s, data: art.data, ueAssets: art.ueAssets, status, ...(res?.tier ? { tier: res.tier } : {}) };
       })
     : [];
   const panel = (extra?: React.CSSProperties): React.CSSProperties => ({
@@ -187,7 +212,7 @@ export function Baseline({ theme: t, groups, detail, onSelectCatalog }: Props) {
             const spec = pipeline?.steps.find((s) => s.label === stepName) ?? null;
             return (
               <>
-                {entity && <div style={{ marginBottom: 16 }}><PipelineRollup t={t} steps={steps} artifacts={artifacts} /></div>}
+                {entity && <div style={{ marginBottom: 16 }}><PipelineRollup t={t} steps={steps} artifacts={artifacts} onDrain={runDrain} draining={draining} /></div>}
                 <div className={t.fontMono} style={{ fontSize: 14, letterSpacing: '0.12em', color: t.muted, textTransform: 'uppercase' }}>Step {pad2(stepIdx + 1)} / {pad2(steps.length)}{stepDone(stepName, stepIdx) ? ' · complete' : ''}</div>
                 <h2 style={{ fontSize: 30, fontWeight: 700, color: t.inkDeep, margin: '6px 0 18px' }}>{stepName}</h2>
                 {Bespoke && entity ? (

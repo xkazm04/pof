@@ -54,6 +54,27 @@ export function listArtifacts(catalogId: string, entityId?: string): PipelineArt
   return (getDb().prepare(sql).all(...args) as Record<string, unknown>[]).map(rowToArtifact);
 }
 
+/** Single artifact by its primary key, or null. */
+export function getArtifact(catalogId: string, entityId: string, step: string): PipelineArtifact | null {
+  ensureTable();
+  const row = getDb()
+    .prepare('SELECT * FROM pipeline_artifacts WHERE catalog_id = ? AND entity_id = ? AND step = ?')
+    .get(catalogId, entityId, step) as Record<string, unknown> | undefined;
+  return row ? rowToArtifact(row) : null;
+}
+
+/** All `deferred` artifacts (the runner's work queue), optionally narrowed. */
+export function listDeferredArtifacts(filter?: { tier?: AcceptanceTier; catalogId?: string; entityId?: string }): PipelineArtifact[] {
+  ensureTable();
+  const where = ["status = 'deferred'"];
+  const args: string[] = [];
+  if (filter?.tier) { where.push('tier = ?'); args.push(filter.tier); }
+  if (filter?.catalogId) { where.push('catalog_id = ?'); args.push(filter.catalogId); }
+  if (filter?.entityId) { where.push('entity_id = ?'); args.push(filter.entityId); }
+  const sql = `SELECT * FROM pipeline_artifacts WHERE ${where.join(' AND ')} ORDER BY catalog_id, entity_id, step`;
+  return (getDb().prepare(sql).all(...args) as Record<string, unknown>[]).map(rowToArtifact);
+}
+
 export function upsertArtifact(a: PipelineArtifact): PipelineArtifact {
   ensureTable();
   getDb().prepare(`
