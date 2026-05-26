@@ -72,6 +72,8 @@ Acceptance is **derived** (never a manual toggle) but the *source* of the deriva
 
 Two meaningful milestones fall out: **config-complete** = L0–L2 reached; **runtime-verified** = L3 (+L4 for presentation). A step at L2 with L3 `deferred` is *legitimately progressed*, not failed.
 
+**What L2/L3 should actually assert** (salvaged from the Legacy 3-pass evaluator + wiring contract — see [`LEGACY-SALVAGE.md`](LEGACY-SALVAGE.md) §B): the legacy eval ran *Structure → Quality → Performance* + a per-domain *trace*. Map it onto the ladder: **L2** = structure + UE-convention quality (the symbol/row exists *and* follows conventions); **L3** = the *trace* (one observable end-to-end behavior, e.g. combat's one-hit path). Also enforce the **wiring contract**: an artifact that compiles but isn't *granted/activated* is **not** config-complete — a step's L2 must check it's registered + triggered (the "no gray-box" rule), and the step's Verification line becomes its acceptance `detail`/`reason`.
+
 ## 3. How far the UE "live check" goes (live run + codebase analysis)
 
 Per the research, the split is concrete:
