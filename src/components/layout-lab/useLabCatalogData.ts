@@ -60,24 +60,28 @@ export interface LabDetail {
 }
 
 /** Per-catalog detail data for a variant's second screen: entities (the "spell
- *  selection") + the fine pipeline step list. `null` when no catalog is selected. */
+ *  selection") + the fine pipeline step list. `null` when no catalog is selected.
+ *  Draft entities (one-shot staged) are merged alongside seeded entities. */
 export function useLabDetail(catalogId: string | null): LabDetail | null {
   const entitiesByCatalog = useCatalogStore((s) => s.entitiesByCatalog);
+  const draftEntitiesByCatalog = useCatalogStore((s) => s.draftEntitiesByCatalog);
 
   return useMemo(() => {
     if (!catalogId) return null;
     const section = CATALOG_SECTIONS.find((s) => s.catalogId === catalogId);
     if (!section) return null;
-    const ents = Object.values(entitiesByCatalog[catalogId] ?? {});
+    const seeded = Object.values(entitiesByCatalog[catalogId] ?? {});
+    const drafts = Object.values(draftEntitiesByCatalog[catalogId] ?? {});
+    const all = [...seeded, ...drafts];
     return {
       catalog: {
         catalogId, label: section.label, description: section.description ?? '',
-        total: ents.length, verified: ents.filter((e) => e.lifecycle === 'verified').length,
+        total: all.length, verified: all.filter((e) => e.lifecycle === 'verified').length,
       },
-      entities: ents.map((e) => ({
+      entities: all.map((e) => ({
         id: e.id, name: e.name, lifecycle: e.lifecycle, data: (e as { data?: unknown }).data,
       })),
       steps: labPipelineSteps(catalogId),
     };
-  }, [catalogId, entitiesByCatalog]);
+  }, [catalogId, entitiesByCatalog, draftEntitiesByCatalog]);
 }
