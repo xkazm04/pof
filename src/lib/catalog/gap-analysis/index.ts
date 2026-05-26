@@ -43,13 +43,14 @@ function pickStratifiedSample(entities: StoredCatalogEntity[], path: string, max
   const out: StoredCatalogEntity[] = [];
   const keys = [...byKey.keys()];
   let i = 0;
+  // Terminates naturally: each iteration either appends to `out` (bounded by `max`)
+  // or removes a key from `keys` (bounded by initial bucket count).
   while (out.length < max && keys.length > 0) {
     const k = keys[i % keys.length];
     const bucket = byKey.get(k)!;
     if (bucket.length) out.push(bucket.shift()!);
     if (!bucket.length) { keys.splice(keys.indexOf(k), 1); i = 0; continue; }
     i++;
-    if (i > 1000) break;
   }
   return out;
 }

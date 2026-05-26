@@ -1,5 +1,3 @@
-import type { StoredCatalogEntity } from '@/lib/catalog/types';
-
 export interface Histogram { [value: string]: number }
 
 export interface GapAnalysisPlugin {
@@ -10,6 +8,3 @@ export interface GapAnalysisPlugin {
   /** Short deterministic summary of one entity's `data` for the proposal prompt. */
   summarize: (data: unknown) => string;
 }
-
-// Suppress the unused-import warning on StoredCatalogEntity (kept for downstream re-export ergonomics).
-export type _Refs = StoredCatalogEntity;
