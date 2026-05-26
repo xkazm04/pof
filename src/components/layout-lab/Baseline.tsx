@@ -22,6 +22,8 @@ interface Props {
   groups: LabGroup[];
   detail: LabDetail | null;
   onSelectCatalog: (id: string) => void;
+  entityId: string | null;
+  onSelectEntity: (id: string) => void;
 }
 
 const pad2 = (n: number) => String(n).padStart(2, '0');
@@ -32,8 +34,7 @@ const pad2 = (n: number) => String(n).padStart(2, '0');
  * a left column holds the Category→Catalog→Entity tree; the pipeline column shows
  * the vertical step timeline; the main area is the roomy work canvas for the selected step.
  */
-export function Baseline({ theme: t, groups, detail, onSelectCatalog }: Props) {
-  const [entityId, setEntityId] = useState<string | null>(null);
+export function Baseline({ theme: t, groups, detail, onSelectCatalog, entityId, onSelectEntity }: Props) {
   const [stepIdx, setStepIdx] = useState<number | null>(0);
   const [draining, setDraining] = useState(false);
   // Server-stored verdicts, keyed by step — used to overlay the runner's L3/L4 pass/fail
@@ -121,12 +122,11 @@ export function Baseline({ theme: t, groups, detail, onSelectCatalog }: Props) {
 
   const handleSelectCatalog = (id: string) => {
     onSelectCatalog(id);
-    setEntityId(null);
     setStepIdx(0);
   };
 
   const handleSelectEntity = (id: string) => {
-    setEntityId(id);
+    onSelectEntity(id);
     setStepIdx(0);
   };
 

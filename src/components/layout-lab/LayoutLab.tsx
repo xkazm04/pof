@@ -7,6 +7,10 @@ import { Baseline } from './Baseline';
 import { CanonView } from './CanonView';
 import { LAB_THEMES, LIGHT } from './theme';
 import { LabBridgeStrip } from './LabBridgeStrip';
+import { LabJobsChip } from './LabJobsChip';
+import { OneShotPanel } from './one-shot/OneShotPanel';
+import { useOneShotLabStore } from '@/stores/oneShotLabStore';
+import { setupOneShotToastHandler } from './one-shot/toastHandler';
 import { useCanonStore } from './canonStore';
 import { writeShellPref } from '@/lib/ecw/shell-pref';
 
@@ -20,12 +24,31 @@ export function LayoutLab() {
   const groups = useLabCatalogData();
   const [themeId, setThemeId] = useState<'light' | 'dark'>('light');
   const [catalogId, setCatalogId] = useState('items');
+  const [entityId, setEntityId] = useState<string | null>(null);
   const [view, setView] = useState<'catalogs' | 'canon'>('catalogs');
   const detail = useLabDetail(catalogId);
   const theme = LAB_THEMES.find((t) => t.id === themeId) ?? LIGHT;
   const hydrate = useCanonStore((s) => s.hydrate);
+  const setPanelOpen = useOneShotLabStore((s) => s.setPanelOpen);
 
   useEffect(() => { hydrate(); }, [hydrate]);
+
+  useEffect(() => {
+    const dispose = setupOneShotToastHandler();
+    return () => dispose();
+  }, []);
+
+  // Subscribe directly so state updates happen inside a store callback, not in the effect body.
+  useEffect(() => {
+    const unsub = useOneShotLabStore.subscribe((state, prev) => {
+      if (state.pendingNavigation && state.pendingNavigation !== prev.pendingNavigation) {
+        setCatalogId(state.pendingNavigation.catalogId);
+        setEntityId(state.pendingNavigation.entityId);
+        useOneShotLabStore.getState().setPendingNavigation(null);
+      }
+    });
+    return unsub;
+  }, []);
 
   const switchToLegacy = useCallback(() => {
     writeShellPref('legacy');
@@ -73,6 +96,17 @@ export function LayoutLab() {
           </button>
         ))}
         <button
+          onClick={() => setPanelOpen(true)}
+          style={{
+            padding: '6px 14px', borderRadius: 6, fontSize: 13,
+            cursor: 'pointer', border: '1px solid #333', background: 'transparent',
+            color: '#aaa', fontWeight: 400,
+          }}
+        >
+          + One-shot
+        </button>
+        <LabJobsChip t={theme} />
+        <button
           onClick={switchToLegacy}
           style={{
             marginLeft: 'auto', padding: '6px 14px', borderRadius: 6, fontSize: 13,
@@ -87,9 +121,14 @@ export function LayoutLab() {
       <div style={{ flex: 1, minHeight: 0, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
         {view === 'canon'
           ? <CanonView t={theme} />
-          : <Baseline theme={theme} groups={groups} detail={detail} onSelectCatalog={setCatalogId} />
+          : <Baseline theme={theme} groups={groups} detail={detail}
+              onSelectCatalog={(id) => { setCatalogId(id); setEntityId(null); }}
+              entityId={entityId}
+              onSelectEntity={setEntityId}
+            />
         }
       </div>
+      <OneShotPanel t={theme} />
     </div>
   );
 }
