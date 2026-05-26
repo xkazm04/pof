@@ -142,9 +142,19 @@ export function createOrchestrator(opts: OrchestratorOptions = {}): Orchestrator
             reason = `${dec.tier} pending the test-gate runner`;
           } else {
             const mode = dec.mode === 'run-cli' ? 'cli' : 'deterministic';
+            // Re-read proposal from store after each await to avoid stale closure snapshot.
+            const currentProposal = useOneShotJobStore.getState().proposal;
             const result = await postJson<{ outcome: 'pass' | 'fail'; reason?: string }>(
               '/api/one-shot/step',
-              { catalogId: store.catalogId, entityId: draftId, stepLabel: s.label, mode },
+              {
+                catalogId: store.catalogId,
+                entityId: draftId,
+                stepLabel: s.label,
+                mode,
+                proposal: currentProposal
+                  ? { name: currentProposal.name, data: currentProposal.data }
+                  : undefined,
+              },
             );
             outcome = result.outcome;
             reason = result.reason;
@@ -168,19 +178,39 @@ export function createOrchestrator(opts: OrchestratorOptions = {}): Orchestrator
       if (_cancelled) return;
       useOneShotJobStore.getState().markCompleted();
       const sum = useOneShotJobStore.getState().lastSummary!;
-      eventBus.emit('oneshot.completed', {
-        jobId,
-        jobName: store.catalogId,
-        totalSteps: steps.length,
-        ...sum,
-        catalogId: store.catalogId,
-        entityId: draftId,
-      });
+      if (sum.failed > 0 && sum.passed === 0) {
+        eventBus.emit('oneshot.failed', {
+          jobId,
+          jobName: store.catalogId ?? '',
+          stepIndex: steps.length - 1,
+          totalSteps: steps.length,
+          error: 'all steps failed',
+        });
+      } else {
+        eventBus.emit('oneshot.completed', {
+          jobId,
+          jobName: store.catalogId,
+          totalSteps: steps.length,
+          ...sum,
+          catalogId: store.catalogId,
+          entityId: draftId,
+        });
+      }
     },
 
     cancel() {
       _cancelled = true;
-      useOneShotJobStore.getState().setPhase('failed', { failureReason: 'cancelled' });
+      const cancelStore = useOneShotJobStore.getState();
+      cancelStore.setPhase('failed', { failureReason: 'cancelled' });
+      const cancelStepIndex = cancelStore.stepResults.length > 0 ? cancelStore.stepResults.length - 1 : 0;
+      const cancelTotalSteps = cancelStore.totalSteps ?? 0;
+      eventBus.emit('oneshot.failed', {
+        jobId: cancelStore.jobId ?? '',
+        jobName: cancelStore.catalogId ?? '',
+        stepIndex: cancelStepIndex,
+        totalSteps: cancelTotalSteps,
+        error: 'cancelled',
+      });
     },
   };
 }

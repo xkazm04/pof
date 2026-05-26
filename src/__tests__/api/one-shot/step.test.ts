@@ -67,4 +67,37 @@ describe('POST /api/one-shot/step', () => {
     expect(body.data.outcome).toBe('pass');
     expect(body.data.stepName).toBe('Concept Brief');
   });
+
+  // ── Draft entity regression tests ───────────────────────────────────────────
+  // draft-<cat>-<ts> IDs are created client-side in Zustand catalogStore and
+  // are never present in seededEntities(). Without a proposal payload the route
+  // must return 404; with a proposal payload it must succeed.
+
+  it('draft entity without proposal: returns 404 with informative message', async () => {
+    const res = await POST(makePost({
+      catalogId: 'items',
+      entityId: 'draft-items-9999',
+      stepLabel: 'Concept Brief',
+      mode: 'deterministic',
+    }));
+    expect(res.status).toBe(404);
+    const body = await res.json();
+    expect(body.success).toBe(false);
+    expect(body.error).toMatch(/no proposal provided/i);
+  });
+
+  it('draft entity with proposal: resolves inline and returns 200', async () => {
+    const res = await POST(makePost({
+      catalogId: 'items',
+      entityId: 'draft-items-9999',
+      stepLabel: 'Concept Brief',
+      mode: 'deterministic',
+      proposal: { name: 'Test Wand', data: { type: 'Weapon', rarity: 'Uncommon' } },
+    }));
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.success).toBe(true);
+    expect(body.data.outcome).toBe('pass');
+    expect(body.data.stepName).toBe('Concept Brief');
+  });
 });

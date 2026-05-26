@@ -5,7 +5,7 @@
  * on `createOrchestrator`; the real orchestrator state machine and event bus
  * are exercised end-to-end without starting a real HTTP server.
  */
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { createOrchestrator } from '@/lib/one-shot/orchestrator';
 import type { OrchestratorStepRef } from '@/lib/one-shot/orchestrator';
 import { useOneShotJobStore } from '@/stores/oneShotJobStore';
@@ -82,11 +82,17 @@ function standardRoutes(overrides: Partial<Record<string, RouteHandler>> = {}): 
 
 // ─── setup ───────────────────────────────────────────────────────────────────
 
+const _unsubs: Array<() => void> = [];
+
 beforeEach(() => {
   useOneShotJobStore.getState().reset();
   localStorage.removeItem('pof-one-shot-job');
   localStorage.removeItem('pof-catalog-store');
   useCatalogStore.setState({ draftEntitiesByCatalog: {} });
+});
+
+afterEach(() => {
+  _unsubs.splice(0).forEach((u) => u());
 });
 
 // ─── tests ───────────────────────────────────────────────────────────────────
@@ -192,7 +198,7 @@ describe('one-shot E2E (mocked CLI)', () => {
     expect(completedPayloads[0].passed).toBeGreaterThan(0);
   });
 
-  it('cancel() mid-run ends with phase=failed and failureReason=cancelled', async () => {
+  it('cancel() mid-run ends with phase=failed, failureReason=cancelled, and emits oneshot.failed', async () => {
     let resolveStep: (v: unknown) => void;
     /** The step mock pauses on the first call until `resolveStep` is invoked. */
     const blockedStepFetch = (async (url: string, init?: RequestInit) => {
@@ -216,6 +222,11 @@ describe('one-shot E2E (mocked CLI)', () => {
       ] as OrchestratorStepRef[],
     });
 
+    const failedPayloads: Array<EventMap['oneshot.failed']> = [];
+    const completedPayloads: Array<EventMap['oneshot.completed']> = [];
+    _unsubs.push(eventBus.on('oneshot.failed', (e) => failedPayloads.push(e.payload)));
+    _unsubs.push(eventBus.on('oneshot.completed', (e) => completedPayloads.push(e.payload)));
+
     await orch.start('items');
 
     // Start run, then cancel before the blocked step resolves
@@ -229,5 +240,40 @@ describe('one-shot E2E (mocked CLI)', () => {
 
     expect(useOneShotJobStore.getState().phase).toBe('failed');
     expect(useOneShotJobStore.getState().failureReason).toBe('cancelled');
+
+    // cancel must emit oneshot.failed
+    expect(failedPayloads).toHaveLength(1);
+    expect(failedPayloads[0].error).toBe('cancelled');
+    // and must NOT emit oneshot.completed
+    expect(completedPayloads).toHaveLength(0);
+  });
+
+  it('all-steps-fail emits oneshot.failed (not completed)', async () => {
+    const orch = createOrchestrator({
+      fetchImpl: mockFetch(standardRoutes({
+        '/api/one-shot/step': () => ({ outcome: 'fail', reason: 'every step fails' }),
+      })),
+      stepsFor: () => [
+        // Only deterministic runnable steps so every step POST returns fail
+        { label: 'Concept Brief',      archetype: 'brief',  tier: 'L0', view: { kind: 'prose', field: 'brief', emptyText: '' } },
+        { label: 'Base Type & Rarity', archetype: 'schema', tier: 'L0', view: { kind: 'table', field: 'baseType', columns: [] } },
+      ] as OrchestratorStepRef[],
+    });
+
+    const failedPayloads: Array<EventMap['oneshot.failed']> = [];
+    const completedPayloads: Array<EventMap['oneshot.completed']> = [];
+    _unsubs.push(eventBus.on('oneshot.failed', (e) => failedPayloads.push(e.payload)));
+    _unsubs.push(eventBus.on('oneshot.completed', (e) => completedPayloads.push(e.payload)));
+
+    await orch.start('items');
+    await orch.approveAndRun();
+
+    // must emit oneshot.failed
+    expect(failedPayloads).toHaveLength(1);
+    expect(failedPayloads[0].error).toBe('all steps failed');
+    // must NOT emit oneshot.completed
+    expect(completedPayloads).toHaveLength(0);
+    // store phase is still 'completed' (summary was committed; toast differentiates via event)
+    expect(useOneShotJobStore.getState().phase).toBe('completed');
   });
 });

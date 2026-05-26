@@ -6,6 +6,7 @@ import { seededEntities } from '@/lib/catalog/seed';
 import { startExecution, awaitCallback } from '@/lib/claude-terminal/cli-service';
 import type { LabEntity } from '@/components/layout-lab/useLabCatalogData';
 import type { AcceptanceTier } from '@/lib/catalog/acceptance/types';
+import type { StoredCatalogEntity } from '@/lib/catalog/types';
 
 const PROJECT_PATH = process.env.POF_UE_UPROJECT ?? process.cwd();
 
@@ -15,8 +16,16 @@ function entityToLab(e: { id: string; name: string; lifecycle: string; data?: un
 
 /**
  * POST /api/one-shot/step
- * Body: { catalogId: string; entityId: string; stepLabel: string; mode: 'deterministic' | 'cli' }
+ * Body: {
+ *   catalogId: string;
+ *   entityId: string;
+ *   stepLabel: string;
+ *   mode: 'deterministic' | 'cli';
+ *   proposal?: { name: string; data: unknown };   // required for draft entities (id draft-<cat>-<ts>)
+ * }
  * Runs a single pipeline step for the given entity and upserts the artifact.
+ * Draft entities (created client-side) are resolved via the inline proposal payload;
+ * seeded entities are resolved from the static catalog seed as before.
  */
 export async function POST(req: NextRequest) {
   try {
@@ -25,6 +34,12 @@ export async function POST(req: NextRequest) {
     const entityId = typeof body.entityId === 'string' ? body.entityId : '';
     const stepLabel = typeof body.stepLabel === 'string' ? body.stepLabel : '';
     const mode = body.mode === 'cli' ? 'cli' : 'deterministic';
+
+    // Optional inline proposal — required when entityId is a draft (not in seededEntities)
+    const proposalRaw = body.proposal && typeof body.proposal === 'object' ? body.proposal as Record<string, unknown> : null;
+    const proposal = proposalRaw && typeof proposalRaw.name === 'string'
+      ? { name: proposalRaw.name, data: proposalRaw.data }
+      : null;
 
     if (!catalogId) return apiError('catalogId is required', 400);
     if (!entityId) return apiError('entityId is required', 400);
@@ -36,10 +51,15 @@ export async function POST(req: NextRequest) {
     const step = pipeline.steps.find((s) => s.label === stepLabel);
     if (!step) return apiError(`step '${stepLabel}' not found in catalog '${catalogId}'`, 404);
 
-    // Resolve entity from seeded entities (drafts live in the client store only).
+    // Resolve entity: first check seeded entities, then fall back to the inline proposal
+    // (draft entities live only in the client Zustand store and are never seeded server-side).
+    let rawEntity: StoredCatalogEntity | undefined;
     const all = seededEntities(catalogId);
-    const rawEntity = all.find((e) => e.id === entityId);
-    if (!rawEntity) return apiError(`entity '${entityId}' not found in catalog '${catalogId}'`, 404);
+    rawEntity = all.find((e) => e.id === entityId);
+    if (!rawEntity && proposal) {
+      rawEntity = { id: entityId, name: proposal.name, data: proposal.data, catalogId, categoryPath: [], tags: ['one-shot'], lifecycle: 'planned' } as StoredCatalogEntity;
+    }
+    if (!rawEntity) return apiError(`entity '${entityId}' not found in catalog '${catalogId}' (and no proposal provided)`, 404);
 
     const entity = entityToLab(rawEntity);
 
