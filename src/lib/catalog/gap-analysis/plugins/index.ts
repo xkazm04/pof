@@ -1,11 +1,35 @@
-import type { GapAnalysisPlugin } from './types';
+export { pluginFor, register } from './registry';
 
-const PLUGINS: Record<string, GapAnalysisPlugin> = {};
-
-export function pluginFor(catalogId: string): GapAnalysisPlugin | undefined {
-  return PLUGINS[catalogId];
-}
-
-export function register(catalogId: string, plugin: GapAnalysisPlugin): void {
-  PLUGINS[catalogId] = plugin;
-}
+// Side-effect imports — keep this list complete (30 catalogs).
+import './items';
+import './bestiary';
+import './spellbook';
+import './materials';
+import './loot-tables';
+import './combat-map';
+import './zone-map';
+import './screen-flow';
+import './state-graph';
+import './audio';
+import './animation-assets';
+import './quests';
+import './dialog-trees';
+import './cutscenes';
+import './codex';
+import './factions';
+import './props';
+import './status-effects';
+import './crafting-recipes';
+import './vendors';
+import './progression-curves';
+import './achievements';
+import './save-points';
+import './music';
+import './ambient';
+import './vfx';
+import './hud-elements';
+import './icon-sets';
+import './input-schemes';
+import './tutorial-beats';
+import './currencies';
+import './characters';
