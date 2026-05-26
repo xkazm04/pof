@@ -1,9 +1,13 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { useOneShotJobStore } from '@/stores/oneShotJobStore';
 
 describe('oneShotJobStore', () => {
   beforeEach(() => {
     useOneShotJobStore.getState().reset();
+  });
+
+  afterEach(() => {
+    localStorage.removeItem('pof-one-shot-job');
   });
 
   it('starts idle', () => {
