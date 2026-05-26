@@ -34,6 +34,8 @@ interface LabPipelineState {
   fail: (entityId: string, step: string, error: string) => void;
   /** Clear every step for one entity. */
   resetEntity: (entityId: string) => void;
+  /** Merge server artifacts into the cache (add-only: never overwrites/clears local steps). */
+  hydrateEntity: (entityId: string, steps: { step: string; artifact: LabStepArtifact }[]) => void;
 }
 
 export const useLabPipelineStore = create<LabPipelineState>()(
@@ -41,16 +43,11 @@ export const useLabPipelineStore = create<LabPipelineState>()(
     (set) => ({
       byEntity: {},
 
-      produce: (entityId, step, out) =>
-        set((s) => ({
-          byEntity: {
-            ...s.byEntity,
-            [entityId]: {
-              ...s.byEntity[entityId],
-              [step]: { done: true, data: out?.data ?? {}, ueAssets: out?.ueAssets ?? [], at: new Date().toISOString() },
-            },
-          },
-        })),
+      produce: (entityId, step, out) => {
+        const artifact: LabStepArtifact = { done: true, data: out?.data ?? {}, ueAssets: out?.ueAssets ?? [], at: new Date().toISOString() };
+        set((s) => ({ byEntity: { ...s.byEntity, [entityId]: { ...s.byEntity[entityId], [step]: artifact } } }));
+        _labSync?.(entityId, step, artifact);
+      },
 
       fail: (entityId, step, error) =>
         set((s) => ({
@@ -70,10 +67,27 @@ export const useLabPipelineStore = create<LabPipelineState>()(
           delete next[entityId];
           return { byEntity: next };
         }),
+
+      hydrateEntity: (entityId, steps) =>
+        set((s) => {
+          if (!steps.length) return s; // no-op (avoids needless re-render)
+          const existing = s.byEntity[entityId] ?? {};
+          let changed = false;
+          const merged = { ...existing };
+          for (const { step, artifact } of steps) {
+            if (!merged[step]) { merged[step] = artifact; changed = true; }
+          }
+          return changed ? { byEntity: { ...s.byEntity, [entityId]: merged } } : s;
+        }),
     }),
     { name: 'pof-lab-pipeline', storage: createJSONStorage(() => localStorage) },
   ),
 );
+
+/** Optional write-through sink, set by the shell (bound to the active catalogId) to persist produces. */
+export type LabSyncFn = (entityId: string, step: string, artifact: LabStepArtifact) => void;
+let _labSync: LabSyncFn | null = null;
+export function setLabSync(fn: LabSyncFn | null): void { _labSync = fn; }
 
 /** Subscribe to one step's artifact (undefined until produced). */
 export function useLabStep(entityId: string, step: string): LabStepArtifact | undefined {

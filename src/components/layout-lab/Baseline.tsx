@@ -1,17 +1,21 @@
 'use client';
 
 import '@/lib/catalog/pipelines/registry.generated';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { summarizeEntityData } from '@/lib/ecw/entity-summary';
 import { labStepsDone } from './labPipelines';
 import { getStepComponent } from './steps';
 import { ArchetypeStep } from './steps/ArchetypeStep';
 import { populateItemDemo } from './steps/itemsSteps';
-import { useLabPipelineStore, useEntitySteps } from './labPipelineStore';
+import { useLabPipelineStore, useEntitySteps, setLabSync } from './labPipelineStore';
 import { getCatalogPipeline } from '@/lib/catalog/pipeline-registry';
+import { fetchArtifacts, postArtifact } from './labArtifactClient';
+import { resolveAccept } from './labAcceptance';
+import { summarizeEntity } from '@/lib/catalog/rollup';
 import { CatalogTree } from './CatalogTree';
 import type { LabTheme } from './theme';
 import type { LabDetail, LabGroup } from './useLabCatalogData';
+import type { PipelineArtifact } from '@/lib/pipeline-artifacts-db';
 
 interface Props {
   theme: LabTheme;
@@ -39,17 +43,54 @@ export function Baseline({ theme: t, groups, detail, onSelectCatalog }: Props) {
   const pipeline = detail ? getCatalogPipeline(detail.catalog.catalogId) : null;
   const steps = pipeline ? pipeline.steps.map((s) => s.label) : (detail?.steps ?? []);
 
+  const catalogId = detail?.catalog.catalogId;
+
   const fields = summarizeEntityData(entity?.data);
 
   // Real per-step production state (Items pipeline is fully data-backed; others use pseudo-progress).
-  const isItems = detail?.catalog.catalogId === 'items';
+  const isItems = catalogId === 'items';
   const entitySteps = useEntitySteps(entity?.id ?? '');
   const produce = useLabPipelineStore((s) => s.produce);
   const resetEntity = useLabPipelineStore((s) => s.resetEntity);
+  const hydrateEntity = useLabPipelineStore((s) => s.hydrateEntity);
   const stepDone = (step: string, i: number) =>
     isItems ? !!entitySteps?.[step]?.done : i < (entity ? labStepsDone(entity.lifecycle, steps.length) : 0);
   const done = steps.filter((s, i) => stepDone(s, i)).length;
   const ueAssetCount = entitySteps ? Object.values(entitySteps).reduce((n, a) => n + (a.ueAssets?.length ?? 0), 0) : 0;
+
+  // Write-through: register sync bound to the active catalogId so produce() fires postArtifact.
+  useEffect(() => {
+    if (!catalogId) { setLabSync(null); return; }
+    setLabSync((entityId, step, art) => {
+      const accept = resolveAccept(catalogId, step);
+      const res = accept ? accept(art.data) : null;
+      void postArtifact({ catalogId, entityId, step, data: art.data, ueAssets: art.ueAssets, status: res?.status ?? 'pass', tier: res?.tier ?? 'L0', reason: res?.reason });
+    });
+    return () => setLabSync(null);
+  }, [catalogId]);
+
+  // Hydrate: load server artifacts into the cache (add-only — never wipes local state).
+  useEffect(() => {
+    if (!catalogId || !entity) return;
+    let cancelled = false;
+    fetchArtifacts(catalogId, entity.id).then((arts) => {
+      if (cancelled || !arts.length) return;
+      hydrateEntity(entity.id, arts.map((a) => ({ step: a.step, artifact: { done: true, data: a.data, ueAssets: a.ueAssets, at: a.updatedAt ?? new Date().toISOString() } })));
+    });
+    return () => { cancelled = true; };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [catalogId, entity?.id, hydrateEntity]); // entity?.id is the stable identity key; full entity ref changes on every render
+
+  // Server-faithful rollup: derives config-complete/tier using the same accept logic the server stored.
+  const artifacts: PipelineArtifact[] = catalogId
+    ? steps.filter((s) => entitySteps?.[s]).map((s) => {
+        const art = entitySteps![s];
+        const accept = resolveAccept(catalogId, s);
+        const res = accept ? accept(art.data) : null;
+        return { catalogId, entityId: entity?.id ?? '', step: s, data: art.data, ueAssets: art.ueAssets, status: res?.status ?? 'pass', ...(res?.tier ? { tier: res.tier } : {}) };
+      })
+    : [];
+  const rollup = summarizeEntity(artifacts, steps.length);
 
   const panel = (extra?: React.CSSProperties): React.CSSProperties => ({
     background: t.panel, border: `1px solid ${t.line}`, ...(t.glass ? { backdropFilter: 'blur(12px)' } : {}), ...extra,
@@ -107,7 +148,12 @@ export function Baseline({ theme: t, groups, detail, onSelectCatalog }: Props) {
 
         {/* pipeline column (right of the tree) */}
         <aside style={{ borderRight: `1px solid ${t.line}`, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
-          <div className={t.fontMono} style={{ fontSize: 14, letterSpacing: '0.12em', textTransform: 'uppercase', color: t.ink, padding: '14px 18px 8px' }}>Pipeline · {done}/{steps.length}</div>
+          <div className={t.fontMono} style={{ fontSize: 14, letterSpacing: '0.12em', textTransform: 'uppercase', color: t.ink, padding: '14px 18px 8px' }}>
+            Pipeline · {done}/{steps.length}
+            {rollup.configComplete
+              ? <span style={{ color: t.ok }}> · config-complete</span>
+              : rollup.highestTier ? <span style={{ color: t.muted }}> · {rollup.highestTier}</span> : null}
+          </div>
           {isItems && entity && (
             <div style={{ display: 'flex', gap: 8, padding: '0 18px 8px' }}>
               <button onClick={() => populateItemDemo(entity, produce)} className={t.fontMono}
