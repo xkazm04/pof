@@ -19,4 +19,6 @@ export const CANON_SEED: ProjectRule[] = [
   { id: 'proj-links', category: 'project', scope: 'global', title: 'Cross-catalog links', body: 'bestiary→abilities + loot; loot→items; vendor→items + economy; currency defines caps + sinks. Reference upstream entities via CatalogLink (they may still be deferred).' },
   { id: 'proj-quality', category: 'project', scope: 'global', title: 'Quality bar', body: 'config-complete (the parallel-dev done bar) = every step passes at L0–L2 or is deferred at L3/L4. Brief ≥ 300 chars; all schema fields populated; an icon selected.' },
   { id: 'proj-economy', category: 'project', scope: 'currency', title: 'Economy laws', body: 'Every currency must define at least one sink; caps prevent runaway inflation; the per-hour faucet and sink should stay balanced within ±15%. Premium and soft currencies never inter-convert freely.' },
+  { id: 'art-icon-family', category: 'art', scope: 'icon-sets', title: 'Icon family coherence', body: 'Icons within a set share silhouette weight, line treatment, palette, rarity-frame, and light direction — the set reads as one family across every member.' },
+  { id: 'art-icon-a11y', category: 'art', scope: 'global', title: 'Icon accessibility', body: 'Icons must hold AA contrast on the dark HUD, use colorblind-safe hue separation, and remain legible at 32px.' },
 ];
