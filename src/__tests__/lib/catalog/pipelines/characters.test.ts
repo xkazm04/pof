@@ -26,33 +26,56 @@ describe('characters pipeline', () => {
 
     // Stat Block: produce + accept → pass (L0 fieldsPopulated)
     const statBlock = p!.steps.find((s) => s.label === 'Stat Block')!;
-    expect(statBlock.accept(statBlock.produce(entity).data ?? {}).status).toBe('pass');
+    const statData = statBlock.produce(entity).data ?? {};
+    expect(statBlock.accept(statData).status).toBe('pass');
+    // FIX 2: ARPG-grade Str/Dex/Int attributes (§9c) + resistance profile (§4) present
+    const stats = (statData as Record<string, unknown>).stats as Record<string, unknown>;
+    expect(stats).toHaveProperty('strength');
+    expect(stats).toHaveProperty('dexterity');
+    expect(stats).toHaveProperty('intelligence');
+    expect(stats).toHaveProperty('fireResistance');
+    expect(stats).toHaveProperty('chaosResistance');
+    expect(stats).toHaveProperty('damageType');
+    // wiringContract present on stat block data
+    expect(statData).toHaveProperty('wiringContract');
 
-    // Stat Block static checks: declared but deferred without UE root (no fixture for FARPGAttributeInitRow)
+    // Stat Block static checks: 2 checks (cppSymbolExists + seedRowPresent), both L2
     const statChecks = statBlock.staticChecks!(entity);
-    expect(statChecks).toHaveLength(1);
+    expect(statChecks).toHaveLength(2);
     const l2stat = statChecks[0](null);
     expect(l2stat.tier).toBe('L2');
+    const l2statSeed = statChecks[1](null);
+    expect(l2statSeed.tier).toBe('L2');
 
     // Behavior (NPC): produce + accept → pass (L0 fieldsPopulated)
     const behavior = p!.steps.find((s) => s.label === 'Behavior (NPC)')!;
     expect(behavior.accept(behavior.produce(entity).data ?? {}).status).toBe('pass');
 
-    // Behavior produces cross-catalog links to dialog-trees + quests
+    // Behavior produces cross-catalog links to dialog-trees + quests (real seeded ids only)
     const behaviorData = behavior.produce(entity).data ?? {};
-    const links = (behaviorData as Record<string, unknown>).links as Array<{ catalogId: string; role: string }>;
+    const links = (behaviorData as Record<string, unknown>).links as Array<{ catalogId: string; entityId: string; role: string }>;
     expect(links.some((l) => l.catalogId === 'dialog-trees')).toBe(true);
     expect(links.some((l) => l.catalogId === 'quests')).toBe(true);
+    // FIX 1: dangling ids replaced with real seeded ids (new-catalogs.ts starters)
+    const dialogLink = links.find((l) => l.catalogId === 'dialog-trees')!;
+    expect(dialogLink.entityId).toBe('dialog-gatekeeper');
+    const questLink = links.find((l) => l.catalogId === 'quests')!;
+    expect(questLink.entityId).toBe('quest-ember-pact');
+    // FIX 2: spellbook ability grants are linked (real seeded off-phy-01 / off-phy-02)
+    expect(links.some((l) => l.catalogId === 'spellbook' && l.entityId === 'off-phy-01')).toBe(true);
+    expect(links.some((l) => l.catalogId === 'spellbook' && l.entityId === 'off-phy-02')).toBe(true);
 
     // Test Gate: deferred L3
     const gate = p!.steps.find((s) => s.label === 'Test Gate')!;
     expect(gate.accept({})).toMatchObject({ tier: 'L3', status: 'deferred' });
 
-    // UE Packaging static checks: declared (result is tier L2 regardless of UE root availability)
+    // UE Packaging static checks: 2 checks (cppSymbolExists + seedRowPresent), both L2
     const packaging = p!.steps.find((s) => s.label === 'UE Packaging')!;
     const pkgChecks = packaging.staticChecks!(entity);
-    expect(pkgChecks).toHaveLength(1);
+    expect(pkgChecks).toHaveLength(2);
     const l2pkg = pkgChecks[0](null);
     expect(l2pkg.tier).toBe('L2');
+    const l2pkgSeed = pkgChecks[1](null);
+    expect(l2pkgSeed.tier).toBe('L2');
   });
 });
