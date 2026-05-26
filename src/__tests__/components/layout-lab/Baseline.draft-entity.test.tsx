@@ -38,6 +38,10 @@ describe('useLabDetail merges drafts', () => {
 });
 
 describe('CatalogTree draft rendering', () => {
+  beforeEach(() => {
+    useCatalogStore.setState({ draftEntitiesByCatalog: {} });
+  });
+
   it('renders a draft entity with a × discard button', () => {
     useCatalogStore.getState().addDraft('items', {
       id: 'draft-items-disc', catalogId: 'items', name: 'Draft With Discard',

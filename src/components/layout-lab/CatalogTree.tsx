@@ -68,36 +68,42 @@ function CatalogRow({
         // Drafts always use the warn capsule style regardless of lifecycle status.
         const isPass = !isDraft && status === 'pass';
         return (
-          <button
+          <div
             key={entity.id}
-            onClick={() => onSelectEntity(entity.id)}
-            aria-label={statusAriaLabel(entity.name, status)}
             style={{
-              display: 'flex', alignItems: 'center', gap: 8,
-              width: '100%', textAlign: 'left', padding: '6px 12px 6px 36px',
-              cursor: 'pointer', border: 'none',
+              display: 'flex', alignItems: 'center',
               background: isEntitySelected ? t.accentBg : 'transparent',
-              color: isEntitySelected ? t.inkDeep : t.text,
-              fontWeight: isEntitySelected ? 600 : 400,
-              fontSize: 14,
             }}
           >
-            <span
-              aria-hidden="true"
-              title={`${entity.name}: ${entity.lifecycle}`}
+            <button
+              onClick={() => onSelectEntity(entity.id)}
+              aria-label={statusAriaLabel(entity.name, status)}
               style={{
-                minWidth: 14, height: 14, padding: isPass ? 0 : '0 3px',
-                flexShrink: 0, borderRadius: isPass ? '50%' : 4,
-                background: isPass ? dotColor : 'transparent',
-                border: isPass ? 'none' : `1px solid ${dotColor}`,
-                color: dotColor,
-                display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-                fontSize: 11, fontWeight: 700, lineHeight: 1,
+                flex: 1, display: 'flex', alignItems: 'center', gap: 8,
+                textAlign: 'left', padding: '6px 12px 6px 36px',
+                cursor: 'pointer', border: 'none', background: 'transparent',
+                color: isEntitySelected ? t.inkDeep : t.text,
+                fontWeight: isEntitySelected ? 600 : 400,
+                fontSize: 14,
               }}
-            >{isPass ? '' : STATUS_GLYPH[status]}</span>
-            <span style={{ minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-              {entity.name}
-            </span>
+            >
+              <span
+                aria-hidden="true"
+                title={`${entity.name}: ${entity.lifecycle}`}
+                style={{
+                  minWidth: 14, height: 14, padding: isPass ? 0 : '0 3px',
+                  flexShrink: 0, borderRadius: isPass ? '50%' : 4,
+                  background: isPass ? dotColor : 'transparent',
+                  border: isPass ? 'none' : `1px solid ${dotColor}`,
+                  color: dotColor,
+                  display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                  fontSize: 11, fontWeight: 700, lineHeight: 1,
+                }}
+              >{isPass ? '' : STATUS_GLYPH[status]}</span>
+              <span style={{ minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                {entity.name}
+              </span>
+            </button>
             {isDraft && (
               <button
                 aria-label="discard draft"
@@ -105,12 +111,12 @@ function CatalogRow({
                   e.stopPropagation();
                   useCatalogStore.getState().removeDraft(catalog.catalogId, entity.id);
                 }}
-                style={{ marginLeft: 'auto', background: 'transparent', border: 'none', cursor: 'pointer', color: t.muted, fontSize: 14, padding: '0 4px' }}
+                style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: t.muted, fontSize: 14, padding: '0 4px' }}
               >
                 ×
               </button>
             )}
-          </button>
+          </div>
         );
       })}
     </>
