@@ -7,7 +7,7 @@ import type { LabEntity } from '@/components/layout-lab/useLabCatalogData';
 const slug = (n: string) => n.replace(/[^a-z0-9]+/gi, '');
 
 registerCatalogPipeline({
-  catalogId: 'status-effect',
+  catalogId: 'status-effects',
   steps: [
     {
       archetype: 'brief', label: 'Concept Brief',

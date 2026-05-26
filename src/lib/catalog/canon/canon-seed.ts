@@ -23,4 +23,5 @@ export const CANON_SEED: ProjectRule[] = [
   { id: 'art-icon-a11y', category: 'art', scope: 'global', title: 'Icon accessibility', body: 'Icons must hold AA contrast on the dark HUD, use colorblind-safe hue separation, and remain legible at 32px.' },
   { id: 'game-creature-design', category: 'game', scope: 'bestiary', title: 'Creature design', body: 'Enemies read by archetype (tank / skirmisher / caster / boss); attacks are telegraphed and counterable; difficulty comes from legible, learnable patterns — never stat inflation.' },
   { id: 'game-lore-canon', category: 'game', scope: 'global', title: 'Lore canon', body: 'All lore aligns to the post-Sundering setting and established factions with no contradictions; codex entries keep spoilers behind unlocks.' },
+  { id: 'proj-hud-binding', category: 'project', scope: 'global', title: 'HUD binding contract', body: 'Any entity that surfaces in the HUD (currency, status, objective tracker) must declare its widget, a display-format string, and a HUD anchor; bind to a hud-elements presentation entry — never hard-code placement.' },
 ];

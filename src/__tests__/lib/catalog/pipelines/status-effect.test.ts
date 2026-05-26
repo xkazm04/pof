@@ -6,7 +6,7 @@ describe('status-effect pilot pipeline', () => {
   beforeEach(() => _resetRegistry());
   it('registers a config-complete-capable pipeline with a deferred runtime gate', async () => {
     await import('@/lib/catalog/pipelines/status-effect');
-    const p = getCatalogPipeline('status-effect');
+    const p = getCatalogPipeline('status-effects');
     expect(p).not.toBeNull();
     const labels = p!.steps.map((s) => s.label);
     expect(labels).toContain('Effect Logic');

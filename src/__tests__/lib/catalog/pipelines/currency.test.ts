@@ -5,9 +5,9 @@ import { _resetRegistry, getCatalogPipeline } from '@/lib/catalog/pipeline-regis
 describe('currency pipeline', () => {
   beforeEach(() => _resetRegistry());
 
-  it('registers under "currency" with correct step labels and acceptance', async () => {
+  it('registers under "currencies" with correct step labels and acceptance', async () => {
     await import('@/lib/catalog/pipelines/currency');
-    const p = getCatalogPipeline('currency');
+    const p = getCatalogPipeline('currencies');
     expect(p).not.toBeNull();
 
     const labels = p!.steps.map((s) => s.label);

@@ -5,6 +5,9 @@ import { CliProduce } from './shared/CliProduce';
 import { useLabStep, useLabPipelineStore } from '../labPipelineStore';
 import { useCanonStore } from '../canonStore';
 import { canonContextFor } from '@/lib/catalog/canon/canonContext';
+import { useCatalogStore } from '@/stores/catalogStore';
+import { linkTargetsExist } from '@/lib/catalog/acceptance/linkCheckers';
+import type { CatalogLinkRef } from '@/lib/catalog/acceptance/linkCheckers';
 import type { LabTheme } from '../theme';
 import type { LabEntity } from '../useLabCatalogData';
 import type { StepSpec, ViewDescriptor } from '@/lib/catalog/stepSpec';
@@ -55,21 +58,37 @@ export function ArchetypeStep({ t, entity, step, spec, catalogId }: { t: LabThem
   const art = useLabStep(entity.id, step);
   const produce = useLabPipelineStore((s) => s.produce);
   const canonRules = useCanonStore((s) => s.rules);
+  const entitiesByCatalog = useCatalogStore((s) => s.entitiesByCatalog);
   const data = art?.data ?? {};
+  const links = Array.isArray((data as Record<string, unknown>).links) ? ((data as Record<string, unknown>).links as CatalogLinkRef[]) : [];
+  const linkRes = links.length ? linkTargetsExist(links, (c, e) => !!entitiesByCatalog[c]?.[e]) : null;
   return (
-    <StepFrame t={t} acceptance={spec.accept(data)}
-      panels={[
-        { label: 'View', node: <ViewPanel t={t} view={spec.view} data={data} /> },
-        { label: 'Produce', node: (
-          <CliProduce t={t} label={`Generate ${spec.label} (CLI)`} rows={3}
-            defaultDirection={spec.defaultDirection} note={spec.produceNote}
-            buildPrompt={(dir) => {
-              const canon = canonContextFor(canonRules, catalogId, ARCHETYPE_CANON[spec.archetype]);
-              return [canon, `Produce ${spec.label} for ${entity.name}. ${dir}`].filter(Boolean).join('\n\n');
-            }}
-            onComplete={() => produce(entity.id, step, spec.produce(entity))} />
-        ) },
-      ]}
-    />
+    <>
+      {linkRes && (
+        <div style={{
+          borderLeft: `4px solid ${linkRes.status === 'pass' ? t.ok : linkRes.status === 'deferred' ? t.muted : t.warn}`,
+          padding: '6px 12px',
+          marginBottom: 8,
+          fontSize: 14,
+          color: t.text,
+        }}>
+          {linkRes.label}: {linkRes.detail}{linkRes.reason ? ` — ${linkRes.reason}` : ''}
+        </div>
+      )}
+      <StepFrame t={t} acceptance={spec.accept(data)}
+        panels={[
+          { label: 'View', node: <ViewPanel t={t} view={spec.view} data={data} /> },
+          { label: 'Produce', node: (
+            <CliProduce t={t} label={`Generate ${spec.label} (CLI)`} rows={3}
+              defaultDirection={spec.defaultDirection} note={spec.produceNote}
+              buildPrompt={(dir) => {
+                const canon = canonContextFor(canonRules, catalogId, ARCHETYPE_CANON[spec.archetype]);
+                return [canon, `Produce ${spec.label} for ${entity.name}. ${dir}`].filter(Boolean).join('\n\n');
+              }}
+              onComplete={() => produce(entity.id, step, spec.produce(entity))} />
+          ) },
+        ]}
+      />
+    </>
   );
 }
