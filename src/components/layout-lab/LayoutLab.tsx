@@ -1,7 +1,7 @@
 'use client';
 /* eslint-disable no-restricted-syntax -- identity-lab chrome: neutral monochrome bar, bespoke by design */
 
-import { useState, useMemo } from 'react';
+import { useState } from 'react';
 import { useLabCatalogData, useLabDetail } from './useLabCatalogData';
 import { Baseline } from './Baseline';
 import { LAB_THEMES, LIGHT } from './theme';
@@ -14,7 +14,6 @@ import { LAB_THEMES, LIGHT } from './theme';
  */
 export function LayoutLab() {
   const groups = useLabCatalogData();
-  const catalogs = useMemo(() => groups.flatMap((g) => g.catalogs), [groups]);
   const [themeId, setThemeId] = useState<'light' | 'dark'>('light');
   const [catalogId, setCatalogId] = useState('items');
   const detail = useLabDetail(catalogId);
@@ -39,7 +38,7 @@ export function LayoutLab() {
         ))}
       </div>
       <div style={{ flex: 1, minHeight: 0, overflow: 'hidden' }}>
-        <Baseline theme={theme} catalogs={catalogs} detail={detail} onSelectCatalog={setCatalogId} />
+        <Baseline theme={theme} groups={groups} detail={detail} onSelectCatalog={setCatalogId} />
       </div>
     </div>
   );

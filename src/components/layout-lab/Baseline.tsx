@@ -1,17 +1,21 @@
 'use client';
 
+import '@/lib/catalog/pipelines/registry.generated';
 import { useState } from 'react';
 import { summarizeEntityData } from '@/lib/ecw/entity-summary';
 import { labStepsDone } from './labPipelines';
 import { getStepComponent } from './steps';
+import { ArchetypeStep } from './steps/ArchetypeStep';
 import { populateItemDemo } from './steps/itemsSteps';
 import { useLabPipelineStore, useEntitySteps } from './labPipelineStore';
+import { getCatalogPipeline } from '@/lib/catalog/pipeline-registry';
+import { CatalogTree } from './CatalogTree';
 import type { LabTheme } from './theme';
-import type { LabCatalog, LabDetail } from './useLabCatalogData';
+import type { LabDetail, LabGroup } from './useLabCatalogData';
 
 interface Props {
   theme: LabTheme;
-  catalogs: LabCatalog[];
+  groups: LabGroup[];
   detail: LabDetail | null;
   onSelectCatalog: (id: string) => void;
 }
@@ -21,16 +25,20 @@ const pad2 = (n: number) => String(n).padStart(2, '0');
 /**
  * The single Blueprint baseline (light) / Studio (dark) composition screen. Full
  * width + height: header carries the title + entity stats (the old title block);
- * a left sidebar holds the entity list + the vertical pipeline timeline; the main
- * area is the roomy work canvas for the selected pipeline step.
+ * a left column holds the Category→Catalog→Entity tree; the pipeline column shows
+ * the vertical step timeline; the main area is the roomy work canvas for the selected step.
  */
-export function Baseline({ theme: t, catalogs, detail, onSelectCatalog }: Props) {
+export function Baseline({ theme: t, groups, detail, onSelectCatalog }: Props) {
   const [entityId, setEntityId] = useState<string | null>(null);
   const [stepIdx, setStepIdx] = useState<number | null>(0);
 
   const entities = detail?.entities ?? [];
   const entity = entities.find((e) => e.id === entityId) ?? entities[0] ?? null;
-  const steps = detail?.steps ?? [];
+
+  // Hybrid step source: registry pipeline wins if present, else detail.steps fallback
+  const pipeline = detail ? getCatalogPipeline(detail.catalog.catalogId) : null;
+  const steps = pipeline ? pipeline.steps.map((s) => s.label) : (detail?.steps ?? []);
+
   const fields = summarizeEntityData(entity?.data);
 
   // Real per-step production state (Items pipeline is fully data-backed; others use pseudo-progress).
@@ -47,6 +55,17 @@ export function Baseline({ theme: t, catalogs, detail, onSelectCatalog }: Props)
     background: t.panel, border: `1px solid ${t.line}`, ...(t.glass ? { backdropFilter: 'blur(12px)' } : {}), ...extra,
   });
 
+  const handleSelectCatalog = (id: string) => {
+    onSelectCatalog(id);
+    setEntityId(null);
+    setStepIdx(0);
+  };
+
+  const handleSelectEntity = (id: string) => {
+    setEntityId(id);
+    setStepIdx(0);
+  };
+
   return (
     <div
       className={t.fontBody}
@@ -57,14 +76,6 @@ export function Baseline({ theme: t, catalogs, detail, onSelectCatalog }: Props)
     >
       {/* ── Header: title + moved title-block stats ── */}
       <header style={{ display: 'flex', alignItems: 'center', gap: 20, padding: '16px 28px', borderBottom: `2px solid ${t.ink}`, ...panel({ borderTop: 'none', borderLeft: 'none', borderRight: 'none' }) }}>
-        <select
-          value={detail?.catalog.catalogId ?? ''}
-          onChange={(e) => { onSelectCatalog(e.target.value); setEntityId(null); setStepIdx(0); }}
-          className={t.fontMono}
-          style={{ background: t.bg, color: t.ink, border: `1px solid ${t.line}`, padding: '8px 10px', fontSize: 14, cursor: 'pointer' }}
-        >
-          {catalogs.map((c) => <option key={c.catalogId} value={c.catalogId}>{c.label}</option>)}
-        </select>
         <div style={{ minWidth: 0 }}>
           <div className={t.fontMono} style={{ fontSize: 14, letterSpacing: '0.12em', textTransform: 'uppercase', color: t.muted }}>{detail?.catalog.label ?? '—'}</div>
           <h1 style={{ fontSize: 26, fontWeight: 700, color: t.inkDeep, margin: 0, lineHeight: 1.1 }}>{entity?.name ?? '—'}</h1>
@@ -78,25 +89,23 @@ export function Baseline({ theme: t, catalogs, detail, onSelectCatalog }: Props)
         </div>
       </header>
 
-      {/* ── Body: [ entity list | pipeline | main content ] ── */}
-      <div style={{ flex: 1, display: 'grid', gridTemplateColumns: '230px 320px 1fr', minHeight: 0 }}>
-        {/* entity list column */}
+      {/* ── Body: [ catalog tree | pipeline | main content ] ── */}
+      <div style={{ flex: 1, display: 'grid', gridTemplateColumns: '260px 320px 1fr', minHeight: 0 }}>
+        {/* catalog tree column */}
         <aside style={{ borderRight: `1px solid ${t.line}`, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
-          <div className={t.fontMono} style={{ fontSize: 14, letterSpacing: '0.12em', textTransform: 'uppercase', color: t.ink, padding: '14px 18px 8px' }}>Entities · {entities.length}</div>
-          <div style={{ overflow: 'auto', padding: '0 10px 10px' }}>
-            {entities.map((e) => {
-              const on = e.id === entity?.id;
-              return (
-                <button key={e.id} onClick={() => setEntityId(e.id)}
-                  style={{ display: 'block', width: '100%', textAlign: 'left', padding: '9px 12px', fontSize: 17, cursor: 'pointer', border: 'none', borderLeft: on ? `3px solid ${t.ink}` : '3px solid transparent', background: on ? t.accentBg : 'transparent', color: on ? t.inkDeep : t.text, fontWeight: on ? 600 : 400 }}>
-                  {e.name}
-                </button>
-              );
-            })}
-          </div>
+          <div className={t.fontMono} style={{ fontSize: 14, letterSpacing: '0.12em', textTransform: 'uppercase', color: t.ink, padding: '14px 18px 8px' }}>Catalogs</div>
+          <CatalogTree
+            t={t}
+            groups={groups}
+            selectedCatalogId={detail?.catalog.catalogId ?? ''}
+            entities={entities}
+            selectedEntityId={entity?.id ?? null}
+            onSelectCatalog={handleSelectCatalog}
+            onSelectEntity={handleSelectEntity}
+          />
         </aside>
 
-        {/* pipeline column (right of the list) */}
+        {/* pipeline column (right of the tree) */}
         <aside style={{ borderRight: `1px solid ${t.line}`, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
           <div className={t.fontMono} style={{ fontSize: 14, letterSpacing: '0.12em', textTransform: 'uppercase', color: t.ink, padding: '14px 18px 8px' }}>Pipeline · {done}/{steps.length}</div>
           {isItems && entity && (
@@ -134,18 +143,22 @@ export function Baseline({ theme: t, catalogs, detail, onSelectCatalog }: Props)
         {/* main content — roomy work canvas */}
         <main style={{ padding: '28px 36px', overflow: 'auto', minHeight: 0 }}>
           {stepIdx != null && steps[stepIdx] ? (() => {
-            const StepComp = detail && entity ? getStepComponent(detail.catalog.catalogId, steps[stepIdx]) : null;
+            const stepName = steps[stepIdx];
+            const Bespoke = detail && entity ? getStepComponent(detail.catalog.catalogId, stepName) : null;
+            const spec = pipeline?.steps.find((s) => s.label === stepName) ?? null;
             return (
               <>
-                <div className={t.fontMono} style={{ fontSize: 14, letterSpacing: '0.12em', color: t.muted, textTransform: 'uppercase' }}>Step {pad2(stepIdx + 1)} / {pad2(steps.length)}{stepDone(steps[stepIdx], stepIdx) ? ' · complete' : ''}</div>
-                <h2 style={{ fontSize: 30, fontWeight: 700, color: t.inkDeep, margin: '6px 0 18px' }}>{steps[stepIdx]}</h2>
-                {StepComp && entity ? (
-                  <StepComp key={`${entity.id}:${steps[stepIdx]}`} t={t} entity={entity} step={steps[stepIdx]} />
+                <div className={t.fontMono} style={{ fontSize: 14, letterSpacing: '0.12em', color: t.muted, textTransform: 'uppercase' }}>Step {pad2(stepIdx + 1)} / {pad2(steps.length)}{stepDone(stepName, stepIdx) ? ' · complete' : ''}</div>
+                <h2 style={{ fontSize: 30, fontWeight: 700, color: t.inkDeep, margin: '6px 0 18px' }}>{stepName}</h2>
+                {Bespoke && entity ? (
+                  <Bespoke key={`${entity.id}:${stepName}`} t={t} entity={entity} step={stepName} />
+                ) : spec && entity ? (
+                  <ArchetypeStep key={`${entity.id}:${stepName}`} t={t} entity={entity} step={stepName} spec={spec} />
                 ) : (
                   <div style={panel({ borderRadius: t.glass ? 12 : 0, padding: 28, minHeight: 360 })}>
                     <div className={t.fontMono} style={{ fontSize: 14, color: t.muted, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 10 }}>Compose</div>
                     <p style={{ fontSize: 15, color: t.muted, maxWidth: 520, lineHeight: 1.6 }}>
-                      Work canvas for <strong style={{ color: t.text }}>{steps[stepIdx]}</strong> on <strong style={{ color: t.text }}>{entity?.name}</strong>. View / Produce / Acceptance UI for this step is not prototyped yet — see the Items · Concept Brief / Attributes / Economy steps for the pattern.
+                      Work canvas for <strong style={{ color: t.text }}>{stepName}</strong> on <strong style={{ color: t.text }}>{entity?.name}</strong>. View / Produce / Acceptance UI for this step is not prototyped yet — see the Items · Concept Brief / Attributes / Economy steps for the pattern.
                     </p>
                   </div>
                 )}
