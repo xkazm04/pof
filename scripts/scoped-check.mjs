@@ -4,6 +4,10 @@ import { execSync } from 'node:child_process';
 // then lint + test ONLY the files this CLI changed vs HEAD, so foreign in-progress work
 // on the shared tree does not fail this CLI's gate. tsc is run tolerantly: the 3
 // pre-existing AssetInspector.tsx errors are excluded; any OTHER `error TS` fails the gate.
+
+// Regenerate the gitignored pipeline registry barrel so tsc/vitest never see a missing file.
+execSync('node scripts/gen-pipeline-registry.mjs', { stdio: 'ignore' });
+
 function run(cmd) {
   try {
     return execSync(cmd, { encoding: 'utf8', stdio: 'pipe' });

@@ -3,6 +3,9 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
+    "prepare": "node scripts/gen-pipeline-registry.mjs",
+    "predev": "node scripts/gen-pipeline-registry.mjs",
+    "prebuild": "node scripts/gen-pipeline-registry.mjs",
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
