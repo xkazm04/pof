@@ -5,6 +5,7 @@ import { persist, createJSONStorage } from 'zustand/middleware';
 import { useShallow } from 'zustand/react/shallow';
 import type {
   CatalogEntityBase, AbilityEntry, ItemEntry, LifecycleState, TestResult, LifecycleRecord,
+  StoredCatalogEntity,
 } from '@/lib/catalog/types';
 import { resolveTransition } from '@/lib/catalog/lifecycle';
 import { seedAllCatalogs } from '@/lib/catalog/sections';
@@ -20,6 +21,10 @@ interface CatalogState {
   }) => void;
   /** Merge server-side lifecycle records over seeded entities (called on load). */
   loadLifecycle: (records: LifecycleRecord[]) => void;
+  /** Draft entities staged for a one-shot produce step, keyed by catalogId then entityId. */
+  draftEntitiesByCatalog: Record<string, Record<string, StoredCatalogEntity>>;
+  addDraft: (catalogId: string, entity: StoredCatalogEntity) => void;
+  removeDraft: (catalogId: string, entityId: string) => void;
 }
 
 function indexById(entities: CatalogEntityBase[]): Record<string, CatalogEntityBase> {
@@ -87,6 +92,23 @@ export const useCatalogStore = create<CatalogState>()(
           }
           return changed ? { entitiesByCatalog: next } : s;
         }),
+
+      draftEntitiesByCatalog: {},
+
+      addDraft: (catalogId, entity) =>
+        set((s) => ({
+          draftEntitiesByCatalog: {
+            ...s.draftEntitiesByCatalog,
+            [catalogId]: { ...(s.draftEntitiesByCatalog[catalogId] ?? {}), [entity.id]: entity },
+          },
+        })),
+
+      removeDraft: (catalogId, entityId) =>
+        set((s) => {
+          const next = { ...(s.draftEntitiesByCatalog[catalogId] ?? {}) };
+          delete next[entityId];
+          return { draftEntitiesByCatalog: { ...s.draftEntitiesByCatalog, [catalogId]: next } };
+        }),
     }),
     {
       name: 'pof-catalog',
@@ -94,10 +116,11 @@ export const useCatalogStore = create<CatalogState>()(
       // Re-seed any catalog the persisted blob is missing, so newly-added seed
       // entries appear after a code update without wiping persisted ones.
       merge: (persisted, current) => {
-        const p = (persisted as Partial<CatalogState> | undefined)?.entitiesByCatalog ?? {};
+        const p = persisted as Partial<CatalogState> | undefined;
         return {
           ...current,
-          entitiesByCatalog: { ...current.entitiesByCatalog, ...p },
+          entitiesByCatalog: { ...current.entitiesByCatalog, ...(p?.entitiesByCatalog ?? {}) },
+          draftEntitiesByCatalog: { ...(p?.draftEntitiesByCatalog ?? {}) },
         };
       },
     },
