@@ -39,8 +39,10 @@ yarn-error.log*
 # CLI self-improvement signals
 .pof/
 
-# Claude Code logs
+# Claude Code logs + transient agent/idea artifacts
 .claude/logs/
+.claude/worktrees/
+.claude/commands/idea-*
 
 # Windows reserved name artifacts
 nul
