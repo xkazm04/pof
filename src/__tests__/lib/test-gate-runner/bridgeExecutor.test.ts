@@ -90,6 +90,11 @@ describe('makeBridgeExecutor', () => {
     expect(v.status).toBe('pass');
   });
 
+  it('run() throws fast (→ stays deferred) when the plugin reports not_found', async () => {
+    const ex = makeBridgeExecutor({ fetchImpl: (() => resp({ status: 'not_found', message: 'no test' })) as unknown as typeof fetch, pollMs: 1, maxPolls: 3 });
+    await expect(ex.run(job)).rejects.toThrow(/no automation test matches/);
+  });
+
   it('run() throws on a non-ok HTTP response', async () => {
     const ex = makeBridgeExecutor({ fetchImpl: (() => resp({ error: 'no plugin' }, false, 500)) as unknown as typeof fetch });
     await expect(ex.run(job)).rejects.toThrow(/run-automation 500/);

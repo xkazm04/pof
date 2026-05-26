@@ -133,7 +133,13 @@ export function makeBridgeExecutor(opts: BridgeExecutorOptions = {}): GateExecut
         const text = await res.text().catch(() => '');
         throw new Error(`bridge run-automation ${res.status}: ${text.slice(0, 160)}`);
       }
-      let interp = interpretAutomationResult(await res.json().catch(() => null), job.testName);
+      const posted = (await res.json().catch(() => null)) as Record<string, unknown> | null;
+      // The plugin returns status:"not_found" when no automation test matches → skip
+      // (stays deferred), never a false fail, and don't waste the poll budget.
+      if (posted && posted.status === 'not_found') {
+        throw new Error(`no automation test matches ${job.testName}`);
+      }
+      let interp = interpretAutomationResult(posted, job.testName);
 
       // run-automation is async (returns {status:"accepted"}) — poll the results
       // endpoint until our test's verdict is recorded or we exhaust the budget.
