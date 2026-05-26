@@ -2,19 +2,21 @@
 
 The plan to take every catalog entity from **idea → UE asset → live test**. Source of truth: `game_catalog_pipelines.xlsx` (parsed into [`_sheet.json`](_sheet.json); regenerate the per-row briefs with `node docs/catalog/_generate.mjs`).
 
+> **⚠️ Execution model updated (2026-05-26).** A catalog row is now authored as a **`StepSpec[]` pipeline** that renders through a shared chassis — start at **[`AUTHORING.md`](AUTHORING.md)** (the recipe + the loop), with **[`PIPELINE_REVIEW.md`](PIPELINE_REVIEW.md)** (archetype library) and **[`WIRING-AND-ACCEPTANCE.md`](WIRING-AND-ACCEPTANCE.md)** (data contract + L0–L4 acceptance tiers). The older "one CLI, one asset, idea→UE→test + Session Findings" framing below is **superseded for *how* to build**; the **catalog index table** and the **living findings/opportunities logs at the bottom remain authoritative reference**.
+
 ## Vision
 
 One year out, the whole catalog asset pipeline is automated — design through 2D/3D, audio/VFX, UI, and into a playable, test-gated UE build. This tree is how we get there: every catalog entity is a row with an explicit pipeline, and each row is buildable by a single focused session.
 
-## The execution contract (one CLI, one entity, end-to-end)
+## The execution contract (one CLI per row) — see [`AUTHORING.md`](AUTHORING.md)
 
-Each catalog row is owned by **one Claude Code CLI**, at highest effort:
+Each catalog row is owned by **one Claude Code CLI** (its own terminal). The row is authored as a **`StepSpec[]` pipeline** (`src/lib/catalog/pipelines/<catalogId>.ts`) per [`AUTHORING.md`](AUTHORING.md):
 
-1. **Design well.** Read this index + the row's `plan.md`. Design the entity's schema and rules before producing assets.
-2. **Make one asset start → end.** Drive the row's **one named target asset** through *every* pipeline step (idea → real UE asset → passing test gate), reusing existing PoF capabilities wherever they exist and producing real artifacts. Where a capability is missing, build a minimal real version or record a gap — do not fake a step.
-3. **Document for future sessions.** Fill the row's `## Session Findings` with **cross-catalog opportunities** discovered and **gaps/blockers**, and append one-liners to the two living logs at the bottom of this index so knowledge compounds across sessions.
+1. **Read the design.** This index + the row's `plan.md` (intent, cross-catalog deps, findings) + the archetype sequence in [`PIPELINE_REVIEW.md`](PIPELINE_REVIEW.md). The **Project Canon** auto-injects project laws into every Produce prompt.
+2. **Author the pipeline spec** — copy an exemplar (`currency.ts` / `icon-sets.ts` / `bestiary.ts`). Each step declares a **derived** acceptance on the L0–L4 ladder; produced artifacts persist to the `pipeline_artifacts` table; the registry barrel is auto-generated (never hand-edit it).
+3. **Reach config-complete (L0–L2)** — the parallel-dev done bar; L3 runtime / L4 visual are honestly **deferred** to the live-UE runner. Gate with `npm run check:scoped` (not full `validate`); commit narrowly.
 
-A session is "complete" when the target asset exists in the UE project, its **test gate** passes (or the gate's blocker is documented), and the findings are recorded.
+Knowledge still compounds via the **living logs at the bottom** of this index — append cross-catalog opportunities + gaps as you go. (The legacy "drive one asset idea→UE→test" detail is retained in those logs as historical findings.)
 
 ## Common pipeline shape
 
