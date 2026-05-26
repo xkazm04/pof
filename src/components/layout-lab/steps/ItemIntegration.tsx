@@ -1,19 +1,20 @@
 'use client';
 
-import { useState } from 'react';
-import { Lbl, LabInput } from './controls';
 import { StepFrame } from './StepFrame';
 import { CliProduce } from './shared/CliProduce';
-import type { LabTheme } from '../theme';
-import type { LabEntity } from '../useLabCatalogData';
+import { useLabStep, useLabPipelineStore } from '../labPipelineStore';
+import { ITEM_STEP_SPECS } from './itemsSteps';
+import type { StepProps } from './stepProps';
 
-/** Items · Inventory UI Integration. View: grid preview + binding. Produce: wire. Acceptance: renders + category. */
-export function ItemInventoryUI({ t, entity }: { t: LabTheme; entity: LabEntity }) {
-  const [wired, setWired] = useState(false);
-  const [slot, setSlot] = useState('Weapon');
+/** Items · Inventory UI Integration. View: grid preview + binding (persisted). Produce: wire. */
+export function ItemInventoryUI({ t, entity, step }: StepProps) {
+  const art = useLabStep(entity.id, step);
+  const produce = useLabPipelineStore((s) => s.produce);
+  const wired = !!art?.data?.wired;
+  const slot = String((art?.data?.slot as string) ?? 'Weapon');
+
   return (
-    <StepFrame t={t}
-      acceptance={{ label: 'Item renders in the inventory grid · slot category set', status: wired && slot ? 'pass' : 'pending', detail: wired ? `slot: ${slot}` : 'not wired' }}
+    <StepFrame t={t} acceptance={ITEM_STEP_SPECS[step].accept(art)}
       panels={[
         { label: 'Inventory grid', node: (
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 6 }}>
@@ -26,29 +27,30 @@ export function ItemInventoryUI({ t, entity }: { t: LabTheme; entity: LabEntity 
         ) },
         { label: 'Binding', node: (
           <div style={{ display: 'grid', gap: 10 }}>
-            <Lbl t={t}>Slot category</Lbl>
-            <LabInput t={t} value={slot} onChange={setSlot} placeholder="Weapon / Armor / Consumable…" />
+            <span className={t.fontMono} style={{ fontSize: 14, color: t.muted }}>slot category: <span style={{ color: t.text }}>{slot}</span></span>
             <span style={{ fontSize: 14, color: t.muted, lineHeight: 1.55 }}>{wired ? `${entity.name} occupies one grid cell; stack size 1; equippable to the ${slot} slot.` : 'Not yet bound to the inventory widget.'}</span>
           </div>
         ) },
         { label: 'Produce', node: (
           <CliProduce t={t} label="Wire to inventory UI (CLI)" rows={3}
             note={`Registers ${entity.name} with the inventory widget (slot rules + stack size).`}
-            buildPrompt={(d) => `Register ${entity.name} with the inventory UI: ${slot} slot, stack size 1, icon binding. ${d}`.trim()}
-            onComplete={() => setWired(true)} />
+            buildPrompt={(dir) => `Register ${entity.name} with the inventory UI: ${slot} slot, stack size 1, icon binding. ${dir}`}
+            onComplete={() => produce(entity.id, step, ITEM_STEP_SPECS[step].produce(entity))} />
         ) },
       ]}
     />
   );
 }
 
-/** Items · Tooltip / Compare. View: tooltip card + compare. Produce: layout. Acceptance: required fields. */
-export function ItemTooltip({ t, entity }: { t: LabTheme; entity: LabEntity }) {
-  const [done, setDone] = useState(false);
+/** Items · Tooltip / Compare. View: tooltip card + compare (persisted). Produce: layout. */
+export function ItemTooltip({ t, entity, step }: StepProps) {
+  const art = useLabStep(entity.id, step);
+  const produce = useLabPipelineStore((s) => s.produce);
+  const done = !!art?.data?.compare;
   const stats = [['Damage', '34', '+3'], ['Attack Speed', '1.1/s', '-0.1'], ['Weight', '3.4kg', '+0.4'], ['Value', '120g', '+20']];
+
   return (
-    <StepFrame t={t}
-      acceptance={{ label: 'Tooltip shows all required fields · compare vs equipped works', status: done ? 'pass' : 'pending', detail: done ? `${stats.length} fields · compare on` : 'not laid out' }}
+    <StepFrame t={t} acceptance={ITEM_STEP_SPECS[step].accept(art)}
       panels={[
         { label: 'Tooltip card', node: (
           <div style={{ border: `1px solid ${t.line}`, borderRadius: t.glass ? 10 : 0, padding: 14, background: t.panel }}>
@@ -77,8 +79,8 @@ export function ItemTooltip({ t, entity }: { t: LabTheme; entity: LabEntity }) {
         { label: 'Produce', node: (
           <CliProduce t={t} label="Generate tooltip (CLI)" rows={3}
             note="Writes the tooltip layout + compare-vs-equipped delta view."
-            buildPrompt={(d) => `Generate the tooltip layout for ${entity.name} (all stat fields + compare-vs-equipped deltas). ${d}`.trim()}
-            onComplete={() => setDone(true)} />
+            buildPrompt={(dir) => `Generate the tooltip layout for ${entity.name} (all stat fields + compare-vs-equipped deltas). ${dir}`}
+            onComplete={() => produce(entity.id, step, ITEM_STEP_SPECS[step].produce(entity))} />
         ) },
       ]}
     />

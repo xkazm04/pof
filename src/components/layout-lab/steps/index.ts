@@ -9,7 +9,7 @@ import { ItemAnimations, ItemVFX, ItemSFX } from './ItemAnimAudio';
 import { ItemInventoryUI, ItemTooltip } from './ItemIntegration';
 import { ItemTestGate, ItemPackaging } from './ItemGate';
 
-export type StepComponent = ComponentType<{ t: LabTheme; entity: LabEntity }>;
+export type StepComponent = ComponentType<{ t: LabTheme; entity: LabEntity; step: string }>;
 
 /** Per-catalog, per-step composition UIs (View/Produce/Acceptance). The full Items
  *  pipeline is prototyped; other catalogs fall back to the Baseline placeholder. */

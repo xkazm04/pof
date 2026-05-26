@@ -1,11 +1,11 @@
 'use client';
 
-import { useState } from 'react';
 import { Lbl } from './controls';
 import { StepFrame } from './StepFrame';
 import { CliProduce } from './shared/CliProduce';
-import type { LabTheme } from '../theme';
-import type { LabEntity } from '../useLabCatalogData';
+import { useLabStep, useLabPipelineStore } from '../labPipelineStore';
+import { ITEM_STEP_SPECS } from './itemsSteps';
+import type { StepProps } from './stepProps';
 
 interface Attr { key: string; unit: string }
 const SCHEMA: Attr[] = [
@@ -13,21 +13,17 @@ const SCHEMA: Attr[] = [
   { key: 'Durability', unit: 'pt' }, { key: 'Crit Chance', unit: '%' }, { key: 'Range', unit: 'm' },
   { key: 'Stagger', unit: 'pt' }, { key: 'Value', unit: 'g' },
 ];
-const SEED: Record<string, string> = { Damage: '34', 'Attack Speed': '1.1', Weight: '3.4', Value: '120' };
-const GENERATED: Record<string, string> = { Durability: '180', 'Crit Chance': '5', Range: '1.8', Stagger: '22' };
 const PEERS = [['Steel Saber', '31'], ['Worn Greatsword', '46'], ['Guard\'s Blade', '29'], ['Iron Mace', '38']];
 
-/** Items · Step 2 — Attributes. View: UE-synced table | peers+schema. Produce: CLI fills the mix. */
-export function ItemAttributes({ t, entity }: { t: LabTheme; entity: LabEntity }) {
-  const [vals, setVals] = useState<Record<string, string>>(SEED);
-  const missing = SCHEMA.filter((a) => !vals[a.key]);
-  const status = missing.length === 0 ? 'pass' : 'pending';
+/** Items · Attributes. View: UE-synced table (persisted) | peers+schema. Produce: CLI fills the mix. */
+export function ItemAttributes({ t, entity, step }: StepProps) {
+  const art = useLabStep(entity.id, step);
+  const produce = useLabPipelineStore((s) => s.produce);
+  const vals = (art?.data?.stats ?? {}) as Record<string, string | number>;
   const cell: React.CSSProperties = { padding: '8px 12px', borderTop: `1px solid ${t.line}`, fontSize: 15 };
 
   return (
-    <StepFrame
-      t={t}
-      acceptance={{ label: 'All attributes populated per schema (Weapon)', status, detail: `${SCHEMA.length - missing.length} / ${SCHEMA.length} populated` }}
+    <StepFrame t={t} acceptance={ITEM_STEP_SPECS[step].accept(art)}
       panels={[
         {
           label: 'Attribute table',
@@ -45,7 +41,7 @@ export function ItemAttributes({ t, entity }: { t: LabTheme; entity: LabEntity }
                   return (
                     <div key={a.key} style={{ display: 'grid', gridTemplateColumns: '1fr auto', ...cell }}>
                       <span style={{ color: t.text }}>{a.key}</span>
-                      <span className={t.fontMono} style={{ color: v ? t.inkDeep : t.warn, fontWeight: 600 }}>{v ? `${v} ${a.unit}` : '— missing'}</span>
+                      <span className={t.fontMono} style={{ color: v != null ? t.inkDeep : t.warn, fontWeight: 600 }}>{v != null ? `${v} ${a.unit}` : '— missing'}</span>
                     </div>
                   );
                 })}
@@ -59,8 +55,8 @@ export function ItemAttributes({ t, entity }: { t: LabTheme; entity: LabEntity }
             <div style={{ display: 'grid', gap: 12 }}>
               <Lbl t={t}>Peers (same tier)</Lbl>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-                {PEERS.map(([n, d]) => (
-                  <span key={n} className={t.fontMono} style={{ fontSize: 14, padding: '5px 10px', border: `1px solid ${t.line}`, borderRadius: t.glass ? 6 : 0, color: t.muted }}>{n} · <span style={{ color: t.text }}>{d}</span></span>
+                {PEERS.map(([n, dmg]) => (
+                  <span key={n} className={t.fontMono} style={{ fontSize: 14, padding: '5px 10px', border: `1px solid ${t.line}`, borderRadius: t.glass ? 6 : 0, color: t.muted }}>{n} · <span style={{ color: t.text }}>{dmg}</span></span>
                 ))}
               </div>
               <span style={{ fontSize: 14, color: t.muted, lineHeight: 1.55 }}>
@@ -72,16 +68,10 @@ export function ItemAttributes({ t, entity }: { t: LabTheme; entity: LabEntity }
         {
           label: 'Produce',
           node: (
-            <div style={{ display: 'grid', gap: 12 }}>
-              <CliProduce t={t} label="Generate attribute mix (CLI)"
-                fields={<span style={{ fontSize: 15, color: t.muted, lineHeight: 1.55 }}>Prefilled: <span style={{ color: t.text }}>{Object.keys(SEED).join(', ')}</span>. The CLI infers the rest from the brief, peers, and prefilled values.</span>}
-                note="Writes the full attribute set to the UE Weapon row."
-                buildPrompt={(d) => `Fill the missing Weapon attributes for ${entity.name} from its brief + peers; keep prefilled ${Object.keys(SEED).join('/')}. ${d}`.trim()}
-                onComplete={() => setVals({ ...SEED, ...GENERATED })} />
-              {missing.length > 0
-                ? <span className={t.fontMono} style={{ fontSize: 14, color: t.warn }}>{missing.length} await generation: {missing.map((m) => m.key).join(', ')}</span>
-                : <span className={t.fontMono} style={{ fontSize: 14, color: t.ok }}>Schema complete · {entity.name} ready to balance.</span>}
-            </div>
+            <CliProduce t={t} label="Generate attribute mix (CLI)" rows={3}
+              note="Writes the full attribute set to the UE Weapon row + the pipeline store."
+              buildPrompt={(dir) => `Fill the Weapon attributes for ${entity.name} from its brief + peers (${PEERS.map((p) => p[0]).join(', ')}). ${dir}`}
+              onComplete={() => produce(entity.id, step, ITEM_STEP_SPECS[step].produce(entity))} />
           ),
         },
       ]}

@@ -4,6 +4,8 @@ import { useState } from 'react';
 import { summarizeEntityData } from '@/lib/ecw/entity-summary';
 import { labStepsDone } from './labPipelines';
 import { getStepComponent } from './steps';
+import { populateItemDemo } from './steps/itemsSteps';
+import { useLabPipelineStore, useEntitySteps } from './labPipelineStore';
 import type { LabTheme } from './theme';
 import type { LabCatalog, LabDetail } from './useLabCatalogData';
 
@@ -29,8 +31,17 @@ export function Baseline({ theme: t, catalogs, detail, onSelectCatalog }: Props)
   const entities = detail?.entities ?? [];
   const entity = entities.find((e) => e.id === entityId) ?? entities[0] ?? null;
   const steps = detail?.steps ?? [];
-  const done = entity ? labStepsDone(entity.lifecycle, steps.length) : 0;
   const fields = summarizeEntityData(entity?.data);
+
+  // Real per-step production state (Items pipeline is fully data-backed; others use pseudo-progress).
+  const isItems = detail?.catalog.catalogId === 'items';
+  const entitySteps = useEntitySteps(entity?.id ?? '');
+  const produce = useLabPipelineStore((s) => s.produce);
+  const resetEntity = useLabPipelineStore((s) => s.resetEntity);
+  const stepDone = (step: string, i: number) =>
+    isItems ? !!entitySteps?.[step]?.done : i < (entity ? labStepsDone(entity.lifecycle, steps.length) : 0);
+  const done = steps.filter((s, i) => stepDone(s, i)).length;
+  const ueAssetCount = entitySteps ? Object.values(entitySteps).reduce((n, a) => n + (a.ueAssets?.length ?? 0), 0) : 0;
 
   const panel = (extra?: React.CSSProperties): React.CSSProperties => ({
     background: t.panel, border: `1px solid ${t.line}`, ...(t.glass ? { backdropFilter: 'blur(12px)' } : {}), ...extra,
@@ -61,6 +72,8 @@ export function Baseline({ theme: t, catalogs, detail, onSelectCatalog }: Props)
         {/* stat strip (moved from the title block) */}
         <div style={{ marginLeft: 'auto', display: 'flex', flexWrap: 'wrap', gap: 8, justifyContent: 'flex-end' }}>
           <Stat t={t} label="lifecycle" value={entity?.lifecycle ?? '—'} accent />
+          {isItems && <Stat t={t} label="pipeline" value={`${done}/${steps.length}`} accent />}
+          {isItems && ueAssetCount > 0 && <Stat t={t} label="ue assets" value={String(ueAssetCount)} />}
           {fields.map((f) => <Stat key={f.label} t={t} label={f.label} value={f.value} />)}
         </div>
       </header>
@@ -86,10 +99,22 @@ export function Baseline({ theme: t, catalogs, detail, onSelectCatalog }: Props)
         {/* pipeline column (right of the list) */}
         <aside style={{ borderRight: `1px solid ${t.line}`, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
           <div className={t.fontMono} style={{ fontSize: 14, letterSpacing: '0.12em', textTransform: 'uppercase', color: t.ink, padding: '14px 18px 8px' }}>Pipeline · {done}/{steps.length}</div>
+          {isItems && entity && (
+            <div style={{ display: 'flex', gap: 8, padding: '0 18px 8px' }}>
+              <button onClick={() => populateItemDemo(entity, produce)} className={t.fontMono}
+                style={{ flex: 1, fontSize: 14, padding: '6px 8px', cursor: 'pointer', background: t.glass ? t.accentBg : t.ink, color: t.glass ? t.ink : t.onAccent, border: `1px solid ${t.ink}`, borderRadius: t.glass ? 6 : 0, fontWeight: 600 }}>
+                Populate demo
+              </button>
+              <button onClick={() => resetEntity(entity.id)} className={t.fontMono}
+                style={{ fontSize: 14, padding: '6px 10px', cursor: 'pointer', background: 'transparent', color: t.muted, border: `1px solid ${t.line}`, borderRadius: t.glass ? 6 : 0 }}>
+                Reset
+              </button>
+            </div>
+          )}
           <div style={{ overflow: 'auto', padding: '4px 18px 18px', position: 'relative' }}>
             <div style={{ position: 'absolute', left: 27, top: 12, bottom: 22, width: 2, background: t.line }} />
             {steps.map((step, i) => {
-              const isDone = i < done;
+              const isDone = stepDone(step, i);
               const current = i === stepIdx;
               const live = !!(detail && getStepComponent(detail.catalog.catalogId, step)); // has a prototyped V/P/A UI
               return (
@@ -112,10 +137,10 @@ export function Baseline({ theme: t, catalogs, detail, onSelectCatalog }: Props)
             const StepComp = detail && entity ? getStepComponent(detail.catalog.catalogId, steps[stepIdx]) : null;
             return (
               <>
-                <div className={t.fontMono} style={{ fontSize: 14, letterSpacing: '0.12em', color: t.muted, textTransform: 'uppercase' }}>Step {pad2(stepIdx + 1)} / {pad2(steps.length)}{stepIdx < done ? ' · complete' : ''}</div>
+                <div className={t.fontMono} style={{ fontSize: 14, letterSpacing: '0.12em', color: t.muted, textTransform: 'uppercase' }}>Step {pad2(stepIdx + 1)} / {pad2(steps.length)}{stepDone(steps[stepIdx], stepIdx) ? ' · complete' : ''}</div>
                 <h2 style={{ fontSize: 30, fontWeight: 700, color: t.inkDeep, margin: '6px 0 18px' }}>{steps[stepIdx]}</h2>
                 {StepComp && entity ? (
-                  <StepComp key={entity.id} t={t} entity={entity} />
+                  <StepComp key={`${entity.id}:${steps[stepIdx]}`} t={t} entity={entity} step={steps[stepIdx]} />
                 ) : (
                   <div style={panel({ borderRadius: t.glass ? 12 : 0, padding: 28, minHeight: 360 })}>
                     <div className={t.fontMono} style={{ fontSize: 14, color: t.muted, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 10 }}>Compose</div>

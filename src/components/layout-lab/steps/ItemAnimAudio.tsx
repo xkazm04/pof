@@ -1,10 +1,11 @@
 'use client';
 
-import { useState } from 'react';
 import { StepFrame } from './StepFrame';
 import { CliProduce } from './shared/CliProduce';
+import { useLabStep, useLabPipelineStore } from '../labPipelineStore';
+import { ITEM_STEP_SPECS, slug } from './itemsSteps';
 import type { LabTheme } from '../theme';
-import type { LabEntity } from '../useLabCatalogData';
+import type { StepProps } from './stepProps';
 
 function Row({ t, name, right, on }: { t: LabTheme; name: string; right: string; on: boolean }) {
   return (
@@ -17,43 +18,50 @@ function Row({ t, name, right, on }: { t: LabTheme; name: string; right: string;
   );
 }
 
-/** Items · Animations. View: clip set + source. Produce: retarget. Acceptance: required clips. */
-export function ItemAnimations({ t, entity }: { t: LabTheme; entity: LabEntity }) {
-  const [made, setMade] = useState(false);
-  const clips = [['Pickup', '0.6s'], ['Equip', '0.8s'], ['Idle Loop', '2.0s'], ['Inspect', '1.4s']];
+/** Items · Animations. View: clip set (persisted). Produce: retarget. */
+export function ItemAnimations({ t, entity, step }: StepProps) {
+  const art = useLabStep(entity.id, step);
+  const produce = useLabPipelineStore((s) => s.produce);
+  const clips = (art?.data?.clips ?? []) as [string, string][];
+  const fallback: [string, string][] = [['Pickup', '0.6s'], ['Equip', '0.8s'], ['Idle Loop', '2.0s'], ['Inspect', '1.4s']];
+  const rows = clips.length ? clips : fallback;
+  const made = clips.length > 0;
+
   return (
-    <StepFrame t={t}
-      acceptance={{ label: 'Required clips present (Pickup · Equip)', status: made ? 'pass' : 'pending', detail: made ? `${clips.length} clips` : '0 clips' }}
+    <StepFrame t={t} acceptance={ITEM_STEP_SPECS[step].accept(art)}
       panels={[
-        { label: 'Clip set', node: <div>{clips.map(([n, d]) => <Row key={n} t={t} name={n} right={d} on={made} />)}</div> },
+        { label: 'Clip set', node: <div>{rows.map(([n, dur]) => <Row key={n} t={t} name={n} right={dur} on={made} />)}</div> },
         { label: 'Skeleton · source', node: (
           <div style={{ display: 'grid', gap: 10 }}>
             <span className={t.fontMono} style={{ fontSize: 14, color: t.muted }}>skeleton: SK_Mannequin</span>
             <span style={{ fontSize: 14, color: t.muted, lineHeight: 1.55 }}>Clips retarget from the shared mannequin library; per-weapon timing comes from the Attributes step (attack speed).</span>
+            {made && art?.ueAssets?.[0] && <span className={t.fontMono} style={{ fontSize: 14, color: t.ok }}>✓ {art.ueAssets[0]}</span>}
           </div>
         ) },
         { label: 'Produce', node: (
           <CliProduce t={t} label="Generate / retarget (CLI)" rows={3}
-            note="Writes the equip/pickup/idle montages to the UE project."
-            buildPrompt={(d) => `Generate/retarget pickup + equip + idle clips for ${entity.name} from SK_Mannequin. ${d}`.trim()}
-            onComplete={() => setMade(true)} />
+            note={`Writes A_${slug(entity.name)}_Equip + pickup/idle montages to the UE project.`}
+            buildPrompt={(dir) => `Generate/retarget pickup + equip + idle clips for ${entity.name} from SK_Mannequin. ${dir}`}
+            onComplete={() => produce(entity.id, step, ITEM_STEP_SPECS[step].produce(entity))} />
         ) },
       ]}
     />
   );
 }
 
-/** Items · VFX. View: variant set + GPU budget. Produce: Niagara. Acceptance: >=1 VFX + budget. */
-export function ItemVFX({ t, entity }: { t: LabTheme; entity: LabEntity }) {
-  const [made, setMade] = useState(false);
-  const cost = made ? 0.4 : 0;
-  const CAP = 0.8;
-  const variants = [['Idle glow', 'small'], ['Equip flash', 'med'], ['Use trail', 'med']];
+/** Items · VFX. View: variant set + GPU budget (persisted). Produce: Niagara. */
+export function ItemVFX({ t, entity, step }: StepProps) {
+  const art = useLabStep(entity.id, step);
+  const produce = useLabPipelineStore((s) => s.produce);
+  const variants = (art?.data?.variants ?? []) as [string, string][];
+  const made = variants.length > 0;
+  const cost = Number((art?.data?.cost as number) ?? 0);
+  const CAP = Number((art?.data?.cap as number) ?? 0.8);
+
   return (
-    <StepFrame t={t}
-      acceptance={{ label: 'At least one VFX bound · GPU cost under budget', status: made && cost <= CAP ? 'pass' : 'pending', detail: made ? `${cost.toFixed(1)} / ${CAP} ms` : 'no vfx' }}
+    <StepFrame t={t} acceptance={ITEM_STEP_SPECS[step].accept(art)}
       panels={[
-        { label: 'Variants', node: <div>{variants.map(([n, s]) => <Row key={n} t={t} name={n} right={s} on={made} />)}</div> },
+        { label: 'Variants', node: <div>{(made ? variants : [['Idle glow', 'small'], ['Equip flash', 'med'], ['Use trail', 'med']] as [string, string][]).map(([n, s]) => <Row key={n} t={t} name={n} right={s} on={made} />)}</div> },
         { label: 'GPU budget', node: (
           <div style={{ display: 'grid', gap: 8 }}>
             <div style={{ height: 16, background: t.line, opacity: 0.4 }}><div style={{ width: `${(cost / CAP) * 100}%`, height: '100%', background: cost <= CAP ? t.ok : t.bad }} /></div>
@@ -62,24 +70,27 @@ export function ItemVFX({ t, entity }: { t: LabTheme; entity: LabEntity }) {
         ) },
         { label: 'Produce', node: (
           <CliProduce t={t} label="Generate Niagara (CLI)" rows={3}
-            note="Writes NS_<item> variants bound to anim notifies."
-            buildPrompt={(d) => `Author Niagara variants (idle/equip/use) for ${entity.name} keyed to anim notifies, under ${CAP}ms GPU. ${d}`.trim()}
-            onComplete={() => setMade(true)} />
+            note={`Writes NS_${slug(entity.name)}_Use bound to anim notifies.`}
+            buildPrompt={(dir) => `Author Niagara variants (idle/equip/use) for ${entity.name} keyed to anim notifies, under ${CAP}ms GPU. ${dir}`}
+            onComplete={() => produce(entity.id, step, ITEM_STEP_SPECS[step].produce(entity))} />
         ) },
       ]}
     />
   );
 }
 
-/** Items · SFX. View: clip set + loudness. Produce: import set. Acceptance: required events. */
-export function ItemSFX({ t, entity }: { t: LabTheme; entity: LabEntity }) {
-  const [made, setMade] = useState(false);
-  const clips = [['Pickup', '-14 LUFS'], ['Equip', '-13 LUFS'], ['Swing', '-12 LUFS']];
+/** Items · SFX. View: cue set + loudness + waveform (persisted). Produce: import set. */
+export function ItemSFX({ t, entity, step }: StepProps) {
+  const art = useLabStep(entity.id, step);
+  const produce = useLabPipelineStore((s) => s.produce);
+  const cues = (art?.data?.cues ?? []) as [string, string][];
+  const made = cues.length > 0;
+  const rows = made ? cues : [['Pickup', '-14 LUFS'], ['Equip', '-13 LUFS'], ['Swing', '-12 LUFS']] as [string, string][];
+
   return (
-    <StepFrame t={t}
-      acceptance={{ label: 'Required SFX events covered (pickup · equip · use)', status: made ? 'pass' : 'pending', detail: made ? `${clips.length} cues` : '0 cues' }}
+    <StepFrame t={t} acceptance={ITEM_STEP_SPECS[step].accept(art)}
       panels={[
-        { label: 'Cues · loudness', node: <div>{clips.map(([n, d]) => <Row key={n} t={t} name={n} right={d} on={made} />)}</div> },
+        { label: 'Cues · loudness', node: <div>{rows.map(([n, dur]) => <Row key={n} t={t} name={n} right={dur} on={made} />)}</div> },
         { label: 'Waveform', node: (
           <svg viewBox="0 0 300 70" width="100%" height="70" style={{ marginTop: 4 }}>
             {Array.from({ length: 48 }, (_, i) => {
@@ -90,9 +101,9 @@ export function ItemSFX({ t, entity }: { t: LabTheme; entity: LabEntity }) {
         ) },
         { label: 'Produce', node: (
           <CliProduce t={t} label="Import set (CLI)" rows={3}
-            note="Imports a randomizing SoundCue set wired to anim notifies."
-            buildPrompt={(d) => `Import a randomizing SoundCue set for ${entity.name} (pickup/equip/swing), normalized loudness. ${d}`.trim()}
-            onComplete={() => setMade(true)} />
+            note={`Imports SC_${slug(entity.name)} (randomizing SoundCue set) wired to anim notifies.`}
+            buildPrompt={(dir) => `Import a randomizing SoundCue set for ${entity.name} (pickup/equip/swing), normalized loudness. ${dir}`}
+            onComplete={() => produce(entity.id, step, ITEM_STEP_SPECS[step].produce(entity))} />
         ) },
       ]}
     />

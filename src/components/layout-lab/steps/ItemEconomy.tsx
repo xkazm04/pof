@@ -1,24 +1,24 @@
 'use client';
 
-import { useState } from 'react';
-import { Lbl, LabInput } from './controls';
+import { Lbl } from './controls';
 import { StepFrame } from './StepFrame';
 import { CliProduce } from './shared/CliProduce';
+import { useLabStep, useLabPipelineStore } from '../labPipelineStore';
+import { ITEM_STEP_SPECS } from './itemsSteps';
 import type { LabTheme } from '../theme';
-import type { LabEntity } from '../useLabCatalogData';
+import type { StepProps } from './stepProps';
 
-const POWER = 102;
 const TARGET = 100;
 const PEERS_POWER = [88, 94, 96, 99, 101, 104, 110, 118];
 const EXPECTED = (p: number) => Math.round(p * 1.4);
 
-function Bars({ t, hi, name }: { t: LabTheme; hi: string; name: string }) {
-  const rows: [string, number, string][] = [['Tier target', TARGET, t.muted], ['Steel Saber', 96, t.line], [name, POWER, hi], ['Worn GS', 110, t.line]];
+function Bars({ t, hi, name, power }: { t: LabTheme; hi: string; name: string; power: number }) {
+  const rows: [string, number, string][] = [['Tier target', TARGET, t.muted], ['Steel Saber', 96, t.line], [name, power, hi], ['Worn GS', 110, t.line]];
   return (
     <div style={{ display: 'grid', gap: 8 }}>
-      {rows.map(([name, val, col]) => (
-        <div key={name} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <span style={{ width: 90, fontSize: 14, color: t.text, flexShrink: 0 }}>{name}</span>
+      {rows.map(([label, val, col]) => (
+        <div key={label} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <span style={{ width: 90, fontSize: 14, color: t.text, flexShrink: 0 }}>{label}</span>
           <div style={{ flex: 1, height: 16, background: t.line, opacity: 0.4 }}>
             <div style={{ width: `${(val / 130) * 100}%`, height: '100%', background: col, opacity: col === t.muted ? 0.6 : 1 }} />
           </div>
@@ -29,22 +29,21 @@ function Bars({ t, hi, name }: { t: LabTheme; hi: string; name: string }) {
   );
 }
 
-/** Items · Step 3 — Economy. View: budget bars + price/power curve | distribution. Produce: tuned values. */
-export function ItemEconomy({ t, entity }: { t: LabTheme; entity: LabEntity }) {
-  const [cost, setCost] = useState('120');
-  const [rarity, setRarity] = useState('Uncommon');
-  const c = Number(cost) || 0;
-  const ratio = c / EXPECTED(POWER);
-  const priceOk = ratio >= 0.8 && ratio <= 1.2;
-  const powerOk = POWER >= TARGET * 0.9 && POWER <= TARGET * 1.1;
-  const status = powerOk && priceOk ? 'pass' : 'fail';
-  const hi = priceOk ? t.ok : t.bad;
+/** Items · Economy. View: budget bars + price/power curve | distribution (persisted). Produce: tuned values. */
+export function ItemEconomy({ t, entity, step }: StepProps) {
+  const art = useLabStep(entity.id, step);
+  const produce = useLabPipelineStore((s) => s.produce);
+  const data = (art?.data ?? {}) as Record<string, number | string>;
+  const tuned = data.power != null;
+  const power = Number(data.power ?? TARGET);
+  const c = Number(data.cost ?? 0);
+  const ratio = c / EXPECTED(power);
+  const priceOk = tuned && ratio >= 0.8 && ratio <= 1.2;
+  const hi = !tuned ? t.muted : priceOk ? t.ok : t.bad;
   const peerMax = Math.max(...PEERS_POWER);
 
   return (
-    <StepFrame
-      t={t}
-      acceptance={{ label: 'Power within ±10% of tier · price/power in curve · no outliers', status, detail: `power ${POWER}% · price/power ${ratio.toFixed(2)}×` }}
+    <StepFrame t={t} acceptance={ITEM_STEP_SPECS[step].accept(art)}
       panels={[
         {
           label: 'Budget & curve',
@@ -52,7 +51,7 @@ export function ItemEconomy({ t, entity }: { t: LabTheme; entity: LabEntity }) {
             <div style={{ display: 'grid', gap: 20 }}>
               <div>
                 <Lbl t={t}>Stat budget vs tier (target {TARGET})</Lbl>
-                <div style={{ marginTop: 10 }}><Bars t={t} hi={hi} name={entity.name} /></div>
+                <div style={{ marginTop: 10 }}><Bars t={t} hi={hi} name={entity.name} power={power} /></div>
               </div>
               <div>
                 <Lbl t={t}>Price vs power</Lbl>
@@ -62,7 +61,7 @@ export function ItemEconomy({ t, entity }: { t: LabTheme; entity: LabEntity }) {
                   <polyline fill="none" stroke={t.ink} strokeWidth={1.5} strokeDasharray="5 3" opacity={0.6}
                     points={PEERS_POWER.map((p) => `${28 + ((p - 84) / 40) * 280},${150 - (EXPECTED(p) / 200) * 138}`).join(' ')} />
                   {PEERS_POWER.map((p) => <circle key={p} cx={28 + ((p - 84) / 40) * 280} cy={150 - (EXPECTED(p) / 200) * 138} r={3.5} fill={t.muted} />)}
-                  <circle cx={28 + ((POWER - 84) / 40) * 280} cy={150 - (Math.min(c, 200) / 200) * 138} r={6.5} fill={hi} stroke={t.bg} strokeWidth={2} />
+                  {tuned && <circle cx={28 + ((power - 84) / 40) * 280} cy={150 - (Math.min(c, 200) / 200) * 138} r={6.5} fill={hi} stroke={t.bg} strokeWidth={2} />}
                 </svg>
                 <div className={t.fontMono} style={{ fontSize: 14, color: t.muted, display: 'flex', gap: 16 }}>
                   <span>● peers</span><span>– – curve</span><span style={{ color: hi }}>◆ this item</span>
@@ -80,16 +79,16 @@ export function ItemEconomy({ t, entity }: { t: LabTheme; entity: LabEntity }) {
                 <svg viewBox="0 0 320 130" width="100%" height="130" style={{ marginTop: 8 }}>
                   {PEERS_POWER.map((p, i) => {
                     const h = (p / peerMax) * 110;
-                    const near = Math.abs(p - POWER) <= 3;
+                    const near = tuned && Math.abs(p - power) <= 3;
                     return <rect key={i} x={14 + i * 38} y={120 - h} width={30} height={h} fill={near ? t.ink : t.line} opacity={near ? 1 : 0.55} />;
                   })}
                 </svg>
-                <span className={t.fontMono} style={{ fontSize: 14, color: t.muted }}>Highlighted bars sit within ±3 of this item ({POWER}).</span>
+                <span className={t.fontMono} style={{ fontSize: 14, color: t.muted }}>{tuned ? `Highlighted bars sit within ±3 of this item (${power}).` : 'Run Produce to place this item on the curve.'}</span>
               </div>
               <div>
                 <Lbl t={t}>Outliers</Lbl>
-                <div style={{ marginTop: 6, fontSize: 15, color: priceOk ? t.ok : t.bad }}>
-                  {priceOk ? 'None flagged · price/power inside the band.' : `Outlier · price/power ${ratio.toFixed(2)}× is outside 0.8–1.2.`}
+                <div style={{ marginTop: 6, fontSize: 15, color: !tuned ? t.muted : priceOk ? t.ok : t.bad }}>
+                  {!tuned ? 'Pending — not yet tuned.' : priceOk ? 'None flagged · price/power inside the band.' : `Outlier · price/power ${ratio.toFixed(2)}× is outside 0.8–1.2.`}
                 </div>
               </div>
             </div>
@@ -100,18 +99,14 @@ export function ItemEconomy({ t, entity }: { t: LabTheme; entity: LabEntity }) {
           node: (
             <div style={{ display: 'grid', gap: 12 }}>
               <CliProduce t={t} label="Tune within budget (CLI)" rows={3}
-                fields={<>
-                  <Lbl t={t}>Cost (gold)</Lbl>
-                  <LabInput t={t} type="number" value={cost} onChange={setCost} />
-                  <Lbl t={t}>Rarity</Lbl>
-                  <LabInput t={t} value={rarity} onChange={setRarity} placeholder="Common / Uncommon / Rare…" />
-                </>}
-                note="Writes cost / rarity / drop-weight to the UE item row."
-                buildPrompt={(d) => `Tune cost/rarity for ${entity.name} onto the price/power curve (power ${POWER}, tier target ${TARGET}). ${d}`.trim()}
-                onComplete={() => setCost(String(EXPECTED(POWER)))} />
-              <span className={t.fontMono} style={{ fontSize: 14, color: priceOk ? t.ok : t.bad }}>
-                curve suggests ≈ {EXPECTED(POWER)}g for power {POWER}{priceOk ? ' · in band' : ' · OUTLIER'}
-              </span>
+                note="Writes cost / rarity / drop-weight to the UE item row + the pipeline store."
+                buildPrompt={(dir) => `Tune cost/rarity for ${entity.name} onto the price/power curve (tier target ${TARGET}). ${dir}`}
+                onComplete={() => produce(entity.id, step, ITEM_STEP_SPECS[step].produce(entity))} />
+              {tuned && (
+                <span className={t.fontMono} style={{ fontSize: 14, color: priceOk ? t.ok : t.bad }}>
+                  cost {c}g for power {power}{priceOk ? ' · in band' : ' · OUTLIER'}
+                </span>
+              )}
             </div>
           ),
         },

@@ -1,37 +1,31 @@
 'use client';
 
-import { useState } from 'react';
 import { StepFrame } from './StepFrame';
-import { Lbl, LabButton, LabTextarea, LabInput } from './controls';
-import type { LabTheme } from '../theme';
-import type { LabEntity } from '../useLabCatalogData';
+import { CliProduce } from './shared/CliProduce';
+import { useLabStep, useLabPipelineStore } from '../labPipelineStore';
+import { ITEM_STEP_SPECS } from './itemsSteps';
+import type { StepProps } from './stepProps';
 
-const MIN = 300;
 const REFS = [
   ['Steel Saber', 'A guardsman\'s reliable sidearm — clean lines, municipal issue.'],
-  ['Worn Greatsword', 'A heirloom past its prime; pitted steel, a story in every notch.'],
+  ['Worn Greatsword', 'An heirloom past its prime; pitted steel, a story in every notch.'],
   ['Iron Mace', 'Blunt, brutal, peasant-levy gear — function over grace.'],
 ];
 
-function seedBrief(name: string, dir: string): string {
-  const base = `${name} is a mid-tier martial weapon forged for frontline duelists. It favors disciplined, rhythmic strikes over raw burst — rewarding players who weave light and heavy attacks rather than spamming a single button. Visually it reads as weathered steel with a leather-wrapped grip and a faint guild sigil etched near the crossguard. Intended player feeling: dependable and earned — a soldier's tool, not a hero's relic.`;
-  return dir.trim() ? `${base}\n\nDirection applied: ${dir.trim()}.` : base;
-}
-
-/** Items · Step 1 — Concept Brief. View: brief + style refs. Produce: CLI text-gen. Acceptance: char count. */
-export function ItemConceptBrief({ t, entity }: { t: LabTheme; entity: LabEntity }) {
-  const [brief, setBrief] = useState(() => seedBrief(entity.name, ''));
-  const [dir, setDir] = useState('');
-  const status = brief.length >= MIN ? 'pass' : 'pending';
+/** Items · Concept Brief. View: persisted brief + style refs. Produce: CLI text-gen. */
+export function ItemConceptBrief({ t, entity, step }: StepProps) {
+  const art = useLabStep(entity.id, step);
+  const produce = useLabPipelineStore((s) => s.produce);
+  const brief = String((art?.data?.brief as string) ?? '');
 
   return (
-    <StepFrame
-      t={t}
-      acceptance={{ label: `Brief is at least ${MIN} characters`, status, detail: `${brief.length} / ${MIN} chars` }}
+    <StepFrame t={t} acceptance={ITEM_STEP_SPECS[step].accept(art)}
       panels={[
         {
           label: 'Current brief',
-          node: <div style={{ fontSize: 15, lineHeight: 1.75, color: t.text, whiteSpace: 'pre-wrap' }}>{brief}</div>,
+          node: brief
+            ? <div style={{ fontSize: 15, lineHeight: 1.75, color: t.text, whiteSpace: 'pre-wrap' }}>{brief}</div>
+            : <span style={{ fontSize: 15, color: t.muted }}>No brief yet — run Produce to generate one.</span>,
         },
         {
           label: 'Style references (peers)',
@@ -50,14 +44,11 @@ export function ItemConceptBrief({ t, entity }: { t: LabTheme; entity: LabEntity
         {
           label: 'Produce',
           node: (
-            <div style={{ display: 'grid', gap: 12 }}>
-              <Lbl t={t}>Direction (optional)</Lbl>
-              <LabInput t={t} value={dir} onChange={setDir} placeholder="e.g. darker, ceremonial, dwarven" />
-              <Lbl t={t}>Brief draft</Lbl>
-              <LabTextarea t={t} value={brief} onChange={setBrief} rows={9} />
-              <LabButton t={t} onClick={() => setBrief(seedBrief(entity.name, dir))}>⚡ Generate with CLI</LabButton>
-              <span className={t.fontMono} style={{ fontSize: 14, color: t.muted }}>Saved to DB · feeds the UE item description.</span>
-            </div>
+            <CliProduce t={t} label="Generate with CLI" rows={4}
+              defaultDirection="tone: dependable, earned — a soldier's tool"
+              note="Saved to the pipeline store · feeds the UE item description."
+              buildPrompt={(dir) => `Write a 300+ char concept brief for ${entity.name} (mid-tier martial weapon). ${dir}`}
+              onComplete={() => produce(entity.id, step, ITEM_STEP_SPECS[step].produce(entity))} />
           ),
         },
       ]}
