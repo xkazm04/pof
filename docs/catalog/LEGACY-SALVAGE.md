@@ -26,7 +26,7 @@ This is the highest-value salvage: hard-won knowledge that currently lives in `s
 
 ## B. Keep → fold as authoring/acceptance principles (where they're codified)
 
-4. **6-section prompt structure** — `src/lib/prompts/prompt-builder.ts`. Prompts assemble in a fixed order: *Project Context → Domain Context → Task → UE Best Practices → Output Schema → Success Criteria.* Adopt as the **prompt-authoring principle** for every `StepSpec` produce prompt (canon block is the "Project Context + UE Best Practices" sections). Record it in the row-authoring guidance + CLAUDE.md.
+4. **6-section prompt structure** — `src/lib/prompts/prompt-builder.ts`. Prompts assemble in a fixed order: *Project Context → Domain Context → Task → UE Best Practices → Output Schema → Success Criteria.* Adopt as the **prompt-authoring principle** for every `StepSpec` produce prompt (canon block is the "Project Context + UE Best Practices" sections). Already recorded in [`AUTHORING.md`](AUTHORING.md) (prompt-authoring note); keep CLAUDE.md aligned.
 5. **3-pass evaluation** — `src/lib/evaluator/module-eval-prompts.ts` (Structure → Quality → Performance, plus a per-domain *trace* pass, e.g. combat one-hit end-to-end). This maps onto the acceptance ladder, it is not a new system: **structure + UE-convention quality → the L2 static check; trace-able runtime behavior → the L3 gate.** Fold the mapping into `WIRING-AND-ACCEPTANCE.md` as the "what L2/L3 should actually assert" guidance.
 6. **The wiring contract as an acceptance requirement** — beyond the Canon rule (§A-3), make a step's *Verification* line feed its acceptance `detail`/`reason`, and treat "compiled but not granted/activated" as **not** config-complete. Sharpens L2/L3 in `WIRING-AND-ACCEPTANCE.md`.
 7. **Error-memory injection loop** *(lightweight; the lib already exists)* — `error-memory-db.ts` fingerprints/dedups past errors. Principle: a Produce step injects the top relevant prior errors into its prompt so the model doesn't repeat them. Keep the lib; wire it into the produce-prompt path later. No new UI.
@@ -65,6 +65,6 @@ We are deleting real past effort. None of the below clears the bar:
 ## F. Action checklist (before/with the Legacy delete)
 
 1. [ ] Migrate §A gotchas + known-assets + wiring rule into `CANON_SEED` (then the `src/lib/knowledge/*` files can go with the legacy prompt builder).
-2. [ ] Add §B principles: 6-section prompt order + 3-pass→L2/L3 mapping + wiring-as-acceptance into `WIRING-AND-ACCEPTANCE.md` and the row-authoring guidance.
+2. [ ] Add §B principles: 6-section prompt order + 3-pass→L2/L3 mapping + wiring-as-acceptance into `WIRING-AND-ACCEPTANCE.md` and [`AUTHORING.md`](AUTHORING.md) (6-section already noted there).
 3. [ ] Confirm §C libs still typecheck after the module-UI delete (they live in `src/lib/**`, not the deleted trees).
 4. [ ] Delete §E with confidence — the value is captured above.
