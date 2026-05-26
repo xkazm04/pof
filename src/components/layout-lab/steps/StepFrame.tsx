@@ -3,8 +3,8 @@
 import type { CSSProperties, ReactNode } from 'react';
 import type { LabTheme } from '../theme';
 
-export type AcceptanceStatus = 'pass' | 'pending' | 'fail';
-export interface Acceptance { label: string; status: AcceptanceStatus; detail: string }
+export type AcceptanceStatus = 'pass' | 'pending' | 'fail' | 'deferred';
+export interface Acceptance { label: string; status: AcceptanceStatus; detail: string; tier?: string; reason?: string }
 export interface StepPanel { label: string; node: ReactNode }
 
 /**
@@ -14,7 +14,7 @@ export interface StepPanel { label: string; node: ReactNode }
  * All type is >= 14px (text-sm floor).
  */
 export function StepFrame({ t, acceptance, panels }: { t: LabTheme; acceptance: Acceptance; panels: StepPanel[] }) {
-  const sc = acceptance.status === 'pass' ? t.ok : acceptance.status === 'fail' ? t.bad : t.warn;
+  const sc = acceptance.status === 'pass' ? t.ok : acceptance.status === 'fail' ? t.bad : acceptance.status === 'deferred' ? t.muted : t.warn;
   const panelStyle = (): CSSProperties => ({ background: t.panel, border: `1px solid ${t.line}`, ...(t.glass ? { backdropFilter: 'blur(12px)', borderRadius: 12 } : {}) });
 
   return (
@@ -24,7 +24,7 @@ export function StepFrame({ t, acceptance, panels }: { t: LabTheme; acceptance: 
         <span style={{ fontSize: 15, color: t.text }}>{acceptance.label}</span>
         <span style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 12 }}>
           <span className={t.fontMono} style={{ fontSize: 14, color: t.muted }}>{acceptance.detail}</span>
-          <span className={t.fontMono} style={{ fontSize: 14, fontWeight: 700, letterSpacing: '0.06em', color: sc, border: `1px solid ${sc}`, padding: '4px 10px', borderRadius: t.glass ? 6 : 0 }}>{acceptance.status.toUpperCase()}</span>
+          <span className={t.fontMono} style={{ fontSize: 14, fontWeight: 700, letterSpacing: '0.06em', color: sc, border: `1px solid ${sc}`, padding: '4px 10px', borderRadius: t.glass ? 6 : 0 }}>{acceptance.status.toUpperCase()}{acceptance.tier ? ` · ${acceptance.tier}` : ''}</span>
         </span>
       </div>
 
