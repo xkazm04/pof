@@ -5,6 +5,7 @@ import { useCatalogStore } from '@/stores/catalogStore';
 import { eventBus } from '@/lib/event-bus';
 import { decide } from './skip-policy';
 import type { ArchetypeId, ViewDescriptor, AcceptanceTier } from './types';
+import { getCatalogPipeline } from '@/lib/catalog/pipeline-registry';
 
 export interface OrchestratorStepRef {
   label: string;
@@ -32,17 +33,7 @@ function mkJobId(): string {
 }
 
 function defaultStepsFor(catalogId: string): OrchestratorStepRef[] {
-  // eslint-disable-next-line @typescript-eslint/no-require-imports
-  const reg = require('@/lib/catalog/pipeline-registry') as {
-    getCatalogPipeline?: (id: string) => { steps: Array<{
-      label: string;
-      archetype: ArchetypeId;
-      view: ViewDescriptor;
-      autoMode?: 'cli' | 'deterministic' | 'skip';
-      accept?: (data: Record<string, unknown>) => { tier?: AcceptanceTier };
-    }> } | null;
-  };
-  const pipeline = reg.getCatalogPipeline?.(catalogId);
+  const pipeline = getCatalogPipeline(catalogId);
   if (!pipeline) return [];
   return pipeline.steps.map((s) => {
     const res = s.accept ? s.accept({}) : { tier: 'L0' as const };
@@ -51,7 +42,6 @@ function defaultStepsFor(catalogId: string): OrchestratorStepRef[] {
       archetype: s.archetype,
       tier: (res?.tier ?? 'L0') as AcceptanceTier,
       view: s.view,
-      autoMode: s.autoMode,
     };
   });
 }
