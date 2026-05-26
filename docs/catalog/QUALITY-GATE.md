@@ -36,8 +36,9 @@ You are the QUALITY GATE for the catalog row "<row>" (catalogId `<id>`). Verify 
 read the actual code + the laws, do not trust the author's report.
 
 Read: src/lib/catalog/pipelines/<id>.ts (+ its test), docs/catalog/ARPG-LAWS.md, the scoped
-Canon rules in src/lib/catalog/canon/canon-seed.ts (scope 'global' + '<id>'), and
-docs/catalog/<cat>/<row>/plan.md (design intent). Then score the rubric in
+Canon rules in src/lib/catalog/canon/canon-seed.ts (scope 'global' + '<id>'), and the
+seeded entity it drives (src/lib/catalog/seed-*.ts / new-catalogs.ts — the design intent
++ the real ids/enums to validate against). Then score the rubric in
 docs/catalog/QUALITY-GATE.md:
   1. Content fidelity — is each step's produced content Diablo-grade per ARPG-LAWS + Canon,
      with concrete in-envelope numbers, faithful tone, matching the existing UE/TS enums?

@@ -1,12 +1,12 @@
 # Authoring a catalog row pipeline (the chassis recipe)
 
-**This is the current execution model for building a catalog row.** It supersedes the older "one CLI drives one asset idea→UE→test + Session Findings" contract described in the body of [`index.md`](index.md) (those living-log findings are still useful *reference*, but the *how* is here). A row is now a small **`StepSpec[]` spec file** that renders through the shared chassis — not a hand-built pipeline.
+**This is the current execution model for building a catalog row.** A row is a small **`StepSpec[]` spec file** that renders through the shared chassis — not a hand-built pipeline. For the system overview (the chassis, the acceptance ladder, the Canon) see [`index.md`](index.md).
 
 Read alongside (don't duplicate these — they're the source of truth for their topic):
 - [`PIPELINE_REVIEW.md`](PIPELINE_REVIEW.md) — the ~22 **step archetypes** + each row's recommended archetype sequence.
 - [`WIRING-AND-ACCEPTANCE.md`](WIRING-AND-ACCEPTANCE.md) — the **data contract** + the **4-tier acceptance ladder** (L0 data · L1 selection · L2 static · L3 runtime · L4 visual) + the parallel model.
 - `.claude/CLAUDE.md` → *Catalog Pipeline Step Authoring* — the **coding rules** + shared-component manifest.
-- The row's own `docs/catalog/<cat>/<row>/plan.md` — **design intent**: the entity's role, cross-catalog deps, and prior **Session Findings**. Read it for *what to build*; ignore its step-by-step "agent roles / idea→UE→test" framing — that's the superseded model.
+- The **seeded entity** the row drives (`src/lib/catalog/seed-*.ts` / `new-catalogs.ts`) for *what to build*, plus a gate-approved **exemplar pipeline** (`loot-tables.ts`, or `dialog-trees.ts` for a graph row) for *how*.
 
 ## Worked exemplars (copy one)
 - `src/lib/catalog/pipelines/currency.ts` — logic/systems (L2 `cppSymbolExists` + L3 `runtimeDeferred`).
@@ -69,8 +69,8 @@ Leave alone: `registry.generated.ts` (auto-gen), other rows' pipeline files, and
 | `ARPG-LAWS.md` | the **Diablo/PoE-grade systems** (items/affixes, damage/resist, ailments, monsters, loot, classes, crafting, scaling) | the real rules your produced content must obey |
 | `QUALITY-GATE.md` | the **blocking** content-fidelity + wiring review rubric | the bar your row must pass beyond green tests |
 | `.claude/CLAUDE.md` | coding rules + component manifest | conventions |
-| `<cat>/<row>/plan.md` | the row's **design intent** + cross-catalog deps + findings | *what* to build (ignore its old execution framing) |
-| `index.md` | catalog list + the living **findings/opportunities logs** | reuse insights (its execution-contract section is superseded by this doc) |
+| `index.md` | the catalog-pipeline overview (chassis · ladder · canon · quality bar) | the big picture + the doc map |
+| `L3-L4-RUNNER.md` | the live-UE runner that drains deferred L3/L4 gates | how a Test Gate eventually flips to pass/fail |
 | `LEGACY-SALVAGE.md` | what to migrate from the Legacy shell into the **Canon** before deleting it (UE gotchas, known asset paths, wiring contract) | the canon rules your Produce prompts rely on (gotchas/paths) — read if they're not in `CANON_SEED` yet |
 
 > **Prompt authoring:** the Canon block `ArchetypeStep` injects is the *Project Context + UE Best Practices* of a Produce prompt — the 6-section prompt order (`Project Context → Domain Context → Task → UE Best Practices → Output Schema → Success Criteria`) salvaged in `LEGACY-SALVAGE.md` §B-4 is the principle each step's `buildPrompt` follows.
