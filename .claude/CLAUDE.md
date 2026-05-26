@@ -106,6 +106,27 @@ All timing values (toast duration, batch delays, heartbeat intervals) come from 
 ### Result Type
 Use `Result<T, E>` from `@/types/result.ts` for fallible operations.
 
+## Catalog Pipeline Step Authoring (rules for parallel sessions)
+
+The catalog→UE pipeline is built by many parallel CLI sessions. Every pipeline step follows the **View / Produce / Acceptance** model (see `docs/catalog/PIPELINE_REVIEW.md` for the full standard + archetype library + per-row plan). The `/layout` lab (`src/components/layout-lab/`) holds the **reference implementation** — the full Items pipeline. Before building a step, read the manifest below and reuse; do not duplicate.
+
+**Rule 1 — Produce contract.** Every CLI/Produce component has a **text area for the user's direction** + its **own prompt logic** (a `buildPrompt(direction)` callback). Use the shared `CliProduce` (below); never hand-roll a Produce panel. It exposes the built prompt and reports the result/error.
+
+**Rule 2 — Generated code conventions.** Code CLIs generate must be clean and **≤ 200 LOC per file**. Folder structure **mirrors the UI hierarchy** — `Catalog → <Catalog> → <PipelineStep>` (e.g. `.../items/economy/`). Filenames are **camelCase and encode hierarchy position** so a file is identifiable out of context: `itemEconomyBudget.tsx`, `itemEconomyDistribution.tsx`. The component export stays PascalCase (`ItemEconomyBudget`). Split anything over 200 LOC into sub-component files in the step folder.
+
+**Rule 3 — Reuse, don't duplicate (Shared Component Manifest).** Check here before building UI:
+
+| Component | Path | Use for |
+|-----------|------|---------|
+| `CliProduce` | `layout-lab/steps/shared/CliProduce.tsx` | the Produce face of any step (Rule 1) |
+| `StepFrame` | `layout-lab/steps/StepFrame.tsx` | step shell: Acceptance banner + responsive View panel grid |
+| `Lbl` / `LabButton` / `LabInput` / `LabTextarea` | `layout-lab/steps/controls.tsx` | themed form controls (≥14px) |
+| `getStepComponent` | `layout-lab/steps/index.ts` | per-catalog/per-step registry lookup |
+
+Reusable patterns still to extract to `shared/` when first needed (add to this table when you do): `DataTable` (attribute/manifest tables), `Gallery2D` (icon/concept candidate grid + select), `ChartPanel` (budget bars / scatter / histogram). The 2D-generation and table UIs recur across catalogs — build them once in `shared/` and register here.
+
+**Rule 4 — Every step is tested + truthful.** Each step must: (a) **produce data to the UE5 project** and **update the UI**, (b) **fulfill a derived Acceptance** (read from UE/DB truth, never a manual toggle), and (c) if production fails, the **CLI reports the reason** (surface it, don't fail silently — `CliProduce.validate` returns the error reason). Each step ships a test asserting its View renders, Produce dispatches, and Acceptance derives.
+
 ## Testing
 
 Vitest with setup file at `src/__tests__/setup.ts`. Tests live in `src/__tests__/`. Path alias `@` resolves to `src` in vitest config.

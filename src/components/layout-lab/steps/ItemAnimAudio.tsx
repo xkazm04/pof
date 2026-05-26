@@ -1,8 +1,8 @@
 'use client';
 
 import { useState } from 'react';
-import { LabButton } from './controls';
 import { StepFrame } from './StepFrame';
+import { CliProduce } from './shared/CliProduce';
 import type { LabTheme } from '../theme';
 import type { LabEntity } from '../useLabCatalogData';
 
@@ -18,7 +18,7 @@ function Row({ t, name, right, on }: { t: LabTheme; name: string; right: string;
 }
 
 /** Items · Animations. View: clip set + source. Produce: retarget. Acceptance: required clips. */
-export function ItemAnimations({ t }: { t: LabTheme; entity: LabEntity }) {
+export function ItemAnimations({ t, entity }: { t: LabTheme; entity: LabEntity }) {
   const [made, setMade] = useState(false);
   const clips = [['Pickup', '0.6s'], ['Equip', '0.8s'], ['Idle Loop', '2.0s'], ['Inspect', '1.4s']];
   return (
@@ -33,10 +33,10 @@ export function ItemAnimations({ t }: { t: LabTheme; entity: LabEntity }) {
           </div>
         ) },
         { label: 'Produce', node: (
-          <div style={{ display: 'grid', gap: 12 }}>
-            <span style={{ fontSize: 15, color: t.muted, lineHeight: 1.55 }}>Generate/retarget pickup + equip + idle clips for this weapon class.</span>
-            <LabButton t={t} onClick={() => setMade(true)}>⚡ Generate / retarget (CLI)</LabButton>
-          </div>
+          <CliProduce t={t} label="Generate / retarget (CLI)" rows={3}
+            note="Writes the equip/pickup/idle montages to the UE project."
+            buildPrompt={(d) => `Generate/retarget pickup + equip + idle clips for ${entity.name} from SK_Mannequin. ${d}`.trim()}
+            onComplete={() => setMade(true)} />
         ) },
       ]}
     />
@@ -44,7 +44,7 @@ export function ItemAnimations({ t }: { t: LabTheme; entity: LabEntity }) {
 }
 
 /** Items · VFX. View: variant set + GPU budget. Produce: Niagara. Acceptance: >=1 VFX + budget. */
-export function ItemVFX({ t }: { t: LabTheme; entity: LabEntity }) {
+export function ItemVFX({ t, entity }: { t: LabTheme; entity: LabEntity }) {
   const [made, setMade] = useState(false);
   const cost = made ? 0.4 : 0;
   const CAP = 0.8;
@@ -61,10 +61,10 @@ export function ItemVFX({ t }: { t: LabTheme; entity: LabEntity }) {
           </div>
         ) },
         { label: 'Produce', node: (
-          <div style={{ display: 'grid', gap: 12 }}>
-            <span style={{ fontSize: 15, color: t.muted, lineHeight: 1.55 }}>Author Niagara variants (idle/equip/use) keyed to anim notifies.</span>
-            <LabButton t={t} onClick={() => setMade(true)}>⚡ Generate Niagara (CLI)</LabButton>
-          </div>
+          <CliProduce t={t} label="Generate Niagara (CLI)" rows={3}
+            note="Writes NS_<item> variants bound to anim notifies."
+            buildPrompt={(d) => `Author Niagara variants (idle/equip/use) for ${entity.name} keyed to anim notifies, under ${CAP}ms GPU. ${d}`.trim()}
+            onComplete={() => setMade(true)} />
         ) },
       ]}
     />
@@ -72,7 +72,7 @@ export function ItemVFX({ t }: { t: LabTheme; entity: LabEntity }) {
 }
 
 /** Items · SFX. View: clip set + loudness. Produce: import set. Acceptance: required events. */
-export function ItemSFX({ t }: { t: LabTheme; entity: LabEntity }) {
+export function ItemSFX({ t, entity }: { t: LabTheme; entity: LabEntity }) {
   const [made, setMade] = useState(false);
   const clips = [['Pickup', '-14 LUFS'], ['Equip', '-13 LUFS'], ['Swing', '-12 LUFS']];
   return (
@@ -89,10 +89,10 @@ export function ItemSFX({ t }: { t: LabTheme; entity: LabEntity }) {
           </svg>
         ) },
         { label: 'Produce', node: (
-          <div style={{ display: 'grid', gap: 12 }}>
-            <span style={{ fontSize: 15, color: t.muted, lineHeight: 1.55 }}>Import a randomizing SoundCue set via the audio-import pipeline; wire to anim notifies.</span>
-            <LabButton t={t} onClick={() => setMade(true)}>⚡ Import set (CLI)</LabButton>
-          </div>
+          <CliProduce t={t} label="Import set (CLI)" rows={3}
+            note="Imports a randomizing SoundCue set wired to anim notifies."
+            buildPrompt={(d) => `Import a randomizing SoundCue set for ${entity.name} (pickup/equip/swing), normalized loudness. ${d}`.trim()}
+            onComplete={() => setMade(true)} />
         ) },
       ]}
     />

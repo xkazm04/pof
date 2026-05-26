@@ -1,8 +1,8 @@
 'use client';
 
 import { useState } from 'react';
-import { LabButton } from './controls';
 import { StepFrame } from './StepFrame';
+import { CliProduce } from './shared/CliProduce';
 import type { LabTheme } from '../theme';
 import type { LabEntity } from '../useLabCatalogData';
 
@@ -33,10 +33,10 @@ export function ItemTestGate({ t, entity }: { t: LabTheme; entity: LabEntity }) 
           </pre>
         ) },
         { label: 'Produce', node: (
-          <div style={{ display: 'grid', gap: 12 }}>
-            <span style={{ fontSize: 15, color: t.muted, lineHeight: 1.55 }}>Run the UE functional test that equips + uses the item; gate is judged by the -abslog.</span>
-            <LabButton t={t} onClick={() => setRan(true)}>⚡ Run functional test (CLI)</LabButton>
-          </div>
+          <CliProduce t={t} label="Run functional test (CLI)" rows={3}
+            note="Runs the UE functional test; the gate is judged by the -abslog, not the exit code."
+            buildPrompt={(d) => `Run the UE functional test that equips + uses ${entity.name}; judge PASS/FAIL by -abslog content. ${d}`.trim()}
+            onComplete={() => setRan(true)} />
         ) },
       ]}
     />
@@ -66,10 +66,10 @@ export function ItemPackaging({ t, entity }: { t: LabTheme; entity: LabEntity })
           </div>
         ) },
         { label: 'Produce', node: (
-          <div style={{ display: 'grid', gap: 12 }}>
-            <span style={{ fontSize: 15, color: t.muted, lineHeight: 1.55 }}>Write the DataTable row + cook the referenced assets into the UE project; commit narrowly.</span>
-            <LabButton t={t} onClick={() => setPacked(true)}>⚡ Package to UE (CLI)</LabButton>
-          </div>
+          <CliProduce t={t} label="Package to UE (CLI)" rows={3}
+            note={`Writes the DT_Items row for ${entity.name} + cooks referenced assets; commits narrowly.`}
+            buildPrompt={(d) => `Write the DT_Items row for ${entity.name} + cook the referenced icon/mesh/material/montage/VFX into the UE project; commit narrowly. ${d}`.trim()}
+            onComplete={() => setPacked(true)} />
         ) },
       ]}
     />

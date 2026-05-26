@@ -1,8 +1,9 @@
 'use client';
 
 import { useState } from 'react';
-import { Lbl, LabButton, LabInput } from './controls';
+import { Lbl, LabInput } from './controls';
 import { StepFrame } from './StepFrame';
+import { CliProduce } from './shared/CliProduce';
 import type { LabTheme } from '../theme';
 import type { LabEntity } from '../useLabCatalogData';
 
@@ -31,10 +32,10 @@ export function ItemInventoryUI({ t, entity }: { t: LabTheme; entity: LabEntity 
           </div>
         ) },
         { label: 'Produce', node: (
-          <div style={{ display: 'grid', gap: 12 }}>
-            <span style={{ fontSize: 15, color: t.muted, lineHeight: 1.55 }}>Register the item with the inventory UI (icon + slot rules + stack size).</span>
-            <LabButton t={t} onClick={() => setWired(true)}>⚡ Wire to inventory UI (CLI)</LabButton>
-          </div>
+          <CliProduce t={t} label="Wire to inventory UI (CLI)" rows={3}
+            note={`Registers ${entity.name} with the inventory widget (slot rules + stack size).`}
+            buildPrompt={(d) => `Register ${entity.name} with the inventory UI: ${slot} slot, stack size 1, icon binding. ${d}`.trim()}
+            onComplete={() => setWired(true)} />
         ) },
       ]}
     />
@@ -74,10 +75,10 @@ export function ItemTooltip({ t, entity }: { t: LabTheme; entity: LabEntity }) {
           </div>
         ) },
         { label: 'Produce', node: (
-          <div style={{ display: 'grid', gap: 12 }}>
-            <span style={{ fontSize: 15, color: t.muted, lineHeight: 1.55 }}>Generate the tooltip layout + the compare-vs-equipped delta view.</span>
-            <LabButton t={t} onClick={() => setDone(true)}>⚡ Generate tooltip (CLI)</LabButton>
-          </div>
+          <CliProduce t={t} label="Generate tooltip (CLI)" rows={3}
+            note="Writes the tooltip layout + compare-vs-equipped delta view."
+            buildPrompt={(d) => `Generate the tooltip layout for ${entity.name} (all stat fields + compare-vs-equipped deltas). ${d}`.trim()}
+            onComplete={() => setDone(true)} />
         ) },
       ]}
     />

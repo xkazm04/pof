@@ -1,8 +1,9 @@
 'use client';
 
 import { useState } from 'react';
-import { Lbl, LabButton } from './controls';
+import { Lbl } from './controls';
 import { StepFrame } from './StepFrame';
+import { CliProduce } from './shared/CliProduce';
 import type { LabTheme } from '../theme';
 import type { LabEntity } from '../useLabCatalogData';
 
@@ -72,10 +73,11 @@ export function ItemAttributes({ t, entity }: { t: LabTheme; entity: LabEntity }
           label: 'Produce',
           node: (
             <div style={{ display: 'grid', gap: 12 }}>
-              <span style={{ fontSize: 15, color: t.muted, lineHeight: 1.55 }}>
-                Prefilled: <span style={{ color: t.text }}>{Object.keys(SEED).join(', ')}</span>. The CLI infers the rest from the brief, peers, and prefilled values.
-              </span>
-              <LabButton t={t} onClick={() => setVals({ ...SEED, ...GENERATED })}>⚡ Generate attribute mix (CLI)</LabButton>
+              <CliProduce t={t} label="Generate attribute mix (CLI)"
+                fields={<span style={{ fontSize: 15, color: t.muted, lineHeight: 1.55 }}>Prefilled: <span style={{ color: t.text }}>{Object.keys(SEED).join(', ')}</span>. The CLI infers the rest from the brief, peers, and prefilled values.</span>}
+                note="Writes the full attribute set to the UE Weapon row."
+                buildPrompt={(d) => `Fill the missing Weapon attributes for ${entity.name} from its brief + peers; keep prefilled ${Object.keys(SEED).join('/')}. ${d}`.trim()}
+                onComplete={() => setVals({ ...SEED, ...GENERATED })} />
               {missing.length > 0
                 ? <span className={t.fontMono} style={{ fontSize: 14, color: t.warn }}>{missing.length} await generation: {missing.map((m) => m.key).join(', ')}</span>
                 : <span className={t.fontMono} style={{ fontSize: 14, color: t.ok }}>Schema complete · {entity.name} ready to balance.</span>}

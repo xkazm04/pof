@@ -1,8 +1,9 @@
 'use client';
 
 import { useState } from 'react';
-import { Lbl, LabButton, LabInput } from './controls';
+import { Lbl, LabInput } from './controls';
 import { StepFrame } from './StepFrame';
+import { CliProduce } from './shared/CliProduce';
 import type { LabTheme } from '../theme';
 import type { LabEntity } from '../useLabCatalogData';
 
@@ -98,15 +99,19 @@ export function ItemEconomy({ t, entity }: { t: LabTheme; entity: LabEntity }) {
           label: 'Produce',
           node: (
             <div style={{ display: 'grid', gap: 12 }}>
-              <Lbl t={t}>Cost (gold)</Lbl>
-              <LabInput t={t} type="number" value={cost} onChange={setCost} />
-              <Lbl t={t}>Rarity</Lbl>
-              <LabInput t={t} value={rarity} onChange={setRarity} placeholder="Common / Uncommon / Rare…" />
-              <LabButton t={t} onClick={() => setCost(String(EXPECTED(POWER)))}>⚡ Tune within budget (CLI)</LabButton>
+              <CliProduce t={t} label="Tune within budget (CLI)" rows={3}
+                fields={<>
+                  <Lbl t={t}>Cost (gold)</Lbl>
+                  <LabInput t={t} type="number" value={cost} onChange={setCost} />
+                  <Lbl t={t}>Rarity</Lbl>
+                  <LabInput t={t} value={rarity} onChange={setRarity} placeholder="Common / Uncommon / Rare…" />
+                </>}
+                note="Writes cost / rarity / drop-weight to the UE item row."
+                buildPrompt={(d) => `Tune cost/rarity for ${entity.name} onto the price/power curve (power ${POWER}, tier target ${TARGET}). ${d}`.trim()}
+                onComplete={() => setCost(String(EXPECTED(POWER)))} />
               <span className={t.fontMono} style={{ fontSize: 14, color: priceOk ? t.ok : t.bad }}>
                 curve suggests ≈ {EXPECTED(POWER)}g for power {POWER}{priceOk ? ' · in band' : ' · OUTLIER'}
               </span>
-              <span className={t.fontMono} style={{ fontSize: 14, color: t.muted }}>Writes cost/rarity/drop-weight to the UE item row.</span>
             </div>
           ),
         },

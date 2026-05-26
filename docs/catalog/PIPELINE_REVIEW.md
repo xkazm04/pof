@@ -104,4 +104,15 @@ The Items prototype proved ~13 step components; almost all reappear across other
 - Per-archetype **acceptance definitions** — are the ones above the right gates?
 - How **per-type variation** is modeled (one component, type-param data) — confirm.
 
-Next: operator reviews the Items design in `/layout` + this proposal, adds coding principles, then we finalize per-row archetype sequences for parallel development.
+## 6. Coding principles (LOCKED by operator — canonical copy in CLAUDE.md)
+
+These bind every parallel session. Full text + the shared-component manifest live in `.claude/CLAUDE.md` → *Catalog Pipeline Step Authoring*; summary:
+
+1. **Produce contract** — every CLI/Produce component has a **text area for user direction** + its **own `buildPrompt(direction)` logic**. Use the shared `CliProduce`; never hand-roll a Produce panel.
+2. **Generated code** — clean, **≤200 LOC/file**; folder mirrors UI hierarchy (`<Catalog>/<Step>/`); **camelCase hierarchy-encoding filenames** (`itemEconomyBudget.tsx`), PascalCase exports.
+3. **Reuse, don't duplicate** — consult the **Shared Component Manifest** in CLAUDE.md before building (CliProduce, StepFrame, controls, registry; extract `DataTable`/`Gallery2D`/`ChartPanel` to `shared/` on first need and register them).
+4. **Tested + truthful** — each step produces data to the UE5 project **and** updates the UI, fulfills a **derived** Acceptance (UE/DB truth, never a manual toggle), and on failure the **CLI reports the reason** (`CliProduce.validate`). Each step ships a test (View renders · Produce dispatches · Acceptance derives).
+
+The `/layout` Items pipeline is the **reference implementation**: all 13 Produce panels now route through `CliProduce` (textarea + per-step prompt + result/error). New catalogs copy that shape into the Rule-2 folder/file layout.
+
+Next: operator reviews the Items design in `/layout` + this proposal, then we finalize per-row archetype sequences for parallel development.

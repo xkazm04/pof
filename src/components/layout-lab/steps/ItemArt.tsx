@@ -2,8 +2,8 @@
 /* eslint-disable no-restricted-syntax -- art/swatch placeholders use bespoke preview colors by design */
 
 import { useState } from 'react';
-import { Lbl, LabButton, LabInput } from './controls';
 import { StepFrame } from './StepFrame';
+import { CliProduce } from './shared/CliProduce';
 import type { LabTheme } from '../theme';
 import type { LabEntity } from '../useLabCatalogData';
 
@@ -14,11 +14,10 @@ function tile(t: LabTheme, grad: string, selected: boolean, onClick: () => void,
 }
 
 /** Items · Icon 2D Art. View: gallery + prompt refs. Produce: Leonardo/Gemini gen. Acceptance: selected icon. */
-export function ItemIcon2D({ t }: { t: LabTheme; entity: LabEntity }) {
+export function ItemIcon2D({ t, entity }: { t: LabTheme; entity: LabEntity }) {
   const CANDS = ['linear-gradient(135deg,#8a5a2b,#d8a657)', 'linear-gradient(135deg,#3a4a6b,#7e9bd4)', 'linear-gradient(135deg,#5a2b2b,#c66)', 'linear-gradient(135deg,#444,#999)'];
   const RARITY = ['#9aa', '#5b9', '#59f', '#b5f'];
   const [sel, setSel] = useState<number | null>(0);
-  const [prompt, setPrompt] = useState('weathered steel longsword, leather grip, guild sigil, 3/4 view, game icon');
   return (
     <StepFrame t={t}
       acceptance={{ label: 'A main icon is selected', status: sel != null ? 'pass' : 'pending', detail: sel != null ? `candidate ${sel + 1} · 256px` : 'none selected' }}
@@ -35,12 +34,11 @@ export function ItemIcon2D({ t }: { t: LabTheme; entity: LabEntity }) {
           </div>
         ) },
         { label: 'Produce', node: (
-          <div style={{ display: 'grid', gap: 12 }}>
-            <Lbl t={t}>Art direction / prompt</Lbl>
-            <LabInput t={t} value={prompt} onChange={setPrompt} />
-            <LabButton t={t}>⚡ Generate via Leonardo (CLI)</LabButton>
-            <span className={t.fontMono} style={{ fontSize: 14, color: t.muted }}>Prompts are saved as style refs for peer items.</span>
-          </div>
+          <CliProduce t={t} label="Generate via Leonardo (CLI)"
+            defaultDirection="weathered steel longsword, leather grip, guild sigil, 3/4 view, game icon"
+            note="Prompt saved as a style ref for peer items; selected icon writes to the UE row."
+            buildPrompt={(d) => `Generate 4 icon candidates for ${entity.name} (256px, rarity frame). Art direction: ${d}`}
+            onComplete={() => setSel(0)} />
         ) },
       ]}
     />
@@ -48,7 +46,7 @@ export function ItemIcon2D({ t }: { t: LabTheme; entity: LabEntity }) {
 }
 
 /** Items · 3D Generation. View: mesh preview + LOD/tris. Produce: Blender/Meshy. Acceptance: mesh + tri budget. */
-export function Item3DGen({ t }: { t: LabTheme; entity: LabEntity }) {
+export function Item3DGen({ t, entity }: { t: LabTheme; entity: LabEntity }) {
   const [made, setMade] = useState(false);
   const tris = made ? 4200 : 0;
   const CAP = 6000;
@@ -71,10 +69,10 @@ export function Item3DGen({ t }: { t: LabTheme; entity: LabEntity }) {
           </div>
         ) },
         { label: 'Produce', node: (
-          <div style={{ display: 'grid', gap: 12 }}>
-            <span style={{ fontSize: 15, color: t.muted, lineHeight: 1.55 }}>Generate a base mesh from the icon + brief via the Blender/Meshy pipeline, then auto-LOD.</span>
-            <LabButton t={t} onClick={() => setMade(true)}>⚡ Generate mesh (CLI)</LabButton>
-          </div>
+          <CliProduce t={t} label="Generate mesh (CLI)" rows={3}
+            note={`Writes SM_${entity.name.replace(/[^a-z0-9]+/gi, '')} + auto-LODs to the UE project.`}
+            buildPrompt={(d) => `Generate a base mesh for ${entity.name} from its icon + brief via Blender/Meshy, then auto-LOD under ${CAP} tris. ${d}`.trim()}
+            onComplete={() => setMade(true)} />
         ) },
       ]}
     />
@@ -82,7 +80,7 @@ export function Item3DGen({ t }: { t: LabTheme; entity: LabEntity }) {
 }
 
 /** Items · Material / Texture. View: PBR map set + preview. Produce: generate maps. Acceptance: required maps. */
-export function ItemMaterial({ t }: { t: LabTheme; entity: LabEntity }) {
+export function ItemMaterial({ t, entity }: { t: LabTheme; entity: LabEntity }) {
   const MAPS = [['Albedo', '#b08d57'], ['Normal', '#8088ff'], ['ORM', '#9a9a4a'], ['Height', '#777']];
   const [done, setDone] = useState(false);
   const need = ['Albedo', 'Normal', 'ORM'];
@@ -107,10 +105,10 @@ export function ItemMaterial({ t }: { t: LabTheme; entity: LabEntity }) {
           </div>
         ) },
         { label: 'Produce', node: (
-          <div style={{ display: 'grid', gap: 12 }}>
-            <span style={{ fontSize: 15, color: t.muted, lineHeight: 1.55 }}>Author a PBR set from the master material + the item brief; expose params + wear variants.</span>
-            <LabButton t={t} onClick={() => setDone(true)}>⚡ Generate PBR maps (CLI)</LabButton>
-          </div>
+          <CliProduce t={t} label="Generate PBR maps (CLI)" rows={3}
+            note={`Writes MI_${entity.name.replace(/[^a-z0-9]+/gi, '')} (Albedo/Normal/ORM) from the master material.`}
+            buildPrompt={(d) => `Author a PBR set for ${entity.name} from the master material; expose params + wear variants. ${d}`.trim()}
+            onComplete={() => setDone(true)} />
         ) },
       ]}
     />
