@@ -60,6 +60,27 @@ describe('oneShotJobStore', () => {
     expect(sum).toEqual({ ran: 3, passed: 2, failed: 1, skipped: 1, deferred: 1 });
   });
 
+  it('setDistribution stores distribution and reset clears it', () => {
+    const fixture = {
+      catalogId: 'items',
+      total: 5,
+      byAttribute: { tier: { uncommon: 3, rare: 2 } },
+      underrepresented: [],
+      sample: [],
+    };
+    useOneShotJobStore.getState().setDistribution(fixture);
+    expect(useOneShotJobStore.getState().distribution).toEqual(fixture);
+    useOneShotJobStore.getState().reset();
+    expect(useOneShotJobStore.getState().distribution).toBeNull();
+  });
+
+  it('setTotalSteps stores count and reset clears it', () => {
+    useOneShotJobStore.getState().setTotalSteps(13);
+    expect(useOneShotJobStore.getState().totalSteps).toBe(13);
+    useOneShotJobStore.getState().reset();
+    expect(useOneShotJobStore.getState().totalSteps).toBe(0);
+  });
+
   it('rehydrate of phase=running transitions to failed/reload-interrupted', () => {
     const persisted = { state: { phase: 'running', catalogId: 'items', stepResults: [] }, version: 0 };
     localStorage.setItem('pof-one-shot-job', JSON.stringify(persisted));

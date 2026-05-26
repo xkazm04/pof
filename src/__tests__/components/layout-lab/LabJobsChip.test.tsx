@@ -32,8 +32,8 @@ describe('LabJobsChip', () => {
   });
 
   it('shows step counter when phase is running', () => {
-    useOneShotJobStore.setState({ phase: 'running', catalogId: 'spellbook', currentStepIndex: 2 });
-    render(<LabJobsChip t={LIGHT} totalSteps={10} />);
+    useOneShotJobStore.setState({ phase: 'running', catalogId: 'spellbook', currentStepIndex: 2, totalSteps: 10 });
+    render(<LabJobsChip t={LIGHT} />);
     expect(screen.getByText(/Jobs · spellbook · 3\/10/)).toBeTruthy();
   });
 

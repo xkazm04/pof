@@ -5,15 +5,32 @@ import { useOneShotJobStore } from '@/stores/oneShotJobStore';
 import { useOneShotLabStore } from '@/stores/oneShotLabStore';
 import { createOrchestrator } from '@/lib/one-shot/orchestrator';
 import type { LabTheme } from '../theme';
-import { DistributionView } from './DistributionView';
+import { DistributionView, type DistributionBucket } from './DistributionView';
 import { ProposalView } from './ProposalView';
 import { RunLogView } from './RunLogView';
+import { CatalogPickerForm } from './CatalogPickerForm';
+import type { CatalogDistribution } from '@/lib/catalog/gap-analysis';
 
 // One module-level orchestrator — shared across renders.
 const orchestrator = createOrchestrator();
 
 interface Props {
   t: LabTheme;
+}
+
+function distributionToBuckets(d: CatalogDistribution): { buckets: DistributionBucket[]; total: number } {
+  const firstKey = Object.keys(d.byAttribute)[0];
+  if (!firstKey) return { buckets: [], total: d.total };
+  const histogram = d.byAttribute[firstKey];
+  const underrepSet = new Set(
+    d.underrepresented.filter((u) => u.attribute === firstKey).map((u) => u.value),
+  );
+  const buckets: DistributionBucket[] = Object.entries(histogram).map(([label, count]) => ({
+    label,
+    count,
+    underRep: underrepSet.has(label),
+  }));
+  return { buckets, total: d.total };
 }
 
 /**
@@ -31,6 +48,7 @@ export function OneShotPanel({ t }: Props) {
   const refinementTurns = useOneShotJobStore((s) => s.refinementTurns);
   const stepResults = useOneShotJobStore((s) => s.stepResults);
   const lastSummary = useOneShotJobStore((s) => s.lastSummary);
+  const distribution = useOneShotJobStore((s) => s.distribution);
 
   const [catalogInput, setCatalogInput] = useState('items');
   const [hintInput, setHintInput] = useState('');
@@ -50,21 +68,6 @@ export function OneShotPanel({ t }: Props) {
     flexDirection: 'column',
     zIndex: 200,
     overflow: 'hidden',
-  };
-
-  const headerStyle: React.CSSProperties = {
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    padding: '14px 16px',
-    borderBottom: `1px solid ${t.line}`,
-    flexShrink: 0,
-  };
-
-  const bodyStyle: React.CSSProperties = {
-    flex: 1,
-    overflow: 'auto',
-    padding: '16px',
   };
 
   const handleStart = async () => {
@@ -97,10 +100,18 @@ export function OneShotPanel({ t }: Props) {
   const isIdle = phase === 'idle';
   const isAnalyzing = phase === 'analyzing' || phase === 'proposing' || phase === 'refining' || phase === 'awaitingRun';
   const isRunning = phase === 'running' || phase === 'completed' || phase === 'failed';
+  const showDistribution = phase === 'proposing' || phase === 'refining' || phase === 'awaitingRun';
+
+  const distData = distribution ? distributionToBuckets(distribution) : null;
 
   return (
     <div role="dialog" aria-label="one-shot panel" style={panelStyle}>
-      <div style={headerStyle}>
+      <div
+        style={{
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          padding: '14px 16px', borderBottom: `1px solid ${t.line}`, flexShrink: 0,
+        }}
+      >
         <span className={t.fontMono} style={{ fontSize: 13, color: t.ink, fontWeight: 700 }}>
           One-shot · {phase}
         </span>
@@ -114,7 +125,7 @@ export function OneShotPanel({ t }: Props) {
         </button>
       </div>
 
-      <div style={bodyStyle}>
+      <div style={{ flex: 1, overflow: 'auto', padding: '16px' }}>
         {error && (
           <div
             className={t.fontMono}
@@ -124,89 +135,34 @@ export function OneShotPanel({ t }: Props) {
           </div>
         )}
 
-        {/* Idle: catalog picker */}
         {isIdle && (
-          <div>
-            <label
-              htmlFor="oneshot-catalog"
-              className={t.fontMono}
-              style={{ display: 'block', fontSize: 12, color: t.muted, marginBottom: 4 }}
-            >
-              Catalog
-            </label>
-            <input
-              id="oneshot-catalog"
-              value={catalogInput}
-              onChange={(e) => setCatalogInput(e.target.value)}
-              aria-label="catalog"
-              style={{
-                width: '100%',
-                fontSize: 14,
-                padding: '7px 10px',
-                background: t.panel,
-                color: t.text,
-                border: `1px solid ${t.line}`,
-                outline: 'none',
-                marginBottom: 10,
-                boxSizing: 'border-box',
-              }}
-            />
-            <label
-              htmlFor="oneshot-hint"
-              className={t.fontMono}
-              style={{ display: 'block', fontSize: 12, color: t.muted, marginBottom: 4 }}
-            >
-              Hint (optional)
-            </label>
-            <input
-              id="oneshot-hint"
-              value={hintInput}
-              onChange={(e) => setHintInput(e.target.value)}
-              placeholder="e.g. focus on under-represented archetypes"
-              style={{
-                width: '100%',
-                fontSize: 14,
-                padding: '7px 10px',
-                background: t.panel,
-                color: t.text,
-                border: `1px solid ${t.line}`,
-                outline: 'none',
-                marginBottom: 12,
-                boxSizing: 'border-box',
-              }}
-            />
-            <button
-              onClick={() => { void handleStart(); }}
-              className={t.fontMono}
-              style={{
-                width: '100%',
-                fontSize: 14,
-                padding: '8px 16px',
-                cursor: 'pointer',
-                background: t.ink,
-                color: t.onAccent,
-                border: `1px solid ${t.ink}`,
-                fontWeight: 600,
-              }}
-            >
-              Analyze
-            </button>
-          </div>
+          <CatalogPickerForm
+            t={t}
+            catalogInput={catalogInput}
+            hintInput={hintInput}
+            onCatalogChange={setCatalogInput}
+            onHintChange={setHintInput}
+            onStart={() => { void handleStart(); }}
+          />
         )}
 
-        {/* Analyzing / proposing / refining */}
         {isAnalyzing && (
           <div>
-            {(phase === 'analyzing') && (
+            {phase === 'analyzing' && (
               <div className={t.fontMono} style={{ fontSize: 13, color: t.muted, marginBottom: 16 }}>
                 Scanning {catalogId}…
               </div>
             )}
 
-            {/* DistributionView — shown once we have data (proposing/refining) */}
-            {(phase === 'proposing' || phase === 'refining' || phase === 'awaitingRun') && (
+            {showDistribution && (
               <div style={{ marginBottom: 16 }}>
-                <DistributionView t={t} buckets={[]} total={0} />
+                {distData && distData.buckets.length > 0 ? (
+                  <DistributionView t={t} buckets={distData.buckets} total={distData.total} />
+                ) : (
+                  <div className={t.fontMono} style={{ fontSize: 12, color: t.muted }}>
+                    No distribution data yet
+                  </div>
+                )}
               </div>
             )}
 
@@ -228,7 +184,6 @@ export function OneShotPanel({ t }: Props) {
           </div>
         )}
 
-        {/* Running / completed / failed */}
         {isRunning && (
           <RunLogView
             t={t}

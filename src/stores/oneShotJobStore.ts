@@ -2,6 +2,7 @@
 
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
+import type { CatalogDistribution } from '@/lib/catalog/gap-analysis';
 
 export type OneShotPhase =
   | 'idle' | 'analyzing' | 'proposing' | 'refining' | 'awaitingRun'
@@ -27,6 +28,8 @@ export interface OneShotJobState {
   stepResults: StepResult[];
   lastSummary: OneShotSummary | null;
   failureReason?: string;
+  distribution: CatalogDistribution | null;
+  totalSteps: number;
 
   // actions
   reset: () => void;
@@ -35,6 +38,8 @@ export interface OneShotJobState {
     patch?: Partial<Pick<OneShotJobState, 'catalogId' | 'jobId' | 'draftEntityId' | 'userHint' | 'failureReason'>>,
   ) => void;
   setProposal: (p: OneShotProposal | null) => void;
+  setDistribution: (d: CatalogDistribution | null) => void;
+  setTotalSteps: (n: number) => void;
   incRefinementTurn: (forceMore: boolean) => boolean;
   recordStep: (r: StepResult) => void;
   summarize: () => OneShotSummary;
@@ -46,7 +51,7 @@ const REFINEMENT_TURN_CAP = 3;
 
 const INITIAL: Pick<
   OneShotJobState,
-  'jobId' | 'phase' | 'catalogId' | 'draftEntityId' | 'proposal' | 'refinementTurns' | 'currentStepIndex' | 'stepResults' | 'lastSummary'
+  'jobId' | 'phase' | 'catalogId' | 'draftEntityId' | 'proposal' | 'refinementTurns' | 'currentStepIndex' | 'stepResults' | 'lastSummary' | 'distribution' | 'totalSteps'
 > = {
   jobId: null,
   phase: 'idle',
@@ -57,6 +62,8 @@ const INITIAL: Pick<
   currentStepIndex: 0,
   stepResults: [],
   lastSummary: null,
+  distribution: null,
+  totalSteps: 0,
 };
 
 export const useOneShotJobStore = create<OneShotJobState>()(
@@ -66,6 +73,8 @@ export const useOneShotJobStore = create<OneShotJobState>()(
       reset: () => set({ ...INITIAL, failureReason: undefined, userHint: undefined }),
       setPhase: (phase, patch) => set({ phase, ...(patch ?? {}) }),
       setProposal: (proposal) => set({ proposal }),
+      setDistribution: (distribution) => set({ distribution }),
+      setTotalSteps: (totalSteps) => set({ totalSteps }),
       incRefinementTurn: (forceMore) => {
         const cur = get().refinementTurns;
         if (cur >= REFINEMENT_TURN_CAP && !forceMore) return false;

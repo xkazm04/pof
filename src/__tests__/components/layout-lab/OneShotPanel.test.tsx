@@ -84,4 +84,25 @@ describe('OneShotPanel', () => {
     // Run log + summary shown
     expect(screen.getByText('Concept Brief')).toBeTruthy();
   });
+
+  it('shows distribution bucket label when store has distribution data', () => {
+    const fixture = {
+      catalogId: 'items',
+      total: 10,
+      byAttribute: {
+        tier: { uncommon: 4, rare: 3, epic: 2, legendary: 1 },
+      },
+      underrepresented: [{ attribute: 'tier', value: 'legendary', count: 1, expected: 2 }],
+      sample: [],
+    };
+    useOneShotJobStore.setState({
+      phase: 'proposing',
+      catalogId: 'items',
+      proposal: { name: 'Test Sword', rationale: 'good', data: {} },
+      distribution: fixture,
+    });
+    useOneShotLabStore.setState({ panelOpen: true });
+    render(<OneShotPanel t={LIGHT} />);
+    expect(screen.getByText('uncommon')).toBeTruthy();
+  });
 });

@@ -67,7 +67,8 @@ export function createOrchestrator(opts: OrchestratorOptions = {}): Orchestrator
       if (!store.canStart()) throw new Error('another one-shot is in flight — cancel it first');
       store.reset();
       store.setPhase('analyzing', { catalogId, jobId: mkJobId(), userHint });
-      const distribution = await postJson<unknown>('/api/one-shot/analyze', { catalogId, userHint });
+      const distribution = await postJson<import('@/lib/catalog/gap-analysis').CatalogDistribution>('/api/one-shot/analyze', { catalogId, userHint });
+      useOneShotJobStore.getState().setDistribution(distribution);
       store.setPhase('proposing');
       const proposal = await postJson<{ name: string; data: unknown; rationale: string }>(
         '/api/one-shot/propose',
@@ -112,6 +113,7 @@ export function createOrchestrator(opts: OrchestratorOptions = {}): Orchestrator
       store.setPhase('running', { draftEntityId: draftId });
 
       const steps = stepsFor(store.catalogId);
+      useOneShotJobStore.getState().setTotalSteps(steps.length);
       const jobId = store.jobId!;
       eventBus.emit('oneshot.started', {
         jobId,
