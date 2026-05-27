@@ -28,6 +28,7 @@ Read alongside (don't duplicate these — they're the source of truth for their 
 - `src/lib/catalog/pipelines/currency.ts` — logic/systems (L2 `cppSymbolExists` + L3 `runtimeDeferred`).
 - `src/lib/catalog/pipelines/icon-sets.ts` — pure presentation (L0 + L1 + deferred L3, no L2).
 - `src/lib/catalog/pipelines/bestiary.ts` — composite (cross-catalog links + mixed tiers).
+- `src/lib/catalog/pipelines/player-movement.ts` — **python-driven UE asset build** (each step's Produce calls a Python module on the editor thread via `/pof/python/run`; acceptance reads the `{created, skipped, failed}` envelope via `pythonStepSuccess`/`pythonStepOk`). See `ui-shell.md` §9 + `docs/superpowers/specs/2026-05-27-player-movement-design.md`.
 - `src/lib/catalog/pipelines/status-effect.ts` — the original pilot.
 
 ## The recipe

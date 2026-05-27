@@ -303,6 +303,45 @@ A single `_cancelled` flag per `createOrchestrator()` closure guards the run loo
 
 ---
 
+## §9 Player Movement — Tier-2 Animation Pipeline
+
+A worked example of a catalog row whose Produce calls a Python module on the UE
+editor thread instead of (or in addition to) writing app-side data. Lives at
+`catalog: player-movement` / entity `v1-default-player`. Ten `StepSpec` rows
+drive WASD + Shift sprint + Space roll from no animation to a PIE-and-feel
+playable.
+
+**Bridge surface added:** `POST :30040/pof/python/run` (route registered in
+`PofHttpServer.cpp::Start()`). Body `{module, function, args}`. The runtime-side
+`UPofPythonRunner` (`PillarsOfFortuneBridge` module) dispatches the call via
+`IPythonScriptPlugin` on the editor thread, wrapping it to capture stdout/stderr +
+return the standard `{ok, data|error, logs}` envelope through a
+`__POF_BRIDGE_RESULT__` marker line. App-side client is `src/lib/bridge/run-python.ts`.
+
+**Acceptance shape:** the python modules return `{created, skipped, failed, ...}`.
+The new acceptance helpers in `src/lib/catalog/acceptance/pythonStepCheckers.ts`
+(`pythonStepSuccess`, `pythonStepOk`, `humanConfirmed`) derive L1/L2 statuses from
+that envelope. Step 10 uses `visualDeferred` (L4) until the PIE+capture loop is wired.
+
+**Procedural AnimBP authoring:** Step 8 builds `ABP_VSPlayer` entirely from
+Python by calling `unreal.PoFAnimBPAuthoringLibrary` — a `UBlueprintFunctionLibrary`
+in the `PoFEditor` C++ module that exposes 6 graph-mutation primitives
+(`CreateAnimBlueprint`, `AddStateMachine`, `AddBlendSpaceState`, `AddDefaultSlot`,
+`ConnectStateMachineToOutputPose`, `CompileAndSave`). No binary AnimBP template
+in source control; every future AnimBP becomes a ~30-line Python script.
+
+**Mixamo source convention:** users drop FBX downloads into
+`Content/Source/Mixamo/Raw/` (gitignored). Step 02 lists the 10 expected
+filenames + flags missing; step 03 batch-imports + the rest of the pipeline
+takes over.
+
+See:
+- Spec: `docs/superpowers/specs/2026-05-27-player-movement-design.md`
+- Plan: `docs/superpowers/plans/2026-05-27-player-movement.md`
+- Python modules: `Content/Python/player_movement/` (UE pof-exp repo)
+- AnimBP library: `Source/PoFEditor/{Public,Private}/PoFAnimBPAuthoringLibrary.{h,cpp}`
+- Acceptance gate: `Source/PoF/Test/Character/VSPlayerMovementTest.cpp` (Wiring + Playable)
+
 ## See also
 
 - [Overview](overview.md) — top-level architecture
