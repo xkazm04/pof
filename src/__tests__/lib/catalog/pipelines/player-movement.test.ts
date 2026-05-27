@@ -83,7 +83,7 @@ describe('player-movement pipeline', () => {
     // Step 2 is the human-confirmed step (no python call)
     const pythonSteps = pipeline?.steps.filter((_, i) => i !== 1) ?? [];
     for (const s of pythonSteps) {
-      const out = s.produce({ id: 'test', name: 'Test', catalogId: 'player-movement', data: {} });
+      const out = s.produce({ id: 'test', name: 'Test', lifecycle: 'planned', data: {} });
       const py = (out.data as { python?: { module?: string } })?.python;
       expect(py?.module).toMatch(/^player_movement\./);
     }
