@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import { useState, useCallback, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -7,13 +7,15 @@ import {
   Swords, TreePine, Monitor, Music,
   Volume2, Zap,
 } from 'lucide-react';
-import { SurfaceCard } from '@/components/ui/SurfaceCard';
-import { MODULE_COLORS } from '@/lib/constants';
 import {
   STATUS_ERROR, ACCENT_EMERALD, STATUS_INFO, ACCENT_VIOLET, STATUS_WARNING,
+  MODULE_COLORS, withOpacity, OPACITY_10, OPACITY_20, OPACITY_30, OPACITY_50,
 } from '@/lib/chart-colors';
+import { SurfaceCard } from '@/components/ui/SurfaceCard';
 
-// â”€â”€ Types â”€â”€
+const ACCENT = MODULE_COLORS.content;
+
+// -- Types --
 
 export type EventCategory = 'combat' | 'environment' | 'ui' | 'music';
 export type SpatialMode = '2d' | '3d';
@@ -35,7 +37,7 @@ export interface AudioEventCatalogConfig {
   events: AudioEvent[];
 }
 
-// â”€â”€ Constants â”€â”€
+// -- Constants --
 
 const CATEGORY_CONFIG: Record<EventCategory, {
   color: string;
@@ -98,21 +100,21 @@ const DEFAULT_EVENTS: AudioEvent[] = [
   { id: 'evt-13', name: 'Boss Theme', category: 'music', trigger: 'OnBossEncounterStart', priority: 'critical', spatial: '2d', concurrency: 1, cooldownMs: 0, tags: ['boss', 'layer'] },
 ];
 
-// â”€â”€ Props â”€â”€
+// -- Props --
 
 interface AudioEventCatalogProps {
   onGenerate: (config: AudioEventCatalogConfig) => void;
   isGenerating: boolean;
 }
 
-// â”€â”€ Component â”€â”€
+// -- Component --
 
 export function AudioEventCatalog({ onGenerate, isGenerating }: AudioEventCatalogProps) {
   const [events, setEvents] = useState<AudioEvent[]>(() => structuredClone(DEFAULT_EVENTS));
   const [filterCategory, setFilterCategory] = useState<EventCategory | 'all'>('all');
   const [editingEventId, setEditingEventId] = useState<string | null>(null);
 
-  // â”€â”€ Derived â”€â”€
+  // -- Derived --
 
   const filteredEvents = useMemo(() => {
     if (filterCategory === 'all') return events;
@@ -135,7 +137,7 @@ export function AudioEventCatalog({ onGenerate, isGenerating }: AudioEventCatalo
     spatial2d: events.filter((e) => e.spatial === '2d').length,
   }), [events]);
 
-  // â”€â”€ CRUD â”€â”€
+  // -- CRUD --
 
   const addEvent = useCallback((category: EventCategory) => {
     const id = `evt-${Date.now()}`;
@@ -171,50 +173,51 @@ export function AudioEventCatalog({ onGenerate, isGenerating }: AudioEventCatalo
   const config: AudioEventCatalogConfig = useMemo(() => ({ events }), [events]);
 
   return (
-    <div className="p-6 space-y-6 overflow-y-auto bg-[#03030a] rounded-2xl border border-amber-900/30 shadow-[inset_0_0_80px_rgba(245,158,11,0.05)] relative w-full h-full">
-      {/* Ambient background */}
-      <div className="absolute inset-0 pointer-events-none z-0">
-        <div className="absolute top-1/4 right-1/4 w-96 h-96 bg-amber-600/10 blur-[120px] rounded-full pointer-events-none" />
-      </div>
-
+    <div className="p-6 space-y-6 overflow-y-auto bg-surface-deep rounded-2xl border border-border relative w-full h-full">
       <div className="relative z-10 space-y-6">
         {/* Header & Stats */}
-        <div className="flex items-start justify-between border-b border-amber-900/40 pb-4">
+        <div className="flex items-start justify-between border-b border-border pb-4">
           <div>
-            <h3 className="text-sm font-bold tracking-widest uppercase text-amber-100 flex items-center gap-2">
-              <Zap className="w-4 h-4 text-amber-400" />
-              Acoustic Event Matrix
+            <h3 className="text-base font-semibold text-text flex items-center gap-2">
+              <Zap className="w-4 h-4" style={{ color: ACCENT }} />
+              Audio Events
             </h3>
-            <p className="text-xs text-amber-400/60 uppercase tracking-widest mt-1">
-              SYSTEM_AUDIO_TRIGGERS_AND_ROUTING
+            <p className="text-sm text-text-muted mt-1">
+              Define triggers, routing, and playback rules
             </p>
           </div>
-          <div className="flex items-center gap-4 text-xs font-mono uppercase tracking-widest text-amber-400/80">
-            <span className="flex items-center gap-1.5 bg-amber-900/20 px-2.5 py-1.5 rounded-lg border border-amber-500/20 shadow-[inset_0_0_10px_rgba(245,158,11,0.1)]">
-              TOTAL_NODES: <span className="text-amber-200 font-bold">{stats.total}</span>
+          <div className="flex items-center gap-3 text-sm text-text-muted">
+            <span className="flex items-center gap-1.5 bg-surface px-2.5 py-1.5 rounded-lg border border-border">
+              Total <span className="text-text font-semibold">{stats.total}</span>
             </span>
-            <span className="flex items-center gap-1.5 bg-emerald-500/10 px-2.5 py-1.5 rounded-lg border border-emerald-500/20 shadow-[inset_0_0_10px_rgba(16,185,129,0.05)] text-emerald-400">
+            <span
+              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border"
+              style={{ color: ACCENT_EMERALD, backgroundColor: withOpacity(ACCENT_EMERALD, OPACITY_10), borderColor: withOpacity(ACCENT_EMERALD, OPACITY_20) }}
+            >
               <Volume2 className="w-3.5 h-3.5" />
-              3D_SPATIAL: {stats.spatial3d}
+              3D sound <span className="font-semibold">{stats.spatial3d}</span>
             </span>
-            <span className="flex items-center gap-1.5 bg-amber-500/10 px-2.5 py-1.5 rounded-lg border border-amber-500/20 shadow-[inset_0_0_10px_rgba(245,158,11,0.05)]">
-              2D_STEREO: {stats.spatial2d}
+            <span
+              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border"
+              style={{ color: ACCENT, backgroundColor: withOpacity(ACCENT, OPACITY_10), borderColor: withOpacity(ACCENT, OPACITY_20) }}
+            >
+              2D sound <span className="font-semibold">{stats.spatial2d}</span>
             </span>
           </div>
         </div>
 
         {/* Filter bar */}
-        <div className="flex items-center gap-2 flex-wrap bg-black/40 p-1.5 rounded-xl border border-amber-900/30 backdrop-blur-md shadow-lg">
+        <div className="flex items-center gap-2 flex-wrap bg-surface p-1.5 rounded-xl border border-border backdrop-blur-md">
           <button
             onClick={() => setFilterCategory('all')}
-            className={`px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-widest transition-all ${filterCategory === 'all'
-                ? 'bg-amber-500/20 text-amber-200 border border-amber-500/50 shadow-[0_0_15px_rgba(245,158,11,0.2)]'
-                : 'text-amber-500/50 hover:text-amber-300 border border-transparent hover:bg-amber-900/30'
-              }`}
+            className="px-4 py-2 rounded-lg text-sm font-semibold transition-all border"
+            style={filterCategory === 'all'
+              ? { color: ACCENT, backgroundColor: withOpacity(ACCENT, OPACITY_20), borderColor: withOpacity(ACCENT, OPACITY_50) }
+              : { borderColor: 'transparent' }}
           >
-            GLOBAL_VIEW ({stats.total})
+            <span className={filterCategory === 'all' ? '' : 'text-text-muted'}>All ({stats.total})</span>
           </button>
-          <div className="w-px h-6 bg-amber-900/40 mx-2" />
+          <div className="w-px h-6 bg-border mx-2" />
           {CATEGORIES.map((cat) => {
             const cfg = CATEGORY_CONFIG[cat];
             const Icon = cfg.icon;
@@ -223,14 +226,13 @@ export function AudioEventCatalog({ onGenerate, isGenerating }: AudioEventCatalo
               <button
                 key={cat}
                 onClick={() => setFilterCategory(cat)}
-                className={`flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-bold uppercase tracking-widest transition-all border ${active ? '' : 'border-transparent text-amber-500/50 hover:bg-amber-900/20 hover:text-amber-300'
+                className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-semibold transition-all border ${active ? '' : 'border-transparent text-text-muted hover:bg-surface-hover hover:text-text'
                   }`}
                 style={
                   active ? {
                     color: cfg.color,
-                    borderColor: `${cfg.color}40`,
-                    backgroundColor: `${cfg.color}15`,
-                    boxShadow: `0 0 15px ${cfg.color}20`,
+                    borderColor: withOpacity(cfg.color, OPACITY_30),
+                    backgroundColor: withOpacity(cfg.color, OPACITY_10),
                   } : {}
                 }
               >
@@ -284,7 +286,7 @@ export function AudioEventCatalog({ onGenerate, isGenerating }: AudioEventCatalo
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: 20 }}
-              className="mt-6 border-t border-amber-900/40 pt-6"
+              className="mt-6 border-t border-border pt-6"
             >
               <EventEditor
                 event={editingEvent}
@@ -300,12 +302,11 @@ export function AudioEventCatalog({ onGenerate, isGenerating }: AudioEventCatalo
           <button
             onClick={() => onGenerate(config)}
             disabled={isGenerating || events.length === 0}
-            className="relative w-full overflow-hidden flex items-center justify-center gap-2 px-6 py-4 rounded-xl text-xs font-bold uppercase tracking-widest transition-all disabled:opacity-50 group outline-none"
+            className="relative w-full overflow-hidden flex items-center justify-center gap-2 px-6 py-4 rounded-xl text-sm font-semibold transition-all disabled:opacity-50 group outline-none"
             style={{
-              backgroundColor: 'rgba(245,158,11,0.15)',
-              color: STATUS_INFO,
-              border: '1px solid rgba(245,158,11,0.5)',
-              boxShadow: '0 0 20px rgba(245,158,11,0.2), inset 0 0 10px rgba(245,158,11,0.1)',
+              backgroundColor: withOpacity(ACCENT, OPACITY_10),
+              color: ACCENT,
+              border: `1px solid ${withOpacity(ACCENT, OPACITY_50)}`,
             }}
           >
             <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/40 to-transparent opacity-50" />
@@ -314,12 +315,12 @@ export function AudioEventCatalog({ onGenerate, isGenerating }: AudioEventCatalo
             {isGenerating ? (
               <>
                 <Loader2 className="w-4 h-4 animate-spin" />
-                COMPILING_AUDIO_MANAGEMENT_SYSTEM...
+                Generating Audio Manager...
               </>
             ) : (
               <>
                 <Send className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
-                BUILD_AUDIO_MANAGER_NODE
+                Generate Audio Manager
               </>
             )}
           </button>
@@ -329,7 +330,7 @@ export function AudioEventCatalog({ onGenerate, isGenerating }: AudioEventCatalo
   );
 }
 
-// â”€â”€ CategoryGroup â”€â”€
+// -- CategoryGroup --
 
 function CategoryGroup({
   category,
@@ -350,31 +351,31 @@ function CategoryGroup({
   const Icon = cfg.icon;
 
   return (
-    <div className="bg-black/20 rounded-xl border border-amber-900/20 p-4 shadow-inner">
+    <SurfaceCard className="p-4">
       {/* Category header */}
-      <div className="flex items-center gap-3 mb-4 pb-3" style={{ borderBottom: `1px solid ${cfg.color}30` }}>
+      <div className="flex items-center gap-3 mb-4 pb-3" style={{ borderBottom: `1px solid ${withOpacity(cfg.color, OPACITY_30)}` }}>
         <div className="w-8 h-8 rounded-lg flex items-center justify-center shadow-lg" style={{ backgroundColor: `${cfg.color}15`, border: `1px solid ${cfg.color}30` }}>
           <Icon className="w-4 h-4" style={{ color: cfg.color }} />
         </div>
         <div>
-          <h4 className="text-[11px] font-bold uppercase tracking-widest" style={{ color: cfg.color }}>
-            {cfg.label}_ROUTING_GROUP
+          <h4 className="text-sm font-semibold" style={{ color: cfg.color }}>
+            {cfg.label}
           </h4>
-          <p className="text-[11px] font-mono text-amber-400/50 uppercase tracking-widest mt-0.5">{cfg.description}</p>
+          <p className="text-sm text-text-muted mt-0.5">{cfg.description}</p>
         </div>
         <button
           onClick={onAdd}
-          className="ml-auto flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold uppercase tracking-widest transition-all hover:bg-white/5 border border-transparent hover:border-white/10"
+          className="ml-auto flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-semibold transition-all hover:bg-white/5 border border-transparent hover:border-white/10"
           style={{ color: cfg.color }}
         >
           <Plus className="w-3.5 h-3.5" />
-          ATTACH_NODE
+          Add event
         </button>
       </div>
 
       {events.length === 0 ? (
-        <div className="text-center py-8 text-xs font-mono uppercase tracking-widest text-amber-500/40 bg-black/40 rounded-xl border border-dashed border-amber-900/30">
-          NULL_ROUTING_NODES_FOUND
+        <div className="text-center py-8 text-sm text-text-muted bg-surface-deep rounded-xl border border-dashed border-border">
+          No events yet
         </div>
       ) : (
         <div className="grid gap-2">
@@ -387,9 +388,8 @@ function CategoryGroup({
                 onClick={() => onSelect(evt.id)}
                 className="flex items-center gap-4 px-4 py-3 rounded-xl border transition-all cursor-pointer group relative overflow-hidden"
                 style={{
-                  borderColor: isEditing ? `${cfg.color}60` : `${cfg.color}20`,
-                  backgroundColor: isEditing ? `${cfg.color}15` : 'rgba(0,0,0,0.5)',
-                  boxShadow: isEditing ? `0 0 20px ${cfg.color}15, inset 0 0 10px ${cfg.color}10` : 'none',
+                  borderColor: isEditing ? withOpacity(cfg.color, OPACITY_50) : withOpacity(cfg.color, OPACITY_20),
+                  backgroundColor: isEditing ? withOpacity(cfg.color, OPACITY_10) : 'var(--surface-deep)',
                 }}
               >
                 {isEditing && (
@@ -404,18 +404,18 @@ function CategoryGroup({
                 />
 
                 {/* Name */}
-                <span className="text-xs font-bold text-white tracking-wide min-w-[120px]">
+                <span className="text-sm font-semibold text-text min-w-[120px]">
                   {evt.name}
                 </span>
 
                 {/* Trigger */}
-                <span className="text-xs text-amber-300/60 font-mono flex-1 truncate uppercase tracking-widest bg-amber-900/20 px-2 py-1 rounded border border-amber-900/30">
+                <span className="text-xs text-text-muted font-mono flex-1 truncate bg-surface px-2 py-1 rounded border border-border">
                   {evt.trigger}
                 </span>
 
                 {/* Spatial badge */}
                 <span
-                  className="text-[11px] font-bold uppercase px-2 py-1 rounded shadow-inner"
+                  className="text-xs font-semibold uppercase px-2 py-1 rounded shadow-inner"
                   style={{
                     color: evt.spatial === '3d' ? ACCENT_EMERALD : STATUS_INFO,
                     backgroundColor: evt.spatial === '3d' ? `${ACCENT_EMERALD}15` : `${STATUS_INFO}15`,
@@ -426,8 +426,8 @@ function CategoryGroup({
                 </span>
 
                 {/* Concurrency */}
-                <span className="text-xs font-mono text-amber-400/50 w-12 text-right uppercase tracking-widest border-r border-amber-900/30 pr-4">
-                  Ă—{evt.concurrency} MAX
+                <span className="text-sm text-text-muted w-16 text-right border-r border-border pr-4">
+                  Max {evt.concurrency}
                 </span>
 
                 {/* Tags */}
@@ -435,7 +435,7 @@ function CategoryGroup({
                   {evt.tags.slice(0, 2).map((t) => (
                     <span
                       key={t}
-                      className="text-[11px] uppercase tracking-widest font-bold px-2 py-0.5 rounded border"
+                      className="text-xs font-semibold px-2 py-0.5 rounded border"
                       style={{
                         color: `${cfg.color}`,
                         borderColor: `${cfg.color}40`,
@@ -446,14 +446,14 @@ function CategoryGroup({
                     </span>
                   ))}
                   {evt.tags.length > 2 && (
-                    <span className="text-[11px] text-amber-500/60 font-bold uppercase">+{evt.tags.length - 2} MORE</span>
+                    <span className="text-xs text-text-muted font-semibold">+{evt.tags.length - 2}</span>
                   )}
                 </div>
 
                 {/* Delete */}
                 <button
                   onClick={(e) => { e.stopPropagation(); onDelete(evt.id); }}
-                  className="opacity-0 translate-x-4 group-hover:opacity-100 group-hover:translate-x-0 w-8 h-8 rounded-lg flex items-center justify-center text-red-500/50 hover:text-red-400 hover:bg-red-500/10 border border-transparent hover:border-red-500/30 transition-all flex-shrink-0"
+                  className="opacity-0 translate-x-4 group-hover:opacity-100 group-hover:translate-x-0 w-8 h-8 rounded-lg flex items-center justify-center text-red-500/60 hover:text-red-400 hover:bg-red-500/10 border border-transparent hover:border-red-500/30 transition-all flex-shrink-0"
                 >
                   <X className="w-4 h-4" />
                 </button>
@@ -462,11 +462,11 @@ function CategoryGroup({
           })}
         </div>
       )}
-    </div>
+    </SurfaceCard>
   );
 }
 
-// â”€â”€ EventEditor â”€â”€
+// -- EventEditor --
 
 function EventEditor({
   event,
@@ -492,21 +492,21 @@ function EventEditor({
   }, [event.tags, onUpdate]);
 
   return (
-    <div className="bg-black/60 border border-amber-900/50 rounded-2xl p-6 shadow-[0_0_30px_rgba(245,158,11,0.1)_inset] relative overflow-hidden">
+    <SurfaceCard className="p-6 relative overflow-hidden">
       {/* Glow effect */}
       <div className="absolute top-0 right-0 w-64 h-64 opacity-20 blur-[80px] pointer-events-none" style={{ backgroundColor: cfg.color }} />
 
-      <div className="flex items-center justify-between mb-6 relative z-10 border-b border-amber-900/40 pb-4">
+      <div className="flex items-center justify-between mb-6 relative z-10 border-b border-border pb-4">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-xl flex items-center justify-center shadow-lg" style={{ backgroundColor: `${cfg.color}20`, border: `1px solid ${cfg.color}50` }}>
             <Zap className="w-5 h-5" style={{ color: cfg.color }} />
           </div>
           <div>
-            <span className="text-[11px] font-bold tracking-widest uppercase text-white">Modify Routing Node</span>
-            <p className="text-[11px] font-mono text-amber-400/60 uppercase tracking-widest mt-0.5">ID: {event.id}</p>
+            <span className="text-base font-semibold text-text">Edit Event</span>
+            <p className="text-xs text-text-muted mt-0.5">ID: {event.id}</p>
           </div>
         </div>
-        <button onClick={onClose} className="w-8 h-8 rounded-lg flex items-center justify-center text-amber-500/60 hover:text-white hover:bg-amber-500/20 border border-transparent hover:border-amber-500/40 transition-all">
+        <button onClick={onClose} className="w-8 h-8 rounded-lg flex items-center justify-center text-text-muted hover:text-text hover:bg-surface-hover border border-transparent hover:border-border transition-all">
           <X className="w-4 h-4" />
         </button>
       </div>
@@ -514,47 +514,47 @@ function EventEditor({
       <div className="grid grid-cols-2 gap-5 relative z-10">
         {/* Name */}
         <div className="space-y-2">
-          <label className="text-xs uppercase tracking-widest text-amber-400 font-bold">Node Designation</label>
+          <label className="text-sm text-text-muted font-semibold">Name</label>
           <input
             type="text"
             value={event.name}
             onChange={(e) => onUpdate({ name: e.target.value })}
-            className="w-full px-4 py-2.5 bg-black/40 border border-amber-900/60 rounded-xl text-[11px] text-white focus-ring-inset transition-all shadow-inner"
+            className="w-full px-4 py-2.5 bg-surface-deep border border-border rounded-xl text-sm text-text focus-ring-inset transition-all shadow-inner"
           />
         </div>
 
         {/* Trigger */}
         <div className="space-y-2">
-          <label className="text-xs uppercase tracking-widest text-amber-400 font-bold">Execution Trigger</label>
+          <label className="text-sm text-text-muted font-semibold">Trigger</label>
           <input
             type="text"
             value={event.trigger}
             onChange={(e) => onUpdate({ trigger: e.target.value })}
             placeholder="OnGameEvent..."
-            className="w-full px-4 py-2.5 bg-black/40 border border-amber-900/60 rounded-xl text-[11px] text-amber-200 font-mono focus-ring-inset transition-all shadow-inner uppercase tracking-wider"
+            className="w-full px-4 py-2.5 bg-surface-deep border border-border rounded-xl text-sm text-text font-mono focus-ring-inset transition-all shadow-inner"
           />
         </div>
 
         {/* Category */}
         <div className="space-y-2">
-          <label className="text-xs uppercase tracking-widest text-amber-400 font-bold">Subsystem Route</label>
+          <label className="text-sm text-text-muted font-semibold">Category</label>
           <div className="relative">
             <select
               value={event.category}
               onChange={(e) => onUpdate({ category: e.target.value as EventCategory })}
-              className="w-full px-4 py-2.5 bg-black/40 border border-amber-900/60 rounded-xl text-[11px] font-bold text-white uppercase tracking-widest focus-ring-inset appearance-none transition-all shadow-inner"
+              className="w-full px-4 py-2.5 bg-surface-deep border border-border rounded-xl text-sm font-semibold text-text focus-ring-inset appearance-none transition-all shadow-inner"
             >
               {CATEGORIES.map((c) => (
                 <option key={c} value={c} className="bg-gray-900">{CATEGORY_CONFIG[c].label}</option>
               ))}
             </select>
-            <ChevronDown className="w-4 h-4 text-amber-500/80 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+            <ChevronDown className="w-4 h-4 text-text-muted absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
           </div>
         </div>
 
         {/* Priority */}
         <div className="space-y-2">
-          <label className="text-xs uppercase tracking-widest text-amber-400 font-bold">Interrupt Priority</label>
+          <label className="text-sm text-text-muted font-semibold">Priority</label>
           <div className="flex gap-2">
             {(['low', 'normal', 'high', 'critical'] as PriorityLevel[]).map((p) => {
               const pCfg = PRIORITY_CONFIG[p];
@@ -563,11 +563,11 @@ function EventEditor({
                 <button
                   key={p}
                   onClick={() => onUpdate({ priority: p })}
-                  className="flex-1 py-2.5 rounded-lg text-xs font-bold tracking-widest uppercase transition-all border"
+                  className="flex-1 py-2.5 rounded-lg text-sm font-semibold transition-all border"
                   style={{
-                    color: active ? pCfg.color : 'rgba(96,165,250,0.5)',
-                    borderColor: active ? `${pCfg.color}50` : 'rgba(30,58,138,0.4)',
-                    backgroundColor: active ? `${pCfg.color}15` : 'rgba(0,0,0,0.4)',
+                    color: active ? pCfg.color : 'var(--text-muted)',
+                    borderColor: active ? withOpacity(pCfg.color, OPACITY_50) : 'var(--border)',
+                    backgroundColor: active ? withOpacity(pCfg.color, OPACITY_10) : 'var(--surface-deep)',
                     boxShadow: active ? `inset 0 0 10px ${pCfg.color}10` : 'none',
                   }}
                 >
@@ -580,7 +580,7 @@ function EventEditor({
 
         {/* Spatial */}
         <div className="space-y-2">
-          <label className="text-xs uppercase tracking-widest text-amber-400 font-bold">Acoustic Projection</label>
+          <label className="text-sm text-text-muted font-semibold">2D / 3D Sound</label>
           <div className="flex gap-2">
             {(['3d', '2d'] as SpatialMode[]).map((mode) => {
               const active = event.spatial === mode;
@@ -589,11 +589,11 @@ function EventEditor({
                 <button
                   key={mode}
                   onClick={() => onUpdate({ spatial: mode })}
-                  className="flex-1 py-2.5 rounded-lg text-xs font-bold tracking-widest uppercase transition-all border"
+                  className="flex-1 py-2.5 rounded-lg text-sm font-semibold uppercase transition-all border"
                   style={{
-                    color: active ? modeColor : 'rgba(96,165,250,0.5)',
-                    borderColor: active ? `${modeColor}50` : 'rgba(30,58,138,0.4)',
-                    backgroundColor: active ? `${modeColor}15` : 'rgba(0,0,0,0.4)',
+                    color: active ? modeColor : 'var(--text-muted)',
+                    borderColor: active ? withOpacity(modeColor, OPACITY_50) : 'var(--border)',
+                    backgroundColor: active ? withOpacity(modeColor, OPACITY_10) : 'var(--surface-deep)',
                     boxShadow: active ? `inset 0 0 10px ${modeColor}10` : 'none',
                   }}
                 >
@@ -607,33 +607,33 @@ function EventEditor({
         {/* Concurrency & Cooldown */}
         <div className="flex gap-4">
           <div className="space-y-2 flex-1">
-            <label className="text-xs uppercase tracking-widest text-amber-400 font-bold">Max Instantiations</label>
+            <label className="text-sm text-text-muted font-semibold">Max Simultaneous</label>
             <input
               type="number"
               value={event.concurrency}
               onChange={(e) => onUpdate({ concurrency: Math.max(1, Math.min(16, Number(e.target.value) || 1)) })}
               min={1} max={16}
-              className="w-full px-4 py-2.5 bg-black/40 border border-amber-900/60 rounded-xl text-[11px] text-amber-200 font-mono text-center focus-ring-inset transition-all shadow-inner"
+              className="w-full px-4 py-2.5 bg-surface-deep border border-border rounded-xl text-sm text-text font-mono text-center focus-ring-inset transition-all shadow-inner"
             />
           </div>
 
           <div className="space-y-2 flex-1">
-            <label className="text-xs uppercase tracking-widest text-amber-400 font-bold">Reset Latency (ms)</label>
+            <label className="text-sm text-text-muted font-semibold">Cooldown ms</label>
             <input
               type="number"
               value={event.cooldownMs}
               onChange={(e) => onUpdate({ cooldownMs: Math.max(0, Number(e.target.value) || 0) })}
               min={0}
-              className="w-full px-4 py-2.5 bg-black/40 border border-amber-900/60 rounded-xl text-[11px] text-amber-200 font-mono text-center focus-ring-inset transition-all shadow-inner"
+              className="w-full px-4 py-2.5 bg-surface-deep border border-border rounded-xl text-sm text-text font-mono text-center focus-ring-inset transition-all shadow-inner"
             />
           </div>
         </div>
       </div>
 
       {/* Tags */}
-      <div className="mt-6 pt-5 border-t border-amber-900/40 relative z-10 space-y-3">
-        <label className="text-xs uppercase tracking-widest text-amber-400 font-bold flex items-center gap-2">
-          Metadata Tokens <span className="bg-amber-900/40 text-amber-300 px-1.5 py-0.5 rounded border border-amber-500/20">{event.tags.length}</span>
+      <div className="mt-6 pt-5 border-t border-border relative z-10 space-y-3">
+        <label className="text-sm text-text-muted font-semibold flex items-center gap-2">
+          Tags <span className="bg-surface text-text-muted px-1.5 py-0.5 rounded border border-border text-xs">{event.tags.length}</span>
         </label>
 
         {event.tags.length > 0 && (
@@ -641,7 +641,7 @@ function EventEditor({
             {event.tags.map((tag) => (
               <span
                 key={tag}
-                className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-bold uppercase tracking-widest border transition-all hover:brightness-125"
+                className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-sm font-semibold border transition-all hover:brightness-125"
                 style={{
                   color: `${cfg.color}e0`,
                   borderColor: `${cfg.color}40`,
@@ -650,7 +650,7 @@ function EventEditor({
                 }}
               >
                 {tag}
-                <button onClick={() => removeTag(tag)} className="hover:text-white transition-colors">
+                <button onClick={() => removeTag(tag)} className="hover:text-text transition-colors">
                   <X className="w-3 h-3" />
                 </button>
               </span>
@@ -664,13 +664,13 @@ function EventEditor({
             value={newTag}
             onChange={(e) => setNewTag(e.target.value)}
             onKeyDown={(e) => { if (e.key === 'Enter') addTag(); }}
-            placeholder="ADD_TOKEN..."
-            className="flex-1 px-4 py-2 bg-black/40 border border-amber-900/60 rounded-xl text-[11px] uppercase tracking-widest text-amber-200 placeholder-amber-500/40 focus-ring-inset transition-all shadow-inner"
+            placeholder="Add tag..."
+            className="flex-1 px-4 py-2 bg-surface-deep border border-border rounded-xl text-sm text-text placeholder-text-muted focus-ring-inset transition-all shadow-inner"
           />
           <button
             onClick={addTag}
             disabled={!newTag.trim()}
-            className="px-4 py-2 pl-3 rounded-xl text-xs font-bold uppercase tracking-widest transition-all disabled:opacity-30 disabled:cursor-not-allowed flex items-center gap-1.5"
+            className="px-4 py-2 pl-3 rounded-xl text-sm font-semibold transition-all disabled:opacity-30 disabled:cursor-not-allowed flex items-center gap-1.5"
             style={{
               backgroundColor: `${cfg.color}15`,
               color: cfg.color,
@@ -678,10 +678,10 @@ function EventEditor({
             }}
           >
             <Plus className="w-4 h-4" />
-            APPEND
+            Add
           </button>
         </div>
       </div>
-    </div>
+    </SurfaceCard>
   );
 }

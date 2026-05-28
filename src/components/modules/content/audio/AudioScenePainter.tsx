@@ -6,8 +6,11 @@ import type { AudioZone, SoundEmitter, AudioZoneShape, EmitterType } from '@/typ
 import {
   STATUS_INFO, ACCENT_VIOLET, STATUS_SUCCESS, STATUS_BLOCKER,
   STATUS_WARNING, ACCENT_EMERALD, ACCENT_PINK, STATUS_ERROR,
-  STATUS_SUBDUED, ACCENT_CYAN_LIGHT, withOpacity, OPACITY_20, OPACITY_60,
+  STATUS_SUBDUED, ACCENT_CYAN_LIGHT, withOpacity, OPACITY_10, OPACITY_20, OPACITY_30, OPACITY_60,
+  MODULE_COLORS,
 } from '@/lib/chart-colors';
+
+const CHROME_ACCENT = MODULE_COLORS.content;
 
 // ── Constants ──
 
@@ -283,21 +286,16 @@ export function AudioScenePainter({
   };
 
   return (
-    <div className="relative w-full h-full bg-[#03030a] overflow-hidden rounded-2xl border border-blue-900/30 shadow-[inset_0_0_80px_rgba(59,130,246,0.05)]">
-      {/* Background Ambient Glow */}
-      <div className="absolute inset-0 pointer-events-none z-0">
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-blue-600/5 blur-[120px] rounded-full" />
-      </div>
-
+    <div className="relative w-full h-full bg-surface-deep overflow-hidden rounded-2xl border border-border">
       {/* Toolbar */}
       <div className="absolute top-4 left-4 z-10 flex flex-col gap-2">
-        <div className="bg-black/40 border border-blue-900/40 p-1.5 rounded-xl backdrop-blur-md shadow-[0_0_15px_rgba(0,0,0,0.5)] flex items-center gap-1">
+        <div className="bg-surface border border-border p-1.5 rounded-xl backdrop-blur-md flex items-center gap-1">
           <ToolBtn
             active={paintMode === 'select'}
             onClick={() => setPaintMode('select')}
             label="SELECT"
           />
-          <div className="w-px h-6 bg-blue-900/60 mx-1" />
+          <div className="w-px h-6 bg-border mx-1" />
           <ToolBtn
             active={paintMode === 'zone-rect'}
             onClick={() => setPaintMode('zone-rect')}
@@ -310,7 +308,7 @@ export function AudioScenePainter({
             label="VOL_RADIAL"
             icon={<Radio className="w-3.5 h-3.5" />}
           />
-          <div className="w-px h-6 bg-blue-900/60 mx-1" />
+          <div className="w-px h-6 bg-border mx-1" />
           <ToolBtn
             active={paintMode === 'emitter'}
             onClick={() => setPaintMode('emitter')}
@@ -321,10 +319,13 @@ export function AudioScenePainter({
       </div>
 
       {/* Stats badge */}
-      <div className="absolute top-4 right-4 z-10 px-3 py-1.5 rounded-lg border border-blue-500/30 bg-blue-500/10 text-xs font-mono font-bold text-blue-300 backdrop-blur-md uppercase tracking-widest shadow-[0_0_15px_rgba(59,130,246,0.15)] flex items-center gap-3">
-        <span className="flex items-center gap-1.5"><Volume2 className="w-3.5 h-3.5 text-blue-500" /> {zones.length}</span>
-        <span className="text-blue-500/50">/</span>
-        <span className="flex items-center gap-1.5"><Radio className="w-3.5 h-3.5 text-cyan-500" /> {emitters.length}</span>
+      <div
+        className="absolute top-4 right-4 z-10 px-3 py-1.5 rounded-lg border text-xs font-mono font-semibold text-text backdrop-blur-md flex items-center gap-3"
+        style={{ borderColor: withOpacity(CHROME_ACCENT, OPACITY_30), backgroundColor: withOpacity(CHROME_ACCENT, OPACITY_10) }}
+      >
+        <span className="flex items-center gap-1.5"><Volume2 className="w-3.5 h-3.5" style={{ color: CHROME_ACCENT }} /> {zones.length}</span>
+        <span className="text-text-muted">/</span>
+        <span className="flex items-center gap-1.5"><Radio className="w-3.5 h-3.5 text-text-muted" /> {emitters.length}</span>
       </div>
 
       {/* SVG Canvas */}
@@ -340,13 +341,13 @@ export function AudioScenePainter({
         {/* Grid and defs */}
         <defs>
           <pattern id="audio-grid-major" width="96" height="96" patternUnits="userSpaceOnUse" patternTransform={`translate(${pan.x % 96},${pan.y % 96})`}>
-            <path d="M 96 0 L 0 0 0 96" fill="none" stroke="rgba(59,130,246,0.15)" strokeWidth="1" />
+            <path d="M 96 0 L 0 0 0 96" fill="none" stroke="var(--border)" strokeWidth="1" opacity={0.6} />
           </pattern>
           <pattern id="audio-grid-minor" width="24" height="24" patternUnits="userSpaceOnUse" patternTransform={`translate(${pan.x % 24},${pan.y % 24})`}>
-            <path d="M 24 0 L 0 0 0 24" fill="none" stroke="rgba(59,130,246,0.05)" strokeWidth="0.5" />
+            <path d="M 24 0 L 0 0 0 24" fill="none" stroke="var(--border)" strokeWidth="0.5" opacity={0.3} />
           </pattern>
           <radialGradient id="radar-glow" cx="50%" cy="50%" r="50%">
-            <stop offset="0%" stopColor="rgba(59,130,246,0.05)" />
+            <stop offset="0%" stopColor={withOpacity(CHROME_ACCENT, OPACITY_10)} />
             <stop offset="100%" stopColor="transparent" />
           </radialGradient>
         </defs>
@@ -446,12 +447,12 @@ export function AudioScenePainter({
                 <g style={{ pointerEvents: 'none' }}>
                   {zone.shape === 'circle' ? (
                     <>
-                      <rect x={zone.x - 40} y={zone.y - zone.width / 2 - 16} width={80} height={14} rx={2} fill="rgba(0,0,0,0.6)" stroke={`${zoneColor}40`} strokeWidth={1} />
+                      <rect x={zone.x - 40} y={zone.y - zone.width / 2 - 16} width={80} height={14} rx={2} fill="var(--surface-deep)" stroke={`${zoneColor}40`} strokeWidth={1} />
                       <text x={zone.x} y={zone.y - zone.width / 2 - 6} textAnchor="middle" fontSize={8} fill={zoneColor} fontFamily="monospace" fontWeight={700} style={{ textTransform: 'uppercase' }}>{zone.name}</text>
                     </>
                   ) : (
                     <>
-                      <rect x={zone.x + 8} y={zone.y + 8} width={Math.max(80, zone.name.length * 6 + 10)} height={14} rx={2} fill="rgba(0,0,0,0.6)" stroke={`${zoneColor}40`} strokeWidth={1} />
+                      <rect x={zone.x + 8} y={zone.y + 8} width={Math.max(80, zone.name.length * 6 + 10)} height={14} rx={2} fill="var(--surface-deep)" stroke={`${zoneColor}40`} strokeWidth={1} />
                       <text x={zone.x + 12} y={zone.y + 18} fontSize={8} fill={zoneColor} fontFamily="monospace" fontWeight={700} style={{ textTransform: 'uppercase' }}>{zone.name}</text>
 
                       <text x={zone.x + 12} y={zone.y + 32} fontSize={7} fill={`${zoneColor}80`} fontFamily="monospace" style={{ textTransform: 'uppercase' }}>[{zone.reverbPreset}]</text>
@@ -549,7 +550,7 @@ export function AudioScenePainter({
                 <circle
                   cx={em.x} cy={em.y}
                   r={10}
-                  fill="rgba(0,0,0,0.6)"
+                  fill="var(--surface-deep)"
                   stroke={isSelected ? accentColor : emColor}
                   strokeWidth={isSelected ? 2 : 1.5}
                   onMouseDown={(e) => handleEmitterMouseDown(e, em.id)}
@@ -586,7 +587,7 @@ export function AudioScenePainter({
 
                 {/* Label */}
                 <g style={{ pointerEvents: 'none' }}>
-                  <rect x={em.x - 30} y={em.y - 28} width={60} height={14} rx={2} fill="rgba(0,0,0,0.7)" stroke={`${emColor}40`} strokeWidth={1} />
+                  <rect x={em.x - 30} y={em.y - 28} width={60} height={14} rx={2} fill="var(--surface-deep)" stroke={`${emColor}40`} strokeWidth={1} />
                   <text x={em.x} y={em.y - 18} textAnchor="middle" fontSize={7} fill={emColor} fontFamily="monospace" fontWeight={700} style={{ textTransform: 'uppercase' }}>{em.name}</text>
                 </g>
 
@@ -695,11 +696,13 @@ function ToolBtn({ active, onClick, label, icon }: {
   return (
     <button
       onClick={onClick}
-      className={`flex items-center gap-2 px-3 py-2 rounded-lg text-[11px] font-bold uppercase tracking-widest transition-all ${active
-        ? 'bg-blue-500/20 text-blue-300 border-blue-500/50 shadow-[0_0_15px_rgba(59,130,246,0.3)]'
-        : 'bg-transparent text-blue-400/60 border-transparent hover:bg-blue-500/10 hover:text-blue-300'
+      className={`flex items-center gap-2 px-3 py-2 rounded-lg text-2xs font-semibold uppercase tracking-widest transition-all border ${active
+        ? 'text-text'
+        : 'bg-transparent border-transparent text-text-muted hover:bg-surface-hover hover:text-text'
         }`}
-      style={{ borderStyle: 'solid', borderWidth: '1px' }}
+      style={active
+        ? { color: CHROME_ACCENT, backgroundColor: withOpacity(CHROME_ACCENT, OPACITY_20), borderColor: withOpacity(CHROME_ACCENT, OPACITY_60) }
+        : { borderColor: 'transparent' }}
     >
       {icon}
       {label}

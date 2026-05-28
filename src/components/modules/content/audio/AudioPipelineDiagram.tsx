@@ -1,10 +1,12 @@
-﻿'use client';
+'use client';
 
 import { useCallback, useMemo } from 'react';
 import { Music, Lock, Check, ChevronUp, Volume2, Radio, Layers, Loader2, Send } from 'lucide-react';
 import { useModuleStore } from '@/stores/moduleStore';
-import { MODULE_COLORS } from '@/lib/constants';
-import { STATUS_SUCCESS } from '@/lib/chart-colors';
+import { SurfaceCard } from '@/components/ui/SurfaceCard';
+import { MODULE_COLORS, STATUS_SUCCESS, withOpacity, OPACITY_10, OPACITY_20, OPACITY_30 } from '@/lib/chart-colors';
+
+const ACCENT = MODULE_COLORS.content;
 
 interface PipelineLayer {
   id: string;
@@ -39,7 +41,7 @@ const LAYERS: PipelineLayer[] = [
     id: 'au-1',
     label: 'Sound Manager',
     subtitle: 'Foundation',
-    description: 'Pooling, fading, priority â€” the base of your audio stack',
+    description: 'Pooling, fading, priority — the base of your audio stack',
     icon: Volume2,
     prompt: 'Create an audio manager component for playing sounds with pooling, fading, and priority.',
     prerequisites: [],
@@ -79,29 +81,30 @@ export function AudioPipelineDiagram({ onRunPrompt, isRunning, activeItemId }: A
   const completedCount = layerStates.filter((l) => l.completed).length;
 
   return (
-    <div className="flex flex-col items-center gap-0 w-full max-w-md mx-auto select-none p-6 bg-[#03030a] rounded-2xl border border-amber-900/30 shadow-[inset_0_0_80px_rgba(245,158,11,0.05)] relative overflow-hidden">
-      {/* Ambient glow */}
-      <div className="absolute top-0 right-0 w-64 h-64 bg-amber-600/10 blur-[100px] rounded-full pointer-events-none" />
-
+    <SurfaceCard className="flex flex-col items-center gap-0 w-full max-w-md mx-auto select-none p-6">
       {/* Header */}
-      <div className="flex items-center gap-3 mb-8 self-start relative z-10 w-full border-b border-amber-900/40 pb-4">
-        <div className="w-10 h-10 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center shadow-[inset_0_0_15px_rgba(245,158,11,0.1)]">
-          <Music className="w-5 h-5 text-amber-400" />
+      <div className="flex items-center gap-3 mb-8 self-start w-full border-b border-border pb-4">
+        <div
+          className="w-10 h-10 rounded-xl flex items-center justify-center"
+          style={{ backgroundColor: withOpacity(ACCENT, OPACITY_10), border: `1px solid ${withOpacity(ACCENT, OPACITY_20)}` }}
+        >
+          <Music className="w-5 h-5" style={{ color: ACCENT }} />
         </div>
         <div>
-          <h3 className="text-sm font-bold tracking-widest uppercase text-amber-100 dark:text-amber-100 shadow-[0_0_10px_rgba(245,158,11,0.5)]">Audio Subsystem Architecture</h3>
-          <p className="text-xs text-amber-400/60 uppercase tracking-widest mt-1">
-            {completedCount}/3 MODULES COMPILED â€” ESTABLISH CORE INFRASTRUCTURE
+          <h3 className="text-sm font-semibold text-text">Audio Subsystem Architecture</h3>
+          <p className="text-xs text-text-muted mt-1">
+            {completedCount}/3 modules complete — establish core infrastructure
           </p>
         </div>
       </div>
 
-      {/* Pipeline layers â€” top to bottom (Dynamic Music â†’ Ambient â†’ Sound Manager) */}
-      <div className="w-full relative z-10">
+      {/* Pipeline layers — top to bottom (Dynamic Music → Ambient → Sound Manager) */}
+      <div className="w-full">
         {layerStates.map((layer, idx) => {
           const Icon = layer.icon;
           const showArrow = idx < layerStates.length - 1;
           const nextLayer = idx < layerStates.length - 1 ? layerStates[idx + 1] : null;
+          const statusColor = layer.completed ? STATUS_SUCCESS : ACCENT;
 
           return (
             <div key={layer.id} className="w-full flex flex-col items-center">
@@ -109,63 +112,36 @@ export function AudioPipelineDiagram({ onRunPrompt, isRunning, activeItemId }: A
               <button
                 onClick={() => handleClick(layer, layer.locked)}
                 disabled={isRunning && !layer.isActive}
-                className={`
-                  relative w-full rounded-2xl border transition-all duration-500 text-left group overflow-hidden
-                  ${layer.completed
-                    ? 'border-emerald-500/40 bg-emerald-950/20 shadow-[0_0_30px_rgba(16,185,129,0.1)_inset]'
-                    : layer.locked
-                      ? 'border-amber-900/20 bg-black/40 opacity-60 cursor-not-allowed'
-                      : layer.isActive
-                        ? 'border-amber-500/50 bg-amber-950/30 shadow-[0_0_30px_rgba(245,158,11,0.15)_inset]'
-                        : 'border-amber-500/30 bg-amber-950/20 hover:border-amber-400/60 hover:bg-amber-900/40 hover:shadow-[0_0_20px_rgba(245,158,11,0.15)] cursor-pointer'
-                  }
-                `}
-                style={{
-                  ...(layer.isFoundation && !layer.completed && !layer.locked
-                    ? { boxShadow: '0 0 30px rgba(245,158,11,0.15), inset 0 0 20px rgba(245,158,11,0.1)' }
-                    : {}),
-                }}
+                className={`relative w-full rounded-2xl border transition-all duration-300 text-left group overflow-hidden ${
+                  layer.locked
+                    ? 'border-border bg-surface-deep opacity-60 cursor-not-allowed'
+                    : 'cursor-pointer hover:bg-surface-hover'
+                }`}
+                style={
+                  layer.locked
+                    ? undefined
+                    : {
+                        borderColor: withOpacity(statusColor, OPACITY_30),
+                        backgroundColor: withOpacity(statusColor, OPACITY_10),
+                      }
+                }
               >
-                {/* Active scanline effect */}
-                {!layer.locked && !layer.completed && (
-                  <div className="absolute inset-0 bg-gradient-to-b from-transparent via-amber-400/5 to-transparent -translate-y-full group-hover:translate-y-full transition-transform duration-1000 ease-linear" />
-                )}
-
-                {/* Pulse ring on foundation layer */}
-                {layer.isFoundation && !layer.completed && !layer.locked && !layer.isActive && (
-                  <span
-                    className="absolute inset-0 rounded-2xl animate-pulse pointer-events-none border border-amber-400/40 shadow-[0_0_20px_rgba(245,158,11,0.2)]"
-                  />
-                )}
-
-                <div className="flex items-start gap-4 px-5 py-4 relative z-10">
+                <div className="flex items-start gap-4 px-5 py-4">
                   {/* Icon column */}
                   <div
-                    className="flex-shrink-0 w-12 h-12 rounded-xl flex items-center justify-center shadow-lg relative"
-                    style={{
-                      background: layer.completed
-                        ? 'linear-gradient(135deg, rgba(16,185,129,0.2), rgba(16,185,129,0.05))'
-                        : layer.locked
-                          ? 'rgba(0,0,0,0.5)'
-                          : 'linear-gradient(135deg, rgba(245,158,11,0.2), rgba(245,158,11,0.05))',
-                      border: layer.completed
-                        ? '1px solid rgba(16,185,129,0.3)'
-                        : layer.locked
-                          ? '1px solid rgba(30,58,138,0.3)'
-                          : '1px solid rgba(245,158,11,0.3)',
-                    }}
+                    className="flex-shrink-0 w-12 h-12 rounded-xl flex items-center justify-center"
+                    style={
+                      layer.locked
+                        ? { backgroundColor: 'var(--surface-deep)', border: '1px solid var(--border)' }
+                        : { backgroundColor: withOpacity(statusColor, OPACITY_10), border: `1px solid ${withOpacity(statusColor, OPACITY_30)}` }
+                    }
                   >
                     {layer.completed ? (
-                      <Check className="w-6 h-6 text-emerald-400 drop-shadow-[0_0_8px_rgba(16,185,129,0.8)]" />
+                      <Check className="w-6 h-6" style={{ color: STATUS_SUCCESS }} />
                     ) : layer.locked ? (
-                      <Lock className="w-5 h-5 text-amber-800/60" />
+                      <Lock className="w-5 h-5 text-text-muted" />
                     ) : (
-                      <>
-                        <Icon className="w-6 h-6 text-amber-400 drop-shadow-[0_0_8px_rgba(245,158,11,0.8)]" />
-                        {layer.isFoundation && !layer.isActive && (
-                          <div className="absolute inset-0 border border-amber-400/50 rounded-xl animate-ping opacity-20" />
-                        )}
-                      </>
+                      <Icon className="w-6 h-6" style={{ color: ACCENT }} />
                     )}
                   </div>
 
@@ -174,52 +150,47 @@ export function AudioPipelineDiagram({ onRunPrompt, isRunning, activeItemId }: A
                     <div className="flex items-center justify-between mb-1">
                       <div className="flex items-center gap-2">
                         <span
-                          className={`text-xs font-bold uppercase tracking-widest ${layer.completed
-                            ? 'text-emerald-400'
-                            : layer.locked
-                              ? 'text-amber-800/60'
-                              : 'text-amber-200'
-                            }`}
+                          className="text-xs font-semibold"
+                          style={{ color: layer.locked ? 'var(--text-muted)' : statusColor }}
                         >
                           {layer.label}
                         </span>
-
                         <span
-                          className={`text-[11px] font-bold uppercase tracking-widest px-2 py-0.5 rounded border ${layer.completed
-                            ? 'bg-emerald-500/10 text-emerald-400/80 border-emerald-500/20'
-                            : layer.locked
-                              ? 'bg-black/50 text-amber-900/50 border-amber-900/20'
-                              : 'bg-amber-500/10 text-amber-400 border-amber-500/20'
-                            }`}
+                          className="text-2xs font-medium px-2 py-0.5 rounded border"
+                          style={
+                            layer.locked
+                              ? { color: 'var(--text-muted)', borderColor: 'var(--border)' }
+                              : { color: statusColor, backgroundColor: withOpacity(statusColor, OPACITY_10), borderColor: withOpacity(statusColor, OPACITY_20) }
+                          }
                         >
                           {layer.subtitle}
                         </span>
                       </div>
                     </div>
 
-                    <p
-                      className={`text-xs font-mono leading-relaxed mt-1 uppercase tracking-wider ${layer.locked ? 'text-amber-900/40' : 'text-amber-300/60'
-                        }`}
-                    >
+                    <p className="text-xs leading-relaxed mt-1 text-text-muted">
                       {layer.description}
                     </p>
 
                     {/* Locked prerequisite hint */}
                     {layer.locked && (
-                      <div className="mt-3 flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-orange-950/30 border border-orange-900/30 w-fit">
-                        <Lock className="w-3 h-3 text-orange-500/70" />
-                        <span className="text-[11px] font-bold uppercase tracking-widest text-orange-500/70">
-                          REQ: {layer.prerequisites.length === 1 ? 'SOUND_MANAGER' : 'SOUND_MANAGER + AMBIENT_SYS'}
+                      <div className="mt-3 flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-surface-deep border border-border w-fit">
+                        <Lock className="w-3 h-3 text-text-muted" />
+                        <span className="text-2xs font-medium text-text-muted">
+                          Requires: {layer.prerequisites.length === 1 ? 'Sound Manager' : 'Sound Manager + Ambient System'}
                         </span>
                       </div>
                     )}
 
                     {/* Active indicator */}
                     {layer.isActive && (
-                      <div className="flex items-center gap-2 mt-3 bg-amber-500/10 border border-amber-500/20 px-3 py-1.5 rounded-lg w-fit">
-                        <Loader2 className="w-3 h-3 text-amber-400 animate-spin" />
-                        <span className="text-[11px] font-bold uppercase tracking-widest text-amber-400">
-                          COMPILING_MODULE...
+                      <div
+                        className="flex items-center gap-2 mt-3 px-3 py-1.5 rounded-lg w-fit border"
+                        style={{ backgroundColor: withOpacity(ACCENT, OPACITY_10), borderColor: withOpacity(ACCENT, OPACITY_20) }}
+                      >
+                        <Loader2 className="w-3 h-3 animate-spin" style={{ color: ACCENT }} />
+                        <span className="text-2xs font-medium" style={{ color: ACCENT }}>
+                          Compiling module…
                         </span>
                       </div>
                     )}
@@ -228,27 +199,27 @@ export function AudioPipelineDiagram({ onRunPrompt, isRunning, activeItemId }: A
                     {layer.isFoundation && !layer.completed && !layer.locked && !layer.isActive && (
                       <div className="mt-3 flex items-center gap-2">
                         <span className="flex h-2 w-2 relative">
-                          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
-                          <span className="relative inline-flex rounded-full h-2 w-2 bg-amber-500"></span>
+                          <span className="animate-ping absolute inline-flex h-full w-full rounded-full opacity-75" style={{ backgroundColor: ACCENT }}></span>
+                          <span className="relative inline-flex rounded-full h-2 w-2" style={{ backgroundColor: ACCENT }}></span>
                         </span>
-                        <span className="text-[11px] font-bold uppercase tracking-widest text-amber-400">
-                          INITIALIZE_HERE
+                        <span className="text-2xs font-medium" style={{ color: ACCENT }}>
+                          Start here
                         </span>
                       </div>
                     )}
                   </div>
 
                   {/* Right arrow / status */}
-                  <div className="flex-shrink-0 self-center pl-2 border-l border-amber-900/20 ml-2 h-full flex items-center">
+                  <div className="flex-shrink-0 self-center pl-2 border-l border-border ml-2 h-full flex items-center">
                     {layer.completed ? (
                       <div className="flex flex-col items-center gap-1">
-                        <Check className="w-4 h-4 text-emerald-500/50" />
-                        <span className="text-[11px] text-emerald-500/50 font-bold uppercase tracking-widest">OK</span>
+                        <Check className="w-4 h-4" style={{ color: STATUS_SUCCESS }} />
+                        <span className="text-2xs font-medium" style={{ color: STATUS_SUCCESS }}>OK</span>
                       </div>
                     ) : !layer.locked && !layer.isActive ? (
                       <div className="flex flex-col items-center gap-1 opacity-50 group-hover:opacity-100 transition-opacity">
-                        <Send className="w-4 h-4 text-amber-400 group-hover:translate-x-1 transition-transform" />
-                        <span className="text-[11px] font-bold uppercase tracking-widest text-amber-400">RUN</span>
+                        <Send className="w-4 h-4 group-hover:translate-x-1 transition-transform" style={{ color: ACCENT }} />
+                        <span className="text-2xs font-medium" style={{ color: ACCENT }}>Run</span>
                       </div>
                     ) : null}
                   </div>
@@ -258,27 +229,10 @@ export function AudioPipelineDiagram({ onRunPrompt, isRunning, activeItemId }: A
               {/* Upward arrow connector */}
               {showArrow && (
                 <div className="flex flex-col items-center py-2 relative">
-                  {/* Glowing connection line */}
-                  <div
-                    className="absolute top-0 bottom-0 w-px"
-                    style={{
-                      background: nextLayer?.completed
-                        ? 'linear-gradient(to bottom, rgba(16,185,129,0.5), rgba(16,185,129,0.1))'
-                        : nextLayer && !nextLayer.locked
-                          ? 'linear-gradient(to bottom, rgba(245,158,11,0.5), rgba(245,158,11,0.1))'
-                          : 'rgba(30,58,138,0.2)',
-                    }}
-                  />
+                  <div className="absolute top-0 bottom-0 w-px bg-border" />
                   <ChevronUp
-                    className="w-5 h-5 relative z-10 bg-[#03030a]"
-                    style={{
-                      color: nextLayer?.completed
-                        ? 'rgba(16,185,129,0.8)'
-                        : nextLayer && !nextLayer.locked
-                          ? 'rgba(245,158,11,0.8)'
-                          : 'rgba(30,58,138,0.5)',
-                      filter: nextLayer?.completed || (nextLayer && !nextLayer.locked) ? 'drop-shadow(0 0 5px currentColor)' : 'none',
-                    }}
+                    className="w-5 h-5 relative z-10 bg-surface"
+                    style={{ color: nextLayer?.completed ? STATUS_SUCCESS : nextLayer && !nextLayer.locked ? ACCENT : 'var(--text-muted)' }}
                   />
                 </div>
               )}
@@ -286,6 +240,6 @@ export function AudioPipelineDiagram({ onRunPrompt, isRunning, activeItemId }: A
           );
         })}
       </div>
-    </div>
+    </SurfaceCard>
   );
 }
