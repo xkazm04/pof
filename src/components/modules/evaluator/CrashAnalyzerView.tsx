@@ -14,6 +14,7 @@ import { ProgressRing } from '@/components/ui/ProgressRing';
 import { MultiInteractivePill } from '@/components/ui/InteractivePill';
 import type { MultiPillItem } from '@/components/ui/InteractivePill';
 import { useCrashAnalyzerStore } from '@/stores/crashAnalyzerStore';
+import { CrashHealthMap } from './CrashHealthMap';
 import type {
   CrashReport,
   CrashDiagnosis,
@@ -58,7 +59,7 @@ const CRASH_TYPE_LABELS: Record<CrashType, string> = {
   unknown: 'Unknown',
 };
 
-type ViewTab = 'crashes' | 'patterns' | 'import';
+type ViewTab = 'crashes' | 'patterns' | 'import' | 'health';
 
 // ── Main Component ──────────────────────────────────────────────────────────
 
@@ -186,6 +187,7 @@ export function CrashAnalyzerView() {
         <div className="flex items-center gap-1 border-b border-border">
           <SubTab label="Crash Reports" active={viewTab === 'crashes'} onClick={() => setViewTab('crashes')} count={reports.length} />
           <SubTab label="Patterns" active={viewTab === 'patterns'} onClick={() => setViewTab('patterns')} count={patterns.length} />
+          <SubTab label="Health Map" active={viewTab === 'health'} onClick={() => setViewTab('health')} />
           <SubTab label="Import Log" active={viewTab === 'import'} onClick={() => setViewTab('import')} />
         </div>
       )}
@@ -285,6 +287,11 @@ export function CrashAnalyzerView() {
             patterns.map((p) => <PatternCard key={p.id} pattern={p} />)
           )}
         </div>
+      )}
+
+      {/* ── Health Map Tab ──────────────────────────────────────── */}
+      {hasData && viewTab === 'health' && (
+        <CrashHealthMap reports={reports} patterns={patterns} />
       )}
 
       {/* ── Import Tab ───────────────────────────────────────────── */}
