@@ -11,6 +11,7 @@ interface UseGameDesignDocResult {
   error: string | null;
   generate: () => Promise<void>;
   exportMarkdown: () => Promise<string | null>;
+  exportPitch: () => Promise<string | null>;
 }
 
 export function useGameDesignDoc(projectName: string): UseGameDesignDocResult {
@@ -71,5 +72,27 @@ export function useGameDesignDoc(projectName: string): UseGameDesignDocResult {
     }
   }, [projectName, getChecklistJson]);
 
-  return { gdd, isLoading, error, generate, exportMarkdown };
+  const exportPitch = useCallback(async (): Promise<string | null> => {
+    try {
+      let checklistProgress = {};
+      try {
+        checklistProgress = JSON.parse(getChecklistJson());
+      } catch { /* ignore */ }
+
+      const data = await apiFetch<{ html: string }>('/api/game-design-doc', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'export-pitch',
+          projectName,
+          checklist: checklistProgress,
+        }),
+      });
+      return data.html;
+    } catch {
+      return null;
+    }
+  }, [projectName, getChecklistJson]);
+
+  return { gdd, isLoading, error, generate, exportMarkdown, exportPitch };
 }
