@@ -16,6 +16,10 @@ export interface FileWritePlan {
   path: string;
   relPath: string;
   exists: boolean;
+  /** Existing on-disk content ('' if absent) — feeds a before/after diff view. */
+  before: string;
+  /** The content that would be written. */
+  after: string;
   diff: PromptDiff;
 }
 
@@ -58,8 +62,8 @@ export async function planWrite(input: WriteInput): Promise<WritePlan> {
   const [hOld, cOld] = await Promise.all([readIfExists(headerPath), readIfExists(sourcePath)]);
   return {
     files: [
-      { path: headerPath, relPath: relHeader, exists: hOld !== null, diff: diffPrompts(hOld ?? '', input.header) },
-      { path: sourcePath, relPath: relSource, exists: cOld !== null, diff: diffPrompts(cOld ?? '', input.source) },
+      { path: headerPath, relPath: relHeader, exists: hOld !== null, before: hOld ?? '', after: input.header, diff: diffPrompts(hOld ?? '', input.header) },
+      { path: sourcePath, relPath: relSource, exists: cOld !== null, before: cOld ?? '', after: input.source, diff: diffPrompts(cOld ?? '', input.source) },
     ],
   };
 }

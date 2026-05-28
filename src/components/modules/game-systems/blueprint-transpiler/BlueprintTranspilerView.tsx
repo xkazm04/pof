@@ -4,10 +4,13 @@ import { useState, useCallback } from 'react';
 import {
   Code, FileCode, ArrowRight, AlertTriangle, CheckCircle2,
   XCircle, Loader2, Clipboard, ClipboardCheck, RotateCcw,
-  GitCompare, ChevronDown, ChevronRight, Upload,
+  GitCompare, ChevronDown, ChevronRight, Upload, Save,
 } from 'lucide-react';
 import { useBlueprintTranspiler } from '@/hooks/useBlueprintTranspiler';
 import { useProjectStore } from '@/stores/projectStore';
+import { apiFetch } from '@/lib/api-utils';
+import { PromptDiffView } from '@/components/modules/evaluator/PromptDiffView';
+import type { WritePlan } from '@/lib/blueprint-transpiler-write';
 import { StaggerContainer, StaggerItem } from '@/components/ui/Stagger';
 import { TermChip, DecoratedJargon } from '@/components/ui/TermChip';
 import type { TranspilerTab, SemanticChange, DiffConflictLevel } from '@/types/blueprint';
@@ -67,6 +70,7 @@ export function BlueprintTranspilerView() {
   const [showCode, setShowCode] = useState<'header' | 'source'>('header');
 
   const projectName = useProjectStore((s) => s.projectName);
+  const projectPath = useProjectStore((s) => s.projectPath);
   const {
     blueprintJson, setBlueprintJson,
     existingCpp, setExistingCpp,
@@ -151,6 +155,8 @@ export function BlueprintTranspilerView() {
             copiedHeader={copiedHeader}
             copiedSource={copiedSource}
             onCopy={copyToClipboard}
+            projectName={projectName}
+            projectPath={projectPath}
           />
         ) : (
           <DiffPane
@@ -178,6 +184,7 @@ function TranspilePane({
   isLoading, error, asset, summary, result,
   showCode, setShowCode,
   copiedHeader, copiedSource, onCopy,
+  projectName, projectPath,
 }: {
   blueprintJson: string;
   setBlueprintJson: (v: string) => void;
@@ -193,11 +200,13 @@ function TranspilePane({
   copiedHeader: boolean;
   copiedSource: boolean;
   onCopy: (text: string, which: 'header' | 'source') => void;
+  projectName: string;
+  projectPath: string;
 }) {
   return (
-    <div className="flex h-full">
+    <div className="flex flex-col md:flex-row h-full overflow-auto md:overflow-hidden">
       {/* Left: Input */}
-      <div className="w-1/2 flex flex-col border-r border-border">
+      <div className="w-full md:w-1/2 flex flex-col border-b md:border-b-0 md:border-r border-border min-h-[280px] md:min-h-0">
         <div className="flex items-center justify-between px-3 py-2 border-b border-border bg-surface-deep">
           <div className="flex items-center gap-2">
             <Upload className="w-3.5 h-3.5 text-text-muted" />
@@ -211,13 +220,13 @@ function TranspilePane({
           </button>
         </div>
         <textarea
-          className="flex-1 p-3 bg-background text-xs font-mono text-text resize-none focus:outline-none placeholder-text-muted"
+          className="flex-1 min-h-[160px] p-3 bg-background text-xs font-mono text-text resize-none focus:outline-none placeholder-text-muted"
           placeholder="Paste Blueprint JSON here (from UE5 commandlet export or copy graph)..."
           value={blueprintJson}
           onChange={(e) => setBlueprintJson(e.target.value)}
           spellCheck={false}
         />
-        <div className="px-3 py-2 border-t border-border flex items-center justify-between">
+        <div className="px-3 py-2 border-t border-border flex items-center justify-between gap-2 flex-wrap">
           <div className="text-2xs text-text-muted">
             {blueprintJson ? `${blueprintJson.length.toLocaleString()} chars` : 'No input'}
           </div>
@@ -234,7 +243,7 @@ function TranspilePane({
       </div>
 
       {/* Right: Output */}
-      <div className="w-1/2 flex flex-col">
+      <div className="w-full md:w-1/2 flex flex-col min-h-[280px] md:min-h-0">
         {error && (
           <div className="px-3 py-2 bg-status-red-subtle border-b border-status-red-strong text-xs text-red-400 flex items-center gap-2">
             <XCircle className="w-3.5 h-3.5" /> {error}
@@ -294,7 +303,14 @@ function TranspilePane({
                 <Code className="w-3 h-3" />
                 {result.className}.cpp
               </button>
-              <div className="ml-auto">
+              <div className="ml-auto flex items-center gap-1">
+                <WriteToProjectButton
+                  className={result.className}
+                  header={result.headerCode}
+                  source={result.sourceCode}
+                  projectPath={projectPath}
+                  defaultModule={sanitizeModule(projectName)}
+                />
                 <button
                   onClick={() => onCopy(
                     showCode === 'header' ? result.headerCode : result.sourceCode,
@@ -366,10 +382,10 @@ function DiffPane({
 }) {
   return (
     <div className="flex flex-col h-full">
-      {/* Input area — two textareas side by side */}
-      <div className="flex flex-1 min-h-0">
+      {/* Input area — stacks on narrow viewports, side-by-side on md+ */}
+      <div className="flex flex-col md:flex-row flex-1 min-h-0">
         {/* Left: Blueprint JSON */}
-        <div className="w-1/2 flex flex-col border-r border-border">
+        <div className="w-full md:w-1/2 flex flex-col border-b md:border-b-0 md:border-r border-border min-h-[200px] md:min-h-0">
           <div className="flex items-center justify-between px-3 py-2 border-b border-border bg-surface-deep">
             <div className="flex items-center gap-2">
               <Upload className="w-3.5 h-3.5 text-text-muted" />
@@ -383,7 +399,7 @@ function DiffPane({
             </button>
           </div>
           <textarea
-            className="flex-1 p-3 bg-background text-xs font-mono text-text resize-none focus:outline-none placeholder-text-muted"
+            className="flex-1 min-h-[140px] p-3 bg-background text-xs font-mono text-text resize-none focus:outline-none placeholder-text-muted"
             placeholder="Paste Blueprint JSON..."
             value={blueprintJson}
             onChange={(e) => setBlueprintJson(e.target.value)}
@@ -392,13 +408,13 @@ function DiffPane({
         </div>
 
         {/* Right: Existing C++ */}
-        <div className="w-1/2 flex flex-col">
+        <div className="w-full md:w-1/2 flex flex-col min-h-[200px] md:min-h-0">
           <div className="flex items-center gap-2 px-3 py-2 border-b border-border bg-surface-deep">
             <Code className="w-3.5 h-3.5 text-text-muted" />
             <span className="text-xs font-medium text-text">Existing C++</span>
           </div>
           <textarea
-            className="flex-1 p-3 bg-background text-xs font-mono text-text resize-none focus:outline-none placeholder-text-muted"
+            className="flex-1 min-h-[140px] p-3 bg-background text-xs font-mono text-text resize-none focus:outline-none placeholder-text-muted"
             placeholder="Paste existing C++ header/source to compare..."
             value={existingCpp}
             onChange={(e) => setExistingCpp(e.target.value)}
@@ -408,7 +424,7 @@ function DiffPane({
       </div>
 
       {/* Action bar */}
-      <div className="px-3 py-2 border-t border-border flex items-center justify-between">
+      <div className="px-3 py-2 border-t border-border flex items-center justify-between gap-2 flex-wrap">
         <div className="text-2xs text-text-muted">
           {blueprintJson ? `BP: ${blueprintJson.length.toLocaleString()} chars` : 'No Blueprint'}
           {' · '}
@@ -432,9 +448,9 @@ function DiffPane({
         </div>
       )}
 
-      {/* Diff results */}
+      {/* Diff results — shares vertical space with inputs via flex-1; grows past 50% on tall viewports */}
       {result && (
-        <div className="border-t border-border max-h-[50%] overflow-y-auto">
+        <div className="border-t border-border flex-1 min-h-[200px] overflow-y-auto">
           {/* Summary */}
           <div className="px-4 py-3 border-b border-border bg-surface-deep flex items-center gap-4">
             {(() => {
@@ -533,5 +549,139 @@ function ChangeCard({ change }: { change: SemanticChange }) {
         </div>
       )}
     </div>
+  );
+}
+
+// ─── Write to Project (dry-run diff → confirm) ──────────────────────────────
+
+/** Sanitize a project name into a UE C++ module identifier. */
+function sanitizeModule(name: string): string {
+  const cleaned = (name || '').replace(/[^A-Za-z0-9_]/g, '');
+  return /^[A-Za-z_]/.test(cleaned) ? cleaned : 'Game';
+}
+
+function WriteToProjectButton({ className, header, source, projectPath, defaultModule }: {
+  className: string;
+  header: string;
+  source: string;
+  projectPath: string;
+  defaultModule: string;
+}) {
+  const [moduleName, setModuleName] = useState(defaultModule);
+  const [plan, setPlan] = useState<WritePlan | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [written, setWritten] = useState<string[] | null>(null);
+  const [err, setErr] = useState<string | null>(null);
+
+  const body = (confirm?: boolean) => JSON.stringify({ projectPath, moduleName, className, header, source, confirm });
+
+  const dryRun = useCallback(async () => {
+    setBusy(true); setErr(null); setWritten(null);
+    try {
+      const data = await apiFetch<WritePlan>('/api/blueprint-transpiler/write', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: body(false),
+      });
+      setPlan(data);
+    } catch (e) { setErr(e instanceof Error ? e.message : 'Dry-run failed'); }
+    finally { setBusy(false); }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [projectPath, moduleName, className, header, source]);
+
+  const confirmWrite = useCallback(async () => {
+    setBusy(true); setErr(null);
+    try {
+      const data = await apiFetch<{ written: string[] }>('/api/blueprint-transpiler/write', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: body(true),
+      });
+      setWritten(data.written); setPlan(null);
+    } catch (e) { setErr(e instanceof Error ? e.message : 'Write failed'); }
+    finally { setBusy(false); }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [projectPath, moduleName, className, header, source]);
+
+  if (!projectPath) {
+    return <span className="text-2xs text-text-muted" title="Set a project path in Project Setup first">No project path</span>;
+  }
+
+  return (
+    <>
+      <button
+        onClick={dryRun}
+        disabled={busy}
+        className="flex items-center gap-1 px-2 py-1 rounded text-2xs transition-colors disabled:opacity-40"
+        style={{ backgroundColor: `${ACCENT}${OPACITY_15}`, color: ACCENT }}
+        title="Write the header + source into the UE project (with a dry-run diff)"
+      >
+        {busy ? <Loader2 className="w-3 h-3 animate-spin" /> : <Save className="w-3 h-3" />}
+        Write to Project
+      </button>
+
+      {written && (
+        <span className="text-2xs text-green-400 flex items-center gap-1">
+          <CheckCircle2 className="w-3 h-3" /> Wrote {written.length} files
+        </span>
+      )}
+      {err && (
+        <span className="text-2xs text-red-400 flex items-center gap-1">
+          <XCircle className="w-3 h-3" /> {err}
+        </span>
+      )}
+
+      {plan && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-6" onClick={() => setPlan(null)}>
+          <div
+            className="w-full max-w-3xl max-h-[85vh] overflow-y-auto rounded-xl border border-border bg-surface p-4 shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-sm font-semibold text-text flex items-center gap-2">
+                <Save className="w-4 h-4" style={{ color: ACCENT }} /> Write {className} to project — dry run
+              </h3>
+              <label className="text-2xs text-text-muted flex items-center gap-1.5">
+                Module
+                <input
+                  value={moduleName}
+                  onChange={(e) => setModuleName(e.target.value)}
+                  className="w-28 bg-surface-deep border border-border rounded px-1.5 py-0.5 text-xs text-text font-mono"
+                />
+              </label>
+            </div>
+
+            <div className="space-y-3">
+              {plan.files.map((f) => (
+                <div key={f.path} className="rounded-lg border border-border overflow-hidden">
+                  <div className="flex items-center justify-between px-3 py-1.5 bg-surface-deep">
+                    <span className="text-2xs font-mono text-text">{f.relPath}</span>
+                    <span className="text-2xs" style={{ color: f.exists ? STATUS_WARNING : STATUS_SUCCESS }}>
+                      {f.exists
+                        ? `overwrites existing · +${f.diff.summary.added} / -${f.diff.summary.removed}`
+                        : `new file · +${f.diff.summary.added}`}
+                    </span>
+                  </div>
+                  <div className="p-2">
+                    <PromptDiffView before={f.before} after={f.after} maxHeightClass="max-h-56" />
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div className="flex items-center justify-end gap-2 mt-4">
+              <button onClick={() => setPlan(null)} className="px-3 py-1.5 rounded-md text-xs text-text-muted hover:text-text hover:bg-surface-hover transition-colors">
+                Cancel
+              </button>
+              <button
+                onClick={confirmWrite}
+                disabled={busy}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all disabled:opacity-40"
+                style={{ backgroundColor: `${ACCENT}${OPACITY_20}`, color: ACCENT, border: `1px solid ${ACCENT}${OPACITY_30}` }}
+              >
+                {busy ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
+                Confirm write
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
   );
 }

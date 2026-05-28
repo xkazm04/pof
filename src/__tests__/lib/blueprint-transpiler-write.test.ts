@@ -34,6 +34,8 @@ describe('planWrite (dry-run)', () => {
     expect(plan.files).toHaveLength(2);
     for (const f of plan.files) {
       expect(f.exists).toBe(false);
+      expect(f.before).toBe('');
+      expect(f.after.length).toBeGreaterThan(0);
       expect(f.diff.summary.added).toBeGreaterThan(0);
       expect(f.diff.summary.removed).toBe(0);
     }
