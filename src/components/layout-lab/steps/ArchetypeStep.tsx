@@ -1,7 +1,10 @@
 'use client';
 
-import { StepFrame } from './StepFrame';
+import { StepFrame, type StepPanel } from './StepFrame';
 import { CliProduce } from './shared/CliProduce';
+import { CandidateGallery } from './shared/CandidateGallery';
+import { readHistory, makeBatch, appendBatch, selectCandidate, selectedCandidate, historyData } from './shared/genHistory';
+import { genericGalleryCandidates } from './shared/genericGalleryCandidates';
 import { useLabStep, useLabPipelineStore } from '../labPipelineStore';
 import { useCanonStore } from '../canonStore';
 import { canonContextFor } from '@/lib/catalog/canon/canonContext';
@@ -77,6 +80,63 @@ export function ArchetypeStep({ t, entity, step, spec, catalogId }: { t: LabThem
   const data = art?.data ?? {};
   const links = readLinks(data);
   const linkRes = links.length ? linkTargetsExist(links, (c, e) => !!entitiesByCatalog[c]?.[e]) : null;
+
+  const buildPrompt = (dir: string) => {
+    const canon = canonContextFor(canonRules, catalogId, ARCHETYPE_CANON[spec.archetype]);
+    return [canon, `Produce ${spec.label} for ${entity.name}. ${dir}`].filter(Boolean).join('\n\n');
+  };
+
+  // Gallery archetype: the real browse→compare→select loop (shared CandidateGallery + genHistory).
+  const history = readHistory(data);
+  const generate = (dir: string, prompt: string) => {
+    if (spec.view.kind !== 'gallery') return;
+    const base = spec.produce(entity);
+    const batch = makeBatch({
+      seq: history.batches.length,
+      at: new Date().toISOString(),
+      direction: dir,
+      prompt,
+      candidates: genericGalleryCandidates(spec.view.field, spec.view.candidates, dir, history.batches.length),
+    });
+    produce(entity.id, step, { ...base, data: historyData(appendBatch(history, batch), base.data) });
+  };
+  const reselect = (id: string) => {
+    const base = spec.produce(entity);
+    produce(entity.id, step, { ...base, data: historyData(selectCandidate(history, id), base.data) });
+  };
+
+  const cli = (onComplete: (ctx?: { direction: string; prompt: string }) => void) => (
+    <CliProduce t={t} label={`Generate ${spec.label} (CLI)`} rows={3}
+      defaultDirection={spec.defaultDirection} note={spec.produceNote}
+      buildPrompt={buildPrompt} onComplete={onComplete} />
+  );
+
+  let panels: StepPanel[];
+  if (spec.view.kind === 'gallery') {
+    const sel = selectedCandidate(history);
+    const assetPath = spec.produce(entity).ueAssets?.[0];
+    panels = [
+      { label: 'Candidate gallery (kept across re-rolls)', node: (
+        <CandidateGallery t={t} history={history} onSelect={reselect}
+          emptyHint="No candidates yet — run Produce to generate the first batch." />
+      ) },
+      { label: 'Selected', node: (
+        <div style={{ display: 'grid', gap: 8 }}>
+          <div style={{ aspectRatio: '1', maxWidth: 160, borderRadius: t.glass ? 10 : 2, background: sel?.swatch ?? t.panel, border: `1px solid ${t.line}` }} />
+          {sel && assetPath
+            ? <span className={t.fontMono} style={{ fontSize: 14, color: t.ok }}>✓ writes {assetPath}</span>
+            : <span style={{ fontSize: 14, color: t.muted }}>Pick a candidate; the choice + its prompt persist and write the asset path.</span>}
+        </div>
+      ) },
+      { label: 'Produce', node: cli((ctx) => generate(ctx?.direction ?? spec.defaultDirection ?? '', ctx?.prompt ?? buildPrompt(spec.defaultDirection ?? ''))) },
+    ];
+  } else {
+    panels = [
+      { label: 'View', node: <ViewPanel t={t} view={spec.view} data={data} /> },
+      { label: 'Produce', node: cli(() => produce(entity.id, step, spec.produce(entity))) },
+    ];
+  }
+
   return (
     <>
       {linkRes && (
@@ -90,20 +150,7 @@ export function ArchetypeStep({ t, entity, step, spec, catalogId }: { t: LabThem
           {linkRes.label}: {linkRes.detail}{linkRes.reason ? ` — ${linkRes.reason}` : ''}
         </div>
       )}
-      <StepFrame t={t} acceptance={spec.accept(data)}
-        panels={[
-          { label: 'View', node: <ViewPanel t={t} view={spec.view} data={data} /> },
-          { label: 'Produce', node: (
-            <CliProduce t={t} label={`Generate ${spec.label} (CLI)`} rows={3}
-              defaultDirection={spec.defaultDirection} note={spec.produceNote}
-              buildPrompt={(dir) => {
-                const canon = canonContextFor(canonRules, catalogId, ARCHETYPE_CANON[spec.archetype]);
-                return [canon, `Produce ${spec.label} for ${entity.name}. ${dir}`].filter(Boolean).join('\n\n');
-              }}
-              onComplete={() => produce(entity.id, step, spec.produce(entity))} />
-          ) },
-        ]}
-      />
+      <StepFrame t={t} acceptance={spec.accept(data)} panels={panels} />
     </>
   );
 }
