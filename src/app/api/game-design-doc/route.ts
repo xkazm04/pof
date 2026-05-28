@@ -1,5 +1,6 @@
 import { NextRequest } from 'next/server';
 import { synthesizeGDD, exportGDDAsMarkdown } from '@/lib/gdd-synthesizer';
+import { exportGDDAsPitchHTML } from '@/lib/gdd-pitch';
 import { apiSuccess, apiError } from '@/lib/api-utils';
 
 /** GET — generate the GDD from all data sources */
@@ -31,6 +32,13 @@ export async function POST(req: NextRequest) {
       const gdd = synthesizeGDD(projectName ?? 'Untitled Project', checklistProgress);
       const markdown = exportGDDAsMarkdown(gdd);
       return apiSuccess({ markdown, title: gdd.title });
+    }
+
+    if (action === 'export-pitch') {
+      const checklistProgress = checklist ?? {};
+      const gdd = synthesizeGDD(projectName ?? 'Untitled Project', checklistProgress);
+      const html = exportGDDAsPitchHTML(gdd);
+      return apiSuccess({ html, title: gdd.title });
     }
 
     return apiError(`Unknown action: ${action}`, 400);
