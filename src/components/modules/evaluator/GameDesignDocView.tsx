@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import {
   FileText, RefreshCw, Download, ChevronRight, ChevronDown,
   Loader2, BarChart3, Map, Volume2, Wrench, Package,
-  Layers, ClipboardCopy, Check,
+  Layers, ClipboardCopy, Check, Presentation,
 } from 'lucide-react';
 import { useProjectStore } from '@/stores/projectStore';
 import { useGameDesignDoc } from '@/hooks/useGameDesignDoc';
@@ -27,11 +27,12 @@ const SECTION_ICONS: Record<string, typeof FileText> = {
 
 export function GameDesignDocView() {
   const projectName = useProjectStore((s) => s.projectName);
-  const { gdd, isLoading, error, generate, exportMarkdown } = useGameDesignDoc(projectName);
+  const { gdd, isLoading, error, generate, exportMarkdown, exportPitch } = useGameDesignDoc(projectName);
   const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set());
   const [activeSectionId, setActiveSectionId] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const [exporting, setExporting] = useState(false);
+  const [exportingPitch, setExportingPitch] = useState(false);
   const contentRef = useRef<HTMLDivElement>(null);
 
   // Auto-generate on mount
@@ -62,6 +63,21 @@ export function GameDesignDocView() {
     a.click();
     URL.revokeObjectURL(url);
   }, [exportMarkdown, projectName]);
+
+  const handleExportPitch = useCallback(async () => {
+    setExportingPitch(true);
+    const html = await exportPitch();
+    setExportingPitch(false);
+    if (!html) return;
+
+    const blob = new Blob([html], { type: 'text/html' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${projectName}-pitch.html`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }, [exportPitch, projectName]);
 
   const handleCopyMarkdown = useCallback(async () => {
     const markdown = await exportMarkdown();
@@ -193,6 +209,16 @@ export function GameDesignDocView() {
             >
               {exporting ? <Loader2 className="w-3 h-3 animate-spin" /> : <Download className="w-3 h-3" />}
               Export .md
+            </button>
+            <button
+              onClick={handleExportPitch}
+              disabled={exportingPitch}
+              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-xs transition-colors"
+              style={{ backgroundColor: `${ACCENT}15`, color: ACCENT, border: `1px solid ${ACCENT}30` }}
+              title="Export a shareable single-page pitch (HTML)"
+            >
+              {exportingPitch ? <Loader2 className="w-3 h-3 animate-spin" /> : <Presentation className="w-3 h-3" />}
+              Export Pitch
             </button>
           </div>
         </div>
