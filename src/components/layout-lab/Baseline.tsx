@@ -72,9 +72,15 @@ export function Baseline({ theme: t, groups, detail, onSelectCatalog, entityId, 
   const entities = detail?.entities ?? [];
   const entity = entities.find((e) => e.id === entityId) ?? entities[0] ?? null;
 
-  // Hybrid step source: registry pipeline wins if present, else detail.steps fallback
+  // Hybrid step source. Items is the bespoke REFERENCE pipeline (rich
+  // ItemConceptBrief/ItemAttributes/ItemArt… components + populateItemDemo, all keyed
+  // to its curated labPipelineSteps names), so it renders that list (detail.steps).
+  // Every other catalog uses its registry StepSpec labels, which the generic
+  // ArchetypeStep renderer drives.
   const pipeline = detail ? getCatalogPipeline(detail.catalog.catalogId) : null;
-  const steps = pipeline ? pipeline.steps.map((s) => s.label) : (detail?.steps ?? []);
+  const steps = detail?.catalog.catalogId !== 'items' && pipeline
+    ? pipeline.steps.map((s) => s.label)
+    : (detail?.steps ?? []);
 
   const catalogId = detail?.catalog.catalogId;
 
