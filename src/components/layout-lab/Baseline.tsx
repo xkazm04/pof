@@ -15,6 +15,7 @@ import { resolveAccept } from './labAcceptance';
 import { PipelineRollup } from './PipelineRollup';
 import { CatalogTree } from './CatalogTree';
 import { NextStepCoach } from './NextStepCoach';
+import { statusAriaLabel } from './statusLanguage';
 import { summarizeEntity } from '@/lib/catalog/rollup';
 import { useViewportWidth } from '@/hooks/useViewportWidth';
 import type { LabTheme } from './theme';
@@ -231,7 +232,7 @@ export function Baseline({ theme: t, groups, detail, onSelectCatalog, entityId, 
             live ? 'Prototyped step' : 'Placeholder (not yet built)',
             status !== 'pending' || art ? `status: ${status}${art?.tier ? ` · ${art.tier}` : ''}${art?.reason ? ` — ${art.reason}` : ''}` : null,
           ].filter(Boolean).join(' · ');
-          const ariaLabel = `Step ${pad2(i + 1)}: ${step} — ${status}`;
+          const ariaLabel = statusAriaLabel(step, status, art?.tier);
           return (
             <button key={step} onClick={() => selectStep(i)} title={tooltip} aria-label={ariaLabel} aria-current={current ? 'step' : undefined}
               style={{ display: 'flex', alignItems: 'center', gap: 12, width: '100%', textAlign: 'left', padding: '7px 0', cursor: 'pointer', border: 'none', background: 'transparent', position: 'relative', transition: 'color 160ms ease-out' }}>

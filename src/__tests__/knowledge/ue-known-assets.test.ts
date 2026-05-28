@@ -64,8 +64,13 @@ describe('knownAssetDomainsForModule', () => {
     expect(knownAssetDomainsForModule('arpg-enemy-ai')).toContain('character');
   });
 
-  it('returns [] for unrelated modules', () => {
-    expect(knownAssetDomainsForModule('arpg-loot')).toEqual([]);
+  it('maps gameplay modules to their known-asset domains', () => {
+    expect(knownAssetDomainsForModule('arpg-loot')).toEqual(['loot']);
+    expect(knownAssetDomainsForModule('arpg-inventory')).toEqual(['items']);
+  });
+
+  it('returns [] for modules with no known assets', () => {
     expect(knownAssetDomainsForModule('materials')).toEqual([]);
+    expect(knownAssetDomainsForModule('arpg-progression')).toEqual([]);
   });
 });

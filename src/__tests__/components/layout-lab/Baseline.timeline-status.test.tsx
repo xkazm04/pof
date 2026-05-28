@@ -91,10 +91,11 @@ describe('Baseline timeline status indicators', () => {
     );
     const buttons = Array.from(container.querySelectorAll('aside button[aria-label]'));
     const labels = buttons.map((b) => b.getAttribute('aria-label'));
-    expect(labels).toContain('Step 01: StepPass — pass');
-    expect(labels).toContain('Step 02: StepFail — fail');
-    expect(labels).toContain('Step 03: StepDeferred — deferred');
-    expect(labels).toContain('Step 04: StepPending — pending');
+    // Unified status language (statusLanguage.ts) — "{step}: {word}[, tier {tier}]".
+    expect(labels).toContain('StepPass: passed, tier L0');
+    expect(labels).toContain('StepFail: failed, tier L0');
+    expect(labels).toContain('StepDeferred: deferred, tier L3');
+    expect(labels).toContain('StepPending: pending');
   });
 
   it('tints deferred nodes with a dashed muted border (not the failed/passing fill)', () => {

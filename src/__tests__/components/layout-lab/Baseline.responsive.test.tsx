@@ -49,7 +49,7 @@ describe('Baseline responsive shell', () => {
     expect(screen.queryByRole('button', { name: 'Catalogs' })).toBeNull();
     // The pipeline timeline renders inline inside an <aside> column.
     expect(container.querySelector('aside [data-step-status]')).toBeTruthy();
-    expect(screen.getByRole('button', { name: 'Step 01: Alpha — pending' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Alpha: pending' })).toBeTruthy();
   });
 
   it('narrow: collapses both columns to persistent header toggles', () => {
@@ -69,7 +69,7 @@ describe('Baseline responsive shell', () => {
     renderBaseline();
     fireEvent.click(screen.getByRole('button', { name: /^Pipeline/ }));
     expect(screen.getByRole('dialog', { name: /Pipeline/ })).toBeTruthy();
-    expect(screen.getByRole('button', { name: 'Step 01: Alpha — pending' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Alpha: pending' })).toBeTruthy();
   });
 
   it('narrow: opening the Catalogs toggle reveals the catalog tree in a dialog', () => {
@@ -83,7 +83,7 @@ describe('Baseline responsive shell', () => {
     widthRef.current = 800;
     renderBaseline();
     fireEvent.click(screen.getByRole('button', { name: /^Pipeline/ }));
-    fireEvent.click(screen.getByRole('button', { name: 'Step 02: Beta — pending' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Beta: pending' }));
     expect(screen.getByRole('heading', { name: 'Beta' })).toBeTruthy();
   });
 });
