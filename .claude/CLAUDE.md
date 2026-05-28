@@ -125,11 +125,15 @@ The catalog→UE pipeline is built by many parallel CLI sessions. Every pipeline
 | Component | Path | Use for |
 |-----------|------|---------|
 | `CliProduce` | `layout-lab/steps/shared/CliProduce.tsx` | the Produce face of any step (Rule 1) |
-| `StepFrame` | `layout-lab/steps/StepFrame.tsx` | step shell: Acceptance banner + responsive View panel grid |
+| `StepFrame` | `layout-lab/steps/StepFrame.tsx` | step shell: Acceptance banner (with optional `why` / `suggestion` / `onFix`) + responsive View panel grid |
+| `ChartPanel` | `layout-lab/steps/shared/ChartPanel.tsx` | budget bars / scatter / histogram / waveform — shared `scaleLinear` + axes + staggered grow-in entrance (reuse instead of hand-rolled SVG) |
+| `CandidateGallery` (Gallery2D) | `layout-lab/steps/shared/CandidateGallery.tsx` | generative-step candidate browser: every re-roll **batch is kept** (not discarded), each stamped with its direction + an expandable prompt; click any candidate to re-select. Pairs with the pure `genHistory.ts` model (`readHistory`/`appendBatch`/`selectCandidate`/`historyData`) which persists in the step artifact's `data.genHistory` and projects the selected candidate's payload to top-level so derived Acceptance is unchanged. Per-step candidate generators live in `shared/itemGenCandidates.ts` (bespoke Items steps in `ItemArt.tsx`); the **generic `ArchetypeStep` gallery view** uses the same loop via `shared/genericGalleryCandidates.ts`, so every `archetype: 'gallery'` step across all catalogs gets browse→compare→select with acceptance unchanged. |
 | `Lbl` / `LabButton` / `LabInput` / `LabTextarea` | `layout-lab/steps/controls.tsx` | themed form controls (≥14px) |
 | `getStepComponent` | `layout-lab/steps/index.ts` | per-catalog/per-step registry lookup |
 
-Reusable patterns still to extract to `shared/` when first needed (add to this table when you do): `DataTable` (attribute/manifest tables), `Gallery2D` (icon/concept candidate grid + select), `ChartPanel` (budget bars / scatter / histogram). The 2D-generation and table UIs recur across catalogs — build them once in `shared/` and register here.
+Reusable patterns still to extract to `shared/` when first needed (add to this table when you do): `DataTable` (attribute/manifest tables). The table UIs recur across catalogs — build them once in `shared/` and register here. (`Gallery2D` is now `CandidateGallery`, above.)
+
+> **Produce contract note:** `CliProduce.onComplete` is called with an optional `{ direction, prompt }` so generative steps can stamp the batch they produce with the user's art direction. Zero-arg handlers stay valid.
 
 **Rule 4 — Every step is tested + truthful.** Each step must: (a) **produce data to the UE5 project** and **update the UI**, (b) **fulfill a derived Acceptance** (read from UE/DB truth, never a manual toggle), and (c) if production fails, the **CLI reports the reason** (surface it, don't fail silently — `CliProduce.validate` returns the error reason). Each step ships a test asserting its View renders, Produce dispatches, and Acceptance derives.
 
