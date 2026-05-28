@@ -275,7 +275,8 @@ export function Baseline({ theme: t, groups, detail, onSelectCatalog, entityId, 
       className={t.fontBody}
       style={{
         background: t.bg, color: t.text, minHeight: '100%', display: 'flex', flexDirection: 'column',
-        ...(t.gridLine ? { backgroundImage: `linear-gradient(${t.gridLine} 1px, transparent 1px), linear-gradient(90deg, ${t.gridLine} 1px, transparent 1px)`, backgroundSize: '24px 24px' } : {}),
+        backgroundImage: 'var(--lab-grid-image), var(--lab-canvas-ambient)',
+        backgroundSize: 'var(--lab-grid-size), auto',
       }}
     >
       {/* ── Header: title + moved title-block stats ── */}

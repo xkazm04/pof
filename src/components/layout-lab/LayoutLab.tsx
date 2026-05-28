@@ -6,7 +6,8 @@ import { useLabCatalogData, useLabDetail } from './useLabCatalogData';
 import { Baseline } from './Baseline';
 import { CanonView } from './CanonView';
 import { CatalogMatrix } from './CatalogMatrix';
-import { LAB_THEMES, LIGHT } from './theme';
+import { LAB_THEMES, LIGHT, themeAttr } from './theme';
+import { labFontVars } from './fonts';
 import { LabBridgeStrip } from './LabBridgeStrip';
 import { LabJobsChip } from './LabJobsChip';
 import { OneShotPanel } from './one-shot/OneShotPanel';
@@ -71,7 +72,14 @@ export function LayoutLab() {
   }, []);
 
   return (
-    <div data-testid="harness-lab-ready" style={{ height: '100vh', display: 'flex', flexDirection: 'column', background: '#000' }}>
+    <div
+      data-testid="harness-lab-ready"
+      data-lab-root=""
+      data-theme={themeAttr(themeId)}
+      data-density="comfortable"
+      className={labFontVars}
+      style={{ height: '100vh', display: 'flex', flexDirection: 'column', background: 'var(--lab-bg)' }}
+    >
       <div style={{ flex: '0 0 auto', display: 'flex', alignItems: 'center', gap: 6, padding: '10px 16px', background: '#0c0c0c', borderBottom: '1px solid #262626' }}>
         <span style={{ color: '#777', fontSize: 12, marginRight: 12, fontFamily: 'ui-monospace, monospace' }}>/layout · Blueprint baseline</span>
         <button
