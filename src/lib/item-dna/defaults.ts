@@ -9,6 +9,7 @@
 import { MODULE_COLORS } from '@/lib/chart-colors';
 import type {
   ItemGenome, TraitGene, TraitAxis, MutationConfig, EvolutionState,
+  ItemGenomeParentRef,
 } from '@/types/item-genome';
 
 /* ── Constants ─────────────────────────────────────────────────────────────── */
@@ -60,6 +61,22 @@ function sanitizeMutation(raw: unknown): MutationConfig {
     maxMutations: isFiniteNumber(o.maxMutations) ? Math.max(0, Math.round(o.maxMutations)) : DEFAULT_MUTATION.maxMutations,
     wildMutation: typeof o.wildMutation === 'boolean' ? o.wildMutation : DEFAULT_MUTATION.wildMutation,
   };
+}
+
+function sanitizeParents(raw: unknown): ItemGenomeParentRef[] | undefined {
+  if (!Array.isArray(raw)) return undefined;
+  const out: ItemGenomeParentRef[] = [];
+  for (const entry of raw) {
+    if (entry == null || typeof entry !== 'object') continue;
+    const p = entry as Record<string, unknown>;
+    if (typeof p.id !== 'string' || typeof p.name !== 'string') continue;
+    out.push({
+      id: p.id,
+      name: p.name,
+      color: typeof p.color === 'string' ? p.color : MODULE_COLORS.core,
+    });
+  }
+  return out.length > 0 ? out : undefined;
 }
 
 function sanitizeEvolution(raw: unknown): EvolutionState | undefined {
@@ -126,6 +143,8 @@ export function sanitizeItemGenome(
     tags: Array.isArray(obj.tags)
       ? (obj.tags as unknown[]).filter((t): t is string => typeof t === 'string')
       : [],
+    isPreset: obj.isPreset === true ? true : undefined,
+    parents: sanitizeParents(obj.parents),
   };
 
   return { genome, warnings };

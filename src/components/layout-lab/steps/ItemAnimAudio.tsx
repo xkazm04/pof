@@ -2,10 +2,14 @@
 
 import { StepFrame } from './StepFrame';
 import { CliProduce } from './shared/CliProduce';
+import { ChartPanel } from './shared/ChartPanel';
 import { useLabStep, useLabPipelineStore } from '../labPipelineStore';
 import { ITEM_STEP_SPECS, slug } from './itemsSteps';
 import type { LabTheme } from '../theme';
 import type { StepProps } from './stepProps';
+
+/** Deterministic sample bank for the SFX waveform — derived once, not per render. */
+const WAVEFORM_SAMPLES = Array.from({ length: 48 }, (_, i) => Math.sin(i * 0.7) * 0.5 + 0.5);
 
 function Row({ t, name, right, on }: { t: LabTheme; name: string; right: string; on: boolean }) {
   return (
@@ -29,6 +33,7 @@ export function ItemAnimations({ t, entity, step }: StepProps) {
 
   return (
     <StepFrame t={t} acceptance={ITEM_STEP_SPECS[step].accept(art)}
+      onFix={() => produce(entity.id, step, ITEM_STEP_SPECS[step].produce(entity))}
       panels={[
         { label: 'Clip set', node: <div>{rows.map(([n, dur]) => <Row key={n} t={t} name={n} right={dur} on={made} />)}</div> },
         { label: 'Skeleton · source', node: (
@@ -60,6 +65,7 @@ export function ItemVFX({ t, entity, step }: StepProps) {
 
   return (
     <StepFrame t={t} acceptance={ITEM_STEP_SPECS[step].accept(art)}
+      onFix={() => produce(entity.id, step, ITEM_STEP_SPECS[step].produce(entity))}
       panels={[
         { label: 'Variants', node: <div>{(made ? variants : [['Idle glow', 'small'], ['Equip flash', 'med'], ['Use trail', 'med']] as [string, string][]).map(([n, s]) => <Row key={n} t={t} name={n} right={s} on={made} />)}</div> },
         { label: 'GPU budget', node: (
@@ -89,15 +95,12 @@ export function ItemSFX({ t, entity, step }: StepProps) {
 
   return (
     <StepFrame t={t} acceptance={ITEM_STEP_SPECS[step].accept(art)}
+      onFix={() => produce(entity.id, step, ITEM_STEP_SPECS[step].produce(entity))}
       panels={[
         { label: 'Cues · loudness', node: <div>{rows.map(([n, dur]) => <Row key={n} t={t} name={n} right={dur} on={made} />)}</div> },
         { label: 'Waveform', node: (
-          <svg viewBox="0 0 300 70" width="100%" height="70" style={{ marginTop: 4 }}>
-            {Array.from({ length: 48 }, (_, i) => {
-              const h = made ? (Math.sin(i * 0.7) * 0.5 + 0.5) * 56 + 4 : 2;
-              return <rect key={i} x={i * 6.2} y={35 - h / 2} width={3.6} height={h} fill={made ? t.ink : t.line} opacity={made ? 0.8 : 0.4} />;
-            })}
-          </svg>
+          <ChartPanel t={t} variant="waveform" samples={WAVEFORM_SAMPLES} active={made}
+            ariaLabel={`SFX waveform — ${made ? 'imported' : 'idle'}`} />
         ) },
         { label: 'Produce', node: (
           <CliProduce t={t} label="Import set (CLI)" rows={3}

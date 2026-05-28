@@ -3,6 +3,7 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import type { CharacterGenome } from '@/types/character-genome';
+import type { GenomeCheckpoint } from '@/types/genome-checkpoint';
 import {
   PRESET_GENOMES,
   createGenome,
@@ -19,6 +20,8 @@ interface GenomeState {
   activeId: string;
   /** Ids of genomes selected for comparison (max 4) */
   compareIds: string[];
+  /** Named, restorable snapshots — keyed by `genomeId`. Flat for simple persist. */
+  checkpoints: GenomeCheckpoint[];
 
   /* ── Actions ── */
   setActiveId: (id: string) => void;
@@ -30,6 +33,12 @@ interface GenomeState {
   updateGenome: (id: string, updater: (g: CharacterGenome) => CharacterGenome) => void;
   importGenome: (genome: CharacterGenome) => void;
   resetToPresets: () => void;
+
+  /** Checkpoint actions */
+  createCheckpoint: (genomeId: string, name: string, note?: string) => GenomeCheckpoint | null;
+  renameCheckpoint: (checkpointId: string, name: string) => void;
+  deleteCheckpoint: (checkpointId: string) => void;
+  restoreCheckpoint: (checkpointId: string) => void;
 }
 
 /* ── Initial state factory ────────────────────────────────────────────────── */
@@ -46,6 +55,7 @@ export const useGenomeStore = create<GenomeState>()(
       genomes: createInitialGenomes(),
       activeId: '',
       compareIds: [],
+      checkpoints: [],
 
       setActiveId: (id) => set({ activeId: id }),
 
@@ -68,7 +78,7 @@ export const useGenomeStore = create<GenomeState>()(
       },
 
       deleteGenome: (id) => {
-        const { genomes, activeId, compareIds } = get();
+        const { genomes, activeId, compareIds, checkpoints } = get();
         if (genomes.length <= 1) return;
         const remaining = genomes.filter((g) => g.id !== id);
         const nextActiveId = activeId === id
@@ -78,6 +88,8 @@ export const useGenomeStore = create<GenomeState>()(
           genomes: remaining,
           activeId: nextActiveId,
           compareIds: compareIds.filter((x) => x !== id),
+          // Cascade: drop the deleted genome's checkpoints to avoid orphans.
+          checkpoints: checkpoints.filter((c) => c.genomeId !== id),
         });
       },
 
@@ -100,7 +112,58 @@ export const useGenomeStore = create<GenomeState>()(
           genomes: fresh,
           activeId: fresh[0].id,
           compareIds: [],
+          checkpoints: [],
         });
+      },
+
+      createCheckpoint: (genomeId, name, note) => {
+        const trimmedName = name.trim();
+        if (!trimmedName) return null;
+        const target = get().genomes.find((g) => g.id === genomeId);
+        if (!target) return null;
+        const checkpoint: GenomeCheckpoint = {
+          id: createId(),
+          genomeId,
+          name: trimmedName,
+          createdAt: new Date().toISOString(),
+          // Deep-clone via JSON so future edits don't mutate the snapshot.
+          snapshot: JSON.parse(JSON.stringify(target)) as CharacterGenome,
+          ...(note?.trim() ? { note: note.trim() } : {}),
+        };
+        set((state) => ({ checkpoints: [...state.checkpoints, checkpoint] }));
+        return checkpoint;
+      },
+
+      renameCheckpoint: (checkpointId, name) => {
+        const trimmed = name.trim();
+        if (!trimmed) return;
+        set((state) => ({
+          checkpoints: state.checkpoints.map((c) =>
+            c.id === checkpointId ? { ...c, name: trimmed } : c,
+          ),
+        }));
+      },
+
+      deleteCheckpoint: (checkpointId) => {
+        set((state) => ({
+          checkpoints: state.checkpoints.filter((c) => c.id !== checkpointId),
+        }));
+      },
+
+      restoreCheckpoint: (checkpointId) => {
+        const checkpoint = get().checkpoints.find((c) => c.id === checkpointId);
+        if (!checkpoint) return;
+        const restoredAt = new Date().toISOString();
+        set((state) => ({
+          genomes: state.genomes.map((g) =>
+            g.id === checkpoint.genomeId
+              // Restore every field from the snapshot but keep the live id (the
+              // user is still editing the same genome, not creating a new one)
+              // and bump updatedAt so downstream "changed since" UIs refresh.
+              ? { ...checkpoint.snapshot, id: g.id, updatedAt: restoredAt }
+              : g,
+          ),
+        }));
       },
     }),
     {
@@ -110,6 +173,7 @@ export const useGenomeStore = create<GenomeState>()(
         genomes: state.genomes,
         activeId: state.activeId,
         compareIds: state.compareIds,
+        checkpoints: state.checkpoints,
       }),
       merge: (persisted, current) => {
         const raw = persisted as Partial<GenomeState> | undefined;
@@ -121,6 +185,7 @@ export const useGenomeStore = create<GenomeState>()(
             genomes: fresh,
             activeId: fresh[0].id,
             compareIds: [],
+            checkpoints: [],
           };
         }
 
@@ -146,6 +211,7 @@ export const useGenomeStore = create<GenomeState>()(
             genomes: fresh,
             activeId: fresh[0].id,
             compareIds: [],
+            checkpoints: [],
           };
         }
 
@@ -160,11 +226,39 @@ export const useGenomeStore = create<GenomeState>()(
           ? raw.compareIds.filter((id) => genomeIdSet.has(id))
           : [];
 
+        // Sanitize checkpoints: drop any with malformed snapshots or orphan genomeIds.
+        // Each snapshot is re-passed through sanitizeGenome so schema evolution
+        // applies retroactively (older saves don't poison the restore button).
+        const checkpoints: GenomeCheckpoint[] = [];
+        if (Array.isArray(raw.checkpoints)) {
+          for (const entry of raw.checkpoints as unknown[]) {
+            if (!entry || typeof entry !== 'object') continue;
+            const e = entry as Record<string, unknown>;
+            if (typeof e.id !== 'string' || typeof e.genomeId !== 'string' || typeof e.name !== 'string'
+                || typeof e.createdAt !== 'string' || !genomeIdSet.has(e.genomeId)) continue;
+            const snapResult = sanitizeGenome(e.snapshot);
+            if (!('genome' in snapResult)) continue;
+            const originalSnapId = (e.snapshot as { id?: unknown })?.id;
+            if (typeof originalSnapId === 'string' && originalSnapId.length > 0) {
+              snapResult.genome.id = originalSnapId;
+            }
+            checkpoints.push({
+              id: e.id,
+              genomeId: e.genomeId,
+              name: e.name,
+              createdAt: e.createdAt,
+              snapshot: snapResult.genome,
+              ...(typeof e.note === 'string' && e.note.length > 0 ? { note: e.note } : {}),
+            });
+          }
+        }
+
         return {
           ...current,
           genomes: sanitized,
           activeId,
           compareIds,
+          checkpoints,
         };
       },
     },

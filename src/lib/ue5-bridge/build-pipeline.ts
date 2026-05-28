@@ -19,8 +19,29 @@ import type { SubModuleId } from '@/types/modules';
 
 // ── DB Schema ────────────────────────────────────────────────────────────────
 
-function ensureHeadlessBuildsTable(): void {
+/**
+ * Single source of truth for the `headless_builds` schema. Idempotent — safe to
+ * call before any read/write.
+ *
+ * Legacy migration: an earlier duplicate definition (in `db.ts`) created this
+ * table with an `id` primary key and an `output_log` column but no `build_id`,
+ * which silently broke persistence — the INSERT below targets
+ * `build_id`/`output`/`diagnostics_json`, columns that table lacked. Nothing
+ * ever wrote the legacy shape, so it is provably empty and safe to drop.
+ */
+export function ensureHeadlessBuildsTable(): void {
   const db = getDb();
+
+  const exists = db
+    .prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='headless_builds'")
+    .get();
+  if (exists) {
+    const cols = db.prepare('PRAGMA table_info(headless_builds)').all() as { name: string }[];
+    if (!cols.some((c) => c.name === 'build_id')) {
+      db.exec('DROP TABLE headless_builds');
+    }
+  }
+
   db.exec(`
     CREATE TABLE IF NOT EXISTS headless_builds (
       build_id TEXT PRIMARY KEY,

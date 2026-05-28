@@ -75,7 +75,7 @@ interface PromptEvolutionState {
   optimizePrompt: (moduleId: SubModuleId, prompt: string) => Promise<PromptOptimizationResult | null>;
 }
 
-export const usePromptEvolutionStore = create<PromptEvolutionState>((set, get) => ({
+export const usePromptEvolutionStore = create<PromptEvolutionState>((set) => ({
   // Initial state
   variants: EMPTY_VARIANTS,
   abTests: EMPTY_TESTS,
@@ -194,7 +194,8 @@ export const usePromptEvolutionStore = create<PromptEvolutionState>((set, get) =
         abTests: s.abTests.map((t) => (t.id === testId ? test : t)),
       }));
       return test;
-    } catch {
+    } catch (err) {
+      set({ error: err instanceof Error ? err.message : 'Failed to record trial' });
       return null;
     }
   },
@@ -210,7 +211,8 @@ export const usePromptEvolutionStore = create<PromptEvolutionState>((set, get) =
         abTests: s.abTests.map((t) => (t.id === testId ? test : t)),
       }));
       return test;
-    } catch {
+    } catch (err) {
+      set({ error: err instanceof Error ? err.message : 'Failed to conclude test' });
       return null;
     }
   },
@@ -237,7 +239,9 @@ export const usePromptEvolutionStore = create<PromptEvolutionState>((set, get) =
         body: JSON.stringify({ action: 'get-stats' }),
       });
       set({ stats });
-    } catch { /* ignore */ }
+    } catch (err) {
+      set({ error: err instanceof Error ? err.message : 'Failed to load stats' });
+    }
   },
 
   loadSuggestions: async (moduleId) => {
@@ -248,7 +252,9 @@ export const usePromptEvolutionStore = create<PromptEvolutionState>((set, get) =
         body: JSON.stringify({ action: 'get-suggestions', moduleId }),
       });
       set({ suggestions });
-    } catch { /* ignore */ }
+    } catch (err) {
+      set({ error: err instanceof Error ? err.message : 'Failed to load suggestions' });
+    }
   },
 
   getBestVariant: async (moduleId, checklistItemId) => {
@@ -258,7 +264,8 @@ export const usePromptEvolutionStore = create<PromptEvolutionState>((set, get) =
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action: 'get-best-variant', moduleId, checklistItemId }),
       });
-    } catch {
+    } catch (err) {
+      set({ error: err instanceof Error ? err.message : 'Failed to fetch best variant' });
       return null;
     }
   },

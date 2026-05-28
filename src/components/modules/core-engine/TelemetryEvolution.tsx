@@ -15,6 +15,7 @@ import {
 import { useGenreEvolution } from '@/hooks/useGenreEvolution';
 import { useProjectStore } from '@/stores/projectStore';
 import type { GenreEvolutionSuggestion, PatternDetection, SubGenreId } from '@/types/telemetry';
+import { GenreDnaTimeline } from './GenreDnaTimeline';
 
 const ACCENT = MODULE_COLORS.core;
 
@@ -120,6 +121,11 @@ export function TelemetryEvolution() {
       {/* Accepted sub-genres */}
       {accepted.length > 0 && (
         <AcceptedGenres genres={accepted} />
+      )}
+
+      {/* Genre DNA Timeline — cinematic confidence-over-time strands */}
+      {history.length > 1 && (
+        <GenreDnaTimeline history={history} />
       )}
 
       {/* Scan history */}

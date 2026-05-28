@@ -70,6 +70,7 @@ async function main() {
   const dryRun = args['dry-run'] === 'true';
   const themeDirective = args['theme'] ?? undefined;
   const scenario = args['scenario'] ?? undefined; // 'ui-overhaul' for webapp UI work
+  const checkpoint = args['checkpoint'] === 'true'; // git checkpoint per area + rollback-to-green
 
   if (!projectPath || !projectName) {
     console.error(`
@@ -83,6 +84,7 @@ Usage: npx tsx src/lib/harness/run-harness.ts \\
   [--state-path <dir>] \\
   [--theme "<creative direction>"] \\
   [--scenario <scenario-name>] \\
+  [--checkpoint] \\
   [--dry-run]
 
 Scenarios:
@@ -104,6 +106,7 @@ Scenarios:
   console.log(`  Timeout:     ${(sessionTimeoutMs / 60_000).toFixed(0)} min per session`);
   const concurrency = parseInt(args['concurrency'] ?? '4');
   console.log(`  Concurrent:  ${concurrency} sessions`);
+  if (checkpoint) console.log(`  Checkpoint:  git snapshot per area + rollback-to-green`);
   if (scenario) console.log(`  Scenario:    ${scenario}`);
   if (themeDirective) console.log(`  Theme:       ${themeDirective.slice(0, 60)}...`);
   console.log();
@@ -130,6 +133,7 @@ Scenarios:
     maxIterations,
     targetPassRate,
     themeDirective,
+    checkpoint,
     ...(scenarioAreas && { areas: scenarioAreas }),
     executor: {
       sessionTimeoutMs,
@@ -182,6 +186,12 @@ Scenarios:
         break;
       case 'harness:area-failed':
         console.log(`[${ts}] ✗ FAILED — ${event.areaId}: ${event.reason}`);
+        break;
+      case 'harness:checkpoint':
+        console.log(`[${ts}] ⎘ CHECKPOINT — ${event.areaId} @ ${event.sha.slice(0, 8)}`);
+        break;
+      case 'harness:rollback':
+        console.log(`[${ts}] ↩ ROLLBACK — ${event.areaId} → last green ${event.toSha.slice(0, 8)}`);
         break;
       case 'harness:guide-updated':
         console.log(`[${ts}] GUIDE — Phase ${event.step.phase}: ${event.step.label}`);

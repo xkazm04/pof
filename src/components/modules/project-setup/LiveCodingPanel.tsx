@@ -7,6 +7,7 @@ import {
   FileText, ArrowRight,
 } from 'lucide-react';
 import { SurfaceCard } from '@/components/ui/SurfaceCard';
+import { StatusDot, type StatusDotState } from '@/components/ui/StatusDot';
 import { ErrorBanner } from './ErrorBanner';
 import { useLiveCoding } from '@/hooks/useLiveCoding';
 import {
@@ -49,6 +50,19 @@ function phaseColor(phase: PofPatchPhase): string {
     case 'writing_file': return ACCENT_CYAN;
     case 'verifying': return ACCENT_VIOLET;
     default: return STATUS_NEUTRAL;
+  }
+}
+
+function phaseState(phase: PofPatchPhase): StatusDotState {
+  switch (phase) {
+    case 'complete': return 'ok';
+    case 'failed':
+    case 'reverted': return 'fail';
+    case 'reverting': return 'warn';
+    case 'compiling':
+    case 'writing_file':
+    case 'verifying': return 'progress';
+    default: return 'idle';
   }
 }
 
@@ -518,14 +532,17 @@ export function LiveCodingPanel() {
             )}
             {history.map((entry) => {
               const entryColor = phaseColor(entry.phase);
+              const entryState = phaseState(entry.phase);
+              const entryPhaseLabel = phaseLabel(entry.phase);
               return (
                 <div
                   key={entry.id}
                   className="flex items-center gap-2 text-2xs py-1"
                 >
-                  <span
-                    className="w-1.5 h-1.5 rounded-full shrink-0"
-                    style={{ backgroundColor: entryColor }}
+                  <StatusDot
+                    state={entryState}
+                    size="md"
+                    title={entryPhaseLabel}
                   />
                   <span className="font-mono text-text-muted w-16 shrink-0">
                     {new Date(entry.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
@@ -537,7 +554,7 @@ export function LiveCodingPanel() {
                     className="font-medium px-1 rounded shrink-0"
                     style={{ color: entryColor, backgroundColor: `${entryColor}${OPACITY_15}` }}
                   >
-                    {phaseLabel(entry.phase)}
+                    {entryPhaseLabel}
                   </span>
                   <span className="font-mono text-text-muted w-14 text-right shrink-0">
                     {Math.round(entry.durationMs)}ms

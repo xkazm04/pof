@@ -73,8 +73,12 @@ export function AntiPatternWarning({ prompt, moduleId, onSwitchApproach }: AntiP
   const handleSwitch = useCallback((warning: APWarning) => {
     if (!warning.antiPattern.alternative || !onSwitchApproach) return;
     const alt = warning.antiPattern.alternative;
-    // Replace approach keywords in the prompt with the alternative
-    onSwitchApproach(`Use ${alt.approach} approach instead of ${warning.antiPattern.approach}`);
+    // Prefer the recommended pattern's actual example prompt when present;
+    // fall back to a one-line directive if no example was extracted.
+    const replacement = alt.examplePrompt?.trim()
+      ? alt.examplePrompt.trim()
+      : `Use the ${alt.approach} approach instead of ${warning.antiPattern.approach} (see "${alt.title}", ${Math.round(alt.successRate * 100)}% success rate).`;
+    onSwitchApproach(replacement);
     handleDismiss(warning.antiPattern.id);
   }, [onSwitchApproach, handleDismiss]);
 

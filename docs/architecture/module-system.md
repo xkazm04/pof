@@ -16,6 +16,8 @@ Every UI panel, checklist, prompt, and quality evaluation in PoF is anchored to 
 | `src/hooks/useNBA.ts` | React hook wrapping `computeNBA` with feature-status API fetch |
 | `src/components/modules/shared/RecommendedNextBanner.tsx` | UI consumer of `getRecommendedNextModules` (module-level recommendations) |
 | `src/components/modules/shared/RoadmapChecklist.tsx` | UI consumer of `MODULE_PREREQUISITES` |
+| `src/lib/constellation/layout.ts` | `layoutModuleConstellation` / `pickNextFeature` — pure, testable layered layout of one module's `buildDependencyMap()` slice into status-colored feature nodes |
+| `src/components/modules/evaluator/FeatureConstellation.tsx` | Read-only SVG "living tech-tree" view of a single module's features (Evaluator → **Constellation** tab) |
 
 ---
 
@@ -51,6 +53,8 @@ Each `SubModuleDefinition` carries:
 `MODULE_PREREQUISITES` (line 7) is a separate, coarser graph at the **module** level (e.g., `arpg-combat` requires `arpg-gas` and `arpg-animation`). It drives `getRecommendedNextModules` and the `RoadmapChecklist` UI — it is **not** the same as the feature-level `dependsOn` graph.
 
 `buildDependencyMap()` (line 452) converts `MODULE_FEATURE_DEFINITIONS` into a memoized `Map<featureKey, DependencyInfo>` where each key is `moduleId::featureName`. The result is static and memoized. `computeBlockers(depMap, statusMap)` (line 498) produces a fresh copy annotated with live `isBlocked / blockers` fields based on a caller-supplied `featureKey → status` map fetched from the API.
+
+Two read-only graph views render this data. The module-level `DependencyGraph` / `NexusView` (Evaluator → Dependencies / Nexus) draw **modules** as nodes with cross-module edges. The feature-level **Feature Constellation** (`src/lib/constellation/layout.ts` + `FeatureConstellation.tsx`, Evaluator → Constellation) lays out a **single** module's features in dependency layers (column = longest intra-module dependency chain), colors each node by its verified matrix status (`PLAN_STATUS_COLORS`), dims blocked paths and labels their blockers, and pulses the recommended next feature. The layout engine is presentation-free and pure — `layoutModuleConstellation(moduleId, statusMap)` returns positioned nodes/edges and `pickNextFeature` selects an unblocked, unbuilt, high-fan-out node — so it is fully unit-testable without a DOM.
 
 ### 4. The NBA Engine (`src/lib/nba-engine.ts`)
 

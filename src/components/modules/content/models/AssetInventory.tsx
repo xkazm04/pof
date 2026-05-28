@@ -330,28 +330,29 @@ export function AssetInventory() {
   return (
     <div className="space-y-4">
       {/* Summary bar */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <span className="text-xs text-text-muted">
-            <span className="text-text font-semibold">{scanResult.assets.length}</span> assets
+      <div className="flex items-center justify-between gap-3 flex-wrap">
+        <div className="flex items-center gap-x-4 gap-y-1.5 flex-wrap text-[13px] text-text-muted">
+          <span>
+            <span className="text-text font-semibold tabular-nums">{scanResult.assets.length}</span> assets
           </span>
-          <span className="text-xs text-text-muted">
-            <span className="text-text font-semibold">{formatBytes(scanResult.totalSizeBytes)}</span> total
+          <span>
+            <span className="text-text font-semibold tabular-nums">{formatBytes(scanResult.totalSizeBytes)}</span> total
           </span>
-          <span className="text-xs text-text-muted">
-            <span className="text-text font-semibold">{depCount}</span> dependencies
+          <span>
+            <span className="text-text font-semibold tabular-nums">{depCount}</span> dependencies
           </span>
-          <span className="text-xs text-text-muted">
+          <span className="text-xs tabular-nums opacity-80">
             scanned in {scanResult.scanDurationMs}ms
           </span>
         </div>
         <button
           onClick={handleScan}
           disabled={isScanning}
-          className="flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium transition-all hover:brightness-110"
+          aria-label="Rescan content directory"
+          className="inline-flex items-center gap-1.5 h-8 px-3 rounded-md text-[13px] font-semibold transition-all hover:brightness-110"
           style={{ backgroundColor: `${ACCENT}12`, color: ACCENT, border: `1px solid ${ACCENT}25` }}
         >
-          <ScanLine className="w-3 h-3" />
+          <ScanLine className="w-3.5 h-3.5" />
           Rescan
         </button>
       </div>

@@ -276,30 +276,12 @@ export function getDb(): Database.Database {
     ON request_log(created_at)
   `);
 
-  // Headless build results — tracks UBT builds triggered from PoF
-  db.exec(`
-    CREATE TABLE IF NOT EXISTS headless_builds (
-      id TEXT PRIMARY KEY,
-      project_path TEXT NOT NULL,
-      target_name TEXT NOT NULL,
-      platform TEXT NOT NULL,
-      configuration TEXT NOT NULL,
-      status TEXT NOT NULL CHECK(status IN ('queued','running','success','failed','aborted')),
-      started_at TEXT,
-      completed_at TEXT,
-      duration_ms INTEGER,
-      exit_code INTEGER,
-      error_count INTEGER DEFAULT 0,
-      warning_count INTEGER DEFAULT 0,
-      output_log TEXT,
-      created_at TEXT NOT NULL DEFAULT (datetime('now'))
-    )
-  `);
-
-  db.exec(`
-    CREATE INDEX IF NOT EXISTS idx_headless_builds_project
-    ON headless_builds(project_path, created_at DESC)
-  `);
+  // NOTE: the `headless_builds` table is owned and created by
+  // `ensureHeadlessBuildsTable()` in src/lib/ue5-bridge/build-pipeline.ts — the
+  // sole reader/writer. A duplicate definition previously lived here with a
+  // mismatched schema (id/output_log vs build_id/output/diagnostics_json) that
+  // silently broke build persistence; it has been removed to keep one source of
+  // truth.
 
   return db;
 }

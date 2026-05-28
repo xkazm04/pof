@@ -73,6 +73,15 @@ Fluent builder that assembles up to 7 sections in a fixed order:
 `build()` throws if `projectContext` or `taskInstructions` are absent. Sections are
 joined with `\n\n` — no caller manages separator whitespace. (`prompt-builder.ts:192`)
 
+`audit()` returns a `{section, present}[]` row per builder section so the UI can
+surface which sections were actually populated. For prompts that don't go through
+`PromptBuilder` (hand-rolled strings like `buildAbilityForgePrompt`), the same
+shape is recoverable via `auditPromptString(prompt)` — it detects canonical
+section markers by header keywords and returns `{section, label, present, required}[]`
+plus a one-line `summarizeAudit()` summary. The Ability Forge's **Prompt
+Inspector** panel uses both to render audit chips (green = present, amber = missing
+required, neutral zinc = missing optional) over the composed prompt's CodeBlock.
+
 The Asset Specification section (3.5) serialises a catalog entity's identity and
 typed `data` payload as a JSON block. The Wiring Requirements section (3.6) always
 emits granting / activation / dependency / verification sub-prompts and a `wiring`

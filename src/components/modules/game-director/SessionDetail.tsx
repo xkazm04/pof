@@ -15,7 +15,7 @@ import {
   ACCENT_ORANGE, ACCENT_PURPLE, STATUS_SUCCESS, STATUS_WARNING, STATUS_ERROR, STATUS_INFO,
   OPACITY_10, statusBg, statusBorder,
 } from '@/lib/chart-colors';
-import { SEVERITY_STYLES, CATEGORY_LABELS } from '@/lib/game-director-styles';
+import { SEVERITY_TOKENS, CATEGORY_LABELS, severitySurface } from '@/lib/game-director-styles';
 import { EmptyState } from '@/components/ui/EmptyState';
 
 const ACCENT = ACCENT_ORANGE;
@@ -87,7 +87,8 @@ export function SessionDetail({
         <div className="flex items-center gap-3 mb-4">
           <button
             onClick={onBack}
-            className="p-1.5 rounded-md hover:bg-border transition-colors"
+            aria-label="Back to overview"
+            className="focus-ring p-1.5 rounded-md hover:bg-border transition-colors"
           >
             <ArrowLeft className="w-4 h-4 text-text-muted" />
           </button>
@@ -112,7 +113,7 @@ export function SessionDetail({
               <button
                 onClick={onSimulate}
                 disabled={simulating}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all disabled:opacity-50"
+                className="focus-ring flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-all disabled:opacity-50"
                 style={{
                   backgroundColor: `${ACCENT}15`,
                   color: ACCENT,
@@ -125,7 +126,8 @@ export function SessionDetail({
             )}
             <button
               onClick={onDelete}
-              className="p-1.5 rounded-md text-text-muted transition-colors group/del"
+              aria-label="Delete session"
+              className="focus-ring p-1.5 rounded-md text-text-muted transition-colors group/del"
               style={{ ['--del-color' as string]: STATUS_ERROR }}
               onMouseEnter={(e) => { e.currentTarget.style.color = STATUS_ERROR; e.currentTarget.style.backgroundColor = `${STATUS_ERROR}${OPACITY_10}`; }}
               onMouseLeave={(e) => { e.currentTarget.style.color = ''; e.currentTarget.style.backgroundColor = ''; }}
@@ -207,14 +209,14 @@ function SubTab({ label, icon: Icon, active, onClick, count }: {
   return (
     <button
       onClick={onClick}
-      className={`flex items-center gap-1.5 px-3 py-2 text-xs font-medium transition-colors relative ${
+      className={`focus-ring rounded-sm flex items-center gap-1.5 px-3 py-2 text-sm font-medium transition-colors relative ${
         active ? 'text-text' : 'text-text-muted hover:text-text'
       }`}
     >
-      <Icon className="w-3 h-3" />
+      <Icon className="w-3.5 h-3.5" />
       {label}
       {count !== undefined && count > 0 && (
-        <span className="text-2xs px-1 py-0.5 rounded bg-border text-text-muted">{count}</span>
+        <span className="text-xs px-1 py-0.5 rounded bg-border text-text-muted">{count}</span>
       )}
       {active && (
         <motion.span
@@ -245,8 +247,9 @@ function FindingsList({ findings, expandedId, onToggle }: {
   return (
     <div className="space-y-2">
       {findings.map((finding, idx) => {
-        const style = SEVERITY_STYLES[finding.severity];
-        const Icon = style.icon;
+        const token = SEVERITY_TOKENS[finding.severity];
+        const surface = severitySurface(finding.severity);
+        const Icon = token.icon;
         const isExpanded = expandedId === finding.id;
         const catLabel = CATEGORY_LABELS[finding.category] ?? finding.category;
 
@@ -257,22 +260,22 @@ function FindingsList({ findings, expandedId, onToggle }: {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.22, delay: idx * 0.02 }}
             className="rounded-lg border overflow-hidden"
-            style={{ backgroundColor: style.bg, borderColor: style.border }}
+            style={surface}
           >
             <button
               onClick={() => onToggle(finding.id)}
-              className="w-full text-left flex items-start gap-3 px-3.5 py-3 hover:brightness-110 transition-colors"
+              className="focus-ring-inset rounded-lg w-full text-left flex items-start gap-3 px-3.5 py-3 hover:brightness-110 transition-colors"
             >
-              <Icon className="w-4 h-4 flex-shrink-0 mt-0.5" style={{ color: style.color }} />
+              <Icon className="w-4 h-4 flex-shrink-0 mt-0.5" style={{ color: token.color }} />
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 mb-0.5">
-                  <span className="text-xs font-semibold text-text">{finding.title}</span>
-                  <span className="text-2xs px-1.5 py-0.5 rounded bg-border text-text-muted">{catLabel}</span>
+                  <span className="text-sm font-semibold text-text">{finding.title}</span>
+                  <span className="text-xs px-1.5 py-0.5 rounded bg-border text-text-muted">{catLabel}</span>
                   {finding.relatedModule && (
-                    <span className="text-2xs px-1.5 py-0.5 rounded bg-border text-text-muted-hover">{finding.relatedModule}</span>
+                    <span className="text-xs px-1.5 py-0.5 rounded bg-border text-text-muted-hover">{finding.relatedModule}</span>
                   )}
                 </div>
-                <p className="text-xs text-text-muted-hover leading-relaxed line-clamp-2">{finding.description}</p>
+                <p className="text-sm text-text-muted-hover leading-relaxed line-clamp-2">{finding.description}</p>
               </div>
               <div className="flex items-center gap-2 flex-shrink-0">
                 <span className="text-2xs text-text-muted">{finding.confidence}%</span>
@@ -293,14 +296,14 @@ function FindingsList({ findings, expandedId, onToggle }: {
                   transition={{ duration: 0.22 }}
                   className="overflow-hidden"
                 >
-                  <div className="px-3.5 pb-3 pt-1 border-t" style={{ borderColor: style.border }}>
+                  <div className="px-3.5 pb-3 pt-1 border-t" style={{ borderColor: surface.borderColor }}>
                     {finding.suggestedFix && (
                       <div className="mb-2">
                         <div className="flex items-center gap-1.5 mb-1">
                           <Wrench className="w-3 h-3 text-text-muted" />
                           <span className="text-2xs uppercase tracking-wider text-text-muted font-semibold">Suggested Fix</span>
                         </div>
-                        <p className="text-xs text-text-muted-hover leading-relaxed pl-4.5">{finding.suggestedFix}</p>
+                        <p className="text-sm text-text-muted-hover leading-relaxed pl-4.5">{finding.suggestedFix}</p>
                       </div>
                     )}
                     <div className="flex items-center gap-4 text-2xs text-text-muted">
@@ -365,10 +368,10 @@ function TimelineView({ events, onSimulate }: { events: DirectorEvent[]; onSimul
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 mb-0.5">
                   <Icon
-                    className="w-3 h-3 flex-shrink-0"
+                    className="w-3.5 h-3.5 flex-shrink-0"
                     style={{ color: isError ? STATUS_ERROR : isFinding ? STATUS_WARNING : 'var(--text-muted)' }}
                   />
-                  <span className="text-xs" style={{ color: isError ? STATUS_ERROR : 'var(--text)' }}>
+                  <span className="text-sm" style={{ color: isError ? STATUS_ERROR : 'var(--text)' }}>
                     {event.message}
                   </span>
                 </div>
@@ -428,7 +431,7 @@ function CoverageView({ session, findings, onSimulate }: { session: PlaytestSess
               transition={{ duration: 0.22, delay: idx * 0.05 }}
               className="flex items-center gap-3"
             >
-              <span className="text-xs text-text-muted-hover w-28 capitalize">{cat.replace(/-/g, ' ')}</span>
+              <span className="text-sm text-text-muted-hover w-28 capitalize">{cat.replace(/-/g, ' ')}</span>
               <div className="flex-1 h-2 bg-border rounded-full overflow-hidden">
                 <motion.div
                   initial={{ width: 0 }}
@@ -440,7 +443,7 @@ function CoverageView({ session, findings, onSimulate }: { session: PlaytestSess
                   }}
                 />
               </div>
-              <span className="text-xs font-medium text-text w-8 text-right">{pct}%</span>
+              <span className="text-sm font-medium text-text w-8 text-right">{pct}%</span>
             </motion.div>
           ))}
         </div>
@@ -453,16 +456,16 @@ function CoverageView({ session, findings, onSimulate }: { session: PlaytestSess
         </h3>
         <div className="grid grid-cols-5 gap-2">
           {(['critical', 'high', 'medium', 'low', 'positive'] as FindingSeverity[]).map((sev) => {
-            const style = SEVERITY_STYLES[sev];
+            const token = SEVERITY_TOKENS[sev];
             const count = severityCounts[sev] ?? 0;
             return (
               <div
                 key={sev}
                 className="p-3 rounded-lg border text-center"
-                style={{ backgroundColor: style.bg, borderColor: style.border }}
+                style={severitySurface(sev)}
               >
-                <span className="text-lg font-bold block" style={{ color: style.color }}>{count}</span>
-                <span className="text-2xs capitalize text-text-muted">{sev}</span>
+                <span className="text-lg font-bold block" style={{ color: token.color }}>{count}</span>
+                <span className="text-2xs text-text-muted">{token.label}</span>
               </div>
             );
           })}
@@ -480,8 +483,8 @@ function CoverageView({ session, findings, onSimulate }: { session: PlaytestSess
               key={cat}
               className="flex items-center justify-between px-3 py-2"
             >
-              <span className="text-xs text-text-muted-hover capitalize">{CATEGORY_LABELS[cat as FindingCategory] ?? cat}</span>
-              <span className="text-xs font-semibold text-text">{count}</span>
+              <span className="text-sm text-text-muted-hover capitalize">{CATEGORY_LABELS[cat as FindingCategory] ?? cat}</span>
+              <span className="text-sm font-semibold text-text">{count}</span>
             </SurfaceCard>
           ))}
         </div>
@@ -494,7 +497,7 @@ function CoverageView({ session, findings, onSimulate }: { session: PlaytestSess
             <AlertTriangle className="w-3 h-3" style={{ color: STATUS_ERROR }} />
             <span className="text-2xs uppercase tracking-wider font-semibold" style={{ color: STATUS_ERROR }}>Top Issue</span>
           </div>
-          <p className="text-xs text-text">{session.summary.topIssue}</p>
+          <p className="text-sm text-text">{session.summary.topIssue}</p>
         </div>
       )}
       {session.summary.topPraise && (
@@ -503,7 +506,7 @@ function CoverageView({ session, findings, onSimulate }: { session: PlaytestSess
             <CheckCircle2 className="w-3 h-3" style={{ color: STATUS_SUCCESS }} />
             <span className="text-2xs uppercase tracking-wider font-semibold" style={{ color: STATUS_SUCCESS }}>Top Praise</span>
           </div>
-          <p className="text-xs text-text">{session.summary.topPraise}</p>
+          <p className="text-sm text-text">{session.summary.topPraise}</p>
         </div>
       )}
     </div>

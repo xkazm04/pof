@@ -3,63 +3,87 @@
 
 import { StepFrame } from './StepFrame';
 import { CliProduce } from './shared/CliProduce';
+import { CandidateGallery } from './shared/CandidateGallery';
+import { readHistory, makeBatch, appendBatch, selectCandidate, selectedCandidate, historyData } from './shared/genHistory';
+import { iconCandidates, meshCandidates, materialCandidates } from './shared/itemGenCandidates';
 import { useLabStep, useLabPipelineStore } from '../labPipelineStore';
 import { ITEM_STEP_SPECS, slug } from './itemsSteps';
-import type { LabTheme } from '../theme';
 import type { StepProps } from './stepProps';
+import type { GenCandidate } from './shared/genHistory';
 
-const CANDS = ['linear-gradient(135deg,#8a5a2b,#d8a657)', 'linear-gradient(135deg,#3a4a6b,#7e9bd4)', 'linear-gradient(135deg,#5a2b2b,#c66)', 'linear-gradient(135deg,#444,#999)'];
-const RARITY = ['#9aa', '#5b9', '#59f', '#b5f'];
+type RawCandidate = Omit<GenCandidate, 'id'>;
 
-function tile(t: LabTheme, grad: string, selected: boolean, onClick: () => void, frame?: string) {
-  return <button onClick={onClick} style={{ aspectRatio: '1', borderRadius: t.glass ? 10 : 2, cursor: 'pointer', background: grad, border: selected ? `3px solid ${frame ?? t.ink}` : `1px solid ${t.line}`, position: 'relative' }} />;
+/**
+ * Shared plumbing for the three generative Items steps. Each Produce run / re-roll
+ * appends a *kept* batch (never discarding prior candidates) stamped with the typed
+ * direction + prompt; selecting a candidate projects its payload onto the step's
+ * top-level data so the existing derived Acceptance keeps reading `selected`/`tris`/`maps`.
+ */
+function useGenerativeStep(entityId: string, step: string, gen: (direction: string, seq: number) => RawCandidate[], ueAssets: string[]) {
+  const art = useLabStep(entityId, step);
+  const produce = useLabPipelineStore((s) => s.produce);
+  const history = readHistory(art?.data);
+
+  const generate = (direction: string, prompt: string) => {
+    const batch = makeBatch({ seq: history.batches.length, at: new Date().toISOString(), direction, prompt, candidates: gen(direction, history.batches.length) });
+    const next = appendBatch(history, batch);
+    produce(entityId, step, { data: historyData(next), ueAssets });
+  };
+  const reselect = (candidateId: string) => {
+    produce(entityId, step, { data: historyData(selectCandidate(history, candidateId)), ueAssets });
+  };
+  return { art, history, generate, reselect };
 }
 
-/** Items · Icon 2D Art. View: gallery + selection (persisted). Produce: Leonardo gen. */
+/** Items · Icon 2D Art. View: persistent candidate gallery + selection. Produce: Leonardo gen. */
 export function ItemIcon2D({ t, entity, step }: StepProps) {
-  const art = useLabStep(entity.id, step);
-  const produce = useLabPipelineStore((s) => s.produce);
-  const sel = art?.data?.selected as number | undefined;
-  const pick = (i: number) => produce(entity.id, step, { data: { selected: i, prompt: 'weathered steel longsword, leather grip, guild sigil' }, ueAssets: [`/Game/Items/${slug(entity.name)}/T_${slug(entity.name)}_Icon`] });
+  const asset = `/Game/Items/${slug(entity.name)}/T_${slug(entity.name)}_Icon`;
+  const { art, history, generate, reselect } = useGenerativeStep(entity.id, step, iconCandidates, [asset]);
+  const DEFAULT_DIR = 'weathered steel longsword, leather grip, guild sigil, 3/4 view, game icon';
+  const buildPrompt = (dir: string) => `Generate 4 icon candidates for ${entity.name} (256px, rarity frame). Art direction: ${dir}`;
+  const sel = selectedCandidate(history);
 
   return (
     <StepFrame t={t} acceptance={ITEM_STEP_SPECS[step].accept(art)}
+      onFix={(fixDir) => generate(fixDir ?? DEFAULT_DIR, buildPrompt(fixDir ?? DEFAULT_DIR))}
       panels={[
-        { label: 'Gallery (256px · rarity frame)', node: (
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 12 }}>
-            {CANDS.map((g, i) => tile(t, g, sel === i, () => pick(sel === i ? -1 : i), RARITY[i]))}
-          </div>
+        { label: 'Candidate gallery (kept across re-rolls)', node: (
+          <CandidateGallery t={t} history={history} onSelect={reselect}
+            emptyHint="No icon candidates yet — run Produce to generate the first batch." />
         ) },
         { label: 'Selected · silhouette', node: (
           <div style={{ display: 'grid', gap: 12 }}>
-            <div style={{ aspectRatio: '1', maxWidth: 180, borderRadius: t.glass ? 10 : 2, background: sel != null && sel >= 0 ? CANDS[sel] : t.panel, border: `1px solid ${t.line}` }} />
-            <span style={{ fontSize: 14, color: t.muted }}>Click a candidate to select it; the choice + prompt persist and write the icon path to the item record.</span>
+            <div style={{ aspectRatio: '1', maxWidth: 180, borderRadius: t.glass ? 10 : 2, background: sel?.swatch ?? t.panel, border: `1px solid ${t.line}` }} />
+            <span style={{ fontSize: 14, color: t.muted }}>Pick any candidate from any batch; the choice + its prompt persist and write the icon path to the item record.</span>
           </div>
         ) },
         { label: 'Produce', node: (
           <CliProduce t={t} label="Generate via Leonardo (CLI)" rows={3}
-            defaultDirection="weathered steel longsword, leather grip, guild sigil, 3/4 view, game icon"
-            note="Prompt saved as a style ref; selected icon writes T_<item>_Icon."
-            buildPrompt={(dir) => `Generate 4 icon candidates for ${entity.name} (256px, rarity frame). Art direction: ${dir}`}
-            onComplete={() => produce(entity.id, step, ITEM_STEP_SPECS[step].produce(entity))} />
+            defaultDirection={DEFAULT_DIR}
+            note="Every batch is kept; selecting a candidate writes T_<item>_Icon + stamps its prompt."
+            buildPrompt={buildPrompt}
+            onComplete={(ctx) => generate(ctx?.direction ?? DEFAULT_DIR, ctx?.prompt ?? buildPrompt(DEFAULT_DIR))} />
         ) },
       ]}
     />
   );
 }
 
-/** Items · 3D Generation. View: mesh preview + LOD/tris (persisted). Produce: Blender/Meshy. */
+/** Items · 3D Generation. View: mesh preview + LOD budget (from the selected candidate) + gallery. */
 export function Item3DGen({ t, entity, step }: StepProps) {
-  const art = useLabStep(entity.id, step);
-  const produce = useLabPipelineStore((s) => s.produce);
+  const asset = `/Game/Items/${slug(entity.name)}/SM_${slug(entity.name)}`;
+  const { art, history, generate, reselect } = useGenerativeStep(entity.id, step, meshCandidates, [asset]);
+  const DEFAULT_DIR = 'game-ready retopo, clean silhouette, hard-surface bevels';
+  const buildPrompt = (dir: string) => `Generate a base mesh for ${entity.name} from its icon + brief via Blender/Meshy, then auto-LOD. ${dir}`;
   const tris = Number((art?.data?.tris as number) ?? 0);
   const made = tris > 0;
 
   return (
     <StepFrame t={t} acceptance={ITEM_STEP_SPECS[step].accept(art)}
+      onFix={(fixDir) => generate(fixDir ?? DEFAULT_DIR, buildPrompt(fixDir ?? DEFAULT_DIR))}
       panels={[
         { label: 'Mesh preview', node: (
-          <div style={{ aspectRatio: '4/3', borderRadius: t.glass ? 10 : 2, border: `1px solid ${t.line}`, background: t.panel, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <div style={{ aspectRatio: '4/3', borderRadius: t.glass ? 10 : 2, border: `1px solid ${t.line}`, background: selectedCandidate(history)?.swatch ?? t.panel, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             <span className={t.fontMono} style={{ fontSize: 14, color: t.muted }}>{made ? '◈ LOD0 preview' : 'no mesh yet'}</span>
           </div>
         ) },
@@ -73,27 +97,35 @@ export function Item3DGen({ t, entity, step }: StepProps) {
             {made && art?.ueAssets?.[0] && <span className={t.fontMono} style={{ fontSize: 14, color: t.ok, marginTop: 4 }}>✓ {art.ueAssets[0]}</span>}
           </div>
         ) },
+        { label: 'Candidate gallery (kept across re-rolls)', node: (
+          <CandidateGallery t={t} history={history} onSelect={reselect} columns={3}
+            emptyHint="No mesh candidates yet — run Produce to generate a batch of LOD0 variants." />
+        ) },
         { label: 'Produce', node: (
           <CliProduce t={t} label="Generate mesh (CLI)" rows={3}
-            note={`Writes SM_${slug(entity.name)} + auto-LODs to the UE project.`}
-            buildPrompt={(dir) => `Generate a base mesh for ${entity.name} from its icon + brief via Blender/Meshy, then auto-LOD. ${dir}`}
-            onComplete={() => produce(entity.id, step, ITEM_STEP_SPECS[step].produce(entity))} />
+            defaultDirection={DEFAULT_DIR}
+            note={`Each batch is kept; the selected variant writes SM_${slug(entity.name)} + auto-LODs.`}
+            buildPrompt={buildPrompt}
+            onComplete={(ctx) => generate(ctx?.direction ?? DEFAULT_DIR, ctx?.prompt ?? buildPrompt(DEFAULT_DIR))} />
         ) },
       ]}
     />
   );
 }
 
-/** Items · Material / Texture. View: PBR map set (persisted) + preview. Produce: generate maps. */
+/** Items · Material / Texture. View: PBR map set (from the selected candidate) + preview + gallery. */
 export function ItemMaterial({ t, entity, step }: StepProps) {
-  const art = useLabStep(entity.id, step);
-  const produce = useLabPipelineStore((s) => s.produce);
+  const asset = `/Game/Items/${slug(entity.name)}/MI_${slug(entity.name)}`;
+  const { art, history, generate, reselect } = useGenerativeStep(entity.id, step, materialCandidates, [asset]);
+  const DEFAULT_DIR = 'PBR set from the master material; expose wear + tint params';
+  const buildPrompt = (dir: string) => `Author a PBR set for ${entity.name} from the master material; expose params + wear variants. ${dir}`;
   const maps = (art?.data?.maps ?? []) as string[];
   const done = maps.length > 0;
   const SWATCH: Record<string, string> = { Albedo: '#b08d57', Normal: '#8088ff', ORM: '#9a9a4a', Height: '#777' };
 
   return (
     <StepFrame t={t} acceptance={ITEM_STEP_SPECS[step].accept(art)}
+      onFix={(fixDir) => generate(fixDir ?? DEFAULT_DIR, buildPrompt(fixDir ?? DEFAULT_DIR))}
       panels={[
         { label: 'Texture maps', node: (
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2,1fr)', gap: 10 }}>
@@ -107,15 +139,20 @@ export function ItemMaterial({ t, entity, step }: StepProps) {
         ) },
         { label: 'Material preview', node: (
           <div style={{ display: 'grid', gap: 10 }}>
-            <div style={{ width: 120, height: 120, borderRadius: 999, margin: '4px auto', background: done ? 'radial-gradient(circle at 35% 30%, #e6c98a, #8a5a2b)' : t.panel, border: `1px solid ${t.line}` }} />
+            <div style={{ width: 120, height: 120, borderRadius: 999, margin: '4px auto', background: done ? (selectedCandidate(history)?.swatch ?? 'radial-gradient(circle at 35% 30%, #e6c98a, #8a5a2b)') : t.panel, border: `1px solid ${t.line}` }} />
             <span style={{ fontSize: 14, color: t.muted, textAlign: 'center' }}>Reference-sphere preview · tiling + wear variants.</span>
           </div>
         ) },
+        { label: 'Candidate gallery (kept across re-rolls)', node: (
+          <CandidateGallery t={t} history={history} onSelect={reselect} columns={3}
+            emptyHint="No material looks yet — run Produce to generate a batch of surface treatments." />
+        ) },
         { label: 'Produce', node: (
           <CliProduce t={t} label="Generate PBR maps (CLI)" rows={3}
-            note={`Writes MI_${slug(entity.name)} (Albedo/Normal/ORM) from the master material.`}
-            buildPrompt={(dir) => `Author a PBR set for ${entity.name} from the master material; expose params + wear variants. ${dir}`}
-            onComplete={() => produce(entity.id, step, ITEM_STEP_SPECS[step].produce(entity))} />
+            defaultDirection={DEFAULT_DIR}
+            note={`Each look is kept; the selected one writes MI_${slug(entity.name)} (Albedo/Normal/ORM).`}
+            buildPrompt={buildPrompt}
+            onComplete={(ctx) => generate(ctx?.direction ?? DEFAULT_DIR, ctx?.prompt ?? buildPrompt(DEFAULT_DIR))} />
         ) },
       ]}
     />

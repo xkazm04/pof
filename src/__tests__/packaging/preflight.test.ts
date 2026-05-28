@@ -6,6 +6,8 @@ import {
   withEditorCheckResult,
   parseUbtResult,
   buildVerifyCheckResult,
+  parseAssetValidation,
+  assetValidationCheckResult,
   overallStatus,
   type SourceFile,
 } from '@/lib/packaging/preflight';
@@ -193,6 +195,92 @@ describe('parseUbtResult', () => {
   it('wraps into a check result', () => {
     expect(buildVerifyCheckResult('bv-editor', 'Editor build', { succeeded: true, errors: [] }).status).toBe('pass');
     expect(buildVerifyCheckResult('bv-editor', 'Editor build', { succeeded: false, errors: ['x'] }).status).toBe('fail');
+  });
+});
+
+describe('parseAssetValidation', () => {
+  it('flags a missing/unresolved asset reference as an error', () => {
+    const out = [
+      '[2026.05.27-12.00.00:123][  0]LogContentValidation: Error: Asset /Game/Items/BP_Sword.BP_Sword has an unresolved reference to \'/Game/FX/P_Missing\'',
+    ].join('\n');
+    const v = parseAssetValidation(out);
+    expect(v).toHaveLength(1);
+    expect(v[0].severity).toBe('error');
+    expect(v[0].category).toBe('missing-reference');
+  });
+
+  it('flags an oversized/uncompressed texture as a warning', () => {
+    const out = 'LogContentValidation: Warning: Texture /Game/UI/T_Logo is 4096x4096 and uncompressed';
+    const v = parseAssetValidation(out);
+    expect(v).toHaveLength(1);
+    expect(v[0].severity).toBe('warning');
+    expect(v[0].category).toBe('texture');
+  });
+
+  it('warns on leftover redirectors from a resave/fixup summary line', () => {
+    const out = [
+      'LogContentCommandlet: Display: Fixing up 3 redirectors',
+      'LogContentCommandlet: Display: Fixed up 0 redirectors', // zero — must NOT warn
+    ].join('\n');
+    const v = parseAssetValidation(out);
+    expect(v).toHaveLength(1);
+    expect(v[0].severity).toBe('warning');
+    expect(v[0].category).toBe('redirector');
+    expect(v[0].message).toMatch(/3 redirectors/);
+  });
+
+  it('flags a referenced map not in the cook set as an error', () => {
+    const out = 'LogContentValidation: Error: Level /Game/Maps/Secret is referenced but not in the cook set';
+    const v = parseAssetValidation(out);
+    expect(v).toHaveLength(1);
+    expect(v[0].category).toBe('map-not-in-cook');
+    expect(v[0].severity).toBe('error');
+  });
+
+  it('ignores errors from non-validation log categories', () => {
+    const out = [
+      'LogTemp: Error: some unrelated runtime error',
+      'LogInit: Display: Engine initialized',
+    ].join('\n');
+    expect(parseAssetValidation(out)).toHaveLength(0);
+  });
+
+  it('returns nothing for a clean validation run', () => {
+    const out = [
+      'LogContentValidation: Display: Validating 412 assets',
+      'LogContentValidation: Display: All assets passed validation',
+    ].join('\n');
+    expect(parseAssetValidation(out)).toHaveLength(0);
+  });
+
+  it('dedupes identical violation lines', () => {
+    const line = 'LogContentValidation: Warning: /Game/Old_Sword is a redirector to /Game/New_Sword';
+    expect(parseAssetValidation([line, line, line].join('\n'))).toHaveLength(1);
+  });
+});
+
+describe('assetValidationCheckResult', () => {
+  it('passes with no violations', () => {
+    const r = assetValidationCheckResult([]);
+    expect(r.id).toBe('asset-validation');
+    expect(r.status).toBe('pass');
+    expect(r.issues).toHaveLength(0);
+  });
+
+  it('warns when only warnings are present', () => {
+    const r = assetValidationCheckResult([{ severity: 'warning', category: 'redirector', message: '2 redirectors' }]);
+    expect(r.status).toBe('warn');
+    expect(r.issues).toHaveLength(1);
+  });
+
+  it('fails when any error is present', () => {
+    const r = assetValidationCheckResult([
+      { severity: 'error', category: 'missing-reference', message: 'broken ref' },
+      { severity: 'warning', category: 'texture', message: 'big texture' },
+    ]);
+    expect(r.status).toBe('fail');
+    expect(r.detail).toMatch(/1 error/);
+    expect(r.detail).toMatch(/1 warning/);
   });
 });
 

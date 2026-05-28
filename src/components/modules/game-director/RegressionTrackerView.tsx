@@ -5,11 +5,12 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   AlertOctagon, AlertTriangle, CheckCircle2,
   RefreshCw, ChevronDown, ChevronRight, X, Shield, Loader2,
-  TrendingUp, TrendingDown, Bug, ArrowRight, Eye,
+  TrendingDown, Bug, ArrowRight, Eye,
 } from 'lucide-react';
 import { SurfaceCard } from '@/components/ui/SurfaceCard';
 import { apiFetch } from '@/lib/api-utils';
-import type { PlaytestSession, FindingSeverity, FindingCategory } from '@/types/game-director';
+import type { PlaytestSession } from '@/types/game-director';
+import type { RegressionStatus } from '@/types/regression-tracker';
 import type {
   FindingFingerprint,
   FingerprintOccurrence,
@@ -17,21 +18,16 @@ import type {
   RegressionReport,
 } from '@/types/regression-tracker';
 import {
-  ACCENT_ORANGE, STATUS_SUCCESS, STATUS_WARNING, STATUS_ERROR, STATUS_INFO, STATUS_BLOCKER,
+  ACCENT_ORANGE, STATUS_SUCCESS, STATUS_WARNING, STATUS_ERROR, STATUS_BLOCKER,
   OPACITY_8, OPACITY_10, OPACITY_12, OPACITY_15, OPACITY_20,
 } from '@/lib/chart-colors';
-import { SEVERITY_STYLES_DENSE as SEVERITY_STYLES } from '@/lib/game-director-styles';
+import { SEVERITY_TOKENS, REGRESSION_STATUS_TOKENS } from '@/lib/game-director-styles';
+import { SeverityBadge } from '@/components/ui/SeverityBadge';
+import { StatusChip } from '@/components/ui/StatusChip';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { FetchError } from '../shared/FetchError';
 
 const ACCENT = ACCENT_ORANGE;
-
-const STATUS_STYLES: Record<string, { color: string; bg: string; label: string }> = {
-  open: { color: STATUS_BLOCKER, bg: `${STATUS_BLOCKER}${OPACITY_15}`, label: 'Open' },
-  fixed: { color: STATUS_SUCCESS, bg: `${STATUS_SUCCESS}${OPACITY_15}`, label: 'Fixed' },
-  regressed: { color: STATUS_ERROR, bg: `${STATUS_ERROR}${OPACITY_15}`, label: 'Regressed' },
-  resolved: { color: STATUS_INFO, bg: `${STATUS_INFO}${OPACITY_15}`, label: 'Resolved' },
-};
 
 const EMPTY_SESSIONS: PlaytestSession[] = [];
 
@@ -138,13 +134,14 @@ export function RegressionTrackerView() {
         <div className="p-4">
           <div className="flex items-center gap-3">
             <Bug className="w-4 h-4" style={{ color: ACCENT }} />
-            <span className="text-xs font-semibold text-text">Analyze Session for Regressions</span>
+            <span className="text-sm font-semibold text-text">Analyze Session for Regressions</span>
           </div>
           <div className="flex items-center gap-2 mt-3">
             <select
               value={selectedSessionId}
               onChange={(e) => setSelectedSessionId(e.target.value)}
-              className="flex-1 bg-background border border-border rounded-md px-3 py-1.5 text-xs text-text outline-none focus:border-border-bright"
+              aria-label="Select session to analyze"
+              className="focus-ring-inset flex-1 bg-background border border-border rounded-md px-3 py-1.5 text-sm text-text outline-none focus:border-border-bright"
             >
               <option value="">Select a completed session...</option>
               {sessions.map(s => (
@@ -154,7 +151,7 @@ export function RegressionTrackerView() {
             <button
               onClick={handleProcess}
               disabled={!selectedSessionId || processing}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-colors disabled:opacity-40"
+              className="focus-ring flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-colors disabled:opacity-40"
               style={{ backgroundColor: `${ACCENT}20`, color: ACCENT, border: `1px solid ${ACCENT}30` }}
             >
               {processing ? <Loader2 className="w-3 h-3 animate-spin" /> : <RefreshCw className="w-3 h-3" />}
@@ -174,7 +171,7 @@ export function RegressionTrackerView() {
           <button
             key={id}
             onClick={() => setSubTab(id)}
-            className={`px-3 py-1.5 text-xs font-medium transition-colors relative ${
+            className={`focus-ring rounded-sm px-3 py-1.5 text-sm font-medium transition-colors relative ${
               subTab === id ? 'text-text' : 'text-text-muted hover:text-text'
             }`}
           >
@@ -269,11 +266,11 @@ function DashboardTab({
           <div className="p-3">
             <div className="flex items-center gap-2 mb-1">
               <AlertOctagon className="w-3.5 h-3.5" style={{ color: STATUS_ERROR }} />
-              <span className="text-xs font-semibold" style={{ color: STATUS_ERROR }}>
+              <span className="text-sm font-semibold" style={{ color: STATUS_ERROR }}>
                 {stats.activeAlerts} Active Regression Alert{stats.activeAlerts > 1 ? 's' : ''}
               </span>
             </div>
-            <p className="text-2xs text-text-muted">
+            <p className="text-xs text-text-muted">
               Issues that were previously fixed have reappeared. Check the Alerts tab for details.
             </p>
           </div>
@@ -284,24 +281,21 @@ function DashboardTab({
       {topOffenders.length > 0 && (
         <SurfaceCard level={2}>
           <div className="p-3">
-            <span className="text-xs font-semibold text-text">Chronic Regressions</span>
-            <p className="text-2xs text-text-muted mb-3">Issues that keep coming back after being fixed</p>
+            <span className="text-sm font-semibold text-text">Chronic Regressions</span>
+            <p className="text-xs text-text-muted mb-3">Issues that keep coming back after being fixed</p>
             <div className="space-y-2">
               {topOffenders.map(fp => {
-                const sev = SEVERITY_STYLES[fp.peakSeverity];
-                const status = STATUS_STYLES[fp.status];
+                const sev = SEVERITY_TOKENS[fp.peakSeverity];
+                const SevIcon = sev.icon;
                 return (
                   <div key={fp.id} className="flex items-center gap-2 px-2 py-1.5 rounded-md bg-background">
-                    <sev.icon className="w-3 h-3 flex-shrink-0" style={{ color: sev.color }} />
-                    <span className="text-2xs text-text flex-1 truncate">{fp.titleStem}</span>
+                    <SevIcon className="w-3.5 h-3.5 flex-shrink-0" style={{ color: sev.color }} />
+                    <span className="text-sm text-text flex-1 truncate">{fp.titleStem}</span>
                     <span className="text-2xs font-mono px-1.5 py-0.5 rounded"
                       style={{ color: STATUS_ERROR, backgroundColor: `${STATUS_ERROR}${OPACITY_12}` }}>
                       {fp.regressionCount}x regressed
                     </span>
-                    <span className="text-2xs font-medium px-1.5 py-0.5 rounded"
-                      style={{ color: status.color, backgroundColor: status.bg }}>
-                      {status.label}
-                    </span>
+                    <StatusChip token={REGRESSION_STATUS_TOKENS[fp.status]} />
                   </div>
                 );
               })}
@@ -324,7 +318,7 @@ function ReportSummary({ report }: { report: RegressionReport }) {
       <div className="p-3">
         <div className="flex items-center gap-2 mb-3">
           <Shield className="w-3.5 h-3.5" style={{ color: ACCENT }} />
-          <span className="text-xs font-semibold text-text">
+          <span className="text-sm font-semibold text-text">
             Report: {report.sessionName}
           </span>
           <span className="text-2xs text-text-muted ml-auto">
@@ -414,14 +408,15 @@ function FingerprintsTab({
           <button
             key={s}
             onClick={() => setFilter(s)}
-            className={`px-2.5 py-1 rounded-full text-2xs font-medium transition-colors ${
+            aria-pressed={filter === s}
+            className={`focus-ring px-2.5 py-1 rounded-full text-xs font-medium transition-colors ${
               filter === s ? 'text-white' : 'text-text-muted hover:text-text bg-surface-hover/50'
             }`}
             style={filter === s ? {
-              backgroundColor: s === 'all' ? ACCENT : (STATUS_STYLES[s]?.color ?? ACCENT),
+              backgroundColor: s === 'all' ? ACCENT : (REGRESSION_STATUS_TOKENS[s as RegressionStatus]?.color ?? ACCENT),
             } : undefined}
           >
-            {s === 'all' ? 'All' : STATUS_STYLES[s]?.label ?? s} ({statusCounts[s] ?? 0})
+            {s === 'all' ? 'All' : REGRESSION_STATUS_TOKENS[s as RegressionStatus]?.label ?? s} ({statusCounts[s] ?? 0})
           </button>
         ))}
       </div>
@@ -444,8 +439,8 @@ function FingerprintsTab({
       ) : (
         <div className="space-y-2">
           {filtered.map(fp => {
-            const sev = SEVERITY_STYLES[fp.peakSeverity];
-            const status = STATUS_STYLES[fp.status];
+            const sev = SEVERITY_TOKENS[fp.peakSeverity];
+            const statusToken = REGRESSION_STATUS_TOKENS[fp.status];
             const SevIcon = sev.icon;
             const isExpanded = expandedId === fp.id;
 
@@ -453,19 +448,20 @@ function FingerprintsTab({
               <SurfaceCard key={fp.id} level={2}>
                 <button
                   onClick={() => loadOccurrences(fp.id)}
-                  className="w-full text-left px-3 py-2.5 flex items-center gap-2.5 hover:bg-surface-hover/30 transition-colors"
+                  aria-expanded={isExpanded}
+                  className="focus-ring-inset rounded-md w-full text-left px-3 py-2.5 flex items-center gap-2.5 hover:bg-surface-hover/30 transition-colors"
                 >
                   {isExpanded
-                    ? <ChevronDown className="w-3 h-3 text-text-muted flex-shrink-0" />
-                    : <ChevronRight className="w-3 h-3 text-text-muted flex-shrink-0" />
+                    ? <ChevronDown className="w-3.5 h-3.5 text-text-muted flex-shrink-0" />
+                    : <ChevronRight className="w-3.5 h-3.5 text-text-muted flex-shrink-0" />
                   }
                   <SevIcon className="w-3.5 h-3.5 flex-shrink-0" style={{ color: sev.color }} />
                   <div className="flex-1 min-w-0">
-                    <span className="text-xs font-medium text-text block truncate">{fp.titleStem}</span>
+                    <span className="text-sm font-medium text-text block truncate">{fp.titleStem}</span>
                     <div className="flex items-center gap-2 mt-0.5">
-                      <span className="text-2xs text-text-muted">{fp.category}</span>
+                      <span className="text-xs text-text-muted">{fp.category}</span>
                       {fp.relatedModule && (
-                        <span className="text-2xs text-text-muted">{fp.relatedModule}</span>
+                        <span className="text-xs text-text-muted">{fp.relatedModule}</span>
                       )}
                     </div>
                   </div>
@@ -476,10 +472,7 @@ function FingerprintsTab({
                         {fp.regressionCount}x regressed
                       </span>
                     )}
-                    <span className="text-2xs font-medium px-1.5 py-0.5 rounded"
-                      style={{ color: status.color, backgroundColor: status.bg }}>
-                      {status.label}
-                    </span>
+                    <StatusChip token={statusToken} />
                   </div>
                 </button>
 
@@ -508,7 +501,7 @@ function FingerprintsTab({
                             </div>
                             <button
                               onClick={(e) => { e.stopPropagation(); void fetchOccurrences(fp.id); }}
-                              className="flex items-center gap-1 px-1.5 py-0.5 rounded font-medium flex-shrink-0 hover:opacity-80 transition-opacity"
+                              className="focus-ring flex items-center gap-1 px-1.5 py-0.5 rounded font-medium flex-shrink-0 hover:opacity-80 transition-opacity"
                               style={{ color: STATUS_ERROR, backgroundColor: `${STATUS_ERROR}${OPACITY_15}` }}
                             >
                               <RefreshCw className="w-2.5 h-2.5" /> Retry
@@ -521,7 +514,7 @@ function FingerprintsTab({
                               {(fp.status === 'open' || fp.status === 'regressed') && (
                                 <button
                                   onClick={(e) => { e.stopPropagation(); onResolve(fp.id); }}
-                                  className="text-2xs px-2 py-0.5 rounded transition-colors"
+                                  className="focus-ring text-xs font-medium px-2 py-0.5 rounded transition-colors"
                                   style={{ color: STATUS_SUCCESS, backgroundColor: `${STATUS_SUCCESS}${OPACITY_12}` }}
                                   onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = `${STATUS_SUCCESS}${OPACITY_20}`; }}
                                   onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = `${STATUS_SUCCESS}${OPACITY_12}`; }}
@@ -531,10 +524,11 @@ function FingerprintsTab({
                               )}
                             </div>
                             {occurrences.map(occ => {
-                              const occSev = SEVERITY_STYLES[occ.severity];
+                              const occSev = SEVERITY_TOKENS[occ.severity];
+                              const OccIcon = occSev.icon;
                               return (
                                 <div key={`${occ.sessionId}-${occ.findingId}`} className="flex items-start gap-2 px-2 py-1.5 rounded bg-background text-2xs">
-                                  <occSev.icon className="w-3 h-3 mt-0.5 flex-shrink-0" style={{ color: occSev.color }} />
+                                  <OccIcon className="w-3 h-3 mt-0.5 flex-shrink-0" style={{ color: occSev.color }} />
                                   <div className="flex-1 min-w-0">
                                     <span className="text-text block truncate">{occ.title}</span>
                                     {occ.suggestedFix && (
@@ -594,7 +588,7 @@ function AlertsTab({
             <SurfaceCard level={2}>
               <div className="p-4 flex items-center gap-2">
                 <CheckCircle2 className="w-4 h-4" style={{ color: STATUS_SUCCESS }} />
-                <span className="text-xs font-medium" style={{ color: STATUS_SUCCESS }}>All clear — no active regression alerts</span>
+                <span className="text-sm font-medium" style={{ color: STATUS_SUCCESS }}>All clear — no active regression alerts</span>
               </div>
             </SurfaceCard>
           ) : (
@@ -609,7 +603,8 @@ function AlertsTab({
             <div>
               <button
                 onClick={() => setShowDismissed(!showDismissed)}
-                className="flex items-center gap-1.5 text-2xs text-text-muted hover:text-text transition-colors"
+                aria-expanded={showDismissed}
+                className="focus-ring rounded-sm flex items-center gap-1.5 text-xs text-text-muted hover:text-text transition-colors"
               >
                 {showDismissed ? <ChevronDown className="w-3 h-3" /> : <ChevronRight className="w-3 h-3" />}
                 {dismissed.length} dismissed alert{dismissed.length !== 1 ? 's' : ''}
@@ -630,24 +625,22 @@ function AlertsTab({
 }
 
 function AlertCard({ alert, onDismiss }: { alert: RegressionAlert; onDismiss: (id: string) => void }) {
-  const sev = SEVERITY_STYLES[alert.severity];
+  const sev = SEVERITY_TOKENS[alert.severity];
   const SevIcon = sev.icon;
+  const denseBg = `${sev.color}${OPACITY_20}`;
 
   return (
     <SurfaceCard level={2}>
       <div className="p-3">
         <div className="flex items-start gap-2.5">
           <div className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5"
-            style={{ backgroundColor: sev.bg }}>
+            style={{ backgroundColor: denseBg }}>
             <SevIcon className="w-3.5 h-3.5" style={{ color: sev.color }} />
           </div>
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2">
-              <span className="text-xs font-semibold text-text truncate">{alert.title}</span>
-              <span className="text-2xs font-bold uppercase tracking-wider px-1.5 py-0.5 rounded flex-shrink-0"
-                style={{ color: sev.color, backgroundColor: sev.bg }}>
-                {alert.severity}
-              </span>
+              <span className="text-sm font-semibold text-text truncate">{alert.title}</span>
+              <SeverityBadge severity={alert.severity} density="dense" showIcon={false} upper className="flex-shrink-0" />
             </div>
             <div className="flex items-center gap-1.5 mt-1 text-2xs text-text-muted">
               <span>{alert.category}</span>
@@ -669,10 +662,11 @@ function AlertCard({ alert, onDismiss }: { alert: RegressionAlert; onDismiss: (i
           {!alert.dismissed && (
             <button
               onClick={() => onDismiss(alert.id)}
-              className="p-1 rounded text-text-muted hover:text-text hover:bg-surface-hover transition-colors flex-shrink-0"
+              aria-label="Dismiss alert"
+              className="focus-ring p-1 rounded text-text-muted hover:text-text hover:bg-surface-hover transition-colors flex-shrink-0"
               title="Dismiss alert"
             >
-              <X className="w-3 h-3" />
+              <X className="w-3.5 h-3.5" />
             </button>
           )}
         </div>

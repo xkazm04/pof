@@ -3,7 +3,7 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { MODULE_COLORS } from '@/lib/chart-colors';
 import { useScrollRestoration } from '@/hooks/useScrollRestoration';
-import { Radar, BarChart3, Activity, Link2, LayoutDashboard, ScanSearch, Grid3x3, FileText, ShoppingBag, BookOpen, Coins, Gauge, Swords, Globe, Bug, HeartPulse, Palette, Dna, ShieldCheck, Network, Layers, Calendar, CalendarDays, ChevronLeft, ChevronRight, GitBranch, Pickaxe, SearchCode } from 'lucide-react';
+import { Radar, BarChart3, Activity, Link2, LayoutDashboard, ScanSearch, Grid3x3, FileText, ShoppingBag, BookOpen, Coins, Gauge, Swords, Globe, Bug, HeartPulse, Palette, Dna, ShieldCheck, Network, Layers, Calendar, CalendarDays, ChevronLeft, ChevronRight, GitBranch, Pickaxe, SearchCode, Stars, Hammer } from 'lucide-react';
 import { SessionAnalyticsDashboard } from './SessionAnalyticsDashboard';
 import { AggregateQualityDashboard } from './AggregateQualityDashboard';
 import { CrossModuleFeatureDashboard } from './CrossModuleFeatureDashboard';
@@ -25,14 +25,17 @@ import { PostProcessStudioView } from './PostProcessStudioView';
 import { PromptEvolutionView } from './PromptEvolutionView';
 import { GDDComplianceView } from './GDDComplianceView';
 import { NexusView } from './NexusView';
+import { FeatureConstellation } from './FeatureConstellation';
 import { CrossModuleOverlapPanel } from './CrossModuleOverlapPanel';
 import { WeeklyDigestView } from './WeeklyDigestView';
 import { CalendarRoadmapView } from './CalendarRoadmapView';
 import { WorkflowOrchestratorView } from './WorkflowOrchestratorView';
 import { CodebaseArcheologistView } from './CodebaseArcheologistView';
 import { AssetCodeOracleView } from './AssetCodeOracleView';
+import { ErrorMemoryPanel } from './ErrorMemoryPanel';
+import { BuildHealthDashboard } from './BuildHealthDashboard';
 
-type TabId = 'overview' | 'nexus' | 'features' | 'conflicts' | 'quality' | 'dependencies' | 'analytics' | 'scanner' | 'deep-eval' | 'gdd' | 'compliance' | 'asset-scout' | 'patterns' | 'economy' | 'perf' | 'combat' | 'i18n' | 'crashes' | 'health' | 'pp-studio' | 'evolution' | 'digest' | 'roadmap' | 'workflows' | 'archeologist' | 'oracle';
+type TabId = 'overview' | 'nexus' | 'constellation' | 'features' | 'conflicts' | 'quality' | 'dependencies' | 'analytics' | 'scanner' | 'deep-eval' | 'gdd' | 'compliance' | 'asset-scout' | 'patterns' | 'economy' | 'perf' | 'combat' | 'i18n' | 'crashes' | 'health' | 'build-health' | 'pp-studio' | 'evolution' | 'digest' | 'roadmap' | 'workflows' | 'archeologist' | 'oracle';
 
 export function EvaluatorModule() {
   const [activeTab, setActiveTab] = useState<TabId>('overview');
@@ -71,6 +74,7 @@ export function EvaluatorModule() {
           {/* ── Analysis ── */}
           <TabButton label="Overview" icon={LayoutDashboard} active={activeTab === 'overview'} onClick={() => switchTab('overview')} onArrowNav={handleTabArrowNav} />
           <TabButton label="Nexus" icon={Network} active={activeTab === 'nexus'} onClick={() => switchTab('nexus')} onArrowNav={handleTabArrowNav} />
+          <TabButton label="Constellation" icon={Stars} active={activeTab === 'constellation'} onClick={() => switchTab('constellation')} onArrowNav={handleTabArrowNav} />
           <TabButton label="Deep Eval" icon={ScanSearch} active={activeTab === 'deep-eval'} onClick={() => switchTab('deep-eval')} onArrowNav={handleTabArrowNav} />
           <TabButton label="Features" icon={Grid3x3} active={activeTab === 'features'} onClick={() => switchTab('features')} onArrowNav={handleTabArrowNav} />
           <TabButton label="Conflicts" icon={Layers} active={activeTab === 'conflicts'} onClick={() => switchTab('conflicts')} onArrowNav={handleTabArrowNav} />
@@ -82,6 +86,7 @@ export function EvaluatorModule() {
           <TabButton label="Scanner" icon={Radar} active={activeTab === 'scanner'} onClick={() => switchTab('scanner')} onArrowNav={handleTabArrowNav} />
           <TabButton label="Compliance" icon={ShieldCheck} active={activeTab === 'compliance'} onClick={() => switchTab('compliance')} onArrowNav={handleTabArrowNav} />
           <TabButton label="Health" icon={HeartPulse} active={activeTab === 'health'} onClick={() => switchTab('health')} onArrowNav={handleTabArrowNav} />
+          <TabButton label="Build Health" icon={Hammer} active={activeTab === 'build-health'} onClick={() => switchTab('build-health')} onArrowNav={handleTabArrowNav} />
           <TabButton label="Archeologist" icon={Pickaxe} active={activeTab === 'archeologist'} onClick={() => switchTab('archeologist')} onArrowNav={handleTabArrowNav} />
           <TabButton label="Oracle" icon={SearchCode} active={activeTab === 'oracle'} onClick={() => switchTab('oracle')} onArrowNav={handleTabArrowNav} />
 
@@ -116,6 +121,10 @@ export function EvaluatorModule() {
           <NexusView />
         )}
 
+        {activeTab === 'constellation' && (
+          <FeatureConstellation />
+        )}
+
         {activeTab === 'deep-eval' && (
           <DeepEvalResults />
         )}
@@ -143,6 +152,7 @@ export function EvaluatorModule() {
         {activeTab === 'scanner' && (
           <div className="space-y-6">
             <BatchReviewPanel />
+            <ErrorMemoryPanel />
             <div className="border-t border-border pt-6">
               <ProjectHealthDashboard onNavigateTab={(t) => switchTab(t as TabId)} />
             </div>
@@ -195,6 +205,10 @@ export function EvaluatorModule() {
 
         {activeTab === 'health' && (
           <HolisticHealthView />
+        )}
+
+        {activeTab === 'build-health' && (
+          <BuildHealthDashboard />
         )}
 
         {activeTab === 'pp-studio' && (

@@ -89,6 +89,18 @@ export interface TuningOverrides {
   healingMul: number;           // 0.5-2.0
 }
 
+/** A single (enemy, ability) damage source observed in a fight */
+export interface DamageSource {
+  /** Enemy archetype name (no "#N" suffix) */
+  enemy: string;
+  /** Ability display name */
+  ability: string;
+  /** Ability id */
+  abilityId: string;
+  /** Total damage from this source in this fight */
+  damage: number;
+}
+
 /** Result of a single simulated fight */
 export interface FightResult {
   won: boolean;
@@ -101,8 +113,14 @@ export interface FightResult {
   critCount: number;
   totalHits: number;
   enemiesKilled: number;
-  /** If player died, what killed them */
+  /** If player died, archetype name of the killer (e.g. "Stone Brute") */
   killedBy?: string;
+  /** If player died, name of the killing ability (e.g. "Charge Attack") */
+  killedByAbility?: string;
+  /** If player died, id of the killing ability */
+  killedByAbilityId?: string;
+  /** Per-source damage taken during this fight */
+  damageBySource: DamageSource[];
   /** Was it a one-shot death? */
   oneShot: boolean;
 }
@@ -144,6 +162,47 @@ export interface CombatSummary {
   durationBuckets: { min: number; max: number; count: number }[];
   /** One-shot death percentage */
   oneShotRate: number;
+  /** Death recap: who and what killed the player most */
+  threatBreakdown: ThreatBreakdown;
+}
+
+/** A single (enemy, ability) threat row in the death recap */
+export interface ThreatEntry {
+  enemy: string;
+  ability: string;
+  abilityId: string;
+  /** Total damage from this source across all fights */
+  totalDamage: number;
+  /** Share of all damage taken (0-1) */
+  damageShare: number;
+  /** Number of fights where this source landed the killing blow */
+  killCount: number;
+  /** Share of total deaths (0-1) */
+  killShare: number;
+  /** Designer-facing nerf suggestion */
+  nerfSuggestion: string;
+}
+
+/** Aggregated rank for an enemy archetype across all fights */
+export interface EnemyThreatEntry {
+  enemy: string;
+  totalDamage: number;
+  damageShare: number;
+  killCount: number;
+  killShare: number;
+  nerfSuggestion: string;
+}
+
+/** Death recap data: who is killing the player and which abilities to nerf */
+export interface ThreatBreakdown {
+  /** Per (enemy, ability) source, sorted by damageShare desc */
+  bySource: ThreatEntry[];
+  /** Per enemy archetype, sorted by killShare desc */
+  byEnemy: EnemyThreatEntry[];
+  /** Total fights ending in player death */
+  totalDeaths: number;
+  /** Total damage taken across all fights */
+  totalDamageTaken: number;
 }
 
 export type BalanceAlertSeverity = 'info' | 'warning' | 'critical';
@@ -227,6 +286,58 @@ export interface FeedbackPreset {
   name: string;
   description: string;
   config: FeedbackConfig;
+}
+
+// ── A/B Run Comparison Types ─────────────────────────────────────────────────
+
+/** Headline metric deltas between two full simulation runs (candidate − baseline) */
+export interface RunMetricDeltas {
+  /** Δ survival rate (0-1 scale, candidate − baseline) */
+  survivalRateDelta: number;
+  /** Δ average player DPS */
+  avgDPSDelta: number;
+  /** Δ average fight duration (seconds) */
+  avgDurationDelta: number;
+  /** Δ one-shot death rate (0-1 scale) */
+  oneShotRateDelta: number;
+}
+
+/** How a balance alert changed between the baseline and candidate runs */
+export type AlertDiffStatus = 'appeared' | 'disappeared' | 'persisted';
+
+/** A single balance-alert entry in an A/B diff */
+export interface AlertDiffEntry {
+  /** appeared = new in candidate, disappeared = gone in candidate, persisted = in both */
+  status: AlertDiffStatus;
+  /** Alert type (shared identity for single-instance alert kinds) */
+  type: BalanceAlert['type'];
+  /** Representative alert (candidate's copy when present, else the baseline's) */
+  alert: BalanceAlert;
+  /** Metric value in the baseline run (undefined when the alert was absent there) */
+  baselineValue?: number;
+  /** Metric value in the candidate run (undefined when the alert is absent there) */
+  candidateValue?: number;
+}
+
+/** A labeled, lightweight snapshot of one run used in an A/B comparison */
+export interface RunSnapshot {
+  /** User-facing label, e.g. "Baseline" or "Candidate" */
+  label: string;
+  summary: CombatSummary;
+  alerts: BalanceAlert[];
+  scenario: CombatScenario;
+  tuning: TuningOverrides;
+  config: CombatSimConfig;
+  completedAt: string;
+}
+
+/** Full A/B comparison between a pinned baseline run and a candidate run */
+export interface ABComparisonResult {
+  baseline: RunSnapshot;
+  candidate: RunSnapshot;
+  deltas: RunMetricDeltas;
+  /** Alerts that appeared, disappeared, or persisted between the two runs */
+  alertDiff: AlertDiffEntry[];
 }
 
 // ── API Types ───────────────────────────────────────────────────────────────

@@ -2,6 +2,7 @@
 
 import '@/lib/catalog/pipelines/registry.generated';
 import { useState, useEffect } from 'react';
+import { AnimatePresence, motion } from 'framer-motion';
 import { summarizeEntityData } from '@/lib/ecw/entity-summary';
 import { labStepsDone } from './labPipelines';
 import { getStepComponent } from './steps';
@@ -13,6 +14,9 @@ import { fetchArtifacts, postArtifact, drainGates } from './labArtifactClient';
 import { resolveAccept } from './labAcceptance';
 import { PipelineRollup } from './PipelineRollup';
 import { CatalogTree } from './CatalogTree';
+import { NextStepCoach } from './NextStepCoach';
+import { summarizeEntity } from '@/lib/catalog/rollup';
+import { useViewportWidth } from '@/hooks/useViewportWidth';
 import type { LabTheme } from './theme';
 import type { LabDetail, LabGroup } from './useLabCatalogData';
 import type { PipelineArtifact } from '@/lib/pipeline-artifacts-db';
@@ -24,9 +28,22 @@ interface Props {
   onSelectCatalog: (id: string) => void;
   entityId: string | null;
   onSelectEntity: (id: string) => void;
+  /** Step to open on mount (e.g. jumped to from the catalog-wide matrix). Defaults to 0. */
+  initialStepIdx?: number;
 }
 
 const pad2 = (n: number) => String(n).padStart(2, '0');
+
+// Below this viewport width the catalog tree (260px) + pipeline (320px) columns
+// crowd the work canvas, so they collapse into toggled slide-over drawers.
+const COLLAPSE_BREAKPOINT = 1100;
+
+type NodeStatus = 'pass' | 'fail' | 'deferred' | 'pending';
+const STATUS_COLOR = (t: LabTheme, s: NodeStatus): string =>
+  s === 'pass' ? t.ok : s === 'fail' ? t.bad : s === 'deferred' ? t.muted : t.warn;
+// Non-color glyph cues so status reads correctly without color, too.
+const STATUS_GLYPH = (s: NodeStatus): string =>
+  s === 'pass' ? '✓' : s === 'fail' ? '!' : s === 'deferred' ? '⋯' : '';
 
 /**
  * The single Blueprint baseline (light) / Studio (dark) composition screen. Full
@@ -34,12 +51,22 @@ const pad2 = (n: number) => String(n).padStart(2, '0');
  * a left column holds the Category→Catalog→Entity tree; the pipeline column shows
  * the vertical step timeline; the main area is the roomy work canvas for the selected step.
  */
-export function Baseline({ theme: t, groups, detail, onSelectCatalog, entityId, onSelectEntity }: Props) {
-  const [stepIdx, setStepIdx] = useState<number | null>(0);
+export function Baseline({ theme: t, groups, detail, onSelectCatalog, entityId, onSelectEntity, initialStepIdx }: Props) {
+  const [stepIdx, setStepIdx] = useState<number | null>(initialStepIdx ?? 0);
   const [draining, setDraining] = useState(false);
+  const [plainMode, setPlainMode] = useState(false);
   // Server-stored verdicts, keyed by step — used to overlay the runner's L3/L4 pass/fail
   // onto the local recompute (which can only ever yield `deferred` for a Test Gate).
   const [serverArts, setServerArts] = useState<Record<string, PipelineArtifact>>({});
+
+  // Responsive shell: below COLLAPSE_BREAKPOINT the 580px of catalog+pipeline chrome
+  // is hidden and surfaced as left slide-over drawers, leaving the canvas full-width.
+  const viewportWidth = useViewportWidth();
+  const wide = viewportWidth >= COLLAPSE_BREAKPOINT;
+  const [openDrawer, setOpenDrawer] = useState<'tree' | 'pipeline' | null>(null);
+  // Drawers only exist in the narrow shell; in wide mode the columns are inline.
+  const showTreeDrawer = !wide && openDrawer === 'tree';
+  const showPipelineDrawer = !wide && openDrawer === 'pipeline';
 
   const entities = detail?.entities ?? [];
   const entity = entities.find((e) => e.id === entityId) ?? entities[0] ?? null;
@@ -89,6 +116,14 @@ export function Baseline({ theme: t, groups, detail, onSelectCatalog, entityId, 
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [catalogId, entity?.id, hydrateEntity]); // entity?.id is the stable identity key; full entity ref changes on every render
 
+  // Close an open drawer on Escape (narrow shell only).
+  useEffect(() => {
+    if (!openDrawer) return;
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setOpenDrawer(null); };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [openDrawer]);
+
   // Operator-triggered drain of this entity's deferred L3/L4 gates, then refresh verdicts.
   const runDrain = async () => {
     if (!catalogId || !entity || draining) return;
@@ -116,6 +151,16 @@ export function Baseline({ theme: t, groups, detail, onSelectCatalog, entityId, 
         return { catalogId, entityId: entity?.id ?? '', step: s, data: art.data, ueAssets: art.ueAssets, status, ...(res?.tier ? { tier: res.tier } : {}) };
       })
     : [];
+
+  // Per-step artifact lookup for the left timeline (so failed/deferred gates aren't invisible).
+  const artifactByStep = new Map(artifacts.map((a) => [a.step, a]));
+  // Display status mirrors PipelineRollup's vocabulary: pass/fail/deferred/pending.
+  // For non-Items catalogs without artifacts, the legacy `stepDone` heuristic maps to `pass`.
+  const displayStatus = (step: string, i: number): 'pass' | 'fail' | 'deferred' | 'pending' => {
+    const a = artifactByStep.get(step);
+    if (a) return a.status === 'pass' || a.status === 'fail' || a.status === 'deferred' ? a.status : 'pending';
+    return stepDone(step, i) ? 'pass' : 'pending';
+  };
   const panel = (extra?: React.CSSProperties): React.CSSProperties => ({
     background: t.panel, border: `1px solid ${t.line}`, ...(t.glass ? { backdropFilter: 'blur(12px)' } : {}), ...extra,
   });
@@ -123,12 +168,100 @@ export function Baseline({ theme: t, groups, detail, onSelectCatalog, entityId, 
   const handleSelectCatalog = (id: string) => {
     onSelectCatalog(id);
     setStepIdx(0);
+    setOpenDrawer(null); // dismiss the tree drawer after a pick (no-op when wide)
   };
 
   const handleSelectEntity = (id: string) => {
     onSelectEntity(id);
     setStepIdx(0);
+    setOpenDrawer(null);
   };
+
+  const selectStep = (i: number) => {
+    setStepIdx(i);
+    setOpenDrawer(null); // dismiss the pipeline drawer after picking a step
+  };
+
+  // Column bodies, factored so they render either inline (wide) or inside a
+  // slide-over drawer (narrow) without duplicating the tree/timeline markup.
+  const treeBody = (
+    <CatalogTree
+      t={t}
+      groups={groups}
+      selectedCatalogId={detail?.catalog.catalogId ?? ''}
+      entities={entities}
+      selectedEntityId={entity?.id ?? null}
+      onSelectCatalog={handleSelectCatalog}
+      onSelectEntity={handleSelectEntity}
+    />
+  );
+
+  const pipelineBody = (
+    <>
+      {isItems && entity && (
+        <div style={{ display: 'flex', gap: 8, padding: '0 18px 8px' }}>
+          <button onClick={() => populateItemDemo(entity, produce)} className={t.fontMono}
+            style={{ flex: 1, fontSize: 14, padding: '6px 8px', cursor: 'pointer', background: t.glass ? t.accentBg : t.ink, color: t.glass ? t.ink : t.onAccent, border: `1px solid ${t.ink}`, borderRadius: t.glass ? 6 : 0, fontWeight: 600 }}>
+            Populate demo
+          </button>
+          <button onClick={() => resetEntity(entity.id)} className={t.fontMono}
+            style={{ fontSize: 14, padding: '6px 10px', cursor: 'pointer', background: 'transparent', color: t.muted, border: `1px solid ${t.line}`, borderRadius: t.glass ? 6 : 0 }}>
+            Reset
+          </button>
+        </div>
+      )}
+      <div style={{ flex: 1, minHeight: 0, overflow: 'auto', padding: '4px 18px 18px', position: 'relative' }}>
+        <div style={{ position: 'absolute', left: 27, top: 12, bottom: 22, width: 2, background: t.line }} />
+        {steps.map((step, i) => {
+          const status = displayStatus(step, i);
+          const art = artifactByStep.get(step);
+          const current = i === stepIdx;
+          const live = !!(detail && getStepComponent(detail.catalog.catalogId, step)); // has a prototyped V/P/A UI
+          const filled = status === 'pass' || status === 'fail';
+          const fill = filled ? STATUS_COLOR(t, status) : t.bg;
+          const borderColor = current
+            ? t.ink
+            : status === 'pass' ? t.ok
+            : status === 'fail' ? t.bad
+            : status === 'deferred' ? t.muted
+            : t.line;
+          const glyph = STATUS_GLYPH(status);
+          const glyphColor = filled ? t.onAccent : status === 'deferred' ? t.muted : t.ink;
+          const tooltip = [
+            live ? 'Prototyped step' : 'Placeholder (not yet built)',
+            status !== 'pending' || art ? `status: ${status}${art?.tier ? ` · ${art.tier}` : ''}${art?.reason ? ` — ${art.reason}` : ''}` : null,
+          ].filter(Boolean).join(' · ');
+          const ariaLabel = `Step ${pad2(i + 1)}: ${step} — ${status}`;
+          return (
+            <button key={step} onClick={() => selectStep(i)} title={tooltip} aria-label={ariaLabel} aria-current={current ? 'step' : undefined}
+              style={{ display: 'flex', alignItems: 'center', gap: 12, width: '100%', textAlign: 'left', padding: '7px 0', cursor: 'pointer', border: 'none', background: 'transparent', position: 'relative', transition: 'color 160ms ease-out' }}>
+              <span data-step-status={status}
+                className={status === 'fail' ? 'animate-pulse-glow' : undefined}
+                style={{ width: 20, height: 20, flexShrink: 0, zIndex: 1, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', background: fill, border: `2px ${status === 'deferred' ? 'dashed' : 'solid'} ${borderColor}`, boxShadow: current ? `0 0 0 3px ${t.accentBg}` : 'none', color: glyphColor, fontSize: 14, fontWeight: 700, lineHeight: 1, position: 'relative', transition: 'background-color 160ms ease-out, border-color 160ms ease-out, color 160ms ease-out' }}>
+                <AnimatePresence mode="wait" initial={false}>
+                  <motion.span
+                    key={`${step}-${status}`}
+                    data-testid={`step-dot-stamp-${i}`}
+                    initial={{ scale: 0.6, opacity: 0 }}
+                    animate={{ scale: 1, opacity: 1 }}
+                    exit={{ scale: 0.6, opacity: 0 }}
+                    transition={{ duration: 0.22, ease: 'easeOut' }}
+                    style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: '100%', height: '100%' }}
+                  >
+                    {glyph}
+                  </motion.span>
+                </AnimatePresence>
+              </span>
+              <span style={{ fontSize: 16, lineHeight: 1.25, color: live ? (current ? t.inkDeep : t.text) : t.muted, fontWeight: current ? 700 : live ? 500 : 400, display: 'inline-flex', alignItems: 'center', gap: 6, transition: 'color 160ms ease-out' }}>
+                <span className={t.fontMono} style={{ color: t.muted, fontSize: 14 }}>{pad2(i + 1)}</span>{step}
+                {live && <span style={{ width: 6, height: 6, borderRadius: 999, background: t.ok, flexShrink: 0 }} title="Prototyped" />}
+              </span>
+            </button>
+          );
+        })}
+      </div>
+    </>
+  );
 
   return (
     <div
@@ -140,6 +273,15 @@ export function Baseline({ theme: t, groups, detail, onSelectCatalog, entityId, 
     >
       {/* ── Header: title + moved title-block stats ── */}
       <header style={{ display: 'flex', alignItems: 'center', gap: 20, padding: '16px 28px', borderBottom: `2px solid ${t.ink}`, ...panel({ borderTop: 'none', borderLeft: 'none', borderRight: 'none' }) }}>
+        {/* persistent drawer toggles — only in the collapsed (narrow) shell */}
+        {!wide && (
+          <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
+            <DrawerToggle t={t} label="Catalogs" glyph="☰" open={showTreeDrawer} controls="lab-tree-drawer"
+              onClick={() => setOpenDrawer((d) => (d === 'tree' ? null : 'tree'))} />
+            <DrawerToggle t={t} label={`Pipeline · ${done}/${steps.length}`} glyph="◫" open={showPipelineDrawer} controls="lab-pipeline-drawer"
+              onClick={() => setOpenDrawer((d) => (d === 'pipeline' ? null : 'pipeline'))} />
+          </div>
+        )}
         <div style={{ minWidth: 0 }}>
           <div className={t.fontMono} style={{ fontSize: 14, letterSpacing: '0.12em', textTransform: 'uppercase', color: t.muted }}>{detail?.catalog.label ?? '—'}</div>
           <h1 style={{ fontSize: 26, fontWeight: 700, color: t.inkDeep, margin: 0, lineHeight: 1.1 }}>{entity?.name ?? '—'}</h1>
@@ -153,56 +295,25 @@ export function Baseline({ theme: t, groups, detail, onSelectCatalog, entityId, 
         </div>
       </header>
 
-      {/* ── Body: [ catalog tree | pipeline | main content ] ── */}
-      <div style={{ flex: 1, display: 'grid', gridTemplateColumns: '260px 320px 1fr', minHeight: 0 }}>
-        {/* catalog tree column */}
-        <aside style={{ borderRight: `1px solid ${t.line}`, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
-          <div className={t.fontMono} style={{ fontSize: 14, letterSpacing: '0.12em', textTransform: 'uppercase', color: t.ink, padding: '14px 18px 8px' }}>Catalogs</div>
-          <CatalogTree
-            t={t}
-            groups={groups}
-            selectedCatalogId={detail?.catalog.catalogId ?? ''}
-            entities={entities}
-            selectedEntityId={entity?.id ?? null}
-            onSelectCatalog={handleSelectCatalog}
-            onSelectEntity={handleSelectEntity}
-          />
-        </aside>
+      {/* ── Body: [ catalog tree | pipeline | main content ] — the two left columns
+            collapse into toggled slide-over drawers below COLLAPSE_BREAKPOINT so the
+            work canvas stays full-width (mirrors StepFrame's auto-fit instinct). ── */}
+      <div style={{ flex: 1, display: 'grid', gridTemplateColumns: wide ? '260px 320px 1fr' : '1fr', minHeight: 0 }}>
+        {/* catalog tree column — inline when wide, otherwise a drawer (below) */}
+        {wide && (
+          <aside style={{ borderRight: `1px solid ${t.line}`, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
+            <div className={t.fontMono} style={{ fontSize: 14, letterSpacing: '0.12em', textTransform: 'uppercase', color: t.ink, padding: '14px 18px 8px' }}>Catalogs</div>
+            {treeBody}
+          </aside>
+        )}
 
-        {/* pipeline column (right of the tree) */}
-        <aside style={{ borderRight: `1px solid ${t.line}`, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
-          <div className={t.fontMono} style={{ fontSize: 14, letterSpacing: '0.12em', textTransform: 'uppercase', color: t.ink, padding: '14px 18px 8px' }}>Pipeline · {done}/{steps.length}</div>
-          {isItems && entity && (
-            <div style={{ display: 'flex', gap: 8, padding: '0 18px 8px' }}>
-              <button onClick={() => populateItemDemo(entity, produce)} className={t.fontMono}
-                style={{ flex: 1, fontSize: 14, padding: '6px 8px', cursor: 'pointer', background: t.glass ? t.accentBg : t.ink, color: t.glass ? t.ink : t.onAccent, border: `1px solid ${t.ink}`, borderRadius: t.glass ? 6 : 0, fontWeight: 600 }}>
-                Populate demo
-              </button>
-              <button onClick={() => resetEntity(entity.id)} className={t.fontMono}
-                style={{ fontSize: 14, padding: '6px 10px', cursor: 'pointer', background: 'transparent', color: t.muted, border: `1px solid ${t.line}`, borderRadius: t.glass ? 6 : 0 }}>
-                Reset
-              </button>
-            </div>
-          )}
-          <div style={{ overflow: 'auto', padding: '4px 18px 18px', position: 'relative' }}>
-            <div style={{ position: 'absolute', left: 27, top: 12, bottom: 22, width: 2, background: t.line }} />
-            {steps.map((step, i) => {
-              const isDone = stepDone(step, i);
-              const current = i === stepIdx;
-              const live = !!(detail && getStepComponent(detail.catalog.catalogId, step)); // has a prototyped V/P/A UI
-              return (
-                <button key={step} onClick={() => setStepIdx(i)} title={live ? 'Prototyped step' : 'Placeholder (not yet built)'}
-                  style={{ display: 'flex', alignItems: 'center', gap: 12, width: '100%', textAlign: 'left', padding: '7px 0', cursor: 'pointer', border: 'none', background: 'transparent', position: 'relative' }}>
-                  <span style={{ width: 20, height: 20, flexShrink: 0, zIndex: 1, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', background: isDone ? t.ink : t.bg, border: `2px solid ${current ? t.ink : isDone ? t.ink : t.line}`, boxShadow: current ? `0 0 0 3px ${t.accentBg}` : 'none', color: t.onAccent, fontSize: 14, fontWeight: 700 }}>{isDone ? '✓' : ''}</span>
-                  <span style={{ fontSize: 16, lineHeight: 1.25, color: live ? (current ? t.inkDeep : t.text) : t.muted, fontWeight: current ? 700 : live ? 500 : 400, display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-                    <span className={t.fontMono} style={{ color: t.muted, fontSize: 14 }}>{pad2(i + 1)}</span>{step}
-                    {live && <span style={{ width: 6, height: 6, borderRadius: 999, background: t.ok, flexShrink: 0 }} title="Prototyped" />}
-                  </span>
-                  </button>
-                );
-              })}
-            </div>
-        </aside>
+        {/* pipeline column — inline when wide, otherwise a drawer (below) */}
+        {wide && (
+          <aside style={{ borderRight: `1px solid ${t.line}`, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
+            <div className={t.fontMono} style={{ fontSize: 14, letterSpacing: '0.12em', textTransform: 'uppercase', color: t.ink, padding: '14px 18px 8px' }}>Pipeline · {done}/{steps.length}</div>
+            {pipelineBody}
+          </aside>
+        )}
 
         {/* main content — roomy work canvas */}
         <main style={{ padding: '28px 36px', overflow: 'auto', minHeight: 0 }}>
@@ -210,9 +321,21 @@ export function Baseline({ theme: t, groups, detail, onSelectCatalog, entityId, 
             const stepName = steps[stepIdx];
             const Bespoke = detail && entity ? getStepComponent(detail.catalog.catalogId, stepName) : null;
             const spec = pipeline?.steps.find((s) => s.label === stepName) ?? null;
+            const rollupSummary = summarizeEntity(artifacts, steps.length);
             return (
               <>
-                {entity && <div style={{ marginBottom: 16 }}><PipelineRollup t={t} steps={steps} artifacts={artifacts} onDrain={runDrain} draining={draining} /></div>}
+                {entity && (
+                  <NextStepCoach
+                    t={t}
+                    steps={steps}
+                    statusByStep={(s, i) => displayStatus(s, i)}
+                    rollup={rollupSummary}
+                    onJump={(i) => setStepIdx(i)}
+                    plainMode={plainMode}
+                    onTogglePlainMode={() => setPlainMode((v) => !v)}
+                  />
+                )}
+                {entity && <div style={{ marginBottom: 16 }}><PipelineRollup t={t} steps={steps} artifacts={artifacts} onDrain={runDrain} draining={draining} plainMode={plainMode} /></div>}
                 <div className={t.fontMono} style={{ fontSize: 14, letterSpacing: '0.12em', color: t.muted, textTransform: 'uppercase' }}>Step {pad2(stepIdx + 1)} / {pad2(steps.length)}{stepDone(stepName, stepIdx) ? ' · complete' : ''}</div>
                 <h2 style={{ fontSize: 30, fontWeight: 700, color: t.inkDeep, margin: '6px 0 18px' }}>{stepName}</h2>
                 {Bespoke && entity ? (
@@ -240,7 +363,97 @@ export function Baseline({ theme: t, groups, detail, onSelectCatalog, entityId, 
           )}
         </main>
       </div>
+
+      {/* collapsed-shell slide-over drawers (narrow only) */}
+      {!wide && (
+        <>
+          <LabDrawer t={t} open={showTreeDrawer} onClose={() => setOpenDrawer(null)} id="lab-tree-drawer" title="Catalogs" width={300}>
+            {treeBody}
+          </LabDrawer>
+          <LabDrawer t={t} open={showPipelineDrawer} onClose={() => setOpenDrawer(null)} id="lab-pipeline-drawer" title={`Pipeline · ${done}/${steps.length}`} width={360}>
+            {pipelineBody}
+          </LabDrawer>
+        </>
+      )}
     </div>
+  );
+}
+
+/** Header button that opens/closes a collapsed-shell drawer (narrow viewports). */
+function DrawerToggle({ t, label, glyph, open, controls, onClick }: {
+  t: LabTheme; label: string; glyph: string; open: boolean; controls: string; onClick: () => void;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      aria-expanded={open}
+      aria-controls={controls}
+      className={t.fontMono}
+      style={{
+        display: 'inline-flex', alignItems: 'center', gap: 8, fontSize: 14, fontWeight: 600,
+        padding: '6px 12px', cursor: 'pointer', whiteSpace: 'nowrap',
+        background: open ? (t.glass ? t.accentBg : t.ink) : 'transparent',
+        color: open ? (t.glass ? t.ink : t.onAccent) : t.ink,
+        border: `1px solid ${t.ink}`, borderRadius: t.glass ? 6 : 0,
+        transition: 'background-color 160ms ease-out, color 160ms ease-out',
+      }}
+    >
+      <span aria-hidden="true">{glyph}</span>{label}
+    </button>
+  );
+}
+
+/**
+ * Left slide-over drawer used to surface the catalog tree / pipeline columns when
+ * the shell is too narrow to keep them inline. Backdrop click or Escape closes it.
+ */
+function LabDrawer({ t, open, onClose, id, title, width, children }: {
+  t: LabTheme; open: boolean; onClose: () => void; id: string; title: string; width: number; children: React.ReactNode;
+}) {
+  return (
+    <AnimatePresence>
+      {open && (
+        <>
+          <motion.div
+            key={`${id}-backdrop`}
+            data-testid={`${id}-backdrop`}
+            onClick={onClose}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.18 }}
+            style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)', zIndex: 40 }}
+          />
+          <motion.aside
+            key={`${id}-panel`}
+            id={id}
+            role="dialog"
+            aria-modal="true"
+            aria-label={title}
+            initial={{ x: '-100%' }}
+            animate={{ x: 0 }}
+            exit={{ x: '-100%' }}
+            transition={{ type: 'spring', stiffness: 380, damping: 38 }}
+            style={{
+              position: 'fixed', top: 0, bottom: 0, left: 0, width, maxWidth: '85vw',
+              display: 'flex', flexDirection: 'column', minHeight: 0, zIndex: 41,
+              background: t.bg, borderRight: `1px solid ${t.line}`, boxShadow: '0 0 40px rgba(0,0,0,0.28)',
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, padding: '12px 14px 12px 18px', borderBottom: `1px solid ${t.line}` }}>
+              <span className={t.fontMono} style={{ fontSize: 14, letterSpacing: '0.12em', textTransform: 'uppercase', color: t.ink }}>{title}</span>
+              <button onClick={onClose} aria-label="Close drawer" className={t.fontMono}
+                style={{ fontSize: 16, lineHeight: 1, padding: '4px 8px', cursor: 'pointer', background: 'transparent', color: t.muted, border: `1px solid ${t.line}`, borderRadius: t.glass ? 6 : 0 }}>
+                ✕
+              </button>
+            </div>
+            <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+              {children}
+            </div>
+          </motion.aside>
+        </>
+      )}
+    </AnimatePresence>
   );
 }
 

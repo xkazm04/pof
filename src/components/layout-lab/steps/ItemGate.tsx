@@ -26,6 +26,7 @@ export function ItemTestGate({ t, entity, step }: StepProps) {
 
   return (
     <StepFrame t={t} acceptance={ITEM_STEP_SPECS[step].accept(art)}
+      onFix={() => produce(entity.id, step, ITEM_STEP_SPECS[step].produce(entity))}
       panels={[
         { label: 'Checks', node: <div>{checks.map((c) => <Check key={c} t={t} name={c} ran={ran} />)}</div> },
         { label: 'Log', node: (
@@ -55,6 +56,7 @@ export function ItemPackaging({ t, entity, step }: StepProps) {
 
   return (
     <StepFrame t={t} acceptance={ITEM_STEP_SPECS[step].accept(art)}
+      onFix={() => produce(entity.id, step, ITEM_STEP_SPECS[step].produce(entity))}
       panels={[
         { label: 'Asset manifest', node: (
           packed

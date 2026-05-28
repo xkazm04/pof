@@ -5,7 +5,7 @@ import {
   Swords, Play, RefreshCw, Heart, Shield, Zap,
   ChevronDown, ChevronRight, AlertTriangle, Target,
   Activity, BarChart3, Users, Flame, ShieldAlert,
-  TrendingUp, Crosshair, Clock,
+  TrendingUp, Crosshair, Clock, Skull, Pin, X,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { SurfaceCard } from '@/components/ui/SurfaceCard';
@@ -13,6 +13,7 @@ import { KPICard } from '@/components/ui/KPICard';
 import { Badge } from '@/components/ui/Badge';
 import { ProgressRing } from '@/components/ui/ProgressRing';
 import { DashboardHeader } from '@/components/ui/DashboardHeader';
+import { ABComparisonPanel } from './ABComparisonPanel';
 import { useCombatSimulatorStore } from '@/stores/combatSimulatorStore';
 import { MODULE_COLORS, ACCENT_EMERALD_DARK, STATUS_NEUTRAL } from '@/lib/chart-colors';
 import type {
@@ -24,6 +25,7 @@ import type {
   BalanceAlertSeverity,
   GearLoadout,
   CombatAbility,
+  ThreatBreakdown,
 } from '@/types/combat-simulator';
 
 // ── Constants ───────────────────────────────────────────────────────────────
@@ -57,6 +59,8 @@ export function CombatSimulatorView() {
   const result = useCombatSimulatorStore((s) => s.result);
   const summary = useCombatSimulatorStore((s) => s.summary);
   const alerts = useCombatSimulatorStore((s) => s.alerts) ?? EMPTY_ALERTS;
+  const baselineResult = useCombatSimulatorStore((s) => s.baselineResult);
+  const comparison = useCombatSimulatorStore((s) => s.comparison);
   const tuning = useCombatSimulatorStore((s) => s.tuning);
   const isLoading = useCombatSimulatorStore((s) => s.isLoading);
   const isSimulating = useCombatSimulatorStore((s) => s.isSimulating);
@@ -65,6 +69,8 @@ export function CombatSimulatorView() {
   const fetchDefaults = useCombatSimulatorStore((s) => s.fetchDefaults);
   const runSimulation = useCombatSimulatorStore((s) => s.runSimulation);
   const setTuning = useCombatSimulatorStore((s) => s.setTuning);
+  const pinBaseline = useCombatSimulatorStore((s) => s.pinBaseline);
+  const clearBaseline = useCombatSimulatorStore((s) => s.clearBaseline);
 
   // Scenario state
   const [playerLevel, setPlayerLevel] = useState(5);
@@ -125,16 +131,49 @@ export function CombatSimulatorView() {
           accentTo="orange"
           className="mb-4"
           action={
-            <button
-              onClick={handleRun}
-              disabled={isSimulating || !tuning}
-              className="flex items-center gap-1.5 px-4 py-2 bg-status-red-subtle border border-status-red-strong rounded-lg text-red-400 text-xs font-medium hover:bg-status-red-medium transition-colors disabled:opacity-50"
-            >
-              {isSimulating ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Play className="w-3.5 h-3.5" />}
-              {isSimulating ? `Simulating ${iterations}...` : `Run ${iterations} Fights`}
-            </button>
+            <div className="flex items-center gap-2">
+              {result && (
+                <button
+                  onClick={pinBaseline}
+                  title="Pin this run as the A/B baseline; the next run is diffed against it"
+                  className="flex items-center gap-1.5 px-3 py-2 bg-violet-400/10 border border-violet-400/30 rounded-lg text-violet-400 text-xs font-medium hover:bg-violet-400/20 transition-colors"
+                >
+                  <Pin className="w-3.5 h-3.5" />
+                  {baselineResult ? 'Re-pin Baseline' : 'Pin as Baseline'}
+                </button>
+              )}
+              <button
+                onClick={handleRun}
+                disabled={isSimulating || !tuning}
+                className="flex items-center gap-1.5 px-4 py-2 bg-status-red-subtle border border-status-red-strong rounded-lg text-red-400 text-xs font-medium hover:bg-status-red-medium transition-colors disabled:opacity-50"
+              >
+                {isSimulating ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Play className="w-3.5 h-3.5" />}
+                {isSimulating
+                  ? `Simulating ${iterations}...`
+                  : baselineResult ? `Run Candidate (${iterations})` : `Run ${iterations} Fights`}
+              </button>
+            </div>
           }
         />
+
+        {/* Baseline-pinned banner */}
+        {baselineResult && (
+          <div className="flex items-center gap-2 mb-3 px-3 py-1.5 rounded-lg bg-violet-400/10 border border-violet-400/20">
+            <Pin className="w-3 h-3 text-violet-400 flex-shrink-0" />
+            <span className="text-2xs text-text-muted">
+              Baseline pinned: <span className="text-text font-medium">{baselineResult.scenario.name}</span>
+              {' '}· {(baselineResult.summary.survivalRate * 100).toFixed(0)}% survival, {baselineResult.summary.avgDPS.toFixed(0)} DPS
+              {comparison ? ' — comparing against latest run below' : ' — run a candidate to compare'}
+            </span>
+            <button
+              onClick={clearBaseline}
+              title="Clear baseline"
+              className="ml-auto flex items-center gap-1 text-2xs text-text-muted hover:text-red-400 transition-colors"
+            >
+              <X className="w-3 h-3" /> Clear
+            </button>
+          </div>
+        )}
 
         {/* Summary stats */}
         {summary && (
@@ -227,11 +266,17 @@ export function CombatSimulatorView() {
               )}
             </div>
 
+            {/* A/B Comparison — front-and-center when a baseline is pinned */}
+            {comparison && <ABComparisonPanel comparison={comparison} />}
+
             {/* Results */}
             {summary && (
               <>
                 {/* Ability Heatmap */}
                 <AbilityHeatmap heatmap={summary.abilityHeatmap} />
+
+                {/* Death Recap: Threat Breakdown */}
+                <ThreatBreakdownPanel breakdown={summary.threatBreakdown} />
 
                 {/* Distributions */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -466,6 +511,154 @@ function AbilityHeatmap({ heatmap }: { heatmap: Record<string, number> }) {
       </div>
     </SurfaceCard>
   );
+}
+
+// ── Threat Breakdown (Death Recap) ──────────────────────────────────────────
+
+function ThreatBreakdownPanel({ breakdown }: { breakdown: ThreatBreakdown }) {
+  const { bySource, byEnemy, totalDeaths, totalDamageTaken } = breakdown;
+
+  if (totalDamageTaken === 0 && bySource.length === 0) return null;
+
+  const topSource = bySource[0];
+
+  const headline = totalDeaths > 0 && topSource && topSource.killShare > 0
+    ? `${pct(topSource.killShare)} of deaths came from the ${topSource.enemy} ${topSource.ability.toLowerCase()}`
+    : topSource && topSource.damageShare > 0
+      ? `${pct(topSource.damageShare)} of damage taken came from the ${topSource.enemy} ${topSource.ability.toLowerCase()}`
+      : 'No threats recorded';
+
+  const topSources = bySource.slice(0, 5);
+  const topEnemies = byEnemy.slice(0, Math.min(4, byEnemy.length));
+
+  return (
+    <SurfaceCard className="p-4">
+      <div className="flex items-center gap-2 mb-3">
+        <Skull className="w-4 h-4 text-red-400" />
+        <h2 className="text-sm font-medium text-text">Death Recap & Threat Breakdown</h2>
+        <span className="text-2xs text-text-muted">
+          {totalDeaths} death{totalDeaths === 1 ? '' : 's'} · {formatNumber(totalDamageTaken)} dmg taken
+        </span>
+      </div>
+
+      {/* Headline */}
+      <div className="mb-3 px-3 py-2 rounded-lg bg-status-red-subtle border border-status-red-strong">
+        <div className="flex items-center gap-2">
+          <Flame className="w-3.5 h-3.5 text-red-400 flex-shrink-0" />
+          <span className="text-xs text-text">{headline}</span>
+        </div>
+        {topSource && topSource.nerfSuggestion !== 'Within tolerance.' && (
+          <div className="mt-1 ml-5 text-2xs text-text-muted/90 italic">
+            Nerf hint: {topSource.nerfSuggestion}
+          </div>
+        )}
+      </div>
+
+      {/* Per-enemy ranking */}
+      {topEnemies.length > 0 && (
+        <div className="mb-4">
+          <div className="text-2xs text-text-muted font-medium uppercase tracking-wide mb-1.5">
+            By enemy
+          </div>
+          <div className="space-y-1.5">
+            {topEnemies.map((e) => (
+              <ThreatRow
+                key={e.enemy}
+                label={e.enemy}
+                killShare={e.killShare}
+                damageShare={e.damageShare}
+                killCount={e.killCount}
+                nerfSuggestion={e.nerfSuggestion}
+              />
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Per-source ranking (enemy → ability) */}
+      {topSources.length > 0 && (
+        <div>
+          <div className="text-2xs text-text-muted font-medium uppercase tracking-wide mb-1.5">
+            By ability
+          </div>
+          <div className="space-y-1.5">
+            {topSources.map((s) => (
+              <ThreatRow
+                key={`${s.enemy}|${s.abilityId}`}
+                label={`${s.enemy} → ${s.ability}`}
+                killShare={s.killShare}
+                damageShare={s.damageShare}
+                killCount={s.killCount}
+                nerfSuggestion={s.nerfSuggestion}
+              />
+            ))}
+          </div>
+        </div>
+      )}
+    </SurfaceCard>
+  );
+}
+
+function ThreatRow({
+  label, killShare, damageShare, killCount, nerfSuggestion,
+}: {
+  label: string;
+  killShare: number;
+  damageShare: number;
+  killCount: number;
+  nerfSuggestion: string;
+}) {
+  const isTopThreat = killShare >= 0.4 || damageShare >= 0.3;
+  const hasNerf = nerfSuggestion !== 'Within tolerance.';
+  return (
+    <div className="flex flex-col gap-1 px-2 py-1.5 rounded bg-surface-deep/50">
+      <div className="flex items-center gap-2">
+        <span className={`text-2xs flex-1 truncate ${isTopThreat ? 'text-red-400 font-medium' : 'text-text'}`}>
+          {label}
+        </span>
+        <span className="text-2xs text-text-muted whitespace-nowrap">
+          {killCount > 0 && (
+            <>
+              <span className={isTopThreat ? 'text-red-400 font-mono' : 'text-text font-mono'}>{pct(killShare)}</span>
+              <span className="text-text-muted/60"> kills · </span>
+            </>
+          )}
+          <span className="font-mono">{pct(damageShare)}</span>
+          <span className="text-text-muted/60"> dmg</span>
+        </span>
+      </div>
+      {/* Dual-bar: kill share (red) on top of damage share (amber) */}
+      <div className="flex items-center gap-3">
+        <div className="flex-1 relative h-2 bg-surface-deep rounded overflow-hidden">
+          <div
+            className="absolute inset-y-0 left-0 bg-amber-400/30"
+            style={{ width: `${Math.min(100, damageShare * 100)}%` }}
+          />
+          {killShare > 0 && (
+            <div
+              className="absolute inset-y-0 left-0 bg-red-400/60 border-r border-red-400/80"
+              style={{ width: `${Math.min(100, killShare * 100)}%` }}
+            />
+          )}
+        </div>
+      </div>
+      {hasNerf && (
+        <div className="text-2xs text-text-muted/80 italic pl-0.5">
+          {nerfSuggestion}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function pct(v: number): string {
+  return `${Math.round(v * 100)}%`;
+}
+
+function formatNumber(n: number): string {
+  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
+  if (n >= 1_000) return `${(n / 1_000).toFixed(1)}k`;
+  return String(Math.round(n));
 }
 
 // ── Distribution Chart ──────────────────────────────────────────────────────

@@ -27,6 +27,7 @@ import { LiveSimDashboard } from './LiveSimDashboard';
 import { GenomeComparisonTable } from './GenomeComparisonTable';
 import { GenomeHeaderPanel } from './GenomeHeaderPanel';
 import { GenomeSelectorBar } from './GenomeSelectorBar';
+import { CheckpointTimeline } from './CheckpointTimeline';
 
 /* ── Main Editor Component ───────────────────────────────────────────── */
 
@@ -157,6 +158,8 @@ export function CharacterGenomeEditor() {
         <div className="mb-3"><SectionHeader icon={Activity} label="Genome Comparison Matrix" color={ACCENT_VIOLET} /></div>
         <div className="overflow-x-auto custom-scrollbar"><GenomeComparisonTable genomes={genomes} activeId={resolvedActiveId} /></div>
       </BlueprintPanel>
+
+      <CheckpointTimeline activeGenome={activeGenome} />
 
       <AnimatePresence>
         {codePreview && <CodePreview code={codePreview.code} title={codePreview.title} onClose={() => setCodePreview(null)} />}

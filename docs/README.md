@@ -46,4 +46,5 @@ Project conventions (import alias, logger, chart-colors, timing constants, the c
 
 ## Recent additions
 
+- **2026-05-27** — Scheduled nightly builds: a server-side cron (`src/instrumentation.ts`) runs a chosen build profile through preflight → cook → smoke → size-budget unattended, skipping the cook when git HEAD is unchanged since the last build. See [architecture/runtime-patterns.md §Server-side scheduler](architecture/runtime-patterns.md).
 - **2026-05-26** — One-Shot Authoring: autonomous catalog-row production via gap-analysis → LLM proposal → step loop. See [architecture/ui-shell.md §8](architecture/ui-shell.md) and [catalog/AUTHORING.md §Alternative](catalog/AUTHORING.md).

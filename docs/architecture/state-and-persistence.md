@@ -159,7 +159,6 @@ the browser or edge runtime).
 | `project_progress` | Full module state (checklist/health/verification/history) per project path |
 | `session_log` | Audit trail linking CLI sessions to modules and projects |
 | `request_log` | Idempotency-key replay detection for import/mutation routes |
-| `headless_builds` | Queued/running/completed UBT build jobs |
 | `checklist_metadata` | Per-item priority and notes |
 | `milestone_deadlines` | User-set target dates for deliverables |
 
@@ -167,6 +166,13 @@ the browser or edge runtime).
 `visual-verification-db.ts`) call `getDb()` and run `CREATE TABLE IF NOT EXISTS` in a local
 `ensureTable()` guard before every operation. They own row mapping (`rowToArtifact`, `rowToLifecycle`,
 etc.) and expose typed CRUD functions. No ORM — raw prepared statements throughout.
+
+**`headless_builds`** (queued/running/completed UBT build jobs) follows this same guard pattern but is
+owned by `src/lib/ue5-bridge/build-pipeline.ts` (`ensureHeadlessBuildsTable()`) — the sole reader/writer —
+**not** `db.ts`. `src/lib/ue5-bridge/build-health.ts` reads it (+ joins `error_memory`) to derive the
+**Build Health & Trends** dashboard (Evaluator → *Build Health* tab, served by
+`/api/ue5-bridge/build-health`): success rate, duration trend, slowest targets, recurring error
+fingerprints, and rolling-baseline regression alerts.
 
 ---
 

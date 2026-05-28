@@ -6,6 +6,8 @@ import { OrbitControls, Grid, GizmoHelper, GizmoViewport, Environment, Center } 
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import type { RenderMode } from './useViewerStore';
+import { useViewerStore } from './useViewerStore';
+import { computeAssetStats } from './assetStats';
 
 // ── Model component that loads from URL ──────────────────────────────────────
 
@@ -13,6 +15,7 @@ function LoadedModel({ url, renderMode }: { url: string; renderMode: RenderMode 
   const groupRef = useRef<THREE.Group>(null);
   const originalMaterials = useRef<Map<THREE.Mesh, THREE.Material | THREE.Material[]>>(new Map());
   const { scene: threeScene } = useThree();
+  const setStats = useViewerStore((s) => s.setStats);
 
   // Load model
   const loadedScene = useMemo(() => {
@@ -30,6 +33,9 @@ function LoadedModel({ url, renderMode }: { url: string; renderMode: RenderMode 
           }
         });
         group.add(gltf.scene);
+
+        // Report geometry/material/texture stats to the inspector budget check.
+        setStats(computeAssetStats(gltf));
 
         // Auto-fit camera to model
         const box = new THREE.Box3().setFromObject(gltf.scene);
@@ -86,12 +92,13 @@ function LoadedModel({ url, renderMode }: { url: string; renderMode: RenderMode 
     });
   }, [loadedScene, renderMode]);
 
-  // Cleanup on unmount
+  // Cleanup on unmount — clear the inspector stats so a removed model isn't checked.
   useEffect(() => {
     return () => {
       originalMaterials.current.clear();
+      setStats(null);
     };
-  }, []);
+  }, [setStats]);
 
   return <primitive ref={groupRef} object={loadedScene} />;
 }

@@ -2,9 +2,9 @@
 
 import { useEffect, useState, useCallback, useMemo } from 'react';
 import {
-  Dna, FlaskConical, GitBranch, BarChart3, Lightbulb, Play,
+  Dna, FlaskConical, GitBranch, BarChart3, Play,
   Zap, Trophy, Plus, Shuffle, ChevronDown, ChevronRight,
-  CheckCircle2, XCircle, Clock, TrendingUp, Layers,
+  CheckCircle2, Clock, TrendingUp, Layers,
   Target, Sparkles, Copy, ArrowRight, Wand2,
   ArrowDown, ArrowUp, ShieldCheck, FileCode2, Loader2,
 } from 'lucide-react';
@@ -25,9 +25,11 @@ import type {
   PromptOptimizationResult,
 } from '@/types/prompt-evolution';
 import { MUTATION_OPTIONS } from '@/lib/prompt-evolution/mutations';
-import { UI_TIMEOUTS } from '@/lib/constants';
-import { MODULE_COLORS, STATUS_NEUTRAL, ACCENT_EMERALD_DARK, STATUS_WARNING } from '@/lib/chart-colors';
-import type { SubModuleId } from '@/types/modules';
+import { PromptDiffView } from './PromptDiffView';
+import { MODULE_COLORS, STATUS_NEUTRAL, ACCENT_EMERALD_DARK, STATUS_WARNING, ACCENT_PURPLE } from '@/lib/chart-colors';
+import type { SubModuleId, ChecklistItem } from '@/types/modules';
+import { toast } from 'sonner';
+import { getModuleChecklist } from '@/lib/module-registry';
 
 // ── Constants ───────────────────────────────────────────────────────────────
 
@@ -92,9 +94,9 @@ export function PromptEvolutionView() {
   const startABTest = usePromptEvolutionStore((s) => s.startABTest);
   const concludeTestAction = usePromptEvolutionStore((s) => s.concludeTest);
   const clusterPrompts = usePromptEvolutionStore((s) => s.clusterPrompts);
-  const loadStats = usePromptEvolutionStore((s) => s.loadStats);
   const loadSuggestions = usePromptEvolutionStore((s) => s.loadSuggestions);
   const optimizePromptAction = usePromptEvolutionStore((s) => s.optimizePrompt);
+  const getBestVariant = usePromptEvolutionStore((s) => s.getBestVariant);
 
   const [newPrompt, setNewPrompt] = useState('');
   const [newChecklistItemId, setNewChecklistItemId] = useState('');
@@ -102,6 +104,7 @@ export function PromptEvolutionView() {
   const [selectedMutation, setSelectedMutation] = useState<MutationType>('imperative-rewrite');
   const [expandedVariantId, setExpandedVariantId] = useState<string | null>(null);
   const [expandedTestId, setExpandedTestId] = useState<string | null>(null);
+  const [formErrors, setFormErrors] = useState<{ checklistItemId?: string; prompt?: string }>({});
 
   useEffect(() => { init(); }, [init]);
 
@@ -112,12 +115,50 @@ export function PromptEvolutionView() {
     }
   }, [selectedModuleId, loadVariants, loadSuggestions]);
 
+  // Module changes invalidate the picker selection (item ids are module-scoped).
+  // Handled at the onChange site to avoid set-state-in-effect.
+  const handleSelectModule = useCallback((next: SubModuleId | null) => {
+    setSelectedModule(next);
+    setNewChecklistItemId('');
+    setFormErrors({});
+  }, [setSelectedModule]);
+
+  // Checklist items for the currently selected module — drives the picker below.
+  const moduleChecklistItems = useMemo(
+    () => (selectedModuleId ? getModuleChecklist(selectedModuleId) : []),
+    [selectedModuleId],
+  );
+
   const handleCreateVariant = useCallback(async () => {
-    if (!selectedModuleId || !newChecklistItemId || !newPrompt.trim()) return;
-    await createVariant(selectedModuleId, newChecklistItemId, newPrompt.trim());
+    const errors: { checklistItemId?: string; prompt?: string } = {};
+    if (!selectedModuleId) {
+      errors.checklistItemId = 'Select a module before creating a variant.';
+    } else if (!newChecklistItemId) {
+      errors.checklistItemId = 'Pick a checklist item to attach this variant to.';
+    } else if (!moduleChecklistItems.some((c) => c.id === newChecklistItemId)) {
+      errors.checklistItemId = `“${newChecklistItemId}” is not a checklist item in this module.`;
+    }
+    if (!newPrompt.trim()) {
+      errors.prompt = 'Variant prompt cannot be empty.';
+    } else if (newPrompt.trim().length < 16) {
+      errors.prompt = 'Variant prompt is too short — provide at least 16 characters.';
+    }
+    if (errors.checklistItemId || errors.prompt) {
+      setFormErrors(errors);
+      return;
+    }
+    setFormErrors({});
+    const created = await createVariant(selectedModuleId!, newChecklistItemId, newPrompt.trim());
+    if (!created) {
+      // Surface the store error in the form (in addition to the global banner).
+      const storeError = usePromptEvolutionStore.getState().error;
+      setFormErrors({ prompt: storeError ?? 'Failed to create variant.' });
+      return;
+    }
+    toast.success(`Created variant “${created.label}”`);
     setNewPrompt('');
     setShowCreateForm(false);
-  }, [selectedModuleId, newChecklistItemId, newPrompt, createVariant]);
+  }, [selectedModuleId, newChecklistItemId, newPrompt, moduleChecklistItems, createVariant]);
 
   const handleMutate = useCallback(async (variantId: string) => {
     await mutateVariant(variantId, selectedMutation);
@@ -169,7 +210,7 @@ export function PromptEvolutionView() {
         {/* Module picker */}
         <select
           value={selectedModuleId ?? ''}
-          onChange={(e) => setSelectedModule((e.target.value || null) as SubModuleId | null)}
+          onChange={(e) => handleSelectModule((e.target.value || null) as SubModuleId | null)}
           className="px-3 py-1.5 text-xs rounded-md bg-surface border border-border text-text"
         >
           <option value="">Select module...</option>
@@ -179,16 +220,27 @@ export function PromptEvolutionView() {
         </select>
       </div>
 
-      {/* Suggestions bar */}
+      {/* Suggestions bar — actionable cards */}
       {suggestions.length > 0 && (
-        <div className="flex items-start gap-2 p-3 rounded-lg border border-border bg-surface/50">
-          <Lightbulb className="w-4 h-4 mt-0.5 flex-shrink-0" style={{ color: ACCENT }} />
-          <div className="space-y-1">
-            {suggestions.slice(0, 3).map((s, i) => (
-              <p key={i} className="text-xs text-text-muted">{s.message}</p>
-            ))}
-          </div>
-        </div>
+        <SuggestionsBar
+          suggestions={suggestions}
+          onMutate={mutateVariant}
+          onCluster={clusterPrompts}
+          onAdoptWinner={async (moduleId, itemId) => {
+            const best = await getBestVariant(moduleId, itemId);
+            if (!best) {
+              toast.error('No best variant available for this item yet.');
+              return;
+            }
+            await navigator.clipboard.writeText(best.prompt);
+            toast.success(`Copied “${best.label}” to clipboard`);
+          }}
+          onNavigateVariants={(variantId) => {
+            setActiveSubTab('variants');
+            if (variantId) setExpandedVariantId(variantId);
+          }}
+          onNavigateClusters={() => setActiveSubTab('clusters')}
+        />
       )}
 
       {/* Sub-tab bar */}
@@ -236,12 +288,15 @@ export function PromptEvolutionView() {
             <VariantsPanel
               variantsByItem={variantsByItem}
               selectedModuleId={selectedModuleId}
+              checklistItems={moduleChecklistItems}
               showCreateForm={showCreateForm}
               setShowCreateForm={setShowCreateForm}
               newPrompt={newPrompt}
               setNewPrompt={setNewPrompt}
               newChecklistItemId={newChecklistItemId}
               setNewChecklistItemId={setNewChecklistItemId}
+              formErrors={formErrors}
+              clearFormError={(field) => setFormErrors((prev) => ({ ...prev, [field]: undefined }))}
               handleCreateVariant={handleCreateVariant}
               isMutating={isMutating}
               selectedMutation={selectedMutation}
@@ -292,6 +347,9 @@ function VariantsPanel({
   setNewPrompt,
   newChecklistItemId,
   setNewChecklistItemId,
+  checklistItems,
+  formErrors,
+  clearFormError,
   handleCreateVariant,
   isMutating,
   selectedMutation,
@@ -309,6 +367,9 @@ function VariantsPanel({
   setNewPrompt: (v: string) => void;
   newChecklistItemId: string;
   setNewChecklistItemId: (v: string) => void;
+  checklistItems: ChecklistItem[];
+  formErrors: { checklistItemId?: string; prompt?: string };
+  clearFormError: (field: 'checklistItemId' | 'prompt') => void;
   handleCreateVariant: () => void;
   isMutating: boolean;
   selectedMutation: MutationType;
@@ -344,24 +405,75 @@ function VariantsPanel({
             className="overflow-hidden"
           >
             <SurfaceCard level={2} className="p-4 space-y-3">
-              <input
-                type="text"
-                value={newChecklistItemId}
-                onChange={(e) => setNewChecklistItemId(e.target.value)}
-                placeholder="Checklist item ID (e.g. ac-1)"
-                className="w-full px-3 py-1.5 text-xs rounded-md bg-surface border border-border text-text placeholder:text-text-muted"
-              />
-              <textarea
-                value={newPrompt}
-                onChange={(e) => setNewPrompt(e.target.value)}
-                placeholder="Enter the prompt variant text..."
-                rows={5}
-                className="w-full px-3 py-2 text-xs rounded-md bg-surface border border-border text-text placeholder:text-text-muted resize-none font-mono"
-              />
+              {/* Checklist item picker */}
+              <div className="space-y-1">
+                <label htmlFor="pe-checklist-picker" className="text-xs font-medium text-text">
+                  Checklist item
+                </label>
+                {checklistItems.length === 0 ? (
+                  <p className="text-xs text-text-muted">
+                    This module has no checklist items — pick a different module.
+                  </p>
+                ) : (
+                  <select
+                    id="pe-checklist-picker"
+                    value={newChecklistItemId}
+                    onChange={(e) => {
+                      setNewChecklistItemId(e.target.value);
+                      clearFormError('checklistItemId');
+                    }}
+                    aria-invalid={Boolean(formErrors.checklistItemId)}
+                    aria-describedby={formErrors.checklistItemId ? 'pe-checklist-error' : undefined}
+                    className={`w-full px-3 py-1.5 text-xs rounded-md bg-surface border text-text ${
+                      formErrors.checklistItemId ? 'border-status-red-strong' : 'border-border'
+                    }`}
+                  >
+                    <option value="">Select a checklist item…</option>
+                    {checklistItems.map((item) => (
+                      <option key={item.id} value={item.id}>
+                        {item.id} — {item.label}
+                      </option>
+                    ))}
+                  </select>
+                )}
+                {formErrors.checklistItemId && (
+                  <p id="pe-checklist-error" role="alert" className="text-xs text-red-400">
+                    {formErrors.checklistItemId}
+                  </p>
+                )}
+              </div>
+
+              {/* Prompt textarea */}
+              <div className="space-y-1">
+                <label htmlFor="pe-prompt-input" className="text-xs font-medium text-text">
+                  Prompt
+                </label>
+                <textarea
+                  id="pe-prompt-input"
+                  value={newPrompt}
+                  onChange={(e) => {
+                    setNewPrompt(e.target.value);
+                    clearFormError('prompt');
+                  }}
+                  placeholder="Enter the prompt variant text..."
+                  rows={5}
+                  aria-invalid={Boolean(formErrors.prompt)}
+                  aria-describedby={formErrors.prompt ? 'pe-prompt-error' : undefined}
+                  className={`w-full px-3 py-2 text-xs rounded-md bg-surface border text-text placeholder:text-text-muted resize-none font-mono ${
+                    formErrors.prompt ? 'border-status-red-strong' : 'border-border'
+                  }`}
+                />
+                {formErrors.prompt && (
+                  <p id="pe-prompt-error" role="alert" className="text-xs text-red-400">
+                    {formErrors.prompt}
+                  </p>
+                )}
+              </div>
+
               <div className="flex items-center gap-2">
                 <button
                   onClick={handleCreateVariant}
-                  disabled={!newPrompt.trim() || !newChecklistItemId || isMutating}
+                  disabled={isMutating || checklistItems.length === 0}
                   className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md text-white disabled:opacity-40 transition-colors"
                   style={{ backgroundColor: ACCENT }}
                 >
@@ -913,19 +1025,11 @@ function OptimizerPanel({
   onOptimize: (moduleId: SubModuleId, prompt: string) => Promise<PromptOptimizationResult | null>;
 }) {
   const [inputPrompt, setInputPrompt] = useState('');
-  const [copiedOptimized, setCopiedOptimized] = useState(false);
 
   const handleOptimize = useCallback(async () => {
     if (!selectedModuleId || !inputPrompt.trim()) return;
     await onOptimize(selectedModuleId as SubModuleId, inputPrompt.trim());
   }, [selectedModuleId, inputPrompt, onOptimize]);
-
-  const handleCopyOptimized = useCallback(() => {
-    if (!lastOptimization?.optimized) return;
-    navigator.clipboard.writeText(lastOptimization.optimized);
-    setCopiedOptimized(true);
-    setTimeout(() => setCopiedOptimized(false), UI_TIMEOUTS.copyFeedback);
-  }, [lastOptimization]);
 
   return (
     <div className="space-y-5">
@@ -1054,45 +1158,20 @@ function OptimizerPanel({
               </div>
             )}
 
-            {/* Before / After diff view */}
+            {/* Before / After — real word-level diff (unified / split toggle) */}
             {lastOptimization.wasModified && (
-              <div className="grid grid-cols-2 gap-3">
-                {/* Before */}
-                <SurfaceCard level={2} className="p-3">
-                  <div className="flex items-center gap-1.5 mb-2">
-                    <span className="w-2 h-2 rounded-full bg-red-400/70" />
-                    <span className="text-xs font-semibold text-text-muted uppercase tracking-wider">Original</span>
-                    <span className="text-xs text-text-muted ml-auto">{lastOptimization.original.length} chars</span>
-                  </div>
-                  <div className="max-h-64 overflow-y-auto rounded bg-surface/50 p-2">
-                    <pre className="text-xs text-text-muted/80 whitespace-pre-wrap font-mono leading-relaxed">
-                      {lastOptimization.original.slice(0, 1200)}
-                      {lastOptimization.original.length > 1200 ? '\n...' : ''}
-                    </pre>
-                  </div>
-                </SurfaceCard>
-
-                {/* After */}
-                <SurfaceCard level={2} className="p-3">
-                  <div className="flex items-center gap-1.5 mb-2">
-                    <span className="w-2 h-2 rounded-full" style={{ backgroundColor: ACCENT }} />
-                    <span className="text-xs font-semibold text-text-muted uppercase tracking-wider">Optimized</span>
-                    <span className="text-xs text-text-muted ml-auto">{lastOptimization.optimized.length} chars</span>
-                    <button
-                      onClick={handleCopyOptimized}
-                      className="flex items-center gap-1 px-1.5 py-0.5 text-[11px] rounded border border-border hover:bg-surface transition-colors"
-                    >
-                      <Copy className="w-2.5 h-2.5" />
-                      {copiedOptimized ? 'Copied' : 'Copy'}
-                    </button>
-                  </div>
-                  <div className="max-h-64 overflow-y-auto rounded p-2" style={{ backgroundColor: `${ACCENT}08` }}>
-                    <pre className="text-xs text-text whitespace-pre-wrap font-mono leading-relaxed">
-                      {lastOptimization.optimized.slice(0, 1200)}
-                      {lastOptimization.optimized.length > 1200 ? '\n...' : ''}
-                    </pre>
-                  </div>
-                </SurfaceCard>
+              <div className="space-y-2">
+                <h4 className="text-xs font-medium text-text flex items-center gap-1.5">
+                  <FileCode2 className="w-3.5 h-3.5" style={{ color: ACCENT }} />
+                  Before / After
+                  <span className="text-xs text-text-muted font-normal">
+                    {lastOptimization.original.length} → {lastOptimization.optimized.length} chars
+                  </span>
+                </h4>
+                <PromptDiffView
+                  before={lastOptimization.original}
+                  after={lastOptimization.optimized}
+                />
               </div>
             )}
           </motion.div>
@@ -1223,5 +1302,168 @@ function EmptyState({
       <p className="text-sm font-medium text-text-muted mb-1">{title}</p>
       <p className="text-xs text-text-muted/70 max-w-xs">{description}</p>
     </div>
+  );
+}
+
+// ── Suggestions Bar ─────────────────────────────────────────────────────────
+
+type SuggestionType = EvolutionSuggestion['type'];
+
+const SUGGESTION_CONFIG: Record<
+  SuggestionType,
+  { icon: typeof Sparkles; color: string; label: string; actionLabel: string }
+> = {
+  'try-variant':    { icon: Sparkles,     color: ACCENT_EMERALD_DARK,  label: 'Try Variant',     actionLabel: 'Spawn mutation' },
+  'start-ab-test':  { icon: FlaskConical, color: MODULE_COLORS.content, label: 'Start A/B Test', actionLabel: 'Open in Variants' },
+  'adopt-winner':   { icon: Trophy,       color: STATUS_WARNING,        label: 'Adopt Winner',    actionLabel: 'Copy best prompt' },
+  'cluster-insight':{ icon: Layers,       color: ACCENT_PURPLE,         label: 'Cluster Insight', actionLabel: 'Analyze clusters' },
+};
+
+function SuggestionsBar({
+  suggestions,
+  onMutate,
+  onCluster,
+  onAdoptWinner,
+  onNavigateVariants,
+  onNavigateClusters,
+}: {
+  suggestions: EvolutionSuggestion[];
+  onMutate: (variantId: string, mutation: MutationType) => Promise<PromptVariant | null>;
+  onCluster: (moduleId: SubModuleId) => Promise<void>;
+  onAdoptWinner: (moduleId: SubModuleId, checklistItemId: string) => Promise<void>;
+  onNavigateVariants: (variantId?: string) => void;
+  onNavigateClusters: () => void;
+}) {
+  return (
+    <div className="space-y-2" role="list" aria-label="Evolution suggestions">
+      {suggestions.slice(0, 4).map((s, i) => (
+        <SuggestionCard
+          key={`${s.type}-${s.moduleId}-${s.checklistItemId ?? 'na'}-${s.variantId ?? 'na'}-${i}`}
+          suggestion={s}
+          index={i}
+          onMutate={onMutate}
+          onCluster={onCluster}
+          onAdoptWinner={onAdoptWinner}
+          onNavigateVariants={onNavigateVariants}
+          onNavigateClusters={onNavigateClusters}
+        />
+      ))}
+    </div>
+  );
+}
+
+function SuggestionCard({
+  suggestion,
+  index,
+  onMutate,
+  onCluster,
+  onAdoptWinner,
+  onNavigateVariants,
+  onNavigateClusters,
+}: {
+  suggestion: EvolutionSuggestion;
+  index: number;
+  onMutate: (variantId: string, mutation: MutationType) => Promise<PromptVariant | null>;
+  onCluster: (moduleId: SubModuleId) => Promise<void>;
+  onAdoptWinner: (moduleId: SubModuleId, checklistItemId: string) => Promise<void>;
+  onNavigateVariants: (variantId?: string) => void;
+  onNavigateClusters: () => void;
+}) {
+  const [busy, setBusy] = useState(false);
+  const cfg = SUGGESTION_CONFIG[suggestion.type];
+  const Icon = cfg.icon;
+  const confidencePct = Math.round(suggestion.confidence * 100);
+
+  // Per-type action: returns true when nothing to do (button stays disabled).
+  const canAct = (() => {
+    switch (suggestion.type) {
+      case 'try-variant':    return Boolean(suggestion.variantId);
+      case 'start-ab-test':  return Boolean(suggestion.variantId);
+      case 'adopt-winner':   return Boolean(suggestion.checklistItemId);
+      case 'cluster-insight':return true;
+    }
+  })();
+
+  const handleAction = useCallback(async () => {
+    if (busy) return;
+    setBusy(true);
+    try {
+      switch (suggestion.type) {
+        case 'try-variant': {
+          if (!suggestion.variantId) return;
+          const next = await onMutate(suggestion.variantId, 'imperative-rewrite');
+          if (next) {
+            toast.success(`Spawned mutation “${next.label}”`);
+            onNavigateVariants(next.id);
+          }
+          return;
+        }
+        case 'start-ab-test': {
+          onNavigateVariants(suggestion.variantId);
+          toast.info('Pick a partner variant to start the test.');
+          return;
+        }
+        case 'adopt-winner': {
+          if (!suggestion.checklistItemId) return;
+          await onAdoptWinner(suggestion.moduleId, suggestion.checklistItemId);
+          return;
+        }
+        case 'cluster-insight': {
+          onNavigateClusters();
+          await onCluster(suggestion.moduleId);
+          return;
+        }
+      }
+    } finally {
+      setBusy(false);
+    }
+  }, [busy, suggestion, onMutate, onCluster, onAdoptWinner, onNavigateVariants, onNavigateClusters]);
+
+  return (
+    <motion.div
+      role="listitem"
+      initial={{ opacity: 0, y: 6 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay: index * 0.05, duration: 0.22 }}
+      className="flex items-start gap-3 p-3 pl-3.5 rounded-lg border border-border bg-surface/50"
+      style={{ borderLeft: `3px solid ${cfg.color}` }}
+    >
+      <div
+        className="mt-0.5 w-7 h-7 rounded-md flex items-center justify-center flex-shrink-0"
+        style={{ backgroundColor: `${cfg.color}15`, color: cfg.color }}
+        aria-hidden
+      >
+        <Icon className="w-3.5 h-3.5" />
+      </div>
+
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center gap-2 mb-0.5 flex-wrap">
+          <span className="text-xs font-semibold text-text">{cfg.label}</span>
+          <span
+            className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-2xs font-medium"
+            style={{ color: cfg.color, backgroundColor: `${cfg.color}15` }}
+            title={`Confidence: ${confidencePct}%`}
+          >
+            <Target className="w-2.5 h-2.5" />
+            {confidencePct}%
+          </span>
+          {suggestion.checklistItemId && (
+            <span className="text-2xs text-text-muted truncate">{suggestion.checklistItemId}</span>
+          )}
+        </div>
+        <p className="text-xs text-text-muted leading-relaxed">{suggestion.message}</p>
+      </div>
+
+      <button
+        onClick={handleAction}
+        disabled={busy || !canAct}
+        aria-label={cfg.actionLabel}
+        className="focus-ring flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md text-white disabled:opacity-40 transition-colors flex-shrink-0 self-center"
+        style={{ backgroundColor: cfg.color }}
+      >
+        {busy ? <Loader2 className="w-3 h-3 animate-spin" /> : <ArrowRight className="w-3 h-3" />}
+        {cfg.actionLabel}
+      </button>
+    </motion.div>
   );
 }

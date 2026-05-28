@@ -4,75 +4,109 @@
  * LabBridgeStrip
  *
  * Compact inline status strip showing the UE bridge connection state.
- * Reads from usePofBridgeStore directly (display-only — connection wiring
- * is handled upstream by usePofBridge when the full app shell mounts).
- * Degrades gracefully: shows "disconnected · no UE bridge" when nothing is connected.
+ * Renders the shared `BridgeStatusIndicator` so semantics (color/label/icon
+ * pulse) stay identical to the TopBar pill and the panel badges — only the
+ * palette is overridden with lab theme tokens (Blueprint / Studio Dark) so
+ * the strip blends into the /layout aesthetic.
+ *
+ * Clicking the strip opens the Bridge Doctor diagnostic popover so a failed
+ * connection turns into a guided fix instead of an opaque error string.
  */
 
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { BridgeStatusIndicator, type ConnectionStatus } from '@/components/ui/BridgeStatusIndicator';
 import { usePofBridgeStore } from '@/stores/pofBridgeStore';
+import { BridgeDoctor } from '@/components/bridge-doctor/BridgeDoctor';
+import { Z_INDEX } from '@/lib/constants';
 import type { LabTheme } from './theme';
 
 interface LabBridgeStripProps {
   t: LabTheme;
 }
 
+function buildDetail(
+  status: ConnectionStatus,
+  plugin: ReturnType<typeof usePofBridgeStore.getState>['pluginInfo'],
+): string {
+  if (status === 'connected' && plugin) {
+    const parts: string[] = [`UE ${plugin.engineVersion ?? '?'}`];
+    if (plugin.projectName) parts.push(plugin.projectName);
+    if (typeof plugin.manifestAssetCount === 'number') {
+      parts.push(`${plugin.manifestAssetCount} assets`);
+    }
+    return parts.join(' · ');
+  }
+  return 'UE bridge · disconnected';
+}
+
 export function LabBridgeStrip({ t }: LabBridgeStripProps) {
   const connectionStatus = usePofBridgeStore((s) => s.connectionStatus);
   const pluginInfo = usePofBridgeStore((s) => s.pluginInfo);
+  const detail = buildDetail(connectionStatus, pluginInfo);
+  const [open, setOpen] = useState(false);
+  const wrapperRef = useRef<HTMLSpanElement | null>(null);
 
-  // Map PofConnectionStatus → dot color using LabTheme tokens
-  let dotColor: string;
-  if (connectionStatus === 'connected') {
-    dotColor = t.ok;
-  } else if (connectionStatus === 'connecting' || connectionStatus === 'reconnecting') {
-    dotColor = t.warn;
-  } else {
-    // 'disconnected' | 'error' → muted
-    dotColor = t.muted;
-  }
+  // Close on outside click / Escape.
+  useEffect(() => {
+    if (!open) return;
+    const handleDown = (e: MouseEvent) => {
+      if (!wrapperRef.current) return;
+      if (!wrapperRef.current.contains(e.target as Node)) setOpen(false);
+    };
+    const handleKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setOpen(false); };
+    document.addEventListener('mousedown', handleDown);
+    document.addEventListener('keydown', handleKey);
+    return () => {
+      document.removeEventListener('mousedown', handleDown);
+      document.removeEventListener('keydown', handleKey);
+    };
+  }, [open]);
 
-  const isConnected = connectionStatus === 'connected';
+  const toggle = useCallback(() => setOpen((v) => !v), []);
 
-  // Build label segments
-  let label: string;
-  if (isConnected && pluginInfo) {
-    const parts: string[] = ['UE'];
-    if (pluginInfo.engineVersion) parts[0] = `UE ${pluginInfo.engineVersion}`;
-    if (pluginInfo.projectName) parts.push(pluginInfo.projectName);
-    if (typeof pluginInfo.manifestAssetCount === 'number') {
-      parts.push(`${pluginInfo.manifestAssetCount} assets`);
-    }
-    label = parts.join(' · ');
-  } else {
-    label = 'UE bridge · disconnected';
-  }
+  const labPalette: Partial<Record<ConnectionStatus, string>> = {
+    connected: t.ok,
+    connecting: t.warn,
+    reconnecting: t.warn,
+    disconnected: t.muted,
+    error: t.bad,
+  };
 
   return (
-    <div
-      style={{
-        display: 'inline-flex',
-        alignItems: 'center',
-        gap: 6,
-        marginLeft: 'auto',
-        fontFamily: 'ui-monospace, monospace',
-        fontSize: 14,
-        color: isConnected ? t.text : t.muted,
-        userSelect: 'none',
-      }}
-    >
-      {/* Status dot */}
-      <span
-        aria-hidden="true"
-        style={{
-          display: 'inline-block',
-          width: 8,
-          height: 8,
-          borderRadius: '50%',
-          background: dotColor,
-          flexShrink: 0,
-        }}
-      />
-      <span>{label}</span>
-    </div>
+    <span ref={wrapperRef} style={{ marginLeft: 'auto', position: 'relative' }}>
+      <button
+        type="button"
+        onClick={toggle}
+        aria-haspopup="dialog"
+        aria-expanded={open}
+        aria-label="Open Bridge Doctor diagnostics"
+        title="Open Bridge Doctor"
+        className="focus-ring"
+        style={{ background: 'transparent', border: 0, cursor: 'pointer', padding: 0 }}
+      >
+        <BridgeStatusIndicator
+          status={connectionStatus}
+          variant="strip"
+          label={detail}
+          paletteOverride={labPalette}
+        />
+      </button>
+
+      {open && (
+        <div
+          role="dialog"
+          aria-label="Bridge Doctor"
+          style={{
+            position: 'absolute',
+            top: 'calc(100% + 8px)',
+            right: 0,
+            width: 'min(560px, 92vw)',
+            zIndex: Z_INDEX.panel,
+          }}
+        >
+          <BridgeDoctor autoRun />
+        </div>
+      )}
+    </span>
   );
 }

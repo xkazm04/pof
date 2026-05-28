@@ -7,13 +7,21 @@ import type {
   TuningOverrides,
   CombatSimConfig,
   FightResult,
+  DamageSource,
   SimulationResult,
   CombatSummary,
+  ThreatBreakdown,
+  ThreatEntry,
+  EnemyThreatEntry,
   BalanceAlert,
   FeedbackConfig,
   FeedbackComparisonResult,
   FeedbackSimSummary,
   FeedbackInsight,
+  ABComparisonResult,
+  RunSnapshot,
+  AlertDiffEntry,
+  AlertDiffStatus,
 } from '@/types/combat-simulator';
 import {
   BASE_PLAYER_ATTRIBUTES,
@@ -108,6 +116,8 @@ function buildEnemyAttributes(
 
 interface CombatEntity {
   name: string;
+  /** Enemy archetype name (no "#N" suffix); undefined for the player */
+  archetypeName?: string;
   attrs: AttributeSet;
   abilities: CombatAbility[];
   cooldowns: Record<string, number>;
@@ -153,6 +163,7 @@ function simulateFight(
       const attrs = buildEnemyAttributes(archetype, entry.level, tuning);
       enemies.push({
         name: `${archetype.name}${entry.count > 1 ? ` #${i + 1}` : ''}`,
+        archetypeName: archetype.name,
         attrs: { ...attrs },
         abilities: archetype.abilities,
         cooldowns: {},
@@ -168,12 +179,16 @@ function simulateFight(
 
   // Fight tracking
   const abilityUsage: Record<string, number> = {};
+  /** key: `${archetypeName}|${abilityId}` */
+  const damageSources = new Map<string, DamageSource>();
   let totalDamageDealt = 0;
   let totalDamageTaken = 0;
   let critCount = 0;
   let totalHits = 0;
   let enemiesKilled = 0;
   let killedBy: string | undefined;
+  let killedByAbility: string | undefined;
+  let killedByAbilityId: string | undefined;
   let oneShot = false;
   const startHealth = player.attrs.health;
 
@@ -249,18 +264,33 @@ function simulateFight(
       ) ?? enemy.abilities[0];
 
       if (ability && time >= player.invulnerableUntil) {
-        const { damage, isCrit } = calculateDamage(
+        const { damage } = calculateDamage(
           ability, getEffectiveAttrs(enemy), player.attrs, tuning, rng, false,
         );
         player.attrs.health -= damage;
         totalDamageTaken += damage;
 
-        // One-shot check
-        if (player.attrs.health <= 0 && damage >= startHealth * 0.9) {
-          oneShot = true;
-          killedBy = enemy.name;
-        } else if (player.attrs.health <= 0) {
-          killedBy = enemy.name;
+        // Per-source damage tracking (aggregate by archetype, not "#N" instance)
+        const archetypeName = enemy.archetypeName ?? enemy.name;
+        const key = `${archetypeName}|${ability.id}`;
+        const existing = damageSources.get(key);
+        if (existing) {
+          existing.damage += damage;
+        } else {
+          damageSources.set(key, {
+            enemy: archetypeName,
+            ability: ability.name,
+            abilityId: ability.id,
+            damage,
+          });
+        }
+
+        // Death + killing-blow attribution
+        if (player.attrs.health <= 0) {
+          killedBy = archetypeName;
+          killedByAbility = ability.name;
+          killedByAbilityId = ability.id;
+          if (damage >= startHealth * 0.9) oneShot = true;
         }
 
         if (ability.cooldownSec > 0) {
@@ -294,6 +324,9 @@ function simulateFight(
     totalHits,
     enemiesKilled,
     killedBy,
+    killedByAbility,
+    killedByAbilityId,
+    damageBySource: Array.from(damageSources.values()),
     oneShot,
   };
 }
@@ -420,6 +453,8 @@ function computeSummary(
   const totalCrits = fights.reduce((s, f) => s + f.critCount, 0);
   const totalHits = fights.reduce((s, f) => s + f.totalHits, 0);
 
+  const threatBreakdown = computeThreatBreakdown(fights, scenario);
+
   return {
     survivalRate: round2(wins.length / n),
     avgFightDurationSec: round2(avgDuration),
@@ -435,7 +470,173 @@ function computeSummary(
     damageTakenBuckets,
     durationBuckets,
     oneShotRate: round2(fights.filter((f) => f.oneShot).length / n),
+    threatBreakdown,
   };
+}
+
+// ── Threat Breakdown ────────────────────────────────────────────────────────
+
+/**
+ * Death recap aggregator: tallies per-(enemy, ability) damage and kills across
+ * all fights, then ranks the worst offenders with a designer-facing nerf hint.
+ */
+export function computeThreatBreakdown(
+  fights: FightResult[],
+  scenario: CombatScenario,
+): ThreatBreakdown {
+  const deaths = fights.filter((f) => f.killedBy);
+  const totalDeaths = deaths.length;
+  const totalDamageTaken = fights.reduce((s, f) => s + f.totalDamageTaken, 0);
+
+  // Ability lookup across all enemy archetypes in scenario
+  const abilityByKey = new Map<string, { ability: CombatAbility; enemyArchetype: EnemyArchetype }>();
+  for (const entry of scenario.enemies) {
+    const archetype = ENEMY_ARCHETYPES.find((a) => a.id === entry.archetypeId);
+    if (!archetype) continue;
+    for (const ability of archetype.abilities) {
+      abilityByKey.set(`${archetype.name}|${ability.id}`, { ability, enemyArchetype: archetype });
+    }
+  }
+
+  // Aggregate per-source damage + kills
+  type SourceAcc = { enemy: string; ability: string; abilityId: string; totalDamage: number; killCount: number };
+  const sources = new Map<string, SourceAcc>();
+
+  for (const fight of fights) {
+    for (const ds of fight.damageBySource) {
+      const key = `${ds.enemy}|${ds.abilityId}`;
+      const acc = sources.get(key);
+      if (acc) {
+        acc.totalDamage += ds.damage;
+      } else {
+        sources.set(key, {
+          enemy: ds.enemy,
+          ability: ds.ability,
+          abilityId: ds.abilityId,
+          totalDamage: ds.damage,
+          killCount: 0,
+        });
+      }
+    }
+  }
+  for (const fight of deaths) {
+    if (!fight.killedBy || !fight.killedByAbilityId) continue;
+    const key = `${fight.killedBy}|${fight.killedByAbilityId}`;
+    const acc = sources.get(key);
+    if (acc) acc.killCount += 1;
+  }
+
+  const bySource: ThreatEntry[] = Array.from(sources.values())
+    .map((acc) => {
+      const damageShare = totalDamageTaken > 0 ? acc.totalDamage / totalDamageTaken : 0;
+      const killShare = totalDeaths > 0 ? acc.killCount / totalDeaths : 0;
+      const lookup = abilityByKey.get(`${acc.enemy}|${acc.abilityId}`);
+      const nerfSuggestion = suggestAbilityNerf(lookup?.ability, damageShare, killShare);
+      return {
+        enemy: acc.enemy,
+        ability: acc.ability,
+        abilityId: acc.abilityId,
+        totalDamage: Math.round(acc.totalDamage),
+        damageShare: round2(damageShare),
+        killCount: acc.killCount,
+        killShare: round2(killShare),
+        nerfSuggestion,
+      };
+    })
+    .sort((a, b) => b.damageShare - a.damageShare);
+
+  // Roll up per enemy archetype
+  const enemyAcc = new Map<string, { totalDamage: number; killCount: number }>();
+  for (const acc of sources.values()) {
+    const e = enemyAcc.get(acc.enemy) ?? { totalDamage: 0, killCount: 0 };
+    e.totalDamage += acc.totalDamage;
+    e.killCount += acc.killCount;
+    enemyAcc.set(acc.enemy, e);
+  }
+  const byEnemy: EnemyThreatEntry[] = Array.from(enemyAcc.entries())
+    .map(([enemy, e]) => {
+      const damageShare = totalDamageTaken > 0 ? e.totalDamage / totalDamageTaken : 0;
+      const killShare = totalDeaths > 0 ? e.killCount / totalDeaths : 0;
+      return {
+        enemy,
+        totalDamage: Math.round(e.totalDamage),
+        damageShare: round2(damageShare),
+        killCount: e.killCount,
+        killShare: round2(killShare),
+        nerfSuggestion: suggestEnemyNerf(killShare, damageShare),
+      };
+    })
+    .sort((a, b) => b.killShare - a.killShare || b.damageShare - a.damageShare);
+
+  return {
+    bySource,
+    byEnemy,
+    totalDeaths,
+    totalDamageTaken: Math.round(totalDamageTaken),
+  };
+}
+
+function suggestAbilityNerf(
+  ability: CombatAbility | undefined,
+  damageShare: number,
+  killShare: number,
+): string {
+  if (!ability) {
+    return killShare > 0.25 || damageShare > 0.25
+      ? 'Reduce base damage or extend cooldown.'
+      : 'Within tolerance.';
+  }
+
+  // Top killer with one-shot risk — usually a high-baseDamage burst
+  if (killShare >= 0.4) {
+    if (ability.baseDamage >= 25) {
+      return `Headline killer (${pct(killShare)} of deaths) — cut baseDamage from ${ability.baseDamage} to ~${Math.round(ability.baseDamage * 0.75)} or raise cooldown to ${Math.max(ability.cooldownSec, 1) * 1.5}s.`;
+    }
+    return `Headline killer (${pct(killShare)} of deaths) — extend cooldown or shrink hit window.`;
+  }
+
+  // High sustained damage share — usually spammed basic attacks
+  if (damageShare >= 0.3 && (ability.cooldownSec === 0 || ability.cooldownSec < 1)) {
+    return `Spammed source (${pct(damageShare)} of damage taken) — add a 1.5–2.0s cooldown or lower attackPowerScaling.`;
+  }
+
+  // AoE problem
+  if (damageShare >= 0.25 && ability.aoeRadius > 0) {
+    return `Wide AoE (${pct(damageShare)} of damage) — reduce aoeRadius from ${ability.aoeRadius} or lower baseDamage by ~20%.`;
+  }
+
+  // Long stun chain
+  if (ability.appliesStun && ability.appliesStun >= 1 && (killShare >= 0.15 || damageShare >= 0.2)) {
+    return `Stun-locks the player (${ability.appliesStun}s) — lower appliesStun to ${round2(ability.appliesStun * 0.6)}s.`;
+  }
+
+  // Bursty short-cooldown ability
+  if (damageShare >= 0.2 && ability.cooldownSec > 0 && ability.cooldownSec < 5 && ability.baseDamage >= 20) {
+    return `Burst threat — extend cooldown from ${ability.cooldownSec}s to ${round2(ability.cooldownSec * 1.5)}s or cut baseDamage by ~20%.`;
+  }
+
+  if (killShare >= 0.15 || damageShare >= 0.15) {
+    return `Notable threat — minor 10–15% baseDamage trim or telegraph the wind-up.`;
+  }
+
+  return 'Within tolerance.';
+}
+
+function suggestEnemyNerf(killShare: number, damageShare: number): string {
+  if (killShare >= 0.5) {
+    return `Primary killer (${pct(killShare)} of deaths) — drop HP/attackPower or rework counterplay.`;
+  }
+  if (killShare >= 0.3) {
+    return `Frequent killer (${pct(killShare)} of deaths) — small enemy nerf or better player tools.`;
+  }
+  if (damageShare >= 0.4) {
+    return `Damage-tax enemy (${pct(damageShare)} of damage) — reduce attackPower or attackInterval.`;
+  }
+  return 'Within tolerance.';
+}
+
+function pct(v: number): string {
+  return `${Math.round(v * 100)}%`;
 }
 
 function buildBuckets(values: number[], count: number): { min: number; max: number; count: number }[] {
@@ -731,6 +932,97 @@ function generateFeedbackInsights(
   }
 
   return insights;
+}
+
+// ── A/B Run Comparison ───────────────────────────────────────────────────────
+
+/**
+ * Identity key for an alert across two runs. Single-instance alert kinds
+ * (one-shot, survival-low, …) collapse to their `type`. `ability-unused`
+ * fires once per ability, so it is keyed by its (stable) message, which
+ * embeds the ability name.
+ */
+function alertIdentity(alert: BalanceAlert): string {
+  return alert.type === 'ability-unused'
+    ? `ability-unused::${alert.message}`
+    : alert.type;
+}
+
+const ALERT_STATUS_ORDER: Record<AlertDiffStatus, number> = {
+  appeared: 0,
+  persisted: 1,
+  disappeared: 2,
+};
+
+const ALERT_SEVERITY_ORDER = { critical: 2, warning: 1, info: 0 } as const;
+
+/** Diffs two alert sets into appeared / disappeared / persisted entries. */
+function buildAlertDiff(baseline: BalanceAlert[], candidate: BalanceAlert[]): AlertDiffEntry[] {
+  const baseMap = new Map(baseline.map((a) => [alertIdentity(a), a]));
+  const candMap = new Map(candidate.map((a) => [alertIdentity(a), a]));
+  const keys = new Set([...baseMap.keys(), ...candMap.keys()]);
+
+  const entries: AlertDiffEntry[] = [];
+  for (const key of keys) {
+    const base = baseMap.get(key);
+    const cand = candMap.get(key);
+    const status: AlertDiffStatus = base && cand ? 'persisted' : cand ? 'appeared' : 'disappeared';
+    const rep = cand ?? base!;
+    entries.push({
+      status,
+      type: rep.type,
+      alert: rep,
+      baselineValue: base?.value,
+      candidateValue: cand?.value,
+    });
+  }
+
+  // Appeared (new regressions) first, then persisted, then disappeared (fixes);
+  // within each group, most severe first.
+  return entries.sort((a, b) => {
+    const byStatus = ALERT_STATUS_ORDER[a.status] - ALERT_STATUS_ORDER[b.status];
+    if (byStatus !== 0) return byStatus;
+    return ALERT_SEVERITY_ORDER[b.alert.severity] - ALERT_SEVERITY_ORDER[a.alert.severity];
+  });
+}
+
+function toRunSnapshot(result: SimulationResult, label: string): RunSnapshot {
+  return {
+    label,
+    summary: result.summary,
+    alerts: result.alerts,
+    scenario: result.scenario,
+    tuning: result.tuning,
+    config: result.config,
+    completedAt: result.completedAt,
+  };
+}
+
+/**
+ * First-class A/B comparison: pin one run as the baseline, run a candidate with
+ * changed tuning or enemy composition, and quantify how the headline metrics
+ * (survival, DPS, duration, one-shot rate) moved, plus which balance alerts
+ * appeared, disappeared, or persisted. All deltas are candidate − baseline.
+ */
+export function compareRuns(
+  baseline: SimulationResult,
+  candidate: SimulationResult,
+  labels: { baseline?: string; candidate?: string } = {},
+): ABComparisonResult {
+  const b = baseline.summary;
+  const c = candidate.summary;
+
+  return {
+    baseline: toRunSnapshot(baseline, labels.baseline ?? 'Baseline'),
+    candidate: toRunSnapshot(candidate, labels.candidate ?? 'Candidate'),
+    deltas: {
+      survivalRateDelta: round2(c.survivalRate - b.survivalRate),
+      avgDPSDelta: round2(c.avgDPS - b.avgDPS),
+      avgDurationDelta: round2(c.avgFightDurationSec - b.avgFightDurationSec),
+      oneShotRateDelta: round2(c.oneShotRate - b.oneShotRate),
+    },
+    alertDiff: buildAlertDiff(baseline.alerts, candidate.alerts),
+  };
 }
 
 // ── Helpers ─────────────────────────────────────────────────────────────────

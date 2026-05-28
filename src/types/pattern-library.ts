@@ -17,6 +17,9 @@ export type PatternCategory =
 
 export type PatternConfidence = 'proven' | 'promising' | 'experimental';
 
+/** Origin of the pattern — auto-mined from sessions or hand-authored by a human. */
+export type PatternSource = 'mined' | 'authored';
+
 // ── Core pattern ─────────────────────────────────────────────────────────────
 
 export interface ImplementationPattern {
@@ -52,6 +55,46 @@ export interface ImplementationPattern {
   /** When this pattern was last used successfully */
   lastSuccessAt: string;
   /** Prompt snippet that represents this pattern's approach */
+  examplePrompt?: string;
+  /** Origin of the pattern (mined from sessions vs human-authored). */
+  source: PatternSource;
+  /** True once a human has reviewed and blessed the pattern. */
+  verified: boolean;
+  /** True if the pattern is the canonical recommendation for its module. */
+  pinned: boolean;
+  /** ISO timestamp when verified flag was set. */
+  verifiedAt?: string;
+  /** Free-form attribution of who verified it. */
+  verifiedBy?: string;
+  /** Free-form attribution of who authored it (authored patterns only). */
+  authoredBy?: string;
+}
+
+// ── Curation inputs ──────────────────────────────────────────────────────────
+
+/** Fields a human supplies when authoring a brand-new pattern. */
+export interface PatternAuthorInput {
+  title: string;
+  moduleId: SubModuleId;
+  category: PatternCategory;
+  description: string;
+  approach: string;
+  tags?: string[];
+  involvedClasses?: string[];
+  pitfalls?: string[];
+  examplePrompt?: string;
+  authoredBy?: string;
+}
+
+/** Editable fields for patch-style updates to existing patterns. */
+export interface PatternMetaPatch {
+  title?: string;
+  description?: string;
+  category?: PatternCategory;
+  tags?: string[];
+  approach?: string;
+  involvedClasses?: string[];
+  pitfalls?: string[];
   examplePrompt?: string;
 }
 
@@ -113,6 +156,8 @@ export interface AntiPattern {
     approach: string;
     successRate: number;
     title: string;
+    /** Example prompt snippet from the recommended pattern — used by the one-click swap. */
+    examplePrompt?: string;
   };
   /** When first observed */
   firstSeenAt: string;
@@ -174,4 +219,10 @@ export interface PatternRow {
   last_success_at: string;
   created_at: string;
   updated_at: string;
+  source: string;
+  verified: number;
+  pinned: number;
+  verified_at: string | null;
+  verified_by: string | null;
+  authored_by: string | null;
 }

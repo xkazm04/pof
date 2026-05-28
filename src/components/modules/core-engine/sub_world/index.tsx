@@ -15,7 +15,10 @@ import { ZONES } from './_shared/data';
 
 import { CollapsibleGroup } from './_shared/CollapsibleGroup';
 import { MapTopologyGroup } from './map/MapTopologyGroup';
-import { PlaytimeTopologyOverlay, PlaytimeBreakdownTable } from './playtime/PlaytimeEstimator';
+import {
+  PlaytimeTopologyOverlay, PlaytimeBreakdownTable,
+  PlaytimeBudgetTargeter, InterestCurveChart,
+} from './playtime/PlaytimeEstimator';
 import { DensityLevelGroup } from './density/DensityLevelGroup';
 import { PoiEncountersGroup } from './travel/PoiEncountersGroup';
 import { TravelProgressionGroup } from './travel/TravelProgressionGroup';
@@ -153,9 +156,11 @@ export function ZoneMap({ moduleId }: ZoneMapProps) {
 
       {activeTab === 'playtime' && (
         <VisibleSection moduleId={moduleId} sectionId="playtime">
-        <CollapsibleGroup title="Playtime Estimator" accent={ACCENT_ORANGE} sectionCount={2} isOpen={openGroups.has(1)} onToggle={() => toggleGroup(1)}>
+        <CollapsibleGroup title="Playtime Estimator" accent={ACCENT_ORANGE} sectionCount={4} isOpen={openGroups.has(1)} onToggle={() => toggleGroup(1)}>
           <PlaytimeTopologyOverlay mode={playtimeMode} onModeChange={setPlaytimeMode} />
           <PlaytimeBreakdownTable mode={playtimeMode} />
+          <PlaytimeBudgetTargeter mode={playtimeMode} />
+          <InterestCurveChart mode={playtimeMode} />
         </CollapsibleGroup>
         </VisibleSection>
       )}

@@ -193,7 +193,9 @@ export function getModuleDomainContext(moduleId: SubModuleId): string | undefine
 
 // ── Error memory formatting ─────────────────────────────────────────────────
 
-const CATEGORY_LABELS: Record<string, string> = {
+/** Plain-English labels for error_memory `category` values — also used by the
+ *  Error Memory dashboard so prompt + UI share one humanized vocabulary. */
+export const CATEGORY_LABELS: Record<string, string> = {
   'missing-include': 'Missing #include',
   'unresolved-external': 'Linker / unresolved external',
   'gc-issue': 'Garbage Collection',

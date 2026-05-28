@@ -1,7 +1,7 @@
 import {
   STATUS_ERROR, ACCENT_EMERALD, ACCENT_PURPLE, RARITY_COLORS,
 } from '@/lib/chart-colors';
-import { Package, FlaskConical, TrendingUp } from 'lucide-react';
+import { Package, FlaskConical, TrendingUp, ListFilter } from 'lucide-react';
 import type { LoadoutSlot } from '@/types/unique-tab-improvements';
 import type { EntityMetadata } from '@/types/game-metadata';
 import { EXPANDED_ITEMS } from './data-items';
@@ -31,7 +31,7 @@ export const ACCENT = ACCENT_EMERALD;
 
 /* ── Subtab types & definitions ──────────────────────────────────────── */
 
-export type ItemCatalogSubtab = 'features' | 'catalog-gear' | 'economy-sourcing' | 'mechanics-scaling';
+export type ItemCatalogSubtab = 'features' | 'catalog-gear' | 'economy-sourcing' | 'mechanics-scaling' | 'loot-filter';
 
 export interface ItemCatalogSubtabDef {
   key: ItemCatalogSubtab;
@@ -45,6 +45,7 @@ export const SUBTABS: ItemCatalogSubtabDef[] = [
   { key: 'catalog-gear', label: 'Catalog & Gear', icon: Package, narrative: 'Browse Items', subtitle: 'Item grid, gear loadout, affix slots & trading card preview' },
   { key: 'economy-sourcing', label: 'Economy & Sourcing', icon: FlaskConical, narrative: 'Track Economy', subtitle: 'Crafting recipes, drop sources, inventory breakdown & rarity distribution' },
   { key: 'mechanics-scaling', label: 'Mechanics & Scaling', icon: TrendingUp, narrative: 'Understand Scaling', subtitle: 'Power budgets, affix probability trees & stat scaling curves' },
+  { key: 'loot-filter', label: 'Loot Filter', icon: ListFilter, narrative: 'Filter Drops', subtitle: 'Author Show/Hide/Highlight rules, preview them live, and export to a UE DataTable' },
 ];
 
 /* ── Equipment slot layout ─────────────────────────────────────────────── */

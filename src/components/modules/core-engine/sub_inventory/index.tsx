@@ -10,6 +10,7 @@ import { ACCENT, SUBTABS, type ItemCatalogSubtab } from './_shared/data';
 import { CatalogGearTab } from './catalog/CatalogGearTab';
 import { EconomySourcingTab } from './economy/EconomySourcingTab';
 import { MechanicsScalingTab } from './mechanics/MechanicsScalingTab';
+import { LootFilterRuleBuilder } from './loot-filter/LootFilterRuleBuilder';
 import FeatureMapTab from '../unique-tabs/FeatureMapTab';
 import { VisibleSection } from '../unique-tabs/VisibleSection';
 import { renderItemMetric } from './metrics';
@@ -132,6 +133,11 @@ export function ItemCatalog({ moduleId }: ItemCatalogProps) {
               moduleId={moduleId}
               featureMap={featureMap}
             />
+            </VisibleSection>
+          )}
+          {activeTab === 'loot-filter' && (
+            <VisibleSection moduleId={moduleId} sectionId="loot-filter">
+            <LootFilterRuleBuilder key="loot-filter" />
             </VisibleSection>
           )}
           </motion.div>

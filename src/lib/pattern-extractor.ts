@@ -253,6 +253,9 @@ export function extractPatterns(): { extracted: number; updated: number } {
         firstSeenAt: cluster[cluster.length - 1].completed_at,
         lastSuccessAt: cluster[0].completed_at,
         examplePrompt: cluster[0].prompt.slice(0, 500),
+        source: 'mined',
+        verified: false,
+        pinned: false,
       };
 
       // Check if this is an update or new
@@ -314,6 +317,9 @@ function seedPatternsFromDefinitions(): number {
         pitfalls: [],
         firstSeenAt: new Date().toISOString(),
         lastSuccessAt: new Date().toISOString(),
+        source: 'mined',
+        verified: false,
+        pinned: false,
       };
 
       upsertPattern(pattern);
@@ -452,6 +458,7 @@ export function extractAntiPatterns(): { extracted: number; updated: number } {
               approach: bestAlternative.approach,
               successRate: bestAlternative.successRate,
               title: bestAlternative.title,
+              examplePrompt: bestAlternative.examplePrompt,
             }
           : undefined,
         firstSeenAt: cluster[cluster.length - 1].completed_at,

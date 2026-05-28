@@ -8,9 +8,17 @@ import {
   deletePattern,
   getAllAntiPatterns,
   checkPromptForAntiPatterns,
+  authorPattern,
+  setPatternVerified,
+  setPatternPinned,
+  updatePatternMeta,
 } from '@/lib/pattern-library-db';
 import { extractPatterns, extractAntiPatterns } from '@/lib/pattern-extractor';
-import type { PatternSearchParams } from '@/types/pattern-library';
+import type {
+  PatternSearchParams,
+  PatternAuthorInput,
+  PatternMetaPatch,
+} from '@/types/pattern-library';
 import type { SubModuleId } from '@/types/modules';
 
 /**
@@ -90,10 +98,14 @@ export async function GET(req: NextRequest) {
 
 /**
  * POST /api/pattern-library
- *   { action: 'extract' }        → Run pattern extraction from session analytics
- *   { action: 'extract-anti' }   → Run anti-pattern extraction from failed sessions
- *   { action: 'extract-all' }    → Run both extractions
- *   { action: 'delete', id }     → Delete a pattern
+ *   { action: 'extract' }                                  → Run pattern extraction from session analytics
+ *   { action: 'extract-anti' }                             → Run anti-pattern extraction from failed sessions
+ *   { action: 'extract-all' }                              → Run both extractions
+ *   { action: 'delete', id }                               → Delete a pattern
+ *   { action: 'author', input: PatternAuthorInput }        → Author a new human-curated pattern
+ *   { action: 'verify', id, verified, verifiedBy? }        → Toggle the verified flag
+ *   { action: 'pin', id, pinned }                          → Pin/unpin as canonical for the module
+ *   { action: 'update', id, patch: PatternMetaPatch }      → Patch editable fields
  */
 export async function POST(req: NextRequest) {
   try {
@@ -121,6 +133,42 @@ export async function POST(req: NextRequest) {
       if (!id) return apiError('id is required', 400);
       const deleted = deletePattern(id);
       return apiSuccess({ deleted });
+    }
+
+    if (action === 'author') {
+      const input = body.input as PatternAuthorInput | undefined;
+      if (!input?.title || !input.moduleId || !input.category) {
+        return apiError('input.title, input.moduleId, input.category are required', 400);
+      }
+      const pattern = authorPattern(input);
+      return apiSuccess({ pattern });
+    }
+
+    if (action === 'verify') {
+      const { id, verified, verifiedBy } = body as { id?: string; verified?: boolean; verifiedBy?: string };
+      if (!id) return apiError('id is required', 400);
+      if (typeof verified !== 'boolean') return apiError('verified (boolean) is required', 400);
+      const pattern = setPatternVerified(id, verified, verifiedBy);
+      if (!pattern) return apiError('Pattern not found', 404);
+      return apiSuccess({ pattern });
+    }
+
+    if (action === 'pin') {
+      const { id, pinned } = body as { id?: string; pinned?: boolean };
+      if (!id) return apiError('id is required', 400);
+      if (typeof pinned !== 'boolean') return apiError('pinned (boolean) is required', 400);
+      const pattern = setPatternPinned(id, pinned);
+      if (!pattern) return apiError('Pattern not found', 404);
+      return apiSuccess({ pattern });
+    }
+
+    if (action === 'update') {
+      const { id, patch } = body as { id?: string; patch?: PatternMetaPatch };
+      if (!id) return apiError('id is required', 400);
+      if (!patch || typeof patch !== 'object') return apiError('patch is required', 400);
+      const pattern = updatePatternMeta(id, patch);
+      if (!pattern) return apiError('Pattern not found', 404);
+      return apiSuccess({ pattern });
     }
 
     return apiError(`Unknown action: ${action}`, 400);

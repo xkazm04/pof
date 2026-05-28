@@ -5,6 +5,8 @@ import { motion } from 'framer-motion';
 import {
   Activity,
   BarChart3,
+  FileText,
+  LayoutDashboard,
   Link2,
   Loader2,
   Radar,
@@ -18,6 +20,8 @@ import {
 import { correlateModuleData } from '@/lib/evaluator/correlation-engine';
 import { generateInsights } from '@/lib/evaluator/insight-generator';
 import { computeProjectHealth } from '@/lib/evaluator/combined-health';
+import { buildProducersBrief } from '@/lib/evaluator/brief-narrator';
+import { BriefView } from './BriefView';
 import type { CorrelationResult } from '@/lib/evaluator/correlation-engine';
 import type { CorrelatedInsight } from '@/lib/evaluator/insight-generator';
 import type { ProjectHealthSummary, HealthBreakdown } from '@/lib/evaluator/combined-health';
@@ -57,11 +61,14 @@ function healthBg(score: number): string {
 
 // ─── Component ───────────────────────────────────────────────────────────────
 
+type ViewMode = 'detailed' | 'brief';
+
 export function UnifiedSummaryView({ onNavigateTab }: Props) {
   const [aggregates, setAggregates] = useState<ModuleAggregate[]>([]);
   const [analytics, setAnalytics] = useState<AnalyticsDashboard | null>(null);
   const [statusMap, setStatusMap] = useState<Map<string, string>>(new Map());
   const [isLoading, setIsLoading] = useState(true);
+  const [viewMode, setViewMode] = useState<ViewMode>('detailed');
 
   const lastScan = useEvaluatorStore((s) => s.lastScan);
 
@@ -155,6 +162,11 @@ export function UnifiedSummaryView({ onNavigateTab }: Props) {
     [correlation],
   );
 
+  const brief = useMemo(
+    () => buildProducersBrief(insights, health),
+    [insights, health],
+  );
+
   // ── Data source availability badges ────────────────────────────────────────
 
   const sourceStatus = useMemo(() => ({
@@ -182,6 +194,25 @@ export function UnifiedSummaryView({ onNavigateTab }: Props) {
 
   return (
     <div className="space-y-5">
+      {/* ── View-mode toggle (Detailed engineer view vs Brief stakeholder view) ── */}
+      <div className="flex items-center justify-between">
+        <ViewModeToggle mode={viewMode} onChange={setViewMode} />
+        {viewMode === 'brief' && (
+          <button
+            onClick={fetchAll}
+            className="p-2 rounded-lg text-text-muted hover:text-text hover:bg-border transition-colors"
+            title="Refresh all data"
+            aria-label="Refresh"
+          >
+            <RefreshCw className="w-4 h-4" />
+          </button>
+        )}
+      </div>
+
+      {viewMode === 'brief' ? (
+        <BriefView brief={brief} />
+      ) : (
+      <>
       {/* ── Combined Health Score ──────────────────────────────────────────── */}
       <div className="flex items-start gap-5">
         {/* Radial gauge */}
@@ -336,7 +367,75 @@ export function UnifiedSummaryView({ onNavigateTab }: Props) {
           </p>
         </SurfaceCard>
       )}
+      </>
+      )}
     </div>
+  );
+}
+
+// ─── View-mode toggle ────────────────────────────────────────────────────────
+
+function ViewModeToggle({
+  mode,
+  onChange,
+}: {
+  mode: ViewMode;
+  onChange: (mode: ViewMode) => void;
+}) {
+  return (
+    <div
+      role="tablist"
+      aria-label="Summary view mode"
+      className="inline-flex items-center gap-1 rounded-lg p-0.5 bg-surface border border-border"
+    >
+      <ModeButton
+        active={mode === 'detailed'}
+        onClick={() => onChange('detailed')}
+        icon={LayoutDashboard}
+        label="Detailed"
+        title="Engineer view — scores, dimensions, source pills"
+      />
+      <ModeButton
+        active={mode === 'brief'}
+        onClick={() => onChange('brief')}
+        icon={FileText}
+        label="Brief"
+        title="Stakeholder view — plain-English summary of project health"
+      />
+    </div>
+  );
+}
+
+function ModeButton({
+  active,
+  onClick,
+  icon: Icon,
+  label,
+  title,
+}: {
+  active: boolean;
+  onClick: () => void;
+  icon: typeof Activity;
+  label: string;
+  title: string;
+}) {
+  return (
+    <button
+      type="button"
+      role="tab"
+      aria-selected={active}
+      onClick={onClick}
+      title={title}
+      className={
+        'inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium transition-colors ' +
+        (active
+          ? 'bg-border text-text'
+          : 'text-text-muted hover:text-text hover:bg-border/60')
+      }
+    >
+      <Icon className="w-3.5 h-3.5" />
+      {label}
+    </button>
   );
 }
 

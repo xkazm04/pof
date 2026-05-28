@@ -11,6 +11,8 @@ import {
   addEvent,
   getEvents,
   getDirectorStats,
+  getHealthTrend,
+  updateFindingTriage,
 } from '@/lib/game-director-db';
 import type {
   CreateSessionPayload,
@@ -19,6 +21,7 @@ import type {
   PlaytestSummary,
   DirectorEvent,
   PlaytestStatus,
+  UpdateTriagePayload,
 } from '@/types/game-director';
 
 // ─── GET: list sessions, get single session, get findings, get events, get stats
@@ -48,6 +51,12 @@ export async function GET(req: Request) {
 
       case 'stats':
         return apiSuccess(getDirectorStats());
+
+      case 'trend': {
+        const limitParam = searchParams.get('limit');
+        const limit = limitParam ? Math.max(1, Math.min(200, Number(limitParam))) : 30;
+        return apiSuccess(getHealthTrend(limit));
+      }
 
       default:
         return apiError(`Unknown action: ${action}`, 400);
@@ -95,6 +104,19 @@ export async function POST(req: Request) {
         const { finding } = body as { action: string; finding: PlaytestFinding };
         addFinding(finding);
         return apiSuccess({ ok: true });
+      }
+
+      case 'update-triage': {
+        const { findingId, triageStatus, triageNote, snoozedUntil } = body as UpdateTriagePayload & { action: string };
+        if (!findingId || !triageStatus) return apiError('findingId and triageStatus required', 400);
+        const updated = updateFindingTriage(
+          findingId,
+          triageStatus,
+          triageNote ?? '',
+          snoozedUntil ?? null,
+        );
+        if (!updated) return apiError('Finding not found', 404);
+        return apiSuccess(updated);
       }
 
       case 'add-event': {
@@ -241,9 +263,11 @@ async function simulatePlaytest(sessionId: string, config: PlaytestConfig) {
   );
 }
 
+type SimulatedFinding = Omit<PlaytestFinding, 'triageStatus' | 'triageNote' | 'snoozedUntil'>;
+
 function generateFindingsForCategory(sessionId: string, category: string): PlaytestFinding[] {
   const now = Date.now();
-  const templates: Record<string, PlaytestFinding[]> = {
+  const templates: Record<string, SimulatedFinding[]> = {
     combat: [
       { id: `f-${now}-c1`, sessionId, category: 'gameplay-feel', severity: 'medium', title: 'Attack animation cancels feel sluggish', description: 'The window between combo attacks has a 200ms dead zone where input is ignored. Players expect immediate responsiveness during combo chains.', relatedModule: 'arpg-combat', screenshotRef: null, gameTimestamp: 45, suggestedFix: 'Reduce combo window gap from 200ms to 80ms. Buffer input during last 4 frames of attack recovery.', confidence: 85, createdAt: new Date().toISOString() },
       { id: `f-${now}-c2`, sessionId, category: 'animation-issue', severity: 'high', title: 'Hit reaction montage overlaps with dodge', description: 'When hit during dodge i-frames, both hit reaction and dodge animations play simultaneously causing visual jitter.', relatedModule: 'arpg-animation', screenshotRef: null, gameTimestamp: 72, suggestedFix: 'Add montage priority system. Dodge montages should have higher priority than hit reactions during i-frame window.', confidence: 92, createdAt: new Date().toISOString() },
@@ -277,5 +301,10 @@ function generateFindingsForCategory(sessionId: string, category: string): Playt
     ],
   };
 
-  return templates[category] ?? [];
+  return (templates[category] ?? []).map(t => ({
+    ...t,
+    triageStatus: 'active',
+    triageNote: '',
+    snoozedUntil: null,
+  }));
 }

@@ -3,11 +3,13 @@
 import { useCallback, useEffect, useRef } from 'react';
 import { useCLIPanelStore } from '@/components/cli/store/cliPanelStore';
 import { useProjectStore } from '@/stores/projectStore';
+import { usePatternLibraryStore } from '@/stores/patternLibraryStore';
 import { recordSessionOutcome } from '@/hooks/useSessionAnalytics';
 import { buildTaskPrompt, type CLITask } from '@/lib/cli-task';
 import type { SkillId } from '@/components/cli/skills';
 import { UI_TIMEOUTS } from '@/lib/constants';
 import { dispatchPromptWhenReady } from '@/lib/cli-dispatch';
+import { logger } from '@/lib/logger';
 import type { SubModuleId } from '@/types/modules';
 
 interface UseModuleCLIOptions {
@@ -118,6 +120,28 @@ export function useModuleCLI(opts: UseModuleCLIOptions): UseModuleCLIResult {
         });
       }
       setActiveTab(tabId);
+
+      // Non-blocking anti-pattern check — fire-and-forget. Writes warnings to
+      // the pattern library store so the Anti-Patterns tab + any subscribed
+      // UI surface can flag the dispatched prompt against known-failure
+      // approaches mined from prior sessions. We don't gate the dispatch on
+      // this; the user gets the warning post-hoc just like an ESLint warning.
+      void usePatternLibraryStore
+        .getState()
+        .checkPromptBeforeDispatch(prompt, opts.moduleId)
+        .then((warnings) => {
+          if (warnings.length > 0) {
+            logger.warn(
+              `[anti-pattern] dispatched ${opts.moduleId} prompt matched ${warnings.length} known-failure pattern${warnings.length === 1 ? '' : 's'}:`,
+              warnings.map((w) => ({
+                id: w.antiPattern.id,
+                severity: w.antiPattern.severity,
+                matchScore: w.matchScore,
+                message: w.message,
+              })),
+            );
+          }
+        });
 
       // Dispatch when the target terminal announces readiness (handshake) —
       // replaces a fixed mount-delay timer that could lose the event.

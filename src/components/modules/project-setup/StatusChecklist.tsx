@@ -14,6 +14,7 @@ import {
 import type { ChecklistItem } from './useProjectScan';
 import { UI_TIMEOUTS } from '@/lib/constants';
 import { Button } from '@/components/ui/Button';
+import { StatusDot } from '@/components/ui/StatusDot';
 
 const INSTALL_URLS: Record<string, { url: string; label: string }> = {
   engine: { url: 'https://www.unrealengine.com/download', label: 'Get Epic Launcher' },
@@ -138,14 +139,14 @@ export function StatusChecklist({
             data-testid={`pof-setup-wizard-checklist-item-${item.id}`}
             className="flex items-start gap-2.5"
           >
-            <div className="relative mt-[3px] shrink-0">
-              <div
-                className={`w-2.5 h-2.5 rounded-full ${
-                  item.ok ? 'bg-accent-setup' : 'bg-red-400'
-                }`}
+            <div className="relative mt-[2px] shrink-0">
+              <StatusDot
+                state={item.ok ? 'ok' : 'fail'}
+                size="md"
+                title={`${item.label}: ${item.ok ? 'OK' : 'Missing'}`}
               />
               {i < checklist.length - 1 && (
-                <div className="absolute top-3 left-[4px] w-px h-4 bg-border" />
+                <div className="absolute top-3.5 left-[5px] w-px h-4 bg-border" />
               )}
             </div>
             <div className="min-w-0">

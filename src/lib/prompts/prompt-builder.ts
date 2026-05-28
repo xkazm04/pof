@@ -243,3 +243,54 @@ export class PromptBuilder {
     ];
   }
 }
+
+// ── Audit by string scan (for prompts not built through PromptBuilder) ──────
+
+/** A row in the audit table; `required` drives the "missing required" amber state. */
+export interface PromptAuditRow {
+  section: string;
+  /** Friendly label for chip display, e.g. "Project Context". */
+  label: string;
+  present: boolean;
+  /** Required sections (projectContext + taskInstructions) show amber when missing. */
+  required: boolean;
+}
+
+/**
+ * Detect which of the 7 canonical sections a hand-rolled prompt covers, so the
+ * Prompt Inspector can render the same audit-chip strip for prompts that don't
+ * go through `PromptBuilder` (e.g. ability-forge.ts). Matched by characteristic
+ * markers — heading text, header keys, or content cues — not by exact section
+ * names, because hand-rolled prompts use varied phrasing.
+ */
+export function auditPromptString(prompt: string): PromptAuditRow[] {
+  const text = prompt;
+  const has = (re: RegExp): boolean => re.test(text);
+  return [
+    { section: 'projectContext', label: 'Project Context', required: true,
+      present: has(/##\s*Project Context|UE Project|Engine Version|## Existing Project Context/i) },
+    { section: 'domainContext', label: 'Domain', required: false,
+      present: has(/##\s*Domain Context|You are an expert|You are a UE5/i) },
+    { section: 'taskInstructions', label: 'Task', required: true,
+      present: has(/##\s*Task:|##\s*Task /i) },
+    { section: 'wiringRequirements', label: 'Wiring', required: false,
+      present: has(/##\s*Wiring Requirements|wiring sub-prompt/i) },
+    { section: 'bestPractices', label: 'Best Practices', required: false,
+      present: has(/##\s*UE5 Best Practices|##\s*Best Practices/i) },
+    { section: 'outputSchema', label: 'Output Schema', required: false,
+      present: has(/##\s*Output Format|##\s*Output Schema|Return ONLY a JSON|@@CALLBACK:/i) },
+    { section: 'successCriteria', label: 'Success Criteria', required: false,
+      present: has(/##\s*Success Criteria|##\s*Rules\b|^\d+\.\s/m) },
+  ];
+}
+
+/** One-line plain-English summary of an audit, e.g. "5 of 7 sections populated · all required ✓". */
+export function summarizeAudit(rows: PromptAuditRow[]): string {
+  const total = rows.length;
+  const present = rows.filter((r) => r.present).length;
+  const missingRequired = rows.filter((r) => r.required && !r.present);
+  const reqStatus = missingRequired.length === 0
+    ? 'all required ✓'
+    : `missing required: ${missingRequired.map((r) => r.label).join(', ')}`;
+  return `${present} of ${total} sections populated · ${reqStatus}`;
+}

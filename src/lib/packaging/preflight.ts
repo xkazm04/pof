@@ -247,6 +247,139 @@ export function withEditorCheckResult(violations: WithEditorViolation[]): Prefli
   };
 }
 
+// ── Asset / content validation audit ────────────────────────────────────────
+
+export type AssetValidationCategory =
+  | 'missing-reference'
+  | 'redirector'
+  | 'texture'
+  | 'map-not-in-cook'
+  | 'other';
+
+export interface AssetValidationViolation {
+  severity: 'error' | 'warning';
+  category: AssetValidationCategory;
+  /** The validator's message, with the log prefix/verbosity stripped. */
+  message: string;
+}
+
+/**
+ * UE log categories that the DataValidation / asset-audit commandlets emit
+ * under. Scoping the parser to these avoids treating unrelated engine errors
+ * (a `LogTemp: Error` from gameplay code, say) as content defects.
+ */
+const VALIDATION_LOG_CATEGORIES = new Set([
+  'LogContentValidation',
+  'LogDataValidation',
+  'LogEditorValidator',
+  'LogContentValidator',
+  'LogAssetValidation',
+  'LogContentCommandlet', // ResavePackages / -fixupredirectors
+  'LogSavePackage',
+]);
+
+const VERBOSITY_RE = /^(Error|Warning|Display|Verbose|VeryVerbose|Fatal):\s*/;
+// Strips any number of leading `[...]` log prefixes (timestamp, frame counter).
+const LOG_LINE_RE = /^(?:\[[^\]]*\])*\s*([A-Za-z_]\w*):\s*(.*)$/;
+const REDIRECTOR_COUNT_RE = /\b(\d+)\s+redirectors?\b/i;
+
+const CATEGORY_LABELS: Record<AssetValidationCategory, string> = {
+  'missing-reference': 'Missing reference',
+  redirector: 'Redirector',
+  texture: 'Texture',
+  'map-not-in-cook': 'Map not in cook set',
+  other: 'Content',
+};
+
+/** Classify a validator message into the content-defect class it describes. */
+function categorizeAssetIssue(message: string): AssetValidationCategory {
+  const m = message.toLowerCase();
+  if (/redirector/.test(m)) return 'redirector';
+  if (/\b(map|level)\b/.test(m) && /(not in|missing from|outside)\b.{0,20}(cook|build|package)/.test(m)) {
+    return 'map-not-in-cook';
+  }
+  if (
+    /(missing|unresolved|dangling|null|failed to load|can't find|cannot find|could not find|broken)\b.{0,30}(reference|asset|object|dependenc)/.test(m)
+    || /missing reference/.test(m)
+  ) {
+    return 'missing-reference';
+  }
+  if (/texture/.test(m)) return 'texture';
+  return 'other';
+}
+
+/**
+ * Parse the editor commandlet's log output for content defects: missing/broken
+ * asset references, leftover ObjectRedirectors, oversized/uncompressed textures,
+ * and references to maps outside the cook set.
+ *
+ * Errors fail the cook; warnings (e.g. fixed-up redirectors, fat textures) only
+ * warn. The parser keys off UE's `Category: Verbosity: message` log shape and is
+ * scoped to the validation/audit categories so unrelated engine errors are
+ * ignored. Judged by output content, never by exit code — headless
+ * `UnrealEditor-Cmd` exits non-zero on a benign shutdown null-deref.
+ */
+export function parseAssetValidation(output: string): AssetValidationViolation[] {
+  const violations: AssetValidationViolation[] = [];
+  const seen = new Set<string>();
+
+  const push = (severity: 'error' | 'warning', category: AssetValidationCategory, message: string) => {
+    const key = `${severity}|${message}`;
+    if (seen.has(key)) return;
+    seen.add(key);
+    violations.push({ severity, category, message });
+  };
+
+  for (const raw of output.split(/\r?\n/)) {
+    const m = LOG_LINE_RE.exec(raw.trim());
+    if (!m) continue;
+    const category = m[1];
+    if (!VALIDATION_LOG_CATEGORIES.has(category)) continue;
+
+    let rest = m[2];
+    let verbosity: string | null = null;
+    const vm = VERBOSITY_RE.exec(rest);
+    if (vm) {
+      verbosity = vm[1];
+      rest = rest.slice(vm[0].length);
+    }
+    const message = rest.trim();
+    if (!message) continue;
+
+    if (verbosity === 'Error' || verbosity === 'Fatal') {
+      push('error', categorizeAssetIssue(message), message);
+    } else if (verbosity === 'Warning') {
+      push('warning', categorizeAssetIssue(message), message);
+    } else {
+      // Display / informational: only a non-zero redirector-fixup summary is a
+      // signal (leftover redirectors bloat the cook and should be resaved out).
+      const rm = REDIRECTOR_COUNT_RE.exec(message);
+      if (rm && Number(rm[1]) > 0) push('warning', 'redirector', message);
+    }
+  }
+
+  return violations;
+}
+
+/** Wrap asset-validation violations into a pre-flight check result. */
+export function assetValidationCheckResult(violations: AssetValidationViolation[]): PreflightCheckResult {
+  const errors = violations.filter((v) => v.severity === 'error').length;
+  const warnings = violations.length - errors;
+  const status: PreflightStatus = errors > 0 ? 'fail' : warnings > 0 ? 'warn' : 'pass';
+  return {
+    id: 'asset-validation',
+    label: 'Asset validation',
+    status,
+    detail:
+      status === 'pass'
+        ? 'No content defects — references, redirectors, textures, and maps are cook-clean.'
+        : `${errors} error${errors === 1 ? '' : 's'}, ${warnings} warning${warnings === 1 ? '' : 's'} in content validation.`,
+    issues: violations
+      .slice(0, 30)
+      .map((v) => `[${v.severity}] ${CATEGORY_LABELS[v.category]}: ${v.message}`),
+  };
+}
+
 // ── UnrealBuildTool result parsing ──────────────────────────────────────────
 
 export interface UbtParseResult {

@@ -5,6 +5,7 @@ import { useState, useCallback, useEffect } from 'react';
 import { useLabCatalogData, useLabDetail } from './useLabCatalogData';
 import { Baseline } from './Baseline';
 import { CanonView } from './CanonView';
+import { CatalogMatrix } from './CatalogMatrix';
 import { LAB_THEMES, LIGHT } from './theme';
 import { LabBridgeStrip } from './LabBridgeStrip';
 import { LabJobsChip } from './LabJobsChip';
@@ -25,7 +26,9 @@ export function LayoutLab() {
   const [themeId, setThemeId] = useState<'light' | 'dark'>('light');
   const [catalogId, setCatalogId] = useState('items');
   const [entityId, setEntityId] = useState<string | null>(null);
-  const [view, setView] = useState<'catalogs' | 'canon'>('catalogs');
+  const [view, setView] = useState<'catalogs' | 'canon' | 'matrix'>('catalogs');
+  // Step to open when jumping in from the catalog-wide matrix; cleared on a manual Catalogs click.
+  const [focusStepIdx, setFocusStepIdx] = useState<number | undefined>(undefined);
   const detail = useLabDetail(catalogId);
   const theme = LAB_THEMES.find((t) => t.id === themeId) ?? LIGHT;
   const hydrate = useCanonStore((s) => s.hydrate);
@@ -50,6 +53,15 @@ export function LayoutLab() {
     return unsub;
   }, []);
 
+  // Jump straight from a matrix cell to that entity's step: Baseline remounts on the
+  // view switch, so it reads focusStepIdx as its initial step.
+  const openFromMatrix = useCallback((cid: string, eid: string, stepIdx: number) => {
+    setCatalogId(cid);
+    setEntityId(eid);
+    setFocusStepIdx(stepIdx);
+    setView('catalogs');
+  }, []);
+
   const switchToLegacy = useCallback(() => {
     writeShellPref('legacy');
     const url = new URL(window.location.href);
@@ -59,11 +71,11 @@ export function LayoutLab() {
   }, []);
 
   return (
-    <div style={{ height: '100vh', display: 'flex', flexDirection: 'column', background: '#000' }}>
+    <div data-testid="harness-lab-ready" style={{ height: '100vh', display: 'flex', flexDirection: 'column', background: '#000' }}>
       <div style={{ flex: '0 0 auto', display: 'flex', alignItems: 'center', gap: 6, padding: '10px 16px', background: '#0c0c0c', borderBottom: '1px solid #262626' }}>
         <span style={{ color: '#777', fontSize: 12, marginRight: 12, fontFamily: 'ui-monospace, monospace' }}>/layout · Blueprint baseline</span>
         <button
-          onClick={() => setView('catalogs')}
+          onClick={() => { setView('catalogs'); setFocusStepIdx(undefined); }}
           style={{
             padding: '6px 14px', borderRadius: 6, fontSize: 13, cursor: 'pointer', border: '1px solid #333',
             background: view === 'catalogs' ? '#fff' : 'transparent', color: view === 'catalogs' ? '#000' : '#aaa',
@@ -71,6 +83,16 @@ export function LayoutLab() {
           }}
         >
           Catalogs
+        </button>
+        <button
+          onClick={() => setView('matrix')}
+          style={{
+            padding: '6px 14px', borderRadius: 6, fontSize: 13, cursor: 'pointer', border: '1px solid #333',
+            background: view === 'matrix' ? '#fff' : 'transparent', color: view === 'matrix' ? '#000' : '#aaa',
+            fontWeight: view === 'matrix' ? 600 : 400,
+          }}
+        >
+          Matrix
         </button>
         <button
           onClick={() => setView('canon')}
@@ -121,11 +143,14 @@ export function LayoutLab() {
       <div style={{ flex: 1, minHeight: 0, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
         {view === 'canon'
           ? <CanonView t={theme} />
-          : <Baseline theme={theme} groups={groups} detail={detail}
-              onSelectCatalog={(id) => { setCatalogId(id); setEntityId(null); }}
-              entityId={entityId}
-              onSelectEntity={setEntityId}
-            />
+          : view === 'matrix'
+            ? <CatalogMatrix t={theme} groups={groups} catalogId={catalogId} onOpenStep={openFromMatrix} />
+            : <Baseline theme={theme} groups={groups} detail={detail}
+                onSelectCatalog={(id) => { setCatalogId(id); setEntityId(null); }}
+                entityId={entityId}
+                onSelectEntity={setEntityId}
+                initialStepIdx={focusStepIdx}
+              />
         }
       </div>
       <OneShotPanel t={theme} />

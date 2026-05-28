@@ -8,6 +8,9 @@ import type {
   PatternLibraryDashboard,
   PatternSearchParams,
   PatternSuggestion,
+  PatternSource,
+  PatternAuthorInput,
+  PatternMetaPatch,
   AntiPattern,
   AntiPatternRow,
   AntiPatternSeverity,
@@ -43,6 +46,19 @@ export function ensurePatternLibraryTable() {
     )
   `);
 
+  // Add curation columns on legacy DBs (idempotent ALTERs).
+  const cols = db.prepare(`PRAGMA table_info(pattern_library)`).all() as { name: string }[];
+  const names = new Set(cols.map((c) => c.name));
+  const addIfMissing = (col: string, ddl: string) => {
+    if (!names.has(col)) db.exec(`ALTER TABLE pattern_library ADD COLUMN ${ddl}`);
+  };
+  addIfMissing('source', `source TEXT NOT NULL DEFAULT 'mined'`);
+  addIfMissing('verified', `verified INTEGER NOT NULL DEFAULT 0`);
+  addIfMissing('pinned', `pinned INTEGER NOT NULL DEFAULT 0`);
+  addIfMissing('verified_at', `verified_at TEXT`);
+  addIfMissing('verified_by', `verified_by TEXT`);
+  addIfMissing('authored_by', `authored_by TEXT`);
+
   db.exec(`
     CREATE INDEX IF NOT EXISTS idx_pattern_library_module
     ON pattern_library(module_id)
@@ -56,6 +72,12 @@ export function ensurePatternLibraryTable() {
   db.exec(`
     CREATE INDEX IF NOT EXISTS idx_pattern_library_success
     ON pattern_library(success_rate DESC)
+  `);
+
+  // Curation indices — pinned/verified are part of the canonical sort key.
+  db.exec(`
+    CREATE INDEX IF NOT EXISTS idx_pattern_library_curation
+    ON pattern_library(pinned DESC, verified DESC, success_rate DESC)
   `);
 }
 
@@ -80,6 +102,12 @@ function rowToPattern(row: PatternRow): ImplementationPattern {
     examplePrompt: row.example_prompt ?? undefined,
     firstSeenAt: row.first_seen_at,
     lastSuccessAt: row.last_success_at,
+    source: (row.source as PatternSource) ?? 'mined',
+    verified: !!row.verified,
+    pinned: !!row.pinned,
+    verifiedAt: row.verified_at ?? undefined,
+    verifiedBy: row.verified_by ?? undefined,
+    authoredBy: row.authored_by ?? undefined,
   };
 }
 
@@ -94,26 +122,31 @@ export function upsertPattern(pattern: ImplementationPattern): void {
   ensurePatternLibraryTable();
   const db = getDb();
 
+  // Re-mining must not clobber human curation: on conflict we preserve
+  // existing title/description/pitfalls if a human already verified the row.
   db.prepare(`
     INSERT INTO pattern_library
       (id, title, module_id, category, tags, description, approach,
        success_rate, session_count, project_count, avg_duration_ms,
        confidence, involved_classes, pitfalls, example_prompt,
-       first_seen_at, last_success_at, updated_at)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))
+       first_seen_at, last_success_at, updated_at,
+       source, verified, pinned, verified_at, verified_by, authored_by)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'),
+            ?, ?, ?, ?, ?, ?)
     ON CONFLICT(id) DO UPDATE SET
-      title = excluded.title,
-      description = excluded.description,
+      title = CASE WHEN pattern_library.verified = 1 THEN pattern_library.title ELSE excluded.title END,
+      description = CASE WHEN pattern_library.verified = 1 THEN pattern_library.description ELSE excluded.description END,
       success_rate = excluded.success_rate,
       session_count = excluded.session_count,
       project_count = excluded.project_count,
       avg_duration_ms = excluded.avg_duration_ms,
       confidence = excluded.confidence,
       involved_classes = excluded.involved_classes,
-      pitfalls = excluded.pitfalls,
+      pitfalls = CASE WHEN pattern_library.verified = 1 THEN pattern_library.pitfalls ELSE excluded.pitfalls END,
       example_prompt = excluded.example_prompt,
       last_success_at = excluded.last_success_at,
       updated_at = datetime('now')
+      -- source/verified/pinned/verified_at/verified_by/authored_by are preserved
   `).run(
     pattern.id,
     pattern.title,
@@ -132,13 +165,22 @@ export function upsertPattern(pattern: ImplementationPattern): void {
     pattern.examplePrompt ?? null,
     pattern.firstSeenAt,
     pattern.lastSuccessAt,
+    pattern.source ?? 'mined',
+    pattern.verified ? 1 : 0,
+    pattern.pinned ? 1 : 0,
+    pattern.verifiedAt ?? null,
+    pattern.verifiedBy ?? null,
+    pattern.authoredBy ?? null,
   );
 }
+
+/** Canonical sort: pinned first, then verified, then success-driven. */
+const CURATION_ORDER = 'pinned DESC, verified DESC, success_rate DESC, session_count DESC';
 
 export function getAllPatterns(): ImplementationPattern[] {
   ensurePatternLibraryTable();
   const rows = getDb()
-    .prepare('SELECT * FROM pattern_library ORDER BY success_rate DESC, session_count DESC')
+    .prepare(`SELECT * FROM pattern_library ORDER BY ${CURATION_ORDER}`)
     .all() as PatternRow[];
   return rows.map(rowToPattern);
 }
@@ -146,7 +188,7 @@ export function getAllPatterns(): ImplementationPattern[] {
 export function getPatternsByModule(moduleId: SubModuleId): ImplementationPattern[] {
   ensurePatternLibraryTable();
   const rows = getDb()
-    .prepare('SELECT * FROM pattern_library WHERE module_id = ? ORDER BY success_rate DESC')
+    .prepare(`SELECT * FROM pattern_library WHERE module_id = ? ORDER BY ${CURATION_ORDER}`)
     .all(moduleId) as PatternRow[];
   return rows.map(rowToPattern);
 }
@@ -199,19 +241,143 @@ export function searchPatterns(params: PatternSearchParams): ImplementationPatte
 
   const where = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
 
-  let orderBy: string;
+  // Pinned + verified always lead each tie-break; user's sortBy is the inner key.
+  let inner: string;
   switch (params.sortBy) {
-    case 'usage': orderBy = 'session_count DESC'; break;
-    case 'recent': orderBy = 'last_success_at DESC'; break;
-    case 'duration': orderBy = 'avg_duration_ms ASC'; break;
-    default: orderBy = 'success_rate DESC, session_count DESC';
+    case 'usage': inner = 'session_count DESC'; break;
+    case 'recent': inner = 'last_success_at DESC'; break;
+    case 'duration': inner = 'avg_duration_ms ASC'; break;
+    default: inner = 'success_rate DESC, session_count DESC';
   }
+  const orderBy = `pinned DESC, verified DESC, ${inner}`;
 
   const rows = db
     .prepare(`SELECT * FROM pattern_library ${where} ORDER BY ${orderBy} LIMIT 50`)
     .all(...values) as PatternRow[];
 
   return rows.map(rowToPattern);
+}
+
+// ── Curation: author / verify / pin / edit ──────────────────────────────────
+
+/** Slugify a string for use in a pattern ID. */
+function slugify(s: string): string {
+  return s.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 60) || 'pattern';
+}
+
+/**
+ * Insert a human-authored pattern. Authored patterns start with verified=true
+ * and source='authored' — a human is on the line for them, so they outrank
+ * mined entries in suggestion ordering.
+ */
+export function authorPattern(input: PatternAuthorInput): ImplementationPattern {
+  ensurePatternLibraryTable();
+  const now = new Date().toISOString();
+  const id = `authored--${input.moduleId}--${slugify(input.title)}--${Date.now().toString(36)}`;
+  const pattern: ImplementationPattern = {
+    id,
+    title: input.title,
+    moduleId: input.moduleId,
+    category: input.category,
+    tags: input.tags ?? [],
+    description: input.description,
+    approach: input.approach,
+    successRate: 0,
+    sessionCount: 0,
+    projectCount: 0,
+    avgDurationMs: 0,
+    confidence: 'experimental',
+    involvedClasses: input.involvedClasses ?? [],
+    pitfalls: input.pitfalls ?? [],
+    examplePrompt: input.examplePrompt,
+    firstSeenAt: now,
+    lastSuccessAt: now,
+    source: 'authored',
+    verified: true,
+    pinned: false,
+    verifiedAt: now,
+    verifiedBy: input.authoredBy,
+    authoredBy: input.authoredBy,
+  };
+  upsertPattern(pattern);
+  return pattern;
+}
+
+/** Flip the verified flag on a pattern. */
+export function setPatternVerified(
+  id: string,
+  verified: boolean,
+  verifiedBy?: string,
+): ImplementationPattern | null {
+  ensurePatternLibraryTable();
+  const db = getDb();
+  const result = db.prepare(`
+    UPDATE pattern_library
+       SET verified = ?,
+           verified_at = ?,
+           verified_by = ?,
+           updated_at = datetime('now')
+     WHERE id = ?
+  `).run(
+    verified ? 1 : 0,
+    verified ? new Date().toISOString() : null,
+    verified ? (verifiedBy ?? null) : null,
+    id,
+  );
+  if (result.changes === 0) return null;
+  return getPattern(id);
+}
+
+/** Pin/unpin a pattern as the canonical one for its module. */
+export function setPatternPinned(id: string, pinned: boolean): ImplementationPattern | null {
+  ensurePatternLibraryTable();
+  const db = getDb();
+  const result = db.prepare(`
+    UPDATE pattern_library
+       SET pinned = ?,
+           updated_at = datetime('now')
+     WHERE id = ?
+  `).run(pinned ? 1 : 0, id);
+  if (result.changes === 0) return null;
+  return getPattern(id);
+}
+
+/**
+ * Patch curated text fields (title/description/category/tags/approach/classes/pitfalls/examplePrompt).
+ * No-op for fields not present in the patch.
+ */
+export function updatePatternMeta(
+  id: string,
+  patch: PatternMetaPatch,
+): ImplementationPattern | null {
+  ensurePatternLibraryTable();
+  const sets: string[] = [];
+  const values: unknown[] = [];
+
+  if (patch.title !== undefined) { sets.push('title = ?'); values.push(patch.title); }
+  if (patch.description !== undefined) { sets.push('description = ?'); values.push(patch.description); }
+  if (patch.category !== undefined) { sets.push('category = ?'); values.push(patch.category); }
+  if (patch.approach !== undefined) { sets.push('approach = ?'); values.push(patch.approach); }
+  if (patch.tags !== undefined) { sets.push('tags = ?'); values.push(JSON.stringify(patch.tags)); }
+  if (patch.involvedClasses !== undefined) {
+    sets.push('involved_classes = ?'); values.push(JSON.stringify(patch.involvedClasses));
+  }
+  if (patch.pitfalls !== undefined) {
+    sets.push('pitfalls = ?'); values.push(JSON.stringify(patch.pitfalls));
+  }
+  if (patch.examplePrompt !== undefined) {
+    sets.push('example_prompt = ?'); values.push(patch.examplePrompt || null);
+  }
+  if (sets.length === 0) return getPattern(id);
+
+  sets.push(`updated_at = datetime('now')`);
+  values.push(id);
+
+  const result = getDb()
+    .prepare(`UPDATE pattern_library SET ${sets.join(', ')} WHERE id = ?`)
+    .run(...values);
+  if (result.changes === 0) return null;
+  return getPattern(id);
 }
 
 // ── Dashboard ────────────────────────────────────────────────────────────────
@@ -270,6 +436,22 @@ export function suggestPatterns(
     let relevance = 0;
     let reason = '';
 
+    // Human curation outranks mining: pinned > verified > everything else.
+    // The bonuses are large enough that a pinned/verified pattern beats a
+    // mined one even if the mined one has marginally higher success rate.
+    if (pattern.pinned) {
+      relevance += 60;
+      reason += 'Pinned as canonical. ';
+    } else if (pattern.verified) {
+      relevance += 40;
+      reason += 'Human-verified. ';
+    }
+
+    // Authored patterns get a small additional nudge over comparable mined ones.
+    if (pattern.source === 'authored') {
+      relevance += 5;
+    }
+
     // Base relevance from success rate
     relevance += Math.round(pattern.successRate * 40);
 
@@ -301,7 +483,8 @@ export function suggestPatterns(
       reason += `${Math.round(pattern.successRate * 100)}% success rate. `;
     }
 
-    if (relevance < 20) continue;
+    // Curated entries always make the cut; mined ones still need a signal.
+    if (relevance < 20 && !pattern.verified && !pattern.pinned) continue;
 
     suggestions.push({
       pattern,
@@ -312,7 +495,12 @@ export function suggestPatterns(
   }
 
   return suggestions
-    .sort((a, b) => b.relevance - a.relevance)
+    .sort((a, b) => {
+      // Hard precedence: pinned > verified > relevance score
+      if (a.pattern.pinned !== b.pattern.pinned) return a.pattern.pinned ? -1 : 1;
+      if (a.pattern.verified !== b.pattern.verified) return a.pattern.verified ? -1 : 1;
+      return b.relevance - a.relevance;
+    })
     .slice(0, 5);
 }
 

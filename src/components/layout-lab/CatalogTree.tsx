@@ -37,6 +37,7 @@ function CatalogRow({
     <>
       <button
         onClick={() => onSelectCatalog(catalog.catalogId)}
+        data-testid={`harness-catalog-${catalog.catalogId}`}
         style={{
           display: 'flex', alignItems: 'center', justifyContent: 'space-between',
           width: '100%', textAlign: 'left', padding: '7px 12px 7px 20px',
@@ -46,6 +47,7 @@ function CatalogRow({
           color: isSelected ? t.inkDeep : t.text,
           fontWeight: isSelected ? 600 : 400,
           fontSize: 14,
+          transition: 'background-color 160ms ease-out, border-color 160ms ease-out, color 160ms ease-out',
         }}
       >
         <span style={{ minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
@@ -73,6 +75,7 @@ function CatalogRow({
             style={{
               display: 'flex', alignItems: 'center',
               background: isEntitySelected ? t.accentBg : 'transparent',
+              transition: 'background-color 160ms ease-out',
             }}
           >
             <button
@@ -85,6 +88,7 @@ function CatalogRow({
                 color: isEntitySelected ? t.inkDeep : t.text,
                 fontWeight: isEntitySelected ? 600 : 400,
                 fontSize: 14,
+                transition: 'color 160ms ease-out',
               }}
             >
               <span

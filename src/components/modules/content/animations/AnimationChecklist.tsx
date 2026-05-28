@@ -7,6 +7,7 @@ import {
   ExternalLink, Check, Zap, ChevronDown, ChevronRight, ArrowRight
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
+import { ExplainToggle, JargonText, PlainEnglishSummary } from '@/components/animations/explain';
 
 // ── Types ──
 
@@ -317,10 +318,13 @@ export function AnimationChecklist({ onGenerate, isGenerating, completedSteps, o
           </div>
         </div>
 
-        {/* Progress Display */}
-        <div className="flex flex-col items-end gap-1.5">
-          <div className="text-xs font-mono font-bold text-violet-300 tracking-widest uppercase">
-            Progress <span className="text-violet-100">{completedCount}/{ANIMATION_STEPS.length}</span>
+        {/* Progress + Explain toggle */}
+        <div className="flex flex-col items-end gap-2">
+          <div className="flex items-center gap-2">
+            <ExplainToggle />
+            <div className="text-xs font-mono font-bold text-violet-300 tracking-widest uppercase">
+              Progress <span className="text-violet-100">{completedCount}/{ANIMATION_STEPS.length}</span>
+            </div>
           </div>
           <div className="w-32 h-2 rounded-full bg-[#0a0a1e] border border-violet-900/40 overflow-hidden relative shadow-inner">
             <motion.div
@@ -454,7 +458,9 @@ function StepCard({ step, isCompleted, isExpanded, isGenerating, prefersReduced,
               {isCompleted ? 'OK' : typeLabel}
             </span>
           </div>
-          <p className="text-[11px] text-text-muted font-mono leading-relaxed opacity-80 max-w-2xl truncate">{step.description}</p>
+          <p className="text-[11px] text-text-muted font-mono leading-relaxed opacity-80 max-w-2xl truncate">
+            <JargonText>{step.description}</JargonText>
+          </p>
         </div>
 
         {/* Expand indicator */}
@@ -474,13 +480,18 @@ function StepCard({ step, isCompleted, isExpanded, isGenerating, prefersReduced,
             className="overflow-hidden relative z-10"
           >
             <div className="px-5 pb-5 pl-[72px] space-y-4">
+              {/* Plain-English summary (only when Explain toggle is on AND step touches known concepts) */}
+              <PlainEnglishSummary
+                source={`${step.description}\n${step.details.join('\n')}\n${step.prompt ?? ''}`}
+              />
+
               {/* Instructions */}
               <div className="p-4 bg-black/40 border border-violet-900/40 rounded-xl shadow-inner backdrop-blur-sm">
                 <ol className="space-y-2">
                   {step.details.map((detail, i) => (
                     <li key={i} className="text-[11px] text-violet-200/80 leading-relaxed flex gap-3 font-mono">
                       <span className="flex-shrink-0 text-violet-500/70 font-bold">{String(i + 1).padStart(2, '0')}.</span>
-                      <span>{detail}</span>
+                      <span><JargonText>{detail}</JargonText></span>
                     </li>
                   ))}
                 </ol>

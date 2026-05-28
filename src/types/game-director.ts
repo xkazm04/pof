@@ -10,6 +10,19 @@ export type PlaytestStatus =
 
 export type FindingSeverity = 'critical' | 'high' | 'medium' | 'low' | 'positive';
 
+/**
+ * Triage state of a finding. `active` is the default — finding is real and unreviewed.
+ * `confirmed` is a human-confirmed real issue. `false-positive` and `ignore` exclude
+ * the finding from regression fingerprinting and health scoring. `snooze` keeps it in
+ * scoring but hides it until snoozedUntil expires.
+ */
+export type TriageStatus =
+  | 'active'
+  | 'confirmed'
+  | 'false-positive'
+  | 'ignore'
+  | 'snooze';
+
 export type FindingCategory =
   | 'visual-glitch'       // Z-fighting, texture pop-in, clipping
   | 'animation-issue'     // Jitter, blending errors, T-pose
@@ -89,6 +102,20 @@ export interface PlaytestFinding {
   /** Confidence 0-100 that this is a real issue */
   confidence: number;
   createdAt: string;
+  /** Human triage decision; 'active' for newly-recorded findings */
+  triageStatus: TriageStatus;
+  /** Optional note explaining the triage decision */
+  triageNote: string;
+  /** ISO timestamp until which a snoozed finding stays hidden */
+  snoozedUntil: string | null;
+}
+
+export interface UpdateTriagePayload {
+  findingId: string;
+  triageStatus: TriageStatus;
+  triageNote?: string;
+  /** Required when triageStatus = 'snooze'; ISO datetime */
+  snoozedUntil?: string | null;
 }
 
 export interface DirectorEvent {

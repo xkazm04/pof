@@ -1,25 +1,70 @@
-import { AlertOctagon, AlertTriangle, Info, CheckCircle2 } from 'lucide-react';
-import type { FindingSeverity, FindingCategory } from '@/types/game-director';
 import {
-  STATUS_SUCCESS, STATUS_WARNING, STATUS_ERROR, STATUS_INFO, STATUS_BLOCKER,
+  AlertOctagon, AlertTriangle, Info, CheckCircle2,
+  Settings, Play, Activity, Search,
+  ShieldCheck, BellOff, EyeOff, Clock, type LucideIcon,
+} from 'lucide-react';
+import type { FindingSeverity, FindingCategory, PlaytestStatus, TriageStatus } from '@/types/game-director';
+import type { RegressionStatus } from '@/types/regression-tracker';
+import {
+  STATUS_SUCCESS, STATUS_WARNING, STATUS_ERROR, STATUS_INFO, STATUS_BLOCKER, ACCENT_PURPLE,
   OPACITY_8, OPACITY_12, OPACITY_20,
 } from '@/lib/chart-colors';
 
-export const SEVERITY_STYLES: Record<FindingSeverity, { icon: typeof AlertOctagon; color: string; bg: string; border: string }> = {
-  critical: { icon: AlertOctagon, color: STATUS_ERROR, bg: `${STATUS_ERROR}${OPACITY_8}`, border: `${STATUS_ERROR}${OPACITY_20}` },
-  high: { icon: AlertTriangle, color: STATUS_BLOCKER, bg: `${STATUS_BLOCKER}${OPACITY_8}`, border: `${STATUS_BLOCKER}${OPACITY_20}` },
-  medium: { icon: Info, color: STATUS_WARNING, bg: `${STATUS_WARNING}${OPACITY_8}`, border: `${STATUS_WARNING}${OPACITY_20}` },
-  low: { icon: Info, color: STATUS_INFO, bg: `${STATUS_INFO}${OPACITY_8}`, border: `${STATUS_INFO}${OPACITY_20}` },
-  positive: { icon: CheckCircle2, color: STATUS_SUCCESS, bg: `${STATUS_SUCCESS}${OPACITY_8}`, border: `${STATUS_SUCCESS}${OPACITY_20}` },
+/** Shared shape for severity, session status, and regression status tokens. */
+export interface SemanticToken {
+  icon: LucideIcon;
+  color: string;
+  label: string;
+}
+
+export type SemanticDensity = 'default' | 'dense';
+
+export const SEVERITY_TOKENS: Record<FindingSeverity, SemanticToken> = {
+  critical: { icon: AlertOctagon, color: STATUS_ERROR, label: 'Critical' },
+  high: { icon: AlertTriangle, color: STATUS_BLOCKER, label: 'High' },
+  medium: { icon: Info, color: STATUS_WARNING, label: 'Medium' },
+  low: { icon: Info, color: STATUS_INFO, label: 'Low' },
+  positive: { icon: CheckCircle2, color: STATUS_SUCCESS, label: 'Positive' },
 };
 
-/** Denser bg variant used by regression tracker (OPACITY_12, no border). */
-export const SEVERITY_STYLES_DENSE: Record<FindingSeverity, { icon: typeof AlertOctagon; color: string; bg: string }> = {
-  critical: { icon: AlertOctagon, color: STATUS_ERROR, bg: `${STATUS_ERROR}${OPACITY_12}` },
-  high: { icon: AlertTriangle, color: STATUS_BLOCKER, bg: `${STATUS_BLOCKER}${OPACITY_12}` },
-  medium: { icon: Info, color: STATUS_WARNING, bg: `${STATUS_WARNING}${OPACITY_12}` },
-  low: { icon: Info, color: STATUS_INFO, bg: `${STATUS_INFO}${OPACITY_12}` },
-  positive: { icon: CheckCircle2, color: STATUS_SUCCESS, bg: `${STATUS_SUCCESS}${OPACITY_12}` },
+export const SESSION_STATUS_TOKENS: Record<PlaytestStatus, SemanticToken> = {
+  configuring: { icon: Settings, color: 'var(--text-muted)', label: 'Configuring' },
+  launching: { icon: Play, color: STATUS_WARNING, label: 'Launching' },
+  playing: { icon: Activity, color: STATUS_INFO, label: 'Playing' },
+  analyzing: { icon: Search, color: ACCENT_PURPLE, label: 'Analyzing' },
+  complete: { icon: CheckCircle2, color: STATUS_SUCCESS, label: 'Complete' },
+  failed: { icon: AlertOctagon, color: STATUS_ERROR, label: 'Failed' },
+};
+
+export const REGRESSION_STATUS_TOKENS: Record<RegressionStatus, SemanticToken> = {
+  open: { icon: AlertTriangle, color: STATUS_BLOCKER, label: 'Open' },
+  fixed: { icon: CheckCircle2, color: STATUS_SUCCESS, label: 'Fixed' },
+  regressed: { icon: AlertOctagon, color: STATUS_ERROR, label: 'Regressed' },
+  resolved: { icon: CheckCircle2, color: STATUS_INFO, label: 'Resolved' },
+};
+
+/**
+ * Card-level surface styling derived from a severity color. Density `default`
+ * yields a subtle bg + a colored border (for finding cards / breakdown tiles);
+ * `dense` yields a stronger bg with no border (for inline icon wrappers).
+ */
+export function severitySurface(
+  severity: FindingSeverity,
+  density: SemanticDensity = 'default',
+): { backgroundColor: string; borderColor: string } {
+  const color = SEVERITY_TOKENS[severity].color;
+  if (density === 'dense') {
+    return { backgroundColor: `${color}${OPACITY_12}`, borderColor: 'transparent' };
+  }
+  return { backgroundColor: `${color}${OPACITY_8}`, borderColor: `${color}${OPACITY_20}` };
+}
+
+export const TRIAGE_TOKENS: Record<TriageStatus, SemanticToken> = {
+  active: { icon: Activity, color: 'var(--text-muted)', label: 'Active' },
+  confirmed: { icon: ShieldCheck, color: STATUS_BLOCKER, label: 'Confirmed' },
+  'false-positive': { icon: BellOff, color: STATUS_INFO, label: 'False positive' },
+  ignore: { icon: EyeOff, color: 'var(--text-muted)', label: 'Ignored' },
+  snooze: { icon: Clock, color: ACCENT_PURPLE, label: 'Snoozed' },
 };
 
 export const CATEGORY_LABELS: Record<FindingCategory, string> = {

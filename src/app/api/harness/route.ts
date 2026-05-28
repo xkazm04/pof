@@ -77,9 +77,13 @@ export async function GET(request: NextRequest) {
   // Default: status summary
   const plan = orchestrator?.getPlan();
   const guide = orchestrator?.getGuide();
+  const cost = orchestrator?.getCost?.() ?? null;
+  const runId = orchestrator?.getRunId?.() ?? null;
+  const checkpoints = orchestrator?.getCheckpoints?.() ?? null;
 
   return apiSuccess({
     status: globalForHarness.harnessStatus,
+    runId,
     plan: plan ? {
       game: plan.game,
       iteration: plan.iteration,
@@ -98,6 +102,22 @@ export async function GET(request: NextRequest) {
       totalDurationMs: guide.totalDurationMs,
       lastStep: guide.steps[guide.steps.length - 1]?.label ?? null,
     } : null,
+    cost: cost ? {
+      spentUsd: Number(cost.spentUsd.toFixed(4)),
+      budgetUsd: cost.budgetUsd,
+      sessions: cost.sessions,
+      paused: cost.paused,
+      byArea: cost.byArea,
+      remainingUsd: cost.budgetUsd != null ? Number((cost.budgetUsd - cost.spentUsd).toFixed(4)) : null,
+    } : null,
+    checkpoints: checkpoints ? {
+      branch: checkpoints.branch,
+      count: checkpoints.checkpoints.length,
+      lastGreenSha: checkpoints.checkpoints.length > 0
+        ? checkpoints.checkpoints[checkpoints.checkpoints.length - 1].sha
+        : null,
+      areas: checkpoints.checkpoints.map(c => ({ areaId: c.areaId, sha: c.sha, tag: c.tag, iteration: c.iteration })),
+    } : null,
     recentEvents: globalForHarness.harnessEvents.slice(-10),
   });
 }
@@ -114,6 +134,8 @@ export async function POST(request: NextRequest) {
     maxIterations?: number;
     targetPassRate?: number;
     sessionTimeoutMs?: number;
+    budgetUsd?: number;
+    checkpoint?: boolean;
   };
 
   if (body.action === 'start') {
@@ -132,6 +154,8 @@ export async function POST(request: NextRequest) {
       statePath: body.statePath,
       maxIterations: body.maxIterations,
       targetPassRate: body.targetPassRate,
+      ...(body.budgetUsd != null ? { budgetUsd: body.budgetUsd } : {}),
+      ...(body.checkpoint != null ? { checkpoint: body.checkpoint } : {}),
       executor: body.sessionTimeoutMs ? {
         sessionTimeoutMs: body.sessionTimeoutMs,
         maxRetriesPerArea: 3,

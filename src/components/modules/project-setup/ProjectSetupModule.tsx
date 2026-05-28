@@ -1,23 +1,28 @@
 ﻿'use client';
 
-import { useState, useCallback, useEffect, useRef } from 'react';
+import { useState, useCallback, useEffect, useMemo, useRef } from 'react';
 import { Rocket } from 'lucide-react';
 import { useProjectStore } from '@/stores/projectStore';
 import { apiFetch } from '@/lib/api-utils';
 import { useModuleCLI } from '@/hooks/useModuleCLI';
 import { useProjectScan } from './useProjectScan';
 import { StatusChecklist } from './StatusChecklist';
+import { NextStepBanner } from './NextStepBanner';
 import { CreateProjectPanel } from './CreateProjectPanel';
 import { ProjectFilesPanel } from './ProjectFilesPanel';
 import { BuildVerifyPanel } from './BuildVerifyPanel';
 import { ToolingBootstrapPanel } from './ToolingBootstrapPanel';
 import { ManifestPreview } from './ManifestPreview';
+import { deriveNextStep, type NextStepId } from './nextStep';
+import { buildCreateProjectPrompt, buildBuildVerifyPrompt } from './prompts';
 import { SurfaceCard } from '@/components/ui/SurfaceCard';
 import { MODULE_COLORS } from '@/lib/chart-colors';
 import type { SubModuleId } from '@/types/modules';
 
 export function ProjectSetupModule() {
   const projectPath = useProjectStore((s) => s.projectPath);
+  const projectName = useProjectStore((s) => s.projectName);
+  const ueVersion = useProjectStore((s) => s.ueVersion);
 
   // Ref for scan callback â€” allows hooks to call scan() without circular dependency
   const scanRef = useRef<() => void>(() => {});
@@ -81,6 +86,38 @@ export function ProjectSetupModule() {
     setupCLI.sendPrompt(`Open the folder "${projectPath}" in Windows Explorer.`);
   }, [setupCLI, projectPath]);
 
+  // The single "do this next" action, derived from scan truth. Only shown once
+  // a project path is configured (i.e. after the setup wizard).
+  const nextStep = useMemo(
+    () => (projectPath.trim() ? deriveNextStep({ missingToolCount, hasProject }) : null),
+    [projectPath, missingToolCount, hasProject],
+  );
+
+  const handleNextStepAction = useCallback(() => {
+    if (!nextStep) return;
+    if (nextStep.id === 'install-tools') {
+      handleFixAllMissing();
+    } else if (nextStep.id === 'create-project') {
+      setupCLI.sendPrompt(buildCreateProjectPrompt({ projectName, projectPath, ueVersion }));
+    } else {
+      buildCLI.sendPrompt(buildBuildVerifyPrompt({ projectName, projectPath, ueVersion, engines }));
+    }
+  }, [nextStep, handleFixAllMissing, setupCLI, buildCLI, projectName, projectPath, ueVersion, engines]);
+
+  const nextStepLoading =
+    nextStep?.id === 'install-tools' ? bootstrapCLI.isRunning :
+    nextStep?.id === 'create-project' ? setupCLI.isRunning :
+    nextStep?.id === 'build-verify' ? buildCLI.isRunning : false;
+
+  const nextStepDisabled =
+    nextStep?.id === 'install-tools' ? scanning :
+    nextStep?.id === 'create-project' ? (!projectName.trim() || engines.length === 0) :
+    nextStep?.id === 'build-verify' ? engines.length === 0 : false;
+
+  // De-emphasize every panel except the one matching the suggested next step.
+  const dimUnless = (stepId: NextStepId) =>
+    nextStep && nextStep.id !== stepId ? 'opacity-50 transition-opacity duration-base' : '';
+
   return (
     <div className="flex h-full">
       {/* Left rail â€” status checklist */}
@@ -111,41 +148,59 @@ export function ProjectSetupModule() {
           Create and configure your Unreal Engine project
         </p>
 
-        {/* Create Project */}
-        {!hasProject && projectPath.trim() && (
-          <CreateProjectPanel
-            engines={engines}
-            isRunning={setupCLI.isRunning}
-            onSendPrompt={setupCLI.sendPrompt}
+        {/* Guided next step — the one calm "do this next" for the whole module */}
+        {nextStep && (
+          <NextStepBanner
+            step={nextStep}
+            onAction={handleNextStepAction}
+            loading={nextStepLoading}
+            disabled={nextStepDisabled}
           />
         )}
 
-        {/* Project Files */}
+        {/* Create Project */}
+        {!hasProject && projectPath.trim() && (
+          <div className={dimUnless('create-project')}>
+            <CreateProjectPanel
+              engines={engines}
+              isRunning={setupCLI.isRunning}
+              onSendPrompt={setupCLI.sendPrompt}
+            />
+          </div>
+        )}
+
+        {/* Project Files — reference info, de-emphasized while a step is pending */}
         {hasProject && projectFiles.length > 0 && (
-          <ProjectFilesPanel
-            projectPath={projectPath}
-            projectFiles={projectFiles}
-            onOpenInExplorer={openInExplorer}
-          />
+          <div className={nextStep ? 'opacity-50 transition-opacity duration-base' : ''}>
+            <ProjectFilesPanel
+              projectPath={projectPath}
+              projectFiles={projectFiles}
+              onOpenInExplorer={openInExplorer}
+            />
+          </div>
         )}
 
         {/* Build & Verify */}
         {hasProject && (
-          <BuildVerifyPanel
-            engines={engines}
-            isRunning={buildCLI.isRunning}
-            onSendPrompt={buildCLI.sendPrompt}
-          />
+          <div className={dimUnless('build-verify')}>
+            <BuildVerifyPanel
+              engines={engines}
+              isRunning={buildCLI.isRunning}
+              onSendPrompt={buildCLI.sendPrompt}
+            />
+          </div>
         )}
 
         {/* Dev Environment */}
         {missingToolCount > 0 && (
-          <ToolingBootstrapPanel
-            missingToolCount={missingToolCount}
-            isRunning={bootstrapCLI.isRunning}
-            scanning={scanning}
-            onFixAllMissing={handleFixAllMissing}
-          />
+          <div className={dimUnless('install-tools')}>
+            <ToolingBootstrapPanel
+              missingToolCount={missingToolCount}
+              isRunning={bootstrapCLI.isRunning}
+              scanning={scanning}
+              onFixAllMissing={handleFixAllMissing}
+            />
+          </div>
         )}
 
         {/* Exported manifest preview */}

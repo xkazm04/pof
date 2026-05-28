@@ -159,6 +159,25 @@ ${unique.map(l => `- ${l}`).join('\n')}
 `);
   }
 
+  if (guide.cost) {
+    const { spentUsd, budgetUsd, sessions, byArea } = guide.cost;
+    const pct = budgetUsd ? Math.round((spentUsd / budgetUsd) * 100) : null;
+    const remaining = budgetUsd != null ? `$${(budgetUsd - spentUsd).toFixed(2)} remaining` : 'no cap';
+    const topAreas = Object.entries(byArea ?? {})
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 5)
+      .map(([id, usd]) => `- \`${id}\` — $${usd.toFixed(2)}`)
+      .join('\n');
+    sections.push(`---
+
+## Cost
+
+**Total spend:** $${spentUsd.toFixed(2)}${pct != null ? ` (${pct}% of $${budgetUsd!.toFixed(2)} cap)` : ''} across ${sessions} executor session${sessions === 1 ? '' : 's'} — ${remaining}.
+
+${topAreas ? `**Top spend by area:**\n${topAreas}` : ''}
+`);
+  }
+
   return sections.join('\n');
 }
 

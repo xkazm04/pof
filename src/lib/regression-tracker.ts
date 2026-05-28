@@ -1,5 +1,5 @@
 import { getDb } from './db';
-import { listSessions, getFindings } from './game-director-db';
+import { listSessions, getFindings, isTriageExcluded } from './game-director-db';
 import type { PlaytestFinding, PlaytestSession } from '@/types/game-director';
 import type {
   FindingFingerprint,
@@ -117,7 +117,9 @@ export function processSession(session: PlaytestSession): RegressionReport {
   ensureTables();
   const db = getDb();
 
-  const findings = getFindings(session.id);
+  // Findings the user marked as false-positive or ignore are excluded from
+  // fingerprinting so noise doesn't inflate regression counts.
+  const findings = getFindings(session.id).filter(f => !isTriageExcluded(f.triageStatus));
   const allSessions = listSessions();
 
   // Build session index ordered by creation date

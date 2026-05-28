@@ -9,6 +9,7 @@ import {
   ACCENT, RARITY_COLORS, LOADOUT_SLOTS, LOADOUT_SLOT_POSITIONS,
   DUMMY_ITEMS, SLOT_SUBTYPES,
 } from '../_shared/data';
+import { SpatialStashSection } from './spatial-stash/SpatialStashSection';
 import type { ItemData } from '../_shared/data';
 import type { LoadoutSlot } from '@/types/unique-tab-improvements';
 import { STATUS_SUBDUED, STATUS_LOCKED_STROKE, OVERLAY_WHITE,
@@ -102,6 +103,7 @@ export function EquipmentLoadoutSection() {
   }, [pickerSlot]);
 
   return (
+    <div className="space-y-4">
     <BlueprintPanel color={ACCENT} className="p-4">
       <div className="absolute top-0 left-0 right-0 h-[2px]" style={{ background: `linear-gradient(90deg, ${withOpacity(ACCENT, OPACITY_37)}, transparent)` }} />
       <SectionHeader icon={Shield} label="Equipment Loadout Visualizer" color={ACCENT} />
@@ -156,5 +158,8 @@ export function EquipmentLoadoutSection() {
         accent={ACCENT}
       />
     </BlueprintPanel>
+
+    <SpatialStashSection />
+    </div>
   );
 }

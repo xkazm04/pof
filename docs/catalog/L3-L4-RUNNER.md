@@ -54,5 +54,7 @@ The executors are aligned to what the PoF Bridge plugin actually does (`PofHttpS
 
 Run it **when no other UE session is busy** (the editor is single-instance; the bridge serializes through it). The `/layout` rollup carries a **"Run deferred gates"** button that POSTs the drain for the open entity and re-hydrates.
 
+**Server-side in-flight lock.** The POST handler holds a module-level set keyed by `catalogId|entityId` (or `*|*` for global drains) and rejects an overlapping request with **409** + a `drain already in flight for <scope>` message. Mirrors the worker's `tickInFlight` guard. This makes the gate runner safe regardless of how many UI surfaces (extra tabs, retried requests, direct API calls) trigger it: only one drain per scope can be live against the shared, non-reentrant editor. Released in a `finally` so a thrown drain doesn't strand the lock. Drains for *different* scopes (different entity, different catalog) are not blocked.
+
 ## Why judged by markers, not exit code
 Headless `UnrealEditor-Cmd` exits non-zero on a benign shutdown null-deref (`PillarsOfFortuneBridge` teardown) — see [`WIRING-AND-ACCEPTANCE.md`](WIRING-AND-ACCEPTANCE.md) §L3. The spawn executor parses the abslog; the bridge executor reads the plugin's structured result and sidesteps the issue entirely.

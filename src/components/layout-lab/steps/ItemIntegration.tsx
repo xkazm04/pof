@@ -15,6 +15,7 @@ export function ItemInventoryUI({ t, entity, step }: StepProps) {
 
   return (
     <StepFrame t={t} acceptance={ITEM_STEP_SPECS[step].accept(art)}
+      onFix={() => produce(entity.id, step, ITEM_STEP_SPECS[step].produce(entity))}
       panels={[
         { label: 'Inventory grid', node: (
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 6 }}>
@@ -51,6 +52,7 @@ export function ItemTooltip({ t, entity, step }: StepProps) {
 
   return (
     <StepFrame t={t} acceptance={ITEM_STEP_SPECS[step].accept(art)}
+      onFix={() => produce(entity.id, step, ITEM_STEP_SPECS[step].produce(entity))}
       panels={[
         { label: 'Tooltip card', node: (
           <div style={{ border: `1px solid ${t.line}`, borderRadius: t.glass ? 10 : 0, padding: 14, background: t.panel }}>

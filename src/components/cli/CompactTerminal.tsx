@@ -173,6 +173,10 @@ export function CompactTerminal({
       <AntiPatternWarning
         prompt={input}
         moduleId={sessionModuleId}
+        onSwitchApproach={(replacement) => {
+          setInput(replacement);
+          history.inputRef.current?.focus();
+        }}
       />
 
       <TerminalInput

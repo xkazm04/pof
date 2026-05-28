@@ -16,6 +16,7 @@ import {
   MapPin,
 } from 'lucide-react';
 import { ErrorBanner } from './ErrorBanner';
+import { StatusDot } from '@/components/ui/StatusDot';
 
 interface DirectoryEntry {
   name: string;
@@ -316,7 +317,7 @@ export function PathBrowser({ value, startFresh, onSelect, onProjectDetected, on
                 className="w-full flex items-center gap-2 px-3 py-1.5 text-left hover:bg-[#3b82f6]/5 transition-colors"
               >
                 <ChevronRight className="w-3 h-3 text-[#3b82f6] shrink-0" />
-                <span className="text-xs text-[#3b82f6] font-medium">UE {engine.version}</span>
+                <span className="text-sm text-[#3b82f6] font-medium">UE {engine.version}</span>
                 <span className="text-xs text-text-muted truncate ml-auto">{engine.path}</span>
               </button>
             ))}
@@ -338,7 +339,7 @@ export function PathBrowser({ value, startFresh, onSelect, onProjectDetected, on
                 className="w-full flex items-center gap-2 px-3 py-1.5 text-left hover:bg-accent-subtle transition-colors"
               >
                 <ChevronRight className="w-3 h-3 text-accent-setup shrink-0" />
-                <span className="text-xs text-accent-setup font-medium">{dir.label}</span>
+                <span className="text-sm text-accent-setup font-medium">{dir.label}</span>
                 <span className="text-xs text-text-muted truncate ml-auto">{dir.path}</span>
               </button>
             ))}
@@ -361,14 +362,18 @@ export function PathBrowser({ value, startFresh, onSelect, onProjectDetected, on
                 className="w-full flex items-center gap-2 px-3 py-1.5 text-left hover:bg-accent-subtle transition-colors group"
               >
                 <ChevronRight className="w-3 h-3 text-accent-setup shrink-0" />
-                <span className="text-xs text-accent-setup font-medium">{project.name}</span>
+                <span className="text-sm text-accent-setup font-medium">{project.name}</span>
                 {project.engineVersion && (
-                  <span className="text-2xs px-1.5 py-0.5 rounded bg-accent-medium text-accent-setup/80 shrink-0">
+                  <span className="text-xs px-1.5 py-0.5 rounded bg-accent-medium text-accent-setup/80 shrink-0">
                     {project.engineVersion}
                   </span>
                 )}
                 {!project.validated && (
-                  <span className="text-2xs px-1.5 py-0.5 rounded bg-amber-400/10 text-amber-400/70 shrink-0" title="Missing Config/DefaultEngine.ini â€” may be incomplete">
+                  <span
+                    className="inline-flex items-center gap-1 text-xs px-1.5 py-0.5 rounded bg-amber-400/10 text-amber-400/70 shrink-0"
+                    title="Missing Config/DefaultEngine.ini â€” may be incomplete"
+                  >
+                    <StatusDot state="warn" size="md" label="Unverified project" />
                     unverified
                   </span>
                 )}

@@ -1,144 +1,227 @@
 /**
- * Visual Verification Gate — uses Playwright to screenshot the app
- * and check for render errors after harness executor sessions.
+ * Visual Verification Gate — uses Playwright to screenshot each registered
+ * catalog page and judge whether it renders cleanly. Beyond the original
+ * blank-screen / error-boundary heuristics, the gate now performs:
  *
- * Runs as a VerificationGate of type 'visual'. The gate:
- * 1. Navigates to the app's core engine modules
- * 2. Takes screenshots of each module's unique tab
- * 3. Checks for React error boundaries, blank screens, JS errors
- * 4. Saves screenshots to .harness-ui/screenshots/<iteration>/
+ *   • Visual regression — pixel-perceptual diff against a golden baseline
+ *     (lazy-required `pixelmatch` + `pngjs`; degrades gracefully if absent).
+ *   • Accessibility — `@axe-core/playwright` scan; critical/serious WCAG
+ *     violations are recorded as gate sub-errors (also lazy-required).
  *
- * Requires: dev server running on localhost:3000
- * Requires: @playwright/test installed (already a devDep)
+ * Locators are driven by `data-testid` (see {@link VISUAL_GATE_MODULES}) instead
+ * of brittle role/text matches that drift with the UI shell. Per-module rows
+ * land in `result.json` so the gallery + harness verifier can surface them.
+ *
+ * Requires: dev server on `http://localhost:3000` and `@playwright/test`
+ * (already a devDep). `pixelmatch`/`pngjs`/`@axe-core/playwright` are optional —
+ * if not installed, the corresponding sub-check is reported as "skipped" rather
+ * than a hard failure.
  */
 
 import * as fs from 'fs';
 import * as path from 'path';
-import { exec, spawn } from 'child_process';
+import { exec } from 'child_process';
+import { VISUAL_GATE_MODULES, HARNESS_LAB_READY_TESTID } from './visual-modules';
 
 // ── Types ───────────────────────────────────────────────────────────────────
 
-interface VisualCheckResult {
+export interface VisualModuleResult {
+  slug: string;
+  label: string;
+  status: 'pass' | 'fail' | 'skipped';
+  screenshot: string;
+  /** Change vs baseline as a 0–1 fraction; `null` when no baseline existed yet. */
+  changePct: number | null;
+  /** Path to a diff overlay PNG written under this iteration. `null` when not produced. */
+  diffPath: string | null;
+  /** Critical/serious axe violations encountered in this view. */
+  a11yViolations: number;
+  /** Free-form error markers (e.g. ERROR_BOUNDARY, BLANK_SCREEN). */
+  errors: string[];
+}
+
+export interface VisualGateConfig {
+  /** If true, captures missing baselines on this run instead of failing them. Default: true. */
+  updateBaselines?: boolean;
+  /** Fraction (0–1) of pixels that may legitimately differ before a regression is flagged. Default: 0.02 = 2%. */
+  changeThreshold?: number;
+  /** Whether to run axe-core a11y scan per module (still lazy-required). Default: true. */
+  runA11y?: boolean;
+}
+
+export interface VisualGateResult {
   passed: boolean;
   modulesChecked: number;
   errors: string[];
   screenshots: string[];
   durationMs: number;
+  modules: VisualModuleResult[];
+  /** Total critical/serious WCAG violations across all modules. */
+  a11yViolations: number;
 }
 
 // ── Playwright Script ───────────────────────────────────────────────────────
 
 /**
- * Generate a standalone Playwright script that checks all core engine modules.
- * We write this to a temp file and run it via `npx playwright test` rather than
- * importing Playwright directly (avoids ESM/CJS conflicts in the harness process).
+ * Generate a standalone Playwright script for the visual gate. The script is
+ * written to a temp file and run via `npx playwright test` rather than
+ * importing Playwright directly (avoids ESM/CJS conflicts in the harness
+ * process). All optional dependencies are loaded lazily so a missing package
+ * never aborts the run.
  */
 function generateVisualCheckScript(
   screenshotDir: string,
-  baseURL: string,
+  baselineDir: string,
+  modules: readonly { slug: string; label: string }[],
+  cfg: Required<VisualGateConfig>,
 ): string {
-  // Escape backslashes for Windows paths in the generated script
   const dir = screenshotDir.replace(/\\/g, '/');
-
+  const baseDir = baselineDir.replace(/\\/g, '/');
+  const modulesJson = JSON.stringify(modules);
   return `
 import { test, expect } from '@playwright/test';
 import * as fs from 'fs';
+import * as path from 'path';
 
 const SCREENSHOT_DIR = '${dir}';
-const MODULES = [
-  'Character', 'Animation', 'Ability', 'Combat',
-  'Enemy', 'Items', 'Loot',
-];
+const BASELINE_DIR = '${baseDir}';
+const MODULES = ${modulesJson};
+const UPDATE_BASELINES = ${cfg.updateBaselines};
+const CHANGE_THRESHOLD = ${cfg.changeThreshold};
+const RUN_A11Y = ${cfg.runA11y};
 
-// Ensure screenshot dir exists
-if (!fs.existsSync(SCREENSHOT_DIR)) {
-  fs.mkdirSync(SCREENSHOT_DIR, { recursive: true });
+// Lazy-require optional deps so the gate degrades instead of crashing.
+function tryRequire(name) {
+  try { return require(name); } catch { return null; }
+}
+const pixelmatch = tryRequire('pixelmatch')?.default ?? tryRequire('pixelmatch');
+const PNG = tryRequire('pngjs')?.PNG ?? tryRequire('pngjs');
+const AxeBuilder = tryRequire('@axe-core/playwright')?.default ?? tryRequire('@axe-core/playwright');
+
+for (const d of [SCREENSHOT_DIR, BASELINE_DIR]) {
+  if (!fs.existsSync(d)) fs.mkdirSync(d, { recursive: true });
+}
+
+function diffAgainstBaseline(slug, currentPath) {
+  const baselinePath = path.join(BASELINE_DIR, slug + '.png');
+  if (!pixelmatch || !PNG) return { changePct: null, diffPath: null };
+  if (!fs.existsSync(baselinePath)) {
+    // Golden capture: this iteration becomes the baseline.
+    if (UPDATE_BASELINES) {
+      try { fs.copyFileSync(currentPath, baselinePath); } catch { /* */ }
+    }
+    return { changePct: null, diffPath: null };
+  }
+  try {
+    const cur = PNG.sync.read(fs.readFileSync(currentPath));
+    const base = PNG.sync.read(fs.readFileSync(baselinePath));
+    if (cur.width !== base.width || cur.height !== base.height) {
+      // Layout/viewport shift — record as a 100% diff so it surfaces; no overlay.
+      return { changePct: 1, diffPath: null };
+    }
+    const diff = new PNG({ width: cur.width, height: cur.height });
+    const changed = pixelmatch(cur.data, base.data, diff.data, cur.width, cur.height, { threshold: 0.1 });
+    const diffPath = path.join(SCREENSHOT_DIR, slug + '.diff.png');
+    fs.writeFileSync(diffPath, PNG.sync.write(diff));
+    return { changePct: changed / (cur.width * cur.height), diffPath };
+  } catch (e) {
+    return { changePct: null, diffPath: null };
+  }
+}
+
+async function runAxe(page) {
+  if (!AxeBuilder || !RUN_A11Y) return { violations: 0, details: [] };
+  try {
+    const result = await new AxeBuilder({ page })
+      .withTags(['wcag2a', 'wcag2aa'])
+      .analyze();
+    const flagged = (result.violations ?? []).filter((v) => v.impact === 'critical' || v.impact === 'serious');
+    return {
+      violations: flagged.length,
+      details: flagged.slice(0, 5).map((v) => ({ id: v.id, impact: v.impact, help: v.help, nodes: v.nodes.length })),
+    };
+  } catch (e) {
+    return { violations: 0, details: [] };
+  }
 }
 
 test.describe('Visual Gate', () => {
-  test.setTimeout(120000);
+  test.setTimeout(180000);
 
-  test('all core modules render without errors', async ({ page }) => {
-    const errors: string[] = [];
+  test('all registered catalogs render and pass a11y + visual-regression checks', async ({ page }) => {
+    const errors = [];
+    const moduleResults = [];
 
-    // Collect console errors
-    page.on('console', msg => {
-      if (msg.type() === 'error') {
-        errors.push(msg.text().slice(0, 200));
-      }
+    page.on('console', (msg) => {
+      if (msg.type() === 'error') errors.push('CONSOLE: ' + msg.text().slice(0, 200));
     });
+    page.on('pageerror', (err) => errors.push('PAGE ERROR: ' + err.message.slice(0, 200)));
 
-    // Collect page crashes
-    page.on('pageerror', err => {
-      errors.push('PAGE ERROR: ' + err.message.slice(0, 200));
-    });
-
-    // Navigate to app
     await page.goto('/', { waitUntil: 'networkidle', timeout: 30000 });
-
-    // Click PoF project if launcher shown
-    try {
-      const pofBtn = page.locator('button', { hasText: 'PoF' }).first();
-      await pofBtn.waitFor({ state: 'visible', timeout: 5000 });
-      await pofBtn.click();
-      await page.waitForTimeout(2000);
-    } catch { /* already past launcher */ }
-
-    // Click Core Engine in L1 sidebar
-    const coreBtn = page.getByRole('button', { name: 'Core Engine' });
-    await coreBtn.waitFor({ state: 'visible', timeout: 15000 });
-    await coreBtn.click();
-    await page.waitForTimeout(1000);
-
-    let modulesChecked = 0;
+    // Wait for the lab shell to be interactive — testid is the stable handle.
+    await page.getByTestId('${HARNESS_LAB_READY_TESTID}').waitFor({ state: 'visible', timeout: 20000 });
 
     for (const mod of MODULES) {
-      // Click module in sidebar
-      const moduleBtn = page.locator('nav button, nav [role="button"], nav div[class*="cursor"]')
-        .filter({ hasText: mod }).first();
+      const modErrors = [];
+      const testId = 'harness-catalog-' + mod.slug;
+      const screenshot = SCREENSHOT_DIR + '/' + mod.slug + '.png';
 
       try {
-        await moduleBtn.waitFor({ state: 'visible', timeout: 5000 });
-        await moduleBtn.click();
-        await page.waitForTimeout(1500);
+        await page.getByTestId(testId).click({ timeout: 5000 });
+        await page.waitForTimeout(800);
       } catch {
-        errors.push('MODULE_NOT_FOUND: ' + mod);
+        moduleResults.push({
+          slug: mod.slug, label: mod.label, status: 'skipped',
+          screenshot, changePct: null, diffPath: null, a11yViolations: 0,
+          errors: ['MODULE_NOT_FOUND'],
+        });
+        errors.push('MODULE_NOT_FOUND: ' + mod.slug);
         continue;
       }
 
-      // Check for React error boundaries
+      // Heuristic checks — error boundaries / blank screen.
       const errorBoundary = page.locator('[class*="error"], [data-error], text="Something went wrong"');
-      const hasError = await errorBoundary.count() > 0;
-      if (hasError) {
-        errors.push('ERROR_BOUNDARY: ' + mod);
-      }
-
-      // Check page is not blank (has at least some content)
+      if ((await errorBoundary.count()) > 0) modErrors.push('ERROR_BOUNDARY');
       const bodyText = await page.locator('main, [role="main"], #__next').first().innerText().catch(() => '');
-      if (bodyText.trim().length < 10) {
-        errors.push('BLANK_SCREEN: ' + mod);
+      if (bodyText.trim().length < 10) modErrors.push('BLANK_SCREEN');
+
+      await page.screenshot({ path: screenshot, fullPage: false });
+
+      // Visual regression diff (lazy-required deps; null when unavailable).
+      const { changePct, diffPath } = diffAgainstBaseline(mod.slug, screenshot);
+      if (changePct != null && changePct > CHANGE_THRESHOLD) {
+        modErrors.push('VISUAL_REGRESSION:' + (changePct * 100).toFixed(2) + '%');
       }
 
-      // Screenshot
-      await page.screenshot({
-        path: SCREENSHOT_DIR + '/' + mod.toLowerCase() + '.png',
-        fullPage: false,
-      });
+      // Accessibility scan.
+      const axe = await runAxe(page);
+      if (axe.violations > 0) modErrors.push('A11Y_VIOLATIONS:' + axe.violations);
 
-      modulesChecked++;
+      moduleResults.push({
+        slug: mod.slug, label: mod.label,
+        status: modErrors.length === 0 ? 'pass' : 'fail',
+        screenshot, changePct, diffPath,
+        a11yViolations: axe.violations,
+        errors: modErrors,
+      });
+      errors.push(...modErrors.map((e) => e + ': ' + mod.slug));
     }
 
-    // Write results file for harness to read
+    const a11yTotal = moduleResults.reduce((s, m) => s + m.a11yViolations, 0);
     const result = {
       passed: errors.length === 0,
-      modulesChecked,
+      modulesChecked: moduleResults.length,
       errors,
+      screenshots: moduleResults.map((m) => m.screenshot),
+      modules: moduleResults,
+      a11yViolations: a11yTotal,
     };
     fs.writeFileSync(SCREENSHOT_DIR + '/result.json', JSON.stringify(result, null, 2));
 
-    // Assert no critical errors (error boundaries, blank screens)
-    const criticalErrors = errors.filter(e =>
-      e.startsWith('ERROR_BOUNDARY') || e.startsWith('BLANK_SCREEN') || e.startsWith('PAGE ERROR')
+    // Hard fail only on the original critical heuristics — visual + a11y are
+    // recorded as sub-errors so we don't black-hole the iteration on a tweak.
+    const criticalErrors = errors.filter((e) =>
+      e.startsWith('ERROR_BOUNDARY') || e.startsWith('BLANK_SCREEN') || e.startsWith('PAGE ERROR'),
     );
     expect(criticalErrors).toHaveLength(0);
   });
@@ -149,57 +232,66 @@ test.describe('Visual Gate', () => {
 // ── Public API ──────────────────────────────────────────────────────────────
 
 /**
- * Run the visual verification gate.
- * Returns a result compatible with the harness verifier.
+ * Run the visual verification gate. Captures + diffs baselines, runs axe scans,
+ * and writes a structured `result.json` consumable by both the harness verifier
+ * and the gallery UI.
  */
 export async function runVisualGate(
   projectPath: string,
   statePath: string,
   iteration: number,
-): Promise<{ passed: boolean; output: string; durationMs: number; errors?: Array<{ message: string }> }> {
+  options: VisualGateConfig = {},
+): Promise<{
+  passed: boolean;
+  output: string;
+  durationMs: number;
+  errors?: Array<{ message: string }>;
+  result?: VisualGateResult;
+}> {
+  const cfg: Required<VisualGateConfig> = {
+    updateBaselines: options.updateBaselines ?? true,
+    changeThreshold: options.changeThreshold ?? 0.02,
+    runA11y: options.runA11y ?? true,
+  };
   const start = Date.now();
   const screenshotDir = path.join(statePath, 'screenshots', String(iteration));
+  const baselineDir = path.join(statePath, 'screenshots', 'baseline');
   const scriptPath = path.join(statePath, '_visual-gate.spec.ts');
-  const baseURL = 'http://localhost:3000';
 
-  // Write the Playwright test script
-  const script = generateVisualCheckScript(screenshotDir, baseURL);
   fs.mkdirSync(path.dirname(scriptPath), { recursive: true });
-  fs.writeFileSync(scriptPath, script);
+  fs.writeFileSync(
+    scriptPath,
+    generateVisualCheckScript(screenshotDir, baselineDir, VISUAL_GATE_MODULES, cfg),
+  );
 
-  // Run via npx playwright test
   return new Promise((resolve) => {
     const proc = exec(
-      `npx playwright test "${scriptPath}" --reporter=line --timeout=120000`,
-      {
-        cwd: projectPath,
-        timeout: 180_000,
-        maxBuffer: 5 * 1024 * 1024,
-      },
+      `npx playwright test "${scriptPath}" --reporter=line --timeout=180000`,
+      { cwd: projectPath, timeout: 240_000, maxBuffer: 5 * 1024 * 1024 },
       (error, stdout, stderr) => {
         const durationMs = Date.now() - start;
         const combinedOutput = [stdout, stderr].filter(Boolean).join('\n');
 
-        // Try to read the result file
         const resultPath = path.join(screenshotDir, 'result.json');
-        let result: VisualCheckResult | null = null;
+        let parsed: VisualGateResult | null = null;
         try {
-          if (fs.existsSync(resultPath)) {
-            result = JSON.parse(fs.readFileSync(resultPath, 'utf-8'));
-          }
-        } catch { /* ignore parse errors */ }
+          if (fs.existsSync(resultPath)) parsed = JSON.parse(fs.readFileSync(resultPath, 'utf-8'));
+        } catch { /* parse error → fall through */ }
 
-        if (result) {
+        if (parsed) {
+          const regressed = parsed.modules.filter((m) => m.changePct != null && m.changePct > cfg.changeThreshold);
+          const a11y = parsed.a11yViolations;
+          const summary = `Visual gate: ${parsed.modulesChecked} modules, ${parsed.errors.length} errors`
+            + (regressed.length ? `, ${regressed.length} regressions` : '')
+            + (a11y ? `, ${a11y} a11y violations` : '');
           resolve({
-            passed: result.passed,
-            output: `Visual check: ${result.modulesChecked} modules, ${result.errors.length} errors. Screenshots: ${screenshotDir}`,
+            passed: parsed.passed,
+            output: summary + ` (screenshots: ${screenshotDir})`,
             durationMs,
-            errors: result.errors.length > 0
-              ? result.errors.map(e => ({ message: e }))
-              : undefined,
+            errors: parsed.errors.length > 0 ? parsed.errors.map((e) => ({ message: e })) : undefined,
+            result: parsed,
           });
         } else {
-          // Playwright itself failed (maybe no dev server)
           const passed = error === null;
           resolve({
             passed,
@@ -212,17 +304,13 @@ export async function runVisualGate(
         }
       },
     );
-
-    // Safety kill
-    setTimeout(() => {
-      try { proc.kill('SIGTERM'); } catch { /* already dead */ }
-    }, 181_000);
+    setTimeout(() => { try { proc.kill('SIGTERM'); } catch { /* */ } }, 241_000);
   });
 }
 
 /**
  * Create a visual VerificationGate config for the harness.
- * This is advisory (not required) — won't block progress but will record issues.
+ * Advisory by default — captures issues without blocking the loop.
  */
 export function createVisualGate(): {
   name: string;
@@ -230,9 +318,5 @@ export function createVisualGate(): {
   required: boolean;
   command?: string;
 } {
-  return {
-    name: 'visual-check',
-    type: 'visual',
-    required: false, // Advisory — captures issues but doesn't block
-  };
+  return { name: 'visual-check', type: 'visual', required: false };
 }

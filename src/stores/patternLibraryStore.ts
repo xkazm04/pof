@@ -8,12 +8,18 @@ import type {
   PatternCategory,
   PatternLibraryDashboard,
   PatternSuggestion,
+  PatternAuthorInput,
+  PatternMetaPatch,
+  AntiPattern,
+  AntiPatternWarning,
 } from '@/types/pattern-library';
 
 const EMPTY_PATTERNS: ImplementationPattern[] = [];
 const EMPTY_SUGGESTIONS: PatternSuggestion[] = [];
 const EMPTY_MODULES: { moduleId: SubModuleId; patternCount: number }[] = [];
 const EMPTY_CATEGORIES: { category: PatternCategory; count: number }[] = [];
+const EMPTY_ANTI_PATTERNS: AntiPattern[] = [];
+const EMPTY_WARNINGS: AntiPatternWarning[] = [];
 
 interface PatternLibraryState {
   patterns: ImplementationPattern[];
@@ -25,8 +31,15 @@ interface PatternLibraryState {
 
   suggestions: PatternSuggestion[];
 
+  antiPatterns: AntiPattern[];
+  /** Warnings produced by the most recent pre-dispatch check. */
+  lastDispatchWarnings: AntiPatternWarning[];
+  /** Module the last dispatch check ran against (for surfacing context). */
+  lastDispatchModuleId: SubModuleId | null;
+
   isLoading: boolean;
   isExtracting: boolean;
+  isExtractingAnti: boolean;
   error: string | null;
 
   searchQuery: string;
@@ -38,6 +51,17 @@ interface PatternLibraryState {
   searchPatterns: () => Promise<void>;
   extractPatterns: () => Promise<{ extracted: number; updated: number }>;
   fetchSuggestions: (moduleId: SubModuleId, label?: string) => Promise<void>;
+
+  fetchAntiPatterns: () => Promise<void>;
+  extractAntiPatterns: () => Promise<{ extracted: number; updated: number }>;
+  /** Match a prompt against trigger keywords and record warnings (non-blocking). */
+  checkPromptBeforeDispatch: (prompt: string, moduleId?: SubModuleId) => Promise<AntiPatternWarning[]>;
+  clearDispatchWarnings: () => void;
+
+  authorPattern: (input: PatternAuthorInput) => Promise<ImplementationPattern | null>;
+  verifyPattern: (id: string, verified: boolean, verifiedBy?: string) => Promise<void>;
+  pinPattern: (id: string, pinned: boolean) => Promise<void>;
+  updatePattern: (id: string, patch: PatternMetaPatch) => Promise<void>;
 
   setSearchQuery: (q: string) => void;
   setModuleFilter: (m: SubModuleId | null) => void;
@@ -54,8 +78,12 @@ export const usePatternLibraryStore = create<PatternLibraryState>()(
     topModules: EMPTY_MODULES,
     categories: EMPTY_CATEGORIES,
     suggestions: EMPTY_SUGGESTIONS,
+    antiPatterns: EMPTY_ANTI_PATTERNS,
+    lastDispatchWarnings: EMPTY_WARNINGS,
+    lastDispatchModuleId: null,
     isLoading: false,
     isExtracting: false,
+    isExtractingAnti: false,
     error: null,
     searchQuery: '',
     moduleFilter: null,
@@ -78,6 +106,8 @@ export const usePatternLibraryStore = create<PatternLibraryState>()(
           categories: data.categories,
           isLoading: false,
         });
+        // Piggyback the anti-pattern load so the new tab paints with the rest.
+        get().fetchAntiPatterns();
       } catch (err) {
         set({
           isLoading: false,
@@ -143,6 +173,138 @@ export const usePatternLibraryStore = create<PatternLibraryState>()(
         // Silent fail for suggestions
       }
     },
+
+    authorPattern: async (input) => {
+      try {
+        const { pattern } = await apiFetch<{ pattern: ImplementationPattern }>(
+          '/api/pattern-library',
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action: 'author', input }),
+          },
+        );
+        await get().fetchDashboard();
+        return pattern;
+      } catch (err) {
+        set({ error: err instanceof Error ? err.message : 'Failed to author pattern' });
+        return null;
+      }
+    },
+
+    verifyPattern: async (id, verified, verifiedBy) => {
+      // Optimistic: flip the flag locally first, then reconcile via fetch.
+      set({
+        patterns: get().patterns.map((p) =>
+          p.id === id ? { ...p, verified, verifiedAt: verified ? new Date().toISOString() : undefined, verifiedBy: verified ? verifiedBy : undefined } : p,
+        ),
+      });
+      try {
+        await apiFetch('/api/pattern-library', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'verify', id, verified, verifiedBy }),
+        });
+        await get().fetchDashboard();
+      } catch (err) {
+        set({ error: err instanceof Error ? err.message : 'Failed to verify pattern' });
+        await get().fetchDashboard();
+      }
+    },
+
+    pinPattern: async (id, pinned) => {
+      set({
+        patterns: get().patterns.map((p) => (p.id === id ? { ...p, pinned } : p)),
+      });
+      try {
+        await apiFetch('/api/pattern-library', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'pin', id, pinned }),
+        });
+        await get().fetchDashboard();
+      } catch (err) {
+        set({ error: err instanceof Error ? err.message : 'Failed to pin pattern' });
+        await get().fetchDashboard();
+      }
+    },
+
+    updatePattern: async (id, patch) => {
+      try {
+        const { pattern } = await apiFetch<{ pattern: ImplementationPattern }>(
+          '/api/pattern-library',
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action: 'update', id, patch }),
+          },
+        );
+        set({
+          patterns: get().patterns.map((p) => (p.id === id ? pattern : p)),
+        });
+      } catch (err) {
+        set({ error: err instanceof Error ? err.message : 'Failed to update pattern' });
+      }
+    },
+
+    fetchAntiPatterns: async () => {
+      try {
+        const data = await apiFetch<{ antiPatterns: AntiPattern[] }>(
+          '/api/pattern-library?action=anti-patterns',
+        );
+        set({ antiPatterns: data.antiPatterns });
+      } catch (err) {
+        set({ error: err instanceof Error ? err.message : 'Failed to load anti-patterns' });
+      }
+    },
+
+    extractAntiPatterns: async () => {
+      set({ isExtractingAnti: true, error: null });
+      try {
+        const result = await apiFetch<{ extracted: number; updated: number }>(
+          '/api/pattern-library',
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action: 'extract-anti' }),
+          },
+        );
+        set({ isExtractingAnti: false });
+        get().fetchAntiPatterns();
+        return result;
+      } catch (err) {
+        set({
+          isExtractingAnti: false,
+          error: err instanceof Error ? err.message : 'Anti-pattern extraction failed',
+        });
+        return { extracted: 0, updated: 0 };
+      }
+    },
+
+    checkPromptBeforeDispatch: async (prompt, moduleId) => {
+      const trimmed = prompt.trim();
+      if (trimmed.length < 20) {
+        set({ lastDispatchWarnings: EMPTY_WARNINGS, lastDispatchModuleId: moduleId ?? null });
+        return EMPTY_WARNINGS;
+      }
+      try {
+        const params = new URLSearchParams({ action: 'check-prompt', prompt: trimmed });
+        if (moduleId) params.set('moduleId', moduleId);
+        const data = await apiFetch<{ warnings: AntiPatternWarning[] }>(
+          `/api/pattern-library?${params}`,
+        );
+        set({
+          lastDispatchWarnings: data.warnings,
+          lastDispatchModuleId: moduleId ?? null,
+        });
+        return data.warnings;
+      } catch {
+        return EMPTY_WARNINGS;
+      }
+    },
+
+    clearDispatchWarnings: () =>
+      set({ lastDispatchWarnings: EMPTY_WARNINGS, lastDispatchModuleId: null }),
 
     setSearchQuery: (q) => set({ searchQuery: q }),
     setModuleFilter: (m) => set({ moduleFilter: m }),

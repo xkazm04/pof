@@ -4,6 +4,7 @@ import { useCallback } from 'react';
 import { Rocket } from 'lucide-react';
 import { useProjectStore } from '@/stores/projectStore';
 import type { DetectedEngine } from './useProjectScan';
+import { buildCreateProjectPrompt } from './prompts';
 import { SurfaceCard } from '@/components/ui/SurfaceCard';
 import { Button } from '@/components/ui/Button';
 
@@ -19,28 +20,7 @@ export function CreateProjectPanel({ engines, isRunning, onSendPrompt }: CreateP
   const ueVersion = useProjectStore((s) => s.ueVersion);
 
   const handleCreate = useCallback(() => {
-    const majorMinor = ueVersion.split('.').slice(0, 2).join('.');
-
-    const prompt = `Create a new Unreal Engine ${ueVersion} C++ project in the directory "${projectPath}". The project is called "${projectName}".
-
-IMPORTANT: First, web search for "Unreal Engine ${ueVersion} C++ project setup structure" to confirm the correct file structure, Build.cs format, and Target.cs settings for UE ${ueVersion}.
-
-CRITICAL VERSION SETTINGS — follow these exactly to avoid version mismatch errors:
-- In the .uproject file, set "EngineAssociation": "${majorMinor}" (major.minor ONLY — the engine launcher registers as "${majorMinor}", using "${ueVersion}" will cause a version mismatch)
-- In Target.cs files, use DefaultBuildSettings = BuildSettingsVersion.Latest and IncludeOrderVersion = EngineIncludeOrderVersion.Latest (do NOT use version-specific values like V5 or Unreal5_5 — they may not exist in all ${majorMinor}.x builds and cause compile errors)
-- Set "FileVersion": 3 in the .uproject
-
-Create all files directly inside "${projectPath}" (this IS the project root, do NOT create a subdirectory):
-1. ${projectName}.uproject
-2. Source/${projectName}.Target.cs (TargetType.Game)
-3. Source/${projectName}Editor.Target.cs (TargetType.Editor)
-4. Source/${projectName}/${projectName}.Build.cs (PCHUsage = UseExplicitOrSharedPCHs, deps: Core, CoreUObject, Engine, InputCore, EnhancedInput)
-5. Source/${projectName}/${projectName}GameMode.h and .cpp
-6. Source/${projectName}/${projectName}.h and .cpp (module impl with IMPLEMENT_PRIMARY_GAME_MODULE)
-7. Config/DefaultEngine.ini and Config/DefaultGame.ini
-
-Enable the EnhancedInput plugin in the .uproject.`;
-    onSendPrompt(prompt);
+    onSendPrompt(buildCreateProjectPrompt({ projectName, projectPath, ueVersion }));
   }, [projectName, projectPath, ueVersion, onSendPrompt]);
 
   return (

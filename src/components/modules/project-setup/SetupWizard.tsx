@@ -1,10 +1,11 @@
 ﻿'use client';
 
 import { useState, useEffect, useMemo } from 'react';
-import { Rocket, Plus, FolderOpen, Loader2, Info, AlertTriangle } from 'lucide-react';
+import { Rocket, Plus, FolderOpen, Loader2 } from 'lucide-react';
 import { useProjectStore } from '@/stores/projectStore';
 import { apiFetch } from '@/lib/api-utils';
 import { slugifyForTestId } from '@/lib/test-ids';
+import { StatusDot } from '@/components/ui/StatusDot';
 
 const UE_VERSIONS = [
   { value: '5.5.4', label: '5.5', note: 'best AI coverage' },
@@ -112,8 +113,8 @@ export function SetupWizard() {
         <div className="flex items-center justify-center gap-3 mb-6">
           <Rocket className="w-7 h-7 text-accent-setup" />
           <div>
-            <h1 className="text-xl font-bold text-text">POF</h1>
-            <p className="text-xs text-text-muted">Power of Fun</p>
+            <h1 className="text-2xl font-bold text-text">POF</h1>
+            <p className="text-sm text-text-muted">Power of Fun</p>
           </div>
         </div>
 
@@ -136,7 +137,7 @@ export function SetupWizard() {
         </div>
 
         {/* Version hint */}
-        <p className="text-center text-xs text-text-muted/60 mb-5">
+        <p className="text-center text-sm text-text-muted mb-5">
           {ueVersion.startsWith('5.5')
             ? 'Full AI training data'
             : `Web search for UE ${selectedMajorMinor} API changes`}
@@ -147,7 +148,7 @@ export function SetupWizard() {
           <button
             data-testid="pof-setup-wizard-tab-existing"
             onClick={() => setMode('existing')}
-            className={`flex-1 flex items-center justify-center gap-1.5 py-2 text-xs font-medium transition-colors ${
+            className={`flex-1 flex items-center justify-center gap-1.5 py-2 text-sm font-medium transition-colors ${
               mode === 'existing'
                 ? 'text-accent-setup border-b-2 border-accent-setup'
                 : 'text-text-muted hover:text-text'
@@ -159,7 +160,7 @@ export function SetupWizard() {
           <button
             data-testid="pof-setup-wizard-tab-fresh"
             onClick={() => setMode('fresh')}
-            className={`flex-1 flex items-center justify-center gap-1.5 py-2 text-xs font-medium transition-colors ${
+            className={`flex-1 flex items-center justify-center gap-1.5 py-2 text-sm font-medium transition-colors ${
               mode === 'fresh'
                 ? 'text-accent-setup border-b-2 border-accent-setup'
                 : 'text-text-muted hover:text-text'
@@ -200,9 +201,12 @@ export function SetupWizard() {
                       </span>
                     )}
                     {!project.validated && (
-                      <span title="Missing Config â€” may be incomplete">
-                        <AlertTriangle className="w-3.5 h-3.5 text-amber-400/70 shrink-0" />
-                      </span>
+                      <StatusDot
+                        state="warn"
+                        size="md"
+                        title="Missing Config â€” may be incomplete"
+                        label="Unverified project"
+                      />
                     )}
                     <Rocket className="w-3.5 h-3.5 text-text-muted group-hover:text-accent-setup opacity-0 group-hover:opacity-100 transition-all shrink-0" />
                   </button>
@@ -237,7 +241,7 @@ export function SetupWizard() {
 
             {/* Total project count across all versions */}
             {!loading && projects.length > 0 && (
-              <p className="text-xs text-text-muted/50 text-center mt-3">
+              <p className="text-xs text-text-muted text-center mt-3">
                 {filteredProjects.length} of {projects.length} projects match UE {selectedMajorMinor}
               </p>
             )}
@@ -269,7 +273,7 @@ export function SetupWizard() {
                   {nameError}
                 </p>
               ) : (
-                <p className="text-xs text-text-muted/60 mt-1.5">
+                <p className="text-xs text-text-muted mt-1.5">
                   {newName.trim()
                     ? `${DEFAULT_PROJECTS_DIR}\\${newName.trim()}`
                     : DEFAULT_PROJECTS_DIR}

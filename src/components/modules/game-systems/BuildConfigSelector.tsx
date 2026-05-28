@@ -18,6 +18,7 @@ import { CookSettingsPanel } from './CookSettingsPanel';
 import { CookProgress } from './CookProgress';
 import { PreflightPanel, type PreflightStatusSummary } from './PreflightPanel';
 import { SmokeTest, type SmokeTestRequest } from './SmokeTest';
+import { NightlyBuildScheduler } from './NightlyBuildScheduler';
 import { MODULE_COLORS, ACCENT_VIOLET, STATUS_ERROR } from '@/lib/chart-colors';
 
 const PLATFORM_ICONS: Record<PlatformId, typeof Monitor> = {
@@ -332,6 +333,9 @@ export function BuildConfigSelector() {
 
       {/* Post-cook runnable-exe smoke-test */}
       <SmokeTest key={smokeRequest?.exePath ?? 'idle'} request={smokeRequest} />
+
+      {/* Unattended nightly builds (preflight → cook → smoke → size-budget, skip-if-unchanged) */}
+      <NightlyBuildScheduler profiles={profiles} />
 
       {/* Profile editor modal */}
       <AnimatePresence>

@@ -49,6 +49,13 @@ export interface InheritanceResult {
   crossoverBonus: number;
 }
 
+/** Lightweight pointer to a parent genome for lineage tracking */
+export interface ItemGenomeParentRef {
+  id: string;
+  name: string;
+  color: string;
+}
+
 /** Complete Item Genome — portable, shareable */
 export interface ItemGenome {
   /** Unique id for this genome instance */
@@ -79,6 +86,10 @@ export interface ItemGenome {
   evolution?: EvolutionState;
   /** Optional tags for filtering */
   tags?: string[];
+  /** Built-in preset (cannot be deleted) */
+  isPreset?: boolean;
+  /** For bred offspring — parents that produced this genome */
+  parents?: ItemGenomeParentRef[];
 }
 
 /** Affix definition used in the DNA-biased roller */

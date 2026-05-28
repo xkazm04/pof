@@ -33,7 +33,7 @@ function SettingTooltip({ lines }: { lines: string[] }) {
 
   return (
     <span
-      className="relative inline-flex ml-1 cursor-help"
+      className="focus-ring rounded-full relative inline-flex ml-1 cursor-help"
       onMouseEnter={show}
       onMouseLeave={hide}
       onFocus={show}
@@ -144,7 +144,7 @@ export function NewSessionPanel({ onCreated, createSession }: NewSessionPanelPro
           value={name}
           onChange={(e) => setName(e.target.value)}
           placeholder="e.g. Pre-alpha combat test"
-          className="w-full px-3 py-2.5 bg-surface border border-border rounded-lg text-xs text-text placeholder-text-muted outline-none focus:border-border-bright transition-colors"
+          className="focus-ring-inset w-full px-3 py-2.5 bg-surface border border-border rounded-lg text-sm text-text placeholder-text-muted outline-none focus:border-border-bright transition-colors"
         />
       </motion.div>
 
@@ -164,9 +164,13 @@ export function NewSessionPanel({ onCreated, createSession }: NewSessionPanelPro
             value={buildPath}
             onChange={(e) => setBuildPath(e.target.value)}
             placeholder="C:\MyGame\Saved\StagedBuilds\Windows"
-            className="flex-1 px-3 py-2.5 bg-surface border border-border rounded-lg text-xs text-text placeholder-text-muted outline-none focus:border-border-bright transition-colors font-mono"
+            className="focus-ring-inset flex-1 px-3 py-2.5 bg-surface border border-border rounded-lg text-sm text-text placeholder-text-muted outline-none focus:border-border-bright transition-colors font-mono"
           />
-          <button className="px-3 py-2.5 bg-surface border border-border rounded-lg text-text-muted hover:text-text transition-colors">
+          <button
+            type="button"
+            aria-label="Browse for build folder"
+            className="focus-ring px-3 py-2.5 bg-surface border border-border rounded-lg text-text-muted hover:text-text transition-colors"
+          >
             <FolderOpen className="w-4 h-4" />
           </button>
         </div>
@@ -192,8 +196,9 @@ export function NewSessionPanel({ onCreated, createSession }: NewSessionPanelPro
               <button
                 key={cat.id}
                 onClick={() => toggleCategory(cat.id)}
+                aria-pressed={isSelected}
                 className={`
-                  flex flex-col items-center gap-1.5 px-3 py-3 rounded-lg border text-center transition-all
+                  focus-ring flex flex-col items-center gap-1.5 px-3 py-3 rounded-lg border text-center transition-all
                   ${isSelected
                     ? ''
                     : 'border-border bg-surface-deep hover:border-border-bright hover:bg-surface'
@@ -205,10 +210,10 @@ export function NewSessionPanel({ onCreated, createSession }: NewSessionPanelPro
                   className="w-4 h-4"
                   style={{ color: isSelected ? ACCENT : 'var(--text-muted)' }}
                 />
-                <span className={`text-xs font-medium ${isSelected ? 'text-text' : 'text-text-muted'}`}>
+                <span className={`text-sm font-medium ${isSelected ? 'text-text' : 'text-text-muted'}`}>
                   {cat.label}
                 </span>
-                <span className="text-2xs text-text-muted leading-tight">{cat.description}</span>
+                <span className="text-xs text-text-muted leading-tight">{cat.description}</span>
               </button>
             );
           })}
@@ -272,8 +277,9 @@ export function NewSessionPanel({ onCreated, createSession }: NewSessionPanelPro
           </label>
           <button
             onClick={() => setAggressiveMode(!aggressiveMode)}
+            aria-pressed={aggressiveMode}
             className={`
-              w-full px-3 py-2 rounded-lg text-xs font-medium transition-all border
+              focus-ring w-full px-3 py-2 rounded-lg text-sm font-medium transition-all border
               ${aggressiveMode
                 ? ''
                 : 'bg-surface-deep border-border text-text-muted'
@@ -296,7 +302,7 @@ export function NewSessionPanel({ onCreated, createSession }: NewSessionPanelPro
         <button
           onClick={handleCreate}
           disabled={creating || !name.trim() || selectedCategories.size === 0}
-          className="flex items-center justify-center gap-2 w-full px-4 py-3 rounded-xl text-xs font-semibold transition-all disabled:opacity-50"
+          className="focus-ring flex items-center justify-center gap-2 w-full px-4 py-3 rounded-xl text-sm font-semibold transition-all disabled:opacity-50"
           style={{
             backgroundColor: `${ACCENT}18`,
             color: ACCENT,

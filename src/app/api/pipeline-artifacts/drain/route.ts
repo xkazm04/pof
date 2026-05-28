@@ -7,6 +7,14 @@ function parseTier(v: string | null | undefined): GateTier | undefined {
   return v === 'L3' || v === 'L4' ? v : undefined;
 }
 
+// Module-level in-flight set, scoped per catalogId|entityId (global key when both omitted).
+// The drain talks to a shared, non-reentrant UE editor — overlapping requests would clobber
+// each other and produce garbage verdicts. Mirrors the worker's tickInFlight guard.
+const drainInFlight = new Set<string>();
+const drainKey = (f: DrainFilter) => `${f.catalogId ?? '*'}|${f.entityId ?? '*'}`;
+/** Test-only: clear the in-flight set between cases. */
+export function __resetDrainInFlight() { drainInFlight.clear(); }
+
 /** GET /api/pipeline-artifacts/drain?tier=L3[&catalogId=&entityId=] → the deferred jobs queue. */
 export async function GET(req: NextRequest) {
   try {
@@ -39,16 +47,28 @@ export async function POST(req: NextRequest) {
       ...(body.catalogId ? { catalogId: body.catalogId } : {}),
       ...(body.entityId ? { entityId: body.entityId } : {}),
     };
-    const executors = buildExecutors({
-      executor: body.executor === 'spawn' ? 'spawn' : 'bridge',
-      ...(body.port ? { port: body.port } : {}),
-      ...(body.allowSpawn ? { allowSpawn: true } : {}),
-      ...(body.screenshotPath ? { screenshotPath: body.screenshotPath } : {}),
-      ...(body.visualMode ? { visualMode: body.visualMode } : {}),
-      appOrigin: getOriginFromRequest(req),
-    });
-    const summary = await drainAll(executors, filter, body.limit != null ? { limit: body.limit } : undefined);
-    return apiSuccess(summary);
+    const key = drainKey(filter);
+    if (drainInFlight.has(key)) {
+      const scope = filter.catalogId || filter.entityId
+        ? `${filter.catalogId ?? '*'}/${filter.entityId ?? '*'}`
+        : 'global';
+      return apiError(`drain already in flight for ${scope} — refusing to overlap (UE editor is non-reentrant)`, 409);
+    }
+    drainInFlight.add(key);
+    try {
+      const executors = buildExecutors({
+        executor: body.executor === 'spawn' ? 'spawn' : 'bridge',
+        ...(body.port ? { port: body.port } : {}),
+        ...(body.allowSpawn ? { allowSpawn: true } : {}),
+        ...(body.screenshotPath ? { screenshotPath: body.screenshotPath } : {}),
+        ...(body.visualMode ? { visualMode: body.visualMode } : {}),
+        appOrigin: getOriginFromRequest(req),
+      });
+      const summary = await drainAll(executors, filter, body.limit != null ? { limit: body.limit } : undefined);
+      return apiSuccess(summary);
+    } finally {
+      drainInFlight.delete(key);
+    }
   } catch (e) {
     return apiError(e instanceof Error ? e.message : 'drain POST failed', 500);
   }

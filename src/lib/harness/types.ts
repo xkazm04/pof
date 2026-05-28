@@ -201,6 +201,11 @@ export interface GameBuildGuide {
   learnings: string[];
   /** Prerequisites and setup instructions */
   prerequisites: string[];
+  /**
+   * Snapshot of the cost governor at the time the guide was last written.
+   * Optional so legacy guides without cost tracking still parse.
+   */
+  cost?: HarnessCostTotals;
 }
 
 // ── Harness Config ──────────────────────────────────────────────────────────
@@ -236,6 +241,39 @@ export interface HarnessConfig {
    * When set, the executor tells Claude to apply this theme to all implementations.
    */
   themeDirective?: string;
+  /**
+   * Optional hard ceiling on accumulated executor spend in USD. When the running
+   * total reaches the cap (or projected next-session spend would cross it), the
+   * orchestrator emits `harness:paused` and stops launching new pool sessions.
+   * Unset = no cap (legacy behaviour).
+   */
+  budgetUsd?: number;
+  /**
+   * Opt-in git checkpointing. When true, the orchestrator commits the working
+   * tree onto a dedicated `harness/<runId>` branch (tagged per areaId) after an
+   * area passes its required gates, and `git reset --hard`s back to the last
+   * green checkpoint before promoting-with-gaps. Default false. Assumes
+   * sequential execution (maxConcurrent = 1) — a hard reset would clobber a
+   * concurrent area's in-flight work.
+   */
+  checkpoint?: boolean;
+}
+
+/**
+ * Running spend tally written to `cost.json` alongside the plan, so a paused
+ * run resumes with its previous cumulative total instead of restarting at zero.
+ */
+export interface HarnessCostTotals {
+  /** Sum of all executor session `costUsd` values reported so far. */
+  spentUsd: number;
+  /** Per-area attribution — sums of costUsd grouped by `areaId`. */
+  byArea: Record<string, number>;
+  /** Number of sessions that contributed to `spentUsd`. */
+  sessions: number;
+  /** Configured ceiling (mirrored here so reloads + the guide are self-describing). */
+  budgetUsd: number | null;
+  /** Whether the governor has stopped launches because the cap was hit. */
+  paused: boolean;
 }
 
 // ── Orchestrator Events ─────────────────────────────────────────────────────
@@ -248,6 +286,8 @@ export type HarnessEvent =
   | { type: 'harness:verifying'; iteration: number; areaId: string }
   | { type: 'harness:area-completed'; areaId: string; iteration: number }
   | { type: 'harness:area-failed'; areaId: string; iteration: number; reason: string }
+  | { type: 'harness:checkpoint'; areaId: string; iteration: number; sha: string }
+  | { type: 'harness:rollback'; areaId: string; iteration: number; toSha: string }
   | { type: 'harness:guide-updated'; step: GuideStep }
   | { type: 'harness:learning'; learning: string }
   | { type: 'harness:completed'; plan: GamePlan; guide: GameBuildGuide }

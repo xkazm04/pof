@@ -3,8 +3,9 @@
 import { useEffect, useMemo, useState, useCallback } from 'react';
 import {
   BookOpen, Search, Filter, ChevronDown, ChevronRight,
-  Sparkles, TrendingUp, Users, Clock, AlertTriangle,
-  RefreshCw, Code, Tag, Layers,
+  Sparkles, TrendingUp, Users, AlertTriangle,
+  RefreshCw, Code, Tag, Layers, ShieldAlert,
+  CheckCircle2, Pin, Edit3, Plus, X, User,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { SurfaceCard } from '@/components/ui/SurfaceCard';
@@ -13,10 +14,18 @@ import { Badge } from '@/components/ui/Badge';
 import { ProgressRing } from '@/components/ui/ProgressRing';
 import { DashboardHeader } from '@/components/ui/DashboardHeader';
 import { usePatternLibraryStore } from '@/stores/patternLibraryStore';
-import type { ImplementationPattern, PatternCategory, PatternConfidence } from '@/types/pattern-library';
+import type {
+  ImplementationPattern,
+  PatternCategory,
+  PatternConfidence,
+  PatternAuthorInput,
+} from '@/types/pattern-library';
 import type { SubModuleId } from '@/types/modules';
 import { MODULE_COLORS, OPACITY_10, ACCENT_EMERALD_DARK } from '@/lib/chart-colors';
 import { MOTION } from '@/lib/constants';
+import { AntiPatternList } from './AntiPatternList';
+
+type LibraryTab = 'patterns' | 'anti-patterns';
 
 // ── Constants for stable Zustand selectors ──────────────────────────────────
 
@@ -80,6 +89,9 @@ export function PatternLibraryView() {
   const setSortBy = usePatternLibraryStore((s) => s.setSortBy);
 
   const [extractResult, setExtractResult] = useState<{ extracted: number; updated: number } | null>(null);
+  const [authorOpen, setAuthorOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState<LibraryTab>('patterns');
+  const antiPatternCount = usePatternLibraryStore((s) => s.antiPatterns.length);
 
   // Fetch on mount
   useEffect(() => {
@@ -115,14 +127,23 @@ export function PatternLibraryView() {
           accentTo="blue"
           className="mb-4"
           action={
-            <button
-              onClick={handleExtract}
-              disabled={isExtracting}
-              className="flex items-center gap-1.5 px-3 py-2 bg-violet-500/10 border border-violet-500/25 rounded-lg text-violet-400 text-xs font-medium hover:bg-violet-500/20 transition-colors disabled:opacity-50"
-            >
-              <RefreshCw className={`w-3.5 h-3.5 ${isExtracting ? 'animate-spin' : ''}`} />
-              {isExtracting ? 'Extracting...' : 'Extract Patterns'}
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setAuthorOpen(true)}
+                className="flex items-center gap-1.5 px-3 py-2 bg-emerald-500/10 border border-emerald-500/25 rounded-lg text-emerald-400 text-xs font-medium hover:bg-emerald-500/20 transition-colors"
+              >
+                <Plus className="w-3.5 h-3.5" />
+                Author Pattern
+              </button>
+              <button
+                onClick={handleExtract}
+                disabled={isExtracting}
+                className="flex items-center gap-1.5 px-3 py-2 bg-violet-500/10 border border-violet-500/25 rounded-lg text-violet-400 text-xs font-medium hover:bg-violet-500/20 transition-colors disabled:opacity-50"
+              >
+                <RefreshCw className={`w-3.5 h-3.5 ${isExtracting ? 'animate-spin' : ''}`} />
+                {isExtracting ? 'Extracting...' : 'Extract Patterns'}
+              </button>
+            </div>
           }
         />
 
@@ -144,6 +165,30 @@ export function PatternLibraryView() {
           )}
         </AnimatePresence>
 
+        {/* Patterns / Anti-Patterns tab switcher */}
+        <div role="tablist" aria-label="Pattern library tabs" className="flex items-center gap-1 mb-4 border-b border-border">
+          <LibraryTabButton
+            label="Patterns"
+            icon={BookOpen}
+            count={totalPatterns}
+            active={activeTab === 'patterns'}
+            onClick={() => setActiveTab('patterns')}
+            accent="text-violet-400"
+            accentBar={MODULE_COLORS.systems}
+          />
+          <LibraryTabButton
+            label="Anti-Patterns"
+            icon={ShieldAlert}
+            count={antiPatternCount}
+            active={activeTab === 'anti-patterns'}
+            onClick={() => setActiveTab('anti-patterns')}
+            accent="text-red-400"
+            accentBar="#f87171"
+          />
+        </div>
+
+        {activeTab === 'patterns' && (
+          <>
         {/* Stats bar */}
         <div className="flex gap-3 mb-4">
           <StatCard
@@ -234,24 +279,28 @@ export function PatternLibraryView() {
             <ChevronDown className="absolute right-1.5 top-1/2 -translate-y-1/2 w-3 h-3 text-text-muted pointer-events-none" />
           </div>
         </div>
+          </>
+        )}
       </div>
 
       {/* Content */}
       <div className="flex-1 overflow-y-auto px-6 pb-6">
-        {isLoading && (
+        {activeTab === 'anti-patterns' && <AntiPatternList moduleId={moduleFilter} />}
+
+        {activeTab === 'patterns' && isLoading && (
           <div className="flex items-center justify-center py-16">
             <div className="w-6 h-6 border-2 border-violet-500/30 border-t-violet-500 rounded-full animate-spin" />
             <span className="ml-3 text-sm text-text-muted">Loading patterns...</span>
           </div>
         )}
 
-        {error && (
+        {activeTab === 'patterns' && error && (
           <SurfaceCard className="p-4 mb-4 border-status-red-strong">
             <p className="text-sm text-red-400">{error}</p>
           </SurfaceCard>
         )}
 
-        {!isLoading && patterns.length === 0 && (
+        {activeTab === 'patterns' && !isLoading && patterns.length === 0 && (
           <div className="flex flex-col items-center justify-center py-16 text-center">
             <div className="w-12 h-12 rounded-xl border border-border flex items-center justify-center mb-4" style={{ backgroundColor: `${MODULE_COLORS.systems}${OPACITY_10}` }}>
               <BookOpen className="w-6 h-6 text-violet-400" />
@@ -271,7 +320,7 @@ export function PatternLibraryView() {
           </div>
         )}
 
-        {!isLoading && patterns.length > 0 && (
+        {activeTab === 'patterns' && !isLoading && patterns.length > 0 && (
           <div className="space-y-3">
             {patterns.map((pattern) => (
               <PatternCard key={pattern.id} pattern={pattern} />
@@ -279,7 +328,60 @@ export function PatternLibraryView() {
           </div>
         )}
       </div>
+
+      <AuthorPatternModal
+        open={authorOpen}
+        onClose={() => setAuthorOpen(false)}
+        moduleIds={moduleIds}
+      />
     </div>
+  );
+}
+
+// ── Library Tab Button ──────────────────────────────────────────────────────
+
+function LibraryTabButton({
+  label,
+  icon: Icon,
+  count,
+  active,
+  onClick,
+  accent,
+  accentBar,
+}: {
+  label: string;
+  icon: typeof BookOpen;
+  count: number;
+  active: boolean;
+  onClick: () => void;
+  accent: string;
+  accentBar: string;
+}) {
+  return (
+    <button
+      role="tab"
+      aria-selected={active}
+      onClick={onClick}
+      className={`relative flex items-center gap-1.5 px-4 py-2 text-xs font-medium transition-colors ${
+        active ? 'text-text' : 'text-text-muted hover:text-text'
+      }`}
+    >
+      <Icon className={`w-3.5 h-3.5 ${active ? accent : ''}`} />
+      <span>{label}</span>
+      <span
+        className={`px-1.5 py-0.5 rounded text-2xs ${
+          active ? 'bg-surface-hover text-text' : 'bg-surface-deep text-text-muted'
+        }`}
+      >
+        {count}
+      </span>
+      {active && (
+        <span
+          className="absolute bottom-0 left-0 right-0 h-0.5 rounded-t"
+          style={{ backgroundColor: accentBar }}
+        />
+      )}
+    </button>
   );
 }
 
@@ -304,6 +406,10 @@ function StatCard({ icon, value, label, color }: {
 
 function PatternCard({ pattern }: { pattern: ImplementationPattern }) {
   const [expanded, setExpanded] = useState(false);
+  const [editing, setEditing] = useState(false);
+  const verifyPattern = usePatternLibraryStore((s) => s.verifyPattern);
+  const pinPattern = usePatternLibraryStore((s) => s.pinPattern);
+
   const conf = CONFIDENCE_STYLE[pattern.confidence];
   const successPercent = Math.round(pattern.successRate * 100);
   const successColor = successPercent >= 70 ? ACCENT_EMERALD_DARK : successPercent >= 50 ? MODULE_COLORS.content : MODULE_COLORS.evaluator;
@@ -325,6 +431,12 @@ function PatternCard({ pattern }: { pattern: ImplementationPattern }) {
               ? <ChevronDown className="w-3.5 h-3.5 text-text-muted flex-shrink-0" />
               : <ChevronRight className="w-3.5 h-3.5 text-text-muted flex-shrink-0" />
             }
+            {pattern.pinned && (
+              <Pin className="w-3.5 h-3.5 text-amber-400 flex-shrink-0" aria-label="Pinned" />
+            )}
+            {pattern.verified && (
+              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 flex-shrink-0" aria-label="Verified" />
+            )}
             <span className="text-sm font-medium text-text truncate">{pattern.title}</span>
           </div>
           <div className="flex items-center gap-2 mt-0.5 ml-5">
@@ -335,6 +447,8 @@ function PatternCard({ pattern }: { pattern: ImplementationPattern }) {
             </span>
             <span className="text-2xs text-text-muted/50">|</span>
             <Badge>{CATEGORY_LABELS[pattern.category]}</Badge>
+            <span className="text-2xs text-text-muted/50">|</span>
+            <SourceBadge source={pattern.source} />
           </div>
         </div>
 
@@ -443,12 +557,356 @@ function PatternCard({ pattern }: { pattern: ImplementationPattern }) {
               <div className="flex items-center gap-4 text-2xs text-text-muted pt-1 border-t border-border/50">
                 <span>First seen: {new Date(pattern.firstSeenAt).toLocaleDateString()}</span>
                 <span>Last success: {new Date(pattern.lastSuccessAt).toLocaleDateString()}</span>
+                {pattern.verifiedBy && (
+                  <span className="flex items-center gap-1">
+                    <User className="w-3 h-3" />
+                    Verified by {pattern.verifiedBy}
+                  </span>
+                )}
               </div>
+
+              {/* Curation controls */}
+              <div className="flex items-center gap-2 pt-2 border-t border-border/50">
+                <button
+                  type="button"
+                  onClick={() => verifyPattern(pattern.id, !pattern.verified)}
+                  className={`flex items-center gap-1 px-2 py-1 rounded text-2xs font-medium transition-colors ${
+                    pattern.verified
+                      ? 'bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/25'
+                      : 'bg-surface-hover border border-border text-text-muted hover:text-text hover:border-emerald-500/30'
+                  }`}
+                  aria-pressed={pattern.verified}
+                >
+                  <CheckCircle2 className="w-3 h-3" />
+                  {pattern.verified ? 'Verified' : 'Mark Verified'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => pinPattern(pattern.id, !pattern.pinned)}
+                  className={`flex items-center gap-1 px-2 py-1 rounded text-2xs font-medium transition-colors ${
+                    pattern.pinned
+                      ? 'bg-amber-500/15 border border-amber-500/30 text-amber-400 hover:bg-amber-500/25'
+                      : 'bg-surface-hover border border-border text-text-muted hover:text-text hover:border-amber-500/30'
+                  }`}
+                  aria-pressed={pattern.pinned}
+                >
+                  <Pin className="w-3 h-3" />
+                  {pattern.pinned ? 'Pinned' : 'Pin as Canonical'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setEditing((v) => !v)}
+                  className="flex items-center gap-1 px-2 py-1 rounded text-2xs font-medium bg-surface-hover border border-border text-text-muted hover:text-text hover:border-blue-500/30 transition-colors"
+                >
+                  <Edit3 className="w-3 h-3" />
+                  {editing ? 'Cancel Edit' : 'Edit'}
+                </button>
+              </div>
+
+              {editing && (
+                <PatternEditor pattern={pattern} onDone={() => setEditing(false)} />
+              )}
             </div>
           </motion.div>
         )}
       </AnimatePresence>
     </SurfaceCard>
+  );
+}
+
+// ── Source Badge ────────────────────────────────────────────────────────────
+
+function SourceBadge({ source }: { source: ImplementationPattern['source'] }) {
+  if (source === 'authored') {
+    return (
+      <span className="px-1.5 py-0.5 rounded text-2xs font-medium bg-emerald-400/10 text-emerald-400 border border-emerald-400/20">
+        Authored
+      </span>
+    );
+  }
+  return (
+    <span className="px-1.5 py-0.5 rounded text-2xs font-medium bg-blue-400/10 text-blue-400 border border-blue-400/20">
+      Mined
+    </span>
+  );
+}
+
+// ── Pattern Editor (description + pitfalls patch) ───────────────────────────
+
+function PatternEditor({ pattern, onDone }: { pattern: ImplementationPattern; onDone: () => void }) {
+  const updatePattern = usePatternLibraryStore((s) => s.updatePattern);
+  const [description, setDescription] = useState(pattern.description);
+  const [pitfallsText, setPitfallsText] = useState(pattern.pitfalls.join('\n'));
+  const [saving, setSaving] = useState(false);
+
+  const handleSave = useCallback(async () => {
+    setSaving(true);
+    const pitfalls = pitfallsText.split('\n').map((s) => s.trim()).filter(Boolean);
+    await updatePattern(pattern.id, { description, pitfalls });
+    setSaving(false);
+    onDone();
+  }, [pattern.id, description, pitfallsText, updatePattern, onDone]);
+
+  return (
+    <div className="space-y-2 pt-2 border-t border-border/50">
+      <div>
+        <label className="text-2xs text-text-muted font-medium mb-1 block">Description</label>
+        <textarea
+          value={description}
+          onChange={(e) => setDescription(e.target.value)}
+          rows={4}
+          className="w-full px-2 py-1.5 bg-surface border border-border rounded text-xs text-text focus:outline-none focus:border-blue-500/40 resize-y"
+        />
+      </div>
+      <div>
+        <label className="text-2xs text-text-muted font-medium mb-1 block">Pitfalls (one per line)</label>
+        <textarea
+          value={pitfallsText}
+          onChange={(e) => setPitfallsText(e.target.value)}
+          rows={3}
+          className="w-full px-2 py-1.5 bg-surface border border-border rounded text-xs text-text focus:outline-none focus:border-blue-500/40 resize-y"
+        />
+      </div>
+      <div className="flex items-center justify-end gap-2">
+        <button
+          type="button"
+          onClick={onDone}
+          className="px-3 py-1 rounded text-2xs text-text-muted hover:text-text"
+        >
+          Cancel
+        </button>
+        <button
+          type="button"
+          onClick={handleSave}
+          disabled={saving}
+          className="px-3 py-1 rounded text-2xs font-medium bg-blue-500/15 border border-blue-500/30 text-blue-400 hover:bg-blue-500/25 disabled:opacity-50"
+        >
+          {saving ? 'Saving…' : 'Save Changes'}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// ── Author Pattern Modal ────────────────────────────────────────────────────
+
+function AuthorPatternModal({
+  open,
+  onClose,
+  moduleIds,
+}: {
+  open: boolean;
+  onClose: () => void;
+  moduleIds: SubModuleId[];
+}) {
+  const authorPattern = usePatternLibraryStore((s) => s.authorPattern);
+  const [submitting, setSubmitting] = useState(false);
+  const [form, setForm] = useState<PatternAuthorInput>(() => ({
+    title: '',
+    moduleId: (moduleIds[0] ?? 'arpg-character') as SubModuleId,
+    category: 'general',
+    description: '',
+    approach: '',
+    tags: [],
+    pitfalls: [],
+    involvedClasses: [],
+  }));
+  const [tagsText, setTagsText] = useState('');
+  const [pitfallsText, setPitfallsText] = useState('');
+  const [classesText, setClassesText] = useState('');
+
+  // Reset form when the modal re-opens
+  useEffect(() => {
+    if (!open) return;
+    setForm({
+      title: '',
+      moduleId: (moduleIds[0] ?? 'arpg-character') as SubModuleId,
+      category: 'general',
+      description: '',
+      approach: '',
+      tags: [],
+      pitfalls: [],
+      involvedClasses: [],
+    });
+    setTagsText('');
+    setPitfallsText('');
+    setClassesText('');
+  }, [open, moduleIds]);
+
+  const handleSubmit = useCallback(async () => {
+    if (!form.title.trim() || !form.description.trim()) return;
+    setSubmitting(true);
+    const input: PatternAuthorInput = {
+      ...form,
+      title: form.title.trim(),
+      description: form.description.trim(),
+      approach: form.approach.trim() || 'general',
+      tags: tagsText.split(',').map((t) => t.trim()).filter(Boolean),
+      pitfalls: pitfallsText.split('\n').map((t) => t.trim()).filter(Boolean),
+      involvedClasses: classesText.split(',').map((t) => t.trim()).filter(Boolean),
+    };
+    const created = await authorPattern(input);
+    setSubmitting(false);
+    if (created) onClose();
+  }, [form, tagsText, pitfallsText, classesText, authorPattern, onClose]);
+
+  if (!open) return null;
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4"
+      onClick={onClose}
+    >
+      <SurfaceCard
+        className="w-full max-w-xl max-h-[90vh] overflow-y-auto p-5"
+        onClick={(e: React.MouseEvent) => e.stopPropagation()}
+      >
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-2">
+            <Plus className="w-4 h-4 text-emerald-400" />
+            <h3 className="text-sm font-semibold text-text">Author a Pattern</h3>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="p-1 rounded hover:bg-surface-hover text-text-muted hover:text-text"
+            aria-label="Close"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+
+        <p className="text-2xs text-text-muted mb-3 leading-relaxed">
+          Hand-authored patterns are saved as <strong>verified</strong> and outrank mined entries in dispatch suggestions.
+        </p>
+
+        <div className="space-y-3">
+          <div>
+            <label className="text-2xs text-text-muted font-medium mb-1 block">Title</label>
+            <input
+              type="text"
+              value={form.title}
+              onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))}
+              className="w-full px-2 py-1.5 bg-surface border border-border rounded text-xs text-text focus:outline-none focus:border-emerald-500/40"
+              placeholder="e.g. GAS Combo via Montage Sections"
+            />
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="text-2xs text-text-muted font-medium mb-1 block">Module</label>
+              <select
+                value={form.moduleId}
+                onChange={(e) => setForm((f) => ({ ...f, moduleId: e.target.value as SubModuleId }))}
+                className="w-full px-2 py-1.5 bg-surface border border-border rounded text-xs text-text focus:outline-none focus:border-emerald-500/40"
+              >
+                {moduleIds.length === 0 && <option value={form.moduleId}>{form.moduleId}</option>}
+                {moduleIds.map((m) => (
+                  <option key={m} value={m}>{m}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="text-2xs text-text-muted font-medium mb-1 block">Category</label>
+              <select
+                value={form.category}
+                onChange={(e) => setForm((f) => ({ ...f, category: e.target.value as PatternCategory }))}
+                className="w-full px-2 py-1.5 bg-surface border border-border rounded text-xs text-text focus:outline-none focus:border-emerald-500/40"
+              >
+                {(Object.keys(CATEGORY_LABELS) as PatternCategory[]).map((c) => (
+                  <option key={c} value={c}>{CATEGORY_LABELS[c]}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          <div>
+            <label className="text-2xs text-text-muted font-medium mb-1 block">Approach</label>
+            <input
+              type="text"
+              value={form.approach}
+              onChange={(e) => setForm((f) => ({ ...f, approach: e.target.value }))}
+              className="w-full px-2 py-1.5 bg-surface border border-border rounded text-xs text-text focus:outline-none focus:border-emerald-500/40"
+              placeholder="composition | inheritance | data-driven | event-driven | ..."
+            />
+          </div>
+
+          <div>
+            <label className="text-2xs text-text-muted font-medium mb-1 block">Description</label>
+            <textarea
+              value={form.description}
+              onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
+              rows={4}
+              className="w-full px-2 py-1.5 bg-surface border border-border rounded text-xs text-text focus:outline-none focus:border-emerald-500/40 resize-y"
+              placeholder="Describe the pattern: when to use it, why it works, what to avoid…"
+            />
+          </div>
+
+          <div>
+            <label className="text-2xs text-text-muted font-medium mb-1 block">Tags (comma-separated)</label>
+            <input
+              type="text"
+              value={tagsText}
+              onChange={(e) => setTagsText(e.target.value)}
+              className="w-full px-2 py-1.5 bg-surface border border-border rounded text-xs text-text focus:outline-none focus:border-emerald-500/40"
+              placeholder="gas, montage, combo"
+            />
+          </div>
+
+          <div>
+            <label className="text-2xs text-text-muted font-medium mb-1 block">Involved Classes (comma-separated)</label>
+            <input
+              type="text"
+              value={classesText}
+              onChange={(e) => setClassesText(e.target.value)}
+              className="w-full px-2 py-1.5 bg-surface border border-border rounded text-xs text-text focus:outline-none focus:border-emerald-500/40 font-mono"
+              placeholder="UGameplayAbility, UAnimMontage, AVCharacter"
+            />
+          </div>
+
+          <div>
+            <label className="text-2xs text-text-muted font-medium mb-1 block">Pitfalls (one per line)</label>
+            <textarea
+              value={pitfallsText}
+              onChange={(e) => setPitfallsText(e.target.value)}
+              rows={3}
+              className="w-full px-2 py-1.5 bg-surface border border-border rounded text-xs text-text focus:outline-none focus:border-emerald-500/40 resize-y"
+              placeholder="Don't replicate animation state directly&#10;Watch out for montage section ordering"
+            />
+          </div>
+
+          <div>
+            <label className="text-2xs text-text-muted font-medium mb-1 block">Authored By (optional)</label>
+            <input
+              type="text"
+              value={form.authoredBy ?? ''}
+              onChange={(e) => setForm((f) => ({ ...f, authoredBy: e.target.value }))}
+              className="w-full px-2 py-1.5 bg-surface border border-border rounded text-xs text-text focus:outline-none focus:border-emerald-500/40"
+              placeholder="your name or handle"
+            />
+          </div>
+        </div>
+
+        <div className="flex items-center justify-end gap-2 mt-5">
+          <button
+            type="button"
+            onClick={onClose}
+            className="px-3 py-1.5 rounded text-xs text-text-muted hover:text-text"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            onClick={handleSubmit}
+            disabled={submitting || !form.title.trim() || !form.description.trim()}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded text-xs font-medium bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/25 disabled:opacity-50"
+          >
+            <CheckCircle2 className="w-3.5 h-3.5" />
+            {submitting ? 'Saving…' : 'Save Pattern'}
+          </button>
+        </div>
+      </SurfaceCard>
+    </div>
   );
 }
 

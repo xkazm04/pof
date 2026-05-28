@@ -20,6 +20,7 @@ export function ItemConceptBrief({ t, entity, step }: StepProps) {
 
   return (
     <StepFrame t={t} acceptance={ITEM_STEP_SPECS[step].accept(art)}
+      onFix={() => produce(entity.id, step, ITEM_STEP_SPECS[step].produce(entity))}
       panels={[
         {
           label: 'Current brief',

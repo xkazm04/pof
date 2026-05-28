@@ -107,6 +107,10 @@ export const UI_TIMEOUTS = {
   buildPollInterval: 3_000,
   /** Maximum time for a headless build process (10 min). */
   buildProcessTimeout: 600_000,
+  /** Poll interval for the nightly-build scheduler status panel. */
+  schedulePoll: 30_000,
+  /** Cron tick interval that evaluates whether a scheduled build is due (1 min). */
+  scheduleTick: 60_000,
   /** Poll interval for PoF Bridge health check. */
   pofHealthCheck: 10_000,
   /** Base delay for PoF Bridge reconnection attempts. */

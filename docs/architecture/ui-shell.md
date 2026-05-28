@@ -14,8 +14,9 @@ rollup strip.
 | `src/app/page.tsx` | Root page; `useSyncExternalStore(popstate, readShellPref)` switches between `NewHome` and `AppShell` |
 | `src/lib/ecw/shell-pref.ts` | `readShellPref()` / `writeShellPref()` — `?legacy=1` URL flag or `localStorage['pof.shell']` |
 | `src/components/layout-lab/NewHome.tsx` | Thin wrapper: calls `usePofBridge()` then renders `<LayoutLab />` |
-| `src/components/layout-lab/LayoutLab.tsx` | Top-level shell: header bar, Catalogs/Canon toggle, Light/Studio-Dark theme toggle, `<LabBridgeStrip>` |
-| `src/components/layout-lab/Baseline.tsx` | 3-column composition screen: tree / pipeline timeline / work canvas; all produce→persist→render logic |
+| `src/components/layout-lab/LayoutLab.tsx` | Top-level shell: header bar, Catalogs/Matrix/Canon toggle, Light/Studio-Dark theme toggle, `<LabBridgeStrip>` |
+| `src/components/layout-lab/Baseline.tsx` | 3-column composition screen: tree / pipeline timeline / work canvas; all produce→persist→render logic. Optional `initialStepIdx` opens a specific step on mount (used by the matrix jump) |
+| `src/components/layout-lab/CatalogMatrix.tsx` | Catalog-wide status matrix: entities (rows) × steps (columns) colored by derived Acceptance; per-entity `summarizeEntity` rollup + blocker flags; cells jump to that entity's step |
 | `src/components/layout-lab/CatalogTree.tsx` | Category→Catalog→Entity collapsible tree (left column) |
 | `src/components/layout-lab/steps/index.ts` | `getStepComponent(catalogId, stepName)` — looks up the `STEP_REGISTRY` |
 | `src/components/layout-lab/steps/ArchetypeStep.tsx` | Generic renderer for any registered `StepSpec`; drives View + CliProduce + Acceptance |
@@ -56,11 +57,15 @@ delegating to `<LayoutLab />`. Lab tests render `<LayoutLab />` directly and are
 
 Renders a `100vh` flex column:
 
-- **Header bar**: monospace `/layout · Blueprint baseline` label; **Catalogs** / **Canon**
+- **Header bar**: monospace `/layout · Blueprint baseline` label; **Catalogs** / **Matrix** / **Canon**
   toggle (local `view` state); **Blueprint** / **Studio Dark** theme toggle (local `themeId` state);
   "Legacy shell" button; `<LabBridgeStrip t={theme} />`.
-- **Body**: when `view === 'canon'` renders `<CanonView t={theme} />`; otherwise renders
-  `<Baseline theme={theme} groups={groups} detail={detail} onSelectCatalog={setCatalogId} />`.
+- **Body**: when `view === 'canon'` renders `<CanonView t={theme} />`; when `view === 'matrix'`
+  renders `<CatalogMatrix … onOpenStep={openFromMatrix} />`; otherwise renders
+  `<Baseline theme={theme} groups={groups} detail={detail} initialStepIdx={focusStepIdx} … />`.
+  A matrix cell click runs `openFromMatrix(catalogId, entityId, stepIdx)`, which sets `catalogId`/
+  `entityId`/`focusStepIdx` and switches `view` back to `'catalogs'`; Baseline remounts on the switch
+  and reads `focusStepIdx` as its initial step (a manual **Catalogs** click clears it).
 
 On mount, `useEffect(() => { hydrate(); }, [hydrate])` fetches the server's project canon rules into
 `canonStore` (replaces the seed if the server responds).
@@ -87,6 +92,16 @@ Three-column CSS grid `260px 320px 1fr`:
 | Left 260 px | `<CatalogTree>` |
 | Middle 320 px | Pipeline timeline: vertical connector line + step buttons; "Populate demo" / "Reset" buttons for the Items catalog |
 | Right 1fr | Work canvas: `<PipelineRollup>` overlay + step heading + step component |
+
+**Responsive collapse**: the grid is `wide ? '260px 320px 1fr' : '1fr'`. Width comes from
+`useViewportWidth()` (`src/hooks/useViewportWidth.ts`) — a `ResizeObserver` on `documentElement` that
+defaults to `WIDE_FALLBACK_WIDTH` (1440) for SSR / first paint / jsdom (no `ResizeObserver`), so the
+shell starts wide and collapses only once a narrow viewport is confirmed. Below `COLLAPSE_BREAKPOINT`
+(1100 px) the two left columns un-mount and reappear as left **slide-over drawers** (`LabDrawer`,
+framer-motion, backdrop + Escape to close) toggled by persistent header buttons (`DrawerToggle`),
+keeping the canvas full-width. Both column bodies (`treeBody`, `pipelineBody`) are factored so they
+render identically inline (wide) or inside a drawer (narrow); picking a catalog/entity/step closes
+the drawer.
 
 **Step source**: `getCatalogPipeline(detail.catalog.catalogId)` wins if the registry has a pipeline;
 otherwise falls back to `detail.steps` (line 47–48). The `live` flag on each step button is set when

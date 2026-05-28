@@ -159,6 +159,21 @@ While suspended, the store subscription is replaced with a no-op (no re-renders)
 
 ---
 
+## Server-side scheduler (cron)
+
+`src/instrumentation.ts` is the one place the app runs work on a wall-clock interval **without a browser**. Next.js calls its exported `register()` once per server start; guarded to `NEXT_RUNTIME === 'nodejs'` (better-sqlite3 is node-only) and to a `globalThis.__pofSchedulerStarted` flag (no double-register on dev HMR). It starts a 1-minute `setInterval` (`UI_TIMEOUTS.scheduleTick`, `.unref()`'d) that calls `tickScheduler()`.
+
+The first (and currently only) consumer is **scheduled nightly builds** (`src/lib/packaging/scheduled-build-runner.ts`):
+
+- **Config + state** live in the `settings` table via `build-schedule-store.ts` — a disabled-by-default `BuildSchedule` (time, weekdays, profile, skip-if-unchanged, **and the captured project target** so the server cron can run unattended), plus last-run `ScheduleState`. An in-memory `running` flag is the single-flight guard.
+- **`tickScheduler()`** reads the schedule, asks the pure `isDueAt()` (`build-scheduler.ts`) whether a slot is due, and fire-and-forgets `runScheduledBuild()` if so. `startScheduledRun()` is the manual ("Run now") path.
+- **`runScheduledBuild(ctx, deps)`** runs the full chain — skip-if-unchanged (git HEAD vs last built commit) → fast pre-flight (`preflight-runner.ts`) → cook → smoke (Win64) → size-budget → record to `build_history`. Every side-effect is injected, so the orchestration is unit-tested without spawning anything; `defaultRunnerDeps()` wires the real implementations.
+- API surface: `/api/packaging/schedule` (GET status, POST `save`/`tick`/`run-now`). UI: `NightlyBuildScheduler.tsx` in the packaging **Pipeline** tab (GET-polls for status; the cron, not the client, drives the actual builds).
+
+When adding another scheduled job, register it the same way (cheap when idle, guarded, `.unref()`'d) rather than spinning a second interval.
+
+---
+
 ## Coding conventions
 
 These are enforced by `eslint.config.mjs` and the patterns in the codebase. Follow them in all new code.

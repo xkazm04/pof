@@ -4,8 +4,9 @@ import type {
   PlaytestFinding,
   DirectorEvent,
   CreateSessionPayload,
+  TriageStatus,
 } from '@/types/game-director';
-import type { DirectorStats } from '@/lib/game-director-db';
+import type { DirectorStats, HealthTrendPoint } from '@/lib/game-director-db';
 import { tryApiFetch } from '@/lib/api-utils';
 import { unwrapOr } from '@/types/result';
 import { useCRUD } from './useCRUD';
@@ -13,24 +14,28 @@ import { useCRUD } from './useCRUD';
 interface DirectorData {
   sessions: PlaytestSession[];
   stats: DirectorStats | null;
+  trend: HealthTrendPoint[];
 }
 
-const EMPTY: DirectorData = { sessions: [], stats: null };
+const EMPTY: DirectorData = { sessions: [], stats: null, trend: [] };
 
 const fetchDirectorData = async (): Promise<DirectorData> => {
-  const [sessResult, statsResult] = await Promise.all([
+  const [sessResult, statsResult, trendResult] = await Promise.all([
     tryApiFetch<PlaytestSession[]>('/api/game-director?action=list'),
     tryApiFetch<DirectorStats>('/api/game-director?action=stats'),
+    tryApiFetch<HealthTrendPoint[]>('/api/game-director?action=trend'),
   ]);
   return {
     sessions: sessResult.ok ? sessResult.data : [],
     stats: statsResult.ok ? statsResult.data : null,
+    trend: trendResult.ok ? trendResult.data : [],
   };
 };
 
 export interface UseGameDirectorResult {
   sessions: PlaytestSession[];
   stats: DirectorStats | null;
+  trend: HealthTrendPoint[];
   loading: boolean;
   simulating: boolean;
   refresh: () => Promise<void>;
@@ -39,6 +44,12 @@ export interface UseGameDirectorResult {
   simulatePlaytest: (sessionId: string) => Promise<void>;
   getFindings: (sessionId: string) => Promise<PlaytestFinding[]>;
   getEvents: (sessionId: string) => Promise<DirectorEvent[]>;
+  updateTriage: (
+    findingId: string,
+    triageStatus: TriageStatus,
+    triageNote?: string,
+    snoozedUntil?: string | null,
+  ) => Promise<PlaytestFinding>;
 }
 
 export function useGameDirector(): UseGameDirectorResult {
@@ -92,9 +103,27 @@ export function useGameDirector(): UseGameDirectorResult {
     return unwrapOr(result, []);
   }, []);
 
+  const updateTriage = useCallback(async (
+    findingId: string,
+    triageStatus: TriageStatus,
+    triageNote?: string,
+    snoozedUntil?: string | null,
+  ): Promise<PlaytestFinding> => {
+    const result = await tryApiFetch<PlaytestFinding>('/api/game-director', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'update-triage', findingId, triageStatus, triageNote, snoozedUntil }),
+    });
+    if (!result.ok) throw new Error(result.error);
+    // Health stats and session findings_count depend on triage; refresh to sync.
+    void refresh();
+    return result.data;
+  }, [refresh]);
+
   return {
     sessions: data.sessions,
     stats: data.stats,
+    trend: data.trend,
     loading,
     simulating,
     refresh,
@@ -103,5 +132,6 @@ export function useGameDirector(): UseGameDirectorResult {
     simulatePlaytest,
     getFindings,
     getEvents,
+    updateTriage,
   };
 }

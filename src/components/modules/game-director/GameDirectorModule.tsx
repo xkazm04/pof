@@ -114,6 +114,7 @@ export function GameDirectorModule() {
           <DirectorOverview
             sessions={director.sessions}
             stats={director.stats}
+            trend={director.trend}
             loading={director.loading}
             onViewSession={handleViewSession}
             onNewSession={() => setActiveTab('new-session')}
@@ -125,7 +126,12 @@ export function GameDirectorModule() {
         )}
 
         {activeTab === 'findings' && (
-          <FindingsExplorer sessions={director.sessions} getFindings={director.getFindings} onNewSession={() => setActiveTab('new-session')} />
+          <FindingsExplorer
+            sessions={director.sessions}
+            getFindings={director.getFindings}
+            updateTriage={director.updateTriage}
+            onNewSession={() => setActiveTab('new-session')}
+          />
         )}
 
         {activeTab === 'regressions' && (
@@ -152,11 +158,11 @@ function TabButton({
   return (
     <button
       onClick={onClick}
-      className={`flex items-center gap-1.5 px-3 py-2 text-xs font-medium transition-colors relative ${
+      className={`focus-ring rounded-sm flex items-center gap-1.5 px-3 py-2 text-sm font-medium transition-colors relative ${
         active ? 'text-text' : 'text-text-muted hover:text-text'
       }`}
     >
-      <Icon className="w-3 h-3" />
+      <Icon className="w-3.5 h-3.5" />
       {label}
       {active && (
         <motion.span

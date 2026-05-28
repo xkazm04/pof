@@ -1,12 +1,12 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { CheckCircle2, XCircle, AlertTriangle, RefreshCw, Hammer, ChevronDown, ShieldCheck } from 'lucide-react';
+import { CheckCircle2, XCircle, AlertTriangle, RefreshCw, Hammer, ChevronDown, ShieldCheck, FileSearch } from 'lucide-react';
 import { tryApiFetch } from '@/lib/api-utils';
 import { STATUS_SUCCESS, STATUS_WARNING, STATUS_ERROR, MODULE_COLORS } from '@/lib/chart-colors';
 import type { PreflightCheckResult, PreflightStatus } from '@/lib/packaging/preflight';
 
-type CheckKind = 'fast' | 'build-verify-editor' | 'build-verify-shipping';
+type CheckKind = 'fast' | 'build-verify-editor' | 'build-verify-shipping' | 'asset-validation';
 
 interface PreflightResponse {
   results: PreflightCheckResult[];
@@ -40,6 +40,7 @@ const CHECK_RESULT_IDS: Record<CheckKind, string[]> = {
   fast: ['config-sanity', 'with-editor-audit'],
   'build-verify-editor': ['build-verify-editor'],
   'build-verify-shipping': ['build-verify-shipping'],
+  'asset-validation': ['asset-validation'],
 };
 
 function worstStatus(results: PreflightCheckResult[]): PreflightStatus | 'idle' {
@@ -213,6 +214,23 @@ export function PreflightPanel({ projectPath, projectName, ueVersion, mapName, o
         </button>
         {(running.has('build-verify-editor') || running.has('build-verify-shipping')) && (
           <span className="text-2xs text-text-muted font-mono">compiling… (may take minutes)</span>
+        )}
+      </div>
+
+      {/* Content audit (slow, opt-in) — DataValidation commandlet */}
+      <div className="flex items-center gap-2 pt-1 border-t border-border">
+        <span className="text-2xs text-text-muted uppercase tracking-wider">Content audit:</span>
+        <button
+          onClick={() => runCheck('asset-validation')}
+          disabled={running.has('asset-validation')}
+          data-testid="pof-preflight-run-asset-validation"
+          className="flex items-center gap-1 px-2 py-1 rounded border border-border-bright text-2xs text-text-muted hover:text-text hover:border-violet-500/40 transition-colors disabled:opacity-50"
+        >
+          <FileSearch className={`w-3 h-3 ${running.has('asset-validation') ? 'animate-pulse' : ''}`} />
+          Validate assets
+        </button>
+        {running.has('asset-validation') && (
+          <span className="text-2xs text-text-muted font-mono">scanning content… (boots the editor)</span>
         )}
       </div>
     </div>

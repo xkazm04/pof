@@ -265,7 +265,8 @@ export function markResolved(fingerprint: string): void {
 export interface ErrorMemoryStats {
   totalErrors: number;
   uniqueFingerprints: number;
-  topCategories: { category: string; count: number }[];
+  /** Per-category aggregate. `unresolved` is the count of categories' fingerprints not yet flagged resolved. */
+  topCategories: { category: string; count: number; unresolved: number }[];
   topPatterns: { pattern: string; occurrences: number; moduleId: SubModuleId }[];
   unresolvedCount: number;
 }
@@ -278,13 +279,15 @@ export function getErrorMemoryStats(): ErrorMemoryStats {
   const unique = (db.prepare('SELECT COUNT(*) as cnt FROM error_memory').get() as { cnt: number })?.cnt ?? 0;
   const unresolved = (db.prepare('SELECT COUNT(*) as cnt FROM error_memory WHERE was_resolved = 0').get() as { cnt: number })?.cnt ?? 0;
 
+  // SUM(was_resolved = 0) counts rows still unresolved per category — used for the
+  // per-row resolved/unresolved dot in the dashboard.
   const topCategories = db.prepare(`
-    SELECT category, SUM(occurrences) as count
+    SELECT category, SUM(occurrences) as count, SUM(CASE WHEN was_resolved = 0 THEN 1 ELSE 0 END) as unresolved
     FROM error_memory
     GROUP BY category
     ORDER BY count DESC
     LIMIT 5
-  `).all() as { category: string; count: number }[];
+  `).all() as { category: string; count: number; unresolved: number }[];
 
   const topPatterns = db.prepare(`
     SELECT pattern, occurrences, module_id

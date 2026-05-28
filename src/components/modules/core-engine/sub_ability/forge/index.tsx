@@ -10,9 +10,8 @@
  * - Radar profile for comparison with existing abilities
  */
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ACCENT_RED, OPACITY_5, OPACITY_25, withOpacity } from '@/lib/chart-colors';
 import { apiFetch } from '@/lib/api-utils';
 import { BlueprintPanel } from '../../unique-tabs/_design';
 import {
@@ -29,6 +28,8 @@ import { ForgeResult } from './ForgeResult';
 import { RefineBar } from './RefineBar';
 import { AbilityDiff } from './AbilityDiff';
 import { ForgeHistoryPanel } from './ForgeHistoryPanel';
+import { PromptInspector } from './PromptInspector';
+import { ForgeErrorCard } from './ForgeErrorCard';
 
 /* ── Main component ──────────────────────────────────────────────────── */
 
@@ -36,13 +37,18 @@ export function AbilityForge() {
   const [description, setDescription] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
   const [result, setResult] = useState<ForgedAbility | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  // Preserve the raw caught value so the classifier can pattern-match more than just `.message`.
+  const [error, setError] = useState<unknown>(null);
   const [history, setHistory] = useState<ForgedAbility[]>([]);
+  const descriptionAnchorRef = useRef<HTMLDivElement | null>(null);
   // The ability the current `result` was refined FROM, plus the instruction
   // that produced it — together they drive the "what changed" diff. Both are
   // null for a fresh, one-shot forge.
   const [baseline, setBaseline] = useState<ForgedAbility | null>(null);
   const [lastInstruction, setLastInstruction] = useState<string | null>(null);
+  // The exact prompt string just sent to the LLM — fed to the Prompt Inspector
+  // so the user can see what was actually asked.
+  const [lastPrompt, setLastPrompt] = useState<string | null>(null);
 
   const radarData = STATIC_RADAR_DATA;
 
@@ -58,6 +64,7 @@ export function AbilityForge() {
         comboAbilities: COMBO_ABILITIES,
         radarData,
       });
+      setLastPrompt(prompt);
 
       const forged = await apiFetch<ForgedAbility>('/api/agents/forge-ability', {
         method: 'POST',
@@ -70,7 +77,7 @@ export function AbilityForge() {
       setLastInstruction(null);
       setHistory(prev => [forged, ...prev.slice(0, 9)]);
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Unknown error');
+      setError(e);
     } finally {
       setIsGenerating(false);
     }
@@ -90,6 +97,7 @@ export function AbilityForge() {
         radarData,
         refine: { prior, instruction: instr },
       });
+      setLastPrompt(prompt);
 
       const forged = await apiFetch<ForgedAbility>('/api/agents/forge-ability', {
         method: 'POST',
@@ -101,7 +109,7 @@ export function AbilityForge() {
       setLastInstruction(instr);
       setHistory(prev => [forged, ...prev.slice(0, 9)]);
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Unknown error');
+      setError(e);
     } finally {
       setIsGenerating(false);
     }
@@ -126,29 +134,28 @@ export function AbilityForge() {
       className="space-y-4"
     >
       {/* Input section */}
-      <ForgeInput
-        description={description}
-        setDescription={setDescription}
-        isGenerating={isGenerating}
-        onGenerate={handleGenerate}
-      />
+      <div ref={descriptionAnchorRef}>
+        <ForgeInput
+          description={description}
+          setDescription={setDescription}
+          isGenerating={isGenerating}
+          onGenerate={handleGenerate}
+        />
+      </div>
 
-      {/* Error */}
+      {/* Error — classified into a structured, actionable card. */}
       <AnimatePresence>
-        {error && (
-          <motion.div
-            initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: 'auto' }}
-            exit={{ opacity: 0, height: 0 }}
-            className="rounded-lg border px-3 py-2 text-xs"
-            style={{
-              borderColor: withOpacity(ACCENT_RED, OPACITY_25),
-              color: ACCENT_RED,
-              background: withOpacity(ACCENT_RED, OPACITY_5),
+        {error != null && (
+          <ForgeErrorCard
+            error={error}
+            onRetry={() => { setError(null); handleGenerate(); }}
+            onEditDescription={() => {
+              setError(null);
+              descriptionAnchorRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+              const ta = descriptionAnchorRef.current?.querySelector('textarea');
+              if (ta instanceof HTMLTextAreaElement) ta.focus();
             }}
-          >
-            {error}
-          </motion.div>
+          />
         )}
       </AnimatePresence>
 
@@ -158,6 +165,9 @@ export function AbilityForge() {
           <ForgeResult ability={result} existingRadar={radarData} />
         </BlueprintPanel>
       )}
+
+      {/* Prompt Inspector — exposes the audit + composed prompt that produced the result. */}
+      <PromptInspector prompt={lastPrompt} />
 
       {/* Refinement diff — what the latest follow-up changed */}
       <AnimatePresence>

@@ -7,10 +7,10 @@ export function Lbl({ t, children }: { t: LabTheme; children: ReactNode }) {
   return <span className={t.fontMono} style={{ fontSize: 14, letterSpacing: '0.08em', textTransform: 'uppercase', color: t.muted }}>{children}</span>;
 }
 
-export function LabButton({ t, children, onClick }: { t: LabTheme; children: ReactNode; onClick?: () => void }) {
+export function LabButton({ t, children, onClick, disabled }: { t: LabTheme; children: ReactNode; onClick?: () => void; disabled?: boolean }) {
   return (
-    <button onClick={onClick} className={t.fontMono}
-      style={{ padding: '10px 16px', fontSize: 14, letterSpacing: '0.03em', cursor: 'pointer', background: t.glass ? t.accentBg : t.ink, color: t.glass ? t.ink : t.onAccent, border: `1px solid ${t.ink}`, borderRadius: t.glass ? 8 : 0, fontWeight: 600 }}>
+    <button onClick={onClick} disabled={disabled} className={t.fontMono}
+      style={{ padding: '10px 16px', fontSize: 14, letterSpacing: '0.03em', cursor: disabled ? 'not-allowed' : 'pointer', opacity: disabled ? 0.55 : 1, background: t.glass ? t.accentBg : t.ink, color: t.glass ? t.ink : t.onAccent, border: `1px solid ${t.ink}`, borderRadius: t.glass ? 8 : 0, fontWeight: 600 }}>
       {children}
     </button>
   );

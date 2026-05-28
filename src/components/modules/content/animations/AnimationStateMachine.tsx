@@ -21,6 +21,7 @@ import { nlaStateMachineScript } from '@/lib/blender-mcp/scripts/nla-state-machi
 import type { ExecuteOutput } from '@/lib/blender-mcp/types';
 import { logger } from '@/lib/logger';
 import { computeEdgeGeometry } from '@/components/ui/svg/graph-edges';
+import { ExplainToggle, JargonText } from '@/components/animations/explain';
 
 const ANIM_ACCENT = ACCENT_VIOLET;
 
@@ -499,6 +500,7 @@ export function AnimationStateMachine({ onSelectState, isRunning, activeStateId 
         </div>
 
         <div className="flex items-center gap-2">
+          <ExplainToggle compact />
           {/* Simulate button */}
           <button
             onClick={toggleSimMode}
@@ -623,7 +625,7 @@ export function AnimationStateMachine({ onSelectState, isRunning, activeStateId 
           )}
           {scanResult.states.length === 0 && !scanError && (
             <span className="text-[#f59e0b]">
-              No states found — AnimBP states may be defined in Blueprint only
+              <JargonText>No states found — AnimBP states may be defined in Blueprint only</JargonText>
             </span>
           )}
         </div>

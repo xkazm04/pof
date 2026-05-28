@@ -17,8 +17,19 @@
  *   const guide = await harness.start();
  */
 
-export { createHarnessOrchestrator, createDefaultConfig } from './orchestrator';
+export { createHarnessOrchestrator, createDefaultConfig, newRunId, readCheckpoints } from './orchestrator';
 export type { HarnessOrchestrator, HarnessEventListener } from './orchestrator';
+export {
+  createCheckpointer,
+  checkpointBranch,
+  checkpointTag,
+  lastGreenSha,
+  recordCheckpoint,
+  BASELINE_AREA_ID,
+} from './checkpoint';
+export type { Checkpointer, CheckpointState, GitCheckpoint, GitRunner, GitResult } from './checkpoint';
+export { diffRuns } from './run-diff';
+export type { RunDiff, AreaDiffEntry, AreaChangeKind } from './run-diff';
 export { buildGamePlan, pickNextArea, updatePlanStats } from './plan-builder';
 export { executeArea, parseAreaResult, readAgentsMd, appendAgentsMd } from './executor';
 export type { ParsedAreaResult } from './executor';
