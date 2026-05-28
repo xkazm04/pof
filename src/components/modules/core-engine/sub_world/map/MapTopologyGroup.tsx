@@ -16,6 +16,7 @@ import type { FeatureRow } from '@/types/feature-matrix';
 import { ZoneMapCanvas } from './MapCanvas';
 import { FeatureList } from './FeatureList';
 import { TopologyGraph } from './TopologyGraph';
+import { ZoneGeneratorPanel } from './ZoneGeneratorPanel';
 
 const ACCENT = ACCENT_CYAN;
 
@@ -87,6 +88,8 @@ export function MapTopologyGroup({ featureMap, defs, matchingIds }: MapTopologyG
       </BlueprintPanel>
 
       <TopologyGraph matchingIds={matchingIds} />
+
+      <ZoneGeneratorPanel />
     </>
   );
 }
