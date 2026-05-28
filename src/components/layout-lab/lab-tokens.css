@@ -1,0 +1,83 @@
+/* Lab v2 design tokens. Single source of visual truth for the /layout shell.
+   Theme = [data-theme]; density = [data-density]. Consumed by the primitive kit
+   and by the LabTheme compat shim (theme.ts), whose color fields are var() refs. */
+
+:root {
+  /* space scale (px) */
+  --lab-s1: 4px;  --lab-s2: 8px;  --lab-s3: 12px; --lab-s4: 16px;
+  --lab-s5: 20px; --lab-s6: 28px; --lab-s7: 36px; --lab-s8: 48px;
+  /* type scale (>=14px floor) */
+  --lab-fs-xs: 14px; --lab-fs-sm: 15px; --lab-fs-md: 16px;
+  --lab-fs-lg: 20px; --lab-fs-xl: 26px; --lab-fs-2xl: 30px;
+  --lab-font-body: var(--font-inter), system-ui, sans-serif;
+  /* motion (overridden per theme) */
+  --lab-dur-fast: 120ms; --lab-dur: 220ms; --lab-ease: cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Blueprint (light, default) — engineering drawing */
+:root,
+[data-theme="blueprint"] {
+  --lab-bg: #dde3ec;
+  --lab-panel: rgba(255, 255, 255, 0.62);
+  --lab-ink: #1b4f9c;
+  --lab-ink-deep: #10325f;
+  --lab-text: #243446;
+  --lab-muted: #647488;
+  --lab-line: #aebfd6;
+  --lab-accent: #1b4f9c;
+  --lab-accent-bg: #d2deef;
+  --lab-on-accent: #ffffff;
+  --lab-ok: #2e7d4f; --lab-warn: #b5790f; --lab-bad: #b23b3b; --lab-deferred: #647488;
+  --lab-r-sm: 0px; --lab-r-md: 0px; --lab-r-lg: 0px;
+  --lab-elev-1: none; --lab-elev-2: none; --lab-elev-3: none;
+  --lab-font-mono: var(--font-ibm-plex), ui-monospace, monospace;
+  --lab-ease: cubic-bezier(0.2, 0, 0, 1);
+  --lab-grid: rgba(27, 79, 156, 0.07);
+  --lab-grid-image:
+    linear-gradient(var(--lab-grid) 1px, transparent 1px),
+    linear-gradient(90deg, var(--lab-grid) 1px, transparent 1px);
+  --lab-grid-size: 24px 24px;
+  --lab-canvas-ambient: none;
+  --lab-glass-blur: 0px;
+}
+
+/* Studio (dark) — lit-glass instrument */
+[data-theme="studio"] {
+  --lab-bg: #0a0e14;
+  --lab-panel: rgba(255, 255, 255, 0.05);
+  --lab-ink: #22d3ee;
+  --lab-ink-deep: #67e8f9;
+  --lab-text: #e2e8f0;
+  --lab-muted: #8c9aae;
+  --lab-line: rgba(255, 255, 255, 0.12);
+  --lab-accent: #22d3ee;
+  --lab-accent-bg: rgba(34, 211, 238, 0.10);
+  --lab-on-accent: #06141b;
+  --lab-ok: #34d399; --lab-warn: #fbbf24; --lab-bad: #f87171; --lab-deferred: #8c9aae;
+  --lab-r-sm: 6px; --lab-r-md: 8px; --lab-r-lg: 12px;
+  --lab-elev-1: 0 1px 2px rgba(0,0,0,0.4);
+  --lab-elev-2: 0 8px 30px rgba(0,0,0,0.45);
+  --lab-elev-3: 0 18px 50px rgba(0,0,0,0.55);
+  --lab-font-mono: var(--font-jetbrains), ui-monospace, monospace;
+  --lab-ease: cubic-bezier(0.4, 0, 0.2, 1);
+  --lab-grid: transparent;
+  --lab-grid-image: none;
+  --lab-grid-size: 0 0;
+  --lab-canvas-ambient: radial-gradient(1200px 600px at 70% -10%, rgba(34,211,238,0.06), transparent 60%);
+  --lab-glass-blur: 12px;
+}
+
+/* Density */
+[data-density="compact"] {
+  --lab-s2: 6px; --lab-s3: 9px; --lab-s4: 12px; --lab-s5: 15px; --lab-s6: 21px;
+}
+
+/* Reduced motion — belt and suspenders */
+@media (prefers-reduced-motion: reduce) {
+  :root, [data-theme="blueprint"], [data-theme="studio"] {
+    --lab-dur-fast: 0ms; --lab-dur: 0ms;
+  }
+}
+
+/* The lab scopes its keyboard focus-ring accent to its own theme accent. */
+[data-lab-root] { --focus-accent: var(--lab-accent); }
