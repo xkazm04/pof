@@ -4,21 +4,30 @@ import { motion } from 'framer-motion';
 import { STATUS_SUCCESS, STATUS_WARNING, STATUS_LOCKED, STATUS_LOCKED_STROKE, ACCENT_CYAN, OVERLAY_WHITE,
   withOpacity, OPACITY_50,
 } from '@/lib/chart-colors';
-import type { ZoneRecord } from '../_shared/data';
-
 const ACCENT = ACCENT_CYAN;
 
-interface MapCanvasProps {
-  zones: ZoneRecord[];
-  selectedZone: ZoneRecord;
-  onSelectZone: (z: ZoneRecord) => void;
+/** The minimal zone shape the canvas renders. ZoneRecord is a structural superset. */
+export interface MapZone {
+  id: string;
+  displayName: string;
+  cx: number;
+  cy: number;
+  type: 'hub' | 'combat' | 'boss';
+  status: 'active' | 'locked' | 'completed';
+  connections: string[];
+}
+
+interface MapCanvasProps<Z extends MapZone> {
+  zones: Z[];
+  selectedZone: Z;
+  onSelectZone: (z: Z) => void;
   matchingIds?: Set<string>;
 }
 
-export function ZoneMapCanvas({ zones, selectedZone, onSelectZone, matchingIds }: MapCanvasProps) {
+export function ZoneMapCanvas<Z extends MapZone>({ zones, selectedZone, onSelectZone, matchingIds }: MapCanvasProps<Z>) {
   const hasFilter = matchingIds !== undefined && matchingIds.size > 0;
   const isInRange = (id: string) => !hasFilter || matchingIds!.has(id);
-  const getZoneColor = (z: ZoneRecord) => {
+  const getZoneColor = (z: MapZone) => {
     switch (z.status) {
       case 'completed': return STATUS_SUCCESS;
       case 'active': return STATUS_WARNING;
@@ -26,7 +35,7 @@ export function ZoneMapCanvas({ zones, selectedZone, onSelectZone, matchingIds }
     }
   };
 
-  const getStrokeColor = (z: ZoneRecord) => {
+  const getStrokeColor = (z: MapZone) => {
     switch (z.status) {
       case 'completed': return `${withOpacity(STATUS_SUCCESS, OPACITY_50)}`;
       case 'active': return `${withOpacity(STATUS_WARNING, OPACITY_50)}`;
