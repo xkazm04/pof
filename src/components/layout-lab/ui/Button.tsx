@@ -32,7 +32,7 @@ export function Button({ children, onClick, variant = 'ghost', active, mono, dis
         display: 'inline-flex', alignItems: 'center', gap: 'var(--lab-s2)',
         padding: 'var(--lab-s2) var(--lab-s4)', fontSize: 'var(--lab-fs-xs)',
         fontFamily: mono ? 'var(--lab-font-mono)' : 'var(--lab-font-body)',
-        cursor: disabled ? 'not-allowed' : 'pointer', opacity: disabled ? 0.5 : 1,
+        cursor: 'pointer',
         border: '1px solid var(--lab-line)', borderRadius: 'var(--lab-r-sm)',
         background: bg, color, whiteSpace: 'nowrap',
         transition: 'background-color var(--lab-dur-fast) var(--lab-ease), color var(--lab-dur-fast) var(--lab-ease)',

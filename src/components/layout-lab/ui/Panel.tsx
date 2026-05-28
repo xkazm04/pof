@@ -1,14 +1,11 @@
-import type { CSSProperties, ReactNode } from 'react';
+import type { ReactNode, HTMLAttributes } from 'react';
 
-interface PanelProps {
+interface PanelProps extends HTMLAttributes<HTMLDivElement> {
   children: ReactNode;
   elevation?: 0 | 1 | 2 | 3;
   radius?: 'sm' | 'md' | 'lg';
   padded?: boolean;
   glass?: boolean;
-  style?: CSSProperties;
-  className?: string;
-  'data-testid'?: string;
 }
 
 /** A themed surface: bg/border/radius/elevation all from --lab-* tokens. */
@@ -16,7 +13,6 @@ export function Panel({ children, elevation = 0, radius = 'md', padded, glass, s
   return (
     <div
       className={className}
-      data-testid={rest['data-testid']}
       style={{
         background: 'var(--lab-panel)',
         border: '1px solid var(--lab-line)',
@@ -27,6 +23,7 @@ export function Panel({ children, elevation = 0, radius = 'md', padded, glass, s
         transition: 'background-color var(--lab-dur) var(--lab-ease), border-color var(--lab-dur) var(--lab-ease)',
         ...style,
       }}
+      {...rest}
     >
       {children}
     </div>

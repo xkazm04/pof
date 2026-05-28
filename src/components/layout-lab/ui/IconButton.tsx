@@ -1,11 +1,11 @@
 import type { ReactNode } from 'react';
 
-interface IconButtonProps { children: ReactNode; onClick?: () => void; ariaLabel: string; active?: boolean; }
+interface IconButtonProps { children: ReactNode; onClick?: () => void; ariaLabel: string; active?: boolean; disabled?: boolean; }
 
-export function IconButton({ children, onClick, ariaLabel, active }: IconButtonProps) {
+export function IconButton({ children, onClick, ariaLabel, active, disabled }: IconButtonProps) {
   return (
     <button
-      type="button" onClick={onClick} aria-label={ariaLabel} aria-pressed={active ? true : undefined}
+      type="button" onClick={onClick} aria-label={ariaLabel} aria-pressed={active ? true : undefined} disabled={disabled}
       className="focus-ring"
       style={{
         width: 28, height: 28, display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
