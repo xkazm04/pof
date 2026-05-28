@@ -2,7 +2,8 @@ import type { ReactNode } from 'react';
 
 interface RailProps { title: ReactNode; children: ReactNode; }
 
-/** A bordered left column with an uppercase mono header. The body scrolls. */
+/** A bordered left column with an uppercase mono header. The body fills the
+ *  remaining height (flex:1, minHeight:0) and clips; its child owns scrolling. */
 export function Rail({ title, children }: RailProps) {
   return (
     <aside style={{ borderRight: '1px solid var(--lab-line)', display: 'flex', flexDirection: 'column', minHeight: 0 }}>
