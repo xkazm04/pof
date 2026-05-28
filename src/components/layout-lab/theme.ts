@@ -1,42 +1,45 @@
-/* eslint-disable no-restricted-syntax -- identity-lab theme tokens: bespoke palettes by design, not the app's chart-color tokens */
+/* eslint-disable no-restricted-syntax -- identity-lab theme: var() tokens + bespoke font classNames */
 import { inter, ibmPlexMono, jetbrainsMono } from './fonts';
 
-/** A lab theme for the Blueprint baseline. Light = Blueprint drafting; Dark = Studio palette/type. */
+export type LabDensity = 'comfortable' | 'compact';
+
+/** Lab theme. Color fields are var(--lab-*) refs resolved by [data-theme] (see lab-tokens.css).
+ *  JS-read fields (id/label/glass/gridLine/fonts) stay real values. */
 export interface LabTheme {
   id: 'light' | 'dark';
   label: string;
-  bg: string;
-  gridLine: string | null;   // null = no schematic grid (dark)
-  panel: string;
-  ink: string;               // primary line/heading color
-  inkDeep: string;
-  text: string;
-  muted: string;
-  line: string;
-  accentBg: string;          // soft accent fill (selected)
-  glass: boolean;            // backdrop-blur panels (dark)
-  fontBody: string;          // className
-  fontMono: string;          // className (labels, numbers, stats)
-  ok: string;                // acceptance pass
-  warn: string;              // acceptance pending
-  bad: string;               // acceptance fail
-  onAccent: string;          // glyph/text on an accent-filled square (checkmark)
+  bg: string; gridLine: string | null; panel: string;
+  ink: string; inkDeep: string; text: string; muted: string; line: string;
+  accentBg: string; glass: boolean;
+  fontBody: string; fontMono: string;
+  ok: string; warn: string; bad: string; onAccent: string;
 }
+
+/** Color fields shared by both themes — identical var() refs; the actual values
+ *  come from [data-theme] in lab-tokens.css. */
+const VARS = {
+  bg: 'var(--lab-bg)', panel: 'var(--lab-panel)',
+  ink: 'var(--lab-ink)', inkDeep: 'var(--lab-ink-deep)', text: 'var(--lab-text)',
+  muted: 'var(--lab-muted)', line: 'var(--lab-line)', accentBg: 'var(--lab-accent-bg)',
+  ok: 'var(--lab-ok)', warn: 'var(--lab-warn)', bad: 'var(--lab-bad)', onAccent: 'var(--lab-on-accent)',
+} as const;
 
 export const LIGHT: LabTheme = {
   id: 'light', label: 'Blueprint',
-  bg: '#dde3ec', gridLine: 'rgba(27,79,156,0.07)', panel: 'rgba(255,255,255,0.62)',
-  ink: '#1b4f9c', inkDeep: '#10325f', text: '#243446', muted: '#647488', line: '#aebfd6',
-  accentBg: '#d2deef', glass: false, fontBody: inter.className, fontMono: ibmPlexMono.className,
-  ok: '#2e7d4f', warn: '#b5790f', bad: '#b23b3b', onAccent: '#ffffff',
+  ...VARS,
+  gridLine: '#aebfd6', // real value retained for any non-grid reader; the grid itself is CSS now
+  glass: false, fontBody: inter.className, fontMono: ibmPlexMono.className,
 };
 
 export const DARK: LabTheme = {
   id: 'dark', label: 'Studio Dark',
-  bg: '#0a0e14', gridLine: null, panel: 'rgba(255,255,255,0.05)',
-  ink: '#22d3ee', inkDeep: '#67e8f9', text: '#e2e8f0', muted: '#8c9aae', line: 'rgba(255,255,255,0.12)',
-  accentBg: 'rgba(34,211,238,0.10)', glass: true, fontBody: inter.className, fontMono: jetbrainsMono.className,
-  ok: '#34d399', warn: '#fbbf24', bad: '#f87171', onAccent: '#06141b',
+  ...VARS,
+  gridLine: null,
+  glass: true, fontBody: inter.className, fontMono: jetbrainsMono.className,
 };
 
 export const LAB_THEMES: LabTheme[] = [LIGHT, DARK];
+export const LAB_DENSITIES: LabDensity[] = ['comfortable', 'compact'];
+
+/** Maps the LabTheme.id ('light'|'dark') to the [data-theme] attribute value. */
+export const themeAttr = (id: LabTheme['id']): 'blueprint' | 'studio' => (id === 'light' ? 'blueprint' : 'studio');
