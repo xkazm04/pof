@@ -15,6 +15,8 @@ import { resolveAccept } from './labAcceptance';
 import { PipelineRollup } from './PipelineRollup';
 import { CatalogTree } from './CatalogTree';
 import { NextStepCoach } from './NextStepCoach';
+import { PipelineRail } from './PipelineRail';
+import { Button } from './ui/Button';
 import { statusAriaLabel } from './statusLanguage';
 import { summarizeEntity } from '@/lib/catalog/rollup';
 import { useViewportWidth } from '@/hooks/useViewportWidth';
@@ -39,12 +41,6 @@ const pad2 = (n: number) => String(n).padStart(2, '0');
 // crowd the work canvas, so they collapse into toggled slide-over drawers.
 const COLLAPSE_BREAKPOINT = 1100;
 
-type NodeStatus = 'pass' | 'fail' | 'deferred' | 'pending';
-const STATUS_COLOR = (t: LabTheme, s: NodeStatus): string =>
-  s === 'pass' ? t.ok : s === 'fail' ? t.bad : s === 'deferred' ? t.muted : t.warn;
-// Non-color glyph cues so status reads correctly without color, too.
-const STATUS_GLYPH = (s: NodeStatus): string =>
-  s === 'pass' ? '✓' : s === 'fail' ? '!' : s === 'deferred' ? '⋯' : '';
 
 /**
  * The single Blueprint baseline (light) / Studio (dark) composition screen. Full
@@ -207,66 +203,37 @@ export function Baseline({ theme: t, groups, detail, onSelectCatalog, entityId, 
     <>
       {isItems && entity && (
         <div style={{ display: 'flex', gap: 8, padding: '0 18px 8px' }}>
-          <button onClick={() => populateItemDemo(entity, produce)} className={t.fontMono}
-            style={{ flex: 1, fontSize: 14, padding: '6px 8px', cursor: 'pointer', background: t.glass ? t.accentBg : t.ink, color: t.glass ? t.ink : t.onAccent, border: `1px solid ${t.ink}`, borderRadius: t.glass ? 6 : 0, fontWeight: 600 }}>
+          <Button variant="accent" mono onClick={() => populateItemDemo(entity, produce)} style={{ flex: 1 }}>
             Populate demo
-          </button>
-          <button onClick={() => resetEntity(entity.id)} className={t.fontMono}
-            style={{ fontSize: 14, padding: '6px 10px', cursor: 'pointer', background: 'transparent', color: t.muted, border: `1px solid ${t.line}`, borderRadius: t.glass ? 6 : 0 }}>
+          </Button>
+          <Button mono onClick={() => resetEntity(entity.id)}>
             Reset
-          </button>
+          </Button>
         </div>
       )}
-      <div style={{ flex: 1, minHeight: 0, overflow: 'auto', padding: '4px 18px 18px', position: 'relative' }}>
-        <div style={{ position: 'absolute', left: 27, top: 12, bottom: 22, width: 2, background: t.line }} />
-        {steps.map((step, i) => {
+      <PipelineRail
+        t={t}
+        steps={steps}
+        stepIdx={stepIdx}
+        displayStatus={displayStatus}
+        isLive={(step) => !!(detail && getStepComponent(detail.catalog.catalogId, step))}
+        tooltipFor={(step, i) => {
+          const a = artifactByStep.get(step);
           const status = displayStatus(step, i);
-          const art = artifactByStep.get(step);
-          const current = i === stepIdx;
-          const live = !!(detail && getStepComponent(detail.catalog.catalogId, step)); // has a prototyped V/P/A UI
-          const filled = status === 'pass' || status === 'fail';
-          const fill = filled ? STATUS_COLOR(t, status) : t.bg;
-          const borderColor = current
-            ? t.ink
-            : status === 'pass' ? t.ok
-            : status === 'fail' ? t.bad
-            : status === 'deferred' ? t.muted
-            : t.line;
-          const glyph = STATUS_GLYPH(status);
-          const glyphColor = filled ? t.onAccent : status === 'deferred' ? t.muted : t.ink;
-          const tooltip = [
+          const live = !!(detail && getStepComponent(detail.catalog.catalogId, step));
+          return [
             live ? 'Prototyped step' : 'Placeholder (not yet built)',
-            status !== 'pending' || art ? `status: ${status}${art?.tier ? ` · ${art.tier}` : ''}${art?.reason ? ` — ${art.reason}` : ''}` : null,
-          ].filter(Boolean).join(' · ');
-          const ariaLabel = statusAriaLabel(step, status, art?.tier);
-          return (
-            <button key={step} onClick={() => selectStep(i)} title={tooltip} aria-label={ariaLabel} aria-current={current ? 'step' : undefined}
-              style={{ display: 'flex', alignItems: 'center', gap: 12, width: '100%', textAlign: 'left', padding: '7px 0', cursor: 'pointer', border: 'none', background: 'transparent', position: 'relative', transition: 'color 160ms ease-out' }}>
-              <span data-step-status={status}
-                className={status === 'fail' ? 'animate-pulse-glow' : undefined}
-                style={{ width: 20, height: 20, flexShrink: 0, zIndex: 1, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', background: fill, border: `2px ${status === 'deferred' ? 'dashed' : 'solid'} ${borderColor}`, boxShadow: current ? `0 0 0 3px ${t.accentBg}` : 'none', color: glyphColor, fontSize: 14, fontWeight: 700, lineHeight: 1, position: 'relative', transition: 'background-color 160ms ease-out, border-color 160ms ease-out, color 160ms ease-out' }}>
-                <AnimatePresence mode="wait" initial={false}>
-                  <motion.span
-                    key={`${step}-${status}`}
-                    data-testid={`step-dot-stamp-${i}`}
-                    initial={{ scale: 0.6, opacity: 0 }}
-                    animate={{ scale: 1, opacity: 1 }}
-                    exit={{ scale: 0.6, opacity: 0 }}
-                    transition={{ duration: 0.22, ease: 'easeOut' }}
-                    style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: '100%', height: '100%' }}
-                  >
-                    {glyph}
-                  </motion.span>
-                </AnimatePresence>
-              </span>
-              <span style={{ fontSize: 16, lineHeight: 1.25, color: live ? (current ? t.inkDeep : t.text) : t.muted, fontWeight: current ? 700 : live ? 500 : 400, display: 'inline-flex', alignItems: 'center', gap: 6, transition: 'color 160ms ease-out' }}>
-                <span className={t.fontMono} style={{ color: t.muted, fontSize: 14 }}>{pad2(i + 1)}</span>{step}
-                {live && <span style={{ width: 6, height: 6, borderRadius: 999, background: t.ok, flexShrink: 0 }} title="Prototyped" />}
-              </span>
-            </button>
-          );
-        })}
-      </div>
+            status !== 'pending' || a
+              ? `status: ${status}${a?.tier ? ` · ${a.tier}` : ''}${a?.reason ? ` — ${a.reason}` : ''}`
+              : null,
+          ]
+            .filter(Boolean)
+            .join(' · ');
+        }}
+        ariaFor={(step, i) => statusAriaLabel(step, displayStatus(step, i), artifactByStep.get(step)?.tier)}
+        tierFor={(step) => artifactByStep.get(step)?.tier}
+        onSelectStep={selectStep}
+      />
     </>
   );
 
