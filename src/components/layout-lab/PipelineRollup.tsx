@@ -8,9 +8,17 @@ import {
   STATUS_GLOSSARY, TIER_GLOSSARY, TERM_GLOSSARY, plainEntitySummary,
 } from './labGlossary';
 import { STATUS_GLYPH, STATUS_WORD, statusAriaLabel, type StatusKind } from './statusLanguage';
+import { Button } from './ui/Button';
+import { Chip } from './ui/Chip';
+import { Panel } from './ui/Panel';
 
 const COLOR = (t: LabTheme, s: PipelineArtifact['status']) =>
   s === 'pass' ? t.ok : s === 'fail' ? t.bad : s === 'deferred' ? t.muted : t.warn;
+
+type ChipTone = 'ok' | 'bad' | 'neutral' | 'warn';
+const STATUS_TONE: Record<PipelineArtifact['status'], ChipTone> = {
+  pass: 'ok', fail: 'bad', deferred: 'neutral', pending: 'warn',
+};
 
 /**
  * Build a `title` tooltip that is helpful in both technical and plain modes:
@@ -64,15 +72,14 @@ export function PipelineRollup({ t, steps, artifacts, onDrain, draining, plainMo
           </span>
         )}
         {onDrain && sum.deferred > 0 && (
-          <button onClick={onDrain} disabled={draining} className={t.fontMono}
-            title={TERM_GLOSSARY.drain.plain}
-            style={{ fontSize: 13, padding: '3px 10px', cursor: draining ? 'wait' : 'pointer', background: 'transparent', color: t.ink, border: `1px solid ${t.line}`, borderRadius: t.glass ? 6 : 0, opacity: draining ? 0.6 : 1 }}>
+          <Button onClick={onDrain} disabled={draining} mono
+            style={{ opacity: draining ? 0.6 : 1, cursor: draining ? 'wait' : 'pointer' }}>
             {draining
               ? 'Running…'
               : plainMode
                 ? `Run ${sum.deferred} waiting test${sum.deferred > 1 ? 's' : ''}`
                 : `Run ${sum.deferred} deferred gate${sum.deferred > 1 ? 's' : ''}`}
-          </button>
+          </Button>
         )}
       </div>
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, alignItems: 'flex-start' }}>
@@ -83,19 +90,18 @@ export function PipelineRollup({ t, steps, artifacts, onDrain, draining, plainMo
           const color = COLOR(t, status);
           const label = statusAriaLabel(s, status, tier);
           const glyph = STATUS_GLYPH[status];
-          const chipStyle: React.CSSProperties = {
-            fontSize: 14, padding: '4px 8px', border: `1px solid ${color}`, color,
-            borderRadius: t.glass ? 6 : 0, display: 'inline-flex', alignItems: 'center', gap: 6,
-          };
           const chipBody = <><span aria-hidden="true">{glyph}</span>{s}{tier ? ` · ${tier}` : ''}</>;
 
           // Pass / pending stay non-interactive (role="img") — the plain-language
           // label + glyph carry the status without relying on color (WCAG 1.4.1).
           if (status !== 'fail' && status !== 'deferred') {
             return (
-              <span key={s} role="img" aria-label={label} title={stepTooltip(s, a)} className={t.fontMono} style={chipStyle}>
+              <Chip key={s} tone={STATUS_TONE[status]}
+                role="img" aria-label={label} title={stepTooltip(s, a)}
+                className={t.fontMono}
+                style={{ color, borderColor: color }}>
                 {chipBody}
-              </span>
+              </Chip>
             );
           }
 
@@ -104,7 +110,7 @@ export function PipelineRollup({ t, steps, artifacts, onDrain, draining, plainMo
           const regionId = `rollup-detail-${s.replace(/\W+/g, '-')}`;
           const testName = recoverTestName(a?.reason);
           return (
-            <span key={s} style={{ display: 'inline-flex', flexDirection: 'column', gap: 6 }}>
+            <span key={s} style={{ display: 'inline-flex', flexDirection: 'column', gap: 'var(--lab-s2)' }}>
               <button
                 aria-label={label}
                 aria-expanded={open}
@@ -112,21 +118,28 @@ export function PipelineRollup({ t, steps, artifacts, onDrain, draining, plainMo
                 onClick={() => setOpenStep(open ? null : s)}
                 title={stepTooltip(s, a)}
                 className={t.fontMono}
-                style={{ ...chipStyle, cursor: 'pointer', background: 'transparent' }}
+                style={{
+                  display: 'inline-flex', alignItems: 'center', gap: 'var(--lab-s1)',
+                  fontSize: 'var(--lab-fs-xs)', padding: 'var(--lab-s1) var(--lab-s2)',
+                  border: `1px solid ${color}`, color,
+                  borderRadius: 'var(--lab-r-sm)', cursor: 'pointer', background: 'transparent',
+                  whiteSpace: 'nowrap',
+                }}
               >
                 {chipBody}
               </button>
               {open && (
-                <div id={regionId} role="region" aria-label={`${s} ${STATUS_WORD[status]} details`} className={t.fontBody}
-                  style={{ fontSize: 13, color: t.text, border: `1px solid ${t.line}`, borderRadius: t.glass ? 8 : 0, padding: 10, maxWidth: 320, display: 'grid', gap: 6 }}>
-                  <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 8 }}>
+                <Panel id={regionId} role="region" aria-label={`${s} ${STATUS_WORD[status]} details`}
+                  className={t.fontBody} radius="md"
+                  style={{ fontSize: 13, color: 'var(--lab-text)', maxWidth: 320, display: 'grid', gap: 'var(--lab-s2)', padding: 'var(--lab-s3)' }}>
+                  <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 'var(--lab-s2)' }}>
                     <span className={t.fontMono} style={{ color, fontSize: 13 }}>{STATUS_WORD[status]} · tier {tier ?? '—'}</span>
                     <button aria-label="Close details" onClick={() => setOpenStep(null)} className={t.fontMono}
-                      style={{ background: 'none', border: 'none', cursor: 'pointer', color: t.muted, fontSize: 13 }}>✕</button>
+                      style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--lab-muted)', fontSize: 13 }}>✕</button>
                   </div>
-                  {testName && <code className={t.fontMono} style={{ fontSize: 13, color: t.inkDeep }}>{testName}</code>}
-                  {a?.reason && <p style={{ margin: 0, color: t.muted, lineHeight: 1.5 }}>{a.reason}</p>}
-                </div>
+                  {testName && <code className={t.fontMono} style={{ fontSize: 13, color: 'var(--lab-ink-deep)' }}>{testName}</code>}
+                  {a?.reason && <p style={{ margin: 0, color: 'var(--lab-muted)', lineHeight: 1.5 }}>{a.reason}</p>}
+                </Panel>
               )}
             </span>
           );
