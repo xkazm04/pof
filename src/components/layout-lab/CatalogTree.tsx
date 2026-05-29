@@ -1,9 +1,11 @@
 'use client';
 
+import { useState } from 'react';
 import type { LabTheme } from './theme';
 import type { LabGroup, LabCatalog, LabEntity } from './useLabCatalogData';
 import { STATUS_GLYPH, lifecycleStatus, statusAriaLabel, type StatusKind } from './statusLanguage';
 import { useCatalogStore } from '@/stores/catalogStore';
+import { useRovingFocus } from './hooks/useRovingFocus';
 
 interface CatalogTreeProps {
   t: LabTheme;
@@ -23,7 +25,7 @@ function lifecycleColor(status: StatusKind, t: LabTheme, isDraft: boolean): stri
 }
 
 function CatalogRow({
-  t, catalog, isSelected, entities, selectedEntityId, onSelectCatalog, onSelectEntity,
+  t, catalog, isSelected, entities, selectedEntityId, onSelectCatalog, onSelectEntity, rovingItemProps,
 }: {
   t: LabTheme;
   catalog: LabCatalog;
@@ -32,12 +34,16 @@ function CatalogRow({
   selectedEntityId: string | null;
   onSelectCatalog: (id: string) => void;
   onSelectEntity: (id: string) => void;
+  rovingItemProps?: { tabIndex: number; 'data-roving-active'?: boolean };
 }) {
   return (
     <>
       <button
+        role="treeitem"
+        aria-selected={isSelected}
         onClick={() => onSelectCatalog(catalog.catalogId)}
         data-testid={`harness-catalog-${catalog.catalogId}`}
+        {...rovingItemProps}
         style={{
           display: 'flex', alignItems: 'center', justifyContent: 'space-between',
           width: '100%', textAlign: 'left', padding: '7px 12px 7px 20px',
@@ -131,34 +137,61 @@ function CatalogRow({
 export function CatalogTree({
   t, groups, selectedCatalogId, entities, selectedEntityId, onSelectCatalog, onSelectEntity,
 }: CatalogTreeProps) {
+  const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
+  const visibleCatalogs = groups.flatMap((g) => (collapsed.has(g.category) ? [] : g.catalogs));
+  const activeIdx = Math.max(0, visibleCatalogs.findIndex((c) => c.catalogId === selectedCatalogId));
+  const roving = useRovingFocus(visibleCatalogs.length, activeIdx, (i) => {
+    const c = visibleCatalogs[i];
+    if (c) onSelectCatalog(c.catalogId);
+  });
+
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', minHeight: 0, overflow: 'auto' }}>
-      {groups.map((group) => (
-        <div key={group.category}>
-          <div
-            className={t.fontMono}
-            style={{
-              fontSize: 11, letterSpacing: '0.14em', textTransform: 'uppercase',
-              color: t.muted, padding: '12px 12px 4px 12px',
-              borderBottom: `1px solid ${t.line}`,
-            }}
-          >
-            {group.category}
+    <div
+      role="tree"
+      aria-label="Catalogs"
+      {...roving.containerProps}
+      style={{ display: 'flex', flexDirection: 'column', minHeight: 0, overflow: 'auto' }}
+    >
+      {groups.map((group) => {
+        const isCollapsed = collapsed.has(group.category);
+        return (
+          <div key={group.category}>
+            <button
+              onClick={() => setCollapsed((s) => {
+                const n = new Set(s);
+                if (n.has(group.category)) n.delete(group.category);
+                else n.add(group.category);
+                return n;
+              })}
+              aria-expanded={!isCollapsed}
+              className="focus-ring-inset"
+              style={{
+                width: '100%', textAlign: 'left',
+                fontFamily: 'var(--lab-font-mono)', fontSize: 'var(--lab-fs-xs)',
+                letterSpacing: '0.14em', textTransform: 'uppercase',
+                color: 'var(--lab-muted)', padding: 'var(--lab-s3) var(--lab-s3) var(--lab-s1)',
+                borderBottom: '1px solid var(--lab-line)',
+                background: 'transparent', border: 'none', cursor: 'pointer',
+              }}
+            >
+              <span aria-hidden="true">{isCollapsed ? '▸' : '▾'}</span> {group.category}
+            </button>
+            {!isCollapsed && group.catalogs.map((catalog) => (
+              <CatalogRow
+                key={catalog.catalogId}
+                t={t}
+                catalog={catalog}
+                isSelected={catalog.catalogId === selectedCatalogId}
+                entities={catalog.catalogId === selectedCatalogId ? entities : []}
+                selectedEntityId={selectedEntityId}
+                onSelectCatalog={onSelectCatalog}
+                onSelectEntity={onSelectEntity}
+                rovingItemProps={roving.itemProps(visibleCatalogs.indexOf(catalog))}
+              />
+            ))}
           </div>
-          {group.catalogs.map((catalog) => (
-            <CatalogRow
-              key={catalog.catalogId}
-              t={t}
-              catalog={catalog}
-              isSelected={catalog.catalogId === selectedCatalogId}
-              entities={catalog.catalogId === selectedCatalogId ? entities : []}
-              selectedEntityId={selectedEntityId}
-              onSelectCatalog={onSelectCatalog}
-              onSelectEntity={onSelectEntity}
-            />
-          ))}
-        </div>
-      ))}
+        );
+      })}
     </div>
   );
 }
