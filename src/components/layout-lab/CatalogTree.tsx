@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { motion, useReducedMotion } from 'framer-motion';
 import type { LabTheme } from './theme';
 import type { LabGroup, LabCatalog, LabEntity } from './useLabCatalogData';
 import { STATUS_GLYPH, lifecycleStatus, statusAriaLabel, type StatusKind } from './statusLanguage';
@@ -137,6 +138,7 @@ function CatalogRow({
 export function CatalogTree({
   t, groups, selectedCatalogId, entities, selectedEntityId, onSelectCatalog, onSelectEntity,
 }: CatalogTreeProps) {
+  const reduce = useReducedMotion();
   const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
   const visibleCatalogs = groups.flatMap((g) => (collapsed.has(g.category) ? [] : g.catalogs));
   const activeIdx = Math.max(0, visibleCatalogs.findIndex((c) => c.catalogId === selectedCatalogId));
@@ -186,18 +188,22 @@ export function CatalogTree({
             >
               <span aria-hidden="true">{isCollapsed ? '▸' : '▾'}</span> {group.category}
             </button>
-            {!isCollapsed && group.catalogs.map((catalog) => (
-              <CatalogRow
-                key={catalog.catalogId}
-                t={t}
-                catalog={catalog}
-                isSelected={catalog.catalogId === selectedCatalogId}
-                entities={catalog.catalogId === selectedCatalogId ? entities : []}
-                selectedEntityId={selectedEntityId}
-                onSelectCatalog={onSelectCatalog}
-                onSelectEntity={onSelectEntity}
-                rovingItemProps={roving.itemProps(visibleCatalogs.indexOf(catalog))}
-              />
+            {!isCollapsed && group.catalogs.map((catalog, ci) => (
+              <motion.div key={catalog.catalogId}
+                initial={reduce ? false : { opacity: 0, x: -6 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: reduce ? 0 : ci * 0.02, duration: reduce ? 0 : 0.16 }}>
+                <CatalogRow
+                  t={t}
+                  catalog={catalog}
+                  isSelected={catalog.catalogId === selectedCatalogId}
+                  entities={catalog.catalogId === selectedCatalogId ? entities : []}
+                  selectedEntityId={selectedEntityId}
+                  onSelectCatalog={onSelectCatalog}
+                  onSelectEntity={onSelectEntity}
+                  rovingItemProps={roving.itemProps(visibleCatalogs.indexOf(catalog))}
+                />
+              </motion.div>
             ))}
           </div>
         );

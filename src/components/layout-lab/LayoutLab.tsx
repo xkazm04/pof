@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useCallback, useEffect } from 'react';
+import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 import { useLabCatalogData, useLabDetail } from './useLabCatalogData';
 import { Baseline } from './Baseline';
 import { CanonView } from './CanonView';
@@ -24,6 +25,7 @@ import { Button } from './ui/Button';
  * pipeline timeline (sidebar) + a roomy work canvas. Default catalog: spellbook.
  */
 export function LayoutLab() {
+  const reduce = useReducedMotion();
   const groups = useLabCatalogData();
   const { prefs, setPrefs, hydrated } = useLabPrefs();
   const themeId = prefs.themeId;
@@ -118,17 +120,23 @@ export function LayoutLab() {
         <LabBridgeStrip t={theme} />
       </header>
       <div style={{ flex: 1, minHeight: 0, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
-        {view === 'canon'
-          ? <CanonView t={theme} />
-          : view === 'matrix'
-            ? <CatalogMatrix t={theme} groups={groups} catalogId={catalogId} onOpenStep={openFromMatrix} />
-            : <Baseline theme={theme} groups={groups} detail={detail}
-                onSelectCatalog={(id) => { setCatalogId(id); setEntityId(null); setPrefs({ lastCatalogId: id, lastEntityId: null }); }}
-                entityId={entityId}
-                onSelectEntity={(id) => { setEntityId(id); setPrefs({ lastEntityId: id }); }}
-                initialStepIdx={focusStepIdx}
-              />
-        }
+        <AnimatePresence mode="wait" initial={false}>
+          <motion.div key={view}
+            initial={reduce ? false : { opacity: 0, y: 6 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={reduce ? { opacity: 0 } : { opacity: 0, y: -6 }}
+            transition={{ duration: reduce ? 0 : 0.18, ease: 'easeOut' }}
+            style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
+            {view === 'canon' ? <CanonView t={theme} />
+              : view === 'matrix' ? <CatalogMatrix t={theme} groups={groups} catalogId={catalogId} onOpenStep={openFromMatrix} />
+              : <Baseline theme={theme} groups={groups} detail={detail}
+                  onSelectCatalog={(id) => { setCatalogId(id); setEntityId(null); setPrefs({ lastCatalogId: id, lastEntityId: null }); }}
+                  entityId={entityId}
+                  onSelectEntity={(id) => { setEntityId(id); setPrefs({ lastEntityId: id }); }}
+                  initialStepIdx={focusStepIdx}
+                />}
+          </motion.div>
+        </AnimatePresence>
       </div>
       <OneShotPanel t={theme} />
     </div>

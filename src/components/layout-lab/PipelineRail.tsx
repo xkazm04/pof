@@ -1,6 +1,6 @@
 'use client';
 import { useState } from 'react';
-import { AnimatePresence, motion } from 'framer-motion';
+import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 import { useRovingFocus } from './hooks/useRovingFocus';
 
 type NodeStatus = 'pass' | 'fail' | 'deferred' | 'pending';
@@ -27,6 +27,7 @@ export function PipelineRail({
   ariaFor,
   onSelectStep,
 }: PipelineRailProps) {
+  const reduce = useReducedMotion();
   const roving = useRovingFocus(steps.length, stepIdx ?? 0, onSelectStep);
   // Keep the roving cursor synced to the externally-selected step
   // (render-phase bail-out, not an effect).
@@ -85,8 +86,11 @@ export function PipelineRail({
           : 'var(--lab-ink)';
 
         return (
+          <motion.div key={step}
+            initial={reduce ? false : { opacity: 0, x: -6 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ delay: reduce ? 0 : i * 0.02, duration: reduce ? 0 : 0.16 }}>
           <button
-            key={step}
             {...roving.itemProps(i)}
             onClick={() => onSelectStep(i)}
             title={tooltipFor(step, i)}
@@ -188,6 +192,7 @@ export function PipelineRail({
               )}
             </span>
           </button>
+          </motion.div>
         );
       })}
     </div>
