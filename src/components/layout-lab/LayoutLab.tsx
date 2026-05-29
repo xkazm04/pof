@@ -1,12 +1,11 @@
 'use client';
 
-import { useState, useCallback, useEffect, useRef } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { useLabCatalogData, useLabDetail } from './useLabCatalogData';
 import { Baseline } from './Baseline';
 import { CanonView } from './CanonView';
 import { CatalogMatrix } from './CatalogMatrix';
-import { LAB_THEMES, LIGHT, themeAttr } from './theme';
-import type { LabDensity } from './theme';
+import { LAB_THEMES, LIGHT, themeAttr, type LabDensity } from './theme';
 import { labFontVars } from './fonts';
 import { LabBridgeStrip } from './LabBridgeStrip';
 import { LabJobsChip } from './LabJobsChip';
@@ -34,15 +33,14 @@ export function LayoutLab() {
   const [view, setView] = useState<'catalogs' | 'canon' | 'matrix'>('catalogs');
   // Step to open when jumping in from the catalog-wide matrix; cleared on a manual Catalogs click.
   const [focusStepIdx, setFocusStepIdx] = useState<number | undefined>(undefined);
-  // Adopt persisted last-location once after hydration (render-phase bail-out, not an effect).
-  /* eslint-disable react-hooks/refs -- one-shot guard; gates setState that React no-ops on subsequent renders */
-  const adopted = useRef(false);
-  if (hydrated && !adopted.current) {
-    adopted.current = true;
+  // Adopt persisted last-location once after hydration (React-sanctioned
+  // adjust-state-during-render bail-out; StrictMode-safe, no ref mutation).
+  const [navAdopted, setNavAdopted] = useState(false);
+  if (hydrated && !navAdopted) {
+    setNavAdopted(true);
     if (prefs.lastCatalogId) setCatalogId(prefs.lastCatalogId);
     if (prefs.lastEntityId) setEntityId(prefs.lastEntityId);
   }
-  /* eslint-enable react-hooks/refs */
   const detail = useLabDetail(catalogId);
   const theme = LAB_THEMES.find((t) => t.id === themeId) ?? LIGHT;
   const hydrate = useCanonStore((s) => s.hydrate);
