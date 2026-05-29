@@ -2,9 +2,9 @@
 
 import { useOneShotJobStore } from '@/stores/oneShotJobStore';
 import { useOneShotLabStore } from '@/stores/oneShotLabStore';
-import type { LabTheme } from './theme';
+import { Button } from './ui/Button';
 
-export function LabJobsChip({ t }: { t: LabTheme }) {
+export function LabJobsChip() {
   const phase = useOneShotJobStore((s) => s.phase);
   const catalogId = useOneShotJobStore((s) => s.catalogId);
   const refinementTurns = useOneShotJobStore((s) => s.refinementTurns);
@@ -23,21 +23,17 @@ export function LabJobsChip({ t }: { t: LabTheme }) {
     phase === 'failed'    ? `Jobs · ${catalogId} · failed` : '';
 
   return (
-    <button
+    <Button
       onClick={() => setPanelOpen(true)}
-      className={t.fontMono}
-      aria-label="open one-shot panel"
+      mono
+      ariaLabel="open one-shot panel"
       style={{
-        fontSize: 12,
-        padding: '4px 10px',
-        border: `1px solid ${t.line}`,
-        color: t.ink,
+        color: 'var(--lab-ink)',
+        borderColor: 'var(--lab-line)',
         background: 'transparent',
-        cursor: 'pointer',
-        borderRadius: t.glass ? 6 : 0,
       }}
     >
       {label}
-    </button>
+    </Button>
   );
 }

@@ -1,5 +1,5 @@
 import { describe, it, expect, afterEach, beforeEach, vi } from 'vitest';
-import { render, screen, fireEvent, cleanup, renderHook } from '@testing-library/react';
+import { render, screen, fireEvent, cleanup, renderHook, within } from '@testing-library/react';
 
 // next/font is a Next compiler transform; stub it for the vitest environment.
 vi.mock('next/font/google', () => {
@@ -33,7 +33,8 @@ describe('UI identity lab (Blueprint baseline · Items example)', () => {
 
   it('opens on the Items pipeline with header stats', () => {
     render(<LayoutLab />);
-    expect(screen.getByRole('button', { name: /Attributes/ })).toBeTruthy(); // a pipeline step in the sidebar
+    const pipeline = screen.getByRole('list', { name: /pipeline/i });
+    expect(within(pipeline).getByRole('button', { name: /Attributes/ })).toBeTruthy(); // a pipeline step in the sidebar
     expect(screen.getAllByText('lifecycle').length).toBeGreaterThan(0); // moved title-block stat
   });
 
@@ -48,7 +49,8 @@ describe('UI identity lab (Blueprint baseline · Items example)', () => {
 
   it('Economy step renders charts + power-score acceptance', () => {
     render(<LayoutLab />);
-    fireEvent.click(screen.getByRole('button', { name: /Economy/ }));
+    const pipeline = screen.getByRole('list', { name: /pipeline/i });
+    fireEvent.click(within(pipeline).getByRole('button', { name: /Economy/ }));
     expect(screen.getByText(/Stat budget vs tier/)).toBeTruthy();
     expect(screen.getByText(/Tune within budget/)).toBeTruthy();
     expect(screen.getByText(/Power within ±10%/)).toBeTruthy();
@@ -56,11 +58,12 @@ describe('UI identity lab (Blueprint baseline · Items example)', () => {
 
   it('the full Items pipeline is prototyped (later steps render their step UI)', () => {
     render(<LayoutLab />);
+    const pipeline = screen.getByRole('list', { name: /pipeline/i });
     // a late step has a real V/P/A component, not the placeholder
-    fireEvent.click(screen.getByRole('button', { name: /Test Gate/ }));
+    fireEvent.click(within(pipeline).getByRole('button', { name: /Test Gate/ }));
     expect(screen.getByText(/Run functional test/)).toBeTruthy();
     expect(screen.getByText(/All gate checks pass/)).toBeTruthy();
-    fireEvent.click(screen.getByRole('button', { name: /UE Packaging/ }));
+    fireEvent.click(within(pipeline).getByRole('button', { name: /UE Packaging/ }));
     expect(screen.getByText('Asset manifest')).toBeTruthy();
   });
 
@@ -82,10 +85,11 @@ describe('UI identity lab (Blueprint baseline · Items example)', () => {
     // pipeline progress is derived from the store, not faked.
     expect(screen.getAllByText('13/13').length).toBeGreaterThan(0);
     // persisted attribute data renders in the Attributes View.
-    fireEvent.click(screen.getByRole('button', { name: /Attributes/ }));
+    const pipeline = screen.getByRole('list', { name: /pipeline/i });
+    fireEvent.click(within(pipeline).getByRole('button', { name: /Attributes/ }));
     expect(screen.getByText('34 hp')).toBeTruthy();
     // persisted UE asset paths render in the Packaging manifest (slug = IronLongsword).
-    fireEvent.click(screen.getByRole('button', { name: /UE Packaging/ }));
+    fireEvent.click(within(pipeline).getByRole('button', { name: /UE Packaging/ }));
     expect(screen.getByText('T_IronLongsword_Icon')).toBeTruthy();
     // resetting clears the persisted state back to pending.
     fireEvent.click(screen.getByText('Reset'));

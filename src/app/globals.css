@@ -6,6 +6,8 @@
 @import "../lib/dzin/core/theme/state.css";
 /* PoF bridge: override Dzin tokens with PoF design system values */
 @import "../lib/dzin/core/theme/pof-bridge.css";
+/* Lab v2 design tokens — --lab-* CSS custom properties for the /layout shell */
+@import "../components/layout-lab/lab-tokens.css";
 
 /* Density variants for Tailwind utilities inside Dzin panels */
 @custom-variant density-micro (&:is([data-dzin-density="micro"], [data-dzin-density="micro"] *));

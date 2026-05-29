@@ -2,7 +2,6 @@
 
 import '@/lib/catalog/pipelines/registry.generated';
 import { useState, useEffect } from 'react';
-import { AnimatePresence, motion } from 'framer-motion';
 import { summarizeEntityData } from '@/lib/ecw/entity-summary';
 import { labStepsDone } from './labPipelines';
 import { getStepComponent } from './steps';
@@ -15,6 +14,11 @@ import { resolveAccept } from './labAcceptance';
 import { PipelineRollup } from './PipelineRollup';
 import { CatalogTree } from './CatalogTree';
 import { NextStepCoach } from './NextStepCoach';
+import { PipelineRail } from './PipelineRail';
+import { Button } from './ui/Button';
+import { Rail } from './ui/Rail';
+import { Stat } from './ui/Stat';
+import { LabDrawer, DrawerToggle } from './LabDrawer';
 import { statusAriaLabel } from './statusLanguage';
 import { summarizeEntity } from '@/lib/catalog/rollup';
 import { useViewportWidth } from '@/hooks/useViewportWidth';
@@ -39,12 +43,6 @@ const pad2 = (n: number) => String(n).padStart(2, '0');
 // crowd the work canvas, so they collapse into toggled slide-over drawers.
 const COLLAPSE_BREAKPOINT = 1100;
 
-type NodeStatus = 'pass' | 'fail' | 'deferred' | 'pending';
-const STATUS_COLOR = (t: LabTheme, s: NodeStatus): string =>
-  s === 'pass' ? t.ok : s === 'fail' ? t.bad : s === 'deferred' ? t.muted : t.warn;
-// Non-color glyph cues so status reads correctly without color, too.
-const STATUS_GLYPH = (s: NodeStatus): string =>
-  s === 'pass' ? '✓' : s === 'fail' ? '!' : s === 'deferred' ? '⋯' : '';
 
 /**
  * The single Blueprint baseline (light) / Studio (dark) composition screen. Full
@@ -207,66 +205,35 @@ export function Baseline({ theme: t, groups, detail, onSelectCatalog, entityId, 
     <>
       {isItems && entity && (
         <div style={{ display: 'flex', gap: 8, padding: '0 18px 8px' }}>
-          <button onClick={() => populateItemDemo(entity, produce)} className={t.fontMono}
-            style={{ flex: 1, fontSize: 14, padding: '6px 8px', cursor: 'pointer', background: t.glass ? t.accentBg : t.ink, color: t.glass ? t.ink : t.onAccent, border: `1px solid ${t.ink}`, borderRadius: t.glass ? 6 : 0, fontWeight: 600 }}>
+          <Button variant="accent" mono onClick={() => populateItemDemo(entity, produce)} style={{ flex: 1 }}>
             Populate demo
-          </button>
-          <button onClick={() => resetEntity(entity.id)} className={t.fontMono}
-            style={{ fontSize: 14, padding: '6px 10px', cursor: 'pointer', background: 'transparent', color: t.muted, border: `1px solid ${t.line}`, borderRadius: t.glass ? 6 : 0 }}>
+          </Button>
+          <Button mono onClick={() => resetEntity(entity.id)}>
             Reset
-          </button>
+          </Button>
         </div>
       )}
-      <div style={{ flex: 1, minHeight: 0, overflow: 'auto', padding: '4px 18px 18px', position: 'relative' }}>
-        <div style={{ position: 'absolute', left: 27, top: 12, bottom: 22, width: 2, background: t.line }} />
-        {steps.map((step, i) => {
+      <PipelineRail
+        steps={steps}
+        stepIdx={stepIdx}
+        displayStatus={displayStatus}
+        isLive={(step) => !!(detail && getStepComponent(detail.catalog.catalogId, step))}
+        tooltipFor={(step, i) => {
+          const a = artifactByStep.get(step);
           const status = displayStatus(step, i);
-          const art = artifactByStep.get(step);
-          const current = i === stepIdx;
-          const live = !!(detail && getStepComponent(detail.catalog.catalogId, step)); // has a prototyped V/P/A UI
-          const filled = status === 'pass' || status === 'fail';
-          const fill = filled ? STATUS_COLOR(t, status) : t.bg;
-          const borderColor = current
-            ? t.ink
-            : status === 'pass' ? t.ok
-            : status === 'fail' ? t.bad
-            : status === 'deferred' ? t.muted
-            : t.line;
-          const glyph = STATUS_GLYPH(status);
-          const glyphColor = filled ? t.onAccent : status === 'deferred' ? t.muted : t.ink;
-          const tooltip = [
+          const live = !!(detail && getStepComponent(detail.catalog.catalogId, step));
+          return [
             live ? 'Prototyped step' : 'Placeholder (not yet built)',
-            status !== 'pending' || art ? `status: ${status}${art?.tier ? ` · ${art.tier}` : ''}${art?.reason ? ` — ${art.reason}` : ''}` : null,
-          ].filter(Boolean).join(' · ');
-          const ariaLabel = statusAriaLabel(step, status, art?.tier);
-          return (
-            <button key={step} onClick={() => selectStep(i)} title={tooltip} aria-label={ariaLabel} aria-current={current ? 'step' : undefined}
-              style={{ display: 'flex', alignItems: 'center', gap: 12, width: '100%', textAlign: 'left', padding: '7px 0', cursor: 'pointer', border: 'none', background: 'transparent', position: 'relative', transition: 'color 160ms ease-out' }}>
-              <span data-step-status={status}
-                className={status === 'fail' ? 'animate-pulse-glow' : undefined}
-                style={{ width: 20, height: 20, flexShrink: 0, zIndex: 1, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', background: fill, border: `2px ${status === 'deferred' ? 'dashed' : 'solid'} ${borderColor}`, boxShadow: current ? `0 0 0 3px ${t.accentBg}` : 'none', color: glyphColor, fontSize: 14, fontWeight: 700, lineHeight: 1, position: 'relative', transition: 'background-color 160ms ease-out, border-color 160ms ease-out, color 160ms ease-out' }}>
-                <AnimatePresence mode="wait" initial={false}>
-                  <motion.span
-                    key={`${step}-${status}`}
-                    data-testid={`step-dot-stamp-${i}`}
-                    initial={{ scale: 0.6, opacity: 0 }}
-                    animate={{ scale: 1, opacity: 1 }}
-                    exit={{ scale: 0.6, opacity: 0 }}
-                    transition={{ duration: 0.22, ease: 'easeOut' }}
-                    style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: '100%', height: '100%' }}
-                  >
-                    {glyph}
-                  </motion.span>
-                </AnimatePresence>
-              </span>
-              <span style={{ fontSize: 16, lineHeight: 1.25, color: live ? (current ? t.inkDeep : t.text) : t.muted, fontWeight: current ? 700 : live ? 500 : 400, display: 'inline-flex', alignItems: 'center', gap: 6, transition: 'color 160ms ease-out' }}>
-                <span className={t.fontMono} style={{ color: t.muted, fontSize: 14 }}>{pad2(i + 1)}</span>{step}
-                {live && <span style={{ width: 6, height: 6, borderRadius: 999, background: t.ok, flexShrink: 0 }} title="Prototyped" />}
-              </span>
-            </button>
-          );
-        })}
-      </div>
+            status !== 'pending' || a
+              ? `status: ${status}${a?.tier ? ` · ${a.tier}` : ''}${a?.reason ? ` — ${a.reason}` : ''}`
+              : null,
+          ]
+            .filter(Boolean)
+            .join(' · ');
+        }}
+        ariaFor={(step, i) => statusAriaLabel(step, displayStatus(step, i), artifactByStep.get(step)?.tier)}
+        onSelectStep={selectStep}
+      />
     </>
   );
 
@@ -275,7 +242,8 @@ export function Baseline({ theme: t, groups, detail, onSelectCatalog, entityId, 
       className={t.fontBody}
       style={{
         background: t.bg, color: t.text, minHeight: '100%', display: 'flex', flexDirection: 'column',
-        ...(t.gridLine ? { backgroundImage: `linear-gradient(${t.gridLine} 1px, transparent 1px), linear-gradient(90deg, ${t.gridLine} 1px, transparent 1px)`, backgroundSize: '24px 24px' } : {}),
+        backgroundImage: 'var(--lab-grid-image), var(--lab-canvas-ambient)',
+        backgroundSize: 'var(--lab-grid-size), auto',
       }}
     >
       {/* ── Header: title + moved title-block stats ── */}
@@ -295,10 +263,10 @@ export function Baseline({ theme: t, groups, detail, onSelectCatalog, entityId, 
         </div>
         {/* stat strip (moved from the title block) */}
         <div style={{ marginLeft: 'auto', display: 'flex', flexWrap: 'wrap', gap: 8, justifyContent: 'flex-end' }}>
-          <Stat t={t} label="lifecycle" value={entity?.lifecycle ?? '—'} accent />
-          {isItems && <Stat t={t} label="pipeline" value={`${done}/${steps.length}`} accent />}
-          {isItems && ueAssetCount > 0 && <Stat t={t} label="ue assets" value={String(ueAssetCount)} />}
-          {fields.map((f) => <Stat key={f.label} t={t} label={f.label} value={f.value} />)}
+          <Stat label="lifecycle" value={entity?.lifecycle ?? '—'} accent />
+          {isItems && <Stat label="pipeline" value={`${done}/${steps.length}`} accent />}
+          {isItems && ueAssetCount > 0 && <Stat label="ue assets" value={String(ueAssetCount)} />}
+          {fields.map((f) => <Stat key={f.label} label={f.label} value={f.value} />)}
         </div>
       </header>
 
@@ -307,23 +275,13 @@ export function Baseline({ theme: t, groups, detail, onSelectCatalog, entityId, 
             work canvas stays full-width (mirrors StepFrame's auto-fit instinct). ── */}
       <div style={{ flex: 1, display: 'grid', gridTemplateColumns: wide ? '260px 320px 1fr' : '1fr', minHeight: 0 }}>
         {/* catalog tree column — inline when wide, otherwise a drawer (below) */}
-        {wide && (
-          <aside style={{ borderRight: `1px solid ${t.line}`, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
-            <div className={t.fontMono} style={{ fontSize: 14, letterSpacing: '0.12em', textTransform: 'uppercase', color: t.ink, padding: '14px 18px 8px' }}>Catalogs</div>
-            {treeBody}
-          </aside>
-        )}
+        {wide && <Rail title="Catalogs">{treeBody}</Rail>}
 
         {/* pipeline column — inline when wide, otherwise a drawer (below) */}
-        {wide && (
-          <aside style={{ borderRight: `1px solid ${t.line}`, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
-            <div className={t.fontMono} style={{ fontSize: 14, letterSpacing: '0.12em', textTransform: 'uppercase', color: t.ink, padding: '14px 18px 8px' }}>Pipeline · {done}/{steps.length}</div>
-            {pipelineBody}
-          </aside>
-        )}
+        {wide && <Rail title={`Pipeline · ${done}/${steps.length}`}>{pipelineBody}</Rail>}
 
         {/* main content — roomy work canvas */}
-        <main style={{ padding: '28px 36px', overflow: 'auto', minHeight: 0 }}>
+        <main id="lab-canvas" tabIndex={-1} style={{ padding: '28px 36px', overflow: 'auto', minHeight: 0 }}>
           {stepIdx != null && steps[stepIdx] ? (() => {
             const stepName = steps[stepIdx];
             const Bespoke = detail && entity ? getStepComponent(detail.catalog.catalogId, stepName) : null;
@@ -382,93 +340,6 @@ export function Baseline({ theme: t, groups, detail, onSelectCatalog, entityId, 
           </LabDrawer>
         </>
       )}
-    </div>
-  );
-}
-
-/** Header button that opens/closes a collapsed-shell drawer (narrow viewports). */
-function DrawerToggle({ t, label, glyph, open, controls, onClick }: {
-  t: LabTheme; label: string; glyph: string; open: boolean; controls: string; onClick: () => void;
-}) {
-  return (
-    <button
-      onClick={onClick}
-      aria-expanded={open}
-      aria-controls={controls}
-      className={t.fontMono}
-      style={{
-        display: 'inline-flex', alignItems: 'center', gap: 8, fontSize: 14, fontWeight: 600,
-        padding: '6px 12px', cursor: 'pointer', whiteSpace: 'nowrap',
-        background: open ? (t.glass ? t.accentBg : t.ink) : 'transparent',
-        color: open ? (t.glass ? t.ink : t.onAccent) : t.ink,
-        border: `1px solid ${t.ink}`, borderRadius: t.glass ? 6 : 0,
-        transition: 'background-color 160ms ease-out, color 160ms ease-out',
-      }}
-    >
-      <span aria-hidden="true">{glyph}</span>{label}
-    </button>
-  );
-}
-
-/**
- * Left slide-over drawer used to surface the catalog tree / pipeline columns when
- * the shell is too narrow to keep them inline. Backdrop click or Escape closes it.
- */
-function LabDrawer({ t, open, onClose, id, title, width, children }: {
-  t: LabTheme; open: boolean; onClose: () => void; id: string; title: string; width: number; children: React.ReactNode;
-}) {
-  return (
-    <AnimatePresence>
-      {open && (
-        <>
-          <motion.div
-            key={`${id}-backdrop`}
-            data-testid={`${id}-backdrop`}
-            onClick={onClose}
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.18 }}
-            style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)', zIndex: 40 }}
-          />
-          <motion.aside
-            key={`${id}-panel`}
-            id={id}
-            role="dialog"
-            aria-modal="true"
-            aria-label={title}
-            initial={{ x: '-100%' }}
-            animate={{ x: 0 }}
-            exit={{ x: '-100%' }}
-            transition={{ type: 'spring', stiffness: 380, damping: 38 }}
-            style={{
-              position: 'fixed', top: 0, bottom: 0, left: 0, width, maxWidth: '85vw',
-              display: 'flex', flexDirection: 'column', minHeight: 0, zIndex: 41,
-              background: t.bg, borderRight: `1px solid ${t.line}`, boxShadow: '0 0 40px rgba(0,0,0,0.28)',
-            }}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, padding: '12px 14px 12px 18px', borderBottom: `1px solid ${t.line}` }}>
-              <span className={t.fontMono} style={{ fontSize: 14, letterSpacing: '0.12em', textTransform: 'uppercase', color: t.ink }}>{title}</span>
-              <button onClick={onClose} aria-label="Close drawer" className={t.fontMono}
-                style={{ fontSize: 16, lineHeight: 1, padding: '4px 8px', cursor: 'pointer', background: 'transparent', color: t.muted, border: `1px solid ${t.line}`, borderRadius: t.glass ? 6 : 0 }}>
-                ✕
-              </button>
-            </div>
-            <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-              {children}
-            </div>
-          </motion.aside>
-        </>
-      )}
-    </AnimatePresence>
-  );
-}
-
-function Stat({ t, label, value, accent }: { t: LabTheme; label: string; value: string; accent?: boolean }) {
-  return (
-    <div style={{ padding: '4px 12px', border: `1px solid ${t.line}`, background: t.panel, ...(t.glass ? { borderRadius: 8 } : {}) }}>
-      <div className={t.fontMono} style={{ fontSize: 14, letterSpacing: '0.06em', textTransform: 'uppercase', color: t.muted }}>{label}</div>
-      <div className={t.fontMono} style={{ fontSize: 16, fontWeight: 600, color: accent ? t.ink : t.inkDeep }}>{value}</div>
     </div>
   );
 }

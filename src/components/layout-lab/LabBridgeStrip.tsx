@@ -18,6 +18,7 @@ import { BridgeStatusIndicator, type ConnectionStatus } from '@/components/ui/Br
 import { usePofBridgeStore } from '@/stores/pofBridgeStore';
 import { BridgeDoctor } from '@/components/bridge-doctor/BridgeDoctor';
 import { Z_INDEX } from '@/lib/constants';
+import { Button } from './ui/Button';
 import type { LabTheme } from './theme';
 
 interface LabBridgeStripProps {
@@ -74,15 +75,18 @@ export function LabBridgeStrip({ t }: LabBridgeStripProps) {
 
   return (
     <span ref={wrapperRef} style={{ marginLeft: 'auto', position: 'relative' }}>
-      <button
-        type="button"
+      <Button
         onClick={toggle}
         aria-haspopup="dialog"
         aria-expanded={open}
-        aria-label="Open Bridge Doctor diagnostics"
+        ariaLabel="Open Bridge Doctor diagnostics"
         title="Open Bridge Doctor"
-        className="focus-ring"
-        style={{ background: 'transparent', border: 0, cursor: 'pointer', padding: 0 }}
+        style={{
+          background: 'transparent',
+          border: 'none',
+          padding: 0,
+          minWidth: 0,
+        }}
       >
         <BridgeStatusIndicator
           status={connectionStatus}
@@ -90,7 +94,7 @@ export function LabBridgeStrip({ t }: LabBridgeStripProps) {
           label={detail}
           paletteOverride={labPalette}
         />
-      </button>
+      </Button>
 
       {open && (
         <div

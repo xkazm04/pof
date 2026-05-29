@@ -1,12 +1,13 @@
 'use client';
-/* eslint-disable no-restricted-syntax -- identity-lab chrome: neutral monochrome bar, bespoke by design */
 
 import { useState, useCallback, useEffect } from 'react';
+import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 import { useLabCatalogData, useLabDetail } from './useLabCatalogData';
 import { Baseline } from './Baseline';
 import { CanonView } from './CanonView';
 import { CatalogMatrix } from './CatalogMatrix';
-import { LAB_THEMES, LIGHT } from './theme';
+import { LAB_THEMES, LIGHT, themeAttr, type LabDensity } from './theme';
+import { labFontVars } from './fonts';
 import { LabBridgeStrip } from './LabBridgeStrip';
 import { LabJobsChip } from './LabJobsChip';
 import { OneShotPanel } from './one-shot/OneShotPanel';
@@ -14,6 +15,8 @@ import { useOneShotLabStore } from '@/stores/oneShotLabStore';
 import { setupOneShotToastHandler } from './one-shot/toastHandler';
 import { useCanonStore } from './canonStore';
 import { writeShellPref } from '@/lib/ecw/shell-pref';
+import { useLabPrefs } from './hooks/useLabPrefs';
+import { Button } from './ui/Button';
 
 /**
  * UI identity lab (/layout). Consolidated to a single Blueprint baseline with a
@@ -22,13 +25,24 @@ import { writeShellPref } from '@/lib/ecw/shell-pref';
  * pipeline timeline (sidebar) + a roomy work canvas. Default catalog: spellbook.
  */
 export function LayoutLab() {
+  const reduce = useReducedMotion();
   const groups = useLabCatalogData();
-  const [themeId, setThemeId] = useState<'light' | 'dark'>('light');
+  const { prefs, setPrefs, hydrated } = useLabPrefs();
+  const themeId = prefs.themeId;
+  const density = prefs.density;
   const [catalogId, setCatalogId] = useState('items');
   const [entityId, setEntityId] = useState<string | null>(null);
   const [view, setView] = useState<'catalogs' | 'canon' | 'matrix'>('catalogs');
   // Step to open when jumping in from the catalog-wide matrix; cleared on a manual Catalogs click.
   const [focusStepIdx, setFocusStepIdx] = useState<number | undefined>(undefined);
+  // Adopt persisted last-location once after hydration (React-sanctioned
+  // adjust-state-during-render bail-out; StrictMode-safe, no ref mutation).
+  const [navAdopted, setNavAdopted] = useState(false);
+  if (hydrated && !navAdopted) {
+    setNavAdopted(true);
+    if (prefs.lastCatalogId) setCatalogId(prefs.lastCatalogId);
+    if (prefs.lastEntityId) setEntityId(prefs.lastEntityId);
+  }
   const detail = useLabDetail(catalogId);
   const theme = LAB_THEMES.find((t) => t.id === themeId) ?? LIGHT;
   const hydrate = useCanonStore((s) => s.hydrate);
@@ -71,89 +85,71 @@ export function LayoutLab() {
   }, []);
 
   return (
-    <div data-testid="harness-lab-ready" style={{ height: '100vh', display: 'flex', flexDirection: 'column', background: '#000' }}>
-      <div style={{ flex: '0 0 auto', display: 'flex', alignItems: 'center', gap: 6, padding: '10px 16px', background: '#0c0c0c', borderBottom: '1px solid #262626' }}>
-        <span style={{ color: '#777', fontSize: 12, marginRight: 12, fontFamily: 'ui-monospace, monospace' }}>/layout · Blueprint baseline</span>
-        <button
-          onClick={() => { setView('catalogs'); setFocusStepIdx(undefined); }}
-          style={{
-            padding: '6px 14px', borderRadius: 6, fontSize: 13, cursor: 'pointer', border: '1px solid #333',
-            background: view === 'catalogs' ? '#fff' : 'transparent', color: view === 'catalogs' ? '#000' : '#aaa',
-            fontWeight: view === 'catalogs' ? 600 : 400,
-          }}
-        >
-          Catalogs
-        </button>
-        <button
-          onClick={() => setView('matrix')}
-          style={{
-            padding: '6px 14px', borderRadius: 6, fontSize: 13, cursor: 'pointer', border: '1px solid #333',
-            background: view === 'matrix' ? '#fff' : 'transparent', color: view === 'matrix' ? '#000' : '#aaa',
-            fontWeight: view === 'matrix' ? 600 : 400,
-          }}
-        >
-          Matrix
-        </button>
-        <button
-          onClick={() => setView('canon')}
-          style={{
-            padding: '6px 14px', borderRadius: 6, fontSize: 13, cursor: 'pointer', border: '1px solid #333',
-            background: view === 'canon' ? '#fff' : 'transparent', color: view === 'canon' ? '#000' : '#aaa',
-            fontWeight: view === 'canon' ? 600 : 400,
-          }}
-        >
-          Canon
-        </button>
+    <div
+      data-testid="harness-lab-ready"
+      data-lab-root=""
+      data-theme={themeAttr(themeId)}
+      data-density={density}
+      className={labFontVars}
+      style={{ height: '100vh', display: 'flex', flexDirection: 'column', background: 'var(--lab-bg)' }}
+    >
+      <a href="#lab-canvas" className="focus-ring"
+         style={{ position: 'fixed', left: 'var(--lab-s2)', top: 'var(--lab-s2)', zIndex: 50,
+                  padding: 'var(--lab-s2) var(--lab-s3)', background: 'var(--lab-panel)',
+                  border: '1px solid var(--lab-line)', color: 'var(--lab-ink)',
+                  transform: 'translateY(-200%)', transition: 'transform var(--lab-dur) var(--lab-ease)' }}
+         onFocus={(e) => { e.currentTarget.style.transform = 'translateY(0)'; }}
+         onBlur={(e) => { e.currentTarget.style.transform = 'translateY(-200%)'; }}>
+        Skip to canvas
+      </a>
+      {/* ── Title-block (Blueprint) / glass command bar (Studio) chrome ── */}
+      <header
+        style={{
+          flex: '0 0 auto', display: 'flex', alignItems: 'center', gap: 'var(--lab-s2)',
+          padding: 'var(--lab-s2) var(--lab-s4)', background: 'var(--lab-panel)',
+          borderBottom: '1px solid var(--lab-line)', boxShadow: 'var(--lab-elev-1)',
+          ...(theme.glass ? { backdropFilter: 'blur(var(--lab-glass-blur))' } : {}),
+        }}
+      >
+        <span style={{ fontFamily: 'var(--lab-font-mono)', fontSize: 'var(--lab-fs-xs)', color: 'var(--lab-muted)', marginRight: 'var(--lab-s3)', whiteSpace: 'nowrap' }}>
+          PoF·LAB <span style={{ color: 'var(--lab-ink)' }}>sheet · {detail?.catalog.catalogId ?? '—'}</span>
+        </span>
+        <Button active={view === 'catalogs'} onClick={() => { setView('catalogs'); setFocusStepIdx(undefined); }}>Catalogs</Button>
+        <Button active={view === 'matrix'} onClick={() => setView('matrix')}>Matrix</Button>
+        <Button active={view === 'canon'} onClick={() => setView('canon')}>Canon</Button>
         {LAB_THEMES.map((t) => (
-          <button
-            key={t.id}
-            onClick={() => setThemeId(t.id)}
-            style={{
-              padding: '6px 14px', borderRadius: 6, fontSize: 13, cursor: 'pointer', border: '1px solid #333',
-              background: themeId === t.id ? '#fff' : 'transparent', color: themeId === t.id ? '#000' : '#aaa',
-              fontWeight: themeId === t.id ? 600 : 400,
-            }}
-          >
-            {t.label}
-          </button>
+          <Button key={t.id} active={themeId === t.id} onClick={() => setPrefs({ themeId: t.id })}>{t.label}</Button>
         ))}
-        <button
-          onClick={() => setPanelOpen(true)}
-          style={{
-            padding: '6px 14px', borderRadius: 6, fontSize: 13,
-            cursor: 'pointer', border: '1px solid #333', background: 'transparent',
-            color: '#aaa', fontWeight: 400,
-          }}
-        >
-          + One-shot
-        </button>
-        <LabJobsChip t={theme} />
-        <button
-          onClick={switchToLegacy}
-          style={{
-            marginLeft: 'auto', padding: '6px 14px', borderRadius: 6, fontSize: 13,
-            cursor: 'pointer', border: '1px solid #333', background: 'transparent',
-            color: '#aaa', fontWeight: 400,
-          }}
-        >
-          Legacy shell
-        </button>
+        <Button mono ariaLabel={`density: ${density}`} onClick={() => setPrefs({ density: nextDensity(density) })}>
+          density · {density === 'compact' ? '▮' : '▯'}
+        </Button>
+        <Button onClick={() => setPanelOpen(true)}>+ One-shot</Button>
+        <LabJobsChip />
+        <Button style={{ marginLeft: 'auto' }} onClick={switchToLegacy}>Legacy shell</Button>
         <LabBridgeStrip t={theme} />
-      </div>
+      </header>
       <div style={{ flex: 1, minHeight: 0, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
-        {view === 'canon'
-          ? <CanonView t={theme} />
-          : view === 'matrix'
-            ? <CatalogMatrix t={theme} groups={groups} catalogId={catalogId} onOpenStep={openFromMatrix} />
-            : <Baseline theme={theme} groups={groups} detail={detail}
-                onSelectCatalog={(id) => { setCatalogId(id); setEntityId(null); }}
-                entityId={entityId}
-                onSelectEntity={setEntityId}
-                initialStepIdx={focusStepIdx}
-              />
-        }
+        <AnimatePresence mode="wait" initial={false}>
+          <motion.div key={view}
+            initial={reduce ? false : { opacity: 0, y: 6 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={reduce ? { opacity: 0 } : { opacity: 0, y: -6 }}
+            transition={{ duration: reduce ? 0 : 0.18, ease: 'easeOut' }}
+            style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
+            {view === 'canon' ? <CanonView t={theme} />
+              : view === 'matrix' ? <CatalogMatrix t={theme} groups={groups} catalogId={catalogId} onOpenStep={openFromMatrix} />
+              : <Baseline theme={theme} groups={groups} detail={detail}
+                  onSelectCatalog={(id) => { setCatalogId(id); setEntityId(null); setPrefs({ lastCatalogId: id, lastEntityId: null }); }}
+                  entityId={entityId}
+                  onSelectEntity={(id) => { setEntityId(id); setPrefs({ lastEntityId: id }); }}
+                  initialStepIdx={focusStepIdx}
+                />}
+          </motion.div>
+        </AnimatePresence>
       </div>
       <OneShotPanel t={theme} />
     </div>
   );
 }
+
+const nextDensity = (d: LabDensity): LabDensity => (d === 'compact' ? 'comfortable' : 'compact');
