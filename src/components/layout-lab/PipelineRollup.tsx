@@ -73,6 +73,7 @@ export function PipelineRollup({ t, steps, artifacts, onDrain, draining, plainMo
         )}
         {onDrain && sum.deferred > 0 && (
           <Button onClick={onDrain} disabled={draining} mono
+            title={TERM_GLOSSARY.drain.plain}
             style={{ opacity: draining ? 0.6 : 1, cursor: draining ? 'wait' : 'pointer' }}>
             {draining
               ? 'Running…'

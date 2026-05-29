@@ -1,20 +1,17 @@
-import type { CSSProperties, ReactNode } from 'react';
+import type { ButtonHTMLAttributes, ReactNode } from 'react';
 
 type Variant = 'solid' | 'ghost' | 'accent';
 
-interface ButtonProps {
+interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   children: ReactNode;
-  onClick?: () => void;
   variant?: Variant;
   active?: boolean;
   mono?: boolean;
-  disabled?: boolean;
   ariaLabel?: string;
-  style?: CSSProperties;
 }
 
 /** Themed button. `active` reflects a toggled/selected state (aria-pressed + accent fill). */
-export function Button({ children, onClick, variant = 'ghost', active, mono, disabled, ariaLabel, style }: ButtonProps) {
+export function Button({ children, onClick, variant = 'ghost', active, mono, disabled, ariaLabel, style, className, ...rest }: ButtonProps) {
   const bg =
     active || variant === 'accent' ? 'var(--lab-accent)'
     : variant === 'solid' ? 'var(--lab-accent-bg)'
@@ -22,12 +19,13 @@ export function Button({ children, onClick, variant = 'ghost', active, mono, dis
   const color = active || variant === 'accent' ? 'var(--lab-on-accent)' : 'var(--lab-ink)';
   return (
     <button
+      {...rest}
       type="button"
       onClick={onClick}
       disabled={disabled}
       aria-label={ariaLabel}
       aria-pressed={active ? true : undefined}
-      className="focus-ring"
+      className={`focus-ring${className ? ' ' + className : ''}`}
       style={{
         display: 'inline-flex', alignItems: 'center', gap: 'var(--lab-s2)',
         padding: 'var(--lab-s2) var(--lab-s4)', fontSize: 'var(--lab-fs-xs)',
