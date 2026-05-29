@@ -93,6 +93,15 @@ export function LayoutLab() {
       className={labFontVars}
       style={{ height: '100vh', display: 'flex', flexDirection: 'column', background: 'var(--lab-bg)' }}
     >
+      <a href="#lab-canvas" className="focus-ring"
+         style={{ position: 'absolute', left: 'var(--lab-s2)', top: 'var(--lab-s2)', zIndex: 50,
+                  padding: 'var(--lab-s2) var(--lab-s3)', background: 'var(--lab-panel)',
+                  border: '1px solid var(--lab-line)', color: 'var(--lab-ink)',
+                  transform: 'translateY(-200%)', transition: 'transform var(--lab-dur) var(--lab-ease)' }}
+         onFocus={(e) => { e.currentTarget.style.transform = 'translateY(0)'; }}
+         onBlur={(e) => { e.currentTarget.style.transform = 'translateY(-200%)'; }}>
+        Skip to canvas
+      </a>
       {/* ── Title-block (Blueprint) / glass command bar (Studio) chrome ── */}
       <header
         style={{

@@ -357,6 +357,109 @@ See:
 - AnimBP library: `Source/PoFEditor/{Public,Private}/PoFAnimBPAuthoringLibrary.{h,cpp}`
 - Acceptance gate: `Source/PoF/Test/Character/VSPlayerMovementTest.cpp` (Wiring + Playable)
 
+## §10 Lab Shell v2 Design System
+
+The lab-shell-v2 branch (`feature/lab-shell-v2`) introduced a first-class design system that sits
+beneath the catalog pipeline UI. All new lab UI is built on this layer; the Items pipeline bespoke
+steps are its reference implementation.
+
+### Token layer — `lab-tokens.css`
+
+A single CSS file (`src/components/layout-lab/lab-tokens.css`) defines all `--lab-*` custom
+properties. Tokens are organised into six scales:
+
+| Scale | Examples |
+|-------|---------|
+| **Color** | `--lab-bg`, `--lab-panel`, `--lab-ink`, `--lab-muted`, `--lab-accent`, `--lab-on-accent`, `--lab-line`, `--lab-glass-blur` |
+| **Space** | `--lab-s1` … `--lab-s6` (4 px base, powers of 1.5) |
+| **Radius** | `--lab-r-sm`, `--lab-r-md`, `--lab-r-lg` |
+| **Elevation** | `--lab-elev-1` … `--lab-elev-3` (box-shadow ramps) |
+| **Motion** | `--lab-dur`, `--lab-dur-fast`, `--lab-ease` |
+| **Typography** | `--lab-font-body`, `--lab-font-mono`, `--lab-fs-xs`, `--lab-fs-sm`, `--lab-fs-base` |
+
+Theme and density are set via data-attributes on the root `[data-lab-root]` div:
+
+- `[data-theme="blueprint"]` — Light: blueprint-grid canvas, IBM Plex Mono, neutral ink.
+- `[data-theme="studio"]` — Studio Dark: dark panel, JetBrains Mono, glass blur enabled.
+- `[data-density="compact"]` / `[data-density="comfortable"]` — adjusts space tokens (`--lab-s2`
+  through `--lab-s4`) and font sizes throughout the shell without any component changes.
+
+### `LabTheme` compat shim — `theme.ts`
+
+`LabTheme` (`src/components/layout-lab/theme.ts`) is a typed struct of named color fields.
+Since the shift to CSS custom properties the color fields (`bg`, `panel`, `ink`, `muted`, `line`,
+`accent`, `inkDeep`) are `var(--lab-*)` references rather than raw hex values. This means all
+bespoke step-content components that thread `t: LabTheme` through to inline styles automatically
+inherit the active theme and density with zero rewrites when a new theme is added.
+
+Fields that are not color references remain as concrete values: `glass: boolean` (whether to apply
+`backdrop-filter`), `id` (theme name), `gridLine` (the blueprint-grid image string), and the two
+font-class strings `fontBody`/`fontMono`. The `LIGHT` and `DARK` constants are the two shipped
+themes; `LAB_THEMES` is the authoritative array.
+
+### Primitive kit — `ui/`
+
+All generic controls live in `src/components/layout-lab/ui/` and consume the token layer directly:
+
+| Primitive | Notes |
+|-----------|-------|
+| `Panel` | Bordered container; `glass` prop adds `backdrop-filter` |
+| `Button` | Ghost / solid / accent variants; `active` → `aria-pressed`; `mono` switches to mono font; `ariaLabel` prop and HTML `aria-label` attribute both work (prop wins) |
+| `IconButton` | Square variant of Button for icon-only actions (wraps `VisuallyHidden` label) |
+| `Chip` | Inline status badge; color via token name |
+| `Stat` | Label+value pair used in the composition-screen header strip |
+| `Field` / `Input` / `Textarea` | Labeled form controls; min font-size `var(--lab-fs-sm)` (≥ 14 px) |
+| `Rail` | Titled scrollable column shell used by the catalog tree and pipeline timeline |
+| `VisuallyHidden` | SR-only text for icon buttons and decorative elements |
+
+Every primitive carries the `.focus-ring` class so keyboard focus is styled by the unified global
+token (`var(--focus-accent)` → `var(--lab-accent)` inside `[data-lab-root]`).
+
+### Hooks
+
+**`useLabPrefs`** (`src/components/layout-lab/hooks/useLabPrefs.ts`):
+Persists three user preferences across sessions: `themeId` (Blueprint/Studio Dark), `density`
+(compact/comfortable), and `lastCatalogId`/`lastEntityId` (restore the user's last location on
+return). SSR-safe: the hook returns `hydrated: false` during SSR / first paint, and `LayoutLab`
+defers the last-location restore until `hydrated` flips true (React adjust-state-during-render,
+StrictMode-safe, no `useEffect` state mutation).
+
+**`useRovingFocus`** (`src/components/layout-lab/hooks/useRovingFocus.ts`):
+Implements roving tabindex for ordered lists of interactive elements (the nav rail and pipeline
+rail). Manages a single `tabIndex={0}` among siblings; Arrow Down/Up (and j/k vim keys), Home/End
+move focus; Enter activates. Used by `PipelineRail` (step timeline) and `CatalogTree` (catalog
+rows).
+
+### Chrome
+
+The top `<header>` in `LayoutLab` applies Blueprint (title-block) or Studio (glass command bar)
+chrome based on `theme.glass`. The density toggle cycles compact ↔ comfortable via `useLabPrefs`.
+Theme selection and density are persisted immediately so a page reload restores the exact state.
+
+### Motion
+
+View swaps between Catalogs / Matrix / Canon use framer-motion `<AnimatePresence mode="wait">`
+with a 180 ms opacity + 6 px y-shift. List-entrance stagger in panel grids uses
+`motion.div` with `transition.delay = index * 0.04`. Both paths gate on `useReducedMotion()` —
+when `prefers-reduced-motion: reduce` is set the variants collapse to an immediate opacity-only
+fade (or are disabled entirely for the y-axis), satisfying WCAG SC 2.3.3.
+
+### Accessibility
+
+- **Roving keyboard nav**: `PipelineRail` and `CatalogTree` use `useRovingFocus` so Arrow keys,
+  j/k, Home/End, and Enter navigate and activate without Tab-stop flooding.
+- **Skip-to-canvas link**: a visually-hidden skip link is the first child inside
+  `[data-testid="harness-lab-ready"]`. It becomes visible on focus (`transform: translateY(0)`)
+  and targets `#lab-canvas` (`<main id="lab-canvas" tabIndex={-1}>`), letting keyboard users
+  bypass the header and side columns in one keystroke.
+- **Focus rings**: every interactive element in the lab uses the unified `.focus-ring` global
+  class (defined in `globals.css`). Inside `[data-lab-root]` the `--focus-accent` CSS variable
+  resolves to `--lab-accent`, so focus rings inherit the active theme automatically.
+- **Aria roles**: `PipelineRail` renders a `role="list"` with an accessible name; each step
+  button carries the aria label returned by the `ariaFor` callback (step name + status + tier).
+
+---
+
 ## See also
 
 - [Overview](overview.md) — top-level architecture
@@ -366,3 +469,5 @@ See:
 - [Runtime patterns](runtime-patterns.md) — `Lifecycle<T>`, `useSuspendableEffect`, LRU suspend,
   event bus
 - [Catalog authoring](../catalog/AUTHORING.md) — manual-authoring recipe + the one-shot alternative path
+- [Lab Shell v2 design spec](../superpowers/specs/2026-05-28-lab-shell-v2-design.md) — original
+  Ring-by-Ring spec for the token system, primitive kit, hooks, chrome, and a11y work

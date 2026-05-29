@@ -11,7 +11,7 @@ interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
 }
 
 /** Themed button. `active` reflects a toggled/selected state (aria-pressed + accent fill). */
-export function Button({ children, onClick, variant = 'ghost', active, mono, disabled, ariaLabel, style, className, ...rest }: ButtonProps) {
+export function Button({ children, onClick, variant = 'ghost', active, mono, disabled, ariaLabel, style, className, 'aria-label': ariaLabelAttr, ...rest }: ButtonProps) {
   const bg =
     active || variant === 'accent' ? 'var(--lab-accent)'
     : variant === 'solid' ? 'var(--lab-accent-bg)'
@@ -23,7 +23,7 @@ export function Button({ children, onClick, variant = 'ghost', active, mono, dis
       type="button"
       onClick={onClick}
       disabled={disabled}
-      aria-label={ariaLabel}
+      aria-label={ariaLabel ?? ariaLabelAttr}
       aria-pressed={active ? true : undefined}
       className={`focus-ring${className ? ' ' + className : ''}`}
       style={{

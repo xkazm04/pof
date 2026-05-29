@@ -5,6 +5,7 @@ import { useOneShotLabStore } from '@/stores/oneShotLabStore';
 import { Button } from './ui/Button';
 import type { LabTheme } from './theme';
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 export function LabJobsChip({ t }: { t: LabTheme }) {
   const phase = useOneShotJobStore((s) => s.phase);
   const catalogId = useOneShotJobStore((s) => s.catalogId);
@@ -28,7 +29,6 @@ export function LabJobsChip({ t }: { t: LabTheme }) {
       onClick={() => setPanelOpen(true)}
       mono
       ariaLabel="open one-shot panel"
-      className={t.fontMono}
       style={{
         color: 'var(--lab-ink)',
         borderColor: 'var(--lab-line)',

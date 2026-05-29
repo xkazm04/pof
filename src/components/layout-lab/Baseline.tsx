@@ -280,7 +280,7 @@ export function Baseline({ theme: t, groups, detail, onSelectCatalog, entityId, 
         {wide && <Rail title={`Pipeline · ${done}/${steps.length}`}>{pipelineBody}</Rail>}
 
         {/* main content — roomy work canvas */}
-        <main style={{ padding: '28px 36px', overflow: 'auto', minHeight: 0 }}>
+        <main id="lab-canvas" tabIndex={-1} style={{ padding: '28px 36px', overflow: 'auto', minHeight: 0 }}>
           {stepIdx != null && steps[stepIdx] ? (() => {
             const stepName = steps[stepIdx];
             const Bespoke = detail && entity ? getStepComponent(detail.catalog.catalogId, stepName) : null;
