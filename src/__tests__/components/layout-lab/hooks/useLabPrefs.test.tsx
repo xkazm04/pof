@@ -26,4 +26,17 @@ describe('useLabPrefs', () => {
     const { result } = renderHook(() => useLabPrefs());
     expect(typeof result.current.hydrated).toBe('boolean');
   });
+  it('adopts pre-populated storage after hydration', () => {
+    localStorage.setItem('pof-lab-prefs', JSON.stringify({ themeId: 'dark', density: 'compact', lastCatalogId: 'spellbook', lastEntityId: 'e1' }));
+    const { result } = renderHook(() => useLabPrefs());
+    expect(result.current.prefs.themeId).toBe('dark');
+    expect(result.current.prefs.density).toBe('compact');
+    expect(result.current.prefs.lastCatalogId).toBe('spellbook');
+    expect(result.current.prefs.lastEntityId).toBe('e1');
+  });
+  it('adopts storage that differs only by lastEntityId', () => {
+    localStorage.setItem('pof-lab-prefs', JSON.stringify({ themeId: 'light', density: 'comfortable', lastEntityId: 'only-entity' }));
+    const { result } = renderHook(() => useLabPrefs());
+    expect(result.current.prefs.lastEntityId).toBe('only-entity');
+  });
 });

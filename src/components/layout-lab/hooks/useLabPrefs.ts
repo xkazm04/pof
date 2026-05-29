@@ -36,17 +36,12 @@ export function useLabPrefs() {
   const hydrated = useHydrated();
   const [prefs, setLocal] = useState<LabPrefs>(DEFAULTS);
 
-  // First post-hydration pass: adopt stored prefs once, via a render-phase bail-out
-  // (NOT an effect — keeps clear of react-hooks/set-state-in-effect).
+  // Adopt stored prefs once after hydration. read() returns the DEFAULTS constant
+  // (by reference) only on empty/corrupt storage, and a fresh object otherwise — so
+  // `stored !== DEFAULTS` covers every field (incl. lastEntityId) and any future ones.
   if (hydrated && prefs === DEFAULTS) {
     const stored = read();
-    if (
-      stored.themeId !== DEFAULTS.themeId ||
-      stored.density !== DEFAULTS.density ||
-      stored.lastCatalogId
-    ) {
-      setLocal(stored);
-    }
+    if (stored !== DEFAULTS) setLocal(stored);
   }
 
   const effective = hydrated ? prefs : DEFAULTS;
