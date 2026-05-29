@@ -21,6 +21,8 @@ it('collapses a category group when its header is toggled', () => {
   expect(screen.getByTestId('harness-catalog-spellbook')).toBeTruthy();
   fireEvent.click(screen.getByRole('button', { name: /Core/i }));
   expect(screen.queryByTestId('harness-catalog-spellbook')).toBeNull();
+  const coreHeader = screen.getByRole('button', { name: /Core/i });
+  expect(coreHeader.getAttribute('aria-expanded')).toBe('false');
 });
 
 it('selects a catalog via keyboard (ArrowDown + Enter)', () => {
@@ -30,4 +32,14 @@ it('selects a catalog via keyboard (ArrowDown + Enter)', () => {
   fireEvent.keyDown(tree, { key: 'ArrowDown' });
   fireEvent.keyDown(tree, { key: 'Enter' });
   expect(onSelectCatalog).toHaveBeenCalled();
+});
+
+it('Enter on a group header toggles collapse without selecting a catalog', () => {
+  const onSelectCatalog = vi.fn();
+  render(<CatalogTree t={LIGHT} groups={groups} selectedCatalogId="items" entities={[]} selectedEntityId={null} onSelectCatalog={onSelectCatalog} onSelectEntity={() => {}} />);
+  const header = screen.getByRole('button', { name: /Core/i });
+  header.focus();
+  fireEvent.keyDown(header, { key: 'Enter' });
+  // Enter on the header must NOT trigger a roving catalog-select (stopPropagation).
+  expect(onSelectCatalog).not.toHaveBeenCalled();
 });

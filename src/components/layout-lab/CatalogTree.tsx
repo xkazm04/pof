@@ -145,6 +145,15 @@ export function CatalogTree({
     if (c) onSelectCatalog(c.catalogId);
   });
 
+  // Keep the roving cursor in sync with the selected catalog + visible-list changes.
+  // Render-phase bail-out (guarded by a prev-value) — NOT an effect, so it stays clear
+  // of react-hooks/set-state-in-effect; React de-dupes the extra setState.
+  const [prevActiveIdx, setPrevActiveIdx] = useState(activeIdx);
+  if (activeIdx !== prevActiveIdx) {
+    setPrevActiveIdx(activeIdx);
+    roving.setActive(activeIdx);
+  }
+
   return (
     <div
       role="tree"
@@ -165,6 +174,7 @@ export function CatalogTree({
               })}
               aria-expanded={!isCollapsed}
               className="focus-ring-inset"
+              onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') e.stopPropagation(); }}
               style={{
                 width: '100%', textAlign: 'left',
                 fontFamily: 'var(--lab-font-mono)', fontSize: 'var(--lab-fs-xs)',
