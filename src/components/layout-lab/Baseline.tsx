@@ -17,6 +17,7 @@ import { NextStepCoach } from './NextStepCoach';
 import { PipelineRail } from './PipelineRail';
 import { Button } from './ui/Button';
 import { Rail } from './ui/Rail';
+import { Stat } from './ui/Stat';
 import { LabDrawer, DrawerToggle } from './LabDrawer';
 import { statusAriaLabel } from './statusLanguage';
 import { summarizeEntity } from '@/lib/catalog/rollup';
@@ -262,10 +263,10 @@ export function Baseline({ theme: t, groups, detail, onSelectCatalog, entityId, 
         </div>
         {/* stat strip (moved from the title block) */}
         <div style={{ marginLeft: 'auto', display: 'flex', flexWrap: 'wrap', gap: 8, justifyContent: 'flex-end' }}>
-          <Stat t={t} label="lifecycle" value={entity?.lifecycle ?? '—'} accent />
-          {isItems && <Stat t={t} label="pipeline" value={`${done}/${steps.length}`} accent />}
-          {isItems && ueAssetCount > 0 && <Stat t={t} label="ue assets" value={String(ueAssetCount)} />}
-          {fields.map((f) => <Stat key={f.label} t={t} label={f.label} value={f.value} />)}
+          <Stat label="lifecycle" value={entity?.lifecycle ?? '—'} accent />
+          {isItems && <Stat label="pipeline" value={`${done}/${steps.length}`} accent />}
+          {isItems && ueAssetCount > 0 && <Stat label="ue assets" value={String(ueAssetCount)} />}
+          {fields.map((f) => <Stat key={f.label} label={f.label} value={f.value} />)}
         </div>
       </header>
 
@@ -339,15 +340,6 @@ export function Baseline({ theme: t, groups, detail, onSelectCatalog, entityId, 
           </LabDrawer>
         </>
       )}
-    </div>
-  );
-}
-
-function Stat({ t, label, value, accent }: { t: LabTheme; label: string; value: string; accent?: boolean }) {
-  return (
-    <div style={{ padding: '4px 12px', border: `1px solid ${t.line}`, background: t.panel, ...(t.glass ? { borderRadius: 8 } : {}) }}>
-      <div className={t.fontMono} style={{ fontSize: 14, letterSpacing: '0.06em', textTransform: 'uppercase', color: t.muted }}>{label}</div>
-      <div className={t.fontMono} style={{ fontSize: 16, fontWeight: 600, color: accent ? t.ink : t.inkDeep }}>{value}</div>
     </div>
   );
 }

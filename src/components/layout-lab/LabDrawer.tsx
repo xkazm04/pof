@@ -1,6 +1,6 @@
 'use client';
 
-import { AnimatePresence, motion } from 'framer-motion';
+import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 import type { ReactNode } from 'react';
 import type { LabTheme } from './theme';
 
@@ -35,6 +35,7 @@ export function DrawerToggle({ t, label, glyph, open, controls, onClick }: {
 export function LabDrawer({ t, open, onClose, id, title, width, children }: {
   t: LabTheme; open: boolean; onClose: () => void; id: string; title: string; width: number; children: ReactNode;
 }) {
+  const reduce = useReducedMotion();
   return (
     <AnimatePresence>
       {open && (
@@ -43,10 +44,10 @@ export function LabDrawer({ t, open, onClose, id, title, width, children }: {
             key={`${id}-backdrop`}
             data-testid={`${id}-backdrop`}
             onClick={onClose}
-            initial={{ opacity: 0 }}
+            initial={reduce ? false : { opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            transition={{ duration: 0.18 }}
+            transition={{ duration: reduce ? 0 : 0.18 }}
             style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)', zIndex: 40 }}
           />
           <motion.aside
@@ -55,10 +56,10 @@ export function LabDrawer({ t, open, onClose, id, title, width, children }: {
             role="dialog"
             aria-modal="true"
             aria-label={title}
-            initial={{ x: '-100%' }}
+            initial={reduce ? false : { x: '-100%' }}
             animate={{ x: 0 }}
-            exit={{ x: '-100%' }}
-            transition={{ type: 'spring', stiffness: 380, damping: 38 }}
+            exit={reduce ? { opacity: 0 } : { x: '-100%' }}
+            transition={reduce ? { duration: 0 } : { type: 'spring', stiffness: 380, damping: 38 }}
             style={{
               position: 'fixed', top: 0, bottom: 0, left: 0, width, maxWidth: '85vw',
               display: 'flex', flexDirection: 'column', minHeight: 0, zIndex: 41,
