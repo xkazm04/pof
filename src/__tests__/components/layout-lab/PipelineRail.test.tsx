@@ -1,17 +1,16 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import { render, screen, fireEvent, cleanup } from '@testing-library/react';
 import { PipelineRail } from '@/components/layout-lab/PipelineRail';
-import { LIGHT } from '@/components/layout-lab/theme';
 
 vi.mock('next/font/google', () => { const f = () => ({ className: 'm', variable: '--m' }); return { IBM_Plex_Mono: f, Inter: f, JetBrains_Mono: f }; });
 afterEach(cleanup);
 
 const steps = ['Concept Brief', 'Attributes', 'Economy'];
 const baseProps = {
-  t: LIGHT, steps, stepIdx: 0,
+  steps, stepIdx: 0,
   displayStatus: () => 'pending' as const,
   isLive: () => true,
-  tooltipFor: () => '', ariaFor: (s: string) => `${s}: pending`, tierFor: () => undefined,
+  tooltipFor: () => '', ariaFor: (s: string) => `${s}: pending`,
 };
 
 it('renders a dot per step with the stamp testid', () => {

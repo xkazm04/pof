@@ -2,7 +2,6 @@
 import { useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { useRovingFocus } from './hooks/useRovingFocus';
-import type { LabTheme } from './theme';
 
 type NodeStatus = 'pass' | 'fail' | 'deferred' | 'pending';
 const pad2 = (n: number) => String(n).padStart(2, '0');
@@ -10,14 +9,12 @@ const STATUS_GLYPH = (s: NodeStatus): string =>
   s === 'pass' ? '✓' : s === 'fail' ? '!' : s === 'deferred' ? '⋯' : '';
 
 interface PipelineRailProps {
-  t: LabTheme;
   steps: string[];
   stepIdx: number | null;
   displayStatus: (step: string, i: number) => NodeStatus;
   isLive: (step: string) => boolean;
   tooltipFor: (step: string, i: number) => string;
   ariaFor: (step: string, i: number) => string;
-  tierFor: (step: string) => string | undefined;
   onSelectStep: (i: number) => void;
 }
 

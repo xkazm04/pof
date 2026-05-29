@@ -212,7 +212,6 @@ export function Baseline({ theme: t, groups, detail, onSelectCatalog, entityId, 
         </div>
       )}
       <PipelineRail
-        t={t}
         steps={steps}
         stepIdx={stepIdx}
         displayStatus={displayStatus}
@@ -231,7 +230,6 @@ export function Baseline({ theme: t, groups, detail, onSelectCatalog, entityId, 
             .join(' · ');
         }}
         ariaFor={(step, i) => statusAriaLabel(step, displayStatus(step, i), artifactByStep.get(step)?.tier)}
-        tierFor={(step) => artifactByStep.get(step)?.tier}
         onSelectStep={selectStep}
       />
     </>
