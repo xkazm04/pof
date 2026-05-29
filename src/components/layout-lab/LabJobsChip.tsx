@@ -3,10 +3,8 @@
 import { useOneShotJobStore } from '@/stores/oneShotJobStore';
 import { useOneShotLabStore } from '@/stores/oneShotLabStore';
 import { Button } from './ui/Button';
-import type { LabTheme } from './theme';
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-export function LabJobsChip({ t }: { t: LabTheme }) {
+export function LabJobsChip() {
   const phase = useOneShotJobStore((s) => s.phase);
   const catalogId = useOneShotJobStore((s) => s.catalogId);
   const refinementTurns = useOneShotJobStore((s) => s.refinementTurns);

@@ -94,7 +94,7 @@ export function LayoutLab() {
       style={{ height: '100vh', display: 'flex', flexDirection: 'column', background: 'var(--lab-bg)' }}
     >
       <a href="#lab-canvas" className="focus-ring"
-         style={{ position: 'absolute', left: 'var(--lab-s2)', top: 'var(--lab-s2)', zIndex: 50,
+         style={{ position: 'fixed', left: 'var(--lab-s2)', top: 'var(--lab-s2)', zIndex: 50,
                   padding: 'var(--lab-s2) var(--lab-s3)', background: 'var(--lab-panel)',
                   border: '1px solid var(--lab-line)', color: 'var(--lab-ink)',
                   transform: 'translateY(-200%)', transition: 'transform var(--lab-dur) var(--lab-ease)' }}
@@ -124,7 +124,7 @@ export function LayoutLab() {
           density · {density === 'compact' ? '▮' : '▯'}
         </Button>
         <Button onClick={() => setPanelOpen(true)}>+ One-shot</Button>
-        <LabJobsChip t={theme} />
+        <LabJobsChip />
         <Button style={{ marginLeft: 'auto' }} onClick={switchToLegacy}>Legacy shell</Button>
         <LabBridgeStrip t={theme} />
       </header>
