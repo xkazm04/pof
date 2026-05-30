@@ -1,6 +1,7 @@
 import { getArtifact, listDeferredArtifacts, upsertArtifact } from '@/lib/pipeline-artifacts-db';
 import { logger } from '@/lib/logger';
 import { parseTestName } from './parse';
+import { resolveScenario } from './scenarioRegistry';
 import type { DrainResult, DrainSummary, GateExecutor, GateJob, GateTier } from './types';
 
 export interface DrainFilter {
@@ -11,14 +12,19 @@ export interface DrainFilter {
 
 /** Turn the deferred `pipeline_artifacts` rows into runnable jobs. */
 export function collectDeferred(filter?: DrainFilter): GateJob[] {
-  return listDeferredArtifacts(filter).map((a) => ({
-    catalogId: a.catalogId,
-    entityId: a.entityId,
-    step: a.step,
-    tier: a.tier === 'L4' ? 'L4' : 'L3',
-    ...(parseTestName(a.reason) ? { testName: parseTestName(a.reason)! } : {}),
-    ...(a.reason ? { reason: a.reason } : {}),
-  }));
+  return listDeferredArtifacts(filter).map((a) => {
+    const testName = parseTestName(a.reason) ?? undefined;
+    const scenario = resolveScenario({ catalogId: a.catalogId, entityId: a.entityId, step: a.step, testName });
+    return {
+      catalogId: a.catalogId,
+      entityId: a.entityId,
+      step: a.step,
+      tier: (a.tier === 'L4' ? 'L4' : 'L3') as GateTier,
+      ...(testName ? { testName } : {}),
+      ...(scenario ? { scenario } : {}),
+      ...(a.reason ? { reason: a.reason } : {}),
+    };
+  });
 }
 
 /** Run one gate and write the verdict back, preserving the artifact's data/assets/tier. */
@@ -62,8 +68,8 @@ export async function drainJobs(
       results.push({ job, skipped: `no ${job.tier} executor` });
       continue;
     }
-    if (job.tier === 'L3' && !job.testName) {
-      results.push({ job, skipped: 'no test name in deferred reason' });
+    if (job.tier === 'L3' && !job.testName && !job.scenario) {
+      results.push({ job, skipped: 'no test name or scenario for L3 gate' });
       continue;
     }
     if (!(await executor.available())) {

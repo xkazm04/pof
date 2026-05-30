@@ -108,6 +108,17 @@ interface ObsSample {
   droopL: number;
   droopR: number;
   anim_speed?: number;
+  montage_playing?: boolean;
+  health?: number;
+  stamina?: number;
+  mana?: number;
+}
+
+/** max−min of a defined numeric attribute across samples (its biggest dip/swing). */
+function attrDrop(samples: ObsSample[], name: 'health' | 'stamina' | 'mana'): number {
+  const vals = samples.map((s) => s[name]).filter((v): v is number => typeof v === 'number' && v >= 0);
+  if (vals.length < 1) return 0;
+  return Math.max(...vals) - Math.min(...vals);
 }
 interface Observations {
   started?: boolean;
@@ -148,10 +159,21 @@ export function parseScenarioVerdict(obs: Observations, assertions: GateAssertio
     } else if (a.kind === 'static') {
       const max = a.maxSwingDeg ?? 5;
       if (swing > max) fails.push(`static: arm-swing ${swing.toFixed(1)}° > ${max}°`);
+    } else if (a.kind === 'montage-playing') {
+      if (!samples.some((s) => s.montage_playing === true)) fails.push('montage-playing: no montage played in any sample');
+    } else if (a.kind === 'attribute-drop') {
+      const min = a.minDelta ?? 1;
+      const drop = attrDrop(samples, a.name);
+      if (drop < min) fails.push(`attribute-drop ${a.name}: Δ${drop.toFixed(1)} < ${min}`);
+    } else if (a.kind === 'ability-activated') {
+      const montage = samples.some((s) => s.montage_playing === true);
+      const resource = attrDrop(samples, 'health') >= 1 || attrDrop(samples, 'stamina') >= 1 || attrDrop(samples, 'mana') >= 1;
+      if (!montage && !resource) fails.push('ability-activated: no montage and no resource change observed');
     }
   }
   if (fails.length) return { status: 'fail', detail: fails.join('; ') };
-  return { status: 'pass', detail: `swing=${swing.toFixed(1)}° dist=${dist.toFixed(0)} over ${samples.length} samples` };
+  const mont = samples.some((s) => s.montage_playing === true) ? ' montage✓' : '';
+  return { status: 'pass', detail: `swing=${swing.toFixed(1)}° dist=${dist.toFixed(0)}${mont} over ${samples.length} samples` };
 }
 
 /** L3 executor that runs a headless UnrealEditor-Cmd automation pass. Off by default. */
@@ -188,6 +210,8 @@ export function makeSpawnExecutor(opts: SpawnExecutorOptions = {}): GateExecutor
             ...(i.key ? { key: i.key } : {}),
             ...(i.action ? { action: i.action } : {}),
             ...(i.value ? { value: i.value } : {}),
+            ...(i.event ? { event: i.event } : {}),
+            ...(i.eventArg ? { event_arg: i.eventArg } : {}),
             start: i.start,
             duration: i.duration,
           })),

@@ -12,6 +12,11 @@ export interface GateScenarioInput {
   key?: string;
   action?: string;
   value?: [number, number];
+  /** Non-input event at `start`: 'activate_ability' + eventArg=<gameplay tag> (e.g.
+   *  'Ability.Fireball') activates it directly on the pawn's ASC — bypasses Boolean-key
+   *  input fidelity gaps to test the ability's *effect*. */
+  event?: string;
+  eventArg?: string;
   start: number;
   duration: number;
 }
@@ -19,10 +24,15 @@ export interface GateScenarioInput {
 /** An assertion over the observed result of a scenario. All must hold to pass.
  *  Discriminators are the calibration-proven ones (arm-droop variance = animation,
  *  displacement = movement) — not symbolic "test returned PASS". */
+export type AttrName = 'health' | 'stamina' | 'mana';
+
 export type GateAssertion =
   | { kind: 'animated'; minSwingDeg?: number } // arm-droop varies across samples (walk cycle); default ≥10°
   | { kind: 'moved'; minDist?: number }        // pawn displaced ≥ minDist (2D); default ≥50
-  | { kind: 'static'; maxSwingDeg?: number };  // arm-droop ~constant (T-pose / not animating); default ≤5°
+  | { kind: 'static'; maxSwingDeg?: number }   // arm-droop ~constant (T-pose / not animating); default ≤5°
+  | { kind: 'montage-playing' }                // a montage played in ≥1 sample (attack/cast/dodge fired)
+  | { kind: 'attribute-drop'; name: AttrName; minDelta?: number } // resource consumed (max−min ≥ minDelta; default 1)
+  | { kind: 'ability-activated' };             // montage played OR any resource dropped (the ability committed)
 
 /** A behavioural L3 scenario: drive timed inputs in a real game loop, then assert on
  *  the *observed* effect (the harness `observation.run_scenario` contract). */

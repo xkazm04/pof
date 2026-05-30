@@ -70,6 +70,42 @@ const TPOSE_STUCK = {
   ],
 };
 
+// A spell cast: a montage plays and mana drops 50→30. vs nothing happening.
+const FIREBALL_CAST = {
+  started: true,
+  samples: [
+    { t: 0.3, loc_x: 0, loc_y: 0, loc_z: 90, speed: 0, droopL: 55, droopR: 55, montage_playing: false, mana: 50 },
+    { t: 0.7, loc_x: 0, loc_y: 0, loc_z: 90, speed: 0, droopL: 55, droopR: 55, montage_playing: true, mana: 30 },
+    { t: 1.1, loc_x: 0, loc_y: 0, loc_z: 90, speed: 0, droopL: 55, droopR: 55, montage_playing: true, mana: 30 },
+    { t: 1.5, loc_x: 0, loc_y: 0, loc_z: 90, speed: 0, droopL: 55, droopR: 55, montage_playing: false, mana: 30 },
+  ],
+};
+const NO_CAST = {
+  started: true,
+  samples: [
+    { t: 0.3, loc_x: 0, loc_y: 0, loc_z: 90, speed: 0, droopL: 55, droopR: 55, montage_playing: false, mana: 50 },
+    { t: 0.7, loc_x: 0, loc_y: 0, loc_z: 90, speed: 0, droopL: 55, droopR: 55, montage_playing: false, mana: 50 },
+  ],
+};
+
+describe('parseScenarioVerdict — GAS/ability assertions', () => {
+  it('ability-activated passes on a cast (montage + mana drop), fails when nothing happens', () => {
+    expect(parseScenarioVerdict(FIREBALL_CAST, [{ kind: 'ability-activated' }]).status).toBe('pass');
+    const v = parseScenarioVerdict(NO_CAST, [{ kind: 'ability-activated' }]);
+    expect(v.status).toBe('fail');
+    expect(v.detail).toMatch(/no montage and no resource/);
+  });
+  it('montage-playing requires a montage in ≥1 sample', () => {
+    expect(parseScenarioVerdict(FIREBALL_CAST, [{ kind: 'montage-playing' }]).status).toBe('pass');
+    expect(parseScenarioVerdict(NO_CAST, [{ kind: 'montage-playing' }]).status).toBe('fail');
+  });
+  it('attribute-drop measures the resource dip (mana 50→30 = 20)', () => {
+    expect(parseScenarioVerdict(FIREBALL_CAST, [{ kind: 'attribute-drop', name: 'mana', minDelta: 10 }]).status).toBe('pass');
+    expect(parseScenarioVerdict(FIREBALL_CAST, [{ kind: 'attribute-drop', name: 'mana', minDelta: 25 }]).status).toBe('fail');
+    expect(parseScenarioVerdict(NO_CAST, [{ kind: 'attribute-drop', name: 'mana' }]).status).toBe('fail');
+  });
+});
+
 describe('parseScenarioVerdict', () => {
   it('passes animated+moved for a real walk cycle (known-good calibration)', () => {
     expect(parseScenarioVerdict(WALKING, [{ kind: 'animated' }, { kind: 'moved' }]).status).toBe('pass');
