@@ -12,7 +12,7 @@ import { getAppOrigin } from '@/lib/constants';
 import {
   SOURCES, SOURCE_DEFAULTS, ENABLE_PROMPT, ASSET_LABELS, type SetupAssets,
 } from './wizard-data';
-import { Step, DispatchButton, StepRail, type WizardStepStatus } from './WizardChrome';
+import { Step, DispatchButton, StepRail, StepResult, type WizardStepStatus } from './WizardChrome';
 
 const ACCENT = MODULE_COLORS.core;
 
@@ -131,6 +131,7 @@ export function CharacterSourceWizard({ moduleId }: { moduleId: SubModuleId }) {
           })}
         </div>
         <DispatchButton onClick={dispatchEnable} isRunning={isRunning} icon={Wand2} label="Prepare Source" />
+        <StepResult status={steps[0]} runningLabel="Preparing source…" />
       </Step>
 
       {/* Step 2 — wire mesh + skeleton + AnimBP */}
@@ -149,6 +150,7 @@ export function CharacterSourceWizard({ moduleId }: { moduleId: SubModuleId }) {
           </label>
         ))}
         <DispatchButton onClick={dispatchWire} isRunning={isRunning} disabled={!reachable(2)} icon={ArrowRight} label="Wire Characters" />
+        <StepResult status={steps[1]} runningLabel="Wiring characters…" />
       </Step>
 
       {/* Step 3 — verify locomotes (§6 Gemini gate) */}
@@ -158,6 +160,7 @@ export function CharacterSourceWizard({ moduleId }: { moduleId: SubModuleId }) {
           natural pose (not T-posed) and the enemy is visually distinct.
         </p>
         <DispatchButton onClick={dispatchVerify} isRunning={isRunning} disabled={!reachable(3)} icon={Eye} label="Verify Locomotes" />
+        <StepResult status={steps[2]} runningLabel="Verifying locomotion…" />
       </Step>
     </div>
   );

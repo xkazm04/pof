@@ -86,6 +86,30 @@ export function StepRail({ steps }: { steps: WizardStepStatus[] }) {
   );
 }
 
+/**
+ * Inline outcome strip rendered under a step's dispatch button: spinner while
+ * the CLI task runs, then a success/failure line so the result is surfaced in
+ * place instead of only living in the terminal panel.
+ */
+export function StepResult({ status, runningLabel = 'Running…' }: {
+  status: WizardStepStatus;
+  runningLabel?: string;
+}) {
+  if (status === 'idle') return null;
+  const color = status === 'done' ? DONE_COLOR : status === 'error' ? ERROR_COLOR : ACCENT;
+  const text = status === 'running' ? runningLabel
+    : status === 'done' ? 'Completed — see the terminal for details'
+    : 'Failed — check the terminal output';
+  return (
+    <div className="flex items-center gap-1.5 text-[11px] font-mono" style={{ color }} role="status" aria-live="polite">
+      {status === 'running' ? <Loader2 className="w-3 h-3 animate-spin" />
+        : status === 'done' ? <Check className="w-3 h-3" />
+        : <AlertTriangle className="w-3 h-3" />}
+      <span>{text}</span>
+    </div>
+  );
+}
+
 export function DispatchButton({
   onClick, isRunning, icon: Icon, label, disabled = false,
 }: {
