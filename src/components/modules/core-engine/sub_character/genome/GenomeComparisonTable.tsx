@@ -1,12 +1,13 @@
 'use client';
 
+import { memo } from 'react';
 import { STATUS_SUCCESS, withOpacity, OPACITY_37 } from '@/lib/chart-colors';
 import type { CharacterGenome } from '@/types/character-genome';
 import { COMP_STATS } from './field-data';
 
 /* ── Genome Comparison Table ─────────────────────────────────────────── */
 
-export function GenomeComparisonTable({ genomes, activeId }: {
+function GenomeComparisonTableImpl({ genomes, activeId }: {
   genomes: CharacterGenome[];
   activeId: string;
 }) {
@@ -72,3 +73,5 @@ export function GenomeComparisonTable({ genomes, activeId }: {
     </table>
   );
 }
+
+export const GenomeComparisonTable = memo(GenomeComparisonTableImpl);

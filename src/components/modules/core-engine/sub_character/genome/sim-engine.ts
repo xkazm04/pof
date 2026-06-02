@@ -21,6 +21,29 @@ export function getScaledStat(g: CharacterGenome, stat: PowerCurveStat, level: n
   }
 }
 
+/**
+ * Cached per-genome stat curve (one value per level, 1..100). Keyed on the
+ * genome OBJECT identity: the genome store replaces only the edited genome's
+ * object on each keystroke (the rest keep their reference), so unchanged
+ * genomes hit this cache and are never recomputed — the 100-point curve is
+ * rebuilt only for the genome actually being edited.
+ */
+const statCurveCache = new WeakMap<CharacterGenome, Partial<Record<PowerCurveStat, number[]>>>();
+
+export function getStatCurve(g: CharacterGenome, stat: PowerCurveStat): number[] {
+  let byStat = statCurveCache.get(g);
+  if (!byStat) {
+    byStat = {};
+    statCurveCache.set(g, byStat);
+  }
+  const cached = byStat[stat];
+  if (cached) return cached;
+  const values = new Array<number>(100);
+  for (let l = 1; l <= 100; l++) values[l - 1] = getScaledStat(g, stat, l);
+  byStat[stat] = values;
+  return values;
+}
+
 /* ── Power curve crossover detection ───────────────────────────────────── */
 
 export function findPowerCurveCrossovers(

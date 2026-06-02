@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo, useCallback, useRef } from 'react';
+import { useState, useMemo, useCallback, useRef, memo } from 'react';
 import { TrendingUp } from 'lucide-react';
 import { ACCENT_VIOLET, STATUS_SUCCESS, OVERLAY_WHITE,
   withOpacity, OPACITY_6, OPACITY_10, OPACITY_12, OPACITY_25, OPACITY_30, OPACITY_15, OPACITY_5, OPACITY_8, OPACITY_50, OPACITY_37, OPACITY_80, OPACITY_90,
@@ -9,14 +9,14 @@ import { BlueprintPanel, SectionHeader, NeonBar } from '../../unique-tabs/_desig
 import type { CharacterGenome } from '@/types/character-genome';
 import type { PowerCurveStat } from './types';
 import { POWER_CURVE_TABS } from './field-data';
-import { getScaledStat, findPowerCurveCrossovers } from './sim-engine';
+import { getStatCurve, findPowerCurveCrossovers } from './sim-engine';
 
 const PC_W = 600, PC_H = 240;
 const PC_M = { t: 12, r: 16, b: 28, l: 52 };
 const PC_PW = PC_W - PC_M.l - PC_M.r;
 const PC_PH = PC_H - PC_M.t - PC_M.b;
 
-export function LevelScaledPowerCurve({ genomes, activeId }: {
+function LevelScaledPowerCurveImpl({ genomes, activeId }: {
   genomes: CharacterGenome[];
   activeId: string;
 }) {
@@ -26,14 +26,21 @@ export function LevelScaledPowerCurve({ genomes, activeId }: {
   const chartRef = useRef<SVGSVGElement>(null);
   const displayLevel = hoverLevel ?? previewLevel;
 
+  // Per-genome level→value curves, reused across maxVal/paths/dots/legend.
+  // getStatCurve caches by genome identity, so only the edited genome recomputes.
+  const curves = useMemo(
+    () => genomes.map((g) => ({ id: g.id, color: g.color, name: g.name, values: getStatCurve(g, selectedStat) })),
+    [genomes, selectedStat],
+  );
+
   const maxVal = useMemo(() => {
     let max = 0;
-    for (const g of genomes) {
-      const v = getScaledStat(g, selectedStat, 100);
+    for (const c of curves) {
+      const v = c.values[99];
       if (v > max) max = v;
     }
     return Math.max(max * 1.08, 1);
-  }, [genomes, selectedStat]);
+  }, [curves]);
 
   const crossovers = useMemo(() => findPowerCurveCrossovers(genomes, selectedStat), [genomes, selectedStat]);
   const xScale = useCallback((level: number) => ((level - 1) / 99) * PC_PW, []);
@@ -51,14 +58,14 @@ export function LevelScaledPowerCurve({ genomes, activeId }: {
     return ticks;
   }, [maxVal]);
 
-  const paths = useMemo(() => genomes.map((g) => {
+  const paths = useMemo(() => curves.map((c) => {
     const pts: string[] = [];
     for (let l = 1; l <= 100; l++) {
-      const x = xScale(l), y = yScale(getScaledStat(g, selectedStat, l));
+      const x = xScale(l), y = yScale(c.values[l - 1]);
       pts.push(`${l === 1 ? 'M' : 'L'}${x.toFixed(1)},${y.toFixed(1)}`);
     }
-    return { id: g.id, color: g.color, d: pts.join(' ') };
-  }), [genomes, selectedStat, xScale, yScale]);
+    return { id: c.id, color: c.color, d: pts.join(' ') };
+  }), [curves, xScale, yScale]);
 
   const handleMouseMove = useCallback((e: React.MouseEvent<SVGSVGElement>) => {
     const svg = chartRef.current;
@@ -73,9 +80,9 @@ export function LevelScaledPowerCurve({ genomes, activeId }: {
   const fmtVal = useCallback((v: number) => v >= 10000 ? `${(v / 1000).toFixed(1)}k` : v >= 100 ? v.toFixed(0) : v.toFixed(1), []);
 
   const levelStats = useMemo(() =>
-    genomes.map((g) => ({ id: g.id, name: g.name, color: g.color, value: getScaledStat(g, selectedStat, displayLevel), isActive: g.id === activeId }))
+    curves.map((c) => ({ id: c.id, name: c.name, color: c.color, value: c.values[displayLevel - 1], isActive: c.id === activeId }))
       .sort((a, b) => b.value - a.value),
-    [genomes, selectedStat, displayLevel, activeId],
+    [curves, displayLevel, activeId],
   );
 
   const tabInfo = POWER_CURVE_TABS.find((s) => s.key === selectedStat)!;
@@ -130,9 +137,9 @@ export function LevelScaledPowerCurve({ genomes, activeId }: {
                 );
               })}
               <line x1={xScale(displayLevel)} y1={0} x2={xScale(displayLevel)} y2={PC_PH} stroke={withOpacity(OVERLAY_WHITE, OPACITY_25)} strokeWidth={1} strokeDasharray="3,3" />
-              {genomes.map((g) => (
-                <circle key={g.id} cx={xScale(displayLevel)} cy={yScale(getScaledStat(g, selectedStat, displayLevel))}
-                  r={g.id === activeId ? 4 : 3} fill={g.color} stroke={`#000000${OPACITY_30}`} strokeWidth={1} />
+              {curves.map((c) => (
+                <circle key={c.id} cx={xScale(displayLevel)} cy={yScale(c.values[displayLevel - 1])}
+                  r={c.id === activeId ? 4 : 3} fill={c.color} stroke={`#000000${OPACITY_30}`} strokeWidth={1} />
               ))}
             </g>
           </svg>
@@ -188,3 +195,5 @@ export function LevelScaledPowerCurve({ genomes, activeId }: {
     </BlueprintPanel>
   );
 }
+
+export const LevelScaledPowerCurve = memo(LevelScaledPowerCurveImpl);

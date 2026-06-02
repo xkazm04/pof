@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, memo } from 'react';
 import { GitCompareArrows } from 'lucide-react';
 import { STATUS_SUCCESS, STATUS_ERROR, OPACITY_8, OPACITY_12, OPACITY_15, OPACITY_20, OPACITY_25, withOpacity } from '@/lib/chart-colors';
 import { BlueprintPanel, SectionHeader } from '../../unique-tabs/_design';
@@ -11,7 +11,7 @@ import { ACCENT, COMPARISON_AXES } from './field-data';
 
 /* ── Archetype Comparison Panel ────────────────────────────────────────── */
 
-export function ArchetypeComparisonPanel({ genomes, activeGenome: _activeGenome }: {
+function ArchetypeComparisonPanelImpl({ genomes, activeGenome: _activeGenome }: {
   genomes: CharacterGenome[];
   activeGenome: CharacterGenome;
 }) {
@@ -117,3 +117,5 @@ export function ArchetypeComparisonPanel({ genomes, activeGenome: _activeGenome 
     </BlueprintPanel>
   );
 }
+
+export const ArchetypeComparisonPanel = memo(ArchetypeComparisonPanelImpl);
