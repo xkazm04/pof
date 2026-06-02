@@ -29,6 +29,25 @@ function createRNG(seed: number) {
   };
 }
 
+/** Base seed for the sweep — every cell/step derives a stream from this. */
+const BASE_SEED = 42;
+
+/**
+ * Derive a stable 32-bit seed from a key string (FNV-1a style). Each heatmap
+ * cell and sensitivity step seeds its OWN rng from its parameters, so a cell's
+ * result is reproducible regardless of the order cells are evaluated in.
+ * Previously one shared createRNG(42) was threaded through every cell, making
+ * each cell consume an order-dependent slice of the stream — so the numbers for
+ * a given level-vs-enemy cell changed if the sweep order changed.
+ */
+function seedFromKey(key: string, base: number): number {
+  let h = base | 0;
+  for (let i = 0; i < key.length; i++) {
+    h = Math.imul(h ^ key.charCodeAt(i), 0x01000193);
+  }
+  return (h | 0) || 1;
+}
+
 // ── Attribute builders ─────────────────────────────────────────────────────
 
 function buildPlayerAttrs(level: number, gearId: string, tuning: TuningOverrides): AttributeSet {
@@ -258,7 +277,6 @@ const ABILITY_COLORS = ['#3b82f6', '#ef4444', '#f59e0b', '#10b981', '#8b5cf6', '
 
 export function runPredictiveBalance(config: PredictiveBalanceConfig): BalanceReport {
   const start = performance.now();
-  const rng = createRNG(42);
 
   const levels: number[] = [];
   for (let l = config.levelRange[0]; l <= config.levelRange[1]; l += config.levelStep) {
@@ -294,8 +312,11 @@ export function runPredictiveBalance(config: PredictiveBalanceConfig): BalanceRe
       let totalDealt = 0;
       const abilityDamage: Record<string, number> = {};
 
+      // Fresh, deterministic stream per cell — keyed by (enemy, level) so this
+      // cell reproduces identically no matter where it falls in the sweep.
+      const cellRng = createRNG(seedFromKey(`cell|${ec.archetypeId}|${playerLevel}`, BASE_SEED));
       for (let i = 0; i < config.iterations; i++) {
-        const result = simulateFight(playerAttrs, PLAYER_ABILITIES, enemyInstances, config.tuning, rng, 120);
+        const result = simulateFight(playerAttrs, PLAYER_ABILITIES, enemyInstances, config.tuning, cellRng, 120);
         if (result.won) wins++;
         totalTTK += result.durationSec;
         totalDealt += result.damageDealt;
@@ -371,8 +392,10 @@ export function runPredictiveBalance(config: PredictiveBalanceConfig): BalanceRe
         let totalTTK = 0;
         let totalDPS = 0;
 
+        // Per-step deterministic stream — keyed by (attribute, step index).
+        const stepRng = createRNG(seedFromKey(`sens|${attr}|${s}`, BASE_SEED));
         for (let i = 0; i < config.iterations; i++) {
-          const r = simulateFight(testAttrs, PLAYER_ABILITIES, enemies, config.tuning, rng, 120);
+          const r = simulateFight(testAttrs, PLAYER_ABILITIES, enemies, config.tuning, stepRng, 120);
           if (r.won) wins++;
           totalTTK += r.durationSec;
           totalDPS += r.durationSec > 0 ? r.damageDealt / r.durationSec : 0;
