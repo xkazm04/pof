@@ -69,7 +69,7 @@ export function AbilitySpellbook({ moduleId }: AbilitySpellbookProps) {
         el?.scrollIntoView({ behavior: 'smooth', block: 'start' });
       }, 250);
     });
-  }, []);
+  }, [setActiveTab]);
 
   /* ── Compute live-synced data (falls back to static when unavailable) ── */
   const spellbookData = useMemo<SpellbookLiveData>(() => {

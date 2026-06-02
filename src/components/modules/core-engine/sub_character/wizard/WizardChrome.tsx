@@ -3,12 +3,13 @@
 import type { LucideIcon } from 'lucide-react';
 import { Loader2, Check, Lock, AlertTriangle } from 'lucide-react';
 import {
-  MODULE_COLORS, OPACITY_12, OPACITY_20, OPACITY_30, OPACITY_50, withOpacity,
+  MODULE_COLORS, STATUS_SUCCESS, STATUS_ERROR,
+  OPACITY_12, OPACITY_20, OPACITY_30, OPACITY_50, withOpacity,
 } from '@/lib/chart-colors';
 
 const ACCENT = MODULE_COLORS.core;
-const DONE_COLOR = '#10b981';
-const ERROR_COLOR = '#ef4444';
+const DONE_COLOR = STATUS_SUCCESS;
+const ERROR_COLOR = STATUS_ERROR;
 
 /** Lifecycle of a single wizard step's dispatched CLI task. */
 export type WizardStepStatus = 'idle' | 'running' | 'done' | 'error';
