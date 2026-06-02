@@ -10,6 +10,18 @@ import {
 } from '@/lib/combat/definitions';
 import type { CombatScenario, TuningOverrides, CombatSimConfig } from '@/types/combat-simulator';
 
+/**
+ * Coerce an untrusted numeric field to a finite integer within [min, max].
+ * Guards the sim engine against `0`, negatives, and non-numeric input (NaN),
+ * any of which previously flowed straight into runCombatSimulation and produced
+ * a NaN summary / undefined median.
+ */
+function clampInt(value: unknown, fallback: number, min: number, max: number): number {
+  const n = typeof value === 'number' ? value : Number(value);
+  if (!Number.isFinite(n)) return fallback;
+  return Math.min(Math.max(Math.round(n), min), max);
+}
+
 export async function GET() {
   try {
     return apiSuccess({
@@ -33,9 +45,9 @@ export async function POST(req: NextRequest) {
       const scenario = body.scenario as CombatScenario;
       const tuning: TuningOverrides = { ...DEFAULT_TUNING, ...(body.tuning ?? {}) };
       const config: CombatSimConfig = {
-        iterations: Math.min(body.config?.iterations ?? 1000, 5000),
-        seed: body.config?.seed ?? Math.floor(Math.random() * 999999),
-        maxFightDurationSec: Math.min(body.config?.maxFightDurationSec ?? 120, 300),
+        iterations: clampInt(body.config?.iterations, 1000, 1, 5000),
+        seed: clampInt(body.config?.seed, Math.floor(Math.random() * 999999), 0, 0xffffffff),
+        maxFightDurationSec: clampInt(body.config?.maxFightDurationSec, 120, 1, 300),
       };
 
       if (!scenario || !scenario.enemies || scenario.enemies.length === 0) {
