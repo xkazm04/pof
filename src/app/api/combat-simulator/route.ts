@@ -54,17 +54,47 @@ export async function POST(req: NextRequest) {
         return apiError('Scenario with at least one enemy group is required', 400);
       }
 
+      // Strip individual fight results if too many (keep summary + alerts).
+      const trim = (result: Awaited<ReturnType<typeof runCombatSimulationBatched>>) => ({
+        ...result,
+        fights: result.fights.length > 100 ? result.fights.slice(0, 100) : result.fights,
+      });
+
+      // Opt-in progressive streaming (Server-Sent Events): emit a `progress`
+      // event per completed batch and a final `result` event, so the client can
+      // surface intermediate progress instead of staring at a spinner for the
+      // whole run. Default (no stream flag) keeps the plain JSON contract.
+      if (body.stream === true) {
+        const encoder = new TextEncoder();
+        const stream = new ReadableStream<Uint8Array>({
+          async start(controller) {
+            const send = (obj: unknown) =>
+              controller.enqueue(encoder.encode(`data: ${JSON.stringify(obj)}\n\n`));
+            try {
+              const result = await runCombatSimulationBatched(scenario, tuning, config, {
+                onProgress: (completed, total) => { send({ type: 'progress', completed, total }); },
+              });
+              send({ type: 'result', result: trim(result) });
+            } catch (err) {
+              send({ type: 'error', error: err instanceof Error ? err.message : String(err) });
+            } finally {
+              controller.close();
+            }
+          },
+        });
+        return new Response(stream, {
+          headers: {
+            'Content-Type': 'text/event-stream; charset=utf-8',
+            'Cache-Control': 'no-cache, no-transform',
+            Connection: 'keep-alive',
+          },
+        });
+      }
+
       // Batched + event-loop-yielding so a 5000-iteration run doesn't block the
       // Node process (and starve concurrent requests) for its whole duration.
       const result = await runCombatSimulationBatched(scenario, tuning, config);
-
-      // Strip individual fight results if too many (keep summary + alerts)
-      const trimmedResult = {
-        ...result,
-        fights: result.fights.length > 100 ? result.fights.slice(0, 100) : result.fights,
-      };
-
-      return apiSuccess({ result: trimmedResult });
+      return apiSuccess({ result: trim(result) });
     }
 
     return apiError('Unknown action', 400);

@@ -64,10 +64,11 @@ export function CombatSimulatorView() {
   const tuning = useCombatSimulatorStore((s) => s.tuning);
   const isLoading = useCombatSimulatorStore((s) => s.isLoading);
   const isSimulating = useCombatSimulatorStore((s) => s.isSimulating);
+  const simProgress = useCombatSimulatorStore((s) => s.simProgress);
   const error = useCombatSimulatorStore((s) => s.error);
 
   const fetchDefaults = useCombatSimulatorStore((s) => s.fetchDefaults);
-  const runSimulation = useCombatSimulatorStore((s) => s.runSimulation);
+  const runSimulation = useCombatSimulatorStore((s) => s.runSimulationStreaming);
   const setTuning = useCombatSimulatorStore((s) => s.setTuning);
   const pinBaseline = useCombatSimulatorStore((s) => s.pinBaseline);
   const clearBaseline = useCombatSimulatorStore((s) => s.clearBaseline);
@@ -149,7 +150,7 @@ export function CombatSimulatorView() {
               >
                 {isSimulating ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Play className="w-3.5 h-3.5" />}
                 {isSimulating
-                  ? `Simulating ${iterations}...`
+                  ? `Simulating ${iterations}… ${Math.round(simProgress * 100)}%`
                   : baselineResult ? `Run Candidate (${iterations})` : `Run ${iterations} Fights`}
               </button>
             </div>

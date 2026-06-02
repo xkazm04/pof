@@ -48,11 +48,15 @@ interface CombatSimulatorState {
   // UI
   isLoading: boolean;
   isSimulating: boolean;
+  /** Progress of the in-flight streamed run, 0..1 (0 when idle/non-streaming). */
+  simProgress: number;
   error: string | null;
 
   // Actions
   fetchDefaults: () => Promise<void>;
   runSimulation: (scenario: CombatScenario, tuning: TuningOverrides, config: CombatSimConfig) => Promise<SimulationResult | null>;
+  /** Like runSimulation, but consumes the endpoint's SSE stream and updates simProgress per batch. */
+  runSimulationStreaming: (scenario: CombatScenario, tuning: TuningOverrides, config: CombatSimConfig) => Promise<SimulationResult | null>;
   setTuning: (tuning: TuningOverrides) => void;
   /** Pin the current result as the A/B baseline. No-op if there is no result. */
   pinBaseline: () => void;
@@ -76,6 +80,7 @@ export const useCombatSimulatorStore = create<CombatSimulatorState>((set, get) =
 
   isLoading: false,
   isSimulating: false,
+  simProgress: 0,
   error: null,
 
   fetchDefaults: async () => {
@@ -130,6 +135,69 @@ export const useCombatSimulatorStore = create<CombatSimulatorState>((set, get) =
       return data.result;
     } catch (err) {
       set({ error: err instanceof Error ? err.message : String(err), isSimulating: false });
+      return null;
+    }
+  },
+
+  runSimulationStreaming: async (scenario, tuning, config) => {
+    set({ isSimulating: true, error: null, simProgress: 0 });
+    try {
+      const res = await fetch('/api/combat-simulator', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'simulate', scenario, tuning, config, stream: true }),
+      });
+      if (!res.ok || !res.body) throw new Error(`Simulation request failed (${res.status})`);
+
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = '';
+      let finalResult: SimulationResult | null = null;
+      let streamError: string | null = null;
+
+      // Parse the SSE stream: blank-line-delimited `data: {json}` frames.
+      for (;;) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        const frames = buffer.split('\n\n');
+        buffer = frames.pop() ?? '';
+        for (const frame of frames) {
+          const dataLine = frame.split('\n').find((l) => l.startsWith('data:'));
+          if (!dataLine) continue;
+          const payload = JSON.parse(dataLine.slice(5).trim()) as
+            | { type: 'progress'; completed: number; total: number }
+            | { type: 'result'; result: SimulationResult }
+            | { type: 'error'; error: string };
+          if (payload.type === 'progress') {
+            set({ simProgress: payload.total > 0 ? payload.completed / payload.total : 0 });
+          } else if (payload.type === 'result') {
+            finalResult = payload.result;
+          } else if (payload.type === 'error') {
+            streamError = payload.error;
+          }
+        }
+      }
+
+      if (streamError) throw new Error(streamError);
+      if (!finalResult) throw new Error('Simulation stream ended without a result');
+
+      const baseline = get().baselineResult;
+      const comparison = baseline
+        ? compareRuns(baseline, finalResult, { baseline: 'Baseline', candidate: 'Candidate' })
+        : null;
+
+      set({
+        result: finalResult,
+        summary: finalResult.summary,
+        alerts: finalResult.alerts,
+        comparison,
+        isSimulating: false,
+        simProgress: 1,
+      });
+      return finalResult;
+    } catch (err) {
+      set({ error: err instanceof Error ? err.message : String(err), isSimulating: false, simProgress: 0 });
       return null;
     }
   },
