@@ -1,6 +1,6 @@
 import { NextRequest } from 'next/server';
 import { apiSuccess, apiError } from '@/lib/api-utils';
-import { runCombatSimulation } from '@/lib/combat/simulation-engine';
+import { runCombatSimulationBatched } from '@/lib/combat/simulation-engine';
 import {
   ENEMY_ARCHETYPES,
   PLAYER_ABILITIES,
@@ -54,7 +54,9 @@ export async function POST(req: NextRequest) {
         return apiError('Scenario with at least one enemy group is required', 400);
       }
 
-      const result = runCombatSimulation(scenario, tuning, config);
+      // Batched + event-loop-yielding so a 5000-iteration run doesn't block the
+      // Node process (and starve concurrent requests) for its whole duration.
+      const result = await runCombatSimulationBatched(scenario, tuning, config);
 
       // Strip individual fight results if too many (keep summary + alerts)
       const trimmedResult = {

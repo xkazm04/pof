@@ -424,6 +424,60 @@ export function runCombatSimulation(
   };
 }
 
+/** Resolve on the next macrotask so the Node event loop can service other work. */
+function yieldToEventLoop(): Promise<void> {
+  return new Promise((resolve) => {
+    if (typeof setImmediate === 'function') setImmediate(resolve);
+    else setTimeout(resolve, 0);
+  });
+}
+
+/**
+ * Event-loop-friendly variant of runCombatSimulation. Runs the SAME
+ * deterministic fights (identical seed → identical fight sequence → identical
+ * summary/alerts) but in batches, yielding between batches so a 5000-iteration
+ * run no longer blocks the Node process for its whole duration and starves
+ * every other request. `onProgress` fires once per completed batch, enabling a
+ * streaming endpoint to report intermediate progress.
+ */
+export async function runCombatSimulationBatched(
+  scenario: CombatScenario,
+  tuning: TuningOverrides,
+  config: CombatSimConfig,
+  opts: {
+    batchSize?: number;
+    onProgress?: (completed: number, total: number) => void | Promise<void>;
+  } = {},
+): Promise<SimulationResult> {
+  const startTime = Date.now();
+  const rng = createRNG(config.seed);
+  const total = config.iterations;
+  const batchSize = Math.max(1, opts.batchSize ?? 250);
+
+  const fights: FightResult[] = [];
+  for (let i = 0; i < total; i++) {
+    fights.push(simulateFight(scenario, tuning, config, rng));
+    if ((i + 1) % batchSize === 0 || i + 1 === total) {
+      if (opts.onProgress) await opts.onProgress(i + 1, total);
+      if (i + 1 < total) await yieldToEventLoop();
+    }
+  }
+
+  const summary = computeSummary(fights, scenario, config);
+  const alerts = detectAlerts(summary, fights, config);
+
+  return {
+    config,
+    scenario,
+    tuning,
+    fights,
+    summary,
+    alerts,
+    durationMs: Date.now() - startTime,
+    completedAt: new Date().toISOString(),
+  };
+}
+
 // ── Summary Computation ─────────────────────────────────────────────────────
 
 function computeSummary(
