@@ -26,7 +26,7 @@ import type {
 import {
   BASE_PLAYER_ATTRIBUTES,
   PLAYER_LEVEL_SCALING,
-  ENEMY_ARCHETYPES,
+  ENEMY_ARCHETYPE_BY_ID,
 } from './definitions';
 
 // ── Seeded RNG ──────────────────────────────────────────────────────────────
@@ -157,7 +157,7 @@ function simulateFight(
   // Build enemy entities
   const enemies: CombatEntity[] = [];
   for (const entry of scenario.enemies) {
-    const archetype = ENEMY_ARCHETYPES.find((a) => a.id === entry.archetypeId);
+    const archetype = ENEMY_ARCHETYPE_BY_ID.get(entry.archetypeId);
     if (!archetype) continue;
     for (let i = 0; i < entry.count; i++) {
       const attrs = buildEnemyAttributes(archetype, entry.level, tuning);
@@ -491,7 +491,7 @@ export function computeThreatBreakdown(
   // Ability lookup across all enemy archetypes in scenario
   const abilityByKey = new Map<string, { ability: CombatAbility; enemyArchetype: EnemyArchetype }>();
   for (const entry of scenario.enemies) {
-    const archetype = ENEMY_ARCHETYPES.find((a) => a.id === entry.archetypeId);
+    const archetype = ENEMY_ARCHETYPE_BY_ID.get(entry.archetypeId);
     if (!archetype) continue;
     for (const ability of archetype.abilities) {
       abilityByKey.set(`${archetype.name}|${ability.id}`, { ability, enemyArchetype: archetype });

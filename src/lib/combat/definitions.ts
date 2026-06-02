@@ -295,6 +295,15 @@ export const ENEMY_ARCHETYPES: EnemyArchetype[] = [
   },
 ];
 
+/**
+ * O(1) archetype lookup by id, built once at module load. ENEMY_ARCHETYPES is a
+ * static const, so callers in hot paths (e.g. simulateFight, run up to 5000×)
+ * should use this instead of a per-call ENEMY_ARCHETYPES.find linear scan.
+ */
+export const ENEMY_ARCHETYPE_BY_ID: ReadonlyMap<string, EnemyArchetype> = new Map(
+  ENEMY_ARCHETYPES.map((a) => [a.id, a]),
+);
+
 // ── Gear Loadouts ───────────────────────────────────────────────────────────
 
 export const GEAR_LOADOUTS: GearLoadout[] = [
