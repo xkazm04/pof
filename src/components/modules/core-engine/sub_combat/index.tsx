@@ -4,6 +4,7 @@ import { useMemo, useState, useCallback } from 'react';
 import { Swords, LayoutGrid } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useTabFeatures } from '@/hooks/useTabFeatures';
+import { useTabParam } from '@/hooks/useTabParam';
 import type { SubModuleId } from '@/types/modules';
 import { TabHeader, LoadingSpinner } from '../unique-tabs/_shared';
 import type { SubTab } from '../unique-tabs/_shared';
@@ -19,13 +20,15 @@ import { AttributeDefaultsTab } from './attributes/AttributeDefaultsTab';
 import FeatureMapTab from '../unique-tabs/FeatureMapTab';
 import { NarrativeBreadcrumb, CombatSubTabNav, getActiveSubtitle } from './CombatNav';
 
+const COMBAT_TAB_IDS = ['features', ...COMBAT_SUBTABS.map((t) => t.key)] as CombatSubtab[];
+
 interface CombatActionMapProps {
   moduleId: SubModuleId;
 }
 
 export function CombatActionMap({ moduleId }: CombatActionMapProps) {
   const { featureMap, stats, defs, isLoading } = useTabFeatures(moduleId);
-  const [activeTab, setActiveTab] = useState<CombatSubtab>('flow');
+  const [activeTab, setActiveTab] = useTabParam<CombatSubtab>('combatTab', 'flow', COMBAT_TAB_IDS);
   const [expanded, setExpanded] = useState<string | null>(null);
 
   const tabs: SubTab[] = useMemo(() => [

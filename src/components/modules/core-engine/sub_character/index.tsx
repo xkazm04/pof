@@ -1,9 +1,9 @@
 'use client';
 
-import { useState } from 'react';
 import { User, LayoutGrid } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useTabFeatures } from '@/hooks/useTabFeatures';
+import { useTabParam } from '@/hooks/useTabParam';
 import {
   TabHeader, LoadingSpinner, SubTabNavigation, NarrativeBreadcrumb,
   type SubTab, type NarrativeBreadcrumbStep,
@@ -26,6 +26,8 @@ const NARRATIVE_STEPS: ReadonlyArray<NarrativeBreadcrumbStep<BlueprintSubtab>> =
   ...SUBTABS.map((t) => ({ key: t.key, narrative: t.narrative })),
 ];
 
+const BLUEPRINT_TAB_IDS = ['features', ...SUBTABS.map((t) => t.key)] as BlueprintSubtab[];
+
 /* ── Active tab subtitle ──────────────────────────────────────────────────── */
 
 function getActiveSubtitle(tab: BlueprintSubtab): string | null {
@@ -40,7 +42,7 @@ interface CharacterBlueprintProps {
 
 export function CharacterBlueprint({ moduleId }: CharacterBlueprintProps) {
   const { featureMap, stats, defs, isLoading } = useTabFeatures(moduleId);
-  const [activeTab, setActiveTab] = useState<BlueprintSubtab>('overview');
+  const [activeTab, setActiveTab] = useTabParam<BlueprintSubtab>('characterTab', 'overview', BLUEPRINT_TAB_IDS);
 
   if (isLoading) return <LoadingSpinner accent={ACCENT} />;
 

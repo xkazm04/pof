@@ -4,6 +4,7 @@ import { useMemo, useState, useCallback, useRef } from 'react';
 import { BookOpen, LayoutGrid } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useTabFeatures } from '@/hooks/useTabFeatures';
+import { useTabParam } from '@/hooks/useTabParam';
 import { useUE5SourceSync } from '@/hooks/useUE5SourceSync';
 import type { SubModuleId } from '@/types/modules';
 import {
@@ -37,13 +38,15 @@ import { SpellbookTabContent } from './SpellbookTabContent';
 
 /* ── Component ─────────────────────────────────────────────────────────── */
 
+const SPELLBOOK_TAB_IDS = ['features', ...SUBTABS.map((t) => t.key)] as SpellbookSubtab[];
+
 interface AbilitySpellbookProps {
   moduleId: SubModuleId;
 }
 
 export function AbilitySpellbook({ moduleId }: AbilitySpellbookProps) {
   const { featureMap, stats, defs, isLoading } = useTabFeatures(moduleId);
-  const [activeTab, setActiveTab] = useState<SpellbookSubtab>('core');
+  const [activeTab, setActiveTab] = useTabParam<SpellbookSubtab>('abilityTab', 'core', SPELLBOOK_TAB_IDS);
   const [expandedFeature, setExpandedFeature] = useState<string | null>(null);
   const { data: liveData, isLoading: isSyncing, refresh } = useUE5SourceSync();
 
