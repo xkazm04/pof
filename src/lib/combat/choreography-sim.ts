@@ -91,9 +91,16 @@ export function simulateEncounter(
   const playerMaxHP = playerAttrs.maxHealth;
   let playerHP = Math.round(playerMaxHP * tuning.playerHealthMul);
 
-  // Build enemy instances per wave
-  const enemyInstances = enemies.map((e) => {
-    const arch = ENEMY_ARCHETYPES.find((a) => a.id === e.archetypeId)!;
+  // Build enemy instances per wave. Skip any placement whose archetypeId no
+  // longer resolves (renamed/removed/imported encounter) instead of crashing on
+  // a non-null assertion — a stale id must not take down the whole timeline.
+  let skippedEnemies = 0;
+  const enemyInstances = enemies.flatMap((e) => {
+    const arch = ENEMY_ARCHETYPES.find((a) => a.id === e.archetypeId);
+    if (!arch) {
+      skippedEnemies++;
+      return [];
+    }
     const hp = Math.round(
       (arch.baseAttributes.maxHealth + (arch.levelScaling.maxHealth ?? 0) * (e.level - 1)) * tuning.enemyHealthMul,
     );
@@ -248,6 +255,13 @@ export function simulateEncounter(
 
   // Generate alerts
   const alerts: ChoreographyAlert[] = [];
+  if (skippedEnemies > 0) {
+    alerts.push({
+      severity: 'warning',
+      message: `${skippedEnemies} enemy placement${skippedEnemies > 1 ? 's' : ''} skipped — unknown archetype (renamed or removed). Re-pick the enemy in the encounter.`,
+      timeSec: 0,
+    });
+  }
   const playerDied = playerHP <= 0;
   const totalPlayerDmgTaken = damageEvents.filter((e) => e.target === 'Player').reduce((s, e) => s + e.damage, 0);
 
