@@ -5,6 +5,7 @@ import { motion } from 'framer-motion';
 import { Users } from 'lucide-react';
 import { ACCENT_CYAN } from '@/lib/chart-colors';
 import { DEFAULT_TUNING } from '@/lib/combat/definitions';
+import { useDebouncedValue } from '@/hooks/useDebouncedValue';
 import { simulateEncounter } from '@/lib/combat/choreography-sim';
 import type { PlacedEnemy, WaveDef } from '@/lib/combat/choreography-sim';
 import type { TuningOverrides } from '@/types/combat-simulator';
@@ -45,9 +46,18 @@ export function CombatChoreographyEditor() {
   const playRef = useRef<number | null>(null);
   const lastFrameRef = useRef(0);
 
+  // Debounce the sim inputs so dragging a tuning slider (which updates `tuning`
+  // every pointer tick) doesn't re-run the full 60s encounter sim synchronously
+  // on the main thread mid-gesture. The raw state still drives the controls'
+  // visual position; the sim recomputes once the drag settles (~140ms).
+  const debouncedEnemies = useDebouncedValue(enemies, 140);
+  const debouncedWaves = useDebouncedValue(waves, 140);
+  const debouncedTuning = useDebouncedValue(tuning, 140);
+  const debouncedPlayerLevel = useDebouncedValue(playerLevel, 140);
+
   const simResult = useMemo(
-    () => simulateEncounter(enemies, waves, tuning, playerLevel, FEEDBACK_CHANNEL_COLORS),
-    [enemies, waves, tuning, playerLevel],
+    () => simulateEncounter(debouncedEnemies, debouncedWaves, debouncedTuning, debouncedPlayerLevel, FEEDBACK_CHANNEL_COLORS),
+    [debouncedEnemies, debouncedWaves, debouncedTuning, debouncedPlayerLevel],
   );
 
   useEffect(() => {
