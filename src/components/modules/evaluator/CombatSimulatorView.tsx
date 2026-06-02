@@ -323,6 +323,15 @@ export function CombatSimulatorView() {
 
 // ── Scenario Builder ────────────────────────────────────────────────────────
 
+/** Display order + labels for grouping the ability picker by CombatAbility.type. */
+const ABILITY_GROUPS: { type: CombatAbility['type']; label: string }[] = [
+  { type: 'melee', label: 'Melee' },
+  { type: 'ranged', label: 'Ranged' },
+  { type: 'aoe', label: 'AoE' },
+  { type: 'buff', label: 'Buff' },
+  { type: 'dodge', label: 'Dodge' },
+];
+
 function ScenarioBuilder({
   playerLevel, setPlayerLevel, gearId, setGearId, gearLoadouts,
   selectedAbilities, setSelectedAbilities, abilities,
@@ -343,6 +352,13 @@ function ScenarioBuilder({
   iterations: number;
   setIterations: (v: number) => void;
 }) {
+  const toggleAbility = (id: string) =>
+    setSelectedAbilities(
+      selectedAbilities.includes(id)
+        ? selectedAbilities.filter((x) => x !== id)
+        : [...selectedAbilities, id],
+    );
+
   return (
     <SurfaceCard className="p-4">
       <div className="flex items-center gap-2 mb-3">
@@ -387,27 +403,73 @@ function ScenarioBuilder({
 
         {/* Abilities */}
         <div>
-          <label className="text-2xs text-text-muted font-medium block mb-1">Abilities</label>
-          <div className="flex flex-wrap gap-1">
-            {abilities.map((a) => (
+          <div className="flex items-center justify-between mb-1">
+            <label className="text-2xs text-text-muted font-medium">
+              Abilities <span className="text-cyan-400">({selectedAbilities.length}/{abilities.length})</span>
+            </label>
+            <div className="flex items-center gap-1">
               <button
-                key={a.id}
-                onClick={() => {
-                  if (selectedAbilities.includes(a.id)) {
-                    setSelectedAbilities(selectedAbilities.filter((id) => id !== a.id));
-                  } else {
-                    setSelectedAbilities([...selectedAbilities, a.id]);
-                  }
-                }}
-                className={`px-2 py-0.5 rounded text-2xs font-medium border transition-colors ${
-                  selectedAbilities.includes(a.id)
-                    ? 'bg-cyan-500/15 border-cyan-500/30 text-cyan-400'
-                    : 'bg-surface border-border text-text-muted hover:text-text'
-                }`}
+                type="button"
+                onClick={() => setSelectedAbilities(abilities.map((a) => a.id))}
+                disabled={selectedAbilities.length === abilities.length}
+                className="px-1.5 py-0.5 rounded text-2xs text-text-muted hover:text-text disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
               >
-                {a.name}
+                Select all
               </button>
-            ))}
+              <button
+                type="button"
+                onClick={() => setSelectedAbilities([])}
+                disabled={selectedAbilities.length === 0}
+                className="px-1.5 py-0.5 rounded text-2xs text-text-muted hover:text-text disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+              >
+                Clear
+              </button>
+            </div>
+          </div>
+          <div className="space-y-1.5">
+            {ABILITY_GROUPS.map(({ type, label }) => {
+              const group = abilities.filter((a) => a.type === type);
+              if (group.length === 0) return null;
+              const groupIds = group.map((a) => a.id);
+              const selectedInGroup = groupIds.filter((id) => selectedAbilities.includes(id)).length;
+              const allSelected = selectedInGroup === group.length;
+              return (
+                <div key={type}>
+                  <div className="flex items-center gap-1.5 mb-0.5">
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setSelectedAbilities(
+                          allSelected
+                            ? selectedAbilities.filter((id) => !groupIds.includes(id))
+                            : [...new Set([...selectedAbilities, ...groupIds])],
+                        )
+                      }
+                      className="text-[10px] uppercase tracking-wide font-semibold text-text-muted/70 hover:text-text transition-colors"
+                      title={allSelected ? `Clear all ${label}` : `Select all ${label}`}
+                    >
+                      {label}
+                    </button>
+                    <span className="text-[10px] text-text-muted/50">{selectedInGroup}/{group.length}</span>
+                  </div>
+                  <div className="flex flex-wrap gap-1">
+                    {group.map((a) => (
+                      <button
+                        key={a.id}
+                        onClick={() => toggleAbility(a.id)}
+                        className={`px-2 py-0.5 rounded text-2xs font-medium border transition-colors ${
+                          selectedAbilities.includes(a.id)
+                            ? 'bg-cyan-500/15 border-cyan-500/30 text-cyan-400'
+                            : 'bg-surface border-border text-text-muted hover:text-text'
+                        }`}
+                      >
+                        {a.name}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              );
+            })}
           </div>
         </div>
 
