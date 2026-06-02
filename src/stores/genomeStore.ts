@@ -44,7 +44,27 @@ interface GenomeState {
 /* ── Initial state factory ────────────────────────────────────────────────── */
 
 function createInitialGenomes(): CharacterGenome[] {
-  return PRESET_GENOMES.map((g) => ({ ...g, id: createId() }));
+  const taken = new Set<string>();
+  return PRESET_GENOMES.map((g) => {
+    let id = createId();
+    while (taken.has(id)) id = createId();
+    taken.add(id);
+    return { ...g, id };
+  });
+}
+
+/**
+ * Return `genome` with an id guaranteed not to collide with `existing`.
+ * createId() is an 8-char Math.random string with no built-in uniqueness check,
+ * so without this guard a collision (or an empty id) would make
+ * updateGenome/deleteGenome silently mutate or remove the WRONG genome.
+ */
+function withUniqueId(genome: CharacterGenome, existing: Iterable<string>): CharacterGenome {
+  const taken = new Set(existing);
+  if (genome.id && !taken.has(genome.id)) return genome;
+  let id = createId();
+  while (!id || taken.has(id)) id = createId();
+  return { ...genome, id };
 }
 
 /* ── Store ─────────────────────────────────────────────────────────────────── */
@@ -71,10 +91,13 @@ export const useGenomeStore = create<GenomeState>()(
       clearCompareIds: () => set({ compareIds: [] }),
 
       addGenome: (genome) => {
-        set((state) => ({
-          genomes: [...state.genomes, genome],
-          activeId: genome.id,
-        }));
+        set((state) => {
+          const unique = withUniqueId(genome, state.genomes.map((g) => g.id));
+          return {
+            genomes: [...state.genomes, unique],
+            activeId: unique.id,
+          };
+        });
       },
 
       deleteGenome: (id) => {
@@ -100,10 +123,13 @@ export const useGenomeStore = create<GenomeState>()(
       },
 
       importGenome: (genome) => {
-        set((state) => ({
-          genomes: [...state.genomes, genome],
-          activeId: genome.id,
-        }));
+        set((state) => {
+          const unique = withUniqueId(genome, state.genomes.map((g) => g.id));
+          return {
+            genomes: [...state.genomes, unique],
+            activeId: unique.id,
+          };
+        });
       },
 
       resetToPresets: () => {
@@ -191,6 +217,7 @@ export const useGenomeStore = create<GenomeState>()(
 
         // Sanitize each genome on rehydration to handle schema evolution
         const sanitized: CharacterGenome[] = [];
+        const seenIds = new Set<string>();
         for (const entry of raw.genomes) {
           const result = sanitizeGenome(entry);
           if ('genome' in result) {
@@ -199,6 +226,13 @@ export const useGenomeStore = create<GenomeState>()(
             if (typeof originalId === 'string' && originalId.length > 0) {
               result.genome.id = originalId;
             }
+            // Enforce id uniqueness across the rehydrated set: a duplicate (or
+            // empty) id would make updateGenome/deleteGenome target the wrong
+            // genome. Regenerate until unique.
+            let id = result.genome.id;
+            while (!id || seenIds.has(id)) id = createId();
+            result.genome.id = id;
+            seenIds.add(id);
             sanitized.push(result.genome);
           }
           // Skip irrecoverably invalid entries
