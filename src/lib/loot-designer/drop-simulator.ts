@@ -138,36 +138,35 @@ function rollSingleItem(
   const actualCount = Math.min(desiredCount, eligible.length);
   const levelScale = getItemLevelScaling(itemLevel);
 
-  // 3. Weighted selection without replacement (exact UE5 algorithm)
+  // 3. Weighted selection without replacement (exact UE5 algorithm).
+  // Precompute weights once and track the running total incrementally instead of
+  // rebuilding the cumulative pool (with a Math.max per entry) on every pick. Same
+  // selection order, same single rng() per pick — just no per-pick array allocation.
+  const weights = eligible.map((a) => Math.max(0.01, a.designerWeight ?? a.baseWeight));
+  let effectiveTotal = weights.reduce((s, w) => s + w, 0);
   const chosen = new Set<number>();
   const affixes: SimRolledAffix[] = [];
 
   for (let picked = 0; picked < actualCount && chosen.size < eligible.length; picked++) {
-    // Rebuild weight pool excluding chosen
-    let effectiveTotal = 0;
-    const weightPool: { idx: number; cumWeight: number }[] = [];
+    if (effectiveTotal <= 0) break;
 
-    for (let i = 0; i < eligible.length; i++) {
-      if (!chosen.has(i)) {
-        const w = Math.max(0.01, eligible[i].designerWeight ?? eligible[i].baseWeight);
-        effectiveTotal += w;
-        weightPool.push({ idx: i, cumWeight: effectiveTotal });
-      }
-    }
-
-    if (weightPool.length === 0 || effectiveTotal <= 0) break;
-
-    // Weighted random selection
+    // Weighted random selection over the remaining (non-chosen) affixes, in index order.
     const roll = rng() * effectiveTotal;
-    let selectedIdx = weightPool[weightPool.length - 1].idx;
-    for (const entry of weightPool) {
-      if (roll <= entry.cumWeight) {
-        selectedIdx = entry.idx;
-        break;
-      }
+    let selectedIdx = -1;
+    let acc = 0;
+    for (let i = 0; i < eligible.length; i++) {
+      if (chosen.has(i)) continue;
+      acc += weights[i];
+      if (roll <= acc) { selectedIdx = i; break; }
+    }
+    if (selectedIdx === -1) {
+      // FP edge (roll fell past the accumulated total) → last remaining, as before.
+      for (let i = eligible.length - 1; i >= 0; i--) { if (!chosen.has(i)) { selectedIdx = i; break; } }
+      if (selectedIdx === -1) break;
     }
 
     chosen.add(selectedIdx);
+    effectiveTotal -= weights[selectedIdx];
     const row = eligible[selectedIdx];
 
     // Magnitude: random in [min, max] * level scaling

@@ -163,10 +163,11 @@ function rollAffixes(
 
   const result: { statKey: string; value: number }[] = [];
   const remaining = [...eligible];
+  // Track the running total incrementally instead of re-summing the pool every pick.
+  let totalW = remaining.reduce((s, a) => s + a.weight, 0);
 
   for (let i = 0; i < count && remaining.length > 0; i++) {
     // Weighted selection
-    const totalW = remaining.reduce((s, a) => s + a.weight, 0);
     let roll = rng() * totalW;
     let pickIdx = 0;
     for (let j = 0; j < remaining.length; j++) {
@@ -175,6 +176,7 @@ function rollAffixes(
     }
     const picked = remaining[pickIdx];
     remaining.splice(pickIdx, 1); // without replacement
+    totalW -= picked.weight;
 
     // UE5 magnitude scaling: FRandRange(Min, Max) * (1 + 0.1 * ItemLevel)
     const base = picked.minValue + rng() * (picked.maxValue - picked.minValue);
