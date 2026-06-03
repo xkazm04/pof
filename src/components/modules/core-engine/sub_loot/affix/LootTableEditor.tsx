@@ -20,6 +20,12 @@ import { LootTableReExportPanel } from './LootTableReExportPanel';
 import { LootTablePagination } from './LootTablePagination';
 import { useLootTableImport } from './useLootTableImport';
 
+// Cap undo history so a long editing session can't grow memory without bound.
+const MAX_EDITOR_HISTORY = 50;
+function capHistory(h: LootEditorEntryExpanded[][]): LootEditorEntryExpanded[][] {
+  return h.length > MAX_EDITOR_HISTORY ? h.slice(-MAX_EDITOR_HISTORY) : h;
+}
+
 export function LootTableEditor() {
   const [editorEntries, setEditorEntries] = useState<LootEditorEntryExpanded[]>(EXPANDED_ENTRIES);
   const [editorHistory, setEditorHistory] = useState<LootEditorEntryExpanded[][]>([EXPANDED_ENTRIES]);
@@ -30,6 +36,9 @@ export function LootTableEditor() {
   const [importError, setImportError] = useState<string | null>(null);
   const [copiedReExport, setCopiedReExport] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  // Tracks the entry whose slider is being dragged, to coalesce a continuous drag into
+  // a single undo step instead of one full-array snapshot per tick.
+  const lastWeightEditIdRef = useRef<string | null>(null);
 
   // Search + pagination + source grouping
   const [searchQuery, setSearchQuery] = useState('');
@@ -69,29 +78,39 @@ export function LootTableEditor() {
   const updateEditorWeight = useCallback((id: string, weight: number) => {
     setEditorEntries((prev) => {
       const next = prev.map((e) => e.id === id ? { ...e, weight } : e);
-      setEditorHistory((h) => [...h, next]);
+      // Coalesce a continuous drag on the same slider: replace the last snapshot rather
+      // than pushing one per tick (and keep history capped).
+      const coalesce = lastWeightEditIdRef.current === id;
+      lastWeightEditIdRef.current = id;
+      setEditorHistory((h) => {
+        const base = coalesce && h.length > 1 ? h.slice(0, -1) : h;
+        return capHistory([...base, next]);
+      });
       return next;
     });
   }, []);
 
   const addEditorEntry = useCallback(() => {
     const id = `e${Date.now()}`;
+    lastWeightEditIdRef.current = null; // a distinct edit boundary
     setEditorEntries((prev) => {
       const next: LootEditorEntryExpanded[] = [...prev, { id, name: 'New Item', weight: 0, rarity: 'Common', color: STATUS_MUTED, source: 'enemy' }];
-      setEditorHistory((h) => [...h, next]);
+      setEditorHistory((h) => capHistory([...h, next]));
       return next;
     });
   }, []);
 
   const removeEditorEntry = useCallback((id: string) => {
+    lastWeightEditIdRef.current = null; // a distinct edit boundary
     setEditorEntries((prev) => {
       const next = prev.filter((e) => e.id !== id);
-      setEditorHistory((h) => [...h, next]);
+      setEditorHistory((h) => capHistory([...h, next]));
       return next;
     });
   }, []);
 
   const undoEditor = useCallback(() => {
+    lastWeightEditIdRef.current = null; // a post-undo edit must not coalesce into the undone snapshot
     if (editorHistory.length > 1) {
       const newHistory = editorHistory.slice(0, -1);
       setEditorHistory(newHistory);
