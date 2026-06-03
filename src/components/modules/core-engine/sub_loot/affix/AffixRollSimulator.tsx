@@ -33,6 +33,16 @@ export function AffixRollSimulator() {
     [selectedAffixIds],
   );
 
+  // Godroll odds, computed from the SAME weighted distribution spinAffixes rolls (not a
+  // uniform 1/N): probability that all 3 slots land the rarest (lowest-weight) affix.
+  const godrollPct = useMemo(() => {
+    if (activePool.length === 0) return 0;
+    const total = activePool.reduce((s, a) => s + a.weight, 0);
+    if (total <= 0) return 0;
+    const minWeight = activePool.reduce((m, a) => Math.min(m, a.weight), Infinity);
+    return Math.pow(minWeight / total, 3) * 100;
+  }, [activePool]);
+
   const spinAffixes = useCallback(() => {
     if (activePool.length === 0) return;
     setAffixSpinning(true);
@@ -89,7 +99,7 @@ export function AffixRollSimulator() {
         </button>
       </div>
       <div className="text-2xs text-text-muted font-mono mb-3">
-        Godroll: {activePool.length >= 3 ? ((1 / activePool.length) * 100).toFixed(2) : '0'}% &middot; Weighted roll
+        Godroll: {godrollPct.toFixed(2)}% &middot; Weighted roll
       </div>
 
       {/* Category breakdown */}
