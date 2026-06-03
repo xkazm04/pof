@@ -9,6 +9,7 @@ import type {
   ItemCategory,
 } from '@/types/economy-simulator';
 import { DEFAULT_FAUCETS, DEFAULT_SINKS, DEFAULT_ITEMS, generateXPCurve } from './definitions';
+import { applyFlowOverrides } from './simulation-engine';
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -39,17 +40,11 @@ export function generateUE5Code(result: SimulationResult): CodeGenResult {
   const { config } = result;
   const mods = PHILOSOPHY_MODS[config.philosophy] ?? PHILOSOPHY_MODS['balanced'];
 
-  // Apply philosophy multipliers to get the calibrated values
-  const faucets = DEFAULT_FAUCETS.map((f) => ({
-    ...f,
-    baseAmount: Math.round(f.baseAmount * mods.faucetMul),
-    levelScaling: Math.round(f.levelScaling * mods.faucetMul * 100) / 100,
-  }));
-  const sinks = DEFAULT_SINKS.map((f) => ({
-    ...f,
-    baseAmount: Math.round(f.baseAmount * mods.sinkMul),
-    levelScaling: Math.round(f.levelScaling * mods.sinkMul * 100) / 100,
-  }));
+  // Apply flowOverrides + philosophy multiplier exactly as runSimulation did (same
+  // applyFlowOverrides), so the emitted DataAsset's faucets/sinks match the economy the
+  // SimulationResult was actually computed from — not a raw, override-less rebuild.
+  const faucets = applyFlowOverrides(DEFAULT_FAUCETS, config.flowOverrides, mods.faucetMul);
+  const sinks = applyFlowOverrides(DEFAULT_SINKS, config.flowOverrides, mods.sinkMul);
   const items = DEFAULT_ITEMS.map((it) => ({
     ...it,
     dropWeight: Math.round(it.dropWeight * mods.dropMul * 100) / 100,

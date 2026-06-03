@@ -240,7 +240,7 @@ function simulateAgentHour(
 
 // ── Flow Overrides ──────────────────────────────────────────────────────────
 
-function applyFlowOverrides(
+export function applyFlowOverrides(
   defaults: EconomyFlow[],
   overrides: Partial<EconomyFlow>[] | undefined,
   multiplier: number,
