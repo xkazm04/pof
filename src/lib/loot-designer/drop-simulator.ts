@@ -189,6 +189,21 @@ function rollSingleItem(
   return { affixes, totalPower: Math.round(totalPower * 10) / 10 };
 }
 
+/** Single-pass min/max — avoids `Math.min(...arr)` which throws RangeError (call-stack
+ *  overflow) when spreading the tens/hundreds of thousands of elements a large rollCount
+ *  produces. Returns {0,0} for an empty array. */
+function minMax(arr: number[]): { min: number; max: number } {
+  if (arr.length === 0) return { min: 0, max: 0 };
+  let min = arr[0];
+  let max = arr[0];
+  for (let i = 1; i < arr.length; i++) {
+    const v = arr[i];
+    if (v < min) min = v;
+    if (v > max) max = v;
+  }
+  return { min, max };
+}
+
 /* ── Mass simulation ─────────────────────────────────────────────────── */
 
 export function runDropSimulation(config: DropSimConfig): DropSimResult {
@@ -231,8 +246,7 @@ export function runDropSimulation(config: DropSimConfig): DropSimResult {
       };
     }
     const mags = stats.magnitudes;
-    const min = Math.min(...mags);
-    const max = Math.max(...mags);
+    const { min, max } = minMax(mags);
     const avg = mags.reduce((s, v) => s + v, 0) / mags.length;
     const range = max - min || 1;
     const histogram = new Array(10).fill(0) as number[];
@@ -281,8 +295,7 @@ export function runDropSimulation(config: DropSimConfig): DropSimResult {
 
   // ── Power histogram ──
   const powers = items.map((it) => it.totalPower);
-  const minP = Math.min(...powers);
-  const maxP = Math.max(...powers);
+  const { min: minP, max: maxP } = minMax(powers);
   const rangeP = maxP - minP || 1;
   const powerHistogram = new Array(10).fill(0) as number[];
   for (const p of powers) {
