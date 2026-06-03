@@ -354,6 +354,14 @@ export function runItemEconomySim(config: ItemEconomyConfig): ItemEconomyResult 
   let earlyTotal = 0;
   let endgameTotal = 0;
 
+  // Precompute "agents at or above level L" once per level — the bracket aggregation
+  // (rarity + affix) and the power-curve percentiles both need it, and previously each
+  // re-ran agents.filter() per level (a redundant O(maxLevel x playerCount) re-walk).
+  const agentsAtOrAbove = new Map<number, typeof agents>();
+  for (let lvl = 1; lvl <= config.maxLevel; lvl++) {
+    agentsAtOrAbove.set(lvl, agents.filter((a) => a.level >= lvl));
+  }
+
   for (let lvl = 1; lvl <= config.maxLevel; lvl++) {
     const b = brackets.get(lvl)!;
     if (b.powers.length === 0) {
@@ -369,8 +377,8 @@ export function runItemEconomySim(config: ItemEconomyConfig): ItemEconomyResult 
     const avg = (arr: number[]) => arr.reduce((s, v) => s + v, 0) / arr.length;
     const sorted = [...b.powers].sort((a, c) => a - c);
 
-    // Aggregate rarity counts from agents at this level
-    const agentsAtLevel = agents.filter((a) => a.level >= lvl);
+    // Aggregate rarity counts from agents at this level (precomputed once above)
+    const agentsAtLevel = agentsAtOrAbove.get(lvl)!;
     const rarityDist: Record<ItemRarity, number> = { common: 0, uncommon: 0, rare: 0, epic: 0, legendary: 0 };
     let totalRarity = 0;
     for (const a of agentsAtLevel) {
@@ -436,7 +444,7 @@ export function runItemEconomySim(config: ItemEconomyConfig): ItemEconomyResult 
 
   // Power curve (percentiles)
   const powerCurve = bracketResults.map((b) => {
-    const agentsHere = agents.filter((a) => a.level >= b.level);
+    const agentsHere = agentsAtOrAbove.get(b.level) ?? [];
     const powers = agentsHere.map((a) => a.equippedPower).sort((a, c) => a - c);
     const p10 = powers[Math.floor(powers.length * 0.1)] ?? 0;
     const p90 = powers[Math.floor(powers.length * 0.9)] ?? 0;
