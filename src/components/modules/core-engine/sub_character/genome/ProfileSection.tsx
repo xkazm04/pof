@@ -6,6 +6,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { STATUS_WARNING, STATUS_ERROR,
   withOpacity, OPACITY_10, OPACITY_20, OPACITY_25,
 } from '@/lib/chart-colors';
+import { NumberField } from '@/components/ui/NumberField';
+import { FOCUS_RING_INSET_CLASS, focusRingStyle } from '@/lib/ui/focus-ring';
 import { BlueprintPanel, SectionHeader, NeonBar } from '../../unique-tabs/_design';
 import type { FieldDef, FieldWarning } from './types';
 
@@ -89,13 +91,13 @@ export function ProfileSection({
                         <div className="absolute w-2.5 h-2.5 rounded-full border-2 border-surface shadow-md pointer-events-none transition-all duration-150"
                           style={{ left: `calc(${Math.min(pct, 100)}% - 5px)`, backgroundColor: color }} />
                       </div>
-                      <input type="number" min={f.min} max={f.max} step={f.step} value={val}
-                        onChange={(e) => {
-                          const v = parseFloat(e.target.value);
-                          if (!isNaN(v)) onChange(f.key, Math.max(f.min, Math.min(f.max, v)));
-                        }}
-                        className="w-16 text-xs font-mono font-bold text-right px-1.5 py-0.5 rounded bg-surface-deep border border-border/40 text-text focus:outline-none focus:border-blue-500/50"
-                        style={{ textShadow: `0 0 12px ${withOpacity(color, OPACITY_25)}` }}
+                      <NumberField
+                        value={val} min={f.min} max={f.max} step={f.step}
+                        fallback={val}
+                        ariaLabel={f.label}
+                        onChange={(v) => onChange(f.key, v)}
+                        className={`w-16 text-xs font-mono font-bold text-right px-1.5 py-0.5 rounded bg-surface-deep border border-border/40 text-text ${FOCUS_RING_INSET_CLASS}`}
+                        style={{ textShadow: `0 0 12px ${withOpacity(color, OPACITY_25)}`, ...focusRingStyle(color) }}
                       />
                       <span className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted/60 w-8 flex-shrink-0">{f.unit}</span>
                     </div>

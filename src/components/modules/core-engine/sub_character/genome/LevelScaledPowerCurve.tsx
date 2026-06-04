@@ -5,6 +5,8 @@ import { TrendingUp } from 'lucide-react';
 import { ACCENT_VIOLET, STATUS_SUCCESS, OVERLAY_WHITE,
   withOpacity, OPACITY_6, OPACITY_10, OPACITY_12, OPACITY_25, OPACITY_30, OPACITY_15, OPACITY_5, OPACITY_8, OPACITY_50, OPACITY_37, OPACITY_80, OPACITY_90,
 } from '@/lib/chart-colors';
+import { NumberField } from '@/components/ui/NumberField';
+import { FOCUS_RING_INSET_CLASS, focusRingStyle } from '@/lib/ui/focus-ring';
 import { BlueprintPanel, SectionHeader, NeonBar } from '../../unique-tabs/_design';
 import type { CharacterGenome } from '@/types/character-genome';
 import type { PowerCurveStat } from './types';
@@ -153,9 +155,12 @@ function LevelScaledPowerCurveImpl({ genomes, activeId }: {
             <input type="range" min={1} max={100} step={1} value={previewLevel} onChange={(e) => setPreviewLevel(parseInt(e.target.value))} className="absolute inset-0 w-full opacity-0 cursor-pointer" />
             <div className="absolute w-3 h-3 rounded-full border-2 border-surface shadow-md pointer-events-none" style={{ left: `calc(${((previewLevel - 1) / 99) * 100}% - 6px)`, backgroundColor: ACCENT_VIOLET }} />
           </div>
-          <input type="number" min={1} max={100} value={previewLevel}
-            onChange={(e) => { const v = parseInt(e.target.value); if (!isNaN(v) && v >= 1 && v <= 100) setPreviewLevel(v); }}
-            className="w-12 text-xs font-mono font-bold text-center bg-surface border border-border/40 rounded px-1 py-0.5 text-text focus:outline-none focus:border-blue-500/50" />
+          <NumberField
+            value={previewLevel} min={1} max={100} fallback={previewLevel}
+            ariaLabel="Preview level"
+            onChange={(v) => setPreviewLevel(Math.round(v))} // level indexes the curve array — keep it integer
+            className={`w-12 text-xs font-mono font-bold text-center bg-surface border border-border/40 rounded px-1 py-0.5 text-text ${FOCUS_RING_INSET_CLASS}`}
+            style={focusRingStyle(ACCENT_VIOLET)} />
           <span className="text-xs font-mono text-text-muted/50">/ 100</span>
         </div>
 
