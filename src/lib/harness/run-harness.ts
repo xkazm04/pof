@@ -30,8 +30,56 @@ import {
   createDefaultConfig,
   buildGamePlan,
   type HarnessEvent,
+  type ModuleArea,
 } from './index';
 import { UI_OVERHAUL_AREAS, UI_OVERHAUL_SUMMARY } from './ui-overhaul-areas';
+import { CONTENT_OVERHAUL_AREAS, CONTENT_OVERHAUL_SUMMARY } from './content-overhaul-areas';
+
+// ── Scenario Registry ───────────────────────────────────────────────────────
+// Named scenarios swap the auto-generated registry plan for a curated set of
+// areas. Adding an entry here is all it takes to make `--scenario <name>` real.
+
+interface ScenarioDef {
+  /** Human-readable name shown when the scenario loads. */
+  label: string;
+  /** Curated areas fed to the orchestrator as `config.areas`. */
+  areas: ModuleArea[];
+  /** Per-phase area counts, printed as a breakdown on load. */
+  phases: Array<{ label: string; count: number }>;
+  /** Total area count (== areas.length). */
+  total: number;
+}
+
+const SCENARIOS: Record<string, ScenarioDef> = {
+  'ui-overhaul': {
+    label: 'UI Overhaul',
+    areas: UI_OVERHAUL_AREAS,
+    phases: [
+      { label: 'Phase 0 — Infrastructure', count: UI_OVERHAUL_SUMMARY.phase0_infrastructure },
+      { label: 'Phase 1 — Feature Metrics', count: UI_OVERHAUL_SUMMARY.phase1_featureMetrics },
+      { label: 'Phase 2 — Scaling', count: UI_OVERHAUL_SUMMARY.phase2_scaling },
+      { label: 'Phase 3 — Flow Redesign', count: UI_OVERHAUL_SUMMARY.phase3_flow },
+      { label: 'Phase 4 — Visual Polish', count: UI_OVERHAUL_SUMMARY.phase4_visual },
+      { label: 'Phase 5 — Integration', count: UI_OVERHAUL_SUMMARY.phase5_integration },
+    ],
+    total: UI_OVERHAUL_SUMMARY.total,
+  },
+  'content-overhaul': {
+    label: 'Content Overhaul',
+    areas: CONTENT_OVERHAUL_AREAS,
+    phases: [
+      { label: 'Phase 0 — Infrastructure', count: CONTENT_OVERHAUL_SUMMARY.phase0_infrastructure },
+      { label: 'Phase 1 — Animations', count: CONTENT_OVERHAUL_SUMMARY.phase1_animations },
+      { label: 'Phase 1 — Audio', count: CONTENT_OVERHAUL_SUMMARY.phase1_audio },
+      { label: 'Phase 1 — Level Design', count: CONTENT_OVERHAUL_SUMMARY.phase1_level },
+      { label: 'Phase 1 — Materials', count: CONTENT_OVERHAUL_SUMMARY.phase1_materials },
+      { label: 'Phase 1 — Models', count: CONTENT_OVERHAUL_SUMMARY.phase1_models },
+      { label: 'Phase 1 — UI/HUD', count: CONTENT_OVERHAUL_SUMMARY.phase1_uihud },
+      { label: 'Phase 2 — Audit', count: CONTENT_OVERHAUL_SUMMARY.phase2_audit },
+    ],
+    total: CONTENT_OVERHAUL_SUMMARY.total,
+  },
+};
 
 // ── Arg Parsing ─────────────────────────────────────────────────────────────
 
@@ -69,7 +117,7 @@ async function main() {
     : path.join(projectPath ?? '.', '.harness');
   const dryRun = args['dry-run'] === 'true';
   const themeDirective = args['theme'] ?? undefined;
-  const scenario = args['scenario'] ?? undefined; // 'ui-overhaul' for webapp UI work
+  const scenario = args['scenario'] ?? undefined; // named area set: 'ui-overhaul' | 'content-overhaul'
   const checkpoint = args['checkpoint'] === 'true'; // git checkpoint per area + rollback-to-green
 
   if (!projectPath || !projectName) {
@@ -88,7 +136,9 @@ Usage: npx tsx src/lib/harness/run-harness.ts \\
   [--dry-run]
 
 Scenarios:
-  ui-overhaul  — Webapp UI/UX overhaul (${UI_OVERHAUL_SUMMARY.total} areas across 6 phases)
+${Object.entries(SCENARIOS)
+  .map(([name, def]) => `  ${name.padEnd(16)} — ${def.label} (${def.total} areas across ${def.phases.length} phases)`)
+  .join('\n')}
 `);
     process.exit(1);
   }
@@ -112,16 +162,20 @@ Scenarios:
   console.log();
 
   // Load custom areas for named scenarios
-  const scenarioAreas = scenario === 'ui-overhaul' ? UI_OVERHAUL_AREAS : undefined;
-  if (scenario === 'ui-overhaul') {
-    console.log(`  Loading UI Overhaul scenario:`);
-    console.log(`    Phase 0 — Infrastructure:    ${UI_OVERHAUL_SUMMARY.phase0_infrastructure} areas`);
-    console.log(`    Phase 1 — Feature Metrics:   ${UI_OVERHAUL_SUMMARY.phase1_featureMetrics} areas`);
-    console.log(`    Phase 2 — Scaling:           ${UI_OVERHAUL_SUMMARY.phase2_scaling} areas`);
-    console.log(`    Phase 3 — Flow Redesign:     ${UI_OVERHAUL_SUMMARY.phase3_flow} areas`);
-    console.log(`    Phase 4 — Visual Polish:     ${UI_OVERHAUL_SUMMARY.phase4_visual} areas`);
-    console.log(`    Phase 5 — Integration:       ${UI_OVERHAUL_SUMMARY.phase5_integration} areas`);
-    console.log(`    Total:                       ${UI_OVERHAUL_SUMMARY.total} areas`);
+  const scenarioDef = scenario ? SCENARIOS[scenario] : undefined;
+  if (scenario && !scenarioDef) {
+    console.error(
+      `Unknown scenario "${scenario}". Available: ${Object.keys(SCENARIOS).join(', ')}.`,
+    );
+    process.exit(1);
+  }
+  const scenarioAreas = scenarioDef?.areas;
+  if (scenarioDef) {
+    console.log(`  Loading ${scenarioDef.label} scenario:`);
+    for (const phase of scenarioDef.phases) {
+      console.log(`    ${`${phase.label}:`.padEnd(29)}${phase.count} areas`);
+    }
+    console.log(`    ${'Total:'.padEnd(29)}${scenarioDef.total} areas`);
     console.log();
   }
 
