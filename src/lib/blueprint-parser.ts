@@ -159,11 +159,14 @@ function parsePin(raw: RawPin): BlueprintPin {
   };
 }
 
-function parseNode(raw: RawNode): BlueprintNode {
+function parseNode(raw: RawNode, nextNodeId: () => string): BlueprintNode {
   const nodeType = raw.NodeClass ?? raw.NodeType ?? 'Unknown';
   const shortType = nodeType.split('.').pop() ?? nodeType;
   return {
-    id: raw.NodeGuid ?? `node-${Math.random().toString(36).slice(2, 8)}`,
+    // Prefer the stable NodeGuid; otherwise fall back to a per-parse counter
+    // (node-0, node-1, ...) so parsing the same Blueprint twice yields the same
+    // ids — keeping snapshot tests and node-identity-keyed features stable.
+    id: raw.NodeGuid ?? nextNodeId(),
     type: shortType,
     name: raw.Name ?? NODE_TYPE_LABELS[shortType] ?? shortType,
     comment: raw.NodeComment || undefined,
@@ -194,7 +197,7 @@ function parseVariable(raw: RawVariable): BlueprintVariable {
   };
 }
 
-function parseGraph(raw: RawGraph): BlueprintGraph {
+function parseGraph(raw: RawGraph, nextNodeId: () => string): BlueprintGraph {
   const gt = (raw.GraphType ?? '').toLowerCase();
   const graphType: BlueprintGraph['graphType'] =
     gt.includes('function') ? 'function'
@@ -203,7 +206,7 @@ function parseGraph(raw: RawGraph): BlueprintGraph {
   return {
     name: raw.GraphName ?? 'Unnamed',
     graphType,
-    nodes: (raw.Nodes ?? []).map(parseNode),
+    nodes: (raw.Nodes ?? []).map((n) => parseNode(n, nextNodeId)),
   };
 }
 
@@ -214,13 +217,18 @@ function parseGraph(raw: RawGraph): BlueprintGraph {
 export function parseBlueprintJson(input: string | object): BlueprintAsset {
   const data: RawBlueprintJson = typeof input === 'string' ? JSON.parse(input) : input as RawBlueprintJson;
 
+  // One incrementing counter per parse makes fallback node ids deterministic
+  // and collision-free within this Blueprint (see parseNode).
+  let nodeIdCounter = 0;
+  const nextNodeId = () => `node-${nodeIdCounter++}`;
+
   const variables = (data.Variables ?? []).map(parseVariable);
-  const graphs = (data.Graphs ?? []).map(parseGraph);
+  const graphs = (data.Graphs ?? []).map((g) => parseGraph(g, nextNodeId));
 
   // Separate event graph from function graphs
   const eventGraph = graphs.find((g) => g.graphType === 'event' && g.name === 'EventGraph')
     ?? graphs.find((g) => g.graphType === 'event')
-    ?? { name: 'EventGraph', graphType: 'event' as const, nodes: (data.Nodes ?? []).map(parseNode) };
+    ?? { name: 'EventGraph', graphType: 'event' as const, nodes: (data.Nodes ?? []).map((n) => parseNode(n, nextNodeId)) };
 
   const functions = graphs.filter((g) => g.graphType === 'function');
 
