@@ -7,6 +7,7 @@ import { getDb } from './db';
 import { SUB_MODULE_MAP, CATEGORIES, getCategoryForSubModule } from './module-registry';
 import type { FeatureStatus } from '@/types/feature-matrix';
 import type { SubModuleId } from '@/types/modules';
+import { formatBytes } from '@/lib/format';
 
 // ─── GDD Section Types ──────────────────────────────────────────────────────
 
@@ -603,13 +604,6 @@ function severityIcon(severity: string): string {
 function progressBar(pct: number): string {
   const filled = Math.round(pct / 10);
   return '█'.repeat(filled) + '░'.repeat(10 - filled);
-}
-
-function formatBytes(bytes: number): string {
-  if (bytes < 1024) return `${bytes} B`;
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-  if (bytes < 1024 * 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
-  return `${(bytes / (1024 * 1024 * 1024)).toFixed(2)} GB`;
 }
 
 function formatDuration(ms: number): string {

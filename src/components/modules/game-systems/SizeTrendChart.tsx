@@ -3,18 +3,12 @@
 import { useMemo } from 'react';
 import type { SizeTrendPoint } from '@/lib/packaging/build-history-store';
 import { MODULE_COLORS } from '@/lib/chart-colors';
+import { formatBytes } from '@/lib/format';
 
 interface SizeTrendChartProps {
   data: SizeTrendPoint[];
   height?: number;
   accentColor?: string;
-}
-
-function formatBytes(bytes: number): string {
-  if (bytes < 1024) return `${bytes} B`;
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-  if (bytes < 1024 * 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
-  return `${(bytes / (1024 * 1024 * 1024)).toFixed(2)} GB`;
 }
 
 const PADDING = { top: 20, right: 16, bottom: 28, left: 56 };

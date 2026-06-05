@@ -16,6 +16,7 @@ import {
 import { SizeTrendChart } from './SizeTrendChart';
 import { SurfaceCard } from '@/components/ui/SurfaceCard';
 import { BuildComparison } from './BuildComparison';
+import { formatBytes, formatDuration } from '@/lib/format';
 
 type DashboardTab = 'history' | 'trends' | 'compare';
 
@@ -48,21 +49,6 @@ function SortableHeader({
   );
 }
 
-function formatBytes(bytes: number): string {
-  if (bytes < 1024) return `${bytes} B`;
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-  if (bytes < 1024 * 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
-  return `${(bytes / (1024 * 1024 * 1024)).toFixed(2)} GB`;
-}
-
-function formatDuration(ms: number): string {
-  if (ms < 1000) return `${ms}ms`;
-  if (ms < 60000) return `${(ms / 1000).toFixed(1)}s`;
-  const mins = Math.floor(ms / 60000);
-  const secs = Math.round((ms % 60000) / 1000);
-  return `${mins}m ${secs}s`;
-}
-
 // ---------- Metric card ----------
 
 function MetricCard({ label, value, sub, icon, color }: {
@@ -72,7 +58,7 @@ function MetricCard({ label, value, sub, icon, color }: {
   return (
     <SurfaceCard level={2} className="px-3 py-2.5">
       <div className="flex items-center gap-1.5 mb-1">
-        <span style={{ color }}>{icon}</span>
+        <span style={{ color }} aria-hidden="true">{icon}</span>
         <span className="text-2xs uppercase tracking-wider text-text-muted font-medium">{label}</span>
       </div>
       <div className="text-base font-semibold text-text leading-tight">{value}</div>
@@ -509,7 +495,14 @@ export function BuildHistoryDashboard() {
                   {p.successRate.toFixed(0)}%
                 </span>
               </div>
-              <div className="w-full h-1 rounded-full bg-surface-hover overflow-hidden mb-1">
+              <div
+                className="w-full h-1 rounded-full bg-surface-hover overflow-hidden mb-1"
+                role="progressbar"
+                aria-valuenow={Math.round(p.successRate)}
+                aria-valuemin={0}
+                aria-valuemax={100}
+                aria-label={`${p.platform} success rate`}
+              >
                 <div
                   className="h-full rounded-full transition-all"
                   style={{ width: `${p.successRate}%`, backgroundColor: successRateColor(p.successRate) }}

@@ -1,4 +1,5 @@
 import { getSetting, setSetting } from '@/lib/db';
+import { formatBytes } from '@/lib/format';
 
 const BUDGETS_KEY = 'build_size_budgets';
 
@@ -79,14 +80,6 @@ function platformBudget(platform: string, budgets: SizeBudgetMap): SizeBudget {
   return budgets[platform] ?? { budgetBytes: 0, growthPercent: 0 };
 }
 
-function formatBytes(bytes: number): string {
-  const abs = Math.abs(bytes);
-  if (abs < 1024) return `${bytes} B`;
-  if (abs < 1024 ** 2) return `${(bytes / 1024).toFixed(1)} KB`;
-  if (abs < 1024 ** 3) return `${(bytes / 1024 ** 2).toFixed(1)} MB`;
-  return `${(bytes / 1024 ** 3).toFixed(2)} GB`;
-}
-
 /**
  * Evaluate a successful build's size against the per-platform budget and the
  * size of the last green build. Returns a regression record when either the
@@ -117,17 +110,17 @@ export function evaluateBuildSize(
     const overBy = sizeBytes - budget.budgetBytes;
     const overPct = (overBy / budget.budgetBytes) * 100;
     parts.push(
-      `exceeds ${formatBytes(budget.budgetBytes)} budget by ${formatBytes(overBy)} (+${overPct.toFixed(1)}%)`,
+      `exceeds ${formatBytes(budget.budgetBytes, { signed: true })} budget by ${formatBytes(overBy, { signed: true })} (+${overPct.toFixed(1)}%)`,
     );
   }
   if (exceedsGrowth && actualGrowthPercent != null && lastGreenSizeBytes != null) {
     const delta = sizeBytes - lastGreenSizeBytes;
     parts.push(
-      `grew ${actualGrowthPercent.toFixed(1)}% vs last green (+${formatBytes(delta)}, threshold ${budget.growthPercent}%)`,
+      `grew ${actualGrowthPercent.toFixed(1)}% vs last green (+${formatBytes(delta, { signed: true })}, threshold ${budget.growthPercent}%)`,
     );
   }
 
-  const note = `${SIZE_REGRESSION_NOTE_PREFIX} ${platform} ${formatBytes(sizeBytes)} — ${parts.join('; ')}`;
+  const note = `${SIZE_REGRESSION_NOTE_PREFIX} ${platform} ${formatBytes(sizeBytes, { signed: true })} — ${parts.join('; ')}`;
 
   return {
     sizeBytes,

@@ -4,26 +4,12 @@ import { useMemo, useState } from 'react';
 import { ArrowLeftRight, ArrowUp, ArrowDown, Clock, HardDrive, AlertTriangle, AlertCircle, Tag, FolderOpen, CheckCircle, XCircle } from 'lucide-react';
 import type { BuildRecord } from '@/lib/packaging/build-history-store';
 import { STATUS_SUCCESS, STATUS_ERROR, STATUS_NEUTRAL } from '@/lib/chart-colors';
+import { formatBytes, formatDuration } from '@/lib/format';
 
 const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
 
 interface BuildComparisonProps {
   builds: BuildRecord[];
-}
-
-function formatBytes(bytes: number): string {
-  if (bytes < 1024) return `${bytes} B`;
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-  if (bytes < 1024 * 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
-  return `${(bytes / (1024 * 1024 * 1024)).toFixed(2)} GB`;
-}
-
-function formatDuration(ms: number): string {
-  if (ms < 1000) return `${ms}ms`;
-  if (ms < 60000) return `${(ms / 1000).toFixed(1)}s`;
-  const mins = Math.floor(ms / 60000);
-  const secs = Math.round((ms % 60000) / 1000);
-  return `${mins}m ${secs}s`;
 }
 
 function DeltaBadge({ a, b, format, invertColor, metricLabel }: { a: number | null; b: number | null; format: (n: number) => string; invertColor?: boolean; metricLabel?: string }) {
