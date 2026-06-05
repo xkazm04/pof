@@ -15,6 +15,7 @@ import {
   type EffectDurationType, type GameplayEffectEntry,
 } from '../_shared/data';
 import type { SectionProps } from '../_shared/types';
+import { TEXT_SCALE } from '@/lib/typography-scale';
 
 const PAGE_SIZE = 8;
 const EFFECT_TYPES: EffectDurationType[] = ['Instant', 'Duration', 'Periodic', 'Infinite'];
@@ -103,7 +104,7 @@ export function EffectsSection({ featureMap, defs, expanded, onToggle }: Section
                         <span className="text-xs font-mono uppercase tracking-[0.15em] font-bold text-text truncate"
                           style={{ textShadow: `0 0 12px ${withOpacity(effect.color, OPACITY_25)}` }}>{effect.name}</span>
                       </div>
-                      <p className="text-2xs text-text-muted leading-relaxed">{effect.description}</p>
+                      <p className={`${TEXT_SCALE.body} text-text-muted leading-relaxed`}>{effect.description}</p>
                       <div className="flex gap-2 mt-1.5 text-2xs font-mono text-text-muted">
                         {effect.magnitude > 0 && <span>×{effect.magnitude}</span>}
                         {effect.duration != null && <span>{effect.duration}s</span>}

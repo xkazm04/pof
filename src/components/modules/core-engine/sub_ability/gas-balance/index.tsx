@@ -15,6 +15,7 @@ import { GASBalanceHeader } from './GASBalanceHeader';
 import { runIteration, finalizeSimulation } from './simulation';
 import type { SimScenario, SimResults, SimIterationResult } from './data';
 import { ACCENT, SCENARIO_PRESETS } from './data';
+import { TEXT_SCALE } from '@/lib/typography-scale';
 
 export function GASBalanceSimulator() {
   const [scenario, setScenario] = useState<SimScenario>(() => ({
@@ -147,7 +148,7 @@ export function GASBalanceSimulator() {
               <div className="flex flex-col items-center gap-2 text-text-muted">
                 <BarChart3 className="w-8 h-8 opacity-30" />
                 <p className="text-sm">Configure a scenario and run the simulation</p>
-                <p className="text-2xs">Results will show TTK distributions, DPS curves, armor breakpoints, and sensitivity analysis</p>
+                <p className={TEXT_SCALE.body}>Results will show TTK distributions, DPS curves, armor breakpoints, and sensitivity analysis</p>
               </div>
             </BlueprintPanel>
           )}

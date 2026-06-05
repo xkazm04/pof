@@ -5,6 +5,7 @@ import { motion } from 'framer-motion';
 import type { HistogramBin } from './simulation';
 
 import { withOpacity, OPACITY_50, OPACITY_37 } from '@/lib/chart-colors';
+import { TEXT_SCALE } from '@/lib/typography-scale';
 /** Histogram bar chart with hover crosshair + tooltip */
 export function HistogramChart({ bins, maxCount, color, formatRange, barHeight = 64 }: {
   bins: HistogramBin[];
@@ -60,7 +61,7 @@ export function HistogramChart({ bins, maxCount, color, formatRange, barHeight =
           }}
         >
           <div
-            className="px-2 py-1 rounded-md text-2xs font-mono whitespace-nowrap shadow-lg"
+            className={`px-2 py-1 rounded-md ${TEXT_SCALE.body} font-mono whitespace-nowrap shadow-lg`}
             style={{
               backgroundColor: 'var(--surface-deep)',
               border: `1px solid ${withOpacity(color, OPACITY_37)}`,

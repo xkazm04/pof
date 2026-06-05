@@ -134,7 +134,7 @@ export function AbilitySpellbook({ moduleId }: AbilitySpellbookProps) {
       </div>
 
       {/* ── Active Tab Subtitle ───────────────────────────────────────────── */}
-      {subtitle && <p className="text-xs font-mono text-text-muted/70 -mt-1 mb-1 pl-0.5">{subtitle}</p>}
+      {subtitle && <p className="text-xs font-mono text-text-muted -mt-1 mb-1 pl-0.5">{subtitle}</p>}
 
       <div ref={contentRef} className="mt-4 relative min-h-[300px]">
         <AnimatePresence mode="wait">

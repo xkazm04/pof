@@ -1,6 +1,7 @@
 'use client';
 
 import type { Heart } from 'lucide-react';
+import { TEXT_SCALE } from '@/lib/typography-scale';
 
 /** Compact stat slider input with icon, label, value readout, and optional hint */
 export function StatInput({ label, value, onChange, min, max, step, icon: Icon, color, unit, hint }: {
@@ -33,7 +34,7 @@ export function StatInput({ label, value, onChange, min, max, step, icon: Icon, 
         <span className="text-2xs font-mono" style={{ color }}>
           {step && step < 1 ? value.toFixed(2) : value}{unit ?? ''}
         </span>
-        {hint && <div className="text-2xs font-mono text-text-muted opacity-60 leading-tight">{hint}</div>}
+        {hint && <div className={`${TEXT_SCALE.body} font-mono text-text-muted leading-tight`}>{hint}</div>}
       </div>
     </div>
   );

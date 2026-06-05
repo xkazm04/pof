@@ -9,6 +9,7 @@ import { STATUS_SUCCESS, STATUS_ERROR,
 import { BlueprintPanel } from '../../unique-tabs/_design';
 import type { SimScenario } from './data';
 import { ACCENT, decodeScenario } from './data';
+import { TEXT_SCALE } from '@/lib/typography-scale';
 
 export function ImportScenarioModal({ onImport, onClose }: {
   onImport: (scenario: SimScenario) => void;
@@ -52,7 +53,7 @@ export function ImportScenarioModal({ onImport, onClose }: {
               </button>
             </div>
 
-            <p className="text-2xs text-text-muted">
+            <p className={`${TEXT_SCALE.body} text-text-muted`}>
               Paste a base64 scenario code below. Click Validate to preview, then Apply to load it.
             </p>
 

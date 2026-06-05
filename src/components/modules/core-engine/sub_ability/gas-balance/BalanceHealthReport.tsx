@@ -10,6 +10,7 @@ import {
   withOpacity, OPACITY_8,
 } from '@/lib/chart-colors';
 import { BlueprintPanel, SectionHeader } from '../../unique-tabs/_design';
+import { TEXT_SCALE } from '@/lib/typography-scale';
 import { buildBalanceHealthReport, type HealthSeverity, type HealthGrade, type HealthFinding } from './balanceHealth';
 import type { SimResults, SimScenario } from './data';
 
@@ -79,14 +80,14 @@ function FindingCard({ finding }: { finding: HealthFinding }) {
             </span>
           </div>
         </div>
-        <p className="text-2xs text-text-muted leading-relaxed">{finding.narrative}</p>
+        <p className={`${TEXT_SCALE.body} text-text-muted leading-relaxed`}>{finding.narrative}</p>
         {finding.suggestion && (
           <div
             className="flex items-start gap-1.5 mt-1 rounded px-1.5 py-1"
             style={{ backgroundColor: withOpacity(color, OPACITY_8), border: `1px dashed ${withOpacity(color, OPACITY_25)}` }}
           >
             <Wrench className="w-3 h-3 mt-0.5 flex-shrink-0" style={{ color }} />
-            <span className="text-2xs text-text leading-relaxed">
+            <span className={`${TEXT_SCALE.body} text-text leading-relaxed`}>
               <span className="font-semibold" style={{ color }}>Try: </span>
               {finding.suggestion}
             </span>
@@ -108,7 +109,7 @@ export function BalanceHealthReport({ results, scenario }: { results: SimResults
         style={{ backgroundColor: withOpacity(gradeColor, OPACITY_8) }}
       />
       <SectionHeader icon={Heart} label="Balance Health Report" color={ACCENT_VIOLET} />
-      <p className="text-2xs text-text-muted mt-0.5">
+      <p className={`${TEXT_SCALE.body} text-text-muted mt-0.5`}>
         Plain-language reading of the simulation for designers and producers — no ARPG math required.
       </p>
 
@@ -128,7 +129,7 @@ export function BalanceHealthReport({ results, scenario }: { results: SimResults
         </div>
         <div className="flex-1 min-w-0 flex flex-col justify-center">
           <p className="text-sm font-semibold text-text leading-snug">{report.headline}</p>
-          <p className="text-2xs text-text-muted leading-relaxed mt-1">{report.narrative}</p>
+          <p className={`${TEXT_SCALE.body} text-text-muted leading-relaxed mt-1`}>{report.narrative}</p>
         </div>
       </div>
 
@@ -156,7 +157,7 @@ export function BalanceHealthReport({ results, scenario }: { results: SimResults
           </div>
           <ol className="space-y-1 list-none">
             {report.topRecommendations.map((rec, i) => (
-              <li key={i} className="flex gap-2 text-2xs text-text leading-relaxed">
+              <li key={i} className={`flex gap-2 ${TEXT_SCALE.body} text-text leading-relaxed`}>
                 <span
                   className="flex-shrink-0 w-4 h-4 rounded-full flex items-center justify-center font-mono font-bold text-2xs"
                   style={{ backgroundColor: withOpacity(ACCENT_VIOLET, OPACITY_15), color: ACCENT_VIOLET }}

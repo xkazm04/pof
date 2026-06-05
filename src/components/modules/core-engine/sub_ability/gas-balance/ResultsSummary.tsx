@@ -16,6 +16,7 @@ import { HistogramChart } from './HistogramChart';
 import { BalanceHealthReport } from './BalanceHealthReport';
 import { buildHistogram } from './simulation';
 import type { SimResults, SimScenario } from './data';
+import { TEXT_SCALE } from '@/lib/typography-scale';
 import { ACCENT } from './data';
 
 /** Stat badge with icon */
@@ -74,7 +75,7 @@ export function ResultsSummary({ results, scenario }: { results: SimResults; sce
       {/* TTK Distribution */}
       <BlueprintPanel color={ACCENT_CYAN} className="p-3">
         <SectionHeader icon={Activity} label="TTK Distribution (Time-to-Kill)" color={ACCENT_CYAN} />
-        <p className="text-2xs text-text-muted mt-0.5 mb-2">
+        <p className={`${TEXT_SCALE.body} text-text-muted mt-0.5 mb-2`}>
           {results.iterations.length.toLocaleString()} iterations — Median: {results.ttkStats.median.toFixed(2)}s, P10: {results.ttkStats.p10.toFixed(2)}s, P90: {results.ttkStats.p90.toFixed(2)}s
         </p>
         <HistogramChart bins={ttkHist.bins} maxCount={maxBin} color={ACCENT_CYAN}
@@ -104,7 +105,7 @@ export function ResultsSummary({ results, scenario }: { results: SimResults; sce
       {/* DPS Distribution */}
       <BlueprintPanel color={ACCENT_ORANGE} className="p-3">
         <SectionHeader icon={TrendingUp} label="DPS Distribution" color={ACCENT_ORANGE} />
-        <p className="text-2xs text-text-muted mt-0.5 mb-2">
+        <p className={`${TEXT_SCALE.body} text-text-muted mt-0.5 mb-2`}>
           Mean: {results.dpsStats.mean.toFixed(0)}, Median: {results.dpsStats.median.toFixed(0)}, Range: {results.dpsStats.min.toFixed(0)}\u2013{results.dpsStats.max.toFixed(0)}
         </p>
         <HistogramChart bins={dpsHist.bins} maxCount={maxDpsBin} color={ACCENT_ORANGE}
@@ -118,7 +119,7 @@ export function ResultsSummary({ results, scenario }: { results: SimResults; sce
       {/* Armor Breakpoints */}
       <BlueprintPanel color={MODULE_COLORS.core} className="p-3">
         <SectionHeader icon={Shield} label="Armor Breakpoint Analysis" color={MODULE_COLORS.core} />
-        <p className="text-2xs text-text-muted mt-0.5 mb-2">
+        <p className={`${TEXT_SCALE.body} text-text-muted mt-0.5 mb-2`}>
           Formula: mitigation = armor / (armor + 100). Shows diminishing returns on damage reduction.
         </p>
         <div className="overflow-x-auto">

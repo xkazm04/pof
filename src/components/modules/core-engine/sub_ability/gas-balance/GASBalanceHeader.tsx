@@ -9,6 +9,7 @@ import { BlueprintPanel, SectionHeader } from '../../unique-tabs/_design';
 import type { SimScenario } from './data';
 import { ACCENT, SCENARIO_PRESETS, encodeScenario } from './data';
 import { useCallback, useState } from 'react';
+import { TEXT_SCALE } from '@/lib/typography-scale';
 
 interface Props {
   scenario: SimScenario;
@@ -31,7 +32,7 @@ export function GASBalanceHeader({ scenario, selectedPreset, onLoadPreset, onOpe
     <BlueprintPanel color={ACCENT} className="p-3 relative overflow-hidden">
       <div className="absolute right-0 top-0 w-40 h-40 blur-3xl rounded-full pointer-events-none" style={{ backgroundColor: `${withOpacity(ACCENT, OPACITY_8)}` }} />
       <SectionHeader icon={BarChart3} label="Monte Carlo Balance Simulator" color={ACCENT} />
-      <p className="text-2xs text-text-muted mt-1">
+      <p className={`${TEXT_SCALE.body} text-text-muted mt-1`}>
         Simulate thousands of combat encounters using the full GAS damage pipeline (Strength{'→'}AttackPower scaling, armor/(armor+100) reduction, crit rolls, health depletion).
         Identify TTK distributions, DPS curves, effective HP, and attribute sensitivity breakpoints.
       </p>

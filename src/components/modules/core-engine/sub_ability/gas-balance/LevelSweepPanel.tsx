@@ -9,6 +9,7 @@ import {
 import { BlueprintPanel, SectionHeader } from '../../unique-tabs/_design';
 import { LevelSweepChart, LEVEL_SWEEP_METRICS } from './LevelSweepChart';
 import type { LevelSweepPoint, LevelSweepConfig } from './data';
+import { TEXT_SCALE } from '@/lib/typography-scale';
 
 interface Props {
   show: boolean;
@@ -30,7 +31,7 @@ export function LevelSweepPanel({ show, points, breakpoints, running, config, se
           {running ? 'Sweeping...' : 'Run Sweep'}
         </button>
       </div>
-      <p className="text-2xs text-text-muted mt-0.5 mb-2">
+      <p className={`${TEXT_SCALE.body} text-text-muted mt-0.5 mb-2`}>
         Simulates combat across player levels {config.minLevel}\u2013{config.maxLevel}, plotting TTK, DPS, survival rate, and EHP. Red zones indicate balance breakpoints.
       </p>
 
