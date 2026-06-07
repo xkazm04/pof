@@ -5,6 +5,7 @@ import type { LabTheme } from './theme';
 import type { EntityRollup } from '@/lib/catalog/rollup';
 import { pickNextActionableStep, type StepStatus } from './nextActionableStep';
 import { plainEntitySummary, STATUS_GLOSSARY } from './labGlossary';
+import { statusColor } from './statusLanguage';
 import { Panel } from './ui/Panel';
 import { Button } from './ui/Button';
 
@@ -21,9 +22,6 @@ interface NextStepCoachProps {
   onTogglePlainMode: () => void;
 }
 
-const STATUS_TINT = (t: LabTheme, s: StepStatus): string =>
-  s === 'fail' ? t.bad : s === 'deferred' ? t.muted : s === 'pass' ? t.ok : t.warn;
-
 /**
  * Per-entity coach banner. Surfaces the next thing the user should do in plain
  * language with a one-click jump. Reads the same statuses PipelineRollup
@@ -37,7 +35,7 @@ export function NextStepCoach({
     [steps, statusByStep],
   );
 
-  const tint = next ? STATUS_TINT(t, next.status) : t.ok;
+  const tint = next ? statusColor(next.status, t) : t.ok;
   const showCelebration = !next && rollup.total > 0 && rollup.deferred === 0;
 
   return (

@@ -1,18 +1,14 @@
 'use client';
 
 import { AnimatePresence, motion } from 'framer-motion';
-import type { CSSProperties, ReactNode } from 'react';
-import type { LabTheme } from '../theme';
-
-export type AcceptanceStatus = 'pass' | 'pending' | 'fail' | 'deferred';
-
-const STATUS_GLYPH: Record<AcceptanceStatus, string> = { pass: '✓', fail: '✕', pending: '○', deferred: '⏸' };
-const STATUS_WORD: Record<AcceptanceStatus, string> = { pass: 'passed', fail: 'failed', pending: 'pending', deferred: 'deferred' };
+import type { ReactNode } from 'react';
+import { labPanelStyle, type LabTheme } from '../theme';
+import { STATUS_GLYPH, STATUS_WORD, statusColor, type StatusKind } from '../statusLanguage';
 
 export interface Acceptance {
   /** The criterion this gate measures. */
   label: string;
-  status: AcceptanceStatus;
+  status: StatusKind;
   /** Terse, jargon-heavy numeric detail (e.g. `price/power 1.34×`). */
   detail: string;
   tier?: string;
@@ -49,8 +45,9 @@ export function StepFrame({ t, acceptance, panels, onFix }: {
   panels: StepPanel[];
   onFix?: (fixDirection?: string) => void;
 }) {
-  const sc = acceptance.status === 'pass' ? t.ok : acceptance.status === 'fail' ? t.bad : acceptance.status === 'deferred' ? t.muted : t.warn;
-  const panelStyle = (): CSSProperties => ({ background: t.panel, border: `1px solid ${t.line}`, ...(t.glass ? { backdropFilter: 'blur(12px)', borderRadius: 12 } : {}) });
+  const sc = statusColor(acceptance.status, t);
+  // Studio (glass) panels round to 12; Blueprint keeps sharp corners (borderRadius 0).
+  const panelStyle = labPanelStyle(t, { borderRadius: t.glass ? 12 : 0 });
   const showFix = onFix != null && acceptance.status !== 'pass';
 
   return (
@@ -64,7 +61,7 @@ export function StepFrame({ t, acceptance, panels, onFix }: {
           padding: '14px 18px', marginBottom: 20,
           borderLeft: `4px solid ${sc}`,
           transition: 'border-color 160ms ease-out',
-          ...panelStyle(),
+          ...panelStyle,
         }}
       >
         <AnimatePresence initial={false}>
@@ -144,7 +141,7 @@ export function StepFrame({ t, acceptance, panels, onFix }: {
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(340px, 1fr))', gap: 16, alignItems: 'start' }}>
         {panels.map((p) => (
-          <section key={p.label} style={{ ...panelStyle(), padding: 18 }}>
+          <section key={p.label} style={{ ...panelStyle, padding: 18 }}>
             <div className={t.fontMono} style={{ fontSize: 14, letterSpacing: '0.1em', textTransform: 'uppercase', color: t.ink, marginBottom: 14, borderBottom: `1px solid ${t.line}`, paddingBottom: 8 }}>{p.label}</div>
             {p.node}
           </section>

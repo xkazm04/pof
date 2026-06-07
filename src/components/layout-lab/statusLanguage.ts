@@ -1,5 +1,6 @@
 import type { AcceptanceStatus } from '@/lib/catalog/acceptance/types';
 import type { LifecycleState } from '@/lib/catalog/types';
+import type { LabTheme } from './theme';
 
 /**
  * One status language for the catalog→UE pipeline UI.
@@ -29,6 +30,15 @@ export const STATUS_WORD: Record<StatusKind, string> = {
   deferred: 'deferred',
   pending: 'pending',
 };
+
+/**
+ * Theme color for a status. This *reinforces* the glyph + word — it is never the
+ * only signal (WCAG 1.4.1). Single-sourced here so the step banner, rollup chips,
+ * catalog matrix, and next-step coach can't drift. `pending` maps to the warn tone.
+ */
+export function statusColor(status: StatusKind, t: LabTheme): string {
+  return status === 'pass' ? t.ok : status === 'fail' ? t.bad : status === 'deferred' ? t.muted : t.warn;
+}
 
 /** e.g. statusAriaLabel('Economy', 'fail', 'L2') → "Economy: failed, tier L2" */
 export function statusAriaLabel(name: string, status: StatusKind, tier?: string | null): string {

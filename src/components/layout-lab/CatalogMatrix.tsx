@@ -8,14 +8,12 @@ import { getCatalogPipeline } from '@/lib/catalog/pipeline-registry';
 import { summarizeEntity, type EntityRollup } from '@/lib/catalog/rollup';
 import { useLabDetail } from './useLabCatalogData';
 import { labPipelineSteps } from './labPipelines';
-import { STATUS_GLYPH, STATUS_WORD } from './statusLanguage';
+import { STATUS_GLYPH, STATUS_WORD, statusColor } from './statusLanguage';
 import type { AcceptanceStatus } from '@/lib/catalog/acceptance/types';
 import type { PipelineArtifact } from '@/lib/pipeline-artifacts-db';
 import type { LabTheme } from './theme';
 import type { LabGroup } from './useLabCatalogData';
 
-const COLOR = (t: LabTheme, s: AcceptanceStatus) =>
-  s === 'pass' ? t.ok : s === 'fail' ? t.bad : s === 'deferred' ? t.muted : t.warn;
 const pad2 = (n: number) => String(n).padStart(2, '0');
 
 interface Blocker { step: string; reason: string }
@@ -92,9 +90,9 @@ export function CatalogMatrix({ t, groups, catalogId, onOpenStep }: Props) {
     return {
       width: isHeader ? undefined : 30, height: 30, padding: 0, cursor: 'pointer',
       display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-      background: filled ? COLOR(t, status) : 'transparent',
-      border: `${status === 'deferred' ? '2px dashed' : '1px solid'} ${filled ? COLOR(t, status) : status === 'pending' ? t.line : COLOR(t, status)}`,
-      color: filled ? t.onAccent : status === 'pending' ? t.muted : COLOR(t, status),
+      background: filled ? statusColor(status, t) : 'transparent',
+      border: `${status === 'deferred' ? '2px dashed' : '1px solid'} ${filled ? statusColor(status, t) : status === 'pending' ? t.line : statusColor(status, t)}`,
+      color: filled ? t.onAccent : status === 'pending' ? t.muted : statusColor(status, t),
       fontSize: 14, fontWeight: 700, lineHeight: 1, borderRadius: t.glass ? 5 : 0,
       transition: 'background-color 160ms ease-out, border-color 160ms ease-out',
     };

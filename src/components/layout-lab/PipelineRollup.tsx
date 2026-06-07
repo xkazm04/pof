@@ -7,13 +7,10 @@ import type { LabTheme } from './theme';
 import {
   STATUS_GLOSSARY, TIER_GLOSSARY, TERM_GLOSSARY, plainEntitySummary,
 } from './labGlossary';
-import { STATUS_GLYPH, STATUS_WORD, statusAriaLabel, type StatusKind } from './statusLanguage';
+import { STATUS_GLYPH, STATUS_WORD, statusAriaLabel, statusColor, type StatusKind } from './statusLanguage';
 import { Button } from './ui/Button';
 import { Chip } from './ui/Chip';
 import { Panel } from './ui/Panel';
-
-const COLOR = (t: LabTheme, s: PipelineArtifact['status']) =>
-  s === 'pass' ? t.ok : s === 'fail' ? t.bad : s === 'deferred' ? t.muted : t.warn;
 
 type ChipTone = 'ok' | 'bad' | 'neutral' | 'warn';
 const STATUS_TONE: Record<PipelineArtifact['status'], ChipTone> = {
@@ -88,7 +85,7 @@ export function PipelineRollup({ t, steps, artifacts, onDrain, draining, plainMo
           const a = byStep.get(s);
           const status = (a?.status ?? 'pending') as StatusKind;
           const tier = a?.tier ?? null;
-          const color = COLOR(t, status);
+          const color = statusColor(status, t);
           const label = statusAriaLabel(s, status, tier);
           const glyph = STATUS_GLYPH[status];
           const chipBody = <><span aria-hidden="true">{glyph}</span>{s}{tier ? ` · ${tier}` : ''}</>;
