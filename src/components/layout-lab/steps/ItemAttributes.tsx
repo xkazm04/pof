@@ -4,15 +4,9 @@ import { Lbl } from './controls';
 import { StepFrame } from './StepFrame';
 import { CliProduce } from './shared/CliProduce';
 import { useLabStep, useLabPipelineStore } from '../labPipelineStore';
-import { ITEM_STEP_SPECS } from './itemsSteps';
+import { ITEM_STEP_SPECS, ITEM_ATTR_SCHEMA } from './itemsSteps';
 import type { StepProps } from './stepProps';
 
-interface Attr { key: string; unit: string }
-const SCHEMA: Attr[] = [
-  { key: 'Damage', unit: 'hp' }, { key: 'Attack Speed', unit: '/s' }, { key: 'Weight', unit: 'kg' },
-  { key: 'Durability', unit: 'pt' }, { key: 'Crit Chance', unit: '%' }, { key: 'Range', unit: 'm' },
-  { key: 'Stagger', unit: 'pt' }, { key: 'Value', unit: 'g' },
-];
 const PEERS = [['Steel Saber', '31'], ['Worn Greatsword', '46'], ['Guard\'s Blade', '29'], ['Iron Mace', '38']];
 
 /** Items · Attributes. View: UE-synced table (persisted) | peers+schema. Produce: CLI fills the mix. */
@@ -37,7 +31,7 @@ export function ItemAttributes({ t, entity, step }: StepProps) {
                 <div className={t.fontMono} style={{ display: 'grid', gridTemplateColumns: '1fr auto', background: t.accentBg, fontSize: 14, letterSpacing: '0.06em', textTransform: 'uppercase', color: t.inkDeep, padding: '7px 12px' }}>
                   <span>Attribute</span><span>Value</span>
                 </div>
-                {SCHEMA.map((a) => {
+                {ITEM_ATTR_SCHEMA.map((a) => {
                   const v = vals[a.key];
                   return (
                     <div key={a.key} style={{ display: 'grid', gridTemplateColumns: '1fr auto', ...cell }}>

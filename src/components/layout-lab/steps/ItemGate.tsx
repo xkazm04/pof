@@ -3,7 +3,7 @@
 import { StepFrame } from './StepFrame';
 import { CliProduce } from './shared/CliProduce';
 import { useLabStep, useLabPipelineStore } from '../labPipelineStore';
-import { ITEM_STEP_SPECS } from './itemsSteps';
+import { ITEM_STEP_SPECS, DEFAULT_GATE_CHECKS } from './itemsSteps';
 import type { LabTheme } from '../theme';
 import type { StepProps } from './stepProps';
 
@@ -22,7 +22,7 @@ export function ItemTestGate({ t, entity, step }: StepProps) {
   const art = useLabStep(entity.id, step);
   const produce = useLabPipelineStore((s) => s.produce);
   const ran = art?.data?.pass === true;
-  const checks = (art?.data?.checks ?? ['Stat/rules unit test', 'Equip + use in PIE', 'Visual QA (icon + mesh)', 'Performance budget']) as string[];
+  const checks = (art?.data?.checks ?? DEFAULT_GATE_CHECKS) as string[];
 
   return (
     <StepFrame t={t} acceptance={ITEM_STEP_SPECS[step].accept(art)}

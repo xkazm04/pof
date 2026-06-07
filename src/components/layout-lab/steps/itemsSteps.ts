@@ -6,12 +6,56 @@ import type { LabStepArtifact, StepOutput } from '../labPipelineStore';
 export function slug(name: string): string {
   return name.replace(/[^a-z0-9]+/gi, '');
 }
-function base(entity: LabEntity): string {
-  return `/Game/Items/${slug(entity.name)}/`;
+
+/** Root UE content path for all catalog item assets. */
+const ITEMS_ROOT = '/Game/Items';
+
+/** UE asset folder for one item: `/Game/Items/<slug>/`. The single source of
+ *  truth for the Items asset-path layout — reused by the step specs and ItemArt. */
+export function base(entity: LabEntity): string {
+  return `${ITEMS_ROOT}/${slug(entity.name)}/`;
 }
 
-const ATTR_KEYS = ['Damage', 'Attack Speed', 'Weight', 'Durability', 'Crit Chance', 'Range', 'Stagger', 'Value'];
+/** Full path for one item asset named `<prefix><slug><suffix>` — the convention
+ *  every Items asset follows (e.g. `itemAsset(e, 'T_', '_Icon')` →
+ *  `/Game/Items/<slug>/T_<slug>_Icon`). Computes the slug once. */
+export function itemAsset(entity: LabEntity, prefix: string, suffix = ''): string {
+  const s = slug(entity.name);
+  return `${ITEMS_ROOT}/${s}/${prefix}${s}${suffix}`;
+}
+
+/**
+ * The Weapon attribute schema — the single source of truth for the attribute key
+ * list, display units, and Produce's default values. The Attributes View
+ * (`ItemAttributes`) renders this table, and the spec's produce()/accept() derive
+ * their key list + default stats from it, so the preview can't drift from what
+ * Produce actually writes.
+ */
+export interface ItemAttr { key: string; unit: string; value: number }
+export const ITEM_ATTR_SCHEMA: ItemAttr[] = [
+  { key: 'Damage', unit: 'hp', value: 34 },
+  { key: 'Attack Speed', unit: '/s', value: 1.1 },
+  { key: 'Weight', unit: 'kg', value: 3.4 },
+  { key: 'Durability', unit: 'pt', value: 180 },
+  { key: 'Crit Chance', unit: '%', value: 5 },
+  { key: 'Range', unit: 'm', value: 1.8 },
+  { key: 'Stagger', unit: 'pt', value: 22 },
+  { key: 'Value', unit: 'g', value: 120 },
+];
+/** Attribute key list — derived from the schema; drives accept() / copy completeness. */
+const ATTR_KEYS = ITEM_ATTR_SCHEMA.map((a) => a.key);
 const RARITY_MULT = 1.4; // expected gold per power point
+
+/**
+ * Default produce outputs that the matching View previews also render as their
+ * empty-state fallback. Exported so each View imports the exact array Produce
+ * writes — a renamed clip, an added cue, or a reworded gate check updates the
+ * spec and the preview in one place and can never silently diverge.
+ */
+export const DEFAULT_ANIM_CLIPS: [string, string][] = [['Pickup', '0.6s'], ['Equip', '0.8s'], ['Idle Loop', '2.0s'], ['Inspect', '1.4s']];
+export const DEFAULT_VFX_VARIANTS: [string, string][] = [['Idle glow', 'small'], ['Equip flash', 'med'], ['Use trail', 'med']];
+export const DEFAULT_SFX_CUES: [string, string][] = [['Pickup', '-14 LUFS'], ['Equip', '-13 LUFS'], ['Swing', '-12 LUFS']];
+export const DEFAULT_GATE_CHECKS: string[] = ['Stat/rules unit test', 'Equip + use in PIE', 'Visual QA (icon + mesh)', 'Performance budget'];
 
 function brief(entity: LabEntity): string {
   return `${entity.name} is a mid-tier martial weapon forged for frontline duelists. It favors disciplined, rhythmic strikes over raw burst — rewarding players who weave light and heavy attacks rather than mashing a single button. Visually it reads as weathered steel with a leather-wrapped grip and a faint guild sigil etched near the crossguard. Intended player feeling: dependable and earned — a soldier's tool, not a hero's relic.`;
@@ -225,7 +269,7 @@ export const ITEM_STEP_SPECS: Record<string, ItemStepSpec> = {
     },
   },
   'Attributes': {
-    produce: () => ({ data: { stats: { Damage: 34, 'Attack Speed': 1.1, Weight: 3.4, Durability: 180, 'Crit Chance': 5, Range: 1.8, Stagger: 22, Value: 120 } } }),
+    produce: () => ({ data: { stats: Object.fromEntries(ITEM_ATTR_SCHEMA.map((a) => [a.key, a.value] as const)) } }),
     accept: (a) => {
       const stats = (d(a).stats ?? {}) as Record<string, unknown>;
       const have = ATTR_KEYS.filter((k) => stats[k] != null).length;
@@ -244,21 +288,21 @@ export const ITEM_STEP_SPECS: Record<string, ItemStepSpec> = {
     },
   },
   'Icon 2D Art': {
-    produce: (e) => ({ data: { selected: 0, prompt: 'weathered steel longsword, leather grip, guild sigil, 3/4 view, game icon' }, ueAssets: [`${base(e)}T_${slug(e.name)}_Icon`] }),
+    produce: (e) => ({ data: { selected: 0, prompt: 'weathered steel longsword, leather grip, guild sigil, 3/4 view, game icon' }, ueAssets: [itemAsset(e, 'T_', '_Icon')] }),
     accept: (a) => {
       const sel = d(a).selected;
       return withCopy('Icon 2D Art', a, { label: 'A main icon is selected', status: sel != null ? 'pass' : 'pending', detail: sel != null ? 'candidate · 256px' : 'none selected' });
     },
   },
   '3D Generation': {
-    produce: (e) => ({ data: { tris: 4200, cap: 6000 }, ueAssets: [`${base(e)}SM_${slug(e.name)}`] }),
+    produce: (e) => ({ data: { tris: 4200, cap: 6000 }, ueAssets: [itemAsset(e, 'SM_')] }),
     accept: (a) => {
       const tris = Number(d(a).tris ?? 0), cap = Number(d(a).cap ?? 6000);
       return withCopy('3D Generation', a, { label: 'Mesh generated · tri count under LOD0 budget', status: tris > 0 && tris <= cap ? 'pass' : 'pending', detail: tris > 0 ? `${tris} / ${cap} tris` : 'no mesh' });
     },
   },
   'Material / Texture': {
-    produce: (e) => ({ data: { maps: ['Albedo', 'Normal', 'ORM', 'Height'] }, ueAssets: [`${base(e)}MI_${slug(e.name)}`] }),
+    produce: (e) => ({ data: { maps: ['Albedo', 'Normal', 'ORM', 'Height'] }, ueAssets: [itemAsset(e, 'MI_')] }),
     accept: (a) => {
       const maps = (d(a).maps ?? []) as string[];
       const need = ['Albedo', 'Normal', 'ORM'];
@@ -267,14 +311,14 @@ export const ITEM_STEP_SPECS: Record<string, ItemStepSpec> = {
     },
   },
   'Animations': {
-    produce: (e) => ({ data: { clips: [['Pickup', '0.6s'], ['Equip', '0.8s'], ['Idle Loop', '2.0s'], ['Inspect', '1.4s']] }, ueAssets: [`${base(e)}A_${slug(e.name)}_Equip`] }),
+    produce: (e) => ({ data: { clips: DEFAULT_ANIM_CLIPS }, ueAssets: [itemAsset(e, 'A_', '_Equip')] }),
     accept: (a) => {
       const clips = (d(a).clips ?? []) as unknown[];
       return withCopy('Animations', a, { label: 'Required clips present (Pickup · Equip)', status: clips.length >= 2 ? 'pass' : 'pending', detail: clips.length ? `${clips.length} clips` : '0 clips' });
     },
   },
   'VFX': {
-    produce: (e) => ({ data: { cost: 0.4, cap: 0.8, variants: [['Idle glow', 'small'], ['Equip flash', 'med'], ['Use trail', 'med']] }, ueAssets: [`${base(e)}NS_${slug(e.name)}_Use`] }),
+    produce: (e) => ({ data: { cost: 0.4, cap: 0.8, variants: DEFAULT_VFX_VARIANTS }, ueAssets: [itemAsset(e, 'NS_', '_Use')] }),
     accept: (a) => {
       const variants = (d(a).variants ?? []) as unknown[];
       const cost = Number(d(a).cost ?? 0), cap = Number(d(a).cap ?? 0.8);
@@ -282,7 +326,7 @@ export const ITEM_STEP_SPECS: Record<string, ItemStepSpec> = {
     },
   },
   'SFX': {
-    produce: (e) => ({ data: { cues: [['Pickup', '-14 LUFS'], ['Equip', '-13 LUFS'], ['Swing', '-12 LUFS']] }, ueAssets: [`${base(e)}SC_${slug(e.name)}`] }),
+    produce: (e) => ({ data: { cues: DEFAULT_SFX_CUES }, ueAssets: [itemAsset(e, 'SC_')] }),
     accept: (a) => {
       const cues = (d(a).cues ?? []) as unknown[];
       return withCopy('SFX', a, { label: 'Required SFX events covered (pickup · equip · use)', status: cues.length >= 3 ? 'pass' : 'pending', detail: cues.length ? `${cues.length} cues` : '0 cues' });
@@ -304,7 +348,7 @@ export const ITEM_STEP_SPECS: Record<string, ItemStepSpec> = {
     },
   },
   'Test Gate': {
-    produce: () => ({ data: { checks: ['Stat/rules unit test', 'Equip + use in PIE', 'Visual QA (icon + mesh)', 'Performance budget'], pass: true } }),
+    produce: () => ({ data: { checks: DEFAULT_GATE_CHECKS, pass: true } }),
     accept: (a) => {
       const data = d(a);
       const checks = (data.checks ?? []) as unknown[];

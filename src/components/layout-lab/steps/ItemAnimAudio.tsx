@@ -4,7 +4,7 @@ import { StepFrame } from './StepFrame';
 import { CliProduce } from './shared/CliProduce';
 import { ChartPanel } from './shared/ChartPanel';
 import { useLabStep, useLabPipelineStore } from '../labPipelineStore';
-import { ITEM_STEP_SPECS, slug } from './itemsSteps';
+import { ITEM_STEP_SPECS, slug, DEFAULT_ANIM_CLIPS, DEFAULT_VFX_VARIANTS, DEFAULT_SFX_CUES } from './itemsSteps';
 import type { LabTheme } from '../theme';
 import type { StepProps } from './stepProps';
 
@@ -27,8 +27,7 @@ export function ItemAnimations({ t, entity, step }: StepProps) {
   const art = useLabStep(entity.id, step);
   const produce = useLabPipelineStore((s) => s.produce);
   const clips = (art?.data?.clips ?? []) as [string, string][];
-  const fallback: [string, string][] = [['Pickup', '0.6s'], ['Equip', '0.8s'], ['Idle Loop', '2.0s'], ['Inspect', '1.4s']];
-  const rows = clips.length ? clips : fallback;
+  const rows = clips.length ? clips : DEFAULT_ANIM_CLIPS;
   const made = clips.length > 0;
 
   return (
@@ -67,7 +66,7 @@ export function ItemVFX({ t, entity, step }: StepProps) {
     <StepFrame t={t} acceptance={ITEM_STEP_SPECS[step].accept(art)}
       onFix={() => produce(entity.id, step, ITEM_STEP_SPECS[step].produce(entity))}
       panels={[
-        { label: 'Variants', node: <div>{(made ? variants : [['Idle glow', 'small'], ['Equip flash', 'med'], ['Use trail', 'med']] as [string, string][]).map(([n, s]) => <Row key={n} t={t} name={n} right={s} on={made} />)}</div> },
+        { label: 'Variants', node: <div>{(made ? variants : DEFAULT_VFX_VARIANTS).map(([n, s]) => <Row key={n} t={t} name={n} right={s} on={made} />)}</div> },
         { label: 'GPU budget', node: (
           <div style={{ display: 'grid', gap: 8 }}>
             <div style={{ height: 16, background: t.line, opacity: 0.4 }}><div style={{ width: `${(cost / CAP) * 100}%`, height: '100%', background: cost <= CAP ? t.ok : t.bad }} /></div>
@@ -91,7 +90,7 @@ export function ItemSFX({ t, entity, step }: StepProps) {
   const produce = useLabPipelineStore((s) => s.produce);
   const cues = (art?.data?.cues ?? []) as [string, string][];
   const made = cues.length > 0;
-  const rows = made ? cues : [['Pickup', '-14 LUFS'], ['Equip', '-13 LUFS'], ['Swing', '-12 LUFS']] as [string, string][];
+  const rows = made ? cues : DEFAULT_SFX_CUES;
 
   return (
     <StepFrame t={t} acceptance={ITEM_STEP_SPECS[step].accept(art)}
