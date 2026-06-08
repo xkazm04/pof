@@ -86,7 +86,7 @@ export function CliProduce({ t, label, buildPrompt, onComplete, note, placeholde
       <Lbl t={t}>Direction (your input)</Lbl>
       <LabTextarea t={t} value={direction} onChange={setDirection} rows={rows} placeholder={placeholder ?? 'Steer this step — tone, constraints, references…'} />
       <div style={{ display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap' }}>
-        <LabButton t={t} onClick={dispatch} disabled={dispatching}>{btnLabel}</LabButton>
+        <LabButton t={t} onClick={dispatch} disabled={dispatching} testId="cli-produce-run">{btnLabel}</LabButton>
         <button onClick={() => setShowPrompt((v) => !v)} className={t.fontMono}
           style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 14, color: t.muted, textDecoration: 'underline' }}>
           {showPrompt ? 'hide prompt' : 'view prompt'}

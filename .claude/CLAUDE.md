@@ -137,6 +137,14 @@ Reusable patterns still to extract to `shared/` when first needed (add to this t
 
 **Rule 4 — Every step is tested + truthful.** Each step must: (a) **produce data to the UE5 project** and **update the UI**, (b) **fulfill a derived Acceptance** (read from UE/DB truth, never a manual toggle), and (c) if production fails, the **CLI reports the reason** (surface it, don't fail silently — `CliProduce.validate` returns the error reason). Each step ships a test asserting its View renders, Produce dispatches, and Acceptance derives.
 
+**Rule 5 — Every pipeline is e2e-walked.** Every registered catalog pipeline is exercised end-to-end through the real `/layout` lab by the data-driven walker `e2e/catalog-pipeline-walker.spec.ts` (the Items reference pipeline by `e2e/catalog-items-reference.spec.ts`). The walker enumerates `allCatalogPipelines()`, so a **new pipeline is auto-covered** the moment it self-registers — you do not write a new spec. Your obligations when authoring a pipeline:
+- Keep **≥1 seeded entity** for the catalog in `CATALOG_SECTIONS` / `NEW_CATALOGS` (the walker opens `entities[0]`).
+- Each step's Produce must drive its Acceptance to a **config-complete terminal status**: `pass` for L0/L1/L2 (data/selection/static), `deferred` for L3/L4 (runtime/visual) — **never `fail`/`pending`** after a clean Produce. `deferred` must carry a reason (Rule 4).
+- Keep the guard `src/__tests__/catalog/pipeline-e2e-coverage.test.ts` green (it runs in `npm run validate`). It fails if your pipeline has no seeded entity/section or is skipped without a reason.
+- If a step genuinely cannot be walked in stub mode, add the catalog to `WALKER_SKIP` in `e2e/helpers/pipeline-coverage.ts` **with a precise reason** — never to mask a real failure. (Current documented gap: `player-movement` is registered but absent from `CATALOG_SECTIONS`, so the lab surfaces no entity — add a section/starter to close it.)
+
+Run the catalog e2e with `npm run test:e2e` (Playwright, real dev server + SQLite, stub mode — no Claude CLI / UE bridge; `CliProduce` writes artifacts synchronously). It is intentionally **not** part of `npm run validate` (vitest-only); the guard test is the fast `validate`-time enforcement. The lab exposes stable test-ids for the walker: `harness-lab-ready`, `harness-catalog-<id>`, `harness-entity-<id>`, `step-dot-stamp-<i>`, `cli-produce-run`, `cli-produce-result`, `acceptance-banner` (`data-status`), and `#lab-canvas[data-active-entity-id]`.
+
 ## Testing
 
 Vitest with setup file at `src/__tests__/setup.ts`. Tests live in `src/__tests__/`. Path alias `@` resolves to `src` in vitest config.
