@@ -236,14 +236,28 @@ export function getPromptQualityScore(moduleId: SubModuleId): PromptQualityScore
     'SELECT success FROM session_analytics WHERE module_id = ? ORDER BY completed_at DESC LIMIT 20'
   ).all(moduleId) as { success: number }[];
 
-  const recent = trendRows.slice(0, Math.min(10, trendRows.length));
-  const recentSuccess = recent.filter((r) => r.success === 1).length / recent.length;
+  return computeQualityScore(moduleId, total, overallSuccess, trendRows.map((r) => r.success));
+}
+
+/**
+ * Pure score computation shared by the single-module and batched dashboard paths so
+ * both produce identical results. `trendDesc` holds up to the newest 20 success flags
+ * (completed_at DESC) used for the recent/older trend windows.
+ */
+function computeQualityScore(
+  moduleId: SubModuleId,
+  total: number,
+  overallSuccess: number,
+  trendDesc: number[],
+): PromptQualityScore {
+  const recent = trendDesc.slice(0, Math.min(10, trendDesc.length));
+  const recentSuccess = recent.filter((s) => s === 1).length / recent.length;
 
   // Older window for trend comparison
-  const older = trendRows.slice(10, 20);
+  const older = trendDesc.slice(10, 20);
   let trend: 'improving' | 'stable' | 'declining' = 'stable';
   if (older.length >= 5) {
-    const olderRate = older.filter((r) => r.success === 1).length / older.length;
+    const olderRate = older.filter((s) => s === 1).length / older.length;
     const diff = recentSuccess - olderRate;
     if (diff > 0.15) trend = 'improving';
     else if (diff < -0.15) trend = 'declining';
@@ -260,6 +274,37 @@ export function getPromptQualityScore(moduleId: SubModuleId): PromptQualityScore
     overallSuccessRate: overallSuccess,
     sessionsRecorded: total,
   };
+}
+
+/**
+ * Quality scores for ALL modules in a single ORDER BY pass (no N+1). Rows are
+ * grouped by module in JS, preserving each module's completed_at DESC order, and
+ * only the newest 20 rows per module feed the trend windows (mirrors the
+ * single-module LIMIT 20 above).
+ */
+export function getAllPromptQualityScores(): PromptQualityScore[] {
+  ensureTables();
+  const rows = getDb().prepare(
+    'SELECT module_id, success FROM session_analytics ORDER BY module_id, completed_at DESC'
+  ).all() as { module_id: string; success: number }[];
+
+  const byModule = new Map<string, { total: number; succ: number; trendDesc: number[] }>();
+  for (const r of rows) {
+    let agg = byModule.get(r.module_id);
+    if (!agg) {
+      agg = { total: 0, succ: 0, trendDesc: [] };
+      byModule.set(r.module_id, agg);
+    }
+    agg.total += 1;
+    if (r.success === 1) agg.succ += 1;
+    if (agg.trendDesc.length < 20) agg.trendDesc.push(r.success);
+  }
+
+  const scores: PromptQualityScore[] = [];
+  for (const [mid, agg] of byModule) {
+    scores.push(computeQualityScore(mid as SubModuleId, agg.total, agg.succ / agg.total, agg.trendDesc));
+  }
+  return scores;
 }
 
 // ── Analytics: Pattern Insights ──
@@ -426,12 +471,10 @@ export function getDashboard(): AnalyticsDashboard {
   const totalDurationMs = moduleStats.reduce((s, m) => s + m.avgDurationMs * m.totalSessions, 0);
 
   const insights: PromptInsight[] = [];
-  const qualityScores: PromptQualityScore[] = [];
   for (const raw of rawRows) {
     const mid = raw.module_id as SubModuleId;
     // Reuse the GROUP BY row already in hand instead of re-querying per module.
     insights.push(...generateInsights(mid, raw));
-    qualityScores.push(getPromptQualityScore(mid));
   }
 
   // Sort insights by confidence * factor descending
@@ -440,6 +483,9 @@ export function getDashboard(): AnalyticsDashboard {
     const bScore = b.confidence * (isFinite(b.factor) ? b.factor : 10);
     return bScore - aScore;
   });
+
+  // All quality scores in a single ORDER BY pass — no per-module re-query.
+  const qualityScores = getAllPromptQualityScores();
 
   const recentSessions = getRecentSessions(15);
 
