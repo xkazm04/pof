@@ -1,4 +1,5 @@
 import { expect, type Page, type APIRequestContext } from '@playwright/test';
+import { seedAllCatalogs } from '@/lib/catalog/sections';
 
 export type StepStatus = 'pass' | 'fail' | 'deferred' | 'pending';
 
@@ -19,13 +20,22 @@ export async function expandAllCategories(page: Page): Promise<void> {
   }
 }
 
-/** Select a catalog; the lab auto-shows entities[0]. Returns the active entity id. */
+/** The lab opens a catalog to `entities[0]` (the first seeded entity, since selecting a
+ *  catalog clears the entity selection). We derive that entity from the same seed the
+ *  store hydrates from — so we need no app-specific DOM hook to know which entity is open. */
+function firstSeededEntity(catalogId: string): { id: string; name: string } {
+  const e = Object.values(seedAllCatalogs()[catalogId] ?? {})[0] as { id: string; name: string } | undefined;
+  return { id: e?.id ?? '', name: e?.name ?? '' };
+}
+
+/** Select a catalog; the lab auto-shows entities[0]. Returns that entity's id. */
 export async function openCatalog(page: Page, catalogId: string): Promise<string> {
   await expandAllCategories(page);
+  const { id, name } = firstSeededEntity(catalogId);
   await page.getByTestId(`harness-catalog-${catalogId}`).click();
-  const canvas = page.locator('#lab-canvas');
-  await expect(canvas).toHaveAttribute('data-active-entity-id', /.+/, { timeout: 10_000 });
-  return (await canvas.getAttribute('data-active-entity-id')) ?? '';
+  // Confirm the switch landed: the canvas <h1> shows the opened entity's name.
+  await expect(page.getByRole('heading', { level: 1 })).toHaveText(name, { timeout: 10_000 });
+  return id;
 }
 
 export async function selectStep(page: Page, index: number): Promise<void> {
