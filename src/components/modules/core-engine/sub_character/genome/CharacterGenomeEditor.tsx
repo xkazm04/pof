@@ -17,7 +17,9 @@ import {
   ACCENT, MOVEMENT_FIELDS, COMBAT_FIELDS, DODGE_FIELDS,
   CAMERA_FIELDS, ATTRIBUTE_FIELDS, genomeToRadar,
 } from './field-data';
-import { generateSubclassHeader, generateSubclassCpp, generateAttributeInitTable } from './codegen';
+// Use the hardened generators (sanitizeCppIdentifier / csvEscape) — NOT the unsanitized
+// sibling ./codegen, where a genome name with a comma/quote/newline corrupts the CSV/C++.
+import { generateSubclassHeader, generateSubclassCpp, generateAttributeInitTable } from '@/lib/genome/codegen';
 import { validateGenome } from './validation';
 import { CodePreview } from './CodePreview';
 import { ProfileSection } from './ProfileSection';
