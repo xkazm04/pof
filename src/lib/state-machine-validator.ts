@@ -4,6 +4,7 @@ export type WarningKind =
   | 'unreachable-state'
   | 'soft-lock-deadend'
   | 'duplicate-priority'
+  | 'duplicate-state-name'
   | 'unknown-flag-in-rule'
   | 'unknown-flag-in-state';
 
@@ -171,6 +172,27 @@ export function validateStateMachine<S extends StateLike, T extends TransitionLi
         stateIds: [t.from, t.to],
         transitionIds: [t.id],
         message: `Transition ${fromName} → ${toName} references unknown flag(s): ${unknown.join(', ')}.`,
+      });
+    }
+  }
+
+  // 6. Duplicate state names — each state name becomes a UE5 C++ enum member
+  // (EARPGAnimState::<name>), so two states sharing a name emit duplicate enumerators
+  // and uncompilable C++. Nothing else flagged this, and the export is shown as authoritative.
+  const nameGroups = new Map<string, S[]>();
+  for (const s of states) {
+    const key = s.name.trim();
+    if (!nameGroups.has(key)) nameGroups.set(key, []);
+    nameGroups.get(key)!.push(s);
+  }
+  for (const [name, group] of nameGroups) {
+    if (group.length > 1) {
+      warnings.push({
+        kind: 'duplicate-state-name',
+        severity: 'error',
+        stateIds: group.map((s) => s.id),
+        transitionIds: [],
+        message: `State name "${name}" is used by ${group.length} states — generated C++ would have duplicate EARPGAnimState enumerators and fail to compile.`,
       });
     }
   }
