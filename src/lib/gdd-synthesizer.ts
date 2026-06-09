@@ -376,7 +376,12 @@ function buildLevelDesignSection(docs: LevelDocRow[], now: string): GDDSection {
       lines.push('| Room | Type | Difficulty | Pacing |');
       lines.push('|------|------|------------|--------|');
       for (const r of rooms) {
-        lines.push(`| ${r.name} | ${r.type} | ${'●'.repeat(r.difficulty)}${'○'.repeat(5 - r.difficulty)} | ${r.pacing} |`);
+        // Clamp difficulty before rendering the star/dot meter. `rooms` is free-form JSON
+        // from SQLite with no stored bound, and String.repeat throws RangeError for a
+        // negative or NaN count (`5 - 6 = -1`, `repeat(undefined)`) — one bad room would
+        // otherwise crash the entire GDD generation, not just that row.
+        const d = Math.max(0, Math.min(5, Math.round(Number(r.difficulty) || 0)));
+        lines.push(`| ${r.name} | ${r.type} | ${'●'.repeat(d)}${'○'.repeat(5 - d)} | ${r.pacing} |`);
       }
     }
 
