@@ -277,6 +277,45 @@ export function getABTestById(id: string): ABTest | null {
   return row ? rowToABTest(row) : null;
 }
 
+/**
+ * Atomically record one A/B trial: increment the chosen variant's counters in SQL
+ * (`x = x + 1`, never a JS read-modify-write off a stale snapshot — that loses
+ * concurrent trials and skews which variant is declared the winner), then re-read the
+ * fresh row, evaluate it, and persist the verdict, all inside one transaction so
+ * nothing can interleave. `evaluate` is injected by the engine to avoid a circular import.
+ */
+export function recordTrialAndEvaluate(
+  testId: string,
+  variantSlot: 'A' | 'B',
+  success: boolean,
+  durationMs: number,
+  evaluate: (test: ABTest) => ABTest,
+): ABTest | null {
+  ensurePromptEvolutionTables();
+  const db = getDb();
+  // Column names come from a fixed A/B branch — no user input in the SQL identifiers.
+  const cols = variantSlot === 'A'
+    ? { trials: 'variant_a_trials', successes: 'variant_a_successes', duration: 'variant_a_total_duration_ms' }
+    : { trials: 'variant_b_trials', successes: 'variant_b_successes', duration: 'variant_b_total_duration_ms' };
+  const tx = db.transaction((): ABTest | null => {
+    const current = getABTestById(testId);
+    if (!current || current.status !== 'running') return null;
+    db.prepare(
+      `UPDATE prompt_ab_tests
+         SET ${cols.trials} = ${cols.trials} + 1,
+             ${cols.successes} = ${cols.successes} + ?,
+             ${cols.duration} = ${cols.duration} + ?
+       WHERE id = ?`,
+    ).run(success ? 1 : 0, durationMs, testId);
+    const fresh = getABTestById(testId);
+    if (!fresh) return null;
+    const evaluated = evaluate(fresh);
+    upsertABTest(evaluated);
+    return evaluated;
+  });
+  return tx();
+}
+
 export function getAllABTests(): ABTest[] {
   ensurePromptEvolutionTables();
   const rows = getDb()
