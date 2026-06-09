@@ -31,6 +31,10 @@ interface LabPipelineState {
   byEntity: Record<string, Record<string, LabStepArtifact>>;
   /** Run a step: persist its produced data + assets and mark it done. */
   produce: (entityId: string, step: string, out?: StepOutput) => void;
+  /** Like `produce`, but derives the output from the step's CURRENT persisted data inside the
+   *  state updater, so concurrent dispatches (a double-click) serialize instead of both building
+   *  from the same stale render-closure snapshot and overwriting each other (dropping a batch). */
+  produceFrom: (entityId: string, step: string, build: (prevData: Record<string, unknown>) => StepOutput) => void;
   /** Record a failed produce with its reason (Rule 4). */
   fail: (entityId: string, step: string, error: string) => void;
   /** Clear every step for one entity. */
@@ -49,6 +53,21 @@ export const useLabPipelineStore = create<LabPipelineState>()(
         const artifact: LabStepArtifact = { done: true, data, ueAssets: out?.ueAssets ?? [], at: new Date().toISOString() };
         set((s) => ({ byEntity: { ...s.byEntity, [entityId]: { ...s.byEntity[entityId], [step]: artifact } } }));
         _labSync?.(entityId, step, artifact);
+      },
+
+      produceFrom: (entityId, step, build) => {
+        let written: LabStepArtifact | null = null;
+        set((s) => {
+          // Read the step's LIVE persisted data so two dispatches in the same render frame
+          // serialize: the second sees the first's appended batch and mints the next seq,
+          // instead of both reading the stale closure and clobbering one batch.
+          const prev = s.byEntity[entityId]?.[step];
+          const out = build(prev?.data ?? {}) ?? {};
+          const data = { ...(out.data ?? {}), ...(out.links ? { links: out.links } : {}) };
+          written = { done: true, data, ueAssets: out.ueAssets ?? [], at: new Date().toISOString() };
+          return { byEntity: { ...s.byEntity, [entityId]: { ...s.byEntity[entityId], [step]: written } } };
+        });
+        if (written) _labSync?.(entityId, step, written);
       },
 
       fail: (entityId, step, error) =>

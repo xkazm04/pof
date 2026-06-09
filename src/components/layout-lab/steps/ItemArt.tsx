@@ -21,16 +21,25 @@ type RawCandidate = Omit<GenCandidate, 'id'>;
  */
 function useGenerativeStep(entityId: string, step: string, gen: (direction: string, seq: number) => RawCandidate[], ueAssets: string[]) {
   const art = useLabStep(entityId, step);
-  const produce = useLabPipelineStore((s) => s.produce);
+  const produceFrom = useLabPipelineStore((s) => s.produceFrom);
   const history = readHistory(art?.data);
 
   const generate = (direction: string, prompt: string) => {
-    const batch = makeBatch({ seq: history.batches.length, at: new Date().toISOString(), direction, prompt, candidates: gen(direction, history.batches.length) });
-    const next = appendBatch(history, batch);
-    produce(entityId, step, { data: historyData(next), ueAssets });
+    // Build the batch from LIVE persisted state inside the store updater, not from this
+    // render's `history` closure: a double-click would otherwise have both handlers read
+    // batches.length === N, both mint batch bN, and the second overwrite the first (batch lost).
+    produceFrom(entityId, step, (prevData) => {
+      const live = readHistory(prevData);
+      const seq = live.batches.length;
+      const batch = makeBatch({ seq, at: new Date().toISOString(), direction, prompt, candidates: gen(direction, seq) });
+      return { data: historyData(appendBatch(live, batch)), ueAssets };
+    });
   };
   const reselect = (candidateId: string) => {
-    produce(entityId, step, { data: historyData(selectCandidate(history, candidateId)), ueAssets });
+    produceFrom(entityId, step, (prevData) => ({
+      data: historyData(selectCandidate(readHistory(prevData), candidateId)),
+      ueAssets,
+    }));
   };
   return { art, history, generate, reselect };
 }
