@@ -36,7 +36,10 @@ export function asZone(data: unknown): ZoneLike | null {
     status: typeof d.status === 'string' ? d.status : 'active',
     levelMin: d.levelMin,
     levelMax: d.levelMax,
-    connections: d.connections as string[],
+    // Validate elements, don't just cast: `data` is arbitrary persisted/AI-authored JSON.
+    // A non-string entry (number/null/object) would never match a zone id and would be
+    // mis-reported as a dangling connection — or poison the reverse-reachability check.
+    connections: d.connections.filter((c): c is string => typeof c === 'string'),
   };
 }
 
