@@ -342,7 +342,10 @@ export function createHarnessOrchestrator(config: HarnessConfig): HarnessOrchest
     ueVersion: config.ueVersion,
   };
 
-  const maxConcurrent = config.executor.maxConcurrent ?? 1;
+  // Checkpoint rollback runs `git reset --hard` on the shared working tree; with concurrency
+  // >1 that would wipe sibling areas' in-flight edits. Checkpointing assumes sequential
+  // execution, so force a single worker whenever it is enabled.
+  const maxConcurrent = config.checkpoint === true ? 1 : (config.executor.maxConcurrent ?? 1);
   const areaPassThreshold = (config.executor.areaPassThreshold ?? config.targetPassRate) / 100;
   const maxRetries = config.executor.maxRetriesPerArea;
   const budgetUsd = typeof config.budgetUsd === 'number' && config.budgetUsd > 0 ? config.budgetUsd : null;
