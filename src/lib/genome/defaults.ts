@@ -40,15 +40,58 @@ export const DEFAULT_ATTRIBUTES: AttributeScaling = {
 
 /* ── Sanitization utilities ────────────────────────────────────────────── */
 
-/** Deep-merge a partial profile with its default, coercing every field to a valid finite number. */
-export function sanitizeProfile<T>(defaults: T, partial: unknown): T {
+type FieldBounds = Record<string, { min: number; max: number }>;
+
+/**
+ * Canonical per-field bounds for imported profiles. Mirror of the editor slider
+ * ranges in sub_character/genome/field-data.ts — a value that is merely *finite*
+ * (e.g. `baseHP: -500`, `gravityScale: -3`, `critChance: 50`) must not reach the
+ * store, power-curve sim, or UE5 codegen, so import clamps to the same envelope the
+ * sliders enforce. Kept here (the lib layer) so sanitization has no UI-layer import.
+ */
+const MOVEMENT_BOUNDS: FieldBounds = {
+  maxWalkSpeed: { min: 100, max: 1200 }, maxSprintSpeed: { min: 200, max: 1500 },
+  acceleration: { min: 500, max: 5000 }, deceleration: { min: 500, max: 5000 },
+  turnRate: { min: 90, max: 1080 }, airControl: { min: 0, max: 1 },
+  jumpZVelocity: { min: 100, max: 1200 }, gravityScale: { min: 0.1, max: 4.0 },
+};
+const COMBAT_BOUNDS: FieldBounds = {
+  baseDamage: { min: 1, max: 200 }, attackSpeed: { min: 0.1, max: 4.0 },
+  comboWindowMs: { min: 100, max: 1000 }, hitReactionDuration: { min: 0, max: 2 },
+  critChance: { min: 0, max: 1 }, critMultiplier: { min: 1, max: 5 },
+  attackRange: { min: 50, max: 1500 }, cleaveAngle: { min: 0, max: 360 },
+};
+const DODGE_BOUNDS: FieldBounds = {
+  distance: { min: 100, max: 1200 }, duration: { min: 0.1, max: 1.5 },
+  iFrameStart: { min: 0, max: 0.5 }, iFrameDuration: { min: 0, max: 1.0 },
+  cooldown: { min: 0, max: 3 }, staminaCost: { min: 0, max: 100 },
+  cancelWindowStart: { min: 0, max: 1 }, cancelWindowEnd: { min: 0, max: 1.5 },
+};
+const CAMERA_BOUNDS: FieldBounds = {
+  armLength: { min: 100, max: 2000 }, lagSpeed: { min: 0, max: 30 },
+  fovBase: { min: 60, max: 120 }, fovSprintOffset: { min: 0, max: 20 },
+  swayMaxRoll: { min: 0, max: 5 }, swayMaxPitch: { min: 0, max: 5 },
+  swayInterpSpeed: { min: 0, max: 15 }, socketOffsetZ: { min: -100, max: 200 },
+};
+const ATTRIBUTE_BOUNDS: FieldBounds = {
+  baseHP: { min: 100, max: 5000 }, hpPerLevel: { min: 0, max: 200 },
+  baseStamina: { min: 10, max: 500 }, staminaPerLevel: { min: 0, max: 50 },
+  baseMana: { min: 0, max: 500 }, manaPerLevel: { min: 0, max: 50 },
+  baseArmor: { min: 0, max: 200 }, armorPerLevel: { min: 0, max: 20 },
+  staminaRegenPerSec: { min: 0, max: 50 }, manaRegenPerSec: { min: 0, max: 30 },
+};
+
+/** Deep-merge a partial profile with its default, coercing every field to a finite number
+ *  and clamping it into the field's designed `[min,max]` envelope when bounds are supplied. */
+export function sanitizeProfile<T>(defaults: T, partial: unknown, bounds?: FieldBounds): T {
   if (partial == null || typeof partial !== 'object') return { ...defaults };
   const result = { ...defaults };
   const src = partial as Record<string, unknown>;
   for (const key of Object.keys(defaults as object)) {
     const raw = src[key];
     if (typeof raw === 'number' && Number.isFinite(raw)) {
-      (result as Record<string, unknown>)[key] = raw;
+      const b = bounds?.[key];
+      (result as Record<string, unknown>)[key] = b ? Math.min(Math.max(raw, b.min), b.max) : raw;
     }
     // else: keep default
   }
@@ -79,11 +122,11 @@ export function sanitizeGenome(raw: unknown): { genome: CharacterGenome; warning
     version: typeof obj.version === 'string' ? obj.version : '1.0.0',
     color: typeof obj.color === 'string' ? obj.color : ACCENT_CYAN,
     updatedAt: new Date().toISOString(),
-    movement: sanitizeProfile(DEFAULT_MOVEMENT, obj.movement),
-    combat: sanitizeProfile(DEFAULT_COMBAT, obj.combat),
-    dodge: sanitizeProfile(DEFAULT_DODGE, obj.dodge),
-    camera: sanitizeProfile(DEFAULT_CAMERA, obj.camera),
-    attributes: sanitizeProfile(DEFAULT_ATTRIBUTES, obj.attributes),
+    movement: sanitizeProfile(DEFAULT_MOVEMENT, obj.movement, MOVEMENT_BOUNDS),
+    combat: sanitizeProfile(DEFAULT_COMBAT, obj.combat, COMBAT_BOUNDS),
+    dodge: sanitizeProfile(DEFAULT_DODGE, obj.dodge, DODGE_BOUNDS),
+    camera: sanitizeProfile(DEFAULT_CAMERA, obj.camera, CAMERA_BOUNDS),
+    attributes: sanitizeProfile(DEFAULT_ATTRIBUTES, obj.attributes, ATTRIBUTE_BOUNDS),
     tags: Array.isArray(obj.tags) ? (obj.tags as unknown[]).filter((t): t is string => typeof t === 'string') : [],
   };
   return { genome, warnings };
