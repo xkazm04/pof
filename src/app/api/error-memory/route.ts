@@ -50,8 +50,9 @@ export async function POST(req: NextRequest) {
 
       // ── Mark an error as resolved ─────────────────────────────
       case 'mark-resolved': {
+        if (!body.moduleId) return apiError('moduleId required', 400);
         if (!body.fingerprint) return apiError('fingerprint required', 400);
-        markResolved(body.fingerprint);
+        markResolved(body.moduleId as SubModuleId, body.fingerprint);
         return apiSuccess({ resolved: true });
       }
 
