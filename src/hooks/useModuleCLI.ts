@@ -11,6 +11,15 @@ import { UI_TIMEOUTS } from '@/lib/constants';
 import { dispatchPromptWhenReady } from '@/lib/cli-dispatch';
 import { logger } from '@/lib/logger';
 import type { SubModuleId } from '@/types/modules';
+import { isExpensiveTaskType } from '@/lib/cli-spend/preflight';
+import { fetchPreflightVerdict } from '@/lib/cli-spend-client';
+import { requestPreflightConfirm } from '@/stores/preflightStore';
+
+/** Optional task attribution carried with a dispatch (for spend tracking). */
+interface DispatchMeta {
+  taskType?: string;
+  label?: string;
+}
 
 interface UseModuleCLIOptions {
   /** Module this session is displayed within (must match the page's activeModuleId for inline visibility) */
@@ -26,7 +35,7 @@ interface UseModuleCLIOptions {
 }
 
 export interface UseModuleCLIResult {
-  sendPrompt: (prompt: string) => void;
+  sendPrompt: (prompt: string, meta?: DispatchMeta) => void;
   execute: (task: CLITask) => Promise<void>;
   isRunning: boolean;
 }
@@ -42,6 +51,7 @@ export function useModuleCLI(opts: UseModuleCLIOptions): UseModuleCLIResult {
   const createSession = useCLIPanelStore((s) => s.createSession);
   const findSessionByKey = useCLIPanelStore((s) => s.findSessionByKey);
   const setActiveTab = useCLIPanelStore((s) => s.setActiveTab);
+  const setSessionTaskMeta = useCLIPanelStore((s) => s.setSessionTaskMeta);
 
   const isRunning = useCLIPanelStore((s) => {
     const entry = Object.values(s.sessions).find(
@@ -104,7 +114,7 @@ export function useModuleCLI(opts: UseModuleCLIOptions): UseModuleCLIResult {
   }, [isRunning]);
 
   const sendPrompt = useCallback(
-    (prompt: string) => {
+    (prompt: string, meta?: DispatchMeta) => {
       // Track for analytics
       lastPromptRef.current = prompt;
       taskStartRef.current = new Date().toISOString();
@@ -120,6 +130,11 @@ export function useModuleCLI(opts: UseModuleCLIOptions): UseModuleCLIResult {
         });
       }
       setActiveTab(tabId);
+
+      // Attribute spend to the dispatched task type (defaults to a free-typed
+      // interactive prompt). The terminal reads this back when the run's cost
+      // result arrives. See cli-spend-client / SpendDashboard.
+      setSessionTaskMeta(tabId, meta?.taskType ?? 'interactive', meta?.label ?? opts.label);
 
       // Non-blocking anti-pattern check — fire-and-forget. Writes warnings to
       // the pattern library store so the Anti-Patterns tab + any subscribed
@@ -148,7 +163,7 @@ export function useModuleCLI(opts: UseModuleCLIOptions): UseModuleCLIResult {
       // See src/lib/cli-dispatch.ts.
       dispatchPromptWhenReady(tabId, prompt);
     },
-    [findSessionByKey, createSession, setActiveTab, projectPath, opts.sessionKey, opts.moduleId, opts.label, opts.accentColor]
+    [findSessionByKey, createSession, setActiveTab, setSessionTaskMeta, projectPath, opts.sessionKey, opts.moduleId, opts.label, opts.accentColor]
   );
 
   /**
@@ -160,6 +175,15 @@ export function useModuleCLI(opts: UseModuleCLIOptions): UseModuleCLIResult {
    */
   const execute = useCallback(
     async (task: CLITask) => {
+      // Pre-flight budget guardrail — for resource-intensive task types (live
+      // editor runs, broad scans), check the spend guard before doing any work.
+      // Only interrupts under genuine budget pressure; never blocks on an error.
+      if (isExpensiveTaskType(task.type)) {
+        const verdict = await fetchPreflightVerdict(task.type);
+        const proceed = await requestPreflightConfirm(verdict);
+        if (!proceed) return;
+      }
+
       // Scan project for dynamic context (uses cache if fresh)
       const scanProject = useProjectStore.getState().scanProject;
       await scanProject();
@@ -170,7 +194,7 @@ export function useModuleCLI(opts: UseModuleCLIOptions): UseModuleCLIResult {
       const { projectName, projectPath: pp, ueVersion, dynamicContext } = useProjectStore.getState();
       const ctx = { projectName, projectPath: pp, ueVersion, dynamicContext };
       const enriched = buildTaskPrompt(task, ctx);
-      sendPrompt(enriched);
+      sendPrompt(enriched, { taskType: task.type, label: task.label });
     },
     [sendPrompt, opts.sessionKey],
   );

@@ -9,6 +9,7 @@ import {
   withOpacity,
 } from '@/lib/chart-colors';
 import { EASE_OUT } from '@/lib/motion';
+import { focusRingStyle } from '@/lib/ui/focus-ring';
 import { BlueprintPanel, SectionHeader } from '../../unique-tabs/_design';
 import {
   runItemEconomySim, DEFAULT_ITEM_ECON_CONFIG,
@@ -95,7 +96,7 @@ export function ItemEconomySimulator({ moduleId }: Props) {
       {/* Config + Run */}
       <BlueprintPanel color={ACCENT} className="p-3 space-y-3">
         <SectionHeader icon={Target} label="Simulation Config" color={ACCENT} />
-        <div className="flex items-end gap-3 flex-wrap">
+        <div className="flex items-end gap-3 flex-wrap" style={focusRingStyle(ACCENT)}>
           <ConfigInput label="Players" value={config.playerCount}
             onChange={(v) => updateConfig('playerCount', v)} min={10} max={5000} step={50} wide />
           <ConfigInput label="Max Level" value={config.maxLevel}

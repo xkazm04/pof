@@ -2,7 +2,7 @@
 
 import { Database, Plus } from 'lucide-react';
 import { motion } from 'framer-motion';
-import { BlueprintPanel, SectionHeader } from '../_shared/design';
+import { BlueprintPanel, SectionHeader, SAVE_TYPE } from '../_shared/design';
 import { SAVE_SLOTS, ACCENT } from '../_shared/data';
 
 import { withOpacity, OPACITY_5, STATUS_WARNING, STATUS_SUCCESS, ACCENT_CYAN, ACCENT_CYAN_LIGHT, OVERLAY_WHITE } from '@/lib/chart-colors';
@@ -47,19 +47,19 @@ export function MemoryBanks() {
 
                   <div className="grid grid-cols-2 gap-y-1.5 text-xs pl-2">
                     <div className="flex flex-col">
-                      <span className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted">Location</span>
+                      <span className={`${SAVE_TYPE.body} text-text-muted`}>Location</span>
                       <span className="truncate pr-2" style={{ color: OVERLAY_WHITE }}>{slot.zone}</span>
                     </div>
                     <div className="flex flex-col">
-                      <span className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted">Integrity</span>
+                      <span className={`${SAVE_TYPE.body} text-text-muted`}>Integrity</span>
                       <span style={{ color: STATUS_SUCCESS }}>{slot.integrity}</span>
                     </div>
                     <div className="flex flex-col">
-                      <span className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted">Level</span>
+                      <span className={`${SAVE_TYPE.body} text-text-muted`}>Level</span>
                       <span style={{ color: OVERLAY_WHITE }}>Lv.{slot.level!.toString().padStart(2, '0')}</span>
                     </div>
                     <div className="flex flex-col">
-                      <span className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted">Uptime</span>
+                      <span className={`${SAVE_TYPE.body} text-text-muted`}>Uptime</span>
                       <span style={{ color: OVERLAY_WHITE }}>{slot.playtime}</span>
                     </div>
                   </div>

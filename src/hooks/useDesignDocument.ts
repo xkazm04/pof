@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import type {
   LevelDesignDocument,
   LevelDesignSummary,
@@ -8,6 +8,7 @@ import type {
   UpdateDocPayload,
 } from '@/types/level-design';
 import { apiFetch } from '@/lib/api-utils';
+import { useIsMounted } from '@/hooks/useIsMounted';
 
 interface UseDesignDocumentResult {
   docs: LevelDesignDocument[];
@@ -42,28 +43,23 @@ export function useDesignDocument(): UseDesignDocumentResult {
   const [activeDocId, setActiveDocId] = useState<number | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const mountedRef = useRef(true);
-
-  useEffect(() => {
-    mountedRef.current = true;
-    return () => { mountedRef.current = false; };
-  }, []);
+  const isMounted = useIsMounted();
 
   const fetchAll = useCallback(async () => {
     setIsLoading(true);
     setError(null);
     try {
       const data = await apiFetch<{ docs: LevelDesignDocument[]; summary: LevelDesignSummary }>('/api/level-design');
-      if (!mountedRef.current) return;
+      if (!isMounted()) return;
       setDocs(data.docs ?? []);
       setSummary(data.summary ?? EMPTY_SUMMARY);
     } catch (err) {
       console.error('useDesignDocument fetch error:', err);
-      if (mountedRef.current) setError(err instanceof Error ? err.message : 'Failed to load level designs');
+      if (isMounted()) setError(err instanceof Error ? err.message : 'Failed to load level designs');
     } finally {
-      if (mountedRef.current) setIsLoading(false);
+      if (isMounted()) setIsLoading(false);
     }
-  }, []);
+  }, [isMounted]);
 
   useEffect(() => { fetchAll(); }, [fetchAll]);
 

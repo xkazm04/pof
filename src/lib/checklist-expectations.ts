@@ -147,7 +147,7 @@ export const CHECKLIST_EXPECTATIONS: Record<string, ChecklistExpectation> = {
   },
 
   // ── arpg-combat ───────────────────────────────────────────────────────────
-  'acm-1': {
+  'acb-1': {
     primary: {
       className: 'UGA_MeleeAttack',
       baseClass: 'UARPGGameplayAbility',
@@ -226,22 +226,4 @@ export const CHECKLIST_EXPECTATIONS: Record<string, ChecklistExpectation> = {
  */
 export function getExpectationsForItem(itemId: string): ChecklistExpectation | null {
   return CHECKLIST_EXPECTATIONS[itemId] ?? null;
-}
-
-/**
- * Get the set of class names we expect from all expectations.
- * Used to build the reverse map: className → itemId.
- */
-export function buildClassToItemMap(): Map<string, string> {
-  const map = new Map<string, string>();
-  for (const [itemId, exp] of Object.entries(CHECKLIST_EXPECTATIONS)) {
-    map.set(exp.primary.className, itemId);
-    for (const sec of exp.secondary ?? []) {
-      // Only map secondary if not already mapped
-      if (!map.has(sec.className)) {
-        map.set(sec.className, itemId);
-      }
-    }
-  }
-  return map;
 }

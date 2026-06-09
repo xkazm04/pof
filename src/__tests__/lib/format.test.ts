@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { formatBytes, formatDuration } from '@/lib/format';
+import { formatBytes, formatDuration, formatDurationBetween } from '@/lib/format';
 
 describe('formatBytes (packaging style)', () => {
   it('formats raw bytes with a space and no decimals below 1 KB', () => {
@@ -52,9 +52,26 @@ describe('formatDuration', () => {
     expect(formatDuration(1500)).toBe('1.5s');
   });
 
-  it('formats minute-plus durations as "Xm Ys"', () => {
+  it('formats minute-plus (sub-hour) durations as "Xm Ys"', () => {
     expect(formatDuration(60000)).toBe('1m 0s');
     expect(formatDuration(90000)).toBe('1m 30s');
-    expect(formatDuration(3661000)).toBe('61m 1s');
+    expect(formatDuration(3_599_000)).toBe('59m 59s');
+  });
+
+  it('rolls up to "Xh Ym" once a duration reaches an hour', () => {
+    expect(formatDuration(3_600_000)).toBe('1h 0m');
+    expect(formatDuration(3_661_000)).toBe('1h 1m');
+    expect(formatDuration(90_000_000)).toBe('25h 0m'); // 25h "time invested" total
+  });
+});
+
+describe('formatDurationBetween', () => {
+  it('renders the span between two ISO timestamps via formatDuration', () => {
+    expect(formatDurationBetween('2026-01-01T00:00:00Z', '2026-01-01T00:00:05Z')).toBe('5.0s');
+    expect(formatDurationBetween('2026-01-01T00:00:00Z', '2026-01-01T00:01:30Z')).toBe('1m 30s');
+  });
+
+  it('clamps a negative span (end before start) to zero', () => {
+    expect(formatDurationBetween('2026-01-01T00:00:05Z', '2026-01-01T00:00:00Z')).toBe('0ms');
   });
 });

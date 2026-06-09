@@ -93,6 +93,17 @@ export const UI_TIMEOUTS = {
   stuckCheckInterval: 30 * 1000,
   /** Delay before starting the next queued task. */
   nextTaskDelay: 3000,
+  /** Hard ceiling on a single CLI child-process run before it's force-killed
+   *  (runaway-process guard, 100 min). The user-facing timeout message derives
+   *  its minute count from this value so the two never drift. */
+  cliExecutionTimeout: 100 * 60 * 1000,
+  /** Default window awaitCallback() waits for a @@CALLBACK block before rejecting (5 min). */
+  callbackAwaitTimeout: 5 * 60 * 1000,
+  /** A running task whose last heartbeat is older than this is treated as stale /
+   *  timed-out (10 min). Shared by the task-registry route and its client. */
+  taskTimeout: 10 * 60 * 1000,
+  /** Lifetime of a task-registry record before cleanup evicts it (1 hour). */
+  taskRecordTtl: 60 * 60 * 1000,
   /** Auto-submit delay after programmatic input fill. */
   autoSubmitDelay: 50,
   /** UE5 Remote Control health check interval. */
@@ -103,8 +114,6 @@ export const UI_TIMEOUTS = {
   ue5ReconnectMax: 30_000,
   /** Timeout for individual UE5 HTTP requests. */
   ue5HttpTimeout: 10_000,
-  /** Poll interval while a build is active. */
-  buildPollInterval: 3_000,
   /** Maximum time for a headless build process (10 min). */
   buildProcessTimeout: 600_000,
   /** Poll interval for the nightly-build scheduler status panel. */
@@ -141,4 +150,15 @@ export const UI_TIMEOUTS = {
   blenderGenPollInterval: 5_000,
   /** Debounce delay for viewport screenshot requests. */
   blenderScreenshotDebounce: 500,
+  /** Blink interval for the terminal-variant ModuleHeader cursor. */
+  cursorBlink: 500,
+  /** Per-frame cadence for the Crash Time Machine auto-play replay. */
+  crashReplayStep: 600,
 } as const;
+
+/**
+ * Max entries retained in the per-session UE5 build-parse cache before the
+ * oldest is evicted (LRU). A memory cap, not a timing value, so it lives
+ * outside UI_TIMEOUTS.
+ */
+export const BUILD_PARSE_CACHE_MAX = 200;

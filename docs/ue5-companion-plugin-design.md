@@ -2037,28 +2037,35 @@ Each Next.js route handler proxies to the corresponding plugin HTTP endpoint. Th
 | `/api/pof-bridge/snapshot` | `POST /pof/snapshot/capture`, `GET /pof/snapshot/diff` | POST/GET | Trigger viewport capture, retrieve diff report |
 | `/api/pof-bridge/compile` | `POST /pof/compile/live`, `GET /pof/compile/status` | POST/GET | Trigger Live Coding hot reload, poll compilation status |
 
-All proxy routes follow the same pattern:
+All proxy routes follow the same pattern, built on the shared helper in
+`src/lib/pof-bridge/proxy.ts` so the host, default port, abort timeout, and
+error-shaping live in one place (`src/lib/pof-bridge/constants.ts` holds the
+host + default port):
 
 ```typescript
 // src/app/api/pof-bridge/status/route.ts
-import { NextResponse } from 'next/server';
-import { getPofBridgeUrl, getPofAuthHeaders } from '@/lib/pof-bridge/client';
+import { apiSuccess, apiError } from '@/lib/api-utils';
+import { resolvePofPort } from '@/lib/pof-bridge/constants';
+import { proxyToPofBridge } from '@/lib/pof-bridge/proxy';
+import type { PofBridgeStatus } from '@/types/pof-bridge';
 
-export async function GET() {
-  try {
-    const res = await fetch(`${getPofBridgeUrl()}/pof/status`, {
-      headers: getPofAuthHeaders(),
-    });
-    const data = await res.json();
-    return NextResponse.json(data, { status: res.status });
-  } catch {
-    return NextResponse.json(
-      { error: true, code: 'BRIDGE_UNREACHABLE', message: 'Plugin not running' },
-      { status: 503 }
-    );
-  }
+export async function GET(request: Request) {
+  const port = resolvePofPort(new URL(request.url).searchParams);
+
+  const result = await proxyToPofBridge<PofBridgeStatus>('status', { port, timeoutMs: 5000 });
+  if (result.ok) return apiSuccess(result.data);
+  // An unreachable bridge degrades gracefully; a non-2xx is a real error.
+  if (!result.reachable) return apiSuccess({ connected: false });
+  return apiError(`Plugin returned ${result.status}`, result.status);
 }
 ```
+
+`proxyToPofBridge<T>(path, { port, method?, body?, timeoutMs? })` returns a
+tagged `PofProxyResult<T>`: `{ ok: true, data }` on 2xx, `{ ok: false,
+reachable: true, status, detail }` on a non-2xx response (`detail` is the body
+sliced to 200 chars), or `{ ok: false, reachable: false, status: 502, detail }`
+when the bridge can't be reached. Most routes pass the failure to
+`pofProxyError(result, '<Label> error')`, which formats the standard envelope.
 
 ### 11.3 Connection Lifecycle
 
@@ -2294,8 +2301,8 @@ The integration layer is designed for straightforward extension as new plugin ca
 
 1. Create a new directory under `src/app/api/pof-bridge/{endpoint-name}/`.
 2. Add a `route.ts` file with the appropriate HTTP method handlers.
-3. Use `getPofBridgeUrl()` and `getPofAuthHeaders()` from `src/lib/pof-bridge/client.ts` for consistent proxy behavior.
-4. Handle the `BRIDGE_UNREACHABLE` error case with a 503 response.
+3. Resolve the port with `resolvePofPort(searchParams)` and call `proxyToPofBridge(path, opts)` from `src/lib/pof-bridge/proxy.ts` for consistent URL building, timeouts, and error shaping.
+4. Map the failure case with `pofProxyError(result, '<Label> error')` (or handle `result.reachable` inline when the route degrades gracefully, like `status`).
 
 **Adding new hooks:**
 

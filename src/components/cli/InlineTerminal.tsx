@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback } from 'react';
-import { motion } from 'framer-motion';
+import { motion, useReducedMotion } from 'framer-motion';
 import { Terminal, Minimize2, Loader2, X } from 'lucide-react';
 import { CompactTerminal } from './CompactTerminal';
 import { SuggestedActions, type SuggestionAction } from './SuggestedActions';
@@ -29,6 +29,7 @@ export function InlineTerminal({
   const height = useCLIPanelStore((s) => s.inlineTerminalHeight);
   const setInlineTerminalHeight = useCLIPanelStore((s) => s.setInlineTerminalHeight);
   const projectPath = useProjectStore((s) => s.projectPath);
+  const shouldReduceMotion = useReducedMotion() ?? false;
 
   const handleResizeMouseDown = useCallback(
     (e: React.MouseEvent) => {
@@ -84,10 +85,10 @@ export function InlineTerminal({
     <motion.div
       className="border-t border-border bg-surface-deep flex flex-col overflow-hidden"
       style={{ height }}
-      initial={{ height: 0, opacity: 0 }}
-      animate={{ height, opacity: 1 }}
-      exit={{ height: 0, opacity: 0 }}
-      transition={{ type: 'spring', stiffness: 300, damping: 30, mass: 0.8 }}
+      initial={shouldReduceMotion ? { opacity: 0 } : { height: 0, opacity: 0 }}
+      animate={shouldReduceMotion ? { opacity: 1 } : { height, opacity: 1 }}
+      exit={shouldReduceMotion ? { opacity: 0 } : { height: 0, opacity: 0 }}
+      transition={shouldReduceMotion ? { duration: 0 } : { type: 'spring', stiffness: 300, damping: 30, mass: 0.8 }}
     >
       {/* Resize handle (top edge — drag up to grow) */}
       <div
@@ -120,17 +121,19 @@ export function InlineTerminal({
         <div className="flex items-center gap-0.5">
           <button
             onClick={minimizeTab}
-            className="p-1 text-text-muted hover:text-text transition-colors"
+            className="p-1.5 text-text-muted hover:text-text transition-colors"
             title="Minimize to bottom bar"
+            aria-label="Minimize to bottom bar"
           >
-            <Minimize2 className="w-3 h-3" />
+            <Minimize2 className="w-3 h-3" aria-hidden="true" />
           </button>
           <button
             onClick={() => removeSession(sessionId)}
-            className="p-1 text-text-muted hover:text-red-400 transition-colors"
+            className="p-1.5 text-text-muted hover:text-red-400 transition-colors"
             title="Close terminal"
+            aria-label="Close terminal"
           >
-            <X className="w-3 h-3" />
+            <X className="w-3 h-3" aria-hidden="true" />
           </button>
         </div>
       </div>

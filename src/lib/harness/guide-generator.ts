@@ -17,6 +17,8 @@ import type {
   VerificationReport,
 } from './types';
 import type { ParsedAreaResult } from './executor';
+import { formatDuration } from '@/lib/format';
+import { readJsonFile, writeJsonFile } from './state-io';
 
 // ── Guide Building ──────────────────────────────────────────────────────────
 
@@ -184,28 +186,12 @@ ${topAreas ? `**Top spend by area:**\n${topAreas}` : ''}
 // ── File I/O ────────────────────────────────────────────────────────────────
 
 export function loadGuide(statePath: string): GameBuildGuide | null {
-  const guidePath = path.join(statePath, 'guide.json');
-  if (!fs.existsSync(guidePath)) return null;
-  try {
-    return JSON.parse(fs.readFileSync(guidePath, 'utf-8')) as GameBuildGuide;
-  } catch {
-    return null;
-  }
+  return readJsonFile<GameBuildGuide | null>(path.join(statePath, 'guide.json'), null);
 }
 
 export function saveGuide(statePath: string, guide: GameBuildGuide): void {
-  const guidePath = path.join(statePath, 'guide.json');
-  fs.writeFileSync(guidePath, JSON.stringify(guide, null, 2));
+  writeJsonFile(path.join(statePath, 'guide.json'), guide);
 
-  // Also write the Markdown version
-  const mdPath = path.join(statePath, 'guide.md');
-  fs.writeFileSync(mdPath, renderGuideMarkdown(guide));
-}
-
-// ── Helpers ─────────────────────────────────────────────────────────────────
-
-function formatDuration(ms: number): string {
-  if (ms < 60_000) return `${(ms / 1000).toFixed(0)}s`;
-  if (ms < 3_600_000) return `${(ms / 60_000).toFixed(1)}min`;
-  return `${(ms / 3_600_000).toFixed(1)}h`;
+  // Also write the Markdown version (not JSON, so a plain write).
+  fs.writeFileSync(path.join(statePath, 'guide.md'), renderGuideMarkdown(guide));
 }

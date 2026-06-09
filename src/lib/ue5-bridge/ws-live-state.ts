@@ -12,6 +12,7 @@
 import { UI_TIMEOUTS } from '@/lib/constants';
 import { logger } from '@/lib/logger';
 import { eventBus } from '@/lib/event-bus';
+import { createStateEmitter } from '@/lib/state-emitter';
 import type {
   WSConnectionStatus,
   WSInboundMessage,
@@ -34,7 +35,6 @@ class UE5LiveStateClient {
   private pingInterval: ReturnType<typeof setInterval> | null = null;
   private reconnectTimer: ReturnType<typeof setTimeout> | null = null;
   private reconnectAttempts = 0;
-  private subscribers = new Set<LiveStateHandler>();
   private intentionalClose = false;
 
   /** Active property watches keyed by watchId. */
@@ -48,45 +48,39 @@ class UE5LiveStateClient {
   private frameRate = 0;
   private fpsInterval: ReturnType<typeof setInterval> | null = null;
 
-  private state: LiveEditorState = {
-    wsStatus: 'disconnected',
-    snapshot: null,
-    propertyWatches: new Map(),
-    lastSnapshotTime: null,
-    frameRate: 0,
-  };
+  private emitter = createStateEmitter<LiveEditorState>({
+    label: '[UE5-WS]',
+    initial: {
+      wsStatus: 'disconnected',
+      snapshot: null,
+      propertyWatches: new Map(),
+      lastSnapshotTime: null,
+      frameRate: 0,
+    },
+    // propertyWatches is a Map — deep-clone it so subscribers can't mutate ours.
+    clone: (s) => ({ ...s, propertyWatches: new Map(s.propertyWatches) }),
+  });
+
+  /** Live, read-only view of state for the client's own internal reads. */
+  private get state(): LiveEditorState {
+    return this.emitter.peek();
+  }
 
   // ── State management ────────────────────────────────────────────────────
 
   getState(): LiveEditorState {
-    return {
-      ...this.state,
-      propertyWatches: new Map(this.state.propertyWatches),
-    };
+    return this.emitter.getState();
   }
 
   private setState(partial: Partial<LiveEditorState>) {
-    this.state = { ...this.state, ...partial };
-    this.notifySubscribers();
-  }
-
-  private notifySubscribers() {
-    const snapshot = this.getState();
-    for (const handler of this.subscribers) {
-      try {
-        handler(snapshot);
-      } catch (e) {
-        logger.warn('[UE5-WS] Subscriber error:', e);
-      }
-    }
+    this.emitter.setState(partial);
   }
 
   // ── Public API ──────────────────────────────────────────────────────────
 
   /** Subscribe to live state changes. Returns unsubscribe function. */
   onStateChange(handler: LiveStateHandler): () => void {
-    this.subscribers.add(handler);
-    return () => { this.subscribers.delete(handler); };
+    return this.emitter.subscribe(handler);
   }
 
   /** Connect WebSocket to UE5 editor. */

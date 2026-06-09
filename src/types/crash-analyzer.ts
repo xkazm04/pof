@@ -154,3 +154,60 @@ export interface CrashAnalyzerResult {
   patterns: CrashPattern[];
   stats: CrashStats;
 }
+
+/* ------------------------------------------------------------------ */
+/*  Zeroed-record factories                                            */
+/* ------------------------------------------------------------------ */
+
+/**
+ * A fresh zeroed count record covering every `CrashType` (all 11 keys).
+ *
+ * Single source of truth for the empty `crashesByType` shape so adding a new
+ * `CrashType` is a one-line change here rather than editing each hand-written
+ * literal in the engine and store (which silently risked an incomplete
+ * `Record<CrashType, number>`). Returns a new object each call — safe to use as
+ * a mutable accumulator.
+ */
+export function emptyCrashTypeCounts(): Record<CrashType, number> {
+  return {
+    nullptr_deref: 0,
+    access_violation: 0,
+    assertion_failed: 0,
+    ensure_failed: 0,
+    gc_reference: 0,
+    stack_overflow: 0,
+    out_of_memory: 0,
+    unhandled_exception: 0,
+    fatal_error: 0,
+    gpu_crash: 0,
+    unknown: 0,
+  };
+}
+
+/**
+ * A fresh zeroed count record covering every `CrashSeverity`.
+ * Returns a new object each call — safe to use as a mutable accumulator.
+ */
+export function emptyCrashSeverityCounts(): Record<CrashSeverity, number> {
+  return {
+    critical: 0,
+    high: 0,
+    medium: 0,
+    low: 0,
+  };
+}
+
+/** A fully-zeroed `CrashStats` (no crashes recorded). Returns a new object each call. */
+export function emptyCrashStats(): CrashStats {
+  return {
+    totalCrashes: 0,
+    crashesByType: emptyCrashTypeCounts(),
+    crashesBySeverity: emptyCrashSeverityCounts(),
+    crashesByModule: {},
+    patternsDetected: 0,
+    systemicIssues: 0,
+    recentCrashes: 0,
+    mostCommonType: 'unknown',
+    mostAffectedModule: 'none',
+  };
+}

@@ -20,6 +20,10 @@ export interface CLISessionState {
   moduleId?: string;
   /** Unique key for fine-grained session lookup (multiple sessions in the same module) */
   sessionKey?: string;
+  /** CLITaskType of the most recently dispatched task ('interactive' for free-typed prompts) — used to attribute spend per task type. */
+  lastTaskType?: string;
+  /** Human-readable label of the most recently dispatched task. */
+  lastTaskLabel?: string;
   createdAt: number;
   lastActivityAt: number;
   enabledSkills: SkillId[];
@@ -44,6 +48,8 @@ interface CLIPanelStoreState {
   setSessionRunning: (id: string, running: boolean, success?: boolean) => void;
   setClaudeSessionId: (id: string, claudeSessionId: string) => void;
   setCurrentExecution: (id: string, executionId: string | null, taskId: string | null) => void;
+  /** Record the task type + label of the prompt being dispatched (for spend attribution). */
+  setSessionTaskMeta: (id: string, taskType: string, taskLabel?: string) => void;
   updateLastActivity: (id: string) => void;
   setSessionProjectPath: (id: string, path: string) => void;
   renameSession: (id: string, label: string) => void;
@@ -181,6 +187,19 @@ export const useCLIPanelStore = create<CLIPanelStoreState>()(
             sessions: {
               ...state.sessions,
               [id]: { ...session, currentExecutionId: executionId, currentTaskId: taskId, lastActivityAt: Date.now() },
+            },
+          };
+        });
+      },
+
+      setSessionTaskMeta: (id, taskType, taskLabel) => {
+        set((state) => {
+          const session = state.sessions[id];
+          if (!session) return state;
+          return {
+            sessions: {
+              ...state.sessions,
+              [id]: { ...session, lastTaskType: taskType, lastTaskLabel: taskLabel ?? session.lastTaskLabel },
             },
           };
         });

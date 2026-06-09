@@ -1,5 +1,5 @@
 import {
-  AlertOctagon, AlertTriangle, Info, CheckCircle2,
+  AlertOctagon, AlertTriangle, Info, ArrowDown, CheckCircle2,
   Settings, Play, Activity, Search,
   ShieldCheck, BellOff, EyeOff, Clock, type LucideIcon,
 } from 'lucide-react';
@@ -19,12 +19,31 @@ export interface SemanticToken {
 
 export type SemanticDensity = 'default' | 'dense';
 
+// Each severity carries a DISTINCT icon — never color alone — so the level is
+// legible to colorblind users (WCAG 1.4.1). `medium` (Info, amber) and `low`
+// (ArrowDown, blue) previously shared the Info icon and differed only by hue.
 export const SEVERITY_TOKENS: Record<FindingSeverity, SemanticToken> = {
   critical: { icon: AlertOctagon, color: STATUS_ERROR, label: 'Critical' },
   high: { icon: AlertTriangle, color: STATUS_BLOCKER, label: 'High' },
   medium: { icon: Info, color: STATUS_WARNING, label: 'Medium' },
-  low: { icon: Info, color: STATUS_INFO, label: 'Low' },
+  low: { icon: ArrowDown, color: STATUS_INFO, label: 'Low' },
   positive: { icon: CheckCircle2, color: STATUS_SUCCESS, label: 'Positive' },
+};
+
+/** Display order for severity, most → least urgent (legends, breakdowns). */
+export const SEVERITY_ORDER: FindingSeverity[] = ['critical', 'high', 'medium', 'low', 'positive'];
+
+/**
+ * Plain-language, one-line explanation of each severity for the dismissible
+ * severity legend — lets non-technical users grasp finding levels without
+ * guessing from color or icon alone.
+ */
+export const SEVERITY_DESCRIPTIONS: Record<FindingSeverity, string> = {
+  critical: 'Game-breaking — crashes or blocks play',
+  high: 'Major problem that hurts the experience',
+  medium: 'Noticeable issue worth fixing soon',
+  low: 'Minor polish or an edge case',
+  positive: 'Something that works well',
 };
 
 export const SESSION_STATUS_TOKENS: Record<PlaytestStatus, SemanticToken> = {

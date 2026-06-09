@@ -8,12 +8,12 @@ import {
   startABTest,
   recordTestTrial,
   concludeTest,
-  getActiveTests,
-  getAllTests,
   clusterModulePrompts,
   getEvolutionStats,
   generateSuggestions,
   getBestVariant,
+  getVersionHistory,
+  restoreVariant,
   optimizePrompt,
 } from '@/lib/prompt-evolution/engine';
 import { getModuleSessions, getModuleStats } from '@/lib/session-analytics-db';
@@ -110,6 +110,22 @@ export async function POST(req: NextRequest) {
         }
         const best = getBestVariant(body.moduleId as SubModuleId, body.checklistItemId);
         return apiSuccess(best);
+      }
+
+      // ── Version history & rollback ──────────────────────────────
+      case 'get-version-history': {
+        if (!body.moduleId || !body.checklistItemId) {
+          return apiError('moduleId and checklistItemId required', 400);
+        }
+        const history = getVersionHistory(body.moduleId as SubModuleId, body.checklistItemId);
+        return apiSuccess(history);
+      }
+
+      case 'restore-variant': {
+        if (!body.variantId) return apiError('variantId required', 400);
+        const restored = restoreVariant(body.variantId);
+        if (!restored) return apiError('Variant not found', 404);
+        return apiSuccess(restored);
       }
 
       // ── Prompt Optimizer ────────────────────────────────────────

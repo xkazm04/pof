@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { Brain, CircleCheck, CircleDot, Loader2 } from 'lucide-react';
 import { SurfaceCard } from '@/components/ui/SurfaceCard';
+import { DecoratedCrashText } from '@/components/ui/CrashTerm';
 import { tryApiFetch } from '@/lib/api-utils';
 import { CATEGORY_LABELS } from '@/lib/prompt-context';
 import { SEVERITY_TOKENS, type SeverityLevel } from '@/lib/chart-colors';
@@ -138,7 +139,9 @@ function ErrorMemoryBody({ stats }: { stats: ErrorMemoryStats }) {
                   ? <CircleCheck size={12} className="flex-shrink-0" style={{ color: SEVERITY_TOKENS.positive.color }} />
                   : <CircleDot size={12} className="flex-shrink-0" style={{ color: token.color }} />}
               </span>
-              <span className="text-text flex-shrink-0 truncate max-w-[140px]">{labelFor(c.category)}</span>
+              <span className="text-text flex-shrink-0 truncate max-w-[140px]">
+                <DecoratedCrashText text={labelFor(c.category)} />
+              </span>
               <div className="flex-1 h-1.5 rounded-full overflow-hidden" style={{ background: token.bg }}>
                 <motion.div
                   className="h-full rounded-full"

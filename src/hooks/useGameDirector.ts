@@ -50,6 +50,7 @@ export interface UseGameDirectorResult {
     triageNote?: string,
     snoozedUntil?: string | null,
   ) => Promise<PlaytestFinding>;
+  markFixDispatched: (findingId: string) => Promise<PlaytestFinding>;
 }
 
 export function useGameDirector(): UseGameDirectorResult {
@@ -120,6 +121,16 @@ export function useGameDirector(): UseGameDirectorResult {
     return result.data;
   }, [refresh]);
 
+  const markFixDispatched = useCallback(async (findingId: string): Promise<PlaytestFinding> => {
+    const result = await tryApiFetch<PlaytestFinding>('/api/game-director', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'mark-fix-dispatched', findingId }),
+    });
+    if (!result.ok) throw new Error(result.error);
+    return result.data;
+  }, []);
+
   return {
     sessions: data.sessions,
     stats: data.stats,
@@ -133,5 +144,6 @@ export function useGameDirector(): UseGameDirectorResult {
     getFindings,
     getEvents,
     updateTriage,
+    markFixDispatched,
   };
 }

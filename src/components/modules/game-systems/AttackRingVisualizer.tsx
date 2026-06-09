@@ -8,25 +8,26 @@ import {
   STATUS_SUCCESS, STATUS_WARNING,
   OPACITY_10, OPACITY_20,
 } from '@/lib/chart-colors';
+import { polarSvgLayout } from '@/components/ui/svg/polar-layout';
+import { EQS_ATTACK_POSITIONS } from '@/lib/ai-director/eqs-defaults';
 
 // ── Real C++ defaults from EnvQueryGenerator_AttackPositions.h ──────────────
+// Sourced from the single-source EQS defaults module so this viz can never
+// silently drift from the inventory/pipeline surfaces or the engine.
 
-const DEFAULT_ATTACK_DISTANCE = 200;
-const DEFAULT_NUMBER_OF_POINTS = 12;
-const DEFAULT_INNER_RING = false;
-const MIN_POINTS = 4;
-const MAX_POINTS = 36;
-const MIN_DISTANCE = 50;
+const DEFAULT_ATTACK_DISTANCE = EQS_ATTACK_POSITIONS.attackDistance;
+const DEFAULT_NUMBER_OF_POINTS = EQS_ATTACK_POSITIONS.numberOfPoints;
+const DEFAULT_INNER_RING = EQS_ATTACK_POSITIONS.generateInnerRing;
+const MIN_POINTS = EQS_ATTACK_POSITIONS.clamps.numberOfPoints.min;
+const MAX_POINTS = EQS_ATTACK_POSITIONS.clamps.numberOfPoints.max;
+const MIN_DISTANCE = EQS_ATTACK_POSITIONS.clamps.attackDistance.min;
 
 // Nav projection from constructor
 const PROJECT_DOWN = 500;
 const PROJECT_UP = 100;
 
 // SVG layout
-const SVG_SIZE = 340;
-const SVG_CENTER = SVG_SIZE / 2;
-const SVG_PADDING = 50;
-const MAX_DRAW_RADIUS = (SVG_SIZE - SVG_PADDING * 2) / 2;
+const { size: SVG_SIZE, center: SVG_CENTER, padding: SVG_PADDING, radius: MAX_DRAW_RADIUS } = polarSvgLayout(340, 50);
 
 export function AttackRingVisualizer() {
   const [numPoints, setNumPoints] = useState(DEFAULT_NUMBER_OF_POINTS);

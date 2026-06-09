@@ -4,8 +4,7 @@ import { useEffect, useMemo, useState, useCallback } from 'react';
 import {
   HeartPulse, RefreshCw, TrendingUp, TrendingDown, Minus,
   Target, BarChart3, Activity, Layers, CheckCircle2,
-  AlertTriangle, XCircle, Clock, Zap, ChevronRight,
-  ArrowUpRight, Gauge, Shield,
+  AlertTriangle, XCircle, Clock, Zap, Gauge, Shield, ArrowUpRight,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { SurfaceCard } from '@/components/ui/SurfaceCard';
@@ -15,25 +14,20 @@ import { DashboardHeader } from '@/components/ui/DashboardHeader';
 import { useProjectHealthStore } from '@/stores/projectHealthStore';
 import { useModuleStore } from '@/stores/moduleStore';
 import { useEvaluatorStore } from '@/stores/evaluatorStore';
+import { usePerformanceProfilingStore } from '@/stores/performanceProfilingStore';
+import { useCrashAnalyzerStore } from '@/stores/crashAnalyzerStore';
 import type {
   ModuleHealthSummary,
   ModuleHealthStatus,
   Milestone,
-  VelocityPoint,
-  QualityPoint,
   BurnChartPoint,
   SubsystemSignal,
+  PerfHealthInput,
+  CrashHealthInput,
 } from '@/types/project-health';
 import { ACCENT_EMERALD, STATUS_WARNING, STATUS_ERROR, STATUS_INFO, STATUS_NEUTRAL, OPACITY_10, OPACITY_20 } from '@/lib/chart-colors';
 
 // ── Constants ───────────────────────────────────────────────────────────────
-
-const EMPTY_MODULE_HEALTH: ModuleHealthSummary[] = [];
-const EMPTY_MILESTONES: Milestone[] = [];
-const EMPTY_VELOCITY: VelocityPoint[] = [];
-const EMPTY_QUALITY: QualityPoint[] = [];
-const EMPTY_BURN: BurnChartPoint[] = [];
-const EMPTY_SIGNALS: SubsystemSignal[] = [];
 
 const STATUS_COLORS: Record<ModuleHealthStatus, string> = {
   healthy: ACCENT_EMERALD,
@@ -58,16 +52,21 @@ const SIGNAL_COLORS: Record<string, string> = {
 
 type ViewTab = 'overview' | 'velocity' | 'quality' | 'milestones';
 
+interface HolisticHealthViewProps {
+  /** Drill from a subsystem signal / dimension card into its source evaluator tab. */
+  onNavigateTab?: (tab: string) => void;
+}
+
 // ── Main Component ──────────────────────────────────────────────────────────
 
-export function HolisticHealthView() {
+export function HolisticHealthView({ onNavigateTab }: HolisticHealthViewProps = {}) {
   const summary = useProjectHealthStore((s) => s.summary);
-  const moduleHealth = useProjectHealthStore((s) => s.moduleHealth) ?? EMPTY_MODULE_HEALTH;
-  const velocityHistory = useProjectHealthStore((s) => s.velocityHistory) ?? EMPTY_VELOCITY;
-  const qualityHistory = useProjectHealthStore((s) => s.qualityHistory) ?? EMPTY_QUALITY;
-  const milestones = useProjectHealthStore((s) => s.milestones) ?? EMPTY_MILESTONES;
-  const burnChart = useProjectHealthStore((s) => s.burnChart) ?? EMPTY_BURN;
-  const subsystemSignals = useProjectHealthStore((s) => s.subsystemSignals) ?? EMPTY_SIGNALS;
+  const moduleHealth = useProjectHealthStore((s) => s.moduleHealth);
+  const velocityHistory = useProjectHealthStore((s) => s.velocityHistory);
+  const qualityHistory = useProjectHealthStore((s) => s.qualityHistory);
+  const milestones = useProjectHealthStore((s) => s.milestones);
+  const burnChart = useProjectHealthStore((s) => s.burnChart);
+  const subsystemSignals = useProjectHealthStore((s) => s.subsystemSignals);
   const isLoading = useProjectHealthStore((s) => s.isLoading);
   const error = useProjectHealthStore((s) => s.error);
   const fetchHealth = useProjectHealthStore((s) => s.fetchHealth);
@@ -76,11 +75,46 @@ export function HolisticHealthView() {
   const scanHistory = useEvaluatorStore((s) => s.scanHistory);
   const lastScan = useEvaluatorStore((s) => s.lastScan);
 
+  // Performance triage (in-memory per session) + crash stats (server-persisted)
+  // are the two specialist signals fused into the holistic summary.
+  const perfTriage = usePerformanceProfilingStore((s) => s.triage);
+  const perfSession = usePerformanceProfilingStore((s) => s.activeSession);
+  const crashStats = useCrashAnalyzerStore((s) => s.stats);
+  const fetchCrashAnalysis = useCrashAnalyzerStore((s) => s.fetchAnalysis);
+
   const [viewTab, setViewTab] = useState<ViewTab>('overview');
 
+  // Pull persisted crash data once so the crash signal is real even when the
+  // user hasn't opened the Crashes tab this session.
+  useEffect(() => {
+    fetchCrashAnalysis();
+  }, [fetchCrashAnalysis]);
+
+  const perfInput = useMemo<PerfHealthInput | null>(() => {
+    if (!perfTriage) return null;
+    return {
+      overallScore: perfTriage.overallScore,
+      bottleneck: perfTriage.bottleneck,
+      avgFPS: perfSession?.summary.avgFPS ?? null,
+      findingCount: perfTriage.findings.length,
+      sessionName: perfSession?.name ?? null,
+    };
+  }, [perfTriage, perfSession]);
+
+  const crashInput = useMemo<CrashHealthInput | null>(() => {
+    if (crashStats.totalCrashes === 0 && crashStats.patternsDetected === 0) return null;
+    return {
+      totalCrashes: crashStats.totalCrashes,
+      recentCrashes: crashStats.recentCrashes,
+      criticalCrashes: crashStats.crashesBySeverity.critical,
+      systemicIssues: crashStats.systemicIssues,
+      mostAffectedModule: crashStats.mostAffectedModule,
+    };
+  }, [crashStats]);
+
   const handleRefresh = useCallback(() => {
-    fetchHealth(checklistProgress, scanHistory, lastScan);
-  }, [fetchHealth, checklistProgress, scanHistory, lastScan]);
+    fetchHealth(checklistProgress, scanHistory, lastScan, perfInput, crashInput);
+  }, [fetchHealth, checklistProgress, scanHistory, lastScan, perfInput, crashInput]);
 
   useEffect(() => {
     handleRefresh();
@@ -163,7 +197,7 @@ export function HolisticHealthView() {
       {/* ── Top Stats Row ────────────────────────────────────────── */}
       {summary && (
         <>
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+          <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
             {/* Overall completion */}
             <SurfaceCard level={2}>
               <div className="flex items-center gap-3">
@@ -210,6 +244,14 @@ export function HolisticHealthView() {
                 </div>
               </div>
             </SurfaceCard>
+
+            {/* Performance — fused from the latest profiling triage, drills into the Perf tab */}
+            <PerformanceStatCard
+              score={summary.performanceScore}
+              bottleneck={perfTriage?.bottleneck ?? null}
+              avgFPS={perfSession?.summary.avgFPS ?? null}
+              onDrill={onNavigateTab ? () => onNavigateTab('perf') : undefined}
+            />
 
             {/* Velocity */}
             <SurfaceCard level={2}>
@@ -288,7 +330,7 @@ export function HolisticHealthView() {
                 </h3>
                 <div className="grid grid-cols-2 lg:grid-cols-3 gap-2">
                   {subsystemSignals.map((s) => (
-                    <SignalCard key={s.subsystem} signal={s} />
+                    <SignalCard key={s.subsystem} signal={s} onNavigateTab={onNavigateTab} />
                   ))}
                 </div>
               </SurfaceCard>
@@ -511,16 +553,93 @@ function MilestoneDetailCard({ milestone: ms }: { milestone: Milestone }) {
   );
 }
 
-function SignalCard({ signal: s }: { signal: SubsystemSignal }) {
+function PerformanceStatCard({
+  score,
+  bottleneck,
+  avgFPS,
+  onDrill,
+}: {
+  score: number | null;
+  bottleneck: string | null;
+  avgFPS: number | null;
+  onDrill?: () => void;
+}) {
+  const color = score === null
+    ? STATUS_NEUTRAL
+    : score >= 70
+      ? ACCENT_EMERALD
+      : score >= 40
+        ? STATUS_WARNING
+        : STATUS_ERROR;
+
+  const subtitle = score === null
+    ? 'No trace triaged'
+    : bottleneck && bottleneck !== 'balanced'
+      ? `${bottleneck}-bound`
+      : avgFPS != null
+        ? `${Math.round(avgFPS)} FPS`
+        : 'balanced load';
+
+  const inner = (
+    <div className="flex items-center gap-3">
+      <ProgressRing value={score ?? 0} size={48} strokeWidth={5} color={color} />
+      <div className="min-w-0">
+        <p className="text-2xs text-text-muted flex items-center gap-1">
+          <Gauge className="w-3 h-3" /> Performance
+        </p>
+        <p className="text-lg font-bold text-text">{score !== null ? score : '—'}</p>
+        <p className="text-2xs text-text-muted truncate">{subtitle}</p>
+      </div>
+    </div>
+  );
+
+  if (!onDrill) {
+    return <SurfaceCard level={2}>{inner}</SurfaceCard>;
+  }
   return (
-    <div className="rounded-lg border border-border p-2.5">
+    <SurfaceCard level={2}>
+      <button
+        type="button"
+        onClick={onDrill}
+        aria-label="Open performance profiling"
+        className="w-full text-left rounded-md focus-ring"
+      >
+        {inner}
+      </button>
+    </SurfaceCard>
+  );
+}
+
+function SignalCard({ signal: s, onNavigateTab }: { signal: SubsystemSignal; onNavigateTab?: (tab: string) => void }) {
+  const drillable = Boolean(s.linkTab && onNavigateTab);
+
+  const body = (
+    <>
       <div className="flex items-center gap-2 mb-1">
         <div className="w-2 h-2 rounded-full" style={{ backgroundColor: SIGNAL_COLORS[s.status] }} />
         <span className="text-2xs font-medium text-text">{s.label}</span>
+        {drillable && (
+          <ArrowUpRight className="w-3 h-3 text-text-muted ml-auto opacity-0 group-hover:opacity-100 transition-opacity" />
+        )}
       </div>
       <p className="text-xs text-text-muted">{s.metric}</p>
       <p className="text-xs text-text-muted mt-0.5">{s.detail}</p>
-    </div>
+    </>
+  );
+
+  if (!drillable) {
+    return <div className="rounded-lg border border-border p-2.5">{body}</div>;
+  }
+
+  return (
+    <button
+      type="button"
+      onClick={() => onNavigateTab!(s.linkTab!)}
+      aria-label={`Open ${s.label}`}
+      className="group rounded-lg border border-border p-2.5 text-left transition-colors hover:border-text-muted/50 hover:bg-surface/50 focus-ring"
+    >
+      {body}
+    </button>
   );
 }
 

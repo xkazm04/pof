@@ -2,12 +2,14 @@
 
 import { useState, useCallback, useMemo } from 'react';
 import { motion } from 'framer-motion';
-import { MODULE_COLORS } from '@/lib/chart-colors';
-import { FEEL_PRESETS } from '@/lib/character-feel-optimizer';
+import { MODULE_COLORS, ACCENT_EMERALD, withOpacity, OPACITY_15 } from '@/lib/chart-colors';
+import { FEEL_PRESETS, type FeelPreset } from '@/lib/character-feel-optimizer';
+import { resolveStack, countActiveLayers } from '@/lib/feel-adjustment-layers';
+import { useCharacterBlueprintStore } from '@/stores/characterBlueprintStore';
 import { BlueprintPanel, SectionHeader } from '../../unique-tabs/_design';
 import {
   TrendingUp, Crosshair, Camera, Play, Pause, RotateCcw,
-  Zap, ChevronDown,
+  Zap, ChevronDown, Layers,
 } from 'lucide-react';
 
 import type { CurvePoint } from './types';
@@ -22,32 +24,44 @@ const ACCENT = MODULE_COLORS.core;
 /* ── Main Playground Component ────────────────────────────────────────────── */
 
 export function CharacterFeelPlayground() {
-  const [activePreset, setActivePreset] = useState<string>(FEEL_PRESETS[0].id);
+  // Base preset + adjustment-layer stack are shared with the AI Feel tab via the store.
+  const activePreset = useCharacterBlueprintStore((s) => s.baseFeelPresetId);
+  const feelLayers = useCharacterBlueprintStore((s) => s.feelLayers);
+  const setBaseFeelPreset = useCharacterBlueprintStore((s) => s.setBaseFeelPreset);
+
   const [isPlaying, setIsPlaying] = useState(false);
   const [presetOpen, setPresetOpen] = useState(false);
 
   const preset = FEEL_PRESETS.find(p => p.id === activePreset) ?? FEEL_PRESETS[0];
+  const activeLayerCount = countActiveLayers(feelLayers);
+
+  // Curves seed from the RESOLVED feel (base preset + enabled layers), not the raw preset.
+  const resolvedPreset = useMemo<FeelPreset>(
+    () => ({ ...preset, profile: resolveStack(preset.profile, feelLayers) }),
+    [preset, feelLayers],
+  );
 
   // Curve state
-  const [accelPts, setAccelPts] = useState<CurvePoint[]>(() => presetToAccelCurve(preset));
-  const [dodgePts, setDodgePts] = useState<CurvePoint[]>(() => presetToDodgeCurve(preset));
-  const [cameraPts, setCameraPts] = useState<CurvePoint[]>(() => presetToCameraCurve(preset));
+  const [accelPts, setAccelPts] = useState<CurvePoint[]>(() => presetToAccelCurve(resolvedPreset));
+  const [dodgePts, setDodgePts] = useState<CurvePoint[]>(() => presetToDodgeCurve(resolvedPreset));
+  const [cameraPts, setCameraPts] = useState<CurvePoint[]>(() => presetToCameraCurve(resolvedPreset));
 
   const handlePresetChange = useCallback((id: string) => {
     const p = FEEL_PRESETS.find(fp => fp.id === id);
     if (!p) return;
-    setActivePreset(id);
-    setAccelPts(presetToAccelCurve(p));
-    setDodgePts(presetToDodgeCurve(p));
-    setCameraPts(presetToCameraCurve(p));
+    setBaseFeelPreset(id);
+    const rp: FeelPreset = { ...p, profile: resolveStack(p.profile, feelLayers) };
+    setAccelPts(presetToAccelCurve(rp));
+    setDodgePts(presetToDodgeCurve(rp));
+    setCameraPts(presetToCameraCurve(rp));
     setPresetOpen(false);
-  }, []);
+  }, [feelLayers, setBaseFeelPreset]);
 
   const handleReset = useCallback(() => {
-    setAccelPts(presetToAccelCurve(preset));
-    setDodgePts(presetToDodgeCurve(preset));
-    setCameraPts(presetToCameraCurve(preset));
-  }, [preset]);
+    setAccelPts(presetToAccelCurve(resolvedPreset));
+    setDodgePts(presetToDodgeCurve(resolvedPreset));
+    setCameraPts(presetToCameraCurve(resolvedPreset));
+  }, [resolvedPreset]);
 
   const derived = useMemo(
     () => derivedFromCurves(accelPts, dodgePts, cameraPts),
@@ -98,6 +112,18 @@ export function CharacterFeelPlayground() {
             </motion.div>
           )}
         </div>
+
+        {/* Active adjustment-layer indicator (curves seed from the resolved stack) */}
+        {activeLayerCount > 0 && (
+          <span
+            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-bold"
+            style={{ color: ACCENT_EMERALD, backgroundColor: withOpacity(ACCENT_EMERALD, OPACITY_15) }}
+            title="Curves include the AI Feel adjustment-layer stack. Reset reseeds from the resolved feel."
+          >
+            <Layers className="w-3.5 h-3.5" />
+            +{activeLayerCount} layer{activeLayerCount === 1 ? '' : 's'}
+          </span>
+        )}
 
         {/* Playback controls */}
         <div className="flex items-center gap-1 ml-auto">

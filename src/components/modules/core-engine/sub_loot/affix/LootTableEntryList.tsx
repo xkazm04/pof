@@ -1,7 +1,8 @@
 'use client';
 
-import { STATUS_ERROR } from '@/lib/chart-colors';
+import { Trash2 } from 'lucide-react';
 import type { LootEditorEntryExpanded, LootSource } from '../_shared/data';
+import { RarityDot } from '../_shared/rarityBadge';
 import { LOOT_SOURCE_LABELS } from './loot-table-editor-constants';
 
 interface LootTableEntryListProps {
@@ -29,12 +30,37 @@ export function LootTableEntryList({
           {entries.map((entry) => (
             <div key={entry.id} className="mb-1.5">
               <div className="flex items-center gap-2">
-                <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: entry.color }} />
+                <RarityDot rarity={entry.rarity} />
                 <span className="text-2xs text-text w-28 truncate" title={entry.name}>{entry.name}</span>
-                <input type="range" min={0} max={100} value={entry.weight} onChange={(e) => onUpdateWeight(entry.id, Number(e.target.value))} className="flex-1 h-1 accent-orange-500" />
-                <span className="text-2xs font-mono w-8 text-right" style={{ color: entry.color }}>{entry.weight}%</span>
-                <span className="text-2xs font-mono w-14 text-right text-text-muted">({editorTotalWeight > 0 ? ((entry.weight / editorTotalWeight) * 100).toFixed(1) : '0.0'}%)</span>
-                <button onClick={() => onRemoveEntry(entry.id)} className="text-2xs text-text-muted transition-colors px-1 cursor-pointer" onMouseEnter={e => (e.currentTarget.style.color = STATUS_ERROR)} onMouseLeave={e => (e.currentTarget.style.color = '')}>x</button>
+                <input
+                  type="range"
+                  min={0}
+                  max={100}
+                  value={entry.weight}
+                  onChange={(e) => onUpdateWeight(entry.id, Number(e.target.value))}
+                  aria-label={`Weight for ${entry.name}`}
+                  className="flex-1 h-2 rounded-full appearance-none bg-surface-deep cursor-pointer focus-ring
+                    [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:border-2 [&::-webkit-slider-thumb]:border-background [&::-webkit-slider-thumb]:bg-[var(--thumb)] [&::-webkit-slider-thumb]:shadow [&::-webkit-slider-thumb]:cursor-pointer
+                    [&::-moz-range-thumb]:h-4 [&::-moz-range-thumb]:w-4 [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:border-2 [&::-moz-range-thumb]:border-background [&::-moz-range-thumb]:bg-[var(--thumb)] [&::-moz-range-thumb]:cursor-pointer"
+                  style={{ ['--thumb' as string]: entry.color }}
+                />
+                {/* Raw authoring weight (arbitrary 0-100 magnitude, NOT a percentage). */}
+                <span className="text-2xs font-mono w-14 text-right tabular-nums" style={{ color: entry.color }} title="Raw weight (relative magnitude)">
+                  <span className="text-text-muted">wt</span> {entry.weight}
+                </span>
+                {/* Normalized drop probability across the visible table. */}
+                <span className="text-2xs font-mono w-20 text-right tabular-nums text-text-muted" title="Share of total drop weight">
+                  {editorTotalWeight > 0 ? ((entry.weight / editorTotalWeight) * 100).toFixed(1) : '0.0'}% <span className="opacity-60">share</span>
+                </span>
+                <button
+                  type="button"
+                  onClick={() => onRemoveEntry(entry.id)}
+                  aria-label={`Remove ${entry.name}`}
+                  title={`Remove ${entry.name}`}
+                  className="flex-shrink-0 grid place-items-center w-6 h-6 rounded text-text-muted hover:text-red-400 hover:bg-surface-hover transition-colors cursor-pointer focus-ring"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                </button>
               </div>
               {(entry.minQuantity !== undefined || entry.maxRarity !== undefined) && (
                 <div className="flex items-center gap-3 ml-4 mt-0.5">

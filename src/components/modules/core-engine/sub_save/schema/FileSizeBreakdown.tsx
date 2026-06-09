@@ -5,7 +5,7 @@ import { motion } from 'framer-motion';
 import { ACCENT_EMERALD, ACCENT_CYAN_LIGHT, OVERLAY_WHITE, STATUS_SUCCESS,
   withOpacity, OPACITY_20, OPACITY_10, OPACITY_5, OPACITY_8,
 } from '@/lib/chart-colors';
-import { BlueprintPanel, SectionHeader } from '../_shared/design';
+import { BlueprintPanel, SectionHeader, SAVE_TYPE } from '../_shared/design';
 import { FILE_SIZE_SECTIONS, TOTAL_BYTES, COMPRESSION_RATIO, ACCENT, formatBytes } from '../_shared/data';
 
 export function FileSizeBreakdown() {
@@ -13,7 +13,7 @@ export function FileSizeBreakdown() {
     <BlueprintPanel color={ACCENT} className="p-0 overflow-hidden">
       <div className="px-4 py-3 border-b border-border/10 flex items-center justify-between">
         <SectionHeader label="FILE_SIZE_BREAKDOWN" icon={HardDrive} color={ACCENT} />
-        <span className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted">{formatBytes(TOTAL_BYTES)} total</span>
+        <span className={`${SAVE_TYPE.body} text-text-muted`}>{formatBytes(TOTAL_BYTES)} total</span>
       </div>
 
       <div className="p-4 space-y-4 relative z-10">
@@ -70,7 +70,7 @@ export function FileSizeBreakdown() {
         {/* Compression ratio */}
         <div className="flex items-center gap-3 px-2 py-2 border border-border/10 rounded-lg font-mono text-xs" style={{ backgroundColor: `${withOpacity(ACCENT, OPACITY_5)}` }}>
           <Archive className="w-4 h-4 flex-shrink-0" style={{ color: ACCENT }} />
-          <span className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted">Compression</span>
+          <span className={`${SAVE_TYPE.body} text-text-muted`}>Compression</span>
           <div className="flex-1 h-2 rounded-full overflow-hidden" style={{ backgroundColor: `${withOpacity(ACCENT, OPACITY_8)}` }}>
             <motion.div
               initial={{ width: 0 }}

@@ -2,15 +2,15 @@
 
 import { useState, useCallback, useMemo } from 'react';
 import {
-  Code2, Copy, Check, Download, FileCode, ChevronDown,
+  Code2, Download, FileCode, ChevronDown,
   ChevronRight, Cpu, RefreshCw,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { SurfaceCard } from '@/components/ui/SurfaceCard';
 import { Badge } from '@/components/ui/Badge';
+import { CodeViewer } from '@/components/ui/CodeViewer';
 import { useEconomySimulatorStore } from '@/stores/economySimulatorStore';
-import type { GeneratedFile } from '@/lib/economy/codegen';
-import { UI_TIMEOUTS, MOTION } from '@/lib/constants';
+import { MOTION } from '@/lib/constants';
 import { MODULE_COLORS, ACCENT_PURPLE_BOLD } from '@/lib/chart-colors';
 
 // ── Constants ────────────────────────────────────────────────────────────────
@@ -35,18 +35,11 @@ export function EconomyCodeGenPanel() {
 
   const [expanded, setExpanded] = useState(false);
   const [selectedFile, setSelectedFile] = useState(0);
-  const [copiedFile, setCopiedFile] = useState<string | null>(null);
 
   const handleGenerate = useCallback(async () => {
     const res = await generateCode();
     if (res) setExpanded(true);
   }, [generateCode]);
-
-  const handleCopy = useCallback(async (file: GeneratedFile) => {
-    await navigator.clipboard.writeText(file.content);
-    setCopiedFile(file.filename);
-    setTimeout(() => setCopiedFile(null), UI_TIMEOUTS.copyFeedback);
-  }, []);
 
   const handleDownloadAll = useCallback(() => {
     if (!codeGenResult) return;
@@ -151,52 +144,24 @@ export function EconomyCodeGenPanel() {
                 ))}
               </div>
 
-              {/* File content */}
+              {/* File content — syntax-highlighted via the shared CodeViewer
+                  (Shiki). Real C++ token coloring, line numbers, copy, and
+                  download come for free; `key` forces a remount per file so the
+                  highlight recomputes when switching tabs. */}
               {activeFile && (
                 <div className="relative">
-                  {/* File description + copy */}
-                  <div className="flex items-center gap-2 px-4 py-2 bg-surface-deep border-b border-border">
-                    <Badge>
-                      {LANG_LABELS[activeFile.language] ?? activeFile.language}
-                    </Badge>
-                    <span className="text-2xs text-text-muted flex-1 truncate">
+                  {activeFile.description && (
+                    <p className="px-4 py-2 bg-surface-deep border-b border-border text-2xs text-text-muted truncate">
                       {activeFile.description}
-                    </span>
-                    <button
-                      onClick={() => handleCopy(activeFile)}
-                      className="flex items-center gap-1 px-2 py-1 rounded text-2xs font-medium text-text-muted hover:text-text hover:bg-border transition-colors"
-                    >
-                      {copiedFile === activeFile.filename ? (
-                        <>
-                          <Check className="w-3 h-3 text-green-400" />
-                          <span className="text-green-400">Copied</span>
-                        </>
-                      ) : (
-                        <>
-                          <Copy className="w-3 h-3" />
-                          Copy
-                        </>
-                      )}
-                    </button>
-                  </div>
-
-                  {/* Code block with line numbers */}
-                  <div className="max-h-96 overflow-auto">
-                    <pre className="text-2xs leading-relaxed font-mono">
-                      <code className="block">
-                        {activeFile.content.split('\n').map((line, i) => (
-                          <div key={i} className="flex hover:bg-surface-hover/30">
-                            <span className="select-none text-text-muted/30 text-right pr-3 pl-3 py-px w-10 flex-shrink-0">
-                              {i + 1}
-                            </span>
-                            <span className="text-text/90 py-px pr-4 flex-1 whitespace-pre">
-                              {line}
-                            </span>
-                          </div>
-                        ))}
-                      </code>
-                    </pre>
-                  </div>
+                    </p>
+                  )}
+                  <CodeViewer
+                    key={activeFile.filename}
+                    code={activeFile.content}
+                    fileName={activeFile.filename}
+                    lang={activeFile.language}
+                    languageLabel={LANG_LABELS[activeFile.language] ?? activeFile.language}
+                  />
                 </div>
               )}
 

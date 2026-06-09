@@ -3,6 +3,7 @@ import {
   ACCENT_CYAN, ACCENT_EMERALD, ACCENT_ORANGE, ACCENT_VIOLET,
 } from '@/lib/chart-colors';
 import type { DamageEvent, FeedbackEvent, ChoreographyAlert } from '@/lib/combat/choreography-sim';
+import type { DramaticBeatType, TensionCurve } from '@/lib/combat/tension-curve';
 
 // ── Re-export alias ────────────────────────────────────────────────────────
 export type BalanceAlert = ChoreographyAlert;
@@ -42,7 +43,21 @@ export const FEEDBACK_CHANNELS = [
   { type: 'sfx', label: 'SFX', color: FEEDBACK_CHANNEL_COLORS.sfx },
 ] as const;
 
+// ── Dramatic Beat Visual Map ───────────────────────────────────────────────
+// Color + short label per beat type. Icons live in the React components so this
+// module stays free of JSX. `tone` mirrors tension-curve's BeatTone.
+export const BEAT_STYLES: Record<DramaticBeatType, { color: string; label: string; tone: 'peak' | 'valley' | 'issue' }> = {
+  climax: { color: STATUS_WARNING, label: 'Climax', tone: 'peak' },
+  'near-death': { color: STATUS_ERROR, label: 'Near-death', tone: 'peak' },
+  comeback: { color: ACCENT_EMERALD, label: 'Comeback', tone: 'peak' },
+  breather: { color: ACCENT_CYAN, label: 'Breather', tone: 'valley' },
+  'dead-zone': { color: STATUS_INFO, label: 'Dead zone', tone: 'issue' },
+  anticlimax: { color: ACCENT_VIOLET, label: 'Anticlimax', tone: 'issue' },
+  'flat-pacing': { color: ACCENT_ORANGE, label: 'Flat pacing', tone: 'issue' },
+};
+
 // ── Lane Heights ───────────────────────────────────────────────────────────
+export const LANE_TENSION_H = 60;
 export const LANE_PACING_H = 48;
 export const LANE_DAMAGE_H = 28;
 export const LANE_ALERT_H = 20;
@@ -70,6 +85,8 @@ export interface ScrubData {
   damageEvent: DamageEvent | null;
   feedbackStates: Record<string, FeedbackEvent | null>;
   alert: BalanceAlert | null;
+  /** Dramatic tension at the scrub time, 0–1 (null when no curve) */
+  tension: number | null;
 }
 
 export interface HoverState {
@@ -89,6 +106,7 @@ export function computeScrubData(
   damageEvents: DamageEvent[],
   feedbackEvents: FeedbackEvent[],
   alerts: BalanceAlert[],
+  tensionCurve?: TensionCurve,
 ): ScrubData {
   let closestDmg: DamageEvent | null = null;
   let closestDist = 0.3;
@@ -114,5 +132,16 @@ export function computeScrubData(
     if (d < closestAlertDist) { closestAlert = a; closestAlertDist = d; }
   }
 
-  return { damageEvent: closestDmg, feedbackStates, alert: closestAlert };
+  let tension: number | null = null;
+  if (tensionCurve && tensionCurve.samples.length > 0) {
+    let best = tensionCurve.samples[0];
+    let bestDist = Math.abs(best.timeSec - time);
+    for (const s of tensionCurve.samples) {
+      const d = Math.abs(s.timeSec - time);
+      if (d < bestDist) { best = s; bestDist = d; }
+    }
+    tension = best.tension;
+  }
+
+  return { damageEvent: closestDmg, feedbackStates, alert: closestAlert, tension };
 }

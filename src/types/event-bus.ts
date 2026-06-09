@@ -137,6 +137,22 @@ export interface NavigationEvents {
   };
 }
 
+/** Test-gate verdict events — emitted by the L3/L4 drain (`drainOne`) whenever a
+ *  gate's verdict actually changes. `from` is the prior artifact status (null = no
+ *  prior); `to` is the drained verdict; `regression` is the classic pass→fail. */
+export interface GateEvents {
+  'gate.verdict.changed': {
+    catalogId: string;
+    entityId: string;
+    step: string;
+    tier: 'L3' | 'L4';
+    from: 'pass' | 'pending' | 'fail' | 'deferred' | null;
+    to: 'pass' | 'fail';
+    regression: boolean;
+    detail: string;
+  };
+}
+
 /** One-shot catalog job events */
 export interface OneShotJobEvents {
   'oneshot.started':        { jobId: string; jobName: string; totalSteps: number; catalogId: string; entityId: string };
@@ -156,6 +172,7 @@ export interface EventMap
     UE5Events,
     BuildPipelineEvents,
     PofBridgeEvents,
+    GateEvents,
     OneShotJobEvents {}
 
 /** Any valid channel name */

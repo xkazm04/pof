@@ -45,7 +45,7 @@ export interface NBARecommendation {
   breakdown: ScoreBreakdown;
 }
 
-interface ScoreBreakdown {
+export interface ScoreBreakdown {
   urgency: number;       // 0–30: dependency blockers, critical priority
   successProb: number;   // 0–25: pattern success rate, module track record
   impact: number;        // 0–20: how many features does this unblock
@@ -62,6 +62,25 @@ const W = {
   recency: 15,
   readiness: 10,
 } as const;
+
+/**
+ * Public alias of the scoring weights — the max points each factor can
+ * contribute. UI that visualises a {@link ScoreBreakdown} (e.g. the
+ * why-recommended bar) reads these so segment maxes stay single-sourced.
+ */
+export const NBA_FACTOR_WEIGHTS = W;
+
+// ── Fuzzy matching ─────────────────────────────────────────────────────────
+
+/**
+ * First-word fuzzy match: does `label` (case-insensitive) contain the first
+ * whitespace-delimited token of `candidate`? This single heuristic drives every
+ * NBA match site — feature, evaluator-rec, pattern, and failure-history — so
+ * tuning it (or testing it) happens in exactly one place.
+ */
+export function firstWordMatch(label: string, candidate: string): boolean {
+  return label.toLowerCase().includes(candidate.toLowerCase().split(' ')[0]);
+}
 
 // ── Engine ───────────────────────────────────────────────────────────────────
 
@@ -117,8 +136,7 @@ export function computeNBA(
     // ── 1. Urgency (0–30): Is this item blocking other work? ─────────────
     // Match item to feature(s) by label similarity
     const matchingFeature = moduleFeatures.find((f) =>
-      item.label.toLowerCase().includes(f.featureName.toLowerCase().split(' ')[0].toLowerCase()) ||
-      f.featureName.toLowerCase().includes(item.label.toLowerCase().split(' ')[0].toLowerCase()),
+      firstWordMatch(item.label, f.featureName) || firstWordMatch(f.featureName, item.label),
     );
 
     if (matchingFeature) {
@@ -163,8 +181,7 @@ export function computeNBA(
 
     // ── Evaluator recommendation boost ──────────────────────────────────────
     const evalRec = evalRecs.find((r) =>
-      item.label.toLowerCase().includes(r.title.toLowerCase().split(' ')[0].toLowerCase()) ||
-      r.title.toLowerCase().includes(item.label.toLowerCase().split(' ')[0].toLowerCase()),
+      firstWordMatch(item.label, r.title) || firstWordMatch(r.title, item.label),
     );
     if (evalRec) {
       const priorityScore = { critical: 1.0, high: 0.75, medium: 0.5, low: 0.25 }[evalRec.priority];
@@ -180,7 +197,7 @@ export function computeNBA(
     // ── 2. Success probability (0–25): Pattern match + module track record ──
     const matchingPatterns = patterns.filter((p) =>
       p.moduleId === moduleId && (
-        item.label.toLowerCase().includes(p.title.toLowerCase().split(' ')[0].toLowerCase()) ||
+        firstWordMatch(item.label, p.title) ||
         p.tags.some((t) => item.label.toLowerCase().includes(t.toLowerCase()))
       ),
     );
@@ -207,7 +224,7 @@ export function computeNBA(
 
     // Add pitfalls from failed history
     for (const fail of failedPrompts) {
-      if (fail.prompt.toLowerCase().includes(item.label.toLowerCase().split(' ')[0].toLowerCase())) {
+      if (firstWordMatch(fail.prompt, item.label)) {
         pitfalls.push(`Previous failure on similar task`);
         break;
       }

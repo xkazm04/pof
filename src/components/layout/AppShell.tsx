@@ -1,8 +1,7 @@
 'use client';
 
 import { useEffect, useSyncExternalStore } from 'react';
-import { motion } from 'framer-motion';
-import { Gamepad2 } from 'lucide-react';
+import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import { useProjectStore } from '@/stores/projectStore';
 import { useCLIPanelStore } from '@/components/cli/store/cliPanelStore';
 import { TopBar } from './TopBar';
@@ -10,6 +9,7 @@ import { Sidebar } from './Sidebar';
 import { ModuleRenderer } from './ModuleRenderer';
 import { CLIBottomPanel } from './CLIBottomPanel';
 import { ActivityFeedPanel } from './ActivityFeedPanel';
+import { ShellSkeleton } from './ShellSkeleton';
 import { SetupWizard } from '@/components/modules/project-setup/SetupWizard';
 import { useActivityFeedBridge } from '@/hooks/useActivityFeedBridge';
 import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts';
@@ -18,9 +18,12 @@ import { useDynamicTitle } from '@/hooks/useDynamicTitle';
 import { usePofBridge } from '@/hooks/usePofBridge';
 import { GlobalSearchPanel } from './GlobalSearchPanel';
 import { EventBusDevTools } from './EventBusDevTools';
+import { PreflightGuardDialog } from '@/components/cli/PreflightGuardDialog';
+import { DURATION, EASE_OUT } from '@/lib/motion';
 
 export function AppShell() {
   const isSetupComplete = useProjectStore((s) => s.isSetupComplete);
+  const prefersReduced = useReducedMotion();
   // Bridge CLI/evaluator events into activity feed
   useActivityFeedBridge();
 
@@ -56,40 +59,53 @@ export function AppShell() {
     () => false,
   );
 
-  if (!hydrated) {
-    return (
-      <div className="h-screen flex items-center justify-center bg-background">
+  // One continuous reveal: the branded shell skeleton fades out while the real
+  // shell fades in underneath. Because the skeleton's placeholders sit where the
+  // top bar, rail, and content land, there is no spinner-to-app cut or layout
+  // jump on first paint.
+  const fadeDuration = prefersReduced ? 0 : DURATION.base;
+
+  return (
+    <>
+      {hydrated && (
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
-          transition={{ duration: 0.22 }}
-          className="flex flex-col items-center gap-3"
+          transition={{ duration: fadeDuration, ease: EASE_OUT }}
+          className="h-screen"
         >
-          <Gamepad2 className="w-12 h-12 text-[#00ff88]" />
-          <span className="text-lg font-semibold text-text tracking-wide">
-            POF
-          </span>
-          <div className="w-5 h-5 border-2 border-accent-strong border-t-[#00ff88] rounded-full animate-spin" />
+          {isSetupComplete ? (
+            <div className="h-screen flex flex-col overflow-hidden bg-background">
+              <TopBar />
+              <div className="flex-1 flex overflow-hidden">
+                <Sidebar />
+                <ModuleRenderer />
+                <ActivityFeedPanel />
+              </div>
+              <CLIBottomPanel />
+              <GlobalSearchPanel />
+              <EventBusDevTools />
+              <PreflightGuardDialog />
+            </div>
+          ) : (
+            <SetupWizard />
+          )}
         </motion.div>
-      </div>
-    );
-  }
+      )}
 
-  if (!isSetupComplete) {
-    return <SetupWizard />;
-  }
-
-  return (
-    <div className="h-screen flex flex-col overflow-hidden bg-background">
-      <TopBar />
-      <div className="flex-1 flex overflow-hidden">
-        <Sidebar />
-        <ModuleRenderer />
-        <ActivityFeedPanel />
-      </div>
-      <CLIBottomPanel />
-      <GlobalSearchPanel />
-      <EventBusDevTools />
-    </div>
+      <AnimatePresence>
+        {!hydrated && (
+          <motion.div
+            key="shell-skeleton"
+            className="fixed inset-0 z-50"
+            initial={false}
+            exit={{ opacity: 0 }}
+            transition={{ duration: fadeDuration, ease: EASE_OUT }}
+          >
+            <ShellSkeleton />
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </>
   );
 }

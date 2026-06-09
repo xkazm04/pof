@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef, useEffect, useCallback } from 'react';
+import { useRef, useEffect, useCallback, useId } from 'react';
 import {
   Search, ArrowUp, ArrowDown, CornerDownLeft,
 } from 'lucide-react';
@@ -23,6 +23,14 @@ interface Props {
 export function SpellbookSearchPalette({ query, setQuery, filtered, selectedIdx, setSelectedIdx, onClose, onNavigate }: Props) {
   const inputRef = useRef<HTMLInputElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
+
+  // Stable ids wiring the combobox input to its listbox + active option
+  const baseId = useId();
+  const listboxId = `${baseId}-listbox`;
+  const optionId = (resultId: string) => `${baseId}-option-${resultId}`;
+  const hasResults = filtered.length > 0;
+  const activeOption = hasResults ? filtered[selectedIdx] : undefined;
+  const activeDescendant = activeOption ? optionId(activeOption.id) : undefined;
 
   // Focus input on mount
   useEffect(() => {
@@ -92,6 +100,12 @@ export function SpellbookSearchPalette({ query, setQuery, filtered, selectedIdx,
           <Search className="w-4 h-4 text-text-muted flex-shrink-0" />
           <input
             ref={inputRef}
+            role="combobox"
+            aria-expanded={hasResults}
+            aria-controls={listboxId}
+            aria-activedescendant={activeDescendant}
+            aria-autocomplete="list"
+            aria-label="Search abilities, tags, effects, attributes"
             value={query}
             onChange={e => setQuery(e.target.value)}
             onKeyDown={handleKeyDown}
@@ -104,7 +118,13 @@ export function SpellbookSearchPalette({ query, setQuery, filtered, selectedIdx,
         </div>
 
         {/* Results list */}
-        <div ref={listRef} className="max-h-[300px] overflow-y-auto custom-scrollbar p-1">
+        <div
+          ref={listRef}
+          id={listboxId}
+          role="listbox"
+          aria-label="Search results"
+          className="max-h-[300px] overflow-y-auto custom-scrollbar p-1"
+        >
           {filtered.length === 0 ? (
             <div className="px-3 py-6 text-center text-sm text-text-muted">
               No results for &ldquo;{query}&rdquo;
@@ -113,6 +133,10 @@ export function SpellbookSearchPalette({ query, setQuery, filtered, selectedIdx,
             filtered.map((r, i) => (
               <button
                 key={r.id}
+                id={optionId(r.id)}
+                role="option"
+                aria-selected={i === selectedIdx}
+                tabIndex={-1}
                 onClick={() => handleSelect(r)}
                 onMouseEnter={() => setSelectedIdx(i)}
                 className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-left transition-colors ${

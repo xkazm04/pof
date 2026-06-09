@@ -106,10 +106,57 @@ export function createDefaultProfile(platform: PlatformId, config: BuildConfig =
   };
 }
 
-export const SUPPORTED_PLATFORMS: Array<{ id: PlatformId; label: string; icon: string }> = [
-  { id: 'Win64', label: 'Windows', icon: 'Monitor' },
-  { id: 'Linux', label: 'Linux', icon: 'Terminal' },
-  { id: 'Mac', label: 'macOS', icon: 'Laptop' },
-  { id: 'Android', label: 'Android', icon: 'Smartphone' },
-  { id: 'IOS', label: 'iOS', icon: 'Tablet' },
-];
+// ── Canonical platform identity ──────────────────────────────────────────────
+// The UE `PlatformId` token (Win64, IOS, …) is the single canonical id used for
+// storage, budget lookup and history filtering. `PLATFORM_LABELS` is the one
+// id→label map; `normalizePlatformId` collapses any historical spelling (a
+// friendly name like "Windows", or a differently-cased token) back to the
+// canonical id, and `platformLabel` resolves any spelling to its display label.
+
+/** All canonical platform ids, in display order. */
+export const PLATFORM_IDS: PlatformId[] = ['Win64', 'Linux', 'Mac', 'Android', 'IOS'];
+
+/** The single source of truth for platform display names. */
+export const PLATFORM_LABELS: Record<PlatformId, string> = {
+  Win64: 'Windows',
+  Linux: 'Linux',
+  Mac: 'macOS',
+  Android: 'Android',
+  IOS: 'iOS',
+};
+
+const PLATFORM_ICONS: Record<PlatformId, string> = {
+  Win64: 'Monitor',
+  Linux: 'Terminal',
+  Mac: 'Laptop',
+  Android: 'Smartphone',
+  IOS: 'Tablet',
+};
+
+// Friendly names and token spellings that map to a canonical id (lower-cased keys).
+const PLATFORM_ALIASES: Record<string, PlatformId> = {
+  win64: 'Win64', windows: 'Win64', win: 'Win64', pc: 'Win64',
+  linux: 'Linux',
+  mac: 'Mac', macos: 'Mac', osx: 'Mac', macosx: 'Mac',
+  android: 'Android',
+  ios: 'IOS',
+};
+
+/**
+ * Collapse any historical platform spelling (friendly name or UE token, any
+ * case/whitespace) to the canonical `PlatformId`. Unknown values pass through
+ * unchanged so custom platforms keep working.
+ */
+export function normalizePlatformId(raw: string): string {
+  if (!raw) return raw;
+  return PLATFORM_ALIASES[raw.trim().toLowerCase()] ?? raw;
+}
+
+/** Display label for any platform spelling; unknown values pass through unchanged. */
+export function platformLabel(raw: string): string {
+  const id = normalizePlatformId(raw);
+  return (PLATFORM_LABELS as Record<string, string>)[id] ?? raw;
+}
+
+export const SUPPORTED_PLATFORMS: Array<{ id: PlatformId; label: string; icon: string }> =
+  PLATFORM_IDS.map((id) => ({ id, label: PLATFORM_LABELS[id], icon: PLATFORM_ICONS[id] }));

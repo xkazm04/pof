@@ -1,9 +1,10 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { motion } from 'framer-motion';
+import { motion, useReducedMotion } from 'framer-motion';
 import { Dna } from 'lucide-react';
 import type { GameplayPattern, TelemetrySnapshot } from '@/types/telemetry';
+import { motionSafe } from '@/lib/motion';
 import {
   STATUS_SUCCESS, STATUS_WARNING, STATUS_ERROR, STATUS_INFO,
   STATUS_LIME, STATUS_IMPROVED,
@@ -63,6 +64,7 @@ function buildSmoothPath(points: { x: number; y: number }[]): string {
 
 export function GenreDnaTimeline({ history }: { history: TelemetrySnapshot[] }) {
   const [hovered, setHovered] = useState<GameplayPattern | null>(null);
+  const prefersReduced = useReducedMotion();
 
   // History is newest-first; reverse to chronological (oldest left → newest right).
   const scans = useMemo(() => [...history].reverse(), [history]);
@@ -106,9 +108,9 @@ export function GenreDnaTimeline({ history }: { history: TelemetrySnapshot[] }) 
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 8 }}
+      initial={prefersReduced ? { opacity: 1, y: 0 } : { opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.22, delay: 0.18 }}
+      transition={motionSafe({ duration: 0.22, delay: 0.18 }, prefersReduced)}
     >
       <div className="flex items-center gap-2 mb-2.5">
         <Dna className="w-3.5 h-3.5 text-text-muted" />
@@ -161,24 +163,24 @@ export function GenreDnaTimeline({ history }: { history: TelemetrySnapshot[] }) 
                   strokeWidth={6}
                   strokeOpacity={dim ? 0.04 : 0.16}
                   strokeLinecap="round" strokeLinejoin="round"
-                  initial={{ pathLength: 0 }}
+                  initial={prefersReduced ? { pathLength: 1 } : { pathLength: 0 }}
                   animate={{ pathLength: 1 }}
-                  transition={{ duration: 0.9, delay, ease: 'easeOut' }}
+                  transition={motionSafe({ duration: 0.9, delay, ease: 'easeOut' } as const, prefersReduced)}
                 />
                 <motion.path
                   d={path} fill="none" stroke={color}
                   strokeWidth={1.75}
                   strokeOpacity={dim ? 0.22 : 1}
                   strokeLinecap="round" strokeLinejoin="round"
-                  initial={{ pathLength: 0 }}
+                  initial={prefersReduced ? { pathLength: 1 } : { pathLength: 0 }}
                   animate={{ pathLength: 1 }}
-                  transition={{ duration: 0.9, delay, ease: 'easeOut' }}
+                  transition={motionSafe({ duration: 0.9, delay, ease: 'easeOut' } as const, prefersReduced)}
                 />
                 <motion.circle
                   cx={last.x} cy={last.y} r={hovered === pattern ? 4 : 3}
                   fill={color} fillOpacity={dim ? 0.3 : 1}
-                  initial={{ scale: 0 }} animate={{ scale: 1 }}
-                  transition={{ duration: 0.3, delay: delay + 0.9 }}
+                  initial={prefersReduced ? { scale: 1 } : { scale: 0 }} animate={{ scale: 1 }}
+                  transition={motionSafe({ duration: 0.3, delay: delay + 0.9 }, prefersReduced)}
                 />
                 <text
                   x={W - PAD.right + 8} y={labelY}

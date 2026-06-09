@@ -103,7 +103,7 @@ function DependencyGraph({ asset, allAssets, dependencies }: DependencyGraphProp
         return (
           <g key={`src-${s.name}`}>
             <line x1={160} y1={y} x2={centerX - 60} y2={centerY}
-              stroke="#2a2a4a" strokeWidth={1} markerEnd="url(#arrowhead)" />
+              stroke="var(--border)" strokeWidth={1} markerEnd="url(#arrowhead)" />
             <rect x={10} y={y - 12} width={150} height={24} rx={4} fill="var(--surface-deep)" stroke={conf.color + '40'} strokeWidth={1} />
             <circle cx={22} cy={y} r={4} fill={conf.color} />
             <text x={30} y={y + 3.5} fill="var(--text-muted)" fontSize={10} fontFamily="monospace">{s.name.length > 18 ? s.name.slice(0, 17) + '…' : s.name}</text>
@@ -126,7 +126,7 @@ function DependencyGraph({ asset, allAssets, dependencies }: DependencyGraphProp
         return (
           <g key={`tgt-${t.name}`}>
             <line x1={centerX + 55} y1={centerY} x2={svgW - 160} y2={y}
-              stroke="#2a2a4a" strokeWidth={1} markerEnd="url(#arrowhead)" />
+              stroke="var(--border)" strokeWidth={1} markerEnd="url(#arrowhead)" />
             <rect x={svgW - 160} y={y - 12} width={150} height={24} rx={4} fill="var(--surface-deep)" stroke={conf.color + '40'} strokeWidth={1} />
             <circle cx={svgW - 148} cy={y} r={4} fill={conf.color} />
             <text x={svgW - 140} y={y + 3.5} fill="var(--text-muted)" fontSize={10} fontFamily="monospace">{t.name.length > 18 ? t.name.slice(0, 17) + '…' : t.name}</text>
@@ -262,32 +262,7 @@ export function AssetInventory() {
           Scan Content/
         </button>
         {bridgeConnected && bridgeSummary && (
-          <div className="rounded-lg border border-green-500/20 bg-green-500/5 p-3 space-y-2 w-full max-w-sm">
-            <div className="flex items-center justify-between">
-              <h4 className="text-xs font-semibold text-green-400 flex items-center gap-1.5">
-                <Plug className="w-3 h-3" />
-                Bridge Manifest
-              </h4>
-              <span className="text-2xs text-text-muted font-mono">{bridgeSummary.checksum}</span>
-            </div>
-            <div className="grid grid-cols-5 gap-2">
-              {([
-                ['Blueprints', bridgeSummary.blueprints],
-                ['Materials', bridgeSummary.materials],
-                ['Animations', bridgeSummary.animations],
-                ['DataTables', bridgeSummary.dataTables],
-                ['Other', bridgeSummary.other],
-              ] as const).map(([label, count]) => (
-                <div key={label} className="text-center">
-                  <div className="text-sm font-bold text-text">{count}</div>
-                  <div className="text-2xs text-text-muted">{label}</div>
-                </div>
-              ))}
-            </div>
-            <div className="text-2xs text-text-muted">
-              {bridgeSummary.total} total assets · Last updated {new Date(bridgeSummary.generatedAt).toLocaleTimeString()}
-            </div>
-          </div>
+          <BridgeManifestCard summary={bridgeSummary} className="w-full max-w-sm" />
         )}
         {!projectPath && (
           <p className="text-xs text-red-400/70">Set your project path in Project Setup first</p>
@@ -359,32 +334,7 @@ export function AssetInventory() {
 
       {/* Bridge Assets summary */}
       {bridgeConnected && bridgeSummary && (
-        <div className="rounded-lg border border-green-500/20 bg-green-500/5 p-3 space-y-2">
-          <div className="flex items-center justify-between">
-            <h4 className="text-xs font-semibold text-green-400 flex items-center gap-1.5">
-              <Plug className="w-3 h-3" />
-              Bridge Manifest
-            </h4>
-            <span className="text-2xs text-text-muted font-mono">{bridgeSummary.checksum}</span>
-          </div>
-          <div className="grid grid-cols-5 gap-2">
-            {([
-              ['Blueprints', bridgeSummary.blueprints],
-              ['Materials', bridgeSummary.materials],
-              ['Animations', bridgeSummary.animations],
-              ['DataTables', bridgeSummary.dataTables],
-              ['Other', bridgeSummary.other],
-            ] as const).map(([label, count]) => (
-              <div key={label} className="text-center">
-                <div className="text-sm font-bold text-text">{count}</div>
-                <div className="text-2xs text-text-muted">{label}</div>
-              </div>
-            ))}
-          </div>
-          <div className="text-2xs text-text-muted">
-            {bridgeSummary.total} total assets · Last updated {new Date(bridgeSummary.generatedAt).toLocaleTimeString()}
-          </div>
-        </div>
+        <BridgeManifestCard summary={bridgeSummary} />
       )}
 
       {/* Type filter chips */}
@@ -421,7 +371,7 @@ export function AssetInventory() {
           placeholder="Search by name or path..."
           value={search}
           onChange={e => setSearch(e.target.value)}
-          className="w-full pl-8 pr-3 py-1.5 rounded-md bg-surface-deep border border-border text-xs text-text placeholder-text-muted focus:outline-none focus:border-[#3b3b6a]"
+          className="w-full pl-8 pr-3 py-1.5 rounded-md bg-surface-deep border border-border text-xs text-text placeholder-text-muted focus-ring-inset"
         />
       </div>
 
@@ -514,7 +464,7 @@ export function AssetInventory() {
                           initial={{ height: 0, opacity: 0 }}
                           animate={{ height: 'auto', opacity: 1 }}
                           exit={{ height: 0, opacity: 0 }}
-                          className="relative z-10 flex-1 bg-[#080818]/60 backdrop-blur-md"
+                          className="relative z-10 flex-1 bg-background/60 backdrop-blur-md"
                         >
                           <div className="p-4 border-t" style={{ borderColor: `${conf.color}20` }}>
                             <div className="flex justify-between items-center mb-4">
@@ -553,6 +503,50 @@ export function AssetInventory() {
           Showing {displayAssets.length} of {scanResult.assets.length} assets
         </div>
       )}
+    </div>
+  );
+}
+
+// ── Bridge Manifest Card ──
+
+interface BridgeManifestSummary {
+  blueprints: number;
+  materials: number;
+  animations: number;
+  dataTables: number;
+  other: number;
+  total: number;
+  checksum: string;
+  generatedAt: string;
+}
+
+function BridgeManifestCard({ summary, className = '' }: { summary: BridgeManifestSummary; className?: string }) {
+  return (
+    <div className={`rounded-lg border border-green-500/20 bg-green-500/5 p-3 space-y-2 ${className}`.trim()}>
+      <div className="flex items-center justify-between">
+        <h4 className="text-xs font-semibold text-green-400 flex items-center gap-1.5">
+          <Plug className="w-3 h-3" />
+          Bridge Manifest
+        </h4>
+        <span className="text-2xs text-text-muted font-mono">{summary.checksum}</span>
+      </div>
+      <div className="grid grid-cols-5 gap-2">
+        {([
+          ['Blueprints', summary.blueprints],
+          ['Materials', summary.materials],
+          ['Animations', summary.animations],
+          ['DataTables', summary.dataTables],
+          ['Other', summary.other],
+        ] as const).map(([label, count]) => (
+          <div key={label} className="text-center">
+            <div className="text-sm font-bold text-text">{count}</div>
+            <div className="text-2xs text-text-muted">{label}</div>
+          </div>
+        ))}
+      </div>
+      <div className="text-2xs text-text-muted">
+        {summary.total} total assets · Last updated {new Date(summary.generatedAt).toLocaleTimeString()}
+      </div>
     </div>
   );
 }

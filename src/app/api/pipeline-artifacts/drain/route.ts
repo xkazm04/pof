@@ -1,11 +1,7 @@
 import { NextRequest } from 'next/server';
 import { apiSuccess, apiError } from '@/lib/api-utils';
 import { getOriginFromRequest } from '@/lib/constants';
-import { buildExecutors, collectDeferred, drainAll, type DrainFilter, type GateTier } from '@/lib/test-gate-runner';
-
-function parseTier(v: string | null | undefined): GateTier | undefined {
-  return v === 'L3' || v === 'L4' ? v : undefined;
-}
+import { buildExecutors, collectDeferred, drainAll, parseDrainFilter, type DrainFilter } from '@/lib/test-gate-runner';
 
 // Module-level in-flight set, scoped per catalogId|entityId (global key when both omitted).
 // The drain talks to a shared, non-reentrant UE editor — overlapping requests would clobber
@@ -19,11 +15,7 @@ export function __resetDrainInFlight() { drainInFlight.clear(); }
 export async function GET(req: NextRequest) {
   try {
     const sp = req.nextUrl.searchParams;
-    const filter: DrainFilter = {
-      ...(parseTier(sp.get('tier')) ? { tier: parseTier(sp.get('tier')) } : {}),
-      ...(sp.get('catalogId') ? { catalogId: sp.get('catalogId')! } : {}),
-      ...(sp.get('entityId') ? { entityId: sp.get('entityId')! } : {}),
-    };
+    const filter = parseDrainFilter((k) => sp.get(k));
     return apiSuccess(collectDeferred(filter));
   } catch (e) {
     return apiError(e instanceof Error ? e.message : 'drain GET failed', 500);
@@ -42,11 +34,7 @@ export async function POST(req: NextRequest) {
       executor?: 'bridge' | 'spawn'; port?: number; allowSpawn?: boolean; limit?: number;
       screenshotPath?: string; visualMode?: 'hud' | 'texture' | 'lighting' | 'character';
     };
-    const filter: DrainFilter = {
-      ...(parseTier(body.tier) ? { tier: parseTier(body.tier) } : {}),
-      ...(body.catalogId ? { catalogId: body.catalogId } : {}),
-      ...(body.entityId ? { entityId: body.entityId } : {}),
-    };
+    const filter = parseDrainFilter((k) => body[k]);
     const key = drainKey(filter);
     if (drainInFlight.has(key)) {
       const scope = filter.catalogId || filter.entityId

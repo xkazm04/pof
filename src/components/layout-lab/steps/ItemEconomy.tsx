@@ -4,13 +4,12 @@ import { Lbl } from './controls';
 import { StepFrame } from './StepFrame';
 import { CliProduce } from './shared/CliProduce';
 import { ChartPanel } from './shared/ChartPanel';
-import { useLabStep, useLabPipelineStore } from '../labPipelineStore';
-import { ITEM_STEP_SPECS } from './itemsSteps';
+import { useStaticStep } from './useStaticStep';
+import { ITEM_STEP_SPECS, expectedPrice, priceRatio, priceInBand } from './itemsSteps';
 import type { StepProps } from './stepProps';
 
 const TARGET = 100;
 const PEERS_POWER = [88, 94, 96, 99, 101, 104, 110, 118];
-const EXPECTED = (p: number) => Math.round(p * 1.4);
 
 const BARS_MAX = 130;
 const X_DOMAIN: readonly [number, number] = [84, 124];
@@ -18,24 +17,23 @@ const Y_DOMAIN: readonly [number, number] = [0, 200];
 
 /** Items · Economy. View: budget bars + price/power curve | distribution (persisted). Produce: tuned values. */
 export function ItemEconomy({ t, entity, step }: StepProps) {
-  const art = useLabStep(entity.id, step);
-  const produce = useLabPipelineStore((s) => s.produce);
+  const { art, runProduce } = useStaticStep(entity, step);
   const data = (art?.data ?? {}) as Record<string, number | string>;
   const tuned = data.power != null;
   const power = Number(data.power ?? TARGET);
   const c = Number(data.cost ?? 0);
-  const ratio = c / EXPECTED(power);
-  const priceOk = tuned && ratio >= 0.8 && ratio <= 1.2;
+  const ratio = priceRatio(c, power);
+  const priceOk = tuned && priceInBand(c, power);
   const hi = !tuned ? t.muted : priceOk ? t.ok : t.bad;
 
-  const referencePoints = PEERS_POWER.map((p) => ({ x: p, y: EXPECTED(p) }));
+  const referencePoints = PEERS_POWER.map((p) => ({ x: p, y: expectedPrice(p) }));
   const accentPoints = tuned
     ? [{ x: power, y: Math.min(c, Y_DOMAIN[1]), color: hi, label: `${entity.name}: ${c}g for power ${power}` }]
     : [];
 
   return (
-    <StepFrame t={t} acceptance={ITEM_STEP_SPECS[step].accept(art)}
-      onFix={() => produce(entity.id, step, ITEM_STEP_SPECS[step].produce(entity))}
+    <StepFrame t={t} acceptance={ITEM_STEP_SPECS[step].accept(art?.data ?? {})}
+      onFix={runProduce}
       panels={[
         {
           label: 'Budget & curve',
@@ -99,7 +97,7 @@ export function ItemEconomy({ t, entity, step }: StepProps) {
               <CliProduce t={t} label="Tune within budget (CLI)" rows={3}
                 note="Writes cost / rarity / drop-weight to the UE item row + the pipeline store."
                 buildPrompt={(dir) => `Tune cost/rarity for ${entity.name} onto the price/power curve (tier target ${TARGET}). ${dir}`}
-                onComplete={() => produce(entity.id, step, ITEM_STEP_SPECS[step].produce(entity))} />
+                onComplete={runProduce} />
               {tuned && (
                 <span className={t.fontMono} style={{ fontSize: 14, color: priceOk ? t.ok : t.bad }}>
                   cost {c}g for power {power}{priceOk ? ' · in band' : ' · OUTLIER'}

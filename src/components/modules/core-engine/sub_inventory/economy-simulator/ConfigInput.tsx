@@ -3,7 +3,7 @@
 /* ── Config Input ─────────────────────────────────────────────────────── */
 
 const INPUT_CLS =
-  'w-16 text-xs font-mono font-bold px-1.5 py-1 rounded bg-surface-deep border border-border/40 text-text focus:outline-none focus:border-blue-500/50';
+  'w-16 text-xs font-mono font-bold px-1.5 py-1 rounded bg-surface-deep border border-border/40 text-text focus-ring-inset';
 
 export function ConfigInput({ label, value, onChange, min, max, step, wide }: {
   label: string; value: number; onChange: (v: number) => void;

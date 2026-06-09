@@ -7,8 +7,15 @@ The chassis reaches **config-complete (L0–L2)** entirely in parallel; **L3 run
 1. **Collect** — query `pipeline_artifacts WHERE status='deferred'` (optionally filtered by tier/catalog/entity). Each row becomes a `GateJob`. For **L3** the UE automation test name is recovered from the deferred `reason` (`runtimeDeferred(testName,…)` writes `live-UE runner not yet run: <testName>`).
 2. **Run** — one job at a time (the implicit lease), via a tier-matched **executor**.
 3. **Write back** — the verdict (`pass`/`fail`) upserts the same artifact, preserving its `data`/`ueAssets`/`tier`, setting `status` + `reason` to the verdict detail. The Test Gate flips `deferred → pass/fail`; the rollup updates.
+4. **Announce** — when the verdict actually *moves*, `drainOne` emits `gate.verdict.changed` on the event bus (carrying `from`/`to`/`regression`). A skip leaves the row deferred and emits nothing.
 
 `deferred` stays a first-class state: an unavailable executor or a job missing its test name is **skipped** (stays deferred), never failed.
+
+## Notifications (opt-in webhook)
+
+A long unattended drain shouldn't be a black box. The `gate.verdict.changed` event feeds a server-side notifier (`src/lib/notify/gate-notifier.ts`, registered once in `src/instrumentation.ts` next to the nightly-build cron) that POSTs to an outbound webhook — Slack (`{text}`), Discord (`{content}`), or a generic JSON envelope.
+
+Configured exactly like the nightly-build job: a `settings`-table row (`gate_notify`) holding `{ enabled, webhookUrl, target, mode }`, **disabled by default**. `mode` picks the threshold — `all` (every change), `failures` (any change landing on fail — deferred→fail or pass→fail), or `regressions` (only pass→fail). Managed via `GET`/`POST /api/notify/gate` (actions `save` / `test`) and the **Gate Notifications** panel under the build module's unattended-operations settings. Dispatch is fire-and-forget: a slow or failing webhook never blocks the drain. The pure `classifyVerdictChange`/`shouldNotify` (`src/lib/notify/verdict-change.ts`) define what counts.
 
 ## Executor seam (`src/lib/test-gate-runner/`)
 
@@ -26,7 +33,7 @@ interface GateExecutor {
 | Executor | Tier | Mechanism | Default |
 |----------|------|-----------|---------|
 | **bridge** (`bridgeExecutor.ts`) | L3 | POSTs `filter=<testName>` to the running editor's **PoF Bridge plugin** (`127.0.0.1:30040/pof/test/run-automation`), polls results, maps `passed/failed`. Safest on the shared tree — no spawn, no `PoF.log` clobber, no lease juggling. | **yes** |
-| **spawn** (`spawnExecutor.ts`) | L3 | Assembles + runs headless `UnrealEditor-Cmd … -ExecCmds="Automation RunTests <testName>;Quit" -nullrhi … -abslog=<unique>`, judges by **`-abslog` markers (`Result={Success}` / `[gate] RESULT=PASS`), not exit code**. Real code, **gated OFF by default** (needs `POF_UE_EDITOR_CMD` + `POF_UE_UPROJECT` env + explicit `allowSpawn`) — spawning UE collides with other sessions on the shared tree. | off |
+| **spawn** (`spawnExecutor.ts`) | L3 | Assembles + runs headless `UnrealEditor-Cmd … -ExecCmds="Automation RunTests <testName>;Quit" -nullrhi … -abslog=<unique>`, judges by **`-abslog` markers (`Result={Success}` / `[gate] RESULT=PASS`), not exit code**. Both `run` branches — automation (`runAutomation`) and behavioural scenario (`runScenario`) — share one **SIGKILL watchdog** (`spawnAndWait`, default 180s via `automationTimeoutMs`/`scenarioTimeoutMs`) so a headless editor that never quits can't hang the drain worker. Real code, **gated OFF by default** (needs `POF_UE_EDITOR_CMD` + `POF_UE_UPROJECT` env + explicit `allowSpawn`) — spawning UE collides with other sessions on the shared tree. | off |
 | **visual-bridge** (`visualExecutor.ts`) | L4 | Requests a HighResShot via the bridge, then runs the existing `/api/verify/visual` Gemini check → records to `visual_verifications` + writes the artifact verdict. Honestly **skips** (stays deferred) when no screenshot source is reachable — this is the known "missing render gate". | yes (best-effort) |
 
 The seam means the **mode is chosen at call time**, not baked in (the contract's "configurable (both)").

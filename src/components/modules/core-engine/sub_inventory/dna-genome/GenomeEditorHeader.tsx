@@ -2,9 +2,9 @@
 
 import { Dna, Plus, Upload, Barcode } from 'lucide-react';
 import { ACCENT_CYAN, ACCENT_VIOLET, OPACITY_10, OPACITY_20,
-  withOpacity, OPACITY_50, OPACITY_8,
+  withOpacity, OPACITY_8,
 } from '@/lib/chart-colors';
-import { BlueprintPanel } from '@/components/modules/core-engine/unique-tabs/_design';
+import { UniqueTabHeader } from '@/components/modules/core-engine/unique-tabs/_design';
 import { ACCENT } from './data';
 
 interface Props {
@@ -16,22 +16,13 @@ interface Props {
 
 export function GenomeEditorHeader({ genomesCount, onToggleExport, onToggleImport, onAdd }: Props) {
   return (
-    <BlueprintPanel color={ACCENT} className="p-3" noBrackets>
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <div className="p-1.5 rounded-lg relative overflow-hidden group">
-            <div className="absolute inset-0 opacity-20" style={{ backgroundColor: ACCENT }} />
-            <Dna className="w-4 h-4 relative z-10" style={{ color: ACCENT, filter: `drop-shadow(0 0 4px ${withOpacity(ACCENT, OPACITY_50)})` }} />
-          </div>
-          <div className="flex flex-col">
-            <span className="text-sm font-bold text-text tracking-wide">Item DNA Genome System</span>
-            <span className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted">
-              <span className="font-medium" style={{ color: ACCENT }}>{genomesCount}</span>
-              <span className="opacity-60"> genomes defined</span>
-            </span>
-          </div>
-        </div>
-        <div className="flex items-center gap-1.5">
+    <UniqueTabHeader
+      icon={Dna}
+      title="Item DNA Genome System"
+      color={ACCENT}
+      subtitle={<><span className="font-medium" style={{ color: ACCENT }}>{genomesCount}</span> genomes defined</>}
+      action={
+        <>
           <button
             onClick={onToggleExport}
             className="flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium transition-colors"
@@ -53,8 +44,8 @@ export function GenomeEditorHeader({ genomesCount, onToggleExport, onToggleImpor
           >
             <Plus className="w-3 h-3" /> New Genome
           </button>
-        </div>
-      </div>
-    </BlueprintPanel>
+        </>
+      }
+    />
   );
 }

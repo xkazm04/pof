@@ -3,6 +3,7 @@
 import { useCallback } from 'react';
 import { Search, Loader2 } from 'lucide-react';
 import { useAssetBrowserStore } from './useAssetBrowserStore';
+import { useAssetLibraryStore } from './useAssetLibraryStore';
 import { AssetCard } from './AssetCard';
 import { VISUAL_GEN_FOCUS_RING } from '@/lib/visual-gen/ui';
 import type { AssetSearchResult, AssetSource, AssetCategory } from '@/lib/visual-gen/asset-sources';
@@ -32,6 +33,7 @@ export function BrowsePanel() {
   const setResults = useAssetBrowserStore((s) => s.setResults);
   const setSearching = useAssetBrowserStore((s) => s.setSearching);
   const searchSketchfab = useAssetBrowserStore((s) => s.searchSketchfab);
+  const recordDownload = useAssetLibraryStore((s) => s.recordDownload);
 
   const handleSearch = useCallback(async () => {
     if (activeSource === 'sketchfab') {
@@ -60,11 +62,14 @@ export function BrowsePanel() {
   }, [activeSource, activeCategory, query, setResults, setSearching, searchSketchfab]);
 
   const handleDownload = useCallback((asset: AssetSearchResult) => {
-    // For now, open download URL in new tab
+    // Track every download in the local library (source/category/license/tags +
+    // thumbnail), then open the download URL. Recording is fire-and-forget so a
+    // persistence hiccup never blocks the actual download.
+    void recordDownload(asset);
     if (asset.downloadUrl) {
       window.open(asset.downloadUrl, '_blank');
     }
-  }, []);
+  }, [recordDownload]);
 
   const availableCategories = CATEGORIES.filter((c) => c.sources.includes(activeSource));
 

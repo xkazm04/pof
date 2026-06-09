@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { AlertTriangle, Link2, Loader2, ZoomIn, ZoomOut, Maximize2, Plug } from 'lucide-react';
 import { MODULE_FEATURE_DEFINITIONS, buildDependencyMap, computeBlockers } from '@/lib/feature-definitions';
 import type { DependencyInfo, ResolvedDependency } from '@/lib/feature-definitions';
+import { tryApiFetch } from '@/lib/api-utils';
 import { MODULE_LABELS } from '@/lib/module-registry';
 import { useManifest } from '@/hooks/useManifest';
 import { SurfaceCard } from '@/components/ui/SurfaceCard';
@@ -94,17 +95,19 @@ export function DependencyGraph({ onNavigateTab }: DependencyGraphProps) {
   const fetchStatuses = useCallback(async () => {
     setIsLoading(true);
     try {
-      const res = await fetch('/api/feature-matrix/all-statuses');
-      if (res.ok) {
-        const data = await res.json();
+      // Route returns apiSuccess({ statuses }); tryApiFetch unwraps the envelope so
+      // the status map isn't silently empty (which hid all cross-module blockers).
+      const result = await tryApiFetch<{ statuses: { moduleId: string; featureName: string; status: string }[] }>('/api/feature-matrix/all-statuses');
+      if (result.ok) {
         const map = new Map<string, string>();
-        for (const row of data.statuses ?? []) {
+        for (const row of result.data.statuses ?? []) {
           map.set(`${row.moduleId}::${row.featureName}`, row.status);
         }
         setStatusMap(map);
       }
-    } catch { /* silent */ }
-    finally { setIsLoading(false); }
+    } finally {
+      setIsLoading(false);
+    }
   }, []);
 
   useEffect(() => { fetchStatuses(); }, [fetchStatuses]);

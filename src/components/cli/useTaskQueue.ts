@@ -2,7 +2,7 @@
 
 import { useEffect, useCallback, useRef, useState, useReducer } from 'react';
 import { apiFetch } from '@/lib/api-utils';
-import { UI_TIMEOUTS } from '@/lib/constants';
+import { UI_TIMEOUTS, BUILD_PARSE_CACHE_MAX } from '@/lib/constants';
 import { extractCallbackPayload, resolveCallback } from '@/lib/cli-task';
 import type {
   QueuedTask, FileChange, LogEntry,
@@ -28,6 +28,8 @@ interface UseTaskQueueOpts {
   onQueueEmpty?: () => void;
   onStreamingChange?: (streaming: boolean) => void;
   onBatchFlushed?: (count: number) => void;
+  /** Fired with the run's token/cost result when a `result` event arrives. */
+  onResult?: (result: ExecutionResult) => void;
 }
 
 // ── State machine ───────────────────────────────────────────────────────────
@@ -180,6 +182,7 @@ export function useTaskQueue(opts: UseTaskQueueOpts) {
     instanceId, projectPath, taskQueue, autoStart, enabledSkills,
     visible = true,
     onTaskStart, onTaskComplete, onQueueEmpty, onStreamingChange, onBatchFlushed,
+    onResult,
   } = opts;
 
   const [state, dispatch] = useReducer(taskQueueReducer, INITIAL_STATE);
@@ -199,7 +202,7 @@ export function useTaskQueue(opts: UseTaskQueueOpts) {
 
   /** Tracks task IDs already dispatched to prevent duplicate execution */
   const dispatchedTaskIds = useRef<Set<string>>(new Set());
-  /** Capped at 200 entries — oldest evicted first when full */
+  /** Capped at BUILD_PARSE_CACHE_MAX entries — oldest evicted first when full */
   const [buildParseCache, setBuildParseCache] = useState<Map<string, BuildParseResult>>(() => new Map());
   const eventSourceRef = useRef<EventSource | null>(null);
   /** Accumulated assistant output for current task — used for callback extraction */
@@ -223,6 +226,11 @@ export function useTaskQueue(opts: UseTaskQueueOpts) {
   const rafIdRef = useRef<number | null>(null);
   const onBatchFlushedRef = useRef(onBatchFlushed);
   useEffect(() => { onBatchFlushedRef.current = onBatchFlushed; }, [onBatchFlushed]);
+
+  // Stable ref so the result handler can report token/cost spend without
+  // re-subscribing the SSE stream when the callback identity changes.
+  const onResultRef = useRef(onResult);
+  useEffect(() => { onResultRef.current = onResult; }, [onResult]);
 
   const flushLogBuffer = useCallback(() => {
     rafIdRef.current = null;
@@ -297,7 +305,7 @@ export function useTaskQueue(opts: UseTaskQueueOpts) {
           setBuildParseCache(prev => {
             const next = new Map(prev);
             next.set(logId, parsed);
-            if (next.size > 200) {
+            if (next.size > BUILD_PARSE_CACHE_MAX) {
               const firstKey = next.keys().next().value;
               if (firstKey !== undefined) next.delete(firstKey);
             }
@@ -311,6 +319,9 @@ export function useTaskQueue(opts: UseTaskQueueOpts) {
         const data = event.data as ExecutionResult;
         dispatch({ type: 'SSE_RESULT', result: data, sessionId: data.sessionId });
         clearHeartbeat();
+
+        // Report token/cost spend for this run (e.g. persisted to the spend dashboard).
+        onResultRef.current?.(data);
 
         // Process structured callback if present in assistant output.
         // Await the callback POST so data is in the DB before onTaskComplete fires.

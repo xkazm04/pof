@@ -18,6 +18,7 @@ import {
   WaveManager, TimelineSection, TuningPanel, StatsPanel, ExportPanel,
   ArchetypePalette, GhostLegend,
 } from './panels';
+import { TensionPanel } from './TensionPanel';
 
 export function CombatChoreographyEditor() {
   const [enemies, setEnemies] = useState<PlacedEnemy[]>([
@@ -158,11 +159,14 @@ export function CombatChoreographyEditor() {
         />
       </div>
 
-      {/* Row 2: Timeline */}
+      {/* Row 2: Timeline (with dramatic tension arc overlay) */}
       <TimelineSection
         simResult={simResult} waves={waves} scrubTime={scrubTime} isPlaying={isPlaying}
         onScrub={setScrubTime} onTogglePlay={() => setIsPlaying(!isPlaying)} onReset={handleReset}
       />
+
+      {/* Row 2b: Dramatic Arc beat sheet */}
+      <TensionPanel tensionCurve={simResult.tensionCurve} onSeek={setScrubTime} />
 
       {/* Row 3: Tuning + Alerts + Stats + Export */}
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-4">

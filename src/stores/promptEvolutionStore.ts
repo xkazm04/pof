@@ -10,6 +10,7 @@ import type {
   MutationType,
   TemplateFamily,
   PromptOptimizationResult,
+  VariantVersionHistory,
 } from '@/types/prompt-evolution';
 
 // ── Stable empty constants ──────────────────────────────────────────────────
@@ -44,6 +45,11 @@ interface PromptEvolutionState {
   selectedVariantId: string | null;
   selectedTestId: string | null;
 
+  // Version history (per checklist item) state
+  versionHistory: VariantVersionHistory | null;
+  isLoadingHistory: boolean;
+  isRestoring: boolean;
+
   // Optimizer state
   lastOptimization: PromptOptimizationResult | null;
   isOptimizing: boolean;
@@ -53,7 +59,7 @@ interface PromptEvolutionState {
   isMutating: boolean;
   isClustering: boolean;
   error: string | null;
-  activeSubTab: 'variants' | 'tests' | 'clusters' | 'stats' | 'optimizer';
+  activeSubTab: 'variants' | 'history' | 'tests' | 'clusters' | 'stats' | 'optimizer';
 
   // Actions
   init: () => Promise<void>;
@@ -72,6 +78,8 @@ interface PromptEvolutionState {
   loadStats: () => Promise<void>;
   loadSuggestions: (moduleId: SubModuleId) => Promise<void>;
   getBestVariant: (moduleId: SubModuleId, checklistItemId: string) => Promise<PromptVariant | null>;
+  loadVersionHistory: (moduleId: SubModuleId, checklistItemId: string) => Promise<void>;
+  restoreVariant: (variantId: string) => Promise<PromptVariant | null>;
   optimizePrompt: (moduleId: SubModuleId, prompt: string) => Promise<PromptOptimizationResult | null>;
 }
 
@@ -87,6 +95,9 @@ export const usePromptEvolutionStore = create<PromptEvolutionState>((set) => ({
   selectedChecklistItemId: null,
   selectedVariantId: null,
   selectedTestId: null,
+  versionHistory: null,
+  isLoadingHistory: false,
+  isRestoring: false,
   lastOptimization: null,
   isOptimizing: false,
   isLoading: false,
@@ -266,6 +277,62 @@ export const usePromptEvolutionStore = create<PromptEvolutionState>((set) => ({
       });
     } catch (err) {
       set({ error: err instanceof Error ? err.message : 'Failed to fetch best variant' });
+      return null;
+    }
+  },
+
+  loadVersionHistory: async (moduleId, checklistItemId) => {
+    set({ isLoadingHistory: true, error: null });
+    try {
+      const history = await apiFetch<VariantVersionHistory>('/api/prompt-evolution', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'get-version-history', moduleId, checklistItemId }),
+      });
+      set({ versionHistory: history, isLoadingHistory: false });
+    } catch (err) {
+      set({ error: err instanceof Error ? err.message : 'Failed to load version history', isLoadingHistory: false });
+    }
+  },
+
+  restoreVariant: async (variantId) => {
+    set({ isRestoring: true, error: null });
+    try {
+      const restored = await apiFetch<PromptVariant>('/api/prompt-evolution', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'restore-variant', variantId }),
+      });
+      // Reflect the new active version locally without a round-trip: flip the
+      // active flag on the matching item's versions in the loaded history.
+      set((s) => {
+        if (!s.versionHistory || s.versionHistory.checklistItemId !== restored.checklistItemId) {
+          return { isRestoring: false };
+        }
+        const versions = s.versionHistory.versions.map((v) => ({
+          ...v,
+          isActive: v.variant.id === restored.id,
+          variant: { ...v.variant, active: v.variant.id === restored.id },
+        }));
+        const flip = (node: VariantVersionHistory['roots'][number]): VariantVersionHistory['roots'][number] => ({
+          ...node,
+          isActive: node.variant.id === restored.id,
+          variant: { ...node.variant, active: node.variant.id === restored.id },
+          children: node.children.map(flip),
+        });
+        return {
+          isRestoring: false,
+          versionHistory: {
+            ...s.versionHistory,
+            versions,
+            roots: s.versionHistory.roots.map(flip),
+            activeVariantId: restored.id,
+          },
+        };
+      });
+      return restored;
+    } catch (err) {
+      set({ error: err instanceof Error ? err.message : 'Failed to restore version', isRestoring: false });
       return null;
     }
   },

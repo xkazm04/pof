@@ -2,10 +2,8 @@
 
 import { useMemo, useState, useCallback } from 'react';
 import { Target, TrendingUp } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { OPACITY_10, OPACITY_20, withOpacity,
-  OPACITY_8,
-} from '@/lib/chart-colors';
+import { AnimatePresence } from 'framer-motion';
+import { OPACITY_10, OPACITY_20, withOpacity } from '@/lib/chart-colors';
 import { SubTabNavigation } from '../../unique-tabs/_shared';
 import type { SubTab } from '../../unique-tabs/_shared';
 import type { SubModuleId } from '@/types/modules';
@@ -14,7 +12,7 @@ import {
   calcStats, objectiveScore, optimize,
   type Allocation, type OptTarget, type OptWeights,
 } from './data';
-import { BlueprintPanel, SectionHeader } from './design';
+import { UniqueTabHeader } from './design';
 import { OptimizerTab } from './OptimizerTab';
 import { ComparisonTab } from './ComparisonTab';
 
@@ -75,28 +73,17 @@ export function AttributePointOptimizer({ moduleId: _moduleId }: AttributePointO
 
   return (
     <div className="space-y-4">
-      <motion.div
-        initial={{ opacity: 0, y: -6 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="flex items-center justify-between pb-3 border-b"
-        style={{ borderColor: withOpacity(ACCENT, OPACITY_10) }}
-      >
-        <div className="flex items-center gap-2.5">
-          <div className="p-1.5 rounded-md relative overflow-hidden" style={{ backgroundColor: `${withOpacity(ACCENT, OPACITY_8)}` }}>
-            <Target className="w-4 h-4 relative z-10" style={{ color: ACCENT, filter: `drop-shadow(0 0 6px ${ACCENT})` }} />
+      <UniqueTabHeader
+        icon={Target}
+        title="Attribute Optimizer"
+        color={ACCENT}
+        subtitle={<><span style={{ color: ACCENT }}>{totalAvailable}</span> points at Lv.{level}</>}
+        action={
+          <div className="px-2.5 py-1 rounded-md text-xs font-mono border" style={{ borderColor: withOpacity(accentColor, OPACITY_20), backgroundColor: `${accentColor}${OPACITY_10}`, color: accentColor }}>
+            {efficiency}% efficient
           </div>
-          <div className="flex flex-col">
-            <span className="text-sm font-bold text-text tracking-wide">Attribute Optimizer</span>
-            <span className="text-xs text-text-muted">
-              <span className="font-mono font-medium" style={{ color: ACCENT }}>{totalAvailable}</span>
-              <span className="opacity-60"> points at Lv.{level}</span>
-            </span>
-          </div>
-        </div>
-        <div className="px-2.5 py-1 rounded-md text-xs font-mono border" style={{ borderColor: withOpacity(accentColor, OPACITY_20), backgroundColor: `${accentColor}${OPACITY_10}`, color: accentColor }}>
-          {efficiency}% efficient
-        </div>
-      </motion.div>
+        }
+      />
 
       <SubTabNavigation tabs={tabs} activeTabId={activeTab} onChange={setActiveTab} accent={ACCENT} />
 

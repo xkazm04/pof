@@ -70,6 +70,19 @@ export function ensureHeadlessBuildsTable(): void {
   `);
 }
 
+// ── Build ID ─────────────────────────────────────────────────────────────────
+
+/**
+ * Mint a unique build id. Format: `build-<epochMs>-<rand>`.
+ *
+ * Single source of truth for the id format. The build queue generates the id
+ * once and threads it into `executeBuild` via `BuildOptions.buildId`, so the
+ * id emitted on `build.*` events matches the one persisted to `headless_builds`.
+ */
+export function generateBuildId(): string {
+  return `build-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+}
+
 // ── UBT Progress Pattern ─────────────────────────────────────────────────────
 
 /** Matches UBT compile progress lines like "[3/42] Compile MyFile.cpp" */
@@ -88,7 +101,7 @@ export async function executeBuild(
   request: BuildRequest,
   options?: BuildOptions,
 ): Promise<BuildResult> {
-  const buildId = `build-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+  const buildId = options?.buildId ?? generateBuildId();
   const startedAt = new Date().toISOString();
   const startMs = Date.now();
 

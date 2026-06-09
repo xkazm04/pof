@@ -106,7 +106,7 @@ export function EventBusDevTools() {
         {/* Header */}
         <div className="flex items-center justify-between px-4 py-3 border-b border-border bg-surface">
           <div className="flex items-center gap-2">
-            <Radio className="w-3.5 h-3.5 text-[#00ff88]" />
+            <Radio className="w-3.5 h-3.5 text-accent-setup" />
             <h2 className="text-xs font-semibold text-text uppercase tracking-wider">Event Bus</h2>
             <span className="text-2xs text-text-muted font-mono bg-border px-1.5 py-0.5 rounded">
               {filteredEvents.length}

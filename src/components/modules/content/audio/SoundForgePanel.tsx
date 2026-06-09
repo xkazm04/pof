@@ -7,6 +7,7 @@ import { logger } from '@/lib/logger';
 import { LicenseBadge } from './LicenseBadge';
 import { AUDIO_PROVIDERS } from '@/lib/audio-gen/registry';
 import { MODULE_COLORS } from '@/lib/constants';
+import { STATUS_SUCCESS } from '@/lib/chart-colors';
 import type { AudioKind } from '@/lib/audio-gen/types';
 import type { AudioAsset, AudioSet } from '@/types/audio-asset';
 
@@ -21,7 +22,7 @@ export function SoundForgePanel({ onAssetCreated }: { onAssetCreated?: () => voi
   const [surface, setSurface] = useState('stone');
   const [loop, setLoop] = useState(false);
   const [running, setRunning] = useState(false);
-  const [generated, setGenerated] = useState<Array<{ asset: AudioAsset; set: AudioSet }>>([]);
+  const [generated, setGenerated] = useState<Array<{ asset: AudioAsset; set: AudioSet; cached?: boolean }>>([]);
   const [error, setError] = useState<string | null>(null);
 
   const provider = AUDIO_PROVIDERS[providerId];
@@ -34,7 +35,7 @@ export function SoundForgePanel({ onAssetCreated }: { onAssetCreated?: () => voi
     let setId: string | undefined;
     try {
       for (let i = 0; i < variations; i++) {
-        const res = await apiFetch<{ asset: AudioAsset; set: AudioSet }>('/api/audio-gen', {
+        const res = await apiFetch<{ asset: AudioAsset; set: AudioSet; cached?: boolean }>('/api/audio-gen', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -118,10 +119,23 @@ export function SoundForgePanel({ onAssetCreated }: { onAssetCreated?: () => voi
 
       {generated.length > 0 && (
         <div className="space-y-2 pt-2 border-t border-border">
-          <p className="text-2xs text-text-muted">Generated into set &quot;{generated[0]?.set.name}&quot; ({generated[0]?.set.id.slice(0, 8)})</p>
-          {generated.map(({ asset }) => (
+          <p className="text-2xs text-text-muted">
+            Generated into set &quot;{generated[0]?.set.name}&quot; ({generated[0]?.set.id.slice(0, 8)})
+            {generated.some((g) => g.cached) && (
+              <span className="ml-1" style={{ color: STATUS_SUCCESS }}>
+                · {generated.filter((g) => g.cached).length} served from cache (no spend)
+              </span>
+            )}
+          </p>
+          {generated.map(({ asset, cached }) => (
             <div key={asset.id} className="flex items-center gap-3 p-2 rounded bg-surface-deep border border-border">
               <span className="text-2xs text-text-muted truncate">{asset.filename}</span>
+              {cached && (
+                <span className="text-2xs px-1.5 py-0.5 rounded-full flex-shrink-0"
+                      style={{ backgroundColor: `${STATUS_SUCCESS}22`, color: STATUS_SUCCESS }}>
+                  cached
+                </span>
+              )}
               <audio controls src={`/api/audio-asset?relPath=${encodeURIComponent(asset.relPath)}`} className="ml-auto h-7" />
             </div>
           ))}

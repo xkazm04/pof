@@ -11,6 +11,7 @@ import type {
   CrashType,
   CrashSeverity,
 } from '@/types/crash-analyzer';
+import { emptyCrashTypeCounts, emptyCrashSeverityCounts } from '@/types/crash-analyzer';
 import { SAMPLE_CRASHES, SAMPLE_DIAGNOSES } from './sample-crashes';
 
 /* ------------------------------------------------------------------ */
@@ -118,27 +119,8 @@ function detectPatterns(reports: CrashReport[]): CrashPattern[] {
 /* ------------------------------------------------------------------ */
 
 function computeStats(reports: CrashReport[], patterns: CrashPattern[]): CrashStats {
-  const crashesByType: Record<CrashType, number> = {
-    nullptr_deref: 0,
-    access_violation: 0,
-    assertion_failed: 0,
-    ensure_failed: 0,
-    gc_reference: 0,
-    stack_overflow: 0,
-    out_of_memory: 0,
-    unhandled_exception: 0,
-    fatal_error: 0,
-    gpu_crash: 0,
-    unknown: 0,
-  };
-
-  const crashesBySeverity: Record<CrashSeverity, number> = {
-    critical: 0,
-    high: 0,
-    medium: 0,
-    low: 0,
-  };
-
+  const crashesByType = emptyCrashTypeCounts();
+  const crashesBySeverity = emptyCrashSeverityCounts();
   const crashesByModule: Record<string, number> = {};
 
   for (const r of reports) {
@@ -190,7 +172,21 @@ function computeStats(reports: CrashReport[], patterns: CrashPattern[]): CrashSt
 /*  Main Analysis Function                                             */
 /* ------------------------------------------------------------------ */
 
+/**
+ * Memoized result of the full sample-crash analysis.
+ *
+ * `analyzeAllCrashes` is a pure function of the static `SAMPLE_CRASHES` and
+ * `SAMPLE_DIAGNOSES` imports, which never change at runtime, so the computed
+ * result is invariant. Caching it eliminates repeated pattern detection and
+ * stat aggregation on the hot read path (every GET and every analyze /
+ * full-analysis POST). Callers only read the result — the store copies arrays
+ * before mutating and the API serializes it — so sharing one reference is safe.
+ */
+let cachedResult: CrashAnalyzerResult | null = null;
+
 export function analyzeAllCrashes(): CrashAnalyzerResult {
+  if (cachedResult) return cachedResult;
+
   // Process each crash report
   const processedReports = SAMPLE_CRASHES.map(findCulpritFrame).map((r) => ({
     ...r,
@@ -206,12 +202,13 @@ export function analyzeAllCrashes(): CrashAnalyzerResult {
   // Compute stats
   const stats = computeStats(processedReports, patterns);
 
-  return {
+  cachedResult = {
     reports: processedReports,
     diagnoses,
     patterns,
     stats,
   };
+  return cachedResult;
 }
 
 /** Analyze a single crash report (for importing new crashes) */

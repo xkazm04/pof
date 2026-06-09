@@ -114,6 +114,68 @@ export interface TranslationEntry {
   charDelta: number;
 }
 
+/* ------------------------------------------------------------------ */
+/*  Translation QA (validates the translated OUTPUT, not the source)   */
+/* ------------------------------------------------------------------ */
+
+/**
+ * Automated QA checks run against each {@link TranslationEntry}, mirroring the
+ * target-side validators in memoQ QA / Xbench / Verifika / Lokalise. The scan
+ * engine only flags source-side hazards; these catch the failures most likely
+ * to ship a broken build (a dropped `{0}` crashes UE5's FText::Format).
+ */
+export type TranslationQACheck =
+  | 'placeholder_parity'
+  | 'number_parity'
+  | 'untranslated'
+  | 'empty'
+  | 'whitespace'
+  | 'glossary';
+
+export type TranslationQASeverity = 'critical' | 'warning' | 'info';
+
+/** A single translation-QA finding for one entry in one locale. */
+export interface TranslationQAFinding {
+  id: string;
+  stringId: string;
+  locale: string;
+  check: TranslationQACheck;
+  severity: TranslationQASeverity;
+  /** Human-readable description of the problem. */
+  message: string;
+  /** The English source text the translation was checked against. */
+  sourceText: string;
+  /** The translated text that failed the check. */
+  translatedText: string;
+  /** Suggested fix. */
+  suggestion: string;
+  /** CLI prompt to fix this finding (mirrors {@link LocalizationHazard.fixPrompt}). */
+  fixPrompt: string;
+}
+
+/** Per-locale QA roll-up gating the "ready to ship" badge. */
+export interface LocaleQAStatus {
+  locale: string;
+  totalEntries: number;
+  findingCount: number;
+  criticalCount: number;
+  /** Findings that block ship (critical + warning; info is advisory). */
+  blockingCount: number;
+  /** True when the locale has translations and zero blocking findings. */
+  readyToShip: boolean;
+}
+
+/** Full translation-QA result for a batch of entries. */
+export interface TranslationQAResult {
+  findings: TranslationQAFinding[];
+  byLocale: Record<string, LocaleQAStatus>;
+  criticalCount: number;
+  warningCount: number;
+  infoCount: number;
+  /** True when there are zero critical/warning findings across all locales. */
+  clean: boolean;
+}
+
 /** UE5 String Table row */
 export interface StringTableRow {
   key: string;
@@ -169,11 +231,15 @@ export interface TranslationResult {
   expansionIssues: Record<string, number>;
 }
 
-/** LOCTEXT replacement suggestion */
-export interface LOCTEXTReplacement {
+/** A LOCTEXT replacement suggestion (original → suggested code diff for one string) */
+export interface LOCTEXTReplacementSuggestion {
   stringId: string;
   originalCode: string;
   suggestedCode: string;
+}
+
+/** LOCTEXT replacement suggestion enriched with its source location */
+export interface LOCTEXTReplacement extends LOCTEXTReplacementSuggestion {
   location: StringLocation;
 }
 

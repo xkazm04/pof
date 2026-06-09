@@ -23,14 +23,14 @@ import type {
   ProgressEntry,
 } from './types';
 import type { GameBuildGuide } from './types';
-import { buildGamePlan, pickNextArea, updatePlanStats } from './plan-builder';
+import { buildGamePlan, updatePlanStats } from './plan-builder';
 import {
   executeArea,
   parseAreaResult,
   readAgentsMd,
   appendAgentsMd,
-  type ParsedAreaResult,
 } from './executor';
+import { spawnClaudeSession, wrapHarnessResult } from './claude-session';
 import { verify, formatVerificationSummary, detectGates } from './verifier';
 import {
   createEmptyGuide,
@@ -45,6 +45,7 @@ import {
   type CheckpointState,
 } from './checkpoint';
 import { startRun, finalizeRun, type HarnessRunStatus } from '@/lib/harness-runs-db';
+import { readJsonFile, writeJsonFile } from './state-io';
 
 // ── State I/O ───────────────────────────────────────────────────────────────
 
@@ -55,14 +56,12 @@ function checkpointsPath(sp: string) { return path.join(sp, 'checkpoints.json');
 
 /** Persist the checkpoint ledger for auditability (best-effort, never throws). */
 function saveCheckpoints(sp: string, state: CheckpointState): void {
-  try { fs.writeFileSync(checkpointsPath(sp), JSON.stringify(state, null, 2)); } catch { /* */ }
+  try { writeJsonFile(checkpointsPath(sp), state); } catch { /* */ }
 }
 
 /** Public read accessor for the checkpoint ledger (API + UI). */
 export function readCheckpoints(statePath: string): CheckpointState | null {
-  try {
-    return JSON.parse(fs.readFileSync(checkpointsPath(statePath), 'utf-8')) as CheckpointState;
-  } catch { return null; }
+  return readJsonFile<CheckpointState | null>(checkpointsPath(statePath), null);
 }
 
 // ── Cost governor ───────────────────────────────────────────────────────────
@@ -72,14 +71,12 @@ export function emptyCost(budgetUsd: number | null): HarnessCostTotals {
 }
 
 function loadCost(sp: string, budgetUsd: number | null): HarnessCostTotals {
-  try {
-    const parsed = JSON.parse(fs.readFileSync(costPath(sp), 'utf-8')) as HarnessCostTotals;
-    return { ...parsed, budgetUsd }; // refresh cap from current config
-  } catch { return emptyCost(budgetUsd); }
+  const totals = readJsonFile<HarnessCostTotals>(costPath(sp), emptyCost(budgetUsd));
+  return { ...totals, budgetUsd }; // refresh cap from current config
 }
 
 function saveCost(sp: string, totals: HarnessCostTotals): void {
-  try { fs.writeFileSync(costPath(sp), JSON.stringify(totals, null, 2)); } catch { /* */ }
+  try { writeJsonFile(costPath(sp), totals); } catch { /* */ }
 }
 
 /** Returns the projected spend if we run one more session of `nextEstimateUsd`. */
@@ -102,22 +99,20 @@ export function budgetWouldOverflow(totals: HarnessCostTotals, budgetUsd: number
 
 /** Public read accessor for the API + UI. */
 export function readHarnessCost(statePath: string): HarnessCostTotals | null {
-  try {
-    return JSON.parse(fs.readFileSync(costPath(statePath), 'utf-8')) as HarnessCostTotals;
-  } catch { return null; }
+  return readJsonFile<HarnessCostTotals | null>(costPath(statePath), null);
 }
 
 function loadPlan(sp: string): GamePlan | null {
-  try { return JSON.parse(fs.readFileSync(planPath(sp), 'utf-8')); } catch { return null; }
+  return readJsonFile<GamePlan | null>(planPath(sp), null);
 }
 function savePlan(sp: string, plan: GamePlan) {
-  fs.writeFileSync(planPath(sp), JSON.stringify(plan, null, 2));
+  writeJsonFile(planPath(sp), plan);
 }
 function loadProgress(sp: string): ProgressEntry[] {
-  try { return JSON.parse(fs.readFileSync(progressPath(sp), 'utf-8')); } catch { return []; }
+  return readJsonFile<ProgressEntry[]>(progressPath(sp), []);
 }
 function saveProgress(sp: string, entries: ProgressEntry[]) {
-  fs.writeFileSync(progressPath(sp), JSON.stringify(entries, null, 2));
+  writeJsonFile(progressPath(sp), entries);
 }
 function appendProgressEntry(sp: string, entry: ProgressEntry) {
   const entries = loadProgress(sp);
@@ -231,42 +226,23 @@ ERRORS:
 ${errorSummary}${verifyInstruction}
 
 When done, output exactly:
-@@HARNESS_RESULT
-{"areaId":"self-heal","completed":true,"features":[],"filesCreated":[],"filesModified":[],"learnings":[],"summary":"Fixed errors"}
-@@END_HARNESS_RESULT`;
+${wrapHarnessResult('{"areaId":"self-heal","completed":true,"features":[],"filesCreated":[],"filesModified":[],"learnings":[],"summary":"Fixed errors"}')}`;
 
-  return new Promise((resolve) => {
-    const isWindows = process.platform === 'win32';
-    const command = isWindows ? 'claude.cmd' : 'claude';
-    const args = ['-p', '-', '--output-format', 'stream-json'];
-    if (config.skipPermissions) args.push('--dangerously-skip-permissions');
-    args.push('--allowedTools', 'Bash,Read,Edit,Write,Glob,Grep');
+  await spawnClaudeSession(fixPrompt, {
+    cwd: projectPath,
+    allowedTools: ['Bash', 'Read', 'Edit', 'Write', 'Glob', 'Grep'],
+    skipPermissions: config.skipPermissions,
+    timeoutMs: Math.min(config.sessionTimeoutMs, 300_000), // Max 5 min for fix
+  });
 
-    const proc = spawn(command, args, {
-      cwd: projectPath,
-      env: { ...process.env },
-      stdio: ['pipe', 'pipe', 'pipe'],
-      shell: isWindows,
-    });
-
-    proc.stdin.write(fixPrompt);
-    proc.stdin.end();
-
-    const timeout = setTimeout(() => {
-      try { proc.kill('SIGTERM'); } catch { /* */ }
-    }, Math.min(config.sessionTimeoutMs, 300_000)); // Max 5 min for fix
-
-    proc.on('close', () => {
-      clearTimeout(timeout);
-      if (!verifyCommand) {
-        // No reliable command to re-run — optimistically resolve as healed; the
-        // next full verification pass will re-judge if the fix actually held.
-        resolve(true);
-        return;
-      }
-      exec(verifyCommand, { cwd: projectPath, timeout: 60_000 }, (err) => {
-        resolve(err === null);
-      });
+  if (!verifyCommand) {
+    // No reliable command to re-run — optimistically resolve as healed; the
+    // next full verification pass will re-judge if the fix actually held.
+    return true;
+  }
+  return new Promise<boolean>((resolve) => {
+    exec(verifyCommand, { cwd: projectPath, timeout: 60_000 }, (err) => {
+      resolve(err === null);
     });
   });
 }

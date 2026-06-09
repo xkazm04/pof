@@ -2,10 +2,12 @@
 
 import { TrendingUp } from 'lucide-react';
 import { motion } from 'framer-motion';
-import { STATUS_SUCCESS, STATUS_WARNING, STATUS_ERROR, ACCENT_CYAN_LIGHT,
-  withOpacity, OPACITY_25, OPACITY_56, OPACITY_10, OPACITY_5, OPACITY_20, OPACITY_8, OPACITY_37, OPACITY_50,
+import { STATUS_WARNING, STATUS_ERROR, ACCENT_CYAN_LIGHT,
+  withOpacity, OPACITY_56, OPACITY_5, OPACITY_20, OPACITY_8, OPACITY_37, OPACITY_50,
 } from '@/lib/chart-colors';
-import { BlueprintPanel, SectionHeader } from '../_shared/design';
+import { budgetStatusToken } from '@/lib/status-token';
+import { StatusTag } from '@/components/ui/StatusTag';
+import { BlueprintPanel, SectionHeader, SAVE_TYPE } from '../_shared/design';
 import {
   ACCENT, SECTION_BUDGETS, FILE_SIZE_SECTIONS, GROWTH_HISTORY, TOTAL_BYTES,
   formatBytes, getBudgetStatus, projectGrowth,
@@ -26,9 +28,9 @@ export function BudgetAlerting() {
       <div className="px-4 py-3 border-b border-border/10 flex items-center justify-between">
         <SectionHeader label="BUDGET_ALERTING" icon={TrendingUp} color={ACCENT} />
         <div className="flex items-center gap-2 text-xs font-mono">
-          {overBudget > 0 && <span className="px-1.5 py-0.5 rounded-sm border text-xs font-bold" style={{ color: STATUS_ERROR, borderColor: `${withOpacity(STATUS_ERROR, OPACITY_25)}`, backgroundColor: `${withOpacity(STATUS_ERROR, OPACITY_10)}` }}>{overBudget} OVER</span>}
-          {nearBudget > 0 && <span className="px-1.5 py-0.5 rounded-sm border text-xs font-bold" style={{ color: STATUS_WARNING, borderColor: `${withOpacity(STATUS_WARNING, OPACITY_25)}`, backgroundColor: `${withOpacity(STATUS_WARNING, OPACITY_10)}` }}>{nearBudget} WARN</span>}
-          {overBudget === 0 && nearBudget === 0 && <span className="px-1.5 py-0.5 rounded-sm border text-xs font-bold" style={{ color: STATUS_SUCCESS, borderColor: `${withOpacity(STATUS_SUCCESS, OPACITY_25)}`, backgroundColor: `${withOpacity(STATUS_SUCCESS, OPACITY_10)}` }}>ALL OK</span>}
+          {overBudget > 0 && <StatusTag level="bad" word={`${overBudget} OVER`} />}
+          {nearBudget > 0 && <StatusTag level="warn" word={`${nearBudget} WARN`} />}
+          {overBudget === 0 && nearBudget === 0 && <StatusTag level="ok" word="ALL OK" />}
         </div>
       </div>
 
@@ -39,11 +41,12 @@ export function BudgetAlerting() {
             const currentBytes = sec?.bytes ?? 0;
             const pct = Math.min((currentBytes / budget.budgetBytes) * 100, 100);
             const status = getBudgetStatus(currentBytes, budget.budgetBytes);
-            const statusColor = status === 'red' ? STATUS_ERROR : status === 'amber' ? STATUS_WARNING : STATUS_SUCCESS;
+            const statusToken = budgetStatusToken(status);
+            const statusColor = statusToken.color;
             const history = GROWTH_HISTORY.map(g => g.sectionBytes[budget.sectionLabel] ?? 0);
             const projected = projectGrowth(history);
             const projectedStatus = getBudgetStatus(projected, budget.budgetBytes);
-            const projectedColor = projectedStatus === 'red' ? STATUS_ERROR : projectedStatus === 'amber' ? STATUS_WARNING : STATUS_SUCCESS;
+            const projectedColor = budgetStatusToken(projectedStatus).color;
             const maxVal = Math.max(...history, budget.budgetBytes);
 
             return (
@@ -62,14 +65,12 @@ export function BudgetAlerting() {
                   </div>
                   <div className="flex items-center gap-3">
                     <span className="text-text-muted">{formatBytes(currentBytes)} / {formatBytes(budget.budgetBytes)}</span>
-                    <span className="px-1.5 py-0.5 rounded-sm text-xs font-bold uppercase tracking-[0.15em]" style={{ color: statusColor, backgroundColor: `${withOpacity(statusColor, OPACITY_10)}`, border: `1px solid ${withOpacity(statusColor, OPACITY_20)}` }}>
-                      {status === 'red' ? 'OVER' : status === 'amber' ? 'WARN' : 'OK'}
-                    </span>
+                    <StatusTag level={statusToken.level} />
                   </div>
                 </div>
 
                 <div className="relative h-3 rounded-full overflow-hidden border border-border/10" style={{ backgroundColor: `${withOpacity(ACCENT, OPACITY_8)}` }}>
-                  <motion.div className="absolute top-0 bottom-0 left-0 rounded-full" initial={{ width: 0 }} animate={{ width: `${pct}%` }} transition={{ duration: 0.7, ease: 'easeOut' }} style={{ backgroundColor: `${withOpacity(statusColor, OPACITY_37)}` }} />
+                  <motion.div className="absolute top-0 bottom-0 left-0 rounded-full" initial={{ width: 0 }} animate={{ width: `${pct}%` }} transition={{ duration: 0.7, ease: 'easeOut' }} style={{ backgroundColor: `${withOpacity(statusColor, OPACITY_37)}`, backgroundImage: statusToken.pattern }} />
                   <div className="absolute top-0 bottom-0" style={{ left: '80%', width: '1px', backgroundColor: `${withOpacity(STATUS_WARNING, OPACITY_37)}` }} />
                   {currentBytes < budget.budgetBytes && <div className="absolute top-0 bottom-0 right-0" style={{ width: '1px', backgroundColor: `${withOpacity(STATUS_ERROR, OPACITY_37)}` }} />}
                 </div>
@@ -82,28 +83,32 @@ export function BudgetAlerting() {
                 {/* Sparkline + projected */}
                 <div className="flex items-end gap-4 mt-2 pt-2 border-t border-border/10">
                   <div className="flex-1">
-                    <div className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted mb-1">Growth Trend</div>
+                    <div className={`${SAVE_TYPE.body} text-text-muted mb-1`}>Growth trend</div>
                     <div className="flex items-end gap-0.5 h-8">
                       {history.map((val, hi) => {
                         const barH = maxVal > 0 ? (val / maxVal) * 100 : 0;
                         const barStatus = getBudgetStatus(val, budget.budgetBytes);
-                        const barColor = barStatus === 'red' ? STATUS_ERROR : barStatus === 'amber' ? STATUS_WARNING : budget.color;
+                        const barToken = budgetStatusToken(barStatus);
+                        // Keep the section's own hue while under budget; warn/over
+                        // adopt the ramp color + its hatch so the spike reads
+                        // without relying on color (WCAG 1.4.1).
+                        const barColor = barStatus === 'ok' ? budget.color : barToken.color;
                         return (
                           <div key={hi} className="flex-1 flex flex-col items-center gap-0.5">
-                            <motion.div className="w-full rounded-t-sm min-h-[2px]" style={{ backgroundColor: `${withOpacity(barColor, OPACITY_50)}` }} initial={{ height: 0 }} animate={{ height: `${barH}%` }} transition={{ duration: 0.5, delay: 0.1 * hi }} title={`${GROWTH_HISTORY[hi].version}: ${formatBytes(val)}`} />
-                            <span className="text-[9px] text-text-muted leading-none">{GROWTH_HISTORY[hi].version}</span>
+                            <motion.div className="w-full rounded-t-sm min-h-[2px]" style={{ backgroundColor: `${withOpacity(barColor, OPACITY_50)}`, backgroundImage: barToken.pattern }} initial={{ height: 0 }} animate={{ height: `${barH}%` }} transition={{ duration: 0.5, delay: 0.1 * hi }} title={`${GROWTH_HISTORY[hi].version}: ${formatBytes(val)}`} />
+                            <span className={`${SAVE_TYPE.axis} text-text-muted`}>{GROWTH_HISTORY[hi].version}</span>
                           </div>
                         );
                       })}
                       <div className="flex-1 flex flex-col items-center gap-0.5">
                         <motion.div className="w-full rounded-t-sm min-h-[2px] border border-dashed" style={{ backgroundColor: `${withOpacity(projectedColor, OPACITY_20)}`, borderColor: `${withOpacity(projectedColor, OPACITY_37)}` }} initial={{ height: 0 }} animate={{ height: `${maxVal > 0 ? (projected / maxVal) * 100 : 0}%` }} transition={{ duration: 0.5, delay: 0.5 }} title={`Projected V3.0: ${formatBytes(projected)}`} />
-                        <span className="text-[9px] text-text-muted leading-none italic">V3?</span>
+                        <span className={`${SAVE_TYPE.axis} text-text-muted italic`}>V3?</span>
                       </div>
                     </div>
                   </div>
                   <div className="text-right shrink-0">
-                    <div className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted mb-0.5">Projected</div>
-                    <div className="text-sm font-bold" style={{ color: projectedColor }}>{formatBytes(projected)}</div>
+                    <div className={`${SAVE_TYPE.body} text-text-muted mb-0.5`}>Projected</div>
+                    <div className={SAVE_TYPE.hero} style={{ color: projectedColor }}>{formatBytes(projected)}</div>
                     <div className="text-xs" style={{ color: projectedColor }}>
                       {projected > currentBytes ? `+${formatBytes(projected - currentBytes)}` : projected < currentBytes ? `-${formatBytes(currentBytes - projected)}` : 'stable'}
                     </div>
@@ -116,7 +121,7 @@ export function BudgetAlerting() {
 
         <div className="flex items-center gap-3 px-3 py-2 border border-border/10 rounded-lg font-mono text-xs" style={{ backgroundColor: `${withOpacity(ACCENT, OPACITY_5)}` }}>
           <TrendingUp className="w-3.5 h-3.5 flex-shrink-0" style={{ color: ACCENT }} />
-          <span className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted">Total Budget:</span>
+          <span className={`${SAVE_TYPE.body} text-text-muted`}>Total budget:</span>
           <span style={{ color: ACCENT_CYAN_LIGHT }}>{formatBytes(TOTAL_BYTES)}</span>
           <span className="text-text-muted">/</span>
           <span style={{ color: ACCENT_CYAN_LIGHT }}>{formatBytes(SECTION_BUDGETS.reduce((s, b) => s + b.budgetBytes, 0))}</span>

@@ -2,11 +2,12 @@
 
 import { useState, useCallback, useEffect } from 'react';
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
+import { Moon, Sun } from 'lucide-react';
 import { useLabCatalogData, useLabDetail } from './useLabCatalogData';
 import { Baseline } from './Baseline';
 import { CanonView } from './CanonView';
 import { CatalogMatrix } from './CatalogMatrix';
-import { LAB_THEMES, LIGHT, themeAttr, type LabDensity } from './theme';
+import { LAB_THEMES, LIGHT, themeAttr } from './theme';
 import { labFontVars } from './fonts';
 import { LabBridgeStrip } from './LabBridgeStrip';
 import { LabJobsChip } from './LabJobsChip';
@@ -17,6 +18,7 @@ import { useCanonStore } from './canonStore';
 import { writeShellPref } from '@/lib/ecw/shell-pref';
 import { useLabPrefs } from './hooks/useLabPrefs';
 import { Button } from './ui/Button';
+import { IconButton } from './ui/IconButton';
 
 /**
  * UI identity lab (/layout). Consolidated to a single Blueprint baseline with a
@@ -29,7 +31,6 @@ export function LayoutLab() {
   const groups = useLabCatalogData();
   const { prefs, setPrefs, hydrated } = useLabPrefs();
   const themeId = prefs.themeId;
-  const density = prefs.density;
   const [catalogId, setCatalogId] = useState('items');
   const [entityId, setEntityId] = useState<string | null>(null);
   const [view, setView] = useState<'catalogs' | 'canon' | 'matrix'>('catalogs');
@@ -89,7 +90,6 @@ export function LayoutLab() {
       data-testid="harness-lab-ready"
       data-lab-root=""
       data-theme={themeAttr(themeId)}
-      data-density={density}
       className={labFontVars}
       style={{ height: '100vh', display: 'flex', flexDirection: 'column', background: 'var(--lab-bg)' }}
     >
@@ -111,22 +111,26 @@ export function LayoutLab() {
           ...(theme.glass ? { backdropFilter: 'blur(var(--lab-glass-blur))' } : {}),
         }}
       >
-        <span style={{ fontFamily: 'var(--lab-font-mono)', fontSize: 'var(--lab-fs-xs)', color: 'var(--lab-muted)', marginRight: 'var(--lab-s3)', whiteSpace: 'nowrap' }}>
-          PoF·LAB <span style={{ color: 'var(--lab-ink)' }}>sheet · {detail?.catalog.catalogId ?? '—'}</span>
-        </span>
-        <Button active={view === 'catalogs'} onClick={() => { setView('catalogs'); setFocusStepIdx(undefined); }}>Catalogs</Button>
-        <Button active={view === 'matrix'} onClick={() => setView('matrix')}>Matrix</Button>
-        <Button active={view === 'canon'} onClick={() => setView('canon')}>Canon</Button>
-        {LAB_THEMES.map((t) => (
-          <Button key={t.id} active={themeId === t.id} onClick={() => setPrefs({ themeId: t.id })}>{t.label}</Button>
-        ))}
-        <Button mono ariaLabel={`density: ${density}`} onClick={() => setPrefs({ density: nextDensity(density) })}>
-          density · {density === 'compact' ? '▮' : '▯'}
-        </Button>
-        <Button onClick={() => setPanelOpen(true)}>+ One-shot</Button>
-        <LabJobsChip />
-        <Button style={{ marginLeft: 'auto' }} onClick={switchToLegacy}>Legacy shell</Button>
-        <LabBridgeStrip t={theme} />
+        {/* Left zone: brand. flex:1 balances the right zone so the center group is truly centered. */}
+        <div style={{ flex: 1, minWidth: 0, display: 'flex', alignItems: 'center', gap: 'var(--lab-s2)' }}>
+          <span style={{ fontFamily: 'var(--lab-font-mono)', fontSize: 'var(--lab-fs-xs)', color: 'var(--lab-muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+            PoF·LAB <span style={{ color: 'var(--lab-ink)' }}>sheet · {detail?.catalog.catalogId ?? '—'}</span>
+          </span>
+        </div>
+        {/* Center zone: primary actions */}
+        <div style={{ flex: '0 0 auto', display: 'flex', alignItems: 'center', gap: 'var(--lab-s2)' }}>
+          <Button active={view === 'catalogs'} onClick={() => { setView('catalogs'); setFocusStepIdx(undefined); }}>Catalogs</Button>
+          <Button active={view === 'matrix'} onClick={() => setView('matrix')}>Matrix</Button>
+          <Button active={view === 'canon'} onClick={() => setView('canon')}>Canon</Button>
+          <Button onClick={() => setPanelOpen(true)}>+ One-shot</Button>
+          <Button onClick={switchToLegacy}>Legacy shell</Button>
+        </div>
+        {/* Right zone: status + theme toggle in the corner */}
+        <div style={{ flex: 1, minWidth: 0, display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 'var(--lab-s2)' }}>
+          <LabJobsChip />
+          <LabBridgeStrip t={theme} />
+          <ThemeToggle themeId={themeId} onToggle={() => setPrefs({ themeId: themeId === 'light' ? 'dark' : 'light' })} />
+        </div>
       </header>
       <div style={{ flex: 1, minHeight: 0, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
         <AnimatePresence mode="wait" initial={false}>
@@ -152,4 +156,18 @@ export function LayoutLab() {
   );
 }
 
-const nextDensity = (d: LabDensity): LabDensity => (d === 'compact' ? 'comfortable' : 'compact');
+/**
+ * Light/Dark theme switch as a single icon button parked in the header's right
+ * corner. Shows the icon of the theme you'd switch *to* (Moon → Studio Dark,
+ * Sun → Blueprint); the aria-label names that target theme.
+ */
+function ThemeToggle({ themeId, onToggle }: { themeId: 'light' | 'dark'; onToggle: () => void }) {
+  const toDark = themeId === 'light';
+  const Icon = toDark ? Moon : Sun;
+  const label = toDark ? 'Switch to Studio Dark theme' : 'Switch to Blueprint theme';
+  return (
+    <IconButton ariaLabel={label} onClick={onToggle}>
+      <Icon size={16} aria-hidden style={{ display: 'block' }} />
+    </IconButton>
+  );
+}

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   ArrowLeft, Play, Trash2, Loader2,
@@ -11,12 +11,16 @@ import {
 import type { PlaytestSession, PlaytestFinding, DirectorEvent, FindingSeverity, FindingCategory } from '@/types/game-director';
 import { SurfaceCard } from '@/components/ui/SurfaceCard';
 import { ScoreRing } from '@/components/ui/ScoreRing';
+import { MeterBar } from '@/components/ui/MeterBar';
+import { TabBar, type TabItem } from '@/components/ui/TabBar';
 import {
   ACCENT_ORANGE, ACCENT_PURPLE, STATUS_SUCCESS, STATUS_WARNING, STATUS_ERROR, STATUS_INFO,
   OPACITY_10, statusBg, statusBorder,
 } from '@/lib/chart-colors';
 import { SEVERITY_TOKENS, CATEGORY_LABELS, severitySurface } from '@/lib/game-director-styles';
 import { EmptyState } from '@/components/ui/EmptyState';
+import { SeverityLegend } from './SeverityLegend';
+import { FindingFixButton } from './FindingFixButton';
 
 const ACCENT = ACCENT_ORANGE;
 
@@ -39,6 +43,7 @@ interface SessionDetailProps {
   simulating: boolean;
   getFindings: (id: string) => Promise<PlaytestFinding[]>;
   getEvents: (id: string) => Promise<DirectorEvent[]>;
+  markFixDispatched: (findingId: string) => Promise<PlaytestFinding>;
 }
 
 export function SessionDetail({
@@ -49,6 +54,7 @@ export function SessionDetail({
   simulating,
   getFindings,
   getEvents,
+  markFixDispatched,
 }: SessionDetailProps) {
   const [findings, setFindings] = useState<PlaytestFinding[]>([]);
   const [events, setEvents] = useState<DirectorEvent[]>([]);
@@ -70,6 +76,17 @@ export function SessionDetail({
     return () => { cancelled = true; };
   }, [session.id, getFindings, getEvents]);
 
+  // After a one-click fix is dispatched, stamp the finding so the UI reflects
+  // the detect→fix link (best-effort — the CLI task is already running).
+  const handleFixDispatched = useCallback(async (finding: PlaytestFinding) => {
+    try {
+      const updated = await markFixDispatched(finding.id);
+      setFindings(prev => prev.map(f => (f.id === updated.id ? updated : f)));
+    } catch {
+      // tracking is best-effort; the repair task has already been dispatched
+    }
+  }, [markFixDispatched]);
+
   const isComplete = session.status === 'complete';
   const canSimulate = session.status === 'configuring' || session.status === 'complete';
 
@@ -79,6 +96,12 @@ export function SessionDetail({
   const mediums = findings.filter(f => f.severity === 'medium');
   const lows = findings.filter(f => f.severity === 'low');
   const positives = findings.filter(f => f.severity === 'positive');
+
+  const tabs: TabItem<DetailTab>[] = [
+    { id: 'findings', label: 'Findings', icon: Target, badge: { count: findings.length } },
+    { id: 'timeline', label: 'Timeline', icon: Activity, badge: { count: events.length } },
+    { id: 'coverage', label: 'Coverage', icon: BarChart3 },
+  ];
 
   return (
     <div className="h-full flex flex-col">
@@ -160,11 +183,14 @@ export function SessionDetail({
         )}
 
         {/* Sub-tabs */}
-        <div className="flex items-center gap-1 border-b border-border">
-          <SubTab label="Findings" icon={Target} active={activeTab === 'findings'} onClick={() => setActiveTab('findings')} count={findings.length} />
-          <SubTab label="Timeline" icon={Activity} active={activeTab === 'timeline'} onClick={() => setActiveTab('timeline')} count={events.length} />
-          <SubTab label="Coverage" icon={BarChart3} active={activeTab === 'coverage'} onClick={() => setActiveTab('coverage')} />
-        </div>
+        <TabBar
+          tabs={tabs}
+          activeId={activeTab}
+          onChange={setActiveTab}
+          layoutId="session-detail-tab-indicator"
+          accent={ACCENT}
+          ariaLabel="Session detail views"
+        />
       </div>
 
       {/* Content */}
@@ -180,6 +206,7 @@ export function SessionDetail({
                 findings={findings}
                 expandedId={expandedFindingId}
                 onToggle={(id) => setExpandedFindingId(expandedFindingId === id ? null : id)}
+                onFixDispatched={handleFixDispatched}
               />
             )}
             {activeTab === 'timeline' && <TimelineView events={events} onSimulate={canSimulate ? onSimulate : undefined} />}
@@ -203,37 +230,11 @@ function SummaryStat({ icon: Icon, label, value, color }: { icon: typeof Target;
   );
 }
 
-function SubTab({ label, icon: Icon, active, onClick, count }: {
-  label: string; icon: typeof Target; active: boolean; onClick: () => void; count?: number;
-}) {
-  return (
-    <button
-      onClick={onClick}
-      className={`focus-ring rounded-sm flex items-center gap-1.5 px-3 py-2 text-sm font-medium transition-colors relative ${
-        active ? 'text-text' : 'text-text-muted hover:text-text'
-      }`}
-    >
-      <Icon className="w-3.5 h-3.5" />
-      {label}
-      {count !== undefined && count > 0 && (
-        <span className="text-xs px-1 py-0.5 rounded bg-border text-text-muted">{count}</span>
-      )}
-      {active && (
-        <motion.span
-          layoutId="session-detail-tab-indicator"
-          className="absolute bottom-0 left-0 right-0 h-0.5 rounded-t"
-          style={{ backgroundColor: ACCENT }}
-          transition={{ type: 'spring', stiffness: 500, damping: 35 }}
-        />
-      )}
-    </button>
-  );
-}
-
-function FindingsList({ findings, expandedId, onToggle }: {
+function FindingsList({ findings, expandedId, onToggle, onFixDispatched }: {
   findings: PlaytestFinding[];
   expandedId: string | null;
   onToggle: (id: string) => void;
+  onFixDispatched: (finding: PlaytestFinding) => void;
 }) {
   if (findings.length === 0) {
     return (
@@ -246,6 +247,7 @@ function FindingsList({ findings, expandedId, onToggle }: {
 
   return (
     <div className="space-y-2">
+      <SeverityLegend className="mb-1" />
       {findings.map((finding, idx) => {
         const token = SEVERITY_TOKENS[finding.severity];
         const surface = severitySurface(finding.severity);
@@ -262,30 +264,39 @@ function FindingsList({ findings, expandedId, onToggle }: {
             className="rounded-lg border overflow-hidden"
             style={surface}
           >
-            <button
-              onClick={() => onToggle(finding.id)}
-              className="focus-ring-inset rounded-lg w-full text-left flex items-start gap-3 px-3.5 py-3 hover:brightness-110 transition-colors"
-            >
-              <Icon className="w-4 h-4 flex-shrink-0 mt-0.5" style={{ color: token.color }} />
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2 mb-0.5">
-                  <span className="text-sm font-semibold text-text">{finding.title}</span>
-                  <span className="text-xs px-1.5 py-0.5 rounded bg-border text-text-muted">{catLabel}</span>
-                  {finding.relatedModule && (
-                    <span className="text-xs px-1.5 py-0.5 rounded bg-border text-text-muted-hover">{finding.relatedModule}</span>
+            <div className="flex items-stretch">
+              <button
+                onClick={() => onToggle(finding.id)}
+                aria-expanded={isExpanded}
+                className="focus-ring-inset rounded-l-lg flex-1 min-w-0 text-left flex items-start gap-3 px-3.5 py-3 hover:brightness-110 transition-colors"
+              >
+                <Icon className="w-4 h-4 flex-shrink-0 mt-0.5" style={{ color: token.color }} />
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 mb-0.5">
+                    <span className="text-sm font-semibold text-text">{finding.title}</span>
+                    <span className="text-xs px-1.5 py-0.5 rounded bg-border text-text-muted">{catLabel}</span>
+                    {finding.relatedModule && (
+                      <span className="text-xs px-1.5 py-0.5 rounded bg-border text-text-muted-hover">{finding.relatedModule}</span>
+                    )}
+                  </div>
+                  <p className="text-sm text-text-muted-hover leading-relaxed line-clamp-2">{finding.description}</p>
+                </div>
+                <div className="flex items-center gap-2 flex-shrink-0">
+                  <span className="text-2xs text-text-muted">{finding.confidence}%</span>
+                  {isExpanded ? (
+                    <ChevronDown className="w-3 h-3 text-text-muted" />
+                  ) : (
+                    <ChevronRight className="w-3 h-3 text-text-muted" />
                   )}
                 </div>
-                <p className="text-sm text-text-muted-hover leading-relaxed line-clamp-2">{finding.description}</p>
-              </div>
-              <div className="flex items-center gap-2 flex-shrink-0">
-                <span className="text-2xs text-text-muted">{finding.confidence}%</span>
-                {isExpanded ? (
-                  <ChevronDown className="w-3 h-3 text-text-muted" />
-                ) : (
-                  <ChevronRight className="w-3 h-3 text-text-muted" />
-                )}
-              </div>
-            </button>
+              </button>
+              {/* Positive findings are praise, not bugs — no repair task offered. */}
+              {finding.severity !== 'positive' && (
+                <div className="flex items-center pr-3 pl-2 flex-shrink-0">
+                  <FindingFixButton finding={finding} onDispatched={onFixDispatched} />
+                </div>
+              )}
+            </div>
 
             <AnimatePresence>
               {isExpanded && (
@@ -387,6 +398,10 @@ function TimelineView({ events, onSimulate }: { events: DirectorEvent[]; onSimul
   );
 }
 
+/** Coverage threshold coloring: green ≥80%, amber ≥50%, red below. */
+const coverageBand = (pct: number): string =>
+  pct >= 80 ? STATUS_SUCCESS : pct >= 50 ? STATUS_WARNING : STATUS_ERROR;
+
 function CoverageView({ session, findings, onSimulate }: { session: PlaytestSession; findings: PlaytestFinding[]; onSimulate?: () => Promise<void> }) {
   if (!session.summary) {
     return (
@@ -432,17 +447,15 @@ function CoverageView({ session, findings, onSimulate }: { session: PlaytestSess
               className="flex items-center gap-3"
             >
               <span className="text-sm text-text-muted-hover w-28 capitalize">{cat.replace(/-/g, ' ')}</span>
-              <div className="flex-1 h-2 bg-border rounded-full overflow-hidden">
-                <motion.div
-                  initial={{ width: 0 }}
-                  animate={{ width: `${pct}%` }}
-                  transition={{ duration: 0.45, ease: [0.16, 1, 0.3, 1], delay: 0.3 + idx * 0.05 }}
-                  className="h-full rounded-full"
-                  style={{
-                    backgroundColor: pct >= 80 ? STATUS_SUCCESS : pct >= 50 ? STATUS_WARNING : STATUS_ERROR,
-                  }}
-                />
-              </div>
+              <MeterBar
+                value={pct}
+                color={coverageBand}
+                height={8}
+                delayMs={300 + idx * 50}
+                ariaLabel={`${cat.replace(/-/g, ' ')} test coverage`}
+                valueText={`${pct}%`}
+                className="flex-1"
+              />
               <span className="text-sm font-medium text-text w-8 text-right">{pct}%</span>
             </motion.div>
           ))}

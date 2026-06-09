@@ -5,7 +5,7 @@
  * Emits typed events on the event bus for UI reactivity.
  */
 
-import { executeBuild } from './build-pipeline';
+import { executeBuild, generateBuildId } from './build-pipeline';
 import { eventBus } from '@/lib/event-bus';
 import { logger } from '@/lib/logger';
 import type { BuildRequest, BuildQueueItem, BuildStatus } from '@/types/ue5-bridge';
@@ -25,7 +25,7 @@ class BuildQueue {
    * If no build is currently running, processing starts immediately.
    */
   enqueue(request: BuildRequest, moduleId?: string): string {
-    const buildId = `build-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+    const buildId = generateBuildId();
     const item: BuildQueueItem = {
       buildId,
       request,
@@ -131,6 +131,7 @@ class BuildQueue {
 
     try {
       const result = await executeBuild(item.request, {
+        buildId: item.buildId,
         moduleId,
         abortSignal: abortController.signal,
         onProgress: (message, percent) => {

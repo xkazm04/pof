@@ -1,12 +1,9 @@
 'use client';
 
-import { useState, useMemo, useCallback, useEffect, useRef } from 'react';
+import { useState, useMemo, useCallback, useEffect } from 'react';
 import {
   Radar as RadarIcon,
   AlertTriangle,
-  Check,
-  ChevronDown,
-  ChevronUp,
   Loader2,
   Play,
   TrendingDown,
@@ -21,7 +18,7 @@ import { MODULE_LABELS } from '@/lib/module-registry';
 import type { EvaluatorReport, ModuleScore, Recommendation } from '@/types/evaluator';
 import { SurfaceCard } from '@/components/ui/SurfaceCard';
 import { EmptyState } from '@/components/ui/EmptyState';
-import { MODULE_COLORS, STATUS_SUCCESS, STATUS_WARNING, STATUS_ERROR, STATUS_BLOCKER, STATUS_STALE, OPACITY_8, OPACITY_10, OPACITY_12, OPACITY_15, OPACITY_30, statusBg, statusBorder } from '@/lib/chart-colors';
+import { MODULE_COLORS, STATUS_SUCCESS, STATUS_WARNING, STATUS_ERROR, STATUS_BLOCKER, STATUS_STALE, OPACITY_8, OPACITY_10, OPACITY_30, statusBg, statusBorder } from '@/lib/chart-colors';
 import type { SubModuleId } from '@/types/modules';
 
 const EVAL_ACCENT = MODULE_COLORS.evaluator;

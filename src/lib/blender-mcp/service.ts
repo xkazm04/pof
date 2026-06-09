@@ -10,12 +10,34 @@ import type {
   ObjectInfo,
   ExecuteOutput,
   AssetResult,
+  AssetSource,
   ImportedObject,
   JobResult,
   JobStatusResult,
   GenerationProvider,
 } from './types';
 import { DEFAULT_BLENDER_HOST, DEFAULT_BLENDER_PORT } from './types';
+
+/**
+ * Per-provider Blender addon command names. Keeping the create/poll/import
+ * verbs for each generation provider in one map makes the branching explicit
+ * and means a new provider only touches this table.
+ */
+const PROVIDER_COMMANDS: Record<
+  GenerationProvider,
+  { create: string; poll: string; import: string }
+> = {
+  hyper3d: {
+    create: 'create_rodin_job',
+    poll: 'poll_rodin_job_status',
+    import: 'import_generated_asset',
+  },
+  hunyuan3d: {
+    create: 'create_hunyuan_job',
+    poll: 'poll_hunyuan_job_status',
+    import: 'import_generated_asset_hunyuan',
+  },
+};
 
 class BlenderMCPService {
   private socket: net.Socket | null = null;
@@ -184,6 +206,42 @@ class BlenderMCPService {
     );
   }
 
+  // ── Response mapping helpers ────────────────────────────────────────────
+
+  /** Map a raw addon response to an ImportedObject, falling back to an id. */
+  private toImportedObject(raw: unknown, fallbackId: string): ImportedObject {
+    const data = raw as Record<string, unknown>;
+    return {
+      objectName: String(data?.objectName ?? data?.name ?? fallbackId),
+    };
+  }
+
+  /** Map a raw addon asset list to AssetResults stamped with their source. */
+  private mapAssetResults(raw: unknown, source: AssetSource): AssetResult[] {
+    if (!Array.isArray(raw)) return [];
+    return (raw as Record<string, unknown>[]).map((a) => ({
+      id: String(a.id ?? ''),
+      name: String(a.name ?? ''),
+      source,
+      category: String(a.category ?? ''),
+      thumbnailUrl: a.thumbnailUrl as string | undefined,
+    }));
+  }
+
+  /** Send a job-creation command and map the response to a JobResult. */
+  private async createJob(
+    type: string,
+    prompt: string,
+  ): Promise<Result<JobResult, string>> {
+    const result = await this.sendCommand({ type, params: { prompt } });
+    if (!result.ok) return result;
+    const data = result.data as Record<string, unknown>;
+    return ok({
+      jobId: String(data?.jobId ?? ''),
+      status: 'pending',
+    });
+  }
+
   // ── Asset sourcing ──────────────────────────────────────────────────────
 
   async searchPolyHaven(
@@ -198,17 +256,7 @@ class BlenderMCPService {
       params,
     });
     if (!result.ok) return result;
-    const raw = result.data as Record<string, unknown>[];
-    const assets: AssetResult[] = Array.isArray(raw)
-      ? raw.map((a) => ({
-          id: String(a.id ?? ''),
-          name: String(a.name ?? ''),
-          source: 'polyhaven' as const,
-          category: String(a.category ?? ''),
-          thumbnailUrl: a.thumbnailUrl as string | undefined,
-        }))
-      : [];
-    return ok(assets);
+    return ok(this.mapAssetResults(result.data, 'polyhaven'));
   }
 
   async downloadPolyHaven(
@@ -220,10 +268,7 @@ class BlenderMCPService {
       params: { asset_id: assetId, resolution },
     });
     if (!result.ok) return result;
-    const data = result.data as Record<string, unknown>;
-    return ok({
-      objectName: String(data?.objectName ?? data?.name ?? assetId),
-    });
+    return ok(this.toImportedObject(result.data, assetId));
   }
 
   async searchSketchfab(
@@ -234,17 +279,7 @@ class BlenderMCPService {
       params: { query, downloadable: true },
     });
     if (!result.ok) return result;
-    const raw = result.data as Record<string, unknown>[];
-    const assets: AssetResult[] = Array.isArray(raw)
-      ? raw.map((a) => ({
-          id: String(a.id ?? ''),
-          name: String(a.name ?? ''),
-          source: 'sketchfab' as const,
-          category: String(a.category ?? ''),
-          thumbnailUrl: a.thumbnailUrl as string | undefined,
-        }))
-      : [];
-    return ok(assets);
+    return ok(this.mapAssetResults(result.data, 'sketchfab'));
   }
 
   async downloadSketchfab(
@@ -255,10 +290,7 @@ class BlenderMCPService {
       params: { model_id: modelId },
     });
     if (!result.ok) return result;
-    const data = result.data as Record<string, unknown>;
-    return ok({
-      objectName: String(data?.objectName ?? data?.name ?? modelId),
-    });
+    return ok(this.toImportedObject(result.data, modelId));
   }
 
   // ── Generation ──────────────────────────────────────────────────────────
@@ -266,43 +298,21 @@ class BlenderMCPService {
   async generateHyper3D(
     prompt: string,
   ): Promise<Result<JobResult, string>> {
-    const result = await this.sendCommand({
-      type: 'create_rodin_job',
-      params: { prompt },
-    });
-    if (!result.ok) return result;
-    const data = result.data as Record<string, unknown>;
-    return ok({
-      jobId: String(data?.jobId ?? ''),
-      status: 'pending',
-    });
+    return this.createJob(PROVIDER_COMMANDS.hyper3d.create, prompt);
   }
 
   async generateHunyuan3D(
     prompt: string,
   ): Promise<Result<JobResult, string>> {
-    const result = await this.sendCommand({
-      type: 'create_hunyuan_job',
-      params: { prompt },
-    });
-    if (!result.ok) return result;
-    const data = result.data as Record<string, unknown>;
-    return ok({
-      jobId: String(data?.jobId ?? ''),
-      status: 'pending',
-    });
+    return this.createJob(PROVIDER_COMMANDS.hunyuan3d.create, prompt);
   }
 
   async pollJobStatus(
     jobId: string,
     provider: GenerationProvider,
   ): Promise<Result<JobStatusResult, string>> {
-    const type =
-      provider === 'hyper3d'
-        ? 'poll_rodin_job_status'
-        : 'poll_hunyuan_job_status';
     const result = await this.sendCommand({
-      type,
+      type: PROVIDER_COMMANDS[provider].poll,
       params: { job_id: jobId },
     });
     if (!result.ok) return result;
@@ -320,19 +330,12 @@ class BlenderMCPService {
     jobId: string,
     provider: GenerationProvider,
   ): Promise<Result<ImportedObject, string>> {
-    const type =
-      provider === 'hyper3d'
-        ? 'import_generated_asset'
-        : 'import_generated_asset_hunyuan';
     const result = await this.sendCommand({
-      type,
+      type: PROVIDER_COMMANDS[provider].import,
       params: { job_id: jobId },
     });
     if (!result.ok) return result;
-    const data = result.data as Record<string, unknown>;
-    return ok({
-      objectName: String(data?.objectName ?? data?.name ?? jobId),
-    });
+    return ok(this.toImportedObject(result.data, jobId));
   }
 }
 

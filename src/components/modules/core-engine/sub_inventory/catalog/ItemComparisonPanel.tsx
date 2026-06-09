@@ -1,12 +1,13 @@
 'use client';
 
 import { useMemo, useState, useCallback } from 'react';
-import { GitCompareArrows, RotateCcw, Plus, X } from 'lucide-react';
+import { GitCompareArrows, RotateCcw, Plus, X, ArrowUp, ArrowDown, Minus, Crown } from 'lucide-react';
 import { STATUS_SUCCESS, STATUS_ERROR, STATUS_MUTED,
   withOpacity, OPACITY_20, OPACITY_12, OPACITY_30, OPACITY_10,
 } from '@/lib/chart-colors';
 import { BlueprintPanel, SectionHeader } from '../../unique-tabs/_design';
 import { ACCENT, RARITY_COLORS, ALL_ITEM_TYPES, type ItemData } from '../_shared/data';
+import { buildComparison, formatDelta, describeDelta } from './itemComparison';
 
 /* ── Same-Type Item Comparison Panel (2-3 items) ────────────────────────── */
 
@@ -49,20 +50,11 @@ export function ItemComparisonPanel({ items }: { items: ItemData[] }) {
     setSlotIds(prev => prev.filter((_, i) => i !== index));
   }, [slotIds.length]);
 
-  /* stat union with max for bar scaling */
-  const statRows = useMemo(() => {
-    if (selectedItems.length < 2) return [];
-    const keys = new Set(selectedItems.flatMap(item => item.stats.map(s => s.label)));
-    return Array.from(keys).map(label => {
-      const values = selectedItems.map(item => {
-        const s = item.stats.find(st => st.label === label);
-        return { numericValue: s?.numericValue ?? 0, display: s?.value ?? '—', maxValue: s?.maxValue ?? 0 };
-      });
-      const max = Math.max(...values.map(v => v.numericValue), ...values.map(v => v.maxValue), 1);
-      const bestValue = Math.max(...values.map(v => v.numericValue));
-      return { label, values, max, bestValue };
-    });
-  }, [selectedItems]);
+  /* stat rows + per-value deltas + overall winner (pure model) */
+  const { rows: statRows, winnerIndex } = useMemo(
+    () => buildComparison(selectedItems),
+    [selectedItems],
+  );
 
   if (availableCategories.length === 0) return null;
 
@@ -126,36 +118,56 @@ export function ItemComparisonPanel({ items }: { items: ItemData[] }) {
         <>
           {/* Header names + rarity */}
           <div className="grid gap-2 items-center" style={{ gridTemplateColumns: `repeat(${selectedItems.length}, 1fr)` }}>
-            {selectedItems.map(item => (
-              <div key={item.id} className="text-center">
-                <span className="text-sm font-mono font-bold"
-                  style={{ color: RARITY_COLORS[item.rarity] ?? STATUS_MUTED }}>
-                  {item.name}
-                </span>
-                <div className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted">
-                  {item.rarity} {item.subtype}
+            {selectedItems.map((item, idx) => {
+              const isWinner = idx === winnerIndex;
+              return (
+                <div key={item.id} className="text-center">
+                  <span className="inline-flex items-center gap-1 text-sm font-mono font-bold"
+                    style={{ color: RARITY_COLORS[item.rarity] ?? STATUS_MUTED }}>
+                    {isWinner && (
+                      <Crown className="w-3.5 h-3.5 shrink-0" style={{ color: STATUS_SUCCESS }}
+                        aria-label="Best overall" />
+                    )}
+                    {item.name}
+                  </span>
+                  <div className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted">
+                    {item.rarity} {item.subtype}
+                    {isWinner && <span className="sr-only"> — best overall</span>}
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
 
           {/* Stat rows with bars */}
           <div className="space-y-1.5">
-            {statRows.map(({ label, values, max, bestValue }) => (
+            {statRows.map(({ label, values, max }) => (
               <div key={label} className="space-y-0.5">
                 <div className="text-xs font-mono text-text-muted text-center">{label}</div>
                 <div className="grid gap-3" style={{ gridTemplateColumns: `repeat(${values.length}, 1fr)` }}>
                   {values.map((v, idx) => {
-                    const isBest = v.numericValue === bestValue && bestValue > 0;
-                    const isWorst = v.numericValue < bestValue && bestValue > 0;
-                    const barColor = isBest ? STATUS_SUCCESS : isWorst ? STATUS_ERROR : ACCENT;
+                    const barColor = v.isBest ? STATUS_SUCCESS : v.isTrailing ? STATUS_ERROR : ACCENT;
+                    const tone = v.isLeader ? STATUS_SUCCESS : v.isTrailing ? STATUS_ERROR : STATUS_MUTED;
+                    const DirGlyph = v.isLeader ? ArrowUp : v.isTrailing ? ArrowDown : Minus;
+                    const deltaLabel = formatDelta(v);
+                    const standing = describeDelta(v);
                     return (
-                      <div key={idx} className="flex items-center gap-2">
-                        <span className="text-xs font-mono font-bold w-12 text-right"
-                          style={{ color: isBest ? STATUS_SUCCESS : isWorst ? STATUS_ERROR : 'var(--text)' }}>
+                      <div key={idx} className="flex items-center gap-1.5" title={standing || undefined}>
+                        {v.hasComparison && (
+                          <DirGlyph className="w-3 h-3 shrink-0" style={{ color: tone }} aria-hidden="true" />
+                        )}
+                        <span className="text-xs font-mono font-bold tabular-nums whitespace-nowrap"
+                          style={{ color: v.isBest ? STATUS_SUCCESS : v.isTrailing ? STATUS_ERROR : 'var(--text)' }}>
                           {v.display}
                         </span>
-                        <div className="flex-1 h-2 rounded-full bg-surface-deep overflow-hidden">
+                        {deltaLabel && (
+                          <span className="text-2xs font-mono font-bold tabular-nums whitespace-nowrap"
+                            style={{ color: tone }}>
+                            {deltaLabel}
+                          </span>
+                        )}
+                        {standing && <span className="sr-only">{`${label}: ${standing}`}</span>}
+                        <div className="flex-1 h-2 rounded-full bg-surface-deep overflow-hidden min-w-[20px]">
                           <div className="h-full rounded-full transition-all"
                             style={{ width: `${(v.numericValue / max) * 100}%`, backgroundColor: barColor }} />
                         </div>

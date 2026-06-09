@@ -4,6 +4,7 @@ import { buildProposalPrompt } from '@/lib/one-shot/design-prompts';
 import { validateProposal } from '@/lib/one-shot/validate-proposal';
 import { seededEntities } from '@/lib/catalog/seed';
 import { startExecution, awaitCallback } from '@/lib/claude-terminal/cli-service';
+import { UI_TIMEOUTS } from '@/lib/constants';
 import type { CatalogDistribution } from '@/lib/catalog/gap-analysis';
 
 const PROJECT_PATH = process.env.POF_UE_UPROJECT ?? process.cwd();
@@ -26,7 +27,7 @@ export async function POST(req: NextRequest) {
     const prompt = buildProposalPrompt(catalogId, distribution, userHint);
 
     const executionId = startExecution(PROJECT_PATH, prompt);
-    const parsed = await awaitCallback(executionId, { timeoutMs: 5 * 60 * 1000 }) as Record<string, unknown>;
+    const parsed = await awaitCallback(executionId, { timeoutMs: UI_TIMEOUTS.callbackAwaitTimeout }) as Record<string, unknown>;
 
     const seededIds = new Set(seededEntities(catalogId).map((e) => e.id));
     const issues = validateProposal(catalogId, parsed as { name?: string; data?: unknown }, { seededIds });

@@ -6,7 +6,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { STATUS_SUCCESS, STATUS_WARNING, STATUS_ERROR, ACCENT_CYAN, ACCENT_CYAN_LIGHT, OPACITY_8,
   withOpacity, OPACITY_10, OPACITY_5, OPACITY_20, OPACITY_30,
 } from '@/lib/chart-colors';
-import { BlueprintPanel, SectionHeader } from '../_shared/design';
+import { BlueprintPanel, SectionHeader, SAVE_TYPE } from '../_shared/design';
 import { ACCENT } from '../_shared/data';
 import { MIGRATION_PATH, COMPAT_VERSIONS, COMPAT_LOOKUP } from '../_shared/data-panels';
 
@@ -62,8 +62,8 @@ export function MigrationPathGraph() {
             return (
               <motion.div key={node.version} initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
                 <div className="border border-border/10 rounded-lg p-3 font-mono text-xs space-y-3" style={{ backgroundColor: `${withOpacity(ACCENT, OPACITY_5)}` }}>
-                  <div className="text-xs font-mono uppercase tracking-[0.15em] border-b border-border/10 pb-1" style={{ color: ACCENT }}>
-                    {node.version} Migration Details
+                  <div className={`${SAVE_TYPE.title} border-b border-border/10 pb-1`} style={{ color: ACCENT }}>
+                    {node.version} migration details
                   </div>
                   {node.fieldsAdded.length > 0 && (
                     <div className="space-y-0.5">
@@ -94,7 +94,7 @@ export function MigrationPathGraph() {
 
         {/* Compatibility matrix */}
         <div className="space-y-1.5">
-          <span className="text-xs font-mono uppercase tracking-[0.15em]" style={{ color: ACCENT }}>Compatibility Matrix</span>
+          <span className={SAVE_TYPE.title} style={{ color: ACCENT }}>Compatibility matrix</span>
           <div className="overflow-auto">
             <table className="w-full border-collapse font-mono text-xs">
               <thead>

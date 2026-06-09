@@ -1,16 +1,14 @@
 'use client';
 import { useCallback, useState, useSyncExternalStore } from 'react';
-import type { LabDensity } from '../theme';
 
 export interface LabPrefs {
   themeId: 'light' | 'dark';
-  density: LabDensity;
   lastCatalogId?: string;
   lastEntityId?: string | null;
 }
 
 const KEY = 'pof-lab-prefs';
-const DEFAULTS: LabPrefs = { themeId: 'light', density: 'comfortable' };
+const DEFAULTS: LabPrefs = { themeId: 'light' };
 
 function read(): LabPrefs {
   if (typeof window === 'undefined') return DEFAULTS;
@@ -20,7 +18,6 @@ function read(): LabPrefs {
     const parsed = JSON.parse(raw) as Partial<LabPrefs>;
     return {
       themeId: parsed.themeId === 'dark' ? 'dark' : 'light',
-      density: parsed.density === 'compact' ? 'compact' : 'comfortable',
       lastCatalogId: typeof parsed.lastCatalogId === 'string' ? parsed.lastCatalogId : undefined,
       lastEntityId: typeof parsed.lastEntityId === 'string' ? parsed.lastEntityId : null,
     };

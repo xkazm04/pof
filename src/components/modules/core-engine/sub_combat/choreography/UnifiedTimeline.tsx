@@ -5,6 +5,7 @@ import {
   OVERLAY_WHITE, withOpacity, OPACITY_40, OPACITY_60,
 } from '@/lib/chart-colors';
 import type { DamageEvent, FeedbackEvent, WaveDef } from '@/lib/combat/choreography-sim';
+import type { TensionCurve } from '@/lib/combat/tension-curve';
 import {
   LANE_GAP,
   computeScrubData,
@@ -15,7 +16,7 @@ import { usePacingPaths } from './usePacingPaths';
 import { TimelineLanes, TimelineLaneLabels } from './TimelineLanes';
 
 export function UnifiedTimeline({
-  damageEvents, feedbackEvents, alerts, waves, totalDuration, scrubTime, onScrub,
+  damageEvents, feedbackEvents, alerts, waves, totalDuration, scrubTime, onScrub, tensionCurve,
 }: {
   damageEvents: DamageEvent[];
   feedbackEvents: FeedbackEvent[];
@@ -24,6 +25,7 @@ export function UnifiedTimeline({
   totalDuration: number;
   scrubTime: number;
   onScrub: (t: number) => void;
+  tensionCurve: TensionCurve;
 }) {
   const wrapperRef = useRef<HTMLDivElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -50,8 +52,8 @@ export function UnifiedTimeline({
 
   const displayTime = hover?.time ?? scrubTime;
   const scrubData = useMemo(
-    () => computeScrubData(displayTime, damageEvents, feedbackEvents, alerts),
-    [displayTime, damageEvents, feedbackEvents, alerts],
+    () => computeScrubData(displayTime, damageEvents, feedbackEvents, alerts, tensionCurve),
+    [displayTime, damageEvents, feedbackEvents, alerts, tensionCurve],
   );
 
   const handlePointerMove = useCallback((e: React.PointerEvent) => {
@@ -110,6 +112,7 @@ export function UnifiedTimeline({
               playerPath={playerPath}
               enemyPath={enemyPath}
               hasAlerts={hasAlerts}
+              tensionCurve={tensionCurve}
             />
 
             {/* Scrub head */}

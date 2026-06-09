@@ -2,7 +2,7 @@
 
 import { StepFrame } from './StepFrame';
 import { CliProduce } from './shared/CliProduce';
-import { useLabStep, useLabPipelineStore } from '../labPipelineStore';
+import { useStaticStep } from './useStaticStep';
 import { ITEM_STEP_SPECS, DEFAULT_GATE_CHECKS } from './itemsSteps';
 import type { LabTheme } from '../theme';
 import type { StepProps } from './stepProps';
@@ -19,14 +19,13 @@ function Check({ t, name, ran }: { t: LabTheme; name: string; ran: boolean }) {
 
 /** Items · Test Gate. View: checks + log (persisted). Produce: run functional test. */
 export function ItemTestGate({ t, entity, step }: StepProps) {
-  const art = useLabStep(entity.id, step);
-  const produce = useLabPipelineStore((s) => s.produce);
+  const { art, runProduce } = useStaticStep(entity, step);
   const ran = art?.data?.pass === true;
   const checks = (art?.data?.checks ?? DEFAULT_GATE_CHECKS) as string[];
 
   return (
-    <StepFrame t={t} acceptance={ITEM_STEP_SPECS[step].accept(art)}
-      onFix={() => produce(entity.id, step, ITEM_STEP_SPECS[step].produce(entity))}
+    <StepFrame t={t} acceptance={ITEM_STEP_SPECS[step].accept(art?.data ?? {})}
+      onFix={runProduce}
       panels={[
         { label: 'Checks', node: <div>{checks.map((c) => <Check key={c} t={t} name={c} ran={ran} />)}</div> },
         { label: 'Log', node: (
@@ -40,7 +39,7 @@ export function ItemTestGate({ t, entity, step }: StepProps) {
           <CliProduce t={t} label="Run functional test (CLI)" rows={3}
             note="Runs the UE functional test; the gate is judged by the -abslog, not the exit code."
             buildPrompt={(dir) => `Run the UE functional test that equips + uses ${entity.name}; judge PASS/FAIL by -abslog content. ${dir}`}
-            onComplete={() => produce(entity.id, step, ITEM_STEP_SPECS[step].produce(entity))} />
+            onComplete={runProduce} />
         ) },
       ]}
     />
@@ -49,14 +48,13 @@ export function ItemTestGate({ t, entity, step }: StepProps) {
 
 /** Items · UE Packaging. View: asset manifest + deps (persisted). Produce: package. */
 export function ItemPackaging({ t, entity, step }: StepProps) {
-  const art = useLabStep(entity.id, step);
-  const produce = useLabPipelineStore((s) => s.produce);
+  const { art, runProduce } = useStaticStep(entity, step);
   const assets = (art?.data?.assets ?? []) as string[];
   const packed = assets.length > 0;
 
   return (
-    <StepFrame t={t} acceptance={ITEM_STEP_SPECS[step].accept(art)}
-      onFix={() => produce(entity.id, step, ITEM_STEP_SPECS[step].produce(entity))}
+    <StepFrame t={t} acceptance={ITEM_STEP_SPECS[step].accept(art?.data ?? {})}
+      onFix={runProduce}
       panels={[
         { label: 'Asset manifest', node: (
           packed
@@ -77,7 +75,7 @@ export function ItemPackaging({ t, entity, step }: StepProps) {
           <CliProduce t={t} label="Package to UE (CLI)" rows={3}
             note={`Writes the DT_Items row for ${entity.name} + cooks referenced assets; commits narrowly.`}
             buildPrompt={(dir) => `Write the DT_Items row for ${entity.name} + cook the referenced icon/mesh/material/montage/VFX into the UE project; commit narrowly. ${dir}`}
-            onComplete={() => produce(entity.id, step, ITEM_STEP_SPECS[step].produce(entity))} />
+            onComplete={runProduce} />
         ) },
       ]}
     />

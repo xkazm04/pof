@@ -12,8 +12,10 @@ Every UI panel, checklist, prompt, and quality evaluation in PoF is anchored to 
 | `src/lib/module-registry.ts` | All `SubModuleDefinition` objects (checklists, quick actions, knowledge tips), `CATEGORIES`, `SUB_MODULE_MAP`, `ARPG_SUB_MODULES`, helper lookups |
 | `src/lib/feature-definitions.ts` | `MODULE_FEATURE_DEFINITIONS` (per-module `FeatureDefinition[]` with `dependsOn`), `MODULE_PREREQUISITES`, `buildDependencyMap`, `computeBlockers`, `getRecommendedNextModules`, `getUnmetPrerequisites` |
 | `src/lib/evaluator/module-eval-prompts.ts` | `MODULE_CONTEXTS` (per-module eval focus + pass checks), `EVAL_PASSES`, `buildEvalPrompt`, `getPassesForModule` |
-| `src/lib/nba-engine.ts` | `computeNBA` — the Next Best Action engine; reads all three registries plus Zustand stores |
+| `src/lib/nba-engine.ts` | `computeNBA` — the Next Best Action engine; reads all three registries plus Zustand stores. Exports `NBA_FACTOR_WEIGHTS` (max points per factor) and the `ScoreBreakdown` type |
 | `src/hooks/useNBA.ts` | React hook wrapping `computeNBA` with feature-status API fetch |
+| `src/lib/nba-breakdown.ts` | Pure, tested projection of a recommendation's `ScoreBreakdown` into ordered, color-tokened, plain-language factor segments (`nbaFactorSegments`, `nbaBreakdownAriaLabel`) |
+| `src/components/modules/shared/NBAScoreBar.tsx` | The "why-recommended" bar — a slim segmented track (one grow-in segment per factor, width-weighted by points) with a hover/focus plain-language legend; rendered in `RoadmapChecklist`'s NBA banner |
 | `src/components/modules/shared/RecommendedNextBanner.tsx` | UI consumer of `getRecommendedNextModules` (module-level recommendations) |
 | `src/components/modules/shared/RoadmapChecklist.tsx` | UI consumer of `MODULE_PREREQUISITES` |
 | `src/lib/constellation/layout.ts` | `layoutModuleConstellation` / `pickNextFeature` — pure, testable layered layout of one module's `buildDependencyMap()` slice into status-colored feature nodes |
@@ -70,6 +72,8 @@ Two read-only graph views render this data. The module-level `DependencyGraph` /
 
 Checklist items are matched to `FeatureDefinition` entries by fuzzy label-word matching (line 119–122). If no match, the item is treated as unblocked with readiness = 70 % of max.
 
+The breakdown is no longer opaque to users: `RoadmapChecklist`'s NBA banner renders an `NBAScoreBar` under the top recommendation, projecting the `ScoreBreakdown` (via the pure `nba-breakdown.ts`) into a width-weighted segmented bar with a plain-language legend on hover/focus. Since the five weights sum to 100, each factor's points double as its percent width.
+
 ### 5. Registry 3 — Evaluator prompts (`src/lib/evaluator/module-eval-prompts.ts`)
 
 `EVAL_PASSES` (line 18) defines the standard four-pass sequence: `ground-truth → structure → quality → performance`. One module (`arpg-combat`) also has a fifth `combat-trace` pass defined in `getPassesForModule`.
@@ -77,6 +81,16 @@ Checklist items are matched to `FeatureDefinition` entries by fuzzy label-word m
 `MODULE_CONTEXTS` (line 70) maps each `moduleId` to a `ModuleEvalContext` with `focus`, `structureChecks`, `qualityChecks`, `performanceChecks`, and an optional `tracePass`. Modules without an entry in `MODULE_CONTEXTS` receive generic pass descriptions.
 
 `buildEvalPrompt(params)` (line 346) assembles the full prompt string from the context + a shared `FINDING_SCHEMA` that instructs the model to return a JSON array of findings with `{ category, severity, file, line, description, suggestedFix, effort }`.
+
+#### Regression diff (new-since-last-scan)
+
+`DeepEvalResults` diffs each fresh scan against the previous one so regressions stand out (the SonarQube "New Code" / GitHub code-scanning model), instead of re-triaging the whole backlog every run:
+
+- **`src/lib/evaluator/finding-collector.ts`** exposes `fingerprintFinding(f, { includeLine })`. Within-scan dedup keys on the line-inclusive fingerprint; cross-scan diffing uses the **line-insensitive** form so a finding that merely shifts lines reads as *persisting*, not one resolved + one new.
+- **`src/lib/evaluator/regression-diff.ts`** (pure) — `diffScans(previous, current, { scopeModuleIds })` tags every current finding `new`/`persisting` and reports prior findings now absent as `resolved`, with a per-severity `summary`. `scopeModuleIds` restricts the comparison to the modules actually re-evaluated (a single-module re-eval won't mark other modules resolved). `mergeBaseline(...)` builds the next stored baseline, replacing re-evaluated modules and keeping untouched ones.
+- **`src/stores/deepEvalStore.ts`** persists only the single most-recent scan's findings (localStorage `pof-deep-eval`) as the diff baseline.
+- **`src/lib/evaluator/git-attribution.ts`** + **`/api/evaluator/git-attribution`** reuse the codebase-archeologist `git log` approach to attribute each NEW finding to the commit(s) that touched its file since the previous scan (`--since` = prior scan time). The pure `parseAttributionLog` is unit-tested; the git-spawning `attributeFilesSince` is server-only.
+- **`RegressionBanner.tsx`** renders the compact `+N critical / −M resolved / persisting` summary above the tree plus a **New / All** view toggle; the view defaults to *New issues* whenever a baseline exists and something new appeared.
 
 ---
 

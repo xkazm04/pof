@@ -10,31 +10,12 @@ import type {
 } from '@/types/session-analytics';
 
 // ── Schema bootstrap ──
+// The `session_analytics` table + index are defined centrally in db.ts; this is
+// just the documented "ensure DB is initialized" guard (same pattern as
+// session-log-db.ts / telemetry-db.ts). Call at the top of every exported function.
 
-export function ensureSessionAnalyticsTable() {
-  const db = getDb();
-
-  db.exec(`
-    CREATE TABLE IF NOT EXISTS session_analytics (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      module_id TEXT NOT NULL,
-      session_key TEXT NOT NULL,
-      prompt TEXT NOT NULL,
-      prompt_preview TEXT NOT NULL,
-      had_project_context INTEGER NOT NULL DEFAULT 0,
-      prompt_length INTEGER NOT NULL DEFAULT 0,
-      success INTEGER NOT NULL DEFAULT 0,
-      duration_ms INTEGER NOT NULL DEFAULT 0,
-      started_at TEXT NOT NULL DEFAULT (datetime('now')),
-      completed_at TEXT NOT NULL DEFAULT (datetime('now'))
-    )
-  `);
-
-  // Index for fast module queries
-  db.exec(`
-    CREATE INDEX IF NOT EXISTS idx_session_analytics_module
-    ON session_analytics(module_id)
-  `);
+function ensureTables() {
+  getDb();
 }
 
 // ── Row mapping ──
@@ -67,7 +48,7 @@ export function recordSession(data: {
   startedAt: string;
   completedAt: string;
 }): SessionRecord {
-  ensureSessionAnalyticsTable();
+  ensureTables();
   const db = getDb();
 
   const preview = data.prompt.slice(0, 80).replace(/\n/g, ' ');
@@ -97,7 +78,7 @@ export function recordSession(data: {
 }
 
 export function getRecord(id: number): SessionRecord | null {
-  ensureSessionAnalyticsTable();
+  ensureTables();
   const row = getDb()
     .prepare('SELECT * FROM session_analytics WHERE id = ?')
     .get(id) as Record<string, unknown> | undefined;
@@ -105,7 +86,7 @@ export function getRecord(id: number): SessionRecord | null {
 }
 
 export function getRecentSessions(limit: number = 20): SessionRecord[] {
-  ensureSessionAnalyticsTable();
+  ensureTables();
   const rows = getDb()
     .prepare('SELECT * FROM session_analytics ORDER BY completed_at DESC LIMIT ?')
     .all(limit) as Record<string, unknown>[];
@@ -113,7 +94,7 @@ export function getRecentSessions(limit: number = 20): SessionRecord[] {
 }
 
 export function getModuleSessions(moduleId: SubModuleId): SessionRecord[] {
-  ensureSessionAnalyticsTable();
+  ensureTables();
   const rows = getDb()
     .prepare('SELECT * FROM session_analytics WHERE module_id = ? ORDER BY completed_at DESC')
     .all(moduleId) as Record<string, unknown>[];
@@ -180,7 +161,7 @@ function rowToModuleStats(r: RawModuleStatsRow): ModuleStats {
 }
 
 export function getModuleStats(moduleId: SubModuleId): ModuleStats {
-  ensureSessionAnalyticsTable();
+  ensureTables();
   const row = getDb()
     .prepare(MODULE_STATS_SQL + ' WHERE module_id = ?')
     .get(moduleId) as RawModuleStatsRow | undefined;
@@ -200,7 +181,7 @@ export function getModuleStats(moduleId: SubModuleId): ModuleStats {
 
 /** Returns stats for all modules in a single query (no N+1). */
 export function getAllModuleStats(): ModuleStats[] {
-  ensureSessionAnalyticsTable();
+  ensureTables();
   const rows = getDb()
     .prepare(MODULE_STATS_SQL + ' GROUP BY module_id')
     .all() as RawModuleStatsRow[];
@@ -210,7 +191,7 @@ export function getAllModuleStats(): ModuleStats[] {
 
 /** Raw row also carries prompt-length averages for insights/suggestions. */
 function getModuleStatsRaw(moduleId: SubModuleId): RawModuleStatsRow | null {
-  ensureSessionAnalyticsTable();
+  ensureTables();
   const row = getDb()
     .prepare(MODULE_STATS_SQL + ' WHERE module_id = ?')
     .get(moduleId) as RawModuleStatsRow | undefined;
@@ -220,7 +201,7 @@ function getModuleStatsRaw(moduleId: SubModuleId): RawModuleStatsRow | null {
 // ── Analytics: Prompt Quality Score ──
 
 export function getPromptQualityScore(moduleId: SubModuleId): PromptQualityScore {
-  ensureSessionAnalyticsTable();
+  ensureTables();
   const db = getDb();
 
   const allRows = db.prepare(
@@ -341,7 +322,7 @@ export function generateInsights(moduleId: SubModuleId): PromptInsight[] {
   // 4. Speed insight — successful sessions that take too long
   if (stats.avgSuccessDurationMs > 120000 && stats.successCount >= 5) {
     insights.push({
-      type: 'time-of-day',
+      type: 'slow-success',
       moduleId,
       message: `Successful tasks average ${Math.round(stats.avgSuccessDurationMs / 1000)}s — context injection could speed this up`,
       factor: stats.avgSuccessDurationMs / 60000,
@@ -409,7 +390,7 @@ export function getPromptSuggestions(moduleId: SubModuleId, prompt: string): Pro
 // ── Full Dashboard ──
 
 export function getDashboard(): AnalyticsDashboard {
-  ensureSessionAnalyticsTable();
+  ensureTables();
 
   // Single GROUP BY query returns all per-module stats + prompt-length averages
   const moduleStats = getAllModuleStats();
@@ -450,7 +431,7 @@ export function getDashboard(): AnalyticsDashboard {
 // ── Session count per module (for threshold checks) ──
 
 export function getSessionCount(moduleId: SubModuleId): number {
-  ensureSessionAnalyticsTable();
+  ensureTables();
   const row = getDb()
     .prepare('SELECT COUNT(*) as cnt FROM session_analytics WHERE module_id = ?')
     .get(moduleId) as { cnt: number };

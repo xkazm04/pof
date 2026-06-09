@@ -12,6 +12,7 @@ Cross-cutting infrastructure that every module in the app depends on: the typed 
 | `src/types/event-bus.ts` | `EventMap` interface (all typed channels), `BusEvent<C>`, handler types |
 | `src/lib/lifecycle.ts` | `Lifecycle<T>` protocol + four factories + `composeLifecycles` |
 | `src/hooks/useLifecycle.ts` | `useLifecycle()` / `useGuardedLifecycle()` React hooks |
+| `src/lib/state-emitter.ts` | `createStateEmitter<T>()` — shared subscribe/notify/getState primitive for the bridge singletons |
 | `src/hooks/useSuspend.ts` | `SuspendContext`, `useSuspendableEffect`, `useSuspendableSelector` |
 | `src/components/layout/ModuleRenderer.tsx` | LRU module cache (`LRU_CAP = 5`, `SESSION_LRU_CAP = 5`) |
 | `src/lib/logger.ts` | Thin `logger` wrapper — `info`, `warn`, `debug`, `log` |
@@ -42,6 +43,8 @@ All channels are defined in `src/types/event-bus.ts` as a merged `EventMap` inte
 | `nav` | `nav.module.changed`, `nav.tab.changed` |
 | `ue5` | `ue5.connected`, `ue5.disconnected`, `ue5.error`, `ue5.ws.*` (5 WebSocket channels) |
 | `pof` | `pof.connected`, `pof.disconnected`, `pof.error`, `pof.manifest.updated`, `pof.test.completed`, `pof.snapshot.captured`, `pof.compile.completed` |
+| `gate` | `gate.verdict.changed` (emitted by `drainOne` when an L3/L4 test-gate verdict moves; carries `from`/`to`/`regression`) |
+| `oneshot` | `oneshot.started`, `oneshot.step-completed`, `oneshot.completed`, `oneshot.failed` |
 
 The type `EventChannel = keyof EventMap` means TypeScript enforces payload shapes at call sites.
 
@@ -115,6 +118,28 @@ Both hooks store the `Lifecycle` instance in a `useRef` so `dispose()` is always
 
 ---
 
+## State emitter (`src/lib/state-emitter.ts`)
+
+`createStateEmitter<T>({ initial, label, clone? })` is the shared observable-state primitive behind the bridge singletons. It owns the subscribe/notify/getState trio so callers don't re-roll it:
+
+```ts
+const emitter = createStateEmitter<ConnState>({
+  label: '[PoF-CM]',            // prefixes subscriber-error warnings
+  initial: { status: 'disconnected', /* … */ },
+  // Optional — override the default shallow clone when state holds a Map etc.
+  clone: (s) => ({ ...s, propertyWatches: new Map(s.propertyWatches) }),
+});
+
+emitter.getState();             // defensive copy (clone), safe to hand to subscribers
+emitter.peek();                 // live ref — for the owner's own hot internal reads only (read-only)
+emitter.setState({ status });   // shallow-merge, then notify all subscribers
+const unsub = emitter.subscribe(handler);  // returns an unsubscribe fn
+```
+
+`notify` iterates subscribers with a per-handler `try/catch` (a throwing subscriber is logged via `logger.warn` under `label` and never blocks siblings) — the same isolation the event bus gives. **Compose, don't inherit**: hold it as a private field and delegate `getState`/`onStateChange`, expose internal reads through a `private get state() { return this.emitter.peek(); }` getter. Used by `pof-bridge/connection-manager.ts`, `ue5-bridge/connection-manager.ts`, and `ue5-bridge/ws-live-state.ts`.
+
+---
+
 ## Suspend/LRU pattern
 
 ### Problem
@@ -123,7 +148,7 @@ Navigating between modules unmounts components, destroying local state and inter
 
 ### LRU cache (`src/components/layout/ModuleRenderer.tsx`)
 
-`ModuleRenderer` keeps the last **5 modules** (`LRU_CAP = 5`, line 11) and the last **5 inline terminal sessions** (`SESSION_LRU_CAP = 5`, line 14) mounted simultaneously. Navigation promotes the active module to the front of the list via `lruTouched()` (line 151). The tail (least-recently-used) entry is evicted — its DOM subtree unmounts and cleans up. All mounted-but-hidden modules have `display: none` applied via `style`.
+`ModuleRenderer` keeps the last **5 modules** (`LRU_CAP = 5`, line 11) and the last **5 inline terminal sessions** (`SESSION_LRU_CAP = 5`, line 14) mounted simultaneously. Navigation promotes the active module to the front of the list via `lruTouched()` (line 156). The tail (least-recently-used) entry is evicted — its DOM subtree unmounts and cleans up. All mounted-but-hidden modules have `display: none` applied via `style`.
 
 ### SuspendContext (`src/hooks/useSuspend.ts:17`)
 
@@ -131,7 +156,7 @@ Navigating between modules unmounts components, destroying local state and inter
 export const SuspendContext = createContext<boolean>(false);
 ```
 
-`ModuleRenderer` wraps every mounted-but-hidden module in `<SuspendContext.Provider value={!isVisible}>` (lines 243, 272). A value of `true` means "this subtree is suspended (hidden)".
+`ModuleRenderer` wraps every mounted-but-hidden module in `<SuspendContext.Provider value={!isVisible}>` via the shared `renderModulePane()` helper (line 247) — used for both special-category and sub-module panes. A value of `true` means "this subtree is suspended (hidden)".
 
 ### useSuspendableEffect
 
@@ -161,14 +186,17 @@ While suspended, the store subscription is replaced with a no-op (no re-renders)
 
 ## Server-side scheduler (cron)
 
-`src/instrumentation.ts` is the one place the app runs work on a wall-clock interval **without a browser**. Next.js calls its exported `register()` once per server start; guarded to `NEXT_RUNTIME === 'nodejs'` (better-sqlite3 is node-only) and to a `globalThis.__pofSchedulerStarted` flag (no double-register on dev HMR). It starts a 1-minute `setInterval` (`UI_TIMEOUTS.scheduleTick`, `.unref()`'d) that calls `tickScheduler()`.
+`src/instrumentation.ts` is the one place the app runs work on a wall-clock interval **without a browser**. Next.js calls its exported `register()` once per server start; guarded to `NEXT_RUNTIME === 'nodejs'` (better-sqlite3 is node-only) and to a `globalThis.__pofSchedulerStarted` flag (no double-register on dev HMR). It starts a 1-minute `setInterval` (`UI_TIMEOUTS.scheduleTick`, `.unref()`'d) that calls `tickScheduler()` and `tickPurgeExpiredKeys()`.
 
-The first (and currently only) consumer is **scheduled nightly builds** (`src/lib/packaging/scheduled-build-runner.ts`):
+The main consumer is **scheduled nightly builds** (`src/lib/packaging/scheduled-build-runner.ts`):
 
 - **Config + state** live in the `settings` table via `build-schedule-store.ts` — a disabled-by-default `BuildSchedule` (time, weekdays, profile, skip-if-unchanged, **and the captured project target** so the server cron can run unattended), plus last-run `ScheduleState`. An in-memory `running` flag is the single-flight guard.
 - **`tickScheduler()`** reads the schedule, asks the pure `isDueAt()` (`build-scheduler.ts`) whether a slot is due, and fire-and-forgets `runScheduledBuild()` if so. `startScheduledRun()` is the manual ("Run now") path.
 - **`runScheduledBuild(ctx, deps)`** runs the full chain — skip-if-unchanged (git HEAD vs last built commit) → fast pre-flight (`preflight-runner.ts`) → cook → smoke (Win64) → size-budget → record to `build_history`. Every side-effect is injected, so the orchestration is unit-tested without spawning anything; `defaultRunnerDeps()` wires the real implementations.
+- **Platform identity is canonical.** The UE `PlatformId` token (`Win64`, `IOS`, …) is the single id used for storage, size-budget lookup and history filtering. `build-profiles.ts` owns the `PLATFORM_LABELS` id→label map plus `normalizePlatformId()` (collapses any friendly/legacy spelling to the token) and `platformLabel()` (token→display name). `insertBuild` normalizes on write and `size-budgets.ts` normalizes on lookup, so a build cooked as `Win64` resolves the same budget a `Windows` record would — no double-keyed budget maps.
 - API surface: `/api/packaging/schedule` (GET status, POST `save`/`tick`/`run-now`). UI: `NightlyBuildScheduler.tsx` in the packaging **Pipeline** tab (GET-polls for status; the cron, not the client, drives the actual builds).
+
+The second consumer is **request-log hygiene**: `tickPurgeExpiredKeys()` (`src/lib/request-log.ts`) deletes expired `request_log` idempotency rows so that table stays bounded. It self-throttles to one `DELETE` per TTL window (1h), so most ticks are a cheap `now`-comparison no-op; the first tick after a restart always purges.
 
 When adding another scheduled job, register it the same way (cheap when idle, guarded, `.unref()`'d) rather than spinning a second interval.
 
@@ -205,6 +233,7 @@ ESLint warns on any string literal matching `#[0-9a-fA-F]{6,8}` (`eslint.config.
 
 - **Semantic status**: `STATUS_SUCCESS`, `STATUS_WARNING`, `STATUS_ERROR`, `STATUS_INFO`, `STATUS_BLOCKER` from `@/lib/chart-colors`
 - **Severity/score tokens**: `SEVERITY_TOKENS.critical/high/medium/low` (bundles `color`, `bg`, `border`); `scoreBandToken(score)` maps 0–100 to a token; `qualityColor(score)` maps 1–5 quality scores
+- **Calm severity cards**: `severityAccentCard(token)` — for finding/gap/issue rows, prefer a neutral `bg-surface` card with `border-l-[3px] border border-border` + this helper's left-rule style over a full translucent `token.bg` fill (a wall of saturated red flattens hierarchy). Reserve `token.color` for the leading icon and the small badge. Shared by Deep Eval, GDD Compliance, and the Codebase Archeologist.
 - **Module accents**: `MODULE_COLORS.core/content/systems/evaluator` etc.; `TAB_ACCENT` for per-tab colors
 - **Opacity**: `withOpacity(color, OPACITY_20)`, `statusBg(color)`, `statusBorder(color)` — never hand-roll `${hex}33`
 - **Dynamic class bug**: Tailwind JIT cannot process template-literal arbitrary classes (`bg-[${expr}]`). Use `style={{ backgroundColor: color }}` for runtime-dynamic colors. See memory note `reference_dynamic_tailwind_arbitrary_class_bug.md`.

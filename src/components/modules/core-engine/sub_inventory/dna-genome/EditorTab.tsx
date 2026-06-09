@@ -5,6 +5,7 @@ import {
   ACCENT_PINK, STATUS_SUCCESS, OPACITY_10, OPACITY_20,
   withOpacity, OPACITY_37,
 } from '@/lib/chart-colors';
+import { focusRingStyle } from '@/lib/ui/focus-ring';
 import { BlueprintPanel, SectionHeader } from '@/components/modules/core-engine/unique-tabs/_design';
 import { RadarChart } from '@/components/modules/core-engine/unique-tabs/_shared';
 import type { ItemGenome, TraitAxis } from '@/types/item-genome';
@@ -27,7 +28,7 @@ interface EditorTabProps {
 
 export function EditorTab({ selected, radarData, genomeCount, updateGenome, updateTrait, deleteGenome }: EditorTabProps) {
   return (
-    <div className="grid grid-cols-2 gap-3">
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
       {/* Left: DNA strand + radar */}
       <BlueprintPanel color={selected.color} className="space-y-3 p-3">
         <div className="flex items-center justify-between">
@@ -48,13 +49,13 @@ export function EditorTab({ selected, radarData, genomeCount, updateGenome, upda
           </div>
         </div>
         {/* Genome metadata */}
-        <div className="space-y-1.5">
+        <div className="space-y-1.5" style={focusRingStyle(selected.color)}>
           <div className="flex items-center gap-2">
             <span className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted w-14">Name</span>
             <input
               type="text" value={selected.name}
               onChange={(e) => updateGenome(selected.id, (g) => ({ ...g, name: e.target.value }))}
-              className="flex-1 text-xs font-mono font-bold px-2 py-1 rounded bg-surface-deep border border-border/40 text-text focus:outline-none focus:border-blue-500/50"
+              className="flex-1 text-xs font-mono font-bold px-2 py-1 rounded bg-surface-deep border border-border/40 text-text focus-ring-inset"
             />
           </div>
           <div className="flex items-center gap-2">
@@ -62,7 +63,7 @@ export function EditorTab({ selected, radarData, genomeCount, updateGenome, upda
             <select
               value={selected.itemType}
               onChange={(e) => updateGenome(selected.id, (g) => ({ ...g, itemType: e.target.value as ItemGenome['itemType'] }))}
-              className="text-xs font-mono px-2 py-1 rounded bg-surface-deep border border-border/40 text-text focus:outline-none"
+              className="text-xs font-mono px-2 py-1 rounded bg-surface-deep border border-border/40 text-text focus-ring-inset"
             >
               {['Weapon', 'Armor', 'Consumable', 'Material', 'Accessory'].map((t) => (
                 <option key={t} value={t}>{t}</option>
@@ -74,7 +75,7 @@ export function EditorTab({ selected, radarData, genomeCount, updateGenome, upda
             <select
               value={selected.minRarity}
               onChange={(e) => updateGenome(selected.id, (g) => ({ ...g, minRarity: e.target.value as ItemGenome['minRarity'] }))}
-              className="text-xs font-mono px-2 py-1 rounded bg-surface-deep border border-border/40 text-text focus:outline-none"
+              className="text-xs font-mono px-2 py-1 rounded bg-surface-deep border border-border/40 text-text focus-ring-inset"
             >
               {['Common', 'Uncommon', 'Rare', 'Epic', 'Legendary'].map((r) => (
                 <option key={r} value={r}>{r}</option>
@@ -118,7 +119,7 @@ export function EditorTab({ selected, radarData, genomeCount, updateGenome, upda
 
         <BlueprintPanel color={ACCENT_PINK} className="space-y-3 p-3">
           <SectionHeader icon={FlaskConical} label="Mutation Config" color={ACCENT_PINK} />
-          <div className="grid grid-cols-3 gap-2">
+          <div className="grid grid-cols-3 gap-2" style={focusRingStyle(ACCENT_PINK)}>
             <div>
               <span className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted block mb-0.5">Rate</span>
               <input
@@ -128,7 +129,7 @@ export function EditorTab({ selected, radarData, genomeCount, updateGenome, upda
                   ...g,
                   mutation: { ...g.mutation, mutationRate: parseInt(e.target.value) / 100 },
                 }))}
-                className="w-full text-xs font-mono font-bold px-1.5 py-1 rounded bg-surface-deep border border-border/40 text-text focus:outline-none focus:border-blue-500/50"
+                className="w-full text-xs font-mono font-bold px-1.5 py-1 rounded bg-surface-deep border border-border/40 text-text focus-ring-inset"
               />
             </div>
             <div>
@@ -140,7 +141,7 @@ export function EditorTab({ selected, radarData, genomeCount, updateGenome, upda
                   ...g,
                   mutation: { ...g.mutation, maxMutations: parseInt(e.target.value) },
                 }))}
-                className="w-full text-xs font-mono font-bold px-1.5 py-1 rounded bg-surface-deep border border-border/40 text-text focus:outline-none focus:border-blue-500/50"
+                className="w-full text-xs font-mono font-bold px-1.5 py-1 rounded bg-surface-deep border border-border/40 text-text focus-ring-inset"
               />
             </div>
             <div>

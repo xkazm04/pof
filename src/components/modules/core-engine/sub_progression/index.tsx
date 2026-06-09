@@ -3,8 +3,8 @@
 import { useMemo, useState, useCallback } from 'react';
 import { TrendingUp, Settings2, LayoutGrid } from 'lucide-react';
 import { useTabFeatures } from '@/hooks/useTabFeatures';
-import { BlueprintPanel, SectionHeader } from '../unique-tabs/_design';
-import { TabHeader, FeatureGrid, LoadingSpinner, SubTabNavigation, type SubTab } from '../unique-tabs/_shared';
+import { BlueprintPanel, SectionHeader, UniqueTabHeader } from '../unique-tabs/_design';
+import { ProgressChip, FeatureGrid, LoadingSpinner, SubTabNavigation, type SubTab } from '../unique-tabs/_shared';
 import type { SubModuleId } from '@/types/modules';
 import { ACCENT, PROGRESSION_FEATURES, generateChartData } from './_shared/data';
 
@@ -89,7 +89,13 @@ export function ProgressionCurve({ moduleId }: ProgressionCurveProps) {
 
   return (
     <div className="space-y-4">
-      <TabHeader icon={TrendingUp} title="Progression Curve" implemented={stats.implemented} total={stats.total} accent={ACCENT} />
+      <UniqueTabHeader
+        icon={TrendingUp}
+        title="Progression Curve"
+        color={ACCENT}
+        subtitle="level & power scaling curves"
+        action={<ProgressChip implemented={stats.implemented} total={stats.total} accent={ACCENT} />}
+      />
 
       <SubTabNavigation tabs={tabs} activeTabId={activeTab} onChange={setActiveTab} accent={ACCENT} />
 

@@ -7,27 +7,19 @@ import type {
   CrashStats,
   CrashAnalyzerResult,
 } from '@/types/crash-analyzer';
+import { emptyCrashStats } from '@/types/crash-analyzer';
 
 /* ---- Stable empty constants (Zustand selector safety) ------------ */
 
-const EMPTY_REPORTS: CrashReport[] = [];
-const EMPTY_DIAGNOSES: CrashDiagnosis[] = [];
-const EMPTY_PATTERNS: CrashPattern[] = [];
-const EMPTY_STATS: CrashStats = {
-  totalCrashes: 0,
-  crashesByType: {
-    nullptr_deref: 0, access_violation: 0, assertion_failed: 0, ensure_failed: 0,
-    gc_reference: 0, stack_overflow: 0, out_of_memory: 0, unhandled_exception: 0,
-    fatal_error: 0, gpu_crash: 0, unknown: 0,
-  },
-  crashesBySeverity: { critical: 0, high: 0, medium: 0, low: 0 },
-  crashesByModule: {},
-  patternsDetected: 0,
-  systemicIssues: 0,
-  recentCrashes: 0,
-  mostCommonType: 'unknown',
-  mostAffectedModule: 'none',
-};
+/**
+ * Stable empty references shared by the store's initial state and the view's
+ * `?? EMPTY_*` selector fallbacks, so both sides read the identical reference
+ * (no re-render churn from a fresh `[]` each render).
+ */
+export const EMPTY_REPORTS: CrashReport[] = [];
+export const EMPTY_DIAGNOSES: CrashDiagnosis[] = [];
+export const EMPTY_PATTERNS: CrashPattern[] = [];
+const EMPTY_STATS: CrashStats = emptyCrashStats();
 
 /* ---- State interface --------------------------------------------- */
 

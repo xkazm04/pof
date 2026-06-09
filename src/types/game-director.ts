@@ -108,6 +108,12 @@ export interface PlaytestFinding {
   triageNote: string;
   /** ISO timestamp until which a snoozed finding stays hidden */
   snoozedUntil: string | null;
+  /**
+   * ISO timestamp of the moment a one-click "Fix this" CLI repair task was
+   * dispatched for this finding, or null if none has been. Links the finding to
+   * its repair attempt so the regression tracker can later confirm the fix held.
+   */
+  fixDispatchedAt: string | null;
 }
 
 export interface UpdateTriagePayload {

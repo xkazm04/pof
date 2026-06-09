@@ -9,7 +9,7 @@ import {
   ACCENT_CYAN, ACCENT_EMERALD, ACCENT_ORANGE, ACCENT_VIOLET,
   withOpacity, OPACITY_37, OPACITY_8, OPACITY_25,
 } from '@/lib/chart-colors';
-import type { WaveDef } from '@/lib/combat/choreography-sim';
+import type { WaveDef, ChoreographySimResult } from '@/lib/combat/choreography-sim';
 import type { TuningOverrides } from '@/types/combat-simulator';
 import { BlueprintPanel, SectionHeader, GlowStat } from '../../unique-tabs/_design';
 import { FEEDBACK_CHANNEL_COLORS } from './types';
@@ -17,12 +17,7 @@ import { UnifiedTimeline } from './UnifiedTimeline';
 import { TuningSlider, StatBox } from './TuningSlider';
 export { ArchetypePalette, GhostLegend } from './GridPanels';
 
-interface SimResult {
-  totalDurationSec: number;
-  damageEvents: import('@/lib/combat/choreography-sim').DamageEvent[];
-  feedbackEvents: import('@/lib/combat/choreography-sim').FeedbackEvent[];
-  alerts: { severity: 'critical' | 'warning' | 'info'; message: string; timeSec?: number }[];
-}
+type SimResult = ChoreographySimResult;
 
 /* ── Wave Manager ───────────────────────────────────────────────────────── */
 
@@ -101,9 +96,10 @@ export function TimelineSection({ simResult, waves, scrubTime, isPlaying, onScru
       <UnifiedTimeline
         damageEvents={simResult.damageEvents} feedbackEvents={simResult.feedbackEvents}
         alerts={simResult.alerts} waves={waves} totalDuration={simResult.totalDurationSec}
-        scrubTime={scrubTime} onScrub={onScrub}
+        scrubTime={scrubTime} onScrub={onScrub} tensionCurve={simResult.tensionCurve}
       />
       <div className="flex items-center gap-3 text-xs font-mono uppercase tracking-[0.15em] text-text-muted pt-1 border-t border-border/20">
+        <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-sm" style={{ backgroundColor: ACCENT_ORANGE }} /> Tension arc</span>
         <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-sm" style={{ backgroundColor: ACCENT_EMERALD }} /> Player dmg</span>
         <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-sm" style={{ backgroundColor: STATUS_ERROR }} /> Enemy dmg</span>
         <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-sm border" style={{ backgroundColor: `${withOpacity(ACCENT_CYAN, OPACITY_25)}`, borderColor: ACCENT_CYAN }} /> Wave marker</span>

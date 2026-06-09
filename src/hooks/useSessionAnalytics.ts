@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import type { AnalyticsDashboard, PromptSuggestion } from '@/types/session-analytics';
 import { apiFetch } from '@/lib/api-utils';
+import { useIsMounted } from '@/hooks/useIsMounted';
 import { useIsSuspended } from '@/hooks/useSuspend';
 import type { SubModuleId } from '@/types/modules';
 
@@ -30,26 +31,21 @@ export function useSessionDashboard(): UseSessionDashboardResult {
   const [dashboard, setDashboard] = useState<AnalyticsDashboard>(EMPTY_DASHBOARD);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const mountedRef = useRef(true);
-
-  useEffect(() => {
-    mountedRef.current = true;
-    return () => { mountedRef.current = false; };
-  }, []);
+  const isMounted = useIsMounted();
 
   const fetchDashboard = useCallback(async () => {
     setIsLoading(true);
     setError(null);
     try {
       const data = await apiFetch<AnalyticsDashboard>('/api/session-analytics?action=dashboard');
-      if (mountedRef.current) setDashboard(data);
+      if (isMounted()) setDashboard(data);
     } catch (err) {
       console.error('useSessionDashboard fetch error:', err);
-      if (mountedRef.current) setError(err instanceof Error ? err.message : 'Failed to load session analytics');
+      if (isMounted()) setError(err instanceof Error ? err.message : 'Failed to load session analytics');
     } finally {
-      if (mountedRef.current) setIsLoading(false);
+      if (isMounted()) setIsLoading(false);
     }
-  }, []);
+  }, [isMounted]);
 
   useEffect(() => { fetchDashboard(); }, [fetchDashboard]);
 

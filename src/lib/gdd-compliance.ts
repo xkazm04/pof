@@ -4,13 +4,13 @@
  */
 
 import type { SubModuleId } from '@/types/modules';
-import { getDb } from './db';
-import { SUB_MODULES, SUB_MODULE_MAP } from './module-registry';
-import { getFeaturesByModule, getFeatureSummary, getAllModuleAggregates } from './feature-matrix-db';
+import { SUB_MODULES } from './module-registry';
+import { countChecklist } from './checklist-progress';
+import { getFeaturesByModule, getFeatureSummary } from './feature-matrix-db';
 import type { FeatureRow, FeatureSummary } from '@/types/feature-matrix';
 import type {
   ComplianceGap, ComplianceReport, ModuleCompliance,
-  ReconciliationSuggestion, GapSeverity, GapDirection, EffortEstimate,
+  ReconciliationSuggestion, EffortEstimate,
 } from '@/types/gdd-compliance';
 
 // ─── Gap Detection ──────────────────────────────────────────────────────────
@@ -238,7 +238,7 @@ export function runComplianceAudit(
       : { total: 0, implemented: 0, improved: 0, partial: 0, missing: 0, unknown: 0 };
 
     const moduleProgress = checklistProgress[mod.id] ?? {};
-    const checklistDone = checklist.filter((c) => moduleProgress[c.id]).length;
+    const { done: checklistDone, total: checklistTotal } = countChecklist(mod, moduleProgress);
 
     const gaps = detectFeatureGaps(
       mod.id,
@@ -248,7 +248,7 @@ export function runComplianceAudit(
       moduleProgress,
     );
 
-    const score = calculateModuleScore(summary, checklist.length, checklistDone, gaps.length);
+    const score = calculateModuleScore(summary, checklistTotal, checklistDone, gaps.length);
 
     modules.push({
       moduleId: mod.id,
@@ -258,7 +258,7 @@ export function runComplianceAudit(
       implemented: summary.implemented,
       partial: summary.partial,
       missing: summary.missing,
-      checklistTotal: checklist.length,
+      checklistTotal,
       checklistDone,
       gaps,
     });

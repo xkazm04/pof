@@ -1,7 +1,6 @@
 /* eslint-disable no-restricted-syntax -- identity-lab theme: var() tokens + bespoke font classNames */
+import type { CSSProperties } from 'react';
 import { inter, ibmPlexMono, jetbrainsMono } from './fonts';
-
-export type LabDensity = 'comfortable' | 'compact';
 
 /** Lab theme. Color fields are var(--lab-*) refs resolved by [data-theme] (see lab-tokens.css).
  *  JS-read fields (id/label/glass/gridLine/fonts) stay real values. */
@@ -39,7 +38,27 @@ export const DARK: LabTheme = {
 };
 
 export const LAB_THEMES: LabTheme[] = [LIGHT, DARK];
-export const LAB_DENSITIES: LabDensity[] = ['comfortable', 'compact'];
 
 /** Maps the LabTheme.id ('light'|'dark') to the [data-theme] attribute value. */
 export const themeAttr = (id: LabTheme['id']): 'blueprint' | 'studio' => (id === 'light' ? 'blueprint' : 'studio');
+
+/**
+ * The lab's canonical glass-panel surface: tokenized `panel` background + a 1px
+ * `line` border, plus a backdrop blur in Studio (glass) mode. This is the single
+ * source for the Blueprint/Studio panel treatment shared by the timeline, the
+ * Acceptance banner, and the step/work panels.
+ *
+ * `extra` is merged last so callers can add padding / overrides. borderRadius is
+ * intentionally NOT defaulted: Blueprint keeps sharp corners and the full-width
+ * header bar must never round — callers opt into a radius via
+ * `labPanelStyle(t, { borderRadius: t.glass ? 12 : 0 })` where a studio-rounded
+ * panel is wanted.
+ */
+export function labPanelStyle(t: LabTheme, extra?: CSSProperties): CSSProperties {
+  return {
+    background: t.panel,
+    border: `1px solid ${t.line}`,
+    ...(t.glass ? { backdropFilter: 'blur(12px)' } : {}),
+    ...extra,
+  };
+}

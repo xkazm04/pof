@@ -14,6 +14,7 @@ import { useNBA } from '@/hooks/useNBA';
 import { StaggerContainer, StaggerItem } from '@/components/ui/Stagger';
 import { AccentButton } from '@/components/ui/AccentButton';
 import { CopyButton } from '@/components/ui/CopyButton';
+import { NBAScoreBar } from '@/components/modules/shared/NBAScoreBar';
 import type { ChecklistItem, SubModuleId } from '@/types/modules';
 import type { PatternSuggestion } from '@/types/pattern-library';
 import type { NBARecommendation } from '@/lib/nba-engine';
@@ -1140,7 +1141,7 @@ function NBABanner({
   const successPct = Math.round(top.successProbability * 100);
 
   return (
-    <div className="rounded-lg border overflow-hidden" style={{ borderColor: `${accentColor}30`, backgroundColor: `${accentColor}08` }}>
+    <div className="rounded-lg border" style={{ borderColor: `${accentColor}30`, backgroundColor: `${accentColor}08` }}>
       {/* Top recommendation */}
       <div className="px-3 py-2.5">
         <div className="flex items-start gap-2.5">
@@ -1161,6 +1162,9 @@ function NBABanner({
             </div>
             <p className="text-xs font-medium text-text mt-1">{top.item.label}</p>
             <p className="text-2xs text-text-muted mt-0.5 leading-relaxed">{top.reason}</p>
+
+            {/* Why-recommended breakdown bar */}
+            <NBAScoreBar rec={top} />
 
             {/* Metrics row */}
             <div className="flex items-center gap-3 mt-2">
@@ -1205,9 +1209,11 @@ function NBABanner({
         </div>
       </div>
 
-      {/* Runners-up toggle */}
+      {/* Runners-up toggle. Wrapped so only this section clips to the rounded
+          bottom corners — the top section stays unclipped so the why-recommended
+          legend popover can overflow the banner. */}
       {runners.length > 0 && (
-        <>
+        <div className="overflow-hidden rounded-b-lg">
           <button
             onClick={onToggleExpand}
             className="w-full flex items-center justify-center gap-1 py-1.5 text-2xs text-text-muted hover:text-text transition-colors border-t"
@@ -1223,7 +1229,7 @@ function NBABanner({
               ))}
             </div>
           )}
-        </>
+        </div>
       )}
     </div>
   );

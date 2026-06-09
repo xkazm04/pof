@@ -18,6 +18,7 @@ import { CodegenModal } from './archetypes/CodegenModal';
 import FeatureMapTab from '../unique-tabs/FeatureMapTab';
 import { renderBestiaryMetric } from './metrics';
 import { NarrativeBreadcrumb } from './NarrativeBreadcrumb';
+import { MicroLabel } from '@/components/ui/MicroLabel';
 
 const ACCENT = ACCENT_ORANGE;
 
@@ -118,7 +119,7 @@ export function EnemyBestiary({ moduleId }: EnemyBestiaryProps) {
       <SubTabNavigation tabs={TABS} activeTabId={activeTab} onChange={(id) => setActiveTab(id as BestiarySubtab)} accent={ACCENT} />
 
       {/* ── Active Tab Subtitle ─────────────────────────────────────────── */}
-      {subtitle && <p className="text-xs font-mono text-text-muted/70 -mt-1 mb-1 pl-0.5">{subtitle}</p>}
+      {subtitle && <MicroLabel as="p" mono className="-mt-1 mb-1 pl-0.5">{subtitle}</MicroLabel>}
 
       {/* ── Tab Content with Animated Transitions ─────────────────────────── */}
       <AnimatePresence mode="wait">

@@ -5,7 +5,7 @@ import { motion } from 'framer-motion';
 import { STATUS_SUCCESS, STATUS_ERROR, STATUS_INFO, STATUS_WARNING, ACCENT_CYAN, ACCENT_CYAN_LIGHT, OVERLAY_WHITE,
   withOpacity, OPACITY_5, OPACITY_20, OPACITY_30,
 } from '@/lib/chart-colors';
-import { BlueprintPanel, SectionHeader } from '../_shared/design';
+import { BlueprintPanel, SectionHeader, SAVE_TYPE } from '../_shared/design';
 import { ACCENT, ENHANCED_SLOTS } from '../_shared/data';
 
 export function SlotManagement() {
@@ -13,7 +13,7 @@ export function SlotManagement() {
     <BlueprintPanel color={ACCENT} className="p-0 overflow-hidden">
       <div className="px-4 py-3 border-b border-border/10 flex items-center justify-between">
         <SectionHeader label="SLOT_MANAGEMENT_DASHBOARD" icon={Layers} color={ACCENT} />
-        <span className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted">{ENHANCED_SLOTS.length} slots</span>
+        <span className={`${SAVE_TYPE.body} text-text-muted`}>{ENHANCED_SLOTS.length} slots</span>
       </div>
 
       <div className="p-4 grid grid-cols-1 md:grid-cols-2 gap-3 relative z-10">
@@ -51,15 +51,15 @@ export function SlotManagement() {
 
               <div className="grid grid-cols-3 gap-2 text-xs">
                 <div>
-                  <span className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted block">Zone</span>
+                  <span className={`${SAVE_TYPE.body} text-text-muted block`}>Zone</span>
                   <span className="truncate block" style={{ color: OVERLAY_WHITE }}>{slot.zone}</span>
                 </div>
                 <div>
-                  <span className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted block">Playtime</span>
+                  <span className={`${SAVE_TYPE.body} text-text-muted block`}>Playtime</span>
                   <span style={{ color: OVERLAY_WHITE }}>{slot.playtime}</span>
                 </div>
                 <div>
-                  <span className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted block">Last</span>
+                  <span className={`${SAVE_TYPE.body} text-text-muted block`}>Last</span>
                   <span style={{ color: OVERLAY_WHITE }}>{slot.lastPlayed}</span>
                 </div>
               </div>
@@ -74,7 +74,7 @@ export function SlotManagement() {
                 ].map(action => (
                   <button
                     key={action.label}
-                    className="flex items-center gap-1 px-2 py-1 rounded-sm border text-xs font-mono uppercase tracking-[0.15em] font-bold transition-colors hover:bg-white/5"
+                    className={`flex items-center gap-1 px-2 py-1 rounded-sm border ${SAVE_TYPE.body} font-semibold transition-colors hover:bg-white/5`}
                     style={{ borderColor: `${withOpacity(action.color, OPACITY_20)}`, color: action.color }}
                   >
                     <action.icon className="w-3 h-3" />

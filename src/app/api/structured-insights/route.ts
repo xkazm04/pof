@@ -1,11 +1,11 @@
 import { NextRequest } from 'next/server';
 import { apiSuccess, apiError } from '@/lib/api-utils';
+import { extractStructuredEntities } from '@/lib/pattern-extractor';
 import {
-  extractStructuredEntities,
   saveStructuredInsight,
   getInsightsForSession,
   getInsightsForModule,
-} from '@/lib/pattern-extractor';
+} from '@/lib/structured-insights-db';
 import type { SubModuleId } from '@/types/modules';
 
 /**

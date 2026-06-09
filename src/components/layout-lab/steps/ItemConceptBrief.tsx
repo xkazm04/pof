@@ -2,7 +2,7 @@
 
 import { StepFrame } from './StepFrame';
 import { CliProduce } from './shared/CliProduce';
-import { useLabStep, useLabPipelineStore } from '../labPipelineStore';
+import { useStaticStep } from './useStaticStep';
 import { ITEM_STEP_SPECS } from './itemsSteps';
 import type { StepProps } from './stepProps';
 
@@ -14,13 +14,12 @@ const REFS = [
 
 /** Items · Concept Brief. View: persisted brief + style refs. Produce: CLI text-gen. */
 export function ItemConceptBrief({ t, entity, step }: StepProps) {
-  const art = useLabStep(entity.id, step);
-  const produce = useLabPipelineStore((s) => s.produce);
+  const { art, runProduce } = useStaticStep(entity, step);
   const brief = String((art?.data?.brief as string) ?? '');
 
   return (
-    <StepFrame t={t} acceptance={ITEM_STEP_SPECS[step].accept(art)}
-      onFix={() => produce(entity.id, step, ITEM_STEP_SPECS[step].produce(entity))}
+    <StepFrame t={t} acceptance={ITEM_STEP_SPECS[step].accept(art?.data ?? {})}
+      onFix={runProduce}
       panels={[
         {
           label: 'Current brief',
@@ -49,7 +48,7 @@ export function ItemConceptBrief({ t, entity, step }: StepProps) {
               defaultDirection="tone: dependable, earned — a soldier's tool"
               note="Saved to the pipeline store · feeds the UE item description."
               buildPrompt={(dir) => `Write a 300+ char concept brief for ${entity.name} (mid-tier martial weapon). ${dir}`}
-              onComplete={() => produce(entity.id, step, ITEM_STEP_SPECS[step].produce(entity))} />
+              onComplete={runProduce} />
           ),
         },
       ]}

@@ -8,6 +8,8 @@ import type {
   Milestone,
   BurnChartPoint,
   SubsystemSignal,
+  PerfHealthInput,
+  CrashHealthInput,
 } from '@/types/project-health';
 import type { EvaluatorReport } from '@/types/evaluator';
 
@@ -38,6 +40,8 @@ interface ProjectHealthState {
     checklistProgress: Record<string, Record<string, boolean>>,
     scanHistory: EvaluatorReport[],
     lastScan: EvaluatorReport | null,
+    perfInput?: PerfHealthInput | null,
+    crashInput?: CrashHealthInput | null,
   ) => Promise<void>;
 }
 
@@ -55,13 +59,13 @@ export const useProjectHealthStore = create<ProjectHealthState>((set) => ({
   isLoading: false,
   error: null,
 
-  fetchHealth: async (checklistProgress, scanHistory, lastScan) => {
+  fetchHealth: async (checklistProgress, scanHistory, lastScan, perfInput = null, crashInput = null) => {
     set({ isLoading: true, error: null });
     try {
       const data = await apiFetch<ProjectHealthSummary>('/api/project-health', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ checklistProgress, scanHistory, lastScan }),
+        body: JSON.stringify({ checklistProgress, scanHistory, lastScan, perfInput, crashInput }),
       });
       set({
         summary: data,

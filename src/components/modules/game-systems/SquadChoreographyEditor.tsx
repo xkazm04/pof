@@ -3,7 +3,7 @@
 import { useState, useMemo, useCallback, useRef } from 'react';
 import {
   Users, Play, RotateCcw, Info, ArrowRight,
-  Shield, Crosshair, Target, Eye, Swords,
+  Shield, Crosshair, Target, Eye, Swords, AlertTriangle,
 } from 'lucide-react';
 import { SurfaceCard } from '@/components/ui/SurfaceCard';
 import { SubTabNavigation, type SubTab } from '@/components/modules/core-engine/unique-tabs/_shared';
@@ -13,11 +13,15 @@ import {
   OPACITY_10, OPACITY_15,
   heatmapScale,
 } from '@/lib/chart-colors';
-import type { SquadRole, DirectorConfig } from '@/types/squad-tactics';
+import type {
+  SquadRole, DirectorConfig, DirectorResult, SquadConfigError,
+} from '@/types/squad-tactics';
 import {
   runSquadSimulation, PRESET_FORMATIONS, ROLE_DEFINITIONS,
   DEFAULT_DIRECTOR_CONFIG,
 } from '@/lib/ai-director/squad-engine';
+import { polarSvgLayout } from '@/components/ui/svg/polar-layout';
+import { useDragAngle } from '@/hooks/useDragAngle';
 
 const ACCENT = MODULE_COLORS.systems;
 
@@ -41,10 +45,7 @@ const ROLE_ICONS: Record<SquadRole, React.ComponentType<{ className?: string; st
 
 /* ── SVG constants ────────────────────────────────────────────────────────── */
 
-const SVG_SIZE = 380;
-const SVG_CENTER = SVG_SIZE / 2;
-const SVG_PADDING = 50;
-const DRAW_RADIUS = (SVG_SIZE - SVG_PADDING * 2) / 2;
+const { size: SVG_SIZE, center: SVG_CENTER, radius: DRAW_RADIUS } = polarSvgLayout(380, 50);
 
 /* ── Sub-tabs ─────────────────────────────────────────────────────────────── */
 
@@ -78,18 +79,26 @@ export function SquadChoreographyEditor() {
   const [config, setConfig] = useState<DirectorConfig>(DEFAULT_DIRECTOR_CONFIG);
   const [activeTab, setActiveTab] = useState('formation');
   const [hoveredMember, setHoveredMember] = useState<string | null>(null);
-  const [isDragging, setIsDragging] = useState(false);
   const svgRef = useRef<SVGSVGElement>(null);
 
-  // Run simulation
-  const result = useMemo(() => runSquadSimulation(config), [config]);
+  // Drag the cyan arrow to rotate the target's forward vector — shared pointer math.
+  const setForwardAngle = useCallback(
+    (angle: number) => setConfig(prev => ({ ...prev, targetForwardAngle: angle })),
+    [],
+  );
+  const drag = useDragAngle(svgRef, SVG_CENTER, setForwardAngle);
+
+  // Run simulation — validated at the engine boundary, so an invalid config
+  // surfaces as a typed error instead of NaN positions that break the SVG.
+  const simulation = useMemo(() => runSquadSimulation(config), [config]);
+  const result = simulation.ok ? simulation.data : null;
+  const configError = simulation.ok ? null : simulation.error;
 
   // Scale factor: map UU to SVG pixels
-  const maxDist = Math.max(
-    ...result.members.map(m => m.distance),
-    config.attackDistance,
-  );
-  const scale = DRAW_RADIUS / (maxDist * 1.15);
+  const maxDist = result
+    ? Math.max(...result.members.map(m => m.distance), config.attackDistance)
+    : config.attackDistance;
+  const scale = maxDist > 0 ? DRAW_RADIUS / (maxDist * 1.15) : 1;
 
   // Forward arrow
   const arrowLen = DRAW_RADIUS * 0.7;
@@ -111,20 +120,6 @@ export function SquadChoreographyEditor() {
   const handleResetForward = useCallback(() => {
     setConfig(prev => ({ ...prev, targetForwardAngle: -Math.PI / 2 }));
   }, []);
-
-  const handlePointerDown = useCallback(() => setIsDragging(true), []);
-  const handlePointerUp = useCallback(() => setIsDragging(false), []);
-
-  const handlePointerMove = useCallback(
-    (e: React.PointerEvent<SVGSVGElement>) => {
-      if (!isDragging || !svgRef.current) return;
-      const rect = svgRef.current.getBoundingClientRect();
-      const x = e.clientX - rect.left - SVG_CENTER;
-      const y = e.clientY - rect.top - SVG_CENTER;
-      setConfig(prev => ({ ...prev, targetForwardAngle: Math.atan2(y, x) }));
-    },
-    [isDragging],
-  );
 
   const handleWeightChange = useCallback((key: 'flankWeight' | 'separationWeight' | 'rangeWeight', value: number) => {
     setConfig(prev => ({ ...prev, [key]: value, seed: prev.seed + 1 }));
@@ -181,6 +176,10 @@ export function SquadChoreographyEditor() {
           </div>
         </div>
       </SurfaceCard>
+
+      {/* Inline error state — surfaces an invalid director config instead of
+          rendering a silently-broken (NaN / off-canvas) formation diagram. */}
+      {configError && <SquadConfigErrorBanner error={configError} />}
 
       {/* Config + Metrics row */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
@@ -249,18 +248,24 @@ export function SquadChoreographyEditor() {
         {/* Formation metrics */}
         <SurfaceCard className="p-3 space-y-2">
           <h4 className="text-xs font-bold text-text">Formation Metrics</h4>
-          {[
-            { label: 'Quality Score', value: `${(result.formationScore * 100).toFixed(0)}%`, color: result.formationScore > 0.7 ? STATUS_SUCCESS : result.formationScore > 0.4 ? STATUS_WARNING : STATUS_ERROR },
-            { label: 'Angular Coverage', value: `${result.angularCoverage.toFixed(0)}°/360°`, color: result.angularCoverage > 200 ? STATUS_SUCCESS : result.angularCoverage > 120 ? STATUS_WARNING : STATUS_ERROR },
-            { label: 'Avg Separation', value: `${result.avgSeparation.toFixed(0)} UU`, color: result.avgSeparation > config.minSeparation ? STATUS_SUCCESS : STATUS_ERROR },
-            { label: 'Squad Size', value: `${result.members.length}`, color: ACCENT },
-            { label: 'Collisions', value: result.hasCollisions ? 'Yes' : 'None', color: result.hasCollisions ? STATUS_ERROR : STATUS_SUCCESS },
-          ].map(m => (
-            <div key={m.label} className="flex items-center justify-between">
-              <span className="text-2xs text-text-muted">{m.label}</span>
-              <span className="text-2xs font-mono font-bold" style={{ color: m.color }}>{m.value}</span>
-            </div>
-          ))}
+          {result ? (
+            [
+              { label: 'Quality Score', value: `${(result.formationScore * 100).toFixed(0)}%`, color: result.formationScore > 0.7 ? STATUS_SUCCESS : result.formationScore > 0.4 ? STATUS_WARNING : STATUS_ERROR },
+              { label: 'Angular Coverage', value: `${result.angularCoverage.toFixed(0)}°/360°`, color: result.angularCoverage > 200 ? STATUS_SUCCESS : result.angularCoverage > 120 ? STATUS_WARNING : STATUS_ERROR },
+              { label: 'Avg Separation', value: `${result.avgSeparation.toFixed(0)} UU`, color: result.avgSeparation > config.minSeparation ? STATUS_SUCCESS : STATUS_ERROR },
+              { label: 'Squad Size', value: `${result.members.length}`, color: ACCENT },
+              { label: 'Collisions', value: result.hasCollisions ? 'Yes' : 'None', color: result.hasCollisions ? STATUS_ERROR : STATUS_SUCCESS },
+            ].map(m => (
+              <div key={m.label} className="flex items-center justify-between">
+                <span className="text-2xs text-text-muted">{m.label}</span>
+                <span className="text-2xs font-mono font-bold" style={{ color: m.color }}>{m.value}</span>
+              </div>
+            ))
+          ) : (
+            <p className="text-2xs text-text-muted italic" data-testid="squad-metrics-unavailable">
+              Metrics unavailable — fix the config above to recompute.
+            </p>
+          )}
           {/* Role breakdown */}
           <div className="pt-1 border-t border-border/30 space-y-1">
             <span className="text-2xs text-text-muted">Roles</span>
@@ -287,37 +292,69 @@ export function SquadChoreographyEditor() {
         </SurfaceCard>
       </div>
 
-      {/* Sub-tab navigation */}
-      <SubTabNavigation
-        tabs={SUB_TABS}
-        activeTabId={activeTab}
-        onChange={setActiveTab}
-        accent={ACCENT}
-      />
+      {/* Sub-tab navigation + content — only when the config produced a result. */}
+      {result && (
+        <>
+          <SubTabNavigation
+            tabs={SUB_TABS}
+            activeTabId={activeTab}
+            onChange={setActiveTab}
+            accent={ACCENT}
+          />
 
-      {/* Tab content */}
-      {activeTab === 'formation' && (
-        <FormationView
-          config={config}
-          result={result}
-          hoveredMember={hoveredMember}
-          setHoveredMember={setHoveredMember}
-          isDragging={isDragging}
-          svgRef={svgRef}
-          scale={scale}
-          arrowEndX={arrowEndX}
-          arrowEndY={arrowEndY}
-          onPointerDown={handlePointerDown}
-          onPointerUp={handlePointerUp}
-          onPointerMove={handlePointerMove}
-        />
+          {activeTab === 'formation' && (
+            <FormationView
+              config={config}
+              result={result}
+              hoveredMember={hoveredMember}
+              setHoveredMember={setHoveredMember}
+              isDragging={drag.isDragging}
+              svgRef={svgRef}
+              scale={scale}
+              arrowEndX={arrowEndX}
+              arrowEndY={arrowEndY}
+              onPointerDown={drag.onPointerDown}
+              onPointerUp={drag.onPointerUp}
+              onPointerMove={drag.onPointerMove}
+            />
+          )}
+          {activeTab === 'pipeline' && (
+            <PipelineView result={result} />
+          )}
+          {activeTab === 'codegen' && (
+            <CodeGenView config={config} />
+          )}
+        </>
       )}
-      {activeTab === 'pipeline' && (
-        <PipelineView result={result} />
-      )}
-      {activeTab === 'codegen' && (
-        <CodeGenView config={config} />
-      )}
+    </div>
+  );
+}
+
+/* ── Inline config error state ────────────────────────────────────────────── */
+
+export function SquadConfigErrorBanner({ error }: { error: SquadConfigError }) {
+  return (
+    <div
+      role="alert"
+      className="flex items-start gap-2.5 px-3.5 py-2.5 rounded-lg"
+      style={{
+        backgroundColor: `${STATUS_ERROR}${OPACITY_10}`,
+        border: `1px solid ${STATUS_ERROR}30`,
+      }}
+      data-testid="squad-config-error"
+    >
+      <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" style={{ color: STATUS_ERROR }} />
+      <div className="min-w-0 space-y-0.5">
+        <p className="text-xs font-bold" style={{ color: STATUS_ERROR }}>
+          Invalid squad configuration
+        </p>
+        <p className="text-2xs text-text-muted">
+          {error.message}
+          {error.field && (
+            <span className="font-mono"> (field: {error.field})</span>
+          )}
+        </p>
+      </div>
     </div>
   );
 }
@@ -330,7 +367,7 @@ function FormationView({
   onPointerDown, onPointerUp, onPointerMove,
 }: {
   config: DirectorConfig;
-  result: ReturnType<typeof runSquadSimulation>;
+  result: DirectorResult;
   hoveredMember: string | null;
   setHoveredMember: (id: string | null) => void;
   isDragging: boolean;
@@ -671,7 +708,7 @@ function FormationView({
 
 /* ── EQS Pipeline View ────────────────────────────────────────────────────── */
 
-function PipelineView({ result }: { result: ReturnType<typeof runSquadSimulation> }) {
+function PipelineView({ result }: { result: DirectorResult }) {
   return (
     <SurfaceCard className="p-0 overflow-hidden" data-testid="squad-pipeline-view">
       <div className="px-4 py-3 border-b border-border/40">

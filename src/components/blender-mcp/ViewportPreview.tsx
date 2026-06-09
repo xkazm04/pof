@@ -2,11 +2,11 @@
 
 import { useState, useCallback, useEffect } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { Camera, RefreshCw, AlertTriangle, X, Image as ImageIcon } from 'lucide-react';
-import { tryApiFetch } from '@/lib/api-utils';
+import { Camera, RefreshCw, X, Image as ImageIcon } from 'lucide-react';
 import { useBlenderMCPStore } from '@/stores/blenderMCPStore';
-import { ERROR_BANNER } from '@/lib/blender-mcp/status-tokens';
+import { captureViewportSnapshot } from '@/lib/blender-mcp/snapshot';
 import { McpPanelFrame } from './McpPanelFrame';
+import { McpErrorBanner } from './McpErrorBanner';
 
 export function ViewportPreview() {
   const { connection, addScreenshot, recentScreenshots } = useBlenderMCPStore();
@@ -19,25 +19,13 @@ export function ViewportPreview() {
     if (!connection.connected || isCapturing) return;
     setIsCapturing(true);
     setCaptureError(null);
-    const result = await tryApiFetch<{ screenshot: string }>(
-      '/api/blender-mcp/screenshot',
-    );
-    if (result.ok && result.data.screenshot) {
-      try {
-        const binary = atob(result.data.screenshot);
-        const bytes = new Uint8Array(binary.length);
-        for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
-        const blob = new Blob([bytes], { type: 'image/png' });
-        addScreenshot(URL.createObjectURL(blob));
-        // New screenshot is unshifted to [0] — pin the active selection to it.
-        setActiveIndex(0);
-      } catch (err) {
-        setCaptureError(err instanceof Error ? err.message : 'Decode failed');
-      }
-    } else if (!result.ok) {
-      setCaptureError(result.error || 'Capture failed');
+    const result = await captureViewportSnapshot();
+    if (result.ok) {
+      addScreenshot(result.data);
+      // New screenshot is unshifted to [0] — pin the active selection to it.
+      setActiveIndex(0);
     } else {
-      setCaptureError('No screenshot returned from Blender');
+      setCaptureError(result.error);
     }
     setIsCapturing(false);
   }, [connection.connected, isCapturing, addScreenshot]);
@@ -84,26 +72,9 @@ export function ViewportPreview() {
         bodyPadding="none"
       >
         {/* Inline error chip (silent failure surfaced) */}
-        <AnimatePresence initial={false}>
-          {captureError && (
-            <motion.div
-              key="capture-error"
-              initial={{ height: 0, opacity: 0 }}
-              animate={{ height: 'auto', opacity: 1 }}
-              exit={{ height: 0, opacity: 0 }}
-              transition={{ duration: 0.2, ease: 'easeOut' }}
-              style={{ overflow: 'hidden' }}
-            >
-              <div
-                role="alert"
-                className={`flex items-start gap-2 mx-3 mt-2 text-xs leading-snug rounded-md px-2.5 py-2 ${ERROR_BANNER}`}
-              >
-                <AlertTriangle className="w-4 h-4 mt-0.5 shrink-0" aria-hidden="true" />
-                <span className="tabular-nums">{captureError}</span>
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
+        <McpErrorBanner show={!!captureError} motionKey="capture-error">
+          <span className="tabular-nums">{captureError}</span>
+        </McpErrorBanner>
 
         {/* Main stage */}
         <div

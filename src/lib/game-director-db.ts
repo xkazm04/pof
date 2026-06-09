@@ -16,6 +16,15 @@ export function isTriageExcluded(status: TriageStatus): boolean {
   return (TRIAGE_EXCLUDED as readonly string[]).includes(status);
 }
 
+/**
+ * SQL predicate (no leading AND/WHERE) keeping only findings that aren't triaged
+ * out. Derived from {@link TRIAGE_EXCLUDED} so the excluded list lives in exactly
+ * one place — interpolate it into finding-count/stat queries instead of hardcoding
+ * the literal list. The values are internal `TriageStatus` constants, never user
+ * input, so direct interpolation carries no injection risk.
+ */
+export const TRIAGE_EXCLUDED_SQL = `triage_status NOT IN (${TRIAGE_EXCLUDED.map(s => `'${s}'`).join(',')})`;
+
 // ─── Schema bootstrap ────────────────────────────────────────────────────────
 
 let initialized = false;
@@ -61,6 +70,7 @@ function ensureTables() {
         CHECK(triage_status IN ('active','confirmed','false-positive','ignore','snooze')),
       triage_note TEXT NOT NULL DEFAULT '',
       snoozed_until TEXT,
+      fix_dispatched_at TEXT,
       FOREIGN KEY (session_id) REFERENCES game_director_sessions(id) ON DELETE CASCADE
     )
   `);
@@ -77,6 +87,9 @@ function ensureTables() {
   }
   if (!colSet.has('snoozed_until')) {
     db.exec(`ALTER TABLE game_director_findings ADD COLUMN snoozed_until TEXT`);
+  }
+  if (!colSet.has('fix_dispatched_at')) {
+    db.exec(`ALTER TABLE game_director_findings ADD COLUMN fix_dispatched_at TEXT`);
   }
 
   db.exec(`
@@ -220,7 +233,7 @@ export function addFinding(finding: PlaytestFinding) {
       UPDATE game_director_sessions
       SET findings_count = (
         SELECT COUNT(*) FROM game_director_findings
-        WHERE session_id = ? AND triage_status NOT IN ('false-positive','ignore')
+        WHERE session_id = ? AND ${TRIAGE_EXCLUDED_SQL}
       )
       WHERE id = ?
     `).run(finding.sessionId, finding.sessionId);
@@ -252,12 +265,31 @@ export function updateFindingTriage(
       UPDATE game_director_sessions
       SET findings_count = (
         SELECT COUNT(*) FROM game_director_findings
-        WHERE session_id = ? AND triage_status NOT IN ('false-positive','ignore')
+        WHERE session_id = ? AND ${TRIAGE_EXCLUDED_SQL}
       )
       WHERE id = ?
     `).run(existing.session_id, existing.session_id);
   });
   updateAndRecount();
+
+  const row = db.prepare('SELECT * FROM game_director_findings WHERE id = ?')
+    .get(findingId) as FindingRow | undefined;
+  return row ? rowToFinding(row) : null;
+}
+
+/**
+ * Stamp a finding with the time a one-click "Fix this" CLI task was dispatched
+ * for it. Records the detect→fix link so the regression tracker can later
+ * confirm whether the fix held. Returns the updated finding, or null if missing.
+ */
+export function markFindingFixDispatched(findingId: string): PlaytestFinding | null {
+  ensureTables();
+  const db = getDb();
+
+  const result = db.prepare(
+    `UPDATE game_director_findings SET fix_dispatched_at = datetime('now') WHERE id = ?`
+  ).run(findingId);
+  if (result.changes === 0) return null;
 
   const row = db.prepare('SELECT * FROM game_director_findings WHERE id = ?')
     .get(findingId) as FindingRow | undefined;
@@ -312,6 +344,10 @@ export interface DirectorStats {
   completedSessions: number;
   totalFindings: number;
   criticalFindings: number;
+  /** Open (not triaged-out) findings at critical OR high severity — drives the nav "All Findings" urgency pill. */
+  openCriticalHigh: number;
+  /** Undismissed regression alerts — drives the nav "Regressions" pill. */
+  activeAlerts: number;
   avgScore: number | null;
   recentSessions: PlaytestSession[];
 }
@@ -339,11 +375,23 @@ export function getDirectorStats(): DirectorStats {
   const completeCount = db.prepare("SELECT COUNT(*) as c FROM game_director_sessions WHERE status = 'complete'").get() as { c: number };
   // Counts exclude findings the user has triaged out so noise doesn't inflate the health score.
   const findCount = db.prepare(
-    "SELECT COUNT(*) as c FROM game_director_findings WHERE triage_status NOT IN ('false-positive','ignore')"
+    `SELECT COUNT(*) as c FROM game_director_findings WHERE ${TRIAGE_EXCLUDED_SQL}`
   ).get() as { c: number };
   const critCount = db.prepare(
-    "SELECT COUNT(*) as c FROM game_director_findings WHERE severity = 'critical' AND triage_status NOT IN ('false-positive','ignore')"
+    `SELECT COUNT(*) as c FROM game_director_findings WHERE severity = 'critical' AND ${TRIAGE_EXCLUDED_SQL}`
   ).get() as { c: number };
+  const openCritHighCount = db.prepare(
+    `SELECT COUNT(*) as c FROM game_director_findings WHERE severity IN ('critical','high') AND ${TRIAGE_EXCLUDED_SQL}`
+  ).get() as { c: number };
+
+  // regression_alerts is owned by regression-tracker.ts and created lazily; guard
+  // for the case where no regressions have ever been processed (cf. getHealthTrend).
+  const hasRegTable = db.prepare(
+    "SELECT name FROM sqlite_master WHERE type='table' AND name='regression_alerts'"
+  ).get() as { name: string } | undefined;
+  const activeAlerts = hasRegTable
+    ? (db.prepare('SELECT COUNT(*) as c FROM regression_alerts WHERE dismissed = 0').get() as { c: number }).c
+    : 0;
 
   // Average overall score from completed sessions
   const avgRow = db.prepare(
@@ -359,6 +407,8 @@ export function getDirectorStats(): DirectorStats {
     completedSessions: completeCount.c,
     totalFindings: findCount.c,
     criticalFindings: critCount.c,
+    openCriticalHigh: openCritHighCount.c,
+    activeAlerts,
     avgScore: avgRow.avg != null ? Math.round(avgRow.avg) : null,
     recentSessions: recentRows.map(rowToSession),
   };
@@ -409,7 +459,7 @@ export function getHealthTrend(limit = 30): HealthTrendPoint[] {
     : null;
 
   const critCountStmt = db.prepare(
-    "SELECT COUNT(*) as c FROM game_director_findings WHERE session_id = ? AND severity = 'critical' AND triage_status NOT IN ('false-positive','ignore')"
+    `SELECT COUNT(*) as c FROM game_director_findings WHERE session_id = ? AND severity = 'critical' AND ${TRIAGE_EXCLUDED_SQL}`
   );
 
   return rows.map(r => {
@@ -467,6 +517,7 @@ interface FindingRow {
   triage_status: string | null;
   triage_note: string | null;
   snoozed_until: string | null;
+  fix_dispatched_at: string | null;
 }
 
 interface EventRow {
@@ -514,6 +565,7 @@ function rowToFinding(row: FindingRow): PlaytestFinding {
     triageStatus: (row.triage_status as PlaytestFinding['triageStatus']) || 'active',
     triageNote: row.triage_note || '',
     snoozedUntil: row.snoozed_until,
+    fixDispatchedAt: row.fix_dispatched_at,
   };
 }
 

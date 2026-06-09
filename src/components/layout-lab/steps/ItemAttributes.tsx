@@ -3,7 +3,7 @@
 import { Lbl } from './controls';
 import { StepFrame } from './StepFrame';
 import { CliProduce } from './shared/CliProduce';
-import { useLabStep, useLabPipelineStore } from '../labPipelineStore';
+import { useStaticStep } from './useStaticStep';
 import { ITEM_STEP_SPECS, ITEM_ATTR_SCHEMA } from './itemsSteps';
 import type { StepProps } from './stepProps';
 
@@ -11,14 +11,13 @@ const PEERS = [['Steel Saber', '31'], ['Worn Greatsword', '46'], ['Guard\'s Blad
 
 /** Items · Attributes. View: UE-synced table (persisted) | peers+schema. Produce: CLI fills the mix. */
 export function ItemAttributes({ t, entity, step }: StepProps) {
-  const art = useLabStep(entity.id, step);
-  const produce = useLabPipelineStore((s) => s.produce);
+  const { art, runProduce } = useStaticStep(entity, step);
   const vals = (art?.data?.stats ?? {}) as Record<string, string | number>;
   const cell: React.CSSProperties = { padding: '8px 12px', borderTop: `1px solid ${t.line}`, fontSize: 15 };
 
   return (
-    <StepFrame t={t} acceptance={ITEM_STEP_SPECS[step].accept(art)}
-      onFix={() => produce(entity.id, step, ITEM_STEP_SPECS[step].produce(entity))}
+    <StepFrame t={t} acceptance={ITEM_STEP_SPECS[step].accept(art?.data ?? {})}
+      onFix={runProduce}
       panels={[
         {
           label: 'Attribute table',
@@ -66,7 +65,7 @@ export function ItemAttributes({ t, entity, step }: StepProps) {
             <CliProduce t={t} label="Generate attribute mix (CLI)" rows={3}
               note="Writes the full attribute set to the UE Weapon row + the pipeline store."
               buildPrompt={(dir) => `Fill the Weapon attributes for ${entity.name} from its brief + peers (${PEERS.map((p) => p[0]).join(', ')}). ${dir}`}
-              onComplete={() => produce(entity.id, step, ITEM_STEP_SPECS[step].produce(entity))} />
+              onComplete={runProduce} />
           ),
         },
       ]}

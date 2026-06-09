@@ -10,50 +10,13 @@ import type {
 } from '@/types/telemetry';
 
 // ─── Schema bootstrap ────────────────────────────────────────────────────────
-
-let initialized = false;
+// The `telemetry_snapshots` / `genre_suggestions` tables + indexes are defined
+// centrally in db.ts; this is just the documented "ensure DB is initialized"
+// guard (same pattern as session-log-db.ts / session-analytics-db.ts).
+// Call at the top of every exported function.
 
 function ensureTables() {
-  if (initialized) return;
-  const db = getDb();
-
-  db.exec(`
-    CREATE TABLE IF NOT EXISTS telemetry_snapshots (
-      id TEXT PRIMARY KEY,
-      scanned_at TEXT NOT NULL DEFAULT (datetime('now')),
-      project_path TEXT NOT NULL,
-      signals TEXT NOT NULL DEFAULT '{}',
-      detected_patterns TEXT NOT NULL DEFAULT '[]'
-    )
-  `);
-
-  db.exec(`
-    CREATE INDEX IF NOT EXISTS idx_telemetry_snapshots_time
-    ON telemetry_snapshots(scanned_at DESC)
-  `);
-
-  db.exec(`
-    CREATE TABLE IF NOT EXISTS genre_suggestions (
-      id TEXT PRIMARY KEY,
-      sub_genre TEXT NOT NULL,
-      label TEXT NOT NULL,
-      description TEXT NOT NULL DEFAULT '',
-      confidence INTEGER NOT NULL DEFAULT 0,
-      patterns TEXT NOT NULL DEFAULT '[]',
-      status TEXT NOT NULL DEFAULT 'pending'
-        CHECK(status IN ('pending','accepted','dismissed')),
-      proposed_changes TEXT NOT NULL DEFAULT '{}',
-      created_at TEXT NOT NULL DEFAULT (datetime('now')),
-      resolved_at TEXT
-    )
-  `);
-
-  db.exec(`
-    CREATE INDEX IF NOT EXISTS idx_genre_suggestions_status
-    ON genre_suggestions(status, created_at DESC)
-  `);
-
-  initialized = true;
+  getDb();
 }
 
 // ─── Snapshots ───────────────────────────────────────────────────────────────

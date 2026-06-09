@@ -12,19 +12,22 @@ import { LayoutLab } from '@/components/layout-lab/LayoutLab';
 afterEach(() => { cleanup(); localStorage.clear(); });
 
 describe('Lab chrome v2', () => {
-  it('exposes data-theme on the lab root and the theme toggle flips it', () => {
+  it('exposes data-theme on the lab root and the icon theme toggle flips it', () => {
     render(<LayoutLab />);
     const root = screen.getByTestId('harness-lab-ready');
     expect(root.getAttribute('data-theme')).toBe('blueprint');
-    fireEvent.click(screen.getByRole('button', { name: /studio dark/i }));
+    // In Blueprint the single icon button offers a switch to Studio Dark.
+    fireEvent.click(screen.getByRole('button', { name: /switch to studio dark theme/i }));
     expect(root.getAttribute('data-theme')).toBe('studio');
+    // …and now offers the reverse.
+    fireEvent.click(screen.getByRole('button', { name: /switch to blueprint theme/i }));
+    expect(root.getAttribute('data-theme')).toBe('blueprint');
   });
-  it('has a density toggle that flips data-density', () => {
+  it('no longer exposes a density toggle (single space-efficient baseline)', () => {
     render(<LayoutLab />);
     const root = screen.getByTestId('harness-lab-ready');
-    expect(root.getAttribute('data-density')).toBe('comfortable');
-    fireEvent.click(screen.getByRole('button', { name: /density/i }));
-    expect(root.getAttribute('data-density')).toBe('compact');
+    expect(root.hasAttribute('data-density')).toBe(false);
+    expect(screen.queryByRole('button', { name: /density/i })).toBeNull();
   });
   it('still renders the view switcher + One-shot + Legacy', () => {
     render(<LayoutLab />);

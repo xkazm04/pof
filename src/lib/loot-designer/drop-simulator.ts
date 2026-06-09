@@ -5,6 +5,7 @@
  * ────────────────────────────────────────────────────────────────────────── */
 
 import type { DNAAffix, TraitAxis } from '@/types/item-genome';
+import { createXorShift32RNG } from '@/lib/seeded-rng';
 
 /* ── Types ────────────────────────────────────────────────────────────── */
 
@@ -66,18 +67,6 @@ export interface DropSimResult {
   avgPower: number;
   powerHistogram: number[];  // 10 buckets
   rarityBreakdown: { affixCount: number; count: number }[];
-}
-
-/* ── Seeded RNG (xorshift32) ─────────────────────────────────────────── */
-
-function createRng(seed: number): () => number {
-  let state = seed | 0 || 1;
-  return () => {
-    state ^= state << 13;
-    state ^= state >> 17;
-    state ^= state << 5;
-    return (state >>> 0) / 4294967296;
-  };
 }
 
 /* ── Rarity helpers ──────────────────────────────────────────────────── */
@@ -207,7 +196,7 @@ function minMax(arr: number[]): { min: number; max: number } {
 
 export function runDropSimulation(config: DropSimConfig): DropSimResult {
   const { affixPool, rarity, itemLevel, rollCount, seed } = config;
-  const rng = createRng(seed);
+  const rng = createXorShift32RNG(seed);
 
   // Build power lookup from pool
   const poolMap = new Map(affixPool.map((a) => [a.id, a]));

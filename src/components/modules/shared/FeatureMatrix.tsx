@@ -2,12 +2,13 @@
 
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useSuspendableEffect } from '@/hooks/useSuspend';
-import { Check, ChevronDown, ChevronRight, FileCode, Loader2, RefreshCw, Star, ArrowRight, Download, TrendingUp, TrendingDown, Minus, AlertTriangle, Link2, Zap, Search, ArrowUpDown, ArrowUp, ArrowDown, Play, Copy, Eye, LayoutList, LayoutGrid, ShieldCheck, Boxes } from 'lucide-react';
+import { Check, ChevronDown, ChevronRight, FileCode, Loader2, RefreshCw, Star, ArrowRight, Download, TrendingUp, TrendingDown, Minus, AlertTriangle, Link2, Zap, Search, ArrowUpDown, ArrowUp, ArrowDown, Play, Copy, Eye, LayoutList, LayoutGrid, ShieldCheck, Boxes, CheckCircle, Sparkles, CircleDashed, Circle, HelpCircle } from 'lucide-react';
 import { useFeatureMatrix } from '@/hooks/useFeatureMatrix';
 import { StaggerContainer, StaggerItem } from '@/components/ui/Stagger';
 import { AccentButton } from '@/components/ui/AccentButton';
 import { FetchError } from './FetchError';
 import { useProjectStore } from '@/stores/projectStore';
+import { FEATURE_STATUSES } from '@/types/feature-matrix';
 import type { FeatureRow, FeatureStatus } from '@/types/feature-matrix';
 import type { ReviewSnapshot } from '@/lib/feature-matrix-db';
 import { buildDependencyMap, computeBlockers, moduleNeedsBinaryContent, getWiringAssets } from '@/lib/feature-definitions';
@@ -15,6 +16,8 @@ import type { DependencyInfo, ResolvedDependency } from '@/lib/feature-definitio
 import { WiringAssetsPanel } from './WiringAssetsPanel';
 import { MODULE_LABELS } from '@/lib/module-registry';
 import { MarkdownProse } from '@/components/ui/MarkdownProse';
+import { tryApiFetch } from '@/lib/api-utils';
+import { formatTimeAgo } from '@/lib/format-time';
 import { UI_TIMEOUTS } from '@/lib/constants';
 import type { SubModuleId } from '@/types/modules';
 import { FEATURE_STATUS_COLORS, STATUS_ERROR, STATUS_BLOCKER, STATUS_WARNING, STATUS_LIME, STATUS_SUCCESS, STATUS_NEUTRAL, STATUS_IMPROVED, ACCENT_CYAN_LIGHT, OPACITY_10, OPACITY_12, statusBg, statusBorder } from '@/lib/chart-colors';
@@ -22,12 +25,17 @@ import { usePofBridgeStore } from '@/stores/pofBridgeStore';
 import type { VerificationResult } from '@/types/pof-bridge';
 import { slugifyForTestId } from '@/lib/test-ids';
 
-const STATUS_CONFIG: Record<FeatureStatus, { color: string; bg: string; label: string; plain: string; action: string }> = {
-  implemented: { color: FEATURE_STATUS_COLORS.implemented, bg: FEATURE_STATUS_COLORS.implemented + OPACITY_10, label: 'Implemented', plain: 'Fully built and ready to use', action: 'Review for quality improvements' },
-  improved: { color: FEATURE_STATUS_COLORS.improved, bg: FEATURE_STATUS_COLORS.improved + OPACITY_10, label: 'Improved', plain: 'Built and recently enhanced', action: 'Verify improvements work as expected' },
-  partial: { color: FEATURE_STATUS_COLORS.partial, bg: FEATURE_STATUS_COLORS.partial + OPACITY_10, label: 'Partial', plain: 'Partially built — some work still needed', action: 'Continue implementation to complete' },
-  missing: { color: FEATURE_STATUS_COLORS.missing, bg: FEATURE_STATUS_COLORS.missing + OPACITY_10, label: 'Missing', plain: 'Not yet built — needs implementation', action: 'Start building this feature' },
-  unknown: { color: FEATURE_STATUS_COLORS.unknown, bg: 'var(--border)', label: 'Unknown', plain: 'Not yet reviewed — status unclear', action: 'Run a scan to determine status' },
+// Single source of truth for feature-status presentation. Status is encoded by
+// SHAPE (a distinct lucide glyph) as well as color, so the matrix stays legible
+// to colorblind users (WCAG 1.4.1 — color is never the sole visual cue). Every
+// surface (summary legend, filter chips, feature rows) reads `icon` from here,
+// so adding/changing a glyph updates them all together.
+const STATUS_CONFIG: Record<FeatureStatus, { color: string; bg: string; label: string; plain: string; action: string; icon: typeof CheckCircle }> = {
+  implemented: { color: FEATURE_STATUS_COLORS.implemented, bg: FEATURE_STATUS_COLORS.implemented + OPACITY_10, label: 'Implemented', plain: 'Fully built and ready to use', action: 'Review for quality improvements', icon: CheckCircle },
+  improved: { color: FEATURE_STATUS_COLORS.improved, bg: FEATURE_STATUS_COLORS.improved + OPACITY_10, label: 'Improved', plain: 'Built and recently enhanced', action: 'Verify improvements work as expected', icon: Sparkles },
+  partial: { color: FEATURE_STATUS_COLORS.partial, bg: FEATURE_STATUS_COLORS.partial + OPACITY_10, label: 'Partial', plain: 'Partially built — some work still needed', action: 'Continue implementation to complete', icon: CircleDashed },
+  missing: { color: FEATURE_STATUS_COLORS.missing, bg: FEATURE_STATUS_COLORS.missing + OPACITY_10, label: 'Missing', plain: 'Not yet built — needs implementation', action: 'Start building this feature', icon: Circle },
+  unknown: { color: FEATURE_STATUS_COLORS.unknown, bg: 'var(--border)', label: 'Unknown', plain: 'Not yet reviewed — status unclear', action: 'Run a scan to determine status', icon: HelpCircle },
 };
 
 const STAR_COLORS = [
@@ -71,7 +79,7 @@ function readUrlParams(): {
   const st = params.get('status');
   if (st) {
     const valid = st.split(',').filter((s): s is FeatureStatus =>
-      ['implemented', 'improved', 'partial', 'missing', 'unknown'].includes(s)
+      (FEATURE_STATUSES as readonly string[]).includes(s)
     );
     if (valid.length > 0) result.statuses = valid;
   }
@@ -178,7 +186,7 @@ export function FeatureMatrix({ moduleId, accentColor, onReview, onSync, isRevie
   const [sortKey, setSortKey] = useState<SortKey>(urlInit.sortKey ?? 'name');
   const [sortDir, setSortDir] = useState<SortDir>(urlInit.sortDir ?? 'asc');
   const [activeFilters, setActiveFilters] = useState<Set<FeatureStatus>>(
-    new Set<FeatureStatus>(urlInit.statuses ?? ['implemented', 'improved', 'partial', 'missing', 'unknown'])
+    new Set<FeatureStatus>(urlInit.statuses ?? FEATURE_STATUSES)
   );
   const [viewMode, setViewMode] = useState<ViewMode>(urlInit.viewMode ?? 'grouped');
 
@@ -261,19 +269,18 @@ export function FeatureMatrix({ moduleId, accentColor, onReview, onSync, isRevie
     } catch { /* silent */ }
   }, [moduleId]);
 
-  // Fetch all module statuses for cross-module dependency resolution
+  // Fetch all module statuses for cross-module dependency resolution.
+  // The route wraps the payload in apiSuccess({ statuses }); tryApiFetch unwraps
+  // the envelope so the array isn't silently read from the wrong nesting level
+  // (which left the cross-module blocked badges / dependency chains empty).
   const fetchAllStatuses = useCallback(async () => {
-    try {
-      const res = await fetch('/api/feature-matrix/all-statuses');
-      if (res.ok) {
-        const data = await res.json();
-        const map = new Map<string, string>();
-        for (const row of data.statuses ?? []) {
-          map.set(`${row.moduleId}::${row.featureName}`, row.status);
-        }
-        setAllStatuses(map);
-      }
-    } catch { /* silent */ }
+    const result = await tryApiFetch<{ statuses: { moduleId: string; featureName: string; status: string }[] }>('/api/feature-matrix/all-statuses');
+    if (!result.ok) return; // silent — keep last-known statuses
+    const map = new Map<string, string>();
+    for (const row of result.data.statuses ?? []) {
+      map.set(`${row.moduleId}::${row.featureName}`, row.status);
+    }
+    setAllStatuses(map);
   }, []);
 
   useEffect(() => { fetchHistory(); }, [fetchHistory]);
@@ -393,11 +400,7 @@ export function FeatureMatrix({ moduleId, accentColor, onReview, onSync, isRevie
   const neverReviewed = features.length > 0 && features.every((f) => f.status === 'unknown' && !f.lastReviewedAt);
 
   if (isLoading) {
-    return (
-      <div className="flex items-center justify-center py-12">
-        <Loader2 className="w-5 h-5 animate-spin text-text-muted-hover" />
-      </div>
-    );
+    return <FeatureMatrixSkeleton />;
   }
 
   if (error) {
@@ -724,6 +727,65 @@ export function FeatureMatrix({ moduleId, accentColor, onReview, onSync, isRevie
 
 // --- Sub-components ---
 
+/**
+ * Content-shaped loading state. Mirrors {@link FeatureRowItem}'s anatomy — a 4px
+ * left rail, a status dot, a 150px name bar, a flex-1 description bar, and a
+ * trailing badge — so the skeleton→content handoff has no layout shift or empty
+ * void. Rows reuse the StaggerContainer entrance rhythm of the real list, and each
+ * row's pulse is offset (0/60/120ms) for a downward wave. `animate-pulse` is
+ * neutralised by the global prefers-reduced-motion rule, so this is motion-safe.
+ */
+function FeatureMatrixSkeleton() {
+  const ROW_COUNT = 7;
+  return (
+    <div
+      role="status"
+      aria-busy="true"
+      aria-label="Loading feature matrix"
+      data-testid="pof-feature-matrix-skeleton"
+      className="space-y-4"
+    >
+      <div aria-hidden="true" className="space-y-4">
+        {/* Summary bar + review button placeholders */}
+        <div className="flex items-center gap-4">
+          <div className="flex-1 space-y-1.5">
+            <div className="h-3 w-40 rounded bg-border animate-pulse" />
+            <div className="h-1.5 w-full rounded-full bg-border animate-pulse" />
+          </div>
+          <div className="h-7 w-32 rounded-md bg-border animate-pulse flex-shrink-0" />
+        </div>
+
+        {/* Skeleton rows — same rhythm + anatomy as the real feature list */}
+        <StaggerContainer className="space-y-px">
+          {Array.from({ length: ROW_COUNT }, (_, i) => (
+            <StaggerItem key={`skeleton-${i}`}>
+              <SkeletonRow delayMs={(i % 3) * 60} />
+            </StaggerItem>
+          ))}
+        </StaggerContainer>
+      </div>
+    </div>
+  );
+}
+
+function SkeletonRow({ delayMs }: { delayMs: number }) {
+  const pulse = { animationDelay: `${delayMs}ms` };
+  return (
+    <div className="rounded-md overflow-hidden" style={{ borderLeft: '4px solid var(--border)' }}>
+      <div className="flex items-center gap-3 px-3 py-2">
+        {/* Status dot */}
+        <span className="w-2 h-2 rounded-full bg-border animate-pulse flex-shrink-0" style={pulse} />
+        {/* Name bar */}
+        <span className="h-3 w-[150px] rounded bg-border animate-pulse flex-shrink-0" style={pulse} />
+        {/* Description bar (hidden on small screens, mirroring the real row) */}
+        <span className="h-3 flex-1 rounded bg-border animate-pulse hidden sm:block" style={pulse} />
+        {/* Trailing status badge */}
+        <span className="h-4 w-14 rounded bg-border animate-pulse flex-shrink-0" style={pulse} />
+      </div>
+    </div>
+  );
+}
+
 function QualityRangeFilter({
   min,
   max,
@@ -810,19 +872,10 @@ function SortButton({
 
 function formatRelativeTime(dateStr: string): { label: string; dotColor: string; isOutdated: boolean } {
   const ms = Date.now() - new Date(dateStr).getTime();
-  const minutes = Math.floor(ms / 60000);
   const hours = Math.floor(ms / 3600000);
   const days = Math.floor(ms / 86400000);
 
-  let label: string;
-  if (minutes < 1) label = 'just now';
-  else if (minutes < 60) label = `${minutes}m ago`;
-  else if (hours < 24) label = `${hours}h ago`;
-  else if (days < 30) label = `${days}d ago`;
-  else {
-    const months = Math.floor(days / 30);
-    label = months === 1 ? '1 month ago' : `${months} months ago`;
-  }
+  const label = formatTimeAgo(dateStr, { extended: true });
 
   // Green <24h, amber 1-7d, red >7d
   const dotColor = hours < 24 ? STATUS_SUCCESS : days <= 7 ? STATUS_WARNING : STATUS_ERROR;
@@ -846,14 +899,17 @@ function SummaryBar({ summary }: { summary: { total: number; implemented: number
     <div className="flex-1 space-y-1.5">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
-          {segments.map((s) =>
-            s.count > 0 ? (
+          {segments.map((s) => {
+            if (s.count === 0) return null;
+            const Glyph = STATUS_CONFIG[s.status].icon;
+            return (
               <span key={s.status} className="flex items-center gap-1 text-2xs" style={{ color: STATUS_CONFIG[s.status].color }} title={STATUS_CONFIG[s.status].plain}>
                 <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: STATUS_CONFIG[s.status].color }} />
+                <Glyph className="w-3 h-3 shrink-0" aria-hidden="true" />
                 {s.count} {STATUS_CONFIG[s.status].label.toLowerCase()}
               </span>
-            ) : null
-          )}
+            );
+          })}
         </div>
         <span className="text-xs text-text-muted-hover">
           {summary.implemented + summary.improved}/{summary.total}
@@ -895,6 +951,7 @@ function StatusFilterChips({
     <div className="flex items-center gap-2 overflow-x-auto scrollbar-none pb-0.5">
       {statuses.map((status) => {
         const cfg = STATUS_CONFIG[status];
+        const Glyph = cfg.icon;
         const count = summary[status];
         const isActive = activeFilters.has(status);
 
@@ -902,13 +959,16 @@ function StatusFilterChips({
           <button
             key={status}
             onClick={() => onToggle(status)}
+            aria-pressed={isActive}
             title={`${cfg.plain} — ${count} feature${count !== 1 ? 's' : ''}. ${cfg.action}`}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap shrink-0"
             style={{
+              // Inactive chips stay readable (opacity 0.6) with a visible border so
+              // "deselected" never reads as "disabled" (WCAG 1.4.11 non-text contrast).
               backgroundColor: isActive ? `${cfg.color}${OPACITY_12}` : 'transparent',
               color: cfg.color,
-              border: `1px solid ${isActive ? `${cfg.color}40` : `${cfg.color}20`}`,
-              opacity: isActive ? 1 : 0.4,
+              border: `1px solid ${isActive ? `${cfg.color}66` : `${cfg.color}40`}`,
+              opacity: isActive ? 1 : 0.6,
               transition: 'background-color 200ms ease-out, opacity 200ms ease-out, border-color 200ms ease-out',
             }}
           >
@@ -920,6 +980,7 @@ function StatusFilterChips({
                 transform: isActive ? 'scale(1)' : 'scale(0.75)',
               }}
             />
+            <Glyph className="w-3.5 h-3.5 shrink-0" aria-hidden="true" />
             {cfg.label}
             <span
               className="ml-0.5 text-xs min-w-[18px] h-[18px] inline-flex items-center justify-center rounded-full font-semibold"
@@ -1046,6 +1107,7 @@ function FeatureRowItem({
   verificationResult?: VerificationResult;
 }) {
   const cfg = STATUS_CONFIG[feature.status];
+  const StatusGlyph = cfg.icon;
   const hasDeps = depInfo && depInfo.deps.length > 0;
   const isBlocked = depInfo?.isBlocked ?? false;
   const hasDetails = feature.reviewNotes || feature.filePaths.length > 0 || feature.nextSteps || hasDeps;
@@ -1084,12 +1146,19 @@ function FeatureRowItem({
           hasDetails ? 'hover:bg-surface-hover cursor-pointer' : 'cursor-default'
         } ${isExpanded ? 'bg-surface-deep' : ''}`}
       >
-        {/* Status dot */}
+        {/* Status indicator — shape (glyph) + color, so status is legible without
+            relying on hue alone (WCAG 1.4.1). The status badge text carries the
+            accessible name; the glyph + dot are decorative reinforcement. */}
         <span
-          className="w-2 h-2 rounded-full flex-shrink-0"
-          style={{ backgroundColor: cfg.color }}
+          className="flex items-center gap-1 flex-shrink-0"
           title={`${cfg.label}: ${cfg.plain}. ${cfg.action}`}
-        />
+        >
+          <span
+            className="w-2 h-2 rounded-full"
+            style={{ backgroundColor: cfg.color }}
+          />
+          <StatusGlyph className="w-3.5 h-3.5" aria-hidden="true" style={{ color: cfg.color }} />
+        </span>
 
         {/* Feature name */}
         <span className="text-sm text-text w-[150px] flex-shrink-0 truncate">
@@ -1108,8 +1177,9 @@ function FeatureRowItem({
           {feature.description}
         </span>
 
-        {/* Hover action buttons */}
-        <span className="flex items-center gap-0.5 flex-shrink-0 opacity-30 scale-95 group-hover/row:opacity-100 group-hover/row:scale-100 transition-all">
+        {/* Hover action buttons — opacity reveal is the primary cue; the scale-up is
+            gated behind motion-safe: so reduced-motion users just get the fade. */}
+        <span className="flex items-center gap-0.5 flex-shrink-0 opacity-30 motion-safe:scale-95 group-hover/row:opacity-100 motion-safe:group-hover/row:scale-100 transition-all">
           {onReviewFeature && (
             <span
               role="button"

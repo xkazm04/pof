@@ -39,7 +39,7 @@ export function CLIBottomPanel() {
       <div className="flex items-center gap-0.5 px-2 py-1 overflow-x-auto">
         {/* Running indicator */}
         {runningCount > 0 && (
-          <span className="text-2xs text-[#00ff88] animate-pulse-glow px-1.5 py-0.5 mr-1 shrink-0">
+          <span className="text-2xs text-accent-setup animate-pulse-glow px-1.5 py-0.5 mr-1 shrink-0">
             {runningCount} running
           </span>
         )}

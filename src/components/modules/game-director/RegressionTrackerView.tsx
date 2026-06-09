@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   AlertOctagon, AlertTriangle, CheckCircle2,
@@ -8,7 +8,11 @@ import {
   TrendingDown, Bug, ArrowRight, Eye,
 } from 'lucide-react';
 import { SurfaceCard } from '@/components/ui/SurfaceCard';
+import { MeterBar } from '@/components/ui/MeterBar';
+import { MetricCard } from '@/components/ui/MetricCard';
+import { TabBar, type TabItem } from '@/components/ui/TabBar';
 import { apiFetch } from '@/lib/api-utils';
+import { useIsMounted } from '@/hooks/useIsMounted';
 import type { PlaytestSession } from '@/types/game-director';
 import type { RegressionStatus } from '@/types/regression-tracker';
 import type {
@@ -16,6 +20,7 @@ import type {
   FingerprintOccurrence,
   RegressionAlert,
   RegressionReport,
+  RegressionStats,
 } from '@/types/regression-tracker';
 import {
   ACCENT_ORANGE, STATUS_SUCCESS, STATUS_WARNING, STATUS_ERROR, STATUS_BLOCKER,
@@ -26,6 +31,7 @@ import { SeverityBadge } from '@/components/ui/SeverityBadge';
 import { StatusChip } from '@/components/ui/StatusChip';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { FetchError } from '../shared/FetchError';
+import { InlineErrorRetry } from '../shared/InlineErrorRetry';
 
 const ACCENT = ACCENT_ORANGE;
 
@@ -35,26 +41,25 @@ const EMPTY_SESSIONS: PlaytestSession[] = [];
 
 type SubTab = 'dashboard' | 'fingerprints' | 'alerts';
 
+/** A regression action that failed and can be retried from the inline error banner. */
+type FailedAction =
+  | { kind: 'analyze'; sessionId: string }
+  | { kind: 'dismiss'; alertId: string }
+  | { kind: 'resolve'; fingerprintId: string };
+
 export function RegressionTrackerView() {
   const [subTab, setSubTab] = useState<SubTab>('dashboard');
   const [sessions, setSessions] = useState<PlaytestSession[]>(EMPTY_SESSIONS);
   const [fingerprints, setFingerprints] = useState<FindingFingerprint[]>([]);
   const [alerts, setAlerts] = useState<RegressionAlert[]>([]);
-  const [stats, setStats] = useState<{
-    totalTracked: number; openCount: number; fixedCount: number;
-    regressedCount: number; resolvedCount: number; activeAlerts: number; regressionRate: number;
-  } | null>(null);
+  const [stats, setStats] = useState<RegressionStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [processing, setProcessing] = useState(false);
   const [selectedSessionId, setSelectedSessionId] = useState<string>('');
   const [lastReport, setLastReport] = useState<RegressionReport | null>(null);
-  const mountedRef = useRef(true);
-
-  useEffect(() => {
-    mountedRef.current = true;
-    return () => { mountedRef.current = false; };
-  }, []);
+  const [actionError, setActionError] = useState<{ message: string; action: FailedAction } | null>(null);
+  const isMounted = useIsMounted();
 
   const refresh = useCallback(async () => {
     setLoading(true);
@@ -63,56 +68,93 @@ export function RegressionTrackerView() {
       const [fpData, alertData, statData, sessData] = await Promise.all([
         apiFetch<FindingFingerprint[]>('/api/regression-tracker?action=fingerprints'),
         apiFetch<RegressionAlert[]>('/api/regression-tracker?action=alerts'),
-        apiFetch<{ totalTracked: number; openCount: number; fixedCount: number; regressedCount: number; resolvedCount: number; activeAlerts: number; regressionRate: number }>('/api/regression-tracker?action=stats'),
+        apiFetch<RegressionStats>('/api/regression-tracker?action=stats'),
         apiFetch<PlaytestSession[]>('/api/regression-tracker?action=sessions'),
       ]);
-      if (!mountedRef.current) return;
+      if (!isMounted()) return;
       setFingerprints(fpData);
       setAlerts(alertData);
       setStats(statData);
       setSessions(sessData);
     } catch (err) {
-      if (!mountedRef.current) return;
+      if (!isMounted()) return;
       setError(err instanceof Error ? err.message : 'Failed to load regression data');
     } finally {
-      if (mountedRef.current) setLoading(false);
+      if (isMounted()) setLoading(false);
     }
-  }, []);
+  }, [isMounted]);
 
   useEffect(() => { void refresh(); }, [refresh]);
 
-  const handleProcess = useCallback(async () => {
-    if (!selectedSessionId) return;
+  const handleProcess = useCallback(async (sessionId: string) => {
+    if (!sessionId) return;
     setProcessing(true);
+    setActionError(null);
     try {
       const report = await apiFetch<RegressionReport>('/api/regression-tracker', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'process-session', sessionId: selectedSessionId }),
+        body: JSON.stringify({ action: 'process-session', sessionId }),
       });
+      if (!isMounted()) return;
       setLastReport(report);
       await refresh();
-    } catch { /* ignore */ }
-    setProcessing(false);
-  }, [selectedSessionId, refresh]);
+    } catch (err) {
+      if (!isMounted()) return;
+      setActionError({
+        message: err instanceof Error ? err.message : 'Failed to analyze session for regressions',
+        action: { kind: 'analyze', sessionId },
+      });
+    } finally {
+      if (isMounted()) setProcessing(false);
+    }
+  }, [refresh, isMounted]);
 
   const handleDismiss = useCallback(async (alertId: string) => {
-    await apiFetch('/api/regression-tracker', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'dismiss', alertId }),
-    });
-    await refresh();
-  }, [refresh]);
+    setActionError(null);
+    try {
+      await apiFetch('/api/regression-tracker', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'dismiss', alertId }),
+      });
+      if (!isMounted()) return;
+      await refresh();
+    } catch (err) {
+      if (!isMounted()) return;
+      setActionError({
+        message: err instanceof Error ? err.message : 'Failed to dismiss alert',
+        action: { kind: 'dismiss', alertId },
+      });
+    }
+  }, [refresh, isMounted]);
 
   const handleResolve = useCallback(async (fpId: string) => {
-    await apiFetch('/api/regression-tracker', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'resolve', fingerprintId: fpId }),
-    });
-    await refresh();
-  }, [refresh]);
+    setActionError(null);
+    try {
+      await apiFetch('/api/regression-tracker', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'resolve', fingerprintId: fpId }),
+      });
+      if (!isMounted()) return;
+      await refresh();
+    } catch (err) {
+      if (!isMounted()) return;
+      setActionError({
+        message: err instanceof Error ? err.message : 'Failed to mark issue resolved',
+        action: { kind: 'resolve', fingerprintId: fpId },
+      });
+    }
+  }, [refresh, isMounted]);
+
+  const retryAction = useCallback((action: FailedAction) => {
+    switch (action.kind) {
+      case 'analyze': void handleProcess(action.sessionId); break;
+      case 'dismiss': void handleDismiss(action.alertId); break;
+      case 'resolve': void handleResolve(action.fingerprintId); break;
+    }
+  }, [handleProcess, handleDismiss, handleResolve]);
 
   if (loading && !stats) {
     return (
@@ -126,6 +168,21 @@ export function RegressionTrackerView() {
   if (error && !stats) {
     return <FetchError message={error} onRetry={refresh} />;
   }
+
+  const activeAlertCount = alerts.filter(a => !a.dismissed).length;
+  const tabs: TabItem<SubTab>[] = [
+    { id: 'dashboard', label: 'Dashboard' },
+    { id: 'fingerprints', label: 'Tracked Issues' },
+    {
+      id: 'alerts',
+      label: 'Regression Alerts',
+      badge: activeAlertCount > 0 ? {
+        count: activeAlertCount,
+        color: STATUS_ERROR,
+        label: `${activeAlertCount} active regression alert${activeAlertCount !== 1 ? 's' : ''}`,
+      } : undefined,
+    },
+  ];
 
   return (
     <div className="space-y-5">
@@ -149,7 +206,7 @@ export function RegressionTrackerView() {
               ))}
             </select>
             <button
-              onClick={handleProcess}
+              onClick={() => void handleProcess(selectedSessionId)}
               disabled={!selectedSessionId || processing}
               className="focus-ring flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-colors disabled:opacity-40"
               style={{ backgroundColor: `${ACCENT}20`, color: ACCENT, border: `1px solid ${ACCENT}30` }}
@@ -161,38 +218,25 @@ export function RegressionTrackerView() {
         </div>
       </SurfaceCard>
 
+      {/* Inline error banner for failed analyze / dismiss / resolve actions */}
+      {actionError && (
+        <InlineErrorRetry
+          message={actionError.message}
+          onRetry={() => retryAction(actionError.action)}
+          onDismiss={() => setActionError(null)}
+        />
+      )}
+
       {/* Sub-tabs */}
-      <div className="flex items-center gap-1 border-b border-border">
-        {([
-          ['dashboard', 'Dashboard'],
-          ['fingerprints', 'Tracked Issues'],
-          ['alerts', 'Regression Alerts'],
-        ] as [SubTab, string][]).map(([id, label]) => (
-          <button
-            key={id}
-            onClick={() => setSubTab(id)}
-            className={`focus-ring rounded-sm px-3 py-1.5 text-sm font-medium transition-colors relative ${
-              subTab === id ? 'text-text' : 'text-text-muted hover:text-text'
-            }`}
-          >
-            {label}
-            {id === 'alerts' && alerts.filter(a => !a.dismissed).length > 0 && (
-              <span className="ml-1.5 inline-flex items-center justify-center w-4 h-4 rounded-full text-[9px] font-bold"
-                style={{ backgroundColor: STATUS_ERROR, color: '#fff' }}>
-                {alerts.filter(a => !a.dismissed).length}
-              </span>
-            )}
-            {subTab === id && (
-              <motion.span
-                layoutId="regression-tab-indicator"
-                className="absolute bottom-0 left-0 right-0 h-0.5 rounded-t"
-                style={{ backgroundColor: ACCENT }}
-                transition={{ type: 'spring', stiffness: 500, damping: 35 }}
-              />
-            )}
-          </button>
-        ))}
-      </div>
+      <TabBar
+        tabs={tabs}
+        activeId={subTab}
+        onChange={setSubTab}
+        layoutId="regression-tab-indicator"
+        accent={ACCENT}
+        density="compact"
+        ariaLabel="Regression tracker views"
+      />
 
       {/* Tab content */}
       {subTab === 'dashboard' && (
@@ -215,7 +259,7 @@ function DashboardTab({
   lastReport,
   fingerprints,
 }: {
-  stats: { totalTracked: number; openCount: number; fixedCount: number; regressedCount: number; resolvedCount: number; activeAlerts: number; regressionRate: number } | null;
+  stats: RegressionStats | null;
   lastReport: RegressionReport | null;
   fingerprints: FindingFingerprint[];
 }) {
@@ -228,15 +272,19 @@ function DashboardTab({
   if (!stats) return null;
 
   const ratePercent = Math.round(stats.regressionRate * 100);
+  // Higher regression rate is worse: red >20%, amber >10%, green below. Shared by
+  // the percentage label and the meter fill so they never drift apart.
+  const rateColor = (pct: number): string =>
+    pct > 20 ? STATUS_ERROR : pct > 10 ? STATUS_WARNING : STATUS_SUCCESS;
 
   return (
     <div className="space-y-4">
       {/* Stats grid */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        <StatCard label="Tracked Issues" value={stats.totalTracked} icon={Bug} color={ACCENT} />
-        <StatCard label="Open" value={stats.openCount} icon={AlertTriangle} color={STATUS_BLOCKER} />
-        <StatCard label="Regressed" value={stats.regressedCount} icon={TrendingDown} color={STATUS_ERROR} />
-        <StatCard label="Fixed" value={stats.fixedCount + stats.resolvedCount} icon={CheckCircle2} color={STATUS_SUCCESS} />
+        <MetricCard layout="horizontal" label="Tracked Issues" value={stats.totalTracked} icon={Bug} accent={ACCENT} />
+        <MetricCard layout="horizontal" label="Open" value={stats.openCount} icon={AlertTriangle} accent={STATUS_BLOCKER} />
+        <MetricCard layout="horizontal" label="Regressed" value={stats.regressedCount} icon={TrendingDown} accent={STATUS_ERROR} />
+        <MetricCard layout="horizontal" label="Fixed" value={stats.fixedCount + stats.resolvedCount} icon={CheckCircle2} accent={STATUS_SUCCESS} />
       </div>
 
       {/* Regression rate bar */}
@@ -244,19 +292,16 @@ function DashboardTab({
         <div className="p-3">
           <div className="flex items-center justify-between mb-2">
             <span className="text-2xs font-medium text-text-muted">Regression Rate</span>
-            <span className="text-xs font-bold" style={{ color: ratePercent > 20 ? STATUS_ERROR : ratePercent > 10 ? STATUS_WARNING : STATUS_SUCCESS }}>
+            <span className="text-xs font-bold" style={{ color: rateColor(ratePercent) }}>
               {ratePercent}%
             </span>
           </div>
-          <div className="h-1.5 bg-border/40 rounded-full overflow-hidden">
-            <div
-              className="h-full rounded-full transition-all duration-500"
-              style={{
-                width: `${Math.min(ratePercent, 100)}%`,
-                backgroundColor: ratePercent > 20 ? STATUS_ERROR : ratePercent > 10 ? STATUS_WARNING : STATUS_SUCCESS,
-              }}
-            />
-          </div>
+          <MeterBar
+            value={ratePercent}
+            color={rateColor}
+            ariaLabel="Regression rate"
+            valueText={`${ratePercent}%`}
+          />
         </div>
       </SurfaceCard>
 
@@ -491,22 +536,11 @@ function FingerprintsTab({
                             <Loader2 className="w-3 h-3 animate-spin" /> Loading history...
                           </div>
                         ) : occError ? (
-                          <div className="flex items-center justify-between gap-2 px-2 py-1.5 rounded text-2xs"
-                            style={{ color: STATUS_ERROR, backgroundColor: `${STATUS_ERROR}${OPACITY_8}`, border: `1px solid ${STATUS_ERROR}${OPACITY_15}` }}
-                            role="alert"
-                          >
-                            <div className="flex items-center gap-1.5 min-w-0">
-                              <AlertTriangle className="w-3 h-3 flex-shrink-0" />
-                              <span className="truncate">Couldn&apos;t load history: {occError}</span>
-                            </div>
-                            <button
-                              onClick={(e) => { e.stopPropagation(); void fetchOccurrences(fp.id); }}
-                              className="focus-ring flex items-center gap-1 px-1.5 py-0.5 rounded font-medium flex-shrink-0 hover:opacity-80 transition-opacity"
-                              style={{ color: STATUS_ERROR, backgroundColor: `${STATUS_ERROR}${OPACITY_15}` }}
-                            >
-                              <RefreshCw className="w-2.5 h-2.5" /> Retry
-                            </button>
-                          </div>
+                          <InlineErrorRetry
+                            dense
+                            message={`Couldn't load history: ${occError}`}
+                            onRetry={() => { void fetchOccurrences(fp.id); }}
+                          />
                         ) : (
                           <>
                             <div className="flex items-center justify-between">
@@ -676,22 +710,6 @@ function AlertCard({ alert, onDismiss }: { alert: RegressionAlert; onDismiss: (i
 }
 
 // ─── Shared stat components ───────────────────────────────────────────────────
-
-function StatCard({ label, value, icon: Icon, color }: { label: string; value: number; icon: typeof Bug; color: string }) {
-  return (
-    <SurfaceCard level={2}>
-      <div className="p-3 flex items-center gap-3">
-        <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ backgroundColor: `${color}15` }}>
-          <Icon className="w-4 h-4" style={{ color }} />
-        </div>
-        <div>
-          <div className="text-lg font-bold text-text">{value}</div>
-          <div className="text-2xs text-text-muted">{label}</div>
-        </div>
-      </div>
-    </SurfaceCard>
-  );
-}
 
 function MiniStat({ label, value, color }: { label: string; value: number; color: string }) {
   return (

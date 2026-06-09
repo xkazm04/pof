@@ -1,12 +1,7 @@
 import { NextRequest } from 'next/server';
 import { apiSuccess, apiError } from '@/lib/api-utils';
 import { getOriginFromRequest } from '@/lib/constants';
-import { startDrainWorker, stopDrainWorker, getWorkerStatus } from '@/lib/test-gate-runner';
-import type { DrainFilter, GateTier } from '@/lib/test-gate-runner';
-
-function parseTier(v: string | null | undefined): GateTier | undefined {
-  return v === 'L3' || v === 'L4' ? v : undefined;
-}
+import { startDrainWorker, stopDrainWorker, getWorkerStatus, parseDrainFilter } from '@/lib/test-gate-runner';
 
 /** GET /api/pipeline-artifacts/drain/worker → current worker status. */
 export async function GET() {
@@ -28,11 +23,7 @@ export async function POST(req: NextRequest) {
     if (body.action === 'stop') return apiSuccess(stopDrainWorker());
     if (body.action !== 'start') return apiError("action must be 'start' or 'stop'", 400);
 
-    const filter: DrainFilter = {
-      ...(parseTier(body.tier) ? { tier: parseTier(body.tier) } : {}),
-      ...(body.catalogId ? { catalogId: body.catalogId } : {}),
-      ...(body.entityId ? { entityId: body.entityId } : {}),
-    };
+    const filter = parseDrainFilter((k) => body[k]);
     return apiSuccess(startDrainWorker({
       intervalMs: Math.max(5_000, body.intervalMs ?? 30_000),
       ...(body.cooldownMs != null ? { cooldownMs: body.cooldownMs } : {}),

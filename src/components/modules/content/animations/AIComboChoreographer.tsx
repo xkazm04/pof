@@ -4,9 +4,10 @@ import { useState, useMemo, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Sparkles, Play, Copy, Check, ChevronRight, Download,
-  Swords, Zap, Shield, Clock, Wind, RotateCcw, Monitor,
+  Swords, Zap, Shield, Clock, Wind, RotateCcw, Monitor, Info,
 } from 'lucide-react';
 import { SurfaceCard } from '@/components/ui/SurfaceCard';
+import { SchematicPanel } from '@/components/ui/SchematicPanel';
 import { SectionLabel } from '@/components/modules/core-engine/unique-tabs/_shared';
 import {
   STATUS_SUCCESS, STATUS_WARNING, STATUS_ERROR, STATUS_INFO,
@@ -50,6 +51,26 @@ interface ComboChainEdge {
   windowEnd: number;
 }
 
+/** One input word that mapped to a hit type, kept so the UI can echo it back. */
+export interface MatchedComboKeyword {
+  word: string;
+  type: HitType;
+}
+
+/** Diagnostics from parsing the free-text combo description. */
+export interface ComboParse {
+  /** Number of hits the combo will have. */
+  count: number;
+  /** True when the user explicitly stated a hit count (e.g. "3-hit"). */
+  countExplicit: boolean;
+  /** Final per-hit type sequence (length === count). */
+  hitTypes: HitType[];
+  /** Unique input words that mapped to a hit type, in order of first appearance. */
+  matchedKeywords: MatchedComboKeyword[];
+  /** True when at least one hit-type keyword was recognized (else a default combo was used). */
+  typesRecognized: boolean;
+}
+
 interface GeneratedCombo {
   name: string;
   description: string;
@@ -58,6 +79,8 @@ interface GeneratedCombo {
   totalDuration: number;
   totalDamage: number;
   avgDPS: number;
+  /** How the description was interpreted — surfaced to the user above the results. */
+  parseInfo: ComboParse;
 }
 
 /* ══════════════════════════════════════════════════════════════════════════
@@ -115,28 +138,54 @@ const KEYWORD_MAP: Record<string, HitType> = {
   finisher: 'heavy', finish: 'heavy', followup: 'medium', 'follow-up': 'medium',
 };
 
-function parseHitCount(prompt: string): number {
+function parseHitCount(prompt: string): { count: number; explicit: boolean } {
   const numMatch = prompt.match(/(\d+)[- ]?hit/i);
-  if (numMatch) return Math.min(Math.max(parseInt(numMatch[1], 10), 1), 8);
+  if (numMatch) return { count: Math.min(Math.max(parseInt(numMatch[1], 10), 1), 8), explicit: true };
   const wordNums: Record<string, number> = { one: 1, two: 2, three: 3, four: 4, five: 5, six: 6, seven: 7, eight: 8 };
   for (const [word, num] of Object.entries(wordNums)) {
-    if (prompt.toLowerCase().includes(`${word}-hit`) || prompt.toLowerCase().includes(`${word} hit`)) return num;
+    if (prompt.toLowerCase().includes(`${word}-hit`) || prompt.toLowerCase().includes(`${word} hit`)) {
+      return { count: num, explicit: true };
+    }
   }
-  return 3; // default
+  return { count: 3, explicit: false }; // default
 }
 
-function parseHitTypes(prompt: string, count: number): HitType[] {
+/**
+ * Parse a free-text combo description into a hit sequence plus diagnostics.
+ * When no hit-type keyword is recognized, falls back to a default light/medium/heavy
+ * combo but reports `typesRecognized: false` so the UI can say so honestly.
+ * Pure & exported for testing.
+ */
+export function parseComboInput(prompt: string): ComboParse {
+  const { count, explicit } = parseHitCount(prompt);
+
   const words = prompt.toLowerCase().split(/[\s,;.!?]+/);
-  const found: HitType[] = [];
+  const foundTypes: HitType[] = [];
+  const matchedKeywords: MatchedComboKeyword[] = [];
+  const seenWords = new Set<string>();
   for (const word of words) {
     const type = KEYWORD_MAP[word];
-    if (type && !found.includes(type)) found.push(type);
+    if (!type) continue;
+    if (!seenWords.has(word)) {
+      seenWords.add(word);
+      matchedKeywords.push({ word, type });
+    }
+    if (!foundTypes.includes(type)) foundTypes.push(type);
   }
-  if (found.length === 0) found.push('light', 'medium', 'heavy');
-  while (found.length < count) {
-    found.push(found[found.length - 1]);
+
+  const typesRecognized = foundTypes.length > 0;
+  const hitTypes: HitType[] = typesRecognized ? [...foundTypes] : ['light', 'medium', 'heavy'];
+  while (hitTypes.length < count) {
+    hitTypes.push(hitTypes[hitTypes.length - 1]);
   }
-  return found.slice(0, count);
+
+  return {
+    count,
+    countExplicit: explicit,
+    hitTypes: hitTypes.slice(0, count),
+    matchedKeywords,
+    typesRecognized,
+  };
 }
 
 function seededRandom(seed: number): () => number {
@@ -147,9 +196,9 @@ function seededRandom(seed: number): () => number {
   };
 }
 
-function generateCombo(prompt: string): GeneratedCombo {
-  const count = parseHitCount(prompt);
-  const hitTypes = parseHitTypes(prompt, count);
+export function generateCombo(prompt: string): GeneratedCombo {
+  const parseInfo = parseComboInput(prompt);
+  const { count, hitTypes } = parseInfo;
   const seed = Array.from(prompt).reduce((s, c) => s + c.charCodeAt(0), 0);
   const rand = seededRandom(seed);
 
@@ -221,6 +270,7 @@ function generateCombo(prompt: string): GeneratedCombo {
     totalDamage,
     // Guard against a 0s combo (empty/degenerate input) → avoid NaN DPS.
     avgDPS: Math.round(safeDivide(totalDamage, totalDuration)),
+    parseInfo,
   };
 }
 
@@ -521,6 +571,50 @@ function StatBadge({ icon: Icon, label, value, color }: { icon: typeof Zap; labe
   );
 }
 
+/**
+ * Honest feedback on how the free-text description was interpreted: a non-blocking
+ * STATUS_INFO note when no hit types were recognized (and a default combo was used),
+ * plus chips for the keywords that actually matched.
+ */
+function ComboParseFeedback({ parse }: { parse: ComboParse }) {
+  if (parse.typesRecognized && parse.matchedKeywords.length === 0) return null;
+
+  return (
+    <div className="space-y-1.5">
+      {!parse.typesRecognized && (
+        <div
+          role="status"
+          className="flex items-start gap-2 px-3 py-2 rounded-lg text-2xs"
+          style={{ backgroundColor: `${STATUS_INFO}12`, border: `1px solid ${STATUS_INFO}30`, color: STATUS_INFO }}
+        >
+          <Info className="w-3.5 h-3.5 flex-shrink-0 mt-px" />
+          <span>
+            No hit types recognized in your description — generated a default {parse.count}-hit combo.
+            Try words like <span className="font-mono font-semibold">sweep</span>,{' '}
+            <span className="font-mono font-semibold">thrust</span>,{' '}
+            <span className="font-mono font-semibold">slam</span>.
+          </span>
+        </div>
+      )}
+      {parse.matchedKeywords.length > 0 && (
+        <div className="flex items-center gap-1.5 flex-wrap">
+          <span className="text-2xs text-text-muted">Matched keywords:</span>
+          {parse.matchedKeywords.map((m) => (
+            <span
+              key={m.word}
+              className="text-2xs px-2 py-0.5 rounded-full font-mono"
+              style={{ backgroundColor: `${ACCENT_CYAN}15`, color: ACCENT_CYAN, border: `1px solid ${ACCENT_CYAN}30` }}
+              title={`recognized as "${m.type}"`}
+            >
+              {m.word}
+            </span>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 /* ══════════════════════════════════════════════════════════════════════════
    MAIN COMPONENT
    ══════════════════════════════════════════════════════════════════════════ */
@@ -680,6 +774,9 @@ export function AIComboChoreographer() {
             exit={{ opacity: 0, y: -8 }}
             className="space-y-2.5"
           >
+            {/* Parse feedback — tells the user how their words were interpreted */}
+            <ComboParseFeedback parse={generatedCombo.parseInfo} />
+
             {/* Summary stats */}
             <SurfaceCard level={2} className="p-3">
               <SectionLabel icon={Swords} label="Combo Summary" color={ACCENT_ORANGE} />
@@ -708,9 +805,12 @@ export function AIComboChoreographer() {
               <p className="text-2xs text-text-muted mt-0.5 mb-2">
                 Node connections show combo window timings for input buffering.
               </p>
-              <div className="overflow-x-auto custom-scrollbar pb-1">
-                <ComboChainGraph combo={generatedCombo} />
-              </div>
+              {/* Schematic well — same re-themeable surface as the State Machine canvas. */}
+              <SchematicPanel tone="well" accent={ACCENT} className="p-3">
+                <div className="overflow-x-auto custom-scrollbar">
+                  <ComboChainGraph combo={generatedCombo} />
+                </div>
+              </SchematicPanel>
             </SurfaceCard>
 
             {/* Root Motion Preview */}

@@ -1,13 +1,17 @@
 'use client';
 
 import { useState, useCallback, useMemo } from 'react';
+import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import { Map as MapIcon, SlidersHorizontal, LayoutGrid } from 'lucide-react';
 import {
   STATUS_ERROR,
   ACCENT_CYAN, ACCENT_ORANGE, ACCENT_VIOLET, ACCENT_EMERALD,
   withOpacity, OPACITY_10, OPACITY_5, OPACITY_25, OPACITY_8,
 } from '@/lib/chart-colors';
+import { DURATION, EASE_OUT, motionSafe } from '@/lib/motion';
 import { useTabFeatures } from '@/hooks/useTabFeatures';
+import { CountUp } from './_shared/CountUp';
+import { RipplePulse } from './_shared/RipplePulse';
 import { TabHeader, LoadingSpinner, SubTabNavigation, type SubTab } from '../unique-tabs/_shared';
 import type { SubModuleId } from '@/types/modules';
 import type { PlaytimePathMode } from './_shared/data';
@@ -38,6 +42,7 @@ interface ZoneMapProps {
 
 export function ZoneMap({ moduleId }: ZoneMapProps) {
   const { featureMap, stats, defs, isLoading } = useTabFeatures(moduleId);
+  const prefersReduced = useReducedMotion();
 
   const [playerLevel, setPlayerLevel] = useState(1);
   const [playtimeMode, setPlaytimeMode] = useState<PlaytimePathMode>('critical');
@@ -57,6 +62,9 @@ export function ZoneMap({ moduleId }: ZoneMapProps) {
     [playerLevel],
   );
   const matchingIds = useMemo(() => new Set(matchingZones.map(z => z.id)), [matchingZones]);
+  /* Stable content signature — pulses the active panel only when the matching
+     set actually changes, not on every slider tick within the same band. */
+  const matchSignature = useMemo(() => matchingZones.map(z => z.id).join('|'), [matchingZones]);
 
   /* folder-09 R3 UI: lifecycle + (Re)generate for the primary (first matching) zone. */
   const zoneEntries = useCatalogEntities('zone-map') as ZoneEntry[];
@@ -113,9 +121,9 @@ export function ZoneMap({ moduleId }: ZoneMapProps) {
             Player Level Filter
           </span>
           <span className="ml-auto text-sm font-mono font-bold" style={{ color: ACCENT }}>Lv {playerLevel}</span>
-          <span className="text-[10px] font-mono px-1.5 py-0.5 rounded"
+          <span className="text-[10px] font-mono px-1.5 py-0.5 rounded tabular-nums"
             style={{ backgroundColor: `${withOpacity(ACCENT, OPACITY_10)}`, color: ACCENT }}>
-            {matchingZones.length}/{ZONES.length} zones
+            <CountUp value={matchingZones.length} />/{ZONES.length} zones
           </span>
         </div>
         <input type="range" min={1} max={50} value={playerLevel} onChange={e => setPlayerLevel(Number(e.target.value))}
@@ -134,16 +142,29 @@ export function ZoneMap({ moduleId }: ZoneMapProps) {
         </div>
         {matchingZones.length > 0 && (
           <div className="flex flex-wrap gap-1 mt-2">
-            {matchingZones.map(z => (
-              <span key={z.id} className="text-[10px] font-mono px-1.5 py-0.5 rounded border"
-                style={{ borderColor: `${withOpacity(z.color, OPACITY_25)}`, color: z.color, backgroundColor: `${withOpacity(z.color, OPACITY_8)}` }}>
-                {z.name} ({z.levelRange})
-              </span>
-            ))}
+            <AnimatePresence initial={false} mode="popLayout">
+              {matchingZones.map((z, i) => (
+                <motion.span
+                  key={z.id}
+                  layout
+                  initial={prefersReduced ? false : { opacity: 0, scale: 0.9 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={prefersReduced ? { opacity: 0 } : { opacity: 0, scale: 0.9 }}
+                  transition={motionSafe({ duration: DURATION.base, ease: EASE_OUT, delay: i * 0.03 }, prefersReduced)}
+                  className="text-[10px] font-mono px-1.5 py-0.5 rounded border"
+                  style={{ borderColor: `${withOpacity(z.color, OPACITY_25)}`, color: z.color, backgroundColor: `${withOpacity(z.color, OPACITY_8)}` }}
+                >
+                  {z.name} ({z.levelRange})
+                </motion.span>
+              ))}
+            </AnimatePresence>
           </div>
         )}
       </div>
 
+      {/* Ring-pulse the active panel when the level filter actually changes the
+          matching set, threading the slider action to its downstream effect. */}
+      <RipplePulse trigger={matchSignature} color={ACCENT}>
       {activeTab === 'features' && <FeatureMapTab moduleId={moduleId} />}
 
       {activeTab === 'map' && (
@@ -184,6 +205,7 @@ export function ZoneMap({ moduleId }: ZoneMapProps) {
           </CollapsibleGroup>
         </VisibleSection>
       )}
+      </RipplePulse>
     </div>
   );
 }

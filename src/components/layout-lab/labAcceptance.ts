@@ -7,9 +7,10 @@ export function resolveAccept(catalogId: string, step: string): Checker | null {
   if (catalogId === 'items') {
     const spec = ITEM_STEP_SPECS[step];
     if (!spec) return null;
-    // ItemStepSpec.accept takes (LabStepArtifact | undefined); wrap to the Checker signature (data: Record<string, unknown>).
+    // ItemStepSpec.accept now shares the Checker signature (data); normalize its
+    // optional tier/reason to the AcceptanceResult shape the rollup expects.
     return (data: Record<string, unknown>) => {
-      const result = spec.accept({ done: true, data, ueAssets: [], at: new Date().toISOString() });
+      const result = spec.accept(data);
       return {
         label: result.label,
         status: result.status,

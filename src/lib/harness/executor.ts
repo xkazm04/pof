@@ -12,7 +12,6 @@
  * One area = one session = coherent block of work with 1M context.
  */
 
-import { spawn } from 'child_process';
 import * as fs from 'fs';
 import * as path from 'path';
 import { SUB_MODULES } from '@/lib/module-registry';
@@ -23,6 +22,7 @@ import {
   getModuleDomainContext,
 } from '@/lib/prompt-context';
 import type { ProjectContext } from '@/lib/prompt-context';
+import { spawnClaudeSession, wrapHarnessResult, HARNESS_RESULT_REGEX } from './claude-session';
 import type {
   ExecutorConfig,
   ExecutorResult,
@@ -136,8 +136,7 @@ ${featureStatusSection ? `### Previous Status\n${featureStatusSection}` : ''}
 When done, output a summary in this exact format:
 
 \`\`\`
-@@HARNESS_RESULT
-{
+${wrapHarnessResult(`{
   "areaId": "${area.id}",
   "completed": true,
   "features": [
@@ -147,8 +146,7 @@ When done, output a summary in this exact format:
   "filesModified": ["<list of modified files>"],
   "learnings": ["<patterns or gotchas discovered>"],
   "summary": "<1-2 sentence summary of what was built>"
-}
-@@END_HARNESS_RESULT
+}`)}
 \`\`\`
 `);
 
@@ -173,7 +171,7 @@ export interface ParsedAreaResult {
 }
 
 export function parseAreaResult(output: string): ParsedAreaResult | null {
-  const match = output.match(/@@HARNESS_RESULT\s*\n([\s\S]*?)\n\s*@@END_HARNESS_RESULT/);
+  const match = output.match(HARNESS_RESULT_REGEX);
   if (!match) return null;
 
   try {
@@ -202,129 +200,35 @@ export async function executeArea(
   const prompt = buildAreaPrompt(area, plan, progress, ctx, agentsMd, themeDirective);
   const startTime = Date.now();
 
-  return new Promise<ExecutorResult>((resolve) => {
-    const isWindows = process.platform === 'win32';
-    const command = isWindows ? 'claude.cmd' : 'claude';
-    const args = ['-p', '-', '--output-format', 'stream-json', '--verbose'];
-
-    if (config.skipPermissions) {
-      args.push('--dangerously-skip-permissions');
-    }
-
-    if (config.bareMode) {
-      args.push('--bare');
-    }
-
-    if (config.allowedTools.length > 0) {
-      args.push('--allowedTools', config.allowedTools.join(','));
-    }
-
-    const proc = spawn(command, args, {
-      cwd: ctx.projectPath,
-      env: { ...process.env },
-      stdio: ['pipe', 'pipe', 'pipe'],
-      shell: isWindows,
-    });
-
-    let fullOutput = '';
-    /** Accumulated assistant text extracted from stream-json messages */
-    let assistantText = '';
-    let sessionId: string | undefined;
-    let costUsd: number | undefined;
-    let exitCode: number | null = null;
-    const errors: string[] = [];
-
-    // Send prompt via stdin
-    proc.stdin.write(prompt);
-    proc.stdin.end();
-
-    proc.stdout.on('data', (data: Buffer) => {
-      const text = data.toString();
-      fullOutput += text;
-
-      // Parse stream-json lines to extract assistant text and metadata
-      for (const line of text.split('\n')) {
-        const trimmed = line.trim();
-        if (!trimmed) continue;
-        try {
-          const parsed = JSON.parse(trimmed);
-          if (parsed.type === 'system' && parsed.subtype === 'init' && parsed.session_id) {
-            sessionId = parsed.session_id;
-          }
-          if (parsed.type === 'result') {
-            if (parsed.cost_usd) costUsd = parsed.cost_usd;
-            // The result message may also contain the final text
-            if (parsed.result?.text) assistantText += parsed.result.text;
-          }
-          // Extract text from assistant messages
-          if (parsed.type === 'assistant') {
-            const content = parsed.message?.content;
-            if (Array.isArray(content)) {
-              for (const block of content) {
-                if (block.type === 'text' && block.text) {
-                  assistantText += block.text;
-                  if (onOutput) onOutput(block.text);
-                }
-              }
-            }
-          }
-        } catch {
-          // Not JSON, ignore
-        }
-      }
-    });
-
-    proc.stderr.on('data', (data: Buffer) => {
-      const text = data.toString().trim();
-      if (text) errors.push(text);
-    });
-
-    // Timeout
-    const timeout = setTimeout(() => {
-      proc.kill('SIGTERM');
-      errors.push(`Session timed out after ${config.sessionTimeoutMs}ms`);
-    }, config.sessionTimeoutMs);
-
-    proc.on('close', (code) => {
-      clearTimeout(timeout);
-      exitCode = code;
-
-      // Detect what was touched by scanning the extracted assistant text
-      const combinedOutput = assistantText || fullOutput;
-      const touchedCpp = /\.(h|cpp|hpp|cc)/.test(combinedOutput);
-      const touchedGameplay = /(UGameplayAbility|UAbilitySystemComponent|ACharacter|APlayerController|APawn)/
-        .test(combinedOutput);
-      const touchedUI = /\.(tsx|jsx|css)/.test(combinedOutput) || /Widget|HUD|UMG/.test(combinedOutput);
-
-      resolve({
-        completed: code === 0,
-        sessionId,
-        durationMs: Date.now() - startTime,
-        assistantOutput: assistantText || fullOutput,
-        touchedCpp,
-        touchedGameplay,
-        touchedUI,
-        exitCode,
-        costUsd,
-        errors: errors.length > 0 ? errors : undefined,
-      });
-    });
-
-    proc.on('error', (err) => {
-      clearTimeout(timeout);
-      errors.push(err.message);
-      resolve({
-        completed: false,
-        durationMs: Date.now() - startTime,
-        assistantOutput: fullOutput,
-        touchedCpp: false,
-        touchedGameplay: false,
-        touchedUI: false,
-        exitCode: null,
-        errors,
-      });
-    });
+  const session = await spawnClaudeSession(prompt, {
+    cwd: ctx.projectPath,
+    allowedTools: config.allowedTools,
+    skipPermissions: config.skipPermissions,
+    bareMode: config.bareMode,
+    verbose: true,
+    timeoutMs: config.sessionTimeoutMs,
+    onOutput,
   });
+
+  // Detect what was touched by scanning the extracted assistant text
+  const combinedOutput = session.output;
+  const touchedCpp = /\.(h|cpp|hpp|cc)/.test(combinedOutput);
+  const touchedGameplay = /(UGameplayAbility|UAbilitySystemComponent|ACharacter|APlayerController|APawn)/
+    .test(combinedOutput);
+  const touchedUI = /\.(tsx|jsx|css)/.test(combinedOutput) || /Widget|HUD|UMG/.test(combinedOutput);
+
+  return {
+    completed: session.exitCode === 0,
+    sessionId: session.sessionId,
+    durationMs: Date.now() - startTime,
+    assistantOutput: session.output,
+    touchedCpp,
+    touchedGameplay,
+    touchedUI,
+    exitCode: session.exitCode,
+    costUsd: session.costUsd,
+    errors: session.errors.length > 0 ? session.errors : undefined,
+  };
 }
 
 // ── State File I/O ──────────────────────────────────────────────────────────

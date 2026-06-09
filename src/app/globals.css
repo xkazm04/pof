@@ -26,6 +26,8 @@
   --text: #e0e4f0;
   --text-muted: #9aa0c4;     /* brighter secondary text */
   --text-muted-hover: #8b8fb0;
+  --text-subtle: #7e84a8;    /* de-emphasized tier — still ≥4.5:1 AA on --background;
+                                use instead of text-text-muted/40–/70 (those fail AA) */
   --surface-deep: #14142c;   /* insets / wells */
 
   /* Category accents */
@@ -85,6 +87,16 @@
   /* Misc accents (mirrors @/lib/chart-colors) */
   --accent-blue-bold: #2563eb;
 
+  /* Schematic panel surfaces — the re-themeable "blueprint" look shared by the
+     animation State Machine, the Visual State Machine Editor canvas, and the
+     Combo Choreographer graph (src/components/ui/SchematicPanel.tsx). Deep floors
+     that sit below the page background; SchematicPanel tints the grid / corner glow
+     / inset glow from a per-instance accent, so the surface re-themes with the app
+     instead of being a hardcoded dark island. */
+  --schematic-surface: #03030a;            /* outer framed panel floor */
+  --schematic-well: #050510;               /* recessed inset canvas floor */
+  --schematic-well-shadow: rgba(0, 0, 0, 0.8); /* inset depth shadow on wells */
+
   /* Animation timing — 3 tiers instead of 7+ arbitrary durations */
   --duration-fast: 150ms;   /* micro-interactions: hovers, toggles, tooltips */
   --duration-base: 250ms;   /* standard transitions: panels, dropdowns, fades */
@@ -117,6 +129,7 @@
   --color-text: var(--text);
   --color-text-muted: var(--text-muted);
   --color-text-muted-hover: var(--text-muted-hover);
+  --color-text-subtle: var(--text-subtle);
   --color-surface-deep: var(--surface-deep);
   --color-accent-setup: var(--setup);
   --color-accent-core: var(--core);
@@ -255,7 +268,17 @@ a:active {
   background: var(--text-muted);
 }
 
-/* Reduced motion — disable animations for users who prefer it */
+/* Reduced motion — disable animations for users who prefer it.
+   Layered motion policy (one coherent contract across the app):
+     1. This block zeroes every CSS animation/transition DURATION, so growing
+        progress bars, grid-template-rows expand/collapse, and chip tweens snap
+        instantly instead of animating.
+     2. JS-driven entrance motion (StaggerContainer/StaggerItem) collapses to
+        instant via framer-motion's useReducedMotion() in src/components/ui/Stagger.tsx.
+     3. Instant scale *transforms* (which a zeroed duration can't remove) are gated
+        behind Tailwind's `motion-safe:` variant at each hover site (FeatureCard,
+        FeatureMatrix row actions), so reduced-motion users keep only the
+        opacity/brightness feedback — no size jump. */
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
@@ -266,9 +289,29 @@ a:active {
     scroll-behavior: auto !important;
   }
 
+  /* CLI terminal reveals — drop the slide/scale keyframes so motion-sensitive
+     users get an instant appearance instead of jarring movement. Mirrors the
+     framer-motion useReducedMotion() guards in InlineTerminal / SuggestedActions
+     / WarningAggregator so the whole terminal honours one coherent policy. */
   .log-enter,
-  .scroll-btn-enter {
+  .scroll-btn-enter,
+  .selection-toolbar-enter {
     animation: none;
+  }
+
+  /* The scroll-to-bottom exit is a transition (not a keyframe): drop the slide
+     so it fades rather than slides; the blanket rule above makes it instant. */
+  .scroll-btn-exit {
+    transform: none;
+  }
+
+  /* Cook console active-phase label: drop the gradient sweep entirely and paint
+     the word in the normal text color instead of a frozen mid-shimmer frame. */
+  .cook-phase-shimmer {
+    animation: none;
+    background-image: none;
+    -webkit-text-fill-color: currentColor;
+    color: inherit;
   }
 }
 
@@ -299,6 +342,57 @@ a:active {
   animation: pulse-glow 2s ease-in-out infinite;
 }
 
+/* Center-anchored tuning slider (buff/nerf). The native track is transparent so
+   the CenterSlider component can paint its own center-origin fill + neutral tick
+   behind the thumb; only the thumb is drawn here. Thumb tint comes from the
+   inline `--center-thumb` var (buff = emerald / nerf = rose / neutral). The
+   global prefers-reduced-motion rule neutralises the drag scale automatically. */
+.center-slider {
+  -webkit-appearance: none;
+  appearance: none;
+  background: transparent;
+  cursor: pointer;
+  margin: 0;
+}
+.center-slider::-webkit-slider-runnable-track {
+  height: 100%;
+  background: transparent;
+  border: none;
+}
+.center-slider::-moz-range-track {
+  height: 100%;
+  background: transparent;
+  border: none;
+}
+.center-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 14px;
+  height: 14px;
+  margin-top: -4px; /* centers the 14px thumb on the 6px track */
+  border-radius: 9999px;
+  background: var(--center-thumb, var(--text));
+  border: 2px solid var(--background);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
+  transition: transform var(--duration-fast) var(--ease-out);
+}
+.center-slider::-moz-range-thumb {
+  width: 14px;
+  height: 14px;
+  border-radius: 9999px;
+  background: var(--center-thumb, var(--text));
+  border: 2px solid var(--background);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
+  transition: transform var(--duration-fast) var(--ease-out);
+}
+/* Tactile feedback: the thumb grows while dragging (pointer down) or focused. */
+.center-slider:active::-webkit-slider-thumb { transform: scale(1.25); }
+.center-slider:focus-visible::-webkit-slider-thumb { transform: scale(1.15); }
+.center-slider:active::-moz-range-thumb { transform: scale(1.25); }
+.center-slider:focus-visible::-moz-range-thumb { transform: scale(1.15); }
+.center-slider:focus { outline: none; }
+.center-slider:focus-visible { outline: none; }
+
 /* Progress ring loading spin */
 @keyframes progress-spin {
   from { transform: rotate(0deg); }
@@ -308,6 +402,19 @@ a:active {
 .animate-progress-spin {
   transform-origin: center;
   animation: progress-spin 1.2s linear infinite;
+}
+
+/* Shared MeterBar grow-in (src/components/ui/MeterBar.tsx). The fill carries its
+   resting width inline; this keyframe animates it up from zero on mount. The
+   `to` width is left unset so it resolves to the element's own width, letting one
+   keyframe serve any fill percent. Stagger via the inline --meter-grow-delay var.
+   The global prefers-reduced-motion rule above zeroes the duration → instant. */
+@keyframes meter-grow {
+  from { width: 0; }
+}
+
+.meter-fill-grow {
+  animation: meter-grow var(--duration-slow) var(--ease-out) var(--meter-grow-delay, 0ms) both;
 }
 
 /* Grid background pattern */
@@ -360,6 +467,33 @@ a:active {
 
 .audio-rel-pill {
   animation: audio-rel-pill-in 200ms var(--ease-out) both;
+}
+
+/* Cook console — active-phase label shimmer (src/components/modules/game-systems/
+   CookProgress.tsx). A faint highlight sweeps across the phase word while a cook
+   is running so the long (up-to-20-minute) wait reads as "alive" rather than
+   frozen. The text color is supplied by the gradient via background-clip:text;
+   the prefers-reduced-motion block above drops the sweep back to a solid label. */
+@keyframes cook-phase-shimmer {
+  from { background-position: 200% 0; }
+  to   { background-position: -200% 0; }
+}
+
+.cook-phase-shimmer {
+  background-image: linear-gradient(
+    100deg,
+    var(--text) 0%,
+    var(--text) 42%,
+    var(--accent-strong) 50%,
+    var(--text) 58%,
+    var(--text) 100%
+  );
+  background-size: 200% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: transparent;
+  animation: cook-phase-shimmer 2.8s linear infinite;
 }
 
 .scroll-btn-exit {

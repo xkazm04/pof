@@ -1,5 +1,6 @@
 import { getSetting, setSetting } from '@/lib/db';
 import { formatBytes } from '@/lib/format';
+import { normalizePlatformId, platformLabel } from './build-profiles';
 
 const BUDGETS_KEY = 'build_size_budgets';
 
@@ -13,7 +14,7 @@ export interface SizeBudget {
 export type SizeBudgetMap = Record<string, SizeBudget>;
 
 export interface SizeBudgetConfig {
-  /** Per-platform budgets, keyed by platform name (e.g. 'Windows') */
+  /** Per-platform budgets, keyed by canonical PlatformId token (e.g. 'Win64'). */
   budgets: SizeBudgetMap;
   /** When true, record API returns a non-success envelope on regression (gate the pipeline) */
   failOnRegression: boolean;
@@ -39,15 +40,14 @@ export interface SizeRegression {
 }
 
 // 5 GB / 5 GB / 8 GB / 4 GB / 4 GB defaults — typical UE5 shipping sizes.
+// Keyed by canonical PlatformId tokens; `platformBudget` normalizes the lookup
+// so a build cooked as 'Win64' resolves the same budget a 'Windows' record does.
 const DEFAULT_BUDGETS: SizeBudgetMap = {
-  Windows: { budgetBytes: 5 * 1024 ** 3, growthPercent: 10 },
+  Win64:   { budgetBytes: 5 * 1024 ** 3, growthPercent: 10 },
   Linux:   { budgetBytes: 5 * 1024 ** 3, growthPercent: 10 },
   Mac:     { budgetBytes: 8 * 1024 ** 3, growthPercent: 10 },
   Android: { budgetBytes: 4 * 1024 ** 3, growthPercent: 10 },
-  iOS:     { budgetBytes: 4 * 1024 ** 3, growthPercent: 10 },
-  // Cook-executor uses UE platform tokens — accept both spellings.
-  Win64: { budgetBytes: 5 * 1024 ** 3, growthPercent: 10 },
-  IOS:   { budgetBytes: 4 * 1024 ** 3, growthPercent: 10 },
+  IOS:     { budgetBytes: 4 * 1024 ** 3, growthPercent: 10 },
 };
 
 export const SIZE_REGRESSION_NOTE_PREFIX = '[SIZE_BUDGET]';
@@ -77,7 +77,10 @@ export function setBudgetConfig(config: SizeBudgetConfig): void {
 }
 
 function platformBudget(platform: string, budgets: SizeBudgetMap): SizeBudget {
-  return budgets[platform] ?? { budgetBytes: 0, growthPercent: 0 };
+  // Prefer the canonical-token key; fall back to the raw spelling so a config
+  // authored with a legacy friendly key still resolves.
+  const id = normalizePlatformId(platform);
+  return budgets[id] ?? budgets[platform] ?? { budgetBytes: 0, growthPercent: 0 };
 }
 
 /**
@@ -120,7 +123,7 @@ export function evaluateBuildSize(
     );
   }
 
-  const note = `${SIZE_REGRESSION_NOTE_PREFIX} ${platform} ${formatBytes(sizeBytes, { signed: true })} — ${parts.join('; ')}`;
+  const note = `${SIZE_REGRESSION_NOTE_PREFIX} ${platformLabel(platform)} ${formatBytes(sizeBytes, { signed: true })} — ${parts.join('; ')}`;
 
   return {
     sizeBytes,

@@ -15,9 +15,10 @@ import { StaggerContainer, StaggerItem } from '@/components/ui/Stagger';
 import { TermChip, DecoratedJargon } from '@/components/ui/TermChip';
 import type { TranspilerTab, SemanticChange, DiffConflictLevel } from '@/types/blueprint';
 import { UI_TIMEOUTS } from '@/lib/constants';
+import { CHANGE_TYPE_META } from '@/lib/blueprint-jargon';
 import {
-  MODULE_COLORS, STATUS_SUCCESS, STATUS_WARNING, STATUS_ERROR, STATUS_INFO,
-  OPACITY_15, OPACITY_20, OPACITY_30, ACCENT_PURPLE,
+  MODULE_COLORS, STATUS_SUCCESS, STATUS_WARNING, STATUS_ERROR,
+  OPACITY_15, OPACITY_20, OPACITY_30,
 } from '@/lib/chart-colors';
 
 const ACCENT = MODULE_COLORS.systems;
@@ -494,15 +495,7 @@ function ChangeCard({ change }: { change: SemanticChange }) {
   const [expanded, setExpanded] = useState(false);
   const conflictStyle = CONFLICT_STYLES[change.conflictLevel];
 
-  const typeLabel: Record<string, { color: string; label: string }> = {
-    add: { color: STATUS_SUCCESS, label: 'ADD' },
-    remove: { color: STATUS_ERROR, label: 'DEL' },
-    modify: { color: STATUS_WARNING, label: 'MOD' },
-    move: { color: STATUS_INFO, label: 'MOV' },
-    rename: { color: ACCENT_PURPLE, label: 'REN' },
-  };
-
-  const t = typeLabel[change.type] ?? typeLabel.modify;
+  const t = CHANGE_TYPE_META[change.type] ?? CHANGE_TYPE_META.modify;
 
   return (
     <div
@@ -512,7 +505,7 @@ function ChangeCard({ change }: { change: SemanticChange }) {
       <div className="flex items-center gap-2">
         {expanded ? <ChevronDown className="w-3 h-3 text-text-muted" /> : <ChevronRight className="w-3 h-3 text-text-muted" />}
         <TermChip
-          term={t.label}
+          term={t.code}
           underline={false}
           className="font-bold px-1.5 py-0.5 rounded"
           style={{ color: t.color, backgroundColor: `${t.color}15` }}

@@ -1,7 +1,8 @@
 'use client';
 
-import { useState, useCallback, useRef, useEffect } from 'react';
+import { useState, useCallback } from 'react';
 import { apiFetch } from '@/lib/api-utils';
+import { useIsMounted } from '@/hooks/useIsMounted';
 import { useModuleStore } from '@/stores/moduleStore';
 import type { GDDDocument } from '@/lib/gdd-synthesizer';
 
@@ -18,12 +19,7 @@ export function useGameDesignDoc(projectName: string): UseGameDesignDocResult {
   const [gdd, setGdd] = useState<GDDDocument | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const mountedRef = useRef(true);
-
-  useEffect(() => {
-    mountedRef.current = true;
-    return () => { mountedRef.current = false; };
-  }, []);
+  const isMounted = useIsMounted();
 
   const getChecklistJson = useCallback((): string => {
     try {
@@ -42,13 +38,13 @@ export function useGameDesignDoc(projectName: string): UseGameDesignDocResult {
       const data = await apiFetch<GDDDocument>(
         `/api/game-design-doc?projectName=${encodeURIComponent(projectName)}&checklist=${checklist}`
       );
-      if (mountedRef.current) setGdd(data);
+      if (isMounted()) setGdd(data);
     } catch (err) {
-      if (mountedRef.current) setError(err instanceof Error ? err.message : 'Failed to generate GDD');
+      if (isMounted()) setError(err instanceof Error ? err.message : 'Failed to generate GDD');
     } finally {
-      if (mountedRef.current) setIsLoading(false);
+      if (isMounted()) setIsLoading(false);
     }
-  }, [projectName, getChecklistJson]);
+  }, [projectName, getChecklistJson, isMounted]);
 
   const exportMarkdown = useCallback(async (): Promise<string | null> => {
     try {

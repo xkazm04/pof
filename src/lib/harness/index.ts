@@ -30,10 +30,19 @@ export {
 export type { Checkpointer, CheckpointState, GitCheckpoint, GitRunner, GitResult } from './checkpoint';
 export { diffRuns } from './run-diff';
 export type { RunDiff, AreaDiffEntry, AreaChangeKind } from './run-diff';
-export { buildGamePlan, pickNextArea, updatePlanStats } from './plan-builder';
+export { buildGamePlan, updatePlanStats } from './plan-builder';
 export { executeArea, parseAreaResult, readAgentsMd, appendAgentsMd } from './executor';
 export type { ParsedAreaResult } from './executor';
-export { verify, formatVerificationSummary, DEFAULT_GATES } from './verifier';
+export {
+  spawnClaudeSession,
+  buildClaudeArgs,
+  wrapHarnessResult,
+  HARNESS_RESULT_START,
+  HARNESS_RESULT_END,
+  HARNESS_RESULT_REGEX,
+} from './claude-session';
+export type { ClaudeSessionOptions, ClaudeSessionResult } from './claude-session';
+export { verify, formatVerificationSummary } from './verifier';
 export {
   createEmptyGuide,
   appendGuideStep,

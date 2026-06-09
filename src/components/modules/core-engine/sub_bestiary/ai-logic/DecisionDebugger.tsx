@@ -51,7 +51,7 @@ export function DecisionDebugger() {
                   : { borderColor: 'var(--border)', backgroundColor: 'var(--surface-deep)' }
                 }>
                 <button onClick={() => setDebugExpanded(isExpanded ? null : entry.tick)}
-                  className="w-full text-left px-3 py-2 flex items-center gap-2 hover:bg-surface-hover/30 transition-colors focus:outline-none cursor-pointer">
+                  className="w-full text-left px-3 py-2 flex items-center gap-2 hover:bg-surface-hover/30 transition-colors focus-ring-inset cursor-pointer">
                   <span className="text-xs font-mono font-bold flex-shrink-0"
                     style={{ color: isUnexpected ? STATUS_WARNING : 'var(--text-muted)' }}>
                     #{entry.tick}

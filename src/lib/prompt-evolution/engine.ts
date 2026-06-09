@@ -10,18 +10,34 @@ import type {
   MutationType,
   PromptOptimizationResult,
   PromptOptimizationDiff,
+  VariantStats,
+  VariantVersionEntry,
+  VariantLineageNode,
+  VariantVersionHistory,
 } from '@/types/prompt-evolution';
 import type { SessionRecord, ModuleStats } from '@/types/session-analytics';
 import { applyMutation, classifyStyle } from './mutations';
 import { clusterPrompts, getBestCluster } from './clustering';
 import { createABTest, evaluateTest } from './ab-testing';
+import {
+  insertVariant,
+  getVariantById,
+  getVariantsForItem as getVariantsForItemDb,
+  getVariantsForModule as getVariantsForModuleDb,
+  getAllVariants as getAllVariantsDb,
+  hasActiveVariant,
+  setActiveVariant,
+  upsertABTest,
+  getABTestById,
+  getAllABTests,
+  getABTestsForItem,
+} from './evolution-db';
 
-// ── In-memory state (persisted across API calls via module scope) ───────────
-// In production you'd use SQLite; for now, in-memory maps are fine since
-// the evolution data is reconstructible from session_analytics.
+// ── Persistence ─────────────────────────────────────────────────────────────
+// Variants and A/B tests live in SQLite (see ./evolution-db) so experiments
+// survive a server restart. Template families are cheap derived data that we
+// keep in-memory and rebuild on demand.
 
-const variants = new Map<string, PromptVariant>();
-const abTests = new Map<string, ABTest>();
 const templateFamilies = new Map<string, TemplateFamily>();
 
 // ── Variant management ──────────────────────────────────────────────────────
@@ -39,6 +55,9 @@ export function createVariant(
   mutationType?: MutationType,
 ): PromptVariant {
   const style = classifyStyle(prompt);
+  // The first version authored for a checklist item becomes the active/current
+  // one; later mutations don't steal "current" until the user restores them.
+  const active = !hasActiveVariant(moduleId, checklistItemId);
   const variant: PromptVariant = {
     id: genId('var'),
     moduleId,
@@ -49,34 +68,127 @@ export function createVariant(
     style,
     parentId,
     mutationType,
+    active,
     createdAt: new Date().toISOString(),
   };
-  variants.set(variant.id, variant);
+  insertVariant(variant);
   return variant;
 }
 
 export function getVariant(id: string): PromptVariant | null {
-  return variants.get(id) ?? null;
+  return getVariantById(id);
 }
 
 export function getVariantsForItem(moduleId: SubModuleId, checklistItemId: string): PromptVariant[] {
-  return Array.from(variants.values()).filter(
-    (v) => v.moduleId === moduleId && v.checklistItemId === checklistItemId,
-  );
+  return getVariantsForItemDb(moduleId, checklistItemId);
 }
 
 export function getVariantsForModule(moduleId: SubModuleId): PromptVariant[] {
-  return Array.from(variants.values()).filter((v) => v.moduleId === moduleId);
+  return getVariantsForModuleDb(moduleId);
 }
 
 export function getAllVariants(): PromptVariant[] {
-  return Array.from(variants.values());
+  return getAllVariantsDb();
+}
+
+// ── Version history & rollback ───────────────────────────────────────────────
+
+/** Aggregate a variant's A/B performance across every test it joined. */
+function computeVariantStats(variantId: string, tests: ABTest[]): VariantStats {
+  let trials = 0;
+  let successes = 0;
+  let wins = 0;
+  let testCount = 0;
+  for (const t of tests) {
+    if (t.variantAId === variantId) {
+      trials += t.variantATrials;
+      successes += t.variantASuccesses;
+      testCount++;
+      if (t.winnerId === variantId) wins++;
+    } else if (t.variantBId === variantId) {
+      trials += t.variantBTrials;
+      successes += t.variantBSuccesses;
+      testCount++;
+      if (t.winnerId === variantId) wins++;
+    }
+  }
+  return {
+    variantId,
+    trials,
+    successes,
+    successRate: trials > 0 ? successes / trials : 0,
+    wins,
+    testCount,
+  };
+}
+
+/**
+ * Build the version timeline for one checklist item: a flat list of versions
+ * (each annotated with A/B success rate) plus the lineage forest formed by
+ * `parentId` links so the UI can render a tech-tree of mutations.
+ */
+export function getVersionHistory(
+  moduleId: SubModuleId,
+  checklistItemId: string,
+): VariantVersionHistory {
+  const variantList = getVariantsForItemDb(moduleId, checklistItemId);
+  const tests = getABTestsForItem(moduleId, checklistItemId);
+
+  const versions: VariantVersionEntry[] = variantList.map((v) => ({
+    variant: v,
+    stats: computeVariantStats(v.id, tests),
+    isActive: v.active,
+  }));
+
+  // Build the lineage forest. A version is a root when it has no parent, or its
+  // parent lives outside this checklist item (defensive — shouldn't happen).
+  const nodes = new Map<string, VariantLineageNode>();
+  for (const entry of versions) {
+    nodes.set(entry.variant.id, { ...entry, children: [], depth: 0 });
+  }
+  const roots: VariantLineageNode[] = [];
+  for (const node of nodes.values()) {
+    const parentId = node.variant.parentId;
+    const parent = parentId ? nodes.get(parentId) : undefined;
+    if (parent) parent.children.push(node);
+    else roots.push(node);
+  }
+
+  // Assign depth + keep children/roots in chronological order.
+  const byCreated = (a: VariantLineageNode, b: VariantLineageNode) =>
+    a.variant.createdAt.localeCompare(b.variant.createdAt);
+  const walk = (node: VariantLineageNode, depth: number) => {
+    node.depth = depth;
+    node.children.sort(byCreated);
+    for (const child of node.children) walk(child, depth + 1);
+  };
+  roots.sort(byCreated);
+  for (const root of roots) walk(root, 0);
+
+  return {
+    moduleId,
+    checklistItemId,
+    versions,
+    roots,
+    activeVariantId: versions.find((v) => v.isActive)?.variant.id ?? null,
+  };
+}
+
+/**
+ * Restore (roll back to) a previous version — makes it the active/current one
+ * for its checklist item. Returns the updated variant, or null if not found.
+ */
+export function restoreVariant(variantId: string): PromptVariant | null {
+  const variant = getVariantById(variantId);
+  if (!variant) return null;
+  setActiveVariant(variant.moduleId, variant.checklistItemId, variantId);
+  return { ...variant, active: true };
 }
 
 // ── Mutation ────────────────────────────────────────────────────────────────
 
 export function mutateVariant(variantId: string, mutation: MutationType): PromptVariant | null {
-  const parent = variants.get(variantId);
+  const parent = getVariantById(variantId);
   if (!parent) return null;
 
   const result = applyMutation(parent.prompt, mutation);
@@ -99,22 +211,22 @@ export function startABTest(
   variantBId: string,
 ): ABTest {
   const test = createABTest(moduleId, checklistItemId, variantAId, variantBId);
-  abTests.set(test.id, test);
+  upsertABTest(test);
   return test;
 }
 
 export function getABTest(id: string): ABTest | null {
-  return abTests.get(id) ?? null;
+  return getABTestById(id);
 }
 
 export function getActiveTests(moduleId?: SubModuleId): ABTest[] {
-  return Array.from(abTests.values()).filter(
+  return getAllABTests().filter(
     (t) => t.status === 'running' && (!moduleId || t.moduleId === moduleId),
   );
 }
 
 export function getAllTests(): ABTest[] {
-  return Array.from(abTests.values());
+  return getAllABTests();
 }
 
 export function recordTestTrial(
@@ -123,7 +235,7 @@ export function recordTestTrial(
   success: boolean,
   durationMs: number,
 ): ABTest | null {
-  const test = abTests.get(testId);
+  const test = getABTestById(testId);
   if (!test || test.status !== 'running') return null;
 
   const updated = {
@@ -143,12 +255,12 @@ export function recordTestTrial(
 
   // Check if test should conclude
   const evaluated = evaluateTest(updated);
-  abTests.set(testId, evaluated);
+  upsertABTest(evaluated);
   return evaluated;
 }
 
 export function concludeTest(testId: string): ABTest | null {
-  const test = abTests.get(testId);
+  const test = getABTestById(testId);
   if (!test) return null;
   if (test.status === 'concluded') return test;
 
@@ -164,7 +276,7 @@ export function concludeTest(testId: string): ABTest | null {
   concluded.winnerId = rateA >= rateB ? test.variantAId : test.variantBId;
   concluded.confidence = Math.min(0.7, (test.variantATrials + test.variantBTrials) / 20);
 
-  abTests.set(testId, concluded);
+  upsertABTest(concluded);
   return concluded;
 }
 
@@ -229,7 +341,7 @@ export function getBestVariant(
   checklistItemId: string,
 ): PromptVariant | null {
   // Check concluded tests for winners
-  const concluded = Array.from(abTests.values()).filter(
+  const concluded = getAllABTests().filter(
     (t) => t.status === 'concluded' && t.moduleId === moduleId && t.checklistItemId === checklistItemId && t.winnerId,
   );
 
@@ -294,7 +406,7 @@ export function generateSuggestions(
   }
 
   // Suggest adopting winners from concluded tests
-  const concluded = Array.from(abTests.values()).filter(
+  const concluded = getAllABTests().filter(
     (t) => t.status === 'concluded' && t.moduleId === moduleId && t.winnerId,
   );
   for (const test of concluded) {

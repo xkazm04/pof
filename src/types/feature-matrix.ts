@@ -1,6 +1,10 @@
 import type { SubModuleId } from './modules';
 
-export type FeatureStatus = 'implemented' | 'improved' | 'partial' | 'missing' | 'unknown';
+/** Single source of truth for the five feature statuses. The type and all runtime
+ *  validators (DB Set, route validator) derive from this tuple so they cannot drift. */
+export const FEATURE_STATUSES = ['implemented', 'improved', 'partial', 'missing', 'unknown'] as const;
+
+export type FeatureStatus = (typeof FEATURE_STATUSES)[number];
 
 export interface FeatureRow {
   id: number;

@@ -1,6 +1,9 @@
-import { spawn, type ChildProcess, type SpawnOptions } from 'node:child_process';
+import { spawn } from 'node:child_process';
 import type { BuildProfile } from './build-profiles';
 import { generateUATCommand } from './uat-command-generator';
+import type { SpawnFn } from './process-utils';
+
+export type { SpawnFn };
 
 export type CookPhase = 'cook' | 'stage' | 'package' | 'done';
 
@@ -10,8 +13,6 @@ export type CookEvent =
   | { type: 'log'; line: string; t: number }
   | { type: 'done'; exePath: string; durationMs: number; sizeBytes: number; status: 'success'; t: number }
   | { type: 'error'; message: string; status: 'failed'; t: number };
-
-export type SpawnFn = (cmd: string, args: string[], opts?: SpawnOptions) => ChildProcess;
 
 export interface CookExecutorOptions {
   profile: BuildProfile;

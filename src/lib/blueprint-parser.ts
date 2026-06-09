@@ -44,31 +44,31 @@ const NODE_TYPE_LABELS: Record<string, string> = {
   'K2Node_CommutativeAssociativeBinaryOperator': 'Math Op',
 };
 
+const TYPE_MAP: Record<string, string> = {
+  'bool': 'bool',
+  'byte': 'uint8',
+  'int': 'int32',
+  'int64': 'int64',
+  'float': 'float',
+  'double': 'double',
+  'name': 'FName',
+  'string': 'FString',
+  'text': 'FText',
+  'vector': 'FVector',
+  'rotator': 'FRotator',
+  'transform': 'FTransform',
+  'color': 'FLinearColor',
+  'object': 'UObject*',
+  'class': 'UClass*',
+  'actor': 'AActor*',
+  'exec': 'void',
+  'struct': 'FStruct',
+  'softobject': 'TSoftObjectPtr<UObject>',
+  'softclass': 'TSoftClassPtr<UObject>',
+};
+
 /** Map a UE5 Blueprint type string to a C++ type. */
 export function blueprintTypeToCpp(bpType: string): string {
-  const TYPE_MAP: Record<string, string> = {
-    'bool': 'bool',
-    'byte': 'uint8',
-    'int': 'int32',
-    'int64': 'int64',
-    'float': 'float',
-    'double': 'double',
-    'name': 'FName',
-    'string': 'FString',
-    'text': 'FText',
-    'vector': 'FVector',
-    'rotator': 'FRotator',
-    'transform': 'FTransform',
-    'color': 'FLinearColor',
-    'object': 'UObject*',
-    'class': 'UClass*',
-    'actor': 'AActor*',
-    'exec': 'void',
-    'struct': 'FStruct',
-    'softobject': 'TSoftObjectPtr<UObject>',
-    'softclass': 'TSoftClassPtr<UObject>',
-  };
-
   const lower = bpType.toLowerCase().replace(/\s+/g, '');
 
   // Direct match
@@ -86,12 +86,7 @@ export function blueprintTypeToCpp(bpType: string): string {
   const setMatch = bpType.match(/^(?:Set|TSet)\s*<\s*(.+)\s*>$/i);
   if (setMatch) return `TSet<${blueprintTypeToCpp(setMatch[1])}>`;
 
-  // Object reference (e.g. "UStaticMesh*")
-  if (bpType.startsWith('U') || bpType.startsWith('A') || bpType.startsWith('F')) {
-    return bpType.includes('*') ? bpType : bpType;
-  }
-
-  // Fallback — return as-is
+  // Fallback — return as-is (covers object references like "UStaticMesh*")
   return bpType;
 }
 

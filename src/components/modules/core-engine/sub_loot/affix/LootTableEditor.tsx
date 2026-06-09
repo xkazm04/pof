@@ -12,6 +12,7 @@ import { EXPANDED_ENTRIES } from '../_shared/data';
 import type { LootEditorEntryExpanded, LootSource } from '../_shared/data';
 import { generateUE5LootTableJson, generateUE5LootTableCpp } from '../_shared/codegen';
 import { BlueprintPanel } from '../_shared/design';
+import { rarityColor } from '../_shared/rarityBadge';
 import { LOOT_TABLE_EDITOR_PAGE_SIZE } from './loot-table-editor-constants';
 import { LootTableEditorToolbar } from './LootTableEditorToolbar';
 import { LootTableSearchFilters } from './LootTableSearchFilters';
@@ -186,7 +187,7 @@ export function LootTableEditor() {
       {editorTotalWeight > 0 && (
         <div className="flex h-4 rounded overflow-hidden w-full mb-2">
           {editorEntries.map((entry) => (
-            <div key={entry.id} title={`${entry.name}: ${((entry.weight / editorTotalWeight) * 100).toFixed(1)}%`} style={{ width: `${(entry.weight / editorTotalWeight) * 100}%`, backgroundColor: entry.color }} />
+            <div key={entry.id} title={`${entry.name}: ${((entry.weight / editorTotalWeight) * 100).toFixed(1)}%`} style={{ width: `${(entry.weight / editorTotalWeight) * 100}%`, backgroundColor: rarityColor(entry.rarity) }} />
           ))}
         </div>
       )}

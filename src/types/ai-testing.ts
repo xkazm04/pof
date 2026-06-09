@@ -69,6 +69,31 @@ export interface TestSuiteSummary {
   draftCount: number;
 }
 
+/** Aggregate counts + pass-rate derived from a flat list of scenarios. */
+export interface ScenarioSummary {
+  total: number;
+  passed: number;
+  /** Both `failed` and `error` statuses count as failed. */
+  failed: number;
+  draft: number;
+  /** Rounded 0–100; 0 when there are no scenarios. */
+  passRate: number;
+}
+
+/**
+ * Single source of truth for scenario status aggregation. Used by both the DB
+ * summary (`getTestingSummary`) and the sandbox UI so the counting semantics —
+ * notably that `error` is grouped with `failed` — stay in lockstep.
+ */
+export function summarizeScenarios(scenarios: TestScenario[]): ScenarioSummary {
+  const total = scenarios.length;
+  const passed = scenarios.filter((s) => s.status === 'passed').length;
+  const failed = scenarios.filter((s) => s.status === 'failed' || s.status === 'error').length;
+  const draft = scenarios.filter((s) => s.status === 'draft').length;
+  const passRate = total > 0 ? Math.round((passed / total) * 100) : 0;
+  return { total, passed, failed, draft, passRate };
+}
+
 // ── API payloads ──
 
 export interface CreateSuitePayload {

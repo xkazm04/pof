@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
 vi.mock('next/font/google', () => { const f = () => ({ className: 'mock-font', variable: '--mock-var' }); return { IBM_Plex_Mono: f, Inter: f, JetBrains_Mono: f }; });
-import { LIGHT, DARK, LAB_THEMES, LAB_DENSITIES, themeAttr } from '@/components/layout-lab/theme';
+import { LIGHT, DARK, LAB_THEMES, themeAttr } from '@/components/layout-lab/theme';
 
 describe('LabTheme compat shim', () => {
   it('color fields are var(--lab-*) references (theme-agnostic; theme set via [data-theme])', () => {
@@ -18,9 +18,8 @@ describe('LabTheme compat shim', () => {
     expect(typeof LIGHT.fontMono).toBe('string'); // a className, not a var()
     expect(LIGHT.fontMono).not.toContain('var(');
   });
-  it('still exposes both themes + the density list', () => {
+  it('still exposes both themes', () => {
     expect(LAB_THEMES.map((t) => t.id)).toEqual(['light', 'dark']);
-    expect(LAB_DENSITIES).toEqual(['comfortable', 'compact']);
   });
   it('themeAttr maps id to the [data-theme] attribute value', () => {
     expect(themeAttr('light')).toBe('blueprint');

@@ -7,22 +7,35 @@ import {
   ACCENT_CYAN, ACCENT_VIOLET, ACCENT_EMERALD, ACCENT_ORANGE, ACCENT_PINK,
 } from '@/lib/chart-colors';
 import type { ChartSeries, RadarDataPoint } from '@/types/unique-tab-improvements';
+import { clamp } from './chartMath';
 
 export const ACCENT = STATUS_WARNING;
 
 export const MAX_LEVEL = 50;
+
+/**
+ * Documented valid ranges for the curve-tuning inputs. Shared by the curve
+ * parameter sliders (slider bounds) and by `generateChartData` (input clamp) so
+ * an out-of-range value can never reach the XP math and produce a broken chart.
+ */
+export const BASE_XP_RANGE = { min: 50, max: 500, step: 10 } as const;
+export const CURVE_EXP_RANGE = { min: 1.1, max: 2.5, step: 0.05 } as const;
 
 export function calculateXpForLevel(level: number, base: number, exponent: number): number {
   return Math.floor(base * Math.pow(level, exponent));
 }
 
 export const generateChartData = (base: number, exp: number) => {
+  // Clamp the tuning inputs to their documented ranges before the XP math so a
+  // stray (or NaN) value can't yield non-finite XP and a silently broken chart.
+  const safeBase = clamp(base, BASE_XP_RANGE.min, BASE_XP_RANGE.max);
+  const safeExp = clamp(exp, CURVE_EXP_RANGE.min, CURVE_EXP_RANGE.max);
   const data = [];
   for (let lvl = 1; lvl <= MAX_LEVEL; lvl += 5) {
     const levelToUse = lvl > MAX_LEVEL ? MAX_LEVEL : lvl;
     data.push({
       level: levelToUse,
-      xp: calculateXpForLevel(levelToUse, base, exp),
+      xp: calculateXpForLevel(levelToUse, safeBase, safeExp),
       totalParams: Math.floor(levelToUse * 1.5),
     });
   }
@@ -159,7 +172,14 @@ export const ENEMY_DIFFICULTY = [15, 30, 55, 100, 160, 240, 330, 420, 520, 650, 
 
 /* -- 8.7 Diminishing Returns Data ----------------------------------------- */
 
-export const DR_ATTRIBUTES = [
+export interface DRAttribute {
+  name: string;
+  color: string;
+  softCap: number;
+  curve: { points: number; marginalValue: number }[];
+}
+
+export const DR_ATTRIBUTES: DRAttribute[] = [
   {
     name: 'Strength', color: STATUS_ERROR, softCap: 60,
     curve: Array.from({ length: 10 }, (_, i) => ({

@@ -17,6 +17,9 @@ export interface SpawnExecutorOptions {
   uproject?: string;
   /** Watchdog for a scenario run (the controller RequestExits on completion). Default 180s. */
   scenarioTimeoutMs?: number;
+  /** Watchdog for an automation run (`Automation RunTests …;Quit`). Default 180s. A hung
+   *  headless editor that never quits is SIGKILLed so the drain worker can't stall forever. */
+  automationTimeoutMs?: number;
 }
 
 /** Spawn `cmd`, resolve on exit, or kill (SIGKILL) + resolve after `timeoutMs`. */
@@ -181,6 +184,56 @@ export function makeSpawnExecutor(opts: SpawnExecutorOptions = {}): GateExecutor
   const editorCmd = opts.editorCmd ?? process.env.POF_UE_EDITOR_CMD;
   const uproject = opts.uproject ?? process.env.POF_UE_UPROJECT;
 
+  /**
+   * Behavioural scenario path (faithful L3): write the scenario, drive inputs in a real
+   * game loop, observe the effect. Watchdog-protected — a hung editor is SIGKILLed.
+   */
+  async function runScenario(job: GateJob, editor: string, project: string): Promise<GateVerdict> {
+    const scn = job.scenario!;
+    const outDir = join(tmpdir(), `pof-scn-${Date.now()}-${sanitize(job.step)}`);
+    await mkdir(outDir, { recursive: true });
+    const outDirFwd = outDir.replace(/\\/g, '/');
+    const scnPath = join(outDir, 'scenario.json');
+    await writeFile(scnPath, JSON.stringify({
+      out_dir: outDirFwd,
+      total_seconds: scn.totalSeconds,
+      num_samples: scn.numSamples,
+      settle: scn.settle ?? 1.0,
+      ...(scn.playAnim ? { play_anim: scn.playAnim } : {}),
+      inputs: scn.inputs.map((i) => ({
+        ...(i.key ? { key: i.key } : {}),
+        ...(i.action ? { action: i.action } : {}),
+        ...(i.value ? { value: i.value } : {}),
+        ...(i.event ? { event: i.event } : {}),
+        ...(i.eventArg ? { event_arg: i.eventArg } : {}),
+        start: i.start,
+        duration: i.duration,
+      })),
+    }, null, 2));
+    const scnLog = join(outDir, 'editor.log');
+    const scnArgs = buildScenarioArgs(project, scn.map, scnPath.replace(/\\/g, '/'), scnLog);
+    const { timedOut } = await spawnAndWait(editor, scnArgs, opts.scenarioTimeoutMs ?? 180_000);
+    const obsRaw = await readFile(join(outDir, 'observations.json'), 'utf-8').catch(() => '');
+    if (!obsRaw) throw new Error(`no observations.json at ${outDir}${timedOut ? ' (watchdog timeout)' : ''}`);
+    const v = parseScenarioVerdict(JSON.parse(obsRaw) as Observations, scn.assert);
+    return { status: v.status, detail: `${job.step}: ${v.detail}`, raw: { outDir, timedOut } };
+  }
+
+  /**
+   * Automation path (symbolic L3): run one headless `Automation RunTests <name>;Quit` and
+   * judge by `-abslog` markers. Shares the same watchdog as the scenario path — a headless
+   * editor that never quits is SIGKILLed so the drain worker can't hang indefinitely.
+   */
+  async function runAutomation(job: GateJob, editor: string, project: string): Promise<GateVerdict> {
+    const abslog = join(tmpdir(), `pof-gate-${Date.now()}-${sanitize(job.testName ?? 'test')}.log`);
+    const args = buildAutomationArgs(job.testName!, project, abslog);
+    const { timedOut } = await spawnAndWait(editor, args, opts.automationTimeoutMs ?? 180_000);
+    const log = await readFile(abslog, 'utf-8').catch(() => '');
+    if (!log) throw new Error(`no abslog produced at ${abslog}${timedOut ? ' (watchdog timeout)' : ''}`);
+    const v = parseAbslogVerdict(log);
+    return { status: v.status, detail: `${job.testName}: ${v.detail}`, raw: { abslog, timedOut } };
+  }
+
   return {
     id: 'spawn',
     tier: 'L3',
@@ -192,52 +245,7 @@ export function makeSpawnExecutor(opts: SpawnExecutorOptions = {}): GateExecutor
     async run(job: GateJob): Promise<GateVerdict> {
       if (!opts.allowSpawn) throw new Error('spawn executor disabled (pass allowSpawn:true to enable)');
       if (!editorCmd || !uproject) throw new Error('spawn executor needs POF_UE_EDITOR_CMD + POF_UE_UPROJECT');
-
-      // Behavioural scenario path (faithful L3): drive inputs, observe the effect.
-      if (job.scenario) {
-        const scn = job.scenario;
-        const outDir = join(tmpdir(), `pof-scn-${Date.now()}-${sanitize(job.step)}`);
-        await mkdir(outDir, { recursive: true });
-        const outDirFwd = outDir.replace(/\\/g, '/');
-        const scnPath = join(outDir, 'scenario.json');
-        await writeFile(scnPath, JSON.stringify({
-          out_dir: outDirFwd,
-          total_seconds: scn.totalSeconds,
-          num_samples: scn.numSamples,
-          settle: scn.settle ?? 1.0,
-          ...(scn.playAnim ? { play_anim: scn.playAnim } : {}),
-          inputs: scn.inputs.map((i) => ({
-            ...(i.key ? { key: i.key } : {}),
-            ...(i.action ? { action: i.action } : {}),
-            ...(i.value ? { value: i.value } : {}),
-            ...(i.event ? { event: i.event } : {}),
-            ...(i.eventArg ? { event_arg: i.eventArg } : {}),
-            start: i.start,
-            duration: i.duration,
-          })),
-        }, null, 2));
-        const scnLog = join(outDir, 'editor.log');
-        const scnArgs = buildScenarioArgs(uproject, scn.map, scnPath.replace(/\\/g, '/'), scnLog);
-        const { timedOut } = await spawnAndWait(editorCmd, scnArgs, opts.scenarioTimeoutMs ?? 180_000);
-        const obsRaw = await readFile(join(outDir, 'observations.json'), 'utf-8').catch(() => '');
-        if (!obsRaw) throw new Error(`no observations.json at ${outDir}${timedOut ? ' (watchdog timeout)' : ''}`);
-        const v = parseScenarioVerdict(JSON.parse(obsRaw) as Observations, scn.assert);
-        return { status: v.status, detail: `${job.step}: ${v.detail}`, raw: { outDir, timedOut } };
-      }
-
-      const abslog = join(tmpdir(), `pof-gate-${Date.now()}-${sanitize(job.testName ?? 'test')}.log`);
-      const args = buildAutomationArgs(job.testName!, uproject, abslog);
-
-      await new Promise<void>((resolve) => {
-        const child = spawn(editorCmd, args, { windowsHide: true });
-        child.on('exit', () => resolve()); // exit code ignored — judged by abslog
-        child.on('error', () => resolve());
-      });
-
-      const log = await readFile(abslog, 'utf-8').catch(() => '');
-      if (!log) throw new Error(`no abslog produced at ${abslog}`);
-      const v = parseAbslogVerdict(log);
-      return { status: v.status, detail: `${job.testName}: ${v.detail}`, raw: { abslog } };
+      return job.scenario ? runScenario(job, editorCmd, uproject) : runAutomation(job, editorCmd, uproject);
     },
   };
 }

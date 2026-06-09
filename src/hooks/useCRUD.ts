@@ -1,7 +1,8 @@
 'use client';
 
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { apiFetch } from '@/lib/api-utils';
+import { useIsMounted } from '@/hooks/useIsMounted';
 
 export interface UseCRUDOptions<T> {
   /** Transform raw API response into the state value. Defaults to identity. */
@@ -43,12 +44,7 @@ export function useCRUD<T>(
   const [data, setData] = useState<T>(initial);
   const [isLoading, setIsLoading] = useState(!skipInitialFetch);
   const [error, setError] = useState<string | null>(null);
-  const mountedRef = useRef(true);
-
-  useEffect(() => {
-    mountedRef.current = true;
-    return () => { mountedRef.current = false; };
-  }, []);
+  const isMounted = useIsMounted();
 
   const refetch = useCallback(async () => {
     setIsLoading(true);
@@ -61,16 +57,16 @@ export function useCRUD<T>(
         const raw = await apiFetch<unknown>(endpoint);
         result = transform ? transform(raw) : raw as T;
       }
-      if (!mountedRef.current) return;
+      if (!isMounted()) return;
       setData(result);
     } catch (err) {
-      if (mountedRef.current) {
+      if (isMounted()) {
         setError(err instanceof Error ? err.message : (errorMessage ?? 'Failed to fetch data'));
       }
     } finally {
-      if (mountedRef.current) setIsLoading(false);
+      if (isMounted()) setIsLoading(false);
     }
-  }, [endpoint, transform, fetcher, errorMessage]);
+  }, [endpoint, transform, fetcher, errorMessage, isMounted]);
 
   useEffect(() => {
     if (!skipInitialFetch) refetch();

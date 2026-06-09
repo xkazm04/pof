@@ -8,35 +8,250 @@
  * with --scenario ui-overhaul flag.
  *
  * See docs/harness/ui-overhaul-scenario.md for full specifications.
+ *
+ * Each overhaul step is split into Part 1/2/3 areas that share one verbatim
+ * prompt; those prompts are hoisted into the consts below so editing a prompt
+ * updates every part. The `feat()`/`area()` builders live in ./overhaul-area-helpers.
  */
 
-import type { ModuleArea, PlannedFeature } from './types';
+import type { ModuleArea } from './types';
+import { makeArea } from './overhaul-area-helpers';
 
-/* ── Helper ─────────────────────────────────────────────────────────────────── */
+// moduleId is informational for these cross-cutting UI areas.
+const area = makeArea('arpg-character');
 
-function feat(name: string): PlannedFeature {
-  return { id: name, name, status: 'pending', quality: null, lastSession: null };
-}
+/* ── Shared prompts (one source per multi-part step) ─────────────────────────── */
 
-function area(
-  id: string,
-  label: string,
-  description: string,
-  features: string[],
-  dependsOn: string[] = [],
-): ModuleArea {
-  return {
-    id,
-    moduleId: 'arpg-character', // cross-cutting — moduleId is informational only for UI areas
-    label,
-    description,
-    checklistItemIds: [],
-    featureNames: features,
-    dependsOn,
-    status: 'pending',
-    features: features.map(feat),
-  };
-}
+const ENTITY_SELECTOR_DESC = `Create src/components/shared/ScalableSelector.tsx — a modal overlay component for picking
+from 100+ entities. Must support: debounced search (300ms), group-by with collapsible sections,
+virtual scroll for large lists, multi-select and single-select modes, keyboard navigation
+(arrow keys, Enter, Escape), render prop for custom item cards, selected items shown as pills.
+Props: items, groupBy, renderItem, onSelect, selected, searchKey, placeholder, mode.
+Component structure: index.tsx, SelectorSearch.tsx, SelectorGroup.tsx, SelectorGrid.tsx, types.ts.
+Place in src/components/shared/ScalableSelector/.`;
+
+const FEATURE_CARDS_DESC = `Replace the toggle-list FeatureMapTab with a card-grid matrix.
+Each feature becomes a FeatureCard component — clickable card with active/inactive states.
+Active: colored background tint (withOpacity accent 8%), bright border (accent 30%), full-color content.
+Inactive: muted border (neutral 20%), desaturated content, reduced opacity.
+Card shows: feature name (mono bold), metric content area (children render prop), status dot (bottom-right).
+Layout: CSS grid auto-fill, min 160px, gap-3. Tab groups become section headers.
+Create: src/components/shared/FeatureCard.tsx, src/components/shared/FeatureCardGrid.tsx.
+Update: src/components/modules/core-engine/unique-tabs/FeatureMapTab.tsx to use new components.
+Keep Enable All / Disable All buttons. Add NeonBar progress at top.`;
+
+const DESIGN_TOKENS_DESC = `Audit and standardize border opacities, glow radii, spacing across all unique-tab components.
+Add to chart-colors.ts: BORDER_DEFAULT=OPACITY_20, BORDER_HOVER=OPACITY_37, BORDER_SUBTLE=OPACITY_10,
+GLOW_SM='0 0 4px', GLOW_MD='0 0 8px', GLOW_LG='0 0 16px'.
+Add to globals.css: --panel-padding:12px, --card-gap:12px, --section-gap:16px.
+Update _design.tsx and _shared.tsx to use new constants.
+Grep all unique-tabs/ for hardcoded hex opacity suffixes (e.g., #3b82f618, #f8717120)
+and replace with imported withOpacity + constants. Do NOT change visual appearance.`;
+
+const METADATA_SCHEMA_DESC = `Define TypeScript interfaces for categorizing game entities.
+Create src/types/game-metadata.ts with:
+- EntityMetadata: id, name, category, subcategory?, tags[], level?, levelMax?, area?, tier?, icon?
+- EntityGrouping: field (keyof EntityMetadata), label, order? (explicit group sort)
+- Default grouping presets: CHAR_GROUPINGS (category→subcategory), ITEM_GROUPINGS (category→tier),
+  ABILITY_GROUPINGS (category→element), ENEMY_GROUPINGS (area→tier)
+Extend each module's data.ts with metadata fields on mock items (add category, tags, area, tier).
+This is the foundation for ScalableSelector group-by in Phase 2.`;
+
+const CHARACTER_FEATURE_METRICS_DESC = `Add unique metric visualizations to each FeatureCard in the Character Blueprint Feature Map tab.
+Each card's children slot gets a micro-visualization:
+- Class Hierarchy: "{types} types / {classes} classes" side by side numbers
+- Properties: Stacked mini bars (HP, Speed, Armor ranges, 60px wide)
+- Scaling: Sparkline SVG (60×20px) showing first 10 curve points
+- Hitbox: "{zones} zones" with colored dots (hurtbox=red, hitbox=blue, pushbox=green)
+- Camera: Three compact stats "FOV | Arm | Lag" in mono font
+- Bindings: Colored ratio bar "{bound}/{total}" with NeonBar
+- Keyboard: "{conflicts}" count — green if 0, red if >0
+- States: "{count} states" with mini icon
+- Dodge: "{distance}m" bold number
+- Curve Editor: Tiny sparkline of feel curve
+- Optimizer: Preset name or "No preset" muted
+- Comparison: "{dupes} duplicates" — red if >0
+- Balance: Mini radar thumbnail (40×40px SVG)
+All metrics derive from existing data in CharacterBlueprint/data.ts.
+Create metric components in CharacterBlueprint/metrics/ directory.`;
+
+const ANIMATION_FEATURE_METRICS_DESC = `Add unique metric visualizations to Animation State Graph Feature Map.
+- States: "{n} states / {g} groups"
+- Transitions: "{n} edges" with mini directed-graph icon
+- Heatmap: Micro heatmap grid (4×4, 20px)
+- Chain: "{n} combos / depth {d}"
+- Montages: "{n} montages"
+- Scrubber: "{n} notifies"
+- Skeleton: "{mapped}/{total}" bone mapping bar
+- Trajectories: "{n} root motion curves"
+- Assets: "{size}MB" estimated memory
+- Playrate: "{min}–{max}x" range
+Derive from AnimationStateGraph/data.ts. Create metrics/ subdirectory.`;
+
+const GAS_FEATURE_METRICS_DESC = `Add unique metric visualizations to Ability Spellbook Feature Map.
+- Architecture: "ASC → {n} GA → {n} GE" pipeline count
+- Radar: Mini radar (40px) with 3-ability overlay
+- Cooldowns: "{avg}s avg / {min}–{max}s range"
+- Timeline: Micro timeline strip (60px)
+- Effects Timeline: "{n} active / {n} passive"
+- Tags: "{n} tags / {depth} depth"
+- Hierarchy: "{n} roots / {n} leaves"
+- Audit: "{n} warnings" — green if 0, red if >0
+- Dependencies: "{n} deps / {n} circular" — red if circular >0
+Derive from AbilitySpellbook/data.ts.`;
+
+const COMBAT_FEATURE_METRICS_DESC = `Add unique metric visualizations to Combat Action Map Feature Map.
+- Lanes: "{n} lanes / {n} actions"
+- Sequences: "{n} events / {n} systems"
+- Traces: "{sphere} sphere / {capsule} capsule"
+- Stats: "{avg} avg DPS" bold
+- Feedback Tuner: "{tuned}/{total}" params bar
+- DPS: Mini bar chart (3 bars for top abilities)
+- Effectiveness: "{best}" top ability name
+- Sankey: "{flows} flows"
+- KPIs: Traffic light (3 dots for TTK, DPS, APM)
+Derive from CombatActionMap/data-metrics.ts.`;
+
+const BESTIARY_FEATURE_METRICS_DESC = `Add unique metric visualizations to Enemy Bestiary Feature Map.
+- Cards: "{n} archetypes" with role pie (melee/ranged/tank/support micro-donut)
+- Modifiers: "{n} modifiers / {n} exclusions"
+- Radar: Mini radar comparing weakest vs strongest enemy
+- Behavior Tree: "{n} nodes / {d} depth"
+- Decision Log: "{n} decisions/sec" throughput
+- Aggro: "{n} threat sources"
+- Formations: "{n} formations" with mini dot-pattern
+- Waves: "{n} waves / {total} enemies"
+- Difficulty: Sparkline of difficulty curve
+Derive from EnemyBestiary/data.ts.`;
+
+const ITEMS_FEATURE_METRICS_DESC = `Add unique metric visualizations to Item Catalog Feature Map.
+- Grid: "{n} items / {slots} slots"
+- Sets: "{n} sets / {bonuses} bonuses"
+- Loadout: "{equipped}/{slots}" fill bar
+- Sources: "{n} source types"
+- Scaling: Sparkline item power vs level
+- Stats: "{avg} avg ilvl"
+- Power: "{min}–{max}" power range bar
+Derive from ItemCatalog/data.ts.`;
+
+const LOOT_FEATURE_METRICS_DESC = `Add unique metric visualizations to Loot Table Visualizer Feature Map.
+- Pipeline: "{stages} stages" flow
+- Weights: Mini pie showing rarity distribution
+- World Items: "{n} world items"
+- Treemap: Micro treemap thumbnail (40×30px)
+- Histogram: "{n} brackets"
+- Simulator: "{n} affixes in pool"
+- Co-occurrence: "{conflicts}" hot cell count
+- Timer: "{threshold} pulls" pity
+- Drought: "{prob}%" probability
+- Beacon: "{n} beacons"
+- Impact: "{gold}/hr" rate
+Derive from LootTableVisualizer/data.ts.`;
+
+const CHARACTER_SCALING_DESC = `Upgrade Character Blueprint to handle 100+ characters.
+1. Expand data.ts: Add 50+ characters with EntityMetadata (categories: Warrior, Mage, Rogue, Tank, Support, Beast, Droid, Force-user; areas: Taris, Dantooine, Kashyyyk, Korriban, Manaan; tiers: common, elite, boss, legendary).
+2. Comparison tab: Replace inline character list with ScalableSelector modal. Default shows 2 selected. "Add Character" button opens selector grouped by class→role.
+3. Overview tab: Add character picker (single-select ScalableSelector grouped by area).
+4. Camera Profiles: Support comparing 3+ profiles via multi-select.
+5. Balance Radar: Handle 10+ overlay by showing top-5 + "show all" toggle.`;
+
+const ANIMATION_SCALING_DESC = `Upgrade Animation State Graph to handle 100+ montages.
+1. Expand data.ts: Add 80+ montages with metadata (categories: Attack, Dodge, HitReact, Death, Idle, Locomotion, Ability, Emote).
+2. Combo Chain: Add montage picker via ScalableSelector grouped by category. Paginate 10/page.
+3. State Machine: Support 30+ states by clustering into collapsible groups.
+4. Frame Scrubber: Montage selector dropdown (grouped by category).
+5. Budget: Virtual-scroll asset list. Group by category. Per-group memory subtotals.`;
+
+const GAS_SCALING_DESC = `Upgrade Ability Spellbook to handle 100+ abilities.
+1. Expand data.ts: Add 60+ abilities with metadata (categories: Offensive, Defensive, Utility, Passive, Ultimate; elements: Fire, Ice, Lightning, Shadow, Holy; tiers: basic, advanced, ultimate).
+2. Ability Radar: ScalableSelector to pick 3-6 abilities for comparison. Group by category→element.
+3. Effects List: Paginate gameplay effects. Group by type (Instant, Duration, Periodic, Infinite).
+4. Tag Tree: Lazy expansion — only first level by default. Search filter for tag names.
+5. Core: Attribute picker for 20+ attributes.`;
+
+const COMBAT_SCALING_DESC = `Upgrade Combat Action Map to handle 100+ weapons/combos.
+1. Expand data.ts: Add 40+ weapons with metadata (categories: Sword, Axe, Mace, Bow, Staff, Dagger, Polearm; tiers: common-legendary). Add 30+ combo sequences.
+2. Flow: Weapon selector to filter lanes. ScalableSelector grouped by category.
+3. Hits: Filter traces by weapon. Per-weapon hit stats.
+4. Metrics: Select 2-4 weapons for DPS comparison.
+5. Combo Chains: Paginate combos. Group by weapon type.`;
+
+const BESTIARY_SCALING_DESC = `Upgrade Enemy Bestiary to handle 100+ enemies.
+1. Expand data.ts: Add 80+ archetypes with metadata (categories: Humanoid, Beast, Droid, Force-sensitive, Undead; areas: all zones; tiers: minion/standard/elite/boss/raid-boss; roles: melee/ranged/tank/healer/caster/swarm).
+2. Archetype Grid: Paginated grid. Group by area→role. ScalableSelector for comparison picks.
+3. Comparison: Multi-select up to 4 enemies. Radar overlay.
+4. Encounters: Enemy picker via ScalableSelector grouped by area→tier. Wave editor handles 20+ waves with virtual scroll.
+5. AI Logic: BT viewer supports 50+ nodes with collapsible subtrees and search.`;
+
+const ITEMS_SCALING_DESC = `Upgrade Item Catalog to handle 100+ items.
+1. Expand data.ts: Add 120+ items with metadata (categories: Weapon/Armor/Accessory/Consumable/Quest/Material; subcategories per type; tiers: common-legendary; sets).
+2. Catalog Grid: Paginated 20/page. Filter by category, tier, slot. Sort by name/power/tier. ScalableSelector for comparison.
+3. Equipment Loadout: Item picker per slot using ScalableSelector filtered to slot type.
+4. Item Sets: Collapsible set panels. Filter complete/incomplete.
+5. Comparison: Side-by-side 2-3 items with stat diff highlighting.`;
+
+const LOOT_SCALING_DESC = `Upgrade Loot Table Visualizer to handle 100+ entries.
+1. Expand data.ts: Add 60+ loot table entries, 30+ affixes, 20+ enemy bindings.
+2. Loot Table Editor: Paginated with search. Group by source (enemy/chest/quest/crafting). Inline weight editing.
+3. Affix Simulator: Affix pool picker via ScalableSelector grouped by Offensive/Defensive/Utility.
+4. Drop Simulator: Enemy picker for simulation using ScalableSelector.
+5. Economy Impact: Filter by tier/source. Paginated impact table.`;
+
+const CHARACTER_VISUAL_DESC = `Visual upgrade for Character Blueprint components.
+1. Comparison Matrix: Card-based columns per character. Stat bars with diff highlighting.
+2. Hitbox Viewer: Layered wireframe SVG with zone coloring and glow. Hover to highlight zones.
+3. Camera Profiles: Visual viewport mockups showing FOV cone, arm length, lag zone.
+4. Movement States: State-machine SVG diagram with animated transition arrows.
+5. Properties: Collapsible categories with colored headers.
+6. Keyboard: Proper key sizing, accent glow on bound keys, red pulse on conflicts.
+Follow design directive for all styling decisions.`;
+
+const GAS_VISUAL_DESC = `Visual upgrade for Ability Spellbook.
+1. Ability Cards: Rich cards — icon circle with initial, cooldown badge, element dot, mini cost bar.
+2. Effect Timeline: Gantt-style chart with durations, stacking, decay. Color by effect type.
+3. Tag Tree: Interactive tree with expand/collapse, search highlight, SVG relationship curves.
+4. Attribute Web: Interactive force-directed graph. Drag nodes. Hover shows relationship details.
+5. Damage Calculator: Visual formula breakdown (Base × Mult + Flat → Armor → Final).`;
+
+const COMBAT_VISUAL_DESC = `Visual upgrade for Combat Action Map.
+1. Action Lanes: Swim-lane diagram with horizontal flows and inter-lane arrows.
+2. Sequence Diagram: UML-style — vertical lifelines, horizontal arrows, activation boxes.
+3. Feedback Tuner: Slider-based editor with grouped categories (Shake, Hitstop, Particles, Sound).
+4. Sankey: Full Sankey flow viz with proportional widths.
+5. DPS Chart: Grouped bar chart with weapon comparison. Hover for breakdown.`;
+
+const ITEMS_VISUAL_DESC = `Visual upgrade for Item Catalog.
+1. Item Cards: RPG-style — rarity border glow, slot icon, power badge, stat list with +/- coloring, set indicator.
+2. Equipment Loadout: Paper-doll slot layout (silhouette with positions). Click opens ScalableSelector for slot type.
+3. Affix Sunburst: Enhanced with tooltips, smooth transitions, tier-colored rings.
+4. Scaling Chart: Multi-line with rarity-colored curves, hover values, confidence bands.
+5. Economy Flow: Sankey showing sources → player → sinks.`;
+
+const LOOT_VISUAL_DESC = `Visual upgrade for Loot Table Visualizer.
+1. Weight Distribution: Donut chart with interactive segments and drill-down. Rarity-colored with glow.
+2. Drop Treemap: Proper nested rectangles. Rarity-colored. Size = probability. Hover for details.
+3. Monte Carlo: Histogram with distribution curve overlay. Mean/median/stddev vertical lines.
+4. Pity Timer: Circular gauge with animated fill and threshold marker.
+5. Co-occurrence: Heatmap with color scale legend. Cell hover shows frequency and conflict flag.
+6. Economy Dashboard: KPI cards at top (gold/hr, items/hr, rarity dist), charts below.`;
+
+const STYLE_AUDIT_DESC = `Verify visual consistency across all 7 modules.
+1. Grep for hardcoded colors, inconsistent spacing, non-standard fonts.
+2. Verify same card/header/stat style everywhere.
+3. Check tab nav looks identical across modules.
+4. Verify ScalableSelector renders consistently.
+5. Check Feature Map card sizing across modules.
+6. Run contrast check on all text/bg combinations (WCAG AA 4.5:1).
+7. Fix all deviations found.`;
+
+const RESPONSIVE_AUDIT_DESC = `Verify responsive behavior and performance.
+1. Test at 1280px, 1440px, 1920px widths.
+2. Verify card grids reflow (2→3→4 cols).
+3. Check virtual scroll perf with 200+ items.
+4. No layout shifts on feature toggle.
+5. 100+ items render without jank.
+6. Add React.memo where needed.
+7. Modal overlays no body scroll lock issues.`;
 
 /* ── Phase 0: Infrastructure ────────────────────────────────────────────────── */
 
@@ -44,13 +259,7 @@ const PHASE_0: ModuleArea[] = [
   area(
     'infra-entity-selector-a',
     'Scalable Entity Selector (Part 1)',
-    `Create src/components/shared/ScalableSelector.tsx — a modal overlay component for picking
-from 100+ entities. Must support: debounced search (300ms), group-by with collapsible sections,
-virtual scroll for large lists, multi-select and single-select modes, keyboard navigation
-(arrow keys, Enter, Escape), render prop for custom item cards, selected items shown as pills.
-Props: items, groupBy, renderItem, onSelect, selected, searchKey, placeholder, mode.
-Component structure: index.tsx, SelectorSearch.tsx, SelectorGroup.tsx, SelectorGrid.tsx, types.ts.
-Place in src/components/shared/ScalableSelector/.`,
+    ENTITY_SELECTOR_DESC,
     [
       'Modal overlay with backdrop and focus trap',
       'Debounced search filtering (300ms)',
@@ -61,13 +270,7 @@ Place in src/components/shared/ScalableSelector/.`,
   area(
     'infra-entity-selector-b',
     'Scalable Entity Selector (Part 2)',
-    `Create src/components/shared/ScalableSelector.tsx — a modal overlay component for picking
-from 100+ entities. Must support: debounced search (300ms), group-by with collapsible sections,
-virtual scroll for large lists, multi-select and single-select modes, keyboard navigation
-(arrow keys, Enter, Escape), render prop for custom item cards, selected items shown as pills.
-Props: items, groupBy, renderItem, onSelect, selected, searchKey, placeholder, mode.
-Component structure: index.tsx, SelectorSearch.tsx, SelectorGroup.tsx, SelectorGrid.tsx, types.ts.
-Place in src/components/shared/ScalableSelector/.`,
+    ENTITY_SELECTOR_DESC,
     [
       'Virtual scroll for 100+ items',
       'Multi-select and single-select modes',
@@ -79,13 +282,7 @@ Place in src/components/shared/ScalableSelector/.`,
   area(
     'infra-entity-selector-c',
     'Scalable Entity Selector (Part 3)',
-    `Create src/components/shared/ScalableSelector.tsx — a modal overlay component for picking
-from 100+ entities. Must support: debounced search (300ms), group-by with collapsible sections,
-virtual scroll for large lists, multi-select and single-select modes, keyboard navigation
-(arrow keys, Enter, Escape), render prop for custom item cards, selected items shown as pills.
-Props: items, groupBy, renderItem, onSelect, selected, searchKey, placeholder, mode.
-Component structure: index.tsx, SelectorSearch.tsx, SelectorGroup.tsx, SelectorGrid.tsx, types.ts.
-Place in src/components/shared/ScalableSelector/.`,
+    ENTITY_SELECTOR_DESC,
     [
       'Selected items as compact pills',
       'Render prop slot for custom item cards',
@@ -96,15 +293,7 @@ Place in src/components/shared/ScalableSelector/.`,
   area(
     'infra-feature-cards-a',
     'Feature Map Card System (Part 1)',
-    `Replace the toggle-list FeatureMapTab with a card-grid matrix.
-Each feature becomes a FeatureCard component — clickable card with active/inactive states.
-Active: colored background tint (withOpacity accent 8%), bright border (accent 30%), full-color content.
-Inactive: muted border (neutral 20%), desaturated content, reduced opacity.
-Card shows: feature name (mono bold), metric content area (children render prop), status dot (bottom-right).
-Layout: CSS grid auto-fill, min 160px, gap-3. Tab groups become section headers.
-Create: src/components/shared/FeatureCard.tsx, src/components/shared/FeatureCardGrid.tsx.
-Update: src/components/modules/core-engine/unique-tabs/FeatureMapTab.tsx to use new components.
-Keep Enable All / Disable All buttons. Add NeonBar progress at top.`,
+    FEATURE_CARDS_DESC,
     [
       'FeatureCard with click-to-toggle',
       'Active/inactive visual states with accent coloring',
@@ -116,15 +305,7 @@ Keep Enable All / Disable All buttons. Add NeonBar progress at top.`,
   area(
     'infra-feature-cards-b',
     'Feature Map Card System (Part 2)',
-    `Replace the toggle-list FeatureMapTab with a card-grid matrix.
-Each feature becomes a FeatureCard component — clickable card with active/inactive states.
-Active: colored background tint (withOpacity accent 8%), bright border (accent 30%), full-color content.
-Inactive: muted border (neutral 20%), desaturated content, reduced opacity.
-Card shows: feature name (mono bold), metric content area (children render prop), status dot (bottom-right).
-Layout: CSS grid auto-fill, min 160px, gap-3. Tab groups become section headers.
-Create: src/components/shared/FeatureCard.tsx, src/components/shared/FeatureCardGrid.tsx.
-Update: src/components/modules/core-engine/unique-tabs/FeatureMapTab.tsx to use new components.
-Keep Enable All / Disable All buttons. Add NeonBar progress at top.`,
+    FEATURE_CARDS_DESC,
     [
       'FeatureCardGrid with CSS grid layout',
       'Section headers from tab groups',
@@ -137,13 +318,7 @@ Keep Enable All / Disable All buttons. Add NeonBar progress at top.`,
   area(
     'infra-design-tokens-a',
     'Design Token Standardization (Part 1)',
-    `Audit and standardize border opacities, glow radii, spacing across all unique-tab components.
-Add to chart-colors.ts: BORDER_DEFAULT=OPACITY_20, BORDER_HOVER=OPACITY_37, BORDER_SUBTLE=OPACITY_10,
-GLOW_SM='0 0 4px', GLOW_MD='0 0 8px', GLOW_LG='0 0 16px'.
-Add to globals.css: --panel-padding:12px, --card-gap:12px, --section-gap:16px.
-Update _design.tsx and _shared.tsx to use new constants.
-Grep all unique-tabs/ for hardcoded hex opacity suffixes (e.g., #3b82f618, #f8717120)
-and replace with imported withOpacity + constants. Do NOT change visual appearance.`,
+    DESIGN_TOKENS_DESC,
     [
       'Border opacity constants in chart-colors.ts',
       'Glow size constants in chart-colors.ts',
@@ -154,13 +329,7 @@ and replace with imported withOpacity + constants. Do NOT change visual appearan
   area(
     'infra-design-tokens-b',
     'Design Token Standardization (Part 2)',
-    `Audit and standardize border opacities, glow radii, spacing across all unique-tab components.
-Add to chart-colors.ts: BORDER_DEFAULT=OPACITY_20, BORDER_HOVER=OPACITY_37, BORDER_SUBTLE=OPACITY_10,
-GLOW_SM='0 0 4px', GLOW_MD='0 0 8px', GLOW_LG='0 0 16px'.
-Add to globals.css: --panel-padding:12px, --card-gap:12px, --section-gap:16px.
-Update _design.tsx and _shared.tsx to use new constants.
-Grep all unique-tabs/ for hardcoded hex opacity suffixes (e.g., #3b82f618, #f8717120)
-and replace with imported withOpacity + constants. Do NOT change visual appearance.`,
+    DESIGN_TOKENS_DESC,
     [
       '_design.tsx updated to use new tokens',
       '_shared.tsx updated to use new tokens',
@@ -172,14 +341,7 @@ and replace with imported withOpacity + constants. Do NOT change visual appearan
   area(
     'infra-metadata-schema-a',
     'Entity Metadata Schema (Part 1)',
-    `Define TypeScript interfaces for categorizing game entities.
-Create src/types/game-metadata.ts with:
-- EntityMetadata: id, name, category, subcategory?, tags[], level?, levelMax?, area?, tier?, icon?
-- EntityGrouping: field (keyof EntityMetadata), label, order? (explicit group sort)
-- Default grouping presets: CHAR_GROUPINGS (category→subcategory), ITEM_GROUPINGS (category→tier),
-  ABILITY_GROUPINGS (category→element), ENEMY_GROUPINGS (area→tier)
-Extend each module's data.ts with metadata fields on mock items (add category, tags, area, tier).
-This is the foundation for ScalableSelector group-by in Phase 2.`,
+    METADATA_SCHEMA_DESC,
     [
       'EntityMetadata interface',
       'EntityGrouping interface',
@@ -191,14 +353,7 @@ This is the foundation for ScalableSelector group-by in Phase 2.`,
   area(
     'infra-metadata-schema-b',
     'Entity Metadata Schema (Part 2)',
-    `Define TypeScript interfaces for categorizing game entities.
-Create src/types/game-metadata.ts with:
-- EntityMetadata: id, name, category, subcategory?, tags[], level?, levelMax?, area?, tier?, icon?
-- EntityGrouping: field (keyof EntityMetadata), label, order? (explicit group sort)
-- Default grouping presets: CHAR_GROUPINGS (category→subcategory), ITEM_GROUPINGS (category→tier),
-  ABILITY_GROUPINGS (category→element), ENEMY_GROUPINGS (area→tier)
-Extend each module's data.ts with metadata fields on mock items (add category, tags, area, tier).
-This is the foundation for ScalableSelector group-by in Phase 2.`,
+    METADATA_SCHEMA_DESC,
     [
       'Item mock data annotated with metadata',
       'Enemy mock data annotated with metadata',
@@ -214,23 +369,7 @@ const PHASE_1: ModuleArea[] = [
   area(
     'ui-character-feature-metrics-a',
     'Character Blueprint Feature Metrics (Part 1)',
-    `Add unique metric visualizations to each FeatureCard in the Character Blueprint Feature Map tab.
-Each card's children slot gets a micro-visualization:
-- Class Hierarchy: "{types} types / {classes} classes" side by side numbers
-- Properties: Stacked mini bars (HP, Speed, Armor ranges, 60px wide)
-- Scaling: Sparkline SVG (60×20px) showing first 10 curve points
-- Hitbox: "{zones} zones" with colored dots (hurtbox=red, hitbox=blue, pushbox=green)
-- Camera: Three compact stats "FOV | Arm | Lag" in mono font
-- Bindings: Colored ratio bar "{bound}/{total}" with NeonBar
-- Keyboard: "{conflicts}" count — green if 0, red if >0
-- States: "{count} states" with mini icon
-- Dodge: "{distance}m" bold number
-- Curve Editor: Tiny sparkline of feel curve
-- Optimizer: Preset name or "No preset" muted
-- Comparison: "{dupes} duplicates" — red if >0
-- Balance: Mini radar thumbnail (40×40px SVG)
-All metrics derive from existing data in CharacterBlueprint/data.ts.
-Create metric components in CharacterBlueprint/metrics/ directory.`,
+    CHARACTER_FEATURE_METRICS_DESC,
     [
       'Class Hierarchy metric component',
       'Properties mini-bar metric',
@@ -243,23 +382,7 @@ Create metric components in CharacterBlueprint/metrics/ directory.`,
   area(
     'ui-character-feature-metrics-b',
     'Character Blueprint Feature Metrics (Part 2)',
-    `Add unique metric visualizations to each FeatureCard in the Character Blueprint Feature Map tab.
-Each card's children slot gets a micro-visualization:
-- Class Hierarchy: "{types} types / {classes} classes" side by side numbers
-- Properties: Stacked mini bars (HP, Speed, Armor ranges, 60px wide)
-- Scaling: Sparkline SVG (60×20px) showing first 10 curve points
-- Hitbox: "{zones} zones" with colored dots (hurtbox=red, hitbox=blue, pushbox=green)
-- Camera: Three compact stats "FOV | Arm | Lag" in mono font
-- Bindings: Colored ratio bar "{bound}/{total}" with NeonBar
-- Keyboard: "{conflicts}" count — green if 0, red if >0
-- States: "{count} states" with mini icon
-- Dodge: "{distance}m" bold number
-- Curve Editor: Tiny sparkline of feel curve
-- Optimizer: Preset name or "No preset" muted
-- Comparison: "{dupes} duplicates" — red if >0
-- Balance: Mini radar thumbnail (40×40px SVG)
-All metrics derive from existing data in CharacterBlueprint/data.ts.
-Create metric components in CharacterBlueprint/metrics/ directory.`,
+    CHARACTER_FEATURE_METRICS_DESC,
     [
       'Camera compact stats metric',
       'Bindings ratio bar metric',
@@ -272,23 +395,7 @@ Create metric components in CharacterBlueprint/metrics/ directory.`,
   area(
     'ui-character-feature-metrics-c',
     'Character Blueprint Feature Metrics (Part 3)',
-    `Add unique metric visualizations to each FeatureCard in the Character Blueprint Feature Map tab.
-Each card's children slot gets a micro-visualization:
-- Class Hierarchy: "{types} types / {classes} classes" side by side numbers
-- Properties: Stacked mini bars (HP, Speed, Armor ranges, 60px wide)
-- Scaling: Sparkline SVG (60×20px) showing first 10 curve points
-- Hitbox: "{zones} zones" with colored dots (hurtbox=red, hitbox=blue, pushbox=green)
-- Camera: Three compact stats "FOV | Arm | Lag" in mono font
-- Bindings: Colored ratio bar "{bound}/{total}" with NeonBar
-- Keyboard: "{conflicts}" count — green if 0, red if >0
-- States: "{count} states" with mini icon
-- Dodge: "{distance}m" bold number
-- Curve Editor: Tiny sparkline of feel curve
-- Optimizer: Preset name or "No preset" muted
-- Comparison: "{dupes} duplicates" — red if >0
-- Balance: Mini radar thumbnail (40×40px SVG)
-All metrics derive from existing data in CharacterBlueprint/data.ts.
-Create metric components in CharacterBlueprint/metrics/ directory.`,
+    CHARACTER_FEATURE_METRICS_DESC,
     [
       'Comparison duplicate detector metric',
       'Balance mini-radar metric',
@@ -300,18 +407,7 @@ Create metric components in CharacterBlueprint/metrics/ directory.`,
   area(
     'ui-animation-feature-metrics-a',
     'Animation State Graph Feature Metrics (Part 1)',
-    `Add unique metric visualizations to Animation State Graph Feature Map.
-- States: "{n} states / {g} groups"
-- Transitions: "{n} edges" with mini directed-graph icon
-- Heatmap: Micro heatmap grid (4×4, 20px)
-- Chain: "{n} combos / depth {d}"
-- Montages: "{n} montages"
-- Scrubber: "{n} notifies"
-- Skeleton: "{mapped}/{total}" bone mapping bar
-- Trajectories: "{n} root motion curves"
-- Assets: "{size}MB" estimated memory
-- Playrate: "{min}–{max}x" range
-Derive from AnimationStateGraph/data.ts. Create metrics/ subdirectory.`,
+    ANIMATION_FEATURE_METRICS_DESC,
     [
       'States/groups count metric',
       'Transitions edge count metric',
@@ -324,18 +420,7 @@ Derive from AnimationStateGraph/data.ts. Create metrics/ subdirectory.`,
   area(
     'ui-animation-feature-metrics-b',
     'Animation State Graph Feature Metrics (Part 2)',
-    `Add unique metric visualizations to Animation State Graph Feature Map.
-- States: "{n} states / {g} groups"
-- Transitions: "{n} edges" with mini directed-graph icon
-- Heatmap: Micro heatmap grid (4×4, 20px)
-- Chain: "{n} combos / depth {d}"
-- Montages: "{n} montages"
-- Scrubber: "{n} notifies"
-- Skeleton: "{mapped}/{total}" bone mapping bar
-- Trajectories: "{n} root motion curves"
-- Assets: "{size}MB" estimated memory
-- Playrate: "{min}–{max}x" range
-Derive from AnimationStateGraph/data.ts. Create metrics/ subdirectory.`,
+    ANIMATION_FEATURE_METRICS_DESC,
     [
       'Montage count metric',
       'Bone mapping bar metric',
@@ -348,17 +433,7 @@ Derive from AnimationStateGraph/data.ts. Create metrics/ subdirectory.`,
   area(
     'ui-gas-feature-metrics-a',
     'Ability Spellbook Feature Metrics (Part 1)',
-    `Add unique metric visualizations to Ability Spellbook Feature Map.
-- Architecture: "ASC → {n} GA → {n} GE" pipeline count
-- Radar: Mini radar (40px) with 3-ability overlay
-- Cooldowns: "{avg}s avg / {min}–{max}s range"
-- Timeline: Micro timeline strip (60px)
-- Effects Timeline: "{n} active / {n} passive"
-- Tags: "{n} tags / {depth} depth"
-- Hierarchy: "{n} roots / {n} leaves"
-- Audit: "{n} warnings" — green if 0, red if >0
-- Dependencies: "{n} deps / {n} circular" — red if circular >0
-Derive from AbilitySpellbook/data.ts.`,
+    GAS_FEATURE_METRICS_DESC,
     [
       'Architecture pipeline metric',
       'Mini radar metric',
@@ -371,17 +446,7 @@ Derive from AbilitySpellbook/data.ts.`,
   area(
     'ui-gas-feature-metrics-b',
     'Ability Spellbook Feature Metrics (Part 2)',
-    `Add unique metric visualizations to Ability Spellbook Feature Map.
-- Architecture: "ASC → {n} GA → {n} GE" pipeline count
-- Radar: Mini radar (40px) with 3-ability overlay
-- Cooldowns: "{avg}s avg / {min}–{max}s range"
-- Timeline: Micro timeline strip (60px)
-- Effects Timeline: "{n} active / {n} passive"
-- Tags: "{n} tags / {depth} depth"
-- Hierarchy: "{n} roots / {n} leaves"
-- Audit: "{n} warnings" — green if 0, red if >0
-- Dependencies: "{n} deps / {n} circular" — red if circular >0
-Derive from AbilitySpellbook/data.ts.`,
+    GAS_FEATURE_METRICS_DESC,
     [
       'Tag tree stats metric',
       'Audit warning counter metric',
@@ -394,17 +459,7 @@ Derive from AbilitySpellbook/data.ts.`,
   area(
     'ui-combat-feature-metrics-a',
     'Combat Action Map Feature Metrics (Part 1)',
-    `Add unique metric visualizations to Combat Action Map Feature Map.
-- Lanes: "{n} lanes / {n} actions"
-- Sequences: "{n} events / {n} systems"
-- Traces: "{sphere} sphere / {capsule} capsule"
-- Stats: "{avg} avg DPS" bold
-- Feedback Tuner: "{tuned}/{total}" params bar
-- DPS: Mini bar chart (3 bars for top abilities)
-- Effectiveness: "{best}" top ability name
-- Sankey: "{flows} flows"
-- KPIs: Traffic light (3 dots for TTK, DPS, APM)
-Derive from CombatActionMap/data-metrics.ts.`,
+    COMBAT_FEATURE_METRICS_DESC,
     [
       'Lane and action count metric',
       'Sequence event count metric',
@@ -417,17 +472,7 @@ Derive from CombatActionMap/data-metrics.ts.`,
   area(
     'ui-combat-feature-metrics-b',
     'Combat Action Map Feature Metrics (Part 2)',
-    `Add unique metric visualizations to Combat Action Map Feature Map.
-- Lanes: "{n} lanes / {n} actions"
-- Sequences: "{n} events / {n} systems"
-- Traces: "{sphere} sphere / {capsule} capsule"
-- Stats: "{avg} avg DPS" bold
-- Feedback Tuner: "{tuned}/{total}" params bar
-- DPS: Mini bar chart (3 bars for top abilities)
-- Effectiveness: "{best}" top ability name
-- Sankey: "{flows} flows"
-- KPIs: Traffic light (3 dots for TTK, DPS, APM)
-Derive from CombatActionMap/data-metrics.ts.`,
+    COMBAT_FEATURE_METRICS_DESC,
     [
       'Mini DPS bar chart',
       'KPI traffic light metric',
@@ -439,17 +484,7 @@ Derive from CombatActionMap/data-metrics.ts.`,
   area(
     'ui-bestiary-feature-metrics-a',
     'Enemy Bestiary Feature Metrics (Part 1)',
-    `Add unique metric visualizations to Enemy Bestiary Feature Map.
-- Cards: "{n} archetypes" with role pie (melee/ranged/tank/support micro-donut)
-- Modifiers: "{n} modifiers / {n} exclusions"
-- Radar: Mini radar comparing weakest vs strongest enemy
-- Behavior Tree: "{n} nodes / {d} depth"
-- Decision Log: "{n} decisions/sec" throughput
-- Aggro: "{n} threat sources"
-- Formations: "{n} formations" with mini dot-pattern
-- Waves: "{n} waves / {total} enemies"
-- Difficulty: Sparkline of difficulty curve
-Derive from EnemyBestiary/data.ts.`,
+    BESTIARY_FEATURE_METRICS_DESC,
     [
       'Archetype count with role pie metric',
       'Modifier count metric',
@@ -462,17 +497,7 @@ Derive from EnemyBestiary/data.ts.`,
   area(
     'ui-bestiary-feature-metrics-b',
     'Enemy Bestiary Feature Metrics (Part 2)',
-    `Add unique metric visualizations to Enemy Bestiary Feature Map.
-- Cards: "{n} archetypes" with role pie (melee/ranged/tank/support micro-donut)
-- Modifiers: "{n} modifiers / {n} exclusions"
-- Radar: Mini radar comparing weakest vs strongest enemy
-- Behavior Tree: "{n} nodes / {d} depth"
-- Decision Log: "{n} decisions/sec" throughput
-- Aggro: "{n} threat sources"
-- Formations: "{n} formations" with mini dot-pattern
-- Waves: "{n} waves / {total} enemies"
-- Difficulty: Sparkline of difficulty curve
-Derive from EnemyBestiary/data.ts.`,
+    BESTIARY_FEATURE_METRICS_DESC,
     [
       'Formation dot-pattern metric',
       'Wave summary metric',
@@ -485,15 +510,7 @@ Derive from EnemyBestiary/data.ts.`,
   area(
     'ui-items-feature-metrics-a',
     'Item Catalog Feature Metrics (Part 1)',
-    `Add unique metric visualizations to Item Catalog Feature Map.
-- Grid: "{n} items / {slots} slots"
-- Sets: "{n} sets / {bonuses} bonuses"
-- Loadout: "{equipped}/{slots}" fill bar
-- Sources: "{n} source types"
-- Scaling: Sparkline item power vs level
-- Stats: "{avg} avg ilvl"
-- Power: "{min}–{max}" power range bar
-Derive from ItemCatalog/data.ts.`,
+    ITEMS_FEATURE_METRICS_DESC,
     [
       'Item/slot count metric',
       'Set bonus count metric',
@@ -506,15 +523,7 @@ Derive from ItemCatalog/data.ts.`,
   area(
     'ui-items-feature-metrics-b',
     'Item Catalog Feature Metrics (Part 2)',
-    `Add unique metric visualizations to Item Catalog Feature Map.
-- Grid: "{n} items / {slots} slots"
-- Sets: "{n} sets / {bonuses} bonuses"
-- Loadout: "{equipped}/{slots}" fill bar
-- Sources: "{n} source types"
-- Scaling: Sparkline item power vs level
-- Stats: "{avg} avg ilvl"
-- Power: "{min}–{max}" power range bar
-Derive from ItemCatalog/data.ts.`,
+    ITEMS_FEATURE_METRICS_DESC,
     [
       'Scaling sparkline metric',
       'Power range bar metric',
@@ -526,19 +535,7 @@ Derive from ItemCatalog/data.ts.`,
   area(
     'ui-loot-feature-metrics-a',
     'Loot Table Feature Metrics (Part 1)',
-    `Add unique metric visualizations to Loot Table Visualizer Feature Map.
-- Pipeline: "{stages} stages" flow
-- Weights: Mini pie showing rarity distribution
-- World Items: "{n} world items"
-- Treemap: Micro treemap thumbnail (40×30px)
-- Histogram: "{n} brackets"
-- Simulator: "{n} affixes in pool"
-- Co-occurrence: "{conflicts}" hot cell count
-- Timer: "{threshold} pulls" pity
-- Drought: "{prob}%" probability
-- Beacon: "{n} beacons"
-- Impact: "{gold}/hr" rate
-Derive from LootTableVisualizer/data.ts.`,
+    LOOT_FEATURE_METRICS_DESC,
     [
       'Pipeline stage count metric',
       'Rarity mini pie metric',
@@ -551,19 +548,7 @@ Derive from LootTableVisualizer/data.ts.`,
   area(
     'ui-loot-feature-metrics-b',
     'Loot Table Feature Metrics (Part 2)',
-    `Add unique metric visualizations to Loot Table Visualizer Feature Map.
-- Pipeline: "{stages} stages" flow
-- Weights: Mini pie showing rarity distribution
-- World Items: "{n} world items"
-- Treemap: Micro treemap thumbnail (40×30px)
-- Histogram: "{n} brackets"
-- Simulator: "{n} affixes in pool"
-- Co-occurrence: "{conflicts}" hot cell count
-- Timer: "{threshold} pulls" pity
-- Drought: "{prob}%" probability
-- Beacon: "{n} beacons"
-- Impact: "{gold}/hr" rate
-Derive from LootTableVisualizer/data.ts.`,
+    LOOT_FEATURE_METRICS_DESC,
     [
       'Pity threshold metric',
       'Economy rate metric',
@@ -579,12 +564,7 @@ const PHASE_2: ModuleArea[] = [
   area(
     'ui-character-scaling-a',
     'Character Blueprint Scaling (Part 1)',
-    `Upgrade Character Blueprint to handle 100+ characters.
-1. Expand data.ts: Add 50+ characters with EntityMetadata (categories: Warrior, Mage, Rogue, Tank, Support, Beast, Droid, Force-user; areas: Taris, Dantooine, Kashyyyk, Korriban, Manaan; tiers: common, elite, boss, legendary).
-2. Comparison tab: Replace inline character list with ScalableSelector modal. Default shows 2 selected. "Add Character" button opens selector grouped by class→role.
-3. Overview tab: Add character picker (single-select ScalableSelector grouped by area).
-4. Camera Profiles: Support comparing 3+ profiles via multi-select.
-5. Balance Radar: Handle 10+ overlay by showing top-5 + "show all" toggle.`,
+    CHARACTER_SCALING_DESC,
     [
       'Data expanded to 50+ characters with metadata',
       'Comparison uses ScalableSelector modal',
@@ -596,12 +576,7 @@ const PHASE_2: ModuleArea[] = [
   area(
     'ui-character-scaling-b',
     'Character Blueprint Scaling (Part 2)',
-    `Upgrade Character Blueprint to handle 100+ characters.
-1. Expand data.ts: Add 50+ characters with EntityMetadata (categories: Warrior, Mage, Rogue, Tank, Support, Beast, Droid, Force-user; areas: Taris, Dantooine, Kashyyyk, Korriban, Manaan; tiers: common, elite, boss, legendary).
-2. Comparison tab: Replace inline character list with ScalableSelector modal. Default shows 2 selected. "Add Character" button opens selector grouped by class→role.
-3. Overview tab: Add character picker (single-select ScalableSelector grouped by area).
-4. Camera Profiles: Support comparing 3+ profiles via multi-select.
-5. Balance Radar: Handle 10+ overlay by showing top-5 + "show all" toggle.`,
+    CHARACTER_SCALING_DESC,
     [
       'Camera supports 3+ profile comparison',
       'Balance radar handles 10+ characters',
@@ -613,12 +588,7 @@ const PHASE_2: ModuleArea[] = [
   area(
     'ui-animation-scaling-a',
     'Animation State Graph Scaling (Part 1)',
-    `Upgrade Animation State Graph to handle 100+ montages.
-1. Expand data.ts: Add 80+ montages with metadata (categories: Attack, Dodge, HitReact, Death, Idle, Locomotion, Ability, Emote).
-2. Combo Chain: Add montage picker via ScalableSelector grouped by category. Paginate 10/page.
-3. State Machine: Support 30+ states by clustering into collapsible groups.
-4. Frame Scrubber: Montage selector dropdown (grouped by category).
-5. Budget: Virtual-scroll asset list. Group by category. Per-group memory subtotals.`,
+    ANIMATION_SCALING_DESC,
     [
       'Data expanded to 80+ montages with metadata',
       'Combo chain uses ScalableSelector',
@@ -630,12 +600,7 @@ const PHASE_2: ModuleArea[] = [
   area(
     'ui-animation-scaling-b',
     'Animation State Graph Scaling (Part 2)',
-    `Upgrade Animation State Graph to handle 100+ montages.
-1. Expand data.ts: Add 80+ montages with metadata (categories: Attack, Dodge, HitReact, Death, Idle, Locomotion, Ability, Emote).
-2. Combo Chain: Add montage picker via ScalableSelector grouped by category. Paginate 10/page.
-3. State Machine: Support 30+ states by clustering into collapsible groups.
-4. Frame Scrubber: Montage selector dropdown (grouped by category).
-5. Budget: Virtual-scroll asset list. Group by category. Per-group memory subtotals.`,
+    ANIMATION_SCALING_DESC,
     [
       'Frame scrubber has grouped montage selector',
       'Budget asset list virtual-scrolls',
@@ -647,12 +612,7 @@ const PHASE_2: ModuleArea[] = [
   area(
     'ui-gas-scaling-a',
     'Ability Spellbook Scaling (Part 1)',
-    `Upgrade Ability Spellbook to handle 100+ abilities.
-1. Expand data.ts: Add 60+ abilities with metadata (categories: Offensive, Defensive, Utility, Passive, Ultimate; elements: Fire, Ice, Lightning, Shadow, Holy; tiers: basic, advanced, ultimate).
-2. Ability Radar: ScalableSelector to pick 3-6 abilities for comparison. Group by category→element.
-3. Effects List: Paginate gameplay effects. Group by type (Instant, Duration, Periodic, Infinite).
-4. Tag Tree: Lazy expansion — only first level by default. Search filter for tag names.
-5. Core: Attribute picker for 20+ attributes.`,
+    GAS_SCALING_DESC,
     [
       'Data expanded to 60+ abilities with metadata',
       'Ability radar uses ScalableSelector',
@@ -664,12 +624,7 @@ const PHASE_2: ModuleArea[] = [
   area(
     'ui-gas-scaling-b',
     'Ability Spellbook Scaling (Part 2)',
-    `Upgrade Ability Spellbook to handle 100+ abilities.
-1. Expand data.ts: Add 60+ abilities with metadata (categories: Offensive, Defensive, Utility, Passive, Ultimate; elements: Fire, Ice, Lightning, Shadow, Holy; tiers: basic, advanced, ultimate).
-2. Ability Radar: ScalableSelector to pick 3-6 abilities for comparison. Group by category→element.
-3. Effects List: Paginate gameplay effects. Group by type (Instant, Duration, Periodic, Infinite).
-4. Tag Tree: Lazy expansion — only first level by default. Search filter for tag names.
-5. Core: Attribute picker for 20+ attributes.`,
+    GAS_SCALING_DESC,
     [
       'Tag tree lazy-expands with search',
       'Attribute picker for large lists',
@@ -681,12 +636,7 @@ const PHASE_2: ModuleArea[] = [
   area(
     'ui-combat-scaling-a',
     'Combat Action Map Scaling (Part 1)',
-    `Upgrade Combat Action Map to handle 100+ weapons/combos.
-1. Expand data.ts: Add 40+ weapons with metadata (categories: Sword, Axe, Mace, Bow, Staff, Dagger, Polearm; tiers: common-legendary). Add 30+ combo sequences.
-2. Flow: Weapon selector to filter lanes. ScalableSelector grouped by category.
-3. Hits: Filter traces by weapon. Per-weapon hit stats.
-4. Metrics: Select 2-4 weapons for DPS comparison.
-5. Combo Chains: Paginate combos. Group by weapon type.`,
+    COMBAT_SCALING_DESC,
     [
       'Data expanded to 40+ weapons with metadata',
       'Flow tab has weapon ScalableSelector',
@@ -698,12 +648,7 @@ const PHASE_2: ModuleArea[] = [
   area(
     'ui-combat-scaling-b',
     'Combat Action Map Scaling (Part 2)',
-    `Upgrade Combat Action Map to handle 100+ weapons/combos.
-1. Expand data.ts: Add 40+ weapons with metadata (categories: Sword, Axe, Mace, Bow, Staff, Dagger, Polearm; tiers: common-legendary). Add 30+ combo sequences.
-2. Flow: Weapon selector to filter lanes. ScalableSelector grouped by category.
-3. Hits: Filter traces by weapon. Per-weapon hit stats.
-4. Metrics: Select 2-4 weapons for DPS comparison.
-5. Combo Chains: Paginate combos. Group by weapon type.`,
+    COMBAT_SCALING_DESC,
     [
       'Metrics compares 2-4 weapons',
       'Combo chains paginated and grouped',
@@ -715,12 +660,7 @@ const PHASE_2: ModuleArea[] = [
   area(
     'ui-bestiary-scaling-a',
     'Enemy Bestiary Scaling (Part 1)',
-    `Upgrade Enemy Bestiary to handle 100+ enemies.
-1. Expand data.ts: Add 80+ archetypes with metadata (categories: Humanoid, Beast, Droid, Force-sensitive, Undead; areas: all zones; tiers: minion/standard/elite/boss/raid-boss; roles: melee/ranged/tank/healer/caster/swarm).
-2. Archetype Grid: Paginated grid. Group by area→role. ScalableSelector for comparison picks.
-3. Comparison: Multi-select up to 4 enemies. Radar overlay.
-4. Encounters: Enemy picker via ScalableSelector grouped by area→tier. Wave editor handles 20+ waves with virtual scroll.
-5. AI Logic: BT viewer supports 50+ nodes with collapsible subtrees and search.`,
+    BESTIARY_SCALING_DESC,
     [
       'Data expanded to 80+ enemies with metadata',
       'Archetype grid paginated and grouped',
@@ -733,12 +673,7 @@ const PHASE_2: ModuleArea[] = [
   area(
     'ui-bestiary-scaling-b',
     'Enemy Bestiary Scaling (Part 2)',
-    `Upgrade Enemy Bestiary to handle 100+ enemies.
-1. Expand data.ts: Add 80+ archetypes with metadata (categories: Humanoid, Beast, Droid, Force-sensitive, Undead; areas: all zones; tiers: minion/standard/elite/boss/raid-boss; roles: melee/ranged/tank/healer/caster/swarm).
-2. Archetype Grid: Paginated grid. Group by area→role. ScalableSelector for comparison picks.
-3. Comparison: Multi-select up to 4 enemies. Radar overlay.
-4. Encounters: Enemy picker via ScalableSelector grouped by area→tier. Wave editor handles 20+ waves with virtual scroll.
-5. AI Logic: BT viewer supports 50+ nodes with collapsible subtrees and search.`,
+    BESTIARY_SCALING_DESC,
     [
       'Wave editor virtual-scrolls 20+ waves',
       'BT viewer collapses 50+ nodes',
@@ -750,12 +685,7 @@ const PHASE_2: ModuleArea[] = [
   area(
     'ui-items-scaling-a',
     'Item Catalog Scaling (Part 1)',
-    `Upgrade Item Catalog to handle 100+ items.
-1. Expand data.ts: Add 120+ items with metadata (categories: Weapon/Armor/Accessory/Consumable/Quest/Material; subcategories per type; tiers: common-legendary; sets).
-2. Catalog Grid: Paginated 20/page. Filter by category, tier, slot. Sort by name/power/tier. ScalableSelector for comparison.
-3. Equipment Loadout: Item picker per slot using ScalableSelector filtered to slot type.
-4. Item Sets: Collapsible set panels. Filter complete/incomplete.
-5. Comparison: Side-by-side 2-3 items with stat diff highlighting.`,
+    ITEMS_SCALING_DESC,
     [
       'Data expanded to 120+ items with metadata',
       'Catalog grid paginated with filters',
@@ -767,12 +697,7 @@ const PHASE_2: ModuleArea[] = [
   area(
     'ui-items-scaling-b',
     'Item Catalog Scaling (Part 2)',
-    `Upgrade Item Catalog to handle 100+ items.
-1. Expand data.ts: Add 120+ items with metadata (categories: Weapon/Armor/Accessory/Consumable/Quest/Material; subcategories per type; tiers: common-legendary; sets).
-2. Catalog Grid: Paginated 20/page. Filter by category, tier, slot. Sort by name/power/tier. ScalableSelector for comparison.
-3. Equipment Loadout: Item picker per slot using ScalableSelector filtered to slot type.
-4. Item Sets: Collapsible set panels. Filter complete/incomplete.
-5. Comparison: Side-by-side 2-3 items with stat diff highlighting.`,
+    ITEMS_SCALING_DESC,
     [
       'Item set panels collapsible and filterable',
       'Item comparison with stat diff highlighting',
@@ -784,12 +709,7 @@ const PHASE_2: ModuleArea[] = [
   area(
     'ui-loot-scaling-a',
     'Loot Table Visualizer Scaling (Part 1)',
-    `Upgrade Loot Table Visualizer to handle 100+ entries.
-1. Expand data.ts: Add 60+ loot table entries, 30+ affixes, 20+ enemy bindings.
-2. Loot Table Editor: Paginated with search. Group by source (enemy/chest/quest/crafting). Inline weight editing.
-3. Affix Simulator: Affix pool picker via ScalableSelector grouped by Offensive/Defensive/Utility.
-4. Drop Simulator: Enemy picker for simulation using ScalableSelector.
-5. Economy Impact: Filter by tier/source. Paginated impact table.`,
+    LOOT_SCALING_DESC,
     [
       'Data expanded to 60+ loot entries',
       'Loot table editor paginated and grouped',
@@ -801,12 +721,7 @@ const PHASE_2: ModuleArea[] = [
   area(
     'ui-loot-scaling-b',
     'Loot Table Visualizer Scaling (Part 2)',
-    `Upgrade Loot Table Visualizer to handle 100+ entries.
-1. Expand data.ts: Add 60+ loot table entries, 30+ affixes, 20+ enemy bindings.
-2. Loot Table Editor: Paginated with search. Group by source (enemy/chest/quest/crafting). Inline weight editing.
-3. Affix Simulator: Affix pool picker via ScalableSelector grouped by Offensive/Defensive/Utility.
-4. Drop Simulator: Enemy picker for simulation using ScalableSelector.
-5. Economy Impact: Filter by tier/source. Paginated impact table.`,
+    LOOT_SCALING_DESC,
     [
       'Drop simulator has enemy ScalableSelector',
       'Economy table paginated and filterable',
@@ -928,14 +843,7 @@ const PHASE_4: ModuleArea[] = [
   area(
     'ui-character-visual-a',
     'Character Blueprint Visual Polish (Part 1)',
-    `Visual upgrade for Character Blueprint components.
-1. Comparison Matrix: Card-based columns per character. Stat bars with diff highlighting.
-2. Hitbox Viewer: Layered wireframe SVG with zone coloring and glow. Hover to highlight zones.
-3. Camera Profiles: Visual viewport mockups showing FOV cone, arm length, lag zone.
-4. Movement States: State-machine SVG diagram with animated transition arrows.
-5. Properties: Collapsible categories with colored headers.
-6. Keyboard: Proper key sizing, accent glow on bound keys, red pulse on conflicts.
-Follow design directive for all styling decisions.`,
+    CHARACTER_VISUAL_DESC,
     [
       'Comparison matrix card-based columns',
       'Hitbox wireframe SVG with glow',
@@ -947,14 +855,7 @@ Follow design directive for all styling decisions.`,
   area(
     'ui-character-visual-b',
     'Character Blueprint Visual Polish (Part 2)',
-    `Visual upgrade for Character Blueprint components.
-1. Comparison Matrix: Card-based columns per character. Stat bars with diff highlighting.
-2. Hitbox Viewer: Layered wireframe SVG with zone coloring and glow. Hover to highlight zones.
-3. Camera Profiles: Visual viewport mockups showing FOV cone, arm length, lag zone.
-4. Movement States: State-machine SVG diagram with animated transition arrows.
-5. Properties: Collapsible categories with colored headers.
-6. Keyboard: Proper key sizing, accent glow on bound keys, red pulse on conflicts.
-Follow design directive for all styling decisions.`,
+    CHARACTER_VISUAL_DESC,
     [
       'Movement state-machine SVG',
       'Properties collapsible categories',
@@ -983,12 +884,7 @@ Follow design directive for all styling decisions.`,
   area(
     'ui-gas-visual-a',
     'Ability Spellbook Visual Polish (Part 1)',
-    `Visual upgrade for Ability Spellbook.
-1. Ability Cards: Rich cards — icon circle with initial, cooldown badge, element dot, mini cost bar.
-2. Effect Timeline: Gantt-style chart with durations, stacking, decay. Color by effect type.
-3. Tag Tree: Interactive tree with expand/collapse, search highlight, SVG relationship curves.
-4. Attribute Web: Interactive force-directed graph. Drag nodes. Hover shows relationship details.
-5. Damage Calculator: Visual formula breakdown (Base × Mult + Flat → Armor → Final).`,
+    GAS_VISUAL_DESC,
     [
       'Rich ability cards',
       'Gantt-style effect timeline',
@@ -1000,12 +896,7 @@ Follow design directive for all styling decisions.`,
   area(
     'ui-gas-visual-b',
     'Ability Spellbook Visual Polish (Part 2)',
-    `Visual upgrade for Ability Spellbook.
-1. Ability Cards: Rich cards — icon circle with initial, cooldown badge, element dot, mini cost bar.
-2. Effect Timeline: Gantt-style chart with durations, stacking, decay. Color by effect type.
-3. Tag Tree: Interactive tree with expand/collapse, search highlight, SVG relationship curves.
-4. Attribute Web: Interactive force-directed graph. Drag nodes. Hover shows relationship details.
-5. Damage Calculator: Visual formula breakdown (Base × Mult + Flat → Armor → Final).`,
+    GAS_VISUAL_DESC,
     [
       'Force-directed attribute web',
       'Visual damage calculator formula',
@@ -1016,12 +907,7 @@ Follow design directive for all styling decisions.`,
   area(
     'ui-combat-visual-a',
     'Combat Action Map Visual Polish (Part 1)',
-    `Visual upgrade for Combat Action Map.
-1. Action Lanes: Swim-lane diagram with horizontal flows and inter-lane arrows.
-2. Sequence Diagram: UML-style — vertical lifelines, horizontal arrows, activation boxes.
-3. Feedback Tuner: Slider-based editor with grouped categories (Shake, Hitstop, Particles, Sound).
-4. Sankey: Full Sankey flow viz with proportional widths.
-5. DPS Chart: Grouped bar chart with weapon comparison. Hover for breakdown.`,
+    COMBAT_VISUAL_DESC,
     [
       'Swim-lane action diagram',
       'UML sequence diagram',
@@ -1033,12 +919,7 @@ Follow design directive for all styling decisions.`,
   area(
     'ui-combat-visual-b',
     'Combat Action Map Visual Polish (Part 2)',
-    `Visual upgrade for Combat Action Map.
-1. Action Lanes: Swim-lane diagram with horizontal flows and inter-lane arrows.
-2. Sequence Diagram: UML-style — vertical lifelines, horizontal arrows, activation boxes.
-3. Feedback Tuner: Slider-based editor with grouped categories (Shake, Hitstop, Particles, Sound).
-4. Sankey: Full Sankey flow viz with proportional widths.
-5. DPS Chart: Grouped bar chart with weapon comparison. Hover for breakdown.`,
+    COMBAT_VISUAL_DESC,
     [
       'Sankey flow visualization',
       'Grouped DPS bar chart',
@@ -1066,12 +947,7 @@ Follow design directive for all styling decisions.`,
   area(
     'ui-items-visual-a',
     'Item Catalog Visual Polish (Part 1)',
-    `Visual upgrade for Item Catalog.
-1. Item Cards: RPG-style — rarity border glow, slot icon, power badge, stat list with +/- coloring, set indicator.
-2. Equipment Loadout: Paper-doll slot layout (silhouette with positions). Click opens ScalableSelector for slot type.
-3. Affix Sunburst: Enhanced with tooltips, smooth transitions, tier-colored rings.
-4. Scaling Chart: Multi-line with rarity-colored curves, hover values, confidence bands.
-5. Economy Flow: Sankey showing sources → player → sinks.`,
+    ITEMS_VISUAL_DESC,
     [
       'RPG-style item cards with rarity glow',
       'Paper-doll equipment layout',
@@ -1083,12 +959,7 @@ Follow design directive for all styling decisions.`,
   area(
     'ui-items-visual-b',
     'Item Catalog Visual Polish (Part 2)',
-    `Visual upgrade for Item Catalog.
-1. Item Cards: RPG-style — rarity border glow, slot icon, power badge, stat list with +/- coloring, set indicator.
-2. Equipment Loadout: Paper-doll slot layout (silhouette with positions). Click opens ScalableSelector for slot type.
-3. Affix Sunburst: Enhanced with tooltips, smooth transitions, tier-colored rings.
-4. Scaling Chart: Multi-line with rarity-colored curves, hover values, confidence bands.
-5. Economy Flow: Sankey showing sources → player → sinks.`,
+    ITEMS_VISUAL_DESC,
     [
       'Multi-line scaling chart',
       'Economy Sankey flow',
@@ -1099,13 +970,7 @@ Follow design directive for all styling decisions.`,
   area(
     'ui-loot-visual-a',
     'Loot Table Visual Polish (Part 1)',
-    `Visual upgrade for Loot Table Visualizer.
-1. Weight Distribution: Donut chart with interactive segments and drill-down. Rarity-colored with glow.
-2. Drop Treemap: Proper nested rectangles. Rarity-colored. Size = probability. Hover for details.
-3. Monte Carlo: Histogram with distribution curve overlay. Mean/median/stddev vertical lines.
-4. Pity Timer: Circular gauge with animated fill and threshold marker.
-5. Co-occurrence: Heatmap with color scale legend. Cell hover shows frequency and conflict flag.
-6. Economy Dashboard: KPI cards at top (gold/hr, items/hr, rarity dist), charts below.`,
+    LOOT_VISUAL_DESC,
     [
       'Interactive donut chart',
       'Nested treemap visualization',
@@ -1117,13 +982,7 @@ Follow design directive for all styling decisions.`,
   area(
     'ui-loot-visual-b',
     'Loot Table Visual Polish (Part 2)',
-    `Visual upgrade for Loot Table Visualizer.
-1. Weight Distribution: Donut chart with interactive segments and drill-down. Rarity-colored with glow.
-2. Drop Treemap: Proper nested rectangles. Rarity-colored. Size = probability. Hover for details.
-3. Monte Carlo: Histogram with distribution curve overlay. Mean/median/stddev vertical lines.
-4. Pity Timer: Circular gauge with animated fill and threshold marker.
-5. Co-occurrence: Heatmap with color scale legend. Cell hover shows frequency and conflict flag.
-6. Economy Dashboard: KPI cards at top (gold/hr, items/hr, rarity dist), charts below.`,
+    LOOT_VISUAL_DESC,
     [
       'Circular pity gauge',
       'Enhanced co-occurrence heatmap',
@@ -1139,14 +998,7 @@ const PHASE_5: ModuleArea[] = [
   area(
     'ui-style-audit-a',
     'Cross-Module Style Audit (Part 1)',
-    `Verify visual consistency across all 7 modules.
-1. Grep for hardcoded colors, inconsistent spacing, non-standard fonts.
-2. Verify same card/header/stat style everywhere.
-3. Check tab nav looks identical across modules.
-4. Verify ScalableSelector renders consistently.
-5. Check Feature Map card sizing across modules.
-6. Run contrast check on all text/bg combinations (WCAG AA 4.5:1).
-7. Fix all deviations found.`,
+    STYLE_AUDIT_DESC,
     [
       'No hardcoded colors remain',
       'Consistent card and header styles',
@@ -1161,14 +1013,7 @@ const PHASE_5: ModuleArea[] = [
   area(
     'ui-style-audit-b',
     'Cross-Module Style Audit (Part 2)',
-    `Verify visual consistency across all 7 modules.
-1. Grep for hardcoded colors, inconsistent spacing, non-standard fonts.
-2. Verify same card/header/stat style everywhere.
-3. Check tab nav looks identical across modules.
-4. Verify ScalableSelector renders consistently.
-5. Check Feature Map card sizing across modules.
-6. Run contrast check on all text/bg combinations (WCAG AA 4.5:1).
-7. Fix all deviations found.`,
+    STYLE_AUDIT_DESC,
     [
       'ScalableSelector consistent',
       'Feature Map cards uniform sizing',
@@ -1180,14 +1025,7 @@ const PHASE_5: ModuleArea[] = [
   area(
     'ui-responsive-audit-a',
     'Responsive & Performance Audit (Part 1)',
-    `Verify responsive behavior and performance.
-1. Test at 1280px, 1440px, 1920px widths.
-2. Verify card grids reflow (2→3→4 cols).
-3. Check virtual scroll perf with 200+ items.
-4. No layout shifts on feature toggle.
-5. 100+ items render without jank.
-6. Add React.memo where needed.
-7. Modal overlays no body scroll lock issues.`,
+    RESPONSIVE_AUDIT_DESC,
     [
       'Responsive at 1280/1440/1920px',
       'Grid reflow verified',
@@ -1199,14 +1037,7 @@ const PHASE_5: ModuleArea[] = [
   area(
     'ui-responsive-audit-b',
     'Responsive & Performance Audit (Part 2)',
-    `Verify responsive behavior and performance.
-1. Test at 1280px, 1440px, 1920px widths.
-2. Verify card grids reflow (2→3→4 cols).
-3. Check virtual scroll perf with 200+ items.
-4. No layout shifts on feature toggle.
-5. 100+ items render without jank.
-6. Add React.memo where needed.
-7. Modal overlays no body scroll lock issues.`,
+    RESPONSIVE_AUDIT_DESC,
     [
       'No layout shifts',
       'No render jank with 100+ items',

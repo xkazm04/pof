@@ -1,5 +1,6 @@
 import { pipelineForCatalog, trackLabel } from '@/lib/pipeline/tracks';
 import type { LifecycleState } from '@/lib/catalog/types';
+import { ITEM_STEP_NAMES } from './steps/itemsSteps';
 
 /**
  * Fine idea→UE pipeline steps per catalog (from game_catalog_pipelines.xlsx).
@@ -14,11 +15,10 @@ const FINE_STEPS: Record<string, string[]> = {
     'SFX (cast, impact, voice)', 'UI (icon, tooltip, cooldown)', 'Camera Shake / Feedback',
     'Localization', 'AI Usage Hints', 'Combat Test Gate', 'UE Ability Asset Packaging',
   ],
-  items: [
-    'Concept Brief', 'Attributes', 'Economy', 'Icon 2D Art', '3D Generation',
-    'Material / Texture', 'Animations', 'VFX', 'SFX', 'Inventory UI Integration',
-    'Tooltip / Compare', 'Test Gate', 'UE Packaging',
-  ],
+  // Single source of truth: the Items step labels are declared once in
+  // itemsSteps.ts (ITEM_STEP_SPECS keys → ITEM_STEP_NAMES) so the rendered
+  // timeline, the bespoke-UI registry, and these specs can never drift apart.
+  items: ITEM_STEP_NAMES,
   bestiary: [
     'Concept Brief & Role', 'Lore & Codex Text', 'Stat Block & Resistances', 'Ability Set',
     'AI Behavior Tree', 'Aggro / Perception', 'Encounter Balancing', 'Loot Binding',

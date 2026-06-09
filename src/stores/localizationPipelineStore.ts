@@ -7,8 +7,12 @@ import type {
   TargetLocale,
   LocalizableString,
   LocalizationHazard,
+  LOCTEXTReplacementSuggestion,
   TranslationEntry,
   StringTable,
+  TranslationQAResult,
+  TranslationQAFinding,
+  LocaleQAStatus,
 } from '@/types/localization-pipeline';
 
 /* ---- Stable empty constants (Zustand selector safety) ------------ */
@@ -19,10 +23,12 @@ const EMPTY_ENTRIES: TranslationEntry[] = [];
 const EMPTY_REVIEW: TranslationEntry[] = [];
 const EMPTY_LOCALES: TargetLocale[] = [];
 const EMPTY_TABLES: StringTable[] = [];
-const EMPTY_REPLACEMENTS: { stringId: string; originalCode: string; suggestedCode: string }[] = [];
+const EMPTY_REPLACEMENTS: LOCTEXTReplacementSuggestion[] = [];
 const EMPTY_PROGRESS: Record<string, number> = {};
 const EMPTY_EXPANSION: Record<string, number> = {};
 const EMPTY_MODULE_BREAKDOWN: Record<string, { total: number; hardcoded: number; localized: number }> = {};
+const EMPTY_QA_FINDINGS: TranslationQAFinding[] = [];
+const EMPTY_QA_BY_LOCALE: Record<string, LocaleQAStatus> = {};
 
 /* ---- State interface --------------------------------------------- */
 
@@ -44,8 +50,13 @@ interface LocalizationPipelineState {
   progress: Record<string, number>;
   expansionIssues: Record<string, number>;
 
+  // Translation QA (validates the translated output)
+  qaResult: TranslationQAResult | null;
+  qaFindings: TranslationQAFinding[];
+  qaByLocale: Record<string, LocaleQAStatus>;
+
   // Replacements & tables
-  replacements: { stringId: string; originalCode: string; suggestedCode: string }[];
+  replacements: LOCTEXTReplacementSuggestion[];
   stringTables: StringTable[];
 
   // UI state
@@ -79,6 +90,11 @@ export const useLocalizationPipelineStore = create<LocalizationPipelineState>((s
   reviewRequired: EMPTY_REVIEW,
   progress: EMPTY_PROGRESS,
   expansionIssues: EMPTY_EXPANSION,
+
+  // Translation QA
+  qaResult: null,
+  qaFindings: EMPTY_QA_FINDINGS,
+  qaByLocale: EMPTY_QA_BY_LOCALE,
 
   // Replacements
   replacements: EMPTY_REPLACEMENTS,
@@ -142,6 +158,7 @@ export const useLocalizationPipelineStore = create<LocalizationPipelineState>((s
       const data = await apiFetch<{
         translation: TranslationResult;
         progress: Record<string, number>;
+        qa: TranslationQAResult;
       }>('/api/localization-pipeline', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -153,6 +170,9 @@ export const useLocalizationPipelineStore = create<LocalizationPipelineState>((s
         reviewRequired: data.translation.reviewRequired,
         progress: data.progress,
         expansionIssues: data.translation.expansionIssues,
+        qaResult: data.qa,
+        qaFindings: data.qa.findings,
+        qaByLocale: data.qa.byLocale,
         isLoading: false,
       });
       return data.translation;
@@ -171,10 +191,11 @@ export const useLocalizationPipelineStore = create<LocalizationPipelineState>((s
     try {
       const data = await apiFetch<{
         scan: ScanResult;
-        replacements: { stringId: string; originalCode: string; suggestedCode: string }[];
+        replacements: LOCTEXTReplacementSuggestion[];
         tables: StringTable[];
         translation: TranslationResult;
         progress: Record<string, number>;
+        qa: TranslationQAResult;
       }>('/api/localization-pipeline', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -192,6 +213,9 @@ export const useLocalizationPipelineStore = create<LocalizationPipelineState>((s
         reviewRequired: data.translation.reviewRequired,
         progress: data.progress,
         expansionIssues: data.translation.expansionIssues,
+        qaResult: data.qa,
+        qaFindings: data.qa.findings,
+        qaByLocale: data.qa.byLocale,
         isLoading: false,
       });
     } catch (err) {

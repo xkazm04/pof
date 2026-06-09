@@ -2,16 +2,18 @@
 
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import {
-  Calendar, Copy, Check, Image, TrendingUp, TrendingDown,
-  Minus, Flame, Clock, BarChart3, Zap, Loader2, RefreshCw,
+  Calendar, Copy, Check, Image, Flame, Clock, BarChart3, Zap, Loader2, RefreshCw,
   CheckCircle, AlertTriangle, XCircle,
 } from 'lucide-react';
 import { useModuleStore } from '@/stores/moduleStore';
-import { KPICard } from '@/components/ui/KPICard';
+import { MetricCard } from '@/components/ui/MetricCard';
 import { apiFetch } from '@/lib/api-utils';
+import { useIsMounted } from '@/hooks/useIsMounted';
 import { SUB_MODULES, MODULE_LABELS } from '@/lib/module-registry';
 import type { WeeklyDigest } from '@/types/weekly-digest';
 import { UI_TIMEOUTS } from '@/lib/constants';
+import { roundRect } from '@/lib/canvas-poster';
+import { formatDuration } from '@/lib/format';
 import { STATUS_INFO, MODULE_COLORS, ACCENT_VIOLET, STATUS_SUCCESS, ACCENT_RED, ACCENT_ORANGE, OVERLAY_WHITE, OPACITY_5, OPACITY_8, OPACITY_10 } from '@/lib/chart-colors';
 import { FetchError } from '../shared/FetchError';
 
@@ -33,12 +35,7 @@ export function WeeklyDigestView() {
   const [copied, setCopied] = useState(false);
   const [exporting, setExporting] = useState(false);
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const mountedRef = useRef(true);
-
-  useEffect(() => {
-    mountedRef.current = true;
-    return () => { mountedRef.current = false; };
-  }, []);
+  const isMounted = useIsMounted();
 
   const checklistProgress = useModuleStore((s) => s.checklistProgress) || EMPTY_PROGRESS;
 
@@ -61,17 +58,17 @@ export function WeeklyDigestView() {
     setError(null);
     try {
       const data = await apiFetch<{ digest: WeeklyDigest }>('/api/weekly-digest');
-      if (!mountedRef.current) return;
+      if (!isMounted()) return;
       const d = data.digest;
       d.checklistCompleted = checklistCompleted;
       setDigest(d);
     } catch (err) {
-      if (!mountedRef.current) return;
+      if (!isMounted()) return;
       setError(err instanceof Error ? err.message : 'Failed to load weekly digest');
     } finally {
-      if (mountedRef.current) setLoading(false);
+      if (isMounted()) setLoading(false);
     }
-  }, [checklistCompleted]);
+  }, [checklistCompleted, isMounted]);
 
   useEffect(() => { void fetchDigest(); }, [fetchDigest]);
 
@@ -169,32 +166,32 @@ export function WeeklyDigestView() {
 
       {/* Stat cards grid */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        <StatCard
+        <MetricCard
           label="Sessions"
           value={digest.totalSessions.toString()}
           delta={sessionDelta}
           icon={BarChart3}
-          color={STATUS_INFO}
+          accent={STATUS_INFO}
         />
-        <StatCard
+        <MetricCard
           label="Success Rate"
           value={`${Math.round(digest.successRate * 100)}%`}
           delta={Math.round(rateDelta * 100)}
-          suffix="%"
+          deltaSuffix="%"
           icon={Zap}
-          color={MODULE_COLORS.setup}
+          accent={MODULE_COLORS.setup}
         />
-        <StatCard
+        <MetricCard
           label="Checklist"
           value={`${digest.checklistCompleted}/${digest.checklistTotal}`}
           icon={Check}
-          color={ACCENT_VIOLET}
+          accent={ACCENT_VIOLET}
         />
-        <StatCard
+        <MetricCard
           label="Time Invested"
           value={formatDuration(digest.totalTimeMs)}
           icon={Clock}
-          color={MODULE_COLORS.content}
+          accent={MODULE_COLORS.content}
         />
       </div>
 
@@ -323,37 +320,6 @@ export function WeeklyDigestView() {
   );
 }
 
-// ── Stat card ────────────────────────────────────────────────────────────────
-
-function StatCard({ label, value, delta, suffix, icon: Icon, color }: {
-  label: string;
-  value: string;
-  delta?: number;
-  suffix?: string;
-  icon: typeof BarChart3;
-  color: string;
-}) {
-  const valueNode = (
-    <div className="flex items-baseline gap-1.5">
-      <span className="text-lg font-bold text-text tabular-nums">{value}</span>
-      {delta !== undefined && delta !== 0 && (
-        <span className="flex items-center gap-0.5 text-2xs" style={{ color: delta > 0 ? STATUS_SUCCESS : ACCENT_RED }}>
-          {delta > 0 ? <TrendingUp className="w-2.5 h-2.5" /> : delta < 0 ? <TrendingDown className="w-2.5 h-2.5" /> : <Minus className="w-2.5 h-2.5" />}
-          {delta > 0 ? '+' : ''}{delta}{suffix ?? ''}
-        </span>
-      )}
-    </div>
-  );
-  return (
-    <KPICard
-      layout="vertical"
-      icon={<Icon className="w-3 h-3" style={{ color }} />}
-      label={label}
-      value={valueNode}
-    />
-  );
-}
-
 // ── Sparkline tooltip bar ───────────────────────────────────────────────────
 
 function SparklineBar({ height, isEmpty, color, dayName, total, success, pct }: {
@@ -412,14 +378,6 @@ function SparklineBar({ height, isEmpty, color, dayName, total, success, pct }: 
 }
 
 // ── Format helpers ───────────────────────────────────────────────────────────
-
-function formatDuration(ms: number): string {
-  const minutes = Math.floor(ms / 60000);
-  if (minutes < 60) return `${minutes}m`;
-  const hours = Math.floor(minutes / 60);
-  const mins = minutes % 60;
-  return mins > 0 ? `${hours}h ${mins}m` : `${hours}h`;
-}
 
 function formatDateRange(start: string, end: string): string {
   const s = new Date(start + 'T12:00:00');
@@ -648,18 +606,4 @@ function renderDigestToCanvas(canvas: HTMLCanvasElement, d: WeeklyDigest): void 
   ctx.font = '10px system-ui, -apple-system, sans-serif';
   ctx.fillStyle = '#444444';
   ctx.fillText('Generated by POF', W - 130, H - 16);
-}
-
-function roundRect(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number) {
-  ctx.beginPath();
-  ctx.moveTo(x + r, y);
-  ctx.lineTo(x + w - r, y);
-  ctx.quadraticCurveTo(x + w, y, x + w, y + r);
-  ctx.lineTo(x + w, y + h - r);
-  ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
-  ctx.lineTo(x + r, y + h);
-  ctx.quadraticCurveTo(x, y + h, x, y + h - r);
-  ctx.lineTo(x, y + r);
-  ctx.quadraticCurveTo(x, y, x + r, y);
-  ctx.closePath();
 }

@@ -1,7 +1,11 @@
 import { getDb } from '@/lib/db';
 import type { LifecycleRecord, LifecycleState, TestResult } from '@/lib/catalog/types';
 
+// The DB connection is a process-level singleton (see getDb), so the DDL only
+// needs to run once. This guard keeps it off the hot path of every query.
+let tableEnsured = false;
 function ensureTable() {
+  if (tableEnsured) return;
   getDb().exec(`
     CREATE TABLE IF NOT EXISTS catalog_lifecycle (
       catalog_id TEXT NOT NULL,
@@ -14,6 +18,7 @@ function ensureTable() {
       PRIMARY KEY (catalog_id, entity_id)
     )
   `);
+  tableEnsured = true;
 }
 
 /** Column row → LifecycleRecord. Pure (exported for unit test). */

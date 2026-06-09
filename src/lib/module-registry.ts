@@ -1248,3 +1248,31 @@ export const MODULE_LABELS: Record<string, string> = Object.fromEntries(
 export function getModuleLabel(moduleId: SubModuleId): string {
   return MODULE_LABELS[moduleId] ?? moduleId;
 }
+
+/** id + canonical label + live checklist count for one module. */
+export interface ModuleChecklistDef {
+  id: string;
+  label: string;
+  checklistCount: number;
+}
+
+/**
+ * Core-engine (aRPG) module definitions derived from SUB_MODULES so the module
+ * list, labels and per-module checklist counts have a single owner. Excludes the
+ * `core-engine-plan` pseudo-module (isSpecialItem). The health engine consumes
+ * this instead of a hardcoded copy, keeping its X/Y denominator in lockstep with
+ * the registry. Add/remove a checklist item and both update automatically.
+ */
+export const CORE_MODULE_DEFS: ModuleChecklistDef[] = ARPG_SUB_MODULES
+  .filter((m) => !m.isSpecialItem)
+  .map((m) => ({ id: m.id, label: m.label, checklistCount: m.checklist?.length ?? 0 }));
+
+/** Total checklist items across the core-engine aRPG modules. */
+export const CORE_CHECKLIST_TOTAL = CORE_MODULE_DEFS.reduce((s, m) => s + m.checklistCount, 0);
+
+/**
+ * Total checklist items across ALL modules (every category). The single owner of
+ * the project-wide X/Y denominator — the weekly digest and the top-bar project
+ * stats both derive from this instead of re-summing SUB_MODULES independently.
+ */
+export const ALL_CHECKLIST_TOTAL = SUB_MODULES.reduce((s, m) => s + (m.checklist?.length ?? 0), 0);

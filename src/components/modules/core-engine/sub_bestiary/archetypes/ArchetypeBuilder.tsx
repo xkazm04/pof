@@ -33,7 +33,7 @@ export function ArchetypeBuilder() {
           <div>
             <label className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted block mb-1">Name</label>
             <input type="text" value={builderName} onChange={e => setBuilderName(e.target.value)}
-              className="w-full bg-surface-deep border border-border/40 rounded px-2.5 py-1.5 text-xs text-text font-mono focus:outline-none focus:border-[var(--accent)] transition-colors" />
+              className="w-full bg-surface-deep border border-border/40 rounded px-2.5 py-1.5 text-xs text-text font-mono focus-ring-inset transition-colors" />
           </div>
           <div>
             <label className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted block mb-1.5">Stats</label>
@@ -67,7 +67,7 @@ export function ArchetypeBuilder() {
           <div>
             <label className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted block mb-1">Behavior Tree</label>
             <select value={builderBT} onChange={e => setBuilderBT(e.target.value as typeof BT_PRESETS[number])}
-              className="w-full bg-surface-deep border border-border/40 rounded px-2.5 py-1.5 text-xs text-text font-mono focus:outline-none focus:border-[var(--accent)] transition-colors">
+              className="w-full bg-surface-deep border border-border/40 rounded px-2.5 py-1.5 text-xs text-text font-mono focus-ring-inset transition-colors">
               {BT_PRESETS.map(bt => <option key={bt} value={bt}>{bt}</option>)}
             </select>
           </div>

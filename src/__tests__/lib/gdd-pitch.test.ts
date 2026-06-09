@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { exportGDDAsPitchHTML } from '@/lib/gdd-pitch';
+import { exportGDDAsPitchHTML, exportGDDAsPrintableHTML } from '@/lib/gdd-pitch';
 import type { GDDDocument } from '@/lib/gdd-synthesizer';
 
 const fixture: GDDDocument = {
@@ -60,6 +60,41 @@ describe('exportGDDAsPitchHTML', () => {
   });
 
   it('HTML-escapes section content (no raw injected tags)', () => {
+    expect(html).toContain('&lt;script&gt;alert(1)&lt;/script&gt;');
+    expect(html).not.toContain('<script>alert(1)</script>');
+  });
+});
+
+describe('exportGDDAsPrintableHTML', () => {
+  const html = exportGDDAsPrintableHTML(fixture);
+
+  it('is a full self-contained HTML document with the title', () => {
+    expect(html).toContain('<!DOCTYPE html>');
+    expect(html).toContain('Pillars of Fortune — Game Design Document');
+  });
+
+  it('leads with a compliance-scorecard cover page that breaks before the body', () => {
+    expect(html).toContain('class="cover"');
+    expect(html).toContain('Compliance Scorecard');
+    expect(html).toContain('page-break-after:always');
+    // Scorecard headline percentages derived from stats (3/10 = 30%, 5/20 = 25%).
+    expect(html).toContain('30%');
+    expect(html).toContain('25%');
+  });
+
+  it('still carries the full GDD body + diagrams (reuses the pitch render)', () => {
+    expect(html).toContain('Project Overview');
+    expect(html).toContain('class="mermaid"');
+    expect(html).toContain('pie title Feature Implementation Status');
+  });
+
+  it('embeds an auto-print trigger that runs after mermaid renders', () => {
+    expect(html).toContain('window.print()');
+    expect(html).toContain('mermaid.run()');
+    expect(html).toMatch(/mermaid@11/);
+  });
+
+  it('HTML-escapes content in the printable build too', () => {
     expect(html).toContain('&lt;script&gt;alert(1)&lt;/script&gt;');
     expect(html).not.toContain('<script>alert(1)</script>');
   });

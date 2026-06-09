@@ -124,7 +124,28 @@ describe('<NextStepCoach />', () => {
     expect(screen.getByText(/all done/i)).toBeTruthy();
   });
 
-  it('toggling plain mode reveals the plain-language summary line', () => {
+  it('is one compact row by default — plain-mode controls live behind the disclosure', () => {
+    render(
+      <NextStepCoach
+        t={LIGHT}
+        steps={steps}
+        statusByStep={() => 'pending' as StepStatus}
+        rollup={rollup()}
+        onJump={() => {}}
+        plainMode={false}
+        onTogglePlainMode={() => {}}
+      />,
+    );
+    // collapsed: the "more" region (and its plain-mode toggle) is not rendered yet.
+    expect(screen.queryByTestId('coach-more')).toBeNull();
+    expect(screen.queryByTestId('plain-mode-toggle')).toBeNull();
+    // expanding reveals it.
+    fireEvent.click(screen.getByTestId('coach-expand'));
+    expect(screen.getByTestId('coach-more')).toBeTruthy();
+    expect(screen.getByTestId('plain-mode-toggle')).toBeTruthy();
+  });
+
+  it('expanded: toggling plain mode reveals the plain-language summary line', () => {
     const onToggle = vi.fn();
     const { rerender } = render(
       <NextStepCoach
@@ -137,6 +158,7 @@ describe('<NextStepCoach />', () => {
         onTogglePlainMode={onToggle}
       />,
     );
+    fireEvent.click(screen.getByTestId('coach-expand'));
     expect(screen.queryByTestId('plain-summary')).toBeNull();
 
     fireEvent.click(screen.getByTestId('plain-mode-toggle'));
@@ -153,6 +175,28 @@ describe('<NextStepCoach />', () => {
         onTogglePlainMode={onToggle}
       />,
     );
+    // the disclosure stays open across the rerender, so the summary is visible.
     expect(screen.getByTestId('plain-summary').textContent).toMatch(/0 of 5 done|not started/i);
+  });
+
+  it('makes the deferred-gate drainer the primary CTA when the next step is deferred', () => {
+    const onDrain = vi.fn();
+    render(
+      <NextStepCoach
+        t={LIGHT}
+        steps={steps}
+        statusByStep={(_, i) => (i < 3 ? 'pass' : 'deferred') as StepStatus}
+        rollup={rollup({ done: 3, pending: 0, deferred: 2, total: 5 })}
+        onJump={() => {}}
+        plainMode={false}
+        onTogglePlainMode={() => {}}
+        onDrain={onDrain}
+        draining={false}
+      />,
+    );
+    // a deferred next step can't be hand-edited — the CTA drains live gates instead of jumping.
+    expect(screen.queryByTestId('next-step-jump')).toBeNull();
+    fireEvent.click(screen.getByTestId('next-step-drain'));
+    expect(onDrain).toHaveBeenCalled();
   });
 });

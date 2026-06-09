@@ -39,7 +39,7 @@ export function BestiaryFilters({
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             placeholder="Search archetypes..."
-            className="pl-8 pr-3 py-1.5 rounded-md border border-border/30 bg-surface-deep/60 text-xs font-mono text-text placeholder:text-text-muted/50 outline-none focus:border-[var(--accent)] w-48"
+            className="pl-8 pr-3 py-1.5 rounded-md border border-border/30 bg-surface-deep/60 text-xs font-mono text-text placeholder:text-text-subtle outline-none focus:border-[var(--accent)] w-48"
           />
         </div>
 

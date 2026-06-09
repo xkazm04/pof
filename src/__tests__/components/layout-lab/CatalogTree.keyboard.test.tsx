@@ -16,6 +16,30 @@ const groups = [{ category: 'Core', catalogs: [
   { catalogId: 'spellbook', label: 'Spellbook', description: '', verified: 0, total: 6 },
 ] }];
 
+it('keeps non-selected chapters compact by default; expands one on click', () => {
+  const multi = [
+    { category: 'Core', catalogs: [{ catalogId: 'items', label: 'Items', description: '', verified: 1, total: 13 }] },
+    { category: 'Content', catalogs: [{ catalogId: 'audio', label: 'Audio', description: '', verified: 0, total: 4 }] },
+  ];
+  render(<CatalogTree t={LIGHT} groups={multi} selectedCatalogId="items" entities={[]} selectedEntityId={null} onSelectCatalog={() => {}} onSelectEntity={() => {}} />);
+  // The selected catalog's chapter (Core) is open; the other chapter (Content) is compact.
+  expect(screen.getByTestId('harness-catalog-items')).toBeTruthy();
+  expect(screen.queryByTestId('harness-catalog-audio')).toBeNull();
+  expect(screen.getByRole('button', { name: /Content/i }).getAttribute('aria-expanded')).toBe('false');
+  // Clicking the compact chapter expands just that one.
+  fireEvent.click(screen.getByRole('button', { name: /Content/i }));
+  expect(screen.getByTestId('harness-catalog-audio')).toBeTruthy();
+});
+
+it('lets the user collapse the auto-opened selected chapter', () => {
+  render(<CatalogTree t={LIGHT} groups={groups} selectedCatalogId="items" entities={[]} selectedEntityId={null} onSelectCatalog={() => {}} onSelectEntity={() => {}} />);
+  // The selected chapter starts open…
+  expect(screen.getByTestId('harness-catalog-items')).toBeTruthy();
+  // …and the user can still collapse it.
+  fireEvent.click(screen.getByRole('button', { name: /Core/i }));
+  expect(screen.queryByTestId('harness-catalog-items')).toBeNull();
+});
+
 it('collapses a category group when its header is toggled', () => {
   render(<CatalogTree t={LIGHT} groups={groups} selectedCatalogId="items" entities={[]} selectedEntityId={null} onSelectCatalog={() => {}} onSelectEntity={() => {}} />);
   expect(screen.getByTestId('harness-catalog-spellbook')).toBeTruthy();

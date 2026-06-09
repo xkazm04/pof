@@ -1,12 +1,11 @@
 import { getDb } from './db';
-import { ensureSessionAnalyticsTable } from './session-analytics-db';
-import { MODULE_LABELS, SUB_MODULES } from './module-registry';
+import { MODULE_LABELS, ALL_CHECKLIST_TOTAL } from './module-registry';
 import type { WeeklyDigest, Achievement } from '@/types/weekly-digest';
 
 // ── Date helpers ─────────────────────────────────────────────────────────────
 
 /** Get Monday 00:00 of the given date's week. */
-function getWeekStart(d: Date): Date {
+export function getWeekStart(d: Date): Date {
   const date = new Date(d);
   const day = date.getDay();
   const diff = day === 0 ? -6 : 1 - day; // Monday = 1
@@ -15,14 +14,13 @@ function getWeekStart(d: Date): Date {
   return date;
 }
 
-function toISODate(d: Date): string {
+export function toISODate(d: Date): string {
   return d.toISOString().slice(0, 10);
 }
 
 // ── Main aggregation ─────────────────────────────────────────────────────────
 
 export function generateWeeklyDigest(referenceDate?: Date): WeeklyDigest {
-  ensureSessionAnalyticsTable();
   const db = getDb();
 
   const now = referenceDate ?? new Date();
@@ -130,8 +128,8 @@ export function generateWeeklyDigest(referenceDate?: Date): WeeklyDigest {
   }
 
   // ── Checklist progress ──
-  // We can't easily access Zustand from server, so compute total from static data
-  const checklistTotal = SUB_MODULES.reduce((sum, m) => sum + (m.checklist?.length ?? 0), 0);
+  // We can't easily access Zustand from server, so use the registry-derived total.
+  const checklistTotal = ALL_CHECKLIST_TOTAL;
   // checklistCompleted and checklistDelta will be computed client-side from moduleStore
   // For server-side, return 0 — the UI enriches this
 

@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useCallback, useMemo, useRef, useEffect } from 'react';
+import { useReducedMotion } from 'framer-motion';
 import {
   Film, Check, RefreshCw, Scan, AlertCircle, Sparkles, FileCode2,
   Play, RotateCcw, AlertTriangle, MousePointerClick, Plug, Monitor,
@@ -11,10 +12,11 @@ import { useManifest } from '@/hooks/useManifest';
 import { getModuleName } from '@/lib/prompt-context';
 import type { AnimBPScanResult, AnimTransition } from '@/app/api/filesystem/scan-animbp/route';
 import {
-  ACCENT_VIOLET, ACCENT_ORANGE, STATUS_SUCCESS, STATUS_WARNING, MODULE_COLORS,
-  OPACITY_8, OPACITY_10, OPACITY_15, OPACITY_20, OPACITY_30,
+  ACCENT_VIOLET, ACCENT_ORANGE, ACCENT_CYAN, STATUS_SUCCESS, STATUS_WARNING, MODULE_COLORS,
+  OPACITY_20, OPACITY_30,
   STATUS_IMPROVED,
 } from '@/lib/chart-colors';
+import { SchematicPanel } from '@/components/ui/SchematicPanel';
 import { useBlenderMCPStore } from '@/stores/blenderMCPStore';
 import { tryApiFetch } from '@/lib/api-utils';
 import { nlaStateMachineScript } from '@/lib/blender-mcp/scripts/nla-state-machine';
@@ -169,6 +171,11 @@ const NODE_W = 110;
 const NODE_H = 46;
 
 export function AnimationStateMachine({ onSelectState, isRunning, activeStateId }: AnimationStateMachineProps) {
+  // Honor the OS reduced-motion preference: looping SMIL edge animations are
+  // suppressed (they fall back to a static dashed/colored highlight) and the
+  // pulse/scale decorations are neutralised below. SMIL <animate> is NOT covered
+  // by the global prefers-reduced-motion CSS rule, so it must be gated in JS.
+  const prefersReducedMotion = useReducedMotion();
   const progress = useModuleStore((s) => s.checklistProgress['animations'] ?? EMPTY_PROGRESS);
   const projectPath = useProjectStore((s) => s.projectPath);
   const projectName = useProjectStore((s) => s.projectName);
@@ -463,14 +470,11 @@ export function AnimationStateMachine({ onSelectState, isRunning, activeStateId 
   };
 
   return (
-    <div className="w-full max-w-4xl mx-auto select-none p-6 bg-[#03030a] rounded-2xl border border-violet-900/30 relative overflow-hidden shadow-[inset_0_0_80px_rgba(167,139,250,0.05)] flex flex-col gap-6">
-      {/* Schematic Background */}
-      <div className="absolute inset-0 pointer-events-none z-0">
-        <div className="absolute inset-0 opacity-[0.03]" style={{ backgroundImage: `linear-gradient(${ANIM_ACCENT} 1px, transparent 1px), linear-gradient(90deg, ${ANIM_ACCENT} 1px, transparent 1px)`, backgroundSize: '32px 32px' }} />
-        <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-violet-600/10 blur-[120px] rounded-full pointer-events-none" />
-        <div className="absolute bottom-0 left-0 w-[400px] h-[400px] bg-cyan-600/10 blur-[100px] rounded-full pointer-events-none" />
-      </div>
-
+    <SchematicPanel
+      accent={ANIM_ACCENT}
+      accentSecondary={ACCENT_CYAN}
+      className="w-full max-w-4xl mx-auto select-none p-6 flex flex-col gap-6"
+    >
       {/* Header */}
       <div className="flex items-center justify-between relative z-10 border-b border-violet-900/40 pb-4">
         <div className="flex items-center gap-3">
@@ -624,7 +628,7 @@ export function AnimationStateMachine({ onSelectState, isRunning, activeStateId 
             </span>
           )}
           {scanResult.states.length === 0 && !scanError && (
-            <span className="text-[#f59e0b]">
+            <span style={{ color: STATUS_WARNING }}>
               <JargonText>No states found — AnimBP states may be defined in Blueprint only</JargonText>
             </span>
           )}
@@ -632,11 +636,14 @@ export function AnimationStateMachine({ onSelectState, isRunning, activeStateId 
       )}
 
       {/* State machine diagram */}
-      <div
-        className="relative rounded-xl border-2 border-surface-deep bg-[#050510]/80 shadow-[inset_0_0_40px_rgba(0,0,0,0.8)] overflow-hidden z-10"
+      <SchematicPanel
+        tone="well"
+        accent={ANIM_ACCENT}
+        grid={false}
+        radial
+        className="z-10"
         style={{ height: displayStates.length > 8 ? 450 : 350 }}
       >
-        <div className="absolute inset-0 pointer-events-none opacity-20 z-0" style={{ backgroundImage: 'radial-gradient(circle at center, rgba(167,139,250,0.15) 0%, transparent 70%)' }} />
         {/* SVG transitions layer */}
         <svg className="absolute inset-0 w-full h-full" style={{ zIndex: 0 }}>
           <defs>
@@ -671,7 +678,7 @@ export function AnimationStateMachine({ onSelectState, isRunning, activeStateId 
               markerHeight="5"
               orient="auto-start-reverse"
             >
-              <path d="M 0 0 L 8 3 L 0 6 z" fill="#f97316" />
+              <path d="M 0 0 L 8 3 L 0 6 z" fill={ACCENT_ORANGE} />
             </marker>
             <marker
               id="sm-arrow-modified"
@@ -682,7 +689,7 @@ export function AnimationStateMachine({ onSelectState, isRunning, activeStateId 
               markerHeight="5"
               orient="auto-start-reverse"
             >
-              <path d="M 0 0 L 8 3 L 0 6 z" fill="#eab308" />
+              <path d="M 0 0 L 8 3 L 0 6 z" fill={STATUS_WARNING} />
             </marker>
             {/* Glow filter for new states */}
             <filter id="glow-new" x="-50%" y="-50%" width="200%" height="200%">
@@ -773,10 +780,12 @@ export function AnimationStateMachine({ onSelectState, isRunning, activeStateId 
                   className="pointer-events-none transition-all duration-300"
                   strokeDasharray={(bothDone || isSimEdge) ? "6, 6" : "none"}
                 >
-                  {isModified && (
+                  {/* Looping decoration only — gated on reduced-motion. The static
+                      stroke color/width/dash pattern already conveys the state. */}
+                  {isModified && !prefersReducedMotion && (
                     <animate attributeName="opacity" values="1;0.3;1" dur="1s" repeatCount="5" />
                   )}
-                  {(bothDone || isSimEdge) && (
+                  {(bothDone || isSimEdge) && !prefersReducedMotion && (
                     <animate attributeName="stroke-dashoffset" from="12" to="0" dur="0.8s" repeatCount="indefinite" />
                   )}
                 </line>
@@ -789,7 +798,7 @@ export function AnimationStateMachine({ onSelectState, isRunning, activeStateId 
                       width="8%"
                       height="6%"
                       rx="3"
-                      fill="#1a1a2e"
+                      style={{ fill: 'var(--surface-deep)' }}
                       stroke={ANIM_ACCENT}
                       strokeWidth="0.5"
                       opacity="0.95"
@@ -823,7 +832,7 @@ export function AnimationStateMachine({ onSelectState, isRunning, activeStateId 
           let borderColor = `${color}40`;
           let bgColor = `${color}0A`;
           let shadow = 'none';
-          let extraClass = 'cursor-pointer hover:scale-105';
+          let extraClass = 'cursor-pointer motion-safe:hover:scale-105';
 
           if (state.completed) {
             borderColor = `${STATUS_SUCCESS}60`;
@@ -833,7 +842,7 @@ export function AnimationStateMachine({ onSelectState, isRunning, activeStateId 
             borderColor = `${ANIM_ACCENT}80`;
             bgColor = `${ANIM_ACCENT}20`;
             shadow = `0 0 20px ${ANIM_ACCENT}40, inset 0 0 15px ${ANIM_ACCENT}20`;
-            extraClass += ' ring-2 ring-violet-500/50 ring-offset-2 ring-offset-[#03030a]';
+            extraClass += ' ring-2 ring-violet-500/50 ring-offset-2 ring-offset-[var(--schematic-surface)]';
           } else if (simMode) {
             if (isInSimPath) {
               borderColor = `${ACCENT_ORANGE}80`;
@@ -892,7 +901,7 @@ export function AnimationStateMachine({ onSelectState, isRunning, activeStateId 
                     <Check className="w-3 h-3 text-green-400" />
                   </div>
                 ) : state.isActive ? (
-                  <span className="w-2.5 h-2.5 rounded-full animate-pulse shadow-[0_0_8px_rgba(167,139,250,0.8)] flex-shrink-0" style={{ backgroundColor: ANIM_ACCENT }} />
+                  <span className="w-2.5 h-2.5 rounded-full animate-pulse motion-reduce:animate-none shadow-[0_0_8px_rgba(167,139,250,0.8)] flex-shrink-0" style={{ backgroundColor: ANIM_ACCENT }} />
                 ) : simMode && isInSimPath ? (
                   <span className="w-2.5 h-2.5 rounded-full shadow-[0_0_8px_rgba(249,115,22,0.8)] flex-shrink-0" style={{ backgroundColor: ACCENT_ORANGE }} />
                 ) : simMode && isDeadEnd ? (
@@ -907,7 +916,7 @@ export function AnimationStateMachine({ onSelectState, isRunning, activeStateId 
                   <span
                     className="text-[11px] font-bold tracking-wide font-mono truncate w-full"
                     style={{
-                      color: state.completed ? STATUS_SUCCESS : state.isActive ? ANIM_ACCENT : isInSimPath ? ACCENT_ORANGE : '#e2e8f0',
+                      color: state.completed ? STATUS_SUCCESS : state.isActive ? ANIM_ACCENT : isInSimPath ? ACCENT_ORANGE : 'var(--text)',
                       textShadow: state.isActive || state.completed || isInSimPath ? `0 0 10px ${color}80` : 'none'
                     }}
                   >
@@ -919,10 +928,10 @@ export function AnimationStateMachine({ onSelectState, isRunning, activeStateId 
                 </div>
               </div>
 
-              {/* New state pulse animation */}
+              {/* New state highlight — pulses, but holds a static border under reduced motion */}
               {state.isNew && (
                 <div
-                  className="absolute inset-0 rounded-xl border-2 animate-pulse pointer-events-none"
+                  className="absolute inset-0 rounded-xl border-2 animate-pulse motion-reduce:animate-none pointer-events-none"
                   style={{ borderColor: `${STATUS_SUCCESS}60` }}
                 />
               )}
@@ -985,13 +994,13 @@ export function AnimationStateMachine({ onSelectState, isRunning, activeStateId 
                 montage
               </span>
               <span className="flex items-center gap-1">
-                <Check className="w-2 h-2 text-[#22c55e]" />
+                <Check className="w-2 h-2" style={{ color: STATUS_SUCCESS }} />
                 done
               </span>
             </>
           )}
         </div>
-      </div>
+      </SchematicPanel>
 
       {/* Simulation summary */}
       {simMode && simPath.length > 0 && (
@@ -1057,6 +1066,6 @@ export function AnimationStateMachine({ onSelectState, isRunning, activeStateId 
           </div>
         </div>
       )}
-    </div>
+    </SchematicPanel>
   );
 }

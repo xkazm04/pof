@@ -17,12 +17,14 @@ export interface BridgeExecutorOptions {
 
 /**
  * Reduce the PoF Bridge plugin's results payload into a terminal verdict. Ground
- * truth (PofHttpServer.cpp): `POST /pof/test/run-automation` is async and returns
- * `{status:"accepted"}`; `GET /pof/test/results` returns
- * `{results:[{testId,status:"passed"|"failed",...}]}` (status is binary). We probe
- * those shapes plus a couple of defensive fallbacks. `matchName` correlates the
- * results array to our test (the recorded testId may embed the automation name).
- * Exported pure for unit tests.
+ * truth (PofHttpServer.cpp + live verification 2026-05-26, see docs/catalog/L3-L4-RUNNER.md):
+ * `POST /pof/test/run-automation` runs the matching IMPLEMENT_SIMPLE_AUTOMATION_TEST gate
+ * synchronously and returns a top-level `{status:"passed"|"failed",testId}` (or
+ * `{status:"not_found"}`, handled by the caller); `GET /pof/test/results` returns
+ * `{results:[{testId,status:"passed"|"failed",...}]}` (status is binary). A top-level
+ * `status` of "accepted"/"running" is the non-terminal poll state of the async fallback.
+ * `matchName` correlates the results array to our test (the recorded testId may embed the
+ * automation name). Exported pure for unit tests.
  */
 export function interpretAutomationResult(
   data: unknown,
@@ -34,7 +36,7 @@ export function interpretAutomationResult(
   const d = data as Record<string, unknown>;
   const testId = typeof d.testId === 'string' ? d.testId : undefined;
 
-  // 0. GET /pof/test/results — the real shape: { results: [{ testId, status }] }
+  // GET /pof/test/results — the array verdict shape: { results: [{ testId, status }] }.
   if (Array.isArray(d.results)) {
     const all = d.results as Array<Record<string, unknown>>;
     const matched = matchName
@@ -48,44 +50,20 @@ export function interpretAutomationResult(
       : { terminal: true, status: 'pass', detail: `${matched.length} passed` };
   }
 
-  // 1. PofTestResult-style status
+  // POST run-automation — synchronous top-level verdict { status, testId }. Any other
+  // status string ("accepted"/"running") is the non-terminal poll state of the async path.
   if (typeof d.status === 'string') {
-    const s = d.status;
-    if (s === 'passed') return { terminal: true, status: 'pass', detail: 'automation passed', testId };
-    if (s === 'failed') return { terminal: true, status: 'fail', detail: failDetail(d), testId };
-    if (s === 'error') return { terminal: true, status: 'fail', detail: failDetail(d, 'automation error'), testId };
-    if (s === 'timeout') return { terminal: true, status: 'fail', detail: 'automation timed out', testId };
-    if (s === 'running') return { terminal: false, detail: 'running', testId };
-  }
-
-  // 2. Automation summary counts ({ passed, failed, total } or nested { summary })
-  const summary = (d.summary && typeof d.summary === 'object' ? d.summary : d) as Record<string, unknown>;
-  const passed = numOr(summary.passed);
-  const failed = numOr(summary.failed);
-  if (passed != null || failed != null) {
-    const f = failed ?? 0;
-    const p = passed ?? 0;
-    if (f > 0) return { terminal: true, status: 'fail', detail: `${f} failed / ${p} passed`, testId };
-    if (p > 0) return { terminal: true, status: 'pass', detail: `${p} passed`, testId };
-  }
-
-  // 3. Plain boolean
-  if (typeof d.success === 'boolean') {
-    return d.success
-      ? { terminal: true, status: 'pass', detail: 'automation passed', testId }
-      : { terminal: true, status: 'fail', detail: failDetail(d), testId };
+    if (d.status === 'passed') return { terminal: true, status: 'pass', detail: 'automation passed', testId };
+    if (d.status === 'failed') return { terminal: true, status: 'fail', detail: failDetail(d), testId };
+    return { terminal: false, detail: d.status, testId };
   }
 
   return { terminal: false, detail: 'unrecognised result shape', testId };
 }
 
-function numOr(v: unknown): number | null {
-  return typeof v === 'number' && Number.isFinite(v) ? v : null;
-}
-
-function failDetail(d: Record<string, unknown>, fallback = 'automation failed'): string {
+function failDetail(d: Record<string, unknown>): string {
   if (Array.isArray(d.errors) && d.errors.length) return String(d.errors[0]).slice(0, 200);
-  return fallback;
+  return 'automation failed';
 }
 
 /**

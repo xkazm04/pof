@@ -1,11 +1,12 @@
 /* Lab v2 design tokens. Single source of visual truth for the /layout shell.
-   Theme = [data-theme]; density = [data-density]. Consumed by the primitive kit
-   and by the LabTheme compat shim (theme.ts), whose color fields are var() refs. */
+   Theme = [data-theme]. Consumed by the primitive kit and by the LabTheme compat
+   shim (theme.ts), whose color fields are var() refs. The space scale is the
+   single, space-efficient baseline (no user-selectable density). */
 
 :root {
-  /* space scale (px) */
-  --lab-s1: 4px;  --lab-s2: 8px;  --lab-s3: 12px; --lab-s4: 16px;
-  --lab-s5: 20px; --lab-s6: 28px; --lab-s7: 36px; --lab-s8: 48px;
+  /* space scale (px) — compact baseline (space-efficient, not user-tunable) */
+  --lab-s1: 4px;  --lab-s2: 6px;  --lab-s3: 9px;  --lab-s4: 12px;
+  --lab-s5: 15px; --lab-s6: 21px; --lab-s7: 36px; --lab-s8: 48px;
   /* type scale (>=14px floor) */
   --lab-fs-xs: 14px; --lab-fs-sm: 15px; --lab-fs-md: 16px;
   --lab-fs-lg: 20px; --lab-fs-xl: 26px; --lab-fs-2xl: 30px;
@@ -23,6 +24,7 @@
   --lab-ink-deep: #10325f;
   --lab-text: #243446;
   --lab-muted: #647488;
+  --text-subtle: #525d70;   /* AA-safe subtle tier on the light Blueprint floor (≥4.5:1) */
   --lab-line: #aebfd6;
   --lab-accent: #1b4f9c;
   --lab-accent-bg: #d2deef;
@@ -49,6 +51,7 @@
   --lab-ink-deep: #67e8f9;
   --lab-text: #e2e8f0;
   --lab-muted: #8c9aae;
+  --text-subtle: #7e84a8;   /* AA-safe subtle tier on the Studio-dark floor (≥4.5:1) */
   --lab-line: rgba(255, 255, 255, 0.12);
   --lab-accent: #22d3ee;
   --lab-accent-bg: rgba(34, 211, 238, 0.10);
@@ -65,11 +68,6 @@
   --lab-grid-size: 0 0;
   --lab-canvas-ambient: radial-gradient(1200px 600px at 70% -10%, rgba(34,211,238,0.06), transparent 60%);
   --lab-glass-blur: 12px;
-}
-
-/* Density */
-[data-density="compact"] {
-  --lab-s2: 6px; --lab-s3: 9px; --lab-s4: 12px; --lab-s5: 15px; --lab-s6: 21px;
 }
 
 /* Reduced motion — belt and suspenders */

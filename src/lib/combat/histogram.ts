@@ -36,3 +36,37 @@ export function buildHistogram(values: number[], bucketCount: number): Histogram
 
   return { min, max, bins };
 }
+
+/** Minimal histogram bucket shape shared with the combat summary distributions. */
+export interface CountBucket {
+  min: number;
+  max: number;
+  count: number;
+}
+
+/**
+ * Estimate the value at percentile `p` (0–1) from pre-binned histogram buckets,
+ * linearly interpolating within the bucket whose running total first reaches the
+ * target rank. Returns `null` when there are no observations.
+ *
+ * Used to draw p50/p95 marker lines on the combat distribution charts so the
+ * spread is readable without relying on bar color alone (WCAG 1.4.1).
+ */
+export function percentileFromBuckets(buckets: CountBucket[], p: number): number | null {
+  const total = buckets.reduce((sum, b) => sum + b.count, 0);
+  if (total === 0) return null;
+
+  const target = Math.max(0, Math.min(1, p)) * total;
+  let cumulative = 0;
+  for (const b of buckets) {
+    if (b.count === 0) continue;
+    if (cumulative + b.count >= target) {
+      const within = (target - cumulative) / b.count; // 0–1 position inside this bucket
+      return b.min + (b.max - b.min) * within;
+    }
+    cumulative += b.count;
+  }
+
+  const last = buckets[buckets.length - 1];
+  return last ? last.max : null;
+}

@@ -1,9 +1,8 @@
 'use client';
 
 import { useState } from 'react';
-import { motion } from 'framer-motion';
 import {
-  Clapperboard, BarChart3, FileSearch, Activity, LayoutDashboard, GitCompareArrows,
+  Clapperboard, FileSearch, Activity, LayoutDashboard, GitCompareArrows,
 } from 'lucide-react';
 import { useGameDirector } from '@/hooks/useGameDirector';
 import { DirectorOverview } from './DirectorOverview';
@@ -11,7 +10,8 @@ import { NewSessionPanel } from './NewSessionPanel';
 import { SessionDetail } from './SessionDetail';
 import { FindingsExplorer } from './FindingsExplorer';
 import { RegressionTrackerView } from './RegressionTrackerView';
-import { ACCENT_ORANGE } from '@/lib/chart-colors';
+import { TabBar, type TabItem } from '@/components/ui/TabBar';
+import { ACCENT_ORANGE, STATUS_ERROR, STATUS_BLOCKER } from '@/lib/chart-colors';
 
 type TabId = 'overview' | 'new-session' | 'findings' | 'regressions';
 
@@ -35,6 +35,36 @@ export function GameDirectorModule() {
     director.refresh();
   };
 
+  // Nav urgency pills: open critical+high findings, and undismissed regression alerts.
+  const openCriticalHigh = director.stats?.openCriticalHigh ?? 0;
+  const hasCriticals = (director.stats?.criticalFindings ?? 0) > 0;
+  const activeAlerts = director.stats?.activeAlerts ?? 0;
+
+  const tabs: TabItem<TabId>[] = [
+    { id: 'overview', label: 'Overview', icon: LayoutDashboard },
+    { id: 'new-session', label: 'New Session', icon: Activity },
+    {
+      id: 'findings',
+      label: 'All Findings',
+      icon: FileSearch,
+      badge: openCriticalHigh > 0 ? {
+        count: openCriticalHigh,
+        color: hasCriticals ? STATUS_ERROR : STATUS_BLOCKER,
+        label: `${openCriticalHigh} open critical or high finding${openCriticalHigh !== 1 ? 's' : ''}`,
+      } : undefined,
+    },
+    {
+      id: 'regressions',
+      label: 'Regressions',
+      icon: GitCompareArrows,
+      badge: activeAlerts > 0 ? {
+        count: activeAlerts,
+        color: STATUS_ERROR,
+        label: `${activeAlerts} active regression alert${activeAlerts !== 1 ? 's' : ''}`,
+      } : undefined,
+    },
+  ];
+
   // If a session is selected, show the session detail view
   if (selectedSessionId) {
     const session = director.sessions.find(s => s.id === selectedSessionId);
@@ -51,6 +81,7 @@ export function GameDirectorModule() {
           simulating={director.simulating}
           getFindings={director.getFindings}
           getEvents={director.getEvents}
+          markFixDispatched={director.markFixDispatched}
         />
       );
     }
@@ -76,36 +107,14 @@ export function GameDirectorModule() {
         </div>
 
         {/* Tab bar */}
-        <div className="flex items-center gap-1 border-b border-border">
-          <TabButton
-            label="Overview"
-            icon={LayoutDashboard}
-            active={activeTab === 'overview'}
-            onClick={() => setActiveTab('overview')}
-            accent={ACCENT}
-          />
-          <TabButton
-            label="New Session"
-            icon={Activity}
-            active={activeTab === 'new-session'}
-            onClick={() => setActiveTab('new-session')}
-            accent={ACCENT}
-          />
-          <TabButton
-            label="All Findings"
-            icon={FileSearch}
-            active={activeTab === 'findings'}
-            onClick={() => setActiveTab('findings')}
-            accent={ACCENT}
-          />
-          <TabButton
-            label="Regressions"
-            icon={GitCompareArrows}
-            active={activeTab === 'regressions'}
-            onClick={() => setActiveTab('regressions')}
-            accent={ACCENT}
-          />
-        </div>
+        <TabBar
+          tabs={tabs}
+          activeId={activeTab}
+          onChange={setActiveTab}
+          layoutId="director-tab-indicator"
+          accent={ACCENT}
+          ariaLabel="Game Director sections"
+        />
       </div>
 
       {/* Tab content */}
@@ -130,6 +139,7 @@ export function GameDirectorModule() {
             sessions={director.sessions}
             getFindings={director.getFindings}
             updateTriage={director.updateTriage}
+            markFixDispatched={director.markFixDispatched}
             onNewSession={() => setActiveTab('new-session')}
           />
         )}
@@ -139,39 +149,5 @@ export function GameDirectorModule() {
         )}
       </div>
     </div>
-  );
-}
-
-function TabButton({
-  label,
-  icon: Icon,
-  active,
-  onClick,
-  accent,
-}: {
-  label: string;
-  icon: typeof BarChart3;
-  active: boolean;
-  onClick: () => void;
-  accent: string;
-}) {
-  return (
-    <button
-      onClick={onClick}
-      className={`focus-ring rounded-sm flex items-center gap-1.5 px-3 py-2 text-sm font-medium transition-colors relative ${
-        active ? 'text-text' : 'text-text-muted hover:text-text'
-      }`}
-    >
-      <Icon className="w-3.5 h-3.5" />
-      {label}
-      {active && (
-        <motion.span
-          layoutId="director-tab-indicator"
-          className="absolute bottom-0 left-0 right-0 h-0.5 rounded-t"
-          style={{ backgroundColor: accent }}
-          transition={{ type: 'spring', stiffness: 500, damping: 35 }}
-        />
-      )}
-    </button>
   );
 }

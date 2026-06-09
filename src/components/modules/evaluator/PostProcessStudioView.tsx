@@ -183,7 +183,9 @@ export function PostProcessStudioView() {
             {/* A/B Compare toggle */}
             <button
               onClick={toggleCompareMode}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors ${
+              aria-pressed={compareMode}
+              title="Compare two post-process stacks side by side"
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors focus-ring ${
                 compareMode
                   ? 'bg-cyan-500/10 border-cyan-500/25 text-cyan-400'
                   : 'bg-surface border-border text-text-muted hover:text-text'
@@ -415,7 +417,7 @@ function PresetGallery({
 
 // ── Effect Card ─────────────────────────────────────────────────────────────
 
-function EffectCard({
+export function EffectCard({
   effect,
   isFirst,
   isLast,
@@ -457,36 +459,49 @@ function EffectCard({
         {/* Reorder */}
         <div className="flex flex-col items-center gap-0.5 flex-shrink-0">
           <button
+            type="button"
             onClick={onMoveUp}
             disabled={isFirst}
-            className="p-0 text-text-muted hover:text-text transition-colors disabled:opacity-30"
+            aria-label={`Move ${effect.name} up`}
+            className="p-0 text-text-muted hover:text-text transition-colors disabled:opacity-30 focus-ring"
           >
-            <ChevronUp className="w-3 h-3" />
+            <ChevronUp className="w-3 h-3" aria-hidden="true" />
           </button>
-          <GripVertical className="w-3 h-3 text-border-bright" />
+          <GripVertical className="w-3 h-3 text-border-bright" aria-hidden="true" />
           <button
+            type="button"
             onClick={onMoveDown}
             disabled={isLast}
-            className="p-0 text-text-muted hover:text-text transition-colors disabled:opacity-30"
+            aria-label={`Move ${effect.name} down`}
+            className="p-0 text-text-muted hover:text-text transition-colors disabled:opacity-30 focus-ring"
           >
-            <ChevronDown className="w-3 h-3" />
+            <ChevronDown className="w-3 h-3" aria-hidden="true" />
           </button>
         </div>
 
-        {/* Toggle switch */}
-        <button
-          onClick={onToggle}
-          className="flex-shrink-0 w-8 h-4 rounded-full relative transition-colors"
-          style={{ backgroundColor: effect.enabled ? `${catColor}40` : 'var(--border)' }}
-        >
-          <span
-            className="absolute top-0.5 w-3 h-3 rounded-full transition-all"
-            style={{
-              left: effect.enabled ? '17px' : '2px',
-              backgroundColor: effect.enabled ? catColor : 'var(--text-muted)',
-            }}
-          />
-        </button>
+        {/* Toggle switch + ON/OFF cue — state must not rely on color/position alone */}
+        <div className="flex items-center gap-1 flex-shrink-0">
+          <button
+            type="button"
+            onClick={onToggle}
+            role="switch"
+            aria-checked={effect.enabled}
+            aria-label={`${effect.name} effect ${effect.enabled ? 'enabled' : 'disabled'}`}
+            className="w-8 h-4 rounded-full relative transition-colors focus-ring"
+            style={{ backgroundColor: effect.enabled ? `${catColor}40` : 'var(--border)' }}
+          >
+            <span
+              className="absolute top-0.5 w-3 h-3 rounded-full transition-all"
+              style={{
+                left: effect.enabled ? '17px' : '2px',
+                backgroundColor: effect.enabled ? catColor : 'var(--text-muted)',
+              }}
+            />
+          </button>
+          <span aria-hidden="true" className="w-6 text-[9px] font-mono font-bold tracking-wider text-text-muted">
+            {effect.enabled ? 'ON' : 'OFF'}
+          </span>
+        </div>
 
         {/* Icon */}
         <div
@@ -499,8 +514,13 @@ function EffectCard({
           <Icon className="w-3 h-3" style={{ color: catColor }} />
         </div>
 
-        {/* Name + description */}
-        <button onClick={onExpand} className="flex-1 min-w-0 text-left group">
+        {/* Name + description (its own text is the accessible name; the chevron carries the explicit Expand/Collapse label) */}
+        <button
+          type="button"
+          onClick={onExpand}
+          aria-expanded={isExpanded}
+          className="flex-1 min-w-0 text-left group focus-ring rounded"
+        >
           <div className="flex items-center gap-1.5">
             <span className="text-xs font-semibold text-text">{effect.name}</span>
             <span className="text-2xs text-text-muted font-mono">{effect.priority + 1}</span>
@@ -523,10 +543,16 @@ function EffectCard({
         )}
 
         {/* Expand arrow */}
-        <button onClick={onExpand} className="flex-shrink-0 p-0.5">
+        <button
+          type="button"
+          onClick={onExpand}
+          aria-expanded={isExpanded}
+          aria-label={`${isExpanded ? 'Collapse' : 'Expand'} ${effect.name} parameters`}
+          className="flex-shrink-0 p-0.5 rounded focus-ring"
+        >
           {isExpanded
-            ? <ChevronUp className="w-3 h-3 text-text-muted" />
-            : <ChevronDown className="w-3 h-3 text-text-muted" />
+            ? <ChevronUp className="w-3 h-3 text-text-muted" aria-hidden="true" />
+            : <ChevronDown className="w-3 h-3 text-text-muted" aria-hidden="true" />
           }
         </button>
       </div>
@@ -573,7 +599,7 @@ function EffectCard({
 
 // ── Parameter Slider ────────────────────────────────────────────────────────
 
-function ParamSlider({
+export function ParamSlider({
   param,
   color,
   explainMode,
@@ -584,11 +610,14 @@ function ParamSlider({
   explainMode: boolean;
   onChange: (value: number) => void;
 }) {
+  const [focused, setFocused] = useState(false);
   const isModified = param.value !== param.defaultValue;
   const pct = ((param.value - param.min) / (param.max - param.min)) * 100;
   const plain = param.plain;
   // Explain mode only kicks in when the param actually carries plain metadata.
   const explain = explainMode && plain != null;
+  // Accessible name: the plain-language label when explaining, else the UE param name.
+  const sliderLabel = explain && plain ? plain.label : param.name;
 
   return (
     <div className="px-2.5 py-2 rounded-lg bg-[#0a0a1e] border border-border">
@@ -648,23 +677,30 @@ function ParamSlider({
             className="absolute left-0 h-1 rounded-full transition-all"
             style={{ width: `${pct}%`, backgroundColor: `${color}60` }}
           />
-          {/* Input */}
+          {/* Input — visually hidden over the custom track; focus drives the thumb's ring */}
           <input
             type="range"
+            aria-label={sliderLabel}
             min={param.min}
             max={param.max}
             step={param.step}
             value={param.value}
             onChange={(e) => onChange(Number(e.target.value))}
+            onFocus={() => setFocused(true)}
+            onBlur={() => setFocused(false)}
             className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
           />
-          {/* Thumb indicator */}
+          {/* Thumb indicator — mirrors the shared .focus-ring token when the input is focused */}
           <div
+            data-testid="pp-param-thumb"
             className="absolute w-3 h-3 rounded-full border-2 pointer-events-none transition-all"
             style={{
               left: `calc(${pct}% - 6px)`,
               backgroundColor: 'var(--surface)',
               borderColor: color,
+              boxShadow: focused
+                ? '0 0 0 2px var(--background), 0 0 0 4px var(--focus-accent, #60a5fa)'
+                : undefined,
             }}
           />
         </div>

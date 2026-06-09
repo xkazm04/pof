@@ -19,7 +19,7 @@ import type {
   ShotgunSurgery,
   RefactoringItem,
 } from '@/types/codebase-archeologist';
-import { SEVERITY_TOKENS, scoreBandToken, STATUS_SUCCESS, STATUS_STALE, type SeverityToken } from '@/lib/chart-colors';
+import { SEVERITY_TOKENS, scoreBandToken, severityAccentCard, STATUS_SUCCESS, STATUS_STALE, type SeverityToken } from '@/lib/chart-colors';
 
 // ── Stable empty references (Zustand selector safety) ──
 
@@ -388,9 +388,10 @@ function AntiPatternsTab({
 
 function AntiPatternRow({ hit }: { hit: AntiPatternHit }) {
   const [expanded, setExpanded] = useState(false);
+  const cfg = SEVERITY_CONFIG[hit.severity];
 
   return (
-    <div>
+    <div className="border-l-[3px]" style={severityAccentCard(cfg)}>
       <button
         onClick={() => setExpanded(!expanded)}
         className="w-full flex items-center gap-2 px-2 py-1.5 text-left hover:bg-surface-hover/30 transition-colors text-xs"

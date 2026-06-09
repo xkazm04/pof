@@ -7,6 +7,8 @@ import type {
   GlossaryEntry,
   LocalizationConfig,
   StringContext,
+  TranslationQACheck,
+  TranslationQASeverity,
 } from '@/types/localization-pipeline';
 
 /* ---- Supported Locales ------------------------------------------- */
@@ -87,6 +89,22 @@ export const DEFAULT_GLOSSARY: GlossaryEntry[] = [
   { sourceTerm: 'AttributeSet',    context: 'unknown',          translations: {}, doNotTranslate: true },
 ];
 
+/* ---- Confidence thresholds --------------------------------------- */
+
+/**
+ * Detection-confidence floor. Auto-detected strings never report a confidence
+ * below this, and the UI's "low confidence" filters compare against it. Single
+ * source for the 0.7 magic number shared by the scan engine and the pipeline view.
+ */
+export const LOW_CONFIDENCE = 0.7;
+
+/**
+ * Default review gate. Translations at or above this confidence are auto-applied
+ * (status 'translated'); below it they are flagged 'needs_review'. Overridable per
+ * run via {@link LocalizationConfig.autoApplyThreshold}, which the engine honors.
+ */
+export const REVIEW_GATE = 0.85;
+
 /* ---- Default Config ---------------------------------------------- */
 
 export const DEFAULT_CONFIG: LocalizationConfig = {
@@ -107,7 +125,7 @@ export const DEFAULT_CONFIG: LocalizationConfig = {
     'arpg-polish',
   ],
   glossary: DEFAULT_GLOSSARY,
-  autoApplyThreshold: 0.85,
+  autoApplyThreshold: REVIEW_GATE,
 };
 
 /* ---- Hazard descriptions ----------------------------------------- */
@@ -124,6 +142,53 @@ export const HAZARD_DESCRIPTIONS: Record<string, { label: string; description: s
   text_in_texture:     { label: 'Text in Texture',        description: 'Text baked into image/texture assets cannot be localized through string tables' },
   hardcoded_layout:    { label: 'Hardcoded Layout',       description: 'Fixed-width UI element may not accommodate RTL text or longer translations' },
 };
+
+/* ---- Translation QA check metadata ------------------------------- */
+
+/** Display label + canonical severity for each target-side QA check. */
+export const QA_CHECKS: Record<
+  TranslationQACheck,
+  { label: string; severity: TranslationQASeverity; description: string }
+> = {
+  placeholder_parity: {
+    label: 'Placeholder Parity',
+    severity: 'critical',
+    description: 'Format tokens like {0}/{1} were dropped, added, or altered — a missing token crashes UE5 FText::Format at runtime',
+  },
+  empty: {
+    label: 'Empty Result',
+    severity: 'critical',
+    description: 'The translation is blank — the localized build would render nothing for this string',
+  },
+  number_parity: {
+    label: 'Number Parity',
+    severity: 'warning',
+    description: 'A number present in the source is missing or changed in the translation (mistranslated damage/cost/duration)',
+  },
+  untranslated: {
+    label: 'Untranslated',
+    severity: 'warning',
+    description: 'The translation is identical to the English source and is not a known do-not-translate / glossary term',
+  },
+  glossary: {
+    label: 'Glossary Compliance',
+    severity: 'warning',
+    description: 'A glossary term was not rendered with its approved, consistent translation',
+  },
+  whitespace: {
+    label: 'Whitespace',
+    severity: 'info',
+    description: 'Leading/trailing or doubled whitespace that should be trimmed and collapsed',
+  },
+};
+
+/**
+ * A QA finding "blocks ship" (turns the per-locale ready-to-ship badge red)
+ * when it is critical or warning. Info-level findings are advisory only.
+ */
+export function qaBlocksShip(severity: TranslationQASeverity): boolean {
+  return severity === 'critical' || severity === 'warning';
+}
 
 /* ---- Sample code patterns for scanning --------------------------- */
 

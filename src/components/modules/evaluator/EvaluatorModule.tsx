@@ -3,8 +3,9 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { MODULE_COLORS } from '@/lib/chart-colors';
 import { useScrollRestoration } from '@/hooks/useScrollRestoration';
-import { Radar, BarChart3, Activity, Link2, LayoutDashboard, ScanSearch, Grid3x3, FileText, ShoppingBag, BookOpen, Coins, Gauge, Swords, Globe, Bug, HeartPulse, Palette, Dna, ShieldCheck, Network, Layers, Calendar, CalendarDays, ChevronLeft, ChevronRight, GitBranch, Pickaxe, SearchCode, Stars, Hammer } from 'lucide-react';
+import { Radar, BarChart3, Activity, Link2, LayoutDashboard, ScanSearch, Grid3x3, FileText, ShoppingBag, BookOpen, Coins, Gauge, Swords, Globe, Bug, HeartPulse, Palette, Dna, ShieldCheck, Network, Layers, Calendar, CalendarDays, ChevronLeft, ChevronRight, GitBranch, Pickaxe, SearchCode, Stars, Hammer, Sparkles, Wallet } from 'lucide-react';
 import { SessionAnalyticsDashboard } from './SessionAnalyticsDashboard';
+import { SpendDashboard } from './SpendDashboard';
 import { AggregateQualityDashboard } from './AggregateQualityDashboard';
 import { CrossModuleFeatureDashboard } from './CrossModuleFeatureDashboard';
 import { DependencyGraph } from './DependencyGraph';
@@ -28,14 +29,18 @@ import { NexusView } from './NexusView';
 import { FeatureConstellation } from './FeatureConstellation';
 import { CrossModuleOverlapPanel } from './CrossModuleOverlapPanel';
 import { WeeklyDigestView } from './WeeklyDigestView';
+import { ProjectWrappedView } from './ProjectWrappedView';
 import { CalendarRoadmapView } from './CalendarRoadmapView';
 import { WorkflowOrchestratorView } from './WorkflowOrchestratorView';
 import { CodebaseArcheologistView } from './CodebaseArcheologistView';
 import { AssetCodeOracleView } from './AssetCodeOracleView';
 import { ErrorMemoryPanel } from './ErrorMemoryPanel';
 import { BuildHealthDashboard } from './BuildHealthDashboard';
+import { EvaluatorCoachmark } from './EvaluatorCoachmark';
+import { Tooltip } from '@/components/ui/Tooltip';
+import { EVALUATOR_TAB_INFO, type EvaluatorTabId } from '@/lib/evaluator/tab-glossary';
 
-type TabId = 'overview' | 'nexus' | 'constellation' | 'features' | 'conflicts' | 'quality' | 'dependencies' | 'analytics' | 'scanner' | 'deep-eval' | 'gdd' | 'compliance' | 'asset-scout' | 'patterns' | 'economy' | 'perf' | 'combat' | 'i18n' | 'crashes' | 'health' | 'build-health' | 'pp-studio' | 'evolution' | 'digest' | 'roadmap' | 'workflows' | 'archeologist' | 'oracle';
+type TabId = EvaluatorTabId;
 
 export function EvaluatorModule() {
   const [activeTab, setActiveTab] = useState<TabId>('overview');
@@ -72,43 +77,55 @@ export function EvaluatorModule() {
         {/* Tab bar with scroll overflow handling */}
         <ScrollableTabBar tabBarRef={tabBarRef}>
           {/* ── Analysis ── */}
-          <TabButton label="Overview" icon={LayoutDashboard} active={activeTab === 'overview'} onClick={() => switchTab('overview')} onArrowNav={handleTabArrowNav} />
-          <TabButton label="Nexus" icon={Network} active={activeTab === 'nexus'} onClick={() => switchTab('nexus')} onArrowNav={handleTabArrowNav} />
-          <TabButton label="Constellation" icon={Stars} active={activeTab === 'constellation'} onClick={() => switchTab('constellation')} onArrowNav={handleTabArrowNav} />
-          <TabButton label="Deep Eval" icon={ScanSearch} active={activeTab === 'deep-eval'} onClick={() => switchTab('deep-eval')} onArrowNav={handleTabArrowNav} />
-          <TabButton label="Features" icon={Grid3x3} active={activeTab === 'features'} onClick={() => switchTab('features')} onArrowNav={handleTabArrowNav} />
-          <TabButton label="Conflicts" icon={Layers} active={activeTab === 'conflicts'} onClick={() => switchTab('conflicts')} onArrowNav={handleTabArrowNav} />
-          <TabButton label="Dependencies" icon={Link2} active={activeTab === 'dependencies'} onClick={() => switchTab('dependencies')} onArrowNav={handleTabArrowNav} />
-          <TabButton label="Analytics" icon={BarChart3} active={activeTab === 'analytics'} onClick={() => switchTab('analytics')} onArrowNav={handleTabArrowNav} />
+          <TabButton tabId="overview" icon={LayoutDashboard} active={activeTab === 'overview'} onClick={() => switchTab('overview')} onArrowNav={handleTabArrowNav} />
+          <TabButton tabId="nexus" icon={Network} active={activeTab === 'nexus'} onClick={() => switchTab('nexus')} onArrowNav={handleTabArrowNav} />
+          <TabButton tabId="constellation" icon={Stars} active={activeTab === 'constellation'} onClick={() => switchTab('constellation')} onArrowNav={handleTabArrowNav} />
+          <TabButton tabId="deep-eval" icon={ScanSearch} active={activeTab === 'deep-eval'} onClick={() => switchTab('deep-eval')} onArrowNav={handleTabArrowNav} />
+          <TabButton tabId="features" icon={Grid3x3} active={activeTab === 'features'} onClick={() => switchTab('features')} onArrowNav={handleTabArrowNav} />
+          <TabButton tabId="conflicts" icon={Layers} active={activeTab === 'conflicts'} onClick={() => switchTab('conflicts')} onArrowNav={handleTabArrowNav} />
+          <TabButton tabId="dependencies" icon={Link2} active={activeTab === 'dependencies'} onClick={() => switchTab('dependencies')} onArrowNav={handleTabArrowNav} />
+          <TabButton tabId="analytics" icon={BarChart3} active={activeTab === 'analytics'} onClick={() => switchTab('analytics')} onArrowNav={handleTabArrowNav} />
+          <TabButton tabId="spend" icon={Wallet} active={activeTab === 'spend'} onClick={() => switchTab('spend')} onArrowNav={handleTabArrowNav} />
 
           <TabDivider label="Quality" />
-          <TabButton label="Quality" icon={Activity} active={activeTab === 'quality'} onClick={() => switchTab('quality')} onArrowNav={handleTabArrowNav} />
-          <TabButton label="Scanner" icon={Radar} active={activeTab === 'scanner'} onClick={() => switchTab('scanner')} onArrowNav={handleTabArrowNav} />
-          <TabButton label="Compliance" icon={ShieldCheck} active={activeTab === 'compliance'} onClick={() => switchTab('compliance')} onArrowNav={handleTabArrowNav} />
-          <TabButton label="Health" icon={HeartPulse} active={activeTab === 'health'} onClick={() => switchTab('health')} onArrowNav={handleTabArrowNav} />
-          <TabButton label="Build Health" icon={Hammer} active={activeTab === 'build-health'} onClick={() => switchTab('build-health')} onArrowNav={handleTabArrowNav} />
-          <TabButton label="Archeologist" icon={Pickaxe} active={activeTab === 'archeologist'} onClick={() => switchTab('archeologist')} onArrowNav={handleTabArrowNav} />
-          <TabButton label="Oracle" icon={SearchCode} active={activeTab === 'oracle'} onClick={() => switchTab('oracle')} onArrowNav={handleTabArrowNav} />
+          <TabButton tabId="quality" icon={Activity} active={activeTab === 'quality'} onClick={() => switchTab('quality')} onArrowNav={handleTabArrowNav} />
+          <TabButton tabId="scanner" icon={Radar} active={activeTab === 'scanner'} onClick={() => switchTab('scanner')} onArrowNav={handleTabArrowNav} />
+          <TabButton tabId="compliance" icon={ShieldCheck} active={activeTab === 'compliance'} onClick={() => switchTab('compliance')} onArrowNav={handleTabArrowNav} />
+          <TabButton tabId="health" icon={HeartPulse} active={activeTab === 'health'} onClick={() => switchTab('health')} onArrowNav={handleTabArrowNav} />
+          <TabButton tabId="build-health" icon={Hammer} active={activeTab === 'build-health'} onClick={() => switchTab('build-health')} onArrowNav={handleTabArrowNav} />
+          <TabButton tabId="archeologist" icon={Pickaxe} active={activeTab === 'archeologist'} onClick={() => switchTab('archeologist')} onArrowNav={handleTabArrowNav} />
+          <TabButton tabId="oracle" icon={SearchCode} active={activeTab === 'oracle'} onClick={() => switchTab('oracle')} onArrowNav={handleTabArrowNav} />
 
           <TabDivider label="Simulation" />
-          <TabButton label="Economy" icon={Coins} active={activeTab === 'economy'} onClick={() => switchTab('economy')} onArrowNav={handleTabArrowNav} />
-          <TabButton label="Combat" icon={Swords} active={activeTab === 'combat'} onClick={() => switchTab('combat')} onArrowNav={handleTabArrowNav} />
-          <TabButton label="Perf" icon={Gauge} active={activeTab === 'perf'} onClick={() => switchTab('perf')} onArrowNav={handleTabArrowNav} />
+          <TabButton tabId="economy" icon={Coins} active={activeTab === 'economy'} onClick={() => switchTab('economy')} onArrowNav={handleTabArrowNav} />
+          <TabButton tabId="combat" icon={Swords} active={activeTab === 'combat'} onClick={() => switchTab('combat')} onArrowNav={handleTabArrowNav} />
+          <TabButton tabId="perf" icon={Gauge} active={activeTab === 'perf'} onClick={() => switchTab('perf')} onArrowNav={handleTabArrowNav} />
 
           <TabDivider label="Pipeline" />
-          <TabButton label="GDD" icon={FileText} active={activeTab === 'gdd'} onClick={() => switchTab('gdd')} onArrowNav={handleTabArrowNav} />
-          <TabButton label="Asset Scout" icon={ShoppingBag} active={activeTab === 'asset-scout'} onClick={() => switchTab('asset-scout')} onArrowNav={handleTabArrowNav} />
-          <TabButton label="Patterns" icon={BookOpen} active={activeTab === 'patterns'} onClick={() => switchTab('patterns')} onArrowNav={handleTabArrowNav} />
-          <TabButton label="i18n" icon={Globe} active={activeTab === 'i18n'} onClick={() => switchTab('i18n')} onArrowNav={handleTabArrowNav} />
-          <TabButton label="Crashes" icon={Bug} active={activeTab === 'crashes'} onClick={() => switchTab('crashes')} onArrowNav={handleTabArrowNav} />
-          <TabButton label="PP Studio" icon={Palette} active={activeTab === 'pp-studio'} onClick={() => switchTab('pp-studio')} onArrowNav={handleTabArrowNav} />
-          <TabButton label="Workflows" icon={GitBranch} active={activeTab === 'workflows'} onClick={() => switchTab('workflows')} onArrowNav={handleTabArrowNav} />
-          <TabButton label="Roadmap" icon={CalendarDays} active={activeTab === 'roadmap'} onClick={() => switchTab('roadmap')} onArrowNav={handleTabArrowNav} />
+          <TabButton tabId="gdd" icon={FileText} active={activeTab === 'gdd'} onClick={() => switchTab('gdd')} onArrowNav={handleTabArrowNav} />
+          <TabButton tabId="asset-scout" icon={ShoppingBag} active={activeTab === 'asset-scout'} onClick={() => switchTab('asset-scout')} onArrowNav={handleTabArrowNav} />
+          <TabButton tabId="patterns" icon={BookOpen} active={activeTab === 'patterns'} onClick={() => switchTab('patterns')} onArrowNav={handleTabArrowNav} />
+          <TabButton tabId="i18n" icon={Globe} active={activeTab === 'i18n'} onClick={() => switchTab('i18n')} onArrowNav={handleTabArrowNav} />
+          <TabButton tabId="crashes" icon={Bug} active={activeTab === 'crashes'} onClick={() => switchTab('crashes')} onArrowNav={handleTabArrowNav} />
+          <TabButton tabId="pp-studio" icon={Palette} active={activeTab === 'pp-studio'} onClick={() => switchTab('pp-studio')} onArrowNav={handleTabArrowNav} />
+          <TabButton tabId="workflows" icon={GitBranch} active={activeTab === 'workflows'} onClick={() => switchTab('workflows')} onArrowNav={handleTabArrowNav} />
+          <TabButton tabId="roadmap" icon={CalendarDays} active={activeTab === 'roadmap'} onClick={() => switchTab('roadmap')} onArrowNav={handleTabArrowNav} />
 
           <TabDivider label="Intelligence" />
-          <TabButton label="Evolution" icon={Dna} active={activeTab === 'evolution'} onClick={() => switchTab('evolution')} onArrowNav={handleTabArrowNav} />
-          <TabButton label="Digest" icon={Calendar} active={activeTab === 'digest'} onClick={() => switchTab('digest')} onArrowNav={handleTabArrowNav} />
+          <TabButton tabId="evolution" icon={Dna} active={activeTab === 'evolution'} onClick={() => switchTab('evolution')} onArrowNav={handleTabArrowNav} />
+          <TabButton tabId="digest" icon={Calendar} active={activeTab === 'digest'} onClick={() => switchTab('digest')} onArrowNav={handleTabArrowNav} />
+          <TabButton tabId="wrapped" icon={Sparkles} active={activeTab === 'wrapped'} onClick={() => switchTab('wrapped')} onArrowNav={handleTabArrowNav} />
         </ScrollableTabBar>
+
+        {/* Plain-language layer: first-run coachmark + always-on description of the active tab */}
+        <div className="pt-3 pb-1 space-y-2">
+          <EvaluatorCoachmark />
+          <p className="text-xs text-text-muted" aria-live="polite" data-testid="evaluator-active-tab-desc">
+            <span className="font-medium text-text">{EVALUATOR_TAB_INFO[activeTab].plain}</span>
+            {' — '}
+            {EVALUATOR_TAB_INFO[activeTab].description}
+          </p>
+        </div>
       </div>
 
       {/* Tab content */}
@@ -147,6 +164,10 @@ export function EvaluatorModule() {
 
         {activeTab === 'analytics' && (
           <SessionAnalyticsDashboard onNavigateTab={(t) => switchTab(t as TabId)} />
+        )}
+
+        {activeTab === 'spend' && (
+          <SpendDashboard />
         )}
 
         {activeTab === 'scanner' && (
@@ -204,7 +225,7 @@ export function EvaluatorModule() {
         )}
 
         {activeTab === 'health' && (
-          <HolisticHealthView />
+          <HolisticHealthView onNavigateTab={(t) => switchTab(t as TabId)} />
         )}
 
         {activeTab === 'build-health' && (
@@ -221,6 +242,10 @@ export function EvaluatorModule() {
 
         {activeTab === 'digest' && (
           <WeeklyDigestView />
+        )}
+
+        {activeTab === 'wrapped' && (
+          <ProjectWrappedView />
         )}
 
         {activeTab === 'workflows' && (
@@ -330,37 +355,42 @@ function ScrollableTabBar({ children, tabBarRef }: { children: React.ReactNode; 
 }
 
 function TabButton({
-  label,
+  tabId,
   icon: Icon,
   active,
   onClick,
   onArrowNav,
 }: {
-  label: string;
+  tabId: TabId;
   icon: typeof Radar;
   active: boolean;
   onClick: () => void;
   onArrowNav?: (e: React.KeyboardEvent<HTMLButtonElement>) => void;
 }) {
+  // Label, plain alias, and description all come from the single glossary so the
+  // chip text, its tooltip, and the subtitle never drift apart.
+  const info = EVALUATOR_TAB_INFO[tabId];
   return (
-    <button
-      role="tab"
-      aria-selected={active}
-      tabIndex={active ? 0 : -1}
-      onClick={onClick}
-      onKeyDown={onArrowNav}
-      className={`flex items-center gap-1.5 px-3 py-2 text-xs font-medium transition-colors relative ${
-        active ? 'text-text' : 'text-text-muted hover:text-text'
-      }`}
-    >
-      <Icon className="w-3 h-3" />
-      {label}
-      {active && (
-        <span
-          className="absolute bottom-0 left-0 right-0 h-0.5 rounded-t"
-          style={{ backgroundColor: MODULE_COLORS.evaluator }}
-        />
-      )}
-    </button>
+    <Tooltip content={`${info.plain} — ${info.description}`} multiline placement="bottom">
+      <button
+        role="tab"
+        aria-selected={active}
+        tabIndex={active ? 0 : -1}
+        onClick={onClick}
+        onKeyDown={onArrowNav}
+        className={`flex items-center gap-1.5 px-3 py-2 text-xs font-medium transition-colors relative ${
+          active ? 'text-text' : 'text-text-muted hover:text-text'
+        }`}
+      >
+        <Icon className="w-3 h-3" />
+        {info.label}
+        {active && (
+          <span
+            className="absolute bottom-0 left-0 right-0 h-0.5 rounded-t"
+            style={{ backgroundColor: MODULE_COLORS.evaluator }}
+          />
+        )}
+      </button>
+    </Tooltip>
   );
 }

@@ -14,7 +14,7 @@ interface KPICardProps {
    * for full control, or a plain `<Icon />` and let `accent` colorize it via the wrapper.
    */
   icon?: ReactNode;
-  label: string;
+  label: ReactNode;
   value: ReactNode;
   /** Optional sub-line (e.g. delta, target, secondary metric). */
   sub?: ReactNode;

@@ -76,6 +76,11 @@ export interface ProjectHealthSummary {
   completedChecklistItems: number;
   /** Current quality score from latest evaluator scan */
   currentQualityScore: number | null;
+  /**
+   * Performance score 0-100 fused from the latest profiling triage
+   * (`TriageResult.overallScore`), or null when no trace has been triaged.
+   */
+  performanceScore: number | null;
   /** Quality trend direction */
   qualityTrend: 'improving' | 'stable' | 'declining' | 'unknown';
   /** Average velocity (items per week) */
@@ -101,4 +106,43 @@ export interface SubsystemSignal {
   status: 'healthy' | 'warning' | 'critical' | 'inactive';
   metric: string;
   detail: string;
+  /**
+   * Optional evaluator tab id this signal drills into when clicked
+   * (e.g. `'perf'`, `'crashes'`). Omitted for signals with no source view.
+   */
+  linkTab?: string;
+}
+
+/**
+ * Latest performance-triage snapshot fed into the holistic health fusion.
+ * Sourced client-side from `usePerformanceProfilingStore` (the triage is held
+ * in-memory per session — there is no server-side "latest triage" record).
+ */
+export interface PerfHealthInput {
+  /** Triage overall score 0-100 (higher = better performance). */
+  overallScore: number;
+  /** Dominant bottleneck from the triage (frame-budget category or 'balanced'). */
+  bottleneck: string;
+  /** Average FPS of the profiled session, if known. */
+  avgFPS: number | null;
+  /** Number of triage findings. */
+  findingCount: number;
+  /** Profiling session name for context, if known. */
+  sessionName: string | null;
+}
+
+/**
+ * Crash-analyzer snapshot fed into the holistic health fusion.
+ * Derived from `CrashStats` (server-persisted via `/api/crash-analyzer`).
+ */
+export interface CrashHealthInput {
+  totalCrashes: number;
+  /** Crashes seen in the last 24 hours. */
+  recentCrashes: number;
+  /** Count of critical-severity crashes. */
+  criticalCrashes: number;
+  /** Number of systemic (recurring) crash patterns. */
+  systemicIssues: number;
+  /** Module with the most crashes ('none' when empty). */
+  mostAffectedModule: string;
 }

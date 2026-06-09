@@ -5,24 +5,15 @@
 
 import { NextRequest } from 'next/server';
 import { apiSuccess, apiError } from '@/lib/api-utils';
-
-interface TaskRecord {
-  taskId: string;
-  sessionId: string;
-  status: 'running' | 'completed' | 'failed';
-  startedAt: number;
-  completedAt?: number;
-  requirementName?: string;
-}
+import { UI_TIMEOUTS } from '@/lib/constants';
+import type { TaskRecord, TaskStatus, TaskRegistryAction } from '@/types/cli-task-registry';
 
 const taskRegistry = new Map<string, TaskRecord>();
-const RECORD_TTL = 60 * 60 * 1000;
-const TASK_TIMEOUT = 10 * 60 * 1000;
 
 function cleanupOldRecords() {
   const now = Date.now();
   for (const [key, record] of taskRegistry.entries()) {
-    if (now - record.startedAt > RECORD_TTL) taskRegistry.delete(key);
+    if (now - record.startedAt > UI_TIMEOUTS.taskRecordTtl) taskRegistry.delete(key);
   }
 }
 
@@ -36,7 +27,7 @@ export async function GET(request: NextRequest) {
   if (taskId) {
     const record = taskRegistry.get(taskId);
     if (!record) return apiSuccess({ found: false, taskId });
-    const isStale = record.status === 'running' && (Date.now() - record.startedAt) > TASK_TIMEOUT;
+    const isStale = record.status === 'running' && (Date.now() - record.startedAt) > UI_TIMEOUTS.taskTimeout;
     return apiSuccess({ found: true, ...record, isStale });
   }
 
@@ -59,7 +50,13 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { action, taskId, sessionId, status, requirementName } = body;
+    const { action, taskId, sessionId, status, requirementName } = body as {
+      action?: TaskRegistryAction;
+      taskId?: string;
+      sessionId?: string;
+      status?: TaskStatus;
+      requirementName?: string;
+    };
 
     if (!taskId) return apiError('taskId is required', 400);
     cleanupOldRecords();
@@ -72,7 +69,7 @@ export async function POST(request: NextRequest) {
           if (record.sessionId === sessionId && record.status === 'running') { existingRunning = record; break; }
         }
         if (existingRunning && existingRunning.taskId !== taskId) {
-          const isStale = (Date.now() - existingRunning.startedAt) > TASK_TIMEOUT;
+          const isStale = (Date.now() - existingRunning.startedAt) > UI_TIMEOUTS.taskTimeout;
           if (isStale) { existingRunning.status = 'failed'; existingRunning.completedAt = Date.now(); }
           else return apiError('Session already has a running task', 409, { runningTask: existingRunning });
         }

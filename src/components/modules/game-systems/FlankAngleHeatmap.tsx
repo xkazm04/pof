@@ -9,17 +9,19 @@ import {
   heatmapScale,
 } from '@/lib/chart-colors';
 import { arcPath } from '@/components/ui/svg/arc-helpers';
+import { polarSvgLayout } from '@/components/ui/svg/polar-layout';
+import { useDragAngle } from '@/hooks/useDragAngle';
+import { computeFlankAngle, ringPoint, forwardVector } from '@/lib/ai-director/eqs-geometry';
+import { EQS_ATTACK_POSITIONS, eqsFloat } from '@/lib/ai-director/eqs-defaults';
 
 // ── Constants matching C++ defaults ──────────────────────────────────────────
+// From the single-source EQS defaults module (see `eqs-defaults.ts`).
 
-const ATTACK_DISTANCE = 200;
-const NUMBER_OF_POINTS = 12;
+const ATTACK_DISTANCE = EQS_ATTACK_POSITIONS.attackDistance;
+const NUMBER_OF_POINTS = EQS_ATTACK_POSITIONS.numberOfPoints;
 
 // SVG layout
-const SVG_SIZE = 360;
-const SVG_CENTER = SVG_SIZE / 2;
-const SVG_PADDING = 40;
-const DRAW_RADIUS = (SVG_SIZE - SVG_PADDING * 2) / 2;
+const { size: SVG_SIZE, center: SVG_CENTER, radius: DRAW_RADIUS } = polarSvgLayout(360, 40);
 
 // ── Flank angle color: 0°=red(front) → 90°=yellow(side) → 180°=green(behind)
 
@@ -28,27 +30,10 @@ function flankColor(angleDeg: number): string {
   return heatmapScale(Math.min(angleDeg / 180, 1));
 }
 
-// ── Compute flank angle exactly like C++ ─────────────────────────────────────
-
-function computeFlankAngle(
-  targetForwardX: number,
-  targetForwardY: number,
-  pointX: number,
-  pointY: number,
-): number {
-  // DirToItem = normalize(point - origin) — origin is (0,0) in our coordinate space
-  const len = Math.sqrt(pointX * pointX + pointY * pointY);
-  if (len < 0.001) return 0;
-  const dirX = pointX / len;
-  const dirY = pointY / len;
-
-  // dot(TargetForward, DirToItem)
-  const dot = targetForwardX * dirX + targetForwardY * dirY;
-  const clampedDot = Math.max(-1, Math.min(1, dot));
-  return Math.acos(clampedDot) * (180 / Math.PI);
-}
-
 // ── Generate attack ring points (matches C++) ────────────────────────────────
+// Flank-angle scoring comes from the shared `@/lib/ai-director/eqs-geometry`
+// helpers — the single source of truth that mirrors the C++
+// UEnvQueryTest_FlankAngle (also used by the squad simulation engine).
 
 interface RingPoint {
   x: number;
@@ -62,14 +47,12 @@ function generateRingPoints(
   numPoints: number,
   forwardAngleRad: number,
 ): RingPoint[] {
-  const fwdX = Math.cos(forwardAngleRad);
-  const fwdY = Math.sin(forwardAngleRad);
+  const { x: fwdX, y: fwdY } = forwardVector(forwardAngleRad);
   const angleStep = (2 * Math.PI) / numPoints;
 
   return Array.from({ length: numPoints }, (_, i) => {
     const angle = angleStep * i;
-    const x = Math.cos(angle) * ATTACK_DISTANCE;
-    const y = Math.sin(angle) * ATTACK_DISTANCE;
+    const { x, y } = ringPoint(angle, ATTACK_DISTANCE);
     const flankDeg = computeFlankAngle(fwdX, fwdY, x, y);
     return { x, y, angle, flankDeg, color: flankColor(flankDeg) };
   });
@@ -81,14 +64,12 @@ function generateHeatmapArcs(
   forwardAngleRad: number,
   segments: number = 72,
 ): { startAngle: number; endAngle: number; flankDeg: number; color: string }[] {
-  const fwdX = Math.cos(forwardAngleRad);
-  const fwdY = Math.sin(forwardAngleRad);
+  const { x: fwdX, y: fwdY } = forwardVector(forwardAngleRad);
   const step = (2 * Math.PI) / segments;
 
   return Array.from({ length: segments }, (_, i) => {
     const midAngle = step * i + step / 2;
-    const px = Math.cos(midAngle);
-    const py = Math.sin(midAngle);
+    const { x: px, y: py } = ringPoint(midAngle, 1);
     const flankDeg = computeFlankAngle(fwdX, fwdY, px, py);
     return {
       startAngle: step * i,
@@ -105,9 +86,11 @@ export function FlankAngleHeatmap() {
   // Forward direction as angle in radians (0 = right/east, PI/2 = down/south in SVG)
   // Default: pointing up (north) = -PI/2
   const [forwardAngle, setForwardAngle] = useState(-Math.PI / 2);
-  const [isDragging, setIsDragging] = useState(false);
   const [hoveredPoint, setHoveredPoint] = useState<number | null>(null);
   const svgRef = useRef<SVGSVGElement>(null);
+
+  // Drag the cyan handle to rotate the forward vector — shared pointer math.
+  const drag = useDragAngle(svgRef, SVG_CENTER, setForwardAngle);
 
   const scale = DRAW_RADIUS / ATTACK_DISTANCE;
 
@@ -127,26 +110,6 @@ export function FlankAngleHeatmap() {
   );
 
   const resetForward = useCallback(() => setForwardAngle(-Math.PI / 2), []);
-
-  // Drag handler to rotate forward vector
-  const handlePointerDown = useCallback(() => {
-    setIsDragging(true);
-  }, []);
-
-  const handlePointerMove = useCallback(
-    (e: React.PointerEvent<SVGSVGElement>) => {
-      if (!isDragging || !svgRef.current) return;
-      const rect = svgRef.current.getBoundingClientRect();
-      const x = e.clientX - rect.left - SVG_CENTER;
-      const y = e.clientY - rect.top - SVG_CENTER;
-      setForwardAngle(Math.atan2(y, x));
-    },
-    [isDragging],
-  );
-
-  const handlePointerUp = useCallback(() => {
-    setIsDragging(false);
-  }, []);
 
   // Forward arrow endpoint
   const arrowLen = DRAW_RADIUS * 0.85;
@@ -198,10 +161,10 @@ export function FlankAngleHeatmap() {
             height={SVG_SIZE}
             viewBox={`0 0 ${SVG_SIZE} ${SVG_SIZE}`}
             className="shrink-0 select-none"
-            style={{ cursor: isDragging ? 'grabbing' : 'default' }}
-            onPointerMove={handlePointerMove}
-            onPointerUp={handlePointerUp}
-            onPointerLeave={handlePointerUp}
+            style={{ cursor: drag.isDragging ? 'grabbing' : 'default' }}
+            onPointerMove={drag.onPointerMove}
+            onPointerUp={drag.onPointerUp}
+            onPointerLeave={drag.onPointerUp}
           >
             {/* Heatmap annular zone */}
             {heatmapArcs.map((arc, i) => (
@@ -286,7 +249,7 @@ export function FlankAngleHeatmap() {
               stroke={ACCENT_CYAN}
               strokeWidth={1.5}
               className="cursor-grab"
-              onPointerDown={handlePointerDown}
+              onPointerDown={drag.onPointerDown}
               data-testid="flank-angle-drag-handle"
             />
 
@@ -430,7 +393,7 @@ export function FlankAngleHeatmap() {
             <h4 className="text-xs font-bold text-text mb-2">Generator + Test Parameters</h4>
             <div className="space-y-1.5">
               {[
-                { label: 'AttackDistance', value: `${ATTACK_DISTANCE}.0`, desc: 'Ring radius' },
+                { label: 'AttackDistance', value: eqsFloat(ATTACK_DISTANCE), desc: 'Ring radius' },
                 { label: 'NumberOfPoints', value: String(NUMBER_OF_POINTS), desc: 'Evenly spaced' },
                 { label: 'Forward', value: `${forwardDeg.toFixed(0)}°`, desc: 'Drag to rotate' },
               ].map((p) => (

@@ -4,6 +4,7 @@ import { Search, Plus, X } from 'lucide-react';
 import { BlueprintPanel } from '../../unique-tabs/_design';
 import { ACCENT, ALL_ITEM_TYPES } from '../_shared/data';
 import { withOpacity, OPACITY_12, OPACITY_30 } from '@/lib/chart-colors';
+import { focusRingStyle } from '@/lib/ui/focus-ring';
 
 export type SortBy = 'name' | 'rarity' | 'type' | 'power';
 
@@ -38,30 +39,30 @@ export function CatalogFiltersBar({
 }: Props) {
   return (
     <BlueprintPanel color={ACCENT} className="p-3 sticky top-4 z-20 shadow-md space-y-3">
-      <div className="flex flex-wrap items-center gap-3" role="toolbar" aria-label="Item filters">
+      <div className="flex flex-wrap items-center gap-3" role="toolbar" aria-label="Item filters" style={focusRingStyle(ACCENT)}>
         <div className="relative flex-1 min-w-[200px]">
           <Search className="w-4 h-4 absolute left-2.5 top-1/2 -translate-y-1/2 text-text-muted" />
           <input type="text" placeholder="Search items..." value={searchQuery}
             onChange={e => { setSearchQuery(e.target.value); resetPage(); }}
-            className="w-full text-sm font-mono pl-9 pr-3 py-2 rounded-lg bg-surface-deep border border-border/40 text-text placeholder:text-text-muted/50 focus:outline-none focus:border-blue-500/50" />
+            className="w-full text-sm font-mono pl-9 pr-3 py-2 rounded-lg bg-surface-deep border border-border/40 text-text placeholder:text-text-muted/50 focus-ring-inset" />
         </div>
         <select value={categoryFilter} onChange={e => { setCategoryFilter(e.target.value); setSubtypeFilter('all'); resetPage(); }}
-          className="text-sm font-mono px-3 py-2 rounded-lg bg-surface-deep border border-border/40 text-text cursor-pointer">
+          className="text-sm font-mono px-3 py-2 rounded-lg bg-surface-deep border border-border/40 text-text cursor-pointer focus-ring-inset">
           <option value="all">All Types</option>
           {ALL_ITEM_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
         </select>
         <select value={subtypeFilter} onChange={e => { setSubtypeFilter(e.target.value); resetPage(); }}
-          className="text-sm font-mono px-3 py-2 rounded-lg bg-surface-deep border border-border/40 text-text cursor-pointer">
+          className="text-sm font-mono px-3 py-2 rounded-lg bg-surface-deep border border-border/40 text-text cursor-pointer focus-ring-inset">
           <option value="all">All Slots</option>
           {availableSubtypes.map(s => <option key={s} value={s}>{s}</option>)}
         </select>
         <select value={rarityFilter} onChange={e => { setRarityFilter(e.target.value); resetPage(); }}
-          className="text-sm font-mono px-3 py-2 rounded-lg bg-surface-deep border border-border/40 text-text cursor-pointer">
+          className="text-sm font-mono px-3 py-2 rounded-lg bg-surface-deep border border-border/40 text-text cursor-pointer focus-ring-inset">
           <option value="all">All Rarities</option>
           {['Common', 'Uncommon', 'Rare', 'Epic', 'Legendary'].map(r => <option key={r} value={r}>{r}</option>)}
         </select>
         <select value={sortBy} onChange={e => setSortBy(e.target.value as SortBy)}
-          className="text-sm font-mono px-3 py-2 rounded-lg bg-surface-deep border border-border/40 text-text cursor-pointer">
+          className="text-sm font-mono px-3 py-2 rounded-lg bg-surface-deep border border-border/40 text-text cursor-pointer focus-ring-inset">
           <option value="name">Sort: Name</option>
           <option value="power">Sort: Power</option>
           <option value="rarity">Sort: Tier</option>

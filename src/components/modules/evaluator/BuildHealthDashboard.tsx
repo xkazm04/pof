@@ -6,6 +6,7 @@ import {
   TrendingUp, Bug, Activity, XCircle, Timer,
 } from 'lucide-react';
 import { apiFetch } from '@/lib/api-utils';
+import { formatDuration } from '@/lib/format';
 import { useProjectStore } from '@/stores/projectStore';
 import { KPICard } from '@/components/ui/KPICard';
 import { EmptyState } from '@/components/ui/EmptyState';
@@ -26,15 +27,6 @@ const ACCENT = MODULE_COLORS.systems;
 interface BuildHealthDashboardProps {
   /** Pre-supplied report — bypasses the network fetch (used by tests / SSR). */
   initialReport?: BuildHealthReport;
-}
-
-function formatDuration(ms: number | null): string {
-  if (ms == null) return '—';
-  if (ms < 1000) return `${ms}ms`;
-  if (ms < 60_000) return `${(ms / 1000).toFixed(1)}s`;
-  const mins = Math.floor(ms / 60_000);
-  const secs = Math.round((ms % 60_000) / 1000);
-  return `${mins}m ${secs}s`;
 }
 
 function statusColor(status: BuildStatus): string {
@@ -154,7 +146,7 @@ export function BuildHealthDashboard({ initialReport }: BuildHealthDashboardProp
           accent={STATUS_INFO}
           icon={<Clock className="w-3.5 h-3.5" style={{ color: STATUS_INFO }} />}
           label="Avg Duration"
-          value={<span data-stat="avg-duration">{formatDuration(summary.avgDurationMs)}</span>}
+          value={<span data-stat="avg-duration">{summary.avgDurationMs != null ? formatDuration(summary.avgDurationMs) : '—'}</span>}
           sub={summary.medianDurationMs != null ? `median ${formatDuration(summary.medianDurationMs)}` : undefined}
         />
         <KPICard
@@ -274,7 +266,7 @@ function TargetRow({ target, maxAvg }: { target: TargetHealth; maxAvg: number })
           <span className="font-mono text-text truncate">{target.targetName}</span>
           <span className="text-2xs text-text-muted">({target.builds})</span>
         </span>
-        <span className="font-mono text-text-muted flex-shrink-0">{formatDuration(target.avgDurationMs)}</span>
+        <span className="font-mono text-text-muted flex-shrink-0">{target.avgDurationMs != null ? formatDuration(target.avgDurationMs) : '—'}</span>
       </div>
       <div className="w-full h-1.5 rounded-full bg-surface-hover overflow-hidden">
         <div className="h-full rounded-full transition-all" style={{ width: `${widthPct}%`, backgroundColor: ACCENT }} />

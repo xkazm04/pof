@@ -3,6 +3,7 @@
 import { useState, useCallback } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { STATUS_SUCCESS, STATUS_ERROR, STATUS_WARNING, OVERLAY_WHITE, withOpacity, OPACITY_25 } from '@/lib/chart-colors';
+import { ChartLegend } from '@/components/ui/ChartLegend';
 import { STAGGER_DEFAULT } from '@/components/modules/core-engine/unique-tabs/_shared';
 import { NODE_W, NODE_H, BRANCH_OFFSET_X } from './types';
 import { DAMAGE_PIPELINE } from './pipeline-data';
@@ -39,6 +40,18 @@ export function DamagePipelineFlow() {
 
   return (
     <div className="relative min-h-[200px]">
+      {/* Decode the branch-arrow colors so the death/alive paths read without
+          relying on red-vs-green (WCAG 1.4.1); the arrows also carry text labels. */}
+      <ChartLegend
+        className="mb-2"
+        dense
+        ariaLabel="Damage pipeline branch legend"
+        items={[
+          { color: STATUS_ERROR, label: 'Dead', description: 'YES → OnDeath', shape: 'line' },
+          { color: STATUS_SUCCESS, label: 'Alive', description: 'NO → HitReact', shape: 'dashed' },
+          { color: STATUS_WARNING, label: 'Not dead yet', shape: 'line' },
+        ]}
+      />
       <ResponsiveSvgContainer intrinsicWidth={svgWidth}>
         <svg width="100%" height={totalH}
           viewBox={`0 0 ${svgWidth} ${totalH}`}

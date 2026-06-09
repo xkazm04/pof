@@ -1,10 +1,10 @@
 'use client';
 
 import { useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import {
   Dna, Scan, Loader2, ChevronDown, ChevronRight, CheckCircle2,
-  XCircle, AlertTriangle, TrendingUp, Activity, Sparkles,
+  XCircle, TrendingUp, Activity, Sparkles,
   Layers, Clock, Shield, Swords, Compass, Package,
   Skull, Crosshair, Zap,
 } from 'lucide-react';
@@ -12,10 +12,13 @@ import {
   MODULE_COLORS, STATUS_SUCCESS, STATUS_WARNING, STATUS_ERROR, STATUS_INFO,
   ACCENT_ORANGE, ACCENT_EMERALD, ACCENT_PURPLE, ACCENT_PINK,
 } from '@/lib/chart-colors';
+import { motionSafe } from '@/lib/motion';
+import { ScoreRing } from '@/components/ui/ScoreRing';
 import { useGenreEvolution } from '@/hooks/useGenreEvolution';
 import { useProjectStore } from '@/stores/projectStore';
 import type { GenreEvolutionSuggestion, PatternDetection, SubGenreId } from '@/types/telemetry';
 import { GenreDnaTimeline } from './GenreDnaTimeline';
+import { GenreTemplateGallery } from './GenreTemplateGallery';
 
 const ACCENT = MODULE_COLORS.core;
 
@@ -34,6 +37,7 @@ export function TelemetryEvolution() {
   const { stats, history, loading, scanning, scanProject, resolveSuggestion } = useGenreEvolution();
   const { projectPath, dynamicContext } = useProjectStore();
   const [expandedSuggestion, setExpandedSuggestion] = useState<string | null>(null);
+  const prefersReduced = useReducedMotion();
 
   const handleScan = async () => {
     if (!projectPath) return;
@@ -56,9 +60,9 @@ export function TelemetryEvolution() {
     <div className="space-y-5">
       {/* Header + Scan button */}
       <motion.div
-        initial={{ opacity: 0, y: 8 }}
+        initial={prefersReduced ? { opacity: 1, y: 0 } : { opacity: 0, y: 8 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.22 }}
+        transition={motionSafe({ duration: 0.22 }, prefersReduced)}
         className="flex items-center justify-between"
       >
         <div className="flex items-center gap-2.5">
@@ -139,9 +143,10 @@ export function TelemetryEvolution() {
 // ─── Sub-components ──────────────────────────────────────────────────────────
 
 function EmptyState({ onScan, scanning, hasProject }: { onScan: () => void; scanning: boolean; hasProject: boolean }) {
+  const prefersReduced = useReducedMotion();
   return (
     <motion.div
-      initial={{ opacity: 0 }}
+      initial={prefersReduced ? { opacity: 1 } : { opacity: 0 }}
       animate={{ opacity: 1 }}
       className="flex flex-col items-center justify-center py-14 text-center"
     >
@@ -177,11 +182,12 @@ function EmptyState({ onScan, scanning, hasProject }: { onScan: () => void; scan
 }
 
 function PatternsList({ patterns }: { patterns: PatternDetection[] }) {
+  const prefersReduced = useReducedMotion();
   return (
     <motion.div
-      initial={{ opacity: 0, y: 8 }}
+      initial={prefersReduced ? { opacity: 1, y: 0 } : { opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.22, delay: 0.05 }}
+      transition={motionSafe({ duration: 0.22, delay: 0.05 }, prefersReduced)}
     >
       <div className="flex items-center gap-2 mb-2.5">
         <Activity className="w-3.5 h-3.5 text-text-muted" />
@@ -194,12 +200,12 @@ function PatternsList({ patterns }: { patterns: PatternDetection[] }) {
         {patterns.map((p, i) => (
           <motion.div
             key={p.pattern}
-            initial={{ opacity: 0, y: 4 }}
+            initial={prefersReduced ? { opacity: 1, y: 0 } : { opacity: 0, y: 4 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.22, delay: i * 0.03 }}
+            transition={motionSafe({ duration: 0.22, delay: i * 0.03 }, prefersReduced)}
             className="flex items-start gap-2.5 px-3 py-2.5 bg-surface-deep border border-border rounded-lg"
           >
-            <ConfidenceRing value={p.confidence} size={28} />
+            <ScoreRing value={p.confidence} size={28} strokeWidth={2} labelClassName="text-2xs font-bold text-text" />
             <div className="flex-1 min-w-0">
               <span className="text-xs font-medium text-text block">
                 {formatPatternName(p.pattern)}
@@ -228,14 +234,15 @@ function SuggestionsList({
   onToggle: (id: string) => void;
   onResolve: (id: string, action: 'accept' | 'dismiss') => void;
 }) {
+  const prefersReduced = useReducedMotion();
   return (
     <motion.div
-      initial={{ opacity: 0, y: 8 }}
+      initial={prefersReduced ? { opacity: 1, y: 0 } : { opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.22, delay: 0.1 }}
+      transition={motionSafe({ duration: 0.22, delay: 0.1 }, prefersReduced)}
     >
       <div className="flex items-center gap-2 mb-2.5">
-        <Sparkles className="w-3.5 h-3.5 text-[#fbbf24]" />
+        <Sparkles className="w-3.5 h-3.5" style={{ color: STATUS_WARNING }} />
         <span className="text-xs uppercase tracking-wider text-text-muted font-semibold">
           Evolution Suggestions
         </span>
@@ -249,9 +256,9 @@ function SuggestionsList({
           return (
             <motion.div
               key={sug.id}
-              initial={{ opacity: 0, y: 4 }}
+              initial={prefersReduced ? { opacity: 1, y: 0 } : { opacity: 0, y: 4 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.22, delay: i * 0.04 }}
+              transition={motionSafe({ duration: 0.22, delay: i * 0.04 }, prefersReduced)}
               className="bg-surface-deep border rounded-xl overflow-hidden transition-colors"
               style={{ borderColor: isExpanded ? `${style.color}30` : 'var(--border)' }}
             >
@@ -270,7 +277,7 @@ function SuggestionsList({
                   <span className="text-xs font-medium text-text block">{sug.label}</span>
                   <span className="text-2xs text-text-muted">{sug.confidence}% confidence</span>
                 </div>
-                <ConfidenceRing value={sug.confidence} size={32} color={style.color} />
+                <ScoreRing value={sug.confidence} size={32} strokeWidth={2} color={style.color} labelClassName="text-2xs font-bold text-text" />
                 {isExpanded ? (
                   <ChevronDown className="w-3.5 h-3.5 text-text-muted" />
                 ) : (
@@ -282,10 +289,10 @@ function SuggestionsList({
               <AnimatePresence>
                 {isExpanded && (
                   <motion.div
-                    initial={{ height: 0, opacity: 0 }}
+                    initial={prefersReduced ? { height: 'auto', opacity: 1 } : { height: 0, opacity: 0 }}
                     animate={{ height: 'auto', opacity: 1 }}
-                    exit={{ height: 0, opacity: 0 }}
-                    transition={{ duration: 0.22 }}
+                    exit={prefersReduced ? { opacity: 0 } : { height: 0, opacity: 0 }}
+                    transition={motionSafe({ duration: 0.22 }, prefersReduced)}
                     className="overflow-hidden"
                   >
                     <div className="px-3.5 pb-3.5 space-y-3 border-t border-border">
@@ -326,6 +333,10 @@ function SuggestionsList({
                         </div>
                       )}
 
+                      {/* Genome templates — turn this recommendation into an
+                          instant, genre-aligned starting point */}
+                      <GenreTemplateGallery subGenre={sug.subGenre} accentColor={style.color} />
+
                       {/* Action buttons */}
                       <div className="flex gap-2 pt-1">
                         <button
@@ -361,48 +372,75 @@ function SuggestionsList({
 }
 
 function AcceptedGenres({ genres }: { genres: SubGenreId[] }) {
+  const prefersReduced = useReducedMotion();
+  const [openGenre, setOpenGenre] = useState<SubGenreId | null>(null);
+  const openStyle = openGenre
+    ? SUB_GENRE_STYLES[openGenre] ?? { color: 'var(--text-muted)', icon: Layers }
+    : null;
   return (
     <motion.div
-      initial={{ opacity: 0, y: 8 }}
+      initial={prefersReduced ? { opacity: 1, y: 0 } : { opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.22, delay: 0.15 }}
+      transition={motionSafe({ duration: 0.22, delay: 0.15 }, prefersReduced)}
     >
       <div className="flex items-center gap-2 mb-2.5">
-        <CheckCircle2 className="w-3.5 h-3.5 text-[#4ade80]" />
+        <CheckCircle2 className="w-3.5 h-3.5" style={{ color: STATUS_SUCCESS }} />
         <span className="text-xs uppercase tracking-wider text-text-muted font-semibold">
           Active Sub-Genres
         </span>
+        <span className="text-2xs text-text-muted">tap for genome templates</span>
       </div>
       <div className="flex flex-wrap gap-2">
         {genres.map(g => {
           const style = SUB_GENRE_STYLES[g] ?? { color: 'var(--text-muted)', icon: Layers };
           const Icon = style.icon;
+          const isOpen = openGenre === g;
           return (
-            <div
+            <button
               key={g}
-              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium"
+              onClick={() => setOpenGenre(prev => prev === g ? null : g)}
+              aria-pressed={isOpen}
+              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-all hover:brightness-110"
               style={{
-                backgroundColor: `${style.color}10`,
+                backgroundColor: `${style.color}${isOpen ? '20' : '10'}`,
                 color: style.color,
-                border: `1px solid ${style.color}25`,
+                border: `1px solid ${style.color}${isOpen ? '40' : '25'}`,
               }}
             >
               <Icon className="w-3 h-3" />
               {formatSubGenreName(g)}
-            </div>
+            </button>
           );
         })}
       </div>
+
+      <AnimatePresence>
+        {openGenre && openStyle && (
+          <motion.div
+            key={openGenre}
+            initial={prefersReduced ? { opacity: 1, height: 'auto' } : { opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            exit={prefersReduced ? { opacity: 0 } : { opacity: 0, height: 0 }}
+            transition={motionSafe({ duration: 0.22 }, prefersReduced)}
+            className="overflow-hidden"
+          >
+            <div className="pt-3">
+              <GenreTemplateGallery subGenre={openGenre} accentColor={openStyle.color} />
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </motion.div>
   );
 }
 
 function ScanHistory({ history }: { history: { id: string; scannedAt: string; detectedPatterns: PatternDetection[] }[] }) {
+  const prefersReduced = useReducedMotion();
   return (
     <motion.div
-      initial={{ opacity: 0, y: 8 }}
+      initial={prefersReduced ? { opacity: 1, y: 0 } : { opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.22, delay: 0.2 }}
+      transition={motionSafe({ duration: 0.22, delay: 0.2 }, prefersReduced)}
     >
       <div className="flex items-center gap-2 mb-2.5">
         <Clock className="w-3.5 h-3.5 text-text-muted" />
@@ -414,9 +452,9 @@ function ScanHistory({ history }: { history: { id: string; scannedAt: string; de
         {history.slice(0, 5).map((snap, i) => (
           <motion.div
             key={snap.id}
-            initial={{ opacity: 0, x: -4 }}
+            initial={prefersReduced ? { opacity: 1, x: 0 } : { opacity: 0, x: -4 }}
             animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.12, delay: i * 0.03 }}
+            transition={motionSafe({ duration: 0.12, delay: i * 0.03 }, prefersReduced)}
             className="flex items-center gap-3 px-3 py-2 bg-surface-deep border border-border rounded-lg"
           >
             <Scan className="w-3 h-3 text-text-muted flex-shrink-0" />
@@ -434,36 +472,6 @@ function ScanHistory({ history }: { history: { id: string; scannedAt: string; de
 }
 
 // ─── Shared helpers ──────────────────────────────────────────────────────────
-
-function ConfidenceRing({ value, size, color }: { value: number; size: number; color?: string }) {
-  const r = (size / 2) - 3;
-  const circumference = 2 * Math.PI * r;
-  const fillColor = color ?? (value >= 70 ? STATUS_SUCCESS : value >= 50 ? STATUS_WARNING : STATUS_ERROR);
-
-  return (
-    <div className="relative flex-shrink-0" style={{ width: size, height: size }}>
-      <svg className="-rotate-90" width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
-        <circle
-          cx={size / 2} cy={size / 2} r={r}
-          fill="none" stroke="var(--border)" strokeWidth="2"
-        />
-        <circle
-          cx={size / 2} cy={size / 2} r={r}
-          fill="none" stroke={fillColor} strokeWidth="2"
-          strokeDasharray={`${(value / 100) * circumference} ${circumference}`}
-          strokeLinecap="round"
-          className="transition-all duration-slow"
-        />
-      </svg>
-      <span
-        className="absolute inset-0 flex items-center justify-center font-bold text-text"
-        style={{ fontSize: size < 30 ? 11 : 11 }}
-      >
-        {value}
-      </span>
-    </div>
-  );
-}
 
 function formatPatternName(pattern: string): string {
   return pattern

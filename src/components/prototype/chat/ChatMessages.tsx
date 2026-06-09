@@ -5,16 +5,9 @@ import Markdown from 'markdown-to-jsx';
 import { Check, Sparkles, X } from 'lucide-react';
 import type { ChatMessage } from '@/lib/dzin/core/chat';
 import { summarizeSuggestion } from '@/lib/dzin/advisor/suggestionActions';
+import { formatTimeAgo } from '@/lib/format-time';
 
-function relativeTime(timestamp: number): string {
-  const delta = Math.floor((Date.now() - timestamp) / 1000);
-  if (delta < 5) return 'just now';
-  if (delta < 60) return `${delta}s ago`;
-  const mins = Math.floor(delta / 60);
-  if (mins < 60) return `${mins}m ago`;
-  const hours = Math.floor(mins / 60);
-  return `${hours}h ago`;
-}
+const relativeTime = (timestamp: number) => formatTimeAgo(timestamp, { seconds: true });
 
 const markdownOverrides = {
   overrides: {

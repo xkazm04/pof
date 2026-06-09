@@ -1,7 +1,7 @@
 'use client';
 
-import { useState, useCallback, useRef, useMemo } from 'react';
-import { Plus, Volume2, Radio } from 'lucide-react';
+import { useState, useCallback, useRef, useMemo, useEffect } from 'react';
+import { Plus, Minus, Volume2, Radio, Map as MapIcon } from 'lucide-react';
 import type { AudioZone, SoundEmitter, AudioZoneShape, EmitterType } from '@/types/audio-scene';
 import {
   STATUS_INFO, ACCENT_VIOLET, STATUS_SUCCESS, STATUS_BLOCKER,
@@ -9,6 +9,16 @@ import {
   STATUS_SUBDUED, ACCENT_CYAN_LIGHT, withOpacity, OPACITY_10, OPACITY_20, OPACITY_30, OPACITY_60,
   MODULE_COLORS,
 } from '@/lib/chart-colors';
+import {
+  type Viewport,
+  IDENTITY_VIEW, ZOOM_STEP,
+  contentBounds, fitView, zoomByFactor,
+  viewportRectInContent, unionBounds, minimapProjection, minimapToContent, panToCenter,
+} from '@/lib/audio-scene-viewport';
+import { useElementSize } from '@/hooks/useElementSize';
+
+const MINIMAP_W = 120;
+const MINIMAP_H = 90;
 
 const CHROME_ACCENT = MODULE_COLORS.content;
 
@@ -69,9 +79,13 @@ export function AudioScenePainter({
   accentColor,
 }: AudioScenePainterProps) {
   const svgRef = useRef<SVGSVGElement>(null);
+  const minimapRef = useRef<SVGSVGElement>(null);
+  const [containerRef, size] = useElementSize<HTMLDivElement>({ width: 800, height: 600 });
   const [paintMode, setPaintMode] = useState<PaintMode>('select');
-  const [pan, setPan] = useState({ x: 0, y: 0 });
+  const [view, setView] = useState<Viewport>(IDENTITY_VIEW);
   const [isPanning, setIsPanning] = useState(false);
+  const [showMinimap, setShowMinimap] = useState(true);
+  const [isNavigatingMinimap, setIsNavigatingMinimap] = useState(false);
   const panStart = useRef({ x: 0, y: 0, panX: 0, panY: 0 });
   const [dragState, setDragState] = useState<{ id: string; type: 'zone' | 'emitter'; offsetX: number; offsetY: number } | null>(null);
   const [drawState, setDrawState] = useState<DrawState | null>(null);
@@ -91,10 +105,10 @@ export function AudioScenePainter({
     if (!svgRef.current) return { x: 0, y: 0 };
     const rect = svgRef.current.getBoundingClientRect();
     return {
-      x: e.clientX - rect.left - pan.x,
-      y: e.clientY - rect.top - pan.y,
+      x: (e.clientX - rect.left - view.panX) / view.zoom,
+      y: (e.clientY - rect.top - view.panY) / view.zoom,
     };
-  }, [pan]);
+  }, [view]);
 
   // ── Zone drawing ──
 
@@ -142,11 +156,11 @@ export function AudioScenePainter({
     }
 
     // Select mode — start panning
-    panStart.current = { x: e.clientX, y: e.clientY, panX: pan.x, panY: pan.y };
+    panStart.current = { x: e.clientX, y: e.clientY, panX: view.panX, panY: view.panY };
     setIsPanning(true);
     onSelectZone(null);
     onSelectEmitter(null);
-  }, [paintMode, getSVGPoint, emitters, zones, onUpdateEmitters, onSelectEmitter, onSelectZone, pan]);
+  }, [paintMode, getSVGPoint, emitters, zones, onUpdateEmitters, onSelectEmitter, onSelectZone, view]);
 
   const handleMouseMove = useCallback((e: React.MouseEvent) => {
     if (drawState) {
@@ -168,10 +182,11 @@ export function AudioScenePainter({
     }
 
     if (isPanning) {
-      setPan({
-        x: e.clientX - panStart.current.x + panStart.current.panX,
-        y: e.clientY - panStart.current.y + panStart.current.panY,
-      });
+      setView((v) => ({
+        ...v,
+        panX: e.clientX - panStart.current.x + panStart.current.panX,
+        panY: e.clientY - panStart.current.y + panStart.current.panY,
+      }));
       return;
     }
 
@@ -277,6 +292,90 @@ export function AudioScenePainter({
     if (selectedEmitterId === emitterId) onSelectEmitter(null);
   }, [emitters, onUpdateEmitters, selectedEmitterId, onSelectEmitter]);
 
+  // ── Zoom / pan viewport controls ──
+  // The painter applies `view` as a `translate … scale` transform on the inner
+  // <g>; button/keyboard zooms anchor on the viewport centre, wheel zooms on the
+  // cursor. See `lib/audio-scene-viewport.ts` for the (tested) geometry.
+
+  const zoomIn = useCallback(
+    () => setView((v) => zoomByFactor(v, ZOOM_STEP, size.width / 2, size.height / 2)),
+    [size.width, size.height],
+  );
+  const zoomOut = useCallback(
+    () => setView((v) => zoomByFactor(v, 1 / ZOOM_STEP, size.width / 2, size.height / 2)),
+    [size.width, size.height],
+  );
+  const resetView = useCallback(() => setView(IDENTITY_VIEW), []);
+  const fitToContent = useCallback(
+    () => setView(fitView(contentBounds(zones, emitters), size.width, size.height)),
+    [zones, emitters, size.width, size.height],
+  );
+
+  // Ctrl/Cmd + wheel zooms about the cursor. Attached natively (non-passive) so
+  // `preventDefault` can suppress the browser's page-zoom on the same gesture.
+  useEffect(() => {
+    const svg = svgRef.current;
+    if (!svg) return;
+    const onWheel = (e: WheelEvent) => {
+      if (!(e.ctrlKey || e.metaKey)) return;
+      e.preventDefault();
+      const rect = svg.getBoundingClientRect();
+      const factor = Math.exp(-e.deltaY * 0.0015);
+      setView((v) => zoomByFactor(v, factor, e.clientX - rect.left, e.clientY - rect.top));
+    };
+    svg.addEventListener('wheel', onWheel, { passive: false });
+    return () => svg.removeEventListener('wheel', onWheel);
+  }, []);
+
+  const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
+    switch (e.key) {
+      case '+': case '=': e.preventDefault(); zoomIn(); break;
+      case '-': case '_': e.preventDefault(); zoomOut(); break;
+      case '0': e.preventDefault(); resetView(); break;
+      case 'f': case 'F': e.preventDefault(); fitToContent(); break;
+      default: break;
+    }
+  }, [zoomIn, zoomOut, resetView, fitToContent]);
+
+  // ── Minimap projection + drag-to-navigate ──
+  // World bounds = scene content ∪ the current viewport, so both the painted zones
+  // and the "you are here" rectangle always stay on the minimap.
+  const minimap = useMemo(() => {
+    const vpRect = viewportRectInContent(view, size.width, size.height);
+    const world = unionBounds(contentBounds(zones, emitters), vpRect) ?? vpRect;
+    return { proj: minimapProjection(world, MINIMAP_W, MINIMAP_H), vpRect };
+  }, [zones, emitters, view, size.width, size.height]);
+
+  const navigateMinimap = useCallback((pt: { clientX: number; clientY: number }) => {
+    if (!minimapRef.current) return;
+    const rect = minimapRef.current.getBoundingClientRect();
+    const { x, y } = minimapToContent(minimap.proj, pt.clientX - rect.left, pt.clientY - rect.top);
+    setView((v) => ({ ...v, ...panToCenter(v.zoom, size.width, size.height, x, y) }));
+  }, [minimap.proj, size.width, size.height]);
+
+  const handleMinimapDown = useCallback((e: React.MouseEvent) => {
+    e.stopPropagation();
+    setIsNavigatingMinimap(true);
+    navigateMinimap(e);
+  }, [navigateMinimap]);
+
+  // While dragging the minimap viewport, track globally so the pan keeps following
+  // the cursor even when it leaves the 120×90 minimap area.
+  useEffect(() => {
+    if (!isNavigatingMinimap) return;
+    const move = (e: MouseEvent) => navigateMinimap(e);
+    const up = () => setIsNavigatingMinimap(false);
+    window.addEventListener('mousemove', move);
+    window.addEventListener('mouseup', up);
+    return () => {
+      window.removeEventListener('mousemove', move);
+      window.removeEventListener('mouseup', up);
+    };
+  }, [isNavigatingMinimap, navigateMinimap]);
+
+  const majorGrid = 96 * view.zoom;
+  const minorGrid = 24 * view.zoom;
+
   const getCursor = () => {
     if (isPanning) return 'grabbing';
     if (drawState) return 'crosshair';
@@ -286,7 +385,14 @@ export function AudioScenePainter({
   };
 
   return (
-    <div className="relative w-full h-full bg-surface-deep overflow-hidden rounded-2xl border border-border">
+    <div
+      ref={containerRef}
+      tabIndex={0}
+      onKeyDown={handleKeyDown}
+      role="application"
+      aria-label="Audio scene painter canvas. Keyboard: + and − zoom, 0 resets to 100%, F fits to content."
+      className="relative w-full h-full bg-surface-deep overflow-hidden rounded-2xl border border-border outline-none focus-ring"
+    >
       {/* Toolbar */}
       <div className="absolute top-4 left-4 z-10 flex flex-col gap-2">
         <div className="bg-surface border border-border p-1.5 rounded-xl backdrop-blur-md flex items-center gap-1">
@@ -318,14 +424,98 @@ export function AudioScenePainter({
         </div>
       </div>
 
-      {/* Stats badge */}
-      <div
-        className="absolute top-4 right-4 z-10 px-3 py-1.5 rounded-lg border text-xs font-mono font-semibold text-text backdrop-blur-md flex items-center gap-3"
-        style={{ borderColor: withOpacity(CHROME_ACCENT, OPACITY_30), backgroundColor: withOpacity(CHROME_ACCENT, OPACITY_10) }}
-      >
-        <span className="flex items-center gap-1.5"><Volume2 className="w-3.5 h-3.5" style={{ color: CHROME_ACCENT }} /> {zones.length}</span>
-        <span className="text-text-muted">/</span>
-        <span className="flex items-center gap-1.5"><Radio className="w-3.5 h-3.5 text-text-muted" /> {emitters.length}</span>
+      {/* Top-right cluster — stats badge + minimap */}
+      <div className="absolute top-4 right-4 z-10 flex flex-col items-end gap-2">
+        {/* Stats badge */}
+        <div
+          className="px-3 py-1.5 rounded-lg border text-xs font-mono font-semibold text-text backdrop-blur-md flex items-center gap-3"
+          style={{ borderColor: withOpacity(CHROME_ACCENT, OPACITY_30), backgroundColor: withOpacity(CHROME_ACCENT, OPACITY_10) }}
+        >
+          <span className="flex items-center gap-1.5"><Volume2 className="w-3.5 h-3.5" style={{ color: CHROME_ACCENT }} /> {zones.length}</span>
+          <span className="text-text-muted">/</span>
+          <span className="flex items-center gap-1.5"><Radio className="w-3.5 h-3.5 text-text-muted" /> {emitters.length}</span>
+        </div>
+
+        {/* Minimap — filled zone rects + emitter dots + a draggable viewport box */}
+        {showMinimap ? (
+          <div className="rounded-lg bg-black/40 backdrop-blur-md border border-border overflow-hidden">
+            <div className="flex items-center justify-between pl-2 pr-1 py-0.5">
+              <span className="flex items-center gap-1 text-2xs font-mono uppercase tracking-widest text-text-muted">
+                <MapIcon className="w-3 h-3" /> map
+              </span>
+              <button
+                onClick={() => setShowMinimap(false)}
+                title="Hide minimap"
+                aria-label="Hide minimap"
+                className="px-1 text-text-muted hover:text-text text-xs leading-none focus-ring rounded"
+              >
+                ×
+              </button>
+            </div>
+            <svg
+              ref={minimapRef}
+              width={MINIMAP_W}
+              height={MINIMAP_H}
+              className="block cursor-pointer"
+              onMouseDown={handleMinimapDown}
+              aria-label="Scene minimap — drag to navigate"
+            >
+              {zones.map((z) => {
+                const isCircle = z.shape === 'circle';
+                const left = isCircle ? z.x - z.width / 2 : z.x;
+                const top = isCircle ? z.y - z.width / 2 : z.y;
+                const w = z.width;
+                const h = isCircle ? z.width : z.height;
+                const color = resolveZoneColor(z);
+                return (
+                  <rect
+                    key={z.id}
+                    x={minimap.proj.offsetX + left * minimap.proj.scale}
+                    y={minimap.proj.offsetY + top * minimap.proj.scale}
+                    width={Math.max(1, w * minimap.proj.scale)}
+                    height={Math.max(1, h * minimap.proj.scale)}
+                    rx={1}
+                    fill={color}
+                    fillOpacity={0.55}
+                    stroke={color}
+                    strokeOpacity={0.8}
+                    strokeWidth={0.5}
+                  />
+                );
+              })}
+              {emitters.map((em) => (
+                <circle
+                  key={em.id}
+                  cx={minimap.proj.offsetX + em.x * minimap.proj.scale}
+                  cy={minimap.proj.offsetY + em.y * minimap.proj.scale}
+                  r={1.5}
+                  fill={EMITTER_COLORS[em.type] || STATUS_INFO}
+                />
+              ))}
+              {/* Current viewport */}
+              <rect
+                x={minimap.proj.offsetX + minimap.vpRect.minX * minimap.proj.scale}
+                y={minimap.proj.offsetY + minimap.vpRect.minY * minimap.proj.scale}
+                width={Math.max(2, (minimap.vpRect.maxX - minimap.vpRect.minX) * minimap.proj.scale)}
+                height={Math.max(2, (minimap.vpRect.maxY - minimap.vpRect.minY) * minimap.proj.scale)}
+                fill={accentColor}
+                fillOpacity={0.12}
+                stroke={accentColor}
+                strokeWidth={1}
+                style={{ pointerEvents: 'none' }}
+              />
+            </svg>
+          </div>
+        ) : (
+          <button
+            onClick={() => setShowMinimap(true)}
+            title="Show minimap"
+            aria-label="Show minimap"
+            className="flex items-center gap-1 rounded-lg bg-black/40 backdrop-blur-md border border-border px-2 py-1 text-2xs font-mono uppercase tracking-widest text-text-muted hover:text-text focus-ring"
+          >
+            <MapIcon className="w-3 h-3" /> map
+          </button>
+        )}
       </div>
 
       {/* SVG Canvas */}
@@ -338,13 +528,13 @@ export function AudioScenePainter({
         onMouseUp={handleMouseUp}
         onMouseLeave={handleMouseUp}
       >
-        {/* Grid and defs */}
+        {/* Grid and defs — spacing scales with zoom so the grid tracks content. */}
         <defs>
-          <pattern id="audio-grid-major" width="96" height="96" patternUnits="userSpaceOnUse" patternTransform={`translate(${pan.x % 96},${pan.y % 96})`}>
-            <path d="M 96 0 L 0 0 0 96" fill="none" stroke="var(--border)" strokeWidth="1" opacity={0.6} />
+          <pattern id="audio-grid-major" width={majorGrid} height={majorGrid} patternUnits="userSpaceOnUse" patternTransform={`translate(${view.panX % majorGrid},${view.panY % majorGrid})`}>
+            <path d={`M ${majorGrid} 0 L 0 0 0 ${majorGrid}`} fill="none" stroke="var(--border)" strokeWidth="1" opacity={0.6} />
           </pattern>
-          <pattern id="audio-grid-minor" width="24" height="24" patternUnits="userSpaceOnUse" patternTransform={`translate(${pan.x % 24},${pan.y % 24})`}>
-            <path d="M 24 0 L 0 0 0 24" fill="none" stroke="var(--border)" strokeWidth="0.5" opacity={0.3} />
+          <pattern id="audio-grid-minor" width={minorGrid} height={minorGrid} patternUnits="userSpaceOnUse" patternTransform={`translate(${view.panX % minorGrid},${view.panY % minorGrid})`}>
+            <path d={`M ${minorGrid} 0 L 0 0 0 ${minorGrid}`} fill="none" stroke="var(--border)" strokeWidth="0.5" opacity={0.3} />
           </pattern>
           <radialGradient id="radar-glow" cx="50%" cy="50%" r="50%">
             <stop offset="0%" stopColor={withOpacity(CHROME_ACCENT, OPACITY_10)} />
@@ -352,10 +542,10 @@ export function AudioScenePainter({
           </radialGradient>
         </defs>
 
-        <rect width="100%" height="100%" fill="url(#audio-grid-minor)" />
+        {minorGrid >= 8 && <rect width="100%" height="100%" fill="url(#audio-grid-minor)" />}
         <rect width="100%" height="100%" fill="url(#audio-grid-major)" />
 
-        <g transform={`translate(${pan.x},${pan.y})`}>
+        <g transform={`translate(${view.panX},${view.panY}) scale(${view.zoom})`}>
           {/* Audio zones */}
           {zones.map((zone) => {
             const isSelected = selectedZoneId === zone.id;
@@ -659,6 +849,19 @@ export function AudioScenePainter({
           })(drawState)}
         </g>
       </svg>
+
+      {/* Zoom control cluster — zoom% | − | + | fit | 1:1 */}
+      <div className="absolute bottom-4 right-4 z-10 flex items-center gap-0.5 rounded-lg bg-black/40 backdrop-blur-md border border-border px-1 py-0.5 font-mono text-2xs text-text">
+        <span className="px-2 tabular-nums text-center select-none" style={{ minWidth: 46 }} aria-live="polite">
+          {Math.round(view.zoom * 100)}%
+        </span>
+        <div className="w-px h-4 bg-border" />
+        <ZoomBtn onClick={zoomOut} title="Zoom out (−)" ariaLabel="Zoom out"><Minus className="w-3.5 h-3.5" /></ZoomBtn>
+        <ZoomBtn onClick={zoomIn} title="Zoom in (+)" ariaLabel="Zoom in"><Plus className="w-3.5 h-3.5" /></ZoomBtn>
+        <div className="w-px h-4 bg-border" />
+        <ZoomBtn onClick={fitToContent} title="Fit to content (F)" ariaLabel="Fit to content">fit</ZoomBtn>
+        <ZoomBtn onClick={resetView} title="Reset to 100% (0)" ariaLabel="Reset zoom to 100%">1:1</ZoomBtn>
+      </div>
     </div>
   );
 }
@@ -706,6 +909,21 @@ function ToolBtn({ active, onClick, label, icon }: {
     >
       {icon}
       {label}
+    </button>
+  );
+}
+
+function ZoomBtn({ onClick, title, ariaLabel, children }: {
+  onClick: () => void; title: string; ariaLabel: string; children: React.ReactNode;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      title={title}
+      aria-label={ariaLabel}
+      className="flex items-center justify-center px-2 h-6 rounded-md uppercase tracking-wider text-text-muted hover:text-text hover:bg-surface-hover transition-colors focus-ring"
+    >
+      {children}
     </button>
   );
 }

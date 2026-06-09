@@ -1,17 +1,26 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { Monitor, Plug, PlugZap, Settings, AlertTriangle } from 'lucide-react';
+import {
+  Monitor,
+  Plug,
+  PlugZap,
+  Settings,
+  RotateCw,
+  LifeBuoy,
+} from 'lucide-react';
 import { useBlenderMCPStore } from '@/stores/blenderMCPStore';
+import { classifyConnectionError } from '@/lib/blender-mcp/diagnostics';
 import {
   PILL_BY_STATE,
   DOT_BY_STATE,
   CONNECT_BUTTON,
   DISCONNECT_BUTTON,
-  ERROR_BANNER,
 } from '@/lib/blender-mcp/status-tokens';
 import { McpPanelFrame } from './McpPanelFrame';
+import { McpErrorBanner } from './McpErrorBanner';
+import { BlenderSetupWizard } from './BlenderSetupWizard';
 
 export function BlenderConnectionBar() {
   const {
@@ -20,13 +29,24 @@ export function BlenderConnectionBar() {
     lastError,
     host,
     port,
+    autoConnect,
+    autoRetrying,
+    retryAttempt,
     connect,
     disconnect,
     setSettings,
+    setAutoConnect,
+    maybeAutoConnect,
   } = useBlenderMCPStore();
   const [showSettings, setShowSettings] = useState(false);
+  const [wizardOpen, setWizardOpen] = useState(false);
   const [editHost, setEditHost] = useState(host);
   const [editPort, setEditPort] = useState(String(port));
+
+  // Honor the persisted autoConnect flag once on mount (idempotent in store).
+  useEffect(() => {
+    maybeAutoConnect();
+  }, [maybeAutoConnect]);
 
   const handleConnect = () => {
     if (connection.connected) {
@@ -37,13 +57,13 @@ export function BlenderConnectionBar() {
   };
 
   const handleSaveSettings = () => {
-    setSettings(editHost, Number(editPort), false);
+    setSettings(editHost, Number(editPort), autoConnect);
     setShowSettings(false);
   };
 
   const state = connection.connected
     ? 'connected'
-    : isConnecting
+    : isConnecting || autoRetrying
       ? 'connecting'
       : 'disconnected';
 
@@ -51,11 +71,20 @@ export function BlenderConnectionBar() {
     ? `Connected${connection.blenderVersion ? ` (${connection.blenderVersion})` : ''}`
     : isConnecting
       ? 'Connecting…'
-      : 'Disconnected';
+      : autoRetrying
+        ? `Reconnecting… (attempt ${retryAttempt + 1})`
+        : 'Disconnected';
 
   const connectDisabledReason = isConnecting
     ? 'Connecting — please wait'
     : undefined;
+
+  const diagnosis = lastError
+    ? classifyConnectionError(lastError, {
+        host: connection.host || host,
+        port: connection.port || port,
+      })
+    : null;
 
   const statusPill = (
     <span
@@ -122,27 +151,33 @@ export function BlenderConnectionBar() {
       actions={actions}
       bodyPadding="none"
     >
-      <AnimatePresence initial={false}>
-        {lastError && (
-          <motion.div
-            key="connection-error"
-            initial={{ height: 0, opacity: 0 }}
-            animate={{ height: 'auto', opacity: 1 }}
-            exit={{ height: 0, opacity: 0 }}
-            transition={{ duration: 0.2, ease: 'easeOut' }}
-            style={{ overflow: 'hidden' }}
+      <McpErrorBanner
+        show={!!diagnosis}
+        motionKey="connection-error"
+        action={
+          <button
+            type="button"
+            onClick={() => setWizardOpen(true)}
+            className="focus-ring shrink-0 self-start inline-flex items-center gap-1 rounded px-2 h-6 text-2xs font-semibold bg-accent/10 text-accent hover:bg-accent/20"
           >
-            <div
-              role="alert"
-              aria-live="polite"
-              className={`flex items-start gap-2 text-xs leading-snug rounded-md mx-3 mt-2 px-2.5 py-2 ${ERROR_BANNER}`}
-            >
-              <AlertTriangle className="w-4 h-4 mt-0.5 shrink-0" aria-hidden="true" />
-              <span className="tabular-nums">{lastError}</span>
-            </div>
-          </motion.div>
+            <LifeBuoy className="w-3 h-3" aria-hidden="true" />
+            Troubleshoot
+          </button>
+        }
+      >
+        {diagnosis && (
+          <>
+            <p className="font-semibold">{diagnosis.title}</p>
+            <p className="mt-0.5">{diagnosis.summary}</p>
+            {autoRetrying && (
+              <p className="mt-1 flex items-center gap-1.5 text-amber-400">
+                <RotateCw className="w-3 h-3 animate-spin" aria-hidden="true" />
+                Reconnecting… attempt {retryAttempt + 1}
+              </p>
+            )}
+          </>
         )}
-      </AnimatePresence>
+      </McpErrorBanner>
 
       <AnimatePresence initial={false}>
         {showSettings && (
@@ -154,46 +189,70 @@ export function BlenderConnectionBar() {
             transition={{ duration: 0.22, ease: 'easeOut' }}
             style={{ overflow: 'hidden' }}
           >
-            <div className="flex items-center gap-2 px-3 py-2.5">
-              <label htmlFor="blender-mcp-host" className="sr-only">
-                Blender MCP host
-              </label>
-              <input
-                id="blender-mcp-host"
-                type="text"
-                value={editHost}
-                onChange={(e) => setEditHost(e.target.value)}
-                placeholder="Host"
-                aria-label="Blender MCP host"
-                className="focus-ring flex-1 bg-surface-tertiary border border-border rounded-md px-2.5 h-8 text-[13px] text-text"
-              />
-              <label htmlFor="blender-mcp-port" className="sr-only">
-                Blender MCP port
-              </label>
-              <input
-                id="blender-mcp-port"
-                type="number"
-                value={editPort}
-                onChange={(e) => setEditPort(e.target.value)}
-                placeholder="Port"
-                aria-label="Blender MCP port"
-                className="focus-ring w-24 bg-surface-tertiary border border-border rounded-md px-2.5 h-8 text-[13px] text-text tabular-nums"
-              />
-              <button
-                type="button"
-                onClick={handleSaveSettings}
-                aria-label="Save Blender MCP connection settings"
-                className="focus-ring h-8 px-3 rounded-md bg-accent/10 text-accent text-[13px] font-semibold hover:bg-accent/20"
-              >
-                Save
-              </button>
+            <div className="flex flex-col gap-2.5 px-3 py-2.5">
+              <div className="flex items-center gap-2">
+                <label htmlFor="blender-mcp-host" className="sr-only">
+                  Blender MCP host
+                </label>
+                <input
+                  id="blender-mcp-host"
+                  type="text"
+                  value={editHost}
+                  onChange={(e) => setEditHost(e.target.value)}
+                  placeholder="Host"
+                  aria-label="Blender MCP host"
+                  className="focus-ring flex-1 bg-surface-tertiary border border-border rounded-md px-2.5 h-8 text-[13px] text-text"
+                />
+                <label htmlFor="blender-mcp-port" className="sr-only">
+                  Blender MCP port
+                </label>
+                <input
+                  id="blender-mcp-port"
+                  type="number"
+                  value={editPort}
+                  onChange={(e) => setEditPort(e.target.value)}
+                  placeholder="Port"
+                  aria-label="Blender MCP port"
+                  className="focus-ring w-24 bg-surface-tertiary border border-border rounded-md px-2.5 h-8 text-[13px] text-text tabular-nums"
+                />
+                <button
+                  type="button"
+                  onClick={handleSaveSettings}
+                  aria-label="Save Blender MCP connection settings"
+                  className="focus-ring h-8 px-3 rounded-md bg-accent/10 text-accent text-[13px] font-semibold hover:bg-accent/20"
+                >
+                  Save
+                </button>
+              </div>
+              <div className="flex items-center justify-between gap-2">
+                <label className="flex items-center gap-2 text-[13px] text-text cursor-pointer select-none">
+                  <input
+                    type="checkbox"
+                    checked={autoConnect}
+                    onChange={(e) => setAutoConnect(e.target.checked)}
+                    aria-label="Auto-connect to Blender MCP on launch"
+                    className="focus-ring w-4 h-4 rounded border-border accent-accent"
+                  />
+                  Auto-connect on launch
+                </label>
+                <button
+                  type="button"
+                  onClick={() => setWizardOpen(true)}
+                  className="focus-ring inline-flex items-center gap-1 rounded px-2 h-7 text-xs font-medium text-text-muted hover:text-text hover:bg-surface-tertiary"
+                >
+                  <LifeBuoy className="w-3.5 h-3.5" aria-hidden="true" />
+                  Setup guide
+                </button>
+              </div>
             </div>
           </motion.div>
         )}
       </AnimatePresence>
 
       {/* When neither banner nor settings shown, ensure the frame still has a thin bottom gutter */}
-      {!lastError && !showSettings && <div className="h-1" aria-hidden="true" />}
+      {!diagnosis && !showSettings && <div className="h-1" aria-hidden="true" />}
+
+      <BlenderSetupWizard open={wizardOpen} onClose={() => setWizardOpen(false)} />
     </McpPanelFrame>
   );
 }

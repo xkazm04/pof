@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import { AlertTriangle, ChevronDown, ChevronRight, FileCode } from 'lucide-react';
 import type { WarningGroup } from './UE5BuildParser';
 import { TruncateWithTooltip } from '@/components/ui/TruncateWithTooltip';
@@ -16,6 +16,7 @@ interface WarningAggregatorProps {
 export function WarningAggregator({ groups, onFix, isRunning = false }: WarningAggregatorProps) {
   const [expanded, setExpanded] = useState(false);
   const [expandedGroup, setExpandedGroup] = useState<string | null>(null);
+  const shouldReduceMotion = useReducedMotion() ?? false;
 
   const totalCount = groups.reduce((sum, g) => sum + g.count, 0);
 
@@ -45,10 +46,10 @@ export function WarningAggregator({ groups, onFix, isRunning = false }: WarningA
       <AnimatePresence>
         {expanded && (
           <motion.div
-            initial={{ height: 0, opacity: 0 }}
-            animate={{ height: 'auto', opacity: 1 }}
-            exit={{ height: 0, opacity: 0 }}
-            transition={{ duration: 0.12 }}
+            initial={shouldReduceMotion ? { opacity: 0 } : { height: 0, opacity: 0 }}
+            animate={shouldReduceMotion ? { opacity: 1 } : { height: 'auto', opacity: 1 }}
+            exit={shouldReduceMotion ? { opacity: 0 } : { height: 0, opacity: 0 }}
+            transition={shouldReduceMotion ? { duration: 0 } : { duration: 0.12 }}
             className="border-t border-yellow-500/10"
           >
             {groups.map((group) => {
@@ -86,10 +87,10 @@ export function WarningAggregator({ groups, onFix, isRunning = false }: WarningA
                   <AnimatePresence>
                     {isGroupExpanded && (
                       <motion.div
-                        initial={{ height: 0, opacity: 0 }}
-                        animate={{ height: 'auto', opacity: 1 }}
-                        exit={{ height: 0, opacity: 0 }}
-                        transition={{ duration: 0.12 }}
+                        initial={shouldReduceMotion ? { opacity: 0 } : { height: 0, opacity: 0 }}
+                        animate={shouldReduceMotion ? { opacity: 1 } : { height: 'auto', opacity: 1 }}
+                        exit={shouldReduceMotion ? { opacity: 0 } : { height: 0, opacity: 0 }}
+                        transition={shouldReduceMotion ? { duration: 0 } : { duration: 0.12 }}
                         className="pl-6 bg-background/40"
                       >
                         {group.warnings.map((w) => (

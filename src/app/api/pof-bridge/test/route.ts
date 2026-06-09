@@ -1,69 +1,32 @@
-import { apiSuccess, apiError } from '@/lib/api-utils';
+import { apiSuccess } from '@/lib/api-utils';
+import { resolvePofPort } from '@/lib/pof-bridge/constants';
+import { proxyToPofBridge, pofProxyError } from '@/lib/pof-bridge/proxy';
 import type { PofTestSpec, PofTestResult } from '@/types/pof-bridge';
 
-const DEFAULT_POF_PORT = 30040;
-
 export async function POST(request: Request) {
-  const { searchParams } = new URL(request.url);
-  const port = parseInt(searchParams.get('port') || String(DEFAULT_POF_PORT), 10);
+  const port = resolvePofPort(new URL(request.url).searchParams);
+  const body = await request.json() as { action: string; spec?: PofTestSpec; filter?: string; flags?: string[] };
 
-  try {
-    const body = await request.json() as { action: string; spec?: PofTestSpec; filter?: string; flags?: string[] };
-
-    let url: string;
-    if (body.action === 'run-automation') {
-      url = `http://127.0.0.1:${port}/pof/test/run-automation`;
-    } else {
-      url = `http://127.0.0.1:${port}/pof/test/run`;
-    }
-
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 15000);
-
-    const res = await fetch(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body.action === 'run-automation' ? { filter: body.filter, flags: body.flags } : body.spec),
-      signal: controller.signal,
-    });
-    clearTimeout(timeout);
-
-    if (!res.ok) {
-      const text = await res.text().catch(() => '');
-      return apiError(`Test runner error: ${text.slice(0, 200)}`, res.status);
-    }
-
-    const data = await res.json();
-    return apiSuccess(data);
-  } catch (e) {
-    return apiError(e instanceof Error ? e.message : 'Failed to reach PoF Bridge plugin');
-  }
+  const isAutomation = body.action === 'run-automation';
+  const result = await proxyToPofBridge(isAutomation ? 'test/run-automation' : 'test/run', {
+    port,
+    method: 'POST',
+    body: isAutomation ? { filter: body.filter, flags: body.flags } : body.spec,
+    timeoutMs: 15000,
+  });
+  if (!result.ok) return pofProxyError(result, 'Test runner error');
+  return apiSuccess(result.data);
 }
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
-  const port = parseInt(searchParams.get('port') || String(DEFAULT_POF_PORT), 10);
+  const port = resolvePofPort(searchParams);
   const testId = searchParams.get('testId');
 
-  try {
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 10000);
-
-    const url = testId
-      ? `http://127.0.0.1:${port}/pof/test/results/${encodeURIComponent(testId)}`
-      : `http://127.0.0.1:${port}/pof/test/results`;
-
-    const res = await fetch(url, { signal: controller.signal });
-    clearTimeout(timeout);
-
-    if (!res.ok) {
-      const text = await res.text().catch(() => '');
-      return apiError(`Test results error: ${text.slice(0, 200)}`, res.status);
-    }
-
-    const data = await res.json() as PofTestResult | { results: PofTestResult[] };
-    return apiSuccess(data);
-  } catch (e) {
-    return apiError(e instanceof Error ? e.message : 'Failed to reach PoF Bridge plugin');
-  }
+  const result = await proxyToPofBridge<PofTestResult | { results: PofTestResult[] }>(
+    testId ? `test/results/${encodeURIComponent(testId)}` : 'test/results',
+    { port, timeoutMs: 10000 },
+  );
+  if (!result.ok) return pofProxyError(result, 'Test results error');
+  return apiSuccess(result.data);
 }

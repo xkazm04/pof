@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { computeNBA, getTopRecommendation } from '@/lib/nba-engine';
+import { computeNBA, getTopRecommendation, firstWordMatch } from '@/lib/nba-engine';
 import { useModuleStore } from '@/stores/moduleStore';
 import { usePatternLibraryStore } from '@/stores/patternLibraryStore';
 import { useEvaluatorStore } from '@/stores/evaluatorStore';
@@ -14,6 +14,31 @@ beforeEach(() => {
   });
   usePatternLibraryStore.setState({ patterns: [] });
   useEvaluatorStore.setState({ lastScan: null });
+});
+
+describe('firstWordMatch', () => {
+  it('matches when label contains the first whitespace token of the candidate', () => {
+    expect(firstWordMatch('attack combo system', 'Attack montages')).toBe(true);
+  });
+
+  it('is case-insensitive on both sides', () => {
+    expect(firstWordMatch('DODGE roll', 'dodge mechanics')).toBe(true);
+    expect(firstWordMatch('dodge roll', 'DODGE mechanics')).toBe(true);
+  });
+
+  it('only uses the first token of the candidate, not later words', () => {
+    // "montages" is the second token, so it must not be the needle
+    expect(firstWordMatch('build montages later', 'Attack montages')).toBe(false);
+  });
+
+  it('returns false when the first token is absent from the label', () => {
+    expect(firstWordMatch('healing potions', 'Combat dodge')).toBe(false);
+  });
+
+  it('treats an empty candidate as a match (empty needle)', () => {
+    // ''.split(' ')[0] === '' and includes('') is always true — preserves prior behavior
+    expect(firstWordMatch('anything', '')).toBe(true);
+  });
 });
 
 describe('computeNBA', () => {

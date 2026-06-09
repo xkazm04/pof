@@ -8,6 +8,7 @@ import {
   ChevronUp,
 } from 'lucide-react';
 import type { BuildRecord, BuildStats, SizeTrendPoint } from '@/lib/packaging/build-history-store';
+import { PLATFORM_IDS, platformLabel, normalizePlatformId } from '@/lib/packaging/build-profiles';
 import { apiFetch } from '@/lib/api-utils';
 import {
   MODULE_COLORS, ACCENT_VIOLET, statusBg, successRateColor, withOpacity, OPACITY_80,
@@ -22,8 +23,6 @@ type DashboardTab = 'history' | 'trends' | 'compare';
 
 type SortKey = 'date' | 'platform' | 'config' | 'size' | 'duration' | 'errors';
 type SortDir = 'asc' | 'desc';
-
-const ALL_PLATFORMS = ['Windows', 'Linux', 'Mac', 'Android', 'iOS'] as const;
 
 function SortableHeader({
   label, sortKey, activeKey, dir, onSort,
@@ -101,7 +100,7 @@ function BuildRow({ build, onDelete }: { build: BuildRecord; onDelete: (id: numb
           )}
         </div>
 
-        <span className="text-text-muted font-mono">{build.platform}</span>
+        <span className="text-text-muted font-mono">{platformLabel(build.platform)}</span>
         <span className="text-text-muted">{build.config}</span>
         <span className="text-text-muted font-mono">{build.sizeBytes != null ? formatBytes(build.sizeBytes) : '-'}</span>
         <span className="text-text-muted font-mono">{build.durationMs != null ? formatDuration(build.durationMs) : '-'}</span>
@@ -181,7 +180,7 @@ function BuildRow({ build, onDelete }: { build: BuildRecord; onDelete: (id: numb
 // ---------- Record build form ----------
 
 function RecordBuildForm({ onSubmit, version }: { onSubmit: (data: Record<string, unknown>) => void; version: string }) {
-  const [platform, setPlatform] = useState('Windows');
+  const [platform, setPlatform] = useState<string>(PLATFORM_IDS[0]);
   const [config, setConfig] = useState('Shipping');
   const [status, setStatus] = useState<'success' | 'failed'>('success');
   const [sizeGb, setSizeGb] = useState('');
@@ -195,8 +194,8 @@ function RecordBuildForm({ onSubmit, version }: { onSubmit: (data: Record<string
     setDurationMin('');
   };
 
-  const inputClass = 'bg-background border border-border-bright rounded px-2 py-1 text-xs text-text-muted font-mono outline-none focus:border-violet-500/50 w-full';
-  const selectClass = 'bg-background border border-border-bright rounded px-2 py-1 text-xs text-text-muted outline-none focus:border-violet-500/50 w-full';
+  const inputClass = 'bg-background border border-border-bright rounded px-2 py-1 text-xs text-text-muted font-mono outline-none focus:border-[var(--systems)]/50 w-full';
+  const selectClass = 'bg-background border border-border-bright rounded px-2 py-1 text-xs text-text-muted outline-none focus:border-[var(--systems)]/50 w-full';
 
   return (
     <div className="rounded border border-border-bright bg-surface-deep/80 p-3">
@@ -209,11 +208,9 @@ function RecordBuildForm({ onSubmit, version }: { onSubmit: (data: Record<string
         <div>
           <label className="text-2xs text-text-muted uppercase tracking-wider">Platform</label>
           <select value={platform} onChange={(e) => setPlatform(e.target.value)} className={selectClass}>
-            <option>Windows</option>
-            <option>Linux</option>
-            <option>Mac</option>
-            <option>Android</option>
-            <option>iOS</option>
+            {PLATFORM_IDS.map((id) => (
+              <option key={id} value={id}>{platformLabel(id)}</option>
+            ))}
           </select>
         </div>
         <div>
@@ -243,7 +240,7 @@ function RecordBuildForm({ onSubmit, version }: { onSubmit: (data: Record<string
       </div>
       <button
         onClick={handleSubmit}
-        className="mt-2 w-full py-1.5 rounded text-xs font-medium text-white bg-violet-500/80 hover:bg-violet-500 transition-colors"
+        className="mt-2 w-full py-1.5 rounded text-xs font-medium text-white bg-[var(--systems)]/80 hover:bg-[var(--systems)] transition-colors"
       >
         Record Build
       </button>
@@ -312,9 +309,9 @@ export function BuildHistoryDashboard() {
   const filteredSortedBuilds = useMemo(() => {
     let result = builds;
 
-    // Platform filter
+    // Platform filter (filter set holds canonical ids; rows may store any spelling)
     if (platformFilter.size > 0) {
-      result = result.filter((b) => platformFilter.has(b.platform));
+      result = result.filter((b) => platformFilter.has(normalizePlatformId(b.platform)));
     }
 
     // Sort
@@ -324,7 +321,7 @@ export function BuildHistoryDashboard() {
         case 'date':
           return dir * (new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
         case 'platform':
-          return dir * a.platform.localeCompare(b.platform);
+          return dir * platformLabel(a.platform).localeCompare(platformLabel(b.platform));
         case 'config':
           return dir * a.config.localeCompare(b.config);
         case 'size':
@@ -341,10 +338,10 @@ export function BuildHistoryDashboard() {
     return result;
   }, [builds, platformFilter, sortKey, sortDir]);
 
-  // Platforms that actually exist in the data
+  // Canonical platform ids that actually exist in the data (any stored spelling)
   const availablePlatforms = useMemo(() => {
-    const set = new Set(builds.map((b) => b.platform));
-    return ALL_PLATFORMS.filter((p) => set.has(p));
+    const set = new Set(builds.map((b) => normalizePlatformId(b.platform)));
+    return PLATFORM_IDS.filter((p) => set.has(p));
   }, [builds]);
 
   const fetchAll = useCallback(async () => {
@@ -408,7 +405,7 @@ export function BuildHistoryDashboard() {
   const tabClass = (t: DashboardTab) =>
     `px-2.5 py-1 text-xs font-medium rounded-t transition-colors ${
       tab === t
-        ? 'text-text bg-surface-hover border-b-2 border-violet-500'
+        ? 'text-text bg-surface-hover border-b-2 border-[var(--systems)]'
         : 'text-text-muted hover:text-text-muted'
     }`;
 
@@ -426,7 +423,7 @@ export function BuildHistoryDashboard() {
         <div className="flex items-center gap-1.5">
           <button
             onClick={() => setShowForm(!showForm)}
-            className="flex items-center gap-1 px-2 py-1 rounded text-xs font-medium bg-violet-500/10 hover:bg-violet-500/20 transition-colors"
+            className="flex items-center gap-1 px-2 py-1 rounded text-xs font-medium bg-[var(--systems)]/10 hover:bg-[var(--systems)]/20 transition-colors"
             style={{ color: MODULE_COLORS.systems }}
           >
             <Plus className="w-3 h-3" />
@@ -490,7 +487,7 @@ export function BuildHistoryDashboard() {
           {stats.platforms.map((p) => (
             <div key={p.platform} className="rounded border border-border bg-surface-deep/60 px-2.5 py-2">
               <div className="flex items-center justify-between mb-1">
-                <span className="text-xs font-medium text-text-muted">{p.platform}</span>
+                <span className="text-xs font-medium text-text-muted">{platformLabel(p.platform)}</span>
                 <span className="text-2xs font-mono" style={{ color: successRateColor(p.successRate) }}>
                   {p.successRate.toFixed(0)}%
                 </span>
@@ -501,7 +498,7 @@ export function BuildHistoryDashboard() {
                 aria-valuenow={Math.round(p.successRate)}
                 aria-valuemin={0}
                 aria-valuemax={100}
-                aria-label={`${p.platform} success rate`}
+                aria-label={`${platformLabel(p.platform)} success rate`}
               >
                 <div
                   className="h-full rounded-full transition-all"
@@ -545,12 +542,12 @@ export function BuildHistoryDashboard() {
                     onClick={() => togglePlatform(p)}
                     className={`px-2 py-0.5 rounded-full text-2xs font-medium transition-colors ${
                       active
-                        ? 'bg-violet-500/20 border border-violet-500/40'
+                        ? 'bg-[var(--systems)]/20 border border-[var(--systems)]/40'
                         : 'bg-surface-hover text-text-muted border border-transparent hover:border-border-bright hover:text-text'
                     }`}
                     style={active ? { color: ACCENT_VIOLET } : undefined}
                   >
-                    {p}
+                    {platformLabel(p)}
                   </button>
                 );
               })}

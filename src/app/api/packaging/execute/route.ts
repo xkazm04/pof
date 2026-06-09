@@ -1,6 +1,7 @@
 import { cookExecutor, type CookEvent } from '@/lib/packaging/cook-executor';
 import { getProfile } from '@/lib/packaging/build-profiles-db';
 import { insertBuild } from '@/lib/packaging/build-history-store';
+import { apiError } from '@/lib/api-utils';
 
 interface ExecuteRequest {
   profileId: string;
@@ -22,25 +23,16 @@ function isExecuteRequest(v: unknown): v is ExecuteRequest {
 export async function POST(req: Request): Promise<Response> {
   let body: unknown;
   try { body = await req.json(); } catch {
-    return new Response(JSON.stringify({ success: false, error: 'invalid JSON body' }), {
-      status: 400,
-      headers: { 'Content-Type': 'application/json' },
-    });
+    return apiError('invalid JSON body', 400);
   }
   if (!isExecuteRequest(body)) {
-    return new Response(JSON.stringify({ success: false, error: 'missing required fields' }), {
-      status: 400,
-      headers: { 'Content-Type': 'application/json' },
-    });
+    return apiError('missing required fields', 400);
   }
   const { profileId, projectPath, projectName, ueVersion } = body;
 
   const profile = getProfile(profileId);
   if (!profile) {
-    return new Response(JSON.stringify({ success: false, error: 'profile not found' }), {
-      status: 404,
-      headers: { 'Content-Type': 'application/json' },
-    });
+    return apiError('profile not found', 404);
   }
 
   const encoder = new TextEncoder();

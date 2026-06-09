@@ -380,6 +380,6 @@ function highlightMarkers(text: string): string {
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;')
-    .replace(/→/g, '<mark class="bg-[#00ff88]/20 text-[#00ff88] rounded px-px">')
+    .replace(/→/g, '<mark class="bg-accent-setup/20 text-accent-setup rounded px-px">')
     .replace(/←/g, '</mark>');
 }

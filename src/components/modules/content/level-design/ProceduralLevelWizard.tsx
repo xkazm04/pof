@@ -1,10 +1,10 @@
 'use client';
 
-import { useState, useCallback, useRef } from 'react';
+import { useState, useCallback, useRef, useMemo, useDeferredValue } from 'react';
 import type { KeyboardEvent } from 'react';
 import {
   Zap, Grid3X3, Waves, Hexagon, Mountain,
-  Castle, Sword, Trophy, MapPin, Package, Gem, Loader2, Monitor,
+  Castle, Sword, Trophy, MapPin, Package, Gem, Loader2, Monitor, Eye,
 } from 'lucide-react';
 import { MODULE_COLORS } from '@/lib/constants';
 import { STATUS_IMPROVED, ACCENT_VIOLET, STATUS_SUCCESS, ACCENT_ORANGE, OVERLAY_WHITE } from '@/lib/chart-colors';
@@ -12,10 +12,11 @@ import { motion } from 'framer-motion';
 import { useBlenderMCPStore } from '@/stores/blenderMCPStore';
 import { tryApiFetch } from '@/lib/api-utils';
 import { dungeonToGeometryScript } from '@/lib/blender-mcp/scripts/dungeon-to-geometry';
-import type { CellType } from '@/lib/blender-mcp/scripts/dungeon-to-geometry';
 import { levelMetadataScript } from '@/lib/blender-mcp/scripts/level-metadata';
 import type { ExecuteOutput } from '@/lib/blender-mcp/types';
 import { logger } from '@/lib/logger';
+import { generatePreview, type PreviewConfig } from '@/lib/level-design/procgen-preview';
+import { ProcgenPreviewCanvas } from './ProcgenPreviewCanvas';
 
 // ── Types ──
 
@@ -205,6 +206,22 @@ export function ProceduralLevelWizard({ onGenerate, isGenerating }: ProceduralLe
   const [blenderResult, setBlenderResult] = useState<{ message: string; isError: boolean } | null>(null);
   const blenderConnected = useBlenderMCPStore((s) => s.connection.connected);
 
+  // ── Live preview ──
+  // Runs the chosen algorithm purely in TypeScript with the same FRandomStream
+  // seed the UE codegen targets, so the layout the designer sees here matches
+  // what UE will produce. Deferred so dragging sliders / typing stays smooth.
+  const previewConfig = useMemo<PreviewConfig>(() => ({
+    algorithm,
+    gridWidth: size.gridWidth,
+    gridHeight: size.gridHeight,
+    roomCountMin: size.roomCountMin,
+    roomCountMax: size.roomCountMax,
+    corridorWidth: size.corridorWidth,
+    seed,
+  }), [algorithm, size, seed]);
+  const deferredConfig = useDeferredValue(previewConfig);
+  const preview = useMemo(() => generatePreview(deferredConfig), [deferredConfig]);
+
   const selectLevelType = useCallback((lt: LevelType) => {
     setLevelType(lt);
     setSize(DEFAULT_SIZE[lt]);
@@ -226,18 +243,12 @@ export function ProceduralLevelWizard({ onGenerate, isGenerating }: ProceduralLe
     setBlenderExporting(true);
     setBlenderResult(null);
     try {
-      // Generate a simple procedural grid based on current settings
-      const rows = Math.min(size.gridHeight, 32);
-      const cols = Math.min(size.gridWidth, 32);
-      const grid: CellType[][] = [];
-      for (let r = 0; r < rows; r++) {
-        const row: CellType[] = [];
-        for (let c = 0; c < cols; c++) {
-          const isBorder = r === 0 || r === rows - 1 || c === 0 || c === cols - 1;
-          row.push(isBorder ? 'wall' : 'floor');
-        }
-        grid.push(row);
-      }
+      // Export the *actual* previewed layout (same seed + algorithm the designer
+      // is looking at), not a placeholder border. The preview grid is already a
+      // CellType[][], so dungeonToGeometryScript consumes it directly.
+      const grid = preview.grid;
+      const rows = preview.height;
+      const cols = preview.width;
 
       const geometryCode = dungeonToGeometryScript({
         grid,
@@ -276,7 +287,7 @@ export function ProceduralLevelWizard({ onGenerate, isGenerating }: ProceduralLe
     } finally {
       setBlenderExporting(false);
     }
-  }, [size, constraints]);
+  }, [preview, constraints]);
 
   const algNav = useRovingRadioGroup(ALGORITHMS.length, (i) => setAlgorithm(ALGORITHMS[i].id));
   const ltNav = useRovingRadioGroup(LEVEL_TYPES.length, (i) => selectLevelType(LEVEL_TYPES[i].id));
@@ -498,6 +509,19 @@ export function ProceduralLevelWizard({ onGenerate, isGenerating }: ProceduralLe
             );
           })}
         </div>
+      </div>
+
+      {/* ─── Live Preview ─── */}
+      <div className="space-y-3 relative z-10">
+        <h4 className="flex items-center gap-2 text-xs font-bold text-violet-400 uppercase tracking-widest border-b border-violet-900/30 pb-2">
+          <Eye className="w-3 h-3" /> Live Preview
+          <span className="ml-1 text-violet-500/50">[{algDef.label}]</span>
+        </h4>
+        <p className="text-[11px] text-violet-300/60 leading-relaxed">
+          Runs the algorithm in-browser with the same seed UE targets — inspect room count and
+          connectivity before dispatching the C++ generation task.
+        </p>
+        <ProcgenPreviewCanvas result={preview} seedLabel={seed} />
       </div>
 
       {/* ─── Generate ─── */}

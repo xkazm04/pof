@@ -19,6 +19,7 @@
 
 import {
   type JargonEntry,
+  CHANGE_TYPE_META,
   lookupJargon,
 } from './blueprint-jargon';
 
@@ -96,34 +97,21 @@ const PIN_DIRECTIONS: Record<string, JargonEntry> = {
 };
 
 // ─── Diff change codes ───────────────────────────────────────────────────────
-// The three-letter badges shown on each diff change card. Keyed by the display
-// code so a chip rendered as "MOD" can be decoded directly.
+// The three-letter badges shown on each diff change card, keyed by the display
+// code so a chip rendered as "MOD" can be decoded directly. Derived from the
+// authoritative CHANGE_TYPE_META table (blueprint-jargon.ts): the hover text
+// leads with the plain-English label ("Modified — …") so the bare code decodes.
 
-const CHANGE_CODES: Record<string, JargonEntry> = {
-  ADD: {
-    term: 'ADD',
-    plain: 'Added — exists in the Blueprint but is missing on the C++ side.',
-    whyItMatters: 'Regenerating the C++ will create the matching declaration.',
-  },
-  DEL: {
-    term: 'DEL',
-    plain: 'Deleted — exists in the C++ but is missing on the Blueprint side.',
-    whyItMatters: 'May be C++-only code kept on purpose, or dead state worth removing.',
-  },
-  MOD: {
-    term: 'MOD',
-    plain: 'Modified — exists on both sides but the two definitions disagree.',
-  },
-  MOV: {
-    term: 'MOV',
-    plain: 'Moved — same definition, just a different location.',
-  },
-  REN: {
-    term: 'REN',
-    plain: 'Renamed — same definition under a different name on one side.',
-    whyItMatters: 'Pick the new name everywhere, or save data and references can break.',
-  },
-};
+const CHANGE_CODES: Record<string, JargonEntry> = Object.fromEntries(
+  Object.values(CHANGE_TYPE_META).map((meta) => [
+    meta.code,
+    {
+      term: meta.code,
+      plain: `${meta.label} — ${meta.plain}`,
+      ...(meta.why ? { whyItMatters: meta.why } : {}),
+    } satisfies JargonEntry,
+  ]),
+);
 
 // ─── Diff scopes ─────────────────────────────────────────────────────────────
 // What kind of thing a change applies to (the `scope` field on a SemanticChange).

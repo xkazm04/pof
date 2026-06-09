@@ -12,8 +12,16 @@ import {
   STATUS_SUCCESS, STATUS_WARNING,
   OPACITY_10, OPACITY_15,
 } from '@/lib/chart-colors';
+import {
+  EQS_ATTACK_POSITIONS, EQS_PATROL_POINTS, EQS_COVER_POSITIONS,
+  EQS_LINE_OF_SIGHT, EQS_ELEVATION_ADVANTAGE,
+  eqsFloat, eqsClampMeta,
+} from '@/lib/ai-director/eqs-defaults';
 
 // ── Real UPROPERTY data from C++ EQS sources ────────────────────────────────
+// Numeric defaults + clamp metas come from the single-source `eqs-defaults.ts`
+// so this inventory can never silently drift from the visualizers, the pipeline
+// diagram, or the engine.
 
 type ComponentKind = 'context' | 'generator' | 'test';
 
@@ -75,21 +83,21 @@ const EQS_COMPONENTS: EQSComponentDef[] = [
       {
         name: 'AttackDistance',
         type: 'float',
-        defaultValue: '200.0',
-        meta: 'ClampMin = 50',
+        defaultValue: eqsFloat(EQS_ATTACK_POSITIONS.attackDistance),
+        meta: eqsClampMeta(EQS_ATTACK_POSITIONS.clamps.attackDistance),
         description: 'Distance from the center actor at which to generate points.',
       },
       {
         name: 'NumberOfPoints',
         type: 'int32',
-        defaultValue: '12',
-        meta: 'ClampMin = 4, ClampMax = 36',
+        defaultValue: String(EQS_ATTACK_POSITIONS.numberOfPoints),
+        meta: eqsClampMeta(EQS_ATTACK_POSITIONS.clamps.numberOfPoints),
         description: 'Number of points evenly distributed around the ring.',
       },
       {
         name: 'bGenerateInnerRing',
         type: 'bool',
-        defaultValue: 'false',
+        defaultValue: String(EQS_ATTACK_POSITIONS.generateInnerRing),
         description: 'When true, adds a second inner ring at half AttackDistance for fallback positions.',
       },
     ],
@@ -106,22 +114,22 @@ const EQS_COMPONENTS: EQSComponentDef[] = [
       {
         name: 'NumberOfPoints',
         type: 'int32',
-        defaultValue: '15',
-        meta: 'ClampMin = 1, ClampMax = 50',
+        defaultValue: String(EQS_PATROL_POINTS.numberOfPoints),
+        meta: eqsClampMeta(EQS_PATROL_POINTS.clamps.numberOfPoints),
         description: 'Number of random points to generate.',
       },
       {
         name: 'MinRadius',
         type: 'float',
-        defaultValue: '500.0',
-        meta: 'ClampMin = 0',
+        defaultValue: eqsFloat(EQS_PATROL_POINTS.minRadius),
+        meta: eqsClampMeta(EQS_PATROL_POINTS.clamps.minRadius),
         description: 'Minimum distance from the querier.',
       },
       {
         name: 'MaxRadius',
         type: 'float',
-        defaultValue: '1500.0',
-        meta: 'ClampMin = 100',
+        defaultValue: eqsFloat(EQS_PATROL_POINTS.maxRadius),
+        meta: eqsClampMeta(EQS_PATROL_POINTS.clamps.maxRadius),
         description: 'Maximum distance from the querier.',
       },
     ],
@@ -145,36 +153,36 @@ const EQS_COMPONENTS: EQSComponentDef[] = [
       {
         name: 'SampleCount',
         type: 'int32',
-        defaultValue: '36',
-        meta: 'ClampMin = 8, ClampMax = 72',
+        defaultValue: String(EQS_COVER_POSITIONS.sampleCount),
+        meta: eqsClampMeta(EQS_COVER_POSITIONS.clamps.sampleCount),
         description: 'Number of candidate sample points per ring around the threat.',
       },
       {
         name: 'MinRadius',
         type: 'float',
-        defaultValue: '300.0',
-        meta: 'ClampMin = 100',
+        defaultValue: eqsFloat(EQS_COVER_POSITIONS.minRadius),
+        meta: eqsClampMeta(EQS_COVER_POSITIONS.clamps.minRadius),
         description: 'Minimum search radius from the threat.',
       },
       {
         name: 'MaxRadius',
         type: 'float',
-        defaultValue: '1200.0',
-        meta: 'ClampMin = 200',
+        defaultValue: eqsFloat(EQS_COVER_POSITIONS.maxRadius),
+        meta: eqsClampMeta(EQS_COVER_POSITIONS.clamps.maxRadius),
         description: 'Maximum search radius from the threat.',
       },
       {
         name: 'NumberOfRings',
         type: 'int32',
-        defaultValue: '3',
-        meta: 'ClampMin = 1, ClampMax = 5',
+        defaultValue: String(EQS_COVER_POSITIONS.numberOfRings),
+        meta: eqsClampMeta(EQS_COVER_POSITIONS.clamps.numberOfRings),
         description: 'Number of radial rings between MinRadius and MaxRadius.',
       },
       {
         name: 'CoverCheckDistance',
         type: 'float',
-        defaultValue: '150.0',
-        meta: 'ClampMin = 50',
+        defaultValue: eqsFloat(EQS_COVER_POSITIONS.coverCheckDistance),
+        meta: eqsClampMeta(EQS_COVER_POSITIONS.clamps.coverCheckDistance),
         description: 'Max distance from candidate to geometry to qualify as cover.',
       },
       {
@@ -268,22 +276,22 @@ const EQS_COMPONENTS: EQSComponentDef[] = [
       {
         name: 'NumberOfTraceHeights',
         type: 'int32',
-        defaultValue: '3',
-        meta: 'ClampMin = 1, ClampMax = 5',
+        defaultValue: String(EQS_LINE_OF_SIGHT.numberOfTraceHeights),
+        meta: eqsClampMeta(EQS_LINE_OF_SIGHT.clamps.numberOfTraceHeights),
         description: 'Vertical trace rays spread from crouch to standing height.',
       },
       {
         name: 'MinTraceHeight',
         type: 'float',
-        defaultValue: '40.0',
-        meta: 'ClampMin = 0',
+        defaultValue: eqsFloat(EQS_LINE_OF_SIGHT.minTraceHeight),
+        meta: eqsClampMeta(EQS_LINE_OF_SIGHT.clamps.minTraceHeight),
         description: 'Lowest trace height offset (crouch height).',
       },
       {
         name: 'MaxTraceHeight',
         type: 'float',
-        defaultValue: '170.0',
-        meta: 'ClampMin = 50',
+        defaultValue: eqsFloat(EQS_LINE_OF_SIGHT.maxTraceHeight),
+        meta: eqsClampMeta(EQS_LINE_OF_SIGHT.clamps.maxTraceHeight),
         description: 'Highest trace height offset (standing height).',
       },
       {
@@ -314,8 +322,8 @@ const EQS_COMPONENTS: EQSComponentDef[] = [
       {
         name: 'MaxElevationBonus',
         type: 'float',
-        defaultValue: '300.0',
-        meta: 'ClampMin = 50',
+        defaultValue: eqsFloat(EQS_ELEVATION_ADVANTAGE.maxElevationBonus),
+        meta: eqsClampMeta(EQS_ELEVATION_ADVANTAGE.clamps.maxElevationBonus),
         description: 'Elevation difference (UU) that maps to score 1.0. Beyond this is clamped.',
       },
       {

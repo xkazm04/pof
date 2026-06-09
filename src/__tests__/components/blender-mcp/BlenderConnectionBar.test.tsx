@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { render, cleanup, screen, fireEvent } from '@testing-library/react';
 import { BlenderConnectionBar } from '@/components/blender-mcp/BlenderConnectionBar';
 import { useBlenderMCPStore } from '@/stores/blenderMCPStore';
@@ -14,6 +14,9 @@ beforeEach(() => {
     isConnecting: false,
     lastError: null,
     recentScreenshots: [],
+    retryAttempt: 0,
+    autoRetrying: false,
+    autoConnectAttempted: false,
   });
 });
 
@@ -90,5 +93,53 @@ describe('BlenderConnectionBar — accessibility', () => {
     const status = screen.getByRole('status');
     const dot = status.querySelector('span[aria-hidden="true"]');
     expect(dot).toBeTruthy();
+  });
+});
+
+describe('BlenderConnectionBar — guided setup + auto-connect', () => {
+  it('honors the persisted autoConnect flag by calling maybeAutoConnect on mount', () => {
+    const spy = vi.fn();
+    useBlenderMCPStore.setState({ maybeAutoConnect: spy as never });
+    render(<BlenderConnectionBar />);
+    expect(spy).toHaveBeenCalledTimes(1);
+  });
+
+  it('replaces the raw error with a diagnosed failure mode and a Troubleshoot action', () => {
+    useBlenderMCPStore.setState({
+      lastError: 'Connection failed: connect ECONNREFUSED 127.0.0.1:9876',
+    });
+    render(<BlenderConnectionBar />);
+    const alert = screen.getByRole('alert');
+    expect(alert.textContent).toMatch(/isn't running/i);
+    expect(screen.getByRole('button', { name: /troubleshoot/i })).toBeTruthy();
+  });
+
+  it('opens the setup wizard when Troubleshoot is clicked', () => {
+    useBlenderMCPStore.setState({
+      lastError: 'Connection failed: connect ECONNREFUSED 127.0.0.1:9876',
+    });
+    render(<BlenderConnectionBar />);
+    expect(screen.queryByRole('dialog')).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: /troubleshoot/i }));
+    expect(screen.getByRole('dialog')).toBeTruthy();
+  });
+
+  it('exposes an auto-connect toggle in settings wired to setAutoConnect', () => {
+    const spy = vi.fn();
+    useBlenderMCPStore.setState({ setAutoConnect: spy as never });
+    render(<BlenderConnectionBar />);
+    fireEvent.click(screen.getByRole('button', { name: /connection settings/i }));
+    const toggle = screen.getByRole('checkbox', {
+      name: /auto-connect to blender mcp on launch/i,
+    });
+    fireEvent.click(toggle);
+    expect(spy).toHaveBeenCalledWith(true);
+  });
+
+  it('reflects an active backoff retry in the status pill', () => {
+    useBlenderMCPStore.setState({ autoRetrying: true, retryAttempt: 1 });
+    render(<BlenderConnectionBar />);
+    const status = screen.getByRole('status');
+    expect(status.getAttribute('aria-label')).toMatch(/reconnecting/i);
   });
 });

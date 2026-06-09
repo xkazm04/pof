@@ -15,6 +15,8 @@ import {
   SEVERITY_TOKENS, CATEGORY_LABELS, TRIAGE_TOKENS, severitySurface,
 } from '@/lib/game-director-styles';
 import { EmptyState } from '@/components/ui/EmptyState';
+import { SeverityLegend } from './SeverityLegend';
+import { FindingFixButton } from './FindingFixButton';
 
 const ACCENT = ACCENT_ORANGE;
 
@@ -27,6 +29,7 @@ interface FindingsExplorerProps {
     triageNote?: string,
     snoozedUntil?: string | null,
   ) => Promise<PlaytestFinding>;
+  markFixDispatched: (findingId: string) => Promise<PlaytestFinding>;
   onNewSession?: () => void;
 }
 
@@ -38,7 +41,7 @@ const TRIAGE_FILTER_LABELS: Record<TriageFilter, string> = {
   triaged: 'Triaged',
 };
 
-export function FindingsExplorer({ sessions, getFindings, updateTriage, onNewSession }: FindingsExplorerProps) {
+export function FindingsExplorer({ sessions, getFindings, updateTriage, markFixDispatched, onNewSession }: FindingsExplorerProps) {
   const [allFindings, setAllFindings] = useState<PlaytestFinding[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
@@ -74,6 +77,17 @@ export function FindingsExplorer({ sessions, getFindings, updateTriage, onNewSes
       setBusyId(prev => (prev === finding.id ? null : prev));
     }
   }, [updateTriage]);
+
+  // Stamp the finding with its fix-dispatch time so the detect→fix link shows
+  // immediately (best-effort — the repair task has already been dispatched).
+  const handleFixDispatched = useCallback(async (finding: PlaytestFinding) => {
+    try {
+      const updated = await markFixDispatched(finding.id);
+      setAllFindings(prev => prev.map(f => (f.id === updated.id ? updated : f)));
+    } catch {
+      // tracking is best-effort
+    }
+  }, [markFixDispatched]);
 
   const filtered = useMemo(() => {
     let result = allFindings;
@@ -179,6 +193,8 @@ export function FindingsExplorer({ sessions, getFindings, updateTriage, onNewSes
         )}
       </span>
 
+      {allFindings.length > 0 && <SeverityLegend />}
+
       {/* Findings list */}
       {filtered.length === 0 ? (
         allFindings.length === 0 ? (
@@ -205,6 +221,7 @@ export function FindingsExplorer({ sessions, getFindings, updateTriage, onNewSes
               index={idx}
               busy={busyId === finding.id}
               onApply={applyTriage}
+              onFixDispatched={handleFixDispatched}
             />
           ))}
         </div>
@@ -218,6 +235,7 @@ function FindingCard({
   index,
   busy,
   onApply,
+  onFixDispatched,
 }: {
   finding: PlaytestFinding;
   index: number;
@@ -228,6 +246,7 @@ function FindingCard({
     note?: string,
     snoozedUntil?: string | null,
   ) => Promise<void>;
+  onFixDispatched: (finding: PlaytestFinding) => void;
 }) {
   const [showNote, setShowNote] = useState(false);
   const [draftNote, setDraftNote] = useState(finding.triageNote);

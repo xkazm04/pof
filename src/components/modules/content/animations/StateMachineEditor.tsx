@@ -17,6 +17,7 @@ import { nlaStateMachineScript } from '@/lib/blender-mcp/scripts/nla-state-machi
 import type { ExecuteOutput } from '@/lib/blender-mcp/types';
 import { useBlenderMCPStore } from '@/stores/blenderMCPStore';
 import { computeEdgeGeometry } from '@/components/ui/svg/graph-edges';
+import { SchematicPanel } from '@/components/ui/SchematicPanel';
 import {
   validateStateMachine,
   groupWarningsByState,
@@ -789,9 +790,11 @@ export function StateMachineEditor() {
       {/* ── Main grid: Canvas + Property Panel ── */}
       <div className="grid grid-cols-1 xl:grid-cols-[1fr_320px] gap-4">
         {/* ── Canvas ── */}
-        <div
+        <SchematicPanel
           ref={canvasRef}
-          className="relative rounded-xl border-2 border-surface-deep bg-[#050510]/80 overflow-hidden select-none"
+          tone="well"
+          accent={EDITOR_ACCENT}
+          className="select-none"
           style={{ height: 400, cursor: draggingStateId ? 'grabbing' : drawingTransition ? 'crosshair' : 'default' }}
           onMouseMove={handleCanvasMouseMove}
           onMouseUp={handleCanvasMouseUp}
@@ -805,9 +808,6 @@ export function StateMachineEditor() {
             }
           }}
         >
-          {/* Grid background */}
-          <div className="absolute inset-0 pointer-events-none opacity-[0.03]" style={{ backgroundImage: `linear-gradient(${EDITOR_ACCENT} 1px, transparent 1px), linear-gradient(90deg, ${EDITOR_ACCENT} 1px, transparent 1px)`, backgroundSize: '32px 32px' }} />
-
           {/* SVG for transitions */}
           <svg className="absolute inset-0 w-full h-full pointer-events-none" style={{ zIndex: 0 }}>
             <defs>
@@ -1011,7 +1011,7 @@ export function StateMachineEditor() {
           <div className="absolute top-2 left-2 text-[11px] text-text-muted/50 font-mono" style={{ zIndex: 2 }}>
             Drag to move · Click to select · Use toolbar for transitions
           </div>
-        </div>
+        </SchematicPanel>
 
         {/* ── Property Panel ── */}
         <div className="space-y-3">

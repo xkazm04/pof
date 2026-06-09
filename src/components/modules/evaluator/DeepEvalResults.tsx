@@ -6,12 +6,14 @@ import {
   AlertOctagon,
   AlertTriangle,
   ArrowRight,
+  ArrowUp,
   BarChart3,
   Check,
   ChevronDown,
   ChevronRight,
   Clock,
   FileCode2,
+  GitCommitHorizontal,
   Info,
   Loader2,
   Play,
@@ -26,14 +28,22 @@ import { getEvaluableModuleIds, EVAL_PASSES, PASS_LABELS } from '@/lib/evaluator
 import { MODULE_LABELS } from '@/lib/module-registry';
 import type { EvalProgress, DeepEvalResult } from '@/lib/evaluator/deep-eval-engine';
 import type { EvalPass } from '@/lib/evaluator/module-eval-prompts';
+import { aggregateFindings } from '@/lib/evaluator/finding-collector';
 import type { EvalFinding, FindingSeverity, ScanFindings, ModuleFindings } from '@/lib/evaluator/finding-collector';
+import { diffScans, mergeBaseline } from '@/lib/evaluator/regression-diff';
+import type { RegressionDiff } from '@/lib/evaluator/regression-diff';
+import type { AttributionMap, CommitAttribution } from '@/lib/evaluator/git-attribution';
 import type { FixPlan } from '@/lib/evaluator/fix-plan-generator';
 import type { SubModuleId } from '@/types/modules';
 import { useProjectStore } from '@/stores/projectStore';
+import { useDeepEvalStore } from '@/stores/deepEvalStore';
 import { useModuleCLI } from '@/hooks/useModuleCLI';
+import { apiFetch } from '@/lib/api-utils';
+import { formatDuration } from '@/lib/format';
 import { MOTION } from '@/lib/constants';
 import { SurfaceCard } from '@/components/ui/SurfaceCard';
-import { MODULE_COLORS, STATUS_SUCCESS, STATUS_ERROR, STATUS_WARNING, STATUS_INFO, SEVERITY_TOKENS, statusBorder, type SeverityToken } from '@/lib/chart-colors';
+import { RegressionBanner } from './RegressionBanner';
+import { MODULE_COLORS, STATUS_SUCCESS, STATUS_ERROR, STATUS_WARNING, STATUS_INFO, SEVERITY_TOKENS, severityAccentCard, statusBorder, type SeverityToken } from '@/lib/chart-colors';
 
 // ─── Constants ───────────────────────────────────────────────────────────────
 
@@ -72,6 +82,9 @@ export function DeepEvalResults() {
 
   const [progress, setProgress] = useState<EvalProgress | null>(null);
   const [result, setResult] = useState<DeepEvalResult | null>(null);
+  const [diff, setDiff] = useState<RegressionDiff | null>(null);
+  const [view, setView] = useState<'new' | 'all'>('all');
+  const [attribution, setAttribution] = useState<AttributionMap>({});
   const [expandedModules, setExpandedModules] = useState<Set<string>>(new Set());
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set());
   const [selectedModuleIds, setSelectedModuleIds] = useState<Set<string>>(new Set(getEvaluableModuleIds()));
@@ -85,6 +98,67 @@ export function DeepEvalResults() {
   });
 
   const isRunning = progress?.status === 'running';
+
+  // ── Result processing ───────────────────────────────────────────────────────
+
+  /**
+   * Apply a completed scan: diff it against the persisted previous scan to tag
+   * findings NEW/PERSISTING/RESOLVED, default to the New-issues view, record the
+   * merged baseline for next time, and attribute NEW findings to recent commits.
+   */
+  const applyScanResult = useCallback(
+    async (evalResult: DeepEvalResult, opts?: { expandModule?: SubModuleId }) => {
+      setResult(evalResult);
+
+      const currentFlat = evalResult.findings.modules.flatMap((m) => m.findings);
+      const scope = evalResult.modulesEvaluated;
+      const previous = useDeepEvalStore.getState().lastScan;
+
+      const d = diffScans(previous?.findings ?? null, currentFlat, { scopeModuleIds: scope });
+      setDiff(d);
+      // Regressions are the point — open on the New-issues view when there's a
+      // baseline and something new actually appeared; otherwise show everything.
+      setView(d.hasPrevious && d.summary.newTotal > 0 ? 'new' : 'all');
+      setAttribution({});
+
+      // Persist the merged baseline (untouched modules keep their prior findings).
+      useDeepEvalStore.getState().recordScan({
+        scanId: evalResult.scanId,
+        timestamp: Date.now(),
+        findings: mergeBaseline(previous?.findings ?? null, currentFlat, scope),
+      });
+
+      // Auto-expand modules with critical/high findings (plus any forced one).
+      const expanded = new Set<string>();
+      for (const mod of evalResult.findings.modules) {
+        if (mod.bySeverity.critical > 0 || mod.bySeverity.high > 0) expanded.add(mod.moduleId);
+      }
+      if (opts?.expandModule) expanded.add(opts.expandModule);
+      setExpandedModules(expanded);
+
+      // Attribute NEW findings to the commit(s) that touched their files since
+      // the previous scan (best-effort; reuses git-log parsing server-side).
+      if (d.hasPrevious && projectPath) {
+        const newFiles = Array.from(
+          new Set(d.tagged.filter((t) => t.status === 'new' && t.file).map((t) => t.file as string)),
+        );
+        if (newFiles.length > 0) {
+          const since = previous?.timestamp ? new Date(previous.timestamp).toISOString() : null;
+          try {
+            const res = await apiFetch<{ attribution: AttributionMap }>('/api/evaluator/git-attribution', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ projectPath, files: newFiles, since }),
+            });
+            setAttribution(res.attribution ?? {});
+          } catch {
+            // Attribution is optional — leave it empty if git/the route fails.
+          }
+        }
+      }
+    },
+    [projectPath],
+  );
 
   // ── Run evaluation ─────────────────────────────────────────────────────────
 
@@ -103,20 +177,11 @@ export function DeepEvalResults() {
         projectPath,
         onProgress: setProgress,
       });
-      setResult(evalResult);
-
-      // Auto-expand modules with critical findings
-      const expanded = new Set<string>();
-      for (const mod of evalResult.findings.modules) {
-        if (mod.bySeverity.critical > 0 || mod.bySeverity.high > 0) {
-          expanded.add(mod.moduleId);
-        }
-      }
-      setExpandedModules(expanded);
+      await applyScanResult(evalResult);
     } catch (err) {
       console.error('Deep eval error:', err);
     }
-  }, [isRunning, selectedModuleIds, projectName, projectPath, ueVersion]);
+  }, [isRunning, selectedModuleIds, projectName, projectPath, ueVersion, applyScanResult]);
 
   const handleRunSingle = useCallback(async (moduleId: SubModuleId) => {
     if (isRunning) return;
@@ -129,12 +194,11 @@ export function DeepEvalResults() {
         projectPath,
         onProgress: setProgress,
       });
-      setResult(evalResult);
-      setExpandedModules(new Set([moduleId]));
+      await applyScanResult(evalResult, { expandModule: moduleId });
     } catch (err) {
       console.error('Single module eval error:', err);
     }
-  }, [isRunning, projectName, projectPath, ueVersion]);
+  }, [isRunning, projectName, projectPath, ueVersion, applyScanResult]);
 
   const handleCancel = useCallback(() => {
     cancelDeepEval();
@@ -182,12 +246,19 @@ export function DeepEvalResults() {
     });
   };
 
-  // ── Duration formatting ────────────────────────────────────────────────────
+  // ── Derived view ─────────────────────────────────────────────────────────
 
-  const formatDuration = (ms: number): string => {
-    if (ms < 60000) return `${Math.round(ms / 1000)}s`;
-    return `${Math.round(ms / 60000)}m ${Math.round((ms % 60000) / 1000)}s`;
-  };
+  // Re-aggregate just the NEW findings into a module tree for the New-issues view.
+  const newAggregated = useMemo<ScanFindings | null>(() => {
+    if (!diff || !result) return null;
+    const news = diff.tagged.filter((t) => t.status === 'new');
+    return aggregateFindings(news, result.scanId);
+  }, [diff, result]);
+
+  const activeFindings: ScanFindings | null =
+    view === 'new' && newAggregated ? newAggregated : result?.findings ?? null;
+  // Only badge findings NEW/PERSISTING once we have a real baseline to compare to.
+  const taggingActive = diff?.hasPrevious ?? false;
 
   // ── Render ─────────────────────────────────────────────────────────────────
 
@@ -316,6 +387,16 @@ export function DeepEvalResults() {
       {/* ── Results summary ───────────────────────────────────────────────── */}
       {result && (
         <div data-testid="pof-module-evaluator-result-summary" className="space-y-4">
+          {/* Regression summary banner — what changed since the last scan */}
+          {diff && (
+            <RegressionBanner
+              diff={diff}
+              view={view}
+              onViewChange={setView}
+              totalFindings={result.findings.totalFindings}
+            />
+          )}
+
           {/* Summary bar */}
           <SurfaceCard className="p-4">
             <div className="flex items-center gap-4">
@@ -350,14 +431,17 @@ export function DeepEvalResults() {
             </div>
           </SurfaceCard>
 
-          {/* Module tree */}
+          {/* Module tree (filtered to the active New/All view) */}
           <div className="space-y-2">
-            {result.findings.modules.map((mod) => (
+            {(activeFindings?.modules ?? []).map((mod) => (
               <ModuleSection
                 key={mod.moduleId}
                 module={mod}
                 isExpanded={expandedModules.has(mod.moduleId)}
                 expandedCategories={expandedCategories}
+                statusById={diff?.statusById}
+                attribution={attribution}
+                taggingActive={taggingActive}
                 onToggleModule={() => toggleModule(mod.moduleId)}
                 onToggleCategory={toggleCategory}
                 onFix={handleFix}
@@ -368,7 +452,21 @@ export function DeepEvalResults() {
             ))}
           </div>
 
-          {/* Empty results */}
+          {/* Empty: there are findings overall, but none new since last scan */}
+          {activeFindings?.totalFindings === 0 && view === 'new' && diff?.hasPrevious && result.findings.totalFindings > 0 && (
+            <div className="bg-surface border rounded-lg p-8 text-center" style={{ borderColor: statusBorder(STATUS_SUCCESS, 0.12) }}>
+              <Check className="w-8 h-8 mx-auto mb-3" style={{ color: STATUS_SUCCESS }} />
+              <h3 className="text-sm font-semibold text-text mb-1">No New Issues</h3>
+              <p className="text-xs text-text-muted">
+                No regressions since the last scan.{' '}
+                <button onClick={() => setView('all')} className="underline hover:brightness-125" style={{ color: STATUS_INFO }}>
+                  View all {result.findings.totalFindings} findings
+                </button>
+              </p>
+            </div>
+          )}
+
+          {/* Empty: the whole scan found nothing */}
           {result.findings.totalFindings === 0 && (
             <div className="bg-surface border rounded-lg p-8 text-center" style={{ borderColor: statusBorder(STATUS_SUCCESS, 0.12) }}>
               <Check className="w-8 h-8 mx-auto mb-3" style={{ color: STATUS_SUCCESS }} />
@@ -492,6 +590,9 @@ function ModuleSection({
   module: mod,
   isExpanded,
   expandedCategories,
+  statusById,
+  attribution,
+  taggingActive,
   onToggleModule,
   onToggleCategory,
   onFix,
@@ -502,6 +603,9 @@ function ModuleSection({
   module: ModuleFindings;
   isExpanded: boolean;
   expandedCategories: Set<string>;
+  statusById?: Record<string, 'new' | 'persisting'>;
+  attribution: AttributionMap;
+  taggingActive: boolean;
   onToggleModule: () => void;
   onToggleCategory: (key: string) => void;
   onFix: (finding: EvalFinding) => void;
@@ -622,6 +726,8 @@ function ModuleSection({
                               <FindingRow
                                 key={finding.id}
                                 finding={finding}
+                                status={taggingActive ? statusById?.[finding.id] : undefined}
+                                commits={finding.file ? attribution[finding.file] : undefined}
                                 onFix={() => onFix(finding)}
                                 isFixRunning={isFixRunning}
                               />
@@ -645,10 +751,16 @@ function ModuleSection({
 
 function FindingRow({
   finding,
+  status,
+  commits,
   onFix,
   isFixRunning,
 }: {
   finding: EvalFinding;
+  /** Regression tag relative to the previous scan (undefined = no baseline yet). */
+  status?: 'new' | 'persisting';
+  /** Commits that touched this finding's file since the last scan (NEW findings). */
+  commits?: CommitAttribution[];
   onFix: () => void;
   isFixRunning: boolean;
 }) {
@@ -657,13 +769,29 @@ function FindingRow({
 
   return (
     <div
-      className="rounded-md border px-3 py-2.5 transition-colors"
-      style={{ backgroundColor: cfg.bg, borderColor: cfg.border }}
+      className="rounded-md border border-border border-l-[3px] bg-surface px-3 py-2.5 transition-colors"
+      style={severityAccentCard(cfg)}
     >
       <div className="flex items-start gap-2.5">
         <SeverityIcon className="w-3.5 h-3.5 flex-shrink-0 mt-0.5" style={{ color: cfg.color }} />
 
         <div className="flex-1 min-w-0">
+          {/* Regression status tag */}
+          {status === 'new' && (
+            <span
+              className="inline-flex items-center gap-1 text-2xs font-bold uppercase tracking-wider px-1.5 py-0.5 rounded mb-1.5"
+              style={{ color: STATUS_WARNING, backgroundColor: `${STATUS_WARNING}1a` }}
+            >
+              <ArrowUp className="w-2.5 h-2.5" />
+              New
+            </span>
+          )}
+          {status === 'persisting' && (
+            <span className="inline-block text-2xs uppercase tracking-wider text-text-muted mb-1.5">
+              Persisting
+            </span>
+          )}
+
           {/* Description */}
           <p className="text-xs text-text leading-relaxed mb-1.5">
             {finding.description}
@@ -675,6 +803,19 @@ function FindingRow({
               <FileCode2 className="w-3 h-3 text-text-muted" />
               <span className="text-xs text-text-muted font-mono">
                 {finding.file}{finding.line ? `:${finding.line}` : ''}
+              </span>
+            </div>
+          )}
+
+          {/* Git attribution — which commit(s) introduced this since last scan */}
+          {status === 'new' && commits && commits.length > 0 && (
+            <div className="flex items-start gap-1.5 mb-1.5">
+              <GitCommitHorizontal className="w-3 h-3 text-text-muted mt-0.5 flex-shrink-0" />
+              <span className="text-2xs text-text-muted leading-relaxed">
+                Introduced in{' '}
+                <span className="font-mono text-text-muted-hover">{commits[0].hash}</span>
+                {commits[0].subject ? ` — ${commits[0].subject}` : ''}
+                {commits.length > 1 ? ` (+${commits.length - 1} more)` : ''}
               </span>
             </div>
           )}

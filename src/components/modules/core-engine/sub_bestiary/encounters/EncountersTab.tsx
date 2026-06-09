@@ -144,7 +144,7 @@ export function EncountersTab({ accent }: EncountersTabProps) {
                     <span className="text-text font-medium truncate flex-1">{wave.archetype}</span>
                     <span className="font-mono font-bold uppercase text-[10px]" style={{ color: tierColorValue(wave.tier) }}>{wave.tier}</span>
                     <span className="text-text-muted font-mono text-xs flex-shrink-0">x{wave.count}</span>
-                    <span className="text-text-muted/60 font-mono text-[10px] truncate max-w-[60px]">{wave.area}</span>
+                    <span className="text-text-subtle font-mono text-[10px] truncate max-w-[60px]">{wave.area}</span>
                   </div>
                 ))}
               </div>

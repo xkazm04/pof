@@ -1,5 +1,7 @@
 import { getDb } from '@/lib/db';
 import type { AcceptanceStatus, AcceptanceTier } from '@/lib/catalog/acceptance/types';
+// Type-only import (erased at runtime), so the runner→db dependency stays one-way.
+import type { DrainFilter } from '@/lib/test-gate-runner/drain';
 
 export interface PipelineArtifact {
   catalogId: string;
@@ -13,7 +15,11 @@ export interface PipelineArtifact {
   updatedAt?: string;
 }
 
+// The DB connection is a process-level singleton (see getDb), so the DDL only
+// needs to run once. This guard keeps it off the hot path of every query.
+let tableEnsured = false;
 function ensureTable() {
+  if (tableEnsured) return;
   getDb().exec(`
     CREATE TABLE IF NOT EXISTS pipeline_artifacts (
       catalog_id TEXT NOT NULL,
@@ -28,6 +34,7 @@ function ensureTable() {
       PRIMARY KEY (catalog_id, entity_id, step)
     )
   `);
+  tableEnsured = true;
 }
 
 /** Column row → PipelineArtifact. Pure (exported for unit test). */
@@ -64,7 +71,7 @@ export function getArtifact(catalogId: string, entityId: string, step: string): 
 }
 
 /** All `deferred` artifacts (the runner's work queue), optionally narrowed. */
-export function listDeferredArtifacts(filter?: { tier?: AcceptanceTier; catalogId?: string; entityId?: string }): PipelineArtifact[] {
+export function listDeferredArtifacts(filter?: DrainFilter): PipelineArtifact[] {
   ensureTable();
   const where = ["status = 'deferred'"];
   const args: string[] = [];

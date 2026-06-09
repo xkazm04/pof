@@ -2,20 +2,19 @@
 
 import { StepFrame } from './StepFrame';
 import { CliProduce } from './shared/CliProduce';
-import { useLabStep, useLabPipelineStore } from '../labPipelineStore';
+import { useStaticStep } from './useStaticStep';
 import { ITEM_STEP_SPECS } from './itemsSteps';
 import type { StepProps } from './stepProps';
 
 /** Items · Inventory UI Integration. View: grid preview + binding (persisted). Produce: wire. */
 export function ItemInventoryUI({ t, entity, step }: StepProps) {
-  const art = useLabStep(entity.id, step);
-  const produce = useLabPipelineStore((s) => s.produce);
+  const { art, runProduce } = useStaticStep(entity, step);
   const wired = !!art?.data?.wired;
   const slot = String((art?.data?.slot as string) ?? 'Weapon');
 
   return (
-    <StepFrame t={t} acceptance={ITEM_STEP_SPECS[step].accept(art)}
-      onFix={() => produce(entity.id, step, ITEM_STEP_SPECS[step].produce(entity))}
+    <StepFrame t={t} acceptance={ITEM_STEP_SPECS[step].accept(art?.data ?? {})}
+      onFix={runProduce}
       panels={[
         { label: 'Inventory grid', node: (
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 6 }}>
@@ -36,7 +35,7 @@ export function ItemInventoryUI({ t, entity, step }: StepProps) {
           <CliProduce t={t} label="Wire to inventory UI (CLI)" rows={3}
             note={`Registers ${entity.name} with the inventory widget (slot rules + stack size).`}
             buildPrompt={(dir) => `Register ${entity.name} with the inventory UI: ${slot} slot, stack size 1, icon binding. ${dir}`}
-            onComplete={() => produce(entity.id, step, ITEM_STEP_SPECS[step].produce(entity))} />
+            onComplete={runProduce} />
         ) },
       ]}
     />
@@ -45,14 +44,13 @@ export function ItemInventoryUI({ t, entity, step }: StepProps) {
 
 /** Items · Tooltip / Compare. View: tooltip card + compare (persisted). Produce: layout. */
 export function ItemTooltip({ t, entity, step }: StepProps) {
-  const art = useLabStep(entity.id, step);
-  const produce = useLabPipelineStore((s) => s.produce);
+  const { art, runProduce } = useStaticStep(entity, step);
   const done = !!art?.data?.compare;
   const stats = [['Damage', '34', '+3'], ['Attack Speed', '1.1/s', '-0.1'], ['Weight', '3.4kg', '+0.4'], ['Value', '120g', '+20']];
 
   return (
-    <StepFrame t={t} acceptance={ITEM_STEP_SPECS[step].accept(art)}
-      onFix={() => produce(entity.id, step, ITEM_STEP_SPECS[step].produce(entity))}
+    <StepFrame t={t} acceptance={ITEM_STEP_SPECS[step].accept(art?.data ?? {})}
+      onFix={runProduce}
       panels={[
         { label: 'Tooltip card', node: (
           <div style={{ border: `1px solid ${t.line}`, borderRadius: t.glass ? 10 : 0, padding: 14, background: t.panel }}>
@@ -82,7 +80,7 @@ export function ItemTooltip({ t, entity, step }: StepProps) {
           <CliProduce t={t} label="Generate tooltip (CLI)" rows={3}
             note="Writes the tooltip layout + compare-vs-equipped delta view."
             buildPrompt={(dir) => `Generate the tooltip layout for ${entity.name} (all stat fields + compare-vs-equipped deltas). ${dir}`}
-            onComplete={() => produce(entity.id, step, ITEM_STEP_SPECS[step].produce(entity))} />
+            onComplete={runProduce} />
         ) },
       ]}
     />

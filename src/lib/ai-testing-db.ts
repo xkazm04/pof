@@ -1,5 +1,6 @@
 import { getDb } from './db';
 import { buildUpdateQuery } from './db-utils';
+import { summarizeScenarios } from '@/types/ai-testing';
 import type {
   TestSuite,
   TestScenario,
@@ -237,13 +238,15 @@ export function deleteScenario(id: number): boolean {
 
 export function getTestingSummary(): TestSuiteSummary {
   const suites = getAllSuites();
-  const allScenarios = suites.flatMap((s) => s.scenarios);
+  const { total, passed, failed, draft } = summarizeScenarios(
+    suites.flatMap((s) => s.scenarios)
+  );
 
   return {
     totalSuites: suites.length,
-    totalScenarios: allScenarios.length,
-    passedCount: allScenarios.filter((s) => s.status === 'passed').length,
-    failedCount: allScenarios.filter((s) => s.status === 'failed' || s.status === 'error').length,
-    draftCount: allScenarios.filter((s) => s.status === 'draft').length,
+    totalScenarios: total,
+    passedCount: passed,
+    failedCount: failed,
+    draftCount: draft,
   };
 }

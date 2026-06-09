@@ -1,25 +1,27 @@
 'use client';
 
 import { useState, useCallback } from 'react';
-import { Settings, Layers, Zap, FileOutput, Loader2, CheckCircle, AlertCircle } from 'lucide-react';
+import { Settings, Layers, Zap, FileOutput, Boxes } from 'lucide-react';
 import { ReviewableModuleView } from '@/components/modules/shared/ReviewableModuleView';
 import type { ExtraTab } from '@/components/modules/shared/ReviewableModuleView';
 import { SUB_MODULE_MAP, getCategoryForSubModule, getModuleChecklist } from '@/lib/module-registry';
 import { useBlenderMCPStore } from '@/stores/blenderMCPStore';
-import { tryApiFetch } from '@/lib/api-utils';
-import type { ExecuteOutput } from '@/lib/blender-mcp/types';
 import { generateLodsScript } from '@/lib/blender-mcp/scripts/generate-lods';
 import { optimizeMeshScript } from '@/lib/blender-mcp/scripts/optimize-mesh';
 import { convertFbxScript } from '@/lib/blender-mcp/scripts/convert-fbx';
 import { TabHeader } from '@/components/modules/shared/TabHeader';
+import {
+  MCPFormCard,
+  MCPField,
+  MCPTextInput,
+  MCPSubmitButton,
+  DisconnectedNotice,
+  ResultBlock,
+} from '@/components/blender-mcp/McpFormControls';
 import { BlenderSetup } from './BlenderSetup';
 import { ScriptRunner } from './ScriptRunner';
 import { executeViaMCP } from './ScriptRunner';
-import {
-  SUCCESS_RESULT,
-  ERROR_RESULT,
-  WARNING_TEXT,
-} from '@/lib/blender-mcp/status-tokens';
+import { AssetBrowser } from './AssetBrowser';
 
 /* ─── Shared execution hook ─────────────────────────────────────────────── */
 
@@ -50,26 +52,6 @@ function useScriptExecution() {
   return { isRunning, result, error, connected, execute };
 }
 
-function ResultBlock({ result, error }: { result: string | null; error: string | null }) {
-  if (!result && !error) return null;
-  return (
-    <div className="mt-3">
-      {result && (
-        <div className={`flex items-start gap-2 p-3 rounded ${SUCCESS_RESULT}`}>
-          <CheckCircle size={14} className="text-green-400 mt-0.5 shrink-0" />
-          <pre className="text-xs font-mono text-text-muted whitespace-pre-wrap">{result}</pre>
-        </div>
-      )}
-      {error && (
-        <div className={`flex items-start gap-2 p-3 rounded ${ERROR_RESULT}`}>
-          <AlertCircle size={14} className="text-red-400 mt-0.5 shrink-0" />
-          <span className="text-xs text-red-400">{error}</span>
-        </div>
-      )}
-    </div>
-  );
-}
-
 /* ─── Pipeline Tab ──────────────────────────────────────────────────────── */
 
 function PipelineTab() {
@@ -87,7 +69,7 @@ function PipelineTab() {
 
 /* ─── LOD Generation Tab ────────────────────────────────────────────────── */
 
-function LODGenerationTab() {
+export function LODGenerationTab() {
   const { isRunning, result, error, connected, execute } = useScriptExecution();
   const [objectName, setObjectName] = useState('');
   const [lodRatiosText, setLodRatiosText] = useState('0.75, 0.5, 0.25');
@@ -111,49 +93,41 @@ function LODGenerationTab() {
         description="Generate Level-of-Detail meshes via decimation in Blender"
       />
 
-      <div className="rounded-lg border border-border bg-surface-secondary p-4 space-y-3">
-        <div>
-          <label className="block text-xs font-medium text-text mb-1">Object Name</label>
-          <input
-            type="text"
+      <MCPFormCard>
+        <MCPField label="Object Name" htmlFor="lod-object">
+          <MCPTextInput
+            id="lod-object"
             value={objectName}
-            onChange={(e) => setObjectName(e.target.value)}
+            onChange={setObjectName}
             placeholder="e.g. SM_Sword"
-            className="w-full bg-surface-tertiary border border-border rounded-lg px-3 py-1.5 text-xs text-text placeholder:text-text-muted"
           />
-        </div>
+        </MCPField>
 
-        <div>
-          <label className="block text-xs font-medium text-text mb-1">
-            LOD Ratios (comma-separated, 0-1)
-          </label>
-          <input
-            type="text"
-            value={lodRatiosText}
-            onChange={(e) => setLodRatiosText(e.target.value)}
-            placeholder="0.75, 0.5, 0.25"
-            className="w-full bg-surface-tertiary border border-border rounded-lg px-3 py-1.5 text-xs text-text placeholder:text-text-muted"
-          />
-          <p className="text-xs text-text-muted mt-1">
-            Each ratio creates an LOD level. 0.75 = 75% of original polygon count.
-          </p>
-        </div>
-
-        <button
-          onClick={handleGenerate}
-          disabled={!connected || isRunning || !objectName.trim()}
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded text-xs font-medium
-                     bg-[var(--visual-gen)] text-white hover:brightness-110 transition-all
-                     disabled:opacity-50"
+        <MCPField
+          label="LOD Ratios (comma-separated, 0-1)"
+          htmlFor="lod-ratios"
+          hint="Each ratio creates an LOD level. 0.75 = 75% of original polygon count."
         >
-          {isRunning ? <Loader2 size={14} className="animate-spin" /> : <Layers size={14} />}
-          {isRunning ? 'Generating...' : 'Generate LODs'}
-        </button>
+          <MCPTextInput
+            id="lod-ratios"
+            value={lodRatiosText}
+            onChange={setLodRatiosText}
+            placeholder="0.75, 0.5, 0.25"
+          />
+        </MCPField>
 
-        {!connected && (
-          <p className={`text-xs ${WARNING_TEXT}`}>Connect to Blender MCP first.</p>
-        )}
-      </div>
+        <MCPSubmitButton
+          onClick={handleGenerate}
+          disabled={!connected || !objectName.trim()}
+          loading={isRunning}
+          loadingLabel="Generating..."
+          icon={Layers}
+        >
+          Generate LODs
+        </MCPSubmitButton>
+
+        {!connected && <DisconnectedNotice />}
+      </MCPFormCard>
 
       <ResultBlock result={result} error={error} />
     </div>
@@ -162,7 +136,7 @@ function LODGenerationTab() {
 
 /* ─── Mesh Optimization Tab ─────────────────────────────────────────────── */
 
-function MeshOptimizationTab() {
+export function MeshOptimizationTab() {
   const { isRunning, result, error, connected, execute } = useScriptExecution();
   const [objectName, setObjectName] = useState('');
   const [removeDoubles, setRemoveDoubles] = useState(true);
@@ -188,17 +162,15 @@ function MeshOptimizationTab() {
         description="Clean up meshes by removing doubles and recalculating normals"
       />
 
-      <div className="rounded-lg border border-border bg-surface-secondary p-4 space-y-3">
-        <div>
-          <label className="block text-xs font-medium text-text mb-1">Object Name</label>
-          <input
-            type="text"
+      <MCPFormCard>
+        <MCPField label="Object Name" htmlFor="mesh-object">
+          <MCPTextInput
+            id="mesh-object"
             value={objectName}
-            onChange={(e) => setObjectName(e.target.value)}
+            onChange={setObjectName}
             placeholder="e.g. SM_Character"
-            className="w-full bg-surface-tertiary border border-border rounded-lg px-3 py-1.5 text-xs text-text placeholder:text-text-muted"
           />
-        </div>
+        </MCPField>
 
         <div className="flex items-center gap-4">
           <label className="flex items-center gap-1.5 text-xs text-text">
@@ -221,32 +193,28 @@ function MeshOptimizationTab() {
           </label>
         </div>
 
-        <div>
-          <label className="block text-xs font-medium text-text mb-1">Merge Distance</label>
-          <input
-            type="text"
+        <MCPField label="Merge Distance" htmlFor="mesh-merge">
+          <MCPTextInput
+            id="mesh-merge"
             value={mergeDistance}
-            onChange={(e) => setMergeDistance(e.target.value)}
+            onChange={setMergeDistance}
             placeholder="0.0001"
-            className="w-32 bg-surface-tertiary border border-border rounded-lg px-3 py-1.5 text-xs text-text placeholder:text-text-muted"
+            className="w-32"
           />
-        </div>
+        </MCPField>
 
-        <button
+        <MCPSubmitButton
           onClick={handleOptimize}
-          disabled={!connected || isRunning || !objectName.trim()}
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded text-xs font-medium
-                     bg-[var(--visual-gen)] text-white hover:brightness-110 transition-all
-                     disabled:opacity-50"
+          disabled={!connected || !objectName.trim()}
+          loading={isRunning}
+          loadingLabel="Optimizing..."
+          icon={Zap}
         >
-          {isRunning ? <Loader2 size={14} className="animate-spin" /> : <Zap size={14} />}
-          {isRunning ? 'Optimizing...' : 'Optimize Mesh'}
-        </button>
+          Optimize Mesh
+        </MCPSubmitButton>
 
-        {!connected && (
-          <p className={`text-xs ${WARNING_TEXT}`}>Connect to Blender MCP first.</p>
-        )}
-      </div>
+        {!connected && <DisconnectedNotice />}
+      </MCPFormCard>
 
       <ResultBlock result={result} error={error} />
     </div>
@@ -255,7 +223,7 @@ function MeshOptimizationTab() {
 
 /* ─── FBX Conversion Tab ────────────────────────────────────────────────── */
 
-function FBXConversionTab() {
+export function FBXConversionTab() {
   const { isRunning, result, error, connected, execute } = useScriptExecution();
   const [inputPath, setInputPath] = useState('');
   const [outputPath, setOutputPath] = useState('');
@@ -279,28 +247,26 @@ function FBXConversionTab() {
         description="Convert FBX files to GLB format with optional Draco compression"
       />
 
-      <div className="rounded-lg border border-border bg-surface-secondary p-4 space-y-3">
-        <div>
-          <label className="block text-xs font-medium text-text mb-1">Input FBX Path</label>
-          <input
-            type="text"
+      <MCPFormCard>
+        <MCPField label="Input FBX Path" htmlFor="fbx-input">
+          <MCPTextInput
+            id="fbx-input"
             value={inputPath}
-            onChange={(e) => setInputPath(e.target.value)}
+            onChange={setInputPath}
             placeholder="C:/Assets/model.fbx"
-            className="w-full bg-surface-tertiary border border-border rounded-lg px-3 py-1.5 text-xs text-text font-mono placeholder:text-text-muted"
+            mono
           />
-        </div>
+        </MCPField>
 
-        <div>
-          <label className="block text-xs font-medium text-text mb-1">Output GLB Path</label>
-          <input
-            type="text"
+        <MCPField label="Output GLB Path" htmlFor="fbx-output">
+          <MCPTextInput
+            id="fbx-output"
             value={outputPath}
-            onChange={(e) => setOutputPath(e.target.value)}
+            onChange={setOutputPath}
             placeholder="C:/Assets/model.glb"
-            className="w-full bg-surface-tertiary border border-border rounded-lg px-3 py-1.5 text-xs text-text font-mono placeholder:text-text-muted"
+            mono
           />
-        </div>
+        </MCPField>
 
         <label className="flex items-center gap-1.5 text-xs text-text">
           <input
@@ -312,21 +278,18 @@ function FBXConversionTab() {
           Enable Draco Compression
         </label>
 
-        <button
+        <MCPSubmitButton
           onClick={handleConvert}
-          disabled={!connected || isRunning || !inputPath.trim() || !outputPath.trim()}
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded text-xs font-medium
-                     bg-[var(--visual-gen)] text-white hover:brightness-110 transition-all
-                     disabled:opacity-50"
+          disabled={!connected || !inputPath.trim() || !outputPath.trim()}
+          loading={isRunning}
+          loadingLabel="Converting..."
+          icon={FileOutput}
         >
-          {isRunning ? <Loader2 size={14} className="animate-spin" /> : <FileOutput size={14} />}
-          {isRunning ? 'Converting...' : 'Convert to GLB'}
-        </button>
+          Convert to GLB
+        </MCPSubmitButton>
 
-        {!connected && (
-          <p className={`text-xs ${WARNING_TEXT}`}>Connect to Blender MCP first.</p>
-        )}
-      </div>
+        {!connected && <DisconnectedNotice />}
+      </MCPFormCard>
 
       <ResultBlock result={result} error={error} />
     </div>
@@ -347,6 +310,12 @@ export function BlenderPipelineView() {
       label: 'Pipeline',
       icon: Settings,
       render: () => <PipelineTab />,
+    },
+    {
+      id: 'asset-browser',
+      label: 'Asset Browser',
+      icon: Boxes,
+      render: () => <AssetBrowser />,
     },
     {
       id: 'lod-gen',

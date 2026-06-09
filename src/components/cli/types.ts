@@ -46,7 +46,12 @@ export interface ExecutionInfo {
 
 export interface ExecutionResult {
   sessionId?: string;
-  usage?: { inputTokens: number; outputTokens: number };
+  usage?: {
+    inputTokens: number;
+    outputTokens: number;
+    cacheReadTokens?: number;
+    cacheCreationTokens?: number;
+  };
   durationMs?: number;
   totalCostUsd?: number;
   isError?: boolean;

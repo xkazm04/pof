@@ -6,6 +6,7 @@ import {
   PLAYER_LEVEL_SCALING,
 } from './definitions';
 import { calculateDamage, createRNG } from './simulation-engine';
+import { computeTensionCurve, type TensionCurve } from './tension-curve';
 
 // ── Types ──────────────────────────────────────────────────────────────────
 
@@ -52,6 +53,8 @@ export interface ChoreographySimResult {
   feedbackEvents: FeedbackEvent[];
   alerts: ChoreographyAlert[];
   totalDurationSec: number;
+  /** Continuous dramatic-pacing arc + detected story beats */
+  tensionCurve: TensionCurve;
 }
 
 // ── Feedback channel color mapping (caller provides) ────────────────────
@@ -307,5 +310,22 @@ export function simulateEncounter(
     }
   }
 
-  return { damageEvents, feedbackEvents, alerts, totalDurationSec: totalDuration };
+  // Dramatic tension curve — model emotional pacing on top of the raw damage
+  // signal. Surface its pacing defects (anticlimax / flat pacing) as alerts so
+  // they show alongside the balance issues; dead zones already alert above.
+  const tensionCurve = computeTensionCurve({
+    damageEvents,
+    totalDurationSec: totalDuration,
+    playerMaxHp: playerMaxHP * tuning.playerHealthMul,
+    playerDied,
+  });
+  for (const beat of tensionCurve.beats) {
+    if (beat.type === 'anticlimax') {
+      alerts.push({ severity: 'info', message: `Anticlimactic finish: ${beat.detail}`, timeSec: beat.timeSec });
+    } else if (beat.type === 'flat-pacing') {
+      alerts.push({ severity: 'info', message: `Flat pacing: ${beat.detail}`, timeSec: beat.timeSec });
+    }
+  }
+
+  return { damageEvents, feedbackEvents, alerts, totalDurationSec: totalDuration, tensionCurve };
 }

@@ -19,15 +19,6 @@ export async function POST(req: Request) {
         return apiSuccess(report);
       }
 
-      case 'get-report': {
-        if (!cachedReport) {
-          const report = runComplianceAudit({});
-          cachedReport = report;
-          return apiSuccess(report);
-        }
-        return apiSuccess(cachedReport);
-      }
-
       case 'resolve-gap': {
         if (!cachedReport) {
           return apiError('No audit report available. Run audit first.', 400);

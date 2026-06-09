@@ -3,7 +3,10 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { computeNBA, type NBARecommendation } from '@/lib/nba-engine';
 import { useModuleStore } from '@/stores/moduleStore';
+import { tryApiFetch } from '@/lib/api-utils';
 import type { SubModuleId } from '@/types/modules';
+
+interface FeatureStatusRow { moduleId: string; featureName: string; status: string }
 
 export interface UseNBAResult {
   recommendations: NBARecommendation[];
@@ -28,21 +31,23 @@ export function useNBA(moduleId: SubModuleId): UseNBAResult {
   useEffect(() => {
     let cancelled = false;
 
-    fetch('/api/feature-matrix/all-statuses')
-      .then((r) => (r.ok ? r.json() : { statuses: [] }))
-      .then((data) => {
+    // The route returns the standard apiSuccess({ statuses }) envelope, so the
+    // array lives at data.data.statuses — tryApiFetch unwraps it for us. (Reading
+    // data.statuses off the raw fetch silently yielded an empty map, so NBA scored
+    // against no cross-module dependency data.)
+    tryApiFetch<{ statuses: FeatureStatusRow[] }>('/api/feature-matrix/all-statuses')
+      .then((result) => {
         if (cancelled) return;
-        const map = new Map<string, string>();
-        for (const row of data.statuses ?? []) {
-          map.set(`${row.moduleId}::${row.featureName}`, row.status);
+        if (result.ok) {
+          const map = new Map<string, string>();
+          for (const row of result.data.statuses ?? []) {
+            map.set(`${row.moduleId}::${row.featureName}`, row.status);
+          }
+          statusMapRef.current = map;
+          setRecommendations(computeNBA(moduleId, map));
+        } else {
+          setRecommendations(computeNBA(moduleId));
         }
-        statusMapRef.current = map;
-        setRecommendations(computeNBA(moduleId, map));
-        setIsLoading(false);
-      })
-      .catch(() => {
-        if (cancelled) return;
-        setRecommendations(computeNBA(moduleId));
         setIsLoading(false);
       });
 

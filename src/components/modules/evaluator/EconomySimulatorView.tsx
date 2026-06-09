@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState, useCallback } from 'react';
+import { useEffect, useId, useMemo, useState, useCallback } from 'react';
 import {
   Coins, TrendingUp, TrendingDown, AlertTriangle, Play,
   BarChart3, ArrowUpRight, ArrowDownRight, Users,
@@ -28,6 +28,7 @@ import type {
 import type { SweepResult, SweepOutput } from '@/lib/economy/sensitivity-sweep';
 import { MODULE_COLORS, ACCENT_CYAN, ACCENT_EMERALD_DARK, ACCENT_PURPLE_BOLD } from '@/lib/chart-colors';
 import { MOTION } from '@/lib/constants';
+import { useViewportWidth } from '@/hooks/useViewportWidth';
 
 // ── Constants ───────────────────────────────────────────────────────────────
 
@@ -64,6 +65,17 @@ const PHILOSOPHY_LABELS = {
   balanced: 'Balanced',
 } as const;
 
+// Below this viewport width the side-by-side Gini/histogram pair squashes, so it
+// stacks into a single column. Mirrors the `useViewportWidth` pattern used by the
+// `/layout` Baseline shell — measured width drives the breakpoint, not a CSS media
+// query, since 900px is between Tailwind's `sm` (640) and `lg` (1024) stops.
+const WEALTH_STACK_BREAKPOINT = 900;
+
+/** Grid columns for the wealth Gini/histogram pair: two-up when wide, stacked below the breakpoint. Pure for unit-testing the reflow decision without a DOM. */
+export function wealthGridClass(viewportWidth: number): string {
+  return viewportWidth < WEALTH_STACK_BREAKPOINT ? 'grid-cols-1' : 'grid-cols-2';
+}
+
 // ── Main Component ──────────────────────────────────────────────────────────
 
 export function EconomySimulatorView() {
@@ -81,6 +93,10 @@ export function EconomySimulatorView() {
 
   const [showConfig, setShowConfig] = useState(false);
   const [config, setConfig] = useState<SimulationConfig | null>(null);
+  // Out-of-range config fields, keyed by label → human reason. A non-empty map
+  // blocks the Run button (config can never carry an out-of-range value — those
+  // are held in each field's draft until corrected or clamped on blur).
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
   // Fetch defaults on mount
   useEffect(() => {
@@ -90,10 +106,36 @@ export function EconomySimulatorView() {
   // Sync config when defaults arrive (state-during-render pattern)
   if (defaultConfig && !config) setConfig(defaultConfig);
 
+  // Toggle the config panel, resetting field errors each time. Collapsing
+  // unmounts the inputs, so a lingering invalid draft must not keep Run disabled
+  // from behind a hidden panel; reopening simply starts clean.
+  const toggleConfig = useCallback(() => {
+    setShowConfig((open) => !open);
+    setFieldErrors((errs) => (Object.keys(errs).length ? {} : errs));
+  }, []);
+
+  const handleFieldValidity = useCallback((label: string, error: string | null) => {
+    setFieldErrors((prev) => {
+      if (error) {
+        return prev[label] === error ? prev : { ...prev, [label]: error };
+      }
+      if (!(label in prev)) return prev;
+      const next = { ...prev };
+      delete next[label];
+      return next;
+    });
+  }, []);
+
   const handleRun = useCallback(async () => {
     if (!config) return;
     await runSimulation(config);
   }, [config, runSimulation]);
+
+  const blockReason = runBlockReason({
+    isSimulating,
+    hasConfig: !!config,
+    invalidLabels: Object.keys(fieldErrors),
+  });
 
   // Summary stats from last metric
   const lastMetric = metrics.length > 0 ? metrics[metrics.length - 1] : null;
@@ -111,28 +153,38 @@ export function EconomySimulatorView() {
           accent="amber"
           accentTo="orange"
           className="mb-4"
-          secondaryAction={
-            <button
-              onClick={() => setShowConfig(!showConfig)}
-              className="flex items-center gap-1.5 px-3 py-2 bg-surface border border-border rounded-lg text-text-muted text-xs font-medium hover:text-text hover:border-border-bright transition-colors"
-            >
-              <Settings2 className="w-3.5 h-3.5" />
-              Config
-            </button>
-          }
           action={
-            <button
-              onClick={handleRun}
-              disabled={isSimulating || !config}
-              className="flex items-center gap-1.5 px-4 py-2 bg-amber-500/10 border border-amber-500/25 rounded-lg text-amber-400 text-xs font-medium hover:bg-amber-500/20 transition-colors disabled:opacity-50"
-            >
-              {isSimulating ? (
-                <RefreshCw className="w-3.5 h-3.5 animate-spin" />
-              ) : (
-                <Play className="w-3.5 h-3.5" />
-              )}
-              {isSimulating ? 'Simulating...' : 'Run Simulation'}
-            </button>
+            // Config + Run share one wrapping flex group: as the title shrinks and
+            // the action area is squeezed on narrow/zoomed viewports, the two
+            // buttons wrap past each other (Run drops below Config) instead of
+            // overflowing or colliding.
+            <div className="flex flex-wrap items-center justify-end gap-2">
+              <button
+                onClick={toggleConfig}
+                aria-expanded={showConfig}
+                className="flex items-center gap-1.5 px-3 py-2 bg-surface border border-border rounded-lg text-text-muted text-xs font-medium hover:text-text hover:border-border-bright transition-colors"
+              >
+                <Settings2 className="w-3.5 h-3.5" />
+                Config
+              </button>
+              {/* Tooltip lives on the wrapper span: a disabled button doesn't
+                  reliably surface `title` on hover, but its enabled parent does. */}
+              <span className="inline-flex" title={blockReason ?? undefined}>
+                <button
+                  onClick={handleRun}
+                  disabled={!!blockReason}
+                  aria-label={blockReason ? `Run Simulation — unavailable: ${blockReason}` : 'Run Simulation'}
+                  className="flex items-center gap-1.5 px-4 py-2 bg-amber-500/10 border border-amber-500/25 rounded-lg text-amber-400 text-xs font-medium hover:bg-amber-500/20 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {isSimulating ? (
+                    <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                  ) : (
+                    <Play className="w-3.5 h-3.5" />
+                  )}
+                  {isSimulating ? 'Simulating...' : 'Run Simulation'}
+                </button>
+              </span>
+            </div>
           }
         />
 
@@ -146,7 +198,7 @@ export function EconomySimulatorView() {
               transition={{ duration: MOTION.base }}
               className="overflow-hidden mb-4"
             >
-              <ConfigPanel config={config} onChange={setConfig} />
+              <ConfigPanel config={config} onChange={setConfig} onValidity={handleFieldValidity} />
             </motion.div>
           )}
         </AnimatePresence>
@@ -155,7 +207,7 @@ export function EconomySimulatorView() {
 
         {/* Stats bar */}
         {lastMetric && (
-          <div className="flex gap-3 mb-4">
+          <div className="flex flex-wrap gap-3 mb-4">
             <StatCard
               icon={<Coins className="w-4 h-4 text-amber-400" />}
               value={formatGold(lastMetric.avgGold)}
@@ -251,16 +303,44 @@ export function EconomySimulatorView() {
 
 // ── Config Panel ────────────────────────────────────────────────────────────
 
-function ConfigPanel({ config, onChange }: { config: SimulationConfig; onChange: (c: SimulationConfig) => void }) {
+/**
+ * Reason the Run button is unavailable, or `null` when it's clickable. Pure so
+ * the disabled state + tooltip can be unit-tested without the store. Listed in
+ * priority order: an in-flight run, then a not-yet-loaded config, then any
+ * out-of-range field edits the user must correct first.
+ */
+export function runBlockReason({
+  isSimulating,
+  hasConfig,
+  invalidLabels,
+}: {
+  isSimulating: boolean;
+  hasConfig: boolean;
+  invalidLabels: string[];
+}): string | null {
+  if (isSimulating) return 'Simulation already running';
+  if (!hasConfig) return 'Loading economy parameters…';
+  if (invalidLabels.length > 0) {
+    return `Fix out-of-range ${invalidLabels.length === 1 ? 'value' : 'values'}: ${invalidLabels.join(', ')}`;
+  }
+  return null;
+}
+
+function ConfigPanel({ config, onChange, onValidity }: {
+  config: SimulationConfig;
+  onChange: (c: SimulationConfig) => void;
+  onValidity: (label: string, error: string | null) => void;
+}) {
   return (
     <SurfaceCard level={2} className="p-4 space-y-3">
-      <div className="grid grid-cols-4 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
         <ConfigField
           label="Virtual Players"
           value={config.agentCount}
           onChange={(v) => onChange({ ...config, agentCount: v })}
           min={10}
           max={500}
+          onValidity={onValidity}
         />
         <ConfigField
           label="Max Level"
@@ -268,6 +348,7 @@ function ConfigPanel({ config, onChange }: { config: SimulationConfig; onChange:
           onChange={(v) => onChange({ ...config, maxLevel: v })}
           min={10}
           max={100}
+          onValidity={onValidity}
         />
         <ConfigField
           label="Play Hours"
@@ -275,6 +356,7 @@ function ConfigPanel({ config, onChange }: { config: SimulationConfig; onChange:
           onChange={(v) => onChange({ ...config, maxPlayHours: v })}
           min={20}
           max={200}
+          onValidity={onValidity}
         />
         <ConfigField
           label="Seed"
@@ -282,11 +364,12 @@ function ConfigPanel({ config, onChange }: { config: SimulationConfig; onChange:
           onChange={(v) => onChange({ ...config, seed: v })}
           min={1}
           max={999999}
+          onValidity={onValidity}
         />
       </div>
       <div>
         <label className="text-2xs text-text-muted font-medium block mb-1">Economy Philosophy</label>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           {(['loot-driven', 'scarcity-based', 'balanced'] as const).map((p) => (
             <button
               key={p}
@@ -306,24 +389,117 @@ function ConfigPanel({ config, onChange }: { config: SimulationConfig; onChange:
   );
 }
 
-function ConfigField({ label, value, onChange, min, max }: {
+/** Validate a raw draft against `[min, max]`; returns the reason it's rejected, or null. */
+function validateField(raw: string, min: number, max: number): string | null {
+  const trimmed = raw.trim();
+  if (trimmed === '') return `Enter ${min}–${max}`;
+  const n = Number(trimmed);
+  if (!Number.isFinite(n)) return 'Numbers only';
+  if (n < min) return `Below min — min is ${min}`;
+  if (n > max) return `Above max — max is ${max}`;
+  return null;
+}
+
+/**
+ * Numeric config input with visible validation feedback. Edits a raw draft so
+ * the user can type freely; valid in-range values commit immediately, while
+ * out-of-range or empty drafts are held (never pushed into the simulation
+ * config), flagged with `aria-invalid` + an inline reason, and reported up via
+ * `onValidity` so the Run button can block. On blur the draft is clamped to the
+ * range (or reset to the last committed value) with a brief "clamped" note, so
+ * snapping is explained rather than silent.
+ */
+export function ConfigField({ label, value, onChange, min, max, onValidity }: {
   label: string;
   value: number;
   onChange: (v: number) => void;
   min: number;
   max: number;
+  onValidity: (label: string, error: string | null) => void;
 }) {
+  const fieldId = useId();
+  const hintId = `${fieldId}-hint`;
+  const errId = `${fieldId}-err`;
+  const noteId = `${fieldId}-note`;
+
+  const [raw, setRaw] = useState(() => String(value));
+  const [lastValue, setLastValue] = useState(value);
+  const [error, setError] = useState<string | null>(null);
+  const [clampNote, setClampNote] = useState<string | null>(null);
+
+  // Re-sync the draft when the committed value changes externally (e.g. defaults
+  // reload) — render-time sync, no effect. Only touches this field's own state
+  // (the parent's error map is already cleared by the commit that moved `value`).
+  if (value !== lastValue) {
+    setLastValue(value);
+    if (Number(raw.trim()) !== value) setRaw(String(value));
+    setError(null);
+  }
+
+  const handleChange = (text: string) => {
+    setRaw(text);
+    if (clampNote) setClampNote(null);
+    const err = validateField(text, min, max);
+    setError(err);
+    onValidity(label, err);
+    if (!err) {
+      const n = Number(text.trim());
+      if (n !== value) onChange(n);
+    }
+  };
+
+  const handleBlur = () => {
+    const trimmed = raw.trim();
+    const n = Number(trimmed);
+    if (trimmed === '' || !Number.isFinite(n)) {
+      // Empty / garbage → restore the last committed value, no fuss.
+      setRaw(String(value));
+      setError(null);
+      onValidity(label, null);
+      setClampNote(null);
+      return;
+    }
+    const clamped = Math.max(min, Math.min(max, n));
+    setClampNote(
+      clamped === n ? null : clamped === max ? `Clamped to max ${max}` : `Clamped to min ${min}`,
+    );
+    setRaw(String(clamped));
+    setError(null);
+    onValidity(label, null);
+    if (clamped !== value) onChange(clamped);
+  };
+
+  const describedBy = [hintId, error ? errId : null, !error && clampNote ? noteId : null]
+    .filter(Boolean)
+    .join(' ');
+
   return (
     <div>
-      <label className="text-2xs text-text-muted font-medium block mb-1">{label}</label>
+      <label htmlFor={fieldId} className="text-2xs text-text-muted font-medium block mb-1">{label}</label>
       <input
+        id={fieldId}
         type="number"
-        value={value}
-        onChange={(e) => onChange(Math.max(min, Math.min(max, Number(e.target.value) || min)))}
-        className="w-full px-2.5 py-1.5 bg-surface border border-border rounded-lg text-xs text-text focus:outline-none focus:border-amber-500/40"
+        inputMode="numeric"
+        value={raw}
         min={min}
         max={max}
+        aria-invalid={error ? true : undefined}
+        aria-describedby={describedBy}
+        onChange={(e) => handleChange(e.target.value)}
+        onBlur={handleBlur}
+        onKeyDown={(e) => { if (e.key === 'Enter') e.currentTarget.blur(); }}
+        className={`w-full px-2.5 py-1.5 bg-surface border rounded-lg text-xs text-text focus:outline-none transition-colors ${
+          error ? 'border-red-400/60 focus:border-red-400' : 'border-border focus:border-amber-500/40'
+        }`}
       />
+      <div className="mt-1 space-y-0.5">
+        <span id={hintId} className="block text-2xs text-text-muted/60">Range {min}–{max}</span>
+        {error ? (
+          <span id={errId} role="alert" className="block text-2xs text-red-400 font-medium">{error}</span>
+        ) : clampNote ? (
+          <span id={noteId} role="status" className="block text-2xs text-amber-400 font-medium">{clampNote}</span>
+        ) : null}
+      </div>
     </div>
   );
 }
@@ -418,10 +594,13 @@ function GoldFlowChart({ metrics }: { metrics: EconomyMetrics[] }) {
 
 // ── Wealth Distribution ─────────────────────────────────────────────────────
 
-function WealthDistributionChart({ metrics, snapshots }: {
+export function WealthDistributionChart({ metrics, snapshots }: {
   metrics: EconomyMetrics[];
   snapshots: PlayerSnapshot[];
 }) {
+  // Stack the Gini/histogram pair into one column on narrow/zoomed viewports.
+  const gridCols = wealthGridClass(useViewportWidth());
+
   if (snapshots.length === 0) return null;
 
   // Gini over time
@@ -453,7 +632,7 @@ function WealthDistributionChart({ metrics, snapshots }: {
         </Badge>
       </div>
 
-      <div className="grid grid-cols-2 gap-4">
+      <div className={`grid ${gridCols} gap-4`}>
         {/* Gini over time */}
         <div>
           <div className="text-2xs text-text-muted font-medium mb-1">Gini Coefficient Over Time</div>
@@ -783,6 +962,9 @@ function StatCard({ icon, value, label, color }: {
       icon={icon}
       label={label}
       value={<span className={color}>{value}</span>}
+      // min-width keeps each card legible so the wrapping row reflows 4 → 2 → 1
+      // instead of squashing all four onto one cramped line.
+      className="min-w-[170px]"
     />
   );
 }

@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { OPACITY_10 } from '@/lib/chart-colors';
+import { focusRingStyle } from '@/lib/ui/focus-ring';
 import { NeonBar } from '@/components/modules/core-engine/unique-tabs/_design';
 import type { TraitGene } from '@/types/item-genome';
 import type { AxisConfig } from './data';
@@ -21,6 +22,7 @@ export function TraitSlider({
       initial={{ opacity: 0, x: -8 }}
       animate={{ opacity: 1, x: 0 }}
       className="group"
+      style={focusRingStyle(config.color)}
     >
       <div className="flex items-center gap-2">
         <div className="p-1 rounded" style={{ backgroundColor: `${config.color}${OPACITY_10}` }}>
@@ -48,8 +50,12 @@ export function TraitSlider({
             style={{
               left: `calc(${Math.min(pct, 100)}% - 5px)`,
               backgroundColor: config.color,
+              // Mirror the shared `.focus-ring-outline` token: the native range
+              // input is `opacity-0` (can't show a CSS ring) and this visible
+              // thumb isn't focusable, so the ring is driven in JS but reads the
+              // same `--focus-accent` set on this row (falls back to the axis color).
               ...(focused ? {
-                outline: `2px solid ${config.color}`,
+                outline: `2px solid var(--focus-accent, ${config.color})`,
                 outlineOffset: '2px',
               } : {}),
             }}
@@ -61,7 +67,7 @@ export function TraitSlider({
             const v = parseInt(e.target.value);
             if (!isNaN(v)) onChange(Math.max(0, Math.min(100, v)) / 100);
           }}
-          className="w-12 text-xs font-mono font-bold text-right px-1 py-0.5 rounded bg-surface-deep border border-border/40 text-text focus:outline-none focus:border-blue-500/50"
+          className="w-12 text-xs font-mono font-bold text-right px-1 py-0.5 rounded bg-surface-deep border border-border/40 text-text focus-ring-inset"
         />
         <span className="text-xs font-mono text-text-muted/60 w-4">%</span>
       </div>

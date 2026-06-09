@@ -7,7 +7,7 @@ import { CandidateGallery } from './shared/CandidateGallery';
 import { readHistory, makeBatch, appendBatch, selectCandidate, selectedCandidate, historyData } from './shared/genHistory';
 import { iconCandidates, meshCandidates, materialCandidates } from './shared/itemGenCandidates';
 import { useLabStep, useLabPipelineStore } from '../labPipelineStore';
-import { ITEM_STEP_SPECS, slug } from './itemsSteps';
+import { ITEM_STEP_SPECS, slug, itemAsset } from './itemsSteps';
 import type { StepProps } from './stepProps';
 import type { GenCandidate } from './shared/genHistory';
 
@@ -37,14 +37,14 @@ function useGenerativeStep(entityId: string, step: string, gen: (direction: stri
 
 /** Items · Icon 2D Art. View: persistent candidate gallery + selection. Produce: Leonardo gen. */
 export function ItemIcon2D({ t, entity, step }: StepProps) {
-  const asset = `/Game/Items/${slug(entity.name)}/T_${slug(entity.name)}_Icon`;
+  const asset = itemAsset(entity, 'T_', '_Icon');
   const { art, history, generate, reselect } = useGenerativeStep(entity.id, step, iconCandidates, [asset]);
   const DEFAULT_DIR = 'weathered steel longsword, leather grip, guild sigil, 3/4 view, game icon';
   const buildPrompt = (dir: string) => `Generate 4 icon candidates for ${entity.name} (256px, rarity frame). Art direction: ${dir}`;
   const sel = selectedCandidate(history);
 
   return (
-    <StepFrame t={t} acceptance={ITEM_STEP_SPECS[step].accept(art)}
+    <StepFrame t={t} acceptance={ITEM_STEP_SPECS[step].accept(art?.data ?? {})}
       onFix={(fixDir) => generate(fixDir ?? DEFAULT_DIR, buildPrompt(fixDir ?? DEFAULT_DIR))}
       panels={[
         { label: 'Candidate gallery (kept across re-rolls)', node: (
@@ -71,7 +71,7 @@ export function ItemIcon2D({ t, entity, step }: StepProps) {
 
 /** Items · 3D Generation. View: mesh preview + LOD budget (from the selected candidate) + gallery. */
 export function Item3DGen({ t, entity, step }: StepProps) {
-  const asset = `/Game/Items/${slug(entity.name)}/SM_${slug(entity.name)}`;
+  const asset = itemAsset(entity, 'SM_');
   const { art, history, generate, reselect } = useGenerativeStep(entity.id, step, meshCandidates, [asset]);
   const DEFAULT_DIR = 'game-ready retopo, clean silhouette, hard-surface bevels';
   const buildPrompt = (dir: string) => `Generate a base mesh for ${entity.name} from its icon + brief via Blender/Meshy, then auto-LOD. ${dir}`;
@@ -79,7 +79,7 @@ export function Item3DGen({ t, entity, step }: StepProps) {
   const made = tris > 0;
 
   return (
-    <StepFrame t={t} acceptance={ITEM_STEP_SPECS[step].accept(art)}
+    <StepFrame t={t} acceptance={ITEM_STEP_SPECS[step].accept(art?.data ?? {})}
       onFix={(fixDir) => generate(fixDir ?? DEFAULT_DIR, buildPrompt(fixDir ?? DEFAULT_DIR))}
       panels={[
         { label: 'Mesh preview', node: (
@@ -115,7 +115,7 @@ export function Item3DGen({ t, entity, step }: StepProps) {
 
 /** Items · Material / Texture. View: PBR map set (from the selected candidate) + preview + gallery. */
 export function ItemMaterial({ t, entity, step }: StepProps) {
-  const asset = `/Game/Items/${slug(entity.name)}/MI_${slug(entity.name)}`;
+  const asset = itemAsset(entity, 'MI_');
   const { art, history, generate, reselect } = useGenerativeStep(entity.id, step, materialCandidates, [asset]);
   const DEFAULT_DIR = 'PBR set from the master material; expose wear + tint params';
   const buildPrompt = (dir: string) => `Author a PBR set for ${entity.name} from the master material; expose params + wear variants. ${dir}`;
@@ -124,7 +124,7 @@ export function ItemMaterial({ t, entity, step }: StepProps) {
   const SWATCH: Record<string, string> = { Albedo: '#b08d57', Normal: '#8088ff', ORM: '#9a9a4a', Height: '#777' };
 
   return (
-    <StepFrame t={t} acceptance={ITEM_STEP_SPECS[step].accept(art)}
+    <StepFrame t={t} acceptance={ITEM_STEP_SPECS[step].accept(art?.data ?? {})}
       onFix={(fixDir) => generate(fixDir ?? DEFAULT_DIR, buildPrompt(fixDir ?? DEFAULT_DIR))}
       panels={[
         { label: 'Texture maps', node: (

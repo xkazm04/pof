@@ -57,12 +57,12 @@ export function TerminalInput({
         style={{ height: '20px', maxHeight: '88px' }}
       />
       {isStreaming ? (
-        <button onClick={onAbort} className={`p-1 mt-[3px] ${CLI_COLORS.error} hover:bg-status-red-medium rounded transition-colors`}>
-          <Square className="w-3 h-3" />
+        <button onClick={onAbort} className={`p-1.5 mt-[3px] ${CLI_COLORS.error} hover:bg-status-red-medium rounded transition-colors`} title="Abort running task (Esc)" aria-label="Abort running task">
+          <Square className="w-3 h-3" aria-hidden="true" />
         </button>
       ) : (
-        <button data-testid="pof-cli-panel-send-btn" onClick={() => onSubmit(false)} disabled={!input.trim()} className="p-1 mt-[3px] hover:bg-blue-500/20 rounded transition-colors" style={{ color: MODULE_COLORS.core }}>
-          <Send className="w-3 h-3" />
+        <button data-testid="pof-cli-panel-send-btn" onClick={() => onSubmit(false)} disabled={!input.trim()} className="p-1.5 mt-[3px] hover:bg-blue-500/20 rounded transition-colors" style={{ color: MODULE_COLORS.core }} title="Send prompt (Enter)" aria-label="Send prompt">
+          <Send className="w-3 h-3" aria-hidden="true" />
         </button>
       )}
     </div>

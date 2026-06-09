@@ -1,4 +1,5 @@
-import { spawn, execFileSync, type ChildProcess, type SpawnOptions } from 'node:child_process';
+import { spawn, execFileSync } from 'node:child_process';
+import type { SpawnFn } from './process-utils';
 
 /**
  * Post-cook "runnable .exe" smoke-test.
@@ -31,8 +32,6 @@ export interface SmokeTestResult {
   /** The bootstrap exe that was launched. */
   bootstrapExe: string;
 }
-
-type SpawnFn = (cmd: string, args: string[], opts?: SpawnOptions) => ChildProcess;
 
 export interface SmokeTestOptions {
   /** Full path to the staged bootstrap exe, e.g. `<StageDir>\<ProjectName>.exe`. */

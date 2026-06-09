@@ -2,6 +2,7 @@
 
 import { Filter, Skull } from 'lucide-react';
 import { BlueprintPanel } from './_shared/design';
+import { RarityBadge } from './_shared/rarityBadge';
 import { ACCENT, RARITY_TIERS } from './_shared/data';
 import { ARCHETYPES } from '../sub_bestiary/_shared/data';
 
@@ -29,10 +30,7 @@ export function LootFilters({ rarityFilter, setRarityFilter, enemyFilter, setEne
             Rarity Filter
           </span>
           {rarityFilter !== 'All' && (
-            <span className="ml-auto text-[10px] font-mono px-1.5 py-0.5 rounded"
-              style={{ backgroundColor: withOpacity(activeRarityColor, OPACITY_10), color: activeRarityColor }}>
-              {rarityFilter}
-            </span>
+            <RarityBadge rarity={rarityFilter} className="ml-auto" />
           )}
         </div>
         <div className="flex flex-wrap gap-1.5">

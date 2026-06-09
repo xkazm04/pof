@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   evaluateBuildSize,
+  getDefaultBudgets,
   hasSizeRegressionNote,
   extractRegressionNote,
   SIZE_REGRESSION_NOTE_PREFIX,
@@ -79,6 +80,39 @@ describe('evaluateBuildSize', () => {
     expect(r!.exceedsGrowth).toBe(true);
     expect(r!.note).toContain('budget');
     expect(r!.note).toContain('grew');
+  });
+});
+
+describe('default budgets are keyed by canonical PlatformId tokens', () => {
+  it('keys defaults only by UE tokens — no duplicate friendly spellings', () => {
+    const keys = Object.keys(getDefaultBudgets()).sort();
+    expect(keys).toEqual(['Android', 'IOS', 'Linux', 'Mac', 'Win64']);
+    // The old double-keyed friendly spellings are gone.
+    expect(keys).not.toContain('Windows');
+    expect(keys).not.toContain('iOS');
+  });
+
+  it('a build cooked as a UE token hits the default budget (the bug this fixes)', () => {
+    const config: SizeBudgetConfig = { failOnRegression: false, budgets: getDefaultBudgets() };
+    // Win64 default is 5 GB — a 6 GB cook must be flagged, not silently missed.
+    const win = evaluateBuildSize('Win64', 6 * GB, 5 * GB, config);
+    expect(win).not.toBeNull();
+    expect(win!.exceedsBudget).toBe(true);
+    // IOS default is 4 GB.
+    const ios = evaluateBuildSize('IOS', 5 * GB, 4 * GB, config);
+    expect(ios).not.toBeNull();
+    expect(ios!.exceedsBudget).toBe(true);
+  });
+
+  it('resolves the same budget whether the platform is a token or a friendly name', () => {
+    const config: SizeBudgetConfig = { failOnRegression: false, budgets: getDefaultBudgets() };
+    const byToken = evaluateBuildSize('Win64', 6 * GB, 5 * GB, config);
+    const byFriendly = evaluateBuildSize('Windows', 6 * GB, 5 * GB, config);
+    expect(byToken!.budgetBytes).toBe(5 * GB);
+    expect(byFriendly!.budgetBytes).toBe(5 * GB);
+    // Notes read with the same single label regardless of input spelling.
+    expect(byToken!.note).toContain('Windows');
+    expect(byFriendly!.note).toContain('Windows');
   });
 });
 

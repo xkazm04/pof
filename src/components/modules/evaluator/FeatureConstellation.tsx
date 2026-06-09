@@ -12,6 +12,7 @@ import { EmptyState } from '@/components/ui/EmptyState';
 import { useCRUD } from '@/hooks/useCRUD';
 import { tryApiFetch } from '@/lib/api-utils';
 import type { SubModuleId } from '@/types/modules';
+import { FEATURE_STATUSES } from '@/types/feature-matrix';
 import type { FeatureStatus } from '@/types/feature-matrix';
 import {
   PLAN_STATUS_COLORS, STATUS_SUCCESS, STATUS_BLOCKER, STATUS_INFO, statusBg, statusBorder,
@@ -22,7 +23,7 @@ import { MOTION } from '@/lib/constants';
 
 const NODE_W = 158;
 const NODE_H = 56;
-const STATUS_ORDER: FeatureStatus[] = ['implemented', 'improved', 'partial', 'missing', 'unknown'];
+const STATUS_ORDER: readonly FeatureStatus[] = FEATURE_STATUSES;
 const STATUS_LABEL: Record<FeatureStatus, string> = {
   implemented: 'Done', improved: 'Improved', partial: 'Partial', missing: 'Missing', unknown: 'Unknown',
 };

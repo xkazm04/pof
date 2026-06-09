@@ -276,6 +276,69 @@ export function getDb(): Database.Database {
     ON request_log(created_at)
   `);
 
+  // Session analytics — per-CLI-session prompt/outcome telemetry powering the
+  // analytics dashboard, insights, and prompt suggestions. Read/written via
+  // src/lib/session-analytics-db.ts (plus weekly-digest / project-wrapped /
+  // pattern-extractor, which query the table directly).
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS session_analytics (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      module_id TEXT NOT NULL,
+      session_key TEXT NOT NULL,
+      prompt TEXT NOT NULL,
+      prompt_preview TEXT NOT NULL,
+      had_project_context INTEGER NOT NULL DEFAULT 0,
+      prompt_length INTEGER NOT NULL DEFAULT 0,
+      success INTEGER NOT NULL DEFAULT 0,
+      duration_ms INTEGER NOT NULL DEFAULT 0,
+      started_at TEXT NOT NULL DEFAULT (datetime('now')),
+      completed_at TEXT NOT NULL DEFAULT (datetime('now'))
+    )
+  `);
+
+  db.exec(`
+    CREATE INDEX IF NOT EXISTS idx_session_analytics_module
+    ON session_analytics(module_id)
+  `);
+
+  // Telemetry snapshots + genre suggestions — drive the genre-evolution engine
+  // (TelemetryEvolution module). Read/written via src/lib/telemetry-db.ts.
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS telemetry_snapshots (
+      id TEXT PRIMARY KEY,
+      scanned_at TEXT NOT NULL DEFAULT (datetime('now')),
+      project_path TEXT NOT NULL,
+      signals TEXT NOT NULL DEFAULT '{}',
+      detected_patterns TEXT NOT NULL DEFAULT '[]'
+    )
+  `);
+
+  db.exec(`
+    CREATE INDEX IF NOT EXISTS idx_telemetry_snapshots_time
+    ON telemetry_snapshots(scanned_at DESC)
+  `);
+
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS genre_suggestions (
+      id TEXT PRIMARY KEY,
+      sub_genre TEXT NOT NULL,
+      label TEXT NOT NULL,
+      description TEXT NOT NULL DEFAULT '',
+      confidence INTEGER NOT NULL DEFAULT 0,
+      patterns TEXT NOT NULL DEFAULT '[]',
+      status TEXT NOT NULL DEFAULT 'pending'
+        CHECK(status IN ('pending','accepted','dismissed')),
+      proposed_changes TEXT NOT NULL DEFAULT '{}',
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      resolved_at TEXT
+    )
+  `);
+
+  db.exec(`
+    CREATE INDEX IF NOT EXISTS idx_genre_suggestions_status
+    ON genre_suggestions(status, created_at DESC)
+  `);
+
   // NOTE: the `headless_builds` table is owned and created by
   // `ensureHeadlessBuildsTable()` in src/lib/ue5-bridge/build-pipeline.ts — the
   // sole reader/writer. A duplicate definition previously lived here with a

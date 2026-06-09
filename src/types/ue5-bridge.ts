@@ -93,6 +93,12 @@ export interface BuildOptions {
   onProgress?: (message: string, percent?: number) => void;
   abortSignal?: AbortSignal;
   moduleId?: string;
+  /**
+   * Pre-generated build id (typically from the build queue). When supplied,
+   * `executeBuild` reuses it instead of minting its own, so the id in the
+   * `build.*` event stream matches the id persisted to `headless_builds`.
+   */
+  buildId?: string;
 }
 
 // ── WebSocket Live State types ──────────────────────────────────────────────

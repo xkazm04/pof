@@ -156,9 +156,6 @@ export function detectGates(projectPath: string): VerificationGate[] {
   return UE5_GATES; // fallback
 }
 
-/** @deprecated Use detectGates() or WEBAPP_GATES/UE5_GATES directly */
-export const DEFAULT_GATES = UE5_GATES;
-
 /** Verification gates for PoF webapp (TypeScript/Next.js) */
 export const WEBAPP_GATES: VerificationGate[] = [
   {

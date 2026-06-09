@@ -6,6 +6,9 @@
 import { spawn, ChildProcess } from 'child_process';
 import * as fs from 'fs';
 import * as path from 'path';
+import { UI_TIMEOUTS } from '@/lib/constants';
+import { parseCallbackMarker } from '@/lib/cli-task';
+import { extractResultMetrics } from '@/lib/claude-terminal/result-metrics';
 
 export interface CLISystemMessage {
   type: 'system';
@@ -245,8 +248,12 @@ export function startExecution(
         }
       } else if (parsed.type === 'result') {
         resultEventEmitted = true;
-        execution.sessionId = parsed.result?.session_id || execution.sessionId;
-        const resultEvent: CLIExecutionEvent = { type: 'result', data: { sessionId: parsed.result?.session_id, usage: parsed.result?.usage, durationMs: parsed.duration_ms, costUsd: parsed.cost_usd, isError: parsed.is_error }, timestamp: Date.now() };
+        // Normalize token usage + cost across CLI result shapes (top-level vs.
+        // nested, snake_case vs. camelCase) so the metrics actually surface
+        // instead of being silently dropped — see result-metrics.ts.
+        const metrics = extractResultMetrics(parsed as unknown as Record<string, unknown>, execution.sessionId);
+        execution.sessionId = metrics.sessionId || execution.sessionId;
+        const resultEvent: CLIExecutionEvent = { type: 'result', data: { sessionId: metrics.sessionId, usage: metrics.usage, durationMs: metrics.durationMs, costUsd: metrics.costUsd, isError: metrics.isError }, timestamp: Date.now() };
         emitEvent(resultEvent);
       }
     };
@@ -295,9 +302,10 @@ export function startExecution(
       if (!childProcess.killed) {
         childProcess.kill();
         execution.status = 'error';
-        emitEvent({ type: 'error', data: { message: 'Execution timed out after 100 minutes' }, timestamp: Date.now() });
+        const timeoutMinutes = UI_TIMEOUTS.cliExecutionTimeout / 60000;
+        emitEvent({ type: 'error', data: { message: `Execution timed out after ${timeoutMinutes} minutes` }, timestamp: Date.now() });
       }
-    }, 6000000);
+    }, UI_TIMEOUTS.cliExecutionTimeout);
 
     childProcess.on('close', () => clearTimeout(timeoutHandle));
   } catch (error) {
@@ -365,15 +373,15 @@ function registerCallbackResolver(executionId: string, resolve: (payload: unknow
   callbackRegistry.set(executionId, resolve);
 }
 
-/** Attempt to extract a @@CALLBACK JSON block from a text event. */
+/**
+ * Attempt to extract a parsed @@CALLBACK JSON object from a text event.
+ *
+ * Thin server-side wrapper over the shared {@link parseCallbackMarker} (cli-task) —
+ * projects to the parsed-object shape `awaitCallback` resolves on. Returns null
+ * when there is no marker, or when the marker body is not valid JSON.
+ */
 function extractCallbackPayload(text: string): unknown | null {
-  const match = /@@CALLBACK:[^\n]*\n([\s\S]*?)@@END_CALLBACK/.exec(text);
-  if (!match) return null;
-  try {
-    return JSON.parse(match[1].trim());
-  } catch {
-    return null;
-  }
+  return parseCallbackMarker(text)?.data ?? null;
 }
 
 /**
@@ -385,7 +393,7 @@ export function awaitCallback(
   executionId: string,
   opts: { timeoutMs?: number } = {},
 ): Promise<unknown> {
-  const timeoutMs = opts.timeoutMs ?? 5 * 60 * 1000;
+  const timeoutMs = opts.timeoutMs ?? UI_TIMEOUTS.callbackAwaitTimeout;
 
   return new Promise((resolve, reject) => {
     const execution = activeExecutions.get(executionId);

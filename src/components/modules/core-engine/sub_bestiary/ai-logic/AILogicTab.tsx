@@ -54,7 +54,7 @@ export function AILogicTab({ featureMap, accent }: AILogicTabProps) {
         {/* Spawn config collapsible */}
         <BlueprintPanel color={accent} className="p-0 overflow-hidden h-fit">
           <button onClick={() => setSpawnOpen(!spawnOpen)}
-            className="w-full flex items-center gap-3 px-4 py-3 hover:bg-surface-hover/30 transition-colors text-left focus:outline-none cursor-pointer">
+            className="w-full flex items-center gap-3 px-4 py-3 hover:bg-surface-hover/30 transition-colors text-left focus-ring-inset cursor-pointer">
             <motion.div animate={{ rotate: spawnOpen ? 90 : 0 }}>
               <ChevronRight className="w-4 h-4 text-text-muted" />
             </motion.div>

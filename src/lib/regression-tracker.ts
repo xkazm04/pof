@@ -6,7 +6,9 @@ import type {
   FingerprintOccurrence,
   RegressionAlert,
   RegressionReport,
+  RegressionStats,
   RegressionStatus,
+  RegressionStatusCounts,
 } from '@/types/regression-tracker';
 
 // ─── Schema bootstrap ────────────────────────────────────────────────────────
@@ -108,6 +110,24 @@ const SEVERITY_RANK: Record<string, number> = {
 
 function higherSeverity(a: string, b: string): string {
   return (SEVERITY_RANK[a] ?? 0) >= (SEVERITY_RANK[b] ?? 0) ? a : b;
+}
+
+// ─── Status counting ────────────────────────────────────────────────────────────
+
+/**
+ * Tally fingerprint rows into the shared status breakdown. Single source of truth
+ * for the counts consumed by both the per-session report and the dashboard stats.
+ */
+function countFingerprintStatuses(rows: { status: string }[]): RegressionStatusCounts {
+  const regressedCount = rows.filter(f => f.status === 'regressed').length;
+  return {
+    totalTracked: rows.length,
+    openCount: rows.filter(f => f.status === 'open').length,
+    fixedCount: rows.filter(f => f.status === 'fixed').length,
+    regressedCount,
+    resolvedCount: rows.filter(f => f.status === 'resolved').length,
+    regressionRate: rows.length > 0 ? regressedCount / rows.length : 0,
+  };
 }
 
 // ─── Core tracking ───────────────────────────────────────────────────────────
@@ -252,16 +272,7 @@ export function processSession(session: PlaytestSession): RegressionReport {
 
   // Stats
   const allFps = db.prepare('SELECT status FROM regression_fingerprints').all() as { status: string }[];
-  const stats = {
-    totalTracked: allFps.length,
-    openCount: allFps.filter(f => f.status === 'open').length,
-    fixedCount: allFps.filter(f => f.status === 'fixed').length,
-    regressedCount: allFps.filter(f => f.status === 'regressed').length,
-    resolvedCount: allFps.filter(f => f.status === 'resolved').length,
-    regressionRate: allFps.length > 0
-      ? allFps.filter(f => f.status === 'regressed').length / allFps.length
-      : 0,
-  };
+  const stats = countFingerprintStatuses(allFps);
 
   return {
     sessionId: session.id,
@@ -355,21 +366,13 @@ export function markResolved(fingerprintId: string) {
   db.prepare("UPDATE regression_fingerprints SET status = 'resolved' WHERE id = ?").run(fingerprintId);
 }
 
-export function getRegressionStats() {
+export function getRegressionStats(): RegressionStats {
   ensureTables();
   const db = getDb();
   const all = db.prepare('SELECT status FROM regression_fingerprints').all() as { status: string }[];
   const activeAlerts = (db.prepare('SELECT COUNT(*) as cnt FROM regression_alerts WHERE dismissed = 0').get() as { cnt: number }).cnt;
 
-  return {
-    totalTracked: all.length,
-    openCount: all.filter(f => f.status === 'open').length,
-    fixedCount: all.filter(f => f.status === 'fixed').length,
-    regressedCount: all.filter(f => f.status === 'regressed').length,
-    resolvedCount: all.filter(f => f.status === 'resolved').length,
-    activeAlerts,
-    regressionRate: all.length > 0 ? all.filter(f => f.status === 'regressed').length / all.length : 0,
-  };
+  return { ...countFingerprintStatuses(all), activeAlerts };
 }
 
 // ─── Row mappers ──────────────────────────────────────────────────────────────

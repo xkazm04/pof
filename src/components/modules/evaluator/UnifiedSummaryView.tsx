@@ -29,6 +29,7 @@ import type { ModuleAggregate } from '@/lib/feature-matrix-db';
 import type { AnalyticsDashboard } from '@/types/session-analytics';
 import type { EvaluatorReport } from '@/types/evaluator';
 import { MODULE_FEATURE_DEFINITIONS, buildDependencyMap, computeBlockers } from '@/lib/feature-definitions';
+import { tryApiFetch } from '@/lib/api-utils';
 import { useEvaluatorStore } from '@/stores/evaluatorStore';
 import { InsightCard } from './InsightCard';
 import { SurfaceCard } from '@/components/ui/SurfaceCard';
@@ -77,30 +78,24 @@ export function UnifiedSummaryView({ onNavigateTab }: Props) {
   const fetchAll = useCallback(async () => {
     setIsLoading(true);
     try {
+      // All three routes return the standard apiSuccess(...) envelope, so the real
+      // payload lives at data.data.*. tryApiFetch unwraps it — reading off the raw
+      // fetch silently left aggregates/analytics/status all empty or mis-shaped.
       const [aggRes, analyticsRes, statusRes] = await Promise.all([
-        fetch('/api/feature-matrix/aggregate'),
-        fetch('/api/session-analytics?action=dashboard'),
-        fetch('/api/feature-matrix/all-statuses'),
+        tryApiFetch<{ modules: ModuleAggregate[] }>('/api/feature-matrix/aggregate'),
+        tryApiFetch<AnalyticsDashboard>('/api/session-analytics?action=dashboard'),
+        tryApiFetch<{ statuses: { moduleId: string; featureName: string; status: string }[] }>('/api/feature-matrix/all-statuses'),
       ]);
 
-      if (aggRes.ok) {
-        const data = await aggRes.json();
-        setAggregates(data.modules ?? []);
-      }
-      if (analyticsRes.ok) {
-        const data = await analyticsRes.json();
-        setAnalytics(data);
-      }
+      if (aggRes.ok) setAggregates(aggRes.data.modules ?? []);
+      if (analyticsRes.ok) setAnalytics(analyticsRes.data);
       if (statusRes.ok) {
-        const data = await statusRes.json();
         const map = new Map<string, string>();
-        for (const row of data.statuses ?? []) {
+        for (const row of statusRes.data.statuses ?? []) {
           map.set(`${row.moduleId}::${row.featureName}`, row.status);
         }
         setStatusMap(map);
       }
-    } catch (err) {
-      console.error('UnifiedSummaryView fetch error:', err);
     } finally {
       setIsLoading(false);
     }

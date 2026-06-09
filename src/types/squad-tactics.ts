@@ -92,3 +92,22 @@ export interface ComposedEQSStep {
   kind: 'context' | 'generator' | 'test-score' | 'test-filter' | 'director' | 'result';
   description: string;
 }
+
+/** Why a {@link DirectorConfig} was rejected by the squad engine. */
+export type SquadConfigErrorCode =
+  | 'empty-formation'    // formation has no roles / expands to zero members
+  | 'invalid-role'       // a role name is not a known squad role
+  | 'invalid-formation'  // a role count is missing, negative, or non-finite
+  | 'invalid-range'      // a role's engagement range is inverted/negative/non-finite
+  | 'non-finite'         // a scalar config field is NaN / ±Infinity
+  | 'invalid-distance'   // attack distance is negative
+  | 'invalid-separation'; // minimum separation is <= 0 (would divide by zero)
+
+/** Typed validation failure surfaced at the squad-engine boundary. */
+export interface SquadConfigError {
+  code: SquadConfigErrorCode;
+  /** Human-readable, surface-able message for an inline error state. */
+  message: string;
+  /** The offending config field, when attributable. */
+  field?: string;
+}

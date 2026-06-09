@@ -47,8 +47,7 @@ export type InsightType =
   | 'context-injection'
   | 'prompt-length'
   | 'module-success-rate'
-  | 'time-of-day'
-  | 'prompt-prefix';
+  | 'slow-success';
 
 export interface PromptInsight {
   type: InsightType;

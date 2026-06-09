@@ -6,7 +6,7 @@ import { STATUS_SUCCESS, STATUS_WARNING, STATUS_ERROR, ACCENT_CYAN_LIGHT,
   withOpacity, OPACITY_8, OPACITY_25, OPACITY_37, OPACITY_5,
 } from '@/lib/chart-colors';
 import { LiveMetricGauge } from '../../unique-tabs/_shared';
-import { BlueprintPanel, SectionHeader } from '../_shared/design';
+import { BlueprintPanel, SectionHeader, SAVE_TYPE } from '../_shared/design';
 import { ACCENT } from '../_shared/data';
 import {
   SERIALIZATION_SEGMENTS, SERIALIZATION_BUDGET_MS,
@@ -18,7 +18,7 @@ export function SerializationProfiler() {
     <BlueprintPanel color={ACCENT} className="p-0 overflow-hidden">
       <div className="px-4 py-3 border-b border-border/10 flex items-center justify-between">
         <SectionHeader label="SERIALIZATION_PROFILER" icon={Timer} color={ACCENT} />
-        <span className="text-xs font-mono uppercase tracking-[0.15em]" style={{ color: ACCENT_CYAN_LIGHT }}>
+        <span className="text-xs font-mono" style={{ color: ACCENT_CYAN_LIGHT }}>
           {SERIALIZATION_TOTAL}ms / {SERIALIZATION_BUDGET_MS}ms budget
         </span>
       </div>
@@ -73,7 +73,7 @@ export function SerializationProfiler() {
                 <span className="w-2 h-2 rounded-full" style={{ backgroundColor: seg.color }} />
                 <span className="text-xs font-bold uppercase tracking-[0.15em]" style={{ color: ACCENT_CYAN_LIGHT }}>{seg.label}</span>
               </div>
-              <div className="text-lg font-bold" style={{ color: seg.color }}>{seg.timeMs}<span className="text-xs text-text-muted">ms</span></div>
+              <div className={SAVE_TYPE.hero} style={{ color: seg.color }}>{seg.timeMs}<span className="text-xs text-text-muted font-normal">ms</span></div>
               <div className="text-xs text-text-muted">{((seg.timeMs / SERIALIZATION_TOTAL) * 100).toFixed(0)}% of total</div>
             </div>
           ))}

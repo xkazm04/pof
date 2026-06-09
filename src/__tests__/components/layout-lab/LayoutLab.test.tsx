@@ -24,10 +24,11 @@ describe('UI identity lab (Blueprint baseline · Items example)', () => {
     for (const s of ['Concept Brief', 'Attributes', 'Economy']) expect(result.current?.steps).toContain(s);
   });
 
-  it('renders the Light/Dark theme toggle', () => {
+  it('renders a single icon theme toggle (no per-theme text buttons)', () => {
     render(<LayoutLab />);
-    expect(screen.getByRole('button', { name: 'Blueprint' })).toBeTruthy();
-    expect(screen.getByRole('button', { name: 'Studio Dark' })).toBeTruthy();
+    // One icon button that names the theme it switches to; the old text buttons are gone.
+    expect(screen.getByRole('button', { name: /switch to studio dark theme/i })).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'Studio Dark' })).toBeNull();
     expect(screen.queryByRole('button', { name: 'Forge' })).toBeNull();
   });
 

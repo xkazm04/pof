@@ -10,20 +10,21 @@ import {
   heatmapScale,
 } from '@/lib/chart-colors';
 import { arcPath } from '@/components/ui/svg/arc-helpers';
+import { polarSvgLayout } from '@/components/ui/svg/polar-layout';
+import { createRNG } from '@/lib/seeded-rng';
+import { EQS_COVER_POSITIONS } from '@/lib/ai-director/eqs-defaults';
 
 // ── Constants ───────────────────────────────────────────────────────────────
 
-const SVG_SIZE = 380;
-const SVG_CENTER = SVG_SIZE / 2;
-const SVG_PADDING = 44;
-const DRAW_RADIUS = (SVG_SIZE - SVG_PADDING * 2) / 2;
+const { size: SVG_SIZE, center: SVG_CENTER, radius: DRAW_RADIUS } = polarSvgLayout(380, 44);
 
-// World-space defaults (matching C++)
-const DEFAULT_MIN_RADIUS = 300;
-const DEFAULT_MAX_RADIUS = 1200;
-const DEFAULT_SAMPLE_COUNT = 36;
-const DEFAULT_COVER_CHECK = 150;
-const DEFAULT_RINGS = 3;
+// World-space defaults from the single-source EQS defaults module (see
+// `eqs-defaults.ts`) — mirrors UEnvQueryGenerator_CoverPositions.
+const DEFAULT_MIN_RADIUS = EQS_COVER_POSITIONS.minRadius;
+const DEFAULT_MAX_RADIUS = EQS_COVER_POSITIONS.maxRadius;
+const DEFAULT_SAMPLE_COUNT = EQS_COVER_POSITIONS.sampleCount;
+const DEFAULT_COVER_CHECK = EQS_COVER_POSITIONS.coverCheckDistance;
+const DEFAULT_RINGS = EQS_COVER_POSITIONS.numberOfRings;
 
 // ── Mock obstacles (walls, pillars) for visualization ───────────────────────
 
@@ -40,7 +41,7 @@ interface Obstacle {
   elevation?: number;
 }
 
-const MOCK_OBSTACLES: Obstacle[] = [
+export const MOCK_OBSTACLES: Obstacle[] = [
   { id: 'wall-1', label: 'Stone Wall', type: 'wall', x: -400, y: -300, w: 250, h: 40 },
   { id: 'wall-2', label: 'Barricade', type: 'wall', x: 500, y: 200, w: 180, h: 35 },
   { id: 'pillar-1', label: 'Pillar A', type: 'pillar', x: -200, y: 500, w: 45, h: 45 },
@@ -124,16 +125,18 @@ function isPointBehindObstacle(
   return { covered: bestCover, nearestId, elevBonus };
 }
 
-function generateCoverPoints(
+export function generateCoverPoints(
   sampleCount: number,
   rings: number,
   minRadius: number,
   maxRadius: number,
   obstacles: Obstacle[],
+  seed: number,
 ): CoverPoint[] {
   const points: CoverPoint[] = [];
   const threatX = 0;
   const threatY = 0;
+  const rng = createRNG(seed);
 
   for (let ringIdx = 0; ringIdx < rings; ringIdx++) {
     const alpha = rings === 1 ? 0.5 : ringIdx / (rings - 1);
@@ -149,7 +152,7 @@ function generateCoverPoints(
         x, y, threatX, threatY, obstacles,
       );
 
-      const coverScore = covered ? 0.7 + Math.random() * 0.3 : Math.random() * 0.15;
+      const coverScore = covered ? 0.7 + rng() * 0.3 : rng() * 0.15;
       const elevationScore = elevBonus;
       const combinedScore = coverScore * 0.6 + elevationScore * 0.4;
 
@@ -192,8 +195,7 @@ export function TacticalCoverAnalysis() {
   const scale = DRAW_RADIUS / maxRadius;
 
   const points = useMemo(
-    () => generateCoverPoints(sampleCount, rings, minRadius, maxRadius, MOCK_OBSTACLES),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    () => generateCoverPoints(sampleCount, rings, minRadius, maxRadius, MOCK_OBSTACLES, seed),
     [sampleCount, rings, minRadius, maxRadius, seed],
   );
 

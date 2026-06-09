@@ -1,12 +1,11 @@
 'use client';
 
 import { useState, useCallback, useMemo } from 'react';
-import { useSuspendableEffect } from '@/hooks/useSuspend';
 import { Terminal, Cpu, Database, LayoutGrid } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useTabFeatures } from '@/hooks/useTabFeatures';
 import { SectionHeader, BlueprintPanel } from '../unique-tabs/_design';
-import { SectionLabel, FeatureCard, PipelineFlow, LoadingSpinner, SubTabNavigation, type SubTab } from '../unique-tabs/_shared';
+import { ModuleHeader, SectionLabel, FeatureCard, PipelineFlow, LoadingSpinner, SubTabNavigation, type SubTab } from '../unique-tabs/_shared';
 import { SchemaTree } from './schema/SchemaTree';
 import { MemoryBanks } from './schema/MemoryBanks';
 import { FileSizeBreakdown } from './schema/FileSizeBreakdown';
@@ -25,7 +24,7 @@ import FeatureMapTab from '../unique-tabs/FeatureMapTab';
 import { VisibleSection } from '../unique-tabs/VisibleSection';
 import type { SubModuleId } from '@/types/modules';
 
-import { withOpacity, OPACITY_90, OPACITY_25, OPACITY_12, OPACITY_5, GLOW_MD } from '@/lib/chart-colors';
+import { withOpacity, OPACITY_12, OPACITY_5 } from '@/lib/chart-colors';
 interface SaveDataSchemaProps { moduleId: SubModuleId }
 
 export function SaveDataSchema({ moduleId }: SaveDataSchemaProps) {
@@ -41,12 +40,6 @@ export function SaveDataSchema({ moduleId }: SaveDataSchemaProps) {
     { id: 'versions', label: 'Versions' },
     { id: 'advanced', label: 'Advanced' },
   ], []);
-
-  const [cursorVisible, setCursorVisible] = useState(true);
-  useSuspendableEffect(() => {
-    const i = setInterval(() => setCursorVisible(v => !v), 500);
-    return () => clearInterval(i);
-  }, []);
 
   const toggleGroup = useCallback((id: string) => {
     setExpandedGroups(prev => {
@@ -64,21 +57,14 @@ export function SaveDataSchema({ moduleId }: SaveDataSchemaProps) {
 
   return (
     <div className="space-y-4">
-      {/* Terminal header */}
-      <div className="flex items-center gap-3 pb-3 border-b border-border">
-        <BlueprintPanel color={ACCENT} className="p-2 grid place-items-center">
-          <Terminal className="w-5 h-5" style={{ color: ACCENT }} />
-        </BlueprintPanel>
-        <div className="flex flex-col">
-          <span className="text-base font-bold font-mono tracking-widest uppercase"
-            style={{ color: `${withOpacity(ACCENT, OPACITY_90)}`, textShadow: `${GLOW_MD} ${withOpacity(ACCENT, OPACITY_25)}` }}>
-            Save.Data_Schema <span style={{ color: ACCENT }}>{cursorVisible ? '_' : ' '}</span>
-          </span>
-          <span className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted mt-0.5">
-            Protocol: UARPG_SYS_{stats.implemented}/{stats.total}
-          </span>
-        </div>
-      </div>
+      <ModuleHeader
+        icon={Terminal}
+        title="Save Data Schema"
+        implemented={stats.implemented}
+        total={stats.total}
+        accent={ACCENT}
+        variant="terminal"
+      />
 
       <SubTabNavigation tabs={tabs} activeTabId={activeTab} onChange={setActiveTab} accent={ACCENT} />
 

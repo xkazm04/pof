@@ -1,9 +1,10 @@
 'use client';
 
-import { useState, useCallback, useMemo } from 'react';
+import { useState, useCallback, useMemo, useRef, useEffect } from 'react';
 import { Sparkles, Settings2 } from 'lucide-react';
-import { motion } from 'framer-motion';
-import { OPACITY_8, OPACITY_30, STATUS_WARNING, ACCENT_EMERALD, ACCENT_VIOLET, withOpacity, OPACITY_12 } from '@/lib/chart-colors';
+import { motion, useReducedMotion } from 'framer-motion';
+import { OPACITY_8, OPACITY_30, STATUS_WARNING, ACCENT_EMERALD, ACCENT_VIOLET, withOpacity, OPACITY_12, OPACITY_0, OPACITY_80 } from '@/lib/chart-colors';
+import { EASE_OUT } from '@/lib/motion';
 import { HeatmapGrid } from '../../unique-tabs/_shared';
 import {
   AFFIX_DEFS,
@@ -20,13 +21,41 @@ const CATEGORY_COLORS: Record<string, string> = {
   Utility: ACCENT_VIOLET,
 };
 
+// Reel choreography: the three slots stop staggered left-to-right (ms from spin
+// start) so a roll reads as "landing" one reel at a time with an ease-out settle.
+const REEL_STOP_MS = [400, 600, 800] as const;
+// How fast a still-spinning slot cycles through random affix names.
+const REEL_CYCLE_MS = 80;
+
 export function AffixRollSimulator() {
-  const [affixSlots, setAffixSlots] = useState<string[]>(['?', '?', '?']);
+  // reelText is what each slot shows: '?' before a spin, a fast-cycling random
+  // affix name while spinning, then the resolved pick once that reel lands.
+  const [reelText, setReelText] = useState<string[]>(['?', '?', '?']);
+  const [spinningSlots, setSpinningSlots] = useState<boolean[]>([false, false, false]);
+  const [winSlots, setWinSlots] = useState<boolean[]>([false, false, false]);
   const [affixSpinning, setAffixSpinning] = useState(false);
   const [affixHistory, setAffixHistory] = useState<Record<string, number>>({});
   const [affixRollCount, setAffixRollCount] = useState(0);
   const [selectorOpen, setSelectorOpen] = useState(false);
   const [selectedAffixIds, setSelectedAffixIds] = useState<string[]>(AFFIX_DEFS.map(a => a.id));
+
+  const prefersReducedMotion = useReducedMotion();
+  const cycleRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const timeoutsRef = useRef<ReturnType<typeof setTimeout>[]>([]);
+
+  const clearTimers = useCallback(() => {
+    if (cycleRef.current) { clearInterval(cycleRef.current); cycleRef.current = null; }
+    timeoutsRef.current.forEach(clearTimeout);
+    timeoutsRef.current = [];
+  }, []);
+
+  // Tear down any in-flight reel timers if the panel unmounts mid-spin.
+  useEffect(() => clearTimers, [clearTimers]);
+
+  const colorForAffixName = useCallback((name: string) => {
+    const def = AFFIX_DEFS.find(a => a.name === name);
+    return def ? CATEGORY_COLORS[def.category] ?? STATUS_WARNING : STATUS_WARNING;
+  }, []);
 
   const activePool = useMemo(
     () => AFFIX_DEFS.filter(a => selectedAffixIds.includes(a.id)),
@@ -45,28 +74,71 @@ export function AffixRollSimulator() {
 
   const spinAffixes = useCallback(() => {
     if (activePool.length === 0) return;
-    setAffixSpinning(true);
-    setTimeout(() => {
-      const totalWeight = activePool.reduce((s, a) => s + a.weight, 0);
-      const picks: string[] = [];
-      for (let i = 0; i < 3; i++) {
-        let roll = Math.random() * totalWeight;
-        for (const affix of activePool) {
-          roll -= affix.weight;
-          if (roll <= 0) { picks.push(affix.name); break; }
-        }
-        if (picks.length <= i) picks.push(activePool[0].name); // fallback
+    clearTimers();
+
+    // Resolve the outcome up front from the weighted distribution; the reel
+    // choreography below is purely cosmetic and simply lands on these picks.
+    const totalWeight = activePool.reduce((s, a) => s + a.weight, 0);
+    const picks: AffixDef[] = [];
+    for (let i = 0; i < 3; i++) {
+      let roll = Math.random() * totalWeight;
+      let chosen = activePool[0];
+      for (const affix of activePool) {
+        roll -= affix.weight;
+        if (roll <= 0) { chosen = affix; break; }
       }
-      setAffixSlots(picks);
+      picks.push(chosen);
+    }
+    const names = picks.map(p => p.name);
+
+    const commit = () => {
       setAffixSpinning(false);
       setAffixRollCount((c) => c + 1);
       setAffixHistory((prev) => {
         const next = { ...prev };
-        for (const p of picks) next[p] = (next[p] ?? 0) + 1;
+        for (const n of names) next[n] = (next[n] ?? 0) + 1;
         return next;
       });
-    }, 600);
-  }, [activePool]);
+    };
+
+    // Reduced motion: skip the reels entirely and reveal the result instantly.
+    if (prefersReducedMotion) {
+      setReelText(names);
+      setSpinningSlots([false, false, false]);
+      setWinSlots(picks.map(p => p.tier === 3));
+      commit();
+      return;
+    }
+
+    setAffixSpinning(true);
+    setSpinningSlots([true, true, true]);
+    setWinSlots([false, false, false]);
+
+    // Cycle a random affix name through every slot that is still in motion.
+    const stillSpinning = [true, true, true];
+    const randomName = () => activePool[Math.floor(Math.random() * activePool.length)].name;
+    cycleRef.current = setInterval(() => {
+      setReelText((prev) => prev.map((t, i) => (stillSpinning[i] ? randomName() : t)));
+    }, REEL_CYCLE_MS);
+
+    // Stagger the stops left-to-right; each reel settles onto its pick, and a
+    // tier-3 (godroll) landing flags the slot for the scale-pop + glow win cue.
+    REEL_STOP_MS.forEach((ms, i) => {
+      const handle = setTimeout(() => {
+        stillSpinning[i] = false;
+        setReelText((prev) => { const n = [...prev]; n[i] = names[i]; return n; });
+        setSpinningSlots((prev) => { const n = [...prev]; n[i] = false; return n; });
+        if (picks[i].tier === 3) {
+          setWinSlots((prev) => { const n = [...prev]; n[i] = true; return n; });
+        }
+        if (i === REEL_STOP_MS.length - 1) {
+          if (cycleRef.current) { clearInterval(cycleRef.current); cycleRef.current = null; }
+          commit();
+        }
+      }, ms);
+      timeoutsRef.current.push(handle);
+    });
+  }, [activePool, prefersReducedMotion, clearTimers]);
 
   const renderAffixItem = useCallback((item: AffixDef, selected: boolean) => {
     const catColor = CATEGORY_COLORS[item.category] ?? STATUS_WARNING;
@@ -117,17 +189,45 @@ export function AffixRollSimulator() {
 
       {/* Slot machine */}
       <div className="flex items-center justify-center gap-3 mb-3">
-        {affixSlots.map((slot, i) => (
-          <motion.div
-            key={i}
-            className="w-24 h-12 rounded-lg border flex items-center justify-center text-xs font-mono font-bold overflow-hidden"
-            style={{ borderColor: withOpacity(STATUS_WARNING, OPACITY_30), backgroundColor: withOpacity(STATUS_WARNING, OPACITY_8), color: STATUS_WARNING }}
-            animate={affixSpinning ? { y: [0, -10, 10, -5, 5, 0] } : {}}
-            transition={{ duration: 0.6, ease: 'easeInOut' }}
-          >
-            {affixSpinning ? '...' : slot}
-          </motion.div>
-        ))}
+        {reelText.map((text, i) => {
+          const spinning = spinningSlots[i];
+          const win = winSlots[i];
+          // Spinning reels stay neutral amber; a landed reel takes its affix's
+          // category color, so a godroll's glow flash reads in the right hue.
+          const color = spinning ? STATUS_WARNING : colorForAffixName(text);
+          return (
+            <motion.div
+              key={i}
+              className="w-24 h-12 rounded-lg border flex items-center justify-center text-center px-1 text-xs font-mono font-bold overflow-hidden"
+              style={{ borderColor: withOpacity(color, OPACITY_30), backgroundColor: withOpacity(color, OPACITY_8), color }}
+              animate={
+                prefersReducedMotion
+                  ? undefined
+                  : spinning
+                    ? { y: [0, -6, 0] }
+                    : win
+                      ? {
+                          scale: [1, 1.15, 1],
+                          boxShadow: [
+                            `0 0 0px ${withOpacity(color, OPACITY_0)}`,
+                            `0 0 16px ${withOpacity(color, OPACITY_80)}`,
+                            `0 0 0px ${withOpacity(color, OPACITY_0)}`,
+                          ],
+                        }
+                      : { y: 0, scale: 1 }
+              }
+              transition={
+                spinning
+                  ? { duration: REEL_CYCLE_MS / 1000, ease: 'easeInOut', repeat: Infinity }
+                  : win
+                    ? { duration: 0.45, ease: EASE_OUT, times: [0, 0.4, 1] }
+                    : { duration: 0.3, ease: EASE_OUT }
+              }
+            >
+              {text}
+            </motion.div>
+          );
+        })}
         <button
           onClick={spinAffixes}
           disabled={affixSpinning || activePool.length === 0}

@@ -484,27 +484,6 @@ export function buildGamePlan(config: HarnessConfig): GamePlan {
 }
 
 /**
- * Pick the next area to work on based on dependency resolution.
- * Returns null if all areas are completed or blocked.
- */
-export function pickNextArea(plan: GamePlan): ModuleArea | null {
-  const completedIds = new Set(
-    plan.areas.filter(a => a.status === 'completed').map(a => a.id),
-  );
-
-  for (const area of plan.areas) {
-    if (area.status !== 'pending' && area.status !== 'failed') continue;
-
-    const depsResolved = area.dependsOn.every(depId => completedIds.has(depId));
-    if (!depsResolved) continue;
-
-    return area;
-  }
-
-  return null;
-}
-
-/**
  * Update plan statistics after an iteration.
  */
 export function updatePlanStats(plan: GamePlan): void {

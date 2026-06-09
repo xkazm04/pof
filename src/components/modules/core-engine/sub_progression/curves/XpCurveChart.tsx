@@ -1,8 +1,9 @@
 'use client';
 
-import { motion } from 'framer-motion';
+import { motion, useReducedMotion } from 'framer-motion';
 import { ACCENT } from '../_shared/data';
 import { EmptyPanel } from '@/components/modules/core-engine/unique-tabs/_shared';
+import { SPRING, motionSafe } from '@/lib/motion';
 
 /* -- XP Curve Chart SVG --------------------------------------------------- */
 
@@ -13,9 +14,24 @@ interface XpCurveChartProps {
   color?: string;
 }
 
+// Point coordinates in the 0..100 chart space. `x` is purely index-based (it
+// never changes between renders), so only `y` moves when the curve params do —
+// that's why a `d`/`cy` morph reads as the line fluidly reshaping.
+const pointX = (i: number, len: number) => (i === 0 ? 0 : (i / (len - 1)) * 100);
+const pointY = (xp: number, maxXp: number) => 100 - (xp / maxXp) * 100;
+
 export function XpCurveChart({
   data, maxXp, chartId = 'main', color = ACCENT,
 }: XpCurveChartProps) {
+  // Honor prefers-reduced-motion. We gate ONLY the transition (never the
+  // rendered markup), so the one-time draw-in, the per-point stagger, and the
+  // param-change morph all collapse to instant snaps for users who opt out —
+  // without risking a hydration mismatch. See reference-reduced-motion-pattern.
+  const prefersReduced = useReducedMotion();
+  // Short spring used to morph the curve (`d`) + dots (`cy`) when the tuning
+  // sliders change, so dragging reshapes the line fluidly instead of teleporting.
+  const morph = motionSafe(SPRING.snappy, prefersReduced);
+
   if (data.length < 2 || maxXp <= 0) {
     return (
       <div className="w-full h-full flex items-center justify-center p-4">
@@ -32,13 +48,13 @@ export function XpCurveChart({
   const filterId = `glow-curve-${chartId}`;
 
   const pathData = data.reduce((acc, point, i, a) => {
-    const x = i === 0 ? 0 : (i / (a.length - 1)) * 100;
-    const y = 100 - (point.xp / maxXp) * 100;
+    const x = pointX(i, a.length);
+    const y = pointY(point.xp, maxXp);
 
     if (i === 0) return `M ${x},${y}`;
 
-    const prevX = (i - 1) === 0 ? 0 : ((i - 1) / (a.length - 1)) * 100;
-    const prevY = 100 - (a[i - 1].xp / maxXp) * 100;
+    const prevX = pointX(i - 1, a.length);
+    const prevY = pointY(a[i - 1].xp, maxXp);
 
     const cp1x = prevX + (x - prevX) * 0.5;
     const cp1y = prevY;
@@ -47,6 +63,10 @@ export function XpCurveChart({
 
     return `${acc} C ${cp1x},${cp1y} ${cp2x},${cp2y} ${x},${y}`;
   }, '');
+
+  // Same command structure every render (the level count is fixed), so framer
+  // can interpolate the embedded numbers and morph the shape smoothly.
+  const areaData = `${pathData} L 100,100 L 0,100 Z`;
 
   return (
     <div className="w-full h-full relative">
@@ -75,18 +95,23 @@ export function XpCurveChart({
             </filter>
           </defs>
 
+          {/* Filled area: fades in once, then morphs its `d` with the params. */}
           <motion.path
-            initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 1 }}
-            d={`${pathData} L 100,100 L 0,100 Z`}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1, d: areaData }}
+            transition={{ opacity: motionSafe({ duration: 1 }, prefersReduced), d: morph }}
             fill={`url(#${gradientId})`}
             vectorEffect="non-scaling-stroke"
           />
 
+          {/* Curve stroke: draws in once (pathLength), then morphs its `d`. */}
           <motion.path
             initial={{ pathLength: 0 }}
-            animate={{ pathLength: 1 }}
-            transition={{ duration: 1.5, ease: "easeOut" }}
-            d={pathData}
+            animate={{ pathLength: 1, d: pathData }}
+            transition={{
+              pathLength: motionSafe({ duration: 1.5, ease: 'easeOut' } as const, prefersReduced),
+              d: morph,
+            }}
             fill="none"
             stroke={color}
             strokeWidth="3"
@@ -95,13 +120,18 @@ export function XpCurveChart({
           />
 
           {data.map((d, i) => {
-            const x = i === 0 ? 0 : (i / (data.length - 1)) * 100;
-            const y = 100 - (d.xp / maxXp) * 100;
+            const x = pointX(i, data.length);
+            const y = pointY(d.xp, maxXp);
             return (
               <motion.circle
                 key={i}
-                initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ delay: 1 + (i * 0.05), type: "spring" }}
-                cx={`${x}%`} cy={`${y}%`}
+                initial={{ scale: 0 }}
+                animate={{ scale: 1, cy: `${y}%` }}
+                transition={{
+                  scale: motionSafe({ delay: 1 + (i * 0.05), type: 'spring' } as const, prefersReduced),
+                  cy: morph,
+                }}
+                cx={`${x}%`}
                 r="4"
                 fill="var(--surface-deep)"
                 stroke={color}

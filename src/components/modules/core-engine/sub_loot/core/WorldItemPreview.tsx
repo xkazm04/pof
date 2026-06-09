@@ -5,6 +5,7 @@ import { motion } from 'framer-motion';
 import { WORLD_ITEMS } from '../_shared/data';
 import { DUMMY_ITEMS } from '../../sub_inventory/_shared/data';
 import { BlueprintPanel, SectionHeader } from '../_shared/design';
+import { RarityDot } from '../_shared/rarityBadge';
 
 import { withOpacity, OVERLAY_WHITE, OPACITY_5, OPACITY_12, OPACITY_50, OPACITY_25, OPACITY_8 } from '@/lib/chart-colors';
 
@@ -53,7 +54,7 @@ export function WorldItemPreview() {
                   )}
                 </div>
                 <div className="flex items-center gap-1.5 mb-1.5 px-1">
-                  <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: item.beamColor, boxShadow: `0 0 5px ${item.beamColor}` }} />
+                  <RarityDot rarity={item.rarity} size={6} glow />
                   <span className="text-xs font-mono uppercase tracking-widest" style={{ color: item.beamColor }}>{item.rarity}</span>
                 </div>
                 <p className="text-xs text-text-muted bg-surface-deep/50 px-2 py-1.5 rounded border border-border/30 shadow-inner leading-relaxed">{item.pickup}</p>

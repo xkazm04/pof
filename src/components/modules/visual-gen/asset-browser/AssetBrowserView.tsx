@@ -1,11 +1,12 @@
 'use client';
 
-import { FolderOpen } from 'lucide-react';
+import { FolderOpen, Library } from 'lucide-react';
 import { ReviewableModuleView } from '@/components/modules/shared/ReviewableModuleView';
 import type { ExtraTab } from '@/components/modules/shared/ReviewableModuleView';
 import { TabHeader } from '@/components/modules/shared/TabHeader';
 import { SUB_MODULE_MAP, getCategoryForSubModule, getModuleChecklist } from '@/lib/module-registry';
 import { BrowsePanel } from '@/components/modules/visual-gen/asset-browser/BrowsePanel';
+import { LibraryPanel } from '@/components/modules/visual-gen/asset-browser/LibraryPanel';
 import { BlenderConnectionBar } from '@/components/blender-mcp/BlenderConnectionBar';
 
 function BrowseTab() {
@@ -17,6 +18,18 @@ function BrowseTab() {
         description="Browse and download CC0-licensed 3D models, textures, HDRIs, and PBR materials"
       />
       <BrowsePanel />
+    </div>
+  );
+}
+
+function LibraryTab() {
+  return (
+    <div className="space-y-4">
+      <TabHeader
+        title="Asset Library"
+        description="Everything you've downloaded — searchable, favoritable, and grouped into collections"
+      />
+      <LibraryPanel />
     </div>
   );
 }
@@ -33,6 +46,12 @@ export function AssetBrowserView() {
       label: 'Browse',
       icon: FolderOpen,
       render: () => <BrowseTab />,
+    },
+    {
+      id: 'library',
+      label: 'Library',
+      icon: Library,
+      render: () => <LibraryTab />,
     },
   ];
 

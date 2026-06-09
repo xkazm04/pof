@@ -5,16 +5,26 @@ import {
   Bug, Play, ChevronDown, ChevronRight,
   Copy, Check, Search, RefreshCw, XCircle, FileText,
   ShieldAlert, Layers, ArrowRight, Clock, Cpu,
-  TrendingUp, Eye, Upload, Terminal,
+  TrendingUp, Eye, Upload, Terminal, Lightbulb, Wrench, Code2,
 } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import { SurfaceCard } from '@/components/ui/SurfaceCard';
 import { Badge } from '@/components/ui/Badge';
 import { ProgressRing } from '@/components/ui/ProgressRing';
 import { MultiInteractivePill } from '@/components/ui/InteractivePill';
 import type { MultiPillItem } from '@/components/ui/InteractivePill';
-import { useCrashAnalyzerStore } from '@/stores/crashAnalyzerStore';
+import { DashboardHeader } from '@/components/ui/DashboardHeader';
+import { UnderlineTabs } from '@/components/ui/UnderlineTabs';
+import { DecoratedCrashText } from '@/components/ui/CrashTerm';
+import { formatTimeAgo } from '@/lib/format-time';
+import {
+  useCrashAnalyzerStore,
+  EMPTY_REPORTS,
+  EMPTY_DIAGNOSES,
+  EMPTY_PATTERNS,
+} from '@/stores/crashAnalyzerStore';
 import { CrashHealthMap } from './CrashHealthMap';
+import { CrashTimeMachine } from './CrashTimeMachine';
 import type {
   CrashReport,
   CrashDiagnosis,
@@ -24,13 +34,11 @@ import type {
   CallstackFrame,
 } from '@/types/crash-analyzer';
 import { UI_TIMEOUTS } from '@/lib/constants';
-import { ACCENT_EMERALD, STATUS_ERROR, STATUS_WARNING, SEVERITY_TOKENS } from '@/lib/chart-colors';
+import { ACCENT_EMERALD, ACCENT_ROSE, STATUS_ERROR, STATUS_WARNING, SEVERITY_TOKENS } from '@/lib/chart-colors';
+import { DURATION, EASE_OUT, motionSafe } from '@/lib/motion';
+import { plainCrashType, plainSeverity } from '@/lib/crash-glossary';
 
 // ── Constants ───────────────────────────────────────────────────────────────
-
-const EMPTY_REPORTS: CrashReport[] = [];
-const EMPTY_DIAGNOSES: CrashDiagnosis[] = [];
-const EMPTY_PATTERNS: CrashPattern[] = [];
 
 // Crash severities draw from the shared SEVERITY_TOKENS map (chart-colors), the
 // same source Deep Eval / GDD Compliance / Archeologist use — so a `critical`
@@ -77,6 +85,12 @@ export function CrashAnalyzerView() {
   const [viewTab, setViewTab] = useState<ViewTab>('crashes');
   const [searchQuery, setSearchQuery] = useState('');
   const [severityFilter, setSeverityFilter] = useState<Set<CrashSeverity>>(new Set());
+  // Plain English mode leads with a humanized "what happened / what to do" story
+  // and tucks callstacks + raw logs behind a disclosure. Default ON so the screen
+  // is legible to non-technical readers (PMs, newcomers); "Technical" restores the
+  // dense developer view.
+  const [plainMode, setPlainMode] = useState(true);
+  const prefersReducedMotion = useReducedMotion();
 
   useEffect(() => {
     fetchAnalysis();
@@ -138,27 +152,23 @@ export function CrashAnalyzerView() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-start justify-between">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-lg bg-status-red-subtle flex items-center justify-center">
-            <Bug className="w-5 h-5 text-red-400" />
-          </div>
-          <div>
-            <h2 className="text-base font-semibold text-text">Crash Log Analyzer</h2>
-            <p className="text-2xs text-text-muted mt-0.5">
-              Parse UE5 crash dumps, identify root causes with AI, and generate one-click fix prompts
-            </p>
-          </div>
-        </div>
-        <button
-          onClick={fetchAnalysis}
-          disabled={isLoading}
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium bg-status-red-subtle text-red-400 hover:bg-status-red-medium transition-colors disabled:opacity-40"
-        >
-          {isLoading ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Play className="w-3.5 h-3.5" />}
-          {isLoading ? 'Analyzing...' : 'Analyze Crashes'}
-        </button>
-      </div>
+      <DashboardHeader
+        icon={Bug}
+        title="Crash Log Analyzer"
+        subtitle="Parse UE5 crash dumps, identify root causes with AI, and generate one-click fix prompts"
+        accent="rose"
+        accentTo="orange"
+        action={
+          <button
+            onClick={fetchAnalysis}
+            disabled={isLoading}
+            className="flex items-center gap-1.5 px-3 py-2 bg-rose-500/10 border border-rose-500/25 rounded-lg text-rose-400 text-xs font-medium hover:bg-rose-500/20 transition-colors disabled:opacity-50"
+          >
+            {isLoading ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Play className="w-3.5 h-3.5" />}
+            {isLoading ? 'Analyzing...' : 'Analyze Crashes'}
+          </button>
+        }
+      />
 
       {/* Error */}
       {error && (
@@ -184,12 +194,23 @@ export function CrashAnalyzerView() {
 
       {/* Sub-tabs */}
       {hasData && (
-        <div className="flex items-center gap-1 border-b border-border">
-          <SubTab label="Crash Reports" active={viewTab === 'crashes'} onClick={() => setViewTab('crashes')} count={reports.length} />
-          <SubTab label="Patterns" active={viewTab === 'patterns'} onClick={() => setViewTab('patterns')} count={patterns.length} />
-          <SubTab label="Health Map" active={viewTab === 'health'} onClick={() => setViewTab('health')} />
-          <SubTab label="Import Log" active={viewTab === 'import'} onClick={() => setViewTab('import')} />
-        </div>
+        <UnderlineTabs
+          ariaLabel="Crash analyzer views"
+          accent={ACCENT_ROSE}
+          active={viewTab}
+          onChange={(id) => setViewTab(id)}
+          tabs={[
+            { id: 'crashes', label: 'Crash Reports', count: reports.length },
+            { id: 'patterns', label: 'Patterns', count: patterns.length },
+            { id: 'health', label: 'Health Map' },
+            { id: 'import', label: 'Import Log' },
+          ]}
+          trailing={
+            viewTab === 'crashes' || viewTab === 'patterns' ? (
+              <PlainModeToggle plain={plainMode} onChange={setPlainMode} />
+            ) : undefined
+          }
+        />
       )}
 
       {/* Empty state */}
@@ -216,10 +237,22 @@ export function CrashAnalyzerView() {
       )}
 
       {/* ── Crashes Tab ──────────────────────────────────────────── */}
+      {/*
+        Master-detail split runs on a CSS grid whose track widths snap once
+        (full → 50/50) rather than a per-frame Framer width tween. The old
+        `animate={{ width: '50%' }}` re-flowed the crash list every frame on a
+        long list; now the list shrinks in a single reflow and the detail panel
+        slides in purely on the compositor (transform + opacity + will-change)
+        for a solid-60fps reveal. `prefers-reduced-motion` drops the slide.
+      */}
       {hasData && viewTab === 'crashes' && (
-        <div className="flex gap-4">
+        <div
+          data-testid="crashes-split"
+          className="grid gap-4 items-start"
+          style={{ gridTemplateColumns: selectedReport ? 'minmax(0, 1fr) minmax(0, 1fr)' : 'minmax(0, 1fr)' }}
+        >
           {/* Crash list */}
-          <div className={`space-y-3 ${selectedCrashId ? 'w-1/2' : 'w-full'}`}>
+          <div className="space-y-3 min-w-0">
             {/* Filters */}
             <div className="flex items-center gap-2">
               <div className="relative flex-1">
@@ -252,23 +285,28 @@ export function CrashAnalyzerView() {
             </div>
           </div>
 
-          {/* Detail panel */}
-          <AnimatePresence>
-            {selectedReport && (
+          {/* Detail panel — a fixed-width grid track (no width tween). The track
+              snaps in alongside the list in a single reflow; its content then
+              slides + fades in purely on the compositor, so the adjacent list
+              never re-flows mid-animation. */}
+          {selectedReport && (
+            <div className="min-w-0 overflow-hidden">
               <motion.div
-                initial={{ width: 0, opacity: 0 }}
-                animate={{ width: '50%', opacity: 1 }}
-                exit={{ width: 0, opacity: 0 }}
-                className="overflow-hidden"
+                data-testid="crash-detail-anim"
+                initial={{ opacity: 0, x: prefersReducedMotion ? 0 : 40 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={motionSafe({ duration: DURATION.base, ease: EASE_OUT }, prefersReducedMotion)}
+                style={{ willChange: 'transform, opacity' }}
               >
                 <CrashDetailPanel
                   report={selectedReport}
                   diagnosis={selectedDiagnosis}
                   onClose={() => selectCrash(null)}
+                  plainMode={plainMode}
                 />
               </motion.div>
-            )}
-          </AnimatePresence>
+            </div>
+          )}
         </div>
       )}
 
@@ -284,7 +322,7 @@ export function CrashAnalyzerView() {
               </div>
             </SurfaceCard>
           ) : (
-            patterns.map((p) => <PatternCard key={p.id} pattern={p} />)
+            patterns.map((p) => <PatternCard key={p.id} pattern={p} plainMode={plainMode} />)
           )}
         </div>
       )}
@@ -304,18 +342,39 @@ export function CrashAnalyzerView() {
 
 // ── Sub-components ──────────────────────────────────────────────────────────
 
-function SubTab({ label, active, onClick, count }: { label: string; active: boolean; onClick: () => void; count?: number }) {
+/** Plain English ⇄ Technical toggle. Plain mode leads with a humanized story and
+ *  hides callstacks/raw logs behind a disclosure; Technical restores the dense
+ *  developer view. */
+function PlainModeToggle({ plain, onChange }: { plain: boolean; onChange: (v: boolean) => void }) {
+  const options: { id: 'plain' | 'technical'; label: string; icon: typeof Lightbulb; hint: string }[] = [
+    { id: 'plain', label: 'Plain English', icon: Lightbulb, hint: 'Humanized summaries — what happened & what to do' },
+    { id: 'technical', label: 'Technical', icon: Code2, hint: 'Full callstacks, diagnoses, and raw logs' },
+  ];
   return (
-    <button
-      onClick={onClick}
-      className={`flex items-center gap-1 px-3 py-2 text-xs font-medium transition-colors relative ${
-        active ? 'text-text' : 'text-text-muted hover:text-text'
-      }`}
+    <div
+      className="inline-flex items-center rounded-md border border-border bg-surface p-0.5"
+      role="group"
+      aria-label="Crash detail level"
     >
-      {label}
-      {count !== undefined && <span className="text-2xs text-text-muted">({count})</span>}
-      {active && <span className="absolute bottom-0 left-0 right-0 h-0.5 rounded-t bg-red-400" />}
-    </button>
+      {options.map((opt) => {
+        const active = (opt.id === 'plain') === plain;
+        return (
+          <button
+            key={opt.id}
+            type="button"
+            onClick={() => onChange(opt.id === 'plain')}
+            aria-pressed={active}
+            title={opt.hint}
+            className={`focus-ring flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium rounded transition-colors ${
+              active ? 'bg-status-red-medium text-red-400' : 'text-text-muted hover:text-text'
+            }`}
+          >
+            <opt.icon className="w-3 h-3" />
+            {opt.label}
+          </button>
+        );
+      })}
+    </div>
   );
 }
 
@@ -357,7 +416,7 @@ function CrashListItem({
   diagnosis: CrashDiagnosis | undefined;
 }) {
   const token = SEVERITY_TOKENS[report.severity];
-  const timeAgo = getTimeAgo(report.timestamp);
+  const timeAgo = formatTimeAgo(report.timestamp);
 
   return (
     <div
@@ -404,20 +463,17 @@ function CrashDetailPanel({
   report,
   diagnosis,
   onClose,
+  plainMode,
 }: {
   report: CrashReport;
   diagnosis: CrashDiagnosis | null;
   onClose: () => void;
+  plainMode: boolean;
 }) {
-  const [copied, setCopied] = useState(false);
-  const [showRawLog, setShowRawLog] = useState(false);
-
-  const handleCopyPrompt = useCallback(() => {
-    if (!diagnosis) return;
-    navigator.clipboard.writeText(diagnosis.fixPrompt);
-    setCopied(true);
-    setTimeout(() => setCopied(false), UI_TIMEOUTS.copyFeedback);
-  }, [diagnosis]);
+  // In Plain English mode the dense developer sections (callstack, AI root cause,
+  // raw log) collapse behind one disclosure so the humanized story leads. Default
+  // closed there; in Technical mode they're always shown.
+  const [showTech, setShowTech] = useState(false);
 
   return (
     <div className="space-y-3 pl-4">
@@ -433,7 +489,9 @@ function CrashDetailPanel({
             <XCircle className="w-4 h-4" />
           </button>
         </div>
-        <p className="text-xs text-text mb-2">{report.errorMessage}</p>
+        <p className="text-xs text-text mb-2">
+          <DecoratedCrashText text={report.errorMessage} />
+        </p>
         <div className="flex flex-wrap gap-2 text-2xs text-text-muted">
           <span className="flex items-center gap-1"><Clock className="w-3 h-3" />{new Date(report.timestamp).toLocaleString()}</span>
           <span className="flex items-center gap-1"><Cpu className="w-3 h-3" />{report.machineState.engineVersion} {report.machineState.buildConfig}</span>
@@ -441,81 +499,202 @@ function CrashDetailPanel({
         </div>
       </SurfaceCard>
 
-      {/* Callstack */}
-      <SurfaceCard>
-        <h3 className="text-xs font-semibold text-text mb-2 flex items-center gap-1.5">
-          <Terminal className="w-3.5 h-3.5 text-red-400" />
-          Callstack ({report.callstack.length} frames)
-        </h3>
-        <div className="space-y-0.5 max-h-48 overflow-y-auto">
-          {report.callstack.map((frame) => (
-            <FrameRow key={frame.index} frame={frame} />
+      {plainMode ? (
+        <>
+          {/* Humanized "what happened / what to do" */}
+          <PlainCrashSummary report={report} diagnosis={diagnosis} />
+
+          {/* All developer detail tucked behind one disclosure */}
+          <button
+            onClick={() => setShowTech((v) => !v)}
+            data-testid="show-tech-toggle"
+            aria-expanded={showTech}
+            className="flex items-center gap-1.5 text-2xs text-text-muted hover:text-text transition-colors"
+          >
+            <Terminal className="w-3 h-3" />
+            {showTech ? 'Hide' : 'Show'} technical details
+            {showTech ? <ChevronDown className="w-3 h-3" /> : <ChevronRight className="w-3 h-3" />}
+          </button>
+          <AnimatePresence>
+            {showTech && (
+              <motion.div
+                initial={{ height: 0, opacity: 0 }}
+                animate={{ height: 'auto', opacity: 1 }}
+                exit={{ height: 0, opacity: 0 }}
+                className="overflow-hidden"
+              >
+                <div className="space-y-3">
+                  <CallstackCard report={report} />
+                  {diagnosis && <AiDiagnosisCard diagnosis={diagnosis} />}
+                  <RawLogBlock rawLog={report.rawLog} />
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </>
+      ) : (
+        <>
+          {/* Technical mode — dense developer view */}
+          <CallstackCard report={report} />
+          {diagnosis && <AiDiagnosisCard diagnosis={diagnosis} />}
+          <RawLogDisclosure rawLog={report.rawLog} />
+        </>
+      )}
+    </div>
+  );
+}
+
+/** The humanized lead: leads with the AI summary + fix when present, always
+ *  backed by the plain-language crashType/severity translations. */
+function PlainCrashSummary({ report, diagnosis }: { report: CrashReport; diagnosis: CrashDiagnosis | null }) {
+  const plain = plainCrashType(report.crashType);
+  const sev = plainSeverity(report.severity);
+  const whatHappened = diagnosis?.summary ?? plain.what;
+  const whatToDo = diagnosis?.fixDescription ?? plain.fix;
+
+  return (
+    <SurfaceCard data-testid="plain-crash-summary">
+      <div className="space-y-3">
+        <div>
+          <p className="text-2xs font-medium text-text-muted mb-1 flex items-center gap-1.5">
+            <Bug className="w-3 h-3" style={{ color: SEVERITY_TOKENS[report.severity].color }} />
+            What happened
+          </p>
+          <p className="text-xs text-text leading-relaxed">
+            <DecoratedCrashText text={whatHappened} />
+          </p>
+          <p className="text-2xs text-text-muted mt-1">{sev.meaning}</p>
+        </div>
+
+        <div>
+          <p className="text-2xs font-medium text-text-muted mb-1 flex items-center gap-1.5">
+            <Wrench className="w-3 h-3 text-emerald-400" />
+            What to do
+          </p>
+          <p className="text-xs text-text leading-relaxed">
+            <DecoratedCrashText text={whatToDo} />
+          </p>
+        </div>
+
+        <div className="flex items-center gap-1.5 pt-1">
+          <span className="text-2xs text-text-muted">Crash type:</span>
+          <Badge variant="default">{CRASH_TYPE_LABELS[report.crashType]}</Badge>
+          <span className="text-2xs text-text-muted">·</span>
+          <span className="text-2xs text-text-muted">{plain.label}</span>
+        </div>
+      </div>
+    </SurfaceCard>
+  );
+}
+
+function CallstackCard({ report }: { report: CrashReport }) {
+  // The Time Machine reimagines the raw frame list as a scrubable replay that
+  // walks execution from engine entry into game code and stops on the glowing
+  // culprit; the static list below stays as the full, copy-friendly reference.
+  return (
+    <SurfaceCard>
+      <h3 className="text-xs font-semibold text-text mb-2 flex items-center gap-1.5">
+        <Terminal className="w-3.5 h-3.5 text-red-400" />
+        Callstack ({report.callstack.length} frames)
+      </h3>
+      <CrashTimeMachine key={report.id} report={report} />
+      <div className="mt-3 pt-3 border-t border-border space-y-0.5 max-h-48 overflow-y-auto">
+        {report.callstack.map((frame) => (
+          <FrameRow key={frame.index} frame={frame} />
+        ))}
+      </div>
+    </SurfaceCard>
+  );
+}
+
+function AiDiagnosisCard({ diagnosis }: { diagnosis: CrashDiagnosis }) {
+  const [copied, setCopied] = useState(false);
+
+  const handleCopyPrompt = useCallback(() => {
+    navigator.clipboard.writeText(diagnosis.fixPrompt);
+    setCopied(true);
+    setTimeout(() => setCopied(false), UI_TIMEOUTS.copyFeedback);
+  }, [diagnosis]);
+
+  return (
+    <SurfaceCard>
+      <h3 className="text-xs font-semibold text-text mb-2 flex items-center gap-1.5">
+        <Eye className="w-3.5 h-3.5 text-emerald-400" />
+        AI Root Cause Analysis
+        <ProgressRing value={Math.round(diagnosis.confidence * 100)} size={20} strokeWidth={2} color={ACCENT_EMERALD} />
+      </h3>
+
+      <div className="space-y-3">
+        <div>
+          <p className="text-2xs font-medium text-text mb-0.5">Summary</p>
+          <p className="text-2xs text-text-muted"><DecoratedCrashText text={diagnosis.summary} /></p>
+        </div>
+
+        <div>
+          <p className="text-2xs font-medium text-text mb-0.5">Root Cause</p>
+          <p className="text-2xs text-text-muted"><DecoratedCrashText text={diagnosis.rootCause} /></p>
+        </div>
+
+        <div>
+          <p className="text-2xs font-medium text-text mb-0.5">UE5 Pattern</p>
+          <Badge variant="warning">{diagnosis.uePattern}</Badge>
+        </div>
+
+        <div>
+          <p className="text-2xs font-medium text-text mb-0.5">Fix Description</p>
+          <p className="text-2xs text-text-muted"><DecoratedCrashText text={diagnosis.fixDescription} /></p>
+        </div>
+
+        {/* Fix prompt */}
+        <div className="rounded-md border border-emerald-500/20 bg-emerald-500/5 p-2.5">
+          <div className="flex items-center justify-between mb-1.5">
+            <p className="text-2xs font-medium text-emerald-400 flex items-center gap-1">
+              <ArrowRight className="w-3 h-3" /> One-Click Fix Prompt
+            </p>
+            <button
+              onClick={handleCopyPrompt}
+              className="flex items-center gap-1 px-2 py-0.5 rounded text-2xs bg-surface hover:bg-surface-2 text-text-muted transition-colors"
+            >
+              {copied ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
+              {copied ? 'Copied!' : 'Copy'}
+            </button>
+          </div>
+          <pre className="text-xs leading-relaxed text-emerald-300/80 whitespace-pre-wrap overflow-x-auto max-h-32 overflow-y-auto">
+            {diagnosis.fixPrompt}
+          </pre>
+        </div>
+
+        {/* Tags */}
+        <div className="flex flex-wrap gap-1">
+          {diagnosis.tags.map((tag) => (
+            <span key={tag} className="px-1.5 py-0.5 rounded text-xs bg-surface-2 text-text-muted">
+              {tag}
+            </span>
           ))}
         </div>
-      </SurfaceCard>
+      </div>
+    </SurfaceCard>
+  );
+}
 
-      {/* AI Diagnosis */}
-      {diagnosis && (
-        <SurfaceCard>
-          <h3 className="text-xs font-semibold text-text mb-2 flex items-center gap-1.5">
-            <Eye className="w-3.5 h-3.5 text-emerald-400" />
-            AI Root Cause Analysis
-            <ProgressRing value={Math.round(diagnosis.confidence * 100)} size={20} strokeWidth={2} color={ACCENT_EMERALD} />
-          </h3>
+function RawLogBlock({ rawLog }: { rawLog: string }) {
+  return (
+    <div>
+      <p className="text-2xs font-medium text-text mb-1 flex items-center gap-1.5">
+        <FileText className="w-3 h-3" /> Raw Log
+      </p>
+      <pre className="text-xs leading-relaxed p-3 rounded-md border border-border bg-surface text-text-muted overflow-x-auto max-h-48 overflow-y-auto">
+        {rawLog}
+      </pre>
+    </div>
+  );
+}
 
-          <div className="space-y-3">
-            <div>
-              <p className="text-2xs font-medium text-text mb-0.5">Summary</p>
-              <p className="text-2xs text-text-muted">{diagnosis.summary}</p>
-            </div>
-
-            <div>
-              <p className="text-2xs font-medium text-text mb-0.5">Root Cause</p>
-              <p className="text-2xs text-text-muted">{diagnosis.rootCause}</p>
-            </div>
-
-            <div>
-              <p className="text-2xs font-medium text-text mb-0.5">UE5 Pattern</p>
-              <Badge variant="warning">{diagnosis.uePattern}</Badge>
-            </div>
-
-            <div>
-              <p className="text-2xs font-medium text-text mb-0.5">Fix Description</p>
-              <p className="text-2xs text-text-muted">{diagnosis.fixDescription}</p>
-            </div>
-
-            {/* Fix prompt */}
-            <div className="rounded-md border border-emerald-500/20 bg-emerald-500/5 p-2.5">
-              <div className="flex items-center justify-between mb-1.5">
-                <p className="text-2xs font-medium text-emerald-400 flex items-center gap-1">
-                  <ArrowRight className="w-3 h-3" /> One-Click Fix Prompt
-                </p>
-                <button
-                  onClick={handleCopyPrompt}
-                  className="flex items-center gap-1 px-2 py-0.5 rounded text-2xs bg-surface hover:bg-surface-2 text-text-muted transition-colors"
-                >
-                  {copied ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
-                  {copied ? 'Copied!' : 'Copy'}
-                </button>
-              </div>
-              <pre className="text-xs leading-relaxed text-emerald-300/80 whitespace-pre-wrap overflow-x-auto max-h-32 overflow-y-auto">
-                {diagnosis.fixPrompt}
-              </pre>
-            </div>
-
-            {/* Tags */}
-            <div className="flex flex-wrap gap-1">
-              {diagnosis.tags.map((tag) => (
-                <span key={tag} className="px-1.5 py-0.5 rounded text-xs bg-surface-2 text-text-muted">
-                  {tag}
-                </span>
-              ))}
-            </div>
-          </div>
-        </SurfaceCard>
-      )}
-
-      {/* Raw log toggle */}
+/** Standalone raw-log disclosure used in Technical mode (its own toggle). */
+function RawLogDisclosure({ rawLog }: { rawLog: string }) {
+  const [showRawLog, setShowRawLog] = useState(false);
+  return (
+    <>
       <button
         onClick={() => setShowRawLog(!showRawLog)}
         className="flex items-center gap-1.5 text-2xs text-text-muted hover:text-text transition-colors"
@@ -533,12 +712,12 @@ function CrashDetailPanel({
             className="overflow-hidden"
           >
             <pre className="text-xs leading-relaxed p-3 rounded-md border border-border bg-surface text-text-muted overflow-x-auto max-h-48 overflow-y-auto">
-              {report.rawLog}
+              {rawLog}
             </pre>
           </motion.div>
         )}
       </AnimatePresence>
-    </div>
+    </>
   );
 }
 
@@ -568,8 +747,9 @@ function FrameRow({ frame }: { frame: CallstackFrame }) {
   );
 }
 
-function PatternCard({ pattern }: { pattern: CrashPattern }) {
+function PatternCard({ pattern, plainMode }: { pattern: CrashPattern; plainMode: boolean }) {
   const [expanded, setExpanded] = useState(false);
+  const plain = plainCrashType(pattern.crashType);
 
   return (
     <SurfaceCard>
@@ -580,12 +760,18 @@ function PatternCard({ pattern }: { pattern: CrashPattern }) {
           <TrendingUp className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
         )}
         <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
             <span className="text-xs font-medium text-text">{pattern.name}</span>
             {pattern.isSystemic && <Badge variant="error">systemic</Badge>}
             <Badge variant="warning">{pattern.occurrences}x</Badge>
+            {plainMode && <span className="text-2xs text-text-muted">{plain.label}</span>}
           </div>
-          <p className="text-2xs text-text-muted mt-0.5">{pattern.description}</p>
+          <p className="text-2xs text-text-muted mt-0.5">
+            <DecoratedCrashText text={pattern.description} />
+          </p>
+          {plainMode && (
+            <p className="text-2xs text-text-muted/80 mt-0.5 italic">{plain.fix}</p>
+          )}
         </div>
         {expanded ? <ChevronDown className="w-3.5 h-3.5 text-text-muted" /> : <ChevronRight className="w-3.5 h-3.5 text-text-muted" />}
       </div>
@@ -600,7 +786,7 @@ function PatternCard({ pattern }: { pattern: CrashPattern }) {
             <div className="mt-2 pt-2 border-t border-border space-y-2">
               <div>
                 <p className="text-2xs font-medium text-text">Root Cause</p>
-                <p className="text-2xs text-text-muted">{pattern.rootCause}</p>
+                <p className="text-2xs text-text-muted"><DecoratedCrashText text={pattern.rootCause} /></p>
               </div>
               <div>
                 <p className="text-2xs font-medium text-text">Signature Functions</p>
@@ -614,8 +800,8 @@ function PatternCard({ pattern }: { pattern: CrashPattern }) {
               </div>
               <div className="flex items-center gap-3 text-2xs text-text-muted">
                 <span>Crash IDs: {pattern.crashIds.join(', ')}</span>
-                <span>First: {getTimeAgo(pattern.firstSeen)}</span>
-                <span>Last: {getTimeAgo(pattern.lastSeen)}</span>
+                <span>First: {formatTimeAgo(pattern.firstSeen)}</span>
+                <span>Last: {formatTimeAgo(pattern.lastSeen)}</span>
               </div>
             </div>
           </motion.div>
@@ -674,16 +860,3 @@ function ImportPanel() {
   );
 }
 
-// ── Helpers ─────────────────────────────────────────────────────────────────
-
-function getTimeAgo(timestamp: string): string {
-  const now = new Date();
-  const then = new Date(timestamp);
-  const diffMs = now.getTime() - then.getTime();
-  const diffMin = Math.floor(diffMs / 60000);
-  if (diffMin < 60) return `${diffMin}m ago`;
-  const diffHr = Math.floor(diffMin / 60);
-  if (diffHr < 24) return `${diffHr}h ago`;
-  const diffDays = Math.floor(diffHr / 24);
-  return `${diffDays}d ago`;
-}

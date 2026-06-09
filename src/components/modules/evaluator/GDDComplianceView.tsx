@@ -2,15 +2,19 @@
 
 import { useEffect } from 'react';
 import {
-  ShieldCheck, AlertTriangle, AlertCircle, Info, CheckCircle2,
+  AlertTriangle, AlertCircle, Info, CheckCircle2,
   RefreshCw, Loader2, ChevronDown, ChevronRight, Lightbulb,
-  ArrowUpRight, ArrowDownRight, X,
+  ChevronsLeft, ChevronsRight,
 } from 'lucide-react';
 import { useGDDComplianceStore } from '@/stores/gddComplianceStore';
 import { useModuleStore } from '@/stores/moduleStore';
-import type { ComplianceGap, ModuleCompliance, GapSeverity, ReconciliationSuggestion } from '@/types/gdd-compliance';
-import { MODULE_COLORS, SEVERITY_TOKENS, scoreBandToken, STATUS_ERROR, STATUS_WARNING, STATUS_SUCCESS, type SeverityToken } from '@/lib/chart-colors';
-import { useState } from 'react';
+import { useDisclosure } from '@/hooks/useDisclosure';
+import type { ComplianceGap, ModuleCompliance, GapSeverity, GapDirection, ReconciliationSuggestion } from '@/types/gdd-compliance';
+import {
+  MODULE_COLORS, SEVERITY_TOKENS, scoreBandToken, severityAccentCard,
+  STATUS_ERROR, STATUS_WARNING, STATUS_SUCCESS, ACCENT_VIOLET, ACCENT_CYAN_LIGHT,
+  statusBg, statusBorder, type SeverityToken,
+} from '@/lib/chart-colors';
 
 // Gap severities use the shared SEVERITY_TOKENS map so a critical gap matches a
 // critical finding in Deep Eval / the Archeologist (major→high, minor→low).
@@ -31,6 +35,137 @@ const EFFORT_LABELS: Record<string, string> = {
 /** Compliance score → shared score-band color (green / amber / orange / red). */
 function scoreColor(score: number): string {
   return scoreBandToken(score).color;
+}
+
+// ── Design-vs-code split visual language ─────────────────────────────────────
+//
+// Every gap has two sides — what the GDD (design) specifies vs. what the code
+// implements — and a *lean* showing which side is ahead. Each side gets one fixed
+// semantic color: violet = design / intent, cyan = code / implementation. Both are
+// drawn from *outside* the severity ramp (red/orange/amber/blue) so a split never
+// reads as a severity. The same `GapSplitIndicator` + side colors are reused on the
+// collapsed row and the expanded panel (incl. the Design says / Code says cards), so
+// the directional metaphor repeats and every gap is legible at a glance.
+
+type GapSide = 'design' | 'code';
+
+const SIDE: Record<GapSide, { color: string; label: string }> = {
+  design: { color: ACCENT_VIOLET, label: 'Design' },
+  code: { color: ACCENT_CYAN_LIGHT, label: 'Code' },
+};
+
+const DIRECTION_META: Record<GapDirection, {
+  ahead: GapSide;
+  short: string;
+  /** Full sentence — drives the indicator's aria-label + the panel banner. */
+  label: string;
+  /** Plain-language consequence, for non-technical triage. */
+  consequence: string;
+}> = {
+  'design-ahead': {
+    ahead: 'design',
+    short: 'Design ahead',
+    label: 'Design is ahead of code',
+    consequence: 'The design specifies more than the code implements — code needs to catch up.',
+  },
+  'code-ahead': {
+    ahead: 'code',
+    short: 'Code ahead',
+    label: 'Code is ahead of design',
+    consequence: 'The code implements more than the design documents — update the GDD to match.',
+  },
+};
+
+/**
+ * Two-sided gap indicator. A Design▕Code split bar whose fuller, brighter half is
+ * the side that's ahead, with a double-chevron leaning toward it. `variant='full'`
+ * adds the Design / Code end labels (expanded-panel header); the compact variant is
+ * row-sized. Carries a directional `aria-label` so the lean is not color-only.
+ */
+function GapSplitIndicator({ direction, variant = 'compact' }: {
+  direction: GapDirection;
+  variant?: 'compact' | 'full';
+}) {
+  const meta = DIRECTION_META[direction];
+  const designAhead = meta.ahead === 'design';
+  const designPct = designAhead ? 66 : 34;
+  const aheadColor = SIDE[meta.ahead].color;
+  const Lean = designAhead ? ChevronsLeft : ChevronsRight;
+  const full = variant === 'full';
+
+  return (
+    <span
+      className={`inline-flex items-center ${full ? 'gap-2' : 'gap-1.5'}`}
+      role="img"
+      aria-label={meta.label}
+    >
+      {full && (
+        <span
+          className="text-2xs font-medium"
+          style={{ color: SIDE.design.color, opacity: designAhead ? 1 : 0.55 }}
+        >
+          {SIDE.design.label}
+        </span>
+      )}
+      <span
+        className={`relative ${full ? 'w-24' : 'w-12'} h-1.5 rounded-full overflow-hidden flex bg-surface`}
+        aria-hidden="true"
+      >
+        <span
+          className="h-full transition-all duration-slow"
+          style={{ width: `${designPct}%`, backgroundColor: SIDE.design.color }}
+        />
+        <span
+          className="h-full transition-all duration-slow"
+          style={{ width: `${100 - designPct}%`, backgroundColor: SIDE.code.color }}
+        />
+      </span>
+      {full && (
+        <span
+          className="text-2xs font-medium"
+          style={{ color: SIDE.code.color, opacity: designAhead ? 0.55 : 1 }}
+        >
+          {SIDE.code.label}
+        </span>
+      )}
+      {!full && (
+        <span
+          className="inline-flex items-center text-2xs font-medium flex-shrink-0"
+          style={{ color: aheadColor }}
+        >
+          <Lean className="w-3 h-3" aria-hidden="true" />
+          {meta.short}
+        </span>
+      )}
+    </span>
+  );
+}
+
+/** One side of the gap — the "Design says" / "Code says" card, tinted to its side color. */
+function GapSideCard({ side, state, ahead }: { side: GapSide; state: string; ahead: boolean }) {
+  const { color, label } = SIDE[side];
+  return (
+    <div
+      className="p-2 rounded border bg-surface border-l-2"
+      style={{ borderColor: ahead ? statusBorder(color) : 'var(--border)', borderLeftColor: color }}
+    >
+      <div className="flex items-center justify-between gap-1 mb-0.5">
+        <span className="inline-flex items-center gap-1 font-medium" style={{ color }}>
+          <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: color }} />
+          {label} says
+        </span>
+        {ahead && (
+          <span
+            className="text-2xs px-1 py-px rounded font-medium flex-shrink-0"
+            style={{ color, backgroundColor: statusBg(color), border: `1px solid ${statusBorder(color)}` }}
+          >
+            Ahead
+          </span>
+        )}
+      </div>
+      <p className="text-text mt-0.5">{state}</p>
+    </div>
+  );
 }
 
 export function GDDComplianceView() {
@@ -57,7 +192,7 @@ export function GDDComplianceView() {
     return (
       <div className="flex items-center justify-center py-20">
         <div className="flex flex-col items-center gap-3">
-          <Loader2 className="w-6 h-6 text-[#ef4444] animate-spin" />
+          <Loader2 className="w-6 h-6 animate-spin" style={{ color: STATUS_ERROR }} />
           <span className="text-xs text-text-muted">Running compliance audit...</span>
         </div>
       </div>
@@ -68,9 +203,9 @@ export function GDDComplianceView() {
     return (
       <div className="flex items-center justify-center py-20">
         <div className="flex flex-col items-center gap-3 text-center">
-          <AlertCircle className="w-6 h-6 text-[#ef4444]" />
+          <AlertCircle className="w-6 h-6" style={{ color: STATUS_ERROR }} />
           <span className="text-xs" style={{ color: STATUS_ERROR }}>{error}</span>
-          <button onClick={handleAudit} className="text-xs text-[#ef4444] hover:underline">
+          <button onClick={handleAudit} className="text-xs hover:underline" style={{ color: STATUS_ERROR }}>
             Retry
           </button>
         </div>
@@ -105,7 +240,8 @@ export function GDDComplianceView() {
         <button
           onClick={handleAudit}
           disabled={isAuditing}
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-status-red-subtle text-[#ef4444] border border-status-red-strong hover:bg-status-red-medium transition-colors disabled:opacity-50"
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-status-red-subtle border border-status-red-strong hover:bg-status-red-medium transition-colors disabled:opacity-50"
+          style={{ color: STATUS_ERROR }}
         >
           {isAuditing ? <Loader2 className="w-3 h-3 animate-spin" /> : <RefreshCw className="w-3 h-3" />}
           Re-audit
@@ -151,8 +287,13 @@ function ScoreRing({ score, size }: { score: number; size: number }) {
   const color = scoreColor(score);
 
   return (
-    <div className="relative" style={{ width: size, height: size }}>
-      <svg width={size} height={size} className="-rotate-90">
+    <div
+      className="relative"
+      style={{ width: size, height: size }}
+      role="img"
+      aria-label={`Compliance score ${score} out of 100`}
+    >
+      <svg width={size} height={size} className="-rotate-90" aria-hidden="true">
         <circle
           cx={size / 2} cy={size / 2} r={radius}
           fill="none" stroke="var(--border)" strokeWidth={stroke}
@@ -166,7 +307,7 @@ function ScoreRing({ score, size }: { score: number; size: number }) {
           className="transition-all duration-slow"
         />
       </svg>
-      <div className="absolute inset-0 flex items-center justify-center">
+      <div className="absolute inset-0 flex items-center justify-center" aria-hidden="true">
         <span className="text-sm font-bold tabular-nums" style={{ color }}>
           {score}
         </span>
@@ -184,15 +325,19 @@ function ModuleCard({ module, isSelected, onClick }: {
 }) {
   const unresolvedGaps = module.gaps.filter((g) => !g.resolved).length;
   const color = scoreColor(module.score);
+  const detailId = `gdd-module-detail-${module.moduleId}`;
 
   return (
     <button
       onClick={onClick}
+      aria-expanded={isSelected}
+      aria-controls={isSelected ? detailId : undefined}
       className={`w-full text-left p-3 rounded-lg border transition-colors ${
         isSelected
-          ? 'border-[#ef4444] bg-status-red-subtle'
+          ? 'bg-status-red-subtle'
           : 'border-border bg-surface hover:bg-surface-hover'
       }`}
+      style={isSelected ? { borderColor: STATUS_ERROR } : undefined}
     >
       <div className="flex items-center justify-between mb-2">
         <span className="text-xs font-medium text-text truncate">{module.moduleName}</span>
@@ -222,9 +367,9 @@ function ModuleCard({ module, isSelected, onClick }: {
 
       <div className="flex items-center justify-end mt-1">
         {isSelected ? (
-          <ChevronDown className="w-3 h-3 text-text-muted" />
+          <ChevronDown className="w-3 h-3 text-text-muted" aria-hidden="true" />
         ) : (
-          <ChevronRight className="w-3 h-3 text-text-muted" />
+          <ChevronRight className="w-3 h-3 text-text-muted" aria-hidden="true" />
         )}
       </div>
     </button>
@@ -241,7 +386,7 @@ function ModuleDetail({ module, onResolve }: {
   const resolvedGaps = module.gaps.filter((g) => g.resolved);
 
   return (
-    <div className="border border-border rounded-lg bg-surface p-4 space-y-3">
+    <div id={`gdd-module-detail-${module.moduleId}`} className="border border-border rounded-lg bg-surface p-4 space-y-3">
       <div className="flex items-center justify-between">
         <h3 className="text-sm font-semibold text-text">{module.moduleName} Gaps</h3>
         <span className="text-2xs text-text-muted">
@@ -268,44 +413,51 @@ function ModuleDetail({ module, onResolve }: {
 // ─── Gap Row ────────────────────────────────────────────────────────────────
 
 function GapRow({ gap, onResolve }: { gap: ComplianceGap; onResolve: () => void }) {
-  const [expanded, setExpanded] = useState(false);
+  const { open, toggle, buttonProps, panelProps } = useDisclosure(false);
   const config = SEVERITY_CONFIG[gap.severity];
   const SeverityIcon = config.icon;
-  const DirectionIcon = gap.direction === 'design-ahead' ? ArrowDownRight : ArrowUpRight;
-  const directionLabel = gap.direction === 'design-ahead' ? 'Design ahead of code' : 'Code ahead of design';
+  const meta = DIRECTION_META[gap.direction];
+  const designAhead = meta.ahead === 'design';
 
   return (
-    <div className="border border-border rounded-md bg-surface-deep">
+    <div
+      className="border border-border border-l-[3px] rounded-md bg-surface-deep"
+      style={severityAccentCard(config)}
+    >
       <button
-        onClick={() => setExpanded(!expanded)}
+        onClick={toggle}
+        {...buttonProps}
         className="w-full flex items-center gap-2 px-3 py-2 text-left"
       >
-        <SeverityIcon className="w-3.5 h-3.5 flex-shrink-0" style={{ color: config.color }} />
+        <SeverityIcon className="w-3.5 h-3.5 flex-shrink-0" style={{ color: config.color }} aria-hidden="true" />
         <span className="text-xs text-text flex-1 truncate">{gap.title}</span>
-        <span className="text-2xs text-text-muted flex-shrink-0 flex items-center gap-1">
-          <DirectionIcon className="w-2.5 h-2.5" />
-          {directionLabel}
-        </span>
-        {expanded ? (
-          <ChevronDown className="w-3 h-3 text-text-muted" />
+        <GapSplitIndicator direction={gap.direction} />
+        {open ? (
+          <ChevronDown className="w-3 h-3 text-text-muted flex-shrink-0" aria-hidden="true" />
         ) : (
-          <ChevronRight className="w-3 h-3 text-text-muted" />
+          <ChevronRight className="w-3 h-3 text-text-muted flex-shrink-0" aria-hidden="true" />
         )}
       </button>
 
-      {expanded && (
-        <div className="px-3 pb-3 space-y-2 border-t border-border pt-2">
+      {open && (
+        <div {...panelProps} className="px-3 pb-3 space-y-2 border-t border-border pt-2">
+          {/* Direction banner — the same split language, full-size, with a plain-language consequence. */}
+          <div className="flex items-center gap-2 flex-wrap">
+            <GapSplitIndicator direction={gap.direction} variant="full" />
+            <span className="text-2xs text-text-muted flex-1 min-w-[12rem]">{meta.consequence}</span>
+          </div>
+
           <p className="text-xs text-text-muted">{gap.description}</p>
 
           <div className="grid grid-cols-2 gap-2 text-2xs">
-            <div className="p-2 rounded bg-surface border border-border">
-              <span className="text-text-muted">Design says:</span>
-              <p className="text-text mt-0.5">{gap.designState}</p>
-            </div>
-            <div className="p-2 rounded bg-surface border border-border">
-              <span className="text-text-muted">Code says:</span>
-              <p className="text-text mt-0.5">{gap.codeState}</p>
-            </div>
+            <GapSideCard side="design" state={gap.designState} ahead={designAhead} />
+            <GapSideCard side="code" state={gap.codeState} ahead={!designAhead} />
+          </div>
+
+          {/* Suggestion gets its own full-width line — never truncated behind a tooltip. */}
+          <div className="flex items-start gap-1.5 p-2 rounded bg-surface border border-border">
+            <Lightbulb className="w-3 h-3 flex-shrink-0 mt-px" style={{ color: STATUS_WARNING }} aria-hidden="true" />
+            <p className="text-2xs text-text-muted italic flex-1">{gap.suggestion}</p>
           </div>
 
           <div className="flex items-center justify-between">
@@ -323,18 +475,14 @@ function GapRow({ gap, onResolve }: { gap: ComplianceGap; onResolve: () => void 
               <span>Effort: {EFFORT_LABELS[gap.effort] ?? gap.effort}</span>
             </div>
 
-            <div className="flex items-center gap-2">
-              <span className="text-2xs text-text-muted italic max-w-[200px] truncate" title={gap.suggestion}>
-                {gap.suggestion}
-              </span>
-              <button
-                onClick={(e) => { e.stopPropagation(); onResolve(); }}
-                className="flex items-center gap-1 px-2 py-1 rounded text-2xs font-medium text-[#00ff88] bg-accent-subtle border border-accent-strong hover:bg-accent-medium transition-colors"
-              >
-                <CheckCircle2 className="w-2.5 h-2.5" />
-                Resolve
-              </button>
-            </div>
+            <button
+              onClick={(e) => { e.stopPropagation(); onResolve(); }}
+              className="flex items-center gap-1 px-2 py-1 rounded text-2xs font-medium bg-accent-subtle border border-accent-strong hover:bg-accent-medium transition-colors"
+              style={{ color: STATUS_SUCCESS }}
+            >
+              <CheckCircle2 className="w-2.5 h-2.5" />
+              Resolve
+            </button>
           </div>
         </div>
       )}
@@ -345,33 +493,33 @@ function GapRow({ gap, onResolve }: { gap: ComplianceGap; onResolve: () => void 
 // ─── Suggestions Panel ──────────────────────────────────────────────────────
 
 function SuggestionsPanel({ suggestions }: { suggestions: ReconciliationSuggestion[] }) {
-  const [collapsed, setCollapsed] = useState(false);
+  const { open, toggle, buttonProps, panelProps } = useDisclosure(true);
 
   const typeConfig: Record<string, { color: string; label: string }> = {
     'update-gdd': { color: MODULE_COLORS.core, label: 'Update GDD' },
     'implement-feature': { color: MODULE_COLORS.content, label: 'Implement' },
-    'remove-stale': { color: MODULE_COLORS.evaluator, label: 'Remove' },
   };
 
   return (
     <div className="border border-border rounded-lg bg-surface">
       <button
-        onClick={() => setCollapsed(!collapsed)}
+        onClick={toggle}
+        {...buttonProps}
         className="w-full flex items-center gap-2 px-4 py-3 text-left"
       >
-        <Lightbulb className="w-4 h-4" style={{ color: STATUS_WARNING }} />
+        <Lightbulb className="w-4 h-4" style={{ color: STATUS_WARNING }} aria-hidden="true" />
         <span className="text-xs font-semibold text-text flex-1">
           Reconciliation Suggestions ({suggestions.length})
         </span>
-        {collapsed ? (
-          <ChevronRight className="w-3.5 h-3.5 text-text-muted" />
+        {open ? (
+          <ChevronDown className="w-3.5 h-3.5 text-text-muted" aria-hidden="true" />
         ) : (
-          <ChevronDown className="w-3.5 h-3.5 text-text-muted" />
+          <ChevronRight className="w-3.5 h-3.5 text-text-muted" aria-hidden="true" />
         )}
       </button>
 
-      {!collapsed && (
-        <div className="border-t border-border">
+      {open && (
+        <div {...panelProps} className="border-t border-border">
           {suggestions.map((sug, i) => {
             const cfg = typeConfig[sug.type] ?? { color: 'var(--text-muted)', label: sug.type };
             return (

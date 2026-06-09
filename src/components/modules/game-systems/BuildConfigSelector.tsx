@@ -19,7 +19,8 @@ import { CookProgress } from './CookProgress';
 import { PreflightPanel, type PreflightStatusSummary } from './PreflightPanel';
 import { SmokeTest, type SmokeTestRequest } from './SmokeTest';
 import { NightlyBuildScheduler } from './NightlyBuildScheduler';
-import { MODULE_COLORS, ACCENT_VIOLET, STATUS_ERROR } from '@/lib/chart-colors';
+import { GateNotifySettings } from './GateNotifySettings';
+import { MODULE_COLORS, STATUS_ERROR } from '@/lib/chart-colors';
 
 const PLATFORM_ICONS: Record<PlatformId, typeof Monitor> = {
   Win64: Monitor,
@@ -225,7 +226,7 @@ export function BuildConfigSelector() {
                 key={p.id}
                 onClick={() => handleNewProfile(p.id)}
                 data-testid={`pof-module-packaging-add-platform-${p.id.toLowerCase()}`}
-                className="flex items-center gap-1 px-2 py-1 rounded border border-dashed border-border-bright text-xs text-text-muted hover:text-text hover:border-violet-500/50 transition-colors"
+                className="flex items-center gap-1 px-2 py-1 rounded border border-dashed border-border-bright text-xs text-text-muted hover:text-text hover:border-[var(--systems)]/50 transition-colors"
               >
                 <Icon className="w-3 h-3" />
                 {p.label}
@@ -238,7 +239,7 @@ export function BuildConfigSelector() {
                 const firstPlatform = SUPPORTED_PLATFORMS[0].id;
                 handleNewProfile(grouped.has(firstPlatform) ? (unusedPlatforms[0]?.id ?? firstPlatform) : firstPlatform);
               }}
-              className="flex items-center gap-1 px-2 py-1 rounded border border-dashed border-border-bright text-xs hover:border-violet-500/50 transition-colors"
+              className="flex items-center gap-1 px-2 py-1 rounded border border-dashed border-border-bright text-xs hover:border-[var(--systems)]/50 transition-colors"
               style={{ color: MODULE_COLORS.systems }}
             >
               <Plus className="w-3 h-3" />
@@ -271,7 +272,7 @@ export function BuildConfigSelector() {
                   key={p.id}
                   onClick={() => handleNewProfile(p.id)}
                   data-testid={`pof-module-packaging-add-platform-${p.id.toLowerCase()}`}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded border border-border-bright text-xs text-text-muted hover:border-violet-500/50 hover:bg-surface-hover transition-colors"
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded border border-border-bright text-xs text-text-muted hover:border-[var(--systems)]/50 hover:bg-surface-hover transition-colors"
                 >
                   <Icon className="w-3.5 h-3.5" />
                   {p.label}
@@ -337,6 +338,9 @@ export function BuildConfigSelector() {
       {/* Unattended nightly builds (preflight → cook → smoke → size-budget, skip-if-unchanged) */}
       <NightlyBuildScheduler profiles={profiles} />
 
+      {/* Opt-in webhook ping when a test-gate verdict changes during a drain */}
+      <GateNotifySettings />
+
       {/* Profile editor modal */}
       <AnimatePresence>
         {showEditor && editingProfile && (
@@ -368,8 +372,8 @@ function ProfileEditor({ profile, onSave, onClose }: {
     setForm((prev) => ({ ...prev, [key]: value }));
   };
 
-  const selectClass = 'bg-background border border-border-bright rounded px-2 py-1 text-xs text-text-muted outline-none focus:border-violet-500/50 w-full';
-  const inputClass = 'bg-background border border-border-bright rounded px-2 py-1 text-xs text-text-muted font-mono outline-none focus:border-violet-500/50 w-full';
+  const selectClass = 'bg-background border border-border-bright rounded px-2 py-1 text-xs text-text-muted outline-none focus:border-[var(--systems)]/50 w-full';
+  const inputClass = 'bg-background border border-border-bright rounded px-2 py-1 text-xs text-text-muted font-mono outline-none focus:border-[var(--systems)]/50 w-full';
 
   return (
     <motion.div
@@ -436,8 +440,8 @@ function ProfileEditor({ profile, onSave, onClose }: {
                   data-testid={`pof-module-packaging-config-${opt.value.toLowerCase()}`}
                   className={`px-2 py-1.5 rounded border text-xs font-medium text-center transition-colors ${
                     form.config === opt.value
-                      ? 'border-violet-500 bg-violet-500/15 text-text'
-                      : 'border-border-bright text-text-muted hover:border-violet-500/30'
+                      ? 'border-[var(--systems)] bg-[var(--systems)]/15 text-text'
+                      : 'border-border-bright text-text-muted hover:border-[var(--systems)]/30'
                   }`}
                 >
                   {opt.label}
@@ -475,7 +479,7 @@ function ProfileEditor({ profile, onSave, onClose }: {
                 type="checkbox"
                 checked={form.stage ?? true}
                 onChange={(e) => update('stage', e.target.checked)}
-                className="accent-violet-500"
+                className="accent-[var(--systems)]"
               />
               Stage
             </label>
@@ -484,7 +488,7 @@ function ProfileEditor({ profile, onSave, onClose }: {
                 type="checkbox"
                 checked={form.archive ?? false}
                 onChange={(e) => update('archive', e.target.checked)}
-                className="accent-violet-500"
+                className="accent-[var(--systems)]"
               />
               Archive
             </label>
@@ -493,7 +497,7 @@ function ProfileEditor({ profile, onSave, onClose }: {
                 type="checkbox"
                 checked={form.runAfterPackage ?? false}
                 onChange={(e) => update('runAfterPackage', e.target.checked)}
-                className="accent-violet-500"
+                className="accent-[var(--systems)]"
               />
               Run After Build
             </label>
@@ -530,7 +534,7 @@ function ProfileEditor({ profile, onSave, onClose }: {
           </button>
           <button
             onClick={() => onSave(form)}
-            className="flex items-center gap-1 px-3 py-1.5 rounded text-xs font-medium text-white bg-violet-500 hover:bg-violet-600 transition-colors"
+            className="flex items-center gap-1 px-3 py-1.5 rounded text-xs font-medium text-white bg-[var(--systems)]/80 hover:bg-[var(--systems)] transition-colors"
           >
             <Save className="w-3 h-3" />
             Save Profile

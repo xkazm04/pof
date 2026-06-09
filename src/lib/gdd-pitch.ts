@@ -141,3 +141,82 @@ export function exportGDDAsPitchHTML(gdd: GDDDocument): string {
 </body>
 </html>`;
 }
+
+// ── Printable / PDF variant ──────────────────────────────────────────────────
+
+/** Extra styling for the print build: a full-height compliance scorecard cover
+ *  page (page-breaks after it) plus tightened print margins. Layered on top of
+ *  the shared pitch STYLE so the two stay visually consistent. */
+const PRINT_STYLE = `
+.cover{min-height:88vh;display:flex;flex-direction:column;justify-content:center;border-bottom:1px solid var(--line);margin-bottom:24px;padding-bottom:28px}
+.cover .kicker{color:var(--accent);font-size:13px;font-weight:700;letter-spacing:.2em;text-transform:uppercase;margin-bottom:12px}
+.cover h1{font-size:40px;margin:0 0 8px}
+.scorecard{display:flex;flex-wrap:wrap;gap:32px;margin:26px 0 4px}
+.score-big{font-size:46px;font-weight:800;line-height:1;color:var(--good)}
+.score-big span{display:block;font-size:13px;font-weight:600;color:var(--muted);margin-top:8px;letter-spacing:.03em}
+@media print{
+  @page{margin:14mm}
+  .cover{min-height:auto;page-break-after:always;border:none;padding-bottom:0}
+  .score-big{color:#111}
+}
+`;
+
+/**
+ * Render a synthesized GDD as a self-contained, **print-to-PDF-ready** HTML doc:
+ * the pitch content prefixed by a compliance-scorecard cover page, plus an
+ * auto-print trigger that fires once Mermaid diagrams have rendered (and still
+ * fires if the CDN is blocked, leaving the diagram source readable). Opening this
+ * in a window and letting the browser "Save as PDF" is the headless render path.
+ * Pure (no DOM / no fetch) so it is unit-testable.
+ */
+export function exportGDDAsPrintableHTML(gdd: GDDDocument): string {
+  const s = gdd.stats;
+  const featurePct = s.totalFeatures > 0 ? Math.round((s.implementedFeatures / s.totalFeatures) * 100) : 0;
+  const checklistPct = s.checklistTotal > 0 ? Math.round((s.checklistDone / s.checklistTotal) * 100) : 0;
+  const generated = new Date(gdd.generatedAt).toLocaleDateString();
+
+  const stats = [
+    statCard('Feature Implementation', `${s.implementedFeatures}/${s.totalFeatures}`, featurePct),
+    statCard('Development Checklist', `${s.checklistDone}/${s.checklistTotal}`, checklistPct),
+    statCard('Levels', String(s.levelCount)),
+    statCard('Audio Scenes', String(s.audioSceneCount)),
+    statCard('Builds', String(s.buildCount)),
+    statCard('Eval Findings', String(s.evalFindingCount)),
+  ].join('');
+
+  const body = gdd.sections.map((sec) => sectionHtml(sec)).join('\n');
+
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>${esc(gdd.title)}</title>
+<style>${STYLE}${PRINT_STYLE}</style>
+</head>
+<body>
+<div class="wrap">
+  <section class="cover">
+    <div class="kicker">Game Design Document · Compliance Scorecard</div>
+    <h1>${esc(gdd.title)}</h1>
+    <div class="meta">Action RPG · Unreal Engine 5 · Generated ${esc(generated)}</div>
+    <div class="scorecard">
+      <div class="score-big">${featurePct}%<span>Feature implementation</span></div>
+      <div class="score-big">${checklistPct}%<span>Checklist complete</span></div>
+    </div>
+    <div class="stats">${stats}</div>
+    <div class="status">${esc(statusLine(featurePct, checklistPct))}</div>
+  </section>
+  ${body}
+</div>
+<script type="module">
+  import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+  mermaid.initialize({ startOnLoad: false, theme: 'neutral' });
+  (async () => {
+    try { await mermaid.run(); } catch (e) { /* offline: .mermaid source stays readable */ }
+    setTimeout(() => { window.focus(); window.print(); }, 500);
+  })();
+</script>
+</body>
+</html>`;
+}

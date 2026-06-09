@@ -14,13 +14,14 @@ rollup strip.
 | `src/app/page.tsx` | Root page; `useSyncExternalStore(popstate, readShellPref)` switches between `NewHome` and `AppShell` |
 | `src/lib/ecw/shell-pref.ts` | `readShellPref()` / `writeShellPref()` — `?legacy=1` URL flag or `localStorage['pof.shell']` |
 | `src/components/layout-lab/NewHome.tsx` | Thin wrapper: calls `usePofBridge()` then renders `<LayoutLab />` |
-| `src/components/layout-lab/LayoutLab.tsx` | Top-level shell: header bar, Catalogs/Matrix/Canon toggle, Light/Studio-Dark theme toggle, `<LabBridgeStrip>` |
+| `src/components/layout-lab/LayoutLab.tsx` | Top-level shell: 3-zone header bar (brand · centered Catalogs/Matrix/Canon/One-shot/Legacy actions · right-corner status + icon theme toggle), `<LabBridgeStrip>` |
 | `src/components/layout-lab/Baseline.tsx` | 3-column composition screen: tree / pipeline timeline / work canvas; all produce→persist→render logic. Optional `initialStepIdx` opens a specific step on mount (used by the matrix jump) |
 | `src/components/layout-lab/CatalogMatrix.tsx` | Catalog-wide status matrix: entities (rows) × steps (columns) colored by derived Acceptance; per-entity `summarizeEntity` rollup + blocker flags; cells jump to that entity's step |
 | `src/components/layout-lab/CatalogTree.tsx` | Category→Catalog→Entity collapsible tree (left column) |
 | `src/components/layout-lab/steps/index.ts` | `getStepComponent(catalogId, stepName)` — looks up the `STEP_REGISTRY` |
 | `src/components/layout-lab/steps/ArchetypeStep.tsx` | Generic renderer for any registered `StepSpec`; drives View + CliProduce + Acceptance |
-| `src/components/layout-lab/PipelineRollup.tsx` | Per-step status strip + config-complete summary + "Run deferred gates" drain button |
+| `src/components/layout-lab/NextStepCoach.tsx` | Compact single-row "what to do next" coach in the work canvas; primary CTA (jump / drain) + a disclosure that expands plain-language mode + summary |
+| `src/components/layout-lab/PipelineRollup.tsx` | Reusable per-step status strip + config-complete summary (`X/Y pass · …`). No longer mounted in the canvas — the left pipeline rail is the status display; kept as a standalone strip + WCAG status-encoding tests |
 | `src/components/layout-lab/LabBridgeStrip.tsx` | Compact UE bridge status dot+label; reads `usePofBridgeStore` (display-only) |
 | `src/components/layout-lab/labPipelineStore.ts` | Zustand persisted store (`pof-lab-pipeline`); `produce/fail/resetEntity/hydrateEntity`; module-level `_labSync` function pointer |
 | `src/components/layout-lab/labArtifactClient.ts` | `fetchArtifacts`, `postArtifact`, `drainGates` — thin wrappers around `/api/pipeline-artifacts` |
@@ -46,7 +47,9 @@ useSyncExternalStore(
 resolves to `'ecw'`, which renders `<NewHome />`. The `?legacy=1` path renders `<AppShell />` (the
 old 7-category sidebar shell). The "Legacy shell" button in `LayoutLab` calls `writeShellPref('legacy')`,
 pushes the query param, and fires a synthetic `popstate` event so the store re-reads without a
-full navigation.
+full navigation. The reverse trip is symmetric: the legacy `TopBar`'s **"Blueprint"** button
+(`NewShellButton`) calls `writeShellPref('ecw')`, deletes the `legacy` param, and fires `popstate`
+to swap back to the lab.
 
 ### 2. Bridge connection — `NewHome` (`src/components/layout-lab/NewHome.tsx`)
 
@@ -57,9 +60,12 @@ delegating to `<LayoutLab />`. Lab tests render `<LayoutLab />` directly and are
 
 Renders a `100vh` flex column:
 
-- **Header bar**: monospace `/layout · Blueprint baseline` label; **Catalogs** / **Matrix** / **Canon**
-  toggle (local `view` state); **Blueprint** / **Studio Dark** theme toggle (local `themeId` state);
-  "Legacy shell" button; `<LabBridgeStrip t={theme} />`.
+- **Header bar**: a 3-zone flex (`flex:1` brand · `flex:0 0 auto` centered actions · `flex:1`
+  right-aligned status) so the action group stays centered. Left zone: the `PoF·LAB sheet · <catalog>`
+  brand label. Center zone: **Catalogs** / **Matrix** / **Canon** view toggle (local `view` state),
+  **+ One-shot**, and the **Legacy shell** switch. Right zone (corner): `<LabJobsChip>`,
+  `<LabBridgeStrip t={theme} />`, and the single-icon **theme toggle** (`ThemeToggle`, an `IconButton`
+  showing Moon→Studio Dark / Sun→Blueprint; toggles `themeId`).
 - **Body**: when `view === 'canon'` renders `<CanonView t={theme} />`; when `view === 'matrix'`
   renders `<CatalogMatrix … onOpenStep={openFromMatrix} />`; otherwise renders
   `<Baseline theme={theme} groups={groups} detail={detail} initialStepIdx={focusStepIdx} … />`.
@@ -77,7 +83,11 @@ Default `catalogId` is `'items'`; `useLabCatalogData()` and `useLabDetail(catalo
 
 Left column of `Baseline`. Renders three levels:
 
-1. **Category** heading (monospace, uppercase) — one per `LabGroup`.
+1. **Category** heading (monospace, uppercase) — one per `LabGroup`. Chapters are **compact by
+   default**: only the chapter that holds the current selection auto-opens, so the tree reads as a
+   chapter overview and the user expands others on click (`▸`/`▾`). A per-chapter `override` map
+   records explicit expand/collapse (so the auto-opened chapter can still be collapsed); absent ⇒
+   the default rule.
 2. **Catalog** row — `label` + `verified/total` count. `borderLeft: 3px solid t.ink` marks the
    selection. Clicking calls `onSelectCatalog`.
 3. **Entity** rows — only shown when the catalog is selected; a 7 px lifecycle dot (ok/bad/muted)
@@ -91,7 +101,7 @@ Three-column CSS grid `260px 320px 1fr`:
 |--------|---------|
 | Left 260 px | `<CatalogTree>` |
 | Middle 320 px | Pipeline timeline: vertical connector line + step buttons; "Populate demo" / "Reset" buttons for the Items catalog |
-| Right 1fr | Work canvas: `<PipelineRollup>` overlay + step heading + step component |
+| Right 1fr | Work canvas: compact `<NextStepCoach>` row + step heading + step component (the full per-step status lives in the middle pipeline rail, not repeated here) |
 
 **Responsive collapse**: the grid is `wide ? '260px 320px 1fr' : '1fr'`. Width comes from
 `useViewportWidth()` (`src/hooks/useViewportWidth.ts`) — a `ResizeObserver` on `documentElement` that
@@ -179,17 +189,25 @@ const status = localStatus === 'deferred'
 #### Drain deferred gates (`Baseline.tsx` : 92–102, `labArtifactClient.ts` : 38–45)
 
 `runDrain` calls `drainGates(catalogId, entity.id)` → `POST /api/pipeline-artifacts/drain`, then
-re-fetches and updates `serverArts`. The `<PipelineRollup>` "Run N deferred gates" button is shown
-when `sum.deferred > 0` and an `onDrain` callback is provided.
+re-fetches and updates `serverArts`. The drain trigger lives in `<NextStepCoach>`: it surfaces a
+"Run N deferred gates" button (as the primary CTA when the next actionable step is itself deferred,
+otherwise inside the disclosure) whenever `rollup.deferred > 0` and an `onDrain` callback is provided.
 
-#### `PipelineRollup` (`src/components/layout-lab/PipelineRollup.tsx`)
+#### `NextStepCoach` (`src/components/layout-lab/NextStepCoach.tsx`)
 
-Mounted above the step heading in the work canvas. Calls `summarizeEntity(artifacts, steps.length)`
-for `{ done, total, deferred, pending, highestTier, configComplete }`. Renders:
+Mounted above the step heading in the work canvas as a **single compact row** (the middle pipeline
+rail already carries the full per-step status, so the old in-canvas `PipelineRollup` strip was
+removed). The row shows the next actionable step (`pickNextActionableStep`) + one primary button
+(jump to it, or drain when it's deferred). A `▾ more` disclosure expands a second region with the
+plain-language toggle, an optional `plainEntitySummary(rollup)` line, and the drainer when it isn't
+already the compact CTA.
 
-- Summary line: `X/Y pass · N deferred · N pending · highest <tier>` + optional `· CONFIG-COMPLETE`.
-- "Run N deferred gates" button (only when `onDrain` provided and `sum.deferred > 0`).
-- Per-step colored chips (ok / warn / bad / muted) with `step · tier` tooltip.
+#### `PipelineRollup` (`src/components/layout-lab/PipelineRollup.tsx`) — standalone
+
+No longer mounted in the canvas. Still exported (and unit-tested for colorblind-safe status
+encoding). Calls `summarizeEntity(artifacts, steps.length)` for
+`{ done, total, deferred, pending, highestTier, configComplete }` and renders the
+`X/Y pass · N deferred · N pending · highest <tier>` summary + per-step colored chips.
 
 ---
 
@@ -212,6 +230,14 @@ a no-op subscribe: `useSyncExternalStore(() => () => {}, () => true, () => false
 `true`, SSR always `false`, preventing layout flicker on initial paint. Do not replace this with
 `useEffect(() => setMounted(true))` — the `react-hooks/set-state-in-effect` ESLint rule errors on
 that pattern.
+
+While `hydrated` is `false`, `AppShell` renders **`ShellSkeleton`** (`src/components/layout/ShellSkeleton.tsx`)
+— a branded skeleton that mirrors the real chrome (44px top bar, 56px icon rail, and the shared
+`ModuleSkeleton` tile grid) rather than a centered spinner. When `hydrated` flips `true` the skeleton
+is crossfaded out (`AnimatePresence` exit) while the real shell fades in underneath, so first paint
+reads as one continuous reveal with no spinner-to-app cut or layout jump. `ModuleSkeleton` lives in
+its own module (`src/components/layout/ModuleSkeleton.tsx`) and is shared by the `ModuleRenderer`
+Suspense fallback and the shell skeleton's content area.
 
 ### Theme tokens
 
@@ -255,6 +281,11 @@ silently overwritten by a stale server record. This is intentional.
 catalogs currently fall through to `ArchetypeStep` (when a `StepSpec` is registered) or the
 placeholder. When building a new step, register a bespoke component in `STEP_REGISTRY` or author a
 `StepSpec` in the catalog pipeline registry — the shell handles the rest.
+
+The Items step **labels are declared once** — `ITEM_STEP_NAMES` (the keys of `ITEM_STEP_SPECS` in
+`steps/itemsSteps.ts`). Both the rendered timeline (`labPipelineSteps('items')` in `labPipelines.ts`)
+and `STEP_REGISTRY.items` (which zips `ITEM_STEP_NAMES` to an ordered component array) derive from it,
+so a renamed step can never silently route a real step to the generic placeholder.
 
 ### Concurrency
 
@@ -377,12 +408,19 @@ properties. Tokens are organised into six scales:
 | **Motion** | `--lab-dur`, `--lab-dur-fast`, `--lab-ease` |
 | **Typography** | `--lab-font-body`, `--lab-font-mono`, `--lab-fs-xs`, `--lab-fs-sm`, `--lab-fs-base` |
 
-Theme and density are set via data-attributes on the root `[data-lab-root]` div:
+The Blueprint and Studio blocks also re-declare the cross-app `--text-subtle` token (the
+AA-compliant de-emphasized text tier, default in globals.css `:root`) with a per-theme value
+so it clears WCAG AA 4.5:1 on each theme's floor. The shared `ui/MicroLabel` primitive renders
+in this tier at the 12px size floor — use it for muted micro-text instead of
+`text-text-muted/40–/70` opacity hacks, which fall below AA.
+
+The theme is set via a data-attribute on the root `[data-lab-root]` div:
 
 - `[data-theme="blueprint"]` — Light: blueprint-grid canvas, IBM Plex Mono, neutral ink.
 - `[data-theme="studio"]` — Studio Dark: dark panel, JetBrains Mono, glass blur enabled.
-- `[data-density="compact"]` / `[data-density="comfortable"]` — adjusts space tokens (`--lab-s2`
-  through `--lab-s4`) and font sizes throughout the shell without any component changes.
+
+There is **no density switch** — the space scale (`--lab-s1`…`--lab-s8`) is baked into `:root` as a
+single, space-efficient (compact) baseline, so the shell is uniformly dense without per-user tuning.
 
 ### `LabTheme` compat shim — `theme.ts`
 
@@ -390,7 +428,7 @@ Theme and density are set via data-attributes on the root `[data-lab-root]` div:
 Since the shift to CSS custom properties the color fields (`bg`, `panel`, `ink`, `muted`, `line`,
 `accent`, `inkDeep`) are `var(--lab-*)` references rather than raw hex values. This means all
 bespoke step-content components that thread `t: LabTheme` through to inline styles automatically
-inherit the active theme and density with zero rewrites when a new theme is added.
+inherit the active theme with zero rewrites when a new theme is added.
 
 Fields that are not color references remain as concrete values: `glass: boolean` (whether to apply
 `backdrop-filter`), `id` (theme name), `gridLine` (the blueprint-grid image string), and the two
@@ -418,9 +456,9 @@ token (`var(--focus-accent)` → `var(--lab-accent)` inside `[data-lab-root]`).
 ### Hooks
 
 **`useLabPrefs`** (`src/components/layout-lab/hooks/useLabPrefs.ts`):
-Persists three user preferences across sessions: `themeId` (Blueprint/Studio Dark), `density`
-(compact/comfortable), and `lastCatalogId`/`lastEntityId` (restore the user's last location on
-return). SSR-safe: the hook returns `hydrated: false` during SSR / first paint, and `LayoutLab`
+Persists user preferences across sessions: `themeId` (Blueprint/Studio Dark) and
+`lastCatalogId`/`lastEntityId` (restore the user's last location on return). SSR-safe: the hook
+returns `hydrated: false` during SSR / first paint, and `LayoutLab`
 defers the last-location restore until `hydrated` flips true (React adjust-state-during-render,
 StrictMode-safe, no `useEffect` state mutation).
 
@@ -433,8 +471,8 @@ rows).
 ### Chrome
 
 The top `<header>` in `LayoutLab` applies Blueprint (title-block) or Studio (glass command bar)
-chrome based on `theme.glass`. The density toggle cycles compact ↔ comfortable via `useLabPrefs`.
-Theme selection and density are persisted immediately so a page reload restores the exact state.
+chrome based on `theme.glass`. The right-corner icon `ThemeToggle` flips `themeId` via `useLabPrefs`,
+which persists the selection immediately so a page reload restores the exact theme.
 
 ### Motion
 
@@ -443,6 +481,19 @@ with a 180 ms opacity + 6 px y-shift. List-entrance stagger in panel grids uses
 `motion.div` with `transition.delay = index * 0.04`. Both paths gate on `useReducedMotion()` —
 when `prefers-reduced-motion: reduce` is set the variants collapse to an immediate opacity-only
 fade (or are disabled entirely for the y-axis), satisfying WCAG SC 2.3.3.
+
+The same preference is honored for non-framer motion via a **layered policy** (see the header
+comment on the `@media (prefers-reduced-motion: reduce)` block in `globals.css`): (1) that block
+zeroes every CSS animation/transition *duration* app-wide (progress fills like the shared `MeterBar`
+grow-in `.meter-fill-grow`, grid-row expand/collapse, chip tweens, `animate-pulse` skeletons snap
+instantly); (2) JS entrance motion collapses via
+`useReducedMotion()` in `components/ui/Stagger.tsx`; (3) instant scale *transforms* a zeroed duration
+can't remove (hover/active `scale`) are gated behind Tailwind's `motion-safe:` variant at each site
+(e.g. `FeatureCard`, `FeatureMatrix` row actions), leaving only opacity/brightness feedback;
+(4) SMIL `<animate>` elements are **not** affected by the CSS duration rule, so looping SVG
+animations gate on `useReducedMotion()` in JS — only rendering the `<animate>` when motion is
+allowed and otherwise falling back to a static stroke/dash highlight (e.g. the marching-ants and
+modified-edge blink in `AnimationStateMachine`).
 
 ### Accessibility
 
@@ -457,6 +508,22 @@ fade (or are disabled entirely for the y-axis), satisfying WCAG SC 2.3.3.
   resolves to `--lab-accent`, so focus rings inherit the active theme automatically.
 - **Aria roles**: `PipelineRail` renders a `role="list"` with an accessible name; each step
   button carries the aria label returned by the `ariaFor` callback (step name + status + tier).
+- **Disclosures**: icon-only expand/collapse toggles use the shared `useDisclosure` hook
+  (`src/hooks/useDisclosure.ts`) — it owns the open state and returns matched `buttonProps`
+  (`aria-expanded` + `aria-controls`) and `panelProps` (`id` via `useId`) so screen-reader and
+  keyboard users know whether a region is open and which one the button controls. For
+  parent-owned open state (a card driven by a prop), use the `disclosureA11y(open, panelId)`
+  helper. Applied across the GDD compliance + design-doc views (gap rows, section cards,
+  subsections, suggestions panel, module cards); decorative chevrons are `aria-hidden`. Score
+  rings and Mermaid diagram blocks carry `role="img"` + an `aria-label` (e.g. "Compliance score
+  82 out of 100", "<section> diagram") so the headline number / diagram isn't lost to AT.
+- **Accessible dialogs**: the shared `Modal` shell (`src/components/ui/Modal.tsx`) owns every
+  cross-cutting dialog concern so individual modals only supply content — an `AnimatePresence`
+  fade backdrop + scale-0.96→1 / opacity spring panel (gated on `useReducedMotion()`),
+  `role="dialog"` + `aria-modal` + `aria-labelledby` (from the rendered title) / `aria-label`
+  fallback, a Tab/Shift+Tab focus trap, initial focus into the dialog (`initialFocusRef` or the
+  first focusable), Escape-to-close, backdrop-click-to-close, and focus restored to the trigger on
+  close. First adopter: the evaluator's Author-Pattern modal (`PatternLibraryView`).
 
 ---
 

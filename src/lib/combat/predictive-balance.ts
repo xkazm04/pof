@@ -16,18 +16,11 @@ import {
   GEAR_LOADOUTS,
   DEFAULT_TUNING,
 } from '@/lib/combat/definitions';
+import { createXorShift32RNG } from '@/lib/seeded-rng';
 
-// ── RNG (XORShift32, same as simulation-engine) ────────────────────────────
-
-function createRNG(seed: number) {
-  let s = seed | 0 || 1;
-  return () => {
-    s ^= s << 13;
-    s ^= s >> 17;
-    s ^= s << 5;
-    return (s >>> 0) / 4294967296;
-  };
-}
+// ── RNG ─────────────────────────────────────────────────────────────────────
+// Shared xorshift32 helper (see `@/lib/seeded-rng`); each cell/step derives its
+// own stream from a key so results are order-independent.
 
 /** Base seed for the sweep — every cell/step derives a stream from this. */
 const BASE_SEED = 42;
@@ -314,7 +307,7 @@ export function runPredictiveBalance(config: PredictiveBalanceConfig): BalanceRe
 
       // Fresh, deterministic stream per cell — keyed by (enemy, level) so this
       // cell reproduces identically no matter where it falls in the sweep.
-      const cellRng = createRNG(seedFromKey(`cell|${ec.archetypeId}|${playerLevel}`, BASE_SEED));
+      const cellRng = createXorShift32RNG(seedFromKey(`cell|${ec.archetypeId}|${playerLevel}`, BASE_SEED));
       for (let i = 0; i < config.iterations; i++) {
         const result = simulateFight(playerAttrs, PLAYER_ABILITIES, enemyInstances, config.tuning, cellRng, 120);
         if (result.won) wins++;
@@ -393,7 +386,7 @@ export function runPredictiveBalance(config: PredictiveBalanceConfig): BalanceRe
         let totalDPS = 0;
 
         // Per-step deterministic stream — keyed by (attribute, step index).
-        const stepRng = createRNG(seedFromKey(`sens|${attr}|${s}`, BASE_SEED));
+        const stepRng = createXorShift32RNG(seedFromKey(`sens|${attr}|${s}`, BASE_SEED));
         for (let i = 0; i < config.iterations; i++) {
           const r = simulateFight(testAttrs, PLAYER_ABILITIES, enemies, config.tuning, stepRng, 120);
           if (r.won) wins++;

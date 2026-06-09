@@ -10,32 +10,9 @@ import {
 } from 'lucide-react';
 import { useProjectStore } from '@/stores/projectStore';
 import { apiFetch } from '@/lib/api-utils';
-import type { SubModuleId } from '@/types/modules';
 import { STATUS_SUCCESS, STATUS_ERROR, MODULE_COLORS, STATUS_INFO, statusBg, statusBorder, OPACITY_8, OPACITY_10, OPACITY_12, OPACITY_20, OPACITY_30 } from '@/lib/chart-colors';
-
-// ── Types (mirroring API response) ──
-
-type ModuleReviewStatus = 'pending' | 'running' | 'completed' | 'error' | 'skipped';
-
-interface ModuleProgress {
-  moduleId: SubModuleId;
-  label: string;
-  featureCount: number;
-  status: ModuleReviewStatus;
-  executionId: string | null;
-  startedAt: string | null;
-  completedAt: string | null;
-  error: string | null;
-}
-
-interface BatchState {
-  batchId: string;
-  status: 'running' | 'completed' | 'error' | 'aborted';
-  startedAt: string;
-  completedAt: string | null;
-  modules: ModuleProgress[];
-  currentIndex: number;
-}
+import { formatDurationBetween } from '@/lib/format';
+import type { ModuleReviewStatus, BatchReviewState } from '@/types/batch-review';
 
 const ACCENT = MODULE_COLORS.evaluator;
 
@@ -55,21 +32,11 @@ const STATUS_COLOR: Record<ModuleReviewStatus, string> = {
   skipped: 'var(--text-muted)',
 };
 
-function formatDuration(startIso: string, endIso: string | null): string {
-  const start = new Date(startIso).getTime();
-  const end = endIso ? new Date(endIso).getTime() : Date.now();
-  const sec = Math.round((end - start) / 1000);
-  if (sec < 60) return `${sec}s`;
-  const min = Math.floor(sec / 60);
-  const rem = sec % 60;
-  return `${min}m ${rem}s`;
-}
-
 export function BatchReviewPanel() {
   const projectPath = useProjectStore((s) => s.projectPath);
   const projectName = useProjectStore((s) => s.projectName);
   const ueVersion = useProjectStore((s) => s.ueVersion);
-  const [batch, setBatch] = useState<BatchState | null>(null);
+  const [batch, setBatch] = useState<BatchReviewState | null>(null);
   const [isStarting, setIsStarting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [expanded, setExpanded] = useState(true);
@@ -78,7 +45,7 @@ export function BatchReviewPanel() {
   // Poll batch status
   const pollStatus = useCallback(async () => {
     try {
-      const data = await apiFetch<{ batch: BatchState | null }>('/api/feature-matrix/batch-review');
+      const data = await apiFetch<{ batch: BatchReviewState | null }>('/api/feature-matrix/batch-review');
       setBatch(data.batch);
       // Stop polling when done
       if (data.batch && data.batch.status !== 'running') {
@@ -235,7 +202,7 @@ export function BatchReviewPanel() {
                 {isRunning ? 'Reviewing...' : batch.status === 'completed' ? 'Complete' : batch.status === 'aborted' ? 'Aborted' : 'Finished with errors'}
                 {batch.startedAt && (
                   <span className="ml-1.5 text-text-muted">
-                    {formatDuration(batch.startedAt, batch.completedAt)}
+                    {formatDurationBetween(batch.startedAt, batch.completedAt)}
                   </span>
                 )}
               </span>
@@ -306,7 +273,7 @@ export function BatchReviewPanel() {
                     </span>
                     {mod.startedAt && mod.completedAt && (
                       <span className="text-2xs text-text-muted flex-shrink-0 tabular-nums">
-                        {formatDuration(mod.startedAt, mod.completedAt)}
+                        {formatDurationBetween(mod.startedAt, mod.completedAt)}
                       </span>
                     )}
                     {mod.error && (

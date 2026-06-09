@@ -5,8 +5,9 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { STATUS_INFO,
   withOpacity, OPACITY_25, OPACITY_10, OPACITY_8, OPACITY_12,
 } from '@/lib/chart-colors';
+import { RangeSlider } from '@/components/ui/RangeSlider';
 import { BlueprintPanel, SectionHeader } from '../../unique-tabs/_design';
-import { ACCENT, calculateXpForLevel } from '../_shared/data';
+import { ACCENT, calculateXpForLevel, BASE_XP_RANGE, CURVE_EXP_RANGE } from '../_shared/data';
 
 /* -- Curve Parameters Control Panel --------------------------------------- */
 
@@ -52,16 +53,17 @@ export function CurveParametersPanel({
             </label>
             <span className="text-xs font-mono font-bold px-2 rounded-sm border" style={{ color: ACCENT, backgroundColor: `${withOpacity(ACCENT, OPACITY_8)}`, borderColor: `${withOpacity(ACCENT, OPACITY_12)}` }}>{baseXp}</span>
           </div>
-          <input
+          <RangeSlider
+            ariaLabel="Base XP Scale"
             title="Base XP"
-            type="range" min="50" max="500" step="10"
+            min={BASE_XP_RANGE.min}
+            max={BASE_XP_RANGE.max}
+            step={BASE_XP_RANGE.step}
             value={baseXp}
-            onChange={(e) => onBaseXpChange(Number(e.target.value))}
-            className="w-full accent-amber-500 h-1.5 bg-surface-deep rounded-lg appearance-none cursor-pointer"
+            accent={ACCENT}
+            onChange={onBaseXpChange}
+            ticks={['50', 'Fast', '500']}
           />
-          <div className="flex justify-between text-xs font-mono uppercase tracking-[0.15em] text-text-muted mt-1.5">
-            <span>50</span><span>Fast</span><span>500</span>
-          </div>
         </div>
 
         <div>
@@ -71,16 +73,18 @@ export function CurveParametersPanel({
             </label>
             <span className="text-xs font-mono font-bold px-2 rounded-sm border" style={{ color: ACCENT, backgroundColor: `${withOpacity(ACCENT, OPACITY_8)}`, borderColor: `${withOpacity(ACCENT, OPACITY_12)}` }}>{curveExp.toFixed(2)}</span>
           </div>
-          <input
+          <RangeSlider
+            ariaLabel="Exponential Factor"
             title="Curve Exponential"
-            type="range" min="1.1" max="2.5" step="0.05"
+            min={CURVE_EXP_RANGE.min}
+            max={CURVE_EXP_RANGE.max}
+            step={CURVE_EXP_RANGE.step}
             value={curveExp}
-            onChange={(e) => onCurveExpChange(Number(e.target.value))}
-            className="w-full accent-amber-500 h-1.5 bg-surface-deep rounded-lg appearance-none cursor-pointer"
+            accent={ACCENT}
+            onChange={onCurveExpChange}
+            formatValue={(v) => v.toFixed(2)}
+            ticks={['Linear (1.1)', 'Steep (2.5)']}
           />
-          <div className="flex justify-between text-xs font-mono uppercase tracking-[0.15em] text-text-muted mt-1.5">
-            <span>Linear (1.1)</span><span>Steep (2.5)</span>
-          </div>
         </div>
 
         <div className="mt-6 pt-4 border-t border-border/40">

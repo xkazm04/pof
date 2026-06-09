@@ -32,13 +32,34 @@ export function formatBytes(bytes: number, options: FormatBytesOptions = {}): st
 }
 
 /**
- * Format a millisecond duration as `500ms`, `1.5s`, or `2m 5s`.
- * Sub-second → `ms`, sub-minute → one-decimal seconds, otherwise minutes+seconds.
+ * Format a millisecond duration as `500ms`, `1.5s`, `2m 5s`, or `1h 1m`.
+ *
+ * Sub-second → `ms`, sub-minute → one-decimal seconds, sub-hour → minutes+seconds,
+ * an hour or more → hours+minutes. The single source of truth for every duration
+ * string in the app — build/eval timings (seconds-to-minutes) and long-running
+ * "time invested" totals (minutes-to-hours) both render through here so the same
+ * elapsed time looks identical in every panel.
  */
 export function formatDuration(ms: number): string {
   if (ms < 1000) return `${ms}ms`;
-  if (ms < 60000) return `${(ms / 1000).toFixed(1)}s`;
-  const mins = Math.floor(ms / 60000);
-  const secs = Math.round((ms % 60000) / 1000);
-  return `${mins}m ${secs}s`;
+  if (ms < 60_000) return `${(ms / 1000).toFixed(1)}s`;
+  if (ms < 3_600_000) {
+    const mins = Math.floor(ms / 60_000);
+    const secs = Math.round((ms % 60_000) / 1000);
+    return `${mins}m ${secs}s`;
+  }
+  const hours = Math.floor(ms / 3_600_000);
+  const mins = Math.round((ms % 3_600_000) / 60_000);
+  return `${hours}h ${mins}m`;
+}
+
+/**
+ * Format the elapsed time between two ISO timestamps, e.g. a batch's start and
+ * end. A null `endIso` measures up to now (for an in-progress span). Delegates to
+ * {@link formatDuration} so an interval renders the same as any other duration.
+ */
+export function formatDurationBetween(startIso: string, endIso: string | null): string {
+  const start = new Date(startIso).getTime();
+  const end = endIso ? new Date(endIso).getTime() : Date.now();
+  return formatDuration(Math.max(0, end - start));
 }

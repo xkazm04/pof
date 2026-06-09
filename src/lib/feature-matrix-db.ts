@@ -1,9 +1,20 @@
 import { getDb } from './db';
 import { logger } from '@/lib/logger';
 import type { SubModuleId } from '@/types/modules';
+import { FEATURE_STATUSES } from '@/types/feature-matrix';
 import type { FeatureRow, FeatureStatus, FeatureSummary } from '@/types/feature-matrix';
 
-const VALID_STATUSES: Set<string> = new Set(['implemented', 'improved', 'partial', 'missing', 'unknown']);
+const VALID_STATUSES: Set<string> = new Set(FEATURE_STATUSES);
+
+/** The five per-status count fields, keyed by FeatureStatus. Shared across snapshot/aggregate rows. */
+type StatusCounts = Record<FeatureStatus, number>;
+
+/** SQL fragment: per-status `SUM(CASE WHEN status = X THEN 1 ELSE 0 END) as X` count columns,
+ *  derived from FEATURE_STATUSES so the column list can never drift from the status tuple.
+ *  Statuses come from a hardcoded const tuple (never user input), so interpolation is injection-safe. */
+const STATUS_COUNT_COLUMNS = FEATURE_STATUSES.map(
+  (s) => `SUM(CASE WHEN status = '${s}' THEN 1 ELSE 0 END) as ${s}`,
+).join(',\n         ');
 
 /** Ensure DB is initialized (tables created by getDb()). Call at the top of every exported function. */
 function ensureTables() {
@@ -189,6 +200,36 @@ export interface ReviewSnapshot {
   avgQuality: number | null;
 }
 
+/** Raw row returned by the review_snapshots SELECTs in getReviewHistory / getAllReviewHistory. */
+interface SnapshotRow extends StatusCounts {
+  id: number;
+  module_id: string;
+  reviewed_at: string;
+  total: number;
+  avg_quality: number | null;
+}
+
+/** Column list selected from review_snapshots. COALESCE(improved, 0) covers rows written before
+ *  the improved column existed. Shared so getReviewHistory / getAllReviewHistory cannot drift. */
+const SNAPSHOT_SELECT =
+  `id, module_id, reviewed_at, total, implemented, COALESCE(improved, 0) as improved, partial, missing, unknown, avg_quality`;
+
+/** Map a raw review_snapshots row to the public ReviewSnapshot shape (rounds avg quality to 1dp). */
+function mapSnapshotRow(r: SnapshotRow): ReviewSnapshot {
+  return {
+    id: r.id,
+    moduleId: r.module_id as SubModuleId,
+    reviewedAt: r.reviewed_at,
+    total: r.total,
+    implemented: r.implemented,
+    improved: r.improved,
+    partial: r.partial,
+    missing: r.missing,
+    unknown: r.unknown,
+    avgQuality: r.avg_quality !== null ? Math.round(r.avg_quality * 10) / 10 : null,
+  };
+}
+
 export function captureReviewSnapshot(moduleId: SubModuleId): void {
   ensureTables();
   const db = getDb();
@@ -196,23 +237,14 @@ export function captureReviewSnapshot(moduleId: SubModuleId): void {
     .prepare(
       `SELECT
          COUNT(*) as total,
-         SUM(CASE WHEN status = 'implemented' THEN 1 ELSE 0 END) as implemented,
-         SUM(CASE WHEN status = 'improved' THEN 1 ELSE 0 END) as improved,
-         SUM(CASE WHEN status = 'partial' THEN 1 ELSE 0 END) as partial,
-         SUM(CASE WHEN status = 'missing' THEN 1 ELSE 0 END) as missing,
-         SUM(CASE WHEN status = 'unknown' THEN 1 ELSE 0 END) as unknown,
+         ${STATUS_COUNT_COLUMNS},
          AVG(CASE WHEN quality_score IS NOT NULL THEN quality_score END) as avg_quality,
          MAX(last_reviewed_at) as last_reviewed
        FROM feature_matrix
        WHERE module_id = ?`,
     )
-    .get(moduleId) as {
+    .get(moduleId) as StatusCounts & {
     total: number;
-    implemented: number;
-    improved: number;
-    partial: number;
-    missing: number;
-    unknown: number;
     avg_quality: number | null;
     last_reviewed: string | null;
   };
@@ -239,44 +271,22 @@ export function getReviewHistory(moduleId: SubModuleId, limit = 20): ReviewSnaps
   ensureTables();
   const rows = getDb()
     .prepare(
-      `SELECT id, module_id, reviewed_at, total, implemented, COALESCE(improved, 0) as improved, partial, missing, unknown, avg_quality
+      `SELECT ${SNAPSHOT_SELECT}
        FROM review_snapshots
        WHERE module_id = ?
        ORDER BY reviewed_at ASC
        LIMIT ?`,
     )
-    .all(moduleId, limit) as {
-    id: number;
-    module_id: string;
-    reviewed_at: string;
-    total: number;
-    implemented: number;
-    improved: number;
-    partial: number;
-    missing: number;
-    unknown: number;
-    avg_quality: number | null;
-  }[];
+    .all(moduleId, limit) as SnapshotRow[];
 
-  return rows.map((r) => ({
-    id: r.id,
-    moduleId: r.module_id as SubModuleId,
-    reviewedAt: r.reviewed_at,
-    total: r.total,
-    implemented: r.implemented,
-    improved: r.improved,
-    partial: r.partial,
-    missing: r.missing,
-    unknown: r.unknown,
-    avgQuality: r.avg_quality !== null ? Math.round(r.avg_quality * 10) / 10 : null,
-  }));
+  return rows.map(mapSnapshotRow);
 }
 
 export function getAllReviewHistory(limit = 20): Record<string, ReviewSnapshot[]> {
   ensureTables();
   const rows = getDb()
     .prepare(
-      `SELECT id, module_id, reviewed_at, total, implemented, COALESCE(improved, 0) as improved, partial, missing, unknown, avg_quality
+      `SELECT ${SNAPSHOT_SELECT}
        FROM (
          SELECT *, ROW_NUMBER() OVER (PARTITION BY module_id ORDER BY reviewed_at DESC) as rn
          FROM review_snapshots
@@ -284,35 +294,12 @@ export function getAllReviewHistory(limit = 20): Record<string, ReviewSnapshot[]
        WHERE rn <= ?
        ORDER BY module_id, reviewed_at ASC`,
     )
-    .all(limit) as {
-    id: number;
-    module_id: string;
-    reviewed_at: string;
-    total: number;
-    implemented: number;
-    improved: number;
-    partial: number;
-    missing: number;
-    unknown: number;
-    avg_quality: number | null;
-  }[];
+    .all(limit) as SnapshotRow[];
 
   const result: Record<string, ReviewSnapshot[]> = {};
   for (const r of rows) {
-    const snap: ReviewSnapshot = {
-      id: r.id,
-      moduleId: r.module_id as SubModuleId,
-      reviewedAt: r.reviewed_at,
-      total: r.total,
-      implemented: r.implemented,
-      improved: r.improved,
-      partial: r.partial,
-      missing: r.missing,
-      unknown: r.unknown,
-      avgQuality: r.avg_quality !== null ? Math.round(r.avg_quality * 10) / 10 : null,
-    };
     if (!result[r.module_id]) result[r.module_id] = [];
-    result[r.module_id].push(snap);
+    result[r.module_id].push(mapSnapshotRow(r));
   }
   return result;
 }
@@ -346,28 +333,19 @@ export function getAllModuleAggregates(): ModuleAggregate[] {
       `SELECT
          module_id,
          COUNT(*) as total,
-         SUM(CASE WHEN status = 'implemented' THEN 1 ELSE 0 END) as implemented,
-         SUM(CASE WHEN status = 'improved' THEN 1 ELSE 0 END) as improved,
-         SUM(CASE WHEN status = 'partial' THEN 1 ELSE 0 END) as partial,
-         SUM(CASE WHEN status = 'missing' THEN 1 ELSE 0 END) as missing,
-         SUM(CASE WHEN status = 'unknown' THEN 1 ELSE 0 END) as unknown,
+         ${STATUS_COUNT_COLUMNS},
          AVG(CASE WHEN quality_score IS NOT NULL THEN quality_score END) as avg_quality,
          MAX(last_reviewed_at) as last_reviewed_at
        FROM feature_matrix
        GROUP BY module_id
        ORDER BY module_id`
     )
-    .all() as {
+    .all() as (StatusCounts & {
     module_id: string;
     total: number;
-    implemented: number;
-    improved: number;
-    partial: number;
-    missing: number;
-    unknown: number;
     avg_quality: number | null;
     last_reviewed_at: string | null;
-  }[];
+  })[];
 
   return rows.map((r) => ({
     moduleId: r.module_id as SubModuleId,

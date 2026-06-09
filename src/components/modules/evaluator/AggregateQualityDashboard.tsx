@@ -23,56 +23,21 @@ import { KPICard } from '@/components/ui/KPICard';
 import {
   STATUS_SUCCESS, STATUS_WARNING, STATUS_ERROR, STATUS_STALE, MODULE_COLORS,
   QUALITY_HEATMAP_LOW, QUALITY_HEATMAP_MID, QUALITY_HEATMAP_HIGH, RATING_EMPTY,
-  statusBg, statusBorder,
+  statusBg, statusBorder, qualityCellColor, qualityAccentColor,
 } from '@/lib/chart-colors';
 import type { SubModuleId } from '@/types/modules';
 import { MOTION } from '@/lib/constants';
 import { HorizontalGridLines } from '@/components/ui/svg/ChartAxes';
+import {
+  paddedDomain, sparklinePoints, sparklineLinePath, sparklineAreaPath,
+} from '@/components/modules/core-engine/sub_progression/_shared/chartMath';
 
 const ALL_MODULE_IDS = Object.keys(MODULE_FEATURE_DEFINITIONS) as SubModuleId[];
 
 // ─── Color helpers ──────────────────────────────────────────────────────────────
-
-function qualityToColor(avgQuality: number | null, pctReviewed: number): string {
-  if (pctReviewed === 0) return 'var(--border)'; // un-reviewed: dark
-  if (avgQuality === null) return 'var(--border)';
-  // Map 1-5 → red(1) → amber(3) → green(5)
-  const t = Math.max(0, Math.min(1, (avgQuality - 1) / 4));
-  if (t < 0.5) {
-    // red → amber
-    const s = t / 0.5;
-    return lerpColor(QUALITY_HEATMAP_LOW, QUALITY_HEATMAP_MID, s);
-  }
-  // amber → green
-  const s = (t - 0.5) / 0.5;
-  return lerpColor(QUALITY_HEATMAP_MID, QUALITY_HEATMAP_HIGH, s);
-}
-
-function qualityToAccent(avgQuality: number | null, pctReviewed: number): string {
-  if (pctReviewed === 0) return 'var(--text-muted)';
-  if (avgQuality === null) return 'var(--text-muted)';
-  const t = Math.max(0, Math.min(1, (avgQuality - 1) / 4));
-  if (t < 0.5) {
-    const s = t / 0.5;
-    return lerpColor(STATUS_ERROR, STATUS_WARNING, s);
-  }
-  const s = (t - 0.5) / 0.5;
-  return lerpColor(STATUS_WARNING, STATUS_SUCCESS, s);
-}
-
-function lerpColor(a: string, b: string, t: number): string {
-  const parse = (hex: string) => [
-    parseInt(hex.slice(1, 3), 16),
-    parseInt(hex.slice(3, 5), 16),
-    parseInt(hex.slice(5, 7), 16),
-  ];
-  const ca = parse(a);
-  const cb = parse(b);
-  const r = Math.round(ca[0] + (cb[0] - ca[0]) * t);
-  const g = Math.round(ca[1] + (cb[1] - ca[1]) * t);
-  const bl = Math.round(ca[2] + (cb[2] - ca[2]) * t);
-  return `#${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${bl.toString(16).padStart(2, '0')}`;
-}
+// Quality → cell/accent color mapping lives in `@/lib/chart-colors`
+// (`qualityCellColor` / `qualityAccentColor`) so the hex interpolation is shared
+// and unit-tested rather than hand-rolled here.
 
 function daysSince(dateStr: string | null): number | null {
   if (!dateStr) return null;
@@ -351,8 +316,8 @@ export function AggregateQualityDashboard({ staleDays = 7, onReviewModule, onBat
 
         <div className="grid grid-cols-4 gap-2">
           {cells.map((cell, i) => {
-            const bgColor = qualityToColor(cell.avgQuality, cell.pctReviewed);
-            const accentColor = qualityToAccent(cell.avgQuality, cell.pctReviewed);
+            const bgColor = qualityCellColor(cell.avgQuality, cell.pctReviewed);
+            const accentColor = qualityAccentColor(cell.avgQuality, cell.pctReviewed);
             const isHovered = hoveredModule === cell.moduleId;
             const isSelected = selectedModule === cell.moduleId;
             const isWorst =
@@ -437,9 +402,19 @@ export function AggregateQualityDashboard({ staleDays = 7, onReviewModule, onBat
 
                 {/* Quality sparkline */}
                 {(historyMap[cell.moduleId]?.length ?? 0) >= 2 && (
-                  <MiniSparkline
+                  <Sparkline
                     snapshots={historyMap[cell.moduleId]}
                     color={accentColor}
+                    width={48}
+                    height={16}
+                    pad={1}
+                    domainCeil={5}
+                    strokeWidth={1}
+                    lineOpacity={0.7}
+                    areaFill="solid"
+                    areaOpacity={0.15}
+                    markers="end"
+                    className="mb-1"
                   />
                 )}
 
@@ -505,7 +480,7 @@ export function AggregateQualityDashboard({ staleDays = 7, onReviewModule, onBat
                   <span
                     className="w-2.5 h-2.5 rounded-full"
                     style={{
-                      backgroundColor: qualityToAccent(
+                      backgroundColor: qualityAccentColor(
                         selected.avgQuality,
                         selected.pctReviewed,
                       ),
@@ -574,7 +549,7 @@ export function AggregateQualityDashboard({ staleDays = 7, onReviewModule, onBat
                         <span
                           className="text-2xl font-bold"
                           style={{
-                            color: qualityToAccent(
+                            color: qualityAccentColor(
                               selected.avgQuality,
                               selected.pctReviewed,
                             ),
@@ -592,14 +567,14 @@ export function AggregateQualityDashboard({ staleDays = 7, onReviewModule, onBat
                             style={{
                               color:
                                 si < Math.round(selected.avgQuality!)
-                                  ? qualityToAccent(
+                                  ? qualityAccentColor(
                                       selected.avgQuality,
                                       selected.pctReviewed,
                                     )
                                   : RATING_EMPTY,
                               fill:
                                 si < Math.round(selected.avgQuality!)
-                                  ? qualityToAccent(
+                                  ? qualityAccentColor(
                                       selected.avgQuality,
                                       selected.pctReviewed,
                                     )
@@ -640,9 +615,19 @@ export function AggregateQualityDashboard({ staleDays = 7, onReviewModule, onBat
                     </div>
                   </div>
                   {(historyMap[selected.moduleId]?.length ?? 0) >= 2 && (
-                    <TrendChart
+                    <Sparkline
                       snapshots={historyMap[selected.moduleId]}
-                      accentColor={qualityToAccent(selected.avgQuality, selected.pctReviewed)}
+                      color={qualityAccentColor(selected.avgQuality, selected.pctReviewed)}
+                      width={160}
+                      height={48}
+                      pad={4}
+                      domainCeil={5.5}
+                      strokeWidth={1.5}
+                      areaFill="gradient"
+                      gradientId="trend-grad"
+                      markers="all"
+                      gridValues={[1, 2, 3, 4, 5]}
+                      showDelta
                     />
                   )}
                 </div>
@@ -829,116 +814,120 @@ function StatusRow({
   );
 }
 
-function MiniSparkline({
+/**
+ * One parametric quality sparkline driving both the compact heatmap-cell trend
+ * (`markers="end"`, solid fill) and the rich detail-panel trend (`markers="all"`,
+ * gradient fill, grid lines, delta footer). All point/path geometry comes from
+ * the shared `chartMath` helpers; only the styling differs by prop.
+ */
+function Sparkline({
   snapshots,
   color,
+  width,
+  height,
+  pad,
+  domainCeil,
+  strokeWidth,
+  lineOpacity = 1,
+  areaFill,
+  areaOpacity = 0.15,
+  markers,
+  gridValues,
+  gradientId,
+  showDelta = false,
+  className,
 }: {
   snapshots: ReviewSnapshot[];
   color: string;
+  width: number;
+  height: number;
+  pad: number;
+  /** Upper clamp of the padded Y domain (lower bound is 0). */
+  domainCeil: number;
+  strokeWidth: number;
+  lineOpacity?: number;
+  /** `'solid'` = flat color at `areaOpacity`; `'gradient'` = vertical fade. */
+  areaFill: 'solid' | 'gradient';
+  areaOpacity?: number;
+  /** `'end'` = dot at last point; `'all'` = dot + date tooltip per point. */
+  markers: 'none' | 'end' | 'all';
+  /** Draw horizontal grid lines at these data values. */
+  gridValues?: readonly number[];
+  /** Unique id for the gradient def — required when `areaFill="gradient"`. */
+  gradientId?: string;
+  /** Render the "N reviews / Δ since first" footer below the chart. */
+  showDelta?: boolean;
+  className?: string;
 }) {
-  const qualityPoints = snapshots
-    .map((s) => s.avgQuality)
-    .filter((q): q is number => q !== null);
-
-  if (qualityPoints.length < 2) return null;
-
-  const w = 48;
-  const h = 16;
-  const pad = 1;
-  const min = Math.max(0, Math.min(...qualityPoints) - 0.5);
-  const max = Math.min(5, Math.max(...qualityPoints) + 0.5);
-  const range = max - min || 1;
-
-  const points = qualityPoints.map((q, i) => {
-    const x = pad + (i / (qualityPoints.length - 1)) * (w - pad * 2);
-    const y = h - pad - ((q - min) / range) * (h - pad * 2);
-    return { x, y };
-  });
-
-  const pathD = points.map((p, i) => `${i === 0 ? 'M' : 'L'}${p.x},${p.y}`).join(' ');
-
-  return (
-    <svg width={w} height={h} className="mb-1">
-      <path
-        d={`${pathD} L${points[points.length - 1].x},${h} L${points[0].x},${h} Z`}
-        fill={color}
-        fillOpacity="0.15"
-      />
-      <path d={pathD} fill="none" stroke={color} strokeWidth="1" strokeLinecap="round" strokeLinejoin="round" opacity="0.7" />
-      <circle cx={points[points.length - 1].x} cy={points[points.length - 1].y} r="1.5" fill={color} />
-    </svg>
-  );
-}
-
-function TrendChart({
-  snapshots,
-  accentColor,
-}: {
-  snapshots: ReviewSnapshot[];
-  accentColor: string;
-}) {
-  const qualityPoints = snapshots
+  const series = snapshots
     .map((s) => ({ q: s.avgQuality, date: s.reviewedAt }))
     .filter((p): p is { q: number; date: string } => p.q !== null);
 
-  if (qualityPoints.length < 2) return null;
+  if (series.length < 2) return null;
 
-  const w = 160;
-  const h = 48;
-  const pad = 4;
-  const min = Math.max(0, Math.min(...qualityPoints.map((p) => p.q)) - 0.5);
-  const max = Math.min(5.5, Math.max(...qualityPoints.map((p) => p.q)) + 0.5);
-  const range = max - min || 1;
+  const values = series.map((p) => p.q);
+  const { min, max } = paddedDomain(values, 0.5, 0, domainCeil);
+  const points = sparklinePoints(values, { width, height, pad }, min, max);
+  const linePath = sparklineLinePath(points);
+  const areaPath = sparklineAreaPath(points, height);
+  const lastPoint = points[points.length - 1];
 
-  const points = qualityPoints.map((p, i) => {
-    const x = pad + (i / (qualityPoints.length - 1)) * (w - pad * 2);
-    const y = h - pad - ((p.q - min) / range) * (h - pad * 2);
-    return { x, y, q: p.q, date: p.date };
-  });
+  const svg = (
+    <svg width={width} height={height} className={showDelta ? 'w-full' : className}>
+      {gridValues && (
+        <HorizontalGridLines
+          values={gridValues}
+          min={min}
+          max={max}
+          left={pad}
+          right={width - pad}
+          top={pad}
+          bottom={height - pad}
+        />
+      )}
+      {areaFill === 'gradient' && gradientId ? (
+        <>
+          <defs>
+            <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor={color} stopOpacity="0.25" />
+              <stop offset="100%" stopColor={color} stopOpacity="0" />
+            </linearGradient>
+          </defs>
+          <path d={areaPath} fill={`url(#${gradientId})`} />
+        </>
+      ) : (
+        <path d={areaPath} fill={color} fillOpacity={areaOpacity} />
+      )}
+      <path
+        d={linePath}
+        fill="none"
+        stroke={color}
+        strokeWidth={strokeWidth}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        opacity={lineOpacity}
+      />
+      {markers === 'end' && <circle cx={lastPoint.x} cy={lastPoint.y} r="1.5" fill={color} />}
+      {markers === 'all' &&
+        points.map((p, i) => (
+          <circle key={i} cx={p.x} cy={p.y} r="2" fill={color}>
+            <title>{`${new Date(series[i].date).toLocaleDateString()}: ${series[i].q}`}</title>
+          </circle>
+        ))}
+    </svg>
+  );
 
-  const pathD = points.map((p, i) => `${i === 0 ? 'M' : 'L'}${p.x},${p.y}`).join(' ');
+  if (!showDelta) return svg;
 
-  const first = qualityPoints[0].q;
-  const last = qualityPoints[qualityPoints.length - 1].q;
-  const delta = last - first;
+  const delta = values[values.length - 1] - values[0];
   const deltaStr = delta > 0 ? `+${delta.toFixed(1)}` : delta.toFixed(1);
   const deltaColor = delta > 0.1 ? STATUS_SUCCESS : delta < -0.1 ? STATUS_ERROR : 'var(--text-muted)';
 
   return (
-    <div className="mt-1">
-      <svg width={w} height={h} className="w-full">
-        {/* Reference lines at quality 1-5 */}
-        <HorizontalGridLines
-          values={[1, 2, 3, 4, 5]}
-          min={min}
-          max={max}
-          left={pad}
-          right={w - pad}
-          top={pad}
-          bottom={h - pad}
-        />
-        {/* Area fill */}
-        <defs>
-          <linearGradient id="trend-grad" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor={accentColor} stopOpacity="0.25" />
-            <stop offset="100%" stopColor={accentColor} stopOpacity="0" />
-          </linearGradient>
-        </defs>
-        <path
-          d={`${pathD} L${points[points.length - 1].x},${h} L${points[0].x},${h} Z`}
-          fill="url(#trend-grad)"
-        />
-        {/* Line */}
-        <path d={pathD} fill="none" stroke={accentColor} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-        {/* Data points */}
-        {points.map((p, i) => (
-          <circle key={i} cx={p.x} cy={p.y} r="2" fill={accentColor}>
-            <title>{`${new Date(p.date).toLocaleDateString()}: ${p.q}`}</title>
-          </circle>
-        ))}
-      </svg>
+    <div className={className ?? 'mt-1'}>
+      {svg}
       <div className="flex items-center justify-between mt-1">
-        <span className="text-2xs text-text-muted">{qualityPoints.length} reviews</span>
+        <span className="text-2xs text-text-muted">{values.length} reviews</span>
         <span className="text-2xs font-medium" style={{ color: deltaColor }}>
           {deltaStr} since first
         </span>

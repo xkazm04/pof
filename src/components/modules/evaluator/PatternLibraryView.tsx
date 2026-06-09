@@ -1,28 +1,31 @@
 'use client';
 
-import { useEffect, useMemo, useState, useCallback } from 'react';
+import { useEffect, useMemo, useState, useCallback, useRef } from 'react';
 import {
   BookOpen, Search, Filter, ChevronDown, ChevronRight,
   Sparkles, TrendingUp, Users, AlertTriangle,
   RefreshCw, Code, Tag, Layers, ShieldAlert,
-  CheckCircle2, Pin, Edit3, Plus, X, User,
+  CheckCircle2, Pin, Edit3, Plus, User,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { Modal } from '@/components/ui/Modal';
 import { SurfaceCard } from '@/components/ui/SurfaceCard';
 import { KPICard } from '@/components/ui/KPICard';
 import { Badge } from '@/components/ui/Badge';
 import { ProgressRing } from '@/components/ui/ProgressRing';
 import { DashboardHeader } from '@/components/ui/DashboardHeader';
+import { UnderlineTabs } from '@/components/ui/UnderlineTabs';
+import { DecoratedCrashText } from '@/components/ui/CrashTerm';
 import { usePatternLibraryStore } from '@/stores/patternLibraryStore';
 import type {
   ImplementationPattern,
   PatternCategory,
-  PatternConfidence,
   PatternAuthorInput,
 } from '@/types/pattern-library';
 import type { SubModuleId } from '@/types/modules';
-import { MODULE_COLORS, OPACITY_10, ACCENT_EMERALD_DARK } from '@/lib/chart-colors';
+import { MODULE_COLORS, OPACITY_10, ACCENT_EMERALD_DARK, CONFIDENCE_TOKENS, STATUS_ERROR } from '@/lib/chart-colors';
 import { MOTION } from '@/lib/constants';
+import { formatDuration } from '@/lib/format';
 import { AntiPatternList } from './AntiPatternList';
 
 type LibraryTab = 'patterns' | 'anti-patterns';
@@ -34,12 +37,8 @@ const EMPTY_MODULES: { moduleId: SubModuleId; patternCount: number }[] = [];
 const EMPTY_CATEGORIES: { category: PatternCategory; count: number }[] = [];
 
 // ── Styling maps ────────────────────────────────────────────────────────────
-
-const CONFIDENCE_STYLE: Record<PatternConfidence, { bg: string; text: string; label: string }> = {
-  proven: { bg: 'bg-green-400/10', text: 'text-green-400', label: 'Proven' },
-  promising: { bg: 'bg-amber-400/10', text: 'text-amber-400', label: 'Promising' },
-  experimental: { bg: 'bg-purple-400/10', text: 'text-purple-400', label: 'Experimental' },
-};
+// Confidence chip colors live in CONFIDENCE_TOKENS (chart-colors.ts) so they
+// stay in lockstep with the rest of the evaluator's palette.
 
 const CATEGORY_LABELS: Record<PatternCategory, string> = {
   'class-hierarchy': 'Class Hierarchy',
@@ -166,26 +165,16 @@ export function PatternLibraryView() {
         </AnimatePresence>
 
         {/* Patterns / Anti-Patterns tab switcher */}
-        <div role="tablist" aria-label="Pattern library tabs" className="flex items-center gap-1 mb-4 border-b border-border">
-          <LibraryTabButton
-            label="Patterns"
-            icon={BookOpen}
-            count={totalPatterns}
-            active={activeTab === 'patterns'}
-            onClick={() => setActiveTab('patterns')}
-            accent="text-violet-400"
-            accentBar={MODULE_COLORS.systems}
-          />
-          <LibraryTabButton
-            label="Anti-Patterns"
-            icon={ShieldAlert}
-            count={antiPatternCount}
-            active={activeTab === 'anti-patterns'}
-            onClick={() => setActiveTab('anti-patterns')}
-            accent="text-red-400"
-            accentBar="#f87171"
-          />
-        </div>
+        <UnderlineTabs
+          ariaLabel="Pattern library tabs"
+          className="mb-4"
+          active={activeTab}
+          onChange={(id) => setActiveTab(id)}
+          tabs={[
+            { id: 'patterns', label: 'Patterns', icon: BookOpen, count: totalPatterns, accent: MODULE_COLORS.systems },
+            { id: 'anti-patterns', label: 'Anti-Patterns', icon: ShieldAlert, count: antiPatternCount, accent: STATUS_ERROR },
+          ]}
+        />
 
         {activeTab === 'patterns' && (
           <>
@@ -338,53 +327,6 @@ export function PatternLibraryView() {
   );
 }
 
-// ── Library Tab Button ──────────────────────────────────────────────────────
-
-function LibraryTabButton({
-  label,
-  icon: Icon,
-  count,
-  active,
-  onClick,
-  accent,
-  accentBar,
-}: {
-  label: string;
-  icon: typeof BookOpen;
-  count: number;
-  active: boolean;
-  onClick: () => void;
-  accent: string;
-  accentBar: string;
-}) {
-  return (
-    <button
-      role="tab"
-      aria-selected={active}
-      onClick={onClick}
-      className={`relative flex items-center gap-1.5 px-4 py-2 text-xs font-medium transition-colors ${
-        active ? 'text-text' : 'text-text-muted hover:text-text'
-      }`}
-    >
-      <Icon className={`w-3.5 h-3.5 ${active ? accent : ''}`} />
-      <span>{label}</span>
-      <span
-        className={`px-1.5 py-0.5 rounded text-2xs ${
-          active ? 'bg-surface-hover text-text' : 'bg-surface-deep text-text-muted'
-        }`}
-      >
-        {count}
-      </span>
-      {active && (
-        <span
-          className="absolute bottom-0 left-0 right-0 h-0.5 rounded-t"
-          style={{ backgroundColor: accentBar }}
-        />
-      )}
-    </button>
-  );
-}
-
 // ── Stat Card ───────────────────────────────────────────────────────────────
 
 function StatCard({ icon, value, label, color }: {
@@ -410,7 +352,7 @@ function PatternCard({ pattern }: { pattern: ImplementationPattern }) {
   const verifyPattern = usePatternLibraryStore((s) => s.verifyPattern);
   const pinPattern = usePatternLibraryStore((s) => s.pinPattern);
 
-  const conf = CONFIDENCE_STYLE[pattern.confidence];
+  const conf = CONFIDENCE_TOKENS[pattern.confidence];
   const successPercent = Math.round(pattern.successRate * 100);
   const successColor = successPercent >= 70 ? ACCENT_EMERALD_DARK : successPercent >= 50 ? MODULE_COLORS.content : MODULE_COLORS.evaluator;
 
@@ -442,7 +384,10 @@ function PatternCard({ pattern }: { pattern: ImplementationPattern }) {
           <div className="flex items-center gap-2 mt-0.5 ml-5">
             <span className="text-2xs text-text-muted">{pattern.moduleId}</span>
             <span className="text-2xs text-text-muted/50">|</span>
-            <span className={`px-1.5 py-0.5 rounded text-2xs font-medium ${conf.bg} ${conf.text}`}>
+            <span
+              className="px-1.5 py-0.5 rounded text-2xs font-medium"
+              style={{ backgroundColor: conf.bg, color: conf.color }}
+            >
               {conf.label}
             </span>
             <span className="text-2xs text-text-muted/50">|</span>
@@ -491,7 +436,9 @@ function PatternCard({ pattern }: { pattern: ImplementationPattern }) {
               {/* Description */}
               <div>
                 <div className="text-2xs text-text-muted font-medium mb-1">Description</div>
-                <p className="text-xs text-text/80 leading-relaxed whitespace-pre-wrap">{pattern.description}</p>
+                <p className="text-xs text-text/80 leading-relaxed whitespace-pre-wrap">
+                  <DecoratedCrashText text={pattern.description} />
+                </p>
               </div>
 
               {/* Tags */}
@@ -536,7 +483,7 @@ function PatternCard({ pattern }: { pattern: ImplementationPattern }) {
                     {pattern.pitfalls.map((pitfall, i) => (
                       <div key={i} className="flex items-start gap-2 px-2 py-1.5 bg-amber-400/5 border border-amber-400/10 rounded">
                         <AlertTriangle className="w-3 h-3 text-amber-400 flex-shrink-0 mt-0.5" />
-                        <span className="text-2xs text-amber-400/80">{pitfall}</span>
+                        <span className="text-2xs text-amber-400/80"><DecoratedCrashText text={pitfall} /></span>
                       </div>
                     ))}
                   </div>
@@ -714,6 +661,7 @@ function AuthorPatternModal({
   const [tagsText, setTagsText] = useState('');
   const [pitfallsText, setPitfallsText] = useState('');
   const [classesText, setClassesText] = useState('');
+  const titleInputRef = useRef<HTMLInputElement>(null);
 
   // Reset form when the modal re-opens
   useEffect(() => {
@@ -750,32 +698,14 @@ function AuthorPatternModal({
     if (created) onClose();
   }, [form, tagsText, pitfallsText, classesText, authorPattern, onClose]);
 
-  if (!open) return null;
-
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4"
-      onClick={onClose}
+    <Modal
+      open={open}
+      onClose={onClose}
+      title="Author a Pattern"
+      icon={<Plus className="w-4 h-4 text-emerald-400" />}
+      initialFocusRef={titleInputRef}
     >
-      <SurfaceCard
-        className="w-full max-w-xl max-h-[90vh] overflow-y-auto p-5"
-        onClick={(e: React.MouseEvent) => e.stopPropagation()}
-      >
-        <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center gap-2">
-            <Plus className="w-4 h-4 text-emerald-400" />
-            <h3 className="text-sm font-semibold text-text">Author a Pattern</h3>
-          </div>
-          <button
-            type="button"
-            onClick={onClose}
-            className="p-1 rounded hover:bg-surface-hover text-text-muted hover:text-text"
-            aria-label="Close"
-          >
-            <X className="w-4 h-4" />
-          </button>
-        </div>
-
         <p className="text-2xs text-text-muted mb-3 leading-relaxed">
           Hand-authored patterns are saved as <strong>verified</strong> and outrank mined entries in dispatch suggestions.
         </p>
@@ -784,6 +714,7 @@ function AuthorPatternModal({
           <div>
             <label className="text-2xs text-text-muted font-medium mb-1 block">Title</label>
             <input
+              ref={titleInputRef}
               type="text"
               value={form.title}
               onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))}
@@ -905,18 +836,6 @@ function AuthorPatternModal({
             {submitting ? 'Saving…' : 'Save Pattern'}
           </button>
         </div>
-      </SurfaceCard>
-    </div>
+    </Modal>
   );
-}
-
-// ── Helpers ─────────────────────────────────────────────────────────────────
-
-function formatDuration(ms: number): string {
-  if (ms < 60000) return `${Math.round(ms / 1000)}s`;
-  const minutes = Math.round(ms / 60000);
-  if (minutes < 60) return `${minutes}m`;
-  const h = Math.floor(minutes / 60);
-  const m = minutes % 60;
-  return m > 0 ? `${h}h ${m}m` : `${h}h`;
 }

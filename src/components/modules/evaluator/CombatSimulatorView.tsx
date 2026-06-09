@@ -6,6 +6,7 @@ import {
   ChevronDown, ChevronRight, AlertTriangle, Target,
   Activity, BarChart3, Users, Flame, ShieldAlert,
   TrendingUp, Crosshair, Clock, Skull, Pin, X,
+  Lightbulb, SlidersHorizontal, Sparkles, Copy, Check,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { SurfaceCard } from '@/components/ui/SurfaceCard';
@@ -13,9 +14,19 @@ import { KPICard } from '@/components/ui/KPICard';
 import { Badge } from '@/components/ui/Badge';
 import { ProgressRing } from '@/components/ui/ProgressRing';
 import { DashboardHeader } from '@/components/ui/DashboardHeader';
+import { CenterSlider } from '@/components/ui/CenterSlider';
+import { NumberField } from '@/components/ui/NumberField';
 import { ABComparisonPanel } from './ABComparisonPanel';
+import { ChartLegend } from '@/components/ui/ChartLegend';
+import { MetricLabel } from '@/components/ui/MetricLabel';
 import { useCombatSimulatorStore } from '@/stores/combatSimulatorStore';
-import { MODULE_COLORS, ACCENT_EMERALD_DARK, STATUS_NEUTRAL } from '@/lib/chart-colors';
+import {
+  MODULE_COLORS, ACCENT_EMERALD_DARK, STATUS_NEUTRAL,
+  STATUS_ERROR, STATUS_WARNING, ACCENT_CYAN_LIGHT,
+} from '@/lib/chart-colors';
+import { percentileFromBuckets } from '@/lib/combat/histogram';
+import { UI_TIMEOUTS } from '@/lib/constants';
+import { narrateSummary, formatReportCardText, type FightReportCard, type ReportBand } from '@/lib/combat/fight-report';
 import type {
   CombatScenario,
   TuningOverrides,
@@ -25,6 +36,7 @@ import type {
   BalanceAlertSeverity,
   GearLoadout,
   CombatAbility,
+  EnemyArchetype,
   ThreatBreakdown,
 } from '@/types/combat-simulator';
 
@@ -32,10 +44,21 @@ import type {
 
 const EMPTY_ALERTS: BalanceAlert[] = [];
 
+/** Plain-language Story Mode vs. full numeric Advanced view. */
+type ViewMode = 'simple' | 'advanced';
+
 const SEVERITY_STYLE: Record<BalanceAlertSeverity, { bg: string; border: string; text: string }> = {
   info: { bg: 'bg-blue-400/10', border: 'border-blue-400/20', text: 'text-blue-400' },
   warning: { bg: 'bg-amber-400/10', border: 'border-amber-400/20', text: 'text-amber-400' },
   critical: { bg: 'bg-red-400/10', border: 'border-red-400/20', text: 'text-red-400' },
+};
+
+/** Difficulty-band styling for the narrated Fight Report Card. */
+const BAND_STYLE: Record<ReportBand, { text: string; bg: string; border: string; label: string }> = {
+  easy: { text: 'text-blue-400', bg: 'bg-blue-400/10', border: 'border-blue-400/25', label: 'Too Easy' },
+  fair: { text: 'text-emerald-400', bg: 'bg-emerald-400/10', border: 'border-emerald-400/25', label: 'Well Balanced' },
+  tough: { text: 'text-amber-400', bg: 'bg-amber-400/10', border: 'border-amber-400/25', label: 'Tough' },
+  brutal: { text: 'text-red-400', bg: 'bg-red-400/10', border: 'border-red-400/25', label: 'Brutal' },
 };
 
 const TUNING_SLIDERS: { key: keyof TuningOverrides; label: string; icon: typeof Heart }[] = [
@@ -47,6 +70,43 @@ const TUNING_SLIDERS: { key: keyof TuningOverrides; label: string; icon: typeof 
   { key: 'critMultiplierMul', label: 'Crit Multi', icon: Crosshair },
   { key: 'armorEffectivenessWeight', label: 'Armor Weight', icon: Shield },
 ];
+
+// ── Mode toggle (Story ⇄ Advanced) ──────────────────────────────────────────
+
+/** Mirrors the Prompt Evolution view's Simple/Advanced toggle. */
+function ModeToggle({ mode, onChange }: { mode: ViewMode; onChange: (m: ViewMode) => void }) {
+  const options: { id: ViewMode; label: string; icon: typeof Lightbulb; hint: string }[] = [
+    { id: 'simple', label: 'Story', icon: Lightbulb, hint: 'Plain-language fight report' },
+    { id: 'advanced', label: 'Advanced', icon: SlidersHorizontal, hint: 'Full numeric breakdown' },
+  ];
+  return (
+    <div
+      className="inline-flex items-center rounded-md border border-border bg-surface p-0.5"
+      role="group"
+      aria-label="Result detail level"
+    >
+      {options.map((opt) => {
+        const active = mode === opt.id;
+        return (
+          <button
+            key={opt.id}
+            type="button"
+            onClick={() => onChange(opt.id)}
+            aria-pressed={active}
+            title={opt.hint}
+            className={`focus-ring flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium rounded transition-colors ${
+              active ? 'text-white' : 'text-text-muted hover:text-text'
+            }`}
+            style={active ? { backgroundColor: ACCENT_EMERALD_DARK } : undefined}
+          >
+            <opt.icon className="w-3 h-3" />
+            {opt.label}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
 
 // ── Main Component ──────────────────────────────────────────────────────────
 
@@ -84,6 +144,11 @@ export function CombatSimulatorView() {
   ]);
   const [iterations, setIterations] = useState(1000);
 
+  // Story Mode renders the narrated Fight Report Card and hides the jargon-heavy
+  // panels; Advanced reveals the full numeric breakdown. Default ON so the most
+  // numerically intimidating screen reads approachably for non-technical stakeholders.
+  const [mode, setMode] = useState<ViewMode>('simple');
+
   useEffect(() => {
     fetchDefaults();
   }, [fetchDefaults]);
@@ -96,6 +161,12 @@ export function CombatSimulatorView() {
   const playerAbils = useMemo(() =>
     abilities.filter((a) => selectedAbilities.includes(a.id)),
     [abilities, selectedAbilities],
+  );
+
+  // Narrated plain-language report card, derived purely from the finished run.
+  const report = useMemo(
+    () => (summary ? narrateSummary(summary, summary.threatBreakdown, alerts) : null),
+    [summary, alerts],
   );
 
   const handleRun = useCallback(async () => {
@@ -127,12 +198,19 @@ export function CombatSimulatorView() {
         <DashboardHeader
           icon={Swords}
           title="Combat Balance Simulator"
-          subtitle="GAS-based Monte Carlo combat simulation with balance tuning"
+          subtitle={
+            <>
+              <MetricLabel metricId="gas" label="GAS" placement="bottom" />-based{' '}
+              <MetricLabel metricId="monteCarlo" label="Monte Carlo" placement="bottom" /> combat
+              simulation with balance tuning
+            </>
+          }
           accent="red"
           accentTo="orange"
           className="mb-4"
           action={
             <div className="flex items-center gap-2">
+              <ModeToggle mode={mode} onChange={setMode} />
               {result && (
                 <button
                   onClick={pinBaseline}
@@ -183,12 +261,14 @@ export function CombatSimulatorView() {
               <ProgressRing value={Math.round(summary.survivalRate * 100)} size={36} strokeWidth={3} color={survivalColor} />
               <div>
                 <div className="text-sm font-semibold" style={{ color: survivalColor }}>{(summary.survivalRate * 100).toFixed(1)}%</div>
-                <div className="text-2xs text-text-muted">Survival</div>
+                <div className="text-2xs text-text-muted">
+                  <MetricLabel metricId="survivalRate" label="Survival" />
+                </div>
               </div>
             </SurfaceCard>
-            <StatCard icon={<Clock className="w-4 h-4 text-blue-400" />} value={`${summary.avgFightDurationSec.toFixed(1)}s`} label="Avg Duration" color="text-blue-400" />
-            <StatCard icon={<Swords className="w-4 h-4 text-emerald-400" />} value={`${summary.avgDPS.toFixed(1)}`} label="Player DPS" color="text-emerald-400" />
-            <StatCard icon={<Flame className="w-4 h-4 text-red-400" />} value={`${summary.avgEnemyDPS.toFixed(1)}`} label="Enemy DPS" color="text-red-400" />
+            <StatCard icon={<Clock className="w-4 h-4 text-blue-400" />} value={`${summary.avgFightDurationSec.toFixed(1)}s`} label="Avg Duration" metricId="avgFightDurationSec" color="text-blue-400" />
+            <StatCard icon={<Swords className="w-4 h-4 text-emerald-400" />} value={`${summary.avgDPS.toFixed(1)}`} label="Player DPS" metricId="avgDPS" color="text-emerald-400" />
+            <StatCard icon={<Flame className="w-4 h-4 text-red-400" />} value={`${summary.avgEnemyDPS.toFixed(1)}`} label="Enemy DPS" metricId="avgEnemyDPS" color="text-red-400" />
           </div>
         )}
       </div>
@@ -246,20 +326,20 @@ export function CombatSimulatorView() {
                     {TUNING_SLIDERS.map(({ key, label, icon: Icon }) => (
                       <div key={key} className="flex items-center gap-2">
                         <Icon className="w-3 h-3 text-text-muted flex-shrink-0" />
-                        <span className="text-2xs text-text-muted w-20 flex-shrink-0">{label}</span>
-                        <input
-                          type="range"
+                        <MetricLabel
+                          metricId={key}
+                          label={label}
+                          className="text-2xs text-text-muted w-20 flex-shrink-0"
+                        />
+                        <CenterSlider
+                          className="flex-1"
+                          value={Math.round(tuning[key] * 100)}
                           min={50}
                           max={200}
-                          value={Math.round(tuning[key] * 100)}
-                          onChange={(e) => handleTuningChange(key, Number(e.target.value) / 100)}
-                          className="flex-1 h-1 accent-amber-400 cursor-pointer"
+                          neutral={100}
+                          onChange={(v) => handleTuningChange(key, v / 100)}
+                          ariaLabel={`${label} multiplier`}
                         />
-                        <span className={`text-2xs font-mono w-10 text-right flex-shrink-0 ${
-                          tuning[key] !== 1 ? 'text-amber-400' : 'text-text-muted'
-                        }`}>
-                          {(tuning[key] * 100).toFixed(0)}%
-                        </span>
                       </div>
                     ))}
                   </div>
@@ -273,38 +353,53 @@ export function CombatSimulatorView() {
             {/* Results */}
             {summary && (
               <>
-                {/* Ability Heatmap */}
-                <AbilityHeatmap heatmap={summary.abilityHeatmap} />
+                {/* Narrated Fight Report Card — the plain-language headline answer,
+                    shown in both modes (Story Mode hides the numeric panels below). */}
+                {report && (
+                  <FightReportCardPanel
+                    report={report}
+                    scenarioName={result?.scenario.name}
+                    iterations={result?.config.iterations}
+                  />
+                )}
 
-                {/* Death Recap: Threat Breakdown */}
-                <ThreatBreakdownPanel breakdown={summary.threatBreakdown} />
+                {/* Advanced view: the full numeric breakdown. */}
+                {mode === 'advanced' && (
+                  <>
+                    {/* Ability Heatmap */}
+                    <AbilityHeatmap heatmap={summary.abilityHeatmap} />
 
-                {/* Distributions */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                  <DistributionChart title="Damage Dealt" buckets={summary.damageDealtBuckets} color="emerald" />
-                  <DistributionChart title="Damage Taken" buckets={summary.damageTakenBuckets} color="red" />
-                  <DistributionChart title="Fight Duration" buckets={summary.durationBuckets} color="blue" unit="s" />
-                </div>
+                    {/* Death Recap: Threat Breakdown */}
+                    <ThreatBreakdownPanel breakdown={summary.threatBreakdown} />
 
-                {/* Extra stats */}
-                <SurfaceCard className="p-4">
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-center">
-                    <MiniStat label="Avg Crit Rate" value={`${(summary.avgCritRate * 100).toFixed(1)}%`} />
-                    <MiniStat label="One-Shot Rate" value={`${(summary.oneShotRate * 100).toFixed(1)}%`} alert={summary.oneShotRate > 0.05} />
-                    <MiniStat label="Avg HP Left" value={`${summary.avgPlayerHealthRemaining.toFixed(0)}`} />
-                    <MiniStat label="Median Duration" value={`${summary.medianFightDurationSec.toFixed(1)}s`} />
-                  </div>
-                </SurfaceCard>
+                    {/* Distributions */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                      <DistributionChart title="Damage Dealt" buckets={summary.damageDealtBuckets} color="emerald" />
+                      <DistributionChart title="Damage Taken" buckets={summary.damageTakenBuckets} color="red" />
+                      <DistributionChart title="Fight Duration" buckets={summary.durationBuckets} color="blue" unit="s" />
+                    </div>
 
-                {/* Balance Alerts */}
-                <AlertsSection alerts={alerts} />
+                    {/* Extra stats */}
+                    <SurfaceCard className="p-4">
+                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-center">
+                        <MiniStat label="Avg Crit Rate" metricId="avgCritRate" value={`${(summary.avgCritRate * 100).toFixed(1)}%`} />
+                        <MiniStat label="One-Shot Rate" metricId="oneShotRate" value={`${(summary.oneShotRate * 100).toFixed(1)}%`} alert={summary.oneShotRate > 0.05} />
+                        <MiniStat label="Avg HP Left" metricId="avgPlayerHealthRemaining" value={`${summary.avgPlayerHealthRemaining.toFixed(0)}`} />
+                        <MiniStat label="Median Duration" metricId="medianFightDurationSec" value={`${summary.medianFightDurationSec.toFixed(1)}s`} />
+                      </div>
+                    </SurfaceCard>
 
-                {/* Sim meta */}
-                {result && (
-                  <div className="flex items-center gap-2 text-2xs text-text-muted">
-                    <Zap className="w-3 h-3" />
-                    {result.config.iterations} iterations in {result.durationMs}ms · Seed: {result.config.seed}
-                  </div>
+                    {/* Balance Alerts */}
+                    <AlertsSection alerts={alerts} />
+
+                    {/* Sim meta */}
+                    {result && (
+                      <div className="flex items-center gap-2 text-2xs text-text-muted">
+                        <Zap className="w-3 h-3" />
+                        {result.config.iterations} iterations in {result.durationMs}ms · Seed: {result.config.seed}
+                      </div>
+                    )}
+                  </>
                 )}
               </>
             )}
@@ -349,7 +444,7 @@ function ScenarioBuilder({
   abilities: CombatAbility[];
   enemySetup: { archetypeId: string; count: number; level: number }[];
   setEnemySetup: (v: typeof enemySetup) => void;
-  enemyArchetypes: typeof enemySetup extends { archetypeId: string }[] ? any : any;
+  enemyArchetypes: EnemyArchetype[];
   iterations: number;
   setIterations: (v: number) => void;
 }) {
@@ -372,10 +467,13 @@ function ScenarioBuilder({
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
           <div>
             <label className="text-2xs text-text-muted font-medium block mb-1">Player Level</label>
-            <input
-              type="number"
+            <NumberField
               value={playerLevel}
-              onChange={(e) => setPlayerLevel(Math.max(1, Math.min(50, Number(e.target.value) || 1)))}
+              min={1}
+              max={50}
+              fallback={1}
+              onChange={setPlayerLevel}
+              ariaLabel="Player level"
               className="w-full px-2 py-1 bg-surface border border-border rounded-lg text-xs text-text focus:outline-none focus:border-status-red-strong"
             />
           </div>
@@ -393,10 +491,14 @@ function ScenarioBuilder({
           </div>
           <div>
             <label className="text-2xs text-text-muted font-medium block mb-1">Iterations</label>
-            <input
-              type="number"
+            <NumberField
               value={iterations}
-              onChange={(e) => setIterations(Math.max(100, Math.min(5000, Number(e.target.value) || 1000)))}
+              min={100}
+              max={5000}
+              fallback={1000}
+              step={100}
+              onChange={setIterations}
+              ariaLabel="Simulation iterations"
               className="w-full px-2 py-1 bg-surface border border-border rounded-lg text-xs text-text focus:outline-none focus:border-status-red-strong"
             />
           </div>
@@ -487,32 +589,39 @@ function ScenarioBuilder({
                     next[i] = { ...next[i], archetypeId: e.target.value };
                     setEnemySetup(next);
                   }}
+                  aria-label={`Enemy group ${i + 1} archetype`}
                   className="flex-1 px-2 py-1 bg-surface border border-border rounded-lg text-xs text-text cursor-pointer"
                 >
-                  {enemyArchetypes.map((e: any) => (
-                    <option key={e.id} value={e.id}>{e.name}</option>
+                  {enemyArchetypes.map((arch) => (
+                    <option key={arch.id} value={arch.id}>{arch.name}</option>
                   ))}
                 </select>
                 <span className="text-2xs text-text-muted">×</span>
-                <input
-                  type="number"
+                <NumberField
                   value={entry.count}
-                  onChange={(e) => {
+                  min={1}
+                  max={10}
+                  fallback={1}
+                  onChange={(count) => {
                     const next = [...enemySetup];
-                    next[i] = { ...next[i], count: Math.max(1, Math.min(10, Number(e.target.value) || 1)) };
+                    next[i] = { ...next[i], count };
                     setEnemySetup(next);
                   }}
+                  ariaLabel={`Enemy group ${i + 1} count`}
                   className="w-12 px-2 py-1 bg-surface border border-border rounded-lg text-xs text-text text-center"
                 />
                 <span className="text-2xs text-text-muted">Lvl</span>
-                <input
-                  type="number"
+                <NumberField
                   value={entry.level}
-                  onChange={(e) => {
+                  min={1}
+                  max={50}
+                  fallback={1}
+                  onChange={(level) => {
                     const next = [...enemySetup];
-                    next[i] = { ...next[i], level: Math.max(1, Math.min(50, Number(e.target.value) || 1)) };
+                    next[i] = { ...next[i], level };
                     setEnemySetup(next);
                   }}
+                  ariaLabel={`Enemy group ${i + 1} level`}
                   className="w-12 px-2 py-1 bg-surface border border-border rounded-lg text-xs text-text text-center"
                 />
                 {enemySetup.length > 1 && (
@@ -547,26 +656,52 @@ function AbilityHeatmap({ heatmap }: { heatmap: Record<string, number> }) {
 
   return (
     <SurfaceCard className="p-4">
-      <div className="flex items-center gap-2 mb-3">
+      <div className="flex items-center gap-2 mb-2">
         <BarChart3 className="w-4 h-4 text-cyan-400" />
-        <h2 className="text-sm font-medium text-text">Ability Usage Heatmap</h2>
+        <h2 className="text-sm font-medium text-text">
+          <MetricLabel metricId="abilityHeatmap" label="Ability Usage Heatmap" />
+        </h2>
         <span className="text-2xs text-text-muted">(avg uses per fight)</span>
       </div>
+      {/* Decode the two bar colors so usage tier isn't conveyed by hue alone. */}
+      <ChartLegend
+        className="mb-3"
+        dense
+        ariaLabel="Ability heatmap legend"
+        items={[
+          { color: ACCENT_CYAN_LIGHT, label: 'Used', description: 'avg uses/fight' },
+          { color: STATUS_WARNING, label: 'Under-used', description: '< 0.1/fight' },
+        ]}
+      />
       <div className="space-y-1.5">
         {entries.map(([name, avgUses]) => {
           const w = (avgUses / maxUses) * 100;
           const isLow = avgUses < 0.1;
+          // The longest bars carry their value directly on the bar; shorter rows
+          // keep the value in the trailing column so it's never lost in the fill.
+          const annotateInline = w >= 45;
           return (
             <div key={name} className="flex items-center gap-3">
               <span className={`text-2xs w-28 truncate flex-shrink-0 ${isLow ? 'text-amber-400' : 'text-text-muted'}`}>{name}</span>
-              <div className="flex-1 h-3 bg-surface-deep rounded overflow-hidden">
+              <div className="relative flex-1 h-4 bg-surface-deep rounded overflow-hidden">
                 <div
-                  className={`h-full rounded transition-all ${isLow ? 'bg-amber-400/30' : 'bg-cyan-400/40'}`}
+                  className={`h-full rounded transition-all ${isLow ? 'bg-amber-400/50' : 'bg-cyan-400/50'}`}
                   style={{ width: `${w}%` }}
                 />
+                {annotateInline && (
+                  <span
+                    className="absolute inset-y-0 flex items-center"
+                    style={{ right: `calc(${100 - w}% + 4px)` }}
+                  >
+                    {/* Dark chip guarantees the value's contrast over any fill color. */}
+                    <span className="rounded bg-surface-deep/80 px-1 text-[10px] font-mono font-semibold tabular-nums text-text leading-none">
+                      {avgUses.toFixed(1)}
+                    </span>
+                  </span>
+                )}
               </div>
-              <span className={`text-2xs font-mono w-10 text-right flex-shrink-0 ${isLow ? 'text-amber-400' : 'text-text-muted'}`}>
-                {avgUses.toFixed(1)}
+              <span className={`text-2xs font-mono w-10 text-right flex-shrink-0 tabular-nums ${isLow ? 'text-amber-400' : 'text-text-muted'}`}>
+                {annotateInline ? '' : avgUses.toFixed(1)}
               </span>
             </div>
           );
@@ -616,6 +751,27 @@ function ThreatBreakdownPanel({ breakdown }: { breakdown: ThreatBreakdown }) {
           </div>
         )}
       </div>
+
+      {/* Key for the dual-bar encoding — kill share (red) over damage share (amber). */}
+      <ChartLegend
+        className="mb-3"
+        dense
+        ariaLabel="Threat bar legend"
+        items={[
+          {
+            color: STATUS_ERROR,
+            label: 'Kill share',
+            labelNode: <MetricLabel metricId="killShare" label="Kill share" className="text-2xs font-medium text-text" />,
+            description: '% of deaths',
+          },
+          {
+            color: STATUS_WARNING,
+            label: 'Damage share',
+            labelNode: <MetricLabel metricId="damageShare" label="Damage share" className="text-2xs font-medium text-text" />,
+            description: '% of damage taken',
+          },
+        ]}
+      />
 
       {/* Per-enemy ranking */}
       {topEnemies.length > 0 && (
@@ -694,12 +850,12 @@ function ThreatRow({
       <div className="flex items-center gap-3">
         <div className="flex-1 relative h-2 bg-surface-deep rounded overflow-hidden">
           <div
-            className="absolute inset-y-0 left-0 bg-amber-400/30"
+            className="absolute inset-y-0 left-0 bg-amber-400/50"
             style={{ width: `${Math.min(100, damageShare * 100)}%` }}
           />
           {killShare > 0 && (
             <div
-              className="absolute inset-y-0 left-0 bg-red-400/60 border-r border-red-400/80"
+              className="absolute inset-y-0 left-0 bg-red-400/70 border-r border-red-400/80"
               style={{ width: `${Math.min(100, killShare * 100)}%` }}
             />
           )}
@@ -724,6 +880,87 @@ function formatNumber(n: number): string {
   return String(Math.round(n));
 }
 
+// ── Fight Report Card (Story Mode) ──────────────────────────────────────────
+
+/**
+ * Narrated, shareable plain-language summary of a finished run — the headline
+ * answer a non-technical stakeholder grasps in one read. Reads from the pure
+ * `narrateSummary` generator; a Copy button exports it as shareable text.
+ */
+function FightReportCardPanel({
+  report, scenarioName, iterations,
+}: {
+  report: FightReportCard;
+  scenarioName?: string;
+  iterations?: number;
+}) {
+  const [copied, setCopied] = useState(false);
+  const style = BAND_STYLE[report.band];
+
+  const handleCopy = useCallback(async () => {
+    try {
+      await navigator.clipboard.writeText(formatReportCardText(report, scenarioName));
+      setCopied(true);
+      window.setTimeout(() => setCopied(false), UI_TIMEOUTS.copyFeedback);
+    } catch {
+      // Clipboard unavailable (e.g. insecure context) — silently ignore.
+    }
+  }, [report, scenarioName]);
+
+  return (
+    <SurfaceCard className={`p-5 border ${style.border}`}>
+      <div className="flex items-center gap-2 mb-3">
+        <Sparkles className={`w-4 h-4 ${style.text}`} />
+        <h2 className="text-sm font-medium text-text">Fight Report Card</h2>
+        <span className={`px-2 py-0.5 rounded-full text-2xs font-semibold ${style.bg} ${style.text}`}>
+          {style.label}
+        </span>
+        <button
+          onClick={handleCopy}
+          title="Copy this report as shareable text"
+          className="focus-ring ml-auto flex items-center gap-1.5 px-2.5 py-1 rounded-md border border-border text-2xs text-text-muted hover:text-text transition-colors"
+        >
+          {copied ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
+          {copied ? 'Copied' : 'Copy'}
+        </button>
+      </div>
+
+      {/* Headline (win rate) */}
+      <p className={`text-lg font-semibold leading-snug ${style.text}`}>{report.headline}</p>
+
+      {/* Verdict (pace) */}
+      <p className="mt-1 text-sm text-text-muted">{report.verdict}</p>
+
+      {/* Top fix (dominant threat) */}
+      {report.topFix && (
+        <div className={`mt-3 flex items-start gap-2 px-3 py-2 rounded-lg border ${style.bg} ${style.border}`}>
+          <Skull className={`w-3.5 h-3.5 flex-shrink-0 mt-0.5 ${style.text}`} />
+          <p className="text-xs text-text leading-relaxed">{report.topFix}</p>
+        </div>
+      )}
+
+      {/* Secondary call-outs */}
+      {report.notes.length > 0 && (
+        <ul className="mt-3 space-y-1">
+          {report.notes.map((note, i) => (
+            <li key={i} className="flex items-start gap-2 text-2xs text-text-muted">
+              <AlertTriangle className="w-3 h-3 text-amber-400 flex-shrink-0 mt-0.5" />
+              <span>{note}</span>
+            </li>
+          ))}
+        </ul>
+      )}
+
+      {/* Sample-size footnote */}
+      {iterations != null && (
+        <p className="mt-3 text-2xs text-text-muted/60">
+          Based on {iterations.toLocaleString()} simulated fights.
+        </p>
+      )}
+    </SurfaceCard>
+  );
+}
+
 // ── Distribution Chart ──────────────────────────────────────────────────────
 
 function DistributionChart({
@@ -737,21 +974,30 @@ function DistributionChart({
   if (buckets.length === 0) return null;
   const maxCount = Math.max(...buckets.map((b) => b.count), 1);
   const colorMap = {
-    emerald: 'bg-emerald-400/40',
-    red: 'bg-red-400/40',
-    blue: 'bg-blue-400/40',
+    emerald: 'bg-emerald-400/70',
+    red: 'bg-red-400/70',
+    blue: 'bg-blue-400/70',
   };
+
+  // Median (p50) + tail (p95) markers give the spread a non-color, structural
+  // read so the shape is legible even where the bar fill is hard to perceive.
+  const lo = buckets[0].min;
+  const hi = buckets[buckets.length - 1].max;
+  const range = hi - lo || 1;
+  const frac = (v: number) => Math.max(0, Math.min(1, (v - lo) / range));
+  const p50 = percentileFromBuckets(buckets, 0.5);
+  const p95 = percentileFromBuckets(buckets, 0.95);
 
   return (
     <SurfaceCard className="p-3">
       <div className="text-2xs text-text-muted font-medium mb-2">{title}</div>
-      <div className="flex items-end gap-px h-16">
+      <div className="relative flex items-end gap-px h-16">
         {buckets.map((b, i) => {
           const h = (b.count / maxCount) * 100;
           return (
             <div key={i} className="flex-1 group relative">
               <div className={`w-full rounded-t-sm ${colorMap[color]}`} style={{ height: `${h}%` }} />
-              <div className="absolute bottom-full mb-1 hidden group-hover:block z-10 left-1/2 -translate-x-1/2">
+              <div className="absolute bottom-full mb-1 hidden group-hover:block z-20 left-1/2 -translate-x-1/2">
                 <div className="bg-surface-deep border border-border rounded px-1.5 py-0.5 text-2xs text-text-muted whitespace-nowrap">
                   {b.min.toFixed(0)}{unit}-{b.max.toFixed(0)}{unit}: {b.count}
                 </div>
@@ -759,12 +1005,36 @@ function DistributionChart({
             </div>
           );
         })}
+        {p50 != null && <PercentileMarker fraction={frac(p50)} label="p50" />}
+        {p95 != null && <PercentileMarker fraction={frac(p95)} label="p95" dashed />}
       </div>
       <div className="flex justify-between text-2xs text-text-muted/50 mt-1">
         <span>{buckets[0]?.min.toFixed(0)}{unit}</span>
         <span>{buckets[buckets.length - 1]?.max.toFixed(0)}{unit}</span>
       </div>
     </SurfaceCard>
+  );
+}
+
+/** A labeled vertical percentile line overlaid on a distribution's bars. */
+function PercentileMarker({ fraction, label, dashed }: {
+  fraction: number; label: string; dashed?: boolean;
+}) {
+  const flip = fraction > 0.85; // keep the label inside the chart near the right edge
+  return (
+    <div
+      className="pointer-events-none absolute top-0 bottom-0 z-10"
+      style={{ left: `${fraction * 100}%` }}
+      aria-hidden="true"
+    >
+      <div
+        className="absolute top-0 bottom-0 left-0"
+        style={{ borderLeftWidth: 1, borderLeftStyle: dashed ? 'dashed' : 'solid', borderLeftColor: 'var(--text-muted)' }}
+      />
+      <span className={`absolute -top-1 ${flip ? 'right-0.5' : 'left-0.5'} text-[9px] font-mono leading-none text-text-muted whitespace-nowrap`}>
+        {label}
+      </span>
+    </div>
   );
 }
 
@@ -809,23 +1079,31 @@ function AlertsSection({ alerts }: { alerts: BalanceAlert[] }) {
 
 // ── Small Components ────────────────────────────────────────────────────────
 
-function StatCard({ icon, value, label, color }: {
+function StatCard({ icon, value, label, color, metricId }: {
   icon: React.ReactNode; value: string | number; label: string; color: string;
+  /** When set, the label decodes its jargon via an inline `MetricLabel` tooltip. */
+  metricId?: string;
 }) {
   return (
     <KPICard
       icon={icon}
-      label={label}
+      label={metricId ? <MetricLabel metricId={metricId} label={label} /> : label}
       value={<span className={color}>{value}</span>}
     />
   );
 }
 
-function MiniStat({ label, value, alert }: { label: string; value: string; alert?: boolean }) {
+function MiniStat({ label, value, alert, metricId }: {
+  label: string; value: string; alert?: boolean;
+  /** When set, the label decodes its jargon via an inline `MetricLabel` tooltip. */
+  metricId?: string;
+}) {
   return (
     <div>
       <div className={`text-sm font-semibold ${alert ? 'text-red-400' : 'text-text'}`}>{value}</div>
-      <div className="text-2xs text-text-muted">{label}</div>
+      <div className="text-2xs text-text-muted">
+        {metricId ? <MetricLabel metricId={metricId} label={label} /> : label}
+      </div>
     </div>
   );
 }

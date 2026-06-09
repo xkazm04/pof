@@ -57,7 +57,7 @@ export function ArchetypeGrid({
         <div key={group.header ?? 'all'}>
           {group.header && (
             <div className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted mb-2 mt-2">
-              {group.header} <span className="text-text-muted/60">({groupedArchetypes.find(g => g.header === group.header)?.items.length ?? 0})</span>
+              {group.header} <span className="text-text-subtle">({groupedArchetypes.find(g => g.header === group.header)?.items.length ?? 0})</span>
             </div>
           )}
           <div className="grid grid-cols-1 gap-3 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">

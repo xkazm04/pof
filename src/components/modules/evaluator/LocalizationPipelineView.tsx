@@ -2,10 +2,10 @@
 
 import { useEffect, useMemo, useState, useCallback } from 'react';
 import {
-  Globe, Play, AlertTriangle, CheckCircle2, FileText,
+  Globe, Play, AlertTriangle, CheckCircle2,
   ChevronDown, ChevronRight, Search, Copy, Check,
-  Languages, ShieldAlert, BookOpen, Table2, RefreshCw,
-  ArrowRight, ArrowLeft, XCircle, Info, Eye, X,
+  Languages, ShieldAlert, ShieldCheck, BookOpen, Table2, RefreshCw,
+  ArrowRight, ArrowLeft, XCircle, Info, X,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { SurfaceCard } from '@/components/ui/SurfaceCard';
@@ -15,40 +15,59 @@ import { useLocalizationPipelineStore } from '@/stores/localizationPipelineStore
 import type {
   LocalizableString,
   LocalizationHazard,
+  LOCTEXTReplacementSuggestion,
   TranslationEntry,
   StringContext,
   HazardSeverity,
   TranslationStatus,
   StringTable,
+  TranslationQAFinding,
+  LocaleQAStatus,
 } from '@/types/localization-pipeline';
-import { CONTEXT_LABELS, SUPPORTED_LOCALES } from '@/lib/localization/definitions';
+import { CONTEXT_LABELS, SUPPORTED_LOCALES, LOW_CONFIDENCE, REVIEW_GATE, QA_CHECKS } from '@/lib/localization/definitions';
 import { UI_TIMEOUTS } from '@/lib/constants';
-import { ACCENT_EMERALD, STATUS_WARNING, STATUS_ERROR, STATUS_INFO } from '@/lib/chart-colors';
+import { ACCENT_EMERALD, ACCENT_INDIGO, STATUS_WARNING, STATUS_ERROR, STATUS_INFO, SEVERITY_TOKENS } from '@/lib/chart-colors';
+import { TEXT_SCALE } from '@/lib/typography-scale';
+import { FOCUS_RING_CLASS, focusRingStyle } from '@/lib/ui/focus-ring';
 
 // ── Constants ───────────────────────────────────────────────────────────────
 
-const EMPTY_STRINGS: LocalizableString[] = [];
-const EMPTY_HAZARDS: LocalizationHazard[] = [];
-const EMPTY_ENTRIES: TranslationEntry[] = [];
-const EMPTY_TABLES: StringTable[] = [];
-const EMPTY_REPLACEMENTS: { stringId: string; originalCode: string; suggestedCode: string }[] = [];
-const EMPTY_PROGRESS: Record<string, number> = {};
+// Type scale — three tiers give this dense localization data a scannable
+// hierarchy instead of a flat wall of muted text-2xs. Sizes compose the app-wide
+// TEXT_SCALE floor (text-xs) so the view never dips below the readable minimum;
+// this layer adds the weight + text tone that separates a section title from
+// primary content from dense metadata.
+const SCALE = {
+  /** Card / section heading — anchors each panel (text-sm sits above the floor). */
+  title: 'text-sm font-semibold text-text',
+  /** Primary content — strings, translations, finding labels. */
+  body: `${TEXT_SCALE.body} text-text`,
+  /** Dense metadata — counts, paths, locale codes, units. */
+  meta: `${TEXT_SCALE.meta} text-text-muted`,
+} as const;
 
-const SEVERITY_STYLE: Record<HazardSeverity, { bg: string; border: string; text: string; badge: 'error' | 'warning' | 'default' }> = {
-  critical: { bg: 'bg-status-red-subtle', border: 'border-status-red-medium', text: 'text-red-400', badge: 'error' },
-  warning:  { bg: 'bg-amber-500/5', border: 'border-amber-500/20', text: 'text-amber-400', badge: 'warning' },
-  info:     { bg: 'bg-blue-500/5', border: 'border-blue-500/20', text: 'text-blue-400', badge: 'default' },
+// Hazard severity and translation status colors are routed through SEVERITY_TOKENS
+// (chart-colors) so they share one theme-aware source with the rest of the
+// evaluator instead of drifting Tailwind palette classes. `HazardSeverity`
+// (critical/warning/info) maps directly onto the matching token keys; the Badge
+// variant is the only piece SEVERITY_TOKENS doesn't carry, so it stays a small map.
+const SEVERITY_BADGE: Record<HazardSeverity, 'error' | 'warning' | 'default'> = {
+  critical: 'error',
+  warning:  'warning',
+  info:     'default',
 };
 
+// Translation status → solid token color + label. `pending` has no severity
+// (it's the "not started" neutral), so it keeps the theme-aware muted text var.
 const STATUS_STYLE: Record<TranslationStatus, { color: string; label: string }> = {
-  pending:      { color: 'text-text-muted', label: 'Pending' },
-  translated:   { color: 'text-emerald-400', label: 'Translated' },
-  reviewed:     { color: 'text-blue-400', label: 'Reviewed' },
-  approved:     { color: 'text-green-400', label: 'Approved' },
-  needs_review: { color: 'text-amber-400', label: 'Needs Review' },
+  pending:      { color: 'var(--text-muted)',           label: 'Pending' },
+  translated:   { color: SEVERITY_TOKENS.positive.color, label: 'Translated' },
+  reviewed:     { color: SEVERITY_TOKENS.info.color,     label: 'Reviewed' },
+  approved:     { color: SEVERITY_TOKENS.positive.color, label: 'Approved' },
+  needs_review: { color: SEVERITY_TOKENS.warning.color,  label: 'Needs Review' },
 };
 
-type ViewTab = 'overview' | 'strings' | 'translations' | 'hazards' | 'tables';
+type ViewTab = 'overview' | 'strings' | 'translations' | 'hazards' | 'qa' | 'tables';
 
 type StringPreset = 'hardcoded' | 'low-confidence' | 'missing-translations' | 'critical-hazards';
 
@@ -59,11 +78,12 @@ const STRING_PRESET_LABELS: Record<StringPreset, string> = {
   'critical-hazards': 'Critical Hazards',
 };
 
-type TranslationPreset = 'low-confidence' | 'needs-review' | 'missing-translations' | 'expansion-warnings';
+type TranslationPreset = 'low-confidence' | 'needs-review' | 'qa-failures' | 'missing-translations' | 'expansion-warnings';
 
 const TRANSLATION_PRESET_LABELS: Record<TranslationPreset, string> = {
   'low-confidence': 'Low Confidence',
   'needs-review': 'Needs Review',
+  'qa-failures': 'QA',
   'missing-translations': 'Missing Translations',
   'expansion-warnings': 'Expansion Warnings',
 };
@@ -72,16 +92,17 @@ const TRANSLATION_PRESET_LABELS: Record<TranslationPreset, string> = {
 
 export function LocalizationPipelineView() {
   const config = useLocalizationPipelineStore((s) => s.config);
-  const supportedLocales = useLocalizationPipelineStore((s) => s.supportedLocales) ?? EMPTY_STRINGS;
   const scanResult = useLocalizationPipelineStore((s) => s.scanResult);
-  const strings = useLocalizationPipelineStore((s) => s.strings) ?? EMPTY_STRINGS;
-  const hazards = useLocalizationPipelineStore((s) => s.hazards) ?? EMPTY_HAZARDS;
-  const entries = useLocalizationPipelineStore((s) => s.entries) ?? EMPTY_ENTRIES;
-  const reviewRequired = useLocalizationPipelineStore((s) => s.reviewRequired) ?? EMPTY_ENTRIES;
-  const progress = useLocalizationPipelineStore((s) => s.progress) ?? EMPTY_PROGRESS;
-  const expansionIssues = useLocalizationPipelineStore((s) => s.expansionIssues) ?? EMPTY_PROGRESS;
-  const replacements = useLocalizationPipelineStore((s) => s.replacements) ?? EMPTY_REPLACEMENTS;
-  const stringTables = useLocalizationPipelineStore((s) => s.stringTables) ?? EMPTY_TABLES;
+  const strings = useLocalizationPipelineStore((s) => s.strings);
+  const hazards = useLocalizationPipelineStore((s) => s.hazards);
+  const entries = useLocalizationPipelineStore((s) => s.entries);
+  const reviewRequired = useLocalizationPipelineStore((s) => s.reviewRequired);
+  const progress = useLocalizationPipelineStore((s) => s.progress);
+  const expansionIssues = useLocalizationPipelineStore((s) => s.expansionIssues);
+  const qaFindings = useLocalizationPipelineStore((s) => s.qaFindings);
+  const qaByLocale = useLocalizationPipelineStore((s) => s.qaByLocale);
+  const replacements = useLocalizationPipelineStore((s) => s.replacements);
+  const stringTables = useLocalizationPipelineStore((s) => s.stringTables);
   const isLoading = useLocalizationPipelineStore((s) => s.isLoading);
   const error = useLocalizationPipelineStore((s) => s.error);
   const fetchDefaults = useLocalizationPipelineStore((s) => s.fetchDefaults);
@@ -120,6 +141,14 @@ export function LocalizationPipelineView() {
     return ids;
   }, [entries]);
 
+  // Keys (`stringId:locale`) of entries with at least one QA finding — powers the
+  // "QA" preset chip on the Translations tab.
+  const qaFailedEntryKeys = useMemo(() => {
+    const keys = new Set<string>();
+    for (const f of qaFindings) keys.add(`${f.stringId}:${f.locale}`);
+    return keys;
+  }, [qaFindings]);
+
   // Filtered strings
   const filteredStrings = useMemo(() => {
     let result = strings;
@@ -136,7 +165,7 @@ export function LocalizationPipelineView() {
       result = result.filter((s) => s.currentUsage === 'hardcoded');
     }
     if (stringPresets.has('low-confidence')) {
-      result = result.filter((s) => s.detectionConfidence < 0.7);
+      result = result.filter((s) => s.detectionConfidence < LOW_CONFIDENCE);
     }
     if (stringPresets.has('missing-translations')) {
       result = result.filter((s) => !translatedStringIds.has(s.id));
@@ -161,10 +190,13 @@ export function LocalizationPipelineView() {
       result = result.filter((e) => matchIds.has(e.stringId));
     }
     if (translationPresets.has('low-confidence')) {
-      result = result.filter((e) => e.confidence < 0.7);
+      result = result.filter((e) => e.confidence < LOW_CONFIDENCE);
     }
     if (translationPresets.has('needs-review')) {
       result = result.filter((e) => e.status === 'needs_review');
+    }
+    if (translationPresets.has('qa-failures')) {
+      result = result.filter((e) => qaFailedEntryKeys.has(`${e.stringId}:${e.locale}`));
     }
     if (translationPresets.has('missing-translations')) {
       result = result.filter((e) => e.status === 'pending');
@@ -173,7 +205,7 @@ export function LocalizationPipelineView() {
       result = result.filter((e) => e.expansionWarning);
     }
     return result;
-  }, [entries, localeFilter, searchQuery, strings, translationPresets]);
+  }, [entries, localeFilter, searchQuery, strings, translationPresets, qaFailedEntryKeys]);
 
   // Summary stats
   const totalStrings = scanResult?.totalStringsFound ?? 0;
@@ -190,7 +222,7 @@ export function LocalizationPipelineView() {
     : 0;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6" style={focusRingStyle(ACCENT_INDIGO)}>
       {/* Header */}
       <div className="flex items-start justify-between">
         <div className="flex items-center gap-3">
@@ -199,7 +231,7 @@ export function LocalizationPipelineView() {
           </div>
           <div>
             <h2 className="text-base font-semibold text-text">Localization Pipeline</h2>
-            <p className="text-2xs text-text-muted mt-0.5">
+            <p className={`${TEXT_SCALE.body} text-text-muted mt-0.5`}>
               Scan for hardcoded strings, generate LOCTEXT macros, and produce context-aware translations
             </p>
           </div>
@@ -217,7 +249,7 @@ export function LocalizationPipelineView() {
       {/* Error */}
       {error && (
         <SurfaceCard level={2}>
-          <div className="flex items-center gap-2 text-red-400">
+          <div className="flex items-center gap-2" style={{ color: SEVERITY_TOKENS.critical.color }}>
             <XCircle className="w-4 h-4 shrink-0" />
             <span className="text-xs">{error}</span>
           </div>
@@ -228,21 +260,22 @@ export function LocalizationPipelineView() {
       {scanResult && (
         <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 gap-3">
           <MiniStat label="Total Strings" value={totalStrings} />
-          <MiniStat label="Hardcoded" value={hardcoded + ftextCount} accent="text-red-400" />
-          <MiniStat label="Localized" value={localizedCount} accent="text-emerald-400" />
-          <MiniStat label="Hazards" value={hazards.length} accent={criticalHazards > 0 ? 'text-amber-400' : undefined} />
+          <MiniStat label="Hardcoded" value={hardcoded + ftextCount} accentColor={STATUS_ERROR} />
+          <MiniStat label="Localized" value={localizedCount} accentColor={ACCENT_EMERALD} />
+          <MiniStat label="Hazards" value={hazards.length} accentColor={criticalHazards > 0 ? STATUS_WARNING : undefined} />
           <MiniStat label="Locales" value={config?.targetLocales.length ?? 0} />
-          <MiniStat label="Translation" value={`${avgProgress}%`} accent="text-indigo-400" />
+          <MiniStat label="Translation" value={`${avgProgress}%`} accentColor={ACCENT_INDIGO} />
         </div>
       )}
 
       {/* Sub-tab navigation */}
       {scanResult && (
-        <div className="flex items-center gap-1 border-b border-border">
+        <div role="tablist" aria-label="Localization views" className="flex items-center gap-1 border-b border-border">
           <SubTab label="Overview" active={viewTab === 'overview'} onClick={() => setViewTab('overview')} />
           <SubTab label="Strings" active={viewTab === 'strings'} onClick={() => setViewTab('strings')} count={totalStrings} />
           <SubTab label="Translations" active={viewTab === 'translations'} onClick={() => setViewTab('translations')} count={entries.length} />
           <SubTab label="Hazards" active={viewTab === 'hazards'} onClick={() => setViewTab('hazards')} count={hazards.length} />
+          <SubTab label="QA" active={viewTab === 'qa'} onClick={() => setViewTab('qa')} count={qaFindings.length} />
           <SubTab label="String Tables" active={viewTab === 'tables'} onClick={() => setViewTab('tables')} count={stringTables.length} />
         </div>
       )}
@@ -253,7 +286,7 @@ export function LocalizationPipelineView() {
           <div className="text-center py-10">
             <Globe className="w-10 h-10 text-text-muted mx-auto mb-3 opacity-40" />
             <p className="text-sm text-text-muted mb-1">No scan results yet</p>
-            <p className="text-2xs text-text-muted">
+            <p className={`${TEXT_SCALE.body} text-text-muted`}>
               Click &quot;Run Full Pipeline&quot; to scan your generated code for hardcoded strings,
               detect localization hazards, and generate translations.
             </p>
@@ -277,14 +310,14 @@ export function LocalizationPipelineView() {
           {/* Readiness gauge */}
           <SurfaceCard>
             <div className="flex items-center gap-6">
-              <ProgressRing value={locReadiness} size={72} strokeWidth={6} color="#818cf8" />
+              <ProgressRing value={locReadiness} size={72} strokeWidth={6} color={ACCENT_INDIGO} />
               <div>
-                <p className="text-sm font-semibold text-text">Localization Readiness</p>
-                <p className="text-2xs text-text-muted mt-0.5">
+                <p className={SCALE.title}>Localization Readiness</p>
+                <p className={`${TEXT_SCALE.body} text-text-muted mt-0.5`}>
                   {localizedCount} of {totalStrings} strings use NSLOCTEXT/LOCTEXT macros
                 </p>
                 {hardcoded > 0 && (
-                  <p className="text-2xs text-red-400 mt-1">
+                  <p className={`${TEXT_SCALE.meta} mt-1`} style={{ color: STATUS_ERROR }}>
                     {hardcoded} hardcoded + {ftextCount} FText::FromString need conversion
                   </p>
                 )}
@@ -295,7 +328,7 @@ export function LocalizationPipelineView() {
           {/* Translation progress per locale */}
           {Object.keys(progress).length > 0 && (
             <SurfaceCard>
-              <h3 className="text-xs font-semibold text-text mb-3 flex items-center gap-1.5">
+              <h3 className={`${SCALE.title} mb-3 flex items-center gap-1.5`}>
                 <Languages className="w-3.5 h-3.5 text-indigo-400" />
                 Translation Progress by Locale
               </h3>
@@ -323,6 +356,7 @@ export function LocalizationPipelineView() {
                       {expIssues > 0 && (
                         <Badge variant="warning">{expIssues} exp</Badge>
                       )}
+                      {qaByLocale[locale] && <ReadyToShipBadge status={qaByLocale[locale]} />}
                     </div>
                   );
                 })}
@@ -332,11 +366,11 @@ export function LocalizationPipelineView() {
 
           {/* Expansion factor comparison */}
           <SurfaceCard>
-            <h3 className="text-xs font-semibold text-text mb-3 flex items-center gap-1.5">
+            <h3 className={`${SCALE.title} mb-3 flex items-center gap-1.5`}>
               <Globe className="w-3.5 h-3.5 text-indigo-400" />
               Text Expansion by Locale
             </h3>
-            <p className="text-2xs text-text-muted mb-3">
+            <p className={`${TEXT_SCALE.body} text-text-muted mb-3`}>
               How much longer (or shorter) translated text is compared to English. Higher values risk UI overflow.
             </p>
             <ExpansionFactorBars />
@@ -344,21 +378,21 @@ export function LocalizationPipelineView() {
 
           {/* Module breakdown */}
           <SurfaceCard>
-            <h3 className="text-xs font-semibold text-text mb-3 flex items-center gap-1.5">
+            <h3 className={`${SCALE.title} mb-3 flex items-center gap-1.5`}>
               <BookOpen className="w-3.5 h-3.5 text-indigo-400" />
               Module Breakdown
             </h3>
             <div className="grid grid-cols-2 lg:grid-cols-3 gap-2">
               {Object.entries(scanResult.moduleBreakdown).map(([mod, data]) => (
                 <div key={mod} className="rounded-lg border border-border p-2.5">
-                  <p className="text-2xs font-medium text-text truncate">{mod}</p>
+                  <p className={`${TEXT_SCALE.meta} font-medium text-text truncate`}>{mod}</p>
                   <div className="flex items-center gap-2 mt-1">
-                    <span className="text-2xs text-text-muted">{data.total} strings</span>
+                    <span className={SCALE.meta}>{data.total} strings</span>
                     {data.hardcoded > 0 && (
-                      <span className="text-2xs text-red-400">{data.hardcoded} hardcoded</span>
+                      <span className={TEXT_SCALE.meta} style={{ color: STATUS_ERROR }}>{data.hardcoded} hardcoded</span>
                     )}
                     {data.localized > 0 && (
-                      <span className="text-2xs text-emerald-400">{data.localized} loc</span>
+                      <span className={TEXT_SCALE.meta} style={{ color: ACCENT_EMERALD }}>{data.localized} loc</span>
                     )}
                   </div>
                 </div>
@@ -369,7 +403,7 @@ export function LocalizationPipelineView() {
           {/* LOCTEXT replacements preview */}
           {replacements.length > 0 && (
             <SurfaceCard>
-              <h3 className="text-xs font-semibold text-text mb-3 flex items-center gap-1.5">
+              <h3 className={`${SCALE.title} mb-3 flex items-center gap-1.5`}>
                 <ArrowRight className="w-3.5 h-3.5 text-indigo-400" />
                 LOCTEXT Replacement Suggestions ({replacements.length})
               </h3>
@@ -394,8 +428,10 @@ export function LocalizationPipelineView() {
           {/* Filters */}
           <div className="flex items-center gap-2">
             <div className="relative flex-1">
-              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-text-muted" />
+              <label htmlFor="loc-strings-search" className="sr-only">Search strings by source text or key</label>
+              <Search aria-hidden="true" className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-text-muted" />
               <input
+                id="loc-strings-search"
                 type="text"
                 placeholder="Search strings..."
                 value={searchQuery}
@@ -408,7 +444,9 @@ export function LocalizationPipelineView() {
                 </span>
               )}
             </div>
+            <label htmlFor="loc-strings-context" className="sr-only">Filter strings by context</label>
             <select
+              id="loc-strings-context"
               value={contextFilter}
               onChange={(e) => setContextFilter(e.target.value as StringContext | 'all')}
               className="px-2 py-1.5 rounded-md border border-border bg-surface text-xs text-text focus:outline-none"
@@ -474,8 +512,10 @@ export function LocalizationPipelineView() {
           {/* Filters */}
           <div className="flex items-center gap-2">
             <div className="relative flex-1">
-              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-text-muted" />
+              <label htmlFor="loc-translations-search" className="sr-only">Search translations by source text</label>
+              <Search aria-hidden="true" className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-text-muted" />
               <input
+                id="loc-translations-search"
                 type="text"
                 placeholder="Search source text..."
                 value={searchQuery}
@@ -488,7 +528,9 @@ export function LocalizationPipelineView() {
                 </span>
               )}
             </div>
+            <label htmlFor="loc-translations-locale" className="sr-only">Filter translations by locale</label>
             <select
+              id="loc-translations-locale"
               value={localeFilter}
               onChange={(e) => setLocaleFilter(e.target.value)}
               className="px-2 py-1.5 rounded-md border border-border bg-surface text-xs text-text focus:outline-none"
@@ -547,7 +589,7 @@ export function LocalizationPipelineView() {
           {hazards.length === 0 ? (
             <SurfaceCard>
               <div className="text-center py-10">
-                <CheckCircle2 className="w-8 h-8 text-emerald-400 mx-auto mb-2" />
+                <CheckCircle2 className="w-8 h-8 mx-auto mb-2" style={{ color: ACCENT_EMERALD }} />
                 <p className="text-sm text-text">No localization hazards detected</p>
               </div>
             </SurfaceCard>
@@ -566,6 +608,16 @@ export function LocalizationPipelineView() {
             </>
           )}
         </div>
+      )}
+
+      {/* ── QA Tab ───────────────────────────────────────────────────── */}
+      {scanResult && viewTab === 'qa' && (
+        <QATab
+          findings={qaFindings}
+          byLocale={qaByLocale}
+          targetLocales={config?.targetLocales ?? []}
+          hasTranslations={entries.length > 0}
+        />
       )}
 
       {/* ── String Tables Tab ────────────────────────────────────────── */}
@@ -594,8 +646,11 @@ export function LocalizationPipelineView() {
 function SubTab({ label, active, onClick, count }: { label: string; active: boolean; onClick: () => void; count?: number }) {
   return (
     <button
+      type="button"
+      role="tab"
+      aria-selected={active}
       onClick={onClick}
-      className={`flex items-center gap-1.5 px-3 py-2 text-xs font-medium transition-colors relative ${
+      className={`flex items-center gap-1.5 px-3 py-2 text-xs font-medium transition-colors relative rounded-t ${FOCUS_RING_CLASS} ${
         active ? 'text-text' : 'text-text-muted hover:text-text'
       }`}
     >
@@ -632,31 +687,37 @@ function PresetChip({ label, active, onClick }: { label: string; active: boolean
   );
 }
 
-function MiniStat({ label, value, accent }: { label: string; value: number | string; accent?: string }) {
+function MiniStat({ label, value, accentColor }: { label: string; value: number | string; accentColor?: string }) {
   return (
     <SurfaceCard level={2} className="min-w-0">
-      <p className="text-2xs text-text-muted truncate">{label}</p>
-      <p className={`text-lg font-bold truncate ${accent ?? 'text-text'}`}>{value}</p>
+      <p className={`${SCALE.meta} truncate`}>{label}</p>
+      <p
+        className={`text-lg font-bold truncate ${accentColor ? '' : 'text-text'}`}
+        style={accentColor ? { color: accentColor } : undefined}
+      >
+        {value}
+      </p>
     </SurfaceCard>
   );
 }
 
 function StringCard({ str }: { str: LocalizableString }) {
   const [expanded, setExpanded] = useState(false);
-  const usageColor =
-    str.currentUsage === 'nsloctext' || str.currentUsage === 'loctext'
-      ? 'text-emerald-400'
-      : str.currentUsage === 'hardcoded'
-        ? 'text-red-400'
-        : 'text-amber-400';
+  const panelId = `loc-string-${str.id}`;
 
   return (
     <SurfaceCard level={2}>
-      <div className="flex items-start gap-2 cursor-pointer" onClick={() => setExpanded(!expanded)}>
-        {expanded ? <ChevronDown className="w-3.5 h-3.5 text-text-muted mt-0.5 shrink-0" /> : <ChevronRight className="w-3.5 h-3.5 text-text-muted mt-0.5 shrink-0" />}
+      <button
+        type="button"
+        onClick={() => setExpanded(!expanded)}
+        aria-expanded={expanded}
+        aria-controls={panelId}
+        className={`flex items-start gap-2 w-full text-left rounded-md ${FOCUS_RING_CLASS}`}
+      >
+        {expanded ? <ChevronDown aria-hidden="true" className="w-3.5 h-3.5 text-text-muted mt-0.5 shrink-0" /> : <ChevronRight aria-hidden="true" className="w-3.5 h-3.5 text-text-muted mt-0.5 shrink-0" />}
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2">
-            <span className="text-xs font-medium text-text truncate">&quot;{str.sourceText}&quot;</span>
+            <span className={`${SCALE.body} font-medium truncate`}>&quot;{str.sourceText}&quot;</span>
             <Badge variant={str.currentUsage === 'nsloctext' || str.currentUsage === 'loctext' ? 'success' : str.currentUsage === 'hardcoded' ? 'error' : 'warning'}>
               {str.currentUsage}
             </Badge>
@@ -670,10 +731,11 @@ function StringCard({ str }: { str: LocalizableString }) {
           </div>
         </div>
         <span className="text-2xs text-text-muted shrink-0">{Math.round(str.detectionConfidence * 100)}%</span>
-      </div>
+      </button>
       <AnimatePresence>
         {expanded && (
           <motion.div
+            id={panelId}
             initial={{ height: 0, opacity: 0 }}
             animate={{ height: 'auto', opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
@@ -709,7 +771,7 @@ function TranslationCard({ entry, sourceText }: { entry: TranslationEntry; sourc
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2">
             <span className="text-2xs font-medium text-text-muted">{locInfo?.nativeName ?? entry.locale}</span>
-            <span className={`text-2xs ${style.color}`}>{style.label}</span>
+            <span className="text-2xs" style={{ color: style.color }}>{style.label}</span>
             {entry.expansionWarning && (
               <Badge variant="warning">expansion</Badge>
             )}
@@ -742,7 +804,7 @@ function TranslationCard({ entry, sourceText }: { entry: TranslationEntry; sourc
           )}
         </div>
         <div className="flex items-center gap-1.5 shrink-0">
-          <ProgressRing value={Math.round(entry.confidence * 100)} size={28} strokeWidth={3} color={entry.confidence >= 0.85 ? ACCENT_EMERALD : STATUS_WARNING} />
+          <ProgressRing value={Math.round(entry.confidence * 100)} size={28} strokeWidth={3} color={entry.confidence >= REVIEW_GATE ? ACCENT_EMERALD : STATUS_WARNING} />
         </div>
       </div>
       {entry.charDelta !== 0 && (
@@ -757,7 +819,8 @@ function TranslationCard({ entry, sourceText }: { entry: TranslationEntry; sourc
 function HazardCard({ hazard }: { hazard: LocalizationHazard }) {
   const [expanded, setExpanded] = useState(false);
   const [copied, setCopied] = useState(false);
-  const style = SEVERITY_STYLE[hazard.severity];
+  const token = SEVERITY_TOKENS[hazard.severity];
+  const panelId = `loc-hazard-${hazard.id}`;
 
   const handleCopy = useCallback(() => {
     navigator.clipboard.writeText(hazard.fixPrompt);
@@ -767,27 +830,34 @@ function HazardCard({ hazard }: { hazard: LocalizationHazard }) {
 
   return (
     <SurfaceCard level={2}>
-      <div className={`rounded-md border ${style.border} ${style.bg} p-3`}>
-        <div className="flex items-start gap-2 cursor-pointer" onClick={() => setExpanded(!expanded)}>
+      <div className="rounded-md border p-3" style={{ backgroundColor: token.bg, borderColor: token.border }}>
+        <button
+          type="button"
+          onClick={() => setExpanded(!expanded)}
+          aria-expanded={expanded}
+          aria-controls={panelId}
+          className={`flex items-start gap-2 w-full text-left rounded ${FOCUS_RING_CLASS}`}
+        >
           {hazard.severity === 'critical' ? (
-            <ShieldAlert className={`w-4 h-4 ${style.text} shrink-0 mt-0.5`} />
+            <ShieldAlert className="w-4 h-4 shrink-0 mt-0.5" style={{ color: token.color }} />
           ) : hazard.severity === 'warning' ? (
-            <AlertTriangle className={`w-4 h-4 ${style.text} shrink-0 mt-0.5`} />
+            <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" style={{ color: token.color }} />
           ) : (
-            <Info className={`w-4 h-4 ${style.text} shrink-0 mt-0.5`} />
+            <Info className="w-4 h-4 shrink-0 mt-0.5" style={{ color: token.color }} />
           )}
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2">
-              <span className="text-xs font-medium text-text">{hazard.type.replace(/_/g, ' ')}</span>
-              <Badge variant={style.badge}>{hazard.severity}</Badge>
+              <span className={`${SCALE.body} font-medium`}>{hazard.type.replace(/_/g, ' ')}</span>
+              <Badge variant={SEVERITY_BADGE[hazard.severity]}>{hazard.severity}</Badge>
             </div>
             <p className="text-2xs text-text-muted mt-0.5">{hazard.description}</p>
           </div>
-          {expanded ? <ChevronDown className="w-3.5 h-3.5 text-text-muted" /> : <ChevronRight className="w-3.5 h-3.5 text-text-muted" />}
-        </div>
+          {expanded ? <ChevronDown aria-hidden="true" className="w-3.5 h-3.5 text-text-muted" /> : <ChevronRight aria-hidden="true" className="w-3.5 h-3.5 text-text-muted" />}
+        </button>
         <AnimatePresence>
           {expanded && (
             <motion.div
+              id={panelId}
               initial={{ height: 0, opacity: 0 }}
               animate={{ height: 'auto', opacity: 1 }}
               exit={{ height: 0, opacity: 0 }}
@@ -807,7 +877,7 @@ function HazardCard({ hazard }: { hazard: LocalizationHazard }) {
                     onClick={handleCopy}
                     className="flex items-center gap-1 px-2 py-1 rounded text-2xs bg-surface hover:bg-surface-2 text-text-muted transition-colors"
                   >
-                    {copied ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
+                    {copied ? <Check className="w-3 h-3" style={{ color: ACCENT_EMERALD }} /> : <Copy className="w-3 h-3" />}
                     {copied ? 'Copied!' : 'Copy fix prompt'}
                   </button>
                 </div>
@@ -820,7 +890,197 @@ function HazardCard({ hazard }: { hazard: LocalizationHazard }) {
   );
 }
 
-function ReplacementCard({ replacement }: { replacement: { stringId: string; originalCode: string; suggestedCode: string } }) {
+/* ── Translation QA ─────────────────────────────────────────────────────── */
+
+/**
+ * Per-locale "ready to ship" gate. Green only when the locale has translations
+ * and zero blocking (critical/warning) QA findings; amber with a fix count
+ * otherwise. Mirrors the memoQ/Lokalise "clean QA run" ship gate.
+ */
+function ReadyToShipBadge({ status }: { status: LocaleQAStatus }) {
+  if (status.totalEntries === 0) {
+    return <Badge variant="default">no data</Badge>;
+  }
+  if (status.readyToShip) {
+    return (
+      <Badge variant="success">
+        <span className="inline-flex items-center gap-1">
+          <ShieldCheck aria-hidden="true" className="w-3 h-3" />
+          ready to ship
+        </span>
+      </Badge>
+    );
+  }
+  return (
+    <Badge variant="warning">
+      {status.blockingCount} to fix
+    </Badge>
+  );
+}
+
+function QATab({
+  findings,
+  byLocale,
+  targetLocales,
+  hasTranslations,
+}: {
+  findings: TranslationQAFinding[];
+  byLocale: Record<string, LocaleQAStatus>;
+  targetLocales: string[];
+  hasTranslations: boolean;
+}) {
+  const criticalCount = findings.filter((f) => f.severity === 'critical').length;
+  const warningCount = findings.filter((f) => f.severity === 'warning').length;
+  const infoCount = findings.filter((f) => f.severity === 'info').length;
+
+  if (!hasTranslations) {
+    return (
+      <SurfaceCard>
+        <div className="text-center py-10">
+          <ShieldCheck className="w-8 h-8 text-text-muted mx-auto mb-2 opacity-40" />
+          <p className="text-sm text-text-muted mb-1">No translations to validate yet</p>
+          <p className={`${TEXT_SCALE.body} text-text-muted`}>
+            Run the pipeline to translate strings — QA then checks each result for dropped
+            placeholders, number drift, untranslated segments, and glossary compliance.
+          </p>
+        </div>
+      </SurfaceCard>
+    );
+  }
+
+  return (
+    <div className="space-y-4">
+      {/* Per-locale ready-to-ship gate */}
+      <SurfaceCard>
+        <h3 className={`${SCALE.title} mb-3 flex items-center gap-1.5`}>
+          <ShieldCheck className="w-3.5 h-3.5 text-indigo-400" />
+          Ready to Ship by Locale
+        </h3>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
+          {targetLocales.map((code) => {
+            const status = byLocale[code];
+            const locInfo = SUPPORTED_LOCALES.find((l) => l.code === code);
+            return (
+              <div key={code} className="flex items-center justify-between gap-2 rounded-lg border border-border p-2.5">
+                <span className="text-2xs font-medium text-text truncate">{locInfo?.nativeName ?? code}</span>
+                {status ? <ReadyToShipBadge status={status} /> : <Badge variant="default">no data</Badge>}
+              </div>
+            );
+          })}
+        </div>
+      </SurfaceCard>
+
+      {/* Findings */}
+      {findings.length === 0 ? (
+        <SurfaceCard>
+          <div className="text-center py-10">
+            <CheckCircle2 className="w-8 h-8 mx-auto mb-2" style={{ color: ACCENT_EMERALD }} />
+            <p className="text-sm text-text">All translations passed QA</p>
+            <p className="text-2xs text-text-muted mt-1">Every locale is clear to ship.</p>
+          </div>
+        </SurfaceCard>
+      ) : (
+        <>
+          <div className="flex items-center gap-2 flex-wrap">
+            <Badge variant="error">{criticalCount} critical</Badge>
+            <Badge variant="warning">{warningCount} warnings</Badge>
+            <Badge variant="default">{infoCount} info</Badge>
+          </div>
+          <div className="space-y-2 max-h-[60vh] overflow-y-auto">
+            {findings.map((f) => (
+              <QAFindingCard key={f.id} finding={f} />
+            ))}
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
+function QAFindingCard({ finding }: { finding: TranslationQAFinding }) {
+  const [expanded, setExpanded] = useState(false);
+  const [copied, setCopied] = useState(false);
+  const token = SEVERITY_TOKENS[finding.severity];
+  const meta = QA_CHECKS[finding.check];
+  const locInfo = SUPPORTED_LOCALES.find((l) => l.code === finding.locale);
+  const panelId = `loc-qa-${finding.id}`;
+
+  const handleCopy = useCallback(() => {
+    navigator.clipboard.writeText(finding.fixPrompt);
+    setCopied(true);
+    setTimeout(() => setCopied(false), UI_TIMEOUTS.copyFeedback);
+  }, [finding.fixPrompt]);
+
+  return (
+    <SurfaceCard level={2}>
+      <div className="rounded-md border p-3" style={{ backgroundColor: token.bg, borderColor: token.border }}>
+        <button
+          type="button"
+          onClick={() => setExpanded(!expanded)}
+          aria-expanded={expanded}
+          aria-controls={panelId}
+          className={`flex items-start gap-2 w-full text-left rounded ${FOCUS_RING_CLASS}`}
+        >
+          {finding.severity === 'critical' ? (
+            <ShieldAlert className="w-4 h-4 shrink-0 mt-0.5" style={{ color: token.color }} />
+          ) : finding.severity === 'warning' ? (
+            <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" style={{ color: token.color }} />
+          ) : (
+            <Info className="w-4 h-4 shrink-0 mt-0.5" style={{ color: token.color }} />
+          )}
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className={`${SCALE.body} font-medium`}>{meta.label}</span>
+              <Badge variant={SEVERITY_BADGE[finding.severity]}>{finding.severity}</Badge>
+              <span className="text-2xs text-text-muted">{locInfo?.nativeName ?? finding.locale}</span>
+            </div>
+            <p className="text-2xs text-text-muted mt-0.5">{finding.message}</p>
+          </div>
+          {expanded ? <ChevronDown aria-hidden="true" className="w-3.5 h-3.5 text-text-muted" /> : <ChevronRight aria-hidden="true" className="w-3.5 h-3.5 text-text-muted" />}
+        </button>
+        <AnimatePresence>
+          {expanded && (
+            <motion.div
+              id={panelId}
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: 'auto', opacity: 1 }}
+              exit={{ height: 0, opacity: 0 }}
+              className="overflow-hidden"
+            >
+              <div className="mt-2 pt-2 border-t border-border/50 space-y-2">
+                <div>
+                  <p className="text-2xs font-medium text-text mb-1">Source:</p>
+                  <p dir="ltr" className="text-2xs text-text-muted">&quot;{finding.sourceText}&quot;</p>
+                </div>
+                <div>
+                  <p className="text-2xs font-medium text-text mb-1">Translation:</p>
+                  <p dir={locInfo?.direction ?? 'ltr'} lang={finding.locale} className="text-2xs text-text-muted">
+                    &quot;{finding.translatedText}&quot;
+                  </p>
+                </div>
+                <div>
+                  <p className="text-2xs font-medium text-text mb-1">Suggestion:</p>
+                  <p className="text-2xs text-text-muted">{finding.suggestion}</p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={handleCopy}
+                    className="flex items-center gap-1 px-2 py-1 rounded text-2xs bg-surface hover:bg-surface-2 text-text-muted transition-colors"
+                  >
+                    {copied ? <Check className="w-3 h-3" style={{ color: ACCENT_EMERALD }} /> : <Copy className="w-3 h-3" />}
+                    {copied ? 'Copied!' : 'Copy fix prompt'}
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
+    </SurfaceCard>
+  );
+}
+
+function ReplacementCard({ replacement }: { replacement: LOCTEXTReplacementSuggestion }) {
   const [copied, setCopied] = useState(false);
 
   const handleCopy = useCallback(() => {
@@ -833,19 +1093,19 @@ function ReplacementCard({ replacement }: { replacement: { stringId: string; ori
     <div className="rounded-md border border-border p-2.5">
       <div className="flex items-center gap-1.5 mb-1.5">
         <ArrowRight className="w-3 h-3 text-indigo-400" />
-        <span className="text-2xs font-medium text-text">LOCTEXT Replacement</span>
+        <span className={`${TEXT_SCALE.meta} font-medium text-text`}>LOCTEXT Replacement</span>
       </div>
-      <pre className="text-xs leading-relaxed p-1.5 rounded bg-status-red-subtle text-red-300 overflow-x-auto mb-1">
+      <pre className="text-xs leading-relaxed p-1.5 rounded bg-status-red-subtle overflow-x-auto mb-1" style={{ color: STATUS_ERROR }}>
         - {replacement.originalCode}
       </pre>
-      <pre className="text-xs leading-relaxed p-1.5 rounded bg-emerald-500/5 text-emerald-300 overflow-x-auto mb-1">
+      <pre className="text-xs leading-relaxed p-1.5 rounded bg-status-green-subtle overflow-x-auto mb-1" style={{ color: ACCENT_EMERALD }}>
         + {replacement.suggestedCode}
       </pre>
       <button
         onClick={handleCopy}
         className="flex items-center gap-1 px-2 py-0.5 rounded text-2xs bg-surface hover:bg-surface-2 text-text-muted transition-colors"
       >
-        {copied ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
+        {copied ? <Check className="w-3 h-3" style={{ color: ACCENT_EMERALD }} /> : <Copy className="w-3 h-3" />}
         {copied ? 'Copied!' : 'Copy suggested'}
       </button>
     </div>
@@ -911,6 +1171,7 @@ function ExpansionFactorBars() {
 function StringTableCard({ table }: { table: StringTable }) {
   const [expanded, setExpanded] = useState(false);
   const [copied, setCopied] = useState(false);
+  const panelId = `loc-table-${table.tableId}`;
 
   const csvContent = useMemo(() => {
     const header = 'Key,SourceString,Comment';
@@ -926,28 +1187,36 @@ function StringTableCard({ table }: { table: StringTable }) {
 
   return (
     <SurfaceCard>
-      <div className="flex items-center justify-between cursor-pointer" onClick={() => setExpanded(!expanded)}>
-        <div className="flex items-center gap-2">
-          <Table2 className="w-4 h-4 text-indigo-400" />
-          <div>
-            <p className="text-xs font-medium text-text">{table.tableId}</p>
-            <p className="text-2xs text-text-muted">{table.namespace} — {table.rows.length} entries</p>
+      <div className="flex items-center justify-between gap-2">
+        <button
+          type="button"
+          onClick={() => setExpanded(!expanded)}
+          aria-expanded={expanded}
+          aria-controls={panelId}
+          className={`flex items-center gap-2 flex-1 min-w-0 text-left rounded ${FOCUS_RING_CLASS}`}
+        >
+          <Table2 aria-hidden="true" className="w-4 h-4 text-indigo-400 shrink-0" />
+          <div className="min-w-0">
+            <p className="text-xs font-medium text-text truncate">{table.tableId}</p>
+            <p className="text-2xs text-text-muted truncate">{table.namespace} — {table.rows.length} entries</p>
           </div>
-        </div>
-        <div className="flex items-center gap-2">
+        </button>
+        <div className="flex items-center gap-2 shrink-0">
           <button
-            onClick={(e) => { e.stopPropagation(); handleCopy(); }}
+            type="button"
+            onClick={handleCopy}
             className="flex items-center gap-1 px-2 py-1 rounded text-2xs bg-surface-2 hover:bg-surface text-text-muted transition-colors"
           >
-            {copied ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
+            {copied ? <Check className="w-3 h-3" style={{ color: ACCENT_EMERALD }} /> : <Copy className="w-3 h-3" />}
             {copied ? 'Copied!' : 'Copy CSV'}
           </button>
-          {expanded ? <ChevronDown className="w-3.5 h-3.5 text-text-muted" /> : <ChevronRight className="w-3.5 h-3.5 text-text-muted" />}
+          {expanded ? <ChevronDown aria-hidden="true" className="w-3.5 h-3.5 text-text-muted" /> : <ChevronRight aria-hidden="true" className="w-3.5 h-3.5 text-text-muted" />}
         </div>
       </div>
       <AnimatePresence>
         {expanded && (
           <motion.div
+            id={panelId}
             initial={{ height: 0, opacity: 0 }}
             animate={{ height: 'auto', opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}

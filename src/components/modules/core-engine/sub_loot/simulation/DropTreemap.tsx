@@ -3,10 +3,11 @@
 import { useState, useMemo } from 'react';
 import { BarChart3 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { OPACITY_20, GLOW_MD, withOpacity } from '@/lib/chart-colors';
+import { GLOW_MD } from '@/lib/chart-colors';
 import { ACCENT, TREEMAP_DATA } from '../_shared/data';
 import { computeTreemapLayout } from '../_shared/math';
 import { BlueprintPanel, SectionHeader } from '../_shared/design';
+import { RarityBadge } from '../_shared/rarityBadge';
 
 /* Pre-compute name→data map to avoid repeated .find() in render */
 const TREEMAP_MAP = new Map(TREEMAP_DATA.map(d => [d.name, d]));
@@ -80,9 +81,7 @@ export function DropTreemap() {
                 </div>
                 <div className="flex flex-wrap gap-1">
                   {drillData.affixes.map((affix) => (
-                    <span key={affix} className="text-2xs font-mono px-1.5 py-0.5 rounded" style={{ backgroundColor: withOpacity(drillData.color, OPACITY_20), color: drillData.color }}>
-                      {affix}
-                    </span>
+                    <RarityBadge key={affix} rarity={treemapDrill}>{affix}</RarityBadge>
                   ))}
                 </div>
               </div>

@@ -48,6 +48,9 @@ export const ACCENT_EMERALD = '#34d399';
 /** Cyan — interactive, event bus, economy systems */
 export const ACCENT_CYAN = '#06b6d4';
 
+/** Indigo-400 — localization readiness, neutral progress / pass-rate accent */
+export const ACCENT_INDIGO = '#818cf8';
+
 /** Pink — UI flow, menu navigation, creative accent */
 export const ACCENT_PINK = '#f472b6';
 
@@ -59,6 +62,9 @@ export const ACCENT_RED = '#ef4444';
 
 /** Purple-500 — vivid purple for abilities, arcane, spellcasting */
 export const ACCENT_PURPLE_BOLD = '#a855f7';
+
+/** Rose-400 — crash analysis, diagnostics; pairs with the rose/orange header tile */
+export const ACCENT_ROSE = '#fb7185';
 
 /** Green-500 — vivid green for healing, rogue, ready/available */
 export const ACCENT_GREEN = '#22c55e';
@@ -77,6 +83,15 @@ export const OVERLAY_BLACK = '#000000';
 
 /** Vivid blue used for primary action button glows (matches Tailwind blue-600). */
 export const ACCENT_BLUE_BOLD = '#2563eb';
+
+/**
+ * Subtle text tier — the AA-compliant (≥4.5:1) de-emphasized label color on the
+ * dark app surface (#0a0a16). Use instead of `text-text-muted/40–/70` opacity
+ * hacks, which fall below WCAG AA. Mirrors `--text-subtle` in globals.css; the
+ * lab themes override the CSS var with their own AA-safe value (lab-tokens.css).
+ * The shared `MicroLabel` primitive renders text in this tier.
+ */
+export const TEXT_SUBTLE = '#7e84a8';
 
 // ── Opacity helpers — append to any hex color ───────────────────────────────
 //
@@ -274,6 +289,28 @@ export const HEATMAP_STEP_5 = '#065f46';
 
 const HEATMAP_STOPS = [HEATMAP_STEP_1, HEATMAP_STEP_2, HEATMAP_STEP_3, HEATMAP_STEP_4, HEATMAP_STEP_5];
 
+/**
+ * Linearly interpolate between two `#rrggbb` hex colors (`t` clamped to 0..1).
+ * Single source of the channel-mixing math for every gradient/heatmap helper —
+ * use instead of hand-rolling `parseInt(hex.slice(...))` color lerps in views.
+ */
+export function lerpHexColor(from: string, to: string, t: number): string {
+  const c = Math.max(0, Math.min(1, t));
+  const channel = (hex: string, i: number) => parseInt(hex.slice(1 + i * 2, 3 + i * 2), 16);
+  const mix = (i: number) => Math.round(channel(from, i) + (channel(to, i) - channel(from, i)) * c);
+  const hex = (n: number) => n.toString(16).padStart(2, '0');
+  return `#${hex(mix(0))}${hex(mix(1))}${hex(mix(2))}`;
+}
+
+/**
+ * Three-stop hex interpolation across a low→mid→high ramp. The lower half of
+ * `t` (0..1) maps low→mid, the upper half mid→high.
+ */
+function lerp3Hex(t: number, low: string, mid: string, high: string): string {
+  const c = Math.max(0, Math.min(1, t));
+  return c < 0.5 ? lerpHexColor(low, mid, c / 0.5) : lerpHexColor(mid, high, (c - 0.5) / 0.5);
+}
+
 /** Interpolate a 0-1 value to a 5-stop heatmap color. */
 export function heatmapScale(t: number): string {
   const clamped = Math.max(0, Math.min(1, t));
@@ -281,15 +318,7 @@ export function heatmapScale(t: number): string {
   if (clamped >= 1) return HEATMAP_STOPS[4];
   const segment = clamped * 4;
   const i = Math.floor(segment);
-  const f = segment - i;
-  const from = HEATMAP_STOPS[i];
-  const to = HEATMAP_STOPS[Math.min(i + 1, 4)];
-  const r1 = parseInt(from.slice(1, 3), 16), g1 = parseInt(from.slice(3, 5), 16), b1 = parseInt(from.slice(5, 7), 16);
-  const r2 = parseInt(to.slice(1, 3), 16), g2 = parseInt(to.slice(3, 5), 16), b2 = parseInt(to.slice(5, 7), 16);
-  const r = Math.round(r1 + (r2 - r1) * f);
-  const g = Math.round(g1 + (g2 - g1) * f);
-  const b = Math.round(b1 + (b2 - b1) * f);
-  return `#${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${b.toString(16).padStart(2, '0')}`;
+  return lerpHexColor(HEATMAP_STOPS[i], HEATMAP_STOPS[Math.min(i + 1, 4)], segment - i);
 }
 
 // ── Quality score color mapping ─────────────────────────────────────────────
@@ -411,6 +440,43 @@ export function scoreBandToken(score: number): SeverityToken {
   return SEVERITY_TOKENS.critical;
 }
 
+/**
+ * Calm severity-card treatment. Flooding a card with a translucent severity fill
+ * turns a long list of criticals into an anxious wall of red and flattens
+ * hierarchy. Instead, keep the card on the neutral surface (`bg-surface`) and
+ * mark severity with a slim left accent rule in the solid token color — pair the
+ * returned style with `border-l-[3px] border border-border` and reserve the color
+ * elsewhere for the leading icon and a small badge. Shared by Deep Eval findings,
+ * GDD compliance gaps, and the Codebase Archeologist so the three read identically.
+ * Returns only the left-rule color (no `backgroundColor`) — that restraint is the
+ * whole point.
+ */
+export function severityAccentCard(token: SeverityToken): { borderLeftColor: string } {
+  return { borderLeftColor: token.color };
+}
+
+// ── Pattern confidence tokens ───────────────────────────────────────────────
+//
+// Confidence levels for the Pattern Library chips. Each shares its hue with the
+// rest of the evaluator so a `proven` chip matches the verified emerald badge
+// and an `experimental` chip harmonizes with the systems-violet accent — rather
+// than the near-miss green / purple that read as a rendering bug. Drive chips via
+// inline style (`backgroundColor: token.bg`, `color: token.color`) like the
+// SEVERITY_TOKENS consumers do.
+
+export type ConfidenceLevel = 'proven' | 'promising' | 'experimental';
+
+export interface ConfidenceToken extends SeverityToken {
+  /** Human-readable chip label. */
+  label: string;
+}
+
+export const CONFIDENCE_TOKENS = {
+  proven: { ...makeSeverityToken(ACCENT_EMERALD), label: 'Proven' },        // emerald — matches verified badge
+  promising: { ...makeSeverityToken(STATUS_WARNING), label: 'Promising' },  // amber
+  experimental: { ...makeSeverityToken(ACCENT_VIOLET), label: 'Experimental' }, // violet — matches systems accent
+} as const satisfies Record<ConfidenceLevel, ConfidenceToken>;
+
 // ── Neutral base colors ──────────────────────────────────────────────────────
 
 /** Slate-500 — subdued text, secondary labels */
@@ -442,6 +508,26 @@ export const QUALITY_HEATMAP_HIGH = '#14532d';
 
 /** Dark slate — unfilled star / inactive rating indicator. */
 export const RATING_EMPTY = '#2a2a4a';
+
+/**
+ * Heatmap-cell background for a module's average quality (1-5). Un-reviewed
+ * modules (`pctReviewed === 0`) or those with no score render the neutral
+ * `--border` surface; otherwise a red→amber→green dark cell fill.
+ */
+export function qualityCellColor(avgQuality: number | null, pctReviewed: number): string {
+  if (pctReviewed === 0 || avgQuality === null) return 'var(--border)';
+  return lerp3Hex((avgQuality - 1) / 4, QUALITY_HEATMAP_LOW, QUALITY_HEATMAP_MID, QUALITY_HEATMAP_HIGH);
+}
+
+/**
+ * Foreground accent (stars, text, indicator dot) for a module's average
+ * quality (1-5), on the brighter status ramp. Falls back to `--text-muted`
+ * when the module is un-reviewed or has no score.
+ */
+export function qualityAccentColor(avgQuality: number | null, pctReviewed: number): string {
+  if (pctReviewed === 0 || avgQuality === null) return 'var(--text-muted)';
+  return lerp3Hex((avgQuality - 1) / 4, STATUS_ERROR, STATUS_WARNING, STATUS_SUCCESS);
+}
 
 // ── Item rarity colors ─────────────────────────────────────────────────
 

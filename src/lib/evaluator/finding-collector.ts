@@ -119,6 +119,37 @@ export function parseFindings(
     }));
 }
 
+// ─── Fingerprinting ──────────────────────────────────────────────────────────
+
+/** The identifying subset of a finding used to build its fingerprint. */
+type FingerprintInput = Pick<EvalFinding, 'moduleId' | 'file' | 'line' | 'description'>;
+
+/**
+ * Build a stable fingerprint for a finding from its identifying attributes.
+ *
+ * Used in two places:
+ *  - within-scan **deduplication** (`includeLine: true`) where the exact line
+ *    helps separate distinct issues in the same file, and
+ *  - cross-scan **regression diffing** (`includeLine: false`, the default) where
+ *    the line is deliberately dropped so a finding that merely shifts a few lines
+ *    between scans still matches as the same issue (the SonarQube approach), and
+ *    isn't reported as one resolved + one new.
+ */
+export function fingerprintFinding(f: FingerprintInput, opts?: { includeLine?: boolean }): string {
+  const fileKey = f.file ?? '__general__';
+  // Normalize description for fuzzy matching — lowercase, strip punctuation, first 80 chars
+  const descKey = f.description
+    .toLowerCase()
+    .replace(/[^a-z0-9 ]/g, '')
+    .slice(0, 80)
+    .trim();
+  if (opts?.includeLine) {
+    const lineKey = f.line != null ? String(f.line) : '__no_line__';
+    return `${f.moduleId}::${fileKey}::${lineKey}::${descKey}`;
+  }
+  return `${f.moduleId}::${fileKey}::${descKey}`;
+}
+
 // ─── Deduplication ───────────────────────────────────────────────────────────
 
 /**
@@ -129,16 +160,7 @@ export function deduplicateFindings(findings: EvalFinding[]): EvalFinding[] {
   const seen = new Map<string, EvalFinding>();
 
   for (const f of findings) {
-    // Create a fingerprint from the key identifying attributes
-    const fileKey = f.file ?? '__general__';
-    const lineKey = f.line != null ? String(f.line) : '__no_line__';
-    // Normalize description for fuzzy matching — lowercase, strip punctuation, first 80 chars
-    const descKey = f.description
-      .toLowerCase()
-      .replace(/[^a-z0-9 ]/g, '')
-      .slice(0, 80)
-      .trim();
-    const fingerprint = `${f.moduleId}::${fileKey}::${lineKey}::${descKey}`;
+    const fingerprint = fingerprintFinding(f, { includeLine: true });
 
     const existing = seen.get(fingerprint);
     if (existing) {

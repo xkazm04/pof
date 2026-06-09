@@ -1,5 +1,7 @@
 import { getArtifact, listDeferredArtifacts, upsertArtifact } from '@/lib/pipeline-artifacts-db';
 import { logger } from '@/lib/logger';
+import { eventBus } from '@/lib/event-bus';
+import { classifyVerdictChange } from '@/lib/notify/verdict-change';
 import { parseTestName } from './parse';
 import { resolveScenario } from './scenarioRegistry';
 import type { DrainResult, DrainSummary, GateExecutor, GateJob, GateTier } from './types';
@@ -8,6 +10,29 @@ export interface DrainFilter {
   tier?: GateTier;
   catalogId?: string;
   entityId?: string;
+}
+
+/** Coerce an arbitrary tier string to a runnable gate tier (deferred jobs are L3/L4 only). */
+export function parseTier(v: string | null | undefined): GateTier | undefined {
+  return v === 'L3' || v === 'L4' ? v : undefined;
+}
+
+/**
+ * Build a {@link DrainFilter} from a generic key getter, so the GET (searchParams),
+ * POST (JSON body), and worker handlers all parse tier/catalogId/entityId identically —
+ * a single place to extend when the filter grows a field.
+ */
+export function parseDrainFilter(
+  get: (k: 'tier' | 'catalogId' | 'entityId') => string | null | undefined,
+): DrainFilter {
+  const tier = parseTier(get('tier'));
+  const catalogId = get('catalogId');
+  const entityId = get('entityId');
+  return {
+    ...(tier ? { tier } : {}),
+    ...(catalogId ? { catalogId } : {}),
+    ...(entityId ? { entityId } : {}),
+  };
 }
 
 /** Turn the deferred `pipeline_artifacts` rows into runnable jobs. */
@@ -31,6 +56,7 @@ export function collectDeferred(filter?: DrainFilter): GateJob[] {
 export async function drainOne(job: GateJob, executor: GateExecutor): Promise<DrainResult> {
   const verdict = await executor.run(job);
   const existing = getArtifact(job.catalogId, job.entityId, job.step);
+  const from = existing?.status ?? null;
   upsertArtifact({
     catalogId: job.catalogId,
     entityId: job.entityId,
@@ -41,6 +67,24 @@ export async function drainOne(job: GateJob, executor: GateExecutor): Promise<Dr
     tier: job.tier,
     reason: verdict.detail,
   });
+
+  // Announce only real verdict moves (e.g. deferred→fail / pass→fail). Subscribers
+  // — devtools, analytics, the opt-in webhook notifier — react; the drain doesn't
+  // know or care who's listening.
+  const change = classifyVerdictChange(from, verdict.status);
+  if (change.changed) {
+    eventBus.emit('gate.verdict.changed', {
+      catalogId: job.catalogId,
+      entityId: job.entityId,
+      step: job.step,
+      tier: job.tier,
+      from,
+      to: verdict.status,
+      regression: change.regression,
+      detail: verdict.detail,
+    }, 'test-gate-runner');
+  }
+
   return { job, verdict };
 }
 

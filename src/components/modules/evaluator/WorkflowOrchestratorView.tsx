@@ -14,6 +14,7 @@ import { useTaskDAGStore } from '@/stores/taskDAGStore';
 import { MODULE_FEATURE_DEFINITIONS } from '@/lib/feature-definitions';
 import type { WorkflowTemplate, WorkflowExecution, DAGNodeState, DAGNodeStatus } from '@/types/task-dag';
 import { MOTION } from '@/lib/constants';
+import { formatDuration } from '@/lib/format';
 import type { SubModuleId } from '@/types/modules';
 
 // ── Icons for templates ──────────────────────────────────────────────────────
@@ -430,8 +431,8 @@ function ExecutionHistoryRow({ execution }: { execution: WorkflowExecution }) {
   }[execution.status as 'completed' | 'failed' | 'cancelled'] ?? { variant: 'default' as const, label: execution.status };
 
   const startDate = new Date(execution.startedAt);
-  const duration = execution.completedAt
-    ? Math.round((new Date(execution.completedAt).getTime() - startDate.getTime()) / 1000)
+  const durationMs = execution.completedAt
+    ? new Date(execution.completedAt).getTime() - startDate.getTime()
     : null;
 
   return (
@@ -441,18 +442,9 @@ function ExecutionHistoryRow({ execution }: { execution: WorkflowExecution }) {
       <span className="text-text-muted">
         {execution.completedNodes}/{execution.totalNodes}
       </span>
-      {duration !== null && (
-        <span className="text-text-muted/50">{formatDuration(duration)}</span>
+      {durationMs !== null && (
+        <span className="text-text-muted/50">{formatDuration(durationMs)}</span>
       )}
     </div>
   );
-}
-
-// ── Helpers ──────────────────────────────────────────────────────────────────
-
-function formatDuration(seconds: number): string {
-  if (seconds < 60) return `${seconds}s`;
-  const mins = Math.floor(seconds / 60);
-  const secs = seconds % 60;
-  return secs > 0 ? `${mins}m ${secs}s` : `${mins}m`;
 }

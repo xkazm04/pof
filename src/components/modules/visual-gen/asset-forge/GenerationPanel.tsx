@@ -1,16 +1,24 @@
 'use client';
 
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Send, Upload, Sparkles, Lock, Monitor } from 'lucide-react';
 import { GENERATION_PROVIDERS, type GenerationMode } from '@/lib/visual-gen/providers';
+import { composeVisualPrompt } from '@/lib/visual-gen/prompt-chips';
 import { useForgeStore } from './useForgeStore';
 import { useBlenderMCPStore } from '@/stores/blenderMCPStore';
 import { BlenderConnectionBar } from '@/components/blender-mcp/BlenderConnectionBar';
+import { PromptBuilder } from './PromptBuilder';
 
 export function GenerationPanel() {
-  const [prompt, setPrompt] = useState('');
   const [mode, setMode] = useState<GenerationMode>('text-to-3d');
   const [imageFile, setImageFile] = useState<File | null>(null);
+
+  // Prompt builder state — chips compose the real prompt under the hood.
+  const [subject, setSubject] = useState('');
+  const [selectedChipIds, setSelectedChipIds] = useState<string[]>([]);
+  const [advanced, setAdvanced] = useState(false);
+  const [rawPrompt, setRawPrompt] = useState('');
+
   const activeProviderId = useForgeStore((s) => s.activeProviderId);
   const setActiveProvider = useForgeStore((s) => s.setActiveProvider);
   const addJob = useForgeStore((s) => s.addJob);
@@ -22,16 +30,38 @@ export function GenerationPanel() {
   const activeProvider = filteredProviders.find((p) => p.id === activeProviderId) ?? filteredProviders[0];
   const isMcpProvider = activeProvider?.mcpBacked === true;
 
+  const composedPrompt = useMemo(
+    () => composeVisualPrompt({ subject, chipIds: selectedChipIds, mode }),
+    [subject, selectedChipIds, mode],
+  );
+  const effectivePrompt = (advanced ? rawPrompt : composedPrompt).trim();
+
+  const toggleChip = (id: string) =>
+    setSelectedChipIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
+
+  const toggleAdvanced = () => {
+    // Seed the raw editor from the composed prompt the first time it's opened.
+    if (!advanced && !rawPrompt) setRawPrompt(composedPrompt);
+    setAdvanced((a) => !a);
+  };
+
+  const resetBuilder = () => {
+    setSubject('');
+    setSelectedChipIds([]);
+    setRawPrompt('');
+    setAdvanced(false);
+  };
+
   const handleSubmit = () => {
-    if (!prompt.trim() && mode === 'text-to-3d') return;
+    if (!effectivePrompt && mode === 'text-to-3d') return;
     if (!imageFile && mode === 'image-to-3d') return;
     if (!activeProvider) return;
 
     // MCP-backed providers go through the Blender MCP pipeline
     if (activeProvider.mcpBacked) {
       if (!blenderConnected) return;
-      submitMcpJob(activeProvider.id, prompt.trim(), mode);
-      setPrompt('');
+      submitMcpJob(activeProvider.id, effectivePrompt, mode);
+      resetBuilder();
       setImageFile(null);
       return;
     }
@@ -43,16 +73,16 @@ export function GenerationPanel() {
 
     addJob({
       mode,
-      prompt: prompt.trim(),
+      prompt: effectivePrompt,
       imageUrl,
       providerId: activeProvider.id,
     });
 
-    if (prompt.trim()) {
-      addToHistory(prompt.trim());
+    if (effectivePrompt) {
+      addToHistory(effectivePrompt);
     }
 
-    setPrompt('');
+    resetBuilder();
     setImageFile(null);
   };
 
@@ -63,7 +93,7 @@ export function GenerationPanel() {
 
   const canSubmit = (() => {
     if (!activeProvider) return false;
-    if (!prompt.trim() && mode === 'text-to-3d') return false;
+    if (!effectivePrompt && mode === 'text-to-3d') return false;
     if (!imageFile && mode === 'image-to-3d') return false;
     if (activeProvider.mcpBacked) return blenderConnected;
     return activeProvider.status === 'free';
@@ -147,28 +177,10 @@ export function GenerationPanel() {
       </div>
 
       {/* Blender connection bar for MCP providers */}
-      {isMcpProvider && !blenderConnected && (
-        <BlenderConnectionBar />
-      )}
+      {isMcpProvider && !blenderConnected && <BlenderConnectionBar />}
 
-      {/* Input area */}
-      {mode === 'text-to-3d' ? (
-        <div>
-          <label className="text-xs text-text-muted mb-1.5 block">Describe your 3D model</label>
-          <div className="flex gap-2">
-            <textarea
-              value={prompt}
-              onChange={(e) => setPrompt(e.target.value)}
-              placeholder="A medieval sword with ornate handle, low-poly game asset..."
-              className="flex-1 bg-surface border border-border rounded-lg px-3 py-2 text-sm text-text placeholder:text-text-muted resize-none focus:outline-none focus:border-[var(--visual-gen)]"
-              rows={3}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) handleSubmit();
-              }}
-            />
-          </div>
-        </div>
-      ) : (
+      {/* Reference image upload (image-to-3d only) */}
+      {mode === 'image-to-3d' && (
         <div>
           <label className="text-xs text-text-muted mb-1.5 block">Upload reference image</label>
           <div className="flex items-center gap-3">
@@ -185,23 +197,28 @@ export function GenerationPanel() {
               />
             </label>
             {imageFile && (
-              <button
-                onClick={() => setImageFile(null)}
-                className="text-xs text-text-muted hover:text-text"
-              >
+              <button onClick={() => setImageFile(null)} className="text-xs text-text-muted hover:text-text">
                 Clear
               </button>
             )}
           </div>
-          <textarea
-            value={prompt}
-            onChange={(e) => setPrompt(e.target.value)}
-            placeholder="Optional: describe desired style, detail level..."
-            className="mt-2 w-full bg-surface border border-border rounded-lg px-3 py-2 text-sm text-text placeholder:text-text-muted resize-none focus:outline-none focus:border-[var(--visual-gen)]"
-            rows={2}
-          />
         </div>
       )}
+
+      {/* No-jargon prompt builder */}
+      <PromptBuilder
+        mode={mode}
+        subject={subject}
+        onSubjectChange={setSubject}
+        selectedChipIds={selectedChipIds}
+        onToggleChip={toggleChip}
+        advanced={advanced}
+        onToggleAdvanced={toggleAdvanced}
+        rawPrompt={rawPrompt}
+        onRawPromptChange={setRawPrompt}
+        composedPrompt={composedPrompt}
+        onSubmit={handleSubmit}
+      />
 
       {/* Submit */}
       <button

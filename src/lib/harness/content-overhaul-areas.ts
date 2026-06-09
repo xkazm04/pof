@@ -13,31 +13,11 @@
  * Usage: --scenario content-overhaul
  */
 
-import type { ModuleArea, PlannedFeature } from './types';
+import type { ModuleArea } from './types';
+import { makeArea } from './overhaul-area-helpers';
 
-function feat(name: string): PlannedFeature {
-  return { id: name, name, status: 'pending', quality: null, lastSession: null };
-}
-
-function area(
-  id: string,
-  label: string,
-  description: string,
-  features: string[],
-  dependsOn: string[] = [],
-): ModuleArea {
-  return {
-    id,
-    moduleId: 'animations', // informational — cross-cutting
-    label,
-    description,
-    checklistItemIds: [],
-    featureNames: features,
-    dependsOn,
-    status: 'pending',
-    features: features.map(feat),
-  };
-}
+// moduleId is informational for these cross-cutting areas.
+const area = makeArea('animations');
 
 /* ── Phase 0: Content Infrastructure ────────────────────────────────────── */
 

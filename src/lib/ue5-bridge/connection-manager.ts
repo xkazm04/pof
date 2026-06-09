@@ -11,6 +11,7 @@
 import { UI_TIMEOUTS } from '@/lib/constants';
 import { logger } from '@/lib/logger';
 import { eventBus } from '@/lib/event-bus';
+import { createStateEmitter } from '@/lib/state-emitter';
 import { RemoteControlClient } from './remote-control-client';
 import type { UE5ConnectionState, UE5ConnectionStatus } from '@/types/ue5-bridge';
 
@@ -25,20 +26,27 @@ class UE5ConnectionManager {
   private healthInterval: ReturnType<typeof setInterval> | null = null;
   private reconnectTimer: ReturnType<typeof setTimeout> | null = null;
   private consecutiveFailures = 0;
-  private subscribers = new Set<StateChangeHandler>();
 
-  private state: UE5ConnectionState = {
-    status: 'disconnected',
-    info: null,
-    error: null,
-    lastConnected: null,
-    reconnectAttempts: 0,
-  };
+  private emitter = createStateEmitter<UE5ConnectionState>({
+    label: '[UE5-CM]',
+    initial: {
+      status: 'disconnected',
+      info: null,
+      error: null,
+      lastConnected: null,
+      reconnectAttempts: 0,
+    },
+  });
+
+  /** Live, read-only view of state for the manager's own internal checks. */
+  private get state(): UE5ConnectionState {
+    return this.emitter.peek();
+  }
 
   // ── State management ────────────────────────────────────────────────────
 
   getState(): UE5ConnectionState {
-    return { ...this.state };
+    return this.emitter.getState();
   }
 
   getClient(): RemoteControlClient | null {
@@ -46,33 +54,18 @@ class UE5ConnectionManager {
   }
 
   private setState(partial: Partial<UE5ConnectionState>) {
-    this.state = { ...this.state, ...partial };
-    this.notifySubscribers();
+    this.emitter.setState(partial);
   }
 
   private setStatus(status: UE5ConnectionStatus, extras?: Partial<UE5ConnectionState>) {
     this.setState({ status, ...extras });
   }
 
-  private notifySubscribers() {
-    const snapshot = this.getState();
-    for (const handler of this.subscribers) {
-      try {
-        handler(snapshot);
-      } catch (e) {
-        logger.warn('[UE5-CM] Subscriber error:', e);
-      }
-    }
-  }
-
   // ── Public API ────────────────────────────────────────────────────────────
 
   /** Subscribe to connection state changes. Returns an unsubscribe function. */
   onStateChange(handler: StateChangeHandler): () => void {
-    this.subscribers.add(handler);
-    return () => {
-      this.subscribers.delete(handler);
-    };
+    return this.emitter.subscribe(handler);
   }
 
   /** Connect to UE5 Remote Control at the given host and port. */

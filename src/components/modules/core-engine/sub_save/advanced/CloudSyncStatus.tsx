@@ -5,7 +5,7 @@ import { motion } from 'framer-motion';
 import { STATUS_SUCCESS, STATUS_INFO, STATUS_ERROR, STATUS_WARNING,
   ACCENT_CYAN_LIGHT, withOpacity, OPACITY_5,
 } from '@/lib/chart-colors';
-import { BlueprintPanel, SectionHeader, GlowStat } from '../_shared/design';
+import { BlueprintPanel, SectionHeader, GlowStat, SAVE_TYPE } from '../_shared/design';
 import { ACCENT } from '../_shared/data';
 import { CLOUD_SYNC } from '../_shared/data-panels';
 
@@ -64,7 +64,7 @@ export function CloudSyncSection() {
         {/* Provider info bar */}
         <div className="mt-3 flex items-center gap-3 px-3 py-2 border border-border/10 rounded-lg font-mono text-xs" style={{ backgroundColor: `${withOpacity(ACCENT, OPACITY_5)}` }}>
           <Wifi className="w-3.5 h-3.5" style={{ color: ACCENT }} />
-          <span className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted">Provider:</span>
+          <span className={`${SAVE_TYPE.body} text-text-muted`}>Provider:</span>
           <span style={{ color: ACCENT_CYAN_LIGHT }}>{CLOUD_SYNC.provider}</span>
           <span className="ml-auto text-text-muted">Protocol: WebSocket TLS</span>
         </div>

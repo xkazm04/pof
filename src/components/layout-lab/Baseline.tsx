@@ -3,7 +3,6 @@
 import '@/lib/catalog/pipelines/registry.generated';
 import { useState, useEffect } from 'react';
 import { summarizeEntityData } from '@/lib/ecw/entity-summary';
-import { labStepsDone } from './labPipelines';
 import { getStepComponent } from './steps';
 import { ArchetypeStep } from './steps/ArchetypeStep';
 import { populateItemDemo } from './steps/itemsSteps';
@@ -11,7 +10,7 @@ import { useLabPipelineStore, useEntitySteps, setLabSync } from './labPipelineSt
 import { getCatalogPipeline } from '@/lib/catalog/pipeline-registry';
 import { fetchArtifacts, postArtifact, drainGates } from './labArtifactClient';
 import { resolveAccept } from './labAcceptance';
-import { PipelineRollup } from './PipelineRollup';
+import { useEntityArtifacts } from './hooks/useEntityArtifacts';
 import { CatalogTree } from './CatalogTree';
 import { NextStepCoach } from './NextStepCoach';
 import { PipelineRail } from './PipelineRail';
@@ -22,7 +21,7 @@ import { LabDrawer, DrawerToggle } from './LabDrawer';
 import { statusAriaLabel } from './statusLanguage';
 import { summarizeEntity } from '@/lib/catalog/rollup';
 import { useViewportWidth } from '@/hooks/useViewportWidth';
-import type { LabTheme } from './theme';
+import { labPanelStyle, type LabTheme } from './theme';
 import type { LabDetail, LabGroup } from './useLabCatalogData';
 import type { PipelineArtifact } from '@/lib/pipeline-artifacts-db';
 
@@ -90,10 +89,11 @@ export function Baseline({ theme: t, groups, detail, onSelectCatalog, entityId, 
   const produce = useLabPipelineStore((s) => s.produce);
   const resetEntity = useLabPipelineStore((s) => s.resetEntity);
   const hydrateEntity = useLabPipelineStore((s) => s.hydrateEntity);
-  const stepDone = (step: string, i: number) =>
-    isItems ? !!entitySteps?.[step]?.done : i < (entity ? labStepsDone(entity.lifecycle, steps.length) : 0);
-  const done = steps.filter((s, i) => stepDone(s, i)).length;
   const ueAssetCount = entitySteps ? Object.values(entitySteps).reduce((n, a) => n + (a.ueAssets?.length ?? 0), 0) : 0;
+
+  // Derived pipeline artifacts + display status (incl. the server `deferred`→pass/fail
+  // overlay rule) live in a pure, unit-testable hook so this component stays layout-focused.
+  const { artifacts, artifactByStep, displayStatus, stepDone, done } = useEntityArtifacts(catalogId, entity, steps, entitySteps, serverArts);
 
   // Write-through: register sync bound to the active catalogId so produce() fires postArtifact.
   useEffect(() => {
@@ -141,34 +141,6 @@ export function Baseline({ theme: t, groups, detail, onSelectCatalog, entityId, 
       setDraining(false);
     }
   };
-
-  // Server-faithful rollup: derives config-complete/tier using the same accept logic the server stored.
-  const artifacts: PipelineArtifact[] = catalogId
-    ? steps.filter((s) => entitySteps?.[s]).map((s) => {
-        const art = entitySteps![s];
-        const accept = resolveAccept(catalogId, s);
-        const res = accept ? accept(art.data) : null;
-        const localStatus = res?.status ?? 'pass';
-        // Overlay the runner's verdict: when the local recompute is still `deferred`
-        // (an unrun L3/L4 gate) but the server has a real pass/fail, the server wins.
-        const srv = serverArts[s];
-        const status = localStatus === 'deferred' && srv && srv.status !== 'deferred' && srv.status !== 'pending' ? srv.status : localStatus;
-        return { catalogId, entityId: entity?.id ?? '', step: s, data: art.data, ueAssets: art.ueAssets, status, ...(res?.tier ? { tier: res.tier } : {}) };
-      })
-    : [];
-
-  // Per-step artifact lookup for the left timeline (so failed/deferred gates aren't invisible).
-  const artifactByStep = new Map(artifacts.map((a) => [a.step, a]));
-  // Display status mirrors PipelineRollup's vocabulary: pass/fail/deferred/pending.
-  // For non-Items catalogs without artifacts, the legacy `stepDone` heuristic maps to `pass`.
-  const displayStatus = (step: string, i: number): 'pass' | 'fail' | 'deferred' | 'pending' => {
-    const a = artifactByStep.get(step);
-    if (a) return a.status === 'pass' || a.status === 'fail' || a.status === 'deferred' ? a.status : 'pending';
-    return stepDone(step, i) ? 'pass' : 'pending';
-  };
-  const panel = (extra?: React.CSSProperties): React.CSSProperties => ({
-    background: t.panel, border: `1px solid ${t.line}`, ...(t.glass ? { backdropFilter: 'blur(12px)' } : {}), ...extra,
-  });
 
   const handleSelectCatalog = (id: string) => {
     onSelectCatalog(id);
@@ -247,7 +219,7 @@ export function Baseline({ theme: t, groups, detail, onSelectCatalog, entityId, 
       }}
     >
       {/* ── Header: title + moved title-block stats ── */}
-      <header style={{ display: 'flex', alignItems: 'center', gap: 20, padding: '16px 28px', borderBottom: `2px solid ${t.ink}`, ...panel({ borderTop: 'none', borderLeft: 'none', borderRight: 'none' }) }}>
+      <header style={{ display: 'flex', alignItems: 'center', gap: 20, padding: '16px 28px', borderBottom: `2px solid ${t.ink}`, ...labPanelStyle(t, { borderTop: 'none', borderLeft: 'none', borderRight: 'none' }) }}>
         {/* persistent drawer toggles — only in the collapsed (narrow) shell */}
         {!wide && (
           <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
@@ -298,9 +270,10 @@ export function Baseline({ theme: t, groups, detail, onSelectCatalog, entityId, 
                     onJump={(i) => setStepIdx(i)}
                     plainMode={plainMode}
                     onTogglePlainMode={() => setPlainMode((v) => !v)}
+                    onDrain={runDrain}
+                    draining={draining}
                   />
                 )}
-                {entity && <div style={{ marginBottom: 16 }}><PipelineRollup t={t} steps={steps} artifacts={artifacts} onDrain={runDrain} draining={draining} plainMode={plainMode} /></div>}
                 <div className={t.fontMono} style={{ fontSize: 14, letterSpacing: '0.12em', color: t.muted, textTransform: 'uppercase' }}>Step {pad2(stepIdx + 1)} / {pad2(steps.length)}{stepDone(stepName, stepIdx) ? ' · complete' : ''}</div>
                 <h2 style={{ fontSize: 30, fontWeight: 700, color: t.inkDeep, margin: '6px 0 18px' }}>{stepName}</h2>
                 {Bespoke && entity ? (
@@ -308,7 +281,7 @@ export function Baseline({ theme: t, groups, detail, onSelectCatalog, entityId, 
                 ) : spec && entity ? (
                   <ArchetypeStep key={`${entity.id}:${stepName}`} t={t} entity={entity} step={stepName} spec={spec} catalogId={detail?.catalog.catalogId} />
                 ) : (
-                  <div style={panel({ borderRadius: t.glass ? 12 : 0, padding: 28, minHeight: 360 })}>
+                  <div style={labPanelStyle(t, { borderRadius: t.glass ? 12 : 0, padding: 28, minHeight: 360 })}>
                     <div className={t.fontMono} style={{ fontSize: 14, color: t.muted, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 10 }}>Compose</div>
                     <p style={{ fontSize: 15, color: t.muted, maxWidth: 520, lineHeight: 1.6 }}>
                       Work canvas for <strong style={{ color: t.text }}>{stepName}</strong> on <strong style={{ color: t.text }}>{entity?.name}</strong>. View / Produce / Acceptance UI for this step is not prototyped yet — see the Items · Concept Brief / Attributes / Economy steps for the pattern.
@@ -321,7 +294,7 @@ export function Baseline({ theme: t, groups, detail, onSelectCatalog, entityId, 
             <div style={{ maxWidth: 620 }}>
               <h2 style={{ fontSize: 28, fontWeight: 700, color: t.inkDeep, margin: '0 0 10px' }}>{entity?.name ?? 'Select an entity'}</h2>
               <p style={{ fontSize: 15, color: t.muted, lineHeight: 1.65 }}>{detail?.catalog.description}</p>
-              <div style={panel({ borderRadius: t.glass ? 12 : 0, padding: 24, marginTop: 20 })}>
+              <div style={labPanelStyle(t, { borderRadius: t.glass ? 12 : 0, padding: 24, marginTop: 20 })}>
                 <span className={t.fontMono} style={{ fontSize: 14, color: t.muted }}>← Select a pipeline step to compose it.</span>
               </div>
             </div>

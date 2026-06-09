@@ -13,10 +13,17 @@ interface NavigationState {
   activeCategory: CategoryId | null;
   activeSubModule: SubModuleId | null;
   sidebarMode: SidebarMode;
+  /**
+   * When true, the L1 icon rail is widened to show category labels inline
+   * (instead of icon-only with hover/focus flyouts). Persisted as a user pref.
+   */
+  l1Expanded: boolean;
 
   setActiveCategory: (category: CategoryId | null) => void;
   setActiveSubModule: (subModule: SubModuleId | null) => void;
   setSidebarMode: (mode: SidebarMode) => void;
+  setL1Expanded: (expanded: boolean) => void;
+  toggleL1Expanded: () => void;
 
   /**
    * Navigate to a specific module by its moduleId.
@@ -33,10 +40,13 @@ export const useNavigationStore = create<NavigationState>()(
       activeCategory: null,
       activeSubModule: null,
       sidebarMode: 'full',
+      l1Expanded: false,
 
       setActiveCategory: (category) => set({ activeCategory: category, activeSubModule: null }),
       setActiveSubModule: (subModule) => set({ activeSubModule: subModule }),
       setSidebarMode: (mode) => set({ sidebarMode: mode }),
+      setL1Expanded: (expanded) => set({ l1Expanded: expanded }),
+      toggleL1Expanded: () => set((s) => ({ l1Expanded: !s.l1Expanded })),
 
       navigateToModule: (moduleId) => {
         // Special categories like 'project-setup', 'evaluator'

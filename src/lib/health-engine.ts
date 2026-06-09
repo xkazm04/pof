@@ -11,27 +11,20 @@ import type {
   Milestone,
   BurnChartPoint,
   SubsystemSignal,
+  PerfHealthInput,
+  CrashHealthInput,
 } from '@/types/project-health';
 import type { EvaluatorReport, ModuleScore } from '@/types/evaluator';
+import { CORE_MODULE_DEFS, CORE_CHECKLIST_TOTAL } from './module-registry';
 
-/* ---- Module definitions (mirrors module-registry) ---------------- */
+/* ---- Module definitions ------------------------------------------ */
+// Derived from module-registry SUB_MODULES so labels and per-module checklist
+// counts have a single owner — the X/Y denominator can't drift from the registry
+// (or the weekly digest, which also derives from SUB_MODULES).
 
-const MODULE_DEFS: { id: string; label: string; checklistCount: number }[] = [
-  { id: 'arpg-character',   label: 'Character',       checklistCount: 5 },
-  { id: 'arpg-animation',   label: 'Animation',       checklistCount: 7 },
-  { id: 'arpg-gas',         label: 'GAS',             checklistCount: 8 },
-  { id: 'arpg-combat',      label: 'Combat',          checklistCount: 9 },
-  { id: 'arpg-enemy-ai',    label: 'Enemy AI',        checklistCount: 8 },
-  { id: 'arpg-inventory',   label: 'Inventory',       checklistCount: 8 },
-  { id: 'arpg-loot',        label: 'Loot',            checklistCount: 8 },
-  { id: 'arpg-ui',          label: 'UI/HUD',          checklistCount: 9 },
-  { id: 'arpg-progression', label: 'Progression',     checklistCount: 8 },
-  { id: 'arpg-world',       label: 'World',           checklistCount: 8 },
-  { id: 'arpg-save',        label: 'Save/Load',       checklistCount: 8 },
-  { id: 'arpg-polish',      label: 'Polish',          checklistCount: 10 },
-];
+const MODULE_DEFS = CORE_MODULE_DEFS;
 
-const TOTAL_CHECKLIST_ITEMS = MODULE_DEFS.reduce((s, m) => s + m.checklistCount, 0);
+const TOTAL_CHECKLIST_ITEMS = CORE_CHECKLIST_TOTAL;
 
 /* ---- Seeded RNG for reproducible simulated data ------------------ */
 
@@ -253,8 +246,92 @@ function generateBurnChart(
 
 /* ---- Subsystem signals ------------------------------------------- */
 
+/** Map a 0-100 score to a traffic-light signal status. */
+function scoreStatus(score: number): SubsystemSignal['status'] {
+  if (score >= 70) return 'healthy';
+  if (score >= 40) return 'warning';
+  return 'critical';
+}
+
+/** Real performance signal derived from the latest profiling triage. */
+function buildPerfSignal(perf: PerfHealthInput | null): SubsystemSignal {
+  if (!perf) {
+    return {
+      subsystem: 'performance',
+      label: 'Performance Profiling',
+      status: 'inactive',
+      metric: 'No trace triaged',
+      detail: 'Import a trace or generate a sample to triage frame budget',
+      linkTab: 'perf',
+    };
+  }
+
+  const fpsPrefix = perf.avgFPS != null ? `${Math.round(perf.avgFPS)} FPS · ` : '';
+  const bottleneck = perf.bottleneck === 'balanced' ? 'balanced load' : `${perf.bottleneck}-bound`;
+  const findings = perf.findingCount > 0 ? ` · ${perf.findingCount} finding${perf.findingCount === 1 ? '' : 's'}` : '';
+
+  return {
+    subsystem: 'performance',
+    label: 'Performance Profiling',
+    status: scoreStatus(perf.overallScore),
+    metric: `Score ${perf.overallScore}/100`,
+    detail: `${fpsPrefix}${bottleneck}${findings}`,
+    linkTab: 'perf',
+  };
+}
+
+/** Real crash signal derived from the persisted crash-analyzer stats. */
+function buildCrashSignal(crash: CrashHealthInput | null): SubsystemSignal {
+  if (!crash) {
+    return {
+      subsystem: 'crash-analyzer',
+      label: 'Crash Analyzer',
+      status: 'inactive',
+      metric: 'Ready',
+      detail: 'Import crash logs for AI analysis',
+      linkTab: 'crashes',
+    };
+  }
+
+  if (crash.totalCrashes === 0) {
+    return {
+      subsystem: 'crash-analyzer',
+      label: 'Crash Analyzer',
+      status: 'healthy',
+      metric: 'No crashes',
+      detail: 'No crashes recorded in the database',
+      linkTab: 'crashes',
+    };
+  }
+
+  const status: SubsystemSignal['status'] =
+    crash.criticalCrashes > 0 || crash.systemicIssues > 0
+      ? 'critical'
+      : crash.recentCrashes > 0
+        ? 'warning'
+        : 'healthy';
+
+  const where = crash.mostAffectedModule && crash.mostAffectedModule !== 'none'
+    ? `Most in ${crash.mostAffectedModule}`
+    : 'Across modules';
+  const recent = crash.recentCrashes > 0 ? ` · ${crash.recentCrashes} in 24h` : '';
+  const systemic = crash.systemicIssues > 0 ? ` · ${crash.systemicIssues} systemic` : '';
+
+  return {
+    subsystem: 'crash-analyzer',
+    label: 'Crash Analyzer',
+    status,
+    metric: `${crash.totalCrashes} crash${crash.totalCrashes === 1 ? '' : 'es'}`,
+    detail: `${where}${recent}${systemic}`,
+    linkTab: 'crashes',
+  };
+}
+
 function generateSubsystemSignals(
   checklistProgress: Record<string, Record<string, boolean>>,
+  lastScan: EvaluatorReport | null,
+  perfInput: PerfHealthInput | null,
+  crashInput: CrashHealthInput | null,
 ): SubsystemSignal[] {
   // Check how many modules have any progress at all
   const modulesWithProgress = Object.keys(checklistProgress).filter(
@@ -272,23 +349,20 @@ function generateSubsystemSignals(
     {
       subsystem: 'evaluator',
       label: 'Quality Evaluator',
-      status: 'healthy',
-      metric: 'Active',
-      detail: 'Run deep eval to update quality scores',
+      status: lastScan ? scoreStatus(lastScan.overallScore) : 'inactive',
+      metric: lastScan ? `Score ${lastScan.overallScore}/100` : 'No scan yet',
+      detail: lastScan ? 'Latest deep-eval quality score' : 'Run deep eval to update quality scores',
+      linkTab: 'scanner',
     },
-    {
-      subsystem: 'crash-analyzer',
-      label: 'Crash Analyzer',
-      status: 'healthy',
-      metric: 'Ready',
-      detail: 'Import crash logs for AI analysis',
-    },
+    buildCrashSignal(crashInput),
+    buildPerfSignal(perfInput),
     {
       subsystem: 'localization',
       label: 'Localization Pipeline',
       status: 'healthy',
       metric: 'Ready',
       detail: 'Run pipeline to check i18n readiness',
+      linkTab: 'i18n',
     },
     {
       subsystem: 'combat-sim',
@@ -296,6 +370,7 @@ function generateSubsystemSignals(
       status: 'healthy',
       metric: 'Ready',
       detail: 'Run simulations to balance combat',
+      linkTab: 'combat',
     },
     {
       subsystem: 'economy-sim',
@@ -303,6 +378,7 @@ function generateSubsystemSignals(
       status: 'healthy',
       metric: 'Ready',
       detail: 'Simulate economy for inflation checks',
+      linkTab: 'economy',
     },
   ];
 }
@@ -315,6 +391,8 @@ export function computeProjectHealth(
   checklistProgress: Record<string, Record<string, boolean>>,
   scanHistory: EvaluatorReport[],
   lastScan: EvaluatorReport | null,
+  perfInput: PerfHealthInput | null = null,
+  crashInput: CrashHealthInput | null = null,
 ): ProjectHealthSummary {
   const rng = mulberry32(99);
 
@@ -358,14 +436,18 @@ export function computeProjectHealth(
   // Burndown
   const burnChart = generateBurnChart(velocityHistory, TOTAL_CHECKLIST_ITEMS);
 
-  // Subsystem signals
-  const subsystemSignals = generateSubsystemSignals(checklistProgress);
+  // Performance — fused from the latest profiling triage (null if untriaged)
+  const performanceScore = perfInput?.overallScore ?? null;
+
+  // Subsystem signals — crash + performance are now real, drillable signals
+  const subsystemSignals = generateSubsystemSignals(checklistProgress, lastScan, perfInput, crashInput);
 
   return {
     overallCompletion,
     totalChecklistItems: TOTAL_CHECKLIST_ITEMS,
     completedChecklistItems,
     currentQualityScore,
+    performanceScore,
     qualityTrend,
     avgVelocity: Math.round(avgVelocity * 10) / 10,
     moduleHealth,

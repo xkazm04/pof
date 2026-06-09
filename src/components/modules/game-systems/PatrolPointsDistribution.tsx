@@ -7,18 +7,19 @@ import {
   ACCENT_VIOLET, ACCENT_CYAN, STATUS_WARNING,
   OPACITY_10, OPACITY_15,
 } from '@/lib/chart-colors';
+import { polarSvgLayout } from '@/components/ui/svg/polar-layout';
+import { createRNG } from '@/lib/seeded-rng';
+import { EQS_PATROL_POINTS, eqsFloat } from '@/lib/ai-director/eqs-defaults';
 
 // ── Constants matching C++ defaults ──────────────────────────────────────────
+// From the single-source EQS defaults module (see `eqs-defaults.ts`).
 
-const DEFAULT_MIN_RADIUS = 500;
-const DEFAULT_MAX_RADIUS = 1500;
-const DEFAULT_NUM_POINTS = 15;
+const DEFAULT_MIN_RADIUS = EQS_PATROL_POINTS.minRadius;
+const DEFAULT_MAX_RADIUS = EQS_PATROL_POINTS.maxRadius;
+const DEFAULT_NUM_POINTS = EQS_PATROL_POINTS.numberOfPoints;
 
 // SVG layout
-const SVG_SIZE = 320;
-const SVG_CENTER = SVG_SIZE / 2;
-const SVG_PADDING = 20;
-const DRAW_RADIUS = (SVG_SIZE - SVG_PADDING * 2) / 2;
+const { size: SVG_SIZE, center: SVG_CENTER, radius: DRAW_RADIUS } = polarSvgLayout(320, 20);
 
 // ── Point generation (mirrors UEnvQueryGenerator_PatrolPoints::GenerateItems) ─
 
@@ -29,18 +30,20 @@ interface PatrolPoint {
   radius: number;
 }
 
-function generatePatrolPoints(
+export function generatePatrolPoints(
   numPoints: number,
   minRadius: number,
   maxRadius: number,
+  seed: number,
 ): PatrolPoint[] {
   const points: PatrolPoint[] = [];
   const minR = Math.max(minRadius, 0);
   const maxR = Math.max(maxRadius, minR + 1);
+  const rng = createRNG(seed);
 
   for (let i = 0; i < numPoints; i++) {
-    const angle = Math.random() * 2 * Math.PI;
-    const radius = minR + Math.random() * (maxR - minR);
+    const angle = rng() * 2 * Math.PI;
+    const radius = minR + rng() * (maxR - minR);
     points.push({
       x: Math.cos(angle) * radius,
       y: Math.sin(angle) * radius,
@@ -57,8 +60,7 @@ export function PatrolPointsDistribution() {
   const [seed, setSeed] = useState(0);
 
   const points = useMemo(
-    () => generatePatrolPoints(DEFAULT_NUM_POINTS, DEFAULT_MIN_RADIUS, DEFAULT_MAX_RADIUS),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    () => generatePatrolPoints(DEFAULT_NUM_POINTS, DEFAULT_MIN_RADIUS, DEFAULT_MAX_RADIUS, seed),
     [seed],
   );
 
@@ -260,8 +262,8 @@ export function PatrolPointsDistribution() {
             <div className="space-y-1.5">
               {[
                 { label: 'NumberOfPoints', value: String(DEFAULT_NUM_POINTS), desc: 'Random points per query' },
-                { label: 'MinRadius', value: `${DEFAULT_MIN_RADIUS}.0`, desc: 'Inner boundary (dashed)' },
-                { label: 'MaxRadius', value: `${DEFAULT_MAX_RADIUS}.0`, desc: 'Outer boundary (solid)' },
+                { label: 'MinRadius', value: eqsFloat(DEFAULT_MIN_RADIUS), desc: 'Inner boundary (dashed)' },
+                { label: 'MaxRadius', value: eqsFloat(DEFAULT_MAX_RADIUS), desc: 'Outer boundary (solid)' },
               ].map((p) => (
                 <div key={p.label} className="flex items-baseline gap-2">
                   <span className="text-2xs font-mono shrink-0" style={{ color: ACCENT_VIOLET }}>{p.label}</span>

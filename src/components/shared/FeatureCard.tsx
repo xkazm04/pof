@@ -23,12 +23,15 @@ interface FeatureCardProps {
 }
 
 export function FeatureCard({ name, active, onToggle, accent, children, summary }: FeatureCardProps) {
+  // Scale hovers are gated behind motion-safe: so motion-sensitive users
+  // (prefers-reduced-motion) don't get the size jump — brightness stays as the
+  // non-motion hover feedback. Transition durations are also zeroed globally in globals.css.
   return (
     <button
       type="button"
       onClick={onToggle}
       aria-pressed={active}
-      className="relative text-left rounded-lg border p-3 cursor-pointer transition-all duration-150 hover:brightness-110 hover:scale-[1.02] active:scale-[0.98] focus:outline-none focus-visible:ring-1 focus-visible:ring-offset-0"
+      className="relative text-left rounded-lg border p-3 cursor-pointer transition-all duration-150 hover:brightness-110 motion-safe:hover:scale-[1.02] motion-safe:active:scale-[0.98] focus:outline-none focus-visible:ring-1 focus-visible:ring-offset-0"
       style={{
         backgroundColor: active ? withOpacity(accent, OPACITY_8) : 'transparent',
         borderColor: active ? withOpacity(accent, OPACITY_30) : withOpacity(STATUS_NEUTRAL, OPACITY_20),

@@ -6,30 +6,7 @@ import { MODULE_LABELS } from '@/lib/module-registry';
 import { apiSuccess, apiError } from '@/lib/api-utils';
 import { getOriginFromRequest } from '@/lib/constants';
 import type { SubModuleId } from '@/types/modules';
-
-// ── Types ──
-
-type ModuleReviewStatus = 'pending' | 'running' | 'completed' | 'error' | 'skipped';
-
-interface ModuleProgress {
-  moduleId: SubModuleId;
-  label: string;
-  featureCount: number;
-  status: ModuleReviewStatus;
-  executionId: string | null;
-  startedAt: string | null;
-  completedAt: string | null;
-  error: string | null;
-}
-
-interface BatchReviewState {
-  batchId: string;
-  status: 'running' | 'completed' | 'error' | 'aborted';
-  startedAt: string;
-  completedAt: string | null;
-  modules: ModuleProgress[];
-  currentIndex: number;
-}
+import type { BatchReviewState } from '@/types/batch-review';
 
 // ── In-memory batch state (single batch at a time) ──
 

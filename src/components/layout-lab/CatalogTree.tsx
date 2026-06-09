@@ -139,8 +139,13 @@ export function CatalogTree({
   t, groups, selectedCatalogId, entities, selectedEntityId, onSelectCatalog, onSelectEntity,
 }: CatalogTreeProps) {
   const reduce = useReducedMotion();
-  const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
-  const visibleCatalogs = groups.flatMap((g) => (collapsed.has(g.category) ? [] : g.catalogs));
+  // Chapters are compact by default — only the chapter holding the current
+  // selection opens, so the tree reads as a chapter overview. `override` records
+  // the user's explicit per-chapter expand/collapse; absent ⇒ the default rule.
+  const [override, setOverride] = useState<Record<string, boolean>>({});
+  const selectedCategory = groups.find((g) => g.catalogs.some((c) => c.catalogId === selectedCatalogId))?.category;
+  const isOpen = (category: string) => (category in override ? override[category] : category === selectedCategory);
+  const visibleCatalogs = groups.flatMap((g) => (isOpen(g.category) ? g.catalogs : []));
   const activeIdx = Math.max(0, visibleCatalogs.findIndex((c) => c.catalogId === selectedCatalogId));
   const roving = useRovingFocus(visibleCatalogs.length, activeIdx, (i) => {
     const c = visibleCatalogs[i];
@@ -164,17 +169,12 @@ export function CatalogTree({
       style={{ display: 'flex', flexDirection: 'column', minHeight: 0, overflow: 'auto' }}
     >
       {groups.map((group) => {
-        const isCollapsed = collapsed.has(group.category);
+        const open = isOpen(group.category);
         return (
           <div key={group.category}>
             <button
-              onClick={() => setCollapsed((s) => {
-                const n = new Set(s);
-                if (n.has(group.category)) n.delete(group.category);
-                else n.add(group.category);
-                return n;
-              })}
-              aria-expanded={!isCollapsed}
+              onClick={() => setOverride((o) => ({ ...o, [group.category]: !open }))}
+              aria-expanded={open}
               className="focus-ring-inset"
               onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') e.stopPropagation(); }}
               style={{
@@ -186,9 +186,9 @@ export function CatalogTree({
                 background: 'transparent', border: 'none', cursor: 'pointer',
               }}
             >
-              <span aria-hidden="true">{isCollapsed ? '▸' : '▾'}</span> {group.category}
+              <span aria-hidden="true">{open ? '▾' : '▸'}</span> {group.category}
             </button>
-            {!isCollapsed && group.catalogs.map((catalog, ci) => (
+            {open && group.catalogs.map((catalog, ci) => (
               <motion.div key={catalog.catalogId}
                 initial={reduce ? false : { opacity: 0, x: -6 }}
                 animate={{ opacity: 1, x: 0 }}

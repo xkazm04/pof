@@ -56,6 +56,22 @@ export interface RegressionAlert {
   dismissed: boolean;
 }
 
+/** Status breakdown of all tracked fingerprints — the shared count base */
+export interface RegressionStatusCounts {
+  totalTracked: number;
+  openCount: number;
+  fixedCount: number;
+  regressedCount: number;
+  resolvedCount: number;
+  /** regressedCount / totalTracked (0 when nothing is tracked) */
+  regressionRate: number;
+}
+
+/** Dashboard stats: the status breakdown plus the active (undismissed) alert count */
+export interface RegressionStats extends RegressionStatusCounts {
+  activeAlerts: number;
+}
+
 /** Full regression report generated for a session */
 export interface RegressionReport {
   sessionId: string;
@@ -70,12 +86,5 @@ export interface RegressionReport {
   /** Findings from prior sessions not found here = presumed fixed */
   newlyFixed: FindingFingerprint[];
   /** Summary stats */
-  stats: {
-    totalTracked: number;
-    openCount: number;
-    fixedCount: number;
-    regressedCount: number;
-    resolvedCount: number;
-    regressionRate: number;
-  };
+  stats: RegressionStatusCounts;
 }

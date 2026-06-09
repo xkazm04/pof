@@ -4,6 +4,7 @@ import { getCatalogPipeline } from '@/lib/catalog/pipeline-registry';
 import { upsertArtifact } from '@/lib/pipeline-artifacts-db';
 import { seededEntities } from '@/lib/catalog/seed';
 import { startExecution, awaitCallback } from '@/lib/claude-terminal/cli-service';
+import { UI_TIMEOUTS } from '@/lib/constants';
 import type { LabEntity } from '@/components/layout-lab/useLabCatalogData';
 import type { AcceptanceTier } from '@/lib/catalog/acceptance/types';
 import type { StoredCatalogEntity } from '@/lib/catalog/types';
@@ -97,7 +98,7 @@ export async function POST(req: NextRequest) {
       `@@CALLBACK:step-${Date.now()}\n{}\n@@END_CALLBACK`;
 
     const executionId = startExecution(PROJECT_PATH, promptText);
-    const payload = await awaitCallback(executionId, { timeoutMs: 5 * 60 * 1000 }) as Record<string, unknown>;
+    const payload = await awaitCallback(executionId, { timeoutMs: UI_TIMEOUTS.callbackAwaitTimeout }) as Record<string, unknown>;
 
     const mergedData = { ...(payload ?? {}) } as Record<string, unknown>;
     const accept = step.accept

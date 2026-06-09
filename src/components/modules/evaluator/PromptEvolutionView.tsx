@@ -7,6 +7,7 @@ import {
   CheckCircle2, Clock, TrendingUp, Layers,
   Target, Sparkles, Copy, ArrowRight, Wand2,
   ArrowDown, ArrowUp, ShieldCheck, FileCode2, Loader2,
+  Lightbulb, SlidersHorizontal, History,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { SurfaceCard } from '@/components/ui/SurfaceCard';
@@ -26,7 +27,14 @@ import type {
 } from '@/types/prompt-evolution';
 import { MUTATION_OPTIONS } from '@/lib/prompt-evolution/mutations';
 import { PromptDiffView } from './PromptDiffView';
-import { MODULE_COLORS, STATUS_NEUTRAL, ACCENT_EMERALD_DARK, STATUS_WARNING, ACCENT_PURPLE } from '@/lib/chart-colors';
+import { PromptVersionTimeline } from './PromptVersionTimeline';
+import { StatTerm } from '@/components/ui/StatTerm';
+import {
+  explainTestVerdict,
+  plainClusterSummary,
+  type PlainVerdict,
+} from '@/lib/prompt-evolution/plain-language';
+import { MODULE_COLORS, STATUS_NEUTRAL, ACCENT_EMERALD_DARK, STATUS_WARNING, STATUS_SUCCESS, ACCENT_PURPLE } from '@/lib/chart-colors';
 import type { SubModuleId, ChecklistItem } from '@/types/modules';
 import { toast } from 'sonner';
 import { getModuleChecklist } from '@/lib/module-registry';
@@ -34,6 +42,9 @@ import { getModuleChecklist } from '@/lib/module-registry';
 // ── Constants ───────────────────────────────────────────────────────────────
 
 const ACCENT = ACCENT_EMERALD_DARK; // Emerald for evolution/growth
+
+// Plain-language Simple Mode vs. full statistical Advanced Mode.
+type ViewMode = 'simple' | 'advanced';
 
 const STYLE_COLORS: Record<VariantStyle, string> = {
   imperative: MODULE_COLORS.evaluator,
@@ -66,6 +77,42 @@ const MODULE_OPTIONS = [
   { id: 'arpg-multiplayer', label: 'Multiplayer' },
   { id: 'arpg-progression', label: 'Progression' },
 ];
+
+// ── Mode toggle (Simple ⇄ Advanced) ─────────────────────────────────────────
+
+function ModeToggle({ mode, onChange }: { mode: ViewMode; onChange: (m: ViewMode) => void }) {
+  const options: { id: ViewMode; label: string; icon: typeof Lightbulb; hint: string }[] = [
+    { id: 'simple', label: 'Simple', icon: Lightbulb, hint: 'Plain-language results' },
+    { id: 'advanced', label: 'Advanced', icon: SlidersHorizontal, hint: 'Full statistical detail' },
+  ];
+  return (
+    <div
+      className="inline-flex items-center rounded-md border border-border bg-surface p-0.5"
+      role="group"
+      aria-label="Result detail level"
+    >
+      {options.map((opt) => {
+        const active = mode === opt.id;
+        return (
+          <button
+            key={opt.id}
+            type="button"
+            onClick={() => onChange(opt.id)}
+            aria-pressed={active}
+            title={opt.hint}
+            className={`focus-ring flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium rounded transition-colors ${
+              active ? 'text-white' : 'text-text-muted hover:text-text'
+            }`}
+            style={active ? { backgroundColor: ACCENT } : undefined}
+          >
+            <opt.icon className="w-3 h-3" />
+            {opt.label}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
 
 // ── Main Component ──────────────────────────────────────────────────────────
 
@@ -105,6 +152,11 @@ export function PromptEvolutionView() {
   const [expandedVariantId, setExpandedVariantId] = useState<string | null>(null);
   const [expandedTestId, setExpandedTestId] = useState<string | null>(null);
   const [formErrors, setFormErrors] = useState<{ checklistItemId?: string; prompt?: string }>({});
+
+  // Simple Mode hides the math-heavy internals (Clusters/Stats) and relabels
+  // results in plain language. Default ON to keep the screen approachable for
+  // non-technical users; "Advanced" reveals the full statistical detail.
+  const [mode, setMode] = useState<ViewMode>('simple');
 
   useEffect(() => { init(); }, [init]);
 
@@ -187,13 +239,35 @@ export function PromptEvolutionView() {
     return map;
   }, [variants]);
 
+  // Checklist items that actually have variants — drives the History picker.
+  const historyItemOptions = useMemo(() => {
+    const labelById = new Map(moduleChecklistItems.map((c) => [c.id, c.label]));
+    return Array.from(variantsByItem.keys()).map((id) => ({
+      id,
+      label: labelById.has(id) ? `${id} — ${labelById.get(id)}` : id,
+    }));
+  }, [variantsByItem, moduleChecklistItems]);
+
   const SUB_TABS = [
     { id: 'optimizer' as const, label: 'Optimizer', icon: Wand2 },
     { id: 'variants' as const, label: 'Variants', icon: GitBranch },
+    { id: 'history' as const, label: 'History', icon: History },
     { id: 'tests' as const, label: 'A/B Tests', icon: FlaskConical },
-    { id: 'clusters' as const, label: 'Clusters', icon: Layers },
-    { id: 'stats' as const, label: 'Stats', icon: BarChart3 },
+    { id: 'clusters' as const, label: 'Clusters', icon: Layers, advancedOnly: true },
+    { id: 'stats' as const, label: 'Stats', icon: BarChart3, advancedOnly: true },
   ];
+
+  // Simple Mode tucks the math-heavy Clusters/Stats tabs away.
+  const visibleTabs = mode === 'advanced' ? SUB_TABS : SUB_TABS.filter((t) => !t.advancedOnly);
+
+  // Switch modes; if Simple Mode hides the current tab, fall back to A/B Tests.
+  // Done at the click site to avoid set-state-in-effect.
+  const handleSetMode = useCallback((next: ViewMode) => {
+    setMode(next);
+    if (next === 'simple' && (activeSubTab === 'clusters' || activeSubTab === 'stats')) {
+      setActiveSubTab('tests');
+    }
+  }, [activeSubTab, setActiveSubTab]);
 
   return (
     <div className="space-y-5">
@@ -207,17 +281,22 @@ export function PromptEvolutionView() {
           </Badge>
         </div>
 
-        {/* Module picker */}
-        <select
-          value={selectedModuleId ?? ''}
-          onChange={(e) => handleSelectModule((e.target.value || null) as SubModuleId | null)}
-          className="px-3 py-1.5 text-xs rounded-md bg-surface border border-border text-text"
-        >
-          <option value="">Select module...</option>
-          {MODULE_OPTIONS.map((m) => (
-            <option key={m.id} value={m.id}>{m.label}</option>
-          ))}
-        </select>
+        <div className="flex items-center gap-2">
+          {/* Simple / Advanced mode toggle */}
+          <ModeToggle mode={mode} onChange={handleSetMode} />
+
+          {/* Module picker */}
+          <select
+            value={selectedModuleId ?? ''}
+            onChange={(e) => handleSelectModule((e.target.value || null) as SubModuleId | null)}
+            className="px-3 py-1.5 text-xs rounded-md bg-surface border border-border text-text"
+          >
+            <option value="">Select module...</option>
+            {MODULE_OPTIONS.map((m) => (
+              <option key={m.id} value={m.id}>{m.label}</option>
+            ))}
+          </select>
+        </div>
       </div>
 
       {/* Suggestions bar — actionable cards */}
@@ -245,7 +324,7 @@ export function PromptEvolutionView() {
 
       {/* Sub-tab bar */}
       <div className="flex items-center gap-1 border-b border-border">
-        {SUB_TABS.map((tab) => (
+        {visibleTabs.map((tab) => (
           <button
             key={tab.id}
             onClick={() => setActiveSubTab(tab.id)}
@@ -308,6 +387,14 @@ export function PromptEvolutionView() {
             />
           )}
 
+          {activeSubTab === 'history' && (
+            <PromptVersionTimeline
+              key={selectedModuleId ?? 'none'}
+              selectedModuleId={selectedModuleId}
+              itemOptions={historyItemOptions}
+            />
+          )}
+
           {activeSubTab === 'tests' && (
             <TestsPanel
               abTests={abTests}
@@ -315,6 +402,7 @@ export function PromptEvolutionView() {
               expandedTestId={expandedTestId}
               setExpandedTestId={setExpandedTestId}
               concludeTest={concludeTestAction}
+              mode={mode}
             />
           )}
 
@@ -685,12 +773,14 @@ function TestsPanel({
   expandedTestId,
   setExpandedTestId,
   concludeTest,
+  mode,
 }: {
   abTests: ABTest[];
   variants: PromptVariant[];
   expandedTestId: string | null;
   setExpandedTestId: (id: string | null) => void;
   concludeTest: (id: string) => Promise<ABTest | null>;
+  mode: ViewMode;
 }) {
   const variantMap = useMemo(() => {
     const m = new Map<string, PromptVariant>();
@@ -713,11 +803,21 @@ function TestsPanel({
 
   return (
     <div className="space-y-4">
+      {/* Advanced-only "how it works" line surfaces the engine's jargon as
+          hover tooltips; Simple Mode hides it entirely. */}
+      {mode === 'advanced' && (
+        <p className="text-xs text-text-muted leading-relaxed">
+          Each variant is served using an{' '}
+          <StatTerm term="epsilon-greedy">epsilon-greedy</StatTerm> strategy, then compared with a{' '}
+          <StatTerm term="z-test">z-test</StatTerm> to decide a winner.
+        </p>
+      )}
+
       {running.length > 0 && (
         <div className="space-y-2">
           <h3 className="text-xs font-medium text-text flex items-center gap-1.5">
             <Play className="w-3 h-3" style={{ color: STATUS_COLORS.running }} />
-            Running ({running.length})
+            {mode === 'simple' ? 'Testing' : 'Running'} ({running.length})
           </h3>
           {running.map((test) => (
             <ABTestCard
@@ -728,6 +828,7 @@ function TestsPanel({
               isExpanded={expandedTestId === test.id}
               onToggle={() => setExpandedTestId(expandedTestId === test.id ? null : test.id)}
               onConclude={() => concludeTest(test.id)}
+              mode={mode}
             />
           ))}
         </div>
@@ -737,7 +838,7 @@ function TestsPanel({
         <div className="space-y-2">
           <h3 className="text-xs font-medium text-text flex items-center gap-1.5">
             <Trophy className="w-3 h-3" style={{ color: STATUS_COLORS.concluded }} />
-            Concluded ({concluded.length})
+            {mode === 'simple' ? 'Decided' : 'Concluded'} ({concluded.length})
           </h3>
           {concluded.map((test) => (
             <ABTestCard
@@ -747,6 +848,7 @@ function TestsPanel({
               variantB={variantMap.get(test.variantBId)}
               isExpanded={expandedTestId === test.id}
               onToggle={() => setExpandedTestId(expandedTestId === test.id ? null : test.id)}
+              mode={mode}
             />
           ))}
         </div>
@@ -764,6 +866,7 @@ function ABTestCard({
   isExpanded,
   onToggle,
   onConclude,
+  mode,
 }: {
   test: ABTest;
   variantA?: PromptVariant;
@@ -771,11 +874,24 @@ function ABTestCard({
   isExpanded: boolean;
   onToggle: () => void;
   onConclude?: () => void;
+  mode: ViewMode;
 }) {
   const rateA = test.variantATrials > 0 ? test.variantASuccesses / test.variantATrials : 0;
   const rateB = test.variantBTrials > 0 ? test.variantBSuccesses / test.variantBTrials : 0;
   const totalTrials = test.variantATrials + test.variantBTrials;
   const statusColor = STATUS_COLORS[test.status];
+
+  // Plain-language verdict — the single human-readable answer.
+  const verdict = explainTestVerdict(test, variantA?.label, variantB?.label);
+  const winnerVariant = verdict.winnerSlot === 'A' ? variantA : verdict.winnerSlot === 'B' ? variantB : undefined;
+
+  const handleUseWording = useCallback(async () => {
+    if (!winnerVariant) return;
+    await navigator.clipboard.writeText(winnerVariant.prompt);
+    toast.success(`Copied “${winnerVariant.label}” to clipboard`);
+  }, [winnerVariant]);
+
+  const plainStatus = test.status === 'concluded' ? 'Decided' : test.status === 'running' ? 'Testing' : 'Stopped';
 
   return (
     <SurfaceCard level={2} className="overflow-hidden">
@@ -791,9 +907,11 @@ function ABTestCard({
         <FlaskConical className="w-3.5 h-3.5" style={{ color: statusColor }} />
         <span className="text-xs font-medium text-text flex-1">{test.checklistItemId}</span>
         <span className="inline-flex items-center px-1.5 py-0.5 text-[11px] font-medium rounded border" style={{ borderColor: statusColor, color: statusColor }}>
-          {test.status}
+          {mode === 'simple' ? plainStatus : test.status}
         </span>
-        <span className="text-xs text-text-muted">{totalTrials} trials</span>
+        <span className="text-xs text-text-muted">
+          {totalTrials} {mode === 'simple' ? `run${totalTrials === 1 ? '' : 's'}` : 'trials'}
+        </span>
         {test.winnerId && (
           <Trophy className="w-3 h-3 text-yellow-500" />
         )}
@@ -808,45 +926,61 @@ function ABTestCard({
             className="overflow-hidden"
           >
             <div className="px-3 pb-3 space-y-3 border-t border-border/30">
-              {/* Variant A vs B */}
-              <div className="grid grid-cols-2 gap-3 mt-2">
-                <VariantSlotCard
-                  label="Variant A"
-                  variant={variantA}
-                  trials={test.variantATrials}
-                  successes={test.variantASuccesses}
-                  totalDurationMs={test.variantATotalDurationMs}
-                  rate={rateA}
-                  isWinner={test.winnerId === test.variantAId}
-                />
-                <VariantSlotCard
-                  label="Variant B"
-                  variant={variantB}
-                  trials={test.variantBTrials}
-                  successes={test.variantBSuccesses}
-                  totalDurationMs={test.variantBTotalDurationMs}
-                  rate={rateB}
-                  isWinner={test.winnerId === test.variantBId}
-                />
-              </div>
+              {/* Plain-language verdict — shown in BOTH modes (the headline answer) */}
+              <PlainVerdictBanner
+                verdict={verdict}
+                canUseWording={Boolean(winnerVariant)}
+                onUseWording={handleUseWording}
+              />
 
-              {/* Confidence */}
-              {test.confidence > 0 && (
-                <div className="flex items-center gap-2 text-xs text-text-muted">
-                  <Target className="w-3 h-3" />
-                  <span>Confidence: {Math.round(test.confidence * 100)}%</span>
-                </div>
+              {/* Advanced-only statistical breakdown */}
+              {mode === 'advanced' && (
+                <>
+                  <div className="grid grid-cols-2 gap-3">
+                    <VariantSlotCard
+                      label="Variant A"
+                      variant={variantA}
+                      trials={test.variantATrials}
+                      successes={test.variantASuccesses}
+                      totalDurationMs={test.variantATotalDurationMs}
+                      rate={rateA}
+                      isWinner={test.winnerId === test.variantAId}
+                    />
+                    <VariantSlotCard
+                      label="Variant B"
+                      variant={variantB}
+                      trials={test.variantBTrials}
+                      successes={test.variantBSuccesses}
+                      totalDurationMs={test.variantBTotalDurationMs}
+                      rate={rateB}
+                      isWinner={test.winnerId === test.variantBId}
+                    />
+                  </div>
+
+                  {/* Raw confidence (jargon tooltipped) */}
+                  {test.confidence > 0 && (
+                    <div className="flex items-center gap-2 text-xs text-text-muted">
+                      <Target className="w-3 h-3" />
+                      <span>
+                        <StatTerm term="confidence">Confidence</StatTerm>: {Math.round(test.confidence * 100)}%{' '}
+                        <span className="text-text-muted/70">
+                          (<StatTerm term="z-test">z-test</StatTerm>)
+                        </span>
+                      </span>
+                    </div>
+                  )}
+                </>
               )}
 
               {/* Conclude button */}
               {test.status === 'running' && onConclude && totalTrials >= 2 && (
                 <button
                   onClick={onConclude}
-                  className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md text-white transition-colors"
+                  className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md text-white transition-colors focus-ring"
                   style={{ backgroundColor: ACCENT }}
                 >
                   <CheckCircle2 className="w-3 h-3" />
-                  Conclude Test
+                  {mode === 'simple' ? 'Finish & pick a winner' : 'Conclude Test'}
                 </button>
               )}
             </div>
@@ -854,6 +988,58 @@ function ABTestCard({
         )}
       </AnimatePresence>
     </SurfaceCard>
+  );
+}
+
+// ── Plain-language verdict banner ────────────────────────────────────────────
+
+function PlainVerdictBanner({
+  verdict,
+  canUseWording,
+  onUseWording,
+}: {
+  verdict: PlainVerdict;
+  canUseWording: boolean;
+  onUseWording: () => void;
+}) {
+  const hasWinner = verdict.winnerSlot !== null;
+  const accent = hasWinner ? STATUS_SUCCESS : STATUS_NEUTRAL;
+
+  return (
+    <div
+      className="mt-2 rounded-md border bg-surface/40 p-3"
+      style={{ borderLeft: `3px solid ${accent}` }}
+      data-testid="plain-verdict"
+    >
+      <div className="flex items-start gap-2">
+        {hasWinner ? (
+          <Trophy className="w-4 h-4 flex-shrink-0 mt-0.5" style={{ color: accent }} />
+        ) : (
+          <Clock className="w-4 h-4 flex-shrink-0 mt-0.5 text-text-muted" />
+        )}
+        <div className="flex-1 min-w-0 space-y-1">
+          <p className="text-xs font-semibold text-text">{verdict.headline}</p>
+          <p className="text-xs text-text-muted leading-relaxed">{verdict.detail}</p>
+          <p className="text-xs text-text-muted leading-relaxed">
+            <span className="text-text">Why:</span> {verdict.why}
+          </p>
+          <p className="text-2xs text-text-muted/80">{verdict.confidenceNote}</p>
+        </div>
+      </div>
+
+      {hasWinner && canUseWording && (
+        <div className="mt-2.5">
+          <button
+            onClick={onUseWording}
+            className="focus-ring inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md text-white transition-colors"
+            style={{ backgroundColor: STATUS_SUCCESS }}
+          >
+            <Copy className="w-3 h-3" />
+            Use this wording
+          </button>
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -951,6 +1137,15 @@ function ClustersPanel({
         />
       ) : (
         <div className="space-y-2">
+          {/* How clustering works — surfaces the engine's jargon as tooltips. */}
+          <p className="text-xs text-text-muted leading-relaxed">
+            Similar prompts are grouped using{' '}
+            <StatTerm term="jaccard">Jaccard similarity</StatTerm> and{' '}
+            <StatTerm term="agglomerative clustering">agglomerative clustering</StatTerm>. Each
+            group shows its most typical prompt (its{' '}
+            <StatTerm term="centroid">centroid</StatTerm>).
+          </p>
+
           {clusters.map((cluster, idx) => (
             <motion.div
               key={idx}
@@ -974,6 +1169,9 @@ function ClustersPanel({
                     <span className="text-xs text-text-muted">{cluster.sessionIds.length} sessions</span>
                   </div>
                 </div>
+
+                {/* Plain-language one-liner */}
+                <p className="text-xs text-text mb-2 leading-relaxed">{plainClusterSummary(cluster)}</p>
 
                 {/* Keywords */}
                 <div className="flex items-center gap-1 mb-2 flex-wrap">

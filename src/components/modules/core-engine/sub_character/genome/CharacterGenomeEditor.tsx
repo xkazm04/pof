@@ -1,14 +1,14 @@
 'use client';
 
 import { useState, useMemo, useCallback, useEffect } from 'react';
-import { Zap, Swords, Shield, Camera, Activity, Code2, ChevronRight } from 'lucide-react';
+import { Zap, Swords, Shield, Camera, Activity, Code2, ChevronRight, Dna } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   ACCENT_ORANGE, ACCENT_EMERALD, ACCENT_CYAN,
   ACCENT_VIOLET, ACCENT_PINK, STATUS_WARNING, STATUS_ERROR,
   withOpacity, OPACITY_20, OPACITY_5,
 } from '@/lib/chart-colors';
-import { BlueprintPanel, SectionHeader } from '../../unique-tabs/_design';
+import { BlueprintPanel, SectionHeader, UniqueTabHeader } from '../../unique-tabs/_design';
 import { STAGGER_DEFAULT } from '../../unique-tabs/_shared';
 import { useGenomeStore, createGenome } from '@/stores/genomeStore';
 import type { CharacterGenome } from '@/types/character-genome';
@@ -110,6 +110,13 @@ export function CharacterGenomeEditor() {
 
   return (
     <div className="space-y-4">
+      <UniqueTabHeader
+        icon={Dna}
+        title="Character Genome"
+        color={ACCENT}
+        subtitle={<><span style={{ color: ACCENT }}>{genomes.length}</span> archetypes defined</>}
+      />
+
       <GenomeSelectorBar genomes={genomes} resolvedActiveId={resolvedActiveId}
         onSelectGenome={setActiveId} onAddGenome={addGenome}
         onImportGenome={storeAddGenome} onUpdateGenome={updateGenome} />

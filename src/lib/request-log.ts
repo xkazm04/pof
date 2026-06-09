@@ -43,6 +43,7 @@ export function saveIdempotencyResult(
 
 /**
  * Purge expired idempotency entries. Call periodically to keep the table small.
+ * Prefer {@link tickPurgeExpiredKeys} from a frequent cron — it self-throttles.
  */
 export function purgeExpiredKeys(): number {
   const db = getDb();
@@ -50,4 +51,25 @@ export function purgeExpiredKeys(): number {
     `DELETE FROM request_log WHERE created_at < datetime('now', '-' || ? || ' seconds')`
   ).run(IDEMPOTENCY_TTL_SECONDS);
   return result.changes;
+}
+
+/**
+ * Purge cadence — run at most once per TTL window. One purge per window bounds
+ * the table to roughly the entries created within a single window, without
+ * issuing a DELETE on every scheduler tick.
+ */
+const PURGE_INTERVAL_MS = IDEMPOTENCY_TTL_SECONDS * 1000;
+
+let lastPurgeAt = 0;
+
+/**
+ * Cron entry point for the instrumentation scheduler. Calls {@link purgeExpiredKeys}
+ * at most once per {@link PURGE_INTERVAL_MS} so the 1-minute scheduler tick stays
+ * cheap. Returns the number of rows deleted (0 when the purge was skipped because
+ * it ran recently). The first call always purges.
+ */
+export function tickPurgeExpiredKeys(now: number = Date.now()): number {
+  if (lastPurgeAt !== 0 && now - lastPurgeAt < PURGE_INTERVAL_MS) return 0;
+  lastPurgeAt = now;
+  return purgeExpiredKeys();
 }

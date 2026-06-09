@@ -5,9 +5,10 @@
 
 import { getDb } from './db';
 import { SUB_MODULE_MAP, CATEGORIES, getCategoryForSubModule } from './module-registry';
+import { countChecklist, countAllChecklists } from './checklist-progress';
 import type { FeatureStatus } from '@/types/feature-matrix';
 import type { SubModuleId } from '@/types/modules';
-import { formatBytes } from '@/lib/format';
+import { formatBytes, formatDuration } from '@/lib/format';
 
 // ─── GDD Section Types ──────────────────────────────────────────────────────
 
@@ -117,22 +118,9 @@ export function synthesizeGDD(projectName: string, checklistProgress: Record<str
     if (row.status === 'implemented') implementedFeatures += row.cnt;
   }
 
-  // 2. Checklist progress
-  let checklistTotal = 0;
-  let checklistDone = 0;
-  for (const [moduleId, items] of Object.entries(checklistProgress)) {
-    for (const checked of Object.values(items)) {
-      checklistTotal++;
-      if (checked) checklistDone++;
-    }
-  }
-
-  // If no checklist in DB yet, count from registry
-  if (checklistTotal === 0) {
-    for (const mod of Object.values(SUB_MODULE_MAP)) {
-      if (mod.checklist) checklistTotal += mod.checklist.length;
-    }
-  }
+  // 2. Checklist progress — registry-based tally (single source of truth,
+  //    shared with the compliance audit and the per-section counts below).
+  const { done: checklistDone, total: checklistTotal } = countAllChecklists(checklistProgress);
 
   // 3. Level design docs
   const levelDocs = db.prepare(
@@ -174,32 +162,32 @@ export function synthesizeGDD(projectName: string, checklistProgress: Record<str
   const sections: GDDSection[] = [];
 
   // Section 1: Project Overview
-  sections.push(buildOverviewSection(projectName, totalFeatures, implementedFeatures, checklistTotal, checklistDone));
+  sections.push(buildOverviewSection(projectName, totalFeatures, implementedFeatures, checklistTotal, checklistDone, now));
 
   // Section 2: Core Systems
-  sections.push(buildCoreSystemsSection(featureDetails, checklistProgress));
+  sections.push(buildCoreSystemsSection(featureDetails, checklistProgress, now));
 
   // Section 3: Development Roadmap
-  sections.push(buildRoadmapSection(checklistProgress, snapshots));
+  sections.push(buildRoadmapSection(checklistProgress, snapshots, now));
 
   // Section 4: Level Design
   if (levelDocs.length > 0) {
-    sections.push(buildLevelDesignSection(levelDocs));
+    sections.push(buildLevelDesignSection(levelDocs, now));
   }
 
   // Section 5: Audio Design
   if (audioScenes.length > 0) {
-    sections.push(buildAudioSection(audioScenes));
+    sections.push(buildAudioSection(audioScenes, now));
   }
 
   // Section 6: Technical Architecture
   if (evalFindings.length > 0) {
-    sections.push(buildArchitectureSection(evalFindings, evalBySeverity));
+    sections.push(buildArchitectureSection(evalFindings, evalBySeverity, now));
   }
 
   // Section 7: Build & Deployment
   if (builds.length > 0) {
-    sections.push(buildDeploymentSection(builds));
+    sections.push(buildDeploymentSection(builds, now));
   }
 
   return {
@@ -227,6 +215,7 @@ function buildOverviewSection(
   implemented: number,
   checklistTotal: number,
   checklistDone: number,
+  now: string,
 ): GDDSection {
   const featurePct = totalFeatures > 0 ? Math.round((implemented / totalFeatures) * 100) : 0;
   const checklistPct = checklistTotal > 0 ? Math.round((checklistDone / checklistTotal) * 100) : 0;
@@ -236,7 +225,7 @@ function buildOverviewSection(
     '',
     `**Genre:** Action RPG (aRPG)  `,
     `**Engine:** Unreal Engine 5 (C++)  `,
-    `**Last Updated:** ${new Date().toLocaleDateString()}`,
+    `**Last Updated:** ${new Date(now).toLocaleDateString()}`,
     '',
     '## Project Status',
     '',
@@ -253,12 +242,13 @@ function buildOverviewSection(
     `    "Remaining" : ${totalFeatures - implemented}`,
   ].join('\n') : undefined;
 
-  return { id: 'overview', title: 'Project Overview', content, mermaid, updatedAt: new Date().toISOString() };
+  return { id: 'overview', title: 'Project Overview', content, mermaid, updatedAt: now };
 }
 
 function buildCoreSystemsSection(
   features: FeatureDetailRow[],
   checklistProgress: Record<string, Record<string, boolean>>,
+  now: string,
 ): GDDSection {
   const subsections: GDDSection[] = [];
 
@@ -282,14 +272,12 @@ function buildCoreSystemsSection(
       if (!mod) continue;
 
       const modFeatures = byModule.get(modId) ?? [];
-      const progress = checklistProgress[modId] ?? {};
-      const checklist = mod.checklist ?? [];
-      const done = checklist.filter((c) => progress[c.id]).length;
+      const { done, total } = countChecklist(mod, checklistProgress[modId]);
 
       catFeatures.push(`### ${mod.label}`);
       catFeatures.push(`*${mod.description}*`);
-      if (checklist.length > 0) {
-        catFeatures.push(`\nChecklist: ${done}/${checklist.length} complete`);
+      if (total > 0) {
+        catFeatures.push(`\nChecklist: ${done}/${total} complete`);
       }
 
       if (modFeatures.length > 0) {
@@ -310,7 +298,7 @@ function buildCoreSystemsSection(
         id: `systems-${cat.id}`,
         title: cat.label,
         content: catFeatures.join('\n'),
-        updatedAt: new Date().toISOString(),
+        updatedAt: now,
       });
     }
   }
@@ -324,13 +312,14 @@ function buildCoreSystemsSection(
     content: 'Overview of all game systems, their implementation status, and feature coverage.',
     mermaid,
     subsections,
-    updatedAt: new Date().toISOString(),
+    updatedAt: now,
   };
 }
 
 function buildRoadmapSection(
   checklistProgress: Record<string, Record<string, boolean>>,
   snapshots: SnapshotRow[],
+  now: string,
 ): GDDSection {
   const lines: string[] = [];
 
@@ -339,11 +328,9 @@ function buildRoadmapSection(
   lines.push('|--------|----------|--------|');
 
   for (const mod of Object.values(SUB_MODULE_MAP)) {
-    const checklist = mod.checklist ?? [];
-    if (checklist.length === 0) continue;
-    const progress = checklistProgress[mod.id] ?? {};
-    const done = checklist.filter((c) => progress[c.id]).length;
-    const pct = Math.round((done / checklist.length) * 100);
+    const { done, total } = countChecklist(mod, checklistProgress[mod.id]);
+    if (total === 0) continue;
+    const pct = Math.round((done / total) * 100);
     const bar = progressBar(pct);
     const status = pct === 100 ? 'Complete' : pct > 50 ? 'In Progress' : pct > 0 ? 'Started' : 'Not Started';
     lines.push(`| ${mod.label} | ${bar} ${pct}% | ${status} |`);
@@ -371,11 +358,11 @@ function buildRoadmapSection(
     title: 'Development Roadmap',
     content: lines.join('\n'),
     mermaid,
-    updatedAt: new Date().toISOString(),
+    updatedAt: now,
   };
 }
 
-function buildLevelDesignSection(docs: LevelDocRow[]): GDDSection {
+function buildLevelDesignSection(docs: LevelDocRow[], now: string): GDDSection {
   const subsections: GDDSection[] = [];
 
   for (const doc of docs) {
@@ -417,7 +404,7 @@ function buildLevelDesignSection(docs: LevelDocRow[]): GDDSection {
       title: doc.name,
       content: lines.join('\n'),
       mermaid,
-      updatedAt: new Date().toISOString(),
+      updatedAt: now,
     });
   }
 
@@ -426,11 +413,11 @@ function buildLevelDesignSection(docs: LevelDocRow[]): GDDSection {
     title: 'Level Design & World Flow',
     content: `${docs.length} level design document${docs.length !== 1 ? 's' : ''} define the game world.`,
     subsections,
-    updatedAt: new Date().toISOString(),
+    updatedAt: now,
   };
 }
 
-function buildAudioSection(scenes: AudioSceneRow[]): GDDSection {
+function buildAudioSection(scenes: AudioSceneRow[], now: string): GDDSection {
   const lines: string[] = [];
 
   let totalZones = 0;
@@ -465,13 +452,14 @@ function buildAudioSection(scenes: AudioSceneRow[]): GDDSection {
       ...lines,
     ].join('\n'),
     mermaid,
-    updatedAt: new Date().toISOString(),
+    updatedAt: now,
   };
 }
 
 function buildArchitectureSection(
   findings: EvalFindingRow[],
   bySeverity: { severity: string; cnt: number }[],
+  now: string,
 ): GDDSection {
   const lines: string[] = [];
 
@@ -502,7 +490,7 @@ function buildArchitectureSection(
       id: `arch-${moduleId}`,
       title: `${label} (${modFindings.length} findings)`,
       content: fLines.join('\n') || 'No critical/high findings.',
-      updatedAt: new Date().toISOString(),
+      updatedAt: now,
     });
   }
 
@@ -511,11 +499,11 @@ function buildArchitectureSection(
     title: 'Technical Architecture & Code Quality',
     content: lines.join('\n'),
     subsections,
-    updatedAt: new Date().toISOString(),
+    updatedAt: now,
   };
 }
 
-function buildDeploymentSection(builds: BuildRow[]): GDDSection {
+function buildDeploymentSection(builds: BuildRow[], now: string): GDDSection {
   const lines: string[] = [];
 
   // Platform summary
@@ -543,7 +531,7 @@ function buildDeploymentSection(builds: BuildRow[]): GDDSection {
     id: 'deployment',
     title: 'Build & Deployment',
     content: lines.join('\n'),
-    updatedAt: new Date().toISOString(),
+    updatedAt: now,
   };
 }
 
@@ -604,12 +592,6 @@ function severityIcon(severity: string): string {
 function progressBar(pct: number): string {
   const filled = Math.round(pct / 10);
   return '█'.repeat(filled) + '░'.repeat(10 - filled);
-}
-
-function formatDuration(ms: number): string {
-  if (ms < 1000) return `${ms}ms`;
-  if (ms < 60000) return `${(ms / 1000).toFixed(1)}s`;
-  return `${(ms / 60000).toFixed(1)}m`;
 }
 
 // ─── Markdown Export ────────────────────────────────────────────────────────

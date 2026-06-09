@@ -18,9 +18,9 @@
  *   GET  /pof/compile/status        — get current compile status
  */
 
-import { ok, err, type Result } from '@/types/result';
+import { type Result } from '@/types/result';
 import { UI_TIMEOUTS } from '@/lib/constants';
-import { logger } from '@/lib/logger';
+import { bridgeRequest } from '@/lib/ue5-bridge/shared';
 import type {
   PofBridgeStatus,
   AssetManifest,
@@ -49,57 +49,20 @@ export class PofBridgeClient {
 
   // ── Core HTTP helper ──────────────────────────────────────────────────────
 
-  private async request<T>(
+  private request<T>(
     method: 'GET' | 'POST' | 'PUT' | 'DELETE',
     path: string,
     body?: unknown,
   ): Promise<Result<T, string>> {
-    const url = `${this.baseUrl}${path}`;
-    const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), this.timeout);
-
-    try {
-      const headers: Record<string, string> = {
-        'Content-Type': 'application/json',
-      };
-
-      if (this.authToken) {
-        headers['X-Pof-Auth-Token'] = this.authToken;
-      }
-
-      const init: RequestInit = {
-        method,
-        signal: controller.signal,
-        headers,
-      };
-
-      if (body !== undefined) {
-        init.body = JSON.stringify(body);
-      }
-
-      const res = await fetch(url, init);
-
-      if (!res.ok) {
-        const text = await res.text().catch(() => '');
-        const msg = `PoF Bridge ${method} ${path} returned ${res.status}: ${text.slice(0, 200)}`;
-        logger.warn('[PoF-Bridge]', msg);
-        return err(msg);
-      }
-
-      const data = (await res.json()) as T;
-      return ok(data);
-    } catch (e) {
-      if (e instanceof DOMException && e.name === 'AbortError') {
-        const msg = `PoF Bridge ${method} ${path} timed out after ${this.timeout}ms`;
-        logger.warn('[PoF-Bridge]', msg);
-        return err(msg);
-      }
-      const msg = e instanceof Error ? e.message : 'Unknown fetch error';
-      logger.warn('[PoF-Bridge]', `${method} ${path} failed:`, msg);
-      return err(msg);
-    } finally {
-      clearTimeout(timer);
-    }
+    return bridgeRequest<T>(this.baseUrl, {
+      method,
+      path,
+      body,
+      timeout: this.timeout,
+      label: 'PoF Bridge',
+      logPrefix: '[PoF-Bridge]',
+      headers: this.authToken ? { 'X-Pof-Auth-Token': this.authToken } : undefined,
+    });
   }
 
   // ── Public API ────────────────────────────────────────────────────────────

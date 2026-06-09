@@ -9,6 +9,15 @@
  * and inline annotations under generated code.
  */
 
+import type { DiffChangeType } from '@/types/blueprint';
+import {
+  STATUS_SUCCESS,
+  STATUS_ERROR,
+  STATUS_WARNING,
+  STATUS_INFO,
+  ACCENT_PURPLE,
+} from '@/lib/chart-colors';
+
 export interface JargonEntry {
   /** The raw term as it appears in code or labels (e.g. "EditAnywhere"). */
   term: string;
@@ -243,29 +252,75 @@ export const CONFLICT_LEVEL_LABELS: Record<string, JargonEntry> = {
 };
 
 // ─── Change types ───────────────────────────────────────────────────────────
+//
+// The semantic-diff change taxonomy has ONE authoritative definition:
+// CHANGE_TYPE_META, keyed by DiffChangeType. Every other view of the taxonomy —
+// the plain-language labels (CHANGE_TYPE_LABELS, below), the three-letter
+// glossary codes (CHANGE_CODES in blueprint-glossary.ts), and the diff-card
+// badges in BlueprintTranspilerView — derives from this table, so adding a new
+// change type can't leave one of them out of sync. The `Record<DiffChangeType>`
+// type makes the table exhaustive against the union at compile time.
 
-export const CHANGE_TYPE_LABELS: Record<string, JargonEntry> = {
+/** Authoritative description of a single semantic-diff change type. */
+export interface ChangeTypeMeta {
+  /** Three-letter badge code shown on diff cards (ADD/DEL/MOD/MOV/REN). */
+  code: string;
+  /** Plain-English past-tense label (Added/Removed/Modified/…). */
+  label: string;
+  /** One-line, jargon-free description of what the change means. */
+  plain: string;
+  /** Optional "why it matters" hook for the glossary tooltip. */
+  why?: string;
+  /** Status color used for the badge across the diff UI. */
+  color: string;
+}
+
+export const CHANGE_TYPE_META: Record<DiffChangeType, ChangeTypeMeta> = {
   add: {
-    term: 'Added',
+    code: 'ADD',
+    label: 'Added',
     plain: 'Exists in the Blueprint but is missing on the C++ side.',
+    why: 'Regenerating the C++ will create the matching declaration.',
+    color: STATUS_SUCCESS,
   },
   remove: {
-    term: 'Removed',
+    code: 'DEL',
+    label: 'Removed',
     plain: 'Exists in the C++ but is missing on the Blueprint side.',
+    why: 'May be C++-only code kept on purpose, or dead state worth removing.',
+    color: STATUS_ERROR,
   },
   modify: {
-    term: 'Modified',
+    code: 'MOD',
+    label: 'Modified',
     plain: 'Exists on both sides but the definitions disagree.',
+    color: STATUS_WARNING,
   },
   move: {
-    term: 'Moved',
+    code: 'MOV',
+    label: 'Moved',
     plain: 'Same definition, different location.',
+    color: STATUS_INFO,
   },
   rename: {
-    term: 'Renamed',
+    code: 'REN',
+    label: 'Renamed',
     plain: 'Same definition, different name on one side.',
+    why: 'Pick the new name everywhere, or save data and references can break.',
+    color: ACCENT_PURPLE,
   },
 };
+
+/**
+ * Plain-language jargon entries keyed by {@link DiffChangeType}, derived from
+ * {@link CHANGE_TYPE_META}. Used by the aggregate jargon lookup and the diff
+ * explainer (which reads `.term`).
+ */
+export const CHANGE_TYPE_LABELS: Record<string, JargonEntry> = Object.fromEntries(
+  (Object.entries(CHANGE_TYPE_META) as [DiffChangeType, ChangeTypeMeta][]).map(
+    ([type, meta]) => [type, { term: meta.label, plain: meta.plain }],
+  ),
+);
 
 // ─── Aggregate lookup ───────────────────────────────────────────────────────
 

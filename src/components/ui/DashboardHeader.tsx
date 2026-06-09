@@ -20,7 +20,8 @@ interface DashboardHeaderProps {
   /** Lucide icon component (e.g. `Gauge`, `BookOpen`). Rendered inside the accent tile. */
   icon: ComponentType<{ className?: string }>;
   title: string;
-  subtitle?: string;
+  /** Plain strings are truncated to one line; rich nodes (e.g. inline tooltips) wrap freely. */
+  subtitle?: ReactNode;
   /**
    * Tailwind color family for the gradient/soft tile (e.g. `'emerald'`, `'rose'`, `'violet'`).
    * For `variant='gradient'`, a second color may be supplied via `accentTo` (defaults to the same color).
@@ -164,7 +165,9 @@ export function DashboardHeader({
       <div className="flex-1 min-w-0">
         <h1 className={titleClass}>{title}</h1>
         {subtitle && (
-          <p className="text-xs text-text-muted mt-0.5 truncate">{subtitle}</p>
+          <p className={`text-xs text-text-muted mt-0.5 ${typeof subtitle === 'string' ? 'truncate' : ''}`}>
+            {subtitle}
+          </p>
         )}
       </div>
       {secondaryAction}

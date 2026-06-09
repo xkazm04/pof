@@ -1,4 +1,3 @@
-import type { FeatureStatus } from './feature-matrix';
 import type { SubModuleId } from './modules';
 
 export type GapSeverity = 'critical' | 'major' | 'minor' | 'info';
@@ -46,7 +45,7 @@ export interface ComplianceReport {
 export interface ReconciliationSuggestion {
   id: string;
   moduleId: SubModuleId;
-  type: 'update-gdd' | 'implement-feature' | 'remove-stale';
+  type: 'update-gdd' | 'implement-feature';
   title: string;
   description: string;
   effort: EffortEstimate;
@@ -54,8 +53,7 @@ export interface ReconciliationSuggestion {
 }
 
 export interface ComplianceRequest {
-  action: 'audit' | 'get-report' | 'resolve-gap' | 'apply-suggestion';
+  action: 'audit' | 'resolve-gap';
   moduleId?: string;
   gapId?: string;
-  suggestionId?: string;
 }

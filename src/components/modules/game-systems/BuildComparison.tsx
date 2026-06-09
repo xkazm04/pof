@@ -3,6 +3,7 @@
 import { useMemo, useState } from 'react';
 import { ArrowLeftRight, ArrowUp, ArrowDown, Clock, HardDrive, AlertTriangle, AlertCircle, Tag, FolderOpen, CheckCircle, XCircle } from 'lucide-react';
 import type { BuildRecord } from '@/lib/packaging/build-history-store';
+import { platformLabel } from '@/lib/packaging/build-profiles';
 import { STATUS_SUCCESS, STATUS_ERROR, STATUS_NEUTRAL } from '@/lib/chart-colors';
 import { formatBytes, formatDuration } from '@/lib/format';
 
@@ -136,7 +137,7 @@ export function BuildComparison({ builds }: BuildComparisonProps) {
   }
 
   const buildOption = (b: BuildRecord) =>
-    `#${b.id} ${b.platform} ${b.config} ${b.status === 'success' ? '' : '(failed)'} ${b.version ?? ''}`.trim();
+    `#${b.id} ${platformLabel(b.platform)} ${b.config} ${b.status === 'success' ? '' : '(failed)'} ${b.version ?? ''}`.trim();
 
   const swap = () => {
     setLeftId(rightId);
@@ -282,8 +283,8 @@ export function BuildComparison({ builds }: BuildComparisonProps) {
           <CompareRow
             label="Config"
             icon={<FolderOpen className="w-2.5 h-2.5" />}
-            leftVal={`${left.platform} / ${left.config}`}
-            rightVal={`${right.platform} / ${right.config}`}
+            leftVal={`${platformLabel(left.platform)} / ${left.config}`}
+            rightVal={`${platformLabel(right.platform)} / ${right.config}`}
           />
         </div>
       ) : (

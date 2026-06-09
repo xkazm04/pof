@@ -12,6 +12,8 @@ import {
   ACCENT_ORANGE, STATUS_SUCCESS, STATUS_ERROR, STATUS_INFO,
 } from '@/lib/chart-colors';
 import { ScoreRing } from '@/components/ui/ScoreRing';
+import { MeterBar } from '@/components/ui/MeterBar';
+import { MetricCard } from '@/components/ui/MetricCard';
 import { EmptyState as SharedEmptyState } from '@/components/ui/EmptyState';
 import { StatusChip } from '@/components/ui/StatusChip';
 import { SESSION_STATUS_TOKENS } from '@/lib/game-director-styles';
@@ -48,32 +50,36 @@ export function DirectorOverview({
     <div className="space-y-6">
       {/* Stats cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        <StatCard
+        <MetricCard
           label="Sessions"
           value={stats?.totalSessions ?? 0}
           icon={Gamepad2}
-          color={ACCENT}
+          accent={ACCENT}
+          animate
           delay={0}
         />
-        <StatCard
+        <MetricCard
           label="Findings"
           value={stats?.totalFindings ?? 0}
           icon={Target}
-          color={STATUS_INFO}
+          accent={STATUS_INFO}
+          animate
           delay={0.05}
         />
-        <StatCard
+        <MetricCard
           label="Critical Issues"
           value={stats?.criticalFindings ?? 0}
           icon={AlertTriangle}
-          color={STATUS_ERROR}
+          accent={STATUS_ERROR}
+          animate
           delay={0.1}
         />
-        <StatCard
+        <MetricCard
           label="Avg Score"
           value={stats?.avgScore != null ? `${stats.avgScore}/100` : '—'}
           icon={TrendingUp}
-          color={STATUS_SUCCESS}
+          accent={STATUS_SUCCESS}
+          animate
           delay={0.15}
         />
       </div>
@@ -147,54 +153,19 @@ export function DirectorOverview({
 
 // ─── Sub-components ──────────────────────────────────────────────────────────
 
-function StatCard({
-  label,
-  value,
-  icon: Icon,
-  color,
-  delay,
-}: {
-  label: string;
-  value: number | string;
-  icon: typeof Gamepad2;
-  color: string;
-  delay: number;
-}) {
-  return (
-    <motion.div
-      initial={{ opacity: 0, scale: 0.95 }}
-      animate={{ opacity: 1, scale: 1 }}
-      transition={{ duration: 0.22, delay }}
-      className="p-3.5 bg-surface border border-border rounded-xl"
-    >
-      <div className="flex items-center gap-2 mb-2">
-        <div
-          className="w-6 h-6 rounded-md flex items-center justify-center"
-          style={{ backgroundColor: `${color}12`, border: `1px solid ${color}20` }}
-        >
-          <Icon className="w-3 h-3" style={{ color }} />
-        </div>
-        <span className="text-xs text-text-muted">{label}</span>
-      </div>
-      <span className="text-xl font-bold text-text">{value}</span>
-    </motion.div>
-  );
-}
-
 function ScoreBar({ label, value, max, color }: { label: string; value: number; max: number; color: string }) {
-  const pct = max > 0 ? Math.min((value / max) * 100, 100) : 0;
   return (
     <div className="flex items-center gap-2">
       <span className="text-xs text-text-muted w-16 text-right">{label}</span>
-      <div className="flex-1 h-1.5 bg-border rounded-full overflow-hidden">
-        <motion.div
-          initial={{ width: 0 }}
-          animate={{ width: `${pct}%` }}
-          transition={{ duration: 0.45, ease: [0.16, 1, 0.3, 1], delay: 0.3 }}
-          className="h-full rounded-full"
-          style={{ backgroundColor: color }}
-        />
-      </div>
+      <MeterBar
+        value={value}
+        max={max}
+        color={color}
+        delayMs={300}
+        ariaLabel={label}
+        valueText={`${value} of ${max}`}
+        className="flex-1"
+      />
       <span className="text-xs font-medium text-text-muted-hover w-6 text-right">{value}</span>
     </div>
   );

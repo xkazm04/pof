@@ -5,6 +5,7 @@ import { z } from 'zod';
 import { upsertFeatures } from '@/lib/feature-matrix-db';
 import { MODULE_FEATURE_DEFINITIONS } from '@/lib/feature-definitions';
 import { checkIdempotencyKey, saveIdempotencyResult } from '@/lib/request-log';
+import { FEATURE_STATUSES } from '@/types/feature-matrix';
 import type { CLIFeatureReport } from '@/types/feature-matrix';
 import { apiSuccess, apiError } from '@/lib/api-utils';
 import type { SubModuleId } from '@/types/modules';
@@ -14,7 +15,7 @@ import type { SubModuleId } from '@/types/modules';
 const featureEntrySchema = z.object({
   featureName: z.string().min(1, 'featureName must be non-empty'),
   category: z.string().default('general'),
-  status: z.enum(['implemented', 'improved', 'partial', 'missing', 'unknown']),
+  status: z.enum(FEATURE_STATUSES),
   description: z.string().default(''),
   filePaths: z.array(z.string()).default([]),
   reviewNotes: z.string().default(''),

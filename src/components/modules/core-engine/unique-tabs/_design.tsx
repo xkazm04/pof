@@ -79,6 +79,50 @@ export function SectionHeader({ label, color = DEFAULT_ACCENT, icon: Icon }: {
   );
 }
 
+/* ── Unique Tab Header ─ Standardized tab-opening signature ───────────────── */
+
+/**
+ * The shared header every genome/progression tool tab opens with, so siblings
+ * one click apart read as one product. Slots: an `icon` chip, a `title`, an
+ * optional mono-uppercase `subtitle` metric line, and a right-aligned `action`
+ * area (buttons / badge). The icon chip (`p-1.5 rounded-md`, `OPACITY_8` accent
+ * fill, drop-shadow glow) and the mono-uppercase subtitle are the fixed visual
+ * signature — callers only vary the content and `color`.
+ */
+export function UniqueTabHeader({
+  icon: Icon, title, subtitle, color = DEFAULT_ACCENT, action,
+}: {
+  icon: React.ComponentType<{ className?: string; style?: React.CSSProperties }>;
+  title: string;
+  subtitle?: ReactNode;
+  color?: string;
+  action?: ReactNode;
+}) {
+  const prefersReduced = useReducedMotion();
+  return (
+    <motion.div
+      initial={prefersReduced ? { opacity: 1, y: 0 } : { opacity: 0, y: -6 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={motionSafe(ANIMATION_PRESETS.entrance, prefersReduced)}
+      className="flex items-center justify-between gap-3 pb-3 border-b"
+      style={{ borderColor: withOpacity(color, BORDER_SUBTLE) }}
+    >
+      <div className="flex items-center gap-2.5 min-w-0">
+        <div className="p-1.5 rounded-md shrink-0" style={{ backgroundColor: withOpacity(color, OPACITY_8) }}>
+          <Icon className="w-4 h-4" style={{ color, filter: `drop-shadow(${GLOW_SM} ${color})` }} />
+        </div>
+        <div className="flex flex-col min-w-0">
+          <span className="text-sm font-bold text-text tracking-wide truncate">{title}</span>
+          {subtitle != null && (
+            <span className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted truncate">{subtitle}</span>
+          )}
+        </div>
+      </div>
+      {action != null && <div className="flex items-center gap-1.5 shrink-0">{action}</div>}
+    </motion.div>
+  );
+}
+
 /* ── Glow Stat ─ Numeric readout with hover glow ──────────────────────────── */
 
 export function GlowStat({ label, value, unit, color, delay = 0 }: {

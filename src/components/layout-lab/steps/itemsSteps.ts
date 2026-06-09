@@ -1,6 +1,6 @@
 import type { Acceptance } from './StepFrame';
 import type { LabEntity } from '../useLabCatalogData';
-import type { LabStepArtifact, StepOutput } from '../labPipelineStore';
+import type { StepOutput } from '../labPipelineStore';
 
 /** PascalCase, space-free asset slug for UE paths (Iron Longsword → IronLongsword). */
 export function slug(name: string): string {
@@ -46,6 +46,39 @@ export const ITEM_ATTR_SCHEMA: ItemAttr[] = [
 const ATTR_KEYS = ITEM_ATTR_SCHEMA.map((a) => a.key);
 const RARITY_MULT = 1.4; // expected gold per power point
 
+/* ── Economy curve math ─────────────────────────────────────────────────────
+ * The single source for the price/power formula. Both the Economy Acceptance
+ * gate (below) and the Economy View (`ItemEconomy`) read these helpers, so the
+ * in-band / OUTLIER badge can never disagree with the derived gate at a band
+ * edge — previously the two sites rounded the expected price differently. */
+
+/** Expected gold price for an item of the given power — the loot-curve baseline.
+ *  Gold is whole, so the curve (and the ratio denominator) round to integer gold. */
+export function expectedPrice(power: number): number {
+  return Math.round(power * RARITY_MULT);
+}
+
+/** Actual cost as a multiple of the expected price. 1.0× sits exactly on the curve. */
+export function priceRatio(cost: number, power: number): number {
+  return cost / expectedPrice(power);
+}
+
+/** Price/power band: cost must sit within 0.8–1.2× of the expected curve. */
+export const PRICE_RATIO_BAND = { lo: 0.8, hi: 1.2 } as const;
+/** Power band: power must sit within ±10% of its tier target. */
+export const POWER_BAND = { lo: 0.9, hi: 1.1 } as const;
+
+/** True when the item's price sits inside the price/power band. */
+export function priceInBand(cost: number, power: number): boolean {
+  const ratio = priceRatio(cost, power);
+  return ratio >= PRICE_RATIO_BAND.lo && ratio <= PRICE_RATIO_BAND.hi;
+}
+
+/** True when the item's power sits within ±10% of its tier target. */
+export function powerInBand(power: number, target: number): boolean {
+  return power >= target * POWER_BAND.lo && power <= target * POWER_BAND.hi;
+}
+
 /**
  * Default produce outputs that the matching View previews also render as their
  * empty-state fallback. Exported so each View imports the exact array Produce
@@ -60,8 +93,6 @@ export const DEFAULT_GATE_CHECKS: string[] = ['Stat/rules unit test', 'Equip + u
 function brief(entity: LabEntity): string {
   return `${entity.name} is a mid-tier martial weapon forged for frontline duelists. It favors disciplined, rhythmic strikes over raw burst — rewarding players who weave light and heavy attacks rather than mashing a single button. Visually it reads as weathered steel with a leather-wrapped grip and a faint guild sigil etched near the crossguard. Intended player feeling: dependable and earned — a soldier's tool, not a hero's relic.`;
 }
-
-const d = (art: LabStepArtifact | undefined) => (art?.data ?? {}) as Record<string, unknown>;
 
 /**
  * Plain-language acceptance copy — authored per step alongside `accept()` so the
@@ -84,13 +115,13 @@ export interface AcceptanceCopy {
  */
 export interface ItemStepSpec {
   produce: (entity: LabEntity) => StepOutput;
-  accept: (art: LabStepArtifact | undefined) => Acceptance;
+  accept: (data: Record<string, unknown>) => Acceptance;
 }
 
 /* ── Plain-language reasons ─────────────────────────────────────────────── */
 
-function briefCopy(art: LabStepArtifact | undefined): AcceptanceCopy {
-  const len = String(d(art).brief ?? '').length;
+function briefCopy(data: Record<string, unknown>): AcceptanceCopy {
+  const len = String(data.brief ?? '').length;
   if (len === 0) {
     return { why: 'No concept brief has been written yet — downstream art and economy steps have no tone to reference.',
       suggestion: 'Run Produce to draft a brief.' };
@@ -99,8 +130,8 @@ function briefCopy(art: LabStepArtifact | undefined): AcceptanceCopy {
     suggestion: 'Re-run Produce to lengthen it past 300 characters.' };
 }
 
-function attributesCopy(art: LabStepArtifact | undefined): AcceptanceCopy {
-  const stats = (d(art).stats ?? {}) as Record<string, unknown>;
+function attributesCopy(data: Record<string, unknown>): AcceptanceCopy {
+  const stats = (data.stats ?? {}) as Record<string, unknown>;
   const missing = ATTR_KEYS.filter((k) => stats[k] == null);
   if (missing.length === ATTR_KEYS.length) {
     return { why: 'No attributes have been authored yet — UE5 has no row data to drive damage, weight, or value.',
@@ -110,16 +141,15 @@ function attributesCopy(art: LabStepArtifact | undefined): AcceptanceCopy {
     suggestion: 'Re-run Produce to fill the remaining fields.' };
 }
 
-function economyCopy(art: LabStepArtifact | undefined): AcceptanceCopy {
-  const data = d(art);
+function economyCopy(data: Record<string, unknown>): AcceptanceCopy {
   if (data.power == null) {
     return { why: 'Power and price are not tuned — without them the item has no place on the loot curve.',
       suggestion: 'Run Produce to tune cost / rarity onto the price/power curve.' };
   }
   const power = Number(data.power), target = Number(data.target), cost = Number(data.cost);
-  const ratio = cost / (power * RARITY_MULT);
-  const powerOk = power >= target * 0.9 && power <= target * 1.1;
-  const ratioOk = ratio >= 0.8 && ratio <= 1.2;
+  const ratio = priceRatio(cost, power);
+  const powerOk = powerInBand(power, target);
+  const ratioOk = priceInBand(cost, power);
   if (!powerOk) {
     const pct = Math.round(((power - target) / target) * 100);
     return { why: `Power is ${pct > 0 ? `~${pct}% above` : `~${Math.abs(pct)}% below`} its tier target — out of the ±10% band.`,
@@ -135,15 +165,15 @@ function economyCopy(art: LabStepArtifact | undefined): AcceptanceCopy {
   return { why: 'Power and price both land in their bands — this item fits the loot curve.', suggestion: '' };
 }
 
-function iconCopy(art: LabStepArtifact | undefined): AcceptanceCopy {
-  return d(art).selected != null
+function iconCopy(data: Record<string, unknown>): AcceptanceCopy {
+  return data.selected != null
     ? { why: 'An icon is selected.', suggestion: '' }
     : { why: 'No icon candidate has been picked yet — the item has nothing to render in the inventory grid.',
         suggestion: 'Click one of the gallery tiles, or run Produce to generate fresh candidates.' };
 }
 
-function meshCopy(art: LabStepArtifact | undefined): AcceptanceCopy {
-  const tris = Number(d(art).tris ?? 0), cap = Number(d(art).cap ?? 6000);
+function meshCopy(data: Record<string, unknown>): AcceptanceCopy {
+  const tris = Number(data.tris ?? 0), cap = Number(data.cap ?? 6000);
   if (tris === 0) {
     return { why: 'No mesh has been generated yet — the inventory preview will fall back to an icon-only state.',
       suggestion: 'Run Produce to generate a base mesh and auto-LODs.' };
@@ -152,8 +182,8 @@ function meshCopy(art: LabStepArtifact | undefined): AcceptanceCopy {
     suggestion: 'Re-run Produce with a tighter retopo target.', fixDirection: `retopo under ${cap} triangles for LOD0` };
 }
 
-function materialCopy(art: LabStepArtifact | undefined): AcceptanceCopy {
-  const maps = (d(art).maps ?? []) as string[];
+function materialCopy(data: Record<string, unknown>): AcceptanceCopy {
+  const maps = (data.maps ?? []) as string[];
   const need = ['Albedo', 'Normal', 'ORM'];
   const missing = need.filter((m) => !maps.includes(m));
   if (maps.length === 0) {
@@ -164,8 +194,8 @@ function materialCopy(art: LabStepArtifact | undefined): AcceptanceCopy {
     suggestion: 'Re-run Produce to fill the missing PBR channels.' };
 }
 
-function animationsCopy(art: LabStepArtifact | undefined): AcceptanceCopy {
-  const clips = (d(art).clips ?? []) as unknown[];
+function animationsCopy(data: Record<string, unknown>): AcceptanceCopy {
+  const clips = (data.clips ?? []) as unknown[];
   return clips.length === 0
     ? { why: 'No clips retargeted yet — the item cannot be picked up, equipped, or idled.',
         suggestion: 'Run Produce to retarget pickup / equip / idle from SK_Mannequin.' }
@@ -173,9 +203,9 @@ function animationsCopy(art: LabStepArtifact | undefined): AcceptanceCopy {
         suggestion: 'Re-run Produce to add the missing clips.' };
 }
 
-function vfxCopy(art: LabStepArtifact | undefined): AcceptanceCopy {
-  const variants = (d(art).variants ?? []) as unknown[];
-  const cost = Number(d(art).cost ?? 0), cap = Number(d(art).cap ?? 0.8);
+function vfxCopy(data: Record<string, unknown>): AcceptanceCopy {
+  const variants = (data.variants ?? []) as unknown[];
+  const cost = Number(data.cost ?? 0), cap = Number(data.cap ?? 0.8);
   if (variants.length === 0) {
     return { why: 'No Niagara variants exist — the item has no visual reactions.',
       suggestion: 'Run Produce to author the idle / equip / use variants.' };
@@ -185,8 +215,8 @@ function vfxCopy(art: LabStepArtifact | undefined): AcceptanceCopy {
     fixDirection: `keep GPU cost under ${cap}ms by reducing emitter counts` };
 }
 
-function sfxCopy(art: LabStepArtifact | undefined): AcceptanceCopy {
-  const cues = (d(art).cues ?? []) as unknown[];
+function sfxCopy(data: Record<string, unknown>): AcceptanceCopy {
+  const cues = (data.cues ?? []) as unknown[];
   return cues.length === 0
     ? { why: 'No SoundCues imported — the item is silent on pickup, equip, and use.',
         suggestion: 'Run Produce to import a randomizing SoundCue set.' }
@@ -194,16 +224,14 @@ function sfxCopy(art: LabStepArtifact | undefined): AcceptanceCopy {
         suggestion: 'Re-run Produce to fill the missing cues.' };
 }
 
-function inventoryCopy(art: LabStepArtifact | undefined): AcceptanceCopy {
-  const data = d(art);
+function inventoryCopy(data: Record<string, unknown>): AcceptanceCopy {
   return data.wired
     ? { why: 'Wired to the inventory widget.', suggestion: '' }
     : { why: 'The item is not yet registered with the inventory widget — it will not appear in the grid.',
         suggestion: 'Run Produce to register slot rules and stack size.' };
 }
 
-function tooltipCopy(art: LabStepArtifact | undefined): AcceptanceCopy {
-  const data = d(art);
+function tooltipCopy(data: Record<string, unknown>): AcceptanceCopy {
   const fields = Number(data.fields ?? 0);
   if (fields === 0) {
     return { why: 'No tooltip layout has been authored — hovering the item shows nothing.',
@@ -213,15 +241,15 @@ function tooltipCopy(art: LabStepArtifact | undefined): AcceptanceCopy {
     suggestion: 'Re-run Produce to add the missing rows and enable compare.' };
 }
 
-function gateCopy(art: LabStepArtifact | undefined): AcceptanceCopy {
-  return d(art).pass === true
+function gateCopy(data: Record<string, unknown>): AcceptanceCopy {
+  return data.pass === true
     ? { why: 'All gate checks pass in the UE project.', suggestion: '' }
     : { why: 'The functional test has not been run, or the last run did not pass.',
         suggestion: 'Run Produce to dispatch the UE functional test.' };
 }
 
-function packagingCopy(art: LabStepArtifact | undefined): AcceptanceCopy {
-  const assets = (d(art).assets ?? []) as unknown[];
+function packagingCopy(data: Record<string, unknown>): AcceptanceCopy {
+  const assets = (data.assets ?? []) as unknown[];
   return assets.length === 0
     ? { why: 'Nothing has been packaged yet — the DT_Items row and referenced assets are missing.',
         suggestion: 'Run Produce after the upstream steps finish.' }
@@ -230,7 +258,7 @@ function packagingCopy(art: LabStepArtifact | undefined): AcceptanceCopy {
 }
 
 /** Public lookup so component code (or tests) can pull copy without a closure. */
-export const ITEM_STEP_COPY: Record<string, (art: LabStepArtifact | undefined) => AcceptanceCopy> = {
+export const ITEM_STEP_COPY: Record<string, (data: Record<string, unknown>) => AcceptanceCopy> = {
   'Concept Brief': briefCopy,
   'Attributes': attributesCopy,
   'Economy': economyCopy,
@@ -248,9 +276,9 @@ export const ITEM_STEP_COPY: Record<string, (art: LabStepArtifact | undefined) =
 
 /** Merge step-derived plain-language copy into an Acceptance. Only attaches the
  *  `why` / `suggestion` / `fixDirection` when the gate is not yet `pass`. */
-function withCopy(step: string, art: LabStepArtifact | undefined, base: Acceptance): Acceptance {
+function withCopy(step: string, data: Record<string, unknown>, base: Acceptance): Acceptance {
   if (base.status === 'pass') return base;
-  const copy = ITEM_STEP_COPY[step]?.(art);
+  const copy = ITEM_STEP_COPY[step]?.(data);
   if (!copy) return base;
   return {
     ...base,
@@ -263,97 +291,93 @@ function withCopy(step: string, art: LabStepArtifact | undefined, base: Acceptan
 export const ITEM_STEP_SPECS: Record<string, ItemStepSpec> = {
   'Concept Brief': {
     produce: (e) => ({ data: { brief: brief(e) } }),
-    accept: (a) => {
-      const len = String(d(a).brief ?? '').length;
-      return withCopy('Concept Brief', a, { label: 'Brief is at least 300 characters', status: len >= 300 ? 'pass' : 'pending', detail: `${len} / 300 chars` });
+    accept: (data) => {
+      const len = String(data.brief ?? '').length;
+      return withCopy('Concept Brief', data, { label: 'Brief is at least 300 characters', status: len >= 300 ? 'pass' : 'pending', detail: `${len} / 300 chars` });
     },
   },
   'Attributes': {
     produce: () => ({ data: { stats: Object.fromEntries(ITEM_ATTR_SCHEMA.map((a) => [a.key, a.value] as const)) } }),
-    accept: (a) => {
-      const stats = (d(a).stats ?? {}) as Record<string, unknown>;
+    accept: (data) => {
+      const stats = (data.stats ?? {}) as Record<string, unknown>;
       const have = ATTR_KEYS.filter((k) => stats[k] != null).length;
-      return withCopy('Attributes', a, { label: 'All attributes populated per schema (Weapon)', status: have === ATTR_KEYS.length ? 'pass' : 'pending', detail: `${have} / ${ATTR_KEYS.length} populated` });
+      return withCopy('Attributes', data, { label: 'All attributes populated per schema (Weapon)', status: have === ATTR_KEYS.length ? 'pass' : 'pending', detail: `${have} / ${ATTR_KEYS.length} populated` });
     },
   },
   'Economy': {
     produce: () => ({ data: { power: 102, target: 100, cost: 143, rarity: 'Uncommon' } }),
-    accept: (a) => {
-      const data = d(a);
-      if (data.power == null) return withCopy('Economy', a, { label: 'Power within ±10% of tier · price in curve', status: 'pending', detail: 'not tuned' });
+    accept: (data) => {
+      if (data.power == null) return withCopy('Economy', data, { label: 'Power within ±10% of tier · price in curve', status: 'pending', detail: 'not tuned' });
       const power = Number(data.power), target = Number(data.target), cost = Number(data.cost);
-      const ratio = cost / (power * RARITY_MULT);
-      const ok = power >= target * 0.9 && power <= target * 1.1 && ratio >= 0.8 && ratio <= 1.2;
-      return withCopy('Economy', a, { label: 'Power within ±10% of tier · price in curve · no outliers', status: ok ? 'pass' : 'fail', detail: `power ${power}% · price/power ${ratio.toFixed(2)}×` });
+      const ratio = priceRatio(cost, power);
+      const ok = powerInBand(power, target) && priceInBand(cost, power);
+      return withCopy('Economy', data, { label: 'Power within ±10% of tier · price in curve · no outliers', status: ok ? 'pass' : 'fail', detail: `power ${power}% · price/power ${ratio.toFixed(2)}×` });
     },
   },
   'Icon 2D Art': {
     produce: (e) => ({ data: { selected: 0, prompt: 'weathered steel longsword, leather grip, guild sigil, 3/4 view, game icon' }, ueAssets: [itemAsset(e, 'T_', '_Icon')] }),
-    accept: (a) => {
-      const sel = d(a).selected;
-      return withCopy('Icon 2D Art', a, { label: 'A main icon is selected', status: sel != null ? 'pass' : 'pending', detail: sel != null ? 'candidate · 256px' : 'none selected' });
+    accept: (data) => {
+      const sel = data.selected;
+      return withCopy('Icon 2D Art', data, { label: 'A main icon is selected', status: sel != null ? 'pass' : 'pending', detail: sel != null ? 'candidate · 256px' : 'none selected' });
     },
   },
   '3D Generation': {
     produce: (e) => ({ data: { tris: 4200, cap: 6000 }, ueAssets: [itemAsset(e, 'SM_')] }),
-    accept: (a) => {
-      const tris = Number(d(a).tris ?? 0), cap = Number(d(a).cap ?? 6000);
-      return withCopy('3D Generation', a, { label: 'Mesh generated · tri count under LOD0 budget', status: tris > 0 && tris <= cap ? 'pass' : 'pending', detail: tris > 0 ? `${tris} / ${cap} tris` : 'no mesh' });
+    accept: (data) => {
+      const tris = Number(data.tris ?? 0), cap = Number(data.cap ?? 6000);
+      return withCopy('3D Generation', data, { label: 'Mesh generated · tri count under LOD0 budget', status: tris > 0 && tris <= cap ? 'pass' : 'pending', detail: tris > 0 ? `${tris} / ${cap} tris` : 'no mesh' });
     },
   },
   'Material / Texture': {
     produce: (e) => ({ data: { maps: ['Albedo', 'Normal', 'ORM', 'Height'] }, ueAssets: [itemAsset(e, 'MI_')] }),
-    accept: (a) => {
-      const maps = (d(a).maps ?? []) as string[];
+    accept: (data) => {
+      const maps = (data.maps ?? []) as string[];
       const need = ['Albedo', 'Normal', 'ORM'];
       const ok = need.every((m) => maps.includes(m));
-      return withCopy('Material / Texture', a, { label: 'Required PBR maps present (Albedo · Normal · ORM)', status: ok ? 'pass' : 'pending', detail: maps.length ? `${maps.length} maps` : '0 maps' });
+      return withCopy('Material / Texture', data, { label: 'Required PBR maps present (Albedo · Normal · ORM)', status: ok ? 'pass' : 'pending', detail: maps.length ? `${maps.length} maps` : '0 maps' });
     },
   },
   'Animations': {
     produce: (e) => ({ data: { clips: DEFAULT_ANIM_CLIPS }, ueAssets: [itemAsset(e, 'A_', '_Equip')] }),
-    accept: (a) => {
-      const clips = (d(a).clips ?? []) as unknown[];
-      return withCopy('Animations', a, { label: 'Required clips present (Pickup · Equip)', status: clips.length >= 2 ? 'pass' : 'pending', detail: clips.length ? `${clips.length} clips` : '0 clips' });
+    accept: (data) => {
+      const clips = (data.clips ?? []) as unknown[];
+      return withCopy('Animations', data, { label: 'Required clips present (Pickup · Equip)', status: clips.length >= 2 ? 'pass' : 'pending', detail: clips.length ? `${clips.length} clips` : '0 clips' });
     },
   },
   'VFX': {
     produce: (e) => ({ data: { cost: 0.4, cap: 0.8, variants: DEFAULT_VFX_VARIANTS }, ueAssets: [itemAsset(e, 'NS_', '_Use')] }),
-    accept: (a) => {
-      const variants = (d(a).variants ?? []) as unknown[];
-      const cost = Number(d(a).cost ?? 0), cap = Number(d(a).cap ?? 0.8);
-      return withCopy('VFX', a, { label: 'At least one VFX bound · GPU cost under budget', status: variants.length >= 1 && cost <= cap ? 'pass' : 'pending', detail: variants.length ? `${cost.toFixed(1)} / ${cap} ms` : 'no vfx' });
+    accept: (data) => {
+      const variants = (data.variants ?? []) as unknown[];
+      const cost = Number(data.cost ?? 0), cap = Number(data.cap ?? 0.8);
+      return withCopy('VFX', data, { label: 'At least one VFX bound · GPU cost under budget', status: variants.length >= 1 && cost <= cap ? 'pass' : 'pending', detail: variants.length ? `${cost.toFixed(1)} / ${cap} ms` : 'no vfx' });
     },
   },
   'SFX': {
     produce: (e) => ({ data: { cues: DEFAULT_SFX_CUES }, ueAssets: [itemAsset(e, 'SC_')] }),
-    accept: (a) => {
-      const cues = (d(a).cues ?? []) as unknown[];
-      return withCopy('SFX', a, { label: 'Required SFX events covered (pickup · equip · use)', status: cues.length >= 3 ? 'pass' : 'pending', detail: cues.length ? `${cues.length} cues` : '0 cues' });
+    accept: (data) => {
+      const cues = (data.cues ?? []) as unknown[];
+      return withCopy('SFX', data, { label: 'Required SFX events covered (pickup · equip · use)', status: cues.length >= 3 ? 'pass' : 'pending', detail: cues.length ? `${cues.length} cues` : '0 cues' });
     },
   },
   'Inventory UI Integration': {
     produce: () => ({ data: { slot: 'Weapon', wired: true } }),
-    accept: (a) => {
-      const data = d(a);
-      return withCopy('Inventory UI Integration', a, { label: 'Item renders in the inventory grid · slot category set', status: data.wired && data.slot ? 'pass' : 'pending', detail: data.wired ? `slot: ${data.slot}` : 'not wired' });
+    accept: (data) => {
+      return withCopy('Inventory UI Integration', data, { label: 'Item renders in the inventory grid · slot category set', status: data.wired && data.slot ? 'pass' : 'pending', detail: data.wired ? `slot: ${data.slot}` : 'not wired' });
     },
   },
   'Tooltip / Compare': {
     produce: () => ({ data: { fields: 4, compare: true } }),
-    accept: (a) => {
-      const data = d(a);
+    accept: (data) => {
       const fields = Number(data.fields ?? 0);
-      return withCopy('Tooltip / Compare', a, { label: 'Tooltip shows all required fields · compare vs equipped works', status: fields >= 4 && data.compare ? 'pass' : 'pending', detail: fields ? `${fields} fields · compare on` : 'not laid out' });
+      return withCopy('Tooltip / Compare', data, { label: 'Tooltip shows all required fields · compare vs equipped works', status: fields >= 4 && data.compare ? 'pass' : 'pending', detail: fields ? `${fields} fields · compare on` : 'not laid out' });
     },
   },
   'Test Gate': {
     produce: () => ({ data: { checks: DEFAULT_GATE_CHECKS, pass: true } }),
-    accept: (a) => {
-      const data = d(a);
+    accept: (data) => {
       const checks = (data.checks ?? []) as unknown[];
       const ok = data.pass === true;
-      return withCopy('Test Gate', a, { label: 'All gate checks pass in the UE project', status: ok ? 'pass' : 'pending', detail: ok ? `${checks.length}/${checks.length} pass` : `0/${checks.length || 4}` });
+      return withCopy('Test Gate', data, { label: 'All gate checks pass in the UE project', status: ok ? 'pass' : 'pending', detail: ok ? `${checks.length}/${checks.length} pass` : `0/${checks.length || 4}` });
     },
   },
   'UE Packaging': {
@@ -362,9 +386,9 @@ export const ITEM_STEP_SPECS: Record<string, ItemStepSpec> = {
       const assets = [`DT_Items :: ${s}`, `T_${s}_Icon`, `SM_${s}`, `MI_${s}`, `A_${s}_Equip`, `NS_${s}_Use`];
       return { data: { assets }, ueAssets: assets.slice(1).map((x) => `${base(e)}${x}`) };
     },
-    accept: (a) => {
-      const assets = (d(a).assets ?? []) as unknown[];
-      return withCopy('UE Packaging', a, { label: 'All produced assets packaged + committed to the UE project', status: assets.length >= 6 ? 'pass' : 'pending', detail: assets.length ? `${assets.length} assets` : 'not packaged' });
+    accept: (data) => {
+      const assets = (data.assets ?? []) as unknown[];
+      return withCopy('UE Packaging', data, { label: 'All produced assets packaged + committed to the UE project', status: assets.length >= 6 ? 'pass' : 'pending', detail: assets.length ? `${assets.length} assets` : 'not packaged' });
     },
   },
 };

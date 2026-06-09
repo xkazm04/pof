@@ -8,7 +8,9 @@ import {
   Zap, BookOpen, BarChart3, Swords, Sparkles,
 } from 'lucide-react';
 import { MODULE_FEATURE_DEFINITIONS, buildDependencyMap, computeBlockers } from '@/lib/feature-definitions';
+import { tryApiFetch } from '@/lib/api-utils';
 import { MODULE_LABELS, SUB_MODULE_MAP } from '@/lib/module-registry';
+import { countChecklist } from '@/lib/checklist-progress';
 import { useModuleStore } from '@/stores/moduleStore';
 import { usePatternLibraryStore } from '@/stores/patternLibraryStore';
 import { useEvaluatorStore } from '@/stores/evaluatorStore';
@@ -16,7 +18,7 @@ import { useCLIPanelStore } from '@/components/cli/store/cliPanelStore';
 import { SUB_GENRE_TEMPLATES } from '@/lib/genre-evolution-engine';
 import { SurfaceCard } from '@/components/ui/SurfaceCard';
 import type { ImplementationPattern } from '@/types/pattern-library';
-import type { SubModuleId, ChecklistItem } from '@/types/modules';
+import type { SubModuleId } from '@/types/modules';
 import type { Recommendation } from '@/types/evaluator';
 import { STATUS_SUCCESS, STATUS_WARNING, STATUS_ERROR, STATUS_INFO, STATUS_BLOCKER, STATUS_NEUTRAL, ACCENT_VIOLET, MODULE_COLORS, OPACITY_10, OPACITY_15, OPACITY_20, OPACITY_30 } from '@/lib/chart-colors';
 import { MOTION } from '@/lib/constants';
@@ -87,7 +89,6 @@ interface NexusEdge {
 // ─── Stable empty constants ────────────────────────────────────────────────
 
 const EMPTY_PATTERNS: ImplementationPattern[] = [];
-const EMPTY_PROGRESS: Record<string, boolean> = {};
 const EMPTY_HISTORY: { id: string; prompt: string; status: string; timestamp: number }[] = [];
 
 // ─── Genre item → module mapping ───────────────────────────────────────────
@@ -146,21 +147,23 @@ export function NexusView() {
   const lastScan = useEvaluatorStore((s) => s.lastScan);
   const sessions = useCLIPanelStore((s) => s.sessions);
 
-  // Fetch feature statuses
+  // Fetch feature statuses. Route returns apiSuccess({ statuses }); tryApiFetch
+  // unwraps the envelope so the status map isn't silently empty (which previously
+  // left every cross-module dependency edge uncolored / unblocked).
   const fetchStatuses = useCallback(async () => {
     setIsLoading(true);
     try {
-      const res = await fetch('/api/feature-matrix/all-statuses');
-      if (res.ok) {
-        const data = await res.json();
+      const result = await tryApiFetch<{ statuses: { moduleId: string; featureName: string; status: string }[] }>('/api/feature-matrix/all-statuses');
+      if (result.ok) {
         const map = new Map<string, string>();
-        for (const row of data.statuses ?? []) {
+        for (const row of result.data.statuses ?? []) {
           map.set(`${row.moduleId}::${row.featureName}`, row.status);
         }
         setStatusMap(map);
       }
-    } catch { /* silent */ }
-    finally { setIsLoading(false); }
+    } finally {
+      setIsLoading(false);
+    }
   }, []);
 
   useEffect(() => { fetchStatuses(); }, [fetchStatuses]);
@@ -226,10 +229,11 @@ export function NexusView() {
       const ps = patternStats[moduleId];
       const ss = sessionStats[moduleId];
       const health = moduleHealth[moduleId];
-      const progress = checklistProgress[moduleId] ?? EMPTY_PROGRESS;
       const moduleDef = SUB_MODULE_MAP[moduleId as SubModuleId];
-      const checklist = moduleDef?.checklist ?? [];
-      const checklistDone = checklist.filter((item: ChecklistItem) => progress[item.id]).length;
+      const { done: checklistDone, total: checklistTotal } = countChecklist(
+        moduleDef ?? {},
+        checklistProgress[moduleId],
+      );
 
       // Build failure: check if last scan has critical recs for this module
       const hasBuildFailure = lastScan?.recommendations.some(
@@ -257,7 +261,7 @@ export function NexusView() {
         avgDurationMs: avgDuration,
         lastTaskSuccess: ss?.lastSuccess ?? null,
         genreItemCount: genreCoverage[moduleId] ?? 0,
-        checklistTotal: checklist.length,
+        checklistTotal,
         checklistDone,
         healthScore: health?.score ?? 0,
         healthStatus: health?.status ?? 'not-started',

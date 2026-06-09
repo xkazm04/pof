@@ -170,7 +170,12 @@ export function PreflightPanel({ projectPath, projectName, ueVersion, mapName, o
                 onClick={() => hasIssues && toggleExpand(r.id)}
                 className={`w-full flex items-center gap-2 px-2.5 py-1.5 text-left ${hasIssues ? 'cursor-pointer' : 'cursor-default'}`}
               >
-                <Icon className="w-3.5 h-3.5 shrink-0" style={{ color: style.color }} />
+                <Icon
+                  className="w-3.5 h-3.5 shrink-0"
+                  style={{ color: style.color }}
+                  role="img"
+                  aria-label={r.status === 'pass' ? 'Passed' : r.status === 'warn' ? 'Warning' : 'Failed'}
+                />
                 <span className="text-xs font-medium text-text">{r.label}</span>
                 <span className="text-2xs text-text-muted flex-1 truncate">{r.detail}</span>
                 {hasIssues && (
@@ -198,7 +203,7 @@ export function PreflightPanel({ projectPath, projectName, ueVersion, mapName, o
           onClick={() => runCheck('build-verify-editor')}
           disabled={running.has('build-verify-editor')}
           data-testid="pof-preflight-run-editor-build"
-          className="flex items-center gap-1 px-2 py-1 rounded border border-border-bright text-2xs text-text-muted hover:text-text hover:border-violet-500/40 transition-colors disabled:opacity-50"
+          className="flex items-center gap-1 px-2 py-1 rounded border border-border-bright text-2xs text-text-muted hover:text-text hover:border-[var(--systems)]/40 transition-colors disabled:opacity-50"
         >
           <Hammer className={`w-3 h-3 ${running.has('build-verify-editor') ? 'animate-pulse' : ''}`} />
           Editor
@@ -207,7 +212,7 @@ export function PreflightPanel({ projectPath, projectName, ueVersion, mapName, o
           onClick={() => runCheck('build-verify-shipping')}
           disabled={running.has('build-verify-shipping')}
           data-testid="pof-preflight-run-shipping-build"
-          className="flex items-center gap-1 px-2 py-1 rounded border border-border-bright text-2xs text-text-muted hover:text-text hover:border-violet-500/40 transition-colors disabled:opacity-50"
+          className="flex items-center gap-1 px-2 py-1 rounded border border-border-bright text-2xs text-text-muted hover:text-text hover:border-[var(--systems)]/40 transition-colors disabled:opacity-50"
         >
           <Hammer className={`w-3 h-3 ${running.has('build-verify-shipping') ? 'animate-pulse' : ''}`} />
           Shipping
@@ -224,7 +229,7 @@ export function PreflightPanel({ projectPath, projectName, ueVersion, mapName, o
           onClick={() => runCheck('asset-validation')}
           disabled={running.has('asset-validation')}
           data-testid="pof-preflight-run-asset-validation"
-          className="flex items-center gap-1 px-2 py-1 rounded border border-border-bright text-2xs text-text-muted hover:text-text hover:border-violet-500/40 transition-colors disabled:opacity-50"
+          className="flex items-center gap-1 px-2 py-1 rounded border border-border-bright text-2xs text-text-muted hover:text-text hover:border-[var(--systems)]/40 transition-colors disabled:opacity-50"
         >
           <FileSearch className={`w-3 h-3 ${running.has('asset-validation') ? 'animate-pulse' : ''}`} />
           Validate assets

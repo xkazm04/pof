@@ -26,6 +26,13 @@ function rowToEntry(row: Record<string, unknown>): SessionLogEntry {
 
 // ── Write ──
 
+/** Shared INSERT for the session_log table — both writers use this so the column list cannot drift. */
+const INSERT_SESSION_LOG = `
+  INSERT INTO session_log
+    (tab_id, session_key, module_id, project_path, event, success, prompt_preview, duration_ms)
+  VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+`;
+
 export function logSessionEvent(data: {
   tabId: string;
   sessionKey: string;
@@ -39,11 +46,7 @@ export function logSessionEvent(data: {
   ensureTables();
   const db = getDb();
 
-  const result = db.prepare(`
-    INSERT INTO session_log
-      (tab_id, session_key, module_id, project_path, event, success, prompt_preview, duration_ms)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-  `).run(
+  const result = db.prepare(INSERT_SESSION_LOG).run(
     data.tabId,
     data.sessionKey,
     data.moduleId,
@@ -77,23 +80,6 @@ export function getModuleSessionLog(moduleId: SubModuleId, limit = 30): SessionL
   return rows.map(rowToEntry);
 }
 
-/** Find the most recent 'started' event for a given tab that has no matching 'completed'. */
-export function findOpenSession(tabId: string): SessionLogEntry | null {
-  ensureTables();
-  const row = getDb()
-    .prepare(`
-      SELECT * FROM session_log
-      WHERE tab_id = ? AND event = 'started'
-        AND id > COALESCE(
-          (SELECT MAX(id) FROM session_log WHERE tab_id = ? AND event IN ('completed', 'cancelled')),
-          0
-        )
-      ORDER BY id DESC LIMIT 1
-    `)
-    .get(tabId, tabId) as Record<string, unknown> | undefined;
-  return row ? rowToEntry(row) : null;
-}
-
 /** Cancel all open sessions for a given project (used during project switch). */
 export function cancelOpenSessions(projectPath: string): number {
   ensureTables();
@@ -111,11 +97,7 @@ export function cancelOpenSessions(projectPath: string): number {
 
   if (openRows.length === 0) return 0;
 
-  const insert = db.prepare(`
-    INSERT INTO session_log
-      (tab_id, session_key, module_id, project_path, event, success, prompt_preview, duration_ms)
-    VALUES (?, ?, ?, ?, 'cancelled', 0, '', NULL)
-  `);
+  const insert = db.prepare(INSERT_SESSION_LOG);
 
   const batch = db.transaction(() => {
     for (const row of openRows) {
@@ -124,6 +106,10 @@ export function cancelOpenSessions(projectPath: string): number {
         row.session_key,
         row.module_id,
         row.project_path,
+        'cancelled',
+        0,
+        '',
+        null,
       );
     }
   });

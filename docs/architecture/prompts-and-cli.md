@@ -153,12 +153,18 @@ The single code path for all prompt assembly — a switch on `task.type`:
 
 ### 3. `@@CALLBACK` flow (numbered sequence)
 
-The callback system replaces embedded `curl` calls. The exact regex used for
-extraction is at `cli-task.ts:109`:
+The callback system replaces embedded `curl` calls. One shared parser owns the
+marker format — `parseCallbackMarker(text)` in `cli-task.ts` (regex + `JSON.parse`).
+Both the client terminal (`extractCallbackPayload` → `{ callbackId, payload }`) and
+the server-side `awaitCallback` (`cli-service.ts`, which wants the parsed object)
+go through it, so the wire format can never drift between the two paths. The regex:
 
 ```
-/@@CALLBACK:(cb-[^\s\n]+)\s*\n([\s\S]*?)\n\s*@@END_CALLBACK/
+/@@CALLBACK:(\S+)\s*\n([\s\S]*?)\s*@@END_CALLBACK/
 ```
+
+The id is any non-whitespace run — `cb-…` from `registerCallback` **or** `step-…`
+from the one-shot routes — so the prefix is intentionally unconstrained.
 
 **Full sequence:**
 
@@ -181,6 +187,13 @@ extraction is at `cli-task.ts:109`:
    stream-json --verbose --dangerously-skip-permissions`, writes the prompt to stdin,
    and emits `CLIExecutionEvent` objects for every parsed stream-json line.
    (`cli-service.ts:139`)
+
+   The final `result` line is normalized through the pure `result-metrics.ts`
+   (`extractResultMetrics`) so the run's token usage + dollar cost surface as clean
+   camelCase regardless of CLI result shape. `useTaskQueue` forwards each result to its
+   `onResult` callback; `CompactTerminal` persists it to `/api/cli-spend` (attributed to the
+   session's module + `lastTaskType`) for the Evaluator → **Spend** dashboard and budget
+   guard. See *state-and-persistence → `cli_spend`*.
 
 6. **Terminal component** subscribes to `CLIExecutionEvent`s. When a `text` event
    arrives, it scans the accumulated output for the regex match. On a hit it calls

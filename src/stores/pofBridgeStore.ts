@@ -10,6 +10,7 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import type { PofBridgeStatus, AssetManifest, PofConnectionStatus } from '@/types/pof-bridge';
+import { POF_BRIDGE } from '@/lib/pof-bridge/constants';
 
 interface PofBridgeState {
   // ── Persisted settings ──
@@ -48,7 +49,7 @@ export const usePofBridgeStore = create<PofBridgeState>()(
   persist(
     (set) => ({
       // Persisted defaults
-      pofPort: 30040,
+      pofPort: POF_BRIDGE.DEFAULT_PORT,
       pofAuthToken: '',
       autoDetect: true,
 

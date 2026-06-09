@@ -3,22 +3,14 @@
  */
 
 import { apiFetch } from '@/lib/api-utils';
-
-interface TaskRecord {
-  taskId: string;
-  sessionId: string;
-  status: 'running' | 'completed' | 'failed';
-  startedAt: number;
-  completedAt?: number;
-  requirementName?: string;
-  isStale?: boolean;
-}
+import { UI_TIMEOUTS } from '@/lib/constants';
+import type { TaskRecord, TaskStatus } from '@/types/cli-task-registry';
 
 interface TaskStatusResponse {
   found: boolean;
   taskId: string;
   sessionId?: string;
-  status?: 'running' | 'completed' | 'failed';
+  status?: TaskStatus;
   startedAt?: number;
   completedAt?: number;
   isStale?: boolean;
@@ -124,8 +116,7 @@ export async function hasRunningTask(sessionId: string): Promise<{
     const { tasks } = await getSessionTasks(sessionId);
     const running = tasks.find(t => t.status === 'running');
     if (!running) return { hasRunning: false };
-    const TASK_TIMEOUT = 10 * 60 * 1000;
-    const isStale = (Date.now() - running.startedAt) > TASK_TIMEOUT;
+    const isStale = (Date.now() - running.startedAt) > UI_TIMEOUTS.taskTimeout;
     return { hasRunning: true, runningTaskId: running.taskId, isStale };
   } catch (error) {
     console.error('Failed to check running task:', error);

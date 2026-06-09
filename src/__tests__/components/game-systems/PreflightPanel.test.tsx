@@ -41,6 +41,14 @@ describe('PreflightPanel — asset-validation check', () => {
     await waitFor(() => expect(screen.getByTestId('pof-preflight-run-asset-validation')).toBeTruthy());
   });
 
+  it('labels the per-check status icon so it is not color-only', async () => {
+    mockPreflightByCheck();
+    render(<PreflightPanel {...props} />);
+    await waitFor(() => expect(screen.getByTestId('pof-preflight-check-config-sanity')).toBeTruthy());
+    // The config-sanity check passes — its status icon carries an accessible label.
+    expect(screen.getByRole('img', { name: 'Passed' })).toBeTruthy();
+  });
+
   it('dispatches the asset-validation check and renders its tile', async () => {
     const fetchMock = mockPreflightByCheck();
     render(<PreflightPanel {...props} />);

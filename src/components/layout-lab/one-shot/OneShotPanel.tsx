@@ -56,14 +56,19 @@ export function OneShotPanel({ t }: Props) {
 
   if (!panelOpen) return null;
 
+  // Opaque surface (t.bg, not the translucent t.panel) + elevation, matching the
+  // canonical LabDrawer treatment — otherwise the page bleeds through the panel and
+  // the drawer visually collides with the content below.
   const panelStyle: React.CSSProperties = {
     position: 'fixed',
     top: 0,
     right: 0,
     width: 380,
+    maxWidth: '90vw',
     height: '100vh',
-    background: t.panel,
+    background: t.bg,
     borderLeft: `1px solid ${t.line}`,
+    boxShadow: '0 0 40px rgba(0,0,0,0.28)',
     display: 'flex',
     flexDirection: 'column',
     zIndex: 200,
@@ -105,7 +110,15 @@ export function OneShotPanel({ t }: Props) {
   const distData = distribution ? distributionToBuckets(distribution) : null;
 
   return (
-    <div role="dialog" aria-label="one-shot panel" style={panelStyle}>
+    <>
+      {/* Backdrop scrim: separates the drawer from the content below + click-away to close. */}
+      <div
+        data-testid="one-shot-backdrop"
+        aria-hidden="true"
+        onClick={() => setPanelOpen(false)}
+        style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)', zIndex: 199 }}
+      />
+      <div role="dialog" aria-modal="true" aria-label="one-shot panel" style={panelStyle}>
       <div
         style={{
           display: 'flex', alignItems: 'center', justifyContent: 'space-between',
@@ -193,6 +206,7 @@ export function OneShotPanel({ t }: Props) {
           />
         )}
       </div>
-    </div>
+      </div>
+    </>
   );
 }

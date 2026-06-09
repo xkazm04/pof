@@ -165,6 +165,7 @@ export function PostProcessStackBuilder({ onGenerate, isGenerating }: PostProces
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [blenderPreviewing, setBlenderPreviewing] = useState(false);
   const [blenderResult, setBlenderResult] = useState<{ message: string; isError: boolean } | null>(null);
+  const [generateError, setGenerateError] = useState<string | null>(null);
   const blenderConnected = useBlenderMCPStore((s) => s.connection.connected);
 
   const effectMap = useMemo(() => {
@@ -208,8 +209,18 @@ export function PostProcessStackBuilder({ onGenerate, isGenerating }: PostProces
   }, []);
 
   const handleGenerate = useCallback(() => {
-    onGenerate({ stack, effects: PP_EFFECTS });
-  }, [stack, onGenerate]);
+    if (enabledCount === 0) {
+      setGenerateError('Enable at least one effect before compiling the volume settings.');
+      return;
+    }
+    try {
+      setGenerateError(null);
+      onGenerate({ stack, effects: PP_EFFECTS });
+    } catch (e) {
+      logger.warn('Post-process generate dispatch failed', e);
+      setGenerateError(e instanceof Error ? e.message : 'Failed to compile volume settings');
+    }
+  }, [stack, onGenerate, enabledCount]);
 
   const handleBlenderPreview = useCallback(async () => {
     setBlenderPreviewing(true);
@@ -323,6 +334,25 @@ export function PostProcessStackBuilder({ onGenerate, isGenerating }: PostProces
           )}
         </button>
 
+        {/* Generate path: empty-state hint + consistent inline error */}
+        {enabledCount === 0 && (
+          <div
+            data-testid="pp-generate-empty"
+            className="text-xs font-mono px-3 py-2 rounded-lg border border-violet-900/40 bg-violet-950/20 text-violet-400/80"
+          >
+            Enable at least one effect to compile the volume settings.
+          </div>
+        )}
+        {generateError && (
+          <div
+            role="alert"
+            data-testid="pp-generate-error"
+            className="text-xs font-mono px-3 py-2 rounded-lg border border-red-500/30 bg-red-500/10 text-red-400"
+          >
+            {generateError}
+          </div>
+        )}
+
         {/* Preview in Blender */}
         <button
           onClick={handleBlenderPreview}
@@ -395,38 +425,54 @@ function EffectRow({
         {/* Grip + reorder */}
         <div className="flex flex-col items-center gap-1 flex-shrink-0">
           <button
+            type="button"
             onClick={onMoveUp}
             disabled={isFirst}
-            className="p-0.5 rounded text-violet-500/40 hover:text-violet-300 hover:bg-violet-900/20 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+            aria-label={`Move ${effect.name} up`}
+            className="p-0.5 rounded text-violet-500/40 hover:text-violet-300 hover:bg-violet-900/20 transition-colors disabled:opacity-30 disabled:cursor-not-allowed focus-ring"
           >
-            <ChevronUp className="w-3.5 h-3.5" />
+            <ChevronUp className="w-3.5 h-3.5" aria-hidden="true" />
           </button>
-          <GripVertical className="w-3.5 h-3.5 text-violet-900/60 group-hover:text-violet-500/40 transition-colors" />
+          <GripVertical className="w-3.5 h-3.5 text-violet-900/60 group-hover:text-violet-500/40 transition-colors" aria-hidden="true" />
           <button
+            type="button"
             onClick={onMoveDown}
             disabled={isLast}
-            className="p-0.5 rounded text-violet-500/40 hover:text-violet-300 hover:bg-violet-900/20 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+            aria-label={`Move ${effect.name} down`}
+            className="p-0.5 rounded text-violet-500/40 hover:text-violet-300 hover:bg-violet-900/20 transition-colors disabled:opacity-30 disabled:cursor-not-allowed focus-ring"
           >
-            <ChevronDown className="w-3.5 h-3.5" />
+            <ChevronDown className="w-3.5 h-3.5" aria-hidden="true" />
           </button>
         </div>
 
-        {/* Toggle Node */}
-        <button
-          onClick={onToggle}
-          className="flex-shrink-0 w-10 h-5 rounded-full relative transition-colors border border-violet-900/30 shadow-inner"
-          style={{
-            backgroundColor: isActive ? `${effect.color}20` : 'rgba(0,0,0,0.8)',
-          }}
-        >
-          <span
-            className="absolute top-0.5 w-3.5 h-3.5 rounded-full transition-all duration-300 shadow-[0_0_5px_currentColor]"
+        {/* Toggle Node + ON/OFF cue — state must not rely on color/position alone */}
+        <div className="flex items-center gap-1.5 flex-shrink-0">
+          <button
+            type="button"
+            onClick={onToggle}
+            role="switch"
+            aria-checked={isActive}
+            aria-label={`${effect.name} effect ${isActive ? 'enabled' : 'disabled'}`}
+            className="w-10 h-5 rounded-full relative transition-colors border border-violet-900/30 shadow-inner focus-ring"
             style={{
-              left: isActive ? '22px' : '4px',
-              backgroundColor: isActive ? effect.color : 'rgba(139,92,246,0.4)',
+              backgroundColor: isActive ? `${effect.color}20` : 'rgba(0,0,0,0.8)',
             }}
-          />
-        </button>
+          >
+            <span
+              className="absolute top-0.5 w-3.5 h-3.5 rounded-full transition-all duration-300 shadow-[0_0_5px_currentColor]"
+              style={{
+                left: isActive ? '22px' : '4px',
+                backgroundColor: isActive ? effect.color : 'rgba(139,92,246,0.4)',
+              }}
+            />
+          </button>
+          <span
+            aria-hidden="true"
+            className="w-6 text-[9px] font-mono font-bold tracking-wider text-violet-300/80"
+          >
+            {isActive ? 'ON' : 'OFF'}
+          </span>
+        </div>
 
         {/* Icon */}
         <div
@@ -455,10 +501,14 @@ function EffectRow({
 
         {/* Expand arrow */}
         <button
+          type="button"
           onClick={onExpand}
-          className="flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center bg-black/40 border border-violet-900/30 hover:border-violet-500/50 transition-colors"
+          aria-expanded={isExpanded}
+          aria-label={`${isExpanded ? 'Collapse' : 'Expand'} ${effect.name} parameters`}
+          className="flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center bg-black/40 border border-violet-900/30 hover:border-violet-500/50 transition-colors focus-ring"
         >
           <span
+            aria-hidden="true"
             className="text-xs font-mono transition-transform duration-300"
             style={{ color: effect.color, transform: isExpanded ? 'rotate(180deg)' : 'rotate(0deg)' }}
           >

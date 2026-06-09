@@ -12,8 +12,16 @@ import {
   STATUS_SUCCESS, STATUS_WARNING,
   OPACITY_10, OPACITY_15,
 } from '@/lib/chart-colors';
+import {
+  EQS_ATTACK_POSITIONS, EQS_PATROL_POINTS, EQS_COVER_POSITIONS,
+  EQS_LINE_OF_SIGHT, EQS_ELEVATION_ADVANTAGE,
+  eqsFloat,
+} from '@/lib/ai-director/eqs-defaults';
 
 // ── Pipeline data (from C++ EQS sources) ───────────────────────────────────
+// Numeric defaults come from the single-source `eqs-defaults.ts` so this diagram
+// can never silently drift from the visualizers, the component inventory, or the
+// engine.
 
 type StepKind = 'context' | 'generator' | 'test-score' | 'test-filter' | 'result';
 
@@ -62,9 +70,9 @@ const PIPELINES: QueryPipeline[] = [
         color: ACCENT_VIOLET,
         detail: 'Generates ring of nav-projected points around center actor',
         params: [
-          { label: 'AttackDistance', value: '200.0' },
-          { label: 'NumberOfPoints', value: '12' },
-          { label: 'InnerRing', value: 'false' },
+          { label: 'AttackDistance', value: eqsFloat(EQS_ATTACK_POSITIONS.attackDistance) },
+          { label: 'NumberOfPoints', value: String(EQS_ATTACK_POSITIONS.numberOfPoints) },
+          { label: 'InnerRing', value: String(EQS_ATTACK_POSITIONS.generateInnerRing) },
           { label: 'Output', value: 'TArray<FNavLocation>' },
         ],
       },
@@ -131,11 +139,11 @@ const PIPELINES: QueryPipeline[] = [
         color: ACCENT_VIOLET,
         detail: 'Traces geometry in annular rings to find positions behind walls, pillars, and elevation changes',
         params: [
-          { label: 'SampleCount', value: '36' },
-          { label: 'NumberOfRings', value: '3' },
-          { label: 'MinRadius', value: '300.0' },
-          { label: 'MaxRadius', value: '1200.0' },
-          { label: 'CoverCheckDistance', value: '150.0' },
+          { label: 'SampleCount', value: String(EQS_COVER_POSITIONS.sampleCount) },
+          { label: 'NumberOfRings', value: String(EQS_COVER_POSITIONS.numberOfRings) },
+          { label: 'MinRadius', value: eqsFloat(EQS_COVER_POSITIONS.minRadius) },
+          { label: 'MaxRadius', value: eqsFloat(EQS_COVER_POSITIONS.maxRadius) },
+          { label: 'CoverCheckDistance', value: eqsFloat(EQS_COVER_POSITIONS.coverCheckDistance) },
           { label: 'TraceChannel', value: 'ECC_WorldStatic' },
           { label: 'Output', value: 'TArray<FNavLocation>' },
         ],
@@ -150,7 +158,7 @@ const PIPELINES: QueryPipeline[] = [
         cost: 'High',
         params: [
           { label: 'ThreatContext', value: 'TargetActor' },
-          { label: 'TraceHeights', value: '3 (40-170 UU)' },
+          { label: 'TraceHeights', value: `${EQS_LINE_OF_SIGHT.numberOfTraceHeights} (${EQS_LINE_OF_SIGHT.minTraceHeight}-${EQS_LINE_OF_SIGHT.maxTraceHeight} UU)` },
           { label: 'Score', value: '0.0 (exposed) – 1.0 (covered)' },
           { label: 'Best', value: '1.0 (fully occluded)' },
         ],
@@ -165,7 +173,7 @@ const PIPELINES: QueryPipeline[] = [
         cost: 'Low',
         params: [
           { label: 'ReferenceContext', value: 'TargetActor' },
-          { label: 'MaxElevationBonus', value: '300.0 UU' },
+          { label: 'MaxElevationBonus', value: `${eqsFloat(EQS_ELEVATION_ADVANTAGE.maxElevationBonus)} UU` },
           { label: 'PenalizeLowGround', value: 'false' },
           { label: 'Score', value: '0.0 – 1.0 (clamped)' },
         ],
@@ -216,9 +224,9 @@ const PIPELINES: QueryPipeline[] = [
         color: ACCENT_VIOLET,
         detail: 'Random points in annular ring around querier, projected to nav mesh',
         params: [
-          { label: 'NumberOfPoints', value: '15' },
-          { label: 'MinRadius', value: '500.0' },
-          { label: 'MaxRadius', value: '1500.0' },
+          { label: 'NumberOfPoints', value: String(EQS_PATROL_POINTS.numberOfPoints) },
+          { label: 'MinRadius', value: eqsFloat(EQS_PATROL_POINTS.minRadius) },
+          { label: 'MaxRadius', value: eqsFloat(EQS_PATROL_POINTS.maxRadius) },
           { label: 'Output', value: 'TArray<FNavLocation>' },
         ],
       },

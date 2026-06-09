@@ -15,7 +15,7 @@
 
 import { ok, err, type Result } from '@/types/result';
 import { UI_TIMEOUTS } from '@/lib/constants';
-import { logger } from '@/lib/logger';
+import { bridgeRequest } from '@/lib/ue5-bridge/shared';
 import type {
   UE5RemoteControlInfo,
   UE5FunctionCall,
@@ -37,49 +37,19 @@ export class RemoteControlClient {
 
   // ── Core HTTP helper ──────────────────────────────────────────────────────
 
-  private async request<T>(
+  private request<T>(
     method: 'GET' | 'PUT' | 'POST' | 'DELETE',
     path: string,
     body?: unknown,
   ): Promise<Result<T, string>> {
-    const url = `${this.baseUrl}${path}`;
-    const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), this.timeout);
-
-    try {
-      const init: RequestInit = {
-        method,
-        signal: controller.signal,
-        headers: { 'Content-Type': 'application/json' },
-      };
-
-      if (body !== undefined) {
-        init.body = JSON.stringify(body);
-      }
-
-      const res = await fetch(url, init);
-
-      if (!res.ok) {
-        const text = await res.text().catch(() => '');
-        const msg = `UE5 Remote Control ${method} ${path} returned ${res.status}: ${text.slice(0, 200)}`;
-        logger.warn('[UE5-RC]', msg);
-        return err(msg);
-      }
-
-      const data = (await res.json()) as T;
-      return ok(data);
-    } catch (e) {
-      if (e instanceof DOMException && e.name === 'AbortError') {
-        const msg = `UE5 Remote Control ${method} ${path} timed out after ${this.timeout}ms`;
-        logger.warn('[UE5-RC]', msg);
-        return err(msg);
-      }
-      const msg = e instanceof Error ? e.message : 'Unknown fetch error';
-      logger.warn('[UE5-RC]', `${method} ${path} failed:`, msg);
-      return err(msg);
-    } finally {
-      clearTimeout(timer);
-    }
+    return bridgeRequest<T>(this.baseUrl, {
+      method,
+      path,
+      body,
+      timeout: this.timeout,
+      label: 'UE5 Remote Control',
+      logPrefix: '[UE5-RC]',
+    });
   }
 
   // ── Public API ────────────────────────────────────────────────────────────

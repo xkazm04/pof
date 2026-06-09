@@ -6,6 +6,7 @@ import { RefreshCw } from 'lucide-react';
 import { useProjectStore } from '@/stores/projectStore';
 import { useNavigationStore } from '@/stores/navigationStore';
 import { STATUS_SUCCESS, STATUS_ERROR, MODULE_COLORS, statusGlow } from '@/lib/chart-colors';
+import { formatTimeAgo } from '@/lib/format-time';
 import { Z_INDEX } from '@/lib/constants';
 
 interface FieldStatus {
@@ -36,15 +37,6 @@ function getFieldStatuses(
       ok: !!ueVersion,
     },
   ];
-}
-
-function formatTimeAgo(isoString: string): string {
-  const seconds = Math.floor((Date.now() - new Date(isoString).getTime()) / 1000);
-  if (seconds < 60) return 'just now';
-  const minutes = Math.floor(seconds / 60);
-  if (minutes < 60) return `${minutes}m ago`;
-  const hours = Math.floor(minutes / 60);
-  return `${hours}h ago`;
 }
 
 export function ContextHealthBadge() {

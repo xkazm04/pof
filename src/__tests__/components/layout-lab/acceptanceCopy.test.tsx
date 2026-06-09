@@ -8,14 +8,9 @@ vi.mock('next/font/google', () => {
 
 import { StepFrame, type Acceptance } from '@/components/layout-lab/steps/StepFrame';
 import { ITEM_STEP_SPECS, ITEM_STEP_COPY } from '@/components/layout-lab/steps/itemsSteps';
-import type { LabStepArtifact } from '@/components/layout-lab/labPipelineStore';
 import { LIGHT } from '@/components/layout-lab/theme';
 
 afterEach(cleanup);
-
-const art = (data: Record<string, unknown>): LabStepArtifact => ({
-  done: true, data, ueAssets: [], at: '2026-05-27T00:00:00Z',
-});
 
 /* ── StepFrame banner extensions ────────────────────────────────────────── */
 
@@ -74,7 +69,7 @@ describe('StepFrame plain-language banner', () => {
 describe('Economy acceptance copy', () => {
   it('explains a price-too-high outlier in plain language with a fix direction', () => {
     const acceptance = ITEM_STEP_SPECS.Economy.accept(
-      art({ power: 102, target: 100, cost: 200, rarity: 'Uncommon' }),
+      { power: 102, target: 100, cost: 200, rarity: 'Uncommon' },
     );
     expect(acceptance.status).toBe('fail');
     expect(acceptance.why).toMatch(/priced .* too high for its power/i);
@@ -84,7 +79,7 @@ describe('Economy acceptance copy', () => {
 
   it('explains a price-too-low outlier with the opposite suggestion', () => {
     const acceptance = ITEM_STEP_SPECS.Economy.accept(
-      art({ power: 100, target: 100, cost: 60, rarity: 'Uncommon' }),
+      { power: 100, target: 100, cost: 60, rarity: 'Uncommon' },
     );
     expect(acceptance.status).toBe('fail');
     expect(acceptance.why).toMatch(/priced .* too low for its power/i);
@@ -93,7 +88,7 @@ describe('Economy acceptance copy', () => {
 
   it('explains an out-of-band power case (not a price/ratio problem)', () => {
     const acceptance = ITEM_STEP_SPECS.Economy.accept(
-      art({ power: 130, target: 100, cost: 140, rarity: 'Uncommon' }),
+      { power: 130, target: 100, cost: 140, rarity: 'Uncommon' },
     );
     expect(acceptance.status).toBe('fail');
     expect(acceptance.why).toMatch(/power is/i);
@@ -102,7 +97,7 @@ describe('Economy acceptance copy', () => {
 
   it('drops why + fix when the gate passes', () => {
     const acceptance = ITEM_STEP_SPECS.Economy.accept(
-      art({ power: 100, target: 100, cost: 140, rarity: 'Uncommon' }),
+      { power: 100, target: 100, cost: 140, rarity: 'Uncommon' },
     );
     expect(acceptance.status).toBe('pass');
     expect(acceptance.why).toBeUndefined();
@@ -118,13 +113,13 @@ describe('ITEM_STEP_COPY exports per-step plain-language', () => {
   });
 
   it('Concept Brief copy explains the missing-brief case', () => {
-    const copy = ITEM_STEP_COPY['Concept Brief'](undefined);
+    const copy = ITEM_STEP_COPY['Concept Brief']({});
     expect(copy.why.length).toBeGreaterThan(20);
     expect(copy.suggestion).toMatch(/run produce/i);
   });
 
   it('3D Generation copy gives a triangle-budget fix direction for overage', () => {
-    const copy = ITEM_STEP_COPY['3D Generation'](art({ tris: 8000, cap: 6000 }));
+    const copy = ITEM_STEP_COPY['3D Generation']({ tris: 8000, cap: 6000 });
     expect(copy.fixDirection).toMatch(/retopo under 6000 triangles/i);
   });
 });

@@ -1,11 +1,13 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import {
   TaskFactory,
   extractCallbackPayload,
+  parseCallbackMarker,
   registerCallback,
   getCallback,
   removeCallback,
 } from '@/lib/cli-task';
+import { CALLBACK_MARKER_FIXTURE } from '@/__tests__/fixtures/callbackMarker';
 
 describe('TaskFactory', () => {
   describe('checklist', () => {
@@ -124,6 +126,50 @@ describe('Callback system', () => {
       expect(result).not.toBeNull();
       expect(result!.callbackId).toBe('cb-456-2');
       expect(JSON.parse(result!.payload)).toEqual({ status: 'done', count: 5 });
+    });
+  });
+
+  // The shared marker parser is the single source of truth for the wire format,
+  // consumed by BOTH the client terminal (extractCallbackPayload) and the
+  // server-side awaitCallback (cli-service). These tests pin that one format.
+  describe('parseCallbackMarker', () => {
+    it('parses id, raw payload, and JSON data from the shared fixture', () => {
+      const marker = parseCallbackMarker(CALLBACK_MARKER_FIXTURE.text);
+      expect(marker).not.toBeNull();
+      expect(marker!.callbackId).toBe(CALLBACK_MARKER_FIXTURE.callbackId);
+      expect(marker!.payload).toBe(CALLBACK_MARKER_FIXTURE.payload);
+      expect(marker!.data).toEqual(CALLBACK_MARKER_FIXTURE.data);
+    });
+
+    it('feeds both consumer shapes from one parse of the same fixture', () => {
+      // Client terminal shape (raw payload, re-parsed by resolveCallback).
+      const client = extractCallbackPayload(CALLBACK_MARKER_FIXTURE.text);
+      expect(client).toEqual({
+        callbackId: CALLBACK_MARKER_FIXTURE.callbackId,
+        payload: CALLBACK_MARKER_FIXTURE.payload,
+      });
+      // Server-side awaitCallback shape (the parsed object).
+      expect(parseCallbackMarker(CALLBACK_MARKER_FIXTURE.text)!.data).toEqual(
+        CALLBACK_MARKER_FIXTURE.data,
+      );
+    });
+
+    it('accepts non-cb- callback ids (e.g. the one-shot step- markers)', () => {
+      const marker = parseCallbackMarker('@@CALLBACK:step-1717000000000\n{}\n@@END_CALLBACK');
+      expect(marker).not.toBeNull();
+      expect(marker!.callbackId).toBe('step-1717000000000');
+      expect(marker!.data).toEqual({});
+    });
+
+    it('returns null when no marker is present', () => {
+      expect(parseCallbackMarker('Just regular text output')).toBeNull();
+    });
+
+    it('returns the marker with data:null on malformed JSON', () => {
+      const marker = parseCallbackMarker('@@CALLBACK:cb-1-1\n{ not json }\n@@END_CALLBACK');
+      expect(marker).not.toBeNull();
+      expect(marker!.data).toBeNull();
+      expect(marker!.payload).toBe('{ not json }');
     });
   });
 });

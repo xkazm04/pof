@@ -64,16 +64,18 @@ export function SmokeTest({ request, onComplete }: SmokeTestProps) {
     <div
       data-testid="pof-smoke-test"
       data-status={result?.status ?? (running ? 'running' : 'idle')}
+      role="status"
+      aria-live="polite"
       className="rounded border border-border bg-surface p-3 text-xs space-y-1.5"
     >
       <div className="flex items-center gap-2">
-        <Rocket className="w-4 h-4" style={{ color: STATUS_INFO }} />
+        <Rocket className="w-4 h-4" style={{ color: STATUS_INFO }} aria-hidden="true" />
         <span className="font-semibold text-text">Runnable .exe smoke-test</span>
       </div>
 
       {running && (
         <div className="flex items-center gap-2 text-text-muted font-mono">
-          <Loader2 className="w-3.5 h-3.5 animate-spin" />
+          <Loader2 className="w-3.5 h-3.5 animate-spin" aria-hidden="true" />
           Launching staged build, observing ~{OBSERVE_LABEL_MS}s…
         </div>
       )}
@@ -92,8 +94,8 @@ export function SmokeTest({ request, onComplete }: SmokeTestProps) {
           style={{ color: result.status === 'pass' ? STATUS_SUCCESS : STATUS_ERROR }}
         >
           {result.status === 'pass'
-            ? <CheckCircle2 className="w-3.5 h-3.5 shrink-0 mt-0.5" />
-            : <XCircle className="w-3.5 h-3.5 shrink-0 mt-0.5" />}
+            ? <CheckCircle2 className="w-3.5 h-3.5 shrink-0 mt-0.5" aria-hidden="true" />
+            : <XCircle className="w-3.5 h-3.5 shrink-0 mt-0.5" aria-hidden="true" />}
           <span>
             {result.status === 'pass'
               ? `${result.gameImage} survived ${Math.round(result.observedMs / 1000)}s — the cooked build runs.`

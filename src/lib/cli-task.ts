@@ -102,13 +102,59 @@ ${staticNote}
 }
 
 /**
+ * The wire format of a task callback: a `@@CALLBACK:<id>` line, a JSON body, and
+ * a closing `@@END_CALLBACK` line (see {@link buildCallbackSection}). This single
+ * regex is the **one source of truth** for the marker format — both the client
+ * terminal (here) and the server-side `awaitCallback` (cli-service) parse through
+ * {@link parseCallbackMarker}, so the format can never drift between the two paths.
+ *
+ * - `<id>` is any non-whitespace run — `cb-…` from {@link registerCallback}, or
+ *   `step-…` from the one-shot routes — so the prefix is intentionally unconstrained.
+ * - The body is everything up to the closing marker; surrounding whitespace and the
+ *   trailing newline are tolerated and trimmed off.
+ */
+const CALLBACK_MARKER_RE = /@@CALLBACK:(\S+)\s*\n([\s\S]*?)\s*@@END_CALLBACK/;
+
+/** A parsed `@@CALLBACK…@@END_CALLBACK` marker. */
+export interface ParsedCallbackMarker {
+  /** The callback id from the marker line (e.g. `cb-…`, `step-…`). */
+  callbackId: string;
+  /** The raw JSON text between the markers, trimmed. */
+  payload: string;
+  /** The parsed JSON body, or `null` if `payload` was not valid JSON. */
+  data: unknown;
+}
+
+/**
+ * Parse a `@@CALLBACK…@@END_CALLBACK` marker out of assistant output text.
+ *
+ * The single shared marker parser (regex + `JSON.parse`). Returns `null` when no
+ * marker is present; on a marker whose body is malformed JSON, returns the marker
+ * with `data: null` (callers that only need the raw `payload` are unaffected).
+ */
+export function parseCallbackMarker(text: string): ParsedCallbackMarker | null {
+  const match = text.match(CALLBACK_MARKER_RE);
+  if (!match) return null;
+  const payload = match[2].trim();
+  let data: unknown = null;
+  try {
+    data = JSON.parse(payload);
+  } catch {
+    data = null;
+  }
+  return { callbackId: match[1], payload, data };
+}
+
+/**
  * Extract a callback payload from assistant output text.
- * Returns { callbackId, payload } if found, or null.
+ * Returns { callbackId, payload } if found, or null. Thin projection over
+ * {@link parseCallbackMarker} for callers that re-parse the raw payload
+ * themselves (e.g. {@link resolveCallback}, which merges static fields first).
  */
 export function extractCallbackPayload(text: string): { callbackId: string; payload: string } | null {
-  const match = text.match(/@@CALLBACK:(cb-[^\s\n]+)\s*\n([\s\S]*?)\n\s*@@END_CALLBACK/);
-  if (!match) return null;
-  return { callbackId: match[1], payload: match[2].trim() };
+  const marker = parseCallbackMarker(text);
+  if (!marker) return null;
+  return { callbackId: marker.callbackId, payload: marker.payload };
 }
 
 /**

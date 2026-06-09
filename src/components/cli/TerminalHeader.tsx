@@ -3,7 +3,7 @@
 import { useCallback, useState } from 'react';
 import {
   Terminal, CheckCircle, Loader2, Trash2, RotateCcw, FileText, Copy,
-  ListTodo, FileEdit, FilePlus, ArrowDown, ArrowUp,
+  ListTodo, FileEdit, FilePlus, ArrowDown, ArrowUp, Circle, AlertCircle,
 } from 'lucide-react';
 import type { ExecutionInfo, ExecutionResult } from './types';
 import { UI_TIMEOUTS } from '@/lib/constants';
@@ -85,12 +85,12 @@ export function TerminalHeader({
             </div>
           )}
           {sessionId && !isStreaming && (
-            <button onClick={onResume} className="p-1 hover:bg-surface-hover rounded transition-colors" style={{ color: MODULE_COLORS.core }} title="Resume session">
-              <RotateCcw className="w-3 h-3" />
+            <button onClick={onResume} className="p-1.5 hover:bg-surface-hover rounded transition-colors" style={{ color: MODULE_COLORS.core }} title="Resume session" aria-label="Resume session">
+              <RotateCcw className="w-3 h-3" aria-hidden="true" />
             </button>
           )}
-          <button onClick={onClear} disabled={isStreaming} className="p-1 hover:bg-surface-hover rounded text-text-muted hover:text-red-400 disabled:opacity-50 transition-colors" title="Clear">
-            <Trash2 className="w-3 h-3" />
+          <button onClick={onClear} disabled={isStreaming} className="p-1.5 hover:bg-surface-hover rounded text-text-muted hover:text-red-400 disabled:opacity-50 transition-colors" title="Clear terminal" aria-label="Clear terminal">
+            <Trash2 className="w-3 h-3" aria-hidden="true" />
           </button>
         </div>
       </div>
@@ -98,15 +98,19 @@ export function TerminalHeader({
       {/* Status bar */}
       <div className="flex items-center justify-between px-3 py-0.5 text-xs text-text-muted bg-background border-b border-border/50">
         <div className="flex items-center gap-2">
-          {isStreaming ? (
-            <span data-testid="pof-cli-panel-running-indicator" className={`flex items-center gap-1 ${CLI_COLORS.warning}`}><Loader2 className="w-2.5 h-2.5 animate-spin" />Running</span>
-          ) : lastResult?.isError ? (
-            <span className={CLI_COLORS.error}>Error</span>
-          ) : lastResult ? (
-            <span className={CLI_COLORS.success}>Done</span>
-          ) : (
-            <span>Ready</span>
-          )}
+          {/* Status is announced to assistive tech and never encoded by color alone:
+              each state pairs a distinct leading icon with its text label (WCAG 1.4.1). */}
+          <span role="status" aria-live="polite" className="flex items-center gap-1">
+            {isStreaming ? (
+              <span data-testid="pof-cli-panel-running-indicator" className={`flex items-center gap-1 ${CLI_COLORS.warning}`}><Loader2 className="w-2.5 h-2.5 animate-spin" aria-hidden="true" />Running</span>
+            ) : lastResult?.isError ? (
+              <span className={`flex items-center gap-1 ${CLI_COLORS.error}`}><AlertCircle className="w-2.5 h-2.5" aria-hidden="true" />Error</span>
+            ) : lastResult ? (
+              <span className={`flex items-center gap-1 ${CLI_COLORS.success}`}><CheckCircle className="w-2.5 h-2.5" aria-hidden="true" />Done</span>
+            ) : (
+              <span className="flex items-center gap-1"><Circle className="w-2.5 h-2.5" aria-hidden="true" />Ready</span>
+            )}
+          </span>
           {executionInfo?.model && <span className="text-text-muted">{String(executionInfo.model).split('-').slice(-2).join('-')}</span>}
         </div>
         <div className="flex items-center gap-2">

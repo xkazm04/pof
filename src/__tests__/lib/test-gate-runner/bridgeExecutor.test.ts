@@ -6,18 +6,15 @@ function resp(body: unknown, ok = true, status = 200) {
 }
 
 describe('interpretAutomationResult', () => {
-  it('maps PofTestResult-style status', () => {
+  it('maps the synchronous run-automation status verdict', () => {
+    // POST /pof/test/run-automation returns a top-level { status, testId } (verified live).
     expect(interpretAutomationResult({ status: 'passed' })).toMatchObject({ terminal: true, status: 'pass' });
     expect(interpretAutomationResult({ status: 'failed', errors: ['boom'] })).toMatchObject({ terminal: true, status: 'fail', detail: 'boom' });
+  });
+  it('treats any other top-level status string as a non-terminal poll state', () => {
+    // "accepted" (async POST ack) / "running" (in-flight) → keep polling, never a verdict.
+    expect(interpretAutomationResult({ status: 'accepted' })).toMatchObject({ terminal: false, detail: 'accepted' });
     expect(interpretAutomationResult({ status: 'running', testId: 't1' })).toMatchObject({ terminal: false, testId: 't1' });
-  });
-  it('maps summary counts', () => {
-    expect(interpretAutomationResult({ passed: 3, failed: 0 })).toMatchObject({ terminal: true, status: 'pass' });
-    expect(interpretAutomationResult({ summary: { passed: 2, failed: 1 } })).toMatchObject({ terminal: true, status: 'fail' });
-  });
-  it('maps a plain boolean', () => {
-    expect(interpretAutomationResult({ success: true })).toMatchObject({ terminal: true, status: 'pass' });
-    expect(interpretAutomationResult({ success: false })).toMatchObject({ terminal: true, status: 'fail' });
   });
   it('is non-terminal for unrecognised/empty', () => {
     expect(interpretAutomationResult(null)).toMatchObject({ terminal: false });
@@ -58,8 +55,8 @@ describe('makeBridgeExecutor', () => {
     expect(await ex.available()).toBe(false);
   });
 
-  it('run() returns a pass verdict on an immediate terminal result', async () => {
-    const ex = makeBridgeExecutor({ fetchImpl: (() => resp({ status: 'passed' })) as unknown as typeof fetch });
+  it('run() returns a pass verdict on the synchronous run-automation verdict', async () => {
+    const ex = makeBridgeExecutor({ fetchImpl: (() => resp({ status: 'passed', testId: 'FVSItemsTest' })) as unknown as typeof fetch });
     const v = await ex.run(job);
     expect(v.status).toBe('pass');
     expect(v.detail).toContain('VSItemsTest');

@@ -1,4 +1,5 @@
 import { getDb } from '@/lib/db';
+import { normalizePlatformId } from './build-profiles';
 
 // ---------- Types ----------
 
@@ -106,11 +107,13 @@ function rowToRecord(row: BuildRow): BuildRecord {
 
 export function insertBuild(input: BuildRecordInput): BuildRecord {
   const db = getDb();
+  // Normalize the platform to its canonical token on write so every row stores
+  // one spelling — budgets and history filters then match without guessing.
   const result = db.prepare(`
     INSERT INTO build_history (platform, config, status, size_bytes, duration_ms, version, output_path, error_summary, cook_time_ms, warning_count, error_count, notes)
     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `).run(
-    input.platform,
+    normalizePlatformId(input.platform),
     input.config,
     input.status,
     input.sizeBytes ?? null,
@@ -142,7 +145,7 @@ export function getBuilds(limit = 100, offset = 0): BuildRecord[] {
 export function getBuildsByPlatform(platform: string, limit = 50): BuildRecord[] {
   const rows = getDb().prepare(
     'SELECT * FROM build_history WHERE platform = ? ORDER BY created_at DESC LIMIT ?'
-  ).all(platform, limit) as BuildRow[];
+  ).all(normalizePlatformId(platform), limit) as BuildRow[];
   return rows.map(rowToRecord);
 }
 
@@ -161,7 +164,7 @@ export function attachSmokeResultToLatestBuild(platform: string, config: string,
   const db = getDb();
   const row = db.prepare(
     "SELECT id FROM build_history WHERE platform = ? AND config = ? AND status = 'success' ORDER BY created_at DESC LIMIT 1"
-  ).get(platform, config) as { id: number } | undefined;
+  ).get(normalizePlatformId(platform), config) as { id: number } | undefined;
   if (!row) return null;
   db.prepare('UPDATE build_history SET notes = ? WHERE id = ?').run(note, row.id);
   return getBuild(row.id);
@@ -232,7 +235,7 @@ export function getSizeTrend(platform?: string, limit = 30): SizeTrendPoint[] {
     ? "SELECT id, platform, size_bytes, version, created_at FROM build_history WHERE size_bytes IS NOT NULL AND status = 'success' AND platform = ? ORDER BY created_at ASC LIMIT ?"
     : "SELECT id, platform, size_bytes, version, created_at FROM build_history WHERE size_bytes IS NOT NULL AND status = 'success' ORDER BY created_at ASC LIMIT ?";
 
-  const params = platform ? [platform, limit] : [limit];
+  const params = platform ? [normalizePlatformId(platform), limit] : [limit];
   const rows = db.prepare(query).all(...params) as Array<{
     id: number; platform: string; size_bytes: number; version: string | null; created_at: string;
   }>;

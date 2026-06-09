@@ -1,19 +1,28 @@
 'use client';
 
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, useId } from 'react';
 import {
   FileText, RefreshCw, Download, ChevronRight, ChevronDown,
   Loader2, BarChart3, Map, Volume2, Wrench, Package,
-  Layers, ClipboardCopy, Check, Presentation,
+  Layers, ClipboardCopy, Check, Presentation, Printer,
 } from 'lucide-react';
 import { useProjectStore } from '@/stores/projectStore';
+import { useNavigationStore } from '@/stores/navigationStore';
 import { useGameDesignDoc } from '@/hooks/useGameDesignDoc';
 import { SurfaceCard } from '@/components/ui/SurfaceCard';
+import { MermaidDiagram } from '@/components/ui/MermaidDiagram';
 import type { GDDSection } from '@/lib/gdd-synthesizer';
+import { mermaidNodeIdToModuleId } from '@/lib/gdd-mermaid';
+import { exportGDDAsPrintableHTML } from '@/lib/gdd-pitch';
+import { useDisclosure } from '@/hooks/useDisclosure';
 import { UI_TIMEOUTS } from '@/lib/constants';
 import { MODULE_COLORS, STATUS_ERROR, STATUS_SUCCESS } from '@/lib/chart-colors';
+import { logger } from '@/lib/logger';
 
 const ACCENT = MODULE_COLORS.evaluator;
+
+/** A diagram node is interactive only when it resolves to a real sub-module. */
+const isModuleNode = (svgNodeId: string) => mermaidNodeIdToModuleId(svgNodeId) !== null;
 
 const SECTION_ICONS: Record<string, typeof FileText> = {
   'overview': BarChart3,
@@ -33,6 +42,7 @@ export function GameDesignDocView() {
   const [copied, setCopied] = useState(false);
   const [exporting, setExporting] = useState(false);
   const [exportingPitch, setExportingPitch] = useState(false);
+  const [exportingPdf, setExportingPdf] = useState(false);
   const contentRef = useRef<HTMLDivElement>(null);
 
   // Auto-generate on mount
@@ -86,6 +96,35 @@ export function GameDesignDocView() {
     setCopied(true);
     setTimeout(() => setCopied(false), UI_TIMEOUTS.copyFeedback);
   }, [exportMarkdown]);
+
+  // Print-to-PDF: render the live GDD (cover scorecard + diagrams) into a new
+  // window and let the browser "Save as PDF". Falls back to downloading the
+  // printable HTML if the popup is blocked.
+  const handleExportPDF = useCallback(() => {
+    if (!gdd) return;
+    setExportingPdf(true);
+    try {
+      const html = exportGDDAsPrintableHTML(gdd);
+      const win = window.open('', '_blank');
+      if (win) {
+        win.document.open();
+        win.document.write(html);
+        win.document.close();
+        return;
+      }
+      // Popup blocked — fall back to a downloadable print-ready HTML file.
+      logger.warn('GDD PDF export: popup blocked, falling back to HTML download');
+      const blob = new Blob([html], { type: 'text/html' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${projectName}-GDD-print.html`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } finally {
+      setExportingPdf(false);
+    }
+  }, [gdd, projectName]);
 
   if (isLoading && !gdd) {
     return (
@@ -152,13 +191,14 @@ export function GameDesignDocView() {
                 const el = document.getElementById(`gdd-${section.id}`);
                 el?.scrollIntoView({ behavior: 'smooth', block: 'start' });
               }}
+              aria-current={activeSectionId === section.id ? 'true' : undefined}
               className={`w-full flex items-center gap-2 px-2 py-1.5 rounded-md text-left text-xs transition-colors mb-0.5 ${
                 activeSectionId === section.id
                   ? 'bg-surface-hover text-text'
                   : 'text-text-muted hover:text-text hover:bg-surface-hover/50'
               }`}
             >
-              <Icon className="w-3 h-3 flex-shrink-0" />
+              <Icon className="w-3 h-3 flex-shrink-0" aria-hidden="true" />
               <span className="truncate">{section.title}</span>
             </button>
           );
@@ -220,6 +260,16 @@ export function GameDesignDocView() {
               {exportingPitch ? <Loader2 className="w-3 h-3 animate-spin" /> : <Presentation className="w-3 h-3" />}
               Export Pitch
             </button>
+            <button
+              onClick={handleExportPDF}
+              disabled={exportingPdf}
+              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-xs transition-colors disabled:opacity-40"
+              style={{ backgroundColor: `${ACCENT}15`, color: ACCENT, border: `1px solid ${ACCENT}30` }}
+              title="Export a print-ready PDF (compliance scorecard cover + diagrams)"
+            >
+              {exportingPdf ? <Loader2 className="w-3 h-3 animate-spin" /> : <Printer className="w-3 h-3" />}
+              Export PDF
+            </button>
           </div>
         </div>
 
@@ -248,22 +298,32 @@ function GDDSectionCard({ section, isExpanded, onToggle }: {
 }) {
   const Icon = SECTION_ICONS[section.id] ?? FileText;
   const hasChildren = (section.subsections?.length ?? 0) > 0 || !!section.mermaid;
+  const panelId = `gdd-section-panel-${useId()}`;
+  const navigateToModule = useNavigationStore((s) => s.navigateToModule);
+
+  // The Core Systems architecture map's nodes are modules — click to jump to one.
+  const isArchitecture = section.id === 'core-systems';
+  const handleNodeClick = useCallback((svgNodeId: string) => {
+    const moduleId = mermaidNodeIdToModuleId(svgNodeId);
+    if (moduleId) navigateToModule(moduleId);
+  }, [navigateToModule]);
 
   return (
     <SurfaceCard id={`gdd-${section.id}`}>
-      {/* Section header */}
+      {/* Section header — a disclosure toggle when it has collapsible children */}
       <button
         onClick={onToggle}
+        {...(hasChildren ? { 'aria-expanded': isExpanded, 'aria-controls': panelId } : {})}
         className="w-full flex items-center gap-2.5 px-4 py-3 text-left hover:bg-surface-hover/40 transition-colors"
       >
         {hasChildren ? (
           isExpanded
-            ? <ChevronDown className="w-3.5 h-3.5 text-text-muted flex-shrink-0" />
-            : <ChevronRight className="w-3.5 h-3.5 text-text-muted flex-shrink-0" />
+            ? <ChevronDown className="w-3.5 h-3.5 text-text-muted flex-shrink-0" aria-hidden="true" />
+            : <ChevronRight className="w-3.5 h-3.5 text-text-muted flex-shrink-0" aria-hidden="true" />
         ) : (
           <div className="w-3.5" />
         )}
-        <Icon className="w-4 h-4 flex-shrink-0" style={{ color: ACCENT }} />
+        <Icon className="w-4 h-4 flex-shrink-0" style={{ color: ACCENT }} aria-hidden="true" />
         <span className="text-sm font-medium text-text">{section.title}</span>
       </button>
 
@@ -272,43 +332,60 @@ function GDDSectionCard({ section, isExpanded, onToggle }: {
         <MarkdownBlock content={section.content} />
       </div>
 
-      {/* Mermaid diagram */}
-      {isExpanded && section.mermaid && (
-        <div className="mx-4 mb-3 p-3 bg-surface-deep rounded-lg overflow-x-auto">
-          <pre className="text-2xs text-text-muted font-mono whitespace-pre leading-relaxed">{section.mermaid}</pre>
+      {/* Collapsible region — diagram + subsections */}
+      {isExpanded && hasChildren && (
+        <div id={panelId}>
+          {section.mermaid && (
+            <div className="mx-4 mb-3">
+              <MermaidDiagram
+                code={section.mermaid}
+                ariaLabel={`${section.title} diagram`}
+                className="p-3 bg-surface-deep rounded-lg overflow-x-auto"
+                {...(isArchitecture
+                  ? { onNodeClick: handleNodeClick, isNodeInteractive: isModuleNode }
+                  : {})}
+              />
+              {isArchitecture && (
+                <p className="mt-1.5 text-2xs text-text-muted">
+                  Click a system to open its module.
+                </p>
+              )}
+            </div>
+          )}
+          {section.subsections?.map((sub) => (
+            <SubSectionBlock key={sub.id} section={sub} />
+          ))}
         </div>
       )}
-
-      {/* Subsections */}
-      {isExpanded && section.subsections?.map((sub) => (
-        <SubSectionBlock key={sub.id} section={sub} />
-      ))}
     </SurfaceCard>
   );
 }
 
 function SubSectionBlock({ section }: { section: GDDSection }) {
-  const [expanded, setExpanded] = useState(false);
+  const { open, toggle, buttonProps, panelProps } = useDisclosure(false);
 
   return (
     <div className="border-t border-border">
       <button
-        onClick={() => setExpanded(!expanded)}
+        onClick={toggle}
+        {...buttonProps}
         className="w-full flex items-center gap-2 px-6 py-2 text-left hover:bg-surface-hover/30 transition-colors"
       >
-        {expanded
-          ? <ChevronDown className="w-3 h-3 text-text-muted" />
-          : <ChevronRight className="w-3 h-3 text-text-muted" />
+        {open
+          ? <ChevronDown className="w-3 h-3 text-text-muted" aria-hidden="true" />
+          : <ChevronRight className="w-3 h-3 text-text-muted" aria-hidden="true" />
         }
         <span className="text-xs font-medium text-text">{section.title}</span>
       </button>
-      {expanded && (
-        <div className="px-6 pb-3">
+      {open && (
+        <div {...panelProps} className="px-6 pb-3">
           <MarkdownBlock content={section.content} />
           {section.mermaid && (
-            <div className="mt-2 p-2.5 bg-surface-deep rounded-lg overflow-x-auto">
-              <pre className="text-2xs text-text-muted font-mono whitespace-pre leading-relaxed">{section.mermaid}</pre>
-            </div>
+            <MermaidDiagram
+              code={section.mermaid}
+              ariaLabel={`${section.title} diagram`}
+              className="mt-2 p-2.5 bg-surface-deep rounded-lg overflow-x-auto"
+            />
           )}
         </div>
       )}

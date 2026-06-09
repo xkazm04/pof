@@ -1,8 +1,8 @@
 'use client';
 
-import { Clock, AlertTriangle } from 'lucide-react';
+import { Clock, AlertTriangle, Activity } from 'lucide-react';
 import {
-  ACCENT_EMERALD, STATUS_ERROR, STATUS_WARNING, STATUS_INFO, GLOW_SM,
+  ACCENT_EMERALD, ACCENT_ORANGE, STATUS_ERROR, STATUS_WARNING, STATUS_INFO, GLOW_SM,
 } from '@/lib/chart-colors';
 import { FEEDBACK_CHANNELS, type ScrubData } from './types';
 
@@ -37,6 +37,12 @@ export function ScrubTooltip({
         <div className="font-bold text-text flex items-center gap-1.5">
           <Clock className="w-3 h-3 text-text-muted" />
           {displayTime.toFixed(1)}s
+          {scrubData.tension !== null && (
+            <span className="ml-1 flex items-center gap-0.5" style={{ color: ACCENT_ORANGE }}>
+              <Activity className="w-2.5 h-2.5" />
+              {Math.round(scrubData.tension * 100)}%
+            </span>
+          )}
         </div>
         {scrubData.damageEvent && (
           <div className="text-text-muted mt-0.5">

@@ -1,10 +1,13 @@
 'use client';
 
 import { useState, useCallback } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import {
-  Plus, Trash2, Play, FlaskConical, Zap, ChevronDown, ChevronRight,
+  Plus, Trash2, Play, FlaskConical, Zap, ChevronRight,
   Loader2, Eye, Ear, Crosshair, Tag, Sparkles, AlertTriangle,
+  CheckCircle2, XCircle, Circle, CircleDot,
 } from 'lucide-react';
+import { summarizeScenarios } from '@/types/ai-testing';
 import type {
   TestSuite,
   TestScenario,
@@ -14,10 +17,13 @@ import type {
   ScenarioStatus,
 } from '@/types/ai-testing';
 import { SurfaceCard } from '@/components/ui/SurfaceCard';
+import { ProgressRing } from '@/components/ui/ProgressRing';
 import {
   MODULE_COLORS, STATUS_SUCCESS, STATUS_WARNING, STATUS_ERROR,
-  STATUS_INFO, STATUS_BLOCKER, OPACITY_15, OPACITY_30, ACCENT_PURPLE,
+  STATUS_INFO, STATUS_BLOCKER, STATUS_NEUTRAL, OPACITY_15, OPACITY_30, ACCENT_PURPLE,
+  ACCENT_EMERALD, ACCENT_INDIGO,
 } from '@/lib/chart-colors';
+import { DURATION, EASE_OUT, STAGGER } from '@/lib/motion';
 
 const SYSTEMS_ACCENT = MODULE_COLORS.systems;
 
@@ -32,13 +38,15 @@ const STIMULUS_META: Record<StimulusType, { label: string; icon: typeof Eye; col
   custom: { label: 'Custom', icon: Sparkles, color: ACCENT_PURPLE },
 };
 
-const STATUS_COLORS: Record<ScenarioStatus, string> = {
-  draft: 'var(--text-muted)',
-  ready: STATUS_INFO,
-  running: STATUS_WARNING,
-  passed: STATUS_SUCCESS,
-  failed: STATUS_ERROR,
-  error: STATUS_BLOCKER,
+// Status metadata — icon + label + color so status survives colorblindness and
+// grayscale (WCAG 1.4.1), rather than a color-only dot. `spin` marks in-progress.
+const STATUS_META: Record<ScenarioStatus, { icon: typeof Circle; label: string; color: string; spin?: boolean }> = {
+  draft: { icon: Circle, label: 'Draft', color: STATUS_NEUTRAL },
+  ready: { icon: CircleDot, label: 'Ready', color: STATUS_INFO },
+  running: { icon: Loader2, label: 'Running', color: STATUS_WARNING, spin: true },
+  passed: { icon: CheckCircle2, label: 'Passed', color: STATUS_SUCCESS },
+  failed: { icon: XCircle, label: 'Failed', color: STATUS_ERROR },
+  error: { icon: AlertTriangle, label: 'Error', color: STATUS_BLOCKER },
 };
 
 // ── Props ──
@@ -75,13 +83,27 @@ export function AITestingSandbox({
     setNewScenarioName('');
   }, [newScenarioName, onCreateScenario]);
 
-  const passedCount = suite.scenarios.filter((s) => s.status === 'passed').length;
-  const failedCount = suite.scenarios.filter((s) => s.status === 'failed' || s.status === 'error').length;
+  // Shared aggregation so the suite counts/pass-rate stay in lockstep with the
+  // DB summary (getTestingSummary) — both derive from summarizeScenarios.
+  const { total: totalCount, passed: passedCount, failed: failedCount, passRate } =
+    summarizeScenarios(suite.scenarios);
+  // Live pass-rate ring: emerald when the whole suite is green, indigo while pending/mixed.
+  const ringColor = passRate === 100 ? ACCENT_EMERALD : ACCENT_INDIGO;
 
   return (
     <div className="flex flex-col h-full">
       {/* Header toolbar */}
       <div className="flex items-center gap-2 px-4 py-3 border-b border-border">
+        {totalCount > 0 && (
+          <ProgressRing
+            value={passRate}
+            size={56}
+            strokeWidth={5}
+            color={ringColor}
+            label={`${passRate}% pass rate — ${passedCount} of ${totalCount} passed`}
+            className="flex-shrink-0 mr-1"
+          />
+        )}
         <FlaskConical className="w-4 h-4" style={{ color: SYSTEMS_ACCENT }} />
         <span className="text-xs font-semibold text-text">Test Scenarios</span>
         <span className="text-2xs text-text-muted ml-1">
@@ -148,19 +170,28 @@ export function AITestingSandbox({
           </div>
         ) : (
           <div className="p-2 space-y-1">
-            {suite.scenarios.map((scenario) => (
-              <ScenarioCard
-                key={scenario.id}
-                scenario={scenario}
-                isExpanded={expandedId === scenario.id}
-                onToggle={() => setExpandedId(expandedId === scenario.id ? null : scenario.id)}
-                onUpdate={(updates) => onUpdateScenario(scenario.id, updates)}
-                onDelete={() => onDeleteScenario(scenario.id)}
-                onGenerateTest={() => onGenerateSingleTest(scenario)}
-                onGenerateStimuli={() => onGenerateStimuli(scenario)}
-                isGenerating={isGenerating}
-              />
-            ))}
+            <AnimatePresence>
+              {suite.scenarios.map((scenario, index) => (
+                <motion.div
+                  key={scenario.id}
+                  initial={{ opacity: 0, y: 4 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, height: 0 }}
+                  transition={{ duration: DURATION.base, ease: EASE_OUT, delay: index * STAGGER.fast }}
+                >
+                  <ScenarioCard
+                    scenario={scenario}
+                    isExpanded={expandedId === scenario.id}
+                    onToggle={() => setExpandedId(expandedId === scenario.id ? null : scenario.id)}
+                    onUpdate={(updates) => onUpdateScenario(scenario.id, updates)}
+                    onDelete={() => onDeleteScenario(scenario.id)}
+                    onGenerateTest={() => onGenerateSingleTest(scenario)}
+                    onGenerateStimuli={() => onGenerateStimuli(scenario)}
+                    isGenerating={isGenerating}
+                  />
+                </motion.div>
+              ))}
+            </AnimatePresence>
           </div>
         )}
       </div>
@@ -215,7 +246,8 @@ function ScenarioCard({
   onGenerateStimuli: () => void;
   isGenerating: boolean;
 }) {
-  const statusColor = STATUS_COLORS[scenario.status];
+  const status = STATUS_META[scenario.status];
+  const StatusIcon = status.icon;
 
   const handleAddStimulus = () => {
     const newStimulus: MockStimulus = {
@@ -262,17 +294,12 @@ function ScenarioCard({
       <button
         onClick={onToggle}
         className="w-full flex items-center gap-2 px-3 py-2.5 hover:bg-surface transition-colors"
+        aria-expanded={isExpanded}
       >
-        {isExpanded ? (
-          <ChevronDown className="w-3 h-3 text-text-muted flex-shrink-0" />
-        ) : (
-          <ChevronRight className="w-3 h-3 text-text-muted flex-shrink-0" />
-        )}
-
-        {/* Status dot */}
-        <span
-          className="w-2 h-2 rounded-full flex-shrink-0"
-          style={{ backgroundColor: statusColor }}
+        <ChevronRight
+          className="w-3 h-3 text-text-muted flex-shrink-0 transition-transform duration-200"
+          style={{ transform: isExpanded ? 'rotate(90deg)' : 'rotate(0deg)' }}
+          aria-hidden="true"
         />
 
         <span className="text-xs text-text truncate flex-1 text-left">{scenario.name}</span>
@@ -281,205 +308,217 @@ function ScenarioCard({
           {scenario.stimuli.length} stimuli &middot; {scenario.expectedActions.length} expected
         </span>
 
+        {/* Status pill — icon + color + label so status survives grayscale / colorblindness */}
         <span
-          className="text-2xs px-1.5 py-0.5 rounded capitalize"
+          className="flex items-center gap-1 text-2xs px-1.5 py-0.5 rounded flex-shrink-0"
           style={{
-            backgroundColor: `${statusColor}15`,
-            color: statusColor,
-            border: `1px solid ${statusColor}30`,
+            backgroundColor: `${status.color}${OPACITY_15}`,
+            color: status.color,
+            border: `1px solid ${status.color}${OPACITY_30}`,
           }}
         >
-          {scenario.status}
+          <StatusIcon className={`w-3 h-3 ${status.spin ? 'animate-spin' : ''}`} aria-hidden="true" />
+          {status.label}
         </span>
       </button>
 
       {/* Expanded detail */}
-      {isExpanded && (
-        <div className="px-3 pb-3 space-y-3 border-t border-border">
-          {/* Description */}
-          <div className="pt-3">
-            <label className="text-2xs uppercase tracking-wider text-text-muted mb-1 block font-semibold">
-              Scenario Description
-            </label>
-            <textarea
-              value={scenario.description}
-              onChange={(e) => onUpdate({ description: e.target.value })}
-              placeholder="Describe the game situation in natural language..."
-              className="w-full px-3 py-2 bg-surface border border-border rounded text-xs text-text placeholder-text-muted outline-none focus:border-border-bright transition-colors resize-none"
-              rows={2}
-            />
-          </div>
+      <AnimatePresence>
+        {isExpanded && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: DURATION.base, ease: EASE_OUT }}
+            className="overflow-hidden"
+          >
+            <div className="px-3 pb-3 space-y-3 border-t border-border">
+              {/* Description */}
+              <div className="pt-3">
+                <label className="text-2xs uppercase tracking-wider text-text-muted mb-1 block font-semibold">
+                  Scenario Description
+                </label>
+                <textarea
+                  value={scenario.description}
+                  onChange={(e) => onUpdate({ description: e.target.value })}
+                  placeholder="Describe the game situation in natural language..."
+                  className="w-full px-3 py-2 bg-surface border border-border rounded text-xs text-text placeholder-text-muted outline-none focus:border-border-bright transition-colors resize-none"
+                  rows={2}
+                />
+              </div>
 
-          {/* Stimuli */}
-          <div>
-            <div className="flex items-center justify-between mb-1.5">
-              <label className="text-2xs uppercase tracking-wider text-text-muted font-semibold">
-                Mock Stimuli
-              </label>
-              <div className="flex items-center gap-1">
+              {/* Stimuli */}
+              <div>
+                <div className="flex items-center justify-between mb-1.5">
+                  <label className="text-2xs uppercase tracking-wider text-text-muted font-semibold">
+                    Mock Stimuli
+                  </label>
+                  <div className="flex items-center gap-1">
+                    <button
+                      onClick={onGenerateStimuli}
+                      disabled={isGenerating || !scenario.description.trim()}
+                      className="text-2xs px-1.5 py-0.5 rounded transition-colors disabled:opacity-50"
+                      style={{ color: SYSTEMS_ACCENT }}
+                      title="Auto-generate stimuli from description"
+                    >
+                      <Sparkles className="w-3 h-3 inline mr-0.5" />
+                      Auto-detect
+                    </button>
+                    <button
+                      onClick={handleAddStimulus}
+                      className="text-2xs text-text-muted hover:text-text transition-colors"
+                    >
+                      <Plus className="w-3 h-3" />
+                    </button>
+                  </div>
+                </div>
+                <div className="space-y-1.5">
+                  {scenario.stimuli.map((stim, idx) => {
+                    const meta = STIMULUS_META[stim.type];
+                    const Icon = meta.icon;
+                    return (
+                      <div
+                        key={stim.id}
+                        className="flex items-start gap-2 px-2.5 py-2 bg-surface border border-border rounded"
+                      >
+                        <Icon className="w-3 h-3 mt-0.5 flex-shrink-0" style={{ color: meta.color }} />
+                        <div className="flex-1 min-w-0 space-y-1">
+                          <div className="flex items-center gap-1.5">
+                            <select
+                              value={stim.type}
+                              onChange={(e) => handleUpdateStimulus(idx, { type: e.target.value as StimulusType })}
+                              className="bg-surface-deep border border-border rounded text-xs text-text px-1.5 py-0.5 outline-none"
+                            >
+                              {Object.entries(STIMULUS_META).map(([key, m]) => (
+                                <option key={key} value={key}>{m.label}</option>
+                              ))}
+                            </select>
+                            <input
+                              type="text"
+                              value={stim.label}
+                              onChange={(e) => handleUpdateStimulus(idx, { label: e.target.value })}
+                              placeholder="Label"
+                              className="flex-1 bg-transparent text-xs text-text placeholder-text-muted outline-none min-w-0"
+                            />
+                          </div>
+                          <input
+                            type="text"
+                            value={stim.description}
+                            onChange={(e) => handleUpdateStimulus(idx, { description: e.target.value })}
+                            placeholder="What happens in the game world..."
+                            className="w-full bg-transparent text-xs text-text-muted-hover placeholder-text-muted outline-none"
+                          />
+                        </div>
+                        <button
+                          onClick={() => handleRemoveStimulus(idx)}
+                          className="text-text-muted hover:text-red-400 transition-colors mt-0.5"
+                        >
+                          <Trash2 className="w-3 h-3" />
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Expected Actions */}
+              <div>
+                <div className="flex items-center justify-between mb-1.5">
+                  <label className="text-2xs uppercase tracking-wider text-text-muted font-semibold">
+                    Expected Actions
+                  </label>
+                  <button
+                    onClick={handleAddExpected}
+                    className="text-2xs text-text-muted hover:text-text transition-colors"
+                  >
+                    <Plus className="w-3 h-3" />
+                  </button>
+                </div>
+                <div className="space-y-1.5">
+                  {scenario.expectedActions.map((ea, idx) => (
+                    <div
+                      key={ea.id}
+                      className="flex items-start gap-2 px-2.5 py-2 bg-surface border border-border rounded"
+                    >
+                      <Play className="w-3 h-3 mt-0.5 flex-shrink-0" style={{ color: STATUS_SUCCESS }} />
+                      <div className="flex-1 min-w-0 space-y-1">
+                        <input
+                          type="text"
+                          value={ea.action}
+                          onChange={(e) => handleUpdateExpected(idx, { action: e.target.value })}
+                          placeholder="Expected action (e.g. 'Enter Chase state')"
+                          className="w-full bg-transparent text-xs text-text placeholder-text-muted outline-none"
+                        />
+                        <div className="flex items-center gap-2">
+                          <input
+                            type="text"
+                            value={ea.btNode}
+                            onChange={(e) => handleUpdateExpected(idx, { btNode: e.target.value })}
+                            placeholder="BT node (optional)"
+                            className="flex-1 bg-transparent text-xs text-text-muted-hover placeholder-text-muted outline-none min-w-0"
+                          />
+                          <span className="text-2xs text-text-muted">timeout:</span>
+                          <input
+                            type="number"
+                            value={ea.timeoutSeconds}
+                            onChange={(e) => handleUpdateExpected(idx, { timeoutSeconds: Number(e.target.value) || 5 })}
+                            className="w-10 bg-surface-deep border border-border rounded text-xs text-text px-1.5 py-0.5 outline-none text-center"
+                            min={1}
+                            max={60}
+                          />
+                          <span className="text-2xs text-text-muted">s</span>
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => handleRemoveExpected(idx)}
+                        className="text-text-muted hover:text-red-400 transition-colors mt-0.5"
+                      >
+                        <Trash2 className="w-3 h-3" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Last run output */}
+              {scenario.lastRunOutput && (
+                <div>
+                  <label className="text-2xs uppercase tracking-wider text-text-muted mb-1 block font-semibold">
+                    Last Run Output
+                  </label>
+                  <pre className="px-3 py-2 bg-surface border border-border rounded text-xs text-text-muted-hover whitespace-pre-wrap max-h-32 overflow-y-auto font-mono">
+                    {scenario.lastRunOutput}
+                  </pre>
+                </div>
+              )}
+
+              {/* Action buttons */}
+              <div className="flex items-center gap-2 pt-1">
                 <button
-                  onClick={onGenerateStimuli}
-                  disabled={isGenerating || !scenario.description.trim()}
-                  className="text-2xs px-1.5 py-0.5 rounded transition-colors disabled:opacity-50"
-                  style={{ color: SYSTEMS_ACCENT }}
-                  title="Auto-generate stimuli from description"
+                  onClick={onGenerateTest}
+                  disabled={isGenerating || scenario.stimuli.length === 0}
+                  className="flex items-center gap-1 px-2 py-1.5 rounded text-xs font-medium transition-all disabled:opacity-50"
+                  style={{
+                    backgroundColor: `${SYSTEMS_ACCENT}15`,
+                    color: SYSTEMS_ACCENT,
+                    border: `1px solid ${SYSTEMS_ACCENT}30`,
+                  }}
                 >
-                  <Sparkles className="w-3 h-3 inline mr-0.5" />
-                  Auto-detect
+                  <Zap className="w-3 h-3" />
+                  Generate Test
                 </button>
                 <button
-                  onClick={handleAddStimulus}
-                  className="text-2xs text-text-muted hover:text-text transition-colors"
+                  onClick={onDelete}
+                  className="flex items-center gap-1 px-2 py-1.5 rounded text-xs text-text-muted hover:text-red-400 hover:bg-red-400/10 transition-colors"
                 >
-                  <Plus className="w-3 h-3" />
+                  <Trash2 className="w-3 h-3" />
+                  Delete
                 </button>
               </div>
             </div>
-            <div className="space-y-1.5">
-              {scenario.stimuli.map((stim, idx) => {
-                const meta = STIMULUS_META[stim.type];
-                const Icon = meta.icon;
-                return (
-                  <div
-                    key={stim.id}
-                    className="flex items-start gap-2 px-2.5 py-2 bg-surface border border-border rounded"
-                  >
-                    <Icon className="w-3 h-3 mt-0.5 flex-shrink-0" style={{ color: meta.color }} />
-                    <div className="flex-1 min-w-0 space-y-1">
-                      <div className="flex items-center gap-1.5">
-                        <select
-                          value={stim.type}
-                          onChange={(e) => handleUpdateStimulus(idx, { type: e.target.value as StimulusType })}
-                          className="bg-surface-deep border border-border rounded text-xs text-text px-1.5 py-0.5 outline-none"
-                        >
-                          {Object.entries(STIMULUS_META).map(([key, m]) => (
-                            <option key={key} value={key}>{m.label}</option>
-                          ))}
-                        </select>
-                        <input
-                          type="text"
-                          value={stim.label}
-                          onChange={(e) => handleUpdateStimulus(idx, { label: e.target.value })}
-                          placeholder="Label"
-                          className="flex-1 bg-transparent text-xs text-text placeholder-text-muted outline-none min-w-0"
-                        />
-                      </div>
-                      <input
-                        type="text"
-                        value={stim.description}
-                        onChange={(e) => handleUpdateStimulus(idx, { description: e.target.value })}
-                        placeholder="What happens in the game world..."
-                        className="w-full bg-transparent text-xs text-text-muted-hover placeholder-text-muted outline-none"
-                      />
-                    </div>
-                    <button
-                      onClick={() => handleRemoveStimulus(idx)}
-                      className="text-text-muted hover:text-red-400 transition-colors mt-0.5"
-                    >
-                      <Trash2 className="w-3 h-3" />
-                    </button>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-
-          {/* Expected Actions */}
-          <div>
-            <div className="flex items-center justify-between mb-1.5">
-              <label className="text-2xs uppercase tracking-wider text-text-muted font-semibold">
-                Expected Actions
-              </label>
-              <button
-                onClick={handleAddExpected}
-                className="text-2xs text-text-muted hover:text-text transition-colors"
-              >
-                <Plus className="w-3 h-3" />
-              </button>
-            </div>
-            <div className="space-y-1.5">
-              {scenario.expectedActions.map((ea, idx) => (
-                <div
-                  key={ea.id}
-                  className="flex items-start gap-2 px-2.5 py-2 bg-surface border border-border rounded"
-                >
-                  <Play className="w-3 h-3 mt-0.5 flex-shrink-0" style={{ color: STATUS_SUCCESS }} />
-                  <div className="flex-1 min-w-0 space-y-1">
-                    <input
-                      type="text"
-                      value={ea.action}
-                      onChange={(e) => handleUpdateExpected(idx, { action: e.target.value })}
-                      placeholder="Expected action (e.g. 'Enter Chase state')"
-                      className="w-full bg-transparent text-xs text-text placeholder-text-muted outline-none"
-                    />
-                    <div className="flex items-center gap-2">
-                      <input
-                        type="text"
-                        value={ea.btNode}
-                        onChange={(e) => handleUpdateExpected(idx, { btNode: e.target.value })}
-                        placeholder="BT node (optional)"
-                        className="flex-1 bg-transparent text-xs text-text-muted-hover placeholder-text-muted outline-none min-w-0"
-                      />
-                      <span className="text-2xs text-text-muted">timeout:</span>
-                      <input
-                        type="number"
-                        value={ea.timeoutSeconds}
-                        onChange={(e) => handleUpdateExpected(idx, { timeoutSeconds: Number(e.target.value) || 5 })}
-                        className="w-10 bg-surface-deep border border-border rounded text-xs text-text px-1.5 py-0.5 outline-none text-center"
-                        min={1}
-                        max={60}
-                      />
-                      <span className="text-2xs text-text-muted">s</span>
-                    </div>
-                  </div>
-                  <button
-                    onClick={() => handleRemoveExpected(idx)}
-                    className="text-text-muted hover:text-red-400 transition-colors mt-0.5"
-                  >
-                    <Trash2 className="w-3 h-3" />
-                  </button>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Last run output */}
-          {scenario.lastRunOutput && (
-            <div>
-              <label className="text-2xs uppercase tracking-wider text-text-muted mb-1 block font-semibold">
-                Last Run Output
-              </label>
-              <pre className="px-3 py-2 bg-surface border border-border rounded text-xs text-text-muted-hover whitespace-pre-wrap max-h-32 overflow-y-auto font-mono">
-                {scenario.lastRunOutput}
-              </pre>
-            </div>
-          )}
-
-          {/* Action buttons */}
-          <div className="flex items-center gap-2 pt-1">
-            <button
-              onClick={onGenerateTest}
-              disabled={isGenerating || scenario.stimuli.length === 0}
-              className="flex items-center gap-1 px-2 py-1.5 rounded text-xs font-medium transition-all disabled:opacity-50"
-              style={{
-                backgroundColor: `${SYSTEMS_ACCENT}15`,
-                color: SYSTEMS_ACCENT,
-                border: `1px solid ${SYSTEMS_ACCENT}30`,
-              }}
-            >
-              <Zap className="w-3 h-3" />
-              Generate Test
-            </button>
-            <button
-              onClick={onDelete}
-              className="flex items-center gap-1 px-2 py-1.5 rounded text-xs text-text-muted hover:text-red-400 hover:bg-red-400/10 transition-colors"
-            >
-              <Trash2 className="w-3 h-3" />
-              Delete
-            </button>
-          </div>
-        </div>
-      )}
+          </motion.div>
+        )}
+      </AnimatePresence>
     </SurfaceCard>
   );
 }

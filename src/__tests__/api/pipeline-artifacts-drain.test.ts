@@ -12,6 +12,17 @@ vi.mock('@/lib/test-gate-runner', () => ({
   buildExecutors: vi.fn().mockReturnValue([]),
   collectDeferred: vi.fn().mockReturnValue([]),
   drainAll: drainAllMock,
+  // Faithful copy of the real helper (pure) so the in-flight scope/key logic still derives.
+  parseDrainFilter: (get: (k: 'tier' | 'catalogId' | 'entityId') => string | null | undefined) => {
+    const tier = get('tier');
+    const catalogId = get('catalogId');
+    const entityId = get('entityId');
+    return {
+      ...(tier === 'L3' || tier === 'L4' ? { tier } : {}),
+      ...(catalogId ? { catalogId } : {}),
+      ...(entityId ? { entityId } : {}),
+    };
+  },
 }));
 
 import { POST, __resetDrainInFlight } from '@/app/api/pipeline-artifacts/drain/route';

@@ -1,6 +1,7 @@
 'use client';
 
 import { useMemo, useCallback, useState, useEffect } from 'react';
+import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import {
   X,
   CheckCircle2,
@@ -18,11 +19,25 @@ import {
 } from 'lucide-react';
 import { useActivityFeedStore } from '@/stores/activityFeedStore';
 import { useModuleActions } from '@/hooks/useModuleActions';
+import { useViewportWidth } from '@/hooks/useViewportWidth';
+import { DURATION, EASE_OUT } from '@/lib/motion';
+import { formatTimeAgo } from '@/lib/format-time';
 import { StaggerContainer, StaggerItem } from '@/components/ui/Stagger';
 import type { ActivityEvent, ActivityEventType } from '@/stores/activityFeedStore';
 import type { SubModuleId } from '@/types/modules';
 import { TruncateWithTooltip } from '@/components/ui/TruncateWithTooltip';
 import { STATUS_SUCCESS, STATUS_ERROR, STATUS_WARNING, STATUS_BLOCKER, MODULE_COLORS, OPACITY_12 } from '@/lib/chart-colors';
+
+// ── Layout constants ──
+
+/** Fixed width of the feed (px) — inline column when wide, drawer when narrow. */
+const PANEL_WIDTH = 320;
+/**
+ * At or below this viewport width the feed promotes from a layout-shifting inline
+ * column to an overlay drawer, so narrow screens aren't crushed by the 320px rail.
+ * Mirrors the `/layout` shell's collapse breakpoint.
+ */
+const OVERLAY_BREAKPOINT = 1100;
 
 // ── Event type config ──
 
@@ -94,20 +109,6 @@ function buildSections(events: ActivityEvent[]): TimePeriodSection[] {
   return sections;
 }
 
-// ── Time formatting ──
-
-function timeAgo(ts: number): string {
-  const diff = Date.now() - ts;
-  const seconds = Math.floor(diff / 1000);
-  if (seconds < 60) return 'just now';
-  const minutes = Math.floor(seconds / 60);
-  if (minutes < 60) return `${minutes}m ago`;
-  const hours = Math.floor(minutes / 60);
-  if (hours < 24) return `${hours}h ago`;
-  const days = Math.floor(hours / 24);
-  return `${days}d ago`;
-}
-
 // ── Component ──
 
 export function ActivityFeedPanel() {
@@ -118,12 +119,27 @@ export function ActivityFeedPanel() {
   const dismissAll = useActivityFeedStore((s) => s.dismissAll);
   const { sendPromptToModule } = useModuleActions();
 
+  const prefersReduced = useReducedMotion();
+  const viewportWidth = useViewportWidth();
+  // Wide → inline column that smoothly pushes ModuleRenderer; narrow → overlay drawer.
+  const overlay = viewportWidth < OVERLAY_BREAKPOINT;
+
   // Refresh relative timestamps every 60s
   const [, setTick] = useState(0);
   useEffect(() => {
     const id = setInterval(() => setTick((n) => n + 1), 60_000);
     return () => clearInterval(id);
   }, []);
+
+  // In overlay mode, Escape dismisses the drawer (parity with the search palette / lab drawers).
+  useEffect(() => {
+    if (!isOpen || !overlay) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setOpen(false);
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [isOpen, overlay, setOpen]);
 
   const unreadCount = useMemo(() => events.filter((e) => !e.dismissed).length, [events]);
   const sections = useMemo(() => buildSections(events), [events]);
@@ -145,10 +161,9 @@ export function ActivityFeedPanel() {
     [sendPromptToModule, dismissEvent],
   );
 
-  if (!isOpen) return null;
-
-  return (
-    <div className="w-80 border-l border-border bg-surface-deep flex flex-col h-full flex-shrink-0" style={{ ['--focus-accent' as string]: 'var(--setup)' }}>
+  // Header + scrollable list + footer — shared by the inline-column and overlay-drawer shells.
+  const body = (
+    <>
       {/* Header */}
       <div className="flex items-center justify-between px-4 py-3 border-b border-border">
         <div className="flex items-center gap-2">
@@ -236,7 +251,57 @@ export function ActivityFeedPanel() {
           </div>
         </div>
       )}
-    </div>
+    </>
+  );
+
+  return (
+    <AnimatePresence>
+      {isOpen && (overlay ? (
+        // ── Narrow: overlay drawer over a dimmed backdrop (no layout shift) ──
+        <motion.div
+          key="activity-feed-overlay"
+          data-testid="activity-feed-backdrop"
+          className="fixed inset-0 z-[90] bg-black/40"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: prefersReduced ? 0 : DURATION.fast }}
+          onClick={(e) => { if (e.target === e.currentTarget) setOpen(false); }}
+        >
+          <motion.aside
+            role="dialog"
+            aria-modal="true"
+            aria-label="Activity feed"
+            className="absolute top-0 right-0 h-full w-80 max-w-[85vw] flex flex-col border-l border-border bg-surface-deep shadow-2xl"
+            style={{ ['--focus-accent' as string]: 'var(--setup)' }}
+            onClick={(e) => e.stopPropagation()}
+            initial={prefersReduced ? { opacity: 0 } : { x: '100%' }}
+            animate={prefersReduced ? { opacity: 1 } : { x: 0 }}
+            exit={prefersReduced ? { opacity: 0 } : { x: '100%' }}
+            transition={prefersReduced ? { duration: 0 } : { duration: DURATION.base, ease: EASE_OUT }}
+          >
+            {body}
+          </motion.aside>
+        </motion.div>
+      ) : (
+        // ── Wide: inline column whose width animates 0 → 320px, gently reflowing the canvas ──
+        <motion.aside
+          key="activity-feed-column"
+          aria-label="Activity feed"
+          initial={prefersReduced ? { opacity: 1, width: PANEL_WIDTH } : { width: 0, opacity: 0 }}
+          animate={{ width: PANEL_WIDTH, opacity: 1 }}
+          exit={prefersReduced ? { opacity: 0 } : { width: 0, opacity: 0 }}
+          transition={prefersReduced ? { duration: 0 } : { duration: DURATION.base, ease: EASE_OUT }}
+          className="h-full flex-shrink-0 overflow-hidden"
+          style={{ ['--focus-accent' as string]: 'var(--setup)' }}
+        >
+          {/* Fixed-width inner shell so content doesn't reflow while the column grows. */}
+          <div style={{ width: PANEL_WIDTH }} className="flex flex-col h-full border-l border-border bg-surface-deep">
+            {body}
+          </div>
+        </motion.aside>
+      ))}
+    </AnimatePresence>
   );
 }
 
@@ -273,7 +338,7 @@ function CollapsedGroup({
           {count} {config.label.toLowerCase()} events{moduleLabel ? ` in ${moduleLabel}` : ''}
         </TruncateWithTooltip>
         <span className="text-2xs text-text-muted ml-auto flex-shrink-0">
-          {timeAgo(group.events[0].timestamp)}
+          {formatTimeAgo(group.events[0].timestamp)}
         </span>
       </button>
 
@@ -383,7 +448,7 @@ function EventCard({
           </p>
 
           <div className="flex items-center gap-2 mt-1">
-            <span className="text-2xs text-text-muted">{timeAgo(event.timestamp)}</span>
+            <span className="text-2xs text-text-muted">{formatTimeAgo(event.timestamp)}</span>
             {event.moduleId && (
               <span className="text-2xs text-text-muted">{event.moduleId}</span>
             )}
@@ -401,7 +466,7 @@ function EventCard({
           {event.moduleId && event.meta?.prompt && (
             <button
               onClick={(e) => { e.stopPropagation(); onAct(event); }}
-              className="flex items-center gap-1 px-1.5 py-0.5 rounded text-2xs font-medium opacity-30 group-hover:opacity-100 focus-visible:opacity-100 text-[#00ff88] hover:bg-accent-subtle transition-all scale-95 group-hover:scale-100 focus-visible:scale-100 focus-ring"
+              className="flex items-center gap-1 px-1.5 py-0.5 rounded text-2xs font-medium opacity-30 group-hover:opacity-100 focus-visible:opacity-100 text-accent-setup hover:bg-accent-subtle transition-all scale-95 group-hover:scale-100 focus-visible:scale-100 focus-ring"
               title="Fix with Claude"
             >
               <Zap className="w-2.5 h-2.5" />

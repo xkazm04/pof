@@ -22,7 +22,53 @@ export interface PromptVariant {
   parentId: string | null;
   /** Which mutation was applied */
   mutationType?: MutationType;
+  /** Whether this is the currently-active/restored version for its checklist item */
+  active: boolean;
   createdAt: string;
+}
+
+// ── Version history — lineage timeline + per-version A/B stats ──
+
+/** Aggregated A/B performance for a single variant across every test it joined. */
+export interface VariantStats {
+  variantId: string;
+  /** Total trials across all tests where this variant was slot A or B */
+  trials: number;
+  /** Total successes across those trials */
+  successes: number;
+  /** successes / trials (0 when untested) */
+  successRate: number;
+  /** Number of concluded tests this variant won */
+  wins: number;
+  /** Number of tests this variant participated in */
+  testCount: number;
+}
+
+/** A single version (variant) in a checklist item's history, with its stats. */
+export interface VariantVersionEntry {
+  variant: PromptVariant;
+  stats: VariantStats;
+  /** Whether this is the currently-active/restored version */
+  isActive: boolean;
+}
+
+/** A node in the lineage tree — a version plus its mutation descendants. */
+export interface VariantLineageNode extends VariantVersionEntry {
+  children: VariantLineageNode[];
+  /** Distance from a root (root = 0) — drives indentation */
+  depth: number;
+}
+
+/** Full version history for one checklist item: flat list + lineage forest. */
+export interface VariantVersionHistory {
+  moduleId: SubModuleId;
+  checklistItemId: string;
+  /** All versions, flat, each annotated with stats + active flag */
+  versions: VariantVersionEntry[];
+  /** Lineage roots (originals + any variant whose parent is outside this item) */
+  roots: VariantLineageNode[];
+  /** Id of the currently-active version, if any */
+  activeVariantId: string | null;
 }
 
 // ── Mutation types — ways to transform a prompt ──
@@ -173,6 +219,8 @@ export interface PromptEvolutionRequest {
     | 'get-stats'
     | 'get-suggestions'
     | 'get-best-variant'
+    | 'get-version-history'
+    | 'restore-variant'
     | 'optimize-prompt';
   moduleId?: string;
   checklistItemId?: string;

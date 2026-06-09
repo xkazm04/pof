@@ -5,16 +5,18 @@ import { useProjectStore } from '@/stores/projectStore';
 import type { RecentProject } from '@/stores/projectStore';
 import { useCLIPanelStore } from '@/components/cli/store/cliPanelStore';
 import { useModuleStore } from '@/stores/moduleStore';
-import { SUB_MODULES } from '@/lib/module-registry';
+import { SUB_MODULES, ALL_CHECKLIST_TOTAL } from '@/lib/module-registry';
 import {
   Gamepad2, ChevronDown, Pencil, Trash2, Check, X,
-  Bell, FolderOpen, Plus, Clock, Loader2, CheckCircle2, Search,
+  Bell, FolderOpen, Plus, Clock, Loader2, CheckCircle2, Search, LayoutDashboard,
 } from 'lucide-react';
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import { useActivityFeedStore } from '@/stores/activityFeedStore';
-import { MODULE_COLORS } from '@/lib/chart-colors';
+import { MODULE_COLORS, STATUS_ERROR } from '@/lib/chart-colors';
+import { formatTimeAgo } from '@/lib/format-time';
 import { usePofBridgeStore } from '@/stores/pofBridgeStore';
 import { BridgeStatusIndicator } from '@/components/ui/BridgeStatusIndicator';
+import { writeShellPref } from '@/lib/ecw/shell-pref';
 
 const dropdownMotion = {
   initial: { opacity: 0, y: -4, scale: 0.98 },
@@ -157,11 +159,8 @@ export function TopBar() {
   }, [renameValue, projectName, projectPath, setProject]);
 
   const handleDelete = useCallback(() => {
-    // Clear all CLI sessions
-    const { tabOrder, removeSession } = useCLIPanelStore.getState();
-    for (const tabId of [...tabOrder]) {
-      removeSession(tabId);
-    }
+    // Clear all CLI sessions (atomic reset of sessions/tabOrder/active/maximized)
+    useCLIPanelStore.getState().clearAllSessions();
 
     // Reset project store (clears localStorage too)
     resetProject();
@@ -179,10 +178,7 @@ export function TopBar() {
 
     setSwitching(project.id);
     // Clear CLI sessions before switching
-    const { tabOrder, removeSession } = useCLIPanelStore.getState();
-    for (const tabId of [...tabOrder]) {
-      removeSession(tabId);
-    }
+    useCLIPanelStore.getState().clearAllSessions();
 
     await switchProject(project.id);
     setSwitching(null);
@@ -197,10 +193,7 @@ export function TopBar() {
     }
 
     // Clear CLI sessions
-    const { tabOrder, removeSession } = useCLIPanelStore.getState();
-    for (const tabId of [...tabOrder]) {
-      removeSession(tabId);
-    }
+    useCLIPanelStore.getState().clearAllSessions();
 
     resetProject();
     setDropdownOpen(false);
@@ -398,6 +391,7 @@ export function TopBar() {
         )}
       </div>
       <div className="flex items-center gap-3">
+        <NewShellButton />
         {isSetupComplete && <SearchTrigger />}
         {isSetupComplete && <ProjectStats />}
         {isSetupComplete && <PofBridgeIndicator />}
@@ -421,7 +415,7 @@ function ProjectRow({ project, isSwitching, onSwitch, onRemove }: {
     ? Math.round((project.checklistDone / project.checklistTotal) * 100)
     : 0;
 
-  const timeAgo = formatTimeAgo(project.lastOpenedAt);
+  const timeAgo = formatTimeAgo(project.lastOpenedAt, { extended: true, justNow: 'Just now', invalid: 'Unknown' });
 
   return (
     <div className="group relative">
@@ -492,32 +486,6 @@ function ProjectRow({ project, isSwitching, onSwitch, onRemove }: {
   );
 }
 
-// --- Helper ---
-
-function formatTimeAgo(isoDate: string): string {
-  const now = Date.now();
-  const then = new Date(isoDate).getTime();
-  const diffMs = now - then;
-
-  if (isNaN(then)) return 'Unknown';
-
-  const minutes = Math.floor(diffMs / 60000);
-  if (minutes < 1) return 'Just now';
-  if (minutes < 60) return `${minutes}m ago`;
-
-  const hours = Math.floor(minutes / 60);
-  if (hours < 24) return `${hours}h ago`;
-
-  const days = Math.floor(hours / 24);
-  if (days < 7) return `${days}d ago`;
-
-  const weeks = Math.floor(days / 7);
-  if (weeks < 5) return `${weeks}w ago`;
-
-  const months = Math.floor(days / 30);
-  return `${months}mo ago`;
-}
-
 // --- Project stats summary ---
 
 // Precompute total checklist items per module (static — never changes at runtime)
@@ -525,7 +493,8 @@ const MODULE_CHECKLIST_COUNTS: { moduleId: string; total: number }[] = SUB_MODUL
   .filter((m) => m.checklist && m.checklist.length > 0)
   .map((m) => ({ moduleId: m.id, total: m.checklist!.length }));
 
-const TOTAL_CHECKLIST_ITEMS = MODULE_CHECKLIST_COUNTS.reduce((sum, m) => sum + m.total, 0);
+// Registry-derived single source of truth for the project-wide denominator.
+const TOTAL_CHECKLIST_ITEMS = ALL_CHECKLIST_TOTAL;
 const MODULE_ITEM_IDS: Record<string, string[]> = Object.fromEntries(
   SUB_MODULES
     .filter((m) => m.checklist && m.checklist.length > 0)
@@ -610,14 +579,15 @@ function NotificationBadge() {
       aria-expanded={isOpen}
       className={`relative p-1.5 rounded-md transition-colors focus-ring ${
         isOpen
-          ? 'bg-status-red-subtle text-[#ef4444]'
+          ? 'bg-status-red-subtle'
           : 'text-text-muted hover:text-text hover:bg-surface'
       }`}
+      style={isOpen ? { color: STATUS_ERROR } : undefined}
       title="Activity feed"
     >
       <Bell className="w-4 h-4" aria-hidden="true" />
       {unreadCount > 0 && (
-        <span aria-hidden="true" className="absolute -top-0.5 -right-0.5 min-w-[14px] h-[14px] flex items-center justify-center px-0.5 text-2xs font-bold text-white bg-[#ef4444] rounded-full leading-none">
+        <span aria-hidden="true" style={{ backgroundColor: STATUS_ERROR }} className="absolute -top-0.5 -right-0.5 min-w-[14px] h-[14px] flex items-center justify-center px-0.5 text-2xs font-bold text-white rounded-full leading-none">
           {unreadCount > 9 ? '9+' : unreadCount}
         </span>
       )}
@@ -654,6 +624,31 @@ function PofBridgeIndicator() {
       label={label}
       title={title}
     />
+  );
+}
+
+// --- New (Blueprint) shell switch ---
+// Mirror of the lab's "Legacy shell" button: clears the legacy preference and the
+// `?legacy=1` param, then fires popstate so page.tsx's shell gate swaps live.
+
+function NewShellButton() {
+  const handleClick = useCallback(() => {
+    writeShellPref('ecw');
+    const url = new URL(window.location.href);
+    url.searchParams.delete('legacy');
+    window.history.pushState({}, '', url);
+    window.dispatchEvent(new PopStateEvent('popstate'));
+  }, []);
+
+  return (
+    <button
+      onClick={handleClick}
+      className="flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs text-text-muted hover:text-text bg-background border border-border hover:border-border-bright transition-colors focus-ring"
+      title="Switch to the new Blueprint shell"
+    >
+      <LayoutDashboard className="w-3 h-3" aria-hidden="true" />
+      <span className="hidden sm:inline">Blueprint</span>
+    </button>
   );
 }
 

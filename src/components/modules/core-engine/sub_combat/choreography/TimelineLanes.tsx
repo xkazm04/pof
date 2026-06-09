@@ -3,15 +3,17 @@
 import { AlertTriangle } from 'lucide-react';
 import {
   STATUS_ERROR, STATUS_WARNING, STATUS_INFO,
-  ACCENT_CYAN, ACCENT_EMERALD,
+  ACCENT_CYAN, ACCENT_EMERALD, ACCENT_ORANGE,
   OVERLAY_WHITE, withOpacity, OPACITY_25, OPACITY_22, OPACITY_12, OPACITY_30, OPACITY_50, GLOW_SM,
 } from '@/lib/chart-colors';
 import type { DamageEvent, FeedbackEvent, WaveDef } from '@/lib/combat/choreography-sim';
+import type { TensionCurve } from '@/lib/combat/tension-curve';
 import {
   FEEDBACK_CHANNELS,
-  LANE_PACING_H, LANE_DAMAGE_H, LANE_ALERT_H, LANE_FEEDBACK_H,
+  LANE_TENSION_H, LANE_PACING_H, LANE_DAMAGE_H, LANE_ALERT_H, LANE_FEEDBACK_H,
   type BalanceAlert,
 } from './types';
+import { TensionArc } from './TensionArc';
 
 interface TimelineLanesProps {
   damageEvents: DamageEvent[];
@@ -24,6 +26,7 @@ interface TimelineLanesProps {
   playerPath: string;
   enemyPath: string;
   hasAlerts: boolean;
+  tensionCurve: TensionCurve;
 }
 
 /**
@@ -32,10 +35,13 @@ interface TimelineLanesProps {
  */
 export function TimelineLanes({
   damageEvents, feedbackEvents, timelineAlerts, waves,
-  duration, totalWidth, pxPerSec, playerPath, enemyPath, hasAlerts,
+  duration, totalWidth, pxPerSec, playerPath, enemyPath, hasAlerts, tensionCurve,
 }: TimelineLanesProps) {
   return (
     <>
+      {/* Dramatic tension arc */}
+      <TensionArc curve={tensionCurve} duration={duration} totalWidth={totalWidth} pxPerSec={pxPerSec} />
+
       {/* Pacing */}
       <div className="relative bg-black/30 rounded border border-border/20" style={{ height: LANE_PACING_H }}>
         {Array.from({ length: Math.ceil(duration) + 1 }, (_, i) => (
@@ -124,6 +130,9 @@ interface TimelineLaneLabelsProps {
 export function TimelineLaneLabels({ hasAlerts }: TimelineLaneLabelsProps) {
   return (
     <>
+      <div className="flex items-center" style={{ height: LANE_TENSION_H }}>
+        <span className="text-xs font-mono uppercase tracking-[0.15em]" style={{ color: ACCENT_ORANGE }}>Tension</span>
+      </div>
       <div className="flex items-center" style={{ height: LANE_PACING_H }}>
         <span className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted">Pacing</span>
       </div>

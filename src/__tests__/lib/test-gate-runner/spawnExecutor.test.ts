@@ -143,4 +143,20 @@ describe('makeSpawnExecutor', () => {
     const ex = makeSpawnExecutor({ editorCmd: 'x', uproject: 'y' });
     await expect(ex.run({ catalogId: 'c', entityId: 'e', step: 's', tier: 'L3', testName: 'T' })).rejects.toThrow(/disabled/);
   });
+
+  // The automation branch now routes through the same watchdog-protected spawnAndWait as the
+  // scenario branch (it no longer reimplements a timeout-less inline spawn). Use the node
+  // binary as a stand-in editor that exits immediately: spawnAndWait must resolve on exit
+  // (well within automationTimeoutMs), then the missing abslog surfaces as a failure.
+  it('automation branch spawns via the watchdog and surfaces a missing abslog', async () => {
+    const ex = makeSpawnExecutor({
+      allowSpawn: true,
+      editorCmd: process.execPath,
+      uproject: '/nonexistent/PoF.uproject',
+      automationTimeoutMs: 5_000,
+    });
+    await expect(
+      ex.run({ catalogId: 'c', entityId: 'e', step: 's', tier: 'L3', testName: 'VSFooTest' }),
+    ).rejects.toThrow(/no abslog produced/);
+  });
 });

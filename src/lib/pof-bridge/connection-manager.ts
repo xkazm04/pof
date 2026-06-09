@@ -11,6 +11,7 @@
 import { UI_TIMEOUTS } from '@/lib/constants';
 import { logger } from '@/lib/logger';
 import { eventBus } from '@/lib/event-bus';
+import { createStateEmitter } from '@/lib/state-emitter';
 import { PofBridgeClient } from './client';
 import type { PofConnectionState, PofConnectionStatus } from '@/types/pof-bridge';
 
@@ -25,20 +26,27 @@ class PofBridgeConnectionManager {
   private healthInterval: ReturnType<typeof setInterval> | null = null;
   private reconnectTimer: ReturnType<typeof setTimeout> | null = null;
   private consecutiveFailures = 0;
-  private subscribers = new Set<StateChangeHandler>();
 
-  private state: PofConnectionState = {
-    status: 'disconnected',
-    pluginInfo: null,
-    error: null,
-    lastConnected: null,
-    reconnectAttempts: 0,
-  };
+  private emitter = createStateEmitter<PofConnectionState>({
+    label: '[PoF-CM]',
+    initial: {
+      status: 'disconnected',
+      pluginInfo: null,
+      error: null,
+      lastConnected: null,
+      reconnectAttempts: 0,
+    },
+  });
+
+  /** Live, read-only view of state for the manager's own internal checks. */
+  private get state(): PofConnectionState {
+    return this.emitter.peek();
+  }
 
   // ── State management ────────────────────────────────────────────────────
 
   getState(): PofConnectionState {
-    return { ...this.state };
+    return this.emitter.getState();
   }
 
   getClient(): PofBridgeClient | null {
@@ -46,33 +54,18 @@ class PofBridgeConnectionManager {
   }
 
   private setState(partial: Partial<PofConnectionState>) {
-    this.state = { ...this.state, ...partial };
-    this.notifySubscribers();
+    this.emitter.setState(partial);
   }
 
   private setStatus(status: PofConnectionStatus, extras?: Partial<PofConnectionState>) {
     this.setState({ status, ...extras });
   }
 
-  private notifySubscribers() {
-    const snapshot = this.getState();
-    for (const handler of this.subscribers) {
-      try {
-        handler(snapshot);
-      } catch (e) {
-        logger.warn('[PoF-CM] Subscriber error:', e);
-      }
-    }
-  }
-
   // ── Public API ────────────────────────────────────────────────────────────
 
   /** Subscribe to connection state changes. Returns an unsubscribe function. */
   onStateChange(handler: StateChangeHandler): () => void {
-    this.subscribers.add(handler);
-    return () => {
-      this.subscribers.delete(handler);
-    };
+    return this.emitter.subscribe(handler);
   }
 
   /** Connect to the PoF Bridge plugin at the given host and port. */

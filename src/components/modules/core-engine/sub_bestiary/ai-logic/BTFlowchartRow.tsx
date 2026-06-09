@@ -3,8 +3,9 @@
 import { ChevronRight, ChevronDown } from 'lucide-react';
 import {
   STATUS_INFO, STATUS_WARNING, OVERLAY_WHITE,
-  withOpacity, OPACITY_15, OPACITY_20, OPACITY_50,
+  withOpacity, OPACITY_15, OPACITY_20,
 } from '@/lib/chart-colors';
+import { MicroLabel } from '@/components/ui/MicroLabel';
 import { SHAPE_LABELS, INDENT, type FlatRow } from './bt-flowchart-utils';
 
 interface BTFlowchartRowProps {
@@ -68,17 +69,17 @@ export function BTFlowchartRow({
         }}
       />
 
-      {/* Label */}
-      <span className={`font-mono font-bold truncate ${
-        node.active ? '' : 'opacity-50'
-      }`} style={{ color: isSelected ? STATUS_INFO : node.active ? accent : withOpacity(OVERLAY_WHITE, OPACITY_50) }}>
+      {/* Label — inactive nodes use the AA --text-subtle tier, not white@50% under an
+          extra opacity-50 (which compounded to well below WCAG AA). */}
+      <span className="font-mono font-bold truncate"
+        style={{ color: isSelected ? STATUS_INFO : node.active ? accent : 'var(--text-subtle)' }}>
         {node.label}
       </span>
 
-      {/* Shape type badge */}
-      <span className="text-text-muted/50 font-mono text-[9px] uppercase ml-auto flex-shrink-0">
+      {/* Shape type badge — 12px-floor subtle micro-label (was text-[9px] text-text-muted/50) */}
+      <MicroLabel mono uppercase className="ml-auto flex-shrink-0">
         {SHAPE_LABELS[node.shape]}
-      </span>
+      </MicroLabel>
     </div>
   );
 }

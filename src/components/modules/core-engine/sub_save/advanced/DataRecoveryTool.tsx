@@ -1,18 +1,25 @@
 'use client';
 
 import { useState } from 'react';
-import { Wrench, CheckCircle2, AlertTriangle, XCircle, RotateCcw } from 'lucide-react';
+import { Wrench, CheckCircle2, RotateCcw } from 'lucide-react';
 import { motion } from 'framer-motion';
-import { STATUS_SUCCESS, STATUS_WARNING, STATUS_ERROR, OVERLAY_WHITE, ACCENT_CYAN, ACCENT_CYAN_LIGHT, ACCENT_EMERALD,
+import { STATUS_SUCCESS, OVERLAY_WHITE, ACCENT_CYAN, ACCENT_CYAN_LIGHT, ACCENT_EMERALD,
   withOpacity, OPACITY_5, OPACITY_20, OPACITY_40,
 } from '@/lib/chart-colors';
-import { BlueprintPanel, SectionHeader } from '../_shared/design';
+import { STATUS_TOKENS, recoveryStatusToken, scoreStatusToken } from '@/lib/status-token';
+import { BlueprintPanel, SectionHeader, SAVE_TYPE } from '../_shared/design';
 import { ACCENT } from '../_shared/data';
 import { RECOVERY_STEPS, RECOVERY_RESULTS, type RecoveryStep } from '../_shared/data-panels';
 
 export function DataRecoveryTool() {
   const [recoveryStep, setRecoveryStep] = useState<RecoveryStep>('confirm');
   const recoveryOverall = RECOVERY_RESULTS.reduce((sum, r) => sum + r.confidence, 0) / RECOVERY_RESULTS.length;
+  const gaugeToken = scoreStatusToken(recoveryOverall);
+  const GaugeIcon = gaugeToken.Icon;
+  // Summary glyphs — pair each tally color with its ramp shape (WCAG 1.4.1).
+  const RecoveredIcon = STATUS_TOKENS.ok.Icon;
+  const PartialIcon = STATUS_TOKENS.warn.Icon;
+  const LostIcon = STATUS_TOKENS.bad.Icon;
 
   return (
     <BlueprintPanel color={ACCENT} className="p-0 overflow-hidden">
@@ -32,7 +39,7 @@ export function DataRecoveryTool() {
                 <motion.div
                   initial={{ scale: 0.8 }}
                   animate={{ scale: isCurrent ? 1.1 : 1 }}
-                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-sm font-mono text-xs uppercase tracking-widest border transition-all cursor-pointer ${
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-sm ${SAVE_TYPE.body} font-semibold border transition-all cursor-pointer ${
                     !isCurrent && !isComplete ? 'border-border/20 bg-surface-deep text-text-muted' : ''
                   }`}
                   style={isCurrent ? {
@@ -62,30 +69,32 @@ export function DataRecoveryTool() {
               <circle cx="36" cy="36" r="28" fill="none" stroke={withOpacity(OVERLAY_WHITE, OPACITY_5)} strokeWidth="5" />
               <circle
                 cx="36" cy="36" r="28" fill="none"
-                stroke={recoveryOverall >= 80 ? STATUS_SUCCESS : recoveryOverall >= 50 ? STATUS_WARNING : STATUS_ERROR}
+                stroke={gaugeToken.color}
                 strokeWidth="5"
                 strokeDasharray={`${2 * Math.PI * 28}`}
                 strokeDashoffset={`${2 * Math.PI * 28 * (1 - recoveryOverall / 100)}`}
                 strokeLinecap="round"
                 transform="rotate(-90 36 36)"
-                style={{ transition: 'stroke-dashoffset 0.8s ease-out', filter: `drop-shadow(0 0 6px ${recoveryOverall >= 80 ? STATUS_SUCCESS : STATUS_WARNING})` }}
+                style={{ transition: 'stroke-dashoffset 0.8s ease-out', filter: `drop-shadow(0 0 6px ${gaugeToken.color})` }}
               />
             </svg>
             <div className="absolute inset-0 flex items-center justify-center flex-col">
-              <span className="text-lg font-mono font-bold" style={{ color: recoveryOverall >= 80 ? STATUS_SUCCESS : STATUS_WARNING }}>
-                {Math.round(recoveryOverall)}%
-              </span>
-              <span className="text-xs font-mono text-text-muted uppercase">confidence</span>
+              <div className="flex items-center gap-1" style={{ color: gaugeToken.color }}>
+                <GaugeIcon className="w-3.5 h-3.5 flex-shrink-0" aria-label={gaugeToken.label} strokeWidth={2.5} />
+                <span className="text-lg font-mono font-bold">{Math.round(recoveryOverall)}%</span>
+              </div>
+              <span className={`${SAVE_TYPE.body} text-text-muted`}>Confidence</span>
             </div>
           </div>
         </div>
 
         {/* Recovery results */}
         <div className="space-y-1.5">
-          <span className="text-xs font-mono text-text-muted uppercase tracking-widest">Recovery Results</span>
+          <span className={`${SAVE_TYPE.body} text-text-muted`}>Recovery results</span>
           {RECOVERY_RESULTS.map((result, i) => {
-            const statusColor = result.status === 'recovered' ? STATUS_SUCCESS : result.status === 'partial' ? STATUS_WARNING : STATUS_ERROR;
-            const StatusIcon = result.status === 'recovered' ? CheckCircle2 : result.status === 'partial' ? AlertTriangle : XCircle;
+            const token = recoveryStatusToken(result.status);
+            const statusColor = token.color;
+            const StatusIcon = token.Icon;
             return (
               <motion.div
                 key={result.field}
@@ -102,7 +111,7 @@ export function DataRecoveryTool() {
                 <div className="flex-1 h-1.5 bg-surface-deep rounded-full overflow-hidden border border-border/10">
                   <motion.div
                     className="h-full rounded-full"
-                    style={{ backgroundColor: statusColor }}
+                    style={{ backgroundColor: statusColor, backgroundImage: token.pattern }}
                     initial={{ width: 0 }}
                     animate={{ width: `${result.confidence}%` }}
                     transition={{ duration: 0.6, delay: 0.2 + i * 0.1 }}
@@ -118,12 +127,21 @@ export function DataRecoveryTool() {
         {/* Summary */}
         <div className="flex items-center gap-3 px-3 py-2 border border-border/20 bg-surface-deep rounded-sm font-mono text-xs">
           <RotateCcw className="w-3.5 h-3.5 flex-shrink-0" style={{ color: ACCENT }} />
-          <span className="text-text-muted uppercase tracking-widest">Summary:</span>
-          <span style={{ color: STATUS_SUCCESS }}>{RECOVERY_RESULTS.filter(r => r.status === 'recovered').length} recovered</span>
+          <span className={`${SAVE_TYPE.body} text-text-muted`}>Summary:</span>
+          <span className="inline-flex items-center gap-1" style={{ color: STATUS_TOKENS.ok.color }}>
+            <RecoveredIcon className="w-3 h-3 flex-shrink-0" aria-hidden strokeWidth={2.5} />
+            {RECOVERY_RESULTS.filter(r => r.status === 'recovered').length} recovered
+          </span>
           <span className="text-text-muted">|</span>
-          <span style={{ color: STATUS_WARNING }}>{RECOVERY_RESULTS.filter(r => r.status === 'partial').length} partial</span>
+          <span className="inline-flex items-center gap-1" style={{ color: STATUS_TOKENS.warn.color }}>
+            <PartialIcon className="w-3 h-3 flex-shrink-0" aria-hidden strokeWidth={2.5} />
+            {RECOVERY_RESULTS.filter(r => r.status === 'partial').length} partial
+          </span>
           <span className="text-text-muted">|</span>
-          <span style={{ color: STATUS_ERROR }}>{RECOVERY_RESULTS.filter(r => r.status === 'lost').length} lost</span>
+          <span className="inline-flex items-center gap-1" style={{ color: STATUS_TOKENS.bad.color }}>
+            <LostIcon className="w-3 h-3 flex-shrink-0" aria-hidden strokeWidth={2.5} />
+            {RECOVERY_RESULTS.filter(r => r.status === 'lost').length} lost
+          </span>
         </div>
       </div>
     </BlueprintPanel>

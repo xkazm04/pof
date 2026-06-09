@@ -3,7 +3,7 @@
 import { Suspense, useState } from 'react';
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import { useNavigationStore } from '@/stores/navigationStore';
-import { CATEGORY_MAP, SUB_MODULE_MAP, MODULE_LABELS } from '@/lib/module-registry';
+import { MODULE_LABELS } from '@/lib/module-registry';
 import { DURATION, EASE_OUT } from '@/lib/motion';
 import { SuspendContext } from '@/hooks/useSuspend';
 
@@ -51,6 +51,7 @@ import { InlineTerminal } from '@/components/cli/InlineTerminal';
 import { useCLIPanelStore } from '@/components/cli/store/cliPanelStore';
 import { useActiveModuleId } from '@/hooks/useActiveModuleId';
 import { ModuleErrorBoundary } from './ModuleErrorBoundary';
+import { ModuleSkeleton } from './ModuleSkeleton';
 import type { SubModuleId } from '@/types/modules';
 
 /** Labels for special categories (not sub-modules — not in MODULE_LABELS) */
@@ -60,30 +61,9 @@ const SPECIAL_CATEGORY_LABELS: Record<string, string> = {
   'game-director': 'Game Director',
 };
 
-/**
- * Shared loading skeleton shown while a module suspends (e.g. while a child
- * `use()` resolves or a lazy import hydrates). Mirrors typical module chrome
- * with a header bar + grid of placeholder tiles. Lightweight, no animation
- * work beyond the existing `animate-pulse` token.
- */
-function ModuleSkeleton() {
-  return (
-    <div className="h-full p-6 animate-pulse" aria-hidden role="status" aria-label="Loading module">
-      <div className="flex items-center gap-3 mb-5">
-        <div className="w-6 h-6 rounded bg-surface-2" />
-        <div className="space-y-2">
-          <div className="h-4 w-40 rounded bg-surface-2" />
-          <div className="h-3 w-64 rounded bg-surface-2/70" />
-        </div>
-      </div>
-      <div className="h-8 w-full rounded bg-surface-2/50 mb-4" />
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-        {Array.from({ length: 6 }).map((_, i) => (
-          <div key={i} className="h-32 rounded-lg bg-surface-2/40 border border-border" />
-        ))}
-      </div>
-    </div>
-  );
+/** Human-readable label for a module/special-category id, falling back to the id. */
+function moduleLabel(id: string): string {
+  return MODULE_LABELS[id] ?? SPECIAL_CATEGORY_LABELS[id] ?? id;
 }
 
 // Factory for genre-based core engine sub-modules
@@ -225,67 +205,53 @@ export function ModuleRenderer() {
 
   const crossfadeDuration = prefersReduced ? 0 : DURATION.fast;
 
+  // Render a single keep-alive module pane: visibility toggled via `display`,
+  // suspended when hidden, crossfaded on entrance, guarded by an error boundary.
+  // Shared by both special-category and sub-module panes (resolution differs only
+  // in how `Component` and `isVisible` are derived below).
+  const renderModulePane = (
+    moduleId: string,
+    Component: React.ComponentType,
+    isVisible: boolean,
+  ) => (
+    <div
+      key={moduleId}
+      className="h-full"
+      style={{ display: isVisible ? 'block' : 'none' }}
+    >
+      <SuspendContext.Provider value={!isVisible}>
+        <motion.div
+          key={`fade-${moduleId}-${isVisible ? switchKey : 'hidden'}`}
+          initial={isVisible ? { opacity: 0, y: -4 } : false}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: crossfadeDuration, ease: EASE_OUT }}
+          className="h-full"
+        >
+          <ModuleErrorBoundary moduleName={moduleLabel(moduleId)}>
+            <Suspense fallback={<ModuleSkeleton />}>
+              <Component />
+            </Suspense>
+          </ModuleErrorBoundary>
+        </motion.div>
+      </SuspendContext.Provider>
+    </div>
+  );
+
   return (
     <div className="flex-1 flex flex-col overflow-hidden">
       {/* Scrollable module content */}
       <div className="flex-1 overflow-y-auto min-h-0 relative">
         {moduleLru.map((moduleId) => {
-          // Special category modules
-          if (SPECIAL_CATEGORIES[moduleId]) {
-            const SpecialComponent = SPECIAL_CATEGORIES[moduleId];
-            const isVisible = activeCategory === moduleId;
-            return (
-              <div
-                key={moduleId}
-                style={{ display: isVisible ? 'block' : 'none' }}
-                className="h-full"
-              >
-                <SuspendContext.Provider value={!isVisible}>
-                  <motion.div
-                    key={`fade-${moduleId}-${isVisible ? switchKey : 'hidden'}`}
-                    initial={isVisible ? { opacity: 0, y: -4 } : false}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: crossfadeDuration, ease: EASE_OUT }}
-                    className="h-full"
-                  >
-                    <ModuleErrorBoundary moduleName={MODULE_LABELS[moduleId] ?? SPECIAL_CATEGORY_LABELS[moduleId] ?? moduleId}>
-                      <Suspense fallback={<ModuleSkeleton />}>
-                        <SpecialComponent />
-                      </Suspense>
-                    </ModuleErrorBoundary>
-                  </motion.div>
-                </SuspendContext.Provider>
-              </div>
-            );
+          // Special category modules render without sub-modules.
+          const SpecialComponent = SPECIAL_CATEGORIES[moduleId];
+          if (SpecialComponent) {
+            return renderModulePane(moduleId, SpecialComponent, activeCategory === moduleId);
           }
 
-          // Regular sub-module views
+          // Regular sub-module views.
           const Component = MODULE_COMPONENTS[moduleId as SubModuleId];
           if (!Component) return null;
-          const isVisible = activeSubModule === moduleId;
-          return (
-            <div
-              key={moduleId}
-              className="h-full"
-              style={{ display: isVisible ? 'block' : 'none' }}
-            >
-              <SuspendContext.Provider value={!isVisible}>
-                <motion.div
-                  key={`fade-${moduleId}-${isVisible ? switchKey : 'hidden'}`}
-                  initial={isVisible ? { opacity: 0, y: -4 } : false}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: crossfadeDuration, ease: EASE_OUT }}
-                  className="h-full"
-                >
-                  <ModuleErrorBoundary moduleName={MODULE_LABELS[moduleId] ?? SPECIAL_CATEGORY_LABELS[moduleId] ?? moduleId}>
-                    <Suspense fallback={<ModuleSkeleton />}>
-                      <Component />
-                    </Suspense>
-                  </ModuleErrorBoundary>
-                </motion.div>
-              </SuspendContext.Provider>
-            </div>
-          );
+          return renderModulePane(moduleId, Component, activeSubModule === moduleId);
         })}
 
         {/* Crossfade veil — bg-colored overlay that fades out to reveal incoming module */}

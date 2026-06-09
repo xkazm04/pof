@@ -1,9 +1,9 @@
-import { apiSuccess, apiError } from '@/lib/api-utils';
+import { respondFromResult, withRoute } from '@/lib/api-utils';
 import { getService } from '@/lib/blender-mcp/service';
+import { mapResult } from '@/types/result';
 
 // GET /api/blender-mcp/screenshot
-export async function GET() {
+export const GET = withRoute(async () => {
   const result = await getService().getViewportScreenshot();
-  if (!result.ok) return apiError(result.error, 502);
-  return apiSuccess({ screenshot: result.data });
-}
+  return respondFromResult(mapResult(result, (screenshot) => ({ screenshot })));
+}, 'Blender screenshot failed');
