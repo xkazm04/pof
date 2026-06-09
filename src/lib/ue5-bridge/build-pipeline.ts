@@ -108,7 +108,9 @@ export async function executeBuild(
   const enginePath = getEnginePath(request.ueVersion);
   const ubtPath = `${enginePath}\\Engine\\Binaries\\DotNET\\UnrealBuildTool\\UnrealBuildTool.exe`;
   const target = `${request.targetName}${request.targetType}`;
-  const projectArg = `-Project="${request.projectPath}\\${request.targetName}.uproject"`;
+  // No embedded quotes: with shell:false each argv element is passed literally, so a path
+  // with spaces is already safe and surrounding quotes would be taken as part of the filename.
+  const projectArg = `-Project=${request.projectPath}\\${request.targetName}.uproject`;
 
   const args = [
     target,
@@ -126,8 +128,12 @@ export async function executeBuild(
     let aborted = false;
     let timedOut = false;
 
-    const proc = spawn(`"${ubtPath}"`, args, {
-      shell: true,
+    // shell:false + a literal argv array: no cmd.exe parsing, so shell metacharacters in the
+    // project path / target / additionalArgs cannot inject a command. (Was shell:true, which
+    // re-joined every arg into one command line interpreted by the shell — a `projectPath`
+    // like `C:\proj" & calc & "x` would have executed arbitrary commands on the host.)
+    const proc = spawn(ubtPath, args, {
+      shell: false,
       cwd: request.projectPath,
       env: { ...process.env },
     });

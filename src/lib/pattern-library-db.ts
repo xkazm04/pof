@@ -632,12 +632,17 @@ export function checkPromptForAntiPatterns(
   if (antiPatterns.length === 0) return [];
 
   const lower = prompt.toLowerCase();
+  // Tokenize into whole words so a keyword matches a complete word only. Unanchored
+  // `includes` let "state" match inside "stateful" and "cast" inside "broadcast", firing
+  // scary false anti-pattern warnings on unrelated prompts and eroding trust in the guardrail.
+  const promptWords = new Set(lower.split(/[^a-z0-9]+/).filter(Boolean));
   const warnings: AntiPatternWarning[] = [];
 
   for (const ap of antiPatterns) {
-    // Score keyword matches
-    const matchedKeywords = ap.triggerKeywords.filter((kw) => lower.includes(kw.toLowerCase()));
-    if (matchedKeywords.length === 0) continue;
+    // Whole-word matches, and require at least two distinct keyword hits so a single generic
+    // token can't drive a blocking-style "this approach failed 85% — switch?" warning.
+    const matchedKeywords = ap.triggerKeywords.filter((kw) => promptWords.has(kw.toLowerCase()));
+    if (matchedKeywords.length < 2) continue;
 
     const matchScore = Math.min(100, Math.round((matchedKeywords.length / Math.max(1, ap.triggerKeywords.length)) * 100));
     if (matchScore < 30) continue;

@@ -1,0 +1,1402 @@
+[
+ {
+  "slug": "abilities-gas-system",
+  "group": "Character & Combat Authoring",
+  "ctx": "Abilities & GAS System",
+  "title": "Imported scenario with unbounded numeric fields crashes or hangs the GAS balance simulator",
+  "sev": "critical",
+  "cat": "edge-case",
+  "file": "src/components/modules/core-engine/sub_ability/gas-balance/data.ts:176 (validator) \u2192 src/components/modules/core-engine/sub_ability/gas-balance/simulation.ts:39 (runIteration)",
+  "scenario": "A user pastes a base64 scenario code (the ImportScenarioModal \"PoB-style\" exchange) crafted \u2014 or accidentally produced \u2014 with `count: 1000000000`, or `attackSpeed: 0`, or `armor: -100`. `decodeScenario` runs `isValidSimScenario`, which type-checks every field and rejects non-finite numbers, then reports \"Valid Scenario\" and applies it. The next \"Run\" feeds it straight into `runIteration`."
+ },
+ {
+  "slug": "abilities-gas-system",
+  "group": "Character & Combat Authoring",
+  "ctx": "Abilities & GAS System",
+  "title": "Instant (sub-frame) kills are silently recorded as 0 DPS, deflating the DPS distribution and balance grade",
+  "sev": "high",
+  "cat": "logic-error",
+  "file": "src/components/modules/core-engine/sub_ability/gas-balance/simulation.ts:88 (ttk=time) \u2192 :101 (dps guard)",
+  "scenario": "A strong player (high baseDamage/attackPower) one-shots the whole pack on the first simulated frame \u2014 common for trash packs, and exactly the case a designer runs to confirm \"this build clears trash instantly.\""
+ },
+ {
+  "slug": "abilities-gas-system",
+  "group": "Character & Combat Authoring",
+  "ctx": "Abilities & GAS System",
+  "title": "Non-converging fights are silently scored as a 300s loss, skewing survival rate and the health grade",
+  "sev": "high",
+  "cat": "silent-failure",
+  "file": "src/components/modules/core-engine/sub_ability/gas-balance/simulation.ts:58 (while time<300) \u2192 :88 (return)",
+  "scenario": "Player and enemies are tuned so neither side can finish the other within 300 s (e.g. high mutual armor, or a tanky enemy the player chips at slower than it regenerates effective HP). Reachable from the normal sliders alone \u2014 a high-armor golem pack vs. a low-baseDamage player."
+ },
+ {
+  "slug": "abilities-gas-system",
+  "group": "Character & Combat Authoring",
+  "ctx": "Abilities & GAS System",
+  "title": "Forge refinement diff misattributes changes when the LLM renames the class",
+  "sev": "medium",
+  "cat": "logic-error",
+  "file": "src/components/modules/core-engine/sub_ability/forge/AbilityDiff.tsx:126 \u2192 src/components/modules/core-engine/sub_ability/forge/ability-diff.ts:111 (diffLines)",
+  "scenario": "A designer refines a forged ability with an instruction that legitimately changes identity (\"turn this into a channeled beam\"), so the LLM returns a new `className` (the prompt explicitly permits this \u2014 ability-forge.ts:204). The \"What changed\" panel diffs `prior.headerCode` vs `next.headerCode` and labels the file `${next.className}.h`."
+ },
+ {
+  "slug": "ai-behavior-squad-tactics",
+  "group": "AI, Build & Packaging Systems",
+  "ctx": "AI Behavior & Squad Tactics",
+  "title": "Stale transpile result shown (and copied) when re-scan parse fails",
+  "sev": "high",
+  "cat": "state-corruption",
+  "file": "src/components/modules/game-systems/multiplayer/ReplicationScaffoldPanel.tsx:45-68 (root in src/hooks/useBlueprintTranspiler.ts:43-82)",
+  "scenario": "User scans Blueprint A successfully (the panel now renders A's replicated fields and a Copy-able `GetLifetimeReplicatedProps()` body). They paste Blueprint B (or edit A into malformed JSON) and click \"Scan Replication\". `handleScan` does `await parse(blueprintJson)` then `await transpile(...)`. `parse` throws because B is invalid JSON / the API returns `success:false` (`apiFetch` throws on `!json.success`, api-utils.ts:78). `transpile` never runs."
+ },
+ {
+  "slug": "ai-behavior-squad-tactics",
+  "group": "AI, Build & Packaging Systems",
+  "ctx": "AI Behavior & Squad Tactics",
+  "title": "Attack ring overflows the SVG viewport above 300 UU (scale fixed to 300, slider allows 500)",
+  "sev": "medium",
+  "cat": "logic-error",
+  "file": "src/components/modules/game-systems/AttackRingVisualizer.tsx:44-45 (slider bound at line 294)",
+  "scenario": "User drags the `AttackDistance` slider past ~300 (it allows up to 500). The ring circle and every ring point render partially or fully outside the `<svg>` box."
+ },
+ {
+  "slug": "ai-behavior-squad-tactics",
+  "group": "AI, Build & Packaging Systems",
+  "ctx": "AI Behavior & Squad Tactics",
+  "title": "\"Best position\" silently falls back to point[0] (an exposed point) when a score mode is all-zero",
+  "sev": "medium",
+  "cat": "logic-error",
+  "file": "src/components/modules/game-systems/TacticalCoverAnalysis.tsx:208-211 (and the \"Best Positions\" list at 735-772)",
+  "scenario": "User switches \"Score by\" to **Elevation**. Only 2 of 7 mock obstacles are elevation, and they sit at specific offsets; the generated ring points (radii 300\u20131200) mostly get `elevationScore = 0`. The `reduce` that picks `bestPoint` finds no point with `getScore(p) > getScore(best)`, so it returns its seed, `points[0]`."
+ },
+ {
+  "slug": "ai-behavior-squad-tactics",
+  "group": "AI, Build & Packaging Systems",
+  "ctx": "AI Behavior & Squad Tactics",
+  "title": "Heatmap \"closest point\" uses JS modulo on negative angle deltas \u2192 wrong coloring across the 0\u00b0/360\u00b0 seam",
+  "sev": "medium",
+  "cat": "edge-case",
+  "file": "src/components/modules/game-systems/TacticalCoverAnalysis.tsx:232-240",
+  "scenario": "For each of the 72 heatmap arc segments the code finds the nearest sample point by angular distance. For arc segments near angle 0 (and points whose `angle` is near 2\u03c0), the wrapped difference goes negative and the \"closest\" comparison picks the wrong point, miscoloring the seam region of the coverage ring."
+ },
+ {
+  "slug": "ai-testing-localization",
+  "group": "AI, Build & Packaging Systems",
+  "ctx": "AI Testing & Localization",
+  "title": "ON DELETE CASCADE silently no-ops \u2014 orphan scenarios leak forever because foreign_keys is never enabled",
+  "sev": "critical",
+  "cat": "state-corruption",
+  "file": "src/lib/ai-testing-db.ts:36 (schema), :177-181 (deleteSuite), :185-205 (createScenario); src/lib/db.ts:11-19 (getDb)",
+  "scenario": "A user creates a suite with N scenarios, then deletes the suite (`deleteSuite` \u2192 `DELETE FROM ai_test_suites WHERE id = ?`). The `ai_test_scenarios.suite_id ... ON DELETE CASCADE` clause is supposed to remove the children \u2014 but SQLite enforces foreign keys **per connection** and defaults them OFF. `getDb()` (the shared singleton connection) never runs `db.pragma('foreign_keys = ON')`, and `ensureAITestingTables()` doesn't either. So the cascade never fires: every deleted suite leaves its scenario rows behind permanently. The same gap lets `createScenario({ suiteId: <nonexistent> })` insert an orphan with no error (the `REFERENCES` clause is decorative), and `createScenario`'s `null` return (treated as \"Suite not found\" 404 in the route) can never trigger."
+ },
+ {
+  "slug": "ai-testing-localization",
+  "group": "AI, Build & Packaging Systems",
+  "ctx": "AI Testing & Localization",
+  "title": "Placeholder fallback \"[DE] text\" defeats the `untranslated` QA gate \u2014 fake translations pass QA and a locale shows \"ready to ship\"",
+  "sev": "high",
+  "cat": "silent-failure",
+  "file": "src/lib/localization/translation-engine.ts:92-97 (fallback); src/lib/localization/qa-engine.ts:175-189 (untranslated check), :258-264 (readyToShip)",
+  "scenario": "A string isn't in the canned `TRANSLATION_DB` and isn't a glossary term (the common case for any real corpus). `translateString` emits `translatedText = `[${locale.toUpperCase()}] ${source.sourceText}`` \u2014 e.g. `\"[FR] Confirm\"` \u2014 which is the untranslated English with a locale tag, not a translation. The `untranslated` QA check compares `tgt.trim().toLowerCase() === src.trim().toLowerCase()`; `\"[fr] confirm\" !== \"confirm\"`, so the check **passes**. The placeholder also preserves all source numbers/`{0}` tokens, so `number_parity` and `placeholder_parity` pass too. Net: the entry produces **zero blocking QA findings**."
+ },
+ {
+  "slug": "ai-testing-localization",
+  "group": "AI, Build & Packaging Systems",
+  "ctx": "AI Testing & Localization",
+  "title": "Per-keystroke whole-array PUT + non-optimistic refetch \u2192 stale-closure lost updates and input reverting while typing",
+  "sev": "high",
+  "cat": "race-condition",
+  "file": "src/components/modules/game-systems/AITestingSandbox.tsx:263-266 & 282-285 (handlers), :406-410 (onChange); src/hooks/useCRUD.ts:75-84 (mutate); src/components/modules/game-systems/AIBehaviorView.tsx:89-94 (handleUpdateScenario)",
+  "scenario": "Typing in a stimulus/expected-action field fires `onChange` \u2192 `handleUpdateStimulus(idx, { description })` \u2192 rebuilds the **entire** `scenario.stimuli` array from the current props snapshot \u2192 `onUpdateScenario(id, { stimuli })` \u2192 `updateScenario` \u2192 `mutate` PUT. `useCRUD.mutate` has **no optimistic update**: it `await apiFetch(PUT)` then `await refetch()` (full GET) and replaces `data.suites` wholesale. Two quick keystrokes race: keystroke B reads `scenario.stimuli` from props that haven't yet been refreshed by A's refetch, so B's PUT overwrites A's change (lost update). When a refetch resolves mid-typing, the controlled `value={stim.description}` snaps back to server state, dropping characters typed after the in-flight request was sent."
+ },
+ {
+  "slug": "ai-testing-localization",
+  "group": "AI, Build & Packaging Systems",
+  "ctx": "AI Testing & Localization",
+  "title": "Translation auto-apply status is non-deterministic w.r.t. locale/string ordering because one RNG stream is shared across the whole batch",
+  "sev": "medium",
+  "cat": "logic-error",
+  "file": "src/lib/localization/translation-engine.ts:129 (single rng), :143-146 (nested loop), :88-96 (confidence), :109 (status gate)",
+  "scenario": "`translateBatch` creates one `mulberry32(seed)` stream and consumes it inside `for (str) { for (locale) { translateString(...rng...) } }`. Each non-glossary translation's confidence is `0.6 + rng()*0.2` (fallback) or `0.85 + rng()*0.1` (DB hit), and `status = confidence >= autoApplyThreshold ? 'translated' : 'needs_review'`. Because every `rng()` advance is shared and order-dependent, the confidence assigned to a given (string, locale) pair depends on how many draws preceded it \u2014 i.e. on the **order of `config.targetLocales`** and the string list. Reorder the locales in config (a user-editable array) and the same translation can get a different confidence, flipping it across `autoApplyThreshold` \u2014 so it auto-applies in one run and is held for review in another, with no input change."
+ },
+ {
+  "slug": "animation-rigging",
+  "group": "Visual Content Generation",
+  "ctx": "Animation & Rigging",
+  "title": "Duplicate state names silently generate uncompilable C++ (duplicate enumerators + redundant cascade)",
+  "sev": "high",
+  "cat": "silent-failure",
+  "file": "src/components/modules/content/animations/StateMachineEditor.tsx:129-168 (generateEnumCode / generateComputeAnimState); validator gap at src/lib/state-machine-validator.ts:77-179",
+  "scenario": "A designer clicks \"Add State\" twice (each new state is created with the hard-coded `name: 'NewState'`, `flag: 'bIsNewState'` \u2014 see `addState` at line 422), or renames two states to the same label, then clicks Export / Copy."
+ },
+ {
+  "slug": "animation-rigging",
+  "group": "Visual Content Generation",
+  "ctx": "Animation & Rigging",
+  "title": "Removing the only default state makes ComputeAnimState() fall back to the highest-priority-number state (wrong default animation)",
+  "sev": "high",
+  "cat": "logic-error",
+  "file": "src/components/modules/content/animations/StateMachineEditor.tsx:143-167 (generateComputeAnimState)",
+  "scenario": "A user unchecks \"Default / fallback state\" on Locomotion (the `StatePropertyEditor` checkbox at line 1296) \u2014 e.g. while experimenting \u2014 and leaves no state marked `isDefault`. They export the C++."
+ },
+ {
+  "slug": "animation-rigging",
+  "group": "Visual Content Generation",
+  "ctx": "Animation & Rigging",
+  "title": "Simulation/scan state is not reset when the data source changes, leaving the trace bound to stale node IDs",
+  "sev": "medium",
+  "cat": "state-corruption",
+  "file": "src/components/modules/content/animations/AnimationStateMachine.tsx:312-326 (displayStates memo) & 360-397 (sim state)",
+  "scenario": "A user enters Simulate mode and clicks a few states to build a path (computing `simUnreachable`/`simDeadEnds` against the current `displayStates`). While they trace, the bridge manifest arrives asynchronously (`useManifest` flips `bridgeConnected` true) or a background rescan resolves \u2014 so `useBridgeData`/`hasScannedData` change and the `displayStates`/`displayTransitions` memo swaps to a different node set with different IDs (`scanned-<name>` vs `anim-idle` fallbacks vs bridge names)."
+ },
+ {
+  "slug": "animation-rigging",
+  "group": "Visual Content Generation",
+  "ctx": "Animation & Rigging",
+  "title": "Blender NLA export in the editor swallows failures and reports nothing (success theater)",
+  "sev": "medium",
+  "cat": "silent-failure",
+  "file": "src/components/modules/content/animations/StateMachineEditor.tsx:357-393 (BlenderNLAExport.handleExport)",
+  "scenario": "A user clicks \"NLA Export\" while Blender is connected but the bridge call fails (Blender busy, script error, socket dropped mid-request)."
+ },
+ {
+  "slug": "app-shell-navigation",
+  "group": "CLI Terminal & Module Shell",
+  "ctx": "App Shell & Navigation",
+  "title": "Hydration gate never waits for persist rehydration \u2192 flash of Setup Wizard",
+  "sev": "high",
+  "cat": "state-corruption",
+  "file": "src/components/layout/AppShell.tsx:56-77",
+  "scenario": "A returning user (setup already complete, `pof-project` in localStorage) reloads the page. The skeleton fades out, and for one or more frames the real shell renders `<SetupWizard />` instead of their project, then snaps to the correct shell once Zustand persist finishes loading."
+ },
+ {
+  "slug": "app-shell-navigation",
+  "group": "CLI Terminal & Module Shell",
+  "ctx": "App Shell & Navigation",
+  "title": "`beforeunload` guard never sets `returnValue` \u2192 close warning silently doesn't fire",
+  "sev": "high",
+  "cat": "silent-failure",
+  "file": "src/components/layout/AppShell.tsx:43-53",
+  "scenario": "A long CLI build/codegen task is streaming (`session.isRunning === true`). The user hits Ctrl+W / closes the tab / refreshes. In Chromium-family browsers the confirmation dialog does not appear, the tab closes, and the in-flight task (and its unsaved output) is lost without any prompt."
+ },
+ {
+  "slug": "app-shell-navigation",
+  "group": "CLI Terminal & Module Shell",
+  "ctx": "App Shell & Navigation",
+  "title": "\"Earlier this week\" time bucket is unreachable on Sundays \u2192 week's events misfiled as \"Older\"",
+  "sev": "medium",
+  "cat": "edge-case",
+  "file": "src/components/layout/ActivityFeedPanel.tsx:57-68",
+  "scenario": "It is Sunday. Activity events generated Monday\u2013Saturday of the same week should group under \"Earlier this week\". Instead they all collapse into \"Older\", and the \"Earlier this week\" section never renders that day."
+ },
+ {
+  "slug": "app-shell-navigation",
+  "group": "CLI Terminal & Module Shell",
+  "ctx": "App Shell & Navigation",
+  "title": "`useActiveModuleId` omits the `game-director` special category \u2192 inline terminal never shows there",
+  "sev": "medium",
+  "cat": "logic-error",
+  "file": "src/hooks/useActiveModuleId.ts:14-19",
+  "scenario": "A user maximizes a CLI tab whose `session.moduleId === 'game-director'` from the bottom bar while viewing the Game Director module. The terminal should dock inline under that module's content, but it never appears (and clicking the tab to \"toggle minimize\" from the bottom bar also misbehaves, because the active-module comparison never matches)."
+ },
+ {
+  "slug": "audio-generation-scenes",
+  "group": "Audio & Blender Pipeline",
+  "ctx": "Audio Generation & Scenes",
+  "title": "Path-traversal guard uses prefix match without a separator \u2014 arbitrary file read",
+  "sev": "critical",
+  "cat": "logic-error",
+  "file": "src/app/api/audio-asset/route.ts:11-16",
+  "scenario": "An unauthenticated caller hits `GET /api/audio-asset?relPath=../audio-secrets/key.mp3` (or `..%2F..%2F.pof%2Fpof.db`). `relPath` is taken verbatim from the query string and never sanitized for `..`."
+ },
+ {
+  "slug": "audio-generation-scenes",
+  "group": "Audio & Blender Pipeline",
+  "ctx": "Audio Generation & Scenes",
+  "title": "Scene edits do read-modify-write off stale server state with no optimistic merge \u2014 lost updates",
+  "sev": "high",
+  "cat": "race-condition",
+  "file": "src/hooks/useAudioScene.ts:67-74 (with src/hooks/useCRUD.ts:75-84 and src/components/modules/content/audio/AudioView.tsx:222-269)",
+  "scenario": "User drags a zone in the painter (fires `handleUpdateZones` \u2192 `updateDoc({ id, zones })` on every mousemove). A `PUT` for an early drag frame is still in flight when `mutate` finishes a later frame and calls `refetch()`. The refetch resolves with a server snapshot several frames behind the cursor and overwrites `data.docs`, so `activeDoc.zones` (which the painter renders from via `zones={activeDoc.zones}`) snaps backward mid-drag. Worse cross-field case: while a `{zones}` PUT is in flight, the user edits a soundscape on the Soundscapes tab; that handler builds its payload from the *stale* `activeDoc.zones`, so the in-flight zone positions are clobbered on save."
+ },
+ {
+  "slug": "audio-generation-scenes",
+  "group": "Audio & Blender Pipeline",
+  "ctx": "Audio Generation & Scenes",
+  "title": "Generation cache hit ignores the requested set \u2014 asset filed under the wrong/old set, requested set never created",
+  "sev": "high",
+  "cat": "data-loss",
+  "file": "src/app/api/audio-gen/route.ts:79-87",
+  "scenario": "A user previously generated \"sword clang\" into set \"Combat A\". Later they request the identical prompt targeting a brand-new `setName: \"Boss B\"` (or a different existing `setId`). The hash matches the old asset, so the route returns `{ asset: cached, set: cachedSet }` \u2014 the *original* \"Combat A\" set \u2014 and returns before reaching the `upsertSet` block. \"Boss B\" is never created and the asset never appears under it."
+ },
+ {
+  "slug": "audio-generation-scenes",
+  "group": "Audio & Blender Pipeline",
+  "ctx": "Audio Generation & Scenes",
+  "title": "Re-running spatial-audio \"merge\" appends duplicate zones/emitters forever and never stamps lastGeneratedAt",
+  "sev": "medium",
+  "cat": "state-corruption",
+  "file": "src/app/api/spatial-audio-generate/route.ts:41-54 (with src/lib/spatial-audio-generator.ts:324-326)",
+  "scenario": "A user runs \"generate spatial audio\" against an existing audio scene, tweaks the level, and runs it again into the same scene. Each run does `zones: [...existing.zones, ...result.zones]` / `emitters: [...existing.emitters, ...result.emitters]`."
+ },
+ {
+  "slug": "bestiary-enemy-design",
+  "group": "Progression, World & Bestiary",
+  "ctx": "Bestiary & Enemy Design",
+  "title": "Elite-modifier stat math clamps to [0,100], silently swallowing buffs and corrupting the diff readout",
+  "sev": "high",
+  "cat": "logic-error",
+  "file": "src/components/modules/core-engine/sub_bestiary/_shared/data.ts:347-361 (consumed at src/components/modules/core-engine/sub_bestiary/archetypes/ArchetypeBuilder.tsx:140-159)",
+  "scenario": "A designer opens the Archetype Builder / card-modifier UI and stacks elite modifiers on a high-stat enemy. They apply \"Commander\" (+60% HP) to a stat already at 100, or \"Shielded\" (+30 flat Shield HP) to any enemy whose HP slider is at/near 100. The preview shows the buff as `+0` (no change), and the effective bar does not move."
+ },
+ {
+  "slug": "bestiary-enemy-design",
+  "group": "Progression, World & Bestiary",
+  "ctx": "Bestiary & Enemy Design",
+  "title": "Wave-list virtual scroller keeps a stale `scrollTop`, so filtering to a smaller tier can render a blank list",
+  "sev": "high",
+  "cat": "state-corruption",
+  "file": "src/components/modules/core-engine/sub_bestiary/encounters/EncountersTab.tsx:35-49,123-150",
+  "scenario": "The user scrolls the 24-wave Wave Choreographer to the bottom (`scrollTop` \u2248 800px), then picks a tier filter such as \"raid-boss\" (1 wave) from the dropdown. The visible window collapses but `scrollTop` state is still ~800."
+ },
+ {
+  "slug": "bestiary-enemy-design",
+  "group": "Progression, World & Bestiary",
+  "ctx": "Bestiary & Enemy Design",
+  "title": "AI-coverage linter keys off behavior-tree summary *keys*, producing false \"missing\"/\"covered\" verdicts",
+  "sev": "medium",
+  "cat": "silent-failure",
+  "file": "src/lib/bestiary/ai-coverage.ts:23-34",
+  "scenario": "Run `lintAiCoverage` on any KOTOR/expanded archetype whose `btSummary` uses the project's actual schema \u2014 keys `Sense` / `Attack` / `Special` (see `_shared/data.ts` and `data-expanded.ts`), e.g. `{ Sense: 'Force sense 12m', Attack: 'Force lightning then melee', Special: '...' }`. The linter reports aggro, patrol, and retreat as **not covered**, even though `Sense` is exactly the perception/aggro behavior."
+ },
+ {
+  "slug": "bestiary-enemy-design",
+  "group": "Progression, World & Bestiary",
+  "ctx": "Bestiary & Enemy Design",
+  "title": "Archetype grid uses filtered-list length as a change proxy, so equal-count filters leave the user on an out-of-range (blank) page",
+  "sev": "medium",
+  "cat": "edge-case",
+  "file": "src/components/modules/core-engine/sub_bestiary/archetypes/ArchetypesTab.tsx:55-60,92-99",
+  "scenario": "With ~96 archetypes and `PAGE_SIZE = 24`, the user pages to page 3 (items 73\u201396), then changes a filter to a *different* selection that also yields the same number of results as the current filtered set (e.g. switching between two areas/categories that each return the same count). The grid shows nothing."
+ },
+ {
+  "slug": "blender-mcp-integration",
+  "group": "Audio & Blender Pipeline",
+  "ctx": "Blender MCP Integration",
+  "title": "Concurrent commands on the shared singleton socket cross-wire responses",
+  "sev": "critical",
+  "cat": "race-condition",
+  "file": "src/lib/blender-mcp/service.ts:117-161 (sendCommand) + 346-349 (getService singleton)",
+  "scenario": "If two API routes run concurrently \u2014 e.g. the ViewportPreview auto-capture hits `/api/blender-mcp/screenshot` while a generate-status poll hits `/api/blender-mcp/generate/status`, or `getSceneInfo()` (the connect health check) overlaps any user request \u2014 both call `sendCommand` on the same process-wide `BlenderMCPService` instance, and each registers its own `socket.on('data', onData)` listener against the **same** `this.socket`."
+ },
+ {
+  "slug": "blender-mcp-integration",
+  "group": "Audio & Blender Pipeline",
+  "ctx": "Blender MCP Integration",
+  "title": "Response buffer accumulates across commands and is unbounded, hanging the next command",
+  "sev": "high",
+  "cat": "silent-failure",
+  "file": "src/lib/blender-mcp/service.ts:127-148",
+  "scenario": "If a command times out (its `onData` listener is removed at line 129) but Blender later flushes that command's bytes onto the socket, those bytes are still buffered by the OS and delivered to the **next** command's fresh `onData`. The new buffer becomes `<<stale response>><<my response>>`, i.e. `{...}{...}`, which `JSON.parse` can never accept \u2014 so the new command never resolves and silently hangs for the full 30s `blenderTcpTimeout`. The same happens any time two responses' bytes coalesce into one chunk."
+ },
+ {
+  "slug": "blender-mcp-integration",
+  "group": "Audio & Blender Pipeline",
+  "ctx": "Blender MCP Integration",
+  "title": "Dropped TCP connection is never detected \u2014 UI shows \"Connected\" forever (no heartbeat)",
+  "sev": "high",
+  "cat": "silent-failure",
+  "file": "src/stores/blenderMCPStore.ts:157-168 (refreshStatus, never called) + src/lib/blender-mcp/service.ts:96-99 (close handler)",
+  "scenario": "If Blender crashes, is closed, or restarts after a successful connect, the server-side socket fires `'close'` and the service quietly sets `this.socket = null` / `connected: false`. But the client store's `connection.connected` was set to `true` at connect time and is **only** re-read by `connect`/`disconnect`/`refreshStatus`. `refreshStatus` is defined but invoked nowhere in the codebase (grep confirms zero call sites; there is no polling interval for Blender as there is for the UE5/PoF bridges). So the connection pill stays green indefinitely."
+ },
+ {
+  "slug": "blender-mcp-integration",
+  "group": "Audio & Blender Pipeline",
+  "ctx": "Blender MCP Integration",
+  "title": "connect() clears its timeout before the health check, so connect can hang ~2\u00d7 the timeout",
+  "sev": "medium",
+  "cat": "edge-case",
+  "file": "src/lib/blender-mcp/service.ts:63-101",
+  "scenario": "If the TCP handshake succeeds but Blender is busy (modal dialog, heavy bake) when the post-connect `getSceneInfo()` health check runs, the connect-level `timer` was already `clearTimeout`-ed at line 72, so the only bound left is `sendCommand`'s own 30s timeout. Total `connect()` latency becomes ~`blenderTcpTimeout` (connect) effectively unbounded up to a second full 30s for the health check \u2014 and during that window the `'error'` event can still fire and call `resolve` a second time (ignored), while `this.socket`/`connected` may already have been set to a live socket by the connect callback, leaving an orphaned connected socket the store believes failed."
+ },
+ {
+  "slug": "blueprint-transpiler-c-codegen",
+  "group": "UE5 Integration & Project Setup",
+  "ctx": "Blueprint Transpiler & C++ Codegen",
+  "title": "C++ header parser silently drops every UPROPERTY/UCLASS/UFUNCTION that uses `Meta=(...)`",
+  "sev": "high",
+  "cat": "silent-failure",
+  "file": "src/lib/cpp-semantic-parser.ts:41,44,50",
+  "scenario": "A user pastes real UE5 C++ (or the project's *own* GAS-generated header) into the Semantic Diff pane, where a property is declared `UPROPERTY(BlueprintReadOnly, Category=\"Attributes|vital\", Meta=(AllowPrivateAccess=\"true\"))` \u2014 and the parser returns zero classes/properties for that member."
+ },
+ {
+  "slug": "blueprint-transpiler-c-codegen",
+  "group": "UE5 Integration & Project Setup",
+  "ctx": "Blueprint Transpiler & C++ Codegen",
+  "title": "Semantic diff is one-directional for functions and ignores events \u2014 \"in sync\" success theater",
+  "sev": "medium",
+  "cat": "silent-failure",
+  "file": "src/lib/blueprint-semantic-diff.ts:100-115",
+  "scenario": "A designer deletes a function from the Blueprint but the C++ class still defines it (orphan), or renames an event handler \u2014 then runs Semantic Diff to confirm the two sides agree before regenerating."
+ },
+ {
+  "slug": "blueprint-transpiler-c-codegen",
+  "group": "UE5 Integration & Project Setup",
+  "ctx": "Blueprint Transpiler & C++ Codegen",
+  "title": "GAS tag codegen emits invalid C++ identifiers from unsanitized ability/tag names",
+  "sev": "medium",
+  "cat": "logic-error",
+  "file": "src/lib/gas-codegen.ts:93-96,109-113",
+  "scenario": "An author names a loadout ability `Fire Ball` (or `Dash-Strike`, or any name with a space/hyphen/symbol) and generates the gameplay-tags header."
+ },
+ {
+  "slug": "blueprint-transpiler-c-codegen",
+  "group": "UE5 Integration & Project Setup",
+  "ctx": "Blueprint Transpiler & C++ Codegen",
+  "title": "Diff reports spurious type \"conflict\" for every object/struct/enum property",
+  "sev": "medium",
+  "cat": "edge-case",
+  "file": "src/lib/blueprint-parser.ts:89-90 (consumed at src/lib/blueprint-semantic-diff.ts:56-69)",
+  "scenario": "A Blueprint has a variable whose type is an object/class/enum reference (e.g. a `StaticMesh`, a custom `UMyComponent`, or a BP enum), the matching C++ declares it idiomatically as `UStaticMesh*` / `UMyComponent*`, and the user runs Semantic Diff."
+ },
+ {
+  "slug": "build-cook-packaging",
+  "group": "AI, Build & Packaging Systems",
+  "ctx": "Build, Cook & Packaging",
+  "title": "Cook always records `sizeBytes: 0` \u2014 size budgets, trends, and stats are permanently blind",
+  "sev": "critical",
+  "cat": "silent-failure",
+  "file": "src/lib/packaging/cook-executor.ts:135 (and src/app/api/packaging/execute/route.ts:70)",
+  "scenario": "Any real cook runs to completion via `cookExecutor`. The `done` event is hard-coded to `sizeBytes: 0` because RunUAT's stdout never prints the staged output size and nothing ever `stat`s the stage directory. The execute route then persists that `0` straight into `build_history.size_bytes`."
+ },
+ {
+  "slug": "build-cook-packaging",
+  "group": "AI, Build & Packaging Systems",
+  "ctx": "Build, Cook & Packaging",
+  "title": "WITH_EDITOR audit mis-tracks `#else`/`#if !WITH_EDITOR` \u2014 editor-only code slips into Shipping while the gate shows green",
+  "sev": "high",
+  "cat": "silent-failure",
+  "file": "src/lib/packaging/preflight.ts:194-205",
+  "scenario": "A plugin Runtime module contains either `#if WITH_EDITOR ... #else <editor-only call here> #endif` or `#if !WITH_EDITOR <editor-only call here> #else ... #endif`. The auditor pushes `editorGuard.test(...)` onto the stack at the `#if` and does nothing on `#else`/`#elif`, so the guard boolean never flips for the alternate branch."
+ },
+ {
+  "slug": "build-cook-packaging",
+  "group": "AI, Build & Packaging Systems",
+  "ctx": "Build, Cook & Packaging",
+  "title": "`attachSmokeResultToLatestBuild` overwrites `notes`, clobbering the size-budget regression note",
+  "sev": "high",
+  "cat": "data-loss",
+  "file": "src/lib/packaging/build-history-store.ts:169",
+  "scenario": "A nightly/scheduled build records a successful cook, the size-budget evaluator writes a `[SIZE_BUDGET] \u2026 grew 14% vs last green` note onto that row, then the post-cook smoke-test runs and calls `attachSmokeResultToLatestBuild`, which does `UPDATE build_history SET notes = ?` with only the smoke-test string."
+ },
+ {
+  "slug": "build-cook-packaging",
+  "group": "AI, Build & Packaging Systems",
+  "ctx": "Build, Cook & Packaging",
+  "title": "Smoke-test reports `pass` when a *different, pre-existing* game process is already running",
+  "sev": "medium",
+  "cat": "logic-error",
+  "file": "src/lib/packaging/smoke-test.ts:125-129",
+  "scenario": "The bootstrap exe fails to actually start the game (bad cook, missing content), but an instance of the same image (`PoF-Win64-Shipping.exe`) from a prior manual launch \u2014 or from a previous smoke-test that `killImage` failed to fully reap \u2014 is still running. After the observe window, `tasklist(gameImage)` finds *that* unrelated process and returns `gameAlive: true`."
+ },
+ {
+  "slug": "character-genome-designer",
+  "group": "Character & Combat Authoring",
+  "ctx": "Character & Genome Designer",
+  "title": "Editor wires the UNSANITIZED codegen \u2014 genome name corrupts generated CSV / C++",
+  "sev": "high",
+  "cat": "data-loss",
+  "file": "src/components/modules/core-engine/sub_character/genome/codegen.ts:92 (and :31, :5); imported at src/components/modules/core-engine/sub_character/genome/CharacterGenomeEditor.tsx:20",
+  "scenario": "A designer names a genome `Frost, Lv9999` (or `Berserker \"Prime\"`, or pastes a name with a `}`/newline/`\"`) and clicks \"Generate AttributeInitTable (CSV)\" or \"Generate .cpp\". The comma splits the CSV row into extra columns; the quote/brace/newline produces malformed C++ or a broken DataTable on UE5 import."
+ },
+ {
+  "slug": "character-genome-designer",
+  "group": "Character & Combat Authoring",
+  "ctx": "Character & Genome Designer",
+  "title": "`sanitizeProfile` only checks `Number.isFinite` \u2014 out-of-range/negative imported values bypass all balance validation",
+  "sev": "high",
+  "cat": "edge-case",
+  "file": "src/lib/genome/defaults.ts:44 (used by sanitizeGenome :82-86; applied unchecked in GenomeImportPanel.tsx:97-130)",
+  "scenario": "A user pastes a build code or genome JSON with `attributes.baseHP: -500`, `movement.gravityScale: -3`, `dodge.staminaCost: 1e308`, or `combat.critChance: 50`. Each value is finite, so `sanitizeProfile` accepts it verbatim. The import preview shows the diff, the user clicks Apply, and the poisoned genome is persisted and fed into power-curve sim and UE5 codegen."
+ },
+ {
+  "slug": "character-genome-designer",
+  "group": "Character & Combat Authoring",
+  "ctx": "Character & Genome Designer",
+  "title": "Comparison panel `leftId`/`rightId` are mount-only state \u2014 controlled `<select>` desyncs from the rendered radar after delete/import",
+  "sev": "medium",
+  "cat": "state-corruption",
+  "file": "src/components/modules/core-engine/sub_character/genome/ArchetypeComparisonPanel.tsx:18-22",
+  "scenario": "The panel mounts with `leftId = genomes[0].id`. The user deletes that genome (or imports/forks several, reordering the list). `leftId` still holds the now-deleted id; `leftGenome` silently falls back to `genomes[0]`, so the radar/deltas render genome[0] while `<select value={leftId}>` points at a value with no matching `<option>` \u2014 the dropdown shows blank or the wrong label, contradicting the chart."
+ },
+ {
+  "slug": "character-genome-designer",
+  "group": "Character & Combat Authoring",
+  "ctx": "Character & Genome Designer",
+  "title": "Rehydration regenerates colliding genome ids but matches checkpoints by raw id \u2014 orphaning or mis-routing snapshots",
+  "sev": "medium",
+  "cat": "state-corruption",
+  "file": "src/stores/genomeStore.ts:221-288 (id regen at :232-235; checkpoint match at :271-272)",
+  "scenario": "Two persisted genomes share an id (e.g. an old export/fork that copied an id, or a pre-fix save). On rehydrate the loop keeps the first occurrence's id and regenerates the second to a fresh `createId()`. A checkpoint saved against that shared id is validated only via `genomeIdSet.has(e.genomeId)` \u2014 it now binds to whichever genome *kept* the original id, while the genome the user actually checkpointed may be the one that got renumbered. Restoring that checkpoint overwrites the wrong genome (or the checkpoint is dropped as an orphan)."
+ },
+ {
+  "slug": "cli-terminal-task-system",
+  "group": "CLI Terminal & Module Shell",
+  "ctx": "CLI Terminal & Task System",
+  "title": "Abort closes the UI stream but never kills the spawned Claude process",
+  "sev": "critical",
+  "cat": "resource-leak",
+  "file": "src/components/cli/useTaskQueue.ts:477-486 (handleAbort); src/lib/claude-terminal/cli-service.ts:333-340 (abortExecution, unused)",
+  "scenario": "A user starts a CLI run, sees it going wrong, and hits the Stop button (or Esc). `handleAbort` calls `eventSourceRef.current.close()`, clears the heartbeat, registers the task as failed, and dispatches `ABORT`. The UI instantly looks idle and the user moves on."
+ },
+ {
+  "slug": "cli-terminal-task-system",
+  "group": "CLI Terminal & Module Shell",
+  "ctx": "CLI Terminal & Task System",
+  "title": "Fast or output-less runs that exit 0 emit no terminal event \u2014 UI hangs until the 100-min safety timeout",
+  "sev": "high",
+  "cat": "silent-failure",
+  "file": "src/lib/claude-terminal/cli-service.ts:283-291",
+  "scenario": "The CLI process exits with code 0 but no `result` stream-json line was parsed (`resultEventEmitted` is false) \u2014 e.g. a trivial prompt that completes in under 5s, a run with zero assistant text, or any CLI version/flag combo whose final `result` line doesn't parse. The `close` handler only emits a *synthetic* result when `initEventReceived && assistantMessageCount > 0 && durationMs > 5000`. When any of those is false, it emits **nothing**."
+ },
+ {
+  "slug": "cli-terminal-task-system",
+  "group": "CLI Terminal & Module Shell",
+  "ctx": "CLI Terminal & Task System",
+  "title": "Only the first @@CALLBACK marker is ever parsed; multi-block runs drop their real result",
+  "sev": "high",
+  "cat": "logic-error",
+  "file": "src/lib/cli-task.ts:116 (CALLBACK_MARKER_RE) & 135-146 (parseCallbackMarker); consumed at src/components/cli/useTaskQueue.ts:328-337",
+  "scenario": "On the `result` SSE event, the client runs `extractCallbackPayload(assistantOutputRef.current)`, where `assistantOutputRef` is the concatenation of **every** assistant text chunk for the entire run. If Claude emits more than one `@@CALLBACK:\u2026@@END_CALLBACK` block \u2014 a discarded draft and a corrected final, or a re-emit after the prompt nudges it \u2014 only one is acted on."
+ },
+ {
+  "slug": "cli-terminal-task-system",
+  "group": "CLI Terminal & Module Shell",
+  "ctx": "CLI Terminal & Task System",
+  "title": "Late callback settle completes the wrong task after the queue has auto-advanced",
+  "sev": "high",
+  "cat": "race-condition",
+  "file": "src/components/cli/useTaskQueue.ts:346-355 (Promise.race \u2192 currentTaskIdRef) vs 533-545 (queue auto-advance)",
+  "scenario": "Task A finishes. The `result` handler dispatches `SSE_RESULT` (synchronously flipping `streaming`\u2192false) and then starts a `Promise.race([cbPromise, timeout(callbackSettleMax=10_000ms)])`. Meanwhile the queue effect sees `streaming===false` and, after `nextTaskDelay=3_000ms`, calls `executeTask(B)`, which sets `currentTaskIdRef.current = B`. When A's callback POST or the 10s timeout settles, the `.finally()` reads `currentTaskIdRef.current` \u2014 now **B** \u2014 and calls `registerTaskComplete(B, \u2026, !A.isError)` plus `onTaskComplete(B, A.success)`."
+ },
+ {
+  "slug": "combat-damage-tuning",
+  "group": "Character & Combat Authoring",
+  "ctx": "Combat & Damage Tuning",
+  "title": "Player-armor multiplier is squared and enemy armor is scaled by a damage knob in `calculateDamage`",
+  "sev": "critical",
+  "cat": "state-corruption",
+  "file": "src/lib/combat/simulation-engine.ts:58 (with src/lib/combat/simulation-engine.ts:87)",
+  "scenario": "A designer drags the \"Player Armor\" slider to 2.0 (or \"Enemy Dmg\" to 2.0) and reads the resulting survival/DPS numbers to make a balance decision."
+ },
+ {
+  "slug": "combat-damage-tuning",
+  "group": "Character & Combat Authoring",
+  "ctx": "Combat & Damage Tuning",
+  "title": "Choreography timeline ignores enemy cooldowns, so brutes spam their 6s burst and fabricate critical \"burst spike\" alerts",
+  "sev": "high",
+  "cat": "logic-error",
+  "file": "src/lib/combat/choreography-sim.ts:230 (enemy loop 227\u2013249)",
+  "scenario": "An encounter contains a Stone Brute (abilities[0] = \"Charge Attack\", baseDamage 30, cooldownSec 6.0). The designer opens the combo/choreography timeline preview to check pacing."
+ },
+ {
+  "slug": "combat-damage-tuning",
+  "group": "Character & Combat Authoring",
+  "ctx": "Combat & Damage Tuning",
+  "title": "Predictive-balance applies `playerDamageMul` only to AttackPower, so its heatmap disagrees with the real sim",
+  "sev": "high",
+  "cat": "logic-error",
+  "file": "src/lib/combat/predictive-balance.ts:60 (with calcDamage at src/lib/combat/predictive-balance.ts:79)",
+  "scenario": "A designer compares the survival heatmap from `runPredictiveBalance` against a point-run from the combat-simulator API at the same level/enemy and sees different survival/DPS."
+ },
+ {
+  "slug": "combat-damage-tuning",
+  "group": "Character & Combat Authoring",
+  "ctx": "Combat & Damage Tuning",
+  "title": "Enemies cast mana abilities they cannot afford once their pool runs dry (fallback bypasses the mana gate)",
+  "sev": "medium",
+  "cat": "edge-case",
+  "file": "src/lib/combat/simulation-engine.ts:255 (fallback",
+  "scenario": "A Dark Mage (mana 80, no mana regen) fights long enough to cast Shadow Bolt (manaCost 10) eight times. From cast nine onward its mana is 0."
+ },
+ {
+  "slug": "crash-analysis-pattern-library",
+  "group": "Quality Evaluator & Health",
+  "ctx": "Crash Analysis & Pattern Library",
+  "title": "Imported crashes never enter pattern detection, stats, or the cached analysis",
+  "sev": "high",
+  "cat": "state-corruption",
+  "file": "src/lib/crash-analyzer/analysis-engine.ts:187 (cache) + src/app/api/crash-analyzer/route.ts:24 (parse-log) + src/stores/crashAnalyzerStore.ts:76 (importCrashLog)",
+  "scenario": "A user pastes a real UE5 crash log in the Import tab. `POST {action:'parse-log'}` calls `parseCrashLog` + `analyzeSingleCrash`, returns one report, and the store appends it to `reports` client-side. But the imported crash is never persisted anywhere \u2014 there is no DB write and `analyzeAllCrashes()` only ever reads the static `SAMPLE_CRASHES`. `analyzeAllCrashes` also memoizes its result into module-level `cachedResult` on first call, so even if a persistence path existed, every subsequent GET / `analyze` / `full-analysis` returns the frozen sample-only snapshot for the process lifetime."
+ },
+ {
+  "slug": "crash-analysis-pattern-library",
+  "group": "Quality Evaluator & Health",
+  "ctx": "Crash Analysis & Pattern Library",
+  "title": "`parseCrashLog` misclassifies every access violation as a null-pointer deref and crashes on unparseable timestamps",
+  "sev": "medium",
+  "cat": "logic-error",
+  "file": "src/lib/crash-analyzer/analysis-engine.ts:240",
+  "scenario": "A user imports a genuine `EXCEPTION_ACCESS_VIOLATION reading address 0x000000ABCD1234` (a wild non-null pointer). The first branch `if (errorMessage.includes('ACCESS_VIOLATION') || errorMessage.includes('address 0x000000000000'))` fires on the `ACCESS_VIOLATION` substring alone, so `crashType = 'nullptr_deref'` and `severity = 'critical'`. The very next `else if (errorMessage.includes('ACCESS_VIOLATION'))` for the real `access_violation` type is therefore dead code \u2014 it can never be reached."
+ },
+ {
+  "slug": "crash-analysis-pattern-library",
+  "group": "Quality Evaluator & Health",
+  "ctx": "Crash Analysis & Pattern Library",
+  "title": "Pattern/anti-pattern extraction silently double-counts and pollutes results when sessions span multiple projects",
+  "sev": "high",
+  "cat": "logic-error",
+  "file": "src/lib/pattern-extractor.ts:183 + src/lib/pattern-extractor.ts:391",
+  "scenario": "`extractPatterns` computes `successRate = successful.length / sessions.length` once per module and stamps it onto *every* approach cluster in that module, while `sessionCount` is set to the per-cluster size. So a module with one 100%-success approach and one 0%-success approach reports BOTH patterns with the blended module-wide success rate, and `projectCount` is hardcoded to `1` (line 216) regardless of how many projects the sessions came from. `confidence` (`computeConfidence`) and the suggestion ranking (`suggestPatterns` weights `successRate*40`, `projectCount*5`) are computed from these wrong numbers."
+ },
+ {
+  "slug": "crash-analysis-pattern-library",
+  "group": "Quality Evaluator & Health",
+  "ctx": "Crash Analysis & Pattern Library",
+  "title": "Anti-pattern trigger keywords match unanchored substrings, firing false warnings on unrelated prompts",
+  "sev": "critical",
+  "cat": "logic-error",
+  "file": "src/lib/pattern-library-db.ts:639 + src/lib/pattern-extractor.ts:331",
+  "scenario": "`extractTriggerKeywords` harvests any 4+ char word appearing in >50% of failed prompts (e.g. `state`, `event`, `component`, `actor`, or even a stray token like `cast`). `checkPromptForAntiPatterns` then matches with `lower.includes(kw.toLowerCase())` \u2014 an unanchored substring test. A future prompt \"Add a **state**ful HUD widget\" matches the keyword `state`; \"broad**cast** the score\" matches `cast`. With a small `triggerKeywords` array the per-keyword match drives `matchScore` over the 30% gate, so an unrelated prompt gets a scary blocking-style warning: \"This approach failed 85% of the time\u2026 switch to it?\"."
+ },
+ {
+  "slug": "economy-balance-simulation",
+  "group": "Items, Loot & Economy",
+  "ctx": "Economy & Balance Simulation",
+  "title": "Simulation config has no lower bound or NaN guard \u2014 `agentCount: 0` / `maxLevel: 0` poisons the entire result with NaN/undefined",
+  "sev": "critical",
+  "cat": "edge-case",
+  "file": "src/app/api/economy-simulator/route.ts:38-46",
+  "scenario": "A client POSTs `{ action: 'simulate', config: { agentCount: 0 } }` (or `agentCount: -5`, `agentCount: 1.5`, `maxLevel: 0`, or a non-numeric string that survives `??`). The route only does `Math.min(body.config?.agentCount ?? 100, 500)` \u2014 it clamps the *upper* bound but never the lower bound, never coerces to an integer, and never rejects NaN/negatives. `agentCount: 0` reaches `runSimulation` with an empty agents array."
+ },
+ {
+  "slug": "economy-balance-simulation",
+  "group": "Items, Loot & Economy",
+  "ctx": "Economy & Balance Simulation",
+  "title": "Client-supplied `flowOverrides` are merged into the engine unvalidated, injecting NaN/negative gold flows",
+  "sev": "high",
+  "cat": "silent-failure",
+  "file": "src/lib/economy/simulation-engine.ts:244-249 (via route.ts:44)",
+  "scenario": "A request includes `config.flowOverrides: [{ id: 'enemy-kill-gold', baseAmount: 'abc' }]` or `[{ id: 'quest-reward', frequencyPerHour: -10 }]` or `[{ levelScaling: NaN }]`. `applyFlowOverrides` does `flows[idx] = { ...flows[idx], ...ov }` \u2014 a blind spread with no type/range check on any field \u2014 and the override values flow straight into `flow.baseAmount + flow.levelScaling * agent.level` and `Math.floor(flow.frequencyPerHour * eff + rng())`."
+ },
+ {
+  "slug": "economy-balance-simulation",
+  "group": "Items, Loot & Economy",
+  "ctx": "Economy & Balance Simulation",
+  "title": "Death-penalty sink uses start-of-hour gold while every other sink uses running gold \u2014 and can spend gold the agent never had",
+  "sev": "high",
+  "cat": "logic-error",
+  "file": "src/lib/economy/simulation-engine.ts:161-181",
+  "scenario": "Within one simulated hour, the death-penalty branch computes `penalty = Math.round(agent.gold * 0.05)` from `agent.gold` (the value at the *start* of the hour, since `agent.gold` isn't updated until line 214). Meanwhile the normal-sink loop just below checks affordability against the *running* balance `agent.gold + goldEarned - goldSpent`. The two sink paths disagree about what \"current gold\" means inside the same tick."
+ },
+ {
+  "slug": "economy-balance-simulation",
+  "group": "Items, Loot & Economy",
+  "ctx": "Economy & Balance Simulation",
+  "title": "`runItemEconomySim` aggregates rarity/affix/power from *cumulative lifetime* agent counters per level bracket, double-counting and inflating endgame rarity inflation",
+  "sev": "medium",
+  "cat": "logic-error",
+  "file": "src/lib/economy/item-economy-engine.ts:350-409, 435-441",
+  "scenario": "A 25-level / 80-hour run finishes. For each level `lvl`, the bracket stats pull from `agentsAtOrAbove.get(lvl)` and sum `a.rarityCounts[r]` / `a.affixCounts[key]` \u2014 but those are *lifetime* per-agent totals accumulated across the whole run (incremented on every drop at every level the agent passed through, line 308/312). An agent that is level 25 is counted in the bracket for level 1, 2, 3, \u2026 and 25, each time contributing its *full lifetime* rarity histogram."
+ },
+ {
+  "slug": "game-director-regression",
+  "group": "Director, Sessions & Autonomy",
+  "ctx": "Game Director & Regression",
+  "title": "`processSession` mutates four tables with no transaction \u2014 partial failure corrupts regression state",
+  "sev": "critical",
+  "cat": "state-corruption",
+  "file": "src/lib/regression-tracker.ts:136-287",
+  "scenario": "A session has, say, 30 findings. `processSession` loops over them issuing `INSERT INTO regression_fingerprints`, `INSERT INTO regression_occurrences`, `UPDATE \u2026 SET occurrence_count`, plus a separate `INSERT INTO regression_alerts` per regression, then a final sweep that flips other fingerprints to `'fixed'`. If the process dies mid-loop (SQLite `SQLITE_BUSY` from a concurrent writer, a thrown error on one malformed finding, a Next.js request abort, or the dev server being killed), the DB is left half-updated: some fingerprints bumped, some occurrences inserted, the global \"mark fixed\" sweep never run (or run against a half-built `currentHashes` set). Unlike `addFinding`/`updateFindingTriage`/`deleteSession` in game-director-db.ts \u2014 which all wrap their multi-statement writes in `db.transaction(...)` \u2014 `processSession` does every write bare."
+ },
+ {
+  "slug": "game-director-regression",
+  "group": "Director, Sessions & Autonomy",
+  "ctx": "Game Director & Regression",
+  "title": "\"Mark fixed\" sweep is global and chronology-blind \u2014 processing an older session flags newer builds' issues as fixed and fabricates regressions",
+  "sev": "high",
+  "cat": "logic-error",
+  "file": "src/lib/regression-tracker.ts:248-263",
+  "scenario": "The Analyze dropdown (RegressionTrackerView.tsx:204) lists *every* completed session and lets the user process them in any order; nothing enforces chronological processing. Suppose builds A (older) and B (newer) both exist and B was processed first (so a fingerprint is `'open'`, last seen in B). The user then re-analyzes A. A doesn't contain that hash, so the sweep at line 254-263 \u2014 which selects ALL `open`/`regressed` fingerprints with no session-order filter \u2014 marks it `'fixed'`, even though it is live in the *newer* build B. The next time B is processed, that hash reappears against a `'fixed'` fingerprint and `processSession` emits a **phantom regression alert** for a bug that never actually went away."
+ },
+ {
+  "slug": "game-director-regression",
+  "group": "Director, Sessions & Autonomy",
+  "ctx": "Game Director & Regression",
+  "title": "Re-analyzing a session duplicates alerts, inflates `regression_count`, and silently downgrades `'regressed'` \u2192 `'open'`",
+  "sev": "high",
+  "cat": "state-corruption",
+  "file": "src/lib/regression-tracker.ts:188-244",
+  "scenario": "`process-session` has no idempotency guard (route.ts:54-62 happily re-runs it; the UI lets you click Analyze on the same session repeatedly). On a first run a fingerprint that was `'fixed'` and reappears \u2192 status `'regressed'`, `regression_count` +1, a new `regression_alerts` row inserted. On a *second* run of the same session, `prevStatus` is now `'regressed'`, so control falls into the `else` branch (line 237-244) which sets status back to **`'open'`** \u2014 erasing the regressed state \u2014 while the earlier alert row and inflated `regression_count` persist. Occurrences are de-duped (line 189-194) but alerts are not: any path that keeps `prevStatus` in {`fixed`,`resolved`} across re-runs inserts a brand-new `crypto.randomUUID()` alert every time."
+ },
+ {
+  "slug": "game-director-regression",
+  "group": "Director, Sessions & Autonomy",
+  "ctx": "Game Director & Regression",
+  "title": "`snooze` triage is a dead feature \u2014 never hides findings and never expires",
+  "sev": "medium",
+  "cat": "silent-failure",
+  "file": "src/lib/game-director-db.ts:567 / src/components/modules/game-director/FindingsExplorer.tsx:92-112",
+  "scenario": "A user snoozes a finding for 7 days (FindingsExplorer.tsx:265-267 writes `snoozedUntil = now + 7d`). The type doc (game-director.ts:16-17, 109) promises snooze \"keeps it in scoring but hides it until snoozedUntil expires.\" But `snoozed_until` is written and round-tripped (rowToFinding line 567) and then read by **nothing**: no query filters on it, and the `filtered`/`triageCounts` logic (FindingsExplorer.tsx:92-122) keys only off `triageStatus`. So a snoozed finding is *not* hidden under the \"Open\" filter (it's excluded only because `triageStatus !== 'active'`, lumping it with permanent triage), and when the 7 days elapse nothing ever flips it back to `'active'` \u2014 the snooze never wakes up."
+ },
+ {
+  "slug": "gdd-compliance-design-doc",
+  "group": "Quality Evaluator & Health",
+  "ctx": "GDD Compliance & Design Doc",
+  "title": "Out-of-range room difficulty throws RangeError and kills the entire GDD",
+  "sev": "critical",
+  "cat": "edge-case",
+  "file": "src/lib/gdd-synthesizer.ts:379",
+  "scenario": "If a `level_design_docs` row has a room whose `difficulty` is anything other than an integer in `[0,5]` \u2014 e.g. `6` (a designer typed it), `0`, `null`/`undefined` (field omitted), or a non-integer \u2014 then `synthesizeGDD` evaluates `'\u25cf'.repeat(r.difficulty)` and `'\u25cb'.repeat(5 - r.difficulty)`. `String.prototype.repeat` throws `RangeError: Invalid count value` for any negative argument (`5 - 6 = -1`) and for `NaN` (`repeat(undefined)`). The throw propagates out of `buildLevelDesignSection` \u2192 `synthesizeGDD` \u2192 the `GET /api/game-design-doc` handler, so the *whole* document fails to generate, not just one room."
+ },
+ {
+  "slug": "gdd-compliance-design-doc",
+  "group": "Quality Evaluator & Health",
+  "ctx": "GDD Compliance & Design Doc",
+  "title": "Resolved compliance gaps silently vanish \u2014 no persistence + shared in-memory cache",
+  "sev": "high",
+  "cat": "data-loss",
+  "file": "src/app/api/gdd-compliance/route.ts:6",
+  "scenario": "A reviewer audits, then clicks \"Resolve\" on several gaps to triage them. `resolveGap` mutates a module-scoped `let cachedReport` and returns it, so the UI updates *this session*. But (a) `GDDComplianceView` auto-runs an audit on every mount (`useEffect(..., [])`, line 187) and on every \"Re-audit\" click, and `runComplianceAudit` recomputes **every gap fresh with `resolved: false`** \u2014 there is no DB column or store that records resolutions. So the moment the user navigates away and back, or re-audits, all resolved flags reset. (b) Because `cachedReport` is a single module-level variable shared across *all* requests/tabs/users, a second tab's audit overwrites the first tab's cache; a `resolve-gap` from tab A then targets tab B's report. (c) After a serverless cold start or dev HMR reload between audit and resolve, `cachedReport` is `null` and resolve returns `400 \"No audit report available\"`."
+ },
+ {
+  "slug": "gdd-compliance-design-doc",
+  "group": "Quality Evaluator & Health",
+  "ctx": "GDD Compliance & Design Doc",
+  "title": "The same missing feature is reported as two separate gaps",
+  "sev": "medium",
+  "cat": "logic-error",
+  "file": "src/lib/gdd-compliance.ts:95",
+  "scenario": "If a feature has `status === 'missing'` *and* its name fuzzy-matches a **checked** checklist item (the 20-char `includes` heuristic at lines 30\u201331), `detectFeatureGaps` pushes it once in loop #1 as a `checklist-vs-scan` \"marked done but scan shows missing\" gap (severity `major`), and again in loop #3 as a `missing-feature` \"not implemented\" gap (severity `major`). Two gaps, two distinct IDs, one underlying feature."
+ },
+ {
+  "slug": "gdd-compliance-design-doc",
+  "group": "Quality Evaluator & Health",
+  "ctx": "GDD Compliance & Design Doc",
+  "title": "Markdown table cells are dropped, misaligning every column after an empty cell",
+  "sev": "medium",
+  "cat": "logic-error",
+  "file": "src/components/modules/evaluator/GameDesignDocView.tsx:488",
+  "scenario": "If any GDD table row contains an empty interior cell, `MarkdownTable.parseRow` does `line.split('|').map(c => c.trim()).filter(Boolean)`. The `.filter(Boolean)` is meant to drop the empty strings from the leading/trailing `|`, but it *also* drops legitimately-empty interior cells. A row like `|  | \u2705 implemented | \u2605\u2605\u2605\u2606\u2606 |` (a feature with a blank `feature_name` \u2014 the scan-import path validates status/quality but not a non-empty name) parses to `['\u2705 implemented', '\u2605\u2605\u2605\u2606\u2606']`: two values under three headers. The status renders under the \"Feature\" column and the quality under \"Status\", with the \"Quality\" column blank \u2014 every cell after the empty one is shifted left."
+ },
+ {
+  "slug": "harness-autonomous-builder",
+  "group": "Director, Sessions & Autonomy",
+  "ctx": "Harness Autonomous Builder",
+  "title": "Checkpoint `git reset --hard` runs while concurrent sibling sessions are mid-write \u2014 wipes their uncommitted work",
+  "sev": "critical",
+  "cat": "data-loss",
+  "file": "src/lib/harness/orchestrator.ts:382-392, 642-662 (rollbackBeforePromote / runStreamingPool); checkpoint.ts:191-197",
+  "scenario": "A user starts the harness with `--checkpoint` (or `checkpoint: true` via the API) and the default concurrency. `createDefaultConfig` defaults `maxConcurrent` to 1, but both real entry points override it: `run-harness.ts` sets `maxConcurrent: parseInt(args['concurrency'] ?? '4')` (line 198) and even the API `start` path leaves the default-config concurrency in force only when no executor is passed. With concurrency 4, area A exhausts its retries while areas B, C, D are still inside live `claude -p` sessions actively editing files. The pool calls `rollbackBeforePromote(A)` \u2192 `checkpointer.rollbackToLastGreen()` \u2192 `git reset --hard <lastGreenSha>` in the shared project tree."
+ },
+ {
+  "slug": "harness-autonomous-builder",
+  "group": "Director, Sessions & Autonomy",
+  "ctx": "Harness Autonomous Builder",
+  "title": "Budget cap is silently bypassed whenever the CLI does not report a per-session cost",
+  "sev": "high",
+  "cat": "silent-failure",
+  "file": "src/lib/harness/orchestrator.ts:369-375 (recordSessionCost), 88-98 (avgSessionCost / budgetWouldOverflow); claude-session.ts:137-138",
+  "scenario": "A user sets `budgetUsd: 20` expecting the run to pause near $20. The harness spawns dozens of expensive sessions and never pauses, blowing far past the cap, because the cost the governor relies on is never recorded."
+ },
+ {
+  "slug": "harness-autonomous-builder",
+  "group": "Director, Sessions & Autonomy",
+  "ctx": "Harness Autonomous Builder",
+  "title": "Self-heal reports \"healed\" without verifying when no verify command exists (success theater)",
+  "sev": "high",
+  "cat": "silent-failure",
+  "file": "src/lib/harness/orchestrator.ts:211-247 (attemptSelfHeal), 466-473 (re-verify branch)",
+  "scenario": "A required gate fails (e.g. the visual gate, or a custom gate configured with no `command`). The orchestrator runs `pickHealVerifyCommand`, which returns `null` because the failing gate carries no command and no typecheck/build gate is present. `attemptSelfHeal` spawns one fix session, then \u2014 because `verifyCommand` is null \u2014 returns `true` unconditionally (line 238-242). The caller treats `healed === true` and re-runs `verify`, but the underlying failure was never actually re-checked by the heal step itself; the area can be reported as self-heal \"SUCCEEDED\" purely on optimism."
+ },
+ {
+  "slug": "harness-autonomous-builder",
+  "group": "Director, Sessions & Autonomy",
+  "ctx": "Harness Autonomous Builder",
+  "title": "Feature-name mismatch force-marks every feature in an area as passing",
+  "sev": "high",
+  "cat": "state-corruption",
+  "file": "src/lib/harness/orchestrator.ts:481-509 (feature reconciliation)",
+  "scenario": "A session emits a `@@HARNESS_RESULT` JSON whose `features[]` all say `\"status\":\"pass\"` but whose `name` values don't match any planned feature (the model renamed them, themed them via `themeDirective`, or summarized them differently). The fuzzy matcher at lines 485-491 finds nothing, so `matchedFeatures` stays 0. The fallback at line 501-508 then fires: `allParsedPass && matchedFeatures === 0` \u2192 it loops over `area.features` and force-sets **every** feature to `status:'pass', quality:4`, regardless of what was actually built."
+ },
+ {
+  "slug": "inventory-system",
+  "group": "Items, Loot & Economy",
+  "ctx": "Inventory System",
+  "title": "Item genome store has no id-uniqueness guard \u2014 edit/delete/evolve can hit the wrong genome",
+  "sev": "high",
+  "cat": "state-corruption",
+  "file": "src/stores/itemGenomeStore.ts:42-44, 72-122, 200-215",
+  "scenario": "A user imports/pastes a genome whose JSON `id` collides with an existing one, OR `createItemId()` (an 8-char `Math.random().toString(36).slice(2,10)` string) collides while adding/duplicating/breeding. The user then drags a trait slider, clicks delete, or evolves \u2014 and a *different* genome silently changes or disappears."
+ },
+ {
+  "slug": "inventory-system",
+  "group": "Items, Loot & Economy",
+  "ctx": "Inventory System",
+  "title": "Mutation Rate/Max fields write `NaN` into genome state, silently disabling mutations",
+  "sev": "high",
+  "cat": "state-corruption",
+  "file": "src/components/modules/core-engine/sub_inventory/dna-genome/EditorTab.tsx:128-131, 140-143",
+  "scenario": "In the DNA Editor's Mutation Config, the user clears the \"Rate\" (or \"Max\") number input (or types non-numeric text). `e.target.value === \"\"`, so `parseInt(\"\")` is `NaN`. `mutationRate: parseInt(e.target.value) / 100` writes `NaN` straight into `selected.mutation.mutationRate` (and `maxMutations: parseInt(...)` writes `NaN`), which is then persisted to localStorage."
+ },
+ {
+  "slug": "inventory-system",
+  "group": "Items, Loot & Economy",
+  "ctx": "Inventory System",
+  "title": "`entries[0]!` feeds `undefined` into `useGeneration`, crashing the catalog tab when the items catalog is empty",
+  "sev": "high",
+  "cat": "edge-case",
+  "file": "src/components/modules/core-engine/sub_inventory/catalog/CatalogGearTab.tsx:83-84",
+  "scenario": "`const primaryEntry = (primaryItem && entryByItemId.get(primaryItem.id)) ?? entries[0]!;` then `const gen = useGeneration(primaryEntry);`. If `useItemEntries()` returns `[]`, `entries[0]!` is `undefined` (the `!` only silences TypeScript). `useGeneration` immediately calls `catalogModule(entity.catalogId)` on `undefined`, throwing `Cannot read properties of undefined (reading 'catalogId')` during render \u2192 the whole Catalog & Gear tab errors out."
+ },
+ {
+  "slug": "inventory-system",
+  "group": "Items, Loot & Economy",
+  "ctx": "Inventory System",
+  "title": "Item evolution's tag bonus is permanently dead \u2014 `dominantTraits` is never populated",
+  "sev": "medium",
+  "cat": "silent-failure",
+  "file": "src/lib/item-dna/rolling-engine.ts:59-63, 246-264",
+  "scenario": "A user repeatedly \"Simulate Combat Usage\" in the Evolution tab; the item tiers up and the UI advertises \"items develop stronger versions of used affixes\" and \"+5/10/15% dominant weight.\" But the per-affix evolution weighting in `calcEffectiveWeight` never actually changes roll outcomes."
+ },
+ {
+  "slug": "item-pipeline-steps",
+  "group": "Catalog to UE Pipeline",
+  "ctx": "Item Pipeline Steps",
+  "title": "Stale-closure double-produce drops a whole generation batch",
+  "sev": "critical",
+  "cat": "race-condition",
+  "file": "src/components/layout-lab/steps/ItemArt.tsx:27-34 (and src/components/layout-lab/steps/shared/CliProduce.tsx:52-64)",
+  "scenario": "If the artist double-clicks \"Generate\" (or clicks \"Produce fix\" then immediately re-rolls) on the Icon / 3D / Material steps before React re-renders, two handlers fire against the same render's closure..."
+ },
+ {
+  "slug": "item-pipeline-steps",
+  "group": "Catalog to UE Pipeline",
+  "ctx": "Item Pipeline Steps",
+  "title": "Divide-by-zero / NaN poisons the economy acceptance gate on hydrated data",
+  "sev": "high",
+  "cat": "edge-case",
+  "file": "src/components/layout-lab/steps/itemsSteps.ts:57-79,144-166,309-315",
+  "scenario": "If a persisted or server-hydrated Economy artifact has `power: 0` (or a `target`/`cost` that is missing/0 \u2014 e.g. a tuning reset, a partial AI write, or a legacy artifact) while the Acceptance gate and the Economy view render it..."
+ },
+ {
+  "slug": "item-pipeline-steps",
+  "group": "Catalog to UE Pipeline",
+  "ctx": "Item Pipeline Steps",
+  "title": "Empty or colliding asset slug yields malformed / overwriting UE paths",
+  "sev": "medium",
+  "cat": "data-loss",
+  "file": "src/components/layout-lab/steps/stepProps.ts:6-25 (consumed by itemsSteps.ts:383-388 and ItemArt.tsx:40,74,118)",
+  "scenario": "If an item entity is named with only punctuation/non-ASCII (e.g. \"\u2014\", an emoji, or a CJK name) or two items differ only in punctuation/spacing (\"Iron Sword\" vs \"Iron-Sword\" vs \"IronSword\")..."
+ },
+ {
+  "slug": "item-pipeline-steps",
+  "group": "Catalog to UE Pipeline",
+  "ctx": "Item Pipeline Steps",
+  "title": "\"Report the reason it failed\" is structurally unenforced \u2014 every Produce is success theater",
+  "sev": "medium",
+  "cat": "silent-failure",
+  "file": "src/components/layout-lab/steps/shared/CliProduce.tsx:59-64 (and labPipelineStore.ts:54-63; all Item step",
+  "scenario": "If the underlying CLI/asset generation a Produce dispatch represents does nothing, errors, or writes nothing meaningful, while the user clicks \"Generate with CLI\"..."
+ },
+ {
+  "slug": "layout-lab-pipeline-steps",
+  "group": "Catalog to UE Pipeline",
+  "ctx": "Layout Lab & Pipeline Steps",
+  "title": "`runDrain` has no cancellation guard \u2014 stale verdicts clobber the wrong entity",
+  "sev": "high",
+  "cat": "race-condition",
+  "file": "src/components/layout-lab/Baseline.tsx:133-143",
+  "scenario": "If an operator clicks \"Run deferred gates\" on entity X, then selects entity Y (or a different catalog) before the drain + refetch round-trip finishes, the in-flight `runDrain` closure resolves and calls `setServerArts(Object.fromEntries(arts.map(...)))` with **X's** artifacts \u2014 overwriting the `serverArts` state that the canvas is now rendering for **Y**."
+ },
+ {
+  "slug": "layout-lab-pipeline-steps",
+  "group": "Catalog to UE Pipeline",
+  "ctx": "Layout Lab & Pipeline Steps",
+  "title": "Add-only hydration + localStorage persistence permanently strands stale step data",
+  "sev": "high",
+  "cat": "data-loss",
+  "file": "src/components/layout-lab/labPipelineStore.ts:73-83",
+  "scenario": "If a step was produced locally (persisted into `localStorage` under `pof-lab-pipeline`) and the server's authoritative artifact for that step later changes \u2014 the drain/runner rewrites status/data, or the same entity is edited from another browser/session \u2014 then on the next load `hydrateEntity` runs `if (!merged[step]) { merged[step] = artifact }` and **silently drops the server copy** because a local entry already exists."
+ },
+ {
+  "slug": "layout-lab-pipeline-steps",
+  "group": "Catalog to UE Pipeline",
+  "ctx": "Layout Lab & Pipeline Steps",
+  "title": "Write-through `postArtifact` is fire-and-forget success theater",
+  "sev": "medium",
+  "cat": "silent-failure",
+  "file": "src/components/layout-lab/labPipelineStore.ts:51 / Baseline.tsx:99-107 / labArtifactClient.ts:27-33",
+  "scenario": "If the server rejects a produce POST \u2014 `artifactUpsertSchema` validation failure (400), a 500, or the dev server being offline \u2014 the failure is swallowed: `postArtifact` awaits `tryApiFetch` (which converts every error to a non-throwing `Result`), returns `void`, ignores `r.ok`, and `_labSync` calls it with `void`. `CliProduce` has already rendered \"\u2713 Dispatched \u00b7 written to the UE project + DB.\""
+ },
+ {
+  "slug": "layout-lab-pipeline-steps",
+  "group": "Catalog to UE Pipeline",
+  "ctx": "Layout Lab & Pipeline Steps",
+  "title": "Selected-entity fallback silently retargets Produce/Reset to a different entity",
+  "sev": "medium",
+  "cat": "state-corruption",
+  "file": "src/components/layout-lab/Baseline.tsx:70",
+  "scenario": "If `entityId` no longer resolves to a real entity in the current catalog \u2014 the selected draft is discarded via the `\u00d7` button in `CatalogTree` (`removeDraft`), or a persisted `lastEntityId` / one-shot `pendingNavigation` points at an id that isn't in `entitiesByCatalog` yet \u2014 then `entity = entities.find(e => e.id === entityId) ?? entities[0] ?? null` silently resolves to `entities[0]`, while the `entityId` state still holds the dead id."
+ },
+ {
+  "slug": "level-materials-authoring",
+  "group": "Visual Content Generation",
+  "ctx": "Level & Materials Authoring",
+  "title": "Dropping a new reference image keeps the previous image's parameter overrides",
+  "sev": "high",
+  "cat": "state-corruption",
+  "file": "src/components/modules/content/materials/MaterialStyleTransfer.tsx:141-152",
+  "scenario": "A user uploads screenshot A, runs Analyze, then opens \"Refine Parameters\" and overrides Roughness/Metallic/Emissive/Surface. They then **drag-and-drop** screenshot B onto the drop zone instead of using the file picker or the clear (X) button."
+ },
+ {
+  "slug": "level-materials-authoring",
+  "group": "Visual Content Generation",
+  "ctx": "Level & Materials Authoring",
+  "title": "Uploaded texture blob URLs are never revoked (memory leak on every upload/clear/replace/reset)",
+  "sev": "medium",
+  "cat": "resource-leak",
+  "file": "src/components/modules/visual-gen/material-lab/PBREditor.tsx:73-79",
+  "scenario": "A user iterates on a PBR material, uploading and re-uploading albedo/normal/metallic/roughness/AO maps, clicking the (X) to clear slots, or hitting reset \u2014 repeatedly, as is normal during material authoring."
+ },
+ {
+  "slug": "level-materials-authoring",
+  "group": "Visual Content Generation",
+  "ctx": "Level & Materials Authoring",
+  "title": "Failed reference analysis fails silently \u2014 stuck spinner, no error shown",
+  "sev": "medium",
+  "cat": "silent-failure",
+  "file": "src/components/modules/content/materials/MaterialStyleTransfer.tsx:164-188",
+  "scenario": "The `/api/style-transfer` request returns a non-OK envelope (`{ success: false }` from a 400/500), or the network throws (offline, aborted, server restart) while the user waits on \"Analyzing visual properties\u2026\"."
+ },
+ {
+  "slug": "level-materials-authoring",
+  "group": "Visual Content Generation",
+  "ctx": "Level & Materials Authoring",
+  "title": "Difficulty distribution miscounts (NaN/dropped buckets) on malformed persisted room data",
+  "sev": "medium",
+  "cat": "edge-case",
+  "file": "src/lib/level-design-db.ts:134-137",
+  "scenario": "A level-design doc is saved with rooms whose `difficulty` is a non-integer or a numeric string \u2014 e.g. `2.5`, or `\"3\"` \u2014 which is entirely possible because `rooms` is an unvalidated JSON blob written verbatim by `updateDoc` (line 99-107) and read back via `JSON.parse` (line 47) with no schema enforcement."
+ },
+ {
+  "slug": "loot-affix-system",
+  "group": "Items, Loot & Economy",
+  "ctx": "Loot & Affix System",
+  "title": "Seeded RNG uses signed `>>` shift \u2014 biased, short-period stream corrupts every drop-simulation statistic",
+  "sev": "high",
+  "cat": "logic-error",
+  "file": "src/lib/seeded-rng.ts:29 (consumed by src/lib/loot-designer/drop-simulator.ts:199)",
+  "scenario": "A designer runs `runDropSimulation` (the headline \"roll N items and read the distribution heatmaps\" feature). It seeds `createXorShift32RNG(seed)`. The XORShift32 closure does `s ^= s >> 17`. Because `s` is a 32-bit value stored in a JS number that frequently goes negative (high bit set after `s ^= s << 13`), `>>` is an *arithmetic* (sign-propagating) shift, not the logical shift the XORShift32 algorithm requires."
+ },
+ {
+  "slug": "loot-affix-system",
+  "group": "Items, Loot & Economy",
+  "ctx": "Loot & Affix System",
+  "title": "UE5 loot-table import accepts unvalidated `DropWeight` (NaN / negative / Infinity) \u2192 corrupt state, broken bars, poisoned codegen",
+  "sev": "high",
+  "cat": "state-corruption",
+  "file": "src/components/modules/core-engine/sub_loot/_shared/codegen.ts:35 (",
+  "scenario": "A user clicks \"Import UE5\" and selects a JSON export whose entries contain `\"DropWeight\": -5`, `\"DropWeight\": \"12\"` (string), or a value serialized as `null`/missing-but-present-as-NaN. `parseUE5LootTable` does `weight: entry.DropWeight ?? 1` with no `typeof`/range check. `??` only guards `null`/`undefined`, so a negative number, a NaN, or a non-number string passes straight through into `editorEntries`."
+ },
+ {
+  "slug": "loot-affix-system",
+  "group": "Items, Loot & Economy",
+  "ctx": "Loot & Affix System",
+  "title": "Clipboard copy swallows promise rejection \u2014 \"Copied!\" shown even when the copy failed",
+  "sev": "medium",
+  "cat": "silent-failure",
+  "file": "src/components/modules/core-engine/sub_loot/affix/LootTableEditor.tsx:128-135 (",
+  "scenario": "A user clicks \"Re-export\" then the copy button in a context where `navigator.clipboard.writeText` rejects or is unavailable \u2014 non-secure origin (HTTP/LAN dev preview), the document not focused, or a browser that gates clipboard on a permission the user denied. `navigator.clipboard.writeText(text)` returns a promise that is neither awaited nor `.catch()`-ed; the code unconditionally calls `setCopiedReExport(true)`."
+ },
+ {
+  "slug": "loot-affix-system",
+  "group": "Items, Loot & Economy",
+  "ctx": "Loot & Affix System",
+  "title": "Economy linter's \"median\" is wrong on even rosters and self-suppresses on small EVs",
+  "sev": "medium",
+  "cat": "logic-error",
+  "file": "src/lib/loot/economy.ts:137-150 (",
+  "scenario": "A designer lints a loot binding against its peers. With an even number of peers, `median = peerEvs[Math.floor(peerEvs.length / 2)]` returns the upper-middle element, not the average of the two middles \u2014 e.g. peers `[10, 90]` yield `median = 90`. The high-outlier rule (`ev > median * 2.5`) then needs `ev > 225` instead of the true `ev > 125`, so genuine over-rewarding tables pass clean. Separately, when peer EVs are small (common for minions: `computeExpectedValue` *rounds*, and a low-drop minion can compute to `0`), the `median > 0` guard makes the entire outlier block silently no-op."
+ },
+ {
+  "slug": "module-registry-feature-matrix",
+  "group": "CLI Terminal & Module Shell",
+  "ctx": "Module Registry & Feature Matrix",
+  "title": "CLI-completed checklist items are silently overwritten by the store's full-state save (last-writer-wins on `project_progress`)",
+  "sev": "critical",
+  "cat": "data-loss",
+  "file": "src/app/api/checklist/complete/route.ts:44-50 (vs src/app/api/project-progress/route.ts:70-85 and src/stores/moduleStore.ts:178-196)",
+  "scenario": "A long-running CLI task finishes a checklist item and `POST /api/checklist/complete` does a read-modify-write that sets `progress[moduleId][itemId] = true` in the DB. Meanwhile the user toggles any *unrelated* checklist item in the UI. `toggleChecklistItem` calls `scheduleAutoSave()`, which fires `saveProgress()` \u2192 `POST /api/project-progress` and writes `checklistProgress` from the in-memory (localStorage) snapshot \u2014 which never saw the CLI's completion. The store's blind `ON CONFLICT DO UPDATE SET checklist_json = excluded.checklist_json` clobbers the entire blob, dropping the CLI-completed item."
+ },
+ {
+  "slug": "module-registry-feature-matrix",
+  "group": "CLI Terminal & Module Shell",
+  "ctx": "Module Registry & Feature Matrix",
+  "title": "`getReviewHistory` returns the OLDEST snapshots, so the quality sparkline freezes after 20 reviews",
+  "sev": "high",
+  "cat": "logic-error",
+  "file": "src/lib/feature-matrix-db.ts:270-283",
+  "scenario": "After a module accumulates more than `limit` (default 20) review snapshots, `SELECT ... ORDER BY reviewed_at ASC LIMIT ?` returns the *first* 20 snapshots ever recorded. The `QualitySparkline` and the \"outdated\" trend indicator in `FeatureMatrix.tsx` therefore render the same ancient history forever and never reflect recent reviews \u2014 the trend arrow can point \"down\" while quality is actually climbing."
+ },
+ {
+  "slug": "module-registry-feature-matrix",
+  "group": "CLI Terminal & Module Shell",
+  "ctx": "Module Registry & Feature Matrix",
+  "title": "`firstWordMatch('', \u2026)` / empty candidate matches every checklist item, poisoning NBA scores from DB-sourced titles",
+  "sev": "high",
+  "cat": "edge-case",
+  "file": "src/lib/nba-engine.ts:81-83 (consumed at 138-139, 183-185, 198-203, 226-228)",
+  "scenario": "An evaluator recommendation or pattern row arrives from the DB with an empty or whitespace-only `title` (or a feature with a blank name). `firstWordMatch(item.label, '')` computes `''.split(' ')[0]` === `''`, and `label.toLowerCase().includes('')` is `true` for *every* label. That single empty-titled record then \"matches\" every uncompleted checklist item, applying its evaluator-priority urgency boost / pattern success-rate / pitfalls to all of them indiscriminately."
+ },
+ {
+  "slug": "module-registry-feature-matrix",
+  "group": "CLI Terminal & Module Shell",
+  "ctx": "Module Registry & Feature Matrix",
+  "title": "Feature-matrix progress poller divides by a stale/zero total and mis-counts on partial JSON, reporting bogus percentages",
+  "sev": "medium",
+  "cat": "silent-failure",
+  "file": "src/app/api/feature-matrix/progress/route.ts:38-54 (rendered by src/components/modules/shared/FeatureMatrix.tsx:225-240, 1355-1385)",
+  "scenario": "During a CLI review the route reads `.pof/matrix/<moduleId>.json` while the CLI is mid-write. If `JSON.parse` succeeds on a *truncated-but-valid* prefix (e.g. an array the CLI hasn't finished appending to), `scanned` is undercounted; if parse fails, the fallback counts `\"featureName\":` substrings \u2014 which also matches the string `\"featureName\"` appearing inside any `reviewNotes`/`description` value, overcounting. Either way `scanned` can exceed or lag `total`, and `total` comes from the static `MODULE_FEATURE_DEFINITIONS` count, not from what the CLI is actually writing \u2014 so the two are unrelated denominators."
+ },
+ {
+  "slug": "pipeline-artifacts-test-gates",
+  "group": "Catalog to UE Pipeline",
+  "ctx": "Pipeline Artifacts & Test Gates",
+  "title": "Two uncoordinated concurrency guards both drive the single non-reentrant UE editor",
+  "sev": "high",
+  "cat": "race-condition",
+  "file": "src/app/api/pipeline-artifacts/drain/route.ts:9-12, src/lib/test-gate-runner/worker.ts:34, 71-77",
+  "scenario": "If an operator starts the always-on drain worker (POST `/drain/worker {action:'start'}`) and *also* fires a manual `POST /drain` \u2014 or fires two manual drains with different filter scopes (one global `{}`, one `{catalogId:'items'}`) \u2014 both run gates against the same running editor at the same time."
+ },
+ {
+  "slug": "pipeline-artifacts-test-gates",
+  "group": "Catalog to UE Pipeline",
+  "ctx": "Pipeline Artifacts & Test Gates",
+  "title": "Results correlation uses substring matching \u2014 an unrelated test's failure poisons the gate",
+  "sev": "high",
+  "cat": "logic-error",
+  "file": "src/lib/test-gate-runner/bridgeExecutor.ts:42-50",
+  "scenario": "If the gate's `testName` is `\"Fireball\"` and the editor's automation results array also contains a sibling test whose id embeds that substring (e.g. `\"FireballChain\"`, `\"FireballRank2\"`, or a namespaced `\"PoF.Ability.Fireball.Edge\"`), `matched` collects *all* of them, and any one of those siblings failing forces this gate to `fail`."
+ },
+ {
+  "slug": "pipeline-artifacts-test-gates",
+  "group": "Catalog to UE Pipeline",
+  "ctx": "Pipeline Artifacts & Test Gates",
+  "title": "Deferred artifacts of any non-L4 tier are silently coerced to L3 and the stored tier is permanently overwritten",
+  "sev": "medium",
+  "cat": "state-corruption",
+  "file": "src/lib/test-gate-runner/drain.ts:47, 60-69",
+  "scenario": "If a `pipeline_artifacts` row is `deferred` with a `tier` that is null, `'L2'`, or any value other than `'L4'` (e.g. an L2-tier acceptance that was deferred, or a row written without a tier), `collectDeferred` builds the job with `tier: a.tier === 'L4' ? 'L4' : 'L3'` \u2014 it becomes an L3 job \u2014 and after the run `drainOne` upserts `tier: job.tier`, persisting `'L3'` over whatever was stored."
+ },
+ {
+  "slug": "pipeline-artifacts-test-gates",
+  "group": "Catalog to UE Pipeline",
+  "ctx": "Pipeline Artifacts & Test Gates",
+  "title": "Optimistic `applyLifecycle` never reconciles with the server \u2014 a rejected transition still shows as advanced/verified",
+  "sev": "medium",
+  "cat": "state-corruption",
+  "file": "src/stores/catalogStore.ts:49-71",
+  "scenario": "If the client optimistically advances an entity (e.g. `wired \u2192 verified`) via `applyLifecycle` and the paired `POST /api/catalog` is rejected by the server gate (409 \u2014 `resolveTransition` returns null because the server's stored `currentState` differs, or `testResult !== 'pass'`), the store keeps the advanced state. There is no rollback path."
+ },
+ {
+  "slug": "progression-save-systems",
+  "group": "Progression, World & Bestiary",
+  "ctx": "Progression & Save Systems",
+  "title": "Data Recovery flow renders as \"already complete\" on mount (success theater)",
+  "sev": "high",
+  "cat": "logic-error",
+  "file": "src/components/modules/core-engine/sub_save/advanced/DataRecoveryTool.tsx:15",
+  "scenario": "An operator opens the Advanced \u2192 Data Recovery tool to recover a corrupted save. Before they click anything \u2014 before any detect/recover/verify step has run \u2014 every step indicator already shows the green \"complete\" check, the wizard reads as finished, and the confidence gauge + per-field results (\"recovered / partial / lost\") are fully populated."
+ },
+ {
+  "slug": "progression-save-systems",
+  "group": "Progression, World & Bestiary",
+  "ctx": "Progression & Save Systems",
+  "title": "XP curve never reaches MAX_LEVEL \u2014 chart and \"Max XP\" silently understate the curve",
+  "sev": "medium",
+  "cat": "edge-case",
+  "file": "src/components/modules/core-engine/sub_progression/_shared/data.ts:34",
+  "scenario": "A designer drags the Base XP / Exponent sliders and reads the header \"Max Level: 50 | Max XP: \u2026\" plus the plotted endgame curve to tune late-game pacing. The number shown and the curve's right edge are the values for **level 46**, not 50."
+ },
+ {
+  "slug": "progression-save-systems",
+  "group": "Progression, World & Bestiary",
+  "ctx": "Progression & Save Systems",
+  "title": "Power-curve danger zones assume two independent series are equal-length & index-aligned",
+  "sev": "medium",
+  "cat": "edge-case",
+  "file": "src/components/modules/core-engine/sub_progression/analysis/PowerCurveDangerZones.tsx:70",
+  "scenario": "A caller renders `<PowerCurveDangerZones playerPower={\u2026} enemyDifficulty={\u2026} />` (both are public props) with series of different lengths \u2014 e.g. 11 player samples but 9 enemy samples after trimming a shorter enemy ramp."
+ },
+ {
+  "slug": "progression-save-systems",
+  "group": "Progression, World & Bestiary",
+  "ctx": "Progression & Save Systems",
+  "title": "Auto-save trigger checkboxes and toggles are non-functional controls (dead config UI)",
+  "sev": "high",
+  "cat": "silent-failure",
+  "file": "src/components/modules/core-engine/sub_save/advanced/AutoSaveConfig.tsx:46",
+  "scenario": "A designer opens Auto-Save Config to disable \"Boss Kill\" saves (combat-save risk) and enable \"Level Up\" saves. They click the trigger rows' checkbox boxes and the Combat-save / Compression toggles. Nothing changes \u2014 and crucially, nothing tells them the click was ignored."
+ },
+ {
+  "slug": "project-health-insights",
+  "group": "Quality Evaluator & Health",
+  "ctx": "Project Health & Insights",
+  "title": "Weekly digest daily buckets are keyed by UTC-shifted local-midnight dates, silently dropping sessions",
+  "sev": "high",
+  "cat": "edge-case",
+  "file": "src/lib/weekly-digest.ts:8-15, 88-104",
+  "scenario": "A user in any non-zero UTC offset (e.g. UTC+2 Europe, or any negative offset in the Americas) runs a CLI session. `getWeekStart` builds the week boundary in LOCAL time (`getDay()`, `setHours(0,0,0,0)`), then `toISODate(d)` keys each of the 7 day-buckets via `d.toISOString().slice(0,10)` \u2014 i.e. the UTC calendar date of a LOCAL midnight, which is the *previous* day for positive offsets. Meanwhile rows are bucketed by `row.completed_at.slice(0,10)`, the true UTC date of the stored `new Date().toISOString()` value. The two date spaces don't line up."
+ },
+ {
+  "slug": "project-health-insights",
+  "group": "Quality Evaluator & Health",
+  "ctx": "Project Health & Insights",
+  "title": "Resolved regressions are never cleared \u2014 the alert banner shows stale, already-fixed regressions",
+  "sev": "high",
+  "cat": "state-corruption",
+  "file": "src/components/modules/evaluator/ProjectHealthDashboard.tsx:104-137",
+  "scenario": "Scan N drops a module's score, raising a regression alert. The user fixes the issue; scan N+1 restores the score. The effect recomputes `alerts` (now empty) but the guard `if (alerts.length > 0)` (line 133) skips `setRegressionAlerts`, so the previous, now-false alert array stays in state and on screen. Conversely, a user-dismissed alert reappears the next time `scanHistory` mutates and the same regression is recomputed."
+ },
+ {
+  "slug": "project-health-insights",
+  "group": "Quality Evaluator & Health",
+  "ctx": "Project Health & Insights",
+  "title": "Velocity cap leaks phantom items into avgVelocity and milestone predictions",
+  "sev": "medium",
+  "cat": "logic-error",
+  "file": "src/lib/health-engine.ts:96-118, 427-434",
+  "scenario": "`generateVelocityHistory` accumulates `itemsThisWeek` into `cumulative` and caps `cumulative` at `completedItems` (lines 108-110), but it still records the *uncapped* `itemsThisWeek` on each point. Once the cap is hit (common, since the ramp+variance routinely overshoots the real total), later weeks report positive `itemsCompleted` while `cumulativeCompleted` is frozen. `avgVelocity` is then computed from the last 3 weeks' `itemsCompleted` (line 429-431), including those phantom items that never moved the cumulative total."
+ },
+ {
+  "slug": "project-health-insights",
+  "group": "Quality Evaluator & Health",
+  "ctx": "Project Health & Insights",
+  "title": "Mixed timestamp formats in completed_at make string-range week filtering fragile (latent landmine)",
+  "sev": "critical",
+  "cat": "data-loss",
+  "file": "src/lib/weekly-digest.ts:42-58 (with src/lib/db.ts:295)",
+  "scenario": "The week queries select rows via `WHERE completed_at >= ? AND completed_at < ?` using full ISO strings (`weekStart.toISOString()` \u2192 `\"2026-06-08T00:00:00.000Z\"`). This is a lexicographic string comparison. Today every insert goes through `recordSession`, which writes `new Date().toISOString()` (T-separated, `Z`-suffixed), so it works. But the schema column defaults to `datetime('now')` (line 295), which produces a SPACE-separated value `\"2026-06-08 12:00:00\"`. The moment any future insert path, migration backfill, or manual/imported row uses the default, those rows carry a format whose space char (0x20) sorts *below* `T` (0x54)."
+ },
+ {
+  "slug": "project-setup-onboarding",
+  "group": "UE5 Integration & Project Setup",
+  "ctx": "Project Setup & Onboarding",
+  "title": "Cross-project checklist contamination on fresh-project setup",
+  "sev": "high",
+  "cat": "state-corruption",
+  "file": "src/stores/projectStore.ts:79-91 (completeSetup), 169-192 (saveToRecent)",
+  "scenario": "A user has Project A open with a partly-completed checklist, opens the Setup Wizard, picks \"Start Fresh\" \u2192 `handleStartFresh` \u2192 `completeSetup()` runs for brand-new Project B. `completeSetup` calls `saveToRecent()` (which reads `getChecklistProgress()`) and then `saveModuleProgress(projectPath)` for the new path."
+ },
+ {
+  "slug": "project-setup-onboarding",
+  "group": "UE5 Integration & Project Setup",
+  "ctx": "Project Setup & Onboarding",
+  "title": "UE5 Remote Controller leaks its polling interval and writes state after unmount",
+  "sev": "high",
+  "cat": "resource-leak",
+  "file": "src/components/modules/project-setup/UE5RemoteController.tsx:615-658, 648-651, 717",
+  "scenario": "User opens the Remote Controller, clicks Connect (`onClick={() => { connect(); startPolling(); }}`) which starts `setInterval(fetchState, 5000)`, then navigates to another module so the component unmounts (the module shell suspends/unmounts panels). The interval keeps firing."
+ },
+ {
+  "slug": "project-setup-onboarding",
+  "group": "UE5 Integration & Project Setup",
+  "ctx": "Project Setup & Onboarding",
+  "title": "\"Detect projects\" performs an unbounded whole-machine scan that blocks the wizard",
+  "sev": "medium",
+  "cat": "silent-failure",
+  "file": "src/app/api/filesystem/browse/route.ts:371-443 (scanForProjects), 394-406, 418-432",
+  "scenario": "The Setup Wizard calls `detect-projects` on every mount (`SetupWizard` useEffect, `PathBrowser` init). On a machine with several large drives, `scanForProjects` adds *every* drive root (`C:\\`, `D:\\`, \u2026) plus every detected engine dir as a candidate, then `readdir`s each root and `Promise.all`s `findUProjectFiles` over *every* top-level folder on *every* drive, plus `readEngineVersion` + `validateUEProject` per hit."
+ },
+ {
+  "slug": "project-setup-onboarding",
+  "group": "UE5 Integration & Project Setup",
+  "ctx": "Project Setup & Onboarding",
+  "title": "Engine auto-detection sets an unsupported `ueVersion`, hiding all projects and persisting bad state",
+  "sev": "high",
+  "cat": "logic-error",
+  "file": "src/components/modules/project-setup/PathBrowser.tsx:143-147, 234-240; src/components/modules/project-setup/SetupWizard.tsx:60-65, 10-14",
+  "scenario": "On a machine with UE 5.4 (or a source build whose `Build.version` reports e.g. `5.4.2`, or `EngineAssociation` is a GUID), `PathBrowser` auto-fires `onEngineDetected(engines[0].version)` which calls `setProject({ ueVersion: \"5.4.2\" })`. The wizard then derives `selectedMajorMinor = \"5.4\"` and filters detected projects with `engineVersion.startsWith(\"5.4\")`."
+ },
+ {
+  "slug": "prompt-construction-context",
+  "group": "Prompt Engineering",
+  "ctx": "Prompt Construction & Context",
+  "title": "`markResolved` clears the resolved flag for the SAME error in EVERY module",
+  "sev": "high",
+  "cat": "state-corruption",
+  "file": "src/lib/error-memory-db.ts:256-260",
+  "scenario": "A user (or the CLI) fixes a \"missing #include AbilitySystemComponent.h\" error in `arpg-gas` and calls `markResolved(fingerprint)`. The same include error also exists, still unfixed, as separate rows in `arpg-combat` and `arpg-character`."
+ },
+ {
+  "slug": "prompt-construction-context",
+  "group": "Prompt Engineering",
+  "ctx": "Prompt Construction & Context",
+  "title": "Relevance candidates are truncated by occurrence count BEFORE the relevance score is computed",
+  "sev": "high",
+  "cat": "logic-error",
+  "file": "src/lib/error-memory-db.ts:191-196",
+  "scenario": "A mature project has accumulated 30+ cross-module errors with `occurrences >= 3`. A new GAS task runs; the one error that is the exact match for this task (correct module, keyword hit on \"ability\") has only `occurrences = 1` because it is new."
+ },
+ {
+  "slug": "prompt-construction-context",
+  "group": "Prompt Engineering",
+  "ctx": "Prompt Construction & Context",
+  "title": "SQLite UTC timestamps are parsed as local time, skewing recency scoring",
+  "sev": "medium",
+  "cat": "edge-case",
+  "file": "src/lib/error-memory-db.ts:209",
+  "scenario": "A user in a UTC-offset timezone (e.g. America/Los_Angeles, UTC-7/8) records an error. Minutes later a prompt is built; the recency calculation runs on the just-stored `last_seen_at`."
+ },
+ {
+  "slug": "prompt-construction-context",
+  "group": "Prompt Engineering",
+  "ctx": "Prompt Construction & Context",
+  "title": "`getRequiredMSVCVersion` checks the minor version without bounding the major",
+  "sev": "medium",
+  "cat": "logic-error",
+  "file": "src/lib/prompt-context.ts:75-80",
+  "scenario": "A future UE 6.0 project (or a sloppily-entered `ueVersion` like `\"5\"` or `\"6.2\"`) flows into `buildProjectContextHeader`, which prints `Required MSVC toolchain: <X>+` into the prompt."
+ },
+ {
+  "slug": "prompt-evolution-a-b-testing",
+  "group": "Prompt Engineering",
+  "ctx": "Prompt Evolution & A/B Testing",
+  "title": "Trial recording is read-modify-write with no transaction \u2014 concurrent trials are silently lost",
+  "sev": "critical",
+  "cat": "race-condition",
+  "file": "src/lib/prompt-evolution/engine.ts:232-260 (with src/lib/prompt-evolution/evolution-db.ts:231-270)",
+  "scenario": "Two CLI runs for the same A/B test finish at nearly the same moment. Both POST `record-trial`. Request 1 calls `getABTestById` and reads `variantATrials = 4`. Before it writes, request 2 also reads `variantATrials = 4`. Request 1 writes `5`; request 2 writes `5`. One real trial (and its success/duration) has vanished."
+ },
+ {
+  "slug": "prompt-evolution-a-b-testing",
+  "group": "Prompt Engineering",
+  "ctx": "Prompt Evolution & A/B Testing",
+  "title": "Two concurrent first-variant creates both become `active` \u2192 two \"current\" versions corrupt rollback state",
+  "sev": "high",
+  "cat": "state-corruption",
+  "file": "src/lib/prompt-evolution/engine.ts:49-76 (with evolution-db.ts:204-211)",
+  "scenario": "A checklist item has no variants yet. A user double-clicks \"Create\", or the UI fires create + a mutate that also creates, near-simultaneously. Both calls run `hasActiveVariant(...)` \u2192 both get `false` \u2192 both insert with `active = 1`."
+ },
+ {
+  "slug": "prompt-evolution-a-b-testing",
+  "group": "Prompt Engineering",
+  "ctx": "Prompt Evolution & A/B Testing",
+  "title": "Manual `concludeTest` overwrites a real z-test confidence with a crude trial-count heuristic",
+  "sev": "high",
+  "cat": "logic-error",
+  "file": "src/lib/prompt-evolution/engine.ts:262-281",
+  "scenario": "An A/B test runs long enough that `evaluateTest` computes a statistically significant winner with `confidence = 0.95` (z \u2265 1.96) but does NOT auto-conclude (e.g. `shouldConclude` was false on the trial that produced it, or the user clicks \"Finish & pick a winner\" at `totalTrials >= 2`, well before significance). The user clicks Conclude. `concludeTest` overwrites `confidence` with `Math.min(0.7, (A+B trials)/20)` and recomputes the winner by raw `rateA >= rateB`."
+ },
+ {
+  "slug": "prompt-evolution-a-b-testing",
+  "group": "Prompt Engineering",
+  "ctx": "Prompt Evolution & A/B Testing",
+  "title": "`swapOrdering` mutation corrupts prompts via literal-string `replace` (duplicate blocks + `$` substitution patterns)",
+  "sev": "medium",
+  "cat": "data-loss",
+  "file": "src/lib/prompt-evolution/mutations.ts:142-159",
+  "scenario": ""
+ },
+ {
+  "slug": "quality-evaluation-engine",
+  "group": "Quality Evaluator & Health",
+  "ctx": "Quality Evaluation Engine",
+  "title": "SSE stream parser drops findings on chunk boundaries (no cross-read buffer)",
+  "sev": "high",
+  "cat": "silent-failure",
+  "file": "src/lib/evaluator/deep-eval-engine.ts:264-288",
+  "scenario": "If the `/api/claude-terminal/query` response delivers a `data: {\u2026}` SSE line that happens to be split across two `reader.read()` network chunks (the normal case for any non-trivial eval output \u2014 TCP/transform-stream boundaries fall mid-line constantly), the two halves are parsed independently."
+ },
+ {
+  "slug": "quality-evaluation-engine",
+  "group": "Quality Evaluator & Health",
+  "ctx": "Quality Evaluation Engine",
+  "title": "`indexOf('[')`/`lastIndexOf(']')` array extraction is corrupted by prose the prompts explicitly request",
+  "sev": "high",
+  "cat": "silent-failure",
+  "file": "src/lib/evaluator/finding-collector.ts:84-97",
+  "scenario": "If a model's output contains a `[` before the real JSON array or a `]` after it, `parseFindings` slices the wrong substring, `JSON.parse` throws, and the whole pass's findings are discarded (`return []`). This is not hypothetical: the `combat-trace` and `ground-truth` passes (module-eval-prompts.ts:151-159, 52-55) instruct the model to **emit a numbered call graph / prose FIRST, then the JSON array**. Call graphs routinely contain bracketed text (\"step [3]\", array refs like `HitActors[]`, markdown links `[GE_Damage](\u2026)`), and the closing prose may contain a stray `]`."
+ },
+ {
+  "slug": "quality-evaluation-engine",
+  "group": "Quality Evaluator & Health",
+  "ctx": "Quality Evaluation Engine",
+  "title": "Finding fingerprint collapses distinct findings (severity/category/pass excluded; null-line + general bucket)",
+  "sev": "medium",
+  "cat": "state-corruption",
+  "file": "src/lib/evaluator/finding-collector.ts:138-178",
+  "scenario": "If two genuinely different findings share a file (or both have `file: null`), the same `line` (very common: the model omits line numbers, so both are `null`), and their first 80 description chars collapse to the same normalized key, `deduplicateFindings` discards one of them."
+ },
+ {
+  "slug": "quality-evaluation-engine",
+  "group": "Quality Evaluator & Health",
+  "ctx": "Quality Evaluation Engine",
+  "title": "Cancelled or errored scan overwrites the regression baseline with partial/empty findings",
+  "sev": "high",
+  "cat": "data-loss",
+  "file": "src/components/modules/evaluator/DeepEvalResults.tsx:109-129 (with deep-eval-engine.ts:218-242)",
+  "scenario": "If the user cancels a run (or the network/API errors mid-scan), `runDeepEval` does **not** throw \u2014 its `catch` block builds a report from whatever partial `allFindings` it has and *returns* it. `handleRunEval` then `await`s that returned value and calls `applyScanResult`, which unconditionally calls `useDeepEvalStore.getState().recordScan({ findings: mergeBaseline(previous, currentFlat, scope) })`."
+ },
+ {
+  "slug": "session-analytics-telemetry",
+  "group": "Director, Sessions & Autonomy",
+  "ctx": "Session Analytics & Telemetry",
+  "title": "Idempotency key is a check-then-act race that double-executes side effects",
+  "sev": "high",
+  "cat": "race-condition",
+  "file": "src/lib/request-log.ts:15 (and consumer src/app/api/feature-matrix/import/route.ts:103-182)",
+  "scenario": "If a client retries an import (or a double-click / network re-send fires two requests) carrying the same `Idempotency-Key` while the first is still in flight, both requests call `checkIdempotencyKey()` before either has called `saveIdempotencyResult()`. Both see `null` (no cached row yet), both fall through, and both run `upsertFeatures(moduleId, features)` \u2014 the real, destructive DB mutation. The cached result is only written *after* the mutation, so the guard window is exactly the duration of the work it is supposed to protect."
+ },
+ {
+  "slug": "session-analytics-telemetry",
+  "group": "Director, Sessions & Autonomy",
+  "ctx": "Session Analytics & Telemetry",
+  "title": "Dismissed genre suggestions resurrect as new pending suggestions on every scan",
+  "sev": "high",
+  "cat": "logic-error",
+  "file": "src/lib/genre-evolution-engine.ts:349-359 (with src/app/api/telemetry/route.ts:86-96)",
+  "scenario": "If a user dismisses an \"Evolve toward Souls-like\" suggestion, then runs another project scan (which is the normal loop in `TelemetryEvolution`), the same `dodge-roll-heavy` pattern is re-detected, `generateSuggestions` re-emits the Souls-like suggestion, the scan handler's dedup checks only the *pending* set (`pendingGenres`) \u2014 which no longer contains the dismissed one \u2014 and re-inserts it with a brand-new `sug-souls-like-${Date.now()}` id. The dismissed card is back, pending again."
+ },
+ {
+  "slug": "session-analytics-telemetry",
+  "group": "Director, Sessions & Autonomy",
+  "ctx": "Session Analytics & Telemetry",
+  "title": "Unguarded JSON.parse in telemetry row mappers crashes the whole dashboard on one bad row",
+  "sev": "medium",
+  "cat": "silent-failure",
+  "file": "src/lib/telemetry-db.ts:143-145 (rowToSnapshot) and :155-157 (rowToSuggestion)",
+  "scenario": "If any `telemetry_snapshots.signals` / `detected_patterns` or `genre_suggestions.patterns` / `proposed_changes` cell contains malformed JSON \u2014 a truncated write, a partial migration, a manually-edited SQLite file, or a future schema change \u2014 `JSON.parse` throws. Because `getTelemetryStats` calls `getLatestSnapshot` + `getPendingSuggestions`, a single corrupt row makes `GET /api/telemetry?action=stats` throw, the route returns a 500, and the entire Genre Evolution view fails to load (the hook's `.catch(() => null)` just yields a permanent empty state with no diagnostic)."
+ },
+ {
+  "slug": "session-analytics-telemetry",
+  "group": "Director, Sessions & Autonomy",
+  "ctx": "Session Analytics & Telemetry",
+  "title": "Quality-score \"improving/declining\" trend reads the wrong rows because ordering has no tiebreaker",
+  "sev": "medium",
+  "cat": "logic-error",
+  "file": "src/lib/session-analytics-db.ts:207-228 (getPromptQualityScore)",
+  "scenario": "`getPromptQualityScore` orders sessions `ORDER BY completed_at DESC` then slices `[0,10)` as \"recent\" and `[10,20)` as \"older\" to compute a trend. `completed_at` is stored at 1-second resolution (`datetime('now')` default, or a client `new Date().toISOString()` that can be skewed/identical for rapid runs). When a burst of sessions shares the same `completed_at` second, SQLite returns them in an arbitrary order, so the 10/20 boundary slices across rows that are not actually time-ordered. The \"recent vs older\" success-rate comparison \u2014 and thus the improving/declining/stable verdict \u2014 is computed on a mis-partitioned, run-to-run-unstable window."
+ },
+ {
+  "slug": "ue5-bridge-live-sync",
+  "group": "UE5 Integration & Project Setup",
+  "ctx": "UE5 Bridge & Live Sync",
+  "title": "Headless build spawns UBT through a shell with unsanitized project paths and args (command injection)",
+  "sev": "critical",
+  "cat": "logic-error",
+  "file": "src/lib/ue5-bridge/build-pipeline.ts:129",
+  "scenario": "If a user (or any caller of `POST /api/ue5-bridge/build`) supplies a `projectPath`, `targetName`, or `additionalArgs[]` containing shell metacharacters while a build is enqueued..."
+ },
+ {
+  "slug": "ue5-bridge-live-sync",
+  "group": "UE5 Integration & Project Setup",
+  "ctx": "UE5 Bridge & Live Sync",
+  "title": "Server-side connection-manager singletons leak timers and bleed connection state across all clients",
+  "sev": "high",
+  "cat": "resource-leak",
+  "file": "src/lib/ue5-bridge/connection-manager.ts:123",
+  "scenario": "If any browser tab triggers `connect` (auto-connect or manual) and then navigates away, closes, or crashes \u2014 while UE5 is momentarily unreachable..."
+ },
+ {
+  "slug": "ue5-bridge-live-sync",
+  "group": "UE5 Integration & Project Setup",
+  "ctx": "UE5 Bridge & Live Sync",
+  "title": "Live-state WebSocket sends (property write / watch / snapshot) silently no-op when the socket isn't OPEN",
+  "sev": "high",
+  "cat": "silent-failure",
+  "file": "src/lib/ue5-bridge/ws-live-state.ts:320",
+  "scenario": "If the user edits a UE5 property, subscribes to a watch, or requests a snapshot during the (frequent) `connecting`/`reconnecting`/`disconnected` window..."
+ },
+ {
+  "slug": "ue5-bridge-live-sync",
+  "group": "UE5 Integration & Project Setup",
+  "ctx": "UE5 Bridge & Live Sync",
+  "title": "`autoUpdateFeatureMatrix` ignores the persistence result and emits \"verified\" events even when the DB write fails",
+  "sev": "medium",
+  "cat": "silent-failure",
+  "file": "src/lib/pof-bridge/verification-engine.ts:88",
+  "scenario": "If the `POST /api/feature-matrix` batch update fails (network blip, validation error, 500) while auto-verifying features from a PoF Bridge manifest..."
+ },
+ {
+  "slug": "visual-asset-generation",
+  "group": "Visual Content Generation",
+  "ctx": "Visual Asset Generation",
+  "title": "Non-MCP generation jobs are queued but never executed (permanent \"pending\" success theater)",
+  "sev": "high",
+  "cat": "silent-failure",
+  "file": "src/components/modules/visual-gen/asset-forge/useForgeStore.ts:61 (and GenerationPanel.tsx:74)",
+  "scenario": "A user selects a \"free\" local provider (TripoSR or TRELLIS.2 \u2014 both `status: 'free'`, both selectable in the provider grid), types a prompt, and clicks \"Generate 3D Model\". `handleSubmit` calls `addJob(...)`, which inserts a job with `status: 'pending'`, `progress: 0`. Nothing else happens."
+ },
+ {
+  "slug": "visual-asset-generation",
+  "group": "Visual Content Generation",
+  "ctx": "Visual Asset Generation",
+  "title": "Leonardo image results render a CDN URL whose generation was already deleted",
+  "sev": "high",
+  "cat": "logic-error",
+  "file": "src/lib/leonardo.ts:149 (consumed at src/components/modules/visual-gen/material-lab/AdvancedTexturePanel.tsx:401,438)",
+  "scenario": "A user runs ControlNet or Inpaint in the Advanced Texture panel. The client POSTs to `/api/leonardo` with `mode: 'image'` and no `opts.cleanup`. `generateImage` therefore takes the default (`cleanup !== false` \u2192 cleanup ON): it downloads the bytes via `downloadThenDelete`, **issues a DELETE for the generation**, and returns `{ imageUrl, generationId, imageBase64 }`. The route (`/api/leonardo/route.ts:33`) forwards `...result` but the component only reads `cnResult.imageUrl` / `ipResult.imageUrl` and renders `<img src={imageUrl}>`."
+ },
+ {
+  "slug": "visual-asset-generation",
+  "group": "Visual Content Generation",
+  "ctx": "Visual Asset Generation",
+  "title": "Overlapping MCP status polls double-fire the Blender import",
+  "sev": "medium",
+  "cat": "race-condition",
+  "file": "src/components/modules/visual-gen/asset-forge/useForgeStore.ts:152",
+  "scenario": "For an MCP provider (Rodin/Hunyuan3D), `submitMcpJob` starts `setInterval(async () => {...}, 5000)`. If a status request is slow (overloaded MCP bridge, slow network) and takes longer than the 5s interval, `setInterval` fires the next tick before the previous async callback has returned \u2014 two callbacks run concurrently. Both can read `status === 'completed'` from their respective in-flight responses."
+ },
+ {
+  "slug": "visual-asset-generation",
+  "group": "Visual Content Generation",
+  "ctx": "Visual Asset Generation",
+  "title": "Object URLs created for reference images are never revoked",
+  "sev": "medium",
+  "cat": "resource-leak",
+  "file": "src/components/modules/visual-gen/asset-forge/GenerationPanel.tsx:72",
+  "scenario": "In image-to-3D mode, every submit does `URL.createObjectURL(imageFile)` and stores the blob URL on the job (`addJob({ imageUrl })`). The user uploads several reference images across a session, submitting each. None of these blob URLs is ever revoked \u2014 not on submit, not when the job is removed (`removeJob` only clears polling intervals), not on unmount."
+ },
+ {
+  "slug": "world-quests-procgen",
+  "group": "Progression, World & Bestiary",
+  "ctx": "World, Quests & Procgen",
+  "title": "Every generated quest's \"Tell me more\" dialogue choice points to a non-existent node",
+  "sev": "critical",
+  "cat": "data-loss",
+  "file": "src/lib/quest-generator.ts:372",
+  "scenario": "A designer generates quests, a player (or the in-engine dialogue runtime / the UI dialogue-tree viewer) opens the quest-giver conversation and clicks the always-present middle choice \"Tell me more about this task.\""
+ },
+ {
+  "slug": "world-quests-procgen",
+  "group": "Progression, World & Bestiary",
+  "ctx": "World, Quests & Procgen",
+  "title": "Module-global `nextId` counter is reset and mutated per call \u2014 concurrent generations collide",
+  "sev": "high",
+  "cat": "race-condition",
+  "file": "src/lib/quest-generator.ts:90-93,553",
+  "scenario": "Two clients (or one client double-clicking \"Generate\") POST `/api/quest-generation` close together. Request A enters `generateQuests`, sets `nextId = 0`, and starts minting ids. Request B enters, resets `nextId = 0` again mid-flight, and both now interleave `++nextId` over the same module-scoped variable."
+ },
+ {
+  "slug": "world-quests-procgen",
+  "group": "Progression, World & Bestiary",
+  "ctx": "World, Quests & Procgen",
+  "title": "`asZone` trusts `connections` array elements without validating they are strings",
+  "sev": "high",
+  "cat": "edge-case",
+  "file": "src/lib/world/zone-analysis.ts:31,39",
+  "scenario": "A catalog `zone-map` entity's `data` (arbitrary persisted/AI-authored JSON) has `connections: [\"z2\", 7, null, {\"id\":\"z3\"}]` \u2014 well-formed enough to pass the guard but with non-string members. `asZone` returns a `ZoneLike`, and `lintZone` then iterates `zone.connections` calling `byId.get(targetId)`."
+ },
+ {
+  "slug": "world-quests-procgen",
+  "group": "Progression, World & Bestiary",
+  "ctx": "World, Quests & Procgen",
+  "title": "Fetch-quest target rooms picked with un-seeded `Math.random()` \u2014 non-reproducible, hydration-divergent",
+  "sev": "medium",
+  "cat": "logic-error",
+  "file": "src/lib/quest-generator.ts:191",
+  "scenario": "A designer generates quests, dislikes one, and clicks \"Generate\" again to compare \u2014 or the same `(classes, levelDoc)` input is run twice for a diff/regression check. Each run uses `explorationRooms[Math.floor(Math.random() * explorationRooms.length)]` to choose the fetch target."
+ }
+]

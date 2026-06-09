@@ -137,6 +137,11 @@ export function processSession(session: PlaytestSession): RegressionReport {
   ensureTables();
   const db = getDb();
 
+  // Wrap the whole multi-table mutation (fingerprints + occurrences + alerts + the
+  // "mark fixed" sweep) in one transaction. better-sqlite3 transactions are synchronous
+  // and roll back atomically on any throw, so a mid-loop failure can no longer leave
+  // occurrence_count, the occurrence rows, and fingerprint status disagreeing.
+  return db.transaction((): RegressionReport => {
   // Findings the user marked as false-positive or ignore are excluded from
   // fingerprinting so noise doesn't inflate regression counts.
   const findings = getFindings(session.id).filter(f => !isTriageExcluded(f.triageStatus));
@@ -284,6 +289,7 @@ export function processSession(session: PlaytestSession): RegressionReport {
     newlyFixed,
     stats,
   };
+  })();
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────

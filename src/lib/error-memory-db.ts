@@ -253,11 +253,14 @@ export function getRelevantErrors(
 
 // ── Mark resolved ───────────────────────────────────────────────────────
 
-export function markResolved(fingerprint: string): void {
+export function markResolved(moduleId: string, fingerprint: string): void {
   ensureErrorMemoryTable();
+  // Scope by module: fingerprints are module-independent and the table is keyed
+  // UNIQUE(module_id, fingerprint), so resolving without the module_id filter would mark
+  // the same fingerprint resolved in EVERY other module and drop its warning from their prompts.
   getDb().prepare(
-    'UPDATE error_memory SET was_resolved = 1 WHERE fingerprint = ?'
-  ).run(fingerprint);
+    'UPDATE error_memory SET was_resolved = 1 WHERE module_id = ? AND fingerprint = ?'
+  ).run(moduleId, fingerprint);
 }
 
 // ── Stats ───────────────────────────────────────────────────────────────

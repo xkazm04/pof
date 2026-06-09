@@ -114,7 +114,29 @@ class BlenderMCPService {
 
   // ── Low-level TCP send/receive ──────────────────────────────────────────
 
+  /** Serializes socket I/O so only one command is ever outstanding at a time. */
+  private commandChain: Promise<unknown> = Promise.resolve();
+
+  /**
+   * Serialize every command on the shared socket. The wire protocol has no
+   * request/response correlation (no id, no length prefix), so two concurrent
+   * callers would each attach a `data` listener to the same socket and whichever
+   * parsed first could resolve with the *other* command's bytes. Chaining each
+   * command after the previous one settles guarantees exactly one outstanding
+   * request at a time, which makes the cross-wire impossible.
+   */
   private sendCommand(
+    command: BlenderCommand,
+  ): Promise<Result<unknown, string>> {
+    const run = this.commandChain
+      .catch(() => undefined)
+      .then(() => this.sendCommandRaw(command));
+    // Keep the chain alive regardless of this command's outcome.
+    this.commandChain = run.catch(() => undefined);
+    return run;
+  }
+
+  private sendCommandRaw(
     command: BlenderCommand,
   ): Promise<Result<unknown, string>> {
     return new Promise((resolve) => {

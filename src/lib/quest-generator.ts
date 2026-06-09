@@ -186,9 +186,11 @@ function generateFetchQuests(
 
   if (explorationRooms.length === 0 || worldScan.itemClasses.length === 0) return quests;
 
-  // Create one fetch quest per item class
-  for (const itemClass of worldScan.itemClasses.slice(0, 3)) {
-    const targetRoom = explorationRooms[Math.floor(Math.random() * explorationRooms.length)];
+  // Create one fetch quest per item class. Pick the target room deterministically by index
+  // (not un-seeded Math.random) so the generator stays a pure function of its inputs and the
+  // same world reproduces the same quests for diffing / regression / "regenerate to compare".
+  for (const [itemIndex, itemClass] of worldScan.itemClasses.slice(0, 3).entries()) {
+    const targetRoom = explorationRooms[itemIndex % explorationRooms.length];
     const difficulty = targetRoom.difficulty as QuestDifficulty;
 
     quests.push({
@@ -362,6 +364,7 @@ function generateQuestDialogue(
   const acceptNode = did();
   const declineNode = did();
   const openingId = did();
+  const infoNode = did();
 
   nodes.push({
     id: openingId,
@@ -369,7 +372,8 @@ function generateQuestDialogue(
     text: openingTexts[questType],
     choices: [
       { id: cid(), text: 'I accept the challenge.', nextNodeId: acceptNode, questEffect: 'accept' },
-      { id: cid(), text: 'Tell me more about this task.', nextNodeId: did(), condition: undefined },
+      // Reference a real node, not a fresh dangling id — see the infoNode pushed below.
+      { id: cid(), text: 'Tell me more about this task.', nextNodeId: infoNode, condition: undefined },
       { id: cid(), text: 'Not right now.', nextNodeId: declineNode },
     ],
   });
@@ -388,6 +392,25 @@ function generateQuestDialogue(
     speaker,
     text: 'I understand. Come back when you are ready.',
     choices: [{ id: cid(), text: '[Leave]', nextNodeId: null }],
+  });
+
+  // Info node — the "Tell me more" choice MUST resolve to a node that exists, or every
+  // generated quest ships a dangling dialogue pointer that dead-ends/crashes any walker.
+  // It offers the same accept/decline branches so the whole tree stays fully connected.
+  const infoTexts: Record<string, string> = {
+    clear: `The ${count} hostiles have fortified the ruins. Clear every last one and the way will be safe again.`,
+    fetch: 'It lies deep below, lost and well guarded. Bring it back and you will be richly rewarded.',
+    interact: 'The mechanism is ancient and stubborn. Reach it, activate it, and its power is yours.',
+    traverse: `${count} zones stand between here and the end. Press through each one — few have the resolve.`,
+  };
+  nodes.push({
+    id: infoNode,
+    speaker,
+    text: infoTexts[questType],
+    choices: [
+      { id: cid(), text: 'I accept the challenge.', nextNodeId: acceptNode, questEffect: 'accept' },
+      { id: cid(), text: 'Not right now.', nextNodeId: declineNode },
+    ],
   });
 
   return nodes;

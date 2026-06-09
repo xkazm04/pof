@@ -31,6 +31,7 @@ import {
   getABTestById,
   getAllABTests,
   getABTestsForItem,
+  recordTrialAndEvaluate,
 } from './evolution-db';
 
 // ── Persistence ─────────────────────────────────────────────────────────────
@@ -235,28 +236,10 @@ export function recordTestTrial(
   success: boolean,
   durationMs: number,
 ): ABTest | null {
-  const test = getABTestById(testId);
-  if (!test || test.status !== 'running') return null;
-
-  const updated = {
-    ...test,
-    ...(variantSlot === 'A'
-      ? {
-          variantATrials: test.variantATrials + 1,
-          variantASuccesses: test.variantASuccesses + (success ? 1 : 0),
-          variantATotalDurationMs: test.variantATotalDurationMs + durationMs,
-        }
-      : {
-          variantBTrials: test.variantBTrials + 1,
-          variantBSuccesses: test.variantBSuccesses + (success ? 1 : 0),
-          variantBTotalDurationMs: test.variantBTotalDurationMs + durationMs,
-        }),
-  };
-
-  // Check if test should conclude
-  const evaluated = evaluateTest(updated);
-  upsertABTest(evaluated);
-  return evaluated;
+  // Atomic SQL increment + evaluate inside a single transaction (see evolution-db) —
+  // replaces the lost-update-prone read-modify-write that overwrote the whole row from a
+  // stale JS snapshot, silently dropping concurrent trials and skewing the A/B verdict.
+  return recordTrialAndEvaluate(testId, variantSlot, success, durationMs, evaluateTest);
 }
 
 export function concludeTest(testId: string): ABTest | null {

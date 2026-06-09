@@ -26,7 +26,10 @@ export function createXorShift32RNG(seed: number, normalize = 4294967296): () =>
   let s = seed | 0 || 1;
   return () => {
     s ^= s << 13;
-    s ^= s >> 17;
+    // Unsigned shift: XORShift32 requires `>>>`. The signed `>>` sign-extends the negative
+    // 32-bit state, biasing the stream and shortening its period — corrupting every statistic
+    // the loot drop simulator / combat sweep compute from it.
+    s ^= s >>> 17;
     s ^= s << 5;
     return (s >>> 0) / normalize;
   };

@@ -1,4 +1,6 @@
 import { spawn } from 'node:child_process';
+import { readdir, stat } from 'node:fs/promises';
+import { join } from 'node:path';
 import type { BuildProfile } from './build-profiles';
 import { generateUATCommand } from './uat-command-generator';
 import type { SpawnFn } from './process-utils';
@@ -11,8 +13,39 @@ export type CookEvent =
   | { type: 'phase'; phase: CookPhase; t: number }
   | { type: 'progress'; percent: number; t: number }
   | { type: 'log'; line: string; t: number }
-  | { type: 'done'; exePath: string; durationMs: number; sizeBytes: number; status: 'success'; t: number }
+  // sizeBytes is a *measured* fact (recursive sum of the stage dir) or null when it
+  // couldn't be measured — never a placeholder 0, which would masquerade as a real
+  // measurement and silently disable the entire size-budget gate (evaluateBuildSize
+  // treats <= 0 as "no size" and stats skip NULL rows).
+  | { type: 'done'; exePath: string; durationMs: number; sizeBytes: number | null; status: 'success'; t: number }
   | { type: 'error'; message: string; status: 'failed'; t: number };
+
+/**
+ * Recursively sum the byte size of every file under `dir`. Returns null only when the
+ * directory itself can't be read (so the caller records "unknown", not a fake 0);
+ * individual unreadable entries are skipped so a partial tree still yields a best-effort sum.
+ */
+async function dirSizeBytes(dir: string): Promise<number | null> {
+  let entries;
+  try {
+    entries = await readdir(dir, { withFileTypes: true });
+  } catch {
+    return null;
+  }
+  let total = 0;
+  for (const entry of entries) {
+    const full = join(dir, entry.name);
+    try {
+      if (entry.isDirectory()) {
+        const sub = await dirSizeBytes(full);
+        if (sub !== null) total += sub;
+      } else if (entry.isFile()) {
+        total += (await stat(full)).size;
+      }
+    } catch { /* skip an unreadable entry, keep summing the rest */ }
+  }
+  return total;
+}
 
 export interface CookExecutorOptions {
   profile: BuildProfile;
@@ -127,11 +160,14 @@ export async function* cookExecutor(opts: CookExecutorOptions): AsyncGenerator<C
   });
 
   if (exit === 0) {
+    // Measure the staged build on disk. RunUAT never prints the size, so without this
+    // the size-budget gate, trend chart, and stats are blind on every real cook.
+    const sizeBytes = stageDir ? await dirSizeBytes(stageDir) : null;
     yield {
       type: 'done',
       exePath: stageDir ? `${stageDir}\\${opts.projectName}.exe` : '',
       durationMs: t(),
-      sizeBytes: 0,
+      sizeBytes,
       status: 'success',
       t: t(),
     };

@@ -51,6 +51,17 @@ export async function POST(req: NextRequest) {
           return apiError('ueVersion is required', 400);
         }
 
+        // Trust-boundary validation: targetName is interpolated into the build target and
+        // the `.uproject` path, and projectPath becomes the spawn cwd. Reject non-identifier
+        // target names and path-traversal so a crafted value can't climb out of the project
+        // directory or smuggle extra build args (defense-in-depth alongside shell:false).
+        if (!/^[A-Za-z0-9_]+$/.test(targetName)) {
+          return apiError('targetName must be alphanumeric/underscore only', 400);
+        }
+        if (projectPath.includes('..')) {
+          return apiError('projectPath must not contain ".."', 400);
+        }
+
         const startBody = body as StartAction;
         const request: BuildRequest = {
           projectPath,

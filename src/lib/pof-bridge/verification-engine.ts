@@ -86,25 +86,29 @@ export async function autoUpdateFeatureMatrix(
 
   // Batch-update changed features via the API
   if (updates.length > 0) {
-    await tryApiFetch('/api/feature-matrix', {
+    const writeResult = await tryApiFetch('/api/feature-matrix', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ moduleId, features: updates }),
     });
 
-    // Emit bus events for each status change
-    for (const update of updates) {
-      eventBus.emit(
-        'checklist.item.changed',
-        {
-          moduleId,
-          itemId: update.featureName,
-          checked:
-            update.status === 'implemented' || update.status === 'improved',
-          source: 'auto-verify',
-        },
-        'verification-engine',
-      );
+    // Only emit "changed" events when the write actually persisted. If it failed, the next
+    // manifest poll recomputes the same diff and re-fires these events (event storm) while
+    // the bus claims changes the DB never recorded — leave it for the retry instead.
+    if (writeResult.ok) {
+      for (const update of updates) {
+        eventBus.emit(
+          'checklist.item.changed',
+          {
+            moduleId,
+            itemId: update.featureName,
+            checked:
+              update.status === 'implemented' || update.status === 'improved',
+            source: 'auto-verify',
+          },
+          'verification-engine',
+        );
+      }
     }
   }
 

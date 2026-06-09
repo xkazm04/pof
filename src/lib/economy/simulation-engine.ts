@@ -229,6 +229,28 @@ function simulateAgentHour(
 
 // ── Flow Overrides ──────────────────────────────────────────────────────────
 
+/**
+ * Merge a client-supplied flow override onto a base flow, copying ONLY known numeric
+ * fields and coercing each to a finite, non-negative number. The overrides arrive
+ * verbatim from the request body, so a blind `{ ...base, ...ov }` spread would inject a
+ * string/NaN `baseAmount` (NaN-poisoning every downstream metric), a negative
+ * `frequencyPerHour` (silently dropping the flow while it still reads as "active"), or a
+ * bogus `id`/`type` that desyncs the model. Non-finite values keep the base value.
+ */
+function sanitizeFlowOverride(base: EconomyFlow, ov: Partial<EconomyFlow>): EconomyFlow {
+  const next = { ...base };
+  const num = (raw: unknown): number | undefined => {
+    const n = Number(raw);
+    return Number.isFinite(n) ? Math.max(0, n) : undefined;
+  };
+  const baseAmount = num(ov.baseAmount); if (baseAmount !== undefined) next.baseAmount = baseAmount;
+  const levelScaling = num(ov.levelScaling); if (levelScaling !== undefined) next.levelScaling = levelScaling;
+  const frequencyPerHour = num(ov.frequencyPerHour); if (frequencyPerHour !== undefined) next.frequencyPerHour = frequencyPerHour;
+  const minLevel = num(ov.minLevel); if (minLevel !== undefined) next.minLevel = Math.floor(minLevel);
+  const maxLevel = num(ov.maxLevel); if (maxLevel !== undefined) next.maxLevel = Math.floor(maxLevel);
+  return next;
+}
+
 export function applyFlowOverrides(
   defaults: EconomyFlow[],
   overrides: Partial<EconomyFlow>[] | undefined,
@@ -242,9 +264,10 @@ export function applyFlowOverrides(
 
   if (!overrides) return flows;
   for (const ov of overrides) {
+    if (!ov || typeof ov !== 'object') continue;
     const idx = flows.findIndex((f) => f.id === ov.id);
     if (idx >= 0) {
-      flows[idx] = { ...flows[idx], ...ov };
+      flows[idx] = sanitizeFlowOverride(flows[idx], ov);
     }
   }
   return flows;

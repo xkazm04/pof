@@ -20,10 +20,21 @@ export function resolveItemName(item: UE5LootEntry['Item']): string {
   return item.Name ?? item.AssetName ?? item.ObjectName ?? 'Unknown Item';
 }
 
+/**
+ * Coerce an imported numeric field to a finite, non-negative number. The UE5 import is a
+ * trust boundary (arbitrary user JSON): `??` only guards null/undefined, so a string,
+ * NaN, negative, or Infinity DropWeight would otherwise pass straight through and poison
+ * the weight sum (one NaN → NaN%), the live-preview bars, and the regenerated UE5 codegen.
+ */
+function finiteNonNeg(raw: unknown, fallback: number): number {
+  const n = Number(raw);
+  return Number.isFinite(n) && n >= 0 ? n : fallback;
+}
+
 export function parseUE5LootTable(json: UE5LootTableJson): { entries: LootEditorEntry[]; nothingWeight: number } {
   const props = json.Properties ?? json;
   const rawEntries = props.Entries ?? [];
-  const nothingWeight = props.NothingWeight ?? 0;
+  const nothingWeight = finiteNonNeg(props.NothingWeight, 0);
 
   const entries: LootEditorEntry[] = rawEntries.map((entry, i) => {
     const minRarity = resolveRarityName(entry.MinRarity);
@@ -31,11 +42,11 @@ export function parseUE5LootTable(json: UE5LootTableJson): { entries: LootEditor
     return {
       id: `ue5_${i}_${Date.now()}`,
       name: resolveItemName(entry.Item),
-      weight: entry.DropWeight ?? 1,
+      weight: finiteNonNeg(entry.DropWeight, 1),
       rarity: minRarity,
       color: RARITY_COLOR_MAP[minRarity] ?? STATUS_MUTED,
-      minQuantity: entry.MinQuantity ?? 1,
-      maxQuantity: entry.MaxQuantity ?? 1,
+      minQuantity: finiteNonNeg(entry.MinQuantity, 1),
+      maxQuantity: finiteNonNeg(entry.MaxQuantity, 1),
       minRarity,
       maxRarity,
     };

@@ -54,8 +54,11 @@ export function calculateDamage(
   const isCrit = rng() < sourceAttrs.critChance;
   const critMul = isCrit ? sourceAttrs.critDamage * tuning.critMultiplierMul : 1.0;
 
-  // Armor reduction (diminishing returns)
-  const effectiveArmor = targetAttrs.armor * (isPlayer ? tuning.enemyDamageMul : tuning.playerArmorMul) * tuning.armorEffectivenessWeight;
+  // Armor reduction (diminishing returns). targetAttrs.armor already includes the build-time
+  // playerArmorMul (see buildPlayerAttributes), so re-applying a multiplier here squared the
+  // player's mitigation, and feeding enemyDamageMul (a *damage* knob) into the enemy's armor
+  // made raising enemy damage also raise enemy armor. Apply only the effectiveness weight.
+  const effectiveArmor = targetAttrs.armor * tuning.armorEffectivenessWeight;
   const armorReduction = effectiveArmor / (effectiveArmor + 100);
 
   const finalDamage = Math.max(1, Math.round(baseDmg * damageMul * critMul * (1 - armorReduction)));

@@ -342,7 +342,10 @@ export function createHarnessOrchestrator(config: HarnessConfig): HarnessOrchest
     ueVersion: config.ueVersion,
   };
 
-  const maxConcurrent = config.executor.maxConcurrent ?? 1;
+  // Checkpoint rollback runs `git reset --hard` on the shared working tree; with concurrency
+  // >1 that would wipe sibling areas' in-flight edits. Checkpointing assumes sequential
+  // execution, so force a single worker whenever it is enabled.
+  const maxConcurrent = config.checkpoint === true ? 1 : (config.executor.maxConcurrent ?? 1);
   const areaPassThreshold = (config.executor.areaPassThreshold ?? config.targetPassRate) / 100;
   const maxRetries = config.executor.maxRetriesPerArea;
   const budgetUsd = typeof config.budgetUsd === 'number' && config.budgetUsd > 0 ? config.budgetUsd : null;
@@ -365,12 +368,19 @@ export function createHarnessOrchestrator(config: HarnessConfig): HarnessOrchest
     return budgetWouldOverflow(cost, budgetUsd);
   }
 
-  /** Record a session's reported cost into the running totals + persist. */
+  /** Fallback per-session spend (USD) used when the CLI reports no cost, so the budget
+   *  governor keeps advancing toward the cap instead of being silently disabled when the
+   *  cost signal is absent. */
+  const SESSION_COST_ESTIMATE_USD = 0.5;
+
+  /** Record a session's cost into the running totals + persist. Always counts the session
+   *  (so avgSessionCost has a non-zero denominator and the governor can fire); a missing or
+   *  non-positive cost falls back to an estimate rather than dropping the session to $0. */
   function recordSessionCost(areaId: string, costUsd: number | undefined): void {
-    if (!costUsd || costUsd <= 0) return;
+    const amount = typeof costUsd === 'number' && costUsd > 0 ? costUsd : SESSION_COST_ESTIMATE_USD;
     cost.sessions += 1;
-    cost.spentUsd += costUsd;
-    cost.byArea[areaId] = (cost.byArea[areaId] ?? 0) + costUsd;
+    cost.spentUsd += amount;
+    cost.byArea[areaId] = (cost.byArea[areaId] ?? 0) + amount;
     saveCost(config.statePath, cost);
   }
 

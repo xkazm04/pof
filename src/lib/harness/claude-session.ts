@@ -135,7 +135,10 @@ export function spawnClaudeSession(
             sessionId = parsed.session_id;
           }
           if (parsed.type === 'result') {
-            if (parsed.cost_usd) costUsd = parsed.cost_usd;
+            // Current Claude CLIs report `total_cost_usd`; older ones used `cost_usd`.
+            // Accept either, or the harness budget governor never sees any spend.
+            const reported = parsed.total_cost_usd ?? parsed.cost_usd;
+            if (typeof reported === 'number') costUsd = reported;
             // The result message may also contain the final text
             if (parsed.result?.text) assistantText += parsed.result.text;
           }

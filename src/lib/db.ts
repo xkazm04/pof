@@ -17,6 +17,12 @@ export function getDb(): Database.Database {
 
   db = new Database(DB_PATH);
   db.pragma('journal_mode = WAL');
+  // Enforce foreign keys for the whole shared connection (SQLite defaults them OFF, per
+  // connection). Without this, declared `REFERENCES ... ON DELETE CASCADE` clauses are
+  // decorative — deletes leak orphan child rows and inserts can reference nonexistent
+  // parents — and whether they fire becomes non-deterministic based on which feature's
+  // init happened to toggle the pragma first.
+  db.pragma('foreign_keys = ON');
 
   db.exec(`
     CREATE TABLE IF NOT EXISTS settings (
@@ -291,8 +297,12 @@ export function getDb(): Database.Database {
       prompt_length INTEGER NOT NULL DEFAULT 0,
       success INTEGER NOT NULL DEFAULT 0,
       duration_ms INTEGER NOT NULL DEFAULT 0,
-      started_at TEXT NOT NULL DEFAULT (datetime('now')),
-      completed_at TEXT NOT NULL DEFAULT (datetime('now'))
+      -- ISO-8601 with milliseconds + Z, matching new Date().toISOString() (the app writer).
+      -- The old datetime('now') produced a SPACE-separated value that sorts BELOW 'T', so a
+      -- default-inserted row would silently fall outside the lexicographic week-range filter
+      -- (WHERE completed_at >= weekStartISO) and vanish from digests.
+      started_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
+      completed_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
     )
   `);
 
