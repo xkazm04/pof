@@ -17,6 +17,12 @@ export function getDb(): Database.Database {
 
   db = new Database(DB_PATH);
   db.pragma('journal_mode = WAL');
+  // Enforce foreign keys for the whole shared connection (SQLite defaults them OFF, per
+  // connection). Without this, declared `REFERENCES ... ON DELETE CASCADE` clauses are
+  // decorative — deletes leak orphan child rows and inserts can reference nonexistent
+  // parents — and whether they fire becomes non-deterministic based on which feature's
+  // init happened to toggle the pragma first.
+  db.pragma('foreign_keys = ON');
 
   db.exec(`
     CREATE TABLE IF NOT EXISTS settings (
