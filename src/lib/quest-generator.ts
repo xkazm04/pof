@@ -186,9 +186,11 @@ function generateFetchQuests(
 
   if (explorationRooms.length === 0 || worldScan.itemClasses.length === 0) return quests;
 
-  // Create one fetch quest per item class
-  for (const itemClass of worldScan.itemClasses.slice(0, 3)) {
-    const targetRoom = explorationRooms[Math.floor(Math.random() * explorationRooms.length)];
+  // Create one fetch quest per item class. Pick the target room deterministically by index
+  // (not un-seeded Math.random) so the generator stays a pure function of its inputs and the
+  // same world reproduces the same quests for diffing / regression / "regenerate to compare".
+  for (const [itemIndex, itemClass] of worldScan.itemClasses.slice(0, 3).entries()) {
+    const targetRoom = explorationRooms[itemIndex % explorationRooms.length];
     const difficulty = targetRoom.difficulty as QuestDifficulty;
 
     quests.push({
