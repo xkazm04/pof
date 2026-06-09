@@ -165,7 +165,9 @@ async function defaultRunCook(ctx: ScheduledRunContext): Promise<CookOutcome> {
     if (ev.type === 'done' || ev.type === 'error') break;
   }
   if (last?.type === 'done') {
-    return { status: 'success', exePath: last.exePath, durationMs: last.durationMs, sizeBytes: last.sizeBytes };
+    // last.sizeBytes is the measured stage size or null when unmeasurable; the caller
+    // re-normalizes 0 → null (treated as "unknown size"), so coercing null to 0 here is safe.
+    return { status: 'success', exePath: last.exePath, durationMs: last.durationMs, sizeBytes: last.sizeBytes ?? 0 };
   }
   return {
     status: 'failed', exePath: '',
