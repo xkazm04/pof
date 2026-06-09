@@ -318,10 +318,21 @@ function extractTriggerKeywords(prompts: string[], approach: string): string[] {
     }
   }
 
-  // Extract commonly-repeated words from failed prompts (3+ chars, appears in >50% of prompts)
+  // Extract distinctive repeated words from failed prompts: 5+ chars, appears in >50% of
+  // prompts, and not a generic English/UE token. Without the length+stopword filter, words
+  // like "state"/"actor"/"widget" became triggers that match half of all future prompts.
+  // Tokenize the same way the matcher does (split on non-alphanumerics) so mined keywords
+  // are clean whole words that can actually match.
+  const STOPWORDS = new Set([
+    'implement', 'create', 'build', 'make', 'should', 'using', 'with', 'that', 'this', 'from',
+    'have', 'been', 'state', 'event', 'events', 'actor', 'actors', 'component', 'components',
+    'widget', 'widgets', 'class', 'classes', 'function', 'value', 'values', 'level', 'levels',
+    'system', 'object', 'objects', 'blueprint', 'logic', 'first', 'after', 'before', 'where',
+    'which', 'their', 'about', 'would', 'could', 'these', 'those', 'there',
+  ]);
   const wordCounts = new Map<string, number>();
   for (const prompt of prompts) {
-    const words = new Set(prompt.toLowerCase().split(/\s+/).filter((w) => w.length >= 4));
+    const words = new Set(prompt.toLowerCase().split(/[^a-z0-9]+/).filter((w) => w.length >= 5));
     for (const word of words) {
       wordCounts.set(word, (wordCounts.get(word) ?? 0) + 1);
     }
@@ -329,7 +340,7 @@ function extractTriggerKeywords(prompts: string[], approach: string): string[] {
 
   const threshold = Math.max(2, Math.floor(prompts.length * 0.5));
   for (const [word, count] of wordCounts) {
-    if (count >= threshold && !['implement', 'create', 'build', 'make', 'should', 'using', 'with', 'that', 'this', 'from', 'have', 'been'].includes(word)) {
+    if (count >= threshold && !STOPWORDS.has(word)) {
       keywords.add(word);
     }
   }
