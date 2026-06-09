@@ -211,6 +211,8 @@ export function useTaskQueue(opts: UseTaskQueueOpts) {
   const stuckCheckIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const pendingNextTaskRef = useRef<NodeJS.Timeout | null>(null);
   const savedStreamUrlRef = useRef<string | null>(null);
+  /** Server-side execution id for the in-flight run, so abort can kill the process. */
+  const executionIdRef = useRef<string | null>(null);
 
   // Notify parent when streaming state changes
   const prevStreamingRef = useRef(false);
@@ -442,6 +444,7 @@ export function useTaskQueue(opts: UseTaskQueueOpts) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ projectPath, prompt: taskPrompt, resumeSessionId: resumeSession ? state.sessionId : undefined }),
       });
+      executionIdRef.current = data.executionId;
       if (data.logFilePath) dispatch({ type: 'SET_LOG_FILE', path: data.logFilePath });
       connectToStream(data.streamUrl);
     } catch (e) {
@@ -465,6 +468,7 @@ export function useTaskQueue(opts: UseTaskQueueOpts) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ projectPath, prompt, resumeSessionId: resumeSession ? state.sessionId : undefined }),
       });
+      executionIdRef.current = data.executionId;
       if (data.logFilePath) dispatch({ type: 'SET_LOG_FILE', path: data.logFilePath });
       connectToStream(data.streamUrl);
     } catch (e) {
@@ -477,6 +481,15 @@ export function useTaskQueue(opts: UseTaskQueueOpts) {
   const handleAbort = useCallback(async () => {
     if (eventSourceRef.current) { eventSourceRef.current.close(); eventSourceRef.current = null; }
     clearHeartbeat();
+    // Closing the SSE stream does NOT stop the spawned claude.cmd — it keeps editing files
+    // and billing tokens until the 100-min timeout. Kill the server-side process by id.
+    const execId = executionIdRef.current;
+    executionIdRef.current = null;
+    if (execId) {
+      try {
+        await apiFetch(`/api/claude-terminal/query?executionId=${encodeURIComponent(execId)}`, { method: 'DELETE' });
+      } catch { /* best-effort: the process may have already exited */ }
+    }
     const tid = currentTaskIdRef.current;
     if (tid) {
       registerTaskComplete(tid, instanceId, false);
