@@ -35,15 +35,21 @@ function rollDamage(attacker: CombatantStats, targetArmor: number): { damage: nu
 
 /* ── Single Iteration ─────────────────────────────────────────────────── */
 
+/** Defensive ceiling on materialized enemies so an unvalidated `count` can never OOM the tab. */
+const MAX_MATERIALIZED_ENEMIES = 5000;
+
 /** Run one iteration: player attacks all enemies sequentially, enemies attack back */
 export function runIteration(player: CombatantStats, enemies: EnemyConfig[]): SimIterationResult {
   const scaledPlayer = applyScaling(player);
-  const allEnemies = enemies.flatMap(e =>
-    Array.from({ length: e.count }, () => ({
+  const allEnemies = enemies.flatMap(e => {
+    // Guard the allocation: clamp to a non-negative integer count and a hard ceiling
+    // (the scenario validator already bounds this; this is belt-and-braces for any caller).
+    const count = Math.min(Math.max(0, Math.floor(e.count) || 0), MAX_MATERIALIZED_ENEMIES);
+    return Array.from({ length: count }, () => ({
       ...applyScaling(e.stats),
       currentHp: applyScaling(e.stats).maxHealth,
-    }))
-  );
+    }));
+  });
 
   let playerHp = scaledPlayer.maxHealth;
   let totalDamage = 0;

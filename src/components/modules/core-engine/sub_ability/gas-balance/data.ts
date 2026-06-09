@@ -173,13 +173,43 @@ const COMBATANT_STAT_KEYS: (keyof CombatantStats)[] = [
   'baseDamage', 'attackSpeed',
 ];
 
+/**
+ * Per-field bounds for imported scenarios. "Valid" must mean "physically sane and
+ * bounded" (the envelope the editor sliders enforce), not merely "finite" — otherwise
+ * a shared/crafted scenario code can wedge or OOM the simulator on Run:
+ *  - attackSpeed <= 0 => `1 / attackSpeed` = Infinity (player never resolves an attack)
+ *  - armor < 0        => armor/(armor+100) = ±Infinity => NaN health report
+ *  - count = 1e9      => `Array.from({ length: count })` allocates a billion entries (OOM)
+ * The min on attackSpeed and the max on count/iterations are the load-bearing guards.
+ */
+const STAT_BOUNDS: Record<Exclude<keyof CombatantStats, 'name'>, { min: number; max: number }> = {
+  level:          { min: 1,    max: 1000 },
+  maxHealth:      { min: 1,    max: 10_000_000 },
+  maxMana:        { min: 0,    max: 10_000_000 },
+  strength:       { min: 0,    max: 100_000 },
+  dexterity:      { min: 0,    max: 100_000 },
+  intelligence:   { min: 0,    max: 100_000 },
+  armor:          { min: 0,    max: 1_000_000 },
+  attackPower:    { min: 0,    max: 1_000_000 },
+  criticalChance: { min: 0,    max: 1 },
+  criticalDamage: { min: 0,    max: 100 },
+  baseDamage:     { min: 0,    max: 1_000_000 },
+  attackSpeed:    { min: 0.01, max: 1000 },
+};
+
+const MAX_ENEMY_COUNT = 1000;
+const MAX_ITERATIONS = 100_000;
+
 function isValidCombatantStats(obj: unknown): obj is CombatantStats {
   if (!obj || typeof obj !== 'object') return false;
   const o = obj as Record<string, unknown>;
   if (typeof o.name !== 'string') return false;
   for (const key of COMBATANT_STAT_KEYS) {
     if (key === 'name') continue;
-    if (typeof o[key] !== 'number' || !isFinite(o[key] as number)) return false;
+    const v = o[key];
+    if (typeof v !== 'number' || !isFinite(v)) return false;
+    const b = STAT_BOUNDS[key as Exclude<keyof CombatantStats, 'name'>];
+    if (v < b.min || v > b.max) return false;
   }
   return true;
 }
@@ -187,16 +217,18 @@ function isValidCombatantStats(obj: unknown): obj is CombatantStats {
 function isValidEnemyConfig(obj: unknown): obj is EnemyConfig {
   if (!obj || typeof obj !== 'object') return false;
   const o = obj as Record<string, unknown>;
-  return typeof o.id === 'string' && typeof o.count === 'number' && isValidCombatantStats(o.stats);
+  return typeof o.id === 'string'
+    && typeof o.count === 'number' && Number.isInteger(o.count) && o.count >= 1 && o.count <= MAX_ENEMY_COUNT
+    && isValidCombatantStats(o.stats);
 }
 
 function isValidSimScenario(obj: unknown): obj is SimScenario {
   if (!obj || typeof obj !== 'object') return false;
   const o = obj as Record<string, unknown>;
   if (typeof o.id !== 'string' || typeof o.name !== 'string') return false;
-  if (typeof o.iterations !== 'number' || o.iterations < 1) return false;
+  if (typeof o.iterations !== 'number' || !Number.isInteger(o.iterations) || o.iterations < 1 || o.iterations > MAX_ITERATIONS) return false;
   if (!isValidCombatantStats(o.player)) return false;
-  if (!Array.isArray(o.enemies) || !o.enemies.every(isValidEnemyConfig)) return false;
+  if (!Array.isArray(o.enemies) || o.enemies.length === 0 || !o.enemies.every(isValidEnemyConfig)) return false;
   return true;
 }
 
