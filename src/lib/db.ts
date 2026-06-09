@@ -291,8 +291,12 @@ export function getDb(): Database.Database {
       prompt_length INTEGER NOT NULL DEFAULT 0,
       success INTEGER NOT NULL DEFAULT 0,
       duration_ms INTEGER NOT NULL DEFAULT 0,
-      started_at TEXT NOT NULL DEFAULT (datetime('now')),
-      completed_at TEXT NOT NULL DEFAULT (datetime('now'))
+      -- ISO-8601 with milliseconds + Z, matching new Date().toISOString() (the app writer).
+      -- The old datetime('now') produced a SPACE-separated value that sorts BELOW 'T', so a
+      -- default-inserted row would silently fall outside the lexicographic week-range filter
+      -- (WHERE completed_at >= weekStartISO) and vanish from digests.
+      started_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
+      completed_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
     )
   `);
 
