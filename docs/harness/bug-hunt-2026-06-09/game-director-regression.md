@@ -1,0 +1,39 @@
+# Bug Hunt — Game Director & Regression
+> Total: 4
+> Severity: 1 critical, 2 high, 1 medium
+
+## 1. `processSession` mutates four tables with no transaction — partial failure corrupts regression state
+- **Severity**: critical
+- **Category**: state-corruption
+- **File**: src/lib/regression-tracker.ts:136-287
+- **Scenario**: A session has, say, 30 findings. `processSession` loops over them issuing `INSERT INTO regression_fingerprints`, `INSERT INTO regression_occurrences`, `UPDATE … SET occurrence_count`, plus a separate `INSERT INTO regression_alerts` per regression, then a final sweep that flips other fingerprints to `'fixed'`. If the process dies mid-loop (SQLite `SQLITE_BUSY` from a concurrent writer, a thrown error on one malformed finding, a Next.js request abort, or the dev server being killed), the DB is left half-updated: some fingerprints bumped, some occurrences inserted, the global "mark fixed" sweep never run (or run against a half-built `currentHashes` set). Unlike `addFinding`/`updateFindingTriage`/`deleteSession` in game-director-db.ts — which all wrap their multi-statement writes in `db.transaction(...)` — `processSession` does every write bare.
+- **Root cause**: The function assumes its long sequence of dependent writes is atomic, but nothing makes it so. The whole point of fingerprint/occurrence/alert tracking is cross-session consistency; a partial write silently breaks the invariant that `occurrence_count`, the occurrence rows, and the fingerprint status all agree.
+- **Impact**: corruption — fingerprints with occurrence_count that disagrees with actual occurrence rows; fingerprints stuck 'open' that should be 'fixed' (→ false regressions next run) or vice-versa (→ missed regressions). The regression history, which is the module's entire value proposition, becomes untrustworthy with no error surfaced to the user.
+- **Fix sketch**: Wrap the entire body of `processSession` (all reads + writes that build the report) in `const tx = db.transaction(() => { ... }); return tx();`. better-sqlite3 transactions are synchronous and will roll back atomically on any throw, making the "half-applied" state impossible as a class.
+
+## 2. "Mark fixed" sweep is global and chronology-blind — processing an older session flags newer builds' issues as fixed and fabricates regressions
+- **Severity**: high
+- **Category**: logic-error
+- **File**: src/lib/regression-tracker.ts:248-263
+- **Scenario**: The Analyze dropdown (RegressionTrackerView.tsx:204) lists *every* completed session and lets the user process them in any order; nothing enforces chronological processing. Suppose builds A (older) and B (newer) both exist and B was processed first (so a fingerprint is `'open'`, last seen in B). The user then re-analyzes A. A doesn't contain that hash, so the sweep at line 254-263 — which selects ALL `open`/`regressed` fingerprints with no session-order filter — marks it `'fixed'`, even though it is live in the *newer* build B. The next time B is processed, that hash reappears against a `'fixed'` fingerprint and `processSession` emits a **phantom regression alert** for a bug that never actually went away.
+- **Root cause**: The sweep treats "not present in the session I happen to be processing right now" as "fixed in the latest build", conflating processing order with build chronology. `sessionOrder`/`sessionIndex` are computed (line 146-152) but never used to scope which fingerprints the sweep is allowed to close.
+- **Impact**: corruption / UX degradation — false `'fixed'` states and phantom regression alerts that page the team about bugs that were never resolved; regression rate and "Chronic Regressions" become noise, eroding trust in the tracker.
+- **Fix sketch**: Only close fingerprints whose latest occurrence is at or before `sessionOrder` (i.e., the session being processed is the newest build that should have re-confirmed them), or restrict processing to the most-recent unprocessed session and store a `last_processed_session_order` marker so the sweep can never close fingerprints owned by a later build.
+
+## 3. Re-analyzing a session duplicates alerts, inflates `regression_count`, and silently downgrades `'regressed'` → `'open'`
+- **Severity**: high
+- **Category**: state-corruption
+- **File**: src/lib/regression-tracker.ts:188-244
+- **Scenario**: `process-session` has no idempotency guard (route.ts:54-62 happily re-runs it; the UI lets you click Analyze on the same session repeatedly). On a first run a fingerprint that was `'fixed'` and reappears → status `'regressed'`, `regression_count` +1, a new `regression_alerts` row inserted. On a *second* run of the same session, `prevStatus` is now `'regressed'`, so control falls into the `else` branch (line 237-244) which sets status back to **`'open'`** — erasing the regressed state — while the earlier alert row and inflated `regression_count` persist. Occurrences are de-duped (line 189-194) but alerts are not: any path that keeps `prevStatus` in {`fixed`,`resolved`} across re-runs inserts a brand-new `crypto.randomUUID()` alert every time.
+- **Root cause**: The state machine assumes each session is processed exactly once. There is no `(fingerprint_id, reappeared_in_session_id)` uniqueness on `regression_alerts` and no check that an occurrence for this session was already recorded before mutating counts/status — so re-processing is destructive rather than a no-op.
+- **Impact**: corruption / UX degradation — duplicate "Active Regression Alerts" for one event, `regression_count` ("Nx regressed") that climbs on every click, and a regressed issue quietly relabeled 'open' so it drops out of the regressed metrics.
+- **Fix sketch**: Make `processSession` idempotent per session: short-circuit (or treat as replay) when `regression_occurrences` already has rows for `session.id`; add a UNIQUE constraint on `regression_alerts(fingerprint_id, reappeared_in_session_id)` with `INSERT OR IGNORE`; and never downgrade `'regressed'` → `'open'` for a finding still present.
+
+## 4. `snooze` triage is a dead feature — never hides findings and never expires
+- **Severity**: medium
+- **Category**: silent-failure
+- **File**: src/lib/game-director-db.ts:567 / src/components/modules/game-director/FindingsExplorer.tsx:92-112
+- **Scenario**: A user snoozes a finding for 7 days (FindingsExplorer.tsx:265-267 writes `snoozedUntil = now + 7d`). The type doc (game-director.ts:16-17, 109) promises snooze "keeps it in scoring but hides it until snoozedUntil expires." But `snoozed_until` is written and round-tripped (rowToFinding line 567) and then read by **nothing**: no query filters on it, and the `filtered`/`triageCounts` logic (FindingsExplorer.tsx:92-122) keys only off `triageStatus`. So a snoozed finding is *not* hidden under the "Open" filter (it's excluded only because `triageStatus !== 'active'`, lumping it with permanent triage), and when the 7 days elapse nothing ever flips it back to `'active'` — the snooze never wakes up.
+- **Root cause**: The feature was given storage (`snoozed_until`) and a setter but no reader. There is no place that compares `snoozedUntil` against `now` to (a) hide unexpired snoozes from the active list or (b) auto-revert expired ones, so the documented "temporary hide" behaves identically to a permanent manual triage.
+- **Impact**: UX degradation / silent failure — a snoozed bug silently disappears from the team's working set forever instead of resurfacing after the snooze window, so genuine issues are lost; the "snooze vs ignore" distinction the UI advertises is meaningless.
+- **Fix sketch**: On read (in `getFindings`/`getDirectorStats` or a normalization step in `ensureTables`), treat `triage_status='snooze' AND snoozed_until <= now` as `'active'` (auto-wake), and have the "Open" filter include snoozed findings whose window has expired. Make snooze-expiry a single derived predicate so unexpired-hidden and expired-reactivated are computed in exactly one place.
