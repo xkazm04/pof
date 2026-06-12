@@ -37,3 +37,16 @@ describe('choosePlayerAbility gate enforcement (caster-only loadout)', () => {
     }
   });
 });
+
+describe('all-unknown-enemy scenario is not a silent win', () => {
+  it('reports a loss (not 100% survival) when every archetype id is unknown', () => {
+    const stale: CombatScenario = {
+      ...casterScenario,
+      playerAbilities: PLAYER_ABILITIES,
+      enemies: [{ archetypeId: 'renamed-since', count: 3, level: 5 }],
+    };
+    const result = runCombatSimulation(stale, DEFAULT_TUNING, { iterations: 5, seed: 1, maxFightDurationSec: 30 });
+    // Zero enemies were built; `[].every()` would otherwise report a win.
+    expect(result.fights.every((f) => f.won === false)).toBe(true);
+  });
+});

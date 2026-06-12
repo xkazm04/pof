@@ -311,7 +311,11 @@ function simulateFight(
     if (enemies.every((e) => e.attrs.health <= 0)) break;
   }
 
-  const won = player.attrs.health > 0 && enemies.every((e) => e.attrs.health <= 0);
+  // enemies.length > 0: an all-unknown-archetype scenario builds zero enemies,
+  // and `[].every(...)` is true — without this guard a fully-stale scenario
+  // would report a 100%-survival "win" against nothing. The API edge also
+  // rejects unknown archetype ids; this is defense in depth for direct callers.
+  const won = enemies.length > 0 && player.attrs.health > 0 && enemies.every((e) => e.attrs.health <= 0);
 
   return {
     won,
