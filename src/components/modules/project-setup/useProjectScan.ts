@@ -43,7 +43,12 @@ export function useProjectScan(projectPath: string) {
   const [projectFiles, setProjectFiles] = useState<string[]>([]);
   const [scanning, setScanning] = useState(false);
   const [scanState, setScanState] = useState<ScanState>('idle');
-  const initialScanDone = useRef(false);
+  // The path the auto-scan last ran for. Comparing by VALUE (not a boolean)
+  // keeps the StrictMode double-mount protection while still rescanning when
+  // the user switches projects — a stale checklist here drives the
+  // NextStepBanner's "Create project" CTA, which would scaffold over an
+  // existing project (SP-A Finding A + scan finding project-setup #1).
+  const scannedPath = useRef<string | null>(null);
 
   const scan = useCallback(async () => {
     setScanning(true);
@@ -195,17 +200,17 @@ export function useProjectScan(projectPath: string) {
   }, [projectPath]);
 
   useEffect(() => {
-    if (initialScanDone.current) return;
-    initialScanDone.current = true;
+    if (scannedPath.current === projectPath) return;
+    scannedPath.current = projectPath;
     // Defer scan() off the effect body (avoids a synchronous setState cascade)
     // but DO NOT clear the timer on cleanup: under React 19 dev StrictMode the
     // mount→cleanup→mount cycle would clearTimeout the only scheduled scan,
-    // while the initialScanDone ref persists across cleanup and blocks the
+    // while the scannedPath ref persists across cleanup and blocks the
     // remount from rescheduling — leaving scanState stuck at 'idle' and
-    // BuildVerifyPanel never rendering (SP-A Finding A). The ref guard already
-    // ensures the scan is scheduled exactly once for the component's lifetime.
+    // BuildVerifyPanel never rendering (SP-A Finding A). The ref guard
+    // ensures exactly one scheduled scan per project path.
     setTimeout(() => scan(), 0);
-  }, [scan]);
+  }, [projectPath, scan]);
 
   const hasProject = checklist.find((c) => c.id === 'uproject')?.ok ?? false;
   const okCount = checklist.filter((c) => c.ok).length;
