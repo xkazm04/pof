@@ -14,8 +14,11 @@ function describeEffect(e: EditorEffect): string {
     : 'no attribute modifiers';
   const tags = e.grantedTags.length ? `; grants ${e.grantedTags.join(', ')}` : '';
   const dur = e.duration === 'duration' ? ` (${e.durationSec}s)` : '';
-  const period = e.cooldownSec > 0 ? `; period ${e.cooldownSec}s` : '';
-  return `- "${e.name}" — DurationPolicy ${POLICY[e.duration]}${dur}; modifiers: ${mods}${period}${tags}`;
+  // cooldownSec is the ABILITY cooldown (the editor's "Cooldown" field) — say
+  // so explicitly, or the model emits it as a GE Period and the effect's
+  // damage silently re-applies every N seconds as a DoT tick.
+  const cooldown = e.cooldownSec > 0 ? `; ability cooldown ${e.cooldownSec}s (NOT a GE Period — see the cooldown GE rule)` : '';
+  return `- "${e.name}" — DurationPolicy ${POLICY[e.duration]}${dur}; modifiers: ${mods}${cooldown}${tags}`;
 }
 
 const RULE_TARGET: Record<TagRule['type'], string> = {
@@ -50,6 +53,14 @@ export function buildGenerateAbilityBundlePrompt(
   const manaNote = scalars?.manaCost != null
     ? `Set \`AbilityManaCost = ${scalars.manaCost}\`.`
     : 'No mana cost provided — leave a `// TODO: mana cost` comment.';
+  // The authoritative ability cooldown: the catalog scalar when provided, else
+  // the largest effect-level "Cooldown" the editor authored. Previously this
+  // was accepted and dropped ('// TODO: cooldown GE') while the same value
+  // leaked into the effects as a Period.
+  const cooldownSec = scalars?.cooldown ?? Math.max(0, ...effects.map((e) => e.cooldownSec));
+  const cooldownNote = cooldownSec > 0
+    ? `Create a Cooldown GE \`UGE_Gen_<AbilityName>_Cooldown\` (HasDuration, \`DurationMagnitude = FGameplayEffectModifierMagnitude(FScalableFloat(${cooldownSec}f))\`, granting the ability's cooldown tag) in \`Effects/Generated/\` and set it as the ability's \`CooldownGameplayEffectClass\`. Do NOT set \`Period\` on any damaging GE for this.`
+    : 'No cooldown provided — leave a `// TODO: cooldown GE` comment.';
   // Faithfulness guard: the catalog entity's `damage` is authoritative. Pin the
   // primary damaging effect to it so the generated asset can't drift from the
   // entity (e.g. via stale spec edits) — the discrepancy that bit the B3 proof.
@@ -79,7 +90,7 @@ export function buildGenerateAbilityBundlePrompt(
     '## Contract — Part B: the wiring ability',
     '5. READ `Source/PoF/AbilitySystem/ARPGGameplayAbility.h` (base: `ApplyEffectToSelf`/`ApplyEffectToTarget`, `bAutoEndAbility`, `AbilityManaCost`) and `Source/PoF/AbilitySystem/GA_WarCry.cpp` (the commit → apply-GE → end idiom).',
     '6. Write ONE `UARPGGameplayAbility` subclass `UGA_Gen_<AbilityName>` (file `GA_Gen_<AbilityName>.{h,cpp}`) into `Source/PoF/AbilitySystem/Abilities/Generated/` (create the folder; additive — never touch hand-written `GA_*`).',
-    `7. Constructor: ${manaNote} Set \`bAutoEndAbility = true\`. Wire the activation tag rules above — \`blocks\`→\`ActivationBlockedTags\`, \`requires\`→\`ActivationRequiredTags\`, \`cancels\`→\`CancelAbilitiesWithTag\` — using native refs \`ARPGGameplayTags::<Tag>\` for declared tags and the guarded \`RequestGameplayTag(...,false)\`+\`IsValid()\` pattern for undeclared ones (record those in the tag delta). Leave a \`// TODO: cooldown GE\` comment (out of scope).`,
+    `7. Constructor: ${manaNote} Set \`bAutoEndAbility = true\`. Wire the activation tag rules above — \`blocks\`→\`ActivationBlockedTags\`, \`requires\`→\`ActivationRequiredTags\`, \`cancels\`→\`CancelAbilitiesWithTag\` — using native refs \`ARPGGameplayTags::<Tag>\` for declared tags and the guarded \`RequestGameplayTag(...,false)\`+\`IsValid()\` pattern for undeclared ones (record those in the tag delta). ${cooldownNote}`,
     '8. `ActivateAbility`: `CommitAbility` (on failure `EndAbility(Handle, ActorInfo, ActivationInfo, true, true)` and return); then apply each generated GE — DAMAGING effects (a modifier reducing Health) via `ApplyEffectToTarget(TargetASC, UGE_Gen_<AbilityName>_<EffectName>::StaticClass())`, BUFFS/HEALS via `ApplyEffectToSelf(...)`; if ambiguous default to target and comment. Finish with `EndAbility(Handle, ActorInfo, ActivationInfo, true, false)`.',
     '',
     '## Contract — Part C: report + build',

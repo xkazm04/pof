@@ -59,4 +59,32 @@ describe('applyWrite', () => {
     expect(header.diff.summary.added).toBeGreaterThan(0);
     expect(header.diff.summary.removed).toBeGreaterThan(0);
   });
+
+  it('rejects a confirm whose approved plan was diffed for a different module', async () => {
+    // Dry-run approved for module PoF…
+    const plan = await planWrite(base());
+    const approved = plan.files.map((f) => ({ relPath: f.relPath, before: f.before }));
+    // …but the confirm resolves Source/GameB/ (the Module input lives inside
+    // the modal) — paths the user never saw diffed must not be written.
+    await expect(applyWrite(base({ moduleName: 'GameB' }), approved)).rejects.toThrow(/re-run the dry run/i);
+    await expect(fs.access(path.join(root, 'Source', 'GameB'))).rejects.toBeTruthy();
+  });
+
+  it('rejects a confirm when the file changed on disk since the dry-run', async () => {
+    await applyWrite(base()); // existing content on disk
+    const plan = await planWrite(base({ header: '#pragma once\nclass AARPGFireball { int hp; };\n' }));
+    const approved = plan.files.map((f) => ({ relPath: f.relPath, before: f.before }));
+    // Someone edits the header after the user approved the diff…
+    await fs.writeFile(path.join(root, 'Source', 'PoF', 'AARPGFireball.h'), '// hand edit\n', 'utf8');
+    await expect(
+      applyWrite(base({ header: '#pragma once\nclass AARPGFireball { int hp; };\n' }), approved),
+    ).rejects.toThrow(/changed on disk/i);
+  });
+
+  it('accepts a confirm whose approved plan still matches', async () => {
+    const plan = await planWrite(base());
+    const approved = plan.files.map((f) => ({ relPath: f.relPath, before: f.before }));
+    const res = await applyWrite(base(), approved);
+    expect(res.written).toHaveLength(2);
+  });
 });

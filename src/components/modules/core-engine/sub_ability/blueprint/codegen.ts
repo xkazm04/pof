@@ -41,8 +41,11 @@ export function generateEffectsCode(effects: EditorEffect[]): string {
     if (eff.duration === 'duration') {
       lines.push(`    DurationMagnitude = FScalableFloat(${eff.durationSec.toFixed(1)}f);`);
     }
+    // cooldownSec is the ABILITY cooldown (the editor's "Cooldown" field) —
+    // emitting it as Period would turn the effect into a repeating DoT tick.
     if (eff.cooldownSec > 0) {
-      lines.push(`    Period = FScalableFloat(${eff.cooldownSec.toFixed(1)}f);`);
+      lines.push(`    // Ability cooldown ${eff.cooldownSec.toFixed(1)}s: apply via a separate Cooldown GE`);
+      lines.push(`    // (HasDuration, DurationMagnitude = ${eff.cooldownSec.toFixed(1)}f) referenced from the ability's CooldownGameplayEffectClass.`);
     }
     lines.push('}');
     lines.push('');

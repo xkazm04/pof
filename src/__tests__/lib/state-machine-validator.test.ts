@@ -157,3 +157,37 @@ describe('validateStateMachine — empty input', () => {
     expect(validateStateMachine([], [], KNOWN_FLAGS)).toEqual([]);
   });
 });
+
+describe('validateStateMachine — invalid identifiers (codegen syntax gate)', () => {
+  it('flags state names that are not valid C++ identifiers', () => {
+    const { states, transitions } = makeBasic();
+    states[1].name = 'Hit React';            // space — the most likely designer rename
+    states[2].name = '2HandAttack';          // leading digit
+    const warnings = validateStateMachine(states, transitions, KNOWN_FLAGS);
+    const invalid = warnings.filter((w) => w.kind === 'invalid-state-name');
+    expect(invalid).toHaveLength(2);
+    expect(invalid.every((w) => w.severity === 'error')).toBe(true);
+  });
+
+  it('flags an empty state name', () => {
+    const { states, transitions } = makeBasic();
+    states[1].name = '   ';
+    const warnings = validateStateMachine(states, transitions, KNOWN_FLAGS);
+    expect(warnings.some((w) => w.kind === 'invalid-state-name' && w.message.includes('empty'))).toBe(true);
+  });
+
+  it('flags a non-identifier flag but not the (default) sentinel', () => {
+    const { states, transitions } = makeBasic();
+    states[1].flag = 'is attacking!';
+    const warnings = validateStateMachine(states, transitions, KNOWN_FLAGS);
+    expect(warnings.some((w) => w.kind === 'invalid-state-flag' && w.stateIds.includes('s2'))).toBe(true);
+    // s1 keeps '(default)' — must NOT be flagged
+    expect(warnings.some((w) => w.kind === 'invalid-state-flag' && w.stateIds.includes('s1'))).toBe(false);
+  });
+
+  it('valid identifiers stay clean', () => {
+    const { states, transitions } = makeBasic();
+    const warnings = validateStateMachine(states, transitions, KNOWN_FLAGS);
+    expect(warnings.some((w) => w.kind === 'invalid-state-name' || w.kind === 'invalid-state-flag')).toBe(false);
+  });
+});

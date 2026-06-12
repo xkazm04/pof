@@ -68,9 +68,50 @@ export async function planWrite(input: WriteInput): Promise<WritePlan> {
   };
 }
 
-/** Write the header + source to disk (after the user confirms the dry-run). */
-export async function applyWrite(input: WriteInput): Promise<{ written: string[] }> {
-  const { sourceDir, headerPath, sourcePath } = resolveTargetPaths(input);
+/** A file the user approved in the dry-run: its path and the on-disk content
+ *  the diff was computed against. */
+export interface ApprovedFile {
+  relPath: string;
+  before: string;
+}
+
+/**
+ * Write the header + source to disk (after the user confirms the dry-run).
+ *
+ * `approved` is the plan the user actually saw. The confirm request is built
+ * from LIVE editor state — if the module name changed after the dry-run (the
+ * input lives inside the modal), the resolved paths no longer match the
+ * approved diff, and writing would overwrite files the user never reviewed.
+ * Content is re-checked too, so a file modified since the dry-run also
+ * invalidates the approval.
+ */
+export async function applyWrite(
+  input: WriteInput,
+  approved?: ApprovedFile[],
+): Promise<{ written: string[] }> {
+  const { sourceDir, headerPath, sourcePath, relHeader, relSource } = resolveTargetPaths(input);
+
+  if (approved) {
+    const targets: { rel: string; abs: string }[] = [
+      { rel: relHeader, abs: headerPath },
+      { rel: relSource, abs: sourcePath },
+    ];
+    for (const t of targets) {
+      const plan = approved.find((a) => a.relPath === t.rel);
+      if (!plan) {
+        throw new Error(
+          `The approved dry-run does not cover ${t.rel} (the module/class changed after the diff) — re-run the dry run.`,
+        );
+      }
+      const current = (await readIfExists(t.abs)) ?? '';
+      if (current !== plan.before) {
+        throw new Error(
+          `${t.rel} changed on disk since the dry-run — the approved diff is stale; re-run the dry run.`,
+        );
+      }
+    }
+  }
+
   await fs.mkdir(sourceDir, { recursive: true });
   await fs.writeFile(headerPath, input.header, 'utf8');
   await fs.writeFile(sourcePath, input.source, 'utf8');

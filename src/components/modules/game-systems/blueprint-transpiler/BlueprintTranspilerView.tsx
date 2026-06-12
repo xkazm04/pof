@@ -562,11 +562,25 @@ function WriteToProjectButton({ className, header, source, projectPath, defaultM
 }) {
   const [moduleName, setModuleName] = useState(defaultModule);
   const [plan, setPlan] = useState<WritePlan | null>(null);
+  // The module the open plan was diffed for. Editing the Module input lives
+  // INSIDE the dry-run modal — a changed module makes the displayed diff
+  // stale (it covers paths that will no longer be written), so Confirm must
+  // be gated until a fresh dry-run exists.
+  const [planModule, setPlanModule] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [written, setWritten] = useState<string[] | null>(null);
   const [err, setErr] = useState<string | null>(null);
 
-  const body = (confirm?: boolean) => JSON.stringify({ projectPath, moduleName, className, header, source, confirm });
+  const planStale = plan !== null && moduleName !== planModule;
+
+  const body = (confirm?: boolean) => JSON.stringify({
+    projectPath, moduleName, className, header, source, confirm,
+    // The reviewed plan rides along on confirm — the server rejects the write
+    // if the resolved paths or on-disk content no longer match it.
+    ...(confirm && plan
+      ? { approved: plan.files.map((f) => ({ relPath: f.relPath, before: f.before })) }
+      : {}),
+  });
 
   const dryRun = useCallback(async () => {
     setBusy(true); setErr(null); setWritten(null);
@@ -575,6 +589,7 @@ function WriteToProjectButton({ className, header, source, projectPath, defaultM
         method: 'POST', headers: { 'Content-Type': 'application/json' }, body: body(false),
       });
       setPlan(data);
+      setPlanModule(moduleName);
     } catch (e) { setErr(e instanceof Error ? e.message : 'Dry-run failed'); }
     finally { setBusy(false); }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -586,11 +601,11 @@ function WriteToProjectButton({ className, header, source, projectPath, defaultM
       const data = await apiFetch<{ written: string[] }>('/api/blueprint-transpiler/write', {
         method: 'POST', headers: { 'Content-Type': 'application/json' }, body: body(true),
       });
-      setWritten(data.written); setPlan(null);
+      setWritten(data.written); setPlan(null); setPlanModule(null);
     } catch (e) { setErr(e instanceof Error ? e.message : 'Write failed'); }
     finally { setBusy(false); }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [projectPath, moduleName, className, header, source]);
+  }, [projectPath, moduleName, className, header, source, plan]);
 
   if (!projectPath) {
     return <span className="text-2xs text-text-muted" title="Set a project path in Project Setup first">No project path</span>;
@@ -659,18 +674,35 @@ function WriteToProjectButton({ className, header, source, projectPath, defaultM
             </div>
 
             <div className="flex items-center justify-end gap-2 mt-4">
-              <button onClick={() => setPlan(null)} className="px-3 py-1.5 rounded-md text-xs text-text-muted hover:text-text hover:bg-surface-hover transition-colors">
+              {planStale && (
+                <span className="text-2xs mr-auto" style={{ color: STATUS_WARNING }}>
+                  Module changed — this diff covers Source/{planModule}/, not Source/{moduleName}/. Re-run the dry run.
+                </span>
+              )}
+              <button onClick={() => { setPlan(null); setPlanModule(null); }} className="px-3 py-1.5 rounded-md text-xs text-text-muted hover:text-text hover:bg-surface-hover transition-colors">
                 Cancel
               </button>
-              <button
-                onClick={confirmWrite}
-                disabled={busy}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all disabled:opacity-40"
-                style={{ backgroundColor: `${ACCENT}${OPACITY_20}`, color: ACCENT, border: `1px solid ${ACCENT}${OPACITY_30}` }}
-              >
-                {busy ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
-                Confirm write
-              </button>
+              {planStale ? (
+                <button
+                  onClick={dryRun}
+                  disabled={busy}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all disabled:opacity-40"
+                  style={{ backgroundColor: `${ACCENT}${OPACITY_20}`, color: ACCENT, border: `1px solid ${ACCENT}${OPACITY_30}` }}
+                >
+                  {busy ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
+                  Re-run dry run
+                </button>
+              ) : (
+                <button
+                  onClick={confirmWrite}
+                  disabled={busy}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all disabled:opacity-40"
+                  style={{ backgroundColor: `${ACCENT}${OPACITY_20}`, color: ACCENT, border: `1px solid ${ACCENT}${OPACITY_30}` }}
+                >
+                  {busy ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
+                  Confirm write
+                </button>
+              )}
             </div>
           </div>
         </div>
