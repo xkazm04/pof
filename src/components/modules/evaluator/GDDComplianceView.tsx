@@ -8,6 +8,7 @@ import {
 } from 'lucide-react';
 import { useGDDComplianceStore } from '@/stores/gddComplianceStore';
 import { useModuleStore } from '@/stores/moduleStore';
+import { useProjectStore } from '@/stores/projectStore';
 import { useDisclosure } from '@/hooks/useDisclosure';
 import type { ComplianceGap, ModuleCompliance, GapSeverity, GapDirection, ReconciliationSuggestion } from '@/types/gdd-compliance';
 import {
@@ -175,18 +176,21 @@ export function GDDComplianceView() {
   const isAuditing = useGDDComplianceStore((s) => s.isAuditing);
   const error = useGDDComplianceStore((s) => s.error);
   const runAudit = useGDDComplianceStore((s) => s.runAudit);
+  const ensureAudit = useGDDComplianceStore((s) => s.ensureAudit);
   const selectedModuleId = useGDDComplianceStore((s) => s.selectedModuleId);
   const selectModule = useGDDComplianceStore((s) => s.selectModule);
   const resolveGap = useGDDComplianceStore((s) => s.resolveGap);
   const checklistProgress = useModuleStore((s) => s.checklistProgress);
+  const projectPath = useProjectStore((s) => s.projectPath);
 
-  const handleAudit = () => runAudit(checklistProgress);
+  const handleAudit = () => runAudit(checklistProgress, projectPath);
 
-  // Auto-run audit on mount if no report
+  // Audit when the project or checklist snapshot changes — never show a stale
+  // report from a previously-selected project, and refresh once the new
+  // project's checklist hydrates. ensureAudit no-ops when nothing changed.
   useEffect(() => {
-    if (!report && !isAuditing) handleAudit();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+    ensureAudit(checklistProgress, projectPath);
+  }, [projectPath, checklistProgress, ensureAudit]);
 
   if (!report && isAuditing) {
     return (
