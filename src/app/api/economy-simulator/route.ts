@@ -12,20 +12,8 @@ import {
   setBaseline,
 } from '@/lib/economy/economy-run-db';
 import { extractRunMetrics } from '@/lib/economy/economy-run';
-import type { SimulationConfig, SimulationResult } from '@/types/economy-simulator';
-
-/**
- * Coerce a client-supplied numeric config field to a finite integer within [min, max].
- * The server is the real trust boundary: the UI's `min=` attrs are bypassable (curl,
- * replayed requests, the load-run re-simulate path, or stored runs predating a clamp).
- * Without a lower bound + NaN guard, `agentCount: 0` reaches the engine and divides
- * `0/0`, poisoning every metric and the emitted UE5 C++ with NaN/undefined.
- */
-function clampConfigInt(value: unknown, min: number, max: number, fallback: number): number {
-  const n = Math.floor(Number(value));
-  if (!Number.isFinite(n)) return fallback;
-  return Math.min(Math.max(n, min), max);
-}
+import { normalizeSimulationConfig } from '@/lib/economy/normalize-config';
+import type { SimulationResult } from '@/types/economy-simulator';
 
 export async function GET(req: NextRequest) {
   try {
@@ -48,17 +36,7 @@ export async function POST(req: NextRequest) {
     const action = body.action as string;
 
     if (action === 'simulate') {
-      const config: SimulationConfig = {
-        agentCount: clampConfigInt(body.config?.agentCount, 1, 500, 100),
-        maxLevel: clampConfigInt(body.config?.maxLevel, 1, 100, 25),
-        maxPlayHours: clampConfigInt(body.config?.maxPlayHours, 1, 200, 80),
-        philosophy: body.config?.philosophy ?? 'loot-driven',
-        seed: body.config?.seed ?? Math.floor(Math.random() * 999999),
-        flowOverrides: body.config?.flowOverrides,
-        itemOverrides: body.config?.itemOverrides,
-      };
-
-      const result = runSimulation(config);
+      const result = runSimulation(normalizeSimulationConfig(body.config));
       return apiSuccess({ result });
     }
 
@@ -69,16 +47,9 @@ export async function POST(req: NextRequest) {
       if (body.result) {
         simResult = body.result;
       } else {
-        const config: SimulationConfig = {
-          agentCount: Math.min(body.config?.agentCount ?? 100, 500),
-          maxLevel: Math.min(body.config?.maxLevel ?? 25, 100),
-          maxPlayHours: Math.min(body.config?.maxPlayHours ?? 80, 200),
-          philosophy: body.config?.philosophy ?? 'loot-driven',
-          seed: body.config?.seed ?? Math.floor(Math.random() * 999999),
-          flowOverrides: body.config?.flowOverrides,
-          itemOverrides: body.config?.itemOverrides,
-        };
-        simResult = runSimulation(config);
+        // Same trust boundary as 'simulate' — an unclamped re-simulate here
+        // emits NaN/undefined into "calibrated" UE5 C++.
+        simResult = runSimulation(normalizeSimulationConfig(body.config));
       }
 
       const codeResult = generateUE5Code(simResult);
