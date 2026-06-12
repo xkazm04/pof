@@ -69,6 +69,7 @@ interface PromptEvolutionState {
   setSelectedTest: (testId: string | null) => void;
   setActiveSubTab: (tab: PromptEvolutionState['activeSubTab']) => void;
   loadVariants: (moduleId: SubModuleId, checklistItemId?: string) => Promise<void>;
+  loadTests: (moduleId?: SubModuleId) => Promise<void>;
   createVariant: (moduleId: SubModuleId, checklistItemId: string, prompt: string) => Promise<PromptVariant | null>;
   mutateVariant: (variantId: string, mutation: MutationType) => Promise<PromptVariant | null>;
   startABTest: (moduleId: SubModuleId, checklistItemId: string, variantAId: string, variantBId: string) => Promise<ABTest | null>;
@@ -83,7 +84,7 @@ interface PromptEvolutionState {
   optimizePrompt: (moduleId: SubModuleId, prompt: string) => Promise<PromptOptimizationResult | null>;
 }
 
-export const usePromptEvolutionStore = create<PromptEvolutionState>((set) => ({
+export const usePromptEvolutionStore = create<PromptEvolutionState>((set, get) => ({
   // Initial state
   variants: EMPTY_VARIANTS,
   abTests: EMPTY_TESTS,
@@ -115,8 +116,26 @@ export const usePromptEvolutionStore = create<PromptEvolutionState>((set) => ({
         body: JSON.stringify({ action: 'get-stats' }),
       });
       set({ stats, isLoading: false });
+      // Hydrate persisted A/B tests so they survive reloads — abTests was
+      // otherwise only ever populated by this session's own start/record/
+      // conclude responses, so a reload orphaned every running test while
+      // Stats still counted it as Active.
+      await get().loadTests();
     } catch (err) {
       set({ error: err instanceof Error ? err.message : 'Failed to initialize', isLoading: false });
+    }
+  },
+
+  loadTests: async (moduleId) => {
+    try {
+      const abTests = await apiFetch<ABTest[]>('/api/prompt-evolution', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'get-tests', ...(moduleId ? { moduleId } : {}) }),
+      });
+      set({ abTests });
+    } catch (err) {
+      set({ error: err instanceof Error ? err.message : 'Failed to load A/B tests' });
     }
   },
 
