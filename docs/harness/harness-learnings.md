@@ -30,3 +30,11 @@ These were accepted but deferred because they either change balance VALUES (a de
 
 ## Implemented this run (6, behaviour-verified)
 #4 drop-sim large-rollCount crash · #1 weighted godroll % · #6 loot-editor undo cap+coalesce · #9 precompute affix weight pool (behaviour-identical) · #8 dedupe per-level agent filter · #15 codegen applies flowOverrides.
+
+## From the 2026-06-12 bug+ui dual-lens scan + fix wave 1 (CLI lifecycle)
+- **Structural fact** — `src/lib/process-tree-kill.ts` (added 2026-06-12) is the canonical kill primitive. On Windows, `ChildProcess.kill()` never cascades: any spawn via `shell:true`, a `.cmd` shim, or a launcher (RunUAT/UBT) tracks a wrapper PID and a plain kill orphans the real workers. Use `killProcessTree()` at every kill site (adopted in cli-service, cook-executor, ue5-bridge build-pipeline).
+- **Structural fact** — interactive CLI runs (`submitPrompt`) have NO queued task id; `onTaskComplete` fires with the sentinel id `'interactive'` (`useTaskQueue.ts`). Never re-introduce an `if (tid)` gate around a latch-releasing callback.
+- **Structural fact** — `/api/ai-testing` POST now has `record-run-results` and `apply-stimuli` actions (the @@CALLBACK write-back targets of the `run-ai-tests` / `detect-stimuli` CLITask types).
+- **Environment trap** — a Node upgrade silently breaks `better-sqlite3` (ERR_DLOPEN_FAILED / NODE_MODULE_VERSION mismatch) and turns ~26 unrelated tests red, looking exactly like a code regression. Fix: `npm rebuild better-sqlite3`. Check this FIRST when many DB-touching tests fail at import.
+- **Context drift** — six file paths referenced by Vibeman contexts no longer exist on disk (`item-dna/index.ts`, `auto-rig/index.ts`, `asset-browser/index.ts`, `useBuildPipeline.ts`, `ResizeHandle.tsx`, `knowledge/index.ts`). Refresh the contexts in Vibeman before the next scan.
+- **Open follow-ups** — 317 of 323 scan findings remain in `docs/harness/scan-bug-ui-2026-06-12/INDEX.md`; next themed waves: B fix-the-fixes (7), D destructive-write data loss (6). The user's uncommitted `src/lib/leonardo.ts` change breaks `leonardo-client.test.ts` (1 of the 15 standing test failures).
