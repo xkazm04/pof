@@ -148,21 +148,30 @@ export const useForgeStore = create<ForgeState>((set, get) => ({
       get().addToHistory(prompt.trim());
     }
 
-    // Start polling for status
+    // Start polling for status. A poll miss is a TRANSPORT failure (dev-server
+    // restart, Wi-Fi blip, one 502) — the multi-minute remote generation is
+    // still running and already paid for. Only consecutive misses, or an
+    // explicit remote 'failed', terminate the job.
+    const MAX_CONSECUTIVE_POLL_FAILURES = 3;
+    let pollFailures = 0;
     const interval = setInterval(async () => {
       const statusResult = await tryApiFetch<JobStatusResult>(
         `/api/blender-mcp/generate/status?jobId=${encodeURIComponent(mcpJobId)}&provider=${encodeURIComponent(mcpProvider)}`,
       );
 
       if (!statusResult.ok) {
+        pollFailures++;
+        if (pollFailures < MAX_CONSECUTIVE_POLL_FAILURES) return; // transient — keep polling
         clearInterval(interval);
         pollingIntervals.delete(localId);
         get().updateJob(localId, {
           status: 'failed',
-          error: statusResult.error,
+          error: `Status polling failed ${pollFailures} times in a row: ${statusResult.error}`,
+          completedAt: Date.now(),
         });
         return;
       }
+      pollFailures = 0;
 
       const { status, progress, resultUrl } = statusResult.data;
 
