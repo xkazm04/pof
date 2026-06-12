@@ -43,7 +43,7 @@ import { formatDuration } from '@/lib/format';
 import { MOTION } from '@/lib/constants';
 import { SurfaceCard } from '@/components/ui/SurfaceCard';
 import { RegressionBanner } from './RegressionBanner';
-import { MODULE_COLORS, STATUS_SUCCESS, STATUS_ERROR, STATUS_WARNING, STATUS_INFO, SEVERITY_TOKENS, severityAccentCard, statusBorder, type SeverityToken } from '@/lib/chart-colors';
+import { MODULE_COLORS, STATUS_SUCCESS, STATUS_ERROR, STATUS_WARNING, STATUS_INFO, SEVERITY_TOKENS, severityAccentCard, statusBg, statusBorder, type SeverityToken } from '@/lib/chart-colors';
 
 // ─── Constants ───────────────────────────────────────────────────────────────
 
@@ -111,7 +111,13 @@ export function DeepEvalResults() {
       setResult(evalResult);
 
       const currentFlat = evalResult.findings.modules.flatMap((m) => m.findings);
-      const scope = evalResult.modulesEvaluated;
+      // "In scope" must mean "successfully evaluated": a module whose passes
+      // errored produced zero findings because it FAILED, not because it is
+      // clean — merging it would wipe its baseline and report every prior
+      // finding as falsely RESOLVED.
+      const scope = evalResult.modulesEvaluated.filter(
+        (m) => !evalResult.failedModules.includes(m),
+      );
       const previous = useDeepEvalStore.getState().lastScan;
 
       const d = diffScans(previous?.findings ?? null, currentFlat, { scopeModuleIds: scope });
@@ -430,6 +436,17 @@ export function DeepEvalResults() {
               </span>
             </div>
           </SurfaceCard>
+
+          {/* Failed modules: their findings are incomplete and were excluded from the baseline merge */}
+          {result.failedModules.length > 0 && (
+            <div
+              className="px-3 py-2 rounded-lg text-xs"
+              style={{ backgroundColor: statusBg(STATUS_WARNING, 0.06), border: `1px solid ${statusBorder(STATUS_WARNING, 0.15)}`, color: STATUS_WARNING }}
+            >
+              {result.failedModules.length} module{result.failedModules.length !== 1 ? 's' : ''} failed to evaluate
+              ({result.failedModules.join(', ')}) — excluded from the regression baseline; re-run them to refresh their findings.
+            </div>
+          )}
 
           {/* Module tree (filtered to the active New/All view) */}
           <div className="space-y-2">

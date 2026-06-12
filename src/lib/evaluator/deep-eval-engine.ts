@@ -53,6 +53,12 @@ export interface DeepEvalResult {
   duration: number;
   modulesEvaluated: string[];
   passesRun: EvalPass[];
+  /**
+   * Modules where at least one pass errored. Their zero/partial findings mean
+   * "evaluation incomplete", NOT "clean" — baseline merges must exclude them
+   * or prior findings get dropped and falsely reported as RESOLVED.
+   */
+  failedModules: string[];
 }
 
 // ─── Engine ──────────────────────────────────────────────────────────────────
@@ -214,6 +220,7 @@ ${prompt}`;
       duration: Date.now() - startTime,
       modulesEvaluated: moduleIds,
       passesRun,
+      failedModules: modulesWithErroredPasses(moduleIds, passStatuses),
     };
   } catch (err) {
     if ((err as Error).name === 'AbortError') {
@@ -236,10 +243,21 @@ ${prompt}`;
       duration: Date.now() - startTime,
       modulesEvaluated: moduleIds,
       passesRun,
+      failedModules: modulesWithErroredPasses(moduleIds, passStatuses),
     };
   } finally {
     abortController = null;
   }
+}
+
+/** Modules whose evaluation is incomplete: any pass errored (or never ran). */
+function modulesWithErroredPasses(
+  moduleIds: string[],
+  passStatuses: Record<string, Record<EvalPass, 'pending' | 'running' | 'done' | 'error' | 'skipped'>>,
+): string[] {
+  return moduleIds.filter((m) =>
+    Object.values(passStatuses[m] ?? {}).some((s) => s === 'error' || s === 'pending' || s === 'running'),
+  );
 }
 
 // ─── Stream collector ────────────────────────────────────────────────────────
