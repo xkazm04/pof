@@ -79,7 +79,23 @@ export function useModuleCLI(opts: UseModuleCLIOptions): UseModuleCLIResult {
   useEffect(() => { sessionKeyRef.current = opts.sessionKey; }, [opts.sessionKey]);
   useEffect(() => { moduleIdRef.current = opts.moduleId; }, [opts.moduleId]);
 
+  // The key the prevRunning value was observed under. A sessionKey switch
+  // re-subscribes this hook to a DIFFERENT session — comparing the old key's
+  // running=true against the new key's running=false is NOT a completion.
+  const prevKeyRef = useRef(opts.sessionKey);
+
   useEffect(() => {
+    if (prevKeyRef.current !== opts.sessionKey) {
+      // Resync to the new session and skip the transition: firing here would
+      // record a false 'failed' analytics outcome (with the OLD session's
+      // prompt and a bogus duration) and call onComplete for a run that is
+      // still in progress on the previous key.
+      prevKeyRef.current = opts.sessionKey;
+      prevRunningRef.current = isRunning;
+      lastPromptRef.current = '';
+      taskStartRef.current = '';
+      return;
+    }
     if (prevRunningRef.current && !isRunning) {
       // Read success imperatively from the settled store state
       setTimeout(() => {
@@ -111,7 +127,7 @@ export function useModuleCLI(opts: UseModuleCLIOptions): UseModuleCLIResult {
       }, UI_TIMEOUTS.raceConditionBuffer);
     }
     prevRunningRef.current = isRunning;
-  }, [isRunning]);
+  }, [isRunning, opts.sessionKey]);
 
   const sendPrompt = useCallback(
     (prompt: string, meta?: DispatchMeta) => {
