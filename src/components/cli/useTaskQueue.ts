@@ -16,6 +16,11 @@ import {
 } from './taskRegistry';
 import { parseBuildOutput, type BuildParseResult } from './UE5BuildParser';
 
+// Sentinel task id for interactive (submitPrompt) runs, which never get a
+// queued-task id. onTaskComplete must fire for them too — hosts release
+// session.isRunning from it.
+const INTERACTIVE_TASK_ID = 'interactive';
+
 interface UseTaskQueueOpts {
   instanceId: string;
   projectPath: string;
@@ -349,11 +354,11 @@ export function useTaskQueue(opts: UseTaskQueueOpts) {
           cbPromise,
           new Promise<void>((resolve) => setTimeout(resolve, UI_TIMEOUTS.callbackSettleMax)),
         ]).finally(() => {
+          // Interactive runs (submitPrompt) have no queued task id, but the
+          // completion signal must still fire — it releases session.isRunning.
           const tid = currentTaskIdRef.current;
-          if (tid) {
-            registerTaskComplete(tid, instanceId, !data.isError);
-            onTaskComplete?.(tid, !data.isError);
-          }
+          if (tid) registerTaskComplete(tid, instanceId, !data.isError);
+          onTaskComplete?.(tid ?? INTERACTIVE_TASK_ID, !data.isError);
         });
 
         break;
@@ -365,10 +370,8 @@ export function useTaskQueue(opts: UseTaskQueueOpts) {
         addLog({ id: `error-${Date.now()}`, type: 'error', content: data.error, timestamp: event.timestamp });
         assistantOutputRef.current = '';
         const tid = currentTaskIdRef.current;
-        if (tid) {
-          registerTaskComplete(tid, instanceId, false);
-          onTaskComplete?.(tid, false);
-        }
+        if (tid) registerTaskComplete(tid, instanceId, false);
+        onTaskComplete?.(tid ?? INTERACTIVE_TASK_ID, false);
         break;
       }
     }
@@ -406,10 +409,8 @@ export function useTaskQueue(opts: UseTaskQueueOpts) {
       if (completed) return;
       completed = true;
       const tid = currentTaskIdRef.current;
-      if (tid) {
-        registerTaskComplete(tid, instanceId, false);
-        onTaskComplete?.(tid, false);
-      }
+      if (tid) registerTaskComplete(tid, instanceId, false);
+      onTaskComplete?.(tid ?? INTERACTIVE_TASK_ID, false);
     };
   }, [handleSSEEvent, instanceId, onTaskComplete]);
 
@@ -473,8 +474,10 @@ export function useTaskQueue(opts: UseTaskQueueOpts) {
       connectToStream(data.streamUrl);
     } catch (e) {
       dispatch({ type: 'START_FAILED', error: e instanceof Error ? e.message : 'Failed to start' });
+      // Release session.isRunning for hosts that latched on SUBMIT_START.
+      onTaskComplete?.(currentTaskIdRef.current ?? INTERACTIVE_TASK_ID, false);
     }
-  }, [projectPath, state.sessionId, addLog, connectToStream]);
+  }, [projectPath, state.sessionId, addLog, connectToStream, onTaskComplete]);
 
   // --- Abort ---
 
@@ -491,10 +494,8 @@ export function useTaskQueue(opts: UseTaskQueueOpts) {
       } catch { /* best-effort: the process may have already exited */ }
     }
     const tid = currentTaskIdRef.current;
-    if (tid) {
-      registerTaskComplete(tid, instanceId, false);
-      onTaskComplete?.(tid, false);
-    }
+    if (tid) registerTaskComplete(tid, instanceId, false);
+    onTaskComplete?.(tid ?? INTERACTIVE_TASK_ID, false);
     dispatch({ type: 'ABORT' });
   }, [instanceId, onTaskComplete, clearHeartbeat]);
 
