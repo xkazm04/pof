@@ -107,6 +107,29 @@ describe('anti-pattern detection', () => {
     ]);
   });
 
+  it('matches multi-word trigger keywords and plural forms (25d6de5 regression)', () => {
+    upsertAntiPattern(
+      antiPattern({
+        id: 'anti--animations--state-machine',
+        moduleId: 'animations' as AntiPattern['moduleId'],
+        title: 'State machine approach',
+        approach: 'state-machine',
+        triggerKeywords: ['state machine', 'fsm', 'transition', 'state graph', 'behavior tree'],
+      }),
+    );
+
+    // The textbook prompt for this anti-pattern: 'state machine' is a phrase
+    // keyword and 'transitions' is a plural — under exact single-token matching
+    // neither counted and the guardrail never fired.
+    const warnings = checkPromptForAntiPatterns(
+      'Implement a state machine for dialogue with transitions between idle and talking.',
+      'animations' as AntiPattern['moduleId'],
+    );
+    expect(warnings).toHaveLength(1);
+    expect(warnings[0].antiPattern.id).toBe('anti--animations--state-machine');
+    expect(warnings[0].matchScore).toBeGreaterThanOrEqual(30);
+  });
+
   it('getAntiPatternsByModule orders by failure rate', () => {
     upsertAntiPattern(antiPattern({ id: 'low', failureRate: 0.7, severity: 'medium' }));
     upsertAntiPattern(antiPattern({ id: 'high', failureRate: 0.95 }));
