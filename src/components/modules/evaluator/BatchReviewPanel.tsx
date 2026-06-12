@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { MOTION } from '@/lib/constants';
 import { useSuspendableEffect } from '@/hooks/useSuspend';
@@ -40,33 +40,30 @@ export function BatchReviewPanel() {
   const [isStarting, setIsStarting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [expanded, setExpanded] = useState(true);
-  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   // Poll batch status
   const pollStatus = useCallback(async () => {
     try {
       const data = await apiFetch<{ batch: BatchReviewState | null }>('/api/feature-matrix/batch-review');
       setBatch(data.batch);
-      // Stop polling when done
-      if (data.batch && data.batch.status !== 'running') {
-        if (pollRef.current) {
-          clearInterval(pollRef.current);
-          pollRef.current = null;
-        }
-      }
     } catch { /* silent */ }
   }, []);
 
-  // Initial fetch + start polling if running — pauses when module is suspended
+  const isRunning = batch?.status === 'running';
+
+  // Initial fetch (+ refetch on resume). Suspend-aware.
+  useSuspendableEffect(() => { pollStatus(); }, [pollStatus]);
+
+  // Own the poll interval from the OBSERVED running state, not the start
+  // action. Previously the interval was created only inside startBatch, so a
+  // tab switch / remount / page reload during a running batch left the panel
+  // frozen at the last-seen percent forever. Driving it off batch.status means
+  // the poll always resumes when a running batch is observed.
   useSuspendableEffect(() => {
-    pollStatus();
-    return () => {
-      if (pollRef.current) {
-        clearInterval(pollRef.current);
-        pollRef.current = null;
-      }
-    };
-  }, [pollStatus]);
+    if (!isRunning) return;
+    const id = setInterval(pollStatus, 3000);
+    return () => clearInterval(id);
+  }, [isRunning, pollStatus]);
 
   const startBatch = useCallback(async () => {
     setIsStarting(true);
@@ -78,10 +75,9 @@ export function BatchReviewPanel() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ appOrigin, projectPath, projectName, ueVersion }),
       });
-
-      // Start polling
+      // Fetch the now-running batch; the interval effect arms itself off the
+      // resulting `running` status.
       await pollStatus();
-      pollRef.current = setInterval(pollStatus, 3000);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to start');
     } finally {
@@ -96,8 +92,13 @@ export function BatchReviewPanel() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action: 'abort' }),
       });
+    } catch {
+      // The batch may have finished server-side between render and click (the
+      // abort then 400s). Fall through to pollStatus so the UI still refreshes
+      // instead of staying stuck on a stale "Reviewing…".
+    } finally {
       await pollStatus();
-    } catch { /* silent */ }
+    }
   }, [pollStatus]);
 
   const clearBatch = useCallback(async () => {
@@ -106,8 +107,6 @@ export function BatchReviewPanel() {
       setBatch(null);
     } catch { /* silent */ }
   }, []);
-
-  const isRunning = batch?.status === 'running';
 
   // Compute progress
   const completed = batch?.modules.filter(m => m.status === 'completed').length ?? 0;
