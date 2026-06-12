@@ -206,7 +206,11 @@ function simulateFight(
       if (aliveEnemies.length === 0) break;
 
       const ability = choosePlayerAbility(player, aliveEnemies, time, rng);
-      if (ability) {
+      if (!ability) {
+        // Every ability is on cooldown or unaffordable — idle until the next
+        // tick re-checks the gates (mana regenerates below).
+        player.nextActionTime = time + dt;
+      } else {
         abilityUsage[ability.id] = (abilityUsage[ability.id] ?? 0) + 1;
 
         if (ability.type === 'buff') {
@@ -342,8 +346,13 @@ function choosePlayerAbility(
   );
 
   if (available.length === 0) {
-    // Fall back to basic attack (always available)
-    return player.abilities.find((a) => a.id === 'ga-melee-attack') ?? player.abilities[0];
+    // No ability is both off-cooldown AND affordable — the player waits this
+    // beat. The old fallback returned `abilities[0]` unconditionally, which
+    // simulateFight then charged mana for (line 241) and reset the cooldown on
+    // (line 244) regardless of the gates — so any loadout without a free,
+    // short-cooldown basic fired its strongest ability forever at no cost,
+    // driving mana negative and computing DPS/survival as fiction.
+    return null;
   }
 
   // Priority: use buff if available and not active, use AoE if multiple enemies, otherwise highest damage
