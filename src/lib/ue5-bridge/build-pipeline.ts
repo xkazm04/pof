@@ -7,6 +7,7 @@
  */
 
 import { spawn } from 'child_process';
+import { killProcessTree } from '@/lib/process-tree-kill';
 import { getEnginePath } from '@/lib/prompt-context';
 import { parseBuildOutput } from '@/components/cli/UE5BuildParser';
 import { fingerprintErrors } from '@/lib/error-fingerprint';
@@ -138,18 +139,21 @@ export async function executeBuild(
       env: { ...process.env },
     });
 
+    // UBT spawns MSBuild/cl.exe/link.exe grandchildren that a plain kill()
+    // leaves running on Windows — they hold .obj/PDB locks and wedge the
+    // sequential queue's next build for the same target.
     // ── Timeout watchdog ──
     const timeout = setTimeout(() => {
       timedOut = true;
       logger.warn(`[build-pipeline] Build ${buildId} timed out after ${UI_TIMEOUTS.buildProcessTimeout}ms`);
-      proc.kill('SIGTERM');
+      killProcessTree(proc, 'SIGTERM');
     }, UI_TIMEOUTS.buildProcessTimeout);
 
     // ── Abort signal handling ──
     const onAbort = () => {
       aborted = true;
       logger.info(`[build-pipeline] Build ${buildId} aborted by signal`);
-      proc.kill('SIGTERM');
+      killProcessTree(proc, 'SIGTERM');
     };
 
     if (options?.abortSignal) {
@@ -157,7 +161,7 @@ export async function executeBuild(
         // Already aborted before we started
         clearTimeout(timeout);
         aborted = true;
-        proc.kill('SIGTERM');
+        killProcessTree(proc, 'SIGTERM');
       } else {
         options.abortSignal.addEventListener('abort', onAbort, { once: true });
       }
