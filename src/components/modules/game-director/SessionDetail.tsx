@@ -74,7 +74,11 @@ export function SessionDetail({
       }
     })();
     return () => { cancelled = true; };
-  }, [session.id, getFindings, getEvents]);
+    // session.status / completedAt are in the deps so a playtest that finishes
+    // (or a re-run, which restamps completedAt) refetches — session.id alone
+    // never changes across a simulate, so the header showed "N findings" while
+    // the Findings/Timeline tabs stayed empty until the user left and re-entered.
+  }, [session.id, session.status, session.completedAt, getFindings, getEvents]);
 
   // After a one-click fix is dispatched, stamp the finding so the UI reflects
   // the detect→fix link (best-effort — the CLI task is already running).
