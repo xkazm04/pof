@@ -613,6 +613,11 @@ export function createHarnessOrchestrator(config: HarnessConfig): HarnessOrchest
 
     function fillPool() {
       while (active.size < maxConcurrent) {
+        // A pause (user or budget) must stop NEW launches immediately — the
+        // loop body calls fillPool() after each completion, and without this
+        // check a pause mid-race still launched replacement 30-minute
+        // sessions before the loop top ever saw `paused`.
+        if (paused) return;
         // Cost governor: bail before launching anything new if the budget cap
         // has been hit (or projected next-session spend would cross it).
         if (wouldOverflowNow()) {
@@ -685,12 +690,35 @@ export function createHarnessOrchestrator(config: HarnessConfig): HarnessOrchest
       // Fill pool with newly unblocked areas
       fillPool();
     }
+
+    // Never abandon in-flight sessions: a pause/target break used to return
+    // with up to maxConcurrent live `claude -p` sessions still running — they
+    // kept editing the working tree and writing progress/cost/guide files
+    // AFTER the run was snapshotted, and their in-memory status flips were
+    // never persisted, stranding areas as in-progress on disk. Drain them,
+    // then persist the plan they actually produced.
+    if (active.size > 0) {
+      emit({
+        type: 'harness:learning',
+        learning: `Draining ${active.size} in-flight session(s) before stopping — no new sessions will launch`,
+      });
+      await Promise.allSettled(active.values());
+      updatePlanStats(plan);
+      savePlan(config.statePath, plan);
+      emit({ type: 'harness:progress', plan });
+    }
   }
 
   // ── Core Loop ───────────────────────────────────────────────────────────
 
   async function runLoop(): Promise<GameBuildGuide> {
     const plan = loadPlan(config.statePath) ?? buildGamePlan(config);
+    // Heal areas stranded mid-flight by a crash or an old abandoning build:
+    // pickNextAreas only picks 'pending', so a persisted 'in-progress' area
+    // would never run again and the target pass rate becomes unreachable.
+    for (const area of plan.areas) {
+      if (area.status === 'in-progress') area.status = 'pending';
+    }
     savePlan(config.statePath, plan);
     const guide = loadGuide(config.statePath) ?? createEmptyGuide(plan);
     saveGuide(config.statePath, guide);
