@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback, useMemo } from 'react';
+import { useState, useCallback, useMemo, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Plus, X, Send, Loader2, ChevronDown,
@@ -12,6 +12,7 @@ import {
   MODULE_COLORS, withOpacity, OPACITY_10, OPACITY_20, OPACITY_30, OPACITY_50,
 } from '@/lib/chart-colors';
 import { SurfaceCard } from '@/components/ui/SurfaceCard';
+import { useAudioEventCatalogStore } from './audioEventCatalogStore';
 
 const ACCENT = MODULE_COLORS.content;
 
@@ -110,9 +111,19 @@ interface AudioEventCatalogProps {
 // -- Component --
 
 export function AudioEventCatalog({ onGenerate, isGenerating }: AudioEventCatalogProps) {
-  const [events, setEvents] = useState<AudioEvent[]>(() => structuredClone(DEFAULT_EVENTS));
+  // Seed from the persisted store: AudioView mounts tab panels conditionally,
+  // so local-only state was wiped on every Painter ↔ Catalog tab switch.
+  const [events, setEvents] = useState<AudioEvent[]>(
+    () => useAudioEventCatalogStore.getState().events ?? structuredClone(DEFAULT_EVENTS),
+  );
   const [filterCategory, setFilterCategory] = useState<EventCategory | 'all'>('all');
   const [editingEventId, setEditingEventId] = useState<string | null>(null);
+
+  // Write-through: every edit lands in the persisted store immediately, so
+  // unmount (tab switch) and reload both keep the curated catalog.
+  useEffect(() => {
+    useAudioEventCatalogStore.getState().setEvents(events);
+  }, [events]);
 
   // -- Derived --
 
