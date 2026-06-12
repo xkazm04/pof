@@ -1,8 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 // In-memory DB so the test never touches ~/.pof/pof.db.
-vi.mock('@/lib/db', () => {
-  const Database = require('better-sqlite3');
+vi.mock('@/lib/db', async () => {
+  const { default: Database } = await import('better-sqlite3');
   const db = new Database(':memory:');
   return { getDb: () => db };
 });
