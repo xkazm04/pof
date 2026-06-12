@@ -37,7 +37,7 @@ import {
 import { MODULE_COLORS, STATUS_NEUTRAL, ACCENT_EMERALD_DARK, STATUS_WARNING, STATUS_SUCCESS, ACCENT_PURPLE } from '@/lib/chart-colors';
 import type { SubModuleId, ChecklistItem } from '@/types/modules';
 import { toast } from 'sonner';
-import { getModuleChecklist } from '@/lib/module-registry';
+import { getModuleChecklist, SUB_MODULES } from '@/lib/module-registry';
 
 // ── Constants ───────────────────────────────────────────────────────────────
 
@@ -61,22 +61,13 @@ const STATUS_COLORS = {
   cancelled: STATUS_NEUTRAL,
 };
 
-// ── Sample modules for the module picker ────────────────────────────────────
-
-const MODULE_OPTIONS = [
-  { id: 'arpg-character', label: 'Character' },
-  { id: 'arpg-combat', label: 'Combat' },
-  { id: 'arpg-inventory', label: 'Inventory' },
-  { id: 'arpg-abilities', label: 'Abilities' },
-  { id: 'arpg-ai', label: 'AI' },
-  { id: 'arpg-world', label: 'World' },
-  { id: 'arpg-ui', label: 'UI' },
-  { id: 'arpg-audio', label: 'Audio' },
-  { id: 'arpg-vfx', label: 'VFX' },
-  { id: 'arpg-save', label: 'Save' },
-  { id: 'arpg-multiplayer', label: 'Multiplayer' },
-  { id: 'arpg-progression', label: 'Progression' },
-];
+// ── Module picker options ───────────────────────────────────────────────────
+// Derived from the registry (the single source of truth getModuleChecklist
+// reads). The old hardcoded list had drifted: 5 phantom ids (arpg-abilities,
+// arpg-ai, arpg-audio, arpg-vfx, arpg-multiplayer) returned empty checklists
+// and dead-ended the create form, while 5 real modules (arpg-animation,
+// arpg-gas, arpg-enemy-ai, arpg-loot, arpg-polish) were unreachable.
+const MODULE_OPTIONS = SUB_MODULES.map((m) => ({ id: m.id, label: m.label }));
 
 // ── Mode toggle (Simple ⇄ Advanced) ─────────────────────────────────────────
 
