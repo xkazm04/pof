@@ -38,3 +38,12 @@ These were accepted but deferred because they either change balance VALUES (a de
 - **Environment trap** — a Node upgrade silently breaks `better-sqlite3` (ERR_DLOPEN_FAILED / NODE_MODULE_VERSION mismatch) and turns ~26 unrelated tests red, looking exactly like a code regression. Fix: `npm rebuild better-sqlite3`. Check this FIRST when many DB-touching tests fail at import.
 - **Context drift** — six file paths referenced by Vibeman contexts no longer exist on disk (`item-dna/index.ts`, `auto-rig/index.ts`, `asset-browser/index.ts`, `useBuildPipeline.ts`, `ResizeHandle.tsx`, `knowledge/index.ts`). Refresh the contexts in Vibeman before the next scan.
 - **Open follow-ups** — 317 of 323 scan findings remain in `docs/harness/scan-bug-ui-2026-06-12/INDEX.md`; next themed waves: B fix-the-fixes (7), D destructive-write data loss (6). The user's uncommitted `src/lib/leonardo.ts` change breaks `leonardo-client.test.ts` (1 of the 15 standing test failures).
+
+## Canonical helpers established by the 2026-06-12 fix waves (use these, don't re-invent)
+- `killProcessTree()` (`src/lib/process-tree-kill.ts`) — every abort/timeout kill site (wave 1).
+- `normalizeSimulationConfig()` (`src/lib/economy/normalize-config.ts`) — the ONLY trust boundary for economy sim configs; all three runSimulation entry points use it (wave 2).
+- `upsertFeatures(…, { seedOnly: true })` — insert-if-missing mode; every seed-style writer must use it (wave 3).
+- `meter()` (`src/lib/gdd-synthesizer.ts`) — all meter-style `.repeat` in GDD output (wave 2).
+- `cppFloat()` (`src/lib/genome/codegen.ts`) — every numeric literal in generated C++ (wave 4).
+- State-machine validator rules `invalid-state-name`/`invalid-state-flag` gate codegen identifiers (wave 4).
+- Blueprint-transpiler confirm carries the `approved` plan; `applyWrite` rejects on path/content drift (wave 4).
