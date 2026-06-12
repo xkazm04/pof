@@ -1,0 +1,29 @@
+{
+ "name": "Abilities & GAS System",
+ "slug": "abilities-gas-system",
+ "priorReport": "docs/harness/bug-hunt-2026-06-09/abilities-gas-system.md",
+ "description": "Author Gameplay Ability System abilities and gameplay effects: the spellbook UI, effect timelines, ability forge with C++ codegen, and a GAS balance analyzer with damage-formula histograms. Spans sub_ability, ability/GAS libs, and the ability-spec store/DB.",
+ "filePaths": [
+  "src/components/modules/core-engine/sub_ability/index.tsx",
+  "src/components/modules/core-engine/sub_ability/core/CoreSection.tsx",
+  "src/components/modules/core-engine/sub_ability/effects/EffectsSection.tsx",
+  "src/components/modules/core-engine/sub_ability/effects/EffectsTimelineSection.tsx",
+  "src/components/modules/core-engine/sub_ability/forge/AbilityDiff.tsx",
+  "src/components/modules/core-engine/sub_ability/forge/CodeDiff.tsx",
+  "src/components/modules/core-engine/sub_ability/gas-balance/BalanceHealthReport.tsx",
+  "src/components/modules/core-engine/sub_ability/gas-balance/HistogramChart.tsx",
+  "src/components/modules/core-engine/sub_ability/SpellbookSearchPalette.tsx",
+  "src/components/modules/core-engine/sub_ability/spellbook-search-index.ts",
+  "src/lib/ability/spec.ts",
+  "src/lib/ability/ability-spec-db.ts",
+  "src/lib/ability/damage-formula.ts",
+  "src/lib/ability/effect-codegen-prompt.ts",
+  "src/lib/ability/logic-prompts.ts",
+  "src/lib/gas-codegen.ts",
+  "src/lib/combat/gas-balance-presets.ts",
+  "src/stores/abilitySpecStore.ts",
+  "src/types/gas-balance-simulator.ts",
+  "src/app/api/ability-spec/route.ts",
+  "src/lib/prompts/ability-forge.ts"
+ ]
+}

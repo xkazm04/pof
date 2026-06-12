@@ -1,0 +1,27 @@
+{
+ "name": "Combat & Damage Tuning",
+ "slug": "combat-damage-tuning",
+ "priorReport": "docs/harness/bug-hunt-2026-06-09/combat-damage-tuning.md",
+ "description": "Design and balance ARPG combat: the GAS damage pipeline, combo/dodge chains, hit timing, and a Monte-Carlo combat simulator that stress-tests encounters and surfaces balance histograms. Spans the sub_combat module, combat simulation libs, and the combat-simulator store/API.",
+ "filePaths": [
+  "src/components/modules/core-engine/sub_combat/index.tsx",
+  "src/components/modules/core-engine/sub_combat/CombatNav.tsx",
+  "src/components/modules/core-engine/sub_combat/damage-pipeline/DamagePipelineFlow.tsx",
+  "src/components/modules/core-engine/sub_combat/damage-pipeline/DirectHealthFlow.tsx",
+  "src/components/modules/core-engine/sub_combat/damage-pipeline/ExecAttributePhase.tsx",
+  "src/components/modules/core-engine/sub_combat/combos/index.tsx",
+  "src/components/modules/core-engine/sub_combat/combos/CooldownOverlapChart.tsx",
+  "src/components/modules/core-engine/sub_combat/combos/TimelineBlock.tsx",
+  "src/lib/combat/simulation-engine.ts",
+  "src/lib/combat/choreography-sim.ts",
+  "src/lib/combat/combo-analysis.ts",
+  "src/lib/combat/combo-tuner.ts",
+  "src/lib/combat/predictive-balance.ts",
+  "src/lib/combat/definitions.ts",
+  "src/lib/combat/histogram.ts",
+  "src/stores/combatSimulatorStore.ts",
+  "src/types/combat-simulator.ts",
+  "src/app/api/combat-simulator/route.ts",
+  "src/components/modules/evaluator/CombatSimulatorView.tsx"
+ ]
+}

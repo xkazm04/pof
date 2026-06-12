@@ -1,0 +1,23 @@
+{
+ "name": "Quality Evaluation Engine",
+ "slug": "quality-evaluation-engine",
+ "priorReport": "docs/harness/bug-hunt-2026-06-09/quality-evaluation-engine.md",
+ "description": "The multi-pass evaluation engine (structure->quality->performance->...): per-module eval prompts, finding collection, correlation, deep-eval, fix-plan generation, and batch review. Spans the evaluator libs, evaluator module views, and the evaluator store + eval_findings table.",
+ "filePaths": [
+  "src/lib/evaluator/deep-eval-engine.ts",
+  "src/lib/evaluator/module-eval-prompts.ts",
+  "src/lib/evaluator/finding-collector.ts",
+  "src/lib/evaluator/correlation-engine.ts",
+  "src/lib/evaluator/insight-generator.ts",
+  "src/lib/evaluator/fix-plan-generator.ts",
+  "src/lib/evaluator/combined-health.ts",
+  "src/lib/consistency-grade.ts",
+  "src/stores/evaluatorStore.ts",
+  "src/types/evaluator.ts",
+  "src/components/modules/evaluator/EvaluatorModule.tsx",
+  "src/components/modules/evaluator/DeepEvalResults.tsx",
+  "src/components/modules/evaluator/BatchReviewPanel.tsx",
+  "src/components/modules/evaluator/AggregateQualityDashboard.tsx",
+  "src/app/api/feature-matrix/batch-review/route.ts"
+ ]
+}

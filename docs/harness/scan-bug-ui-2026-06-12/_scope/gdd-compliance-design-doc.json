@@ -1,0 +1,18 @@
+{
+ "name": "GDD Compliance & Design Doc",
+ "slug": "gdd-compliance-design-doc",
+ "priorReport": "docs/harness/bug-hunt-2026-06-09/gdd-compliance-design-doc.md",
+ "description": "Synthesize and check the Game Design Document: GDD synthesis, compliance scoring against the design intent, and the in-app design-doc viewer. Spans gdd-compliance/synthesizer libs, the gdd-compliance store, and its API.",
+ "filePaths": [
+  "src/lib/gdd-compliance.ts",
+  "src/lib/gdd-synthesizer.ts",
+  "src/types/gdd-compliance.ts",
+  "src/stores/gddComplianceStore.ts",
+  "src/components/modules/evaluator/GDDComplianceView.tsx",
+  "src/components/modules/evaluator/GameDesignDocView.tsx",
+  "src/app/api/gdd-compliance/route.ts",
+  "src/app/api/game-design-doc/route.ts",
+  "src/hooks/useGameDesignDoc.ts",
+  "src/hooks/useDesignDocument.ts"
+ ]
+}

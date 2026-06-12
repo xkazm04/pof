@@ -1,0 +1,24 @@
+{
+ "name": "World, Quests & Procgen",
+ "slug": "world-quests-procgen",
+ "priorReport": "docs/harness/bug-hunt-2026-06-09/world-quests-procgen.md",
+ "description": "Design world zones, map topology and playtime budgets, plus procedural generation and AI quest generation. Spans the sub_world module, world/quest libs, and the quest-generation API.",
+ "filePaths": [
+  "src/components/modules/core-engine/sub_world/index.tsx",
+  "src/components/modules/core-engine/sub_world/density/DensityLevelGroup.tsx",
+  "src/components/modules/core-engine/sub_world/map/FeatureList.tsx",
+  "src/components/modules/core-engine/sub_world/map/MapCanvas.tsx",
+  "src/components/modules/core-engine/sub_world/map/MapTopologyGroup.tsx",
+  "src/components/modules/core-engine/sub_world/map/TopologyGraph.tsx",
+  "src/components/modules/core-engine/sub_world/playtime/PlaytimeBreakdownTable.tsx",
+  "src/components/modules/core-engine/sub_world/playtime/PlaytimeEstimator.tsx",
+  "src/lib/world/zone-analysis.ts",
+  "src/lib/world/zone-prompt.ts",
+  "src/lib/quest-generator.ts",
+  "src/lib/procgen-db.ts",
+  "src/lib/scatter-db.ts",
+  "src/types/procgen.ts",
+  "src/types/quest-generation.ts",
+  "src/app/api/quest-generation/route.ts"
+ ]
+}

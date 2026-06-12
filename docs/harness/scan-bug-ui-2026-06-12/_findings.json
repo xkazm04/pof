@@ -1,0 +1,3232 @@
+[
+ {
+  "slug": "abilities-gas-system",
+  "context": "Abilities & GAS System",
+  "num": 1,
+  "title": "Authored \"Cooldown\" is silently codegen'd as a GameplayEffect *Period* (DoT tick), so cooldowns become periodic damage",
+  "severity": "High",
+  "lens": "bug",
+  "category": "state-corruption",
+  "file": "src/lib/gas-codegen.ts:141"
+ },
+ {
+  "slug": "abilities-gas-system",
+  "context": "Abilities & GAS System",
+  "num": 2,
+  "title": "Cross-tab spellbook search navigation never scrolls — the 250 ms scroll timer always loses to the 300 ms tab-exit animation",
+  "severity": "Medium",
+  "lens": "bug",
+  "category": "race-condition",
+  "file": "src/components/modules/core-engine/sub_ability/index.tsx:66"
+ },
+ {
+  "slug": "abilities-gas-system",
+  "context": "Abilities & GAS System",
+  "num": 3,
+  "title": "Search results for `Damage.*` tags route to the Tags tab with an `effects` section id that only exists on the Effects tab",
+  "severity": "Medium",
+  "lens": "bug",
+  "category": "edge-case",
+  "file": "src/components/modules/core-engine/sub_ability/spellbook-search-index.ts:64"
+ },
+ {
+  "slug": "abilities-gas-system",
+  "context": "Abilities & GAS System",
+  "num": 4,
+  "title": "/api/ability-spec POST persists unvalidated LLM-callback payloads; malformed effects crash downstream consumers later",
+  "severity": "Medium",
+  "lens": "bug",
+  "category": "silent-failure",
+  "file": "src/app/api/ability-spec/route.ts:26"
+ },
+ {
+  "slug": "abilities-gas-system",
+  "context": "Abilities & GAS System",
+  "num": 5,
+  "title": "C++ codegen emits invalid identifiers from free-text names — `FGameplayTag Ability_Frost Nova;` compiles nowhere",
+  "severity": "Medium",
+  "lens": "bug",
+  "category": "edge-case",
+  "file": "src/lib/gas-codegen.ts:111"
+ },
+ {
+  "slug": "abilities-gas-system",
+  "context": "Abilities & GAS System",
+  "num": 6,
+  "title": "Search palette is a modal without dialog semantics, focus trap, or global Escape",
+  "severity": "Medium",
+  "lens": "ui",
+  "category": "a11y",
+  "file": "src/components/modules/core-engine/sub_ability/SpellbookSearchPalette.tsx:78"
+ },
+ {
+  "slug": "abilities-gas-system",
+  "context": "Abilities & GAS System",
+  "num": 7,
+  "title": "Histogram tooltip floats in ~130px of dead space below the bars",
+  "severity": "Medium",
+  "lens": "ui",
+  "category": "polish",
+  "file": "src/components/modules/core-engine/sub_ability/gas-balance/HistogramChart.tsx:21"
+ },
+ {
+  "slug": "abilities-gas-system",
+  "context": "Abilities & GAS System",
+  "num": 8,
+  "title": "Forge diff components hardcode zinc-* colors instead of the app's design tokens",
+  "severity": "Medium",
+  "lens": "ui",
+  "category": "visual-consistency",
+  "file": "src/components/modules/core-engine/sub_ability/forge/CodeDiff.tsx:27"
+ },
+ {
+  "slug": "abilities-gas-system",
+  "context": "Abilities & GAS System",
+  "num": 9,
+  "title": "Effects catalog controls are invisible to assistive tech: unlabeled icon-only pagination and stateless filter toggles",
+  "severity": "Medium",
+  "lens": "ui",
+  "category": "a11y",
+  "file": "src/components/modules/core-engine/sub_ability/effects/EffectsSection.tsx:124"
+ },
+ {
+  "slug": "abilities-gas-system",
+  "context": "Abilities & GAS System",
+  "num": 10,
+  "title": "Long descriptive paragraphs set in uppercase + wide tracking, inconsistently across sibling sections",
+  "severity": "Low",
+  "lens": "ui",
+  "category": "visual-consistency",
+  "file": "src/components/modules/core-engine/sub_ability/core/CoreSection.tsx:19"
+ },
+ {
+  "slug": "combat-damage-tuning",
+  "context": "Combat & Damage Tuning",
+  "num": 1,
+  "title": "Player ability fallback bypasses both cooldown and mana gates — caster loadouts cast free, cooldown-less spells forever",
+  "severity": "High",
+  "lens": "bug",
+  "category": "edge-case",
+  "file": "src/lib/combat/simulation-engine.ts:344"
+ },
+ {
+  "slug": "combat-damage-tuning",
+  "context": "Combat & Damage Tuning",
+  "num": 2,
+  "title": "API accepts unvalidated `scenario.enemies` — unbounded `count` hangs the server, all-unknown archetype ids return a silent 100%-survival result",
+  "severity": "High",
+  "lens": "bug",
+  "category": "silent-failure",
+  "file": "src/app/api/combat-simulator/route.ts:53"
+ },
+ {
+  "slug": "combat-damage-tuning",
+  "context": "Combat & Damage Tuning",
+  "num": 3,
+  "title": "Predictive-balance lets the player act every 0.1s tick — no cast time or global action slot, so its heatmap overstates player throughput ~2×",
+  "severity": "Medium",
+  "lens": "bug",
+  "category": "engine-divergence",
+  "file": "src/lib/combat/predictive-balance.ts:123"
+ },
+ {
+  "slug": "combat-damage-tuning",
+  "context": "Combat & Damage Tuning",
+  "num": 4,
+  "title": "Pipeline-node expansion (C++ references) is mouse-only — invisible to keyboard and screen-reader users",
+  "severity": "High",
+  "lens": "ui",
+  "category": "a11y",
+  "file": "src/components/modules/core-engine/sub_combat/damage-pipeline/DamagePipelineFlow.tsx:79"
+ },
+ {
+  "slug": "combat-damage-tuning",
+  "context": "Combat & Damage Tuning",
+  "num": 5,
+  "title": "Combo timeline remove button is invisible until hover and has no accessible name",
+  "severity": "High",
+  "lens": "ui",
+  "category": "a11y",
+  "file": "src/components/modules/core-engine/sub_combat/combos/TimelineBlock.tsx:37"
+ },
+ {
+  "slug": "combat-damage-tuning",
+  "context": "Combat & Damage Tuning",
+  "num": 6,
+  "title": "Combo time ruler doesn't line up with the blocks it measures",
+  "severity": "Medium",
+  "lens": "ui",
+  "category": "visual-consistency",
+  "file": "src/components/modules/core-engine/sub_combat/combos/index.tsx:149"
+ },
+ {
+  "slug": "combat-damage-tuning",
+  "context": "Combat & Damage Tuning",
+  "num": 7,
+  "title": "DirectHealthFlow nodes advertise expansion (caret + pointer cursor) but clicking does nothing",
+  "severity": "Medium",
+  "lens": "ui",
+  "category": "polish",
+  "file": "src/components/modules/core-engine/sub_combat/damage-pipeline/DirectHealthFlow.tsx:29"
+ },
+ {
+  "slug": "combat-damage-tuning",
+  "context": "Combat & Damage Tuning",
+  "num": 8,
+  "title": "Gear select has no programmatic label — the one unlabeled control in the scenario form",
+  "severity": "Medium",
+  "lens": "ui",
+  "category": "a11y",
+  "file": "src/components/modules/evaluator/CombatSimulatorView.tsx:482"
+ },
+ {
+  "slug": "character-genome-designer",
+  "context": "Character & Genome Designer",
+  "num": 1,
+  "title": "\"Hardened\" codegen emits invalid C++ float literals — every preset genome's .cpp fails to compile",
+  "severity": "High",
+  "lens": "bug",
+  "category": "edge-case",
+  "file": "src/lib/genome/codegen.ts:66"
+ },
+ {
+  "slug": "character-genome-designer",
+  "context": "Character & Genome Designer",
+  "num": 2,
+  "title": "Clearing the genome name silently deletes the genome (and all its checkpoints) on next reload",
+  "severity": "High",
+  "lens": "bug",
+  "category": "data-loss",
+  "file": "src/components/modules/core-engine/sub_character/genome/GenomeHeaderPanel.tsx:43"
+ },
+ {
+  "slug": "character-genome-designer",
+  "context": "Character & Genome Designer",
+  "num": 3,
+  "title": "Wizard marks a step \"running\" before a cancellable dispatch — preflight Cancel leaves an eternal spinner",
+  "severity": "Medium",
+  "lens": "bug",
+  "category": "silent-failure",
+  "file": "src/components/modules/core-engine/sub_character/wizard/CharacterSourceWizard.tsx:81-86"
+ },
+ {
+  "slug": "character-genome-designer",
+  "context": "Character & Genome Designer",
+  "num": 4,
+  "title": "Attribute Optimizer: lowering the level keeps the old allocation — efficiency badge reads >100%",
+  "severity": "Medium",
+  "lens": "bug",
+  "category": "edge-case",
+  "file": "src/components/modules/core-engine/sub_character/attributes/AttributePointOptimizer.tsx:31"
+ },
+ {
+  "slug": "character-genome-designer",
+  "context": "Character & Genome Designer",
+  "num": 5,
+  "title": "Clipboard copies report success without verifying the write",
+  "severity": "Low",
+  "lens": "bug",
+  "category": "silent-failure",
+  "file": "src/components/modules/core-engine/sub_character/genome/CodePreview.tsx:20-24"
+ },
+ {
+  "slug": "character-genome-designer",
+  "context": "Character & Genome Designer",
+  "num": 6,
+  "title": "Code preview modal is keyboard-inaccessible: no Escape, no close button, no dialog semantics",
+  "severity": "High",
+  "lens": "ui",
+  "category": "a11y",
+  "file": "src/components/modules/core-engine/sub_character/genome/CodePreview.tsx:27-39"
+ },
+ {
+  "slug": "character-genome-designer",
+  "context": "Character & Genome Designer",
+  "num": 7,
+  "title": "All custom sliders are invisible, unlabeled range inputs — 40+ unnamed focusable controls",
+  "severity": "Medium",
+  "lens": "ui",
+  "category": "a11y",
+  "file": "src/components/modules/core-engine/sub_character/genome/ProfileSection.tsx:88-90"
+ },
+ {
+  "slug": "character-genome-designer",
+  "context": "Character & Genome Designer",
+  "num": 8,
+  "title": "Level-slider row duplicated across panels and already drifting (NumberField vs raw input, Lv.100 vs Lv.50)",
+  "severity": "Medium",
+  "lens": "ui",
+  "category": "component-extraction",
+  "file": "src/components/modules/core-engine/sub_character/genome/LiveSimDashboard.tsx:50-65"
+ },
+ {
+  "slug": "character-genome-designer",
+  "context": "Character & Genome Designer",
+  "num": 9,
+  "title": "Genome title input has no placeholder, label, or empty-state affordance — it can vanish entirely",
+  "severity": "Medium",
+  "lens": "ui",
+  "category": "polish",
+  "file": "src/components/modules/core-engine/sub_character/genome/GenomeHeaderPanel.tsx:43-44"
+ },
+ {
+  "slug": "character-genome-designer",
+  "context": "Character & Genome Designer",
+  "num": 10,
+  "title": "Selected state on wizard source cards and compare toggles is color-only, with no aria-pressed",
+  "severity": "Medium",
+  "lens": "ui",
+  "category": "a11y",
+  "file": "src/components/modules/core-engine/sub_character/wizard/CharacterSourceWizard.tsx:115-131"
+ },
+ {
+  "slug": "economy-balance-simulation",
+  "context": "Economy & Balance Simulation",
+  "num": 1,
+  "title": "Config clamp fix only covers `simulate` — `generate-code` and the entire `/sweep` route still feed raw client configs into `runSimulation`",
+  "severity": "High",
+  "lens": "bug",
+  "category": "edge-case",
+  "file": "src/app/api/economy-simulator/route.ts:73"
+ },
+ {
+  "slug": "economy-balance-simulation",
+  "context": "Economy & Balance Simulation",
+  "num": 2,
+  "title": "Tornado chart relabels stale sweep data when the output metric is toggled — gini values displayed as \"Net Flow /hr\"",
+  "severity": "Medium",
+  "lens": "bug",
+  "category": "stale-state",
+  "file": "src/components/modules/evaluator/EconomySimulatorView.tsx:872"
+ },
+ {
+  "slug": "economy-balance-simulation",
+  "context": "Economy & Balance Simulation",
+  "num": 3,
+  "title": "Saving a run with an existing name silently overwrites it — including the baseline snapshot",
+  "severity": "Medium",
+  "lens": "bug",
+  "category": "data-loss",
+  "file": "src/lib/economy/economy-run-db.ts:44"
+ },
+ {
+  "slug": "economy-balance-simulation",
+  "context": "Economy & Balance Simulation",
+  "num": 4,
+  "title": "`buildSupplyDemand` divides cohort earnings by the total agent count — affordability index inflated for every level past the early game",
+  "severity": "Medium",
+  "lens": "bug",
+  "category": "logic-error",
+  "file": "src/lib/economy/simulation-engine.ts:500"
+ },
+ {
+  "slug": "economy-balance-simulation",
+  "context": "Economy & Balance Simulation",
+  "num": 5,
+  "title": "\"Download All\" fires 7 synchronous programmatic downloads — browsers block all but the first, and the blob URL is revoked while the download may still be starting",
+  "severity": "Low",
+  "lens": "bug",
+  "category": "silent-failure",
+  "file": "src/components/modules/evaluator/EconomyCodeGenPanel.tsx:44"
+ },
+ {
+  "slug": "economy-balance-simulation",
+  "context": "Economy & Balance Simulation",
+  "num": 6,
+  "title": "All four economy charts are hover-only — zero keyboard or screen-reader access to the simulation's core output",
+  "severity": "High",
+  "lens": "ui",
+  "category": "a11y",
+  "file": "src/components/modules/evaluator/EconomySimulatorView.tsx:540"
+ },
+ {
+  "slug": "economy-balance-simulation",
+  "context": "Economy & Balance Simulation",
+  "num": 7,
+  "title": "Chart hover-tooltip JSX copy-pasted 4× with drifting styles — and the Gold Flow variant overflows the card edge",
+  "severity": "Medium",
+  "lens": "ui",
+  "category": "component-extraction",
+  "file": "src/components/modules/evaluator/EconomySimulatorView.tsx:540"
+ },
+ {
+  "slug": "economy-balance-simulation",
+  "context": "Economy & Balance Simulation",
+  "num": 8,
+  "title": "Saved-run delete is one un-confirmed click sitting 12 px from the load/baseline buttons",
+  "severity": "Medium",
+  "lens": "ui",
+  "category": "polish",
+  "file": "src/components/modules/evaluator/EconomyRunsStrip.tsx:117"
+ },
+ {
+  "slug": "economy-balance-simulation",
+  "context": "Economy & Balance Simulation",
+  "num": 9,
+  "title": "Collapsible section headers lack `aria-expanded`, and the CodeGen title row invisibly changes function from \"expand\" to \"trigger network call\"",
+  "severity": "Medium",
+  "lens": "ui",
+  "category": "a11y",
+  "file": "src/components/modules/evaluator/EconomyCodeGenPanel.tsx:74"
+ },
+ {
+  "slug": "economy-balance-simulation",
+  "context": "Economy & Balance Simulation",
+  "num": 10,
+  "title": "Save-run input relies on placeholder-as-label and gives no inline failure feedback",
+  "severity": "Low",
+  "lens": "ui",
+  "category": "a11y",
+  "file": "src/components/modules/evaluator/EconomyRunsStrip.tsx:62"
+ },
+ {
+  "slug": "inventory-system",
+  "context": "Inventory System",
+  "num": 1,
+  "title": "Selecting another item card mid-generation fires a premature/false completion and orphans the real one",
+  "severity": "High",
+  "lens": "bug",
+  "category": "race-condition",
+  "file": "src/components/modules/core-engine/sub_inventory/catalog/CatalogGearTab.tsx:82-84"
+ },
+ {
+  "slug": "inventory-system",
+  "context": "Inventory System",
+  "num": 2,
+  "title": "AffixSunburst outer-ring labels index the wrong arcs — \"2 Prefixes\" is unlabeled and a grandchild label renders in its place",
+  "severity": "Medium",
+  "lens": "bug",
+  "category": "wrong-results",
+  "file": "src/components/modules/core-engine/sub_inventory/catalog/AffixSunburst.tsx:118"
+ },
+ {
+  "slug": "inventory-system",
+  "context": "Inventory System",
+  "num": 3,
+  "title": "\"Sort: Power\" orders the grid by a different power formula than the PWR badge shown on every card",
+  "severity": "Low",
+  "lens": "bug",
+  "category": "wrong-results",
+  "file": "src/components/modules/core-engine/sub_inventory/catalog/CatalogGearTab.tsx:69-73"
+ },
+ {
+  "slug": "inventory-system",
+  "context": "Inventory System",
+  "num": 4,
+  "title": "Comparison panel allows the same item in two of three slots — duplicate React keys and a self-comparison",
+  "severity": "Low",
+  "lens": "bug",
+  "category": "edge-case",
+  "file": "src/components/modules/core-engine/sub_inventory/catalog/ItemComparisonPanel.tsx:33"
+ },
+ {
+  "slug": "inventory-system",
+  "context": "Inventory System",
+  "num": 5,
+  "title": "Keyboard users can navigate the item grid but cannot open the item detail drawer",
+  "severity": "High",
+  "lens": "ui",
+  "category": "a11y",
+  "file": "src/components/modules/core-engine/sub_inventory/catalog/CatalogItemGrid.tsx:40"
+ },
+ {
+  "slug": "inventory-system",
+  "context": "Inventory System",
+  "num": 6,
+  "title": "Equipment loadout paper-doll slots are mouse-only",
+  "severity": "High",
+  "lens": "ui",
+  "category": "a11y",
+  "file": "src/components/modules/core-engine/sub_inventory/catalog/EquipmentLoadoutSection.tsx:127-137"
+ },
+ {
+  "slug": "inventory-system",
+  "context": "Inventory System",
+  "num": 7,
+  "title": "Filter and form controls have no accessible names",
+  "severity": "Medium",
+  "lens": "ui",
+  "category": "a11y",
+  "file": "src/components/modules/core-engine/sub_inventory/catalog/CatalogFiltersBar.tsx:45-70"
+ },
+ {
+  "slug": "inventory-system",
+  "context": "Inventory System",
+  "num": 8,
+  "title": "Affix-table collapse button suppresses the focus outline and hides its expanded state",
+  "severity": "Medium",
+  "lens": "ui",
+  "category": "polish",
+  "file": "src/components/modules/core-engine/sub_inventory/catalog/AffixSlotPanels.tsx:27-28"
+ },
+ {
+  "slug": "inventory-system",
+  "context": "Inventory System",
+  "num": 9,
+  "title": "Select/input pill styling is copy-pasted across three files and has already drifted",
+  "severity": "Low",
+  "lens": "ui",
+  "category": "component-extraction",
+  "file": "src/components/modules/core-engine/sub_inventory/catalog/CatalogFiltersBar.tsx:50"
+ },
+ {
+  "slug": "loot-affix-system",
+  "context": "Loot & Affix System",
+  "num": 1,
+  "title": "Pagination Prev/Next operate on the unclamped stale `page` — dead clicks after deletions shrink the page count",
+  "severity": "Medium",
+  "lens": "bug",
+  "category": "edge-case",
+  "file": "src/components/modules/core-engine/sub_loot/affix/LootTablePagination.tsx:18"
+ },
+ {
+  "slug": "loot-affix-system",
+  "context": "Loot & Affix System",
+  "num": 2,
+  "title": "Auto-balancer conflates \"degenerate lerp\" (denom = 0) with \"dropChance 0\" — reports false reachable/unreachable verdicts",
+  "severity": "Medium",
+  "lens": "bug",
+  "category": "logic-error",
+  "file": "src/lib/loot/auto-balancer.ts:76"
+ },
+ {
+  "slug": "loot-affix-system",
+  "context": "Loot & Affix System",
+  "num": 3,
+  "title": "Auto-balancer silently fabricates a distribution when `rarityWeights` is shorter than 5",
+  "severity": "Low",
+  "lens": "bug",
+  "category": "state-corruption",
+  "file": "src/lib/loot/auto-balancer.ts:87"
+ },
+ {
+  "slug": "loot-affix-system",
+  "context": "Loot & Affix System",
+  "num": 4,
+  "title": "`setEditorHistory` called inside `setEditorEntries` updaters — StrictMode double-invoke pushes duplicate undo snapshots",
+  "severity": "Low",
+  "lens": "bug",
+  "category": "state-corruption",
+  "file": "src/components/modules/core-engine/sub_loot/affix/LootTableEditor.tsx:97"
+ },
+ {
+  "slug": "loot-affix-system",
+  "context": "Loot & Affix System",
+  "num": 5,
+  "title": "Slider-drag undo coalescing never ends — two separate drags of the same slider collapse into one undo step",
+  "severity": "Low",
+  "lens": "bug",
+  "category": "data-loss",
+  "file": "src/components/modules/core-engine/sub_loot/affix/LootTableEditor.tsx:84"
+ },
+ {
+  "slug": "loot-affix-system",
+  "context": "Loot & Affix System",
+  "num": 6,
+  "title": "Pagination chevron buttons are unlabeled icon-only controls with no hover/focus affordance",
+  "severity": "Medium",
+  "lens": "ui",
+  "category": "a11y",
+  "file": "src/components/modules/core-engine/sub_loot/affix/LootTablePagination.tsx:17"
+ },
+ {
+  "slug": "loot-affix-system",
+  "context": "Loot & Affix System",
+  "num": 7,
+  "title": "Filter toggles (source, rarity, breadcrumb) convey active state by color alone — no `aria-pressed`/`aria-current`",
+  "severity": "Medium",
+  "lens": "ui",
+  "category": "a11y",
+  "file": "src/components/modules/core-engine/sub_loot/affix/LootTableSearchFilters.tsx:34"
+ },
+ {
+  "slug": "loot-affix-system",
+  "context": "Loot & Affix System",
+  "num": 8,
+  "title": "Search input and enemy-source select have no programmatic labels",
+  "severity": "Medium",
+  "lens": "ui",
+  "category": "a11y",
+  "file": "src/components/modules/core-engine/sub_loot/affix/LootTableSearchFilters.tsx:25"
+ },
+ {
+  "slug": "loot-affix-system",
+  "context": "Loot & Affix System",
+  "num": 9,
+  "title": "The \"2xs mono pill button\" is hand-rolled ten-plus times with drifting hover/disabled treatments — extract a shared component",
+  "severity": "Low",
+  "lens": "ui",
+  "category": "component-extraction",
+  "file": "src/components/modules/core-engine/sub_loot/affix/LootTableEditorToolbar.tsx:45"
+ },
+ {
+  "slug": "loot-affix-system",
+  "context": "Loot & Affix System",
+  "num": 10,
+  "title": "Empty entry list always blames \"your search\" — misleading when the table is actually empty",
+  "severity": "Low",
+  "lens": "ui",
+  "category": "polish",
+  "file": "src/components/modules/core-engine/sub_loot/affix/LootTableEntryList.tsx:76"
+ },
+ {
+  "slug": "bestiary-enemy-design",
+  "context": "Bestiary & Enemy Design",
+  "num": 1,
+  "title": "Balance linter crashes on the exact malformed archetype it exists to flag (half-applied stats guard)",
+  "severity": "Medium",
+  "lens": "bug",
+  "category": "edge-case",
+  "file": "src/lib/balance/bestiary-guardrails.ts:79-84"
+ },
+ {
+  "slug": "bestiary-enemy-design",
+  "context": "Bestiary & Enemy Design",
+  "num": 2,
+  "title": "Perception cone visualizer draws the 800cm hearing ring at ~1180cm scale, overstating hearing range by ~47%",
+  "severity": "Low",
+  "lens": "bug",
+  "category": "wrong-results",
+  "file": "src/components/modules/core-engine/sub_bestiary/ai-logic/PerceptionConeViz.tsx:17,44"
+ },
+ {
+  "slug": "bestiary-enemy-design",
+  "context": "Bestiary & Enemy Design",
+  "num": 3,
+  "title": "BT flowchart collapse toggles silently corrupt base collapse state while a search is active",
+  "severity": "Low",
+  "lens": "bug",
+  "category": "state-corruption",
+  "file": "src/components/modules/core-engine/sub_bestiary/ai-logic/BTFlowchart.tsx:42-53,95-110"
+ },
+ {
+  "slug": "bestiary-enemy-design",
+  "context": "Bestiary & Enemy Design",
+  "num": 4,
+  "title": "Behavior-tree widget puts every node in the tab order and hides hierarchy from assistive tech",
+  "severity": "High",
+  "lens": "ui",
+  "category": "a11y",
+  "file": "src/components/modules/core-engine/sub_bestiary/ai-logic/BTFlowchartRow.tsx:31-36"
+ },
+ {
+  "slug": "bestiary-enemy-design",
+  "context": "Bestiary & Enemy Design",
+  "num": 5,
+  "title": "Hand-rolled eyebrow-label string duplicated 32 times across the bestiary instead of the MicroLabel primitive",
+  "severity": "Medium",
+  "lens": "ui",
+  "category": "component-extraction",
+  "file": "src/components/modules/core-engine/sub_bestiary/archetypes/ArchetypeBuilder.tsx:34"
+ },
+ {
+  "slug": "bestiary-enemy-design",
+  "context": "Bestiary & Enemy Design",
+  "num": 6,
+  "title": "Perception cone panel doesn't stack on narrow viewports, crushing the legend",
+  "severity": "Medium",
+  "lens": "ui",
+  "category": "responsiveness",
+  "file": "src/components/modules/core-engine/sub_bestiary/ai-logic/AILogicTab.tsx:94"
+ },
+ {
+  "slug": "bestiary-enemy-design",
+  "context": "Bestiary & Enemy Design",
+  "num": 7,
+  "title": "Builder preview's effective stat value renders at 10px, below the module's documented 12px floor",
+  "severity": "Low",
+  "lens": "ui",
+  "category": "a11y",
+  "file": "src/components/modules/core-engine/sub_bestiary/archetypes/ArchetypeBuilder.tsx:152"
+ },
+ {
+  "slug": "bestiary-enemy-design",
+  "context": "Bestiary & Enemy Design",
+  "num": 8,
+  "title": "BT node search has no empty state — zero matches renders a blank tree pane",
+  "severity": "Low",
+  "lens": "ui",
+  "category": "polish",
+  "file": "src/components/modules/core-engine/sub_bestiary/ai-logic/BTFlowchart.tsx:152-167"
+ },
+ {
+  "slug": "world-quests-procgen",
+  "context": "World, Quests & Procgen",
+  "num": 1,
+  "title": "Boss zone diamonds are drawn in pixel space while every other map element uses percentages",
+  "severity": "High",
+  "lens": "bug",
+  "category": "edge-case",
+  "file": "src/components/modules/core-engine/sub_world/map/MapCanvas.tsx:132"
+ },
+ {
+  "slug": "world-quests-procgen",
+  "context": "World, Quests & Procgen",
+  "num": 2,
+  "title": "Level Range Flow axis frozen at MAX_LEVEL=7 while zones now reach level 50 — six zones render empty or clipped bars",
+  "severity": "High",
+  "lens": "bug",
+  "category": "edge-case",
+  "file": "src/components/modules/core-engine/sub_world/density/DensityLevelGroup.tsx:78"
+ },
+ {
+  "slug": "world-quests-procgen",
+  "context": "World, Quests & Procgen",
+  "num": 3,
+  "title": "Moving the player-level slider during a zone generation run re-keys the CLI hook and silently drops the completion refresh",
+  "severity": "Medium",
+  "lens": "bug",
+  "category": "race-condition",
+  "file": "src/components/modules/core-engine/sub_world/index.tsx:75"
+ },
+ {
+  "slug": "world-quests-procgen",
+  "context": "World, Quests & Procgen",
+  "num": 4,
+  "title": "Zone pins persist unvalidated `params` — one malformed POST creates a poison pin that crashes the generator panel on every restore",
+  "severity": "Medium",
+  "lens": "bug",
+  "category": "state-corruption",
+  "file": "src/lib/procgen-db.ts:71"
+ },
+ {
+  "slug": "world-quests-procgen",
+  "context": "World, Quests & Procgen",
+  "num": 5,
+  "title": "Requesting a nonexistent levelDocId silently generates fallback quests instead of erroring",
+  "severity": "Low",
+  "lens": "bug",
+  "category": "silent-failure",
+  "file": "src/app/api/quest-generation/route.ts:73"
+ },
+ {
+  "slug": "world-quests-procgen",
+  "context": "World, Quests & Procgen",
+  "num": 6,
+  "title": "Topology graph nodes overflow the hard-coded 460×300 canvas and their tooltips detach",
+  "severity": "High",
+  "lens": "ui",
+  "category": "visual-consistency",
+  "file": "src/components/modules/core-engine/sub_world/map/TopologyGraph.tsx:31"
+ },
+ {
+  "slug": "world-quests-procgen",
+  "context": "World, Quests & Procgen",
+  "num": 7,
+  "title": "World map and topology graph are mouse-only; the player-level slider has no accessible name",
+  "severity": "High",
+  "lens": "ui",
+  "category": "a11y",
+  "file": "src/components/modules/core-engine/sub_world/map/MapCanvas.tsx:96"
+ },
+ {
+  "slug": "world-quests-procgen",
+  "context": "World, Quests & Procgen",
+  "num": 8,
+  "title": "Enemy Density Heatmap renders the five KOTOR zones as confident all-zero rows",
+  "severity": "Medium",
+  "lens": "ui",
+  "category": "polish",
+  "file": "src/components/modules/core-engine/sub_world/density/DensityLevelGroup.tsx:37"
+ },
+ {
+  "slug": "world-quests-procgen",
+  "context": "World, Quests & Procgen",
+  "num": 9,
+  "title": "Range-filter logic and the labelled-bar row are copy-pasted across three panels",
+  "severity": "Medium",
+  "lens": "ui",
+  "category": "component-extraction",
+  "file": "src/components/modules/core-engine/sub_world/density/DensityLevelGroup.tsx:25"
+ },
+ {
+  "slug": "world-quests-procgen",
+  "context": "World, Quests & Procgen",
+  "num": 10,
+  "title": "Region Details uses AnimatePresence mode=\"sync\", causing a stacked layout jump on every zone switch",
+  "severity": "Low",
+  "lens": "ui",
+  "category": "polish",
+  "file": "src/components/modules/core-engine/sub_world/map/MapTopologyGroup.tsx:104"
+ },
+ {
+  "slug": "progression-save-systems",
+  "context": "Progression & Save Systems",
+  "num": 1,
+  "title": "Build comparison table hardcodes 3 preset columns while BUILD_PRESETS ships 5",
+  "severity": "Medium",
+  "lens": "bug",
+  "category": "edge-case",
+  "file": "src/components/modules/core-engine/sub_progression/builds/BuildPathComparison.tsx:60"
+ },
+ {
+  "slug": "progression-save-systems",
+  "context": "Progression & Save Systems",
+  "num": 2,
+  "title": "Cloud sync \"Last Sync\" renders timezone-dependent time-of-day — hydration mismatch and stale syncs masquerade as fresh",
+  "severity": "Medium",
+  "lens": "bug",
+  "category": "silent-failure",
+  "file": "src/components/modules/core-engine/sub_save/advanced/CloudSyncStatus.tsx:38"
+ },
+ {
+  "slug": "progression-save-systems",
+  "context": "Progression & Save Systems",
+  "num": 3,
+  "title": "Diminishing-returns axis labels don't match the plotted coordinate scale (~11% read error)",
+  "severity": "Low",
+  "lens": "bug",
+  "category": "wrong-results",
+  "file": "src/components/modules/core-engine/sub_progression/analysis/DiminishingReturnsVisualizer.tsx:57"
+ },
+ {
+  "slug": "progression-save-systems",
+  "context": "Progression & Save Systems",
+  "num": 4,
+  "title": "Data Recovery wizard steps are mouse-only clickable divs — keyboard users can't operate them",
+  "severity": "High",
+  "lens": "ui",
+  "category": "a11y",
+  "file": "src/components/modules/core-engine/sub_save/advanced/DataRecoveryTool.tsx:52"
+ },
+ {
+  "slug": "progression-save-systems",
+  "context": "Progression & Save Systems",
+  "num": 5,
+  "title": "Selected-state toggle buttons are inconsistent: aria-pressed on one panel, color-only everywhere else",
+  "severity": "Medium",
+  "lens": "ui",
+  "category": "a11y",
+  "file": "src/components/modules/core-engine/sub_progression/analysis/DiminishingReturnsVisualizer.tsx:36"
+ },
+ {
+  "slug": "progression-save-systems",
+  "context": "Progression & Save Systems",
+  "num": 6,
+  "title": "Compare-mode layouts have no mobile breakpoints, unlike every sibling grid",
+  "severity": "Medium",
+  "lens": "ui",
+  "category": "responsiveness",
+  "file": "src/components/modules/core-engine/sub_progression/curves/MainChartArea.tsx:47"
+ },
+ {
+  "slug": "progression-save-systems",
+  "context": "Progression & Save Systems",
+  "num": 7,
+  "title": "XP source rows print every label and percentage twice",
+  "severity": "Low",
+  "lens": "ui",
+  "category": "polish",
+  "file": "src/components/modules/core-engine/sub_progression/builds/XpSourceBreakdown.tsx:45"
+ },
+ {
+  "slug": "progression-save-systems",
+  "context": "Progression & Save Systems",
+  "num": 8,
+  "title": "Budget bar's \"80%\" tick label is positioned with a margin hack and drifts off its marker",
+  "severity": "Low",
+  "lens": "ui",
+  "category": "visual-consistency",
+  "file": "src/components/modules/core-engine/sub_save/schema/BudgetAlerting.tsx:79"
+ },
+ {
+  "slug": "animation-rigging",
+  "context": "Animation & Rigging",
+  "num": 1,
+  "title": "Non-identifier state names (spaces, empty, leading digit) pass the linter clean and silently generate uncompilable C++",
+  "severity": "High",
+  "lens": "bug",
+  "category": "silent-failure",
+  "file": "src/components/modules/content/animations/StateMachineEditor.tsx:1239"
+ },
+ {
+  "slug": "animation-rigging",
+  "context": "Animation & Rigging",
+  "num": 2,
+  "title": "Setup Guide completion is written to the persisted store but read from ephemeral local state — progress visually resets to 0/6 on remount",
+  "severity": "Medium",
+  "lens": "bug",
+  "category": "state-corruption",
+  "file": "src/components/modules/content/animations/AnimationsView.tsx:30"
+ },
+ {
+  "slug": "animation-rigging",
+  "context": "Animation & Rigging",
+  "num": 3,
+  "title": "MixamoImport watched-folder default is frozen at mount — project switch (or late store hydration) dispatches the pipeline against the wrong project",
+  "severity": "Medium",
+  "lens": "bug",
+  "category": "edge-case",
+  "file": "src/components/modules/content/animations/MixamoImport.tsx:40-44"
+ },
+ {
+  "slug": "animation-rigging",
+  "context": "Animation & Rigging",
+  "num": 4,
+  "title": "Combo code \"Copy\" shows \"Copied!\" even when the clipboard write fails (and leaks an unhandled rejection)",
+  "severity": "Low",
+  "lens": "bug",
+  "category": "silent-failure",
+  "file": "src/components/modules/content/animations/AIComboChoreographer.tsx:653-657"
+ },
+ {
+  "slug": "animation-rigging",
+  "context": "Animation & Rigging",
+  "num": 5,
+  "title": "\"Entry\" indicator labels an arbitrary state as the entry point in scanned/bridge mode",
+  "severity": "Low",
+  "lens": "bug",
+  "category": "edge-case",
+  "file": "src/components/modules/content/animations/AnimationStateMachine.tsx:943-959"
+ },
+ {
+  "slug": "animation-rigging",
+  "context": "Animation & Rigging",
+  "num": 6,
+  "title": "StateMachineEditor canvas nodes are mouse-only divs — selecting states and completing a \"Draw Arrow\" is impossible from the keyboard",
+  "severity": "High",
+  "lens": "ui",
+  "category": "a11y",
+  "file": "src/components/modules/content/animations/StateMachineEditor.tsx:909-935"
+ },
+ {
+  "slug": "animation-rigging",
+  "context": "Animation & Rigging",
+  "num": 7,
+  "title": "Editor header toolbar (8 buttons) has no wrap or collapse — actions clip off-screen at narrow widths",
+  "severity": "Medium",
+  "lens": "ui",
+  "category": "responsiveness",
+  "file": "src/components/modules/content/animations/StateMachineEditor.tsx:614-735"
+ },
+ {
+  "slug": "animation-rigging",
+  "context": "Animation & Rigging",
+  "num": 8,
+  "title": "Animation panels hand-roll their chrome with hard-coded hex colors instead of SchematicPanel/design tokens",
+  "severity": "Medium",
+  "lens": "ui",
+  "category": "visual-consistency",
+  "file": "src/components/modules/content/animations/AnimationChecklist.tsx:299-341"
+ },
+ {
+  "slug": "animation-rigging",
+  "context": "Animation & Rigging",
+  "num": 9,
+  "title": "Async results (Blender exports, scan errors) render silently — no `role=\"status\"`/aria-live and no dismiss",
+  "severity": "Medium",
+  "lens": "ui",
+  "category": "polish",
+  "file": "src/components/modules/content/animations/AnimationStateMachine.tsx:571-575"
+ },
+ {
+  "slug": "animation-rigging",
+  "context": "Animation & Rigging",
+  "num": 10,
+  "title": "Hover-only transition rule labels use a fixed 8%-wide rect — long rules overflow the badge and are unreachable on touch/keyboard",
+  "severity": "Low",
+  "lens": "ui",
+  "category": "polish",
+  "file": "src/components/modules/content/animations/AnimationStateMachine.tsx:793-818"
+ },
+ {
+  "slug": "level-materials-authoring",
+  "context": "Level & Materials Authoring",
+  "num": 1,
+  "title": "Fresh-mount Material Configurator generates a \"Metal\" material with Metallic=0",
+  "severity": "Medium",
+  "lens": "bug",
+  "category": "edge-case",
+  "file": "src/components/modules/content/materials/MaterialParameterConfigurator.tsx:160"
+ },
+ {
+  "slug": "level-materials-authoring",
+  "context": "Level & Materials Authoring",
+  "num": 2,
+  "title": "Style-transfer \"Analyze\" never looks at the image — image-only analyses return hardcoded stone/gray defaults presented as extracted properties",
+  "severity": "Medium",
+  "lens": "bug",
+  "category": "silent-failure",
+  "file": "src/app/api/style-transfer/route.ts:33"
+ },
+ {
+  "slug": "level-materials-authoring",
+  "context": "Level & Materials Authoring",
+  "num": 3,
+  "title": "Concurrent Blender previews on two patterns cross-wire spinner and result state",
+  "severity": "Medium",
+  "lens": "bug",
+  "category": "race-condition",
+  "file": "src/components/modules/content/materials/MaterialPatternCatalog.tsx:215"
+ },
+ {
+  "slug": "level-materials-authoring",
+  "context": "Level & Materials Authoring",
+  "num": 4,
+  "title": "Applying a preset silently discards the user's custom effect ordering",
+  "severity": "Low",
+  "lens": "bug",
+  "category": "data-loss",
+  "file": "src/stores/postProcessStudioStore.ts:173"
+ },
+ {
+  "slug": "level-materials-authoring",
+  "context": "Level & Materials Authoring",
+  "num": 5,
+  "title": "Two clashing visual languages inside the Materials tab strip",
+  "severity": "High",
+  "lens": "ui",
+  "category": "visual-consistency",
+  "file": "src/components/modules/content/materials/MaterialPatternCatalog.tsx:260"
+ },
+ {
+  "slug": "level-materials-authoring",
+  "context": "Level & Materials Authoring",
+  "num": 6,
+  "title": "Configurator surface/output/feature selectors expose no selected state to assistive tech",
+  "severity": "High",
+  "lens": "ui",
+  "category": "a11y",
+  "file": "src/components/modules/content/materials/MaterialParameterConfigurator.tsx:275"
+ },
+ {
+  "slug": "level-materials-authoring",
+  "context": "Level & Materials Authoring",
+  "num": 7,
+  "title": "Configurator and style-transfer range sliders are unlabeled with no visible thumb/focus state",
+  "severity": "Medium",
+  "lens": "ui",
+  "category": "a11y",
+  "file": "src/components/modules/content/materials/MaterialParameterConfigurator.tsx:407"
+ },
+ {
+  "slug": "level-materials-authoring",
+  "context": "Level & Materials Authoring",
+  "num": 8,
+  "title": "Style-transfer \"Compare\" toggle is a dead end for description-only analyses",
+  "severity": "Medium",
+  "lens": "ui",
+  "category": "polish",
+  "file": "src/components/modules/content/materials/MaterialStyleTransfer.tsx:221"
+ },
+ {
+  "slug": "level-materials-authoring",
+  "context": "Level & Materials Authoring",
+  "num": 9,
+  "title": "Post-Process Studio layout breaks down at narrow widths (fixed 7-column presets, non-wrapping toolbar, rigid 3-column grid)",
+  "severity": "Medium",
+  "lens": "ui",
+  "category": "responsiveness",
+  "file": "src/components/modules/evaluator/PostProcessStudioView.tsx:378"
+ },
+ {
+  "slug": "visual-asset-generation",
+  "context": "Visual Asset Generation",
+  "num": 1,
+  "title": "Single transient status-poll failure permanently fails an in-flight MCP job and orphans the remote generation",
+  "severity": "High",
+  "lens": "bug",
+  "category": "recovery-gap",
+  "file": "src/components/modules/visual-gen/asset-forge/useForgeStore.ts:157"
+ },
+ {
+  "slug": "visual-asset-generation",
+  "context": "Visual Asset Generation",
+  "num": 2,
+  "title": "Cancelling a pending MCP job during submission spawns an unregistered poller that can import the cancelled model",
+  "severity": "Medium",
+  "lens": "bug",
+  "category": "race-condition",
+  "file": "src/components/modules/visual-gen/asset-forge/useForgeStore.ts:219"
+ },
+ {
+  "slug": "visual-asset-generation",
+  "context": "Visual Asset Generation",
+  "num": 3,
+  "title": "Generated UE5 skeletal-mesh import script writes scale/LOD to StaticMeshImportData — user's scale silently ignored",
+  "severity": "Medium",
+  "lens": "bug",
+  "category": "wrong-output",
+  "file": "src/lib/visual-gen/ue5-import-templates.ts:67"
+ },
+ {
+  "slug": "visual-asset-generation",
+  "context": "Visual Asset Generation",
+  "num": 4,
+  "title": "Uncommitted transparency drift-fix breaks its own unit test (verified red)",
+  "severity": "Low",
+  "lens": "bug",
+  "category": "regression",
+  "file": "src/lib/leonardo.ts:116"
+ },
+ {
+  "slug": "visual-asset-generation",
+  "context": "Visual Asset Generation",
+  "num": 5,
+  "title": "Cleanup fetch in generateTextureOn3DModel's finally block can mask the real error",
+  "severity": "Low",
+  "lens": "bug",
+  "category": "silent-failure",
+  "file": "src/lib/leonardo.ts:340"
+ },
+ {
+  "slug": "visual-asset-generation",
+  "context": "Visual Asset Generation",
+  "num": 6,
+  "title": "Reference-image upload is unreachable by keyboard (display:none file input)",
+  "severity": "High",
+  "lens": "ui",
+  "category": "a11y",
+  "file": "src/components/modules/visual-gen/asset-forge/GenerationPanel.tsx:187"
+ },
+ {
+  "slug": "visual-asset-generation",
+  "context": "Visual Asset Generation",
+  "num": 7,
+  "title": "Asset-forge controls skip the cluster's standardized focus ring and aria-pressed treatment",
+  "severity": "High",
+  "lens": "ui",
+  "category": "a11y",
+  "file": "src/components/modules/visual-gen/asset-forge/GenerationPanel.tsx:106"
+ },
+ {
+  "slug": "visual-asset-generation",
+  "context": "Visual Asset Generation",
+  "num": 8,
+  "title": "Browse search failures are silent — stale results masquerade as fresh, and zero-hit searches show the wrong copy",
+  "severity": "Medium",
+  "lens": "ui",
+  "category": "polish",
+  "file": "src/components/modules/visual-gen/asset-browser/BrowsePanel.tsx:53"
+ },
+ {
+  "slug": "visual-asset-generation",
+  "context": "Visual Asset Generation",
+  "num": 9,
+  "title": "Disabled Generate button never says why",
+  "severity": "Low",
+  "lens": "ui",
+  "category": "polish",
+  "file": "src/components/modules/visual-gen/asset-forge/GenerationPanel.tsx:224"
+ },
+ {
+  "slug": "visual-asset-generation",
+  "context": "Visual Asset Generation",
+  "num": 10,
+  "title": "Segmented-toggle and status-pill JSX is hand-copied across the visual-gen cluster",
+  "severity": "Low",
+  "lens": "ui",
+  "category": "component-extraction",
+  "file": "src/components/modules/visual-gen/asset-forge/GenerationPanel.tsx:105"
+ },
+ {
+  "slug": "blender-mcp-integration",
+  "context": "Blender MCP Integration",
+  "num": 1,
+  "title": "Command chain from cbb5840 has no flush on disconnect — dead commands starve the queue and reconnects stall behind them",
+  "severity": "High",
+  "lens": "bug",
+  "category": "race-condition",
+  "file": "src/lib/blender-mcp/service.ts:117"
+ },
+ {
+  "slug": "blender-mcp-integration",
+  "context": "Blender MCP Integration",
+  "num": 2,
+  "title": "Serialization does not drain stale bytes after a timeout — late response answers the next command, permanently off-by-one",
+  "severity": "High",
+  "lens": "bug",
+  "category": "state-corruption",
+  "file": "src/lib/blender-mcp/service.ts:155"
+ },
+ {
+  "slug": "blender-mcp-integration",
+  "context": "Blender MCP Integration",
+  "num": 3,
+  "title": "Manual connect during auto-retry backoff doesn't cancel the pending retry — the stale retry clobbers a successful connection",
+  "severity": "Medium",
+  "lens": "bug",
+  "category": "race-condition",
+  "file": "src/stores/blenderMCPStore.ts:106"
+ },
+ {
+  "slug": "blender-mcp-integration",
+  "context": "Blender MCP Integration",
+  "num": 4,
+  "title": "ModelsView still uses the raw 150ms dispatch timer instead of dispatchPromptWhenReady — prompts silently dropped",
+  "severity": "Medium",
+  "lens": "bug",
+  "category": "race-condition",
+  "file": "src/components/modules/content/models/ModelsView.tsx:60"
+ },
+ {
+  "slug": "blender-mcp-integration",
+  "context": "Blender MCP Integration",
+  "num": 5,
+  "title": "Asset-import auto-capture revokes/shifts the screenshot the user is currently viewing",
+  "severity": "Low",
+  "lens": "bug",
+  "category": "edge-case",
+  "file": "src/stores/blenderMCPStore.ts:208"
+ },
+ {
+  "slug": "blender-mcp-integration",
+  "context": "Blender MCP Integration",
+  "num": 6,
+  "title": "Lightbox dialog has no focus management — focus stays behind the modal",
+  "severity": "High",
+  "lens": "ui",
+  "category": "a11y",
+  "file": "src/components/blender-mcp/ViewportPreview.tsx:159"
+ },
+ {
+  "slug": "blender-mcp-integration",
+  "context": "Blender MCP Integration",
+  "num": 7,
+  "title": "Asset cards expand only via mouse — the dependency graph is unreachable by keyboard",
+  "severity": "High",
+  "lens": "ui",
+  "category": "a11y",
+  "file": "src/components/modules/content/models/AssetInventory.tsx:412"
+ },
+ {
+  "slug": "blender-mcp-integration",
+  "context": "Blender MCP Integration",
+  "num": 8,
+  "title": "Sort controls were built but never rendered — the inventory is locked to name-ascending",
+  "severity": "Medium",
+  "lens": "ui",
+  "category": "polish",
+  "file": "src/components/modules/content/models/AssetInventory.tsx:230"
+ },
+ {
+  "slug": "blender-mcp-integration",
+  "context": "Blender MCP Integration",
+  "num": 9,
+  "title": "A failed rescan replaces the entire inventory with a full-screen error",
+  "severity": "Medium",
+  "lens": "ui",
+  "category": "polish",
+  "file": "src/components/modules/content/models/AssetInventory.tsx:285"
+ },
+ {
+  "slug": "blender-mcp-integration",
+  "context": "Blender MCP Integration",
+  "num": 10,
+  "title": "Expanded-card chrome hardcodes raw palette colors and one-off typography against the app's token system",
+  "severity": "Medium",
+  "lens": "ui",
+  "category": "visual-consistency",
+  "file": "src/components/modules/content/models/AssetInventory.tsx:471"
+ },
+ {
+  "slug": "audio-generation-scenes",
+  "context": "Audio Generation & Scenes",
+  "num": 1,
+  "title": "Circular zones (and their attenuation glows) silently swallow emitter placement and zone drawing",
+  "severity": "High",
+  "lens": "bug",
+  "category": "silent-failure",
+  "file": "src/components/modules/content/audio/AudioScenePainter.tsx:115"
+ },
+ {
+  "slug": "audio-generation-scenes",
+  "context": "Audio Generation & Scenes",
+  "num": 2,
+  "title": "Event Catalog edits are silently wiped on every tab switch",
+  "severity": "High",
+  "lens": "bug",
+  "category": "data-loss",
+  "file": "src/components/modules/content/audio/AudioEventCatalog.tsx:113"
+ },
+ {
+  "slug": "audio-generation-scenes",
+  "context": "Audio Generation & Scenes",
+  "num": 3,
+  "title": "The first zone in every scene gets `var(--text-muted)` as its color — hex-opacity concat renders it black/unstyled",
+  "severity": "Medium",
+  "lens": "bug",
+  "category": "edge-case",
+  "file": "src/components/modules/content/audio/AudioScenePainter.tsx:233"
+ },
+ {
+  "slug": "audio-generation-scenes",
+  "context": "Audio Generation & Scenes",
+  "num": 4,
+  "title": "CLI completion stamps `lastGeneratedAt` on whichever scene is active when the run finishes",
+  "severity": "Medium",
+  "lens": "bug",
+  "category": "race-condition",
+  "file": "src/components/modules/content/audio/AudioView.tsx:86"
+ },
+ {
+  "slug": "audio-generation-scenes",
+  "context": "Audio Generation & Scenes",
+  "num": 5,
+  "title": "Deleting assets/sets removes DB rows only — files leak forever and failures are swallowed",
+  "severity": "Low",
+  "lens": "bug",
+  "category": "silent-failure",
+  "file": "src/app/api/audio-gen/route.ts:138"
+ },
+ {
+  "slug": "audio-generation-scenes",
+  "context": "Audio Generation & Scenes",
+  "num": 6,
+  "title": "Scene delete is one-click, irreversible, and unconfirmed",
+  "severity": "High",
+  "lens": "ui",
+  "category": "polish",
+  "file": "src/components/modules/content/audio/AudioView.tsx:415"
+ },
+ {
+  "slug": "audio-generation-scenes",
+  "context": "Audio Generation & Scenes",
+  "num": 7,
+  "title": "10-tab bar has no overflow handling or tablist semantics, unlike every other module's tab bar",
+  "severity": "Medium",
+  "lens": "ui",
+  "category": "responsiveness",
+  "file": "src/components/modules/content/audio/AudioView.tsx:424"
+ },
+ {
+  "slug": "audio-generation-scenes",
+  "context": "Audio Generation & Scenes",
+  "num": 8,
+  "title": "Event Catalog rows are mouse-only — keyboard users cannot edit or delete events",
+  "severity": "High",
+  "lens": "ui",
+  "category": "a11y",
+  "file": "src/components/modules/content/audio/AudioEventCatalog.tsx:386"
+ },
+ {
+  "slug": "audio-generation-scenes",
+  "context": "Audio Generation & Scenes",
+  "num": 9,
+  "title": "Copy button nested inside the expand button in generated-file rows (invalid interactive nesting)",
+  "severity": "Medium",
+  "lens": "ui",
+  "category": "a11y",
+  "file": "src/components/modules/content/audio/AudioCodeGenPanel.tsx:189"
+ },
+ {
+  "slug": "audio-generation-scenes",
+  "context": "Audio Generation & Scenes",
+  "num": 10,
+  "title": "Event Catalog is visually off-scale from every sibling audio tab",
+  "severity": "Medium",
+  "lens": "ui",
+  "category": "visual-consistency",
+  "file": "src/components/modules/content/audio/AudioEventCatalog.tsx:176"
+ },
+ {
+  "slug": "pipeline-artifacts-test-gates",
+  "context": "Pipeline Artifacts & Test Gates",
+  "num": 1,
+  "title": "Scenario-only L3 jobs reach the bridge executor, which runs an *unfiltered* automation pass and correlates against ALL recorded results",
+  "severity": "High",
+  "lens": "bug",
+  "category": "silent-failure / state-corruption",
+  "file": "src/lib/test-gate-runner/drain.ts:115"
+ },
+ {
+  "slug": "pipeline-artifacts-test-gates",
+  "context": "Pipeline Artifacts & Test Gates",
+  "num": 2,
+  "title": "catalogStore persist `merge` shadows whole catalogs — newly-seeded entities in an existing catalog never appear, and their server lifecycle rows are silently dropped",
+  "severity": "Medium",
+  "lens": "bug",
+  "category": "stale-state / data-loss",
+  "file": "src/stores/catalogStore.ts:118-125"
+ },
+ {
+  "slug": "pipeline-artifacts-test-gates",
+  "context": "Pipeline Artifacts & Test Gates",
+  "num": 3,
+  "title": "Drain-worker singleton state evaporates on dev recompile — an orphaned, unstoppable `setInterval` keeps driving the non-reentrant editor alongside any new worker",
+  "severity": "Medium",
+  "lens": "bug",
+  "category": "race-condition / recovery-gap",
+  "file": "src/lib/test-gate-runner/worker.ts:33-37,71-79"
+ },
+ {
+  "slug": "pipeline-artifacts-test-gates",
+  "context": "Pipeline Artifacts & Test Gates",
+  "num": 4,
+  "title": "Running deferred gates gives zero outcome feedback — the DrainSummary is discarded and failures are silent",
+  "severity": "High",
+  "lens": "ui",
+  "category": "polish",
+  "file": "src/components/layout-lab/Baseline.tsx:133-143"
+ },
+ {
+  "slug": "pipeline-artifacts-test-gates",
+  "context": "Pipeline Artifacts & Test Gates",
+  "num": 5,
+  "title": "The runner's failure detail can never appear in the pipeline-rail tooltip — `deriveEntityArtifacts` drops `reason` (and the server tier), leaving dead tooltip code",
+  "severity": "High",
+  "lens": "ui",
+  "category": "polish",
+  "file": "src/components/layout-lab/hooks/useEntityArtifacts.ts:61"
+ },
+ {
+  "slug": "pipeline-artifacts-test-gates",
+  "context": "Pipeline Artifacts & Test Gates",
+  "num": 6,
+  "title": "CatalogMatrix blocker tooltip shows a stale \"not yet run\" reason for gates the runner actually ran and failed",
+  "severity": "Medium",
+  "lens": "ui",
+  "category": "polish",
+  "file": "src/components/layout-lab/CatalogMatrix.tsx:72-75"
+ },
+ {
+  "slug": "pipeline-artifacts-test-gates",
+  "context": "Pipeline Artifacts & Test Gates",
+  "num": 7,
+  "title": "CatalogMatrix renders every cell as \"pending\" while artifacts load (and after a failed fetch) — loading/error states are presented as real data",
+  "severity": "Medium",
+  "lens": "ui",
+  "category": "polish",
+  "file": "src/components/layout-lab/CatalogMatrix.tsx:51-67,79"
+ },
+ {
+  "slug": "pipeline-artifacts-test-gates",
+  "context": "Pipeline Artifacts & Test Gates",
+  "num": 8,
+  "title": "NextStepCoach wraps interactive controls in a `role=\"status\"` aria-live region",
+  "severity": "Medium",
+  "lens": "ui",
+  "category": "a11y",
+  "file": "src/components/layout-lab/NextStepCoach.tsx:57-67"
+ },
+ {
+  "slug": "item-pipeline-steps",
+  "context": "Item Pipeline Steps",
+  "num": 1,
+  "title": "\"Populate demo\" silently destroys the entire kept generation history — locally and on the server",
+  "severity": "High",
+  "lens": "bug",
+  "category": "data-loss",
+  "file": "src/components/layout-lab/steps/itemsSteps.ts:400"
+ },
+ {
+  "slug": "item-pipeline-steps",
+  "context": "Item Pipeline Steps",
+  "num": 2,
+  "title": "Double-click on Generate now appends duplicate batches and silently moves the selection (residue of the 3d50330 fix)",
+  "severity": "Low",
+  "lens": "bug",
+  "category": "race-condition",
+  "file": "src/components/layout-lab/steps/shared/CliProduce.tsx:59"
+ },
+ {
+  "slug": "item-pipeline-steps",
+  "context": "Item Pipeline Steps",
+  "num": 3,
+  "title": "Out-of-band economy values render off-chart: the OUTLIER diamond vanishes and budget bars bleed past their track",
+  "severity": "Medium",
+  "lens": "bug",
+  "category": "edge-case",
+  "file": "src/components/layout-lab/steps/ItemEconomy.tsx:31"
+ },
+ {
+  "slug": "item-pipeline-steps",
+  "context": "Item Pipeline Steps",
+  "num": 4,
+  "title": "CliProduce's \"✓ written…\" success banner survives Reset, contradicting the wiped store",
+  "severity": "Low",
+  "lens": "bug",
+  "category": "state-corruption",
+  "file": "src/components/layout-lab/steps/shared/CliProduce.tsx:49"
+ },
+ {
+  "slug": "item-pipeline-steps",
+  "context": "Item Pipeline Steps",
+  "num": 5,
+  "title": "Batch timestamps display UTC as if it were local wall-clock time",
+  "severity": "Low",
+  "lens": "bug",
+  "category": "edge-case",
+  "file": "src/components/layout-lab/steps/shared/CandidateGallery.tsx:67"
+ },
+ {
+  "slug": "item-pipeline-steps",
+  "context": "Item Pipeline Steps",
+  "num": 6,
+  "title": "LabTextarea / LabInput remove the focus outline with no replacement — keyboard users lose their place in every Produce panel",
+  "severity": "High",
+  "lens": "ui",
+  "category": "a11y",
+  "file": "src/components/layout-lab/steps/controls.tsx:22"
+ },
+ {
+  "slug": "item-pipeline-steps",
+  "context": "Item Pipeline Steps",
+  "num": 7,
+  "title": "CandidateGallery uses 13px type in five places, breaking the module's documented 14px floor",
+  "severity": "Medium",
+  "lens": "ui",
+  "category": "visual-consistency",
+  "file": "src/components/layout-lab/steps/shared/CandidateGallery.tsx:74"
+ },
+ {
+  "slug": "item-pipeline-steps",
+  "context": "Item Pipeline Steps",
+  "num": 8,
+  "title": "ItemVFX hand-rolls its GPU budget bar instead of using ChartPanel, and it overflows past 100% exactly when over budget",
+  "severity": "Medium",
+  "lens": "ui",
+  "category": "component-extraction",
+  "file": "src/components/layout-lab/steps/ItemAnimAudio.tsx:70"
+ },
+ {
+  "slug": "item-pipeline-steps",
+  "context": "Item Pipeline Steps",
+  "num": 9,
+  "title": "\"view prompt\" disclosure toggles expose no expanded state to assistive tech",
+  "severity": "Medium",
+  "lens": "ui",
+  "category": "a11y",
+  "file": "src/components/layout-lab/steps/shared/CliProduce.tsx:90"
+ },
+ {
+  "slug": "item-pipeline-steps",
+  "context": "Item Pipeline Steps",
+  "num": 10,
+  "title": "Acceptance banner labels power with a spurious \"%\" — \"power 102%\" is a score, not a percentage",
+  "severity": "Low",
+  "lens": "ui",
+  "category": "polish",
+  "file": "src/components/layout-lab/steps/itemsSteps.ts:314"
+ },
+ {
+  "slug": "layout-lab-pipeline-steps",
+  "context": "Layout Lab & Pipeline Steps",
+  "num": 1,
+  "title": "ArchetypeStep's gallery `generate`/`reselect` still has the stale-closure batch-drop that 3d50330 fixed only in ItemArt",
+  "severity": "High",
+  "lens": "bug",
+  "category": "race-condition",
+  "file": "src/components/layout-lab/steps/ArchetypeStep.tsx:91"
+ },
+ {
+  "slug": "layout-lab-pipeline-steps",
+  "context": "Layout Lab & Pipeline Steps",
+  "num": 2,
+  "title": "Items step lists diverge between Baseline and the registry — matrix jumps open the wrong step and matrix statuses lie for `items`",
+  "severity": "High",
+  "lens": "bug",
+  "category": "state-corruption (cross-view contract mismatch)",
+  "file": "src/components/layout-lab/Baseline.tsx:78"
+ },
+ {
+  "slug": "layout-lab-pipeline-steps",
+  "context": "Layout Lab & Pipeline Steps",
+  "num": 3,
+  "title": "One-shot toast \"Open\" navigation is silently swallowed unless the Catalogs view is active",
+  "severity": "Medium",
+  "lens": "bug",
+  "category": "silent-failure",
+  "file": "src/components/layout-lab/LayoutLab.tsx:62"
+ },
+ {
+  "slug": "layout-lab-pipeline-steps",
+  "context": "Layout Lab & Pipeline Steps",
+  "num": 4,
+  "title": "`runDrain` discards the drain outcome — a failed/offline drain ends with zero feedback",
+  "severity": "Medium",
+  "lens": "bug",
+  "category": "silent-failure",
+  "file": "src/components/layout-lab/Baseline.tsx:137"
+ },
+ {
+  "slug": "layout-lab-pipeline-steps",
+  "context": "Layout Lab & Pipeline Steps",
+  "num": 5,
+  "title": "The canonical Produce form is invisible to keyboard and screen-reader users at three points",
+  "severity": "High",
+  "lens": "ui",
+  "category": "a11y",
+  "file": "src/components/layout-lab/steps/controls.tsx:22"
+ },
+ {
+  "slug": "layout-lab-pipeline-steps",
+  "context": "Layout Lab & Pipeline Steps",
+  "num": 6,
+  "title": "CatalogTree's `role=\"tree\"` is structurally invalid and entities are outside the keyboard model",
+  "severity": "Medium",
+  "lens": "ui",
+  "category": "a11y",
+  "file": "src/components/layout-lab/CatalogTree.tsx:88"
+ },
+ {
+  "slug": "layout-lab-pipeline-steps",
+  "context": "Layout Lab & Pipeline Steps",
+  "num": 7,
+  "title": "The lab header never adapts below desktop widths while the body collapses at 1100px",
+  "severity": "Medium",
+  "lens": "ui",
+  "category": "responsiveness",
+  "file": "src/components/layout-lab/LayoutLab.tsx:121"
+ },
+ {
+  "slug": "layout-lab-pipeline-steps",
+  "context": "Layout Lab & Pipeline Steps",
+  "num": 8,
+  "title": "Category headers' bottom separator is silently erased by a shorthand override",
+  "severity": "Low",
+  "lens": "ui",
+  "category": "visual-consistency",
+  "file": "src/components/layout-lab/CatalogTree.tsx:186"
+ },
+ {
+  "slug": "layout-lab-pipeline-steps",
+  "context": "Layout Lab & Pipeline Steps",
+  "num": 9,
+  "title": "Draft entities are listed under a catalog whose count excludes them",
+  "severity": "Low",
+  "lens": "ui",
+  "category": "visual-consistency",
+  "file": "src/components/layout-lab/CatalogTree.tsx:66"
+ },
+ {
+  "slug": "crash-analysis-pattern-library",
+  "context": "Crash Analysis & Pattern Library",
+  "num": 1,
+  "title": "Whole-word fix killed multi-word trigger keywords — anti-pattern guardrail silently dead for several approaches",
+  "severity": "High",
+  "lens": "bug",
+  "category": "silent-failure (regression introduced by commit 25d6de5)",
+  "file": "src/lib/pattern-library-db.ts:644"
+ },
+ {
+  "slug": "crash-analysis-pattern-library",
+  "context": "Crash Analysis & Pattern Library",
+  "num": 2,
+  "title": "Imported real-project crash logs invert game/engine frame detection and blame the AI module via `KERNELBASE!RaiseException`",
+  "severity": "Medium",
+  "lens": "bug",
+  "category": "edge-case / wrong-results",
+  "file": "src/lib/crash-analyzer/analysis-engine.ts:278"
+ },
+ {
+  "slug": "crash-analysis-pattern-library",
+  "context": "Crash Analysis & Pattern Library",
+  "num": 3,
+  "title": "Clearing search/filters leaves stale filtered patterns, and the Sort dropdown is inert in the default view",
+  "severity": "Medium",
+  "lens": "bug",
+  "category": "state-staleness",
+  "file": "src/components/modules/evaluator/PatternLibraryView.tsx:101-106"
+ },
+ {
+  "slug": "crash-analysis-pattern-library",
+  "context": "Crash Analysis & Pattern Library",
+  "num": 4,
+  "title": "Anti-pattern pre-dispatch check ships the full enriched prompt in a GET query string — large prompts 431 and the catch swallows it",
+  "severity": "Low",
+  "lens": "bug",
+  "category": "silent-failure",
+  "file": "src/stores/patternLibraryStore.ts:291"
+ },
+ {
+  "slug": "crash-analysis-pattern-library",
+  "context": "Crash Analysis & Pattern Library",
+  "num": 5,
+  "title": "Crash list rows and crash pattern cards are mouse-only clickable divs — keyboard users cannot open anything",
+  "severity": "High",
+  "lens": "ui",
+  "category": "a11y",
+  "file": "src/components/modules/evaluator/CrashAnalyzerView.tsx:422"
+ },
+ {
+  "slug": "crash-analysis-pattern-library",
+  "context": "Crash Analysis & Pattern Library",
+  "num": 6,
+  "title": "PatternLibraryView double-pads and nests a second scroll region inside the evaluator tab container",
+  "severity": "Medium",
+  "lens": "ui",
+  "category": "visual-consistency",
+  "file": "src/components/modules/evaluator/PatternLibraryView.tsx:118-120,276"
+ },
+ {
+  "slug": "crash-analysis-pattern-library",
+  "context": "Crash Analysis & Pattern Library",
+  "num": 7,
+  "title": "Three hand-rolled icon-select dropdowns beg for extraction; sibling search inputs disagree on radius and focus treatment",
+  "severity": "Medium",
+  "lens": "ui",
+  "category": "component-extraction",
+  "file": "src/components/modules/evaluator/PatternLibraryView.tsx:223-269"
+ },
+ {
+  "slug": "crash-analysis-pattern-library",
+  "context": "Crash Analysis & Pattern Library",
+  "num": 8,
+  "title": "Author Pattern modal can only file patterns under modules that already have patterns",
+  "severity": "Medium",
+  "lens": "ui",
+  "category": "polish",
+  "file": "src/components/modules/evaluator/PatternLibraryView.tsx:115,729-738"
+ },
+ {
+  "slug": "crash-analysis-pattern-library",
+  "context": "Crash Analysis & Pattern Library",
+  "num": 9,
+  "title": "Import panel feedback: stale success message survives a failed import, and the failure renders far away at the top of the page",
+  "severity": "Low",
+  "lens": "ui",
+  "category": "polish",
+  "file": "src/components/modules/evaluator/CrashAnalyzerView.tsx:820-827,854-856"
+ },
+ {
+  "slug": "project-health-insights",
+  "context": "Project Health & Insights",
+  "num": 1,
+  "title": "Pattern miner stamps the module-wide success rate onto every approach cluster, corrupting confidence and \"switch to it\" advice",
+  "severity": "High",
+  "lens": "bug",
+  "category": "wrong-results",
+  "file": "src/lib/pattern-extractor.ts:183"
+ },
+ {
+  "slug": "project-health-insights",
+  "context": "Project Health & Insights",
+  "num": 2,
+  "title": "Stale persisted checklist item IDs count as completed — completion can exceed 100% and inflate health, milestones, and velocity",
+  "severity": "Medium",
+  "lens": "bug",
+  "category": "state-corruption",
+  "file": "src/lib/health-engine.ts:48"
+ },
+ {
+  "slug": "project-health-insights",
+  "context": "Project Health & Insights",
+  "num": 3,
+  "title": "fetchHealth has no request sequencing — the crash-enriched refresh can lose the race to the stale first fetch",
+  "severity": "Medium",
+  "lens": "bug",
+  "category": "race-condition",
+  "file": "src/stores/projectHealthStore.ts:62-83"
+ },
+ {
+  "slug": "project-health-insights",
+  "context": "Project Health & Insights",
+  "num": 4,
+  "title": "Health dashboard fabricates \"healthy\" status for subsystems that have never run",
+  "severity": "Low",
+  "lens": "bug",
+  "category": "silent-failure",
+  "file": "src/lib/health-engine.ts:359-383"
+ },
+ {
+  "slug": "project-health-insights",
+  "context": "Project Health & Insights",
+  "num": 5,
+  "title": "/api/weekly-digest bypasses the error envelope — any DB failure surfaces as a cryptic JSON parse error",
+  "severity": "Low",
+  "lens": "bug",
+  "category": "silent-failure",
+  "file": "src/app/api/weekly-digest/route.ts:4-7"
+ },
+ {
+  "slug": "project-health-insights",
+  "context": "Project Health & Insights",
+  "num": 6,
+  "title": "\"Scan Project\" is a dead primary CTA — styled, enabled, and wired to nothing",
+  "severity": "High",
+  "lens": "ui",
+  "category": "polish",
+  "file": "src/components/modules/evaluator/ProjectHealthDashboard.tsx:271-292"
+ },
+ {
+  "slug": "project-health-insights",
+  "context": "Project Health & Insights",
+  "num": 7,
+  "title": "Radar module drill-down is mouse-only; icon-only dismiss buttons are unlabeled",
+  "severity": "High",
+  "lens": "ui",
+  "category": "a11y",
+  "file": "src/components/modules/evaluator/ProjectHealthDashboard.tsx:398"
+ },
+ {
+  "slug": "project-health-insights",
+  "context": "Project Health & Insights",
+  "num": 8,
+  "title": "Hand-rolled PRIORITY_COLORS diverges from SEVERITY_TOKENS — and its 'low' entry is invalid CSS",
+  "severity": "Medium",
+  "lens": "ui",
+  "category": "visual-consistency",
+  "file": "src/components/modules/evaluator/ProjectHealthDashboard.tsx:44-49"
+ },
+ {
+  "slug": "project-health-insights",
+  "context": "Project Health & Insights",
+  "num": 9,
+  "title": "ModuleHeatCell advertises interactivity (hover ring) but does nothing when clicked",
+  "severity": "Medium",
+  "lens": "ui",
+  "category": "polish",
+  "file": "src/components/modules/evaluator/HolisticHealthView.tsx:449-476"
+ },
+ {
+  "slug": "project-health-insights",
+  "context": "Project Health & Insights",
+  "num": 10,
+  "title": "Six bespoke mini-chart implementations; LineChartSimple's gridlines misrepresent the scale",
+  "severity": "Medium",
+  "lens": "ui",
+  "category": "component-extraction",
+  "file": "src/components/modules/evaluator/HolisticHealthView.tsx:648-804"
+ },
+ {
+  "slug": "gdd-compliance-design-doc",
+  "context": "GDD Compliance & Design Doc",
+  "num": 1,
+  "title": "Compliance report is never invalidated — stale scores survive project switches and pre-hydration audits",
+  "severity": "High",
+  "lens": "bug",
+  "category": "stale-state",
+  "file": "src/stores/gddComplianceStore.ts:24"
+ },
+ {
+  "slug": "gdd-compliance-design-doc",
+  "context": "GDD Compliance & Design Doc",
+  "num": 2,
+  "title": "Re-audit and Resolve failures are invisible once a report exists",
+  "severity": "Medium",
+  "lens": "bug",
+  "category": "silent-failure",
+  "file": "src/components/modules/evaluator/GDDComplianceView.tsx:202"
+ },
+ {
+  "slug": "gdd-compliance-design-doc",
+  "context": "GDD Compliance & Design Doc",
+  "num": 3,
+  "title": "Quality star meter still uses unclamped `.repeat()` — the wave-1 clamp was only applied to room difficulty",
+  "severity": "Medium",
+  "lens": "bug",
+  "category": "edge-case",
+  "file": "src/lib/gdd-synthesizer.ts:289"
+ },
+ {
+  "slug": "gdd-compliance-design-doc",
+  "context": "GDD Compliance & Design Doc",
+  "num": 4,
+  "title": "The roadmap \"Feature Implementation Trend\" chart is syntactically invalid Mermaid and never renders",
+  "severity": "Medium",
+  "lens": "bug",
+  "category": "silent-failure",
+  "file": "src/lib/gdd-synthesizer.ts:342-353"
+ },
+ {
+  "slug": "gdd-compliance-design-doc",
+  "context": "GDD Compliance & Design Doc",
+  "num": 5,
+  "title": "Deployment \"Avg Duration\" is a pairwise rolling halving, not an average — and cancelled builds deflate the success rate",
+  "severity": "Medium",
+  "lens": "bug",
+  "category": "logic-error",
+  "file": "src/lib/gdd-synthesizer.ts:521"
+ },
+ {
+  "slug": "gdd-compliance-design-doc",
+  "context": "GDD Compliance & Design Doc",
+  "num": 6,
+  "title": "Error-red is used as the compliance view's accent color — loading, primary action, and selection all read as failures",
+  "severity": "High",
+  "lens": "ui",
+  "category": "visual-consistency",
+  "file": "src/components/modules/evaluator/GDDComplianceView.tsx:195"
+ },
+ {
+  "slug": "gdd-compliance-design-doc",
+  "context": "GDD Compliance & Design Doc",
+  "num": 7,
+  "title": "Resolve button mixes accent backgrounds with success-green text and has no in-flight state",
+  "severity": "Medium",
+  "lens": "ui",
+  "category": "polish",
+  "file": "src/components/modules/evaluator/GDDComplianceView.tsx:480"
+ },
+ {
+  "slug": "gdd-compliance-design-doc",
+  "context": "GDD Compliance & Design Doc",
+  "num": 8,
+  "title": "The accent button recipe is duplicated 5× with drift — including missing disabled styling on two export buttons",
+  "severity": "Medium",
+  "lens": "ui",
+  "category": "component-extraction",
+  "file": "src/components/modules/evaluator/GameDesignDocView.tsx:246"
+ },
+ {
+  "slug": "gdd-compliance-design-doc",
+  "context": "GDD Compliance & Design Doc",
+  "num": 9,
+  "title": "Export and Copy failures give zero feedback",
+  "severity": "Medium",
+  "lens": "ui",
+  "category": "polish",
+  "file": "src/components/modules/evaluator/GameDesignDocView.tsx:65"
+ },
+ {
+  "slug": "gdd-compliance-design-doc",
+  "context": "GDD Compliance & Design Doc",
+  "num": 10,
+  "title": "TOC highlight never follows scrolling — `aria-current` sticks to the last clicked section",
+  "severity": "Low",
+  "lens": "ui",
+  "category": "polish",
+  "file": "src/components/modules/evaluator/GameDesignDocView.tsx:189"
+ },
+ {
+  "slug": "quality-evaluation-engine",
+  "context": "Quality Evaluation Engine",
+  "num": 1,
+  "title": "Batch-review \"Abort\" (and the 10-min timeout) never kills the underlying CLI execution",
+  "severity": "High",
+  "lens": "bug",
+  "category": "silent-failure",
+  "file": "src/app/api/feature-matrix/batch-review/route.ts:41"
+ },
+ {
+  "slug": "quality-evaluation-engine",
+  "context": "Quality Evaluation Engine",
+  "num": 2,
+  "title": "BatchReviewPanel polling interval is never (re)created on mount/resume — progress freezes and the recovery path is swallowed",
+  "severity": "High",
+  "lens": "bug",
+  "category": "state-corruption (stale UI)",
+  "file": "src/components/modules/evaluator/BatchReviewPanel.tsx:61"
+ },
+ {
+  "slug": "quality-evaluation-engine",
+  "context": "Quality Evaluation Engine",
+  "num": 3,
+  "title": "A *completed* scan with errored passes wipes the module's baseline and fabricates \"Resolved\" findings",
+  "severity": "High",
+  "lens": "bug",
+  "category": "data-loss",
+  "file": "src/lib/evaluator/deep-eval-engine.ts:176"
+ },
+ {
+  "slug": "quality-evaluation-engine",
+  "context": "Quality Evaluation Engine",
+  "num": 4,
+  "title": "Progress grid renders 7 cells per row in a `grid-cols-6` grid — every status row shifts one column",
+  "severity": "Medium",
+  "lens": "bug",
+  "category": "wrong-display (regression from adding the ground-truth pass)",
+  "file": "src/components/modules/evaluator/DeepEvalResults.tsx:535"
+ },
+ {
+  "slug": "quality-evaluation-engine",
+  "context": "Quality Evaluation Engine",
+  "num": 5,
+  "title": "\"Improved\" feature status is excluded from Overall Progress and all completion bars",
+  "severity": "Medium",
+  "lens": "bug",
+  "category": "wrong-results",
+  "file": "src/components/modules/evaluator/AggregateQualityDashboard.tsx:181"
+ },
+ {
+  "slug": "quality-evaluation-engine",
+  "context": "Quality Evaluation Engine",
+  "num": 6,
+  "title": "\"Needs Attention\" and \"Stale Reviews\" rows are mouse-only clickable divs",
+  "severity": "High",
+  "lens": "ui",
+  "category": "a11y",
+  "file": "src/components/modules/evaluator/AggregateQualityDashboard.tsx:654"
+ },
+ {
+  "slug": "quality-evaluation-engine",
+  "context": "Quality Evaluation Engine",
+  "num": 7,
+  "title": "Disclosure and toggle controls expose no expanded/pressed state to assistive tech",
+  "severity": "Medium",
+  "lens": "ui",
+  "category": "a11y",
+  "file": "src/components/modules/evaluator/DeepEvalResults.tsx:623"
+ },
+ {
+  "slug": "quality-evaluation-engine",
+  "context": "Quality Evaluation Engine",
+  "num": 8,
+  "title": "Hardcoded hex colors bypass the status-token system; selection ring uses error-red",
+  "severity": "Medium",
+  "lens": "ui",
+  "category": "visual-consistency",
+  "file": "src/components/modules/evaluator/AggregateQualityDashboard.tsx:341"
+ },
+ {
+  "slug": "quality-evaluation-engine",
+  "context": "Quality Evaluation Engine",
+  "num": 9,
+  "title": "The accent \"pill button\" is duplicated 6+ times with three different alpha schemes",
+  "severity": "Medium",
+  "lens": "ui",
+  "category": "component-extraction",
+  "file": "src/components/modules/evaluator/DeepEvalResults.tsx:309"
+ },
+ {
+  "slug": "quality-evaluation-engine",
+  "context": "Quality Evaluation Engine",
+  "num": 10,
+  "title": "Stale-threshold input snaps to 7 while typing and ignores its own max",
+  "severity": "Low",
+  "lens": "ui",
+  "category": "polish",
+  "file": "src/components/modules/evaluator/AggregateQualityDashboard.tsx:703"
+ },
+ {
+  "slug": "ai-testing-localization",
+  "context": "AI Testing & Localization",
+  "num": 1,
+  "title": "Test-run / Auto-detect CLI round-trip never closes — scenario statuses, lastRunOutput, and the pass-rate ring are permanently dead",
+  "severity": "High",
+  "lens": "bug",
+  "category": "silent-failure",
+  "file": "src/components/modules/game-systems/AIBehaviorView.tsx:132"
+ },
+ {
+  "slug": "ai-testing-localization",
+  "context": "AI Testing & Localization",
+  "num": 2,
+  "title": "All AI-testing mutations fail silently — inputs are cleared optimistically and no error ever reaches the UI",
+  "severity": "Medium",
+  "lens": "bug",
+  "category": "silent-failure",
+  "file": "src/hooks/useCRUD.ts:75-84"
+ },
+ {
+  "slug": "ai-testing-localization",
+  "context": "AI Testing & Localization",
+  "num": 3,
+  "title": "PUT update-scenario accepts non-array `stimuli`/`expectedActions` — one malformed request persistently bricks the sandbox view",
+  "severity": "Medium",
+  "lens": "bug",
+  "category": "state-corruption",
+  "file": "src/app/api/ai-testing/route.ts:91-96"
+ },
+ {
+  "slug": "ai-testing-localization",
+  "context": "AI Testing & Localization",
+  "num": 4,
+  "title": "\"Copy CSV\" string-table export does not escape quotes or newlines — silently malformed UE5 import once real strings flow through",
+  "severity": "Low",
+  "lens": "bug",
+  "category": "data-loss",
+  "file": "src/components/modules/evaluator/LocalizationPipelineView.tsx:1176-1180"
+ },
+ {
+  "slug": "ai-testing-localization",
+  "context": "AI Testing & Localization",
+  "num": 5,
+  "title": "Sandbox editing surface is invisible to assistive tech — icon-only buttons and placeholder-only inputs have no accessible names",
+  "severity": "High",
+  "lens": "ui",
+  "category": "a11y",
+  "file": "src/components/modules/game-systems/AITestingSandbox.tsx:210-221"
+ },
+ {
+  "slug": "ai-testing-localization",
+  "context": "AI Testing & Localization",
+  "num": 6,
+  "title": "One-click, cascade suite deletion with no confirmation or undo",
+  "severity": "High",
+  "lens": "ui",
+  "category": "polish",
+  "file": "src/components/modules/game-systems/AIBehaviorView.tsx:266"
+ },
+ {
+  "slug": "ai-testing-localization",
+  "context": "AI Testing & Localization",
+  "num": 7,
+  "title": "Both toolbar buttons spin for any background activity — user can't tell whether tests are running or being generated",
+  "severity": "Medium",
+  "lens": "ui",
+  "category": "polish",
+  "file": "src/components/modules/game-systems/AITestingSandbox.tsx:143"
+ },
+ {
+  "slug": "ai-testing-localization",
+  "context": "AI Testing & Localization",
+  "num": 8,
+  "title": "Hand-rolled accent chip/button styling repeated 8+ times with inconsistent opacity tokens",
+  "severity": "Medium",
+  "lens": "ui",
+  "category": "component-extraction",
+  "file": "src/components/modules/game-systems/AITestingSandbox.tsx:152-155"
+ },
+ {
+  "slug": "ai-testing-localization",
+  "context": "AI Testing & Localization",
+  "num": 9,
+  "title": "Search text bleeds between Strings and Translations tabs, and filtered-to-zero lists render blank space",
+  "severity": "Low",
+  "lens": "ui",
+  "category": "polish",
+  "file": "src/components/modules/evaluator/LocalizationPipelineView.tsx:112"
+ },
+ {
+  "slug": "build-cook-packaging",
+  "context": "Build, Cook & Packaging",
+  "num": 1,
+  "title": "Aborting a cook kills only the `cmd.exe` wrapper — the UAT tree is orphaned and the run is recorded as `failed`",
+  "severity": "High",
+  "lens": "bug",
+  "category": "recovery-gap",
+  "file": "src/lib/packaging/cook-executor.ts:92"
+ },
+ {
+  "slug": "build-cook-packaging",
+  "context": "Build, Cook & Packaging",
+  "num": 2,
+  "title": "`getSizeTrend` returns the *oldest* N rows — the size trend chart freezes once history exceeds the limit",
+  "severity": "Medium",
+  "lens": "bug",
+  "category": "edge-case",
+  "file": "src/lib/packaging/build-history-store.ts:235"
+ },
+ {
+  "slug": "build-cook-packaging",
+  "context": "Build, Cook & Packaging",
+  "num": 3,
+  "title": "SmokeTest's remount key is the exe path, which is identical for every cook of the same profile — second run shows a stale verdict with no running indicator",
+  "severity": "Medium",
+  "lens": "bug",
+  "category": "state-corruption",
+  "file": "src/components/modules/game-systems/SmokeTest.tsx:32"
+ },
+ {
+  "slug": "build-cook-packaging",
+  "context": "Build, Cook & Packaging",
+  "num": 4,
+  "title": "Real pipeline builds never receive a version — auto-increment only fires on hand-entered records",
+  "severity": "Medium",
+  "lens": "bug",
+  "category": "silent-failure",
+  "file": "src/app/api/packaging/execute/route.ts:66"
+ },
+ {
+  "slug": "build-cook-packaging",
+  "context": "Build, Cook & Packaging",
+  "num": 5,
+  "title": "No mutual exclusion between interactive and scheduled cooks — two UATs can stage into the same directory concurrently",
+  "severity": "Medium",
+  "lens": "bug",
+  "category": "race-condition",
+  "file": "src/app/api/packaging/execute/route.ts:23"
+ },
+ {
+  "slug": "build-cook-packaging",
+  "context": "Build, Cook & Packaging",
+  "num": 6,
+  "title": "Icon-only refresh button has no accessible name and sortable headers expose no sort state",
+  "severity": "Medium",
+  "lens": "ui",
+  "category": "a11y",
+  "file": "src/components/modules/game-systems/BuildHistoryDashboard.tsx:432"
+ },
+ {
+  "slug": "build-cook-packaging",
+  "context": "Build, Cook & Packaging",
+  "num": 7,
+  "title": "Expandable rows and preflight tiles don't expose expanded state; no-op tiles still present as clickable buttons",
+  "severity": "Medium",
+  "lens": "ui",
+  "category": "a11y",
+  "file": "src/components/modules/game-systems/PreflightPanel.tsx:169"
+ },
+ {
+  "slug": "build-cook-packaging",
+  "context": "Build, Cook & Packaging",
+  "num": 8,
+  "title": "Build History flashes \"No builds recorded yet\" on every load before data arrives",
+  "severity": "Medium",
+  "lens": "ui",
+  "category": "polish",
+  "file": "src/components/modules/game-systems/BuildHistoryDashboard.tsx:576"
+ },
+ {
+  "slug": "build-cook-packaging",
+  "context": "Build, Cook & Packaging",
+  "num": 9,
+  "title": "Build deletion is a single click, irreversible, with no confirmation or undo",
+  "severity": "High",
+  "lens": "ui",
+  "category": "polish",
+  "file": "src/components/modules/game-systems/BuildHistoryDashboard.tsx:163"
+ },
+ {
+  "slug": "build-cook-packaging",
+  "context": "Build, Cook & Packaging",
+  "num": 10,
+  "title": "Record Build form: labels aren't associated with inputs and numeric fields silently mis-parse",
+  "severity": "Medium",
+  "lens": "ui",
+  "category": "a11y",
+  "file": "src/components/modules/game-systems/BuildHistoryDashboard.tsx:207"
+ },
+ {
+  "slug": "ai-behavior-squad-tactics",
+  "context": "AI Behavior & Squad Tactics",
+  "num": 1,
+  "title": "Enter key bypasses the in-flight guard — duplicate test suites on double/held Enter",
+  "severity": "Medium",
+  "lens": "bug",
+  "category": "race-condition",
+  "file": "src/components/modules/game-systems/AIBehaviorView.tsx:75"
+ },
+ {
+  "slug": "ai-behavior-squad-tactics",
+  "context": "AI Behavior & Squad Tactics",
+  "num": 2,
+  "title": "Failed suite creation silently wipes the user's input — mutate swallows the error, handler clears anyway",
+  "severity": "Medium",
+  "lens": "bug",
+  "category": "silent-failure",
+  "file": "src/components/modules/game-systems/AIBehaviorView.tsx:79"
+ },
+ {
+  "slug": "ai-behavior-squad-tactics",
+  "context": "AI Behavior & Squad Tactics",
+  "num": 3,
+  "title": "Pillar cover model uses `w` as block radius but renders it as diameter — \"covered\" points float in open ground",
+  "severity": "Medium",
+  "lens": "bug",
+  "category": "edge-case",
+  "file": "src/components/modules/game-systems/TacticalCoverAnalysis.tsx:100"
+ },
+ {
+  "slug": "ai-behavior-squad-tactics",
+  "context": "AI Behavior & Squad Tactics",
+  "num": 4,
+  "title": "Copy-to-clipboard failure is an unhandled rejection — user pastes stale clipboard contents into UE5",
+  "severity": "Low",
+  "lens": "bug",
+  "category": "silent-failure",
+  "file": "src/components/modules/game-systems/multiplayer/ReplicationScaffoldPanel.tsx:63-68"
+ },
+ {
+  "slug": "ai-behavior-squad-tactics",
+  "context": "AI Behavior & Squad Tactics",
+  "num": 5,
+  "title": "Suite deletion is instant, unconfirmed, and irreversible — one misclick destroys all scenarios",
+  "severity": "High",
+  "lens": "ui",
+  "category": "polish",
+  "file": "src/components/modules/game-systems/AIBehaviorView.tsx:265-271"
+ },
+ {
+  "slug": "ai-behavior-squad-tactics",
+  "context": "AI Behavior & Squad Tactics",
+  "num": 6,
+  "title": "Drag-to-rotate forward vector is pointer-only — keyboard and AT users cannot drive the core control",
+  "severity": "High",
+  "lens": "ui",
+  "category": "a11y",
+  "file": "src/components/modules/game-systems/FlankAngleHeatmap.tsx:243-254"
+ },
+ {
+  "slug": "ai-behavior-squad-tactics",
+  "context": "AI Behavior & Squad Tactics",
+  "num": 7,
+  "title": "Drag releases the moment the cursor exits the SVG — no pointer capture on the shared drag hook",
+  "severity": "Medium",
+  "lens": "ui",
+  "category": "polish",
+  "file": "src/hooks/useDragAngle.ts:46-55"
+ },
+ {
+  "slug": "ai-behavior-squad-tactics",
+  "context": "AI Behavior & Squad Tactics",
+  "num": 8,
+  "title": "Squad member hover tooltip clips off the canvas — missing the side-flip its sibling visualizers use",
+  "severity": "Medium",
+  "lens": "ui",
+  "category": "visual-consistency",
+  "file": "src/components/modules/game-systems/SquadChoreographyEditor.tsx:563-588"
+ },
+ {
+  "slug": "ai-behavior-squad-tactics",
+  "context": "AI Behavior & Squad Tactics",
+  "num": 9,
+  "title": "Create-suite form rendered twice and bound to the same state — typing mirrors across two visible inputs",
+  "severity": "Medium",
+  "lens": "ui",
+  "category": "component-extraction",
+  "file": "src/components/modules/game-systems/AIBehaviorView.tsx:221-251"
+ },
+ {
+  "slug": "app-shell-navigation",
+  "context": "App Shell & Navigation",
+  "num": 1,
+  "title": "\"+\" new-terminal tab creates a session that can never be displayed anywhere",
+  "severity": "High",
+  "lens": "bug",
+  "category": "silent-failure",
+  "file": "src/components/layout/CLITabBar.tsx:116-125"
+ },
+ {
+  "slug": "app-shell-navigation",
+  "context": "App Shell & Navigation",
+  "num": 2,
+  "title": "Renaming a project rewrites `projectPath` to a directory that does not exist",
+  "severity": "High",
+  "lens": "bug",
+  "category": "state-corruption",
+  "file": "src/components/layout/TopBar.tsx:139-159"
+ },
+ {
+  "slug": "app-shell-navigation",
+  "context": "App Shell & Navigation",
+  "num": 3,
+  "title": "Out-of-order search responses overwrite newer results (no request sequencing)",
+  "severity": "Medium",
+  "lens": "bug",
+  "category": "race-condition",
+  "file": "src/components/layout/GlobalSearchPanel.tsx:86-100"
+ },
+ {
+  "slug": "app-shell-navigation",
+  "context": "App Shell & Navigation",
+  "num": 4,
+  "title": "Selecting a \"Category\" search result silently does nothing",
+  "severity": "Medium",
+  "lens": "bug",
+  "category": "silent-failure",
+  "file": "src/stores/navigationStore.ts:51-70"
+ },
+ {
+  "slug": "app-shell-navigation",
+  "context": "App Shell & Navigation",
+  "num": 5,
+  "title": "FTS5 highlight markers collide with literal \"→\" arrows in indexed content",
+  "severity": "Medium",
+  "lens": "bug",
+  "category": "edge-case",
+  "file": "src/lib/search-index.ts:213-214"
+ },
+ {
+  "slug": "app-shell-navigation",
+  "context": "App Shell & Navigation",
+  "num": 6,
+  "title": "CLI tab close \"X\" is a fake nested button — unreachable by keyboard",
+  "severity": "High",
+  "lens": "ui",
+  "category": "a11y",
+  "file": "src/components/layout/CLITabBar.tsx:101-111"
+ },
+ {
+  "slug": "app-shell-navigation",
+  "context": "App Shell & Navigation",
+  "num": 7,
+  "title": "The shell's three overlay surfaces each do dialog semantics differently (none fully correct)",
+  "severity": "High",
+  "lens": "ui",
+  "category": "component-extraction",
+  "file": "src/components/layout/GlobalSearchPanel.tsx:170-176"
+ },
+ {
+  "slug": "app-shell-navigation",
+  "context": "App Shell & Navigation",
+  "num": 8,
+  "title": "Activity feed shows raw module ids instead of human labels",
+  "severity": "Medium",
+  "lens": "ui",
+  "category": "visual-consistency",
+  "file": "src/components/layout/ActivityFeedPanel.tsx:323"
+ },
+ {
+  "slug": "app-shell-navigation",
+  "context": "App Shell & Navigation",
+  "num": 9,
+  "title": "Search trigger shows mac \"⌘K\" on Windows while its tooltip says \"Ctrl+K\"",
+  "severity": "Medium",
+  "lens": "ui",
+  "category": "polish",
+  "file": "src/components/layout/TopBar.tsx:670-672"
+ },
+ {
+  "slug": "app-shell-navigation",
+  "context": "App Shell & Navigation",
+  "num": 10,
+  "title": "Shared chrome bypasses the color-token system with one-off hex/Tailwind palette values",
+  "severity": "Medium",
+  "lens": "ui",
+  "category": "visual-consistency",
+  "file": "src/components/layout/GlobalSearchPanel.tsx:22"
+ },
+ {
+  "slug": "module-registry-feature-matrix",
+  "context": "Module Registry & Feature Matrix",
+  "num": 1,
+  "title": "Auto-Verify's batch write can never persist (partial payload vs. full-upsert binding), so after commit 2dd1e06 the whole feature is silently dead while the UI claims \"N statuses updated\"",
+  "severity": "High",
+  "lens": "bug",
+  "category": "silent-failure",
+  "file": "src/lib/pof-bridge/verification-engine.ts:88-113"
+ },
+ {
+  "slug": "module-registry-feature-matrix",
+  "context": "Module Registry & Feature Matrix",
+  "num": 2,
+  "title": "One transient GET failure on mount triggers auto-seed, which overwrites a module's entire review data with `unknown`/empty",
+  "severity": "High",
+  "lens": "bug",
+  "category": "data-loss",
+  "file": "src/hooks/useFeatureMatrix.ts:107-112"
+ },
+ {
+  "slug": "module-registry-feature-matrix",
+  "context": "Module Registry & Feature Matrix",
+  "num": 3,
+  "title": "`/api/checklist/complete` accepts arbitrary moduleId/itemId, so a single mistyped CLI curl pushes module progress past 100% and falsely unlocks prerequisite gates",
+  "severity": "Medium",
+  "lens": "bug",
+  "category": "edge-case",
+  "file": "src/app/api/checklist/complete/route.ts:20-52"
+ },
+ {
+  "slug": "module-registry-feature-matrix",
+  "context": "Module Registry & Feature Matrix",
+  "num": 4,
+  "title": "NBA reports 50% success probability for modules whose every attempt failed (`moduleSuccessRate || 0.5` falsy-zero)",
+  "severity": "Low",
+  "lens": "bug",
+  "category": "edge-case",
+  "file": "src/lib/nba-engine.ts:239-241"
+ },
+ {
+  "slug": "module-registry-feature-matrix",
+  "context": "Module Registry & Feature Matrix",
+  "num": 5,
+  "title": "Row action buttons (Review / Copy / View files) are keyboard- and screen-reader-hostile: interactive spans nested inside the row button, hover-only reveal, no visible focus",
+  "severity": "High",
+  "lens": "ui",
+  "category": "a11y",
+  "file": "src/components/modules/shared/FeatureMatrix.tsx:1143-1218"
+ },
+ {
+  "slug": "module-registry-feature-matrix",
+  "context": "Module Registry & Feature Matrix",
+  "num": 6,
+  "title": "The \"Grouped\" view toggle is a dead button whenever a non-default sort is active — the auto-switch effect instantly reverts it",
+  "severity": "Medium",
+  "lens": "ui",
+  "category": "polish",
+  "file": "src/components/modules/shared/FeatureMatrix.tsx:194-199"
+ },
+ {
+  "slug": "module-registry-feature-matrix",
+  "context": "Module Registry & Feature Matrix",
+  "num": 7,
+  "title": "Sticky category headers hide under the filter bar when it wraps — hardcoded `top-[40px]` breaks at narrow widths",
+  "severity": "Medium",
+  "lens": "ui",
+  "category": "responsiveness",
+  "file": "src/components/modules/shared/FeatureMatrix.tsx:581, 669"
+ },
+ {
+  "slug": "module-registry-feature-matrix",
+  "context": "Module Registry & Feature Matrix",
+  "num": 8,
+  "title": "Filter feedback is inconsistent: status-chip filtering shows no \"Showing X of Y\" count, and the no-match empty state offers no one-click reset",
+  "severity": "Medium",
+  "lens": "ui",
+  "category": "polish",
+  "file": "src/components/modules/shared/FeatureMatrix.tsx:625-629, 714-718"
+ },
+ {
+  "slug": "module-registry-feature-matrix",
+  "context": "Module Registry & Feature Matrix",
+  "num": 9,
+  "title": "Quality range min/max selects have no accessible labels and icon-only controls rely on `title` alone",
+  "severity": "Low",
+  "lens": "ui",
+  "category": "a11y",
+  "file": "src/components/modules/shared/FeatureMatrix.tsx:811-837"
+ },
+ {
+  "slug": "cli-terminal-task-system",
+  "context": "CLI Terminal & Task System",
+  "num": 1,
+  "title": "Every live run completes with a null task id, so `session.isRunning` latches true forever after the first prompt",
+  "severity": "Critical",
+  "lens": "bug",
+  "category": "state-corruption",
+  "file": "src/components/cli/InlineTerminal.tsx:156"
+ },
+ {
+  "slug": "cli-terminal-task-system",
+  "context": "CLI Terminal & Task System",
+  "num": 2,
+  "title": "Abort still doesn't stop the run on Windows — `process.kill()` only terminates the `cmd.exe` shell, not the claude node process (regression gap in the a5a5795 fix)",
+  "severity": "High",
+  "lens": "bug",
+  "category": "resource-leak",
+  "file": "src/lib/claude-terminal/cli-service.ts:336"
+ },
+ {
+  "slug": "cli-terminal-task-system",
+  "context": "CLI Terminal & Task System",
+  "num": 3,
+  "title": "Abort during the connecting window doesn't latch — the POST resolution revives the \"aborted\" run and the DELETE targets a stale executionId",
+  "severity": "Medium",
+  "lens": "bug",
+  "category": "race-condition",
+  "file": "src/components/cli/useTaskQueue.ts:447"
+ },
+ {
+  "slug": "cli-terminal-task-system",
+  "context": "CLI Terminal & Task System",
+  "num": 4,
+  "title": "Hiding and re-showing a streaming terminal replays the full event history — duplicated transcript and doubled `assistantOutputRef`",
+  "severity": "Medium",
+  "lens": "bug",
+  "category": "state-corruption",
+  "file": "src/components/cli/useTaskQueue.ts:562-580"
+ },
+ {
+  "slug": "cli-terminal-task-system",
+  "context": "CLI Terminal & Task System",
+  "num": 5,
+  "title": "Dispatched task prompts are silently dropped when the terminal is mid-stream — the task evaporates with a registered callback leaked",
+  "severity": "Medium",
+  "lens": "bug",
+  "category": "silent-failure",
+  "file": "src/components/cli/CompactTerminal.tsx:115"
+ },
+ {
+  "slug": "cli-terminal-task-system",
+  "context": "CLI Terminal & Task System",
+  "num": 6,
+  "title": "Assistant replies are hard-truncated at 200 characters with no way to expand them",
+  "severity": "High",
+  "lens": "ui",
+  "category": "polish",
+  "file": "src/components/cli/TerminalOutput.tsx:73"
+ },
+ {
+  "slug": "cli-terminal-task-system",
+  "context": "CLI Terminal & Task System",
+  "num": 7,
+  "title": "Inline terminal resize handle is mouse-only — no keyboard, touch, or separator semantics",
+  "severity": "Medium",
+  "lens": "ui",
+  "category": "a11y",
+  "file": "src/components/cli/InlineTerminal.tsx:94-104"
+ },
+ {
+  "slug": "cli-terminal-task-system",
+  "context": "CLI Terminal & Task System",
+  "num": 8,
+  "title": "Streaming output and disclosure rows are invisible to screen readers — no live region, no `aria-expanded`",
+  "severity": "Medium",
+  "lens": "ui",
+  "category": "a11y",
+  "file": "src/components/cli/TerminalOutput.tsx:765"
+ },
+ {
+  "slug": "cli-terminal-task-system",
+  "context": "CLI Terminal & Task System",
+  "num": 9,
+  "title": "Disabled send button is visually identical to enabled, and its hover state hardcodes `blue-500` outside the token system",
+  "severity": "Medium",
+  "lens": "ui",
+  "category": "visual-consistency",
+  "file": "src/components/cli/TerminalInput.tsx:64"
+ },
+ {
+  "slug": "cli-terminal-task-system",
+  "context": "CLI Terminal & Task System",
+  "num": 10,
+  "title": "Three different accent colors compete inside one terminal — session accent, `MODULE_COLORS.core`, and `MODULE_COLORS.setup`",
+  "severity": "Low",
+  "lens": "ui",
+  "category": "visual-consistency",
+  "file": "src/components/cli/InlineTerminal.tsx:116"
+ },
+ {
+  "slug": "prompt-evolution-a-b-testing",
+  "context": "Prompt Evolution & A/B Testing",
+  "num": 1,
+  "title": "Persisted A/B tests are unreachable after a page reload — the UI has no way to list them",
+  "severity": "High",
+  "lens": "bug",
+  "category": "silent-failure",
+  "file": "src/stores/promptEvolutionStore.ts:109"
+ },
+ {
+  "slug": "prompt-evolution-a-b-testing",
+  "context": "Prompt Evolution & A/B Testing",
+  "num": 2,
+  "title": "Module picker offers 5 phantom modules and hides 5 real ones — registry drift",
+  "severity": "High",
+  "lens": "bug",
+  "category": "edge-case",
+  "file": "src/components/modules/evaluator/PromptEvolutionView.tsx:66-79"
+ },
+ {
+  "slug": "prompt-evolution-a-b-testing",
+  "context": "Prompt Evolution & A/B Testing",
+  "num": 3,
+  "title": "One transient action error permanently blanks every tab in the view",
+  "severity": "Medium",
+  "lens": "bug",
+  "category": "recovery-gap",
+  "file": "src/components/modules/evaluator/PromptEvolutionView.tsx:355"
+ },
+ {
+  "slug": "prompt-evolution-a-b-testing",
+  "context": "Prompt Evolution & A/B Testing",
+  "num": 4,
+  "title": "Optimizer records phantom diffs when a pass doesn't actually change the prompt",
+  "severity": "Medium",
+  "lens": "bug",
+  "category": "silent-failure",
+  "file": "src/lib/prompt-evolution/engine.ts:524-531"
+ },
+ {
+  "slug": "prompt-evolution-a-b-testing",
+  "context": "Prompt Evolution & A/B Testing",
+  "num": 5,
+  "title": "`shorten` mutation deletes every parenthetical — gutting UE5 macro specifiers and function arguments",
+  "severity": "Medium",
+  "lens": "bug",
+  "category": "data-loss",
+  "file": "src/lib/prompt-evolution/mutations.ts:127"
+ },
+ {
+  "slug": "prompt-evolution-a-b-testing",
+  "context": "Prompt Evolution & A/B Testing",
+  "num": 6,
+  "title": "Disclosure buttons and icon-only actions are invisible to keyboard and screen-reader users",
+  "severity": "High",
+  "lens": "ui",
+  "category": "a11y",
+  "file": "src/components/modules/evaluator/PromptEvolutionView.tsx:666"
+ },
+ {
+  "slug": "prompt-evolution-a-b-testing",
+  "context": "Prompt Evolution & A/B Testing",
+  "num": 7,
+  "title": "Starting an A/B test gives zero feedback and invites duplicate submissions",
+  "severity": "Medium",
+  "lens": "ui",
+  "category": "polish",
+  "file": "src/components/modules/evaluator/PromptEvolutionView.tsx:739-747"
+ },
+ {
+  "slug": "prompt-evolution-a-b-testing",
+  "context": "Prompt Evolution & A/B Testing",
+  "num": 8,
+  "title": "Variant \"Copy\" button is fire-and-forget — no confirmation, no failure handling",
+  "severity": "Low",
+  "lens": "ui",
+  "category": "visual-consistency",
+  "file": "src/components/modules/evaluator/PromptEvolutionView.tsx:752-758"
+ },
+ {
+  "slug": "prompt-evolution-a-b-testing",
+  "context": "Prompt Evolution & A/B Testing",
+  "num": 9,
+  "title": "Three competing spinner implementations — one nearly invisible on its button",
+  "severity": "Low",
+  "lens": "ui",
+  "category": "component-extraction",
+  "file": "src/components/modules/evaluator/PromptEvolutionView.tsx:1121"
+ },
+ {
+  "slug": "prompt-evolution-a-b-testing",
+  "context": "Prompt Evolution & A/B Testing",
+  "num": 10,
+  "title": "\"New Variant\" button silently no-ops when no module is selected",
+  "severity": "Low",
+  "lens": "ui",
+  "category": "polish",
+  "file": "src/components/modules/evaluator/PromptEvolutionView.tsx:474-484"
+ },
+ {
+  "slug": "prompt-construction-context",
+  "context": "Prompt Construction & Context",
+  "num": 1,
+  "title": "Room codegen builds C++ class names from raw room names — only whitespace is stripped",
+  "severity": "Medium",
+  "lens": "bug",
+  "category": "edge-case",
+  "file": "src/lib/prompts/level-design.ts:38"
+ },
+ {
+  "slug": "prompt-construction-context",
+  "context": "Prompt Construction & Context",
+  "num": 2,
+  "title": "Screen/zone enum identifiers can collide, go empty, or start with a digit",
+  "severity": "Low",
+  "lens": "bug",
+  "category": "edge-case",
+  "file": "src/lib/prompts/menu-flow.ts:124"
+ },
+ {
+  "slug": "prompt-construction-context",
+  "context": "Prompt Construction & Context",
+  "num": 3,
+  "title": "`getEnginePath` hardcodes the Launcher install path while its docstring claims source-build support",
+  "severity": "Medium",
+  "lens": "bug",
+  "category": "silent-failure",
+  "file": "src/lib/prompt-context.ts:65-69"
+ },
+ {
+  "slug": "prompt-construction-context",
+  "context": "Prompt Construction & Context",
+  "num": 4,
+  "title": "Inventory prompt emits dangling empty bullets for disabled interactions",
+  "severity": "Low",
+  "lens": "bug",
+  "category": "edge-case",
+  "file": "src/lib/prompts/inventory.ts:159-160"
+ },
+ {
+  "slug": "prompt-construction-context",
+  "context": "Prompt Construction & Context",
+  "num": 5,
+  "title": "\"Try again\" after a failed refinement silently regenerates from scratch — and the instruction is already gone",
+  "severity": "High",
+  "lens": "ui",
+  "category": "polish",
+  "file": "src/components/modules/core-engine/sub_ability/forge/index.tsx:151"
+ },
+ {
+  "slug": "prompt-construction-context",
+  "context": "Prompt Construction & Context",
+  "num": 6,
+  "title": "Prompt Inspector's missing-required vs missing-optional chips differ only by color",
+  "severity": "Low",
+  "lens": "ui",
+  "category": "a11y",
+  "file": "src/components/modules/core-engine/sub_ability/forge/PromptInspector.tsx:74-93"
+ },
+ {
+  "slug": "prompt-construction-context",
+  "context": "Prompt Construction & Context",
+  "num": 7,
+  "title": "ForgeErrorCard's status icon doesn't get the card's tone color",
+  "severity": "Low",
+  "lens": "ui",
+  "category": "visual-consistency",
+  "file": "src/components/modules/core-engine/sub_ability/forge/ForgeErrorCard.tsx:63"
+ },
+ {
+  "slug": "prompt-construction-context",
+  "context": "Prompt Construction & Context",
+  "num": 8,
+  "title": "Refine input has no accessible label",
+  "severity": "Low",
+  "lens": "ui",
+  "category": "a11y",
+  "file": "src/components/modules/core-engine/sub_ability/forge/RefineBar.tsx:46-54"
+ },
+ {
+  "slug": "project-setup-onboarding",
+  "context": "Project Setup & Onboarding",
+  "num": 1,
+  "title": "Project switch never re-scans: stale checklist drives a destructive \"Create project\" CTA against an existing project",
+  "severity": "High",
+  "lens": "bug",
+  "category": "state-corruption",
+  "file": "src/components/modules/project-setup/useProjectScan.ts:197-208"
+ },
+ {
+  "slug": "project-setup-onboarding",
+  "context": "Project Setup & Onboarding",
+  "num": 2,
+  "title": "\"Start Fresh\" hardcodes another user's home directory as the default projects path",
+  "severity": "High",
+  "lens": "bug",
+  "category": "edge-case",
+  "file": "src/components/modules/project-setup/SetupWizard.tsx:16,91"
+ },
+ {
+  "slug": "project-setup-onboarding",
+  "context": "Project Setup & Onboarding",
+  "num": 3,
+  "title": "baffff5 merge regression: `project_progress` rows are now append-only — fresh setup at a reused path resurrects the old checklist forever",
+  "severity": "Medium",
+  "lens": "bug",
+  "category": "state-corruption",
+  "file": "src/app/api/project-progress/route.ts:76-104"
+ },
+ {
+  "slug": "project-setup-onboarding",
+  "context": "Project Setup & Onboarding",
+  "num": 4,
+  "title": "Pending debounced autosave fires across a project switch and merges the old project's checklist into the new project's row",
+  "severity": "Medium",
+  "lens": "bug",
+  "category": "race-condition",
+  "file": "src/services/ProjectModuleBridge.ts:70-81"
+ },
+ {
+  "slug": "project-setup-onboarding",
+  "context": "Project Setup & Onboarding",
+  "num": 5,
+  "title": "The wizard offers no manual browse / path-entry fallback — undetectable projects simply cannot be opened",
+  "severity": "High",
+  "lens": "ui",
+  "category": "polish",
+  "file": "src/components/modules/project-setup/SetupWizard.tsx:215-240"
+ },
+ {
+  "slug": "project-setup-onboarding",
+  "context": "Project Setup & Onboarding",
+  "num": 6,
+  "title": "Detection failure is rendered as a confident \"No projects found\" — silent error with no retry on the first screen",
+  "severity": "Medium",
+  "lens": "ui",
+  "category": "polish",
+  "file": "src/components/modules/project-setup/SetupWizard.tsx:37-58,215-220"
+ },
+ {
+  "slug": "project-setup-onboarding",
+  "context": "Project Setup & Onboarding",
+  "num": 7,
+  "title": "Wizard selection states are color-only and carry no semantics for assistive tech",
+  "severity": "Medium",
+  "lens": "ui",
+  "category": "a11y",
+  "file": "src/components/modules/project-setup/SetupWizard.tsx:122-172,177-181"
+ },
+ {
+  "slug": "project-setup-onboarding",
+  "context": "Project Setup & Onboarding",
+  "num": 8,
+  "title": "Hot-patch pipeline visualization never advances — \"Write\" spins for the entire compile/verify",
+  "severity": "Medium",
+  "lens": "ui",
+  "category": "polish",
+  "file": "src/components/modules/project-setup/LiveCodingPanel.tsx:222-285"
+ },
+ {
+  "slug": "project-setup-onboarding",
+  "context": "Project Setup & Onboarding",
+  "num": 9,
+  "title": "Icon-only and hover-revealed controls lack accessible names and focus reveal",
+  "severity": "Low",
+  "lens": "ui",
+  "category": "a11y",
+  "file": "src/components/modules/project-setup/ProjectFilesPanel.tsx:50-60"
+ },
+ {
+  "slug": "blueprint-transpiler-c-codegen",
+  "context": "Blueprint Transpiler & C++ Codegen",
+  "num": 1,
+  "title": "Editing the Module field inside the dry-run modal makes \"Confirm write\" overwrite files the user never saw diffed",
+  "severity": "High",
+  "lens": "bug",
+  "category": "data-loss",
+  "file": "src/components/modules/game-systems/blueprint-transpiler/BlueprintTranspilerView.tsx:569"
+ },
+ {
+  "slug": "blueprint-transpiler-c-codegen",
+  "context": "Blueprint Transpiler & C++ Codegen",
+  "num": 2,
+  "title": "Parser silently discards macro graphs and every event graph after the first",
+  "severity": "Medium",
+  "lens": "bug",
+  "category": "silent-failure",
+  "file": "src/lib/blueprint-parser.ts:224-228"
+ },
+ {
+  "slug": "blueprint-transpiler-c-codegen",
+  "context": "Blueprint Transpiler & C++ Codegen",
+  "num": 3,
+  "title": "Scalar/array JSON parses into a phantom \"BP_Unknown\" asset — success theater end to end",
+  "severity": "Medium",
+  "lens": "bug",
+  "category": "edge-case",
+  "file": "src/lib/blueprint-parser.ts:212-231"
+ },
+ {
+  "slug": "blueprint-transpiler-c-codegen",
+  "context": "Blueprint Transpiler & C++ Codegen",
+  "num": 4,
+  "title": "UE5 source parser reads commented-out code as live values — first match shadows the real one",
+  "severity": "Medium",
+  "lens": "bug",
+  "category": "silent-failure",
+  "file": "src/lib/ue5-source-parser.ts:146-160"
+ },
+ {
+  "slug": "blueprint-transpiler-c-codegen",
+  "context": "Blueprint Transpiler & C++ Codegen",
+  "num": 5,
+  "title": "View handlers re-throw hook errors into the void — unhandled rejections; clipboard copy can fail silently",
+  "severity": "Low",
+  "lens": "bug",
+  "category": "silent-failure",
+  "file": "src/components/modules/game-systems/blueprint-transpiler/BlueprintTranspilerView.tsx:84-104"
+ },
+ {
+  "slug": "blueprint-transpiler-c-codegen",
+  "context": "Blueprint Transpiler & C++ Codegen",
+  "num": 6,
+  "title": "Diff change cards are mouse-only — no keyboard expansion, no `aria-expanded`, and TermChip clicks toggle them by accident",
+  "severity": "High",
+  "lens": "ui",
+  "category": "a11y",
+  "file": "src/components/modules/game-systems/blueprint-transpiler/BlueprintTranspilerView.tsx:500-519"
+ },
+ {
+  "slug": "blueprint-transpiler-c-codegen",
+  "context": "Blueprint Transpiler & C++ Codegen",
+  "num": 7,
+  "title": "Write-to-project dry-run dialog hand-rolls a modal instead of using the app's accessible `Modal` primitive",
+  "severity": "High",
+  "lens": "ui",
+  "category": "visual-consistency",
+  "file": "src/components/modules/game-systems/blueprint-transpiler/BlueprintTranspilerView.tsx:624-677"
+ },
+ {
+  "slug": "blueprint-transpiler-c-codegen",
+  "context": "Blueprint Transpiler & C++ Codegen",
+  "num": 8,
+  "title": "Input-panel and accent-CTA markup duplicated across both panes (and the modal)",
+  "severity": "Medium",
+  "lens": "ui",
+  "category": "component-extraction",
+  "file": "src/components/modules/game-systems/blueprint-transpiler/BlueprintTranspilerView.tsx:210-243"
+ },
+ {
+  "slug": "blueprint-transpiler-c-codegen",
+  "context": "Blueprint Transpiler & C++ Codegen",
+  "num": 9,
+  "title": "One shared error banner leaks across tabs and is never announced to screen readers",
+  "severity": "Medium",
+  "lens": "ui",
+  "category": "polish",
+  "file": "src/components/modules/game-systems/blueprint-transpiler/BlueprintTranspilerView.tsx:248-252"
+ },
+ {
+  "slug": "blueprint-transpiler-c-codegen",
+  "context": "Blueprint Transpiler & C++ Codegen",
+  "num": 10,
+  "title": "Textareas have no programmatic label — placeholder is the only name",
+  "severity": "Low",
+  "lens": "ui",
+  "category": "a11y",
+  "file": "src/components/modules/game-systems/blueprint-transpiler/BlueprintTranspilerView.tsx:223-229"
+ },
+ {
+  "slug": "ue5-bridge-live-sync",
+  "context": "UE5 Bridge & Live Sync",
+  "num": 1,
+  "title": "Aborted/timed-out builds orphan UBT's child compiler processes on Windows",
+  "severity": "Medium",
+  "lens": "bug",
+  "category": "resource-leak / recovery-gap",
+  "file": "src/lib/ue5-bridge/build-pipeline.ts:135"
+ },
+ {
+  "slug": "ue5-bridge-live-sync",
+  "context": "UE5 Bridge & Live Sync",
+  "num": 2,
+  "title": "PIE pause/resume mutates the shared `pieState` object in place",
+  "severity": "Low",
+  "lens": "bug",
+  "category": "state-corruption",
+  "file": "src/lib/ue5-bridge/ws-live-state.ts:246"
+ },
+ {
+  "slug": "ue5-bridge-live-sync",
+  "context": "UE5 Bridge & Live Sync",
+  "num": 3,
+  "title": "WebSocket auto-reconnect targets stale host/port after a settings change",
+  "severity": "Low",
+  "lens": "bug",
+  "category": "edge-case / silent-failure",
+  "file": "src/lib/ue5-bridge/ws-live-state.ts:363"
+ },
+ {
+  "slug": "ue5-bridge-live-sync",
+  "context": "UE5 Bridge & Live Sync",
+  "num": 4,
+  "title": "Stale \"live\" data renders alongside a \"Connect\" button during reconnect",
+  "severity": "Medium",
+  "lens": "ui",
+  "category": "polish / visual-consistency",
+  "file": "src/components/modules/project-setup/LiveStateSyncPanel.tsx:289"
+ },
+ {
+  "slug": "ue5-bridge-live-sync",
+  "context": "UE5 Bridge & Live Sync",
+  "num": 5,
+  "title": "Connect button has no in-flight state — invites double-submit, gives no feedback",
+  "severity": "Medium",
+  "lens": "ui",
+  "category": "polish",
+  "file": "src/components/modules/project-setup/LiveStateSyncPanel.tsx:225"
+ },
+ {
+  "slug": "ue5-bridge-live-sync",
+  "context": "UE5 Bridge & Live Sync",
+  "num": 6,
+  "title": "Sync log records outbound writes as sent even when the WebSocket dropped them",
+  "severity": "Medium",
+  "lens": "ui",
+  "category": "polish / feedback",
+  "file": "src/components/modules/project-setup/BidirectionalStateSyncPanel.tsx:258"
+ },
+ {
+  "slug": "ue5-bridge-live-sync",
+  "context": "UE5 Bridge & Live Sync",
+  "num": 7,
+  "title": "Collapsible-section header markup is duplicated ~8 times across both panels",
+  "severity": "Medium",
+  "lens": "ui",
+  "category": "component-extraction",
+  "file": "src/components/modules/project-setup/BidirectionalStateSyncPanel.tsx:482"
+ },
+ {
+  "slug": "ue5-bridge-live-sync",
+  "context": "UE5 Bridge & Live Sync",
+  "num": 8,
+  "title": "Icon-only header buttons rely on `title` without `aria-label`",
+  "severity": "Low",
+  "lens": "ui",
+  "category": "a11y",
+  "file": "src/components/modules/project-setup/LiveStateSyncPanel.tsx:210"
+ },
+ {
+  "slug": "harness-autonomous-builder",
+  "context": "Harness Autonomous Builder",
+  "num": 1,
+  "title": "Every pause path falls through to the \"completed\" epilogue — paused runs are persisted and reported as completed, and the resume API is bricked",
+  "severity": "High",
+  "lens": "bug",
+  "category": "silent-failure",
+  "file": "src/lib/harness/orchestrator.ts:749"
+ },
+ {
+  "slug": "harness-autonomous-builder",
+  "context": "Harness Autonomous Builder",
+  "num": 2,
+  "title": "`fillPool` ignores `paused` — a user pause can launch brand-new sessions, then the pool abandons all in-flight sessions without awaiting or killing them",
+  "severity": "High",
+  "lens": "bug",
+  "category": "race-condition",
+  "file": "src/lib/harness/orchestrator.ts:614-639"
+ },
+ {
+  "slug": "harness-autonomous-builder",
+  "context": "Harness Autonomous Builder",
+  "num": 3,
+  "title": "Checkpoint baseline anchors at HEAD, not the dirty tree — first rollback still wipes the user's pre-run uncommitted changes even in sequential mode (residual gap of 73a447a)",
+  "severity": "High",
+  "lens": "bug",
+  "category": "data-loss",
+  "file": "src/lib/harness/orchestrator.ts:392-402, 656-672"
+ },
+ {
+  "slug": "harness-autonomous-builder",
+  "context": "Harness Autonomous Builder",
+  "num": 4,
+  "title": "Cost ledger is never reset — a fresh run inherits the lifetime spend of its statePath, so the budget governor fires on day one (activated by edd8750)",
+  "severity": "Medium",
+  "lens": "bug",
+  "category": "state-corruption",
+  "file": "src/lib/harness/orchestrator.ts:73-76, 358, 848"
+ },
+ {
+  "slug": "harness-autonomous-builder",
+  "context": "Harness Autonomous Builder",
+  "num": 5,
+  "title": "An exception inside `processArea` bypasses retry accounting — the pool respawns the same area in a tight loop, spending a session per spin",
+  "severity": "Medium",
+  "lens": "bug",
+  "category": "edge-case",
+  "file": "src/lib/harness/orchestrator.ts:636"
+ },
+ {
+  "slug": "session-analytics-telemetry",
+  "context": "Session Analytics & Telemetry",
+  "num": 1,
+  "title": "The 8b7856f ISO-timestamp-default fix is inert on every existing database",
+  "severity": "Medium",
+  "lens": "bug",
+  "category": "silent-failure (incomplete fix)",
+  "file": "src/lib/db.ts:290"
+ },
+ {
+  "slug": "session-analytics-telemetry",
+  "context": "Session Analytics & Telemetry",
+  "num": 2,
+  "title": "Substring matching turns Scroll/Dashboard widgets into \"dodge/roll\" evidence and fabricates Souls-like suggestions",
+  "severity": "Medium",
+  "lens": "bug",
+  "category": "edge-case (wrong results)",
+  "file": "src/lib/genre-evolution-engine.ts:167"
+ },
+ {
+  "slug": "session-analytics-telemetry",
+  "context": "Session Analytics & Telemetry",
+  "num": 3,
+  "title": "Clearing the prompt doesn't cancel the in-flight debounce — stale suggestions resurrect for empty input",
+  "severity": "Low",
+  "lens": "bug",
+  "category": "race-condition (stale state)",
+  "file": "src/hooks/useSessionAnalytics.ts:80"
+ },
+ {
+  "slug": "session-analytics-telemetry",
+  "context": "Session Analytics & Telemetry",
+  "num": 4,
+  "title": "Every failure in the Genre Evolution view is silent — errors are indistinguishable from \"no data\"",
+  "severity": "High",
+  "lens": "ui",
+  "category": "polish",
+  "file": "src/components/modules/core-engine/TelemetryEvolution.tsx:47"
+ },
+ {
+  "slug": "session-analytics-telemetry",
+  "context": "Session Analytics & Telemetry",
+  "num": 5,
+  "title": "Suggestion disclosure headers have no aria-expanded/aria-controls, unlike the dashboard's identical pattern",
+  "severity": "Medium",
+  "lens": "ui",
+  "category": "a11y",
+  "file": "src/components/modules/core-engine/TelemetryEvolution.tsx:266"
+ },
+ {
+  "slug": "session-analytics-telemetry",
+  "context": "Session Analytics & Telemetry",
+  "num": 6,
+  "title": "Quality-score trend arrow is icon-and-hue only — no text alternative or explanation",
+  "severity": "Medium",
+  "lens": "ui",
+  "category": "a11y",
+  "file": "src/components/modules/evaluator/SessionAnalyticsDashboard.tsx:261"
+ },
+ {
+  "slug": "session-analytics-telemetry",
+  "context": "Session Analytics & Telemetry",
+  "num": 7,
+  "title": "Accent-pill buttons and section headers are copy-pasted with drifting hover/focus behavior",
+  "severity": "Low",
+  "lens": "ui",
+  "category": "component-extraction",
+  "file": "src/components/modules/core-engine/TelemetryEvolution.tsx:87"
+ },
+ {
+  "slug": "session-analytics-telemetry",
+  "context": "Session Analytics & Telemetry",
+  "num": 8,
+  "title": "Loading states use two different spinners and are never announced",
+  "severity": "Low",
+  "lens": "ui",
+  "category": "visual-consistency",
+  "file": "src/components/modules/evaluator/SessionAnalyticsDashboard.tsx:52"
+ },
+ {
+  "slug": "game-director-regression",
+  "context": "Game Director & Regression",
+  "num": 1,
+  "title": "SessionDetail never refetches findings/events after a playtest run completes",
+  "severity": "High",
+  "lens": "bug",
+  "category": "state-staleness",
+  "file": "src/components/modules/game-director/SessionDetail.tsx:65"
+ },
+ {
+  "slug": "game-director-regression",
+  "context": "Game Director & Regression",
+  "num": 2,
+  "title": "Health trend query freezes at the first 30 completed sessions (`ORDER BY ... ASC LIMIT`)",
+  "severity": "Medium",
+  "lens": "bug",
+  "category": "silent-failure",
+  "file": "src/lib/game-director-db.ts:433"
+ },
+ {
+  "slug": "game-director-regression",
+  "context": "Game Director & Regression",
+  "num": 3,
+  "title": "Occurrence-history race in FingerprintsTab shows the wrong fingerprint's history",
+  "severity": "Medium",
+  "lens": "bug",
+  "category": "race-condition",
+  "file": "src/components/modules/game-director/RegressionTrackerView.tsx:419"
+ },
+ {
+  "slug": "game-director-regression",
+  "context": "Game Director & Regression",
+  "num": 4,
+  "title": "Create/triage/delete failures vanish with no user feedback (unhandled rejections)",
+  "severity": "Medium",
+  "lens": "bug",
+  "category": "silent-failure",
+  "file": "src/components/modules/game-director/NewSessionPanel.tsx:113"
+ },
+ {
+  "slug": "game-director-regression",
+  "context": "Game Director & Regression",
+  "num": 5,
+  "title": "Regression alerts label the session where the bug was last *seen* as where it was \"Fixed\"",
+  "severity": "Low",
+  "lens": "bug",
+  "category": "logic-error",
+  "file": "src/lib/regression-tracker.ts:305"
+ },
+ {
+  "slug": "game-director-regression",
+  "context": "Game Director & Regression",
+  "num": 6,
+  "title": "Build-path \"Browse\" button is dead — it renders, focuses, and does nothing",
+  "severity": "High",
+  "lens": "ui",
+  "category": "polish",
+  "file": "src/components/modules/game-director/NewSessionPanel.tsx:169"
+ },
+ {
+  "slug": "game-director-regression",
+  "context": "Game Director & Regression",
+  "num": 7,
+  "title": "Triaging one finding collapses the whole Findings Explorer into a spinner and drops scroll position",
+  "severity": "High",
+  "lens": "ui",
+  "category": "polish",
+  "file": "src/components/modules/game-director/FindingsExplorer.tsx:52"
+ },
+ {
+  "slug": "game-director-regression",
+  "context": "Game Director & Regression",
+  "num": 8,
+  "title": "SettingTooltip content is invisible to screen readers and the trigger lies about being a button",
+  "severity": "Medium",
+  "lens": "ui",
+  "category": "a11y",
+  "file": "src/components/modules/game-director/NewSessionPanel.tsx:27"
+ },
+ {
+  "slug": "game-director-regression",
+  "context": "Game Director & Regression",
+  "num": 9,
+  "title": "Finding row JSX is duplicated between SessionDetail and FindingsExplorer",
+  "severity": "Medium",
+  "lens": "ui",
+  "category": "component-extraction",
+  "file": "src/components/modules/game-director/SessionDetail.tsx:251"
+ },
+ {
+  "slug": "game-director-regression",
+  "context": "Game Director & Regression",
+  "num": 10,
+  "title": "Session \"Timeline\" plays backwards — newest event first under a chronological rail",
+  "severity": "Low",
+  "lens": "ui",
+  "category": "visual-consistency",
+  "file": "src/components/modules/game-director/SessionDetail.tsx:338"
+ }
+]

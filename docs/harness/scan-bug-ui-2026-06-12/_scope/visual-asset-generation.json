@@ -1,0 +1,22 @@
+{
+ "name": "Visual Asset Generation",
+ "slug": "visual-asset-generation",
+ "priorReport": "docs/harness/bug-hunt-2026-06-09/visual-asset-generation.md",
+ "description": "Generate 2D/3D game assets via external providers (Leonardo, Scenario): the asset forge UI, generation queue, asset browser, and UE5 import templates. Spans the visual-gen module, visual-gen libs, and the generation APIs.",
+ "filePaths": [
+  "src/components/modules/visual-gen/asset-forge/AssetForgeView.tsx",
+  "src/components/modules/visual-gen/asset-forge/GenerationPanel.tsx",
+  "src/components/modules/visual-gen/asset-forge/GenerationQueue.tsx",
+  "src/lib/visual-gen/providers.ts",
+  "src/lib/visual-gen/asset-sources.ts",
+  "src/lib/visual-gen/ue5-import-templates.ts",
+  "src/lib/visual-gen/ui.ts",
+  "src/lib/leonardo.ts",
+  "src/lib/scenario.ts",
+  "src/app/api/visual-gen/generate/route.ts",
+  "src/app/api/visual-gen/browse/route.ts",
+  "src/app/api/leonardo/route.ts",
+  "src/app/api/scenario/route.ts",
+  "src/components/modules/visual-gen/asset-browser/index.ts"
+ ]
+}

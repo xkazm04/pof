@@ -1,0 +1,26 @@
+{
+ "name": "Blender MCP Integration",
+ "slug": "blender-mcp-integration",
+ "priorReport": "docs/harness/bug-hunt-2026-06-09/blender-mcp-integration.md",
+ "description": "Drive Blender over a TCP/MCP bridge to generate, import and preview 3D models: connection bar, viewport preview, scene/object execution, and asset download. Spans the blender-mcp lib/components/store and its API namespace, plus the content/models module.",
+ "filePaths": [
+  "src/lib/blender-mcp/service.ts",
+  "src/lib/blender-mcp/escape.ts",
+  "src/lib/blender-mcp/status-tokens.ts",
+  "src/lib/blender-mcp/types.ts",
+  "src/components/blender-mcp/BlenderConnectionBar.tsx",
+  "src/components/blender-mcp/ViewportPreview.tsx",
+  "src/stores/blenderMCPStore.ts",
+  "src/app/api/blender-mcp/execute/route.ts",
+  "src/app/api/blender-mcp/generate/route.ts",
+  "src/app/api/blender-mcp/generate/import/route.ts",
+  "src/app/api/blender-mcp/generate/status/route.ts",
+  "src/app/api/blender-mcp/assets/route.ts",
+  "src/app/api/blender-mcp/assets/download/route.ts",
+  "src/app/api/blender-mcp/scene/route.ts",
+  "src/app/api/blender-mcp/object/route.ts",
+  "src/app/api/blender-mcp/screenshot/route.ts",
+  "src/components/modules/content/models/ModelsView.tsx",
+  "src/components/modules/content/models/AssetInventory.tsx"
+ ]
+}

@@ -1,0 +1,24 @@
+{
+ "name": "CLI Terminal & Task System",
+ "slug": "cli-terminal-task-system",
+ "priorReport": "docs/harness/bug-hunt-2026-06-09/cli-terminal-task-system.md",
+ "description": "The Claude Code CLI integration: spawn the CLI and parse stream-json, the unified CLITask abstraction with the @@CALLBACK marker system, skills knowledge packs, and the terminal UI. Spans the claude-terminal lib, cli-task, the components/cli terminal, and the useModuleCLI hook.",
+ "filePaths": [
+  "src/lib/claude-terminal/cli-service.ts",
+  "src/lib/claude-terminal/session-manager.ts",
+  "src/lib/claude-terminal/types.ts",
+  "src/lib/cli-task.ts",
+  "src/components/cli/skills.ts",
+  "src/components/cli/taskRegistry.ts",
+  "src/components/cli/InlineTerminal.tsx",
+  "src/components/cli/CompactTerminal.tsx",
+  "src/components/cli/TerminalOutput.tsx",
+  "src/components/cli/TerminalInput.tsx",
+  "src/components/cli/useTaskQueue.ts",
+  "src/components/cli/UE5BuildParser.ts",
+  "src/hooks/useModuleCLI.ts",
+  "src/hooks/useChecklistCLI.ts",
+  "src/hooks/useIntentDispatch.ts",
+  "src/app/api/cli-task-registry/route.ts"
+ ]
+}

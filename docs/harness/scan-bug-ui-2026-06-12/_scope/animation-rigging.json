@@ -1,0 +1,21 @@
+{
+ "name": "Animation & Rigging",
+ "slug": "animation-rigging",
+ "priorReport": "docs/harness/bug-hunt-2026-06-09/animation-rigging.md",
+ "description": "Author animation state machines, montages and combo choreography, import Mixamo animations, and auto-rig generated meshes. Spans the content/animations module, sub_animation, auto-rig, and animation libs.",
+ "filePaths": [
+  "src/components/modules/content/animations/AnimationsView.tsx",
+  "src/components/modules/content/animations/AnimationStateMachine.tsx",
+  "src/components/modules/content/animations/StateMachineEditor.tsx",
+  "src/components/modules/content/animations/AIComboChoreographer.tsx",
+  "src/components/modules/content/animations/AnimationChecklist.tsx",
+  "src/components/modules/content/animations/MixamoImport.tsx",
+  "src/components/modules/visual-gen/auto-rig/index.ts",
+  "src/lib/animation/montage-analysis.ts",
+  "src/lib/animation/montage-prompt.ts",
+  "src/lib/animations.ts",
+  "src/lib/mixamo-db.ts",
+  "src/lib/visual-gen/rig-presets.ts",
+  "src/lib/prompts/animation-checklist.ts"
+ ]
+}

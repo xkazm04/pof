@@ -1,0 +1,22 @@
+{
+ "name": "Prompt Construction & Context",
+ "slug": "prompt-construction-context",
+ "priorReport": "docs/harness/bug-hunt-2026-06-09/prompt-construction-context.md",
+ "description": "Composable prompt construction: the fluent prompt-builder (Project Context -> Domain -> Task -> Best Practices -> Output Schema -> Success Criteria), the shared project-context header injecting UE paths/build commands/error memory, and per-module prompt builders.",
+ "filePaths": [
+  "src/lib/prompts/prompt-builder.ts",
+  "src/lib/prompt-context.ts",
+  "src/lib/prompts/ability-forge.ts",
+  "src/lib/prompts/inventory.ts",
+  "src/lib/prompts/level-design.ts",
+  "src/lib/prompts/material-configurator.ts",
+  "src/lib/prompts/material-patterns.ts",
+  "src/lib/prompts/menu-flow.ts",
+  "src/lib/prompts/post-process.ts",
+  "src/lib/prompts/audio-events.ts",
+  "src/lib/prompts/audio-scene.ts",
+  "src/lib/prompts/animation-checklist.ts",
+  "src/lib/error-memory-db.ts",
+  "src/lib/knowledge/index.ts"
+ ]
+}

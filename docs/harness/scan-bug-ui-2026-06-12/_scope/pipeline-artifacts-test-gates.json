@@ -1,0 +1,30 @@
+{
+ "name": "Pipeline Artifacts & Test Gates",
+ "slug": "pipeline-artifacts-test-gates",
+ "priorReport": "docs/harness/bug-hunt-2026-06-09/pipeline-artifacts-test-gates.md",
+ "description": "The server side of the catalog->UE contract: the pipeline_artifacts table (SQLite authoring source of record), catalog lifecycle, the 4-tier acceptance ladder, and the L3/L4 live-UE test-gate runner (bridge/spawn/visual executors + drain worker). Spans catalog/pipeline libs, test-gate-runner, and pipeline APIs.",
+ "filePaths": [
+  "src/lib/pipeline-artifacts-db.ts",
+  "src/lib/pipeline-db.ts",
+  "src/lib/catalog-db.ts",
+  "src/lib/catalog/pipeline-registry.ts",
+  "src/lib/catalog/artifact-validation.ts",
+  "src/lib/catalog/lifecycle.ts",
+  "src/lib/catalog/batch.ts",
+  "src/lib/pipeline/tracks.ts",
+  "src/lib/pipeline/types.ts",
+  "src/lib/test-gate-runner/index.ts",
+  "src/lib/test-gate-runner/drain.ts",
+  "src/lib/test-gate-runner/executors.ts",
+  "src/lib/test-gate-runner/bridgeExecutor.ts",
+  "src/lib/test-gate-runner/spawnExecutor.ts",
+  "src/lib/test-gate-runner/visualExecutor.ts",
+  "src/lib/test-gate-runner/parse.ts",
+  "src/lib/test-gate-runner/worker.ts",
+  "src/stores/pipelineStore.ts",
+  "src/stores/catalogStore.ts",
+  "src/app/api/pipeline-artifacts/route.ts",
+  "src/app/api/pipeline-artifacts/drain/route.ts",
+  "src/app/api/catalog/route.ts"
+ ]
+}

@@ -1,0 +1,25 @@
+{
+ "name": "Module Registry & Feature Matrix",
+ "slug": "module-registry-feature-matrix",
+ "priorReport": "docs/harness/bug-hunt-2026-06-09/module-registry-feature-matrix.md",
+ "description": "The module/feature backbone: the module registry (checklists, quick actions, knowledge tips), the feature dependency graph driving the Next-Best-Action engine, and the feature matrix tracking verification status/scan results. Spans module-registry, feature-definitions, nba-engine, the feature_matrix DB, and the module store.",
+ "filePaths": [
+  "src/lib/module-registry.ts",
+  "src/lib/feature-definitions.ts",
+  "src/lib/feature-matrix-db.ts",
+  "src/lib/nba-engine.ts",
+  "src/lib/checklist-expectations.ts",
+  "src/stores/moduleStore.ts",
+  "src/types/feature-matrix.ts",
+  "src/types/modules.ts",
+  "src/hooks/useFeatureMatrix.ts",
+  "src/hooks/useNBA.ts",
+  "src/hooks/useModuleActions.ts",
+  "src/components/modules/core-engine/FeatureMatrix.tsx",
+  "src/components/modules/shared/FeatureCard.tsx",
+  "src/app/api/feature-matrix/route.ts",
+  "src/app/api/feature-matrix/progress/route.ts",
+  "src/app/api/checklist/complete/route.ts",
+  "src/app/api/module-scan/import/route.ts"
+ ]
+}

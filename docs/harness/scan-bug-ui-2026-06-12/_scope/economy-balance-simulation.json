@@ -1,0 +1,22 @@
+{
+ "name": "Economy & Balance Simulation",
+ "slug": "economy-balance-simulation",
+ "priorReport": "docs/harness/bug-hunt-2026-06-09/economy-balance-simulation.md",
+ "description": "Model the game economy and balance baselines: currency/item-economy engines, an economy simulator with code generation, and threat-score/bestiary guardrails persisted as balance baselines. Spans economy/balance libs, the economy-simulator store, and the balance-baseline API.",
+ "filePaths": [
+  "src/lib/economy/simulation-engine.ts",
+  "src/lib/economy/item-economy-engine.ts",
+  "src/lib/economy/codegen.ts",
+  "src/lib/economy/definitions.ts",
+  "src/lib/balance/baseline.ts",
+  "src/lib/balance/baseline-db.ts",
+  "src/lib/balance/bestiary-guardrails.ts",
+  "src/lib/balance/threat-score.ts",
+  "src/stores/economySimulatorStore.ts",
+  "src/types/economy-simulator.ts",
+  "src/app/api/economy-simulator/route.ts",
+  "src/app/api/balance-baseline/route.ts",
+  "src/components/modules/evaluator/EconomySimulatorView.tsx",
+  "src/components/modules/evaluator/EconomyCodeGenPanel.tsx"
+ ]
+}

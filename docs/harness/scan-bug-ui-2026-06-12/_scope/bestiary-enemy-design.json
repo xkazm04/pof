@@ -1,0 +1,22 @@
+{
+ "name": "Bestiary & Enemy Design",
+ "slug": "bestiary-enemy-design",
+ "priorReport": "docs/harness/bug-hunt-2026-06-09/bestiary-enemy-design.md",
+ "description": "Design enemy archetypes, encounter mixes and AI logic (behavior trees, perception cones, aggro), with AI-coverage analysis and remix prompts. Centered on the sub_bestiary module and bestiary libs.",
+ "filePaths": [
+  "src/components/modules/core-engine/sub_bestiary/index.tsx",
+  "src/components/modules/core-engine/sub_bestiary/NarrativeBreadcrumb.tsx",
+  "src/components/modules/core-engine/sub_bestiary/ai-logic/AggroTable.tsx",
+  "src/components/modules/core-engine/sub_bestiary/ai-logic/AILogicSidePanels.tsx",
+  "src/components/modules/core-engine/sub_bestiary/ai-logic/AILogicTab.tsx",
+  "src/components/modules/core-engine/sub_bestiary/ai-logic/BTFlowchart.tsx",
+  "src/components/modules/core-engine/sub_bestiary/ai-logic/BTFlowchartRow.tsx",
+  "src/components/modules/core-engine/sub_bestiary/ai-logic/DecisionDebugger.tsx",
+  "src/components/modules/core-engine/sub_bestiary/ai-logic/PerceptionConeViz.tsx",
+  "src/components/modules/core-engine/sub_bestiary/archetypes/ArchetypeBuilder.tsx",
+  "src/lib/bestiary/ai-coverage.ts",
+  "src/lib/bestiary/encounter-mix.ts",
+  "src/lib/bestiary/remix-prompt.ts",
+  "src/lib/balance/bestiary-guardrails.ts"
+ ]
+}
