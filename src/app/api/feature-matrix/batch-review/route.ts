@@ -1,5 +1,5 @@
 import { NextRequest } from 'next/server';
-import { startExecution, getExecution, subscribeToExecution } from '@/lib/claude-terminal/cli-service';
+import { startExecution, getExecution, subscribeToExecution, abortExecution } from '@/lib/claude-terminal/cli-service';
 import { MODULE_FEATURE_DEFINITIONS } from '@/lib/feature-definitions';
 import { TaskFactory, buildTaskPrompt, extractCallbackPayload, resolveCallback } from '@/lib/cli-task';
 import { MODULE_LABELS } from '@/lib/module-registry';
@@ -38,7 +38,13 @@ async function waitForExecution(executionId: string, timeoutMs = 600000): Promis
 
   const start = Date.now();
   while (Date.now() - start < timeoutMs) {
-    if (batchAborted) { unsub?.(); return { result: 'aborted', assistantOutput }; }
+    if (batchAborted) {
+      unsub?.();
+      // Stopping the wait is not stopping the work — kill the CLI process
+      // too, or the "aborted" review keeps burning tokens to completion.
+      abortExecution(executionId);
+      return { result: 'aborted', assistantOutput };
+    }
     const exec = getExecution(executionId);
     if (!exec) { unsub?.(); return { result: 'error', assistantOutput }; }
     if (exec.status === 'completed') { unsub?.(); return { result: 'completed', assistantOutput }; }
@@ -46,6 +52,7 @@ async function waitForExecution(executionId: string, timeoutMs = 600000): Promis
     await new Promise((r) => setTimeout(r, 2000));
   }
   unsub?.();
+  abortExecution(executionId); // timeout: the runaway review must not keep running
   return { result: 'error', assistantOutput }; // timeout
 }
 
