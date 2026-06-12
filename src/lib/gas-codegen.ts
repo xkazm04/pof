@@ -122,7 +122,7 @@ export function generateEffectsCode(effects: EditorEffect[]): string {
   for (const eff of effects) {
     lines.push(`// ── ${eff.name} ──`);
     lines.push(`// Duration: ${eff.duration}${eff.duration === 'duration' ? ` (${eff.durationSec}s)` : ''}`);
-    if (eff.cooldownSec > 0) lines.push(`// Period: ${eff.cooldownSec}s`);
+    if (eff.cooldownSec > 0) lines.push(`// Cooldown: ${eff.cooldownSec}s (ability cooldown — wire via a Cooldown GE on the owning ability)`);
     if (eff.modifiers.length > 0) {
       lines.push('// Modifiers:');
       for (const m of eff.modifiers) {
@@ -138,8 +138,13 @@ export function generateEffectsCode(effects: EditorEffect[]): string {
     if (eff.duration === 'duration') {
       lines.push(`    DurationMagnitude = FScalableFloat(${eff.durationSec.toFixed(1)}f);`);
     }
+    // cooldownSec is the ABILITY cooldown (the editor labels it "Cooldown" and
+    // deriveDefaultSpec seeds it from ability.cooldown) — it must NOT be
+    // emitted as the GE's Period: a Period turns this effect into a repeating
+    // DoT tick, silently re-applying its damage every N seconds.
     if (eff.cooldownSec > 0) {
-      lines.push(`    Period = FScalableFloat(${eff.cooldownSec.toFixed(1)}f);`);
+      lines.push(`    // Ability cooldown ${eff.cooldownSec.toFixed(1)}s: apply via a separate Cooldown GE`);
+      lines.push(`    // (HasDuration, DurationMagnitude = ${eff.cooldownSec.toFixed(1)}f) referenced from the ability's CooldownGameplayEffectClass.`);
     }
     lines.push('}');
     lines.push('');
