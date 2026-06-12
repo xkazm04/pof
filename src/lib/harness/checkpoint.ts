@@ -151,10 +151,30 @@ export function createCheckpointer(
       const checkout = await runGit(['checkout', '-B', branch], projectPath);
       if (checkout.exitCode !== 0) return false;
 
+      // A dirty tree makes bare HEAD a state the working tree never matched —
+      // the first rollback would hard-reset away the user's pre-run
+      // uncommitted work. Snapshot the dirty tree on the harness branch as
+      // the real baseline; if that snapshot cannot be made, refuse to enable
+      // checkpointing rather than arm a rollback that destroys it.
+      let baselineSha = head.stdout;
+      const status = await runGit(['status', '--porcelain'], projectPath);
+      if (status.exitCode !== 0) return false;
+      if (status.stdout) {
+        await runGit(['add', '-A'], projectPath);
+        const commit = await runGit(
+          ['commit', '-m', `harness checkpoint: ${BASELINE_AREA_ID} (pre-run dirty tree)`],
+          projectPath,
+        );
+        if (commit.exitCode !== 0) return false;
+        const newHead = await runGit(['rev-parse', 'HEAD'], projectPath);
+        if (newHead.exitCode !== 0 || !newHead.stdout) return false;
+        baselineSha = newHead.stdout;
+      }
+
       state = recordCheckpoint(state, {
         areaId: BASELINE_AREA_ID,
         iteration: 0,
-        sha: head.stdout,
+        sha: baselineSha,
         tag: '',
         timestamp: new Date().toISOString(),
       });

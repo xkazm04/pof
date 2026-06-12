@@ -20,14 +20,16 @@ interface FakeOpts {
   isRepo?: boolean;
   hasHead?: boolean;
   commitFails?: boolean;
+  dirty?: boolean;
 }
 
 /** A stateful in-memory git simulator: HEAD advances on commit, moves on reset. */
 function makeFakeGit(opts: FakeOpts = {}) {
-  const { isRepo = true, hasHead = true, commitFails = false } = opts;
+  const { isRepo = true, hasHead = true, commitFails = false, dirty = false } = opts;
   const calls: string[][] = [];
   let head = 'base000';
   let n = 0;
+  let isDirty = dirty;
   const runner: GitRunner = async (args) => {
     calls.push(args);
     const [sub, a1] = args;
@@ -37,10 +39,14 @@ function makeFakeGit(opts: FakeOpts = {}) {
     if (sub === 'rev-parse' && a1 === 'HEAD') {
       return hasHead ? ok(head) : fail(128, 'fatal: ambiguous argument HEAD');
     }
+    if (sub === 'status') {
+      return ok(isDirty ? ' M src/wip.ts' : '');
+    }
     if (sub === 'commit') {
       if (commitFails) return fail(1, 'nothing to commit, working tree clean');
       n += 1;
       head = `c${n}`;
+      isDirty = false; // committing absorbs the dirty tree
       return ok(`[harness ${head}] checkpoint`);
     }
     if (sub === 'reset') {
@@ -127,6 +133,28 @@ describe('createCheckpointer.init', () => {
     const git = makeFakeGit({ hasHead: false });
     const cp = createCheckpointer('run_x', '/proj', git.runner);
     expect(await cp.init()).toBe(false);
+  });
+
+  it('commits a dirty tree as the baseline so rollback cannot wipe pre-run work', async () => {
+    const git = makeFakeGit({ dirty: true });
+    const cp = createCheckpointer('run_x', '/proj', git.runner);
+    expect(await cp.init()).toBe(true);
+    // The baseline is the snapshot commit, NOT the bare pre-run HEAD: a
+    // rollback to base000 would hard-reset away the uncommitted changes.
+    expect(cp.lastGreen()).toBe('c1');
+    expect(has(git.calls, 'add', '-A')).toBe(true);
+    const state = cp.getState();
+    expect(state.checkpoints[0].areaId).toBe(BASELINE_AREA_ID);
+    expect(state.checkpoints[0].sha).toBe('c1');
+  });
+
+  it('refuses to enable checkpointing when the dirty-tree snapshot cannot be committed', async () => {
+    const git = makeFakeGit({ dirty: true, commitFails: true });
+    const cp = createCheckpointer('run_x', '/proj', git.runner);
+    // Better no checkpointing (no rollbacks at all) than a rollback armed to
+    // destroy the user's uncommitted work.
+    expect(await cp.init()).toBe(false);
+    expect(cp.lastGreen()).toBeNull();
   });
 });
 

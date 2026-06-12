@@ -1,8 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 // In-memory DB so the test never touches ~/.pof/pof.db.
-vi.mock('@/lib/db', () => {
-  const Database = require('better-sqlite3');
+vi.mock('@/lib/db', async () => {
+  const { default: Database } = await import('better-sqlite3');
   const db = new Database(':memory:');
   return { getDb: () => db };
 });
@@ -105,6 +105,29 @@ describe('anti-pattern detection', () => {
       'anti--arpg-character--inheritance',
       'anti--arpg-gas--inheritance',
     ]);
+  });
+
+  it('matches multi-word trigger keywords and plural forms (25d6de5 regression)', () => {
+    upsertAntiPattern(
+      antiPattern({
+        id: 'anti--animations--state-machine',
+        moduleId: 'animations' as AntiPattern['moduleId'],
+        title: 'State machine approach',
+        approach: 'state-machine',
+        triggerKeywords: ['state machine', 'fsm', 'transition', 'state graph', 'behavior tree'],
+      }),
+    );
+
+    // The textbook prompt for this anti-pattern: 'state machine' is a phrase
+    // keyword and 'transitions' is a plural — under exact single-token matching
+    // neither counted and the guardrail never fired.
+    const warnings = checkPromptForAntiPatterns(
+      'Implement a state machine for dialogue with transitions between idle and talking.',
+      'animations' as AntiPattern['moduleId'],
+    );
+    expect(warnings).toHaveLength(1);
+    expect(warnings[0].antiPattern.id).toBe('anti--animations--state-machine');
+    expect(warnings[0].matchScore).toBeGreaterThanOrEqual(30);
   });
 
   it('getAntiPatternsByModule orders by failure rate', () => {

@@ -75,6 +75,7 @@ function ViewPanel({ t, view, data }: { t: LabTheme; view: ViewDescriptor; data:
 export function ArchetypeStep({ t, entity, step, spec, catalogId }: { t: LabTheme; entity: LabEntity; step: string; spec: StepSpec; catalogId?: string }) {
   const art = useLabStep(entity.id, step);
   const produce = useLabPipelineStore((s) => s.produce);
+  const produceFrom = useLabPipelineStore((s) => s.produceFrom);
   const canonRules = useCanonStore((s) => s.rules);
   const entitiesByCatalog = useCatalogStore((s) => s.entitiesByCatalog);
   const data = art?.data ?? {};
@@ -87,22 +88,31 @@ export function ArchetypeStep({ t, entity, step, spec, catalogId }: { t: LabThem
   };
 
   // Gallery archetype: the real browse→compare→select loop (shared CandidateGallery + genHistory).
+  // `history` here is a render-time view only; generate/reselect MUST derive
+  // next-state from the LIVE store data inside produceFrom — the closure copy
+  // drops a kept batch when two dispatches land in one frame (see 3d50330).
   const history = readHistory(data);
   const generate = (dir: string, prompt: string) => {
-    if (spec.view.kind !== 'gallery') return;
-    const base = spec.produce(entity);
-    const batch = makeBatch({
-      seq: history.batches.length,
-      at: new Date().toISOString(),
-      direction: dir,
-      prompt,
-      candidates: genericGalleryCandidates(spec.view.field, spec.view.candidates, dir, history.batches.length),
+    const view = spec.view;
+    if (view.kind !== 'gallery') return;
+    produceFrom(entity.id, step, (prevData) => {
+      const base = spec.produce(entity);
+      const live = readHistory(prevData);
+      const batch = makeBatch({
+        seq: live.batches.length,
+        at: new Date().toISOString(),
+        direction: dir,
+        prompt,
+        candidates: genericGalleryCandidates(view.field, view.candidates, dir, live.batches.length),
+      });
+      return { ...base, data: historyData(appendBatch(live, batch), base.data) };
     });
-    produce(entity.id, step, { ...base, data: historyData(appendBatch(history, batch), base.data) });
   };
   const reselect = (id: string) => {
-    const base = spec.produce(entity);
-    produce(entity.id, step, { ...base, data: historyData(selectCandidate(history, id), base.data) });
+    produceFrom(entity.id, step, (prevData) => {
+      const base = spec.produce(entity);
+      return { ...base, data: historyData(selectCandidate(readHistory(prevData), id), base.data) };
+    });
   };
 
   const cli = (onComplete: (ctx?: { direction: string; prompt: string }) => void) => (

@@ -286,7 +286,7 @@ function buildCoreSystemsSection(
         catFeatures.push('|---------|--------|---------|');
         for (const f of modFeatures) {
           const statusIcon = statusEmoji(f.status as FeatureStatus);
-          const quality = f.quality_score != null ? `${'★'.repeat(f.quality_score)}${'☆'.repeat(5 - f.quality_score)}` : '—';
+          const quality = f.quality_score != null ? meter(f.quality_score, 5, '★', '☆') : '—';
           catFeatures.push(`| ${f.feature_name} | ${statusIcon} ${f.status} | ${quality} |`);
         }
       }
@@ -376,12 +376,7 @@ function buildLevelDesignSection(docs: LevelDocRow[], now: string): GDDSection {
       lines.push('| Room | Type | Difficulty | Pacing |');
       lines.push('|------|------|------------|--------|');
       for (const r of rooms) {
-        // Clamp difficulty before rendering the star/dot meter. `rooms` is free-form JSON
-        // from SQLite with no stored bound, and String.repeat throws RangeError for a
-        // negative or NaN count (`5 - 6 = -1`, `repeat(undefined)`) — one bad room would
-        // otherwise crash the entire GDD generation, not just that row.
-        const d = Math.max(0, Math.min(5, Math.round(Number(r.difficulty) || 0)));
-        lines.push(`| ${r.name} | ${r.type} | ${'●'.repeat(d)}${'○'.repeat(5 - d)} | ${r.pacing} |`);
+        lines.push(`| ${r.name} | ${r.type} | ${meter(r.difficulty, 5, '●', '○')} | ${r.pacing} |`);
       }
     }
 
@@ -594,9 +589,20 @@ function severityIcon(severity: string): string {
   }
 }
 
+/**
+ * Render a clamped fill meter (★★★☆☆ / ●●○○○ / ███░░). Values come from
+ * stored data with no schema bound — String.repeat throws RangeError on a
+ * negative or NaN count, and one bad row would crash the entire GDD
+ * synthesis (and every export action with it). Every meter-style .repeat
+ * in this file must go through this clamp.
+ */
+function meter(value: unknown, max: number, fullChar: string, emptyChar: string): string {
+  const v = Math.max(0, Math.min(max, Math.round(Number(value) || 0)));
+  return fullChar.repeat(v) + emptyChar.repeat(max - v);
+}
+
 function progressBar(pct: number): string {
-  const filled = Math.round(pct / 10);
-  return '█'.repeat(filled) + '░'.repeat(10 - filled);
+  return meter(pct / 10, 10, '█', '░');
 }
 
 // ─── Markdown Export ────────────────────────────────────────────────────────

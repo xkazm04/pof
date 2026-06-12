@@ -635,13 +635,24 @@ export function checkPromptForAntiPatterns(
   // Tokenize into whole words so a keyword matches a complete word only. Unanchored
   // `includes` let "state" match inside "stateful" and "cast" inside "broadcast", firing
   // scary false anti-pattern warnings on unrelated prompts and eroding trust in the guardrail.
-  const promptWords = new Set(lower.split(/[^a-z0-9]+/).filter(Boolean));
+  //
+  // Both sides are lightly stemmed (trailing 's') so "transitions" matches "transition",
+  // and multi-word keywords ('state machine', 'base class' — most APPROACH_KEYWORDS
+  // phrases) match when every token of the phrase appears: a Set of single tokens can
+  // never contain a two-word string, which silently killed the guardrail for the
+  // state-machine / montage-based / data-driven anti-patterns.
+  const stemToken = (w: string) => (w.length > 3 && w.endsWith('s') ? w.slice(0, -1) : w);
+  const promptStems = new Set(lower.split(/[^a-z0-9]+/).filter(Boolean).map(stemToken));
+  const keywordMatches = (kw: string) => {
+    const tokens = kw.toLowerCase().split(/[^a-z0-9]+/).filter(Boolean);
+    return tokens.length > 0 && tokens.every((t) => promptStems.has(stemToken(t)));
+  };
   const warnings: AntiPatternWarning[] = [];
 
   for (const ap of antiPatterns) {
     // Whole-word matches, and require at least two distinct keyword hits so a single generic
     // token can't drive a blocking-style "this approach failed 85% — switch?" warning.
-    const matchedKeywords = ap.triggerKeywords.filter((kw) => promptWords.has(kw.toLowerCase()));
+    const matchedKeywords = ap.triggerKeywords.filter(keywordMatches);
     if (matchedKeywords.length < 2) continue;
 
     const matchScore = Math.min(100, Math.round((matchedKeywords.length / Math.max(1, ap.triggerKeywords.length)) * 100));

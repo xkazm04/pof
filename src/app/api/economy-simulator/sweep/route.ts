@@ -1,5 +1,6 @@
 import { NextRequest } from 'next/server';
 import { runSensitivitySweep, type SweepOutput } from '@/lib/economy/sensitivity-sweep';
+import { normalizeSimulationConfig } from '@/lib/economy/normalize-config';
 import { apiSuccess, apiError } from '@/lib/api-utils';
 
 export async function POST(req: NextRequest) {
@@ -10,9 +11,12 @@ export async function POST(req: NextRequest) {
       return apiError('a SimulationConfig (with a numeric seed) is required', 400);
     }
     const out: SweepOutput = output === 'gini' || output === 'criticalAlerts' ? output : 'netFlow';
-    const result = runSensitivitySweep(config, {
+    // The sweep runs 31 full simulations per request — an unclamped config is
+    // a 31×-amplified CPU DoS on this single-process server.
+    const rawRange = typeof range === 'number' && Number.isFinite(range) ? range : 0.5;
+    const result = runSensitivitySweep(normalizeSimulationConfig(config), {
       output: out,
-      range: typeof range === 'number' ? range : 0.5,
+      range: Math.min(Math.max(rawRange, 0.05), 0.9),
     });
     return apiSuccess(result);
   } catch (err) {
