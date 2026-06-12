@@ -47,3 +47,13 @@ These were accepted but deferred because they either change balance VALUES (a de
 - `cppFloat()` (`src/lib/genome/codegen.ts`) — every numeric literal in generated C++ (wave 4).
 - State-machine validator rules `invalid-state-name`/`invalid-state-flag` gate codegen identifiers (wave 4).
 - Blueprint-transpiler confirm carries the `approved` plan; `applyWrite` rejects on path/content drift (wave 4).
+
+## Canonical helpers/contracts added by fix waves 6-7 (2026-06-12, Opus session)
+- Combat scenario inputs are validated at the API edge (`combat-simulator/route.ts`): count 1-10, level 1-50, reject unknown archetypeId; `simulateFight` `won` requires `enemies.length > 0` (defense in depth) — never reintroduce a gate-bypassing ability fallback (return null to idle the beat).
+- SVG shapes that must scale with a percent-positioned canvas use a percent rect/circle (+ `transform-box: fill-box` for rotation), never `<polygon points>`/`<path d>` (user-space only). See MapCanvas boss diamond.
+- Scale axes from data (`Math.max(FLOOR, ...data)`), never a frozen constant — DensityLevelGroup axisMax.
+- `pattern-extractor` computes per-approach success rate via the `approachOf` memo (both the success and anti-pattern pipelines now agree).
+- Prompt-evolution module picker derives from `SUB_MODULES`; A/B tests are listed via the `get-tests` route action + store `loadTests()` (called from `init`).
+- `gddComplianceStore` tags the report with `reportProjectPath` + a checklist hash; use `ensureAudit(checklistProgress, projectPath)` (re-audits on project/checklist change) + `clearReport()`. Mirror this "tag the cache with its inputs, re-derive on change" pattern for any project-scoped singleton.
+- BatchReviewPanel poll interval is owned by a suspend-aware effect keyed on observed `batch.status === 'running'`, not the start action — the pattern for any resumable poll.
+- Effects that must react to an entity's CONTENT change (not just its id) include the status/timestamp that flips — SessionDetail uses `session.status`/`session.completedAt`.
