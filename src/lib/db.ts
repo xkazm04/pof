@@ -306,6 +306,36 @@ export function getDb(): Database.Database {
     )
   `);
 
+  // Migrate: the ISO defaults above reach FRESH databases only — CREATE TABLE
+  // IF NOT EXISTS never updates an existing table's schema, so installs created
+  // before the default change still carry datetime('now') (space-separated,
+  // sorts below 'T' and falls out of the lexicographic week-range filters).
+  // SQLite can't alter a column default in place: rebuild via the
+  // feature_matrix pattern and normalize any legacy space-format rows.
+  const saSql = db.prepare("SELECT sql FROM sqlite_master WHERE type='table' AND name='session_analytics'").get() as { sql: string } | undefined;
+  if (saSql?.sql && saSql.sql.includes("datetime('now')")) {
+    db.exec(`
+      CREATE TABLE session_analytics_new (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        module_id TEXT NOT NULL,
+        session_key TEXT NOT NULL,
+        prompt TEXT NOT NULL,
+        prompt_preview TEXT NOT NULL,
+        had_project_context INTEGER NOT NULL DEFAULT 0,
+        prompt_length INTEGER NOT NULL DEFAULT 0,
+        success INTEGER NOT NULL DEFAULT 0,
+        duration_ms INTEGER NOT NULL DEFAULT 0,
+        started_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
+        completed_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
+      );
+      INSERT INTO session_analytics_new SELECT * FROM session_analytics;
+      DROP TABLE session_analytics;
+      ALTER TABLE session_analytics_new RENAME TO session_analytics;
+      UPDATE session_analytics SET started_at = replace(started_at, ' ', 'T') || 'Z' WHERE started_at LIKE '% %';
+      UPDATE session_analytics SET completed_at = replace(completed_at, ' ', 'T') || 'Z' WHERE completed_at LIKE '% %';
+    `);
+  }
+
   db.exec(`
     CREATE INDEX IF NOT EXISTS idx_session_analytics_module
     ON session_analytics(module_id)
