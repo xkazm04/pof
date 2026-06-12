@@ -24,6 +24,24 @@ export const POST = withRoute(async (request: NextRequest) => {
     return apiError('moduleId and features array required', 400);
   }
 
+  // upsertFeatures is a FULL upsert — undefined required columns crash in the
+  // better-sqlite3 bind layer as an unactionable 500. Reject partial rows
+  // loudly; status-only updates belong on PATCH.
+  for (const f of features) {
+    if (
+      typeof f?.featureName !== 'string' || !f.featureName ||
+      typeof f.category !== 'string' ||
+      typeof f.description !== 'string' ||
+      !Array.isArray(f.filePaths) ||
+      typeof f.reviewNotes !== 'string'
+    ) {
+      return apiError(
+        `features[] rows must be complete upsert rows (featureName, category, description, filePaths[], reviewNotes); got a partial row for "${f?.featureName ?? '?'}" — use PATCH for status-only updates`,
+        400,
+      );
+    }
+  }
+
   upsertFeatures(moduleId as SubModuleId, features);
   return apiSuccess({ count: features.length });
 }, 'Failed to save features');

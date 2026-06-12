@@ -8,7 +8,7 @@ import type { SubModuleId } from '@/types/modules';
 import { VERIFICATION_RULES } from './verification-rules';
 import { tryApiFetch } from '@/lib/api-utils';
 import { eventBus } from '@/lib/event-bus';
-import type { FeatureStatus } from '@/types/feature-matrix';
+import type { UpsertFeature } from '@/lib/feature-matrix-db';
 
 /**
  * Run all verification rules against the manifest and return results.
@@ -55,11 +55,11 @@ export async function autoUpdateFeatureMatrix(
 
   // Run each rule against the manifest
   const results: VerificationResult[] = [];
-  const updates: {
-    featureName: string;
-    status: FeatureStatus;
-    reviewNotes: string;
-  }[] = [];
+  // /api/feature-matrix POST is a FULL upsert — partial rows bind undefined
+  // into required columns and the whole batch 500s. Merge each update from
+  // the row we already fetched so existing category/description/filePaths/
+  // qualityScore survive, and rows discovered by a rule get sane defaults.
+  const updates: UpsertFeature[] = [];
 
   for (const rule of applicableRules) {
     const newStatus = rule.check(manifest);
@@ -79,7 +79,13 @@ export async function autoUpdateFeatureMatrix(
       updates.push({
         featureName: rule.featureName,
         status: newStatus,
+        category: existing?.category ?? 'general',
+        description: existing?.description ?? '',
+        filePaths: existing?.filePaths ?? [],
+        qualityScore: existing?.qualityScore ?? null,
+        nextSteps: existing?.nextSteps ?? '',
         reviewNotes: `Auto-verified from PoF Bridge manifest at ${new Date().toISOString()}`,
+        lastReviewedAt: new Date().toISOString(),
       });
     }
   }
@@ -109,6 +115,11 @@ export async function autoUpdateFeatureMatrix(
           'verification-engine',
         );
       }
+    } else {
+      // Surface the failure instead of letting the banner claim success
+      // while the DB still holds the old statuses.
+      console.error('[verification-engine] feature-matrix write failed:', writeResult.error);
+      for (const r of results) r.writeError = writeResult.error;
     }
   }
 

@@ -382,4 +382,6 @@ export interface VerificationResult {
   previousStatus: FeatureStatus | null;
   newStatus: FeatureStatus;
   details?: string;
+  /** Set when the batch write failed — the statuses above did NOT persist. */
+  writeError?: string;
 }

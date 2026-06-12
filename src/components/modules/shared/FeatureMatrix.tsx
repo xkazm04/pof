@@ -1473,6 +1473,7 @@ function VerificationBadge({ result }: { result: VerificationResult }) {
 
 function VerificationSummaryBanner({ results }: { results: VerificationResult[] }) {
   const changed = results.filter((r) => r.previousStatus !== null && r.previousStatus !== r.newStatus);
+  const writeError = results.find((r) => r.writeError)?.writeError;
   const implemented = results.filter((r) => r.newStatus === 'implemented' || r.newStatus === 'improved').length;
   const partial = results.filter((r) => r.newStatus === 'partial').length;
   const missing = results.filter((r) => r.newStatus === 'missing').length;
@@ -1501,9 +1502,14 @@ function VerificationSummaryBanner({ results }: { results: VerificationResult[] 
           <span style={{ color: STATUS_ERROR }}>{missing} missing</span>
         )}
       </span>
-      {changed.length > 0 && (
+      {changed.length > 0 && !writeError && (
         <span className="text-2xs" style={{ color: ACCENT_CYAN_LIGHT }}>
           {changed.length} status{changed.length !== 1 ? 'es' : ''} updated
+        </span>
+      )}
+      {writeError && (
+        <span className="text-2xs" style={{ color: STATUS_ERROR }}>
+          write failed — statuses NOT saved: {writeError}
         </span>
       )}
     </div>
