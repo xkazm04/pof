@@ -5,6 +5,8 @@ export type WarningKind =
   | 'soft-lock-deadend'
   | 'duplicate-priority'
   | 'duplicate-state-name'
+  | 'invalid-state-name'
+  | 'invalid-state-flag'
   | 'unknown-flag-in-rule'
   | 'unknown-flag-in-state';
 
@@ -193,6 +195,40 @@ export function validateStateMachine<S extends StateLike, T extends TransitionLi
         stateIds: group.map((s) => s.id),
         transitionIds: [],
         message: `State name "${name}" is used by ${group.length} states — generated C++ would have duplicate EARPGAnimState enumerators and fail to compile.`,
+      });
+    }
+  }
+
+  // 7. Non-identifier state names — every name is emitted verbatim as a C++
+  // enumerator (EARPGAnimState::<name>) and into derived bCan<From>To<To>
+  // flag identifiers, so "Hit React", "2HandAttack", or an empty name passes
+  // the duplicate check (rule 6) clean and still emits uncompilable C++.
+  // Same failure class as the duplicate-name bug, different syntax gap.
+  const CPP_IDENTIFIER = /^[A-Za-z_]\w*$/;
+  for (const s of states) {
+    const name = s.name.trim();
+    if (!CPP_IDENTIFIER.test(name)) {
+      warnings.push({
+        kind: 'invalid-state-name',
+        severity: 'error',
+        stateIds: [s.id],
+        transitionIds: [],
+        message: name.length === 0
+          ? 'A state has an empty name — generated C++ would emit a bare enumerator and fail to compile.'
+          : `State name "${name}" is not a valid C++ identifier (letters/digits/underscore, no leading digit, no spaces) — EARPGAnimState::${name} would fail to compile.`,
+      });
+    }
+    // The free-text flag field is emitted verbatim inside `if (<flag>)`.
+    // '(default)' is the editor's sentinel for the entry state (see rule
+    // unknown-flag-in-state) — it never reaches codegen as a flag.
+    const flag = s.flag.trim();
+    if (flag.length > 0 && flag !== '(default)' && !CPP_IDENTIFIER.test(flag)) {
+      warnings.push({
+        kind: 'invalid-state-flag',
+        severity: 'error',
+        stateIds: [s.id],
+        transitionIds: [],
+        message: `State "${name || s.id}" has flag "${flag}", which is not a valid C++ identifier — the generated if (${flag}) would fail to compile.`,
       });
     }
   }
