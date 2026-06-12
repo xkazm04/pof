@@ -76,7 +76,9 @@ export async function POST(req: Request): Promise<Response> {
               insertBuild({
                 platform: profile.platform,
                 config: profile.config,
-                status: 'failed',
+                // 'cancelled' (user abort / client gone) must not pollute the
+                // failure stats — BuildRecord has carried the status all along.
+                status: lastEvent.status,
                 durationMs: Date.now() - startedAt,
                 errorSummary: lastEvent.message,
               });

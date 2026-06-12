@@ -4,6 +4,7 @@ import { join } from 'node:path';
 import type { BuildProfile } from './build-profiles';
 import { generateUATCommand } from './uat-command-generator';
 import type { SpawnFn } from './process-utils';
+import { killProcessTree } from '@/lib/process-tree-kill';
 
 export type { SpawnFn };
 
@@ -18,7 +19,9 @@ export type CookEvent =
   // measurement and silently disable the entire size-budget gate (evaluateBuildSize
   // treats <= 0 as "no size" and stats skip NULL rows).
   | { type: 'done'; exePath: string; durationMs: number; sizeBytes: number | null; status: 'success'; t: number }
-  | { type: 'error'; message: string; status: 'failed'; t: number };
+  // status 'cancelled' = the abort signal fired (user cancel / client gone);
+  // 'failed' = the cook itself broke. History must record them differently.
+  | { type: 'error'; message: string; status: 'failed' | 'cancelled'; t: number };
 
 /**
  * Recursively sum the byte size of every file under `dir`. Returns null only when the
@@ -89,7 +92,10 @@ export async function* cookExecutor(opts: CookExecutorOptions): AsyncGenerator<C
 
   if (opts.signal) {
     opts.signal.addEventListener('abort', () => {
-      try { child.kill('SIGTERM'); } catch { /* noop */ }
+      // child is the cmd.exe wrapper around RunUAT.bat — a plain kill orphans
+      // AutomationTool/UBT/UnrealEditor-Cmd, which keep cooking and hold
+      // staging-dir locks. Kill the whole tree.
+      try { killProcessTree(child, 'SIGTERM'); } catch { /* noop */ }
     });
   }
 
@@ -169,6 +175,13 @@ export async function* cookExecutor(opts: CookExecutorOptions): AsyncGenerator<C
       durationMs: t(),
       sizeBytes,
       status: 'success',
+      t: t(),
+    };
+  } else if (opts.signal?.aborted) {
+    yield {
+      type: 'error',
+      message: 'cook cancelled — process tree terminated',
+      status: 'cancelled',
       t: t(),
     };
   } else {
