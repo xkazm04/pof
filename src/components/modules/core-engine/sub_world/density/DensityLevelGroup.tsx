@@ -24,10 +24,20 @@ interface DensityLevelGroupProps {
 export function DensityLevelGroup({ matchingIds, playerLevel }: DensityLevelGroupProps = {}) {
   const hasFilter = matchingIds !== undefined && matchingIds.size > 0;
   const isInRange = (id: string) => !hasFilter || matchingIds!.has(id);
-  // Clamp the indicator level so it stays inside the local axis (which uses
-  // MAX_LEVEL); the label still reports the unclamped value from the slider.
+  // Derive the axis scale from the actual zone data. MAX_LEVEL was frozen at 7
+  // (the original 6-zone world) while later zones reach level 50, so every bar
+  // computed leftPct/widthPct against 7 and rendered clipped past the track —
+  // half the rows showed blank bars and the indicator pegged at 7. Floor at
+  // MAX_LEVEL so a low-level-only world keeps the original baseline.
+  const axisMax = Math.max(MAX_LEVEL, ...LEVEL_RANGE_BARS.map((b) => b.max));
+  // Evenly spaced tick labels (rendering 50 individual ticks would be unreadable).
+  const tickCount = Math.min(axisMax, 8);
+  const ticks = tickCount <= 1
+    ? [1]
+    : Array.from({ length: tickCount }, (_, i) => Math.round(1 + (i * (axisMax - 1)) / (tickCount - 1)));
+  // Clamp the indicator to the axis; the label still reports the real value.
   const realLevel = playerLevel ?? PLAYER_LEVEL;
-  const indicatorLevel = Math.max(1, Math.min(realLevel, MAX_LEVEL));
+  const indicatorLevel = Math.max(1, Math.min(realLevel, axisMax));
 
   return (
     <>
@@ -61,7 +71,7 @@ export function DensityLevelGroup({ matchingIds, playerLevel }: DensityLevelGrou
           <div
             className="absolute top-0 bottom-0 w-[2px] z-10"
             style={{
-              left: `${((indicatorLevel - 0.5) / MAX_LEVEL) * 100}%`,
+              left: `${((indicatorLevel - 0.5) / axisMax) * 100}%`,
               backgroundColor: ACCENT_PINK,
               boxShadow: `${GLOW_MD} ${withOpacity(ACCENT_PINK, OPACITY_50)}`,
               transition: 'left 200ms ease-out',
@@ -75,8 +85,8 @@ export function DensityLevelGroup({ matchingIds, playerLevel }: DensityLevelGrou
 
           <div className="space-y-3 pt-6">
             {LEVEL_RANGE_BARS.map((bar) => {
-              const leftPct = ((bar.min - 0.5) / MAX_LEVEL) * 100;
-              const widthPct = ((bar.max - bar.min + 1) / MAX_LEVEL) * 100;
+              const leftPct = ((bar.min - 0.5) / axisMax) * 100;
+              const widthPct = ((bar.max - bar.min + 1) / axisMax) * 100;
               const inRange = isInRange(bar.id);
               return (
                 <div
@@ -112,8 +122,8 @@ export function DensityLevelGroup({ matchingIds, playerLevel }: DensityLevelGrou
           <div className="flex items-center gap-3 mt-2">
             <span className="w-28 flex-shrink-0" />
             <div className="flex-1 flex justify-between text-xs font-mono text-text-muted px-1">
-              {Array.from({ length: MAX_LEVEL }, (_, i) => (
-                <span key={i}>{i + 1}</span>
+              {ticks.map((t, i) => (
+                <span key={i}>{t}</span>
               ))}
             </div>
           </div>

@@ -123,17 +123,23 @@ export function ZoneMapCanvas<Z extends MapZone>({ zones, selectedZone, onSelect
               />
             )}
 
-            {/* Base shape based on type */}
+            {/* Base shape based on type. Boss = a diamond: a percent-positioned
+                rect (like the hub) resting at a 45° rotation. The old polygon
+                used the `points` attribute, which — unlike circle/rect/line/text
+                — accepts only user-space units, not percentages, so every boss
+                rendered at pixel (cx, cy) in the top-left corner, detached from
+                its own percent-positioned label, edges, and rings. */}
             {isBoss ? (
-              <motion.polygon
-                initial={{ scale: 0, rotate: -45 }}
-                animate={{ scale: 1, rotate: 0 }}
+              <motion.rect
+                initial={{ scale: 0, rotate: 0 }}
+                animate={{ scale: 1, rotate: 45 }}
                 transition={{ delay: i * 0.1, type: 'spring' }}
-                points={`${zone.cx},${zone.cy - 12} ${zone.cx + 12},${zone.cy} ${zone.cx},${zone.cy + 12} ${zone.cx - 12},${zone.cy}`}
+                x={`${zone.cx}%`} y={`${zone.cy}%`} width="17" height="17"
+                transform="translate(-8.5, -8.5)"
                 fill={color}
                 stroke={isSelected ? OVERLAY_WHITE : strokeColor}
                 strokeWidth="2"
-                style={{ transformOrigin: `${zone.cx}% ${zone.cy}%`, filter: hasFilter && inRange ? glowFilter : undefined }}
+                style={{ transformBox: 'fill-box', transformOrigin: 'center', filter: hasFilter && inRange ? glowFilter : undefined }}
               />
             ) : isHub ? (
               <motion.rect

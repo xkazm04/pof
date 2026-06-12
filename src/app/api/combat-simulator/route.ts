@@ -50,9 +50,29 @@ export async function POST(req: NextRequest) {
         maxFightDurationSec: clampInt(body.config?.maxFightDurationSec, 120, 1, 300),
       };
 
-      if (!scenario || !scenario.enemies || scenario.enemies.length === 0) {
+      if (!scenario || !Array.isArray(scenario.enemies) || scenario.enemies.length === 0) {
         return apiError('Scenario with at least one enemy group is required', 400);
       }
+
+      // The trust boundary: the UI clamps count to 1–10, but a direct API /
+      // MCP / scripted caller can send an unbounded `count` (the build loop
+      // and every tick iterate it, blocking the event loop), a `level: NaN`
+      // (poisons the summary), or a stale `archetypeId` (silently skipped by
+      // the engine → a fight against zero enemies that reports 100% survival).
+      const validIds = new Set(ENEMY_ARCHETYPES.map((a) => a.id));
+      const unknown: string[] = [];
+      const enemies = scenario.enemies.map((e) => {
+        if (!validIds.has(e?.archetypeId)) unknown.push(String(e?.archetypeId));
+        return {
+          archetypeId: e?.archetypeId,
+          count: clampInt(e?.count, 1, 1, 10),
+          level: clampInt(e?.level, 1, 1, 50),
+        };
+      });
+      if (unknown.length > 0) {
+        return apiError(`Unknown enemy archetype id(s): ${unknown.join(', ')}`, 400);
+      }
+      scenario.enemies = enemies;
 
       // Strip individual fight results if too many (keep summary + alerts).
       const trim = (result: Awaited<ReturnType<typeof runCombatSimulationBatched>>) => ({
