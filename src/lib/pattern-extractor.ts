@@ -163,10 +163,15 @@ export function extractPatterns(): { extracted: number; updated: number } {
 
     if (successful.length === 0) continue;
 
+    // Memoize each session's approach once (success + fail) so the per-approach
+    // success rate below uses the right population — see the successRate fix.
+    const approachOf = new Map<SessionRow, string>();
+    for (const session of sessions) approachOf.set(session, detectApproach(session.prompt));
+
     // Cluster successful prompts by approach
     const approachClusters = new Map<string, SessionRow[]>();
     for (const session of successful) {
-      const approach = detectApproach(session.prompt);
+      const approach = approachOf.get(session)!;
       const existing = approachClusters.get(approach) ?? [];
       existing.push(session);
       approachClusters.set(approach, existing);
@@ -180,7 +185,15 @@ export function extractPatterns(): { extracted: number; updated: number } {
       const classes = extractClasses(allPromptText);
       const pitfalls = extractPitfalls(failed.map((s) => s.prompt));
 
-      const successRate = successful.length / sessions.length;
+      // Success rate for THIS approach, not the module-wide blend. cluster
+      // holds this approach's successes; divide by all of this approach's
+      // sessions (success + fail). The old `successful.length / sessions.length`
+      // stamped every approach with the same module-wide rate, so a mostly-
+      // failing approach could be stored as 'promising' and even recommended
+      // as an anti-pattern's bestAlternative — contradicting its own
+      // anti-pattern entry, which already computes the per-approach rate.
+      const approachTotal = sessions.filter((s) => approachOf.get(s) === approach).length;
+      const successRate = approachTotal > 0 ? cluster.length / approachTotal : 0;
       const avgDuration = Math.round(cluster.reduce((s, c) => s + c.duration_ms, 0) / cluster.length);
       const confidence = computeConfidence(cluster.length, 1, successRate);
 

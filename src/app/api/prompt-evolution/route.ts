@@ -5,6 +5,7 @@ import {
   mutateVariant,
   getVariantsForItem,
   getVariantsForModule,
+  getAllTests,
   startABTest,
   recordTestTrial,
   concludeTest,
@@ -95,6 +96,14 @@ export async function POST(req: NextRequest) {
       case 'get-stats': {
         const stats = getEvolutionStats();
         return apiSuccess(stats);
+      }
+
+      case 'get-tests': {
+        // List persisted A/B tests (all statuses) so the UI can show / conclude
+        // them after a reload. Without this, started tests vanished from the
+        // Tests tab while Stats still counted them as Active.
+        const tests = getAllTests().filter((t) => !body.moduleId || t.moduleId === body.moduleId);
+        return apiSuccess(tests);
       }
 
       case 'get-suggestions': {

@@ -217,6 +217,7 @@ export interface PromptEvolutionRequest {
     | 'conclude-test'
     | 'cluster-prompts'
     | 'get-stats'
+    | 'get-tests'
     | 'get-suggestions'
     | 'get-best-variant'
     | 'get-version-history'
