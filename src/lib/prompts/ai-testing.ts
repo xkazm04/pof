@@ -145,7 +145,7 @@ Parse the scenario and produce:
    }
    \`\`\`
 
-Return ONLY the two JSON arrays: \`{ "stimuli": [...], "expectedActions": [...] }\`
+Produce the two arrays as \`{ "stimuli": [...], "expectedActions": [...] }\` and submit them via the callback block below — that is how they reach the scenario editor.
 Do NOT use TodoWrite.`;
 }
 
@@ -161,12 +161,18 @@ export function buildRunTestsPrompt(
     includeRules: true,
   });
 
+  const scenarioList = suite.scenarios.length > 0
+    ? `\n### Scenarios in this suite\n${suite.scenarios
+        .map((s) => `- scenarioId ${s.id}: ${s.name}`)
+        .join('\n')}\n`
+    : '';
+
   return `${header}
 
 ## Task: Run AI Behavior Tests
 
 Run the automation tests for suite "${suite.name}" targeting class **${suite.targetClass}**.
-
+${scenarioList}
 ### Steps:
 1. Build the project in Test configuration (or Editor if Test is not configured)
 2. Run the automation tests with:
@@ -174,8 +180,8 @@ Run the automation tests for suite "${suite.name}" targeting class **${suite.tar
    UnrealEditor-Cmd.exe <ProjectPath> -ExecCmds="Automation RunTests AI.BehaviorTests.${suite.targetClass}" -Unattended -NoPause -NullRHI -Log
    \`\`\`
 3. Parse the test output log for pass/fail results
-4. Report which scenarios passed and which failed with the failure reason
+4. Submit a result for EVERY scenarioId listed above via the callback block below — status "passed" or "failed" (with the failure reason in "output"), or "error" if the test could not run.
 
-If the test file doesn't exist yet, say so and suggest generating tests first.
+If the test file doesn't exist yet, say so, suggest generating tests first, and submit every scenario as "error" with output "test file missing".
 Do NOT use TodoWrite.`;
 }

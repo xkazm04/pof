@@ -25,6 +25,8 @@ import { trackLabel, trackHint, type PipelineTrackId } from '@/lib/pipeline/trac
 import { buildAbilitySpecDraftPrompt, type AbilityRef } from '@/lib/ability/logic-prompts';
 import { buildGenerateAbilityBundlePrompt } from '@/lib/ability/effect-codegen-prompt';
 import type { EditorEffect, TagRule } from '@/lib/ability/spec';
+import { buildRunTestsPrompt, buildMockStimuliPrompt } from '@/lib/prompts/ai-testing';
+import type { TestSuite } from '@/types/ai-testing';
 
 // ── Task callback system ────────────────────────────────────────────────────
 
@@ -213,7 +215,9 @@ export type CLITaskType =
   | 'generate'
   | 'evaluate-track'
   | 'draft-ability-spec'
-  | 'generate-gas-effects';
+  | 'generate-gas-effects'
+  | 'run-ai-tests'
+  | 'detect-stimuli';
 
 /** Task types that generate or modify UE code and therefore get a Wiring Requirements section. */
 const WIRING_TASK_TYPES = new Set<CLITaskType>(['checklist', 'quick-action', 'feature-fix']);
@@ -358,6 +362,31 @@ export interface GenerateGasEffectsTask extends CLITask {
   tagRules: TagRule[];
   /** Optional entity scalars (catalog data) — AbilityManaCost + the canonical-damage guard. */
   scalars?: { manaCost?: number; cooldown?: number; damage?: number };
+  appOrigin: string;
+}
+
+/**
+ * Run-AI-tests task — builds + runs the suite's UE automation tests, then
+ * writes per-scenario pass/fail/error results back to /api/ai-testing via
+ * @@CALLBACK so scenario statuses, the pass-rate ring, and Last Run Output
+ * reflect real runs.
+ */
+export interface RunAITestsTask extends CLITask {
+  type: 'run-ai-tests';
+  suite: TestSuite;
+  appOrigin: string;
+}
+
+/**
+ * Detect-stimuli task — parses a scenario's natural-language description into
+ * MockStimulus/ExpectedAction arrays and writes them back to the scenario via
+ * @@CALLBACK (the "Auto-detect" sparkles button).
+ */
+export interface DetectStimuliTask extends CLITask {
+  type: 'detect-stimuli';
+  scenarioId: number;
+  scenarioDescription: string;
+  targetClass: string;
   appOrigin: string;
 }
 
@@ -936,6 +965,35 @@ ${buildCallbackSection(getCallback(cbId)!)}`;
       return `${header}\n\n## Task\n${body}`;
     }
 
+    case 'run-ai-tests': {
+      const rt = task as RunAITestsTask;
+      const base = buildRunTestsPrompt(rt.suite, ctx);
+      const cbId = registerCallback({
+        url: `${rt.appOrigin}/api/ai-testing`,
+        method: 'POST',
+        staticFields: { action: 'record-run-results' },
+        schemaHint:
+          '  "results": [\n' +
+          '    { "scenarioId": <id from the scenario list>, "status": "passed|failed|error", "output": "<pass summary or failure reason>" }\n' +
+          '  ]',
+      });
+      return `${base}\n\n${buildCallbackSection(getCallback(cbId)!)}`;
+    }
+
+    case 'detect-stimuli': {
+      const dt = task as DetectStimuliTask;
+      const base = buildMockStimuliPrompt(dt.scenarioDescription, dt.targetClass, ctx);
+      const cbId = registerCallback({
+        url: `${dt.appOrigin}/api/ai-testing`,
+        method: 'POST',
+        staticFields: { action: 'apply-stimuli', scenarioId: dt.scenarioId },
+        schemaHint:
+          '  "stimuli": [ { "id": "<unique-id>", "type": "<stimulus type>", "label": "<label>", "description": "<what it does>", "params": {} } ],\n' +
+          '  "expectedActions": [ { "id": "<unique-id>", "action": "<what the BT should do>", "btNode": "", "timeoutSeconds": 5 } ]',
+      });
+      return `${base}\n\n${buildCallbackSection(getCallback(cbId)!)}`;
+    }
+
     default:
       return task.prompt;
   }
@@ -1173,6 +1231,32 @@ export const TaskFactory = {
       entityId: params.entityId,
       ref: params.ref,
       instruction: params.instruction ?? '',
+      appOrigin,
+    };
+  },
+
+  /** Create a run-ai-tests task — runs the suite's automation tests and writes
+   *  per-scenario results back to /api/ai-testing via callback. */
+  runAITests(moduleId: SubModuleId, suite: TestSuite, appOrigin: string, label: string): RunAITestsTask {
+    return { type: 'run-ai-tests', moduleId, prompt: '', label, suite, appOrigin };
+  },
+
+  /** Create a detect-stimuli task — parses a scenario description into
+   *  stimuli/expectedActions and writes them back via callback. */
+  detectStimuli(
+    moduleId: SubModuleId,
+    params: { scenarioId: number; scenarioDescription: string; targetClass: string },
+    appOrigin: string,
+    label: string,
+  ): DetectStimuliTask {
+    return {
+      type: 'detect-stimuli',
+      moduleId,
+      prompt: '',
+      label,
+      scenarioId: params.scenarioId,
+      scenarioDescription: params.scenarioDescription,
+      targetClass: params.targetClass,
       appOrigin,
     };
   },

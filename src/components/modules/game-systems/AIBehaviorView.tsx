@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef } from 'react';
 import {
   Bot, Plus, Trash2, Loader2,
   FlaskConical,
@@ -17,9 +17,8 @@ import { MODULE_COLORS, STATUS_SUCCESS, STATUS_ERROR } from '@/lib/chart-colors'
 import {
   buildGenerateTestsPrompt,
   buildSingleScenarioTestPrompt,
-  buildMockStimuliPrompt,
-  buildRunTestsPrompt,
 } from '@/lib/prompts/ai-testing';
+import { TaskFactory } from '@/lib/cli-task';
 import type { TestScenario } from '@/types/ai-testing';
 import type { ExtraTab } from '../shared/ReviewableModuleView';
 
@@ -56,11 +55,18 @@ export function AIBehaviorView() {
 
   // ── Testing-specific CLI sessions ──
 
+  // Scenario ids set to 'running' by the last Run Tests dispatch — used to
+  // reset them to 'error' if the CLI run dies before submitting results.
+  const runningIdsRef = useRef<number[]>([]);
+
   const testGenCli = useModuleCLI({
     moduleId: 'ai-behavior',
     sessionKey: 'ai-test-gen',
     label: 'AI Test Gen',
     accentColor: SYSTEMS_ACCENT,
+    // Auto-detected stimuli land via @@CALLBACK while the run completes —
+    // refetch so the scenario editor shows them.
+    onComplete: () => retry(),
   });
 
   const testRunCli = useModuleCLI({
@@ -68,6 +74,22 @@ export function AIBehaviorView() {
     sessionKey: 'ai-test-run',
     label: 'AI Test Run',
     accentColor: STATUS_SUCCESS,
+    onComplete: (success) => {
+      if (!success) {
+        const now = new Date().toISOString();
+        for (const id of runningIdsRef.current) {
+          updateScenario({
+            id,
+            status: 'error',
+            lastRunOutput: 'CLI run failed before reporting results',
+            lastRunAt: now,
+          });
+        }
+      }
+      runningIdsRef.current = [];
+      // Pick up the statuses the @@CALLBACK wrote during the run.
+      retry();
+    },
   });
 
   // ── Handlers ──
@@ -119,21 +141,33 @@ export function AIBehaviorView() {
   const handleGenerateStimuli = useCallback(
     (scenario: TestScenario) => {
       if (!activeSuite) return;
-      const prompt = buildMockStimuliPrompt(
-        scenario.description,
-        activeSuite.targetClass,
-        ctx
+      testGenCli.execute(
+        TaskFactory.detectStimuli(
+          'ai-behavior',
+          {
+            scenarioId: scenario.id,
+            scenarioDescription: scenario.description,
+            targetClass: activeSuite.targetClass,
+          },
+          window.location.origin,
+          'Auto-detect Stimuli'
+        )
       );
-      testGenCli.sendPrompt(prompt);
     },
-    [activeSuite, ctx, testGenCli]
+    [activeSuite, testGenCli]
   );
 
   const handleRunTests = useCallback(() => {
     if (!activeSuite) return;
-    const prompt = buildRunTestsPrompt(activeSuite, ctx);
-    testRunCli.sendPrompt(prompt);
-  }, [activeSuite, ctx, testRunCli]);
+    // The existing 'running' status pill becomes real: mark every scenario
+    // running now; the @@CALLBACK writes the final per-scenario results.
+    const ids = activeSuite.scenarios.map((s) => s.id);
+    runningIdsRef.current = ids;
+    for (const id of ids) updateScenario({ id, status: 'running' });
+    testRunCli.execute(
+      TaskFactory.runAITests('ai-behavior', activeSuite, window.location.origin, 'AI Test Run')
+    );
+  }, [activeSuite, testRunCli, updateScenario]);
 
   const isAnyRunning = testGenCli.isRunning || testRunCli.isRunning;
 
