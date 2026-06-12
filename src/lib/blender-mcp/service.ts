@@ -41,6 +41,14 @@ const PROVIDER_COMMANDS: Record<
 
 class BlenderMCPService {
   private socket: net.Socket | null = null;
+  /**
+   * Bumped on every teardown. Commands queued on the chain capture the epoch
+   * at enqueue time and are DISCARDED if it changed before they run — without
+   * this, entries queued behind a wedged command survive a disconnect and
+   * execute against the next connection's socket (head-of-line stalls on
+   * reconnect, plus a fresh cross-wire surface).
+   */
+  private epoch = 0;
   private connection: BlenderConnection = {
     host: DEFAULT_BLENDER_HOST,
     port: DEFAULT_BLENDER_PORT,
@@ -101,6 +109,10 @@ class BlenderMCPService {
   }
 
   disconnect(): void {
+    this.epoch++;
+    // Fresh chain: a reconnect's health check must not queue behind stale
+    // commands. Entries still on the old chain are epoch-discarded.
+    this.commandChain = Promise.resolve();
     if (this.socket) {
       this.socket.destroy();
       this.socket = null;
@@ -128,9 +140,17 @@ class BlenderMCPService {
   private sendCommand(
     command: BlenderCommand,
   ): Promise<Result<unknown, string>> {
+    const epoch = this.epoch;
     const run = this.commandChain
       .catch(() => undefined)
-      .then(() => this.sendCommandRaw(command));
+      .then(() => {
+        // The connection was torn down while this command sat in the queue —
+        // running it now would target a different socket than the caller saw.
+        if (epoch !== this.epoch) {
+          return err('Connection was reset while this command was queued — retry');
+        }
+        return this.sendCommandRaw(command);
+      });
     // Keep the chain alive regardless of this command's outcome.
     this.commandChain = run.catch(() => undefined);
     return run;
@@ -147,22 +167,41 @@ class BlenderMCPService {
 
       const socket = this.socket;
       let buffer = '';
-      const timer = setTimeout(() => {
+      let settled = false;
+      const settle = (result: Result<unknown, string>) => {
+        if (settled) return;
+        settled = true;
+        clearTimeout(timer);
         socket.removeListener('data', onData);
-        resolve(err('Command timed out'));
+        socket.removeListener('close', onClose);
+        socket.removeListener('error', onError);
+        resolve(result);
+      };
+
+      const timer = setTimeout(() => {
+        // The single-threaded addon may still flush a LATE response for this
+        // command; the protocol has no request id, so those bytes would parse
+        // as the NEXT command's response — a permanent off-by-one desync.
+        // Poison the connection: tear it down so the stale bytes die with the
+        // socket, and queued commands fail fast (epoch bump) instead of
+        // silently consuming wrong data.
+        settle(err('Command timed out — connection reset to avoid response desync; reconnect to continue'));
+        this.disconnect();
       }, UI_TIMEOUTS.blenderTcpTimeout);
+
+      // A wedged in-flight command must not hold the queue for the full
+      // timeout when the socket dies — fail it the moment the socket does.
+      const onClose = () => settle(err('Connection closed while command was in flight'));
+      const onError = (e: Error) => settle(err(`Socket error: ${e.message}`));
 
       const onData = (chunk: Buffer) => {
         buffer += chunk.toString('utf-8');
         try {
           const response: BlenderResponse = JSON.parse(buffer);
-          clearTimeout(timer);
-          socket.removeListener('data', onData);
-
           if (response.status === 'error') {
-            resolve(err(response.message));
+            settle(err(response.message));
           } else {
-            resolve(ok(response.result));
+            settle(ok(response.result));
           }
         } catch {
           // Incomplete JSON — wait for more data
@@ -170,13 +209,13 @@ class BlenderMCPService {
       };
 
       socket.on('data', onData);
+      socket.on('close', onClose);
+      socket.on('error', onError);
 
       const payload = JSON.stringify(command);
       socket.write(payload, 'utf-8', (writeErr) => {
         if (writeErr) {
-          clearTimeout(timer);
-          socket.removeListener('data', onData);
-          resolve(err(`Write failed: ${writeErr.message}`));
+          settle(err(`Write failed: ${writeErr.message}`));
         }
       });
     });
