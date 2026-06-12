@@ -67,6 +67,45 @@ export async function POST(req: NextRequest) {
       return apiSuccess({ scenario }, 201);
     }
 
+    // CLI run write-back (@@CALLBACK from the run-ai-tests task): persist
+    // per-scenario outcomes so status pills / pass-rate / Last Run Output
+    // reflect real runs.
+    if (action === 'record-run-results') {
+      if (!Array.isArray(body.results)) return apiError('results array is required', 400);
+      const now = new Date().toISOString();
+      const updated: number[] = [];
+      for (const r of body.results) {
+        const scenarioId = Number(r?.scenarioId);
+        if (!Number.isInteger(scenarioId)) continue;
+        const status = r?.status === 'passed' || r?.status === 'failed' ? r.status : 'error';
+        const scenario = updateScenario({
+          id: scenarioId,
+          status,
+          lastRunOutput: typeof r?.output === 'string' ? r.output : '',
+          lastRunAt: now,
+        });
+        if (scenario) updated.push(scenarioId);
+      }
+      return apiSuccess({ updated });
+    }
+
+    // CLI stimuli write-back (@@CALLBACK from the detect-stimuli task):
+    // merge auto-detected stimuli/expectedActions into the scenario.
+    if (action === 'apply-stimuli') {
+      const scenarioId = Number(body.scenarioId);
+      if (!Number.isInteger(scenarioId)) return apiError('scenarioId is required', 400);
+      if (!Array.isArray(body.stimuli) && !Array.isArray(body.expectedActions)) {
+        return apiError('stimuli or expectedActions array is required', 400);
+      }
+      const scenario = updateScenario({
+        id: scenarioId,
+        ...(Array.isArray(body.stimuli) ? { stimuli: body.stimuli } : {}),
+        ...(Array.isArray(body.expectedActions) ? { expectedActions: body.expectedActions } : {}),
+      });
+      if (!scenario) return apiError('Not found', 404);
+      return apiSuccess({ scenario });
+    }
+
     return apiError('Unknown action', 400);
   } catch (err) {
     console.error('POST /api/ai-testing error:', err);
