@@ -42,7 +42,7 @@ export const POST = withRoute(async (request: NextRequest) => {
     }
   }
 
-  upsertFeatures(moduleId as SubModuleId, features);
+  upsertFeatures(moduleId as SubModuleId, features, { seedOnly: body.seedOnly === true });
   return apiSuccess({ count: features.length });
 }, 'Failed to save features');
 

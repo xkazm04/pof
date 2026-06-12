@@ -64,7 +64,9 @@ export function useFeatureMatrix(moduleId: SubModuleId): UseFeatureMatrixResult 
     const result = await tryApiFetch<unknown>('/api/feature-matrix', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ moduleId, features: seedFeatures }),
+      // seedOnly: insert-if-missing — a seed must never clobber review data
+      // that exists in the DB (e.g. when this ran because a fetch failed).
+      body: JSON.stringify({ moduleId, features: seedFeatures, seedOnly: true }),
     });
     if (result.ok) {
       await fetchData();
@@ -103,13 +105,15 @@ export function useFeatureMatrix(moduleId: SubModuleId): UseFeatureMatrixResult 
     return () => { cancelled = true; };
   }, [fetchData]);
 
-  // After loading, if features is empty and we haven't seeded this module yet, auto-seed
+  // After loading, if features is empty and we haven't seeded this module yet, auto-seed.
+  // Only after a SUCCESSFUL empty fetch — a failed GET also leaves features at []
+  // and seeding then would write over review data the DB still holds.
   useEffect(() => {
-    if (!isLoading && features.length === 0 && !seededRef.current.has(moduleId)) {
+    if (!isLoading && !error && features.length === 0 && !seededRef.current.has(moduleId)) {
       seededRef.current.add(moduleId);
       seed();
     }
-  }, [isLoading, features.length, moduleId, seed]);
+  }, [isLoading, error, features.length, moduleId, seed]);
 
   return { features, summary, isLoading, error, retry: fetchData, refetch: fetchData, seed, runAutoVerify, isVerifying, verificationResults };
 }

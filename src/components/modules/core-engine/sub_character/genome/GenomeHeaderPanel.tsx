@@ -41,6 +41,11 @@ export function GenomeHeaderPanel({
             <div className="flex items-center gap-2">
               <span className="w-3 h-3 rounded-full" style={{ backgroundColor: activeGenome.color, boxShadow: `${GLOW_MD} ${withOpacity(activeGenome.color, OPACITY_37)}` }} />
               <input type="text" value={activeGenome.name} onChange={(e) => onUpdateGenome(resolvedActiveId, (g) => ({ ...g, name: e.target.value }))}
+                onBlur={(e) => {
+                  // Never leave a persisted empty name — rehydration treats it
+                  // as invalid and a reload would drop the genome.
+                  if (!e.target.value.trim()) onUpdateGenome(resolvedActiveId, (g) => ({ ...g, name: 'Unnamed Archetype' }));
+                }}
                 className="text-sm font-bold bg-transparent border-none text-text focus:outline-none px-0" />
             </div>
             <input type="text" value={activeGenome.description} onChange={(e) => onUpdateGenome(resolvedActiveId, (g) => ({ ...g, description: e.target.value }))}

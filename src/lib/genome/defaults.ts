@@ -103,10 +103,18 @@ export function sanitizeProfile<T>(defaults: T, partial: unknown, bounds?: Field
 export function sanitizeGenome(raw: unknown): { genome: CharacterGenome; warnings: string[] } | { error: string } {
   if (raw == null || typeof raw !== 'object') return { error: 'Parsed data is not an object' };
   const obj = raw as Record<string, unknown>;
-  if (typeof obj.name !== 'string' || obj.name.trim().length === 0) {
-    return { error: 'Invalid genome: missing or empty "name" field' };
+  // A missing name key means this likely isn't a genome at all — reject. But a
+  // PRESENT-and-empty name is trivially recoverable (the header input persists
+  // '' on every keystroke mid-rename): default it instead of erroring, because
+  // rehydration drops "invalid" genomes AND all their checkpoints.
+  if (typeof obj.name !== 'string') {
+    return { error: 'Invalid genome: missing "name" field' };
   }
   const warnings: string[] = [];
+  const name = obj.name.trim() || 'Unnamed Archetype';
+  if (!obj.name.trim()) {
+    warnings.push('Empty "name" — defaulted to "Unnamed Archetype"');
+  }
   const profileKeys = ['movement', 'combat', 'dodge', 'camera', 'attributes'] as const;
   for (const key of profileKeys) {
     if (obj[key] == null || typeof obj[key] !== 'object') {
@@ -116,7 +124,7 @@ export function sanitizeGenome(raw: unknown): { genome: CharacterGenome; warning
 
   const genome: CharacterGenome = {
     id: createId(),
-    name: obj.name as string,
+    name,
     description: typeof obj.description === 'string' ? obj.description : '',
     author: typeof obj.author === 'string' ? obj.author : 'Imported',
     version: typeof obj.version === 'string' ? obj.version : '1.0.0',

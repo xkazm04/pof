@@ -111,13 +111,19 @@ export interface UpsertFeature {
   lastReviewedAt?: string | null;
 }
 
-export function upsertFeatures(moduleId: SubModuleId, features: UpsertFeature[]): void {
+export function upsertFeatures(
+  moduleId: SubModuleId,
+  features: UpsertFeature[],
+  opts?: { seedOnly?: boolean },
+): void {
   ensureTables();
   const db = getDb();
-  const stmt = db.prepare(`
-    INSERT INTO feature_matrix (module_id, feature_name, category, status, description, file_paths, review_notes, quality_score, next_steps, last_reviewed_at, updated_at)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))
-    ON CONFLICT(module_id, feature_name) DO UPDATE SET
+  // seedOnly = insert-if-missing: seeding static definitions must never
+  // clobber an existing row's review data (statuses, scores, notes) — the
+  // full DO UPDATE path is for real reviews/imports only.
+  const conflictClause = opts?.seedOnly
+    ? 'ON CONFLICT(module_id, feature_name) DO NOTHING'
+    : `ON CONFLICT(module_id, feature_name) DO UPDATE SET
       category = excluded.category,
       status = excluded.status,
       description = excluded.description,
@@ -126,7 +132,11 @@ export function upsertFeatures(moduleId: SubModuleId, features: UpsertFeature[])
       quality_score = excluded.quality_score,
       next_steps = excluded.next_steps,
       last_reviewed_at = excluded.last_reviewed_at,
-      updated_at = datetime('now')
+      updated_at = datetime('now')`;
+  const stmt = db.prepare(`
+    INSERT INTO feature_matrix (module_id, feature_name, category, status, description, file_paths, review_notes, quality_score, next_steps, last_reviewed_at, updated_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))
+    ${conflictClause}
   `);
 
   const transaction = db.transaction((items: UpsertFeature[]) => {

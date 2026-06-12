@@ -396,7 +396,19 @@ export const ITEM_STEP_SPECS: Record<string, ItemStepSpec> = {
 /** Ordered step names (matches the registry + pipeline). */
 export const ITEM_STEP_NAMES = Object.keys(ITEM_STEP_SPECS);
 
-/** Run every Items step for one entity — the worked "fully populated item" example. */
-export function populateItemDemo(entity: LabEntity, produce: (entityId: string, step: string, out?: StepOutput) => void) {
-  for (const step of ITEM_STEP_NAMES) produce(entity.id, step, ITEM_STEP_SPECS[step].produce(entity));
+/** Run every Items step for one entity — the worked "fully populated item" example.
+ *  Steps that already have an artifact are SKIPPED: produce() is a
+ *  whole-artifact replace, the generative steps keep their entire kept batch
+ *  history inside data.genHistory, and the write-through sink persists the
+ *  replacement to the server (hydrateEntity is add-only, so a wiped history
+ *  is unrecoverable). Demo data must only fill gaps, never overwrite work. */
+export function populateItemDemo(
+  entity: LabEntity,
+  produce: (entityId: string, step: string, out?: StepOutput) => void,
+  hasArtifact?: (entityId: string, step: string) => boolean,
+) {
+  for (const step of ITEM_STEP_NAMES) {
+    if (hasArtifact?.(entity.id, step)) continue;
+    produce(entity.id, step, ITEM_STEP_SPECS[step].produce(entity));
+  }
 }

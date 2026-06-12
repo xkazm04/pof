@@ -177,7 +177,13 @@ export function Baseline({ theme: t, groups, detail, onSelectCatalog, entityId, 
     <>
       {isItems && entity && (
         <div style={{ display: 'flex', gap: 8, padding: '0 18px 8px' }}>
-          <Button variant="accent" mono onClick={() => populateItemDemo(entity, produce)} style={{ flex: 1 }}>
+          <Button
+            variant="accent" mono style={{ flex: 1 }}
+            onClick={() => populateItemDemo(entity, produce,
+              // Fill gaps only — overwriting an existing artifact would wipe
+              // the generative steps' kept batch history (and sync the wipe).
+              (id, step) => !!useLabPipelineStore.getState().byEntity[id]?.[step])}
+          >
             Populate demo
           </Button>
           <Button mono onClick={() => resetEntity(entity.id)}>
