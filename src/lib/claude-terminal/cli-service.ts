@@ -9,6 +9,7 @@ import * as path from 'path';
 import { UI_TIMEOUTS } from '@/lib/constants';
 import { parseCallbackMarker } from '@/lib/cli-task';
 import { extractResultMetrics } from '@/lib/claude-terminal/result-metrics';
+import { killProcessTree } from '@/lib/process-tree-kill';
 
 export interface CLISystemMessage {
   type: 'system';
@@ -300,7 +301,9 @@ export function startExecution(
 
     const timeoutHandle = setTimeout(() => {
       if (!childProcess.killed) {
-        childProcess.kill();
+        // shell:true on win32 means childProcess is the cmd.exe wrapper —
+        // kill the tree or claude's node.exe keeps running past the timeout.
+        killProcessTree(childProcess);
         execution.status = 'error';
         const timeoutMinutes = UI_TIMEOUTS.cliExecutionTimeout / 60000;
         emitEvent({ type: 'error', data: { message: `Execution timed out after ${timeoutMinutes} minutes` }, timestamp: Date.now() });
@@ -333,7 +336,9 @@ export function subscribeToExecution(executionId: string, listener: CLIEventList
 export function abortExecution(executionId: string): boolean {
   const execution = activeExecutions.get(executionId);
   if (!execution || !execution.process) return false;
-  execution.process.kill();
+  // shell:true on win32 means execution.process is the cmd.exe wrapper; a
+  // plain kill() leaves claude's node.exe editing files and billing tokens.
+  killProcessTree(execution.process);
   execution.status = 'aborted';
   execution.endTime = Date.now();
   return true;
