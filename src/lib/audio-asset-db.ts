@@ -126,6 +126,16 @@ export function listAssets(db: Database.Database, setId: string): AudioAsset[] {
   return rows.map(rowToAsset);
 }
 
+/**
+ * Fetch every asset across all sets in a single indexed pass. Replaces the
+ * per-set N+1 (`sets.flatMap(s => listAssets(s.id))`) the library GET used to
+ * issue; rows already carry `setId`, so the client groups them itself.
+ */
+export function listAllAssets(db: Database.Database): AudioAsset[] {
+  const rows = db.prepare('SELECT * FROM audio_assets ORDER BY createdAt ASC').all() as Array<Record<string, unknown>>;
+  return rows.map(rowToAsset);
+}
+
 export function deleteAsset(db: Database.Database, id: string): void {
   db.prepare('DELETE FROM audio_assets WHERE id = ?').run(id);
 }
