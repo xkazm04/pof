@@ -1,5 +1,6 @@
 'use client';
 
+import { useMemo } from 'react';
 import { TrendingUp } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { STATUS_WARNING, STATUS_ERROR, ACCENT_CYAN_LIGHT,
@@ -14,14 +15,41 @@ import {
 } from '../_shared/data';
 
 export function BudgetAlerting() {
-  const overBudget = SECTION_BUDGETS.filter(b => {
-    const sec = FILE_SIZE_SECTIONS.find(s => s.label === b.sectionLabel);
-    return sec && sec.bytes >= b.budgetBytes;
-  }).length;
-  const nearBudget = SECTION_BUDGETS.filter(b => {
-    const sec = FILE_SIZE_SECTIONS.find(s => s.label === b.sectionLabel);
-    return sec && getBudgetStatus(sec.bytes, b.budgetBytes) === 'amber';
-  }).length;
+  // Every input below is a frozen module-level constant and the component takes
+  // no props, so this derivation is computed exactly once (empty deps). It
+  // replaces what previously ran on every render: two header `.filter` + nested
+  // `.find` passes, a per-section nested `FILE_SIZE_SECTIONS.find`, and three
+  // separate `projectGrowth` regression passes (one per section in the map plus
+  // a second full pass in the footer). A label→bytes index removes the nested
+  // `.find`, and each row's `projected` is reused for the footer total.
+  const { rows, overBudget, nearBudget, totalBudget, nextVersionEst } = useMemo(() => {
+    const bytesByLabel = new Map(FILE_SIZE_SECTIONS.map(s => [s.label, s.bytes]));
+
+    const rows = SECTION_BUDGETS.map(budget => {
+      const currentBytes = bytesByLabel.get(budget.sectionLabel) ?? 0;
+      const pct = Math.min((currentBytes / budget.budgetBytes) * 100, 100);
+      const status = getBudgetStatus(currentBytes, budget.budgetBytes);
+      const statusToken = budgetStatusToken(status);
+      const history = GROWTH_HISTORY.map(g => g.sectionBytes[budget.sectionLabel] ?? 0);
+      const projected = projectGrowth(history);
+      const projectedStatus = getBudgetStatus(projected, budget.budgetBytes);
+      const projectedColor = budgetStatusToken(projectedStatus).color;
+      const maxVal = Math.max(...history, budget.budgetBytes);
+      return {
+        budget, currentBytes, pct, statusToken,
+        statusColor: statusToken.color,
+        history, projected, projectedColor, maxVal,
+      };
+    });
+
+    return {
+      rows,
+      overBudget: rows.filter(r => r.currentBytes >= r.budget.budgetBytes).length,
+      nearBudget: rows.filter(r => getBudgetStatus(r.currentBytes, r.budget.budgetBytes) === 'amber').length,
+      totalBudget: SECTION_BUDGETS.reduce((s, b) => s + b.budgetBytes, 0),
+      nextVersionEst: rows.reduce((s, r) => s + r.projected, 0),
+    };
+  }, []);
 
   return (
     <BlueprintPanel color={ACCENT} className="p-0 overflow-hidden">
@@ -36,19 +64,7 @@ export function BudgetAlerting() {
 
       <div className="p-4 space-y-4 relative z-10">
         <div className="space-y-3">
-          {SECTION_BUDGETS.map((budget, i) => {
-            const sec = FILE_SIZE_SECTIONS.find(s => s.label === budget.sectionLabel);
-            const currentBytes = sec?.bytes ?? 0;
-            const pct = Math.min((currentBytes / budget.budgetBytes) * 100, 100);
-            const status = getBudgetStatus(currentBytes, budget.budgetBytes);
-            const statusToken = budgetStatusToken(status);
-            const statusColor = statusToken.color;
-            const history = GROWTH_HISTORY.map(g => g.sectionBytes[budget.sectionLabel] ?? 0);
-            const projected = projectGrowth(history);
-            const projectedStatus = getBudgetStatus(projected, budget.budgetBytes);
-            const projectedColor = budgetStatusToken(projectedStatus).color;
-            const maxVal = Math.max(...history, budget.budgetBytes);
-
+          {rows.map(({ budget, currentBytes, pct, statusToken, statusColor, history, projected, projectedColor, maxVal }, i) => {
             return (
               <motion.div
                 key={budget.sectionLabel}
@@ -124,10 +140,10 @@ export function BudgetAlerting() {
           <span className={`${SAVE_TYPE.body} text-text-muted`}>Total budget:</span>
           <span style={{ color: ACCENT_CYAN_LIGHT }}>{formatBytes(TOTAL_BYTES)}</span>
           <span className="text-text-muted">/</span>
-          <span style={{ color: ACCENT_CYAN_LIGHT }}>{formatBytes(SECTION_BUDGETS.reduce((s, b) => s + b.budgetBytes, 0))}</span>
-          <span className="text-text-muted ml-1">({((TOTAL_BYTES / SECTION_BUDGETS.reduce((s, b) => s + b.budgetBytes, 0)) * 100).toFixed(0)}% used)</span>
+          <span style={{ color: ACCENT_CYAN_LIGHT }}>{formatBytes(totalBudget)}</span>
+          <span className="text-text-muted ml-1">({((TOTAL_BYTES / totalBudget) * 100).toFixed(0)}% used)</span>
           <span className="ml-auto text-text-muted">Next version est:</span>
-          <span style={{ color: ACCENT_CYAN_LIGHT }}>{formatBytes(SECTION_BUDGETS.reduce((s, b) => s + projectGrowth(GROWTH_HISTORY.map(g => g.sectionBytes[b.sectionLabel] ?? 0)), 0))}</span>
+          <span style={{ color: ACCENT_CYAN_LIGHT }}>{formatBytes(nextVersionEst)}</span>
         </div>
       </div>
     </BlueprintPanel>
