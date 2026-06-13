@@ -8,23 +8,12 @@ import { genericGalleryCandidates } from './shared/genericGalleryCandidates';
 import { useLabStep, useLabPipelineStore } from '../labPipelineStore';
 import { useCanonStore } from '../canonStore';
 import { canonContextFor } from '@/lib/catalog/canon/canonContext';
+import { ARCHETYPE_CANON } from '@/lib/catalog/canon/archetypeCanon';
 import { useCatalogStore } from '@/stores/catalogStore';
 import { linkTargetsExist, readLinks } from '@/lib/catalog/acceptance/linkCheckers';
 import type { LabTheme } from '../theme';
 import type { LabEntity } from '../useLabCatalogData';
 import type { StepSpec, ViewDescriptor } from '@/lib/catalog/stepSpec';
-import type { RuleCategory } from '@/lib/catalog/canon/types';
-
-const ARCHETYPE_CANON: Record<string, RuleCategory[]> = {
-  brief: ['game'],
-  schema: ['project', 'game'],
-  rules: ['project', 'game'],
-  balance: ['project', 'game'],
-  gallery: ['art', 'game'],
-  checklist: ['project'],
-  manifest: ['project'],
-  graph: ['game', 'project'],
-};
 
 function ViewPanel({ t, view, data }: { t: LabTheme; view: ViewDescriptor; data: Record<string, unknown> }) {
   if (view.kind === 'prose') {

@@ -441,7 +441,7 @@ export function DeepEvalResults() {
           {result.failedModules.length > 0 && (
             <div
               className="px-3 py-2 rounded-lg text-xs"
-              style={{ backgroundColor: statusBg(STATUS_WARNING, 0.06), border: `1px solid ${statusBorder(STATUS_WARNING, 0.15)}`, color: STATUS_WARNING }}
+              style={{ backgroundColor: statusBg(STATUS_WARNING, 0.05), border: `1px solid ${statusBorder(STATUS_WARNING, 0.20)}`, color: STATUS_WARNING }}
             >
               {result.failedModules.length} module{result.failedModules.length !== 1 ? 's' : ''} failed to evaluate
               ({result.failedModules.join(', ')}) — excluded from the regression baseline; re-run them to refresh their findings.

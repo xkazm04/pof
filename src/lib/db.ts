@@ -3,8 +3,11 @@ import path from 'path';
 import os from 'os';
 import fs from 'fs';
 
-const DB_DIR = path.join(os.homedir(), '.pof');
-const DB_PATH = path.join(DB_DIR, 'pof.db');
+// POF_DB_PATH overrides the SQLite location — used by the pof-mcp integration suite to
+// run against a throwaway DB instead of the user's real ~/.pof/pof.db. Falls back to the
+// default so normal runs are unchanged.
+const DB_PATH = process.env.POF_DB_PATH || path.join(os.homedir(), '.pof', 'pof.db');
+const DB_DIR = path.dirname(DB_PATH);
 
 let db: Database.Database | null = null;
 

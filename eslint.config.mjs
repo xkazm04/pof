@@ -31,6 +31,9 @@ const eslintConfig = defineConfig([
     "next-env.d.ts",
     // Vendored Dzin panel framework — do not lint vendored source.
     "src/lib/dzin/**",
+    // Standalone tooling (e.g. the pof-mcp headless server) — separate package,
+    // own tsconfig/lint; not part of the Next app build.
+    "tools/**",
   ]),
 ]);
 

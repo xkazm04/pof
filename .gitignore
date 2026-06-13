@@ -56,3 +56,9 @@ src/lib/catalog/pipelines/registry.generated.ts
 
 # generated context scan reports
 docs/contexts/
+
+# pof-mcp standalone package (built + installed separately)
+tools/pof-mcp/node_modules/
+tools/pof-mcp/dist/
+# machine-local UE growth ratchet baseline (GROWTH-LOG.md is committed)
+tools/pof-mcp/growth-baseline.json

@@ -4,6 +4,7 @@
  */
 
 import { getDb } from './db';
+import { ensureLevelDesignTable } from './level-design-db';
 import { SUB_MODULE_MAP, CATEGORIES, getCategoryForSubModule } from './module-registry';
 import { countChecklist, countAllChecklists } from './checklist-progress';
 import type { FeatureStatus } from '@/types/feature-matrix';
@@ -100,6 +101,10 @@ interface SnapshotRow {
 
 export function synthesizeGDD(projectName: string, checklistProgress: Record<string, Record<string, boolean>>): GDDDocument {
   const db = getDb();
+  // The synthesizer reads level_design_docs directly; ensure its owning module's table
+  // exists so the GDD works on a fresh project DB (the table is otherwise only created
+  // when a level-design API is first hit). Surfaced by the pof-mcp integration suite.
+  ensureLevelDesignTable();
   const now = new Date().toISOString();
 
   // 1. Feature Matrix

@@ -71,7 +71,7 @@ export interface GenerateImageOptions {
   width?: number;
   height?: number;
   tiling?: boolean;
-  transparency?: 'disabled' | 'foreground';
+  transparency?: 'disabled' | 'foreground' | 'foreground_only';
   contrast?: number;
   numImages?: number;
   /** ControlNet guidance inputs (depth/normal/edge/pose/style/…). */
@@ -110,7 +110,11 @@ export async function generateImage(
     contrast: opts.contrast ?? 3.5,
   };
   if (opts.tiling) body.tiling = true;
-  if (opts.transparency) body.transparency = opts.transparency;
+  // Leonardo's TransparencyType is 'disabled' | 'foreground_only' — map our historical
+  // 'foreground' alias so callers using the documented option don't 400 (API drift fix).
+  if (opts.transparency) {
+    body.transparency = opts.transparency === 'foreground' ? 'foreground_only' : opts.transparency;
+  }
   if (opts.controlnets && opts.controlnets.length > 0) body.controlnets = opts.controlnets;
   if (opts.inpaint) {
     body.init_image_id = opts.inpaint.initImageId;

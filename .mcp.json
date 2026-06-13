@@ -6,6 +6,14 @@
       "env": {
         "MCP_UNREAL_PROJECT": "C:\\Users\\kazda\\Documents\\Unreal Projects\\PoF\\PoF.uproject"
       }
+    },
+    "pof-mcp": {
+      "type": "stdio",
+      "command": "node",
+      "args": ["C:\\Users\\kazda\\kiro\\pof\\tools\\pof-mcp\\dist\\index.js"],
+      "env": {
+        "POF_APP_ORIGIN": "http://127.0.0.1:3001"
+      }
     }
   }
 }

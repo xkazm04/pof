@@ -1,0 +1,30 @@
+{
+  "name": "pof-mcp",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Headless MCP server exposing PoF's catalog pipelines + autonomous harness, so the Claude Code CLI can orchestrate UE5 game-dev tasks directly (raw UE ops stay with mcp-unreal).",
+  "bin": {
+    "pof-mcp": "dist/index.js"
+  },
+  "main": "dist/index.js",
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "start": "node dist/index.js",
+    "test": "node --test \"dist/*.test.js\"",
+    "test:integration": "node --test \"dist/*.itest.js\"",
+    "test:mcp": "npm run build && node --test \"dist/*.test.js\" \"dist/*.itest.js\"",
+    "gen:docs": "node scripts/gen-tools-reference.mjs"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.19.0",
+    "typescript": "^5.6.0"
+  }
+}
