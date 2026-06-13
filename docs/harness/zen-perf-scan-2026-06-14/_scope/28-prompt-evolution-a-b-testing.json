@@ -1,0 +1,17 @@
+{
+  "index": 28,
+  "name": "Prompt Evolution & A/B Testing",
+  "group": "Prompt Engineering",
+  "id": "ctx_1779817681612_1y4if81",
+  "description": "Continuously improve prompts: the evolution engine with mutations, clustering of results, and A/B testing of prompt variants. Spans the prompt-evolution lib, its store/types, and the prompt-evolution API.",
+  "filePaths": [
+    "src/lib/prompt-evolution/engine.ts",
+    "src/lib/prompt-evolution/mutations.ts",
+    "src/lib/prompt-evolution/clustering.ts",
+    "src/lib/prompt-evolution/ab-testing.ts",
+    "src/stores/promptEvolutionStore.ts",
+    "src/types/prompt-evolution.ts",
+    "src/components/modules/evaluator/PromptEvolutionView.tsx",
+    "src/app/api/prompt-evolution/route.ts"
+  ]
+}

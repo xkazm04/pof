@@ -1,0 +1,30 @@
+{
+  "index": 32,
+  "name": "UE5 Bridge & Live Sync",
+  "group": "UE5 Integration & Project Setup",
+  "id": "ctx_1779817681617_9e5lk7w",
+  "description": "The live link to the running UE5 editor: the PoF Bridge client/connection manager, remote-control client, WebSocket live state sync, headless build pipeline/queue, and bidirectional state sync. Spans the ue5-bridge and pof-bridge libs, their stores/hooks, and bridge APIs.",
+  "filePaths": [
+    "src/lib/pof-bridge/client.ts",
+    "src/lib/pof-bridge/connection-manager.ts",
+    "src/lib/pof-bridge/verification-engine.ts",
+    "src/lib/pof-bridge/verification-rules.ts",
+    "src/lib/ue5-bridge/remote-control-client.ts",
+    "src/lib/ue5-bridge/connection-manager.ts",
+    "src/lib/ue5-bridge/ws-live-state.ts",
+    "src/lib/ue5-bridge/build-pipeline.ts",
+    "src/lib/ue5-bridge/build-queue.ts",
+    "src/stores/pofBridgeStore.ts",
+    "src/stores/ue5BridgeStore.ts",
+    "src/types/pof-bridge.ts",
+    "src/types/ue5-bridge.ts",
+    "src/hooks/usePofBridge.ts",
+    "src/hooks/useUE5Connection.ts",
+    "src/hooks/useLiveStateSync.ts",
+    "src/app/api/pof-bridge/compile/route.ts",
+    "src/app/api/pof-bridge/status/route.ts",
+    "src/app/api/pof-bridge/snapshot/route.ts",
+    "src/app/api/ue5-bridge/build/route.ts",
+    "src/app/api/ue5-bridge/status/route.ts"
+  ]
+}

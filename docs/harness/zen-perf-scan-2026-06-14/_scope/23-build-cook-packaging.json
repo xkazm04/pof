@@ -1,0 +1,29 @@
+{
+  "index": 23,
+  "name": "Build, Cook & Packaging",
+  "group": "AI, Build & Packaging Systems",
+  "id": "ctx_1779817681565_awcb3tl",
+  "description": "Run the UE5 build-cook-package pipeline: platform profiles, preflight checks, cook execution, smoke tests, size budgets, version management and build history. Spans the packaging libs, game-systems packaging views, and packaging APIs.",
+  "filePaths": [
+    "src/lib/packaging/cook-executor.ts",
+    "src/lib/packaging/preflight.ts",
+    "src/lib/packaging/smoke-test.ts",
+    "src/lib/packaging/size-budgets.ts",
+    "src/lib/packaging/build-profiles.ts",
+    "src/lib/packaging/build-profiles-db.ts",
+    "src/lib/packaging/build-history-store.ts",
+    "src/lib/packaging/version-manager.ts",
+    "src/lib/packaging/uat-command-generator.ts",
+    "src/components/modules/game-systems/PackagingView.tsx",
+    "src/components/modules/game-systems/CookProgress.tsx",
+    "src/components/modules/game-systems/PreflightPanel.tsx",
+    "src/components/modules/game-systems/SmokeTest.tsx",
+    "src/components/modules/game-systems/BuildHistoryDashboard.tsx",
+    "src/hooks/useBuildPipeline.ts",
+    "src/app/api/packaging/execute/route.ts",
+    "src/app/api/packaging/history/route.ts",
+    "src/app/api/packaging/preflight/route.ts",
+    "src/app/api/packaging/profiles/route.ts",
+    "src/app/api/packaging/smoke-test/route.ts"
+  ]
+}

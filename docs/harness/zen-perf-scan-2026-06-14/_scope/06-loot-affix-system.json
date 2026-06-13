@@ -1,0 +1,22 @@
+{
+  "index": 6,
+  "name": "Loot & Affix System",
+  "group": "Items, Loot & Economy",
+  "id": "ctx_1779817681438_291rm1z",
+  "description": "Design loot tables, affixes and pity timers, and simulate drop rates with an auto-balancer. Covers the sub_loot module (affix workbench, roll simulator, loot-table editor) and the loot generation/economy libs.",
+  "filePaths": [
+    "src/components/modules/core-engine/sub_loot/index.tsx",
+    "src/components/modules/core-engine/sub_loot/LootFilters.tsx",
+    "src/components/modules/core-engine/sub_loot/LootTabPanels.tsx",
+    "src/components/modules/core-engine/sub_loot/NarrativeBreadcrumb.tsx",
+    "src/components/modules/core-engine/sub_loot/affix/AffixRollSimulator.tsx",
+    "src/components/modules/core-engine/sub_loot/affix/LootTableEditor.tsx",
+    "src/components/modules/core-engine/sub_loot/affix/LootTableEditorToolbar.tsx",
+    "src/components/modules/core-engine/sub_loot/affix/LootTableEntryList.tsx",
+    "src/components/modules/core-engine/sub_loot/affix/LootTablePagination.tsx",
+    "src/lib/loot/auto-balancer.ts",
+    "src/lib/loot/economy.ts",
+    "src/lib/loot/loot-author-prompt.ts",
+    "src/lib/loot-designer/drop-simulator.ts"
+  ]
+}

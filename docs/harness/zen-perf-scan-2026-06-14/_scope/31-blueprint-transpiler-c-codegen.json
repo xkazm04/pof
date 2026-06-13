@@ -1,0 +1,22 @@
+{
+  "index": 31,
+  "name": "Blueprint Transpiler & C++ Codegen",
+  "group": "UE5 Integration & Project Setup",
+  "id": "ctx_1779817681622_0d15x16",
+  "description": "Translate between Blueprint and UE5 C++: the Blueprint parser/explainer/glossary, the transpiler view, GAS codegen, replication scaffolding, and a C++ semantic parser for round-trip import. Spans blueprint/codegen libs, the transpiler module, and its API.",
+  "filePaths": [
+    "src/lib/blueprint-parser.ts",
+    "src/lib/blueprint-explainer.ts",
+    "src/lib/blueprint-glossary.ts",
+    "src/lib/blueprint-jargon.ts",
+    "src/lib/gas-codegen.ts",
+    "src/lib/replication-scaffolder.ts",
+    "src/lib/cpp-semantic-parser.ts",
+    "src/lib/state-machine-validator.ts",
+    "src/lib/ue5-source-parser.ts",
+    "src/types/blueprint.ts",
+    "src/hooks/useBlueprintTranspiler.ts",
+    "src/components/modules/game-systems/blueprint-transpiler/BlueprintTranspilerView.tsx",
+    "src/app/api/blueprint-transpiler/route.ts"
+  ]
+}

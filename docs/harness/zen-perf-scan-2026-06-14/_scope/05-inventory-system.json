@@ -1,0 +1,23 @@
+{
+  "index": 5,
+  "name": "Inventory System",
+  "group": "Items, Loot & Economy",
+  "id": "ctx_1779817681446_ik4elby",
+  "description": "Item catalog and equipment authoring: the item DNA/genome editor, gear loadouts, inventory mechanics, and an inventory economy simulator. Centered on the sub_inventory module and item-dna libs.",
+  "filePaths": [
+    "src/components/modules/core-engine/sub_inventory/index.tsx",
+    "src/components/modules/core-engine/sub_inventory/catalog/AddItemForm.tsx",
+    "src/components/modules/core-engine/sub_inventory/catalog/AffixSlotPanels.tsx",
+    "src/components/modules/core-engine/sub_inventory/catalog/AffixSunburst.tsx",
+    "src/components/modules/core-engine/sub_inventory/catalog/CatalogFiltersBar.tsx",
+    "src/components/modules/core-engine/sub_inventory/catalog/CatalogGearTab.tsx",
+    "src/components/modules/core-engine/sub_inventory/catalog/CatalogItemGrid.tsx",
+    "src/components/modules/core-engine/sub_inventory/catalog/CatalogPagination.tsx",
+    "src/components/modules/core-engine/sub_inventory/catalog/EquipmentLoadoutSection.tsx",
+    "src/components/modules/core-engine/sub_inventory/catalog/GearSections.tsx",
+    "src/components/modules/core-engine/sub_inventory/catalog/ItemComparisonPanel.tsx",
+    "src/lib/item-dna/index.ts",
+    "src/stores/genomeStore.ts",
+    "src/types/item-genome.ts"
+  ]
+}

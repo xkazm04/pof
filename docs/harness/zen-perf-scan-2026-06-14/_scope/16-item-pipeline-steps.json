@@ -1,0 +1,19 @@
+{
+  "index": 16,
+  "name": "Item Pipeline Steps",
+  "group": "Catalog to UE Pipeline",
+  "id": "ctx_1779817681532_rcrtl4e",
+  "description": "The data-backed Items catalog pipeline steps (the reference vertical): concept brief, art, attributes, economy, anim/audio, gate, and UE integration. Each step follows View/Produce/Acceptance with its own buildPrompt logic and derived acceptance.",
+  "filePaths": [
+    "src/components/layout-lab/steps/itemsSteps.ts",
+    "src/components/layout-lab/steps/stepProps.ts",
+    "src/components/layout-lab/steps/controls.tsx",
+    "src/components/layout-lab/steps/ItemConceptBrief.tsx",
+    "src/components/layout-lab/steps/ItemArt.tsx",
+    "src/components/layout-lab/steps/ItemAttributes.tsx",
+    "src/components/layout-lab/steps/ItemEconomy.tsx",
+    "src/components/layout-lab/steps/ItemAnimAudio.tsx",
+    "src/components/layout-lab/steps/ItemGate.tsx",
+    "src/components/layout-lab/steps/ItemIntegration.tsx"
+  ]
+}

@@ -1,0 +1,24 @@
+{
+  "index": 18,
+  "name": "Crash Analysis & Pattern Library",
+  "group": "Quality Evaluator & Health",
+  "id": "ctx_1779817681556_rz4syrb",
+  "description": "Diagnose crashes and curate reusable patterns: crash log analysis with fingerprinting, the pattern library and anti-pattern catalog, and localization QA. Spans crash-analyzer/pattern-library libs, their stores, and the corresponding APIs.",
+  "filePaths": [
+    "src/lib/crash-analyzer/analysis-engine.ts",
+    "src/lib/crash-analyzer/sample-crashes.ts",
+    "src/lib/error-fingerprint.ts",
+    "src/lib/error-memory-db.ts",
+    "src/lib/pattern-library-db.ts",
+    "src/lib/pattern-extractor.ts",
+    "src/stores/crashAnalyzerStore.ts",
+    "src/stores/patternLibraryStore.ts",
+    "src/types/crash-analyzer.ts",
+    "src/types/pattern-library.ts",
+    "src/components/modules/evaluator/CrashAnalyzerView.tsx",
+    "src/components/modules/evaluator/PatternLibraryView.tsx",
+    "src/app/api/crash-analyzer/route.ts",
+    "src/app/api/pattern-library/route.ts",
+    "src/app/api/error-memory/route.ts"
+  ]
+}

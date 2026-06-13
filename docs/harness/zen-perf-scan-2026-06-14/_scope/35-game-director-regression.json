@@ -1,0 +1,22 @@
+{
+  "index": 35,
+  "name": "Game Director & Regression",
+  "group": "Director, Sessions & Autonomy",
+  "id": "ctx_1779817681632_gt07pdm",
+  "description": "Run playtest-director sessions and track regressions: session creation, findings exploration, and regression fingerprinting/occurrences/alerts. Spans the game-director and regression-tracker libs, the game-director module, and their APIs.",
+  "filePaths": [
+    "src/lib/game-director-db.ts",
+    "src/lib/regression-tracker.ts",
+    "src/types/game-director.ts",
+    "src/types/regression-tracker.ts",
+    "src/hooks/useGameDirector.ts",
+    "src/components/modules/game-director/GameDirectorModule.tsx",
+    "src/components/modules/game-director/DirectorOverview.tsx",
+    "src/components/modules/game-director/NewSessionPanel.tsx",
+    "src/components/modules/game-director/SessionDetail.tsx",
+    "src/components/modules/game-director/FindingsExplorer.tsx",
+    "src/components/modules/game-director/RegressionTrackerView.tsx",
+    "src/app/api/game-director/route.ts",
+    "src/app/api/regression-tracker/route.ts"
+  ]
+}

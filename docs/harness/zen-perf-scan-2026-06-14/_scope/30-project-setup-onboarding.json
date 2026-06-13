@@ -1,0 +1,26 @@
+{
+  "index": 30,
+  "name": "Project Setup & Onboarding",
+  "group": "UE5 Integration & Project Setup",
+  "id": "ctx_1779817681628_4ynv4d0",
+  "description": "Set up and connect a UE5 project: the setup wizard, path browser, project scan, tooling bootstrap, build-verify, live-coding, and recent-projects management. Spans the project-setup module, the project store, and filesystem/recent-projects/project-rules APIs.",
+  "filePaths": [
+    "src/components/modules/project-setup/ProjectSetupModule.tsx",
+    "src/components/modules/project-setup/SetupWizard.tsx",
+    "src/components/modules/project-setup/PathBrowser.tsx",
+    "src/components/modules/project-setup/CreateProjectPanel.tsx",
+    "src/components/modules/project-setup/ToolingBootstrapPanel.tsx",
+    "src/components/modules/project-setup/BuildVerifyPanel.tsx",
+    "src/components/modules/project-setup/LiveCodingPanel.tsx",
+    "src/components/modules/project-setup/ProjectFilesPanel.tsx",
+    "src/components/modules/project-setup/UE5RemoteController.tsx",
+    "src/components/modules/project-setup/useProjectScan.ts",
+    "src/stores/projectStore.ts",
+    "src/lib/project-rules-db.ts",
+    "src/hooks/useLiveCoding.ts",
+    "src/app/api/recent-projects/route.ts",
+    "src/app/api/filesystem/scan-project/route.ts",
+    "src/app/api/filesystem/browse/route.ts",
+    "src/app/api/project-rules/route.ts"
+  ]
+}

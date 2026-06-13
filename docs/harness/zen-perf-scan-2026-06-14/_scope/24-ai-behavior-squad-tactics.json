@@ -1,0 +1,22 @@
+{
+  "index": 24,
+  "name": "AI Behavior & Squad Tactics",
+  "group": "AI, Build & Packaging Systems",
+  "id": "ctx_1779817681561_bcvuydl",
+  "description": "Design enemy/NPC AI: behavior trees, EQS, squad choreography and tactical cover analysis, plus multiplayer replication scaffolding. Spans the game-systems AI/multiplayer views and the ai-director squad engine.",
+  "filePaths": [
+    "src/components/modules/game-systems/AIBehaviorView.tsx",
+    "src/components/modules/game-systems/SquadChoreographyEditor.tsx",
+    "src/components/modules/game-systems/TacticalCoverAnalysis.tsx",
+    "src/components/modules/game-systems/FlankAngleHeatmap.tsx",
+    "src/components/modules/game-systems/PatrolPointsDistribution.tsx",
+    "src/components/modules/game-systems/EQSComponentInventory.tsx",
+    "src/components/modules/game-systems/EQSPipelineDiagram.tsx",
+    "src/components/modules/game-systems/AttackRingVisualizer.tsx",
+    "src/components/modules/game-systems/MultiplayerView.tsx",
+    "src/components/modules/game-systems/multiplayer/ReplicationScaffoldPanel.tsx",
+    "src/lib/ai-director/squad-engine.ts",
+    "src/lib/replication-scaffolder.ts",
+    "src/types/squad-tactics.ts"
+  ]
+}
