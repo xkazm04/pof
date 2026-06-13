@@ -58,6 +58,17 @@ export function runSimulation(config: SimulationConfig): SimulationResult {
   const allTicks: SimulationTick[][] = agents.map(() => []);
   const supplyDemandAccum = new Map<string, { supply: number; demand: number; priceSum: number; count: number }>();
 
+  // Metrics sampling cadence — must match buildMetricsArray exactly. computeMetrics is pure
+  // (no rng/mutation) and only feeds buildMetricsArray, which keeps every `metricsStep`-th
+  // hour and discards the rest. Computing only on retained hours yields identical output
+  // while skipping the sort+reductions for the ~half that would be thrown away.
+  const metricsStep = config.maxPlayHours <= 100 ? 1 : Math.max(1, Math.floor(config.maxPlayHours / 100));
+
+  // Precompute per-item supply/demand invariants once (they depend only on the item and
+  // mods.dropMul, neither of which changes during the run). The hot per-agent-per-hour loop
+  // then reads these instead of recomputing dropMul math + the category test 2M+ times.
+  const supplyDemandItems = precomputeSupplyDemandItems(items, mods);
+
   for (let hour = 0; hour < config.maxPlayHours; hour++) {
     for (let a = 0; a < agents.length; a++) {
       const agent = agents[a];
@@ -67,13 +78,15 @@ export function runSimulation(config: SimulationConfig): SimulationResult {
       allTicks[a].push(tick);
 
       // Track supply/demand
-      trackSupplyDemand(agent, items, supplyDemandAccum, mods, rng);
+      trackSupplyDemand(agent, supplyDemandItems, supplyDemandAccum, rng);
     }
 
-    // Compute aggregate metrics for this hour
-    const level = Math.round(agents.reduce((sum, a) => sum + a.level, 0) / agents.length);
-    const metrics = computeMetrics(agents, hour, level);
-    metricsMap.set(hour, metrics);
+    // Compute aggregate metrics for this hour — only on hours buildMetricsArray will retain.
+    if (hour % metricsStep === 0) {
+      const level = Math.round(agents.reduce((sum, a) => sum + a.level, 0) / agents.length);
+      const metrics = computeMetrics(agents, hour, level);
+      metricsMap.set(hour, metrics);
+    }
   }
 
   // Build metrics array (sample every level transition + every 5 hours)
@@ -275,24 +288,63 @@ export function applyFlowOverrides(
 
 // ── Supply/Demand Tracking ──────────────────────────────────────────────────
 
+type SupplyDemandBucket = { supply: number; demand: number; priceSum: number; count: number };
+
+/**
+ * Per-item supply/demand descriptor with the run-invariant terms precomputed.
+ * `category`, `minLevel`, `sellPrice` and `levelScaling` mirror the source item; `supplyDelta`
+ * (= dropWeight·dropMul·0.1) and `demandFactor` (3 for consumables, else 0.5) fold in mods.dropMul
+ * and the category test, which are constant for the whole run — so the hot loop skips that work.
+ */
+interface SupplyDemandItem {
+  category: ItemCategory;
+  minLevel: number;
+  sellPrice: number;
+  levelScaling: number;
+  supplyDelta: number;
+  demandFactor: number;
+}
+
+function precomputeSupplyDemandItems(
+  items: EconomyItem[],
+  mods: { dropMul: number },
+): SupplyDemandItem[] {
+  return items.map((item) => ({
+    category: item.category,
+    minLevel: item.minLevel,
+    sellPrice: item.sellPrice,
+    levelScaling: item.levelScaling,
+    supplyDelta: item.dropWeight * mods.dropMul * 0.1,
+    demandFactor: item.category === 'consumable' ? 3 : 0.5,
+  }));
+}
+
 function trackSupplyDemand(
   agent: AgentState,
-  items: EconomyItem[],
-  accum: Map<string, { supply: number; demand: number; priceSum: number; count: number }>,
-  mods: { dropMul: number },
+  items: SupplyDemandItem[],
+  accum: Map<string, SupplyDemandBucket>,
   rng: () => number,
 ) {
+  // agent.level is constant for this call, so build the key prefix once.
+  const level = agent.level;
+  const prefix = `${level}-`;
   for (const item of items) {
-    if (agent.level < item.minLevel) continue;
-    const key = `${agent.level}-${item.category}`;
-    const entry = accum.get(key) ?? { supply: 0, demand: 0, priceSum: 0, count: 0 };
-    const price = item.sellPrice + item.levelScaling * agent.level;
+    if (level < item.minLevel) continue;
+    const key = prefix + item.category;
+    // Fetch-or-create without the throwaway `?? {…}` literal on every hit, and mutate in place
+    // (no redundant re-`set`). Float additions stay in the original order to preserve bit-for-bit
+    // identical accumulation, and rng() is still drawn once per eligible item, in item order.
+    let entry = accum.get(key);
+    if (entry === undefined) {
+      entry = { supply: 0, demand: 0, priceSum: 0, count: 0 };
+      accum.set(key, entry);
+    }
+    const price = item.sellPrice + item.levelScaling * level;
 
-    entry.supply += item.dropWeight * mods.dropMul * 0.1;
-    entry.demand += (item.category === 'consumable' ? 3 : 0.5) * (0.5 + rng() * 0.5);
+    entry.supply += item.supplyDelta;
+    entry.demand += item.demandFactor * (0.5 + rng() * 0.5);
     entry.priceSum += price;
     entry.count++;
-    accum.set(key, entry);
   }
 }
 
