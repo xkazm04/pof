@@ -220,23 +220,30 @@ export function getBuildStats(): BuildStats {
     avg_dur: number | null; avg_size: number | null;
   }>;
 
-  const platforms: PlatformStats[] = platformRows.map((r) => {
-    // Latest size for this platform
-    const latestSize = db.prepare(
-      "SELECT size_bytes FROM build_history WHERE platform = ? AND size_bytes IS NOT NULL AND status = 'success' ORDER BY created_at DESC LIMIT 1"
-    ).get(r.platform) as { size_bytes: number } | undefined;
+  // Latest green size per platform in ONE window-function query (avoids the
+  // former N+1: one SELECT per platform inside the .map below).
+  const latestSizeRows = db.prepare(`
+    SELECT platform, size_bytes FROM (
+      SELECT platform, size_bytes,
+        ROW_NUMBER() OVER (PARTITION BY platform ORDER BY created_at DESC) rn
+      FROM build_history
+      WHERE size_bytes IS NOT NULL AND status = 'success'
+    ) WHERE rn = 1
+  `).all() as Array<{ platform: string; size_bytes: number }>;
+  const latestSizeByPlatform = new Map<string, number>(
+    latestSizeRows.map((r) => [r.platform, r.size_bytes])
+  );
 
-    return {
-      platform: r.platform,
-      total: r.total,
-      success: r.success,
-      failed: r.failed,
-      successRate: r.total > 0 ? (r.success / r.total) * 100 : 0,
-      avgDurationMs: r.avg_dur ? Math.round(r.avg_dur) : null,
-      avgSizeBytes: r.avg_size ? Math.round(r.avg_size) : null,
-      latestSizeBytes: latestSize?.size_bytes ?? null,
-    };
-  });
+  const platforms: PlatformStats[] = platformRows.map((r) => ({
+    platform: r.platform,
+    total: r.total,
+    success: r.success,
+    failed: r.failed,
+    successRate: r.total > 0 ? (r.success / r.total) * 100 : 0,
+    avgDurationMs: r.avg_dur ? Math.round(r.avg_dur) : null,
+    avgSizeBytes: r.avg_size ? Math.round(r.avg_size) : null,
+    latestSizeBytes: latestSizeByPlatform.get(r.platform) ?? null,
+  }));
 
   return {
     totalBuilds: total.cnt,
