@@ -423,8 +423,6 @@ export interface ResolvedDependency {
 export interface DependencyInfo {
   /** Direct dependencies for this feature */
   deps: ResolvedDependency[];
-  /** Full transitive chain (breadth-first) */
-  chain: ResolvedDependency[];
   /** Dependencies that are NOT implemented (status != 'implemented') */
   blockers: ResolvedDependency[];
   /** True if any upstream dependency is missing/unknown */
@@ -443,9 +441,9 @@ function resolveDep(ref: string, contextModuleId: string): ResolvedDependency {
 /**
  * Build a full dependency map for all features across all modules.
  *
- * Memoized: MODULE_FEATURE_DEFINITIONS is a static const, so deps and
- * transitive chains are computed once and reused. The cached map should
- * be treated as read-only — use computeBlockers() to get a status-aware copy.
+ * Memoized: MODULE_FEATURE_DEFINITIONS is a static const, so direct deps are
+ * resolved once and reused. The cached map should be treated as read-only —
+ * use computeBlockers() to get a status-aware copy.
  */
 let _cachedDepMap: Map<string, DependencyInfo> | null = null;
 
@@ -454,35 +452,13 @@ export function buildDependencyMap(): Map<string, DependencyInfo> {
 
   const map = new Map<string, DependencyInfo>();
 
-  // First pass: resolve direct deps
+  // Resolve direct deps for every feature.
   for (const [moduleId, features] of Object.entries(MODULE_FEATURE_DEFINITIONS)) {
     for (const feat of features) {
       const key = `${moduleId}::${feat.featureName}`;
       const deps = (feat.dependsOn ?? []).map((ref) => resolveDep(ref, moduleId));
-      map.set(key, { deps, chain: [], blockers: [], isBlocked: false });
+      map.set(key, { deps, blockers: [], isBlocked: false });
     }
-  }
-
-  // Second pass: compute transitive chains (BFS)
-  for (const [key, info] of map) {
-    const visited = new Set<string>([key]);
-    const queue = [...info.deps];
-    const chain: ResolvedDependency[] = [];
-
-    while (queue.length > 0) {
-      const dep = queue.shift()!;
-      if (visited.has(dep.key)) continue;
-      visited.add(dep.key);
-      chain.push(dep);
-      const upstream = map.get(dep.key);
-      if (upstream) {
-        for (const d of upstream.deps) {
-          if (!visited.has(d.key)) queue.push(d);
-        }
-      }
-    }
-
-    info.chain = chain;
   }
 
   _cachedDepMap = map;
