@@ -37,6 +37,8 @@ export function BlenderConnectionBar() {
     setSettings,
     setAutoConnect,
     maybeAutoConnect,
+    ensureHealthCheck,
+    stopHealthCheck,
   } = useBlenderMCPStore();
   const [showSettings, setShowSettings] = useState(false);
   const [wizardOpen, setWizardOpen] = useState(false);
@@ -47,6 +49,15 @@ export function BlenderConnectionBar() {
   useEffect(() => {
     maybeAutoConnect();
   }, [maybeAutoConnect]);
+
+  // The liveness probe is store-managed (mirrors the retryTimer pattern) and is
+  // armed on a successful connect. On mount, re-arm it if the connection is
+  // already live (e.g. after a remount); on unmount, tear it down so no probe
+  // interval leaks. The connection itself is left untouched.
+  useEffect(() => {
+    ensureHealthCheck();
+    return () => stopHealthCheck();
+  }, [ensureHealthCheck, stopHealthCheck]);
 
   const handleConnect = () => {
     if (connection.connected) {

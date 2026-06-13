@@ -40,6 +40,10 @@ interface BlenderMCPState {
   setAutoConnect: (autoConnect: boolean) => void;
   /** Honor the persisted autoConnect flag on mount (idempotent). */
   maybeAutoConnect: () => void;
+  /** Arm the liveness probe when already connected (idempotent). For mount. */
+  ensureHealthCheck: () => void;
+  /** Tear down the liveness probe without touching the connection. For unmount. */
+  stopHealthCheck: () => void;
   /** Stop and clear any scheduled/in-flight auto-retry. */
   cancelRetry: () => void;
   addScreenshot: (objectUrl: string) => void;
@@ -60,6 +64,20 @@ function clearRetryTimer() {
   if (retryTimer) {
     clearTimeout(retryTimer);
     retryTimer = null;
+  }
+}
+
+// Module-level liveness probe. Same rationale as retryTimer: a timer handle is
+// not serializable, and at most one probe loop runs while connected. The OS can
+// tear down the TCP socket on a Blender close/crash/sleep without any client
+// notification, so we poll the service's cached connection state to detect the
+// silent drop and self-heal.
+let healthTimer: ReturnType<typeof setInterval> | null = null;
+
+function clearHealthTimer() {
+  if (healthTimer) {
+    clearInterval(healthTimer);
+    healthTimer = null;
   }
 }
 
@@ -86,6 +104,19 @@ export const useBlenderMCPStore = create<BlenderMCPState>()(
           set({ retryAttempt: get().retryAttempt + 1 });
           void get().connect();
         }, delay);
+      };
+
+      /**
+       * Arm the periodic liveness probe. Idempotent — clears any prior loop
+       * first so a reconnect never stacks intervals. Each tick refreshes the
+       * connection state from the service, which detects a socket the OS tore
+       * down silently and triggers self-healing (see refreshStatus).
+       */
+      const startHealthCheck = () => {
+        clearHealthTimer();
+        healthTimer = setInterval(() => {
+          void get().refreshStatus();
+        }, UI_TIMEOUTS.blenderHealthCheck);
       };
 
       return {
@@ -127,6 +158,8 @@ export const useBlenderMCPStore = create<BlenderMCPState>()(
               retryAttempt: 0,
               autoRetrying: false,
             });
+            // Arm the liveness probe so a silent socket drop is detected.
+            startHealthCheck();
           } else {
             set({
               isConnecting: false,
@@ -142,6 +175,7 @@ export const useBlenderMCPStore = create<BlenderMCPState>()(
 
         disconnect: async () => {
           clearRetryTimer();
+          clearHealthTimer();
           set({ retryAttempt: 0, autoRetrying: false });
           await tryApiFetch('/api/blender-mcp', {
             method: 'POST',
@@ -155,6 +189,7 @@ export const useBlenderMCPStore = create<BlenderMCPState>()(
         },
 
         refreshStatus: async () => {
+          const wasConnected = get().connection.connected;
           const result = await tryApiFetch<{
             connection: BlenderConnection;
           }>('/api/blender-mcp', {
@@ -162,8 +197,20 @@ export const useBlenderMCPStore = create<BlenderMCPState>()(
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ action: 'status' }),
           });
-          if (result.ok) {
-            set({ connection: result.data.connection });
+          if (!result.ok) return;
+
+          const fresh = result.data.connection;
+          set({ connection: fresh });
+
+          // The probe found Blender gone (OS tore down the socket; the service
+          // already flipped its own connected=false). Stop polling a dead link
+          // and, when auto-connect is on, arm the backoff loop to self-heal.
+          if (wasConnected && !fresh.connected) {
+            clearHealthTimer();
+            if (get().autoConnect && !get().autoRetrying) {
+              set({ retryAttempt: 0 });
+              scheduleRetry();
+            }
           }
         },
 
@@ -198,6 +245,18 @@ export const useBlenderMCPStore = create<BlenderMCPState>()(
             set({ retryAttempt: 0 });
             void get().connect();
           }
+        },
+
+        ensureHealthCheck: () => {
+          // Re-arm after a remount if the connection is still live but the
+          // probe was torn down on the previous unmount.
+          if (get().connection.connected && !healthTimer) {
+            startHealthCheck();
+          }
+        },
+
+        stopHealthCheck: () => {
+          clearHealthTimer();
         },
 
         cancelRetry: () => {
