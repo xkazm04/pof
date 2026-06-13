@@ -1,8 +1,8 @@
 /** ── Genome Checkpoint Schema ─────────────────────────────────────────────── *
  * Durable, named snapshot of a character genome at a moment in time. Unlike
- * the ephemeral undo/redo stack in `useGenomeHistory`, checkpoints persist
- * across reloads, are user-named (e.g. "v1.0 pre-nerf"), and form a vertical
- * changelog timeline diffed against the previous checkpoint.
+ * an ephemeral in-memory undo/redo stack, checkpoints persist across reloads,
+ * are user-named (e.g. "v1.0 pre-nerf"), and form a vertical changelog
+ * timeline diffed against the previous checkpoint.
  * ────────────────────────────────────────────────────────────────────────── */
 
 import type { CharacterGenome } from './character-genome';
