@@ -206,24 +206,59 @@ export function runDropSimulation(config: DropSimConfig): DropSimResult {
     return affix.magnitude * (tag ? (POWER_WEIGHTS[tag] ?? 0.5) : 0.5);
   };
 
-  // Roll all items
+  // ── Single roll loop: roll each item and fold every aggregate accumulator
+  //    into this one pass instead of re-sweeping the items array 5+ times.
+  //    `items` is still materialized (consumed by the large-rollCount test) but
+  //    no aggregate re-iterates it — they are all accumulated here as rolls happen. ──
   const items: RolledItem[] = [];
-  for (let i = 0; i < rollCount; i++) {
-    items.push(rollSingleItem(affixPool, rarity, itemLevel, rng, powerFn));
-  }
-
-  // ── Affix distributions ──
   const affixCounts = new Map<string, { count: number; magnitudes: number[] }>();
-  for (const item of items) {
-    for (const a of item.affixes) {
+  const coMap = new Map<string, number>();
+  const axisCoverage: Record<TraitAxis, number> = { offensive: 0, defensive: 0, utility: 0, economic: 0 };
+  const powers: number[] = [];
+  const countMap = new Map<number, number>();
+  let itemsWithAffixesRaw = 0;
+  let totalAffixes = 0;
+  let powerSum = 0;
+
+  for (let i = 0; i < rollCount; i++) {
+    const item = rollSingleItem(affixPool, rarity, itemLevel, rng, powerFn);
+    items.push(item);
+
+    const affixes = item.affixes;
+    const affixLen = affixes.length;
+
+    // Affix-count distribution + running affix-count total
+    countMap.set(affixLen, (countMap.get(affixLen) ?? 0) + 1);
+    totalAffixes += affixLen;
+    if (affixLen > 0) itemsWithAffixesRaw++;
+
+    // Power histogram source + running power sum
+    powers.push(item.totalPower);
+    powerSum += item.totalPower;
+
+    // Per-affix counts/magnitudes + axis coverage (distinct axes per item)
+    const seenAxes = new Set<TraitAxis>();
+    for (const a of affixes) {
       const entry = affixCounts.get(a.affixId) ?? { count: 0, magnitudes: [] };
       entry.count++;
       entry.magnitudes.push(a.magnitude);
       affixCounts.set(a.affixId, entry);
+      seenAxes.add(a.axis);
+    }
+    for (const ax of seenAxes) axisCoverage[ax]++;
+
+    // Co-occurrence (sorted id pairs per item)
+    const ids = affixes.map((a) => a.affixId).sort();
+    for (let x = 0; x < ids.length; x++) {
+      for (let y = x + 1; y < ids.length; y++) {
+        const key = `${ids[x]}|${ids[y]}`;
+        coMap.set(key, (coMap.get(key) ?? 0) + 1);
+      }
     }
   }
 
-  const itemsWithAffixes = items.filter((it) => it.affixes.length > 0).length || 1;
+  // ── Affix distributions ──
+  const itemsWithAffixes = itemsWithAffixesRaw || 1;
   const affixDistributions: AffixDistribution[] = affixPool.map((affix) => {
     const stats = affixCounts.get(affix.id);
     if (!stats || stats.count === 0) {
@@ -253,36 +288,19 @@ export function runDropSimulation(config: DropSimConfig): DropSimResult {
     };
   });
 
-  // ── Co-occurrence matrix ──
-  const coMap = new Map<string, number>();
-  for (const item of items) {
-    const ids = item.affixes.map((a) => a.affixId).sort();
-    for (let i = 0; i < ids.length; i++) {
-      for (let j = i + 1; j < ids.length; j++) {
-        const key = `${ids[i]}|${ids[j]}`;
-        coMap.set(key, (coMap.get(key) ?? 0) + 1);
-      }
-    }
-  }
-
+  // ── Co-occurrence matrix (coMap accumulated in the roll loop above) ──
   const coOccurrence: CoOccurrenceCell[] = [];
   for (const [key, count] of coMap.entries()) {
     const [affixA, affixB] = key.split('|');
     coOccurrence.push({ affixA, affixB, count, probability: count / itemsWithAffixes });
   }
 
-  // ── Axis coverage ──
-  const axisCoverage: Record<TraitAxis, number> = { offensive: 0, defensive: 0, utility: 0, economic: 0 };
-  for (const item of items) {
-    const axes = new Set(item.affixes.map((a) => a.axis));
-    for (const ax of axes) axisCoverage[ax]++;
-  }
+  // ── Axis coverage (raw counts accumulated above → normalize to fraction) ──
   for (const ax of Object.keys(axisCoverage) as TraitAxis[]) {
     axisCoverage[ax] = Math.round((axisCoverage[ax] / itemsWithAffixes) * 1000) / 1000;
   }
 
-  // ── Power histogram ──
-  const powers = items.map((it) => it.totalPower);
+  // ── Power histogram (powers collected in the roll loop above) ──
   const { min: minP, max: maxP } = minMax(powers);
   const rangeP = maxP - minP || 1;
   const powerHistogram = new Array(10).fill(0) as number[];
@@ -291,20 +309,14 @@ export function runDropSimulation(config: DropSimConfig): DropSimResult {
     powerHistogram[bucket]++;
   }
 
-  // ── Affix count distribution ──
-  const countMap = new Map<number, number>();
-  for (const item of items) {
-    const c = item.affixes.length;
-    countMap.set(c, (countMap.get(c) ?? 0) + 1);
-  }
+  // ── Affix count distribution (countMap accumulated in the roll loop above) ──
   const rarityBreakdown = Array.from(countMap.entries())
     .map(([affixCount, count]) => ({ affixCount, count }))
     .sort((a, b) => a.affixCount - b.affixCount);
 
-  // ── Averages ──
-  const totalAffixes = items.reduce((s, it) => s + it.affixes.length, 0);
+  // ── Averages (totalAffixes / powerSum accumulated in the roll loop above) ──
   const avgAffixCount = Math.round((totalAffixes / items.length) * 100) / 100;
-  const avgPower = Math.round(powers.reduce((s, p) => s + p, 0) / items.length * 10) / 10;
+  const avgPower = Math.round(powerSum / items.length * 10) / 10;
 
   return {
     items,
