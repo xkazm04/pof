@@ -6,7 +6,7 @@
 import type { SubModuleId } from '@/types/modules';
 import { SUB_MODULES } from './module-registry';
 import { countChecklist } from './checklist-progress';
-import { getFeaturesByModule, getFeatureSummary } from './feature-matrix-db';
+import { getFeaturesByModule } from './feature-matrix-db';
 import type { FeatureRow, FeatureSummary } from '@/types/feature-matrix';
 import type {
   ComplianceGap, ComplianceReport, ModuleCompliance,
@@ -126,6 +126,17 @@ function estimateEffort(label: string): EffortEstimate {
   return 'small';
 }
 
+/** Derive the per-status summary from already-fetched feature rows, avoiding a
+ *  second `feature_matrix` query per module — the full rows already carry every status. */
+function summarizeFeatures(features: FeatureRow[]): FeatureSummary {
+  const summary: FeatureSummary = { total: 0, implemented: 0, improved: 0, partial: 0, missing: 0, unknown: 0 };
+  for (const f of features) {
+    summary.total += 1;
+    summary[f.status] += 1;
+  }
+  return summary;
+}
+
 // ─── Scoring ────────────────────────────────────────────────────────────────
 
 function calculateModuleScore(
@@ -226,16 +237,15 @@ export function runComplianceAudit(
 
   for (const mod of SUB_MODULES) {
     const checklist = mod.checklist ?? [];
-    if (checklist.length === 0) {
-      // Try to get features even for modules without checklists
-      const features = getFeaturesByModule(mod.id);
-      if (features.length === 0) continue;
-    }
 
+    // Single read per module; the summary is derived from these rows below
+    // instead of issuing a second `feature_matrix` query.
     const features = getFeaturesByModule(mod.id);
-    const summary = features.length > 0
-      ? getFeatureSummary(mod.id)
-      : { total: 0, implemented: 0, improved: 0, partial: 0, missing: 0, unknown: 0 };
+
+    // Skip modules with neither a checklist nor any scanned features.
+    if (checklist.length === 0 && features.length === 0) continue;
+
+    const summary = summarizeFeatures(features);
 
     const moduleProgress = checklistProgress[mod.id] ?? {};
     const { done: checklistDone, total: checklistTotal } = countChecklist(mod, moduleProgress);
