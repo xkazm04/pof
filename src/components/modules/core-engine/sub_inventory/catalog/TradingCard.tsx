@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback, useRef, forwardRef, memo } from 'react';
+import { useState, useCallback, useRef, forwardRef } from 'react';
 import { Package } from 'lucide-react';
 import Image from 'next/image';
 import { OVERLAY_WHITE, STATUS_SUCCESS, STATUS_ERROR,
@@ -42,7 +42,7 @@ interface TradingCardProps {
   onFocus?: () => void;
 }
 
-const TradingCardInner = forwardRef<HTMLDivElement, TradingCardProps>(
+export const TradingCard = forwardRef<HTMLDivElement, TradingCardProps>(
 function TradingCard({ item, tabIndex, onFocus: onFocusProp }, ref) {
   const color = RARITY_COLORS[item.rarity];
   const [showTooltip, setShowTooltip] = useState(false);
@@ -158,14 +158,3 @@ function TradingCard({ item, tabIndex, onFocus: onFocusProp }, ref) {
     </motion.div>
   );
 });
-
-/**
- * Memoized so the heavy framer-motion card (layout + spring + per-stat map +
- * set lookup + tooltip subtree) only re-renders when its own inputs change.
- * Default shallow prop comparison is correct here: `item` is a stable reference
- * from the module-constant catalog, and the grid passes a per-cell-stable
- * `ref`/`onFocus` (see CatalogGridCell). The only prop that legitimately varies
- * per render is `tabIndex` (roving focus) — a shallow-different number, so the
- * focused card still re-renders while the other ~19 cards skip their work.
- */
-export const TradingCard = memo(TradingCardInner);
