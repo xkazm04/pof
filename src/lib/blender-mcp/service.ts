@@ -168,6 +168,24 @@ class BlenderMCPService {
       const socket = this.socket;
       let buffer = '';
       let settled = false;
+
+      // ── Incremental parse-readiness gate ──────────────────────────────────
+      // The wire protocol has no length prefix, so a large response (e.g. a
+      // base64 screenshot) arrives split across many TCP chunks. Re-running
+      // JSON.parse on the full accumulated buffer for every chunk is O(n²) over
+      // the payload. Instead we scan only the *newly arrived* bytes, tracking
+      // structural brace/bracket depth (skipping anything inside JSON string
+      // literals, honoring escapes). A complete top-level value is exactly when
+      // depth returns to 0 after the first structural char, so we attempt
+      // JSON.parse only then — turning the work into a single O(n) scan plus one
+      // parse. This is purely a gate: it cannot accept an incomplete object
+      // (depth would still be > 0) and cannot reject a complete one (depth hits
+      // 0 precisely at the closing brace/bracket), so behavior is unchanged.
+      let depth = 0;
+      let inString = false;
+      let escaped = false;
+      let sawStructure = false;
+      let scanPos = 0;
       const settle = (result: Result<unknown, string>) => {
         if (settled) return;
         settled = true;
@@ -196,6 +214,39 @@ class BlenderMCPService {
 
       const onData = (chunk: Buffer) => {
         buffer += chunk.toString('utf-8');
+
+        // Advance the structural scan over only the bytes we haven't seen yet.
+        let ready = false;
+        for (; scanPos < buffer.length; scanPos++) {
+          const c = buffer[scanPos];
+          if (inString) {
+            if (escaped) escaped = false;
+            else if (c === '\\') escaped = true;
+            else if (c === '"') inString = false;
+            continue;
+          }
+          if (c === '"') {
+            inString = true;
+          } else if (c === '{' || c === '[') {
+            depth++;
+            sawStructure = true;
+          } else if (c === '}' || c === ']') {
+            depth--;
+            // Top-level value just closed — the buffer plausibly holds one
+            // complete JSON object/array. Anything before the first structural
+            // char (e.g. leading whitespace) leaves sawStructure false.
+            if (depth === 0 && sawStructure) {
+              ready = true;
+              scanPos++; // include this char before breaking out
+              break;
+            }
+          }
+        }
+
+        // Only attempt the (potentially expensive) parse once the structure is
+        // balanced. An incomplete buffer never reaches depth 0, so we simply
+        // wait for more data exactly as before — just without the wasted parse.
+        if (!ready) return;
         try {
           const response: BlenderResponse = JSON.parse(buffer);
           if (response.status === 'error') {
@@ -204,7 +255,8 @@ class BlenderMCPService {
             settle(ok(response.result));
           }
         } catch {
-          // Incomplete JSON — wait for more data
+          // Balanced braces but not yet valid JSON (e.g. trailing bytes still
+          // in flight). Keep waiting; the next chunk re-evaluates from here.
         }
       };
 
