@@ -15,7 +15,6 @@ import {
   buildDependencyMap,
   computeBlockers,
   getDependentCounts,
-  type DependencyInfo,
 } from '@/lib/feature-definitions';
 import { SUB_MODULE_MAP } from '@/lib/module-registry';
 import { useModuleStore } from '@/stores/moduleStore';
