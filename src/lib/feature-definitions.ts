@@ -446,11 +446,16 @@ function resolveDep(ref: string, contextModuleId: string): ResolvedDependency {
  * use computeBlockers() to get a status-aware copy.
  */
 let _cachedDepMap: Map<string, DependencyInfo> | null = null;
+let _cachedDependentCounts: Map<string, number> | null = null;
 
 export function buildDependencyMap(): Map<string, DependencyInfo> {
   if (_cachedDepMap) return _cachedDepMap;
 
   const map = new Map<string, DependencyInfo>();
+  // Fan-out counts: how many features list each key as a direct dependency.
+  // A static property of the graph — computed once in the same pass and cached
+  // alongside the dep map via getDependentCounts().
+  const dependentCounts = new Map<string, number>();
 
   // Resolve direct deps for every feature.
   for (const [moduleId, features] of Object.entries(MODULE_FEATURE_DEFINITIONS)) {
@@ -458,11 +463,29 @@ export function buildDependencyMap(): Map<string, DependencyInfo> {
       const key = `${moduleId}::${feat.featureName}`;
       const deps = (feat.dependsOn ?? []).map((ref) => resolveDep(ref, moduleId));
       map.set(key, { deps, blockers: [], isBlocked: false });
+      for (const dep of deps) {
+        dependentCounts.set(dep.key, (dependentCounts.get(dep.key) ?? 0) + 1);
+      }
     }
   }
 
   _cachedDepMap = map;
+  _cachedDependentCounts = dependentCounts;
   return map;
+}
+
+/**
+ * Fan-out count per feature key: how many features depend on each key.
+ *
+ * This is a static graph property (it never varies with status/progress), so it
+ * is built once during {@link buildDependencyMap} and cached. Returns 0 for any
+ * key with no dependents via the caller's `?? 0`.
+ */
+export function getDependentCounts(): Map<string, number> {
+  if (!_cachedDependentCounts) {
+    buildDependencyMap();
+  }
+  return _cachedDependentCounts!;
 }
 
 /**

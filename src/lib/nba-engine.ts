@@ -14,6 +14,7 @@ import {
   MODULE_FEATURE_DEFINITIONS,
   buildDependencyMap,
   computeBlockers,
+  getDependentCounts,
   type DependencyInfo,
 } from '@/lib/feature-definitions';
 import { SUB_MODULE_MAP } from '@/lib/module-registry';
@@ -106,6 +107,8 @@ export function computeNBA(
   // Dependency graph
   const statusMap = featureStatusMap ?? new Map<string, string>();
   const depMap = computeBlockers(buildDependencyMap(), statusMap);
+  // Fan-out counts are a static graph property — looked up, not rescanned.
+  const dependentCounts = getDependentCounts();
 
   // Module features for mapping checklist items → features
   const moduleFeatures = MODULE_FEATURE_DEFINITIONS[moduleId] ?? [];
@@ -143,13 +146,9 @@ export function computeNBA(
       const featureKey = `${moduleId}::${matchingFeature.featureName}`;
       const featureStatus = statusMap.get(featureKey);
 
-      // Count how many other features depend on this one (fan-out)
-      let dependentCount = 0;
-      for (const [, info] of depMap) {
-        if (info.deps.some((d) => d.key === featureKey)) {
-          dependentCount++;
-        }
-      }
+      // Count how many other features depend on this one (fan-out).
+      // Static graph property — precomputed once in buildDependencyMap.
+      const dependentCount = dependentCounts.get(featureKey) ?? 0;
 
       if (dependentCount > 0 && featureStatus !== 'implemented') {
         // This unimplemented feature blocks others
