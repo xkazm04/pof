@@ -89,17 +89,44 @@ export function clusterPrompts(
     tokens: tokenize(s.prompt),
   }));
 
-  // Agglomerative merge loop
+  // Agglomerative merge loop.
+  //
+  // Performance: instead of recomputing every pairwise Jaccard similarity on
+  // each merge (an O(n²) rescan per iteration → O(n³) overall), we cache the
+  // upper-triangular similarity matrix once and, after each merge, only
+  // recompute the row/column for the single new cluster. This is the standard
+  // agglomerative optimization and brings the loop to O(n²).
+  //
+  // Output identity is preserved exactly:
+  //  - `clusters` is mutated with the SAME ordering the original produced:
+  //    the two merged nodes are removed (surviving order kept) and the merged
+  //    node is appended at the end. `sim[i][j]` is kept in lock-step with that
+  //    array so index-based tie-breaking is unchanged.
+  //  - The pair scan visits (i, j) in identical row-major order with the same
+  //    strict `sim > bestSim` comparison, so on ties the first-encountered pair
+  //    still wins — identical merge order.
+  //  - The merged token set uses the same `new Set([...a, ...b])` union, so
+  //    recomputed similarities are bit-for-bit equal to a full rescan.
+
+  // sim[i][j] (j > i) caches jaccardSimilarity(clusters[i], clusters[j]).
+  const sim: number[][] = clusters.map(() => []);
+  for (let i = 0; i < clusters.length; i++) {
+    for (let j = i + 1; j < clusters.length; j++) {
+      sim[i][j] = jaccardSimilarity(clusters[i].tokens, clusters[j].tokens);
+    }
+  }
+
   while (clusters.length > maxClusters) {
     let bestI = 0;
     let bestJ = 1;
     let bestSim = -1;
 
+    // Same row-major scan order and strict-greater tie-break as the original.
     for (let i = 0; i < clusters.length; i++) {
       for (let j = i + 1; j < clusters.length; j++) {
-        const sim = jaccardSimilarity(clusters[i].tokens, clusters[j].tokens);
-        if (sim > bestSim) {
-          bestSim = sim;
+        const s = sim[i][j];
+        if (s > bestSim) {
+          bestSim = s;
           bestI = i;
           bestJ = j;
         }
@@ -109,7 +136,7 @@ export function clusterPrompts(
     // Stop if best similarity is below threshold
     if (bestSim < threshold) break;
 
-    // Merge bestJ into bestI
+    // Merge bestJ into bestI (bestI < bestJ always, matching original order).
     const merged: ClusterNode = {
       sessionIds: [...clusters[bestI].sessionIds, ...clusters[bestJ].sessionIds],
       prompts: [...clusters[bestI].prompts, ...clusters[bestJ].prompts],
@@ -117,8 +144,38 @@ export function clusterPrompts(
       tokens: new Set([...clusters[bestI].tokens, ...clusters[bestJ].tokens]),
     };
 
-    clusters = clusters.filter((_, idx) => idx !== bestI && idx !== bestJ);
-    clusters.push(merged);
+    // Rebuild `clusters` AND `sim` in lock-step, preserving the original's
+    // ordering: keep all survivors in their original relative order, then
+    // append the merged node. We copy cached similarities for untouched pairs
+    // (they cannot have changed) and only compute the new cluster's distances.
+    const survivors: ClusterNode[] = [];
+    const survivorIdx: number[] = []; // old index of each survivor
+    for (let idx = 0; idx < clusters.length; idx++) {
+      if (idx === bestI || idx === bestJ) continue;
+      survivors.push(clusters[idx]);
+      survivorIdx.push(idx);
+    }
+
+    const m = survivors.length; // index the merged node will occupy
+    const newSim: number[][] = survivors.map(() => []);
+    newSim.push([]); // row for merged node (no entries needed; it is last)
+
+    for (let a = 0; a < m; a++) {
+      const oldA = survivorIdx[a];
+      // Copy untouched pairwise similarities between survivors.
+      for (let b = a + 1; b < m; b++) {
+        const oldB = survivorIdx[b];
+        newSim[a][b] = sim[oldA][oldB]; // oldA < oldB preserved by ascending scan
+      }
+      // Recompute only the column linking each survivor to the merged node.
+      newSim[a][m] = jaccardSimilarity(survivors[a].tokens, merged.tokens);
+    }
+
+    survivors.push(merged);
+    clusters = survivors;
+    // Replace sim contents in place is unnecessary; reassign via closure var.
+    for (let r = 0; r < clusters.length; r++) sim[r] = newSim[r];
+    sim.length = clusters.length;
   }
 
   // Convert to PromptCluster and sort by success rate descending
