@@ -102,6 +102,21 @@ export async function drainJobs(
   const results: DrainResult[] = [];
   let runCount = 0;
 
+  // Availability is a per-pass property of an executor (e.g. the bridge's reachability
+  // is one HTTP /status GET, not consumed by running a job), so probe each distinct
+  // executor at most once per drain pass and reuse the result across its jobs — instead
+  // of one round-trip to the non-reentrant UE bridge per job. Lazily memoized so an
+  // executor is only probed when a tier-matched job actually reaches it (preserves the
+  // prior behaviour where an executor with no matching jobs is never probed).
+  const availability = new Map<GateExecutor, boolean>();
+  const isAvailable = async (e: GateExecutor): Promise<boolean> => {
+    const cached = availability.get(e);
+    if (cached !== undefined) return cached;
+    const ok = await e.available();
+    availability.set(e, ok);
+    return ok;
+  };
+
   for (const job of jobs) {
     if (opts?.limit != null && runCount >= opts.limit) {
       results.push({ job, skipped: 'limit reached' });
@@ -116,7 +131,7 @@ export async function drainJobs(
       results.push({ job, skipped: 'no test name or scenario for L3 gate' });
       continue;
     }
-    if (!(await executor.available())) {
+    if (!(await isAvailable(executor))) {
       results.push({ job, skipped: `${executor.id} unavailable` });
       continue;
     }
