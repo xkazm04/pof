@@ -69,7 +69,7 @@ function findCulpritFrame(report: CrashReport): CrashReport {
 /*  Pattern Detection                                                  */
 /* ------------------------------------------------------------------ */
 
-function detectPatterns(reports: CrashReport[]): CrashPattern[] {
+export function detectPatterns(reports: CrashReport[]): CrashPattern[] {
   // Group crashes by their signature (crash type + culprit function)
   const signatureMap = new Map<string, CrashReport[]>();
 
@@ -118,7 +118,7 @@ function detectPatterns(reports: CrashReport[]): CrashPattern[] {
 /*  Statistics                                                         */
 /* ------------------------------------------------------------------ */
 
-function computeStats(reports: CrashReport[], patterns: CrashPattern[]): CrashStats {
+export function computeStats(reports: CrashReport[], patterns: CrashPattern[]): CrashStats {
   const crashesByType = emptyCrashTypeCounts();
   const crashesBySeverity = emptyCrashSeverityCounts();
   const crashesByModule: Record<string, number> = {};
