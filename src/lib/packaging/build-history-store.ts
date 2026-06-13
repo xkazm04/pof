@@ -149,6 +149,27 @@ export function getBuildsByPlatform(platform: string, limit = 50): BuildRecord[]
   return rows.map(rowToRecord);
 }
 
+/**
+ * Size (bytes) of the most recent green build for a platform, or null when none
+ * has a measured size. Shared baseline for the size-budget growth check so the
+ * scheduled runner and the interactive cook path evaluate against the same
+ * "last green" reference. Mirrors scheduled-build-runner's lastGreenSize.
+ */
+export function lastGreenSizeBytes(platform: string): number | null {
+  const recent = getBuildsByPlatform(platform, 50);
+  const green = recent.find((b) => b.status === 'success' && b.sizeBytes && b.sizeBytes > 0);
+  return green?.sizeBytes ?? null;
+}
+
+/**
+ * Replace the notes on an existing build. Used by the interactive cook path to
+ * append a size-regression note after the build is recorded (the regression can
+ * only be evaluated once the size is known and the build row exists).
+ */
+export function updateBuildNotes(id: number, notes: string): void {
+  getDb().prepare('UPDATE build_history SET notes = ? WHERE id = ?').run(notes, id);
+}
+
 export function deleteBuild(id: number): boolean {
   const result = getDb().prepare('DELETE FROM build_history WHERE id = ?').run(id);
   return result.changes > 0;

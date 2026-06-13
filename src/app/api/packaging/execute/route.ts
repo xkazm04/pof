@@ -1,6 +1,7 @@
 import { cookExecutor, type CookEvent } from '@/lib/packaging/cook-executor';
 import { getProfile } from '@/lib/packaging/build-profiles-db';
-import { insertBuild } from '@/lib/packaging/build-history-store';
+import { insertBuild, lastGreenSizeBytes, updateBuildNotes } from '@/lib/packaging/build-history-store';
+import { evaluateBuildSize } from '@/lib/packaging/size-budgets';
 import { apiError } from '@/lib/api-utils';
 
 interface ExecuteRequest {
@@ -63,7 +64,16 @@ export async function POST(req: Request): Promise<Response> {
         if (lastEvent && (lastEvent.type === 'done' || lastEvent.type === 'error')) {
           try {
             if (lastEvent.type === 'done') {
-              insertBuild({
+              // Same size-budget / regression gate the scheduled runner applies,
+              // evaluated against the last green build for this platform. Capture
+              // the baseline BEFORE inserting this build (as the scheduled runner
+              // does) — otherwise the just-recorded green row becomes its own
+              // baseline and the gate would always self-compare to 0% growth.
+              // Skip the lookup when the cook produced no measurable size.
+              const lastGreen = lastEvent.sizeBytes && lastEvent.sizeBytes > 0
+                ? lastGreenSizeBytes(profile.platform)
+                : null;
+              const rec = insertBuild({
                 platform: profile.platform,
                 config: profile.config,
                 status: 'success',
@@ -72,6 +82,17 @@ export async function POST(req: Request): Promise<Response> {
                 outputPath: lastEvent.exePath,
                 cookTimeMs: lastEvent.durationMs,
               });
+              // A passing build records exactly as before; a regression gets the
+              // note recorded and surfaces a final SSE event for the UI.
+              const regression = lastEvent.sizeBytes && lastEvent.sizeBytes > 0
+                ? evaluateBuildSize(profile.platform, lastEvent.sizeBytes, lastGreen)
+                : null;
+              if (regression) {
+                updateBuildNotes(rec.id, regression.note);
+                controller.enqueue(
+                  encoder.encode(`data: ${JSON.stringify({ type: 'size-regression', note: regression.note })}\n\n`),
+                );
+              }
             } else {
               insertBuild({
                 platform: profile.platform,
