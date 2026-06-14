@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo, useCallback, useRef } from 'react';
+import { useState, useMemo, useCallback, useRef, memo } from 'react';
 import {
   Users, Play, RotateCcw, Info, ArrowRight,
   Shield, Crosshair, Target, Eye, Swords, AlertTriangle,
@@ -14,7 +14,7 @@ import {
   heatmapScale,
 } from '@/lib/chart-colors';
 import type {
-  SquadRole, DirectorConfig, DirectorResult, SquadConfigError,
+  SquadRole, SquadMember, DirectorConfig, DirectorResult, SquadConfigError,
 } from '@/types/squad-tactics';
 import {
   runSquadSimulation, PRESET_FORMATIONS, ROLE_DEFINITIONS,
@@ -78,7 +78,6 @@ const STEP_KIND_COLORS: Record<string, string> = {
 export function SquadChoreographyEditor() {
   const [config, setConfig] = useState<DirectorConfig>(DEFAULT_DIRECTOR_CONFIG);
   const [activeTab, setActiveTab] = useState('formation');
-  const [hoveredMember, setHoveredMember] = useState<string | null>(null);
   const svgRef = useRef<SVGSVGElement>(null);
 
   // Drag the cyan arrow to rotate the target's forward vector — shared pointer math.
@@ -306,8 +305,6 @@ export function SquadChoreographyEditor() {
             <FormationView
               config={config}
               result={result}
-              hoveredMember={hoveredMember}
-              setHoveredMember={setHoveredMember}
               isDragging={drag.isDragging}
               svgRef={svgRef}
               scale={scale}
@@ -362,14 +359,12 @@ export function SquadConfigErrorBanner({ error }: { error: SquadConfigError }) {
 /* ── Formation SVG View ───────────────────────────────────────────────────── */
 
 function FormationView({
-  config, result, hoveredMember, setHoveredMember,
+  config, result,
   isDragging, svgRef, scale, arrowEndX, arrowEndY,
   onPointerDown, onPointerUp, onPointerMove,
 }: {
   config: DirectorConfig;
   result: DirectorResult;
-  hoveredMember: string | null;
-  setHoveredMember: (id: string | null) => void;
   isDragging: boolean;
   svgRef: React.RefObject<SVGSVGElement | null>;
   scale: number;
@@ -379,6 +374,15 @@ function FormationView({
   onPointerUp: () => void;
   onPointerMove: (e: React.PointerEvent<SVGSVGElement>) => void;
 }) {
+  // Hover lives here (not in the parent editor) so highlighting a member only
+  // re-renders the two affected memoized leaves — the static SVG subtree (grid,
+  // compass, forward arrow, legend) and the unrelated members/rows are skipped.
+  const [hoveredMember, setHoveredMember] = useState<string | null>(null);
+  // Stable identity so the memoized leaves don't re-render just because the
+  // setter prop changed each render.
+  const handleEnter = useCallback((id: string) => setHoveredMember(id), []);
+  const handleLeave = useCallback(() => setHoveredMember(null), []);
+
   return (
     <div className="flex flex-col sm:flex-row gap-3">
       {/* SVG diagram */}
@@ -502,93 +506,16 @@ function FormationView({
           </text>
 
           {/* Squad members */}
-          {result.members.map(member => {
-            const sx = SVG_CENTER + member.position.x * scale;
-            const sy = SVG_CENTER + member.position.y * scale;
-            const color = ROLE_COLORS[member.role];
-            const isHovered = hoveredMember === member.id;
-            const baseR = 7;
-            const r = isHovered ? baseR + 3 : baseR;
-
-            return (
-              <g
-                key={member.id}
-                onPointerEnter={() => setHoveredMember(member.id)}
-                onPointerLeave={() => setHoveredMember(null)}
-                data-testid={`squad-member-${member.id}`}
-              >
-                {/* Connection line to center */}
-                <line
-                  x1={SVG_CENTER} y1={SVG_CENTER}
-                  x2={sx} y2={sy}
-                  stroke={color}
-                  strokeWidth={isHovered ? 1.5 : 0.8}
-                  opacity={isHovered ? 0.5 : 0.2}
-                  strokeDasharray="3 3"
-                />
-
-                {/* Flank angle indicator arc */}
-                {isHovered && (
-                  <circle
-                    cx={sx} cy={sy} r={14}
-                    fill="none" stroke={flankColor(member.flankAngle)}
-                    strokeWidth={2} opacity={0.6}
-                  />
-                )}
-
-                {/* Member dot */}
-                <circle
-                  cx={sx} cy={sy} r={r}
-                  fill={color}
-                  fillOpacity={0.9}
-                  stroke="var(--surface-deep)"
-                  strokeWidth={2}
-                  className="cursor-pointer transition-all"
-                />
-
-                {/* Role initial */}
-                <text
-                  x={sx} y={sy + 1}
-                  textAnchor="middle"
-                  dominantBaseline="central"
-                  className="text-[11px] font-mono font-bold fill-[var(--surface-deep)]"
-                  style={{ pointerEvents: 'none' }}
-                >
-                  {member.role[0].toUpperCase()}
-                </text>
-
-                {/* Label on hover */}
-                {isHovered && (
-                  <g>
-                    <rect
-                      x={sx + 12} y={sy - 20}
-                      width={90} height={36}
-                      rx={4}
-                      fill="var(--surface-deep)"
-                      stroke={color}
-                      strokeWidth={0.5}
-                      opacity={0.95}
-                    />
-                    <text x={sx + 16} y={sy - 8}
-                      className="text-[11px] font-mono font-bold" fill={color}
-                    >
-                      {member.label}
-                    </text>
-                    <text x={sx + 16} y={sy + 2}
-                      className="text-[11px] font-mono fill-[var(--text-muted)]"
-                    >
-                      Flank: {member.flankAngle.toFixed(0)}° | {member.distance.toFixed(0)} UU
-                    </text>
-                    <text x={sx + 16} y={sy + 12}
-                      className="text-[11px] font-mono fill-[var(--text-muted)]"
-                    >
-                      Score: {(member.score * 100).toFixed(0)}%
-                    </text>
-                  </g>
-                )}
-              </g>
-            );
-          })}
+          {result.members.map(member => (
+            <SquadMemberGlyph
+              key={member.id}
+              member={member}
+              scale={scale}
+              isHovered={hoveredMember === member.id}
+              onEnter={handleEnter}
+              onLeave={handleLeave}
+            />
+          ))}
 
           {/* Legend */}
           {(() => {
@@ -619,38 +546,15 @@ function FormationView({
         <SurfaceCard className="p-3 space-y-2">
           <h4 className="text-xs font-bold text-text">Squad Members</h4>
           <div className="space-y-1.5">
-            {result.members.map(member => {
-              const RoleIcon = ROLE_ICONS[member.role];
-              const color = ROLE_COLORS[member.role];
-              const isHovered = hoveredMember === member.id;
-
-              return (
-                <div
-                  key={member.id}
-                  className="flex items-center gap-2 px-2 py-1.5 rounded-md transition-colors"
-                  style={{
-                    backgroundColor: isHovered ? `${color}${OPACITY_10}` : 'transparent',
-                    border: `1px solid ${isHovered ? `${color}30` : 'transparent'}`,
-                  }}
-                  onPointerEnter={() => setHoveredMember(member.id)}
-                  onPointerLeave={() => setHoveredMember(null)}
-                  data-testid={`squad-member-row-${member.id}`}
-                >
-                  <RoleIcon className="w-3.5 h-3.5 shrink-0" style={{ color }} />
-                  <span className="text-xs font-bold text-text flex-1 min-w-0 truncate">{member.label}</span>
-                  <span className="text-2xs font-mono shrink-0" style={{ color: flankColor(member.flankAngle) }}>
-                    {member.flankAngle.toFixed(0)}°
-                  </span>
-                  <span className="text-2xs font-mono text-text-muted shrink-0">{member.distance.toFixed(0)} UU</span>
-                  <div className="w-10 h-2 bg-surface-deep/50 rounded-sm overflow-hidden shrink-0">
-                    <div
-                      className="h-full rounded-sm"
-                      style={{ backgroundColor: color, width: `${member.score * 100}%`, opacity: 0.8 }}
-                    />
-                  </div>
-                </div>
-              );
-            })}
+            {result.members.map(member => (
+              <SquadMemberRow
+                key={member.id}
+                member={member}
+                isHovered={hoveredMember === member.id}
+                onEnter={handleEnter}
+                onLeave={handleLeave}
+              />
+            ))}
           </div>
         </SurfaceCard>
 
@@ -705,6 +609,144 @@ function FormationView({
     </div>
   );
 }
+
+/* ── Memoized member leaves ───────────────────────────────────────────────────
+   Hover is a purely visual O(1) change. By memoizing each glyph/row and feeding
+   it an `isHovered` boolean, only the previously- and newly-hovered member
+   re-render on a hover change; every other member, the static SVG subtree and
+   the side panels are skipped. Identical markup to the former inline maps. */
+
+const SquadMemberGlyph = memo(function SquadMemberGlyph({
+  member, scale, isHovered, onEnter, onLeave,
+}: {
+  member: SquadMember;
+  scale: number;
+  isHovered: boolean;
+  onEnter: (id: string) => void;
+  onLeave: () => void;
+}) {
+  const sx = SVG_CENTER + member.position.x * scale;
+  const sy = SVG_CENTER + member.position.y * scale;
+  const color = ROLE_COLORS[member.role];
+  const baseR = 7;
+  const r = isHovered ? baseR + 3 : baseR;
+
+  return (
+    <g
+      onPointerEnter={() => onEnter(member.id)}
+      onPointerLeave={onLeave}
+      data-testid={`squad-member-${member.id}`}
+    >
+      {/* Connection line to center */}
+      <line
+        x1={SVG_CENTER} y1={SVG_CENTER}
+        x2={sx} y2={sy}
+        stroke={color}
+        strokeWidth={isHovered ? 1.5 : 0.8}
+        opacity={isHovered ? 0.5 : 0.2}
+        strokeDasharray="3 3"
+      />
+
+      {/* Flank angle indicator arc */}
+      {isHovered && (
+        <circle
+          cx={sx} cy={sy} r={14}
+          fill="none" stroke={flankColor(member.flankAngle)}
+          strokeWidth={2} opacity={0.6}
+        />
+      )}
+
+      {/* Member dot */}
+      <circle
+        cx={sx} cy={sy} r={r}
+        fill={color}
+        fillOpacity={0.9}
+        stroke="var(--surface-deep)"
+        strokeWidth={2}
+        className="cursor-pointer transition-all"
+      />
+
+      {/* Role initial */}
+      <text
+        x={sx} y={sy + 1}
+        textAnchor="middle"
+        dominantBaseline="central"
+        className="text-[11px] font-mono font-bold fill-[var(--surface-deep)]"
+        style={{ pointerEvents: 'none' }}
+      >
+        {member.role[0].toUpperCase()}
+      </text>
+
+      {/* Label on hover */}
+      {isHovered && (
+        <g>
+          <rect
+            x={sx + 12} y={sy - 20}
+            width={90} height={36}
+            rx={4}
+            fill="var(--surface-deep)"
+            stroke={color}
+            strokeWidth={0.5}
+            opacity={0.95}
+          />
+          <text x={sx + 16} y={sy - 8}
+            className="text-[11px] font-mono font-bold" fill={color}
+          >
+            {member.label}
+          </text>
+          <text x={sx + 16} y={sy + 2}
+            className="text-[11px] font-mono fill-[var(--text-muted)]"
+          >
+            Flank: {member.flankAngle.toFixed(0)}° | {member.distance.toFixed(0)} UU
+          </text>
+          <text x={sx + 16} y={sy + 12}
+            className="text-[11px] font-mono fill-[var(--text-muted)]"
+          >
+            Score: {(member.score * 100).toFixed(0)}%
+          </text>
+        </g>
+      )}
+    </g>
+  );
+});
+
+const SquadMemberRow = memo(function SquadMemberRow({
+  member, isHovered, onEnter, onLeave,
+}: {
+  member: SquadMember;
+  isHovered: boolean;
+  onEnter: (id: string) => void;
+  onLeave: () => void;
+}) {
+  const RoleIcon = ROLE_ICONS[member.role];
+  const color = ROLE_COLORS[member.role];
+
+  return (
+    <div
+      className="flex items-center gap-2 px-2 py-1.5 rounded-md transition-colors"
+      style={{
+        backgroundColor: isHovered ? `${color}${OPACITY_10}` : 'transparent',
+        border: `1px solid ${isHovered ? `${color}30` : 'transparent'}`,
+      }}
+      onPointerEnter={() => onEnter(member.id)}
+      onPointerLeave={onLeave}
+      data-testid={`squad-member-row-${member.id}`}
+    >
+      <RoleIcon className="w-3.5 h-3.5 shrink-0" style={{ color }} />
+      <span className="text-xs font-bold text-text flex-1 min-w-0 truncate">{member.label}</span>
+      <span className="text-2xs font-mono shrink-0" style={{ color: flankColor(member.flankAngle) }}>
+        {member.flankAngle.toFixed(0)}°
+      </span>
+      <span className="text-2xs font-mono text-text-muted shrink-0">{member.distance.toFixed(0)} UU</span>
+      <div className="w-10 h-2 bg-surface-deep/50 rounded-sm overflow-hidden shrink-0">
+        <div
+          className="h-full rounded-sm"
+          style={{ backgroundColor: color, width: `${member.score * 100}%`, opacity: 0.8 }}
+        />
+      </div>
+    </div>
+  );
+});
 
 /* ── EQS Pipeline View ────────────────────────────────────────────────────── */
 
