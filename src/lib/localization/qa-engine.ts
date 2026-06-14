@@ -249,19 +249,37 @@ export function validateTranslations(
   const locales = new Set<string>(targetLocales ?? []);
   for (const e of entries) locales.add(e.locale);
 
+  // Bucket per-locale tallies in a single pass each over entries/findings, so
+  // the roll-up below is O(entries + findings) instead of O(locales × …).
+  const entryCountByLocale = new Map<string, number>();
+  for (const e of entries) {
+    entryCountByLocale.set(e.locale, (entryCountByLocale.get(e.locale) ?? 0) + 1);
+  }
+  type LocaleTally = { findingCount: number; criticalCount: number; blockingCount: number };
+  const tallyByLocale = new Map<string, LocaleTally>();
+  for (const f of findings) {
+    let tally = tallyByLocale.get(f.locale);
+    if (!tally) {
+      tally = { findingCount: 0, criticalCount: 0, blockingCount: 0 };
+      tallyByLocale.set(f.locale, tally);
+    }
+    tally.findingCount += 1;
+    if (f.severity === 'critical') tally.criticalCount += 1;
+    if (qaBlocksShip(f.severity)) tally.blockingCount += 1;
+  }
+
   const byLocale: Record<string, LocaleQAStatus> = {};
   for (const locale of locales) {
-    const localeEntries = entries.filter((e) => e.locale === locale);
-    const localeFindings = findings.filter((f) => f.locale === locale);
-    const criticalCount = localeFindings.filter((f) => f.severity === 'critical').length;
-    const blockingCount = localeFindings.filter((f) => qaBlocksShip(f.severity)).length;
+    const totalEntries = entryCountByLocale.get(locale) ?? 0;
+    const tally = tallyByLocale.get(locale);
+    const blockingCount = tally?.blockingCount ?? 0;
     byLocale[locale] = {
       locale,
-      totalEntries: localeEntries.length,
-      findingCount: localeFindings.length,
-      criticalCount,
+      totalEntries,
+      findingCount: tally?.findingCount ?? 0,
+      criticalCount: tally?.criticalCount ?? 0,
       blockingCount,
-      readyToShip: localeEntries.length > 0 && blockingCount === 0,
+      readyToShip: totalEntries > 0 && blockingCount === 0,
     };
   }
 
