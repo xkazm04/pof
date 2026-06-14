@@ -284,6 +284,20 @@ export function scanForLocalizableStrings(moduleFilter?: string[]): ScanResult {
 }
 
 /* ------------------------------------------------------------------ */
+/*  Translatable predicate (single source of truth)                    */
+/* ------------------------------------------------------------------ */
+
+/**
+ * A string is "translatable" when it is not already wrapped in a LOCTEXT /
+ * NSLOCTEXT macro. This predicate is the single source of truth for the filter
+ * that was previously copy-pasted across the route, translation engine and the
+ * replacement generator — share it so the definition can never drift.
+ */
+export function isTranslatable(s: LocalizableString): boolean {
+  return s.currentUsage !== 'nsloctext' && s.currentUsage !== 'loctext';
+}
+
+/* ------------------------------------------------------------------ */
 /*  LOCTEXT Replacement Generator                                      */
 /* ------------------------------------------------------------------ */
 
@@ -292,7 +306,7 @@ export function generateLOCTEXTReplacements(
   rootNamespace: string,
 ): LOCTEXTReplacementSuggestion[] {
   return strings
-    .filter((s) => s.currentUsage !== 'nsloctext' && s.currentUsage !== 'loctext')
+    .filter(isTranslatable)
     .map((s) => {
       const loc = s.locations[0];
       const original = loc?.codeSnippet ?? '';
