@@ -341,19 +341,79 @@ export function lookupJargon(term: string): JargonEntry | undefined {
   return ALL_JARGON[term];
 }
 
+// Precompute ONCE at module load so findJargonInText runs a single regex sweep
+// instead of ~60 separate `String.includes` calls per invocation.
+const JARGON_KEYS: readonly string[] = Object.keys(ALL_JARGON);
+
+function escapeRegExp(s: string): string {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+// A non-overlapping regex sweep can MISS a key whose occurrence in the text
+// overlaps a span the engine already consumed for another key — either because
+// the key is a substring of a longer key (e.g. "Replicated" ⊂ "ReplicatedUsing"
+// "move" ⊂ "remove"), or because it straddles the boundary between two adjacent
+// matches (e.g. "remove" hiding in "...EditAnywhere|move..."). The old
+// `text.includes(key)` test caught all of these. So split the keys: every key
+// that is a substring of any single key OR of any two-key concatenation across
+// the join is "ambiguous" and resolved with a direct `includes` (a tiny set);
+// the rest are resolved by the fast regex. The union is bit-for-bit identical
+// to the original per-key includes loop.
+const AMBIGUOUS_KEYS: readonly string[] = JARGON_KEYS.filter((k) =>
+  JARGON_KEYS.some((a) => {
+    if (a !== k && a.includes(k)) return true; // substring of another key
+    return JARGON_KEYS.some((b) => {
+      // substring of concat that crosses the a|b boundary
+      const concat = a + b;
+      let idx = concat.indexOf(k);
+      while (idx !== -1) {
+        if (idx < a.length && idx + k.length > a.length) return true;
+        idx = concat.indexOf(k, idx + 1);
+      }
+      return false;
+    });
+  }),
+);
+
+// The remaining keys are unambiguous: any occurrence is always matched standalone
+// by the regex, so the sweep reports them with full `includes` fidelity.
+const REGEX_KEYS: readonly string[] = JARGON_KEYS.filter(
+  (k) => !AMBIGUOUS_KEYS.includes(k),
+);
+
+// Sorted longest-first so the engine prefers the longest valid key at each
+// position; escaped so regex-special keys (e.g. `.generated.h`) match literally.
+const JARGON_REGEX: RegExp = new RegExp(
+  [...REGEX_KEYS]
+    .sort((a, b) => b.length - a.length)
+    .map(escapeRegExp)
+    .join('|'),
+  'g',
+);
+
 /**
  * Return all jargon terms found inside a text blob. Used to power inline
  * tooltips: scan a generated header line for known specifiers and wrap each
  * occurrence with a tooltip.
  */
 export function findJargonInText(text: string): JargonEntry[] {
+  // One regex sweep collects the unambiguous keys present in the text.
+  const present = new Set<string>();
+  JARGON_REGEX.lastIndex = 0;
+  let m: RegExpExecArray | null;
+  while ((m = JARGON_REGEX.exec(text)) !== null) {
+    present.add(m[0]);
+    if (m.index === JARGON_REGEX.lastIndex) JARGON_REGEX.lastIndex++; // zero-len guard
+  }
+  // Direct includes for the handful of ambiguous keys the sweep can hide.
+  for (const k of AMBIGUOUS_KEYS) {
+    if (text.includes(k)) present.add(k);
+  }
+  // Iterate keys in their original insertion order so the returned entries keep
+  // the exact same order as the previous Object.keys(ALL_JARGON) loop produced.
   const hits: JargonEntry[] = [];
-  const seen = new Set<string>();
-  for (const term of Object.keys(ALL_JARGON)) {
-    if (text.includes(term) && !seen.has(term)) {
-      hits.push(ALL_JARGON[term]);
-      seen.add(term);
-    }
+  for (const term of JARGON_KEYS) {
+    if (present.has(term)) hits.push(ALL_JARGON[term]);
   }
   return hits;
 }
