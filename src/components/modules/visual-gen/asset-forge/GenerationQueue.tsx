@@ -12,17 +12,10 @@ const STATUS_CONFIG: Record<JobStatus, { icon: typeof Clock; color: string; labe
   failed: { icon: AlertCircle, color: 'text-red-400', label: 'Failed' },
 };
 
-function JobCard({ job }: { job: GenerationJob }) {
+function JobCard({ job, now }: { job: GenerationJob; now: number }) {
   const removeJob = useForgeStore((s) => s.removeJob);
   const config = STATUS_CONFIG[job.status];
   const StatusIcon = config.icon;
-  const [now, setNow] = useState(() => Date.now());
-
-  useEffect(() => {
-    if (job.completedAt) return;
-    const id = setInterval(() => setNow(Date.now()), 1000);
-    return () => clearInterval(id);
-  }, [job.completedAt]);
 
   const elapsed = job.completedAt
     ? Math.round((job.completedAt - job.createdAt) / 1000)
@@ -94,6 +87,18 @@ export function GenerationQueue() {
   const jobs = useForgeStore((s) => s.jobs);
   const clearCompleted = useForgeStore((s) => s.clearCompleted);
 
+  // Single shared 1s ticker for all cards' elapsed-time labels.
+  // Only runs while at least one job is still in flight (no completedAt),
+  // matching the previous per-card behaviour where the timer stopped on completion.
+  const hasActive = jobs.some((j) => !j.completedAt);
+  const [now, setNow] = useState(() => Date.now());
+
+  useEffect(() => {
+    if (!hasActive) return;
+    const id = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(id);
+  }, [hasActive]);
+
   if (jobs.length === 0) {
     return (
       <div className="text-center py-8">
@@ -121,7 +126,7 @@ export function GenerationQueue() {
       </div>
       <div className="space-y-2">
         {jobs.map((job) => (
-          <JobCard key={job.id} job={job} />
+          <JobCard key={job.id} job={job} now={now} />
         ))}
       </div>
     </div>
