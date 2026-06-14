@@ -2,7 +2,15 @@ import { getDb } from '@/lib/db';
 import type { EnrichedAbilitySpec } from '@/lib/ability/spec';
 import type { EditorEffect, TagRule } from '@/lib/gas-codegen';
 
+// DDL is idempotent (IF NOT EXISTS) but parsing/planning it on every read is
+// pure overhead. Bootstrap runs at most once per process; subsequent calls are
+// a cheap boolean check. Every read/write still calls ensureTable() so first-call
+// correctness is preserved.
+let abilitySpecBootstrapped = false;
+
 function ensureTable() {
+  if (abilitySpecBootstrapped) return;
+
   getDb().exec(`
     CREATE TABLE IF NOT EXISTS ability_specs (
       catalog_id TEXT NOT NULL,
@@ -13,6 +21,8 @@ function ensureTable() {
       PRIMARY KEY (catalog_id, entity_id)
     )
   `);
+
+  abilitySpecBootstrapped = true;
 }
 
 /** Column row → EnrichedAbilitySpec. Pure (exported for unit test). */
