@@ -4,7 +4,15 @@ import type { ErrorMemoryRecord, ErrorContextEntry } from '@/types/error-memory'
 
 // ── Schema bootstrap ──────────────────────────────────────────────────────
 
+// DDL is idempotent (IF NOT EXISTS) but parsing/planning it on every read is
+// pure overhead. Bootstrap runs at most once per process; subsequent calls are
+// a cheap boolean check. Every read/write still calls ensure…() so first-call
+// correctness is preserved.
+let errorMemoryBootstrapped = false;
+
 export function ensureErrorMemoryTable() {
+  if (errorMemoryBootstrapped) return;
+
   const db = getDb();
 
   db.exec(`
@@ -35,6 +43,8 @@ export function ensureErrorMemoryTable() {
     CREATE INDEX IF NOT EXISTS idx_error_memory_fingerprint
     ON error_memory(fingerprint)
   `);
+
+  errorMemoryBootstrapped = true;
 }
 
 // ── Row type ─────────────────────────────────────────────────────────────

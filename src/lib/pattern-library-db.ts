@@ -19,7 +19,15 @@ import type {
 
 // ── Schema bootstrap ─────────────────────────────────────────────────────────
 
+// DDL (CREATE TABLE / ALTER probes / CREATE INDEX) is idempotent but expensive to
+// parse + plan (and the PRAGMA table_info read + Set rebuild) on every read. Bootstrap
+// runs at most once per process; subsequent calls are a cheap boolean check. Every
+// read/write still calls ensure…() so first-call correctness is preserved.
+let patternLibraryBootstrapped = false;
+
 export function ensurePatternLibraryTable() {
+  if (patternLibraryBootstrapped) return;
+
   const db = getDb();
 
   db.exec(`
@@ -79,6 +87,8 @@ export function ensurePatternLibraryTable() {
     CREATE INDEX IF NOT EXISTS idx_pattern_library_curation
     ON pattern_library(pinned DESC, verified DESC, success_rate DESC)
   `);
+
+  patternLibraryBootstrapped = true;
 }
 
 // ── Row mapping ──────────────────────────────────────────────────────────────
@@ -508,7 +518,11 @@ export function suggestPatterns(
 // Anti-Pattern Storage & Detection
 // ══════════════════════════════════════════════════════════════════════════════
 
+let antiPatternBootstrapped = false;
+
 export function ensureAntiPatternTable() {
+  if (antiPatternBootstrapped) return;
+
   const db = getDb();
 
   db.exec(`
@@ -537,6 +551,8 @@ export function ensureAntiPatternTable() {
     CREATE INDEX IF NOT EXISTS idx_anti_patterns_module
     ON anti_patterns(module_id)
   `);
+
+  antiPatternBootstrapped = true;
 }
 
 // ── Row mapping ──
