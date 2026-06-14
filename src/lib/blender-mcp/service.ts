@@ -19,6 +19,31 @@ import type {
 import { DEFAULT_BLENDER_HOST, DEFAULT_BLENDER_PORT } from './types';
 
 /**
+ * Hard ceiling on a single response's accumulated bytes. The wire protocol has
+ * no length prefix, so a wedged/garbage addon response that never closes its
+ * top-level JSON value would otherwise grow `buffer` without bound for the full
+ * command timeout while stalling the serialized command chain. A legitimate
+ * screenshot/asset payload is comfortably under a few MB (max_size 800 PNG is
+ * tens–hundreds of KB), so 8MB fast-fails only true garbage while leaving every
+ * normal large response untouched.
+ */
+const MAX_RESPONSE_BYTES = 8 * 1024 * 1024;
+
+/**
+ * Per-command-class receive timeouts. Cheap status/scene polls should fail fast
+ * (a wedged poll behind which everything else is serialized must not hog the
+ * chain for 30s), while downloads/imports/generation legitimately take longer.
+ * The command type is available at the send site, so we classify off it and
+ * fall back to the blanket `blenderTcpTimeout` for anything unlisted.
+ */
+const SHORT_COMMAND_TIMEOUT = 8_000;
+const FAST_COMMANDS = new Set<string>([
+  'get_scene_info',
+  'get_object_info',
+  'get_viewport_screenshot',
+]);
+
+/**
  * Per-provider Blender addon command names. Keeping the create/poll/import
  * verbs for each generation provider in one map makes the branching explicit
  * and means a new provider only touches this table.
@@ -196,6 +221,12 @@ class BlenderMCPService {
         resolve(result);
       };
 
+      // Cheap polls fail fast; downloads/imports/generation keep the blanket
+      // timeout. Either way the buffer cap below provides the hard fast-fail
+      // for a flood that never parses.
+      const timeoutMs = FAST_COMMANDS.has(command.type)
+        ? SHORT_COMMAND_TIMEOUT
+        : UI_TIMEOUTS.blenderTcpTimeout;
       const timer = setTimeout(() => {
         // The single-threaded addon may still flush a LATE response for this
         // command; the protocol has no request id, so those bytes would parse
@@ -205,7 +236,7 @@ class BlenderMCPService {
         // silently consuming wrong data.
         settle(err('Command timed out — connection reset to avoid response desync; reconnect to continue'));
         this.disconnect();
-      }, UI_TIMEOUTS.blenderTcpTimeout);
+      }, timeoutMs);
 
       // A wedged in-flight command must not hold the queue for the full
       // timeout when the socket dies — fail it the moment the socket does.
@@ -214,6 +245,24 @@ class BlenderMCPService {
 
       const onData = (chunk: Buffer) => {
         buffer += chunk.toString('utf-8');
+
+        // Bounded receive buffer. A wedged/garbage response (never closes its
+        // top-level value, so the brace-depth gate below never trips) would
+        // otherwise grow `buffer` unbounded for the whole timeout while the
+        // serialized command chain stalls behind it. Bail the moment we cross
+        // the ceiling: settle + poison the connection so the runaway bytes die
+        // with the socket instead of desyncing the next command. The cap is far
+        // above any legitimate screenshot/asset payload, so valid large
+        // responses are unaffected.
+        if (buffer.length > MAX_RESPONSE_BYTES) {
+          settle(
+            err(
+              `Response exceeded ${MAX_RESPONSE_BYTES} bytes without a complete value — connection reset to avoid a wedged buffer; reconnect to continue`,
+            ),
+          );
+          this.disconnect();
+          return;
+        }
 
         // Advance the structural scan over only the bytes we haven't seen yet.
         let ready = false;
