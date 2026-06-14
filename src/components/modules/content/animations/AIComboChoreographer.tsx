@@ -621,7 +621,9 @@ function ComboParseFeedback({ parse }: { parse: ComboParse }) {
 
 export function AIComboChoreographer() {
   const [prompt, setPrompt] = useState('');
-  const [isGenerating, setIsGenerating] = useState(false);
+  // Generation is synchronous & instant, so there is no "generating" state to toggle —
+  // kept as a const so the button's enabled/label logic reads a stable false.
+  const isGenerating = false;
   const [generatedCombo, setGeneratedCombo] = useState<GeneratedCombo | null>(null);
   const [codePreview, setCodePreview] = useState<{ code: string; title: string } | null>(null);
   const [copied, setCopied] = useState(false);
@@ -629,26 +631,22 @@ export function AIComboChoreographer() {
   const [blenderResult, setBlenderResult] = useState<{ message: string; isError: boolean } | null>(null);
   const blenderConnected = useBlenderMCPStore((s) => s.connection.connected);
 
+  // generateCombo is pure & synchronous (local keyword parse + seeded RNG, no
+  // network), so produce the result immediately — no artificial delay.
+  const runGenerate = useCallback((text: string) => {
+    const trimmed = text.trim();
+    if (!trimmed) return;
+    setGeneratedCombo(generateCombo(trimmed));
+  }, []);
+
   const handleGenerate = useCallback(() => {
-    if (!prompt.trim()) return;
-    setIsGenerating(true);
-    // Simulate AI processing delay
-    setTimeout(() => {
-      const combo = generateCombo(prompt.trim());
-      setGeneratedCombo(combo);
-      setIsGenerating(false);
-    }, 600);
-  }, [prompt]);
+    runGenerate(prompt);
+  }, [prompt, runGenerate]);
 
   const handlePreset = useCallback((presetPrompt: string) => {
     setPrompt(presetPrompt);
-    setIsGenerating(true);
-    setTimeout(() => {
-      const combo = generateCombo(presetPrompt);
-      setGeneratedCombo(combo);
-      setIsGenerating(false);
-    }, 600);
-  }, []);
+    runGenerate(presetPrompt);
+  }, [runGenerate]);
 
   const handleCopy = useCallback((text: string) => {
     navigator.clipboard.writeText(text);

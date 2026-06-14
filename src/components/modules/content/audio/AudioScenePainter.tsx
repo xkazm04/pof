@@ -340,11 +340,19 @@ export function AudioScenePainter({
   // ── Minimap projection + drag-to-navigate ──
   // World bounds = scene content ∪ the current viewport, so both the painted zones
   // and the "you are here" rectangle always stay on the minimap.
+  //
+  // The O(zones+emitters) content-bounds scan only depends on the scene content, so
+  // it is memoized separately on `[zones, emitters]` — panning (which mutates
+  // `view.panX/panY` every mousemove) never re-runs it. The remaining per-frame work
+  // (the viewport rect, its union with the content bounds, and the projection) is all
+  // O(1) and *must* track `view` so the "you are here" box and the world union stay
+  // correct; the rendered minimap is byte-identical to the previous single memo.
+  const sceneBounds = useMemo(() => contentBounds(zones, emitters), [zones, emitters]);
   const minimap = useMemo(() => {
     const vpRect = viewportRectInContent(view, size.width, size.height);
-    const world = unionBounds(contentBounds(zones, emitters), vpRect) ?? vpRect;
+    const world = unionBounds(sceneBounds, vpRect) ?? vpRect;
     return { proj: minimapProjection(world, MINIMAP_W, MINIMAP_H), vpRect };
-  }, [zones, emitters, view, size.width, size.height]);
+  }, [sceneBounds, view, size.width, size.height]);
 
   const navigateMinimap = useCallback((pt: { clientX: number; clientY: number }) => {
     if (!minimapRef.current) return;
