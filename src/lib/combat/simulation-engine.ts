@@ -30,6 +30,7 @@ import {
 } from './definitions';
 import { createRNG } from '@/lib/seeded-rng';
 import { calculateDamage } from './damage';
+import { buildHistogram, type CountBucket } from './histogram';
 
 // ── Seeded RNG ──────────────────────────────────────────────────────────────
 // Re-exported from the shared helper so existing combat sims (e.g. choreography-sim)
@@ -207,7 +208,7 @@ function simulateFight(
           const targets = ability.aoeRadius > 0 ? aliveEnemies : [aliveEnemies[0]];
           for (const target of targets) {
             const { damage, isCrit } = calculateDamage(
-              ability, getEffectiveAttrs(player), target.attrs, tuning, rng, true,
+              ability, player.attrs, target.attrs, tuning, rng, true,
             );
             target.attrs.health -= damage;
             totalDamageDealt += damage;
@@ -251,7 +252,7 @@ function simulateFight(
 
       if (ability && time >= player.invulnerableUntil) {
         const { damage } = calculateDamage(
-          ability, getEffectiveAttrs(enemy), player.attrs, tuning, rng, false,
+          ability, enemy.attrs, player.attrs, tuning, rng, false,
         );
         player.attrs.health -= damage;
         totalDamageTaken += damage;
@@ -383,10 +384,6 @@ function updateBuffs(entity: CombatEntity, time: number) {
     }
     return true;
   });
-}
-
-function getEffectiveAttrs(entity: CombatEntity): AttributeSet {
-  return entity.attrs; // Buffs already applied in-place
 }
 
 // ── Monte Carlo Runner ──────────────────────────────────────────────────────
@@ -722,30 +719,20 @@ function pct(v: number): string {
   return `${Math.round(v * 100)}%`;
 }
 
+// Thin adapter over the canonical equal-width binner in ./histogram: same
+// sort→range→fixed-width→tally algorithm, renamed to this module's bucket shape
+// ({min,max,count}) with the boundaries rounded to 2dp for the summary payload.
 function buildBuckets(
   values: number[],
   count: number,
   presorted = false,
-): { min: number; max: number; count: number }[] {
-  if (values.length === 0) return [];
-  const sorted = presorted ? values : [...values].sort((a, b) => a - b);
-  const min = sorted[0];
-  const max = sorted[sorted.length - 1];
-  const range = max - min || 1;
-  const bucketSize = range / count;
-
-  const buckets = Array.from({ length: count }, (_, i) => ({
-    min: round2(min + i * bucketSize),
-    max: round2(min + (i + 1) * bucketSize),
-    count: 0,
+): CountBucket[] {
+  const { bins } = buildHistogram(values, count, presorted);
+  return bins.map((bin) => ({
+    min: round2(bin.low),
+    max: round2(bin.high),
+    count: bin.count,
   }));
-
-  for (const v of sorted) {
-    const idx = Math.min(Math.floor((v - min) / bucketSize), count - 1);
-    buckets[idx].count++;
-  }
-
-  return buckets;
 }
 
 // ── Balance Alert Detection ─────────────────────────────────────────────────
