@@ -234,6 +234,49 @@ export function deleteScenario(id: number): boolean {
   return result.changes > 0;
 }
 
+/**
+ * Bulk-transition a set of scenarios to a single status in one transaction.
+ * Used for the "mark all running" (Run Tests) and "reset running → error"
+ * (CLI-died) paths so one logical state change is one DB write + one refetch,
+ * instead of N sequential PUTs each triggering a full-suite re-read.
+ *
+ * Returns the ids that were actually updated.
+ */
+export function bulkUpdateScenarioStatus(
+  ids: number[],
+  status: ScenarioStatus,
+  fields: { lastRunOutput?: string; lastRunAt?: string | null } = {},
+): number[] {
+  ensureAITestingTables();
+  const db = getDb();
+  const valid = ids.filter((id) => Number.isInteger(id));
+  if (valid.length === 0) return [];
+
+  const setClauses = ["status = ?", "updated_at = datetime('now')"];
+  const baseValues: unknown[] = [status];
+  if (fields.lastRunOutput !== undefined) {
+    setClauses.push('last_run_output = ?');
+    baseValues.push(fields.lastRunOutput);
+  }
+  if (fields.lastRunAt !== undefined) {
+    setClauses.push('last_run_at = ?');
+    baseValues.push(fields.lastRunAt);
+  }
+
+  const stmt = db.prepare(
+    `UPDATE ai_test_scenarios SET ${setClauses.join(', ')} WHERE id = ?`,
+  );
+  const updated: number[] = [];
+  const run = db.transaction((rows: number[]) => {
+    for (const id of rows) {
+      const result = stmt.run(...baseValues, id);
+      if (result.changes > 0) updated.push(id);
+    }
+  });
+  run(valid);
+  return updated;
+}
+
 // ── Summary ──
 
 export function getTestingSummary(): TestSuiteSummary {

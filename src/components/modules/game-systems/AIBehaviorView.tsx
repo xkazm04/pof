@@ -40,6 +40,7 @@ export function AIBehaviorView() {
     deleteSuite,
     createScenario,
     updateScenario,
+    bulkUpdateScenarioStatus,
     deleteScenario,
   } = useAITesting();
 
@@ -75,20 +76,19 @@ export function AIBehaviorView() {
     label: 'AI Test Run',
     accentColor: STATUS_SUCCESS,
     onComplete: (success) => {
-      if (!success) {
-        const now = new Date().toISOString();
-        for (const id of runningIdsRef.current) {
-          updateScenario({
-            id,
-            status: 'error',
-            lastRunOutput: 'CLI run failed before reporting results',
-            lastRunAt: now,
-          });
-        }
-      }
+      const ids = runningIdsRef.current;
       runningIdsRef.current = [];
-      // Pick up the statuses the @@CALLBACK wrote during the run.
-      retry();
+      if (!success && ids.length > 0) {
+        // One PUT for the whole reset; bulkUpdateScenarioStatus already
+        // refetches once afterwards, so no separate retry() needed here.
+        bulkUpdateScenarioStatus(ids, 'error', {
+          lastRunOutput: 'CLI run failed before reporting results',
+          lastRunAt: new Date().toISOString(),
+        });
+      } else {
+        // Pick up the statuses the @@CALLBACK wrote during the run.
+        retry();
+      }
     },
   });
 
@@ -161,13 +161,14 @@ export function AIBehaviorView() {
     if (!activeSuite) return;
     // The existing 'running' status pill becomes real: mark every scenario
     // running now; the @@CALLBACK writes the final per-scenario results.
+    // One bulk PUT + one refetch for the whole transition (was N PUTs + N refetches).
     const ids = activeSuite.scenarios.map((s) => s.id);
     runningIdsRef.current = ids;
-    for (const id of ids) updateScenario({ id, status: 'running' });
+    bulkUpdateScenarioStatus(ids, 'running');
     testRunCli.execute(
       TaskFactory.runAITests('ai-behavior', activeSuite, window.location.origin, 'AI Test Run')
     );
-  }, [activeSuite, testRunCli, updateScenario]);
+  }, [activeSuite, testRunCli, bulkUpdateScenarioStatus]);
 
   const isAnyRunning = testGenCli.isRunning || testRunCli.isRunning;
 

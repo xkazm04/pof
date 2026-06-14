@@ -9,8 +9,14 @@ import {
   createScenario,
   updateScenario,
   deleteScenario,
+  bulkUpdateScenarioStatus,
   getTestingSummary,
 } from '@/lib/ai-testing-db';
+import type { ScenarioStatus } from '@/types/ai-testing';
+
+const SCENARIO_STATUSES: ReadonlySet<ScenarioStatus> = new Set([
+  'draft', 'ready', 'running', 'passed', 'failed', 'error',
+]);
 
 // GET /api/ai-testing
 // ?suiteId=<number> → single suite
@@ -132,6 +138,20 @@ export async function PUT(req: NextRequest) {
       const scenario = updateScenario(body);
       if (!scenario) return apiError('Not found', 404);
       return apiSuccess({ scenario });
+    }
+
+    // Bulk single-status transition for many scenarios in one transaction —
+    // used by Run Tests ("mark all running") and the CLI-died failure reset
+    // so one logical state change is one PUT + one refetch instead of N.
+    if (action === 'bulk-status') {
+      if (!Array.isArray(body.ids)) return apiError('ids array is required', 400);
+      if (!SCENARIO_STATUSES.has(body.status)) return apiError('valid status is required', 400);
+      const ids = body.ids.map((x: unknown) => Number(x));
+      const updated = bulkUpdateScenarioStatus(ids, body.status, {
+        ...(typeof body.lastRunOutput === 'string' ? { lastRunOutput: body.lastRunOutput } : {}),
+        ...(body.lastRunAt !== undefined ? { lastRunAt: body.lastRunAt } : {}),
+      });
+      return apiSuccess({ updated });
     }
 
     return apiError('Unknown action', 400);
