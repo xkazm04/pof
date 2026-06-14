@@ -148,6 +148,11 @@ export function startExecution(
 ): string {
   const executionId = `exec-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 
+  // Prune finished/old executions before adding a new one so the module-global
+  // `activeExecutions` map stays bounded over a long-running dev server. Only
+  // non-running entries past maxAgeMs are removed; active runs survive.
+  cleanupExecutions();
+
   // Ensure project directory exists (for fresh projects the dir may not exist yet)
   if (!fs.existsSync(projectPath)) {
     fs.mkdirSync(projectPath, { recursive: true });
@@ -262,7 +267,16 @@ export function startExecution(
     childProcess.stdout.on('data', (data: Buffer) => {
       const text = data.toString();
       logMessage(`[STDOUT] ${text.trim()}`);
-      emitEvent({ type: 'stdout', data: { raw: text }, timestamp: Date.now() });
+      // Deliver raw stdout to live listeners only — do NOT retain it in
+      // execution.events. The only consumers (stream/query routes, awaitCallback,
+      // getExecutionStatus) all skip/ignore 'stdout' events, so pushing the full
+      // raw chunk into events just duplicated the entire stdout stream in memory
+      // for the life of the process.
+      const stdoutEvent: CLIExecutionEvent = { type: 'stdout', data: { raw: text }, timestamp: Date.now() };
+      if (onEvent) onEvent(stdoutEvent);
+      for (const listener of execution.listeners) {
+        try { listener(stdoutEvent); } catch { /* ignore listener errors */ }
+      }
       lineBuffer += text;
       const lines = lineBuffer.split('\n');
       lineBuffer = lines.pop() || '';
