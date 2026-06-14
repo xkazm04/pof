@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { parseBlueprintJson, blueprintTypeToCpp } from '@/lib/blueprint-parser';
+import { parseBlueprintJson, blueprintTypeToCpp, buildEndpointIndex } from '@/lib/blueprint-parser';
 
 /** A Blueprint export mixing nodes with and without NodeGuid, across two graphs. */
 const BP_MIXED_GUIDS = {
@@ -74,6 +74,52 @@ describe('blueprint-parser', () => {
       const fromString = parseBlueprintJson(JSON.stringify(BP_MIXED_GUIDS));
       const fromObject = parseBlueprintJson(BP_MIXED_GUIDS);
       expect(fromString).toEqual(fromObject);
+    });
+  });
+
+  describe('pin ids + endpoint index', () => {
+    const BP_PINS = {
+      ClassName: 'BP_Pins',
+      ParentClass: 'AActor',
+      Graphs: [
+        {
+          GraphName: 'EventGraph',
+          GraphType: 'event',
+          Nodes: [
+            {
+              NodeGuid: 'n1', NodeClass: 'K2Node_Event', Name: 'BeginPlay', MemberName: 'BeginPlay',
+              Pins: [{ PinId: 'pin-out-1', PinName: 'exec', PinType: { PinCategory: 'exec' }, Direction: 'EGPD_Output', LinkedTo: ['pin-in-2'] }],
+            },
+            {
+              NodeGuid: 'n2', NodeClass: 'K2Node_CallFunction', Name: 'Log', MemberName: 'Log',
+              // Input exec carries an explicit PinId (the link target); the
+              // unnamed-id output exec must get a distinct synthesised id.
+              Pins: [{ PinId: 'pin-in-2', PinName: 'exec', PinType: { PinCategory: 'exec' }, Direction: 'EGPD_Input' }, { PinName: 'exec', PinType: { PinCategory: 'exec' }, Direction: 'EGPD_Output' }],
+            },
+          ],
+        },
+      ],
+    };
+
+    it('preserves an explicit PinId and synthesises stable, collision-free ids otherwise', () => {
+      const a = parseBlueprintJson(BP_PINS).eventGraph.nodes;
+      const n1Pins = a[0].pins;
+      const n2Pins = a[1].pins;
+      expect(n1Pins[0].id).toBe('pin-out-1'); // PinId preserved
+      // Same-named pins on one node still get unique ids.
+      expect(n2Pins[0].id).not.toBe(n2Pins[1].id);
+      // Synthesised ids are deterministic across re-parses.
+      expect(parseBlueprintJson(BP_PINS)).toEqual(parseBlueprintJson(BP_PINS));
+    });
+
+    it('indexes every node under its own id and under each of its pin ids', () => {
+      const nodes = parseBlueprintJson(BP_PINS).eventGraph.nodes;
+      const index = buildEndpointIndex(nodes);
+      expect(index.get('n1')).toBe(nodes[0]);       // node id
+      expect(index.get('pin-out-1')).toBe(nodes[0]); // pin id → owning node
+      // The pin-id link from n1's exec out resolves to n2.
+      const linkedPinId = nodes[0].pins[0].linkedTo![0];
+      expect(index.get(linkedPinId)).toBe(nodes[1]);
     });
   });
 

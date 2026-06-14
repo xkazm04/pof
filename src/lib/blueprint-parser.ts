@@ -116,6 +116,7 @@ interface RawNode {
 }
 
 interface RawPin {
+  PinId?: string;
   PinName?: string;
   PinType?: { PinCategory?: string; PinSubCategoryObject?: string };
   Direction?: string;
@@ -141,12 +142,17 @@ interface RawGraph {
   [key: string]: unknown;
 }
 
-function parsePin(raw: RawPin): BlueprintPin {
+function parsePin(raw: RawPin, nodeId: string, index: number): BlueprintPin {
   const typeStr = raw.PinType?.PinSubCategoryObject
     ?? raw.PinType?.PinCategory
     ?? 'unknown';
+  const name = raw.PinName ?? 'unnamed';
   return {
-    name: raw.PinName ?? 'unnamed',
+    // Prefer the UE5 export's PinId; otherwise synthesise a stable, collision-
+    // free id within this node (`<nodeId>::<pinName>#<index>`). Pin names are
+    // not unique on a node (e.g. two `exec` pins), so the index is required.
+    id: raw.PinId ?? `${nodeId}::${name}#${index}`,
+    name,
     type: typeStr,
     direction: raw.Direction === 'EGPD_Output' ? 'output' : 'input',
     linkedTo: raw.LinkedTo,
@@ -157,20 +163,44 @@ function parsePin(raw: RawPin): BlueprintPin {
 function parseNode(raw: RawNode, nextNodeId: () => string): BlueprintNode {
   const nodeType = raw.NodeClass ?? raw.NodeType ?? 'Unknown';
   const shortType = nodeType.split('.').pop() ?? nodeType;
+  // Prefer the stable NodeGuid; otherwise fall back to a per-parse counter
+  // (node-0, node-1, ...) so parsing the same Blueprint twice yields the same
+  // ids — keeping snapshot tests and node-identity-keyed features stable.
+  const id = raw.NodeGuid ?? nextNodeId();
   return {
-    // Prefer the stable NodeGuid; otherwise fall back to a per-parse counter
-    // (node-0, node-1, ...) so parsing the same Blueprint twice yields the same
-    // ids — keeping snapshot tests and node-identity-keyed features stable.
-    id: raw.NodeGuid ?? nextNodeId(),
+    id,
     type: shortType,
     name: raw.Name ?? NODE_TYPE_LABELS[shortType] ?? shortType,
     comment: raw.NodeComment || undefined,
     memberParent: raw.MemberParent || undefined,
     memberName: raw.MemberName || undefined,
-    pins: (raw.Pins ?? []).map(parsePin),
+    pins: (raw.Pins ?? []).map((p, i) => parsePin(p, id, i)),
     posX: raw.NodePosX ?? 0,
     posY: raw.NodePosY ?? 0,
   };
+}
+
+/**
+ * Build a single O(1) lookup from any exec-edge endpoint id to the node that
+ * owns it. `BlueprintPin.linkedTo` may reference either a pin id (UE5
+ * commandlet exports) or a node id (bundled samples / copy-paste), so the index
+ * registers every node under its own id *and* under each of its pins' ids.
+ *
+ * Built once per graph and shared by the codegen walker, turning successor
+ * resolution from a per-edge `graph.nodes.find(...)` scan (O(N·pins) each, so
+ * O(N²·pins) for a linear chain) into O(N+E) total.
+ */
+export function buildEndpointIndex(nodes: BlueprintNode[]): Map<string, BlueprintNode> {
+  const index = new Map<string, BlueprintNode>();
+  for (const node of nodes) {
+    // Register the node id first; a pin id can never collide with it in
+    // practice, and node-id edges must win for the sample convention.
+    if (!index.has(node.id)) index.set(node.id, node);
+    for (const pin of node.pins) {
+      if (pin.id && !index.has(pin.id)) index.set(pin.id, node);
+    }
+  }
+  return index;
 }
 
 function parseVariable(raw: RawVariable): BlueprintVariable {

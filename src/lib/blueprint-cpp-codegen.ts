@@ -14,7 +14,7 @@
  * the HTTP route — mirroring how `replication-scaffolder.ts` is kept pure.
  */
 
-import { blueprintTypeToCpp } from '@/lib/blueprint-parser';
+import { blueprintTypeToCpp, buildEndpointIndex } from '@/lib/blueprint-parser';
 import {
   REPLICATION_INCLUDE,
   buildReplicationInfo,
@@ -316,6 +316,12 @@ export function generateNodeLogic(
   const lines: string[] = [];
   const visited = new Set<string>();
 
+  // Resolve every exec-edge endpoint (pin id *or* node id) to its owning node
+  // in O(1). `linkedTo` holds pin ids in UE5 commandlet exports and node ids in
+  // the bundled samples; the index registers both, so traversal is correct for
+  // either and O(N+E) overall instead of the old per-edge O(N·pins) scan.
+  const endpointIndex = buildEndpointIndex(graph.nodes);
+
   function walk(node: BlueprintNode, indent: string) {
     if (visited.has(node.id)) return;
     visited.add(node.id);
@@ -342,7 +348,7 @@ export function generateNodeLogic(
       lines.push(`${indent}{`);
       if (thenPin?.linkedTo) {
         for (const id of thenPin.linkedTo) {
-          const next = graph.nodes.find((n) => n.pins.some((p) => p.name === id || n.id === id));
+          const next = endpointIndex.get(id);
           if (next) walk(next, indent + '\t');
         }
       } else {
@@ -354,7 +360,7 @@ export function generateNodeLogic(
         lines.push(`${indent}else`);
         lines.push(`${indent}{`);
         for (const id of elsePin.linkedTo) {
-          const next = graph.nodes.find((n) => n.pins.some((p) => p.name === id || n.id === id));
+          const next = endpointIndex.get(id);
           if (next) walk(next, indent + '\t');
         }
         lines.push(`${indent}}`);
@@ -376,7 +382,7 @@ export function generateNodeLogic(
 
     // Follow exec chain
     for (const nextId of nextNodeIds) {
-      const nextNode = graph.nodes.find((n) => n.id === nextId || n.pins.some((p) => p.name === nextId));
+      const nextNode = endpointIndex.get(nextId);
       if (nextNode) walk(nextNode, indent);
     }
   }

@@ -319,4 +319,115 @@ describe('generateNodeLogic', () => {
     const evt = node({ id: 'evt', type: 'K2Node_Event', pins: [] });
     expect(generateNodeLogic({ nodes: [evt] }, evt, 'AFoo', [])).toBe('\t// TODO: Implement logic');
   });
+
+  // ── Multi-node exec chains (regression for the pin-id-vs-node-id traversal bug) ──
+  // Previously the walker matched `linkedTo` entries with
+  // `graph.nodes.find(n => n.id === id || n.pins.some(p => p.name === id))`, which
+  // only resolved node-id links by accident and dropped every statement past the
+  // first node on a true pin-id-linked graph. Resolution now goes through the
+  // parser's endpoint index, so both link conventions emit the WHOLE chain.
+
+  it('emits statements from EVERY node in a 3-node chain linked by node ids', () => {
+    const start = node({
+      id: 'evt',
+      type: 'K2Node_Event',
+      pins: [pin({ name: 'then', type: 'exec', direction: 'output', linkedTo: ['a'] })],
+    });
+    const a = node({
+      id: 'a',
+      type: 'K2Node_CallFunction',
+      memberName: 'StepOne',
+      pins: [
+        pin({ name: 'exec', type: 'exec', direction: 'input' }),
+        pin({ name: 'then', type: 'exec', direction: 'output', linkedTo: ['b'] }),
+      ],
+    });
+    const b = node({
+      id: 'b',
+      type: 'K2Node_CallFunction',
+      memberName: 'StepTwo',
+      pins: [
+        pin({ name: 'exec', type: 'exec', direction: 'input' }),
+        pin({ name: 'then', type: 'exec', direction: 'output', linkedTo: ['c'] }),
+      ],
+    });
+    const c = node({
+      id: 'c',
+      type: 'K2Node_VariableSet',
+      memberName: 'Done',
+      pins: [
+        pin({ name: 'exec', type: 'exec', direction: 'input' }),
+        pin({ name: 'NewValue', type: 'bool', direction: 'input', defaultValue: 'true' }),
+      ],
+    });
+    const code = generateNodeLogic({ nodes: [start, a, b, c] }, start, 'AFoo', []);
+    expect(code).toContain('StepOne();');
+    expect(code).toContain('StepTwo();');
+    expect(code).toContain('Done = true;');
+  });
+
+  it('emits the whole chain when linkedTo holds PIN ids (real UE5 export shape — previously broken)', () => {
+    // Each exec edge references the *input pin id* of the next node, exactly as a
+    // UE5 commandlet export does. The owning node is found via the endpoint index.
+    const start = node({
+      id: 'evt',
+      type: 'K2Node_Event',
+      pins: [pin({ id: 'p-evt-out', name: 'then', type: 'exec', direction: 'output', linkedTo: ['p-a-in'] })],
+    });
+    const a = node({
+      id: 'a',
+      type: 'K2Node_CallFunction',
+      memberName: 'StepOne',
+      pins: [
+        pin({ id: 'p-a-in', name: 'exec', type: 'exec', direction: 'input' }),
+        pin({ id: 'p-a-out', name: 'then', type: 'exec', direction: 'output', linkedTo: ['p-b-in'] }),
+      ],
+    });
+    const b = node({
+      id: 'b',
+      type: 'K2Node_CallFunction',
+      memberName: 'StepTwo',
+      pins: [pin({ id: 'p-b-in', name: 'exec', type: 'exec', direction: 'input' })],
+    });
+    const warnings: TranspileWarning[] = [];
+    const code = generateNodeLogic({ nodes: [start, a, b] }, start, 'AFoo', warnings);
+    expect(code).toContain('StepOne();');
+    expect(code).toContain('StepTwo();'); // would be silently dropped before the fix
+    expect(warnings).toHaveLength(0);
+  });
+});
+
+// ─── End-to-end: multi-node graph through the parser ──────────────────────────
+
+describe('generateCppFromBlueprint — multi-node exec chains end-to-end', () => {
+  it('transpiles the bundled-style BeginPlay chain so the PrintString call lands in BeginPlay()', () => {
+    const result = generateCppFromBlueprint(
+      asset({
+        eventGraph: {
+          name: 'EventGraph',
+          graphType: 'event',
+          nodes: [
+            node({
+              id: 'n1',
+              type: 'K2Node_Event',
+              name: 'BeginPlay',
+              memberName: 'BeginPlay',
+              pins: [pin({ name: 'exec', type: 'exec', direction: 'output', linkedTo: ['n2'] })],
+            }),
+            node({
+              id: 'n2',
+              type: 'K2Node_CallFunction',
+              name: 'LogReady',
+              memberName: 'LogReady',
+              pins: [pin({ name: 'exec', type: 'exec', direction: 'input' })],
+            }),
+          ],
+        },
+      }),
+      'P',
+    );
+    expect(result.sourceCode).toContain('void ATest::BeginPlay()');
+    expect(result.sourceCode).toContain('Super::BeginPlay();');
+    expect(result.sourceCode).toContain('LogReady();');
+  });
 });

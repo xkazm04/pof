@@ -2,10 +2,23 @@
 
 /** A single pin (input or output) on a Blueprint node. */
 export interface BlueprintPin {
+  /**
+   * Stable id for this pin, unique within a parsed Blueprint. Sourced from the
+   * UE5 export's `PinId` when present, otherwise synthesised by the parser
+   * (`<nodeId>::<pinName>#<n>`). Used to resolve `linkedTo` edges to their
+   * owning node via the parser's pin-id index.
+   */
+  id?: string;
   name: string;
   type: string;           // e.g. 'exec', 'float', 'FVector', 'bool'
   direction: 'input' | 'output';
-  linkedTo?: string[];    // pin IDs of connected pins
+  /**
+   * Endpoints this pin connects to. UE5 commandlet exports put **pin ids**
+   * here; the bundled samples / copy-paste exports use **node ids**. Either is
+   * resolved to the owning node by the codegen walker (pin-id index first,
+   * node-id fallback).
+   */
+  linkedTo?: string[];
   defaultValue?: string;
 }
 
