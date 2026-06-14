@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Activity,
@@ -80,6 +80,9 @@ export function AggregateQualityDashboard({ staleDays = 7, onReviewModule, onBat
   const [selectedModule, setSelectedModule] = useState<string | null>(null);
   const [customStaleDays, setCustomStaleDays] = useState(staleDays);
   const [isBatchReviewing, setIsBatchReviewing] = useState(false);
+  // The heatmap entrance stagger should play once (on first mount), not replay
+  // on every data refresh while the grid stays mounted.
+  const hasAnimatedRef = useRef(false);
 
   const fetchData = useCallback(async () => {
     setIsLoading(true);
@@ -190,7 +193,10 @@ export function AggregateQualityDashboard({ staleDays = 7, onReviewModule, onBat
     }
   };
 
-  if (isLoading) {
+  // Only blank to the spinner on the very first load. On manual refreshes the
+  // grid stays mounted (data is updated in place), so we avoid a full remount +
+  // staggered re-animation of every cell.
+  if (isLoading && aggregates.length === 0) {
     return (
       <div className="flex items-center justify-center py-16">
         <Loader2 className="w-5 h-5 animate-spin text-text-muted" />
@@ -199,6 +205,11 @@ export function AggregateQualityDashboard({ staleDays = 7, onReviewModule, onBat
   }
 
   const selected = selectedModule ? cells.find((c) => c.moduleId === selectedModule) : null;
+
+  // Play the cell entrance stagger only on the first render with data; mark the
+  // ref so subsequent refreshes/re-renders render the grid in its final state.
+  const playEntrance = !hasAnimatedRef.current;
+  hasAnimatedRef.current = true;
 
   return (
     <div className="space-y-5">
@@ -328,9 +339,11 @@ export function AggregateQualityDashboard({ staleDays = 7, onReviewModule, onBat
             return (
               <motion.button
                 key={cell.moduleId}
-                initial={{ opacity: 0, scale: 0.95 }}
+                initial={playEntrance ? { opacity: 0, scale: 0.95 } : false}
                 animate={{ opacity: 1, scale: 1 }}
-                transition={{ duration: MOTION.base, delay: i * 0.03 }}
+                transition={
+                  playEntrance ? { duration: MOTION.base, delay: i * 0.03 } : { duration: 0 }
+                }
                 onClick={() =>
                   setSelectedModule(isSelected ? null : cell.moduleId)
                 }
