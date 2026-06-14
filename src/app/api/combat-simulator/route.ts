@@ -75,10 +75,25 @@ export async function POST(req: NextRequest) {
       scenario.enemies = enemies;
 
       // Strip individual fight results if too many (keep summary + alerts).
-      const trim = (result: Awaited<ReturnType<typeof runCombatSimulationBatched>>) => ({
-        ...result,
-        fights: result.fights.length > 100 ? result.fights.slice(0, 100) : result.fights,
-      });
+      //
+      // The engine has already folded the full `fights` array into `summary`,
+      // `alerts`, and `threatBreakdown` by the time it returns, so the array is
+      // only needed transiently for that aggregation (reducing the engine's own
+      // peak materialization would require the `onFight`/`keepFights` runner
+      // change in finding #5, which is out of scope here). What the route can
+      // do safely is avoid holding a *second* live reference to the full array
+      // through response serialization: detach `result.fights` so the original
+      // (up to 5000-object) array becomes GC-eligible before `JSON.stringify`,
+      // while the response keeps only the ≤100 slice. The serialized payload is
+      // byte-for-byte identical to slicing in place.
+      const trim = (result: Awaited<ReturnType<typeof runCombatSimulationBatched>>) => {
+        const kept = result.fights.length > 100 ? result.fights.slice(0, 100) : result.fights;
+        // Release the engine's full array so it can be collected ahead of
+        // serialization instead of being pinned by `result` until the response
+        // object falls out of scope.
+        result.fights = kept;
+        return result;
+      };
 
       // Opt-in progressive streaming (Server-Sent Events): emit a `progress`
       // event per completed batch and a final `result` event, so the client can
