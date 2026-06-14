@@ -11,8 +11,9 @@ import { TEXT_SCALE } from '@/lib/typography-scale';
  * Single histogram bar. Memoized so a hover elsewhere in the strip never
  * re-renders it. The dim-others highlight and the hover crosshair are driven
  * purely by CSS (`group`/`group-hover` on the strip + peer dimming), so moving
- * the cursor across bars touches no per-bar React state. The entrance animation
- * is gated to mount via a ref so re-renders (e.g. tooltip moving) don't re-animate.
+ * the cursor across bars touches no per-bar React state. framer-motion's
+ * `initial` applies only on mount, and the memo keeps hovers from re-rendering
+ * the bar, so the entrance animation runs once without any ref gate.
  */
 const Bar = memo(function Bar({ pct, color, hasCount, barHeight, onEnter }: {
   pct: number;
@@ -21,10 +22,6 @@ const Bar = memo(function Bar({ pct, color, hasCount, barHeight, onEnter }: {
   barHeight: number;
   onEnter: () => void;
 }) {
-  const didMount = useRef(false);
-  const animateOnMount = !didMount.current;
-  didMount.current = true;
-
   return (
     <div
       className="bar group/bar flex-1 min-w-[3px] h-full flex items-end relative cursor-crosshair group-hover:opacity-50 hover:!opacity-100 transition-opacity duration-100"
@@ -37,7 +34,7 @@ const Bar = memo(function Bar({ pct, color, hasCount, barHeight, onEnter }: {
           height: `${pct}%`,
           minHeight: hasCount ? 1 : 0,
         }}
-        initial={animateOnMount ? { height: 0 } : false}
+        initial={{ height: 0 }}
         animate={{ height: `${pct}%` }}
         transition={{ duration: 0.3 }}
       />
