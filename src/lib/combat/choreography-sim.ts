@@ -5,7 +5,8 @@ import {
   BASE_PLAYER_ATTRIBUTES,
   PLAYER_LEVEL_SCALING,
 } from './definitions';
-import { calculateDamage, createRNG } from './simulation-engine';
+import { createRNG } from './simulation-engine';
+import { calculateDamage } from './damage';
 import { computeTensionCurve, type TensionCurve } from './tension-curve';
 
 // ── Types ──────────────────────────────────────────────────────────────────

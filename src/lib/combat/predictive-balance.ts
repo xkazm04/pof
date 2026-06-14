@@ -17,6 +17,7 @@ import {
   DEFAULT_TUNING,
 } from '@/lib/combat/definitions';
 import { createXorShift32RNG } from '@/lib/seeded-rng';
+import { calculateDamage } from '@/lib/combat/damage';
 
 // ── RNG ─────────────────────────────────────────────────────────────────────
 // Shared xorshift32 helper (see `@/lib/seeded-rng`); each cell/step derives its
@@ -57,7 +58,10 @@ function buildPlayerAttrs(level: number, gearId: string, tuning: TuningOverrides
   }
   attrs.health *= tuning.playerHealthMul;
   attrs.maxHealth *= tuning.playerHealthMul;
-  attrs.attackPower *= tuning.playerDamageMul;
+  // NOTE: playerDamageMul is NOT pre-baked into attackPower here. The shared
+  // calculateDamage applies it per-hit (scaling the whole hit incl. baseDamage),
+  // matching the canonical simulation-engine behavior. Baking it in here used to
+  // double-count it relative to the main engine.
   attrs.armor *= tuning.playerArmorMul;
   return attrs;
 }
@@ -70,26 +74,14 @@ function buildEnemyAttrs(archetype: EnemyArchetype, level: number, tuning: Tunin
   }
   attrs.health *= tuning.enemyHealthMul;
   attrs.maxHealth *= tuning.enemyHealthMul;
-  attrs.attackPower *= tuning.enemyDamageMul;
+  // enemyDamageMul is applied per-hit by the shared calculateDamage, not baked in here.
   return attrs;
 }
 
 // ── Damage formula ─────────────────────────────────────────────────────────
-
-function calcDamage(
-  ability: CombatAbility,
-  srcAttrs: AttributeSet,
-  tgtAttrs: AttributeSet,
-  tuning: TuningOverrides,
-  rng: () => number,
-): number {
-  const raw = ability.baseDamage + srcAttrs.attackPower * ability.attackPowerScaling;
-  const armorEff = tuning.armorEffectivenessWeight;
-  const mitigation = (tgtAttrs.armor * armorEff) / (tgtAttrs.armor * armorEff + 100);
-  const isCrit = rng() < srcAttrs.critChance;
-  const critMul = isCrit ? srcAttrs.critDamage * tuning.critMultiplierMul : 1;
-  return Math.max(0, raw * critMul * (1 - mitigation));
-}
+// Now delegated to the shared canonical calculateDamage (see ./damage). The
+// previous local `calcDamage` had drifted: it clamped at Math.max(0,…) un-rounded
+// and pre-baked the damage multiplier into attackPower — both reconciled here.
 
 // ── Single fight simulation (lightweight) ──────────────────────────────────
 
@@ -152,7 +144,7 @@ function simulateFight(
       if (bestAbility.baseDamage > 0) {
         const targets = bestAbility.aoeRadius > 0 ? alive : [alive[0]];
         for (const ti of targets) {
-          const dmg = calcDamage(bestAbility, playerAttrs, enemies[ti].attrs, tuning, rng);
+          const { damage: dmg } = calculateDamage(bestAbility, playerAttrs, enemies[ti].attrs, tuning, rng, true);
           enemyHPs[ti] -= dmg;
           totalDealt += dmg;
         }
@@ -169,7 +161,7 @@ function simulateFight(
       const attacksPerTick = TICK / enemy.intervalSec;
       if (rng() < attacksPerTick) {
         if (time < invulnUntil) continue;
-        const dmg = calcDamage(enemy.ability, enemy.attrs, playerAttrs, tuning, rng);
+        const { damage: dmg } = calculateDamage(enemy.ability, enemy.attrs, playerAttrs, tuning, rng, false);
         playerHP -= dmg;
         totalTaken += dmg;
         if (playerHP <= 0) break;

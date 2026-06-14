@@ -29,41 +29,18 @@ import {
   ENEMY_ARCHETYPE_BY_ID,
 } from './definitions';
 import { createRNG } from '@/lib/seeded-rng';
+import { calculateDamage } from './damage';
 
 // ── Seeded RNG ──────────────────────────────────────────────────────────────
 // Re-exported from the shared helper so existing combat sims (e.g. choreography-sim)
 // keep importing `createRNG` from this module.
 export { createRNG };
 
-// ── Damage Formula (UARPGDamageExecution) ───────────────────────────────────
-// FinalDamage = (BaseDamage + AttackPower * Scaling) * CritMul * (1 - ArmorReduction)
-// ArmorReduction = Armor / (Armor + 100) — diminishing returns formula
-
-export function calculateDamage(
-  ability: CombatAbility,
-  sourceAttrs: AttributeSet,
-  targetAttrs: AttributeSet,
-  tuning: TuningOverrides,
-  rng: () => number,
-  isPlayer: boolean,
-): { damage: number; isCrit: boolean } {
-  const baseDmg = ability.baseDamage + sourceAttrs.attackPower * ability.attackPowerScaling;
-  const damageMul = isPlayer ? tuning.playerDamageMul : tuning.enemyDamageMul;
-
-  // Crit check
-  const isCrit = rng() < sourceAttrs.critChance;
-  const critMul = isCrit ? sourceAttrs.critDamage * tuning.critMultiplierMul : 1.0;
-
-  // Armor reduction (diminishing returns). targetAttrs.armor already includes the build-time
-  // playerArmorMul (see buildPlayerAttributes), so re-applying a multiplier here squared the
-  // player's mitigation, and feeding enemyDamageMul (a *damage* knob) into the enemy's armor
-  // made raising enemy damage also raise enemy armor. Apply only the effectiveness weight.
-  const effectiveArmor = targetAttrs.armor * tuning.armorEffectivenessWeight;
-  const armorReduction = effectiveArmor / (effectiveArmor + 100);
-
-  const finalDamage = Math.max(1, Math.round(baseDmg * damageMul * critMul * (1 - armorReduction)));
-  return { damage: finalDamage, isCrit };
-}
+// ── Damage Formula ──────────────────────────────────────────────────────────
+// Single canonical implementation now lives in ./damage. Re-exported here so
+// existing importers (`from './simulation-engine'`) keep working, while this
+// module also uses it locally in its fight loop.
+export { calculateDamage };
 
 // ── Build Scaled Attributes ─────────────────────────────────────────────────
 
