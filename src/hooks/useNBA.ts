@@ -1,12 +1,10 @@
 'use client';
 
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { computeNBA, type NBARecommendation } from '@/lib/nba-engine';
 import { useModuleStore } from '@/stores/moduleStore';
-import { tryApiFetch } from '@/lib/api-utils';
+import { useFeatureStatuses } from '@/hooks/useFeatureStatuses';
 import type { SubModuleId } from '@/types/modules';
-
-interface FeatureStatusRow { moduleId: string; featureName: string; status: string }
 
 export interface UseNBAResult {
   recommendations: NBARecommendation[];
@@ -17,57 +15,37 @@ export interface UseNBAResult {
 
 /**
  * Hook that computes Next Best Action recommendations for a module.
- * Fetches feature statuses once, then re-computes when progress changes.
+ *
+ * Cross-module feature statuses come from the shared {@link useFeatureStatuses}
+ * cache, so when the NBA card and the Feature Matrix mount for the same module
+ * view they share ONE fetch of `/api/feature-matrix/all-statuses` + one `Map`
+ * instead of each running the unfiltered table scan independently. NBA then
+ * re-computes when progress changes or when the shared status map updates.
  */
 export function useNBA(moduleId: SubModuleId): UseNBAResult {
   const [recommendations, setRecommendations] = useState<NBARecommendation[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const statusMapRef = useRef<Map<string, string>>(new Map());
+
+  // Shared, deduped cross-module status map (same data the Feature Matrix reads).
+  const { statusMap, isLoading: statusesLoading, loaded, failed } = useFeatureStatuses();
 
   // Subscribe to progress changes to re-compute
   const progress = useModuleStore((s) => s.checklistProgress[moduleId]);
 
-  // Fetch feature statuses once
+  // Re-compute whenever the module, the shared status map, or progress changes.
+  // While statuses are still loading we hold off; once settled we compute with
+  // the map (or without it on failure, matching the prior fallback behaviour).
   useEffect(() => {
-    let cancelled = false;
-
-    // The route returns the standard apiSuccess({ statuses }) envelope, so the
-    // array lives at data.data.statuses — tryApiFetch unwraps it for us. (Reading
-    // data.statuses off the raw fetch silently yielded an empty map, so NBA scored
-    // against no cross-module dependency data.)
-    tryApiFetch<{ statuses: FeatureStatusRow[] }>('/api/feature-matrix/all-statuses')
-      .then((result) => {
-        if (cancelled) return;
-        if (result.ok) {
-          const map = new Map<string, string>();
-          for (const row of result.data.statuses ?? []) {
-            map.set(`${row.moduleId}::${row.featureName}`, row.status);
-          }
-          statusMapRef.current = map;
-          setRecommendations(computeNBA(moduleId, map));
-        } else {
-          setRecommendations(computeNBA(moduleId));
-        }
-        setIsLoading(false);
-      });
-
-    return () => { cancelled = true; };
-  }, [moduleId]);
-
-  // Re-compute when progress changes (but not on first mount — the effect above handles that)
-  const hasLoadedRef = useRef(false);
-  useEffect(() => {
-    if (!hasLoadedRef.current) {
-      hasLoadedRef.current = true;
-      return;
-    }
-    setRecommendations(computeNBA(moduleId, statusMapRef.current));
-  }, [moduleId, progress]);
+    if (!loaded) return;
+    setRecommendations(failed ? computeNBA(moduleId) : computeNBA(moduleId, statusMap));
+    // progress is included so a checklist toggle re-scores; statusMap identity
+    // changes when the shared cache refreshes.
+  }, [moduleId, statusMap, loaded, failed, progress]);
 
   const refresh = useCallback(() => {
-    setRecommendations(computeNBA(moduleId, statusMapRef.current));
-  }, [moduleId]);
+    setRecommendations(failed ? computeNBA(moduleId) : computeNBA(moduleId, statusMap));
+  }, [moduleId, statusMap, failed]);
 
+  const isLoading = !loaded && statusesLoading;
   const top = recommendations[0] ?? null;
 
   return { recommendations, top, isLoading, refresh };
