@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { motion, useReducedMotion } from 'framer-motion';
 import type { LabTheme } from './theme';
 import type { LabGroup, LabCatalog, LabEntity } from './useLabCatalogData';
@@ -143,9 +143,26 @@ export function CatalogTree({
   // selection opens, so the tree reads as a chapter overview. `override` records
   // the user's explicit per-chapter expand/collapse; absent ⇒ the default rule.
   const [override, setOverride] = useState<Record<string, boolean>>({});
-  const selectedCategory = groups.find((g) => g.catalogs.some((c) => c.catalogId === selectedCatalogId))?.category;
+  const selectedCategory = useMemo(
+    () => groups.find((g) => g.catalogs.some((c) => c.catalogId === selectedCatalogId))?.category,
+    [groups, selectedCatalogId],
+  );
   const isOpen = (category: string) => (category in override ? override[category] : category === selectedCategory);
-  const visibleCatalogs = groups.flatMap((g) => (isOpen(g.category) ? g.catalogs : []));
+  // Flatten the visible (open-chapter) catalogs once, and carry each catalog's
+  // flat index in the same pass so render rows do an O(1) Map lookup instead of
+  // an O(catalogs) indexOf per row (which was O(catalogs²) over the whole tree).
+  const { visibleCatalogs, visibleIndex } = useMemo(() => {
+    const list: LabCatalog[] = [];
+    const index = new Map<LabCatalog, number>();
+    for (const g of groups) {
+      if (!(g.category in override ? override[g.category] : g.category === selectedCategory)) continue;
+      for (const c of g.catalogs) {
+        index.set(c, list.length);
+        list.push(c);
+      }
+    }
+    return { visibleCatalogs: list, visibleIndex: index };
+  }, [groups, override, selectedCategory]);
   const activeIdx = Math.max(0, visibleCatalogs.findIndex((c) => c.catalogId === selectedCatalogId));
   const roving = useRovingFocus(visibleCatalogs.length, activeIdx, (i) => {
     const c = visibleCatalogs[i];
@@ -201,7 +218,7 @@ export function CatalogTree({
                   selectedEntityId={selectedEntityId}
                   onSelectCatalog={onSelectCatalog}
                   onSelectEntity={onSelectEntity}
-                  rovingItemProps={roving.itemProps(visibleCatalogs.indexOf(catalog))}
+                  rovingItemProps={roving.itemProps(visibleIndex.get(catalog) ?? -1)}
                 />
               </motion.div>
             ))}

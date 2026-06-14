@@ -81,6 +81,21 @@ export function appendCookLog(prev: CookLogLine[], entry: CookLogLine, max = MAX
   return next.length > max ? next.slice(next.length - max) : next;
 }
 
+/** Per-facet tallies for the filter chips — the shape of the `counts` state. */
+type CookLogCounts = Record<CookLogFilter, number>;
+
+const ZERO_COUNTS: CookLogCounts = { all: 0, error: 0, warning: 0, cook: 0, stage: 0 };
+
+/** The facet buckets a single line contributes to (used to add on append / subtract on trim). */
+function lineFacets(l: CookLogLine): { error: boolean; warning: boolean; cook: boolean; stage: boolean } {
+  return {
+    error: l.severity === 'error',
+    warning: l.severity === 'warning',
+    cook: l.phase === 'cook',
+    stage: l.phase === 'stage',
+  };
+}
+
 /**
  * Format an elapsed-ms timestamp as a zero-padded `MM:SS` prefix. Cooks can run
  * past an hour, so minutes simply keep counting (`125:30`) rather than wrapping.
@@ -145,6 +160,10 @@ export function CookProgress({ request, onComplete }: CookProgressProps) {
   const [phase, setPhase] = useState<CookPhase | null>(null);
   const [percent, setPercent] = useState<number>(0);
   const [logs, setLogs] = useState<CookLogLine[]>([]);
+  // Per-facet tallies maintained incrementally (add on append, subtract on the
+  // trimmed-off head) so a long cook never re-scans the full ≤2000-line buffer
+  // just to recount. Identical to scanning `logs` from scratch each tick.
+  const [counts, setCounts] = useState<CookLogCounts>(ZERO_COUNTS);
   const [elapsedMs, setElapsedMs] = useState<number>(0);
   const [result, setResult] = useState<{ status: 'success' | 'failed'; exePath?: string; error?: string } | null>(null);
   const [filter, setFilter] = useState<CookLogFilter>('all');
@@ -157,6 +176,11 @@ export function CookProgress({ request, onComplete }: CookProgressProps) {
   const startedAtRef = useRef<number | null>(null);
   const listRef = useRef<ListImperativeAPI | null>(null);
   const logIdRef = useRef(0);
+  // Authoritative log buffer + running tallies, mutated synchronously per log
+  // event so neither the spread nor the recount depends on a (possibly stale)
+  // render closure, and so React StrictMode double-invokes can't double-count.
+  const logsRef = useRef<CookLogLine[]>([]);
+  const countsRef = useRef<CookLogCounts>(ZERO_COUNTS);
   // Cursor that cycles "Jump to error" through each error in turn.
   const errorCursorRef = useRef(0);
   // Set when a jump is requested while the active filter hides errors — the jump
@@ -171,6 +195,9 @@ export function CookProgress({ request, onComplete }: CookProgressProps) {
     setPhase(null);
     setPercent(0);
     setLogs([]);
+    setCounts(ZERO_COUNTS);
+    logsRef.current = [];
+    countsRef.current = ZERO_COUNTS;
     setResult(null);
     setElapsedMs(0);
     setFilter('all');
@@ -221,7 +248,26 @@ export function CookProgress({ request, onComplete }: CookProgressProps) {
                 phase: currentPhase,
                 severity: classifyCookLogLine(ev.line),
               };
-              setLogs((prev) => appendCookLog(prev, entry));
+              const prev = logsRef.current;
+              const next = appendCookLog(prev, entry);
+              // Mirror append/trim into the running tallies (O(1)): +1 for the
+              // new line's facets, −1 for any head line that fell off the cap.
+              // Equivalent to rescanning `next` from scratch each tick.
+              const add = lineFacets(entry);
+              const trimmed = prev.length + 1 > next.length ? prev[0] : null;
+              const sub = trimmed ? lineFacets(trimmed) : null;
+              const c = countsRef.current;
+              const nextCounts: CookLogCounts = {
+                all: next.length,
+                error: c.error + (add.error ? 1 : 0) - (sub?.error ? 1 : 0),
+                warning: c.warning + (add.warning ? 1 : 0) - (sub?.warning ? 1 : 0),
+                cook: c.cook + (add.cook ? 1 : 0) - (sub?.cook ? 1 : 0),
+                stage: c.stage + (add.stage ? 1 : 0) - (sub?.stage ? 1 : 0),
+              };
+              logsRef.current = next;
+              countsRef.current = nextCounts;
+              setLogs(next);
+              setCounts(nextCounts);
             } else if (ev.type === 'done') {
               const final = { status: 'success' as const, exePath: ev.exePath };
               setResult(final);
@@ -261,17 +307,6 @@ export function CookProgress({ request, onComplete }: CookProgressProps) {
   }, [result]);
 
   useEffect(() => () => { if (copyTimerRef.current) clearTimeout(copyTimerRef.current); }, []);
-
-  const counts = useMemo(() => {
-    let error = 0, warning = 0, cook = 0, stage = 0;
-    for (const l of logs) {
-      if (l.severity === 'error') error++;
-      else if (l.severity === 'warning') warning++;
-      if (l.phase === 'cook') cook++;
-      else if (l.phase === 'stage') stage++;
-    }
-    return { all: logs.length, error, warning, cook, stage } as Record<CookLogFilter, number>;
-  }, [logs]);
 
   const displayedLines = useMemo(() => {
     switch (filter) {

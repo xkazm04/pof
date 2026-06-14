@@ -43,6 +43,15 @@ export function AffixRollSimulator() {
   const cycleRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const timeoutsRef = useRef<ReturnType<typeof setTimeout>[]>([]);
 
+  // Precompute name -> def once so the hot spin render path (slot colors +
+  // frequency rows, ~12.5 renders/sec while reeling) does O(1) Map.get instead
+  // of a linear AFFIX_DEFS.find per slot/row. AFFIX_DEFS is module-static, so []
+  // deps keep this stable for the component's lifetime.
+  const affixByName = useMemo(
+    () => new Map(AFFIX_DEFS.map(a => [a.name, a] as const)),
+    [],
+  );
+
   const clearTimers = useCallback(() => {
     if (cycleRef.current) { clearInterval(cycleRef.current); cycleRef.current = null; }
     timeoutsRef.current.forEach(clearTimeout);
@@ -53,9 +62,9 @@ export function AffixRollSimulator() {
   useEffect(() => clearTimers, [clearTimers]);
 
   const colorForAffixName = useCallback((name: string) => {
-    const def = AFFIX_DEFS.find(a => a.name === name);
+    const def = affixByName.get(name);
     return def ? CATEGORY_COLORS[def.category] ?? STATUS_WARNING : STATUS_WARNING;
-  }, []);
+  }, [affixByName]);
 
   const activePool = useMemo(
     () => AFFIX_DEFS.filter(a => selectedAffixIds.includes(a.id)),
@@ -139,6 +148,20 @@ export function AffixRollSimulator() {
       timeoutsRef.current.push(handle);
     });
   }, [activePool, prefersReducedMotion, clearTimers]);
+
+  // Sorted frequency rows, each pre-resolved to its category color via the
+  // O(1) Map. Memoized so the spin-driven re-renders don't re-sort + re-scan.
+  const frequencyRows = useMemo(
+    () =>
+      Object.entries(affixHistory)
+        .sort((a, b) => b[1] - a[1])
+        .map(([affix, count]) => {
+          const def = affixByName.get(affix);
+          const catColor = def ? CATEGORY_COLORS[def.category] ?? STATUS_WARNING : STATUS_WARNING;
+          return { affix, count, catColor };
+        }),
+    [affixHistory, affixByName],
+  );
 
   const renderAffixItem = useCallback((item: AffixDef, selected: boolean) => {
     const catColor = CATEGORY_COLORS[item.category] ?? STATUS_WARNING;
@@ -244,9 +267,7 @@ export function AffixRollSimulator() {
       {Object.keys(affixHistory).length > 0 && (
         <div className="space-y-1 mb-3">
           <div className="text-xs font-mono uppercase tracking-[0.15em] text-text-muted">Affix Frequency</div>
-          {Object.entries(affixHistory).sort((a, b) => b[1] - a[1]).map(([affix, count]) => {
-            const def = AFFIX_DEFS.find(a => a.name === affix);
-            const catColor = def ? CATEGORY_COLORS[def.category] ?? STATUS_WARNING : STATUS_WARNING;
+          {frequencyRows.map(({ affix, count, catColor }) => {
             return (
               <div key={affix} className="flex items-center gap-2">
                 <span className="text-2xs font-mono w-20 truncate" style={{ color: catColor }}>{affix}</span>

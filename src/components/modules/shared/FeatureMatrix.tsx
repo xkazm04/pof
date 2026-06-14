@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useSuspendableEffect } from '@/hooks/useSuspend';
 import { Check, ChevronDown, ChevronRight, FileCode, Loader2, RefreshCw, Star, ArrowRight, Download, TrendingUp, TrendingDown, Minus, AlertTriangle, Link2, Zap, Search, ArrowUpDown, ArrowUp, ArrowDown, Play, Copy, Eye, LayoutList, LayoutGrid, ShieldCheck, Boxes, CheckCircle, Sparkles, CircleDashed, Circle, HelpCircle } from 'lucide-react';
 import { useFeatureMatrix } from '@/hooks/useFeatureMatrix';
+import { useFeatureStatuses } from '@/hooks/useFeatureStatuses';
 import { StaggerContainer, StaggerItem } from '@/components/ui/Stagger';
 import { AccentButton } from '@/components/ui/AccentButton';
 import { FetchError } from './FetchError';
@@ -16,7 +17,6 @@ import type { DependencyInfo, ResolvedDependency } from '@/lib/feature-definitio
 import { WiringAssetsPanel } from './WiringAssetsPanel';
 import { MODULE_LABELS } from '@/lib/module-registry';
 import { MarkdownProse } from '@/components/ui/MarkdownProse';
-import { tryApiFetch } from '@/lib/api-utils';
 import { formatTimeAgo } from '@/lib/format-time';
 import { UI_TIMEOUTS } from '@/lib/constants';
 import type { SubModuleId } from '@/types/modules';
@@ -175,7 +175,9 @@ export function FeatureMatrix({ moduleId, accentColor, onReview, onSync, isRevie
   const [isSyncing, setIsSyncing] = useState(false);
   const [collapsedCategories, setCollapsedCategories] = useState<Set<string>>(new Set());
   const [snapshots, setSnapshots] = useState<ReviewSnapshot[]>([]);
-  const [allStatuses, setAllStatuses] = useState<Map<string, string>>(new Map());
+  // Cross-module statuses come from the shared, deduped cache so this view and
+  // the NBA card share one fetch of /api/feature-matrix/all-statuses + one Map.
+  const { statusMap: allStatuses } = useFeatureStatuses();
   const [reviewProgress, setReviewProgress] = useState<{ scanned: number; total: number } | null>(null);
   const progressTimer = useRef<ReturnType<typeof setInterval> | null>(null);
   // Filter / sort / search state — initialize from URL params
@@ -269,22 +271,7 @@ export function FeatureMatrix({ moduleId, accentColor, onReview, onSync, isRevie
     } catch { /* silent */ }
   }, [moduleId]);
 
-  // Fetch all module statuses for cross-module dependency resolution.
-  // The route wraps the payload in apiSuccess({ statuses }); tryApiFetch unwraps
-  // the envelope so the array isn't silently read from the wrong nesting level
-  // (which left the cross-module blocked badges / dependency chains empty).
-  const fetchAllStatuses = useCallback(async () => {
-    const result = await tryApiFetch<{ statuses: { moduleId: string; featureName: string; status: string }[] }>('/api/feature-matrix/all-statuses');
-    if (!result.ok) return; // silent — keep last-known statuses
-    const map = new Map<string, string>();
-    for (const row of result.data.statuses ?? []) {
-      map.set(`${row.moduleId}::${row.featureName}`, row.status);
-    }
-    setAllStatuses(map);
-  }, []);
-
   useEffect(() => { fetchHistory(); }, [fetchHistory]);
-  useEffect(() => { fetchAllStatuses(); }, [fetchAllStatuses]);
 
   // Compute dependency info for all features in this module
   const depMap = useMemo(() => {

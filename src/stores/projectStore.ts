@@ -173,19 +173,23 @@ export const useProjectStore = create<ProjectState>()(
         const checklistProgress = getChecklistProgress();
 
         try {
-          await apiFetch('/api/recent-projects', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              action: 'save',
-              projectName,
-              projectPath,
-              ueVersion,
-              checklistProgress,
-            }),
-          });
-          // Refresh the list
-          get().loadRecentProjects();
+          // The save action returns the freshened list, so we set it directly
+          // instead of issuing a follow-up GET (one round-trip instead of two).
+          const { projects } = await apiFetch<{ id: string; projects?: RecentProject[] }>(
+            '/api/recent-projects',
+            {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                action: 'save',
+                projectName,
+                projectPath,
+                ueVersion,
+                checklistProgress,
+              }),
+            }
+          );
+          if (projects) set({ recentProjects: projects });
         } catch {
           // Silent fail — not critical
         }
@@ -225,16 +229,22 @@ export const useProjectStore = create<ProjectState>()(
           }).catch(() => {});
         }
 
-        // Touch the target project's last_opened_at
+        // Touch the target project's last_opened_at. The touch action returns
+        // the freshened list (reflecting the new ordering), so we set it
+        // directly here — no separate loadRecentProjects() GET is needed.
         try {
-          await apiFetch('/api/recent-projects', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              action: 'touch',
-              projectId: target.id,
-            }),
-          });
+          const { projects } = await apiFetch<{ touched: boolean; projects?: RecentProject[] }>(
+            '/api/recent-projects',
+            {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                action: 'touch',
+                projectId: target.id,
+              }),
+            }
+          );
+          if (projects) set({ recentProjects: projects });
         } catch {
           // Continue switching even if touch fails
         }
@@ -257,8 +267,7 @@ export const useProjectStore = create<ProjectState>()(
 
         // Trigger a scan for the new project
         setTimeout(() => get().scanProject(), 200);
-        // Refresh recent list
-        get().loadRecentProjects();
+        // Recent list was already refreshed by the touch response above.
       },
 
       removeRecentProject: async (projectId: string) => {

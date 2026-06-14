@@ -16,36 +16,43 @@ function projectId(projectPath: string): string {
   return crypto.createHash('sha256').update(projectPath.toLowerCase().replace(/\\/g, '/')).digest('hex').slice(0, 16);
 }
 
+/**
+ * Read all recent projects (sorted by last opened) and shape them for the
+ * client. Shared by GET and by the save/touch POST actions so a mutation can
+ * return the freshened list directly — sparing the client a follow-up GET.
+ */
+function loadRecentProjects(db: ReturnType<typeof getDb>) {
+  const rows = db.prepare(
+    'SELECT id, project_name, project_path, ue_version, checklist_json, last_opened_at FROM recent_projects ORDER BY last_opened_at DESC LIMIT 20'
+  ).all() as RecentProjectRow[];
+
+  return rows.map((row) => {
+    const checklist: Record<string, Record<string, boolean>> = JSON.parse(row.checklist_json || '{}');
+    let total = 0;
+    let done = 0;
+    for (const moduleItems of Object.values(checklist)) {
+      for (const checked of Object.values(moduleItems)) {
+        total++;
+        if (checked) done++;
+      }
+    }
+    return {
+      id: row.id,
+      projectName: row.project_name,
+      projectPath: row.project_path,
+      ueVersion: row.ue_version,
+      lastOpenedAt: row.last_opened_at,
+      checklistTotal: total,
+      checklistDone: done,
+    };
+  });
+}
+
 /** GET — return all recent projects sorted by last opened */
 export async function GET() {
   try {
     const db = getDb();
-    const rows = db.prepare(
-      'SELECT id, project_name, project_path, ue_version, checklist_json, last_opened_at FROM recent_projects ORDER BY last_opened_at DESC LIMIT 20'
-    ).all() as RecentProjectRow[];
-
-    const projects = rows.map((row) => {
-      const checklist: Record<string, Record<string, boolean>> = JSON.parse(row.checklist_json || '{}');
-      let total = 0;
-      let done = 0;
-      for (const moduleItems of Object.values(checklist)) {
-        for (const checked of Object.values(moduleItems)) {
-          total++;
-          if (checked) done++;
-        }
-      }
-      return {
-        id: row.id,
-        projectName: row.project_name,
-        projectPath: row.project_path,
-        ueVersion: row.ue_version,
-        lastOpenedAt: row.last_opened_at,
-        checklistTotal: total,
-        checklistDone: done,
-      };
-    });
-
-    return apiSuccess(projects);
+    return apiSuccess(loadRecentProjects(db));
   } catch (err) {
     return apiError(err instanceof Error ? err.message : 'Failed to load recent projects');
   }
@@ -78,14 +85,16 @@ export async function POST(req: NextRequest) {
           last_opened_at = datetime('now')
       `).run(id, projectName, projectPath, ueVersion ?? '5.5', checklistJson);
 
-      return apiSuccess({ id });
+      // Return the freshened list so the client can update state without a follow-up GET.
+      return apiSuccess({ id, projects: loadRecentProjects(db) });
     }
 
     if (action === 'touch') {
       const { projectId: pid } = body;
       if (!pid) return apiError('projectId required', 400);
       db.prepare("UPDATE recent_projects SET last_opened_at = datetime('now') WHERE id = ?").run(pid);
-      return apiSuccess({ touched: true });
+      // Return the freshened list so the client can update state without a follow-up GET.
+      return apiSuccess({ touched: true, projects: loadRecentProjects(db) });
     }
 
     if (action === 'remove') {
