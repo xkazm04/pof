@@ -4,30 +4,28 @@ import { BuildHistoryDashboard } from '@/components/modules/game-systems/BuildHi
 
 afterEach(cleanup);
 
-/** Mock the four /api/packaging/history GETs the dashboard fires on mount. */
+/** Mock the single composite /api/packaging/history?action=dashboard GET the dashboard fires on mount. */
 function mockHistory() {
-  const byAction: Record<string, unknown> = {
-    'action=list': { builds: [] },
-    'action=stats': {
-      stats: {
-        totalBuilds: 4,
-        successCount: 3,
-        failedCount: 1,
-        successRate: 75,
-        avgDurationMs: 120000,
-        avgSizeBytes: 1073741824,
-        latestVersion: '0.2.0',
-        platforms: [
-          { platform: 'Windows', total: 4, success: 3, failed: 1, successRate: 75, avgDurationMs: 120000, avgSizeBytes: 1073741824, latestSizeBytes: 1073741824 },
-        ],
-      },
+  const dashboard = {
+    builds: [],
+    stats: {
+      totalBuilds: 4,
+      successCount: 3,
+      failedCount: 1,
+      successRate: 75,
+      avgDurationMs: 120000,
+      avgSizeBytes: 1073741824,
+      latestVersion: '0.2.0',
+      platforms: [
+        { platform: 'Windows', total: 4, success: 3, failed: 1, successRate: 75, avgDurationMs: 120000, avgSizeBytes: 1073741824, latestSizeBytes: 1073741824 },
+      ],
     },
-    'action=trend': { trend: [] },
-    'action=version': { version: '0.2.0' },
+    trend: [],
+    version: '0.2.0',
+    parsed: { major: 0, minor: 2, patch: 0 },
   };
-  globalThis.fetch = vi.fn().mockImplementation((url: string) => {
-    const key = Object.keys(byAction).find((k) => url.includes(k)) ?? 'action=list';
-    const body = { success: true, data: byAction[key] };
+  globalThis.fetch = vi.fn().mockImplementation(() => {
+    const body = { success: true, data: dashboard };
     return Promise.resolve({
       ok: true,
       status: 200,
