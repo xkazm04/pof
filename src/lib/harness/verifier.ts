@@ -30,14 +30,11 @@ function runCommand(
   timeoutMs: number = 120_000,
 ): Promise<{ stdout: string; stderr: string; exitCode: number }> {
   return new Promise((resolve) => {
-    // Fallback kill if the command genuinely hangs past exec's own `timeout`.
-    // Captured so we can clear it on normal completion (and unref'd so a
-    // still-pending fallback timer can never hold the event loop open).
-    let fallbackKill: ReturnType<typeof setTimeout> | undefined;
-
     const proc = exec(command, { cwd, timeout: timeoutMs, maxBuffer: 10 * 1024 * 1024 }, (error, stdout, stderr) => {
       // Command settled normally — cancel the pending fallback kill timer.
-      if (fallbackKill) clearTimeout(fallbackKill);
+      // (fallbackKill is initialized synchronously below, before any async
+      // exec callback can fire, so it is always defined here.)
+      clearTimeout(fallbackKill);
       resolve({
         stdout: stdout ?? '',
         stderr: stderr ?? '',
@@ -45,11 +42,12 @@ function runCommand(
       });
     });
 
-    // Fallback kill if timeout fires (belt-and-suspenders over exec's `timeout`).
-    fallbackKill = setTimeout(() => {
+    // Fallback kill if the command genuinely hangs past exec's own `timeout`
+    // (belt-and-suspenders). unref'd so an armed-but-unfired timer can never
+    // hold the event loop open after the gate completes.
+    const fallbackKill = setTimeout(() => {
       try { proc.kill('SIGTERM'); } catch { /* already dead */ }
     }, timeoutMs + 1000);
-    // Don't let an armed-but-unfired fallback timer keep the process alive.
     fallbackKill.unref?.();
   });
 }
