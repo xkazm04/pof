@@ -621,7 +621,9 @@ function ComboParseFeedback({ parse }: { parse: ComboParse }) {
 
 export function AIComboChoreographer() {
   const [prompt, setPrompt] = useState('');
-  const [isGenerating, setIsGenerating] = useState(false);
+  // Generation is synchronous & instant, so there is no "generating" state to toggle —
+  // kept as a const so the button's enabled/label logic reads a stable false.
+  const isGenerating = false;
   const [generatedCombo, setGeneratedCombo] = useState<GeneratedCombo | null>(null);
   const [codePreview, setCodePreview] = useState<{ code: string; title: string } | null>(null);
   const [copied, setCopied] = useState(false);
