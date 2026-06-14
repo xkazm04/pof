@@ -535,13 +535,18 @@ export function StateMachineEditor() {
   // ── Code gen ──
 
   const generatedCode = useMemo(() => {
+    // Skip the full string-building pipeline while the code panel is hidden:
+    // node drag mutates `states` on every mousemove, so without this gate the
+    // 4-section C++ output would regenerate on every pointer frame for output
+    // the user can't see. When `showCode` is true the result is identical.
+    if (!showCode) return '';
     switch (codeTab) {
       case 'enum': return generateEnumCode(states);
       case 'compute': return generateComputeAnimState(states);
       case 'setup': return generateAnimBPSetup(states, transitions);
       default: return generateFullCppOutput(states, transitions);
     }
-  }, [states, transitions, codeTab]);
+  }, [showCode, states, transitions, codeTab]);
 
   const handleCopy = useCallback(async (section: string, text: string) => {
     try {
