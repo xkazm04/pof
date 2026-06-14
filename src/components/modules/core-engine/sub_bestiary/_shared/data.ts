@@ -490,43 +490,8 @@ export const RADAR_PLAYER: RadarDataPoint[] = [
 ];
 
 /* ── 5.2 Behavior Tree Flowchart data ────────────────────────────────── */
-
-export interface BtNode {
-  id: string;
-  label: string;
-  shape: 'diamond' | 'rect' | 'rounded' | 'hexagon';
-  x: number;
-  y: number;
-  active: boolean;
-  details: string;
-}
-
-export interface BtEdge {
-  from: string;
-  to: string;
-  active: boolean;
-}
-
-export const BT_NODES: BtNode[] = [
-  { id: 'root', label: 'Root Selector', shape: 'diamond', x: 120, y: 15, active: true, details: 'Evaluates children left-to-right. Succeeds on first child success.' },
-  { id: 'seq-combat', label: 'Seq:Combat', shape: 'rect', x: 51.4, y: 60, active: true, details: 'Sequence node: all children must succeed for combat engagement.' },
-  { id: 'seq-patrol', label: 'Seq:Patrol', shape: 'rect', x: 188.6, y: 60, active: false, details: 'Sequence node: patrol waypoint loop with idle pauses.' },
-  { id: 'dec-target', label: 'HasTarget?', shape: 'hexagon', x: 17.1, y: 105, active: true, details: 'Decorator: checks blackboard for valid target reference (not null, alive, in range).' },
-  { id: 'dec-range', label: 'InRange?', shape: 'hexagon', x: 85.7, y: 105, active: true, details: 'Decorator: evaluates distance < AttackRange (500cm default). Returns success/fail.' },
-  { id: 'task-attack', label: 'Attack', shape: 'rounded', x: 17.1, y: 150, active: true, details: 'Task: execute melee/ranged attack ability. Cooldown: 1.2s. Damage: based on archetype.' },
-  { id: 'task-chase', label: 'Chase', shape: 'rounded', x: 85.7, y: 150, active: false, details: 'Task: move toward target using NavMesh pathfinding. Speed multiplier: 1.5x base.' },
-  { id: 'task-wander', label: 'Wander', shape: 'rounded', x: 188.6, y: 105, active: false, details: 'Task: random point in 600cm radius via EQS. Idle 2-4s between moves.' },
-];
-
-export const BT_EDGES: BtEdge[] = [
-  { from: 'root', to: 'seq-combat', active: true },
-  { from: 'root', to: 'seq-patrol', active: false },
-  { from: 'seq-combat', to: 'dec-target', active: true },
-  { from: 'seq-combat', to: 'dec-range', active: true },
-  { from: 'dec-target', to: 'task-attack', active: true },
-  { from: 'dec-range', to: 'task-chase', active: false },
-  { from: 'seq-patrol', to: 'task-wander', active: false },
-];
+/* Canonical hierarchical tree (BtTreeNode / BT_TREE) lives in data-expanded.ts
+   and is re-exported above. */
 
 /* ── 5.3 Perception Cone data ────────────────────────────────────────── */
 
