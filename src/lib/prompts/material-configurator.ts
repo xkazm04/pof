@@ -1,5 +1,6 @@
 import { getModuleName, type ProjectContext } from '@/lib/prompt-context';
 import { PromptBuilder } from '@/lib/prompts/prompt-builder';
+import { GENERATE_ALL_DIRECTLY, USE_MATERIAL_BEST_PRACTICES, MATERIAL_UPROPERTY_TUNING } from '@/lib/prompts/_shared';
 import type { MaterialConfiguratorConfig, SurfaceType, RenderFeature } from '@/components/modules/content/materials/MaterialParameterConfigurator';
 
 const SURFACE_LABELS: Record<SurfaceType, string> = {
@@ -81,9 +82,9 @@ export function buildMaterialConfiguratorPrompt(config: MaterialConfiguratorConf
   return new PromptBuilder()
     .withProjectContext(ctx, {
       extraRules: [
-        'Generate all code files directly — do NOT ask for confirmation.',
-        'Use UE5 Material system best practices.',
-        'All parameters must be UPROPERTY(EditAnywhere, BlueprintReadWrite) for designer tuning.',
+        GENERATE_ALL_DIRECTLY,
+        USE_MATERIAL_BEST_PRACTICES,
+        MATERIAL_UPROPERTY_TUNING,
         isMaster
           ? 'Generate a full Master Material with static switches and parameterized inputs.'
           : 'Generate a Material Instance Dynamic (MID) helper — NOT a full master material shader.',

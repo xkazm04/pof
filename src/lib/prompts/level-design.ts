@@ -1,5 +1,6 @@
 import type { RoomNode, LevelDesignDocument, SyncDivergence } from '@/types/level-design';
 import { buildProjectContextHeader, getModuleName, type ProjectContext } from '@/lib/prompt-context';
+import { GENERATE_ALL_DIRECTLY, GENERATE_THE_DIRECTLY } from '@/lib/prompts/_shared';
 import type { StreamingZonePlannerConfig, StreamingZone, ZoneTransition } from '@/components/modules/content/level-design/StreamingZonePlanner';
 import type { ProceduralLevelConfig } from '@/components/modules/content/level-design/ProceduralLevelWizard';
 
@@ -11,7 +12,7 @@ export function buildRoomCodegenPrompt(room: RoomNode, doc: LevelDesignDocument,
 
   const header = buildProjectContextHeader(ctx, {
     extraRules: [
-      'Generate the code files directly — do NOT ask for confirmation.',
+      GENERATE_THE_DIRECTLY,
     ],
   });
 
@@ -116,7 +117,7 @@ export function buildNarrativeCodegenPrompt(doc: LevelDesignDocument, ctx: Proje
 
   const header = buildProjectContextHeader(ctx, {
     extraRules: [
-      'Generate all code files directly — do NOT ask for confirmation.',
+      GENERATE_ALL_DIRECTLY,
       'Include a data-driven approach for easy iteration.',
     ],
   });
@@ -180,7 +181,7 @@ export function buildStreamingZonePrompt(config: StreamingZonePlannerConfig, ctx
   const moduleName = getModuleName(ctx.projectName);
   const header = buildProjectContextHeader(ctx, {
     extraRules: [
-      'Generate all code files directly — do NOT ask for confirmation.',
+      GENERATE_ALL_DIRECTLY,
       'Each zone must be a separate UE5 streaming level.',
       'Use ULevelStreamingDynamic for runtime loading when possible.',
     ],
@@ -352,7 +353,7 @@ export function buildProceduralLevelPrompt(config: ProceduralLevelConfig, ctx: P
   const moduleName = getModuleName(ctx.projectName);
   const header = buildProjectContextHeader(ctx, {
     extraRules: [
-      'Generate all code files directly — do NOT ask for confirmation.',
+      GENERATE_ALL_DIRECTLY,
       'Use UE5 C++ best practices for procedural generation.',
       'The system must be deterministic with a seed parameter.',
       'All generation parameters must be UPROPERTY(EditAnywhere) for designer iteration.',

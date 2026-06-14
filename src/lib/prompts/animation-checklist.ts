@@ -1,5 +1,6 @@
 import { getModuleName, type ProjectContext } from '@/lib/prompt-context';
 import { PromptBuilder } from '@/lib/prompts/prompt-builder';
+import { GENERATE_ALL_DIRECTLY } from '@/lib/prompts/_shared';
 import type { ChecklistStep } from '@/components/modules/content/animations/AnimationChecklist';
 
 export function buildAnimationChecklistPrompt(step: ChecklistStep, ctx: ProjectContext): string {
@@ -8,7 +9,7 @@ export function buildAnimationChecklistPrompt(step: ChecklistStep, ctx: ProjectC
   return new PromptBuilder()
     .withProjectContext(ctx, {
       extraRules: [
-        'Generate all code files directly — do NOT ask for confirmation.',
+        GENERATE_ALL_DIRECTLY,
         'Use UE5 C++ best practices for animation systems.',
         'All animation-related UPROPERTYs should be EditAnywhere, BlueprintReadWrite.',
         'Place animation classes under Source/' + moduleName + '/Animation/.',

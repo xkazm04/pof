@@ -1,11 +1,12 @@
 import { buildProjectContextHeader, getModuleName, type ProjectContext } from '@/lib/prompt-context';
+import { GENERATE_ALL_DIRECTLY } from '@/lib/prompts/_shared';
 import type { MaterialPattern } from '@/components/modules/content/materials/MaterialPatternCatalog';
 
 export function buildMaterialPatternPrompt(pattern: MaterialPattern, ctx: ProjectContext): string {
   const moduleName = getModuleName(ctx.projectName);
   const header = buildProjectContextHeader(ctx, {
     extraRules: [
-      'Generate all code files directly — do NOT ask for confirmation.',
+      GENERATE_ALL_DIRECTLY,
       'Use UE5 Material system best practices with UPROPERTY-exposed parameters.',
       'Create both C++ helper classes and material setup instructions.',
     ],
