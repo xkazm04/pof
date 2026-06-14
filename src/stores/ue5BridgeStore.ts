@@ -85,11 +85,38 @@ export const useUE5BridgeStore = create<UE5BridgeState>()(
       setAutoConnect: (autoConnect) => set({ autoConnect }),
       setAutoSyncLiveState: (autoSyncLiveState) => set({ autoSyncLiveState }),
       setConnectionState: (connectionState) => set({ connectionState }),
-      setLiveState: (liveState: LiveEditorState) => set({
-        wsStatus: liveState.wsStatus,
-        liveSnapshot: liveState.snapshot,
-        propertyWatches: Object.fromEntries(liveState.propertyWatches),
-        wsFrameRate: liveState.frameRate,
+      // Bridge each live-state notification into the store, writing ONLY the
+      // slices that actually changed. The WS firehose notifies on every
+      // message (snapshot/delta/property/fps); blindly replacing every slice
+      // (and rebuilding the propertyWatches object via Object.fromEntries) on
+      // each message re-renders every subscriber unnecessarily. We diff against
+      // current state and skip no-op writes — observable values are identical.
+      setLiveState: (liveState: LiveEditorState) => set((prev) => {
+        const patch: Partial<UE5BridgeState> = {};
+
+        if (prev.wsStatus !== liveState.wsStatus) patch.wsStatus = liveState.wsStatus;
+        if (prev.liveSnapshot !== liveState.snapshot) patch.liveSnapshot = liveState.snapshot;
+        if (prev.wsFrameRate !== liveState.frameRate) patch.wsFrameRate = liveState.frameRate;
+
+        // Only rebuild the propertyWatches object when the watch set actually
+        // changed (size differs, or any key's value reference differs). On
+        // pure snapshot/delta/fps messages the watches are untouched, so we
+        // keep the existing object reference and avoid the Object.fromEntries
+        // rebuild + the re-render of property-watch consumers.
+        const incoming = liveState.propertyWatches;
+        const current = prev.propertyWatches;
+        let watchesChanged = incoming.size !== Object.keys(current).length;
+        if (!watchesChanged) {
+          for (const [key, value] of incoming) {
+            if (current[key] !== value) {
+              watchesChanged = true;
+              break;
+            }
+          }
+        }
+        if (watchesChanged) patch.propertyWatches = Object.fromEntries(incoming);
+
+        return patch;
       }),
     }),
     {
