@@ -175,17 +175,42 @@ function extractConcepts(text: string): string[] {
 
 // ── Link entities to modules ─────────────────────────────────────────────────
 
-function linkEntityToModule(entity: string): string | undefined {
-  const lower = entity.toLowerCase();
+/**
+ * Lowercased feature corpus, precomputed once at module load.
+ *
+ * The match is fuzzy (substring in both directions + a description scan), so it
+ * cannot be reduced to an exact-key Map. Instead we hoist the lowercasing out of
+ * the per-entity hot path: each feature's name/description is lowercased a single
+ * time here rather than re-lowercased on every `linkEntityToModule` call.
+ *
+ * Order is preserved exactly — `Object.entries(MODULE_FEATURE_DEFINITIONS)` module
+ * order, then feature-array order within each module — so the first-match result
+ * (and therefore every entity→module assignment) is byte-for-byte identical to the
+ * previous nested-loop implementation; only redundant recomputation is removed.
+ */
+const FEATURE_MATCH_CORPUS: { moduleId: string; nameLower: string; descLower: string }[] = (() => {
+  const corpus: { moduleId: string; nameLower: string; descLower: string }[] = [];
   for (const [moduleId, features] of Object.entries(MODULE_FEATURE_DEFINITIONS)) {
     for (const feat of features) {
-      if (
-        feat.featureName.toLowerCase().includes(lower) ||
-        lower.includes(feat.featureName.toLowerCase()) ||
-        feat.description.toLowerCase().includes(lower)
-      ) {
-        return moduleId;
-      }
+      corpus.push({
+        moduleId,
+        nameLower: feat.featureName.toLowerCase(),
+        descLower: feat.description.toLowerCase(),
+      });
+    }
+  }
+  return corpus;
+})();
+
+function linkEntityToModule(entity: string): string | undefined {
+  const lower = entity.toLowerCase();
+  for (const feat of FEATURE_MATCH_CORPUS) {
+    if (
+      feat.nameLower.includes(lower) ||
+      lower.includes(feat.nameLower) ||
+      feat.descLower.includes(lower)
+    ) {
+      return feat.moduleId;
     }
   }
   return undefined;
