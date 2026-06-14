@@ -22,6 +22,7 @@
  */
 
 import { logger } from '@/lib/logger';
+import { pollUntilReady } from '@/lib/visual-gen/poll';
 
 const SCENARIO_API_BASE = 'https://api.cloud.scenario.com/v1';
 const POLL_INTERVAL_MS = 3000;
@@ -55,10 +56,6 @@ export interface ScenarioTextureResult {
   metallicUrl?: string;
   heightUrl?: string;
   aoUrl?: string;
-}
-
-function sleep(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 function authHeader(): string {
@@ -132,24 +129,29 @@ export async function generateTexture(opts: ScenarioTextureOptions): Promise<Sce
   logger.info(`[scenario] texture job started: ${jobId}`);
 
   // 2. poll the job until success
-  let assetIds: string[] = [];
-  for (let attempt = 0; attempt < maxAttempts; attempt++) {
-    await sleep(pollMs);
-    const pollRes = await fetch(`${SCENARIO_API_BASE}/jobs/${jobId}`, { headers: headers() });
-    if (!pollRes.ok) continue;
-    const data = (await pollRes.json()) as {
-      job?: { status?: string; metadata?: { assetIds?: string[] } };
-    };
-    const status = data.job?.status?.toLowerCase();
-    if (status === 'success') {
-      assetIds = data.job?.metadata?.assetIds ?? [];
-      break;
-    }
-    if (status === 'failure' || status === 'failed' || status === 'error') {
-      throw new Error(`Scenario texture job ${jobId} failed`);
-    }
-  }
-  if (assetIds.length === 0) throw new Error(`Scenario texture job ${jobId} produced no assets (timed out or empty)`);
+  type ScenarioJob = { status?: string; metadata?: { assetIds?: string[] } };
+  const timedOut = new Error(`Scenario texture job ${jobId} produced no assets (timed out or empty)`);
+  const job = await pollUntilReady<ScenarioJob>({
+    intervalMs: pollMs,
+    maxAttempts,
+    fetchStatus: async () => {
+      const pollRes = await fetch(`${SCENARIO_API_BASE}/jobs/${jobId}`, { headers: headers() });
+      if (!pollRes.ok) return undefined;
+      const data = (await pollRes.json()) as { job?: ScenarioJob };
+      return data.job ?? undefined;
+    },
+    isDone: (j) => j.status?.toLowerCase() === 'success',
+    isFailed: (j) => {
+      const s = j.status?.toLowerCase();
+      return s === 'failure' || s === 'failed' || s === 'error';
+    },
+    onFailed: () => new Error(`Scenario texture job ${jobId} failed`),
+    // The original loop fell through to the empty-assets check on timeout, so the
+    // timeout surfaces the same "produced no assets (timed out or empty)" error.
+    onTimeout: () => timedOut,
+  });
+  const assetIds: string[] = job.metadata?.assetIds ?? [];
+  if (assetIds.length === 0) throw timedOut;
 
   // 3. resolve each asset URL + classify it
   const maps: ScenarioTextureMap[] = [];
