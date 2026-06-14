@@ -16,9 +16,11 @@ interface Props {
   setFocusedIndex: (i: number) => void;
   setSelectedItem: React.Dispatch<React.SetStateAction<ItemData | null>>;
   entryByItemId: Map<string, ItemEntry>;
-  primaryEntry: ItemEntry;
+  /** Undefined when the catalog store is empty (no backing entry to generate). */
+  primaryEntry: ItemEntry | undefined;
   isGenRunning: boolean;
-  onRegenerate: () => void;
+  /** Undefined disables the (Re)generate affordance (no primary entry). */
+  onRegenerate: (() => void) | undefined;
   onGridKeyDown: (e: React.KeyboardEvent) => void;
 }
 
