@@ -19,7 +19,7 @@ import {
 } from 'lucide-react';
 import { useActivityFeedStore } from '@/stores/activityFeedStore';
 import { useModuleActions } from '@/hooks/useModuleActions';
-import { useViewportWidth } from '@/hooks/useViewportWidth';
+import { useViewportAtLeast } from '@/hooks/useViewportWidth';
 import { DURATION, EASE_OUT } from '@/lib/motion';
 import { formatTimeAgo } from '@/lib/format-time';
 import { StaggerContainer, StaggerItem } from '@/components/ui/Stagger';
@@ -120,9 +120,10 @@ export function ActivityFeedPanel() {
   const { sendPromptToModule } = useModuleActions();
 
   const prefersReduced = useReducedMotion();
-  const viewportWidth = useViewportWidth();
   // Wide → inline column that smoothly pushes ModuleRenderer; narrow → overlay drawer.
-  const overlay = viewportWidth < OVERLAY_BREAKPOINT;
+  // Only the breakpoint boolean matters, so subscribe to the threshold rather than
+  // the raw width — a resize that stays on one side of OVERLAY_BREAKPOINT is a no-op.
+  const overlay = !useViewportAtLeast(OVERLAY_BREAKPOINT);
 
   // Refresh relative timestamps every 60s
   const [, setTick] = useState(0);

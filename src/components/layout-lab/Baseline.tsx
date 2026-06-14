@@ -20,7 +20,7 @@ import { Stat } from './ui/Stat';
 import { LabDrawer, DrawerToggle } from './LabDrawer';
 import { statusAriaLabel } from './statusLanguage';
 import { summarizeEntity } from '@/lib/catalog/rollup';
-import { useViewportWidth } from '@/hooks/useViewportWidth';
+import { useViewportAtLeast } from '@/hooks/useViewportWidth';
 import { labPanelStyle, type LabTheme } from './theme';
 import type { LabDetail, LabGroup } from './useLabCatalogData';
 import type { PipelineArtifact } from '@/lib/pipeline-artifacts-db';
@@ -59,8 +59,9 @@ export function Baseline({ theme: t, groups, detail, onSelectCatalog, entityId, 
 
   // Responsive shell: below COLLAPSE_BREAKPOINT the 580px of catalog+pipeline chrome
   // is hidden and surfaced as left slide-over drawers, leaving the canvas full-width.
-  const viewportWidth = useViewportWidth();
-  const wide = viewportWidth >= COLLAPSE_BREAKPOINT;
+  // Only the breakpoint boolean matters here, so subscribe to the threshold — a
+  // resize that doesn't cross COLLAPSE_BREAKPOINT re-renders nothing.
+  const wide = useViewportAtLeast(COLLAPSE_BREAKPOINT);
   const [openDrawer, setOpenDrawer] = useState<'tree' | 'pipeline' | null>(null);
   // Drawers only exist in the narrow shell; in wide mode the columns are inline.
   const showTreeDrawer = !wide && openDrawer === 'tree';
