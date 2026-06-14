@@ -13,6 +13,7 @@ import { ResultsAnalysis } from './ResultsAnalysis';
 import { ImportScenarioModal } from './ImportScenarioModal';
 import { GASBalanceHeader } from './GASBalanceHeader';
 import { runIteration, finalizeSimulation } from './simulation';
+import { armorMitigation } from '@/lib/ability/damage-formula';
 import type { SimScenario, SimResults, SimIterationResult } from './data';
 import { ACCENT, SCENARIO_PRESETS } from './data';
 import { TEXT_SCALE } from '@/lib/typography-scale';
@@ -132,7 +133,7 @@ export function GASBalanceSimulator() {
             <div>Player: Lv.{scenario.player.level} — {scenario.player.maxHealth} HP, {scenario.player.attackPower} AtkPow</div>
             <div>Enemies: {totalEnemies} targets, {totalEnemyHp} total HP</div>
             <div>Scaling: AtkPow +Str{'×'}2 = {scenario.player.attackPower + scenario.player.strength * 2}</div>
-            <div>Armor Mit: {((scenario.player.armor / (scenario.player.armor + 100)) * 100).toFixed(1)}%</div>
+            <div>Armor Mit: {(armorMitigation(scenario.player.armor) * 100).toFixed(1)}%</div>
           </BlueprintPanel>
         </div>
 
