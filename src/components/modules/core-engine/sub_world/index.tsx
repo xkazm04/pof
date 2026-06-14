@@ -64,13 +64,15 @@ export function ZoneMap({ moduleId }: ZoneMapProps) {
   /* Stable content signature — pulses the active panel only when the matching
      set actually changes, not on every slider tick within the same band. */
   const matchSignature = useMemo(() => matchingZones.map(z => z.id).join('|'), [matchingZones]);
-  /* Key the Set on the content signature, not on `matchingZones`: `.filter()`
-     returns a fresh array every tick, so keying on it would mint a new Set
-     reference even when membership is unchanged, defeating the memo boundary on
-     the map/topology children below. The signature only changes when the band's
-     membership actually changes, so the Set identity stays stable across ticks
-     within the same band and changes exactly when the rendered set must. */
-  const matchingIds = useMemo(() => new Set(matchingZones.map(z => z.id)), [matchSignature]); // eslint-disable-line react-hooks/exhaustive-deps
+  /* Derive the Set from the signature (not from `matchingZones`, a fresh
+     `.filter()` array every tick) so its identity stays stable across slider
+     ticks within the same level band — that's what lets the memo boundary on the
+     map/topology children below actually skip work. Reading only `matchSignature`
+     also keeps the deps honest (no manual-memoization / exhaustive-deps escape). */
+  const matchingIds = useMemo(
+    () => new Set(matchSignature ? matchSignature.split('|') : []),
+    [matchSignature],
+  );
 
   /* folder-09 R3 UI: lifecycle + (Re)generate for the primary (first matching) zone. */
   const zoneEntries = useCatalogEntities('zone-map') as ZoneEntry[];
