@@ -70,11 +70,23 @@ export function recordSession(data: {
     data.completedAt,
   );
 
-  const record = getRecord(result.lastInsertRowid as number);
-  if (!record) {
-    throw new Error(`Failed to retrieve session_analytics record after INSERT (rowid=${result.lastInsertRowid})`);
-  }
-  return record;
+  // Build the return object from the values we already have in hand instead of
+  // re-SELECTing the row we just inserted. The sole caller (POST
+  // /api/session-analytics → recordSessionOutcome) is fire-and-forget and
+  // discards the body, so the extra round-trip was pure write-path overhead.
+  return {
+    id: result.lastInsertRowid as number,
+    moduleId: data.moduleId,
+    sessionKey: data.sessionKey,
+    prompt: data.prompt,
+    promptPreview: preview,
+    hadProjectContext: data.hadProjectContext,
+    promptLength: data.prompt.length,
+    success: data.success,
+    durationMs: data.durationMs,
+    startedAt: data.startedAt,
+    completedAt: data.completedAt,
+  };
 }
 
 export function getRecord(id: number): SessionRecord | null {
