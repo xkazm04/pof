@@ -49,6 +49,34 @@ function cloneEffects(effects: PPStudioEffect[]): PPStudioEffect[] {
   }));
 }
 
+/**
+ * Pure priority-swap reorder. Sorts `effects` by priority, swaps the target
+ * effect's priority with its up/down neighbour, and returns a new array
+ * (in the sorted order). The input is never mutated. Returns the same
+ * (already-sorted) array reference is *not* guaranteed — callers should treat
+ * the result as the new canonical ordering. If the effect is missing or the
+ * move is out of bounds, a sorted copy of the input is returned unchanged.
+ *
+ * Shared by the store's `moveEffect` action and the materials-tab
+ * PostProcessStackBuilder so both surfaces reorder identically.
+ */
+export function reorderByPriority(
+  effects: PPStudioEffect[],
+  effectId: string,
+  direction: 'up' | 'down',
+): PPStudioEffect[] {
+  const next = [...effects].sort((a, b) => a.priority - b.priority);
+  const idx = next.findIndex((e) => e.id === effectId);
+  if (idx < 0) return next;
+  const swapIdx = direction === 'up' ? idx - 1 : idx + 1;
+  if (swapIdx < 0 || swapIdx >= next.length) return next;
+
+  const tempPriority = next[idx].priority;
+  next[idx] = { ...next[idx], priority: next[swapIdx].priority };
+  next[swapIdx] = { ...next[swapIdx], priority: tempPriority };
+  return next;
+}
+
 function applyPresetToEffects(
   effects: PPStudioEffect[],
   preset: PPPreset,
@@ -158,16 +186,13 @@ export const usePostProcessStudioStore = create<PostProcessStudioState>((set, ge
   },
 
   moveEffect: (effectId, direction) => {
-    const effects = [...get().effects].sort((a, b) => a.priority - b.priority);
-    const idx = effects.findIndex((e) => e.id === effectId);
+    const current = [...get().effects].sort((a, b) => a.priority - b.priority);
+    const idx = current.findIndex((e) => e.id === effectId);
     if (idx < 0) return;
     const swapIdx = direction === 'up' ? idx - 1 : idx + 1;
-    if (swapIdx < 0 || swapIdx >= effects.length) return;
+    if (swapIdx < 0 || swapIdx >= current.length) return;
 
-    const tempPriority = effects[idx].priority;
-    effects[idx] = { ...effects[idx], priority: effects[swapIdx].priority };
-    effects[swapIdx] = { ...effects[swapIdx], priority: tempPriority };
-    set({ effects });
+    set({ effects: reorderByPriority(current, effectId, direction) });
   },
 
   applyPreset: (presetId) => {
