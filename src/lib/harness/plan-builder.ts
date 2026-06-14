@@ -398,7 +398,17 @@ function buildAreasForModule(moduleId: SubModuleId): ModuleArea[] {
 
 /**
  * Wire up area-level dependencies from MODULE_PREREQUISITES.
- * If module B depends on module A, all areas in B depend on all areas in A.
+ *
+ * Module B depending on module A means B must not start until A is fully built.
+ * We express this with the *minimal* edge set rather than a dense cartesian
+ * product: only B's FIRST area depends on A's LAST area. Because intra-module
+ * areas are chained sequentially (area[i] depends on area[i-1]), A's last area
+ * is `completed` only after every earlier sibling in A is completed, and B's
+ * first area gates all later siblings in B. So a single first→last edge per
+ * prerequisite transitively enforces "all of A before all of B" — identical
+ * ordering guarantees to the old all-pairs graph, but ~O(areas) edges instead
+ * of O(areas²). This lets independent module branches run concurrently in the
+ * streaming pool (orchestrator `pickNextAreas`) instead of needlessly serializing.
  */
 function wireAreaDependencies(areas: ModuleArea[]): void {
   const areasByModule = new Map<SubModuleId, string[]>();
@@ -409,18 +419,27 @@ function wireAreaDependencies(areas: ModuleArea[]): void {
   }
 
   for (const area of areas) {
-    const modulePrereqs = MODULE_PREREQUISITES[area.moduleId] ?? [];
     const deps: string[] = [];
-    for (const prereqModule of modulePrereqs) {
-      const prereqAreas = areasByModule.get(prereqModule) ?? [];
-      deps.push(...prereqAreas);
-    }
 
-    // Within the same module, chain areas sequentially
+    // Within the same module, chain areas sequentially.
     const sibling = areasByModule.get(area.moduleId) ?? [];
     const myIndex = sibling.indexOf(area.id);
     if (myIndex > 0) {
       deps.push(sibling[myIndex - 1]);
+    }
+
+    // Cross-module prerequisites: only the FIRST area of this module needs an
+    // explicit edge to each prerequisite. The sibling chain above carries the
+    // dependency to later areas transitively, so we avoid redundant edges.
+    if (myIndex <= 0) {
+      const modulePrereqs = MODULE_PREREQUISITES[area.moduleId] ?? [];
+      for (const prereqModule of modulePrereqs) {
+        const prereqAreas = areasByModule.get(prereqModule) ?? [];
+        if (prereqAreas.length === 0) continue;
+        // Depend on the LAST area of the prerequisite; its own sibling chain
+        // guarantees the whole module is completed before this edge resolves.
+        deps.push(prereqAreas[prereqAreas.length - 1]);
+      }
     }
 
     area.dependsOn = [...new Set(deps)];

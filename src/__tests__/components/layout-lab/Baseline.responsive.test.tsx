@@ -23,6 +23,7 @@ vi.mock('@/components/layout-lab/steps', () => ({
 const { widthRef } = vi.hoisted(() => ({ widthRef: { current: 1440 } }));
 vi.mock('@/hooks/useViewportWidth', () => ({
   useViewportWidth: () => widthRef.current,
+  useViewportAtLeast: (bp: number) => widthRef.current >= bp,
   WIDE_FALLBACK_WIDTH: 1440,
 }));
 

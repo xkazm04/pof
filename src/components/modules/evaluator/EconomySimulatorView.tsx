@@ -28,7 +28,7 @@ import type {
 import type { SweepResult, SweepOutput } from '@/lib/economy/sensitivity-sweep';
 import { MODULE_COLORS, ACCENT_CYAN, ACCENT_EMERALD_DARK, ACCENT_PURPLE_BOLD } from '@/lib/chart-colors';
 import { MOTION } from '@/lib/constants';
-import { useViewportWidth } from '@/hooks/useViewportWidth';
+import { useViewportAtLeast } from '@/hooks/useViewportWidth';
 
 // ── Constants ───────────────────────────────────────────────────────────────
 
@@ -74,6 +74,11 @@ const WEALTH_STACK_BREAKPOINT = 900;
 /** Grid columns for the wealth Gini/histogram pair: two-up when wide, stacked below the breakpoint. Pure for unit-testing the reflow decision without a DOM. */
 export function wealthGridClass(viewportWidth: number): string {
   return viewportWidth < WEALTH_STACK_BREAKPOINT ? 'grid-cols-1' : 'grid-cols-2';
+}
+
+/** Grid columns from the already-derived breakpoint boolean (`width >= WEALTH_STACK_BREAKPOINT`). Mirrors {@link wealthGridClass} so both stay in lockstep. */
+function wealthGridClassFromWide(wide: boolean): string {
+  return wide ? 'grid-cols-2' : 'grid-cols-1';
 }
 
 // ── Main Component ──────────────────────────────────────────────────────────
@@ -599,7 +604,9 @@ export function WealthDistributionChart({ metrics, snapshots }: {
   snapshots: PlayerSnapshot[];
 }) {
   // Stack the Gini/histogram pair into one column on narrow/zoomed viewports.
-  const gridCols = wealthGridClass(useViewportWidth());
+  // Only the breakpoint boolean matters, so subscribe to the threshold — a resize
+  // that doesn't cross WEALTH_STACK_BREAKPOINT re-renders nothing.
+  const gridCols = wealthGridClassFromWide(useViewportAtLeast(WEALTH_STACK_BREAKPOINT));
 
   if (snapshots.length === 0) return null;
 

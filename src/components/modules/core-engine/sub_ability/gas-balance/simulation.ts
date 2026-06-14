@@ -3,6 +3,7 @@ import type {
   SimIterationResult, SensitivityPoint, SensitivityResult,
   LevelSweepPoint, LevelSweepConfig,
 } from './data';
+import { scaleAndMitigate, armorMitigation } from '@/lib/ability/damage-formula';
 
 /* ── Attribute Scaling ────────────────────────────────────────────────── */
 
@@ -18,16 +19,14 @@ export function applyScaling(stats: CombatantStats): CombatantStats {
 /* ── Damage Pipeline ──────────────────────────────────────────────────── */
 
 /**
- * Damage pipeline per hit (mirrors UE5 DamageExecution):
- * 1. scaledDamage = baseDamage * (1 + attackPower / 100)
- * 2. armorReduction = targetArmor / (targetArmor + 100)
- * 3. afterArmor = scaledDamage * (1 - armorReduction)
- * 4. if crit: afterArmor * critDamage, else afterArmor
+ * Damage pipeline per hit (mirrors UE5 DamageExecution). The pre-crit core
+ * (scale by power, then armor mitigation) is the shared canonical GAS model
+ * from @/lib/ability/damage-formula; only the crit step is sim-specific:
+ * 1. afterArmor = scaleAndMitigate(baseDamage, attackPower, targetArmor)
+ * 2. if crit (rolled): afterArmor * critDamage, else afterArmor
  */
 function rollDamage(attacker: CombatantStats, targetArmor: number): { damage: number; isCrit: boolean } {
-  const scaledDamage = attacker.baseDamage * (1 + attacker.attackPower / 100);
-  const armorReduction = targetArmor / (targetArmor + 100);
-  const afterArmor = scaledDamage * (1 - armorReduction);
+  const afterArmor = scaleAndMitigate(attacker.baseDamage, attacker.attackPower, targetArmor);
   const isCrit = Math.random() < attacker.criticalChance;
   const damage = isCrit ? afterArmor * attacker.criticalDamage : afterArmor;
   return { damage, isCrit };
@@ -107,8 +106,8 @@ function computeResults(scenario: SimScenario, iterations: SimIterationResult[])
   const dpsList = iterations.map(it => it.ttk > 0 ? it.totalDamage / it.ttk : 0).sort((a, b) => a - b);
   const ttkMean = mean(ttks);
   const scaledPlayer = applyScaling(scenario.player);
-  const armorMitigation = scaledPlayer.armor / (scaledPlayer.armor + 100);
-  const effectiveHp = scaledPlayer.maxHealth / (1 - armorMitigation);
+  const playerArmorMit = armorMitigation(scaledPlayer.armor);
+  const effectiveHp = scaledPlayer.maxHealth / (1 - playerArmorMit);
   const totalCrits = iterations.reduce((s, it) => s + it.critHits, 0);
   const totalHitsAll = iterations.reduce((s, it) => s + it.totalHits, 0);
 
@@ -123,7 +122,7 @@ function computeResults(scenario: SimScenario, iterations: SimIterationResult[])
     dpsStats: { mean: mean(dpsList), median: percentile(dpsList, 50), min: dpsList[0] ?? 0, max: dpsList[dpsList.length - 1] ?? 0 },
     critRate: totalHitsAll > 0 ? totalCrits / totalHitsAll : 0,
     survivalRate: iterations.filter(it => it.playerSurvived).length / iterations.length,
-    effectiveHp, armorMitigation, timestamp: Date.now(),
+    effectiveHp, armorMitigation: playerArmorMit, timestamp: Date.now(),
   };
 }
 

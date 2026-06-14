@@ -13,6 +13,7 @@ const { widthRef, reducedRef } = vi.hoisted(() => ({
 
 vi.mock('@/hooks/useViewportWidth', () => ({
   useViewportWidth: () => widthRef.current,
+  useViewportAtLeast: (bp: number) => widthRef.current >= bp,
   WIDE_FALLBACK_WIDTH: 1440,
 }));
 
