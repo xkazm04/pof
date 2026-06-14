@@ -347,16 +347,19 @@ export function BuildHistoryDashboard() {
   const fetchAll = useCallback(async () => {
     setLoading(true);
     try {
-      const [buildsData, statsData, trendData, versionData] = await Promise.all([
-        apiFetch<{ builds: BuildRecord[] }>('/api/packaging/history?action=list&limit=100'),
-        apiFetch<{ stats: BuildStats | null }>('/api/packaging/history?action=stats'),
-        apiFetch<{ trend: SizeTrendPoint[] }>('/api/packaging/history?action=trend&limit=50'),
-        apiFetch<{ version: string }>('/api/packaging/history?action=version'),
-      ]);
-      setBuilds(buildsData.builds ?? []);
-      setStats(statsData.stats ?? null);
-      setTrend(trendData.trend ?? []);
-      setVersion(versionData.version ?? '0.1.0');
+      // One composite request replaces the former 4-way fan-out (list / stats /
+      // trend / version). The `dashboard` action returns the identical pieces
+      // produced by those same store functions in a single route invocation.
+      const data = await apiFetch<{
+        builds: BuildRecord[];
+        stats: BuildStats | null;
+        trend: SizeTrendPoint[];
+        version: string;
+      }>('/api/packaging/history?action=dashboard&limit=100&trendLimit=50');
+      setBuilds(data.builds ?? []);
+      setStats(data.stats ?? null);
+      setTrend(data.trend ?? []);
+      setVersion(data.version ?? '0.1.0');
     } catch (e) {
       console.error('Failed to fetch build history:', e);
     } finally {
