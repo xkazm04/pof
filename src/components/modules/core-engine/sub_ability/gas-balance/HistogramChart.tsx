@@ -1,11 +1,52 @@
 'use client';
 
-import { useState, useRef } from 'react';
+import { memo, useRef, useState } from 'react';
 import { motion } from 'framer-motion';
 import type { HistogramBin } from './simulation';
 
 import { withOpacity, OPACITY_50, OPACITY_37 } from '@/lib/chart-colors';
 import { TEXT_SCALE } from '@/lib/typography-scale';
+
+/**
+ * Single histogram bar. Memoized so a hover elsewhere in the strip never
+ * re-renders it. The dim-others highlight and the hover crosshair are driven
+ * purely by CSS (`group`/`group-hover` on the strip + peer dimming), so moving
+ * the cursor across bars touches no per-bar React state. framer-motion's
+ * `initial` applies only on mount, and the memo keeps hovers from re-rendering
+ * the bar, so the entrance animation runs once without any ref gate.
+ */
+const Bar = memo(function Bar({ pct, color, hasCount, barHeight, onEnter }: {
+  pct: number;
+  color: string;
+  hasCount: boolean;
+  barHeight: number;
+  onEnter: () => void;
+}) {
+  return (
+    <div
+      className="bar group/bar flex-1 min-w-[3px] h-full flex items-end relative cursor-crosshair group-hover:opacity-50 hover:!opacity-100 transition-opacity duration-100"
+      onMouseEnter={onEnter}
+    >
+      <motion.div
+        className="w-full rounded-t-sm"
+        style={{
+          backgroundColor: color,
+          height: `${pct}%`,
+          minHeight: hasCount ? 1 : 0,
+        }}
+        initial={{ height: 0 }}
+        animate={{ height: `${pct}%` }}
+        transition={{ duration: 0.3 }}
+      />
+      {/* Hover crosshair — CSS-driven, shown only when this bar is hovered. */}
+      <div
+        className="absolute top-0 left-1/2 -translate-x-px w-px pointer-events-none opacity-0 group-hover/bar:opacity-100"
+        style={{ height: barHeight, backgroundColor: `${withOpacity(color, OPACITY_50)}` }}
+      />
+    </div>
+  );
+});
+
 /** Histogram bar chart with hover crosshair + tooltip */
 export function HistogramChart({ bins, maxCount, color, formatRange, barHeight = 64 }: {
   bins: HistogramBin[];
@@ -14,42 +55,24 @@ export function HistogramChart({ bins, maxCount, color, formatRange, barHeight =
   formatRange: (bin: HistogramBin) => string;
   barHeight?: number;
 }) {
+  // Tooltip-only state. The memoized <Bar>s never receive this, so a hover does
+  // not re-render the bar strip — only the single absolutely-positioned tooltip.
   const [hoveredIdx, setHoveredIdx] = useState<number | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
   return (
     <div ref={containerRef} className="relative min-h-[200px] bg-surface-deep/30 rounded-lg p-2" onMouseLeave={() => setHoveredIdx(null)}>
-      <div className="flex items-end gap-px" style={{ height: barHeight }}>
-        {bins.map((bin, i) => {
-          const pct = maxCount > 0 ? (bin.count / maxCount) * 100 : 0;
-          const isHovered = hoveredIdx === i;
-          return (
-            <div
-              key={i}
-              className="flex-1 min-w-[3px] h-full flex items-end relative cursor-crosshair"
-              onMouseEnter={() => setHoveredIdx(i)}
-            >
-              <motion.div
-                className="w-full rounded-t-sm transition-opacity duration-100"
-                style={{
-                  backgroundColor: color,
-                  height: `${pct}%`,
-                  minHeight: bin.count > 0 ? 1 : 0,
-                  opacity: hoveredIdx !== null && !isHovered ? 0.5 : 1,
-                }}
-                initial={{ height: 0 }}
-                animate={{ height: `${pct}%` }}
-                transition={{ duration: 0.3 }}
-              />
-              {isHovered && (
-                <div
-                  className="absolute top-0 left-1/2 -translate-x-px w-px pointer-events-none"
-                  style={{ height: barHeight, backgroundColor: `${withOpacity(color, OPACITY_50)}` }}
-                />
-              )}
-            </div>
-          );
-        })}
+      <div className="group flex items-end gap-px" style={{ height: barHeight }}>
+        {bins.map((bin, i) => (
+          <Bar
+            key={`${bin.low}:${bin.high}`}
+            pct={maxCount > 0 ? (bin.count / maxCount) * 100 : 0}
+            color={color}
+            hasCount={bin.count > 0}
+            barHeight={barHeight}
+            onEnter={() => setHoveredIdx(i)}
+          />
+        ))}
       </div>
       {hoveredIdx !== null && bins[hoveredIdx] && (
         <div

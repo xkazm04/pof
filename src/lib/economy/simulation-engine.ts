@@ -542,17 +542,23 @@ function buildSupplyDemand(
   const points: SupplyDemandPoint[] = [];
   const categories: ItemCategory[] = ['weapon', 'armor', 'consumable', 'material', 'gem'];
 
+  const agentCountDivisor = Math.max(agents.length, 1);
+
   for (let level = 1; level <= config.maxLevel; level++) {
+    // Estimate hourly income at this level from metrics — independent of category,
+    // so compute once per level and reuse across all category buckets.
+    let levelGoldSum = 0;
+    for (const a of agents) {
+      if (a.level >= level) levelGoldSum += a.totalGoldEarned;
+    }
+    const avgGold = levelGoldSum / agentCountDivisor / Math.max(level, 1);
+
     for (const cat of categories) {
       const key = `${level}-${cat}`;
       const data = accum.get(key);
       if (!data || data.count === 0) continue;
 
       const avgPrice = data.priceSum / data.count;
-      // Estimate hourly income at this level from metrics
-      const avgGold = agents
-        .filter((a) => a.level >= level)
-        .reduce((sum, a) => sum + a.totalGoldEarned, 0) / Math.max(agents.length, 1) / Math.max(level, 1);
 
       points.push({
         level,
