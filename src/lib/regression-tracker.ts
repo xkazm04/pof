@@ -73,6 +73,15 @@ function ensureTables() {
     )
   `);
 
+  // One alert per (fingerprint, reappeared-in-session): a regression event is uniquely
+  // identified by the fingerprint that came back and the session it came back in.
+  // Re-analyzing the same session must not mint a second alert for the same event
+  // (mirrors the regression_occurrences composite PRIMARY KEY idempotency).
+  db.exec(`
+    CREATE UNIQUE INDEX IF NOT EXISTS idx_reg_alert_fp_session
+    ON regression_alerts(fingerprint_id, reappeared_in_session_id)
+  `);
+
   initialized = true;
 }
 
@@ -222,9 +231,12 @@ export function processSession(session: PlaytestSession): RegressionReport {
         const fixedOrder = lastFixedSessionId ? (sessionIndex.get(lastFixedSessionId) ?? 0) : 0;
         const buildGap = sessionOrder - fixedOrder;
 
+        // Idempotent on (fingerprint_id, reappeared_in_session_id): re-analyzing the
+        // same session is a no-op for the alert table (INSERT OR IGNORE against the
+        // UNIQUE index), exactly like insertOccurrence is idempotent on its PRIMARY KEY.
         const alertId = crypto.randomUUID();
-        db.prepare(`
-          INSERT INTO regression_alerts
+        const inserted = db.prepare(`
+          INSERT OR IGNORE INTO regression_alerts
             (id, fingerprint_id, fixed_in_session_id, reappeared_in_session_id,
              fixed_in_session_name, reappeared_in_session_name,
              category, severity, title, build_gap)
@@ -237,8 +249,12 @@ export function processSession(session: PlaytestSession): RegressionReport {
           buildGap,
         );
 
-        const alert = getAlert(db, alertId)!;
-        regressions.push(alert);
+        // Only surface the alert in the report when this analyze run actually created
+        // it; a duplicate (changes === 0) means the regression was already reported.
+        if (inserted.changes > 0) {
+          const alert = getAlert(db, alertId)!;
+          regressions.push(alert);
+        }
       } else {
         // Still open or regressed — update counts
         db.prepare(`
