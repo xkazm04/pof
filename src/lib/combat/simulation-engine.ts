@@ -473,44 +473,78 @@ function computeSummary(
   config: CombatSimConfig,
 ): CombatSummary {
   const n = fights.length;
-  const wins = fights.filter((f) => f.won);
-  const durations = fights.map((f) => f.durationSec).sort((a, b) => a - b);
-  const dmgDealt = fights.map((f) => f.totalDamageDealt);
-  const dmgTaken = fights.map((f) => f.totalDamageTaken);
 
-  // Ability heatmap
-  const abilityHeatmap: Record<string, number> = {};
-  for (const ability of scenario.playerAbilities) {
-    const totalUses = fights.reduce((sum, f) => sum + (f.abilitiesUsed[ability.id] ?? 0), 0);
-    abilityHeatmap[ability.name] = round2(totalUses / n);
+  // Single accumulation pass over fights: collect all sums, counts, the
+  // per-ability tally, and the distribution arrays in one traversal instead of
+  // a dozen separate filter/map/reduce passes.
+  const durations = new Array<number>(n);
+  const dmgDealt = new Array<number>(n);
+  const dmgTaken = new Array<number>(n);
+
+  const abilityUses: Record<string, number> = {};
+  for (const ability of scenario.playerAbilities) abilityUses[ability.id] = 0;
+
+  let winCount = 0;
+  let oneShotCount = 0;
+  let totalCrits = 0;
+  let totalHits = 0;
+  let sumDmgDealt = 0;
+  let sumDmgTaken = 0;
+  let sumPlayerHealth = 0;
+
+  for (let i = 0; i < n; i++) {
+    const f = fights[i];
+    durations[i] = f.durationSec;
+    dmgDealt[i] = f.totalDamageDealt;
+    dmgTaken[i] = f.totalDamageTaken;
+    if (f.won) winCount++;
+    if (f.oneShot) oneShotCount++;
+    totalCrits += f.critCount;
+    totalHits += f.totalHits;
+    sumDmgDealt += f.totalDamageDealt;
+    sumDmgTaken += f.totalDamageTaken;
+    sumPlayerHealth += f.playerHealthRemaining;
+    for (const ability of scenario.playerAbilities) {
+      abilityUses[ability.id] += f.abilitiesUsed[ability.id] ?? 0;
+    }
   }
 
-  // Distribution buckets
+  // Sort durations once; reused by the median, the avgDuration sum, and its
+  // distribution bucket (which skips its own sort via the presorted flag).
+  durations.sort((a, b) => a - b);
+  let sumDuration = 0;
+  for (let i = 0; i < n; i++) sumDuration += durations[i];
+  const avgDuration = sumDuration / n;
+
+  // Ability heatmap (keyed by name, averaged per fight)
+  const abilityHeatmap: Record<string, number> = {};
+  for (const ability of scenario.playerAbilities) {
+    abilityHeatmap[ability.name] = round2(abilityUses[ability.id] / n);
+  }
+
+  // Distribution buckets — dmgDealt/dmgTaken sort internally (as before),
+  // durations is already sorted so we pass presorted to drop the redundant sort.
   const damageDealtBuckets = buildBuckets(dmgDealt, 8);
   const damageTakenBuckets = buildBuckets(dmgTaken, 8);
-  const durationBuckets = buildBuckets(durations, 8);
-
-  const avgDuration = durations.reduce((s, d) => s + d, 0) / n;
-  const totalCrits = fights.reduce((s, f) => s + f.critCount, 0);
-  const totalHits = fights.reduce((s, f) => s + f.totalHits, 0);
+  const durationBuckets = buildBuckets(durations, 8, true);
 
   const threatBreakdown = computeThreatBreakdown(fights, scenario);
 
   return {
-    survivalRate: round2(wins.length / n),
+    survivalRate: round2(winCount / n),
     avgFightDurationSec: round2(avgDuration),
     medianFightDurationSec: round2(durations[Math.floor(n / 2)]),
-    avgDamageDealt: round2(dmgDealt.reduce((s, d) => s + d, 0) / n),
-    avgDamageTaken: round2(dmgTaken.reduce((s, d) => s + d, 0) / n),
-    avgPlayerHealthRemaining: round2(fights.reduce((s, f) => s + f.playerHealthRemaining, 0) / n),
-    avgDPS: avgDuration > 0 ? round2(dmgDealt.reduce((s, d) => s + d, 0) / n / avgDuration) : 0,
-    avgEnemyDPS: avgDuration > 0 ? round2(dmgTaken.reduce((s, d) => s + d, 0) / n / avgDuration) : 0,
+    avgDamageDealt: round2(sumDmgDealt / n),
+    avgDamageTaken: round2(sumDmgTaken / n),
+    avgPlayerHealthRemaining: round2(sumPlayerHealth / n),
+    avgDPS: avgDuration > 0 ? round2(sumDmgDealt / n / avgDuration) : 0,
+    avgEnemyDPS: avgDuration > 0 ? round2(sumDmgTaken / n / avgDuration) : 0,
     avgCritRate: totalHits > 0 ? round2(totalCrits / totalHits) : 0,
     abilityHeatmap,
     damageDealtBuckets,
     damageTakenBuckets,
     durationBuckets,
-    oneShotRate: round2(fights.filter((f) => f.oneShot).length / n),
+    oneShotRate: round2(oneShotCount / n),
     threatBreakdown,
   };
 }
@@ -680,9 +714,13 @@ function pct(v: number): string {
   return `${Math.round(v * 100)}%`;
 }
 
-function buildBuckets(values: number[], count: number): { min: number; max: number; count: number }[] {
+function buildBuckets(
+  values: number[],
+  count: number,
+  presorted = false,
+): { min: number; max: number; count: number }[] {
   if (values.length === 0) return [];
-  const sorted = [...values].sort((a, b) => a - b);
+  const sorted = presorted ? values : [...values].sort((a, b) => a - b);
   const min = sorted[0];
   const max = sorted[sorted.length - 1];
   const range = max - min || 1;
