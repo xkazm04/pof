@@ -3,8 +3,13 @@
 import { useMemo, useState, useEffect } from 'react';
 import { Search, Command } from 'lucide-react';
 import { AnimatePresence } from 'framer-motion';
+import { useDebouncedValue } from '@/hooks/useDebouncedValue';
 import { useSpellbookSearchIndex, MAX_RESULTS } from './spellbook-search-index';
 import { SpellbookSearchPalette } from './SpellbookSearchPalette';
+
+/** Debounce delay for the filter scan. The input stays controlled by the raw
+ *  `query` (updates instantly); only the O(index) filter waits for a pause. */
+const SEARCH_DEBOUNCE_MS = 150;
 
 interface SpellbookSearchProps {
   onNavigate: (tab: string, sectionId: string) => void;
@@ -16,14 +21,19 @@ export function SpellbookSearch({ onNavigate }: SpellbookSearchProps) {
   const [selectedIdx, setSelectedIdx] = useState(0);
   const index = useSpellbookSearchIndex();
 
+  // Debounce the query that drives the expensive filter scan. The text field
+  // stays bound to raw `query` (responsive); only this settled value re-runs
+  // the O(index) scan — final results are identical, just settled after a pause.
+  const debouncedQuery = useDebouncedValue(query, SEARCH_DEBOUNCE_MS);
+
   const filtered = useMemo(() => {
-    if (!query.trim()) return index.slice(0, MAX_RESULTS);
-    const q = query.toLowerCase().trim();
+    if (!debouncedQuery.trim()) return index.slice(0, MAX_RESULTS);
+    const q = debouncedQuery.toLowerCase().trim();
     const terms = q.split(/\s+/);
     return index
-      .filter(r => terms.every(t => r.label.toLowerCase().includes(t) || r.category.includes(t)))
+      .filter(r => terms.every(t => r.labelLower.includes(t) || r.category.includes(t)))
       .slice(0, MAX_RESULTS);
-  }, [query, index]);
+  }, [debouncedQuery, index]);
 
   // Reset selection when results change (state-during-render pattern)
   const [prevFiltered, setPrevFiltered] = useState(filtered);
