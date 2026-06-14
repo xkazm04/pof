@@ -132,6 +132,14 @@ export function LocalizationPipelineView() {
     return ids;
   }, [hazards]);
 
+  // Lookup map (stringId -> string) so per-row source resolution is O(1) instead
+  // of an O(n) `strings.find` per Translations row (avoids O(strings × entries)).
+  const stringsById = useMemo(() => {
+    const map = new Map<string, (typeof strings)[number]>();
+    for (const s of strings) map.set(s.id, s);
+    return map;
+  }, [strings]);
+
   // Set of string IDs that have translations
   const translatedStringIds = useMemo(() => {
     const ids = new Set<string>();
@@ -574,7 +582,7 @@ export function LocalizationPipelineView() {
 
           <div className="space-y-2 max-h-[60vh] overflow-y-auto">
             {filteredEntries.map((e, i) => {
-              const source = strings.find((s) => s.id === e.stringId);
+              const source = stringsById.get(e.stringId);
               return (
                 <TranslationCard key={`${e.stringId}-${e.locale}-${i}`} entry={e} sourceText={source?.sourceText ?? '?'} />
               );
