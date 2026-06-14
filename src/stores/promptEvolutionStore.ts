@@ -8,7 +8,6 @@ import type {
   EvolutionStats,
   EvolutionSuggestion,
   MutationType,
-  TemplateFamily,
   PromptOptimizationResult,
   VariantVersionHistory,
 } from '@/types/prompt-evolution';
@@ -19,12 +18,10 @@ const EMPTY_VARIANTS: PromptVariant[] = [];
 const EMPTY_TESTS: ABTest[] = [];
 const EMPTY_CLUSTERS: PromptCluster[] = [];
 const EMPTY_SUGGESTIONS: EvolutionSuggestion[] = [];
-const EMPTY_FAMILIES: TemplateFamily[] = [];
 const EMPTY_STATS: EvolutionStats = {
   totalVariants: 0,
   activeABTests: 0,
   concludedABTests: 0,
-  templateFamilies: 0,
   avgImprovementRate: 0,
   topPerformingModule: null,
   moduleBreakdown: [],
@@ -38,7 +35,6 @@ interface PromptEvolutionState {
   abTests: ABTest[];
   clusters: PromptCluster[];
   suggestions: EvolutionSuggestion[];
-  families: TemplateFamily[];
   stats: EvolutionStats;
   selectedModuleId: SubModuleId | null;
   selectedChecklistItemId: string | null;
@@ -90,7 +86,6 @@ export const usePromptEvolutionStore = create<PromptEvolutionState>((set, get) =
   abTests: EMPTY_TESTS,
   clusters: EMPTY_CLUSTERS,
   suggestions: EMPTY_SUGGESTIONS,
-  families: EMPTY_FAMILIES,
   stats: EMPTY_STATS,
   selectedModuleId: null,
   selectedChecklistItemId: null,
