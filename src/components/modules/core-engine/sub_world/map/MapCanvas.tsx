@@ -1,5 +1,6 @@
 'use client';
 
+import { memo } from 'react';
 import { motion } from 'framer-motion';
 import { STATUS_SUCCESS, STATUS_WARNING, STATUS_LOCKED, STATUS_LOCKED_STROKE, ACCENT_CYAN, OVERLAY_WHITE,
   withOpacity, OPACITY_50,
@@ -24,7 +25,7 @@ interface MapCanvasProps<Z extends MapZone> {
   matchingIds?: Set<string>;
 }
 
-export function ZoneMapCanvas<Z extends MapZone>({ zones, selectedZone, onSelectZone, matchingIds }: MapCanvasProps<Z>) {
+function ZoneMapCanvasImpl<Z extends MapZone>({ zones, selectedZone, onSelectZone, matchingIds }: MapCanvasProps<Z>) {
   const hasFilter = matchingIds !== undefined && matchingIds.size > 0;
   const isInRange = (id: string) => !hasFilter || matchingIds!.has(id);
   const getZoneColor = (z: MapZone) => {
@@ -207,3 +208,11 @@ export function ZoneMapCanvas<Z extends MapZone>({ zones, selectedZone, onSelect
     </svg>
   );
 }
+
+/* Memo boundary: skip re-render when props are referentially stable. `zones`
+   (ZONES module constant), `selectedZone`/`onSelectZone` (parent state, stable
+   across slider ticks) and `matchingIds` (now stabilized in index.tsx) only
+   change identity when the rendered map must change, so same-band slider ticks
+   no longer re-render the framer-motion SVG subtree. memo() drops the generic,
+   so cast back to the original generic call signature for the lone call site. */
+export const ZoneMapCanvas = memo(ZoneMapCanvasImpl) as typeof ZoneMapCanvasImpl;
