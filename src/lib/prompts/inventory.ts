@@ -1,4 +1,5 @@
 import { buildProjectContextHeader, getModuleName, type ProjectContext } from '@/lib/prompt-context';
+import { GENERATE_ALL_DIRECTLY } from '@/lib/prompts/_shared';
 
 export interface InventoryConfig {
   gridCols: number;
@@ -74,7 +75,7 @@ export function buildInventoryPrompt(config: InventoryConfig, ctx: ProjectContex
   const moduleName = getModuleName(ctx.projectName);
   const header = buildProjectContextHeader(ctx, {
     extraRules: [
-      'Generate all code files directly — do NOT ask for confirmation.',
+      GENERATE_ALL_DIRECTLY,
       'This system must integrate with UARPGInventoryComponent and UARPGItemInstance from the existing inventory module.',
     ],
   });

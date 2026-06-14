@@ -144,75 +144,127 @@ export async function runDeepEval(options: DeepEvalOptions): Promise<DeepEvalRes
 
   emitProgress();
 
-  try {
-    // Sequential per-module, sequential per-pass
-    for (const moduleId of moduleIds) {
-      if (signal.aborted) throw new DOMException('Evaluation cancelled', 'AbortError');
+  // Flatten module × pass into an ordered work list. The index is the work
+  // item's position in strict (module, pass) order — identical to the old
+  // nested-loop traversal. Each task writes its findings into its own slot so
+  // the final aggregate is order-independent of completion order (see below).
+  interface WorkItem {
+    index: number;
+    moduleId: string;
+    pass: EvalPass;
+  }
+  const workItems: WorkItem[] = [];
+  for (const moduleId of moduleIds) {
+    for (const pass of passesFor(moduleId)) {
+      workItems.push({ index: workItems.length, moduleId, pass });
+    }
+  }
+  // Per-work-item findings slots. Flattening these in `index` order reproduces
+  // the exact `allFindings` sequence the serial loop produced, regardless of
+  // which pass finishes first under concurrency — so dedup/aggregate output is
+  // byte-identical to the sequential version.
+  const findingsByIndex: EvalFinding[][] = workItems.map(() => []);
 
-      for (const pass of passesFor(moduleId)) {
-        if (signal.aborted) throw new DOMException('Evaluation cancelled', 'AbortError');
+  // Bounded concurrency. Claude CLI passes are slow (30-120s) and rate-limited,
+  // so we cap in-flight passes at a small pool rather than firing all ~69 at
+  // once. N=4 roughly quarters wall-clock time while staying resource-safe.
+  const CONCURRENCY = 4;
 
-        progress.currentModule = moduleId;
-        progress.currentPass = pass;
-        passStatuses[moduleId][pass] = 'running';
-        emitProgress();
+  // Run a single pass. Concurrency-safe because each task touches only its own
+  // `passStatuses[moduleId][pass]` cell and its own `findingsByIndex[index]`
+  // slot — no two tasks ever write the same cell, so the shared snapshot taken
+  // by emitProgress cannot be corrupted. `completedSteps++` is a synchronous
+  // statement with no `await` between read and write, so JS's single-threaded
+  // execution makes the increment atomic across tasks. `currentModule`/
+  // `currentPass` become "latest started/finished" hints (last-writer-wins),
+  // which is acceptable for a progress indicator.
+  const runPass = async (item: WorkItem): Promise<void> => {
+    const { index, moduleId, pass } = item;
+    if (signal.aborted) throw new DOMException('Evaluation cancelled', 'AbortError');
 
-        try {
-          const prompt = buildEvalPrompt({
-            moduleId: moduleId as SubModuleId,
-            pass,
-            projectName: projectContext.projectName,
-            moduleName,
-            sourcePath,
-          });
+    progress.currentModule = moduleId;
+    progress.currentPass = pass;
+    passStatuses[moduleId][pass] = 'running';
+    emitProgress();
 
-          // Wrap with project context header for the CLI
-          const fullPrompt = `${buildProjectContextHeader(projectContext, {
-            includeBuildCommand: false,
-            includeRules: true,
-            extraRules: [
-              'This is an EVALUATION task — do NOT modify any files.',
-              'Read source files to analyze them, then output your findings.',
-              'Do NOT use TodoWrite.',
-            ],
-          })}
+    try {
+      const prompt = buildEvalPrompt({
+        moduleId: moduleId as SubModuleId,
+        pass,
+        projectName: projectContext.projectName,
+        moduleName,
+        sourcePath,
+      });
+
+      // Wrap with project context header for the CLI
+      const fullPrompt = `${buildProjectContextHeader(projectContext, {
+        includeBuildCommand: false,
+        includeRules: true,
+        extraRules: [
+          'This is an EVALUATION task — do NOT modify any files.',
+          'Read source files to analyze them, then output your findings.',
+          'Do NOT use TodoWrite.',
+        ],
+      })}
 
 ${prompt}`;
 
-          const response = await fetch('/api/claude-terminal/query', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              prompt: fullPrompt,
-              cwd: projectPath,
-            }),
-            signal,
-          });
+      const response = await fetch('/api/claude-terminal/query', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          prompt: fullPrompt,
+          cwd: projectPath,
+        }),
+        signal,
+      });
 
-          if (!response.ok) {
-            passStatuses[moduleId][pass] = 'error';
-            completedSteps++;
-            emitProgress();
-            continue;
-          }
-
-          // Collect streamed response
-          const rawOutput = await collectStreamResponse(response, signal);
-
-          // Parse findings from output
-          const findings = parseFindings(rawOutput, scanId, moduleId as SubModuleId, pass);
-          allFindings.push(...findings);
-
-          passStatuses[moduleId][pass] = 'done';
-        } catch (err) {
-          if ((err as Error).name === 'AbortError') throw err;
-          passStatuses[moduleId][pass] = 'error';
-        }
-
+      if (!response.ok) {
+        passStatuses[moduleId][pass] = 'error';
         completedSteps++;
         emitProgress();
+        return;
       }
+
+      // Collect streamed response
+      const rawOutput = await collectStreamResponse(response, signal);
+
+      // Parse findings from output — into this task's own slot.
+      findingsByIndex[index] = parseFindings(rawOutput, scanId, moduleId as SubModuleId, pass);
+
+      passStatuses[moduleId][pass] = 'done';
+    } catch (err) {
+      if ((err as Error).name === 'AbortError') throw err;
+      passStatuses[moduleId][pass] = 'error';
     }
+
+    completedSteps++;
+    emitProgress();
+  };
+
+  // Fixed-size worker pool: each worker pulls the next item off a shared cursor
+  // until the list is drained, keeping at most CONCURRENCY passes in flight.
+  // An AbortError from any worker rejects Promise.all and propagates to the
+  // catch below, mirroring the serial loop's cancellation behavior.
+  const runPool = async (): Promise<void> => {
+    let cursor = 0;
+    const worker = async (): Promise<void> => {
+      while (cursor < workItems.length) {
+        if (signal.aborted) throw new DOMException('Evaluation cancelled', 'AbortError');
+        const item = workItems[cursor++];
+        await runPass(item);
+      }
+    };
+    const workers = Array.from({ length: Math.min(CONCURRENCY, workItems.length) }, () => worker());
+    await Promise.all(workers);
+  };
+
+  try {
+    await runPool();
+
+    // Collect findings in deterministic (module, pass) order, independent of
+    // task completion order.
+    for (const slot of findingsByIndex) allFindings.push(...slot);
 
     // Deduplicate and aggregate
     const deduplicated = deduplicateFindings(allFindings);
@@ -244,7 +296,11 @@ ${prompt}`;
     progress.currentPass = null;
     emitProgress();
 
-    // Still return what we have
+    // Still return what we have. The try-block flatten never ran (runPool
+    // threw), so gather whatever slots completed before the abort/error, in
+    // deterministic (module, pass) order.
+    allFindings.length = 0;
+    for (const slot of findingsByIndex) allFindings.push(...slot);
     const deduplicated = deduplicateFindings(allFindings);
     const aggregated = aggregateFindings(deduplicated, scanId);
     return {

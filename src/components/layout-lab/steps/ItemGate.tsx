@@ -1,9 +1,8 @@
 'use client';
 
-import { StepFrame } from './StepFrame';
+import { StaticStepFrame } from './StaticStepFrame';
 import { CliProduce } from './shared/CliProduce';
-import { useStaticStep } from './useStaticStep';
-import { ITEM_STEP_SPECS, DEFAULT_GATE_CHECKS } from './itemsSteps';
+import { DEFAULT_GATE_CHECKS } from './itemsSteps';
 import type { LabTheme } from '../theme';
 import type { StepProps } from './stepProps';
 
@@ -19,14 +18,11 @@ function Check({ t, name, ran }: { t: LabTheme; name: string; ran: boolean }) {
 
 /** Items · Test Gate. View: checks + log (persisted). Produce: run functional test. */
 export function ItemTestGate({ t, entity, step }: StepProps) {
-  const { art, runProduce } = useStaticStep(entity, step);
-  const ran = art?.data?.pass === true;
-  const checks = (art?.data?.checks ?? DEFAULT_GATE_CHECKS) as string[];
-
   return (
-    <StepFrame t={t} acceptance={ITEM_STEP_SPECS[step].accept(art?.data ?? {})}
-      onFix={runProduce}
-      panels={[
+    <StaticStepFrame t={t} entity={entity} step={step} panels={({ art, runProduce }) => {
+      const ran = art?.data?.pass === true;
+      const checks = (art?.data?.checks ?? DEFAULT_GATE_CHECKS) as string[];
+      return [
         { label: 'Checks', node: <div>{checks.map((c) => <Check key={c} t={t} name={c} ran={ran} />)}</div> },
         { label: 'Log', node: (
           <pre className={t.fontMono} style={{ fontSize: 14, color: t.muted, whiteSpace: 'pre-wrap', margin: 0, lineHeight: 1.6 }}>
@@ -41,21 +37,18 @@ export function ItemTestGate({ t, entity, step }: StepProps) {
             buildPrompt={(dir) => `Run the UE functional test that equips + uses ${entity.name}; judge PASS/FAIL by -abslog content. ${dir}`}
             onComplete={runProduce} />
         ) },
-      ]}
-    />
+      ];
+    }} />
   );
 }
 
 /** Items · UE Packaging. View: asset manifest + deps (persisted). Produce: package. */
 export function ItemPackaging({ t, entity, step }: StepProps) {
-  const { art, runProduce } = useStaticStep(entity, step);
-  const assets = (art?.data?.assets ?? []) as string[];
-  const packed = assets.length > 0;
-
   return (
-    <StepFrame t={t} acceptance={ITEM_STEP_SPECS[step].accept(art?.data ?? {})}
-      onFix={runProduce}
-      panels={[
+    <StaticStepFrame t={t} entity={entity} step={step} panels={({ art, runProduce }) => {
+      const assets = (art?.data?.assets ?? []) as string[];
+      const packed = assets.length > 0;
+      return [
         { label: 'Asset manifest', node: (
           packed
             ? <div>{assets.map((a) => (
@@ -77,7 +70,7 @@ export function ItemPackaging({ t, entity, step }: StepProps) {
             buildPrompt={(dir) => `Write the DT_Items row for ${entity.name} + cook the referenced icon/mesh/material/montage/VFX into the UE project; commit narrowly. ${dir}`}
             onComplete={runProduce} />
         ) },
-      ]}
-    />
+      ];
+    }} />
   );
 }

@@ -248,6 +248,20 @@ export function TacticalCoverAnalysis() {
     });
   }, [points, getScore]);
 
+  // LOS-trace candidates — covered points only. Depends solely on `points`,
+  // so hover state does not recompute this filter.
+  const losTracePoints = useMemo(
+    () => points.filter((p) => p.coverScore > 0.5),
+    [points],
+  );
+
+  // Best positions (top 5 by current score mode). Keyed on `points`/`getScore`
+  // so hovering a dot no longer re-sorts the whole cloud.
+  const bestPositions = useMemo(
+    () => [...points].sort((a, b) => getScore(b) - getScore(a)).slice(0, 5),
+    [points, getScore],
+  );
+
   return (
     <SurfaceCard className="p-0 overflow-hidden" data-testid="tactical-cover-analysis">
       {/* Header */}
@@ -461,7 +475,7 @@ export function TacticalCoverAnalysis() {
             })}
 
             {/* LOS trace lines from covered points to threat center */}
-            {showLOSTraces && points.filter((p) => p.coverScore > 0.5).map((pt, i) => {
+            {showLOSTraces && losTracePoints.map((pt, i) => {
               const sx = SVG_CENTER + pt.x * scale;
               const sy = SVG_CENTER + pt.y * scale;
               return (
@@ -736,9 +750,7 @@ export function TacticalCoverAnalysis() {
             <div>
               <h4 className="text-xs font-bold text-text mb-1.5">Best Positions</h4>
               <div className="space-y-1">
-                {[...points]
-                  .sort((a, b) => getScore(b) - getScore(a))
-                  .slice(0, 5)
+                {bestPositions
                   .map((pt, i) => {
                     const score = getScore(pt);
                     return (

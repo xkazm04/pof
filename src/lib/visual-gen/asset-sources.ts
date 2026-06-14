@@ -36,24 +36,42 @@ interface PolyHavenAsset {
   categories: string[];
 }
 
+// The Poly Haven catalog is a CC0 list that changes rarely and is effectively
+// static within a session. Cache the mapped full catalog per category so that
+// repeated searches (e.g. per keystroke) filter the cached list instead of
+// re-downloading and re-parsing hundreds of entries on every call.
+const POLYHAVEN_CATALOG_TTL_MS = 60 * 60 * 1000; // 1 hour
+const polyHavenCatalogCache = new Map<
+  string,
+  { fetchedAt: number; results: AssetSearchResult[] }
+>();
+
 export async function searchPolyHaven(
   category: 'hdris' | 'textures' | 'models' = 'textures',
 ): Promise<AssetSearchResult[]> {
+  const cached = polyHavenCatalogCache.get(category);
+  if (cached && Date.now() - cached.fetchedAt < POLYHAVEN_CATALOG_TTL_MS) {
+    return cached.results;
+  }
+
   const res = await fetch(`${POLYHAVEN_API}/assets?t=${category}`);
   if (!res.ok) throw new Error(`Poly Haven API error: ${res.status}`);
 
   const data = await res.json() as Record<string, PolyHavenAsset>;
 
-  return Object.entries(data).map(([id, asset]) => ({
+  const results = Object.entries(data).map(([id, asset]) => ({
     id,
     name: asset.name || id,
     source: 'polyhaven' as AssetSource,
-    category: category === 'models' ? 'models' : category === 'hdris' ? 'hdris' : 'textures',
+    category: (category === 'models' ? 'models' : category === 'hdris' ? 'hdris' : 'textures') as AssetCategory,
     thumbnailUrl: `https://cdn.polyhaven.com/asset_img/thumbs/${id}.png?width=256`,
     downloadUrl: `${POLYHAVEN_API}/files/${id}`,
     license: 'CC0' as const,
     tags: asset.tags ?? [],
   }));
+
+  polyHavenCatalogCache.set(category, { fetchedAt: Date.now(), results });
+  return results;
 }
 
 // ── ambientCG ───────────────────────────────────────────────────────────────

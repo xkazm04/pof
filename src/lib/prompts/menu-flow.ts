@@ -1,4 +1,5 @@
 import { buildProjectContextHeader, getModuleName, type ProjectContext } from '@/lib/prompt-context';
+import { GENERATE_ALL_DIRECTLY } from '@/lib/prompts/_shared';
 import type { MenuFlowConfig, ScreenNode, ScreenTransition, ScreenType } from '@/components/modules/content/ui-hud/MenuFlowDiagram';
 
 const SCREEN_TYPE_OWNERSHIP: Record<ScreenType, string> = {
@@ -27,7 +28,7 @@ export function buildMenuFlowPrompt(config: MenuFlowConfig, ctx: ProjectContext)
   const moduleName = getModuleName(ctx.projectName);
   const header = buildProjectContextHeader(ctx, {
     extraRules: [
-      'Generate all code files directly — do NOT ask for confirmation.',
+      GENERATE_ALL_DIRECTLY,
       'Each screen must be a separate UUserWidget subclass with a corresponding C++ class.',
       'The navigation controller must manage all screen transitions via a central stack-based system.',
     ],

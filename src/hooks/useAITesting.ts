@@ -8,6 +8,7 @@ import type {
   UpdateSuitePayload,
   CreateScenarioPayload,
   UpdateScenarioPayload,
+  ScenarioStatus,
 } from '@/types/ai-testing';
 import { useCRUD } from './useCRUD';
 
@@ -29,6 +30,12 @@ interface UseAITestingResult {
   deleteSuite: (id: number) => Promise<boolean>;
   createScenario: (payload: CreateScenarioPayload) => Promise<boolean>;
   updateScenario: (payload: UpdateScenarioPayload) => Promise<boolean>;
+  /** Transition many scenarios to one status in a single PUT + single refetch. */
+  bulkUpdateScenarioStatus: (
+    ids: number[],
+    status: ScenarioStatus,
+    fields?: { lastRunOutput?: string; lastRunAt?: string | null },
+  ) => Promise<boolean>;
   deleteScenario: (id: number) => Promise<boolean>;
   refetch: () => Promise<void>;
 }
@@ -96,6 +103,20 @@ export function useAITesting(): UseAITestingResult {
     return result !== null;
   }, [mutate]);
 
+  const bulkUpdateScenarioStatusOp = useCallback(async (
+    ids: number[],
+    status: ScenarioStatus,
+    fields?: { lastRunOutput?: string; lastRunAt?: string | null },
+  ) => {
+    if (ids.length === 0) return true;
+    const result = await mutate<unknown>('/api/ai-testing', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'bulk-status', ids, status, ...fields }),
+    });
+    return result !== null;
+  }, [mutate]);
+
   const deleteScenarioOp = useCallback(async (id: number) => {
     const result = await mutate<unknown>(`/api/ai-testing?type=scenario&id=${id}`, { method: 'DELETE' });
     return result !== null;
@@ -114,6 +135,7 @@ export function useAITesting(): UseAITestingResult {
     deleteSuite: deleteSuiteOp,
     createScenario: createScenarioOp,
     updateScenario: updateScenarioOp,
+    bulkUpdateScenarioStatus: bulkUpdateScenarioStatusOp,
     deleteScenario: deleteScenarioOp,
     refetch,
   };

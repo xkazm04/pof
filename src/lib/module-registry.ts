@@ -1271,8 +1271,19 @@ export const CORE_MODULE_DEFS: ModuleChecklistDef[] = ARPG_SUB_MODULES
 export const CORE_CHECKLIST_TOTAL = CORE_MODULE_DEFS.reduce((s, m) => s + m.checklistCount, 0);
 
 /**
+ * ALL-module definitions derived from SUB_MODULES (every category), excluding the
+ * `core-engine-plan` pseudo-module (isSpecialItem). This is the project-wide
+ * counterpart to CORE_MODULE_DEFS: the health engine iterates this so its
+ * "overall completion" numerator and denominator span the same module set the
+ * weekly digest and top-bar stats use — they can't drift.
+ */
+export const ALL_MODULE_DEFS: ModuleChecklistDef[] = SUB_MODULES
+  .filter((m) => !m.isSpecialItem)
+  .map((m) => ({ id: m.id, label: m.label, checklistCount: m.checklist?.length ?? 0 }));
+
+/**
  * Total checklist items across ALL modules (every category). The single owner of
  * the project-wide X/Y denominator — the weekly digest and the top-bar project
  * stats both derive from this instead of re-summing SUB_MODULES independently.
  */
-export const ALL_CHECKLIST_TOTAL = SUB_MODULES.reduce((s, m) => s + (m.checklist?.length ?? 0), 0);
+export const ALL_CHECKLIST_TOTAL = ALL_MODULE_DEFS.reduce((s, m) => s + m.checklistCount, 0);

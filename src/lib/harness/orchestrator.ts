@@ -97,6 +97,36 @@ export function budgetWouldOverflow(totals: HarnessCostTotals, budgetUsd: number
   return projectedSpend(totals, avgSessionCost(totals)) > budgetUsd;
 }
 
+/**
+ * Per-session spend estimate used for in-flight reservation at launch time.
+ * Prefers the running average once any session has settled, falling back to the
+ * fixed estimate so the first launches still reserve a non-zero amount.
+ */
+export function sessionCostEstimate(totals: HarnessCostTotals, fallbackUsd: number): number {
+  const avg = avgSessionCost(totals);
+  return avg > 0 ? avg : fallbackUsd;
+}
+
+/**
+ * Budget admission check that also counts spend already reserved by in-flight
+ * sessions. Committed spend (`totals.spentUsd`) plus the outstanding reservation
+ * (`reservedUsd`) plus the next session's estimate must stay within the cap.
+ * This is what closes the (maxConcurrent − 1) overshoot: without `reservedUsd`,
+ * the governor reads only settled spend and green-lights every concurrent
+ * launch before a single dollar is booked.
+ */
+export function budgetWouldOverflowReserved(
+  totals: HarnessCostTotals,
+  reservedUsd: number,
+  nextEstimateUsd: number,
+  budgetUsd: number | null,
+): boolean {
+  if (budgetUsd == null) return false;
+  const committedPlusInFlight = totals.spentUsd + reservedUsd;
+  if (committedPlusInFlight >= budgetUsd) return true;
+  return committedPlusInFlight + nextEstimateUsd > budgetUsd;
+}
+
 /** Public read accessor for the API + UI. */
 export function readHarnessCost(statePath: string): HarnessCostTotals | null {
   return readJsonFile<HarnessCostTotals | null>(costPath(statePath), null);
@@ -381,25 +411,53 @@ export function createHarnessOrchestrator(config: HarnessConfig): HarnessOrchest
   let cost = loadCost(config.statePath, budgetUsd);
   cost.budgetUsd = budgetUsd;
 
+  // In-flight budget reservation: the optimistic estimated spend of sessions
+  // that have launched but not yet returned. Lives in memory only (it is never
+  // restart-safe — a crash drops all in-flight sessions anyway) and is always
+  // reconciled to $0 as each session books its actual cost in recordSessionCost.
+  // Maps areaId → reserved estimate so each session releases exactly what it booked.
+  const reserved = new Map<string, number>();
+  const reservedTotal = () => {
+    let sum = 0;
+    for (const v of reserved.values()) sum += v;
+    return sum;
+  };
+
   // Git checkpointing (opt-in). The checkpointer is created lazily in runLoop
   // once a runId exists, since the branch name is derived from it.
   const checkpointEnabled = config.checkpoint === true;
   let checkpointer: Checkpointer | null = null;
 
-  /** Returns true when launching a new session would exceed the cap. */
-  function wouldOverflowNow(): boolean {
-    return budgetWouldOverflow(cost, budgetUsd);
-  }
-
   /** Fallback per-session spend (USD) used when the CLI reports no cost, so the budget
    *  governor keeps advancing toward the cap instead of being silently disabled when the
-   *  cost signal is absent. */
+   *  cost signal is absent. Also the seed estimate for the in-flight reservation before
+   *  any session has settled an average. */
   const SESSION_COST_ESTIMATE_USD = 0.5;
 
-  /** Record a session's cost into the running totals + persist. Always counts the session
-   *  (so avgSessionCost has a non-zero denominator and the governor can fire); a missing or
-   *  non-positive cost falls back to an estimate rather than dropping the session to $0. */
+  /** Returns true when launching one more session would push committed + in-flight
+   *  (reserved) spend past the cap. Factoring in `reservedTotal()` is what stops fillPool
+   *  from overshooting by up to (maxConcurrent − 1) sessions: settled spend alone is
+   *  unchanged until a session returns, so without the reservation every concurrent
+   *  launch would be green-lit before a single dollar is booked. */
+  function wouldOverflowNow(): boolean {
+    const estimate = sessionCostEstimate(cost, SESSION_COST_ESTIMATE_USD);
+    return budgetWouldOverflowReserved(cost, reservedTotal(), estimate, budgetUsd);
+  }
+
+  /** Optimistically book a session's estimated cost at LAUNCH time so concurrent launches
+   *  in fillPool see each other's projected spend. Reconciled to the real cost in
+   *  recordSessionCost when the session returns. */
+  function reserveSessionCost(areaId: string): void {
+    reserved.set(areaId, sessionCostEstimate(cost, SESSION_COST_ESTIMATE_USD));
+  }
+
+  /** Record a session's actual cost into the running totals + persist, and RECONCILE by
+   *  releasing the launch-time reservation for this area (so the final accounting is exact,
+   *  not the optimistic estimate). Always counts the session (so avgSessionCost has a
+   *  non-zero denominator and the governor can fire); a missing or non-positive cost falls
+   *  back to an estimate rather than dropping the session to $0. */
   function recordSessionCost(areaId: string, costUsd: number | undefined): void {
+    reserved.delete(areaId); // release the optimistic reservation — actual spend booked below
     const amount = typeof costUsd === 'number' && costUsd > 0 ? costUsd : SESSION_COST_ESTIMATE_USD;
     cost.sessions += 1;
     cost.spentUsd += amount;
@@ -659,9 +717,20 @@ export function createHarnessOrchestrator(config: HarnessConfig): HarnessOrchest
         if (!next) break;
 
         emit({ type: 'harness:iteration', iteration: plan.iteration, areaId: next.id });
+        // Reserve this session's estimated cost NOW so the next loop iteration's
+        // wouldOverflowNow() sees it and stops launching once projected spend
+        // (committed + in-flight reservations) would cross the cap. processArea
+        // reconciles to the actual cost via recordSessionCost when it returns.
+        reserveSessionCost(next.id);
         const promise = processArea(next, plan, progress, gates, guide)
           .then(result => ({ area: next, result }))
-          .catch(() => ({ area: next, result: 'failed' as const }));
+          .catch(() => {
+            // executeArea threw before recordSessionCost could reconcile —
+            // release the reservation so it can't permanently inflate the
+            // in-flight total and falsely trip the governor on later launches.
+            reserved.delete(next.id);
+            return { area: next, result: 'failed' as const };
+          });
         active.set(next.id, promise);
       }
     }

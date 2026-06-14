@@ -8,6 +8,7 @@ import {
   updateSessionSummary,
   addFinding,
   getFindings,
+  getAllFindings,
   addEvent,
   getEvents,
   getDirectorStats,
@@ -45,6 +46,11 @@ export async function GET(req: Request) {
       case 'findings':
         if (!sessionId) return apiError('sessionId required', 400);
         return apiSuccess(getFindings(sessionId));
+
+      case 'all-findings':
+        // Batch path for FindingsExplorer: one request returning every finding,
+        // grouped/filtered client-side. Replaces the per-session fan-out.
+        return apiSuccess(getAllFindings());
 
       case 'events':
         if (!sessionId) return apiError('sessionId required', 400);

@@ -11,6 +11,7 @@ import type {
 } from '@/types/localization-pipeline';
 import { SUPPORTED_LOCALES, REVIEW_GATE } from './definitions';
 import { lookupTranslation } from './fixtures';
+import { isTranslatable } from './scan-engine';
 
 /* ------------------------------------------------------------------ */
 /*  Seeded RNG (mulberry32) for reproducible translations             */
@@ -135,10 +136,10 @@ export function translateBatch(
     expansionIssues[locale] = 0;
   }
 
-  // Only translate strings that aren't already localized
-  const translatable = strings.filter(
-    (s) => s.currentUsage !== 'nsloctext' && s.currentUsage !== 'loctext',
-  );
+  // Only translate strings that aren't already localized. The route already
+  // hands us a pre-filtered set; this guard is idempotent and keeps the engine
+  // safe to call with a raw scan result, sharing the single isTranslatable rule.
+  const translatable = strings.filter(isTranslatable);
 
   for (const str of translatable) {
     for (const locale of targetLocales) {

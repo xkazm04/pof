@@ -147,11 +147,14 @@ export function useProjectScan(projectPath: string) {
       detail: hasSource ? 'Source/ found' : 'No Source/ folder',
     });
 
-    // Build files check
+    // Build files check — list Source ONCE here and reuse below for the
+    // projectFiles enumeration (collapses two identical `list` round-trips
+    // for `<project>\Source` into one).
+    let sourceData: ListResponse | null = null;
     let hasBuildFiles = false;
     if (hasSource) {
       try {
-        const sourceData = await apiFetch<ListResponse>('/api/filesystem/browse', {
+        sourceData = await apiFetch<ListResponse>('/api/filesystem/browse', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ action: 'list', path: `${projectPath}\\Source` }),
@@ -176,21 +179,15 @@ export function useProjectScan(projectPath: string) {
       for (const uf of dirData.uprojectFiles) {
         files.push(`${projectPath}\\${uf}`);
       }
-      if (hasSource) {
-        try {
-          const sourceData = await apiFetch<ListResponse>('/api/filesystem/browse', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ action: 'list', path: `${projectPath}\\Source` }),
-          });
-          for (const d of sourceData.directories) {
-            files.push(`Source\\${d.name}\\`);
-          }
-          for (const uf of sourceData.uprojectFiles) {
-            files.push(`Source\\${uf}`);
-          }
-        } catch {
-          // Non-critical
+      // Reuse the `sourceData` already fetched for the Build Files check above
+      // instead of re-listing `<project>\Source`. When hasSource is true and the
+      // earlier list succeeded, sourceData holds the identical response.
+      if (hasSource && sourceData) {
+        for (const d of sourceData.directories) {
+          files.push(`Source\\${d.name}\\`);
+        }
+        for (const uf of sourceData.uprojectFiles) {
+          files.push(`Source\\${uf}`);
         }
       }
     }

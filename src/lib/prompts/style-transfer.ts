@@ -1,4 +1,5 @@
 import { buildProjectContextHeader, getModuleName, type ProjectContext } from '@/lib/prompt-context';
+import { GENERATE_ALL_DIRECTLY, USE_MATERIAL_BEST_PRACTICES, MATERIAL_UPROPERTY_TUNING } from '@/lib/prompts/_shared';
 import type { StyleTransferConfig, AnalyzedProperties } from '@/components/modules/content/materials/MaterialStyleTransfer';
 
 const SURFACE_SHADING: Record<string, string> = {
@@ -42,9 +43,9 @@ export function buildStyleTransferPrompt(config: StyleTransferConfig, ctx: Proje
   const moduleName = getModuleName(ctx.projectName);
   const header = buildProjectContextHeader(ctx, {
     extraRules: [
-      'Generate all code files directly — do NOT ask for confirmation.',
-      'Use UE5 Material system best practices.',
-      'All parameters must be UPROPERTY(EditAnywhere, BlueprintReadWrite) for designer tuning.',
+      GENERATE_ALL_DIRECTLY,
+      USE_MATERIAL_BEST_PRACTICES,
+      MATERIAL_UPROPERTY_TUNING,
       'This is a style-transfer task: replicate the visual look as closely as possible.',
       'Generate a full Master Material with parameterized inputs matching the analyzed properties.',
     ],

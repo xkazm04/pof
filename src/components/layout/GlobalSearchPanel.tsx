@@ -22,6 +22,15 @@ const TYPE_META: Record<string, { icon: typeof Box; label: string; color: string
   build:     { icon: Package, label: 'Build', color: '#94a3b8' },
 };
 
+// ── Index freshness ───────────────────────────────────────────────────────────
+// The search index source is almost entirely static (categories, sub-modules,
+// checklist items, quick actions, feature definitions) plus a few rarely-changing
+// DB tables. The index persists in SQLite across opens, so rebuilding it on every
+// panel open is wasted work (a full DELETE + hundreds of synchronous inserts).
+// Rebuild lazily once per client session instead; the manual "Reindex" button
+// remains the force path for the rare cases where the DB-backed rows change.
+let indexEnsuredThisSession = false;
+
 // ── Main component ──────────────────────────────────────────────────────────
 
 export function GlobalSearchPanel() {
@@ -62,8 +71,11 @@ export function GlobalSearchPanel() {
     if (open) {
       // Small delay to let animation start
       requestAnimationFrame(() => inputRef.current?.focus());
-      // Rebuild index on first open (ensures it's fresh)
-      handleRebuild(true);
+      // Build the index once per session; reuse the persisted index thereafter.
+      // handleRebuild sets indexEnsuredThisSession on success.
+      if (!indexEnsuredThisSession) {
+        handleRebuild(true);
+      }
     } else {
       setQuery('');
       setResults([]);
@@ -110,6 +122,9 @@ export function GlobalSearchPanel() {
     try {
       await apiFetch('/api/search?rebuild=1');
       setLastRebuilt(new Date().toISOString());
+      // Mark the session index as built only on success, so a failed first
+      // rebuild is retried on the next open rather than left permanently stale.
+      indexEnsuredThisSession = true;
     } catch { /* ignore */ }
     if (!silent) setRebuilding(false);
   }, []);

@@ -1,7 +1,7 @@
 import { NextRequest } from 'next/server';
 import { apiSuccess, apiError } from '@/lib/api-utils';
 import { DEFAULT_CONFIG, SUPPORTED_LOCALES } from '@/lib/localization/definitions';
-import { scanForLocalizableStrings, generateLOCTEXTReplacements, generateStringTable } from '@/lib/localization/scan-engine';
+import { scanForLocalizableStrings, generateLOCTEXTReplacements, generateStringTable, isTranslatable } from '@/lib/localization/scan-engine';
 import { translateBatch, computeTranslationProgress } from '@/lib/localization/translation-engine';
 import { validateTranslations } from '@/lib/localization/qa-engine';
 import type { LocalizationConfig } from '@/types/localization-pipeline';
@@ -53,9 +53,7 @@ export async function POST(req: NextRequest) {
     if (action === 'translate') {
       const config = (body.config as LocalizationConfig) ?? DEFAULT_CONFIG;
       const scan = scanForLocalizableStrings(config.scanModules);
-      const translatable = scan.strings.filter(
-        (s) => s.currentUsage !== 'nsloctext' && s.currentUsage !== 'loctext',
-      );
+      const translatable = scan.strings.filter(isTranslatable);
       const result = translateBatch(translatable, config.targetLocales, config.glossary, undefined, config.autoApplyThreshold);
       const progress = computeTranslationProgress(result.entries, translatable.length, config.targetLocales);
       const qa = validateTranslations(result.entries, translatable, config.glossary, config.targetLocales);
@@ -66,9 +64,7 @@ export async function POST(req: NextRequest) {
     if (action === 'validate') {
       const config = (body.config as LocalizationConfig) ?? DEFAULT_CONFIG;
       const scan = scanForLocalizableStrings(config.scanModules);
-      const translatable = scan.strings.filter(
-        (s) => s.currentUsage !== 'nsloctext' && s.currentUsage !== 'loctext',
-      );
+      const translatable = scan.strings.filter(isTranslatable);
       const translation = translateBatch(translatable, config.targetLocales, config.glossary, undefined, config.autoApplyThreshold);
       const qa = validateTranslations(translation.entries, translatable, config.glossary, config.targetLocales);
       return apiSuccess({ qa });
@@ -78,10 +74,9 @@ export async function POST(req: NextRequest) {
     if (action === 'full-pipeline') {
       const config = (body.config as LocalizationConfig) ?? DEFAULT_CONFIG;
       const scan = scanForLocalizableStrings(config.scanModules);
-      const translatable = scan.strings.filter(
-        (s) => s.currentUsage !== 'nsloctext' && s.currentUsage !== 'loctext',
-      );
-      const replacements = generateLOCTEXTReplacements(scan.strings, config.rootNamespace);
+      // Compute the translatable subset ONCE and reuse it across every stage.
+      const translatable = scan.strings.filter(isTranslatable);
+      const replacements = generateLOCTEXTReplacements(translatable, config.rootNamespace);
       const tables = generateStringTable(scan.strings, config.rootNamespace);
       const translation = translateBatch(translatable, config.targetLocales, config.glossary, undefined, config.autoApplyThreshold);
       const progress = computeTranslationProgress(translation.entries, translatable.length, config.targetLocales);

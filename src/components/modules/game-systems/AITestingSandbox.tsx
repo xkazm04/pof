@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Plus, Trash2, Play, FlaskConical, Zap, ChevronRight,
@@ -48,6 +48,110 @@ const STATUS_META: Record<ScenarioStatus, { icon: typeof Circle; label: string; 
   failed: { icon: XCircle, label: 'Failed', color: STATUS_ERROR },
   error: { icon: AlertTriangle, label: 'Error', color: STATUS_BLOCKER },
 };
+
+// ── Debounced text fields ──
+//
+// Every keystroke in the scenario editor used to fire onUpdate → a PUT that
+// auto-refetched the whole suite (twice, per ai-testing-db.getTestingSummary),
+// and the refetched value then replaced the controlled `value` mid-edit,
+// dropping characters / jumping the cursor.
+//
+// These wrappers keep the input bound to LOCAL state while the user is typing,
+// debounce the upstream commit (~400ms), and flush immediately on blur. The
+// server value only re-syncs into the field when it changes externally AND the
+// field is not focused — so an in-flight refetch can never clobber an active
+// edit. The final committed value is identical to what was typed.
+
+const COMMIT_DEBOUNCE_MS = 400;
+
+function useDebouncedField(value: string, onCommit: (v: string) => void) {
+  const [local, setLocal] = useState(value);
+  // `focused` is state (not a ref) so the render-time sync below can read it
+  // without violating the refs-during-render rule.
+  const [focused, setFocused] = useState(false);
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const onCommitRef = useRef(onCommit);
+  useEffect(() => { onCommitRef.current = onCommit; }, [onCommit]);
+
+  // Re-sync from server only when not actively editing (avoids mid-edit clobber).
+  // Adjust state during render (React's recommended pattern) rather than in an effect:
+  // when the server `value` changes, mirror it into local state only if the field
+  // isn't focused, so an in-flight refetch can't replace what the user is typing.
+  const [prevValue, setPrevValue] = useState(value);
+  if (value !== prevValue) {
+    setPrevValue(value);
+    if (!focused) setLocal(value);
+  }
+
+  // Flush any pending debounced commit on unmount.
+  useEffect(() => () => { if (timerRef.current) clearTimeout(timerRef.current); }, []);
+
+  const onChange = useCallback((next: string) => {
+    setLocal(next);
+    if (timerRef.current) clearTimeout(timerRef.current);
+    timerRef.current = setTimeout(() => {
+      timerRef.current = null;
+      onCommitRef.current(next);
+    }, COMMIT_DEBOUNCE_MS);
+  }, []);
+
+  const onFocus = useCallback(() => { setFocused(true); }, []);
+
+  const onBlur = useCallback((next: string) => {
+    setFocused(false);
+    if (timerRef.current) { clearTimeout(timerRef.current); timerRef.current = null; }
+    // Commit only if the value actually diverged from the last server value.
+    if (next !== value) onCommitRef.current(next);
+  }, [value]);
+
+  return { local, onChange, onFocus, onBlur };
+}
+
+function DebouncedInput({
+  value, onCommit, className, placeholder, type = 'text',
+}: {
+  value: string;
+  onCommit: (v: string) => void;
+  className?: string;
+  placeholder?: string;
+  type?: string;
+}) {
+  const { local, onChange, onFocus, onBlur } = useDebouncedField(value, onCommit);
+  return (
+    <input
+      type={type}
+      value={local}
+      onChange={(e) => onChange(e.target.value)}
+      onFocus={onFocus}
+      onBlur={(e) => onBlur(e.target.value)}
+      placeholder={placeholder}
+      className={className}
+    />
+  );
+}
+
+function DebouncedTextarea({
+  value, onCommit, className, placeholder, rows,
+}: {
+  value: string;
+  onCommit: (v: string) => void;
+  className?: string;
+  placeholder?: string;
+  rows?: number;
+}) {
+  const { local, onChange, onFocus, onBlur } = useDebouncedField(value, onCommit);
+  return (
+    <textarea
+      value={local}
+      onChange={(e) => onChange(e.target.value)}
+      onFocus={onFocus}
+      onBlur={(e) => onBlur(e.target.value)}
+      placeholder={placeholder}
+      rows={rows}
+      className={className}
+    />
+  );
+}
 
 // ── Props ──
 
@@ -338,9 +442,9 @@ function ScenarioCard({
                 <label className="text-2xs uppercase tracking-wider text-text-muted mb-1 block font-semibold">
                   Scenario Description
                 </label>
-                <textarea
+                <DebouncedTextarea
                   value={scenario.description}
-                  onChange={(e) => onUpdate({ description: e.target.value })}
+                  onCommit={(v) => onUpdate({ description: v })}
                   placeholder="Describe the game situation in natural language..."
                   className="w-full px-3 py-2 bg-surface border border-border rounded text-xs text-text placeholder-text-muted outline-none focus:border-border-bright transition-colors resize-none"
                   rows={2}
@@ -393,18 +497,16 @@ function ScenarioCard({
                                 <option key={key} value={key}>{m.label}</option>
                               ))}
                             </select>
-                            <input
-                              type="text"
+                            <DebouncedInput
                               value={stim.label}
-                              onChange={(e) => handleUpdateStimulus(idx, { label: e.target.value })}
+                              onCommit={(v) => handleUpdateStimulus(idx, { label: v })}
                               placeholder="Label"
                               className="flex-1 bg-transparent text-xs text-text placeholder-text-muted outline-none min-w-0"
                             />
                           </div>
-                          <input
-                            type="text"
+                          <DebouncedInput
                             value={stim.description}
-                            onChange={(e) => handleUpdateStimulus(idx, { description: e.target.value })}
+                            onCommit={(v) => handleUpdateStimulus(idx, { description: v })}
                             placeholder="What happens in the game world..."
                             className="w-full bg-transparent text-xs text-text-muted-hover placeholder-text-muted outline-none"
                           />
@@ -442,18 +544,16 @@ function ScenarioCard({
                     >
                       <Play className="w-3 h-3 mt-0.5 flex-shrink-0" style={{ color: STATUS_SUCCESS }} />
                       <div className="flex-1 min-w-0 space-y-1">
-                        <input
-                          type="text"
+                        <DebouncedInput
                           value={ea.action}
-                          onChange={(e) => handleUpdateExpected(idx, { action: e.target.value })}
+                          onCommit={(v) => handleUpdateExpected(idx, { action: v })}
                           placeholder="Expected action (e.g. 'Enter Chase state')"
                           className="w-full bg-transparent text-xs text-text placeholder-text-muted outline-none"
                         />
                         <div className="flex items-center gap-2">
-                          <input
-                            type="text"
+                          <DebouncedInput
                             value={ea.btNode}
-                            onChange={(e) => handleUpdateExpected(idx, { btNode: e.target.value })}
+                            onCommit={(v) => handleUpdateExpected(idx, { btNode: v })}
                             placeholder="BT node (optional)"
                             className="flex-1 bg-transparent text-xs text-text-muted-hover placeholder-text-muted outline-none min-w-0"
                           />

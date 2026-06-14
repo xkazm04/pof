@@ -1,9 +1,7 @@
 'use client';
 
-import { StepFrame } from './StepFrame';
+import { StaticStepFrame } from './StaticStepFrame';
 import { CliProduce } from './shared/CliProduce';
-import { useStaticStep } from './useStaticStep';
-import { ITEM_STEP_SPECS } from './itemsSteps';
 import type { StepProps } from './stepProps';
 
 const REFS = [
@@ -14,13 +12,10 @@ const REFS = [
 
 /** Items · Concept Brief. View: persisted brief + style refs. Produce: CLI text-gen. */
 export function ItemConceptBrief({ t, entity, step }: StepProps) {
-  const { art, runProduce } = useStaticStep(entity, step);
-  const brief = String((art?.data?.brief as string) ?? '');
-
   return (
-    <StepFrame t={t} acceptance={ITEM_STEP_SPECS[step].accept(art?.data ?? {})}
-      onFix={runProduce}
-      panels={[
+    <StaticStepFrame t={t} entity={entity} step={step} panels={({ art, runProduce }) => {
+      const brief = String((art?.data?.brief as string) ?? '');
+      return [
         {
           label: 'Current brief',
           node: brief
@@ -51,7 +46,7 @@ export function ItemConceptBrief({ t, entity, step }: StepProps) {
               onComplete={runProduce} />
           ),
         },
-      ]}
-    />
+      ];
+    }} />
   );
 }

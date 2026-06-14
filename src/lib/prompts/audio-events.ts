@@ -1,4 +1,5 @@
 import { buildProjectContextHeader, getModuleName, type ProjectContext } from '@/lib/prompt-context';
+import { GENERATE_ALL_DIRECTLY } from '@/lib/prompts/_shared';
 import type {
   AudioEventCatalogConfig,
   AudioEvent,
@@ -16,7 +17,7 @@ export function buildAudioEventPrompt(config: AudioEventCatalogConfig, ctx: Proj
   const moduleName = getModuleName(ctx.projectName);
   const header = buildProjectContextHeader(ctx, {
     extraRules: [
-      'Generate all code files directly — do NOT ask for confirmation.',
+      GENERATE_ALL_DIRECTLY,
       'Use MetaSounds for DSP where applicable (UE5 best practice).',
       'The audio manager must integrate with the existing GameplayAbilitySystem for combat event binding.',
     ],

@@ -105,8 +105,15 @@ function generateClearQuests(
 
   if (combatRooms.length === 0) return quests;
 
+  // Build adjacency + id→room indices once and share them across the segment grouping
+  // and every per-segment findNearestSafeRoom call (was rebuilt + O(n) .find()-scanned
+  // inside both helpers, making the pass O(segments × rooms × edges)).
+  const adjacency = buildAdjacency(connections);
+  const roomById = indexRoomsById(rooms);
+  const combatById = indexRoomsById(combatRooms);
+
   // Group connected combat rooms into dungeon segments
-  const segments = buildCombatSegments(combatRooms, connections);
+  const segments = buildCombatSegments(combatRooms, adjacency, combatById);
 
   for (const segment of segments) {
     const totalSpawns = segment.flatMap(r => r.spawnEntries);
@@ -163,7 +170,7 @@ function generateClearQuests(
       difficulty: maxDifficulty,
       objectives,
       giverClass: giverNpc,
-      giverRoomId: findNearestSafeRoom(segment[0].id, rooms, connections)?.id,
+      giverRoomId: findNearestSafeRoom(segment[0].id, roomById, adjacency)?.id,
       roomPath: segment.map(r => r.id),
       dialogue: generateQuestDialogue(questName, giverNpc, 'clear', totalCount),
       sourceHint: `Generated from ${segment.length} combat rooms with ${totalSpawns.length} spawn entries`,
@@ -425,15 +432,14 @@ function formatClassName(name: string): string {
   return clean.replace(/([a-z])([A-Z])/g, '$1 $2');
 }
 
-function buildCombatSegments(
-  combatRooms: RoomNode[],
-  connections: RoomConnection[],
-): RoomNode[][] {
-  // Group connected combat rooms into segments
-  const visited = new Set<string>();
-  const segments: RoomNode[][] = [];
+/**
+ * Build a directed adjacency list from room connections once.
+ * Neighbor insertion order mirrors the previous inline builders exactly
+ * (fromId→toId in connection order, plus toId→fromId for bidirectional edges)
+ * so BFS/DFS traversal order — and therefore generated quest output — is identical.
+ */
+function buildAdjacency(connections: RoomConnection[]): Map<string, string[]> {
   const adjacency = new Map<string, string[]>();
-
   for (const conn of connections) {
     if (!adjacency.has(conn.fromId)) adjacency.set(conn.fromId, []);
     adjacency.get(conn.fromId)!.push(conn.toId);
@@ -442,6 +448,30 @@ function buildCombatSegments(
       adjacency.get(conn.toId)!.push(conn.fromId);
     }
   }
+  return adjacency;
+}
+
+/**
+ * Index rooms by id, keeping the FIRST occurrence on duplicate ids to match the
+ * previous `rooms.find(r => r.id === ...)` semantics exactly (Array.find returns
+ * the first match; a plain `new Map(entries)` would keep the last).
+ */
+function indexRoomsById(rooms: RoomNode[]): Map<string, RoomNode> {
+  const byId = new Map<string, RoomNode>();
+  for (const room of rooms) {
+    if (!byId.has(room.id)) byId.set(room.id, room);
+  }
+  return byId;
+}
+
+function buildCombatSegments(
+  combatRooms: RoomNode[],
+  adjacency: Map<string, string[]>,
+  combatById: Map<string, RoomNode>,
+): RoomNode[][] {
+  // Group connected combat rooms into segments
+  const visited = new Set<string>();
+  const segments: RoomNode[][] = [];
 
   const combatIds = new Set(combatRooms.map(r => r.id));
 
@@ -457,7 +487,7 @@ function buildCombatSegments(
       const neighbors = adjacency.get(curr.id) || [];
       for (const nId of neighbors) {
         if (!visited.has(nId) && combatIds.has(nId)) {
-          const neighbor = combatRooms.find(r => r.id === nId);
+          const neighbor = combatById.get(nId);
           if (neighbor) stack.push(neighbor);
         }
       }
@@ -470,28 +500,18 @@ function buildCombatSegments(
 
 function findNearestSafeRoom(
   startId: string,
-  rooms: RoomNode[],
-  connections: RoomConnection[],
+  roomById: Map<string, RoomNode>,
+  adjacency: Map<string, string[]>,
 ): RoomNode | undefined {
   // BFS for nearest safe/hub room
   const visited = new Set<string>();
   const queue = [startId];
-  const adjacency = new Map<string, string[]>();
-
-  for (const conn of connections) {
-    if (!adjacency.has(conn.fromId)) adjacency.set(conn.fromId, []);
-    adjacency.get(conn.fromId)!.push(conn.toId);
-    if (conn.bidirectional) {
-      if (!adjacency.has(conn.toId)) adjacency.set(conn.toId, []);
-      adjacency.get(conn.toId)!.push(conn.fromId);
-    }
-  }
 
   while (queue.length > 0) {
     const id = queue.shift()!;
     if (visited.has(id)) continue;
     visited.add(id);
-    const room = rooms.find(r => r.id === id);
+    const room = roomById.get(id);
     if (room && (room.type === 'safe' || room.type === 'hub')) return room;
     const neighbors = adjacency.get(id) || [];
     for (const nId of neighbors) {

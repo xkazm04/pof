@@ -1,18 +1,12 @@
 'use client';
 
-import { BT_NODES, BT_EDGES } from '../_shared/data';
+import { BT_TREE } from '../_shared/data';
 import { ACCENT_EMERALD, withOpacity, OPACITY_50 } from '@/lib/chart-colors';
 
-const nodeCount = BT_NODES.length;
+const nodeCount = BT_TREE.length;
 
 function computeDepth(): number {
-  const children = new Map<string, string[]>();
-  for (const e of BT_EDGES) {
-    const list = children.get(e.from) ?? [];
-    list.push(e.to);
-    children.set(e.from, list);
-  }
-  const roots = BT_NODES.filter(n => !BT_EDGES.some(e => e.to === n.id));
+  const children = new Map(BT_TREE.map(n => [n.id, n.children]));
   let maxDepth = 0;
 
   function walk(id: string, depth: number) {
@@ -22,7 +16,7 @@ function computeDepth(): number {
     }
   }
 
-  for (const root of roots) walk(root.id, 1);
+  walk('root', 1);
   return maxDepth;
 }
 

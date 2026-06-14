@@ -1,4 +1,5 @@
 import { buildProjectContextHeader, getModuleName, type ProjectContext } from '@/lib/prompt-context';
+import { GENERATE_ALL_DIRECTLY } from '@/lib/prompts/_shared';
 import type { PostProcessStackConfig, PPEffect, PPStackEntry } from '@/components/modules/content/materials/PostProcessStackBuilder';
 
 function formatEffectSection(effect: PPEffect, entry: PPStackEntry): string {
@@ -17,7 +18,7 @@ export function buildPostProcessPrompt(config: PostProcessStackConfig, ctx: Proj
   const moduleName = getModuleName(ctx.projectName);
   const header = buildProjectContextHeader(ctx, {
     extraRules: [
-      'Generate all code files directly — do NOT ask for confirmation.',
+      GENERATE_ALL_DIRECTLY,
       'Use UE5 Post Process Volume best practices.',
       'Expose all parameters as UPROPERTY(EditAnywhere, BlueprintReadWrite) for designer tuning.',
     ],

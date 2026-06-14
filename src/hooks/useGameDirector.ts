@@ -43,6 +43,7 @@ export interface UseGameDirectorResult {
   deleteSession: (sessionId: string) => Promise<void>;
   simulatePlaytest: (sessionId: string) => Promise<void>;
   getFindings: (sessionId: string) => Promise<PlaytestFinding[]>;
+  getAllFindings: () => Promise<PlaytestFinding[]>;
   getEvents: (sessionId: string) => Promise<DirectorEvent[]>;
   updateTriage: (
     findingId: string,
@@ -99,6 +100,13 @@ export function useGameDirector(): UseGameDirectorResult {
     return unwrapOr(result, []);
   }, []);
 
+  // Single batch fetch backing FindingsExplorer — returns every finding in one
+  // request instead of one round-trip per completed session.
+  const getAllFindings = useCallback(async (): Promise<PlaytestFinding[]> => {
+    const result = await tryApiFetch<PlaytestFinding[]>('/api/game-director?action=all-findings');
+    return unwrapOr(result, []);
+  }, []);
+
   const getEvents = useCallback(async (sessionId: string): Promise<DirectorEvent[]> => {
     const result = await tryApiFetch<DirectorEvent[]>(`/api/game-director?action=events&sessionId=${sessionId}`);
     return unwrapOr(result, []);
@@ -142,6 +150,7 @@ export function useGameDirector(): UseGameDirectorResult {
     deleteSession,
     simulatePlaytest,
     getFindings,
+    getAllFindings,
     getEvents,
     updateTriage,
     markFixDispatched,

@@ -22,7 +22,8 @@ const ACCENT = ACCENT_ORANGE;
 
 interface FindingsExplorerProps {
   sessions: PlaytestSession[];
-  getFindings: (sessionId: string) => Promise<PlaytestFinding[]>;
+  /** Single batch fetch returning every finding; grouped/filtered client-side. */
+  getAllFindings: () => Promise<PlaytestFinding[]>;
   updateTriage: (
     findingId: string,
     triageStatus: TriageStatus,
@@ -41,7 +42,7 @@ const TRIAGE_FILTER_LABELS: Record<TriageFilter, string> = {
   triaged: 'Triaged',
 };
 
-export function FindingsExplorer({ sessions, getFindings, updateTriage, markFixDispatched, onNewSession }: FindingsExplorerProps) {
+export function FindingsExplorer({ sessions, getAllFindings, updateTriage, markFixDispatched, onNewSession }: FindingsExplorerProps) {
   const [allFindings, setAllFindings] = useState<PlaytestFinding[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
@@ -49,19 +50,23 @@ export function FindingsExplorer({ sessions, getFindings, updateTriage, markFixD
   const [triageFilter, setTriageFilter] = useState<TriageFilter>('open');
   const [busyId, setBusyId] = useState<string | null>(null);
 
+  // One batch request returns every finding (replacing the per-completed-session
+  // fan-out). We intentionally do NOT depend on `sessions` here: `useGameDirector`
+  // hands back a fresh `sessions` reference after every triage `refresh()`, which
+  // previously re-fired the whole N-request storm and clobbered the optimistic
+  // update below. Completed-session scoping is applied client-side in `filtered`.
   useEffect(() => {
     let cancelled = false;
     (async () => {
       setLoading(true);
-      const completedSessions = sessions.filter(s => s.status === 'complete');
-      const allResults = await Promise.all(completedSessions.map(s => getFindings(s.id)));
+      const results = await getAllFindings();
       if (!cancelled) {
-        setAllFindings(allResults.flat());
+        setAllFindings(results);
         setLoading(false);
       }
     })();
     return () => { cancelled = true; };
-  }, [sessions, getFindings]);
+  }, [getAllFindings]);
 
   const applyTriage = useCallback(async (
     finding: PlaytestFinding,
@@ -89,8 +94,21 @@ export function FindingsExplorer({ sessions, getFindings, updateTriage, markFixD
     }
   }, [markFixDispatched]);
 
+  // The batch endpoint returns findings for every session; the explorer only
+  // ever showed findings from *completed* sessions (the old fan-out fetched only
+  // those). Scope client-side to keep the displayed set byte-for-byte identical.
+  const completedSessionIds = useMemo(
+    () => new Set(sessions.filter(s => s.status === 'complete').map(s => s.id)),
+    [sessions],
+  );
+
+  const visibleFindings = useMemo(
+    () => allFindings.filter(f => completedSessionIds.has(f.sessionId)),
+    [allFindings, completedSessionIds],
+  );
+
   const filtered = useMemo(() => {
-    let result = allFindings;
+    let result = visibleFindings;
     if (triageFilter === 'open') {
       result = result.filter(f => f.triageStatus === 'active' || f.triageStatus === 'confirmed');
     } else if (triageFilter === 'triaged') {
@@ -109,17 +127,17 @@ export function FindingsExplorer({ sessions, getFindings, updateTriage, markFixD
       );
     }
     return result;
-  }, [allFindings, severityFilter, searchQuery, triageFilter]);
+  }, [visibleFindings, severityFilter, searchQuery, triageFilter]);
 
   const triageCounts = useMemo(() => {
     let open = 0;
     let triaged = 0;
-    for (const f of allFindings) {
+    for (const f of visibleFindings) {
       if (f.triageStatus === 'active' || f.triageStatus === 'confirmed') open += 1;
       if (f.triageStatus !== 'active') triaged += 1;
     }
-    return { open, all: allFindings.length, triaged };
-  }, [allFindings]);
+    return { open, all: visibleFindings.length, triaged };
+  }, [visibleFindings]);
 
   if (loading) {
     return (
@@ -193,11 +211,11 @@ export function FindingsExplorer({ sessions, getFindings, updateTriage, markFixD
         )}
       </span>
 
-      {allFindings.length > 0 && <SeverityLegend />}
+      {visibleFindings.length > 0 && <SeverityLegend />}
 
       {/* Findings list */}
       {filtered.length === 0 ? (
-        allFindings.length === 0 ? (
+        visibleFindings.length === 0 ? (
           <EmptyState
             icon={Target}
             iconColor={ACCENT}

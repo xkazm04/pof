@@ -1,24 +1,21 @@
 'use client';
 
 import { Lbl } from './controls';
-import { StepFrame } from './StepFrame';
+import { StaticStepFrame } from './StaticStepFrame';
 import { CliProduce } from './shared/CliProduce';
-import { useStaticStep } from './useStaticStep';
-import { ITEM_STEP_SPECS, ITEM_ATTR_SCHEMA } from './itemsSteps';
+import { ITEM_ATTR_SCHEMA } from './itemsSteps';
 import type { StepProps } from './stepProps';
 
 const PEERS = [['Steel Saber', '31'], ['Worn Greatsword', '46'], ['Guard\'s Blade', '29'], ['Iron Mace', '38']];
 
 /** Items · Attributes. View: UE-synced table (persisted) | peers+schema. Produce: CLI fills the mix. */
 export function ItemAttributes({ t, entity, step }: StepProps) {
-  const { art, runProduce } = useStaticStep(entity, step);
-  const vals = (art?.data?.stats ?? {}) as Record<string, string | number>;
   const cell: React.CSSProperties = { padding: '8px 12px', borderTop: `1px solid ${t.line}`, fontSize: 15 };
 
   return (
-    <StepFrame t={t} acceptance={ITEM_STEP_SPECS[step].accept(art?.data ?? {})}
-      onFix={runProduce}
-      panels={[
+    <StaticStepFrame t={t} entity={entity} step={step} panels={({ art, runProduce }) => {
+      const vals = (art?.data?.stats ?? {}) as Record<string, string | number>;
+      return [
         {
           label: 'Attribute table',
           node: (
@@ -68,7 +65,7 @@ export function ItemAttributes({ t, entity, step }: StepProps) {
               onComplete={runProduce} />
           ),
         },
-      ]}
-    />
+      ];
+    }} />
   );
 }

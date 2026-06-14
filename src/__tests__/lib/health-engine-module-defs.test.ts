@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import {
   CORE_MODULE_DEFS,
   CORE_CHECKLIST_TOTAL,
+  ALL_MODULE_DEFS,
   ALL_CHECKLIST_TOTAL,
   SUB_MODULES,
   SUB_MODULE_MAP,
@@ -49,12 +50,15 @@ describe('CORE_MODULE_DEFS — derived from SUB_MODULES', () => {
   });
 });
 
-describe('computeProjectHealth uses the derived totals', () => {
-  it('reports the registry-derived denominator and labels', () => {
+describe('computeProjectHealth uses the all-module derived totals', () => {
+  // "Overall completion" spans every module (ALL_MODULE_DEFS / ALL_CHECKLIST_TOTAL)
+  // so the Holistic Health dashboard agrees with the weekly digest and top-bar
+  // stats, which also count all modules — not just the core-engine subset.
+  it('reports the all-module denominator and labels', () => {
     const health = computeProjectHealth({}, [], null);
 
-    expect(health.totalChecklistItems).toBe(CORE_CHECKLIST_TOTAL);
-    expect(health.moduleHealth).toHaveLength(CORE_MODULE_DEFS.length);
+    expect(health.totalChecklistItems).toBe(ALL_CHECKLIST_TOTAL);
+    expect(health.moduleHealth).toHaveLength(ALL_MODULE_DEFS.length);
 
     for (const card of health.moduleHealth) {
       // Labels flow from the single owner, not a private copy.
@@ -62,8 +66,8 @@ describe('computeProjectHealth uses the derived totals', () => {
     }
   });
 
-  it('keeps completion in sync with the derived denominator when items are checked', () => {
-    const firstDef = CORE_MODULE_DEFS[0];
+  it('keeps completion in sync with the all-module denominator when items are checked', () => {
+    const firstDef = ALL_MODULE_DEFS[0];
     const progress = {
       [firstDef.id]: { 'item-a': true, 'item-b': true },
     };
@@ -71,7 +75,7 @@ describe('computeProjectHealth uses the derived totals', () => {
 
     expect(health.completedChecklistItems).toBe(2);
     expect(health.overallCompletion).toBe(
-      Math.round((2 / CORE_CHECKLIST_TOTAL) * 100),
+      Math.round((2 / ALL_CHECKLIST_TOTAL) * 100),
     );
   });
 });
