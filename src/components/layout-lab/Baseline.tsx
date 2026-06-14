@@ -1,7 +1,7 @@
 'use client';
 
 import '@/lib/catalog/pipelines/registry.generated';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { summarizeEntityData } from '@/lib/ecw/entity-summary';
 import { getStepComponent } from './steps';
 import { ArchetypeStep } from './steps/ArchetypeStep';
@@ -75,9 +75,17 @@ export function Baseline({ theme: t, groups, detail, onSelectCatalog, entityId, 
   // Every other catalog uses its registry StepSpec labels, which the generic
   // ArchetypeStep renderer drives.
   const pipeline = detail ? getCatalogPipeline(detail.catalog.catalogId) : null;
-  const steps = detail?.catalog.catalogId !== 'items' && pipeline
-    ? pipeline.steps.map((s) => s.label)
-    : (detail?.steps ?? []);
+  // Memoized so the `steps` array identity is stable across renders that don't change
+  // the pipeline/items list. A fresh `pipeline.steps.map(...)` array every render would
+  // otherwise bust useEntityArtifacts' memo (it keys on `steps`), forcing a full
+  // per-step acceptance rollup recompute on every unrelated re-render.
+  const steps = useMemo(
+    () =>
+      detail?.catalog.catalogId !== 'items' && pipeline
+        ? pipeline.steps.map((s) => s.label)
+        : (detail?.steps ?? []),
+    [detail?.catalog.catalogId, pipeline, detail?.steps],
+  );
 
   const catalogId = detail?.catalog.catalogId;
 
