@@ -121,9 +121,13 @@ export function deleteDoc(id: number): boolean {
 // ── Summary ──
 
 export function getSummary(): LevelDesignSummary {
-  const docs = getAllDocs();
+  ensureLevelDesignTable();
 
-  const allRooms: RoomNode[] = docs.flatMap((d) => d.rooms);
+  // Only `rooms` and `sync_status` feed the summary — skip parsing the heavy
+  // `connections` / `difficulty_arc` / `sync_report` blobs that getAllDocs() would.
+  const rows = getDb()
+    .prepare('SELECT rooms, sync_status FROM level_design_docs')
+    .all() as { rooms: string; sync_status: LevelDesignDocument['syncStatus'] }[];
 
   const diffDist = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 } as Record<DifficultyLevel, number>;
   const typeDist = {
@@ -131,17 +135,31 @@ export function getSummary(): LevelDesignSummary {
     safe: 0, transition: 0, cutscene: 0, hub: 0,
   } as Record<RoomType, number>;
 
-  for (const room of allRooms) {
-    if (room.difficulty >= 1 && room.difficulty <= 5) diffDist[room.difficulty]++;
-    if (room.type in typeDist) typeDist[room.type]++;
+  let totalRooms = 0;
+  let syncedCount = 0;
+  let divergedCount = 0;
+  let unlinkedCount = 0;
+
+  for (const row of rows) {
+    const status = row.sync_status;
+    if (status === 'synced') syncedCount++;
+    else if (status === 'diverged' || status === 'doc-ahead' || status === 'code-ahead') divergedCount++;
+    else if (status === 'unlinked') unlinkedCount++;
+
+    const rooms: RoomNode[] = JSON.parse(row.rooms || '[]');
+    totalRooms += rooms.length;
+    for (const room of rooms) {
+      if (room.difficulty >= 1 && room.difficulty <= 5) diffDist[room.difficulty]++;
+      if (room.type in typeDist) typeDist[room.type]++;
+    }
   }
 
   return {
-    totalDocs: docs.length,
-    totalRooms: allRooms.length,
-    syncedCount: docs.filter((d) => d.syncStatus === 'synced').length,
-    divergedCount: docs.filter((d) => d.syncStatus === 'diverged' || d.syncStatus === 'doc-ahead' || d.syncStatus === 'code-ahead').length,
-    unlinkedCount: docs.filter((d) => d.syncStatus === 'unlinked').length,
+    totalDocs: rows.length,
+    totalRooms,
+    syncedCount,
+    divergedCount,
+    unlinkedCount,
     difficultyDistribution: diffDist,
     roomTypeDistribution: typeDist,
   };
