@@ -14,6 +14,8 @@ interface CatalogState {
   /** entitiesByCatalog[catalogId][entityId] */
   entitiesByCatalog: Record<string, Record<string, CatalogEntityBase>>;
   setEntities: (catalogId: string, entities: CatalogEntityBase[]) => void;
+  /** Insert/replace a single entity in a catalog (used by the catalog "Add Item" flow). */
+  addEntity: (catalogId: string, entity: CatalogEntityBase) => void;
   /** Advance an entity's lifecycle in-memory through the shared gate (optimistic + post-callback sync). */
   applyLifecycle: (input: {
     catalogId: string; entityId: string; nextLifecycle: LifecycleState;
@@ -44,6 +46,14 @@ export const useCatalogStore = create<CatalogState>()(
       setEntities: (catalogId, entities) =>
         set((s) => ({
           entitiesByCatalog: { ...s.entitiesByCatalog, [catalogId]: indexById(entities) },
+        })),
+
+      addEntity: (catalogId, entity) =>
+        set((s) => ({
+          entitiesByCatalog: {
+            ...s.entitiesByCatalog,
+            [catalogId]: { ...(s.entitiesByCatalog[catalogId] ?? {}), [entity.id]: entity },
+          },
         })),
 
       applyLifecycle: ({ catalogId, entityId, nextLifecycle, ueAssets, testResult }) =>

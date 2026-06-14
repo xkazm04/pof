@@ -170,6 +170,11 @@ function simulateFight(
   const dt = 0.1;
   let time = 0;
 
+  // Reusable scratch buffer for the alive-enemy list. Refilled in `enemies`
+  // order on each player action instead of allocating a fresh `enemies.filter`
+  // array every tick — identical contents/order, no per-action GC churn.
+  const aliveEnemies: CombatEntity[] = [];
+
   while (time < config.maxFightDurationSec) {
     time += dt;
 
@@ -179,7 +184,10 @@ function simulateFight(
 
     // Player action
     if (player.attrs.health > 0 && time >= player.nextActionTime && time >= player.stunUntil) {
-      const aliveEnemies = enemies.filter((e) => e.attrs.health > 0);
+      aliveEnemies.length = 0;
+      for (const e of enemies) {
+        if (e.attrs.health > 0) aliveEnemies.push(e);
+      }
       if (aliveEnemies.length === 0) break;
 
       const ability = choosePlayerAbility(player, aliveEnemies, time, rng);

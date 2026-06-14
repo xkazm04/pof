@@ -11,7 +11,8 @@ import { EquipmentLoadoutSection, SetBonusSection } from './GearSections';
 import { AffixSlotPanels } from './AffixSlotPanels';
 import { CatalogPagination } from './CatalogPagination';
 import { ACCENT, DUMMY_ITEMS, RARITY_ORDER, type ItemData } from '../_shared/data';
-import { useItemEntries } from '@/stores/catalogStore';
+import { useCatalogStore, useItemEntries } from '@/stores/catalogStore';
+import { itemToEntry } from '@/lib/catalog/seed-items';
 import { useGeneration } from '@/hooks/useGeneration';
 import type { GenerationStep } from '@/lib/catalog/recipe';
 import type { ItemEntry, StoredCatalogEntity } from '@/lib/catalog/types';
@@ -52,51 +53,51 @@ export function CatalogGearTab({ moduleId, featureMap }: CatalogGearTabProps) {
 
   const { execute: executeCli, isRunning: isCliRunning } = useModuleCLI({ moduleId, sessionKey: 'item-gen', label: 'Item Generator', accentColor: ACCENT });
 
-  // folder-09 R3: source lifecycle/ueAssets from the catalog store; the static
-  // DUMMY_ITEMS array still drives the rich UI (the seed converter wraps it 1:1).
+  // zen-perf R3: the catalog store is the SINGLE source of truth. It is seeded
+  // 1:1 from DUMMY_ITEMS at first run (seedAllCatalogs → seedItemEntries) and the
+  // persist `merge` re-seeds the `items` catalog if a persisted blob is missing it,
+  // so every hand-authored item (plus any generated/added entries) lives here.
+  // Each ItemEntry carries `data: ItemData` (the rich UI payload) + lifecycle/ueAssets;
+  // filtering/sorting/paging operate directly on entries — no runtime id-join Map.
   const entries = useItemEntries();
-  const entryByItemId = useMemo(
-    () => new Map(entries.map((e) => [e.data.id, e])),
-    [entries],
-  );
+  const addEntity = useCatalogStore((s) => s.addEntity);
 
-  const items = DUMMY_ITEMS;
   const availableSubtypes = useMemo(() => {
-    const pool = categoryFilter !== 'all' ? items.filter(i => i.type === categoryFilter) : items;
-    return [...new Set(pool.map(i => i.subtype))].sort();
-  }, [items, categoryFilter]);
+    const pool = categoryFilter !== 'all' ? entries.filter(e => e.data.type === categoryFilter) : entries;
+    return [...new Set(pool.map(e => e.data.subtype))].sort();
+  }, [entries, categoryFilter]);
 
-  const filteredItems = useMemo(() => {
-    let result = items;
-    if (categoryFilter !== 'all') result = result.filter(i => i.type === categoryFilter);
-    if (rarityFilter !== 'all') result = result.filter(i => i.rarity === rarityFilter);
-    if (subtypeFilter !== 'all') result = result.filter(i => i.subtype === subtypeFilter);
+  const filteredEntries = useMemo(() => {
+    let result = entries;
+    if (categoryFilter !== 'all') result = result.filter(e => e.data.type === categoryFilter);
+    if (rarityFilter !== 'all') result = result.filter(e => e.data.rarity === rarityFilter);
+    if (subtypeFilter !== 'all') result = result.filter(e => e.data.subtype === subtypeFilter);
     if (searchQuery) {
       const q = searchQuery.toLowerCase();
-      result = result.filter(i => i.name.toLowerCase().includes(q) || i.description.toLowerCase().includes(q));
+      result = result.filter(e => e.data.name.toLowerCase().includes(q) || e.data.description.toLowerCase().includes(q));
     }
     return [...result].sort((a, b) => {
-      if (sortBy === 'name') return a.name.localeCompare(b.name);
-      if (sortBy === 'type') return a.type.localeCompare(b.type);
-      if (sortBy === 'rarity') return (RARITY_ORDER[b.rarity] ?? 0) - (RARITY_ORDER[a.rarity] ?? 0);
+      const ad = a.data, bd = b.data;
+      if (sortBy === 'name') return ad.name.localeCompare(bd.name);
+      if (sortBy === 'type') return ad.type.localeCompare(bd.type);
+      if (sortBy === 'rarity') return (RARITY_ORDER[bd.rarity] ?? 0) - (RARITY_ORDER[ad.rarity] ?? 0);
       if (sortBy === 'power') {
-        const pa = a.stats.reduce((s, st) => s + (st.numericValue ?? 0), 0);
-        const pb = b.stats.reduce((s, st) => s + (st.numericValue ?? 0), 0);
+        const pa = ad.stats.reduce((s, st) => s + (st.numericValue ?? 0), 0);
+        const pb = bd.stats.reduce((s, st) => s + (st.numericValue ?? 0), 0);
         return pb - pa;
       }
       return 0;
     });
-  }, [items, categoryFilter, rarityFilter, subtypeFilter, searchQuery, sortBy]);
+  }, [entries, categoryFilter, rarityFilter, subtypeFilter, searchQuery, sortBy]);
 
-  const totalPages = Math.ceil(filteredItems.length / ITEMS_PER_PAGE);
-  const pageItems = filteredItems.slice(currentPage * ITEMS_PER_PAGE, (currentPage + 1) * ITEMS_PER_PAGE);
+  const totalPages = Math.ceil(filteredEntries.length / ITEMS_PER_PAGE);
+  const pageEntries = filteredEntries.slice(currentPage * ITEMS_PER_PAGE, (currentPage + 1) * ITEMS_PER_PAGE);
 
-  // folder-09 R3: dispatch generation for the primary (selected or first visible) item.
+  // zen-perf R3: dispatch generation for the primary (selected or first visible) entry.
   // `entries` is legitimately empty before the catalog is seeded / after a store
   // reset, so `primaryEntry` must be nullable — never assert it non-null here.
-  const primaryItem = selectedItem ?? pageItems[0];
   const primaryEntry: ItemEntry | undefined =
-    (primaryItem && entryByItemId.get(primaryItem.id)) ?? entries[0] ?? undefined;
+    (selectedItem && entries.find(e => e.data.id === selectedItem.id)) ?? pageEntries[0] ?? entries[0] ?? undefined;
   // useGeneration is a hook and must be called unconditionally; when there is no
   // backing entry we hand it a placeholder and gate the actual (Re)generate
   // affordance below so nothing is ever dispatched for a non-existent entity.
@@ -123,7 +124,7 @@ export function CatalogGearTab({ moduleId, featureMap }: CatalogGearTabProps) {
   }, []);
 
   const handleGridKeyDown = useCallback((e: React.KeyboardEvent) => {
-    const count = pageItems.length;
+    const count = pageEntries.length;
     if (count === 0) return;
     let next = focusedIndex;
     const cols = getColumnCount();
@@ -138,17 +139,40 @@ export function CatalogGearTab({ moduleId, featureMap }: CatalogGearTabProps) {
     }
     e.preventDefault();
     if (next !== focusedIndex) { setFocusedIndex(next); cardRefs.current[next]?.focus(); }
-  }, [focusedIndex, pageItems.length, getColumnCount]);
+  }, [focusedIndex, pageEntries.length, getColumnCount]);
 
   const handleCreateItem = useCallback(() => {
     if (!newItem.name.trim()) return;
     const slug = newItem.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+
+    // zen-perf R3: the new item enters the rendered grid immediately because the
+    // store is now the single source of truth — build an ItemData, wrap it via the
+    // same seed converter, and add it to the catalog store. The CLI image-gen below
+    // then fills in its artwork at public/items/<slug>.webp.
+    const newData: ItemData = {
+      id: `user-${slug}-${Date.now().toString(36)}`,
+      name: newItem.name.trim(),
+      type: newItem.type,
+      subtype: newItem.type,
+      rarity: newItem.rarity,
+      stats: [],
+      description: newItem.description,
+      imagePath: `/items/${slug}.webp`,
+    };
+    addEntity('items', itemToEntry(newData));
+    // Surface the freshly-added item: clear filters/search and jump to the first page.
+    setCategoryFilter('all');
+    setRarityFilter('all');
+    setSubtypeFilter('all');
+    setSearchQuery('');
+    setCurrentPage(0);
+
     const imagePrompt = `Game item icon, ${newItem.rarity} ${newItem.type}, ${newItem.name}, ${newItem.description}, dark fantasy ARPG style, centered on black background, high detail`.slice(0, 1500);
     const prompt = `Create a new item for the ARPG loot system:\nName: ${newItem.name}\nType: ${newItem.type}\nRarity: ${newItem.rarity}\nDescription: ${newItem.description}\n\nSteps:\n1. Call POST /api/leonardo with prompt: "${imagePrompt}"\n2. The API will return { imageUrl, generationId }\n3. Download the image from imageUrl and save to public/items/${slug}.webp\n4. Confirm the item was created with its image path\n\nItem slug: ${slug}`;
     executeCli({ type: 'checklist', moduleId, prompt, label: `Create item: ${newItem.name}` });
     setShowAddForm(false);
     setNewItem({ name: '', type: 'Weapon', rarity: 'Common', description: '' });
-  }, [newItem, moduleId, executeCli]);
+  }, [newItem, moduleId, executeCli, addEntity]);
 
   return (
     <motion.div key="catalog-gear" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} transition={{ duration: 0.2 }} className="space-y-4">
@@ -161,7 +185,7 @@ export function CatalogGearTab({ moduleId, featureMap }: CatalogGearTabProps) {
           rarityFilter={rarityFilter} setRarityFilter={setRarityFilter}
           sortBy={sortBy} setSortBy={setSortBy}
           availableSubtypes={availableSubtypes}
-          filteredCount={filteredItems.length}
+          filteredCount={filteredEntries.length}
           showAddForm={showAddForm} setShowAddForm={setShowAddForm}
           resetPage={() => setCurrentPage(0)}
         />
@@ -182,12 +206,11 @@ export function CatalogGearTab({ moduleId, featureMap }: CatalogGearTabProps) {
         <CatalogItemGrid
           gridRef={gridRef}
           cardRefs={cardRefs}
-          pageItems={pageItems}
-          filteredCount={filteredItems.length}
+          pageEntries={pageEntries}
+          filteredCount={filteredEntries.length}
           focusedIndex={focusedIndex}
           setFocusedIndex={setFocusedIndex}
           setSelectedItem={setSelectedItem}
-          entryByItemId={entryByItemId}
           primaryEntry={primaryEntry}
           isGenRunning={gen.isRunning}
           onRegenerate={primaryEntry ? () => gen.generate(nextStep) : undefined}

@@ -10,12 +10,12 @@ import type { ItemEntry } from '@/lib/catalog/types';
 interface Props {
   gridRef: React.RefObject<HTMLDivElement | null>;
   cardRefs: React.MutableRefObject<(HTMLDivElement | null)[]>;
-  pageItems: ItemData[];
+  /** zen-perf R3: the grid renders directly from store entries (each carries `data: ItemData`). */
+  pageEntries: ItemEntry[];
   filteredCount: number;
   focusedIndex: number;
   setFocusedIndex: (i: number) => void;
   setSelectedItem: React.Dispatch<React.SetStateAction<ItemData | null>>;
-  entryByItemId: Map<string, ItemEntry>;
   /** Undefined when the catalog store is empty (no backing entry to generate). */
   primaryEntry: ItemEntry | undefined;
   isGenRunning: boolean;
@@ -25,9 +25,9 @@ interface Props {
 }
 
 export function CatalogItemGrid({
-  gridRef, cardRefs, pageItems, filteredCount,
+  gridRef, cardRefs, pageEntries, filteredCount,
   focusedIndex, setFocusedIndex, setSelectedItem,
-  entryByItemId, primaryEntry, isGenRunning, onRegenerate,
+  primaryEntry, isGenRunning, onRegenerate,
   onGridKeyDown,
 }: Props) {
   return (
@@ -35,9 +35,9 @@ export function CatalogItemGrid({
       <motion.div ref={gridRef} layout role="grid" aria-label="Item catalog" onKeyDown={onGridKeyDown}
         className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
         <AnimatePresence mode="popLayout">
-          {pageItems.map((item, index) => {
-            const entry = entryByItemId.get(item.id);
-            const isPrimary = !!entry && entry.id === primaryEntry?.id;
+          {pageEntries.map((entry, index) => {
+            const item = entry.data;
+            const isPrimary = entry.id === primaryEntry?.id;
             return (
               <div key={item.id} onClick={() => setSelectedItem(prev => prev?.id === item.id ? null : item)} className="cursor-pointer">
                 <TradingCard ref={(el: HTMLDivElement | null) => { cardRefs.current[index] = el; }}
@@ -45,8 +45,8 @@ export function CatalogItemGrid({
                 {/* folder-09 R3: lifecycle cell + (Re)generate for the primary item. */}
                 <div className="mt-1 px-1" onClick={(e) => e.stopPropagation()}>
                   <CatalogLifecycleCell
-                    lifecycle={entry?.lifecycle ?? 'planned'}
-                    ueAssetCount={entry?.ueAssets?.length ?? 0}
+                    lifecycle={entry.lifecycle}
+                    ueAssetCount={entry.ueAssets?.length ?? 0}
                     busy={isPrimary && isGenRunning}
                     onRegenerate={isPrimary ? onRegenerate : undefined}
                   />
