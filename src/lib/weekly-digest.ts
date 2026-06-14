@@ -104,21 +104,33 @@ export function generateWeeklyDigest(referenceDate?: Date): WeeklyDigest {
     .map(([date, data]) => ({ date, ...data }));
 
   // ── Streaks ──
-  const allRecent = db.prepare(`
+  // currentStreak only needs the recent tail: scan newest-first and stop at the
+  // first failure, so a 200-row cap is more than enough.
+  const recentTail = db.prepare(`
     SELECT success FROM session_analytics
     ORDER BY completed_at DESC
     LIMIT 200
   `).all() as { success: number }[];
 
   let currentStreak = 0;
-  for (const r of allRecent) {
+  for (const r of recentTail) {
     if (r.success === 1) currentStreak++;
     else break;
   }
 
+  // longestStreak is an all-time high-water mark and must never regress as
+  // history grows, so it is computed over the FULL session history (not the
+  // 200-row tail, which would silently drop an older best streak). Only the
+  // success flags are fetched, in chronological order — SQLite reads via the
+  // completed_at index, JS just scans the column.
+  const allSuccess = db.prepare(`
+    SELECT success FROM session_analytics
+    ORDER BY completed_at ASC
+  `).all() as { success: number }[];
+
   let longestStreak = 0;
   let streak = 0;
-  for (const r of allRecent) {
+  for (const r of allSuccess) {
     if (r.success === 1) {
       streak++;
       if (streak > longestStreak) longestStreak = streak;
