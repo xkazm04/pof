@@ -112,25 +112,6 @@ export interface ABTest {
   concludedAt: string | null;
 }
 
-// ── Template family — group of similar prompts ──
-
-export interface TemplateFamily {
-  id: string;
-  moduleId: SubModuleId;
-  /** Representative label */
-  label: string;
-  /** Centroid prompt (most representative) */
-  centroidVariantId: string;
-  /** All variant ids in this cluster */
-  variantIds: string[];
-  /** Average success rate across all variants */
-  avgSuccessRate: number;
-  /** Average duration */
-  avgDurationMs: number;
-  /** Dominant style in this family */
-  dominantStyle: VariantStyle;
-}
-
 // ── Prompt cluster result (from similarity analysis) ──
 
 export interface PromptCluster {
@@ -154,7 +135,6 @@ export interface EvolutionStats {
   totalVariants: number;
   activeABTests: number;
   concludedABTests: number;
-  templateFamilies: number;
   avgImprovementRate: number;
   topPerformingModule: string | null;
   /** Per-module breakdown */

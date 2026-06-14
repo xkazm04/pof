@@ -2,6 +2,7 @@
 
 import { useMemo, useState, useCallback, useRef } from 'react';
 import { useModuleCLI } from '@/hooks/useModuleCLI';
+import { useViewportAtLeast } from '@/hooks/useViewportWidth';
 import { motion, AnimatePresence } from 'framer-motion';
 import type { SubModuleId } from '@/types/modules';
 import type { FeatureRow } from '@/types/feature-matrix';
@@ -118,16 +119,24 @@ export function CatalogGearTab({ moduleId, featureMap }: CatalogGearTabProps) {
     setFocusedIndex(0);
   }
 
-  const getColumnCount = useCallback(() => {
-    if (!gridRef.current) return 1;
-    return window.getComputedStyle(gridRef.current).gridTemplateColumns.split(' ').filter(Boolean).length;
-  }, []);
+  // zen-perf wave21: column count is derived from the grid's responsive Tailwind
+  // breakpoints (`grid-cols-1 md:grid-cols-2 xl:grid-cols-4`) rather than read via
+  // `window.getComputedStyle(gridRef.current).gridTemplateColumns` inside the
+  // keydown handler. That computed-style read forced a synchronous style/layout
+  // flush on every ArrowUp/ArrowDown. `useViewportAtLeast` is a ResizeObserver-
+  // backed boolean that only re-renders when its threshold flips, so `columnCount`
+  // is updated once per breakpoint crossing and read O(1) (no DOM access / reflow)
+  // in the handler. Tailwind v4 defaults apply (md=768px, xl=1280px; no custom
+  // `--breakpoint-*`), so this maps 1:1 to the rendered columns at every width.
+  const isXl = useViewportAtLeast(1280);
+  const isMd = useViewportAtLeast(768);
+  const columnCount = isXl ? 4 : isMd ? 2 : 1;
 
   const handleGridKeyDown = useCallback((e: React.KeyboardEvent) => {
     const count = pageEntries.length;
     if (count === 0) return;
     let next = focusedIndex;
-    const cols = getColumnCount();
+    const cols = columnCount;
     switch (e.key) {
       case 'ArrowRight': next = Math.min(count - 1, focusedIndex + 1); break;
       case 'ArrowLeft': next = Math.max(0, focusedIndex - 1); break;
@@ -139,7 +148,7 @@ export function CatalogGearTab({ moduleId, featureMap }: CatalogGearTabProps) {
     }
     e.preventDefault();
     if (next !== focusedIndex) { setFocusedIndex(next); cardRefs.current[next]?.focus(); }
-  }, [focusedIndex, pageEntries.length, getColumnCount]);
+  }, [focusedIndex, pageEntries.length, columnCount]);
 
   const handleCreateItem = useCallback(() => {
     if (!newItem.name.trim()) return;

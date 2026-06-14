@@ -2,7 +2,6 @@ import type { SubModuleId } from '@/types/modules';
 import type {
   PromptVariant,
   ABTest,
-  TemplateFamily,
   EvolutionStats,
   ModuleEvolutionStats,
   EvolutionSuggestion,
@@ -36,10 +35,7 @@ import {
 
 // ── Persistence ─────────────────────────────────────────────────────────────
 // Variants and A/B tests live in SQLite (see ./evolution-db) so experiments
-// survive a server restart. Template families are cheap derived data that we
-// keep in-memory and rebuild on demand.
-
-const templateFamilies = new Map<string, TemplateFamily>();
+// survive a server restart.
 
 // ── Variant management ──────────────────────────────────────────────────────
 
@@ -269,53 +265,6 @@ export function clusterModulePrompts(sessions: SessionRecord[]) {
   return clusterPrompts(sessions);
 }
 
-// ── Template families ───────────────────────────────────────────────────────
-
-export function buildTemplateFamilies(moduleId: SubModuleId): TemplateFamily[] {
-  const moduleVariants = getVariantsForModule(moduleId);
-  if (moduleVariants.length < 2) return [];
-
-  // Group by checklistItemId
-  const byItem = new Map<string, PromptVariant[]>();
-  for (const v of moduleVariants) {
-    const list = byItem.get(v.checklistItemId) ?? [];
-    list.push(v);
-    byItem.set(v.checklistItemId, list);
-  }
-
-  const families: TemplateFamily[] = [];
-  for (const [itemId, itemVariants] of byItem) {
-    if (itemVariants.length < 2) continue;
-
-    // Group by style
-    const byStyle = new Map<VariantStyle, PromptVariant[]>();
-    for (const v of itemVariants) {
-      const list = byStyle.get(v.style) ?? [];
-      list.push(v);
-      byStyle.set(v.style, list);
-    }
-
-    for (const [style, styleVariants] of byStyle) {
-      if (styleVariants.length < 2) continue;
-
-      const family: TemplateFamily = {
-        id: genId('fam'),
-        moduleId,
-        label: `${itemId} — ${style}`,
-        centroidVariantId: styleVariants[0].id, // First created is the centroid
-        variantIds: styleVariants.map((v) => v.id),
-        avgSuccessRate: 0, // Would need session data to compute
-        avgDurationMs: 0,
-        dominantStyle: style,
-      };
-      families.push(family);
-      templateFamilies.set(family.id, family);
-    }
-  }
-
-  return families;
-}
-
 // ── Best variant selection ──────────────────────────────────────────────────
 
 /** Get the best-performing variant for a checklist item, based on A/B test results. */
@@ -484,7 +433,6 @@ export function getEvolutionStats(): EvolutionStats {
     totalVariants: allVariants.length,
     activeABTests: active.length,
     concludedABTests: concluded.length,
-    templateFamilies: templateFamilies.size,
     avgImprovementRate: improvementCount > 0 ? totalImprovement / improvementCount : 0,
     topPerformingModule: topModule?.moduleId ?? null,
     moduleBreakdown,

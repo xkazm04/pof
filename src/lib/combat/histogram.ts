@@ -12,12 +12,14 @@ export interface HistogramResult {
 
 /**
  * Build an equal-width histogram from a list of numeric values.
- * Values are sorted, divided into `bucketCount` bins, and counted.
+ * Values are sorted, divided into `bucketCount` bins, and counted. Pass
+ * `presorted` when `values` is already ascending to skip the redundant copy+sort
+ * (the binning is order-independent, so the result is identical either way).
  */
-export function buildHistogram(values: number[], bucketCount: number): HistogramResult {
+export function buildHistogram(values: number[], bucketCount: number, presorted = false): HistogramResult {
   if (values.length === 0) return { min: 0, max: 0, bins: [] };
 
-  const sorted = [...values].sort((a, b) => a - b);
+  const sorted = presorted ? values : [...values].sort((a, b) => a - b);
   const min = sorted[0];
   const max = sorted[sorted.length - 1];
   const range = max - min || 1;

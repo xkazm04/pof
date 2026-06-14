@@ -388,16 +388,21 @@ export function FeatureMatrix({ moduleId, accentColor, onReview, onSync, isRevie
   }, [features, activeFilters, searchQuery, qualityMin, qualityMax, sortKey, sortDir]);
 
   // Group by category
-  const grouped = filtered.reduce<Record<string, FeatureRow[]>>((acc, f) => {
-    if (!acc[f.category]) acc[f.category] = [];
-    acc[f.category].push(f);
-    return acc;
-  }, {});
+  const { grouped, categories } = useMemo(() => {
+    const grouped = filtered.reduce<Record<string, FeatureRow[]>>((acc, f) => {
+      if (!acc[f.category]) acc[f.category] = [];
+      acc[f.category].push(f);
+      return acc;
+    }, {});
+    const categories = Object.keys(grouped).sort();
+    return { grouped, categories };
+  }, [filtered]);
 
-  const categories = Object.keys(grouped).sort();
-
-  const lastReviewed = features.find((f) => f.lastReviewedAt)?.lastReviewedAt;
-  const neverReviewed = features.length > 0 && features.every((f) => f.status === 'unknown' && !f.lastReviewedAt);
+  const { lastReviewed, neverReviewed } = useMemo(() => {
+    const lastReviewed = features.find((f) => f.lastReviewedAt)?.lastReviewedAt;
+    const neverReviewed = features.length > 0 && features.every((f) => f.status === 'unknown' && !f.lastReviewedAt);
+    return { lastReviewed, neverReviewed };
+  }, [features]);
 
   if (isLoading) {
     return <FeatureMatrixSkeleton />;
