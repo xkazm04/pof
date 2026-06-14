@@ -1,10 +1,9 @@
 'use client';
 
-import { StepFrame } from './StepFrame';
+import { StaticStepFrame } from './StaticStepFrame';
 import { CliProduce } from './shared/CliProduce';
 import { ChartPanel } from './shared/ChartPanel';
-import { useStaticStep } from './useStaticStep';
-import { ITEM_STEP_SPECS, slug, DEFAULT_ANIM_CLIPS, DEFAULT_VFX_VARIANTS, DEFAULT_SFX_CUES } from './itemsSteps';
+import { slug, DEFAULT_ANIM_CLIPS, DEFAULT_VFX_VARIANTS, DEFAULT_SFX_CUES } from './itemsSteps';
 import type { LabTheme } from '../theme';
 import type { StepProps } from './stepProps';
 
@@ -24,15 +23,12 @@ function Row({ t, name, right, on }: { t: LabTheme; name: string; right: string;
 
 /** Items · Animations. View: clip set (persisted). Produce: retarget. */
 export function ItemAnimations({ t, entity, step }: StepProps) {
-  const { art, runProduce } = useStaticStep(entity, step);
-  const clips = (art?.data?.clips ?? []) as [string, string][];
-  const rows = clips.length ? clips : DEFAULT_ANIM_CLIPS;
-  const made = clips.length > 0;
-
   return (
-    <StepFrame t={t} acceptance={ITEM_STEP_SPECS[step].accept(art?.data ?? {})}
-      onFix={runProduce}
-      panels={[
+    <StaticStepFrame t={t} entity={entity} step={step} panels={({ art, runProduce }) => {
+      const clips = (art?.data?.clips ?? []) as [string, string][];
+      const rows = clips.length ? clips : DEFAULT_ANIM_CLIPS;
+      const made = clips.length > 0;
+      return [
         { label: 'Clip set', node: <div>{rows.map(([n, dur]) => <Row key={n} t={t} name={n} right={dur} on={made} />)}</div> },
         { label: 'Skeleton · source', node: (
           <div style={{ display: 'grid', gap: 10 }}>
@@ -47,23 +43,20 @@ export function ItemAnimations({ t, entity, step }: StepProps) {
             buildPrompt={(dir) => `Generate/retarget pickup + equip + idle clips for ${entity.name} from SK_Mannequin. ${dir}`}
             onComplete={runProduce} />
         ) },
-      ]}
-    />
+      ];
+    }} />
   );
 }
 
 /** Items · VFX. View: variant set + GPU budget (persisted). Produce: Niagara. */
 export function ItemVFX({ t, entity, step }: StepProps) {
-  const { art, runProduce } = useStaticStep(entity, step);
-  const variants = (art?.data?.variants ?? []) as [string, string][];
-  const made = variants.length > 0;
-  const cost = Number((art?.data?.cost as number) ?? 0);
-  const CAP = Number((art?.data?.cap as number) ?? 0.8);
-
   return (
-    <StepFrame t={t} acceptance={ITEM_STEP_SPECS[step].accept(art?.data ?? {})}
-      onFix={runProduce}
-      panels={[
+    <StaticStepFrame t={t} entity={entity} step={step} panels={({ art, runProduce }) => {
+      const variants = (art?.data?.variants ?? []) as [string, string][];
+      const made = variants.length > 0;
+      const cost = Number((art?.data?.cost as number) ?? 0);
+      const CAP = Number((art?.data?.cap as number) ?? 0.8);
+      return [
         { label: 'Variants', node: <div>{(made ? variants : DEFAULT_VFX_VARIANTS).map(([n, s]) => <Row key={n} t={t} name={n} right={s} on={made} />)}</div> },
         { label: 'GPU budget', node: (
           <div style={{ display: 'grid', gap: 8 }}>
@@ -77,22 +70,19 @@ export function ItemVFX({ t, entity, step }: StepProps) {
             buildPrompt={(dir) => `Author Niagara variants (idle/equip/use) for ${entity.name} keyed to anim notifies, under ${CAP}ms GPU. ${dir}`}
             onComplete={runProduce} />
         ) },
-      ]}
-    />
+      ];
+    }} />
   );
 }
 
 /** Items · SFX. View: cue set + loudness + waveform (persisted). Produce: import set. */
 export function ItemSFX({ t, entity, step }: StepProps) {
-  const { art, runProduce } = useStaticStep(entity, step);
-  const cues = (art?.data?.cues ?? []) as [string, string][];
-  const made = cues.length > 0;
-  const rows = made ? cues : DEFAULT_SFX_CUES;
-
   return (
-    <StepFrame t={t} acceptance={ITEM_STEP_SPECS[step].accept(art?.data ?? {})}
-      onFix={runProduce}
-      panels={[
+    <StaticStepFrame t={t} entity={entity} step={step} panels={({ art, runProduce }) => {
+      const cues = (art?.data?.cues ?? []) as [string, string][];
+      const made = cues.length > 0;
+      const rows = made ? cues : DEFAULT_SFX_CUES;
+      return [
         { label: 'Cues · loudness', node: <div>{rows.map(([n, dur]) => <Row key={n} t={t} name={n} right={dur} on={made} />)}</div> },
         { label: 'Waveform', node: (
           <ChartPanel t={t} variant="waveform" samples={WAVEFORM_SAMPLES} active={made}
@@ -104,7 +94,7 @@ export function ItemSFX({ t, entity, step }: StepProps) {
             buildPrompt={(dir) => `Import a randomizing SoundCue set for ${entity.name} (pickup/equip/swing), normalized loudness. ${dir}`}
             onComplete={runProduce} />
         ) },
-      ]}
-    />
+      ];
+    }} />
   );
 }

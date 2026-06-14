@@ -1,11 +1,10 @@
 'use client';
 
 import { Lbl } from './controls';
-import { StepFrame } from './StepFrame';
+import { StaticStepFrame } from './StaticStepFrame';
 import { CliProduce } from './shared/CliProduce';
 import { ChartPanel } from './shared/ChartPanel';
-import { useStaticStep } from './useStaticStep';
-import { ITEM_STEP_SPECS, expectedPrice, priceRatio, priceInBand } from './itemsSteps';
+import { expectedPrice, priceRatio, priceInBand } from './itemsSteps';
 import type { StepProps } from './stepProps';
 
 const TARGET = 100;
@@ -17,24 +16,21 @@ const Y_DOMAIN: readonly [number, number] = [0, 200];
 
 /** Items · Economy. View: budget bars + price/power curve | distribution (persisted). Produce: tuned values. */
 export function ItemEconomy({ t, entity, step }: StepProps) {
-  const { art, runProduce } = useStaticStep(entity, step);
-  const data = (art?.data ?? {}) as Record<string, number | string>;
-  const tuned = data.power != null;
-  const power = Number(data.power ?? TARGET);
-  const c = Number(data.cost ?? 0);
-  const ratio = priceRatio(c, power);
-  const priceOk = tuned && priceInBand(c, power);
-  const hi = !tuned ? t.muted : priceOk ? t.ok : t.bad;
-
-  const referencePoints = PEERS_POWER.map((p) => ({ x: p, y: expectedPrice(p) }));
-  const accentPoints = tuned
-    ? [{ x: power, y: Math.min(c, Y_DOMAIN[1]), color: hi, label: `${entity.name}: ${c}g for power ${power}` }]
-    : [];
-
   return (
-    <StepFrame t={t} acceptance={ITEM_STEP_SPECS[step].accept(art?.data ?? {})}
-      onFix={runProduce}
-      panels={[
+    <StaticStepFrame t={t} entity={entity} step={step} panels={({ art, runProduce }) => {
+      const data = (art?.data ?? {}) as Record<string, number | string>;
+      const tuned = data.power != null;
+      const power = Number(data.power ?? TARGET);
+      const c = Number(data.cost ?? 0);
+      const ratio = priceRatio(c, power);
+      const priceOk = tuned && priceInBand(c, power);
+      const hi = !tuned ? t.muted : priceOk ? t.ok : t.bad;
+
+      const referencePoints = PEERS_POWER.map((p) => ({ x: p, y: expectedPrice(p) }));
+      const accentPoints = tuned
+        ? [{ x: power, y: Math.min(c, Y_DOMAIN[1]), color: hi, label: `${entity.name}: ${c}g for power ${power}` }]
+        : [];
+      return [
         {
           label: 'Budget & curve',
           node: (
@@ -106,7 +102,7 @@ export function ItemEconomy({ t, entity, step }: StepProps) {
             </div>
           ),
         },
-      ]}
-    />
+      ];
+    }} />
   );
 }

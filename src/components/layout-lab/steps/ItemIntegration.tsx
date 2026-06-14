@@ -1,21 +1,16 @@
 'use client';
 
-import { StepFrame } from './StepFrame';
+import { StaticStepFrame } from './StaticStepFrame';
 import { CliProduce } from './shared/CliProduce';
-import { useStaticStep } from './useStaticStep';
-import { ITEM_STEP_SPECS } from './itemsSteps';
 import type { StepProps } from './stepProps';
 
 /** Items · Inventory UI Integration. View: grid preview + binding (persisted). Produce: wire. */
 export function ItemInventoryUI({ t, entity, step }: StepProps) {
-  const { art, runProduce } = useStaticStep(entity, step);
-  const wired = !!art?.data?.wired;
-  const slot = String((art?.data?.slot as string) ?? 'Weapon');
-
   return (
-    <StepFrame t={t} acceptance={ITEM_STEP_SPECS[step].accept(art?.data ?? {})}
-      onFix={runProduce}
-      panels={[
+    <StaticStepFrame t={t} entity={entity} step={step} panels={({ art, runProduce }) => {
+      const wired = !!art?.data?.wired;
+      const slot = String((art?.data?.slot as string) ?? 'Weapon');
+      return [
         { label: 'Inventory grid', node: (
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 6 }}>
             {Array.from({ length: 15 }, (_, i) => (
@@ -37,21 +32,19 @@ export function ItemInventoryUI({ t, entity, step }: StepProps) {
             buildPrompt={(dir) => `Register ${entity.name} with the inventory UI: ${slot} slot, stack size 1, icon binding. ${dir}`}
             onComplete={runProduce} />
         ) },
-      ]}
-    />
+      ];
+    }} />
   );
 }
 
 /** Items · Tooltip / Compare. View: tooltip card + compare (persisted). Produce: layout. */
 export function ItemTooltip({ t, entity, step }: StepProps) {
-  const { art, runProduce } = useStaticStep(entity, step);
-  const done = !!art?.data?.compare;
   const stats = [['Damage', '34', '+3'], ['Attack Speed', '1.1/s', '-0.1'], ['Weight', '3.4kg', '+0.4'], ['Value', '120g', '+20']];
 
   return (
-    <StepFrame t={t} acceptance={ITEM_STEP_SPECS[step].accept(art?.data ?? {})}
-      onFix={runProduce}
-      panels={[
+    <StaticStepFrame t={t} entity={entity} step={step} panels={({ art, runProduce }) => {
+      const done = !!art?.data?.compare;
+      return [
         { label: 'Tooltip card', node: (
           <div style={{ border: `1px solid ${t.line}`, borderRadius: t.glass ? 10 : 0, padding: 14, background: t.panel }}>
             <div style={{ fontSize: 16, fontWeight: 700, color: t.inkDeep }}>{entity.name}</div>
@@ -82,7 +75,7 @@ export function ItemTooltip({ t, entity, step }: StepProps) {
             buildPrompt={(dir) => `Generate the tooltip layout for ${entity.name} (all stat fields + compare-vs-equipped deltas). ${dir}`}
             onComplete={runProduce} />
         ) },
-      ]}
-    />
+      ];
+    }} />
   );
 }
