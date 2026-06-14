@@ -50,8 +50,17 @@ const MCP_PROVIDER_MAP: Record<string, McpProvider> = {
   hunyuan3d: 'hunyuan3d',
 };
 
-/** Track active polling intervals so they can be cleared. */
-const pollingIntervals = new Map<string, ReturnType<typeof setInterval>>();
+/**
+ * Track active pollers so they can be cancelled. A poller is a self-scheduling
+ * `setTimeout` recursion (NOT a `setInterval`): the next tick is only scheduled
+ * after the current async body settles, so polls can never overlap. `stop()`
+ * sets `stopped` (so any in-flight body bails before mutating state) and clears
+ * the pending timeout (so no further tick fires).
+ */
+interface Poller {
+  stop: () => void;
+}
+const pollingIntervals = new Map<string, Poller>();
 
 export const useForgeStore = create<ForgeState>((set, get) => ({
   jobs: [],
@@ -77,10 +86,10 @@ export const useForgeStore = create<ForgeState>((set, get) => ({
     })),
 
   removeJob: (id) => {
-    // Clear any active polling for this job
-    const interval = pollingIntervals.get(id);
-    if (interval) {
-      clearInterval(interval);
+    // Stop any active polling for this job
+    const poller = pollingIntervals.get(id);
+    if (poller) {
+      poller.stop();
       pollingIntervals.delete(id);
     }
     set((s) => ({ jobs: s.jobs.filter((j) => j.id !== id) }));
@@ -88,12 +97,12 @@ export const useForgeStore = create<ForgeState>((set, get) => ({
 
   clearCompleted: () => {
     const { jobs } = get();
-    // Clear polling for any completed/failed jobs being removed
+    // Stop polling for any completed/failed jobs being removed
     for (const job of jobs) {
       if (job.status === 'completed' || job.status === 'failed') {
-        const interval = pollingIntervals.get(job.id);
-        if (interval) {
-          clearInterval(interval);
+        const poller = pollingIntervals.get(job.id);
+        if (poller) {
+          poller.stop();
           pollingIntervals.delete(job.id);
         }
       }
@@ -154,15 +163,47 @@ export const useForgeStore = create<ForgeState>((set, get) => ({
     // explicit remote 'failed', terminate the job.
     const MAX_CONSECUTIVE_POLL_FAILURES = 3;
     let pollFailures = 0;
-    const interval = setInterval(async () => {
+
+    // Self-scheduling poll loop. We use a recursive `setTimeout` rather than a
+    // `setInterval` with an async body so that the next tick is only scheduled
+    // AFTER the current poll (and its trailing awaits) settle — overlapping
+    // in-flight polls for the same job are therefore impossible. `stopped`
+    // guards every post-await branch so a late-resolving body can't mutate a job
+    // that has already finished or been torn down (prevents the importing →
+    // generating state-flip race), and `timer` is nulled/cleared on stop.
+    let stopped = false;
+    let timer: ReturnType<typeof setTimeout> | null = null;
+
+    const stop = () => {
+      stopped = true;
+      if (timer !== null) {
+        clearTimeout(timer);
+        timer = null;
+      }
+    };
+
+    const scheduleNext = () => {
+      if (stopped) return;
+      timer = setTimeout(tick, UI_TIMEOUTS.blenderGenPollInterval);
+    };
+
+    async function tick() {
+      // The timeout has fired; this poll is now the only in-flight tick.
+      timer = null;
+      if (stopped) return;
+
       const statusResult = await tryApiFetch<JobStatusResult>(
         `/api/blender-mcp/generate/status?jobId=${encodeURIComponent(mcpJobId)}&provider=${encodeURIComponent(mcpProvider)}`,
       );
+      if (stopped) return;
 
       if (!statusResult.ok) {
         pollFailures++;
-        if (pollFailures < MAX_CONSECUTIVE_POLL_FAILURES) return; // transient — keep polling
-        clearInterval(interval);
+        if (pollFailures < MAX_CONSECUTIVE_POLL_FAILURES) {
+          scheduleNext(); // transient — keep polling
+          return;
+        }
+        stop();
         pollingIntervals.delete(localId);
         get().updateJob(localId, {
           status: 'failed',
@@ -176,7 +217,10 @@ export const useForgeStore = create<ForgeState>((set, get) => ({
       const { status, progress, resultUrl } = statusResult.data;
 
       if (status === 'completed') {
-        clearInterval(interval);
+        // Stop scheduling BEFORE the long /import await so no poll fires during
+        // import; `stopped` is now set, so any race that re-enters this body
+        // bails immediately.
+        stop();
         pollingIntervals.delete(localId);
 
         // Auto-import into Blender
@@ -211,7 +255,7 @@ export const useForgeStore = create<ForgeState>((set, get) => ({
       }
 
       if (status === 'failed') {
-        clearInterval(interval);
+        stop();
         pollingIntervals.delete(localId);
         get().updateJob(localId, {
           status: 'failed',
@@ -221,10 +265,12 @@ export const useForgeStore = create<ForgeState>((set, get) => ({
         return;
       }
 
-      // Still processing — update progress
+      // Still processing — update progress, then schedule the next poll.
       get().updateJob(localId, { progress });
-    }, UI_TIMEOUTS.blenderGenPollInterval);
+      scheduleNext();
+    }
 
-    pollingIntervals.set(localId, interval);
+    pollingIntervals.set(localId, { stop });
+    scheduleNext();
   },
 }));
