@@ -89,6 +89,20 @@ export function generateBuildId(): string {
 /** Matches UBT compile progress lines like "[3/42] Compile MyFile.cpp" */
 const UBT_PROGRESS_RE = /\[(\d+)\/(\d+)\]/;
 
+/**
+ * Cap for the RETAINED build log. A full editor target build emits tens of
+ * thousands of compile lines; without a bound the whole log sits in the Node
+ * heap for the build's lifetime, is written verbatim into the
+ * `headless_builds.output` TEXT column, and is re-read in full by
+ * `getBuildHistory` for up to 20 rows. We keep only a rolling tail so a
+ * runaway/noisy build can't grow memory or the DB row without limit.
+ *
+ * The tail is what matters for diagnosis: the build summary and the final
+ * errors/linker output land at the end of the log. (Matches the tail-buffer
+ * cap pattern in packaging/cook-executor.ts and claude-terminal/cli-service.)
+ */
+const MAX_RETAINED_OUTPUT_BYTES = 256 * 1024; // ~256 KB
+
 // ── Core Build Executor ──────────────────────────────────────────────────────
 
 /**
@@ -125,7 +139,13 @@ export async function executeBuild(
   logger.info(`[build-pipeline] Starting build ${buildId}: ${ubtPath} ${args.join(' ')}`);
 
   return new Promise<BuildResult>((resolve) => {
-    let output = '';
+    // `fullOutput` feeds the diagnostics parser (it needs the whole log to
+    // extract every error/warning) and is transient — it is dropped when this
+    // promise resolves. `retainedTail` is the bounded copy we persist and
+    // return: only the last MAX_RETAINED_OUTPUT_BYTES are kept, so a runaway
+    // build can't grow the DB row or the history re-read without limit.
+    let fullOutput = '';
+    let retainedTail = '';
     let aborted = false;
     let timedOut = false;
 
@@ -170,7 +190,11 @@ export async function executeBuild(
     // ── Stream output ──
     const handleData = (data: Buffer) => {
       const text = data.toString();
-      output += text;
+      fullOutput += text;
+      // Keep only the rolling tail of the raw log for persistence. slice(-N) on
+      // the concatenation gives a byte-bounded ring buffer (same pattern as
+      // packaging/cook-executor.ts stderrTail).
+      retainedTail = (retainedTail + text).slice(-MAX_RETAINED_OUTPUT_BYTES);
 
       // Detect progress from [N/M] patterns
       const lines = text.split('\n');
@@ -209,8 +233,10 @@ export async function executeBuild(
         status = 'failed';
       }
 
-      // Parse build output for diagnostics
-      const parsed = parseBuildOutput(output);
+      // Parse build output for diagnostics from the full log so no diagnostic
+      // from early in a long build is lost. `fullOutput` is released once this
+      // callback returns; only the bounded `retainedTail` is kept past here.
+      const parsed = parseBuildOutput(fullOutput);
       const diagnostics = parsed.diagnostics;
       const errorCount = parsed.summary?.errorCount ?? diagnostics.filter((d) => d.severity === 'error').length;
       const warningCount = parsed.summary?.warningCount ?? diagnostics.filter((d) => d.severity === 'warning').length;
@@ -240,6 +266,13 @@ export async function executeBuild(
         }
       }
 
+      // Persisted/returned log is the bounded tail. Prefix a marker when the
+      // head was dropped so a reader knows the log is truncated, not partial.
+      const retainedOutput =
+        fullOutput.length > retainedTail.length
+          ? `[…${fullOutput.length - retainedTail.length} bytes truncated; showing last ${Math.round(MAX_RETAINED_OUTPUT_BYTES / 1024)} KB…]\n${retainedTail}`
+          : retainedTail;
+
       const result: BuildResult = {
         buildId,
         status,
@@ -250,7 +283,7 @@ export async function executeBuild(
         errorCount,
         warningCount,
         diagnostics,
-        output,
+        output: retainedOutput,
       };
 
       // Persist to DB
