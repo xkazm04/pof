@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback, useMemo, useRef } from 'react';
+import { useState, useCallback, useMemo, useRef, useLayoutEffect } from 'react';
 import { Search } from 'lucide-react';
 import { STATUS_SUCCESS } from '@/lib/chart-colors';
 import { BT_TREE } from '../_shared/data';
@@ -19,6 +19,12 @@ export function BTFlowchart({ expandedNodeId, onNodeClick, accent = STATUS_SUCCE
   const [collapsed, setCollapsed] = useState<Set<string>>(() => new Set());
   const [search, setSearch] = useState('');
   const listRef = useRef<HTMLDivElement>(null);
+  /* Stable node.id -> focusable row element map, rebuilt after each render from
+     the logical row order. Keyboard navigation resolves focus targets by node
+     id (computed from visibleRows) rather than by raw DOM child index, so focus
+     follows the intended node ordering even if the DOM children of the tree
+     container ever diverge (dividers, placeholders, animated wrappers, etc.). */
+  const rowElsRef = useRef<Map<string, HTMLElement>>(new Map());
 
   const toggleCollapse = useCallback((id: string) => {
     setCollapsed(prev => {
@@ -75,21 +81,37 @@ export function BTFlowchart({ expandedNodeId, onNodeClick, accent = STATUS_SUCCE
     return flatRows.filter(r => matchIds.has(r.node.id));
   }, [flatRows, matchIds]);
 
+  /* Map each visible row's node.id to its rendered focusable element. Rebuilt
+     after every render by aligning the actual treeitem elements (queried by
+     role, so non-row children are ignored) to visibleRows in order. This is the
+     single place the model↔DOM correspondence is established; navigation below
+     then works purely in terms of node ids. */
+  useLayoutEffect(() => {
+    const map = rowElsRef.current;
+    map.clear();
+    const items = listRef.current?.querySelectorAll<HTMLElement>('[role="treeitem"]');
+    if (!items) return;
+    visibleRows.forEach((row, i) => {
+      const el = items[i];
+      if (el) map.set(row.node.id, el);
+    });
+  }, [visibleRows]);
+
   const handleKeyDown = useCallback((e: React.KeyboardEvent, idx: number) => {
     if (e.target instanceof HTMLInputElement) return;
     switch (e.key) {
       case 'ArrowDown':
         e.preventDefault();
         if (idx < visibleRows.length - 1) {
-          const nextEl = listRef.current?.children[idx + 1] as HTMLElement | undefined;
-          nextEl?.focus();
+          const nextId = visibleRows[idx + 1].node.id;
+          rowElsRef.current.get(nextId)?.focus();
         }
         break;
       case 'ArrowUp':
         e.preventDefault();
         if (idx > 0) {
-          const prevEl = listRef.current?.children[idx - 1] as HTMLElement | undefined;
-          prevEl?.focus();
+          const prevId = visibleRows[idx - 1].node.id;
+          rowElsRef.current.get(prevId)?.focus();
         }
         break;
       case 'ArrowRight': {
