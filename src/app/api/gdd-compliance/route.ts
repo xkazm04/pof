@@ -1,10 +1,11 @@
 import { apiSuccess, apiError } from '@/lib/api-utils';
-import { runComplianceAudit, resolveGap } from '@/lib/gdd-compliance';
+import { runComplianceAudit } from '@/lib/gdd-compliance';
 import type { ComplianceRequest } from '@/types/gdd-compliance';
 
-// In-memory cache of last report for resolve operations
-let cachedReport: ReturnType<typeof runComplianceAudit> | null = null;
-
+// `audit` is the only server action: it computes a fresh report from the request.
+// Gap resolution is a pure client-side transform on the report the store already
+// holds (see gddComplianceStore.resolveGap) — keeping it off the server avoids a
+// shared module-level cache that one client/project could overwrite for another.
 export async function POST(req: Request) {
   try {
     const body = (await req.json()) as ComplianceRequest & {
@@ -15,19 +16,7 @@ export async function POST(req: Request) {
       case 'audit': {
         const checklistProgress = body.checklistProgress ?? {};
         const report = runComplianceAudit(checklistProgress);
-        cachedReport = report;
         return apiSuccess(report);
-      }
-
-      case 'resolve-gap': {
-        if (!cachedReport) {
-          return apiError('No audit report available. Run audit first.', 400);
-        }
-        if (!body.gapId) {
-          return apiError('gapId is required', 400);
-        }
-        cachedReport = resolveGap(cachedReport, body.gapId);
-        return apiSuccess(cachedReport);
       }
 
       default:
