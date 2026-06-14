@@ -11,13 +11,11 @@ import { useAudioScene } from '@/hooks/useAudioScene';
 import { FetchError } from '../../shared/FetchError';
 import { useModuleCLI } from '@/hooks/useModuleCLI';
 import { useChecklistCLI } from '@/hooks/useChecklistCLI';
+import { useModuleReviewCli } from '@/hooks/useModuleReviewCli';
 import { useProjectStore } from '@/stores/projectStore';
-import { TaskFactory } from '@/lib/cli-task';
-import { MODULE_FEATURE_DEFINITIONS } from '@/lib/feature-definitions';
 
 import { RoadmapChecklist } from '../../shared/RoadmapChecklist';
 import { FeatureMatrix } from '../../shared/FeatureMatrix';
-import type { FeatureRow } from '@/types/feature-matrix';
 import { ModuleHeaderDecoration } from '@/components/modules/ModuleHeaderDecoration';
 import { AudioScenePainter } from './AudioScenePainter';
 import { ZonePropertyPanel, EmitterPropertyPanel } from './AudioPropertyPanel';
@@ -35,7 +33,7 @@ import {
 import { buildAudioEventPrompt } from '@/lib/prompts/audio-events';
 import type { AudioZone, SoundEmitter } from '@/types/audio-scene';
 import type { AudioEventCatalogConfig } from './AudioEventCatalog';
-import { MODULE_COLORS, getAppOrigin } from '@/lib/constants';
+import { MODULE_COLORS } from '@/lib/constants';
 import { STATUS_SUCCESS, STATUS_ERROR, ACCENT_VIOLET, OPACITY_15, OPACITY_30 } from '@/lib/chart-colors';
 
 type TabId = 'overview' | 'roadmap' | 'painter' | 'soundscapes' | 'settings' | 'events' | 'codegen' | 'autogen' | 'forge' | 'library';
@@ -110,14 +108,14 @@ export function AudioView() {
     eventCli.sendPrompt(prompt);
   }, [eventCli, projectName, projectPath, ueVersion]);
 
-  // ── Review/Checklist inline CLI sessions ──
+  // ── Review/Checklist CLI sessions (shared harness) ──
 
   const AUD_MODULE_ID = 'audio' as const;
   const AUD_MODULE_LABEL = 'Audio';
 
-  const [rvLastCompletedId, setRvLastCompletedId] = useState<string | null>(null);
+  // Toast presentation stays inline (JSX toast + auto-dismiss) — the shared hook
+  // only decides the message; this view owns how it's rendered.
   const [rvToast, setRvToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
-  const [rvRefetch, setRvRefetch] = useState(0);
 
   useEffect(() => {
     if (!rvToast) return;
@@ -125,90 +123,25 @@ export function AudioView() {
     return () => clearTimeout(t);
   }, [rvToast]);
 
-  const handleRvItemCompleted = useCallback((itemId: string) => {
-    setRvLastCompletedId(itemId);
-    setTimeout(() => setRvLastCompletedId(null), 2000);
+  const handleRvToast = useCallback((message: string, type: 'success' | 'error') => {
+    setRvToast({ message, type });
   }, []);
 
-  const rvChecklistCli = useChecklistCLI({
+  const {
+    refetchKey: rvRefetch,
+    lastCompletedId: rvLastCompletedId,
+    checklistCli: rvChecklistCli,
+    isReviewing,
+    isFixing,
+    startReview: startRvReview,
+    handleFix: handleRvFix,
+    handleSync: handleRvSync,
+  } = useModuleReviewCli({
     moduleId: AUD_MODULE_ID,
-    sessionKey: `${AUD_MODULE_ID}-rv-cli`,
-    label: AUD_MODULE_LABEL,
+    moduleLabel: AUD_MODULE_LABEL,
     accentColor: MODULE_COLORS.content,
-    onItemCompleted: handleRvItemCompleted,
+    onToast: handleRvToast,
   });
-
-  const handleRvReviewComplete = useCallback(async (success: boolean) => {
-    if (!success) return;
-    await new Promise((r) => setTimeout(r, 500));
-    try {
-      const res = await fetch('/api/feature-matrix/import', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ moduleId: AUD_MODULE_ID, projectPath }),
-      });
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({ error: 'Import failed' }));
-        setRvToast({ message: err.error ?? `Import failed (${res.status})`, type: 'error' });
-        return;
-      }
-      const data = await res.json();
-      setRvToast({ message: `Imported ${data.imported} features`, type: 'success' });
-    } catch (err) {
-      setRvToast({ message: err instanceof Error ? err.message : 'Failed to import review results', type: 'error' });
-      return;
-    }
-    setRvRefetch((n) => n + 1);
-  }, [projectPath]);
-
-  const rvReviewCli = useModuleCLI({
-    moduleId: AUD_MODULE_ID,
-    sessionKey: `${AUD_MODULE_ID}-rv-review`,
-    label: `${AUD_MODULE_LABEL} Review`,
-    accentColor: MODULE_COLORS.content,
-    onComplete: handleRvReviewComplete,
-  });
-
-  const rvFixCli = useModuleCLI({
-    moduleId: AUD_MODULE_ID,
-    sessionKey: `${AUD_MODULE_ID}-rv-fix`,
-    label: `${AUD_MODULE_LABEL} Fix`,
-    accentColor: MODULE_COLORS.content,
-  });
-
-  const handleRvFix = useCallback((feature: FeatureRow) => {
-    if (!feature.nextSteps) return;
-    const appOrigin = getAppOrigin();
-    const task = TaskFactory.featureFix(AUD_MODULE_ID, feature, `${AUD_MODULE_LABEL} Fix`, appOrigin);
-    rvFixCli.execute(task);
-  }, [rvFixCli]);
-
-  const handleRvSync = useCallback(async () => {
-    try {
-      const res = await fetch('/api/feature-matrix/import', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ moduleId: AUD_MODULE_ID, projectPath }),
-      });
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({ error: 'Sync failed' }));
-        setRvToast({ message: err.error ?? `Sync failed (${res.status})`, type: 'error' });
-        return;
-      }
-      const data = await res.json();
-      setRvToast({ message: `Imported ${data.imported} features`, type: 'success' });
-    } catch (err) {
-      setRvToast({ message: err instanceof Error ? err.message : 'Failed to sync', type: 'error' });
-    }
-  }, [projectPath]);
-
-  const startRvReview = useCallback(() => {
-    const defs = MODULE_FEATURE_DEFINITIONS[AUD_MODULE_ID] ?? [];
-    if (defs.length === 0) return;
-    const appOrigin = getAppOrigin();
-    const task = TaskFactory.featureReview(AUD_MODULE_ID, AUD_MODULE_LABEL, defs, appOrigin, `${AUD_MODULE_LABEL} Review`);
-    rvReviewCli.execute(task);
-  }, [rvReviewCli]);
 
   const rvChecklist = getModuleChecklist(AUD_MODULE_ID);
 
@@ -447,9 +380,9 @@ export function AudioView() {
                     accentColor={MODULE_COLORS.content}
                     onReview={startRvReview}
                     onSync={handleRvSync}
-                    isReviewing={rvReviewCli.isRunning}
+                    isReviewing={isReviewing}
                     onFix={handleRvFix}
-                    isFixing={rvFixCli.isRunning}
+                    isFixing={isFixing}
                   />
                 </div>
               )}
