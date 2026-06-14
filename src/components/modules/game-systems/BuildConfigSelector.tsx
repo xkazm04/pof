@@ -4,7 +4,7 @@ import { useState, useCallback, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Plus, Settings, Monitor, Terminal as TerminalIcon, Laptop, Smartphone, Tablet,
-  Play, Save, X, RefreshCw, Wrench, Rocket, ChevronDown,
+  Save, X, RefreshCw, Wrench, Rocket,
 } from 'lucide-react';
 import {
   type BuildProfile, type PlatformId, type BuildConfig,
