@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   emptyCost, projectedSpend, avgSessionCost, budgetWouldOverflow,
+  budgetWouldOverflowReserved, sessionCostEstimate,
   pickHealVerifyCommand,
 } from '@/lib/harness/orchestrator';
 
@@ -41,6 +42,39 @@ describe('cost governor helpers', () => {
   it('projectedSpend simply adds the estimate', () => {
     expect(projectedSpend(emptyCost(null), 1.5)).toBe(1.5);
     expect(projectedSpend({ spentUsd: 3, sessions: 1, byArea: {}, budgetUsd: null, paused: false }, 2)).toBe(5);
+  });
+});
+
+describe('in-flight reservation governor', () => {
+  it('sessionCostEstimate uses the running average once a session has settled', () => {
+    expect(sessionCostEstimate({ spentUsd: 6, sessions: 3, byArea: {}, budgetUsd: null, paused: false }, 0.5)).toBe(2);
+  });
+
+  it('sessionCostEstimate falls back to the fixed estimate before any session settles', () => {
+    expect(sessionCostEstimate(emptyCost(10), 0.5)).toBe(0.5);
+  });
+
+  it('budgetWouldOverflowReserved is false when no cap is configured', () => {
+    expect(budgetWouldOverflowReserved(emptyCost(null), 99, 99, null)).toBe(false);
+  });
+
+  it('blocks the (maxConcurrent − 1) overshoot: settled spend low, but in-flight reservations fill the cap', () => {
+    // $5 cap, $0 settled, but 4 sessions already launched at ~$1.50 reserved each = $6 in flight.
+    // The pre-fix governor (settled spend only) would green-light this launch; the reserved one blocks it.
+    const totals = { spentUsd: 0, sessions: 0, byArea: {}, budgetUsd: 5, paused: false };
+    expect(budgetWouldOverflow(totals, 5)).toBe(false);           // old behavior: would launch (overshoot)
+    expect(budgetWouldOverflowReserved(totals, 6, 1.5, 5)).toBe(true); // new behavior: blocked
+  });
+
+  it('still launches while committed + reserved + next estimate stays under the cap', () => {
+    const totals = { spentUsd: 2, sessions: 4, byArea: {}, budgetUsd: 10, paused: false };
+    // committed 2 + reserved 1 + next 0.5 = 3.5 ≤ 10 → ok to launch.
+    expect(budgetWouldOverflowReserved(totals, 1, 0.5, 10)).toBe(false);
+  });
+
+  it('trips when committed + reserved already meets the cap even with a zero next estimate', () => {
+    const totals = { spentUsd: 4, sessions: 2, byArea: {}, budgetUsd: 6, paused: false };
+    expect(budgetWouldOverflowReserved(totals, 2, 0, 6)).toBe(true);
   });
 });
 
