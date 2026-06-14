@@ -629,26 +629,22 @@ export function AIComboChoreographer() {
   const [blenderResult, setBlenderResult] = useState<{ message: string; isError: boolean } | null>(null);
   const blenderConnected = useBlenderMCPStore((s) => s.connection.connected);
 
+  // generateCombo is pure & synchronous (local keyword parse + seeded RNG, no
+  // network), so produce the result immediately — no artificial delay.
+  const runGenerate = useCallback((text: string) => {
+    const trimmed = text.trim();
+    if (!trimmed) return;
+    setGeneratedCombo(generateCombo(trimmed));
+  }, []);
+
   const handleGenerate = useCallback(() => {
-    if (!prompt.trim()) return;
-    setIsGenerating(true);
-    // Simulate AI processing delay
-    setTimeout(() => {
-      const combo = generateCombo(prompt.trim());
-      setGeneratedCombo(combo);
-      setIsGenerating(false);
-    }, 600);
-  }, [prompt]);
+    runGenerate(prompt);
+  }, [prompt, runGenerate]);
 
   const handlePreset = useCallback((presetPrompt: string) => {
     setPrompt(presetPrompt);
-    setIsGenerating(true);
-    setTimeout(() => {
-      const combo = generateCombo(presetPrompt);
-      setGeneratedCombo(combo);
-      setIsGenerating(false);
-    }, 600);
-  }, []);
+    runGenerate(presetPrompt);
+  }, [runGenerate]);
 
   const handleCopy = useCallback((text: string) => {
     navigator.clipboard.writeText(text);
