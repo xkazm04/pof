@@ -15,16 +15,19 @@ import type {
   CrashHealthInput,
 } from '@/types/project-health';
 import type { EvaluatorReport, ModuleScore } from '@/types/evaluator';
-import { CORE_MODULE_DEFS, CORE_CHECKLIST_TOTAL } from './module-registry';
+import { ALL_MODULE_DEFS, ALL_CHECKLIST_TOTAL } from './module-registry';
 
 /* ---- Module definitions ------------------------------------------ */
-// Derived from module-registry SUB_MODULES so labels and per-module checklist
-// counts have a single owner — the X/Y denominator can't drift from the registry
-// (or the weekly digest, which also derives from SUB_MODULES).
+// "Overall completion" must span EVERY module, not just core-engine — otherwise
+// the Holistic Health dashboard contradicts the weekly digest and top-bar stats,
+// which both count all modules (ALL_CHECKLIST_TOTAL). We derive the module list
+// and the X/Y denominator from the same all-module registry constants so the
+// numerator (iterating MODULE_DEFS) and denominator (TOTAL_CHECKLIST_ITEMS) share
+// one scope and can't drift from each other or from the digest.
 
-const MODULE_DEFS = CORE_MODULE_DEFS;
+const MODULE_DEFS = ALL_MODULE_DEFS;
 
-const TOTAL_CHECKLIST_ITEMS = CORE_CHECKLIST_TOTAL;
+const TOTAL_CHECKLIST_ITEMS = ALL_CHECKLIST_TOTAL;
 
 /* ---- Seeded RNG for reproducible simulated data ------------------ */
 
