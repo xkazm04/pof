@@ -70,7 +70,7 @@ export function LevelDesignView() {
   const [isCreating, setIsCreating] = useState(false);
   const [newDocName, setNewDocName] = useState('');
 
-  const ctx = { projectName, projectPath, ueVersion };
+  const ctx = useMemo(() => ({ projectName, projectPath, ueVersion }), [projectName, projectPath, ueVersion]);
 
   // ── Spatial diagram CLI session ──
 
