@@ -86,10 +86,11 @@ describe('PostProcessStackBuilder — effect enable toggles', () => {
     expect(getByRole('switch', { name: /Depth of Field effect enabled/i }).getAttribute('aria-checked')).toBe('true');
   });
 
-  it('shows a non-color ON/OFF text cue for every effect (4 enabled, 3 disabled by default)', () => {
+  it('shows a non-color ON/OFF text cue for every effect (4 enabled, 6 disabled by default)', () => {
     const { getAllByText } = renderBuilder();
+    // Canonical DEFAULT_EFFECTS: 10 effects, 4 enabled (bloom, color-grading, ambient-occlusion, vignette).
     expect(getAllByText('ON', { exact: true })).toHaveLength(4);
-    expect(getAllByText('OFF', { exact: true })).toHaveLength(3);
+    expect(getAllByText('OFF', { exact: true })).toHaveLength(6);
   });
 
   it('labels the reorder buttons with the effect name and direction', () => {
@@ -100,9 +101,9 @@ describe('PostProcessStackBuilder — effect enable toggles', () => {
 
   it('disables the up button on the first row and the down button on the last', () => {
     const { getByRole } = renderBuilder();
-    // Bloom is first (priority 0); Custom Stencil is last (priority 6).
+    // Bloom is first (priority 0); Exponential Height Fog is last (priority 9).
     expect((getByRole('button', { name: 'Move Bloom up' }) as HTMLButtonElement).disabled).toBe(true);
-    expect((getByRole('button', { name: 'Move Custom Stencil down' }) as HTMLButtonElement).disabled).toBe(true);
+    expect((getByRole('button', { name: 'Move Exponential Height Fog down' }) as HTMLButtonElement).disabled).toBe(true);
   });
 
   it('marks the expand control with aria-expanded and a descriptive label', () => {

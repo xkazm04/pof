@@ -6,14 +6,23 @@
  *   - periodic health checks with automatic reconnection
  *   - subscriber-based state change notifications
  *   - eventBus integration for cross-module awareness
+ *
+ * The transport-agnostic lifecycle (health-check loop, exponential-backoff
+ * reconnect, timer cleanup) lives in `@/lib/connection-lifecycle`; this manager
+ * supplies the UE5-specific transport (`client.ping()`) and event wiring.
  */
 
 import { UI_TIMEOUTS } from '@/lib/constants';
 import { logger } from '@/lib/logger';
 import { eventBus } from '@/lib/event-bus';
 import { createStateEmitter } from '@/lib/state-emitter';
+import { createConnectionLifecycle } from '@/lib/connection-lifecycle';
 import { RemoteControlClient } from './remote-control-client';
-import type { UE5ConnectionState, UE5ConnectionStatus } from '@/types/ue5-bridge';
+import type {
+  UE5ConnectionState,
+  UE5ConnectionStatus,
+  UE5RemoteControlInfo,
+} from '@/types/ue5-bridge';
 
 // ── Types ───────────────────────────────────────────────────────────────────
 
@@ -23,9 +32,6 @@ type StateChangeHandler = (state: UE5ConnectionState) => void;
 
 class UE5ConnectionManager {
   private client: RemoteControlClient | null = null;
-  private healthInterval: ReturnType<typeof setInterval> | null = null;
-  private reconnectTimer: ReturnType<typeof setTimeout> | null = null;
-  private consecutiveFailures = 0;
 
   private emitter = createStateEmitter<UE5ConnectionState>({
     label: '[UE5-CM]',
@@ -35,6 +41,49 @@ class UE5ConnectionManager {
       error: null,
       lastConnected: null,
       reconnectAttempts: 0,
+    },
+  });
+
+  private lifecycle = createConnectionLifecycle<UE5RemoteControlInfo>({
+    label: '[UE5-CM]',
+    healthCheckMs: UI_TIMEOUTS.ue5HealthCheck,
+    backoffBase: UI_TIMEOUTS.ue5ReconnectBase,
+    backoffMax: UI_TIMEOUTS.ue5ReconnectMax,
+    // Reset the backoff counter for this fresh disconnect episode: a connection
+    // that was healthy (possibly for a long time) may still carry a stale,
+    // non-zero reconnectAttempts from a prior reconnect storm. Seeding it to 0
+    // ensures the first reconnect uses the initial backoff; scheduleReconnect
+    // still escalates the delay across consecutive failed reconnect attempts.
+    resetAttemptsOnHealthFailure: true,
+    probe: () => this.client!.ping(),
+    hasClient: () => this.client !== null,
+    getStatus: () => this.state.status,
+    getReconnectAttempts: () => this.state.reconnectAttempts,
+    onHealthInfo: (data) => {
+      // Update info in case it changed (e.g. level change updates serverName)
+      if (
+        data.version !== this.state.info?.version ||
+        data.serverName !== this.state.info?.serverName
+      ) {
+        this.setState({ info: data });
+      }
+    },
+    onConnected: (data) => {
+      this.setStatus('connected', {
+        info: data,
+        error: null,
+        lastConnected: new Date().toISOString(),
+        reconnectAttempts: 0,
+      });
+      eventBus.emit('ue5.connected', { version: data.version }, 'ue5-connection');
+      logger.info('[UE5-CM] Reconnected to UE5', data.version);
+    },
+    onDisconnectedForReconnect: () => {
+      this.setStatus('disconnected', { error: 'Health check failed', reconnectAttempts: 0 });
+      eventBus.emit('ue5.disconnected', { reason: 'health-check-timeout' }, 'ue5-connection');
+    },
+    onReconnecting: (nextAttempt) => {
+      this.setStatus('reconnecting', { reconnectAttempts: nextAttempt });
     },
   });
 
@@ -71,8 +120,8 @@ class UE5ConnectionManager {
   /** Connect to UE5 Remote Control at the given host and port. */
   async connect(host: string, httpPort: number): Promise<void> {
     // Clean up any existing connection
-    this.clearTimers();
-    this.consecutiveFailures = 0;
+    this.lifecycle.clearTimers();
+    this.lifecycle.resetFailures();
 
     this.client = new RemoteControlClient(host, httpPort);
     this.setStatus('connecting', { error: null, reconnectAttempts: 0 });
@@ -85,7 +134,7 @@ class UE5ConnectionManager {
       this.setStatus('error', { error: result.error });
       eventBus.emit('ue5.error', { message: result.error }, 'ue5-connection');
       logger.warn('[UE5-CM] Initial connection failed:', result.error);
-      this.scheduleReconnect();
+      this.lifecycle.scheduleReconnect();
       return;
     }
 
@@ -99,14 +148,14 @@ class UE5ConnectionManager {
     eventBus.emit('ue5.connected', { version: result.data.version }, 'ue5-connection');
     logger.info('[UE5-CM] Connected to UE5', result.data.version, `(${result.data.serverName})`);
 
-    this.startHealthCheck();
+    this.lifecycle.startHealthCheck();
   }
 
   /** Disconnect from UE5 Remote Control. */
   disconnect(reason?: string): void {
-    this.clearTimers();
+    this.lifecycle.clearTimers();
     this.client = null;
-    this.consecutiveFailures = 0;
+    this.lifecycle.resetFailures();
 
     this.setStatus('disconnected', {
       info: null,
@@ -116,99 +165,6 @@ class UE5ConnectionManager {
 
     eventBus.emit('ue5.disconnected', { reason }, 'ue5-connection');
     logger.info('[UE5-CM] Disconnected', reason ? `(${reason})` : '');
-  }
-
-  // ── Health check ──────────────────────────────────────────────────────────
-
-  private startHealthCheck() {
-    this.healthInterval = setInterval(async () => {
-      if (!this.client || this.state.status !== 'connected') return;
-
-      const result = await this.client.ping();
-
-      if (result.ok) {
-        this.consecutiveFailures = 0;
-        // Update info in case it changed (e.g. level change updates serverName)
-        if (
-          result.data.version !== this.state.info?.version ||
-          result.data.serverName !== this.state.info?.serverName
-        ) {
-          this.setState({ info: result.data });
-        }
-        return;
-      }
-
-      this.consecutiveFailures++;
-      logger.warn(
-        '[UE5-CM] Health check failed',
-        `(${this.consecutiveFailures}/3):`,
-        result.error,
-      );
-
-      if (this.consecutiveFailures >= 3) {
-        logger.warn('[UE5-CM] 3 consecutive health check failures, starting reconnect');
-        this.clearTimers();
-        // Reset the backoff counter for this fresh disconnect episode: a connection
-        // that was healthy (possibly for a long time) may still carry a stale,
-        // non-zero reconnectAttempts from a prior reconnect storm. Seeding it to 0
-        // ensures the first reconnect uses the initial backoff; scheduleReconnect
-        // still escalates the delay across consecutive failed reconnect attempts.
-        this.setStatus('disconnected', { error: 'Health check failed', reconnectAttempts: 0 });
-        eventBus.emit('ue5.disconnected', { reason: 'health-check-timeout' }, 'ue5-connection');
-        this.scheduleReconnect();
-      }
-    }, UI_TIMEOUTS.ue5HealthCheck);
-  }
-
-  // ── Reconnection ──────────────────────────────────────────────────────────
-
-  private scheduleReconnect() {
-    if (!this.client) return;
-
-    const attempt = this.state.reconnectAttempts;
-    const delay = Math.min(
-      UI_TIMEOUTS.ue5ReconnectBase * Math.pow(2, attempt),
-      UI_TIMEOUTS.ue5ReconnectMax,
-    );
-
-    this.setStatus('reconnecting', { reconnectAttempts: attempt + 1 });
-    logger.info('[UE5-CM] Reconnect attempt', attempt + 1, `in ${delay}ms`);
-
-    this.reconnectTimer = setTimeout(async () => {
-      this.reconnectTimer = null;
-
-      if (!this.client) return;
-
-      const result = await this.client.ping();
-
-      if (result.ok) {
-        this.consecutiveFailures = 0;
-        this.setStatus('connected', {
-          info: result.data,
-          error: null,
-          lastConnected: new Date().toISOString(),
-          reconnectAttempts: 0,
-        });
-        eventBus.emit('ue5.connected', { version: result.data.version }, 'ue5-connection');
-        logger.info('[UE5-CM] Reconnected to UE5', result.data.version);
-        this.startHealthCheck();
-      } else {
-        this.scheduleReconnect();
-      }
-    }, delay);
-  }
-
-  // ── Cleanup ───────────────────────────────────────────────────────────────
-
-  private clearTimers() {
-    if (this.healthInterval) {
-      clearInterval(this.healthInterval);
-      this.healthInterval = null;
-    }
-    if (this.reconnectTimer) {
-      clearTimeout(this.reconnectTimer);
-      this.reconnectTimer = null;
-    }
   }
 }
 

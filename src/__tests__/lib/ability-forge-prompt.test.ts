@@ -4,6 +4,13 @@ import {
   type ForgedAbility,
 } from '@/lib/prompts/ability-forge';
 import { COMBO_ABILITIES, ABILITY_RADAR_DATA } from '@/components/modules/core-engine/sub_ability/_shared/AbilitySpellbook.data';
+import type { ProjectContext } from '@/lib/prompt-context';
+
+const CTX: ProjectContext = {
+  projectName: 'PoF',
+  projectPath: 'C:\\proj\\PoF',
+  ueVersion: '5.5.4',
+};
 
 const PRIOR: ForgedAbility = {
   className: 'GA_FlameDash',
@@ -25,6 +32,7 @@ const PRIOR: ForgedAbility = {
 describe('buildAbilityForgePrompt — one-shot mode', () => {
   it('embeds the description and the generation task framing', () => {
     const p = buildAbilityForgePrompt({
+      ctx: CTX,
       description: 'A whirlwind spin dealing physical damage',
       comboAbilities: COMBO_ABILITIES,
       radarData: ABILITY_RADAR_DATA,
@@ -39,6 +47,7 @@ describe('buildAbilityForgePrompt — one-shot mode', () => {
 
 describe('buildAbilityForgePrompt — refine mode', () => {
   const refined = buildAbilityForgePrompt({
+    ctx: CTX,
     description: 'A dashing slash wreathed in fire',
     comboAbilities: COMBO_ABILITIES,
     radarData: ABILITY_RADAR_DATA,

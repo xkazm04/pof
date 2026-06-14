@@ -10,6 +10,9 @@
  */
 
 import type { ComboAbility } from '@/components/modules/core-engine/sub_ability/_shared/AbilitySpellbook.data';
+import { type ProjectContext } from '@/lib/prompt-context';
+import { PromptBuilder } from '@/lib/prompts/prompt-builder';
+import { GENERATE_ALL_DIRECTLY } from '@/lib/prompts/_shared';
 
 /* ── Tag registry from ARPGGameplayTags.h ─────────────────────────────── */
 
@@ -125,6 +128,8 @@ function formatRadarData(radar: { name: string; values: number[] }[]): string {
 /* ── Exported types ──────────────────────────────────────────────────── */
 
 export interface ForgeInput {
+  /** Shared project context — engine paths, build command, error memory, gotchas. */
+  ctx: ProjectContext;
   description: string;
   comboAbilities: ComboAbility[];
   radarData: { name: string; values: number[] }[];
@@ -206,20 +211,13 @@ ${priorJson}
 - Regenerate headerCode and cppCode in full so they remain compilable and reflect the change — do not return diffs or fragments.`;
 }
 
-export function buildAbilityForgePrompt(input: ForgeInput): string {
+/** Ability-specific role + few-shot/reference data (Domain Context section). */
+function buildDomainContext(input: ForgeInput): string {
   const tagRegistry = Object.entries(KNOWN_TAGS)
     .map(([cat, tags]) => `  ${cat}: ${tags.join(', ')}`)
     .join('\n');
 
-  const task = input.refine
-    ? buildRefineTask(input, input.refine)
-    : buildGenerateTask(input);
-
   return `You are an expert UE5 C++ Gameplay Ability System (GAS) developer for the PoF ARPG project.
-
-${task}
-
-## Existing Project Context
 
 ### Tag Registry (ARPGGameplayTags.h)
 ${tagRegistry}
@@ -230,15 +228,15 @@ ${formatComboAbilities(input.comboAbilities)}
 ### Ability Radar Profiles (normalized 0-1)
 ${formatRadarData(input.radarData)}
 
-## Few-Shot Examples
+### Few-Shot Examples
 
 ${FEW_SHOT_HEADER}
 
-${FEW_SHOT_CPP}
+${FEW_SHOT_CPP}`;
+}
 
-## Output Format
-
-Return ONLY a JSON object (no markdown fences) with this exact shape:
+/** The exact JSON shape the forge must return (Output Schema section). */
+const OUTPUT_SCHEMA = `Return ONLY a JSON object (no markdown fences) with this exact shape:
 
 {
   "className": "GA_<PascalCaseName>",
@@ -265,17 +263,35 @@ Return ONLY a JSON object (no markdown fences) with this exact shape:
     "comboMultiplier": <1.0-2.0>
   },
   "radarValues": [<Damage 0-1>, <Range 0-1>, <AOE 0-1>, <Speed 0-1>, <Efficiency 0-1>]
-}
+}`;
 
-## Rules
-1. The class MUST extend UARPGGameplayAbility (include "AbilitySystem/ARPGGameplayAbility.h")
-2. Constructor MUST set: SetAssetTags, ActivationOwnedTags, ActivationBlockedTags, AbilityManaCost, CooldownGameplayEffectClass, AbilityCooldownTag
-3. State_Dead and State_Stunned MUST always be in ActivationBlockedTags
-4. Use SetByCaller with Data_Damage_Base for damage, not hardcoded GE magnitudes
-5. Follow the exact UPROPERTY pattern: EditDefaultsOnly + BlueprintReadOnly + Category
-6. If new tags are needed, use the existing naming convention (Ability_*, State_*, Cooldown_*, etc.)
-7. Include motion warping setup if the ability involves movement
-8. Include VFX (UNiagaraSystem) and montage (UAnimMontage) as UPROPERTY slots
-9. Radar values should be consistent with existing abilities (e.g. pure buff = 0 damage, high speed)
-10. ComboEntry timing should be realistic (animDuration 0.4-1.5s, recovery 0.1-0.5s)`;
+/** GAS-specific generation rules — fed to the shared Best Practices section. */
+const GAS_RULES: string[] = [
+  'The class MUST extend UARPGGameplayAbility (include "AbilitySystem/ARPGGameplayAbility.h")',
+  'Constructor MUST set: SetAssetTags, ActivationOwnedTags, ActivationBlockedTags, AbilityManaCost, CooldownGameplayEffectClass, AbilityCooldownTag',
+  'State_Dead and State_Stunned MUST always be in ActivationBlockedTags',
+  'Use SetByCaller with Data_Damage_Base for damage, not hardcoded GE magnitudes',
+  'Follow the exact UPROPERTY pattern: EditDefaultsOnly + BlueprintReadOnly + Category',
+  'If new tags are needed, use the existing naming convention (Ability_*, State_*, Cooldown_*, etc.)',
+  'Include motion warping setup if the ability involves movement',
+  'Include VFX (UNiagaraSystem) and montage (UAnimMontage) as UPROPERTY slots',
+  'Radar values should be consistent with existing abilities (e.g. pure buff = 0 damage, high speed)',
+  'ComboEntry timing should be realistic (animDuration 0.4-1.5s, recovery 0.1-0.5s)',
+];
+
+export function buildAbilityForgePrompt(input: ForgeInput): string {
+  const task = input.refine
+    ? buildRefineTask(input, input.refine)
+    : buildGenerateTask(input);
+
+  return new PromptBuilder()
+    .withProjectContext(input.ctx, {
+      extraRules: [GENERATE_ALL_DIRECTLY],
+    })
+    .withDomainContext(buildDomainContext(input))
+    .withRawTask(task)
+    .withWiringRequirements()
+    .withBestPractices(GAS_RULES)
+    .withOutputSchema(OUTPUT_SCHEMA)
+    .build();
 }

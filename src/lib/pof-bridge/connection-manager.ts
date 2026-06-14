@@ -6,14 +6,19 @@
  *   - periodic health checks with automatic reconnection
  *   - subscriber-based state change notifications
  *   - eventBus integration for cross-module awareness
+ *
+ * The transport-agnostic lifecycle (health-check loop, exponential-backoff
+ * reconnect, timer cleanup) lives in `@/lib/connection-lifecycle`; this manager
+ * supplies the PoF-specific transport (`client.getStatus()`) and event wiring.
  */
 
 import { UI_TIMEOUTS } from '@/lib/constants';
 import { logger } from '@/lib/logger';
 import { eventBus } from '@/lib/event-bus';
 import { createStateEmitter } from '@/lib/state-emitter';
+import { createConnectionLifecycle } from '@/lib/connection-lifecycle';
 import { PofBridgeClient } from './client';
-import type { PofConnectionState, PofConnectionStatus } from '@/types/pof-bridge';
+import type { PofBridgeStatus, PofConnectionState, PofConnectionStatus } from '@/types/pof-bridge';
 
 // ── Types ───────────────────────────────────────────────────────────────────
 
@@ -23,9 +28,6 @@ type StateChangeHandler = (state: PofConnectionState) => void;
 
 class PofBridgeConnectionManager {
   private client: PofBridgeClient | null = null;
-  private healthInterval: ReturnType<typeof setInterval> | null = null;
-  private reconnectTimer: ReturnType<typeof setTimeout> | null = null;
-  private consecutiveFailures = 0;
 
   private emitter = createStateEmitter<PofConnectionState>({
     label: '[PoF-CM]',
@@ -35,6 +37,54 @@ class PofBridgeConnectionManager {
       error: null,
       lastConnected: null,
       reconnectAttempts: 0,
+    },
+  });
+
+  private lifecycle = createConnectionLifecycle<PofBridgeStatus>({
+    label: '[PoF-CM]',
+    healthCheckMs: UI_TIMEOUTS.pofHealthCheck,
+    backoffBase: UI_TIMEOUTS.pofReconnectBase,
+    backoffMax: UI_TIMEOUTS.pofReconnectMax,
+    // PoF historically does not reseed reconnectAttempts on health-check failure.
+    resetAttemptsOnHealthFailure: false,
+    probe: () => this.client!.getStatus(),
+    hasClient: () => this.client !== null,
+    getStatus: () => this.state.status,
+    getReconnectAttempts: () => this.state.reconnectAttempts,
+    onHealthInfo: (data) => {
+      // Update pluginInfo in case it changed (e.g. editor state transition)
+      if (
+        data.pluginVersion !== this.state.pluginInfo?.pluginVersion ||
+        data.editorState !== this.state.pluginInfo?.editorState ||
+        data.manifestAssetCount !== this.state.pluginInfo?.manifestAssetCount
+      ) {
+        this.setState({ pluginInfo: data });
+      }
+    },
+    onConnected: (data) => {
+      this.setStatus('connected', {
+        pluginInfo: data,
+        error: null,
+        lastConnected: new Date().toISOString(),
+        reconnectAttempts: 0,
+      });
+      eventBus.emit(
+        'pof.connected',
+        {
+          pluginVersion: data.pluginVersion,
+          engineVersion: data.engineVersion,
+          projectName: data.projectName,
+        },
+        'pof-connection',
+      );
+      logger.info('[PoF-CM] Reconnected to PoF Bridge', data.pluginVersion);
+    },
+    onDisconnectedForReconnect: () => {
+      this.setStatus('disconnected', { error: 'Health check failed' });
+      eventBus.emit('pof.disconnected', { reason: 'health-check-timeout' }, 'pof-connection');
+    },
+    onReconnecting: (nextAttempt) => {
+      this.setStatus('reconnecting', { reconnectAttempts: nextAttempt });
     },
   });
 
@@ -71,8 +121,8 @@ class PofBridgeConnectionManager {
   /** Connect to the PoF Bridge plugin at the given host and port. */
   async connect(host: string, port: number, authToken?: string): Promise<void> {
     // Clean up any existing connection
-    this.clearTimers();
-    this.consecutiveFailures = 0;
+    this.lifecycle.clearTimers();
+    this.lifecycle.resetFailures();
 
     this.client = new PofBridgeClient(host, port, authToken);
     this.setStatus('connecting', { error: null, reconnectAttempts: 0 });
@@ -85,7 +135,7 @@ class PofBridgeConnectionManager {
       this.setStatus('error', { error: result.error });
       eventBus.emit('pof.error', { message: result.error }, 'pof-connection');
       logger.warn('[PoF-CM] Initial connection failed:', result.error);
-      this.scheduleReconnect();
+      this.lifecycle.scheduleReconnect();
       return;
     }
 
@@ -111,14 +161,14 @@ class PofBridgeConnectionManager {
       `(${result.data.projectName})`,
     );
 
-    this.startHealthCheck();
+    this.lifecycle.startHealthCheck();
   }
 
   /** Disconnect from the PoF Bridge plugin. */
   disconnect(reason?: string): void {
-    this.clearTimers();
+    this.lifecycle.clearTimers();
     this.client = null;
-    this.consecutiveFailures = 0;
+    this.lifecycle.resetFailures();
 
     this.setStatus('disconnected', {
       pluginInfo: null,
@@ -128,103 +178,6 @@ class PofBridgeConnectionManager {
 
     eventBus.emit('pof.disconnected', { reason }, 'pof-connection');
     logger.info('[PoF-CM] Disconnected', reason ? `(${reason})` : '');
-  }
-
-  // ── Health check ──────────────────────────────────────────────────────────
-
-  private startHealthCheck() {
-    this.healthInterval = setInterval(async () => {
-      if (!this.client || this.state.status !== 'connected') return;
-
-      const result = await this.client.getStatus();
-
-      if (result.ok) {
-        this.consecutiveFailures = 0;
-        // Update pluginInfo in case it changed (e.g. editor state transition)
-        if (
-          result.data.pluginVersion !== this.state.pluginInfo?.pluginVersion ||
-          result.data.editorState !== this.state.pluginInfo?.editorState ||
-          result.data.manifestAssetCount !== this.state.pluginInfo?.manifestAssetCount
-        ) {
-          this.setState({ pluginInfo: result.data });
-        }
-        return;
-      }
-
-      this.consecutiveFailures++;
-      logger.warn(
-        '[PoF-CM] Health check failed',
-        `(${this.consecutiveFailures}/3):`,
-        result.error,
-      );
-
-      if (this.consecutiveFailures >= 3) {
-        logger.warn('[PoF-CM] 3 consecutive health check failures, starting reconnect');
-        this.clearTimers();
-        this.setStatus('disconnected', { error: 'Health check failed' });
-        eventBus.emit('pof.disconnected', { reason: 'health-check-timeout' }, 'pof-connection');
-        this.scheduleReconnect();
-      }
-    }, UI_TIMEOUTS.pofHealthCheck);
-  }
-
-  // ── Reconnection ──────────────────────────────────────────────────────────
-
-  private scheduleReconnect() {
-    if (!this.client) return;
-
-    const attempt = this.state.reconnectAttempts;
-    const delay = Math.min(
-      UI_TIMEOUTS.pofReconnectBase * Math.pow(2, attempt),
-      UI_TIMEOUTS.pofReconnectMax,
-    );
-
-    this.setStatus('reconnecting', { reconnectAttempts: attempt + 1 });
-    logger.info('[PoF-CM] Reconnect attempt', attempt + 1, `in ${delay}ms`);
-
-    this.reconnectTimer = setTimeout(async () => {
-      this.reconnectTimer = null;
-
-      if (!this.client) return;
-
-      const result = await this.client.getStatus();
-
-      if (result.ok) {
-        this.consecutiveFailures = 0;
-        this.setStatus('connected', {
-          pluginInfo: result.data,
-          error: null,
-          lastConnected: new Date().toISOString(),
-          reconnectAttempts: 0,
-        });
-        eventBus.emit(
-          'pof.connected',
-          {
-            pluginVersion: result.data.pluginVersion,
-            engineVersion: result.data.engineVersion,
-            projectName: result.data.projectName,
-          },
-          'pof-connection',
-        );
-        logger.info('[PoF-CM] Reconnected to PoF Bridge', result.data.pluginVersion);
-        this.startHealthCheck();
-      } else {
-        this.scheduleReconnect();
-      }
-    }, delay);
-  }
-
-  // ── Cleanup ───────────────────────────────────────────────────────────────
-
-  private clearTimers() {
-    if (this.healthInterval) {
-      clearInterval(this.healthInterval);
-      this.healthInterval = null;
-    }
-    if (this.reconnectTimer) {
-      clearTimeout(this.reconnectTimer);
-      this.reconnectTimer = null;
-    }
   }
 }
 

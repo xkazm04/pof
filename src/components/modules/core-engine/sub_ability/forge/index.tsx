@@ -22,6 +22,7 @@ import {
   buildAbilityForgePrompt,
   type ForgedAbility,
 } from '@/lib/prompts/ability-forge';
+import { useProjectStore } from '@/stores/projectStore';
 import { ACCENT } from './constants';
 import { ForgeInput } from './ForgeInput';
 import { ForgeResult } from './ForgeResult';
@@ -51,6 +52,9 @@ export function AbilityForge() {
   const [lastPrompt, setLastPrompt] = useState<string | null>(null);
 
   const radarData = STATIC_RADAR_DATA;
+  const projectName = useProjectStore((s) => s.projectName);
+  const projectPath = useProjectStore((s) => s.projectPath);
+  const ueVersion = useProjectStore((s) => s.ueVersion);
 
   const handleGenerate = useCallback(async () => {
     const desc = description.trim();
@@ -60,6 +64,7 @@ export function AbilityForge() {
 
     try {
       const prompt = buildAbilityForgePrompt({
+        ctx: { projectName, projectPath, ueVersion },
         description: desc,
         comboAbilities: COMBO_ABILITIES,
         radarData,
@@ -81,7 +86,7 @@ export function AbilityForge() {
     } finally {
       setIsGenerating(false);
     }
-  }, [description, isGenerating, radarData]);
+  }, [description, isGenerating, radarData, projectName, projectPath, ueVersion]);
 
   const handleRefine = useCallback(async (instruction: string) => {
     const instr = instruction.trim();
@@ -92,6 +97,7 @@ export function AbilityForge() {
 
     try {
       const prompt = buildAbilityForgePrompt({
+        ctx: { projectName, projectPath, ueVersion },
         description: description.trim() || prior.description,
         comboAbilities: COMBO_ABILITIES,
         radarData,
@@ -113,7 +119,7 @@ export function AbilityForge() {
     } finally {
       setIsGenerating(false);
     }
-  }, [result, isGenerating, description, radarData]);
+  }, [result, isGenerating, description, radarData, projectName, projectPath, ueVersion]);
 
   // Viewing a past forge from history is a standalone snapshot — no diff.
   const handleSelectHistory = useCallback((h: ForgedAbility) => {

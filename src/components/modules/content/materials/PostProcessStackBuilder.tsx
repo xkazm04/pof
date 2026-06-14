@@ -3,205 +3,104 @@
 import { useState, useCallback, useMemo } from 'react';
 import {
   Sun, Eye, Wind, Circle, Move, Aperture, Layers as LayersIcon,
-  GripVertical, ChevronDown, ChevronUp, Zap, Monitor,
+  GripVertical, ChevronDown, ChevronUp, Zap, Monitor, Gauge,
+  Sparkles, Film, Cpu, AlertTriangle,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { MODULE_COLORS } from '@/lib/constants';
-import { STATUS_WARNING, ACCENT_VIOLET, STATUS_IMPROVED, STATUS_NEUTRAL, ACCENT_ORANGE, STATUS_SUCCESS, ACCENT_PINK } from '@/lib/chart-colors';
+import {
+  STATUS_WARNING, ACCENT_VIOLET, STATUS_IMPROVED, ACCENT_EMERALD, ACCENT_PINK,
+} from '@/lib/chart-colors';
 import { useBlenderMCPStore } from '@/stores/blenderMCPStore';
 import { BlenderConnectionBar } from '@/components/blender-mcp/BlenderConnectionBar';
 import { tryApiFetch } from '@/lib/api-utils';
 import { compositorStackScript } from '@/lib/blender-mcp/scripts/compositor-stack';
 import type { ExecuteOutput } from '@/lib/blender-mcp/types';
 import { logger } from '@/lib/logger';
+import { DEFAULT_EFFECTS } from '@/lib/post-process-studio/effects';
+import { estimateGPUBudget } from '@/lib/post-process-studio/gpu-estimator';
+import { reorderByPriority } from '@/stores/postProcessStudioStore';
+import type { PPStudioEffect, PPEffectCategory, PPResolution } from '@/types/post-process-studio';
 
-// ── Types ──
+// The canonical stack config — single source of truth lives in the prompt builder.
+export type { PostProcessStackConfig } from '@/lib/prompts/post-process';
 
-export interface PPEffectParam {
-  name: string;
-  description: string;
-  type: 'float' | 'color' | 'bool' | 'int';
-  defaultValue: string;
-  range?: string;
+// ── Presentation maps (shared shape with PostProcessStudioView) ──
+
+const CATEGORY_COLORS: Record<PPEffectCategory, string> = {
+  lighting: STATUS_WARNING,
+  color: ACCENT_VIOLET,
+  blur: STATUS_IMPROVED,
+  atmosphere: ACCENT_EMERALD,
+  special: ACCENT_PINK,
+};
+
+const EFFECT_ICONS: Record<string, LucideIcon> = {
+  'bloom': Sun,
+  'color-grading': Aperture,
+  'depth-of-field': Eye,
+  'ambient-occlusion': Circle,
+  'motion-blur': Move,
+  'vignette': Wind,
+  'exposure': Gauge,
+  'chromatic-aberration': Sparkles,
+  'film-grain': Film,
+  'fog': LayersIcon,
+};
+
+// Materials tab evaluates GPU budget against a fixed target resolution.
+const TARGET_RESOLUTION: PPResolution = '1080p';
+
+/** Deep-clone DEFAULT_EFFECTS so local edits never mutate the shared source. */
+function cloneDefaultEffects(): PPStudioEffect[] {
+  return DEFAULT_EFFECTS.map((e) => ({
+    ...e,
+    params: e.params.map((p) => ({ ...p })),
+  }));
 }
-
-export interface PPEffect {
-  id: string;
-  name: string;
-  icon: LucideIcon;
-  color: string;
-  description: string;
-  ueClass: string;
-  params: PPEffectParam[];
-}
-
-export interface PPStackEntry {
-  effectId: string;
-  enabled: boolean;
-  priority: number;
-}
-
-export interface PostProcessStackConfig {
-  stack: PPStackEntry[];
-  effects: PPEffect[];
-}
-
-// ── Static Effect Definitions ──
-
-export const PP_EFFECTS: PPEffect[] = [
-  {
-    id: 'pp-bloom',
-    name: 'Bloom',
-    icon: Sun,
-    color: STATUS_WARNING,
-    description: 'Glow around bright areas. Controls intensity, threshold, and kernel size for the bloom convolution.',
-    ueClass: 'FPostProcessSettings::Bloom*',
-    params: [
-      { name: 'BloomIntensity', description: 'Overall bloom brightness multiplier', type: 'float', defaultValue: '0.675', range: '0.0 – 8.0' },
-      { name: 'BloomThreshold', description: 'Minimum brightness to trigger bloom', type: 'float', defaultValue: '-1.0', range: '-1.0 – 8.0' },
-      { name: 'BloomSizeScale', description: 'Kernel radius multiplier', type: 'float', defaultValue: '4.0', range: '0.1 – 64.0' },
-      { name: 'BloomConvolutionTexture', description: 'Custom convolution kernel texture (optional)', type: 'bool', defaultValue: 'nullptr' },
-    ],
-  },
-  {
-    id: 'pp-colorgrading',
-    name: 'Color Grading',
-    icon: Aperture,
-    color: ACCENT_VIOLET,
-    description: 'LUT-based color correction. Adjusts white balance, saturation, contrast, and tone curve for cinematic looks.',
-    ueClass: 'FPostProcessSettings::ColorGrading*',
-    params: [
-      { name: 'WhiteTemp', description: 'Color temperature in Kelvin', type: 'float', defaultValue: '6500', range: '1500 – 15000' },
-      { name: 'WhiteTint', description: 'Tint shift (green ↔ magenta)', type: 'float', defaultValue: '0.0', range: '-1.0 – 1.0' },
-      { name: 'ColorSaturation', description: 'Global saturation (per-channel FVector4)', type: 'color', defaultValue: '(1,1,1,1)' },
-      { name: 'ColorContrast', description: 'Global contrast (per-channel FVector4)', type: 'color', defaultValue: '(1,1,1,1)' },
-      { name: 'ColorGradingLUT', description: 'Lookup table texture for color transform', type: 'bool', defaultValue: 'nullptr' },
-    ],
-  },
-  {
-    id: 'pp-dof',
-    name: 'Depth of Field',
-    icon: Eye,
-    color: STATUS_IMPROVED,
-    description: 'Cinematic focus blur. Gaussian or Bokeh DOF with focal distance, aperture (f-stop), and near/far transition regions.',
-    ueClass: 'FPostProcessSettings::DepthOfField*',
-    params: [
-      { name: 'DepthOfFieldFocalDistance', description: 'Distance to sharp focus plane (cm)', type: 'float', defaultValue: '0.0', range: '0.0 – 100000' },
-      { name: 'DepthOfFieldFstop', description: 'Aperture f-stop (lower = more blur)', type: 'float', defaultValue: '4.0', range: '0.7 – 32.0' },
-      { name: 'DepthOfFieldSensorWidth', description: 'Sensor width in mm (affects bokeh)', type: 'float', defaultValue: '24.576', range: '0.1 – 1000' },
-      { name: 'DepthOfFieldMinFstop', description: 'Minimum aperture for auto-exposure interop', type: 'float', defaultValue: '1.2', range: '0.7 – 32.0' },
-    ],
-  },
-  {
-    id: 'pp-ao',
-    name: 'Ambient Occlusion',
-    icon: Circle,
-    color: STATUS_NEUTRAL,
-    description: 'Screen-space darkening in crevices and corners. Adds depth and contact shadows without ray tracing.',
-    ueClass: 'FPostProcessSettings::AmbientOcclusion*',
-    params: [
-      { name: 'AmbientOcclusionIntensity', description: 'Darkening strength', type: 'float', defaultValue: '0.5', range: '0.0 – 1.0' },
-      { name: 'AmbientOcclusionRadius', description: 'World-space sampling radius (cm)', type: 'float', defaultValue: '200.0', range: '0.1 – 500' },
-      { name: 'AmbientOcclusionStaticFraction', description: 'Blend with DFAO when Lumen is off', type: 'float', defaultValue: '1.0', range: '0.0 – 1.0' },
-      { name: 'AmbientOcclusionQuality', description: 'Sample count quality level', type: 'float', defaultValue: '50.0', range: '0.0 – 100.0' },
-    ],
-  },
-  {
-    id: 'pp-motionblur',
-    name: 'Motion Blur',
-    icon: Move,
-    color: ACCENT_ORANGE,
-    description: 'Per-object and camera velocity blur. Adds cinematic motion feel; amount and max pixel length are key controls.',
-    ueClass: 'FPostProcessSettings::MotionBlur*',
-    params: [
-      { name: 'MotionBlurAmount', description: 'Blur strength multiplier', type: 'float', defaultValue: '0.5', range: '0.0 – 1.0' },
-      { name: 'MotionBlurMax', description: 'Max blur distance in percent of screen', type: 'float', defaultValue: '5.0', range: '0.0 – 100' },
-      { name: 'MotionBlurTargetFPS', description: 'Reference frame rate (0 = disabled)', type: 'int', defaultValue: '0', range: '0 – 120' },
-      { name: 'MotionBlurPerObjectSize', description: 'Per-object blur threshold', type: 'float', defaultValue: '0.5', range: '0.0 – 1.0' },
-    ],
-  },
-  {
-    id: 'pp-vignette',
-    name: 'Vignette',
-    icon: Wind,
-    color: ACCENT_PINK,
-    description: 'Darkened screen edges for a cinematic or focused viewport feel. Simple intensity control.',
-    ueClass: 'FPostProcessSettings::VignetteIntensity',
-    params: [
-      { name: 'VignetteIntensity', description: 'Edge darkening strength', type: 'float', defaultValue: '0.4', range: '0.0 – 1.0' },
-    ],
-  },
-  {
-    id: 'pp-stencil',
-    name: 'Custom Stencil',
-    icon: LayersIcon,
-    color: STATUS_SUCCESS,
-    description: 'Per-object post-process using custom stencil buffer. Apply outline, highlight, or unique effects to tagged actors.',
-    ueClass: 'Custom Depth / Stencil + PP Material',
-    params: [
-      { name: 'StencilValue', description: 'Custom stencil value (1–255) to match', type: 'int', defaultValue: '1', range: '1 – 255' },
-      { name: 'bCustomDepth', description: 'Enable Custom Depth on tagged meshes', type: 'bool', defaultValue: 'true' },
-      { name: 'OutlineThickness', description: 'Outline width in pixels (if using outline PP)', type: 'float', defaultValue: '2.0', range: '0.5 – 8.0' },
-      { name: 'OutlineColor', description: 'Outline emission color', type: 'color', defaultValue: '(1, 0.5, 0, 1)' },
-    ],
-  },
-];
-
-const DEFAULT_STACK: PPStackEntry[] = PP_EFFECTS.map((e, i) => ({
-  effectId: e.id,
-  enabled: ['pp-bloom', 'pp-colorgrading', 'pp-ao', 'pp-vignette'].includes(e.id),
-  priority: i,
-}));
 
 // ── Component ──
 
 interface PostProcessStackBuilderProps {
-  onGenerate: (config: PostProcessStackConfig) => void;
+  onGenerate: (config: import('@/lib/prompts/post-process').PostProcessStackConfig) => void;
   isGenerating: boolean;
 }
 
 export function PostProcessStackBuilder({ onGenerate, isGenerating }: PostProcessStackBuilderProps) {
-  const [stack, setStack] = useState<PPStackEntry[]>(DEFAULT_STACK);
+  const [effects, setEffects] = useState<PPStudioEffect[]>(cloneDefaultEffects);
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [blenderPreviewing, setBlenderPreviewing] = useState(false);
   const [blenderResult, setBlenderResult] = useState<{ message: string; isError: boolean } | null>(null);
   const [generateError, setGenerateError] = useState<string | null>(null);
   const blenderConnected = useBlenderMCPStore((s) => s.connection.connected);
 
-  const effectMap = useMemo(() => {
-    const m = new Map<string, PPEffect>();
-    PP_EFFECTS.forEach((e) => m.set(e.id, e));
+  const sortedEffects = useMemo(
+    () => [...effects].sort((a, b) => a.priority - b.priority),
+    [effects],
+  );
+
+  const enabledCount = useMemo(() => effects.filter((e) => e.enabled).length, [effects]);
+
+  // GPU budget for the enabled subset — same estimator the studio view uses.
+  const budget = useMemo(
+    () => estimateGPUBudget(effects, TARGET_RESOLUTION),
+    [effects],
+  );
+  const costById = useMemo(() => {
+    const m = new Map<string, number>();
+    budget.effects.forEach((e) => m.set(e.effectId, e.costMs));
     return m;
-  }, []);
-
-  const sortedStack = useMemo(() => {
-    return [...stack].sort((a, b) => a.priority - b.priority);
-  }, [stack]);
-
-  const enabledCount = useMemo(() => stack.filter((s) => s.enabled).length, [stack]);
+  }, [budget]);
+  const budgetPct = budget.budgetMs > 0 ? Math.min((budget.totalCostMs / budget.budgetMs) * 100, 100) : 0;
 
   const toggleEffect = useCallback((effectId: string) => {
-    setStack((prev) => prev.map((s) =>
-      s.effectId === effectId ? { ...s, enabled: !s.enabled } : s
+    setEffects((prev) => prev.map((e) =>
+      e.id === effectId ? { ...e, enabled: !e.enabled } : e,
     ));
   }, []);
 
   const moveEffect = useCallback((effectId: string, direction: 'up' | 'down') => {
-    setStack((prev) => {
-      const sorted = [...prev].sort((a, b) => a.priority - b.priority);
-      const idx = sorted.findIndex((s) => s.effectId === effectId);
-      if (idx < 0) return prev;
-      const swapIdx = direction === 'up' ? idx - 1 : idx + 1;
-      if (swapIdx < 0 || swapIdx >= sorted.length) return prev;
-
-      // Swap priorities
-      const newStack = prev.map((s) => {
-        if (s.effectId === sorted[idx].effectId) return { ...s, priority: sorted[swapIdx].priority };
-        if (s.effectId === sorted[swapIdx].effectId) return { ...s, priority: sorted[idx].priority };
-        return s;
-      });
-      return newStack;
-    });
+    setEffects((prev) => reorderByPriority(prev, effectId, direction));
   }, []);
 
   const toggleExpand = useCallback((id: string) => {
@@ -215,27 +114,27 @@ export function PostProcessStackBuilder({ onGenerate, isGenerating }: PostProces
     }
     try {
       setGenerateError(null);
-      onGenerate({ stack, effects: PP_EFFECTS });
+      onGenerate({ effects });
     } catch (e) {
       logger.warn('Post-process generate dispatch failed', e);
       setGenerateError(e instanceof Error ? e.message : 'Failed to compile volume settings');
     }
-  }, [stack, onGenerate, enabledCount]);
+  }, [effects, onGenerate, enabledCount]);
 
   const handleBlenderPreview = useCallback(async () => {
     setBlenderPreviewing(true);
     setBlenderResult(null);
     try {
       // Collect enabled effects into compositor settings
-      const enabledIds = new Set(stack.filter((s) => s.enabled).map((s) => s.effectId));
+      const enabledIds = new Set(effects.filter((e) => e.enabled).map((e) => e.id));
       const settings: Parameters<typeof compositorStackScript>[0] = {};
-      if (enabledIds.has('pp-bloom')) {
+      if (enabledIds.has('bloom')) {
         settings.bloom = { intensity: 0.675, threshold: -1.0, radius: 4.0 };
       }
-      if (enabledIds.has('pp-colorgrading')) {
+      if (enabledIds.has('color-grading')) {
         settings.colorGrading = { saturation: 1.0, whiteBalance: 6500 };
       }
-      if (enabledIds.has('pp-vignette')) {
+      if (enabledIds.has('vignette')) {
         settings.vignette = { intensity: 0.4 };
       }
       const code = compositorStackScript(settings);
@@ -255,7 +154,7 @@ export function PostProcessStackBuilder({ onGenerate, isGenerating }: PostProces
     } finally {
       setBlenderPreviewing(false);
     }
-  }, [stack]);
+  }, [effects]);
 
   return (
     <div className="w-full h-full bg-[#03030a] rounded-2xl border border-violet-900/30 shadow-[inset_0_0_80px_rgba(167,139,250,0.05)] p-6 relative overflow-y-auto">
@@ -269,41 +168,71 @@ export function PostProcessStackBuilder({ onGenerate, isGenerating }: PostProces
         <BlenderConnectionBar />
 
         {/* Header */}
-        <div className="flex items-center justify-between border-b border-violet-900/30 pb-4">
-          <div className="flex items-center gap-4">
-            <div className="w-12 h-12 rounded-xl bg-violet-900/40 border border-violet-500/50 flex items-center justify-center shadow-[0_0_15px_rgba(139,92,246,0.3)]">
+        <div className="flex items-center justify-between border-b border-violet-900/30 pb-4 gap-4">
+          <div className="flex items-center gap-4 min-w-0">
+            <div className="w-12 h-12 rounded-xl bg-violet-900/40 border border-violet-500/50 flex items-center justify-center shadow-[0_0_15px_rgba(139,92,246,0.3)] flex-shrink-0">
               <LayersIcon className="w-6 h-6 text-violet-400" />
             </div>
-            <div>
+            <div className="min-w-0">
               <h3 className="text-sm font-bold tracking-widest uppercase text-violet-100">Post-Process Stack Pipeline</h3>
               <p className="text-xs text-violet-400/80 uppercase tracking-wider mt-0.5">
-                {enabledCount}/{PP_EFFECTS.length} ACTIVE_NODES — PRIORITY_ROUTING_LOCKED
+                {enabledCount}/{effects.length} ACTIVE_NODES — PRIORITY_ROUTING_LOCKED
               </p>
             </div>
+          </div>
+
+          {/* GPU budget readout — same estimator the studio view shows */}
+          <div
+            data-testid="pp-gpu-budget"
+            className="flex flex-col items-end flex-shrink-0 px-3 py-2 rounded-xl border bg-black/40"
+            style={{
+              borderColor: budget.overBudget ? 'rgba(248,113,113,0.4)' : 'rgba(139,92,246,0.3)',
+            }}
+          >
+            <div className="flex items-center gap-1.5">
+              <Cpu className="w-3.5 h-3.5" style={{ color: budget.overBudget ? '#f87171' : ACCENT_VIOLET }} />
+              <span
+                className="text-sm font-mono font-bold"
+                style={{ color: budget.overBudget ? '#f87171' : '#34d399' }}
+              >
+                {budget.totalCostMs.toFixed(2)}ms
+              </span>
+              <span className="text-[10px] font-mono text-violet-400/70">/ {budget.budgetMs}ms @ {budget.resolution}</span>
+            </div>
+            <div className="w-32 h-1 bg-violet-950/60 rounded-full mt-1 overflow-hidden">
+              <div
+                className="h-full rounded-full transition-all"
+                style={{
+                  width: `${budgetPct}%`,
+                  backgroundColor: budget.overBudget ? '#f87171' : ACCENT_VIOLET,
+                }}
+              />
+            </div>
+            {budget.overBudget && (
+              <div className="flex items-center gap-1 mt-1 text-[10px] font-mono text-red-400">
+                <AlertTriangle className="w-2.5 h-2.5" aria-hidden="true" />
+                OVER_BUDGET
+              </div>
+            )}
           </div>
         </div>
 
         {/* Stack list */}
         <div className="space-y-3">
-          {sortedStack.map((entry, idx) => {
-            const effect = effectMap.get(entry.effectId);
-            if (!effect) return null;
-            const isExpanded = expandedId === entry.effectId;
-            return (
-              <EffectRow
-                key={entry.effectId}
-                effect={effect}
-                entry={entry}
-                isExpanded={isExpanded}
-                isFirst={idx === 0}
-                isLast={idx === sortedStack.length - 1}
-                onToggle={() => toggleEffect(entry.effectId)}
-                onMoveUp={() => moveEffect(entry.effectId, 'up')}
-                onMoveDown={() => moveEffect(entry.effectId, 'down')}
-                onExpand={() => toggleExpand(entry.effectId)}
-              />
-            );
-          })}
+          {sortedEffects.map((effect, idx) => (
+            <EffectRow
+              key={effect.id}
+              effect={effect}
+              gpuCost={costById.get(effect.id)}
+              isExpanded={expandedId === effect.id}
+              isFirst={idx === 0}
+              isLast={idx === sortedEffects.length - 1}
+              onToggle={() => toggleEffect(effect.id)}
+              onMoveUp={() => moveEffect(effect.id, 'up')}
+              onMoveDown={() => moveEffect(effect.id, 'down')}
+              onExpand={() => toggleExpand(effect.id)}
+            />
+          ))}
         </div>
 
         {/* Generate button */}
@@ -387,8 +316,8 @@ export function PostProcessStackBuilder({ onGenerate, isGenerating }: PostProces
 // ── Effect Row ──
 
 interface EffectRowProps {
-  effect: PPEffect;
-  entry: PPStackEntry;
+  effect: PPStudioEffect;
+  gpuCost?: number;
   isExpanded: boolean;
   isFirst: boolean;
   isLast: boolean;
@@ -399,25 +328,26 @@ interface EffectRowProps {
 }
 
 function EffectRow({
-  effect, entry, isExpanded, isFirst, isLast,
+  effect, gpuCost, isExpanded, isFirst, isLast,
   onToggle, onMoveUp, onMoveDown, onExpand,
 }: EffectRowProps) {
-  const Icon = effect.icon;
-  const isActive = entry.enabled;
+  const color = CATEGORY_COLORS[effect.category] ?? ACCENT_VIOLET;
+  const Icon = EFFECT_ICONS[effect.id] ?? LayersIcon;
+  const isActive = effect.enabled;
 
   return (
     <div
       className="rounded-xl border transition-all duration-500 relative group overflow-hidden"
       style={{
-        borderColor: isExpanded ? `${effect.color}40` : isActive ? `${effect.color}20` : 'rgba(139,92,246,0.2)',
-        backgroundColor: isExpanded ? `${effect.color}08` : isActive ? `${effect.color}04` : 'rgba(10,10,25,0.6)',
-        boxShadow: isExpanded ? `0 0 20px ${effect.color}10, inset 0 0 10px ${effect.color}05` : 'none',
+        borderColor: isExpanded ? `${color}40` : isActive ? `${color}20` : 'rgba(139,92,246,0.2)',
+        backgroundColor: isExpanded ? `${color}08` : isActive ? `${color}04` : 'rgba(10,10,25,0.6)',
+        boxShadow: isExpanded ? `0 0 20px ${color}10, inset 0 0 10px ${color}05` : 'none',
         opacity: isActive ? 1 : 0.6,
       }}
     >
       {/* Active Bar indicator */}
       {isActive && (
-        <div className="absolute left-0 top-0 bottom-0 w-1 shadow-[0_0_10px_currentColor]" style={{ backgroundColor: effect.color }} />
+        <div className="absolute left-0 top-0 bottom-0 w-1 shadow-[0_0_10px_currentColor]" style={{ backgroundColor: color }} />
       )}
 
       {/* Row header */}
@@ -455,14 +385,14 @@ function EffectRow({
             aria-label={`${effect.name} effect ${isActive ? 'enabled' : 'disabled'}`}
             className="w-10 h-5 rounded-full relative transition-colors border border-violet-900/30 shadow-inner focus-ring"
             style={{
-              backgroundColor: isActive ? `${effect.color}20` : 'rgba(0,0,0,0.8)',
+              backgroundColor: isActive ? `${color}20` : 'rgba(0,0,0,0.8)',
             }}
           >
             <span
               className="absolute top-0.5 w-3.5 h-3.5 rounded-full transition-all duration-300 shadow-[0_0_5px_currentColor]"
               style={{
                 left: isActive ? '22px' : '4px',
-                backgroundColor: isActive ? effect.color : 'rgba(139,92,246,0.4)',
+                backgroundColor: isActive ? color : 'rgba(139,92,246,0.4)',
               }}
             />
           </button>
@@ -478,11 +408,11 @@ function EffectRow({
         <div
           className="flex-shrink-0 w-10 h-10 rounded-lg flex items-center justify-center transition-transform group-hover:scale-105"
           style={{
-            background: `linear-gradient(135deg, ${effect.color}15, ${effect.color}05)`,
-            border: `1px solid ${effect.color}30`,
+            background: `linear-gradient(135deg, ${color}15, ${color}05)`,
+            border: `1px solid ${color}30`,
           }}
         >
-          <Icon className="w-5 h-5" style={{ color: effect.color }} />
+          <Icon className="w-5 h-5" style={{ color }} />
         </div>
 
         {/* Name + description */}
@@ -491,10 +421,20 @@ function EffectRow({
             <span className="text-[11px] font-bold uppercase text-violet-100 truncate">{effect.name}</span>
             <span
               className="text-[11px] font-mono font-bold uppercase px-1.5 py-0.5 rounded border"
-              style={{ backgroundColor: `${effect.color}10`, borderColor: `${effect.color}30`, color: effect.color }}
+              style={{ backgroundColor: `${color}10`, borderColor: `${color}30`, color }}
             >
-              PRIORITY: {entry.priority + 1}
+              PRIORITY: {effect.priority + 1}
             </span>
+            {/* Per-row GPU cost — only meaningful while enabled */}
+            {isActive && gpuCost !== undefined && (
+              <span
+                className="flex items-center gap-1 text-[11px] font-mono uppercase px-1.5 py-0.5 rounded border border-violet-900/40 bg-black/40 text-violet-300/80"
+                title="Estimated GPU cost at 1080p"
+              >
+                <Cpu className="w-3 h-3" aria-hidden="true" />
+                {gpuCost.toFixed(2)}ms
+              </span>
+            )}
           </div>
           <p className="text-xs text-violet-300/80 line-clamp-1 font-mono">{effect.description}</p>
         </div>
@@ -510,7 +450,7 @@ function EffectRow({
           <span
             aria-hidden="true"
             className="text-xs font-mono transition-transform duration-300"
-            style={{ color: effect.color, transform: isExpanded ? 'rotate(180deg)' : 'rotate(0deg)' }}
+            style={{ color, transform: isExpanded ? 'rotate(180deg)' : 'rotate(0deg)' }}
           >
             ▼
           </span>
@@ -521,9 +461,9 @@ function EffectRow({
       {isExpanded && (
         <div className="px-5 pb-5 pt-2">
           <div className="ml-[88px] space-y-3 relative">
-            <div className="absolute -left-6 top-0 bottom-4 w-px bg-violet-900/40" style={{ backgroundColor: `${effect.color}30` }} />
+            <div className="absolute -left-6 top-0 bottom-4 w-px" style={{ backgroundColor: `${color}30` }} />
 
-            <div className="text-[11px] font-bold uppercase px-2 py-1 rounded w-fit border shadow-[inset_0_0_10px_rgba(0,0,0,0.5)]" style={{ color: effect.color, backgroundColor: `${effect.color}10`, borderColor: `${effect.color}20` }}>
+            <div className="text-[11px] font-bold uppercase px-2 py-1 rounded w-fit border shadow-[inset_0_0_10px_rgba(0,0,0,0.5)]" style={{ color, backgroundColor: `${color}10`, borderColor: `${color}20` }}>
               CORE_CLASS: {effect.ueClass}
             </div>
 
@@ -535,10 +475,10 @@ function EffectRow({
                 >
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-3 mb-1.5">
-                      <span className="text-xs font-bold font-mono text-violet-200">{param.name}</span>
+                      <span className="text-xs font-bold font-mono text-violet-200">{param.ueProperty}</span>
                       <span
                         className="text-[11px] px-1.5 py-0.5 rounded font-bold uppercase border"
-                        style={{ backgroundColor: `${effect.color}15`, color: effect.color, borderColor: `${effect.color}30` }}
+                        style={{ backgroundColor: `${color}15`, color, borderColor: `${color}30` }}
                       >
                         {param.type}
                       </span>
@@ -547,10 +487,8 @@ function EffectRow({
                   </div>
 
                   <div className="flex-shrink-0 text-left xl:text-right bg-violet-900/10 px-3 py-2 rounded-lg border border-violet-900/30 min-w-[140px]">
-                    <div className="text-[11px] font-mono text-violet-100 font-bold">{param.defaultValue}</div>
-                    {param.range && (
-                      <div className="text-[11px] text-violet-500/80 font-mono mt-1 uppercase border-t border-violet-900/40 pt-1">RANGE: {param.range}</div>
-                    )}
+                    <div className="text-[11px] font-mono text-violet-100 font-bold">{param.value}</div>
+                    <div className="text-[11px] text-violet-500/80 font-mono mt-1 uppercase border-t border-violet-900/40 pt-1">RANGE: {param.min} – {param.max}</div>
                   </div>
                 </div>
               ))}

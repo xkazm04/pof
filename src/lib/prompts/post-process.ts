@@ -1,15 +1,28 @@
 import { buildProjectContextHeader, getModuleName, type ProjectContext } from '@/lib/prompt-context';
 import { GENERATE_ALL_DIRECTLY } from '@/lib/prompts/_shared';
-import type { PostProcessStackConfig, PPEffect, PPStackEntry } from '@/components/modules/content/materials/PostProcessStackBuilder';
+import type { PPStudioEffect, PPStudioParam } from '@/types/post-process-studio';
 
-function formatEffectSection(effect: PPEffect, entry: PPStackEntry): string {
-  const paramLines = effect.params
-    .map((p) => `  - ${p.name} (${p.type}) = ${p.defaultValue}${p.range ? `  [range: ${p.range}]` : ''} — ${p.description}`)
-    .join('\n');
+/**
+ * Canonical post-process stack config consumed by the prompt builder.
+ * Effects are the single source of truth ({@link PPStudioEffect}) — each
+ * carries its own `enabled`/`priority`/current param values, so no separate
+ * stack array is needed.
+ */
+export interface PostProcessStackConfig {
+  effects: PPStudioEffect[];
+}
 
-  return `### ${entry.priority + 1}. ${effect.name} ${entry.enabled ? '(ENABLED)' : '(DISABLED — skip)'}
+function formatParamLine(p: PPStudioParam): string {
+  return `  - ${p.ueProperty} (${p.type}) = ${p.value}  [range: ${p.min} – ${p.max}] — ${p.description}`;
+}
+
+function formatEffectSection(effect: PPStudioEffect): string {
+  const paramLines = effect.params.map(formatParamLine).join('\n');
+
+  return `### ${effect.priority + 1}. ${effect.name} ${effect.enabled ? '(ENABLED)' : '(DISABLED — skip)'}
 - UE class: ${effect.ueClass}
 - Description: ${effect.description}
+- Est. GPU cost: ${effect.gpuCostMs}ms @ 1080p
 - Parameters:
 ${paramLines}`;
 }
@@ -24,20 +37,12 @@ export function buildPostProcessPrompt(config: PostProcessStackConfig, ctx: Proj
     ],
   });
 
-  const sorted = [...config.stack].sort((a, b) => a.priority - b.priority);
-  const enabled = sorted.filter((s) => s.enabled);
-  const effectMap = new Map(config.effects.map((e) => [e.id, e]));
+  const sorted = [...config.effects].sort((a, b) => a.priority - b.priority);
+  const enabled = sorted.filter((e) => e.enabled);
 
-  const effectSections = sorted.map((entry) => {
-    const effect = effectMap.get(entry.effectId);
-    if (!effect) return '';
-    return formatEffectSection(effect, entry);
-  }).filter(Boolean).join('\n\n');
+  const effectSections = sorted.map(formatEffectSection).join('\n\n');
 
-  const enabledNames = enabled
-    .map((e) => effectMap.get(e.effectId)?.name)
-    .filter(Boolean)
-    .join(', ');
+  const enabledNames = enabled.map((e) => e.name).join(', ');
 
   return `${header}
 
@@ -77,8 +82,7 @@ ${effectSections}
    - Notes on performance cost per effect
 
 ### UE5 Best Practices
-- Use FPostProcessSettings struct members directly — do not create custom post-process materials unless needed (stencil effect is the exception)
-- For Custom Stencil: create a simple post-process material that reads SceneTexture:CustomDepth and CustomStencil
+- Use FPostProcessSettings struct members directly — do not create custom post-process materials unless needed
 - Expose Blend Weight and Priority on the volume for designers
 - Group UPROPERTYs by category: "PostProcess|Bloom", "PostProcess|ColorGrading", etc.
 - Use PostEditChangeProperty to live-preview changes in editor

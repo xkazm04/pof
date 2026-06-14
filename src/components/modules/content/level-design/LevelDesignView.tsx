@@ -13,13 +13,12 @@ import { useDesignDocument } from '@/hooks/useDesignDocument';
 import { FetchError } from '../../shared/FetchError';
 import { useModuleCLI } from '@/hooks/useModuleCLI';
 import { useChecklistCLI } from '@/hooks/useChecklistCLI';
+import { useModuleReviewCli } from '@/hooks/useModuleReviewCli';
 import { useProjectStore } from '@/stores/projectStore';
 import { TaskFactory } from '@/lib/cli-task';
-import { MODULE_FEATURE_DEFINITIONS } from '@/lib/feature-definitions';
 
 import { RoadmapChecklist } from '../../shared/RoadmapChecklist';
 import { FeatureMatrix } from '../../shared/FeatureMatrix';
-import type { FeatureRow } from '@/types/feature-matrix';
 import { ModuleHeaderDecoration } from '@/components/modules/ModuleHeaderDecoration';
 import { LevelFlowEditor } from './LevelFlowEditor';
 import { RoomDetailPanel } from './RoomDetailPanel';
@@ -71,7 +70,7 @@ export function LevelDesignView() {
   const [isCreating, setIsCreating] = useState(false);
   const [newDocName, setNewDocName] = useState('');
 
-  const ctx = { projectName, projectPath, ueVersion };
+  const ctx = useMemo(() => ({ projectName, projectPath, ueVersion }), [projectName, projectPath, ueVersion]);
 
   // ── Spatial diagram CLI session ──
 
@@ -163,98 +162,33 @@ export function LevelDesignView() {
     );
   }, [scatterCli]);
 
-  // ── Review/Checklist inline CLI sessions ──
+  // ── Review/Checklist CLI sessions (shared harness) ──
 
   const MODULE_ID = 'level-design' as const;
   const MODULE_LABEL = 'Level Design';
 
-  const [rvLastCompletedId, setRvLastCompletedId] = useState<string | null>(null);
-  const [rvRefetch, setRvRefetch] = useState(0);
-
-  const handleRvItemCompleted = useCallback((itemId: string) => {
-    setRvLastCompletedId(itemId);
-    setTimeout(() => setRvLastCompletedId(null), 2000);
+  // Toast presentation stays per-view (sonner) — the shared hook only decides
+  // the message; this view routes it to the global sonner toaster.
+  const handleRvToast = useCallback((message: string, type: 'success' | 'error') => {
+    if (type === 'success') toast.success(message);
+    else toast.error(message);
   }, []);
 
-  const rvChecklistCli = useChecklistCLI({
+  const {
+    refetchKey: rvRefetch,
+    lastCompletedId: rvLastCompletedId,
+    checklistCli: rvChecklistCli,
+    isReviewing,
+    isFixing,
+    startReview: startRvReview,
+    handleFix: handleRvFix,
+    handleSync: handleRvSync,
+  } = useModuleReviewCli({
     moduleId: MODULE_ID,
-    sessionKey: `${MODULE_ID}-rv-cli`,
-    label: MODULE_LABEL,
+    moduleLabel: MODULE_LABEL,
     accentColor: MODULE_COLORS.content,
-    onItemCompleted: handleRvItemCompleted,
+    onToast: handleRvToast,
   });
-
-  const handleRvReviewComplete = useCallback(async (success: boolean) => {
-    if (!success) return;
-    await new Promise((r) => setTimeout(r, 500));
-    try {
-      const res = await fetch('/api/feature-matrix/import', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ moduleId: MODULE_ID, projectPath }),
-      });
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({ error: 'Import failed' }));
-        toast.error(err.error ?? `Import failed (${res.status})`);
-        return;
-      }
-      const data = await res.json();
-      toast.success(`Imported ${data.imported} features`);
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Failed to import review results');
-      return;
-    }
-    setRvRefetch((n) => n + 1);
-  }, [projectPath]);
-
-  const rvReviewCli = useModuleCLI({
-    moduleId: MODULE_ID,
-    sessionKey: `${MODULE_ID}-rv-review`,
-    label: `${MODULE_LABEL} Review`,
-    accentColor: MODULE_COLORS.content,
-    onComplete: handleRvReviewComplete,
-  });
-
-  const rvFixCli = useModuleCLI({
-    moduleId: MODULE_ID,
-    sessionKey: `${MODULE_ID}-rv-fix`,
-    label: `${MODULE_LABEL} Fix`,
-    accentColor: MODULE_COLORS.content,
-  });
-
-  const handleRvFix = useCallback((feature: FeatureRow) => {
-    if (!feature.nextSteps) return;
-    const appOrigin = getAppOrigin();
-    const task = TaskFactory.featureFix(MODULE_ID, feature, `${MODULE_LABEL} Fix`, appOrigin);
-    rvFixCli.execute(task);
-  }, [rvFixCli]);
-
-  const handleRvSync = useCallback(async () => {
-    try {
-      const res = await fetch('/api/feature-matrix/import', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ moduleId: MODULE_ID, projectPath }),
-      });
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({ error: 'Sync failed' }));
-        toast.error(err.error ?? `Sync failed (${res.status})`);
-        return;
-      }
-      const data = await res.json();
-      toast.success(`Imported ${data.imported} features`);
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Failed to sync');
-    }
-  }, [projectPath]);
-
-  const startRvReview = useCallback(() => {
-    const defs = MODULE_FEATURE_DEFINITIONS[MODULE_ID] ?? [];
-    if (defs.length === 0) return;
-    const appOrigin = getAppOrigin();
-    const task = TaskFactory.featureReview(MODULE_ID, MODULE_LABEL, defs, appOrigin, `${MODULE_LABEL} Review`);
-    rvReviewCli.execute(task);
-  }, [rvReviewCli]);
 
   const rvChecklist = getModuleChecklist(MODULE_ID);
 
@@ -534,9 +468,9 @@ export function LevelDesignView() {
                     accentColor={MODULE_COLORS.content}
                     onReview={startRvReview}
                     onSync={handleRvSync}
-                    isReviewing={rvReviewCli.isRunning}
+                    isReviewing={isReviewing}
                     onFix={handleRvFix}
-                    isFixing={rvFixCli.isRunning}
+                    isFixing={isFixing}
                   />
                 </div>
               )}
