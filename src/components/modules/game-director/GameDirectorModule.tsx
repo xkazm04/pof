@@ -137,7 +137,7 @@ export function GameDirectorModule() {
         {activeTab === 'findings' && (
           <FindingsExplorer
             sessions={director.sessions}
-            getFindings={director.getFindings}
+            getAllFindings={director.getAllFindings}
             updateTriage={director.updateTriage}
             markFixDispatched={director.markFixDispatched}
             onNewSession={() => setActiveTab('new-session')}
