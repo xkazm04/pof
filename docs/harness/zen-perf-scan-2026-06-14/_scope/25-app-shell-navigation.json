@@ -1,0 +1,29 @@
+{
+  "index": 25,
+  "name": "App Shell & Navigation",
+  "group": "CLI Terminal & Module Shell",
+  "id": "ctx_1779817681600_plemy1b",
+  "description": "The application shell: AppShell layout, sidebar navigation (L1/L2), top bar, module renderer with LRU suspend, the CLI bottom panel, global search, and the activity feed. Spans the components/layout shell, the navigation store, and the search index/API.",
+  "filePaths": [
+    "src/app/page.tsx",
+    "src/app/layout.tsx",
+    "src/components/layout/AppShell.tsx",
+    "src/components/layout/Sidebar.tsx",
+    "src/components/layout/SidebarL1.tsx",
+    "src/components/layout/SidebarL2.tsx",
+    "src/components/layout/TopBar.tsx",
+    "src/components/layout/ModuleRenderer.tsx",
+    "src/components/layout/ModuleErrorBoundary.tsx",
+    "src/components/layout/CLIBottomPanel.tsx",
+    "src/components/layout/CLITabBar.tsx",
+    "src/components/layout/GlobalSearchPanel.tsx",
+    "src/components/layout/ActivityFeedPanel.tsx",
+    "src/components/layout/ResizeHandle.tsx",
+    "src/stores/navigationStore.ts",
+    "src/stores/activityFeedStore.ts",
+    "src/lib/search-index.ts",
+    "src/lib/event-bus.ts",
+    "src/types/navigation.ts",
+    "src/app/api/search/route.ts"
+  ]
+}

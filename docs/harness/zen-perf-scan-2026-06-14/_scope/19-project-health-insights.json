@@ -1,0 +1,22 @@
+{
+  "index": 19,
+  "name": "Project Health & Insights",
+  "group": "Quality Evaluator & Health",
+  "id": "ctx_1779817681552_khgltvf",
+  "description": "Aggregate project health and surface structured insights: the health engine, holistic health view, pattern-extracted structured insights, and the weekly digest. Spans health-engine/structured-insights libs, the project-health store, and health/insights APIs.",
+  "filePaths": [
+    "src/lib/health-engine.ts",
+    "src/lib/pattern-extractor.ts",
+    "src/lib/weekly-digest.ts",
+    "src/stores/projectHealthStore.ts",
+    "src/types/project-health.ts",
+    "src/types/structured-insights.ts",
+    "src/components/modules/evaluator/ProjectHealthDashboard.tsx",
+    "src/components/modules/evaluator/HolisticHealthView.tsx",
+    "src/components/modules/evaluator/InsightCard.tsx",
+    "src/components/modules/evaluator/WeeklyDigestView.tsx",
+    "src/app/api/project-health/route.ts",
+    "src/app/api/structured-insights/route.ts",
+    "src/app/api/weekly-digest/route.ts"
+  ]
+}

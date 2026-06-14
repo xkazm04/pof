@@ -417,6 +417,13 @@ export function StateMachineEditor() {
 
   const stateMap = useMemo(() => new Map(states.map((s) => [s.id, s])), [states]);
 
+  // Set of "from->to" edge keys for O(1) reverse-edge lookups (avoids O(E) .some() per edge on drag)
+  const edgeKeySet = useMemo(() => {
+    const s = new Set<string>();
+    for (const t of transitions) s.add(`${t.from}->${t.to}`);
+    return s;
+  }, [transitions]);
+
   // ── State CRUD ──
 
   const addState = useCallback(() => {
@@ -827,7 +834,7 @@ export function StateMachineEditor() {
               const isSelected = selectedTransitionId === t.id;
 
               // Offset for bidirectional edges
-              const reverseExists = transitions.some((r) => r.from === t.to && r.to === t.from);
+              const reverseExists = edgeKeySet.has(`${t.to}->${t.from}`);
               const isForward = t.from < t.to;
 
               const geom = computeEdgeGeometry(from, to, { reverseExists, isForward });

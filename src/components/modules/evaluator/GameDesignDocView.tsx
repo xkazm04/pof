@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback, useRef, useId } from 'react';
+import { useState, useEffect, useCallback, useRef, useId, useMemo, memo } from 'react';
 import {
   FileText, RefreshCw, Download, ChevronRight, ChevronDown,
   Loader2, BarChart3, Map, Volume2, Wrench, Package,
@@ -395,9 +395,9 @@ function SubSectionBlock({ section }: { section: GDDSection }) {
 
 // ─── Markdown renderer (lightweight — tables, headings, lists, bold, italic)
 
-function MarkdownBlock({ content }: { content: string }) {
-  if (!content) return null;
-
+// Pure markdown parser — deterministic in `content`, so its output can be
+// memoized and only recomputed when the source text changes.
+function parseMarkdown(content: string): React.ReactNode[] {
   const lines = content.split('\n');
   const elements: React.ReactNode[] = [];
   let i = 0;
@@ -460,8 +460,15 @@ function MarkdownBlock({ content }: { content: string }) {
     i++;
   }
 
-  return <>{elements}</>;
+  return elements;
 }
+
+const MarkdownBlock = memo(function MarkdownBlock({ content }: { content: string }) {
+  // Re-parse only when the source text changes, not on unrelated parent re-renders.
+  const elements = useMemo(() => (content ? parseMarkdown(content) : null), [content]);
+  if (!elements) return null;
+  return <>{elements}</>;
+});
 
 function InlineMarkdown({ text }: { text: string }) {
   // Handle **bold** and *italic*

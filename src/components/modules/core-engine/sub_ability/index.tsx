@@ -71,11 +71,14 @@ export function AbilitySpellbook({ moduleId }: AbilitySpellbookProps) {
     });
   }, [setActiveTab]);
 
-  /* ── Compute live-synced data (falls back to static when unavailable) ── */
-  const spellbookData = useMemo<SpellbookLiveData>(() => {
+  /* ── Compute live-synced data (falls back to static when unavailable) ──
+     Heavy transforms depend only on [liveData, refresh]; the presentational
+     `isSyncing` flag is merged in separately below so a sync toggle never
+     re-runs the buildLive* derivations or recreates the derived identity. */
+  const derivedData = useMemo<Omit<SpellbookLiveData, 'isSyncing'>>(() => {
     if (!liveData || liveData.tags.length === 0) {
       return {
-        isLive: false, isSyncing, parsedAt: null, refresh,
+        isLive: false, parsedAt: null, refresh,
         CORE_ATTRIBUTES: STATIC_CORE_ATTRIBUTES,
         DERIVED_ATTRIBUTES: STATIC_DERIVED_ATTRIBUTES,
         TAG_TREE: STATIC_TAG_TREE,
@@ -95,7 +98,7 @@ export function AbilitySpellbook({ moduleId }: AbilitySpellbookProps) {
     const usageFreq = buildLiveTagUsageFrequency(liveData.abilities, liveData.tags);
 
     return {
-      isLive: true, isSyncing, parsedAt: liveData.parsedAt, refresh,
+      isLive: true, parsedAt: liveData.parsedAt, refresh,
       CORE_ATTRIBUTES: attrs.core,
       DERIVED_ATTRIBUTES: attrs.derived,
       TAG_TREE: buildLiveTagTree(liveData.tags),
@@ -108,7 +111,12 @@ export function AbilitySpellbook({ moduleId }: AbilitySpellbookProps) {
       TAG_AUDIT_SCORE: STATIC_TAG_AUDIT_SCORE,
       TAG_DETAIL_MAP: buildLiveTagDetailMap(liveData.abilities, liveData.tags),
     };
-  }, [liveData, isSyncing, refresh]);
+  }, [liveData, refresh]);
+
+  const spellbookData = useMemo<SpellbookLiveData>(
+    () => ({ ...derivedData, isSyncing }),
+    [derivedData, isSyncing],
+  );
 
   const renderMetric = useGASFeatureMetrics(spellbookData);
 

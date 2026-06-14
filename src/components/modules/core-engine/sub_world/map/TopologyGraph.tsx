@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { memo, useState } from 'react';
 import { Network } from 'lucide-react';
 import { motion, useReducedMotion } from 'framer-motion';
 import { STATUS_WARNING, ACCENT_CYAN,
@@ -18,7 +18,7 @@ interface TopologyGraphProps {
   matchingIds?: Set<string>;
 }
 
-export function TopologyGraph({ matchingIds }: TopologyGraphProps = {}) {
+function TopologyGraphImpl({ matchingIds }: TopologyGraphProps = {}) {
   const [hoveredTopoNode, setHoveredTopoNode] = useState<string | null>(null);
   const prefersReduced = useReducedMotion();
   const hasFilter = matchingIds !== undefined && matchingIds.size > 0;
@@ -146,3 +146,8 @@ export function TopologyGraph({ matchingIds }: TopologyGraphProps = {}) {
     </BlueprintPanel>
   );
 }
+
+/* Memo boundary: its only prop, `matchingIds`, is now referentially stable
+   across same-band slider ticks (see index.tsx), so the topology SVG only
+   re-renders when the matching set's membership actually changes. */
+export const TopologyGraph = memo(TopologyGraphImpl);

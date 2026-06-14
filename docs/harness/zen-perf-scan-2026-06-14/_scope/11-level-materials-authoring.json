@@ -1,0 +1,29 @@
+{
+  "index": 11,
+  "name": "Level & Materials Authoring",
+  "group": "Visual Content Generation",
+  "id": "ctx_1779817681504_g83iyph",
+  "description": "Author UE5 materials and post-process: the material parameter configurator, layer graph, PBR/texture lab, post-process stack builder with GPU cost estimation, plus level-design spatial planning. Spans content materials/level-design modules, the material-lab, and post-process-studio libs.",
+  "filePaths": [
+    "src/components/modules/content/materials/MaterialsView.tsx",
+    "src/components/modules/content/materials/MaterialLayerGraph.tsx",
+    "src/components/modules/content/materials/MaterialParameterConfigurator.tsx",
+    "src/components/modules/content/materials/MaterialPatternCatalog.tsx",
+    "src/components/modules/content/materials/MaterialStyleTransfer.tsx",
+    "src/components/modules/content/materials/PostProcessStackBuilder.tsx",
+    "src/components/modules/visual-gen/material-lab/MaterialLabView.tsx",
+    "src/components/modules/visual-gen/material-lab/PBREditor.tsx",
+    "src/components/modules/content/level-design/BiomeScatterPanel.tsx",
+    "src/components/modules/content/level-design/LevelDesignSpatialDiagram.tsx",
+    "src/lib/texture-maps.ts",
+    "src/lib/visual-gen/material-db.ts",
+    "src/lib/visual-gen/biome-textures.ts",
+    "src/lib/level-design-db.ts",
+    "src/lib/post-process-studio/effects.ts",
+    "src/lib/post-process-studio/gpu-estimator.ts",
+    "src/lib/post-process-studio/presets.ts",
+    "src/stores/postProcessStudioStore.ts",
+    "src/lib/prompts/material-configurator.ts",
+    "src/components/modules/evaluator/PostProcessStudioView.tsx"
+  ]
+}

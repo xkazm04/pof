@@ -148,7 +148,12 @@ class UE5ConnectionManager {
       if (this.consecutiveFailures >= 3) {
         logger.warn('[UE5-CM] 3 consecutive health check failures, starting reconnect');
         this.clearTimers();
-        this.setStatus('disconnected', { error: 'Health check failed' });
+        // Reset the backoff counter for this fresh disconnect episode: a connection
+        // that was healthy (possibly for a long time) may still carry a stale,
+        // non-zero reconnectAttempts from a prior reconnect storm. Seeding it to 0
+        // ensures the first reconnect uses the initial backoff; scheduleReconnect
+        // still escalates the delay across consecutive failed reconnect attempts.
+        this.setStatus('disconnected', { error: 'Health check failed', reconnectAttempts: 0 });
         eventBus.emit('ue5.disconnected', { reason: 'health-check-timeout' }, 'ue5-connection');
         this.scheduleReconnect();
       }

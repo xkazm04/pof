@@ -341,6 +341,13 @@ export function AnimationStateMachine({ onSelectState, isRunning, activeStateId 
     return m;
   }, [displayTransitions]);
 
+  // Set of "from->to" edge keys for O(1) reverse-edge lookups (avoids O(E) .some() per edge)
+  const edgeKeySet = useMemo(() => {
+    const s = new Set<string>();
+    for (const t of displayTransitions) s.add(`${t.from}->${t.to}`);
+    return s;
+  }, [displayTransitions]);
+
   const stateNodes = useMemo(() => {
     return displayStates.map((state) => {
       const completed = !!progress[state.id];
@@ -712,7 +719,7 @@ export function AnimationStateMachine({ onSelectState, isRunning, activeStateId 
             const isModified = modifiedTransitions.has(edgeKey);
             const isHovered = hoveredTransition === edgeKey;
 
-            const reverseExists = displayTransitions.some((t) => t.from === to && t.to === from);
+            const reverseExists = edgeKeySet.has(`${to}->${from}`);
             const isForward = from < to;
 
             const geom = computeEdgeGeometry(fromNode, toNode, { reverseExists, isForward });

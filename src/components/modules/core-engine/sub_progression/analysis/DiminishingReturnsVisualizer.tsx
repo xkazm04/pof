@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { TrendingUp } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { OPACITY_10, OPACITY_15, OPACITY_20, OPACITY_30 } from '@/lib/chart-colors';
@@ -26,6 +26,30 @@ export function DiminishingReturnsVisualizer({
   // spread to normalize against and falls back to an explicit empty state.
   const maxMarginal = Math.max(0, ...marginals);
   const plottable = hasPlottableSpread(marginals);
+
+  // Lay out the SVG coordinate math once per (attribute, max) instead of
+  // re-deriving each point's x/y three separate times (polyline, area polygon,
+  // dot circles) on every render. The polyline string, area-polygon string and
+  // dot list are all built from this single shared `points` pass.
+  const geometry = useMemo(() => {
+    const curve = attr?.curve ?? [];
+    const points = curve.map((c) => ({
+      x: (c.points / 100) * 100,
+      y: 100 - safeDivide(c.marginalValue, maxMarginal) * 90,
+      marginalValue: c.marginalValue,
+      points: c.points,
+    }));
+    const linePoints = points.map((p) => `${p.x},${p.y}`).join(' ');
+    const areaPoints =
+      points.length > 0
+        ? [
+            ...points.map((p) => `${p.x},${p.y}`),
+            `${points[points.length - 1].x},100`,
+            `${points[0].x},100`,
+          ].join(' ')
+        : '';
+    return { points, linePoints, areaPoints };
+  }, [attr, maxMarginal]);
 
   return (
     <BlueprintPanel color={ACCENT} className="p-5">
@@ -76,33 +100,22 @@ export function DiminishingReturnsVisualizer({
 
           <motion.polyline
             initial={{ pathLength: 0 }} animate={{ pathLength: 1 }} transition={{ duration: 1 }}
-            points={attr.curve.map((c) => {
-              const x = (c.points / 100) * 100;
-              const y = 100 - safeDivide(c.marginalValue, maxMarginal) * 90;
-              return `${x},${y}`;
-            }).join(' ')}
+            points={geometry.linePoints}
             fill="none" stroke={attr.color} strokeWidth="2.5" vectorEffect="non-scaling-stroke"
             style={{ filter: `drop-shadow(0 0 3px ${attr.color})` }}
           />
 
           <motion.polygon
             initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.6 }}
-            points={[
-              ...attr.curve.map(c => `${(c.points / 100) * 100},${100 - safeDivide(c.marginalValue, maxMarginal) * 90}`),
-              `${(attr.curve[attr.curve.length - 1].points / 100) * 100},100`,
-              `${(attr.curve[0].points / 100) * 100},100`,
-            ].join(' ')}
+            points={geometry.areaPoints}
             fill={`${attr.color}${OPACITY_10}`}
           />
 
-          {attr.curve.map((c, i) => {
-            const y = 100 - safeDivide(c.marginalValue, maxMarginal) * 90;
-            return (
-              <circle key={i} cx={(c.points / 100) * 100} cy={y} r="3" fill={attr.color} vectorEffect="non-scaling-stroke">
-                <title>{c.points} points: +{c.marginalValue.toFixed(1)} value per point</title>
-              </circle>
-            );
-          })}
+          {geometry.points.map((p, i) => (
+            <circle key={i} cx={p.x} cy={p.y} r="3" fill={attr.color} vectorEffect="non-scaling-stroke">
+              <title>{p.points} points: +{p.marginalValue.toFixed(1)} value per point</title>
+            </circle>
+          ))}
         </NormalizedLineChart>
       )}
     </BlueprintPanel>

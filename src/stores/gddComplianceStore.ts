@@ -18,6 +18,28 @@ function hashChecklist(cp: ChecklistProgress): string {
     .join('|');
 }
 
+/**
+ * Mark a gap resolved on a copy of the report and recompute the gap counters.
+ * Pure, immutable transform — no nested mutation of the held report — so resolve
+ * runs client-side against the report the store already holds, with no server
+ * round-trip and no shared server-side cache. (Mirrors `resolveGap` in
+ * `@/lib/gdd-compliance`, re-implemented here to avoid importing that module's
+ * server-only DB dependencies into this `'use client'` store.)
+ */
+function applyResolveGap(report: ComplianceReport, gapId: string): ComplianceReport {
+  const modules = report.modules.map((mod) => ({
+    ...mod,
+    gaps: mod.gaps.map((g) => (g.id === gapId ? { ...g, resolved: true } : g)),
+  }));
+  const allGaps = modules.flatMap((m) => m.gaps);
+  return {
+    ...report,
+    modules,
+    totalGaps: allGaps.filter((g) => !g.resolved).length,
+    criticalGaps: allGaps.filter((g) => g.severity === 'critical' && !g.resolved).length,
+  };
+}
+
 interface GDDComplianceState {
   report: ComplianceReport | null;
   modules: ComplianceReport['modules'];
@@ -93,16 +115,14 @@ export const useGDDComplianceStore = create<GDDComplianceState>((set, get) => ({
     }),
 
   resolveGap: async (gapId: string) => {
-    try {
-      const report = await apiFetch<ComplianceReport>('/api/gdd-compliance', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'resolve-gap', gapId }),
-      });
-      set({ report, modules: report.modules, suggestions: report.suggestions });
-    } catch (err) {
-      set({ error: (err as Error).message });
-    }
+    // Resolve against the report the store already holds — no server round-trip,
+    // so there is no shared server-side cache to corrupt across clients/projects.
+    // `reportProjectPath`/`reportChecklistHash` are left untouched (staleness
+    // detection in `ensureAudit` keeps working).
+    const current = get().report;
+    if (!current) return;
+    const report = applyResolveGap(current, gapId);
+    set({ report, modules: report.modules, suggestions: report.suggestions });
   },
 
   selectModule: (moduleId) => set({ selectedModuleId: moduleId }),

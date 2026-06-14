@@ -179,14 +179,17 @@ export function getModuleStats(moduleId: SubModuleId): ModuleStats {
   return rowToModuleStats(row);
 }
 
-/** Returns stats for all modules in a single query (no N+1). */
-export function getAllModuleStats(): ModuleStats[] {
+/** Returns the raw per-module aggregate rows in a single GROUP BY query (no N+1). */
+function getAllModuleStatsRaw(): RawModuleStatsRow[] {
   ensureTables();
-  const rows = getDb()
+  return getDb()
     .prepare(MODULE_STATS_SQL + ' GROUP BY module_id')
     .all() as RawModuleStatsRow[];
+}
 
-  return rows.map(rowToModuleStats);
+/** Returns stats for all modules in a single query (no N+1). */
+export function getAllModuleStats(): ModuleStats[] {
+  return getAllModuleStatsRaw().map(rowToModuleStats);
 }
 
 /** Raw row also carries prompt-length averages for insights/suggestions. */
@@ -204,21 +207,28 @@ export function getPromptQualityScore(moduleId: SubModuleId): PromptQualityScore
   ensureTables();
   const db = getDb();
 
-  const allRows = db.prepare(
-    'SELECT success FROM session_analytics WHERE module_id = ? ORDER BY completed_at DESC'
-  ).all(moduleId) as { success: number }[];
+  // Overall rate + total count from a single aggregate — no full-row materialization.
+  const agg = db.prepare(
+    'SELECT COUNT(*) AS total, SUM(CASE WHEN success = 1 THEN 1 ELSE 0 END) AS succ FROM session_analytics WHERE module_id = ?'
+  ).get(moduleId) as { total: number; succ: number | null };
 
-  const total = allRows.length;
+  const total = agg.total;
   if (total === 0) {
     return { moduleId, score: 0, trend: 'stable', recentSuccessRate: 0, overallSuccessRate: 0, sessionsRecorded: 0 };
   }
 
-  const overallSuccess = allRows.filter((r) => r.success === 1).length / total;
-  const recent = allRows.slice(0, Math.min(10, total));
+  const overallSuccess = (agg.succ ?? 0) / total;
+
+  // Only the newest 20 rows feed the recent/older trend windows.
+  const trendRows = db.prepare(
+    'SELECT success FROM session_analytics WHERE module_id = ? ORDER BY completed_at DESC LIMIT 20'
+  ).all(moduleId) as { success: number }[];
+
+  const recent = trendRows.slice(0, Math.min(10, trendRows.length));
   const recentSuccess = recent.filter((r) => r.success === 1).length / recent.length;
 
   // Older window for trend comparison
-  const older = allRows.slice(10, Math.min(20, total));
+  const older = trendRows.slice(10, 20);
   let trend: 'improving' | 'stable' | 'declining' = 'stable';
   if (older.length >= 5) {
     const olderRate = older.filter((r) => r.success === 1).length / older.length;
@@ -242,8 +252,10 @@ export function getPromptQualityScore(moduleId: SubModuleId): PromptQualityScore
 
 // ── Analytics: Pattern Insights ──
 
-export function generateInsights(moduleId: SubModuleId): PromptInsight[] {
-  const raw = getModuleStatsRaw(moduleId);
+export function generateInsights(moduleId: SubModuleId, prefetchedRaw?: RawModuleStatsRow | null): PromptInsight[] {
+  // Callers that already hold the GROUP BY aggregate (e.g. getDashboard) can pass it
+  // in to avoid re-running the per-module aggregate query.
+  const raw = prefetchedRaw !== undefined ? prefetchedRaw : getModuleStatsRaw(moduleId);
   if (!raw || raw.total < 5) return [];
 
   const stats = rowToModuleStats(raw);
@@ -392,19 +404,21 @@ export function getPromptSuggestions(moduleId: SubModuleId, prompt: string): Pro
 export function getDashboard(): AnalyticsDashboard {
   ensureTables();
 
-  // Single GROUP BY query returns all per-module stats + prompt-length averages
-  const moduleStats = getAllModuleStats();
+  // Single GROUP BY query returns all per-module raw aggregates + prompt-length averages
+  const rawRows = getAllModuleStatsRaw();
+  const moduleStats = rawRows.map(rowToModuleStats);
 
   // Derive global totals from per-module stats (avoids 3 extra queries)
   const totalSessions = moduleStats.reduce((s, m) => s + m.totalSessions, 0);
   const totalSuccess = moduleStats.reduce((s, m) => s + m.successCount, 0);
   const totalDurationMs = moduleStats.reduce((s, m) => s + m.avgDurationMs * m.totalSessions, 0);
 
-  const moduleIds = moduleStats.map((m) => m.moduleId);
   const insights: PromptInsight[] = [];
   const qualityScores: PromptQualityScore[] = [];
-  for (const mid of moduleIds) {
-    insights.push(...generateInsights(mid));
+  for (const raw of rawRows) {
+    const mid = raw.module_id as SubModuleId;
+    // Reuse the GROUP BY row already in hand instead of re-querying per module.
+    insights.push(...generateInsights(mid, raw));
     qualityScores.push(getPromptQualityScore(mid));
   }
 

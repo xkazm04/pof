@@ -19,7 +19,7 @@ import {
   findAssetByPromptHash,
   getSet,
   getUsageSummary,
-  listAssets,
+  listAllAssets,
   listSets,
   logUsage,
   setAssetFavorite,
@@ -116,9 +116,10 @@ export async function POST(request: NextRequest) {
 }
 
 export async function GET() {
-  const sets = listSets(db());
-  const assets = sets.flatMap((s) => listAssets(db(), s.id));
-  const usage = getUsageSummary(db(), startOfMonth(), monthlyQuota());
+  const d = db();
+  const sets = listSets(d);
+  const assets = listAllAssets(d);
+  const usage = getUsageSummary(d, startOfMonth(), monthlyQuota());
   return apiSuccess({ sets, assets, usage });
 }
 

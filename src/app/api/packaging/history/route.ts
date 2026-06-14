@@ -17,6 +17,22 @@ export const GET = withRoute(async (request: NextRequest) => {
       const builds = getBuilds(limit, offset);
       return apiSuccess({ builds });
     }
+    case 'dashboard': {
+      // Composite "load the dashboard" payload: the four pieces the dashboard
+      // used to fetch in a 4-way Promise.all, reusing the exact same store
+      // functions/args so each field is byte-for-byte identical to the
+      // individual actions below.
+      const listLimit = Number(request.nextUrl.searchParams.get('limit') ?? '100');
+      const trendLimit = Number(request.nextUrl.searchParams.get('trendLimit') ?? '30');
+      const version = getCurrentVersion();
+      return apiSuccess({
+        builds: getBuilds(listLimit, 0),
+        stats: getBuildStats(),
+        trend: getSizeTrend(undefined, trendLimit),
+        version: formatVersion(version),
+        parsed: version,
+      });
+    }
     case 'get': {
       const id = Number(request.nextUrl.searchParams.get('id'));
       if (!id) return apiError('id is required', 400);

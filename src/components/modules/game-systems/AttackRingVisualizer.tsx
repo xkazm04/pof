@@ -21,6 +21,9 @@ const DEFAULT_INNER_RING = EQS_ATTACK_POSITIONS.generateInnerRing;
 const MIN_POINTS = EQS_ATTACK_POSITIONS.clamps.numberOfPoints.min;
 const MAX_POINTS = EQS_ATTACK_POSITIONS.clamps.numberOfPoints.max;
 const MIN_DISTANCE = EQS_ATTACK_POSITIONS.clamps.attackDistance.min;
+// Upper bound of the AttackDistance slider (world units). Single source for both
+// the slider's `max` and the SVG scale, so the ring can never exceed the viewBox.
+const MAX_DISTANCE = 500;
 
 // Nav projection from constructor
 const PROJECT_DOWN = 500;
@@ -40,8 +43,10 @@ export function AttackRingVisualizer() {
     setInnerRing(DEFAULT_INNER_RING);
   }, []);
 
-  // Scale: map attack distance to SVG radius (200 units = MAX_DRAW_RADIUS)
-  const scale = MAX_DRAW_RADIUS / 300; // 300 units fits at max radius
+  // Scale: map world-space attack distance to SVG radius. Derived from the
+  // slider's max (MAX_DISTANCE) so the outer ring lands exactly on MAX_DRAW_RADIUS
+  // at full distance and always fits inside the viewBox.
+  const scale = MAX_DRAW_RADIUS / MAX_DISTANCE;
   const outerR = attackDist * scale;
   const innerR = (attackDist * 0.5) * scale;
 
@@ -291,20 +296,20 @@ export function AttackRingVisualizer() {
               <input
                 type="range"
                 min={MIN_DISTANCE}
-                max={500}
+                max={MAX_DISTANCE}
                 step={10}
                 value={attackDist}
                 onChange={e => setAttackDist(Number(e.target.value))}
                 data-testid="attack-ring-distance"
                 className="w-full h-1.5 rounded-full appearance-none cursor-pointer"
                 style={{
-                  background: `linear-gradient(to right, ${ACCENT_CYAN} 0%, ${ACCENT_CYAN} ${((attackDist - MIN_DISTANCE) / (500 - MIN_DISTANCE)) * 100}%, rgba(255,255,255,0.1) ${((attackDist - MIN_DISTANCE) / (500 - MIN_DISTANCE)) * 100}%, rgba(255,255,255,0.1) 100%)`,
+                  background: `linear-gradient(to right, ${ACCENT_CYAN} 0%, ${ACCENT_CYAN} ${((attackDist - MIN_DISTANCE) / (MAX_DISTANCE - MIN_DISTANCE)) * 100}%, rgba(255,255,255,0.1) ${((attackDist - MIN_DISTANCE) / (MAX_DISTANCE - MIN_DISTANCE)) * 100}%, rgba(255,255,255,0.1) 100%)`,
                 }}
               />
               <div className="flex justify-between text-[11px] font-mono text-text-muted mt-0.5">
                 <span>{MIN_DISTANCE}</span>
                 <span>ClampMin={MIN_DISTANCE}</span>
-                <span>500</span>
+                <span>{MAX_DISTANCE}</span>
               </div>
             </div>
 

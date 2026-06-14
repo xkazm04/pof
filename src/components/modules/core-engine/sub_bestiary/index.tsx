@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState, useCallback } from 'react';
+import { useState, useCallback } from 'react';
 import { Skull, LayoutGrid } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ACCENT_ORANGE } from '@/lib/chart-colors';
@@ -9,8 +9,8 @@ import type { SubModuleId } from '@/types/modules';
 import { TabHeader, LoadingSpinner, SubTabNavigation } from '../unique-tabs/_shared';
 import type { SubTab } from '../unique-tabs/_shared';
 import { VisibleSection } from '../unique-tabs/VisibleSection';
-import type { EliteModifier, GroupBy, EnemyRole, ArchetypeConfig, BestiarySubtab } from './_shared/data';
-import { ARCHETYPES, ELITE_MODIFIERS, BESTIARY_SUBTABS } from './_shared/data';
+import type { EliteModifier, BestiarySubtab } from './_shared/data';
+import { ELITE_MODIFIERS, BESTIARY_SUBTABS } from './_shared/data';
 import { ArchetypesTab } from './archetypes/ArchetypesTab';
 import { AILogicTab } from './ai-logic/AILogicTab';
 import { EncountersTab } from './encounters/EncountersTab';
@@ -48,22 +48,6 @@ export function EnemyBestiary({ moduleId }: EnemyBestiaryProps) {
   /* Archetype selection & comparison (up to 4) */
   const [compareIds, setCompareIds] = useState<string[]>([]);
   const [expandedArchetype, setExpandedArchetype] = useState<string | null>(null);
-  const [groupBy, setGroupBy] = useState<GroupBy>('none');
-  const [searchTerm, setSearchTerm] = useState('');
-  const [roleFilter, setRoleFilter] = useState<'all' | EnemyRole>('all');
-  const [categoryFilter, setCategoryFilter] = useState<'all' | ArchetypeConfig['category']>('all');
-  const [tierFilter, setTierFilter] = useState<'all' | ArchetypeConfig['tier']>('all');
-  const [areaFilter, setAreaFilter] = useState<'all' | string>('all');
-
-  const filteredArchetypes = useMemo(() => {
-    let result = ARCHETYPES;
-    if (searchTerm) result = result.filter(a => a.label.toLowerCase().includes(searchTerm.toLowerCase()));
-    if (roleFilter !== 'all') result = result.filter(a => a.role === roleFilter);
-    if (categoryFilter !== 'all') result = result.filter(a => a.category === categoryFilter);
-    if (tierFilter !== 'all') result = result.filter(a => a.tier === tierFilter);
-    if (areaFilter !== 'all') result = result.filter(a => a.area === areaFilter);
-    return result;
-  }, [searchTerm, roleFilter, categoryFilter, tierFilter, areaFilter]);
 
   const toggleCompare = useCallback((id: string) => {
     setCompareIds(prev => {
@@ -135,19 +119,12 @@ export function EnemyBestiary({ moduleId }: EnemyBestiaryProps) {
             <VisibleSection moduleId={moduleId} sectionId="cards">
               <ArchetypesTab
                 featureMap={featureMap}
-                groupBy={groupBy} setGroupBy={setGroupBy}
                 compareIds={compareIds} toggleCompare={toggleCompare}
                 expandedArchetype={expandedArchetype} toggleArchetype={toggleArchetype}
                 cardModifiers={cardModifiers} toggleCardModifier={toggleCardModifier}
                 setCodegenMod={setCodegenMod}
                 radarOverlays={radarOverlays} onToggleOverlay={toggleOverlay}
                 accent={ACCENT}
-                searchTerm={searchTerm} setSearchTerm={setSearchTerm}
-                roleFilter={roleFilter} setRoleFilter={setRoleFilter}
-                categoryFilter={categoryFilter} setCategoryFilter={setCategoryFilter}
-                tierFilter={tierFilter} setTierFilter={setTierFilter}
-                areaFilter={areaFilter} setAreaFilter={setAreaFilter}
-                filteredArchetypes={filteredArchetypes}
               />
             </VisibleSection>
           )}

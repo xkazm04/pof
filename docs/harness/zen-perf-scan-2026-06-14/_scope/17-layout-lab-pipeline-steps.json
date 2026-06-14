@@ -1,0 +1,25 @@
+{
+  "index": 17,
+  "name": "Layout Lab & Pipeline Steps",
+  "group": "Catalog to UE Pipeline",
+  "id": "ctx_1779817681527_cqxe4g6",
+  "description": "The /layout reference workspace and StepSpec pipeline UI: the Category->Catalog->Entity tree, the Items pipeline (concept->art->attributes->economy->gate->integration), the archetype step renderer, and the server-backed lab artifact cache. The canonical View/Produce/Acceptance implementation.",
+  "filePaths": [
+    "src/components/layout-lab/LayoutLab.tsx",
+    "src/components/layout-lab/NewHome.tsx",
+    "src/components/layout-lab/Baseline.tsx",
+    "src/components/layout-lab/CatalogTree.tsx",
+    "src/components/layout-lab/labPipelineStore.ts",
+    "src/components/layout-lab/labAcceptance.ts",
+    "src/components/layout-lab/labArtifactClient.ts",
+    "src/components/layout-lab/labPipelines.ts",
+    "src/components/layout-lab/useLabCatalogData.ts",
+    "src/components/layout-lab/LabBridgeStrip.tsx",
+    "src/components/layout-lab/PipelineRollup.tsx",
+    "src/components/layout-lab/steps/StepFrame.tsx",
+    "src/components/layout-lab/steps/ArchetypeStep.tsx",
+    "src/components/layout-lab/steps/index.ts",
+    "src/components/layout-lab/steps/itemsSteps.ts",
+    "src/components/layout-lab/steps/shared/CliProduce.tsx"
+  ]
+}

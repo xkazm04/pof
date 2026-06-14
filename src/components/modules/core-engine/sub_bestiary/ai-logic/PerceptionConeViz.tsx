@@ -1,6 +1,6 @@
 'use client';
 
-import { useId } from 'react';
+import { useEffect, useId, useRef, useState } from 'react';
 import { motion, useReducedMotion } from 'framer-motion';
 import { motionSafe } from '@/lib/motion';
 import type { DetectedEntity } from '../_shared/data';
@@ -9,6 +9,28 @@ import { ACCENT_CYAN, OVERLAY_WHITE, withOpacity, OPACITY_25, OPACITY_12, OPACIT
 interface PerceptionConeVizProps {
   entities: DetectedEntity[];
   accent?: string;
+}
+
+/**
+ * Tracks whether `ref` is currently on screen via IntersectionObserver so the
+ * infinite radar/pulse loops can be parked while scrolled out of view (the
+ * AI-Logic tab is a long scroll). Defaults to `true` — on SSR, first paint, or
+ * any environment without IntersectionObserver (e.g. jsdom) the element is
+ * treated as visible, so rendered markup + animation are unchanged from before.
+ */
+function useIsOnScreen(ref: React.RefObject<Element | null>): boolean {
+  const [visible, setVisible] = useState(true);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el || typeof IntersectionObserver === 'undefined') return;
+    const observer = new IntersectionObserver(
+      ([entry]) => setVisible(entry.isIntersecting),
+      { rootMargin: '0px' },
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [ref]);
+  return visible;
 }
 
 // Geometry shared by the static diagram and the live sweep (AI eye at centre).
@@ -26,8 +48,14 @@ export function PerceptionConeViz({ entities, accent = ACCENT_CYAN }: Perception
   // Unique gradient id so multiple cones on a page never collide.
   const sweepGrad = `${useId()}-sweep`;
 
+  // Park the perpetual sweep/pulse loops while the SVG is scrolled off-screen.
+  // When visible, animation is exactly as before; off-screen it rests on a
+  // static frame (rotate 0 / scale 1) with no `repeat`, freeing the rAF loop.
+  const svgRef = useRef<SVGSVGElement>(null);
+  const onScreen = useIsOnScreen(svgRef);
+
   return (
-    <svg width={200} height={200} viewBox="0 0 130 130" className="flex-shrink-0">
+    <svg ref={svgRef} width={200} height={200} viewBox="0 0 130 130" className="flex-shrink-0">
       <defs>
         {/* Beam fades from bright at the AI eye to nothing at its reach. */}
         <linearGradient id={sweepGrad} gradientUnits="userSpaceOnUse" x1={CX} y1={CY} x2={CX} y2={CY - CONE_R}>
@@ -53,11 +81,11 @@ export function PerceptionConeViz({ entities, accent = ACCENT_CYAN }: Perception
       <motion.g
         data-testid="perception-sweep"
         style={{ transformBox: 'view-box', transformOrigin: `${CX}px ${CY}px` }}
-        animate={{ rotate: [-SWEEP_DEG, SWEEP_DEG] }}
-        transition={motionSafe(
+        animate={onScreen ? { rotate: [-SWEEP_DEG, SWEEP_DEG] } : { rotate: 0 }}
+        transition={onScreen ? motionSafe(
           { duration: 4, repeat: Infinity, repeatType: 'reverse', ease: 'easeInOut' } as const,
           prefersReduced,
-        )}
+        ) : { duration: 0 }}
       >
         <line x1={CX} y1={CY} x2={CX} y2={CY - CONE_R} stroke={`url(#${sweepGrad})`} strokeWidth="2.5" strokeLinecap="round" />
       </motion.g>
@@ -77,11 +105,11 @@ export function PerceptionConeViz({ entities, accent = ACCENT_CYAN }: Perception
                 data-testid="perception-pulse"
                 cx={e.x} cy={e.y} r={5.5} fill="none" stroke={e.color} strokeWidth="1.5"
                 style={{ transformOrigin: 'center' }}
-                animate={{ scale: [1, 1.9, 1], opacity: [0.55, 0, 0.55] }}
-                transition={motionSafe(
+                animate={onScreen ? { scale: [1, 1.9, 1], opacity: [0.55, 0, 0.55] } : { scale: 1, opacity: 0.55 }}
+                transition={onScreen ? motionSafe(
                   { duration: e.inCone ? 1.8 : 2.6, repeat: Infinity, ease: 'easeInOut' } as const,
                   prefersReduced,
-                )}
+                ) : { duration: 0 }}
               />
             )}
             <circle cx={e.x} cy={e.y} r={4} fill={e.color} style={{ filter: `drop-shadow(0 0 4px ${e.color})` }} />

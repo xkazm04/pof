@@ -1,7 +1,7 @@
 'use client';
 import { getModuleChecklist } from '@/lib/module-registry';
 
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useMemo } from 'react';
 import {
   Music, Plus, Trash2, FileText, Loader2,
   Zap, Volume2, Radio, Settings, List, Eye, ListChecks, Code2, Wand2,
@@ -65,7 +65,10 @@ export function AudioView() {
   const [isCreating, setIsCreating] = useState(false);
   const [newDocName, setNewDocName] = useState('');
 
-  const ctx = { projectName, projectPath, ueVersion };
+  const ctx = useMemo(
+    () => ({ projectName, projectPath, ueVersion }),
+    [projectName, projectPath, ueVersion]
+  );
 
   // ── Pipeline CLI session ──
 

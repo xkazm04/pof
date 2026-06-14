@@ -79,7 +79,7 @@ interface AudioSceneRow {
   emitters: string;
 }
 
-interface BuildRow {
+export interface BuildRow {
   platform: string;
   config: string;
   status: string;
@@ -508,17 +508,21 @@ function buildArchitectureSection(
   };
 }
 
-function buildDeploymentSection(builds: BuildRow[], now: string): GDDSection {
+export function buildDeploymentSection(builds: BuildRow[], now: string): GDDSection {
   const lines: string[] = [];
 
-  // Platform summary
-  const platforms = new Map<string, { successes: number; failures: number; lastSize: number | null; avgDuration: number }>();
+  // Platform summary. Track a running sum + count per platform so "Avg Duration"
+  // is a true arithmetic mean (sum / count), not a pairwise running mean.
+  const platforms = new Map<string, { successes: number; failures: number; lastSize: number | null; durationSum: number; durationCount: number }>();
   for (const b of builds) {
-    const p = platforms.get(b.platform) ?? { successes: 0, failures: 0, lastSize: null, avgDuration: 0 };
+    const p = platforms.get(b.platform) ?? { successes: 0, failures: 0, lastSize: null, durationSum: 0, durationCount: 0 };
     if (b.status === 'success') p.successes++;
     else p.failures++;
     if (p.lastSize === null && b.size_bytes) p.lastSize = b.size_bytes;
-    if (b.duration_ms) p.avgDuration = (p.avgDuration + b.duration_ms) / 2;
+    if (b.duration_ms) {
+      p.durationSum += b.duration_ms;
+      p.durationCount++;
+    }
     platforms.set(b.platform, p);
   }
 
@@ -528,7 +532,8 @@ function buildDeploymentSection(builds: BuildRow[], now: string): GDDSection {
     const total = data.successes + data.failures;
     const rate = total > 0 ? Math.round((data.successes / total) * 100) : 0;
     const size = data.lastSize ? formatBytes(data.lastSize) : '—';
-    const duration = data.avgDuration > 0 ? formatDuration(data.avgDuration) : '—';
+    const avgDuration = data.durationCount > 0 ? data.durationSum / data.durationCount : 0;
+    const duration = avgDuration > 0 ? formatDuration(avgDuration) : '—';
     lines.push(`| ${platform} | ${total} | ${rate}% | ${size} | ${duration} |`);
   }
 

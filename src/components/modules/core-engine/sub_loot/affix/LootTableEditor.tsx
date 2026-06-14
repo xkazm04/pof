@@ -48,6 +48,20 @@ export function LootTableEditor() {
 
   const editorTotalWeight = useMemo(() => editorEntries.reduce((s, e) => s + e.weight, 0), [editorEntries]);
 
+  // Whole-table drop-rate distribution segments for the live-preview bar. Memoized so it only
+  // recomputes when entries/weights actually change — not on unrelated state ticks (search,
+  // pagination, source filter, JSON toggle, import flags). Stays unpaginated by design: the bar
+  // visualizes the entire table's drop-rate split, independent of the paged editable list above.
+  const previewSegments = useMemo(() => {
+    if (editorTotalWeight <= 0) return [];
+    return editorEntries.map((entry) => ({
+      id: entry.id,
+      pct: (entry.weight / editorTotalWeight) * 100,
+      name: entry.name,
+      color: rarityColor(entry.rarity),
+    }));
+  }, [editorEntries, editorTotalWeight]);
+
   const filteredEntries = useMemo(() => {
     let entries = editorEntries;
     if (sourceFilter !== 'all') {
@@ -186,8 +200,8 @@ export function LootTableEditor() {
       {/* Live preview bar */}
       {editorTotalWeight > 0 && (
         <div className="flex h-4 rounded overflow-hidden w-full mb-2">
-          {editorEntries.map((entry) => (
-            <div key={entry.id} title={`${entry.name}: ${((entry.weight / editorTotalWeight) * 100).toFixed(1)}%`} style={{ width: `${(entry.weight / editorTotalWeight) * 100}%`, backgroundColor: rarityColor(entry.rarity) }} />
+          {previewSegments.map((seg) => (
+            <div key={seg.id} title={`${seg.name}: ${seg.pct.toFixed(1)}%`} style={{ width: `${seg.pct}%`, backgroundColor: seg.color }} />
           ))}
         </div>
       )}

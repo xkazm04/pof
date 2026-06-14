@@ -1,0 +1,22 @@
+{
+  "index": 22,
+  "name": "AI Testing & Localization",
+  "group": "AI, Build & Packaging Systems",
+  "id": "ctx_1779817681571_x5attzp",
+  "description": "Automated quality production: the AI testing sandbox (test suites/scenarios) and the localization pipeline (string scan, machine translation, QA validation). Spans ai-testing and localization libs, their stores, and APIs.",
+  "filePaths": [
+    "src/lib/ai-testing-db.ts",
+    "src/types/ai-testing.ts",
+    "src/hooks/useAITesting.ts",
+    "src/components/modules/game-systems/AITestingSandbox.tsx",
+    "src/app/api/ai-testing/route.ts",
+    "src/lib/prompts/ai-testing.ts",
+    "src/lib/localization/definitions.ts",
+    "src/lib/localization/scan-engine.ts",
+    "src/lib/localization/translation-engine.ts",
+    "src/stores/localizationPipelineStore.ts",
+    "src/types/localization-pipeline.ts",
+    "src/components/modules/evaluator/LocalizationPipelineView.tsx",
+    "src/app/api/localization-pipeline/route.ts"
+  ]
+}

@@ -1,5 +1,6 @@
 'use client';
 
+import { memo } from 'react';
 import { Target } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { ACCENT_CYAN } from '@/lib/chart-colors';
@@ -8,7 +9,7 @@ import { ABILITY_UNLOCKS } from '../_shared/data';
 
 /* -- Key Milestone Timeline ----------------------------------------------- */
 
-export function MilestoneTimeline() {
+export const MilestoneTimeline = memo(function MilestoneTimeline() {
   return (
     <BlueprintPanel color={ACCENT_CYAN} className="p-3">
       <SectionHeader label="Key Milestone Timeline" icon={Target} color={ACCENT_CYAN} />
@@ -45,4 +46,4 @@ export function MilestoneTimeline() {
       </div>
     </BlueprintPanel>
   );
-}
+});

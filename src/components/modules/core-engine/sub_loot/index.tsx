@@ -4,9 +4,8 @@ import { useState, useCallback, useMemo } from 'react';
 import { Coins, LayoutGrid } from 'lucide-react';
 import { useTabFeatures } from '@/hooks/useTabFeatures';
 import { TabHeader, LoadingSpinner, SubTabNavigation, type SubTab } from '../unique-tabs/_shared';
-import { ACCENT, RARITY_TIERS, LOOT_SUBTABS, type LootSubtab } from './_shared/data';
+import { ACCENT, RARITY_TIERS, LOOT_SUBTABS, enemyMap, rarityColorFor, type LootSubtab } from './_shared/data';
 import { DUMMY_ITEMS } from '../sub_inventory/_shared/data';
-import { ARCHETYPES } from '../sub_bestiary/_shared/data';
 import { LootFilters } from './LootFilters';
 import { NarrativeBreadcrumb } from './NarrativeBreadcrumb';
 import { LootTabPanels } from './LootTabPanels';
@@ -14,7 +13,7 @@ import type { SubModuleId } from '@/types/modules';
 
 /* ── Cross-reference lookup maps (used by sub-components) ───────────────── */
 export const itemMap = new Map(DUMMY_ITEMS.map(i => [i.name, i]));
-export const enemyMap = new Map(ARCHETYPES.map(a => [a.id, a]));
+export { enemyMap };
 
 type RarityFilter = 'All' | (typeof RARITY_TIERS)[number]['name'];
 
@@ -49,7 +48,7 @@ export function LootTableVisualizer({ moduleId }: LootTableVisualizerProps) {
 
   const activeRarityColor = useMemo(() => {
     if (rarityFilter === 'All') return ACCENT;
-    return RARITY_TIERS.find(t => t.name === rarityFilter)?.color ?? ACCENT;
+    return rarityColorFor(rarityFilter);
   }, [rarityFilter]);
 
   const toggleExpand = useCallback(

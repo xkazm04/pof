@@ -116,9 +116,24 @@ export function HolisticHealthView({ onNavigateTab }: HolisticHealthViewProps = 
     fetchHealth(checklistProgress, scanHistory, lastScan, perfInput, crashInput);
   }, [fetchHealth, checklistProgress, scanHistory, lastScan, perfInput, crashInput]);
 
+  // The server result is a pure, deterministic function of exactly these five
+  // inputs (see computeProjectHealth). `checklistProgress`/`scanHistory`/`lastScan`
+  // are fresh object/array references on every store touch, so depending on their
+  // identity re-POSTs even when their *values* are unchanged. Key the auto-fetch on
+  // a primitive value-signature instead: it changes iff the POST body changes, so we
+  // refetch exactly when the inputs that affect the output change — no missed refetch
+  // (any genuine change alters the serialization) and no redundant ones (identity-only
+  // churn no longer counts). `handleRefresh` is intentionally excluded; the signature
+  // captures every value it reads.
+  const inputsSignature = useMemo(
+    () => JSON.stringify({ checklistProgress, scanHistory, lastScan, perfInput, crashInput }),
+    [checklistProgress, scanHistory, lastScan, perfInput, crashInput],
+  );
+
   useEffect(() => {
     handleRefresh();
-  }, [handleRefresh]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [inputsSignature]);
 
   const trendIcon = useMemo(() => {
     if (!summary) return null;

@@ -66,8 +66,89 @@ function validateEffort(e: string): FindingEffort {
 // ─── Parsing ─────────────────────────────────────────────────────────────────
 
 /**
+ * Extract the contents of the first fenced code block (```json … ``` or ``` … ```),
+ * wherever it appears in the text. Returns null if there is no closed fence.
+ *
+ * This lets a pass that emits prose around a fenced block (e.g. the combat-trace
+ * call graph followed by ```json [ … ] ```) still surface its JSON payload.
+ */
+function extractFencedBlock(text: string): string | null {
+  const match = /```(?:json)?\s*\n?([\s\S]*?)```/i.exec(text);
+  return match ? match[1].trim() : null;
+}
+
+/**
+ * Scan `text` for the first balanced JSON value of the given kind (`'['` for an
+ * array, `'{'` for an object) that successfully parses, starting from each
+ * matching opener. Bracket matching is string- and escape-aware so brackets
+ * inside JSON string values don't throw off the depth count. Returns
+ * `undefined` if no balanced, parseable value of that kind is found.
+ */
+function scanBalancedJson(text: string, open: '[' | '{'): unknown {
+  const close = open === '[' ? ']' : '}';
+
+  for (let i = 0; i < text.length; i++) {
+    if (text[i] !== open) continue;
+
+    let depth = 0;
+    let inString = false;
+    let escaped = false;
+
+    for (let j = i; j < text.length; j++) {
+      const ch = text[j];
+
+      if (inString) {
+        if (escaped) {
+          escaped = false;
+        } else if (ch === '\\') {
+          escaped = true;
+        } else if (ch === '"') {
+          inString = false;
+        }
+        continue;
+      }
+
+      if (ch === '"') {
+        inString = true;
+      } else if (ch === open) {
+        depth++;
+      } else if (ch === close) {
+        depth--;
+        if (depth === 0) {
+          const candidate = text.slice(i, j + 1);
+          try {
+            return JSON.parse(candidate);
+          } catch {
+            // Not valid JSON from this start — fall through and try the next opener.
+          }
+          break;
+        }
+      }
+    }
+  }
+
+  return undefined;
+}
+
+/**
+ * Find a parseable JSON findings payload in `text`. Unlike a naive
+ * first-`[`/last-`]` slice, this tolerates leading prose (and brackets inside
+ * that prose), so output like "Here are the findings: [ … ]" — or a
+ * combat-trace call graph with stray brackets before the real array — still
+ * parses. Findings are always an array, so a balanced array is preferred;
+ * a balanced object is accepted only as a fallback.
+ */
+function extractBalancedJson(text: string): unknown {
+  const arr = scanBalancedJson(text, '[');
+  if (arr !== undefined) return arr;
+  return scanBalancedJson(text, '{');
+}
+
+/**
  * Parse raw CLI output into structured findings.
- * The CLI should return a JSON array, but we handle markdown fences and noise.
+ * The CLI should return a JSON array, but we handle markdown fences, leading
+ * prose, and noise — including combat-trace output that prints a call graph
+ * before the JSON findings array.
  */
 export function parseFindings(
   raw: string,
@@ -75,25 +156,18 @@ export function parseFindings(
   moduleId: SubModuleId,
   pass: EvalPass,
 ): EvalFinding[] {
-  // Strip markdown code fences if present
-  let cleaned = raw.trim();
-  cleaned = cleaned.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/i, '');
-  cleaned = cleaned.trim();
+  const trimmed = raw.trim();
 
-  // Try to find a JSON array in the output
-  const arrayStart = cleaned.indexOf('[');
-  const arrayEnd = cleaned.lastIndexOf(']');
-  if (arrayStart === -1 || arrayEnd === -1 || arrayEnd <= arrayStart) {
-    return [];
-  }
+  // Prefer a fenced code block if one is present anywhere in the output;
+  // otherwise scan the whole string. Either way, locate the first balanced
+  // JSON array/object that actually parses.
+  const fenced = extractFencedBlock(trimmed);
+  let parsed = extractBalancedJson(fenced ?? trimmed);
 
-  cleaned = cleaned.slice(arrayStart, arrayEnd + 1);
-
-  let parsed: unknown;
-  try {
-    parsed = JSON.parse(cleaned);
-  } catch {
-    return [];
+  // If a fence was present but its contents didn't parse, fall back to scanning
+  // the full output (the array may live outside the fence).
+  if (parsed === undefined && fenced !== null) {
+    parsed = extractBalancedJson(trimmed);
   }
 
   if (!Array.isArray(parsed)) return [];

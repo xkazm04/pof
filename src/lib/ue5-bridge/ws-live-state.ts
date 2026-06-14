@@ -344,9 +344,15 @@ class UE5LiveStateClient {
     this.messageCount = 0;
     this.frameRate = 0;
     this.fpsInterval = setInterval(() => {
-      this.frameRate = this.messageCount;
+      const next = this.messageCount;
       this.messageCount = 0;
-      this.setState({ frameRate: this.frameRate });
+      // Skip the store write/notify when the rate is unchanged (e.g. a steady
+      // idle 0). A no-op write would otherwise re-render every subscriber once
+      // per second forever while connected.
+      if (next !== this.frameRate) {
+        this.frameRate = next;
+        this.setState({ frameRate: next });
+      }
     }, 1000);
   }
 

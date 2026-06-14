@@ -1,5 +1,6 @@
 'use client';
 
+import { useMemo } from 'react';
 import { AlertTriangle, Cpu, Layers } from 'lucide-react';
 import {
   STATUS_SUCCESS, STATUS_WARNING, STATUS_ERROR, STATUS_NEUTRAL,
@@ -22,7 +23,10 @@ import type { SurfaceType, RenderFeature } from './MaterialParameterConfigurator
 export function MaterialBudgetBar({
   surfaceType, features,
 }: { surfaceType: SurfaceType; features: RenderFeature[] }) {
-  const report = estimateMaterialBudget({ surfaceType, features });
+  const report = useMemo(
+    () => estimateMaterialBudget({ surfaceType, features }),
+    [surfaceType, features],
+  );
   return (
     <section aria-label="Material cost" className="rounded-lg border border-border/40 bg-surface-deep/40 p-3 space-y-3">
       <header className="flex items-center gap-2">

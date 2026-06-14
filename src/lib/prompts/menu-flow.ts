@@ -43,10 +43,12 @@ export function buildMenuFlowPrompt(config: MenuFlowConfig, ctx: ProjectContext)
     })
     .join('\n\n');
 
+  const screenById = new Map(config.screens.map((s) => [s.id, s]));
+
   const transitionLines = config.transitions
     .map((t) => {
-      const fromScr = config.screens.find((s) => s.id === t.fromId);
-      const toScr = config.screens.find((s) => s.id === t.toId);
+      const fromScr = screenById.get(t.fromId);
+      const toScr = screenById.get(t.toId);
       if (!fromScr || !toScr) return null;
       const dir = t.bidirectional ? '⟷' : '→';
       return `  - ${fromScr.name} ${dir} ${toScr.name} (trigger: "${t.trigger}")`;

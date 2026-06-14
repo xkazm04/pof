@@ -1,13 +1,13 @@
 'use client';
 
-import { useState } from 'react';
+import { memo, useState } from 'react';
 import { Layers } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { BlueprintPanel, SectionHeader } from '../../unique-tabs/_design';
 import { NormalizedLineChart } from '../../unique-tabs/_shared';
 import { ACCENT, MULTI_CURVE_SERIES } from '../_shared/data';
 
-export function MultiCurveOverlay() {
+export const MultiCurveOverlay = memo(function MultiCurveOverlay() {
   const [curveVisibility, setCurveVisibility] = useState<Record<string, boolean>>(() =>
     Object.fromEntries(MULTI_CURVE_SERIES.map(s => [s.id, true]))
   );
@@ -74,4 +74,4 @@ export function MultiCurveOverlay() {
       </NormalizedLineChart>
     </BlueprintPanel>
   );
-}
+});

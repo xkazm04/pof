@@ -12,9 +12,9 @@ beforeAll(() => {
 afterEach(cleanup);
 
 const RESULTS: SearchResult[] = [
-  { id: 'r1', label: 'Fireball', category: 'ability', tab: 'abilities', sectionId: 'abilities', color: STATUS_ERROR },
-  { id: 'r2', label: 'Frostbite', category: 'ability', tab: 'abilities', sectionId: 'abilities', color: STATUS_SUCCESS },
-  { id: 'r3', label: 'Burning', category: 'effect', tab: 'effects', sectionId: 'effects', color: STATUS_WARNING },
+  { id: 'r1', label: 'Fireball', labelLower: 'fireball', category: 'ability', tab: 'abilities', sectionId: 'abilities', color: STATUS_ERROR },
+  { id: 'r2', label: 'Frostbite', labelLower: 'frostbite', category: 'ability', tab: 'abilities', sectionId: 'abilities', color: STATUS_SUCCESS },
+  { id: 'r3', label: 'Burning', labelLower: 'burning', category: 'effect', tab: 'effects', sectionId: 'effects', color: STATUS_WARNING },
 ];
 
 type PaletteProps = React.ComponentProps<typeof SpellbookSearchPalette>;

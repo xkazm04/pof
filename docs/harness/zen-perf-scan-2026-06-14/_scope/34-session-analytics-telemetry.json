@@ -1,0 +1,23 @@
+{
+  "index": 34,
+  "name": "Session Analytics & Telemetry",
+  "group": "Director, Sessions & Autonomy",
+  "id": "ctx_1779817681638_7078qcm",
+  "description": "Capture and analyze usage: session analytics, CLI session logging/request logging, telemetry snapshots with genre suggestions, and the activity feed. Spans session-analytics/session-log/telemetry libs and their APIs.",
+  "filePaths": [
+    "src/lib/session-analytics-db.ts",
+    "src/lib/session-log-db.ts",
+    "src/lib/telemetry-db.ts",
+    "src/lib/request-log.ts",
+    "src/lib/genre-evolution-engine.ts",
+    "src/types/session-analytics.ts",
+    "src/types/session-log.ts",
+    "src/types/telemetry.ts",
+    "src/hooks/useSessionAnalytics.ts",
+    "src/components/modules/evaluator/SessionAnalyticsDashboard.tsx",
+    "src/components/modules/core-engine/TelemetryEvolution.tsx",
+    "src/app/api/session-analytics/route.ts",
+    "src/app/api/telemetry/route.ts",
+    "src/app/api/session-log/route.ts"
+  ]
+}

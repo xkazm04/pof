@@ -15,6 +15,8 @@ export type SearchCategory = 'section' | 'ability' | 'tag' | 'effect' | 'attribu
 export interface SearchResult {
   id: string;
   label: string;
+  /** Precomputed `label.toLowerCase()` so the keystroke filter does plain `includes` without re-lowercasing. */
+  labelLower: string;
   category: SearchCategory;
   tab: string;
   sectionId: string;
@@ -45,10 +47,19 @@ function sectionToTab(sectionId: string): string {
 export function useSpellbookSearchIndex(): SearchResult[] {
   const data = useSpellbookData();
 
+  // Key the memo on the underlying source arrays/maps actually consumed below,
+  // not the `data` context object whose identity is unstable across syncs
+  // (the provider returns a fresh object on every sync-state toggle). This keeps
+  // the index built once per real data change instead of rebuilt mid-typing.
+  const {
+    TAG_DETAIL_MAP, TAG_TREE, ABILITY_RADAR_DATA, COOLDOWN_ABILITIES,
+    CORE_ATTRIBUTES, DERIVED_ATTRIBUTES, TAG_DEP_NODES,
+  } = data;
+
   return useMemo(() => {
     const results: SearchResult[] = [];
     const add = (id: string, label: string, category: SearchCategory, tab: string, sectionId: string, color: string) =>
-      results.push({ id, label, category, tab, sectionId, color });
+      results.push({ id, label, labelLower: label.toLowerCase(), category, tab, sectionId, color });
 
     // Sections
     for (const s of SECTIONS) {
@@ -60,7 +71,7 @@ export function useSpellbookSearchIndex(): SearchResult[] {
     }
 
     // Tag detail map
-    for (const [key, detail] of Object.entries(data.TAG_DETAIL_MAP)) {
+    for (const [key, detail] of Object.entries(TAG_DETAIL_MAP)) {
       const tab = key.startsWith('Ability') ? 'abilities' : 'tags';
       const section = key.startsWith('Ability') ? 'abilities' : key.startsWith('Input') ? 'tags' : key.startsWith('Damage') ? 'effects' : 'tags';
       add(`tag-${key}`, key, 'tag', tab === 'abilities' ? 'abilities' : 'tags', section, detail.color);
@@ -73,15 +84,15 @@ export function useSpellbookSearchIndex(): SearchResult[] {
         if (node.children) flattenTags(node.children as typeof nodes);
       }
     };
-    flattenTags(data.TAG_TREE);
+    flattenTags(TAG_TREE);
 
     // Abilities from radar
-    for (const ab of data.ABILITY_RADAR_DATA) {
+    for (const ab of ABILITY_RADAR_DATA) {
       add(`radar-${ab.name}`, ab.name, 'ability', 'abilities', 'abilities', ab.color);
     }
 
     // Cooldown abilities
-    for (const ab of data.COOLDOWN_ABILITIES) {
+    for (const ab of COOLDOWN_ABILITIES) {
       add(`cd-${ab.name}`, ab.name, 'ability', 'abilities', 'abilities', ab.color);
     }
 
@@ -91,10 +102,10 @@ export function useSpellbookSearchIndex(): SearchResult[] {
     }
 
     // Core + Derived attributes
-    for (const attr of data.CORE_ATTRIBUTES) {
+    for (const attr of CORE_ATTRIBUTES) {
       add(`attr-core-${attr}`, attr, 'attribute', 'tags', 'attributes', ACCENT_EMERALD_DARK);
     }
-    for (const attr of data.DERIVED_ATTRIBUTES) {
+    for (const attr of DERIVED_ATTRIBUTES) {
       add(`attr-derived-${attr}`, attr, 'attribute', 'tags', 'attributes', ACCENT_EMERALD_DARK);
     }
 
@@ -104,7 +115,7 @@ export function useSpellbookSearchIndex(): SearchResult[] {
     }
 
     // Tag dep nodes
-    for (const node of data.TAG_DEP_NODES) {
+    for (const node of TAG_DEP_NODES) {
       add(`dep-${node.id}`, node.label, 'tag', 'tags', 'tag-deps', node.color);
     }
 
@@ -115,7 +126,10 @@ export function useSpellbookSearchIndex(): SearchResult[] {
       seen.add(r.id);
       return true;
     });
-  }, [data]);
+  }, [
+    TAG_DETAIL_MAP, TAG_TREE, ABILITY_RADAR_DATA, COOLDOWN_ABILITIES,
+    CORE_ATTRIBUTES, DERIVED_ATTRIBUTES, TAG_DEP_NODES,
+  ]);
 }
 
 export const MAX_RESULTS = 20;

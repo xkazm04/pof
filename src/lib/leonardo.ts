@@ -4,6 +4,7 @@
  */
 
 import { logger } from '@/lib/logger';
+import { pollUntilReady } from '@/lib/visual-gen/poll';
 
 const LEONARDO_API_BASE = 'https://cloud.leonardo.ai/api/rest/v1';
 const LUCID_ORIGIN_MODEL_ID = '7b592283-e8a7-4c5a-9ba6-d18c31f258b9';
@@ -35,10 +36,6 @@ function authHeaders(json = false): Record<string, string> {
   const h: Record<string, string> = { Authorization: `Bearer ${getApiKey()}` };
   if (json) h['Content-Type'] = 'application/json';
   return h;
-}
-
-function sleep(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 /**
@@ -136,27 +133,33 @@ export async function generateImage(
   const generationId = genData.sdGenerationJob.generationId;
   logger.info(`[leonardo] Generation started: ${generationId}`);
 
-  for (let attempt = 0; attempt < MAX_POLL_ATTEMPTS; attempt++) {
-    await sleep(pollMs);
-    const pollRes = await fetch(`${LEONARDO_API_BASE}/generations/${generationId}`, {
-      headers: authHeaders(),
-    });
-    if (!pollRes.ok) {
-      logger.warn(`[leonardo] Poll attempt ${attempt + 1} failed (${pollRes.status})`);
-      continue;
-    }
-    const pollData = (await pollRes.json()) as PollResponse;
-    const gen = pollData.generations_by_pk;
-    if (gen?.status === 'COMPLETE' && gen.generated_images.length > 0) {
-      const imageUrl = gen.generated_images[0].url;
-      logger.info(`[leonardo] Generation complete: ${imageUrl}`);
-      if (opts.cleanup === false) return { imageUrl, generationId };
-      const bytes = await downloadThenDelete(imageUrl, generationId);
-      return { imageUrl, generationId, imageBase64: Buffer.from(bytes).toString('base64') };
-    }
-    if (gen?.status === 'FAILED') throw new Error('Leonardo generation failed');
-  }
-  throw new Error(`Leonardo generation timed out after ${(MAX_POLL_ATTEMPTS * pollMs) / 1000}s`);
+  let pollAttempt = 0;
+  const gen = await pollUntilReady<NonNullable<PollResponse['generations_by_pk']>>({
+    intervalMs: pollMs,
+    maxAttempts: MAX_POLL_ATTEMPTS,
+    fetchStatus: async () => {
+      const attempt = pollAttempt++;
+      const pollRes = await fetch(`${LEONARDO_API_BASE}/generations/${generationId}`, {
+        headers: authHeaders(),
+      });
+      if (!pollRes.ok) {
+        logger.warn(`[leonardo] Poll attempt ${attempt + 1} failed (${pollRes.status})`);
+        return undefined;
+      }
+      const pollData = (await pollRes.json()) as PollResponse;
+      return pollData.generations_by_pk ?? undefined;
+    },
+    isDone: (g) => g.status === 'COMPLETE' && g.generated_images.length > 0,
+    isFailed: (g) => g.status === 'FAILED',
+    onFailed: () => new Error('Leonardo generation failed'),
+    onTimeout: () => new Error(`Leonardo generation timed out after ${(MAX_POLL_ATTEMPTS * pollMs) / 1000}s`),
+  });
+
+  const imageUrl = gen.generated_images[0].url;
+  logger.info(`[leonardo] Generation complete: ${imageUrl}`);
+  if (opts.cleanup === false) return { imageUrl, generationId };
+  const bytes = await downloadThenDelete(imageUrl, generationId);
+  return { imageUrl, generationId, imageBase64: Buffer.from(bytes).toString('base64') };
 }
 
 /** Remove a generation from the Leonardo account (the local copy is the only retained one). */
@@ -319,22 +322,24 @@ export async function generateTextureOn3DModel(req: Texture3DRequest): Promise<T
     if (!jobId) throw new Error('Leonardo texture job returned no id');
 
     // 4. poll for the PBR maps
-    for (let attempt = 0; attempt < MAX_POLL_ATTEMPTS; attempt++) {
-      await sleep(pollMs);
-      const pollRes = await fetch(`${LEONARDO_API_BASE}/generations-texture/${jobId}`, {
-        headers: authHeaders(),
-      });
-      if (!pollRes.ok) continue;
-      const data = (await pollRes.json()) as {
-        texture_generation?: { status?: string; albedo?: string; normal?: string; roughness?: string };
-      };
-      const t = data.texture_generation;
-      if (t?.status === 'COMPLETE' && t.albedo) {
-        return { modelAssetId, albedoUrl: t.albedo, normalUrl: t.normal, roughnessUrl: t.roughness };
-      }
-      if (t?.status === 'FAILED') throw new Error('Leonardo texture generation failed');
-    }
-    throw new Error('Leonardo texture generation timed out');
+    type TextureGen = { status?: string; albedo?: string; normal?: string; roughness?: string };
+    const t = await pollUntilReady<TextureGen>({
+      intervalMs: pollMs,
+      maxAttempts: MAX_POLL_ATTEMPTS,
+      fetchStatus: async () => {
+        const pollRes = await fetch(`${LEONARDO_API_BASE}/generations-texture/${jobId}`, {
+          headers: authHeaders(),
+        });
+        if (!pollRes.ok) return undefined;
+        const data = (await pollRes.json()) as { texture_generation?: TextureGen };
+        return data.texture_generation ?? undefined;
+      },
+      isDone: (tg) => tg.status === 'COMPLETE' && !!tg.albedo,
+      isFailed: (tg) => tg.status === 'FAILED',
+      onFailed: () => new Error('Leonardo texture generation failed'),
+      onTimeout: () => new Error('Leonardo texture generation timed out'),
+    });
+    return { modelAssetId, albedoUrl: t.albedo!, normalUrl: t.normal, roughnessUrl: t.roughness };
   } finally {
     // Cleanup: delete the uploaded model asset (mirrors the cleanup protocol).
     const del = await fetch(`${LEONARDO_API_BASE}/models-3d/${modelAssetId}`, {

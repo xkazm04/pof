@@ -4,7 +4,7 @@ import { useState, useCallback, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Plus, Settings, Monitor, Terminal as TerminalIcon, Laptop, Smartphone, Tablet,
-  Play, Save, X, RefreshCw, Wrench, Rocket, ChevronDown,
+  Save, X, RefreshCw, Wrench, Rocket,
 } from 'lucide-react';
 import {
   type BuildProfile, type PlatformId, type BuildConfig,
@@ -13,6 +13,7 @@ import {
 } from '@/lib/packaging/build-profiles';
 import { useProjectStore } from '@/stores/projectStore';
 import { apiFetch } from '@/lib/api-utils';
+import { generateUATCommand } from '@/lib/packaging/uat-command-generator';
 import { PlatformProfileCard } from './PlatformProfileCard';
 import { CookSettingsPanel } from './CookSettingsPanel';
 import { CookProgress } from './CookProgress';
@@ -44,11 +45,23 @@ export function BuildConfigSelector() {
   const [loading, setLoading] = useState(true);
   const [showEditor, setShowEditor] = useState(false);
   const [editingProfile, setEditingProfile] = useState<Partial<BuildProfile> | null>(null);
-  const [uatCommands, setUatCommands] = useState<Record<string, string>>({});
 
   const projectName = useProjectStore((s) => s.projectName);
   const projectPath = useProjectStore((s) => s.projectPath);
   const ueVersion = useProjectStore((s) => s.ueVersion);
+
+  // UAT commands are a pure, deterministic function of (profile, projectPath,
+  // projectName, ueVersion) — the same generator the server used to run per
+  // profile over a chatty POST loop. Computed client-side; identical output.
+  const uatCommands = useMemo(() => {
+    const cmds: Record<string, string> = {};
+    for (const p of profiles) {
+      try {
+        cmds[p.id] = generateUATCommand(p, projectPath, projectName, ueVersion);
+      } catch { /* skip command generation failures */ }
+    }
+    return cmds;
+  }, [profiles, projectPath, projectName, ueVersion]);
 
   const [cookRequest, setCookRequest] = useState<{
     profileId: string; projectPath: string; projectName: string; ueVersion: string;
@@ -69,26 +82,12 @@ export function BuildConfigSelector() {
     try {
       const data = await apiFetch<{ profiles: BuildProfile[] }>('/api/packaging/profiles');
       setProfiles(data.profiles ?? []);
-
-      // Generate commands for each profile
-      const cmds: Record<string, string> = {};
-      for (const p of data.profiles ?? []) {
-        try {
-          const cmdData = await apiFetch<{ command: string }>('/api/packaging/profiles', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ action: 'generate-command', profile: p, projectPath, projectName, ueVersion }),
-          });
-          if (cmdData.command) cmds[p.id] = cmdData.command;
-        } catch { /* skip command generation failures */ }
-      }
-      setUatCommands(cmds);
     } catch (e) {
       console.error('Failed to fetch profiles:', e);
     } finally {
       setLoading(false);
     }
-  }, [projectPath, projectName, ueVersion]);
+  }, []);
 
   useEffect(() => { fetchProfiles(); }, [fetchProfiles]);
 

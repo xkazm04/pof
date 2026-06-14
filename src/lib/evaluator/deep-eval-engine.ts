@@ -129,7 +129,17 @@ export async function runDeepEval(options: DeepEvalOptions): Promise<DeepEvalRes
   const emitProgress = () => {
     progress.completedSteps = completedSteps;
     progress.findings = [...allFindings];
-    onProgress?.({ ...progress, passStatuses: JSON.parse(JSON.stringify(passStatuses)) });
+    // Snapshot passStatuses with a shallow structural copy instead of a full
+    // JSON deep clone. The engine mutates `passStatuses[module][pass]` in place
+    // between emits, so each consumer snapshot must own its own outer object and
+    // per-module rows; the leaf values are immutable strings and can be shared.
+    // This is content-identical to the deep clone but avoids serializing the
+    // whole nested record (~17×4 cells) on every one of ~140 emits per scan.
+    const passStatusesSnapshot: typeof passStatuses = {};
+    for (const m in passStatuses) {
+      passStatusesSnapshot[m] = { ...passStatuses[m] };
+    }
+    onProgress?.({ ...progress, passStatuses: passStatusesSnapshot });
   };
 
   emitProgress();

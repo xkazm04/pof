@@ -349,7 +349,11 @@ export function generateSuggestions(
 ): EvolutionSuggestion[] {
   const suggestions: EvolutionSuggestion[] = [];
   const moduleVariants = getVariantsForModule(moduleId);
-  const activeTests = getActiveTests(moduleId);
+  // Fetch the A/B tests once and derive both the active and concluded subsets
+  // from the same result, instead of two full-table scans (getActiveTests +
+  // the concluded filter both called getAllABTests independently).
+  const moduleTests = getAllABTests().filter((t) => t.moduleId === moduleId);
+  const activeTests = moduleTests.filter((t) => t.status === 'running');
 
   // Suggest clustering if enough sessions
   if (sessions.length >= 10) {
@@ -388,10 +392,8 @@ export function generateSuggestions(
     }
   }
 
-  // Suggest adopting winners from concluded tests
-  const concluded = getAllABTests().filter(
-    (t) => t.status === 'concluded' && t.moduleId === moduleId && t.winnerId,
-  );
+  // Suggest adopting winners from concluded tests (reuse the rows fetched above)
+  const concluded = moduleTests.filter((t) => t.status === 'concluded' && t.winnerId);
   for (const test of concluded) {
     const winner = test.winnerId ? getVariant(test.winnerId) : null;
     if (winner) {
@@ -417,16 +419,38 @@ export function getEvolutionStats(): EvolutionStats {
   const active = allTests.filter((t) => t.status === 'running');
   const concluded = allTests.filter((t) => t.status === 'concluded');
 
-  // Per-module breakdown
+  // Per-module breakdown. Bucket variants/active/concluded tests by moduleId in
+  // a single grouping pass instead of re-filtering the full arrays once per
+  // module (was O(modules × (variants + tests))).
+  const variantsByModule = new Map<SubModuleId, PromptVariant[]>();
+  for (const v of allVariants) {
+    const list = variantsByModule.get(v.moduleId) ?? [];
+    list.push(v);
+    variantsByModule.set(v.moduleId, list);
+  }
+  const activeByModule = new Map<SubModuleId, ABTest[]>();
+  for (const t of active) {
+    const list = activeByModule.get(t.moduleId) ?? [];
+    list.push(t);
+    activeByModule.set(t.moduleId, list);
+  }
+  const concludedByModule = new Map<SubModuleId, ABTest[]>();
+  for (const t of concluded) {
+    const list = concludedByModule.get(t.moduleId) ?? [];
+    list.push(t);
+    concludedByModule.set(t.moduleId, list);
+  }
+
+  // Preserve the original iteration order: modules in first-seen order of variants.
   const moduleIds = new Set(allVariants.map((v) => v.moduleId));
   const moduleBreakdown: ModuleEvolutionStats[] = [];
   let totalImprovement = 0;
   let improvementCount = 0;
 
   for (const mid of moduleIds) {
-    const modVariants = allVariants.filter((v) => v.moduleId === mid);
-    const modActiveTests = active.filter((t) => t.moduleId === mid);
-    const modConcluded = concluded.filter((t) => t.moduleId === mid);
+    const modVariants = variantsByModule.get(mid) ?? [];
+    const modActiveTests = activeByModule.get(mid) ?? [];
+    const modConcluded = concludedByModule.get(mid) ?? [];
 
     // Compute best/default success rates from concluded tests
     let bestRate = 0;

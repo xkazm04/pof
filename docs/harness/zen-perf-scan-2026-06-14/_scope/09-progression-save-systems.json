@@ -1,0 +1,24 @@
+{
+  "index": 9,
+  "name": "Progression & Save Systems",
+  "group": "Progression, World & Bestiary",
+  "id": "ctx_1779817681461_p2xbdbr",
+  "description": "Tune XP/level progression curves, build paths and reward pacing, plus save/load schema, autosave, cloud sync and serialization profiling. Covers the sub_progression and sub_save modules.",
+  "filePaths": [
+    "src/components/modules/core-engine/sub_progression/index.tsx",
+    "src/components/modules/core-engine/sub_progression/analysis/DiminishingReturnsVisualizer.tsx",
+    "src/components/modules/core-engine/sub_progression/analysis/PowerCurveDangerZones.tsx",
+    "src/components/modules/core-engine/sub_progression/builds/BuildPathComparison.tsx",
+    "src/components/modules/core-engine/sub_progression/builds/BuildPresetPanel.tsx",
+    "src/components/modules/core-engine/sub_progression/builds/XpSourceBreakdown.tsx",
+    "src/components/modules/core-engine/sub_progression/curves/CurveDeltaSummary.tsx",
+    "src/components/modules/core-engine/sub_progression/curves/CurveParametersPanel.tsx",
+    "src/components/modules/core-engine/sub_progression/curves/MainChartArea.tsx",
+    "src/components/modules/core-engine/sub_save/index.tsx",
+    "src/components/modules/core-engine/sub_save/advanced/AutoSaveConfig.tsx",
+    "src/components/modules/core-engine/sub_save/advanced/CloudSyncStatus.tsx",
+    "src/components/modules/core-engine/sub_save/advanced/DataRecoveryTool.tsx",
+    "src/components/modules/core-engine/sub_save/advanced/SerializationProfiler.tsx",
+    "src/components/modules/core-engine/sub_save/schema/BudgetAlerting.tsx"
+  ]
+}

@@ -41,6 +41,12 @@ const keyOf = (j: GateJob) => `${j.catalogId}|${j.entityId}|${j.step}`;
 /** One drain pass: collect deferred jobs not in cooldown, drain them, refresh cooldowns. Exported for tests. */
 export async function runDrainTick(now: number = Date.now()): Promise<DrainSummary | null> {
   if (!cfg) return null;
+  // Sweep expired cooldowns up front: an entry whose cooldown has elapsed (value <= now)
+  // is already non-gating (line below treats missing/expired identically), so dropping it
+  // changes no behavior for live jobs while reclaiming keys for jobs that have vanished.
+  for (const [k, until] of cooldownUntil) {
+    if (until <= now) cooldownUntil.delete(k);
+  }
   const executors = buildExecutors(cfg.executor ?? { executor: 'bridge' });
   const jobs = collectDeferred(cfg.filter).filter((j) => (cooldownUntil.get(keyOf(j)) ?? 0) <= now);
   const summary = jobs.length

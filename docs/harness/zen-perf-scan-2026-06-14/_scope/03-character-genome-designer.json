@@ -1,0 +1,29 @@
+{
+  "index": 3,
+  "name": "Character & Genome Designer",
+  "group": "Character & Combat Authoring",
+  "id": "ctx_1779817245217_rn9cy7f",
+  "description": "Author ARPG characters via a data-driven 'genome': edit attributes, archetypes and movement feel, simulate level-scaled power curves, diff variants, and generate shareable build codes plus UE5 C++ scaffolding. Vertical slice spanning the sub_character module UI, genome libs, and the genome/character-blueprint Zustand stores.",
+  "filePaths": [
+    "src/components/modules/core-engine/sub_character/index.tsx",
+    "src/components/modules/core-engine/sub_character/genome/CharacterGenomeEditor.tsx",
+    "src/components/modules/core-engine/sub_character/genome/codegen.ts",
+    "src/components/modules/core-engine/sub_character/genome/sim-engine.ts",
+    "src/components/modules/core-engine/sub_character/genome/validation.ts",
+    "src/components/modules/core-engine/sub_character/genome/types.ts",
+    "src/components/modules/core-engine/sub_character/genome/GenomeComparisonTable.tsx",
+    "src/components/modules/core-engine/sub_character/genome/LevelScaledPowerCurve.tsx",
+    "src/components/modules/core-engine/sub_character/attributes/data.ts",
+    "src/components/modules/core-engine/sub_character/attributes/AttributePointOptimizer.tsx",
+    "src/components/modules/core-engine/sub_character/wizard/CharacterSourceWizard.tsx",
+    "src/components/modules/core-engine/sub_character/simulator/ArchetypeBalanceRadar.tsx",
+    "src/stores/genomeStore.ts",
+    "src/stores/characterBlueprintStore.ts",
+    "src/lib/genome/build-code.ts",
+    "src/lib/genome/codegen.ts",
+    "src/lib/genome/genome-diff.ts",
+    "src/lib/genome/defaults.ts",
+    "src/types/character-genome.ts",
+    "src/hooks/useGenomeHistory.ts"
+  ]
+}

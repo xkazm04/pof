@@ -20,7 +20,7 @@ export function generateEffectsCode(effects: EditorEffect[]): string {
   for (const eff of effects) {
     lines.push(`// \u2500\u2500 ${eff.name} \u2500\u2500`);
     lines.push(`// Duration: ${eff.duration}${eff.duration === 'duration' ? ` (${eff.durationSec}s)` : ''}`);
-    if (eff.cooldownSec > 0) lines.push(`// Period: ${eff.cooldownSec}s`);
+    if (eff.cooldownSec > 0) lines.push(`// Cooldown: ${eff.cooldownSec}s (ability cooldown — apply via a separate Cooldown GE, NOT as a Period/DoT tick)`);
     if (eff.modifiers.length > 0) {
       lines.push('// Modifiers:');
       for (const m of eff.modifiers) {

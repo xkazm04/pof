@@ -4,7 +4,15 @@ import type { ErrorMemoryRecord, ErrorContextEntry } from '@/types/error-memory'
 
 // ── Schema bootstrap ──────────────────────────────────────────────────────
 
+// DDL is idempotent (IF NOT EXISTS) but parsing/planning it on every read is
+// pure overhead. Bootstrap runs at most once per process; subsequent calls are
+// a cheap boolean check. Every read/write still calls ensure…() so first-call
+// correctness is preserved.
+let errorMemoryBootstrapped = false;
+
 export function ensureErrorMemoryTable() {
+  if (errorMemoryBootstrapped) return;
+
   const db = getDb();
 
   db.exec(`
@@ -35,6 +43,8 @@ export function ensureErrorMemoryTable() {
     CREATE INDEX IF NOT EXISTS idx_error_memory_fingerprint
     ON error_memory(fingerprint)
   `);
+
+  errorMemoryBootstrapped = true;
 }
 
 // ── Row type ─────────────────────────────────────────────────────────────
@@ -90,32 +100,21 @@ export function recordError(data: {
   ensureErrorMemoryTable();
   const db = getDb();
 
-  // Try to increment existing record
-  const existing = db.prepare(
-    'SELECT id FROM error_memory WHERE module_id = ? AND fingerprint = ?'
-  ).get(data.moduleId, data.fingerprint) as { id: number } | undefined;
-
-  if (existing) {
-    db.prepare(`
-      UPDATE error_memory
-      SET occurrences = occurrences + 1,
-          last_seen_at = datetime('now'),
-          was_resolved = 0
-      WHERE id = ?
-    `).run(existing.id);
-    const record = getRecord(existing.id);
-    if (!record) {
-      throw new Error(`Failed to retrieve error_memory record after UPDATE (id=${existing.id})`);
-    }
-    return record;
-  }
-
-  // Insert new
-  const result = db.prepare(`
+  // Single upsert collapses the former SELECT(exists) → UPDATE|INSERT → SELECT(getRecord)
+  // 3-query path into one statement. On conflict we bump only occurrences/last_seen_at/
+  // was_resolved — leaving category/error_code/pattern/message/file/fix_description as
+  // originally inserted, exactly matching the prior UPDATE behaviour. RETURNING * gives us
+  // the stored row without a follow-up read. Stored rows are byte-identical to the old path.
+  const row = db.prepare(`
     INSERT INTO error_memory
       (module_id, fingerprint, category, error_code, pattern, message, file, fix_description)
     VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-  `).run(
+    ON CONFLICT(module_id, fingerprint) DO UPDATE SET
+      occurrences = occurrences + 1,
+      last_seen_at = datetime('now'),
+      was_resolved = 0
+    RETURNING *
+  `).get(
     data.moduleId,
     data.fingerprint,
     data.category,
@@ -124,13 +123,12 @@ export function recordError(data: {
     data.message,
     data.file,
     data.fixDescription,
-  );
+  ) as ErrorMemoryRow | undefined;
 
-  const inserted = getRecord(result.lastInsertRowid as number);
-  if (!inserted) {
-    throw new Error(`Failed to retrieve error_memory record after INSERT (rowid=${result.lastInsertRowid})`);
+  if (!row) {
+    throw new Error(`Failed to upsert error_memory record (module=${data.moduleId}, fingerprint=${data.fingerprint})`);
   }
-  return inserted;
+  return rowToRecord(row);
 }
 
 // ── Batch record multiple errors ────────────────────────────────────────
@@ -139,18 +137,18 @@ export function recordErrors(
   moduleId: SubModuleId,
   errors: { fingerprint: string; category: string; errorCode: string | null; pattern: string; message: string; file: string | null; fixDescription: string }[],
 ): ErrorMemoryRecord[] {
-  return errors.map((e) => recordError({ moduleId, ...e }));
+  ensureErrorMemoryTable();
+  // Wrap the whole batch in one transaction: N errors commit in a single fsync and the
+  // batch is atomic (a mid-batch throw rolls back all rows instead of leaving a partial
+  // write). Each recordError is a single upsert statement, so the batch is ~N statements
+  // in one commit rather than ~3N statements across N auto-commit transactions.
+  const insertBatch = getDb().transaction(
+    (items: typeof errors) => items.map((e) => recordError({ moduleId, ...e })),
+  );
+  return insertBatch(errors);
 }
 
 // ── Read ────────────────────────────────────────────────────────────────
-
-function getRecord(id: number): ErrorMemoryRecord | null {
-  ensureErrorMemoryTable();
-  const row = getDb()
-    .prepare('SELECT * FROM error_memory WHERE id = ?')
-    .get(id) as ErrorMemoryRow | undefined;
-  return row ? rowToRecord(row) : null;
-}
 
 export function getModuleErrors(moduleId: SubModuleId, limit = 20): ErrorMemoryRecord[] {
   ensureErrorMemoryTable();

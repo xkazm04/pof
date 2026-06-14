@@ -231,23 +231,74 @@ test.describe('Visual Gate', () => {
 
 // ── Public API ──────────────────────────────────────────────────────────────
 
-/**
- * Run the visual verification gate. Captures + diffs baselines, runs axe scans,
- * and writes a structured `result.json` consumable by both the harness verifier
- * and the gallery UI.
- */
-export async function runVisualGate(
-  projectPath: string,
-  statePath: string,
-  iteration: number,
-  options: VisualGateConfig = {},
-): Promise<{
+export interface VisualGateRunResult {
   passed: boolean;
   output: string;
   durationMs: number;
   errors?: Array<{ message: string }>;
   result?: VisualGateResult;
-}> {
+}
+
+/**
+ * In-flight de-dupe for the visual gate.
+ *
+ * The generated Playwright spec walks *every* registered module
+ * (`VISUAL_GATE_MODULES`) and is keyed only on `statePath`/`iteration`/config —
+ * it is identical for every area verified within the same iteration. The
+ * orchestrator's streaming pool, however, calls `verify()` (and thus this gate)
+ * once per area, often concurrently. Spawning a full `npx playwright test` +
+ * browser cold-start per area is the dominant verification cost and is entirely
+ * redundant: every concurrent area in an iteration would get the same result.
+ *
+ * We share the *in-flight promise* per `(statePath, iteration)` so the runner +
+ * browser boots once while areas verify concurrently. The entry is dropped as
+ * soon as the run settles — so this is a pure in-flight de-dupe, NOT a result
+ * cache: a later sequential call (e.g. a self-heal re-verify in the same
+ * iteration) always starts a fresh run and can never read a stale pre-heal
+ * result. Per-area results are unchanged.
+ */
+const visualGateRunCache = new Map<string, Promise<VisualGateRunResult>>();
+
+/**
+ * Run the visual verification gate. Captures + diffs baselines, runs axe scans,
+ * and writes a structured `result.json` consumable by both the harness verifier
+ * and the gallery UI.
+ *
+ * Concurrent area verifications within one `(statePath, iteration)` share a
+ * single Playwright run + browser cold-start; the shared promise is dropped on
+ * settle, so any sequential re-verify runs fresh.
+ */
+export function runVisualGate(
+  projectPath: string,
+  statePath: string,
+  iteration: number,
+  options: VisualGateConfig = {},
+): Promise<VisualGateRunResult> {
+  const cacheKey = `${statePath}::${iteration}`;
+  const inflight = visualGateRunCache.get(cacheKey);
+  if (inflight) return inflight;
+
+  const run = executeVisualGate(projectPath, statePath, iteration, options).finally(() => {
+    // Drop the entry once the run settles: pure in-flight de-dupe, not a result
+    // cache. Concurrent callers share this run; later sequential callers (e.g. a
+    // self-heal re-verify in the same iteration) start a fresh run.
+    if (visualGateRunCache.get(cacheKey) === run) visualGateRunCache.delete(cacheKey);
+  });
+  visualGateRunCache.set(cacheKey, run);
+  return run;
+}
+
+/**
+ * Actually spawn Playwright and produce the gate result. Not memoised — callers
+ * go through {@link runVisualGate}. Exported only for tests / advanced callers
+ * that need to force a fresh run.
+ */
+export function executeVisualGate(
+  projectPath: string,
+  statePath: string,
+  iteration: number,
+  options: VisualGateConfig = {},
+): Promise<VisualGateRunResult> {
   const cfg: Required<VisualGateConfig> = {
     updateBaselines: options.updateBaselines ?? true,
     changeThreshold: options.changeThreshold ?? 0.02,

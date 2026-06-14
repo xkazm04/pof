@@ -227,6 +227,24 @@ export function AssetInventory() {
     return list;
   }, [scanResult, typeFilter, search, sortKey, sortDir]);
 
+  // Precompute per-asset dependency edge counts once, so each card reads from
+  // the map instead of re-filtering the full edge list on every render.
+  // Matches the inline `e.from === name || e.to === name` count: each edge is
+  // counted once per endpoint, and a self-loop (from === to) counts once.
+  // Plain object (same Record pattern as DependencyGraph's assetMap) because
+  // the `Map` identifier is shadowed by the lucide-react Map icon import.
+  const edgeCount = useMemo(() => {
+    const counts: Record<string, number> = {};
+    if (!scanResult) return counts;
+    for (const e of scanResult.dependencies) {
+      counts[e.from] = (counts[e.from] ?? 0) + 1;
+      if (e.to !== e.from) {
+        counts[e.to] = (counts[e.to] ?? 0) + 1;
+      }
+    }
+    return counts;
+  }, [scanResult]);
+
   const toggleSort = (key: SortKey) => {
     if (sortKey === key) {
       setSortDir(d => d === 'asc' ? 'desc' : 'asc');
@@ -452,7 +470,7 @@ export function AssetInventory() {
                       <div className="px-4 py-2.5 bg-surface/40 flex justify-between items-center relative z-10">
                         <span className="text-xs text-text-muted opacity-80">{formatDate(asset.modifiedAt)}</span>
                         <div className="text-xs text-text-muted font-mono bg-surface-deep px-1.5 py-0.5 rounded border border-border/40">
-                          {scanResult.dependencies.filter(e => e.from === asset.name || e.to === asset.name).length} edges
+                          {edgeCount[asset.name] ?? 0} edges
                         </div>
                       </div>
                     )}

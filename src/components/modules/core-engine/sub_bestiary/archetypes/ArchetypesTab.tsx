@@ -17,8 +17,6 @@ const PAGE_SIZE = 24;
 
 interface ArchetypesTabProps {
   featureMap: Map<string, FeatureRow>;
-  groupBy: GroupBy;
-  setGroupBy: (g: GroupBy) => void;
   compareIds: string[];
   toggleCompare: (id: string) => void;
   expandedArchetype: string | null;
@@ -29,29 +27,32 @@ interface ArchetypesTabProps {
   radarOverlays: Record<string, boolean>;
   onToggleOverlay: (key: string) => void;
   accent: string;
-  searchTerm: string;
-  setSearchTerm: (s: string) => void;
-  roleFilter: 'all' | EnemyRole;
-  setRoleFilter: (r: 'all' | EnemyRole) => void;
-  categoryFilter: 'all' | ArchetypeConfig['category'];
-  setCategoryFilter: (c: 'all' | ArchetypeConfig['category']) => void;
-  tierFilter: 'all' | ArchetypeConfig['tier'];
-  setTierFilter: (t: 'all' | ArchetypeConfig['tier']) => void;
-  areaFilter: 'all' | string;
-  setAreaFilter: (a: 'all' | string) => void;
-  filteredArchetypes: ArchetypeConfig[];
 }
 
 export function ArchetypesTab({
-  featureMap, groupBy, setGroupBy,
+  featureMap,
   compareIds, toggleCompare,
   expandedArchetype, toggleArchetype,
   cardModifiers, toggleCardModifier, setCodegenMod,
   radarOverlays, onToggleOverlay, accent,
-  searchTerm, setSearchTerm, roleFilter, setRoleFilter,
-  categoryFilter, setCategoryFilter, tierFilter, setTierFilter,
-  areaFilter, setAreaFilter, filteredArchetypes,
 }: ArchetypesTabProps) {
+  const [groupBy, setGroupBy] = useState<GroupBy>('none');
+  const [searchTerm, setSearchTerm] = useState('');
+  const [roleFilter, setRoleFilter] = useState<'all' | EnemyRole>('all');
+  const [categoryFilter, setCategoryFilter] = useState<'all' | ArchetypeConfig['category']>('all');
+  const [tierFilter, setTierFilter] = useState<'all' | ArchetypeConfig['tier']>('all');
+  const [areaFilter, setAreaFilter] = useState<'all' | string>('all');
+
+  const filteredArchetypes = useMemo(() => {
+    let result = ARCHETYPES;
+    if (searchTerm) result = result.filter(a => a.label.toLowerCase().includes(searchTerm.toLowerCase()));
+    if (roleFilter !== 'all') result = result.filter(a => a.role === roleFilter);
+    if (categoryFilter !== 'all') result = result.filter(a => a.category === categoryFilter);
+    if (tierFilter !== 'all') result = result.filter(a => a.tier === tierFilter);
+    if (areaFilter !== 'all') result = result.filter(a => a.area === areaFilter);
+    return result;
+  }, [searchTerm, roleFilter, categoryFilter, tierFilter, areaFilter]);
+
   const [page, setPage] = useState(0);
   const [prevFilterLen, setPrevFilterLen] = useState(filteredArchetypes.length);
   if (prevFilterLen !== filteredArchetypes.length) {

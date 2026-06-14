@@ -8,11 +8,17 @@ export interface BridgeExecutorOptions {
   port?: number;
   /** Injectable for tests. Defaults to global fetch. */
   fetchImpl?: FetchImpl;
-  /** Per-request timeout (ms). */
+  /** Per-request timeout (ms) for the synchronous run-automation POST + status probe. */
   timeoutMs?: number;
   /** Poll interval + cap when the plugin reports the run is still in progress. */
   pollMs?: number;
   maxPolls?: number;
+  /**
+   * Per-request timeout (ms) for the lightweight results-poll GETs. Defaults to a
+   * short value scaled off pollMs so a slow poll fails fast instead of inheriting the
+   * 120s run-automation timeout. The overall poll wall-clock is independently capped.
+   */
+  pollTimeoutMs?: number;
 }
 
 /**
@@ -77,10 +83,13 @@ export function makeBridgeExecutor(opts: BridgeExecutorOptions = {}): GateExecut
   const timeoutMs = opts.timeoutMs ?? 120_000;
   const pollMs = opts.pollMs ?? 2_000;
   const maxPolls = opts.maxPolls ?? 60;
+  // Poll GETs are lightweight and must fail fast — don't let them inherit the long
+  // run-automation timeout. Default to a few poll intervals (min 5s).
+  const pollTimeoutMs = opts.pollTimeoutMs ?? Math.max(5_000, pollMs * 3);
 
-  async function call(path: string, init?: RequestInit): Promise<Response> {
+  async function call(path: string, init?: RequestInit, reqTimeoutMs: number = timeoutMs): Promise<Response> {
     const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), timeoutMs);
+    const timer = setTimeout(() => controller.abort(), reqTimeoutMs);
     try {
       return await fetchImpl(`${base}${path}`, { ...init, signal: controller.signal });
     } finally {
@@ -121,10 +130,14 @@ export function makeBridgeExecutor(opts: BridgeExecutorOptions = {}): GateExecut
 
       // run-automation is async (returns {status:"accepted"}) — poll the results
       // endpoint until our test's verdict is recorded or we exhaust the budget.
-      for (let i = 0; !interp.terminal && i < maxPolls; i++) {
+      // Cap total poll wall-clock with a single deadline computed once, and arm a
+      // short per-GET timeout (not the 120s POST timeout) so one slow poll can't stall
+      // the whole budget. Worst case is now ~maxPolls × (pollMs + pollTimeoutMs).
+      const deadline = Date.now() + maxPolls * (pollMs + pollTimeoutMs);
+      for (let i = 0; !interp.terminal && i < maxPolls && Date.now() < deadline; i++) {
         await new Promise((r) => setTimeout(r, pollMs));
         const path = interp.testId ? `/test/results/${encodeURIComponent(interp.testId)}` : '/test/results';
-        const pr = await call(path).catch(() => null);
+        const pr = await call(path, undefined, pollTimeoutMs).catch(() => null);
         if (!pr || !pr.ok) continue;
         interp = interpretAutomationResult(await pr.json().catch(() => null), job.testName);
       }

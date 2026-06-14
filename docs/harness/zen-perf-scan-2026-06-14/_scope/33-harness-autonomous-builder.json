@@ -1,0 +1,21 @@
+{
+  "index": 33,
+  "name": "Harness Autonomous Builder",
+  "group": "Director, Sessions & Autonomy",
+  "id": "ctx_1779817681642_8rhqqx5",
+  "description": "The autonomous development loop: an orchestrator that builds a plan, executes steps via the CLI, verifies results (including a visual gate), and generates guides over UI/content overhaul areas. Centered on the harness lib and its API.",
+  "filePaths": [
+    "src/lib/harness/index.ts",
+    "src/lib/harness/orchestrator.ts",
+    "src/lib/harness/run-harness.ts",
+    "src/lib/harness/plan-builder.ts",
+    "src/lib/harness/executor.ts",
+    "src/lib/harness/verifier.ts",
+    "src/lib/harness/visual-gate.ts",
+    "src/lib/harness/guide-generator.ts",
+    "src/lib/harness/types.ts",
+    "src/lib/harness/ui-overhaul-areas.ts",
+    "src/lib/harness/content-overhaul-areas.ts",
+    "src/app/api/harness/route.ts"
+  ]
+}

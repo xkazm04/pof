@@ -1,0 +1,247 @@
+[
+  {
+    "index": 1,
+    "slug": "01-abilities-gas-system",
+    "name": "Abilities & GAS System",
+    "group": "Character & Combat Authoring",
+    "files": 21
+  },
+  {
+    "index": 2,
+    "slug": "02-combat-damage-tuning",
+    "name": "Combat & Damage Tuning",
+    "group": "Character & Combat Authoring",
+    "files": 19
+  },
+  {
+    "index": 3,
+    "slug": "03-character-genome-designer",
+    "name": "Character & Genome Designer",
+    "group": "Character & Combat Authoring",
+    "files": 20
+  },
+  {
+    "index": 4,
+    "slug": "04-economy-balance-simulation",
+    "name": "Economy & Balance Simulation",
+    "group": "Items, Loot & Economy",
+    "files": 14
+  },
+  {
+    "index": 5,
+    "slug": "05-inventory-system",
+    "name": "Inventory System",
+    "group": "Items, Loot & Economy",
+    "files": 14
+  },
+  {
+    "index": 6,
+    "slug": "06-loot-affix-system",
+    "name": "Loot & Affix System",
+    "group": "Items, Loot & Economy",
+    "files": 13
+  },
+  {
+    "index": 7,
+    "slug": "07-bestiary-enemy-design",
+    "name": "Bestiary & Enemy Design",
+    "group": "Progression, World & Bestiary",
+    "files": 14
+  },
+  {
+    "index": 8,
+    "slug": "08-world-quests-procgen",
+    "name": "World, Quests & Procgen",
+    "group": "Progression, World & Bestiary",
+    "files": 16
+  },
+  {
+    "index": 9,
+    "slug": "09-progression-save-systems",
+    "name": "Progression & Save Systems",
+    "group": "Progression, World & Bestiary",
+    "files": 15
+  },
+  {
+    "index": 10,
+    "slug": "10-animation-rigging",
+    "name": "Animation & Rigging",
+    "group": "Visual Content Generation",
+    "files": 13
+  },
+  {
+    "index": 11,
+    "slug": "11-level-materials-authoring",
+    "name": "Level & Materials Authoring",
+    "group": "Visual Content Generation",
+    "files": 20
+  },
+  {
+    "index": 12,
+    "slug": "12-visual-asset-generation",
+    "name": "Visual Asset Generation",
+    "group": "Visual Content Generation",
+    "files": 14
+  },
+  {
+    "index": 13,
+    "slug": "13-blender-mcp-integration",
+    "name": "Blender MCP Integration",
+    "group": "Audio & Blender Pipeline",
+    "files": 18
+  },
+  {
+    "index": 14,
+    "slug": "14-audio-generation-scenes",
+    "name": "Audio Generation & Scenes",
+    "group": "Audio & Blender Pipeline",
+    "files": 20
+  },
+  {
+    "index": 15,
+    "slug": "15-pipeline-artifacts-test-gates",
+    "name": "Pipeline Artifacts & Test Gates",
+    "group": "Catalog to UE Pipeline",
+    "files": 22
+  },
+  {
+    "index": 16,
+    "slug": "16-item-pipeline-steps",
+    "name": "Item Pipeline Steps",
+    "group": "Catalog to UE Pipeline",
+    "files": 10
+  },
+  {
+    "index": 17,
+    "slug": "17-layout-lab-pipeline-steps",
+    "name": "Layout Lab & Pipeline Steps",
+    "group": "Catalog to UE Pipeline",
+    "files": 16
+  },
+  {
+    "index": 18,
+    "slug": "18-crash-analysis-pattern-library",
+    "name": "Crash Analysis & Pattern Library",
+    "group": "Quality Evaluator & Health",
+    "files": 15
+  },
+  {
+    "index": 19,
+    "slug": "19-project-health-insights",
+    "name": "Project Health & Insights",
+    "group": "Quality Evaluator & Health",
+    "files": 13
+  },
+  {
+    "index": 20,
+    "slug": "20-gdd-compliance-design-doc",
+    "name": "GDD Compliance & Design Doc",
+    "group": "Quality Evaluator & Health",
+    "files": 10
+  },
+  {
+    "index": 21,
+    "slug": "21-quality-evaluation-engine",
+    "name": "Quality Evaluation Engine",
+    "group": "Quality Evaluator & Health",
+    "files": 15
+  },
+  {
+    "index": 22,
+    "slug": "22-ai-testing-localization",
+    "name": "AI Testing & Localization",
+    "group": "AI, Build & Packaging Systems",
+    "files": 13
+  },
+  {
+    "index": 23,
+    "slug": "23-build-cook-packaging",
+    "name": "Build, Cook & Packaging",
+    "group": "AI, Build & Packaging Systems",
+    "files": 20
+  },
+  {
+    "index": 24,
+    "slug": "24-ai-behavior-squad-tactics",
+    "name": "AI Behavior & Squad Tactics",
+    "group": "AI, Build & Packaging Systems",
+    "files": 13
+  },
+  {
+    "index": 25,
+    "slug": "25-app-shell-navigation",
+    "name": "App Shell & Navigation",
+    "group": "CLI Terminal & Module Shell",
+    "files": 20
+  },
+  {
+    "index": 26,
+    "slug": "26-module-registry-feature-matrix",
+    "name": "Module Registry & Feature Matrix",
+    "group": "CLI Terminal & Module Shell",
+    "files": 17
+  },
+  {
+    "index": 27,
+    "slug": "27-cli-terminal-task-system",
+    "name": "CLI Terminal & Task System",
+    "group": "CLI Terminal & Module Shell",
+    "files": 16
+  },
+  {
+    "index": 28,
+    "slug": "28-prompt-evolution-a-b-testing",
+    "name": "Prompt Evolution & A/B Testing",
+    "group": "Prompt Engineering",
+    "files": 8
+  },
+  {
+    "index": 29,
+    "slug": "29-prompt-construction-context",
+    "name": "Prompt Construction & Context",
+    "group": "Prompt Engineering",
+    "files": 14
+  },
+  {
+    "index": 30,
+    "slug": "30-project-setup-onboarding",
+    "name": "Project Setup & Onboarding",
+    "group": "UE5 Integration & Project Setup",
+    "files": 17
+  },
+  {
+    "index": 31,
+    "slug": "31-blueprint-transpiler-c-codegen",
+    "name": "Blueprint Transpiler & C++ Codegen",
+    "group": "UE5 Integration & Project Setup",
+    "files": 13
+  },
+  {
+    "index": 32,
+    "slug": "32-ue5-bridge-live-sync",
+    "name": "UE5 Bridge & Live Sync",
+    "group": "UE5 Integration & Project Setup",
+    "files": 21
+  },
+  {
+    "index": 33,
+    "slug": "33-harness-autonomous-builder",
+    "name": "Harness Autonomous Builder",
+    "group": "Director, Sessions & Autonomy",
+    "files": 12
+  },
+  {
+    "index": 34,
+    "slug": "34-session-analytics-telemetry",
+    "name": "Session Analytics & Telemetry",
+    "group": "Director, Sessions & Autonomy",
+    "files": 14
+  },
+  {
+    "index": 35,
+    "slug": "35-game-director-regression",
+    "name": "Game Director & Regression",
+    "group": "Director, Sessions & Autonomy",
+    "files": 13
+  }
+]

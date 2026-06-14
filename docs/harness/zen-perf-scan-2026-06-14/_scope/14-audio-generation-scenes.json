@@ -1,0 +1,29 @@
+{
+  "index": 14,
+  "name": "Audio Generation & Scenes",
+  "group": "Audio & Blender Pipeline",
+  "id": "ctx_1779817681516_84j8lbi",
+  "description": "Generate and catalog game audio: audio event catalogs, scene painting, spatial audio generation, and audio code generation, persisted as audio sets/assets/scenes. Spans the content/audio module, audio libs, and the audio APIs.",
+  "filePaths": [
+    "src/components/modules/content/audio/AudioView.tsx",
+    "src/components/modules/content/audio/AudioEventCatalog.tsx",
+    "src/components/modules/content/audio/AudioScenePainter.tsx",
+    "src/components/modules/content/audio/AudioCodeGenPanel.tsx",
+    "src/components/modules/content/audio/AudioLibraryPanel.tsx",
+    "src/components/modules/content/audio/AudioPropertyPanel.tsx",
+    "src/components/modules/content/audio/AudioPipelineDiagram.tsx",
+    "src/lib/audio-gen/registry.ts",
+    "src/lib/audio-gen/types.ts",
+    "src/lib/audio-asset-db.ts",
+    "src/lib/audio-scene-db.ts",
+    "src/lib/spatial-audio-generator.ts",
+    "src/types/audio-asset.ts",
+    "src/types/audio-scene.ts",
+    "src/app/api/audio-gen/route.ts",
+    "src/app/api/audio-scene/route.ts",
+    "src/app/api/audio-asset/route.ts",
+    "src/app/api/spatial-audio-generate/route.ts",
+    "src/lib/prompts/audio-events.ts",
+    "src/lib/prompts/audio-scene.ts"
+  ]
+}

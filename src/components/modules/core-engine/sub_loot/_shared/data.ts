@@ -4,6 +4,7 @@ import type { GaugeMetric, DiffEntry, HeatmapCell } from '@/types/unique-tab-imp
 import type { EntityMetadata } from '@/types/game-metadata';
 import { Layers, FlaskConical, Dices, Shield, DollarSign } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
+import { ARCHETYPES } from '../../sub_bestiary/_shared/data';
 
 export const ACCENT = ACCENT_ORANGE;
 
@@ -44,6 +45,15 @@ export const RARITY_TIERS: RarityTier[] = [
 ];
 
 export const TOTAL_WEIGHT = RARITY_TIERS.reduce((sum, t) => sum + t.weight, 0);
+
+/* -- Shared cross-reference lookups --------------------------------------- */
+
+/** Enemy archetype lookup by id. Shared by index.tsx and LootFilters.tsx. */
+export const enemyMap = new Map(ARCHETYPES.map(a => [a.id, a]));
+
+/** Resolve a rarity tier's color by name, falling back to the module ACCENT. */
+export const rarityColorFor = (name: string): string =>
+  RARITY_TIERS.find(t => t.name === name)?.color ?? ACCENT;
 
 /* -- World item examples per rarity --------------------------------------- */
 

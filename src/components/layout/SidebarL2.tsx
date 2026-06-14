@@ -1,12 +1,12 @@
 'use client';
 
-import { memo, useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
+import { memo, useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { createPortal } from 'react-dom';
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import { Check, ListOrdered } from 'lucide-react';
 import { useNavigationStore } from '@/stores/navigationStore';
 import { useModuleStore } from '@/stores/moduleStore';
-import { useCLIPanelStore } from '@/components/cli/store/cliPanelStore';
+import { useCLIPanelStore, type CLISessionState } from '@/components/cli/store/cliPanelStore';
 import { getSubModulesForCategory, SUB_MODULE_MAP, CATEGORY_MAP } from '@/lib/module-registry';
 import { StaggerContainer, StaggerItem } from '@/components/ui/Stagger';
 import { TruncateWithTooltip } from '@/components/ui/TruncateWithTooltip';
@@ -367,24 +367,31 @@ const STATUS_COLORS = {
   running: STATUS_INFO,  // blue — CLI task running
 } as const;
 
+/**
+ * Derive the badge status for a single module from the sessions map.
+ * Returns a primitive ('failed' | 'running' | null) so the per-badge Zustand
+ * subscription below settles under the default Object.is equality: a streamed
+ * token that only bumps lastActivityAt on one session no longer invalidates
+ * every badge — a badge re-renders only when its own module's status flips.
+ * (Selecting a primitive, not a fresh object, also sidesteps the
+ * "new object every render" selector trap.)
+ */
+function deriveStatusForModule(
+  sessions: Record<string, CLISessionState>,
+  moduleId: SubModuleId,
+): 'failed' | 'running' | null {
+  let hasRunning = false;
+  for (const session of Object.values(sessions)) {
+    if (session.moduleId !== moduleId) continue;
+    // Failed takes priority over running — return as soon as we see one.
+    if (session.lastTaskSuccess === false) return 'failed';
+    if (session.isRunning) hasRunning = true;
+  }
+  return hasRunning ? 'running' : null;
+}
+
 const StatusBadge = memo(function StatusBadge({ moduleId }: { moduleId: SubModuleId }) {
-  const sessions = useCLIPanelStore((s) => s.sessions);
-
-  const status = useMemo(() => {
-    let hasFailed = false;
-    let hasRunning = false;
-
-    for (const session of Object.values(sessions)) {
-      if (session.moduleId !== moduleId) continue;
-      if (session.isRunning) hasRunning = true;
-      if (session.lastTaskSuccess === false) hasFailed = true;
-    }
-
-    // Failed takes priority over running
-    if (hasFailed) return 'failed' as const;
-    if (hasRunning) return 'running' as const;
-    return null;
-  }, [sessions, moduleId]);
+  const status = useCLIPanelStore((s) => deriveStatusForModule(s.sessions, moduleId));
 
   if (!status) return null;
 

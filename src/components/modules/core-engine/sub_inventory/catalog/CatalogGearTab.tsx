@@ -14,11 +14,24 @@ import { ACCENT, DUMMY_ITEMS, RARITY_ORDER, type ItemData } from '../_shared/dat
 import { useItemEntries } from '@/stores/catalogStore';
 import { useGeneration } from '@/hooks/useGeneration';
 import type { GenerationStep } from '@/lib/catalog/recipe';
+import type { ItemEntry, StoredCatalogEntity } from '@/lib/catalog/types';
 import { CatalogFiltersBar, type SortBy } from './CatalogFiltersBar';
 import { AddItemForm, type NewItemState } from './AddItemForm';
 import { CatalogItemGrid } from './CatalogItemGrid';
 
 /* ── Main CatalogGearTab ───────────────────────────────────────────────── */
+
+// Hook-stable placeholder fed to `useGeneration` when the catalog store is empty
+// (no backing entry to generate). The (Re)generate affordance is gated on a real
+// `primaryEntry`, so this entity is never actually dispatched.
+const EMPTY_ITEM_ENTRY: StoredCatalogEntity = {
+  id: '',
+  catalogId: 'items',
+  name: '',
+  categoryPath: [],
+  tags: [],
+  lifecycle: 'planned',
+};
 
 interface CatalogGearTabProps {
   moduleId: SubModuleId;
@@ -79,9 +92,15 @@ export function CatalogGearTab({ moduleId, featureMap }: CatalogGearTabProps) {
   const pageItems = filteredItems.slice(currentPage * ITEMS_PER_PAGE, (currentPage + 1) * ITEMS_PER_PAGE);
 
   // folder-09 R3: dispatch generation for the primary (selected or first visible) item.
+  // `entries` is legitimately empty before the catalog is seeded / after a store
+  // reset, so `primaryEntry` must be nullable — never assert it non-null here.
   const primaryItem = selectedItem ?? pageItems[0];
-  const primaryEntry = (primaryItem && entryByItemId.get(primaryItem.id)) ?? entries[0]!;
-  const gen = useGeneration(primaryEntry);
+  const primaryEntry: ItemEntry | undefined =
+    (primaryItem && entryByItemId.get(primaryItem.id)) ?? entries[0] ?? undefined;
+  // useGeneration is a hook and must be called unconditionally; when there is no
+  // backing entry we hand it a placeholder and gate the actual (Re)generate
+  // affordance below so nothing is ever dispatched for a non-existent entity.
+  const gen = useGeneration(primaryEntry ?? EMPTY_ITEM_ENTRY);
   const nextStep: GenerationStep =
     primaryEntry?.lifecycle === 'generated' ? 'wire'
       : primaryEntry?.lifecycle === 'wired' ? 'verify'
@@ -171,7 +190,7 @@ export function CatalogGearTab({ moduleId, featureMap }: CatalogGearTabProps) {
           entryByItemId={entryByItemId}
           primaryEntry={primaryEntry}
           isGenRunning={gen.isRunning}
-          onRegenerate={() => gen.generate(nextStep)}
+          onRegenerate={primaryEntry ? () => gen.generate(nextStep) : undefined}
           onGridKeyDown={handleGridKeyDown}
         />
 

@@ -138,7 +138,11 @@ async function ensureDevServer(projectPath: string): Promise<void> {
       cwd: projectPath,
       stdio: ['ignore', 'pipe', 'pipe'],
       shell: true,
-      detached: false,
+      // On POSIX, detach so the child (and its `next dev` descendants) form a
+      // process group we can tree-kill via `process.kill(-pid)` in
+      // killDevServer; otherwise a SIGKILL to the shell would orphan node.
+      // On Windows we keep the default and tree-kill with `taskkill /T`.
+      detached: process.platform !== 'win32',
     });
 
     let resolved = false;
@@ -172,8 +176,27 @@ function checkPort(port: number): Promise<boolean> {
 
 function killDevServer() {
   if (devServerProc) {
-    try { devServerProc.kill(); } catch { /* ignore */ }
+    const proc = devServerProc;
+    const pid = proc.pid;
     devServerProc = null;
+    // The dev server is spawned with `shell: true`, so on Windows `proc.pid` is
+    // the wrapping `cmd.exe` and `proc.kill()` would orphan the real `next dev`
+    // node process holding port 3000. Kill the whole process tree so the port
+    // is actually released: `taskkill /T` on win32, the process group on POSIX.
+    if (pid != null) {
+      if (process.platform === 'win32') {
+        try {
+          exec(`taskkill /pid ${pid} /T /F`, () => { /* best-effort reap */ });
+        } catch { /* ignore */ }
+      } else {
+        // Fall back to a plain kill if the group kill isn't available.
+        try { process.kill(-pid, 'SIGKILL'); } catch {
+          try { proc.kill('SIGKILL'); } catch { /* ignore */ }
+        }
+      }
+    } else {
+      try { proc.kill(); } catch { /* ignore */ }
+    }
   }
 }
 
@@ -845,8 +868,8 @@ export function createHarnessOrchestrator(config: HarnessConfig): HarnessOrchest
       savePlan(config.statePath, plan);
     }
 
-    // Cleanup
-    killDevServer();
+    // Cleanup (dev server teardown happens in runLoopWithErrorCapture's
+    // `finally` so it also covers every error/crash/early-return path).
     savePlan(config.statePath, plan);
     saveGuide(config.statePath, guide);
     emit({ type: 'harness:completed', plan, guide });
@@ -869,6 +892,11 @@ export function createHarnessOrchestrator(config: HarnessConfig): HarnessOrchest
         runId = null;
       }
       throw err;
+    } finally {
+      // Tear down the dev server on EVERY exit path — normal completion,
+      // pause/early-return breaks, and thrown/crashed errors — so we never
+      // leak a `next dev` process bound to port 3000 across runs.
+      killDevServer();
     }
   }
 

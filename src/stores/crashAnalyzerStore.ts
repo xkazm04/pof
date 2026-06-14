@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { apiFetch } from '@/lib/api-utils';
+import { detectPatterns, computeStats } from '@/lib/crash-analyzer/analysis-engine';
 import type {
   CrashReport,
   CrashDiagnosis,
@@ -91,9 +92,16 @@ export const useCrashAnalyzerStore = create<CrashAnalyzerState>((set, get) => ({
         ? [...current.diagnoses, data.diagnosis]
         : current.diagnoses;
 
+      // Recompute derived state so pattern list + severity pills reflect the
+      // imported crash (patterns first — stats depends on the pattern array).
+      const newPatterns = detectPatterns(newReports);
+      const newStats = computeStats(newReports, newPatterns);
+
       set({
         reports: newReports,
         diagnoses: newDiagnoses,
+        patterns: newPatterns,
+        stats: newStats,
         isLoading: false,
       });
 

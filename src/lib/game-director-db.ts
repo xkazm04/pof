@@ -373,16 +373,16 @@ export function getDirectorStats(): DirectorStats {
 
   const sessCount = db.prepare('SELECT COUNT(*) as c FROM game_director_sessions').get() as { c: number };
   const completeCount = db.prepare("SELECT COUNT(*) as c FROM game_director_sessions WHERE status = 'complete'").get() as { c: number };
-  // Counts exclude findings the user has triaged out so noise doesn't inflate the health score.
-  const findCount = db.prepare(
-    `SELECT COUNT(*) as c FROM game_director_findings WHERE ${TRIAGE_EXCLUDED_SQL}`
-  ).get() as { c: number };
-  const critCount = db.prepare(
-    `SELECT COUNT(*) as c FROM game_director_findings WHERE severity = 'critical' AND ${TRIAGE_EXCLUDED_SQL}`
-  ).get() as { c: number };
-  const openCritHighCount = db.prepare(
-    `SELECT COUNT(*) as c FROM game_director_findings WHERE severity IN ('critical','high') AND ${TRIAGE_EXCLUDED_SQL}`
-  ).get() as { c: number };
+  // Counts exclude findings the user has triaged out so noise doesn't inflate the
+  // health score. All three finding counts read the same (triage-filtered) table, so
+  // collapse them into one row of conditional aggregates instead of three scans.
+  const findAgg = db.prepare(
+    `SELECT
+       COUNT(*) as total,
+       SUM(CASE WHEN severity = 'critical' THEN 1 ELSE 0 END) as critical,
+       SUM(CASE WHEN severity IN ('critical','high') THEN 1 ELSE 0 END) as openCritHigh
+     FROM game_director_findings WHERE ${TRIAGE_EXCLUDED_SQL}`
+  ).get() as { total: number; critical: number | null; openCritHigh: number | null };
 
   // regression_alerts is owned by regression-tracker.ts and created lazily; guard
   // for the case where no regressions have ever been processed (cf. getHealthTrend).
@@ -405,9 +405,9 @@ export function getDirectorStats(): DirectorStats {
   return {
     totalSessions: sessCount.c,
     completedSessions: completeCount.c,
-    totalFindings: findCount.c,
-    criticalFindings: critCount.c,
-    openCriticalHigh: openCritHighCount.c,
+    totalFindings: findAgg.total,
+    criticalFindings: findAgg.critical ?? 0,
+    openCriticalHigh: findAgg.openCritHigh ?? 0,
     activeAlerts,
     avgScore: avgRow.avg != null ? Math.round(avgRow.avg) : null,
     recentSessions: recentRows.map(rowToSession),
@@ -452,15 +452,32 @@ export function getHealthTrend(limit = 30): HealthTrendPoint[] {
     "SELECT name FROM sqlite_master WHERE type='table' AND name='regression_alerts'"
   ).get() as { name: string } | undefined;
 
-  const regCountStmt = hasRegTable
-    ? db.prepare(
-        'SELECT COUNT(*) as c FROM regression_alerts WHERE reappeared_in_session_id = ?'
-      )
-    : null;
+  // Pre-aggregate per-session critical counts and regression-alert counts with one
+  // GROUP BY each, then look up from Maps in the .map below — instead of two point
+  // queries per session row (the former N+1). Sessions with no matching rows are
+  // absent from the Map and fall back to 0, exactly as the per-row COUNT(*) did.
+  const sessionIds = rows.map(r => r.id);
+  const idPlaceholders = sessionIds.map(() => '?').join(',');
 
-  const critCountStmt = db.prepare(
-    `SELECT COUNT(*) as c FROM game_director_findings WHERE session_id = ? AND severity = 'critical' AND ${TRIAGE_EXCLUDED_SQL}`
-  );
+  const critCounts = new Map<string, number>();
+  for (const row of db.prepare(
+    `SELECT session_id as id, COUNT(*) as c FROM game_director_findings
+     WHERE session_id IN (${idPlaceholders}) AND severity = 'critical' AND ${TRIAGE_EXCLUDED_SQL}
+     GROUP BY session_id`
+  ).all(...sessionIds) as Array<{ id: string; c: number }>) {
+    critCounts.set(row.id, row.c);
+  }
+
+  const regCounts = new Map<string, number>();
+  if (hasRegTable) {
+    for (const row of db.prepare(
+      `SELECT reappeared_in_session_id as id, COUNT(*) as c FROM regression_alerts
+       WHERE reappeared_in_session_id IN (${idPlaceholders})
+       GROUP BY reappeared_in_session_id`
+    ).all(...sessionIds) as Array<{ id: string; c: number }>) {
+      regCounts.set(row.id, row.c);
+    }
+  }
 
   return rows.map(r => {
     let overallScore = 0;
@@ -470,16 +487,14 @@ export function getHealthTrend(limit = 30): HealthTrendPoint[] {
     } catch {
       overallScore = 0;
     }
-    const critRow = critCountStmt.get(r.id) as { c: number };
-    const regRow = regCountStmt ? (regCountStmt.get(r.id) as { c: number }) : { c: 0 };
     return {
       sessionId: r.id,
       sessionName: r.name,
       createdAt: r.created_at,
       overallScore,
       findingsCount: r.findings_count ?? 0,
-      criticalCount: critRow.c,
-      regressionCount: regRow.c,
+      criticalCount: critCounts.get(r.id) ?? 0,
+      regressionCount: regCounts.get(r.id) ?? 0,
     };
   });
 }

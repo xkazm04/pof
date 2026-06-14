@@ -423,8 +423,6 @@ export interface ResolvedDependency {
 export interface DependencyInfo {
   /** Direct dependencies for this feature */
   deps: ResolvedDependency[];
-  /** Full transitive chain (breadth-first) */
-  chain: ResolvedDependency[];
   /** Dependencies that are NOT implemented (status != 'implemented') */
   blockers: ResolvedDependency[];
   /** True if any upstream dependency is missing/unknown */
@@ -443,50 +441,51 @@ function resolveDep(ref: string, contextModuleId: string): ResolvedDependency {
 /**
  * Build a full dependency map for all features across all modules.
  *
- * Memoized: MODULE_FEATURE_DEFINITIONS is a static const, so deps and
- * transitive chains are computed once and reused. The cached map should
- * be treated as read-only — use computeBlockers() to get a status-aware copy.
+ * Memoized: MODULE_FEATURE_DEFINITIONS is a static const, so direct deps are
+ * resolved once and reused. The cached map should be treated as read-only —
+ * use computeBlockers() to get a status-aware copy.
  */
 let _cachedDepMap: Map<string, DependencyInfo> | null = null;
+let _cachedDependentCounts: Map<string, number> | null = null;
 
 export function buildDependencyMap(): Map<string, DependencyInfo> {
   if (_cachedDepMap) return _cachedDepMap;
 
   const map = new Map<string, DependencyInfo>();
+  // Fan-out counts: how many features list each key as a direct dependency.
+  // A static property of the graph — computed once in the same pass and cached
+  // alongside the dep map via getDependentCounts().
+  const dependentCounts = new Map<string, number>();
 
-  // First pass: resolve direct deps
+  // Resolve direct deps for every feature.
   for (const [moduleId, features] of Object.entries(MODULE_FEATURE_DEFINITIONS)) {
     for (const feat of features) {
       const key = `${moduleId}::${feat.featureName}`;
       const deps = (feat.dependsOn ?? []).map((ref) => resolveDep(ref, moduleId));
-      map.set(key, { deps, chain: [], blockers: [], isBlocked: false });
-    }
-  }
-
-  // Second pass: compute transitive chains (BFS)
-  for (const [key, info] of map) {
-    const visited = new Set<string>([key]);
-    const queue = [...info.deps];
-    const chain: ResolvedDependency[] = [];
-
-    while (queue.length > 0) {
-      const dep = queue.shift()!;
-      if (visited.has(dep.key)) continue;
-      visited.add(dep.key);
-      chain.push(dep);
-      const upstream = map.get(dep.key);
-      if (upstream) {
-        for (const d of upstream.deps) {
-          if (!visited.has(d.key)) queue.push(d);
-        }
+      map.set(key, { deps, blockers: [], isBlocked: false });
+      for (const dep of deps) {
+        dependentCounts.set(dep.key, (dependentCounts.get(dep.key) ?? 0) + 1);
       }
     }
-
-    info.chain = chain;
   }
 
   _cachedDepMap = map;
+  _cachedDependentCounts = dependentCounts;
   return map;
+}
+
+/**
+ * Fan-out count per feature key: how many features depend on each key.
+ *
+ * This is a static graph property (it never varies with status/progress), so it
+ * is built once during {@link buildDependencyMap} and cached. Returns 0 for any
+ * key with no dependents via the caller's `?? 0`.
+ */
+export function getDependentCounts(): Map<string, number> {
+  if (!_cachedDependentCounts) {
+    buildDependencyMap();
+  }
+  return _cachedDependentCounts!;
 }
 
 /**
