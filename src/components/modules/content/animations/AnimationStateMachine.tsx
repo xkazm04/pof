@@ -18,26 +18,18 @@ import {
 } from '@/lib/chart-colors';
 import { SchematicPanel } from '@/components/ui/SchematicPanel';
 import { useBlenderMCPStore } from '@/stores/blenderMCPStore';
-import { tryApiFetch } from '@/lib/api-utils';
-import { nlaStateMachineScript } from '@/lib/blender-mcp/scripts/nla-state-machine';
-import type { ExecuteOutput } from '@/lib/blender-mcp/types';
 import { logger } from '@/lib/logger';
 import { computeEdgeGeometry } from '@/components/ui/svg/graph-edges';
 import { ExplainToggle, JargonText } from '@/components/animations/explain';
+import {
+  type StateType,
+  STATE_TYPE_COLORS,
+  exportStatesToBlenderNLA,
+} from './shared/state-machine-shared';
 
 const ANIM_ACCENT = ACCENT_VIOLET;
 
 // ── State type classification ──
-
-type StateType = 'locomotion' | 'combat' | 'reaction' | 'montage' | 'other';
-
-const STATE_TYPE_COLORS: Record<StateType, string> = {
-  locomotion: MODULE_COLORS.core,
-  combat: MODULE_COLORS.evaluator,
-  reaction: ACCENT_ORANGE,
-  montage: MODULE_COLORS.content,
-  other: ANIM_ACCENT,
-};
 
 const LOCOMOTION_KEYWORDS = ['idle', 'walk', 'run', 'sprint', 'jump', 'jumpstart', 'jumploop', 'fall', 'falling', 'land', 'landing', 'locomotion', 'swimming', 'climbing'];
 const COMBAT_KEYWORDS = ['attack', 'attacking', 'combo', 'block', 'blocking', 'dodge', 'dodging', 'cast', 'casting'];
@@ -437,25 +429,13 @@ export function AnimationStateMachine({ onSelectState, isRunning, activeStateId 
     setBlenderExporting(true);
     setBlenderResult(null);
     try {
-      const fps = 30;
-      const frameDuration = 60; // frames per state
-      const states = displayStates.map((state, i) => ({
+      const exportStates = displayStates.map((state) => ({
         name: state.label,
         type: state.stateType,
-        frameStart: i * frameDuration + 1,
-        frameEnd: (i + 1) * frameDuration,
       }));
-      const code = nlaStateMachineScript({
-        armatureName: 'Armature',
-        states,
-      });
-      const result = await tryApiFetch<ExecuteOutput>('/api/blender-mcp/execute', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ code }),
-      });
+      const result = await exportStatesToBlenderNLA(exportStates);
       if (result.ok) {
-        setBlenderResult({ message: result.data.output || `Exported ${states.length} states to Blender NLA`, isError: false });
+        setBlenderResult({ message: result.data.output || `Exported ${exportStates.length} states to Blender NLA`, isError: false });
       } else {
         setBlenderResult({ message: result.error, isError: true });
       }

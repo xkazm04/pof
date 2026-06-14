@@ -12,9 +12,6 @@ import {
   MODULE_COLORS, OPACITY_10, OPACITY_15, OPACITY_20, OPACITY_30,
 } from '@/lib/chart-colors';
 import { logger } from '@/lib/logger';
-import { tryApiFetch } from '@/lib/api-utils';
-import { nlaStateMachineScript } from '@/lib/blender-mcp/scripts/nla-state-machine';
-import type { ExecuteOutput } from '@/lib/blender-mcp/types';
 import { useBlenderMCPStore } from '@/stores/blenderMCPStore';
 import { computeEdgeGeometry } from '@/components/ui/svg/graph-edges';
 import { SchematicPanel } from '@/components/ui/SchematicPanel';
@@ -25,6 +22,11 @@ import {
   type ValidationWarning,
   type WarningSeverity,
 } from '@/lib/state-machine-validator';
+import {
+  type StateType,
+  STATE_TYPE_COLORS,
+  exportStatesToBlenderNLA,
+} from './shared/state-machine-shared';
 
 const EDITOR_ACCENT = ACCENT_VIOLET;
 
@@ -50,14 +52,9 @@ export interface EditorTransition {
   description?: string;
 }
 
-type StateType = 'locomotion' | 'combat' | 'reaction' | 'other';
-
-const STATE_TYPE_COLORS: Record<StateType, string> = {
-  locomotion: MODULE_COLORS.core,
-  combat: MODULE_COLORS.evaluator,
-  reaction: ACCENT_ORANGE,
-  other: EDITOR_ACCENT,
-};
+// StateType + STATE_TYPE_COLORS are imported from ./shared/state-machine-shared
+// (shared with AnimationStateMachine). The editor only ever assigns the four
+// options below; the shared union additionally carries `montage`.
 
 const STATE_TYPE_OPTIONS: { value: StateType; label: string }[] = [
   { value: 'locomotion', label: 'Locomotion' },
@@ -360,20 +357,9 @@ function BlenderNLAExport({ states }: { states: EditorState[] }) {
 
   const handleExport = async () => {
     setIsExporting(true);
-    const code = nlaStateMachineScript({
-      armatureName: 'Armature',
-      states: states.map((s, i) => ({
-        name: s.name,
-        type: s.stateType,
-        frameStart: i * 30 + 1,
-        frameEnd: (i + 1) * 30,
-      })),
-    });
-    await tryApiFetch<ExecuteOutput>('/api/blender-mcp/execute', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ code }),
-    });
+    await exportStatesToBlenderNLA(
+      states.map((s) => ({ name: s.name, type: s.stateType })),
+    );
     setIsExporting(false);
   };
 
