@@ -134,68 +134,62 @@ export function extractSignals(
   const plugins = dynamic?.plugins ?? [];
   const deps = dynamic?.buildDependencies ?? [];
 
-  // Count class types by prefix/name patterns
-  const classNames = classes.map(c => c.name.toLowerCase());
-  const headerPaths = classes.map(c => c.headerPath.toLowerCase());
-  const depModules = deps.map(d => d.module.toLowerCase());
+  // Count/flag class-name signals in a single pass instead of ~17 independent
+  // .filter/.some sweeps over the same array. Counters and boolean flags below
+  // accumulate exactly what the per-signal scans previously derived.
+  let gasAbilityCount = 0;
+  let gameplayEffectCount = 0;
+  let behaviorTreeCount = 0;
+  let eqsQueryCount = 0;
+  let widgetClassCount = 0;
+  let saveGameFieldCount = 0;
+  let niagaraSystemCount = 0;
 
-  const gasAbilityCount = classNames.filter(n =>
-    n.includes('gameplayability') || n.includes('ga_') || n.startsWith('ga')
-  ).length;
+  let hasDodgeAbility = false;
+  let hasComboSystem = false;
+  let hasProjectileSystem = false;
+  let hasLootTables = false;
+  let hasDialogueSystem = false;
+  let hasCraftingSystem = false;
+  let hasProceduralGeneration = false;
+  let hasStealthMechanics = false;
+  let hasReplicationClass = false;
 
-  const gameplayEffectCount = classNames.filter(n =>
-    n.includes('gameplayeffect') || n.includes('ge_') || n.startsWith('ge')
-  ).length;
+  const moduleSet = new Set<string>();
 
-  const behaviorTreeCount = classNames.filter(n =>
-    n.includes('bttask') || n.includes('btservice') || n.includes('btdecorator') || n.includes('behaviortree')
-  ).length;
+  for (const c of classes) {
+    const n = c.name.toLowerCase();
 
-  const eqsQueryCount = classNames.filter(n =>
-    n.includes('eqs') || n.includes('envquery')
-  ).length;
+    // Count class types by prefix/name patterns
+    if (n.includes('gameplayability') || n.includes('ga_') || n.startsWith('ga')) gasAbilityCount++;
+    if (n.includes('gameplayeffect') || n.includes('ge_') || n.startsWith('ge')) gameplayEffectCount++;
+    if (n.includes('bttask') || n.includes('btservice') || n.includes('btdecorator') || n.includes('behaviortree')) behaviorTreeCount++;
+    if (n.includes('eqs') || n.includes('envquery')) eqsQueryCount++;
+    if (n.includes('widget') || n.includes('hud') || n.includes('umg')) widgetClassCount++;
+    if (n.includes('savegame')) saveGameFieldCount++;
+    if (n.includes('niagara') || n.includes('vfx') || n.includes('particl')) niagaraSystemCount++;
 
-  const widgetClassCount = classNames.filter(n =>
-    n.includes('widget') || n.includes('hud') || n.includes('umg')
-  ).length;
+    // Pattern detection from class names
+    if (!hasDodgeAbility && (n.includes('dodge') || n.includes('roll') || n.includes('dash') || n.includes('evade'))) hasDodgeAbility = true;
+    if (!hasComboSystem && (n.includes('combo') || n.includes('combowindow'))) hasComboSystem = true;
+    if (!hasProjectileSystem && (n.includes('projectile') || n.includes('bullet') || n.includes('ranged'))) hasProjectileSystem = true;
+    if (!hasLootTables && (n.includes('loottable') || n.includes('lootdrop') || n.includes('itemdrop'))) hasLootTables = true;
+    if (!hasDialogueSystem && (n.includes('dialogue') || n.includes('conversation') || n.includes('quest'))) hasDialogueSystem = true;
+    if (!hasCraftingSystem && (n.includes('crafting') || n.includes('recipe') || n.includes('workstation'))) hasCraftingSystem = true;
+    if (!hasProceduralGeneration && (n.includes('procedural') || n.includes('generator') || n.includes('randomize'))) hasProceduralGeneration = true;
+    if (!hasStealthMechanics && (n.includes('stealth') || n.includes('detection') || n.includes('sneak'))) hasStealthMechanics = true;
+    if (!hasReplicationClass && (n.includes('replicated') || n.includes('rpc'))) hasReplicationClass = true;
+  }
 
-  const saveGameFieldCount = classNames.filter(n =>
-    n.includes('savegame')
-  ).length;
-
-  // Pattern detection from class names and paths
-  const hasDodgeAbility = classNames.some(n =>
-    n.includes('dodge') || n.includes('roll') || n.includes('dash') || n.includes('evade')
-  );
-  const hasComboSystem = classNames.some(n =>
-    n.includes('combo') || n.includes('combowindow')
-  );
-  const hasProjectileSystem = classNames.some(n =>
-    n.includes('projectile') || n.includes('bullet') || n.includes('ranged')
-  );
-  const hasLootTables = classNames.some(n =>
-    n.includes('loottable') || n.includes('lootdrop') || n.includes('itemdrop')
-  );
-  const hasDialogueSystem = classNames.some(n =>
-    n.includes('dialogue') || n.includes('conversation') || n.includes('quest')
-  );
-  const hasCraftingSystem = classNames.some(n =>
-    n.includes('crafting') || n.includes('recipe') || n.includes('workstation')
-  );
-  const hasMultiplayerReplication = depModules.some(m =>
-    m.includes('onlinesubsystem') || m.includes('netcore')
-  ) || classNames.some(n => n.includes('replicated') || n.includes('rpc'));
-  const hasProceduralGeneration = classNames.some(n =>
-    n.includes('procedural') || n.includes('generator') || n.includes('randomize')
-  );
-  const hasStealthMechanics = classNames.some(n =>
-    n.includes('stealth') || n.includes('detection') || n.includes('sneak')
-  );
-
-  // Structural signals
-  const niagaraSystemCount = classNames.filter(n =>
-    n.includes('niagara') || n.includes('vfx') || n.includes('particl')
-  ).length;
+  let hasMultiplayerDep = false;
+  for (const d of deps) {
+    moduleSet.add(d.module);
+    if (!hasMultiplayerDep) {
+      const m = d.module.toLowerCase();
+      if (m.includes('onlinesubsystem') || m.includes('netcore')) hasMultiplayerDep = true;
+    }
+  }
+  const hasMultiplayerReplication = hasMultiplayerDep || hasReplicationClass;
 
   return {
     gasAbilityCount,
@@ -217,7 +211,7 @@ export function extractSignals(
     niagaraSystemCount,
     totalSourceFiles: dynamic?.sourceFileCount ?? 0,
     totalHeaderFiles: Math.floor((dynamic?.sourceFileCount ?? 0) * 0.5),
-    moduleCount: new Set(deps.map(d => d.module)).size,
+    moduleCount: moduleSet.size,
   };
 }
 
