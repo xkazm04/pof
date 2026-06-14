@@ -66,15 +66,22 @@ const COMMIT_DEBOUNCE_MS = 400;
 
 function useDebouncedField(value: string, onCommit: (v: string) => void) {
   const [local, setLocal] = useState(value);
-  const focusedRef = useRef(false);
+  // `focused` is state (not a ref) so the render-time sync below can read it
+  // without violating the refs-during-render rule.
+  const [focused, setFocused] = useState(false);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const onCommitRef = useRef(onCommit);
   useEffect(() => { onCommitRef.current = onCommit; }, [onCommit]);
 
   // Re-sync from server only when not actively editing (avoids mid-edit clobber).
-  useEffect(() => {
-    if (!focusedRef.current) setLocal(value);
-  }, [value]);
+  // Adjust state during render (React's recommended pattern) rather than in an effect:
+  // when the server `value` changes, mirror it into local state only if the field
+  // isn't focused, so an in-flight refetch can't replace what the user is typing.
+  const [prevValue, setPrevValue] = useState(value);
+  if (value !== prevValue) {
+    setPrevValue(value);
+    if (!focused) setLocal(value);
+  }
 
   // Flush any pending debounced commit on unmount.
   useEffect(() => () => { if (timerRef.current) clearTimeout(timerRef.current); }, []);
@@ -88,10 +95,10 @@ function useDebouncedField(value: string, onCommit: (v: string) => void) {
     }, COMMIT_DEBOUNCE_MS);
   }, []);
 
-  const onFocus = useCallback(() => { focusedRef.current = true; }, []);
+  const onFocus = useCallback(() => { setFocused(true); }, []);
 
   const onBlur = useCallback((next: string) => {
-    focusedRef.current = false;
+    setFocused(false);
     if (timerRef.current) { clearTimeout(timerRef.current); timerRef.current = null; }
     // Commit only if the value actually diverged from the last server value.
     if (next !== value) onCommitRef.current(next);
