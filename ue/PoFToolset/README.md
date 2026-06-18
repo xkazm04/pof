@@ -46,6 +46,35 @@ then trigger a one-shot/harness run; the `init` event's tool list should include
 ### Acceptance
 `PoFSpikeTools.ping` returns **`"PoF toolset alive"`** through the MCP client. ✅ proves the authoring path.
 
+## ✅ Proven autonomously (2026-06-18)
+
+Verified end-to-end with **zero human steps** — launched UE 5.8 headless from a shell, mounted the plugin via `-EnablePlugins` (no `.uproject` edit), and read the result from the abslog:
+
+```
+LogToolsetRegistry: Display: Registering Toolset pof_toolset.toolsets.spike.PoFSpikeTools
+LogPython: SPIKE_RESULT=PoF toolset alive | PoF on UE 5.8.0-55116800+++UE5+Release-5.8
+```
+
+The exact working invocation (and the gotchas that cost three tries):
+
+```bash
+UE='…/UE_5.8/Engine/Binaries/Win64/UnrealEditor-Cmd.exe'
+# ONE `py` prefix, ';'-joined plain Python, SINGLE quotes only (see below)
+EXEC="py import unreal; import pof_toolset.toolsets.spike as s; unreal.log('SPIKE_RESULT=' + s.PoFSpikeTools.ping() + ' | ' + s.PoFSpikeTools.project_info())"
+"$UE" "$PROJ/PoF.uproject" -EnablePlugins=PythonScriptPlugin,ToolsetRegistry,PoFToolset \
+  "-ExecCmds=$EXEC" -unattended -nopause -nosplash -nullrhi -NoLiveCoding -log -abslog="$LOG"
+# then poll $LOG for "LogPython: SPIKE_RESULT=" and kill the editor (it won't self-quit)
+```
+
+**Gotchas (now encoded in `src/lib/ue-launch`):**
+- **`Quit` via `-ExecCmds` does NOT exit a headless 5.8 editor** — it idles. Poll the abslog for your marker, then kill the process (or launch `-game`, which self-exits).
+- **UE's `py` consumes the whole line as one Python string** — use one `py ` prefix + `;`-separated plain Python; a second `py` after `;` is a SyntaxError. (`buildPythonExecCmd` enforces this.)
+- **Use single quotes in the Python** — double quotes collide with `-ExecCmds="…"` and truncate the value at the first inner `"`. (`buildPythonExecCmd` throws on `"`.)
+- **Anchor the result grep on the `LogPython:` prefix** — the abslog also echoes the raw command line (which contains your `KEY=`), so a bare `KEY=` grep false-positives.
+- `-EnablePlugins=A,B,C` enables session-scoped plugins without editing the `.uproject`.
+
+**Still pending:** the MCP *transport* round-trip (Claude → `http://127.0.0.1:8000/mcp` → call `PoFSpikeTools.ping`) — this validated registration + direct execution, not Epic's HTTP server. And the `RefreshTools`-vs-restart measurement.
+
 ## The key unknown to capture: re-register cost
 
 After editing a **Python** toolset, run the console command:
