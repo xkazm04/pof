@@ -60,13 +60,15 @@
 - **PoF Bridge (`:30040`):** `…/Plugins/PillarsOfFortuneBridge/` (auth-token REST); app client `src/lib/pof-bridge/client.ts`, `src/stores/pofBridgeStore.ts`, `LabBridgeStrip`. **Lands here:** status/manifest/test-runner/snapshot, the verification+auth layer.
 - **UE 5.8 convergence:** `docs/ue58-mcp-convergence-plan.md` (adopt first-party `AICallable`/Toolset-Registry control surface, keep PoF's verification moat). **Engine targets 5.7; 5.8 not installed locally.**
 - **Docs/memory:** `docs/ue5-companion-plugin-design.md`, `docs/ue5-capability-integration-candidates.md`, `[[project_ue58_official_mcp]]`.
+- **Backlog deltas (from /research, target the external plugin — not in this repo):** (1) **runtime Python-API introspection tools** (list a class's methods/signatures/docstrings/subsystems) so the agent self-discovers UE APIs instead of guessing — `mcp-unreal` has `lookup_class`/`lookup_docs`/`subsystem_query` but not full reflection; VibeUE ships this. (2) **blueprint graph auto-layout/tidy pass** (generated BPs are "spaghetti"; no auto-layout tool exists). (3) **StateTree editing tools** (VibeUE ships ~94 methods; PoF targets StateTree AI — verify the plugin's coverage on reconnect). Source: `Research/2026-06-18-claude-took-over-ue5.md`.
 
 ---
 
 ## D — Prompt / knowledge / skill
 
-- **Anchors:** `src/lib/module-registry.ts` (checklist prompts), `src/lib/prompts/` + `prompt-context.ts` (`buildProjectContextHeader`, 6-section builder), `src/lib/evaluator/module-eval-prompts.ts` (4-pass eval), `src/components/cli/skills.ts` (12 domain skill packs), `src/lib/cli-task.ts` (`TaskFactory`, `@@CALLBACK`).
-- **Lands here:** prompt-quality ideas, new skill packs, UE_GOTCHAS/tripwires (only UE_GOTCHAS + tripwire reach dispatch prompts — knowledgeTips are UI-only).
+- **Anchors:** `src/lib/module-registry.ts` (checklist prompts), `src/lib/prompts/` + `prompt-context.ts` (`buildProjectContextHeader`, 6-section builder), `src/lib/evaluator/module-eval-prompts.ts` (4-pass eval), `src/lib/knowledge/ue-gotchas.ts` (`UE_GOTCHAS` + `formatGotchas`, filtered by `PromptKind`), `src/components/cli/skills.ts` (12 domain skill packs), `src/lib/cli-task.ts` (`TaskFactory`, `@@CALLBACK`).
+- **Lands here:** prompt-quality ideas, new skill packs, UE_GOTCHAS/tripwires (only UE_GOTCHAS + tripwire reach dispatch prompts — knowledgeTips are UI-only). To add a UE pitfall: append to `UE_GOTCHAS` with `appliesTo` (`ue-python`/`ue-cpp`/`packaging`) + a test in `__tests__/knowledge/ue-gotchas.test.ts`.
+- **Already-has:** prompt-injected UE pitfalls incl. (2026-06-18) a `ue-python` "introspect-before-you-guess" gotcha.
 - **Docs/memory:** `[[reference_prompt_knowledge_injection]]`, `docs/architecture/prompts-and-cli.md`.
 
 ---
@@ -83,3 +85,4 @@
 
 ## Maintenance log
 - **2026-06-18** — seeded.
+- **2026-06-18** — run `claude-took-over-ue5` (Stefan 3D AI): added D-bucket gotcha; logged 3 C-bucket backlog deltas (introspection/BP-layout/StateTree). Mostly already-have catches (visual self-review, build automation, git checkpoints, mcp tool surface) — confirms PoF is ahead of the manual workflow.

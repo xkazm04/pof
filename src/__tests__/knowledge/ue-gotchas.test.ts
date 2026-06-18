@@ -48,6 +48,15 @@ describe('formatGotchas', () => {
     expect(formatGotchas('ue-python')).toContain('Constant3Vector');
   });
 
+  it('tells ue-python sessions to introspect the API before guessing names', () => {
+    const out = formatGotchas('ue-python');
+    expect(out).toMatch(/introspect|lookup_class|dir\(unreal/i);
+  });
+
+  it('keeps the introspect-first guidance out of the ue-cpp block', () => {
+    expect(formatGotchas('ue-cpp')).not.toMatch(/dir\(unreal/);
+  });
+
   it('returns an empty string for web', () => {
     expect(formatGotchas('web')).toBe('');
   });
