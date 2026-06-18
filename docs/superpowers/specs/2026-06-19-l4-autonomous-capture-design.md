@@ -6,6 +6,15 @@
 
 Make PoF's **L4 visual verification run end-to-end with no operator**: `buildExecutors` → autonomously capture a rendered frame (headless UE 5.8) → existing Gemini check reads it. Closes the documented "render gate still manual — supply a screenshotPath" gap by implementing the `screenshotResolver` seam `visualExecutor` already exposes.
 
+## As-built (2026-06-19, after live runs)
+
+Two approved decisions were overturned by live verification:
+- **`-game -RenderOffScreen` + `HighResShot` produced no PNG** (PoF's standalone game target is unbuilt → the process exits early). Pivoted to the **editor + `take_high_res_screenshot`** path (proven: a 439 KB PNG in ~15s).
+- **`load_map` breaks the async screenshot** (no frame is ever written). Dropped it (and the `mapFor`/`map` plumbing). The captured frame is therefore the **generic editor view**; per-level/per-entity framing is the noted follow-up via the existing `-game -PoFScenario` Observation Spine.
+- The capture python runs via a **probe FILE** (`py exec(open(probe).read())`), not inline `-ExecCmds=py …` (inline multi-statement/quoting is fragile — cost three failed runs across this effort).
+
+Committed: `404330c`.
+
 ## Decisions (approved)
 
 - **Capture mechanism:** `UnrealEditor.exe <uproject> <map> -game -RenderOffScreen -ResX -ResY -ExecCmds="HighResShot WxH"` — a real *gameplay* frame (what the L4 modes verify), reusing the proven `launchAndScreenshot` pattern + the 5.8 `-game -RenderOffScreen` recipe. The game-mode "newest screenshot" race is handled by `pickNewestPng(dir, startedAt)`.
