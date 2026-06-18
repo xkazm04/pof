@@ -109,19 +109,29 @@ Markers: ✅ ready to wire today · 🟡 preview/experimental, prototype now · 
 
 ---
 
-## Candidate G — Bridge/CLI interop with the standard UE MCP server ✅
+## Candidate G — Converge on the first-party UE MCP server (control surface), keep PoF's verification moat ✅/🟡
 
-**UE version:** 5.7 (new **in-editor AI Assistant**; community `mcp-unreal` server for 5.7).
+**UE version:** 5.7 (in-editor AI Assistant + community `mcp-unreal` server — wireable today) · **5.8 (first-party Epic MCP server, Experimental)**.
 
-**What landed:** UE 5.7 ships an in-editor AI Assistant, and a community **MCP server for UE 5.7** exposes headless builds & tests, Blueprint editing, actor manipulation, procedural mesh generation, UE API doc lookup, and PCG graph ops to AI agents (Claude Code, Cursor, …).
+> Updated 2026-06-18 after researching UE 5.8's official MCP (Epic docs + three demo walkthroughs). The original candidate only knew the *community* `mcp-unreal` (remiphilippe, Go) and the 5.7 AI Assistant; 5.8's **first-party** MCP is the bigger, more durable target and changes the recommendation from "adapter work" to "converge."
 
-**Why it matters to PoF:** PoF's CLI terminal already spawns Claude Code, and the PoF Bridge is a custom companion plugin. Interoperating with (or adopting) the standard MCP-Unreal protocol means our CLI can drive UE directly, and we ride a maintained, growing surface instead of only our bespoke bridge. This is also the lane UE6 will most plausibly formalize — so it's a forward-compatible bet.
+**What landed:** UE **5.8 ships an official, first-party MCP server from Epic.** A built-in **Terminal** plugin runs Claude Code *inside* the editor (`Tools → Terminal`); companion **Unreal MCP** + **Toolset Registry** plugins do the work. Custom tools are authored **natively** — C++ `UFUNCTION(meta = (AICallable))` static methods on a `UToolsetDefinition`, or Python `@toolset_registry.tool_call` `@staticmethod` on `unreal.ToolsetDefinition` — and the **Toolset Registry** subsystem auto-discovers them (scans plugin `Content/Python/`; `ModelContextProtocol.RefreshTools` re-polls). **Tool-search is on by default** (the server advertises three meta-tools — `list_toolsets` / `describe_toolset` / `call_tool` — instead of every schema). `ModelContextProtocol.GenerateClientConfig ClaudeCode` writes the client `.mcp.json`. Transport is **HTTP + SSE only at `http://127.0.0.1:8000/mcp`** (no stdio/WebSocket). Shipped toolsets: ActorTools, SceneTools, MaterialInstanceTools, ObjectTools, AttributeSetToolset (GAS, experimental); most are Python.
+
+**Caveats (Experimental — design around these):** loopback-only with **no authentication layer**; **no code-execution / "code mode" tool**; **Live Coding does not propagate new `UFUNCTION`s — adding a tool requires an editor restart** (friction vs. hot route edits).
+
+**Where PoF stands today:** PoF targets **5.7** and runs a **bespoke dual-plugin** stack — `Plugins/MCPUnreal/` (HTTP `:8090`, ~37 hand-registered routes via `Register*Routes()`, behind a community Go MCP process, **no tool-search**) for raw control, and `Plugins/PillarsOfFortuneBridge/` (HTTP `:30040`, **auth-token validated**) for app/harness/test-gate integration. The app-spawned Claude Code session is launched with **no `--mcp-config`** (`src/lib/claude-terminal/cli-service.ts`) — it drives PoF via `@@CALLBACK` markers, not MCP tools.
+
+**Why it matters to PoF:** The first-party MCP is the durable, maintained target our bespoke `MCPUnreal` routes were a workaround for. Re-homing our 37 PoF-specific tools as a **Python Toolset Registry toolset** (we already ship plenty of `Content/Python/`) would retire the Go bridge *and* the hand-rolled HTTP routing, riding Epic's growing surface — our tools become exactly the "gap-filler" toolsets the community already expects to layer on top. **But the official MCP is only a *control* surface** — it has no verification, no code-mode, no auth. PoF's distinctive value (`execute_script`, the L3/L4 observation + Gemini-visual spine, the auth'd bridge) is precisely what Epic omits. So the bet is **adopt the control surface, keep the verification/orchestration moat** — not rip-and-replace.
 
 **Integration points:**
-- PoF Bridge ([`ue5-companion-plugin-design.md`](./ue5-companion-plugin-design.md)) — evaluate MCP interop vs. custom protocol.
-- CLI terminal (`src/lib/claude-terminal/`) + skills packs — add a UE-MCP skill.
+- `Plugins/MCPUnreal/` — map the 37 `Register*Routes()` handlers to `@toolset_registry.tool_call` Python staticmethods (or C++ `AICallable`); **keep `execute_script` as a custom toolset** (the missing "code mode," and a candidate to contribute upstream).
+- `src/lib/claude-terminal/cli-service.ts` — pass `--mcp-config` so the harness Claude can call UE tools directly (today: callbacks only).
+- `src/lib/test-gate-runner/` + `PillarsOfFortuneBridge` (`:30040`) — keep as the verification/auth layer *above* whichever control transport wins.
+- CLI skills (`src/components/cli/skills.ts`) — add a UE-MCP / bridge-ops skill (be-specific + coordinates-to-avoid-overlap prompting; check *both* the editor and server logs when debugging).
 
-**Effort / dependency:** Medium; mostly evaluation + protocol-adapter work. High strategic value (forward-compatible with UE6 direction).
+**Effort / dependency:** Medium, **gated on a 5.7 → 5.8 engine upgrade** (5.8 and the MCP feature are preview/Experimental). Prototype the Python-toolset path + `--mcp-config` wiring against 5.8 preview now; productionize when 5.8 ships and the restart-to-register / no-auth caveats are acceptable. High strategic value (less bespoke surface to maintain; forward-compatible with the UE6 "one toolchain" direction). **Concrete spike plan:** [`ue58-mcp-convergence-plan.md`](./ue58-mcp-convergence-plan.md).
+
+**Sources:** Epic — *Unreal MCP in Unreal Editor* (https://dev.epicgames.com/documentation/unreal-engine/unreal-mcp-in-unreal-editor); demo walkthroughs — BuiltByMoebs (https://youtu.be/A3PbbbjzB1c), VibeUE (https://youtu.be/Ko3dy_G75-s), Flopperam (https://youtu.be/ct5dNJC-Hx4).
 
 ---
 
@@ -155,7 +165,7 @@ Markers: ✅ ready to wire today · 🟡 preview/experimental, prototype now · 
 | **P1** | C · MetaHuman → Blender ingest | Low effort on a working subsystem; unlocks A/B | ✅ 5.6 shipped |
 | **P1** | I · Evaluator readiness checks | Cheap, broad coverage | ✅ |
 | **P2 — high value** | B · Mesh → MetaHuman conform | Closes the auto-rig gap; needs Asset Forge wired | 🟡 5.8 preview |
-| **P2** | G · UE-MCP interop | Forward-compatible with UE6; modernizes the bridge | ✅ 5.7 |
+| **P2** | G · Converge on first-party UE MCP | Retires the bespoke dual-bridge; rides Epic's maintained surface; keep the verification moat | 🟡 5.8 (Experimental) · ✅ 5.7 community |
 | **P2** | F · Substrate export | Future-proofs Material Lab | ✅ 5.7 |
 | **P3 — environment scale** | D · PCG graph emission | Big payoff, larger schema effort | ✅ 5.7 / 🟡 5.8 |
 | **P3** | E · Nanite/PVE vegetation | Mind the BeginPlay regen gotcha | ✅ 5.7 / 🟡 5.8 |
@@ -179,12 +189,13 @@ Markers: ✅ ready to wire today · 🟡 preview/experimental, prototype now · 
 
 ## Sources & confidence
 
-**Well-sourced (shipped):** UE 5.6 MetaHuman in-engine + FBX/DNA export + open license; UE 5.7 (shipped 2025-11-12) PCG production-ready, Substrate production-ready, Nanite Foliage, MetaHuman Python/Blueprint scripting API, in-editor AI Assistant, MetaHuman Animator. **Preview (subject to change):** UE 5.8 (preview ~2026-05-14) Procedural Vegetation Editor, mesh→MetaHuman conform, MetaHuman Crowd, editable PCG results, experimental Mesh Terrain, MegaLights production-ready, Control Rig Physics Beta.
+**Well-sourced (shipped):** UE 5.6 MetaHuman in-engine + FBX/DNA export + open license; UE 5.7 (shipped 2025-11-12) PCG production-ready, Substrate production-ready, Nanite Foliage, MetaHuman Python/Blueprint scripting API, in-editor AI Assistant, MetaHuman Animator. **Preview (subject to change):** UE 5.8 (preview ~2026-05-14) Procedural Vegetation Editor, mesh→MetaHuman conform, MetaHuman Crowd, editable PCG results, experimental Mesh Terrain, MegaLights production-ready, Control Rig Physics Beta, **first-party MCP server (Experimental) — `AICallable` / Python Toolset Registry, tool-search, in-editor Terminal; HTTP+SSE loopback, no auth, restart-to-register**.
 
 - Unreal Engine 5.7 release — https://www.unrealengine.com/news/unreal-engine-5-7-is-now-available
 - UE 5.7 PCG production-ready — https://www.tweaktown.com/news/107858/unreal-engine-5-7-preview-now-out-with-production-ready-procedural-content-generation-framework/index.html
 - MetaHuman 5.7 (scripting/Animator) — https://www.metahuman.com/releases/metahuman-5-7-is-now-available
 - UE 5.7 MCP server (community) — https://github.com/remiphilippe/mcp-unreal
+- UE 5.8 first-party MCP server (Epic, Experimental) — https://dev.epicgames.com/documentation/unreal-engine/unreal-mcp-in-unreal-editor
 - MetaHuman 5.6 FBX/DNA export — https://dev.epicgames.com/documentation/metahuman/saving-and-exporting-data
 - UE 5.8 preview — https://80.lv/articles/unreal-engine-5-8-preview-has-arrived
 - UE 5.6 integrated MetaHuman Creator + license — https://wnhub.io/news/engines/item-47953

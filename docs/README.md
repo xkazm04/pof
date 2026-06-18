@@ -39,6 +39,7 @@ The system that turns a catalog "row" (item, monster, quest, material, …) into
 |-----|--------|
 | [ue5-companion-plugin-design.md](ue5-companion-plugin-design.md) | The PoF Bridge editor plugin (HTTP on :30040 — status, manifest, test runner, snapshots) |
 | [ue5-capability-integration-candidates.md](ue5-capability-integration-candidates.md) | Backlog of native UE 5.6/5.7/5.8 features to target (engine-side) |
+| [ue58-mcp-convergence-plan.md](ue58-mcp-convergence-plan.md) | Prototype plan for converging PoF's UE control surface onto UE 5.8's first-party MCP (Candidate G) while keeping the verification moat |
 | [visual-generation-roadmap.md](visual-generation-roadmap.md) | The asset/character generation directions (what PoF *generates*: 2D/3D/material/rig) |
 
 ## Conventions
@@ -47,5 +48,6 @@ Project conventions (import alias, logger, chart-colors, timing constants, the c
 
 ## Recent additions
 
+- **2026-06-18** — UE 5.8 first-party MCP research: Epic shipped an official MCP server (`AICallable` / Python Toolset Registry, tool-search, in-editor Terminal). Refreshed [Candidate G](ue5-capability-integration-candidates.md) and added a [convergence prototype plan](ue58-mcp-convergence-plan.md) — adopt the control surface, keep PoF's verification moat.
 - **2026-05-27** — Scheduled nightly builds: a server-side cron (`src/instrumentation.ts`) runs a chosen build profile through preflight → cook → smoke → size-budget unattended, skipping the cook when git HEAD is unchanged since the last build. See [architecture/runtime-patterns.md §Server-side scheduler](architecture/runtime-patterns.md).
 - **2026-05-26** — One-Shot Authoring: autonomous catalog-row production via gap-analysis → LLM proposal → step loop. See [architecture/ui-shell.md §8](architecture/ui-shell.md) and [catalog/AUTHORING.md §Alternative](catalog/AUTHORING.md).
