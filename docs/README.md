@@ -40,6 +40,7 @@ The system that turns a catalog "row" (item, monster, quest, material, …) into
 | [ue5-companion-plugin-design.md](ue5-companion-plugin-design.md) | The PoF Bridge editor plugin (HTTP on :30040 — status, manifest, test runner, snapshots) |
 | [ue5-capability-integration-candidates.md](ue5-capability-integration-candidates.md) | Backlog of native UE 5.6/5.7/5.8 features to target (engine-side) |
 | [ue58-mcp-convergence-plan.md](ue58-mcp-convergence-plan.md) | Prototype plan for converging PoF's UE control surface onto UE 5.8's first-party MCP (Candidate G) while keeping the verification moat |
+| [ue58-mcp-phase2-tool-map.md](ue58-mcp-phase2-tool-map.md) | Per-tool DROP/PORT verdict: our 40 MCPUnreal tools vs Epic's 5.8 first-party toolsets (the Phase 2 scope) |
 | [visual-generation-roadmap.md](visual-generation-roadmap.md) | The asset/character generation directions (what PoF *generates*: 2D/3D/material/rig) |
 
 ## Conventions

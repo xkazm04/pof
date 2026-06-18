@@ -51,7 +51,7 @@ The control plane is interchangeable (official MCP ← today: MCPUnreal). The ve
 - `ModelContextProtocol.GenerateClientConfig ClaudeCode` → writes `.mcp.json`. `ModelContextProtocol.RefreshTools` → re-poll.
 - **Tool-search on by default**: server advertises `list_toolsets` / `describe_toolset` / `call_tool`, not every schema.
 - Transport: **HTTP + SSE only** at `http://127.0.0.1:8000/mcp` (no stdio/WebSocket).
-- **Caveats:** Experimental; loopback-only, **no auth**; **no code-execution tool**; **Live Coding does not register new `UFUNCTION`s — adding a tool needs an editor restart.**
+- **Caveats:** Experimental; loopback-only, **no auth**; code execution is **sandboxed only** (`execute_tool_script`: stdlib + read-only FS) — **no unsandboxed "code mode"**; **Live Coding does not register new `UFUNCTION`s — adding a tool needs an editor restart.**
 
 ## Phases
 
@@ -65,9 +65,9 @@ Add an optional MCP-config path to the spawn in `src/lib/claude-terminal/cli-ser
 - **Acceptance:** a harness Claude session lists + invokes a UE tool over MCP (callback path still works unchanged when the flag is off).
 - **DONE 2026-06-18** (commit `059c95a`): `POF_CLI_MCP_CONFIG`-gated `--mcp-config` on autonomous spawns only; off-state byte-for-byte unchanged; tsc/eslint 0, tests green. Live acceptance pending.
 
-### Phase 2 — Port the toolset (on 5.8)
-Map the 37 `MCPUnreal` `Register*Routes()` handlers → `@toolset_registry.tool_call` Python staticmethods, grouped by category (Actor/Blueprint/Anim/Asset/Editor/Mesh/PCG/GAS/Niagara/…). Keep `execute_script` as a custom toolset. Verification stays on the `:30040` auth'd bridge.
-- **Acceptance:** tool parity vs. `MCPUnreal` on 5.8; the test-gate-runner still drains L3/L4 verdicts.
+### Phase 2 — Port the gap-fillers (on 5.8)
+**Scoped 2026-06-18** ([`ue58-mcp-phase2-tool-map.md`](./ue58-mcp-phase2-tool-map.md)): Epic's 5.8 first-party toolsets (28 toolsets / 350+ tools) already cover ~20 of our 40 — **drop those**. Port only the **~16 PoF gap-fillers** as `@toolset_registry.tool_call` Python staticmethods, **6 ⭐ moat tools first** (`capture_viewport`, `gas_ops` mutations, `character_config`, `niagara_ops`, `input_ops`, unsandboxed `execute_script`). Build/cook/headless ops stay on the PoF bridge (Epic's MCP is editor-only). Verification stays on the `:30040` auth'd bridge.
+- **Acceptance:** the gap-filler toolset loads + is callable on 5.8; the test-gate-runner still drains L3/L4 verdicts. (The DROP list's open verifications get confirmed in the Phase 0 live run.)
 
 ### Phase 3 — Decide (gate, not a migration)
 With parity + verification proven on 5.8, decide whether to retire the Go MCP proc + `MCPUnreal` routing, keep both, or run a thin adapter. Only then touch the production engine version.
@@ -84,4 +84,4 @@ With parity + verification proven on 5.8, decide whether to retire the Go MCP pr
 
 ## What we deliberately keep (the moat)
 
-`execute_script` ("code mode" Epic omits) · the L3 observation.json behavioral spine + L4 Gemini visual gate · the auth'd `:30040` bridge · the SQLite authoring-truth + harness orchestration. The official MCP gives Claude *hands*; PoF keeps the *eyes and the rules*.
+`execute_script` (full/unsandboxed — Epic's `execute_tool_script` is sandboxed/read-only) · `capture_viewport` (Epic ships no screenshot tool) · `gas_ops` mutations (Epic GAS only inspects) · the L3 observation.json behavioral spine + L4 Gemini visual gate · the auth'd `:30040` bridge · the SQLite authoring-truth + harness orchestration. The official MCP gives Claude *hands*; PoF keeps the *eyes and the rules*. Full tool-by-tool verdict: [`ue58-mcp-phase2-tool-map.md`](./ue58-mcp-phase2-tool-map.md).
