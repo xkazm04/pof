@@ -10,6 +10,7 @@ import unreal
 from pof_toolset.toolsets.script import PoFScriptTools
 from pof_toolset.toolsets.character import PoFCharacterTools
 from pof_toolset.toolsets.input_actions import PoFInputTools
+from pof_toolset.toolsets.niagara import PoFNiagaraTools
 
 
 class PoFScriptToolsTestCase(unittest.TestCase):
@@ -44,3 +45,10 @@ class PoFCharacterToolsTestCase(unittest.TestCase):
 class PoFInputToolsTestCase(unittest.TestCase):
     def test_list_returns_a_list(self):
         self.assertIsInstance(PoFInputTools.list_input_actions(), list)
+
+
+class PoFNiagaraToolsTestCase(unittest.TestCase):
+    def test_list_returns_a_list(self):
+        # capture_viewport is verified via a -RenderOffScreen launch, not here
+        # (it needs RHI). list_niagara_systems works in any editor.
+        self.assertIsInstance(PoFNiagaraTools.list_niagara_systems(), list)

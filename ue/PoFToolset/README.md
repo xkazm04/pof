@@ -24,6 +24,8 @@ Real PoF capabilities Epic's first-party toolsets don't cover ([tool map](../../
 | `PoFScriptTools.run_python(script)` | **Unsandboxed** code mode (vs Epic's sandboxed `execute_tool_script`) — execs with full `unreal` access, returns `str(result)` | `run_python('result = 2 + 2')` → `4` |
 | `PoFCharacterTools.get_movement` / `set_movement(path, walk, jump, gravity)` | ARPG character movement tuning on an editor-world actor (transient) | spawn `Character`, set → `max_walk_speed=600.0; jump_z_velocity=800.0; gravity_scale=1.5` |
 | `PoFInputTools.list_input_actions()` | Enhanced Input introspection (Epic's is non-functional) | returned 16 `InputAction` assets |
+| `PoFNiagaraTools.list_niagara_systems` / `spawn_niagara(path,x,y,z)` | Niagara FX (Epic ships 0 callable Niagara tools) | 17 systems listed; spawned `NiagaraComponent_0` |
+| `PoFViewportTools.capture_viewport(path,w,h)` | Rendered-frame capture (Epic ships none) — powers PoF's L4 visual gate | wrote a 71 KB PNG (needs a `-RenderOffScreen`/non-`-nullrhi` launch) |
 
 **Verify recipe (robust):** write the probe to a `.py` file and exec it via `buildPythonExecFile` → `-ExecCmds=py exec(open('<path>').read())`. This dodges the `-ExecCmds="…"` double-quote truncation that bit the inline form — use it for any multi-statement Python.
 

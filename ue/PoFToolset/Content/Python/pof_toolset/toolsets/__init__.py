@@ -5,6 +5,8 @@ from pof_toolset.toolsets.spike import PoFSpikeTools
 from pof_toolset.toolsets.script import PoFScriptTools
 from pof_toolset.toolsets.character import PoFCharacterTools
 from pof_toolset.toolsets.input_actions import PoFInputTools
+from pof_toolset.toolsets.niagara import PoFNiagaraTools
+from pof_toolset.toolsets.viewport import PoFViewportTools
 from toolset_registry.registration import Registration
 
 _registration = Registration([
@@ -12,4 +14,6 @@ _registration = Registration([
     PoFScriptTools,
     PoFCharacterTools,
     PoFInputTools,
+    PoFNiagaraTools,
+    PoFViewportTools,
 ])
