@@ -1,4 +1,7 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import * as fs from 'fs';
+import * as os from 'os';
+import * as path from 'path';
 import {
   buildClaudeArgs,
   wrapHarnessResult,
@@ -48,6 +51,51 @@ describe('buildClaudeArgs', () => {
 
   it('omits --allowedTools when the list is empty', () => {
     expect(buildClaudeArgs({ allowedTools: [] })).not.toContain('--allowedTools');
+  });
+});
+
+describe('buildClaudeArgs — autonomous MCP wiring', () => {
+  const ENV_KEY = 'POF_CLI_MCP_CONFIG';
+  let original: string | undefined;
+  const tempFiles: string[] = [];
+
+  beforeEach(() => {
+    original = process.env[ENV_KEY];
+    delete process.env[ENV_KEY];
+  });
+
+  afterEach(() => {
+    if (original === undefined) delete process.env[ENV_KEY];
+    else process.env[ENV_KEY] = original;
+    for (const f of tempFiles.splice(0)) {
+      try { fs.unlinkSync(f); } catch { /* ignore */ }
+    }
+  });
+
+  const writeTempConfig = () => {
+    const file = path.join(os.tmpdir(), `pof-harness-${process.pid}-${Date.now()}.json`);
+    fs.writeFileSync(file, '{"mcpServers":{}}');
+    tempFiles.push(file);
+    return file;
+  };
+
+  it('appends --mcp-config + --strict-mcp-config when enableMcp and the env var resolves', () => {
+    const file = writeTempConfig();
+    process.env[ENV_KEY] = file;
+    expect(buildClaudeArgs({ skipPermissions: true, enableMcp: true })).toEqual([
+      '-p', '-', '--output-format', 'stream-json',
+      '--dangerously-skip-permissions',
+      '--mcp-config', file, '--strict-mcp-config',
+    ]);
+  });
+
+  it('does not add MCP args when enableMcp is absent, even with the env var set', () => {
+    process.env[ENV_KEY] = writeTempConfig();
+    expect(buildClaudeArgs({ skipPermissions: true })).not.toContain('--mcp-config');
+  });
+
+  it('does not add MCP args when enableMcp is true but the env var is unset', () => {
+    expect(buildClaudeArgs({ enableMcp: true })).not.toContain('--mcp-config');
   });
 });
 

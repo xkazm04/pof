@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { NextRequest } from 'next/server';
 import { POST } from '@/app/api/one-shot/propose/route';
+import { startExecution } from '@/lib/claude-terminal/cli-service';
 
 const MOCK_DISTRIBUTION = {
   catalogId: 'items',
@@ -56,5 +57,11 @@ describe('POST /api/one-shot/propose', () => {
     expect(body.data.name).toBe('Void Staff');
     expect(Array.isArray(body.data.issues)).toBe(true);
     expect(typeof body.data.rationale).toBe('string');
+  });
+
+  it('opts the autonomous spawn into MCP (passes enableMcp: true)', async () => {
+    await POST(makePost({ catalogId: 'items', distribution: MOCK_DISTRIBUTION }));
+    const lastCall = vi.mocked(startExecution).mock.calls.at(-1)!;
+    expect(lastCall[4]).toEqual({ enableMcp: true });
   });
 });

@@ -206,6 +206,7 @@ export async function executeArea(
     skipPermissions: config.skipPermissions,
     bareMode: config.bareMode,
     verbose: true,
+    enableMcp: true,
     timeoutMs: config.sessionTimeoutMs,
     onOutput,
   });

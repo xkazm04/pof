@@ -30,7 +30,7 @@ export async function POST(req: NextRequest) {
 
     const prompt = buildRefinePrompt(catalogId, distribution, prior, userInput);
 
-    const executionId = startExecution(PROJECT_PATH, prompt);
+    const executionId = startExecution(PROJECT_PATH, prompt, undefined, undefined, { enableMcp: true });
     const parsed = await awaitCallback(executionId, { timeoutMs: UI_TIMEOUTS.callbackAwaitTimeout }) as Record<string, unknown>;
 
     const seededIds = new Set(seededEntities(catalogId).map((e) => e.id));

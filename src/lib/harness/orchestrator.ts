@@ -285,6 +285,7 @@ ${wrapHarnessResult('{"areaId":"self-heal","completed":true,"features":[],"files
     cwd: projectPath,
     allowedTools: ['Bash', 'Read', 'Edit', 'Write', 'Glob', 'Grep'],
     skipPermissions: config.skipPermissions,
+    enableMcp: true,
     timeoutMs: Math.min(config.sessionTimeoutMs, 300_000), // Max 5 min for fix
   });
 

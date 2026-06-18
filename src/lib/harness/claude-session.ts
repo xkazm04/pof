@@ -13,6 +13,7 @@
  */
 
 import { spawn } from 'child_process';
+import { resolveAutonomousMcpArgs } from '@/lib/claude-terminal/mcp-config';
 
 // ── @@HARNESS_RESULT marker contract ─────────────────────────────────────────
 
@@ -51,6 +52,11 @@ export interface ClaudeSessionOptions {
   bareMode?: boolean;
   /** Pass `--verbose`. */
   verbose?: boolean;
+  /**
+   * Autonomous opt-in to load MCP servers via `--mcp-config` (gated by the
+   * POF_CLI_MCP_CONFIG env var — default off). See `resolveAutonomousMcpArgs`.
+   */
+  enableMcp?: boolean;
   /** Kill the session with SIGTERM after this many ms. */
   timeoutMs: number;
   /** Called with each assistant text block as it streams in. */
@@ -76,7 +82,7 @@ export interface ClaudeSessionResult {
  * without spawning a process.
  */
 export function buildClaudeArgs(
-  opts: Pick<ClaudeSessionOptions, 'allowedTools' | 'skipPermissions' | 'bareMode' | 'verbose'>,
+  opts: Pick<ClaudeSessionOptions, 'allowedTools' | 'skipPermissions' | 'bareMode' | 'verbose' | 'enableMcp'>,
 ): string[] {
   const args = ['-p', '-', '--output-format', 'stream-json'];
   if (opts.verbose) args.push('--verbose');
@@ -85,6 +91,7 @@ export function buildClaudeArgs(
   if (opts.allowedTools && opts.allowedTools.length > 0) {
     args.push('--allowedTools', opts.allowedTools.join(','));
   }
+  if (opts.enableMcp) args.push(...resolveAutonomousMcpArgs());
   return args;
 }
 
