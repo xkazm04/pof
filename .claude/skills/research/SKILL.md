@@ -90,16 +90,17 @@ Cluster detection first (same-file anchor → ships together; `depends-on [N]`; 
 ```
 Then per-idea detail: source anchor, evidence (`file:line`), recommended action, impact-map area, `aligns-with` an existing PoF pattern if any.
 
-### Phase 8 — Triage + action-by-effort
-Ask: "Which findings should I action? (numbers / all / none / ask)". For each accepted finding, action by effort:
-- **S/M** → implement in-session with **TDD** (`superpowers:test-driven-development`) + an atomic `research:` commit per finding (`npm run validate` clean before commit).
-- **L** → implement the core slice (TDD + commit) and write a handoff for the remainder.
-- **XL** (framework bet) → write a spec/handoff doc under `docs/` (don't half-build a subsystem in one run); link it from the impact-map.
+### Phase 8 — Triage + action
+Ask "Which findings should I action? (numbers / all / none / ask)" — but if there's a single dominant in-repo finding and the run is autonomous, action it directly and report. Route each accepted finding:
+- **In-repo, S/M** → implement with **TDD** (`superpowers:test-driven-development`) + an atomic `research:` commit per finding. **Validate before commit:** the affected test(s) + `tsc --noEmit` + `eslint` on changed files for an S/M single-area change; run full `npm run validate` for an L or multi-area change.
+- **In-repo, L** → implement the core slice (TDD + commit) + write a handoff for the remainder.
+- **XL** (framework bet) → write a spec/handoff doc under `docs/` (don't half-build a subsystem); link it from the impact-map.
+- **External / blocked** → the finding targets a system **outside this repo** (e.g. the UE C++ plugin) or needs an **unavailable dependency** (a disconnected MCP, an uninstalled engine, a preview product). Record a **backlog delta** in `docs/research/impact-map.md` under the owning subsystem AND a **`descoped-reopenable`** entry with a concrete reconsider-trigger (e.g. "when mcp-unreal reconnects / UE 5.8 installed"). This is **NOT a decline** — it's a real finding waiting on a blocker. PoF's UE-plugin work lands here often; don't force-fit it into an in-repo commit.
 Honor `--no-commit` / "research only" if the user said so.
 
 ### Phase 9 — Persist + grow the impact-map
 - **Obsidian Research note** `Research/{YYYY-MM-DD}-{slug}.md` (frontmatter: source, type, url, title, buckets, extracted/accepted/declined, commits, web_augmentations) + per-idea blocks with accept/decline + action taken.
-- **Update `docs/research/impact-map.md`:** if the run touched an area that was missing/thin, or found a new anchor, gap, or structural fact, append/refine that subsystem's entry. Keep entries thin (anchors + "lands here" + gaps + doc links). This is what makes run N+1 cheaper — treat it as part of the work, not an afterthought.
+- **Update `docs/research/impact-map.md`:** if the run touched an area that was missing/thin, or found a new anchor, gap, or structural fact, append/refine that subsystem's entry. **Record already-have catches into that subsystem's `already-has` line** (they confirm coverage and stop future re-proposing), and **log External/blocked findings as backlog deltas** under the owning subsystem. Keep entries thin (anchors + "lands here" + already-has + gaps + doc links). This is what makes run N+1 cheaper — treat it as part of the work, not an afterthought.
 
 ### Phase 10 — Reflect (learning loop)
 - Ask the user once (batched) why declined findings were skipped; write `Lessons/{YYYY-MM-DD}.md` (decline reasons + a short self-assessment of what worked/didn't in *this run's process*).
@@ -118,6 +119,7 @@ Print: source, extracted/relevant/accepted/declined counts, already-have catches
 - **Forgetting to grow the map.** Phase 9's impact-map update is the compounding value — skipping it means every run stays slow.
 - **Committing the Obsidian vault.** It's outside the repo by design; only `docs/`, code, and the impact-map are committed.
 - **Building an XL finding in one run.** Spec/handoff it; don't half-ship a subsystem.
+- **Mishandling an external/blocked finding.** A finding that targets the UE plugin or needs a disconnected MCP / uninstalled engine is NOT a decline and NOT a fake in-repo commit — route it to a backlog delta + a `descoped-reopenable` entry with a reconsider-trigger (Phase 8).
 
 ## Supporting files
 - `scripts/clean_vtt.py` — VTT → deduped, timestamped transcript (proven on auto-subs).
