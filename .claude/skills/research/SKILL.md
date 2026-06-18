@@ -61,65 +61,57 @@ Tag every finding with a bucket and an effort scale.
 - **Raw text:** use as-is.
 - If transcript is disabled / text <300 words: report it's too thin and stop.
 
-### Phase 2.5 — Web augmentation (bounded, ≤3 web calls)
-Only if the source names a tool/technique/model that Phase 6 framing needs and that isn't already in the impact-map or `docs/`. One focused `WebSearch` → `WebFetch` the single most authoritative page. Capture a 2-4 sentence note (what it is / how it works / integration shape / why it matters to PoF). Don't validate the speaker's claims here (that's Phase 6) and don't rabbit-hole.
+### Phase 3 — Extract candidate ideas (lightweight — NO web, NO deep reads)
+Extract 5–15 candidates. Each: `title` (imperative, <60 chars), `summary` (1-2 sentences), `source_anchor` (≤20-word quote or `[HH:MM:SS]`), `bucket`, `effort`, and a one-line **impact-map area** (which subsystem it'd touch — read straight from the already-loaded `docs/research/impact-map.md`; cheap). Apply memory filters (deprioritize patterns the user repeatedly declines; surface matching `descoped-reopenable` items as "reconsider?") + source-type yield calibration (engineering talk = dense; product/competitor demo = few + many "already-have" catches). Quick relevance: drop only candidates with **no plausible PoF attachment point**. **Do NOT web-search, grep, or read anchor files yet** — that budget is spent only on what the user picks.
 
-### Phase 3 — Extract ideas (5–15)
-Each idea: `title` (imperative, <60 chars), `summary` (1-2 sentences), `source_anchor` (≤20-word quote or `[HH:MM:SS]`), `tentative_bucket`, `effort`. Apply memory filters (deprioritize patterns the user repeatedly declines; surface matching `descoped-reopenable` items as "reconsider?"). **Source-type yield:** engineering talk = dense (3-5 strong); product/competitor demo = few findings + many "already-have" catches (that's a *good* run — surface the catch count). Don't pad to hit a number.
-
-### Phase 4 — Relevance filter
-Score each idea against the impact-map. **Drop** ideas with no plausible PoF attachment point. Keep `High`/`Medium`.
-
-### Phase 5 — Bucket + score
-Assign final bucket(s) (multi-bucket OK) and confirm effort. Bias toward bucket E / automation-loop leverage when ranking.
-
-### Phase 6 — Impact analysis (the anti-re-scan phase)
-For each surviving idea, in order:
-1. **Impact-map first.** Find the impacted subsystem in `docs/research/impact-map.md` → it names the likely file anchors and whether the area "already has" something. This replaces a blind codebase sweep.
-2. **Host-infrastructure-first grep.** Before claiming "build new", grep for the *category* of infra the idea attaches to (e.g. an MCP tool → `Register*Routes`/tool registry; a harness step → `src/lib/harness/`; a pipeline step → `getStepComponent`/`ArchetypeStep`; an API route → the `apiSuccess` envelope). One discovery here usually reframes "new build" → "extend existing".
-3. **Read the anchor file(s)** (~30-100 lines) to confirm the gap and the exact `file:line` where the change lands.
-4. **Drop if redundant** (PoF already does it → log as an "already-have" catch).
-5. **Security escalation:** PoF exposes HTTP bridges (`:8090`, `:30040`), MCP servers, and spawns `claude --dangerously-skip-permissions`. If an idea touches one of these surfaces and the area lacks auth/sandbox handling, escalate it to a finding even if the source never mentioned security.
-6. If the impacted area is **missing/thin in the impact-map**, note it — you'll add it in Phase 9.
-
-### Phase 7 — Present findings
-Cluster detection first (same-file anchor → ships together; `depends-on [N]`; security pairs). Then a summary table:
+### Phase 4 — Present candidates + PICK (early gate)
+This is the cheap steering gate so a feature-rich video doesn't trigger wholesale web + codebase analysis. Show the candidate table:
 ```
-#  Bucket  Effort  Title                              Relevance  Anchor
-1  A       M       Wire X into the harness loop       High       src/lib/harness/executor.ts
+#  Bucket  Effort  Title                          Area (impact-map)          Source
+1  A       M       Wire X into the harness loop   Headless · harness/executor [04:12]
 ```
-Then per-idea detail: source anchor, evidence (`file:line`), recommended action, impact-map area, `aligns-with` an existing PoF pattern if any.
+Note the source-type expected yield and flag any `descoped-reopenable` matches as "reconsider?". Then ask: **"Which should I investigate + (if real) implement? (numbers / all / none / ask)"**. Only picked candidates go deep. (If the run is autonomous or the user pre-authorized, pick the few highest-value yourself and say which.)
 
-### Phase 8 — Triage + action
-Ask "Which findings should I action? (numbers / all / none / ask)" — but if there's a single dominant in-repo finding and the run is autonomous, action it directly and report. Route each accepted finding:
+### Phase 5 — Deep-verify the PICKED candidates only
+Now spend the expensive budget, on the picks only:
+1. **Web-augment (bounded, ≤3 `WebSearch`/`WebFetch` calls for the whole run)** — only if a pick names a tool/technique/model whose definition sharpens framing and isn't already in the impact-map/`docs/`. One focused search → fetch the most authoritative page; capture a 2-4 sentence note (what / how / integration shape / why it matters to PoF). Don't validate the speaker's claims here; don't rabbit-hole.
+2. **Impact analysis (anti-re-scan):** impact-map first → **host-infrastructure-first grep** (MCP tool → `Register*Routes`/registry; harness step → `src/lib/harness/`; pipeline step → `getStepComponent`/`ArchetypeStep`; API route → `apiSuccess`) → **read the anchor file(s)** (~30-100 lines) for the exact `file:line`.
+3. **Drop if redundant** — a picked item can still resolve to an "already-have" catch; report that honestly, don't force it.
+4. **Security escalation:** PoF exposes HTTP bridges (`:8090`, `:30040`), MCP servers, and spawns `claude --dangerously-skip-permissions`. If a pick touches one of these and the area lacks auth/sandbox handling, escalate it to a finding even if the source never mentioned security.
+
+### Phase 6 — Present verified findings
+The survivors (picked AND real), now with evidence. Cluster detection (same-file anchor → ships together; `depends-on [N]`; security pairs). Summary table + per-idea detail: source anchor, evidence (`file:line`), recommended action + effort, impact-map area, `aligns-with` an existing PoF pattern. Call out any picks that resolved to already-have catches.
+
+### Phase 7 — Action-by-effort
+Route each verified finding:
 - **In-repo, S/M** → implement with **TDD** (`superpowers:test-driven-development`) + an atomic `research:` commit per finding. **Validate before commit:** the affected test(s) + `tsc --noEmit` + `eslint` on changed files for an S/M single-area change; run full `npm run validate` for an L or multi-area change.
 - **In-repo, L** → implement the core slice (TDD + commit) + write a handoff for the remainder.
 - **XL** (framework bet) → write a spec/handoff doc under `docs/` (don't half-build a subsystem); link it from the impact-map.
 - **External / blocked** → the finding targets a system **outside this repo** (e.g. the UE C++ plugin) or needs an **unavailable dependency** (a disconnected MCP, an uninstalled engine, a preview product). Record a **backlog delta** in `docs/research/impact-map.md` under the owning subsystem AND a **`descoped-reopenable`** entry with a concrete reconsider-trigger (e.g. "when mcp-unreal reconnects / UE 5.8 installed"). This is **NOT a decline** — it's a real finding waiting on a blocker. PoF's UE-plugin work lands here often; don't force-fit it into an in-repo commit.
 Honor `--no-commit` / "research only" if the user said so.
 
-### Phase 9 — Persist + grow the impact-map
+### Phase 8 — Persist + grow the impact-map
 - **Obsidian Research note** `Research/{YYYY-MM-DD}-{slug}.md` (frontmatter: source, type, url, title, buckets, extracted/accepted/declined, commits, web_augmentations) + per-idea blocks with accept/decline + action taken.
 - **Update `docs/research/impact-map.md`:** if the run touched an area that was missing/thin, or found a new anchor, gap, or structural fact, append/refine that subsystem's entry. **Record already-have catches into that subsystem's `already-has` line** (they confirm coverage and stop future re-proposing), and **log External/blocked findings as backlog deltas** under the owning subsystem. Keep entries thin (anchors + "lands here" + already-has + gaps + doc links). This is what makes run N+1 cheaper — treat it as part of the work, not an afterthought.
 
-### Phase 10 — Reflect (learning loop)
+### Phase 9 — Reflect (learning loop)
 - Ask the user once (batched) why declined findings were skipped; write `Lessons/{YYYY-MM-DD}.md` (decline reasons + a short self-assessment of what worked/didn't in *this run's process*).
 - **Pattern promotion:** a decline reason seen 3+ times across `Lessons/` → propose adding to `Patterns/user-preferences.md`.
 - **Descoped-reopenable:** a finding blocked by an external dependency (the user says "come back when…") → record in `Patterns/descoped-reopenable.md` with a reconsider-trigger.
 - **Structural facts** the run discovered about the codebase → fold into the impact-map (PoF's analog of a "codebase-stack" doc).
 
-### Phase 11 — Summary + Phase 12 — Atomic commit
+### Phase 10 — Summary + Phase 11 — Atomic commit
 Print: source, extracted/relevant/accepted/declined counts, already-have catches (surface prominently when finding count is low), files updated, commit SHA. Then commit (mandatory unless no changes or user opted out): explicit `git add <path>` for in-scope files **+ `docs/research/impact-map.md`** (never `-A`); `research:`-prefixed message; let hooks run (no `--no-verify`); end with the Co-Authored-By footer. The Obsidian vault is outside the repo — it won't appear in git, and that's correct.
 
 ## Common mistakes
 
 - **Re-scanning the whole codebase.** The impact-map exists so you don't. If it's thin for an area, scan once and *add to it* — don't repeat the scan next run.
-- **Proposing what already exists.** Phase 6 step 2 + the impact-map "already-has" notes + Obsidian memory exist to catch this. A demo that yields 8 "already-have" catches + 2 real gaps is a *successful* run.
+- **Proposing what already exists.** Phase 5 step 2 + the impact-map "already-has" notes + Obsidian memory exist to catch this. A demo that yields 8 "already-have" catches + 2 real gaps is a *successful* run.
 - **Padding to a number.** Low finding count on a product demo is expected; report catches instead.
-- **Forgetting to grow the map.** Phase 9's impact-map update is the compounding value — skipping it means every run stays slow.
+- **Forgetting to grow the map.** Phase 8's impact-map update is the compounding value — skipping it means every run stays slow.
 - **Committing the Obsidian vault.** It's outside the repo by design; only `docs/`, code, and the impact-map are committed.
 - **Building an XL finding in one run.** Spec/handoff it; don't half-ship a subsystem.
-- **Mishandling an external/blocked finding.** A finding that targets the UE plugin or needs a disconnected MCP / uninstalled engine is NOT a decline and NOT a fake in-repo commit — route it to a backlog delta + a `descoped-reopenable` entry with a reconsider-trigger (Phase 8).
+- **Mishandling an external/blocked finding.** A finding that targets the UE plugin or needs a disconnected MCP / uninstalled engine is NOT a decline and NOT a fake in-repo commit — route it to a backlog delta + a `descoped-reopenable` entry with a reconsider-trigger (Phase 7).
 
 ## Supporting files
 - `scripts/clean_vtt.py` — VTT → deduped, timestamped transcript (proven on auto-subs).
