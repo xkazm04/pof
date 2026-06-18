@@ -12,3 +12,4 @@ export { buildLaunchArgs, type LaunchArgsOptions } from './args';
 export { extractLogMarker } from './parse';
 export { buildPythonExecCmd, buildPythonExecFile } from './python';
 export { launchEditor, type LaunchEditorOptions, type LaunchEditorResult, type LaunchDeps } from './launch';
+export { buildCaptureProbe, buildCaptureArgs, captureFrame, type CaptureFrameOptions, type CaptureDeps } from './capture';
