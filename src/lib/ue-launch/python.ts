@@ -28,3 +28,18 @@ export function buildPythonExecCmd(statements: string[]): string {
   }
   return `py ${statements.join('; ')}`;
 }
+
+/**
+ * Wraps a Python FILE path in a quote-safe `-ExecCmds` one-liner:
+ * `py exec(open('<absPath>').read())`. This is the robust pattern for anything
+ * beyond a trivial statement — the file can use any quotes / multiple lines /
+ * try-except, while the command line stays single-quoted with no `;`, dodging the
+ * `-ExecCmds="…"` double-quote truncation. Runs post-init (ExecCmds timing), so
+ * the editor's plugin Content/Python paths are already importable.
+ */
+export function buildPythonExecFile(absPath: string): string {
+  if (absPath.includes("'")) {
+    throw new Error(`buildPythonExecFile: path must not contain a single quote: ${absPath}`);
+  }
+  return `py exec(open('${absPath}').read())`;
+}

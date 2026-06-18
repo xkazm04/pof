@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { buildPythonExecCmd } from '@/lib/ue-launch/python';
+import { buildPythonExecCmd, buildPythonExecFile } from '@/lib/ue-launch/python';
 
 describe('buildPythonExecCmd', () => {
   it('prefixes a single `py` and semicolon-joins the statements', () => {
@@ -20,5 +20,18 @@ describe('buildPythonExecCmd', () => {
 
   it('rejects an empty statement list', () => {
     expect(() => buildPythonExecCmd([])).toThrow(/at least one/i);
+  });
+});
+
+describe('buildPythonExecFile', () => {
+  it('wraps a file path in a quote-safe exec one-liner (no inline-quoting hell)', () => {
+    // The robust pattern for multi-statement Python: write a file, exec it via a
+    // single-quoted one-liner. Avoids the -ExecCmds double-quote truncation that
+    // cost several tries in the Phase 0/2 spikes.
+    expect(buildPythonExecFile('C:/x/probe.py')).toBe("py exec(open('C:/x/probe.py').read())");
+  });
+
+  it('rejects a path containing a single quote (would break the wrapper)', () => {
+    expect(() => buildPythonExecFile("C:/x'/probe.py")).toThrow(/single quote/i);
   });
 });

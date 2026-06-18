@@ -15,6 +15,20 @@ Authored against Epic's shipped pattern (`UE_5.8/Engine/Plugins/Experimental/Too
 | `PoFSpikeTools.ping` | `"PoF toolset alive"` | authoring → registry discovery → MCP call |
 | `PoFSpikeTools.project_info` | `"<project> on UE <version>"` | the toolset reaches the live `unreal` API |
 
+### Phase 2 gap-filler tools (verified autonomously 2026-06-18)
+
+Real PoF capabilities Epic's first-party toolsets don't cover ([tool map](../../docs/ue58-mcp-phase2-tool-map.md)). All registered with the Toolset Registry and executed in a headless 5.8 editor:
+
+| Tool | Purpose | Verified |
+|------|---------|----------|
+| `PoFScriptTools.run_python(script)` | **Unsandboxed** code mode (vs Epic's sandboxed `execute_tool_script`) — execs with full `unreal` access, returns `str(result)` | `run_python('result = 2 + 2')` → `4` |
+| `PoFCharacterTools.get_movement` / `set_movement(path, walk, jump, gravity)` | ARPG character movement tuning on an editor-world actor (transient) | spawn `Character`, set → `max_walk_speed=600.0; jump_z_velocity=800.0; gravity_scale=1.5` |
+| `PoFInputTools.list_input_actions()` | Enhanced Input introspection (Epic's is non-functional) | returned 16 `InputAction` assets |
+
+**Verify recipe (robust):** write the probe to a `.py` file and exec it via `buildPythonExecFile` → `-ExecCmds=py exec(open('<path>').read())`. This dodges the `-ExecCmds="…"` double-quote truncation that bit the inline form — use it for any multi-statement Python.
+
+**Next slice:** `capture_viewport` (needs a rendered `-game -RenderOffScreen` launch), `gas_ops` mutations (needs an ASC-bearing actor + ability/effect assets), `niagara_ops`.
+
 ## Run the spike (manual editor steps)
 
 > The PoF project is still UE 5.7. Test against a **throwaway 5.8 project** (recommended — isolated) **or** a PoF project upgraded to 5.8. Pick one and copy the plugin in.

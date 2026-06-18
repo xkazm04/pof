@@ -10,5 +10,5 @@
 export { resolveEditorBinary, type ResolveEditorOptions, type EnvLike } from './engines';
 export { buildLaunchArgs, type LaunchArgsOptions } from './args';
 export { extractLogMarker } from './parse';
-export { buildPythonExecCmd } from './python';
+export { buildPythonExecCmd, buildPythonExecFile } from './python';
 export { launchEditor, type LaunchEditorOptions, type LaunchEditorResult, type LaunchDeps } from './launch';
