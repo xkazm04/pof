@@ -1,0 +1,23 @@
+{
+	"FileVersion": 3,
+	"Version": 1,
+	"VersionName": "0.1",
+	"FriendlyName": "PoF Toolset (Phase-0 Spike)",
+	"Description": "PoF custom MCP toolset spike — validates the UE 5.8 Toolset Registry authoring path (ue58-mcp convergence Phase 0). Content-only Python; no C++ module.",
+	"Category": "PoF",
+	"CreatedBy": "PoF",
+	"CreatedByURL": "",
+	"DocsURL": "",
+	"MarketplaceURL": "",
+	"SupportURL": "",
+	"EditorOnly": true,
+	"CanContainContent": true,
+	"IsBetaVersion": false,
+	"IsExperimentalVersion": true,
+	"Installed": false,
+	"EnabledByDefault": false,
+	"Plugins": [
+		{ "Name": "ToolsetRegistry", "Enabled": true },
+		{ "Name": "PythonScriptPlugin", "Enabled": true }
+	]
+}

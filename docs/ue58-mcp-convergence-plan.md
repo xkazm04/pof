@@ -58,10 +58,12 @@ The control plane is interchangeable (official MCP ← today: MCPUnreal). The ve
 ### Phase 0 — Spike the toolset path (throwaway 5.8 project)
 Stand up a fresh UE 5.8 preview project; enable **Unreal MCP**, **Toolset Registry**, **Terminal**; turn on *Auto Start Server*; run `ModelContextProtocol.GenerateClientConfig ClaudeCode`; connect Claude Code and confirm tool-search (3 meta-tools). Author **one** Python toolset (in the plugin's `Content/Python/`) that wraps a single existing PoF op — start with **`execute_script`** (it's our differentiator and the simplest to prove). Test the `RefreshTools` vs. restart-to-register behavior.
 - **Acceptance:** Claude calls a PoF-authored tool through Epic's server and gets a real result. Restart-to-register friction quantified.
+- **Authored 2026-06-18:** spike plugin in [`ue/PoFToolset/`](../ue/PoFToolset/README.md) — content-only `PoFSpikeTools` (`ping`, `project_info`) built against Epic's shipped toolset pattern (UE 5.8 ships `ModelContextProtocol`/`ToolsetRegistry`/`Toolsets` in `Engine/Plugins/Experimental/`). Live editor run + the RefreshTools-vs-restart measurement are pending a 5.8 project (PoF project still on 5.7; editor offline).
 
 ### Phase 1 — Wire `--mcp-config` into the app-spawned Claude (no 5.8 needed)
 Add an optional MCP-config path to the spawn in `src/lib/claude-terminal/cli-service.ts` (behind a setting/flag, default off). De-risk independently of 5.8 by pointing it at **today's `MCPUnreal` (`:8090`)** first. This is the missing link that lets a harness session call UE tools directly instead of only `@@CALLBACK`.
 - **Acceptance:** a harness Claude session lists + invokes a UE tool over MCP (callback path still works unchanged when the flag is off).
+- **DONE 2026-06-18** (commit `059c95a`): `POF_CLI_MCP_CONFIG`-gated `--mcp-config` on autonomous spawns only; off-state byte-for-byte unchanged; tsc/eslint 0, tests green. Live acceptance pending.
 
 ### Phase 2 — Port the toolset (on 5.8)
 Map the 37 `MCPUnreal` `Register*Routes()` handlers → `@toolset_registry.tool_call` Python staticmethods, grouped by category (Actor/Blueprint/Anim/Asset/Editor/Mesh/PCG/GAS/Niagara/…). Keep `execute_script` as a custom toolset. Verification stays on the `:30040` auth'd bridge.
