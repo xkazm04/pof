@@ -21,7 +21,7 @@ export interface ExecutorConfig {
    * gate captures its own frame via a headless UE launch (`ue-launch` captureFrame),
    * so L4 runs end-to-end with no operator. Off unless configured.
    */
-  autoCapture?: { uproject: string; engine?: string };
+  autoCapture?: { uproject: string; engine?: string; mapFor?: (job: GateJob) => string };
 }
 
 /**

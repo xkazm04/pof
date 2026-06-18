@@ -13,3 +13,4 @@ export { extractLogMarker } from './parse';
 export { buildPythonExecCmd, buildPythonExecFile } from './python';
 export { launchEditor, type LaunchEditorOptions, type LaunchEditorResult, type LaunchDeps } from './launch';
 export { buildCaptureProbe, buildCaptureArgs, captureFrame, type CaptureFrameOptions, type CaptureDeps } from './capture';
+export { buildScenarioInbox, buildScenarioArgs, newestShot, captureScenarioFrame, type CaptureScenarioFrameOptions } from './capture';

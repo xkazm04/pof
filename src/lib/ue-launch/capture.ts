@@ -15,7 +15,7 @@
  * The pure builders are tested; the spawn is an injectable seam.
  */
 import { spawn, execFileSync } from 'node:child_process';
-import { existsSync, writeFileSync, unlinkSync } from 'node:fs';
+import { existsSync, writeFileSync, unlinkSync, mkdirSync, readdirSync, statSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { resolveEditorBinary } from './engines';
@@ -93,4 +93,82 @@ export async function captureFrame(opts: CaptureFrameOptions, deps: CaptureDeps 
   } finally {
     try { unlinkSync(probePath); } catch { /* ignore */ }
   }
+}
+
+// ── Scenario capture (per-level framing via the Observation Spine) ────────────
+//
+// Unlike the editor screenshot (generic empty view), a `-game -PoFScenario
+// -RenderOffScreen` run loads the level + spawns the player, and the project's
+// UScenarioController writes `shot_<NN>.png` (the on-screen viewport) into out_dir.
+// In `-game` the map IS a working command-line arg (the editor's load_map is not).
+
+/** Capture-only scenario inbox: spawn → settle → one sample. Pure. */
+export function buildScenarioInbox(
+  outDir: string,
+  opts: { totalSeconds?: number; numSamples?: number; settle?: number } = {},
+): string {
+  return JSON.stringify({
+    out_dir: outDir,
+    total_seconds: opts.totalSeconds ?? 3,
+    num_samples: opts.numSamples ?? 1,
+    settle: opts.settle ?? 1.5,
+    inputs: [],
+  }, null, 2);
+}
+
+/** Args for a `-game -PoFScenario -RenderOffScreen` capture run. Pure. Mirrors
+ *  spawnExecutor.buildScenarioArgs but renders (no `-nullrhi`). */
+export function buildScenarioArgs(o: { uproject: string; map: string; inboxPath: string; resX: number; resY: number }): string[] {
+  return [
+    o.uproject, o.map, '-game', `-PoFScenario=${o.inboxPath}`,
+    '-RenderOffScreen', '-windowed', `-ResX=${o.resX}`, `-ResY=${o.resY}`,
+    '-unattended', '-nopause', '-nosplash', '-NoLiveCoding',
+  ];
+}
+
+/** Newest `shot_<NN>.png` in `dir` by mtime (ignores `frame_*` cams / non-png). Pure(+fs). */
+export function newestShot(dir: string): string | null {
+  let names: string[];
+  try { names = readdirSync(dir); } catch { return null; }
+  let best: { path: string; mtime: number } | null = null;
+  for (const name of names) {
+    if (!/^shot_\d+\.png$/i.test(name)) continue;
+    const full = join(dir, name);
+    let mtime: number;
+    try { mtime = statSync(full).mtimeMs; } catch { continue; }
+    if (!best || mtime > best.mtime) best = { path: full, mtime };
+  }
+  return best ? best.path : null;
+}
+
+export interface CaptureScenarioFrameOptions {
+  uproject: string;
+  /** Map to load + render (default the vertical slice). A real `-game` arg. */
+  map?: string;
+  engine?: string;
+  resX?: number;
+  resY?: number;
+  /** Watchdog for the scenario run. Default 180s. */
+  settleMs?: number;
+  /** Override the scenario out_dir (default a temp dir). */
+  outDir?: string;
+}
+
+/**
+ * Capture a meaningful per-level frame via the Observation Spine. Returns the
+ * newest `shot_<NN>.png`, or null if the scenario produced none.
+ */
+export async function captureScenarioFrame(opts: CaptureScenarioFrameOptions, deps: CaptureDeps = {}): Promise<string | null> {
+  const run = deps.run ?? defaultRun;
+  const now = deps.now ?? (() => Date.now());
+  const binary = resolveEditorBinary({ ...(opts.engine ? { engine: opts.engine } : {}), windowed: true });
+  const map = opts.map ?? '/Game/Maps/VerticalSlice';
+  const resX = opts.resX ?? 1280;
+  const resY = opts.resY ?? 720;
+  const outDir = (opts.outDir ?? join(tmpdir(), `pof_l4_scn_${now()}`)).replace(/\\/g, '/');
+  mkdirSync(outDir, { recursive: true });
+  const inboxPath = join(outDir, 'inbox.json').replace(/\\/g, '/');
+  writeFileSync(inboxPath, buildScenarioInbox(outDir));
+  await run(binary, buildScenarioArgs({ uproject: opts.uproject, map, inboxPath, resX, resY }), opts.settleMs ?? 180_000);
+  return newestShot(outDir);
 }
