@@ -30,6 +30,16 @@ Real PoF capabilities Epic's first-party toolsets don't cover ([tool map](../../
 
 > GAS tip: PoF's GameplayEffects are **C++** classes — pass them as `/Script/PoF.GE_*` (e.g. `/Script/PoF.GE_Heal`), not asset paths. ASC-bearing actors exist in `VerticalSlice` (`VSEnemy`).
 
+### Slice 3 — world/editor long-tail (verified 2026-06-18)
+
+| Tool | Purpose | Verified |
+|------|---------|----------|
+| `PoFWorldTools.run_console_command(cmd)` | Run any UE console command | `ran: stat none` |
+| `PoFWorldTools.get_current_level()` | Current editor world name | `VerticalSlice` |
+| `PoFWorldTools.teleport_actor(actor,x,y,z)` | Move an editor-world actor | `loc=100.0,200.0,300.0` |
+
+**8 PoF toolsets** now register (1 spike + 7 functional). Remaining long-tail PORT items (anim_blueprint, ism, pie/player-control, network, fab, output-log) follow the same template.
+
 **Verify recipe (robust):** write the probe to a `.py` file and exec it via `buildPythonExecFile` → `-ExecCmds=py exec(open('<path>').read())`. This dodges the `-ExecCmds="…"` double-quote truncation that bit the inline form — use it for any multi-statement Python.
 
 **Next slice:** `capture_viewport` (needs a rendered `-game -RenderOffScreen` launch), `gas_ops` mutations (needs an ASC-bearing actor + ability/effect assets), `niagara_ops`.
