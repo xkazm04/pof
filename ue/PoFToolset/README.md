@@ -26,6 +26,9 @@ Real PoF capabilities Epic's first-party toolsets don't cover ([tool map](../../
 | `PoFInputTools.list_input_actions()` | Enhanced Input introspection (Epic's is non-functional) | returned 16 `InputAction` assets |
 | `PoFNiagaraTools.list_niagara_systems` / `spawn_niagara(path,x,y,z)` | Niagara FX (Epic ships 0 callable Niagara tools) | 17 systems listed; spawned `NiagaraComponent_0` |
 | `PoFViewportTools.capture_viewport(path,w,h)` | Rendered-frame capture (Epic ships none) — powers PoF's L4 visual gate | wrote a 71 KB PNG (needs a `-RenderOffScreen`/non-`-nullrhi` launch) |
+| `PoFGasTools.apply_effect(actor,ge,level)` / `list_abilities(actor)` | GAS **mutation** + inspection (Epic's GAS toolset is inspection-**only**) | applied `/Script/PoF.GE_Buff_Strength` to `VSEnemy`'s ASC; `list_abilities`=0 |
+
+> GAS tip: PoF's GameplayEffects are **C++** classes — pass them as `/Script/PoF.GE_*` (e.g. `/Script/PoF.GE_Heal`), not asset paths. ASC-bearing actors exist in `VerticalSlice` (`VSEnemy`).
 
 **Verify recipe (robust):** write the probe to a `.py` file and exec it via `buildPythonExecFile` → `-ExecCmds=py exec(open('<path>').read())`. This dodges the `-ExecCmds="…"` double-quote truncation that bit the inline form — use it for any multi-statement Python.
 

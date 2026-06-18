@@ -7,6 +7,7 @@ from pof_toolset.toolsets.character import PoFCharacterTools
 from pof_toolset.toolsets.input_actions import PoFInputTools
 from pof_toolset.toolsets.niagara import PoFNiagaraTools
 from pof_toolset.toolsets.viewport import PoFViewportTools
+from pof_toolset.toolsets.gas import PoFGasTools
 from toolset_registry.registration import Registration
 
 _registration = Registration([
@@ -16,4 +17,5 @@ _registration = Registration([
     PoFInputTools,
     PoFNiagaraTools,
     PoFViewportTools,
+    PoFGasTools,
 ])
