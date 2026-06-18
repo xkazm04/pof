@@ -2,6 +2,14 @@
 
 **Date:** 2026-06-19 · **Status:** approved · **Follows:** `2026-06-19-l4-autonomous-capture-design.md` (generic editor frame). **Reuses:** the UE-project `ScenarioController` Observation Spine (proven on 5.8 by the 5.7→5.8 upgrade).
 
+## ✅ As-built (2026-06-19, commit `e913249`)
+
+Proven live: VerticalSlice scenario `ARMED → pawn possessed → 2 viewport screenshots` → `shot_00/01.png` (~982 KB each). The captured frame **shows the arena + the red player pawn** (not the empty editor view). Implementation matched the spec; no code changes needed from the live runs.
+
+Two **test-harness-only** gotchas (the Node `spawn` code is unaffected — its argv passes intact):
+- Git Bash **MSYS path-conversion mangles the `/Game/Maps/...` map arg** into `C:/Program Files/Git/Game/...` → use `MSYS_NO_PATHCONV=1` for live bash verifies, **and** pass the uproject in **Windows form** (`C:/…`, since `MSYS_NO_PATHCONV=1` also stops `/c/…`→`C:/…` conversion).
+- `Failed to find object 'Class /Script/PoF.UARPGGameInstance'` is **benign** (falls back to generic `UGameInstance`; the scenario + capture still run).
+
 ## Goal
 
 The L4 autonomous capture currently renders the **empty editor view** (`load_map` breaks the editor screenshot). Route capture through the existing **`-game -PoFScenario -RenderOffScreen` Observation Spine** so the frame shows the **actual loaded level + spawned player** — a meaningful frame for the Gemini visual check.
