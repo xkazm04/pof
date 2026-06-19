@@ -14,6 +14,7 @@ open followups a future session should pick up.
 | [mcp-parity-audit.md](mcp-parity-audit.md) | The Phase 3 #1 coverage audit: per-candidate verdicts (Epic-COVERED / GAP / residual) deciding what to port to `PoFToolset` vs drop — and the one C++-bound retire blocker (`anim_blueprint`). |
 | [mcp-bakeoff-verdict.md](mcp-bakeoff-verdict.md) | The Phase 3 #1 retirement bake-off: coverage-parity map + live `:8000` vs `:8090` spot-checks + rubric → **retire `MCPUnreal`+Go, gated on re-homing `anim_blueprint` as C++**. |
 | [go-cpp-stack-decommission.md](go-cpp-stack-decommission.md) | The descope: what's done (config-level — `.mcp.json` flipped to `:8000`), the **manual** physical-removal steps (UE plugin + Go binary), and the **deferred** `anim_blueprint` C++ re-home. |
+| [sword-lifecycle-battle-plan.md](sword-lifecycle-battle-plan.md) | **Plan (not started)** — drive a sword concept→2D→3D→equip→attack→hit/damage into the live UE project on the converged stack. MVP the raw process first, then wire each step to PoF UI/API. The "prove the tooling end-to-end → autonomous game dev" use case 1. |
 | [followups.md](followups.md) | The running backlog of UE-side followups for future sessions (L4 content gap, Phase 2 long-tail tools, RefreshTools measurement, lit-map alignment, …). |
 
 ## Related (elsewhere in docs/)
