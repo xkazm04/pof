@@ -122,20 +122,40 @@ describe('summarizeObservations', () => {
 });
 
 describe('runExperiment scenario mode', () => {
+  const scnRun = (obs: unknown, shot = 'shot_01.png') => async (_b: string, args: string[]) => {
+    const inbox = args.map((a) => a.match(/^-PoFScenario=(.*)$/)?.[1]).find(Boolean)!;
+    const dir = dirname(inbox);
+    writeFileSync(join(dir, 'observations.json'), JSON.stringify(obs));
+    writeFileSync(join(dir, shot), 'PNG');
+  };
+
   it('drives a scenario, summarizes observations + picks the action frame', async () => {
-    const run = async (_b: string, args: string[]) => {
-      const inbox = args.map((a) => a.match(/^-PoFScenario=(.*)$/)?.[1]).find(Boolean)!;
-      const dir = dirname(inbox);
-      writeFileSync(join(dir, 'observations.json'), JSON.stringify({ samples: [{ t: 0, speed: 0 }, { t: 1, speed: 300, anim_speed: 5, montage_playing: true }] }));
-      writeFileSync(join(dir, 'shot_01.png'), 'PNG');
-    };
     const res = await runExperiment(
       { python: '', scenario: { map: '/Game/Maps/VerticalSlice', inputs: [{ key: 'W', start: 0, duration: 2 }] } },
-      { run, fileExists: () => true, env: ENV, now: () => 1 },
+      { run: scnRun({ samples: [{ t: 0, speed: 0 }, { t: 1, speed: 300, anim_speed: 5, montage_playing: true }] }), fileExists: () => true, env: ENV, now: () => 1 },
     );
     expect(res.observationSummary?.maxSpeed).toBe(300);
     expect(res.observationSummary?.montagePlayed).toBe(true);
     expect(res.screenshotPath).toMatch(/shot_01\.png/);
     expect(res.ok).toBe(true);
+  });
+
+  it('applies behavioral assertions (pass when moved far enough)', async () => {
+    const obs = { started: true, samples: [{ t: 0, loc_x: 0, loc_y: 0, droopL: 60, droopR: 60 }, { t: 1, loc_x: 100, loc_y: 0, droopL: 80, droopR: 80 }] };
+    const res = await runExperiment(
+      { python: '', scenario: { map: '/m', inputs: [{ key: 'W', start: 0, duration: 1 }], assert: [{ kind: 'moved', minDist: 50 }] } },
+      { run: scnRun(obs, 'shot_00.png'), fileExists: () => true, env: ENV, now: () => 1 },
+    );
+    expect(res.behavioralVerdict?.status).toBe('pass');
+  });
+
+  it('behavioral assertion fails when the metric is not met', async () => {
+    const obs = { started: true, samples: [{ t: 0, loc_x: 0, loc_y: 0, droopL: 60, droopR: 60 }, { t: 1, loc_x: 10, loc_y: 0, droopL: 60, droopR: 60 }] };
+    const res = await runExperiment(
+      { python: '', scenario: { map: '/m', inputs: [{ key: 'W', start: 0, duration: 1 }], assert: [{ kind: 'moved', minDist: 200 }] } },
+      { run: scnRun(obs, 'shot_00.png'), fileExists: () => true, env: ENV, now: () => 1 },
+    );
+    expect(res.behavioralVerdict?.status).toBe('fail');
+    expect(res.behavioralVerdict?.detail).toMatch(/moved/);
   });
 });

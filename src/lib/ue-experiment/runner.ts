@@ -13,6 +13,8 @@ import { existsSync, writeFileSync, readFileSync, unlinkSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { buildLaunchArgs, buildPythonExecFile, resolveEditorBinary, captureScenarioFrame, type EnvLike, type CaptureScenarioInput } from '@/lib/ue-launch';
+import { parseScenarioVerdict } from '@/lib/test-gate-runner/spawnExecutor';
+import type { GateAssertion } from '@/lib/test-gate-runner/types';
 
 const DONE = 'POF_EXPERIMENT_DONE';
 const ERR = 'POF_EXPERIMENT_ERROR';
@@ -134,6 +136,9 @@ export interface ScenarioSpec {
   totalSeconds?: number;
   numSamples?: number;
   settle?: number;
+  /** Behavioral assertions judged against the observations (reuses the gate-runner's
+   *  parseScenarioVerdict): moved / animated / static / montage-playing / attribute-drop. */
+  assert?: GateAssertion[];
 }
 
 export interface ExperimentSpec {
@@ -157,9 +162,11 @@ export interface ExperimentResult {
   markers: Record<string, string>;
   screenshotPath?: string;
   verdict?: { status: 'pass' | 'fail'; detail: string };
-  /** Scenario mode only: the captured behavioral samples (capped) + their summary. */
+  /** Scenario mode only: the captured behavioral samples (capped) + their summary + the
+   *  assertion verdict (if assertions were given). */
   observations?: ObservationSample[];
   observationSummary?: ObservationSummary;
+  behavioralVerdict?: { status: 'pass' | 'fail'; detail: string };
   durationMs: number;
   binary: string;
   args: string[];
@@ -265,12 +272,24 @@ async function runScenario(spec: ExperimentSpec, ctx: ScenarioCtx, stamp: number
     },
     { run: ctx.run, now: ctx.now },
   );
-  const observations = parseObservations(readFileSafe(join(outDir, 'observations.json')));
+  const raw = readFileSafe(join(outDir, 'observations.json'));
+  let started: boolean | undefined;
+  try { started = (JSON.parse(raw) as { started?: boolean }).started; } catch { /* no obs */ }
+  const observations = parseObservations(raw);
+
   let verdict: ExperimentResult['verdict'];
   if (spec.verify && shot) {
     const verify = ctx.verifyVisual ?? postVerifyVisual(ctx.env);
     verdict = await verify(shot, spec.verify.mode ?? 'character', spec.verify.prompt);
   }
+  let behavioralVerdict: ExperimentResult['behavioralVerdict'];
+  if (scn.assert?.length) {
+    behavioralVerdict = parseScenarioVerdict(
+      { started: started ?? observations.length > 0, samples: observations } as unknown as Parameters<typeof parseScenarioVerdict>[0],
+      scn.assert,
+    );
+  }
+
   return {
     ok: observations.length > 0,
     error: observations.length === 0 ? 'no observations produced (scenario did not run / UScenarioController missing)' : undefined,
@@ -278,6 +297,7 @@ async function runScenario(spec: ExperimentSpec, ctx: ScenarioCtx, stamp: number
     markers: {},
     observations: observations.slice(0, 60),
     observationSummary: summarizeObservations(observations),
+    behavioralVerdict,
     screenshotPath: shot ?? undefined,
     verdict,
     durationMs: ctx.now() - start,
