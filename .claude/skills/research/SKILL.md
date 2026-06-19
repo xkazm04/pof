@@ -56,6 +56,7 @@ Tag every finding with a bucket and an effort scale.
   python .claude/skills/research/scripts/clean_vtt.py "$WORK/<id>.en.vtt"   # → <id>.clean.txt
   ```
   Get the title/duration first with `yt-dlp --skip-download -O "%(id)s :: %(title)s :: %(duration_string)s :: %(channel)s" <url>`.
+  **If yt-dlp hangs/throttles** (common after several pulls in one session): it's usually transient — wrap calls in `timeout`, retry once, or wait for a cooldown. Get the title independently via oEmbed (`curl -s "https://www.youtube.com/oembed?url=<watch-url>&format=json"`). Last-resort transcript fetcher: `python .claude/skills/research/scripts/fetch_transcript.py <id>` (uses `youtube-transcript-api`; needs PyPI + YouTube reachable).
   **Cleanup (mandatory, scoped to THIS run's id):** `rm -f "$WORK"/<id>.*` as soon as the cleaned text is in memory — before Phase 3, so a mid-run failure leaves no residue. Never blind-sweep `$WORK/*` (races parallel runs).
 - **Article URL:** `WebFetch` for the body, stripped of nav/ads.
 - **Raw text:** use as-is.

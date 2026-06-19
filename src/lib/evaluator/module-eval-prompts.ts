@@ -261,7 +261,9 @@ Output the numbered call graph first, then the JSON findings array.`,
     performanceChecks: `- Level streaming should pre-load before player reaches transition
 - Distant actors should be dormant
 - Environmental VFX should use pooling
-- NavMesh should not rebuild at runtime unless necessary`,
+- NavMesh should not rebuild at runtime unless necessary
+- Static-mesh poly budgets should match asset role (small props ~2-5k tris, large/hero props ~10-12k, characters ~20k) — flag over-dense generated/imported meshes that waste GPU + bloat memory
+- High-poly static meshes should use Nanite; non-Nanite meshes need LODs. Generated/AI-imported meshes should have clean topology (no degenerate or hard-edge triangles that break shading)`,
   },
   'arpg-save': {
     focus: 'USaveGame, serialization, auto-save, save slots, versioning',
