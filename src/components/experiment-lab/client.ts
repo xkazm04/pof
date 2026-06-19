@@ -24,7 +24,7 @@ export async function runExperimentJob(spec: ExperimentSpec, opts: RunOpts = {})
   );
   const maxPolls = opts.maxPolls ?? 600;
   for (let i = 0; i < maxPolls; i++) {
-    await sleep(opts.pollMs ?? 2000);
+    await sleep(opts.pollMs ?? 30_000);
     const s = await unwrap<{ status: 'running' | 'done' | 'error'; result?: ExperimentResult; error?: string }>(
       await f(`/api/experiment/status/${jobId}`),
     );
