@@ -147,4 +147,18 @@ describe('captureScenarioFrame', () => {
     const res = await captureScenarioFrame({ uproject: 'C:/p/PoF.uproject', scenario, outDir, settleMs: 0 }, { run });
     expect(res).toBe(join(outDir, 'shot_01.png')); // the mid-ability frame, not the last sample
   });
+
+  it('renders on the caller-supplied LIT map, not the scenario`s (dark) map', async () => {
+    const outDir = tmp();
+    let seenArgs: string[] = [];
+    const scenario: GateScenario = {
+      map: '/Game/Maps/TestHarness', totalSeconds: 2, numSamples: 1, settle: 1,
+      inputs: [{ event: 'activate_ability', eventArg: 'Ability.X', start: 0.5, duration: 0.1 }],
+      assert: [{ kind: 'ability-activated' }],
+    };
+    const run = async (_bin: string, args: string[]) => { seenArgs = args; writeFileSync(join(outDir, 'shot_00.png'), 'x'); };
+    await captureScenarioFrame({ uproject: 'C:/p/PoF.uproject', scenario, map: '/Game/Maps/VerticalSlice', outDir, settleMs: 0 }, { run });
+    expect(seenArgs).toContain('/Game/Maps/VerticalSlice'); // caller's lit map wins
+    expect(seenArgs).not.toContain('/Game/Maps/TestHarness'); // not the scenario's dark map
+  });
 });

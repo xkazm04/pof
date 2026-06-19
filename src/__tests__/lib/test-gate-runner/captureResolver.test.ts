@@ -20,6 +20,7 @@ describe('makeUeCaptureResolver', () => {
     expect(out).toBe('C:/out/shot_01.png');
     expect(seen!.scenario).toBeDefined();
     expect(seen!.scenario!.inputs?.[0]?.event).toBe('activate_ability');
+    expect(seen!.map).toBe('/Game/Maps/VerticalSlice'); // lit map default wins over the scenario's
   });
 
   it('uses a generic frame (no scenario) for an unregistered catalog, with mapFor', async () => {

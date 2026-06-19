@@ -217,7 +217,9 @@ export async function captureScenarioFrame(opts: CaptureScenarioFrameOptions, de
   const now = deps.now ?? (() => Date.now());
   const binary = resolveEditorBinary({ ...(opts.engine ? { engine: opts.engine } : {}), windowed: true });
   const scn = opts.scenario;
-  const map = scn?.map ?? opts.map ?? '/Game/Maps/VerticalSlice';
+  // Caller-supplied map wins over the scenario's: L4 renders on a LIT map, while the
+  // scenario's own map is L3-oriented (often dark/headless, e.g. TestHarness).
+  const map = opts.map ?? scn?.map ?? '/Game/Maps/VerticalSlice';
   const resX = opts.resX ?? 1280;
   const resY = opts.resY ?? 720;
   const outDir = (opts.outDir ?? join(tmpdir(), `pof_l4_scn_${now()}`)).replace(/\\/g, '/');

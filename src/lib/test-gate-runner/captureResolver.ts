@@ -41,7 +41,8 @@ export function makeUeCaptureResolver(
       uproject: cfg.uproject,
       ...(cfg.engine ? { engine: cfg.engine } : {}),
       ...(scenario ? { scenario } : {}),
-      ...(cfg.mapFor ? { map: cfg.mapFor(job) } : {}),
+      // Always a LIT map — wins over the scenario's (L3) map so the L4 frame isn't dark.
+      map: cfg.mapFor ? cfg.mapFor(job) : '/Game/Maps/VerticalSlice',
     });
   };
 }
