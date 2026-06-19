@@ -121,18 +121,22 @@ export interface CaptureScenarioSpec {
   numSamples?: number;
   settle?: number;
   inputs?: CaptureScenarioInput[];
+  /** Destroy AI-possessed pawns at scenario start so combat can't interfere with the
+   *  observed behavior (e.g. isolate locomotion — enemies otherwise stagger the player). */
+  disableAI?: boolean;
 }
 
 /** Scenario inbox — capture-only (no inputs) or driving a per-gate action. Pure. */
 export function buildScenarioInbox(
   outDir: string,
-  opts: { totalSeconds?: number; numSamples?: number; settle?: number; inputs?: CaptureScenarioInput[] } = {},
+  opts: { totalSeconds?: number; numSamples?: number; settle?: number; inputs?: CaptureScenarioInput[]; disableAI?: boolean } = {},
 ): string {
   return JSON.stringify({
     out_dir: outDir,
     total_seconds: opts.totalSeconds ?? 3,
     num_samples: opts.numSamples ?? 1,
     settle: opts.settle ?? 1.5,
+    ...(opts.disableAI ? { disable_ai: true } : {}),
     inputs: (opts.inputs ?? []).map((i) => ({
       ...(i.key ? { key: i.key } : {}),
       ...(i.action ? { action: i.action } : {}),
@@ -230,6 +234,7 @@ export async function captureScenarioFrame(opts: CaptureScenarioFrameOptions, de
     numSamples: scn.numSamples,
     settle: scn.settle,
     inputs: scn.inputs,
+    disableAI: scn.disableAI,
   } : {}));
   await run(binary, buildScenarioArgs({ uproject: opts.uproject, map, inboxPath, resX, resY }), opts.settleMs ?? 180_000);
   // Pick the action-active sample's shot (falls back to newest for the generic case).

@@ -54,6 +54,11 @@ describe('buildScenarioInbox', () => {
     expect(inbox.num_samples).toBeGreaterThanOrEqual(1);
     expect(typeof inbox.total_seconds).toBe('number');
   });
+
+  it('emits disable_ai only when requested', () => {
+    expect(JSON.parse(buildScenarioInbox('C:/t/out')).disable_ai).toBeUndefined();
+    expect(JSON.parse(buildScenarioInbox('C:/t/out', { disableAI: true })).disable_ai).toBe(true);
+  });
 });
 
 describe('buildScenarioInbox (with inputs)', () => {

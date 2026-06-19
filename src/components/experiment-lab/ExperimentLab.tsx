@@ -34,6 +34,7 @@ export function ExperimentLab() {
   const [capture, setCapture] = useState(true);
   const [scenarioMap, setScenarioMap] = useState('/Game/Maps/VerticalSlice');
   const [scenarioInputs, setScenarioInputs] = useState(STARTER_INPUTS);
+  const [removeEnemies, setRemoveEnemies] = useState(true);
   const [verifyPrompt, setVerifyPrompt] = useState('');
   const [asserts, setAsserts] = useState<AssertionToggles>({});
   const [status, setStatus] = useState<Status>('idle');
@@ -58,7 +59,7 @@ export function ExperimentLab() {
         const assert = buildAssertions(asserts);
         spec = {
           python: '',
-          scenario: { map: scenarioMap, inputs, totalSeconds: 4, numSamples: 8, ...(assert.length ? { assert } : {}) },
+          scenario: { map: scenarioMap, inputs, totalSeconds: 4, numSamples: 8, disableAI: removeEnemies, ...(assert.length ? { assert } : {}) },
           verify: verifyPrompt.trim() ? { prompt: verifyPrompt.trim() } : undefined,
         };
       } catch {
@@ -79,7 +80,7 @@ export function ExperimentLab() {
       setStatus('error');
       logger.error('experiment run failed', e);
     }
-  }, [mode, python, capture, scenarioMap, scenarioInputs, verifyPrompt, asserts]);
+  }, [mode, python, capture, scenarioMap, scenarioInputs, removeEnemies, verifyPrompt, asserts]);
 
   const s = result?.observationSummary;
 
@@ -132,6 +133,10 @@ export function ExperimentLab() {
           <label className="block">
             <span className="text-xs text-text-muted">Inputs — JSON; prefer {`{ action, value:[x,y], start, duration }`} (reliable) over {`{ key }`}</span>
             <textarea className="mt-1 h-32 w-full rounded border border-border bg-surface p-2 font-mono text-xs" value={scenarioInputs} onChange={(e) => setScenarioInputs(e.target.value)} aria-label="Scenario inputs" spellCheck={false} />
+          </label>
+          <label className="flex items-center gap-2 text-xs">
+            <input type="checkbox" checked={removeEnemies} onChange={(e) => setRemoveEnemies(e.target.checked)} aria-label="Remove enemies" />
+            <span>Remove enemies (isolate movement — uncheck to test combat)</span>
           </label>
           <div className="flex flex-wrap items-center gap-4" aria-label="behavioral assertions">
             <span className="text-xs text-text-muted">Assert behavior:</span>

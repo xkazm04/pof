@@ -136,6 +136,9 @@ export interface ScenarioSpec {
   totalSeconds?: number;
   numSamples?: number;
   settle?: number;
+  /** Destroy AI-possessed pawns at start so combat can't interfere (e.g. isolate locomotion
+   *  — enemies otherwise stagger the player into a CanMove()-false state). */
+  disableAI?: boolean;
   /** Behavioral assertions judged against the observations (reuses the gate-runner's
    *  parseScenarioVerdict): moved / animated / static / montage-playing / attribute-drop. */
   assert?: GateAssertion[];
@@ -268,7 +271,7 @@ async function runScenario(spec: ExperimentSpec, ctx: ScenarioCtx, stamp: number
       ...(spec.engine ? { engine: spec.engine } : {}),
       outDir,
       settleMs: spec.settleMs ?? 180_000,
-      scenario: { totalSeconds: scn.totalSeconds, numSamples: scn.numSamples, settle: scn.settle, inputs: scn.inputs },
+      scenario: { totalSeconds: scn.totalSeconds, numSamples: scn.numSamples, settle: scn.settle, inputs: scn.inputs, disableAI: scn.disableAI },
     },
     { run: ctx.run, now: ctx.now },
   );
