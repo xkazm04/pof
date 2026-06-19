@@ -5,10 +5,17 @@ import { UE_GOTCHAS } from '@/lib/knowledge/ue-gotchas';
 import { logger } from '@/lib/logger';
 import { seedFromGotcha } from './seed';
 import { runExperimentJob } from './client';
+import { buildAssertions, type AssertionToggles } from './assertions';
+import { ExperimentHistory } from './ExperimentHistory';
 import type { ExperimentResult, ExperimentSpec } from '@/lib/ue-experiment/runner';
 
 type Status = 'idle' | 'running' | 'done' | 'error';
 type Mode = 'python' | 'scenario';
+const ASSERT_KINDS: { key: keyof AssertionToggles; label: string }[] = [
+  { key: 'moved', label: 'moved' },
+  { key: 'animated', label: 'animated' },
+  { key: 'montage', label: 'montage played' },
+];
 
 const STARTER = "unreal.log('RESULT=' + unreal.SystemLibrary.get_engine_version())";
 const STARTER_INPUTS = '[{ "key": "W", "start": 0.5, "duration": 2 }]';
@@ -26,10 +33,12 @@ export function ExperimentLab() {
   const [scenarioMap, setScenarioMap] = useState('/Game/Maps/VerticalSlice');
   const [scenarioInputs, setScenarioInputs] = useState(STARTER_INPUTS);
   const [verifyPrompt, setVerifyPrompt] = useState('');
+  const [asserts, setAsserts] = useState<AssertionToggles>({});
   const [status, setStatus] = useState<Status>('idle');
   const [jobId, setJobId] = useState<string | null>(null);
   const [result, setResult] = useState<ExperimentResult | null>(null);
   const [errMsg, setErrMsg] = useState<string | null>(null);
+  const [refreshKey, setRefreshKey] = useState(0);
 
   const onSeed = useCallback((id: string) => {
     const g = UE_GOTCHAS.find((x) => x.id === id);
@@ -44,7 +53,12 @@ export function ExperimentLab() {
     if (mode === 'scenario') {
       try {
         const inputs = JSON.parse(scenarioInputs);
-        spec = { python: '', scenario: { map: scenarioMap, inputs, totalSeconds: 4, numSamples: 8 }, verify: verifyPrompt.trim() ? { prompt: verifyPrompt.trim() } : undefined };
+        const assert = buildAssertions(asserts);
+        spec = {
+          python: '',
+          scenario: { map: scenarioMap, inputs, totalSeconds: 4, numSamples: 8, ...(assert.length ? { assert } : {}) },
+          verify: verifyPrompt.trim() ? { prompt: verifyPrompt.trim() } : undefined,
+        };
       } catch {
         setErrMsg('Inputs must be valid JSON (an array of { key/action, start, duration }).');
         setStatus('error');
@@ -57,12 +71,13 @@ export function ExperimentLab() {
     try {
       const { jobId: id, result: r } = await runExperimentJob(spec);
       setJobId(id); setResult(r); setStatus('done');
+      setRefreshKey((k) => k + 1);
     } catch (e) {
       setErrMsg(e instanceof Error ? e.message : 'experiment failed');
       setStatus('error');
       logger.error('experiment run failed', e);
     }
-  }, [mode, python, capture, scenarioMap, scenarioInputs, verifyPrompt]);
+  }, [mode, python, capture, scenarioMap, scenarioInputs, verifyPrompt, asserts]);
 
   const s = result?.observationSummary;
 
@@ -116,6 +131,15 @@ export function ExperimentLab() {
             <span className="text-xs text-text-muted">Inputs — JSON array of {`{ key|action, start, duration, value? }`}</span>
             <textarea className="mt-1 h-32 w-full rounded border border-border bg-surface p-2 font-mono text-xs" value={scenarioInputs} onChange={(e) => setScenarioInputs(e.target.value)} aria-label="Scenario inputs" spellCheck={false} />
           </label>
+          <div className="flex flex-wrap items-center gap-4" aria-label="behavioral assertions">
+            <span className="text-xs text-text-muted">Assert behavior:</span>
+            {ASSERT_KINDS.map((a) => (
+              <label key={a.key} className="flex items-center gap-1.5 text-xs">
+                <input type="checkbox" checked={!!asserts[a.key]} onChange={(e) => setAsserts((p) => ({ ...p, [a.key]: e.target.checked }))} aria-label={`assert ${a.label}`} />
+                <span>{a.label}</span>
+              </label>
+            ))}
+          </div>
         </>
       )}
 
@@ -134,6 +158,7 @@ export function ExperimentLab() {
           <div className="flex flex-wrap items-center gap-3">
             <span className={result.ok ? 'font-medium text-emerald-500' : 'font-medium text-red-500'}>{result.ok ? '✓ ran' : '✗ failed'}</span>
             <span className="text-text-muted">{Math.round(result.durationMs / 1000)}s</span>
+            {result.behavioralVerdict && <span className={result.behavioralVerdict.status === 'pass' ? 'text-emerald-500' : 'text-amber-500'}>behavior: {result.behavioralVerdict.status} — {result.behavioralVerdict.detail}</span>}
             {result.verdict && <span className={result.verdict.status === 'pass' ? 'text-emerald-500' : 'text-amber-500'}>visual: {result.verdict.status} — {result.verdict.detail}</span>}
           </div>
           {result.error && <p className="font-mono text-xs text-red-500">{result.error}</p>}
@@ -160,6 +185,8 @@ export function ExperimentLab() {
           )}
         </section>
       )}
+
+      <ExperimentHistory refreshKey={refreshKey} />
     </div>
   );
 }

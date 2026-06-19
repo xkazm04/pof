@@ -1,6 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import { seedFromGotcha } from '@/components/experiment-lab/seed';
-import { runExperimentJob } from '@/components/experiment-lab/client';
+import { runExperimentJob, fetchHistory, fetchRun } from '@/components/experiment-lab/client';
+import { buildAssertions } from '@/components/experiment-lab/assertions';
 
 describe('seedFromGotcha', () => {
   it('builds a runnable starter probe + verify prompt from a gotcha', () => {
@@ -34,5 +35,29 @@ describe('runExperimentJob', () => {
       .mockResolvedValueOnce(jsonRes({ success: true, data: { jobId: 'exp-2' } }))
       .mockResolvedValueOnce(jsonRes({ success: true, data: { status: 'error', error: 'boom' } }));
     await expect(runExperimentJob({ python: 'x' }, { fetchImpl, pollMs: 0 })).rejects.toThrow(/boom/);
+  });
+});
+
+describe('buildAssertions', () => {
+  it('maps toggles to GateAssertion kinds', () => {
+    expect(buildAssertions({ moved: true, montage: true })).toEqual([{ kind: 'moved' }, { kind: 'montage-playing' }]);
+    expect(buildAssertions({})).toEqual([]);
+  });
+});
+
+describe('history fetchers', () => {
+  const jsonRes = (body: unknown) => ({ json: async () => body }) as Response;
+
+  it('fetchHistory unwraps the runs list', async () => {
+    const fetchImpl = vi.fn().mockResolvedValue(jsonRes({ success: true, data: { runs: [{ id: 'r1' }, { id: 'r2' }] } }));
+    const runs = await fetchHistory({ fetchImpl });
+    expect(runs.map((r) => r.id)).toEqual(['r1', 'r2']);
+    expect(fetchImpl).toHaveBeenCalledWith('/api/experiment/history?limit=50');
+  });
+
+  it('fetchRun unwraps a single run', async () => {
+    const fetchImpl = vi.fn().mockResolvedValue(jsonRes({ success: true, data: { id: 'r1', mode: 'scenario' } }));
+    const run = await fetchRun('r1', fetchImpl);
+    expect(run.id).toBe('r1');
   });
 });

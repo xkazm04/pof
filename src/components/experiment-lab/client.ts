@@ -1,6 +1,7 @@
 /** Client-side: start an experiment job and poll it to completion. Pure of React
  * so the POST→poll loop is unit-tested with a mock fetch. */
 import type { ExperimentResult, ExperimentSpec } from '@/lib/ue-experiment/runner';
+import type { ExperimentRunSummary, ExperimentRunDetail } from '@/lib/ue-experiment/experiment-db';
 import type { ApiResponse } from '@/types/api';
 
 interface RunOpts {
@@ -32,4 +33,16 @@ export async function runExperimentJob(spec: ExperimentSpec, opts: RunOpts = {})
     if (s.status === 'error') throw new Error(s.error ?? 'experiment failed');
   }
   throw new Error('experiment timed out');
+}
+
+/** List persisted runs (newest first) for the history panel. */
+export async function fetchHistory(opts: { fetchImpl?: typeof fetch; limit?: number } = {}): Promise<ExperimentRunSummary[]> {
+  const f = opts.fetchImpl ?? fetch;
+  const { runs } = await unwrap<{ runs: ExperimentRunSummary[] }>(await f(`/api/experiment/history?limit=${opts.limit ?? 50}`));
+  return runs;
+}
+
+/** Fetch one persisted run's full detail (for A-B compare). */
+export async function fetchRun(id: string, fetchImpl: typeof fetch = fetch): Promise<ExperimentRunDetail> {
+  return unwrap<ExperimentRunDetail>(await fetchImpl(`/api/experiment/runs/${id}`));
 }
