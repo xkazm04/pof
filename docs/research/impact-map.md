@@ -34,7 +34,7 @@
 
 ### Experiment Lab (theory → output — validate a concept live on UE 5.8)
 - **Anchors:** `src/lib/ue-experiment/` (`runner.ts` `runExperiment` — launch headless 5.8 → run Python probe → capture frame → log markers → optional Gemini verdict; `job-store.ts`), `src/app/api/experiment/{run,status/[id],screenshot/[id]}/route.ts`, `src/components/experiment-lab/` (`ExperimentLab.tsx` + `seed.ts` + `client.ts`), page `/experiment`.
-- **Lands here:** running an ad-hoc concept on the connected project + seeing output. **A research finding (a `UE_GOTCHAS` entry) can be SEEDED into a live experiment** (`seedFromGotcha`) — the theory→output bridge for the research loop.
+- **Lands here:** running an ad-hoc concept on the connected project + seeing output. **Two modes:** Editor-Python (probe + screenshot) and **Gameplay Scenario** (`-game -PoFScenario` — drive the player with inputs + observe behavioral metrics `summarizeObservations` (maxSpeed/displacement/montage) + the peak-action frame, reusing the observation spine). **A research finding (a `UE_GOTCHAS` entry) can be SEEDED into a live experiment** (`seedFromGotcha`) — the theory→output bridge for the research loop. TopBar "Experiment" tab → `/experiment`; 30s poll.
 - **Already-has:** reuses `ue-launch` (launch/python/capture/markers) + `/api/verify/visual` (L4). **Proven live 2026-06-19** (real UE 5.8: 439 KB frame + `RESULT=5.8.0` marker). Headless-per-run; ad-hoc; in-app UI.
 - **Docs/memory:** `docs/superpowers/specs/2026-06-19-ue-experiment-lab-design.md`, `[[project_ue58_official_mcp]]`.
 
