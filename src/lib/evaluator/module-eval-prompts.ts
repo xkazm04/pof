@@ -253,7 +253,8 @@ Output the numbered call graph first, then the JSON findings array.`,
 - Zone transitions should use streaming volumes or portal actors
 - Spawn points should be data-driven (not hardcoded positions)
 - Boss encounters should have dedicated trigger volumes
-- Environmental hazards should use GAS effects for damage`,
+- Environmental hazards should use GAS effects for damage
+- Large-scale content placement should use PCG (5.7 production-ready) — PCG graphs are DATA-flow not exec-flow; expose parameters + use PCG graph INSTANCES (the material/material-instance paradigm) rather than authoring a bespoke graph per variation; use runtime hierarchical generation for open worlds; filter on sampled landscape layer-weight attributes for biome-aware placement`,
     qualityChecks: `- NavMesh should cover all walkable areas
 - Zone transitions should preserve player state
 - Boss phases should use behavior tree states, not hardcoded sequences

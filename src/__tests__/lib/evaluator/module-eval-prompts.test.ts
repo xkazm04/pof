@@ -16,3 +16,11 @@ describe('arpg-animation quality checks — generated / AI motion sources', () =
     expect(q).toMatch(/cleanup|foot slid|jitter/i);
   });
 });
+
+describe('arpg-world structure checks — PCG procedural placement', () => {
+  it('recommends PCG for large-scale content with parameters/graph-instances', () => {
+    const s = MODULE_CONTEXTS['arpg-world'].structureChecks;
+    expect(s).toMatch(/PCG/);
+    expect(s).toMatch(/graph instance|parameter|hierarchical/i);
+  });
+});
