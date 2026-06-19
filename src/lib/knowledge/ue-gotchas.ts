@@ -85,6 +85,30 @@ export const UE_GOTCHAS: Gotcha[] = [
     appliesTo: ['ue-python'],
     source: 'vertical-slice: characters',
   },
+  {
+    id: 'lumen-swrt-thin-geometry',
+    summary: 'Lumen software tracing misses thin geometry — raise the mesh Distance Field Resolution Scale',
+    detail:
+      'With Lumen Software Ray Tracing, thin meshes (walls, ceilings, railings) drop out of the mesh distance field and leak light / lose GI. Fix per-mesh in the Static Mesh Editor build settings: raise Distance Field Resolution Scale (e.g. ~10-20) — costs memory/disk but resolves thin geo — or thicken the mesh. Visualize with Show Flags → Visualize → Mesh Distance Fields.',
+    appliesTo: ['ue-python'],
+    source: 'research: Lumen in AAA (Karim Yasser)',
+  },
+  {
+    id: 'lumen-swrt-mode-by-scale',
+    summary: 'Pick Lumen SWRT mode by world scale: Detail Tracing (per-mesh) vs Global Tracing (large worlds)',
+    detail:
+      'Lumen Software Ray Tracing has two modes. Detail Tracing uses per-mesh distance fields — accurate, best for focused/interior or small-distance detail. Global Tracing uses the low-res global distance field — cheaper + faster, loses small-distance detail, best for large open-world environments. Choose by project scale, not by default.',
+    appliesTo: ['ue-python'],
+    source: 'research: Lumen in AAA (Karim Yasser)',
+  },
+  {
+    id: 'lumen-hwrt-reflection-cache',
+    summary: 'Lumen HWRT surface-cache gives black/inaccurate reflections on smooth surfaces — use Hit Lighting for Reflections',
+    detail:
+      'With Hardware Ray Tracing, the default Surface Cache produces black or wrong reflections on smooth/specular surfaces (water, polished floors). Set the post-process Lumen reflection method to "Hit Lighting for Reflections" for accurate reflections at moderate cost. Avoid full "Hit Lighting" in shipping games — it casts far more indirect rays and is too expensive to be reliable.',
+    appliesTo: ['ue-python'],
+    source: 'research: Lumen in AAA (Karim Yasser)',
+  },
 ];
 
 /**

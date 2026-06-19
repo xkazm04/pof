@@ -57,6 +57,12 @@ describe('formatGotchas', () => {
     expect(formatGotchas('ue-cpp')).not.toMatch(/dir\(unreal/);
   });
 
+  it('carries Lumen lighting best-practice pitfalls for ue-python', () => {
+    const out = formatGotchas('ue-python');
+    expect(out).toMatch(/Lumen/);
+    expect(out).toMatch(/distance field|surface cache|hit lighting/i);
+  });
+
   it('returns an empty string for web', () => {
     expect(formatGotchas('web')).toBe('');
   });
