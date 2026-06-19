@@ -6,6 +6,20 @@
 
 Mechanism + wiring **proven**: the `abilities`/Fireball scenario `ARMED → pawn possessed → 8 per-sample shots` (the action is genuinely driven; 108 unit tests green). **But the abilities frame is poor** — `TestHarness` is an unlit black void (white pawn + a debug arrow) and Fireball fires **no character montage** (`montage_flags=[false×8]` — projectile cast), so `pickActionShot` falls back to the idle last sample and there's no visible action. This is the documented lit-map caveat in practice; a *meaningful* abilities frame needs a **lit map + framed camera + a montage/VFX-visible action** (follow-up). The code is correct (drives the registered scenario, selects the action sample); the visual quality is a map/content issue. Contrast: the generic VerticalSlice capture (prior slice) IS a good lit frame.
 
+## Lit-map override (2026-06-19, commit `d8bbfc5`)
+
+Follow-up to the dark-frame finding above. L4 capture now renders the scenario's
+**inputs on a LIT map** (default VerticalSlice) instead of the scenario's L3 map:
+`captureScenarioFrame` map precedence = `opts.map → scenario.map → default`, and
+the resolver always passes a lit map. **Live result:** abilities/Fireball on
+VerticalSlice → a **lit, character-framed frame** (red player in the lit arena) —
+the useful-frame unlock works (good for the character/lighting/hud L4 modes).
+**Residual caveat (confirmed):** Fireball does NOT fire on `BP_VSPlayer` (montage
+all-false, mana flat 50) — the lit map's pawn lacks that ability, so the frame is
+the character *idle*, not mid-cast. A *specific ability visibly firing* needs the
+lit map's pawn to have it (or lighting the ability-capable map) — a content/map
+follow-up, not a capture-code issue.
+
 ## Goal
 
 Capture the entity **performing the gate-relevant action** (activate an ability / walk) rather than just standing spawned — so the L4 Gemini check sees the meaningful moment for the gate.
