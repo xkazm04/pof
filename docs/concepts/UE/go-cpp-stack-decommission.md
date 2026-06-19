@@ -11,15 +11,13 @@ from PoF's active workflow** in favour of UE 5.8's first-party MCP (`:8000`, Epi
 - **`mcp-config.ts`** — docstring updated (the resolver is config-agnostic; no behavior change).
 - The autonomous-Claude UE surface is now: **`pof-mcp`** (app API, always up) + **`unreal-official` `:8000`** (live only when a 5.8 editor is up with `ModelContextProtocol.StartServer`; a failed connect is a non-fatal warning).
 
-## Manual physical-removal steps (do when ready — destructive, outside the repo)
+## Physical removal — ✅ DONE 2026-06-19
 
-These touch the **shared UE project** and an **external dir**, so they're left manual:
+Both deleted (recoverable):
+1. **Go binary/staging** — `~/mcp-unreal-staging/` deleted. Recoverable by re-cloning `https://github.com/remiphilippe/mcp-unreal.git`.
+2. **`MCPUnreal` UE plugin** — `<UE project>/Plugins/MCPUnreal/` deleted (only `PillarsOfFortuneBridge` — the `:30040` moat — remains). It was git-tracked in the UE project (39 source files), so the deletion is **recoverable via UE git history** (`git checkout -- Plugins/MCPUnreal`). The deletions were left **unstaged** in the UE working tree (branch `feature/arpg-movement-feel`, which also holds the concurrent session's UE WIP) — to be committed by that session alongside their changes; this repo did not commit into the shared UE git.
 
-1. **Stop / delete the Go binary:** `~/mcp-unreal-staging/` (the `mcp-unreal.exe` + source). Nothing in the repo references it after this descope.
-2. **Remove the `MCPUnreal` UE plugin:** delete `<UE project>/Plugins/MCPUnreal/`. Confirm no other consumer (the concurrent `/research` session) still relies on `:8090` first.
-3. Rebuild the project once after removal to drop the C++ module.
-
-Until step 2, `MCPUnreal` remains physically present (harmless, just unused) and can serve as a **break-glass `:8090` fallback**.
+**Clean removal — no follow-up needed:** `PoF.uproject` did **not** reference `MCPUnreal` (it was auto-discovered, not pinned) and no UE `Source/` module depended on it → no dangling references, no `.uproject` edit, no rebuild required to avoid errors.
 
 ## Deferred — `anim_blueprint` C++ re-home (do ONLY if needed)
 
