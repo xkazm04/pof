@@ -12,9 +12,10 @@ done. (This is the UE counterpart to a backlog — not a commitment.)
 
 ## UE 5.8 first-party MCP convergence
 
-- **Phase 2 long-tail gap-fillers.** The 6 ⭐ moat tools + 3 world tools are ported; the remaining non-⭐ PORT items (anim_blueprint state machines, ism_ops, level streaming, pie/player control, network_debug, fab_ops, get_output_log) follow the same `PoFToolset` template when needed. See `docs/ue58-mcp-phase2-tool-map.md`.
+- **Phase A coverage audit DONE (2026-06-19)** — see [mcp-parity-audit.md](mcp-parity-audit.md). Remaining long-tail adjudicated: `ism_ops` PORTED+verified (`PoFInstancedMeshTools`); `pie_control`/`get_output_log` dropped (Epic covers); `network_debug`+in-game `player_control` are runtime-only; `procedural_mesh`/`fab_ops`/`level_ops`-streaming unused (not ported). `PoFToolset` = 10 tools / 9 toolsets.
+- **🔴 anim_blueprint is C++-bound — the one genuine retire blocker.** AnimBP state-machine graph edit/read is not a clean Python re-home (AnimGraph editing is C++/editor-only); PoF locomotion uses it. To fully retire `MCPUnreal` either re-implement `anim_blueprint` as a **C++ AICallable toolset** (a real chunk of work) or keep that one `MCPUnreal` tool. Decide in/after the Phase B bake-off.
+- **Phase B bake-off (next).** Coverage-parity map (all 40 MCPUnreal → Epic|PoFToolset|gap) + live spot-checks (`:8000` Epic+PoFToolset vs `:8090` MCPUnreal) on a correctness/quality/ease rubric → retire-or-keep verdict. Spec: `docs/superpowers/specs/2026-06-19-mcp-convergence-parity-bakeoff-design.md`.
 - **Phase 0 `RefreshTools`-vs-restart measurement.** Confirm whether editing a Python toolset re-registers via `ModelContextProtocol.RefreshTools` without an editor restart (drives the iterate cadence). Minor.
-- **Phase 3 — the strategic decision (in progress).** Whether to retire the bespoke `mcp-unreal` (Go) + `MCPUnreal` (HTTP routes) in favour of the first-party Toolset Registry, keep the auth'd `:30040` PoF Bridge as the verification moat, and promote the engine default to 5.8. (See the convergence plan + the session's Phase 3 analysis.)
 
 ## Autonomy / tooling
 

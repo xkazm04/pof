@@ -9,6 +9,7 @@ from pof_toolset.toolsets.niagara import PoFNiagaraTools
 from pof_toolset.toolsets.viewport import PoFViewportTools
 from pof_toolset.toolsets.gas import PoFGasTools
 from pof_toolset.toolsets.world import PoFWorldTools
+from pof_toolset.toolsets.mesh_instances import PoFInstancedMeshTools
 from toolset_registry.registration import Registration
 
 _registration = Registration([
@@ -20,4 +21,5 @@ _registration = Registration([
     PoFViewportTools,
     PoFGasTools,
     PoFWorldTools,
+    PoFInstancedMeshTools,
 ])

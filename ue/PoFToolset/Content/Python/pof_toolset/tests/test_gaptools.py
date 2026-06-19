@@ -11,6 +11,7 @@ from pof_toolset.toolsets.script import PoFScriptTools
 from pof_toolset.toolsets.character import PoFCharacterTools
 from pof_toolset.toolsets.input_actions import PoFInputTools
 from pof_toolset.toolsets.niagara import PoFNiagaraTools
+from pof_toolset.toolsets.mesh_instances import PoFInstancedMeshTools
 
 
 class PoFScriptToolsTestCase(unittest.TestCase):
@@ -52,3 +53,21 @@ class PoFNiagaraToolsTestCase(unittest.TestCase):
         # capture_viewport is verified via a -RenderOffScreen launch, not here
         # (it needs RHI). list_niagara_systems works in any editor.
         self.assertIsInstance(PoFNiagaraTools.list_niagara_systems(), list)
+
+
+class PoFInstancedMeshToolsTestCase(unittest.TestCase):
+    def setUp(self):
+        sub = unreal.get_editor_subsystem(unreal.EditorActorSubsystem)
+        self._actor = sub.spawn_actor_from_class(unreal.Actor, unreal.Vector(0, 0, 0))
+        self._actor.add_component_by_class(unreal.InstancedStaticMeshComponent, False, unreal.Transform(), False)
+        self._label = self._actor.get_actor_label()
+
+    def tearDown(self):
+        unreal.get_editor_subsystem(unreal.EditorActorSubsystem).destroy_actor(self._actor)
+
+    def test_add_then_count_then_remove(self):
+        PoFInstancedMeshTools.add_instance(self._label, 100, 0, 0)
+        PoFInstancedMeshTools.add_instance(self._label, 200, 0, 0)
+        self.assertIn('count=2', PoFInstancedMeshTools.get_instance_count(self._label))
+        PoFInstancedMeshTools.remove_instance(self._label, 0)
+        self.assertIn('count=1', PoFInstancedMeshTools.get_instance_count(self._label))

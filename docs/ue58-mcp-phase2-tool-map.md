@@ -42,6 +42,14 @@ Epic ships **28 toolsets / 350+ AI-callable tools** in 5.8 — `EditorToolset` a
 | `get_output_log` (filtered) | Category/verbosity/regex log querying — verify; PoF debugging relies on it. |
 | `run_console_command` | Arbitrary console command — verify; small, port if uncovered. |
 
+### Phase A audit resolution (2026-06-19)
+
+The "verify" candidates above were adjudicated against Epic's shipped 5.8 toolset source — full table in [`concepts/UE/mcp-parity-audit.md`](./concepts/UE/mcp-parity-audit.md). Outcome:
+- **COVERED → drop:** `pie_control` (`EditorAppToolset.StartPIE/StopPIE/IsPIERunning`), `get_output_log` (`LogsToolset.GetLogEntries`+regex).
+- **Already ported:** `run_console_command`, `player_control`(editor) — `PoFWorldTools`.
+- **GAP → PORTED + verified live:** `ism_ops` → `PoFInstancedMeshTools` (add/count/update/remove instance). `PoFToolset` is now **10 tools / 9 toolsets**.
+- **Residual — not ported (rationale):** `anim_blueprint` is a real PoF-used gap but **C++-bound** (AnimGraph/state-machine editing isn't a clean Python re-home — needs a C++ AICallable toolset) → the one genuine retire blocker; `network_debug` + in-game `player_control` are **runtime/PIE-only** (not editor-MCP, like build/cook); `procedural_mesh`/`realtime_mesh`, `fab_ops`, `level_ops`(streaming) are **unused by PoF** (porting them = wasted potential).
+
 ## DROP — Epic covers it (use first-party on migration)
 
 | Our tool(s) | First-party replacement |
