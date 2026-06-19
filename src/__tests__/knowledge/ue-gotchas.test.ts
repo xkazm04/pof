@@ -40,6 +40,12 @@ describe('formatGotchas', () => {
     expect(out).toMatch(/DisableAllScreenMessages/);
   });
 
+  it('carries GAS attribute/effect pitfalls for ue-cpp', () => {
+    const out = formatGotchas('ue-cpp');
+    expect(out).toMatch(/meta attribute|PostGameplayEffectExecute/i);
+    expect(out).toMatch(/REPNOTIFY|GameplayEffect/);
+  });
+
   it('excludes python-only gotchas from the ue-cpp block', () => {
     expect(formatGotchas('ue-cpp')).not.toContain('Constant3Vector');
   });

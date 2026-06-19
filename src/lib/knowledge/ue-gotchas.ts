@@ -133,6 +133,22 @@ export const UE_GOTCHAS: Gotcha[] = [
     appliesTo: ['ue-cpp', 'ue-python'],
     source: 'research: Optimizing Niagara, Unreal Fest 2025 (A. Kurali)',
   },
+  {
+    id: 'gas-meta-attribute-damage',
+    summary: 'GAS: model damage as a server-only META attribute, apply via GameplayEffect, clamp in PostGameplayEffectExecute — never SetHealth directly',
+    detail:
+      'Route ALL attribute changes through GameplayEffects (so prediction/stacking/calc work) — never call the attribute setter directly. Model damage as a meta attribute (server-only, not replicated): a GE adds to Damage; in PostGameplayEffectExecute, read Damage, reset it to 0, subtract from Health, and clamp Health to [0, MaxHealth] (clamp in PreAttributeChange too). Health/MaxHealth ARE replicated.',
+    appliesTo: ['ue-cpp'],
+    source: 'research: GAS in 20 minutes (Danny Goodayle)',
+  },
+  {
+    id: 'gas-repnotify-and-cosmetic-cues',
+    summary: 'GAS: replicated attributes need GAMEPLAYATTRIBUTE_REPNOTIFY in OnRep; Gameplay Cues are COSMETIC ONLY',
+    detail:
+      'Each replicated attribute needs an OnRep_ that calls GAMEPLAYATTRIBUTE_REPNOTIFY(USet, Attribute) — without it the ASC never sees replicated value changes. Use the ATTRIBUTE_ACCESSORS macro set for the getter/setter/init. Gameplay Cues are for COSMETIC feedback only (VFX/SFX/shader), keyed by gameplay tag — never put gameplay logic in a cue.',
+    appliesTo: ['ue-cpp'],
+    source: 'research: GAS in 20 minutes (Danny Goodayle)',
+  },
 ];
 
 /**
