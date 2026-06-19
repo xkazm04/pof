@@ -18,7 +18,9 @@ const ASSERT_KINDS: { key: keyof AssertionToggles; label: string }[] = [
 ];
 
 const STARTER = "unreal.log('RESULT=' + unreal.SystemLibrary.get_engine_version())";
-const STARTER_INPUTS = '[{ "key": "W", "start": 0.5, "duration": 2 }]';
+// action+value injects the post-modifier vector straight into Enhanced Input — reliable,
+// unlike Boolean-key injection (which has fidelity gaps). forward = [0, 1].
+const STARTER_INPUTS = '[{ "action": "/Game/Input/Actions/IA_Move", "value": [0, 1], "start": 0.5, "duration": 2.5 }]';
 
 /**
  * UE Experiment Lab — run a UE 5.8 concept and see the captured output. Two modes:
@@ -128,7 +130,7 @@ export function ExperimentLab() {
             <input className="mt-1 w-full rounded border border-border bg-surface p-2 font-mono text-xs" value={scenarioMap} onChange={(e) => setScenarioMap(e.target.value)} aria-label="Scenario map" />
           </label>
           <label className="block">
-            <span className="text-xs text-text-muted">Inputs — JSON array of {`{ key|action, start, duration, value? }`}</span>
+            <span className="text-xs text-text-muted">Inputs — JSON; prefer {`{ action, value:[x,y], start, duration }`} (reliable) over {`{ key }`}</span>
             <textarea className="mt-1 h-32 w-full rounded border border-border bg-surface p-2 font-mono text-xs" value={scenarioInputs} onChange={(e) => setScenarioInputs(e.target.value)} aria-label="Scenario inputs" spellCheck={false} />
           </label>
           <div className="flex flex-wrap items-center gap-4" aria-label="behavioral assertions">

@@ -20,4 +20,13 @@ describe('ExperimentLab', () => {
     const ta = screen.getByLabelText('Experiment Python') as HTMLTextAreaElement;
     expect(ta.value).toContain(`# ${g.summary}`);
   });
+
+  it('defaults the scenario input to action+value (reliable injection, not key)', () => {
+    render(<ExperimentLab />);
+    fireEvent.click(screen.getByRole('tab', { name: /Gameplay Scenario/ }));
+    const ta = screen.getByLabelText('Scenario inputs') as HTMLTextAreaElement;
+    expect(ta.value).toContain('"action"');
+    expect(ta.value).toContain('IA_Move');
+    expect(ta.value).not.toContain('"key"');
+  });
 });
