@@ -70,6 +70,14 @@ export const UE_GOTCHAS: Gotcha[] = [
     source: 'vertical-slice: harness',
   },
   {
+    id: 'python-api-introspect-first',
+    summary: 'verify unreal.* API names by introspection before calling — never guess',
+    detail:
+      'Guessed unreal.* class/method/property names fail silently (return None/false) or crash the pythonscript commandlet, and each wrong guess burns tokens on retries. Before calling an unfamiliar API, confirm it exists and check its signature: use mcp-unreal lookup_class / lookup_docs / subsystem_query, or `dir(unreal.X)`, `help(unreal.X.method)`, and `unreal.X.__doc__` inside execute_script. Prefer EditorSubsystem getters (unreal.get_editor_subsystem(...)) over deprecated global helpers.',
+    appliesTo: ['ue-python'],
+    source: 'research: Claude-in-UE5 demo (Stefan 3D AI) + VibeUE introspection',
+  },
+  {
     id: 'fbx-import-scale',
     summary: 'metre-authored FBX: Blender apply_unit_scale=True + UE import_uniform_scale=1.0',
     detail:

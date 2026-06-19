@@ -97,7 +97,7 @@ export async function POST(req: NextRequest) {
       `Direction: ${direction}\n\nProduce the step output as a JSON @@CALLBACK block:\n` +
       `@@CALLBACK:step-${Date.now()}\n{}\n@@END_CALLBACK`;
 
-    const executionId = startExecution(PROJECT_PATH, promptText);
+    const executionId = startExecution(PROJECT_PATH, promptText, undefined, undefined, { enableMcp: true });
     const payload = await awaitCallback(executionId, { timeoutMs: UI_TIMEOUTS.callbackAwaitTimeout }) as Record<string, unknown>;
 
     const mergedData = { ...(payload ?? {}) } as Record<string, unknown>;

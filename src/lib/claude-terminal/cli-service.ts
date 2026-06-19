@@ -10,6 +10,7 @@ import { UI_TIMEOUTS } from '@/lib/constants';
 import { parseCallbackMarker } from '@/lib/cli-task';
 import { extractResultMetrics } from '@/lib/claude-terminal/result-metrics';
 import { killProcessTree } from '@/lib/process-tree-kill';
+import { resolveAutonomousMcpArgs } from '@/lib/claude-terminal/mcp-config';
 
 export interface CLISystemMessage {
   type: 'system';
@@ -140,11 +141,35 @@ export function extractToolUses(msg: CLIAssistantMessage): Array<{ id: string; n
   return msg.message.content.filter(c => c.type === 'tool_use').map(c => ({ id: c.id || '', name: c.name || '', input: c.input || {} }));
 }
 
+export interface StartExecutionOptions {
+  /**
+   * AUTONOMOUS spawns (one-shot orchestrator, batch-review) opt in to load MCP
+   * servers via `--mcp-config` (itself gated by the POF_CLI_MCP_CONFIG env var —
+   * default off). The interactive terminal leaves this unset, so it never loads
+   * MCP servers. See `resolveAutonomousMcpArgs`.
+   */
+  enableMcp?: boolean;
+}
+
+/**
+ * Builds the `claude` CLI arg list. Pure + exported so it can be unit-tested
+ * without spawning a process. With no opts it returns exactly the long-standing
+ * base args (off-state is byte-for-byte unchanged); `--mcp-config` is appended
+ * only when an autonomous caller opts in AND POF_CLI_MCP_CONFIG resolves.
+ */
+export function buildCliArgs(opts: { resumeSessionId?: string; enableMcp?: boolean } = {}): string[] {
+  const args = ['-p', '-', '--output-format', 'stream-json', '--verbose', '--dangerously-skip-permissions'];
+  if (opts.resumeSessionId) args.push('--resume', opts.resumeSessionId);
+  if (opts.enableMcp) args.push(...resolveAutonomousMcpArgs());
+  return args;
+}
+
 export function startExecution(
   projectPath: string,
   prompt: string,
   resumeSessionId?: string,
-  onEvent?: (event: CLIExecutionEvent) => void
+  onEvent?: (event: CLIExecutionEvent) => void,
+  options?: StartExecutionOptions
 ): string {
   const executionId = `exec-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 
@@ -203,9 +228,7 @@ export function startExecution(
 
   const isWindows = process.platform === 'win32';
   const command = isWindows ? 'claude.cmd' : 'claude';
-  const args = ['-p', '-', '--output-format', 'stream-json', '--verbose', '--dangerously-skip-permissions'];
-
-  if (resumeSessionId) args.push('--resume', resumeSessionId);
+  const args = buildCliArgs({ resumeSessionId, enableMcp: options?.enableMcp });
 
   const env = { ...process.env };
   delete env.ANTHROPIC_API_KEY;
