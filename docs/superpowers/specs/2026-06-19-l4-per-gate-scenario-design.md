@@ -2,6 +2,10 @@
 
 **Date:** 2026-06-19 · **Status:** approved · **Follows:** `2026-06-19-l4-scenario-capture-design.md` (generic spawn-and-settle frame).
 
+## As-built (2026-06-19, commit `46489ff`)
+
+Mechanism + wiring **proven**: the `abilities`/Fireball scenario `ARMED → pawn possessed → 8 per-sample shots` (the action is genuinely driven; 108 unit tests green). **But the abilities frame is poor** — `TestHarness` is an unlit black void (white pawn + a debug arrow) and Fireball fires **no character montage** (`montage_flags=[false×8]` — projectile cast), so `pickActionShot` falls back to the idle last sample and there's no visible action. This is the documented lit-map caveat in practice; a *meaningful* abilities frame needs a **lit map + framed camera + a montage/VFX-visible action** (follow-up). The code is correct (drives the registered scenario, selects the action sample); the visual quality is a map/content issue. Contrast: the generic VerticalSlice capture (prior slice) IS a good lit frame.
+
 ## Goal
 
 Capture the entity **performing the gate-relevant action** (activate an ability / walk) rather than just standing spawned — so the L4 Gemini check sees the meaningful moment for the gate.
