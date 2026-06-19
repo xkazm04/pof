@@ -12,6 +12,7 @@ open followups a future session should pick up.
 |-----|--------|
 | [l4-autonomous-visual-capture.md](l4-autonomous-visual-capture.md) | The L4 visual-verification gate: how PoF autonomously launches headless UE 5.8, renders a frame, and feeds it to the Gemini check — the architecture, the proven headless-launch recipe + gotchas, what works, and the open content gap. |
 | [mcp-parity-audit.md](mcp-parity-audit.md) | The Phase 3 #1 coverage audit: per-candidate verdicts (Epic-COVERED / GAP / residual) deciding what to port to `PoFToolset` vs drop — and the one C++-bound retire blocker (`anim_blueprint`). |
+| [mcp-bakeoff-verdict.md](mcp-bakeoff-verdict.md) | The Phase 3 #1 retirement bake-off: coverage-parity map + live `:8000` vs `:8090` spot-checks + rubric → **retire `MCPUnreal`+Go, gated on re-homing `anim_blueprint` as C++**. |
 | [followups.md](followups.md) | The running backlog of UE-side followups for future sessions (L4 content gap, Phase 2 long-tail tools, RefreshTools measurement, lit-map alignment, …). |
 
 ## Related (elsewhere in docs/)
