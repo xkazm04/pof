@@ -117,6 +117,22 @@ export const UE_GOTCHAS: Gotcha[] = [
     appliesTo: ['ue-python'],
     source: 'research: Modular 3D Character (Stefan 3D AI)',
   },
+  {
+    id: 'niagara-effect-types-significance',
+    summary: 'Cap active Niagara systems with Effect Types (significance + max-instance + visibility cull) — hidden systems still TICK',
+    detail:
+      'A disabled renderer or off-screen Niagara system still TICKS (and GPU sims still cost the render thread via compute dispatch) — hiding it does not save the cost. Use Effect Types (like texture groups, assigned per system): a significance manager (distance/age) + hard max-instance caps + visibility culling (pre-spawn check + a short re-show delay) cull the TICK. This roughly halves active systems with identical visuals (Lyra). Caveat: at very high system counts the significance-manager refresh itself can spike — keep counts sane.',
+    appliesTo: ['ue-cpp', 'ue-python'],
+    source: 'research: Optimizing Niagara, Unreal Fest 2025 (A. Kurali)',
+  },
+  {
+    id: 'niagara-insights-stat-named-events',
+    summary: 'Profiling Niagara in Unreal Insights needs `stat named events` — else Niagara is invisible in the capture',
+    detail:
+      'Niagara work will NOT appear in an Unreal Insights trace unless `stat named events` is enabled before capturing. For quick triage use stat NiagaraSystems / stat NiagaraEmitters (per-system/emitter cost, with the owning system/actor) and the in-editor Niagara Debugger (effects outliner shows systems ticking while invisible + GPU compute cost).',
+    appliesTo: ['ue-cpp', 'ue-python'],
+    source: 'research: Optimizing Niagara, Unreal Fest 2025 (A. Kurali)',
+  },
 ];
 
 /**

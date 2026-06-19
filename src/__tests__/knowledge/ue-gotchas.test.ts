@@ -69,6 +69,13 @@ describe('formatGotchas', () => {
     expect(out).toMatch(/occlud|covered|single bone|one bone/i);
   });
 
+  it('carries Niagara optimization pitfalls', () => {
+    const out = formatGotchas('ue-python');
+    expect(out).toMatch(/Niagara/);
+    expect(out).toMatch(/Effect Type|significance/i);
+    expect(out).toMatch(/stat named events|Insights/i);
+  });
+
   it('returns an empty string for web', () => {
     expect(formatGotchas('web')).toBe('');
   });
