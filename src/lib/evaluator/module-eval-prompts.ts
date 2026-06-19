@@ -104,7 +104,8 @@ export const MODULE_CONTEXTS: Record<string, ModuleEvalContext> = {
 - IK Retargeter should use spatially aware retargeting to prevent limb collision (5.7+)
 - Batch retarget should use IKRetargetBatchOperation.duplicate_and_retarget() not manual per-asset retarget
 - Mixamo in-place locomotion should NOT have root motion enabled — movement driven by CharacterMovementComponent
-- Attack/dodge anims from Mixamo may need RootMotionGeneratorOp post-process if root motion extraction is needed`,
+- Attack/dodge anims from Mixamo may need RootMotionGeneratorOp post-process if root motion extraction is needed
+- The Mixamo library is limited/aging — for motions it lacks, generated motion (AI video-to-motion / text-to-motion mocap) can fill gaps, but AI mocap output needs cleanup (foot sliding, jitter, contact pops) before production; verify retarget quality (IK foot/floor contact, in-place root motion) regardless of source`,
     performanceChecks: `- NativeUpdateAnimation runs every frame — avoid expensive calculations
 - Thread-safe proxy should be used for heavy computations
 - Avoid GetActorLocation/GetActorRotation in anim tick — cache values
