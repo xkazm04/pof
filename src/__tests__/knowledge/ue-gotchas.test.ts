@@ -82,6 +82,12 @@ describe('formatGotchas', () => {
     expect(out).toMatch(/stat named events|Insights/i);
   });
 
+  it('carries Motion Matching pitfalls (root motion need + Phase crash)', () => {
+    const out = formatGotchas('ue-cpp');
+    expect(out).toMatch(/Motion Matching/i);
+    expect(out).toMatch(/Phase channel|root motion/i);
+  });
+
   it('returns an empty string for web', () => {
     expect(formatGotchas('web')).toBe('');
   });

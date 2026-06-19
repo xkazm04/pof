@@ -149,6 +149,14 @@ export const UE_GOTCHAS: Gotcha[] = [
     appliesTo: ['ue-cpp'],
     source: 'research: GAS in 20 minutes (Danny Goodayle)',
   },
+  {
+    id: 'motion-matching-pitfalls',
+    summary: 'Motion Matching: anims need root motion even w/o capsule root motion; the Phase channel CRASHES the editor; tune cost bias carefully',
+    detail:
+      'Source anims in a Pose Search database need root motion ENABLED even when the capsule is driven by velocity (not root motion) — the pose search scores foot velocity/position from it. Do NOT enable the Phase channel in the pose-search schema — it crashes the editor and keeps crashing on reopen. Collected bones (pose history) must match the bones in the pose channel. Do not lower Continuing Pose Cost Bias too far (the character becomes unresponsive / sticks in one animation); if a Chooser will not leave a loop DB for a stop DB, lower the stop DB base cost bias. Reduce foot sliding with a SMALL play-rate window (~0.75-1.25, not 0.5-1.5) or Dead Blending; be cautious with mirroring (foot sliding / tilt). Use Exclude-From-Database (not a manual cut) to drop T-posed lead frames.',
+    appliesTo: ['ue-cpp', 'ue-python'],
+    source: 'research: Motion Matching Problems & Solutions (Unreal DevOP)',
+  },
 ];
 
 /**
