@@ -2,7 +2,8 @@ import { describe, it, expect, afterEach } from 'vitest';
 import { mkdtempSync, writeFileSync, rmSync, utimesSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { buildCaptureProbe, buildCaptureArgs, captureFrame, buildScenarioInbox, buildScenarioArgs, newestShot, captureScenarioFrame } from '@/lib/ue-launch/capture';
+import { buildCaptureProbe, buildCaptureArgs, captureFrame, buildScenarioInbox, buildScenarioArgs, newestShot, pickActionShot, captureScenarioFrame } from '@/lib/ue-launch/capture';
+import type { GateScenario } from '@/lib/test-gate-runner/types';
 
 const tmps: string[] = [];
 function tmp(): string { const d = mkdtempSync(join(tmpdir(), 'pof-cap-')); tmps.push(d); return d; }
@@ -55,6 +56,41 @@ describe('buildScenarioInbox', () => {
   });
 });
 
+describe('buildScenarioInbox (with inputs)', () => {
+  it('serializes scenario inputs with event_arg snake_case + timing', () => {
+    const inbox = JSON.parse(buildScenarioInbox('C:/t/out', {
+      totalSeconds: 2.5, numSamples: 8, settle: 1,
+      inputs: [{ event: 'activate_ability', eventArg: 'Ability.Fireball', start: 0.5, duration: 0.1 }],
+    }));
+    expect(inbox.total_seconds).toBe(2.5);
+    expect(inbox.num_samples).toBe(8);
+    expect(inbox.inputs).toHaveLength(1);
+    expect(inbox.inputs[0]).toMatchObject({ event: 'activate_ability', event_arg: 'Ability.Fireball', start: 0.5, duration: 0.1 });
+  });
+});
+
+describe('pickActionShot', () => {
+  it('returns the shot at the montage-playing sample', () => {
+    const d = tmp();
+    writeFileSync(join(d, 'observations.json'), JSON.stringify({ started: true, samples: [{ montage_playing: false }, { montage_playing: true }, { montage_playing: false }] }));
+    for (const i of [0, 1, 2]) writeFileSync(join(d, `shot_0${i}.png`), 'x');
+    expect(pickActionShot(d)).toBe(join(d, 'shot_01.png'));
+  });
+
+  it('falls back to the max anim_speed sample when no montage', () => {
+    const d = tmp();
+    writeFileSync(join(d, 'observations.json'), JSON.stringify({ samples: [{ anim_speed: 0 }, { anim_speed: 5 }, { anim_speed: 2 }] }));
+    for (const i of [0, 1, 2]) writeFileSync(join(d, `shot_0${i}.png`), 'x');
+    expect(pickActionShot(d)).toBe(join(d, 'shot_01.png'));
+  });
+
+  it('falls back to newestShot when there is no observations.json', () => {
+    const d = tmp();
+    writeFileSync(join(d, 'shot_00.png'), 'x');
+    expect(pickActionShot(d)).toBe(join(d, 'shot_00.png'));
+  });
+});
+
 describe('buildScenarioArgs', () => {
   it('builds a -game -PoFScenario -RenderOffScreen invocation (NOT -nullrhi)', () => {
     const args = buildScenarioArgs({ uproject: 'C:/p/PoF.uproject', map: '/Game/Maps/VerticalSlice', inboxPath: 'C:/t/out/inbox.json', resX: 1280, resY: 720 });
@@ -95,5 +131,20 @@ describe('captureScenarioFrame', () => {
     const run = async () => { /* nothing */ };
     const res = await captureScenarioFrame({ uproject: 'C:/p/PoF.uproject', outDir, settleMs: 0 }, { run });
     expect(res).toBeNull();
+  });
+
+  it('drives a per-gate scenario and returns the action (montage-playing) shot', async () => {
+    const outDir = tmp();
+    const scenario: GateScenario = {
+      map: '/Game/Maps/TestHarness', totalSeconds: 2.5, numSamples: 3, settle: 1,
+      inputs: [{ event: 'activate_ability', eventArg: 'Ability.Fireball', start: 0.5, duration: 0.1 }],
+      assert: [{ kind: 'ability-activated' }],
+    };
+    const run = async (_bin: string, _args: string[]) => {
+      writeFileSync(join(outDir, 'observations.json'), JSON.stringify({ samples: [{ montage_playing: false }, { montage_playing: true }, { montage_playing: false }] }));
+      for (const i of [0, 1, 2]) writeFileSync(join(outDir, `shot_0${i}.png`), 'x');
+    };
+    const res = await captureScenarioFrame({ uproject: 'C:/p/PoF.uproject', scenario, outDir, settleMs: 0 }, { run });
+    expect(res).toBe(join(outDir, 'shot_01.png')); // the mid-ability frame, not the last sample
   });
 });

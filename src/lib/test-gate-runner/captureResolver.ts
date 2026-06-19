@@ -7,6 +7,7 @@
  * gate still manual" gap with a MEANINGFUL frame. `capture` is injectable for tests.
  */
 import { captureScenarioFrame, type CaptureScenarioFrameOptions } from '@/lib/ue-launch/capture';
+import { resolveScenario } from './scenarioRegistry';
 import type { GateJob } from './types';
 
 export interface UeCaptureResolverConfig {
@@ -26,10 +27,21 @@ export function makeUeCaptureResolver(
   deps: UeCaptureResolverDeps = {},
 ): (job: GateJob) => Promise<string | null> {
   const capture = deps.capture ?? captureScenarioFrame;
-  return (job) =>
-    capture({
+  return (job) => {
+    // If a per-gate scenario is registered (e.g. the `abilities` archetype activates
+    // the entity's ability), drive it so the frame shows the ACTION; else generic.
+    // A GateScenario is structurally assignable to ue-launch's CaptureScenarioSpec.
+    const scenario = resolveScenario({
+      catalogId: job.catalogId,
+      entityId: job.entityId,
+      step: job.step,
+      ...(job.testName ? { testName: job.testName } : {}),
+    });
+    return capture({
       uproject: cfg.uproject,
       ...(cfg.engine ? { engine: cfg.engine } : {}),
+      ...(scenario ? { scenario } : {}),
       ...(cfg.mapFor ? { map: cfg.mapFor(job) } : {}),
     });
+  };
 }

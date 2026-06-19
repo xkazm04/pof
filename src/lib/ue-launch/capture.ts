@@ -15,7 +15,7 @@
  * The pure builders are tested; the spawn is an injectable seam.
  */
 import { spawn, execFileSync } from 'node:child_process';
-import { existsSync, writeFileSync, unlinkSync, mkdirSync, readdirSync, statSync } from 'node:fs';
+import { existsSync, writeFileSync, unlinkSync, mkdirSync, readdirSync, statSync, readFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { resolveEditorBinary } from './engines';
@@ -102,17 +102,46 @@ export async function captureFrame(opts: CaptureFrameOptions, deps: CaptureDeps 
 // UScenarioController writes `shot_<NN>.png` (the on-screen viewport) into out_dir.
 // In `-game` the map IS a working command-line arg (the editor's load_map is not).
 
-/** Capture-only scenario inbox: spawn → settle → one sample. Pure. */
+/** A scenario input (structurally compatible with the gate-runner's GateScenarioInput,
+ *  so a GateScenario can be passed straight in — ue-launch stays independent of it). */
+export interface CaptureScenarioInput {
+  key?: string;
+  action?: string;
+  value?: [number, number];
+  event?: string;
+  eventArg?: string;
+  start: number;
+  duration: number;
+}
+
+/** The subset of a gate scenario this capture needs (a GateScenario is assignable). */
+export interface CaptureScenarioSpec {
+  map?: string;
+  totalSeconds?: number;
+  numSamples?: number;
+  settle?: number;
+  inputs?: CaptureScenarioInput[];
+}
+
+/** Scenario inbox — capture-only (no inputs) or driving a per-gate action. Pure. */
 export function buildScenarioInbox(
   outDir: string,
-  opts: { totalSeconds?: number; numSamples?: number; settle?: number } = {},
+  opts: { totalSeconds?: number; numSamples?: number; settle?: number; inputs?: CaptureScenarioInput[] } = {},
 ): string {
   return JSON.stringify({
     out_dir: outDir,
     total_seconds: opts.totalSeconds ?? 3,
     num_samples: opts.numSamples ?? 1,
     settle: opts.settle ?? 1.5,
-    inputs: [],
+    inputs: (opts.inputs ?? []).map((i) => ({
+      ...(i.key ? { key: i.key } : {}),
+      ...(i.action ? { action: i.action } : {}),
+      ...(i.value ? { value: i.value } : {}),
+      ...(i.event ? { event: i.event } : {}),
+      ...(i.eventArg ? { event_arg: i.eventArg } : {}),
+      start: i.start,
+      duration: i.duration,
+    })),
   }, null, 2);
 }
 
@@ -141,6 +170,28 @@ export function newestShot(dir: string): string | null {
   return best ? best.path : null;
 }
 
+/**
+ * Pick the shot at the sample where the action is most active — first a
+ * `montage_playing` sample, else max `anim_speed`, else the last — so a per-gate
+ * action frame shows the peak (an ability's montage often finishes before the last
+ * sample). Reads `observations.json` (sample idx ↔ `shot_<idx>.png`). Falls back to
+ * `newestShot` (no observations / missing shot file). Pure(+fs).
+ */
+export function pickActionShot(dir: string): string | null {
+  let obs: { samples?: Array<{ montage_playing?: boolean; anim_speed?: number }> };
+  try { obs = JSON.parse(readFileSync(join(dir, 'observations.json'), 'utf-8')); } catch { return newestShot(dir); }
+  const samples = obs?.samples ?? [];
+  if (samples.length === 0) return newestShot(dir);
+  let idx = samples.findIndex((s) => s.montage_playing === true);
+  if (idx < 0) {
+    let best = -1;
+    samples.forEach((s, i) => { const a = s.anim_speed ?? 0; if (a > best) { best = a; idx = i; } });
+    if (best <= 0) idx = samples.length - 1;
+  }
+  const shot = join(dir, `shot_${String(idx).padStart(2, '0')}.png`);
+  return existsSync(shot) ? shot : newestShot(dir);
+}
+
 export interface CaptureScenarioFrameOptions {
   uproject: string;
   /** Map to load + render (default the vertical slice). A real `-game` arg. */
@@ -152,6 +203,9 @@ export interface CaptureScenarioFrameOptions {
   settleMs?: number;
   /** Override the scenario out_dir (default a temp dir). */
   outDir?: string;
+  /** A per-gate scenario to drive (action inputs + map + timing). Absent → generic
+   *  spawn-and-settle. A gate-runner GateScenario is assignable. */
+  scenario?: CaptureScenarioSpec;
 }
 
 /**
@@ -162,13 +216,20 @@ export async function captureScenarioFrame(opts: CaptureScenarioFrameOptions, de
   const run = deps.run ?? defaultRun;
   const now = deps.now ?? (() => Date.now());
   const binary = resolveEditorBinary({ ...(opts.engine ? { engine: opts.engine } : {}), windowed: true });
-  const map = opts.map ?? '/Game/Maps/VerticalSlice';
+  const scn = opts.scenario;
+  const map = scn?.map ?? opts.map ?? '/Game/Maps/VerticalSlice';
   const resX = opts.resX ?? 1280;
   const resY = opts.resY ?? 720;
   const outDir = (opts.outDir ?? join(tmpdir(), `pof_l4_scn_${now()}`)).replace(/\\/g, '/');
   mkdirSync(outDir, { recursive: true });
   const inboxPath = join(outDir, 'inbox.json').replace(/\\/g, '/');
-  writeFileSync(inboxPath, buildScenarioInbox(outDir));
+  writeFileSync(inboxPath, buildScenarioInbox(outDir, scn ? {
+    totalSeconds: scn.totalSeconds,
+    numSamples: scn.numSamples,
+    settle: scn.settle,
+    inputs: scn.inputs,
+  } : {}));
   await run(binary, buildScenarioArgs({ uproject: opts.uproject, map, inboxPath, resX, resY }), opts.settleMs ?? 180_000);
-  return newestShot(outDir);
+  // Pick the action-active sample's shot (falls back to newest for the generic case).
+  return pickActionShot(outDir);
 }
