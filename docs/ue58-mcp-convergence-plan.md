@@ -71,8 +71,16 @@ Add an optional MCP-config path to the spawn in `src/lib/claude-terminal/cli-ser
 - **✅ Slice 1 DONE 2026-06-18** (commit `9a2d281`): 3 of the moat tools ported as Python toolsets in `ue/PoFToolset` + autonomously headless-verified — `PoFScriptTools.run_python` (unsandboxed code mode → `4`), `PoFCharacterTools.get/set_movement` (round-tripped 600/800/1.5 on a spawned `ACharacter`), `PoFInputTools.list_input_actions` (16 IA assets). All registered by Epic's Toolset Registry; `run_python` proven callable over MCP HTTP (see Phase 0 capstone).
 - **✅ Slice 2 DONE 2026-06-18** (commits `579f581`, `90e4827`): the remaining 3 moat tools — `PoFNiagaraTools.list/spawn` (17 systems; spawned a component — Epic ships 0 Niagara tools), `PoFViewportTools.capture_viewport` (**71 KB PNG via `-RenderOffScreen`** — the L4 visual-gate unlock), `PoFGasTools.apply_effect`/`list_abilities` (**GAS mutation** — applied `/Script/PoF.GE_Buff_Strength` to `VSEnemy`; Epic's GAS is inspection-only). All Python (no C++ escalation needed — GAS mutation verbs are Python-exposed). **All 6 ⭐ moat gap-filler tools now ported + registered + autonomously verified.** Remaining gap-fillers (the non-⭐ PORT list in the tool map: anim_blueprint, ism, level streaming, pie/player control, network, fab, output-log, run-console) follow the same template when needed.
 
-### Phase 3 — Decide (gate, not a migration)
-With parity + verification proven on 5.8, decide whether to retire the Go MCP proc + `MCPUnreal` routing, keep both, or run a thin adapter. Only then touch the production engine version.
+### Phase 3 — Decided 2026-06-19 (directions of record)
+
+1. **Control surface → port-to-parity, bake-off, then retire.** Finish porting the remaining gap-fillers into `PoFToolset` so it reaches **functional parity** with `MCPUnreal`; run a **head-to-head bake-off** (output correctness / quality / ease-of-use) of `PoFToolset` (first-party `:8000`) vs the bespoke `MCPUnreal` (`:8090`); once parity holds, **retire the Go `mcp-unreal` proc + the `MCPUnreal` C++ HTTP routes** (redundant once parity proven). Retirement is gated on the bake-off, not assumed.
+2. **In-app autonomous Claude → `:8000` official, `:8090` fallback.** Point the Phase-1 `--mcp-config` at the official MCP once 5.8 is the daily-driver; keep `:8090` as the transition fallback.
+3. **Verification moat → KEEP.** The `:30040` PoF Bridge + `test-gate-runner` (L3/L4, auth, `execute_script` code-mode, harness orchestration, the autonomous L4 capture) stay — the official MCP is control-only and does NOT replace them. Do not converge the verification layer.
+4. **Landing → mixed PR as-is.** PR `feature/ue58-mcp-convergence` including the interleaved concurrent `/research` commits (no history surgery).
+
+Adjacent cleanup (do with #1/#2): the project is already on 5.8 — standardize the remaining 5.7 references (e.g. the `mcp-unreal` Go server's editor path) on 5.8.
+
+**Next work (the #1 program):** port the long-tail PORT items from [`ue58-mcp-phase2-tool-map.md`](./ue58-mcp-phase2-tool-map.md) (anim_blueprint, ism, level-streaming, pie/player-control, network, fab, output-log) into `PoFToolset` → run the parity bake-off → retire `MCPUnreal`. Tracked in [`concepts/UE/followups.md`](./concepts/UE/followups.md).
 
 ## Risks & mitigations
 
