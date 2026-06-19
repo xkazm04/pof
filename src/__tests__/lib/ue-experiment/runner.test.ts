@@ -1,9 +1,11 @@
 import { describe, it, expect } from 'vitest';
 import { writeFileSync } from 'node:fs';
+import { dirname, join } from 'node:path';
 import {
   buildExperimentProbe,
   buildExperimentArgs,
   parseExperimentLog,
+  summarizeObservations,
   runExperiment,
 } from '@/lib/ue-experiment/runner';
 
@@ -99,5 +101,41 @@ describe('runExperiment (orchestration, deps-seam)', () => {
     const res = await runExperiment({ python: 'pass' }, { run: async () => {}, env: {} });
     expect(res.ok).toBe(false);
     expect(res.error).toMatch(/POF_UE_UPROJECT/);
+  });
+});
+
+describe('summarizeObservations', () => {
+  it('summarizes speed / displacement / montage from samples', () => {
+    const s = summarizeObservations([
+      { t: 0, loc_x: 0, loc_y: 0, speed: 0 },
+      { t: 1, loc_x: 3, loc_y: 4, speed: 300, anim_speed: 5, montage_playing: true },
+    ]);
+    expect(s.sampleCount).toBe(2);
+    expect(s.maxSpeed).toBe(300);
+    expect(s.displacement).toBeCloseTo(5); // sqrt(3^2 + 4^2)
+    expect(s.montagePlayed).toBe(true);
+  });
+
+  it('handles no samples', () => {
+    expect(summarizeObservations([]).sampleCount).toBe(0);
+  });
+});
+
+describe('runExperiment scenario mode', () => {
+  it('drives a scenario, summarizes observations + picks the action frame', async () => {
+    const run = async (_b: string, args: string[]) => {
+      const inbox = args.map((a) => a.match(/^-PoFScenario=(.*)$/)?.[1]).find(Boolean)!;
+      const dir = dirname(inbox);
+      writeFileSync(join(dir, 'observations.json'), JSON.stringify({ samples: [{ t: 0, speed: 0 }, { t: 1, speed: 300, anim_speed: 5, montage_playing: true }] }));
+      writeFileSync(join(dir, 'shot_01.png'), 'PNG');
+    };
+    const res = await runExperiment(
+      { python: '', scenario: { map: '/Game/Maps/VerticalSlice', inputs: [{ key: 'W', start: 0, duration: 2 }] } },
+      { run, fileExists: () => true, env: ENV, now: () => 1 },
+    );
+    expect(res.observationSummary?.maxSpeed).toBe(300);
+    expect(res.observationSummary?.montagePlayed).toBe(true);
+    expect(res.screenshotPath).toMatch(/shot_01\.png/);
+    expect(res.ok).toBe(true);
   });
 });

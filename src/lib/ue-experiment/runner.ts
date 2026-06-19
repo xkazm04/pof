@@ -12,7 +12,7 @@
 import { existsSync, writeFileSync, readFileSync, unlinkSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { buildLaunchArgs, buildPythonExecFile, resolveEditorBinary, type EnvLike } from '@/lib/ue-launch';
+import { buildLaunchArgs, buildPythonExecFile, resolveEditorBinary, captureScenarioFrame, type EnvLike, type CaptureScenarioInput } from '@/lib/ue-launch';
 
 const DONE = 'POF_EXPERIMENT_DONE';
 const ERR = 'POF_EXPERIMENT_ERROR';
@@ -87,10 +87,62 @@ export function parseExperimentLog(log: string): ParsedLog {
   };
 }
 
+export interface ObservationSample {
+  t?: number;
+  loc_x?: number; loc_y?: number; loc_z?: number;
+  speed?: number; anim_speed?: number; montage_playing?: boolean;
+  health?: number; stamina?: number; mana?: number;
+  [k: string]: number | boolean | undefined;
+}
+
+export interface ObservationSummary {
+  sampleCount: number;
+  maxSpeed: number;
+  maxAnimSpeed: number;
+  displacement: number;
+  montagePlayed: boolean;
+}
+
+/** Reduce a scenario's observation samples to a headline behavioral summary. Pure. */
+export function summarizeObservations(samples: ObservationSample[]): ObservationSummary {
+  let maxSpeed = 0, maxAnimSpeed = 0, montagePlayed = false;
+  let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+  for (const s of samples) {
+    if ((s.speed ?? 0) > maxSpeed) maxSpeed = s.speed!;
+    if ((s.anim_speed ?? 0) > maxAnimSpeed) maxAnimSpeed = s.anim_speed!;
+    if (s.montage_playing) montagePlayed = true;
+    if (typeof s.loc_x === 'number') { minX = Math.min(minX, s.loc_x); maxX = Math.max(maxX, s.loc_x); }
+    if (typeof s.loc_y === 'number') { minY = Math.min(minY, s.loc_y); maxY = Math.max(maxY, s.loc_y); }
+  }
+  const dx = Number.isFinite(maxX) ? maxX - minX : 0;
+  const dy = Number.isFinite(maxY) ? maxY - minY : 0;
+  return { sampleCount: samples.length, maxSpeed, maxAnimSpeed, displacement: Math.sqrt(dx * dx + dy * dy), montagePlayed };
+}
+
+function parseObservations(raw: string): ObservationSample[] {
+  try {
+    const j = JSON.parse(raw) as { samples?: ObservationSample[] };
+    return Array.isArray(j?.samples) ? j.samples : [];
+  } catch {
+    return [];
+  }
+}
+
+export interface ScenarioSpec {
+  map?: string;
+  inputs?: CaptureScenarioInput[];
+  totalSeconds?: number;
+  numSamples?: number;
+  settle?: number;
+}
+
 export interface ExperimentSpec {
   python: string;
   capture?: boolean;
   verify?: { mode?: string; prompt: string };
+  /** Scenario mode: drive `-game -PoFScenario` (player + inputs) and observe behavioral
+   *  metrics + the peak-action frame instead of running a Python probe. */
+  scenario?: ScenarioSpec;
   resX?: number;
   resY?: number;
   settleMs?: number;
@@ -105,6 +157,9 @@ export interface ExperimentResult {
   markers: Record<string, string>;
   screenshotPath?: string;
   verdict?: { status: 'pass' | 'fail'; detail: string };
+  /** Scenario mode only: the captured behavioral samples (capped) + their summary. */
+  observations?: ObservationSample[];
+  observationSummary?: ObservationSummary;
   durationMs: number;
   binary: string;
   args: string[];
@@ -136,10 +191,15 @@ export async function runExperiment(spec: ExperimentSpec, deps: RunnerDeps = {})
   const uproject = spec.uproject ?? env.POF_UE_UPROJECT;
   if (!uproject) return err('POF_UE_UPROJECT not set (path to the PoF .uproject)');
 
-  const binary = resolveEditorBinary({ windowed: !!spec.capture, ...(spec.engine ? { engine: spec.engine } : {}) }, env);
+  const binary = resolveEditorBinary({ windowed: !!spec.capture || !!spec.scenario, ...(spec.engine ? { engine: spec.engine } : {}) }, env);
   if (!fileExists(binary)) return err(`UE editor not found at ${binary} (install UE 5.8 or set POF_UE_CMD/POF_UE_EDITOR)`, binary);
 
   const stamp = now();
+
+  if (spec.scenario) {
+    return runScenario(spec, { uproject, binary, run, now, env, verifyVisual: deps.verifyVisual }, stamp);
+  }
+
   const outPath = join(tmpdir(), `pof_exp_${stamp}.png`).replace(/\\/g, '/');
   const probePath = join(tmpdir(), `pof_exp_probe_${stamp}.py`).replace(/\\/g, '/');
   const abslog = join(tmpdir(), `pof_exp_${stamp}.log`).replace(/\\/g, '/');
@@ -177,6 +237,53 @@ export async function runExperiment(spec: ExperimentSpec, deps: RunnerDeps = {})
 
 function readFileSafe(p: string): string {
   try { return readFileSync(p, 'utf-8'); } catch { return ''; }
+}
+
+interface ScenarioCtx {
+  uproject: string;
+  binary: string;
+  run: RunFn;
+  now: () => number;
+  env: EnvLike;
+  verifyVisual?: RunnerDeps['verifyVisual'];
+}
+
+/** Scenario mode: drive `-game -PoFScenario` (player + inputs) via captureScenarioFrame,
+ * then read the observation samples + pick the peak-action frame. */
+async function runScenario(spec: ExperimentSpec, ctx: ScenarioCtx, stamp: number): Promise<ExperimentResult> {
+  const scn = spec.scenario!;
+  const outDir = join(tmpdir(), `pof_exp_scn_${stamp}`).replace(/\\/g, '/');
+  const start = ctx.now();
+  const shot = await captureScenarioFrame(
+    {
+      uproject: ctx.uproject,
+      ...(scn.map ? { map: scn.map } : {}),
+      ...(spec.engine ? { engine: spec.engine } : {}),
+      outDir,
+      settleMs: spec.settleMs ?? 180_000,
+      scenario: { totalSeconds: scn.totalSeconds, numSamples: scn.numSamples, settle: scn.settle, inputs: scn.inputs },
+    },
+    { run: ctx.run, now: ctx.now },
+  );
+  const observations = parseObservations(readFileSafe(join(outDir, 'observations.json')));
+  let verdict: ExperimentResult['verdict'];
+  if (spec.verify && shot) {
+    const verify = ctx.verifyVisual ?? postVerifyVisual(ctx.env);
+    verdict = await verify(shot, spec.verify.mode ?? 'character', spec.verify.prompt);
+  }
+  return {
+    ok: observations.length > 0,
+    error: observations.length === 0 ? 'no observations produced (scenario did not run / UScenarioController missing)' : undefined,
+    logs: [],
+    markers: {},
+    observations: observations.slice(0, 60),
+    observationSummary: summarizeObservations(observations),
+    screenshotPath: shot ?? undefined,
+    verdict,
+    durationMs: ctx.now() - start,
+    binary: ctx.binary,
+    args: [],
+  };
 }
 
 // ── default seams (not unit-tested; exercised by the live acceptance run) ──────

@@ -12,13 +12,14 @@ import type { ExperimentSpec } from '@/lib/ue-experiment/runner';
 export async function POST(req: NextRequest) {
   try {
     const body = (await req.json()) as Partial<ExperimentSpec>;
-    if (typeof body.python !== 'string' || body.python.trim() === '') {
-      return apiError('python (a non-empty string) is required', 400);
+    if (!body.scenario && (typeof body.python !== 'string' || body.python.trim() === '')) {
+      return apiError('python (a non-empty string) or a scenario is required', 400);
     }
     const jobId = startExperimentJob({
-      python: body.python,
+      python: body.python ?? '',
       capture: body.capture,
       verify: body.verify,
+      scenario: body.scenario,
       resX: body.resX,
       resY: body.resY,
       settleMs: body.settleMs,
