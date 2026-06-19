@@ -34,7 +34,16 @@ Tag every finding with a bucket and an effort scale.
 - **D — Prompt / knowledge / skill**: `module-registry.ts` prompts, `src/components/cli/skills.ts`, UE_GOTCHAS, knowledge tips.
 - **E — Framework / cross-cutting**: verification (Tiers of Truth), orchestration, contracts, the "automated game-dev framework" bets.
 
-**Effort:** `S` (≤~30 LOC) · `M` (one file/feature) · `L` (multi-file) · `XL` (new subsystem / framework bet). Effort drives the action (Phase 8).
+**Effort:** `S` (≤~30 LOC) · `M` (one file/feature) · `L` (multi-file) · `XL` (new subsystem / framework bet). Effort drives the action (Phase 7).
+
+## Source classes — what a finding *is*
+
+Classify the source up front; it changes the shape of every finding.
+- **Tooling source** (a tool / feature / automation demo): findings are code/feature changes (buckets A/B/C). The default.
+- **Knowledge / best-practice source** (a "how to build X *well*" talk — lighting, environment, combat feel, optimization): the value is **raising the quality of automated outputs**, not adding tooling. Route each best practice to one of **three homes** (D/B) and present candidates mapped to the home, not just the topic:
+  1. **Knowledge base** → `ue-gotchas.ts` (`UE_GOTCHAS`, prompt-injected) or evaluator criteria (`module-eval-prompts.ts`). Cheapest + highest-leverage: the practice reaches every relevant dispatch prompt.
+  2. **Preset** → a data-driven best-practice config (e.g. `visual-gen/lighting-presets.ts`, `rig-presets.ts`) that prompts/pipelines target.
+  3. **Pipeline** → a new/extended catalog StepSpec pipeline (usually L/XL → spec it, don't half-build).
 
 ## Procedure
 
