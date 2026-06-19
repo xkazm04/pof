@@ -109,6 +109,14 @@ export const UE_GOTCHAS: Gotcha[] = [
     appliesTo: ['ue-python'],
     source: 'research: Lumen in AAA (Karim Yasser)',
   },
+  {
+    id: 'modular-character-accessory-rigging',
+    summary: 'Modular character: weight rigid accessories to ONE bone, hide occluded body mesh, keep swap-slots exclusive',
+    detail:
+      'For customizable/modular characters: (1) rigid accessories (hats, glasses, held props) must be weighted 100% to a single bone (head; or a hand socket via parenting) — NOT auto-skinned to the body, or they deform with it. (2) Hide/remove body mesh occluded by equipped clothing (do not render the torso under a shirt) to save draw cost. (3) Make swappable slots mutually exclusive (legs vs pants in one category) so they do not co-occupy and clip. (4) Generate the body WITH a placeholder head for proportion, then swap in a higher-detail head (bridge the neck loops). Show holdables only in the matching animation state.',
+    appliesTo: ['ue-python'],
+    source: 'research: Modular 3D Character (Stefan 3D AI)',
+  },
 ];
 
 /**

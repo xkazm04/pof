@@ -75,7 +75,7 @@
 
 - **Anchors:** `src/lib/module-registry.ts` (checklist prompts), `src/lib/prompts/` + `prompt-context.ts` (`buildProjectContextHeader`, 6-section builder), `src/lib/evaluator/module-eval-prompts.ts` (4-pass eval), `src/lib/knowledge/ue-gotchas.ts` (`UE_GOTCHAS` + `formatGotchas`, filtered by `PromptKind`), `src/components/cli/skills.ts` (12 domain skill packs), `src/lib/cli-task.ts` (`TaskFactory`, `@@CALLBACK`).
 - **Lands here:** prompt-quality ideas, new skill packs, UE_GOTCHAS/tripwires (only UE_GOTCHAS + tripwire reach dispatch prompts — knowledgeTips are UI-only). To add a UE pitfall: append to `UE_GOTCHAS` with `appliesTo` (`ue-python`/`ue-cpp`/`packaging`) + a test in `__tests__/knowledge/ue-gotchas.test.ts`.
-- **Already-has:** prompt-injected UE pitfalls incl. (2026-06-18) a `ue-python` "introspect-before-you-guess" gotcha + 3 `lumen-*` gotchas (SWRT thin-geo Distance-Field-Resolution / detail-vs-global by world scale / HWRT surface-cache reflections → Hit Lighting for Reflections); evaluator `arpg-world` performance checks incl. (2026-06-18) static-mesh polygon-budget / Nanite-LOD criteria + `arpg-animation` quality checks incl. generated/AI-mocap source guidance.
+- **Already-has:** prompt-injected UE pitfalls incl. (2026-06-18) a `ue-python` "introspect-before-you-guess" gotcha + 3 `lumen-*` gotchas (SWRT thin-geo Distance-Field-Resolution / detail-vs-global by world scale / HWRT surface-cache reflections → Hit Lighting for Reflections) + a modular-character accessory/rigging gotcha (rigid-accessory single-bone weight / occluded-mesh hiding / exclusive swap-slots); evaluator `arpg-world` performance checks incl. (2026-06-18) static-mesh polygon-budget / Nanite-LOD criteria + `arpg-animation` quality checks incl. generated/AI-mocap source guidance.
 - **Docs/memory:** `[[reference_prompt_knowledge_injection]]`, `docs/architecture/prompts-and-cli.md`.
 
 ---
@@ -92,6 +92,7 @@
 ---
 
 ## Maintenance log
+- **2026-06-19** — run `modular-character` (Stefan 3D AI): modular-character rigging/optimization gotcha (rigid-accessory single-bone weight, occluded-mesh hiding, exclusive swap-slots). AccuRig/Tripo = catches (off-domain per user-pref). Cleaner hardened (strip VTT cue-numbers).
 - **2026-06-18** — seeded.
 - **2026-06-18** — run `claude-took-over-ue5` (Stefan 3D AI): added D-bucket gotcha; logged 3 C-bucket backlog deltas (introspection/BP-layout/StateTree). Mostly already-have catches (visual self-review, build automation, git checkpoints, mcp tool surface) — confirms PoF is ahead of the manual workflow.
 - **2026-06-18** — run `weekend-game-pipeline` (Stefan 3D AI): first two-gate run (candidate list → user picked C2/C4). Added a **visual-gen** subsystem entry (was thin). C4 evaluator poly-budget check implemented (S). C2 AccuRig deep-verify → **GUI-only/manual, declined** (off automation-goal; MetaHuman-conform is the better path). Asset-pipeline-centric source = off the harness/MCP north star.

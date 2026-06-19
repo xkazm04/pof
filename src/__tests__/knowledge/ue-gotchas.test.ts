@@ -63,6 +63,12 @@ describe('formatGotchas', () => {
     expect(out).toMatch(/distance field|surface cache|hit lighting/i);
   });
 
+  it('carries modular-character accessory/optimization guidance for ue-python', () => {
+    const out = formatGotchas('ue-python');
+    expect(out).toMatch(/accessor|modular/i);
+    expect(out).toMatch(/occlud|covered|single bone|one bone/i);
+  });
+
   it('returns an empty string for web', () => {
     expect(formatGotchas('web')).toBe('');
   });

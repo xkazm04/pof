@@ -23,6 +23,8 @@ def clean(path):
             continue
         if not ln.strip():
             continue
+        if re.fullmatch(r"\d+", ln.strip()):          # standalone VTT cue index
+            continue
         txt = re.sub(r"<[^>]+>", "", ln).strip()      # strip inline tags
         txt = html.unescape(txt)                       # &nbsp; &amp; etc.
         txt = re.sub(r"\s+", " ", txt)
