@@ -3,7 +3,10 @@
  * (the one-shot orchestrator, feature-matrix batch review, and the harness).
  *
  * Gate + source are a single env var, POF_CLI_MCP_CONFIG: an absolute path to an
- * MCP config JSON (e.g. the repo `.mcp.json`, which declares mcp-unreal + pof-mcp).
+ * MCP config JSON (e.g. the repo `.mcp.json`, which declares pof-mcp + the official
+ * UE 5.8 MCP `unreal-official` at :8000). The bespoke `mcp-unreal` (Go/:8090) was
+ * retired 2026-06-19 — see docs/concepts/UE/mcp-bakeoff-verdict.md. This resolver is
+ * config-agnostic: it just passes whatever config the env var points at.
  *   - unset           → [] (feature OFF — the default; spawn args are unchanged)
  *   - set, missing    → [] (+ a warning; never break a spawn over a bad path)
  *   - set, exists     → ['--mcp-config', <path>, '--strict-mcp-config']
