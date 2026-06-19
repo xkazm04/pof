@@ -7,6 +7,7 @@ Output: a sibling <name>.clean.txt for each input (timestamps ~every 25s for cit
 import re
 import sys
 import os
+import html
 
 
 def clean(path):
@@ -23,6 +24,7 @@ def clean(path):
         if not ln.strip():
             continue
         txt = re.sub(r"<[^>]+>", "", ln).strip()      # strip inline tags
+        txt = html.unescape(txt)                       # &nbsp; &amp; etc.
         txt = re.sub(r"\s+", " ", txt)
         if not txt or txt == last:                    # drop consecutive repeats
             continue

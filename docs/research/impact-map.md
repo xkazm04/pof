@@ -48,9 +48,9 @@
 - **Docs/memory:** `docs/architecture/module-system.md`.
 
 ### Visual-gen / asset pipeline (2D→3D→rig→texture→assemble)
-- **Anchors:** `src/lib/visual-gen/` — `providers.ts` (3D-gen providers, e.g. Tripo/TripoSR), `rig-presets.ts` (retarget *targets*: UE5 Mannequin/MetaHuman/Minimal — NOT rig tools), `material-db.ts` + `biome-textures.ts` (PBR/material gen), `generators/{terrain,dungeon,vegetation}.ts`, `asset-library-db.ts`, `ue5-import-templates.ts`, `poll.ts`; UI `src/components/modules/visual-gen/auto-rig/AutoRigView.tsx` + `material-lab/`.
-- **Lands here:** new 2D/3D/material/texture providers, auto-rig methods, procedural generators, asset library.
-- **Already-has:** Tripo-family 3D gen, Material Lab PBR, retarget presets, same-style/modular-kit workflow. **Auto-rig direction = MetaHuman conform (UE 5.8, scriptable/headless)** — Candidate B in `ue5-capability-integration-candidates.md`; UniRig was a placeholder.
+- **Anchors:** `src/lib/visual-gen/` — `providers.ts` (3D-gen providers, e.g. Tripo/TripoSR), `rig-presets.ts` (retarget *targets*: UE5 Mannequin/MetaHuman/Minimal — NOT rig tools), `lighting-presets.ts` (Lumen best-practice configs per tier; consumed by prompts/pipelines), `material-db.ts` + `biome-textures.ts` (PBR/material gen), `generators/{terrain,dungeon,vegetation}.ts`, `asset-library-db.ts`, `ue5-import-templates.ts`, `poll.ts`; UI `src/components/modules/visual-gen/auto-rig/AutoRigView.tsx` + `material-lab/`.
+- **Lands here:** new 2D/3D/material/texture providers, auto-rig methods, lighting/Lumen presets, procedural generators, asset library.
+- **Already-has:** Tripo-family 3D gen, Material Lab PBR, retarget presets, same-style/modular-kit workflow, (2026-06-18) Lumen `lighting-presets.ts`. **Auto-rig direction = MetaHuman conform (UE 5.8, scriptable/headless)** — Candidate B in `ue5-capability-integration-candidates.md`; UniRig was a placeholder. **Lighting-pipeline spec:** `docs/research/lighting-pipeline-spec.md` (K4 — a new `environment-lighting` catalog pipeline, not built).
 - **Gaps / verdicts:** ⛔ **AccuRig is GUI-only (no CLI/headless/API)** → a manual tool, off the automation-loop goal and inferior to the planned MetaHuman-conform path (run `weekend-game-pipeline` 2026-06-18). Backlog providers (not picked): Tripo smart-mesh/segmentation-V2/retopology; Patina/Poliigon cheap PBR-set-from-image for Material Lab.
 - **Docs/memory:** `docs/visual-generation-roadmap.md`, `docs/ue5-capability-integration-candidates.md`.
 
@@ -75,7 +75,7 @@
 
 - **Anchors:** `src/lib/module-registry.ts` (checklist prompts), `src/lib/prompts/` + `prompt-context.ts` (`buildProjectContextHeader`, 6-section builder), `src/lib/evaluator/module-eval-prompts.ts` (4-pass eval), `src/lib/knowledge/ue-gotchas.ts` (`UE_GOTCHAS` + `formatGotchas`, filtered by `PromptKind`), `src/components/cli/skills.ts` (12 domain skill packs), `src/lib/cli-task.ts` (`TaskFactory`, `@@CALLBACK`).
 - **Lands here:** prompt-quality ideas, new skill packs, UE_GOTCHAS/tripwires (only UE_GOTCHAS + tripwire reach dispatch prompts — knowledgeTips are UI-only). To add a UE pitfall: append to `UE_GOTCHAS` with `appliesTo` (`ue-python`/`ue-cpp`/`packaging`) + a test in `__tests__/knowledge/ue-gotchas.test.ts`.
-- **Already-has:** prompt-injected UE pitfalls incl. (2026-06-18) a `ue-python` "introspect-before-you-guess" gotcha; evaluator `arpg-world` performance checks incl. (2026-06-18) static-mesh polygon-budget / Nanite-LOD criteria.
+- **Already-has:** prompt-injected UE pitfalls incl. (2026-06-18) a `ue-python` "introspect-before-you-guess" gotcha + 3 `lumen-*` gotchas (SWRT thin-geo Distance-Field-Resolution / detail-vs-global by world scale / HWRT surface-cache reflections → Hit Lighting for Reflections); evaluator `arpg-world` performance checks incl. (2026-06-18) static-mesh polygon-budget / Nanite-LOD criteria.
 - **Docs/memory:** `[[reference_prompt_knowledge_injection]]`, `docs/architecture/prompts-and-cli.md`.
 
 ---
@@ -94,3 +94,4 @@
 - **2026-06-18** — seeded.
 - **2026-06-18** — run `claude-took-over-ue5` (Stefan 3D AI): added D-bucket gotcha; logged 3 C-bucket backlog deltas (introspection/BP-layout/StateTree). Mostly already-have catches (visual self-review, build automation, git checkpoints, mcp tool surface) — confirms PoF is ahead of the manual workflow.
 - **2026-06-18** — run `weekend-game-pipeline` (Stefan 3D AI): first two-gate run (candidate list → user picked C2/C4). Added a **visual-gen** subsystem entry (was thin). C4 evaluator poly-budget check implemented (S). C2 AccuRig deep-verify → **GUI-only/manual, declined** (off automation-goal; MetaHuman-conform is the better path). Asset-pipeline-centric source = off the harness/MCP north star.
+- **2026-06-18** — run `lumen-best-practices` (Karim Yasser): **knowledge source** mined into prompt-consumable form (user's lens: best practices → pipelines/presets/knowledge-base). K1 = 3 Lumen gotchas; K3 = `lighting-presets.ts` (4 tier presets); K4 = `environment-lighting` pipeline spec (not built). Shows the knowledge-injection path (D/B) raising automation output quality — distinct from tooling sources.
