@@ -32,6 +32,12 @@
 - **Lands here:** L3 runtime / L4 visual gates, observation contracts, the "no done without a ground-truth observation" moat.
 - **Docs/memory:** `docs/catalog/L3-L4-RUNNER.md`, `[[project_llm_ue_interface]]` (Observation Spine).
 
+### Experiment Lab (theory → output — validate a concept live on UE 5.8)
+- **Anchors:** `src/lib/ue-experiment/` (`runner.ts` `runExperiment` — launch headless 5.8 → run Python probe → capture frame → log markers → optional Gemini verdict; `job-store.ts`), `src/app/api/experiment/{run,status/[id],screenshot/[id]}/route.ts`, `src/components/experiment-lab/` (`ExperimentLab.tsx` + `seed.ts` + `client.ts`), page `/experiment`.
+- **Lands here:** running an ad-hoc concept on the connected project + seeing output. **A research finding (a `UE_GOTCHAS` entry) can be SEEDED into a live experiment** (`seedFromGotcha`) — the theory→output bridge for the research loop.
+- **Already-has:** reuses `ue-launch` (launch/python/capture/markers) + `/api/verify/visual` (L4). **Proven live 2026-06-19** (real UE 5.8: 439 KB frame + `RESULT=5.8.0` marker). Headless-per-run; ad-hoc; in-app UI.
+- **Docs/memory:** `docs/superpowers/specs/2026-06-19-ue-experiment-lab-design.md`, `[[project_ue58_official_mcp]]`.
+
 ---
 
 ## B — UI / catalog workflow
