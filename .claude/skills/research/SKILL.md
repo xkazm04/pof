@@ -69,7 +69,8 @@ Classify the source up front; it changes the shape of every finding.
   **Cleanup (mandatory, scoped to THIS run's id):** `rm -f "$WORK"/<id>.*` as soon as the cleaned text is in memory — before Phase 3, so a mid-run failure leaves no residue. Never blind-sweep `$WORK/*` (races parallel runs).
 - **Article URL:** `WebFetch` for the body, stripped of nav/ads.
 - **Raw text:** use as-is.
-- If transcript is disabled / text <300 words: report it's too thin and stop.
+- **Web-discovery (a topic, no URL):** the user gives a topic/thread instead of a source. Run a focused `WebSearch` round (2-4 queries), then `WebFetch` the 1-2 **most substantive** results — prefer **research papers (arxiv) / primary docs / vendor docs over listicles/SEO posts**. Treat the fetched content as the source(s). This is how to reach material videos can't cover (e.g. agentic-3D research). Stay bounded — this is discovery, not a literature review.
+- If transcript is disabled / text <300 words / no substantive source found: report it's too thin and stop.
 
 ### Phase 3 — Extract candidate ideas (lightweight — NO web, NO deep reads)
 Extract 5–15 candidates. Each: `title` (imperative, <60 chars), `summary` (1-2 sentences), `source_anchor` (≤20-word quote or `[HH:MM:SS]`), `bucket`, `effort`, and a one-line **impact-map area** (which subsystem it'd touch — read straight from the already-loaded `docs/research/impact-map.md`; cheap). Apply memory filters (deprioritize patterns the user repeatedly declines; surface matching `descoped-reopenable` items as "reconsider?") + source-type yield calibration (engineering talk = dense; product/competitor demo = few + many "already-have" catches). Quick relevance: drop only candidates with **no plausible PoF attachment point**. **Do NOT web-search, grep, or read anchor files yet** — that budget is spent only on what the user picks.
