@@ -125,6 +125,10 @@ interface SceneViewerProps {
   showAxes: boolean;
   autoRotate: boolean;
   canvasRef?: React.RefObject<HTMLCanvasElement | null>;
+  /** Override the floor-grid line color (e.g. a blueprint tint). Default: studio grey. */
+  gridColor?: string;
+  /** Override the canvas backdrop (e.g. blueprint paper). Default: var(--surface-deep). */
+  backgroundColor?: string;
 }
 
 export function SceneViewer({
@@ -134,9 +138,11 @@ export function SceneViewer({
   showAxes,
   autoRotate,
   canvasRef,
+  gridColor,
+  backgroundColor,
 }: SceneViewerProps) {
   return (
-    <div className="w-full h-full rounded-lg overflow-hidden bg-[var(--surface-deep)]">
+    <div className="w-full h-full rounded-lg overflow-hidden" style={{ background: backgroundColor ?? 'var(--surface-deep)' }}>
       <Canvas
         ref={canvasRef}
         camera={{ position: [3, 2, 3], fov: 50, near: 0.01, far: 1000 }}
@@ -171,10 +177,10 @@ export function SceneViewer({
               args={[10, 10]}
               cellSize={0.5}
               cellThickness={0.5}
-              cellColor="#374151"
+              cellColor={gridColor ?? '#374151'}
               sectionSize={2}
               sectionThickness={1}
-              sectionColor="#4b5563"
+              sectionColor={gridColor ?? '#4b5563'}
               fadeDistance={15}
               fadeStrength={1}
               infiniteGrid

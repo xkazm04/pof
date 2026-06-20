@@ -2,10 +2,12 @@
 
 import { useCallback, useRef } from 'react';
 import dynamic from 'next/dynamic';
-import { ViewerToolbar } from '@/components/modules/visual-gen/asset-viewer/ViewerToolbar';
-import { AssetInspector } from '@/components/modules/visual-gen/asset-viewer/AssetInspector';
+import { labFontVars } from '@/components/layout-lab/fonts';
+import { LIGHT } from '@/components/layout-lab/theme';
 import { useViewerStore } from '@/components/modules/visual-gen/asset-viewer/useViewerStore';
 import { AssetGallery } from './AssetGallery';
+import { StudioToolbar } from './StudioToolbar';
+import { StudioInspector } from './StudioInspector';
 import type { GeneratedAsset } from '@/lib/visual-gen/generated-assets';
 
 // Three.js needs the browser — never SSR the canvas.
@@ -14,6 +16,12 @@ const SceneViewer = dynamic(
   { ssr: false },
 );
 
+// Blueprint floor-grid line color, sourced from the lab theme (a concrete hex —
+// three.js can't read CSS vars). LIGHT.gridLine is non-null for the Blueprint theme.
+const BLUEPRINT_GRID = LIGHT.gridLine ?? undefined;
+
+/** Blueprint-themed 3D studio: gallery rail · viewport · inspector, locked to the
+ *  lab's Blueprint (light) theme via data-theme + --lab-* tokens. */
 export function Studio3D() {
   const modelUrl = useViewerStore((s) => s.modelUrl);
   const modelName = useViewerStore((s) => s.modelName);
@@ -41,25 +49,32 @@ export function Studio3D() {
   }, [modelName]);
 
   return (
-    <div className="flex h-screen flex-col bg-background text-text">
-      <header className="flex items-center gap-2 border-b border-border px-4 h-11 shrink-0">
-        <span className="text-sm font-semibold">3D Studio</span>
-        <span className="text-xs text-text-muted">preview generated assets before Unreal</span>
+    <div
+      data-theme="blueprint"
+      className={labFontVars}
+      style={{ display: 'flex', height: '100vh', flexDirection: 'column', background: 'var(--lab-bg)', color: 'var(--lab-ink)', fontFamily: 'var(--lab-font-body)' }}
+    >
+      <header style={{ display: 'flex', alignItems: 'center', gap: 'var(--lab-s3)', height: 44, flexShrink: 0, padding: '0 var(--lab-s4)', borderBottom: '1px solid var(--lab-line)', background: 'var(--lab-panel)' }}>
+        <span style={{ fontFamily: 'var(--lab-font-mono)', fontSize: 'var(--lab-fs-xs)', letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--lab-ink)' }}>PoF · 3D Studio</span>
+        <span style={{ fontFamily: 'var(--lab-font-mono)', fontSize: 'var(--lab-fs-xs)', color: 'var(--lab-muted)' }}>preview generated assets before Unreal</span>
       </header>
-      <div className="flex min-h-0 flex-1">
+      <div style={{ display: 'flex', flex: 1, minHeight: 0 }}>
         <AssetGallery activeUrl={modelUrl} onPick={onPick} />
-        <div className="flex min-w-0 flex-1 flex-col">
-          <ViewerToolbar
+        <div style={{ display: 'flex', flex: 1, minWidth: 0, flexDirection: 'column' }}>
+          <StudioToolbar
             renderMode={renderMode} showGrid={showGrid} showAxes={showAxes} autoRotate={autoRotate}
             modelName={modelName} onFileLoad={onFileLoad} onRenderModeChange={setRenderMode}
             onToggleGrid={toggleGrid} onToggleAxes={toggleAxes} onToggleAutoRotate={toggleAutoRotate}
             onScreenshot={onScreenshot}
           />
-          <div className="min-h-0 flex-1 p-2">
-            <SceneViewer modelUrl={modelUrl} renderMode={renderMode} showGrid={showGrid} showAxes={showAxes} autoRotate={autoRotate} canvasRef={canvasRef} />
+          <div style={{ flex: 1, minHeight: 0, padding: 'var(--lab-s2)' }}>
+            <SceneViewer
+              modelUrl={modelUrl} renderMode={renderMode} showGrid={showGrid} showAxes={showAxes} autoRotate={autoRotate}
+              canvasRef={canvasRef} gridColor={BLUEPRINT_GRID} backgroundColor="var(--lab-bg)"
+            />
           </div>
         </div>
-        <AssetInspector modelName={modelName} />
+        <StudioInspector modelName={modelName} />
       </div>
     </div>
   );
