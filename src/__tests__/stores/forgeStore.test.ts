@@ -5,7 +5,7 @@ describe('useForgeStore', () => {
   beforeEach(() => {
     useForgeStore.setState({
       jobs: [],
-      activeProviderId: 'triposr',
+      activeProviderId: 'hunyuan3d',
       promptHistory: [],
     });
   });
@@ -13,7 +13,7 @@ describe('useForgeStore', () => {
   it('starts with empty state', () => {
     const state = useForgeStore.getState();
     expect(state.jobs).toEqual([]);
-    expect(state.activeProviderId).toBe('triposr');
+    expect(state.activeProviderId).toBe('hunyuan3d');
     expect(state.promptHistory).toEqual([]);
   });
 

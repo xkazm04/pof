@@ -9,6 +9,7 @@ import type {
   ImportedObject,
 } from '@/lib/blender-mcp/types';
 import type { CritiqueCard } from '@/lib/visual-gen/mesh-critique';
+import { getOfficialProvider } from '@/lib/visual-gen/providers';
 
 export type JobStatus = 'pending' | 'generating' | 'completed' | 'failed' | 'importing';
 export type GenerationMode = 'text-to-3d' | 'image-to-3d';
@@ -73,7 +74,7 @@ const pollingIntervals = new Map<string, Poller>();
 
 export const useForgeStore = create<ForgeState>((set, get) => ({
   jobs: [],
-  activeProviderId: 'triposr',
+  activeProviderId: getOfficialProvider().id,
   promptHistory: [],
 
   addJob: (jobData) => {

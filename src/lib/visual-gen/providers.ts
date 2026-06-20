@@ -21,6 +21,9 @@ export interface GenerationProvider {
   /** Whether a PoF runner can actually execute this provider end-to-end today
    *  (vs being descriptive metadata only). */
   runnerBacked?: boolean;
+  /** The default image-to-3D provider used across PoF. Exactly one provider should
+   *  carry this. */
+  official?: boolean;
 }
 
 export const GENERATION_PROVIDERS: GenerationProvider[] = [
@@ -29,7 +32,7 @@ export const GENERATION_PROVIDERS: GenerationProvider[] = [
     name: 'TripoSR',
     status: 'free',
     modes: ['image-to-3d'],
-    description: 'Open-source image-to-3D (MIT). Runs locally on ~6GB VRAM. WIRED: the first executable generator in the zero-budget local pipeline — src/lib/visual-gen/triposr-runner.ts drives scripts/visual-gen/pof_triposr.py (set POF_TRIPOSR_ROOT). Low quality by design; the seam lets a cloud provider (Tripo/Meshy/Rodin) slot in later.',
+    description: 'Open-source image-to-3D (MIT — the COMMERCIAL-SAFE / fast fallback to the official Hunyuan3D provider). Runs locally on ~6GB VRAM, <1s, ~44K-face meshes. src/lib/visual-gen/triposr-runner.ts drives scripts/visual-gen/pof_triposr.py (set POF_TRIPOSR_ROOT). Lower detail than Hunyuan; use when an MIT license or sub-second speed matters more than geometry quality.',
     vramGb: 6,
     isLocal: true,
     runnerBacked: true,
@@ -47,11 +50,12 @@ export const GENERATION_PROVIDERS: GenerationProvider[] = [
     id: 'hunyuan3d',
     name: 'Hunyuan3D',
     status: 'free',
-    modes: ['text-to-3d', 'image-to-3d'],
-    description: 'Open-source 3D generation from Tencent (Apache 2.0). Good quality, ~12GB VRAM.',
-    vramGb: 12,
+    modes: ['image-to-3d'],
+    description: 'OFFICIAL PoF image-to-3D provider. Local Hunyuan3D-2 shape model (Hunyuan3DDiTFlowMatchingPipeline) via src/lib/visual-gen/hunyuan-runner.ts → scripts/visual-gen/pof_hunyuan.py (set POF_HUNYUAN_ROOT; venv = POF_HUNYUAN_VENV or the shared TripoSR venv). ~6GB VRAM, ~31s, ~360K-face high-detail meshes — an ~8x geometry jump over TripoSR. SHAPE ONLY (texturing is a separate custom-rasterizer / Leonardo-PBR step). NON-COMMERCIAL license — TripoSR is the MIT/commercial-safe fallback. Pairs with the Leonardo GPT Image 2 (RENDER_3D) 2D front + the CLIP/geometry/Qwen-VL critique tiers.',
+    vramGb: 6,
     isLocal: true,
-    mcpBacked: true,
+    runnerBacked: true,
+    official: true,
   },
   {
     id: 'meshy',
@@ -90,4 +94,12 @@ export function getAvailableProviders(mode: GenerationMode): GenerationProvider[
 
 export function getFreeProviders(): GenerationProvider[] {
   return GENERATION_PROVIDERS.filter((p) => p.status === 'free');
+}
+
+/** The default image-to-3D provider used across PoF (Hunyuan3D). Falls back to the
+ *  first runner-backed provider if none is flagged official. */
+export function getOfficialProvider(): GenerationProvider {
+  return GENERATION_PROVIDERS.find((p) => p.official)
+    ?? GENERATION_PROVIDERS.find((p) => p.runnerBacked)
+    ?? GENERATION_PROVIDERS[0];
 }
