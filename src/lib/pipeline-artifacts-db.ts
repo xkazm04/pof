@@ -82,6 +82,18 @@ export function listDeferredArtifacts(filter?: DrainFilter): PipelineArtifact[] 
   return (getDb().prepare(sql).all(...args) as Record<string, unknown>[]).map(rowToArtifact);
 }
 
+/** All artifacts (any status), optionally narrowed by catalog/entity — the L2
+ *  static-verify pass's work set (every persisted step, not just deferred ones). */
+export function listAllArtifacts(filter?: { catalogId?: string; entityId?: string }): PipelineArtifact[] {
+  ensureTable();
+  const where: string[] = [];
+  const args: string[] = [];
+  if (filter?.catalogId) { where.push('catalog_id = ?'); args.push(filter.catalogId); }
+  if (filter?.entityId) { where.push('entity_id = ?'); args.push(filter.entityId); }
+  const sql = `SELECT * FROM pipeline_artifacts${where.length ? ' WHERE ' + where.join(' AND ') : ''} ORDER BY catalog_id, entity_id, step`;
+  return (getDb().prepare(sql).all(...args) as Record<string, unknown>[]).map(rowToArtifact);
+}
+
 export function upsertArtifact(a: PipelineArtifact): PipelineArtifact {
   ensureTable();
   getDb().prepare(`
