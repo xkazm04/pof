@@ -123,6 +123,7 @@ export function LayoutLab() {
           <Button active={view === 'matrix'} onClick={() => setView('matrix')}>Matrix</Button>
           <Button active={view === 'canon'} onClick={() => setView('canon')}>Canon</Button>
           <Button onClick={() => setPanelOpen(true)}>+ One-shot</Button>
+          <Button onClick={() => { window.location.href = '/3d'; }}>3D Studio</Button>
           <Button onClick={switchToLegacy}>Legacy shell</Button>
         </div>
         {/* Right zone: status + theme toggle in the corner */}
