@@ -75,6 +75,13 @@ describe('formatGotchas', () => {
     expect(out).toMatch(/occlud|covered|single bone|one bone/i);
   });
 
+  it('tells ue-python sessions to segment a fused AI mesh into named parts before rigging', () => {
+    const out = formatGotchas('ue-python');
+    expect(out).toMatch(/segment/i);
+    expect(out).toMatch(/named part|into.*parts|riggable/i);
+    expect(out).toMatch(/Tripo|Rodin|CubePart/);
+  });
+
   it('carries Niagara optimization pitfalls', () => {
     const out = formatGotchas('ue-python');
     expect(out).toMatch(/Niagara/);

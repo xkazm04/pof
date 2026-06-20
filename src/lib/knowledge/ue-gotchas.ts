@@ -157,6 +157,14 @@ export const UE_GOTCHAS: Gotcha[] = [
     appliesTo: ['ue-cpp', 'ue-python'],
     source: 'research: Motion Matching Problems & Solutions (Unreal DevOP)',
   },
+  {
+    id: 'ai-mesh-segment-before-rig',
+    summary: 'AI-generated 3D is one fused mesh — segment into NAMED parts before rigging (riggable + modular)',
+    detail:
+      'Text/image-to-3D models (Tripo, Hunyuan, Meshy, Roblox Cube/CubePart) output a single solid mesh that is hard to rig, animate, or make modular. Before rigging, segment it into semantically NAMED parts (wheel/body/grip; or head/torso/arms/legs) so each is an independently-skinnable mesh / Skeletal Mesh section / modular swap-slot. Prefer GEOMETRY-ACCURATE part cutters (Tripo V2 / Rodin: cut on the real geometry, 15+ parts, API + commercial-OK) over LATENT-RESAMPLE segmenters (Roblox CubePart: open + local but research-only license, and it reconstructs a lower-detail mesh in a fixed latent space instead of splitting your input — max ~8 parts, no texture, detail loss). After segmenting, apply the modular-character rules (rigid parts weighted to one bone, exclusive swap-slots, hide occluded mesh).',
+    appliesTo: ['ue-python'],
+    source: 'research: Roblox CubePart 3D part-segmentation (Stefan 3D AI)',
+  },
 ];
 
 /**
