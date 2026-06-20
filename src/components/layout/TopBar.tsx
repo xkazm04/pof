@@ -8,7 +8,7 @@ import { useModuleStore } from '@/stores/moduleStore';
 import { SUB_MODULES, ALL_CHECKLIST_TOTAL } from '@/lib/module-registry';
 import {
   Gamepad2, ChevronDown, Pencil, Trash2, Check, X,
-  Bell, FolderOpen, Plus, Clock, Loader2, CheckCircle2, Search, LayoutDashboard, FlaskConical,
+  Bell, FolderOpen, Plus, Clock, Loader2, CheckCircle2, Search, LayoutDashboard, FlaskConical, Boxes,
 } from 'lucide-react';
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import { useActivityFeedStore } from '@/stores/activityFeedStore';
@@ -391,6 +391,7 @@ export function TopBar() {
         )}
       </div>
       <div className="flex items-center gap-3">
+        <Studio3DLink />
         <ExperimentLabLink />
         <NewShellButton />
         {isSetupComplete && <SearchTrigger />}
@@ -664,6 +665,21 @@ function ExperimentLabLink() {
     >
       <FlaskConical className="w-3 h-3" aria-hidden="true" />
       <span className="hidden sm:inline">Experiment</span>
+    </a>
+  );
+}
+
+// --- 3D Studio link (preview generated assets before Unreal) ---
+
+function Studio3DLink() {
+  return (
+    <a
+      href="/3d"
+      className="flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs text-text-muted hover:text-text bg-background border border-border hover:border-border-bright transition-colors focus-ring"
+      title="3D Studio — preview generated assets"
+    >
+      <Boxes className="w-3 h-3" aria-hidden="true" />
+      <span className="hidden sm:inline">3D Studio</span>
     </a>
   );
 }
