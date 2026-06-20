@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { Clock, CheckCircle, AlertCircle, Loader2, Trash2, X, Download } from 'lucide-react';
 import { useForgeStore, type GenerationJob, type JobStatus } from './useForgeStore';
+import { CritiqueBadge } from './CritiqueBadge';
 
 const STATUS_CONFIG: Record<JobStatus, { icon: typeof Clock; color: string; label: string }> = {
   pending: { icon: Clock, color: 'text-amber-400', label: 'Pending' },
@@ -68,6 +69,7 @@ function JobCard({ job, now }: { job: GenerationJob; now: number }) {
             </p>
           </div>
         )}
+        {job.critique && <CritiqueBadge critique={job.critique} fidelity={job.fidelity} />}
         {job.error && (
           <p className="mt-1 text-xs text-red-400">{job.error}</p>
         )}

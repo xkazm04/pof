@@ -18,6 +18,9 @@ export interface GenerationProvider {
   isLocal: boolean;
   /** Whether this provider is backed by Blender MCP integration */
   mcpBacked?: boolean;
+  /** Whether a PoF runner can actually execute this provider end-to-end today
+   *  (vs being descriptive metadata only). */
+  runnerBacked?: boolean;
 }
 
 export const GENERATION_PROVIDERS: GenerationProvider[] = [
@@ -26,9 +29,10 @@ export const GENERATION_PROVIDERS: GenerationProvider[] = [
     name: 'TripoSR',
     status: 'free',
     modes: ['image-to-3d'],
-    description: 'Open-source image-to-3D model (MIT license). Runs locally, requires ~6GB VRAM.',
+    description: 'Open-source image-to-3D (MIT). Runs locally on ~6GB VRAM. WIRED: the first executable generator in the zero-budget local pipeline — src/lib/visual-gen/triposr-runner.ts drives scripts/visual-gen/pof_triposr.py (set POF_TRIPOSR_ROOT). Low quality by design; the seam lets a cloud provider (Tripo/Meshy/Rodin) slot in later.',
     vramGb: 6,
     isLocal: true,
+    runnerBacked: true,
   },
   {
     id: 'trellis2',

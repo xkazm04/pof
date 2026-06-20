@@ -24,6 +24,7 @@ export function GenerationPanel() {
   const addJob = useForgeStore((s) => s.addJob);
   const addToHistory = useForgeStore((s) => s.addToHistory);
   const submitMcpJob = useForgeStore((s) => s.submitMcpJob);
+  const submitLocalJob = useForgeStore((s) => s.submitLocalJob);
   const blenderConnected = useBlenderMCPStore((s) => s.connection.connected);
 
   const filteredProviders = GENERATION_PROVIDERS.filter((p) => p.modes.includes(mode));
@@ -69,19 +70,25 @@ export function GenerationPanel() {
     // Non-MCP providers: must be free status
     if (activeProvider.status !== 'free') return;
 
-    const imageUrl = imageFile ? URL.createObjectURL(imageFile) : undefined;
-
-    addJob({
-      mode,
-      prompt: effectivePrompt,
-      imageUrl,
-      providerId: activeProvider.id,
-    });
-
-    if (effectivePrompt) {
-      addToHistory(effectivePrompt);
+    // Runner-backed local providers (TripoSR) actually execute via the generate API:
+    // read the reference image as a data URL the server can decode, then submit + poll.
+    if (activeProvider.runnerBacked && mode === 'image-to-3d' && imageFile) {
+      const reader = new FileReader();
+      reader.onload = () => {
+        if (typeof reader.result === 'string') {
+          void submitLocalJob(activeProvider.id, mode, reader.result);
+        }
+      };
+      reader.readAsDataURL(imageFile);
+      resetBuilder();
+      setImageFile(null);
+      return;
     }
 
+    // Other local providers aren't wired to execute yet — queue a placeholder job.
+    const imageUrl = imageFile ? URL.createObjectURL(imageFile) : undefined;
+    addJob({ mode, prompt: effectivePrompt, imageUrl, providerId: activeProvider.id });
+    if (effectivePrompt) addToHistory(effectivePrompt);
     resetBuilder();
     setImageFile(null);
   };

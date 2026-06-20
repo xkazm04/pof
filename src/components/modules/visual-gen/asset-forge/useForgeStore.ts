@@ -8,6 +8,7 @@ import type {
   JobStatusResult,
   ImportedObject,
 } from '@/lib/blender-mcp/types';
+import type { CritiqueCard } from '@/lib/visual-gen/mesh-critique';
 
 export type JobStatus = 'pending' | 'generating' | 'completed' | 'failed' | 'importing';
 export type GenerationMode = 'text-to-3d' | 'image-to-3d';
@@ -26,6 +27,10 @@ export interface GenerationJob {
   completedAt?: number;
   /** Remote job id returned by the MCP generation API */
   mcpJobId?: string;
+  /** Tier-1 quality-gate scorecard (local subprocess providers, e.g. TripoSR). */
+  critique?: CritiqueCard;
+  /** Tier-2 CLIP fidelity (0–1) of the generated mesh vs the input image. */
+  fidelity?: number;
 }
 
 interface ForgeState {
@@ -40,6 +45,10 @@ interface ForgeState {
   setActiveProvider: (id: string) => void;
   addToHistory: (prompt: string) => void;
   submitMcpJob: (providerId: string, prompt: string, mode: GenerationMode) => Promise<void>;
+  /** Local-subprocess generation (e.g. TripoSR image-to-3d): POST the image to
+   *  /api/visual-gen/generate, then poll /status. The runner-backed counterpart to
+   *  submitMcpJob. */
+  submitLocalJob: (providerId: string, mode: GenerationMode, imageDataUrl: string) => Promise<void>;
 }
 
 let jobCounter = 0;
@@ -270,6 +279,55 @@ export const useForgeStore = create<ForgeState>((set, get) => ({
       scheduleNext();
     }
 
+    pollingIntervals.set(localId, { stop });
+    scheduleNext();
+  },
+
+  submitLocalJob: async (providerId, mode, imageDataUrl) => {
+    const localId = get().addJob({ mode, prompt: '', providerId, imageUrl: imageDataUrl });
+
+    const submit = await tryApiFetch<{ jobId: string }>('/api/visual-gen/generate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ mode, providerId, imageDataUrl }),
+    });
+    if (!submit.ok) {
+      get().updateJob(localId, { status: 'failed', error: submit.error, completedAt: Date.now() });
+      return;
+    }
+    const { jobId } = submit.data;
+    get().updateJob(localId, { status: 'generating', mcpJobId: jobId });
+
+    // Self-scheduling poll loop (same discipline as submitMcpJob: no overlapping
+    // ticks, `stopped` guards every post-await branch).
+    let stopped = false;
+    let timer: ReturnType<typeof setTimeout> | null = null;
+    const stop = () => { stopped = true; if (timer !== null) { clearTimeout(timer); timer = null; } };
+    const scheduleNext = () => { if (!stopped) timer = setTimeout(tick, UI_TIMEOUTS.blenderGenPollInterval); };
+
+    async function tick() {
+      timer = null;
+      if (stopped) return;
+      const res = await tryApiFetch<{ status: string; meshPath?: string; error?: string; critique?: CritiqueCard; fidelity?: number }>(
+        `/api/visual-gen/generate/status?jobId=${encodeURIComponent(jobId)}`,
+      );
+      if (stopped) return;
+      if (!res.ok) { scheduleNext(); return; } // transient transport miss — keep polling
+      const { status, meshPath, error, critique, fidelity } = res.data;
+      if (status === 'done') {
+        stop();
+        pollingIntervals.delete(localId);
+        get().updateJob(localId, { status: 'completed', progress: 100, resultUrl: meshPath, critique, fidelity, completedAt: Date.now() });
+        return;
+      }
+      if (status === 'error') {
+        stop();
+        pollingIntervals.delete(localId);
+        get().updateJob(localId, { status: 'failed', error: error ?? 'generation failed', completedAt: Date.now() });
+        return;
+      }
+      scheduleNext();
+    }
     pollingIntervals.set(localId, { stop });
     scheduleNext();
   },

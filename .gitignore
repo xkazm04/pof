@@ -62,3 +62,6 @@ tools/pof-mcp/node_modules/
 tools/pof-mcp/dist/
 # machine-local UE growth ratchet baseline (GROWTH-LOG.md is committed)
 tools/pof-mcp/growth-baseline.json
+
+# Local generated 3D assets (zero-budget TripoSR pipeline) — not committed
+/generated/
