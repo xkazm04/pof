@@ -25,17 +25,31 @@ let _fs: NodeFs | undefined;
 let _path: NodePath | undefined;
 
 function serverModules(): { fs: NodeFs; path: NodePath } {
-  if (typeof window !== 'undefined') {
-    throw new Error('ueStaticCheckers: filesystem checks are server-only (called in the browser)');
-  }
   if (!_fs || !_path) {
-    // Indirected require — hidden from static bundler analysis so node:fs/node:path
-    // never enter the client graph. Resolves to the CJS require in Next's Node runtime.
-    const req = Function('return require')() as NodeRequire;
-    _fs = req('node:fs');
-    _path = req('node:path');
+    // Resolve fs/path at runtime, server-only, WITHOUT a static import (which would drag
+    // node:fs into the client bundle — Turbopack rejects that). `process.getBuiltinModule`
+    // is a synchronous builtin accessor (Node 20.16+/22.3+) that works in CJS *and* ESM,
+    // so it also runs under vitest (incl. its jsdom env, which still executes on Node) —
+    // unlike the old `typeof window` guard + indirected `require`, which threw in tests.
+    const proc = (globalThis as {
+      process?: { getBuiltinModule?: <T>(id: string) => T; versions?: { node?: string } };
+    }).process;
+    const getBuiltin = proc?.getBuiltinModule;
+    if (typeof getBuiltin === 'function') {
+      _fs = getBuiltin<NodeFs>('node:fs');
+      _path = getBuiltin<NodePath>('node:path');
+    } else if (proc?.versions?.node) {
+      // Older Node server runtime (no getBuiltinModule): the CJS require, still kept out of
+      // the client graph by the indirection.
+      const req = Function('return require')() as NodeRequire;
+      _fs = req('node:fs');
+      _path = req('node:path');
+    } else {
+      // No Node runtime at all = a real browser bundle. Filesystem checks are server-only.
+      throw new Error('ueStaticCheckers: filesystem checks are server-only (called in the browser)');
+    }
   }
-  // Non-null: the block above always assigns both when either is unset.
+  // Non-null: a branch above always assigns both, or throws.
   return { fs: _fs!, path: _path! };
 }
 
