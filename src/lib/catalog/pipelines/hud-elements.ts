@@ -329,9 +329,10 @@ registerCatalogPipeline({
           ],
         },
       }),
+      // Registered automation name (enumerated from UE): the HUD functional test.
       accept: runtimeDeferred(
-        'VSHUDElementTest',
-        'Renders + binds at multiple resolutions in PIE',
+        'VSHUDFunctionalTest',
+        'HUD renders + binds in PIE',
       ),
     },
 

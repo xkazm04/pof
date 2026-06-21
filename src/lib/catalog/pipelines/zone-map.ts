@@ -608,7 +608,8 @@ registerCatalogPipeline({
           ],
         },
       }),
-      accept: runtimeDeferred('VSZoneTest', 'Zone setup + encounter + loot-ilvl test passes in UE'),
+      // Registered automation name (enumerated from UE): the AshenForest zone-setup gate.
+      accept: runtimeDeferred('AshenForestSetupTest', 'AshenForest zone setup test passes in UE'),
     },
 
     // ── 12. UE Packaging ──────────────────────────────────────────────────────

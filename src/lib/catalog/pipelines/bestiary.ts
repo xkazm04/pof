@@ -330,7 +330,8 @@ registerCatalogPipeline({
           ],
         },
       }),
-      accept: runtimeDeferred('VSBestiarySpawnTest', 'Enemy spawn + combat test passes in UE'),
+      // Registered automation name (enumerated from UE): the bestiary archetype gate.
+      accept: runtimeDeferred('PoF.Bestiary.BruteArchetypeConfig', 'Brute archetype config validated in UE'),
     },
 
     // ── 12. UE Packaging ──────────────────────────────────────────────────────

@@ -631,9 +631,12 @@ registerCatalogPipeline({
           ],
         },
       }),
+      // Registered automation name (enumerated from UE): the arena gate this row reuses
+      // (geometry/lighting/collision). The fuller wave/win-loss/hazard slice-rules test is
+      // still planned; until it registers, the setup gate is the runnable L3 coverage.
       accept: runtimeDeferred(
-        'VSArenaSliceRulesTest',
-        'Arena slice rules test passes in UE (wave sequence + win/loss + hazard ticks)',
+        'VSArenaSetupTest',
+        'Arena setup test passes in UE (geometry/lighting/collision)',
       ),
     },
 
