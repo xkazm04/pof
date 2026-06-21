@@ -19,6 +19,10 @@ export default defineConfig({
   use: {
     baseURL: BASE_URL,
     trace: 'on-first-retry',
+    // Every context starts from a completed project (written by global-setup) so the
+    // project-gated homepage (`/`) renders the lab — the specs target the lab, not the
+    // first-run setup flow. The file is regenerated each run and gitignored.
+    storageState: './e2e/.auth/project-seeded.json',
     screenshot: 'only-on-failure',
   },
 

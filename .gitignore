@@ -65,3 +65,6 @@ tools/pof-mcp/growth-baseline.json
 
 # Local generated 3D assets (zero-budget TripoSR pipeline) — not committed
 /generated/
+
+# Playwright seeded storage state (regenerated each run by e2e/global-setup.ts)
+/e2e/.auth/

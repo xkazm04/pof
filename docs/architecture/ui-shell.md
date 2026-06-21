@@ -13,7 +13,7 @@ rollup strip.
 |------|------|
 | `src/app/page.tsx` | Root page; `useSyncExternalStore(popstate, readShellPref)` switches between `NewHome` and `AppShell` |
 | `src/lib/ecw/shell-pref.ts` | `readShellPref()` / `writeShellPref()` — `?legacy=1` URL flag or `localStorage['pof.shell']` |
-| `src/components/layout-lab/NewHome.tsx` | Thin wrapper: calls `usePofBridge()` then renders `<LayoutLab />` |
+| `src/components/layout-lab/NewHome.tsx` | Calls `usePofBridge()`, then gates: Blueprint `<SetupWizard />` when no project is loaded, else `<LayoutLab />` |
 | `src/components/layout-lab/LayoutLab.tsx` | Top-level shell: 3-zone header bar (brand · centered Catalogs/Matrix/Canon/One-shot/Legacy actions · right-corner status + icon theme toggle), `<LabBridgeStrip>` |
 | `src/components/layout-lab/Baseline.tsx` | 3-column composition screen: tree / pipeline timeline / work canvas; all produce→persist→render logic. Optional `initialStepIdx` opens a specific step on mount (used by the matrix jump) |
 | `src/components/layout-lab/CatalogMatrix.tsx` | Catalog-wide status matrix: entities (rows) × steps (columns) colored by derived Acceptance; per-entity `summarizeEntity` rollup + blocker flags; cells jump to that entity's step |
@@ -51,10 +51,18 @@ full navigation. The reverse trip is symmetric: the legacy `TopBar`'s **"Bluepri
 (`NewShellButton`) calls `writeShellPref('ecw')`, deletes the `legacy` param, and fires `popstate`
 to swap back to the lab.
 
-### 2. Bridge connection — `NewHome` (`src/components/layout-lab/NewHome.tsx`)
+### 2. Bridge + project gate — `NewHome` (`src/components/layout-lab/NewHome.tsx`)
 
-`NewHome` exists solely to call `usePofBridge()` at the correct React subtree root before
-delegating to `<LayoutLab />`. Lab tests render `<LayoutLab />` directly and are unaffected.
+`NewHome` calls `usePofBridge()` at the correct React subtree root, then **gates on project
+setup** the same way the legacy `AppShell` does: behind the Zustand persist hydration guard
+(`useSyncExternalStore(() => () => {}, () => true, () => false)`), it renders the Blueprint
+`<SetupWizard />` (now `data-theme="blueprint"` + `--lab-*` tokens) when `isSetupComplete` is
+false, and `<LayoutLab />` once a project is loaded. The `/layout` route
+(`src/app/layout/page.tsx`) renders `<LayoutLab />` directly and stays project-agnostic — it is
+the entry the e2e catalog walker uses. Because the homepage `/` now gates, `e2e/global-setup.ts`
+seeds a completed project into a Playwright `storageState` (wired via `playwright.config.ts`'s
+`use.storageState`) and runs its identity-guard + warm-up against `/layout`, so every spec that
+hits `/` still lands on the lab. Lab tests render `<LayoutLab />` directly and are unaffected.
 
 ### 3. Top-level shell — `LayoutLab` (`src/components/layout-lab/LayoutLab.tsx`)
 

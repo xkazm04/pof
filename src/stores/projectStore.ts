@@ -63,7 +63,7 @@ export const useProjectStore = create<ProjectState>()(
     (set, get) => ({
       projectName: '',
       projectPath: '',
-      ueVersion: '5.7.3',
+      ueVersion: '5.8.0',
       isSetupComplete: false,
       isNewProject: true,
       setupStep: 0,
@@ -99,7 +99,7 @@ export const useProjectStore = create<ProjectState>()(
         set({
           projectName: '',
           projectPath: '',
-          ueVersion: '5.7.3',
+          ueVersion: '5.8.0',
           isSetupComplete: false,
           isNewProject: true,
           setupStep: 0,
