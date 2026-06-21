@@ -94,6 +94,12 @@ export function listAllArtifacts(filter?: { catalogId?: string; entityId?: strin
   return (getDb().prepare(sql).all(...args) as Record<string, unknown>[]).map(rowToArtifact);
 }
 
+/** Remove one artifact by its primary key (used to clean up synthetic/test rows). */
+export function deleteArtifact(catalogId: string, entityId: string, step: string): void {
+  ensureTable();
+  getDb().prepare('DELETE FROM pipeline_artifacts WHERE catalog_id = ? AND entity_id = ? AND step = ?').run(catalogId, entityId, step);
+}
+
 export function upsertArtifact(a: PipelineArtifact): PipelineArtifact {
   ensureTable();
   getDb().prepare(`
