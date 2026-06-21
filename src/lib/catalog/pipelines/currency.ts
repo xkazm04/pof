@@ -268,7 +268,8 @@ registerCatalogPipeline({
           ],
         },
       }),
-      accept: runtimeDeferred('VSCurrencyWalletTest', 'Wallet functional test passes in UE'),
+      // FVSCurrencyWalletTest — registered automation name (not the C++ class) so the runner resolves it.
+      accept: runtimeDeferred('PoF.Currency.WalletRules', 'Wallet functional test passes in UE'),
     },
 
     // ── 7. UE Packaging ───────────────────────────────────────────────────────

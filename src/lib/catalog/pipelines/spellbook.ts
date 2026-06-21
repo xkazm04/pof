@@ -509,9 +509,11 @@ registerCatalogPipeline({
           ],
         },
       }),
+      // FVSGenFireballEffectTest — defer with the REGISTERED automation name (dotted path /
+      // substring), not the C++ class name, so the L3 runner resolves it (verified live on 5.8).
       accept: runtimeDeferred(
-        'VSGenFireballEffectTest',
-        'Fireball functional test passes in UE (VSGenFireballEffectTest)',
+        'PoF.GenFireball.EffectConfig',
+        'Fireball functional test passes in UE (FVSGenFireballEffectTest)',
       ),
     },
 

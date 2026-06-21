@@ -262,7 +262,8 @@ registerCatalogPipeline({
           ],
         },
       }),
-      accept: runtimeDeferred('VSStatusBurningEffectTest', 'Functional test passes in UE'),
+      // FVSStatusBurningEffectTest — registered automation name (not the C++ class) so the runner resolves it.
+      accept: runtimeDeferred('PoF.StatusBurning.EffectConfig', 'Functional test passes in UE'),
     },
 
     // ── 6. UE Packaging ───────────────────────────────────────────────────────

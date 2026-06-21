@@ -238,7 +238,9 @@ registerCatalogPipeline({
           ],
         },
       }),
-      accept: runtimeDeferred('VSCharacterVaelTest', 'NPC spawns + talks + gives quest in PIE'),
+      // FVSCharacterVaelTest — defer with the REGISTERED automation name (dotted path /
+      // substring), not the C++ class name, so the L3 runner resolves it.
+      accept: runtimeDeferred('PoF.CharacterVael.NPCConfig', 'NPC spawns + talks + gives quest in PIE'),
     },
 
     // ── 12. UE Packaging ─────────────────────────────────────────────────────
