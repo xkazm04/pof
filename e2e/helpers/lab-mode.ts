@@ -1,12 +1,13 @@
 import { expect, type Page, type APIRequestContext } from '@playwright/test';
 import { seedAllCatalogs } from '@/lib/catalog/sections';
+import { POF_READY_TESTID } from './pof-identity';
 
 export type StepStatus = 'pass' | 'fail' | 'deferred' | 'pending';
 
 /** The lab is the homepage; wait for the LayoutLab root ready marker. */
 export async function gotoLab(page: Page): Promise<void> {
   await page.goto('/', { waitUntil: 'domcontentloaded' });
-  await expect(page.getByTestId('harness-lab-ready')).toBeVisible({ timeout: 30_000 });
+  await expect(page.getByTestId(POF_READY_TESTID)).toBeVisible({ timeout: 30_000 });
 }
 
 /** The catalog tree opens only the selected category; expand every collapsed one

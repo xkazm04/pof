@@ -11,6 +11,10 @@ export default defineConfig({
   workers: 1,
   reporter: 'html',
   timeout: 30_000,
+  // Runs once: assert the server under test is actually PoF (not a stray dev server on the
+  // port) + warm the heavy /layout compile. Fails fast with one actionable error instead of
+  // N silent harness-lab-ready timeouts against the wrong app.
+  globalSetup: './e2e/global-setup.ts',
 
   use: {
     baseURL: BASE_URL,
@@ -28,7 +32,9 @@ export default defineConfig({
   webServer: {
     command: `npm run dev -- -p ${PORT}`,
     url: BASE_URL,
-    reuseExistingServer: true,
+    // Reuse a local dev server for fast iteration, but in CI always start a fresh PoF server
+    // so a leftover/wrong process can't be silently adopted.
+    reuseExistingServer: !process.env.CI,
     timeout: 60_000,
   },
 });
