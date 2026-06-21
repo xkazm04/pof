@@ -25,11 +25,13 @@ describe.skipIf(!ENABLED)('L3 live drain (spawn → real UE)', () => {
   afterEach(() => deleteArtifact(CAT, ENT, STEP));
 
   it('runs a deferred L3 gate in UE and flips it to pass', async () => {
-    // Seed a deferred L3 gate exactly as runtimeDeferred would — parseTestName recovers the
-    // automation filter ("GenFireball" matches the registered Project.…GenFireball.EffectConfig).
+    // Seed a deferred L3 gate exactly as the spellbook pipeline now does — the realigned
+    // registered name `PoF.GenFireball.EffectConfig` (a substring of the registered
+    // "Project.Functional Tests.PoF.GenFireball.EffectConfig"). Proves the aligned name
+    // resolves through the live runner, not just a generic substring.
     upsertArtifact({
       catalogId: CAT, entityId: ENT, step: STEP, data: {}, ueAssets: [],
-      status: 'deferred', tier: 'L3', reason: 'live-UE runner not yet run: GenFireball',
+      status: 'deferred', tier: 'L3', reason: 'live-UE runner not yet run: PoF.GenFireball.EffectConfig',
     });
 
     const spawn = makeSpawnExecutor({ allowSpawn: true });
