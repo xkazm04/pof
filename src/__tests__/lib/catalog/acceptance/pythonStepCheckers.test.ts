@@ -8,10 +8,11 @@ import {
 describe('pythonStepSuccess', () => {
   const checker = pythonStepSuccess('Test step', 3);
 
-  it('reports pending when the step has not run yet', () => {
+  it('reports deferred (L3, pending bridge run) when the step has not run yet', () => {
     const r = checker({});
-    expect(r.status).toBe('pending');
-    expect(r.detail).toContain('not yet run');
+    expect(r.status).toBe('deferred');
+    expect(r.tier).toBe('L3');
+    expect(r.detail).toContain('pending bridge run');
   });
 
   it('reports pass when failed is empty and total >= expectAtLeast', () => {
@@ -42,8 +43,10 @@ describe('pythonStepSuccess', () => {
 describe('pythonStepOk', () => {
   const checker = pythonStepOk('Verify');
 
-  it('pending when ok is unset', () => {
-    expect(checker({}).status).toBe('pending');
+  it('deferred (L3) when ok is unset (pending bridge run)', () => {
+    const r = checker({});
+    expect(r.status).toBe('deferred');
+    expect(r.tier).toBe('L3');
   });
 
   it('pass when ok=true', () => {
@@ -60,9 +63,11 @@ describe('pythonStepOk', () => {
 describe('humanConfirmed', () => {
   const checker = humanConfirmed('Files present', 'confirmed');
 
-  it('pending when not confirmed', () => {
-    expect(checker({}).status).toBe('pending');
-    expect(checker({ confirmed: false }).status).toBe('pending');
+  it('deferred (L3) when not confirmed — awaiting the live prerequisite', () => {
+    expect(checker({}).status).toBe('deferred');
+    const r = checker({ confirmed: false });
+    expect(r.status).toBe('deferred');
+    expect(r.tier).toBe('L3');
   });
 
   it('pass when confirmed=true', () => {

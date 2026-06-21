@@ -10,10 +10,7 @@
 /** catalogId -> reason it is excluded from the generic walker. */
 export const WALKER_SKIP: Record<string, string> = {
   items: 'covered in depth by catalog-items-reference.spec.ts (bespoke 13-step UI)',
-  // KNOWN COVERAGE GAP (2026-06-08): player-movement registers a CatalogPipeline but
-  // has NO CATALOG_SECTIONS / NEW_CATALOGS entry, so the /layout lab never surfaces it
-  // and there is no entity to open. To close the gap, add a NEW_CATALOGS entry
-  // (catalogId 'player-movement') with a starter entity whose seed data satisfies the
-  // pipeline's accept checkers — then remove this skip. Until then it is uncovered.
-  'player-movement': 'orphaned pipeline: registered but absent from CATALOG_SECTIONS/NEW_CATALOGS, so the lab surfaces no entity to walk. Needs a section + starter to be walkable.',
+  // player-movement is no longer skipped (2026-06-21): it now has a NEW_CATALOGS section +
+  // starter (Manny Locomotion), and its bridge steps are L3/L4-deferred-to-the-bridge in
+  // stub mode (config-complete), so the generic walker covers it like any other pipeline.
 };

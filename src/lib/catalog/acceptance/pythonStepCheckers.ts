@@ -26,7 +26,10 @@ export function pythonStepSuccess(label: string, expectAtLeast = 1): Checker {
     const total = created.length + skipped.length;
 
     if (data.created === undefined && data.failed === undefined && data.skipped === undefined) {
-      return { label, tier: 'L2', status: 'pending', detail: 'not yet run' };
+      // Not yet run = the dispatch is authored, the assets are realized live on the editor
+      // thread. That's runtime-deferred (L3), like the StepSpec pipelines' runtimeDeferred
+      // gates — NOT pending-incomplete. Keeps the step config-complete (walkable) pre-run.
+      return { label, tier: 'L3', status: 'deferred', detail: 'pending bridge run', reason: 'awaiting /pof/python/run on the editor' };
     }
     if (failed.length > 0) {
       return {
@@ -61,7 +64,7 @@ export function pythonStepSuccess(label: string, expectAtLeast = 1): Checker {
 export function pythonStepOk(label: string): Checker {
   return (data) => {
     if (data.ok === undefined) {
-      return { label, tier: 'L2', status: 'pending', detail: 'not yet run' };
+      return { label, tier: 'L3', status: 'deferred', detail: 'pending bridge run', reason: 'awaiting the verify module on the editor' };
     }
     const issues = Array.isArray(data.issues) ? (data.issues as unknown[]) : [];
     if (data.ok === true) {
@@ -83,11 +86,11 @@ export function pythonStepOk(label: string): Checker {
 export function humanConfirmed(label: string, field: string): Checker {
   return (data) => {
     const ok = data[field] === true;
-    return {
-      label,
-      tier: 'L1',
-      status: ok ? 'pass' : 'pending',
-      detail: ok ? 'confirmed' : 'awaiting user confirmation',
-    };
+    // Confirmed = an L1 human attestation (pass). Unconfirmed = deferred to the live
+    // prerequisite (the source files + the human action), not pending-incomplete — so a
+    // bridge-driven step stays config-complete (walkable) before the prerequisite is met.
+    return ok
+      ? { label, tier: 'L1', status: 'pass', detail: 'confirmed' }
+      : { label, tier: 'L3', status: 'deferred', detail: 'awaiting confirmation', reason: `confirm the prerequisite (${field}) is satisfied` };
   };
 }

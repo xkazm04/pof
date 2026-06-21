@@ -13,7 +13,8 @@ import { seededEntities } from '@/lib/catalog/seed';
 const CONFIG_COMPLETE = new Set(['pass', 'deferred']);
 // Registered pipelines with no CATALOG_SECTIONS entity (so they can't be walked). Keep in
 // lockstep with WALKER_SKIP — adding one here without a section is a known coverage gap.
-const KNOWN_UNSEEDED = new Set(['player-movement']);
+// (Empty: player-movement was given a section + starter on 2026-06-21.)
+const KNOWN_UNSEEDED = new Set<string>([]);
 
 describe('catalog pipelines — headless produce→accept config-complete', () => {
   for (const pipeline of allCatalogPipelines()) {

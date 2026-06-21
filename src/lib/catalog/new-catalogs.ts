@@ -14,8 +14,10 @@ export interface NewCatalogDef {
 }
 
 /**
- * The 21 new catalog entities from game_catalog_pipelines.xlsx. One source of truth:
- * CATALOG_SECTIONS, PIPELINE_BY_CATALOG and CATALOG_MODULE are all derived from this.
+ * The new catalog entities — 21 from game_catalog_pipelines.xlsx + `player-movement` (the
+ * autonomously-built Mixamo→Manny locomotion pipeline, surfaced here so it's lab-visible
+ * and walker-covered instead of orphaned). One source of truth: CATALOG_SECTIONS,
+ * PIPELINE_BY_CATALOG and CATALOG_MODULE are all derived from this.
  */
 export const NEW_CATALOGS: NewCatalogDef[] = [
   // ── Quests & Narrative ──
@@ -70,6 +72,13 @@ export const NEW_CATALOGS: NewCatalogDef[] = [
   // ── Economy / Meta ──
   { catalogId: 'currencies', label: 'Currencies', category: 'Economy / Meta', description: 'Spendable resource types in the economy.', module: 'arpg-inventory', tracks: ['logic', 'art-2d', 'vfx', 'audio', 'test'],
     starters: [{ id: 'currency-gold', name: 'Gold', categoryPath: ['Standard'], tags: [], description: 'The primary soft currency.' }] },
+  // ── Player Movement (not from the xlsx-21) ──
+  // The autonomously-built locomotion pipeline. Bridge-driven: each step dispatches a
+  // Python module on the editor thread, so every step is L3/L4-deferred-to-the-bridge in
+  // stub mode (config-complete, walkable). Surfaced here to retire its orphaned/walker-skip
+  // status — see src/lib/catalog/pipelines/player-movement.ts.
+  { catalogId: 'player-movement', label: 'Player Movement', category: 'Game Assets', description: 'Tier-2 player locomotion: Mixamo→Manny retarget → blend space → AnimBP → roll montage → playable gate.', module: 'arpg-character', tracks: ['animation', 'test'],
+    starters: [{ id: 'player-locomotion-manny', name: 'Manny Locomotion', categoryPath: ['Movement'], tags: ['mixamo', 'locomotion'], description: 'WASD + Shift sprint + Space roll, from no animation to a PIE-and-feel playable gate.' }] },
 ];
 
 /** Materialize a new catalog's starters into CatalogEntityBase[] (planned, minimal data). */

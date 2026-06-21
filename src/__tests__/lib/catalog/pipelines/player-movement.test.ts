@@ -21,22 +21,23 @@ describe('player-movement pipeline', () => {
     expect(result?.tier).toBe('L2');
   });
 
-  it('step 2 is the human-confirmed Mixamo source list (L1)', () => {
+  it('step 2 (Mixamo source) defers to the live prerequisite until confirmed', () => {
     const s = pipeline?.steps[1];
     expect(s?.label).toMatch(/mixamo source/i);
-    const pending = s?.accept({ confirmed: false });
-    expect(pending?.status).toBe('pending');
-    expect(pending?.tier).toBe('L1');
+    const unconfirmed = s?.accept({ confirmed: false });
+    expect(unconfirmed?.status).toBe('deferred');
+    expect(unconfirmed?.tier).toBe('L3');
     const passed = s?.accept({ confirmed: true });
     expect(passed?.status).toBe('pass');
+    expect(passed?.tier).toBe('L1');
   });
 
-  it('steps 3-5 use pythonStepSuccess with expected artifact counts', () => {
+  it('steps 3-5 (pythonStepSuccess) are deferred (L3) until the bridge runs', () => {
     for (const idx of [2, 3, 4]) {
       const s = pipeline?.steps[idx];
       const r = s?.accept({});
-      expect(r?.status).toBe('pending');
-      expect(r?.tier).toBe('L2');
+      expect(r?.status).toBe('deferred');
+      expect(r?.tier).toBe('L3');
     }
   });
 

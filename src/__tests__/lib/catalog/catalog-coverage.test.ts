@@ -5,7 +5,7 @@ import { CATALOG_MODULE } from '@/lib/catalog/catalog-module';
 import { NEW_CATALOGS, newCatalogStarters } from '@/lib/catalog/new-catalogs';
 
 describe('catalog program coverage', () => {
-  it('registers the 21 new catalogs as sections (32 total)', () => {
+  it('registers every new catalog as a section (11 base + NEW_CATALOGS)', () => {
     const ids = new Set(CATALOG_SECTIONS.map((s) => s.catalogId));
     for (const c of NEW_CATALOGS) expect(ids.has(c.catalogId)).toBe(true);
     expect(CATALOG_SECTIONS.length).toBe(11 + NEW_CATALOGS.length);
