@@ -217,7 +217,8 @@ export async function POST(request: NextRequest) {
   let raw: AnyVerdict;
   try {
     const response = await client.models.generateContent({
-      model: 'gemini-2.0-flash',
+      // gemini-2.0-flash was decommissioned (404 NOT_FOUND); 2.5-flash is the current multimodal flash.
+      model: 'gemini-2.5-flash',
       contents: [
         {
           role: 'user',

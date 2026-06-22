@@ -96,23 +96,28 @@ export const PIPELINE_TOOLS: ToolDef[] = [
   {
     name: 'pof_drain_gates',
     description:
-      'Run the deferred L3/L4 Test Gates for an entity against the LIVE UE editor (via the PoF bridge), turning "deferred" gates into pass/fail. The editor is non-reentrant — one drain at a time (concurrent → 409). Set allowSpawn to use a headless editor.',
+      'Run the deferred L3/L4 Test Gates for an entity, turning "deferred" into pass/fail. L3 runs on the live editor (bridge) or headless (allowSpawn). For L4 VISUAL gates, pass projectPath + autoCapture:true to RENDER a real frame headlessly — the result\'s `screenshots` array holds PNG paths you MUST Read and judge with your own eyes: the automated visual judge catches only gross errors (T-pose, black scene, missing humanoid), not "the attack has no swing" or debug cruft. One drain at a time (concurrent → 409).',
     inputSchema: obj(
       {
         catalogId: STR,
         entityId: STR,
         tier: { type: 'string', enum: ['L3', 'L4'] },
         allowSpawn: { type: 'boolean' },
+        projectPath: STR,
+        autoCapture: { type: 'boolean' },
       },
       ['catalogId', 'entityId'],
     ),
     handler: (args, pof) => {
       const allowSpawn = args.allowSpawn === true;
+      const projectPath = optStr(args, 'projectPath');
+      const autoCapture = args.autoCapture === true && !!projectPath;
       return pof.post('/api/pipeline-artifacts/drain', {
         catalogId: reqStr(args, 'catalogId'),
         entityId: reqStr(args, 'entityId'),
         ...(optStr(args, 'tier') ? { tier: optStr(args, 'tier') } : {}),
         ...(allowSpawn ? { executor: 'spawn', allowSpawn: true } : {}),
+        ...(autoCapture ? { autoCapture: true, projectPath } : {}),
       });
     },
   },

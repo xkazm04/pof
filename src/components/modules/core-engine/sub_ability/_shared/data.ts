@@ -888,6 +888,8 @@ export const SPELLBOOK_ABILITIES: SpellbookAbility[] = [
   sa('ult-shd-01', 'Death Field', 'Ultimate', 'Shadow', 'ultimate', 240, 90, 65, [1.00, 0.35, 0.85, 0.05, 0.03], 'Create a field of death', 'Ability.Force.DeathField'),
   sa('ult-hly-01', 'Divine Intervention', 'Ultimate', 'Holy', 'ultimate', 0, 100, 120, [0.00, 0.00, 1.00, 0.05, 0.02], 'Heal and protect all allies', 'Ability.Holy.DivineIntervention'),
   sa('ult-arc-01', 'Time Stop', 'Ultimate', 'Arcane', 'ultimate', 0, 85, 90, [0.00, 0.00, 1.00, 0.05, 0.03], 'Freeze time for all enemies', 'Ability.Arcane.TimeStop'),
+  // ── Force / Star Wars arena duel ──
+  sa('off-arc-fp', 'Force Push', 'Offensive', 'Arcane', 'advanced', 15, 20, 5, [0.30, 0.60, 0.45, 0.70, 0.70], 'Telekinetic shove: knocks the target back (physics launch) and deals light damage. Bound to key 1; realized in UE as UGA_ForcePush + UGE_Cooldown_ForcePush.', 'Ability.ForcePush'),
 ];
 
 export const SPELLBOOK_ABILITY_MAP = new Map(SPELLBOOK_ABILITIES.map(a => [a.id, a]));

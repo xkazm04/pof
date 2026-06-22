@@ -16,6 +16,7 @@ const summary = (results: DrainSummary['results']): DrainSummary => ({
   passed: results.filter((r) => r.verdict?.status === 'pass').length,
   failed: results.filter((r) => r.verdict?.status === 'fail').length,
   skipped: results.filter((r) => r.skipped).length,
+  screenshots: [],
   results,
 });
 
@@ -88,7 +89,7 @@ describe('drain worker', () => {
     startDrainWorker({ intervalMs: 999_999 });
     collectDeferred.mockReturnValue([]);
     const res = await runDrainTick(1_000);
-    expect(res).toEqual({ ran: 0, passed: 0, failed: 0, skipped: 0, results: [] });
+    expect(res).toEqual({ ran: 0, passed: 0, failed: 0, skipped: 0, screenshots: [], results: [] });
     expect(drainJobs).not.toHaveBeenCalled(); // no jobs → drainJobs skipped
   });
 });

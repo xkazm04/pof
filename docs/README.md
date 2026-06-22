@@ -33,6 +33,12 @@ The system that turns a catalog "row" (item, monster, quest, material, …) into
 | [catalog/E2E-COVERAGE.md](catalog/E2E-COVERAGE.md) | The Playwright walker + vitest guard that e2e-cover every registered pipeline (CLAUDE.md Rule 5) |
 | [catalog/LEGACY-SALVAGE.md](catalog/LEGACY-SALVAGE.md) | UE gotchas / known asset paths migrated into the Project Canon |
 
+## Feature & capability map
+
+| Doc | Covers |
+|-----|--------|
+| [features/README.md](features/README.md) | Going-forward (Blueprint) capability map: all 31 catalog pipelines (one folder each) + the LLM↔Unreal harness, with the shared [pipeline architecture](features/pipeline-architecture.md) reference |
+
 ## UE integration & generation
 
 | Doc | Covers |

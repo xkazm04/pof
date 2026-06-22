@@ -109,6 +109,17 @@ const _ORIGINAL_ITEMS: ItemData[] = [
   { id: '6', name: 'Sunfire Amulet', type: 'Consumable', subtype: 'Elixir', rarity: 'Legendary', stats: [{ label: 'Uses', value: '1', numericValue: 100, maxValue: 100 }], description: 'Contains the essence of a dying star.', effect: 'Grants immunity to Fire damage for 60s.', affixes: [{ name: 'of Legends', stat: '+2 All Skills', category: 'utility' }] },
   { id: '7', name: 'Minor Health Potion', type: 'Consumable', subtype: 'Potion', rarity: 'Common', stats: [{ label: 'Heal', value: '50 HP', numericValue: 25, maxValue: 100 }], description: 'A basic healing draft.' },
   { id: '8', name: 'Void Daggers', type: 'Weapon', subtype: 'Dagger', rarity: 'Legendary', stats: [{ label: 'Damage', value: '35-45', numericValue: 40, maxValue: 50 }, { label: 'Speed', value: '0.8s', numericValue: 80, maxValue: 100 }], description: 'Forged in the abyss.', effect: 'Attacks tear reality, ignoring 20% armor.', affixes: [{ name: 'Vampiric', stat: '+8% Life Steal', category: 'offensive' }, { name: 'of Power', stat: '+15% Atk Power', category: 'offensive' }, { name: 'of Legends', stat: '+2 All Skills', category: 'utility' }] },
+  /* ── Star Wars arena duel: the signature weapon both combatants wield ──── */
+  {
+    id: 'lightsaber', name: 'Lightsaber', type: 'Weapon', subtype: 'Sword', rarity: 'Legendary',
+    stats: [
+      { label: 'Energy Damage', value: '30-46', numericValue: 38, maxValue: 50 },
+      { label: 'Attack Speed', value: '1.0', numericValue: 20, maxValue: 20 },
+      { label: 'Armor Penetration', value: '60%', numericValue: 60, maxValue: 100 },
+    ],
+    description: 'An elegant weapon for a more civilized age — a blade of pure plasma held in a magnetic field. The signature weapon of Jedi and Sith alike; carried by both duelists in the arena. One-handed energy sword (uses the melee combat path).',
+    effect: 'Cuts through most armor (60% penetration).',
+  },
   /* ── KOTOR Melee Weapons ──────────────────────────────────────────────── */
   {
     id: 'kotor-vibroblade', name: 'Vibroblade', type: 'Weapon', subtype: 'Sword', rarity: 'Common',

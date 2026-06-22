@@ -2,6 +2,7 @@ import { NextRequest } from 'next/server';
 import { apiSuccess, apiError } from '@/lib/api-utils';
 import { getOriginFromRequest } from '@/lib/constants';
 import { buildExecutors, collectDeferred, drainAll, parseDrainFilter, type DrainFilter } from '@/lib/test-gate-runner';
+import { resolveUprojectPath } from '@/lib/ue5-bridge/build-pipeline';
 
 // Module-level in-flight set, scoped per catalogId|entityId (global key when both omitted).
 // The drain talks to a shared, non-reentrant UE editor — overlapping requests would clobber
@@ -33,6 +34,10 @@ export async function POST(req: NextRequest) {
       tier?: string; catalogId?: string; entityId?: string;
       executor?: 'bridge' | 'spawn'; port?: number; allowSpawn?: boolean; limit?: number;
       screenshotPath?: string; visualMode?: 'hud' | 'texture' | 'lighting' | 'character';
+      // L4 autonomous capture: with a projectPath + autoCapture, the visual gate renders its
+      // OWN frame (headless -game -RenderOffScreen) instead of staying deferred. Opt-in (it
+      // launches an editor — pair with executor:'spawn' so it doesn't collide with a live one).
+      projectPath?: string; autoCapture?: boolean;
     };
     const filter = parseDrainFilter((k) => body[k]);
     const key = drainKey(filter);
@@ -50,6 +55,9 @@ export async function POST(req: NextRequest) {
         ...(body.allowSpawn ? { allowSpawn: true } : {}),
         ...(body.screenshotPath ? { screenshotPath: body.screenshotPath } : {}),
         ...(body.visualMode ? { visualMode: body.visualMode } : {}),
+        ...(body.autoCapture && body.projectPath
+          ? { autoCapture: { uproject: resolveUprojectPath(body.projectPath, 'PoF') } }
+          : {}),
         appOrigin: getOriginFromRequest(req),
       });
       const summary = await drainAll(executors, filter, body.limit != null ? { limit: body.limit } : undefined);

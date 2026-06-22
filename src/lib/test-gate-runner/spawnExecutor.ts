@@ -94,6 +94,11 @@ export function buildScenarioArgs(uproject: string, map: string, scenarioPath: s
     '-game',
     `-PoFScenario=${scenarioPath}`,
     '-nullrhi',
+    // Deterministic fixed timestep (1/60s). Without it, a headless -nullrhi run ticks uncapped
+    // (~1600fps), so dt is ~0.0006s and the Motion Quality Probe's acceleration metric (Δvel/dt)
+    // explodes on numerical noise (~14.5M vs ~146k). Fixed dt also makes the run reproducible.
+    '-benchmark',
+    '-fps=60',
     '-unattended',
     '-nopause',
     '-nosplash',

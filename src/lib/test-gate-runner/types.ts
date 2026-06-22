@@ -67,7 +67,15 @@ export interface GateVerdict {
   status: 'pass' | 'fail';
   /** Human-readable; becomes the artifact's new `reason`. */
   detail: string;
-  /** Executor-specific payload (logs, assertion results, screenshot path) — for debugging. */
+  /**
+   * L4: the rendered frame this verdict was judged from. Surfaced as a first-class field so
+   * the loop CLOSES — the agent is handed a frame to READ with its own eyes, not trusted to
+   * remember to look. The automated (Gemini) judge catches only gross errors (T-pose, black
+   * scene, missing humanoid); it will pass a mannequin standing in a non-attack or miss debug
+   * cruft. Reviewing this PNG is what catches those.
+   */
+  screenshot?: string;
+  /** Executor-specific payload (logs, assertion results) — for debugging. */
   raw?: unknown;
 }
 
@@ -96,5 +104,7 @@ export interface DrainSummary {
   passed: number;
   failed: number;
   skipped: number;
+  /** Rendered frames produced by L4 gates this drain — READ these to verify the result by eye. */
+  screenshots: string[];
   results: DrainResult[];
 }

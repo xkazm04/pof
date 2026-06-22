@@ -63,10 +63,19 @@ export function makeVisualExecutor(opts: VisualExecutorOptions): GateExecutor {
       });
       const env = (await res.json().catch(() => null)) as { success?: boolean; data?: { verdict?: string }; error?: string } | null;
       if (!res.ok || !env?.success) {
-        throw new Error(`verify/visual failed: ${env?.error ?? res.status}`);
+        // The frame WAS captured — the AUTOMATED judge just couldn't run (bad model, no key,
+        // network). Surface the frame anyway (conservative status: fail, i.e. not verified-pass)
+        // so the agent can judge it by eye. Losing the frame on a judge hiccup defeats the loop.
+        return {
+          status: 'fail',
+          detail: `visual ${opts.mode ?? visualModeFor(job.catalogId)}: auto-judge unavailable (${env?.error ?? res.status}) — frame captured for review (${screenshotPath})`,
+          screenshot: screenshotPath,
+        };
       }
       const verdict = env.data?.verdict === 'pass' ? 'pass' : 'fail';
-      return { status: verdict, detail: `visual ${mode}: ${verdict}`, raw: env.data };
+      // Surface the frame the verdict was judged from so the agent can READ it — Gemini's
+      // single-frame check is the gross-error floor, not the final word on quality.
+      return { status: verdict, detail: `visual ${mode}: ${verdict} (frame: ${screenshotPath})`, screenshot: screenshotPath, raw: env.data };
     },
   };
 }

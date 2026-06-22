@@ -150,6 +150,11 @@ export async function drainJobs(
     passed: results.filter((r) => r.verdict?.status === 'pass').length,
     failed: results.filter((r) => r.verdict?.status === 'fail').length,
     skipped: results.filter((r) => r.skipped).length,
+    // Hoist L4 frames to the top level so callers (the drain route, pof_drain_gates) can hand
+    // them straight to the agent to READ — closing the "agent must look" loop.
+    screenshots: results
+      .map((r) => r.verdict?.screenshot)
+      .filter((s): s is string => typeof s === 'string' && s.length > 0),
     results,
   };
 }

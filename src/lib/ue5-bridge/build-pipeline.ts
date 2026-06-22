@@ -7,6 +7,7 @@
  */
 
 import { spawn } from 'child_process';
+import { existsSync, readdirSync } from 'fs';
 import { killProcessTree } from '@/lib/process-tree-kill';
 import { getEnginePath } from '@/lib/prompt-context';
 import { parseBuildOutput } from '@/components/cli/UE5BuildParser';
@@ -103,6 +104,78 @@ const UBT_PROGRESS_RE = /\[(\d+)\/(\d+)\]/;
  */
 const MAX_RETAINED_OUTPUT_BYTES = 256 * 1024; // ~256 KB
 
+// ── UnrealBuildTool launcher resolution ──────────────────────────────────────
+
+/**
+ * Resolve how to launch UnrealBuildTool for this engine.
+ *
+ * UE 5.8's `UnrealBuildTool.exe` is a *framework-dependent* .NET 10 app: launching
+ * it directly fails ("You must install or update .NET ... 10.0.0") unless that exact
+ * runtime is installed system-wide. The engine ships its own matching runtime under
+ * `Engine/Binaries/ThirdParty/DotNet/<ver>/win-x64/dotnet.exe` — this is what Epic's
+ * own `Build.bat` uses. So prefer running `UnrealBuildTool.dll` through the bundled
+ * `dotnet.exe` (version-proof across 5.x: each engine ships the runtime it needs),
+ * matching Build.bat's `DOTNET_ROOT` + `DOTNET_MULTILEVEL_LOOKUP=0` so the system
+ * runtime can't shadow the bundled one. Fall back to the bare `.exe` only when no
+ * bundled runtime is found (older layouts / non-Windows hosts).
+ */
+export function resolveUbtInvocation(
+  enginePath: string,
+): { command: string; prefixArgs: string[]; env: Record<string, string> } {
+  const ubtExe = `${enginePath}\\Engine\\Binaries\\DotNET\\UnrealBuildTool\\UnrealBuildTool.exe`;
+  const ubtDll = `${enginePath}\\Engine\\Binaries\\DotNET\\UnrealBuildTool\\UnrealBuildTool.dll`;
+  const dotnetRoot = `${enginePath}\\Engine\\Binaries\\ThirdParty\\DotNet`;
+
+  if (existsSync(ubtDll) && existsSync(dotnetRoot)) {
+    let versions: string[] = [];
+    try {
+      // Numeric-aware, highest-first (so "10.0" beats "8.0"); skip non-version entries.
+      versions = readdirSync(dotnetRoot)
+        .filter((v) => /^\d/.test(v))
+        .sort((a, b) => parseFloat(b) - parseFloat(a));
+    } catch {
+      versions = [];
+    }
+    for (const ver of versions) {
+      const runtimeDir = `${dotnetRoot}\\${ver}\\win-x64`;
+      const dotnetExe = `${runtimeDir}\\dotnet.exe`;
+      if (existsSync(dotnetExe)) {
+        return {
+          command: dotnetExe,
+          prefixArgs: [ubtDll],
+          env: { DOTNET_ROOT: runtimeDir, DOTNET_MULTILEVEL_LOOKUP: '0' },
+        };
+      }
+    }
+  }
+
+  return { command: ubtExe, prefixArgs: [], env: {} };
+}
+
+/**
+ * Resolve the `.uproject` file path for a build.
+ *
+ * The `.uproject` base name is the PROJECT name, which is independent of the build
+ * TARGET name: the targets `PoF`, `PoFEditor`, and `PoFServer` all share `PoF.uproject`.
+ * So building the editor target `PoFEditor` must NOT look for `PoFEditor.uproject`.
+ * Prefer an exact targetName match (back-compat), then the single `.uproject` in the
+ * directory, then a suffix-stripped (Editor/Server/Client/Game) base-name match.
+ */
+export function resolveUprojectPath(projectPath: string, targetName: string): string {
+  const exact = `${projectPath}\\${targetName}.uproject`;
+  if (existsSync(exact)) return exact;
+  try {
+    const uprojects = readdirSync(projectPath).filter((f) => f.toLowerCase().endsWith('.uproject'));
+    if (uprojects.length === 1) return `${projectPath}\\${uprojects[0]}`;
+    const base = targetName.replace(/(Editor|Server|Client|Game)$/i, '').toLowerCase();
+    const match = uprojects.find((f) => f.toLowerCase() === `${base}.uproject`);
+    if (match) return `${projectPath}\\${match}`;
+  } catch {
+    /* fall through to best-effort exact path */
+  }
+  return exact;
+}
+
 // ── Core Build Executor ──────────────────────────────────────────────────────
 
 /**
@@ -121,13 +194,21 @@ export async function executeBuild(
   const startMs = Date.now();
 
   const enginePath = getEnginePath(request.ueVersion);
-  const ubtPath = `${enginePath}\\Engine\\Binaries\\DotNET\\UnrealBuildTool\\UnrealBuildTool.exe`;
-  const target = `${request.targetName}${request.targetType}`;
+  const { command: ubtCommand, prefixArgs: ubtPrefixArgs, env: ubtEnv } = resolveUbtInvocation(enginePath);
+  // Avoid double-suffixing the UBT target. A caller may pass either the base project
+  // name ("PoF") — to which targetType ("Editor"/"Server"/…) is appended to form the
+  // *.Target.cs rules name ("PoFEditor") — or the already-suffixed target ("PoFEditor").
+  // Without this guard, "PoFEditor" + "Editor" = "PoFEditorEditor" (RulesError).
+  const target =
+    request.targetType && request.targetName.endsWith(request.targetType)
+      ? request.targetName
+      : `${request.targetName}${request.targetType ?? ''}`;
   // No embedded quotes: with shell:false each argv element is passed literally, so a path
   // with spaces is already safe and surrounding quotes would be taken as part of the filename.
-  const projectArg = `-Project=${request.projectPath}\\${request.targetName}.uproject`;
+  const projectArg = `-Project=${resolveUprojectPath(request.projectPath, request.targetName)}`;
 
   const args = [
+    ...ubtPrefixArgs,
     target,
     request.platform,
     request.configuration,
@@ -136,7 +217,7 @@ export async function executeBuild(
     ...(request.additionalArgs ?? []),
   ];
 
-  logger.info(`[build-pipeline] Starting build ${buildId}: ${ubtPath} ${args.join(' ')}`);
+  logger.info(`[build-pipeline] Starting build ${buildId}: ${ubtCommand} ${args.join(' ')}`);
 
   return new Promise<BuildResult>((resolve) => {
     // `fullOutput` feeds the diagnostics parser (it needs the whole log to
@@ -153,10 +234,10 @@ export async function executeBuild(
     // project path / target / additionalArgs cannot inject a command. (Was shell:true, which
     // re-joined every arg into one command line interpreted by the shell — a `projectPath`
     // like `C:\proj" & calc & "x` would have executed arbitrary commands on the host.)
-    const proc = spawn(ubtPath, args, {
+    const proc = spawn(ubtCommand, args, {
       shell: false,
       cwd: request.projectPath,
-      env: { ...process.env },
+      env: { ...process.env, ...ubtEnv },
     });
 
     // UBT spawns MSBuild/cl.exe/link.exe grandchildren that a plain kill()
@@ -318,7 +399,7 @@ export async function executeBuild(
         errorCount: 1,
         warningCount: 0,
         diagnostics: [],
-        output: `Failed to spawn UBT process: ${err.message}\n\nUBT path: ${ubtPath}\nArgs: ${args.join(' ')}\n\nEnsure UE ${request.ueVersion} is installed at: ${enginePath}`,
+        output: `Failed to spawn UBT process: ${err.message}\n\nUBT command: ${ubtCommand}\nArgs: ${args.join(' ')}\n\nEnsure UE ${request.ueVersion} is installed at: ${enginePath}`,
       };
 
       try {

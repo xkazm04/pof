@@ -51,7 +51,7 @@ export async function runDrainTick(now: number = Date.now()): Promise<DrainSumma
   const jobs = collectDeferred(cfg.filter).filter((j) => (cooldownUntil.get(keyOf(j)) ?? 0) <= now);
   const summary = jobs.length
     ? await drainJobs(jobs, executors)
-    : { ran: 0, passed: 0, failed: 0, skipped: 0, results: [] };
+    : { ran: 0, passed: 0, failed: 0, skipped: 0, screenshots: [], results: [] };
 
   const cooldown = cfg.cooldownMs ?? DEFAULT_COOLDOWN_MS;
   for (const r of summary.results) {

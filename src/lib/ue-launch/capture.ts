@@ -43,17 +43,27 @@ export function buildCaptureArgs(o: { uproject: string; probePath: string }): st
 
 type CaptureRun = (binary: string, args: string[], settleMs: number) => Promise<void>;
 
-/** Spawn the windowed editor, let it render + write the screenshot for `settleMs`, then SIGKILL. */
+/** Spawn the editor; resolve when it self-exits (a `-game` scenario RequestExits when done)
+ *  or after `settleMs` (the watchdog, for the non-exiting editor-probe case), then SIGKILL. */
 const defaultRun: CaptureRun = (binary, args, settleMs) =>
   new Promise((resolve) => {
     const child = spawn(binary, args, { windowsHide: true, stdio: 'ignore' });
+    let settled = false;
+    let timer: ReturnType<typeof setTimeout>;
     const done = () => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
       try { if (child.pid) execFileSync('taskkill', ['/PID', String(child.pid), '/T', '/F'], { stdio: 'ignore' }); } catch { /* gone */ }
       try { execFileSync('taskkill', ['/IM', 'UnrealEditor.exe', '/F'], { stdio: 'ignore' }); } catch { /* none */ }
       resolve();
     };
-    const timer = setTimeout(done, settleMs);
-    child.on('error', () => { clearTimeout(timer); resolve(); });
+    timer = setTimeout(done, settleMs);
+    // A `-game` scenario self-exits when it finishes — resolve early (with a small grace for the
+    // final async screenshot to flush) instead of blocking the whole watchdog. The editor
+    // screenshot probe does NOT self-exit, so it still falls through to settleMs.
+    child.on('exit', () => setTimeout(done, 800));
+    child.on('error', () => done());
   });
 
 export interface CaptureFrameOptions {
@@ -154,7 +164,10 @@ export function buildScenarioInbox(
 export function buildScenarioArgs(o: { uproject: string; map: string; inboxPath: string; resX: number; resY: number }): string[] {
   return [
     o.uproject, o.map, '-game', `-PoFScenario=${o.inboxPath}`,
-    '-RenderOffScreen', '-windowed', `-ResX=${o.resX}`, `-ResY=${o.resY}`,
+    '-RenderOffScreen', `-ResX=${o.resX}`, `-ResY=${o.resY}`,
+    // Fixed timestep: deterministic frames + the Motion Quality Probe's accel metric is stable
+    // (uncapped headless fps makes dt ~0.0006s and accel explodes). Proven live in P0.
+    '-benchmark', '-fps=60',
     '-unattended', '-nopause', '-nosplash', '-NoLiveCoding',
   ];
 }
@@ -219,7 +232,9 @@ export interface CaptureScenarioFrameOptions {
 export async function captureScenarioFrame(opts: CaptureScenarioFrameOptions, deps: CaptureDeps = {}): Promise<string | null> {
   const run = deps.run ?? defaultRun;
   const now = deps.now ?? (() => Date.now());
-  const binary = resolveEditorBinary({ ...(opts.engine ? { engine: opts.engine } : {}), windowed: true });
+  // The HEADLESS commandlet host (UnrealEditor-Cmd) — proven in P0 to render real shot_NN.png
+  // under -RenderOffScreen. The windowed UnrealEditor.exe produced no frame in the drain path.
+  const binary = resolveEditorBinary({ ...(opts.engine ? { engine: opts.engine } : {}), windowed: false });
   const scn = opts.scenario;
   // Caller-supplied map wins over the scenario's: L4 renders on a LIT map, while the
   // scenario's own map is L3-oriented (often dark/headless, e.g. TestHarness).
@@ -231,11 +246,13 @@ export async function captureScenarioFrame(opts: CaptureScenarioFrameOptions, de
   const inboxPath = join(outDir, 'inbox.json').replace(/\\/g, '/');
   writeFileSync(inboxPath, buildScenarioInbox(outDir, scn ? {
     totalSeconds: scn.totalSeconds,
-    numSamples: scn.numSamples,
+    // ≥4 samples so a viewport screenshot is captured well BEFORE the final frame — the last
+    // shot is requested in the same frame as RequestExit and never flushes (1 sample → no shot).
+    numSamples: scn.numSamples ?? 4,
     settle: scn.settle,
     inputs: scn.inputs,
     disableAI: scn.disableAI,
-  } : {}));
+  } : { numSamples: 4 }));
   await run(binary, buildScenarioArgs({ uproject: opts.uproject, map, inboxPath, resX, resY }), opts.settleMs ?? 180_000);
   // Pick the action-active sample's shot (falls back to newest for the generic case).
   return pickActionShot(outDir);

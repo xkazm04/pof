@@ -3,6 +3,7 @@ import {
   minLength,
   fieldsPopulated,
   withinPercent,
+  dpsConsistent,
   selected,
   minCount,
 } from '../acceptance/dataCheckers';
@@ -466,9 +467,11 @@ registerCatalogPipeline({
           },
         };
       },
-      // baseDPS derived from seed: item-1 APS 0.8333 × avg-dmg 15 ≈ 12.5.
-      // Target 12.5 ±30% (8.75–16.25); generous band covers tier-1 variance.
-      accept: withinPercent('baseDPS', 'Base DPS within ±30% of tier-1 weapon target (12.5)', 12.5, 30),
+      // Tier-AGNOSTIC: verify baseDPS is internally consistent with the weapon's own
+      // damage × APS (item-1: 15 × 0.8333 ≈ 12.5; a Legendary lightsaber: 38 × 1.0 ≈ 38).
+      // Power-budget belongs to the Economy step (pricePowerRatio), so this step must not
+      // pin a fixed 12.5 target that fails every above-tier-1 weapon.
+      accept: dpsConsistent('damage', 'baseDPS', 'Base DPS consistent with avg-damage × APS', 12),
     },
 
     // ── 5. Economy ────────────────────────────────────────────────────────────
