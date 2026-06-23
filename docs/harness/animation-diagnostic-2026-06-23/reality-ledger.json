@@ -1,0 +1,750 @@
+{
+  "summary": {
+    "sourceFiles": 503,
+    "contentAssets": 116,
+    "referenced": 41,
+    "existing": 22,
+    "missing": 19,
+    "emptyShells": 3,
+    "orphans": 9,
+    "runtimeFallbacks": 2,
+    "status": "red"
+  },
+  "missing": [
+    {
+      "path": "/Game/Abilities/DT_AbilityCatalog",
+      "kind": "dataTable",
+      "referencedBy": [
+        "ARPGAbilityCatalog.cpp",
+        "ARPGAbilityCatalog.h",
+        "ARPGAbilityCatalogTypes.h"
+      ]
+    },
+    {
+      "path": "/Game/Audio/footstep",
+      "kind": "other",
+      "referencedBy": [
+        "VSFootstepWiringTest.cpp",
+        "VSFootstepWiringTest.h"
+      ]
+    },
+    {
+      "path": "/Game/Blueprints/BP_Enemy_Grunt",
+      "kind": "blueprint",
+      "referencedBy": [
+        "ARPGCheatManager.cpp"
+      ]
+    },
+    {
+      "path": "/Game/Characters/Mannequins/Meshes/SK_Mannequin",
+      "kind": "skeleton",
+      "referencedBy": [
+        "PoFAnimBPAuthoringTest.cpp"
+      ]
+    },
+    {
+      "path": "/Game/Characters/Manny/Meshes/SK_Mannequin",
+      "kind": "skeleton",
+      "referencedBy": [
+        "PoFAnimBPAuthoringTest.cpp"
+      ]
+    },
+    {
+      "path": "/Game/Characters/Player/Animations",
+      "kind": "other",
+      "referencedBy": [
+        "AnimAssetCommandlet.cpp"
+      ]
+    },
+    {
+      "path": "/Game/Characters/Player/Animations/Mixamo",
+      "kind": "other",
+      "referencedBy": [
+        "MixamoImportCommandlet.cpp",
+        "MixamoImportCommandlet.h"
+      ]
+    },
+    {
+      "path": "/Game/Characters/Player/Animations/Montages",
+      "kind": "montage",
+      "referencedBy": [
+        "AnimAssetCommandlet.cpp"
+      ]
+    },
+    {
+      "path": "/Game/Characters/Player/Meshes/SK_Mannequin",
+      "kind": "skeleton",
+      "referencedBy": [
+        "MixamoImportCommandlet.h"
+      ]
+    },
+    {
+      "path": "/Game/Characters/Player/Test",
+      "kind": "other",
+      "referencedBy": [
+        "PoFAnimBPAuthoringTest.cpp"
+      ]
+    },
+    {
+      "path": "/Game/Characters/Player/Test/",
+      "kind": "other",
+      "referencedBy": [
+        "PoFAnimBPAuthoringTest.cpp"
+      ]
+    },
+    {
+      "path": "/Game/Data/Items/",
+      "kind": "other",
+      "referencedBy": [
+        "VSItemsDefinitionsTest.cpp"
+      ]
+    },
+    {
+      "path": "/Game/Data/Progression",
+      "kind": "other",
+      "referencedBy": [
+        "AnimAssetCommandlet.cpp"
+      ]
+    },
+    {
+      "path": "/Game/Input/Actions",
+      "kind": "input",
+      "referencedBy": [
+        "InputAssetCommandlet.cpp"
+      ]
+    },
+    {
+      "path": "/Game/Maps/Arena",
+      "kind": "map",
+      "referencedBy": [
+        "ARPGSessionSubsystem.h"
+      ]
+    },
+    {
+      "path": "/Game/Maps/TestLevel_PlayerMovement",
+      "kind": "map",
+      "referencedBy": [
+        "VSPlayerMovementTest.cpp"
+      ]
+    },
+    {
+      "path": "/Game/Maps/VerticalSlice",
+      "kind": "map",
+      "referencedBy": [
+        "ARPGHUDWidgetTest.h",
+        "AVSHUDFunctionalTest.h",
+        "PoFHealthCheckTest.cpp"
+      ]
+    },
+    {
+      "path": "/Game/Materials/",
+      "kind": "material",
+      "referencedBy": [
+        "VSMasterMaterialInstanceTest.h"
+      ]
+    },
+    {
+      "path": "/Game/SK_Mannequin",
+      "kind": "skeleton",
+      "referencedBy": [
+        "MixamoImportCommandlet.cpp"
+      ]
+    }
+  ],
+  "emptyShells": [
+    {
+      "path": "/Game/Weapons/AM_Parry",
+      "kind": "montage",
+      "sizeBytes": 4508,
+      "referencedBy": [
+        "GA_Parry.cpp",
+        "GA_Parry.h"
+      ]
+    },
+    {
+      "path": "/Game/Weapons/AM_Recoil",
+      "kind": "montage",
+      "sizeBytes": 4516,
+      "referencedBy": [
+        "SaberClashSubsystem.cpp"
+      ]
+    },
+    {
+      "path": "/Game/Weapons/AM_SwordSlashC",
+      "kind": "montage",
+      "sizeBytes": 4637,
+      "referencedBy": [
+        "GA_EnemyMeleeAttack.cpp",
+        "GA_MeleeAttack.cpp"
+      ]
+    }
+  ],
+  "orphans": [
+    {
+      "path": "/Game/Characters/Player/Animations/Montages/AM_Death",
+      "kind": "montage",
+      "sizeBytes": 2623
+    },
+    {
+      "path": "/Game/Characters/Player/Animations/Montages/AM_Dodge_Backward",
+      "kind": "montage",
+      "sizeBytes": 2659
+    },
+    {
+      "path": "/Game/Characters/Player/Animations/Montages/AM_Dodge_Forward",
+      "kind": "montage",
+      "sizeBytes": 2655
+    },
+    {
+      "path": "/Game/Characters/Player/Animations/Montages/AM_Dodge_Left",
+      "kind": "montage",
+      "sizeBytes": 2643
+    },
+    {
+      "path": "/Game/Characters/Player/Animations/Montages/AM_Dodge_Right",
+      "kind": "montage",
+      "sizeBytes": 2647
+    },
+    {
+      "path": "/Game/Characters/Player/Animations/Montages/AM_HitReact",
+      "kind": "montage",
+      "sizeBytes": 2638
+    },
+    {
+      "path": "/Game/Characters/Player/Animations/Montages/AM_MeleeCombo",
+      "kind": "montage",
+      "sizeBytes": 3541
+    },
+    {
+      "path": "/Game/Weapons/AM_MixamoSlash",
+      "kind": "montage",
+      "sizeBytes": 4396
+    },
+    {
+      "path": "/Game/Weapons/AS_SwordSlash",
+      "kind": "sequence",
+      "sizeBytes": 162359
+    }
+  ],
+  "referenced": [
+    {
+      "path": "/Game/Abilities/DT_AbilityCatalog",
+      "kind": "dataTable",
+      "exists": false,
+      "sizeBytes": 0,
+      "valid": false,
+      "issues": [
+        "missing"
+      ],
+      "referencedBy": [
+        "ARPGAbilityCatalog.cpp",
+        "ARPGAbilityCatalog.h",
+        "ARPGAbilityCatalogTypes.h"
+      ]
+    },
+    {
+      "path": "/Game/ArenaBuild/SM_Arena",
+      "kind": "other",
+      "exists": true,
+      "sizeBytes": 99388,
+      "valid": true,
+      "issues": [],
+      "referencedBy": [
+        "VSArenaMaterialBindingTest.cpp"
+      ]
+    },
+    {
+      "path": "/Game/Audio/footstep",
+      "kind": "other",
+      "exists": false,
+      "sizeBytes": 0,
+      "valid": false,
+      "issues": [
+        "missing"
+      ],
+      "referencedBy": [
+        "VSFootstepWiringTest.cpp",
+        "VSFootstepWiringTest.h"
+      ]
+    },
+    {
+      "path": "/Game/Blueprints/BP_Enemy_Grunt",
+      "kind": "blueprint",
+      "exists": false,
+      "sizeBytes": 0,
+      "valid": false,
+      "issues": [
+        "missing"
+      ],
+      "referencedBy": [
+        "ARPGCheatManager.cpp"
+      ]
+    },
+    {
+      "path": "/Game/Characters/Mannequins/Meshes/SK_Mannequin",
+      "kind": "skeleton",
+      "exists": false,
+      "sizeBytes": 0,
+      "valid": false,
+      "issues": [
+        "missing"
+      ],
+      "referencedBy": [
+        "PoFAnimBPAuthoringTest.cpp"
+      ]
+    },
+    {
+      "path": "/Game/Characters/Manny/Meshes/SK_Mannequin",
+      "kind": "skeleton",
+      "exists": false,
+      "sizeBytes": 0,
+      "valid": false,
+      "issues": [
+        "missing"
+      ],
+      "referencedBy": [
+        "PoFAnimBPAuthoringTest.cpp"
+      ]
+    },
+    {
+      "path": "/Game/Characters/Player/ABP_VSPlayer",
+      "kind": "animBlueprint",
+      "exists": true,
+      "sizeBytes": 74213,
+      "valid": true,
+      "issues": [],
+      "referencedBy": [
+        "VSPlayerMovementTest.cpp"
+      ]
+    },
+    {
+      "path": "/Game/Characters/Player/Animations",
+      "kind": "other",
+      "exists": false,
+      "sizeBytes": 0,
+      "valid": false,
+      "issues": [
+        "missing"
+      ],
+      "referencedBy": [
+        "AnimAssetCommandlet.cpp"
+      ]
+    },
+    {
+      "path": "/Game/Characters/Player/Animations/AM_Roll",
+      "kind": "montage",
+      "exists": true,
+      "sizeBytes": 12643,
+      "valid": true,
+      "issues": [],
+      "referencedBy": [
+        "VSPlayerMovementTest.cpp"
+      ]
+    },
+    {
+      "path": "/Game/Characters/Player/Animations/BS_Locomotion",
+      "kind": "other",
+      "exists": true,
+      "sizeBytes": 12347,
+      "valid": true,
+      "issues": [],
+      "referencedBy": [
+        "PoFAnimBPAuthoringTest.cpp",
+        "VSPlayerMovementTest.cpp"
+      ]
+    },
+    {
+      "path": "/Game/Characters/Player/Animations/Mixamo",
+      "kind": "other",
+      "exists": false,
+      "sizeBytes": 0,
+      "valid": false,
+      "issues": [
+        "missing"
+      ],
+      "referencedBy": [
+        "MixamoImportCommandlet.cpp",
+        "MixamoImportCommandlet.h"
+      ]
+    },
+    {
+      "path": "/Game/Characters/Player/Animations/Montages",
+      "kind": "montage",
+      "exists": false,
+      "sizeBytes": 0,
+      "valid": false,
+      "issues": [
+        "missing"
+      ],
+      "referencedBy": [
+        "AnimAssetCommandlet.cpp"
+      ]
+    },
+    {
+      "path": "/Game/Characters/Player/IK/IK_Manny",
+      "kind": "other",
+      "exists": true,
+      "sizeBytes": 133610,
+      "valid": true,
+      "issues": [],
+      "referencedBy": [
+        "VSPlayerMovementTest.cpp"
+      ]
+    },
+    {
+      "path": "/Game/Characters/Player/IK/IK_Mixamo",
+      "kind": "other",
+      "exists": true,
+      "sizeBytes": 60146,
+      "valid": true,
+      "issues": [],
+      "referencedBy": [
+        "VSPlayerMovementTest.cpp"
+      ]
+    },
+    {
+      "path": "/Game/Characters/Player/IK/RTG_MixamoToManny",
+      "kind": "other",
+      "exists": true,
+      "sizeBytes": 29299,
+      "valid": true,
+      "issues": [],
+      "referencedBy": [
+        "VSPlayerMovementTest.cpp"
+      ]
+    },
+    {
+      "path": "/Game/Characters/Player/Meshes/SK_Mannequin",
+      "kind": "skeleton",
+      "exists": false,
+      "sizeBytes": 0,
+      "valid": false,
+      "issues": [
+        "missing"
+      ],
+      "referencedBy": [
+        "MixamoImportCommandlet.h"
+      ]
+    },
+    {
+      "path": "/Game/Characters/Player/PA_VSPlayer",
+      "kind": "other",
+      "exists": true,
+      "sizeBytes": 32983,
+      "valid": true,
+      "issues": [],
+      "referencedBy": [
+        "ARPGCharacterBase.cpp"
+      ]
+    },
+    {
+      "path": "/Game/Characters/Player/Test",
+      "kind": "other",
+      "exists": false,
+      "sizeBytes": 0,
+      "valid": false,
+      "issues": [
+        "missing"
+      ],
+      "referencedBy": [
+        "PoFAnimBPAuthoringTest.cpp"
+      ]
+    },
+    {
+      "path": "/Game/Characters/Player/Test/",
+      "kind": "other",
+      "exists": false,
+      "sizeBytes": 0,
+      "valid": false,
+      "issues": [
+        "missing"
+      ],
+      "referencedBy": [
+        "PoFAnimBPAuthoringTest.cpp"
+      ]
+    },
+    {
+      "path": "/Game/Data/Items/",
+      "kind": "other",
+      "exists": false,
+      "sizeBytes": 0,
+      "valid": false,
+      "issues": [
+        "missing"
+      ],
+      "referencedBy": [
+        "VSItemsDefinitionsTest.cpp"
+      ]
+    },
+    {
+      "path": "/Game/Data/Items/DA_IronLongsword",
+      "kind": "other",
+      "exists": true,
+      "sizeBytes": 2134,
+      "valid": true,
+      "issues": [],
+      "referencedBy": [
+        "VSItemsDefinitionsTest.cpp",
+        "VSItemsDefinitionsTest.h"
+      ]
+    },
+    {
+      "path": "/Game/Data/Progression",
+      "kind": "other",
+      "exists": false,
+      "sizeBytes": 0,
+      "valid": false,
+      "issues": [
+        "missing"
+      ],
+      "referencedBy": [
+        "AnimAssetCommandlet.cpp"
+      ]
+    },
+    {
+      "path": "/Game/FX/M_Saber_Blue",
+      "kind": "material",
+      "exists": true,
+      "sizeBytes": 4994,
+      "valid": true,
+      "issues": [],
+      "referencedBy": [
+        "ARPGPlayerCharacter.cpp",
+        "SaberClashSubsystem.cpp"
+      ]
+    },
+    {
+      "path": "/Game/FX/M_Saber_Red",
+      "kind": "material",
+      "exists": true,
+      "sizeBytes": 4989,
+      "valid": true,
+      "issues": [],
+      "referencedBy": [
+        "ARPGEnemyCharacter.cpp"
+      ]
+    },
+    {
+      "path": "/Game/FX/M_Sith_Body",
+      "kind": "material",
+      "exists": true,
+      "sizeBytes": 5289,
+      "valid": true,
+      "issues": [],
+      "referencedBy": [
+        "ARPGEnemyCharacter.cpp"
+      ]
+    },
+    {
+      "path": "/Game/Input/Actions",
+      "kind": "input",
+      "exists": false,
+      "sizeBytes": 0,
+      "valid": false,
+      "issues": [
+        "missing"
+      ],
+      "referencedBy": [
+        "InputAssetCommandlet.cpp"
+      ]
+    },
+    {
+      "path": "/Game/Maps/Arena",
+      "kind": "map",
+      "exists": false,
+      "sizeBytes": 0,
+      "valid": false,
+      "issues": [
+        "missing"
+      ],
+      "referencedBy": [
+        "ARPGSessionSubsystem.h"
+      ]
+    },
+    {
+      "path": "/Game/Maps/TestLevel_PlayerMovement",
+      "kind": "map",
+      "exists": false,
+      "sizeBytes": 0,
+      "valid": false,
+      "issues": [
+        "missing"
+      ],
+      "referencedBy": [
+        "VSPlayerMovementTest.cpp"
+      ]
+    },
+    {
+      "path": "/Game/Maps/VerticalSlice",
+      "kind": "map",
+      "exists": false,
+      "sizeBytes": 0,
+      "valid": false,
+      "issues": [
+        "missing"
+      ],
+      "referencedBy": [
+        "ARPGHUDWidgetTest.h",
+        "AVSHUDFunctionalTest.h",
+        "PoFHealthCheckTest.cpp"
+      ]
+    },
+    {
+      "path": "/Game/Materials/",
+      "kind": "material",
+      "exists": false,
+      "sizeBytes": 0,
+      "valid": false,
+      "issues": [
+        "missing"
+      ],
+      "referencedBy": [
+        "VSMasterMaterialInstanceTest.h"
+      ]
+    },
+    {
+      "path": "/Game/Materials/M_ARPG_Surface_Master",
+      "kind": "material",
+      "exists": true,
+      "sizeBytes": 14530,
+      "valid": true,
+      "issues": [],
+      "referencedBy": [
+        "VSMasterMaterialInstanceTest.cpp",
+        "VSMasterMaterialInstanceTest.h"
+      ]
+    },
+    {
+      "path": "/Game/Materials/MI_Arena_Floor",
+      "kind": "material",
+      "exists": true,
+      "sizeBytes": 9253,
+      "valid": true,
+      "issues": [],
+      "referencedBy": [
+        "VSMasterMaterialInstanceTest.cpp"
+      ]
+    },
+    {
+      "path": "/Game/Materials/MI_Arena_Pillar",
+      "kind": "material",
+      "exists": true,
+      "sizeBytes": 9169,
+      "valid": true,
+      "issues": [],
+      "referencedBy": [
+        "VSMasterMaterialInstanceTest.cpp"
+      ]
+    },
+    {
+      "path": "/Game/Materials/MI_Arena_Wall",
+      "kind": "material",
+      "exists": true,
+      "sizeBytes": 9145,
+      "valid": true,
+      "issues": [],
+      "referencedBy": [
+        "VSMasterMaterialInstanceTest.cpp"
+      ]
+    },
+    {
+      "path": "/Game/Materials/MI_EnemyRed",
+      "kind": "material",
+      "exists": true,
+      "sizeBytes": 7659,
+      "valid": true,
+      "issues": [],
+      "referencedBy": [
+        "VSMasterMaterialInstanceTest.cpp"
+      ]
+    },
+    {
+      "path": "/Game/SK_Mannequin",
+      "kind": "skeleton",
+      "exists": false,
+      "sizeBytes": 0,
+      "valid": false,
+      "issues": [
+        "missing"
+      ],
+      "referencedBy": [
+        "MixamoImportCommandlet.cpp"
+      ]
+    },
+    {
+      "path": "/Game/VerticalSlice/BP_VSPlayer",
+      "kind": "blueprint",
+      "exists": true,
+      "sizeBytes": 40665,
+      "valid": true,
+      "issues": [],
+      "referencedBy": [
+        "VSPlayerMovementTest.cpp"
+      ]
+    },
+    {
+      "path": "/Game/Weapons/AM_Parry",
+      "kind": "montage",
+      "exists": true,
+      "sizeBytes": 4508,
+      "valid": false,
+      "issues": [
+        "empty-shell"
+      ],
+      "referencedBy": [
+        "GA_Parry.cpp",
+        "GA_Parry.h"
+      ]
+    },
+    {
+      "path": "/Game/Weapons/AM_Recoil",
+      "kind": "montage",
+      "exists": true,
+      "sizeBytes": 4516,
+      "valid": false,
+      "issues": [
+        "empty-shell"
+      ],
+      "referencedBy": [
+        "SaberClashSubsystem.cpp"
+      ]
+    },
+    {
+      "path": "/Game/Weapons/AM_SwordSlash",
+      "kind": "montage",
+      "exists": true,
+      "sizeBytes": 14362,
+      "valid": true,
+      "issues": [],
+      "referencedBy": [
+        "GA_EnemyMeleeAttack.cpp",
+        "GA_MeleeAttack.cpp"
+      ]
+    },
+    {
+      "path": "/Game/Weapons/AM_SwordSlashC",
+      "kind": "montage",
+      "exists": true,
+      "sizeBytes": 4637,
+      "valid": false,
+      "issues": [
+        "empty-shell"
+      ],
+      "referencedBy": [
+        "GA_EnemyMeleeAttack.cpp",
+        "GA_MeleeAttack.cpp"
+      ]
+    }
+  ],
+  "runtimeFallbacks": [
+    {
+      "signal": "No playable swing montage; using 0.30s timer-driven attack window.",
+      "source": "scn-5_8-stride-run.log"
+    },
+    {
+      "signal": "No playable attack montage on this avatar; using 0.50s timer-driven attack window.",
+      "source": "scnanim.log"
+    }
+  ],
+  "projectPath": "C:\\Users\\kazda\\Documents\\Unreal Projects\\PoF"
+}

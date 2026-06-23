@@ -19,7 +19,8 @@
     "test:e2e:headed": "npx playwright test --headed",
     "gen:pipelines": "node scripts/gen-pipeline-registry.mjs",
     "check:scoped": "node scripts/scoped-check.mjs",
-    "snapshot:ue-schema": "node scripts/snapshot-ue-schema.mjs"
+    "snapshot:ue-schema": "node scripts/snapshot-ue-schema.mjs",
+    "ledger": "node scripts/animation-ledger.mjs"
   },
   "dependencies": {
     "@google/genai": "^2.6.0",
