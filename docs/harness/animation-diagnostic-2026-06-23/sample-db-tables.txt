@@ -1,0 +1,70 @@
+DB: C:\Users\kazda\.pof\pof.db
+=== ALL TABLES (49) ===
+ability_specs
+ai_test_scenarios
+ai_test_suites
+anti_patterns
+audio_assets
+audio_gen_usage
+audio_import_runs
+audio_scenes
+audio_sets
+balance_baselines
+build_history
+catalog_lifecycle
+checklist_metadata
+eval_findings
+experiment_runs
+feature_matrix
+game_director_events
+game_director_findings
+game_director_sessions
+genre_suggestions
+headless_builds
+level_design_docs
+milestone_deadlines
+pattern_library
+pipeline_artifacts
+pipeline_tracks
+procgen_runs
+project_progress
+project_rules
+recent_projects
+regression_alerts
+regression_fingerprints
+regression_occurrences
+request_log
+review_snapshots
+scatter_runs
+search_index
+search_index_config
+search_index_content
+search_index_data
+search_index_docsize
+search_index_idx
+search_meta
+session_analytics
+session_log
+settings
+sqlite_sequence
+telemetry_snapshots
+visual_verifications
+
+=== ROW COUNTS (anim-relevant) ===
+checklist_metadata: 0
+
+== headless_builds (4 rows) ==
+cols: build_id,project_path,target_name,ue_version,platform,configuration,target_type,status,started_at,completed_at,duration_ms,exit_code,error_count,warning_count,output,diagnostics_json,created_at
+{"build_id":"build-1782033411562-by4kdq","project_path":"C:\\Users\\kazda\\Documents\\Unreal Projects\\PoF","target_name":"PoF","ue_version":"5.8","platform":"Win64","configuration":"Development","target_type":"Editor","status":"success","started_at":"2026-06-21T09:16:51.563Z","completed_at":"2026-06-21T09:17:52.070Z","duration_ms":60507,"exit_code":0,"error_count":0,"warning_count":0,"output":"Log file: C:\\Users\\kazda\\AppData\\Local\\UnrealBuildTool\\Log.txt\r\nDetermining max actions to execute in parallel (8 physical cores, 16 logical cores)\r\n  Executing up to 8 processes, one per physical core\r\nUsing 'git status' to determine working set for adaptive non-unity build (C:\\Users\\kazda\\Documents\\Unreal Projects\\PoF).\r\nUbaServer - Listening on 0.0.0.0:1345\r\nInvalidating make
+
+== build_history (6 rows) ==
+cols: id,platform,config,status,size_bytes,duration_ms,version,output_path,error_summary,cook_time_ms,warning_count,error_count,notes,created_at,project_id
+{"id":6,"platform":"Win64","config":"Shipping","status":"success","size_bytes":0,"duration_ms":17647,"version":null,"output_path":"C:\\Users\\kazda\\Documents\\Unreal Projects\\PoF\\Saved\\StagedBuilds\\Windows\\PoF.exe","error_summary":null,"cook_time_ms":17647,"warning_count":0,"error_count":0,"notes":null,"created_at":"2026-05-21 21:24:07","project_id":""}
+
+== pipeline_artifacts (349 rows) ==
+cols: catalog_id,entity_id,step,data,ue_assets,status,tier,reason,updated_at
+{"catalog_id":"player-movement","entity_id":"player-locomotion-manny","step":"Playable Gate","data":"{\"note\":\"seed an L4 visual gate to prove the live drain→render→frame loop\"}","ue_assets":"[]","status":"fail","tier":"L4","reason":"visual hud: fail (frame: C:\\Users\\kazda\\AppData\\Local\\Temp\\pof_l4_scn_1782055730978\\shot_03.png)","updated_at":"2026-06-21 15:29:08"}
+
+== pipeline_tracks (1 rows) ==
+cols: catalog_id,entity_id,track_id,state,note,updated_at
+{"catalog_id":"spellbook","entity_id":"def-fire-02","track_id":"logic","state":"not-started","note":null,"updated_at":"2026-05-25 09:59:58"}

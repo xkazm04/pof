@@ -1,0 +1,18 @@
+=== ENGINE GROUND TRUTH: montage missing at runtime (scn-5_8-walk-run.log) ===
+1703:[2026.06.18-16.37.06:442][  2]LogTemp: [GA_EnemyMelee] No playable swing montage; using 0.30s timer-driven attack window.
+1705:[2026.06.18-16.37.06:745][ 15]LogTemp: [GA_EnemyMelee] Hit BP_VSPlayer_C_0 for 15.0 base damage
+1719:[2026.06.18-16.37.08:588][272]LogTemp: [GA_EnemyMelee] No playable swing montage; using 0.30s timer-driven attack window.
+1723:[2026.06.18-16.37.08:933][339]LogTemp: [GA_EnemyMelee] Hit BP_VSPlayer_C_0 for 15.0 base damage
+
+=== scenario config that drove the capture (scn-5_8-walk.json) ===
+{
+  "total_seconds": 2.5,
+  "num_samples": 5,
+  "settle": 0.6,
+  "out_dir": "C:/Users/kazda/kiro/pof/scn-5_8-walk",
+  "inputs": [
+    { "key": "W", "start": 0.0, "duration": 2.5 }
+  ]
+}
+=== real UE project targeted (from headless_builds) ===
+C:\Users\kazda\Documents\Unreal Projects\PoF  (NOT the ue/PoFToolset stub in this repo)

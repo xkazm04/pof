@@ -1,0 +1,30 @@
+    prompt: `Create a complete UE5 C++ montage system for combat animations:
+
+1. **UMontageManagerComponent** (UActorComponent)
+   - PlayMontage(UAnimMontage*, float Rate, FName Section) with priority system
+   - StopMontage(float BlendOut)
+   - IsPlayingMontage() / GetCurrentMontage()
+   - OnMontageEnded and OnMontageBlendingOut delegates
+   - UPROPERTY for all montage asset references (TSoftObjectPtr for async load)
+
+2. **Attack Combo System**
+   - UAnimMontage with 3 named sections: "Attack1", "Attack2", "Attack3"
+   - AdvanceCombo() — jumps to next section if in combo window
+   - ResetCombo() — resets on timeout or montage end
+   - Combo count tracking with ComboWindowOpen/ComboWindowClose notify integration
+   - UPROPERTY float ComboWindowDuration = 0.4
+
+3. **Dodge Montage**
+   - PlayDodge(FVector Direction) — picks forward/back/left/right variant
+   - Root motion enabled for the dodge distance
+   - InvulnerabilityStart/End via anim notifies (sets gameplay tag State.Invulnerable)
+
+4. **Hit Reaction System**
+   - PlayHitReact(FVector HitDirection) — calculates front/back/left/right
+   - Uses DotProduct with character forward to determine direction
+   - Short montages that blend back to locomotion
+
+5. **Death Montage**
+   - PlayDeath() — plays death anim then triggers ragdoll blend
+   - DisableInput on play, enable ragdoll physics after montage
+   - OnDeathComplete delegate for cleanup logic`,

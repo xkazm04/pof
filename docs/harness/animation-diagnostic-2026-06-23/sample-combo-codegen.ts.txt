@@ -1,0 +1,75 @@
+function generateMontageCode(combo: GeneratedCombo): string {
+  const lines: string[] = [
+    `// Auto-generated Combo Montage Definition`,
+    `// "${combo.description}"`,
+    `// ${combo.sections.length} hits | ${combo.totalDuration}s | ${combo.totalDamage} total damage | ${combo.avgDPS} DPS`,
+    ``,
+    `#pragma once`,
+    ``,
+    `#include "CoreMinimal.h"`,
+    `#include "ComboDefinition.generated.h"`,
+    ``,
+    `USTRUCT(BlueprintType)`,
+    `struct FComboSectionDef`,
+    `{`,
+    `\tGENERATED_BODY()`,
+    ``,
+    `\tUPROPERTY(EditAnywhere) FName SectionName;`,
+    `\tUPROPERTY(EditAnywhere) float Duration;`,
+    `\tUPROPERTY(EditAnywhere) float Damage;`,
+    `\tUPROPERTY(EditAnywhere) float RootMotionDistance;`,
+    `\tUPROPERTY(EditAnywhere) bool bUseMotionWarping;`,
+    `\tUPROPERTY(EditAnywhere) float HitDetectionStart;`,
+    `\tUPROPERTY(EditAnywhere) float HitDetectionEnd;`,
+    `\tUPROPERTY(EditAnywhere) float ComboWindowStart;`,
+    `\tUPROPERTY(EditAnywhere) float ComboWindowEnd;`,
+    `};`,
+    ``,
+    `// ── Section Definitions ──`,
+    ``,
+  ];
+
+  combo.sections.forEach((sec, i) => {
+    const hitWin = sec.windows.find(w => w.name === 'HitDetection');
+    const comboWin = sec.windows.find(w => w.name === 'ComboWindow');
+    lines.push(`// Section ${i + 1}: ${sec.label} (${sec.description})`);
+    lines.push(`FComboSectionDef Section${i + 1};`);
+    lines.push(`Section${i + 1}.SectionName = TEXT("${sec.label.replace(/\s+/g, '_')}");`);
+    lines.push(`Section${i + 1}.Duration = ${sec.duration}f;`);
+    lines.push(`Section${i + 1}.Damage = ${sec.damage}.f;`);
+    lines.push(`Section${i + 1}.RootMotionDistance = ${sec.rootMotionDistance}.f;`);
+    lines.push(`Section${i + 1}.bUseMotionWarping = ${sec.motionWarpTarget ? 'true' : 'false'};`);
+    lines.push(`Section${i + 1}.HitDetectionStart = ${((hitWin?.start ?? 0) * sec.duration).toFixed(3)}f;`);
+    lines.push(`Section${i + 1}.HitDetectionEnd = ${(((hitWin?.start ?? 0) + (hitWin?.width ?? 0)) * sec.duration).toFixed(3)}f;`);
+    lines.push(`Section${i + 1}.ComboWindowStart = ${((comboWin?.start ?? 0) * sec.duration).toFixed(3)}f;`);
+    lines.push(`Section${i + 1}.ComboWindowEnd = ${(((comboWin?.start ?? 0) + (comboWin?.width ?? 0)) * sec.duration).toFixed(3)}f;`);
+    lines.push(``);
+  });
+
+  return lines.join('\n');
+}
+
+function generateJSON(combo: GeneratedCombo): string {
+  return JSON.stringify({
+    name: combo.name,
+    description: combo.description,
+    totalDuration: combo.totalDuration,
+    totalDamage: combo.totalDamage,
+    avgDPS: combo.avgDPS,
+    sections: combo.sections.map(sec => ({
+      label: sec.label,
+      duration: sec.duration,
+      damage: sec.damage,
+      rootMotionDistance: sec.rootMotionDistance,
+      motionWarpTarget: sec.motionWarpTarget,
+      windows: sec.windows.map(w => ({
+        name: w.name,
+        startNorm: w.start,
+        widthNorm: w.width,
+        startSec: Math.round(w.start * sec.duration * 1000) / 1000,
+        endSec: Math.round((w.start + w.width) * sec.duration * 1000) / 1000,
+      })),
+    })),
+    edges: combo.edges,
+  }, null, 2);
+}

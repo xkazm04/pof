@@ -1,0 +1,91 @@
+  id: string;
+  label: string;
+  prompt: string;
+  x: number;
+  y: number;
+  stateType: StateType;
+}
+
+const FALLBACK_STATES: StateNode[] = [
+  { id: 'anim-idle', label: 'Idle', prompt: 'Implement the Idle state in the Animation Blueprint. Set up the idle animation with subtle breathing/sway, transition conditions to Walk (movement speed > 0), and an idle break montage system for variety.', x: 14, y: 50, stateType: 'locomotion' },
+  { id: 'anim-walk', label: 'Walk', prompt: 'Implement the Walk state in the Animation Blueprint. Create a walk blend space driven by direction and speed, with transitions to Idle (speed ~ 0), Run (speed > walk threshold), and Jump (jump input).', x: 34, y: 50, stateType: 'locomotion' },
+  { id: 'anim-run', label: 'Run', prompt: 'Implement the Run state in the Animation Blueprint. Create a run blend space with lean animations, transitions to Walk (speed < run threshold), Jump (jump input), and stamina-based sprint variation.', x: 54, y: 50, stateType: 'locomotion' },
+  { id: 'anim-jump', label: 'Jump', prompt: 'Implement the Jump state in the Animation Blueprint. Create jump start animation with root motion, transition to Fall when vertical velocity becomes negative, and support for double-jump if enabled.', x: 50, y: 14, stateType: 'locomotion' },
+  { id: 'anim-fall', label: 'Fall', prompt: 'Implement the Fall state in the Animation Blueprint. Create a falling loop animation with air control blend, transition to Land on ground contact, and a long-fall variant for extended airtime.', x: 78, y: 14, stateType: 'locomotion' },
+  { id: 'anim-land', label: 'Land', prompt: 'Implement the Land state in the Animation Blueprint. Create soft and hard landing animations based on fall duration/velocity, with recovery transition back to Idle and optional roll for high falls.', x: 78, y: 50, stateType: 'locomotion' },
+];
+
+interface TransitionEdge {
+  from: string;
+  to: string;
+  rule: string | null;
+}
+
+const FALLBACK_TRANSITIONS: TransitionEdge[] = [
+  { from: 'anim-idle', to: 'anim-walk', rule: 'Speed > 0' },
+  { from: 'anim-walk', to: 'anim-idle', rule: 'Speed ~ 0' },
+  { from: 'anim-walk', to: 'anim-run', rule: 'Speed > Threshold' },
+  { from: 'anim-run', to: 'anim-walk', rule: 'Speed < Threshold' },
+  { from: 'anim-walk', to: 'anim-jump', rule: 'IsInAir' },
+  { from: 'anim-run', to: 'anim-jump', rule: 'IsInAir' },
+  { from: 'anim-jump', to: 'anim-fall', rule: 'VelZ < 0' },
+  { from: 'anim-fall', to: 'anim-land', rule: '!IsInAir' },
+  { from: 'anim-land', to: 'anim-idle', rule: 'AnimTime < 0.2' },
+];
+
+// ── Layout helpers ──
+
+function layoutStates(states: { name: string; hasMontage: boolean }[]): StateNode[] {
+  const count = states.length;
+  if (count === 0) return [];
+
+  if (count <= 8) {
+    const cx = 50, cy = 50;
+    const rx = 34, ry = 32;
+    return states.map((s, i) => {
+      const angle = (i / count) * 2 * Math.PI - Math.PI / 2;
+      return {
+        id: `scanned-${s.name}`,
+        label: s.name,
+        prompt: `Implement or improve the "${s.name}" state in the Animation Blueprint. Ensure it has proper animation assets, transition conditions, and blending configured.`,
+        x: cx + rx * Math.cos(angle),
+        y: cy + ry * Math.sin(angle),
+        stateType: classifyState(s.name, s.hasMontage),
+      };
+    });
+  }
+
+  const cols = Math.ceil(Math.sqrt(count));
+  const rows = Math.ceil(count / cols);
+  const xPad = 14, yPad = 14;
+  const xSpan = 72, ySpan = 72;
+
+  return states.map((s, i) => {
+    const col = i % cols;
+    const row = Math.floor(i / cols);
+    return {
+      id: `scanned-${s.name}`,
+      label: s.name,
+      prompt: `Implement or improve the "${s.name}" state in the Animation Blueprint. Ensure it has proper animation assets, transition conditions, and blending configured.`,
+      x: xPad + (cols > 1 ? (col / (cols - 1)) * xSpan : xSpan / 2),
+      y: yPad + (rows > 1 ? (row / (rows - 1)) * ySpan : ySpan / 2),
+      stateType: classifyState(s.name, s.hasMontage),
+    };
+  });
+}
+
+// ── Simulation helpers ──
+
+function findReachableStates(transitions: TransitionEdge[], startId: string): Set<string> {
+  const reachable = new Set<string>();
+  const queue = [startId];
+  while (queue.length > 0) {
+    const current = queue.pop()!;
+    if (reachable.has(current)) continue;
+    reachable.add(current);
+    for (const t of transitions) {
+      if (t.from === current && !reachable.has(t.to)) {
+        queue.push(t.to);
+      }
+    }
+  }

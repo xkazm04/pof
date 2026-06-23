@@ -1,0 +1,22 @@
+=== ue/PoFToolset full tree (the in-repo 'UE project' = python plugin stub only) ===
+ue/PoFToolset/Content/Python/init_unreal.py
+ue/PoFToolset/Content/Python/pof_toolset/tests/test_gaptools.py
+ue/PoFToolset/Content/Python/pof_toolset/tests/test_spike.py
+ue/PoFToolset/Content/Python/pof_toolset/tests/__init__.py
+ue/PoFToolset/Content/Python/pof_toolset/toolsets/character.py
+ue/PoFToolset/Content/Python/pof_toolset/toolsets/gas.py
+ue/PoFToolset/Content/Python/pof_toolset/toolsets/input_actions.py
+ue/PoFToolset/Content/Python/pof_toolset/toolsets/mesh_instances.py
+ue/PoFToolset/Content/Python/pof_toolset/toolsets/niagara.py
+ue/PoFToolset/Content/Python/pof_toolset/toolsets/script.py
+ue/PoFToolset/Content/Python/pof_toolset/toolsets/spike.py
+ue/PoFToolset/Content/Python/pof_toolset/toolsets/viewport.py
+ue/PoFToolset/Content/Python/pof_toolset/toolsets/world.py
+ue/PoFToolset/Content/Python/pof_toolset/toolsets/__init__.py
+ue/PoFToolset/Content/Python/pof_toolset/__init__.py
+ue/PoFToolset/pof-official-mcp.example.json
+ue/PoFToolset/PoFToolset.uplugin
+ue/PoFToolset/README.md
+
+=== .uasset / .umap / .uproject anywhere under ue/ ===
+(none)
