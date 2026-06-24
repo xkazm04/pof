@@ -50,6 +50,7 @@ The system that turns a catalog "row" (item, monster, quest, material, …) into
 | [concepts/UE/](concepts/UE/README.md) | **Maintained UE reference + followups** for future sessions — L4 autonomous visual capture (architecture + headless-launch recipe) and the UE followups backlog |
 | [visual-generation-roadmap.md](visual-generation-roadmap.md) | The asset/character generation directions (what PoF *generates*: 2D/3D/material/rig) |
 | [animation-capture-pipeline.md](animation-capture-pipeline.md) | **The autonomous animation pipeline**: text → Veo video → MetaHuman markerless capture → IK-retarget to Manny → harness render → VLM grade. The 5 hard-won fixes, the numeric+VLM verification, and the plan to remove Gemini (Leonardo/Wan video gen + Qwen-VL critique) |
+| [parallel-development-plan.md](parallel-development-plan.md) | **4 concurrent Claude Code streams** building a Jedi vertical slice (environment / character / actions / inventory): the worktree+content isolation model, the shared-code coordination zones, per-stream scope + frame/observation acceptance, the integration order, and paste-ready kickoff prompts |
 
 ## Conventions
 
