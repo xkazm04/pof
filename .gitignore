@@ -68,3 +68,6 @@ tools/pof-mcp/growth-baseline.json
 
 # Playwright seeded storage state (regenerated each run by e2e/global-setup.ts)
 /e2e/.auth/
+
+# Bleve docs search index (regenerated, not source)
+docs/index.bleve/

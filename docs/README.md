@@ -32,6 +32,7 @@ The system that turns a catalog "row" (item, monster, quest, material, …) into
 | [catalog/L3-L4-RUNNER.md](catalog/L3-L4-RUNNER.md) | The L3/L4 test-gate runner that drains deferred gates into real verdicts |
 | [catalog/E2E-COVERAGE.md](catalog/E2E-COVERAGE.md) | The Playwright walker + vitest guard that e2e-cover every registered pipeline (CLAUDE.md Rule 5) |
 | [catalog/LEGACY-SALVAGE.md](catalog/LEGACY-SALVAGE.md) | UE gotchas / known asset paths migrated into the Project Canon |
+| [catalog/HARNESS-APPLICABILITY.md](catalog/HARNESS-APPLICABILITY.md) | How the Observation/Scenario harness wires across pipelines as the L3 (runtime) / L4 (visual) verification engine — observed behaviour over symbolic green |
 
 ## Feature & capability map
 

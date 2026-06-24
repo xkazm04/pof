@@ -94,7 +94,7 @@ Each builder is a single function that wires a domain-specific config into `Prom
 - `buildAnimationChecklistPrompt(step, ctx)` — injects animation-specific `extraRules`,
   builds the task from `ChecklistStep.{number, title, description, details, prompt}`,
   then appends a raw best-practices block covering `NativeUpdateAnimation`, montage
-  delegates, Mixamo import, and UE 5.7 commandlet automation gotchas.
+  delegates, Mixamo import, and UE 5.8 commandlet automation gotchas.
   (`animation-checklist.ts:5`)
 
 - `buildMaterialConfiguratorPrompt(config, ctx)` — maps surface type to shading model

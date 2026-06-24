@@ -14,7 +14,7 @@ Research feeding the multi-pipeline plan. Answers four operator questions: (1) w
 
 **Not in SQLite:** the catalog entity's typed `data` payload (ItemData, SpellbookAbility…) lives in **seed files** (`src/lib/catalog/seed-*.ts`) + client localStorage. Only *lifecycle + assets + verdicts* are server-persisted.
 
-**UE project (`C:\Users\kazda\Documents\Unreal Projects\PoF`, UE 5.7):**
+**UE project (`C:\Users\kazda\Documents\Unreal Projects\PoF`, UE 5.8):**
 - Modules: `PoF` (runtime), `PoFEditor` (editor, has PythonScriptPlugin/AssetTools/IKRig).
 - Source-of-truth structs: `FARPGAbilityCatalogRow`, `FARPGGeneratedAbilityRow`, `FARPGAttributeInitRow`, `FARPGCurrencyDef`, `UARPGAttributeSet` (the stat schema), GAS `UGE_*`/`UGA_*`.
 - DataTables: `DT_AbilityCatalog` (**synced from the app's `CHARACTER_ABILITIES` TS via `Content/Python/seed_ability_catalog.py`**), `DT_GeneratedAbilities` (from `Effects/Generated/manifest.json` + generated `GA_/GE_` C++ via `seed_generated_abilities.py`).

@@ -1,6 +1,6 @@
 # Architecture overview
 
-PoF (Pillars of Fortune) is a **Next.js 16 / React 19 web app that drives UE5 ARPG game development**. It holds the *authoring* truth (designs, checklists, generated specs, acceptance verdicts) in SQLite, dispatches **Claude Code CLI** sessions to produce real engine artifacts, and validates the result against the live **Unreal Engine 5.7** project through a companion bridge plugin.
+PoF (Pillars of Fortune) is a **Next.js 16 / React 19 web app that drives UE5 ARPG game development**. It holds the *authoring* truth (designs, checklists, generated specs, acceptance verdicts) in SQLite, dispatches **Claude Code CLI** sessions to produce real engine artifacts, and validates the result against the live **Unreal Engine 5.8** project through a companion bridge plugin.
 
 ## The system at a glance
 
@@ -11,7 +11,7 @@ PoF (Pillars of Fortune) is a **Next.js 16 / React 19 web app that drives UE5 AR
 └──────────────┬──────────────────────────────────────────────────────────┬─────────────────────┘
                │ better-sqlite3 (server)                                    │ Claude Code CLI (stream-json)
        ┌───────▼────────┐                                          ┌────────▼─────────┐
-       │ SQLite ~/.pof  │ ◄────── schema-down / content-up ──────► │  UE 5.7 project   │
+       │ SQLite ~/.pof  │ ◄────── schema-down / content-up ──────► │  UE 5.8 project   │
        │ pof.db (WAL)   │   app validates UE schema; content       │ (realized truth)  │
        │ authoring SoR  │   flows app → UE via seeds / codegen     └────────┬─────────┘
        └────────────────┘                                   PoF Bridge plugin :30040
@@ -42,7 +42,7 @@ PoF (Pillars of Fortune) is a **Next.js 16 / React 19 web app that drives UE5 AR
 
 ## Tech stack
 
-Next.js 16 (App Router) · React 19.2 · Zustand 5 (persist) · better-sqlite3 (WAL, `serverExternalPackages`) · Tailwind CSS 4 · Vitest · TypeScript (strict) · `@/` → `src/` path alias. The UE side is UE 5.7 with the PoF Bridge editor plugin.
+Next.js 16 (App Router) · React 19.2 · Zustand 5 (persist) · better-sqlite3 (WAL, `serverExternalPackages`) · Tailwind CSS 4 · Vitest · TypeScript (strict) · `@/` → `src/` path alias. The UE side is UE 5.8 with the PoF Bridge editor plugin.
 
 ## Where things live
 
