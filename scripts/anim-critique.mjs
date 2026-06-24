@@ -18,6 +18,7 @@ const intent = arg('intent');
 const duration = arg('duration');
 const cam = arg('cam', 'main');
 const model = arg('model');
+const provider = arg('provider'); // 'qwen' | 'gemini' (route default: gemini)
 const url = arg('url', 'http://localhost:3000');
 
 if (!dir || !intent) {
@@ -28,6 +29,7 @@ if (!dir || !intent) {
 const body = { name, intent, frameDir: dir, cam };
 if (duration) body.durationSeconds = Number(duration);
 if (model) body.model = model;
+if (provider) body.provider = provider;
 
 const res = await fetch(`${url}/api/verify/animation`, {
   method: 'POST',
@@ -42,7 +44,7 @@ if (!res.ok || !env?.success) {
 
 const c = env.data;
 const bar = (n) => '#'.repeat(Math.round(n / 10)).padEnd(10, '.');
-console.log(`\n  ${name} — ${c.verdict.toUpperCase()} (${c.score}/100)   [${c.frames.length} frames]\n`);
+console.log(`\n  ${name} — ${c.verdict.toUpperCase()} (${c.score}/100)   [${c.frames.length} frames · ${c.provider ?? 'gemini'}]\n`);
 for (const [k, v] of Object.entries(c.dimensions)) {
   console.log(`  ${k.padEnd(14)} ${bar(v)} ${String(v).padStart(3)}`);
 }

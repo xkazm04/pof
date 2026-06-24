@@ -1,0 +1,8 @@
+{
+  "total_seconds": 8.0,
+  "num_samples": 12,
+  "settle": 0.3,
+  "out_dir": "C:/Users/kazda/kiro/pof/shots/veo_manny",
+  "play_anim": "/Game/MHA/AS_VeoStrike_Manny.AS_VeoStrike_Manny",
+  "disable_ai": true
+}

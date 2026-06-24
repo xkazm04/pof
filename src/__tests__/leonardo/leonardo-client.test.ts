@@ -106,7 +106,8 @@ describe('generateImage', () => {
       modelId: '05ce0082-2d80-4a2d-8653-4d1c85e2418e',
       prompt: 'seamless rock',
       width: 1024, height: 1024, num_images: 2, contrast: 4,
-      tiling: true, transparency: 'foreground',
+      // generateImage maps the 'foreground' alias -> Leonardo's 'foreground_only' (API drift fix).
+      tiling: true, transparency: 'foreground_only',
     });
   });
 });

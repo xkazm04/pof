@@ -18,3 +18,4 @@ export {
   type VisionImage,
 } from './critique';
 export { makeGeminiVision, type GeminiVisionOptions } from './gemini';
+export { makeQwenVision, type QwenVisionOptions } from './qwen';

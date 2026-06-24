@@ -7,6 +7,7 @@ import { logger } from '@/lib/logger';
 import { pollUntilReady } from '@/lib/visual-gen/poll';
 
 const LEONARDO_API_BASE = 'https://cloud.leonardo.ai/api/rest/v1';
+const LEONARDO_API_BASE_V2 = 'https://cloud.leonardo.ai/api/rest/v2';
 const LUCID_ORIGIN_MODEL_ID = '7b592283-e8a7-4c5a-9ba6-d18c31f258b9';
 export const LUCID_REALISM_MODEL_ID = '05ce0082-2d80-4a2d-8653-4d1c85e2418e';
 const POLL_INTERVAL_MS = 2000;
@@ -160,6 +161,233 @@ export async function generateImage(
   if (opts.cleanup === false) return { imageUrl, generationId };
   const bytes = await downloadThenDelete(imageUrl, generationId);
   return { imageUrl, generationId, imageBase64: Buffer.from(bytes).toString('base64') };
+}
+
+/**
+ * Leonardo video models (project policy): text-to-video uses **hailuo-2_3**;
+ * image-to-video (start frame) uses **hailuo-2_3-fast**. Both are on the v2
+ * `/generations` endpoint; image-to-video adds `parameters.guidances.start_frame`.
+ */
+export const LEONARDO_VIDEO_MODELS = {
+  hailuo23: 'hailuo-2_3', // text-to-video
+  hailuo23Fast: 'hailuo-2_3-fast', // image-to-video (start frame)
+} as const;
+
+export interface GenerateVideoOptions {
+  /** Override the model. Default: hailuo-2_3 (T2V) / hailuo-2_3-fast (I2V). */
+  model?: string;
+  durationSeconds?: number; // default 6
+  width?: number; // default 1376
+  height?: number; // default 768
+  promptEnhance?: boolean; // default false
+  audio?: boolean; // default false
+  /** Download bytes + delete the generation after completion. Default true. */
+  cleanup?: boolean;
+  pollIntervalMs?: number;
+  maxPollAttempts?: number;
+}
+
+export interface GenerateVideoResult {
+  videoUrl: string;
+  generationId: string;
+  /** base64 of the downloaded mp4 — present when cleanup ran. */
+  videoBase64?: string;
+}
+
+interface VideoPollRecord {
+  status: string;
+  generated_images: { motionMP4URL?: string; id: string }[];
+}
+
+/** Pull the rendered mp4 url out of a Leonardo motion-generation poll record (field name varies). */
+function extractVideoUrl(g: VideoPollRecord): string | null {
+  const direct = g.generated_images?.find((i) => i.motionMP4URL)?.motionMP4URL;
+  if (direct) return direct;
+  const m = JSON.stringify(g ?? {}).match(/https?:\/\/[^"']+\.mp4[^"']*/);
+  return m ? m[0] : null;
+}
+
+/** Poll a video generation (v1 generations/{id}) to COMPLETE with a downloadable mp4. */
+async function pollVideo(generationId: string, pollMs: number, maxAttempts: number): Promise<VideoPollRecord> {
+  let attempt = 0;
+  return pollUntilReady<VideoPollRecord>({
+    intervalMs: pollMs,
+    maxAttempts,
+    fetchStatus: async () => {
+      attempt++;
+      const r = await fetch(`${LEONARDO_API_BASE}/generations/${generationId}`, { headers: authHeaders() });
+      if (!r.ok) {
+        logger.warn(`[leonardo] video poll ${attempt} -> ${r.status}`);
+        return undefined;
+      }
+      const d = (await r.json()) as { generations_by_pk: VideoPollRecord | null };
+      return d.generations_by_pk ?? undefined;
+    },
+    isDone: (g) => g.status === 'COMPLETE' && extractVideoUrl(g) !== null,
+    isFailed: (g) => g.status === 'FAILED',
+    onFailed: () => new Error('Leonardo video generation failed'),
+    onTimeout: () => new Error('Leonardo video generation timed out'),
+  });
+}
+
+/**
+ * Shared v2 video submit: create -> `{ generate: { generationId } }`, poll v1
+ * generations/{id} to COMPLETE, then download-then-delete. Confirmed live 2026-06-23.
+ */
+async function submitV2Video(
+  model: string,
+  parameters: Record<string, unknown>,
+  opts: GenerateVideoOptions,
+): Promise<GenerateVideoResult> {
+  const pollMs = opts.pollIntervalMs ?? POLL_INTERVAL_MS;
+  const maxAttempts = opts.maxPollAttempts ?? 90;
+  const res = await fetch(`${LEONARDO_API_BASE_V2}/generations`, {
+    method: 'POST',
+    headers: authHeaders(true),
+    body: JSON.stringify({ model, public: false, parameters }),
+  });
+  if (!res.ok) throw new Error(`Leonardo video generation failed (${res.status}): ${await res.text()}`);
+  const data = (await res.json()) as { generate?: { generationId?: string } };
+  const generationId = data.generate?.generationId;
+  if (!generationId) throw new Error('Leonardo video generation returned no generationId');
+  logger.info(`[leonardo] Video generation started: ${generationId} (${model})`);
+  const gen = await pollVideo(generationId, pollMs, maxAttempts);
+  const videoUrl = extractVideoUrl(gen)!;
+  if (opts.cleanup === false) return { videoUrl, generationId };
+  const bytes = await downloadThenDelete(videoUrl, generationId);
+  return { videoUrl, generationId, videoBase64: Buffer.from(bytes).toString('base64') };
+}
+
+/** Common Hailuo `parameters` block shared by T2V and I2V. */
+function hailuoParams(prompt: string, opts: GenerateVideoOptions): Record<string, unknown> {
+  return {
+    prompt,
+    duration: opts.durationSeconds ?? 6,
+    prompt_enhance: opts.promptEnhance ? 'ON' : 'OFF',
+    quantity: 1,
+    width: opts.width ?? 1376,
+    height: opts.height ?? 768,
+    audio: opts.audio ?? false,
+  };
+}
+
+/**
+ * Text-to-video via Hailuo 2.3 (v2 /generations). ~180 credits for a 6s clip.
+ * Honors the download-then-delete cleanup protocol.
+ */
+export async function generateVideo(prompt: string, opts: GenerateVideoOptions = {}): Promise<GenerateVideoResult> {
+  return submitV2Video(opts.model ?? LEONARDO_VIDEO_MODELS.hailuo23, hailuoParams(prompt, opts), opts);
+}
+
+export interface GenerateVideoFromImageOptions extends GenerateVideoOptions {
+  /** GENERATED (a Leonardo-generated image id) or UPLOADED (an init-image upload). Default GENERATED. */
+  imageType?: 'GENERATED' | 'UPLOADED';
+}
+
+/**
+ * Image-to-video via Hailuo 2.3 Fast (v2 /generations + `guidances.start_frame`) —
+ * animate a start frame. Cheaper + more controllable than text-to-video (generate one
+ * image, then drive the motion). Same v2 submit + download-then-delete cleanup.
+ */
+export async function generateVideoFromImage(
+  imageId: string,
+  prompt: string,
+  opts: GenerateVideoFromImageOptions = {},
+): Promise<GenerateVideoResult> {
+  const parameters = {
+    ...hailuoParams(prompt, opts),
+    guidances: { start_frame: [{ image: { id: imageId, type: opts.imageType ?? 'GENERATED' } }] },
+  };
+  return submitV2Video(opts.model ?? LEONARDO_VIDEO_MODELS.hailuo23Fast, parameters, opts);
+}
+
+export interface StartFrameOptions {
+  model?: string; // default gpt-image-2
+  width?: number; // default 1376 (match the I2V clip)
+  height?: number; // default 768
+  promptEnhance?: boolean;
+  pollIntervalMs?: number;
+  maxPollAttempts?: number;
+}
+
+export interface StartFrameResult {
+  imageId: string;
+  generationId: string;
+  imageUrl: string;
+}
+
+/**
+ * Generate an I2V start frame via GPT Image 2 (v2 /generations). Returns the
+ * generated image id (for `generateVideoFromImage`'s `start_frame`) — does NOT
+ * delete, since the image is consumed downstream; the caller cleans it up. (~66 credits.)
+ */
+export async function generateStartFrame(prompt: string, opts: StartFrameOptions = {}): Promise<StartFrameResult> {
+  const pollMs = opts.pollIntervalMs ?? POLL_INTERVAL_MS;
+  const maxAttempts = opts.maxPollAttempts ?? MAX_POLL_ATTEMPTS;
+  const res = await fetch(`${LEONARDO_API_BASE_V2}/generations`, {
+    method: 'POST',
+    headers: authHeaders(true),
+    body: JSON.stringify({
+      model: opts.model ?? 'gpt-image-2',
+      public: false,
+      parameters: {
+        prompt,
+        quantity: 1,
+        width: opts.width ?? 1376,
+        height: opts.height ?? 768,
+        prompt_enhance: opts.promptEnhance ? 'ON' : 'OFF',
+      },
+    }),
+  });
+  if (!res.ok) throw new Error(`Leonardo start-frame generation failed (${res.status}): ${await res.text()}`);
+  const data = (await res.json()) as { generate?: { generationId?: string } };
+  const generationId = data.generate?.generationId;
+  if (!generationId) throw new Error('Leonardo start-frame generation returned no generationId');
+  type ImgRecord = { status: string; generated_images: { url: string; id: string }[] };
+  const gen = await pollUntilReady<ImgRecord>({
+    intervalMs: pollMs,
+    maxAttempts,
+    fetchStatus: async () => {
+      const r = await fetch(`${LEONARDO_API_BASE}/generations/${generationId}`, { headers: authHeaders() });
+      if (!r.ok) return undefined;
+      const d = (await r.json()) as { generations_by_pk: ImgRecord | null };
+      return d.generations_by_pk ?? undefined;
+    },
+    isDone: (g) => g.status === 'COMPLETE' && g.generated_images.length > 0,
+    isFailed: (g) => g.status === 'FAILED',
+    onFailed: () => new Error('Leonardo start-frame generation failed'),
+    onTimeout: () => new Error('Leonardo start-frame generation timed out'),
+  });
+  const img = gen.generated_images[0];
+  return { imageId: img.id, generationId, imageUrl: img.url };
+}
+
+export interface GenerateVideoFromPromptOptions extends GenerateVideoFromImageOptions {
+  /** Prompt for the start frame; defaults to the motion prompt. */
+  framePrompt?: string;
+  /** Start-frame image model. Default gpt-image-2. */
+  frameModel?: string;
+}
+
+/**
+ * One-call prompt → video via image-to-video: generate a GPT Image 2 start frame,
+ * animate it with Hailuo 2.3 Fast, and clean up BOTH generations. The cheapest +
+ * most controllable path (a sharp full-body start frame, then ~128-credit motion).
+ */
+export async function generateVideoFromPrompt(
+  prompt: string,
+  opts: GenerateVideoFromPromptOptions = {},
+): Promise<GenerateVideoResult> {
+  const frame = await generateStartFrame(opts.framePrompt ?? prompt, {
+    model: opts.frameModel,
+    width: opts.width,
+    height: opts.height,
+  });
+  try {
+    return await generateVideoFromImage(frame.imageId, prompt, { ...opts, imageType: 'GENERATED' });
+  } finally {
+    await deleteGeneration(frame.generationId); // start frame is consumed — clean it up
+  }
 }
 
 /** Remove a generation from the Leonardo account (the local copy is the only retained one). */

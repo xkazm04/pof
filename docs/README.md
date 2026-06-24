@@ -49,6 +49,7 @@ The system that turns a catalog "row" (item, monster, quest, material, …) into
 | [ue58-mcp-phase2-tool-map.md](ue58-mcp-phase2-tool-map.md) | Per-tool DROP/PORT verdict: our 40 MCPUnreal tools vs Epic's 5.8 first-party toolsets (the Phase 2 scope) |
 | [concepts/UE/](concepts/UE/README.md) | **Maintained UE reference + followups** for future sessions — L4 autonomous visual capture (architecture + headless-launch recipe) and the UE followups backlog |
 | [visual-generation-roadmap.md](visual-generation-roadmap.md) | The asset/character generation directions (what PoF *generates*: 2D/3D/material/rig) |
+| [animation-capture-pipeline.md](animation-capture-pipeline.md) | **The autonomous animation pipeline**: text → Veo video → MetaHuman markerless capture → IK-retarget to Manny → harness render → VLM grade. The 5 hard-won fixes, the numeric+VLM verification, and the plan to remove Gemini (Leonardo/Wan video gen + Qwen-VL critique) |
 
 ## Conventions
 
@@ -56,6 +57,7 @@ Project conventions (import alias, logger, chart-colors, timing constants, the c
 
 ## Recent additions
 
+- **2026-06-23** — Autonomous animation pipeline proven end-to-end: text → Veo video → MetaHuman markerless body capture → IK-retarget → Manny → render → VLM grade (42/100, first clip). Full backbone + the Gemini-removal plan (Leonardo/Wan for video gen, Qwen-VL for the critique) in [animation-capture-pipeline.md](animation-capture-pipeline.md).
 - **2026-06-19** — Autonomous UE: `src/lib/ue-launch` (headless 5.8 launcher) + L4 visual capture wired into the test-gate runner (launch → render → Gemini, no operator). Reference + followups in [concepts/UE/](concepts/UE/README.md).
 - **2026-06-18** — UE 5.8 first-party MCP research: Epic shipped an official MCP server (`AICallable` / Python Toolset Registry, tool-search, in-editor Terminal). Refreshed [Candidate G](ue5-capability-integration-candidates.md) and added a [convergence prototype plan](ue58-mcp-convergence-plan.md) — adopt the control surface, keep PoF's verification moat.
 - **2026-05-27** — Scheduled nightly builds: a server-side cron (`src/instrumentation.ts`) runs a chosen build profile through preflight → cook → smoke → size-budget unattended, skipping the cook when git HEAD is unchanged since the last build. See [architecture/runtime-patterns.md §Server-side scheduler](architecture/runtime-patterns.md).

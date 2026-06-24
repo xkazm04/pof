@@ -12,6 +12,7 @@ import { join } from 'node:path';
 import { apiSuccess, apiError } from '@/lib/api-utils';
 import { critiqueAnimation } from '@/lib/anim-critique/critique';
 import { makeGeminiVision } from '@/lib/anim-critique/gemini';
+import { makeQwenVision } from '@/lib/anim-critique/qwen';
 import { resolveFilmstrip } from '@/lib/anim-critique/filmstrip';
 
 export async function POST(request: NextRequest) {
@@ -22,6 +23,7 @@ export async function POST(request: NextRequest) {
     framePaths?: string[];
     durationSeconds?: number;
     model?: string;
+    provider?: string;
     cam?: string;
     maxFrames?: number;
   };
@@ -54,14 +56,21 @@ export async function POST(request: NextRequest) {
   const missing = frames.find((f) => !existsSync(f));
   if (missing) return apiError(`Frame not found: ${missing}`, 404);
 
+  // Pick the vision provider: 'qwen' (DashScope, Gemini-free) or 'gemini' (default).
+  const provider = body.provider === 'qwen' ? 'qwen' : 'gemini';
+  const callVision =
+    provider === 'qwen'
+      ? makeQwenVision({ ...(model ? { model } : {}) })
+      : makeGeminiVision({ ...(model ? { model } : {}) });
+
   const result = await critiqueAnimation(
     frames,
     { name, intent, frameCount: frames.length, ...(durationSeconds ? { durationSeconds } : {}) },
-    { callVision: makeGeminiVision({ ...(model ? { model } : {}) }) },
+    { callVision },
   );
 
   if (!result.ok || !result.card) {
     return apiError(result.error ?? 'critique failed', 502);
   }
-  return apiSuccess({ ...result.card, frames });
+  return apiSuccess({ ...result.card, frames, provider });
 }

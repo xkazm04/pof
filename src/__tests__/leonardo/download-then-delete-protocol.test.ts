@@ -26,6 +26,16 @@ const CREATE_ENDPOINTS = [
 ];
 const CLEANUP_TOKENS = ['downloadThenDelete', 'deleteGeneration', "method: 'DELETE'", 'method: "DELETE"'];
 
+/**
+ * Builder functions that intentionally DON'T self-clean: they return the `generationId`
+ * so the CALLER deletes it (the asset is consumed downstream). Each MUST have a caller
+ * in this lib that cleans it up — asserted separately below, so this isn't a free pass.
+ */
+const DEFERRED_CLEANUP: Record<string, string> = {
+  // GPT Image 2 start frame — consumed by generateVideoFromPrompt, which deletes it in a finally.
+  generateStartFrame: 'generateVideoFromPrompt',
+};
+
 /** Split a TS source into { name, body } blocks by `export async function`. */
 function exportedAsyncFunctions(src: string): Array<{ name: string; body: string }> {
   const re = /export\s+async\s+function\s+(\w+)/g;
@@ -55,9 +65,24 @@ describe('Leonardo download-then-delete protocol', () => {
     const src = readFileSync(LEONARDO_LIB, 'utf8');
     const offenders: string[] = [];
     for (const fn of exportedAsyncFunctions(src)) {
-      if (createsRetainedAsset(fn.body) && !hasCleanup(fn.body)) offenders.push(fn.name);
+      if (createsRetainedAsset(fn.body) && !hasCleanup(fn.body) && !(fn.name in DEFERRED_CLEANUP)) {
+        offenders.push(fn.name);
+      }
     }
     expect(offenders, `these create a Leonardo asset without a cleanup path: ${offenders.join(', ')}`).toEqual([]);
+  });
+
+  it('every deferred-cleanup builder has a caller that deletes the asset (no free pass)', () => {
+    const src = readFileSync(LEONARDO_LIB, 'utf8');
+    const fns = exportedAsyncFunctions(src);
+    for (const [builder, caller] of Object.entries(DEFERRED_CLEANUP)) {
+      const callerFn = fns.find((f) => f.name === caller);
+      expect(callerFn, `deferred-cleanup builder ${builder} names caller ${caller}, which must exist`).toBeDefined();
+      expect(callerFn!.body, `${caller} must call ${builder}`).toContain(builder);
+      // the caller deletes the consumed asset (finally + deleteGeneration).
+      expect(callerFn!.body).toContain('deleteGeneration');
+      expect(callerFn!.body).toContain('finally');
+    }
   });
 
   it('generateImage cleans up by default (download-then-delete unless explicitly opted out)', () => {
