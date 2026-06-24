@@ -1,7 +1,8 @@
 /**
  * Deep Evaluation Engine — multi-pass orchestrator.
  *
- * Runs specialized analysis per module with 3 passes (structure, quality, perf).
+ * Runs specialized analysis per module with 4 passes (ground-truth, structure,
+ * quality, perf); arpg-combat adds a 5th combat-trace pass via getPassesForModule.
  * Each pass produces structured findings that are collected, deduplicated, and
  * aggregated into a comprehensive scan report.
  *

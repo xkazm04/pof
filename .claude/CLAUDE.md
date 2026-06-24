@@ -37,7 +37,7 @@ The app is organized around **modules** — each representing a game development
 
 - **`src/lib/module-registry.ts`** — Central registry of all sub-modules with checklists, quick actions, knowledge tips. Each checklist item has `{ id, label, description, prompt }` where prompt is a multiline template string with UE5-specific guidance.
 - **`src/lib/feature-definitions.ts`** — Dependency graph of features per module. Cross-module deps use `'moduleId::featureName'` format. Drives the NBA (Next Best Action) engine.
-- **`src/lib/evaluator/module-eval-prompts.ts`** — 3-pass evaluation criteria (structure → quality → performance) per module.
+- **`src/lib/evaluator/module-eval-prompts.ts`** — 4-pass evaluation criteria (ground-truth → structure → quality → performance) per module, plus a 5th `combat-trace` pass for `arpg-combat` (see `EVAL_PASSES` / `getPassesForModule`).
 
 Module categories and their component locations:
 | Category | Path | Examples |

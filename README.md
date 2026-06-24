@@ -14,13 +14,13 @@ Game development in UE5 C++ is a multi-year, multi-system endeavor. PoF exists t
 
 ## Key Features
 
-**Module System** — 39 domain modules across 6 categories (character, combat, loot, animation, materials, level design, AI, multiplayer, etc.) each with checklists, quick actions, and knowledge tips. Over 170 checklist items and 100+ quick actions total.
+**Module System** — 37 domain modules across 7 categories (character, combat, loot, animation, materials, level design, AI, multiplayer, asset generation, etc.) each with checklists, quick actions, and knowledge tips. Over 170 checklist items and 100+ quick actions total.
 
 **Integrated CLI Terminal** — Spawns Claude Code directly from the UI. Domain-specific skill packs are injected into prompts based on context (souls-combat, loot-itemization, projectile-systems, etc.). A callback system (`@@CALLBACK:<id>` markers) lets Claude submit structured results back to the app automatically.
 
 **Feature Matrix** — Per-feature implementation tracking with statuses (implemented / improved / partial / missing), quality scores 1-5, and historical review snapshots. Tracks 300+ unique features with cross-module dependency resolution.
 
-**Evaluator** — 3-pass deep evaluation (structure, quality, performance) with cross-module correlation, pattern extraction, and a finding collector that rolls up issues into actionable fix plans.
+**Evaluator** — 4-pass deep evaluation (ground-truth, structure, quality, performance; plus a 5th combat-trace pass for arpg-combat) with cross-module correlation, pattern extraction, and a finding collector that rolls up issues into actionable fix plans.
 
 **Game Director** — Session-based analysis that reviews your project holistically, tracks findings over time, and detects regressions between sessions.
 
@@ -70,7 +70,7 @@ npm run validate     # typecheck + lint + test (full CI check)
 
 ```
 src/
-├── app/                 # Next.js App Router + 60+ API routes
+├── app/                 # Next.js App Router + 140+ API routes
 ├── components/
 │   ├── cli/             # Terminal UI, task queue, skills, UE5 build parser
 │   ├── layout/          # App shell (TopBar, Sidebar, ModuleRenderer, CLI panel)
@@ -81,6 +81,7 @@ src/
 │   │   ├── game-director/ # Session tracking, regression detection
 │   │   ├── game-systems/  # AI, physics, multiplayer, dialogue, packaging
 │   │   ├── project-setup/ # Project wizard, path browser, build verification
+│   │   ├── visual-gen/    # Asset Studio: forge, material lab, Blender pipeline, scene composer
 │   │   └── shared/      # FeatureMatrix, QuickActions, RoadmapChecklist
 │   └── ui/              # Reusable primitives (Badge, Card, ProgressRing, etc.)
 ├── hooks/               # 30+ custom React hooks
@@ -168,7 +169,7 @@ The quality intelligence layer that continuously analyzes your project.
 
 | Component | Description |
 |-----------|-------------|
-| **Deep Evaluation Engine** | 3-pass analysis (structure, quality, performance) per module. Each pass produces structured findings that are deduplicated and aggregated. |
+| **Deep Evaluation Engine** | 4-pass analysis (ground-truth, structure, quality, performance; arpg-combat adds a 5th combat-trace pass) per module. Each pass produces structured findings that are deduplicated and aggregated. |
 | **Aggregate Quality Dashboard** | Unified quality scores across all modules with trend visualization |
 | **Cross-Module Feature Dashboard** | Tracks features that span multiple modules and their dependency health |
 | **Cross-Module Overlap Panel** | Detects duplicated or conflicting implementations across modules |
@@ -342,7 +343,7 @@ Real-time connection to the UE5 companion plugin for live project awareness.
 
 ### API Surface
 
-60+ API routes organized by domain, all following a standardized envelope pattern:
+140+ API routes organized by domain, all following a standardized envelope pattern:
 
 ```typescript
 // Success: { success: true, data: T }

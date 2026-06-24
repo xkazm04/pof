@@ -1,6 +1,6 @@
 # PoF documentation
 
-**PoF (Pillars of Fortune)** is a Next.js 16 / React 19 web app that drives UE5 ARPG game development: it holds authoring truth in SQLite, dispatches Claude Code CLI sessions to produce real engine artifacts, and verifies them against a live Unreal Engine 5.7 project via a companion bridge plugin.
+**PoF (Pillars of Fortune)** is a Next.js 16 / React 19 web app that drives UE5 ARPG game development: it holds authoring truth in SQLite, dispatches Claude Code CLI sessions to produce real engine artifacts, and verifies them against a live Unreal Engine 5.8 project via a companion bridge plugin.
 
 > New here? Read [`architecture/overview.md`](architecture/overview.md) first — it's the system map and links everything below.
 
@@ -56,6 +56,15 @@ The system that turns a catalog "row" (item, monster, quest, material, …) into
 ## Conventions
 
 Project conventions (import alias, logger, chart-colors, timing constants, the catalog-authoring rules) live in [`.claude/CLAUDE.md`](../.claude/CLAUDE.md); the enforced subset is summarized in [architecture/runtime-patterns.md](architecture/runtime-patterns.md).
+
+## Process artifacts (not maintained)
+
+The doc map above is the curated, maintained set. Two subtrees hold **dated, point-in-time process output** and are intentionally *not* part of it — do not treat them as current architecture:
+
+- **`harness/`** — scan reports and fix-wave logs from autonomous/agentic runs (e.g. `harness/zen-perf-scan-2026-06-14/`, `harness/ui-perfectionist-2026-04-28/`). These are kept because a handful of source files cite a specific report as the provenance for a tuning decision (e.g. `src/lib/combat/damage.ts` → `harness/zen-perf-scan-2026-06-14/02-combat-damage-tuning.md`), so they are load-bearing references, not deletable cruft — but they are frozen snapshots, not living docs.
+- **`contexts/`** — generated context-scan reports (gitignored; see `.gitignore`).
+
+When you need current truth, use the `architecture/` and `catalog/` docs above, not these.
 
 ## Recent additions
 

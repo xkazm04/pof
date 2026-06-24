@@ -1,10 +1,12 @@
 /**
  * Module-specific evaluation prompts for deep analysis.
  *
- * Each module type gets tailored prompts for 3 passes:
- *   1. Structure — code organization, file layout, class hierarchy
- *   2. Quality — UE5 best practices, anti-patterns, correctness
- *   3. Performance — tick usage, memory, pooling, async patterns
+ * Each module type gets tailored prompts for 4 default passes:
+ *   1. Ground Truth — confirm the real classes/parents/properties exist before proposing changes
+ *   2. Structure — code organization, file layout, class hierarchy
+ *   3. Quality — UE5 best practices, anti-patterns, correctness
+ *   4. Performance — tick usage, memory, pooling, async patterns
+ * One module (arpg-combat) appends a 5th combat-trace pass via getPassesForModule.
  */
 
 // ─── Pass types ──────────────────────────────────────────────────────────────
