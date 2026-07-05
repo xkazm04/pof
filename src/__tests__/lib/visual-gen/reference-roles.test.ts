@@ -31,6 +31,20 @@ describe('GEN_PROMPTING_PRACTICES', () => {
     expect(text).toMatch(/block/i);
     expect(text).toMatch(/multi.?view|all sides/i);
   });
+
+  it('encodes image→3D input prep: isolate the subject on a plain background', () => {
+    const text = GEN_PROMPTING_PRACTICES.map((p) => `${p.summary} ${p.detail}`).join(' ');
+    expect(text).toMatch(/plain|white|neutral|isolat/i);
+    expect(text).toMatch(/background/i);
+    expect(text).toMatch(/image.?to.?3d|mesh|3d/i);
+  });
+
+  it('encodes image→3D input prep: a simple canonical pose over a complex one', () => {
+    const text = GEN_PROMPTING_PRACTICES.map((p) => `${p.summary} ${p.detail}`).join(' ');
+    expect(text).toMatch(/simple|canonical|A-?pose|neutral pose|straightforward pose/i);
+    expect(text).toMatch(/pose/i);
+    expect(text).toMatch(/artifact|occlu|floater|fused|clean/i);
+  });
 });
 
 describe('assembleReferenceDirective', () => {

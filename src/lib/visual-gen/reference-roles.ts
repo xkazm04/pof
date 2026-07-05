@@ -91,6 +91,16 @@ export const GEN_PROMPTING_PRACTICES: GenPromptingPractice[] = [
     summary: 'Match the generated timing to the play blast',
     detail: 'Keep the clip length/timing equal to the blocking (normal mode) or the motion desyncs and reads awkward.',
   },
+  {
+    summary: 'For image→3D, isolate the subject on a plain (white/neutral) background',
+    detail:
+      'Before feeding a concept image to an image-to-3D generator (Hunyuan3D / TripoSR / Tripo / Meshy), put the subject alone on a plain white or neutral background. Busy or textured backgrounds bleed into the mesh — the generator reconstructs background geometry as floaters, fused blobs, or surface artifacts. Generate (or re-generate) the concept clean, single-subject, evenly lit; this is upstream of, and complements, the runner background-removal step.',
+  },
+  {
+    summary: 'For image→3D, use a simple canonical pose — not a complex or stylized one',
+    detail:
+      'Give the mesher a straightforward, near-canonical pose (roughly A-pose, limbs uncrossed, no heavy self-occlusion) and a not-overly-stylized silhouette. Complex poses, crossed/overlapping limbs, and flowing accessories self-occlude and produce fused limbs, missing faces, and warped geometry in single-image→3D — characters are already the hard case. If the desired concept is complex, simplify the reference (canonical pose, isolated subject) for the mesh, then re-pose/retarget in-engine afterward.',
+  },
 ];
 
 /**
