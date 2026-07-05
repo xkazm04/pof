@@ -165,6 +165,22 @@ export const UE_GOTCHAS: Gotcha[] = [
     appliesTo: ['ue-python'],
     source: 'research: Roblox CubePart 3D part-segmentation (Stefan 3D AI)',
   },
+  {
+    id: 'metahuman-conform-input-prep',
+    summary: 'AI→MetaHuman conform: input mesh needs an A-pose, separated fingers, armpit/leg clearance, hair+lashes removed, and a separate high-poly head — or the auto-solve mis-conforms',
+    detail:
+      "UE 5.8 'Mesh to MetaHuman' conforms an arbitrary-topology human mesh into a fully-rigged MetaHuman via an auto-solve. For a clean solve, prepare the input mesh (from Tripo/Hunyuan/etc.): (1) use an A-pose with clear space between the legs and the arms held away from the torso — tight armpits/legs make the body conform fold. (2) Physically SEPARATE all fingers — fused/close fingers make the solver mis-count (it can place 4 finger markers on 2 fingers), needing a manual fix via Reset Body + hand-placing/adding solve points. (3) REMOVE hair and eyelashes — the body conforms AROUND hair into a distorted skull; generate hair/branches/accessories as SEPARATE meshes to rig on top later. (4) Keep the source HIGH-POLY (an HD mesh, not a smart/low-poly one) — it doubles as the bake reference for normal/color transfer. (5) Model the head as a SEPARATE high-detail mesh (no lashes). (6) Scale the assembled mesh to the free 'MetaHuman conform body' size reference (Fab), apply scale+rotation with transforms zeroed, then export the combined GLB as a static mesh. Auto-solve is a starting point: expect to hand-align points for complex/custom topology.",
+    appliesTo: ['ue-python'],
+    source: 'research: AI to MetaHuman UE 5.8 workflow (Stefan 3D AI)',
+  },
+  {
+    id: 'metahuman-conform-texture-export',
+    summary: 'MetaHuman conform texturing/rig-export: save the DNA pose BEFORE it changes, shift UDIMs to one UE UV tile, disable Add Leaf Bones, flip the normal-map green channel',
+    detail:
+      "Four pitfalls break the texture + accessory-rig round-trip after a MetaHuman conform: (1) At the manual-solve stage SAVE the conformed pose to a DNA file BEFORE moving to the next tab (the pose changes there). Baking transfers color/normal from the original high-poly mesh to the conform's generated skeletal mesh and is IMPOSSIBLE if the two poses don't match — so save-pose is what makes baking possible; the DNA export is reversible. (2) MetaHuman meshes use UDIMs (the body sits on the 2nd UDIM tile), which Blender/AI-texturing can't bake across: in Blender shift the body UVs by -1 tile into a single 0-1 space (re-shift to UE space on the way back). (3) BAKE-FREE alternative for stylized/toon characters that don't need normals: skip Blender baking and texture the conformed body with image-to-3D AI (Tripo) — export the MetaHuman-UV mesh and keep 'use original UV' ON so the AI paints color that follows the MetaHuman UV exactly (no neck-seam transition work). (4) When exporting a rigged accessory FBX from Blender, DISABLE 'Add Leaf Bones' or the armature won't match the MetaHuman skeleton; name the armature 'root'; select armature+mesh only; and on UE import enable 'flip normal map green channel' for normals baked in Blender/Marmoset (OpenGL→DirectX).",
+    appliesTo: ['ue-python'],
+    source: 'research: AI to MetaHuman UE 5.8 workflow (Stefan 3D AI)',
+  },
 ];
 
 /**

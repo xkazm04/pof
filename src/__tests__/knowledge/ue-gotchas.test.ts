@@ -82,6 +82,26 @@ describe('formatGotchas', () => {
     expect(out).toMatch(/Tripo|Rodin|CubePart/);
   });
 
+  it('carries MetaHuman conform INPUT-PREP guidance for ue-python', () => {
+    const out = formatGotchas('ue-python');
+    expect(out).toMatch(/MetaHuman/);
+    expect(out).toMatch(/conform/i);
+    expect(out).toMatch(/A-pose|separate.*finger|armpit/i);
+    expect(out).toMatch(/remove.*(hair|lashes)|hair.*remov/i);
+  });
+
+  it('carries MetaHuman conform TEXTURE/RIG-EXPORT pitfalls for ue-python', () => {
+    const out = formatGotchas('ue-python');
+    expect(out).toMatch(/DNA/);
+    expect(out).toMatch(/UDIM/i);
+    expect(out).toMatch(/leaf bone/i);
+    expect(out).toMatch(/green channel/i);
+  });
+
+  it('keeps MetaHuman conform UDIM/leaf-bone guidance out of the ue-cpp block', () => {
+    expect(formatGotchas('ue-cpp')).not.toMatch(/UDIM/);
+  });
+
   it('carries Niagara optimization pitfalls', () => {
     const out = formatGotchas('ue-python');
     expect(out).toMatch(/Niagara/);
