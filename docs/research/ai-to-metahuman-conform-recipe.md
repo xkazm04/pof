@@ -42,16 +42,25 @@ Two headless introspection probes on **UE 5.8.0 Release** (`UnrealEditor-Cmd PoF
 - **PoF Bridge (`:30040`)** — a `conform` step that runs the MetaHuman Python in the attached editor (NOT a headless commandlet), reports the DNA path + skeletal-mesh asset back.
 - Reuse the **mesh-critique / VLM tiers** (`mesh-critique.ts`, `pof_vlm_critique.py`) as the post-conform quality gate (rig integrity + on-model check), and the L4 visual critic for the final in-engine frame.
 
-## Status & next step (NOT install-blocked)
+## PROVEN LIVE — headless conform end-to-end (2026-07-05)
 
-**UE 5.8.0 is installed** (`C:/Program Files/Epic Games/UE_5.8`; `PoF.uproject` EngineAssociation `5.8`) and the conform API is **verified headless-scriptable** (above). This is **no longer an install/feasibility blocker** — it's a prototype-and-wire task. Remaining work, in order:
+A full headless run on the real UE 5.8.0 install conformed a **generated** mesh to a MetaHuman and saved the asset — no interactive editor:
 
-1. **Enable the `MetaHumanCharacter` (Experimental) plugin** in `PoF.uproject` (currently off) and **install the MetaHuman Optional Content** (removes the "limited features" cap).
-2. **Prototype script** (headless is fine): import a generated GLB → `MetaHumanCharacterEditorSubsystem.conform_to_target_meshes` / `set_body_mesh` → save DNA → generate skeletal mesh → export. Dispatch via the PoF Bridge or the `ue-experiment` runner (both already spawn 5.8 Python).
-3. **Wire Asset Forge → conform** (`AutoRigView.tsx` "Conform to MetaHuman" path) and **measure the auto-solve failure rate** on real Hunyuan/Tripo output — that determines whether a scripted point-align correction step is needed or input-prep alone suffices.
-4. Gate the result with the mesh-critique / L4 visual critic.
+- Target: `generated/jinx-leo/jinx_hunyuan.glb` (the Hunyuan character). Import → StaticMesh; `get_mesh_data_for_conforming` extracted **180,007 vertices / 360,082 triangles**.
+- Created a `MetaHumanCharacter` (face model = 1397 coefficients), `try_add_object_to_edit` → True.
+- **`conform_body_to_target(char, verts, [], True, True)` → True** — the parametric MetaHuman body fit the generated mesh. `commit_body_state` + `save_loaded_asset` → **`MH_JinxConform.uasset` (862 KB) written to disk.**
+- **`MetaHumanCharacter` plugin is now enabled in `PoF.uproject`** (a run with NO `-EnablePlugins` flag still resolved the API), so the `ue-experiment` runner picks it up automatically.
+- Committed seam: **`src/lib/visual-gen/metahuman-conform.ts`** (`buildConformPython` + `conformMeshToMetaHuman`, mirrors `ue-import.ts`, 6 tests) dispatches this via the Experiment Lab runner.
 
-Repro of the ground-truth probe: `UnrealEditor-Cmd PoF.uproject -run=pythonscript -script=<probe> -EnablePlugins=MetaHumanCharacter -nullrhi -unattended -NoLiveCoding -abslog=<log>` then grep the log.
+**API note — use `conform_body_to_target`, not `conform_to_target_meshes`:** the high-level wrapper `conform_to_target_meshes(character, target_mesh_key, conform_target_params)` executes headless (the key's `body_mesh`/`combined_mesh`/`head_mesh` are **SoftObjectProperty refs to the source mesh**, `ConformTargetMesh.target_parts_type` ∈ `BODY_ONLY/COMBINED/HEAD_AND_BODY/HEAD_ONLY`) but **returned False** in the headless/limited-content setup — it wants the interactive tool's keypoint/curve targets and/or the MetaHuman Optional Content. The lower-level `conform_body_to_target` (extracted target vertices directly) is the working programmatic conform.
+
+## Remaining work (build)
+
+1. **Install the MetaHuman Optional Content** to remove the "initialized with limited features" cap (texture synthesis + full-fidelity presets; also likely what makes the `conform_to_target_meshes` wrapper succeed).
+2. Add **head conform + `request_auto_rigging` + `build_meta_human`** to `metahuman-conform.ts` to go from a conformed body to a fully-assembled, textured, rigged MetaHuman (the seam currently does the body conform + save).
+3. **Wire Asset Forge → conform** (`AutoRigView.tsx` "Conform to MetaHuman" path beside the Mannequin/Mixamo presets) + **measure the conform quality** on real Hunyuan/Tripo output; gate with the mesh-critique / L4 visual critic.
+
+Repro of the ground-truth probes / the live conform: `UnrealEditor-Cmd PoF.uproject -ExecutePythonScript=<script> -nullrhi -unattended -nopause -nosplash -NoLiveCoding -abslog=<log>` then grep `POF_` markers in the log (`MetaHumanCharacter` now enabled in the .uproject, so `-EnablePlugins` is no longer required).
 
 ## Sources
 
