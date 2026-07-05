@@ -907,7 +907,11 @@ export function StateMachineEditor() {
             return (
               <div
                 key={state.id}
-                className="absolute rounded-xl border transition-all duration-150 group"
+                role="button"
+                tabIndex={0}
+                aria-pressed={isSelected}
+                aria-label={`State ${state.name}, priority ${state.priority}${nodeSeverity ? `, ${nodeSeverity}` : ''}${isSelected ? ', selected' : ''}`}
+                className="absolute rounded-xl border transition-all duration-150 group focus-ring"
                 style={{
                   left: `${state.x}%`,
                   top: `${state.y}%`,
@@ -923,6 +927,12 @@ export function StateMachineEditor() {
                 onClick={(e) => {
                   e.stopPropagation();
                   handleStateClick(state.id);
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    handleStateClick(state.id);
+                  }
                 }}
                 onMouseDown={(e) => {
                   // Only start drag on left button and not drawing

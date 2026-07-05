@@ -373,10 +373,22 @@ export function DependencyGraph({ onNavigateTab }: DependencyGraphProps) {
             return (
               <g
                 key={node.moduleId}
+                role="button"
+                tabIndex={0}
+                aria-pressed={isSelected}
+                aria-label={`${node.label}: ${node.implementedCount} of ${node.featureCount} features implemented${node.blockedCount > 0 ? `, ${node.blockedCount} blocked` : ''}. ${isSelected ? 'Selected — activate to deselect' : 'Activate to select'}.`}
                 onClick={() => setSelectedModule(isSelected ? null : node.moduleId)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    setSelectedModule(isSelected ? null : node.moduleId);
+                  }
+                }}
                 onMouseEnter={() => setHoveredModule(node.moduleId)}
                 onMouseLeave={() => setHoveredModule(null)}
-                className="cursor-pointer"
+                onFocus={() => setHoveredModule(node.moduleId)}
+                onBlur={() => setHoveredModule(null)}
+                className="cursor-pointer focus-ring"
                 opacity={dimmed ? 0.25 : 1}
                 style={{ transition: 'opacity 200ms' }}
               >
