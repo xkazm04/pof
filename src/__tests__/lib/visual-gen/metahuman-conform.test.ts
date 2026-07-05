@@ -1,5 +1,8 @@
 import { describe, it, expect } from 'vitest';
-import { buildConformPython, conformMeshToMetaHuman } from '@/lib/visual-gen/metahuman-conform';
+import {
+  buildConformPython, conformMeshToMetaHuman,
+  buildAssemblePython, assembleMetaHuman,
+} from '@/lib/visual-gen/metahuman-conform';
 import type { ExperimentResult } from '@/lib/ue-experiment/runner';
 
 const RES = (markers: Record<string, string>, ok = true): ExperimentResult => ({
@@ -69,5 +72,43 @@ describe('conformMeshToMetaHuman', () => {
       runExperimentFn: async () => RES({ POF_EXPERIMENT_ERROR: 'boom' }, false),
     });
     expect(res.ok).toBe(false);
+  });
+});
+
+describe('buildAssemblePython', () => {
+  it('gates assembly on can_build_meta_human before build_meta_human', () => {
+    const py = buildAssemblePython('/Game/X/MH_Jinx', { nameOverride: 'JinxHero' });
+    expect(py).toContain("unreal.load_asset('/Game/X/MH_Jinx')");
+    expect(py).toContain('can_build_meta_human(_char, True)');
+    expect(py).toContain('unreal.MetaHumanCharacterEditorBuildParameters()');
+    expect(py).toContain("set_editor_property('name_override', 'JinxHero')");
+    expect(py).toContain('build_meta_human(_char, _p)');
+    expect(py).toContain('POF_MH_CAN_BUILD=');
+    expect(py).toContain('POF_MH_ASSEMBLED=');
+  });
+
+  it('omits the name override when not given', () => {
+    const py = buildAssemblePython('/Game/X/MH_Jinx');
+    expect(py).not.toContain('name_override');
+  });
+});
+
+describe('assembleMetaHuman', () => {
+  it('assembles when the character is build-ready', async () => {
+    const res = await assembleMetaHuman('/Game/X/MH_Jinx', {
+      runExperimentFn: async () => RES({ POF_MH_CHAR: '/Game/X/MH_Jinx.MH_Jinx', POF_MH_CAN_BUILD: 'True', POF_MH_ASSEMBLED: 'True', POF_EXPERIMENT_DONE: 'ok' }),
+    });
+    expect(res.ok).toBe(true);
+    expect(res.canBuild).toBe(true);
+    expect(res.assembled).toBe(true);
+  });
+
+  it('reports the Optional-Content install step when not build-ready', async () => {
+    const res = await assembleMetaHuman('/Game/X/MH_Jinx', {
+      runExperimentFn: async () => RES({ POF_MH_CHAR: '/Game/X/MH_Jinx.MH_Jinx', POF_MH_CAN_BUILD: 'False', POF_MH_ASSEMBLED: 'False' }),
+    });
+    expect(res.ok).toBe(false);
+    expect(res.canBuild).toBe(false);
+    expect(res.error).toMatch(/Optional Content/i);
   });
 });

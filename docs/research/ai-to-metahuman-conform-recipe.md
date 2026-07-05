@@ -54,11 +54,24 @@ A full headless run on the real UE 5.8.0 install conformed a **generated** mesh 
 
 **API note — use `conform_body_to_target`, not `conform_to_target_meshes`:** the high-level wrapper `conform_to_target_meshes(character, target_mesh_key, conform_target_params)` executes headless (the key's `body_mesh`/`combined_mesh`/`head_mesh` are **SoftObjectProperty refs to the source mesh**, `ConformTargetMesh.target_parts_type` ∈ `BODY_ONLY/COMBINED/HEAD_AND_BODY/HEAD_ONLY`) but **returned False** in the headless/limited-content setup — it wants the interactive tool's keypoint/curve targets and/or the MetaHuman Optional Content. The lower-level `conform_body_to_target` (extracted target vertices directly) is the working programmatic conform.
 
-## Remaining work (build)
+## What is local-headless vs cloud vs a launcher download (ground-truthed 2026-07-05)
 
-1. **Install the MetaHuman Optional Content** to remove the "initialized with limited features" cap (texture synthesis + full-fidelity presets; also likely what makes the `conform_to_target_meshes` wrapper succeed).
-2. Add **head conform + `request_auto_rigging` + `build_meta_human`** to `metahuman-conform.ts` to go from a conformed body to a fully-assembled, textured, rigged MetaHuman (the seam currently does the body conform + save).
-3. **Wire Asset Forge → conform** (`AutoRigView.tsx` "Conform to MetaHuman" path beside the Mannequin/Mixamo presets) + **measure the conform quality** on real Hunyuan/Tripo output; gate with the mesh-critique / L4 visual critic.
+Probing `can_build_meta_human` / `request_auto_rigging` / `build_meta_human` on the conformed character mapped the exact boundary:
+
+| Step | Where it runs | Status |
+|---|---|---|
+| glb import + `get_mesh_data_for_conforming` | **local headless** | ✅ proven |
+| body conform (`conform_body_to_target`) | **local headless** | ✅ proven (saved asset) |
+| assemble (`build_meta_human`) | **local headless** | ⛔ **gated:** `can_build_meta_human` → **False** until Optional Content is installed (log: *"texture synthesis data … does not contain valid data → skin editing disabled"*). Params ground-truthed (`MetaHumanCharacterEditorBuildParameters`); seam `assembleMetaHuman` runs the gate + reports the reason. |
+| auto-rig (`request_auto_rigging`) | **Epic CLOUD** | 🌐 online + Epic auth (Epic's autorig service); params `MetaHumanCharacterAutoRiggingRequestParams{rig_type, blocking, report_progress}`. Not a pure-local step. |
+| texture synthesis (skin) | **Epic CLOUD** | 🌐 online + Epic auth. UE 5.8 can assemble *unbaked* (no baked textures) for local lookdev. |
+
+**#1 — Install the MetaHuman Optional Content (the assembly gate — a user action, can't be scripted headlessly):**
+Epic Games Launcher → **Unreal Engine → Library** → on the **UE 5.8** slot click the **⌄ dropdown → Options** → check **"MetaHuman Creator Core Data"** (presets, grooms, texture models, export files) → **Apply**. This populates `Engine/Plugins/MetaHuman/MetaHumanCharacter/Content/Optional/` (currently absent). After it installs, re-run `assembleMetaHuman` — `can_build` should flip True.
+
+**#2 — Assemble seam (DONE, gated):** `metahuman-conform.ts` now exports `buildAssemblePython` + `assembleMetaHuman` — load char → `try_add_object_to_edit` → `can_build_meta_human` (gate + log reason) → `build_meta_human` → save. The gate is **verified live** (correctly returns False + the Optional-Content reason); a successful assemble awaits #1. Auto-rig/texture-synthesis are documented as the cloud steps (kept out of the pure-local seam).
+
+**Remaining after #1:** live-verify `assembleMetaHuman` once Optional Content is installed; add the cloud auto-rig call (online, `blocking=True`) as an explicit online step; wire Asset Forge → an `AutoRigView.tsx` "Conform to MetaHuman" path + gate with the mesh-critique / L4 visual critic.
 
 Repro of the ground-truth probes / the live conform: `UnrealEditor-Cmd PoF.uproject -ExecutePythonScript=<script> -nullrhi -unattended -nopause -nosplash -NoLiveCoding -abslog=<log>` then grep `POF_` markers in the log (`MetaHumanCharacter` now enabled in the .uproject, so `-EnablePlugins` is no longer required).
 

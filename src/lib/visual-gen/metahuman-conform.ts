@@ -106,3 +106,83 @@ export async function conformMeshToMetaHuman(glbPath: string, opts: ConformOptio
     logs: res.logs,
   };
 }
+
+export interface AssembleOptions {
+  /** Override the assembled MetaHuman's name (MetaHumanCharacterEditorBuildParameters.name_override). */
+  nameOverride?: string;
+  settleMs?: number;
+  runExperimentFn?: (spec: ExperimentSpec, deps?: RunnerDeps) => Promise<ExperimentResult>;
+}
+
+/**
+ * UE editor-Python that assembles a conformed MetaHumanCharacter into a usable MetaHuman.
+ * `can_build_meta_human(char, True)` gates the assembly and logs the blocking reason — verified
+ * live to return False + "texture synthesis data … does not contain valid data" when the
+ * MetaHuman Optional Content ("MetaHuman Creator Core Data", an Epic Launcher download) is absent.
+ *
+ * PREREQUISITES (both external to this seam):
+ *  - MetaHuman Optional Content installed (Epic Launcher → UE 5.8 → Options → "MetaHuman Creator
+ *    Core Data") — without it `can_build` is False and this reports the reason.
+ *  - Online + Epic auth: auto-rigging (`request_auto_rigging`) and texture synthesis run on Epic's
+ *    CLOUD servers, so a fully-textured, auto-rigged assemble is NOT a pure-local-headless step.
+ * Pure (no I/O); the runner wraps it in try/except + DONE and spawns the editor.
+ */
+export function buildAssemblePython(characterPath: string, opts: AssembleOptions = {}): string {
+  const cp = characterPath.replace(/\\/g, '/');
+  const nameLine = opts.nameOverride
+    ? [`    _p.set_editor_property('name_override', '${opts.nameOverride}')`]
+    : [];
+  return [
+    '_sub = unreal.get_editor_subsystem(unreal.MetaHumanCharacterEditorSubsystem)',
+    `_char = unreal.load_asset('${cp}')`,
+    "unreal.log('POF_MH_CHAR=' + (_char.get_path_name() if _char else 'NONE'))",
+    '_can = False',
+    '_assembled = False',
+    'if _char:',
+    '    _sub.try_add_object_to_edit(_char)',
+    '    _can = _sub.can_build_meta_human(_char, True)',
+    "    unreal.log('POF_MH_CAN_BUILD=' + str(_can))",
+    '    if _can:',
+    '        _p = unreal.MetaHumanCharacterEditorBuildParameters()',
+    ...nameLine,
+    '        _sub.build_meta_human(_char, _p)',
+    '        unreal.EditorAssetLibrary.save_loaded_asset(_char)',
+    '        _assembled = True',
+    '    _sub.remove_object_to_edit(_char)',
+    "unreal.log('POF_MH_ASSEMBLED=' + str(_assembled))",
+  ].join('\n');
+}
+
+export interface AssembleResult {
+  ok: boolean;
+  /** Whether the character passed `can_build_meta_human` (assemble-ready). */
+  canBuild: boolean;
+  /** Whether `build_meta_human` ran and the asset was saved. */
+  assembled: boolean;
+  error?: string;
+  logs: string[];
+}
+
+/**
+ * Assemble a conformed MetaHumanCharacter. Gated by `can_build_meta_human`; when the MetaHuman
+ * Optional Content is missing this returns `{canBuild:false}` with the reason surfaced in `logs`.
+ */
+export async function assembleMetaHuman(characterPath: string, opts: AssembleOptions = {}): Promise<AssembleResult> {
+  const run = opts.runExperimentFn ?? runExperiment;
+  const res = await run({
+    python: buildAssemblePython(characterPath, opts),
+    capture: false,
+    settleMs: opts.settleMs ?? 300_000,
+  });
+  const canBuild = res.markers['POF_MH_CAN_BUILD'] === 'True';
+  const assembled = res.markers['POF_MH_ASSEMBLED'] === 'True';
+  return {
+    ok: res.ok && assembled,
+    canBuild,
+    assembled,
+    error: res.error ?? (!canBuild
+      ? 'not assemble-ready (can_build_meta_human=False) — install the MetaHuman Optional Content (Epic Launcher → UE 5.8 → Options → "MetaHuman Creator Core Data"); see logs for the exact reason'
+      : !assembled ? 'build_meta_human did not complete' : undefined),
+    logs: res.logs,
+  };
+}
