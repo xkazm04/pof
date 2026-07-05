@@ -52,9 +52,15 @@ describe('<ChartPanel variant="bars" />', () => {
     expect(screen.getByText('50')).toBeTruthy();
     expect(screen.getByText('100')).toBeTruthy();
     expect(screen.getByText('80')).toBeTruthy();
-    // 3 inner motion bars rendered.
-    const innerBars = container.querySelectorAll('div[style*="background"][style*="rgb"]');
-    expect(innerBars.length).toBeGreaterThanOrEqual(3);
+    // One row per datum: the figure holds 3 row wrappers. (Theme colors are now CSS
+    // custom properties — var(--lab-*) — so assert structure + token usage, not an
+    // rgb() literal, which the theme's CSS-variable migration made obsolete.)
+    const rowWrappers = container.querySelectorAll('div[role="figure"] > div');
+    expect(rowWrappers).toHaveLength(3);
+    const themedBars = Array.from(container.querySelectorAll('div')).filter((d) =>
+      (d.getAttribute('style') ?? '').includes('var(--lab'),
+    );
+    expect(themedBars.length).toBeGreaterThanOrEqual(1);
   });
 
   it('exposes an accessible figure role with the supplied aria-label', () => {

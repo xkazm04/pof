@@ -92,6 +92,33 @@ function safeAccept(accept: Checker, data: Record<string, unknown>): AcceptanceR
   }
 }
 
+/**
+ * The server-side acceptance Checker for a (catalog, step), or null when the catalog
+ * has no registered pipeline. Bespoke Items specs and synthetic catalogs (loot-filter)
+ * have no server-importable checker, so the server genuinely can't re-derive them.
+ */
+export function serverCheckerFor(catalogId: string, step: string): Checker | null {
+  const pipeline = getCatalogPipeline(catalogId);
+  if (!pipeline) return null;
+  return pipeline.steps.find((s) => s.label === step)?.accept ?? null;
+}
+
+/**
+ * Grade a submitted artifact with the server's own checker — the caller never self-grades.
+ * `graded` is false when no server checker exists (the caller's status must then stand).
+ * A registered step whose checker throws yields `{ graded: true, result: null }`, so a
+ * caller can never turn "checker didn't resolve" into an optimistic pass.
+ */
+export function gradeArtifact(
+  catalogId: string,
+  step: string,
+  data: Record<string, unknown>,
+): { graded: boolean; result: AcceptanceResult | null } {
+  const checker = serverCheckerFor(catalogId, step);
+  if (!checker) return { graded: false, result: null };
+  return { graded: true, result: safeAccept(checker, data) };
+}
+
 /** Map a seeded entity to the `LabEntity` shape the step `produce`/`accept` expect. */
 function toLabEntity(e: StoredCatalogEntity) {
   return { id: e.id, name: e.name, lifecycle: e.lifecycle, data: e.data };
