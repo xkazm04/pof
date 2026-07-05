@@ -115,6 +115,13 @@ describe('formatGotchas', () => {
     expect(out).toMatch(/Phase channel|root motion/i);
   });
 
+  it('tells GAS sessions to author abilities incrementally, not one-shot the whole system', () => {
+    const out = formatGotchas('ue-cpp');
+    expect(out).toMatch(/increment|one at a time|one coupled piece|small.*step/i);
+    expect(out).toMatch(/one.?shot|whole.*(system|ability)|entire ability/i);
+    expect(out).toMatch(/tag|Input Action|GameplayEffect/);
+  });
+
   it('returns an empty string for web', () => {
     expect(formatGotchas('web')).toBe('');
   });
