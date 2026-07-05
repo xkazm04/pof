@@ -1,16 +1,24 @@
 # Recipe / handoff — AI character mesh → UE 5.8 MetaHuman conform (the auto-rig bridge)
 
-> Research-originated **recipe + handoff** (not built). From the `/research` run 2026-07-05 on "From AI to Metahuman — Best New UE 5.8 Workflow for Custom Character" (Stefan 3D AI). This is the **concrete, verified end-to-end recipe** for [Candidate B](../ue5-capability-integration-candidates.md#candidate-b--generated-mesh--metahuman-conform-closes-the-auto-rig-gap-) — the "generated 3D shape has no rig" gap in PoF's asset pipeline. Effort **XL** and **externally blocked** (UE 5.8 not installed locally; conform is editor-dependent) → spec/handoff per the action-by-effort rule, plus a `descoped-reopenable` trigger.
+> Research-originated **recipe + handoff** (not built). From the `/research` run 2026-07-05 on "From AI to Metahuman — Best New UE 5.8 Workflow for Custom Character" (Stefan 3D AI). This is the **concrete, verified end-to-end recipe** for [Candidate B](../ue5-capability-integration-candidates.md#candidate-b--generated-mesh--metahuman-conform-closes-the-auto-rig-gap-) — the "generated 3D shape has no rig" gap in PoF's asset pipeline. Effort **XL** → spec/handoff per the action-by-effort rule. **UE 5.8 is installed locally** (not an install blocker); the remaining dependency is a live editor session (conform is editor-dependent) + Asset Forge wiring.
 
 ## Why this closes a real gap
 
 PoF's official asset pipeline (impact-map `visual-gen`) is **Leonardo 2D → Hunyuan3D-2 / TripoSR shape → CLIP/geometry/Qwen-VL critique** — a **shape-only** output with **no rig**, so the generated character is not animatable. `rig-presets.ts` names MetaHuman only as a *retarget target* (bone table), with an empty `mixamoMapping` and the comment "MetaHuman requires custom retargeting workflow." UE 5.8's **Mesh-to-MetaHuman conform** *is* that custom workflow: it turns an arbitrary-topology human mesh into a fully-rigged MetaHuman (facial + body rig, Live Link, markerless-mocap-ready). It's the missing `design → 3D → playable character` link, and it retires the placeholder UniRig path.
 
-## Automation reality (verified 2026-07-05)
+## Automation reality — GROUND-TRUTHED on the real install (2026-07-05)
 
-- **Conform is scriptable** — 5.8 exposes almost every Creator op (sculpt, **conform**, wardrobe, **rigging**, texture synthesis) via Python/Blueprint; it added `GetFaceModelCoefficients`/`SetFaceModelCoefficients` (conform-to-PCA), a batch-processing API for captured performance data, and a `MetaHumanGenerator` MCP Toolset (instantiate a MetaHuman, set eye/skin/body-shape).
-- **…but editor-dependent, not headless.** Epic documents **no commandlet** for the conform itself (only `ConvertLegacyDNAAssets` for DNA migration). Dispatch conform through the **PoF Bridge (editor-attached Python at `:30040`)**, not a headless `-run=pythonscript` commandlet.
-- **Manual fallback is expected.** Auto-solve mis-detects complex/custom topology (fused fingers → 4 markers on 2). A fully-autonomous path needs either (a) input-mesh prep good enough that auto-solve never mis-detects, or (b) a scripted point-alignment / `SetFaceModelCoefficients` correction step. Prep guidance is the cheap lever — see the gotchas below.
+Two headless introspection probes on **UE 5.8.0 Release** (`UnrealEditor-Cmd PoF.uproject -run=pythonscript -nullrhi`) settle the feasibility question — and the answer is **stronger than the release notes imply**:
+
+- **The full conform API is Python-exposed and loads in a HEADLESS commandlet** — no editor GUI, no `-nullrhi`-blocker. Verified methods on `unreal.MetaHumanCharacterEditorSubsystem`:
+  - `conform_to_target_meshes` — **the "conform to a custom mesh" entry point.**
+  - `conform_body`, `conform_body_to_target`, `set_body_mesh`, `set_body_joints`, `set_body_constraints`.
+  - `get_face_model_coefficients` / `set_face_model_coefficients` — the exact conform-to-PCA API from the 5.8 notes.
+  - `get_mesh_for_body_conforming{,_from_dna,_from_template}`, `get_joints_for_body_conforming{,_from_dna,_from_template}`, `get_preset_body_key_points`, `get_mesh_data_for_conforming`.
+  - Plus the legacy MetaHuman-Identity path: `MetaHumanIdentityFace.conform`, `is_conformal_rig_valid`, and the `MetaHumanCharacterBodyFitOptions.FIT_FROM_MESH_ONLY / _AND_SKELETON / _TO_FIXED_SKELETON` fit modes.
+- **The catch that hid it:** these classes live in the **`MetaHumanCharacter` (Experimental) plugin, which `PoF.uproject` does NOT enable** — with the project's default plugin set the API is absent (probe 1: 108 MH classes, `HAS_MetaHumanCharacter=False`). Enabling it (`-EnablePlugins=MetaHumanCharacter`, or add it to the `.uproject`) jumps to **243 MH classes** and surfaces the full subsystem (probe 2). So Candidate B's original "scriptable, headless" claim is **vindicated** once the plugin is on — the earlier "editor-dependent, no commandlet" tempering (from the release-notes' silence) was too pessimistic.
+- **Caveat (fidelity, not availability):** without the **MetaHuman Optional Content** installed the plugin logs *"initialized with limited features"* — the API loads but some presets/textures are limited. Install the optional content for full-fidelity conform output.
+- **Manual point-align remains a QUALITY concern, not an API gap.** Auto-solve mis-detects complex topology (fused fingers → 4 markers on 2). Mitigate with input-mesh prep (the cheap lever) and/or a scripted correction via `set_face_model_coefficients` / the body-key-points API — both now confirmed callable headlessly. See the gotchas below.
 
 ## The recipe (grounded in the video)
 
@@ -34,10 +42,16 @@ PoF's official asset pipeline (impact-map `visual-gen`) is **Leonardo 2D → Hun
 - **PoF Bridge (`:30040`)** — a `conform` step that runs the MetaHuman Python in the attached editor (NOT a headless commandlet), reports the DNA path + skeletal-mesh asset back.
 - Reuse the **mesh-critique / VLM tiers** (`mesh-critique.ts`, `pof_vlm_critique.py`) as the post-conform quality gate (rig integrity + on-model check), and the L4 visual critic for the final in-engine frame.
 
-## Blocker & reconsider trigger
+## Status & next step (NOT install-blocked)
 
-**Blocked on:** a live UE 5.8 editor (5.8 not installed; engine targets 5.7) to verify the scripted in-editor conform end-to-end, and on Asset Forge generation being wired to feed it.
-**Reconsider when:** UE 5.8 is installed locally / the PoF Bridge runs 5.8 — then prototype the scripted conform (`Get/SetFaceModelCoefficients` + the MetaHumanGenerator Toolset) against a Hunyuan/Tripo character output and measure how often the manual point-align fallback is actually needed.
+**UE 5.8.0 is installed** (`C:/Program Files/Epic Games/UE_5.8`; `PoF.uproject` EngineAssociation `5.8`) and the conform API is **verified headless-scriptable** (above). This is **no longer an install/feasibility blocker** — it's a prototype-and-wire task. Remaining work, in order:
+
+1. **Enable the `MetaHumanCharacter` (Experimental) plugin** in `PoF.uproject` (currently off) and **install the MetaHuman Optional Content** (removes the "limited features" cap).
+2. **Prototype script** (headless is fine): import a generated GLB → `MetaHumanCharacterEditorSubsystem.conform_to_target_meshes` / `set_body_mesh` → save DNA → generate skeletal mesh → export. Dispatch via the PoF Bridge or the `ue-experiment` runner (both already spawn 5.8 Python).
+3. **Wire Asset Forge → conform** (`AutoRigView.tsx` "Conform to MetaHuman" path) and **measure the auto-solve failure rate** on real Hunyuan/Tripo output — that determines whether a scripted point-align correction step is needed or input-prep alone suffices.
+4. Gate the result with the mesh-critique / L4 visual critic.
+
+Repro of the ground-truth probe: `UnrealEditor-Cmd PoF.uproject -run=pythonscript -script=<probe> -EnablePlugins=MetaHumanCharacter -nullrhi -unattended -NoLiveCoding -abslog=<log>` then grep the log.
 
 ## Sources
 
