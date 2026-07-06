@@ -23,7 +23,7 @@ const spec: StepSpec = {
 };
 
 const status = () => screen.getByTestId('acceptance-banner').getAttribute('data-status');
-const produce = () => fireEvent.click(screen.getByRole('button', { name: /Generate Icon 2D Art/ }));
+const produce = () => fireEvent.click(screen.getByRole('button', { name: /Produce Icon 2D Art/ }));
 
 describe('ArchetypeStep gallery archetype', () => {
   beforeEach(() => { useLabPipelineStore.setState({ byEntity: {} }); localStorage.clear(); });

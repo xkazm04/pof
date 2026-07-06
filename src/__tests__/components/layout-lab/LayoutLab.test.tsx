@@ -45,7 +45,7 @@ describe('UI identity lab (Blueprint baseline · Items example)', () => {
     expect(screen.getByText(/at least 300 characters/)).toBeTruthy();
     expect(screen.getByText('Current brief')).toBeTruthy();   // a View panel label
     expect(screen.getByText('Produce')).toBeTruthy();          // the Produce panel label
-    expect(screen.getByText(/Generate with CLI/)).toBeTruthy();
+    expect(screen.getByText(/Produce brief/)).toBeTruthy();
   });
 
   it('Economy step renders charts + power-score acceptance', () => {
@@ -74,7 +74,7 @@ describe('UI identity lab (Blueprint baseline · Items example)', () => {
     expect(screen.getByText('0 / 300 chars')).toBeTruthy();
     expect(screen.getByText('No brief yet — run Produce to generate one.')).toBeTruthy();
     // run the step's CLI produce → data is persisted, gate flips to PASS, View shows the brief.
-    fireEvent.click(screen.getByText(/Generate with CLI/));
+    fireEvent.click(screen.getByText(/Produce brief/));
     expect(screen.queryByText('No brief yet — run Produce to generate one.')).toBeNull();
     expect(screen.getByText(/mid-tier martial weapon/)).toBeTruthy();
     expect(screen.getAllByText('PASS').length).toBeGreaterThan(0);

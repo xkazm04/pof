@@ -38,7 +38,7 @@ export function ItemAnimations({ t, entity, step }: StepProps) {
           </div>
         ) },
         { label: 'Produce', node: (
-          <CliProduce t={t} label="Generate / retarget (CLI)" rows={3}
+          <CliProduce t={t} label="Produce anim / retarget" rows={3}
             note={`Writes A_${slug(entity.name)}_Equip + pickup/idle montages to the UE project.`}
             buildPrompt={(dir) => `Generate/retarget pickup + equip + idle clips for ${entity.name} from SK_Mannequin. ${dir}`}
             onComplete={runProduce} />
@@ -65,7 +65,7 @@ export function ItemVFX({ t, entity, step }: StepProps) {
           </div>
         ) },
         { label: 'Produce', node: (
-          <CliProduce t={t} label="Generate Niagara (CLI)" rows={3}
+          <CliProduce t={t} label="Produce Niagara" rows={3}
             note={`Writes NS_${slug(entity.name)}_Use bound to anim notifies.`}
             buildPrompt={(dir) => `Author Niagara variants (idle/equip/use) for ${entity.name} keyed to anim notifies, under ${CAP}ms GPU. ${dir}`}
             onComplete={runProduce} />

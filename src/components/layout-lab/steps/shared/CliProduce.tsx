@@ -54,7 +54,7 @@ export function CliProduce({ t, label, buildPrompt, onComplete, note, placeholde
     const err = validate?.(direction);
     if (err) { setResult({ ok: false, msg: err }); return; }
     const ctx = { direction, prompt: buildPrompt(direction) };
-    const successMsg = note ?? 'Dispatched · written to the UE project + DB.';
+    const successMsg = note ?? 'Recorded · step config + prompt saved to the pipeline.';
 
     if (!minDispatchMs) {
       // Legacy synchronous path (unchanged behavior).
@@ -92,6 +92,12 @@ export function CliProduce({ t, label, buildPrompt, onComplete, note, placeholde
           {showPrompt ? 'hide prompt' : 'view prompt'}
         </button>
       </div>
+      {/* Honesty note (functional-honesty): the lab is the design/config surface — it records the
+          step config + the exact prompt that drives Acceptance. The real asset is produced by a CLI
+          session or the gate drain, not synchronously here. Keeps the UI from overclaiming. */}
+      <span className={t.fontMono} style={{ fontSize: 13, color: t.muted, lineHeight: 1.5 }}>
+        Records this step&apos;s config + the exact prompt that drives Acceptance. The asset itself is produced by a CLI session or the gate drain — not in this panel.
+      </span>
       {showPrompt && (
         <pre className={t.fontMono} style={{ fontSize: 14, color: t.muted, whiteSpace: 'pre-wrap', margin: 0, lineHeight: 1.55, padding: 10, border: `1px solid ${t.line}`, borderRadius: t.glass ? 8 : 0 }}>
           {buildPrompt(direction)}

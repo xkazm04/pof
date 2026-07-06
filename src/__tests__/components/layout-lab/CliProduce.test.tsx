@@ -25,7 +25,7 @@ describe('CliProduce dispatching state', () => {
     expect(dispatchingBtn.disabled).toBe(true);
 
     await waitFor(() => expect(screen.queryByText('Dispatching…')).toBeNull());
-    expect(screen.getByText(/Dispatched · written to the UE project/)).toBeTruthy();
+    expect(screen.getByText(/Recorded · step config \+ prompt saved to the pipeline/)).toBeTruthy();
     expect((screen.getByRole('button', { name: /Run It \(dispatch\)/ }) as HTMLButtonElement).disabled).toBe(false);
   });
 
@@ -63,7 +63,19 @@ describe('CliProduce dispatching state', () => {
 
     await act(async () => { resolveFn?.(); });
     await waitFor(() => expect(screen.queryByText('Dispatching…')).toBeNull());
-    expect(screen.getByText(/Dispatched/)).toBeTruthy();
+    expect(screen.getByText(/Recorded/)).toBeTruthy();
+  });
+
+  it('is functionally honest — states config+prompt are recorded, never claims a CLI ran or a UE asset was written', () => {
+    const { container } = render(<CliProduce t={t} label="Produce Icon Set" buildPrompt={() => 'p'} onComplete={vi.fn()} />);
+    // Persistent honesty note sets expectations up front.
+    expect(screen.getByText(/produced by a CLI session or the gate drain — not in this panel/i)).toBeTruthy();
+    // The old overclaim must not appear anywhere (no "written to the UE project").
+    expect(container.textContent ?? '').not.toMatch(/written to the UE project/i);
+    // On success the message is honest about scope (recorded to the pipeline), not "written to UE".
+    fireEvent.click(screen.getByRole('button', { name: /Produce Icon Set/ }));
+    expect(screen.getByText(/Recorded · step config \+ prompt saved to the pipeline/)).toBeTruthy();
+    expect(screen.queryByText(/written to the UE project/i)).toBeNull();
   });
 
   it('reports an error if onComplete rejects', async () => {

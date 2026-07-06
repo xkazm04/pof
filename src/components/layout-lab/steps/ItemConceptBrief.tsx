@@ -39,7 +39,7 @@ export function ItemConceptBrief({ t, entity, step }: StepProps) {
         {
           label: 'Produce',
           node: (
-            <CliProduce t={t} label="Generate with CLI" rows={4}
+            <CliProduce t={t} label="Produce brief" rows={4}
               defaultDirection="tone: dependable, earned — a soldier's tool"
               note="Saved to the pipeline store · feeds the UE item description."
               buildPrompt={(dir) => `Write a 300+ char concept brief for ${entity.name} (mid-tier martial weapon). ${dir}`}

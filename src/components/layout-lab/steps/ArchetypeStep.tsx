@@ -105,7 +105,7 @@ export function ArchetypeStep({ t, entity, step, spec, catalogId }: { t: LabThem
   };
 
   const cli = (onComplete: (ctx?: { direction: string; prompt: string }) => void) => (
-    <CliProduce t={t} label={`Generate ${spec.label} (CLI)`} rows={3}
+    <CliProduce t={t} label={`Produce ${spec.label}`} rows={3}
       defaultDirection={spec.defaultDirection} note={spec.produceNote}
       buildPrompt={buildPrompt} onComplete={onComplete} />
   );
@@ -122,9 +122,10 @@ export function ArchetypeStep({ t, entity, step, spec, catalogId }: { t: LabThem
       { label: 'Selected', node: (
         <div style={{ display: 'grid', gap: 8 }}>
           <div style={{ aspectRatio: '1', maxWidth: 160, borderRadius: t.glass ? 10 : 2, background: sel?.swatch ?? t.panel, border: `1px solid ${t.line}` }} />
+          <span style={{ fontSize: 12, color: t.muted }}>Deterministic seed preview — not the generated asset.</span>
           {sel && assetPath
-            ? <span className={t.fontMono} style={{ fontSize: 14, color: t.ok }}>✓ writes {assetPath}</span>
-            : <span style={{ fontSize: 14, color: t.muted }}>Pick a candidate; the choice + its prompt persist and write the asset path.</span>}
+            ? <span className={t.fontMono} style={{ fontSize: 14, color: t.ok }}>✓ asset target: {assetPath} <span style={{ color: t.muted }}>(written by the drain)</span></span>
+            : <span style={{ fontSize: 14, color: t.muted }}>Pick a candidate; the choice + its prompt persist. The asset is written to that path when the gate drain runs.</span>}
         </div>
       ) },
       { label: 'Produce', node: cli((ctx) => generate(ctx?.direction ?? spec.defaultDirection ?? '', ctx?.prompt ?? buildPrompt(spec.defaultDirection ?? ''))) },

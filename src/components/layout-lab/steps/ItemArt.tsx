@@ -67,7 +67,7 @@ export function ItemIcon2D({ t, entity, step }: StepProps) {
           </div>
         ) },
         { label: 'Produce', node: (
-          <CliProduce t={t} label="Generate via Leonardo (CLI)" rows={3}
+          <CliProduce t={t} label="Produce via Leonardo" rows={3}
             defaultDirection={DEFAULT_DIR}
             note="Every batch is kept; selecting a candidate writes T_<item>_Icon + stamps its prompt."
             buildPrompt={buildPrompt}
@@ -111,7 +111,7 @@ export function Item3DGen({ t, entity, step }: StepProps) {
             emptyHint="No mesh candidates yet — run Produce to generate a batch of LOD0 variants." />
         ) },
         { label: 'Produce', node: (
-          <CliProduce t={t} label="Generate mesh (CLI)" rows={3}
+          <CliProduce t={t} label="Produce mesh" rows={3}
             defaultDirection={DEFAULT_DIR}
             note={`Each batch is kept; the selected variant writes SM_${slug(entity.name)} + auto-LODs.`}
             buildPrompt={buildPrompt}
@@ -157,7 +157,7 @@ export function ItemMaterial({ t, entity, step }: StepProps) {
             emptyHint="No material looks yet — run Produce to generate a batch of surface treatments." />
         ) },
         { label: 'Produce', node: (
-          <CliProduce t={t} label="Generate PBR maps (CLI)" rows={3}
+          <CliProduce t={t} label="Produce PBR maps" rows={3}
             defaultDirection={DEFAULT_DIR}
             note={`Each look is kept; the selected one writes MI_${slug(entity.name)} (Albedo/Normal/ORM).`}
             buildPrompt={buildPrompt}

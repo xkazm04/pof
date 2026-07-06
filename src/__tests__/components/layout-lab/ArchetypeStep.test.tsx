@@ -23,7 +23,7 @@ describe('ArchetypeStep', () => {
   it('renders empty state + pending, then persists + passes on Produce', () => {
     render(<ArchetypeStep t={t} entity={entity} step="Concept Brief" spec={spec} />);
     expect(screen.getByText('No brief yet')).toBeTruthy();
-    fireEvent.click(screen.getByText(/Generate/));
+    fireEvent.click(screen.getByRole('button', { name: /Produce Concept Brief/ }));
     expect(screen.queryByText('No brief yet')).toBeNull();
     expect(screen.getAllByText(/PASS/).length).toBeGreaterThan(0);
   });

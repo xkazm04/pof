@@ -23,7 +23,7 @@ describe('ItemArt persistent candidate gallery', () => {
     expect(status()).toBe('pending');
     expect(screen.getByTestId('candidate-gallery-empty')).toBeTruthy();
 
-    generate(/Generate via Leonardo/);
+    generate(/Produce via Leonardo/);
     expect(status()).toBe('pass');                       // derived from the projected `selected`
     expect(screen.getByTestId('candidate-gallery').textContent).toContain('4 candidates · 1 re-roll kept');
     expect((screen.getByTestId('candidate-b0-c0') as HTMLButtonElement).getAttribute('aria-pressed')).toBe('true');
@@ -31,8 +31,8 @@ describe('ItemArt persistent candidate gallery', () => {
 
   it('Icon 2D: a re-roll keeps the prior batch (history not discarded) and re-selecting an older candidate persists', () => {
     render(<ItemIcon2D t={LIGHT} entity={entity} step="Icon 2D Art" />);
-    generate(/Generate via Leonardo/);   // batch 0
-    generate(/Generate via Leonardo/);   // batch 1 (re-roll) — prior batch kept
+    generate(/Produce via Leonardo/);   // batch 0
+    generate(/Produce via Leonardo/);   // batch 1 (re-roll) — prior batch kept
 
     expect(screen.getByTestId('candidate-gallery').textContent).toContain('8 candidates · 2 re-rolls kept');
     expect((screen.getByTestId('candidate-b1-c0') as HTMLButtonElement).getAttribute('aria-pressed')).toBe('true');
@@ -51,7 +51,7 @@ describe('ItemArt persistent candidate gallery', () => {
   it('3D Generation: Produce yields a batch of tri-budget variants and passes the LOD0 cap', () => {
     render(<Item3DGen t={LIGHT} entity={entity} step="3D Generation" />);
     expect(status()).toBe('pending');
-    generate(/Generate mesh/);
+    generate(/Produce mesh/);
     expect(status()).toBe('pass');
     // "4200 tris" appears both as the LOD0 budget and the candidate caption — scope to the tile.
     expect(within(screen.getByTestId('candidate-b0-c0')).getByText('4200 tris')).toBeTruthy();
@@ -61,7 +61,7 @@ describe('ItemArt persistent candidate gallery', () => {
   it('Material / Texture: Produce yields named looks each carrying the required PBR maps', () => {
     render(<ItemMaterial t={LIGHT} entity={entity} step="Material / Texture" />);
     expect(status()).toBe('pending');
-    generate(/Generate PBR maps/);
+    generate(/Produce PBR maps/);
     expect(status()).toBe('pass');
     expect(screen.getByText('worn iron')).toBeTruthy();      // candidate caption (look name)
     expect(screen.getByTestId('candidate-gallery').textContent).toContain('3 candidates · 1 re-roll kept');

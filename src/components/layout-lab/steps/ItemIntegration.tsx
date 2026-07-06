@@ -70,7 +70,7 @@ export function ItemTooltip({ t, entity, step }: StepProps) {
           </div>
         ) },
         { label: 'Produce', node: (
-          <CliProduce t={t} label="Generate tooltip (CLI)" rows={3}
+          <CliProduce t={t} label="Produce tooltip" rows={3}
             note="Writes the tooltip layout + compare-vs-equipped delta view."
             buildPrompt={(dir) => `Generate the tooltip layout for ${entity.name} (all stat fields + compare-vs-equipped deltas). ${dir}`}
             onComplete={runProduce} />
