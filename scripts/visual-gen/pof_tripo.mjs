@@ -59,6 +59,7 @@ async function main() {
   if (a['face-limit']) opt.face_limit = parseInt(a['face-limit'], 10);
   if (a.pbr) opt.pbr = true;
   if (a.quad) opt.quad = true;
+  if (a['texture-quality']) opt.texture_quality = a['texture-quality']; // standard | detailed
 
   let body;
   try {
