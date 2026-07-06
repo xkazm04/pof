@@ -68,10 +68,11 @@ export const GENERATION_PROVIDERS: GenerationProvider[] = [
   {
     id: 'tripo3d',
     name: 'Tripo3D',
-    status: 'coming-soon',
+    status: 'free',
     modes: ['text-to-3d', 'image-to-3d'],
-    description: 'Cloud-based fast 3D generation. Good for rapid prototyping. Paid API.',
+    description: 'Cloud 3D generation (Tripo REST API) — the CLOUD route next to the local open-source route. Runs via src/lib/visual-gen/tripo-runner.ts (upload → create task → poll → download .glb); needs env TRIPO_API_KEY (free tier = 200 credits/mo, 1 concurrent task). Adds TEXT-to-3D (the local Hunyuan/TripoSR route is image-only) and PBR-textured image-to-3D with no local VRAM. FREE-TIER OUTPUT IS NON-COMMERCIAL (CC BY 4.0) — like Hunyuan3D; TripoSR (MIT) stays the commercial-safe fallback.',
     isLocal: false,
+    runnerBacked: true,
   },
   {
     id: 'rodin',

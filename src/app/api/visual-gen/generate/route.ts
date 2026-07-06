@@ -6,15 +6,19 @@ import { apiSuccess, apiError } from '@/lib/api-utils';
 import { parseImageDataUrl } from '@/lib/visual-gen/triposr-runner';
 import { startTriposrJob } from '@/lib/visual-gen/triposr-job-store';
 import { startHunyuanJob } from '@/lib/visual-gen/hunyuan-job-store';
+import { startTripoJob } from '@/lib/visual-gen/tripo-job-store';
 
 /**
  * POST /api/visual-gen/generate
  *
- * Local image-to-3D pipeline. The OFFICIAL provider is 'hunyuan3d' (Hunyuan3D-2 shape,
- * ~360K-face high-detail); 'triposr' is the MIT/commercial-safe fallback. Both decode
- * the uploaded reference image, write it server-side, and start a job (poll
- * GET /api/visual-gen/generate/status?jobId=...). MCP-backed providers (rodin) go
- * through /api/blender-mcp/generate, not here.
+ * Image/text-to-3D pipeline. Two routes behind one endpoint:
+ *  - LOCAL (open-source, GPU): 'hunyuan3d' (OFFICIAL, ~360K-face) + 'triposr' (MIT
+ *    fallback) — image-to-3d only; decode the uploaded image, write it server-side,
+ *    start a job.
+ *  - CLOUD (Tripo3D REST API): 'tripo3d' — text-to-3d OR image-to-3d, no local VRAM,
+ *    PBR-textured output (free tier is non-commercial). Needs env TRIPO_API_KEY.
+ * Both start a job (poll GET /api/visual-gen/generate/status?jobId=...). MCP-backed
+ * providers (rodin) go through /api/blender-mcp/generate, not here.
  */
 export async function POST(request: NextRequest) {
   try {
@@ -22,30 +26,55 @@ export async function POST(request: NextRequest) {
       mode?: string;
       providerId?: string;
       imageDataUrl?: string;
+      prompt?: string;
       mcResolution?: number;
     };
-    const { mode, providerId, imageDataUrl, mcResolution } = body;
+    const { mode, providerId, imageDataUrl, prompt, mcResolution } = body;
 
     if (!mode || !providerId) return apiError('Missing required fields: mode, providerId', 400);
+
+    const outFor = (id: string) => {
+      const stamp = Date.now();
+      const outDir = join(process.cwd(), 'generated', id).replace(/\\/g, '/');
+      mkdirSync(outDir, { recursive: true });
+      return { stamp, outputPath: join(outDir, `${stamp}.glb`).replace(/\\/g, '/') };
+    };
+    const imageToFile = (id: string, stamp: number) => {
+      const img = imageDataUrl ? parseImageDataUrl(imageDataUrl) : null;
+      if (!img) return null;
+      const inPath = join(tmpdir(), `pof_${id}_in_${stamp}.${img.ext}`).replace(/\\/g, '/');
+      writeFileSync(inPath, img.buffer);
+      return inPath;
+    };
 
     if (providerId === 'hunyuan3d' || providerId === 'triposr') {
       if (mode !== 'image-to-3d') return apiError(`${providerId} supports image-to-3d only`, 400);
       if (!imageDataUrl) return apiError('Missing imageDataUrl for image-to-3d', 400);
-      const img = parseImageDataUrl(imageDataUrl);
-      if (!img) return apiError('imageDataUrl must be a base64 PNG/JPG/WebP data URL', 400);
-
-      const stamp = Date.now();
-      const inPath = join(tmpdir(), `pof_${providerId}_in_${stamp}.${img.ext}`).replace(/\\/g, '/');
-      writeFileSync(inPath, img.buffer);
-
-      const outDir = join(process.cwd(), 'generated', providerId).replace(/\\/g, '/');
-      mkdirSync(outDir, { recursive: true });
-      const outputPath = join(outDir, `${stamp}.glb`).replace(/\\/g, '/');
+      const { stamp, outputPath } = outFor(providerId);
+      const inPath = imageToFile(providerId, stamp);
+      if (!inPath) return apiError('imageDataUrl must be a base64 PNG/JPG/WebP data URL', 400);
 
       const jobId = providerId === 'hunyuan3d'
         ? startHunyuanJob({ imagePath: inPath, outputPath })
         : startTriposrJob({ imagePath: inPath, outputPath, mcResolution, fidelity: true });
       return apiSuccess({ jobId, provider: providerId, mode }, 202);
+    }
+
+    if (providerId === 'tripo3d') {
+      const { stamp, outputPath } = outFor('tripo3d');
+      if (mode === 'text-to-3d') {
+        if (!prompt?.trim()) return apiError('Missing prompt for text-to-3d', 400);
+        const jobId = startTripoJob({ mode: 'text-to-3d', prompt, outputPath, pbr: true });
+        return apiSuccess({ jobId, provider: 'tripo3d', mode }, 202);
+      }
+      if (mode === 'image-to-3d') {
+        if (!imageDataUrl) return apiError('Missing imageDataUrl for image-to-3d', 400);
+        const inPath = imageToFile('tripo3d', stamp);
+        if (!inPath) return apiError('imageDataUrl must be a base64 PNG/JPG/WebP data URL', 400);
+        const jobId = startTripoJob({ mode: 'image-to-3d', imagePath: inPath, outputPath, pbr: true });
+        return apiSuccess({ jobId, provider: 'tripo3d', mode }, 202);
+      }
+      return apiError('tripo3d supports text-to-3d and image-to-3d', 400);
     }
 
     return apiError(`Provider "${providerId}" is not wired for local generation (MCP providers use /api/blender-mcp/generate)`, 400);

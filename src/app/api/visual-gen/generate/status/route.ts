@@ -2,17 +2,19 @@ import { NextRequest } from 'next/server';
 import { apiSuccess, apiError } from '@/lib/api-utils';
 import { getTriposrJob } from '@/lib/visual-gen/triposr-job-store';
 import { getHunyuanJob } from '@/lib/visual-gen/hunyuan-job-store';
+import { getTripoJob } from '@/lib/visual-gen/tripo-job-store';
 
 /**
  * GET /api/visual-gen/generate/status?jobId=...
- * Polls an image-to-3D job — Hunyuan3D (official) or the TripoSR fallback (resolved by
- * trying either store): { status, meshPath?, verts?, faces?, previewPath?, critique?, error? }.
+ * Polls a 3D-gen job — local Hunyuan3D (official) / TripoSR fallback, or cloud Tripo3D
+ * (resolved by trying each store): { status, meshPath?, verts?, faces?, previewPath?,
+ * critique?, error? }.
  */
 export async function GET(req: NextRequest) {
   try {
     const jobId = req.nextUrl.searchParams.get('jobId');
     if (!jobId) return apiError('jobId is required', 400);
-    const job = getHunyuanJob(jobId) ?? getTriposrJob(jobId);
+    const job = getHunyuanJob(jobId) ?? getTriposrJob(jobId) ?? getTripoJob(jobId);
     if (!job) return apiError('generation job not found', 404);
     // TripoSR and Hunyuan results share most fields; the few that differ (device/clipMax
     // vs vramGb) are read loosely so one shape serves both providers.
