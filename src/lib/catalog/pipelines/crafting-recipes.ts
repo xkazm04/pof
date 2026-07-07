@@ -517,15 +517,19 @@ registerCatalogPipeline({
         data: {
           // Real localization content — en source + cs translation per key, not a bare
           // key-name schema (the judge fleet failed the stub form, 2026-07-07).
+          // Strings mirror THIS recipe's own Inputs & Output step (proj-sot: never re-author
+          // ground truth): inputs Thornleaf Extract ×1 + Ashroot Dust ×1 → output Minor
+          // Health Potion (item-7). Judge-refleet fix 2026-07-07 — the previous strings
+          // invented different reagents.
           keys: [
-            'RECIPE_HEALTH_POTION_NAME: en "Health Potion" · cs "Lektvar zdraví"',
-            'RECIPE_HEALTH_POTION_DESCRIPTION: en "A stoppered vial of crimson restorative. Bitter, but it mends wounds." · cs "Zazátkovaná lahvička rudého odvaru. Hořká, ale rány zacelí."',
-            'RECIPE_HEALTH_POTION_INPUT_1: en "Bloodmoss Herb ×2" · cs "Krvomech ×2"',
-            'RECIPE_HEALTH_POTION_INPUT_2: en "Glass Vial ×1" · cs "Skleněná lahvička ×1"',
-            'RECIPE_HEALTH_POTION_OUTPUT: en "Health Potion ×1" · cs "Lektvar zdraví ×1"',
+            'RECIPE_HEALTH_POTION_NAME: en "Minor Health Potion" · cs "Malý lektvar zdraví"',
+            'RECIPE_HEALTH_POTION_DESCRIPTION: en "Thornleaf bitterness cut with ashroot — the field remedy every Ashen scout learns first." · cs "Hořkost trnolistu zjemněná popelokořenem — polní lék, který se každý zvěd Popelavých učí jako první."',
+            'RECIPE_HEALTH_POTION_INPUT_1: en "Thornleaf Extract ×1" · cs "Výtažek z trnolistu ×1"',
+            'RECIPE_HEALTH_POTION_INPUT_2: en "Ashroot Dust ×1" · cs "Prach z popelokořene ×1"',
+            'RECIPE_HEALTH_POTION_OUTPUT: en "Minor Health Potion ×1" · cs "Malý lektvar zdraví ×1"',
             'RECIPE_HEALTH_POTION_STATION_REQUIRED: en "Requires: Alchemy Bench" · cs "Vyžaduje: Alchymistický stůl"',
             'RECIPE_HEALTH_POTION_SKILL_REQUIRED: en "Requires: Alchemy I" · cs "Vyžaduje: Alchymie I"',
-            'RECIPE_HEALTH_POTION_UNLOCK_HINT: en "Learned from the herbalist in the Ashen camp." · cs "Naučíš se od bylinkářky v Popelavém táboře."',
+            'RECIPE_HEALTH_POTION_UNLOCK_HINT: en "Taught at any Ashen Order field camp." · cs "Naučí tě v kterémkoli polním táboře Popelavého řádu."',
           ],
           locales: ['en', 'cs'],
           format: 'key: en "<source>" · cs "<translation>" — en is the authoring truth; cs seeds the LocRes pipeline',

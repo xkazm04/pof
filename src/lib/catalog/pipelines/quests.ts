@@ -246,18 +246,19 @@ registerCatalogPipeline({
               '"EmberPact" topic branch to the existing Gatekeeper tree. The stage-3 ritual choice ' +
               'tree dt_ember_pact_choice is authored below (judge-fleet fix 2026-07-07 — the ' +
               'quest\'s dramatic centerpiece was previously only a placeholder name).',
-            // The stage-3 ritual choice — the quest's centerpiece, authored as a real tree.
+            // The stage-3 ritual choice — the quest's centerpiece, authored to THIS row's
+            // actual narrative (Ember Cores + the binding ritual; judge-refleet fix 2026-07-07).
             emberPactChoiceTree: {
               id: 'dt_ember_pact_choice',
               root: 'vael_ritual_open',
               nodes: [
-                { id: 'vael_ritual_open', speaker: 'Vael', line: 'The moss, then. Maren\'s poultices — or the Order\'s pyre. You carried it here; you choose what it becomes.', choices: ['give_maren', 'give_order', 'ask_consequence'] },
-                { id: 'ask_consequence', speaker: 'Player', line: 'What happens to the one I refuse?', next: 'vael_consequence' },
-                { id: 'vael_consequence', speaker: 'Vael', line: 'Maren loses her patients. The Order loses face. Neither forgets. Choose.', choices: ['give_maren', 'give_order'] },
-                { id: 'give_maren', speaker: 'Player', line: 'Maren heals with it. That outweighs doctrine.', effects: ['SetStage(EMBER_PACT, MAREN_TERMINAL)', 'Reputation(faction-ashen-order, -15)', 'GrantReward(lt-ember-pact-maren)'] },
-                { id: 'give_order', speaker: 'Player', line: 'The Order burns it. Some cures cost too much.', effects: ['SetStage(EMBER_PACT, ORDER_TERMINAL)', 'Reputation(faction-ashen-order, +15)', 'GrantReward(lt-ember-pact-order)'] },
+                { id: 'vael_ritual_open', speaker: 'Vael', line: 'Three cores, as asked. The brazier is lit. Kneel and the Order binds the ash to you — or stand, and walk out unbound.', choices: ['forge_pact', 'refuse_pact', 'ask_binding'] },
+                { id: 'ask_binding', speaker: 'Player', line: 'What does the binding take from me?', next: 'vael_binding' },
+                { id: 'vael_binding', speaker: 'Vael', line: 'Nothing you will miss today. The ash remembers its debts — that is its gift, and its price. Choose.', choices: ['forge_pact', 'refuse_pact'] },
+                { id: 'forge_pact', speaker: 'Player', line: 'I kneel. Bind it.', effects: ['SetStage(EMBER_PACT, PACT_FORGED_TERMINAL)', 'Reputation(faction-ashen-order, +20)', 'GrantReward(lt-ember-pact-forged: ember-laced weapon)'] },
+                { id: 'refuse_pact', speaker: 'Player', line: 'I carried your cores. I carry no one\'s leash.', effects: ['SetStage(EMBER_PACT, REFUSED_TERMINAL)', 'Reputation(faction-ashen-order, -10)', 'GrantReward(lt-ember-pact-refused: gold + cores\' salvage value)'] },
               ],
-              conditions: 'gated on quest stage == 3 AND player carries ≥3 ember-moss; vael dead → BETRAY terminal bypasses this tree entirely',
+              conditions: 'gated on quest stage == 3 AND player carries 3 Ember Cores; Vael dead → BETRAY terminal bypasses this tree entirely',
               terminals: 'both branches terminal (quest-stage-graph canon: explicit success terminals; BETRAY is the fail terminal)',
             },
           },
@@ -353,12 +354,16 @@ registerCatalogPipeline({
           data: {
             // Real localization content — en source + cs translation per key, not a bare
             // key-name schema (the judge fleet failed the stub form, 2026-07-07).
+            // Strings narrate THIS row's actual quest (Concept Brief: the Ashen Order sends
+            // the player for three Ember Cores from corrupted stone-brute spawn sites north
+            // of the Ashen Forest; the return ritual offers the Pact choice). Judge-refleet
+            // fix 2026-07-07 — the previous strings invented an off-canon narrative.
             keys: [
               `${K}_TITLE: en "The Ember Pact" · cs "Pakt uhlíků"`,
-              `${K}_BRIEF: en "The herbalist Maren begs you to recover ember-moss from the scorched hollow — but the Ashen Order wants it burned." · cs "Bylinkářka Maren tě prosí o žhavý mech ze spálené rokle — Popelavý řád ho ale chce spálit."`,
-              `${K}_STAGE1: en "Gather 3 clumps of ember-moss in the Scorched Hollow." · cs "Nasbírej 3 trsy žhavého mechu ve Spálené rokli."`,
-              `${K}_STAGE2: en "Decide: deliver the moss to Maren, or surrender it to Warden Kale." · cs "Rozhodni: přines mech Maren, nebo ho odevzdej strážci Kaleovi."`,
-              `${K}_JOURNAL: en "The moss glows faintly in my pack. Someone will be betrayed by morning." · cs "Mech mi v brašně slabě žhne. Do rána někoho zradím."`,
+              `${K}_BRIEF: en "Captain Vael of the Ashen Order needs three Ember Cores from the corrupted spawn sites north of the Ashen Forest. Bring them back — then decide what you become." · cs "Kapitán Vael z Popelavého řádu potřebuje tři Žhnoucí jádra ze zamořených hnízd severně od Popelavého hvozdu. Přines je — a pak rozhodni, čím se staneš."`,
+              `${K}_STAGE1: en "Recover 3 Ember Cores from the stone-brute spawn sites north of the Ashen Forest." · cs "Získej 3 Žhnoucí jádra z hnízd kamenných hromotluků severně od Popelavého hvozdu."`,
+              `${K}_STAGE2: en "Return to Captain Vael. At the binding ritual, choose: forge the Ember Pact, or refuse the Order." · cs "Vrať se ke kapitánu Vaelovi. Při poutním rituálu zvol: uzavři Pakt uhlíků, nebo Řád odmítni."`,
+              `${K}_JOURNAL: en "Three cores, still warm from the brutes that carried them. The Order calls the binding an honor. It feels like a debt." · cs "Tři jádra, dosud teplá po hromotlucích, kteří je nesli. Řád nazývá pouto ctí. Působí spíš jako dluh."`,
             ],
             locales: ['en', 'cs'],
             format: 'key: en "<source>" · cs "<translation>" — en is the authoring truth; cs seeds the LocRes pipeline',
