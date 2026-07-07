@@ -30,6 +30,11 @@ export interface StepSpec {
   /** Optional CLI direction default + note for the Produce panel. */
   produceNote?: string;
   defaultDirection?: string;
+  /** Engine powering this step's Produce (e.g. 'Claude', 'Tripo', 'Leonardo',
+   *  'UE Python', 'Blender', 'Code') — surfaced on the /status health map, where it
+   *  also decides output-credibility (LLM text scales to quality; generative
+   *  3D/audio/2D output needs a real gate). Inferred heuristically when absent. */
+  engine?: string;
 }
 
 export interface CatalogPipeline {

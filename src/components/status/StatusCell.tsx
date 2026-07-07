@@ -1,31 +1,57 @@
 'use client';
 
-/** One swimlane cell: a colored block whose background encodes step readiness.
- *  Unwired steps render hollow (dark) so bottlenecks pop against proven lanes. */
-import type { StepCell } from '@/lib/status/statusModel';
-import { OPACITY_20, OPACITY_60 } from '@/lib/chart-colors';
+/** One swimlane cell, Blueprint-styled: names the ENGINE powering the step (the step
+ *  label moves to the second line + tooltip); background encodes the strict grade.
+ *  Unwired cells render hollow with a dashed border so bottlenecks pop. */
+import type { StepCell, CellGrade } from '@/lib/status/statusModel';
 
-export function StatusCell({ cell, color }: { cell: StepCell; color?: string }) {
+/** Grade → lab token. Green (ok) is reserved for gate-proven; ungated generative
+ *  output holds at warn; trusted (LLM/code) uses the blueprint ink. */
+export const GRADE_VAR: Record<CellGrade, string> = {
+  verified: 'var(--lab-ok)',
+  trusted: 'var(--lab-ink)',
+  ungated: 'var(--lab-warn)',
+  deferred: 'var(--lab-deferred)',
+  attention: 'var(--lab-bad)',
+  pending: 'var(--lab-accent-bg)',
+  unwired: 'transparent',
+};
+
+export function StatusCell({ cell }: { cell: StepCell }) {
   const { counts } = cell;
   const title = [
-    `${cell.label} — ${cell.readiness}${cell.tier ? ` (${cell.tier})` : ''}`,
+    `${cell.label} — ${cell.grade}${cell.tier ? ` (${cell.tier})` : ''} · engine: ${cell.engine}`,
     `pass ${counts.pass} · deferred ${counts.deferred} · pending ${counts.pending} · fail ${counts.fail}`,
     cell.reason ? `reason: ${cell.reason}` : '',
   ].filter(Boolean).join('\n');
 
-  const unwired = cell.readiness === 'unwired' || !color;
+  const unwired = cell.grade === 'unwired';
+  const color = GRADE_VAR[cell.grade];
   return (
     <div
       role="img"
       aria-label={title}
       title={title}
-      className={`h-9 w-28 rounded-sm border px-1.5 py-1 text-xs leading-tight overflow-hidden select-none ${
-        unwired ? 'border-slate-800 text-slate-500 bg-transparent' : 'text-slate-200'
-      }`}
-      style={unwired ? undefined : { background: color + OPACITY_20, borderColor: color + OPACITY_60 }}
+      style={{
+        height: 40,
+        width: 118,
+        padding: 'var(--lab-s1) var(--lab-s2)',
+        border: unwired ? '1px dashed var(--lab-line)' : `1px solid color-mix(in srgb, ${color} 70%, transparent)`,
+        borderRadius: 'var(--lab-r-sm)',
+        background: unwired ? 'transparent' : `color-mix(in srgb, ${color} 24%, transparent)`,
+        color: unwired ? 'var(--text-subtle)' : 'var(--lab-text)',
+        fontSize: 'var(--lab-fs-xs)',
+        lineHeight: 1.25,
+        overflow: 'hidden',
+        userSelect: 'none',
+      }}
     >
-      <span className="block truncate">{cell.label}</span>
-      <span className="block truncate opacity-70">{unwired ? 'unwired' : `${cell.readiness}${cell.tier ? ` · ${cell.tier}` : ''}`}</span>
+      <span style={{ display: 'block', fontFamily: 'var(--lab-font-mono)', fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+        {unwired ? '—' : cell.engine}
+      </span>
+      <span style={{ display: 'block', opacity: 0.75, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+        {cell.label}{!unwired && cell.tier ? ` · ${cell.tier}` : ''}
+      </span>
     </div>
   );
 }

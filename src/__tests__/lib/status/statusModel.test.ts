@@ -1,58 +1,99 @@
 import { describe, it, expect } from 'vitest';
-import { buildSwimlane, deriveCell, sortLanes } from '@/lib/status/statusModel';
+import { buildSwimlane, deriveCell, engineClass, inferEngine, sortLanes } from '@/lib/status/statusModel';
 import type { PipelineArtifact } from '@/lib/pipeline-artifacts-db';
 
 const art = (step: string, status: PipelineArtifact['status'], extra: Partial<PipelineArtifact> = {}): PipelineArtifact => ({
   catalogId: 'c', entityId: 'e1', step, data: {}, ueAssets: [], status, ...extra,
 });
 
-describe('deriveCell', () => {
+describe('inferEngine', () => {
+  it('explicit StepSpec.engine wins', () => {
+    expect(inferEngine('items', { label: 'Anything', engine: 'Tripo' })).toBe('Tripo');
+  });
+  it('player-movement is UE Python; galleries split 2D/3D; default is Claude', () => {
+    expect(inferEngine('player-movement', { label: 'Retarget Clips' })).toBe('UE Python');
+    expect(inferEngine('items', { label: 'Icon 2D Art', archetype: 'gallery' })).toBe('Leonardo');
+    expect(inferEngine('items', { label: '3D Mesh', archetype: 'gallery' })).toBe('Tripo');
+    expect(inferEngine('items', { label: 'Brief', archetype: 'brief' })).toBe('Claude');
+  });
+  it('classifies engines into credibility classes', () => {
+    expect(engineClass('Claude')).toBe('llm');
+    expect(engineClass('Tripo')).toBe('gen3d');
+    expect(engineClass('UE Python')).toBe('runtime');
+    expect(engineClass('SomethingNew')).toBe('llm');
+  });
+});
+
+describe('deriveCell — the strict grade ladder', () => {
   it('no artifacts → unwired (the bottleneck color)', () => {
-    expect(deriveCell('Brief', []).readiness).toBe('unwired');
+    expect(deriveCell('Brief', 'Claude', []).grade).toBe('unwired');
   });
 
-  it('any pass wins (proven), even alongside pending from other entities', () => {
-    const c = deriveCell('Brief', [art('Brief', 'pending'), art('Brief', 'pass', { entityId: 'e2', tier: 'L0' })]);
-    expect(c.readiness).toBe('proven');
-    expect(c.counts).toEqual({ pass: 1, deferred: 0, fail: 0, pending: 1 });
+  it('GREEN is reserved for gate-proven: an L3/L4 pass grades verified', () => {
+    const c = deriveCell('Gate', 'UE Python', [art('Gate', 'pass', { tier: 'L3' })]);
+    expect(c.grade).toBe('verified');
   });
 
-  it('deferred outranks fail/pending when nothing passes (honest L3/L4 wait)', () => {
-    expect(deriveCell('Gate', [art('Gate', 'deferred', { tier: 'L3', reason: 'runner not run' })]).readiness).toBe('deferred');
-    expect(deriveCell('Gate', [art('Gate', 'deferred'), art('Gate', 'fail', { entityId: 'e2' })]).readiness).toBe('deferred');
+  it('an L0 pass on an LLM step grades trusted, NOT verified', () => {
+    const c = deriveCell('Brief', 'Claude', [art('Brief', 'pass', { tier: 'L0' })]);
+    expect(c.grade).toBe('trusted');
   });
 
-  it('fail without pass/deferred → attention; pending alone → pending', () => {
-    expect(deriveCell('X', [art('X', 'fail')]).readiness).toBe('attention');
-    expect(deriveCell('X', [art('X', 'pending')]).readiness).toBe('pending');
+  it('an L0/L1 pass on generative 3D/2D grades UNGATED (quality not provable)', () => {
+    expect(deriveCell('3D Gen', 'Tripo', [art('3D Gen', 'pass', { tier: 'L1' })]).grade).toBe('ungated');
+    expect(deriveCell('Icon', 'Leonardo', [art('Icon', 'pass', { tier: 'L1' })]).grade).toBe('ungated');
   });
 
-  it('carries the highest tier and first reason for the tooltip', () => {
-    const c = deriveCell('Gate', [art('Gate', 'deferred', { tier: 'L3', reason: 'why' }), art('Gate', 'pass', { tier: 'L0', entityId: 'e2' })]);
+  it('an L0-L2 pass on unproven runtime claims grades ungated too', () => {
+    expect(deriveCell('Import', 'UE Python', [art('Import', 'pass', { tier: 'L0' })]).grade).toBe('ungated');
+  });
+
+  it('deferred outranks fail/pending when nothing passes; fail alone → attention', () => {
+    expect(deriveCell('G', 'Claude', [art('G', 'deferred', { tier: 'L3' })]).grade).toBe('deferred');
+    expect(deriveCell('G', 'Claude', [art('G', 'deferred'), art('G', 'fail', { entityId: 'e2' })]).grade).toBe('deferred');
+    expect(deriveCell('G', 'Claude', [art('G', 'fail')]).grade).toBe('attention');
+    expect(deriveCell('G', 'Claude', [art('G', 'pending')]).grade).toBe('pending');
+  });
+
+  it('reports the best PASSING tier and first reason for the tooltip', () => {
+    const c = deriveCell('G', 'Claude', [
+      art('G', 'pass', { tier: 'L0' }),
+      art('G', 'pass', { tier: 'L3', entityId: 'e2' }),
+      art('G', 'deferred', { tier: 'L4', reason: 'why', entityId: 'e3' }),
+    ]);
+    expect(c.grade).toBe('verified');
     expect(c.tier).toBe('L3');
     expect(c.reason).toBe('why');
   });
 });
 
 describe('buildSwimlane', () => {
-  it('maps steps in pipeline order and computes proven/wired percentages', () => {
-    const lane = buildSwimlane('c', 'Catalog', ['A', 'B', 'C', 'D'], [
-      art('A', 'pass'),
-      art('B', 'deferred'),
-      art('C', 'fail'),
-      // D: no artifact → unwired
+  it('computes verified/credible/wired percentages on the strict ladder', () => {
+    const lane = buildSwimlane('c', 'Catalog', [
+      { label: 'A', engine: 'Claude' },
+      { label: 'B', engine: 'Tripo' },
+      { label: 'C', engine: 'UE Python' },
+      { label: 'D', engine: 'Claude' },
+    ], [
+      art('A', 'pass', { tier: 'L0' }),   // trusted
+      art('B', 'pass', { tier: 'L1' }),   // ungated
+      art('C', 'pass', { tier: 'L3' }),   // verified
+      // D unwired
     ]);
-    expect(lane.cells.map((c) => c.readiness)).toEqual(['proven', 'deferred', 'attention', 'unwired']);
-    expect(lane.provenPct).toBe(25);
+    expect(lane.cells.map((c) => c.grade)).toEqual(['trusted', 'ungated', 'verified', 'unwired']);
+    expect(lane.verifiedPct).toBe(25);
+    expect(lane.credibleGePct).toBe(50);
     expect(lane.wiredPct).toBe(75);
   });
 });
 
 describe('sortLanes', () => {
-  it('most-proven first, alpha tiebreak', () => {
-    const a = buildSwimlane('a', 'a', ['S'], [art('S', 'pass')]);
-    const b = buildSwimlane('b', 'b', ['S'], []);
-    const c = buildSwimlane('c', 'c', ['S'], [art('S', 'pass')]);
-    expect(sortLanes([b, c, a]).map((l) => l.catalogId)).toEqual(['a', 'c', 'b']);
+  it('gate-verified first, credible tiebreak, then alpha', () => {
+    const mk = (id: string, tier?: 'L0' | 'L3') =>
+      buildSwimlane(id, id, [{ label: 'S', engine: 'Claude' }], tier ? [art('S', 'pass', { tier })] : []);
+    const verified = mk('v', 'L3');
+    const trusted = mk('t', 'L0');
+    const empty = mk('e');
+    expect(sortLanes([empty, trusted, verified]).map((l) => l.catalogId)).toEqual(['v', 't', 'e']);
   });
 });

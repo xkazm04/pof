@@ -25,6 +25,7 @@ registerCatalogPipeline({
     {
       archetype: 'gallery',
       label: 'Concept 2D',
+      engine: 'Leonardo',
       view: { kind: 'gallery', field: 'candidates', candidates: 3 },
       produce: () => ({
         data: {
@@ -45,6 +46,7 @@ registerCatalogPipeline({
     {
       archetype: 'checklist',
       label: 'Face Gate 2D',
+      engine: 'Blender',
       view: { kind: 'table', field: 'gate', columns: [{ key: 'verdict' }, { key: 'method' }, { key: 'criteria' }, { key: 'evidence' }] },
       produce: () => ({
         data: {
@@ -64,6 +66,7 @@ registerCatalogPipeline({
     {
       archetype: 'gallery',
       label: '3D Generation',
+      engine: 'Tripo',
       view: { kind: 'gallery', field: 'candidates', candidates: 3 },
       produce: () => ({
         data: {
@@ -84,6 +87,7 @@ registerCatalogPipeline({
     {
       archetype: 'checklist',
       label: 'Face Gate 3D',
+      engine: 'Blender',
       view: { kind: 'table', field: 'gate', columns: [{ key: 'verdict' }, { key: 'method' }, { key: 'criteria' }, { key: 'evidence' }] },
       produce: () => ({
         data: {
@@ -103,6 +107,7 @@ registerCatalogPipeline({
     {
       archetype: 'manifest',
       label: 'Rig & Clips',
+      engine: 'Tripo',
       view: { kind: 'manifest', field: 'created' },
       produce: () => ({
         data: {
@@ -123,6 +128,7 @@ registerCatalogPipeline({
     {
       archetype: 'manifest',
       label: 'UE Import',
+      engine: 'UE Python',
       view: { kind: 'manifest', field: 'created' },
       produce: () => ({
         data: {
@@ -142,6 +148,7 @@ registerCatalogPipeline({
     {
       archetype: 'custom',
       label: 'Playable Wire',
+      engine: 'UE C++',
       view: { kind: 'manifest', field: 'features' },
       produce: () => ({
         data: {
@@ -161,6 +168,7 @@ registerCatalogPipeline({
     {
       archetype: 'balance',
       label: 'Game-Tier Convert',
+      engine: 'Tripo',
       view: { kind: 'table', field: 'gameTier', columns: [{ key: 'faceLimit' }, { key: 'textureSize' }, { key: 'sizeMB', unit: 'MB' }, { key: 'hqSizeMB', unit: 'MB' }] },
       produce: () => ({
         data: {
@@ -183,6 +191,7 @@ registerCatalogPipeline({
     {
       archetype: 'gallery',
       label: 'Icon 2D Art',
+      engine: 'Leonardo',
       view: { kind: 'gallery', field: 'candidates', candidates: 3 },
       produce: () => ({
         data: {
@@ -198,6 +207,7 @@ registerCatalogPipeline({
     {
       archetype: 'custom',
       label: 'Visual Gate',
+      engine: 'VLM',
       view: { kind: 'manifest', field: 'checks' },
       produce: () => ({
         data: {
