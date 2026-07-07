@@ -35,6 +35,21 @@ describe('parseAbslogVerdict', () => {
   it('fails when no success marker is present (crashed/aborted run)', () => {
     expect(parseAbslogVerdict('some unrelated log with no verdict').status).toBe('fail');
   });
+  it('classifies a zero-match run as unregistered (planned test), NOT a failure', () => {
+    // Ground truth from the 2026-07 sweep: the controller lists its set, matches nothing, exits.
+    const log = 'LogAutomationController: 8621 tests available on 6A9A…\nLogExit: Exiting.';
+    const v = parseAbslogVerdict(log);
+    expect(v.status).toBe('unregistered');
+    expect(v.detail).toMatch(/planned, not registered/);
+  });
+  it('a zero-match run that ALSO crashed still fails', () => {
+    const log = '8621 tests available\nFatal error!';
+    expect(parseAbslogVerdict(log).status).toBe('fail');
+  });
+  it('a completed test with a verdict is never unregistered', () => {
+    expect(parseAbslogVerdict('10 tests available\nTest Completed. Result={Success}').status).toBe('pass');
+    expect(parseAbslogVerdict('10 tests available\nTest Completed. Result={Failure}').status).toBe('fail');
+  });
 });
 
 describe('buildScenarioArgs', () => {

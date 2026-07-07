@@ -147,7 +147,8 @@ export interface GateEvents {
     step: string;
     tier: 'L3' | 'L4';
     from: 'pass' | 'pending' | 'fail' | 'deferred' | null;
-    to: 'pass' | 'fail';
+    /** `deferred` = the drain proved the test is planned but not registered in UE. */
+    to: 'pass' | 'fail' | 'deferred';
     regression: boolean;
     detail: string;
   };

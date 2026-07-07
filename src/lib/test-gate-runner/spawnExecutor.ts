@@ -66,11 +66,18 @@ export function buildAutomationArgs(testName: string, uproject: string, abslog: 
  * `LogAutomationController: ... Result={Success}` / `Result={Failure}`; some
  * project Python gates emit `[gate] RESULT=PASS/FAIL`. Pure (tested).
  */
-export function parseAbslogVerdict(log: string): { status: 'pass' | 'fail'; detail: string } {
+export function parseAbslogVerdict(log: string): { status: 'pass' | 'fail' | 'unregistered'; detail: string } {
   if (/\[gate\]\s*RESULT=PASS/i.test(log)) return { status: 'pass', detail: '[gate] RESULT=PASS' };
   if (/\[gate\]\s*RESULT=FAIL/i.test(log)) return { status: 'fail', detail: '[gate] RESULT=FAIL' };
   if (/Result=\{Success\}/i.test(log)) return { status: 'pass', detail: 'Result={Success}' };
   if (/Result=\{Fail(?:ure)?\}/i.test(log)) return { status: 'fail', detail: 'Result={Failure}' };
+  // The controller listed its test set but nothing matched the requested name → the test
+  // is PLANNED, not implemented: an honest deferred wait, NOT a red failure. (Ground truth,
+  // 2026-07 sweep: UE listed 8621 tests, matched zero for 29 planned VS*Test names — the
+  // old blanket-fail branded every planned gate a failure.)
+  if (/\d+ tests available/i.test(log) && !/Test Completed/i.test(log) && !/Fatal error/i.test(log)) {
+    return { status: 'unregistered', detail: 'no test matched the requested name (planned, not registered in UE)' };
+  }
   // No success marker found → treat as failure (a crashed/aborted run never passed).
   return { status: 'fail', detail: 'no success marker in abslog' };
 }
@@ -236,7 +243,9 @@ export function makeSpawnExecutor(opts: SpawnExecutorOptions = {}): GateExecutor
     const log = await readFile(abslog, 'utf-8').catch(() => '');
     if (!log) throw new Error(`no abslog produced at ${abslog}${timedOut ? ' (watchdog timeout)' : ''}`);
     const v = parseAbslogVerdict(log);
-    return { status: v.status, detail: `${job.testName}: ${v.detail}`, raw: { abslog, timedOut } };
+    // 'unregistered' maps to deferred: the gate stays an honest wait until the test exists.
+    const status = v.status === 'unregistered' ? 'deferred' : v.status;
+    return { status, detail: `${job.testName}: ${v.detail}`, raw: { abslog, timedOut } };
   }
 
   return {

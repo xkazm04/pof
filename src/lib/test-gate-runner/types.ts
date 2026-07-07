@@ -62,9 +62,10 @@ export interface GateJob {
   reason?: string;
 }
 
-/** The outcome of running a gate. */
+/** The outcome of running a gate. `deferred` = the run proved the test is PLANNED but
+ *  not registered in UE (an honest wait, not a red failure). */
 export interface GateVerdict {
-  status: 'pass' | 'fail';
+  status: 'pass' | 'fail' | 'deferred';
   /** Human-readable; becomes the artifact's new `reason`. */
   detail: string;
   /**

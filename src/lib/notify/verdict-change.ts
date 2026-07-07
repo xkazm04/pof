@@ -6,8 +6,9 @@ import type { AcceptanceStatus } from '@/lib/catalog/acceptance/types';
 
 /** The gate's status before the drain. `null` = there was no prior artifact. */
 export type VerdictFrom = AcceptanceStatus | null;
-/** A drained gate only ever resolves to pass or fail. */
-export type VerdictTo = 'pass' | 'fail';
+/** A drained gate resolves to pass/fail — or stays `deferred` when the run proved the
+ *  test is planned but not registered in UE (an honest wait, never a regression). */
+export type VerdictTo = 'pass' | 'fail' | 'deferred';
 
 export interface VerdictChange {
   /** The verdict actually moved (`from !== to`). Only changes are announced. */
