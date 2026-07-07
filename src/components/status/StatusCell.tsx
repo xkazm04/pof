@@ -46,11 +46,11 @@ export function StatusCell({ cell }: { cell: StepCell }) {
         userSelect: 'none',
       }}
     >
-      <span style={{ display: 'block', fontFamily: 'var(--lab-font-mono)', fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-        {unwired ? '—' : cell.engine}
+      <span style={{ display: 'block', fontFamily: 'var(--lab-font-mono)', fontWeight: 700, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+        {cell.label}
       </span>
-      <span style={{ display: 'block', opacity: 0.75, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-        {cell.label}{!unwired && cell.tier ? ` · ${cell.tier}` : ''}
+      <span style={{ display: 'block', fontWeight: 400, opacity: 0.75, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+        {unwired ? '—' : `${cell.engine}${cell.tier ? ` · ${cell.tier}` : ''}`}
       </span>
     </div>
   );
