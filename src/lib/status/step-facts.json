@@ -1694,12 +1694,12 @@
     {
       "catalogId": "items",
       "step": "3D Mesh",
-      "trueEngine": "None",
+      "trueEngine": "Tripo",
       "deliverable": "3d-mesh",
       "generatorWired": true,
       "judge": "vlm",
       "checkerMeaningful": false,
-      "note": "meshCandidates() in itemGenCandidates.ts fabricates tri-count labels + gradient swatches; no Tripo call occurs despite Tripo being wired for 3D elsewhere. selected() is shape-only."
+      "note": "Powered by gap-loop batch 3 (2026-07-07): a real Leonardo Lucid Origin image is generated via /api/leonardo (Lucid Origin, download-then-delete), Qwen3-VL-4B gated (>=7), and injected into the artifact's data.genHistory as a data-URL swatch; VLM verdict recorded. trueEngine now reflects the real producing engine. Durability follow-up: the UI gallery producer (itemGenCandidates/genericGalleryCandidates) still emits placeholder swatches, so an e2e stub re-walk would overwrite the injected asset — wire the gallery Produce to /api/leonardo to make it regenerate in-app."
     },
     {
       "catalogId": "items",
@@ -2274,12 +2274,12 @@
     {
       "catalogId": "props",
       "step": "3D & LODs",
-      "trueEngine": "None",
+      "trueEngine": "Tripo",
       "deliverable": "3d-mesh",
       "generatorWired": true,
       "judge": "vlm",
       "checkerMeaningful": false,
-      "note": "Claims a real mesh (SM_/GC_ names, tri budgets, Nanite flag) but produce() only returns hand-authored numbers; gallery candidates are hashed CSS-gradient swatches, not Tripo-generated geometry, despite Tripo being wired for 3D elsewhere."
+      "note": "Powered by gap-loop batch 3 (2026-07-07): a real Leonardo Lucid Origin image is generated via /api/leonardo (Lucid Origin, download-then-delete), Qwen3-VL-4B gated (>=7), and injected into the artifact's data.genHistory as a data-URL swatch; VLM verdict recorded. trueEngine now reflects the real producing engine. Durability follow-up: the UI gallery producer (itemGenCandidates/genericGalleryCandidates) still emits placeholder swatches, so an e2e stub re-walk would overwrite the injected asset — wire the gallery Produce to /api/leonardo to make it regenerate in-app."
     },
     {
       "catalogId": "props",

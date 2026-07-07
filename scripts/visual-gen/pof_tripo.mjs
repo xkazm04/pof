@@ -103,6 +103,23 @@ async function main() {
     mkdirSync(dirname(outPath), { recursive: true });
     writeFileSync(outPath, Buffer.from(await dl.arrayBuffer()));
     console.log(`POF_TRIPO_BYTES=${statSync(outPath).size}`);
+    // Tripo returns a preview render of the model — surface it (and optionally download
+    // via --render <path>) so a VLM aesthetic gate can score the mesh without a local renderer.
+    const renderUrl = out.rendered_image || out.render_image || out.thumbnail;
+    if (renderUrl) {
+      console.log(`POF_TRIPO_RENDER=${renderUrl}`);
+      if (a.render) {
+        try {
+          const rr = await fetch(renderUrl);
+          if (rr.ok) {
+            const rPath = resolve(a.render);
+            mkdirSync(dirname(rPath), { recursive: true });
+            writeFileSync(rPath, Buffer.from(await rr.arrayBuffer()));
+            console.log(`POF_TRIPO_RENDER_FILE=${rPath}`);
+          }
+        } catch { /* render download is best-effort */ }
+      }
+    }
     console.log(`POF_TRIPO_DONE=${outPath}`);
   } catch (e) {
     console.log(`POF_TRIPO_ERROR=${e instanceof Error ? e.message : String(e)}`);
