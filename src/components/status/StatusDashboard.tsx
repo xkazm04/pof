@@ -19,7 +19,8 @@ import { StatusCell, GRADE_VAR } from './StatusCell';
 const LEGEND: Array<{ grade: CellGrade; text: string }> = [
   { grade: 'verified', text: 'verified — a real gate passed (L3 runtime / L4 visual)' },
   { grade: 'trusted', text: 'trusted — L0–L2 pass, engine scales without a gate (LLM / code / human)' },
-  { grade: 'ungated', text: 'ungated — output exists, professional quality NOT provable yet (gen 3D/audio/2D, unproven runtime)' },
+  { grade: 'ungated', text: 'ungated — output exists, professional quality NOT provable yet' },
+  { grade: 'unpowered', text: 'unpowered — checker passed but NO wired engine can produce the claimed deliverable (audited)' },
   { grade: 'deferred', text: 'deferred — gate declared, not run' },
   { grade: 'attention', text: 'failing' },
   { grade: 'pending', text: 'pending' },

@@ -16,8 +16,35 @@
  *   unwired   — NO artifact exists (mocked / skipped / never run) ← the bottleneck
  */
 import type { PipelineArtifact } from '@/lib/pipeline-artifacts-db';
+import stepFactsJson from './step-facts.json';
 
-export type CellGrade = 'verified' | 'trusted' | 'ungated' | 'deferred' | 'attention' | 'pending' | 'unwired';
+export type CellGrade = 'verified' | 'trusted' | 'ungated' | 'unpowered' | 'deferred' | 'attention' | 'pending' | 'unwired';
+
+/** One audited step fact from the 2026-07-07 Sonnet-fleet gap audit: who ACTUALLY
+ *  produces the artifact, what the step claims to deliver, whether a wired generator
+ *  for that class exists, and what judge could prove professional quality. */
+export interface StepFact {
+  catalogId: string;
+  step: string;
+  trueEngine: string;
+  deliverable: string;
+  generatorWired: boolean;
+  judge: 'ue-test' | 'vlm' | 'llm-panel' | 'human' | 'none';
+  checkerMeaningful: boolean;
+  note: string;
+}
+
+const FACTS = new Map<string, StepFact>(
+  (stepFactsJson.steps as StepFact[]).map((s) => [`${s.catalogId}|${s.step}`, s]),
+);
+
+export function getStepFact(catalogId: string, step: string): StepFact | undefined {
+  return FACTS.get(`${catalogId}|${step}`);
+}
+
+/** Deliverable classes that require a real media generator (a passing checker on
+ *  hand-typed placeholder data must NOT read as produced capability). */
+const MEDIA_DELIVERABLES = new Set(['2d-art', '3d-mesh', 'audio', 'vfx-particles', 'animation']);
 
 export type EngineClass = 'llm' | 'gen2d' | 'gen3d' | 'audio' | 'runtime' | 'tooling' | 'code' | 'human';
 
@@ -78,12 +105,20 @@ export interface StepCell {
   tier?: string;
   counts: { pass: number; deferred: number; fail: number; pending: number };
   reason?: string;
+  /** What could prove this output professional-grade (from the fleet audit). */
+  judge?: StepFact['judge'];
+  /** Audit note — the gap, or why the step is sound. */
+  auditNote?: string;
+  /** False when the accept checker verifies shape only (field-exists / length),
+   *  not content — the benevolence the audit exposed. */
+  checkerMeaningful?: boolean;
 }
 
 const GATE_TIERS = new Set(['L3', 'L4']);
 
-/** Derive one cell from every artifact recorded for that step label. Pure. */
-export function deriveCell(label: string, engine: string, artifacts: PipelineArtifact[]): StepCell {
+/** Derive one cell from every artifact recorded for that step label, cross-examined
+ *  against the audited step fact. Pure. */
+export function deriveCell(label: string, engine: string, artifacts: PipelineArtifact[], fact?: StepFact): StepCell {
   const counts = { pass: 0, deferred: 0, fail: 0, pending: 0 };
   let bestPassTier: string | undefined;
   let tier: string | undefined;
@@ -99,15 +134,34 @@ export function deriveCell(label: string, engine: string, artifacts: PipelineArt
     if (a.reason && !reason) reason = a.reason;
   }
 
+  // A pass on a claim NOTHING in the palette can produce (audited trueEngine None, or a
+  // media deliverable with no wired generator) is UNPOWERED — the checker passed on
+  // hand-typed placeholder data, not real capability.
+  const unpowered =
+    counts.pass > 0 &&
+    !!fact &&
+    (fact.trueEngine === 'None' || (!fact.generatorWired && MEDIA_DELIVERABLES.has(fact.deliverable)));
+
   let grade: CellGrade;
   if (counts.pass > 0 && bestPassTier && GATE_TIERS.has(bestPassTier)) grade = 'verified';
+  else if (unpowered) grade = 'unpowered';
   else if (counts.pass > 0) grade = TRUSTED_CLASSES.has(engineClass(engine)) ? 'trusted' : 'ungated';
   else if (counts.deferred > 0) grade = 'deferred';
   else if (counts.fail > 0) grade = 'attention';
   else if (counts.pending > 0) grade = 'pending';
   else grade = 'unwired';
 
-  return { label, engine, grade, tier: bestPassTier ?? tier, counts, reason };
+  return {
+    label,
+    engine: fact && fact.trueEngine === 'None' ? 'none' : engine,
+    grade,
+    tier: bestPassTier ?? tier,
+    counts,
+    reason,
+    judge: fact?.judge,
+    auditNote: fact?.note,
+    checkerMeaningful: fact?.checkerMeaningful,
+  };
 }
 
 export interface Swimlane {
@@ -135,7 +189,13 @@ export function buildSwimlane(
     list.push(a);
     byStep.set(a.step, list);
   }
-  const cells = steps.map((s) => deriveCell(s.label, inferEngine(catalogId, s), byStep.get(s.label) ?? []));
+  const cells = steps.map((s) => {
+    const fact = getStepFact(catalogId, s.label);
+    const engine = fact?.trueEngine && fact.trueEngine !== 'None'
+      ? fact.trueEngine.replace(' (deterministic)', '')
+      : inferEngine(catalogId, s);
+    return deriveCell(s.label, engine, byStep.get(s.label) ?? [], fact);
+  });
   const n = Math.max(cells.length, 1);
   const verified = cells.filter((c) => c.grade === 'verified').length;
   const credible = cells.filter((c) => c.grade === 'verified' || c.grade === 'trusted').length;

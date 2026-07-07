@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { buildSwimlane, deriveCell, engineClass, inferEngine, sortLanes } from '@/lib/status/statusModel';
+import { buildSwimlane, deriveCell, engineClass, getStepFact, inferEngine, sortLanes, type StepFact } from '@/lib/status/statusModel';
 import type { PipelineArtifact } from '@/lib/pipeline-artifacts-db';
 
 const art = (step: string, status: PipelineArtifact['status'], extra: Partial<PipelineArtifact> = {}): PipelineArtifact => ({
@@ -95,5 +95,44 @@ describe('sortLanes', () => {
     const trusted = mk('t', 'L0');
     const empty = mk('e');
     expect(sortLanes([empty, trusted, verified]).map((l) => l.catalogId)).toEqual(['v', 't', 'e']);
+  });
+});
+
+describe('unpowered — the audited no-engine gap', () => {
+  const fact = (over: Partial<StepFact> = {}): StepFact => ({
+    catalogId: 'vfx', step: 'Variants', trueEngine: 'None', deliverable: 'vfx-particles',
+    generatorWired: false, judge: 'none', checkerMeaningful: false, note: 'no particle engine wired', ...over,
+  });
+
+  it('a pass on a claim with NO engine grades unpowered, never trusted/ungated', () => {
+    const c = deriveCell('Variants', 'Leonardo', [art('Variants', 'pass', { tier: 'L1' })], fact());
+    expect(c.grade).toBe('unpowered');
+    expect(c.engine).toBe('none');
+    expect(c.judge).toBe('none');
+  });
+
+  it('a media deliverable without a wired generator is unpowered even when trueEngine is Claude', () => {
+    const c = deriveCell('Layers', 'Claude', [art('Layers', 'pass', { tier: 'L0' })],
+      fact({ trueEngine: 'Claude', deliverable: 'audio' }));
+    expect(c.grade).toBe('unpowered');
+  });
+
+  it('a real gate pass STILL wins over unpowered (evidence beats audit priors)', () => {
+    const c = deriveCell('Variants', 'Leonardo', [art('Variants', 'pass', { tier: 'L4' })], fact());
+    expect(c.grade).toBe('verified');
+  });
+
+  it('text-config with a wired path stays trusted; audit metadata rides along', () => {
+    const c = deriveCell('Brief', 'Claude', [art('Brief', 'pass', { tier: 'L0' })],
+      fact({ trueEngine: 'Claude', deliverable: 'text-config', generatorWired: true, judge: 'llm-panel' }));
+    expect(c.grade).toBe('trusted');
+    expect(c.judge).toBe('llm-panel');
+    expect(c.checkerMeaningful).toBe(false);
+  });
+
+  it('the audit dataset is loaded (real fact lookup)', () => {
+    const f = getStepFact('achievements', 'Icon 2D Art');
+    expect(f?.trueEngine).toBe('None');
+    expect(f?.generatorWired).toBe(false);
   });
 });

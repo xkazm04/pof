@@ -1,0 +1,3425 @@
+{
+ "auditedAt": "2026-07-07",
+ "steps": [
+  {
+   "catalogId": "achievements",
+   "step": "Concept Brief",
+   "trueEngine": "Claude",
+   "deliverable": "text-config",
+   "generatorWired": true,
+   "judge": "llm-panel",
+   "checkerMeaningful": false,
+   "note": "Hand-authored prose brief via CLI; minLength(300) only checks character count, not content correctness."
+  },
+  {
+   "catalogId": "achievements",
+   "step": "Trigger & Progress",
+   "trueEngine": "Claude",
+   "deliverable": "text-config",
+   "generatorWired": true,
+   "judge": "llm-panel",
+   "checkerMeaningful": false,
+   "note": "fieldsPopulated only checks the 4 keys exist, not that the trigger logic is coherent."
+  },
+  {
+   "catalogId": "achievements",
+   "step": "Hidden / Visible",
+   "trueEngine": "Claude",
+   "deliverable": "text-config",
+   "generatorWired": true,
+   "judge": "llm-panel",
+   "checkerMeaningful": false,
+   "note": "fieldsPopulated shape check only."
+  },
+  {
+   "catalogId": "achievements",
+   "step": "Reward Binding",
+   "trueEngine": "Claude",
+   "deliverable": "text-config",
+   "generatorWired": true,
+   "judge": "llm-panel",
+   "checkerMeaningful": false,
+   "note": "minCount(links,1) just counts array length; doesn't verify reward economy balance."
+  },
+  {
+   "catalogId": "achievements",
+   "step": "Platform Spec",
+   "trueEngine": "Claude",
+   "deliverable": "text-config",
+   "generatorWired": true,
+   "judge": "llm-panel",
+   "checkerMeaningful": false,
+   "note": "fieldsPopulated shape check; no real Steam/PSN/Xbox API integration exists."
+  },
+  {
+   "catalogId": "achievements",
+   "step": "Icon 2D Art",
+   "trueEngine": "None",
+   "deliverable": "2d-art",
+   "generatorWired": false,
+   "judge": "none",
+   "checkerMeaningful": false,
+   "note": "produce() hardcodes selected:0 and a text 'iconDesignFlavor' description; no Leonardo call generates an actual image, so nothing exists for a VLM to judge."
+  },
+  {
+   "catalogId": "achievements",
+   "step": "Unlock Toast",
+   "trueEngine": "Claude",
+   "deliverable": "text-config",
+   "generatorWired": true,
+   "judge": "llm-panel",
+   "checkerMeaningful": false,
+   "note": "fieldsPopulated shape check on UI-binding config text."
+  },
+  {
+   "catalogId": "achievements",
+   "step": "Anti-Cheat / Validation",
+   "trueEngine": "Claude",
+   "deliverable": "text-config",
+   "generatorWired": true,
+   "judge": "llm-panel",
+   "checkerMeaningful": false,
+   "note": "fieldsPopulated shape check; describes server-authority design in prose, not executable/verified rules."
+  },
+  {
+   "catalogId": "achievements",
+   "step": "Telemetry",
+   "trueEngine": "Claude",
+   "deliverable": "text-config",
+   "generatorWired": true,
+   "judge": "llm-panel",
+   "checkerMeaningful": false,
+   "note": "fieldsPopulated shape check on event/metric text."
+  },
+  {
+   "catalogId": "achievements",
+   "step": "Localization",
+   "trueEngine": "Claude",
+   "deliverable": "text-config",
+   "generatorWired": true,
+   "judge": "llm-panel",
+   "checkerMeaningful": false,
+   "note": "minCount(keys,1) shape check; no localization pipeline actually exercised."
+  },
+  {
+   "catalogId": "achievements",
+   "step": "Test Gate",
+   "trueEngine": "None",
+   "deliverable": "ue-runtime",
+   "generatorWired": false,
+   "judge": "ue-test",
+   "checkerMeaningful": false,
+   "note": "runtimeDeferred names VSAchievementTest but the accept call at Produce time is a status marker, not an executed test — checklist itself is hand-authored text."
+  },
+  {
+   "catalogId": "achievements",
+   "step": "UE Packaging",
+   "trueEngine": "Claude",
+   "deliverable": "ue-runtime",
+   "generatorWired": false,
+   "judge": "none",
+   "checkerMeaningful": false,
+   "note": "minCount(assets,2) just counts a hand-written list of expected asset names; produce() never invokes the UE Python bridge to actually create them."
+  },
+  {
+   "catalogId": "ambient",
+   "step": "Concept Brief",
+   "trueEngine": "Claude",
+   "deliverable": "text-config",
+   "generatorWired": true,
+   "judge": "llm-panel",
+   "checkerMeaningful": false,
+   "note": "minLength(300) shape check on prose."
+  },
+  {
+   "catalogId": "ambient",
+   "step": "Layers",
+   "trueEngine": "None",
+   "deliverable": "audio",
+   "generatorWired": false,
+   "judge": "none",
+   "checkerMeaningful": false,
+   "note": "Claims bed/detail-loop/one-shot audio assets (SC_AshenForestBed etc.) but produce() only writes hand-typed gain/dB/interval numbers and asset-name strings — no ElevenLabs or any audio engine call (ElevenLabs is wired for SFX/VOICE only, not ambient beds, and isn't invoked here anyway). fieldsPopulated is shape-only."
+  },
+  {
+   "catalogId": "ambient",
+   "step": "Spatialization",
+   "trueEngine": "None",
+   "deliverable": "audio",
+   "generatorWired": false,
+   "judge": "none",
+   "checkerMeaningful": false,
+   "note": "Attenuation/panning numbers are hand-authored design spec, not derived from or verified against a real audio engine; fieldsPopulated is shape-only."
+  },
+  {
+   "catalogId": "ambient",
+   "step": "Variants & Randomization",
+   "trueEngine": "None",
+   "deliverable": "audio",
+   "generatorWired": false,
+   "judge": "none",
+   "checkerMeaningful": false,
+   "note": "Randomization/pitch-jitter rules are prose/numbers only; nothing generates or plays audio; fieldsPopulated shape-only."
+  },
+  {
+   "catalogId": "ambient",
+   "step": "Occlusion",
+   "trueEngine": "None",
+   "deliverable": "audio",
+   "generatorWired": false,
+   "judge": "none",
+   "checkerMeaningful": false,
+   "note": "Wwise obstruction/occlusion preset values are hand-typed, no Wwise/UE integration executed by this step; fieldsPopulated shape-only."
+  },
+  {
+   "catalogId": "ambient",
+   "step": "Memory Budget",
+   "trueEngine": "Claude",
+   "deliverable": "text-config",
+   "generatorWired": false,
+   "judge": "none",
+   "checkerMeaningful": true,
+   "note": "withinPercent(totalDecodedMb, 6.0, 33%) does perform a real numeric consistency check — but the 5.8 MB figure itself is a hand-typed estimate from code-comment arithmetic, not measured from real audio assets."
+  },
+  {
+   "catalogId": "ambient",
+   "step": "Zone Binding",
+   "trueEngine": "Claude",
+   "deliverable": "text-config",
+   "generatorWired": true,
+   "judge": "llm-panel",
+   "checkerMeaningful": false,
+   "note": "fieldsPopulated shape check on zone-activation prose/config."
+  },
+  {
+   "catalogId": "ambient",
+   "step": "Icon 2D Art",
+   "trueEngine": "None",
+   "deliverable": "2d-art",
+   "generatorWired": false,
+   "judge": "none",
+   "checkerMeaningful": false,
+   "note": "produce() only sets selected:0 and lists 4 imagined ueAssets paths; no Leonardo call actually generates any icon image."
+  },
+  {
+   "catalogId": "ambient",
+   "step": "Test Gate",
+   "trueEngine": "None",
+   "deliverable": "ue-runtime",
+   "generatorWired": false,
+   "judge": "ue-test",
+   "checkerMeaningful": false,
+   "note": "runtimeDeferred names VSAmbientTest but is a deferred status marker; the 11-item checklist is hand-authored text, not executed."
+  },
+  {
+   "catalogId": "ambient",
+   "step": "UE Packaging",
+   "trueEngine": "Claude",
+   "deliverable": "ue-runtime",
+   "generatorWired": false,
+   "judge": "none",
+   "checkerMeaningful": false,
+   "note": "minCount(assets,3) counts a hand-written list of asset names/paths (SC_*, MS_*, DT_Ambient); produce() never invokes UE/Wwise to actually build them."
+  },
+  {
+   "catalogId": "bestiary",
+   "step": "Concept & Role",
+   "trueEngine": "Claude",
+   "deliverable": "text-config",
+   "generatorWired": true,
+   "judge": "llm-panel",
+   "checkerMeaningful": false,
+   "note": "minLength(300) shape check on prose."
+  },
+  {
+   "catalogId": "bestiary",
+   "step": "Lore / Codex",
+   "trueEngine": "Claude",
+   "deliverable": "text-config",
+   "generatorWired": true,
+   "judge": "llm-panel",
+   "checkerMeaningful": false,
+   "note": "minLength(200) shape check on prose."
+  },
+  {
+   "catalogId": "bestiary",
+   "step": "Stat Block",
+   "trueEngine": "Claude",
+   "deliverable": "text-config",
+   "generatorWired": true,
+   "judge": "llm-panel",
+   "checkerMeaningful": false,
+   "note": "fieldsPopulated checks 4 keys exist; the ARPG-LAWS math in comments is not itself validated by the checker."
+  },
+  {
+   "catalogId": "bestiary",
+   "step": "Resistances",
+   "trueEngine": "Claude",
+   "deliverable": "text-config",
+   "generatorWired": true,
+   "judge": "llm-panel",
+   "checkerMeaningful": false,
+   "note": "fieldsPopulated shape check on 4 resist values."
+  },
+  {
+   "catalogId": "bestiary",
+   "step": "Monster Rarity",
+   "trueEngine": "Claude",
+   "deliverable": "text-config",
+   "generatorWired": true,
+   "judge": "llm-panel",
+   "checkerMeaningful": false,
+   "note": "fieldsPopulated checks tier/multiplier/modifiers exist, not that the multiplier table is internally consistent."
+  },
+  {
+   "catalogId": "bestiary",
+   "step": "Abilities",
+   "trueEngine": "Claude",
+   "deliverable": "text-config",
+   "generatorWired": true,
+   "judge": "llm-panel",
+   "checkerMeaningful": false,
+   "note": "minCount(abilities,1) only counts array length; links reference real spellbook ids but the checker doesn't verify them."
+  },
+  {
+   "catalogId": "bestiary",
+   "step": "AI Behavior",
+   "trueEngine": "Claude",
+   "deliverable": "text-config",
+   "generatorWired": true,
+   "judge": "llm-panel",
+   "checkerMeaningful": false,
+   "note": "fieldsPopulated shape check; BT/aggro values are hand-typed, not derived from a simulation."
+  },
+  {
+   "catalogId": "bestiary",
+   "step": "Encounter Balance",
+   "trueEngine": "Claude",
+   "deliverable": "text-config",
+   "generatorWired": false,
+   "judge": "none",
+   "checkerMeaningful": true,
+   "note": "withinPercent(threat,100,10) is a genuine numeric-consistency check, but the threat=103 value is hardcoded rather than computed by a real combat simulator."
+  },
+  {
+   "catalogId": "bestiary",
+   "step": "Concept 2D Art",
+   "trueEngine": "None",
+   "deliverable": "2d-art",
+   "generatorWired": false,
+   "judge": "none",
+   "checkerMeaningful": false,
+   "note": "produce() hardcodes selected:0 with no Leonardo call; only a ueAssets path string is invented."
+  },
+  {
+   "catalogId": "bestiary",
+   "step": "3D & Rig",
+   "trueEngine": "None",
+   "deliverable": "3d-mesh",
+   "generatorWired": false,
+   "judge": "none",
+   "checkerMeaningful": false,
+   "note": "produce() hardcodes mesh:0 with no Tripo call; no mesh is actually generated or rigged."
+  },
+  {
+   "catalogId": "bestiary",
+   "step": "Test Gate",
+   "trueEngine": "None",
+   "deliverable": "ue-runtime",
+   "generatorWired": false,
+   "judge": "ue-test",
+   "checkerMeaningful": false,
+   "note": "runtimeDeferred names PoF.Bestiary.BruteArchetypeConfig but is a deferred marker; the checklist itself is hand-authored text not executed here."
+  },
+  {
+   "catalogId": "bestiary",
+   "step": "UE Packaging",
+   "trueEngine": "Claude",
+   "deliverable": "ue-runtime",
+   "generatorWired": false,
+   "judge": "none",
+   "checkerMeaningful": false,
+   "note": "minCount(assets,3) counts a hand-written asset-name list; nothing here actually builds BP_/SK_/BT_ assets in UE."
+  },
+  {
+   "catalogId": "character-pipeline",
+   "step": "Concept 2D",
+   "trueEngine": "None",
+   "deliverable": "2d-art",
+   "generatorWired": false,
+   "judge": "vlm",
+   "checkerMeaningful": false,
+   "note": "engine:'Leonardo' is labeled, and the candidate paths/verdicts look like a real historical run, but produce() just replays a fixed hardcoded candidate list every time — it does not call the Leonardo API live, so this Produce step itself is not a wired generator."
+  },
+  {
+   "catalogId": "character-pipeline",
+   "step": "Face Gate 2D",
+   "trueEngine": "None",
+   "deliverable": "text-config",
+   "generatorWired": false,
+   "judge": "vlm",
+   "checkerMeaningful": false,
+   "note": "engine:'Blender' labeled but produce() hardcodes verdict:'pass' unconditionally; no Blender render is actually invoked/re-evaluated by this step."
+  },
+  {
+   "catalogId": "character-pipeline",
+   "step": "3D Generation",
+   "trueEngine": "None",
+   "deliverable": "3d-mesh",
+   "generatorWired": false,
+   "judge": "vlm",
+   "checkerMeaningful": false,
+   "note": "engine:'Tripo' labeled but produce() replays a static historical candidate list (task ids from a past run); no live Tripo call happens when this step runs."
+  },
+  {
+   "catalogId": "character-pipeline",
+   "step": "Face Gate 3D",
+   "trueEngine": "None",
+   "deliverable": "text-config",
+   "generatorWired": false,
+   "judge": "vlm",
+   "checkerMeaningful": false,
+   "note": "Hardcoded verdict:'pass'; no live Blender render/regate executed by produce()."
+  },
+  {
+   "catalogId": "character-pipeline",
+   "step": "Rig & Clips",
+   "trueEngine": "None",
+   "deliverable": "3d-mesh",
+   "generatorWired": false,
+   "judge": "vlm",
+   "checkerMeaningful": false,
+   "note": "engine:'Tripo' labeled but produce() hardcodes a fixed 'created' list of rig/clip names from a past run; minCount(4) just counts array length."
+  },
+  {
+   "catalogId": "character-pipeline",
+   "step": "UE Import",
+   "trueEngine": "None",
+   "deliverable": "ue-runtime",
+   "generatorWired": false,
+   "judge": "none",
+   "checkerMeaningful": false,
+   "note": "engine:'UE Python' labeled but produce() returns a static hardcoded list of asset paths; no commandlet/import actually runs from this step."
+  },
+  {
+   "catalogId": "character-pipeline",
+   "step": "Playable Wire",
+   "trueEngine": "None",
+   "deliverable": "ue-runtime",
+   "generatorWired": false,
+   "judge": "ue-test",
+   "checkerMeaningful": false,
+   "note": "runtimeDeferred names VSCharacterPipelineTest (proven historically in a separate standalone project per produceNote) but is a deferred marker here, not an executed test for this pipeline/entity."
+  },
+  {
+   "catalogId": "character-pipeline",
+   "step": "Game-Tier Convert",
+   "trueEngine": "None",
+   "deliverable": "3d-mesh",
+   "generatorWired": false,
+   "judge": "none",
+   "checkerMeaningful": false,
+   "note": "engine:'Tripo' labeled but produce() hardcodes gameTier numbers (faceLimit/sizeMB); fieldsPopulated is shape-only and no convert_model call executes."
+  },
+  {
+   "catalogId": "character-pipeline",
+   "step": "Icon 2D Art",
+   "trueEngine": "None",
+   "deliverable": "2d-art",
+   "generatorWired": false,
+   "judge": "none",
+   "checkerMeaningful": false,
+   "note": "engine:'Leonardo' labeled but produce() hardcodes a single candidate referencing a prior gate image path; no live generation call."
+  },
+  {
+   "catalogId": "character-pipeline",
+   "step": "Visual Gate",
+   "trueEngine": "None",
+   "deliverable": "ue-runtime",
+   "generatorWired": false,
+   "judge": "vlm",
+   "checkerMeaningful": false,
+   "note": "visualDeferred correctly names VLM/human capture as the eventual judge, but is itself a deferred placeholder — the checklist items are hand-authored text, no capture or VLM call runs here."
+  },
+  {
+   "catalogId": "characters",
+   "step": "Concept & Role",
+   "trueEngine": "Claude",
+   "deliverable": "text-config",
+   "generatorWired": true,
+   "judge": "llm-panel",
+   "checkerMeaningful": false,
+   "note": "minLength(300) shape check on prose."
+  },
+  {
+   "catalogId": "characters",
+   "step": "Concept 2D Art",
+   "trueEngine": "None",
+   "deliverable": "2d-art",
+   "generatorWired": false,
+   "judge": "none",
+   "checkerMeaningful": false,
+   "note": "produce() hardcodes selected:0; no Leonardo call generates an image."
+  },
+  {
+   "catalogId": "characters",
+   "step": "Stat Block",
+   "trueEngine": "Claude",
+   "deliverable": "text-config",
+   "generatorWired": true,
+   "judge": "llm-panel",
+   "checkerMeaningful": false,
+   "note": "fieldsPopulated shape check on 4 keys; the detailed ARPG-LAWS derivations in comments aren't verified by the checker itself."
+  },
+  {
+   "catalogId": "characters",
+   "step": "3D & Rig",
+   "trueEngine": "None",
+   "deliverable": "3d-mesh",
+   "generatorWired": false,
+   "judge": "none",
+   "checkerMeaningful": false,
+   "note": "produce() hardcodes mesh:0; no Tripo call, and the brief admits 'no bespoke mesh pipeline exists yet' (reuses stock Manny mesh)."
+  },
+  {
+   "catalogId": "characters",
+   "step": "Material / Outfit",
+   "trueEngine": "None",
+   "deliverable": "2d-art",
+   "generatorWired": false,
+   "judge": "none",
+   "checkerMeaningful": false,
+   "note": "produce() hardcodes material:0 with no real texture/material generation call."
+  },
+  {
+   "catalogId": "characters",
+   "step": "Locomotion Anim",
+   "trueEngine": "None",
+   "deliverable": "animation",
+   "generatorWired": false,
+   "judge": "none",
+   "checkerMeaningful": false,
+   "note": "produce() returns a static clip-name list ['Idle','Walk','Run']; no Mixamo/animation pipeline is invoked by this step despite the project having a real Mixamo downloader elsewhere."
+  },
+  {
+   "catalogId": "characters",
+   "step": "Combat Anim",
+   "trueEngine": "None",
+   "deliverable": "animation",
+   "generatorWired": false,
+   "judge": "none",
+   "checkerMeaningful": false,
+   "note": "produce() returns static montage-name strings; no animation is actually authored/generated here."
+  },
+  {
+   "catalogId": "characters",
+   "step": "VO",
+   "trueEngine": "None",
+   "deliverable": "audio",
+   "generatorWired": false,
+   "judge": "none",
+   "checkerMeaningful": false,
+   "note": "produce() returns a hand-typed line of dialogue text, not a synthesized voice file; ElevenLabs (wired for voice) is never called by this step."
+  },
+  {
+   "catalogId": "characters",
+   "step": "Behavior (NPC)",
+   "trueEngine": "Claude",
+   "deliverable": "text-config",
+   "generatorWired": true,
+   "judge": "llm-panel",
+   "checkerMeaningful": false,
+   "note": "fieldsPopulated shape check on role/npcId/dialogueBinding; text itself flags two pending cross-catalog dependencies."
+  },
+  {
+   "catalogId": "characters",
+   "step": "Icon 2D Art (portrait)",
+   "trueEngine": "None",
+   "deliverable": "2d-art",
+   "generatorWired": false,
+   "judge": "none",
+   "checkerMeaningful": false,
+   "note": "produce() hardcodes portrait:0; no Leonardo call generates a portrait image."
+  },
+  {
+   "catalogId": "characters",
+   "step": "Test Gate",
+   "trueEngine": "None",
+   "deliverable": "ue-runtime",
+   "generatorWired": false,
+   "judge": "ue-test",
+   "checkerMeaningful": false,
+   "note": "runtimeDeferred names PoF.CharacterVael.NPCConfig but is a deferred status marker; the 6-item checklist is hand-authored text, not executed."
+  },
+  {
+   "catalogId": "characters",
+   "step": "UE Packaging",
+   "trueEngine": "Claude",
+   "deliverable": "ue-runtime",
+   "generatorWired": false,
+   "judge": "none",
+   "checkerMeaningful": false,
+   "note": "minCount(assets,4) counts a hand-written list of BP_/SK_/DT_ names; produce() never actually builds these assets in UE."
+  },
+  {
+   "catalogId": "codex",
+   "step": "Concept Brief",
+   "trueEngine": "Claude",
+   "deliverable": "text-config",
+   "generatorWired": true,
+   "judge": "llm-panel",
+   "checkerMeaningful": false,
+   "note": "Hand-authored lore prose; minLength(300) only checks character count, not narrative consistency."
+  },
+  {
+   "catalogId": "codex",
+   "step": "Lore Body",
+   "trueEngine": "Claude",
+   "deliverable": "text-config",
+   "generatorWired": true,
+   "judge": "llm-panel",
+   "checkerMeaningful": false,
+   "note": "minLength(400) is a shape check; content plausibility is unverified."
+  },
+  {
+   "catalogId": "codex",
+   "step": "Cross-References",
+   "trueEngine": "Claude",
+   "deliverable": "graph-data",
+   "generatorWired": true,
+   "judge": "llm-panel",
+   "checkerMeaningful": true,
+   "note": "graphValid checks real graph structure (reachability, terminal nodes, no dangling edges) — genuinely content-verifying, though it can't confirm the lore facts themselves are correct."
+  },
+  {
+   "catalogId": "codex",
+   "step": "Unlock Rules",
+   "trueEngine": "Claude",
+   "deliverable": "text-config",
+   "generatorWired": true,
+   "judge": "llm-panel",
+   "checkerMeaningful": false,
+   "note": "fieldsPopulated only confirms primary/fallback keys exist, not that the unlock logic is coherent."
+  },
+  {
+   "catalogId": "codex",
+   "step": "Spoiler Tagging",
+   "trueEngine": "Claude",
+   "deliverable": "text-config",
+   "generatorWired": true,
+   "judge": "llm-panel",
+   "checkerMeaningful": false,
+   "note": "fieldsPopulated shape check only."
+  },
+  {
+   "catalogId": "codex",
+   "step": "Illustration",
+   "trueEngine": "None",
+   "deliverable": "2d-art",
+   "generatorWired": true,
+   "judge": "none",
+   "checkerMeaningful": false,
+   "note": "produce() hardcodes {selected:0} over hash-based color-gradient placeholder swatches (genericGalleryCandidates.ts) — no Leonardo call occurs despite Leonardo being wired app-wide for 2D. selected() only checks an index was picked."
+  },
+  {
+   "catalogId": "codex",
+   "step": "Audio Sting",
+   "trueEngine": "Claude",
+   "deliverable": "audio",
+   "generatorWired": true,
+   "judge": "human",
+   "checkerMeaningful": false,
+   "note": "Text description of a SoundCue (dBFS levels, timbre) is authored but ElevenLabs is never invoked to actually synthesize it; fieldsPopulated only checks the spec object shape."
+  },
+  {
+   "catalogId": "codex",
+   "step": "Accessibility",
+   "trueEngine": "Claude",
+   "deliverable": "text-config",
+   "generatorWired": true,
+   "judge": "llm-panel",
+   "checkerMeaningful": false,
+   "note": "minCount(1) checklist — trivially satisfied by any non-empty list."
+  },
+  {
+   "catalogId": "codex",
+   "step": "Localization",
+   "trueEngine": "Claude",
+   "deliverable": "text-config",
+   "generatorWired": true,
+   "judge": "llm-panel",
+   "checkerMeaningful": false,
+   "note": "minCount(1) shape check on key list."
+  },
+  {
+   "catalogId": "codex",
+   "step": "Test Gate",
+   "trueEngine": "Claude",
+   "deliverable": "text-config",
+   "generatorWired": true,
+   "judge": "ue-test",
+   "checkerMeaningful": false,
+   "note": "runtimeDeferred names VSCodexUnlockTest (a real target) but the check itself is a deferral marker, not a content verification."
+  },
+  {
+   "catalogId": "codex",
+   "step": "UE Packaging",
+   "trueEngine": "Claude",
+   "deliverable": "ue-runtime",
+   "generatorWired": false,
+   "judge": "none",
+   "checkerMeaningful": false,
+   "note": "Asset list is hand-written strings (DT_/GE_/T_/SC_ names) — no UE Python build step actually creates these; minCount(3) only counts list length."
+  },
+  {
+   "catalogId": "combat-map",
+   "step": "Concept Brief",
+   "trueEngine": "Claude",
+   "deliverable": "text-config",
+   "generatorWired": true,
+   "judge": "llm-panel",
+   "checkerMeaningful": false,
+   "note": "minLength(300) shape check."
+  },
+  {
+   "catalogId": "combat-map",
+   "step": "Encounter Layout",
+   "trueEngine": "Claude",
+   "deliverable": "text-config",
+   "generatorWired": true,
+   "judge": "llm-panel",
+   "checkerMeaningful": false,
+   "note": "fieldsPopulated checks presence of extent/tacticalPoints/coverPoints; staticCheck cppSymbolExists only confirms AARPGEncounterArena compiles, not that this layout matches it."
+  },
+  {
+   "catalogId": "combat-map",
+   "step": "Waves & Spawns",
+   "trueEngine": "Claude",
+   "deliverable": "text-config",
+   "generatorWired": true,
+   "judge": "llm-panel",
+   "checkerMeaningful": false,
+   "note": "fieldsPopulated shape check; wave/rarity numbers are hand-authored narrative math, not from a live simulator."
+  },
+  {
+   "catalogId": "combat-map",
+   "step": "Win/Loss Rules",
+   "trueEngine": "Claude",
+   "deliverable": "text-config",
+   "generatorWired": true,
+   "judge": "llm-panel",
+   "checkerMeaningful": false,
+   "note": "fieldsPopulated shape check; step itself flags a real gap (no WinCondition evaluator actor exists yet)."
+  },
+  {
+   "catalogId": "combat-map",
+   "step": "Hazards",
+   "trueEngine": "Claude",
+   "deliverable": "text-config",
+   "generatorWired": true,
+   "judge": "llm-panel",
+   "checkerMeaningful": false,
+   "note": "fieldsPopulated checks hazardList/wiringContract keys exist, not that damage math is balanced."
+  },
+  {
+   "catalogId": "combat-map",
+   "step": "Balance",
+   "trueEngine": "Claude",
+   "deliverable": "text-config",
+   "generatorWired": true,
+   "judge": "llm-panel",
+   "checkerMeaningful": true,
+   "note": "withinPercent mechanically compares derivedThreatScore to a target, but derivedThreatScore is hardcoded to exactly 100 with a scaleFactor engineered backward to hit it — not output of an independent balance simulator (pof_economy_simulate/pof_combat_simulate are unused here)."
+  },
+  {
+   "catalogId": "combat-map",
+   "step": "3D / Terrain",
+   "trueEngine": "None",
+   "deliverable": "3d-mesh",
+   "generatorWired": true,
+   "judge": "none",
+   "checkerMeaningful": false,
+   "note": "produce() returns {mesh:0} over hash-based placeholder swatches — Tripo is wired for 3D generation elsewhere in the app but is never called for this arena terrain step."
+  },
+  {
+   "catalogId": "combat-map",
+   "step": "Material",
+   "trueEngine": "Claude",
+   "deliverable": "text-config",
+   "generatorWired": true,
+   "judge": "llm-panel",
+   "checkerMeaningful": false,
+   "note": "minCount(1) only checks a links array is non-empty; material assignment text is hand-authored."
+  },
+  {
+   "catalogId": "combat-map",
+   "step": "Ambient / Audio",
+   "trueEngine": "Claude",
+   "deliverable": "audio",
+   "generatorWired": false,
+   "judge": "human",
+   "checkerMeaningful": false,
+   "note": "Prose describes music + ambient SFX; music generation is explicitly unwired in the app and no audio-gen call is made at all. Step itself flags the audio catalog gap. minLength(100) shape check."
+  },
+  {
+   "catalogId": "combat-map",
+   "step": "Icon 2D Art",
+   "trueEngine": "None",
+   "deliverable": "2d-art",
+   "generatorWired": true,
+   "judge": "none",
+   "checkerMeaningful": false,
+   "note": "Same hash-placeholder gallery pattern; no Leonardo call despite it being wired app-wide."
+  },
+  {
+   "catalogId": "combat-map",
+   "step": "Test Gate",
+   "trueEngine": "Claude",
+   "deliverable": "text-config",
+   "generatorWired": true,
+   "judge": "ue-test",
+   "checkerMeaningful": false,
+   "note": "runtimeDeferred names VSArenaSetupTest, but per the step's own comment this only reuses the narrower geometry/lighting/collision gate — the fuller wave/win-loss/hazard test doesn't exist yet."
+  },
+  {
+   "catalogId": "combat-map",
+   "step": "UE Packaging",
+   "trueEngine": "Claude",
+   "deliverable": "ue-runtime",
+   "generatorWired": false,
+   "judge": "none",
+   "checkerMeaningful": false,
+   "note": "Hand-written asset-name list; minCount(3) + a cppSymbolExists staticCheck confirm class compiles but not that this arena's specific assets exist."
+  },
+  {
+   "catalogId": "crafting-recipes",
+   "step": "Concept Brief",
+   "trueEngine": "Claude",
+   "deliverable": "text-config",
+   "generatorWired": true,
+   "judge": "llm-panel",
+   "checkerMeaningful": false,
+   "note": "minLength(300) shape check."
+  },
+  {
+   "catalogId": "crafting-recipes",
+   "step": "Inputs & Output",
+   "trueEngine": "Claude",
+   "deliverable": "text-config",
+   "generatorWired": true,
+   "judge": "llm-panel",
+   "checkerMeaningful": false,
+   "note": "fieldsPopulated shape check; step is honest that reagent items (Thornleaf Extract, Ashroot Dust) aren't seeded yet."
+  },
+  {
+   "catalogId": "crafting-recipes",
+   "step": "Station & Skill",
+   "trueEngine": "Claude",
+   "deliverable": "text-config",
+   "generatorWired": true,
+   "judge": "llm-panel",
+   "checkerMeaningful": false,
+   "note": "fieldsPopulated shape check."
+  },
+  {
+   "catalogId": "crafting-recipes",
+   "step": "Cost & Yield",
+   "trueEngine": "Claude",
+   "deliverable": "text-config",
+   "generatorWired": true,
+   "judge": "llm-panel",
+   "checkerMeaningful": true,
+   "note": "withinPercent checks costRatio against a target, but goldCost/outputValue/ingredientOpportunityCost are all hand-picked so the ratio lands in-band by construction, not derived from a real economy sim."
+  },
+  {
+   "catalogId": "crafting-recipes",
+   "step": "Discovery / Unlock",
+   "trueEngine": "Claude",
+   "deliverable": "text-config",
+   "generatorWired": true,
+   "judge": "llm-panel",
+   "checkerMeaningful": false,
+   "note": "fieldsPopulated shape check."
+  },
+  {
+   "catalogId": "crafting-recipes",
+   "step": "Craft FX / Audio",
+   "trueEngine": "Claude",
+   "deliverable": "vfx-particles",
+   "generatorWired": false,
+   "judge": "none",
+   "checkerMeaningful": false,
+   "note": "Describes a Niagara cauldron effect and two SoundCues in prose only — no Niagara system is generated (VFX gen is unwired app-wide) and no audio is synthesized (ElevenLabs never called). fieldsPopulated only checks vfx/sfxLoop/sfxSuccess keys exist."
+  },
+  {
+   "catalogId": "crafting-recipes",
+   "step": "Recipe UI",
+   "trueEngine": "Claude",
+   "deliverable": "text-config",
+   "generatorWired": true,
+   "judge": "llm-panel",
+   "checkerMeaningful": false,
+   "note": "fieldsPopulated shape check on widget/displayFormat/hudAnchor."
+  },
+  {
+   "catalogId": "crafting-recipes",
+   "step": "Icon 2D Art",
+   "trueEngine": "None",
+   "deliverable": "2d-art",
+   "generatorWired": true,
+   "judge": "none",
+   "checkerMeaningful": false,
+   "note": "Hash-placeholder gallery selection; no Leonardo call."
+  },
+  {
+   "catalogId": "crafting-recipes",
+   "step": "Localization",
+   "trueEngine": "Claude",
+   "deliverable": "text-config",
+   "generatorWired": true,
+   "judge": "llm-panel",
+   "checkerMeaningful": false,
+   "note": "minCount(1) shape check on key list."
+  },
+  {
+   "catalogId": "crafting-recipes",
+   "step": "Test Gate",
+   "trueEngine": "Claude",
+   "deliverable": "text-config",
+   "generatorWired": true,
+   "judge": "ue-test",
+   "checkerMeaningful": false,
+   "note": "runtimeDeferred names VSCraftingTest but the accept itself is just a deferral marker."
+  },
+  {
+   "catalogId": "crafting-recipes",
+   "step": "UE Packaging",
+   "trueEngine": "Claude",
+   "deliverable": "ue-runtime",
+   "generatorWired": false,
+   "judge": "none",
+   "checkerMeaningful": false,
+   "note": "Hand-written asset list; minCount(2) shape check. staticChecks (cppSymbolExists ×2, seedRowPresent) verify C++/python-seed existence but not that this specific recipe's assets exist."
+  },
+  {
+   "catalogId": "currencies",
+   "step": "Concept Brief",
+   "trueEngine": "Claude",
+   "deliverable": "text-config",
+   "generatorWired": true,
+   "judge": "llm-panel",
+   "checkerMeaningful": false,
+   "note": "minLength(300) shape check."
+  },
+  {
+   "catalogId": "currencies",
+   "step": "Economy Rules",
+   "trueEngine": "Claude",
+   "deliverable": "text-config",
+   "generatorWired": true,
+   "judge": "llm-panel",
+   "checkerMeaningful": false,
+   "note": "fieldsPopulated checks kind/faucets/sinks/cap/conversionNote exist, not that the numbers are simulated/verified."
+  },
+  {
+   "catalogId": "currencies",
+   "step": "Balance",
+   "trueEngine": "Claude",
+   "deliverable": "text-config",
+   "generatorWired": true,
+   "judge": "llm-panel",
+   "checkerMeaningful": true,
+   "note": "withinPercent checks ratio vs target 100, but faucetPerHour=110/sinkPerHour=105 are hand-picked normalized 'relative units' invented to land at 4.8% imbalance — no real economy simulation (pof_economy_simulate) backs these numbers."
+  },
+  {
+   "catalogId": "currencies",
+   "step": "Icon 2D Art",
+   "trueEngine": "None",
+   "deliverable": "2d-art",
+   "generatorWired": true,
+   "judge": "none",
+   "checkerMeaningful": false,
+   "note": "Hash-placeholder gallery selection; no Leonardo call for the currency icon."
+  },
+  {
+   "catalogId": "currencies",
+   "step": "Wallet UI Integration",
+   "trueEngine": "Claude",
+   "deliverable": "text-config",
+   "generatorWired": true,
+   "judge": "llm-panel",
+   "checkerMeaningful": false,
+   "note": "fieldsPopulated shape check on widget/format/position/hudBinding."
+  },
+  {
+   "catalogId": "currencies",
+   "step": "Test Gate",
+   "trueEngine": "Claude",
+   "deliverable": "text-config",
+   "generatorWired": true,
+   "judge": "ue-test",
+   "checkerMeaningful": false,
+   "note": "runtimeDeferred names PoF.Currency.WalletRules but is a deferral marker, not a content check."
+  },
+  {
+   "catalogId": "currencies",
+   "step": "UE Packaging",
+   "trueEngine": "Claude",
+   "deliverable": "ue-runtime",
+   "generatorWired": false,
+   "judge": "none",
+   "checkerMeaningful": false,
+   "note": "Hand-written asset list; minCount(4) shape check plus a cppSymbolExists staticCheck for the currency row struct only."
+  },
+  {
+   "catalogId": "cutscenes",
+   "step": "Concept Brief",
+   "trueEngine": "Claude",
+   "deliverable": "text-config",
+   "generatorWired": true,
+   "judge": "llm-panel",
+   "checkerMeaningful": false,
+   "note": "minLength(300) shape check; step is honest that no lipsync pipeline exists."
+  },
+  {
+   "catalogId": "cutscenes",
+   "step": "Beat Sheet & Shot List",
+   "trueEngine": "Claude",
+   "deliverable": "text-config",
+   "generatorWired": true,
+   "judge": "llm-panel",
+   "checkerMeaningful": false,
+   "note": "minCount(1) on the beats array — trivially satisfied; the rich shot/camera/timing detail is unverified prose."
+  },
+  {
+   "catalogId": "cutscenes",
+   "step": "Blocking / Body Anim",
+   "trueEngine": "None",
+   "deliverable": "animation",
+   "generatorWired": false,
+   "judge": "none",
+   "checkerMeaningful": false,
+   "note": "Checklist of named animation clips to author (Control Rig / Mixamo) — no animation is actually generated by this step; step itself notes no mocap pipeline is available. minCount(1) shape check."
+  },
+  {
+   "catalogId": "cutscenes",
+   "step": "Facial / Lipsync",
+   "trueEngine": "None",
+   "deliverable": "animation",
+   "generatorWired": false,
+   "judge": "none",
+   "checkerMeaningful": false,
+   "note": "Explicitly self-labeled [GAP] entries — no lipsync/facial pipeline exists; this step is unusually honest about the gap rather than overclaiming. minCount(1) shape check."
+  },
+  {
+   "catalogId": "cutscenes",
+   "step": "Lighting",
+   "trueEngine": "Claude",
+   "deliverable": "text-config",
+   "generatorWired": true,
+   "judge": "none",
+   "checkerMeaningful": false,
+   "note": "fieldsPopulated checks globalSetup/beatSetups keys exist; no render is produced so no VLM/human review is possible against this text-only spec."
+  },
+  {
+   "catalogId": "cutscenes",
+   "step": "VFX",
+   "trueEngine": "Claude",
+   "deliverable": "vfx-particles",
+   "generatorWired": false,
+   "judge": "none",
+   "checkerMeaningful": false,
+   "note": "Describes reusing the seeded vfx-fire-impact system with a palette override — no new Niagara system is generated (VFX gen unwired app-wide) and no render exists to inspect. fieldsPopulated shape check."
+  },
+  {
+   "catalogId": "cutscenes",
+   "step": "Music & SFX",
+   "trueEngine": "Claude",
+   "deliverable": "audio",
+   "generatorWired": false,
+   "judge": "human",
+   "checkerMeaningful": false,
+   "note": "Bundles a music stem-switch (music generation is unwired) and SFX cues (ElevenLabs SFX is wired but never actually called here) — purely descriptive text, no audio synthesized. fieldsPopulated shape check."
+  },
+  {
+   "catalogId": "cutscenes",
+   "step": "VO",
+   "trueEngine": "None",
+   "deliverable": "audio",
+   "generatorWired": true,
+   "judge": "none",
+   "checkerMeaningful": false,
+   "note": "Honestly documents that this cutscene has no dialogue, sidestepping the fact no VO/lipsync pipeline exists; ElevenLabs voice is wired app-wide but unused/inapplicable here. minCount(1) shape check."
+  },
+  {
+   "catalogId": "cutscenes",
+   "step": "Subtitles & Loc",
+   "trueEngine": "Claude",
+   "deliverable": "text-config",
+   "generatorWired": true,
+   "judge": "llm-panel",
+   "checkerMeaningful": false,
+   "note": "minCount(1) shape check on loc/caption keys."
+  },
+  {
+   "catalogId": "cutscenes",
+   "step": "Skip / Replay Rules",
+   "trueEngine": "Claude",
+   "deliverable": "text-config",
+   "generatorWired": true,
+   "judge": "llm-panel",
+   "checkerMeaningful": false,
+   "note": "fieldsPopulated shape check on skip/replay fields."
+  },
+  {
+   "catalogId": "cutscenes",
+   "step": "Icon 2D Art",
+   "trueEngine": "None",
+   "deliverable": "2d-art",
+   "generatorWired": true,
+   "judge": "none",
+   "checkerMeaningful": false,
+   "note": "Hash-placeholder gallery selection for the cinematic thumbnail; no Leonardo call."
+  },
+  {
+   "catalogId": "cutscenes",
+   "step": "Test Gate",
+   "trueEngine": "Claude",
+   "deliverable": "text-config",
+   "generatorWired": true,
+   "judge": "ue-test",
+   "checkerMeaningful": false,
+   "note": "runtimeDeferred names VSCutsceneTimingTest but the accept itself is a deferral marker with no content check."
+  },
+  {
+   "catalogId": "cutscenes",
+   "step": "UE Packaging",
+   "trueEngine": "Claude",
+   "deliverable": "ue-runtime",
+   "generatorWired": false,
+   "judge": "none",
+   "checkerMeaningful": false,
+   "note": "Hand-written LevelSequence/VFX/audio asset-path list; minCount(3) shape check. Step honestly omits a staticCheck rather than invent a C++ symbol."
+  },
+  {
+   "catalogId": "dialog-trees",
+   "step": "Concept Brief",
+   "trueEngine": "Claude",
+   "deliverable": "text-config",
+   "generatorWired": true,
+   "judge": "llm-panel",
+   "checkerMeaningful": false,
+   "note": "Hand/LLM-authored prose brief; minLength only checks character count, not narrative quality."
+  },
+  {
+   "catalogId": "dialog-trees",
+   "step": "Branch Graph",
+   "trueEngine": "Claude",
+   "deliverable": "graph-data",
+   "generatorWired": true,
+   "judge": "llm-panel",
+   "checkerMeaningful": true,
+   "note": "Claude-authored node/edge graph; graphValid genuinely checks dangling edges/reachability/terminal presence, so this is real content verification (structural, not gameplay-numeric)."
+  },
+  {
+   "catalogId": "dialog-trees",
+   "step": "Conditions & Effects",
+   "trueEngine": "Claude",
+   "deliverable": "text-config",
+   "generatorWired": true,
+   "judge": "llm-panel",
+   "checkerMeaningful": false,
+   "note": "fieldsPopulated only checks the 4 named keys exist, not that conditions/effects are coherent."
+  },
+  {
+   "catalogId": "dialog-trees",
+   "step": "Skill Checks",
+   "trueEngine": "Claude",
+   "deliverable": "text-config",
+   "generatorWired": true,
+   "judge": "llm-panel",
+   "checkerMeaningful": false,
+   "note": "minCount≥1 shape check on an array; threshold value (Intelligence≥14) is never cross-verified against any balance baseline."
+  },
+  {
+   "catalogId": "dialog-trees",
+   "step": "VO Script",
+   "trueEngine": "Claude",
+   "deliverable": "text-config",
+   "generatorWired": false,
+   "judge": "llm-panel",
+   "checkerMeaningful": false,
+   "note": "Produces text VO lines only, not audio; ueAssets reference SoundCue paths that no generator (ElevenLabs or otherwise) actually creates here — claimed VO deliverable is text, not recorded voice."
+  },
+  {
+   "catalogId": "dialog-trees",
+   "step": "Camera",
+   "trueEngine": "Claude",
+   "deliverable": "text-config",
+   "generatorWired": true,
+   "judge": "llm-panel",
+   "checkerMeaningful": false,
+   "note": "fieldsPopulated shape check on 4 phase keys; no render or camera-behavior validation."
+  },
+  {
+   "catalogId": "dialog-trees",
+   "step": "Subtitles & Choices UI",
+   "trueEngine": "Claude",
+   "deliverable": "text-config",
+   "generatorWired": true,
+   "judge": "llm-panel",
+   "checkerMeaningful": false,
+   "note": "fieldsPopulated shape check on widget/format/anchor keys only."
+  },
+  {
+   "catalogId": "dialog-trees",
+   "step": "Localization",
+   "trueEngine": "Claude",
+   "deliverable": "text-config",
+   "generatorWired": true,
+   "judge": "llm-panel",
+   "checkerMeaningful": false,
+   "note": "minCount≥1 on a key list; no translation or QA content actually produced."
+  },
+  {
+   "catalogId": "dialog-trees",
+   "step": "Accessibility",
+   "trueEngine": "Claude",
+   "deliverable": "text-config",
+   "generatorWired": true,
+   "judge": "llm-panel",
+   "checkerMeaningful": false,
+   "note": "minCount≥1 checklist shape check; items are asserted, never verified against a rendered UI."
+  },
+  {
+   "catalogId": "dialog-trees",
+   "step": "Icon 2D Art",
+   "trueEngine": "None",
+   "deliverable": "2d-art",
+   "generatorWired": true,
+   "judge": "vlm",
+   "checkerMeaningful": false,
+   "note": "produce() returns only {selected:0} — no Leonardo call, no image generated despite claiming an icon deliverable; Leonardo is wired app-wide for 2D but not invoked by this step. accept is `selected` — an index exists, not that art exists or looks good."
+  },
+  {
+   "catalogId": "dialog-trees",
+   "step": "Test Gate",
+   "trueEngine": "None",
+   "deliverable": "ue-runtime",
+   "generatorWired": false,
+   "judge": "ue-test",
+   "checkerMeaningful": false,
+   "note": "runtimeDeferred names VSDialogBranchTest (a real registrable UE test target) so a ue-test judge exists in principle, but the accept checker itself just marks the gate 'deferred' — it does not run or verify anything now."
+  },
+  {
+   "catalogId": "dialog-trees",
+   "step": "UE Packaging",
+   "trueEngine": "Claude",
+   "deliverable": "text-config",
+   "generatorWired": true,
+   "judge": "llm-panel",
+   "checkerMeaningful": false,
+   "note": "Produces a text manifest of intended asset paths (minCount≥3); no assets are actually built/imported by this step."
+  },
+  {
+   "catalogId": "factions",
+   "step": "Concept Brief",
+   "trueEngine": "Claude",
+   "deliverable": "text-config",
+   "generatorWired": true,
+   "judge": "llm-panel",
+   "checkerMeaningful": false,
+   "note": "minLength char-count check only."
+  },
+  {
+   "catalogId": "factions",
+   "step": "Standing & Rep Tiers",
+   "trueEngine": "Claude",
+   "deliverable": "text-config",
+   "generatorWired": true,
+   "judge": "llm-panel",
+   "checkerMeaningful": false,
+   "note": "accept is minCount≥6 tiers; separate staticChecks confirm C++ symbols exist but don't validate the tier thresholds/decay numbers themselves."
+  },
+  {
+   "catalogId": "factions",
+   "step": "Action → Reputation",
+   "trueEngine": "Claude",
+   "deliverable": "text-config",
+   "generatorWired": true,
+   "judge": "llm-panel",
+   "checkerMeaningful": false,
+   "note": "minCount≥8 shape check; delta/cooldown balance numbers are asserted prose, never simulated or cross-checked against an economy baseline."
+  },
+  {
+   "catalogId": "factions",
+   "step": "Tier Rewards",
+   "trueEngine": "Claude",
+   "deliverable": "text-config",
+   "generatorWired": true,
+   "judge": "llm-panel",
+   "checkerMeaningful": false,
+   "note": "minCount≥4 shape check; discount formula is stated, not computed/verified."
+  },
+  {
+   "catalogId": "factions",
+   "step": "NPC Members",
+   "trueEngine": "Claude",
+   "deliverable": "text-config",
+   "generatorWired": true,
+   "judge": "llm-panel",
+   "checkerMeaningful": false,
+   "note": "minCount≥1 shape check on member list."
+  },
+  {
+   "catalogId": "factions",
+   "step": "Greeting & Disposition Hooks",
+   "trueEngine": "Claude",
+   "deliverable": "text-config",
+   "generatorWired": true,
+   "judge": "llm-panel",
+   "checkerMeaningful": false,
+   "note": "minCount≥5 shape check on hook rows."
+  },
+  {
+   "catalogId": "factions",
+   "step": "Standing UI",
+   "trueEngine": "Claude",
+   "deliverable": "text-config",
+   "generatorWired": true,
+   "judge": "llm-panel",
+   "checkerMeaningful": false,
+   "note": "fieldsPopulated on widget/format/anchor only."
+  },
+  {
+   "catalogId": "factions",
+   "step": "Heraldry Icon",
+   "trueEngine": "None",
+   "deliverable": "2d-art",
+   "generatorWired": true,
+   "judge": "vlm",
+   "checkerMeaningful": false,
+   "note": "produce() returns {selected:0}; no Leonardo generation occurs though Leonardo is wired for 2D elsewhere in the app. selected() only checks an index was chosen."
+  },
+  {
+   "catalogId": "factions",
+   "step": "Localization",
+   "trueEngine": "Claude",
+   "deliverable": "text-config",
+   "generatorWired": true,
+   "judge": "llm-panel",
+   "checkerMeaningful": false,
+   "note": "minCount≥1 key list shape check."
+  },
+  {
+   "catalogId": "factions",
+   "step": "Test Gate",
+   "trueEngine": "None",
+   "deliverable": "ue-runtime",
+   "generatorWired": false,
+   "judge": "ue-test",
+   "checkerMeaningful": false,
+   "note": "runtimeDeferred names VSFactionRepTest; accept only marks deferred status, doesn't execute or verify the rep math in PIE."
+  },
+  {
+   "catalogId": "factions",
+   "step": "UE Packaging",
+   "trueEngine": "Claude",
+   "deliverable": "text-config",
+   "generatorWired": true,
+   "judge": "llm-panel",
+   "checkerMeaningful": false,
+   "note": "Text manifest of intended asset names (minCount≥5); staticChecks confirm symbol/seed presence but not that the discount/rep system behaves correctly."
+  },
+  {
+   "catalogId": "hud-elements",
+   "step": "Concept Brief",
+   "trueEngine": "Claude",
+   "deliverable": "text-config",
+   "generatorWired": true,
+   "judge": "llm-panel",
+   "checkerMeaningful": false,
+   "note": "minLength char-count check only."
+  },
+  {
+   "catalogId": "hud-elements",
+   "step": "Data Binding",
+   "trueEngine": "Claude",
+   "deliverable": "text-config",
+   "generatorWired": true,
+   "judge": "llm-panel",
+   "checkerMeaningful": false,
+   "note": "fieldsPopulated on source/format/anchor; staticChecks confirm class names exist in Source but not that binding actually fires."
+  },
+  {
+   "catalogId": "hud-elements",
+   "step": "State Logic",
+   "trueEngine": "Claude",
+   "deliverable": "text-config",
+   "generatorWired": true,
+   "judge": "llm-panel",
+   "checkerMeaningful": false,
+   "note": "fieldsPopulated shape check on states/transitions/threshold keys only."
+  },
+  {
+   "catalogId": "hud-elements",
+   "step": "Wireframe",
+   "trueEngine": "None",
+   "deliverable": "2d-art",
+   "generatorWired": true,
+   "judge": "vlm",
+   "checkerMeaningful": false,
+   "note": "produce() returns {selected:0}, no wireframe image actually generated by Leonardo or any tool despite 3 named ueAsset paths."
+  },
+  {
+   "catalogId": "hud-elements",
+   "step": "Icon 2D Art",
+   "trueEngine": "None",
+   "deliverable": "2d-art",
+   "generatorWired": true,
+   "judge": "vlm",
+   "checkerMeaningful": false,
+   "note": "Same placeholder pattern — {selected:0}, no image generated; selected() checker is presence-only."
+  },
+  {
+   "catalogId": "hud-elements",
+   "step": "Animation",
+   "trueEngine": "Claude",
+   "deliverable": "animation",
+   "generatorWired": false,
+   "judge": "none",
+   "checkerMeaningful": false,
+   "note": "Only a text checklist describing UMG animation-track timing/easing values; no animation asset, curve, or Niagara/keyframe data is actually produced, and nothing in the app's palette (Leonardo/Tripo/ElevenLabs) generates UMG animation. minCount≥4 is a pure shape check."
+  },
+  {
+   "catalogId": "hud-elements",
+   "step": "Accessibility",
+   "trueEngine": "Claude",
+   "deliverable": "text-config",
+   "generatorWired": true,
+   "judge": "llm-panel",
+   "checkerMeaningful": false,
+   "note": "minCount≥4 shape check on prose checklist items."
+  },
+  {
+   "catalogId": "hud-elements",
+   "step": "Localization",
+   "trueEngine": "Claude",
+   "deliverable": "text-config",
+   "generatorWired": true,
+   "judge": "llm-panel",
+   "checkerMeaningful": false,
+   "note": "minCount≥3 shape check."
+  },
+  {
+   "catalogId": "hud-elements",
+   "step": "Test Gate",
+   "trueEngine": "None",
+   "deliverable": "ue-runtime",
+   "generatorWired": false,
+   "judge": "ue-test",
+   "checkerMeaningful": false,
+   "note": "runtimeDeferred names VSHUDFunctionalTest; accept marks deferred only, no execution or verification happens here."
+  },
+  {
+   "catalogId": "hud-elements",
+   "step": "UE Packaging",
+   "trueEngine": "Claude",
+   "deliverable": "text-config",
+   "generatorWired": true,
+   "judge": "llm-panel",
+   "checkerMeaningful": false,
+   "note": "Text manifest of intended widget/texture names (minCount≥2); staticChecks verify symbols/seed rows exist, not that the HUD actually renders correctly."
+  },
+  {
+   "catalogId": "icon-sets",
+   "step": "Family Brief",
+   "trueEngine": "Claude",
+   "deliverable": "text-config",
+   "generatorWired": true,
+   "judge": "llm-panel",
+   "checkerMeaningful": false,
+   "note": "minLength char-count check only."
+  },
+  {
+   "catalogId": "icon-sets",
+   "step": "Taxonomy",
+   "trueEngine": "Claude",
+   "deliverable": "text-config",
+   "generatorWired": true,
+   "judge": "llm-panel",
+   "checkerMeaningful": false,
+   "note": "fieldsPopulated on members/naming/count; the 224-icon roster is asserted text, not generated or cross-checked against a real DataTable."
+  },
+  {
+   "catalogId": "icon-sets",
+   "step": "Icon 2D Art",
+   "trueEngine": "None",
+   "deliverable": "2d-art",
+   "generatorWired": true,
+   "judge": "vlm",
+   "checkerMeaningful": false,
+   "note": "produce() returns {selected:0}; no atlas image is actually generated despite the step name and ueAssets path, though Leonardo is wired for 2D generation elsewhere in the app."
+  },
+  {
+   "catalogId": "icon-sets",
+   "step": "Accessibility",
+   "trueEngine": "Claude",
+   "deliverable": "text-config",
+   "generatorWired": true,
+   "judge": "llm-panel",
+   "checkerMeaningful": false,
+   "note": "minCount==3 shape check on a fixed checklist; contrast/colorblind numbers are asserted prose, never measured against a rendered icon."
+  },
+  {
+   "catalogId": "icon-sets",
+   "step": "Atlas",
+   "trueEngine": "Claude",
+   "deliverable": "text-config",
+   "generatorWired": true,
+   "judge": "llm-panel",
+   "checkerMeaningful": false,
+   "note": "fieldsPopulated on texture/packing/slots; describes a 4096×4096 atlas that is never actually packed or rendered by this step."
+  },
+  {
+   "catalogId": "icon-sets",
+   "step": "Test Gate",
+   "trueEngine": "None",
+   "deliverable": "ue-runtime",
+   "generatorWired": false,
+   "judge": "ue-test",
+   "checkerMeaningful": false,
+   "note": "runtimeDeferred names VSIconSetAtlasTest; accept only marks deferred, no atlas import or contrast check actually runs."
+  },
+  {
+   "catalogId": "icon-sets",
+   "step": "UE Packaging",
+   "trueEngine": "Claude",
+   "deliverable": "text-config",
+   "generatorWired": true,
+   "judge": "llm-panel",
+   "checkerMeaningful": false,
+   "note": "Text manifest of 3 intended asset names (minCount==3); staticChecks confirm struct/seed presence only, not that 224 icons were actually authored."
+  },
+  {
+   "catalogId": "input-schemes",
+   "step": "Concept Brief",
+   "trueEngine": "Claude",
+   "deliverable": "text-config",
+   "generatorWired": true,
+   "judge": "llm-panel",
+   "checkerMeaningful": false,
+   "note": "minLength char-count check only."
+  },
+  {
+   "catalogId": "input-schemes",
+   "step": "Action Mapping",
+   "trueEngine": "Claude",
+   "deliverable": "text-config",
+   "generatorWired": true,
+   "judge": "llm-panel",
+   "checkerMeaningful": false,
+   "note": "fieldsPopulated on 8 named keys; staticChecks confirm the controller class exists but not that bindings actually route in Enhanced Input."
+  },
+  {
+   "catalogId": "input-schemes",
+   "step": "Context Stack",
+   "trueEngine": "Claude",
+   "deliverable": "text-config",
+   "generatorWired": true,
+   "judge": "llm-panel",
+   "checkerMeaningful": false,
+   "note": "fieldsPopulated on gameplay/menu/dialogue keys only."
+  },
+  {
+   "catalogId": "input-schemes",
+   "step": "Rebinding UI",
+   "trueEngine": "Claude",
+   "deliverable": "text-config",
+   "generatorWired": true,
+   "judge": "llm-panel",
+   "checkerMeaningful": false,
+   "note": "fieldsPopulated shape check; conflict-detection behavior is described in prose, never exercised."
+  },
+  {
+   "catalogId": "input-schemes",
+   "step": "Deadzone & Haptics",
+   "trueEngine": "Claude",
+   "deliverable": "text-config",
+   "generatorWired": true,
+   "judge": "llm-panel",
+   "checkerMeaningful": false,
+   "note": "fieldsPopulated on deadzone/rumble keys only."
+  },
+  {
+   "catalogId": "input-schemes",
+   "step": "Accessibility",
+   "trueEngine": "Claude",
+   "deliverable": "text-config",
+   "generatorWired": true,
+   "judge": "llm-panel",
+   "checkerMeaningful": false,
+   "note": "minCount≥3 shape check on a fixed checklist of claims."
+  },
+  {
+   "catalogId": "input-schemes",
+   "step": "Input Glyphs",
+   "trueEngine": "None",
+   "deliverable": "2d-art",
+   "generatorWired": true,
+   "judge": "vlm",
+   "checkerMeaningful": false,
+   "note": "produce() returns {glyphSet:0}; no glyph sprite sheet is actually generated (the file's own comment notes the icon-sets link is deliberately deferred/absent), yet the step still claims a visual deliverable."
+  },
+  {
+   "catalogId": "input-schemes",
+   "step": "Tutorial Prompts",
+   "trueEngine": "Claude",
+   "deliverable": "text-config",
+   "generatorWired": true,
+   "judge": "llm-panel",
+   "checkerMeaningful": false,
+   "note": "fieldsPopulated on promptStyle only."
+  },
+  {
+   "catalogId": "input-schemes",
+   "step": "Localization",
+   "trueEngine": "Claude",
+   "deliverable": "text-config",
+   "generatorWired": true,
+   "judge": "llm-panel",
+   "checkerMeaningful": false,
+   "note": "minCount≥1 key list shape check."
+  },
+  {
+   "catalogId": "input-schemes",
+   "step": "Platform Cert",
+   "trueEngine": "Claude",
+   "deliverable": "text-config",
+   "generatorWired": true,
+   "judge": "llm-panel",
+   "checkerMeaningful": false,
+   "note": "minCount≥1 shape check; cert compliance is self-asserted prose, no actual platform cert process runs."
+  },
+  {
+   "catalogId": "input-schemes",
+   "step": "Test Gate",
+   "trueEngine": "None",
+   "deliverable": "ue-runtime",
+   "generatorWired": false,
+   "judge": "ue-test",
+   "checkerMeaningful": false,
+   "note": "runtimeDeferred names VSInputRebindTest; accept only marks deferred, nothing is executed or verified now."
+  },
+  {
+   "catalogId": "input-schemes",
+   "step": "UE Packaging",
+   "trueEngine": "Claude",
+   "deliverable": "text-config",
+   "generatorWired": true,
+   "judge": "llm-panel",
+   "checkerMeaningful": false,
+   "note": "Text manifest of intended input assets (minCount≥2); staticChecks confirm controller symbol exists only."
+  },
+  {
+   "catalogId": "items",
+   "step": "Concept Brief",
+   "trueEngine": "Claude",
+   "deliverable": "text-config",
+   "generatorWired": false,
+   "judge": "llm-panel",
+   "checkerMeaningful": false,
+   "note": "Hand-written prose brief; minLength(300) only counts characters, never checks the brief is accurate or useful."
+  },
+  {
+   "catalogId": "items",
+   "step": "Base Type & Rarity",
+   "trueEngine": "Code (deterministic)",
+   "deliverable": "text-config",
+   "generatorWired": true,
+   "judge": "llm-panel",
+   "checkerMeaningful": false,
+   "note": "Real deterministic lookup tables (rarity→ilvl/reqLevel), so the config is internally consistent, but fieldsPopulated only checks the keys are non-null, not that the values are balanced."
+  },
+  {
+   "catalogId": "items",
+   "step": "Affixes",
+   "trueEngine": "Code (deterministic)",
+   "deliverable": "text-config",
+   "generatorWired": true,
+   "judge": "llm-panel",
+   "checkerMeaningful": false,
+   "note": "Hand-authored tier tables + one illustrative roll; fieldsPopulated is shape-only (checks budget/tierTable/illustrativeRareRoll exist, not that the tiers are balanced)."
+  },
+  {
+   "catalogId": "items",
+   "step": "Damage / Implicit",
+   "trueEngine": "Code (deterministic)",
+   "deliverable": "text-config",
+   "generatorWired": true,
+   "judge": "llm-panel",
+   "checkerMeaningful": true,
+   "note": "dpsConsistent recomputes baseDPS = avgDamage×APS and fails if the stored value diverges >12% — a real internal-math check, not just a shape check."
+  },
+  {
+   "catalogId": "items",
+   "step": "Economy",
+   "trueEngine": "Code (deterministic)",
+   "deliverable": "text-config",
+   "generatorWired": true,
+   "judge": "llm-panel",
+   "checkerMeaningful": true,
+   "note": "withinPercent checks pricePowerRatio against a real 0.8-1.2x band, though baseValue(12)/powerScore(12) are hand-picked constants engineered to land exactly at 1.0 — the mechanism is real but the inputs are not measured."
+  },
+  {
+   "catalogId": "items",
+   "step": "Material",
+   "trueEngine": "Claude",
+   "deliverable": "text-config",
+   "generatorWired": false,
+   "judge": "llm-panel",
+   "checkerMeaningful": false,
+   "note": "Just asserts a material instance path/params referencing the single seeded materials entity — no material or texture is actually generated here; fieldsPopulated is shape-only."
+  },
+  {
+   "catalogId": "items",
+   "step": "Icon 2D Art",
+   "trueEngine": "None",
+   "deliverable": "2d-art",
+   "generatorWired": true,
+   "judge": "vlm",
+   "checkerMeaningful": false,
+   "note": "produce() just sets selected:0 with static UE path strings; the gallery candidates (itemGenCandidates.ts iconCandidates) are hashed CSS gradient swatches, not Leonardo output, even though Leonardo is wired elsewhere in the app. selected() only checks a non-negative number was chosen."
+  },
+  {
+   "catalogId": "items",
+   "step": "3D Mesh",
+   "trueEngine": "None",
+   "deliverable": "3d-mesh",
+   "generatorWired": true,
+   "judge": "vlm",
+   "checkerMeaningful": false,
+   "note": "meshCandidates() in itemGenCandidates.ts fabricates tri-count labels + gradient swatches; no Tripo call occurs despite Tripo being wired for 3D elsewhere. selected() is shape-only."
+  },
+  {
+   "catalogId": "items",
+   "step": "Tooltip / Compare",
+   "trueEngine": "Claude",
+   "deliverable": "text-config",
+   "generatorWired": true,
+   "judge": "llm-panel",
+   "checkerMeaningful": false,
+   "note": "Hand-authored tooltip text; fieldsPopulated checks 3 keys exist, not that the copy is good."
+  },
+  {
+   "catalogId": "items",
+   "step": "Test Gate",
+   "trueEngine": "Claude",
+   "deliverable": "ue-runtime",
+   "generatorWired": false,
+   "judge": "ue-test",
+   "checkerMeaningful": false,
+   "note": "runtimeDeferred names VSItemsDefinitionsTest (a real functional test target) but always returns status:'deferred' regardless of data — honest about not having run yet, but not itself a check."
+  },
+  {
+   "catalogId": "items",
+   "step": "UE Packaging",
+   "trueEngine": "Claude",
+   "deliverable": "ue-runtime",
+   "generatorWired": false,
+   "judge": "ue-test",
+   "checkerMeaningful": false,
+   "note": "Asset list is a static string manifest, not an actual package/cook step. accept is minCount (shape-only); the staticChecks (cppSymbolExists/seedRowPresent) do read real Source/ and Content/Python files, but those aren't the primary accept gate."
+  },
+  {
+   "catalogId": "loot-tables",
+   "step": "Concept Brief",
+   "trueEngine": "Claude",
+   "deliverable": "text-config",
+   "generatorWired": false,
+   "judge": "llm-panel",
+   "checkerMeaningful": false,
+   "note": "minLength only counts characters."
+  },
+  {
+   "catalogId": "loot-tables",
+   "step": "Drop Generation",
+   "trueEngine": "Code (deterministic)",
+   "deliverable": "text-config",
+   "generatorWired": true,
+   "judge": "llm-panel",
+   "checkerMeaningful": false,
+   "note": "Hardcoded weight/drop-count tables; fieldsPopulated is shape-only."
+  },
+  {
+   "catalogId": "loot-tables",
+   "step": "Rarity Odds",
+   "trueEngine": "Code (deterministic)",
+   "deliverable": "text-config",
+   "generatorWired": true,
+   "judge": "llm-panel",
+   "checkerMeaningful": false,
+   "note": "Hardcoded percentages; fieldsPopulated shape-only."
+  },
+  {
+   "catalogId": "loot-tables",
+   "step": "Magic Find & Smart Loot",
+   "trueEngine": "Claude",
+   "deliverable": "text-config",
+   "generatorWired": true,
+   "judge": "llm-panel",
+   "checkerMeaningful": false,
+   "note": "Design prose + hardcoded pity/IIQ/IIR rules; fieldsPopulated shape-only."
+  },
+  {
+   "catalogId": "loot-tables",
+   "step": "Currency & Unique Pools",
+   "trueEngine": "Claude",
+   "deliverable": "text-config",
+   "generatorWired": true,
+   "judge": "llm-panel",
+   "checkerMeaningful": false,
+   "note": "Mostly design-flavor entries for items/currencies that are 'pending seed' (not real); minCount just checks ≥1 link exists, not that referenced entities are real/complete."
+  },
+  {
+   "catalogId": "loot-tables",
+   "step": "Item Base Links",
+   "trueEngine": "Claude",
+   "deliverable": "text-config",
+   "generatorWired": true,
+   "judge": "llm-panel",
+   "checkerMeaningful": false,
+   "note": "Links to real seeded items (item-1/3/4/5), which is good, but minCount only checks list length ≥1."
+  },
+  {
+   "catalogId": "loot-tables",
+   "step": "Balance / Drop Sim",
+   "trueEngine": "Code (deterministic)",
+   "deliverable": "text-config",
+   "generatorWired": true,
+   "judge": "llm-panel",
+   "checkerMeaningful": true,
+   "note": "withinPercent checks raresPerHour against a real target with real arithmetic shown, but rareItemsPerKill(0.02) is a rounded constant hand-tuned to land in-band rather than derived independently — real mechanism, curated input."
+  },
+  {
+   "catalogId": "loot-tables",
+   "step": "Icon 2D Art",
+   "trueEngine": "None",
+   "deliverable": "2d-art",
+   "generatorWired": true,
+   "judge": "vlm",
+   "checkerMeaningful": false,
+   "note": "Same placeholder gallery pattern as items; no Leonardo call in produce()."
+  },
+  {
+   "catalogId": "loot-tables",
+   "step": "Test Gate",
+   "trueEngine": "Claude",
+   "deliverable": "ue-runtime",
+   "generatorWired": false,
+   "judge": "ue-test",
+   "checkerMeaningful": false,
+   "note": "runtimeDeferred names VSLootDistributionTest but always reports deferred; no distribution has actually been sampled."
+  },
+  {
+   "catalogId": "loot-tables",
+   "step": "UE Packaging",
+   "trueEngine": "Claude",
+   "deliverable": "ue-runtime",
+   "generatorWired": false,
+   "judge": "ue-test",
+   "checkerMeaningful": false,
+   "note": "Static asset-name manifest; minCount is shape-only. staticChecks do real file checks but aren't the primary accept."
+  },
+  {
+   "catalogId": "materials",
+   "step": "Concept Brief",
+   "trueEngine": "Claude",
+   "deliverable": "text-config",
+   "generatorWired": false,
+   "judge": "llm-panel",
+   "checkerMeaningful": false,
+   "note": "minLength only counts characters."
+  },
+  {
+   "catalogId": "materials",
+   "step": "Surface Type",
+   "trueEngine": "Claude",
+   "deliverable": "text-config",
+   "generatorWired": true,
+   "judge": "llm-panel",
+   "checkerMeaningful": false,
+   "note": "Hardcoded stone/physics preset text; fieldsPopulated shape-only."
+  },
+  {
+   "catalogId": "materials",
+   "step": "Shader Graph",
+   "trueEngine": "Claude",
+   "deliverable": "text-config",
+   "generatorWired": true,
+   "judge": "llm-panel",
+   "checkerMeaningful": false,
+   "note": "Documents the shared master material's pins/restrictions; no shader is authored or compiled here. fieldsPopulated shape-only."
+  },
+  {
+   "catalogId": "materials",
+   "step": "Parameters",
+   "trueEngine": "Code (deterministic)",
+   "deliverable": "text-config",
+   "generatorWired": true,
+   "judge": "llm-panel",
+   "checkerMeaningful": false,
+   "note": "Concrete but hand-picked scalar values (tint/wear/roughness); fieldsPopulated just checks the 5 keys are set, not that the surface would actually look right rendered."
+  },
+  {
+   "catalogId": "materials",
+   "step": "Maps",
+   "trueEngine": "None",
+   "deliverable": "2d-art",
+   "generatorWired": false,
+   "judge": "vlm",
+   "checkerMeaningful": false,
+   "note": "Gallery candidates are hashed CSS gradients, not real Albedo/Normal/ORM texture generation. Even Leonardo (the app's only wired 2D generator) cannot produce a coherent PBR triplanar map set, so this deliverable class has no real generator at all. selected() is shape-only."
+  },
+  {
+   "catalogId": "materials",
+   "step": "LOD/Perf Budget",
+   "trueEngine": "Code (deterministic)",
+   "deliverable": "text-config",
+   "generatorWired": true,
+   "judge": "none",
+   "checkerMeaningful": false,
+   "note": "instructionCount(180) is a hardcoded stub, not a measured shader-compile output (the step's own note admits real GPU perf 'requires an RHI build — deferred'). withinPercent(200,20%) is checking a fabricated constant against itself, not a real budget."
+  },
+  {
+   "catalogId": "materials",
+   "step": "Instance Library",
+   "trueEngine": "Claude",
+   "deliverable": "text-config",
+   "generatorWired": true,
+   "judge": "llm-panel",
+   "checkerMeaningful": false,
+   "note": "Describes the intended MI/parent path and the 'clone the Weathered Stone script' recipe, but no build_<slug>.py is actually generated by this step. fieldsPopulated shape-only."
+  },
+  {
+   "catalogId": "materials",
+   "step": "Icon 2D Art",
+   "trueEngine": "None",
+   "deliverable": "2d-art",
+   "generatorWired": true,
+   "judge": "vlm",
+   "checkerMeaningful": false,
+   "note": "Same placeholder gradient gallery pattern; no Leonardo call."
+  },
+  {
+   "catalogId": "materials",
+   "step": "Test Gate",
+   "trueEngine": "Claude",
+   "deliverable": "ue-runtime",
+   "generatorWired": false,
+   "judge": "ue-test",
+   "checkerMeaningful": false,
+   "note": "runtimeDeferred names VSMasterMaterialInstanceTest but always reports deferred; nothing has been compiled or sampled."
+  },
+  {
+   "catalogId": "materials",
+   "step": "UE Packaging",
+   "trueEngine": "Claude",
+   "deliverable": "ue-runtime",
+   "generatorWired": false,
+   "judge": "ue-test",
+   "checkerMeaningful": false,
+   "note": "Custom inline accept just checks assets.length>=3 (shape-only) against a static name list; the one real check is the staticChecks cppSymbolExists call."
+  },
+  {
+   "catalogId": "music",
+   "step": "Concept Brief",
+   "trueEngine": "Claude",
+   "deliverable": "text-config",
+   "generatorWired": false,
+   "judge": "llm-panel",
+   "checkerMeaningful": false,
+   "note": "minLength only counts characters."
+  },
+  {
+   "catalogId": "music",
+   "step": "Stems & Layers",
+   "trueEngine": "Claude",
+   "deliverable": "audio",
+   "generatorWired": false,
+   "judge": "human",
+   "checkerMeaningful": false,
+   "note": "Elaborate hand-written descriptions of 6 stems/4 layers — no audio is composed or generated (ElevenLabs is wired only for SFX/voice, not music stems; no music generator exists at all). fieldsPopulated only checks the JSON keys exist."
+  },
+  {
+   "catalogId": "music",
+   "step": "Transitions",
+   "trueEngine": "Claude",
+   "deliverable": "text-config",
+   "generatorWired": true,
+   "judge": "llm-panel",
+   "checkerMeaningful": false,
+   "note": "Hand-authored crossfade timing rules over stems that don't exist yet; fieldsPopulated shape-only."
+  },
+  {
+   "catalogId": "music",
+   "step": "Loop & Markers",
+   "trueEngine": "Claude",
+   "deliverable": "text-config",
+   "generatorWired": true,
+   "judge": "llm-panel",
+   "checkerMeaningful": false,
+   "note": "Loop points/markers authored in prose for audio that was never produced; fieldsPopulated shape-only."
+  },
+  {
+   "catalogId": "music",
+   "step": "Mix & Loudness",
+   "trueEngine": "Claude",
+   "deliverable": "audio",
+   "generatorWired": false,
+   "judge": "human",
+   "checkerMeaningful": false,
+   "note": "integratedLUFS is hardcoded to 16.0 and the checker's target is also 16.0 — withinPercent(16.0±12.5%) passes trivially by construction since no real mix was ever measured. This is the audit's clearest false-precision example."
+  },
+  {
+   "catalogId": "music",
+   "step": "Trigger Binding",
+   "trueEngine": "Claude",
+   "deliverable": "text-config",
+   "generatorWired": true,
+   "judge": "llm-panel",
+   "checkerMeaningful": false,
+   "note": "Real cross-catalog links to zone-map/combat-map entities (good), but fieldsPopulated is shape-only."
+  },
+  {
+   "catalogId": "music",
+   "step": "Streaming Budget",
+   "trueEngine": "Claude",
+   "deliverable": "text-config",
+   "generatorWired": true,
+   "judge": "llm-panel",
+   "checkerMeaningful": false,
+   "note": "Memory-size math derived from stem lengths that don't exist as real audio files; fieldsPopulated shape-only."
+  },
+  {
+   "catalogId": "music",
+   "step": "Icon 2D Art",
+   "trueEngine": "None",
+   "deliverable": "2d-art",
+   "generatorWired": true,
+   "judge": "vlm",
+   "checkerMeaningful": false,
+   "note": "Same placeholder gradient gallery pattern; no Leonardo call."
+  },
+  {
+   "catalogId": "music",
+   "step": "Test Gate",
+   "trueEngine": "Claude",
+   "deliverable": "audio",
+   "generatorWired": false,
+   "judge": "ue-test",
+   "checkerMeaningful": false,
+   "note": "runtimeDeferred names VSMusicTransitionTest but always reports deferred; there is no audio asset or MetaSound to test against."
+  },
+  {
+   "catalogId": "music",
+   "step": "UE Packaging",
+   "trueEngine": "Claude",
+   "deliverable": "audio",
+   "generatorWired": false,
+   "judge": "human",
+   "checkerMeaningful": false,
+   "note": "Manifest lists a MetaSound asset + 6 stem SoundWaves by name, but no music/audio generator was ever invoked anywhere in this pipeline — these are entirely fictitious filenames. minCount(8) is shape-only over a list nothing produced."
+  },
+  {
+   "catalogId": "player-movement",
+   "step": "Mesh + Skeleton",
+   "trueEngine": "UE Python",
+   "deliverable": "ue-runtime",
+   "generatorWired": true,
+   "judge": "ue-test",
+   "checkerMeaningful": true,
+   "note": "Dispatches verify_mesh on the live editor; pythonStepOk reads a real ok/issues result from the running UE process."
+  },
+  {
+   "catalogId": "player-movement",
+   "step": "Mixamo Source",
+   "trueEngine": "Human",
+   "deliverable": "animation",
+   "generatorWired": false,
+   "judge": "human",
+   "checkerMeaningful": false,
+   "note": "humanConfirmed is a bare boolean toggle — it never actually scans Content/Source/Mixamo/Raw/ for the 10 files, it just trusts the user's click."
+  },
+  {
+   "catalogId": "player-movement",
+   "step": "Import Mixamo Clips",
+   "trueEngine": "UE Python",
+   "deliverable": "animation",
+   "generatorWired": true,
+   "judge": "ue-test",
+   "checkerMeaningful": true,
+   "note": "import_clips actually imports FBX into the live editor; pythonStepSuccess reads real created/skipped/failed counts from that run."
+  },
+  {
+   "catalogId": "player-movement",
+   "step": "IK Rigs",
+   "trueEngine": "UE Python",
+   "deliverable": "graph-data",
+   "generatorWired": true,
+   "judge": "ue-test",
+   "checkerMeaningful": true,
+   "note": "build_ik_rigs creates real IK_Mixamo/IK_Manny/RTG assets; pythonStepSuccess checks the real created count."
+  },
+  {
+   "catalogId": "player-movement",
+   "step": "Retarget Clips",
+   "trueEngine": "UE Python",
+   "deliverable": "animation",
+   "generatorWired": true,
+   "judge": "ue-test",
+   "checkerMeaningful": true,
+   "note": "Batch-retargets real imported clips; pythonStepSuccess checks the real created count (10 _RT clips)."
+  },
+  {
+   "catalogId": "player-movement",
+   "step": "Blend Space Grid",
+   "trueEngine": "UE Python",
+   "deliverable": "animation",
+   "generatorWired": true,
+   "judge": "ue-test",
+   "checkerMeaningful": true,
+   "note": "Wires the 11 retargeted clips into a real BS_Locomotion asset; pythonStepSuccess checks the real created count."
+  },
+  {
+   "catalogId": "player-movement",
+   "step": "PoFEditor Build",
+   "trueEngine": "Human",
+   "deliverable": "ue-runtime",
+   "generatorWired": false,
+   "judge": "ue-test",
+   "checkerMeaningful": true,
+   "note": "The actual C++ library rebuild is a manual Visual Studio/Rider step outside the app; verify_anim_bp_lib then does a real symbol-resolution check via pythonStepOk against the live editor."
+  },
+  {
+   "catalogId": "player-movement",
+   "step": "ABP_VSPlayer",
+   "trueEngine": "UE Python",
+   "deliverable": "graph-data",
+   "generatorWired": true,
+   "judge": "ue-test",
+   "checkerMeaningful": true,
+   "note": "build_anim_bp calls the compiled PoFEditor authoring library to construct + compile a real AnimBP state machine; pythonStepSuccess checks the real result."
+  },
+  {
+   "catalogId": "player-movement",
+   "step": "AM_Roll Montage",
+   "trueEngine": "UE Python",
+   "deliverable": "animation",
+   "generatorWired": true,
+   "judge": "ue-test",
+   "checkerMeaningful": true,
+   "note": "build_montage creates a real AM_Roll asset with a notify; pythonStepSuccess checks the real created count."
+  },
+  {
+   "catalogId": "player-movement",
+   "step": "Playable Gate",
+   "trueEngine": "UE Python",
+   "deliverable": "animation",
+   "generatorWired": true,
+   "judge": "vlm",
+   "checkerMeaningful": false,
+   "note": "run_playable_gate drives real PIE + captures real frames, but visualDeferred always returns status:'deferred' regardless of the captured data — the RHI+Gemini (VLM) visual verdict has not actually run yet, so this is an honest gap, not a passing check."
+  },
+  {
+   "catalogId": "progression-curves",
+   "step": "Concept Brief",
+   "trueEngine": "Code",
+   "deliverable": "text-config",
+   "generatorWired": true,
+   "judge": "llm-panel",
+   "checkerMeaningful": false,
+   "note": "produce() returns a hardcoded template string baked into the pipeline file; the CliProduce CLI dispatch is shown to the user but its output is discarded — ArchetypeStep's onComplete calls spec.produce(entity) regardless of what Claude returns."
+  },
+  {
+   "catalogId": "progression-curves",
+   "step": "Curve Formula",
+   "trueEngine": "Code",
+   "deliverable": "text-config",
+   "generatorWired": true,
+   "judge": "llm-panel",
+   "checkerMeaningful": false,
+   "note": "Math.pow values are genuinely computed, but the whole formula/base/growth choice is hand-authored constants, not derived from any live balance data; accept is fieldsPopulated (existence only)."
+  },
+  {
+   "catalogId": "progression-curves",
+   "step": "XP Sources",
+   "trueEngine": "Code",
+   "deliverable": "text-config",
+   "generatorWired": true,
+   "judge": "llm-panel",
+   "checkerMeaningful": false,
+   "note": "Hardcoded XP-source table; fieldsPopulated only checks the four keys exist, not that the contribution percentages sum correctly or match the formula."
+  },
+  {
+   "catalogId": "progression-curves",
+   "step": "Reward Schedule",
+   "trueEngine": "Code",
+   "deliverable": "text-config",
+   "generatorWired": true,
+   "judge": "llm-panel",
+   "checkerMeaningful": false,
+   "note": "Static milestone/passive-point table; accept only checks the three top-level keys are non-null."
+  },
+  {
+   "catalogId": "progression-curves",
+   "step": "Caps & Catch-up",
+   "trueEngine": "Code",
+   "deliverable": "text-config",
+   "generatorWired": true,
+   "judge": "llm-panel",
+   "checkerMeaningful": false,
+   "note": "Static rules object; fieldsPopulated shape check, no validation that mentor/streak numbers are internally consistent."
+  },
+  {
+   "catalogId": "progression-curves",
+   "step": "Death Penalty",
+   "trueEngine": "Code",
+   "deliverable": "text-config",
+   "generatorWired": true,
+   "judge": "llm-panel",
+   "checkerMeaningful": false,
+   "note": "Static death-penalty bands; fieldsPopulated shape check only."
+  },
+  {
+   "catalogId": "progression-curves",
+   "step": "Balance",
+   "trueEngine": "Code",
+   "deliverable": "text-config",
+   "generatorWired": true,
+   "judge": "none",
+   "checkerMeaningful": true,
+   "note": "withinPercent genuinely checks minutesToNextLevel against the 45 min target, but the xpPerMinute=104 input is an invented calibration constant, not a measured or simulated value — no ue-test/telemetry exists to prove the underlying assumption."
+  },
+  {
+   "catalogId": "progression-curves",
+   "step": "Telemetry",
+   "trueEngine": "Code",
+   "deliverable": "text-config",
+   "generatorWired": true,
+   "judge": "llm-panel",
+   "checkerMeaningful": false,
+   "note": "Static event-schema list; fieldsPopulated shape check only, no telemetry pipeline actually wired to emit these events."
+  },
+  {
+   "catalogId": "progression-curves",
+   "step": "XP Bar UI",
+   "trueEngine": "Code",
+   "deliverable": "text-config",
+   "generatorWired": true,
+   "judge": "llm-panel",
+   "checkerMeaningful": false,
+   "note": "Static widget-binding description; fieldsPopulated shape check only."
+  },
+  {
+   "catalogId": "progression-curves",
+   "step": "Icon 2D Art",
+   "trueEngine": "None",
+   "deliverable": "2d-art",
+   "generatorWired": true,
+   "judge": "vlm",
+   "checkerMeaningful": false,
+   "note": "Gallery candidates come from genericGalleryCandidates.ts, a pure hash→CSS-gradient swatch generator — no Leonardo call is made despite Leonardo being wired elsewhere in the app; accept=selected only checks an index was chosen."
+  },
+  {
+   "catalogId": "progression-curves",
+   "step": "Test Gate",
+   "trueEngine": "Code",
+   "deliverable": "text-config",
+   "generatorWired": true,
+   "judge": "ue-test",
+   "checkerMeaningful": false,
+   "note": "runtimeDeferred() unconditionally returns status:'deferred', reason:'live-UE runner not yet run' — it names VSProgressionCurveTest but never runs or reads any real test result."
+  },
+  {
+   "catalogId": "progression-curves",
+   "step": "UE Packaging",
+   "trueEngine": "Code",
+   "deliverable": "ue-runtime",
+   "generatorWired": false,
+   "judge": "none",
+   "checkerMeaningful": false,
+   "note": "Assembles a deterministic list of asset-name strings (CT_/GE_/WBP_/NS_) from slug(e.name); no engine actually creates these DataTables/GameplayEffects/Blueprints — minCount just checks the list has ≥4 entries."
+  },
+  {
+   "catalogId": "props",
+   "step": "Concept Brief",
+   "trueEngine": "Code",
+   "deliverable": "text-config",
+   "generatorWired": true,
+   "judge": "llm-panel",
+   "checkerMeaningful": false,
+   "note": "Hardcoded template string; CLI dispatch cosmetic, output discarded in favor of spec.produce()."
+  },
+  {
+   "catalogId": "props",
+   "step": "Interaction",
+   "trueEngine": "Code",
+   "deliverable": "text-config",
+   "generatorWired": true,
+   "judge": "llm-panel",
+   "checkerMeaningful": false,
+   "note": "Static interaction rules table; fieldsPopulated shape check only."
+  },
+  {
+   "catalogId": "props",
+   "step": "3D & LODs",
+   "trueEngine": "None",
+   "deliverable": "3d-mesh",
+   "generatorWired": true,
+   "judge": "vlm",
+   "checkerMeaningful": false,
+   "note": "Claims a real mesh (SM_/GC_ names, tri budgets, Nanite flag) but produce() only returns hand-authored numbers; gallery candidates are hashed CSS-gradient swatches, not Tripo-generated geometry, despite Tripo being wired for 3D elsewhere."
+  },
+  {
+   "catalogId": "props",
+   "step": "Collision & Physics",
+   "trueEngine": "Code",
+   "deliverable": "text-config",
+   "generatorWired": true,
+   "judge": "llm-panel",
+   "checkerMeaningful": false,
+   "note": "Static Chaos/physics parameter table; fieldsPopulated shape check only."
+  },
+  {
+   "catalogId": "props",
+   "step": "Material",
+   "trueEngine": "Code",
+   "deliverable": "text-config",
+   "generatorWired": true,
+   "judge": "llm-panel",
+   "checkerMeaningful": false,
+   "note": "Static material-instance parameter block; fieldsPopulated shape check only, no material actually compiled."
+  },
+  {
+   "catalogId": "props",
+   "step": "Destruction States",
+   "trueEngine": "Code",
+   "deliverable": "text-config",
+   "generatorWired": true,
+   "judge": "llm-panel",
+   "checkerMeaningful": false,
+   "note": "Static intact/damaged/destroyed state table; fieldsPopulated shape check only."
+  },
+  {
+   "catalogId": "props",
+   "step": "Loot on Destroy",
+   "trueEngine": "Code",
+   "deliverable": "text-config",
+   "generatorWired": true,
+   "judge": "llm-panel",
+   "checkerMeaningful": false,
+   "note": "Static loot-table link description; accept=minCount('links',1) only checks a link array is non-empty, not that lt-Brute actually resolves or the ilvl math is sound."
+  },
+  {
+   "catalogId": "props",
+   "step": "VFX / Audio",
+   "trueEngine": "Code",
+   "deliverable": "vfx-particles",
+   "generatorWired": false,
+   "judge": "none",
+   "checkerMeaningful": false,
+   "note": "Claims NS_FireImpactBurst Niagara VFX + SoundCue audio, but only text descriptions are produced; Niagara particle generation is not wired at all in this app, and no audio file is generated here (ElevenLabs is SFX/voice-only and isn't invoked by this step)."
+  },
+  {
+   "catalogId": "props",
+   "step": "Icon 2D Art",
+   "trueEngine": "None",
+   "deliverable": "2d-art",
+   "generatorWired": true,
+   "judge": "vlm",
+   "checkerMeaningful": false,
+   "note": "Same hash-swatch gallery stub as other Icon 2D Art steps; no Leonardo call despite it being wired."
+  },
+  {
+   "catalogId": "props",
+   "step": "Test Gate",
+   "trueEngine": "Code",
+   "deliverable": "text-config",
+   "generatorWired": true,
+   "judge": "ue-test",
+   "checkerMeaningful": false,
+   "note": "runtimeDeferred('VSPropInteractTest', ...) is a static constant deferred result, never actually executed or checked against a live PIE run."
+  },
+  {
+   "catalogId": "props",
+   "step": "UE Packaging",
+   "trueEngine": "Code",
+   "deliverable": "ue-runtime",
+   "generatorWired": false,
+   "judge": "none",
+   "checkerMeaningful": false,
+   "note": "Deterministic list of SM_/GC_/BP_/MI_ names from slug(e.name); minCount(4) only checks list length, no assets are actually built in UE by this step."
+  },
+  {
+   "catalogId": "quests",
+   "step": "Concept Brief",
+   "trueEngine": "Code",
+   "deliverable": "text-config",
+   "generatorWired": true,
+   "judge": "llm-panel",
+   "checkerMeaningful": false,
+   "note": "Hardcoded quest-brief template string; CLI output is discarded in favor of the static spec.produce() text."
+  },
+  {
+   "catalogId": "quests",
+   "step": "Objective Graph",
+   "trueEngine": "Code",
+   "deliverable": "graph-data",
+   "generatorWired": true,
+   "judge": "llm-panel",
+   "checkerMeaningful": true,
+   "note": "graphValid() genuinely walks the hardcoded node/edge graph for dangling edges, reachability, and a terminal — real structural verification, but the graph itself is a fixed hand-authored quest layout, not generated from any design input."
+  },
+  {
+   "catalogId": "quests",
+   "step": "Triggers & World-State",
+   "trueEngine": "Code",
+   "deliverable": "text-config",
+   "generatorWired": true,
+   "judge": "llm-panel",
+   "checkerMeaningful": false,
+   "note": "Static trigger/world-mutation table; fieldsPopulated shape check only."
+  },
+  {
+   "catalogId": "quests",
+   "step": "Rewards",
+   "trueEngine": "Code",
+   "deliverable": "text-config",
+   "generatorWired": true,
+   "judge": "llm-panel",
+   "checkerMeaningful": false,
+   "note": "Static reward-path detail object; accept=minCount('rewards',1) only checks the 2-element path array length, not that gold/rep amounts are balanced or that lt-EliteKnight substitution note is resolved."
+  },
+  {
+   "catalogId": "quests",
+   "step": "NPC & Dialog Binding",
+   "trueEngine": "Code",
+   "deliverable": "text-config",
+   "generatorWired": true,
+   "judge": "llm-panel",
+   "checkerMeaningful": false,
+   "note": "Static NPC/dialog-link list; minCount(1) shape check only — note explicitly documents a pending dialog-tree stand-in (dialog-gatekeeper) never actually authored."
+  },
+  {
+   "catalogId": "quests",
+   "step": "Marker / Tracker UI",
+   "trueEngine": "Code",
+   "deliverable": "text-config",
+   "generatorWired": true,
+   "judge": "llm-panel",
+   "checkerMeaningful": false,
+   "note": "Static tracker widget spec; fieldsPopulated shape check only."
+  },
+  {
+   "catalogId": "quests",
+   "step": "Journal / Lore",
+   "trueEngine": "Code",
+   "deliverable": "text-config",
+   "generatorWired": true,
+   "judge": "llm-panel",
+   "checkerMeaningful": false,
+   "note": "Hardcoded lore paragraph; minLength(200) only checks character count, not narrative quality or consistency with the objective graph."
+  },
+  {
+   "catalogId": "quests",
+   "step": "Icon 2D Art",
+   "trueEngine": "None",
+   "deliverable": "2d-art",
+   "generatorWired": true,
+   "judge": "vlm",
+   "checkerMeaningful": false,
+   "note": "Same hash-swatch gallery stub; no Leonardo call for the quest icon despite it being wired."
+  },
+  {
+   "catalogId": "quests",
+   "step": "Localization",
+   "trueEngine": "Code",
+   "deliverable": "text-config",
+   "generatorWired": true,
+   "judge": "llm-panel",
+   "checkerMeaningful": false,
+   "note": "Only produces uppercased key NAMES (QUEST_..._TITLE etc.), no actual translated strings; minCount(1) shape check only."
+  },
+  {
+   "catalogId": "quests",
+   "step": "Test Gate",
+   "trueEngine": "Code",
+   "deliverable": "text-config",
+   "generatorWired": true,
+   "judge": "ue-test",
+   "checkerMeaningful": false,
+   "note": "runtimeDeferred('VSQuestFlowTest', ...) is a static constant deferred marker, never executed against a live PIE run."
+  },
+  {
+   "catalogId": "quests",
+   "step": "UE Packaging",
+   "trueEngine": "Code",
+   "deliverable": "ue-runtime",
+   "generatorWired": false,
+   "judge": "none",
+   "checkerMeaningful": false,
+   "note": "Deterministic DT_/DA_/WBP_/icon name list; minCount(3) only checks list length — no quest DataTable is actually written to a UE project by this step."
+  },
+  {
+   "catalogId": "save-points",
+   "step": "Concept Brief",
+   "trueEngine": "Code",
+   "deliverable": "text-config",
+   "generatorWired": true,
+   "judge": "llm-panel",
+   "checkerMeaningful": false,
+   "note": "Hardcoded brief text; CLI output discarded in favor of static spec.produce()."
+  },
+  {
+   "catalogId": "save-points",
+   "step": "State Schema",
+   "trueEngine": "Code",
+   "deliverable": "text-config",
+   "generatorWired": true,
+   "judge": "llm-panel",
+   "checkerMeaningful": false,
+   "note": "Static persisted/ephemeral field-list description; fieldsPopulated shape check only, no actual UARPGSaveGame class is generated."
+  },
+  {
+   "catalogId": "save-points",
+   "step": "Versioning & Migration",
+   "trueEngine": "Code",
+   "deliverable": "text-config",
+   "generatorWired": true,
+   "judge": "llm-panel",
+   "checkerMeaningful": false,
+   "note": "Static migration-policy prose; fieldsPopulated shape check only."
+  },
+  {
+   "catalogId": "save-points",
+   "step": "Save Triggers",
+   "trueEngine": "Code",
+   "deliverable": "text-config",
+   "generatorWired": true,
+   "judge": "llm-panel",
+   "checkerMeaningful": false,
+   "note": "Static trigger/cooldown table; fieldsPopulated shape check only."
+  },
+  {
+   "catalogId": "save-points",
+   "step": "Cloud / Local Storage",
+   "trueEngine": "Code",
+   "deliverable": "text-config",
+   "generatorWired": true,
+   "judge": "llm-panel",
+   "checkerMeaningful": false,
+   "note": "Static storage-strategy description including an invented fileSizeKB derivation; fieldsPopulated shape check only, nothing measures an actual save file."
+  },
+  {
+   "catalogId": "save-points",
+   "step": "Conflict Resolution",
+   "trueEngine": "Code",
+   "deliverable": "text-config",
+   "generatorWired": true,
+   "judge": "llm-panel",
+   "checkerMeaningful": false,
+   "note": "Static policy prose; fieldsPopulated shape check only."
+  },
+  {
+   "catalogId": "save-points",
+   "step": "Corruption Recovery",
+   "trueEngine": "Code",
+   "deliverable": "text-config",
+   "generatorWired": true,
+   "judge": "llm-panel",
+   "checkerMeaningful": false,
+   "note": "Static recovery-path description; fieldsPopulated shape check only."
+  },
+  {
+   "catalogId": "save-points",
+   "step": "Slots UI",
+   "trueEngine": "Code",
+   "deliverable": "text-config",
+   "generatorWired": true,
+   "judge": "llm-panel",
+   "checkerMeaningful": false,
+   "note": "Static widget-binding description; fieldsPopulated shape check only."
+  },
+  {
+   "catalogId": "save-points",
+   "step": "Load-Time Budget",
+   "trueEngine": "Code",
+   "deliverable": "text-config",
+   "generatorWired": true,
+   "judge": "none",
+   "checkerMeaningful": true,
+   "note": "withinPercent genuinely checks measuredMs(15) against the 30ms target, but measuredMs is an invented sum of guessed per-field costs, never measured from an actual save/load in UE — no ue-test exists to substantiate it."
+  },
+  {
+   "catalogId": "save-points",
+   "step": "Icon 2D Art",
+   "trueEngine": "None",
+   "deliverable": "2d-art",
+   "generatorWired": true,
+   "judge": "vlm",
+   "checkerMeaningful": false,
+   "note": "Same hash-swatch gallery stub; no Leonardo call for the bonfire icon despite it being wired."
+  },
+  {
+   "catalogId": "save-points",
+   "step": "Test Gate",
+   "trueEngine": "Code",
+   "deliverable": "text-config",
+   "generatorWired": true,
+   "judge": "ue-test",
+   "checkerMeaningful": false,
+   "note": "runtimeDeferred('VSSaveLoadTest', ...) is a static constant deferred marker, never executed against a live PIE run."
+  },
+  {
+   "catalogId": "save-points",
+   "step": "UE Packaging",
+   "trueEngine": "Code",
+   "deliverable": "ue-runtime",
+   "generatorWired": false,
+   "judge": "none",
+   "checkerMeaningful": false,
+   "note": "Deterministic asset-name list (SaveGame/Subsystem/BP_Bonfire/icon/WBP names); minCount(4) only checks list length, no save subsystem is actually built by this step."
+  },
+  {
+   "catalogId": "screen-flow",
+   "step": "Concept Brief",
+   "trueEngine": "Code",
+   "deliverable": "text-config",
+   "generatorWired": true,
+   "judge": "llm-panel",
+   "checkerMeaningful": false,
+   "note": "Hardcoded brief text; CLI output discarded in favor of static spec.produce()."
+  },
+  {
+   "catalogId": "screen-flow",
+   "step": "Navigation Graph",
+   "trueEngine": "Code",
+   "deliverable": "graph-data",
+   "generatorWired": true,
+   "judge": "llm-panel",
+   "checkerMeaningful": true,
+   "note": "graphValid() genuinely validates the hardcoded 13-node/22-edge screen graph for dangling edges, reachability, and a terminal — real structural check, but the graph is fixed hand-authored content, not generated."
+  },
+  {
+   "catalogId": "screen-flow",
+   "step": "Input Mapping",
+   "trueEngine": "Code",
+   "deliverable": "text-config",
+   "generatorWired": true,
+   "judge": "llm-panel",
+   "checkerMeaningful": false,
+   "note": "Static Enhanced Input binding table; minCount(1) shape check only, no IMC_Navigation asset is actually created."
+  },
+  {
+   "catalogId": "screen-flow",
+   "step": "Component Inventory",
+   "trueEngine": "Code",
+   "deliverable": "text-config",
+   "generatorWired": true,
+   "judge": "llm-panel",
+   "checkerMeaningful": false,
+   "note": "Static widget/z-depth table; minCount(1) shape check only, no WBP_ widgets are actually created."
+  },
+  {
+   "catalogId": "screen-flow",
+   "step": "Transitions / Animation",
+   "trueEngine": "Code",
+   "deliverable": "text-config",
+   "generatorWired": true,
+   "judge": "llm-panel",
+   "checkerMeaningful": false,
+   "note": "Claims WidgetAnimation (WA_*) specs but only text descriptions of durations/eases are produced, no animation asset is authored; minCount(1) checklist-length check only."
+  },
+  {
+   "catalogId": "screen-flow",
+   "step": "VFX / SFX Juice",
+   "trueEngine": "Code",
+   "deliverable": "vfx-particles",
+   "generatorWired": false,
+   "judge": "none",
+   "checkerMeaningful": false,
+   "note": "Static UI-juice description referencing SoundCues and PostProcess params; no VFX/audio generation is wired (Niagara gen unwired, ElevenLabs not invoked here); minCount(1) shape check only."
+  },
+  {
+   "catalogId": "screen-flow",
+   "step": "Accessibility",
+   "trueEngine": "Code",
+   "deliverable": "text-config",
+   "generatorWired": true,
+   "judge": "llm-panel",
+   "checkerMeaningful": false,
+   "note": "Static checklist of a11y intentions; minCount(1) only checks the list is non-empty, does not verify any screen actually satisfies these rules."
+  },
+  {
+   "catalogId": "screen-flow",
+   "step": "Localization",
+   "trueEngine": "Code",
+   "deliverable": "text-config",
+   "generatorWired": true,
+   "judge": "llm-panel",
+   "checkerMeaningful": false,
+   "note": "Only produces uppercased key NAMES with English display text, no actual translations; minCount(1) shape check only."
+  },
+  {
+   "catalogId": "screen-flow",
+   "step": "Icon 2D Art",
+   "trueEngine": "None",
+   "deliverable": "2d-art",
+   "generatorWired": true,
+   "judge": "vlm",
+   "checkerMeaningful": false,
+   "note": "Same hash-swatch gallery stub; no Leonardo call for the screen-flow icon despite it being wired."
+  },
+  {
+   "catalogId": "screen-flow",
+   "step": "Test Gate",
+   "trueEngine": "Code",
+   "deliverable": "text-config",
+   "generatorWired": true,
+   "judge": "ue-test",
+   "checkerMeaningful": false,
+   "note": "runtimeDeferred('VSScreenFlowTest', ...) is a static constant deferred marker, never executed against a live PIE run."
+  },
+  {
+   "catalogId": "screen-flow",
+   "step": "UE Packaging",
+   "trueEngine": "Code",
+   "deliverable": "ue-runtime",
+   "generatorWired": false,
+   "judge": "none",
+   "checkerMeaningful": false,
+   "note": "Deterministic WBP_/IMC_/icon name list; minCount(3) only checks list length, no HUD widget classes are actually built by this step."
+  },
+  {
+   "catalogId": "spellbook",
+   "step": "Concept Brief",
+   "trueEngine": "Claude",
+   "deliverable": "text-config",
+   "generatorWired": true,
+   "judge": "llm-panel",
+   "checkerMeaningful": false,
+   "note": "Hardcoded prose string in the pipeline source (no live LLM call at Produce time); minLength(300) only counts characters, never assesses narrative/design accuracy."
+  },
+  {
+   "catalogId": "spellbook",
+   "step": "Effect Logic",
+   "trueEngine": "Claude",
+   "deliverable": "text-config",
+   "generatorWired": true,
+   "judge": "llm-panel",
+   "checkerMeaningful": false,
+   "note": "Numbers are pre-computed in the hardcoded produce() function; fieldsPopulated only checks the 7 keys exist, not that the ignite/crit formulas are internally consistent."
+  },
+  {
+   "catalogId": "spellbook",
+   "step": "Targeting",
+   "trueEngine": "Claude",
+   "deliverable": "text-config",
+   "generatorWired": true,
+   "judge": "llm-panel",
+   "checkerMeaningful": false,
+   "note": "Static hand-authored targeting object; fieldsPopulated is existence-only."
+  },
+  {
+   "catalogId": "spellbook",
+   "step": "Balance",
+   "trueEngine": "Claude",
+   "deliverable": "text-config",
+   "generatorWired": true,
+   "judge": "llm-panel",
+   "checkerMeaningful": true,
+   "note": "withinPercent compares a genuinely derived sustainedDPS (35/3s + ignite) against the 19.5 tier target — a real content check, not a shape check."
+  },
+  {
+   "catalogId": "spellbook",
+   "step": "Combo / Synergy",
+   "trueEngine": "Claude",
+   "deliverable": "text-config",
+   "generatorWired": true,
+   "judge": "llm-panel",
+   "checkerMeaningful": false,
+   "note": "minCount(≥2) only counts array entries, doesn't validate multiplier math or tag-rule consistency."
+  },
+  {
+   "catalogId": "spellbook",
+   "step": "Animation",
+   "trueEngine": "None",
+   "deliverable": "animation",
+   "generatorWired": false,
+   "judge": "none",
+   "checkerMeaningful": false,
+   "note": "Step's own note admits 'AnimMontage asset ... is a known gap' — only a hardcoded timing checklist is produced, no montage/asset; minCount(≥6) just counts checklist strings."
+  },
+  {
+   "catalogId": "spellbook",
+   "step": "VFX",
+   "trueEngine": "Claude",
+   "deliverable": "vfx-particles",
+   "generatorWired": false,
+   "judge": "none",
+   "checkerMeaningful": false,
+   "note": "Declares Niagara asset name strings (NS_*) and triggers as text; no Niagara/VFX generator is wired in the app to actually author these systems; fieldsPopulated is existence-only."
+  },
+  {
+   "catalogId": "spellbook",
+   "step": "Icon 2D Art",
+   "trueEngine": "None",
+   "deliverable": "2d-art",
+   "generatorWired": true,
+   "judge": "vlm",
+   "checkerMeaningful": false,
+   "note": "produce() only sets {selected:0}; the generic gallery archetype fills candidates via genericGalleryCandidates.ts, a pure hash→CSS-gradient swatch generator, not a real Leonardo image call; accept is selected() (shape-only)."
+  },
+  {
+   "catalogId": "spellbook",
+   "step": "Applies Status",
+   "trueEngine": "Claude",
+   "deliverable": "text-config",
+   "generatorWired": true,
+   "judge": "llm-panel",
+   "checkerMeaningful": false,
+   "note": "Cross-catalog link declaration only; fieldsPopulated checks 3 keys exist."
+  },
+  {
+   "catalogId": "spellbook",
+   "step": "Test Gate",
+   "trueEngine": "Claude",
+   "deliverable": "text-config",
+   "generatorWired": true,
+   "judge": "ue-test",
+   "checkerMeaningful": false,
+   "note": "runtimeDeferred names a real registered automation test (PoF.GenFireball.EffectConfig) so a UE run could verify it, but the accept call itself just defers status — nothing is checked synchronously."
+  },
+  {
+   "catalogId": "spellbook",
+   "step": "UE Packaging",
+   "trueEngine": "None",
+   "deliverable": "ue-runtime",
+   "generatorWired": false,
+   "judge": "none",
+   "checkerMeaningful": false,
+   "note": "Returns a hardcoded list of intended asset name strings; no UE Python/C++ call actually builds these assets here; minCount(≥4) only counts list length."
+  },
+  {
+   "catalogId": "state-graph",
+   "step": "Concept Brief",
+   "trueEngine": "Claude",
+   "deliverable": "text-config",
+   "generatorWired": true,
+   "judge": "llm-panel",
+   "checkerMeaningful": false,
+   "note": "Hardcoded prose; minLength counts characters only."
+  },
+  {
+   "catalogId": "state-graph",
+   "step": "State Graph",
+   "trueEngine": "Claude",
+   "deliverable": "graph-data",
+   "generatorWired": true,
+   "judge": "llm-panel",
+   "checkerMeaningful": true,
+   "note": "graphValid actually walks the FSM (reachability from Idle, dangling-edge check, ≥1 terminal) — a real structural verification of the produced graph, not a shape check."
+  },
+  {
+   "catalogId": "state-graph",
+   "step": "Blackboard Schema",
+   "trueEngine": "Claude",
+   "deliverable": "text-config",
+   "generatorWired": true,
+   "judge": "llm-panel",
+   "checkerMeaningful": false,
+   "note": "minCount(≥7) just counts declared keys; doesn't confirm the keys are actually read anywhere in engine code."
+  },
+  {
+   "catalogId": "state-graph",
+   "step": "Transition Rules",
+   "trueEngine": "Claude",
+   "deliverable": "text-config",
+   "generatorWired": true,
+   "judge": "llm-panel",
+   "checkerMeaningful": false,
+   "note": "minCount(≥6) counts table rows; guard/condition text is hand-authored, unverified against actual UE condition classes."
+  },
+  {
+   "catalogId": "state-graph",
+   "step": "Hook Points",
+   "trueEngine": "Claude",
+   "deliverable": "text-config",
+   "generatorWired": false,
+   "judge": "none",
+   "checkerMeaningful": false,
+   "note": "Declares VFX/SFX/AnimNotify bindings as descriptive strings only; no VFX/audio generator is wired to actually author NS_/SC_ assets; minCount(≥5) is shape-only."
+  },
+  {
+   "catalogId": "state-graph",
+   "step": "Persistence",
+   "trueEngine": "Claude",
+   "deliverable": "text-config",
+   "generatorWired": true,
+   "judge": "llm-panel",
+   "checkerMeaningful": false,
+   "note": "fieldsPopulated checks 3 keys exist; doesn't verify the save-semantics claims against an actual SaveGame class."
+  },
+  {
+   "catalogId": "state-graph",
+   "step": "Icon 2D Art",
+   "trueEngine": "None",
+   "deliverable": "2d-art",
+   "generatorWired": true,
+   "judge": "vlm",
+   "checkerMeaningful": false,
+   "note": "Same generic gallery placeholder pattern as spellbook — hash-based swatch, not a real Leonardo render; accept is selected() (shape-only)."
+  },
+  {
+   "catalogId": "state-graph",
+   "step": "Test Gate",
+   "trueEngine": "Claude",
+   "deliverable": "text-config",
+   "generatorWired": true,
+   "judge": "ue-test",
+   "checkerMeaningful": false,
+   "note": "runtimeDeferred names VSStateGraphTest (a real functional test) but defers rather than verifying content now."
+  },
+  {
+   "catalogId": "state-graph",
+   "step": "UE Packaging",
+   "trueEngine": "None",
+   "deliverable": "ue-runtime",
+   "generatorWired": false,
+   "judge": "none",
+   "checkerMeaningful": false,
+   "note": "Hardcoded asset-name manifest only; no actual StateTree/Blackboard/ABP asset is built by this step; minCount(≥4) is shape-only."
+  },
+  {
+   "catalogId": "status-effects",
+   "step": "Concept Brief",
+   "trueEngine": "Claude",
+   "deliverable": "text-config",
+   "generatorWired": true,
+   "judge": "llm-panel",
+   "checkerMeaningful": false,
+   "note": "Hardcoded prose; minLength counts characters only."
+  },
+  {
+   "catalogId": "status-effects",
+   "step": "Effect Logic",
+   "trueEngine": "Claude",
+   "deliverable": "text-config",
+   "generatorWired": true,
+   "judge": "llm-panel",
+   "checkerMeaningful": false,
+   "note": "fieldsPopulated checks 7 keys exist; doesn't cross-check magnitude/period/duration math against the DPS claimed in Balance."
+  },
+  {
+   "catalogId": "status-effects",
+   "step": "Balance",
+   "trueEngine": "Claude",
+   "deliverable": "text-config",
+   "generatorWired": true,
+   "judge": "llm-panel",
+   "checkerMeaningful": true,
+   "note": "withinPercent verifies the derived 7.875 DPS against the 7.875 tier target (±20%) — genuine content check on a real computed budget."
+  },
+  {
+   "catalogId": "status-effects",
+   "step": "Icon 2D Art",
+   "trueEngine": "None",
+   "deliverable": "2d-art",
+   "generatorWired": true,
+   "judge": "vlm",
+   "checkerMeaningful": false,
+   "note": "Generic gallery placeholder (hash swatch), not a Leonardo render; selected() is shape-only."
+  },
+  {
+   "catalogId": "status-effects",
+   "step": "Test Gate",
+   "trueEngine": "Claude",
+   "deliverable": "text-config",
+   "generatorWired": true,
+   "judge": "ue-test",
+   "checkerMeaningful": false,
+   "note": "runtimeDeferred names PoF.StatusBurning.EffectConfig, a real registered test, but defers rather than verifying now."
+  },
+  {
+   "catalogId": "status-effects",
+   "step": "UE Packaging",
+   "trueEngine": "None",
+   "deliverable": "ue-runtime",
+   "generatorWired": false,
+   "judge": "none",
+   "checkerMeaningful": false,
+   "note": "Hardcoded asset-name list (GE/icon/DT row/NS); no actual GameplayEffect/Niagara asset is built here; minCount(3) is shape-only (staticChecks separately verify a seed row, but that's not the accept gate)."
+  },
+  {
+   "catalogId": "tutorial-beats",
+   "step": "Concept Brief",
+   "trueEngine": "Claude",
+   "deliverable": "text-config",
+   "generatorWired": true,
+   "judge": "llm-panel",
+   "checkerMeaningful": false,
+   "note": "Hardcoded prose; minLength counts characters only."
+  },
+  {
+   "catalogId": "tutorial-beats",
+   "step": "Trigger",
+   "trueEngine": "Claude",
+   "deliverable": "text-config",
+   "generatorWired": true,
+   "judge": "llm-panel",
+   "checkerMeaningful": false,
+   "note": "fieldsPopulated checks 3 keys exist only."
+  },
+  {
+   "catalogId": "tutorial-beats",
+   "step": "Lock / Sandbox",
+   "trueEngine": "Claude",
+   "deliverable": "text-config",
+   "generatorWired": true,
+   "judge": "llm-panel",
+   "checkerMeaningful": false,
+   "note": "fieldsPopulated checks 3 keys exist only."
+  },
+  {
+   "catalogId": "tutorial-beats",
+   "step": "Step Sequence",
+   "trueEngine": "Claude",
+   "deliverable": "text-config",
+   "generatorWired": true,
+   "judge": "llm-panel",
+   "checkerMeaningful": false,
+   "note": "fieldsPopulated checks 3 keys exist; sequence content is hand-authored, not derived from actual GA_Dodge tag broadcasting."
+  },
+  {
+   "catalogId": "tutorial-beats",
+   "step": "Success / Skip / Fail",
+   "trueEngine": "Claude",
+   "deliverable": "text-config",
+   "generatorWired": true,
+   "judge": "llm-panel",
+   "checkerMeaningful": false,
+   "note": "fieldsPopulated checks the 3 outcome objects exist only."
+  },
+  {
+   "catalogId": "tutorial-beats",
+   "step": "Pointer / Highlight 2D",
+   "trueEngine": "None",
+   "deliverable": "2d-art",
+   "generatorWired": true,
+   "judge": "vlm",
+   "checkerMeaningful": false,
+   "note": "Gallery archetype uses the same generic hash-swatch placeholder, not a real 2D render of a pointer overlay; selected() is shape-only."
+  },
+  {
+   "catalogId": "tutorial-beats",
+   "step": "VFX / Audio Cue",
+   "trueEngine": "Claude",
+   "deliverable": "text-config",
+   "generatorWired": false,
+   "judge": "none",
+   "checkerMeaningful": false,
+   "note": "Step's own note admits the audio entity 'audio-tutorial-prompt' is not seeded ('pending audio catalog seed') — only descriptive cue text is produced, no VFX/audio generator wired; minCount(≥1) is shape-only."
+  },
+  {
+   "catalogId": "tutorial-beats",
+   "step": "VO",
+   "trueEngine": "None",
+   "deliverable": "audio",
+   "generatorWired": true,
+   "judge": "human",
+   "checkerMeaningful": false,
+   "note": "Only literal VO script text is authored (no ElevenLabs synthesis call); voNote itself says the SoundCues are 'pending audio catalog seed'; minCount(≥1) is shape-only."
+  },
+  {
+   "catalogId": "tutorial-beats",
+   "step": "Telemetry",
+   "trueEngine": "Claude",
+   "deliverable": "text-config",
+   "generatorWired": true,
+   "judge": "llm-panel",
+   "checkerMeaningful": false,
+   "note": "fieldsPopulated checks 2 keys exist; doesn't verify the events are actually wired to UARPGTelemetrySubsystem."
+  },
+  {
+   "catalogId": "tutorial-beats",
+   "step": "Icon 2D Art",
+   "trueEngine": "None",
+   "deliverable": "2d-art",
+   "generatorWired": true,
+   "judge": "vlm",
+   "checkerMeaningful": false,
+   "note": "Generic gallery hash-swatch placeholder, not a Leonardo render; selected() is shape-only."
+  },
+  {
+   "catalogId": "tutorial-beats",
+   "step": "Localization",
+   "trueEngine": "Claude",
+   "deliverable": "text-config",
+   "generatorWired": true,
+   "judge": "llm-panel",
+   "checkerMeaningful": false,
+   "note": "minCount(≥1) just counts key strings; no actual localization/translation is performed."
+  },
+  {
+   "catalogId": "tutorial-beats",
+   "step": "Test Gate",
+   "trueEngine": "Claude",
+   "deliverable": "text-config",
+   "generatorWired": true,
+   "judge": "ue-test",
+   "checkerMeaningful": false,
+   "note": "runtimeDeferred names VSTutorialComprehensionTest, a real test, but defers rather than verifying now."
+  },
+  {
+   "catalogId": "tutorial-beats",
+   "step": "UE Packaging",
+   "trueEngine": "None",
+   "deliverable": "ue-runtime",
+   "generatorWired": false,
+   "judge": "none",
+   "checkerMeaningful": false,
+   "note": "Hardcoded asset-name manifest (DT row/BP/pointer/icon/NS); no actual tutorial BP or DataTable row is built by this step; minCount(2) is shape-only."
+  },
+  {
+   "catalogId": "vendors",
+   "step": "Concept Brief",
+   "trueEngine": "Claude",
+   "deliverable": "text-config",
+   "generatorWired": true,
+   "judge": "llm-panel",
+   "checkerMeaningful": false,
+   "note": "Hardcoded prose; minLength counts characters only."
+  },
+  {
+   "catalogId": "vendors",
+   "step": "Inventory Pool",
+   "trueEngine": "Claude",
+   "deliverable": "text-config",
+   "generatorWired": true,
+   "judge": "llm-panel",
+   "checkerMeaningful": false,
+   "note": "minCount(≥1) just checks at least one linked item string exists; real item ids are hand-picked, not queried from the live items catalog at Produce time."
+  },
+  {
+   "catalogId": "vendors",
+   "step": "Pricing & Restock",
+   "trueEngine": "Claude",
+   "deliverable": "text-config",
+   "generatorWired": true,
+   "judge": "llm-panel",
+   "checkerMeaningful": false,
+   "note": "fieldsPopulated checks 3 keys exist only."
+  },
+  {
+   "catalogId": "vendors",
+   "step": "Reputation Modifiers",
+   "trueEngine": "Claude",
+   "deliverable": "text-config",
+   "generatorWired": true,
+   "judge": "llm-panel",
+   "checkerMeaningful": false,
+   "note": "fieldsPopulated checks 2 keys exist; doesn't verify the linear discount is actually wired to a live faction rep value."
+  },
+  {
+   "catalogId": "vendors",
+   "step": "Buy/Sell/Repair",
+   "trueEngine": "Claude",
+   "deliverable": "text-config",
+   "generatorWired": true,
+   "judge": "llm-panel",
+   "checkerMeaningful": false,
+   "note": "fieldsPopulated checks 3 boolean flags exist only."
+  },
+  {
+   "catalogId": "vendors",
+   "step": "Economy Sim",
+   "trueEngine": "Claude",
+   "deliverable": "text-config",
+   "generatorWired": true,
+   "judge": "llm-panel",
+   "checkerMeaningful": true,
+   "note": "withinPercent checks the derived 28% margin against the real 30% vendor-laws target (±20%) — a genuine budget check, not a shape check."
+  },
+  {
+   "catalogId": "vendors",
+   "step": "Shop UI",
+   "trueEngine": "Claude",
+   "deliverable": "text-config",
+   "generatorWired": true,
+   "judge": "llm-panel",
+   "checkerMeaningful": false,
+   "note": "fieldsPopulated checks 3 keys exist only; no actual WBP_VendorShop widget is built here."
+  },
+  {
+   "catalogId": "vendors",
+   "step": "Icon 2D Art",
+   "trueEngine": "None",
+   "deliverable": "2d-art",
+   "generatorWired": true,
+   "judge": "vlm",
+   "checkerMeaningful": false,
+   "note": "Generic gallery hash-swatch placeholder, not a Leonardo render; selected() is shape-only."
+  },
+  {
+   "catalogId": "vendors",
+   "step": "Localization",
+   "trueEngine": "Claude",
+   "deliverable": "text-config",
+   "generatorWired": true,
+   "judge": "llm-panel",
+   "checkerMeaningful": false,
+   "note": "minCount(≥1) just counts key strings; no actual translation performed."
+  },
+  {
+   "catalogId": "vendors",
+   "step": "Test Gate",
+   "trueEngine": "Claude",
+   "deliverable": "text-config",
+   "generatorWired": true,
+   "judge": "ue-test",
+   "checkerMeaningful": false,
+   "note": "runtimeDeferred names VSVendorTransactionTest, a real test, but defers rather than verifying now."
+  },
+  {
+   "catalogId": "vendors",
+   "step": "UE Packaging",
+   "trueEngine": "None",
+   "deliverable": "ue-runtime",
+   "generatorWired": false,
+   "judge": "none",
+   "checkerMeaningful": false,
+   "note": "Hardcoded asset-name manifest (DT row/icon/widget/BP/currency row); no actual vendor BP or DataTable row is built by this step; minCount(3) is shape-only."
+  },
+  {
+   "catalogId": "vfx",
+   "step": "Concept Brief",
+   "trueEngine": "Code",
+   "deliverable": "text-config",
+   "generatorWired": true,
+   "judge": "llm-panel",
+   "checkerMeaningful": false,
+   "note": "produce() returns a fixed template string built by simple interpolation of e.name; CliProduce shows an LLM-built prompt but onComplete writes this hardcoded template verbatim regardless of typed direction or model output; accept is minLength(300), a character-count check only."
+  },
+  {
+   "catalogId": "vfx",
+   "step": "Behavior",
+   "trueEngine": "Code",
+   "deliverable": "text-config",
+   "generatorWired": true,
+   "judge": "llm-panel",
+   "checkerMeaningful": false,
+   "note": "Emitters/lifetime(0.6)/spawnRate(80)/AnimNotify are hardcoded constants templated only by slug, no per-entity variation. accept is fieldsPopulated, which only checks 3 keys are non-null."
+  },
+  {
+   "catalogId": "vfx",
+   "step": "Mesh / Sprite",
+   "trueEngine": "None",
+   "deliverable": "3d-mesh",
+   "generatorWired": true,
+   "judge": "vlm",
+   "checkerMeaningful": false,
+   "note": "Gallery archetype but produce() only sets selectedAsset:0 plus a placeholder SM_ path string; candidate swatches come from genericGalleryCandidates, a synthetic deterministic-seed preview (code comment: 'not the generated asset'). Tripo is wired for 3D elsewhere in the app but is never invoked here. accept is selected(), which only checks the index is a non-negative number."
+  },
+  {
+   "catalogId": "vfx",
+   "step": "Material",
+   "trueEngine": "None",
+   "deliverable": "2d-art",
+   "generatorWired": true,
+   "judge": "vlm",
+   "checkerMeaningful": false,
+   "note": "Same synthetic gallery pattern as Mesh/Sprite: selectedMaterial:0 plus a placeholder MI_ path; no Leonardo (or any) call produces an actual texture/material. accept is selected(), shape-only."
+  },
+  {
+   "catalogId": "vfx",
+   "step": "Sound Hook",
+   "trueEngine": "Code",
+   "deliverable": "text-config",
+   "generatorWired": true,
+   "judge": "llm-panel",
+   "checkerMeaningful": false,
+   "note": "Hardcoded cue-name/binding description; code comments explicitly say this is descriptive-only pending audio catalog seeding, and deliberately emit no cross-catalog link. No ElevenLabs call happens (and it wouldn't apply anyway since audio catalog is unseeded). accept is fieldsPopulated, shape-only."
+  },
+  {
+   "catalogId": "vfx",
+   "step": "GPU / LOD Budget",
+   "trueEngine": "Code",
+   "deliverable": "text-config",
+   "generatorWired": true,
+   "judge": "none",
+   "checkerMeaningful": false,
+   "note": "gpuPct is computed in the same function as classBudgetMs*headroomPct = 0.48ms exactly, then accept checks withinPercent(gpuPct, 0.48, 15%) against that self-derived value — tautologically guaranteed to pass regardless of any real GPU cost; no profiling ever runs. Real verification is only named (VSVFXPerfTest) as a deferred reason on a later step, not executed here."
+  },
+  {
+   "catalogId": "vfx",
+   "step": "Variants",
+   "trueEngine": "None",
+   "deliverable": "3d-mesh",
+   "generatorWired": true,
+   "judge": "vlm",
+   "checkerMeaningful": false,
+   "note": "Same synthetic gallery pattern; selectedVariant:0 plus 3 placeholder NS_ paths (Small/Med/Large), no mesh/particle asset actually generated. accept is selected(), shape-only."
+  },
+  {
+   "catalogId": "vfx",
+   "step": "Icon 2D Art",
+   "trueEngine": "None",
+   "deliverable": "2d-art",
+   "generatorWired": true,
+   "judge": "vlm",
+   "checkerMeaningful": false,
+   "note": "selectedIcon:0 plus a placeholder T_ icon path; Leonardo is wired for 2D gen elsewhere in the app but this step never calls it. accept is selected(), shape-only."
+  },
+  {
+   "catalogId": "vfx",
+   "step": "Test Gate",
+   "trueEngine": "Code",
+   "deliverable": "text-config",
+   "generatorWired": true,
+   "judge": "ue-test",
+   "checkerMeaningful": false,
+   "note": "Checklist text is hardcoded. accept is runtimeDeferred('VSVFXPerfTest', ...) which always returns status:'deferred' with a canned 'live-UE runner not yet run' reason — it names a real test but never executes or checks anything; it cannot fail or meaningfully pass."
+  },
+  {
+   "catalogId": "vfx",
+   "step": "UE Packaging",
+   "trueEngine": "Code",
+   "deliverable": "graph-data",
+   "generatorWired": false,
+   "judge": "none",
+   "checkerMeaningful": false,
+   "note": "assets is a hardcoded list of intended asset-name strings (NS_/MI_/SM_/DT_VFX); no wired engine in the palette (Leonardo/Tripo/ElevenLabs/UE-Python-for-movement) actually authors Niagara systems, material instances, or static meshes from this step, so nothing real is packaged. accept is minCount(assets,2), a length check only; staticChecks (cppSymbolExists/seedRowPresent) are a separate, narrower mechanism not part of accept."
+  },
+  {
+   "catalogId": "zone-map",
+   "step": "Concept Brief",
+   "trueEngine": "Code",
+   "deliverable": "text-config",
+   "generatorWired": true,
+   "judge": "llm-panel",
+   "checkerMeaningful": false,
+   "note": "Hand-written narrative text (Ashen Forest lore) hardcoded in produce(); CliProduce's prompt/direction input is discarded by onComplete. accept is minLength(300), a character count only."
+  },
+  {
+   "catalogId": "zone-map",
+   "step": "Macro Layout & POIs",
+   "trueEngine": "Code",
+   "deliverable": "graph-data",
+   "generatorWired": true,
+   "judge": "llm-panel",
+   "checkerMeaningful": false,
+   "note": "Sector list, POI counts, and navigation edges are hardcoded literals specific to 'Ashen Forest' (produce() takes no entity/direction parameter at all). accept is fieldsPopulated across 3 keys — does not check the nav graph is actually valid/reachable or that navMeshBaked is true (it is explicitly false per the data itself)."
+  },
+  {
+   "catalogId": "zone-map",
+   "step": "Area Level & Density",
+   "trueEngine": "Code",
+   "deliverable": "text-config",
+   "generatorWired": true,
+   "judge": "none",
+   "checkerMeaningful": false,
+   "note": "areaLevel/monsterLevel/lootIlvl/sector breakdown are hardcoded literals (produce() ignores entity/direction). accept is fieldsPopulated — does not verify sectorBreakdown sums to totalEnemies, or that monsterLevel/lootIlvl actually equal areaLevel per the stated ARPG-LAWS §11 rule; a real content checker (like dpsConsistent elsewhere in the codebase) is not used here despite this being exactly the kind of derivable-consistency case that pattern exists for."
+  },
+  {
+   "catalogId": "zone-map",
+   "step": "Encounter Placement",
+   "trueEngine": "Code",
+   "deliverable": "graph-data",
+   "generatorWired": true,
+   "judge": "none",
+   "checkerMeaningful": false,
+   "note": "Hosted-arena and pack-placement data are hardcoded literals naming a specific arena and bestiary archetype. accept is fieldsPopulated across 3 keys — does not verify pack counts sum to the zone's totalEnemies (38) or that the linked catalog entities actually resolve (that's a separate linkTargetsExist mechanism in the UI shell, not this step's accept)."
+  },
+  {
+   "catalogId": "zone-map",
+   "step": "Streaming / LOD",
+   "trueEngine": "Code",
+   "deliverable": "text-config",
+   "generatorWired": true,
+   "judge": "none",
+   "checkerMeaningful": false,
+   "note": "Streaming budget numbers and LOD strategy are hardcoded literals; gaps list itself admits World Partition/HLOD/NavMesh/HISM are all unwired. accept is fieldsPopulated across 2 keys, shape-only."
+  },
+  {
+   "catalogId": "zone-map",
+   "step": "3D / Biome",
+   "trueEngine": "None",
+   "deliverable": "3d-mesh",
+   "generatorWired": true,
+   "judge": "vlm",
+   "checkerMeaningful": false,
+   "note": "Gallery archetype; produce() only sets biome:0 plus 3 placeholder SM_ paths (CharredTrunk/AshenRock/EmberPit); synthetic deterministic-seed swatches stand in, Tripo is never called. accept is selected(), shape-only."
+  },
+  {
+   "catalogId": "zone-map",
+   "step": "Material",
+   "trueEngine": "Code",
+   "deliverable": "text-config",
+   "generatorWired": true,
+   "judge": "llm-panel",
+   "checkerMeaningful": false,
+   "note": "Material instance params (tint/wear/soot) are hardcoded literals referencing an already-seeded master material (mat-weathered-stone); no texture is generated, this is descriptive config. accept is fieldsPopulated across 3 keys, shape-only."
+  },
+  {
+   "catalogId": "zone-map",
+   "step": "Ambient & Music",
+   "trueEngine": "Code",
+   "deliverable": "text-config",
+   "generatorWired": false,
+   "judge": "llm-panel",
+   "checkerMeaningful": false,
+   "note": "Ambient/music descriptions are hardcoded literals referencing pre-seeded ambient/music catalog rows; no audio is generated here, and even if it were, ElevenLabs is wired for SFX/voice only — not ambient beds or adaptive music stems, so no wired engine covers this deliverable class at all. accept is fieldsPopulated across 3 keys, shape-only."
+  },
+  {
+   "catalogId": "zone-map",
+   "step": "Minimap UI",
+   "trueEngine": "Code",
+   "deliverable": "text-config",
+   "generatorWired": true,
+   "judge": "llm-panel",
+   "checkerMeaningful": false,
+   "note": "Discovery%/fast-travel/HUD-binding data is hardcoded; note explicitly defers the actual widget implementation to the hud-elements catalog. accept is fieldsPopulated across 3 keys, shape-only."
+  },
+  {
+   "catalogId": "zone-map",
+   "step": "Icon 2D Art",
+   "trueEngine": "None",
+   "deliverable": "2d-art",
+   "generatorWired": true,
+   "judge": "vlm",
+   "checkerMeaningful": false,
+   "note": "Gallery archetype; produce() only sets selected:0 plus 4 placeholder T_ icon paths; Leonardo is wired for 2D elsewhere but never invoked here. accept is selected(), shape-only."
+  },
+  {
+   "catalogId": "zone-map",
+   "step": "Test Gate",
+   "trueEngine": "Code",
+   "deliverable": "text-config",
+   "generatorWired": true,
+   "judge": "ue-test",
+   "checkerMeaningful": false,
+   "note": "Checklist text is hardcoded. accept is runtimeDeferred('AshenForestSetupTest', ...) which always returns status:'deferred' with a canned reason — it names a real UE functional test but never runs or checks it."
+  },
+  {
+   "catalogId": "zone-map",
+   "step": "UE Packaging",
+   "trueEngine": "Code",
+   "deliverable": "ue-runtime",
+   "generatorWired": false,
+   "judge": "none",
+   "checkerMeaningful": false,
+   "note": "assets is a hardcoded string list, and the umapNote claims a specific real, committed .umap (baked, reload-verified, pof-exp@1ec6353) — the strongest factual claim of any step in either file — but nothing in this Produce call queries the UE project or the git repo to confirm that; it's asserted text. No wired engine in the app's palette builds/exports .umap levels or places actors from this step. accept is minCount(assets,3), a length check only; staticChecks (cppSymbolExists x2) are a separate, narrower mechanism not part of accept."
+  }
+ ]
+}
