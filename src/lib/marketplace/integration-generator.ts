@@ -1,5 +1,5 @@
 import type { SubModuleId } from '@/types/modules';
-import type { IntegrationSpec, IntegrationStep, MarketplaceAsset } from '@/types/marketplace';
+import type { IntegrationSpec, IntegrationStep, IntegrationWarning, MarketplaceAsset } from '@/types/marketplace';
 import { ASSET_CATALOG } from './asset-catalog';
 
 /**
@@ -38,7 +38,35 @@ export function generateIntegration(
     buildDependencies: buildDeps,
     pluginDependencies: pluginDeps,
     steps,
+    warnings: collectScaffoldWarnings(header, source),
   };
+}
+
+/**
+ * Scan generated adapter code for `// TODO` markers and surface one warning per
+ * marker. Some adapters (e.g. the GAS combat adapter) are fully implemented and
+ * produce no warnings; the inventory/AI/generic adapters leave TODO stubs that
+ * the integrator must complete. Mirrors the blueprint-cpp-codegen contract:
+ * nothing left incomplete is silently dropped — every TODO becomes a warning so
+ * callers can present the output as a scaffold, not finished integration.
+ */
+function collectScaffoldWarnings(header: string, source: string): IntegrationWarning[] {
+  const warnings: IntegrationWarning[] = [];
+  const todoRe = /\/\/\s*TODO:?\s*(.*)$/;
+  for (const [location, code] of [['adapterHeader', header], ['adapterSource', source]] as const) {
+    code.split('\n').forEach((text, i) => {
+      const m = todoRe.exec(text);
+      if (m) {
+        warnings.push({
+          location,
+          line: i + 1,
+          message: m[1].trim() || 'Manual completion required',
+          severity: 'warning',
+        });
+      }
+    });
+  }
+  return warnings;
 }
 
 function toPascal(s: string): string {

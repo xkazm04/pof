@@ -90,7 +90,10 @@ function setNestedValue(profile: FeelProfile, path: string, value: number): void
 }
 
 function cloneProfile(profile: FeelProfile): FeelProfile {
-  return JSON.parse(JSON.stringify(profile)) as FeelProfile;
+  // structuredClone is faster than a JSON round-trip for the nested
+  // combat/movement/dodge/camera object and avoids the stringify+parse cost on
+  // every resolveStack (which fires on each feel-tuner slider drag).
+  return structuredClone(profile);
 }
 
 /* ── Resolution ───────────────────────────────────────────────────────────── */

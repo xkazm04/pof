@@ -108,10 +108,8 @@ test.describe('Infra testIds — sidebar + CLI', () => {
     await enterWorkspace(page);
     await page.getByTestId('pof-sidebar-nav-item-core-engine').click();
     await page.getByTestId('pof-sidebar-l2-nav-item-arpg-enemy-ai').click();
-    // The EnemyBestiaryPanel / EnemyAITreePanel dzin-panels (which host the
-    // archetype-list / bt-states testIds) render under /prototype, not on the
-    // standard module page. The standard module page does expose the
-    // ReviewableModuleView root testId, which is the next-best smoke check.
+    // The standard module page exposes the ReviewableModuleView root testId,
+    // which is the smoke check here.
     await expect(page.getByTestId('pof-module-arpg-enemy-ai')).toBeVisible({ timeout: 10000 });
   });
 

@@ -604,8 +604,36 @@ function IntegrationCard({ asset, integration }: {
         <div className="flex items-center gap-2 mb-3">
           <Code className="w-4 h-4 text-cyan-400" />
           <span className="text-sm font-medium text-text">{asset.assetName}</span>
-          <Badge variant="success">Adapter Ready</Badge>
+          {integration.warnings.length > 0 ? (
+            <Badge variant="warning">
+              Scaffold · {integration.warnings.length} TODO{integration.warnings.length === 1 ? '' : 's'}
+            </Badge>
+          ) : (
+            <Badge variant="success">Adapter Ready</Badge>
+          )}
         </div>
+
+        {/* Scaffold warnings — generated code left these stubs to complete by hand */}
+        {integration.warnings.length > 0 && (
+          <div className="mb-3 rounded-lg border border-amber-400/30 bg-amber-400/10 px-3 py-2">
+            <div className="flex items-center gap-1.5 mb-1.5">
+              <AlertCircle className="w-3.5 h-3.5 text-amber-400 flex-shrink-0" />
+              <span className="text-2xs font-medium text-amber-400">
+                Generated adapter is a scaffold — complete these before shipping:
+              </span>
+            </div>
+            <ul className="space-y-0.5">
+              {integration.warnings.map((w, i) => (
+                <li key={i} className="text-2xs text-text-muted">
+                  <span className="font-mono text-text-muted/70">
+                    {w.location === 'adapterSource' ? '.cpp' : '.h'}:{w.line}
+                  </span>{' '}
+                  {w.message}
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
 
         {/* Dependencies */}
         {(integration.buildDependencies.length > 0 || integration.pluginDependencies.length > 0) && (

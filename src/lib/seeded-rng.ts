@@ -23,7 +23,11 @@ export function createRNG(seed: number): () => number {
  * deterministic output is preserved byte-for-byte.
  */
 export function createXorShift32RNG(seed: number, normalize = 4294967296): () => number {
-  let s = seed | 0 || 1;
+  // XORShift32 requires a non-zero state. Map seed 0 to a distinct constant (the
+  // golden-ratio mix 0x9E3779B9) instead of aliasing it to seed 1's stream — a
+  // "seed 0" sweep must not be silently identical to seed 1. Every other integer
+  // seed is unchanged, so existing deterministic snapshots are preserved.
+  let s = (seed | 0) || 0x9e3779b9;
   return () => {
     s ^= s << 13;
     // Unsigned shift: XORShift32 requires `>>>`. The signed `>>` sign-extends the negative

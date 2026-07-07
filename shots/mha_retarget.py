@@ -1,10 +1,13 @@
+import os
 import unreal as u
 def L(m): u.log("RT: %s"%m)
+# MHA_NAME selects which captured clip to retarget (default = the original Veo strike).
+NAME = os.environ.get("MHA_NAME", "VeoStrike")
 at = u.AssetToolsHelpers.get_asset_tools()
-SK_SRC   = u.load_asset("/Game/MHA/SK_VeoStrike")
+SK_SRC   = u.load_asset("/Game/MHA/SK_%s" % NAME)
 SKM_MANNY= u.load_asset("/MoverTests/Characters/Mannequins/Meshes/SKM_Manny")
 IK_MANNY = u.load_asset("/Game/Characters/Player/IK/IK_Manny")
-AS_SRC   = u.load_asset("/Game/MHA/AS_VeoStrike")
+AS_SRC   = u.load_asset("/Game/MHA/AS_%s" % NAME)
 L("src=%s manny=%s ikmanny=%s anim=%s" % (bool(SK_SRC),bool(SKM_MANNY),bool(IK_MANNY),bool(AS_SRC)))
 
 # 1. clone IK_Manny chains onto a new IK rig bound to the MetaHuman body mesh (identical bone names)
@@ -52,7 +55,7 @@ u.EditorAssetLibrary.save_loaded_asset(rtg)
 
 # 3. batch retarget (assets_to_retarget wants AssetData)
 ar = u.AssetRegistryHelpers.get_asset_registry()
-ad = ar.get_asset_by_object_path("/Game/MHA/AS_VeoStrike.AS_VeoStrike")
+ad = ar.get_asset_by_object_path("/Game/MHA/AS_%s.AS_%s" % (NAME, NAME))
 L("assetdata valid=%s" % ad.is_valid())
 try:
     res = u.IKRetargetBatchOperation.duplicate_and_retarget(
@@ -65,9 +68,36 @@ try:
 except Exception as e:
     L("dup_retarget err: %s" % e)
 # verify + length
-mp="/Game/MHA/AS_VeoStrike_Manny"
+mp="/Game/MHA/AS_%s_Manny" % NAME
 ok = u.EditorAssetLibrary.does_asset_exist(mp)
 if ok:
     a = u.load_asset(mp)
     L("manny anim length=%.3f  skel=%s" % (a.get_play_length(), a.get_editor_property("skeleton").get_path_name()))
 L("RESULT manny_anim_exists=%s" % ok)
+
+# ---- ground-truth GATE: bone ROTATION range (quaternion angular distance from rest,
+# wraparound-safe). Local translation is ~0 for limbs so rotation is the real signal. ----
+if ok:
+    import math
+    GBONES = ["pelvis","spine_01","spine_02","spine_03","clavicle_l","clavicle_r",
+              "upperarm_l","upperarm_r","lowerarm_l","lowerarm_r","hand_l","hand_r",
+              "thigh_l","thigh_r","calf_l","calf_r","neck_01","head"]
+    UPPER = ["spine_01","spine_02","spine_03","upperarm_l","upperarm_r","lowerarm_l","lowerarm_r","clavicle_l","clavicle_r"]
+    def _qd(q0,q1):
+        d=abs(q0.x*q1.x+q0.y*q1.y+q0.z*q1.z+q0.w*q1.w); d=min(1.0,max(-1.0,d)); return math.degrees(2.0*math.acos(d))
+    ga=u.load_asset(mp); nf=u.AnimationLibrary.get_num_frames(ga); step=max(1,nf//40); rng={}
+    for b in GBONES:
+        try: q0=u.AnimationLibrary.get_bone_pose_for_frame(ga,b,0,False).rotation
+        except Exception: continue
+        mx=0.0
+        for f in range(0,nf,step):
+            try: d=_qd(q0,u.AnimationLibrary.get_bone_pose_for_frame(ga,b,f,False).rotation)
+            except Exception: continue
+            if d>mx: mx=d
+        rng[b]=mx
+    for b in GBONES:
+        if b in rng: L("  rot %-12s = %.1f deg" % (b, rng[b]))
+    best=0.0; pk="?"
+    for b in UPPER:
+        if rng.get(b,0.0)>best: best=rng[b]; pk=b
+    L("[gate] upper-peak %s=%.1f  RESULT=%s" % (pk, best, "PASS" if best>=35.0 else "FAIL"))

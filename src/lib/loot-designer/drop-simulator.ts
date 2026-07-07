@@ -89,8 +89,11 @@ function meetsRarity(affixMin: string, itemRarity: Rarity): boolean {
   return rarityIndex(affixMin) <= rarityIndex(itemRarity);
 }
 
-function getItemLevelScaling(level: number): number {
-  return 1.0 + 0.1 * Math.max(1, level);
+/** Item-level magnitude scaling — `1 + 0.1 * ItemLevel`, matching the UE5
+ *  UARPGAffixRoller and the sibling reproductions in item-economy-engine and
+ *  item-dna/rolling-engine. Clamped to non-negative levels (ilvl 0 → ×1.0). */
+export function getItemLevelScaling(level: number): number {
+  return 1.0 + 0.1 * Math.max(0, level);
 }
 
 /* ── Power weight per stat (matches economy engine) ──────────────────── */

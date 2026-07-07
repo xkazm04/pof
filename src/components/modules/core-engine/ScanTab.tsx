@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback, useMemo, useEffect, useRef } from 'react';
+import { useState, useCallback, useMemo, useEffect, useRef, memo } from 'react';
 import { useSuspendableEffect } from '@/hooks/useSuspend';
 import {
   ScanSearch, Play, Loader2, AlertTriangle, AlertCircle, Info,
@@ -491,7 +491,7 @@ export function ScanTab({ moduleId }: ScanTabProps) {
 
 // ── Finding row ──────────────────────────────────────────────────────────────
 
-function FindingRow({
+const FindingRow = memo(function FindingRow({
   finding,
   isExpanded,
   onToggle,
@@ -601,7 +601,7 @@ function FindingRow({
       )}
     </div>
   );
-}
+});
 
 // ── Resolved section ─────────────────────────────────────────────────────────
 

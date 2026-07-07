@@ -85,28 +85,46 @@ export function CatalogMatrix({ t, groups, catalogId, onOpenStep }: Props) {
   const completeCount = rows.filter((r) => r.rollup.configComplete).length;
   const blockedCount = rows.filter((r) => r.blockers.length > 0).length;
 
-  const cellStyle = (status: AcceptanceStatus, isHeader = false): React.CSSProperties => {
-    const filled = status === 'pass' || status === 'fail';
-    return {
-      width: isHeader ? undefined : 30, height: 30, padding: 0, cursor: 'pointer',
-      display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-      background: filled ? statusColor(status, t) : 'transparent',
-      border: `${status === 'deferred' ? '2px dashed' : '1px solid'} ${filled ? statusColor(status, t) : status === 'pending' ? t.line : statusColor(status, t)}`,
-      color: filled ? t.onAccent : status === 'pending' ? t.muted : statusColor(status, t),
-      fontSize: 14, fontWeight: 700, lineHeight: 1, borderRadius: t.glass ? 5 : 0,
-      transition: 'background-color 160ms ease-out, border-color 160ms ease-out',
+  // Memoize cell styles per status (only ~5 distinct statuses) instead of
+  // allocating a fresh CSSProperties object for every cell on every render — the
+  // grid is entities × steps cells, so this was O(rows·cols) object churn.
+  const cellStyleFor = useMemo(() => {
+    const cache = new Map<AcceptanceStatus, React.CSSProperties>();
+    return (status: AcceptanceStatus): React.CSSProperties => {
+      const hit = cache.get(status);
+      if (hit) return hit;
+      const filled = status === 'pass' || status === 'fail';
+      const style: React.CSSProperties = {
+        width: 30, height: 30, padding: 0, cursor: 'pointer',
+        display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+        background: filled ? statusColor(status, t) : 'transparent',
+        border: `${status === 'deferred' ? '2px dashed' : '1px solid'} ${filled ? statusColor(status, t) : status === 'pending' ? t.line : statusColor(status, t)}`,
+        color: filled ? t.onAccent : status === 'pending' ? t.muted : statusColor(status, t),
+        fontSize: 14, fontWeight: 700, lineHeight: 1, borderRadius: t.glass ? 5 : 0,
+        transition: 'background-color 160ms ease-out, border-color 160ms ease-out',
+      };
+      cache.set(status, style);
+      return style;
     };
-  };
+  }, [t]);
 
-  const th: React.CSSProperties = {
+  const th = useMemo<React.CSSProperties>(() => ({
     position: 'sticky', top: 0, zIndex: 2, background: t.bg,
     padding: '8px 6px', borderBottom: `2px solid ${t.line}`, color: t.muted,
     fontSize: 12, fontWeight: 600, textAlign: 'center',
-  };
-  const stickyLeft: React.CSSProperties = {
+  }), [t]);
+  const stickyLeft = useMemo<React.CSSProperties>(() => ({
     position: 'sticky', left: 0, zIndex: 1, background: t.bg, textAlign: 'left',
     borderRight: `1px solid ${t.line}`, minWidth: 200, maxWidth: 280,
-  };
+  }), [t]);
+  // Per-cell <td> styles, hoisted out of the row loop (one object per theme,
+  // not one per cell).
+  const stepTd = useMemo<React.CSSProperties>(() => ({
+    padding: 2, textAlign: 'center', borderBottom: `1px solid ${t.line}`,
+  }), [t]);
+  const nameTd = useMemo<React.CSSProperties>(() => ({
+    ...stickyLeft, padding: '6px 12px 6px 4px', borderBottom: `1px solid ${t.line}`,
+  }), [stickyLeft, t]);
 
   return (
     <div data-testid="catalog-matrix" className={t.fontBody}
@@ -159,7 +177,7 @@ export function CatalogMatrix({ t, groups, catalogId, onOpenStep }: Props) {
             <tbody>
               {rows.map((r) => (
                 <tr key={r.id}>
-                  <td style={{ ...stickyLeft, padding: '6px 12px 6px 4px', borderBottom: `1px solid ${t.line}` }}>
+                  <td style={nameTd}>
                     <button onClick={() => onOpenStep(selected, r.id, 0)} className={t.fontBody}
                       style={{ display: 'flex', flexDirection: 'column', gap: 2, width: '100%', textAlign: 'left', cursor: 'pointer', background: 'transparent', border: 'none', color: t.text }}>
                       <span style={{ fontSize: 14, fontWeight: 600, color: t.inkDeep, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.name}</span>
@@ -178,12 +196,12 @@ export function CatalogMatrix({ t, groups, catalogId, onOpenStep }: Props) {
                   {steps.map((s, i) => {
                     const status = r.statusByStep(s);
                     return (
-                      <td key={s} style={{ padding: 2, textAlign: 'center', borderBottom: `1px solid ${t.line}` }}>
+                      <td key={s} style={stepTd}>
                         <button onClick={() => onOpenStep(selected, r.id, i)}
                           data-cell={`${r.id}::${s}`} data-status={status}
                           aria-label={`${r.name} · ${s}: ${STATUS_WORD[status]}`}
                           title={`${r.name} · ${s}: ${STATUS_WORD[status]}`}
-                          style={cellStyle(status)}>
+                          style={cellStyleFor(status)}>
                           {STATUS_GLYPH[status]}
                         </button>
                       </td>

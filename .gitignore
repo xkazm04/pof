@@ -48,6 +48,18 @@ yarn-error.log*
 # Windows reserved name artifacts
 nul
 
+# Regenerable test / capture / scenario run outputs (not source; keep out of the repo).
+# shots/*.py + *.mjs tooling scripts stay tracked; only the capture OUTPUTS are ignored.
+/test-results/
+/sword-run/
+/scn-*
+/*.log
+shots/*/
+shots/*.log
+shots/*.json
+shots/*.mp4
+shots/*.png
+
 # typescript
 *.tsbuildinfo
 next-env.d.ts

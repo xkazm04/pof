@@ -43,9 +43,35 @@ export function asZone(data: unknown): ZoneLike | null {
   };
 }
 
-export function lintZone(zone: ZoneLike, roster: ZoneLike[]): ZoneFinding[] {
+/**
+ * Precomputed roster lookup for linting many zones: id→zone plus an incoming-edge
+ * count (how many *other* zones connect to each id). Building this once lets
+ * validateZoneGraph lint every zone in O(n) total instead of O(n²) — each
+ * lintZone otherwise rebuilt its id map and rescanned the whole roster for the
+ * reachability check.
+ */
+export interface ZoneIndex {
+  byId: Map<string, ZoneLike>;
+  incoming: Map<string, number>;
+}
+
+export function buildZoneIndex(roster: ZoneLike[]): ZoneIndex {
+  const byId = new Map<string, ZoneLike>();
+  for (const z of roster) byId.set(z.id, z);
+  const incoming = new Map<string, number>();
+  for (const z of roster) {
+    for (const targetId of z.connections) {
+      if (targetId === z.id) continue; // a self-loop doesn't make a zone reachable
+      incoming.set(targetId, (incoming.get(targetId) ?? 0) + 1);
+    }
+  }
+  return { byId, incoming };
+}
+
+export function lintZone(zone: ZoneLike, roster: ZoneLike[], index?: ZoneIndex): ZoneFinding[] {
   const findings: ZoneFinding[] = [];
-  const byId = new Map(roster.map((z) => [z.id, z]));
+  const idx = index ?? buildZoneIndex(roster);
+  const byId = idx.byId;
 
   if (zone.levelMin > zone.levelMax) {
     findings.push({
@@ -80,7 +106,7 @@ export function lintZone(zone: ZoneLike, roster: ZoneLike[]): ZoneFinding[] {
   }
 
   if (roster.length >= 2 && zone.type !== 'hub') {
-    const reachable = roster.some((z) => z.id !== zone.id && z.connections.includes(zone.id));
+    const reachable = (idx.incoming.get(zone.id) ?? 0) > 0;
     if (!reachable) {
       findings.push({
         severity: 'warn',

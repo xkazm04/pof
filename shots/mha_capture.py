@@ -1,10 +1,16 @@
 """Headless MetaHuman Animator Markerless body capture: Veo mp4 -> AnimSequence.
 Reference: Engine/Plugins/MetaHuman/MetaHumanAnimator/Content/Python/process_monocular_performance.py
 """
+import os
 import unreal as u
 
-VIDEO = "C:/Users/kazda/kiro/pof/shots/veo/strike_clean.mp4"
-SLATE = "VeoStrikeC"
+# Parameterized via env (back-compat defaults = the original Veo strike).
+#   MHA_VIDEO  absolute path to the cleaned mp4 to capture
+#   MHA_SLATE  ingest slate (unique per clip so CaptureManager folders don't collide)
+#   MHA_NAME   base asset name -> Perf_<NAME>, AS_<NAME>, SK_<NAME> under /Game/MHA
+VIDEO = os.environ.get("MHA_VIDEO", "C:/Users/kazda/kiro/pof/shots/veo/strike_clean.mp4")
+SLATE = os.environ.get("MHA_SLATE", "VeoStrikeC")
+NAME = os.environ.get("MHA_NAME", "VeoStrike")
 STORAGE = "/Game/MHA"
 
 def L(m):
@@ -49,10 +55,10 @@ except Exception as e:
 # ---- 2. PERFORMANCE (MONO_FOOTAGE + body tracking) ----
 at = u.AssetToolsHelpers.get_asset_tools()
 # fresh solve every run: clear prior perf + outputs
-for old in ("/Game/MHA/Perf_VeoStrike", "/Game/MHA/AS_VeoStrike", "/Game/MHA/SK_VeoStrike"):
+for old in ("/Game/MHA/Perf_%s" % NAME, "/Game/MHA/AS_%s" % NAME, "/Game/MHA/SK_%s" % NAME):
     if u.EditorAssetLibrary.does_asset_exist(old):
         u.EditorAssetLibrary.delete_asset(old)
-perf = at.create_asset("Perf_VeoStrike", STORAGE, u.MetaHumanPerformance, u.MetaHumanPerformanceFactoryNew())
+perf = at.create_asset("Perf_%s" % NAME, STORAGE, u.MetaHumanPerformance, u.MetaHumanPerformanceFactoryNew())
 perf.set_editor_property("input_type", u.DataInputType.MONO_FOOTAGE)
 perf.set_editor_property("footage_capture_data", cd)
 # Body-ONLY solve: enable body, DISABLE face. Face is on by default and on a combat clip
@@ -95,7 +101,7 @@ s.export_face = False
 s.enable_head_movement = False
 s.export_range = u.PerformanceExportRange.PROCESSING_RANGE
 s.package_path = STORAGE
-s.asset_name = "AS_VeoStrike"
+s.asset_name = "AS_%s" % NAME
 L("export settings ready (export_body=True). attempting export...")
 anim = u.MetaHumanPerformanceExportUtils.export_animation_sequence(perf, s)
 L("exported anim=%s" % (anim.get_path_name() if anim else None))

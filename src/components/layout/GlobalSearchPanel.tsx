@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, useEffect, useCallback } from 'react';
+import { useState, useRef, useEffect, useCallback, memo } from 'react';
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import {
   Search, X, ListChecks, Box, Layers, AlertTriangle, Package,
@@ -318,7 +318,7 @@ export function GlobalSearchPanel() {
 
 // ── Result row ───────────────────────────────────────────────────────────────
 
-function SearchResultRow({
+const SearchResultRow = memo(function SearchResultRow({
   result,
   active,
   index,
@@ -385,7 +385,7 @@ function SearchResultRow({
       )}
     </button>
   );
-}
+});
 
 // ── Highlight FTS5 markers ───────────────────────────────────────────────────
 

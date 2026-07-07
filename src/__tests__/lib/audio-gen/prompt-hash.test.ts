@@ -29,4 +29,18 @@ describe('computePromptHash', () => {
     const one = computePromptHash({ provider: 'elevenlabs', kind: 'sfx', prompt: 'x', durationSeconds: 1 });
     expect(auto).not.toBe(one);
   });
+
+  it('scopes the cache to the destination set/event (no cross-set cache bleed)', () => {
+    // The same prompt aimed at a different set/event must be a cache MISS, so it
+    // generates into the requested set instead of returning the foreign one.
+    const h = computePromptHash({ ...base, setKey: 'weapon-impacts', eventKey: 'weapon_hit' });
+    expect(computePromptHash({ ...base, setKey: 'boss-attacks', eventKey: 'weapon_hit' })).not.toBe(h);
+    expect(computePromptHash({ ...base, setKey: 'weapon-impacts', eventKey: 'boss_swing' })).not.toBe(h);
+  });
+
+  it('still hits for an identical request to the same set/event', () => {
+    const a = computePromptHash({ ...base, setKey: 's1', eventKey: 'e1' });
+    const b = computePromptHash({ ...base, setKey: 's1', eventKey: 'e1' });
+    expect(a).toBe(b);
+  });
 });

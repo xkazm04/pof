@@ -68,9 +68,9 @@ const stateConfig: Record<
 
 /**
  * Unified status / category dot. Subsumes the inline `w-2 h-2 rounded-full`
- * implementations across `core-engine/dzin-panels/*` (ui-perfectionist 09.2)
- * AND the color-only status dots in `project-setup/StatusChecklist`,
- * `LiveCodingPanel` history, and detected-project badges.
+ * implementations AND the color-only status dots in
+ * `project-setup/StatusChecklist`, `LiveCodingPanel` history, and
+ * detected-project badges.
  *
  * Two render modes:
  *  - **Semantic** (`state="ok" | "fail" | "warn" | "progress" | ...`): color,

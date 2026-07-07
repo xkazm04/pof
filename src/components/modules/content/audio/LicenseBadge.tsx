@@ -1,10 +1,8 @@
 'use client';
 
 import { ShieldCheck, AlertTriangle, ShieldAlert } from 'lucide-react';
-import { STATUS_SUCCESS, STATUS_ERROR } from '@/lib/chart-colors';
+import { STATUS_SUCCESS, STATUS_ERROR, STATUS_WARNING } from '@/lib/chart-colors';
 import type { AudioKind, CommercialLicense } from '@/lib/audio-gen/types';
-
-const AMBER = '#f59e0b';
 
 export function LicenseBadge({ license, kind }: { license: CommercialLicense; kind: AudioKind }) {
   if (license === 'yes') {
@@ -19,7 +17,7 @@ export function LicenseBadge({ license, kind }: { license: CommercialLicense; ki
   if (license === 'extra-license') {
     return (
       <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-2xs font-medium"
-            style={{ backgroundColor: `${AMBER}20`, color: AMBER, border: `1px solid ${AMBER}40` }}
+            style={{ backgroundColor: `${STATUS_WARNING}20`, color: STATUS_WARNING, border: `1px solid ${STATUS_WARNING}40` }}
             title={`${kind} from this provider needs an extra license for games/film/TV.`}>
         <AlertTriangle className="w-3 h-3" /> Extra license required
       </span>

@@ -125,7 +125,7 @@ export function ZonePropertyPanel({
                   ? 'bg-border-bright text-text'
                   : 'bg-surface text-text-muted hover:bg-surface-hover'
               }`}
-              style={{ border: `1px solid ${zone.occlusionMode === mode ? '#3e3e6a' : 'var(--border)'}` }}
+              style={{ border: `1px solid ${zone.occlusionMode === mode ? 'var(--checkbox-border)' : 'var(--border)'}` }}
             >
               {mode}
             </button>
@@ -211,7 +211,7 @@ export function EmitterPropertyPanel({
                   ? 'bg-border-bright text-text'
                   : 'bg-surface text-text-muted hover:bg-surface-hover'
               }`}
-              style={{ border: `1px solid ${emitter.type === type ? '#3e3e6a' : 'var(--border)'}` }}
+              style={{ border: `1px solid ${emitter.type === type ? 'var(--checkbox-border)' : 'var(--border)'}` }}
             >
               {type}
             </button>

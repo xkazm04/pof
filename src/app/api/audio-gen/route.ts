@@ -72,7 +72,13 @@ export async function POST(request: NextRequest) {
   const p = getAudioProvider(provider);
   if (!p) return apiError(`Unknown provider: ${provider}`, 400);
 
-  const promptHash = computePromptHash({ provider: p.id, kind, prompt, durationSeconds: body.durationSeconds });
+  // Scope the cache to the destination set/event so the same prompt aimed at a
+  // different set is a miss (and generates INTO that set) rather than returning
+  // the original set's asset and silently dropping the requested one.
+  const promptHash = computePromptHash({
+    provider: p.id, kind, prompt, durationSeconds: body.durationSeconds,
+    setKey: body.setId ?? body.setName, eventKey: body.eventKey,
+  });
 
   // Content-hash cache: an identical prompt was generated before → return that
   // asset instead of paying for a billed provider call (folder idea-5f3f1c9d).

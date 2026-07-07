@@ -106,6 +106,24 @@ export interface IntegrationSpec {
   pluginDependencies: string[];
   /** Step-by-step integration instructions */
   steps: IntegrationStep[];
+  /**
+   * Scaffold gaps surfaced from the generated code: each `// TODO` left in the
+   * adapter that needs manual completion. Empty means the adapter is complete
+   * (e.g. the GAS combat adapter). Non-empty means the output is a scaffold,
+   * not finished integration — callers must not present it as "done".
+   */
+  warnings: IntegrationWarning[];
+}
+
+/** A single unfinished spot in generated integration code. */
+export interface IntegrationWarning {
+  /** Which generated file the TODO lives in. */
+  location: 'adapterHeader' | 'adapterSource';
+  /** 1-based line number within that file. */
+  line: number;
+  /** What still needs to be done (the TODO text). */
+  message: string;
+  severity: 'info' | 'warning';
 }
 
 export interface IntegrationStep {

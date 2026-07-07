@@ -46,6 +46,13 @@ export function ensureAITestingTables() {
       updated_at TEXT NOT NULL DEFAULT (datetime('now'))
     )
   `);
+
+  // getSuite() filters scenarios by suite_id; without this index that is a full
+  // table scan of ai_test_scenarios on every suite open.
+  db.exec(`
+    CREATE INDEX IF NOT EXISTS idx_ai_test_scenarios_suite
+    ON ai_test_scenarios(suite_id)
+  `);
 }
 
 // ── Row types ──

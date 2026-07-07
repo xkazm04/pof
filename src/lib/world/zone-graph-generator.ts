@@ -1,5 +1,5 @@
 import { createRNG } from '@/lib/seeded-rng';
-import { lintZone, type ZoneFinding, type ZoneLike } from './zone-analysis';
+import { lintZone, buildZoneIndex, type ZoneFinding, type ZoneLike } from './zone-analysis';
 
 export type ZoneTopology = 'linear' | 'hub-and-spoke' | 'metroidvania';
 export type DifficultyCurve = 'gentle' | 'linear' | 'steep';
@@ -127,7 +127,10 @@ export interface ZoneGraphValidation {
 /** Lint every generated zone through zone-analysis and aggregate. */
 export function validateZoneGraph(zones: GeneratedZone[]): ZoneGraphValidation {
   const roster = zones as ZoneLike[];
-  const perZone = zones.map((z) => ({ zoneId: z.id, findings: lintZone(z, roster) }));
+  // Build the roster index once and share it across every lintZone call,
+  // keeping aggregate validation O(n) instead of O(n²).
+  const index = buildZoneIndex(roster);
+  const perZone = zones.map((z) => ({ zoneId: z.id, findings: lintZone(z, roster, index) }));
   let errors = 0;
   let warnings = 0;
   for (const { findings } of perZone) {

@@ -349,7 +349,7 @@ export function AudioView() {
 
               <button
                 onClick={() => deleteDoc(activeDoc.id)}
-                className="px-2 py-1.5 rounded-md text-text-muted hover:text-[#f87171] hover:bg-[#f8717110] transition-colors"
+                className="px-2 py-1.5 rounded-md text-text-muted hover:text-red-400 hover:bg-red-500/10 transition-colors"
                 title="Delete scene"
               >
                 <Trash2 className="w-3.5 h-3.5" />
@@ -576,10 +576,10 @@ export function AudioView() {
                           onClick={() => handleSettingsChange('globalReverbPreset', preset)}
                           className={`px-2.5 py-1.5 rounded text-xs transition-colors ${
                             activeDoc.globalReverbPreset === preset
-                              ? 'bg-border-bright text-text border-[#3e3e6a]'
-                              : 'bg-surface text-text-muted border-border hover:bg-surface-hover'
+                              ? 'bg-border-bright text-text'
+                              : 'bg-surface text-text-muted hover:bg-surface-hover'
                           }`}
-                          style={{ border: '1px solid' }}
+                          style={{ border: `1px solid ${activeDoc.globalReverbPreset === preset ? 'var(--checkbox-border)' : 'var(--border)'}` }}
                         >
                           {preset}
                         </button>

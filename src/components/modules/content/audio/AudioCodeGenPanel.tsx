@@ -4,7 +4,7 @@ import { useState, useCallback, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Code2, FileCode, Copy, Check, ChevronDown, ChevronRight,
-  Loader2, Download, Layers, Volume2, Radio, Zap, Music,
+  Loader2, Layers, Volume2, Radio, Zap, Music,
 } from 'lucide-react';
 import { SurfaceCard } from '@/components/ui/SurfaceCard';
 import { apiFetch } from '@/lib/api-utils';
@@ -12,7 +12,7 @@ import type { AudioSceneDocument } from '@/types/audio-scene';
 import type { GeneratedFile, CodeGenResult } from '@/lib/audio-codegen';
 import { UI_TIMEOUTS, MODULE_COLORS } from '@/lib/constants';
 import {
-  ACCENT_VIOLET, STATUS_INFO, STATUS_SUCCESS, STATUS_WARNING, ACCENT_PINK, STATUS_ERROR,
+  ACCENT_VIOLET, STATUS_INFO, STATUS_SUCCESS, STATUS_WARNING, ACCENT_PINK,
 } from '@/lib/chart-colors';
 
 const CATEGORY_META: Record<GeneratedFile['category'], { icon: typeof Code2; label: string; color: string }> = {
@@ -138,7 +138,7 @@ export function AudioCodeGenPanel({ doc, accentColor }: AudioCodeGenPanelProps) 
           </button>
 
           {error && (
-            <p className="text-2xs text-[#f87171] mt-2">{error}</p>
+            <p className="text-2xs text-red-400 mt-2">{error}</p>
           )}
         </div>
       </SurfaceCard>
@@ -160,7 +160,7 @@ export function AudioCodeGenPanel({ doc, accentColor }: AudioCodeGenPanelProps) 
               onClick={handleCopyAll}
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-2xs font-medium text-text-muted hover:text-text bg-surface-hover/50 hover:bg-surface-hover transition-colors"
             >
-              {copiedFile === '__all__' ? <Check className="w-3 h-3 text-[#4ade80]" /> : <Copy className="w-3 h-3" />}
+              {copiedFile === '__all__' ? <Check className="w-3 h-3 text-green-400" /> : <Copy className="w-3 h-3" />}
               {copiedFile === '__all__' ? 'Copied!' : 'Copy All Files'}
             </button>
           </div>
@@ -202,7 +202,7 @@ export function AudioCodeGenPanel({ doc, accentColor }: AudioCodeGenPanelProps) 
                               className="p-0.5 rounded text-text-muted hover:text-text transition-colors"
                               title="Copy file contents"
                             >
-                              {isCopied ? <Check className="w-3 h-3 text-[#4ade80]" /> : <Copy className="w-3 h-3" />}
+                              {isCopied ? <Check className="w-3 h-3 text-green-400" /> : <Copy className="w-3 h-3" />}
                             </button>
                           </button>
 
@@ -215,7 +215,7 @@ export function AudioCodeGenPanel({ doc, accentColor }: AudioCodeGenPanelProps) 
                                 transition={{ duration: 0.15 }}
                                 className="overflow-hidden"
                               >
-                                <pre className="px-3 py-2 bg-[#0a0c14] text-2xs font-mono text-[#b0b4cc] overflow-x-auto max-h-[400px] overflow-y-auto leading-relaxed border-t border-border/30">
+                                <pre className="px-3 py-2 bg-background text-2xs font-mono text-text-muted-hover overflow-x-auto max-h-[400px] overflow-y-auto leading-relaxed border-t border-border/30">
                                   {file.content}
                                 </pre>
                               </motion.div>
