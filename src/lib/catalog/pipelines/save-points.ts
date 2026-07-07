@@ -591,7 +591,7 @@ registerCatalogPipeline({
         },
       }),
       accept: runtimeDeferred(
-        'VSSaveLoadTest',
+        'PoF.SavePoints.RoundTrip',
         'Save → reload restores persisted state, ephemeral discarded, in PIE',
       ),
     },

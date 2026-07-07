@@ -372,7 +372,7 @@ registerCatalogPipeline({
         },
       }),
       accept: runtimeDeferred(
-        'VSMasterMaterialInstanceTest',
+        'PoF.Materials.ArenaMasters',
         'Instance compiles + samples maps in editor',
       ),
     },

@@ -545,7 +545,7 @@ registerCatalogPipeline({
           ],
         },
       }),
-      accept: runtimeDeferred('VSDialogBranchTest', 'All branches reachable + skill-check gates resolve in PIE'),
+      accept: runtimeDeferred('PoF.DialogTrees.BranchIntegrity', 'All branches reachable + skill-check gates resolve in PIE'),
     },
 
     // ── 12. UE Packaging ──────────────────────────────────────────────────────

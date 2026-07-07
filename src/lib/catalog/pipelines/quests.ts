@@ -390,7 +390,7 @@ registerCatalogPipeline({
           ],
         },
       }),
-      accept: runtimeDeferred('VSQuestFlowTest', 'Quest completes stage→reward in PIE'),
+      accept: runtimeDeferred('PoF.Quests.StageFlow', 'Quest completes stage→reward in PIE'),
     },
 
     // ── 11. UE Packaging ───────────────────────────────────────────────────────
