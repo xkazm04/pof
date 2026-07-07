@@ -193,7 +193,8 @@ registerCatalogPipeline({
               'CraftingSkill ≥ 1 required (the entry gate — every new character starts at 0; ' +
               'awarded on first interaction with any Alchemist NPC in the starting area). ' +
               'Each skill tier unlocks a recipe group: Tier 1 (1–10) = basic consumables; ' +
-              'Tier 2 (11–20) = elemental variants; Tier 3 (21–30) = Greater potions. ' +
+              'Tier 2 (11–20) = Greater potions (e.g. Greater Health Potion, 240 HP, unlocks at ' +
+              'Crafting Skill 11); Tier 3 (21–30) = elemental variants. ' +
               'Skill advance is a passive-tree allocation, not a level-up gift (canon game-pillars).',
             gating: {
               stationType: 'alchemist',

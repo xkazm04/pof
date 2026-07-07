@@ -121,7 +121,8 @@ registerCatalogPipeline({
                   `L91–100 are clamped to the L90 cost (no further growth), making ` +
                   `them long-but-finite prestige levels. ` +
                   `Cumulative XP to reach L50 ≈ ${Math.round(base * (Math.pow(growth, 50) - 1) / (growth - 1)).toLocaleString()} — ` +
-                  `calibrated to ≈45 hours of active play at typical kill rates.`,
+                  `≈9.2 h of active play at the Balance-step rate of ~104 XP/min ` +
+                  `(57,377 ÷ 104 ≈ 552 min ≈ 9.2 hours).`,
               },
               softCapNote:
                 'At L90 the per-level XP cost is clamped — each level from 91 to 100 costs the same ' +

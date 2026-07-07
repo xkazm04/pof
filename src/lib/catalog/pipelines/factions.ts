@@ -47,8 +47,9 @@ registerCatalogPipeline({
             `(char-captain-vael) serves as the faction's primary quest-giver and rank arbiter; ` +
             `his dialogue shifts with the player's standing tier. The faction's heraldry — a ` +
             `stylized ash-ring sigil — appears on armor rewards, faction-gated doors, and the HUD ` +
-            `reputation tracker. Reputation decays passively at 10 points/day below Honored to ` +
-            `prevent indefinite coasting on old deeds without active engagement.`,
+            `reputation tracker. Reputation decays passively at 10 points/day at the top tiers ` +
+            `(Revered and Exalted), floored at Honored, to prevent indefinite coasting at high ` +
+            `standing without active engagement.`,
         },
       }),
       accept: minLength('brief', 'Brief ≥ 300 characters', 300),
@@ -109,7 +110,7 @@ registerCatalogPipeline({
               tier: 'Revered',
               minPoints: 9000,
               maxPoints: 11999,
-              label: '15% discount; unique faction armor cosmetic unlocked; decay begins below Honored.',
+              label: '15% discount; unique faction armor cosmetic unlocked; passive decay of 10/day begins at Revered, floored at Honored.',
               decayPerDay: 10,
             },
             {
@@ -123,10 +124,11 @@ registerCatalogPipeline({
           decayRules: {
             decayThresholdTier: 'Honored',
             decayNote:
-              'Passive decay of 10 rep points/day applies when the player is at or above Revered. ' +
+              'Passive decay of 10 rep points/day applies at the top tiers Revered and Exalted ' +
+              '(the two rows with decayPerDay:10 in the tiers table); tiers at Honored and below do not decay. ' +
               'Decay halts when active play occurs (any rep-granting action resets the daily decay timer). ' +
-              'Decay cannot drop the player below Honored (9000 points) — the floor is the threshold boundary. ' +
-              'Below Honored there is no passive decay; gains/losses are purely action-driven.',
+              'Decay cannot drop the player below the Honored floor (6000 points — Honored.minPoints, the tier threshold boundary). ' +
+              'This prevents indefinite coasting at Revered/Exalted without active engagement.',
             thresholdNote:
               'Thresholds are inclusive: a player at exactly 3000 points is Friendly. ' +
               'Tier transitions broadcast a RepTierChanged delegate (UARPGFactionSubsystem) ' +

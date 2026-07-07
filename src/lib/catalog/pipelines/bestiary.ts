@@ -15,9 +15,11 @@ const slug = (n: string) => n.replace(/[^a-z0-9]+/gi, '');
  * hand-tuned stat inflation.  Monster rarity multipliers scale the Normal
  * baseline; each modifier is a buff/aura GE granted at spawn.
  *
- * Abilities link to real spellbook ids:
- *   off-phy-04  Ground Slam   — primary (AoE shockwave, Physical, advanced)
- *   off-phy-02  Heavy Attack  — heavy (powerful melee strike, Physical, basic)
+ * Abilities link to real spellbook ids (roles per the AI Behavior frame-data model):
+ *   off-phy-02  Heavy Attack  — primary basic melee (the Overhead Cleave + Shield
+ *                               Shove BT weave; powerful strike, Physical, basic)
+ *   off-phy-04  Ground Slam   — situational AoE (telegraphed shockwave, Physical,
+ *                               advanced; only vs 2+ targets / anti-turtle)
  * Loot links to loot-tables::lt-Brute (seeded from DEFAULT_ENEMY_LOOT_BINDINGS).
  *
  * Damage type: Physical (code enum value used in UE damageType field).
@@ -226,39 +228,46 @@ registerCatalogPipeline({
       produce: () => ({
         data: {
           // Abilities listed by display name for the manifest view.
-          // Links (below) carry the real seeded spellbook ids:
-          //   off-phy-04  Ground Slam  — AoE shockwave, Physical, advanced, damage 50, CD 6s
-          //   off-phy-02  Heavy Attack — powerful melee strike, Physical, basic, damage 35, CD 0.9s
+          // Only TWO GAS abilities are granted — roles per the AI Behavior frame-data
+          // model (step 7, the authoritative frame-data source):
+          //   off-phy-02  Heavy Attack — PRIMARY basic melee, Physical, basic, damage 35, CD 0.9s
+          //   off-phy-04  Ground Slam  — SITUATIONAL AoE shockwave, Physical, advanced, damage 50, CD 6s
+          // Reconciliation note: AI Behavior lists three attack *names* — Overhead Cleave
+          // (weight 0.5) and Shield Shove (weight 0.3) are the BehaviorTree melee expressions
+          // of the ONE off-phy-02 Heavy Attack ability (the primary weave); Ground Slam
+          // (weight 0.2, telegraphMs 1400, "only vs 2+ targets") is off-phy-04. That is why
+          // AI Behavior names 3 attacks but only 2 GAS abilities are granted here.
           // Damage type: Physical (code enum; stacks via added→increased→more per ARPG-LAWS §3).
           abilities: [
-            'spellbook::off-phy-04 Ground Slam (primary — telegraphed AoE shockwave, Physical)',
-            'spellbook::off-phy-02 Heavy Attack (heavy — powerful melee strike, Physical)',
+            'spellbook::off-phy-02 Heavy Attack (primary — basic melee weave, expressed in the BT as Overhead Cleave + Shield Shove, Physical)',
+            'spellbook::off-phy-04 Ground Slam (situational AoE — telegraphed shockwave, only vs 2+ targets / anti-turtle, Physical)',
           ],
           wiringContract: {
             grantedBy:
               'UARPGAbilitySystemComponent on AARPGEnemyCharacter; abilities granted via ' +
-              'GE_GrantAbility_GroundSlam and GE_GrantAbility_HeavyAttack on BeginPlay',
+              'GE_GrantAbility_HeavyAttack and GE_GrantAbility_GroundSlam on BeginPlay',
             activatedBy:
-              'BehaviorTree tasks (BTTask_UseAbility_GroundSlam on commit, BTTask_UseAbility_HeavyAttack ' +
-              'on light pressure); abilities fire through UGameplayAbility::ActivateAbility',
+              'BehaviorTree tasks (BTTask_UseAbility_HeavyAttack for the primary melee weave — ' +
+              'Overhead Cleave + Shield Shove; BTTask_UseAbility_GroundSlam only on the situational ' +
+              'AoE commit vs 2+ targets); abilities fire through UGameplayAbility::ActivateAbility',
             dependencies: [
-              'spellbook::off-phy-04 (Ground Slam ability row)',
-              'spellbook::off-phy-02 (Heavy Attack ability row)',
+              'spellbook::off-phy-02 (Heavy Attack — primary ability row)',
+              'spellbook::off-phy-04 (Ground Slam — situational AoE ability row)',
               'UARPGAbilitySystemComponent (GAS component on AARPGEnemyCharacter)',
             ],
             verification:
-              'L2: spellbook::off-phy-04 and off-phy-02 present in SPELLBOOK_ABILITIES seed; ' +
+              'L2: spellbook::off-phy-02 and off-phy-04 present in SPELLBOOK_ABILITIES seed; ' +
               'L3: VSBestiarySpawnTest — ability fires and GE_Damage applies on hit target',
           },
-          // Resolvable links — real seeded spellbook ids.
+          // Resolvable links — real seeded spellbook ids (roles match the AI Behavior model).
           links: [
-            { catalogId: 'spellbook', entityId: 'off-phy-04', role: 'primary-ability' },
-            { catalogId: 'spellbook', entityId: 'off-phy-02', role: 'heavy-ability' },
+            { catalogId: 'spellbook', entityId: 'off-phy-02', role: 'primary-ability' },
+            { catalogId: 'spellbook', entityId: 'off-phy-04', role: 'situational-aoe' },
           ],
         },
         links: [
-          { catalogId: 'spellbook', entityId: 'off-phy-04', role: 'primary-ability' },
-          { catalogId: 'spellbook', entityId: 'off-phy-02', role: 'heavy-ability' },
+          { catalogId: 'spellbook', entityId: 'off-phy-02', role: 'primary-ability' },
+          { catalogId: 'spellbook', entityId: 'off-phy-04', role: 'situational-aoe' },
         ],
       }),
       accept: minCount('abilities', '≥1 ability linked from the abilities catalog', 1),

@@ -343,8 +343,13 @@ registerCatalogPipeline({
       view: { kind: 'manifest', field: 'assets' },
       produce: (e: LabEntity) => {
         const s = slug(e.name);
+        // Packaged widget name carries the `Hud` infix to match the class the game
+        // actually creates (WBP_HudHealthBarClass in AARPGHUD::BeginPlay) and the
+        // Data Binding sibling (WBP_HudHealthBar). Bare WBP_<slug> would name a
+        // widget the wiring never loads.
+        const widget = `WBP_Hud${s}`;
         const assets = [
-          `WBP_${s}`,
+          widget,
           `DT_HUDElements :: ${s}`,
           `T_${s}_Fill_Full`,
           `T_${s}_Fill_Low`,
@@ -374,7 +379,9 @@ registerCatalogPipeline({
               ],
               verification:
                 'L2: UARPGAttributeSet + AARPGHUD declared in Source/PoF/ (cppSymbolExists); ' +
-                'seed_hud_elements.py seeds WBP_HudHealthBar row in DT_HUDElements; ' +
+                'seed_hud_elements.py must seed the WBP_HudHealthBar row in DT_HUDElements — ' +
+                'currently DEFERRED because that row is not yet present in the seed script ' +
+                '(see the seedRowPresent static check); ' +
                 'L3: VSHUDElementTest — widget renders + attribute-change delegate fires correctly ' +
                 'at 1080p and 4K resolutions in PIE.',
             },
@@ -389,7 +396,7 @@ registerCatalogPipeline({
       staticChecks: (e) => [
         cppSymbolExists('UARPGAttributeSet', 'Attribute set declared in Source/'),
         cppSymbolExists('AARPGHUD', 'HUD class declared in Source/'),
-        seedRowPresent('seed_hud_elements.py', slug(e.name), 'HUD element row seeded in Content/Python'),
+        seedRowPresent('seed_hud_elements.py', `WBP_Hud${slug(e.name)}`, 'HUD element row seeded in Content/Python'),
       ],
     },
   ],
