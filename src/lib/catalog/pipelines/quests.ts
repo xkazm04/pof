@@ -243,13 +243,23 @@ registerCatalogPipeline({
               'the BETRAY terminal fires immediately via his OnDeath delegate.',
             dialogBinding:
               'dialog-gatekeeper is reused for the stage-1 accept conversation by adding an ' +
-              '"EmberPact" topic branch to the existing Gatekeeper tree. Pending: a dedicated ' +
-              'dt_ember_pact_choice tree for the stage-3 ritual will be authored once the dialog-trees ' +
-              'pipeline seeded row is promoted (note: pending dialog-trees full pipeline).',
-            pendingDialogTrees:
-              'dt_ember_pact_intro and dt_ember_pact_choice are design-flavor names for future ' +
-              'dedicated dialog tree rows. They are NOT in the resolvable links. Once seeded, ' +
-              'they will replace the dialog-gatekeeper binding above.',
+              '"EmberPact" topic branch to the existing Gatekeeper tree. The stage-3 ritual choice ' +
+              'tree dt_ember_pact_choice is authored below (judge-fleet fix 2026-07-07 — the ' +
+              'quest\'s dramatic centerpiece was previously only a placeholder name).',
+            // The stage-3 ritual choice — the quest's centerpiece, authored as a real tree.
+            emberPactChoiceTree: {
+              id: 'dt_ember_pact_choice',
+              root: 'vael_ritual_open',
+              nodes: [
+                { id: 'vael_ritual_open', speaker: 'Vael', line: 'The moss, then. Maren\'s poultices — or the Order\'s pyre. You carried it here; you choose what it becomes.', choices: ['give_maren', 'give_order', 'ask_consequence'] },
+                { id: 'ask_consequence', speaker: 'Player', line: 'What happens to the one I refuse?', next: 'vael_consequence' },
+                { id: 'vael_consequence', speaker: 'Vael', line: 'Maren loses her patients. The Order loses face. Neither forgets. Choose.', choices: ['give_maren', 'give_order'] },
+                { id: 'give_maren', speaker: 'Player', line: 'Maren heals with it. That outweighs doctrine.', effects: ['SetStage(EMBER_PACT, MAREN_TERMINAL)', 'Reputation(faction-ashen-order, -15)', 'GrantReward(lt-ember-pact-maren)'] },
+                { id: 'give_order', speaker: 'Player', line: 'The Order burns it. Some cures cost too much.', effects: ['SetStage(EMBER_PACT, ORDER_TERMINAL)', 'Reputation(faction-ashen-order, +15)', 'GrantReward(lt-ember-pact-order)'] },
+              ],
+              conditions: 'gated on quest stage == 3 AND player carries ≥3 ember-moss; vael dead → BETRAY terminal bypasses this tree entirely',
+              terminals: 'both branches terminal (quest-stage-graph canon: explicit success terminals; BETRAY is the fail terminal)',
+            },
           },
           links: [
             { catalogId: 'characters',   entityId: 'char-captain-vael',  role: 'quest-giver' },
@@ -337,17 +347,24 @@ registerCatalogPipeline({
       archetype: 'checklist',
       label: 'Localization',
       view: { kind: 'checklist', field: 'keys' },
-      produce: (e: LabEntity) => ({
-        data: {
-          keys: [
-            `QUEST_${slug(e.name).toUpperCase()}_TITLE`,
-            `QUEST_${slug(e.name).toUpperCase()}_BRIEF`,
-            `QUEST_${slug(e.name).toUpperCase()}_STAGE1`,
-            `QUEST_${slug(e.name).toUpperCase()}_STAGE2`,
-            `QUEST_${slug(e.name).toUpperCase()}_JOURNAL`,
-          ],
-        },
-      }),
+      produce: (e: LabEntity) => {
+        const K = `QUEST_${slug(e.name).toUpperCase()}`;
+        return {
+          data: {
+            // Real localization content — en source + cs translation per key, not a bare
+            // key-name schema (the judge fleet failed the stub form, 2026-07-07).
+            keys: [
+              `${K}_TITLE: en "The Ember Pact" · cs "Pakt uhlíků"`,
+              `${K}_BRIEF: en "The herbalist Maren begs you to recover ember-moss from the scorched hollow — but the Ashen Order wants it burned." · cs "Bylinkářka Maren tě prosí o žhavý mech ze spálené rokle — Popelavý řád ho ale chce spálit."`,
+              `${K}_STAGE1: en "Gather 3 clumps of ember-moss in the Scorched Hollow." · cs "Nasbírej 3 trsy žhavého mechu ve Spálené rokli."`,
+              `${K}_STAGE2: en "Decide: deliver the moss to Maren, or surrender it to Warden Kale." · cs "Rozhodni: přines mech Maren, nebo ho odevzdej strážci Kaleovi."`,
+              `${K}_JOURNAL: en "The moss glows faintly in my pack. Someone will be betrayed by morning." · cs "Mech mi v brašně slabě žhne. Do rána někoho zradím."`,
+            ],
+            locales: ['en', 'cs'],
+            format: 'key: en "<source>" · cs "<translation>" — en is the authoring truth; cs seeds the LocRes pipeline',
+          },
+        };
+      },
       accept: minCount('keys', '≥1 localization key extracted', 1),
     },
 

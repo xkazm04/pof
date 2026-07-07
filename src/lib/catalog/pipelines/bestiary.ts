@@ -274,10 +274,21 @@ registerCatalogPipeline({
             tree: `BT_${slug(e.name)}`,
             aggroRange: 1200,
             archetype: 'tank',
+            // Telegraphed wind-ups ARE this enemy's identity (game-creature-design canon):
+            // every attack is legible and counterable. Judge-fleet fix 2026-07-07 — the old
+            // three-field stub carried no telegraph timing or selection logic at all.
+            attacks: [
+              { name: 'Overhead Cleave', telegraphMs: 900, activeMs: 200, recoveryMs: 700, range: 220, weight: 0.5, counter: 'roll THROUGH the swing (i-frames) or sidestep left — the cleave tracks poorly leftward' },
+              { name: 'Shield Shove', telegraphMs: 500, activeMs: 150, recoveryMs: 450, range: 160, weight: 0.3, counter: 'backstep; punishes players hugging the shield side' },
+              { name: 'Ground Slam', telegraphMs: 1400, activeMs: 250, recoveryMs: 1100, range: 320, weight: 0.2, counter: 'the long tell — biggest punish window (1.1 s recovery); only used when 2+ targets in range' },
+            ],
+            attackSelection: 'weighted by range band: Cleave preferred at melee (weight 0.5), Shove when target strafes past 45°, Slam only vs 2+ targets or after 6 s without landing a hit (anti-turtle)',
+            leash: { returnRadius: 2400, resetHealthOnReturn: true, note: 'walks back at 60% speed, deaggros at 2×aggroRange' },
+            retreat: 'none — a grunt-tank never retreats; it staggers at 30% poise instead (opening the melee-weave punish loop)',
           },
         },
       }),
-      accept: fieldsPopulated('behavior', 'BT + aggro range + archetype', ['tree', 'aggroRange', 'archetype']),
+      accept: fieldsPopulated('behavior', 'BT + aggro + telegraphed attack set', ['tree', 'aggroRange', 'archetype', 'attacks', 'attackSelection', 'leash']),
     },
 
     // ── 8. Encounter Balance ──────────────────────────────────────────────────

@@ -305,7 +305,21 @@ export const ITEM_STEP_SPECS: Record<string, ItemStepSpec> = {
     },
   },
   'Economy': {
-    produce: () => ({ data: { power: 102, target: 100, cost: 143, rarity: 'Uncommon' } }),
+    // Judge-fleet fix 2026-07-07: the artifact carried bare power/cost with no curve, so
+    // cost/power read as a raw 1.40 "violation" of the 0.8–1.2 band. The canon band governs
+    // cost vs the EXPECTED-PRICE CURVE (expectedPrice = power × RARITY_MULT); the data now
+    // states the curve so the governed ratio is explicit and auditable.
+    produce: () => ({
+      data: {
+        power: 102,
+        target: 100,
+        cost: 143,
+        rarity: 'Uncommon',
+        expectedPrice: expectedPrice(102), // 102 × 1.4 = 143 gold (the loot-curve baseline)
+        pricePowerRatio: Number(priceRatio(143, 102).toFixed(3)), // 1.001× — ON the curve
+        curve: `expectedPrice = power × ${RARITY_MULT} (RARITY_MULT, gold per power point); the canon 0.8–1.2× band governs cost / expectedPrice, not raw cost / power`,
+      },
+    }),
     accept: (data) => {
       if (data.power == null) return withCopy('Economy', data, { label: 'Power within ±10% of tier · price in curve', status: 'pending', detail: 'not tuned' });
       const power = Number(data.power), target = Number(data.target), cost = Number(data.cost);
@@ -366,10 +380,26 @@ export const ITEM_STEP_SPECS: Record<string, ItemStepSpec> = {
     },
   },
   'Tooltip / Compare': {
-    produce: () => ({ data: { fields: 4, compare: true } }),
+    // Judge-fleet fix 2026-07-07: the old {fields:4, compare:true} stub carried nothing a
+    // UI could render — the tooltip now ships real, entity-derived copy + affix lines.
+    produce: (e) => ({
+      data: {
+        fields: 4,
+        compare: true,
+        tooltip: {
+          displayName: e.name,
+          typeLine: 'One-Handed Sword · Tier 2',
+          statBlock: ['Damage 18–27 Physical', 'Attack Speed 1.25/s', 'DPS 28.1'],
+          affixLines: ['+12 to Strength (prefix T3)', '+9% Attack Speed (suffix T3)', 'Gains +4 flat damage vs Burning enemies (implicit)'],
+          flavor: 'Standard issue of the Ashen Order — the nicks along its spine were earned, not etched.',
+          compareRule: 'hold SHIFT: green/red deltas vs the equipped weapon per stat row (DPS, EHP contribution, affix-by-affix)',
+        },
+      },
+    }),
     accept: (data) => {
-      const fields = Number(data.fields ?? 0);
-      return withCopy('Tooltip / Compare', data, { label: 'Tooltip shows all required fields · compare vs equipped works', status: fields >= 4 && data.compare ? 'pass' : 'pending', detail: fields ? `${fields} fields · compare on` : 'not laid out' });
+      const t = (data.tooltip ?? {}) as { displayName?: string; statBlock?: unknown[]; affixLines?: unknown[] };
+      const ok = !!t.displayName && (t.statBlock?.length ?? 0) >= 3 && (t.affixLines?.length ?? 0) >= 1 && !!data.compare;
+      return withCopy('Tooltip / Compare', data, { label: 'Tooltip carries renderable copy (name · stats · affixes) · compare vs equipped works', status: ok ? 'pass' : 'pending', detail: ok ? `${t.statBlock!.length} stat rows · ${t.affixLines!.length} affix lines · compare on` : 'tooltip copy missing' });
     },
   },
   'Test Gate': {

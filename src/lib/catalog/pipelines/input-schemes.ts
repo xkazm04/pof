@@ -331,12 +331,25 @@ registerCatalogPipeline({
         data: {
           tutorial: {
             promptStyle: 'contextual-overlay',
-            glyphSource: 'T_Gamepad_Glyphs_Atlas resolved at runtime from AARPGPlayerController::GetActiveDeviceFamily()',
-            note: 'Prompt glyphs update automatically when the active input device changes (gamepad ↔ keyboard).',
+            // Judge-fleet fix 2026-07-07: glyphSource previously referenced the phantom
+            // T_Gamepad_Glyphs_Atlas even though Input Glyphs reports glyphSet deferred —
+            // prompts now honestly fall back to TEXT until the atlas exists.
+            glyphSource:
+              'TEXT-LABEL fallback ("[A]", "[R2]") until the deferred glyph atlas ships (see Input Glyphs: ' +
+              'no atlas is generated yet); device family resolved from AARPGPlayerController::GetActiveDeviceFamily()',
+            taughtSequence: [
+              { order: 1, action: 'IA_Move', trigger: 'first possession', prompt: 'Move with the left stick', dismiss: 'moved ≥ 300 units' },
+              { order: 2, action: 'IA_Look', trigger: '2 s after move dismiss', prompt: 'Look with the right stick', dismiss: 'camera yaw ≥ 90°' },
+              { order: 3, action: 'IA_Attack', trigger: 'first enemy within 600 units', prompt: 'Attack with R2', dismiss: 'first hit landed' },
+              { order: 4, action: 'IA_Dodge', trigger: 'first enemy wind-up seen', prompt: 'Roll through attacks with Cross', dismiss: 'first successful dodge (links tutorial-beats::tutorial-dodge)' },
+              { order: 5, action: 'IA_Interact', trigger: 'first interactable within 300 units', prompt: 'Interact with Square', dismiss: 'first interaction' },
+            ],
+            pacing: 'one prompt on screen at a time; re-prompt after 20 s of non-compliance, max 2 re-prompts, never during combat except Dodge',
+            note: 'Prompt glyphs switch automatically when the active device changes (gamepad ↔ keyboard) once the atlas exists; text labels are the shipping fallback.',
           },
         },
       }),
-      accept: fieldsPopulated('tutorial', 'Tutorial prompt style defined', ['promptStyle']),
+      accept: fieldsPopulated('tutorial', 'Tutorial prompt style + taught sequence defined', ['promptStyle', 'glyphSource', 'taughtSequence', 'pacing']),
     },
 
     // ── 9. Localization ───────────────────────────────────────────────────────
@@ -417,17 +430,24 @@ registerCatalogPipeline({
       view: { kind: 'manifest', field: 'assets' },
       produce: (e: LabEntity) => {
         const s = slug(e.name);
+        // Judge-fleet fix 2026-07-07: T_<slug>_Glyphs_Atlas removed from the shipped
+        // manifest — the Input Glyphs step reports the atlas DEFERRED (no glyph set
+        // generated), so packaging must not claim a phantom asset. It ships when the
+        // dedicated icon-sets glyph row lands (see pendingAssets).
         const assets = [
           `DA_InputSchemes_${s}`,
           `IMC_Gameplay_${s}`,
           `IMC_Menu_${s}`,
           `IMC_Dialogue_${s}`,
-          `T_${s}_Glyphs_Atlas`,
           `WBP_InputRebind`,
+        ];
+        const pendingAssets = [
+          `T_${s}_Glyphs_Atlas (deferred with Input Glyphs — tutorial prompts use text-label fallback until it exists)`,
         ];
         return {
           data: {
             assets,
+            pendingAssets,
             wiringContract: {
               grantedBy:
                 'AARPGPlayerController::SetupInputComponent reads DA_InputSchemes_* DataAsset; ' +

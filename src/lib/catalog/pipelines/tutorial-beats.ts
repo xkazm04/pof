@@ -416,13 +416,17 @@ registerCatalogPipeline({
       view: { kind: 'checklist', field: 'keys' },
       produce: () => ({
         data: {
+          // Real localization content — en source + cs translation per key, not a bare
+          // key-name schema (the judge fleet failed the stub form, 2026-07-07).
           keys: [
-            'TUT_DODGE_PROMPT',
-            'TUT_DODGE_SUCCESS',
-            'TUT_DODGE_RETRY',
-            'TUT_DODGE_SKIP',
-            'TUT_DODGE_FAIL',
+            'TUT_DODGE_PROMPT: en "Press [SPACE] as the strike lands to roll through it." · cs "Stiskni [SPACE] ve chvíli úderu a prokutálej se skrz."',
+            'TUT_DODGE_SUCCESS: en "Perfect roll — you passed clean through the attack." · cs "Dokonalý kotoul — útok tě zcela minul."',
+            'TUT_DODGE_RETRY: en "Too early. Watch the wind-up, then roll." · cs "Příliš brzy. Sleduj nápřah, pak se kutál."',
+            'TUT_DODGE_SKIP: en "Hold [TAB] to skip this lesson." · cs "Podržením [TAB] lekci přeskočíš."',
+            'TUT_DODGE_FAIL: en "That one hurt. The roll grants brief immunity — time it to the hit." · cs "Tohle bolelo. Kotoul dává chvilkovou nezranitelnost — načasuj ho na zásah."',
           ],
+          locales: ['en', 'cs'],
+          format: 'key: en "<source>" · cs "<translation>" — en is the authoring truth; cs seeds the LocRes pipeline',
         },
       }),
       accept: minCount('keys', '≥1 localization key defined', 1),

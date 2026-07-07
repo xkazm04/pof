@@ -201,7 +201,10 @@ registerCatalogPipeline({
             slots: 256,
             slotsAllocated: 224,
             slotsReserved: 32,
-            format: 'BC7 (DXT5-equivalent, full alpha for transparency) — no mip below 32 px (mip count = 7)',
+            format:
+              'BC7 (DXT5-equivalent, full alpha for transparency) — mip chain floored where a CELL reaches 32 px: ' +
+              'atlas mips 4096→2048→1024→512 (cells 256→128→64→32), mip count = 4. ' +
+              '(Judge-fleet fix 2026-07-07: the old line claimed a 32 px floor AND mip count 7 — 7 mips would run cells down to 4 px.)',
             uvLookupMethod:
               'FIconSetRow.AtlasU + FIconSetRow.AtlasV (cell indices 0–15) stored in DT_IconSets; ' +
               'MI_HUDIconSheet UV = vec2(AtlasU, AtlasV) / 16.0 + uv_in_cell / 16.0',

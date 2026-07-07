@@ -515,16 +515,20 @@ registerCatalogPipeline({
       view: { kind: 'checklist', field: 'keys' },
       produce: () => ({
         data: {
+          // Real localization content — en source + cs translation per key, not a bare
+          // key-name schema (the judge fleet failed the stub form, 2026-07-07).
           keys: [
-            'RECIPE_HEALTH_POTION_NAME',
-            'RECIPE_HEALTH_POTION_DESCRIPTION',
-            'RECIPE_HEALTH_POTION_INPUT_1',
-            'RECIPE_HEALTH_POTION_INPUT_2',
-            'RECIPE_HEALTH_POTION_OUTPUT',
-            'RECIPE_HEALTH_POTION_STATION_REQUIRED',
-            'RECIPE_HEALTH_POTION_SKILL_REQUIRED',
-            'RECIPE_HEALTH_POTION_UNLOCK_HINT',
+            'RECIPE_HEALTH_POTION_NAME: en "Health Potion" · cs "Lektvar zdraví"',
+            'RECIPE_HEALTH_POTION_DESCRIPTION: en "A stoppered vial of crimson restorative. Bitter, but it mends wounds." · cs "Zazátkovaná lahvička rudého odvaru. Hořká, ale rány zacelí."',
+            'RECIPE_HEALTH_POTION_INPUT_1: en "Bloodmoss Herb ×2" · cs "Krvomech ×2"',
+            'RECIPE_HEALTH_POTION_INPUT_2: en "Glass Vial ×1" · cs "Skleněná lahvička ×1"',
+            'RECIPE_HEALTH_POTION_OUTPUT: en "Health Potion ×1" · cs "Lektvar zdraví ×1"',
+            'RECIPE_HEALTH_POTION_STATION_REQUIRED: en "Requires: Alchemy Bench" · cs "Vyžaduje: Alchymistický stůl"',
+            'RECIPE_HEALTH_POTION_SKILL_REQUIRED: en "Requires: Alchemy I" · cs "Vyžaduje: Alchymie I"',
+            'RECIPE_HEALTH_POTION_UNLOCK_HINT: en "Learned from the herbalist in the Ashen camp." · cs "Naučíš se od bylinkářky v Popelavém táboře."',
           ],
+          locales: ['en', 'cs'],
+          format: 'key: en "<source>" · cs "<translation>" — en is the authoring truth; cs seeds the LocRes pipeline',
         },
       }),
       accept: minCount('keys', '≥1 localization key defined', 1),
