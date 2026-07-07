@@ -79,6 +79,14 @@ export const NEW_CATALOGS: NewCatalogDef[] = [
   // status — see src/lib/catalog/pipelines/player-movement.ts.
   { catalogId: 'player-movement', label: 'Player Movement', category: 'Game Assets', description: 'Tier-2 player locomotion: Mixamo→Manny retarget → blend space → AnimBP → roll montage → playable gate.', module: 'arpg-character', tracks: ['animation', 'test'],
     starters: [{ id: 'player-locomotion-manny', name: 'Manny Locomotion', categoryPath: ['Movement'], tags: ['mixamo', 'locomotion'], description: 'WASD + Shift sprint + Space roll, from no animation to a PIE-and-feel playable gate.' }] },
+  // ── Character Pipeline (not from the xlsx-21) ──
+  // The gated idea→playable-character workflow, ground-truthed on the standalone jinx
+  // UE 5.8 project (2026-07-06/07): face-priority concept → face gates → Tripo v3.1 →
+  // rig/retargets → UE import → playable wire → game-tier convert. The seeded entity
+  // carries the REAL provenance (task ids, gate verdicts, the P1/v2.5 failures) — see
+  // src/lib/catalog/pipelines/character-pipeline.ts.
+  { catalogId: 'character-pipeline', label: 'Character Pipeline', category: 'Game Assets', description: 'Idea→playable hero: gated 2D concept → Tripo v3.1 image-to-3D → auto-rig + preset clips → UE import → playable wire → game-tier convert.', module: 'arpg-character', tracks: ['art-2d', 'art-3d', 'animation', 'test'],
+    starters: [{ id: 'char-pipeline-jinx', name: 'Jinx', categoryPath: ['Hero'], tags: ['tripo', 'v3.1', 'proven'], description: 'The proven exemplar: HD friendly-face Jinx — WASD run + SPACE roll + wheel zoom, playable in the standalone jinx UE 5.8 project.' }] },
 ];
 
 /** Materialize a new catalog's starters into CatalogEntityBase[] (planned, minimal data). */
