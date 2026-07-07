@@ -136,3 +136,36 @@ describe('unpowered — the audited no-engine gap', () => {
     expect(f?.generatorWired).toBe(false);
   });
 });
+
+describe('judge verdict merge — the content-quality layer', () => {
+  const llmFact: StepFact = {
+    catalogId: 'items', step: 'Brief', trueEngine: 'Claude', deliverable: 'text-config',
+    generatorWired: true, judge: 'llm-panel', checkerMeaningful: false, note: 'prose brief',
+  };
+  const jv = (verdict: 'pass' | 'fail', judge: 'llm-panel' | 'vlm' = 'llm-panel') => ({
+    catalogId: 'items', entityId: 'e1', step: 'Brief', judge, verdict,
+    score: verdict === 'pass' ? 86 : 31, findings: 'panel findings text', model: 'sonnet-fleet-w1',
+  });
+
+  it('a matching judge PASS elevates a trusted checker-pass to verified', () => {
+    const c = deriveCell('Brief', 'Claude', [art('Brief', 'pass', { tier: 'L0' })], llmFact, [jv('pass')]);
+    expect(c.grade).toBe('verified');
+    expect(c.judged?.score).toBe(86);
+  });
+
+  it('a judge FAIL condemns the content to attention even when the shape checker passed', () => {
+    const c = deriveCell('Brief', 'Claude', [art('Brief', 'pass', { tier: 'L0' })], llmFact, [jv('fail')]);
+    expect(c.grade).toBe('attention');
+    expect(c.judged?.verdict).toBe('fail');
+  });
+
+  it('a verdict from the WRONG judge class does not elevate (vlm verdict on an llm-panel step)', () => {
+    const c = deriveCell('Brief', 'Claude', [art('Brief', 'pass', { tier: 'L0' })], llmFact, [jv('pass', 'vlm')]);
+    expect(c.grade).toBe('trusted');
+  });
+
+  it('a judge pass without any checker-pass does not fabricate verified (nothing produced)', () => {
+    const c = deriveCell('Brief', 'Claude', [], llmFact, [jv('pass')]);
+    expect(c.grade).toBe('unwired');
+  });
+});

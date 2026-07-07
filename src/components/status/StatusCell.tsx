@@ -22,7 +22,9 @@ export function StatusCell({ cell }: { cell: StepCell }) {
   const { counts } = cell;
   const title = [
     `${cell.label} — ${cell.grade}${cell.tier ? ` (${cell.tier})` : ''} · engine: ${cell.engine}`,
-    cell.judge ? `judge needed: ${cell.judge}${cell.checkerMeaningful === false ? ' · checker is shape-only' : ''}` : '',
+    cell.judged
+      ? `JUDGED ${cell.judged.verdict.toUpperCase()} ${cell.judged.score}/100 by ${cell.judged.model}: ${cell.judged.findings}`
+      : cell.judge ? `judge needed: ${cell.judge}${cell.checkerMeaningful === false ? ' · checker is shape-only' : ''}` : '',
     `pass ${counts.pass} · deferred ${counts.deferred} · pending ${counts.pending} · fail ${counts.fail}`,
     cell.auditNote ? `audit: ${cell.auditNote}` : '',
     cell.reason ? `reason: ${cell.reason}` : '',

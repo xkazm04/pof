@@ -12,7 +12,9 @@ import { useEffect, useState } from 'react';
 import '@/lib/catalog/pipelines/registry.generated';
 import { allCatalogPipelines } from '@/lib/catalog/pipeline-registry';
 import { fetchArtifacts } from '@/components/layout-lab/labArtifactClient';
+import { tryApiFetch } from '@/lib/api-utils';
 import type { PipelineArtifact } from '@/lib/pipeline-artifacts-db';
+import type { JudgeVerdict } from '@/lib/status/judge-verdicts-db';
 import { buildSwimlane, sortLanes, type Swimlane, type CellGrade } from '@/lib/status/statusModel';
 import { StatusCell, GRADE_VAR } from './StatusCell';
 
@@ -34,11 +36,19 @@ export function StatusDashboard() {
     let alive = true;
     (async () => {
       const pipelines = allCatalogPipelines();
+      const verdictRes = await tryApiFetch<JudgeVerdict[]>('/api/judge-verdicts');
+      const allVerdicts = verdictRes.ok ? verdictRes.data : [];
+      const byCatalog = new Map<string, JudgeVerdict[]>();
+      for (const v of allVerdicts) {
+        const list = byCatalog.get(v.catalogId) ?? [];
+        list.push(v);
+        byCatalog.set(v.catalogId, list);
+      }
       const results = await Promise.all(
         pipelines.map(async (p) => {
           const artifacts: PipelineArtifact[] = await fetchArtifacts(p.catalogId);
           const metas = p.steps.map((s) => ({ label: s.label, archetype: s.archetype, engine: s.engine }));
-          return buildSwimlane(p.catalogId, p.catalogId, metas, artifacts);
+          return buildSwimlane(p.catalogId, p.catalogId, metas, artifacts, byCatalog.get(p.catalogId) ?? []);
         }),
       );
       if (alive) setLanes(sortLanes(results));

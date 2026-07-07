@@ -16,6 +16,7 @@
  *   unwired   — NO artifact exists (mocked / skipped / never run) ← the bottleneck
  */
 import type { PipelineArtifact } from '@/lib/pipeline-artifacts-db';
+import type { JudgeVerdict } from './judge-verdicts-db';
 import stepFactsJson from './step-facts.json';
 
 export type CellGrade = 'verified' | 'trusted' | 'ungated' | 'unpowered' | 'deferred' | 'attention' | 'pending' | 'unwired';
@@ -112,13 +113,21 @@ export interface StepCell {
   /** False when the accept checker verifies shape only (field-exists / length),
    *  not content — the benevolence the audit exposed. */
   checkerMeaningful?: boolean;
+  /** Content-quality judgment (LLM panel / VLM), when one has run. */
+  judged?: { verdict: 'pass' | 'fail'; score: number; model: string; findings: string };
 }
 
 const GATE_TIERS = new Set(['L3', 'L4']);
 
 /** Derive one cell from every artifact recorded for that step label, cross-examined
- *  against the audited step fact. Pure. */
-export function deriveCell(label: string, engine: string, artifacts: PipelineArtifact[], fact?: StepFact): StepCell {
+ *  against the audited step fact and any content-quality judge verdicts. Pure. */
+export function deriveCell(
+  label: string,
+  engine: string,
+  artifacts: PipelineArtifact[],
+  fact?: StepFact,
+  verdicts: JudgeVerdict[] = [],
+): StepCell {
   const counts = { pass: 0, deferred: 0, fail: 0, pending: 0 };
   let bestPassTier: string | undefined;
   let tier: string | undefined;
@@ -142,9 +151,19 @@ export function deriveCell(label: string, engine: string, artifacts: PipelineArt
     !!fact &&
     (fact.trueEngine === 'None' || (!fact.generatorWired && MEDIA_DELIVERABLES.has(fact.deliverable)));
 
+  // Content-quality judgments: a matching judge's PASS is professional-grade proof for
+  // content steps (the thing shape checkers can't see); a judge FAIL condemns the content
+  // even when the shape checker passed.
+  const relevant = verdicts.filter((v) => !fact || v.judge === fact.judge || v.judge === 'human');
+  const judgedFail = relevant.find((v) => v.verdict === 'fail');
+  const judgedPass = relevant.find((v) => v.verdict === 'pass');
+  const judged = judgedFail ?? judgedPass;
+
   let grade: CellGrade;
   if (counts.pass > 0 && bestPassTier && GATE_TIERS.has(bestPassTier)) grade = 'verified';
+  else if (judgedFail && counts.pass > 0) grade = 'attention';
   else if (unpowered) grade = 'unpowered';
+  else if (judgedPass && counts.pass > 0) grade = 'verified';
   else if (counts.pass > 0) grade = TRUSTED_CLASSES.has(engineClass(engine)) ? 'trusted' : 'ungated';
   else if (counts.deferred > 0) grade = 'deferred';
   else if (counts.fail > 0) grade = 'attention';
@@ -161,6 +180,7 @@ export function deriveCell(label: string, engine: string, artifacts: PipelineArt
     judge: fact?.judge,
     auditNote: fact?.note,
     checkerMeaningful: fact?.checkerMeaningful,
+    ...(judged ? { judged: { verdict: judged.verdict, score: judged.score, model: judged.model, findings: judged.findings } } : {}),
   };
 }
 
@@ -182,6 +202,7 @@ export function buildSwimlane(
   label: string,
   steps: StepMeta[],
   artifacts: PipelineArtifact[],
+  verdicts: JudgeVerdict[] = [],
 ): Swimlane {
   const byStep = new Map<string, PipelineArtifact[]>();
   for (const a of artifacts) {
@@ -189,12 +210,18 @@ export function buildSwimlane(
     list.push(a);
     byStep.set(a.step, list);
   }
+  const verdictsByStep = new Map<string, JudgeVerdict[]>();
+  for (const v of verdicts) {
+    const list = verdictsByStep.get(v.step) ?? [];
+    list.push(v);
+    verdictsByStep.set(v.step, list);
+  }
   const cells = steps.map((s) => {
     const fact = getStepFact(catalogId, s.label);
     const engine = fact?.trueEngine && fact.trueEngine !== 'None'
       ? fact.trueEngine.replace(' (deterministic)', '')
       : inferEngine(catalogId, s);
-    return deriveCell(s.label, engine, byStep.get(s.label) ?? [], fact);
+    return deriveCell(s.label, engine, byStep.get(s.label) ?? [], fact, verdictsByStep.get(s.label) ?? []);
   });
   const n = Math.max(cells.length, 1);
   const verified = cells.filter((c) => c.grade === 'verified').length;
