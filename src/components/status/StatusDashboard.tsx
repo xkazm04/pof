@@ -3,34 +3,64 @@
 /**
  * /status — the pipeline health map, Blueprint-themed (lab tokens). One swimlane per
  * catalog pipeline, one cell per step: the cell NAMES THE ENGINE powering the step
- * (Claude / Tripo / Leonardo / UE Python / …) and its background encodes the STRICT
- * grade ladder — green is reserved for gate-proven output (L3/L4); an L0–L2 pass is
- * only "trusted" for engines that scale to quality without a gate (LLM text, code,
- * human selection) and shows as UNGATED (amber) for generative 3D/audio/2D.
+ * (Claude / Tripo / Leonardo / UE Python / …), the background encodes the STRICT
+ * grade ladder (green reserved for gate-proven / judge-proven output) and the left
+ * stripe encodes the acceptance TIER (L0–L4).
+ *
+ * Two clickable highlight bars replace the static legend: TIER chips and ENGINE
+ * chips. Clicking one highlights matching cells and demotes everything else to low
+ * opacity; clicking again (or another chip) clears/moves the filter.
  */
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import '@/lib/catalog/pipelines/registry.generated';
 import { allCatalogPipelines } from '@/lib/catalog/pipeline-registry';
 import { fetchArtifacts } from '@/components/layout-lab/labArtifactClient';
 import { tryApiFetch } from '@/lib/api-utils';
 import type { PipelineArtifact } from '@/lib/pipeline-artifacts-db';
 import type { JudgeVerdict } from '@/lib/status/judge-verdicts-db';
-import { buildSwimlane, sortLanes, type Swimlane, type CellGrade } from '@/lib/status/statusModel';
-import { StatusCell, GRADE_VAR } from './StatusCell';
+import { buildSwimlane, sortLanes, type Swimlane, type StepCell } from '@/lib/status/statusModel';
+import { StatusCell, TIER_VAR } from './StatusCell';
 
-const LEGEND: Array<{ grade: CellGrade; text: string }> = [
-  { grade: 'verified', text: 'verified — a real gate passed (L3 runtime / L4 visual)' },
-  { grade: 'trusted', text: 'trusted — L0–L2 pass, engine scales without a gate (LLM / code / human)' },
-  { grade: 'ungated', text: 'ungated — output exists, professional quality NOT provable yet' },
-  { grade: 'unpowered', text: 'unpowered — checker passed but NO wired engine can produce the claimed deliverable (audited)' },
-  { grade: 'deferred', text: 'deferred — gate declared, not run' },
-  { grade: 'attention', text: 'failing' },
-  { grade: 'pending', text: 'pending' },
-  { grade: 'unwired', text: 'unwired — never produced (mocked / skipped)' },
-];
+const TIERS = ['L0', 'L1', 'L2', 'L3', 'L4'] as const;
+
+type Highlight = { kind: 'tier' | 'engine'; value: string } | null;
+
+function cellMatches(cell: StepCell, hl: Highlight): boolean {
+  if (!hl) return true;
+  if (hl.kind === 'tier') return cell.tier === hl.value;
+  return cell.engine === hl.value;
+}
+
+function Chip({ label, color, active, onClick }: { label: string; color?: string; active: boolean; onClick: () => void }) {
+  return (
+    <button
+      type="button"
+      className="focus-ring"
+      aria-pressed={active}
+      onClick={onClick}
+      style={{
+        display: 'inline-flex',
+        alignItems: 'center',
+        gap: 'var(--lab-s1)',
+        padding: 'var(--lab-s1) var(--lab-s2)',
+        fontSize: 'var(--lab-fs-xs)',
+        fontFamily: 'var(--lab-font-mono)',
+        color: 'var(--lab-text)',
+        background: active ? 'color-mix(in srgb, var(--lab-ink) 22%, transparent)' : 'transparent',
+        border: `1px solid ${active ? 'var(--lab-ink)' : 'var(--lab-line)'}`,
+        borderRadius: 'var(--lab-r-sm)',
+        cursor: 'pointer',
+      }}
+    >
+      {color && <span aria-hidden="true" style={{ width: 10, height: 10, borderRadius: 2, background: color }} />}
+      {label}
+    </button>
+  );
+}
 
 export function StatusDashboard() {
   const [lanes, setLanes] = useState<Swimlane[] | null>(null);
+  const [highlight, setHighlight] = useState<Highlight>(null);
 
   useEffect(() => {
     let alive = true;
@@ -56,6 +86,22 @@ export function StatusDashboard() {
     return () => { alive = false; };
   }, []);
 
+  /** Engines actually present on the map (stable order), for the engine bar. */
+  const engines = useMemo(() => {
+    if (!lanes) return [];
+    const seen = new Map<string, number>();
+    for (const lane of lanes) {
+      for (const c of lane.cells) {
+        if (c.grade === 'unwired') continue;
+        seen.set(c.engine, (seen.get(c.engine) ?? 0) + 1);
+      }
+    }
+    return [...seen.entries()].sort((a, b) => b[1] - a[1]).map(([name, count]) => ({ name, count }));
+  }, [lanes]);
+
+  const toggle = (kind: 'tier' | 'engine', value: string) =>
+    setHighlight((h) => (h && h.kind === kind && h.value === value ? null : { kind, value }));
+
   return (
     <div
       data-theme="blueprint"
@@ -75,17 +121,21 @@ export function StatusDashboard() {
         </h1>
         <a href="/layout" className="focus-ring" style={{ fontSize: 'var(--lab-fs-xs)', color: 'var(--lab-ink)', textDecoration: 'none' }}>← Blueprint</a>
       </div>
-      <p style={{ fontSize: 'var(--lab-fs-xs)', color: 'var(--lab-muted)', maxWidth: 880, marginBottom: 'var(--lab-s4)' }}>
-        One row per pipeline, one cell per step — each cell names the engine powering it; the color is the honest grade.
-        Green is reserved for gate-proven output. Dark cells were never produced — the bottlenecks.
+      <p style={{ fontSize: 'var(--lab-fs-xs)', color: 'var(--lab-muted)', maxWidth: 880, marginBottom: 'var(--lab-s3)' }}>
+        One row per pipeline, one cell per step — the cell names its engine, the background is the honest grade
+        (green = gate/judge-proven), the left stripe is the acceptance tier. Click a tier or engine chip to highlight.
       </p>
 
-      <div role="list" aria-label="legend" style={{ display: 'flex', flexWrap: 'wrap', gap: 'var(--lab-s4)', marginBottom: 'var(--lab-s5)', fontSize: 'var(--lab-fs-xs)', color: 'var(--lab-text)' }}>
-        {LEGEND.map((l) => (
-          <span key={l.grade} role="listitem" style={{ display: 'inline-flex', alignItems: 'center', gap: 'var(--lab-s1)' }}>
-            <span aria-hidden="true" style={{ width: 12, height: 12, border: '1px solid var(--lab-line)', background: l.grade === 'unwired' ? 'transparent' : `color-mix(in srgb, ${GRADE_VAR[l.grade]} 38%, transparent)` }} />
-            {l.text}
-          </span>
+      <div role="toolbar" aria-label="highlight by tier" style={{ display: 'flex', flexWrap: 'wrap', gap: 'var(--lab-s2)', marginBottom: 'var(--lab-s2)' }}>
+        <span style={{ fontSize: 'var(--lab-fs-xs)', fontFamily: 'var(--lab-font-mono)', color: 'var(--lab-muted)', alignSelf: 'center', width: 56 }}>tier</span>
+        {TIERS.map((t) => (
+          <Chip key={t} label={t} color={TIER_VAR[t]} active={highlight?.kind === 'tier' && highlight.value === t} onClick={() => toggle('tier', t)} />
+        ))}
+      </div>
+      <div role="toolbar" aria-label="highlight by engine" style={{ display: 'flex', flexWrap: 'wrap', gap: 'var(--lab-s2)', marginBottom: 'var(--lab-s5)' }}>
+        <span style={{ fontSize: 'var(--lab-fs-xs)', fontFamily: 'var(--lab-font-mono)', color: 'var(--lab-muted)', alignSelf: 'center', width: 56 }}>engine</span>
+        {engines.map((e) => (
+          <Chip key={e.name} label={`${e.name} (${e.count})`} active={highlight?.kind === 'engine' && highlight.value === e.name} onClick={() => toggle('engine', e.name)} />
         ))}
       </div>
 
@@ -98,7 +148,7 @@ export function StatusDashboard() {
               href={`/layout?catalog=${lane.catalogId}`}
               className="focus-ring"
               title={`${lane.catalogId} — verified ${lane.verifiedPct}% · credible ${lane.credibleGePct}% · wired ${lane.wiredPct}%`}
-              style={{ width: 176, flexShrink: 0, fontSize: 'var(--lab-fs-xs)', fontFamily: 'var(--lab-font-mono)', color: 'var(--lab-ink)', textDecoration: 'none', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
+              style={{ width: 200, flexShrink: 0, fontSize: 'calc(var(--lab-fs-xs) + 3px)', fontWeight: 700, fontFamily: 'var(--lab-font-mono)', color: 'var(--lab-ink)', textDecoration: 'none', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
             >
               {lane.label}
             </a>
@@ -107,7 +157,7 @@ export function StatusDashboard() {
             </span>
             <div style={{ display: 'flex', gap: 'var(--lab-s1)' }}>
               {lane.cells.map((cell) => (
-                <StatusCell key={cell.label} cell={cell} />
+                <StatusCell key={cell.label} cell={cell} dimmed={!cellMatches(cell, highlight)} />
               ))}
             </div>
           </div>
