@@ -18,6 +18,7 @@
 import type { PipelineArtifact } from '@/lib/pipeline-artifacts-db';
 import type { JudgeVerdict } from './judge-verdicts-db';
 import stepFactsJson from './step-facts.json';
+import { BANDS, RUBRIC_VERSION } from '@/lib/judge/rubrics';
 
 export type CellGrade = 'verified' | 'trusted' | 'ungated' | 'unpowered' | 'deferred' | 'attention' | 'pending' | 'unwired';
 
@@ -154,16 +155,24 @@ export function deriveCell(
   // Content-quality judgments: a matching judge's PASS is professional-grade proof for
   // content steps (the thing shape checkers can't see); a judge FAIL condemns the content
   // even when the shape checker passed.
-  const relevant = verdicts.filter((v) => !fact || v.judge === fact.judge || v.judge === 'human');
+  const allRelevant = verdicts.filter((v) => !fact || v.judge === fact.judge || v.judge === 'human');
+  // Prefer the NEWEST rubric — a strict v2 judgment supersedes a lenient v1 one for the same
+  // step, so an old lenient pass can never keep a cell green after the strict rubric ships.
+  const newestRubric = allRelevant.reduce((mx, v) => Math.max(mx, v.rubricVersion ?? 1), 0);
+  const relevant = allRelevant.filter((v) => (v.rubricVersion ?? 1) === newestRubric);
   const judgedFail = relevant.find((v) => v.verdict === 'fail');
   const judgedPass = relevant.find((v) => v.verdict === 'pass');
   const judged = judgedFail ?? judgedPass;
+  // Strict green requires a >=90 pass under the current strict rubric (v2+). A pass under an
+  // old rubric, or a v2 pass below 90 (a "competent placeholder"), is trusted-amber, not green.
+  const strictPass = !!judgedPass && (judgedPass.rubricVersion ?? 1) >= RUBRIC_VERSION && judgedPass.score >= BANDS.shippable;
 
   let grade: CellGrade;
   if (counts.pass > 0 && bestPassTier && GATE_TIERS.has(bestPassTier)) grade = 'verified';
   else if (judgedFail && counts.pass > 0) grade = 'attention';
   else if (unpowered) grade = 'unpowered';
-  else if (judgedPass && counts.pass > 0) grade = 'verified';
+  else if (strictPass && counts.pass > 0) grade = 'verified';
+  else if (judgedPass && counts.pass > 0) grade = 'trusted';
   else if (counts.pass > 0) grade = TRUSTED_CLASSES.has(engineClass(engine)) ? 'trusted' : 'ungated';
   else if (counts.deferred > 0) grade = 'deferred';
   else if (counts.fail > 0) grade = 'attention';
