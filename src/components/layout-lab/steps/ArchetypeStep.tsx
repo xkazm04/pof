@@ -1,8 +1,16 @@
 'use client';
 
+import dynamic from 'next/dynamic';
 import { StepFrame, type StepPanel } from './StepFrame';
 import { CliProduce } from './shared/CliProduce';
 import { CandidateGallery } from './shared/CandidateGallery';
+
+// three/r3f is client + WebGL only — load the .glb viewer lazily so it never hits SSR
+// and only pulls the 3D bundle for steps that actually render a mesh.
+const GlbViewer = dynamic(() => import('./shared/GlbViewer').then((m) => m.GlbViewer), {
+  ssr: false,
+  loading: () => <div style={{ height: 260, display: 'grid', placeItems: 'center', fontSize: 12, opacity: 0.6 }}>Loading 3D viewer…</div>,
+});
 import { readHistory, makeBatch, appendBatch, selectCandidate, selectedCandidate, historyData } from './shared/genHistory';
 import { genericGalleryCandidates } from './shared/genericGalleryCandidates';
 import { useLabStep, useLabPipelineStore } from '../labPipelineStore';
@@ -114,11 +122,20 @@ export function ArchetypeStep({ t, entity, step, spec, catalogId }: { t: LabThem
   if (spec.view.kind === 'gallery') {
     const sel = selectedCandidate(history);
     const assetPath = spec.produce(entity).ueAssets?.[0];
+    // A generated 3D candidate carries a served .glb URL — render it interactively so the
+    // step is visually verifiable (rotate/zoom the real mesh, not just the preview render).
+    const glbUrl = typeof sel?.payload?.glbUrl === 'string' ? sel.payload.glbUrl : null;
     panels = [
       { label: 'Candidate gallery (kept across re-rolls)', node: (
         <CandidateGallery t={t} history={history} onSelect={reselect}
           emptyHint="No candidates yet — run Produce to generate the first batch." />
       ) },
+      ...(glbUrl ? [{ label: '3D preview (orbit / zoom)', node: (
+        <div style={{ display: 'grid', gap: 6 }}>
+          <GlbViewer url={glbUrl} />
+          <span className={t.fontMono} style={{ fontSize: 12, color: t.muted }}>{glbUrl}</span>
+        </div>
+      ) }] : []),
       { label: 'Selected', node: (
         <div style={{ display: 'grid', gap: 8 }}>
           <div style={{ aspectRatio: '1', maxWidth: 160, borderRadius: t.glass ? 10 : 2, background: sel?.swatch ?? t.panel, border: `1px solid ${t.line}` }} />
