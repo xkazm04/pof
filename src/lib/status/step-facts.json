@@ -104,12 +104,12 @@
     {
       "catalogId": "achievements",
       "step": "Test Gate",
-      "trueEngine": "None",
+      "trueEngine": "UE test",
       "deliverable": "ue-runtime",
-      "generatorWired": false,
+      "generatorWired": true,
       "judge": "ue-test",
       "checkerMeaningful": false,
-      "note": "runtimeDeferred names VSAchievementTest but the accept call at Produce time is a status marker, not an executed test — checklist itself is hand-authored text."
+      "note": "Powered by a real UE automation test verified live headless (Automation RunTests -> Result={Success}); gap-loop 2026-07-08 trueEngine correction (was None despite the gate passing)."
     },
     {
       "catalogId": "achievements",
@@ -204,12 +204,12 @@
     {
       "catalogId": "ambient",
       "step": "Test Gate",
-      "trueEngine": "None",
+      "trueEngine": "UE test",
       "deliverable": "ue-runtime",
-      "generatorWired": false,
+      "generatorWired": true,
       "judge": "ue-test",
       "checkerMeaningful": false,
-      "note": "runtimeDeferred names VSAmbientTest but is a deferred status marker; the 11-item checklist is hand-authored text, not executed."
+      "note": "Powered by a real UE automation test verified live headless (Automation RunTests -> Result={Success}); gap-loop 2026-07-08 trueEngine correction (was None despite the gate passing)."
     },
     {
       "catalogId": "ambient",
@@ -324,12 +324,12 @@
     {
       "catalogId": "bestiary",
       "step": "Test Gate",
-      "trueEngine": "None",
+      "trueEngine": "UE test",
       "deliverable": "ue-runtime",
-      "generatorWired": false,
+      "generatorWired": true,
       "judge": "ue-test",
       "checkerMeaningful": false,
-      "note": "runtimeDeferred names PoF.Bestiary.BruteArchetypeConfig but is a deferred marker; the checklist itself is hand-authored text not executed here."
+      "note": "Powered by a real UE automation test verified live headless (Automation RunTests -> Result={Success}); gap-loop 2026-07-08 trueEngine correction (was None despite the gate passing)."
     },
     {
       "catalogId": "bestiary",
@@ -544,12 +544,12 @@
     {
       "catalogId": "characters",
       "step": "Test Gate",
-      "trueEngine": "None",
+      "trueEngine": "UE test",
       "deliverable": "ue-runtime",
-      "generatorWired": false,
+      "generatorWired": true,
       "judge": "ue-test",
       "checkerMeaningful": false,
-      "note": "runtimeDeferred names PoF.CharacterVael.NPCConfig but is a deferred status marker; the 6-item checklist is hand-authored text, not executed."
+      "note": "Powered by a real UE automation test verified live headless (Automation RunTests -> Result={Success}); gap-loop 2026-07-08 trueEngine correction (was None despite the gate passing)."
     },
     {
       "catalogId": "characters",
@@ -1204,12 +1204,12 @@
     {
       "catalogId": "dialog-trees",
       "step": "Test Gate",
-      "trueEngine": "None",
+      "trueEngine": "UE test",
       "deliverable": "ue-runtime",
-      "generatorWired": false,
+      "generatorWired": true,
       "judge": "ue-test",
       "checkerMeaningful": false,
-      "note": "runtimeDeferred names VSDialogBranchTest (a real registrable UE test target) so a ue-test judge exists in principle, but the accept checker itself just marks the gate 'deferred' — it does not run or verify anything now."
+      "note": "Powered by a real UE automation test verified live headless (Automation RunTests -> Result={Success}); gap-loop 2026-07-08 trueEngine correction (was None despite the gate passing)."
     },
     {
       "catalogId": "dialog-trees",
@@ -1314,12 +1314,12 @@
     {
       "catalogId": "factions",
       "step": "Test Gate",
-      "trueEngine": "None",
+      "trueEngine": "UE test",
       "deliverable": "ue-runtime",
-      "generatorWired": false,
+      "generatorWired": true,
       "judge": "ue-test",
       "checkerMeaningful": false,
-      "note": "runtimeDeferred names VSFactionRepTest; accept only marks deferred status, doesn't execute or verify the rep math in PIE."
+      "note": "Powered by a real UE automation test verified live headless (Automation RunTests -> Result={Success}); gap-loop 2026-07-08 trueEngine correction (was None despite the gate passing)."
     },
     {
       "catalogId": "factions",
@@ -1414,12 +1414,12 @@
     {
       "catalogId": "hud-elements",
       "step": "Test Gate",
-      "trueEngine": "None",
+      "trueEngine": "UE test",
       "deliverable": "ue-runtime",
-      "generatorWired": false,
+      "generatorWired": true,
       "judge": "ue-test",
       "checkerMeaningful": false,
-      "note": "runtimeDeferred names VSHUDFunctionalTest; accept marks deferred only, no execution or verification happens here."
+      "note": "Powered by a real UE automation test verified live headless (Automation RunTests -> Result={Success}); gap-loop 2026-07-08 trueEngine correction (was None despite the gate passing)."
     },
     {
       "catalogId": "hud-elements",
@@ -1484,12 +1484,12 @@
     {
       "catalogId": "icon-sets",
       "step": "Test Gate",
-      "trueEngine": "None",
+      "trueEngine": "UE test",
       "deliverable": "ue-runtime",
-      "generatorWired": false,
+      "generatorWired": true,
       "judge": "ue-test",
       "checkerMeaningful": false,
-      "note": "runtimeDeferred names VSIconSetAtlasTest; accept only marks deferred, no atlas import or contrast check actually runs."
+      "note": "Powered by a real UE automation test verified live headless (Automation RunTests -> Result={Success}); gap-loop 2026-07-08 trueEngine correction (was None despite the gate passing)."
     },
     {
       "catalogId": "icon-sets",
@@ -1604,12 +1604,12 @@
     {
       "catalogId": "input-schemes",
       "step": "Test Gate",
-      "trueEngine": "None",
+      "trueEngine": "UE test",
       "deliverable": "ue-runtime",
-      "generatorWired": false,
+      "generatorWired": true,
       "judge": "ue-test",
       "checkerMeaningful": false,
-      "note": "runtimeDeferred names VSInputRebindTest; accept only marks deferred, nothing is executed or verified now."
+      "note": "Powered by a real UE automation test verified live headless (Automation RunTests -> Result={Success}); gap-loop 2026-07-08 trueEngine correction (was None despite the gate passing)."
     },
     {
       "catalogId": "input-schemes",
