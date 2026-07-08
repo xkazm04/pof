@@ -134,12 +134,13 @@ export function EvidenceModal({ catalogId, step, cell, onClose }: { catalogId: s
       open
       onClose={onClose}
       label={`Evidence for ${catalogId} ${step}`}
-      className="max-w-2xl"
+      className="max-w-[806px]"
     >
       {/* Guaranteed-opaque Blueprint fill via inline style (Tailwind important on the shared
-          panel was unreliable). Negative margin cancels the panel's p-5 so --lab-bg reaches
-          the edges; the light fill stops translucent sub-panels bleeding the map through. */}
-      <div style={{ width: '100%', color: 'var(--lab-text)', fontFamily: 'var(--lab-font-body)', background: 'var(--lab-bg)', border: '1px solid var(--lab-line)', margin: '-21px', padding: '20px' }}>
+          panel was unreliable). The panel has p-5 (20px); cancel it symmetrically (margin -20)
+          AND widen the fill (calc(100% + 40px)) so --lab-bg reaches BOTH edges — otherwise the
+          shared dark bg-surface shows as dead space on the right. */}
+      <div style={{ boxSizing: 'border-box', width: 'calc(100% + 40px)', margin: '-20px', padding: '20px', color: 'var(--lab-text)', fontFamily: 'var(--lab-font-body)', background: 'var(--lab-bg)' }}>
         {/* Blueprint header (own close — the shared dark header is suppressed via `label`). */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 12, borderBottom: '1px solid var(--lab-line)', paddingBottom: 10, marginBottom: 14 }}>
           <h2 style={{ fontFamily: mono, fontSize: 15, color: 'var(--lab-ink-deep)', letterSpacing: '0.03em', textTransform: 'uppercase', margin: 0, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis' }}>
