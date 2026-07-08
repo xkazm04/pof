@@ -6,9 +6,11 @@ logically richer produce prompt and deeper authored content. Aim for a genuine �
 
 ## The loop (up to 5 iterations — text is cheap, iterate freely)
 
-1. **Fetch + diagnose the baseline.** Dump the stored config, then judge it:
-   `npx tsx scripts/get-config.ts --catalog <c> --step "<step>" --out base.json`
-   `npx tsx scripts/judge-one.ts --class text-config --text base.json --subject "<c> :: <step>"`
+1. **Fetch + diagnose the baseline.** Dump the stored config, then judge it. IMPORTANT: use a
+   SESSION-UNIQUE `--out` filename (parallel agents clobber shared names) — prefix with your area,
+   e.g. `<area>-base.json`, and ALWAYS pass `--entity` (order-safe):
+   `npx tsx scripts/get-config.ts --catalog <c> --step "<step>" --entity <e> --out <area>-base.json`
+   `npx tsx scripts/judge-one.ts --class text-config --text <area>-base.json --subject "<c> :: <step>"`
    → `{score, dimensions, verdict, findings, fix}`. The rubric scores coherence, specificity,
    voice, completeness, plausibility against AAA systems-design writing (PoE2/D4/Last Epoch).
    Common failure (seen at score 3): a shallow one-field prose blurb where a real Concept Brief

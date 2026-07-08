@@ -1,0 +1,573 @@
+{
+  "area": "text-audio-cue",
+  "class": "text-config",
+  "subject": "tutorial-beats :: VFX / Audio Cue",
+  "baselineScore": 38,
+  "bestScore": 92,
+  "bestContent": {
+    "beat": "LearntoDodge",
+    "designIntent": "Feedback teaches TIMING, not just input. Cues key to the show_prompt→wait_dodge→show_success sequence and to the incoming-strike telegraph the player rolls through. Thin channel budget (one VO, one accent SFX, one hero VFX per moment) so the taught signal is never masked (vfx-budget canon). Color is never the sole carrier; every VO is captioned; and each coach line's trigger matches its words (mistimed vs no-input).",
+    "eventMap": [
+      {
+        "event": "beat.show_prompt",
+        "source": "BP_TutorialBeat_LearntoDodge::OnStep(show_prompt)",
+        "fires": [
+          "SC_UI_TutorialPrompt",
+          "NS_PointerPulse",
+          "VO_CoachDodgePrompt"
+        ]
+      },
+      {
+        "event": "beat.telegraph_windup",
+        "source": "AARPGDummyStriker::OnAnimNotify(WindupStart) during wait_dodge",
+        "fires": [
+          "SC_Wld_StrikeWindup",
+          "NS_StrikeTelegraph"
+        ],
+        "note": "dummy telegraphs 550ms before the hit frame — the cue the player learns to read"
+      },
+      {
+        "event": "ability.dodge_executed",
+        "source": "GA_Dodge broadcasts Tutorial.Dodge.Executed",
+        "fires": [
+          "SC_Wld_DodgeRoll",
+          "NS_DodgeIFrameShimmer",
+          "HAP_DodgeRoll"
+        ]
+      },
+      {
+        "event": "ability.dodge_mistimed",
+        "source": "GA_Dodge fired OUTSIDE the 550ms window — strike grazes (Tutorial.Dodge.Executed + bMistimed)",
+        "fires": [
+          "SC_UI_RetryTick",
+          "VO_CoachDodgeRetry"
+        ],
+        "note": "the 'Too early' correction — the timing-miss the beat exists to teach; re-arms without a fail."
+      },
+      {
+        "event": "beat.wait_dodge.timeout",
+        "source": "timeoutPerStep(8s) elapsed with NO input, attemptIndex < maxRetries(3)",
+        "fires": [
+          "SC_UI_RetryTick",
+          "VO_CoachDodgePrompt"
+        ],
+        "note": "no roll at all → RE-SHOW the prompt line, not a 'too early' correction (semantics match trigger)."
+      },
+      {
+        "event": "beat.show_success",
+        "source": "OnStep(show_success), gated on Tutorial.Dodge.Executed",
+        "fires": [
+          "NS_TutorialGlow",
+          "SC_UI_SuccessSting",
+          "VO_CoachDodgeSuccess",
+          "HAP_Success"
+        ]
+      },
+      {
+        "event": "beat.fail",
+        "source": "Outcome fail — 3rd failed attempt (mistimed or timeout), grants Tutorial.Dodge.Failed",
+        "fires": [
+          "SC_Wld_HitImpact",
+          "PP_HurtFlash",
+          "VO_CoachDodgeFail",
+          "HAP_Hit"
+        ]
+      },
+      {
+        "event": "beat.skip",
+        "source": "Outcome skip — Tutorial.Dodge.Introduced OR player_level>=5",
+        "fires": [
+          "SC_UI_SkipWhoosh"
+        ],
+        "note": "silent-fast bypass"
+      }
+    ],
+    "cues": [
+      {
+        "id": "NS_TutorialGlow",
+        "type": "vfx",
+        "role": "success-hero",
+        "derivedFrom": {
+          "catalog": "vfx",
+          "entityId": "vfx-fire-impact",
+          "system": "NS_FireImpactBurst"
+        },
+        "spawn": "SpawnSystemAttached(pawn, root, worldSpace=false)",
+        "timing": {
+          "keyedTo": "show_success notify 'GlowBurst'",
+          "offsetMs": 0,
+          "durationMs": 900
+        },
+        "niagara": {
+          "palette": {
+            "coreHex": "#FFF4C2",
+            "rimHex": "#FFB629",
+            "note": "fire-orange User.Color (#FF5A1E) → gold AND emitter velocity inverted to a soft upward ribbon (vs the source's downward impact spray), so shape+hue both read reward, not damage — recolor is legibility-justified"
+          },
+          "particleCount": 140,
+          "particleLifetimeSec": 0.85,
+          "spawnScale": 1.15,
+          "emitters": [
+            "Burst_Core (110 GPU, radial 250u/s)",
+            "RingFlash_CPU (30)"
+          ],
+          "bloomBoost": 1.4
+        }
+      },
+      {
+        "id": "NS_PointerPulse",
+        "type": "vfx",
+        "role": "affordance",
+        "spawn": "attached to IA_Dodge glyph in TutorialPointerSlot (hud-health-bar)",
+        "timing": {
+          "keyedTo": "show_prompt",
+          "offsetMs": 120,
+          "loop": true,
+          "loopPeriodMs": 850,
+          "stopsOn": "dodge_executed"
+        },
+        "niagara": {
+          "palette": {
+            "coreHex": "#8FD4FF"
+          },
+          "particleCount": 24,
+          "spawnScale": 0.6,
+          "redundantChannel": "scale-breathing pulse (motion)"
+        }
+      },
+      {
+        "id": "NS_StrikeTelegraph",
+        "type": "vfx",
+        "role": "teach-timing",
+        "spawn": "decal + world-space arc at AARPGDummyStriker weapon socket",
+        "timing": {
+          "keyedTo": "telegraph_windup",
+          "offsetMs": 0,
+          "durationMs": 550,
+          "note": "hit frame at 550ms == the dodge reaction budget"
+        },
+        "niagara": {
+          "palette": {
+            "coreHex": "#FF3B30"
+          },
+          "particleCount": 40,
+          "spawnScale": 1,
+          "redundantChannel": "not color-only: expanding ground-arc SWEEP (motion) + 3 directional chevrons (shape) — colorblind-readable"
+        }
+      },
+      {
+        "id": "NS_DodgeIFrameShimmer",
+        "type": "vfx",
+        "role": "confirm-immunity",
+        "spawn": "SpawnSystemAttached(pawn, mesh, worldSpace=false)",
+        "timing": {
+          "keyedTo": "dodge_executed",
+          "offsetMs": 0,
+          "durationMs": 400,
+          "note": "matches GA_Dodge i-frame window — visual == 'brief immunity' the loc text promises"
+        },
+        "niagara": {
+          "palette": {
+            "coreHex": "#B9E8FF"
+          },
+          "particleCount": 60,
+          "spawnScale": 1,
+          "redundantChannel": "afterimage trail (motion), not hue"
+        }
+      },
+      {
+        "id": "PP_HurtFlash",
+        "type": "postprocess",
+        "role": "fail-feedback",
+        "spawn": "MPC_HitVignette burst on camera post-process + pawn hit-react",
+        "timing": {
+          "keyedTo": "fail (hit connects)",
+          "offsetMs": 0,
+          "durationMs": 300
+        },
+        "postprocess": {
+          "tintHex": "#C4211B",
+          "vignetteIntensity": 0.7,
+          "cameraShake": "CS_HurtSmall (0.4)",
+          "redundantChannel": "camera-shake + vignette (motion), not hue"
+        }
+      },
+      {
+        "id": "SC_UI_TutorialPrompt",
+        "type": "audio",
+        "role": "ui-prompt",
+        "asset": "SC_UI_TutorialPrompt (tutorial-owned SoundCue, synth WAV, 2D)",
+        "spatialization": "2D",
+        "timing": {
+          "keyedTo": "show_prompt",
+          "offsetMs": 0
+        },
+        "mix": {
+          "bus": "SM_UI",
+          "priority": 6,
+          "volumeDb": -8,
+          "pitch": 1,
+          "concurrency": 1
+        }
+      },
+      {
+        "id": "SC_Wld_StrikeWindup",
+        "type": "audio",
+        "role": "teach-timing",
+        "asset": "SC_Wld_StrikeWindup (SoundCue, 3D)",
+        "spatialization": "3D attached to AARPGDummyStriker",
+        "attenuation": "inner 300cm / falloff 1800cm, NaturalSound",
+        "timing": {
+          "keyedTo": "telegraph_windup",
+          "offsetMs": 0
+        },
+        "mix": {
+          "bus": "SM_WorldSFX",
+          "priority": 7,
+          "volumeDb": -4,
+          "pitch": 1,
+          "concurrency": 1
+        }
+      },
+      {
+        "id": "SC_Wld_DodgeRoll",
+        "type": "audio",
+        "role": "confirm-input",
+        "asset": "SC_Wld_DodgeRoll (SoundCue, 3D, cloth+footfall)",
+        "spatialization": "3D attached to pawn",
+        "attenuation": "inner 200cm / falloff 1500cm, NaturalSound",
+        "timing": {
+          "keyedTo": "dodge_executed",
+          "offsetMs": 0
+        },
+        "mix": {
+          "bus": "SM_WorldSFX",
+          "priority": 7,
+          "volumeDb": -3,
+          "pitch": 1,
+          "pitchRandomize": 0.04,
+          "concurrency": 1
+        }
+      },
+      {
+        "id": "SC_UI_RetryTick",
+        "type": "audio",
+        "role": "ui-retry",
+        "asset": "SC_UI_RetryTick (SoundCue, 2D)",
+        "spatialization": "2D",
+        "timing": {
+          "keyedTo": "dodge_mistimed | wait_dodge.timeout",
+          "offsetMs": 0
+        },
+        "mix": {
+          "bus": "SM_UI",
+          "priority": 5,
+          "volumeDb": -12,
+          "pitch": 1,
+          "concurrency": 1
+        }
+      },
+      {
+        "id": "SC_UI_SuccessSting",
+        "type": "audio",
+        "role": "reward",
+        "asset": "SC_UI_SuccessSting (SoundCue, 2D music sting ~1.1s)",
+        "spatialization": "2D",
+        "timing": {
+          "keyedTo": "show_success",
+          "offsetMs": 60
+        },
+        "mix": {
+          "bus": "SM_UI",
+          "priority": 8,
+          "volumeDb": -5,
+          "pitch": 1,
+          "concurrency": 1
+        }
+      },
+      {
+        "id": "SC_Wld_HitImpact",
+        "type": "audio",
+        "role": "fail-feedback",
+        "asset": "SC_Wld_HitImpact (SoundCue, 3D flesh impact)",
+        "spatialization": "3D attached to pawn",
+        "attenuation": "inner 200cm / falloff 1500cm, NaturalSound",
+        "timing": {
+          "keyedTo": "fail (hit connects)",
+          "offsetMs": 0
+        },
+        "mix": {
+          "bus": "SM_WorldSFX",
+          "priority": 7,
+          "volumeDb": -2,
+          "pitch": 1,
+          "concurrency": 1
+        }
+      },
+      {
+        "id": "SC_UI_SkipWhoosh",
+        "type": "audio",
+        "role": "bypass",
+        "asset": "SC_UI_SkipWhoosh (SoundCue, 2D)",
+        "spatialization": "2D",
+        "timing": {
+          "keyedTo": "skip",
+          "offsetMs": 0
+        },
+        "mix": {
+          "bus": "SM_UI",
+          "priority": 4,
+          "volumeDb": -14,
+          "pitch": 1,
+          "concurrency": 1
+        }
+      },
+      {
+        "id": "HAP_DodgeRoll",
+        "type": "haptics",
+        "role": "confirm-input",
+        "timing": {
+          "keyedTo": "dodge_executed",
+          "offsetMs": 0
+        },
+        "rumble": {
+          "intensity": 0.55,
+          "durationMs": 120,
+          "curve": "quick attack, 60ms decay",
+          "channel": "both"
+        }
+      },
+      {
+        "id": "HAP_Hit",
+        "type": "haptics",
+        "role": "fail-feedback",
+        "timing": {
+          "keyedTo": "fail (hit connects)",
+          "offsetMs": 0
+        },
+        "rumble": {
+          "intensity": 0.9,
+          "durationMs": 220,
+          "curve": "hard hit, slow decay",
+          "channel": "low-freq bias"
+        }
+      },
+      {
+        "id": "HAP_Success",
+        "type": "haptics",
+        "role": "reward",
+        "timing": {
+          "keyedTo": "show_success",
+          "offsetMs": 60
+        },
+        "rumble": {
+          "intensity": 0.35,
+          "durationMs": 90,
+          "curve": "double soft tap",
+          "channel": "hi-freq"
+        }
+      },
+      {
+        "id": "VO_CoachDodgePrompt",
+        "type": "vo",
+        "role": "instruction",
+        "asset": "SC_VO_TutorialCoach_Prompt",
+        "locKey": "TUT_DODGE_PROMPT",
+        "engine": "elevenlabs",
+        "line": "'Press [SPACE] as the strike lands to roll through it.'",
+        "spatialization": "2D",
+        "timing": {
+          "keyedTo": "show_prompt | wait_dodge.timeout (re-prompt)",
+          "offsetMs": 200
+        },
+        "mix": {
+          "bus": "SM_VO",
+          "priority": 10,
+          "volumeDb": -2,
+          "pitch": 1,
+          "concurrency": 1
+        }
+      },
+      {
+        "id": "VO_CoachDodgeSuccess",
+        "type": "vo",
+        "role": "praise",
+        "asset": "SC_VO_TutorialCoach_Success",
+        "locKey": "TUT_DODGE_SUCCESS",
+        "engine": "elevenlabs",
+        "line": "'Perfect roll — you passed clean through the attack.'",
+        "spatialization": "2D",
+        "timing": {
+          "keyedTo": "show_success",
+          "offsetMs": 350
+        },
+        "mix": {
+          "bus": "SM_VO",
+          "priority": 10,
+          "volumeDb": -2,
+          "pitch": 1,
+          "concurrency": 1
+        }
+      },
+      {
+        "id": "VO_CoachDodgeRetry",
+        "type": "vo",
+        "role": "correction",
+        "asset": "SC_VO_TutorialCoach_Retry",
+        "locKey": "TUT_DODGE_RETRY",
+        "engine": "elevenlabs",
+        "line": "'Too early. Watch the wind-up, then roll.'",
+        "spatialization": "2D",
+        "timing": {
+          "keyedTo": "dodge_mistimed (attempts 1-2)",
+          "offsetMs": 150
+        },
+        "mix": {
+          "bus": "SM_VO",
+          "priority": 10,
+          "volumeDb": -2,
+          "pitch": 1,
+          "concurrency": 1
+        }
+      },
+      {
+        "id": "VO_CoachDodgeFail",
+        "type": "vo",
+        "role": "terminal-fail",
+        "asset": "SC_VO_TutorialCoach_Fail",
+        "locKey": "TUT_DODGE_FAIL",
+        "engine": "elevenlabs",
+        "line": "'That one hurt. The roll grants brief immunity — time it to the hit.'",
+        "spatialization": "2D",
+        "timing": {
+          "keyedTo": "fail (hit connects)",
+          "offsetMs": 150,
+          "note": "distinct from the retry line — a terminal recap, not 'try again'; beat resets after 3s cooldown per Success/Skip/Fail canon"
+        },
+        "mix": {
+          "bus": "SM_VO",
+          "priority": 10,
+          "volumeDb": -2,
+          "pitch": 1,
+          "concurrency": 1
+        }
+      }
+    ],
+    "subtitles": {
+      "default": "on",
+      "speakerTag": "COACH",
+      "positioning": "lower-third bar, 42px, hi-contrast",
+      "captions": [
+        {
+          "locKey": "TUT_DODGE_PROMPT",
+          "text": "Press [SPACE] as the strike lands to roll through it.",
+          "cue": "VO_CoachDodgePrompt",
+          "holdMs": 3200
+        },
+        {
+          "locKey": "TUT_DODGE_SUCCESS",
+          "text": "Perfect roll — you passed clean through the attack.",
+          "cue": "VO_CoachDodgeSuccess",
+          "holdMs": 2600
+        },
+        {
+          "locKey": "TUT_DODGE_RETRY",
+          "text": "Too early. Watch the wind-up, then roll.",
+          "cue": "VO_CoachDodgeRetry",
+          "holdMs": 2600
+        },
+        {
+          "locKey": "TUT_DODGE_FAIL",
+          "text": "That one hurt. The roll grants brief immunity — time it to the hit.",
+          "cue": "VO_CoachDodgeFail",
+          "holdMs": 3400
+        }
+      ],
+      "note": "captions render the SAME loc keys the Localization sibling defines (en+cs), so muted/deaf players get the full teaching text; on/off honors the a11y menu"
+    },
+    "mixBuses": {
+      "SM_VO": {
+        "priority": 10,
+        "ducks": [
+          "SM_UI:-6dB",
+          "SM_WorldSFX:-4dB",
+          "SM_Music:-8dB"
+        ],
+        "attackMs": 40,
+        "releaseMs": 250,
+        "note": "coach VO owns the mix"
+      },
+      "SM_UI": {
+        "priority": 6,
+        "ducks": []
+      },
+      "SM_WorldSFX": {
+        "priority": 7,
+        "ducks": []
+      },
+      "SM_Music": {
+        "priority": 2,
+        "ducks": [],
+        "note": "bed only"
+      }
+    },
+    "antiSpam": {
+      "globalConcurrencyPerBus": {
+        "SM_UI": 2,
+        "SM_WorldSFX": 3,
+        "SM_VO": 1
+      },
+      "voCooldownMs": 1200,
+      "voInterruptPolicy": "SM_VO concurrency 1, latest-wins — new coach line stops the previous",
+      "voFiringBudget": "retry VO ('Too early') fires only on MISTIMED rolls (attempts 1-2); a no-input timeout re-shows the prompt line instead; the 3rd failed attempt fires VO_CoachDodgeFail once — 3 coach lines max per failed beat, serialized by concurrency-1"
+    },
+    "links": [
+      {
+        "catalogId": "vfx",
+        "entityId": "vfx-fire-impact",
+        "role": "success-hero-source"
+      }
+    ],
+    "audioNote": "SFX/VO SoundCues are tutorial-owned, authored inline (elevenlabs VO, synth WAV chimes), NOT catalog-bound — the audio catalog is unseeded (seed-audio.ts returns []), so a catalog binding would be vaporware. Every cue is fully specified and self-contained.",
+    "wiringContract": {
+      "grantedBy": "BP_TutorialBeat_LearntoDodge owns a UAudioComponent (per-cue PlaySound), spawns Niagara via UNiagaraFunctionLibrary, and drives rumble via UGameplayStatics::PlayForceFeedback; NS_TutorialGlow is a golden/white User.Color recolor of NS_FireImpactBurst.",
+      "activatedBy": "see eventMap — each sequence step / outcome / anim-notify fires its cue set.",
+      "dependencies": [
+        "vfx (vfx-fire-impact — NS_FireImpactBurst recolored to NS_TutorialGlow)",
+        "spellbook (GA_Dodge broadcasts Tutorial.Dodge.Executed — drives the dodge cue)",
+        "hud-elements (hud-health-bar TutorialPointerSlot — NS_PointerPulse anchor)",
+        "icon-sets (iconset-abilities — IA_Dodge glyph the pulse plays on)"
+      ],
+      "verification": "L2: NS_TutorialGlow derives from NS_FireImpactBurst; SM_VO/SM_UI/SM_WorldSFX submixes declared with SM_VO ducking sends; caption rows resolve to seeded loc keys. L3: VSTutorialComprehensionTest — telegraph fires before the dodge window; NS_TutorialGlow + SC_UI_SuccessSting fire on show_success; SM_VO ducks SM_Music during coach lines; captions render for every VO; 'Too early' fires only on mistimed rolls; a no-input timeout re-prompts; VO_CoachDodgeFail on the terminal attempt."
+    }
+  },
+  "promptTechnique": "Model the cue spec as an EVENT->FEEDBACK graph, not a list of assets. Enumerate every trigger the beat can emit from its sibling Step-Sequence/Outcomes (show_prompt, telegraph_windup, dodge_executed, dodge_mistimed, timeout, show_success, fail, skip); then for EACH cue pin the six load-bearing axes a real audio/VFX designer sets: (1) concrete named asset, (2) numeric timing offsetMs chained against a notify frame, (3) spatialization (2D UI vs 3D attenuation radii), (4) mix bus + priority + volumeDb + ducking sends, (5) anti-spam concurrency/cooldown/firing-budget, (6) redundant non-color channel (motion/shape) + captions + haptics for accessibility. The decisive coherence lever: every coach VO line must be keyed to a trigger whose SEMANTICS match its words (a 'Too early' line cannot fire on a no-input timeout) -- split ambiguous failure states into distinct instrumented events. Refuse vaporware: when a dependency catalog is unseeded, author the asset inline as self-contained rather than deferring a promissory link. Keep the JSON under the judge's 12000-char payload window so nothing truncates.",
+  "iterations": [
+    {
+      "n": 1,
+      "score": 84,
+      "note": "Replaced the 2-cue stub with a full event->feedback graph: 7 events, 8 named cues, per-cue offsetMs timing chains, 2D/3D spatialization + attenuation radii, SM_VO/UI/WorldSFX mix buses with ducking, anti-spam concurrency budget. Killed the vaporware audio by authoring tutorial-owned inline SoundCues."
+    },
+    {
+      "n": 2,
+      "score": 90,
+      "note": "Added the accessibility floor the judge demanded: captions block (per-locKey, sibling-consistent en/cs keys, speaker tag), redundant non-color channels (motion/shape) on every teach-timing VFX, haptics cues (rumble intensity/duration/curve) on dodge/hit/success, distinct terminal-fail VO (TUT_DODGE_FAIL). Trimmed <12000 chars so the judge sees the whole file."
+    },
+    {
+      "n": 3,
+      "score": 88,
+      "note": "Retyped the zero-particle screen flash as its own postprocess cue kind and justified the fire-impact recolor -- but the judge caught a real coherence bug earlier passes missed: the 'Too early' retry VO was keyed to a no-input timeout."
+    },
+    {
+      "n": 4,
+      "score": 92,
+      "note": "Fixed trigger semantics: split wait_dodge failure into ability.dodge_mistimed (fires 'Too early') vs beat.wait_dodge.timeout (re-shows the prompt), reconciled the anti-spam firing budget + fail path + L3 verification. Coherence 95, plausibility 91."
+    }
+  ],
+  "applicableCatalogs": [
+    "tutorial-beats :: VFX / Audio Cue",
+    "vfx :: Sound Hook",
+    "vfx :: Behavior",
+    "any feedback-spec / event->cue step: combat hit-reacts, ability cast/impact cues, HUD notification cues, pickup/loot feedback, status-effect on/off stingers"
+  ]
+}

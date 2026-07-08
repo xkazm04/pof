@@ -48,9 +48,29 @@ export function qualityPack(cls: DeliverableClass, catalogId: string): string {
     `Hard constraints:`,
     negatives,
     ``,
+    cls === 'text-config' ? TEXT_TECHNIQUE : '',
     `Aim for work that could ship as-is in the reference games — not merely technically correct.`,
-  ].join('\n');
+  ].filter(Boolean).join('\n');
 }
+
+/**
+ * The text-config authoring technique that took every text step-type to ≥90 (WS1 hardening wave,
+ * 6/6 agents converged on it). This is the difference between a coherent-but-shallow blurb (~40s)
+ * and a shippable design doc (90+).
+ */
+export const TEXT_TECHNIQUE = [
+  `Author it as a STRUCTURED design doc, not a prose blurb — every field load-bearing. To reach the bar:`,
+  `  - Single source of truth: every number appears once; derive dependent values with the arithmetic SHOWN`,
+  `    (a worked chain a reader can reproduce on a calculator). Forward-derive headline numbers from primitives —`,
+  `    never reverse-engineer a figure to hit a target (the judge catches contradictions with your own inputs).`,
+  `  - Sibling-sourced: cross-reference the entity's OTHER steps by their real values (ids, prices, stats, labels);`,
+  `    contradicting a sibling is an automatic coherence failure. Add a crossReferences / statHooks block.`,
+  `  - Prove hard cases INLINE, don't assert them (worked math, ICU plural/gender arms, edge cases, state machines).`,
+  `  - Scope depth to the subject: a baseline Common is scoped DOWN (it's the zero-point), a boss scoped up.`,
+  `  - Disclose your own discontinuities/edge cases precisely — that scores higher than claiming false airtightness.`,
+  `  - Refuse vaporware: author real inline content, not promissory "TBD"/catalog-link stubs.`,
+  `  - Declarative voice. NO meta-commentary defending your numbers; NO raw engine tokens/enums leaking into prose.`,
+].join('\n');
 
 /** Whether a deliverable class has a quality pack (all judged classes do). */
 export function hasQualityPack(cls: DeliverableClass | null): cls is DeliverableClass {

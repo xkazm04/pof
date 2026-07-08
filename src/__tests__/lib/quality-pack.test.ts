@@ -28,4 +28,12 @@ describe('quality prompt pack (WS1)', () => {
     expect(pack).toMatch(/filler|boilerplate/);
     expect(pack).toMatch(/contradiction/);
   });
+
+  it('text-config pack carries the hardening technique; media packs do not', () => {
+    const text = qualityPack('text-config', 'items');
+    expect(text).toMatch(/single source of truth/i);
+    expect(text).toMatch(/arithmetic SHOWN/);
+    expect(text).toMatch(/Prove hard cases INLINE/);
+    expect(qualityPack('2d-art', 'items')).not.toMatch(/single source of truth/i);
+  });
 });

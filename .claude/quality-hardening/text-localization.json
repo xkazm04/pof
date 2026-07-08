@@ -1,0 +1,422 @@
+{
+  "area": "text-localization",
+  "class": "text-config",
+  "subject": "factions :: Localization",
+  "baselineScore": 28,
+  "bestScore": 91,
+  "bestContent": {
+    "sourceLocale": "en-US",
+    "scope": "en-US SOURCE asset: all 17 keys + every ICU plural/select arm authored in source = 100% source-complete. Shown target values (de/fr/pl/ru/ar/ja) are QA proofs — de/ja expansion, ar RTL + CLDR arms, fr/pl/ru gender, pl/ru 4-arm plurals. Roster = exactly targetLocales.",
+    "stringTables": {
+      "ST_FactionDialogue": "7 GREET rows — SelectGreeting(repTier).",
+      "ST_Factions": "Tier labels, toasts, rep-bar — WBP_FactionRepBar/Toast."
+    },
+    "targetLocales": [
+      {
+        "locale": "en-US",
+        "role": "source",
+        "pluralForms": 2,
+        "rtl": false,
+        "expansion": "1.00"
+      },
+      {
+        "locale": "de-DE",
+        "pluralForms": 2,
+        "rtl": false,
+        "expansion": "1.35",
+        "note": "longest expansion — verified vs charLimit"
+      },
+      {
+        "locale": "fr-FR",
+        "pluralForms": 2,
+        "rtl": false,
+        "expansion": "1.20",
+        "note": "gendered participles authored"
+      },
+      {
+        "locale": "pl-PL",
+        "pluralForms": 4,
+        "rtl": false,
+        "expansion": "1.25",
+        "note": "one/few/many/other"
+      },
+      {
+        "locale": "ru-RU",
+        "pluralForms": 4,
+        "rtl": false,
+        "expansion": "1.20"
+      },
+      {
+        "locale": "ja-JP",
+        "pluralForms": 1,
+        "rtl": false,
+        "expansion": "0.60",
+        "note": "no plural; 点 counter; no spaces around —"
+      },
+      {
+        "locale": "ar-SA",
+        "pluralForms": 6,
+        "rtl": true,
+        "expansion": "1.25",
+        "note": "RTL — bar mirrors, numbers LTR via bidi isolation, arrow flips"
+      }
+    ],
+    "keyConvention": {
+      "pattern": "FACTION_<GROUP>_<VARIANT> — SCREAMING_SNAKE: FACTION_ + group (GREET|TIER_LABEL|TIER_UP|TIER_DOWN|REP_BAR) + tier enum or role.",
+      "tierEnum": [
+        "HATED",
+        "UNFRIENDLY",
+        "NEUTRAL",
+        "FRIENDLY",
+        "HONORED",
+        "REVERED",
+        "EXALTED"
+      ],
+      "note": "Keys are faction-generic (all factions share the rows); per-faction VALUE differs. The tier ENUM drives EvaluateTier math; the localized TIER_LABEL is the world-flavored DISPLAY name, decoupled so voice never contradicts Standing & Rep Tiers thresholds."
+    },
+    "doNotTranslateGlossary": [
+      "The Ashen Order",
+      "Ashen Crucible",
+      "Sword of the Ashen Order",
+      "Captain Vael",
+      "Ember Frontier",
+      "Sundering"
+    ],
+    "tokenGlossary": [
+      {
+        "token": "{factionName}",
+        "type": "text",
+        "example": "The Ashen Order",
+        "doNotTranslate": true
+      },
+      {
+        "token": "{playerName}",
+        "type": "text",
+        "example": "Aldric",
+        "note": "may be empty — reads grammatically when elided"
+      },
+      {
+        "token": "{playerGender}",
+        "type": "select",
+        "example": "other",
+        "note": "female|male|other; defaults other"
+      },
+      {
+        "token": "{tierLabel}",
+        "type": "text",
+        "example": "Recognized",
+        "note": "pre-localized CURRENT-tier label (REP_BAR)"
+      },
+      {
+        "token": "{newTier}",
+        "type": "text",
+        "example": "Recognized",
+        "note": "pre-localized — do not re-decline"
+      },
+      {
+        "token": "{oldTier}",
+        "type": "text",
+        "example": "Soldier of Note"
+      },
+      {
+        "token": "{repPoints}",
+        "type": "number",
+        "example": "7,250",
+        "note": "locale grouping; −10000..15000"
+      },
+      {
+        "token": "{tierMax}",
+        "type": "number",
+        "example": "9,000"
+      },
+      {
+        "token": "{toNext}",
+        "type": "number",
+        "example": "1,750",
+        "note": "tierMax − repPoints; =0 at Exalted 15,000"
+      }
+    ],
+    "entries": [
+      {
+        "key": "FACTION_GREET_HATED",
+        "string": "Ash take you — no gate of ours will open at your hand.",
+        "tokens": [],
+        "charLimit": 56,
+        "voSeconds": 2,
+        "context": "Aggro bark: at Hated the node is null, NPC attacks on sight."
+      },
+      {
+        "key": "FACTION_GREET_UNFRIENDLY",
+        "string": "The watch spares no hours for a stranger. Speak.",
+        "tokens": [],
+        "charLimit": 64,
+        "voSeconds": 2.5,
+        "context": "Cold/terse: surcharge on; no quests."
+      },
+      {
+        "key": "FACTION_GREET_NEUTRAL",
+        "string": "The Ember Frontier has no use for idle hands. Your business?",
+        "tokens": [],
+        "charLimit": 72,
+        "voSeconds": 2.6,
+        "context": "Baseline start tier. Testing, not warm."
+      },
+      {
+        "key": "FACTION_GREET_FRIENDLY",
+        "string": "Ash on your brow, {playerName} — the watch still holds.",
+        "tokens": [
+          "{playerName}"
+        ],
+        "charLimit": 72,
+        "voSeconds": 2.6,
+        "icu": "Ash on your brow{playerName, select, other {, {playerName}}} — the watch still holds.",
+        "context": "First warm tier (5%). 'Ash on your brow' = the Order's soldier greeting. Select-guard drops the comma when name empty."
+      },
+      {
+        "key": "FACTION_GREET_HONORED",
+        "string": "The wall knows your name now, {playerName} — you are honored among us.",
+        "tokens": [
+          "{playerName}",
+          "{playerGender}"
+        ],
+        "charLimit": 72,
+        "voSeconds": 2.7,
+        "context": "Honored (10%). 'honored' inflects for gender.",
+        "fr": {
+          "s": "Le mur connaît ton nom, {playerName} — tu es {playerGender, select, female {honorée} male {honoré} other {honoré·e}} parmi nous."
+        },
+        "ru": {
+          "s": "Стена знает твоё имя, {playerName} — ты {playerGender, select, female {удостоена} male {удостоен} other {удостоен(а)}} чести."
+        },
+        "pl": {
+          "s": "Mur zna twoje imię, {playerName} — jesteś {playerGender, select, female {uhonorowana} male {uhonorowany} other {uhonorowany/a}}."
+        }
+      },
+      {
+        "key": "FACTION_GREET_REVERED",
+        "string": "We hold the line together, {playerName}. The wall holds because you do.",
+        "tokens": [
+          "{playerName}"
+        ],
+        "charLimit": 76,
+        "voSeconds": 2.8,
+        "context": "Revered (15%, decay begins). 'Hold the line'/'wall holds' = Vael's motto. Gender-free — contrast HONORED.",
+        "fr": {
+          "s": "Nous tenons la ligne, {playerName}. Le mur tient parce que tu tiens."
+        }
+      },
+      {
+        "key": "FACTION_GREET_EXALTED",
+        "string": "Sword of the Order — the ash itself steadies where you stand.",
+        "tokens": [],
+        "charLimit": 88,
+        "voSeconds": 3,
+        "context": "Peak tier. Uses the Exalted title, not name."
+      },
+      {
+        "key": "FACTION_TIER_LABEL_HATED",
+        "string": "Enemy of the Order",
+        "tokens": [],
+        "charLimit": 22,
+        "voSeconds": 0,
+        "context": "DISPLAY label for Hated. Red (hostile) fill."
+      },
+      {
+        "key": "FACTION_TIER_LABEL_UNFRIENDLY",
+        "string": "Distrusted",
+        "tokens": [],
+        "charLimit": 22,
+        "voSeconds": 0,
+        "context": "DISPLAY label for Unfriendly (−5%). Red."
+      },
+      {
+        "key": "FACTION_TIER_LABEL_NEUTRAL",
+        "string": "Unproven",
+        "tokens": [],
+        "charLimit": 22,
+        "voSeconds": 0,
+        "context": "DISPLAY label for Neutral (0%). Grey fill."
+      },
+      {
+        "key": "FACTION_TIER_LABEL_FRIENDLY",
+        "string": "Soldier of Note",
+        "tokens": [],
+        "charLimit": 22,
+        "voSeconds": 0,
+        "context": "DISPLAY label for Friendly (5%). de 'Beachteter Soldat' (17) = longest label, drives worstRender."
+      },
+      {
+        "key": "FACTION_TIER_LABEL_HONORED",
+        "string": "Recognized",
+        "tokens": [],
+        "charLimit": 22,
+        "voSeconds": 0,
+        "context": "DISPLAY label for Honored (10%). Ties to Vael's 'recognizes.'"
+      },
+      {
+        "key": "FACTION_TIER_LABEL_REVERED",
+        "string": "Keeper of the Line",
+        "tokens": [],
+        "charLimit": 22,
+        "voSeconds": 0,
+        "context": "DISPLAY label for Revered (15%, decay begins). 'Line' echoes the motto.",
+        "de": {
+          "s": "Hüter der Linie",
+          "len": 15
+        },
+        "ar": {
+          "s": "حارس الخطّ",
+          "len": 10
+        }
+      },
+      {
+        "key": "FACTION_TIER_LABEL_EXALTED",
+        "string": "Sword of the Ashen Order",
+        "tokens": [],
+        "charLimit": 30,
+        "voSeconds": 0,
+        "doNotTranslate": [
+          "Sword of the Ashen Order"
+        ],
+        "context": "DISPLAY label for Exalted (20%). This IS the Tier Rewards Exalted title (title-sword-of-ashen-order) — one key, DNT, English everywhere: byte-identical, no expansion risk.",
+        "de": {
+          "s": "Sword of the Ashen Order",
+          "len": 24
+        },
+        "ar": {
+          "s": "Sword of the Ashen Order",
+          "len": 24
+        }
+      },
+      {
+        "key": "FACTION_TIER_UP_TOAST",
+        "string": "{factionName} now regards you as {newTier}.",
+        "tokens": [
+          "{factionName}",
+          "{newTier}",
+          "{toNext}"
+        ],
+        "charLimit": 90,
+        "voSeconds": 0,
+        "icu": "{factionName} now regards you as {newTier}. {toNext, plural, =0 {You stand at the summit of the Order.} one {# point to the next rank.} other {# points to the next rank.}}",
+        "context": "Fires new>old. 3s slide-in. ICU plural on {toNext}; =0 → summit arm.",
+        "de": {
+          "icu": "{factionName} sieht dich nun als {newTier} an. {toNext, plural, =0 {Du stehst an der Spitze des Ordens.} one {# Punkt bis zum nächsten Rang.} other {# Punkte bis zum nächsten Rang.}}"
+        },
+        "ar": {
+          "icu": "{factionName} تعتبرك الآن {newTier}. {toNext, plural, =0 {أنت في قمة الرهبنة.} one {نقطة واحدة حتى الرتبة التالية.} two {نقطتان حتى الرتبة التالية.} few {# نقاط حتى الرتبة التالية.} many {# نقطة حتى الرتبة التالية.} other {# نقطة حتى الرتبة التالية.}}",
+          "note": "=0 handles n=0 (CLDR zero arm shadowed→omitted); one/two/few/many/other cover the rest; bidi-isolated"
+        },
+        "ja": {
+          "icu": "{factionName}はあなたを{newTier}と認めました。{toNext, plural, other {次の階級まであと{toNext}点。}}",
+          "note": "1-arm (other); 点 counter"
+        },
+        "pl": {
+          "toNextArms": "one {# punkt} few {# punkty} many {# punktów} other {# punktu} do następnej rangi."
+        },
+        "ru": {
+          "toNextArms": "one {# очко} few {# очка} many {# очков} other {# очка} до следующего ранга."
+        }
+      },
+      {
+        "key": "FACTION_TIER_DOWN_TOAST",
+        "string": "Your standing with {factionName} has fallen: {oldTier} → {newTier}.",
+        "tokens": [
+          "{factionName}",
+          "{oldTier}",
+          "{newTier}"
+        ],
+        "charLimit": 90,
+        "voSeconds": 0,
+        "context": "Fires when new<old — hostile drops AND passive decay. Says 'fallen', so decay reads right.",
+        "de": {
+          "s": "Dein Ansehen bei {factionName} ist gefallen: {oldTier} → {newTier}."
+        },
+        "ar": {
+          "s": "تراجعت مكانتك لدى {factionName}: ⁨{oldTier}⁩ → ⁨{newTier}⁩.",
+          "note": "logical old→new order; each tier wrapped in an FSI/PDI bidi isolate so RTL never reorders the transition (no manual token swap)"
+        }
+      },
+      {
+        "key": "FACTION_REP_BAR_LABEL",
+        "string": "{factionName} — {tierLabel} ({repPoints} / {tierMax})",
+        "tokens": [
+          "{factionName}",
+          "{tierLabel}",
+          "{repPoints}",
+          "{tierMax}"
+        ],
+        "charLimit": 56,
+        "voSeconds": 0,
+        "context": "Persistent HUD label — MUST equal Standing UI displayFormat byte-for-byte. {repPoints}/{tierMax} locale-grouped.",
+        "worstRender": {
+          "en": "The Ashen Order — Keeper of the Line (7,250 / 9,000)",
+          "len": 52,
+          "de": "The Ashen Order — Beachteter Soldat (7.250 / 9.000)",
+          "deLen": 51,
+          "note": "both ≤56 → fit WBP_FactionRepBar. Keys are faction-generic: budget assumes factionName ≤15; longer names ellipsis-truncate factionName only, never tierLabel/numerics"
+        },
+        "ar": {
+          "note": "same format; bar mirrors RTL; '({repPoints} / {tierMax})' in an LTR bidi isolate so 7,250/9,000 never flips"
+        },
+        "ja": {
+          "render": "The Ashen Order—一目置かれる存在（7,250 / 9,000）",
+          "note": "no — spaces; full-width （）"
+        }
+      }
+    ],
+    "pluralGenderPolicy": {
+      "engine": "Unreal StringTable + FText::Format (ICU MessageFormat); arms authored in source, carried to every PO. Only {toNext} is a count (TIER_UP_TOAST) — arms proven inline: de(2), ar(=0+5), ja(1: 点), pl/ru(4, one/few/many/other). {playerGender, select} participles inline for fr/ru/pl on GREET_HONORED (default 'other'); {playerName} may be empty — FRIENDLY select-guard drops the comma."
+    },
+    "lengthPolicy": "Fixed-width (hard budget): tier labels ≤22 (EXALTED = DNT title, 24) + assembled REP_BAR ≤56 — both proven (worstRender). Toasts ≤90 (3.0s window). Greetings are subtitle/VO, NOT fixed-width: charLimit is a soft VO budget (±15% of source duration or re-time flag); de 1.35× wraps to a 2nd line, never truncates.",
+    "consistency": {
+      "tierLabelDecoupling": "Labels map 1:1 to the enum — enum = math, label = voice.",
+      "vaelLineEchoes": "Greetings/labels echo Vael's lines (NPC Members): 'ash on your brow'/'the wall holds'/'recognizes' — one faction voice.",
+      "crossStepGuards": "TIER_LABEL_EXALTED == Tier Rewards Exalted title (DNT, byte-identical); REP_BAR_LABEL == Standing UI displayFormat — drift caught by shared-string diff. Vendor discount line lives in the vendors table."
+    },
+    "qa": {
+      "pseudoloc": "qps-ploc (+40% + accents + brackets) before target handoff — catches RepBar truncation + toast overflow.",
+      "validation": [
+        "Every {token} declared + present in every declared-locale PO (missing = build fail); all CLDR plural arms present per locale (pl/ru 4, ja 1).",
+        "doNotTranslate terms verbatim; cross-step guards (REP_BAR_LABEL, EXALTED title) hold; no gender inflection asserted without all gendered arms; no manual RTL reordering (bidi isolates only)."
+      ]
+    }
+  },
+  "promptTechnique": "Treat a loc step as a SOURCE-of-truth asset, not a key list. The produce prompt must (1) dump every sibling step first and mine them for the real strings the keys resolve to (tier ladder, per-tier NPC lines, HUD displayFormat, reward titles), then author each key with: source-locale text + explicit interpolation tokens + a per-key translator context note + a hard/soft char budget tied to the actual widget. (2) Decouple mechanical identity from display: keep the internal enum that drives math, but give each label a world-flavored DISPLAY string so voice cannot contradict the numbers. (3) Prove the hard i18n cases INLINE rather than asserting them — author real ICU plural arm sets per CLDR category (ar =0+one/two/few/many/other, pl/ru one/few/many/other, ja 1-arm), gendered {playerGender,select} participles for gendered locales, an empty-{name} select-guard, RTL via FSI/PDI bidi isolates (never manual token swaps), and a COMPUTED worstRender (longest factionName+label+grouped numbers with a byte count) against the widget budget. (4) Bind to siblings with byte-identical cross-step guards (label == reward title, rep-bar == HUD displayFormat). (5) Give source strings a faction-specific voice pass (concrete world imagery + reused faction idioms) so tier escalation reads as one voice, not a reputation template. Depth of authored, verifiable proof — not length — is the entire lever; text has no model wall.",
+  "iterations": [
+    {
+      "n": 1,
+      "score": 78,
+      "note": "Went from bare 17-key list to a full source asset: authored strings + tokens + per-key translator context + char/VO budgets + tier-label/enum decoupling + cross-step consistency. (Truncated by the judge 12k-char input cap on first try.)"
+    },
+    {
+      "n": 2,
+      "score": 86,
+      "note": "Fit under the 12k cap; added de+ar QA proof translations with rendered char counts for overflow/bidi; framed EFIGS contradiction surfaced."
+    },
+    {
+      "n": 3,
+      "score": 90,
+      "note": "Authored the ar 6-arm CLDR plural + fr/ru/pl gendered participles INLINE (not described); added scope framing so locale roster, authored values and validation are congruent. First PASS."
+    },
+    {
+      "n": 4,
+      "score": 91,
+      "note": "Retired nits: dropped shadowed ar zero-arm, proved REP_BAR budget against longest faction name, added worstRender + ja proof row."
+    },
+    {
+      "n": 5,
+      "score": 91,
+      "note": "Faction-voice pass on all 7 greetings (ash/wall/Ember Frontier imagery + Vael idioms); added pl/ru 4-arm plural proofs; replaced manual ar RTL token-swap with FSI/PDI bidi isolates. Reliably 90-91 across fresh samples."
+    }
+  ],
+  "applicableCatalogs": [
+    "input-schemes :: Localization",
+    "achievements :: Localization",
+    "codex :: Localization",
+    "dialog-trees :: Localization",
+    "cutscenes :: Localization",
+    "any catalog Localization / string-catalog / loc-key step",
+    "any text-config step needing ICU plural/gender + RTL + length-budget discipline"
+  ]
+}
