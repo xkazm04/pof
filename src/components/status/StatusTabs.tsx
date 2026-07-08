@@ -2,12 +2,13 @@
 
 /** The /status header tab switcher: Pipelines (pipeline-centric map) | Item Focus
  *  (entity-centric view). Lab-token styled, keyboard-navigable tablist. */
-export type StatusTab = 'pipelines' | 'category' | 'item';
+export type StatusTab = 'pipelines' | 'category' | 'item' | 'models';
 
 const TABS: { id: StatusTab; label: string }[] = [
   { id: 'pipelines', label: 'Pipelines' },
   { id: 'category', label: 'Category' },
   { id: 'item', label: 'Item Focus' },
+  { id: 'models', label: 'Models' },
 ];
 
 export function StatusTabs({ tab, onChange }: { tab: StatusTab; onChange: (t: StatusTab) => void }) {

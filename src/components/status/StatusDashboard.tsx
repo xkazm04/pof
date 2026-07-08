@@ -18,6 +18,7 @@ import { StatusTabs, type StatusTab } from './StatusTabs';
 import { PipelinesView } from './PipelinesView';
 import { CategoryView } from './CategoryView';
 import { ItemFocusView } from './ItemFocusView';
+import { ModelsView } from './ModelsView';
 
 const NAV_EVENT = 'status-nav';
 
@@ -56,6 +57,7 @@ function parse(search: string): ViewState {
   let tab: StatusTab;
   if (focus || tabParam === 'item') tab = 'item';
   else if (catalogParam || tabParam === 'category') tab = 'category';
+  else if (tabParam === 'models') tab = 'models';
   else tab = 'pipelines';
   return { tab, focus, catalog: catalogParam || null };
 }
@@ -67,6 +69,7 @@ export function StatusDashboard() {
   const setTab = (t: StatusTab) => {
     if (t === 'item') navigate(focus ? `entity=${focus.catalogId}:${focus.entityId}` : 'tab=item');
     else if (t === 'category') navigate(focus ? `catalog=${focus.catalogId}` : catalog ? `catalog=${catalog}` : 'tab=category');
+    else if (t === 'models') navigate('tab=models');
     else navigate('');
   };
 
@@ -128,6 +131,8 @@ export function StatusDashboard() {
           <ItemFocusView focus={focus} onFocus={focusEntity} />
         </>
       )}
+
+      {tab === 'models' && <ModelsView />}
     </div>
   );
 }
