@@ -314,12 +314,12 @@
     {
       "catalogId": "bestiary",
       "step": "3D & Rig",
-      "trueEngine": "None",
+      "trueEngine": "Tripo",
       "deliverable": "3d-mesh",
-      "generatorWired": false,
+      "generatorWired": true,
       "judge": "none",
       "checkerMeaningful": false,
-      "note": "produce() hardcodes mesh:0 with no Tripo call; no mesh is actually generated or rigged."
+      "note": "Powered by gap-loop batch 10 (2026-07-08): real Tripo image→model game-tier mesh (hero-render input), Qwen3-VL-4B gated (>=7), ref injected. Static mesh (game-tier 40k). Rig/anim clips are a documented follow-up."
     },
     {
       "catalogId": "bestiary",
@@ -414,12 +414,12 @@
     {
       "catalogId": "character-pipeline",
       "step": "Game-Tier Convert",
-      "trueEngine": "None",
+      "trueEngine": "Tripo",
       "deliverable": "3d-mesh",
-      "generatorWired": false,
+      "generatorWired": true,
       "judge": "none",
       "checkerMeaningful": false,
-      "note": "engine:'Tripo' labeled but produce() hardcodes gameTier numbers (faceLimit/sizeMB); fieldsPopulated is shape-only and no convert_model call executes."
+      "note": "Powered by gap-loop batch 10 (2026-07-08): real Tripo image→model game-tier mesh (hero-render input), Qwen3-VL-4B gated (>=7), ref injected. Game-tier mesh (40k faces / 2K tex) produced by Tripo at generation face-limit; this is the converted deliverable."
     },
     {
       "catalogId": "character-pipeline",
@@ -734,12 +734,12 @@
     {
       "catalogId": "combat-map",
       "step": "3D / Terrain",
-      "trueEngine": "None",
+      "trueEngine": "Leonardo (Lucid Origin)",
       "deliverable": "3d-mesh",
       "generatorWired": true,
       "judge": "none",
       "checkerMeaningful": false,
-      "note": "produce() returns {mesh:0} over hash-based placeholder swatches — Tripo is wired for 3D generation elsewhere in the app but is never called for this arena terrain step."
+      "note": "Powered by gap-loop batch 10 (2026-07-08): real Leonardo Lucid Origin 2D design map (3D terrain build deferred — no terrain mesh engine) generated via /api/leonardo, Qwen3-VL-4B gated (>=7), injected into artifact data.genHistory; VLM verdict recorded."
     },
     {
       "catalogId": "combat-map",
@@ -3224,12 +3224,12 @@
     {
       "catalogId": "vfx",
       "step": "Mesh / Sprite",
-      "trueEngine": "None",
+      "trueEngine": "Leonardo (Lucid Origin)",
       "deliverable": "3d-mesh",
       "generatorWired": true,
       "judge": "vlm",
       "checkerMeaningful": false,
-      "note": "Gallery archetype but produce() only sets selectedAsset:0 plus a placeholder SM_ path string; candidate swatches come from genericGalleryCandidates, a synthetic deterministic-seed preview (code comment: 'not the generated asset'). Tripo is wired for 3D elsewhere in the app but is never invoked here. accept is selected(), which only checks the index is a non-negative number."
+      "note": "Powered by gap-loop batch 10 (2026-07-08): real Leonardo Lucid Origin sprite generated via /api/leonardo, Qwen3-VL-4B gated (>=7), injected into artifact data.genHistory; VLM verdict recorded."
     },
     {
       "catalogId": "vfx",
@@ -3264,12 +3264,12 @@
     {
       "catalogId": "vfx",
       "step": "Variants",
-      "trueEngine": "None",
+      "trueEngine": "Leonardo (Lucid Origin)",
       "deliverable": "3d-mesh",
       "generatorWired": true,
       "judge": "vlm",
       "checkerMeaningful": false,
-      "note": "Same synthetic gallery pattern; selectedVariant:0 plus 3 placeholder NS_ paths (Small/Med/Large), no mesh/particle asset actually generated. accept is selected(), shape-only."
+      "note": "Powered by gap-loop batch 10 (2026-07-08): real Leonardo Lucid Origin sprite generated via /api/leonardo, Qwen3-VL-4B gated (>=7), injected into artifact data.genHistory; VLM verdict recorded."
     },
     {
       "catalogId": "vfx",
@@ -3354,12 +3354,12 @@
     {
       "catalogId": "zone-map",
       "step": "3D / Biome",
-      "trueEngine": "None",
+      "trueEngine": "Leonardo (Lucid Origin)",
       "deliverable": "3d-mesh",
       "generatorWired": true,
       "judge": "vlm",
       "checkerMeaningful": false,
-      "note": "Gallery archetype; produce() only sets biome:0 plus 3 placeholder SM_ paths (CharredTrunk/AshenRock/EmberPit); synthetic deterministic-seed swatches stand in, Tripo is never called. accept is selected(), shape-only."
+      "note": "Powered by gap-loop batch 10 (2026-07-08): real Leonardo Lucid Origin 2D design map (3D biome build deferred — no terrain mesh engine) generated via /api/leonardo, Qwen3-VL-4B gated (>=7), injected into artifact data.genHistory; VLM verdict recorded."
     },
     {
       "catalogId": "zone-map",
