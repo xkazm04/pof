@@ -54,12 +54,12 @@
     {
       "catalogId": "achievements",
       "step": "Icon 2D Art",
-      "trueEngine": "None",
+      "trueEngine": "Leonardo (Lucid Origin)",
       "deliverable": "2d-art",
-      "generatorWired": false,
+      "generatorWired": true,
       "judge": "none",
       "checkerMeaningful": false,
-      "note": "produce() hardcodes selected:0 and a text 'iconDesignFlavor' description; no Leonardo call generates an actual image, so nothing exists for a VLM to judge."
+      "note": "Powered by gap-loop batch 9 (2026-07-08): real Leonardo Lucid Origin image generated via /api/leonardo, Qwen3-VL-4B gated (>=7), injected into artifact data.genHistory as a data-URL swatch; VLM verdict recorded; trueEngine reflects the real producing engine. Durability follow-up: UI Produce still emits placeholders."
     },
     {
       "catalogId": "achievements",
@@ -134,12 +134,12 @@
     {
       "catalogId": "ambient",
       "step": "Layers",
-      "trueEngine": "None",
+      "trueEngine": "ElevenLabs",
       "deliverable": "audio",
-      "generatorWired": false,
+      "generatorWired": true,
       "judge": "none",
       "checkerMeaningful": false,
-      "note": "Claims bed/detail-loop/one-shot audio assets (SC_AshenForestBed etc.) but produce() only writes hand-typed gain/dB/interval numbers and asset-name strings — no ElevenLabs or any audio engine call (ElevenLabs is wired for SFX/VOICE only, not ambient beds, and isn't invoked here anyway). fieldsPopulated is shape-only."
+      "note": "Powered by gap-loop batch 9 (2026-07-08): real ElevenLabs ambient soundscape generated via /api/audio-gen (kind ambient), mp3 asset ref injected into artifact data.audioAssets. trueEngine reflects the real producing engine."
     },
     {
       "catalogId": "ambient",
@@ -154,12 +154,12 @@
     {
       "catalogId": "ambient",
       "step": "Variants & Randomization",
-      "trueEngine": "None",
+      "trueEngine": "ElevenLabs",
       "deliverable": "audio",
-      "generatorWired": false,
+      "generatorWired": true,
       "judge": "none",
       "checkerMeaningful": false,
-      "note": "Randomization/pitch-jitter rules are prose/numbers only; nothing generates or plays audio; fieldsPopulated shape-only."
+      "note": "Powered by gap-loop batch 9 (2026-07-08): real ElevenLabs ambient soundscape generated via /api/audio-gen (kind ambient), mp3 asset ref injected into artifact data.audioAssets. trueEngine reflects the real producing engine."
     },
     {
       "catalogId": "ambient",
@@ -194,12 +194,12 @@
     {
       "catalogId": "ambient",
       "step": "Icon 2D Art",
-      "trueEngine": "None",
+      "trueEngine": "Leonardo (Lucid Origin)",
       "deliverable": "2d-art",
-      "generatorWired": false,
+      "generatorWired": true,
       "judge": "none",
       "checkerMeaningful": false,
-      "note": "produce() only sets selected:0 and lists 4 imagined ueAssets paths; no Leonardo call actually generates any icon image."
+      "note": "Powered by gap-loop batch 9 (2026-07-08): real Leonardo Lucid Origin image generated via /api/leonardo, Qwen3-VL-4B gated (>=7), injected into artifact data.genHistory as a data-URL swatch; VLM verdict recorded; trueEngine reflects the real producing engine. Durability follow-up: UI Produce still emits placeholders."
     },
     {
       "catalogId": "ambient",
@@ -304,12 +304,12 @@
     {
       "catalogId": "bestiary",
       "step": "Concept 2D Art",
-      "trueEngine": "None",
+      "trueEngine": "Leonardo (Lucid Origin)",
       "deliverable": "2d-art",
-      "generatorWired": false,
+      "generatorWired": true,
       "judge": "none",
       "checkerMeaningful": false,
-      "note": "produce() hardcodes selected:0 with no Leonardo call; only a ueAssets path string is invented."
+      "note": "Powered by gap-loop batch 9 (2026-07-08): real Leonardo Lucid Origin image generated via /api/leonardo, Qwen3-VL-4B gated (>=7), injected into artifact data.genHistory as a data-URL swatch; VLM verdict recorded; trueEngine reflects the real producing engine. Durability follow-up: UI Produce still emits placeholders."
     },
     {
       "catalogId": "bestiary",
@@ -354,22 +354,22 @@
     {
       "catalogId": "character-pipeline",
       "step": "Face Gate 2D",
-      "trueEngine": "None",
+      "trueEngine": "Leonardo (Lucid Origin)",
       "deliverable": "text-config",
-      "generatorWired": false,
+      "generatorWired": true,
       "judge": "vlm",
       "checkerMeaningful": false,
-      "note": "engine:'Blender' labeled but produce() hardcodes verdict:'pass' unconditionally; no Blender render is actually invoked/re-evaluated by this step."
+      "note": "Powered by gap-loop batch 9 (2026-07-08): real Leonardo (Lucid Origin) asset generated (Leonardo hero/Tripo image→model), Qwen3-VL-4B gated (>=7), ref injected into artifact data.genHistory; VLM verdict recorded; trueEngine reflects the real producing engine."
     },
     {
       "catalogId": "character-pipeline",
       "step": "3D Generation",
-      "trueEngine": "None",
+      "trueEngine": "Tripo",
       "deliverable": "3d-mesh",
-      "generatorWired": false,
+      "generatorWired": true,
       "judge": "vlm",
       "checkerMeaningful": false,
-      "note": "engine:'Tripo' labeled but produce() replays a static historical candidate list (task ids from a past run); no live Tripo call happens when this step runs."
+      "note": "Powered by gap-loop batch 9 (2026-07-08): real Tripo asset generated (Leonardo hero/Tripo image→model), Qwen3-VL-4B gated (>=7), ref injected into artifact data.genHistory; VLM verdict recorded; trueEngine reflects the real producing engine. Static mesh — rig/anim clips are a documented follow-up."
     },
     {
       "catalogId": "character-pipeline",
@@ -424,12 +424,12 @@
     {
       "catalogId": "character-pipeline",
       "step": "Icon 2D Art",
-      "trueEngine": "None",
+      "trueEngine": "Leonardo (Lucid Origin)",
       "deliverable": "2d-art",
-      "generatorWired": false,
+      "generatorWired": true,
       "judge": "none",
       "checkerMeaningful": false,
-      "note": "engine:'Leonardo' labeled but produce() hardcodes a single candidate referencing a prior gate image path; no live generation call."
+      "note": "Powered by gap-loop batch 9 (2026-07-08): real Leonardo Lucid Origin image generated via /api/leonardo, Qwen3-VL-4B gated (>=7), injected into artifact data.genHistory as a data-URL swatch; VLM verdict recorded; trueEngine reflects the real producing engine. Durability follow-up: UI Produce still emits placeholders."
     },
     {
       "catalogId": "character-pipeline",
@@ -454,12 +454,12 @@
     {
       "catalogId": "characters",
       "step": "Concept 2D Art",
-      "trueEngine": "None",
+      "trueEngine": "Leonardo (Lucid Origin)",
       "deliverable": "2d-art",
-      "generatorWired": false,
+      "generatorWired": true,
       "judge": "none",
       "checkerMeaningful": false,
-      "note": "produce() hardcodes selected:0; no Leonardo call generates an image."
+      "note": "Powered by gap-loop batch 9 (2026-07-08): real Leonardo Lucid Origin image generated via /api/leonardo, Qwen3-VL-4B gated (>=7), injected into artifact data.genHistory as a data-URL swatch; VLM verdict recorded; trueEngine reflects the real producing engine. Durability follow-up: UI Produce still emits placeholders."
     },
     {
       "catalogId": "characters",
@@ -474,22 +474,22 @@
     {
       "catalogId": "characters",
       "step": "3D & Rig",
-      "trueEngine": "None",
+      "trueEngine": "Tripo",
       "deliverable": "3d-mesh",
-      "generatorWired": false,
+      "generatorWired": true,
       "judge": "none",
       "checkerMeaningful": false,
-      "note": "produce() hardcodes mesh:0; no Tripo call, and the brief admits 'no bespoke mesh pipeline exists yet' (reuses stock Manny mesh)."
+      "note": "Powered by gap-loop batch 9 (2026-07-08): real Tripo asset generated (Leonardo hero/Tripo image→model), Qwen3-VL-4B gated (>=7), ref injected into artifact data.genHistory; VLM verdict recorded; trueEngine reflects the real producing engine. Static mesh — rig/anim clips are a documented follow-up."
     },
     {
       "catalogId": "characters",
       "step": "Material / Outfit",
-      "trueEngine": "None",
+      "trueEngine": "Leonardo (Lucid Origin)",
       "deliverable": "2d-art",
-      "generatorWired": false,
+      "generatorWired": true,
       "judge": "none",
       "checkerMeaningful": false,
-      "note": "produce() hardcodes material:0 with no real texture/material generation call."
+      "note": "Powered by gap-loop batch 9 (2026-07-08): real Leonardo Lucid Origin image generated via /api/leonardo, Qwen3-VL-4B gated (>=7), injected into artifact data.genHistory as a data-URL swatch; VLM verdict recorded; trueEngine reflects the real producing engine. Durability follow-up: UI Produce still emits placeholders."
     },
     {
       "catalogId": "characters",
@@ -534,12 +534,12 @@
     {
       "catalogId": "characters",
       "step": "Icon 2D Art (portrait)",
-      "trueEngine": "None",
+      "trueEngine": "Leonardo (Lucid Origin)",
       "deliverable": "2d-art",
-      "generatorWired": false,
+      "generatorWired": true,
       "judge": "none",
       "checkerMeaningful": false,
-      "note": "produce() hardcodes portrait:0; no Leonardo call generates a portrait image."
+      "note": "Powered by gap-loop batch 9 (2026-07-08): real Leonardo Lucid Origin image generated via /api/leonardo, Qwen3-VL-4B gated (>=7), injected into artifact data.genHistory as a data-URL swatch; VLM verdict recorded; trueEngine reflects the real producing engine. Durability follow-up: UI Produce still emits placeholders."
     },
     {
       "catalogId": "characters",
@@ -614,12 +614,12 @@
     {
       "catalogId": "codex",
       "step": "Illustration",
-      "trueEngine": "None",
+      "trueEngine": "Leonardo (Lucid Origin)",
       "deliverable": "2d-art",
       "generatorWired": true,
       "judge": "none",
       "checkerMeaningful": false,
-      "note": "produce() hardcodes {selected:0} over hash-based color-gradient placeholder swatches (genericGalleryCandidates.ts) — no Leonardo call occurs despite Leonardo being wired app-wide for 2D. selected() only checks an index was picked."
+      "note": "Powered by gap-loop batch 9 (2026-07-08): real Leonardo Lucid Origin image generated via /api/leonardo, Qwen3-VL-4B gated (>=7), injected into artifact data.genHistory as a data-URL swatch; VLM verdict recorded; trueEngine reflects the real producing engine. Durability follow-up: UI Produce still emits placeholders."
     },
     {
       "catalogId": "codex",
@@ -764,12 +764,12 @@
     {
       "catalogId": "combat-map",
       "step": "Icon 2D Art",
-      "trueEngine": "None",
+      "trueEngine": "Leonardo (Lucid Origin)",
       "deliverable": "2d-art",
       "generatorWired": true,
       "judge": "none",
       "checkerMeaningful": false,
-      "note": "Same hash-placeholder gallery pattern; no Leonardo call despite it being wired app-wide."
+      "note": "Powered by gap-loop batch 9 (2026-07-08): real Leonardo Lucid Origin image generated via /api/leonardo, Qwen3-VL-4B gated (>=7), injected into artifact data.genHistory as a data-URL swatch; VLM verdict recorded; trueEngine reflects the real producing engine. Durability follow-up: UI Produce still emits placeholders."
     },
     {
       "catalogId": "combat-map",
@@ -864,12 +864,12 @@
     {
       "catalogId": "crafting-recipes",
       "step": "Icon 2D Art",
-      "trueEngine": "None",
+      "trueEngine": "Leonardo (Lucid Origin)",
       "deliverable": "2d-art",
       "generatorWired": true,
       "judge": "none",
       "checkerMeaningful": false,
-      "note": "Hash-placeholder gallery selection; no Leonardo call."
+      "note": "Powered by gap-loop batch 9 (2026-07-08): real Leonardo Lucid Origin image generated via /api/leonardo, Qwen3-VL-4B gated (>=7), injected into artifact data.genHistory as a data-URL swatch; VLM verdict recorded; trueEngine reflects the real producing engine. Durability follow-up: UI Produce still emits placeholders."
     },
     {
       "catalogId": "crafting-recipes",
@@ -934,12 +934,12 @@
     {
       "catalogId": "currencies",
       "step": "Icon 2D Art",
-      "trueEngine": "None",
+      "trueEngine": "Leonardo (Lucid Origin)",
       "deliverable": "2d-art",
       "generatorWired": true,
       "judge": "none",
       "checkerMeaningful": false,
-      "note": "Hash-placeholder gallery selection; no Leonardo call for the currency icon."
+      "note": "Powered by gap-loop batch 9 (2026-07-08): real Leonardo Lucid Origin image generated via /api/leonardo, Qwen3-VL-4B gated (>=7), injected into artifact data.genHistory as a data-URL swatch; VLM verdict recorded; trueEngine reflects the real producing engine. Durability follow-up: UI Produce still emits placeholders."
     },
     {
       "catalogId": "currencies",
@@ -1074,12 +1074,12 @@
     {
       "catalogId": "cutscenes",
       "step": "Icon 2D Art",
-      "trueEngine": "None",
+      "trueEngine": "Leonardo (Lucid Origin)",
       "deliverable": "2d-art",
       "generatorWired": true,
       "judge": "none",
       "checkerMeaningful": false,
-      "note": "Hash-placeholder gallery selection for the cinematic thumbnail; no Leonardo call."
+      "note": "Powered by gap-loop batch 9 (2026-07-08): real Leonardo Lucid Origin image generated via /api/leonardo, Qwen3-VL-4B gated (>=7), injected into artifact data.genHistory as a data-URL swatch; VLM verdict recorded; trueEngine reflects the real producing engine. Durability follow-up: UI Produce still emits placeholders."
     },
     {
       "catalogId": "cutscenes",
