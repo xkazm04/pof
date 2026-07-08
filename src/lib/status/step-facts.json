@@ -2894,12 +2894,12 @@
     {
       "catalogId": "state-graph",
       "step": "UE Packaging",
-      "trueEngine": "None",
+      "trueEngine": "UE Python",
       "deliverable": "ue-runtime",
-      "generatorWired": false,
+      "generatorWired": true,
       "judge": "none",
       "checkerMeaningful": false,
-      "note": "Hardcoded asset-name manifest only; no actual StateTree/Blackboard/ABP asset is built by this step; minCount(≥4) is shape-only."
+      "note": "Packaged via real UE Python seed scripts against real compiled C++ (UStateTreeComponent-based UARPGStateTreeAIComponent + StateTree assets); L2 static checks verify the symbols + seed rows exist in Source/PoF + Content/Python (verify-static pass). gap-loop 2026-07-08."
     },
     {
       "catalogId": "status-effects",
@@ -2954,12 +2954,12 @@
     {
       "catalogId": "status-effects",
       "step": "UE Packaging",
-      "trueEngine": "None",
+      "trueEngine": "UE Python",
       "deliverable": "ue-runtime",
-      "generatorWired": false,
+      "generatorWired": true,
       "judge": "none",
       "checkerMeaningful": false,
-      "note": "Hardcoded asset-name list (GE/icon/DT row/NS); no actual GameplayEffect/Niagara asset is built here; minCount(3) is shape-only (staticChecks separately verify a seed row, but that's not the accept gate)."
+      "note": "Packaged via real UE Python seed scripts against real compiled C++ (GE_Gen_Burning + DT_GeneratedAbilities Burning row); L2 static checks verify the symbols + seed rows exist in Source/PoF + Content/Python (verify-static pass). gap-loop 2026-07-08."
     },
     {
       "catalogId": "tutorial-beats",
@@ -3194,12 +3194,12 @@
     {
       "catalogId": "vendors",
       "step": "UE Packaging",
-      "trueEngine": "None",
+      "trueEngine": "UE Python",
       "deliverable": "ue-runtime",
-      "generatorWired": false,
+      "generatorWired": true,
       "judge": "none",
       "checkerMeaningful": false,
-      "note": "Hardcoded asset-name manifest (DT row/icon/widget/BP/currency row); no actual vendor BP or DataTable row is built by this step; minCount(3) is shape-only."
+      "note": "Packaged via real UE Python seed scripts against real compiled C++ (UARPGVendorComponent + FARPGVendorInventoryRow + DT_VendorInventory (WanderingMerchant)); L2 static checks verify the symbols + seed rows exist in Source/PoF + Content/Python (verify-static pass). gap-loop 2026-07-08."
     },
     {
       "catalogId": "vfx",
