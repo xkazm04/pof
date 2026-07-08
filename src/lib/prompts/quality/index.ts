@@ -15,6 +15,7 @@ export const PROMPT_VERSION = 'q1';
 const DISCIPLINE: Record<DeliverableClass, string> = {
   'text-config': 'senior systems designer',
   '2d-art': 'senior concept/UI artist',
+  'ui-glyph': 'senior UI/UX icon designer',
   '3d-mesh': 'senior 3D character/prop artist',
   'animation': 'senior gameplay animator',
   'audio': 'senior technical sound designer',
@@ -24,6 +25,7 @@ const DISCIPLINE: Record<DeliverableClass, string> = {
 const NEGATIVES: Record<DeliverableClass, string[]> = {
   'text-config': ['no filler or generic-fantasy boilerplate', 'no placeholder/TODO values', 'no contradictions with sibling steps'],
   '2d-art': ['no watermark, signature, or text', 'no extra subjects or borders', 'no AI mush, banding, or halo artifacts', 'single centered subject on a clean readable ground'],
+  'ui-glyph': ['no watermark, text, letters, or numbers', 'exactly one glyph, no icon grid or extra objects', 'must stay legible at 32-40px', 'clean flat or restrained-lit icon craft, not a painterly illustration'],
   '3d-mesh': ['no stretched or fused geometry', 'no untextured grey blob', '3/4 hero framing, neutral lighting'],
   'animation': ['no floaty weightless motion', 'no uniform robotic cadence', 'no foot sliding'],
   'audio': ['no clipping or artifacts', 'no raw un-mixed TTS/SFX dump', 'seamless where it must loop'],

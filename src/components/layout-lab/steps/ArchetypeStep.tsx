@@ -86,7 +86,7 @@ export function ArchetypeStep({ t, entity, step, spec, catalogId }: { t: LabThem
     const canon = canonContextFor(canonRules, catalogId, ARCHETYPE_CANON[spec.archetype]);
     // Quality Program WS1: prepend the professional-grade quality pack for this deliverable
     // class (shares the judge's craft checklist), so production aims at the bar the judge enforces.
-    const cls = catalogId ? deliverableClassOf(getStepFact(catalogId, step)?.deliverable ?? '') : null;
+    const cls = catalogId ? deliverableClassOf(getStepFact(catalogId, step)?.deliverable ?? '', catalogId) : null;
     const pack = cls && catalogId ? qualityPack(cls, catalogId) : '';
     return [pack, canon, `Produce ${spec.label} for ${entity.name}. ${dir}`].filter(Boolean).join('\n\n');
   };

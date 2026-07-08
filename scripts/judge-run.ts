@@ -74,7 +74,7 @@ function runClaude(prompt: string, modelId: string, effort: string): Promise<str
 
 async function judgeOne(catalogId: string, art: Artifact, tmpDir: string, policy: { cliModel: string; effort: string; modelId: string }, classFilter: Set<string> | null) {
   const fact = getStepFact(catalogId, art.step);
-  const cls = deliverableClassOf(fact?.deliverable ?? '');
+  const cls = deliverableClassOf(fact?.deliverable ?? '', catalogId);
   if (!cls) return null;
   if (classFilter && !classFilter.has(cls)) return null;
   const payload = buildPayload(cls, art, tmpDir);
