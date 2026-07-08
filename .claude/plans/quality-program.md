@@ -4,6 +4,24 @@ Plan authored 2026-07-08 (Fable analysis pass). Execution: Opus-orchestrated, wo
 by workstream. Goal: move `/status` from "technically correct" to "professional-grade,
 strictly judged, produced by the right model at the right thinking budget."
 
+## Execution status (2026-07-08, Opus)
+
+All four workstreams' **infrastructure is built, committed, tested, and proven live**. What
+remains is the compute campaigns (each large) + one user-collaboration point.
+
+| WS | Built | Proven live | Remaining (campaign / steered) |
+|----|-------|-------------|-------------------------------|
+| WS0 | model-policy registry + `/api/model-policy` + `--model`/`--effort` wiring + provenance + judge_verdicts effort/rubricVersion | policy GET/PUT round-trip; 6 tests; off-state byte-identical | — (done) |
+| WS2 | judge/dimensions + judge/rubrics (v2, AAA contract) + scripts/judge-run.ts + calibration math | Icon 2D **80→FAIL 54**, Localization **75→FAIL 50**, items 3D **FAIL 42**, Economy **FAIL 55** | full-map rejudge (items partial); user confirms/expands calibration labels; rubric wording refined after Opus REFUSED an over-harsh v2 draft |
+| WS1 | prompts/quality packs (shared judge dimensions) wired into ArchetypeStep.buildPrompt | 4 tests; anti-drift asserted; /layout 200 | media prompts into repo; prompt-improvement loop; regenerate+regate wave rollout |
+| WS3 | scripts/model-benchmark.ts + benchmark-db + /api/model-benchmarks + /status **Models tab** | produce-text **opus/med 79 vs sonnet/low 70**; panel renders | full matrix (2×5+), `--write-winners` to make defaults data-driven |
+
+Commits: e20b3872 (WS0) · bfd275fa (WS2) · 2f9a200a-range (WS1) · d7180662 (WS3).
+Key lesson: the strict rubric's first wording ("default to a LOWER score / fail correct work")
+made Opus refuse — reframed as a high bar applied honestly. Calibration caught it, as designed.
+Note: a concurrent session's half-finished DialogueView refactor (missing createTabbedModuleView)
+breaks the home/module routes but not /status or the APIs — left untouched per shared-tree rule.
+
 ## Problem statement (user)
 
 1. Isolated outputs are basic-but-correct → prompts must reach professional videogame quality (text, 2D, 3D).
