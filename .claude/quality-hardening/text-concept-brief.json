@@ -1,0 +1,80 @@
+{
+  "area": "text-concept-brief",
+  "class": "text-config",
+  "subject": "items :: Concept Brief (Iron Longsword, Common one-handed sword, entity item-1)",
+  "baselineScore": 46,
+  "bestScore": 92,
+  "reached90": true,
+  "bestContent": {
+    "brief": {
+      "oneLine": "Iron Longsword — the realm's standard-issue Common one-handed sword: the honest, unenchanted baseline every other weapon in the game is balanced against.",
+      "itemIdentity": {
+        "displayName": "Iron Longsword",
+        "weaponClass": "One-Handed Sword",
+        "rarity": "Common (Normal)",
+        "itemLevel": 4,
+        "tags": ["Weapon", "OneHandedSword", "Melee", "Physical", "StrengthBase"],
+        "equipSlot": "Weapon (main hand); off-hand free for shield/focus",
+        "sourceFaction": "Ironmark garrison armories — the mass-forged sidearm issued to line infantry and city watch; the most common martial drop in early zones."
+      },
+      "mechanicalIdentity": {
+        "physicalDamage": "8-12 (avg 10)",
+        "attacksPerSecond": 1.25,
+        "derivedDPS": "12.5 (white/pre-crit: avg 10 damage x 1.25 aps). This pre-crit figure is the economy convention — powerScore is derived from white DPS so crit chance is priced by affixes, not double-counted in the base.",
+        "effectiveDPS": "12.8 post-crit at the 5% base crit / 1.5x crit multiplier: 12.5 x (1 + 0.05 x 0.5) = 12.81. A Common carries only the global 5% base crit, no crit affixes.",
+        "critChance": "5% (global base) / 1.5x multiplier",
+        "implicit": "+30 Accuracy Rating",
+        "accuracyMechanic": "Accuracy Rating resolves against target Evasion: hitChance = Accuracy / (Accuracy + Evasion), floored 5%, capped 100%. Using the character-progression baseline (L4 melee base Accuracy 40) and the Combat step's early-zone monster band (L1-5 Evasion ~40): unarmed-base is 40/80 = 50%, coin-flip. The +30 implicit lifts it to 70/110 = 64%, +14pp. The standard-issue blade grants accuracy over raw damage — it buys reliability, the trait a line soldier's weapon should have.",
+        "affixSlots": 0,
+        "rationale": "As a Normal base it carries only its implicit — no prefixes/suffixes. Its identity is entirely its base line, which is why it doubles as the affix-ladder floor: Magic/Rare/Set/Legendary variants of this same base type inherit the 8-12 / 1.25 / +30 Accuracy foundation and layer affixes on top."
+      },
+      "requirements": {
+        "level": 4,
+        "strength": 14,
+        "note": "Pure-STR gate — no DEX/INT split. Deliberately low so it is usable from the first hour and by any melee build."
+      },
+      "physicalProperties": {
+        "weight": 3.4,
+        "weightSource": "From the Attributes step / DT_Items row (Weight = 3.4). At STR 14's 20.0-unit carry budget it spends 17%, leaving room for a shield and full potion belt on an early melee build.",
+        "durability": 180,
+        "durabilitySource": "From the Attributes step / DT_Items row (Durability = 180). A light gold-sink loop (PoF diverges from the cited ARPGs here): 1 point/landed-hit = 180 hits = 144s at 1.25 aps; full repair costs 9g at 0.05g/point (below the 12g value), so the player never fights a degraded weapon — just leaks a few coins.",
+        "reach": "~90 cm blade, ~120-degree horizontal attack arc, single-target melee (no cleave) — the plain-arming-sword baseline all one-hand-sword reach is measured from."
+      },
+      "rarityAndEconomy": {
+        "positioning": "The 1.0x reference point of the entire item economy: baseValue 12 gold, powerScore 11.8. It is the cheapest complete weapon, not a null-stat baseline — every PoF base type ships an intrinsic implicit, and the +30 Accuracy is counted inside the 11.8 as accuracyPower 1.8. The Common is the floor every other item's price is measured from.",
+        "vendorValue": "Sells for 3g (25% of baseValue, the global sell-rate). Disenchants into 1 Common shard — its real end-of-life role once the first Magic drop arrives.",
+        "powerFormula": "powerScore = dpsPower + accuracyPower + affixPower. dpsPower = DPS x 0.8 = 12.5 x 0.8 = 10.0. accuracyPower = ImplicitAccuracy x 0.06 = 30 x 0.06 = 1.8. affixPower = 0. Total 11.8. priceRatio = baseValue / powerScore = 12 / 11.8 = 1.02, matching the Economy step — near-parity, a hair above the 1.0 center of the 0.8-1.2 fairness band, slightly generous on a starter weapon by design. The 0.8 DPS and 0.06 Accuracy coefficients are the two global economy constants the whole item table shares.",
+        "rarityMultipliers": "The Economy rarity ladder derives from the same powerScore formula: tier price = baseValue x (expectedPowerScore_tier / 11.8). Magic 2.5x (30g): +1-2 affixes, ~+18 powerScore -> ~29.5. Rare 8.0x (96g): +4-6 affixes, ~+82 -> ~94. Set 25.0x (300g): curated cross-item synergy ~295, valued as a whole set. Legendary 60.0x (720g): a flat designer anchor rather than an affix sum, since uniques carry build-defining modifiers no linear affix total captures. The Common holds the 1.0x floor and is disenchant/crafting feedstock, never a keep-forever item.",
+        "dropIntent": "High-frequency early-game floor drop; its job is to be replaced. Sets the player's mental anchor for 'what a plain sword is worth' before the first Magic drop teaches them affixes."
+      },
+      "visualSpec": {
+        "read": "Weathered mass-forged steel, not mirror-polished — hammer facets and light oxidation on the blade, edge freshly whetted (a soldier's habit). Leather-wrapped grip, plain steel crossguard and pommel, a small stamped Ironmark garrison mark near the ricasso (armory issue, not heraldry).",
+        "silhouette": "Immediately readable as a plain arming sword at inventory-icon scale; no glow, no rarity FX — visual restraint is the point, so Magic+ variants read as clearly 'more'.",
+        "materials": "PBR Albedo + Normal + ORM (matches Material/Texture step). Muted steel-grey albedo, mid roughness, zero emissive — a Common must never out-shine a Legendary.",
+        "assetBindings": "SM_IronLongsword (static mesh), MI_IronLongsword (material instance), T_IronLongsword_Icon (256px icon), socketed via the shared one-handed sword equip path."
+      },
+      "playerFantasy": "Dependable and earned, not heroic. This is the weapon a recruit is handed on day one — a soldier's tool that does exactly what a sword should and nothing more. The intended feeling is quiet competence and a clear sense of 'I will replace this soon', which makes the first affixed upgrade land harder.",
+      "designIntent": "Serves three concrete jobs: (1) the balance zero-point — every weapon's price/power is normalized against its 1.02 ratio; (2) the teaching floor — introduces melee, implicit lines, and equip before any affix complexity; (3) the crafting/economy feedstock baseline. Explicitly scoped DOWN: no combo/weave mechanics, no conditional damage, no build-defining behavior — those belong to Rare+ tiers. Over-designing the Common would blur the rarity ladder.",
+      "references": {
+        "poe2": "White (Normal) base item — carries only its implicit, exists to be the affix substrate for Magic/Rare rolls.",
+        "diablo4": "Common/Magic tier starter weapon — the 'gray' floor players outgrow within an act.",
+        "lastEpoch": "Base-type-driven design: the item's core power lives in the base, affixes layer on top — mirrored here by the 8-12 / 1.25 / +30 Accuracy base line."
+      },
+      "uePackaging": "DT_Items :: IronLongsword row is the source of truth (base damage, aps, implicit, requirements, tags); consumed by the Tooltip/Compare, Economy, Attributes, and Inventory-UI steps downstream."
+    }
+  },
+  "promptTechnique": "Author the Concept Brief as a STRUCTURED design doc (identity / mechanicalIdentity / requirements / physicalProperties / rarityAndEconomy / visualSpec / playerFantasy / designIntent / references / uePackaging), never a single prose 'brief' field. Three moves lift it from ~46 to 90+: (1) EVERY number must close on a calculator AND be sourced from a sibling step — pull damage/aps/implicit/durability/weight straight from the Tooltip/Attributes/Economy artifacts and re-derive the load-bearing coefficients inline (powerScore = DPS*0.8 + Accuracy*0.06, priceRatio = baseValue/powerScore = 1.02), so nothing is asserted. Reconcile every cross-number (durability 180hits/1.25aps = 144s; accuracy delta on a STATED base 40 vs Evasion 40 -> 64%). (2) Match rarity to scope: a Common/Normal baseline must be explicitly scoped DOWN — no combo/weave/build-defining mechanics; its identity is being the affix-ladder floor and the economy zero-point. (3) Voice must be DECLARATIVE senior-designer register — state the numbers; never add meta-commentary defending them against a reviewer ('this is derived not asserted', 'matches exactly'), which reads defensive and costs voice points. Depth beats length: cut over-explanation the sibling step already owns.",
+  "iterations": [
+    { "n": 1, "score": 46, "note": "Baseline: single prose 'brief' field, zero load-bearing data; 'mid-tier martial' contradicted 'Common', combo-weave fantasy over-reached for a baseline." },
+    { "n": 2, "score": 84, "note": "Rewrote as structured doc bound to sibling ground-truth (8-12/1.25/+30 Accuracy, weight 3.4, durability 180, 12g/11.8 economy). Removed combo fantasy; scoped as the affix-ladder floor + balance zero-point." },
+    { "n": 3, "score": 78, "note": "Added derivations but introduced arithmetic that didn't close (priceRatio inverted, durability-to-seconds wrong, invented systems). Regressed — every number must survive a calculator." },
+    { "n": 4, "score": 90, "note": "Fixed all math: priceRatio = baseValue/powerScore = 1.02, durability 180hits/1.25aps=144s, accuracy shown as delta on stated base (50%->64%), rarity ladder derived from powerScore formula, missing Legendary gold value added. PASS." },
+    { "n": 5, "score": 92, "note": "Added effectiveDPS(crit)/pre-crit convention, explicit vendor+disenchant value, numeric reach (90cm/120deg), sourced accuracy baselines to sibling steps, and stripped defensive meta-commentary for a clean declarative voice. Best." }
+  ],
+  "biggestLever": "Sibling-sourced, calculator-closing derivation of the economy anchor (powerScore = DPS*0.8 + Accuracy*0.06 = 11.8; priceRatio = baseValue/powerScore = 1.02) — turning every flavor claim into a traceable, reproducible number is what moved coherence/specificity/plausibility from the 40s-50s into the 90s. Rarity-appropriate scoping (a Common must NOT carry combo mechanics) was the secondary lever that cured the baseline's core coherence failure.",
+  "applicableCatalogs": [
+    "items :: Concept Brief (all item entities)",
+    "state-graph :: Concept Brief",
+    "Concept Brief across every catalog (weapons, characters, currencies, quests, zones, etc.) — the technique (structured fields + sibling-sourced closing math + rarity/scope-appropriate depth + declarative voice) is the foundational-doc pattern every downstream step derives from"
+  ]
+}

@@ -24,7 +24,9 @@ async function main() {
   if (!catalog) { console.error('need --catalog'); process.exit(2); }
   const j = await (await fetch(`${ORIGIN}/api/pipeline-artifacts?catalogId=${catalog}`)).json();
   const arts = (j.data?.artifacts ?? j.data ?? []) as { step: string; entityId: string; data: Record<string, unknown> }[];
-  const scoped = entity ? arts.filter((a) => a.entityId === entity) : arts;
+  // Deterministic order (API order isn't stable) so --step without --entity always picks the same one.
+  const scoped = (entity ? arts.filter((a) => a.entityId === entity) : arts)
+    .slice().sort((a, b) => a.entityId.localeCompare(b.entityId) || a.step.localeCompare(b.step));
 
   let result: unknown;
   if (step) {
