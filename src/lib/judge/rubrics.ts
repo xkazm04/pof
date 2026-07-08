@@ -92,12 +92,31 @@ export interface JudgeResult {
   fix: string;
 }
 
-/** Parse the judge's JSON verdict out of raw CLI stdout (tolerant of stray text). */
+/** Extract the first COMPLETE brace-balanced JSON object from text (string-aware, so braces
+ *  or quotes inside "findings" don't confuse it — the greedy-regex approach did). */
+function firstJsonObject(raw: string): string | null {
+  const start = raw.indexOf('{');
+  if (start < 0) return null;
+  let depth = 0, inStr = false, esc = false;
+  for (let i = start; i < raw.length; i++) {
+    const c = raw[i];
+    if (inStr) {
+      if (esc) esc = false;
+      else if (c === '\\') esc = true;
+      else if (c === '"') inStr = false;
+    } else if (c === '"') inStr = true;
+    else if (c === '{') depth++;
+    else if (c === '}' && --depth === 0) return raw.slice(start, i + 1);
+  }
+  return null;
+}
+
+/** Parse the judge's JSON verdict out of raw CLI stdout (tolerant of stray text before/after). */
 export function parseJudgeResult(raw: string): JudgeResult | null {
-  const m = raw.match(/\{[\s\S]*"verdict"[\s\S]*\}/);
-  if (!m) return null;
+  const json = firstJsonObject(raw);
+  if (!json) return null;
   try {
-    const o = JSON.parse(m[0]) as Partial<JudgeResult>;
+    const o = JSON.parse(json) as Partial<JudgeResult>;
     if (typeof o.score !== 'number' || (o.verdict !== 'pass' && o.verdict !== 'fail')) return null;
     return {
       dimensions: (o.dimensions as Record<string, number>) ?? {},

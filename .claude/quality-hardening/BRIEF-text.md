@@ -6,15 +6,19 @@ logically richer produce prompt and deeper authored content. Aim for a genuine �
 
 ## The loop (up to 5 iterations — text is cheap, iterate freely)
 
-1. **Diagnose the baseline.** Judge the stored config:
-   `npx tsx scripts/judge-one.ts --class text-config --text "<path to a .json of the config>" --subject "<catalog :: step>"`
+1. **Fetch + diagnose the baseline.** Dump the stored config, then judge it:
+   `npx tsx scripts/get-config.ts --catalog <c> --step "<step>" --out base.json`
+   `npx tsx scripts/judge-one.ts --class text-config --text base.json --subject "<c> :: <step>"`
    → `{score, dimensions, verdict, findings, fix}`. The rubric scores coherence, specificity,
    voice, completeness, plausibility against AAA systems-design writing (PoE2/D4/Last Epoch).
-2. **Understand the real domain.** Read the sibling steps' artifacts for this entity (same
-   catalog) so your content is consistent and cross-references real values — the #1 failure is
-   generic filler and invented references that contradict siblings. WebSearch the actual game-
-   design topic if it helps (e.g. how ARPGs structure affix budgets, quest stage graphs, vendor
-   pricing) — thoughtful domain grounding is the whole lever here.
+   Common failure (seen at score 3): a shallow one-field prose blurb where a real Concept Brief
+   needs structured fields — mechanical identity, stat/damage hooks, rarity positioning, visual
+   spec, player fantasy, references. DEPTH + STRUCTURE is the lever.
+2. **Understand the real domain.** Dump all siblings for context:
+   `npx tsx scripts/get-config.ts --catalog <c> --out siblings.json` — author content consistent
+   with them and cross-referencing real values; the #1 failure is generic filler and invented
+   references that contradict siblings. WebSearch the actual game-design topic if it helps (ARPG
+   affix budgets, quest stage graphs, vendor pricing) — domain grounding is the whole lever.
 3. **Author a markedly richer config.** Not longer for its own sake — deeper: concrete named
    values, real formulas/relationships, edge cases, designer intent, tight consistency with
    siblings, a distinctive confident voice. Every field load-bearing; zero boilerplate.
