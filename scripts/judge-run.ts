@@ -110,13 +110,14 @@ async function main() {
 
   const catalogs = has('all') ? allCatalogs() : arg('catalog') ? [arg('catalog') as string] : [];
   const stepFilter = arg('step');
+  const entityFilter = arg('entity');
   const classFilter = arg('classes') ? new Set(arg('classes')!.split(',')) : null;
   const limit = arg('limit') ? Number(arg('limit')) : Infinity;
 
   console.log(`judge: model=${policy.cliModel} effort=${policy.effort} rubric=v${RUBRIC_VERSION} catalogs=${catalogs.length} classes=${classFilter ? [...classFilter].join('+') : 'all'} dry=${DRY}`);
   let n = 0;
   for (const c of catalogs) {
-    const arts = (await fetchArtifacts(c)).filter((a) => (stepFilter ? a.step === stepFilter : true));
+    const arts = (await fetchArtifacts(c)).filter((a) => (stepFilter ? a.step === stepFilter : true) && (entityFilter ? a.entityId === entityFilter : true));
     for (const a of arts) {
       if (n >= limit) break;
       const res = await judgeOne(c, a, tmpDir, policy, classFilter);

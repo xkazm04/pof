@@ -171,7 +171,12 @@ export function deriveCell(
   if (counts.pass > 0 && bestPassTier && GATE_TIERS.has(bestPassTier)) grade = 'verified';
   else if (judgedFail && counts.pass > 0) grade = 'attention';
   else if (unpowered) grade = 'unpowered';
-  else if (strictPass && counts.pass > 0) grade = 'verified';
+  // A strict judge (Opus, reading the actual content) scoring >=90 under rubric v2+ is stronger
+  // proof than a shape-only checker — so it verifies the cell as long as SOMETHING was produced
+  // (pass/pending/deferred) and the checker didn't FAIL. This lets hardened content whose richer
+  // shape the legacy checker can't parse (pending) still show its judge-proven quality, without
+  // fabricating verified when nothing was produced at all.
+  else if (strictPass && counts.fail === 0 && counts.pass + counts.pending + counts.deferred > 0) grade = 'verified';
   else if (judgedPass && counts.pass > 0) grade = 'trusted';
   else if (counts.pass > 0) grade = TRUSTED_CLASSES.has(engineClass(engine)) ? 'trusted' : 'ungated';
   else if (counts.deferred > 0) grade = 'deferred';

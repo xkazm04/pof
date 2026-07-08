@@ -131,7 +131,7 @@ describe('unpowered — the audited no-engine gap', () => {
   });
 
   it('the audit dataset is loaded (real fact lookup)', () => {
-    const f = getStepFact('achievements', 'Icon 2D Art');
+    const f = getStepFact('characters', 'Combat Anim');
     expect(f?.trueEngine).toBe('None');
     expect(f?.generatorWired).toBe(false);
   });
@@ -142,15 +142,23 @@ describe('judge verdict merge — the content-quality layer', () => {
     catalogId: 'items', step: 'Brief', trueEngine: 'Claude', deliverable: 'text-config',
     generatorWired: true, judge: 'llm-panel', checkerMeaningful: false, note: 'prose brief',
   };
+  // A STRICT pass (rubric v2, >=90) is what verifies under the WS2 ladder; a lenient/old pass does not.
   const jv = (verdict: 'pass' | 'fail', judge: 'llm-panel' | 'vlm' = 'llm-panel') => ({
     catalogId: 'items', entityId: 'e1', step: 'Brief', judge, verdict,
-    score: verdict === 'pass' ? 86 : 31, findings: 'panel findings text', model: 'sonnet-fleet-w1',
+    score: verdict === 'pass' ? 92 : 31, findings: 'panel findings text', model: 'claude-opus-4-8',
+    rubricVersion: 2,
   });
 
-  it('a matching judge PASS elevates a trusted checker-pass to verified', () => {
+  it('a matching STRICT judge PASS (v2, >=90) elevates a checker-pass to verified', () => {
     const c = deriveCell('Brief', 'Claude', [art('Brief', 'pass', { tier: 'L0' })], llmFact, [jv('pass')]);
     expect(c.grade).toBe('verified');
-    expect(c.judged?.score).toBe(86);
+    expect(c.judged?.score).toBe(92);
+  });
+
+  it('a LENIENT judge pass (old rubric / <90) does NOT verify — stays trusted', () => {
+    const lenient = { catalogId: 'items', entityId: 'e1', step: 'Brief', judge: 'llm-panel' as const, verdict: 'pass' as const, score: 86, findings: 'lenient panel', model: 'sonnet-fleet-w1', rubricVersion: 1 };
+    const c = deriveCell('Brief', 'Claude', [art('Brief', 'pass', { tier: 'L0' })], llmFact, [lenient]);
+    expect(c.grade).toBe('trusted');
   });
 
   it('a judge FAIL condemns the content to attention even when the shape checker passed', () => {
