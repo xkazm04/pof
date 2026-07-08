@@ -114,7 +114,7 @@ export interface StepCell {
    *  not content — the benevolence the audit exposed. */
   checkerMeaningful?: boolean;
   /** Content-quality judgment (LLM panel / VLM), when one has run. */
-  judged?: { verdict: 'pass' | 'fail'; score: number; model: string; findings: string };
+  judged?: { verdict: 'pass' | 'fail'; score: number; model: string; findings: string; effort?: string; rubricVersion?: number };
 }
 
 const GATE_TIERS = new Set(['L3', 'L4']);
@@ -180,7 +180,7 @@ export function deriveCell(
     judge: fact?.judge,
     auditNote: fact?.note,
     checkerMeaningful: fact?.checkerMeaningful,
-    ...(judged ? { judged: { verdict: judged.verdict, score: judged.score, model: judged.model, findings: judged.findings } } : {}),
+    ...(judged ? { judged: { verdict: judged.verdict, score: judged.score, model: judged.model, findings: judged.findings, ...(judged.effort ? { effort: judged.effort } : {}), ...(judged.rubricVersion != null ? { rubricVersion: judged.rubricVersion } : {}) } } : {}),
   };
 }
 

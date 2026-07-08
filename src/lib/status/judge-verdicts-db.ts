@@ -22,6 +22,11 @@ export interface JudgeVerdict {
   findings: string;
   /** Model/panel identity for auditability (e.g. 'sonnet-fleet-w1', 'qwen3-vl-4b'). */
   model: string;
+  /** Thinking effort the judge ran at (Quality Program WS0: 'low'..'max'). */
+  effort?: string;
+  /** Rubric version the verdict was scored under (WS2). A verdict under an older rubric
+   *  must not silently count as a strict pass — statusModel prefers the newest version. */
+  rubricVersion?: number;
   judgedAt?: string;
 }
 
@@ -42,6 +47,10 @@ function ensureTable() {
       PRIMARY KEY (catalog_id, entity_id, step, judge)
     )
   `);
+  // Additive columns (Quality Program WS0/WS2) — safe on existing tables.
+  const cols = new Set((getDb().prepare('PRAGMA table_info(judge_verdicts)').all() as { name: string }[]).map((c) => c.name));
+  if (!cols.has('effort')) getDb().exec("ALTER TABLE judge_verdicts ADD COLUMN effort TEXT NOT NULL DEFAULT ''");
+  if (!cols.has('rubric_version')) getDb().exec('ALTER TABLE judge_verdicts ADD COLUMN rubric_version INTEGER NOT NULL DEFAULT 1');
   tableEnsured = true;
 }
 
@@ -56,6 +65,8 @@ export function rowToVerdict(row: Record<string, unknown>): JudgeVerdict {
     score: Number(row.score ?? 0),
     findings: (row.findings as string) ?? '',
     model: (row.model as string) ?? '',
+    ...(row.effort ? { effort: row.effort as string } : {}),
+    ...(row.rubric_version != null ? { rubricVersion: Number(row.rubric_version) } : {}),
     ...(row.judged_at ? { judgedAt: row.judged_at as string } : {}),
   };
 }
@@ -71,11 +82,12 @@ export function listVerdicts(catalogId?: string): JudgeVerdict[] {
 export function upsertVerdict(v: JudgeVerdict): JudgeVerdict {
   ensureTable();
   getDb().prepare(`
-    INSERT INTO judge_verdicts (catalog_id, entity_id, step, judge, verdict, score, findings, model, judged_at)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))
+    INSERT INTO judge_verdicts (catalog_id, entity_id, step, judge, verdict, score, findings, model, effort, rubric_version, judged_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))
     ON CONFLICT (catalog_id, entity_id, step, judge) DO UPDATE SET
       verdict = excluded.verdict, score = excluded.score, findings = excluded.findings,
-      model = excluded.model, judged_at = excluded.judged_at
-  `).run(v.catalogId, v.entityId, v.step, v.judge, v.verdict, Math.round(v.score), v.findings, v.model);
+      model = excluded.model, effort = excluded.effort, rubric_version = excluded.rubric_version,
+      judged_at = excluded.judged_at
+  `).run(v.catalogId, v.entityId, v.step, v.judge, v.verdict, Math.round(v.score), v.findings, v.model, v.effort ?? '', v.rubricVersion ?? 1);
   return v;
 }

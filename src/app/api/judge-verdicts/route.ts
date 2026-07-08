@@ -22,6 +22,8 @@ const verdictSchema = z.object({
   score: z.number().min(0).max(100),
   findings: z.string().min(10, 'a verdict without findings is not auditable'),
   model: z.string().min(1),
+  effort: z.string().optional(),
+  rubricVersion: z.number().int().optional(),
 });
 
 /** POST /api/judge-verdicts — upsert one judgment. Unlike pipeline-artifacts there is

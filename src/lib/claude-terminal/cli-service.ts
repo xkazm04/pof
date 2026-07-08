@@ -149,6 +149,9 @@ export interface StartExecutionOptions {
    * MCP servers. See `resolveAutonomousMcpArgs`.
    */
   enableMcp?: boolean;
+  /** Model-policy override (Quality Program WS0): pin the model + effort for this spawn. */
+  model?: string;
+  effort?: string;
 }
 
 /**
@@ -157,9 +160,15 @@ export interface StartExecutionOptions {
  * base args (off-state is byte-for-byte unchanged); `--mcp-config` is appended
  * only when an autonomous caller opts in AND POF_CLI_MCP_CONFIG resolves.
  */
-export function buildCliArgs(opts: { resumeSessionId?: string; enableMcp?: boolean } = {}): string[] {
+export function buildCliArgs(
+  opts: { resumeSessionId?: string; enableMcp?: boolean; model?: string; effort?: string } = {},
+): string[] {
   const args = ['-p', '-', '--output-format', 'stream-json', '--verbose', '--dangerously-skip-permissions'];
   if (opts.resumeSessionId) args.push('--resume', opts.resumeSessionId);
+  // Model-policy wiring (Quality Program WS0): a caller can pin which Claude model +
+  // thinking effort powers this spawn. Off-state (neither provided) stays byte-identical.
+  if (opts.model) args.push('--model', opts.model);
+  if (opts.effort) args.push('--effort', opts.effort);
   if (opts.enableMcp) args.push(...resolveAutonomousMcpArgs());
   return args;
 }
@@ -228,7 +237,7 @@ export function startExecution(
 
   const isWindows = process.platform === 'win32';
   const command = isWindows ? 'claude.cmd' : 'claude';
-  const args = buildCliArgs({ resumeSessionId, enableMcp: options?.enableMcp });
+  const args = buildCliArgs({ resumeSessionId, enableMcp: options?.enableMcp, model: options?.model, effort: options?.effort });
 
   const env = { ...process.env };
   delete env.ANTHROPIC_API_KEY;

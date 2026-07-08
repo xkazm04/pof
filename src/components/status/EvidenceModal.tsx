@@ -15,6 +15,7 @@ import { Modal } from '@/components/ui/Modal';
 import { fetchArtifacts } from '@/components/layout-lab/labArtifactClient';
 import type { PipelineArtifact } from '@/lib/pipeline-artifacts-db';
 import type { StepCell } from '@/lib/status/statusModel';
+import { readProvenance } from '@/lib/provenance';
 
 const GlbViewer = dynamic(() => import('@/components/layout-lab/steps/shared/GlbViewer').then((m) => m.GlbViewer), {
   ssr: false,
@@ -164,7 +165,7 @@ export function EvidenceModal({ catalogId, step, cell, onClose }: { catalogId: s
         {j ? (
           <div style={{ fontSize: 13, borderLeft: `3px solid ${j.verdict === 'pass' ? 'var(--lab-ok)' : 'var(--lab-bad)'}`, padding: '8px 12px', marginBottom: 14, ...surface }}>
             <span style={{ fontFamily: mono, fontWeight: 700, color: j.verdict === 'pass' ? 'var(--lab-ok)' : 'var(--lab-bad)' }}>{j.verdict.toUpperCase()} {j.score}/100</span>
-            <span style={{ color: 'var(--lab-muted)', fontFamily: mono, fontSize: 12 }}> · {j.model}</span>
+            <span style={{ color: 'var(--lab-muted)', fontFamily: mono, fontSize: 12 }}> · {j.model}{j.effort ? `/${j.effort}` : ''}{j.rubricVersion != null ? ` · rubric v${j.rubricVersion}` : ''}</span>
             <div style={{ marginTop: 5, color: 'var(--lab-text)', lineHeight: 1.5 }}>{j.findings}</div>
           </div>
         ) : (
@@ -184,6 +185,14 @@ export function EvidenceModal({ catalogId, step, cell, onClose }: { catalogId: s
             </select>
           </label>
         )}
+
+        {/* Provenance — who/how produced this output (Quality Program WS0) */}
+        {art && (() => {
+          const p = readProvenance(art.data as Data);
+          if (!p) return null;
+          const parts = [p.engine, p.model, p.effort, p.promptVersion ? `prompt ${p.promptVersion}` : null].filter(Boolean);
+          return <div style={{ fontSize: 12, fontFamily: mono, color: 'var(--lab-muted)', marginBottom: 12 }}>produced by: {parts.join(' · ')}</div>;
+        })()}
 
         {/* The stored output the gate evaluated */}
         {arts === null ? <div style={{ fontSize: 13, color: 'var(--lab-muted)' }}>Loading stored output…</div>
